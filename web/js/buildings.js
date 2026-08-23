@@ -150,7 +150,7 @@ async function renderBuildings(){
   let b;
   try{ b=await loadBuildings(); }
   catch(e){ main.innerHTML=`<div class="empty">Couldn't read the buildings of “${esc(state.src)}”.<br>
-    <span class="count">${esc(''+e)}</span><br><br>
+    <span class="count">${esc(errText(e))}</span><br><br>
     <button class="primary" onclick="render()">Retry</button></div>`; return; }
   // the picker moved on while we were loading — whoever it moved to will render
   if(!b||b.mod!==state.src||state.mode!=='buildings')return;
@@ -381,11 +381,11 @@ async function openBuilding(name,keepLevel,atLevel){
   // the overview holds the culture list and the capability vocabulary the editor
   // needs; a save or a mod switch can leave it not yet loaded
   try{ await loadBuildings(); }
-  catch(e){ modal.innerHTML=`<h2>Building</h2><div class="mbody w-bad">${esc(''+e)}</div>
+  catch(e){ modal.innerHTML=`<h2>Building</h2><div class="mbody w-bad">${esc(errText(e))}</div>
     <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
   try{ d=await api.get(`/api/building?mod=${enc(state.src)}&line=${enc(name)}`
                        +`&culture=${enc((state.bld&&state.bld.culture)||'')}`); }
-  catch(e){ modal.innerHTML=`<h2>Building</h2><div class="mbody w-bad">${esc(''+e)}</div>
+  catch(e){ modal.innerHTML=`<h2>Building</h2><div class="mbody w-bad">${esc(errText(e))}</div>
     <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
   const b=state.bld;
   b.line=name; b.d=d; b.plan=null; b.locSel=null;
@@ -3325,7 +3325,7 @@ async function bldPreview(){
     b.plan=await api.post('/api/buildings/plan',bldPayload());
     b.planStale=false;
     box.innerHTML=bldPlanHtml(b.plan,false);
-  }catch(e){ box.innerHTML=`<div class="mbody w-bad">${esc(''+e)}</div>`; }
+  }catch(e){ box.innerHTML=`<div class="mbody w-bad">${esc(errText(e))}</div>`; }
 }
 function bldPlanHtml(p,stale){
   if(p.error)return `<div class="sum"><div class="srow bad"><span class="sicon">✕</span>
@@ -3583,7 +3583,7 @@ async function bldNtPreview(){
   try{
     n.plan=await api.post('/api/buildings/plan',{mod:state.src,create:bldNtSpec()});
     box.innerHTML=bldNtPlanHtml(n.plan);
-  }catch(e){ box.innerHTML=`<div class="mbody w-bad">${esc(''+e)}</div>`; }
+  }catch(e){ box.innerHTML=`<div class="mbody w-bad">${esc(errText(e))}</div>`; }
 }
 async function bldNtCreate(){
   const n=bldNt(); if(!n||n.busy)return;

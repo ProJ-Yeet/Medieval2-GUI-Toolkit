@@ -40,7 +40,7 @@ async function loadTraits(){
   try{ r = await api.get('/api/traits?mod=' + enc(mod)); }
   catch(e){ if(stale('traits', mod)) return;
     main.innerHTML = `<div class="empty">Couldn't read the traits file.<br>
-      <span class="count">${esc(''+e)}</span><br><br>
+      <span class="count">${esc(errText(e))}</span><br><br>
       <button class="primary" onclick="loadTraits()">Retry</button></div>`; return; }
   if(stale('traits', mod)) return;
   state.tr = Object.assign({sel:'', d:null, busy:false, adding:false}, r);

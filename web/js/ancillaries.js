@@ -37,7 +37,7 @@ async function loadAncillaries(){
   try{ r = await api.get('/api/ancillaries?mod=' + enc(mod)); }
   catch(e){ if(stale('ancillaries', mod)) return;
     main.innerHTML = `<div class="empty">Couldn't read the ancillaries file.<br>
-      <span class="count">${esc(''+e)}</span><br><br>
+      <span class="count">${esc(errText(e))}</span><br><br>
       <button class="primary" onclick="loadAncillaries()">Retry</button></div>`; return; }
   if(stale('ancillaries', mod)) return;
   state.an = Object.assign({sel:'', d:null, busy:false, adding:false}, r);

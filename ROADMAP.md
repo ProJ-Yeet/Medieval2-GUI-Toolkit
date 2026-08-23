@@ -1588,6 +1588,17 @@ than borrowing a mod's, so everything but the unit-card fan-out runs with no
 game installed. The last section drives the real server over HTTP with the exact
 JSON the page sends.
 
+## v2.1.1 — a fix subrelease ✅ (2026-08-23)
+
+Not a phase. Two failures out of one user's log, both of which presented as
+HTTP 500: a mod folder with a `data/` and no roster (every stock install has
+four — the Kingdoms campaigns, still packed), and a `battle_models.modeldb`
+whose texture count disagreed with the textures under it. Both answer with a
+sentence naming the file now, `/api/mod_files` no longer parses the mod it is
+reporting on, and the page stops retrying an answer the server chose. Carries
+the dropped-`<script>` fix that was already in the tree. Notes:
+`merge/RELEASE_2_1_1.md`.
+
 ## Phase 15 — 3D model viewer ✅ (done 2026-08-20, released as v2.1.0)
 
 - **Goal:** A working in-browser viewer for unit `.mesh` models (their

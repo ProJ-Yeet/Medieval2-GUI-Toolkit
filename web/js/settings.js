@@ -162,8 +162,13 @@ async function loadEopDirs(){
   const rows=(explicit?r.configured:r.detected).map(d=>`<div class="ovr"><span><code>${esc(d)}</code></span>${
     explicit?`<button onclick="removeEopDir('${q1(esc(d))}')">Remove</button>`:'<span class="count">Auto-detected</span>'}</div>`).join('');
   box.innerHTML=(rows||'<div class="count">No EOP folder found or set, so this mod\'s units all live in export_descr_unit.txt.</div>')
-    +`<div class="count" style="margin-top:8px"><b>${r.eop_count}</b> M2TWEOP unit(s) in <b>${r.files.length}</b> file(s);
-      <b>${r.edu_count}</b> unit(s) in export_descr_unit.txt.</div>`
+    // The counts need the roster read; the folders above do not. A mod whose
+    // export_descr_unit.txt is missing or broken still gets the folder list —
+    // with the reason in place of the two numbers, which is the answer anyone
+    // opening this panel on that mod is actually after.
+    +(r.note?`<div class="count w-warn" style="margin-top:8px">${esc(r.note)}</div>`
+      :`<div class="count" style="margin-top:8px"><b>${r.eop_count}</b> M2TWEOP unit(s) in <b>${r.files.length}</b> file(s);
+      <b>${r.edu_count}</b> unit(s) in export_descr_unit.txt.</div>`)
     +(r.files.length?`<div class="flist" style="margin-top:6px">${r.files.slice(0,40).map(f=>`<div class="frow"><span class="fp">${esc(f)}</span></div>`).join('')}${
        r.files.length>40?`<div class="count">…and ${r.files.length-40} more</div>`:''}</div>`:'')
     +(explicit?'<div class="count" style="margin-top:6px">Remove them all to go back to auto-detection.</div>':'');
@@ -233,6 +238,9 @@ state.logView={mode:'',shown:0,entries:[],total:0,counts:{},grand:0};
 const LOG_PAGE=40;
 async function openLog(mode){
   const v=state.logView;
+  // Only a real mode id is one: wired straight to a button, this arrives as the
+  // click event, and "[object PointerEvent]" is a filter no entry can match.
+  if(typeof mode!=='string')mode=undefined;
   if(mode!==undefined&&mode!==v.mode){v.mode=mode;v.shown=0;v.entries=[];}
   document.getElementById('modal').className='modal';
   overlay.classList.add('open');

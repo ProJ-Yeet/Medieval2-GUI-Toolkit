@@ -36,7 +36,7 @@ async function loadStrings(){
   try{ r = await api.get('/api/strings?mod=' + enc(mod)); }
   catch(e){ if(stale('strings', mod)) return;
     main.innerHTML = `<div class="empty">Couldn't read the text folder.<br>
-      <span class="count">${esc(''+e)}</span><br><br>
+      <span class="count">${esc(errText(e))}</span><br><br>
       <button class="primary" onclick="loadStrings()">Retry</button></div>`; return; }
   if(stale('strings', mod)) return;
   state.str = Object.assign({file:'', rows:null, edits:{}, busy:false}, r);

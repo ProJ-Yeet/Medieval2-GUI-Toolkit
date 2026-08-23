@@ -123,6 +123,38 @@ class ModelEntry:
         return self.content_key() == other.content_key()
 
 
+class _Desync(ValueError):
+    """The stream stopped making sense, and where.
+
+    Every field in this file is found by counting from the one before it, so the
+    first wrong number does not fail — it silently shifts everything after it by
+    a field, and the read dies somewhere else entirely, on whatever innocent word
+    now sits where a number should be. ``at`` is that landing point;
+    :func:`_desync_message` turns it and the reader's trail back into the place a
+    person can actually go and look.
+    """
+
+    def __init__(self, at: int, what: str):
+        self.at = at
+        self.what = what
+        #: what the reader was counting through when it lost the thread, set by
+        #: whichever loop knows — a list whose count is one too many is the
+        #: commonest hand-edit in this file and the only one worth naming.
+        self.note = ""
+        super().__init__(what)
+
+
+def _line_col(text: str, i: int) -> Tuple[int, int]:
+    return text.count("\n", 0, i) + 1, i - text.rfind("\n", 0, i)
+
+
+def _snippet(text: str, i: int, before: int = 30, after: int = 40) -> str:
+    """The file either side of ``i``, on one line, with the spot marked."""
+    lead = text[max(0, i - before):i].replace("\n", " | ")
+    rest = text[i:i + after].replace("\n", " | ")
+    return f"...{lead}>>{rest}..."
+
+
 class _Reader:
     """Length-prefixed token reader mirroring the ModdingTool FileStream."""
 
@@ -130,6 +162,12 @@ class _Reader:
         self.s = text
         self.i = 0
         self.n = len(text)
+        #: the last few strings read, as (offset, declared length, value, end
+        #: offset) — kept only so a failure can point back at the number that
+        #: caused it
+        self.trail: List[Tuple[int, int, str, int]] = []
+        #: name of the entry being read, for the same reason
+        self.entry = ""
 
     def _skip_ws(self) -> None:
         while self.i < self.n and self.s[self.i].isspace():
@@ -143,18 +181,39 @@ class _Reader:
         return self.s[start:self.i]
 
     def get_int(self) -> int:
-        return int(self.token())
+        self._skip_ws()
+        at, tok = self.i, self.token()
+        try:
+            return int(tok)
+        except ValueError:
+            raise _Desync(at, f"expected a number here and found {tok!r}") from None
 
     def get_float(self) -> float:
-        return float(self.token())
+        self._skip_ws()
+        at, tok = self.i, self.token()
+        try:
+            return float(tok)
+        except ValueError:
+            raise _Desync(at, f"expected a number here and found {tok!r}") from None
 
     def get_string(self) -> str:
-        length = int(self.token())
+        self._skip_ws()
+        at, tok = self.i, self.token()
+        try:
+            length = int(tok)
+        except ValueError:
+            raise _Desync(
+                at, f"expected the length of a name here and found {tok!r}") from None
         if length <= 0:
             return ""
         self._skip_ws()
+        if self.i + length > self.n:
+            raise _Desync(at, f"a name is written as {length} characters long, and only "
+                              f"{self.n - self.i} are left in the file")
         val = self.s[self.i:self.i + length]
         self.i += length
+        self.trail.append((at, length, val, self.i))
+        del self.trail[:-6]
         return val
 
 
@@ -213,7 +272,9 @@ def _read_entry(r: _Reader, pad: bool = False) -> ModelEntry:
             r.get_int()
             r.get_int()
 
+    r.entry = ""                 # whose entry this is, once we know
     name = r.get_string().lower()
+    r.entry = name
     scale = r.get_float()
     firstpad()
     lod_count = r.get_int()
@@ -221,19 +282,34 @@ def _read_entry(r: _Reader, pad: bool = False) -> ModelEntry:
     lods = [(r.get_string(), r.get_int()) for _ in range(lod_count)]
     firstpad()
 
-    def read_textures(pad_after_count: bool) -> List[Texture]:
+    def read_textures(pad_after_count: bool, what: str) -> List[Texture]:
+        r._skip_ws()
+        cnt_at = r.i
         cnt = r.get_int()
         if pad_after_count:
             firstpad()
         out = []
-        for _ in range(cnt):
-            fac = r.get_string().lower()
-            tex, nrm, spr = r.get_string(), r.get_string(), r.get_string()
+        for k in range(cnt):
+            try:
+                fac = r.get_string().lower()
+                tex, nrm, spr = r.get_string(), r.get_string(), r.get_string()
+            except _Desync as e:
+                # A list that says 2 and holds 1 — what deleting a faction's
+                # skin without touching the number above it leaves behind — puts
+                # the reader into the NEXT field entirely, and everything it
+                # says after that is about the wrong place. Say which count.
+                line, col = _line_col(r.s, cnt_at)
+                e.note = (f" This entry's {what} texture list says it holds {cnt}"
+                          f" (line {line}, column {col}) and only {k} read cleanly,"
+                          f" so that count is the first number to check: a texture"
+                          f" removed without lowering it reads exactly like this.")
+                raise
             out.append(Texture(fac, tex, nrm, spr))
         return out
 
-    main_tex = read_textures(pad_after_count=True)
-    attach_tex = read_textures(pad_after_count=False)   # no padding around this count
+    main_tex = read_textures(pad_after_count=True, what="main")
+    attach_tex = read_textures(pad_after_count=False,   # no padding around this count
+                               what="attachment")
     firstpad()
 
     mount_n = r.get_int()
@@ -261,6 +337,35 @@ def _read_entry(r: _Reader, pad: bool = False) -> ModelEntry:
 #: parsing and left in `header_raw`, so a file that arrived with one is written
 #: back with one: this reads the file, it does not quietly repair it.
 _BOM = kb.BOMS[0]
+
+
+def _suspect(text: str, r: "_Reader") -> str:
+    """The wrong number, if the trail shows one.
+
+    A length that does not match its name leaves a mark right where it is: the
+    slice it took ends in the middle of the next token instead of on a space, or
+    it swallowed a line break. Both are things a reader can only see by looking
+    back, and both name the ONE number worth editing — which is the difference
+    between "your modeldb is broken somewhere" and a line to open.
+    """
+    for at, length, val, end in r.trail:
+        if "\n" in val or (end < r.n and not text[end].isspace()):
+            line, col = _line_col(text, at)
+            return (f" The name at line {line} column {col} is written as {length} "
+                    f"characters and reads {val!r}, which does not end where the file "
+                    f"does — that number is the likely culprit.")
+    return ""
+
+
+def _desync_message(text: str, r: "_Reader", e: "_Desync", n: int) -> str:
+    line, col = _line_col(text, e.at)
+    who = f" ({r.entry!r})" if r.entry else ""
+    return (f"Reading model entry #{n + 1}{who} it stopped making sense at line {line}, "
+            f"column {col}: {e.what}. Every name in this file is stored as "
+            f"'<length> <name>', so one length that does not match the name after it "
+            f"shifts every field that follows by one and the read dies further down, "
+            f"on a word that is fine where it is."
+            f"{e.note or _suspect(text, r)} Here: {_snippet(text, e.at)}")
 
 
 def parse_text(text: str) -> ModelDb:
@@ -295,20 +400,27 @@ def parse_text(text: str) -> ModelDb:
     entries: List[ModelEntry] = []
     for n in range(count):
         pad = False
-        if n == 0:
-            name = r.get_string().lower()
-            if name == "blank":
-                for _ in range(39):
-                    r.get_int()
-                blank_raw = text[prev_end:r.i]
-                prev_end = r.i
-                continue
-            # No blank entry: rewind and treat as a normal first entry.
-            # Vanilla M2TW pads this specific entry with extra reserved
-            # ints (see _read_entry's ``pad`` docstring).
-            r.i = prev_end
-            pad = True
-        entry = _read_entry(r, pad=pad)
+        try:
+            if n == 0:
+                name = r.get_string().lower()
+                if name == "blank":
+                    for _ in range(39):
+                        r.get_int()
+                    blank_raw = text[prev_end:r.i]
+                    prev_end = r.i
+                    continue
+                # No blank entry: rewind and treat as a normal first entry.
+                # Vanilla M2TW pads this specific entry with extra reserved
+                # ints (see _read_entry's ``pad`` docstring).
+                r.i = prev_end
+                pad = True
+            entry = _read_entry(r, pad=pad)
+        except _Desync as e:
+            # Re-raised as a plain ValueError carrying the whole story: the
+            # caller (:meth:`unittransfer.mod.Mod.modeldb`) puts the file's name
+            # in front of it and the UI shows the sentence, which is the only
+            # form of this failure anyone can act on.
+            raise ValueError(_desync_message(text, r, e, n)) from None
         entry.raw = text[prev_end:r.i]
         entries.append(entry)
         prev_end = r.i

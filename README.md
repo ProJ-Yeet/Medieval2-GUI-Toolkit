@@ -1355,6 +1355,24 @@ grows too big to attach.
 `server.log.sample` in this repo shows what a normal session looks like — startup
 checks, icon conversion progress, and a unit transfer with undo.
 
+### When a mod won't open
+
+A mod the toolkit lists but cannot read says which file and why, on the screen,
+instead of a bare error:
+
+- **"data/export_descr_unit.txt is not there"** — the folder has a `data/` but no
+  loose unit roster, so there is nothing to show. Every stock install has four of
+  these: `americas`, `british_isles`, `crusades` and `teutonic`, the Kingdoms
+  campaigns, which keep their files inside `data/packs/*.pack`. Unpack the mod
+  and it becomes an ordinary one. Their **⌂ Home** cards say the same thing with
+  every module greyed out and the missing files listed.
+- **"battle_models.modeldb could not be read"** — the file is length-prefixed
+  (`<length> <name>`), so a count that disagrees with what follows it puts the
+  reader a field out of step and the read dies further down, on a line that is
+  perfectly fine. The message names the entry, the line the *count* is on, and
+  the number to check — usually a texture list left saying 2 after one of its
+  two textures was deleted.
+
 If the launcher window opens and closes with nothing visible, the tool usually
 started fine but your browser didn't open on its own — go to
 `http://127.0.0.1:8756/` manually. Newer builds detect this, keep the window

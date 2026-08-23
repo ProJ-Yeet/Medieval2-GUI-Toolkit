@@ -17,6 +17,27 @@ from . import (buildings as buildings_mod, edu, engines as engines_mod,
                sounds as sounds_mod)
 
 
+class ModDataError(OSError, ValueError):
+    """A file this mod needs is missing, or will not parse.
+
+    Kept apart from the exceptions that mean "the toolkit is broken", because
+    this one never does. A mod whose roster still lives inside a ``.pack``, or
+    whose modeldb was hand-edited until no reader can follow it, is a mod
+    problem — and the person holding it can fix it the moment they are told
+    which file and where. So the server answers these with the sentence and a
+    409 instead of a 500 and a traceback nobody outside this repo can read.
+
+    Both bases are deliberate, and neither is decoration. This used to arrive as
+    a bare ``FileNotFoundError``, or as the ``ValueError`` a parser raised, and
+    the code that copes with an incomplete mod already says so: ``except
+    (OSError, AttributeError, ValueError)`` around a best-effort read is the
+    pattern in factions, minorfiles and the checks. A fresh ``Exception``
+    subclass would have walked straight past every one of those guards and
+    turned a tolerated absence into a crash. Inheriting from both keeps them all
+    working, and the server can still catch this one first, by name.
+    """
+
+
 class Mod:
     def __init__(self, root: str | Path):
         self.root = Path(root)
@@ -120,6 +141,42 @@ class Mod:
                     self.__dict__.pop(name, None)
 
     # ---- parsed databases (cached) -------------------------------------
+    def _rel(self, path: Path) -> str:
+        """``data/export_descr_unit.txt`` — the way a person names the file."""
+        try:
+            return path.relative_to(self.root).as_posix()
+        except ValueError:
+            return str(path)
+
+    def _read_required(self, path: Path, parse, missing: str):
+        """Parse a file this mod cannot be opened without, or say why not.
+
+        Two failures used to leave the same mark — a raw traceback and an HTTP
+        500 — and both are ordinary states for a folder that merely LOOKS like a
+        mod: the file is not there, or it is there and something has desynced
+        it. Neither is a fault here, so both come back as a
+        :class:`ModDataError` naming the file, with whatever the parser worked
+        out about the damage kept on the end of the sentence.
+        """
+        if not path.exists():
+            raise ModDataError(f"{self.name}: {self._rel(path)} is not there. {missing}")
+        try:
+            return parse(path)
+        except (ValueError, UnicodeError) as e:
+            raise ModDataError(
+                f"{self.name}: {self._rel(path)} could not be read. {e}") from e
+        except OSError as e:
+            raise ModDataError(
+                f"{self.name}: {self._rel(path)} could not be opened — {e}") from e
+
+    #: Said about every missing file that lives in a released mod's ``.pack``
+    #: archives. The four Kingdoms campaign folders under a stock install are
+    #: exactly this: a ``data/`` folder with almost nothing loose in it, which
+    #: is why they show up as mods at all.
+    _PACKED = ("A mod that still keeps its files inside data/packs/*.pack — the four "
+               "Kingdoms campaigns (americas, british_isles, crusades, teutonic) do — "
+               "has to be unpacked before any tool can read it.")
+
     @cached_property
     def edu(self) -> edu.EduFile:
         """Every unit the mod defines: the EDU *plus* its M2TWEOP unit files.
@@ -130,7 +187,10 @@ class Mod:
         still-used battle model gets deleted. Each EOP unit keeps ``is_eop`` and
         the file it came from so writes go back to the right place.
         """
-        parsed = edu.parse_file(self.edu_path)
+        parsed = self._read_required(
+            self.edu_path, edu.parse_file,
+            "Every unit the toolkit shows comes out of that file, so there is "
+            "nothing here to open. " + self._PACKED)
         units, preambles = eop_mod.parse(self)
         parsed.units.extend(units)
         parsed.eop_preambles = preambles
@@ -195,7 +255,10 @@ class Mod:
 
     @cached_property
     def modeldb(self) -> modeldb.ModelDb:
-        return modeldb.parse_file(self.modeldb_path)
+        return self._read_required(
+            self.modeldb_path, modeldb.parse_file,
+            "It holds the battle models every unit names, so a unit cannot be "
+            "opened without it. " + self._PACKED)
 
     @cached_property
     def mount_file(self) -> "mounts_mod.MountFile":

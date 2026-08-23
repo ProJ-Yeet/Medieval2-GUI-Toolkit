@@ -41,7 +41,7 @@ async function loadMinor(){
   try{ r = await api.get(`/api/minor?mod=${enc(mod)}&tab=${enc(tab)}`); }
   catch(e){ if(stale('minor', mod)) return;
     main.innerHTML = `<div class="empty">Couldn't read the campaign files.<br>
-      <span class="count">${esc(''+e)}</span><br><br>
+      <span class="count">${esc(errText(e))}</span><br><br>
       <button class="primary" onclick="loadMinor()">Retry</button></div>`; return; }
   if(stale('minor', mod)) return;
   state.mf = Object.assign({tab, sel:'', d:null, busy:false, adding:false}, r);

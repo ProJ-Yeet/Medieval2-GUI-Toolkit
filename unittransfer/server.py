@@ -203,7 +203,7 @@ from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
 from .icons import IconCache
-from .mod import Mod
+from .mod import Mod, ModDataError
 from .transfer import (TransferOptions, plan_transfer, apply_transfer, undo, revert_to,
                        base_field_groups_for, compose_with_base, mount_base_import,
                        officer_base_import)
@@ -517,6 +517,25 @@ class Registry:
         return list(self.discover())
 
     def get(self, name: str) -> Mod:
+        """The mod, with its light databases already parsed."""
+        return self._locate(name, warm=True)
+
+    def describe(self, name: str) -> Mod:
+        """The mod object, having read nothing.
+
+        Home's readiness report and the M2TWEOP folder list ask only about files
+        on disk. Warming the parsed databases for them meant a mod whose roster
+        is missing could not even be asked WHY: the report that exists to say
+        "this file is not there" was itself the request that died on it, and the
+        card that should have explained the mod went blank instead.
+
+        Deliberately does not stamp ``_checked``: the next real
+        :meth:`get` must still take the slow path and warm the databases inside
+        the lock, or it reopens the parse race that stamp exists to close.
+        """
+        return self._locate(name, warm=False)
+
+    def _locate(self, name: str, warm: bool) -> Mod:
         with self._lock:
             fresh = self._checked.get(name)
             cached = self._mods.get(name)
@@ -538,14 +557,18 @@ class Registry:
                 cached = None                    # mod path changed
             cold = cached is None
             if cold:
+                cached = Mod(paths[name])
+                self._mods[name] = cached
+                self._sigs[name] = self._signature(cached)
+            if not warm:
+                # describe(): the object, not its contents — see its docstring
+                return cached
+            if cold:
                 # The log has to say what the tool was doing while the screen was
                 # still empty, and this is it: the first request for a mod reads
                 # its files, everything after that is served from memory.
                 log.info("PARSE  %s: reading its files (%s)", name, paths[name])
                 started = time.perf_counter()
-                cached = Mod(paths[name])
-                self._mods[name] = cached
-                self._sigs[name] = self._signature(cached)
             # Warm the light parsed DBs *inside the lock* so concurrent icon /
             # units requests never trigger a cached_property parse race (which
             # would surface as sporadic 500s -> broken card images). The heavy
@@ -992,6 +1015,15 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-cache")
+        # Say the connection is closing, because it is (HTTP/1.0, above). Left
+        # unsaid, the browser is free to decide otherwise and write its NEXT
+        # request into a socket this handler is about to close — and a socket
+        # closed with unread bytes in it is reset rather than finished, which
+        # throws away the reply we just wrote. That is not theoretical: a page
+        # load here would log a clean 200 for two dozen scripts and the browser
+        # would receive twenty-one of them, leaving whichever modules lost the
+        # race undefined. See uiFailedFiles in web/js/core.js for the other half.
+        self.send_header("Connection", "close")
         for k, v in (headers or {}).items():
             self.send_header(k, v)
         self.end_headers()
@@ -1290,7 +1322,7 @@ class Handler(BaseHTTPRequestHandler):
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
-                return self._json(modfiles.report(self.registry.get(name)))
+                return self._json(modfiles.report(self.registry.describe(name)))
             if u.path in ("/api/buildings", "/api/building",
                           "/api/buildings/checks", "/api/buildings/unit",
                           "/api/buildings/variants"):
@@ -1344,6 +1376,13 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/model", "/api/model/geometry", "/model_texture"):
                 return self._model_route(u.path, q)
             return self._err(404, "not found")
+        except ModDataError as e:
+            # A file this mod needs is missing or will not parse. The sentence is
+            # the whole answer — which file, and where in it — so it goes back as
+            # the reply rather than into a traceback nobody reads, and the log
+            # keeps one line instead of twenty.
+            log.warning("GET %s: %s", u.path, e)
+            return self._err(409, str(e))
         except KeyError as e:
             # an unknown mod / unit / model entry is a 404, not a server fault
             log.warning("GET %s: not found: %s", u.path, e)
@@ -1553,6 +1592,11 @@ class Handler(BaseHTTPRequestHandler):
                          res.get("dest"), res.get("count", 0))
                 return self._json(res)
             return self._err(404, "not found")
+        except ModDataError as e:
+            # see the same handler in do_GET: a mod's own broken or absent file
+            # is answered with the sentence, not a stack trace
+            log.warning("POST %s: %s", u.path, e)
+            return self._err(409, str(e))
         except KeyError as e:
             log.warning("POST %s: not found: %s", u.path, e)
             return self._err(404, str(e))
@@ -2054,19 +2098,29 @@ class Handler(BaseHTTPRequestHandler):
         name = body.get("mod") or ""
         if name not in self.registry.names():
             return {"error": f"unknown mod {name!r}"}
-        mod = self.registry.get(name)
+        # Folders on disk, so nothing has to be parsed to answer — which matters
+        # for the one mod this panel is most likely to be opened on: the one
+        # whose roster the toolkit just refused to read.
+        mod = self.registry.describe(name)
         if "dirs" in body:
             _eop.set_configured_dirs(mod, [str(d) for d in (body.get("dirs") or [])])
             edit._invalidate(mod)             # units move between files as this changes
-        return {
+        out = {
             "mod": mod.name,
             "configured": [str(p) for p in _eop.configured_dirs(mod)],
             "detected": [str(p) for p in _eop.detect_dirs(mod)],
             "dirs": [str(p) for p in mod.eop_dirs],
             "files": [_eop.rel_to_root(mod, p) for p in _eop.unit_files(mod)],
-            "eop_count": len(mod.edu.eop_units),
-            "edu_count": len(mod.edu.main_units),
         }
+        try:
+            out["eop_count"] = len(mod.edu.eop_units)
+            out["edu_count"] = len(mod.edu.main_units)
+        except ModDataError as e:
+            # The folder list is the point of this panel and it is still true, so
+            # an unreadable roster costs the two counts and says why — not the
+            # whole answer.
+            out["note"] = str(e)
+        return out
 
     def _dirs(self, q):
         """List sub-folders under a mod's data/ dir, for the reroute browser.

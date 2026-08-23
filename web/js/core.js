@@ -7,6 +7,93 @@
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
+
+/* ---------- the files this page is made of ----------
+   One dropped <script> used to look like a dead server.
+
+   index.html asks for two dozen files at once, and the page loads whether or
+   not they all arrive: a missing one leaves its module's functions simply
+   absent, so the first call into it throws a ReferenceError far from the cause
+   — and the startup screen said the server could not be reached, while that
+   server's own log showed every request of that same second answered. It is
+   the one place the reader would never look.
+
+   iconRetry below already refetches a dropped unit card for exactly this
+   reason. A dropped module is the same accident with a worse ending, so it
+   gets the same answer: fetch it again, in the order index.html lists them
+   (a file may not depend on one loaded after it), and only give up out loud,
+   naming the file, once it really will not come. */
+const uiFailedFiles=[];
+// A resource error does not bubble, so this is a CAPTURING listener on window —
+// the one place that sees it. core.js is first in index.html precisely so this
+// is armed before any of the others are fetched.
+window.addEventListener('error',e=>{
+  const t=e.target;
+  if(t&&t.tagName==='SCRIPT'&&t.src)uiFailedFiles.push(t.src);
+},true);
+
+const UI_RETRIES=3;
+let uiStarted=false;
+// The order the page asked for them in, which is the order they must run in.
+const uiScriptOrder=()=>[...document.querySelectorAll('script[src]')].map(s=>s.src);
+
+// `async=false` is not a stray line: a script element created here is async BY
+// DEFAULT and would run whenever it happened to land.
+function loadUiFile(src,attempt){
+  return new Promise((done,fail)=>{
+    const s=document.createElement('script');
+    s.async=false;
+    // Same trick as iconRetry: ask for a URL the browser has not already
+    // written off as failed.
+    s.src=src.split('#')[0]+'#retry'+attempt;
+    s.onload=()=>done();
+    s.onerror=()=>fail(new Error(src));
+    document.head.appendChild(s);
+  });
+}
+
+async function retryDroppedUiFiles(){
+  const order=uiScriptOrder();
+  // boot.js is skipped: all it does is call startUi, which is already running.
+  const todo=[...new Set(uiFailedFiles)].filter(s=>!s.split('#')[0].endsWith('/boot.js'))
+    .sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+  uiFailedFiles.length=0;
+  const lost=[];
+  for(const src of todo){
+    let got=false;
+    for(let i=1;i<=UI_RETRIES&&!got;i++){
+      try{ await loadUiFile(src,i); got=true; }
+      catch(e){ await new Promise(r=>setTimeout(r,120*i*i)); }
+    }
+    if(!got)lost.push(src);
+  }
+  return lost;
+}
+
+function uiLoadFailed(lost){
+  const names=lost.map(s=>s.split('/').pop().split('#')[0]).join(', ');
+  main.innerHTML=`<div class="empty">The tool did not finish loading.<br>
+    <span class="count">The server is running — it answered for the rest of this page —
+    but the browser never received ${names?`<b>${esc(names)}</b>`:'part of the interface'}.
+    Reloading fetches it again.</span><br><br>
+    <button class="primary" onclick="location.reload()">Reload the page</button></div>`;
+}
+
+/* Start the app once every file it is made of is actually here.
+
+   boot.js calls this, and so does window's load event — because boot.js is one
+   of the two dozen and can be the file that goes missing, in which case nothing
+   would ever start at all. Whichever gets here first wins. */
+async function startUi(){
+  if(uiStarted)return;
+  uiStarted=true;
+  const lost=uiFailedFiles.length?await retryDroppedUiFiles():[];
+  if(lost.length)return uiLoadFailed(lost);
+  wireKeepPlace();
+  init();
+}
+window.addEventListener('load',()=>startUi());
+
 // `dst` is the mod being written to right now, which a single-mod mode mirrors
 // onto the source. `xferDst` is the destination the user actually PICKED, kept
 // apart so that entering Edit/Buildings doesn't quietly overwrite it — see
@@ -65,13 +152,15 @@ const api={
     try{
       for(let i=0;i<tries;i++){
         try{const r=await fetch(u,{cache:'no-store',signal:o.signal});
-          if(!r.ok) throw new Error('HTTP '+r.status);
+          if(!r.ok) throw await httpAnswer(r);
           return await r.json();}
         catch(e){
           if(isAborted(e)||(o.signal&&o.signal.aborted))throw ABORTED;
-          err=e; if(i<tries-1) await new Promise(res=>setTimeout(res,200*(i+1)));}
+          err=e;
+          if(e.deliberate)break;   // an answer, not a blip — asking again changes nothing
+          if(i<tries-1) await new Promise(res=>setTimeout(res,200*(i+1)));}
       }
-      throw err;
+      throw apiFailed(err,u);
     }finally{loadbar.closed(u);}},
   post:async(u,b,opts)=>{
     const o=opts||{};
@@ -79,8 +168,53 @@ const api={
     try{
       return await (await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify(b||{}),signal:o.signal})).json();
-    }catch(e){ if(isAborted(e))throw ABORTED; throw e; }
+    }catch(e){ if(isAborted(e))throw ABORTED; throw apiFailed(e,u); }
     finally{loadbar.closed(u);}}};
+
+/* Say what a failed request actually was.
+
+   Three different things used to arrive at a caller as the same bare error, and
+   the startup screen read all three as "the server isn't running": nothing
+   answered (it really is gone), it answered and said no (it is running, and the
+   reason is in its log), or the request was never made because the code asking
+   for it is broken. Only the first is worth sending someone back to the
+   launcher window, so each carries its own mark from here on. */
+/* What the server said, and whether asking again could change it.
+
+   A non-OK reply used to become the string "HTTP 500" and then be retried four
+   times. Both halves were wrong. The reply carries the reason in its body —
+   which file, which line, what to fix — and that is the only thing worth
+   putting on the screen; and a 404 or a 409 is an answer the server chose, so
+   three more of them only put three more stack traces in its log and make the
+   wait four times longer. A dropped request is not this: it fails with no
+   status at all and is still retried, which is what the retries were for.
+   502/503/504 stay retryable too — that is the shape of a server still coming
+   up. */
+async function httpAnswer(r){
+  let said='';
+  try{ const b=await r.json(); said=(b&&b.error)||''; }catch(e){}
+  const err=new Error(said||('HTTP '+r.status));
+  err.status=r.status;
+  err.serverSaid=said;
+  err.deliberate=![502,503,504].includes(r.status);
+  return err;
+}
+
+/* The sentence out of an error, without the word "Error:" in front of it.
+
+   Every module ends its catch by printing `''+e`, which on an Error object is
+   "Error: " and then the part worth reading. Now that a refusal arrives carrying
+   the server's own explanation — which file, which line, what to change — that
+   prefix is the only thing standing between the reader and it. */
+const errText=e=>(e&&e.message)||String(e);
+
+function apiFailed(e,u){
+  const err=(e instanceof Error)?e:new Error(String(e));
+  err.apiFailure=true;          // it was a request that failed, not the UI's code
+  err.request=u;
+  err.reachedServer=err.status!==undefined;   // a status means it answered
+  return err;
+}
 
 /* ---------- the loading bar ----------
    "The menu is open but nothing is on it yet" used to look identical to "this is
@@ -260,9 +394,28 @@ async function init(){
       else toast(`“${qEdit}” is not a unit in ${state.src}`,4000);
     }
   }catch(e){
-    main.innerHTML=`<div class="empty">Couldn't reach the Medieval 2 GUI Toolkit server.<br>
-      <span class="count">Is <code>Launch-Medieval2-GUI-Toolkit.bat</code> (python app.py) still running?</span><br><br>
-      <button class="primary" onclick="init()">Retry</button></div>`;
+    // Every line of the startup is inside this try, so the catch used to blame
+    // the server for anything that happened in any of them — including a plain
+    // error in the UI's own code, which is exactly what a dropped <script>
+    // looks like (the module's functions are not there, so the first call into
+    // it throws). "Is the launcher still running?" is the wrong place to send
+    // someone whose server answered every request in the same second, and the
+    // log says it did. So each failure now says which one it was.
+    console.error('startup failed', e);
+    const why=esc(String((e&&e.message)||e));
+    main.innerHTML=
+      e&&e.apiFailure&&!e.reachedServer
+      ? `<div class="empty">Couldn't reach the Medieval 2 GUI Toolkit server.<br>
+        <span class="count">Is <code>Launch-Medieval2-GUI-Toolkit.bat</code> (python app.py) still running?</span><br><br>
+        <button class="primary" onclick="init()">Retry</button></div>`
+      : e&&e.apiFailure
+      ? `<div class="empty">The server is running, but it answered with an error.<br>
+        <span class="count">${why} from <code>${esc(e.request||'')}</code> — the reason is in <code>config\\server.log</code>.</span><br><br>
+        <button class="primary" onclick="init()">Retry</button></div>`
+      : `<div class="empty">The server is fine — the page is not.<br>
+        <span class="count">${why}<br>A UI file that failed to download does exactly this, and a reload fetches it again. F12 → Console has the full trace.</span><br><br>
+        <button class="primary" onclick="location.reload()">Reload</button>
+        <button onclick="init()">Retry</button></div>`;
   }
 }
 
@@ -290,6 +443,17 @@ async function refreshMods(pSrc,pDst){
   state.destData=null;
   await loadSource();
 }
+/* What the unit list says when the mod behind it could not be read.
+
+   Two places paint it and they must not disagree: the load's own catch, and
+   render() — which runs again on every mode switch, and had only "Loading…" to
+   put there. That is what the person in the log was left looking at: the reason
+   was drawn for a moment, then a screen that said the tool was still reading a
+   mod nothing was being read for, under a header that had already given up. */
+const unitListFailedHtml=(mod,why)=>`<div class="empty">Couldn't load “${esc(mod)}”.<br>
+  <span class="count">${esc(why)}</span><br><br>
+  <button class="primary" onclick="loadSource()">Retry</button></div>`;
+
 // The unit list is what Transfer and Edit show; the other modes have their own
 // workspace, so this must not paint over one of those just because the units
 // finished loading underneath it.
@@ -303,6 +467,7 @@ async function loadSource(){
   // looking at. Switching mods is the commonest thing anyone does here.
   const {gen,signal}=newLoad();
   activity('reading mod',mod);
+  state.loadError=null;
   if(unitListMode())main.innerHTML='<div class="empty">Loading '+esc(mod)+'…</div>';
   let r;
   try{
@@ -310,9 +475,8 @@ async function loadSource(){
                     {signal,label:`Reading ${mod}’s units…`});
   }catch(e){
     if(isAborted(e)||loadStale(gen)||mod!==state.src)return;   // a later load owns the screen
-    if(unitListMode())main.innerHTML=`<div class="empty">Couldn't load “${esc(mod)}”.<br>
-      <span class="count">${esc(''+e)}</span><br><br>
-      <button class="primary" onclick="loadSource()">Retry</button></div>`;
+    state.loadError={mod,why:String((e&&e.message)||e)};
+    if(unitListMode())main.innerHTML=unitListFailedHtml(mod,state.loadError.why);
     return;
   }
   if(loadStale(gen)||mod!==state.src)return;   // a later load owns the screen now
@@ -613,7 +777,11 @@ function wire(){
     if(state.data)buildFilter('factionFilter',state.data.factions,'faction',true);
     render();};
   document.querySelectorAll('.era').forEach(cb=>cb.onchange=()=>{cb.checked?state.sel.era.add(cb.value):state.sel.era.delete(cb.value);filtersChanged();});
-  settingsBtn.onclick=openSettings; logBtn.onclick=openLog;
+  settingsBtn.onclick=openSettings;
+  // …but not `logBtn.onclick=openLog`: a handler is called WITH the click,
+  // and openLog's first argument is the mode to filter by. That filter
+  // matched nothing, so the header's own button opened an empty log.
+  logBtn.onclick=()=>openLog();
   selBtn.onclick=toggleSelMode; batchBtn.onclick=openBatch; clearSelBtn.onclick=clearSelection;
   packBtn.onclick=()=>packExport([...state.selected]); importPackBtn.onclick=packImport;
   cleanBtn.onclick=openCleanup; unusedOnly.onchange=render; sndBtn.onclick=sndApply;
@@ -740,9 +908,14 @@ function render(){
   if(state.mode==='ancillaries')return state.an?renderAncillaries():loadAncillaries();
   if(state.mode==='minor')return state.mf?renderMinor():loadMinor();
   if(state.mode==='factions')return state.fac?renderFactions():loadFactions();
-  // the unit list is still loading (or its load failed) — say so rather than
-  // leaving whatever the mode before this one had drawn
-  if(!state.data){main.innerHTML='<div class="empty">Loading '+esc(state.src)+'…</div>';return;}
+  // the unit list is still loading, or its load failed — which are different
+  // things and must not look the same, or a mod that cannot be read presents as
+  // one that is taking a long time
+  if(!state.data){
+    const f=state.loadError;
+    main.innerHTML=(f&&f.mod===state.src)?unitListFailedHtml(f.mod,f.why)
+      :'<div class="empty">Loading '+esc(state.src)+'…</div>';
+    return;}
   const units=state.data.units.filter(unitMatches);
   count.textContent=`${units.length}/${state.data.units.length}`;
   const gb=groupBy.value;

@@ -1,7 +1,24 @@
 # STATE — Medieval 2 GUI Toolkit V2
-_Updated: 2026-08-20 · **v2.1.0 released** · after 15d_
+_Updated: 2026-08-23 · **v2.1.1 released** · a fix subrelease on top of 15d_
 
 ## Next up
+**v2.1.1 IS A FIX SUBRELEASE — no phase, no features.** It came out of one
+user's log: a stock install lists the four Kingdoms campaign folders as mods
+(they have a `data/`, their files are inside `data/packs/*.pack`), the header
+auto-picked the first one alphabetically — `americas` — and every read of it
+answered HTTP 500 with a traceback. The same log carried a second one: a mod
+whose `battle_models.modeldb` has an entry claiming two textures and listing
+one, which desynced the reader and died 400 characters later on an innocent
+word. Both now answer with a sentence naming the file, and the modeldb one names
+the entry, the line of the *bad count*, and what it says versus what is there.
+Notes: `merge/RELEASE_2_1_1.md`. New: `tests/test_broken_mod_files.py` (22).
+
+The rule that came out of it: **a mod's own missing or damaged file is a
+`ModDataError` and a 409, never a 500.** It subclasses `OSError` *and*
+`ValueError` on purpose — the best-effort guards in `factions`, `minorfiles` and
+the checks already say `except (OSError, AttributeError, ValueError)`, and a
+plain `Exception` subclass walks straight past all of them.
+
 **PHASE 15 IS COMPLETE — 15a, 15b, 15c and 15d — and v2.1.0 IS PUBLISHED.**
 The 3D model viewer works end to end, is committed, pushed, tagged `v2.1.0` and
 released with the portable zip. Notes: `merge/RELEASE_2_1_0.md`.

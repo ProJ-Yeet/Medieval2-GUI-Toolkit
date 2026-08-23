@@ -42,7 +42,7 @@ async function loadFactions(){
   try{ r = await api.get('/api/factions?mod=' + enc(mod)); }
   catch(e){ if(stale('factions', mod)) return;
     main.innerHTML = `<div class="empty">Couldn't read the faction roster.<br>
-      <span class="count">${esc(''+e)}</span><br><br>
+      <span class="count">${esc(errText(e))}</span><br><br>
       <button class="primary" onclick="loadFactions()">Retry</button></div>`; return; }
   if(stale('factions', mod)) return;
   state.fac = Object.assign({sel:'', d:null, busy:false}, r);

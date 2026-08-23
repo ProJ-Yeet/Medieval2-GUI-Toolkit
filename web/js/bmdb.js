@@ -37,7 +37,7 @@ async function loadBmdb(){
   try{ state.bmdb=await api.get(`/api/bmdb/entries?mod=${enc(mod)}&job=${enc(job)}`); }
   catch(e){ state.bmdbJob=null; if(stale('bmdb',mod))return;
     main.innerHTML=`<div class="empty">Couldn't read the modeldb.<br>
-    <span class="count">${esc(''+e)}</span><br><br>
+    <span class="count">${esc(errText(e))}</span><br><br>
     <button class="primary" onclick="loadBmdb()">Retry</button></div>`; return; }
   finally{ state.bmdbJob=null; }
   if(stale('bmdb',mod))return;          // moved on while this was in flight

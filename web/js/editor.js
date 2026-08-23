@@ -29,7 +29,7 @@ async function openEditor(type){
   overlay.classList.add('open');
   let d;
   try{ d=await api.get(`/api/edit/unit?mod=${enc(state.src)}&type=${enc(type)}`); }
-  catch(e){ modal.innerHTML=`<h2>Unit editor</h2><div class="mbody w-bad">${esc(''+e)}</div>
+  catch(e){ modal.innerHTML=`<h2>Unit editor</h2><div class="mbody w-bad">${esc(errText(e))}</div>
     <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
   if(d.error){ modal.innerHTML=`<h2>Unit editor</h2><div class="mbody w-bad">${esc(d.error)}</div>
     <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }

@@ -157,9 +157,13 @@ else:
     # now finds the HTML comment that explains the split and reads the comment.)
     src = WEB.read_text(encoding="utf-8")
     tags = re.findall(r'<script src="js/([A-Za-z0-9_.-]+\.js)"></script>', src)
+    # boot.js is left out rather than trimmed off the end: it is the file that
+    # STARTS the app (and now also retries any module the browser dropped), so
+    # running it here would talk to a server that isn't there. Cutting the text
+    # at its last `init();`, as this used to, only worked while that call was
+    # the whole file.
+    tags = [t for t in tags if t != "boot.js"]
     script = "\n".join((WEB.parent / "js" / t).read_text(encoding="utf-8") for t in tags)
-    # `init()` (boot.js) would try to talk to a server that isn't there
-    script = script.rsplit("init();", 1)[0]
     # the page binds its hover-card listeners at load; node has no DOM, and this
     # suite only exercises the pure split/rejoin functions
     stubs = r"""

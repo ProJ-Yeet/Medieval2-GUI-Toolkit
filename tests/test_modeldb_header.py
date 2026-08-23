@@ -87,13 +87,23 @@ print("\n== a real wrapped-header file, if present ==")
 sample = Path(r"C:\Users\projy\Downloads\battle_models.modeldb")
 if sample.is_file():
     text = sample.read_text(encoding=modeldb.ENCODING)
-    db = modeldb.parse_text(text)
-    check(f"parses ({len(db.entries)} entries)", len(db.entries) > 0)
-    check("entry count matches the header's count-1",
-          len(db.entries) + 1 == db.header_ints[5])
-    check("round-trips byte-exact", db.to_text() == text)
-    check("no entry name looks like a swallowed path",
-          not any("/" in e.name for e in db.entries))
+    # Whatever modeldb was last dropped there — so it can be a file that really
+    # will not parse. That is a failing check and its sentence, not a traceback
+    # that takes the rest of this run down with it: the reason a real file was
+    # refused is the whole value of pointing the suite at one.
+    try:
+        db = modeldb.parse_text(text)
+    except ValueError as e:
+        db = None
+        check("parses", False)
+        print(f"    {e}")
+    if db is not None:
+        check(f"parses ({len(db.entries)} entries)", len(db.entries) > 0)
+        check("entry count matches the header's count-1",
+              len(db.entries) + 1 == db.header_ints[5])
+        check("round-trips byte-exact", db.to_text() == text)
+        check("no entry name looks like a swallowed path",
+              not any("/" in e.name for e in db.entries))
 else:
     print("  (skipped -- sample file not on this machine)")
 

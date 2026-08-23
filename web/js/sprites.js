@@ -20,7 +20,7 @@ async function loadSprites(){
   try{ r=await api.get('/api/sprites?mod='+enc(mod)); }
   catch(e){ if(stale('sprites',mod))return;
     main.innerHTML=`<div class="empty">Couldn't read the modeldb.<br>
-    <span class="count">${esc(''+e)}</span><br><br>
+    <span class="count">${esc(errText(e))}</span><br><br>
     <button class="primary" onclick="loadSprites()">Retry</button></div>`; return; }
   if(stale('sprites',mod))return;       // moved on while this was in flight
   state.spr=Object.assign({

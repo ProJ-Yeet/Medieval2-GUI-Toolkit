@@ -27,7 +27,7 @@ async function loadSounds(){
   try{ r=await api.get('/api/sounds?mod='+enc(mod)); }
   catch(e){ if(stale('sounds',mod))return;
     main.innerHTML=`<div class="empty">Couldn't read the voice bank.<br>
-    <span class="count">${esc(''+e)}</span><br><br>
+    <span class="count">${esc(errText(e))}</span><br><br>
     <button class="primary" onclick="loadSounds()">Retry</button></div>`; return; }
   if(stale('sounds',mod))return;        // moved on while this was in flight
   // `ops` is the staging area: unit type -> {accent, class, donor, remove}
