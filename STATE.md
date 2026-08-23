@@ -12,6 +12,8 @@ one, which desynced the reader and died 400 characters later on an innocent
 word. Both now answer with a sentence naming the file, and the modeldb one names
 the entry, the line of the *bad count*, and what it says versus what is there.
 Notes: `merge/RELEASE_2_1_1.md`. New: `tests/test_broken_mod_files.py` (22).
+Committed, pushed, tagged `v2.1.1` and released with the portable zip:
+<https://github.com/ProJ-Yeet/medieval2-gui-toolkit/releases/tag/v2.1.1>
 
 The rule that came out of it: **a mod's own missing or damaged file is a
 `ModDataError` and a 409, never a 500.** It subclasses `OSError` *and*
