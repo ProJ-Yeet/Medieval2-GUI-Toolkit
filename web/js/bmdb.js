@@ -53,29 +53,119 @@ function renderBmdb(){
   const nUnused=state.bmdb.entries.filter(e=>e.unused).length;
   const dupes=state.bmdb.count-state.bmdb.names;
   count.textContent=`${rows.length}/${state.bmdb.names}`;
+  // the 3D panel is a live canvas: detached, not rewritten (see bmPrevAttach)
+  bmPrevDetach();
   // 2000+ rows of HTML in one go is fine; it's the icons that are expensive and
   // there are none here.
-  main.innerHTML=bmdbTabsHtml('data/unit_models/battle_models.modeldb')+`<div class="dbhead">
+  main.innerHTML=bmdbTabsHtml('data/unit_models/battle_models.modeldb')+`<div class="bmsplit" id="bmSplit">
+    <div class="bmmain">
+    <div class="dbhead">
       <h2>${esc(state.src)} · ${state.bmdb.names} battle-model entries</h2>
       <span class="count">${nUnused} referenced by nothing${
         nUnused?'. <b class="w-warn">🧹 Clean up BMDB…</b> moves them out.':''}${
         dupes?` · ${dupes} duplicate entry block${dupes===1?'':'s'} share a name with another`:''}</span>
+      <span class="sp" style="flex:1"></span>
+      <button class="${bmPrevNode?'on':''}" onclick="bmPrevToggle()"
+        title="Draw a battle model beside the list, without leaving it. Every row
+gets its own 🧊 button once this is open.">🧊 View in 3D</button>
     </div>
     ${rows.length?`<div class="dblist">${rows.map(bmdbRow).join('')}</div>`
-                 :'<div class="empty">No entries match.</div>'}`;
+                 :'<div class="empty">No entries match.</div>'}
+    </div>
+  </div>`;
   main.querySelectorAll('.dbrow').forEach(r=>r.onclick=()=>openBmdbEntry(r.dataset.name));
+  bmPrevAttach();
 }
 function bmdbRow(e){
   const use=e.unused?'<span class="w-warn">nothing references it</span>'
     :e.mentioned_in?`<span class="count">No unit uses it. ${e.mentioned_in_lua
         ?'named by a <b class="w-good">Lua script</b>':'only named in'} <code>${esc(e.mentioned_in)}</code></span>`
     :`${esc(e.used_by.slice(0,4).join(', '))}${e.use_count>4?` +${e.use_count-4} more`:''}`;
-  return `<div class="dbrow ${e.unused?'unused':''}" data-name="${esc(e.name)}">
+  return `<div class="dbrow ${e.unused?'unused':''}${
+      bmPrevEntry===e.name?' showing':''}" data-name="${esc(e.name)}">
     <span class="en">${esc(e.name)}${e.copies>1?`<span class="badge w-warn" style="margin-left:5px"
       title="The modeldb holds this name ${e.copies} times.">×${e.copies}</span>`:''}</span>
     <span class="use">${use}</span>
     <span class="nums">${e.lods} LOD${e.lods===1?'':'s'} · ${e.skins} skin${e.skins===1?'':'s'}</span>
+    <button class="db3d" title="Draw this model in the panel beside the list"
+      onclick="event.stopPropagation();bmPrevOpen('${q1(esc(e.name))}')">🧊</button>
   </div>`;
+}
+
+/* ======================= THE 3D PANEL BESIDE THE LIST =======================
+   "View in 3D" opens the model viewer to the side of the browser instead of over
+   it. The dialog viewer (`v3Open`) is still there and still the right thing when
+   looking at ONE model is the errand; this is for the other errand — going down
+   a list of two thousand entries deciding which of them is the horse.
+
+   Same node-detach trick as the unit editor's preview column, for the same
+   reason: `renderBmdb` rewrites the whole page on every keystroke in the search
+   box, and the canvas must not be rebuilt (and the mesh refetched) each time. */
+let bmPrevNode = null;          // the panel, or null when it is closed
+let bmPrevEntry = '';           // which entry it is showing
+const BM_PREV_HOST = 'bmV3Host';
+
+function bmPrevDetach(){
+  if(bmPrevNode && bmPrevNode.parentNode) bmPrevNode.parentNode.removeChild(bmPrevNode);
+}
+function bmPrevAttach(){
+  const split = document.getElementById('bmSplit');
+  if(!split || !bmPrevNode) return;
+  split.appendChild(bmPrevNode);
+  bmPrevBar();
+  bmPrevMount();
+}
+function bmPrevClose(){
+  if(v3 && v3.host === BM_PREV_HOST) v3Unmount();
+  bmPrevDetach();
+  bmPrevNode = null; bmPrevEntry = '';
+  renderBmdb();
+}
+function bmPrevToggle(){
+  if(bmPrevNode) return bmPrevClose();
+  // seeded with the first row on screen, so the panel opens showing something
+  const first = main.querySelector('.dbrow');
+  bmPrevOpen(first ? first.dataset.name : '');
+}
+function bmPrevOpen(name){
+  if(!bmPrevNode){
+    bmPrevNode = document.createElement('aside');
+    bmPrevNode.className = 'bmprev';
+    bmPrevNode.id = 'bmPrevCol';
+    bmPrevNode.innerHTML = `<div class="edprevbar" id="bmPrevBar"></div>
+      <div class="edprevbody" id="${BM_PREV_HOST}"></div>`;
+  }
+  bmPrevEntry = name || bmPrevEntry;
+  renderBmdb();               // re-marks the row that is showing, then re-attaches
+}
+function bmPrevBar(){
+  const el = document.getElementById('bmPrevBar');
+  if(!el) return;
+  el.innerHTML = `<b>3D</b>
+    <span class="count" title="${esc(bmPrevEntry)}">${esc(bmPrevEntry || 'pick an entry')}</span>
+    <span class="sp"></span>
+    ${bmPrevEntry?`<button onclick="openBmdbEntry('${q1(esc(bmPrevEntry))}')"
+      title="Open this entry's editor">✎</button>
+    <button onclick="bmPrevFull()" title="Full screen — Esc comes back">⤢</button>`:''}
+    <button onclick="bmPrevClose()" title="Close the panel">✕</button>`;
+}
+async function bmPrevMount(){
+  const host = document.getElementById(BM_PREV_HOST);
+  if(!host) return;
+  if(!bmPrevEntry){
+    host.innerHTML = '<div class="empty">Press 🧊 on any row.</div>';
+    return;
+  }
+  await v3Mount(BM_PREV_HOST, state.src, bmPrevEntry);
+}
+function bmPrevFull(){
+  const el = bmPrevNode;
+  if(!el) return;
+  if(document.fullscreenElement) return document.exitFullscreen();
+  const go = el.requestFullscreen || el.webkitRequestFullscreen;
+  if(!go){ toast('This browser will not go full screen here.', 3000); return; }
+  Promise.resolve(go.call(el)).catch(e =>
+    toast('Full screen was refused: ' + ((e && e.message) || e), 4000));
 }
 // Opening an entry builds exactly the state the unit editor's model tab runs on,
 // with a one-entry `models` list and no unit — so edModels(), the faction

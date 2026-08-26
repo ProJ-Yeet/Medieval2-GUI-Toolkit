@@ -896,7 +896,12 @@ function eopBound(type){
   const u=(sd&&sd.units||[]).find(x=>x.type===type);
   return !!(u&&u.eop);
 }
-const limitIgnored=mod=>(state.settings.unit_limit_ignored||[]).includes(mod);
+// A mod marked M2EX has no 500-unit ceiling at all, so the warning is off for it
+// without anyone having to dismiss it — the same answer the per-mod override
+// gives, reached from the fact rather than from the dismissal.
+const modIsM2ex=mod=>!!((state.mods||[]).find(m=>m.name===mod)||{}).m2ex;
+const limitIgnored=mod=>modIsM2ex(mod)
+  ||(state.settings.unit_limit_ignored||[]).includes(mod);
 function unitLimitBanner(){
   const p=projectedDestCount(); if(!p) return '';
   if(Math.max(p.current,p.projected)<=VANILLA_UNIT_LIMIT || limitIgnored(state.dst)) return '';

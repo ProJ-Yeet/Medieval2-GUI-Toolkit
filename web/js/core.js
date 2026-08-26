@@ -117,6 +117,7 @@ const state={mods:[],src:null,dst:null,xferDst:null,data:null,destData:null,fact
   bld:null, bldReturn:null};
 
 const VANILLA_UNIT_LIMIT=500;   // M2TW vanilla EDU cap; M2TWEOP/EOP raise it.
+const VANILLA_FACTION_LIMIT=31; // M2TW vanilla descr_sm_factions cap; M2EX raises it.
 
 /* ---------- the API client ----------
    Two things every request in this app needs, so they live here rather than in
@@ -786,7 +787,23 @@ function wire(){
   packBtn.onclick=()=>packExport([...state.selected]); importPackBtn.onclick=packImport;
   cleanBtn.onclick=openCleanup; unusedOnly.onchange=render; sndBtn.onclick=sndApply;
   backBldBtn.onclick=backToBuilding;
-  overlay.onclick=e=>{if(e.target.id==='overlay')closeModal();};
+  /* Click the backdrop to close — but only a click that BEGAN on the backdrop.
+
+     A `click` is dispatched on the nearest ancestor the mousedown and the mouseup
+     still share, so if anything replaces the markup under the pointer between
+     the two halves of one press, the click lands on #overlay and the dialog
+     shuts. Several dialogs here re-render on `input` and on `change`, which
+     makes that a real sequence: press inside a box, the box is rebuilt under the
+     finger, release — and the window the user was typing in disappears. Whether
+     it happens at all depends on how long the re-render takes, which is why it
+     shows up on one machine and not another.
+
+     Remembering where the press started costs one field and closes the hole:
+     a click whose mousedown was inside the dialog is not a click on the
+     backdrop, whatever the DOM did in between. */
+  let overlayDown=false;
+  overlay.addEventListener('mousedown',e=>{overlayDown=(e.target.id==='overlay');});
+  overlay.onclick=e=>{if(e.target.id==='overlay'&&overlayDown)closeModal();};
 }
 /* ---------- mode switching ---------- */
 // Edit and bmdb modes work on ONE mod in place, so the destination always mirrors
@@ -1050,5 +1067,10 @@ function closeModal(){
   // Closing out of a sub-dialog abandons its stashed scroll: leaving it pending
   // would hand a dead snapshot to whatever re-draws next.
   usePlace(null);
+  // the unit editor's 3D column is held outside the modal's markup so it can
+  // survive a re-render (see edPrevAttach) — which means closing the dialog has
+  // to hand it back rather than leaving a WebGL context and a draw loop running
+  // for a dialog that is gone
+  if(typeof edPrevDrop==='function')edPrevDrop();
   // the unit editor widens the modal — put it back for the next dialog
   document.getElementById('modal').className='modal';}

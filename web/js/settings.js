@@ -124,6 +124,20 @@ async function openSettings(){
         <div class="count" style="margin-top:6px">The game reads that compiled cache instead of <code>export_units.txt</code>, and only rebuilds it when it's missing, so until it is deleted a new or renamed unit keeps showing its <b>old</b> text. Deleting costs nothing: the next launch writes a fresh one.</div>
         <div class="count" style="margin-top:6px">It is the only file this touches, and it is the same setting as the box at the bottom of every Apply dialog. (It replaced <code>Full Cleaner.bat</code>, which also deleted mod files the game never rebuilds. That script is still in the app folder if you want it.)</div>
       </fieldset>
+      <fieldset><legend>M2EX mods (no engine limits)</legend>
+        <div class="count" style="margin-bottom:8px">M2EX replaces the engine's hardcoded tables, so a mod
+          that runs on it has none of the ceilings the toolkit otherwise checks against:
+          ${VANILLA_FACTION_LIMIT} factions, ${VANILLA_UNIT_LIMIT} units, 9 levels on a trait, 8 effects on an
+          ancillary, 32 recruitment slots in a building level. Ticked, those findings stop being reported for
+          that mod — <b>and nothing else changes</b>: every other check still runs.</div>
+        <div class="count" style="margin-bottom:8px">This is <b>not</b> the M2TWEOP setting below. That one is
+          about where a mod keeps extra unit files; this one is about the engine it runs on. A mod can be both,
+          either or neither.</div>
+        <div class="ovrlist">${(state.mods||[]).map(m=>`<div class="ovr">
+          <label class="chk"><input type="checkbox" ${m.m2ex?'checked':''}
+            onchange="setM2exFromSettings('${q1(esc(m.name))}',this.checked)"> <code>${esc(m.name)}</code></label>
+        </div>`).join('')||'<div class="count">No mods found.</div>'}</div>
+      </fieldset>
       <fieldset><legend>Unit-limit warning (500 vanilla cap)</legend>
         <div class="count" style="margin-bottom:8px">Mods where the ${VANILLA_UNIT_LIMIT}-unit warning is suppressed (you confirmed M2TWEOP / EOP is in use):</div>
         ${ignHtml}
@@ -145,6 +159,23 @@ async function openSettings(){
     <div class="foot"><button onclick="closeModal()">Close</button><button class="primary" onclick="saveRoot()">Save & scan</button></div>`;
   overlay.classList.add('open');
   loadEopDirs();
+}
+
+/* ---------- M2EX (per mod) ----------
+   The same mark the Home card carries, listed here for every mod at once: the
+   settings dialog is where somebody goes to set a machine up, and ticking four
+   mods there beats visiting four cards. Both call one endpoint, and Home is
+   repainted after so the two never disagree. */
+async function setM2exFromSettings(name, on){
+  const r = await api.post('/api/m2ex', {mod:name, on:!!on});
+  if(r.error){ toast('✗ ' + r.error, 5000); return; }
+  const m = (state.mods||[]).find(x => x.name === name);
+  if(m) m.m2ex = !!r.m2ex;
+  if(state.src === name || state.dst === name){
+    state.data = state.destData = null;
+    state.tr = state.an = state.fac = state.mf = state.bld = null;
+  }
+  toast(on ? `${name} is marked as M2EX.` : `${name} is no longer marked as M2EX.`);
 }
 
 /* ---------- M2TWEOP unit folders (per mod) ---------- */

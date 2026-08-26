@@ -10,6 +10,16 @@ API
   GET  /api/settings             -> {med2_root, last_source, last_dest}
   POST /api/settings             -> set {med2_root,...} (persisted)
   GET  /api/detect_med2_root     -> {path}  (registry lookup, not persisted)
+  GET  /api/port?kind=&source=&dest=
+                                 -> every trait / ancillary the source mod has,
+                                    marked with what the destination already has
+  POST /api/port/plan | /apply   -> copy them over: the block, the triggers that
+                                    grant it and its text keys, in one backed-up,
+                                    undoable job. See :mod:`unittransfer.portrecords`
+  POST /api/m2ex                 -> {mod[, on]} -> {m2ex}. Whether the mod runs on
+                                    M2EX, which replaces the engine's hardcoded
+                                    ceilings — so the toolkit stops reporting
+                                    them. See :mod:`unittransfer.modflags`
   POST /api/browse_folder        -> {title} -> {path}  (native OS folder dialog)
   POST /api/reveal               -> {mod, rel} -> show that file in the OS file
                                     manager. Mod-relative only.
@@ -197,8 +207,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from . import bmdb, buildings, cleaner, codeview, config, edit, modfiles, sounds
-from . import ancillaries, edusort, factions, images, mesh, minorfiles, sprites, strings, traits, triggers
+from . import bmdb, buildings, cleaner, codeview, config, edit, modflags, modfiles, sounds
+from . import ancillaries, edusort, factions, images, mesh, minorfiles, portrecords, sprites, strings, traits, triggers
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1142,8 +1152,12 @@ class Handler(BaseHTTPRequestHandler):
                 # demand rather than only as an initial prefill.
                 return self._json({"path": config.detect_med2_root()})
             if u.path == "/api/mods":
+                # `m2ex` comes off the settings table by path, not off a parsed
+                # mod: this list is the header dropdown and it has to answer
+                # before anything is read.
                 return self._json([{"name": n, "root": str(p),
-                                    "pack": self.registry.is_pack(n)}
+                                    "pack": self.registry.is_pack(n),
+                                    "m2ex": modflags.is_m2ex(p)}
                                    for n, p in self.registry.discover().items()])
             if u.path == "/api/units":
                 name = (q.get("mod") or [None])[0]
@@ -1257,6 +1271,8 @@ class Handler(BaseHTTPRequestHandler):
                     mod, (q.get("file") or [""])[0], (q.get("q") or [""])[0],
                     int((q.get("limit") or [strings.PAGE])[0] or 0),
                     int((q.get("offset") or ["0"])[0] or 0)))
+            if u.path == "/api/port":
+                return self._json(self._port_overview(q))
             if u.path in ("/api/ancillaries", "/api/ancillary"):
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
@@ -1478,6 +1494,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(out)
             if u.path == "/api/eop_dirs":
                 return self._json(self._eop_dirs(body))
+            if u.path == "/api/m2ex":
+                return self._json(self._m2ex(body))
             if u.path == "/api/browse_file":
                 # same reason as browse_folder: the editor needs a real path to
                 # the .mesh/.texture being imported, which a file input can't give.
@@ -1526,6 +1544,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._traits(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/ancillaries/plan", "/api/ancillaries/apply"):
                 return self._json(self._ancillaries(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/port/plan", "/api/port/apply"):
+                return self._json(self._port(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/factions/plan", "/api/factions/apply"):
                 return self._json(self._factions(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/minor/plan", "/api/minor/apply"):
@@ -1793,7 +1813,7 @@ class Handler(BaseHTTPRequestHandler):
             if plan.errors:
                 out["error"] = "; ".join(plan.errors)
             return out
-        if not plan.text and not plan.loc_adds:
+        if not plan.text and not plan.loc_writes:
             out["error"] = "nothing to change"
             return out
         out.update(traits.apply(plan))
@@ -1822,6 +1842,58 @@ class Handler(BaseHTTPRequestHandler):
             return out
         out.update(ancillaries.apply(plan))
         self.registry.invalidate(body["mod"])       # the file changed on disk
+        return out
+
+    # ---- porting a trait / an ancillary between two mods ----
+    def _port_overview(self, q):
+        """Every record the source mod has, marked with what the destination has.
+
+        The only GET in the toolkit that names two mods, because it is the only
+        answer that depends on both: "which of these 799 traits does the other
+        mod already have" is the question the picker opens on.
+        """
+        names = self.registry.names()
+        src = (q.get("source") or [""])[0]
+        dst = (q.get("dest") or [""])[0]
+        if src not in names or dst not in names:
+            return {"error": "pick two mods this toolkit can see"}
+        try:
+            return portrecords.overview(self.registry.get(src),
+                                        self.registry.get(dst),
+                                        (q.get("kind") or ["traits"])[0])
+        except (portrecords.PortError, OSError, ValueError) as e:
+            return {"error": str(e)}
+
+    def _port(self, action, body):
+        """Preview or write a port: the blocks, their triggers and their text.
+
+        Same plan-then-apply shape as every other editor, and the same backup
+        set — one job, because a definition that lands without its text keys is
+        a crash the first time anyone gets the record.
+        """
+        names = self.registry.names()
+        src, dst = body.get("source") or "", body.get("dest") or ""
+        if src not in names or dst not in names:
+            return {"error": "pick two mods this toolkit can see"}
+        try:
+            plan = portrecords.plan(
+                self.registry.get(src), self.registry.get(dst),
+                body.get("kind") or "traits",
+                [str(n) for n in (body.get("names") or [])],
+                with_triggers=body.get("with_triggers", True),
+                overwrite=bool(body.get("overwrite")))
+        except (portrecords.PortError, KeyError, OSError, ValueError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        if not plan.text and not plan.loc_writes:
+            out["error"] = "nothing to change"
+            return out
+        out.update(portrecords.apply(plan))
+        self.registry.invalidate(dst)               # the files changed on disk
         return out
 
     # ---- factions ----
@@ -2086,6 +2158,24 @@ class Handler(BaseHTTPRequestHandler):
                 "fields": _edu.block_fields(composed),
                 "inherited": list(keys) + groups,
                 "base_field_groups": groups}
+
+    def _m2ex(self, body):
+        """Read or set the M2EX mark on one mod.
+
+        A POST with no ``on`` key only reads. Setting it drops the mod's caches:
+        the mark decides which findings its editors report, and those are built
+        from the parsed file the registry is holding.
+        """
+        name = body.get("mod") or ""
+        if name not in self.registry.names():
+            return {"error": f"unknown mod {name!r}"}
+        mod = self.registry.describe(name)
+        if "on" in body:
+            modflags.set_m2ex(mod, bool(body.get("on")))
+            self.registry.invalidate(name)
+            log.info("FLAG   %s: m2ex=%s", name, bool(body.get("on")))
+        return {"mod": mod.name, "root": str(mod.root),
+                "m2ex": modflags.is_m2ex(mod)}
 
     def _eop_dirs(self, body):
         """Read or set one mod's M2TWEOP unit folders.

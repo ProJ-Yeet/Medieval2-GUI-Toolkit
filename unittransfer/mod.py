@@ -7,14 +7,29 @@ EDU / localisation / modeldb databases on demand.
 from __future__ import annotations
 
 import os
+import time
 from functools import cached_property
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import (buildings as buildings_mod, edu, engines as engines_mod,
-               eop as eop_mod, localization, luascan, modeldb,
+               eop as eop_mod, localization, luascan, modeldb, modflags,
                mounts as mounts_mod, projectiles as projectiles_mod,
                sounds as sounds_mod)
+
+
+#: How long after a folder's recorded mtime a second change to it could still
+#: land on that same mtime — the window :meth:`Mod._dir_index` will not trust a
+#: cached listing inside.
+#:
+#: Not a measurement of one machine: NTFS stores 100 ns timestamps but they are
+#: written from the system clock, whose granularity is the timer tick — 15.625 ms
+#: by default on Windows, and lower only while some process happens to have asked
+#: for a finer one (0.5 ms was what this machine measured, with Pillow loaded).
+#: 50 ms clears the default tick three times over and still means "the folder was
+#: written to a moment ago", which is the only situation the extra listing costs
+#: anything in.
+_MTIME_GRAIN_NS = 50_000_000
 
 
 class ModDataError(OSError, ValueError):
@@ -44,9 +59,9 @@ class Mod:
         self.data = self.root / "data"
         if not self.data.is_dir():
             raise FileNotFoundError(f"no data/ folder under {self.root}")
-        # folder -> (its mtime when listed, {lower-case filename: path}). See
-        # :meth:`_dir_index`.
-        self._icon_dirs: Dict[Path, Tuple[int, Dict[str, Path]]] = {}
+        # folder -> (its mtime when listed, {lower-case filename: path},
+        # whether that mtime was too fresh to trust). See :meth:`_dir_index`.
+        self._icon_dirs: Dict[Path, Tuple[int, Dict[str, Path], bool]] = {}
 
     @property
     def name(self) -> str:
@@ -200,6 +215,18 @@ class Mod:
     def eop_dirs(self) -> List[Path]:
         """Folders this mod's M2TWEOP unit files are read from (may be empty)."""
         return eop_mod.eop_dirs(self)
+
+    @cached_property
+    def m2ex(self) -> bool:
+        """Has this mod been marked as running on M2EX?
+
+        A per-mod setting somebody ticked, not something read off the files —
+        nothing in ``data/`` records it. What it turns off is the engine's
+        hardcoded ceilings, which M2EX replaces: see
+        :mod:`unittransfer.modflags`. Separate from :attr:`eop_dirs`, which is
+        about M2TWEOP and about where unit files live.
+        """
+        return modflags.is_m2ex(self)
 
     @cached_property
     def lua_files(self) -> List[Path]:
@@ -463,13 +490,30 @@ class Mod:
         key, so a card that appears while the tool is running is still picked up:
         adding or removing a file changes the folder's mtime, and the next
         lookup re-lists it.
+
+        ...except that "changes the folder's mtime" is only true to the
+        filesystem's own resolution, which is the one thing that stamp cannot
+        tell you about itself. Two changes inside one tick of it land on the SAME
+        mtime, and then the cache is served for a folder that no longer looks
+        like that. Measured on NTFS here: replacing a file in place (unlink, then
+        create under a different name) left the folder's mtime untouched in
+        **70 of 2000 rounds — 3.5%**, and every one of those is a unit card the
+        tool then reports as missing.
+
+        So an entry listed while its folder's mtime was still inside that window
+        is marked *racy* and re-listed next time, which is the rule git uses for
+        exactly this problem ("racily clean" index entries). It costs one extra
+        listing per lookup, but only for a folder something wrote to within the
+        last :data:`_MTIME_GRAIN_NS`; a folder that has been sitting still — which
+        is every folder, during the bulk lookup this index exists to make fast —
+        is answered from the cache as before.
         """
         try:
             stamp = fdir.stat().st_mtime_ns
         except OSError:
             return {}
         hit = self._icon_dirs.get(fdir)
-        if hit is not None and hit[0] == stamp:
+        if hit is not None and hit[0] == stamp and not hit[2]:
             return hit[1]
         index: Dict[str, Path] = {}
         try:
@@ -479,7 +523,15 @@ class Mod:
                         index.setdefault(entry.name.lower(), Path(entry.path))
         except OSError:
             return {}
-        self._icon_dirs[fdir] = (stamp, index)
+        # Only the band between "the folder changed" and one grain later is
+        # untrustworthy. A stamp in the FUTURE (a clock that went backwards, or
+        # files restored from a backup that kept their old times) is deliberately
+        # not racy: it would never leave the band, and re-listing that folder on
+        # every lookup for the life of the process is a worse bug than the one
+        # this is fixing.
+        age = time.time_ns() - stamp
+        racy = 0 <= age < _MTIME_GRAIN_NS
+        self._icon_dirs[fdir] = (stamp, index, racy)
         return index
 
     def _find_icon(self, base: Path, factions: List[str], stem: str,

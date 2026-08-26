@@ -1676,6 +1676,11 @@ def _check_recruit_limit(mod, bl: Optional[BuildingLine], body: dict,
     cultures = mod.faction_cultures
     if not cultures:
         return
+    # The recruitment panel's 32 slots are one of the engine tables M2EX
+    # replaces, so on a mod marked for it this is not a limit and saying so on
+    # every save is noise. See :mod:`unittransfer.modflags`.
+    if getattr(mod, "m2ex", False):
+        return
     for lv in (body.get("levels") or []):
         ops = (lv.get("capabilities") or []) + (lv.get("faction_capabilities") or [])
         if not ops:

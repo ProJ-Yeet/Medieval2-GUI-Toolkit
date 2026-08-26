@@ -63,6 +63,7 @@ from typing import Dict, List, Optional, Tuple
 from . import flatrecord as fr
 from . import keyblock as kb
 from . import minorfiles
+from . import modflags
 
 ENCODING = fr.ENCODING
 
@@ -469,14 +470,17 @@ def overview(mod) -> Dict:
     out: Dict = {"mod": getattr(mod, "name", ""), "file": REL,
                  "exists": path.is_file(), "factions": [], "findings": 0,
                  "count": 0, "actions": list(ACTIONS), "refused": REFUSED,
-                 "limit": FACTION_LIMIT}
+                 # 0 means "no ceiling to count against": an M2EX mod has
+                 # replaced the engine table this number came out of
+                 "limit": 0 if getattr(mod, "m2ex", False) else FACTION_LIMIT,
+                 "m2ex": bool(getattr(mod, "m2ex", False))}
     if not path.is_file():
         out["error"] = f"{getattr(mod, 'name', '?')} has no {REL}"
         return out
     rf = parse_file(path)
     names = loc(mod)
     counted: Dict[str, int] = {}
-    found = check_file(rf, mod)
+    found = modflags.uncapped(check_file(rf, mod), mod)
     for finding in found:
         counted[finding["name"]] = counted.get(finding["name"], 0) + 1
     out["finding_list"] = [{"name": f.get("name", ""), "kind": f.get("kind", ""),
@@ -530,7 +534,8 @@ def detail(mod, name: str) -> Dict:
                     for k in ("primary_colour", "secondary_colour")},
         "text": block, "fields": [list(f) for f in block_fields(block)],
         "spans": block_spans(block),
-        "findings": [f for f in check_file(rf, mod) if f["name"] == rec.name],
+        "findings": modflags.uncapped(
+            [f for f in check_file(rf, mod) if f["name"] == rec.name], mod),
         "loc_tag": tag, "loc_file": LOC_REL, "loc_writable": True,
         "loc": {tag: names.get(tag, "")},
         "missing_loc": [tag] if names and tag not in names else [],
@@ -645,7 +650,8 @@ def plan(mod, body: dict) -> FactionPlan:
     now = after.get(p.name)
     if now is not None:
         p.block = after.block_text(now)
-        p.findings = [f for f in check_file(after, mod) if f["name"] == p.name]
+        p.findings = modflags.uncapped(
+            [f for f in check_file(after, mod) if f["name"] == p.name], mod)
         if body.get("write_loc", True):
             _plan_loc(p, mod, now, dict(body.get("loc") or {}))
     if not p.touched() and not p.errors:

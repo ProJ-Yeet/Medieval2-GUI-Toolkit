@@ -1,8 +1,26 @@
 # STATE — Medieval 2 GUI Toolkit V2
-_Updated: 2026-08-23 · **v2.1.1 released** · a fix subrelease on top of 15d_
+_Updated: 2026-08-26 · **v2.1.2 released** · a feature subrelease on top of 2.1.1_
 
 ## Next up
-**v2.1.1 IS A FIX SUBRELEASE — no phase, no features.** It came out of one
+**v2.1.2 IS A SUBRELEASE, same standing as 14j — real features, not folded
+into Phase 16 because Phase 16 (the Campaign Map Editor) is a different
+program.** Three things: **porting a trait or an ancillary out of another
+installed mod** (`unittransfer/portrecords.py` + `web/js/portui.js`) — the
+block, the triggers that grant it and its text keys, together, because that is
+what a trait or an ancillary actually is; **the M2EX per-mod flag**
+(`unittransfer/modflags.py`) so a mod that runs on it stops being told about
+the five engine ceilings M2EX replaces, while every other check keeps running;
+and **the 3D viewer docked beside the Unit Editor and the BMDB list** instead
+of taking the screen over. Alongside those, a dozen bugs found by using the
+tool — the sharpest was silent: typing a brand-new trait/ancillary/minor-file
+text key and its wording in the same sitting threw the wording away, because
+the words box was bound to the key's value at render time rather than to the
+field itself. Notes: `merge/RELEASE_2_1_2.md`. New: `tests/test_modflags.py`
+(18), `tests/test_port.py` (50). Committed, pushed, tagged `v2.1.2` and
+released with the portable zip:
+<https://github.com/ProJ-Yeet/medieval2-gui-toolkit/releases/tag/v2.1.2>
+
+**v2.1.1 was a fix subrelease — no phase, no features.** It came out of one
 user's log: a stock install lists the four Kingdoms campaign folders as mods
 (they have a `data/`, their files are inside `data/packs/*.pack`), the header
 auto-picked the first one alphabetically — `americas` — and every read of it
@@ -411,6 +429,7 @@ underneath. Both fixed; see ROADMAP.md's 14f outcome.
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
+| 15e — port, M2EX, docked viewer | **done** | **v2.1.2.** `unittransfer/portrecords.py` + `web/js/portui.js`: copy a trait/ancillary between installed mods (block + triggers + text keys, one job); `unittransfer/modflags.py`: per-mod M2EX flag drops only the five engine-ceiling finding kinds, everything else still checked; the 3D viewer (`v3Mount`/`v3Unmount`) docks beside the Unit Editor and BMDB list instead of taking the modal over. Plus a dozen fixes, the sharpest being a silent one: a brand-new text key's wording was discarded if typed in the same sitting as the key (Traits/Ancillaries/Minor Files), because the words box was bound to the key's value at render time rather than to the field. `test_modflags` 18/18, `test_port` 50/50 |
 | 0–12 | done | see ROADMAP.md for each phase's exit criteria |
 | UX correction pass | done | 17 of 18 items; the 18th (prose sweep) is now finished |
 | Prose sweep | done | 19 note blocks in `buildings/transfer/editor/sprites.js` rewritten as lead + points via a shared `docPoints()` in core.js |

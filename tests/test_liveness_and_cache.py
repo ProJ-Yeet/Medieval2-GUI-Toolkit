@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from unittransfer import config, icons, server                       # noqa: E402
+from unittransfer import mod as mod_mod
 from unittransfer.mod import Mod                                     # noqa: E402
 
 ok = []
@@ -132,17 +133,54 @@ found = m.find_unit_card(unit)
 check("a card whose case differs from the dictionary is still found",
       found is not None and found.name == "#Alpha.tga")
 
-# the folder is remembered, and a card added afterwards still turns up: the
-# index is keyed on the folder's mtime, not on the life of the Mod object
-other = mroot / "data" / "ui" / "units" / "england" / "#Alpha.dds"
-time.sleep(0.01)
-os.utime(card.parent, None)
-check("the second lookup is served from the index",
-      m.find_unit_card(unit) == found)
-card.unlink()
-Image.new("RGBA", (48, 64), (10, 10, 10, 255)).save(other.with_suffix(".tga").with_name("#alpha.tga"))
-check("a card that appears while the tool is running is picked up",
-      (m.find_unit_card(unit) or Path("")).name == "#alpha.tga")
+# The folder is listed once and remembered, and the mtime is what says when to
+# list it again. Both halves of that are asserted here by COUNTING the listings,
+# because "was it served from the index" is not visible in the path that comes
+# back — the old test compared the two results, which are equal either way, and
+# so could not have failed however the cache behaved.
+folder = card.parent
+listings = [0]
+_real_scandir = os.scandir
+
+
+def _counting_scandir(path):
+    if Path(path) == folder:
+        listings[0] += 1
+    return _real_scandir(path)
+
+
+os.scandir = _counting_scandir
+try:
+    # A folder nothing has touched for a while: its mtime is settled, so the
+    # cached listing is trustworthy and must be reused.
+    settled = time.time_ns() - 5 * mod_mod._MTIME_GRAIN_NS
+    os.utime(folder, ns=(settled, settled))
+    m._icon_dirs.clear()
+    m.find_unit_card(unit)                      # lists it once
+    before = listings[0]
+    m.find_unit_card(unit)
+    check("a settled folder is listed once and then served from the index",
+          listings[0] == before)
+
+    # And now the case the mtime cannot see. A file is REPLACED — one unlinked,
+    # another created — and the folder's mtime comes out of it unchanged, which
+    # on this machine is what really happens 3.5% of the time (measured: 70 of
+    # 2000 rounds). Pinning the mtime back by hand is that 3.5% made certain, so
+    # this asserts the fix instead of sampling it: the entry was listed while its
+    # folder's mtime was fresh, so it is not trusted a second time.
+    fresh = time.time_ns()
+    os.utime(folder, ns=(fresh, fresh))
+    m._icon_dirs.clear()
+    check("...and while the mtime is fresh the same card is still found",
+          (m.find_unit_card(unit) or Path("")).name == "#Alpha.tga")
+    card.unlink()
+    Image.new("RGBA", (48, 64), (10, 10, 10, 255)).save(folder / "#alpha.tga")
+    os.utime(folder, ns=(fresh, fresh))         # the race, made deterministic
+    check("a card that appears while the tool is running is picked up, even when "
+          "the folder's mtime did not move",
+          (m.find_unit_card(unit) or Path("")).name == "#alpha.tga")
+finally:
+    os.scandir = _real_scandir
 
 import shutil                                                        # noqa: E402
 shutil.rmtree(tmp, ignore_errors=True)

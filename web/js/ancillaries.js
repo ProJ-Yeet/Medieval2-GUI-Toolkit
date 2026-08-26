@@ -59,6 +59,9 @@ function renderAncillaries(){
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
       <button class="trnew" onclick="anNew()">＋ New ancillary</button>
+      <button class="trnew" onclick="portOpen('ancillaries')" title="Copy ancillaries
+out of another mod on this machine — the block, the triggers that grant it, and its
+text keys, in one backed-up job.">⇩ Port from another mod</button>
       ${findingsHtml('ancillaries', a.finding_list, 'anOpen')}
       <div class="trrows">${rows.map(anRowHtml).join('')
         || '<div class="count" style="padding:8px">No ancillary matches.</div>'}</div>
@@ -186,16 +189,25 @@ function anFindingsHtml(d){
 }
 
 function anFormHtml(w, d){
+  /* The key on the left, the words the player reads on the right — and the words
+     box is bound to the FIELD, not to the key that field holds right now. Bound
+     to the key, the handler baked in whatever the box held when the form was
+     last drawn, and typing a key does not redraw the form: the words went in
+     under the old (usually empty) tag, never reached the save, and the ancillary
+     was written with its own code name as its text. The box is always drawn for
+     the same reason — a key typed into an empty box would otherwise have nowhere
+     to put its words until something else redrew. */
   const key = (k, label, hint) => {
-    const tag = w[k] || '';
+    const tag = (w[k] || '').trim();
     return `<label class="lbl" data-label="${k}">${label}</label>
       <div class="trkey">
-        <input data-label="${k}" value="${esc(tag)}" placeholder="${esc(hint||'')}"
+        <input data-label="${k}" value="${esc(w[k]||'')}" placeholder="${esc(hint||'')}"
           oninput="anSet('${k}',this.value.trim())">
-        ${tag ? `<input class="trtext" value="${esc(anLocText(d, tag))}"
-          placeholder="${anHasKey(d, tag)?'':'not in export_ancillaries.txt yet'}"
+        <input class="trtext" value="${esc(anLocTextAt(d, k))}"
+          placeholder="${tag ? (anHasKey(d, tag)?'':'not in export_ancillaries.txt yet')
+                             : 'name the key on the left first'}"
           title="What the player reads. Saved into data/text/export_ancillaries.txt."
-          oninput="anSetLoc('${q1(esc(tag))}',this.value)">` : ''}
+          oninput="anSetLocAt('${k}',this.value)">
       </div>`;
   };
   return `<section class="trsec">
@@ -218,10 +230,11 @@ function anFormHtml(w, d){
           <input data-label="name" value="${esc(w.name)}"
             ${state.an.adding?'':'disabled'} placeholder="ancillary_name"
             oninput="anSet('name',this.value.trim())">
-          <input class="trtext" value="${esc(anLocText(d, w.name))}"
-            placeholder="${anHasKey(d, w.name)?'':'the name on the character screen'}"
+          <input class="trtext" value="${esc(anLocTextAt(d, 'name'))}"
+            placeholder="${w.name ? (anHasKey(d, w.name)?'':'the name on the character screen')
+                                  : 'name the ancillary first'}"
             title="The ancillary's name as the player sees it."
-            oninput="anSetLoc('${q1(esc(w.name))}',this.value)">
+            oninput="anSetLocAt('name',this.value)">
         </div>
         <label class="lbl" data-label="type">Type</label>
         <div>
@@ -358,15 +371,31 @@ function anDelEffect(k){
   state.an.d.w.effects.splice(k, 1);
   anRepaintIf(true);
 }
+/* `locEdits` is keyed by the FIELD typed into (`name`, `description`,
+   `effects_description`), not by the key that field held when the form was
+   drawn. The tags are resolved once, at save time, in `anLocBody` — which is
+   also what carries typed words across a rename of the key they belong to. */
 const anHasKey = (d, tag) => tag && (d.loc||{})[tag] !== undefined;
-function anLocText(d, tag){
+const anTagAt = (d, field) => String((d && d.w && d.w[field]) || '').trim();
+function anLocTextAt(d, field){
+  const tag = anTagAt(d, field);
   if(!tag) return '';
-  const e = d.locEdits || {};
-  return e[tag] !== undefined ? e[tag] : ((d.loc||{})[tag] || '');
+  const e = (d.locEdits || {})[field];
+  return e !== undefined ? e : ((d.loc||{})[tag] || '');
 }
-function anSetLoc(tag, value){
-  const d = state.an.d; if(!d || !tag) return;
-  (d.locEdits = d.locEdits || {})[tag] = value;
+function anSetLocAt(field, value){
+  const d = state.an.d; if(!d) return;
+  (d.locEdits = d.locEdits || {})[field] = value;
+  if(d.cv) cvFromGui(d.cv);
+}
+// field -> the key that field names now. An emptied key writes nothing.
+function anLocBody(){
+  const d = state.an.d, out = {};
+  for(const [field, value] of Object.entries((d && d.locEdits) || {})){
+    const tag = anTagAt(d, field);
+    if(tag) out[tag] = value;
+  }
+  return out;
 }
 // The GUI→pane half of the Code View contract: change a box and the text pane
 // is re-serialised by the server, through the serialiser the save itself uses.
@@ -432,7 +461,7 @@ function anBody(action){
   const body = {mod:a.mod, ancillary:action === 'add' ? d.w.name : d.name, action};
   if(action !== 'delete'){
     body.edits = anEdits();
-    body.loc = d.locEdits || {};
+    body.loc = anLocBody();
     if(d.raw) body.raw_block = d.raw;
     const adds = [], edits = [];
     for(const row of (d.trigs || [])){

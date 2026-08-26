@@ -64,7 +64,9 @@ function renderFactions(){
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
       ${findingsHtml('factions', f.finding_list, 'facOpen')}
-      <div class="trnote">${f.count}/${f.limit} faction slots used</div>
+      <div class="trnote">${f.limit ? `${f.count}/${f.limit} faction slots used`
+        : `${f.count} faction slots — this mod is marked <b>M2EX</b>, so the
+           engine's ${VANILLA_FACTION_LIMIT} is not its ceiling`}</div>
       <div class="trrows">${rows.map(facRowHtml).join('')
         || '<div class="count" style="padding:8px">No faction matches.</div>'}</div>
     </div>

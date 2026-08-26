@@ -52,6 +52,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import keyblock as kb
+from . import modflags
 from . import traits as traits_mod
 from . import triggers
 
@@ -492,7 +493,7 @@ def overview(mod) -> Dict:
     out["loc"] = bool(names)
     counted: Dict[str, int] = {}
     grants: Dict[str, int] = {}
-    found = check_file(af, tg, mod)
+    found = modflags.uncapped(check_file(af, tg, mod), mod)
     for finding in found:
         counted[finding["ancillary"]] = counted.get(finding["ancillary"], 0) + 1
     # what the list's banner lists, so "N things to look at" says which N
@@ -599,11 +600,18 @@ def new_block(edits: Dict) -> str:
     if not name:
         raise AncillaryError("a new ancillary needs a name")
     values = dict(edits)
-    values.setdefault("type", "item")
-    values.setdefault("transferable", "1")
-    values.setdefault("image", f"{name}.tga")
-    values.setdefault("description", f"{name}_desc")
-    values.setdefault("effects_description", f"{name}_effects_desc")
+    # Blank means "give it the usual value", not "leave the line out". The editor
+    # posts every field, so an untouched box arrives as an EMPTY STRING rather
+    # than as a missing key, and `setdefault` alone let a new ancillary be
+    # written without its Image, Description or EffectsDescription — one of
+    # :data:`REQUIRED`, so the block then crashed the character screen and this
+    # module's own `apply_field_edits` refused to save it again.
+    for field, default in (("type", "item"), ("transferable", "1"),
+                           ("image", f"{name}.tga"),
+                           ("description", f"{name}_desc"),
+                           ("effects_description", f"{name}_effects_desc")):
+        if not str(values.get(field) or "").strip():
+            values[field] = default
     return "\n".join(
         [f"{ANC_KW} {name}"]
         + kb.new_lines(values, _KEY_FIELD, BODY_ORDER, FLAGS, LIST_KEYS, "    "))
@@ -712,7 +720,7 @@ def plan(mod, body: dict) -> AncillaryPlan:
     anc = af.get(p.name)
     if anc is not None:
         p.block = af.block_text(anc)
-        p.findings = check(anc, set(af.by_name()))
+        p.findings = modflags.uncapped(check(anc, set(af.by_name())), mod)
         if body.get("write_loc", True):
             _plan_loc(p, mod, anc, dict(body.get("loc") or {}))
     p.text = "" if text == original else text

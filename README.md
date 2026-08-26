@@ -1112,6 +1112,18 @@ created in.
   engine reads, fans a unit card out to every faction folder that holds one, and
   backs everything up for one Undo (see
   [Replacing pictures](#replacing-pictures))
+- **Port a trait or an ancillary from another installed mod** — ⇩ button on the
+  Traits and Ancillaries lists. Brings the block, every trigger that grants it
+  and its text keys together in one backed-up job, and reports — never
+  guesses — anything it names (a culture, an antitrait, a picture) that the
+  destination has not got
+- **Mark a mod as M2EX** on its Home card, or for the whole list in ⚙ Settings,
+  and the toolkit stops reporting the engine's hardcoded ceilings for it (31
+  factions, 500 units, 9 trait levels, 8 ancillary effects, 32 recruitment
+  slots) — every other check still runs
+- **The 3D viewer docks beside the Unit Editor and the BMDB list** instead of
+  taking the screen over, so looking at a model no longer means leaving the
+  unit you are editing
 - **Per-field editor** — override any single EDU field on the way in, in a
   **guided** view that gives every value in a line its own labelled box, a
   drop-down of what the mod actually accepts and a live check of what the engine

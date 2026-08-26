@@ -669,8 +669,19 @@ def overview(mod) -> dict:
     donors = [{"name": e.name, "accent": e.accent, "class": e.voice_class}
               for e in bank.unit_entries()]
 
-    missing, existing = [], []
+    missing, existing, ships = [], [], 0
     for u in mod.edu.units:
+        # A ship has no voice and cannot be given one: the unit voice bank is
+        # `Unit_Select` barks shouted by soldiers, and a naval unit's sounds come
+        # out of the ship banks instead. Every one of them therefore turned up in
+        # "No voice entry" forever, and there are dozens — a permanent block of
+        # rows nothing can be done about, in front of the units that CAN be
+        # fixed. They are counted and said, not listed. (A ship that somehow does
+        # have a bank entry is still shown under "Has a voice entry", where it
+        # can be dropped.)
+        if getattr(u, "ship", "") and u.type not in by_unit:
+            ships += 1
+            continue
         accent, cls = unit_voice_fields(u)
         loc = mod.loc.get(u.dictionary)
         row = {
@@ -712,5 +723,7 @@ def overview(mod) -> dict:
         "missing": missing,
         "existing": existing,
         "orphans": orphans,
+        #: naval units left out of `missing` — they have no unit voice to give
+        "ships_skipped": ships,
         "warnings": bank.warnings[:20],
     }

@@ -60,6 +60,7 @@ running the test suite, and running `graphify update .`.
 | 14 | Bug-fix and polish pass | XL | ✅ done (14a–14g) |
 | 14j | Replace any picture (v2.0.1) | S | ✅ done |
 | 15 | 3D model viewer (v2.1.0) | L | ✅ done (15a–15d) |
+| 15e | Port between mods, M2EX flag, docked viewer (v2.1.2) | M | ✅ done |
 | 16 | Campaign Map Editor — flagship, LAST | XL | 5+ (16a–16e) |
 
 Dependency shape: 1 and 2 are independent; 3 gates 4; 4 gates every editor

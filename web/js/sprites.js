@@ -339,7 +339,10 @@ function renderSounds(){
       <div class="count">${docPoints(`${s.donors.length} units have their own selection barks
         across ${s.pairs.length} accent/class blocks.`,[
         nConf?`<b class="w-warn">${nConf}</b> unit(s) sit in a block their EDU doesn't point at. The
-          game follows the EDU, so those entries are dead.`:''])}</div>
+          game follows the EDU, so those entries are dead.`:'',
+        s.ships_skipped?`${s.ships_skipped} ship(s) are left out: a naval unit has no
+          <code>Unit_Select</code> bark to give it, so listing them as missing one
+          was a page of rows nothing could be done about.`:''])}</div>
       <div class="sndtabs">
         ${tab('missing','No voice entry',s.missing.length)}
         ${tab('existing','Has a voice entry',s.existing.length)}

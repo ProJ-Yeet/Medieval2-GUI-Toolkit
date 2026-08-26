@@ -171,22 +171,66 @@ async function v3Open(mod, entry){
   const modal = document.getElementById('modal');
   const overlay = document.getElementById('overlay');
   const wasOpen = overlay.classList.contains('open');
+  // The unit editor's preview column is a live canvas parked in the modal, and
+  // `modal.innerHTML` would stash a DEAD COPY of it — restored on the way out as
+  // a blank canvas nothing is drawing to, beside a real one with no parent. Take
+  // it out before the snapshot; v3Close puts it back properly.
+  if(typeof edPrevDetach === 'function') edPrevDetach();
   v3Back = wasOpen ? {html: modal.innerHTML, cls: modal.className, scroll: stashPlace()} : {};
   modal.className = 'modal wide';
   modal.innerHTML = `<h2>Model — ${esc(entry)}</h2>
     <div class="mbody"><div class="empty">Reading ${esc(entry)}…</div></div>
     <div class="foot"><button onclick="v3Close()">Close</button></div>`;
   overlay.classList.add('open');
+  await v3Begin(mod, entry, '');
+}
 
+/* --- the same viewer, in a panel the page owns -----------------------------
+   `v3Open` takes the modal over, which is right when looking at a model IS what
+   you came to do. It is the wrong shape for the two places that want the model
+   BESIDE something else: the unit editor, where the preview sits next to the
+   fields being edited, and the BMDB browser, where it sits next to the list.
+   Both hand in the id of an element to paint into instead, and everything below
+   this line — the controls, the parts list, the orbit, the WebGL — is the same
+   code either way.
+
+   Still ONE viewer at a time. A second WebGL context on the same page is a
+   second copy of a 30 MB mesh and a second animation loop, for a second view of
+   a model nobody is looking at; mounting somewhere new drops what was there. */
+async function v3Mount(hostId, mod, entry){
+  if(v3 && v3.host === hostId && v3.entry === entry && v3.mod === mod) return;
+  v3Stop();
+  v3Back = null; v3 = null;
+  const host = document.getElementById(hostId);
+  if(!host) return;
+  host.innerHTML = `<div class="empty">Reading ${esc(entry)}…</div>`;
+  await v3Begin(mod, entry, hostId);
+}
+
+/* Let go of a docked viewer without touching the modal. */
+function v3Unmount(){
+  if(!v3 || !v3.host) return;
+  const host = document.getElementById(v3.host);
+  v3Stop();
+  if(host) host.innerHTML = '';
+  v3 = null;
+}
+
+async function v3Begin(mod, entry, host){
+  // Whatever was showing goes first. Two WebGL contexts on one page is two
+  // copies of a 30 MB mesh and two animation loops, one of them for a view
+  // nobody can see any more.
+  v3Stop();
+  v3 = null;
   let info;
   try{ info = await api.get(`/api/model?mod=${enc(mod)}&entry=${enc(entry)}`); }
-  catch(e){ return v3Fail(''+e); }
-  if(info.error) return v3Fail(info.error);
+  catch(e){ return v3Fail(''+e, host); }
+  if(info.error) return v3Fail(info.error, host);
 
   // `skin` indexes info.skins, because a skin is a PAIR of files now — the
   // main sheet and the attachment sheet a faction uses together — and a pair
   // has no one path to name it by
-  v3 = {mod, entry, info, lod: 0, skin: 0,
+  v3 = {mod, entry, info, host: host || '', lod: 0, skin: 0,
         geo: null, tex: null, texAtt: null, hidden: {}, variant: {},
         wire: false, spin: false,
         yaw: 0.6, pitch: 0.25, dist: 3, centre: [0,0,0], gl: null, err: ''};
@@ -196,6 +240,14 @@ async function v3Open(mod, entry){
   v3.lod = there ? there.index : 0;
   v3Render();
   await v3Load();
+}
+
+// Where the viewer paints: the modal's body, or the element whose id was handed
+// to `v3Mount`. Everything that repaints part of the viewer looks it up through
+// here, so nothing below has to know which of the two it is in.
+function v3HostEl(host){
+  const id = host !== undefined ? host : (v3 ? v3.host : '');
+  return id ? document.getElementById(id) : document.querySelector('#modal .mbody');
 }
 
 /* What to call a skin in the picker: the faction that uses it, and how many
@@ -211,12 +263,13 @@ function v3SkinLabel(s){
 /* The skin the viewer is on, and its two sheets. */
 function v3Skin(){ return (v3.info.skins || [])[v3.skin] || null; }
 
-function v3Fail(msg){
-  const b = document.querySelector('#modal .mbody');
+function v3Fail(msg, host){
+  const b = v3HostEl(host);
   if(b) b.innerHTML = `<div class="w-bad">${esc(msg)}</div>`;
 }
 
 function v3Close(){
+  if(v3 && v3.host) return v3Unmount();
   v3Stop();
   const modal = document.getElementById('modal');
   if(v3Back && v3Back.html !== undefined){
@@ -225,12 +278,17 @@ function v3Close(){
     // the restored markup is inert until its own module rebinds it, and only
     // the model card ever opens this — so it is the one that gets asked
     if(typeof edRenderTab === 'function' && state.ed) edRenderTab();
+    // the live preview column, taken out above, goes back where it belongs
+    if(typeof edPrevAttach === 'function' && state.ed) edPrevAttach();
   }else{
     document.getElementById('overlay').classList.remove('open');
     modal.className = 'modal'; modal.innerHTML = '';
   }
   v3Back = null; v3 = null;
 }
+
+// Stop drawing without giving anything up. See the tick loop in v3Start.
+function v3Pause(on){ if(v3) v3.paused = !!on; }
 
 function v3Stop(){
   if(v3 && v3.raf) cancelAnimationFrame(v3.raf);
@@ -261,8 +319,12 @@ function v3Render(){
         ${s.exists?'':'disabled'}>${esc(v3SkinLabel(s))}${s.exists?'':' — not in this mod'}</option>`).join('')
     : '<option>no skins on this entry</option>';
 
-  document.querySelector('#modal .mbody').innerHTML = `
-    <div class="v3wrap">
+  const host = v3HostEl();
+  if(!host) return;
+  // Docked, the panel is a column: the controls go UNDER the canvas rather than
+  // beside it, because 300px of width does not hold both.
+  host.innerHTML = `
+    <div class="v3wrap${v3.host ? ' dock' : ''}">
       <div class="v3stage">
         <canvas id="v3canvas"></canvas>
         <div class="v3hint">drag to turn · wheel to zoom · right-drag to pan</div>
@@ -567,8 +629,13 @@ function v3Start(canvas){
   gl.enable(gl.DEPTH_TEST);
   const tick = () => {
     if(!v3 || !v3.gl) return;
-    if(v3.spin && !v3.drag) v3.yaw += 0.006;
-    v3Draw();
+    // Paused (the editor's preview column folded away) keeps the loop alive but
+    // draws nothing: everything is still on the GPU, so unfolding is instant,
+    // and a canvas nobody can see costs no frames in the meantime.
+    if(!v3.paused){
+      if(v3.spin && !v3.drag) v3.yaw += 0.006;
+      v3Draw();
+    }
     v3.raf = requestAnimationFrame(tick);
   };
   v3.raf = requestAnimationFrame(tick);

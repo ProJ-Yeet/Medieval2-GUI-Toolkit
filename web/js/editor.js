@@ -157,21 +157,32 @@ function edPayload(extra){
 function renderEditor(){
   const e=state.ed,d=e.d;
   const tab=(k,label)=>`<button class="${e.tab===k?'on':''}" onclick="edTab('${k}')">${label}</button>`;
+  // The preview column is a live WebGL canvas holding a mesh that took a moment
+  // to fetch, so it is DETACHED here rather than destroyed, and appended again
+  // below — see edPrevAttach. Rewriting the modal around it would take the
+  // context with it and reload the model on every tab switch.
+  edPrevDetach();
   document.getElementById('modal').innerHTML=`
-    <h2>Edit unit <span class="pill">${esc(e.mod)}</span></h2>
-    <div class="ehead">
-      <img onerror="iconRetry(this)" src="${iconUrl(e.mod,e.unit)}">
-      <div><div class="nm">${esc(e.loc.name||d.type)}${
-        d.eop?'<span class="badge eop" style="margin-left:6px;vertical-align:middle">EOP</span>':''}</div>
-        <div class="count">${esc(d.type)} · dictionary <code>${esc(d.dictionary)}</code>
-          · ${d.models.length} model entr${d.models.length===1?'y':'ies'}</div>
-        <div class="count">${d.eop
-          ? `M2TWEOP unit. Saves are written to <code>${esc(d.eop_file)}</code>, not to export_descr_unit.txt.`
-          : 'Defined in <code>data/export_descr_unit.txt</code>.'}</div></div>
+    <h2>Edit unit <span class="pill">${esc(e.mod)}</span>
+      ${edPrevOn()?'':`<button class="edprevon" onclick="edPrevShow()"
+        title="Draw this unit's battle model beside the fields">&#129482; 3D preview</button>`}</h2>
+    <div class="edsplit" id="edSplit">
+     <div class="edmain">
+      <div class="ehead">
+        <img onerror="iconRetry(this)" src="${iconUrl(e.mod,e.unit)}">
+        <div><div class="nm">${esc(e.loc.name||d.type)}${
+          d.eop?'<span class="badge eop" style="margin-left:6px;vertical-align:middle">EOP</span>':''}</div>
+          <div class="count">${esc(d.type)} · dictionary <code>${esc(d.dictionary)}</code>
+            · ${d.models.length} model entr${d.models.length===1?'y':'ies'}</div>
+          <div class="count">${d.eop
+            ? `M2TWEOP unit. Saves are written to <code>${esc(d.eop_file)}</code>, not to export_descr_unit.txt.`
+            : 'Defined in <code>data/export_descr_unit.txt</code>.'}</div></div>
+      </div>
+      <div class="tabs">${tab('identity','Identity & text')}${tab('fields','EDU fields')}
+        ${tab('models','Battle models (bmdb)')}${tab('compare','⇄ Compare')}</div>
+      <div class="mbody" id="edBody"></div>
+     </div>
     </div>
-    <div class="tabs">${tab('identity','Identity & text')}${tab('fields','EDU fields')}
-      ${tab('models','Battle models (bmdb)')}${tab('compare','⇄ Compare')}</div>
-    <div class="mbody" id="edBody"></div>
     <div class="foot">
       <button class="danger" onclick="edDeleteDialog()">🗑 Delete unit…</button>
       <span id="edDirtyNote"></span>
@@ -185,8 +196,139 @@ function renderEditor(){
       <button class="primary" onclick="edSave()">Save changes</button>
     </div>`;
   edRenderTab();
+  edPrevAttach();
 }
 function edTab(t){state.ed.tab=t;renderEditor();}
+
+/* ======================= THE 3D PREVIEW COLUMN =======================
+   The model viewer, docked to the right of the unit editor and ON by default.
+
+   Reaching a unit's model used to mean leaving the unit: BMDB mode, find the
+   entry among two thousand, open it, look, come back. The entry names are
+   already here on the Models tab, and the viewer already knows how to paint
+   into any element it is handed (`v3Mount`), so the model belongs beside the
+   fields that decide which model it is.
+
+   Three things this column is careful about:
+
+     * **the canvas outlives a re-render.** `renderEditor` replaces the whole
+       modal on every tab switch. The column is detached first and appended
+       again after, so the WebGL context, the uploaded buffers and the mesh
+       survive — otherwise every tab switch refetched a 30 MB model.
+     * **one viewer at a time.** `v3Mount` drops whatever was mounted, so
+       opening the full-screen viewer or the BMDB side panel takes this one
+       down rather than leaving two GL contexts and two animation loops running.
+     * **minimised is paused, not unloaded.** Folding the column away stops the
+       draw loop and leaves everything on the GPU, so unfolding is instant. */
+
+// the column itself, kept across re-renders (see above). Null when hidden.
+let edPrevNode = null;
+const ED_PREV_HOST = 'edV3Host';
+
+// On unless it has been turned off, because a preview you have to go and ask
+// for is the trip to BMDB mode again with fewer steps.
+const edPrevOn = () => state.settings.model_preview !== false;
+const edPrevEntries = () => ((state.ed && state.ed.d && state.ed.d.models) || [])
+  .filter(m => m && !m.missing).map(m => m.name);
+function edPrevEntry(){
+  const list = edPrevEntries(), want = state.ed && state.ed.prevEntry;
+  return (want && list.includes(want)) ? want : (list[0] || '');
+}
+
+function edPrevDetach(){
+  if(edPrevNode && edPrevNode.parentNode) edPrevNode.parentNode.removeChild(edPrevNode);
+}
+function edPrevAttach(){
+  const split = document.getElementById('edSplit');
+  if(!split) return;
+  if(!edPrevOn() || !state.ed) return edPrevDrop();
+  if(!edPrevNode){
+    edPrevNode = document.createElement('aside');
+    edPrevNode.className = 'edprev' + (state.ed.prevMin ? ' min' : '');
+    edPrevNode.id = 'edPrevCol';
+    edPrevNode.innerHTML = `<div class="edprevbar" id="edPrevBar"></div>
+      <div class="edprevbody" id="${ED_PREV_HOST}"></div>`;
+  }
+  split.appendChild(edPrevNode);
+  edPrevBar();
+  edPrevMount();
+}
+function edPrevDrop(){
+  if(typeof v3 !== 'undefined' && v3 && v3.host === ED_PREV_HOST) v3Unmount();
+  edPrevDetach();
+  edPrevNode = null;
+}
+
+// The bar only — never the body, which is the canvas.
+function edPrevBar(){
+  const el = document.getElementById('edPrevBar');
+  if(!el) return;
+  const list = edPrevEntries(), cur = edPrevEntry(), min = !!(state.ed && state.ed.prevMin);
+  el.innerHTML = `<b>3D</b>
+    ${list.length > 1
+      ? `<select title="Which of this unit's battle-model entries to draw"
+           onchange="edPrevPick(this.value)">${list.map(n =>
+           `<option value="${esc(n)}"${n===cur?' selected':''}>${esc(n)}</option>`).join('')}</select>`
+      : `<span class="count" title="${esc(cur)}">${esc(cur || 'no entry')}</span>`}
+    <span class="sp"></span>
+    <button onclick="edPrevFull()" title="Full screen &mdash; Esc comes back">&#10530;</button>
+    <button onclick="edPrevMin()" title="${min?'Unfold the preview':'Fold the preview away'}"
+      >${min?'&#9656;':'&#9662;'}</button>
+    <button onclick="edPrevHide()" title="Hide the preview. The button at the top of the dialog brings it back, and the choice is remembered.">&#10005;</button>`;
+}
+
+async function edPrevMount(){
+  const host = document.getElementById(ED_PREV_HOST);
+  if(!host) return;
+  if(state.ed && state.ed.prevMin){ v3Pause(true); return; }
+  const entry = edPrevEntry();
+  if(!entry){
+    if(v3 && v3.host === ED_PREV_HOST) v3Unmount();
+    host.innerHTML = `<div class="empty">This unit names no battle-model entry,
+      so there is nothing to draw.</div>`;
+    return;
+  }
+  v3Pause(false);
+  await v3Mount(ED_PREV_HOST, state.ed.mod || state.src, entry);
+}
+
+function edPrevPick(name){
+  if(!state.ed) return;
+  state.ed.prevEntry = name;
+  edPrevMount();
+}
+function edPrevMin(){
+  if(!state.ed) return;
+  state.ed.prevMin = !state.ed.prevMin;
+  if(edPrevNode) edPrevNode.classList.toggle('min', !!state.ed.prevMin);
+  edPrevBar();
+  edPrevMount();
+}
+async function edPrevHide(){
+  edPrevDrop();
+  state.settings.model_preview = false;
+  api.post('/api/settings', {model_preview:false});
+  renderEditor();
+}
+async function edPrevShow(){
+  state.settings.model_preview = true;
+  api.post('/api/settings', {model_preview:true});
+  renderEditor();
+}
+/* Full screen is the browser's own, not a bigger box inside the dialog: the
+   model is the whole point of going full screen, and the modal is most of the
+   window already. Esc leaves it, which is what everyone expects. The canvas
+   needs nothing done to it — v3Draw sizes itself from the element every frame. */
+function edPrevFull(){
+  const el = edPrevNode || document.getElementById('edPrevCol');
+  if(!el) return;
+  if(document.fullscreenElement){ document.exitFullscreen(); return; }
+  if(state.ed && state.ed.prevMin) edPrevMin();          // nothing to look at folded
+  const go = el.requestFullscreen || el.webkitRequestFullscreen;
+  if(!go){ toast('This browser will not go full screen here.', 3000); return; }
+  Promise.resolve(go.call(el)).catch(e =>
+    toast('Full screen was refused: ' + ((e && e.message) || e), 4000));
+}
 function edRenderTab(){
   const e=state.ed,b=document.getElementById('edBody');
   // Editing anything re-renders the whole tab, and replacing innerHTML throws

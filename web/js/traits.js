@@ -62,6 +62,9 @@ function renderTraits(){
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
       <button class="trnew" onclick="trNew()">＋ New trait</button>
+      <button class="trnew" onclick="portOpen('traits')" title="Copy traits out of
+another mod on this machine — the block, the triggers that give it, and its text
+keys, in one backed-up job.">⇩ Port from another mod</button>
       ${findingsHtml('traits', t.finding_list, 'trOpen')}
       <div class="trrows">${rows.map(trRowHtml).join('')
         || '<div class="count" style="padding:8px">No trait matches.</div>'}</div>
@@ -249,17 +252,26 @@ function trLevelsHtml(w, d){
    row, and one save writes both files. */
 function trLevelHtml(lv, i, d){
   const key = `level#${i+1}`;
+  /* The key on the left and the words on the right, and the words box is bound
+     to the SLOT rather than to the key it happens to hold right now. Binding it
+     to the key baked the key in at paint time, and a level's key box does not
+     repaint as it is typed into — so on a new trait the words landed under the
+     empty tag, never reached the save, and the level was written with its own
+     code name as its text. Same reason the box is always drawn: a key typed
+     into an empty box would otherwise have no words box beside it until
+     something else redrew the form. */
   const txt = (k, label, hint) => {
-    const tag = lv[k] || '';
+    const tag = (lv[k] || '').trim();
     return `<label class="lbl" data-label="${key}.${k}">${label}</label>
     <div class="trkey">
-      <input data-label="${key}.${k}" value="${esc(tag)}"
+      <input data-label="${key}.${k}" value="${esc(lv[k]||'')}"
         placeholder="${esc(hint||'none')}"
         oninput="trSetLevel(${i},'${k}',this.value.trim())">
-      ${tag ? `<input class="trtext" value="${esc(trLocText(d, tag))}"
-        placeholder="${trHasKey(d, tag)?'':'Not in export_VnVs.txt yet. Type the words.'}"
+      <input class="trtext" value="${esc(trLocTextAt(d, i, k))}"
+        placeholder="${tag ? (trHasKey(d, tag)?'':'Not in export_VnVs.txt yet. Type the words.')
+                           : 'name the key on the left first'}"
         title="What the player reads. Saved into data/text/export_VnVs.txt."
-        oninput="trSetLoc('${q1(esc(tag))}',this.value)">` : ''}
+        oninput="trSetLocAt(${i},'${k}',this.value)">
     </div>`;
   };
   return `<div class="trlevel" data-card="${key}">
@@ -267,10 +279,11 @@ function trLevelHtml(lv, i, d){
       <span class="n">${i+1}</span>
       <input class="trlevname" data-label="${key}.name" value="${esc(lv.name)}"
         placeholder="LevelName" oninput="trSetLevel(${i},'name',this.value.trim())">
-      <input class="trtext" value="${esc(trLocText(d, lv.name))}"
-        placeholder="${trHasKey(d, lv.name)?'':'the name on the character screen'}"
+      <input class="trtext" value="${esc(trLocTextAt(d, i, 'name'))}"
+        placeholder="${lv.name ? (trHasKey(d, lv.name)?'':'the name on the character screen')
+                               : 'name the level first'}"
         title="The level's name as the player sees it."
-        oninput="trSetLoc('${q1(esc(lv.name))}',this.value)">
+        oninput="trSetLocAt(${i},'name',this.value)">
       <span class="lbl" data-label="${key}.threshold">Threshold</span>
       <input class="trnum" data-label="${key}.threshold" value="${esc(lv.threshold)}"
         oninput="trSetLevel(${i},'threshold',this.value.trim())">
@@ -368,18 +381,43 @@ function trSetLevel(i, key, value){
   lv[key] = value;
   trDirty(false);
 }
-// What a key says on screen. `locEdits` is what has been retyped this session;
-// `loc` is what the mod's text file says now.
+/* What a key says on screen. `locEdits` is what has been retyped this session,
+   keyed by the SLOT that was typed into (`3.description`) rather than by the key
+   that slot held; `loc` is what the mod's text file says now.
+
+   Keying by slot is what makes renaming a key carry its words with it, and what
+   makes words typed beside a key that was itself typed this session reach the
+   save at all — `trSetLevel` deliberately does not repaint, so a handler with
+   the key baked into it goes on writing under the key the box held when the
+   form was last drawn. The tags are resolved once, at save time, in
+   `trLocBody`. */
 const trHasKey = (d, tag) => tag && (d.loc||{})[tag] !== undefined;
-function trLocText(d, tag){
-  if(!tag) return '';
-  const e = d.locEdits || {};
-  return e[tag] !== undefined ? e[tag] : ((d.loc||{})[tag] || '');
+const trSlot = (i, field) => i + '.' + field;
+function trTagAt(d, i, field){
+  const lv = d && d.w && d.w.levels[i];
+  return lv ? String(lv[field] || '').trim() : '';
 }
-function trSetLoc(tag, value){
-  const d = state.tr.d; if(!d || !tag) return;
-  (d.locEdits = d.locEdits || {})[tag] = value;
+function trLocTextAt(d, i, field){
+  const tag = trTagAt(d, i, field);
+  if(!tag) return '';
+  const e = (d.locEdits || {})[trSlot(i, field)];
+  return e !== undefined ? e : ((d.loc||{})[tag] || '');
+}
+function trSetLocAt(i, field, value){
+  const d = state.tr.d; if(!d) return;
+  (d.locEdits = d.locEdits || {})[trSlot(i, field)] = value;
   trDirty(false);
+}
+// slot -> the key that slot names now. A slot whose key has been emptied writes
+// nothing; two slots naming one key is the file's own doing, and the last wins.
+function trLocBody(){
+  const d = state.tr.d, out = {};
+  for(const [slot, value] of Object.entries((d && d.locEdits) || {})){
+    const cut = slot.indexOf('.');
+    const tag = trTagAt(d, +slot.slice(0, cut), slot.slice(cut + 1));
+    if(tag) out[tag] = value;
+  }
+  return out;
 }
 function trSetEffect(i, k, key, value){
   const d = state.tr.d, lv = d && d.w.levels[i]; if(!lv || !lv.effects[k]) return;
@@ -398,6 +436,16 @@ function trAddLevel(){
 function trDelLevel(i){
   const d = state.tr.d; if(!d) return;
   d.w.levels.splice(i, 1);
+  // the words typed this session are keyed by level INDEX, so the ones below the
+  // removed level have to slide down with it — otherwise they would be written
+  // out against the next level's keys
+  const moved = {};
+  for(const [slot, value] of Object.entries(d.locEdits || {})){
+    const cut = slot.indexOf('.'), n = +slot.slice(0, cut);
+    if(n === i) continue;
+    moved[(n > i ? n - 1 : n) + slot.slice(cut)] = value;
+  }
+  d.locEdits = moved;
   trDirty(true);
 }
 function trAddEffect(i){
@@ -492,7 +540,7 @@ function trBody(action){
   const body = {mod:t.mod, trait:action === 'add' ? d.w.name : d.name, action};
   if(action !== 'delete'){
     body.edits = trEdits();
-    body.loc = d.locEdits || {};
+    body.loc = trLocBody();
     if(d.raw) body.raw_block = d.raw;
     const adds = [], edits = [];
     for(const row of (d.trigs || [])){

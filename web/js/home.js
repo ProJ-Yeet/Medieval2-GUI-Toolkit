@@ -178,12 +178,51 @@ function homeCardHtml(m){
       </div>
       ${m.pack?'<span class="badge">📦 mounted pack</span>':''}
     </div>
+    ${homeM2exHtml(m)}
     <div class="hcmods">${homeModulesHtml(m, r)}</div>
     <div class="hcfiles">${homeFilesHtml(m, r)}</div>
   </section>`;
 }
 // ids have to survive a mod folder called anything at all
 const homeKey = name => (''+name).replace(/[^A-Za-z0-9_-]/g,'_');
+
+/* ---- M2EX ----
+   Marked here, on the mod's own card, because it is a fact ABOUT THE MOD rather
+   than a preference: the person who installed it knows, nothing in data/ says
+   so, and there is no cheaper place to be asked than the page that already
+   lists the mods.
+
+   It is not the M2TWEOP setting further down in ⚙ Settings and must not be
+   confused with it. That one says where a mod keeps extra unit FILES. This one
+   says the engine's hardcoded tables have been replaced, so the ceilings the
+   toolkit checks against — 31 factions, 500 units, a trait's 9 levels, an
+   ancillary's 8 effects, a building's 32 recruitment slots — are not this mod's
+   ceilings and reporting them is noise. Every other check still runs. */
+function homeM2exHtml(m){
+  return `<label class="chk hcm2ex" title="Tick this only for a mod that runs on M2EX.
+It stops the toolkit reporting the engine's hardcoded ceilings for this mod —
+31 factions, ${VANILLA_UNIT_LIMIT} units, 9 trait levels, 8 ancillary effects,
+32 recruitment slots — because M2EX replaces the tables those numbers come from.
+Every other check is unaffected. This is NOT the M2TWEOP unit-folder setting.">
+    <input type="checkbox" ${m.m2ex?'checked':''}
+      onchange="homeSetM2ex('${q1(esc(m.name))}',this.checked)">
+    Runs on <b>M2EX</b> <span class="count">no engine limits</span></label>`;
+}
+async function homeSetM2ex(name, on){
+  const r = await api.post('/api/m2ex', {mod:name, on:!!on});
+  if(r.error){ toast('✗ ' + r.error, 5000); return; }
+  const m = (state.mods||[]).find(x => x.name === name);
+  if(m) m.m2ex = !!r.m2ex;
+  // the mark decides what every editor reports about this mod, so what is
+  // already loaded from it is out of date
+  if(state.src === name || state.dst === name){
+    state.data = state.destData = null;
+    state.tr = state.an = state.fac = state.mf = state.bld = null;
+  }
+  toast(on ? `${name} is marked as M2EX — its engine-limit findings are off.`
+           : `${name} is no longer marked as M2EX.`, 4500);
+  renderHome();
+}
 
 function homeModulesHtml(m, r){
   if(!r) return '<span class="count">Reading the mod’s files…</span>';

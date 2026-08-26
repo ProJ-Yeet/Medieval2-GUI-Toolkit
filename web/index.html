@@ -192,6 +192,9 @@
   .fieldrow{display:flex;gap:6px;margin:4px 0}
   .fieldrow select{flex:0 0 200px} .fieldrow input{flex:1}
   .ovr{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:3px 6px;border:1px solid var(--edge);border-radius:5px;margin:3px 0}
+  /* a long mod list in the settings dialog scrolls in place rather than pushing
+     the sections under it off the bottom */
+  .ovrlist{max-height:220px;overflow:auto}
   .ovr code{color:var(--accent)}
   /* disabled include-option (officer/mount/crew absent) */
   label.chk.off{opacity:.4;cursor:not-allowed}
@@ -368,6 +371,70 @@
     pointer-events:none;text-shadow:0 1px 2px #000}
   .v3side{flex:0 1 330px;min-width:260px;display:flex;flex-direction:column;gap:10px;
     max-height:62vh;overflow:auto}
+  /* docked in a side panel: one narrow column, canvas on top of its controls */
+  .v3wrap.dock{flex-direction:column;gap:8px;height:100%}
+  .v3wrap.dock .v3stage{flex:1 1 auto;min-width:0;min-height:240px}
+  .v3wrap.dock .v3side{flex:0 0 auto;min-width:0;max-height:34vh}
+  .v3wrap.dock .v3hint{font-size:10px}
+  /* The unit editor's 3D column. The fields keep the width they had; the
+     preview takes what is left, and folds to its bar when it is in the way. */
+  .edsplit{display:flex;gap:12px;align-items:stretch;min-height:0}
+  .edmain{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+  /* sticky, because the dialog is what scrolls: a preview that slid away as
+     soon as you reached the field you came to change would be worth nothing */
+  .edprev{flex:0 0 340px;min-width:0;display:flex;flex-direction:column;gap:6px;
+    margin:0 14px 0 0;padding:8px;border:1px solid var(--edge);border-radius:8px;
+    background:var(--panel);max-height:78vh;position:sticky;top:8px;align-self:flex-start}
+  .edprev.min{flex:0 0 auto}
+  .edprev.min .edprevbody{display:none}
+  .edprevbar{display:flex;gap:6px;align-items:center;font-size:12px}
+  .edprevbar .sp{flex:1}
+  .edprevbar select{font:inherit;font-size:11.5px;background:var(--panel2);color:var(--ink);
+    border:1px solid var(--edge);border-radius:5px;padding:2px 5px;max-width:170px}
+  .edprevbar button{padding:2px 7px;font-size:12px;line-height:18px}
+  .edprevbar .count{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .edprevbody{flex:1 1 auto;min-height:0;overflow:auto}
+  /* full screen: the browser paints the backdrop, so the panel has to own its
+     own background or the page shows through as black */
+  .edprev:fullscreen{background:var(--bg);padding:10px;max-height:none;border-radius:0}
+  .edprev:fullscreen .edprevbody{max-height:none}
+  .edprev:fullscreen .v3wrap.dock .v3side{max-height:22vh}
+  /* the port picker: one row per record, ticked, with what it brings beside it */
+  .portlist{max-height:300px;overflow:auto;border:1px solid var(--edge);border-radius:8px;
+    background:var(--panel);margin-top:6px}
+  .portrow{display:flex;gap:9px;align-items:baseline;padding:5px 10px;font-size:12.5px;
+    border-bottom:1px solid var(--edge);cursor:pointer}
+  .portrow:last-child{border-bottom:none}
+  .portrow:hover{background:var(--panel2)}
+  .portrow .pn{flex:0 1 auto;font-weight:600;overflow-wrap:anywhere}
+  .portrow .count{margin-left:auto;text-align:right;flex:0 0 auto;font-size:11px}
+  /* one this mod already has: still tickable (with “replace”), but not the ones
+     the eye should land on */
+  .portrow.here .pn{color:var(--dim)}
+  /* BMDB mode's side panel: the list keeps the page, the model takes a column */
+  .bmsplit{display:flex;gap:12px;align-items:flex-start}
+  .bmmain{flex:1 1 auto;min-width:0}
+  .bmprev{flex:0 0 360px;min-width:0;display:flex;flex-direction:column;gap:6px;
+    padding:8px;border:1px solid var(--edge);border-radius:8px;background:var(--panel);
+    position:sticky;top:8px;max-height:82vh}
+  .bmprev:fullscreen{background:var(--bg);padding:10px;max-height:none;border-radius:0}
+  .bmprev:fullscreen .edprevbody{max-height:none}
+  /* the per-row button: invisible until the row is under the cursor, so 2000
+     rows do not turn into 2000 buttons demanding attention */
+  .db3d{opacity:0;padding:0 6px;font-size:13px;line-height:20px;flex:0 0 auto}
+  .dbrow:hover .db3d,.dbrow.showing .db3d{opacity:1}
+  .dbrow.showing{outline:1px solid var(--accent);outline-offset:-1px}
+  @media (max-width:1100px){
+    .bmsplit{flex-wrap:wrap}
+    .bmprev{flex:1 1 100%;position:static;max-height:60vh}
+  }
+  /* the way back when the preview has been hidden: a quiet button in the title */
+  .edprevon{font:inherit;font-size:12px;padding:3px 9px;margin-left:10px;vertical-align:middle}
+  /* narrow windows: the preview goes under the fields rather than squeezing them */
+  @media (max-width:1100px){
+    .edsplit{flex-wrap:wrap}
+    .edprev{flex:1 1 100%;margin:0 14px;max-height:60vh}
+  }
   .v3f{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--dim)}
   .v3f select{font:inherit;font-size:13px;background:var(--panel2);color:var(--ink);
     border:1px solid var(--edge);border-radius:6px;padding:5px 7px}
@@ -1333,6 +1400,12 @@
   .homeprefs > div:last-child{border-bottom:0}
   .homeprefs .chk{align-items:baseline;margin:0}
   .homeprefs .count{font-size:11px;margin-left:auto;text-align:right}
+  /* The M2EX mark: its own line under the card's head, quiet until it is on —
+     it is a fact about the mod, not an action, and most mods are not M2EX. */
+  .hcm2ex{display:flex;gap:6px;align-items:baseline;margin-top:8px;font-size:12px;
+    padding:4px 7px;border:1px solid var(--edge);border-radius:6px}
+  .hcm2ex:has(input:checked){border-color:var(--accent)}
+  .hcm2ex .count{font-size:11px}
   .hcmods{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 6px}
   .hcmod{display:inline-flex;gap:6px;align-items:center;padding:5px 9px;font-size:12px}
   .hcmod .ic{font-size:14px}
@@ -1616,6 +1689,7 @@
 <script src="js/buildings.js"></script>
 <script src="js/traits.js"></script>
 <script src="js/ancillaries.js"></script>
+<script src="js/portui.js"></script>
 <script src="js/minorfiles.js"></script>
 <script src="js/factions.js"></script>
 <script src="js/edusort.js"></script>

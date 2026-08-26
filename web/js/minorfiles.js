@@ -151,6 +151,47 @@ function mfNew(){
   mfLoadVocab();
 }
 
+/* ---- clone ----
+   A rebel faction is a category, a chance and a LIST OF UNITS, and building the
+   next one meant picking every unit out of a mod-wide dropdown again. This
+   starts a new record holding everything the open one holds, under a free name,
+   and leaves it unsaved so the name and the units can be adjusted before Create.
+
+   The copy is staged in the page, not on the server: `add` already takes the
+   whole record shape, so a clone is a create whose form arrives filled in. */
+function mfClone(){
+  const f = state.mf, d = f.d;
+  if(!d || !d.w || !(f.actions||[]).includes('add')) return;
+  const known = new Set((f.records||[]).map(r => r.name));
+  const stem = d.name || 'new';
+  let name = stem + '_copy';
+  for(let n = 2; known.has(name); n++) name = stem + '_copy' + n;
+  const w = JSON.parse(JSON.stringify(d.w));
+  w.name = name;
+  // a rebel faction's text key IS its `description` value, so a copy that kept
+  // the original's would show the ORIGINAL's name on the campaign map
+  if(f.tab === 'rebels') w.description = name;
+  const was = d.loc_tag || '';
+  // both tabs that have a writable text key are keyed by something that just
+  // became the new name — a rebel by its `description`, a religion by itself
+  const tag = (f.tab === 'rebels' || f.tab === 'religions') ? name : '';
+  const shown = was ? ((d.locEdits||{})['#name'] !== undefined ? d.locEdits['#name']
+                       : ((d.loc||{})[was] || '')) : '';
+  f.sel = ''; f.adding = true;
+  f.d = {name:'', label:`copy of ${d.label}`, tab:f.tab, file:f.file, noun:f.noun,
+    record:JSON.parse(JSON.stringify(w)), w,
+    findings:[], loc:{}, locEdits:(tag && shown) ? {'#name':shown} : {},
+    missing_loc:tag ? [tag] : [], loc_tag:tag, loc_file:d.loc_file || '',
+    loc_writable:d.loc_writable !== false, loc_note:d.loc_note || '',
+    known:[...known], actions:f.actions, vocab:d.vocab || {}};
+  renderMinor();
+  const carried = f.tab === 'rebels'
+    ? `${(w.units||[]).length} unit(s) and every field came with it`
+    : 'every field came with it';
+  toast(`Copied ${d.name} as “${name}” — ${carried}. `
+    + 'Nothing is written until you press Create.', 6500);
+}
+
 // The pickers (this mod's unit list, its settlement levels) come with a record,
 // and a brand-new one has no record to come with — so fetch them off any
 // existing row rather than shipping a second endpoint for the same answer.
@@ -199,6 +240,10 @@ function mfDetailHtml(){
       ${f.adding ? '' : `<button class="${d.cv?'on':''}" title="Show this ${esc(f.noun)}
 exactly as ${esc(f.file)} stores it, beside the form."
         onclick="mfCvToggle()">&lt;/&gt; Code view</button>
+      ${(d.actions||[]).includes('add')
+        ? `<button onclick="mfClone()" title="Start a new ${esc(f.noun)} holding
+everything this one holds, under a new name. Nothing is written until you press
+Create.">⧉ Clone</button>` : ''}
       ${(d.actions||[]).includes('delete')
         ? '<button class="danger" onclick="mfDelete()">Delete</button>' : ''}`}
       <button class="primary" onclick="mfSave()">${f.adding?'Create':'Save'}</button>
@@ -265,7 +310,7 @@ Click to replace it; right-click for its file location."
 }
 function mfNameRow(d, placeholder){
   const w = d.w, tag = d.loc_tag || '';
-  const shown = tag ? (d.locEdits[tag] !== undefined ? d.locEdits[tag]
+  const shown = tag ? (d.locEdits['#name'] !== undefined ? d.locEdits['#name']
                        : ((d.loc||{})[tag] || '')) : '';
   return `<label class="lbl" data-label="name">Name</label>
     <div class="${tag?'trkey':''}">
@@ -280,7 +325,7 @@ function mfNameRow(d, placeholder){
           : (shown || 'read by position, so edit it in the Strings module'))}"
         title="${esc(d.loc_writable ? 'What the player reads. Saved into data/'
           + d.loc_file + '.' : d.loc_note || '')}"
-        oninput="mfSetLoc('${q1(esc(tag))}',this.value)">` : ''}
+        oninput="mfSetLocName(this.value)">` : ''}
     </div>
     ${tag && !d.loc_writable ? `<span></span><div class="trhint count">${
       esc(d.loc_note||'')}</div>` : ''}`;
@@ -320,7 +365,7 @@ function mfRebelForm(d){
       ${(w.units||[]).map((u,k)=>`<div class="treff" data-label="unit#${k+1}">
         <input class="trattr" value="${esc(u)}" list="mfUnits"
           placeholder="unit type" oninput="mfSetUnit(${k},this.value)">
-        <span class="count">${esc(mfUnitLabel(d, u))}</span>
+        <span class="count" id="mfu${k}">${esc(mfUnitLabel(d, u))}</span>
         <button class="trgdel" onclick="mfDelUnit(${k})">✕</button>
       </div>`).join('')}
       <datalist id="mfUnits">${(v.units||[]).map(u =>
@@ -497,17 +542,45 @@ function mfTouched(repaint){
 function mfSet(key, value){
   const d = state.mf.d; if(!d) return;
   d.w[key] = value;
-  // these change the shape of the form rather than one box's contents
-  mfTouched(['name','has_mine'].includes(key));
+  // these change the shape of the form rather than one box's contents. `name`
+  // is NOT one of them: it only feeds a placeholder, and repainting the form
+  // under the caret on every keystroke is what the unit rows below were doing
+  // wrong.
+  mfTouched(key === 'has_mine');
 }
-function mfSetLoc(tag, value){
-  const d = state.mf.d; if(!d || !tag) return;
-  (d.locEdits = d.locEdits || {})[tag] = value;
+/* The shown name is stored under one slot, `#name`, and the KEY it goes to is
+   worked out at save time by `mfLocTag`. A rebel faction is keyed by its
+   `description` value, which is a box on the same form — bake the key into the
+   handler and retyping the description quietly sends the words to the old key. */
+function mfSetLocName(value){
+  const d = state.mf.d; if(!d) return;
+  (d.locEdits = d.locEdits || {})['#name'] = value;
 }
+function mfLocTag(){
+  const f = state.mf, d = f.d, w = (d && d.w) || {};
+  if(f.tab === 'rebels') return (w.description || '').trim() || (w.name || '').trim();
+  if(f.tab === 'religions') return (w.name || '').trim();
+  return d ? (d.loc_tag || '') : '';        // resources: read by position, not by tag
+}
+function mfLocBody(){
+  const d = state.mf.d, e = (d && d.locEdits) || {};
+  if(e['#name'] === undefined) return {};
+  const tag = mfLocTag();
+  return tag ? {[tag]: e['#name']} : {};
+}
+/* A rebel `unit` line is a unit TYPE and the whole rest of the line is the name,
+   spaces and all — `Mordor Orcs Invasion`. So this box could not be trimmed as
+   it was typed into and repainted from the trimmed value: every space the user
+   pressed was cut back off and written over the box before the next keystroke,
+   which is the space bar "not working" in the picker. Trimming belongs at save
+   time (`mfEdits`), and the only thing that has to follow a keystroke here is
+   the name shown beside the box. */
 function mfSetUnit(k, value){
   const d = state.mf.d; if(!d) return;
-  d.w.units[k] = value.trim();
-  mfTouched(true);
+  d.w.units[k] = value;
+  const label = document.getElementById('mfu' + k);
+  if(label) label.textContent = mfUnitLabel(d, value.trim());
+  mfTouched(false);
 }
 function mfAddUnit(){
   const w = state.mf.d.w;
@@ -561,16 +634,17 @@ async function mfCvToggle(){
    pane and the save cannot produce different bytes. */
 function mfEdits(){
   const f = state.mf, w = f.d.w;
-  if(f.tab === 'rebels') return {name:w.name, category:w.category, chance:w.chance,
-    description:w.description, units:(w.units||[]).filter(Boolean)};
-  if(f.tab === 'resources') return {name:w.name, trade_value:w.trade_value,
+  if(f.tab === 'rebels') return {name:(w.name||'').trim(), category:w.category,
+    chance:w.chance, description:w.description,
+    units:(w.units||[]).map(u => (u||'').trim()).filter(Boolean)};
+  if(f.tab === 'resources') return {name:(w.name||'').trim(), trade_value:w.trade_value,
     item:w.item, icon:w.icon, has_mine:!!w.has_mine};
-  if(f.tab === 'religions') return {name:w.name, pip_path:w.pip_path};
-  if(f.tab === 'names') return {name:w.name,
+  if(f.tab === 'religions') return {name:(w.name||'').trim(), pip_path:w.pip_path};
+  if(f.tab === 'names') return {name:(w.name||'').trim(),
     sections:Object.fromEntries((w.sections||[]).map(s => [s.name, s.entries]))};
   // cultures: only the keys this culture actually HAS a line for — the server
   // refuses to invent one, because where it would go is the file's own order
-  const out = {name:w.name, levels:{}, agents:{}};
+  const out = {name:(w.name||'').trim(), levels:{}, agents:{}};
   const v = f.d.vocab || {};
   for(const k of (v.head||[]).concat(v.tail||[]))
     if(w[k]) out[k] = w[k];
@@ -585,10 +659,10 @@ function mfEdits(){
 function mfBody(action){
   const f = state.mf, d = f.d;
   const body = {mod:f.mod, tab:f.tab, action,
-    name:action === 'add' ? d.w.name : d.name};
+    name:action === 'add' ? (d.w.name||'').trim() : d.name};
   if(action !== 'delete'){
     body.edits = mfEdits();
-    body.loc = d.locEdits || {};
+    body.loc = mfLocBody();
     if(d.raw) body.raw_block = d.raw;
   }
   return body;

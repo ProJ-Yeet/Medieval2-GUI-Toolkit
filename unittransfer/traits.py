@@ -63,6 +63,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import keyblock as kb
+from . import modflags
 from . import triggers
 
 #: EDCT is plain 8-bit text; the game reads it as Latin-1 (same as the triggers)
@@ -565,7 +566,7 @@ def overview(mod) -> Dict:
     out["vnv"] = bool(names)
     counted: Dict[str, int] = {}
     gives: Dict[str, int] = {}
-    found = check_file(tf, tg)
+    found = modflags.uncapped(check_file(tf, tg), mod)
     for finding in found:
         counted[finding["trait"]] = counted.get(finding["trait"], 0) + 1
     # The list's banner used to say "14 things to look at" and nothing else, so
@@ -617,7 +618,7 @@ def detail(mod, name: str) -> Dict:
         "loc": {tag: names.get(tag, "") for tag in text_tags(trait)},
         "missing_loc": [tag for tag in text_tags(trait) if tag not in names],
         "has_vnv": bool(names),
-        "findings": check(trait, set(tf.by_name())),
+        "findings": modflags.uncapped(check(trait, set(tf.by_name())), mod),
         "triggers": [dict(t.as_dict(), text=tg.block_text(t)) for t in mine],
         "known": sorted(tf.by_name()),
         "attributes": sorted(triggers.vocab().get("attributes", [])),
@@ -723,9 +724,18 @@ def _new_level(w: Dict, lvl_indent: str, body_indent: str) -> List[str]:
         raise TraitError("a new level needs a name")
     out = [f"{lvl_indent}{LEVEL_KW} {name}"]
     values = dict(w)
-    values.setdefault("description", f"{name}_desc")
-    values.setdefault("effects_description", f"{name}_effects_desc")
-    values.setdefault("threshold", "1")
+    # `setdefault` was not enough: the editor sends every level field, so the
+    # three the engine cannot do without arrive as EMPTY STRINGS rather than as
+    # missing keys when their boxes were left blank. The level was then written
+    # without them — a CTD the moment a character reaches it, and a block this
+    # module's own `_edit_level` refuses to save again ("a level needs its
+    # `EffectsDescription` line"). Blank means "give it the usual key", not
+    # "leave the line out".
+    for field, default in (("description", f"{name}_desc"),
+                           ("effects_description", f"{name}_effects_desc"),
+                           ("threshold", "1")):
+        if not str(values.get(field) or "").strip():
+            values[field] = default
     for key in LEVEL_ORDER:
         value = kb.value_text(values.get(_KEY_FIELD[key], ""), key in LIST_KEYS)
         if value:
@@ -863,7 +873,7 @@ def plan(mod, body: dict) -> TraitPlan:
     trait = tf.get(p.name)
     if trait is not None:
         p.block = tf.block_text(trait)
-        p.findings = check(trait, set(tf.by_name()))
+        p.findings = modflags.uncapped(check(trait, set(tf.by_name())), mod)
         if body.get("write_loc", True):
             _plan_loc(p, mod, trait, dict(body.get("loc") or {}))
     p.text = "" if text == original else text

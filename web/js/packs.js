@@ -165,13 +165,18 @@ async function openCleanup(){
   catch(e){ a={error:''+e}; }
   if(a.error){ modal.innerHTML=`<h2>Clean up</h2><div class="mbody w-bad">${esc(a.error)}</div>
     <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
-  state.clean={a,target:state.settings.last_cleanup_target||'',
+  // Re-opened straight after a cleanup (see clApply), the folder that was typed
+  // in and the sections that were unfolded are still the ones being worked in —
+  // only the LISTS are out of date, and it is those the fresh audit replaces.
+  const was=(state.clean&&state.clean.a&&state.clean.a.mod===a.mod)?state.clean:null;
+  state.clean={a,target:(was&&was.target)||state.settings.last_cleanup_target||'',
     entries:new Set(a.unused.map(u=>u.entry)),     // unused: pre-ticked, they are dead by definition
     merges:new Set(),                              // suggestions: never pre-ticked, they change a model
     into:Object.fromEntries(a.merges.map(m=>[m.entry,m.into])),
     orphans:new Set(a.orphans.map(o=>o.rel)),
     mounts:new Set(),                              // rewrites descr_mount.txt: opt in by hand
-    open:{unused:true,merges:true,mounts:false,orphans:false},plan:null};
+    open:(was&&was.open)||{unused:true,merges:true,mounts:false,orphans:false},
+    plan:null};
   resetPlace();
   renderCleanup();
 }
@@ -446,10 +451,17 @@ async function clApply(){
      Everything is backed up as it goes. 🕑 Log → Undo puts it all back.`,
     ()=>api.post('/api/bmdb/cleanup_apply',{...clPayload(),job,clear_strings_bin:clearBinOn()}));
   if(res.error){toast('Cleanup failed: '+res.error);renderCleanup();return;}
-  closeModal();
   toast(`Removed ${res.plan.entry_deletes.length} entr${res.plan.entry_deletes.length===1?'y':'ies'} `+
         `and ${res.plan.export_count} file(s) ✓${binMsg(res)}  (undo in 🕑 Log)`,5200);
-  state.bmdb=null; state.destData=null; loadSource();
+  state.bmdb=null; state.destData=null;
+  // The lists in this dialog were built from an audit taken BEFORE the cleanup,
+  // so leaving them up shows entries that are no longer in the mod and invites
+  // ticking them again. The audit is re-run here rather than left to whoever
+  // reopens the dialog: the mod on disk changed, and the answer on screen has
+  // to change with it. `loadSource` is not awaited — it repaints the page
+  // behind the dialog and has nothing to do with what the dialog shows.
+  loadSource();
+  await openCleanup();
 }
 
 function edDeleteDialog(){

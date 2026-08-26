@@ -79,6 +79,104 @@ OFN_PATHMUSTEXIST = 0x00000800
 OFN_EXPLORER = 0x00080000
 
 
+# ---------------------------------------------------------------------------
+# getting the dialog in front of the browser
+#
+# Every dialog here is opened by the SERVER process, which owns no window and
+# never had the foreground: it is a background process answering an HTTP request
+# the browser made. Windows refuses to hand the foreground to a process in that
+# position (the foreground lock, `SetForegroundWindow` returning FALSE), so the
+# dialog opened somewhere behind the browser window and, on most people's
+# machines, as nothing but a flashing taskbar button — which reads exactly like
+# "Browse... is stuck loading".
+#
+# The fix is to give the dialog an OWNER: a 0x0, never-painted popup this
+# process does own. Two properties of ownership do the work. An owned window is
+# always drawn above its owner, and a WS_EX_TOPMOST owner passes topmost on to
+# it — so the dialog cannot end up behind the browser whatever the foreground
+# lock says. Then, to make it the ACTIVE window rather than merely a visible one,
+# the thread borrows the foreground thread's input state
+# (`AttachThreadInput`) for the moment it takes to call `SetForegroundWindow`,
+# which is the documented way out of the lock for a process that has a reason to
+# be seen.
+#
+# It is created and destroyed around each dialog rather than kept: these calls
+# arrive on whatever HTTP worker thread is free, and a window belongs to the
+# thread that made it.
+
+WS_POPUP = 0x80000000
+WS_EX_TOPMOST = 0x00000008
+WS_EX_TOOLWINDOW = 0x00000080
+
+_user32 = ctypes.windll.user32
+_user32.CreateWindowExW.restype = wintypes.HWND
+_user32.CreateWindowExW.argtypes = [
+    wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD,
+    ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+    wintypes.HWND, wintypes.HMENU, wintypes.HINSTANCE, ctypes.c_void_p]
+_user32.DestroyWindow.argtypes = [wintypes.HWND]
+_user32.GetForegroundWindow.restype = wintypes.HWND
+_user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+_user32.BringWindowToTop.argtypes = [wintypes.HWND]
+_user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+_user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.c_void_p]
+_user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+
+
+class _Owner:
+    """A hidden top-level window to hang a modal dialog off, as a context manager.
+
+    ``with _Owner() as hwnd:`` — ``hwnd`` may be ``None`` (window creation is not
+    worth failing a Browse over), and every dialog below already accepts a null
+    owner, which is what it always used to pass.
+    """
+
+    def __enter__(self):
+        self.hwnd = None
+        try:
+            # "STATIC" is a class the system has already registered, so there is
+            # no window class of our own to register, name-clash or clean up.
+            self.hwnd = _user32.CreateWindowExW(
+                WS_EX_TOPMOST | WS_EX_TOOLWINDOW, "STATIC", "", WS_POPUP,
+                0, 0, 0, 0, None, None, None, None)
+        except OSError:
+            self.hwnd = None
+        if self.hwnd:
+            _force_foreground(self.hwnd)
+        return self.hwnd
+
+    def __exit__(self, *exc):
+        if self.hwnd:
+            try:
+                _user32.DestroyWindow(self.hwnd)
+            except OSError:
+                pass
+        self.hwnd = None
+        return False
+
+
+def _force_foreground(hwnd) -> None:
+    """Make ``hwnd`` the active window, borrowing the foreground thread's input.
+
+    Best-effort throughout: if any of it is refused the dialog is still TOPMOST
+    through its owner, which is the half that stops it hiding behind the browser.
+    """
+    try:
+        fg = _user32.GetForegroundWindow()
+        other = _user32.GetWindowThreadProcessId(fg, None) if fg else 0
+        mine = ctypes.windll.kernel32.GetCurrentThreadId()
+        attached = bool(other) and other != mine and bool(
+            _user32.AttachThreadInput(mine, other, True))
+        try:
+            _user32.SetForegroundWindow(hwnd)
+            _user32.BringWindowToTop(hwnd)
+        finally:
+            if attached:
+                _user32.AttachThreadInput(mine, other, False)
+    except OSError:
+        pass
+
+
 def browse_for_file(title: str = "Select a file", filter_spec: str = "",
                     initial_dir: str = "") -> Optional[str]:
     """Blocking native file-open dialog. Returns the chosen path or None.
@@ -104,8 +202,10 @@ def browse_for_file(title: str = "Select a file", filter_spec: str = "",
     comdlg32 = ctypes.windll.comdlg32
     comdlg32.GetOpenFileNameW.restype = wintypes.BOOL
     comdlg32.GetOpenFileNameW.argtypes = [ctypes.POINTER(_OPENFILENAMEW)]
-    if not comdlg32.GetOpenFileNameW(ctypes.byref(ofn)):
-        return None
+    with _Owner() as owner:
+        ofn.hwndOwner = owner
+        if not comdlg32.GetOpenFileNameW(ctypes.byref(ofn)):
+            return None
     return buf.value or None
 
 
@@ -141,8 +241,10 @@ def browse_for_save(title: str = "Save as", filter_spec: str = "",
     comdlg32 = ctypes.windll.comdlg32
     comdlg32.GetSaveFileNameW.restype = wintypes.BOOL
     comdlg32.GetSaveFileNameW.argtypes = [ctypes.POINTER(_OPENFILENAMEW)]
-    if not comdlg32.GetSaveFileNameW(ctypes.byref(ofn)):
-        return None
+    with _Owner() as owner:
+        ofn.hwndOwner = owner
+        if not comdlg32.GetSaveFileNameW(ctypes.byref(ofn)):
+            return None
     return buf.value or None
 
 
@@ -158,7 +260,9 @@ def browse_for_folder(title: str = "Select a folder") -> Optional[str]:
         bi.pszDisplayName = ctypes.cast(display_name, wintypes.LPWSTR)
         bi.lpszTitle = title
         bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE
-        pidl = _shell32.SHBrowseForFolderW(ctypes.byref(bi))
+        with _Owner() as owner:
+            bi.hwndOwner = owner
+            pidl = _shell32.SHBrowseForFolderW(ctypes.byref(bi))
         if not pidl:
             return None
         try:
