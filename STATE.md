@@ -20,7 +20,8 @@ at half the window already showing, and an entry that names ONE texture is no
 longer glued to a copy of itself — every ordinary mount. Notes:
 `merge/RELEASE_2_1_3.md`. New: `tests/test_stratmap.py` (43),
 `tests/test_cards.py` (39), `tests/test_ownership.py` (41). Suite: 65 of 65
-modules.
+modules. Committed, pushed, tagged `v2.1.3` and released with the portable zip:
+<https://github.com/ProJ-Yeet/medieval2-gui-toolkit/releases/tag/v2.1.3>
 
 **Three rules are the whole safety of this release, and two of them came out of
 running a scan against a real mod before writing any UI:**
