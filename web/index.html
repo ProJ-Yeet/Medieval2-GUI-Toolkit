@@ -172,6 +172,11 @@
   .log-item .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
   .log-item .when{color:var(--dim);font-size:11px}
   .log-item pre{font:11px/1.35 ui-monospace,Consolas,monospace;white-space:pre-wrap;margin:8px 0 0;color:var(--dim);max-height:130px;overflow:auto}
+  /* a game-file block shown verbatim (the strat-model card). Tab-aligned text,
+     so it must NOT wrap — the alignment is how the file is read. */
+  .rawblock{font:11.5px/1.45 ui-monospace,Consolas,monospace;white-space:pre;margin:0;
+    padding:8px 10px;background:var(--panel2);border:1px solid var(--edge);border-radius:6px;
+    color:var(--ink);max-height:320px;overflow:auto;tab-size:4}
   .undone{opacity:.5}
   .pill{font-size:10px;padding:1px 6px;border-radius:10px;border:1px solid var(--edge);color:var(--dim)}
   /* base picker */
@@ -411,6 +416,18 @@
   /* one this mod already has: still tickable (with “replace”), but not the ones
      the eye should land on */
   .portrow.here .pn{color:var(--dim)}
+  /* The grab bar between a list and its 3D column (core.js `splitInstall`).
+     It sits in the flex gap, so it is 6px of hit area with a 2px line drawn in
+     the middle of it — thin enough not to be furniture, wide enough to catch. */
+  .splitbar{flex:0 0 6px;align-self:stretch;min-height:120px;cursor:col-resize;
+    position:relative;border-radius:3px}
+  .splitbar::after{content:'';position:absolute;top:0;bottom:0;left:2px;width:2px;
+    border-radius:2px;background:var(--edge)}
+  .splitbar:hover::after,.splitbar.drag::after{background:var(--accent)}
+  /* While a drag is running the pointer is captured by the bar, but the text it
+     passes over would still highlight — and a half-selected list left behind is
+     the tell that this was bolted on. */
+  body.splitting{user-select:none;cursor:col-resize}
   /* BMDB mode's side panel: the list keeps the page, the model takes a column */
   .bmsplit{display:flex;gap:12px;align-items:flex-start}
   .bmmain{flex:1 1 auto;min-width:0}
@@ -419,6 +436,38 @@
     position:sticky;top:8px;max-height:82vh}
   .bmprev:fullscreen{background:var(--bg);padding:10px;max-height:none;border-radius:0}
   .bmprev:fullscreen .edprevbody{max-height:none}
+  /* ---- the Unit cards tab ----
+     A page, not a dialog: choosing between two cards a mod ships is reading
+     work, and it needs the room and the scroll position a page has. */
+  .cardsbody{padding:0 14px 90px;max-width:1100px}
+  .cardkind{margin-top:18px}
+  .cardkind h3{margin:0 0 6px;font-size:14px;display:flex;gap:10px;align-items:baseline;
+    flex-wrap:wrap}
+  .cardkind h3 .count{font-weight:400}
+  .cardnotes{margin:8px 2px 0;display:flex;flex-direction:column;gap:4px}
+  /* the thumbnail on a row: small, fixed, and never allowed to move the text —
+     hundreds of these load lazily as the list is scrolled */
+  .cdthumb{width:34px;height:34px;object-fit:contain;flex:0 0 auto;
+    background:var(--panel2);border:1px solid var(--edge);border-radius:4px}
+  /* a variant row: the pictures ARE the question, so they get real size */
+  .varrow{align-items:flex-start}
+  .varopts{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px}
+  .varopt{display:flex;flex-direction:column;gap:3px;align-items:center;cursor:pointer;
+    padding:5px;border:1px solid var(--edge);border-radius:7px;background:var(--panel2);
+    max-width:150px}
+  .varopt:hover{border-color:var(--dim)}
+  .varopt.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  .varopt input{margin:0}
+  .varopt img{max-width:132px;max-height:110px;object-fit:contain}
+  .varopt .count{text-align:center;font-size:10px;line-height:1.25;overflow-wrap:anywhere}
+  .varkeep{font-size:11px;text-align:center;color:var(--dim);padding:22px 8px}
+  /* the page's own footer: it does what a dialog's would, without being one */
+  .cardsfoot{position:sticky;bottom:0;display:flex;gap:8px;align-items:center;
+    margin-top:16px;padding:10px 2px;background:var(--bg);border-top:1px solid var(--edge)}
+  /* the two questions the ownership dialog can ask, switchable without closing */
+  .ownmodes{display:flex;gap:8px;flex-wrap:wrap}
+  .ownmodes button{font-size:12.5px;padding:5px 10px}
+  .ownmodes button.on{border-color:var(--accent);background:var(--panel2);color:var(--ink)}
   /* the per-row button: invisible until the row is under the cursor, so 2000
      rows do not turn into 2000 buttons demanding attention */
   .db3d{opacity:0;padding:0 6px;font-size:13px;line-height:20px;flex:0 0 auto}
@@ -426,14 +475,18 @@
   .dbrow.showing{outline:1px solid var(--accent);outline-offset:-1px}
   @media (max-width:1100px){
     .bmsplit{flex-wrap:wrap}
-    .bmprev{flex:1 1 100%;position:static;max-height:60vh}
+    /* !important because splitInstall writes the width as an inline style, and
+       on a window this narrow the panel belongs under the list at full width
+       whatever it was dragged to when there was room for two columns */
+    .bmprev{flex:1 1 100%!important;position:static;max-height:60vh}
+    .splitbar{display:none}
   }
   /* the way back when the preview has been hidden: a quiet button in the title */
   .edprevon{font:inherit;font-size:12px;padding:3px 9px;margin-left:10px;vertical-align:middle}
   /* narrow windows: the preview goes under the fields rather than squeezing them */
   @media (max-width:1100px){
     .edsplit{flex-wrap:wrap}
-    .edprev{flex:1 1 100%;margin:0 14px;max-height:60vh}
+    .edprev{flex:1 1 100%!important;margin:0 14px;max-height:60vh}
   }
   .v3f{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--dim)}
   .v3f select{font:inherit;font-size:13px;background:var(--panel2);color:var(--ink);
@@ -1585,6 +1638,8 @@
   <button id="importPackBtn" style="display:none" title="Import a unit pack somebody sent you">📦 Import pack…</button>
   <button id="newUnitBtn" class="primary" style="display:none" title="Create a new unit using an existing one as the base">＋ New unit</button>
   <button id="cleanBtn" style="display:none" title="Find entries and files nothing uses and move them out of the mod">🧹 Clean up BMDB…</button>
+  <button id="ownBtn" style="display:none" title="Give every model entry a texture record for each faction that fields a unit drawn with it">🛡 Fix ownership…</button>
+  <button id="allFacBtn" style="display:none" title="Give every model entry a texture record for every faction in the mod">🌐 All factions…</button>
   <button id="tidyEduBtn" style="display:none" title="Group the whole unit file into sections and line its values up">🧹 Clean up unit file…</button>
   <button id="sndBtn" class="primary" style="display:none" title="Write the staged voice changes into this mod">Apply voice edits (0)</button>
   <label class="chk" id="unusedWrap" style="display:none"><input type="checkbox" id="unusedOnly"> unused only</label>
@@ -1682,6 +1737,8 @@
 <script src="js/editor.js"></script>
 <script src="js/compare.js"></script>
 <script src="js/bmdb.js"></script>
+<script src="js/stratmap.js"></script>
+<script src="js/cards.js"></script>
 <script src="js/packs.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/guided.js"></script>

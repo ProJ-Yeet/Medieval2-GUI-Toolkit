@@ -438,13 +438,21 @@ Three things it tells you that the file paths cannot:
   pair, labelled with a faction that uses it and how many others share it, so
   four rows means four skins rather than twenty-nine of the same one.
 
-A skin is a *pair*: every faction on an entry gets a main texture and an
+A skin is usually a *pair*: a faction on an entry gets a main texture and an
 attachment texture, and the game paints from both at once — it lays them side by
 side as one image twice as wide, and the model's UVs run across the pair, main in
 the left half and attachments in the right. The viewer does the same, so a
 scabbard or a cape whose art lives on the attachment sheet comes out in its own
 colours instead of wearing whatever happened to sit at those coordinates on the
 main one.
+
+An entry that names **one** sheet is drawn from one sheet. Every ordinary mount
+is that case — a horse, a wolf, a camel has a single texture and an empty
+attachment slot — and so is any unit entry whose attachment slot repeats the main
+file. Those used to be glued to a copy of themselves, which is a needless decode
+and twice the texture for a picture identical to the one wrapping the single
+sheet gives. Entries that really do carry a second sheet (the Balrog, hero models
+with their own weapon sheet) are still glued, and look exactly as they did.
 
 **Level of detail** switches between the LODs the entry lists, and any the mod
 does not actually ship is greyed out and says so — which makes this a quick way
@@ -456,6 +464,16 @@ lights it and sits behind it, because game armour is dark and a dark model on a
 dark field is a silhouette. **Rotate** turns it slowly on the spot, **Wireframe**
 is there for looking at topology, and **Recentre** puts the camera back if you
 lose the model off-screen.
+
+Docked beside the entry list or beside the unit editor's fields, the viewer has a
+**draggable divider**: grab the line between the two columns and pull. Full
+screen used to be the only way to see a model bigger, and full screen takes the
+list you were reading with it. Double-click the divider for the default width.
+The width is remembered per screen, because how much room the model should get
+depends on what you are doing. In BMDB mode the panel opens **half the width of
+the window and already showing**, seeded with the first entry on the list — going
+down two thousand entries deciding which of them is the horse is what that screen
+is for. Closing it is remembered too.
 
 ### 🧹 Clean up BMDB
 
@@ -505,6 +523,180 @@ restores the files, and the entries can be pasted back out of
 never moved. The removal itself is backed up like any other change, so
 **🕑 Log → Undo** restores the mod byte-exact (the destination folder is a copy
 and is left alone).
+
+### 🛡 Fix ownership · 🌐 All factions
+
+Two buttons beside 🧹 Clean up BMDB, about the other half of what a modeldb
+entry holds: its **faction texture records**.
+
+An entry carries one record per faction, and the game reads the record belonging
+to the faction whose army is on the field. So an entry with no record for a
+faction that fields a unit drawn with it is a unit that does not show up right
+for that faction — and nothing in either file says the two lists have to agree,
+which is why it goes unnoticed. Divide and Conquer has 212 such gaps; Third Age
+Reforged 264.
+
+Both buttons open the same dialog and do the same write. They differ in one
+question — which factions an entry *should* have a record for:
+
+- **🛡 Fix ownership** takes the answer from the units: every faction that owns a
+  unit whose `soldier`, `officer` or `armour_ug_models` names this entry. All
+  three slots count, because all three are drawn on the field. `slave` counts
+  too — it is the generic rebel skin, not a placeholder. This is the small,
+  targeted reading of "this is missing"
+- **🌐 All factions** takes it from the roster: every faction in
+  `descr_sm_factions.txt`, for every entry. The blunt one, for models meant to be
+  usable by anybody
+
+A new record is a **clone of one the entry already has**, so it points at the
+same texture until you give it its own: the gap closes and no art is invented.
+Records are only ever **added** — nothing in this dialog can take a faction skin
+away.
+
+Three things it tells you before you press anything:
+
+- **how much bigger `battle_models.modeldb` gets.** M2TW loads the whole file
+  into memory, which is the ceiling 🧹 Clean up BMDB exists for, so the dialog
+  says it in megabytes and flags it when the growth is over a quarter. On Divide
+  and Conquer, Fix ownership is +0.1 MB and All factions is +1.7 MB; on Third Age
+  Reforged, All factions is +9.4 MB on a 1.4 MB file — **7.8× the size**, and the
+  row goes amber
+- **ownership tokens that are not faction slots.** An `ownership` line may name a
+  *culture*, and a record written for one is a skin no faction ever reads. Those
+  are listed with the units that name them, and never written
+- **entries with no texture record at all**, which are left alone: there is
+  nothing to clone a new record from
+
+The write goes through the same planner as the model card's own faction
+checklist — one engine, so it inherits that path's backup and its undo record.
+**🕑 Log → Undo** restores `battle_models.modeldb` byte for byte.
+
+## Strat map mode
+
+BMDB mode's tab strip has a third tab, **Strat map**. It is the same job on the
+other model tree: `data/descr_model_strat.txt` and `data/models_strat` — the
+generals, heirs, agents, heroes and faction symbols the *campaign map* draws,
+rather than the battle models.
+
+It is worth its own screen because the strat map is where unused art hides. A
+battle model nobody recruits is at least visible in the unit list; a general
+model that was replaced two versions ago is visible nowhere at all, and its 5 MB
+texture goes on shipping. Divide and Conquer carries 54 MB of files under
+`models_strat` that nothing in the mod names, on top of 4 MB of declared models
+no character uses.
+
+The list is every `type` block in the file, with what references it, how many
+meshes and textures it names, and a warning colour when nothing does. Clicking
+one shows the block exactly as the file stores it, tab alignment and all, plus
+every file it points at and whether the mod actually ships it.
+
+### 🧹 Clean up strat map
+
+Two lists, each with per-row checkboxes and **Select all** / **None**:
+
+1. **Strat models nothing references** — no `strat_model` line in
+   `descr_character.txt`, no other block borrowing its sprite, no mention in any
+   of the mod's `.lua` scripts, and no mention in any `data/descr_*.txt` or any
+   campaign's `descr_strat.txt` / `campaign_script.txt`. The last two are
+   deliberately over-cautious, exactly as in the BMDB cleanup: a model merely
+   *named* somewhere is held back and listed separately with the file that named
+   it, because a wrong "unused" silently breaks a mod while a wrong "still used"
+   costs nothing
+2. **Files under `models_strat` no model names** — every file in that tree that
+   nothing in the mod points at: not a model block, not a `symbol` or
+   `rebel_symbol` in `descr_sm_factions.txt`, not an `item` or `mine` in
+   `descr_sm_resources.txt`, not a settlement in `descr_cultures.txt`, not a
+   script
+
+Two rules keep it honest, and they are the whole difference between this being
+useful and being a disaster:
+
+* **`models_strat/residences` is skipped entirely.** The settlement models live
+  there, and the game reads a faction's variant of one out of that tree *by
+  folder* — nothing names the file anywhere, so "nothing names it" would be wrong
+  about every file in it. It also cannot hold anything unused worth finding: a
+  settlement nobody can see is the first thing a player notices
+* **`x.tga`, `x.tga.dds` and `x.dds` are one texture.** M2TW prefers the DDS and
+  loads it for a line that says `.tga`, which is what every texture optimiser in
+  the scene leaves behind. A reference to any spelling protects all three, and
+  removing a model takes all three with it. Without that rule the scan would call
+  387 MB of live art in one mod "named by nothing"
+
+Nothing is deleted. You choose a destination folder outside the mod, and
+everything ticked is **moved** there laid out like the mod itself:
+
+```
+<destination>\
+  removed_model_strat.txt          the `type` blocks that were removed, verbatim
+  README.txt                       what this is and how to put it back
+  data\models_strat\…              their meshes/textures, same paths as in the mod
+  unused_files\data\models_strat\… the files nothing named at all
+```
+
+A file a model you *kept* still names is never moved. The rewrite of
+`descr_model_strat.txt` is a splice: every other byte of the file, its CRLF line
+endings and its tab alignment included, comes out exactly as it went in. And it
+is backed up like any other change, so **🕑 Log → Undo** restores the mod
+byte-exact.
+
+## Unit cards mode
+
+The fourth tab of BMDB mode, **Unit cards**, is about the two pictures every unit
+has — the little recruitment card under `data/ui/units/<faction>/#<dictionary>.tga`
+and the big info card under `data/ui/unit_info/<faction>/<dictionary>_info.tga`.
+
+The game looks a card up under the **player's** faction folder, so a unit thirty
+factions can field needs its card in thirty folders. Mods do exactly that, byte
+for byte identical, thirty times over: Divide and Conquer ships 4,289 info cards
+for 916 units — 1.2 GB, of which 244 MB is art for units that no longer exist and
+397 MB is the same picture copied out.
+
+The way out is the folder the engine already falls back to: `ui/units/mercs` and
+`ui/unit_info/merc` are searched for any unit whose own faction folder has
+nothing, which is why DaC already keeps 1,181 of its 1,554 unit cards there and
+nowhere else. One copy there does the job of thirty.
+
+So the tab asks three questions, per kind of card, and every card in the mod is
+hashed so "the same picture" is a fact rather than a guess:
+
+1. **For units that are gone** — a dictionary no unit in the mod claims, in
+   `export_descr_unit.txt` or in an M2TWEOP unit file. Nothing in the game can
+   reach that art. Ticked for you, because it is a fact
+2. **The same picture in several folders** — every copy byte for byte identical.
+   One goes to the merc folder (and nothing is written at all when one of them is
+   already the merc copy), the rest move out. Ticked for you, because there is
+   nothing to decide
+3. **Different pictures per faction — your call.** Some mods really do give a
+   unit a different card per faction. Those are shown side by side, each picture
+   with the folders that hold it, and **nothing is ticked**: pick the one that
+   should become the single copy, or leave the set exactly as it is. "Take the
+   commonest, everywhere" is there once you have read them
+
+Three things it will not touch, and says so on the page:
+
+* a file in those folders that is **not shaped like a card** — the agent pictures
+  (`spy.tga`, `diplomat.tga`) and whatever else has been dropped in there. Its
+  name says nothing about which unit it belongs to, so there is no honest way to
+  call it unused
+* a unit that **pins** `card_pic_dir` or `info_pic_dir` to a folder of its own. A
+  pin is the mod saying "look here", and this is not the place to find out
+  whether the fallback still runs after it
+* a dictionary no unit claims but one of the mod's **`.lua` scripts** names —
+  M2TWEOP can build a unit at runtime, and its card is not dead
+
+Removed cards move to a destination folder outside the mod, with art for
+vanished units kept apart from copies that were merely folded up:
+
+```
+<destination>\
+  README.txt                  what this is and how to put it back
+  data\ui\…                   the copies that were folded into the merc folder
+  unused_files\data\ui\…      cards for dictionaries no unit claims
+```
+
+Everything is backed up first, including the merc copies the run *creates*, so
+**🕑 Log → Undo** puts the mod back exactly — the extra copies restored and the
+new merc files removed.
 
 ## Unit Sounds mode
 
@@ -1103,8 +1295,30 @@ created in.
   it, take parts off, and step through the head/helmet/shield variants the game
   picks between per soldier, or roll the lot with **Randomize variations**. The
   skin picker lists one row per distinct texture *pair*, so an entry naming one
-  for twenty-nine factions reads as one skin, not twenty-nine (see
+  for twenty-nine factions reads as one skin, not twenty-nine. Docked beside the
+  entry list or the editor's fields, the **divider is draggable** — and in BMDB
+  mode the panel opens at half the window, already showing (see
   [View model](#view-model))
+- **Give a model the faction skins its units need** — 🛡 Fix ownership compares
+  every modeldb entry's faction texture records against the `ownership` of the
+  units drawn with it and adds the ones that are missing, cloned from a record
+  the entry already has. 🌐 All factions beside it does the blunt version — every
+  faction in the mod, on every entry — and says in megabytes how much bigger that
+  makes the modeldb before you press it (see
+  [Fix ownership](#-fix-ownership---all-factions))
+- **Clean the strat map out** — the **Strat map** tab of BMDB mode does for
+  `descr_model_strat.txt` and `data/models_strat` what 🧹 Clean up BMDB does for
+  the modeldb: the campaign-map models no character, script or file references,
+  and the meshes and textures nothing names. `models_strat/residences` is left
+  alone (the game reads settlement variants out of it by folder), and a `.tga`
+  and the `.tga.dds` beside it count as one texture. Divide and Conquer has 58 MB
+  in there to move out (see [Strat map mode](#strat-map-mode))
+- **One card instead of thirty** — the **Unit cards** tab finds the unit and info
+  cards a mod copies identically into every faction folder and folds each set
+  into the one folder the game falls back to, plus the cards for units that no
+  longer exist. Where the copies genuinely *differ* per faction it shows them
+  side by side and takes no view — you pick, or leave them. 645 MB of Divide and
+  Conquer's 1.2 GB of card art (see [Unit cards mode](#unit-cards-mode))
 - **Replace any picture in the tool** — right-click any image for **Replace
   image…** and **Open file location**, or use the ✎ on the screens where the
   picture is the subject. A confirm dialog puts the old and new side by side,
@@ -1307,6 +1521,23 @@ cleanup, and a write undone byte for byte — are pinned without an install. Onl
 the unit-card fan-out needs a real mod's EDU, and it skips if there is none. The
 last section drives the real server over HTTP with the exact JSON the page sends.
 
+`tests/test_ownership.py` writes its own `battle_models.modeldb` by hand — the
+length prefixes, the `blank` sentinel and all — rather than borrowing a mod's,
+because the property under test is that adding a faction record keeps every one
+of those numbers right. `tests/test_bmdb_http.py` then drives the same two
+buttons over a real server, on a throwaway mod, and undoes them.
+
+`tests/test_stratmap.py` and `tests/test_cards.py` build their whole mod from
+scratch — a `descr_model_strat.txt` with CRLF endings and tab alignment, a
+`models_strat` tree with a `residences` folder and a `.tga.dds` beside a `.tga`,
+card folders holding identical copies, differing copies and the agent pictures.
+That is the only way to pin the cases these two cleaners live or die on: that the
+residences tree is invisible, that a texture's three spellings are one file, that
+a variant set is never resolved without being asked, and that the rewritten
+`descr_model_strat.txt` is the old one minus exactly one block and identical
+everywhere else. Both end by undoing the run and requiring every file back byte
+for byte.
+
 `tests/test_mesh.py` covers the battle-model decoder. Its core runs with no game
 installed: the seven template meshes under `Reference/TWCenter/` ship with this
 repo, and they pin the group table, the shared vertex pool, the bone names and
@@ -1404,7 +1635,10 @@ open, and print the address.
   the per-mod file discovery behind Home (`modfiles.py`), the shared trigger
   grammar (`triggers.py`) and its generated vocabulary (`data/trigger_vocab.json`),
   the M2TWEOP unit-file layer (`eop.py`), the Lua reference scanner
-  (`luascan.py`), the mod-wide modeldb audit and cleanup (`bmdb.py`), the sprite
+  (`luascan.py`), the mod-wide modeldb audit and cleanup (`bmdb.py`), the same
+  audit and cleanup on the strat map's `descr_model_strat.txt` and
+  `data/models_strat` (`stratmap.py`) and on the mod's unit/info card art
+  (`cards.py`), the sprite
   generation/conversion pipeline (`sprites.py`), the unit-pack format
   (`pack.py` — export to a zip, and mount someone else's as a source mod), the
   guided field editor's per-mod value lists (`vocab.py`), the picture-replacement

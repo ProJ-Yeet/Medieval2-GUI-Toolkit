@@ -58,7 +58,9 @@ data = mod_root / "data"
 (data / "text").mkdir(parents=True); (data / "unit_models").mkdir(parents=True)
 for rel in ("export_descr_unit.txt", "text/export_units.txt",
             "unit_models/battle_models.modeldb", "descr_mount.txt",
-            "descr_character.txt"):
+            # the faction roster: without it there are no faction SLOTS, and the
+            # ownership fixer refuses to write a token it cannot verify
+            "descr_character.txt", "descr_sm_factions.txt"):
     src = TATR / "data" / rel
     if src.exists():
         shutil.copy2(src, data / rel)
@@ -200,6 +202,52 @@ try:
     check("undo brings the loose file back", junk.is_file())
     check("the export folder is untouched by undo",
           (target / "removed_battle_models.modeldb").is_file())
+
+    print("\n== faction ownership: the two buttons beside the cleanup ==")
+    own = get("/api/bmdb/ownership?mod=TestMod&mode=units")
+    check("the audit comes back in the shape the dialog renders",
+          {"rows", "row_count", "added_records", "bytes", "slots", "has_roster",
+           "covered", "no_unit", "no_records", "unknown_ownership"} <= set(own))
+    check("it found the mod's faction roster", own["has_roster"] and own["slot_count"] > 5)
+    check("every row says what it is missing and who is drawn with it",
+          all(r["missing"] and {"entry", "have", "bytes", "used_by"} <= set(r)
+              for r in own["rows"]))
+    everything = get("/api/bmdb/ownership?mod=TestMod&mode=all")
+    check("mode=all is the bigger question",
+          everything["added_records"] >= own["added_records"])
+    check("…and it says how much bigger the file gets, so the dialog can warn",
+          everything["bytes"] > 0 and everything["modeldb_bytes"] > 0)
+
+    plan = post("/api/bmdb/ownership_plan", {"mod": "TestMod", "mode": "units"})
+    check("the plan covers every entry the audit listed",
+          plan["entries"] == own["row_count"] and not plan["plan"]["errors"])
+    one = own["rows"][0]["entry"]
+    narrowed = post("/api/bmdb/ownership_plan",
+                    {"mod": "TestMod", "mode": "units", "entries": [one]})
+    check("naming entries narrows it to those", narrowed["entries"] == 1)
+    check("an entry nothing asks for is simply not planned",
+          post("/api/bmdb/ownership_plan",
+               {"mod": "TestMod", "mode": "units",
+                "entries": ["no_such_entry"]}).get("empty") is True)
+
+    oa = post("/api/bmdb/ownership_apply", {"mod": "TestMod", "mode": "units"})
+    check("applying it writes the modeldb and nothing else",
+          oa["plan"]["files_written"] == ["unit_models/battle_models.modeldb"])
+    db = modeldb.parse_file(data / "unit_models/battle_models.modeldb")
+    check("the file still parses, with every entry still in it",
+          len(db.entries) == len(modeldb.parse_text(
+              before["unit_models/battle_models.modeldb"].decode(modeldb.ENCODING)).entries))
+    fixed = db.by_name()[one]
+    check("the entry that was short now has every faction its units own",
+          set(f.lower() for f in own["rows"][0]["missing"])
+          <= {t.faction.lower() for t in fixed.main_textures})
+    check("a second audit has nothing left to do",
+          get("/api/bmdb/ownership?mod=TestMod&mode=units")["row_count"] == 0)
+
+    post("/api/undo", {"id": oa["record"]["id"]})
+    check("undo restores the modeldb byte-exact again",
+          (data / "unit_models/battle_models.modeldb").read_bytes()
+          == before["unit_models/battle_models.modeldb"])
 finally:
     httpd.shutdown()
 

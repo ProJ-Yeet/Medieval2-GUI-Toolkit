@@ -1,7 +1,50 @@
 # STATE — Medieval 2 GUI Toolkit V2
-_Updated: 2026-08-26 · **v2.1.2 released** · a feature subrelease on top of 2.1.1_
+_Updated: 2026-08-26 · **v2.1.3 released** · a feature subrelease on top of 2.1.2_
 
 ## Next up
+**v2.1.3 IS A SUBRELEASE, same standing as 14j and 2.1.2 — real features, not
+folded into Phase 16 because Phase 16 (the Campaign Map Editor) is a different
+program.** It is about disk, and about gaps nothing else can see. BMDB mode goes
+from two tabs to four: **Strat map** (`unittransfer/stratmap.py`,
+`web/js/stratmap.js`) audits and cleans `descr_model_strat.txt` +
+`data/models_strat`, and **Unit cards** (`unittransfer/cards.py`,
+`web/js/cards.js`) hashes every unit and info card, removes the art of
+dictionaries no unit claims and folds the identical copies into the merc folder
+the engine already falls back to. Together, **700 MB** off Divide and Conquer.
+Beside 🧹 Clean up BMDB there are now **🛡 Fix ownership** and **🌐 All factions**
+(`bmdb.ownership_audit` / `ownership_edits`), which give a model entry a texture
+record for every faction that fields a unit drawn with it — or for every faction
+in the mod. The **3D viewer's divider is draggable** on both docks
+(`core.js` `splitInstall`, width saved per screen), in BMDB mode the panel opens
+at half the window already showing, and an entry that names ONE texture is no
+longer glued to a copy of itself — every ordinary mount. Notes:
+`merge/RELEASE_2_1_3.md`. New: `tests/test_stratmap.py` (43),
+`tests/test_cards.py` (39), `tests/test_ownership.py` (41). Suite: 65 of 65
+modules.
+
+**Three rules are the whole safety of this release, and two of them came out of
+running a scan against a real mod before writing any UI:**
+
+1. `stratmap`: **`models_strat/residences` is skipped entirely** — the game picks
+   a faction's settlement variant out of that tree by folder, so nothing names
+   the file and "nothing names it" would be wrong about all 2,443 of them.
+2. `stratmap`: **`x.tga` / `x.tga.dds` / `x.dds` are ONE texture.** M2TW prefers
+   the DDS for a line that says `.tga`. Without this the first run reported
+   387 MB of Divide and Conquer's *live* art as unnamed; with it, 54 MB.
+3. `cards`: the merc folder is the fallback for **any** unit, not only
+   mercenaries — which is what makes one copy able to replace thirty. DaC already
+   keeps 1,181 of its 1,554 unit cards there and nowhere else, and `edu.py`
+   `_icon_dirs` has encoded the same rule since long before this. If that ever
+   turns out to be wrong for some engine build, cards go blank and 🕑 Log → Undo
+   is the way back — which is why the whole feature moves files rather than
+   deleting them.
+
+`cards.py` refuses three things by design and says so on the page: a file not
+shaped like a card (the agent pictures), a unit that pins `*_pic_dir`, and a
+dictionary only a `.lua` script names. `bmdb.ownership_*` refuses a fourth: an
+ownership token the faction roster does not define, since an `ownership` line
+may name a culture.
+
 **v2.1.2 IS A SUBRELEASE, same standing as 14j — real features, not folded
 into Phase 16 because Phase 16 (the Campaign Map Editor) is a different
 program.** Three things: **porting a trait or an ancillary out of another

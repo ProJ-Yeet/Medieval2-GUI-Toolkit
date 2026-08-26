@@ -250,6 +250,10 @@ function edPrevAttach(){
       <div class="edprevbody" id="${ED_PREV_HOST}"></div>`;
   }
   split.appendChild(edPrevNode);
+  // Folded to its bar, the column is as wide as that bar and a divider would be
+  // dragging nothing — `.edprev.min` sizes itself, so the width is not ours.
+  if(state.ed.prevMin) edPrevNode.style.flex = '';
+  else splitInstall(split, edPrevNode, 'v3_dock_px', 340);
   edPrevBar();
   edPrevMount();
 }
@@ -301,6 +305,17 @@ function edPrevMin(){
   if(!state.ed) return;
   state.ed.prevMin = !state.ed.prevMin;
   if(edPrevNode) edPrevNode.classList.toggle('min', !!state.ed.prevMin);
+  // Fold and unfold in place rather than re-rendering (the canvas is live), so
+  // the width and its grab bar are put right here: `.edprev.min` sizes itself
+  // and the inline width splitInstall wrote would otherwise beat it.
+  const bar = document.querySelector('#edSplit > .splitbar');
+  if(state.ed.prevMin){
+    if(edPrevNode) edPrevNode.style.flex = '';
+    if(bar) bar.style.display = 'none';
+  }else{
+    if(bar) bar.style.display = '';
+    edPrevAttach();
+  }
   edPrevBar();
   edPrevMount();
 }

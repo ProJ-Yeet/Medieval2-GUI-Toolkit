@@ -97,6 +97,15 @@ class Mod:
         return self.data / "descr_mount.txt"
 
     @property
+    def models_strat_dir(self) -> Path:
+        """The strat map's model tree — the other half of a mod's 3D art."""
+        return self.data / "models_strat"
+
+    @property
+    def descr_model_strat_path(self) -> Path:
+        return self.data / "descr_model_strat.txt"
+
+    @property
     def descr_projectile_path(self) -> Path:
         return self.data / "descr_projectile.txt"
 
@@ -286,6 +295,20 @@ class Mod:
             self.modeldb_path, modeldb.parse_file,
             "It holds the battle models every unit names, so a unit cannot be "
             "opened without it. " + self._PACKED)
+
+    @cached_property
+    def strat_models(self):
+        """Parsed data/descr_model_strat.txt (blocks kept verbatim).
+
+        Imported inside the property rather than at the top of the file:
+        :mod:`unittransfer.stratmap` needs :class:`Mod` and this needs it back,
+        and one of the two circles has to be broken somewhere. A cached_property
+        rather than the module's own dict so :meth:`drop_caches` forgets it with
+        everything else after a write — which is the whole reason it is here and
+        not in stratmap.py.
+        """
+        from . import stratmap as stratmap_mod
+        return stratmap_mod.parse_file(self.descr_model_strat_path)
 
     @cached_property
     def mount_file(self) -> "mounts_mod.MountFile":

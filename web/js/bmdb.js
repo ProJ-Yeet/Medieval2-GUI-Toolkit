@@ -50,6 +50,10 @@ function renderBmdb(){
     (!qq||e.name.includes(qq)||(e.folder||'').toLowerCase().includes(qq)
       ||e.used_by.some(u=>u.toLowerCase().includes(qq)))
     &&(!unusedOnly.checked||e.unused));
+  // Open by default, seeded with the first row that survived the search box —
+  // done here rather than on entering the mode because this is the first point
+  // at which there IS a row to show.
+  if(!bmPrevNode && bmPrevOn() && rows.length) bmPrevMake(rows[0].name);
   const nUnused=state.bmdb.entries.filter(e=>e.unused).length;
   const dupes=state.bmdb.count-state.bmdb.names;
   count.textContent=`${rows.length}/${state.bmdb.names}`;
@@ -112,22 +116,37 @@ function bmPrevAttach(){
   const split = document.getElementById('bmSplit');
   if(!split || !bmPrevNode) return;
   split.appendChild(bmPrevNode);
+  // Half the split by default — this mode's errand is looking AT models, not
+  // reading a list with a thumbnail beside it — and draggable from there.
+  splitInstall(split, bmPrevNode, 'bmdb_prev_px', avail => Math.round(avail / 2));
   bmPrevBar();
   bmPrevMount();
 }
+/* On unless it has been turned off, the way the unit editor's preview column
+   already is. Going down a list of two thousand entries deciding which of them
+   is the horse is what this mode is FOR, and a panel you have to go and ask for
+   every time you open the mode is one that mostly does not get opened. */
+const bmPrevOn = () => state.settings.bmdb_preview !== false;
 function bmPrevClose(){
   if(v3 && v3.host === BM_PREV_HOST) v3Unmount();
   bmPrevDetach();
   bmPrevNode = null; bmPrevEntry = '';
+  state.settings.bmdb_preview = false;
+  api.post('/api/settings', {bmdb_preview: false});
   renderBmdb();
 }
 function bmPrevToggle(){
   if(bmPrevNode) return bmPrevClose();
+  state.settings.bmdb_preview = true;
+  api.post('/api/settings', {bmdb_preview: true});
   // seeded with the first row on screen, so the panel opens showing something
   const first = main.querySelector('.dbrow');
   bmPrevOpen(first ? first.dataset.name : '');
 }
-function bmPrevOpen(name){
+/* Build the panel without painting. Separate from `bmPrevOpen` because
+   `renderBmdb` opens it too, and calling something that re-renders from inside
+   the render is how you get a loop. */
+function bmPrevMake(name){
   if(!bmPrevNode){
     bmPrevNode = document.createElement('aside');
     bmPrevNode.className = 'bmprev';
@@ -136,6 +155,9 @@ function bmPrevOpen(name){
       <div class="edprevbody" id="${BM_PREV_HOST}"></div>`;
   }
   bmPrevEntry = name || bmPrevEntry;
+}
+function bmPrevOpen(name){
+  bmPrevMake(name);
   renderBmdb();               // re-marks the row that is showing, then re-attaches
 }
 function bmPrevBar(){
@@ -348,3 +370,243 @@ function edEntryUsers(m){
   </div>`;
 }
 const short=w=>w.replace(/^(mount|file):/,'');
+
+/* ======================= 🛡 FACTION OWNERSHIP =======================
+   A modeldb entry carries one texture record per faction, and the game reads
+   the record for the faction whose army is on the field. An entry with no
+   record for a faction that fields a unit drawn with it is a unit that does not
+   show up right for that faction — and it is invisible in every file, because
+   nothing in the EDU or the modeldb says the two lists have to agree.
+
+   So this is that comparison, mod-wide, in two flavours a modder actually
+   wants. Both are the same dialog and the same write; they differ in one
+   question — which factions an entry SHOULD have a record for:
+
+     * **Fix ownership** takes the answer from the units: every faction that
+       owns a unit whose `soldier`, `officer` or `armour_ug_models` names this
+       entry. Small, targeted and the honest reading of "this is missing".
+     * **All factions** takes it from the roster: every faction the mod has.
+       The blunt one, for a model meant to be usable by anybody. It is a much
+       bigger write and the dialog says so in megabytes before you press it,
+       because M2TW loads the whole modeldb into memory and that ceiling is the
+       reason 🧹 Clean up BMDB exists.
+
+   Nothing is ever REMOVED from a faction list here: the value handed to the
+   planner is `current + missing`, so the write can only append. It goes through
+   `edit.plan_bmdb` — the same engine as the model card's own faction checklist
+   — so the backup, the undo record and the guards are the ones that already
+   exist rather than new ones. */
+const OWN_MODES={
+  units:{icon:'🛡', title:'Fix faction ownership',
+         short:'the factions their units are owned by'},
+  all:  {icon:'🌐', title:'Give every model every faction',
+         short:'every faction in the mod'}};
+
+async function openOwnership(mode){
+  const modal=document.getElementById('modal');
+  modal.className='modal wide';
+  overlay.classList.add('open');
+  const job=newJob();
+  let a;
+  try{ a=await runJob(job,`${OWN_MODES[mode].icon} ${OWN_MODES[mode].title}`,
+        `Reading <code>battle_models.modeldb</code>, the faction roster and every unit's
+         <code>ownership</code> line…`,
+        ()=>api.get(`/api/bmdb/ownership?mod=${enc(state.src)}&mode=${enc(mode)}&job=${enc(job)}`)); }
+  catch(e){ a={error:''+e}; }
+  if(a.error){ modal.innerHTML=`<h2>${esc(OWN_MODES[mode].title)}</h2>
+    <div class="mbody w-bad">${esc(a.error)}</div>
+    <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
+  state.own={a,mode,
+    // Ticked by default: every row is a record the entry is missing, which is a
+    // fact about the file rather than a judgement — the same reason the BMDB
+    // cleanup pre-ticks the entries nothing references.
+    picked:new Set(a.rows.map(r=>r.entry)),
+    plan:null};
+  resetPlace();
+  renderOwnership();
+}
+
+/* Switching mode re-runs the scan rather than filtering the one already here:
+   the two ask different questions of the mod, and half an answer to the other
+   one is worse than making you wait three seconds. */
+function ownMode(mode){ if(state.own&&state.own.mode!==mode) openOwnership(mode); }
+
+function renderOwnership(){
+  const o=state.own,a=o.a,def=OWN_MODES[o.mode];
+  const grow=a.modeldb_bytes?a.bytes/a.modeldb_bytes:0;
+  const heavy=grow>=0.25;                 // a quarter bigger is worth stopping for
+  document.getElementById('modal').innerHTML=`
+    <h2>${def.icon} ${esc(def.title)} <span class="pill">${esc(a.mod)}</span></h2>
+    <div class="mbody">
+      <div class="ownmodes">
+        ${Object.entries(OWN_MODES).map(([k,d])=>`<button class="${k===o.mode?'on':''}"
+          onclick="ownMode('${k}')">${d.icon} ${esc(d.title)}</button>`).join('')}
+      </div>
+      <div class="count" style="margin:8px 0 10px">Every entry gets a texture record for
+        <b>${esc(def.short)}</b>. A new record is a <b>clone of one the entry already has</b>,
+        so it points at the same texture until you give it its own — the entry stops having a
+        gap, and no art is invented. Records are only ever <b>added</b>: nothing here can take
+        a faction skin away.</div>
+
+      ${!a.has_roster?`<div class="warnbox">This mod has no readable
+        <code>descr_sm_factions.txt</code>, so there is no list of faction slots to check
+        against and nothing can be added safely.</div>`:''}
+
+      <div class="sum">
+        <div class="srow shead"><span class="sicon">${def.icon}</span><span class="stext">
+          ${a.row_count} of ${a.entry_count} entries are short of a faction record</span></div>
+        <div class="srow"><span class="sicon">+</span><span class="stext">
+          <b>${a.added_records}</b> record${a.added_records===1?'':'s'} to add across
+          ${a.slot_count} faction slot${a.slot_count===1?'':'s'}</span></div>
+        <div class="srow ${heavy?'warn':''}"><span class="sicon">${heavy?'!':'📦'}</span>
+          <span class="stext">battle_models.modeldb grows by about <b>${MB(a.bytes)}</b>
+          ${a.modeldb_bytes?`— from ${MB(a.modeldb_bytes)} to ${MB(a.modeldb_bytes+a.bytes)}, <b>${
+            (1+grow).toFixed(1)}×</b> its size`:''}${heavy?`. M2TW loads the whole file into
+          memory, and a mod near that ceiling is exactly what <b>🧹 Clean up BMDB</b> is for —
+          worth running first.`:'.'}</span></div>
+        ${a.covered?`<div class="srow"><span class="sicon">✓</span><span class="stext">
+          ${a.covered} entr${a.covered===1?'y':'ies'} already ha${a.covered===1?'s':'ve'} every
+          record ${o.mode==='all'?'the roster asks for':'their units need'}</span></div>`:''}
+        ${a.no_unit?`<div class="srow"><span class="sicon">·</span><span class="stext">
+          ${a.no_unit} entr${a.no_unit===1?'y is':'ies are'} drawn for no unit at all — a mount,
+          a general, or something nothing uses${o.mode==='units'?', so this mode has nothing to say about '
+          +(a.no_unit===1?'it':'them'):''}</span></div>`:''}
+        ${a.no_records?`<div class="srow warn"><span class="sicon">!</span><span class="stext">
+          ${a.no_records} entr${a.no_records===1?'y has':'ies have'} no texture record at all,
+          so there is nothing to clone a new one from. Left alone.</span></div>`:''}
+      </div>
+
+      ${a.unknown_ownership.length?`<fieldset class="assetconf" style="margin-top:10px">
+        <legend class="w-warn">Ownership tokens that are not faction slots</legend>
+        <div class="count">These appear on a unit's <code>ownership</code> line but
+          <code>descr_sm_factions.txt</code> does not define them — a culture name, or a typo.
+          A record written for one of them is a skin no faction ever reads, so they are
+          <b>reported and not added</b>.</div>
+        <div class="flist" style="margin-top:6px">${a.unknown_ownership.map(x=>`<div class="frow">
+          <span class="fp">${esc(x.faction)}</span>
+          <span class="fs">${x.count} unit${x.count===1?'':'s'}: ${esc(x.units.join(', '))}${
+            x.count>x.units.length?' …':''}</span></div>`).join('')}</div>
+      </fieldset>`:''}
+
+      ${a.row_count?`<div class="clbar" style="margin-top:12px">
+          <button onclick="ownAll(true)">Select all</button>
+          <button onclick="ownAll(false)">None</button>
+          <span class="count" id="ownCount">${ownCountText()}</span></div>
+        <div class="cllist">${a.rows.map(ownRowHtml).join('')}</div>
+        ${a.row_count>a.rows.length?`<div class="count">…and ${a.row_count-a.rows.length}
+          more, not listed. <b>Select all</b> covers them too — the list is capped for the
+          page, the write is not.</div>`:''}`
+       :'<div class="count" style="margin-top:10px">Nothing to add. Every entry already has a record for '
+        +esc(def.short)+'. 🎉</div>'}
+      <div id="ownPreview"></div>
+    </div>
+    <div class="foot">
+      <button onclick="closeModal()">Close</button>
+      <button onclick="ownPreview()" ${a.row_count?'':'disabled'}>Preview</button>
+      <button class="primary" onclick="ownApply()" ${a.row_count&&a.has_roster?'':'disabled'}>
+        Add the missing records</button>
+    </div>`;
+}
+function ownRowHtml(r){
+  const o=state.own;
+  return `<div class="clrow">
+    <input type="checkbox" ${o.picked.has(r.entry)?'checked':''}
+      onchange="ownPick('${q1(esc(r.entry))}',this.checked)">
+    <div class="grow"><span class="nm">${esc(r.entry)}</span>
+      <span class="badge">has ${r.have}</span>
+      <div class="sub">+ ${r.missing.map(f=>`<code>${esc(f)}</code>`).join(' ')}</div>
+      ${r.used_by.length?`<div class="sub">drawn for ${esc(r.used_by.slice(0,4).join(', '))}${
+        r.used_by.length>4?` +${r.used_by.length-4} more`:''}</div>`
+       :'<div class="sub count">no unit is drawn with it</div>'}
+    </div>
+    <span class="count">+${MB(r.bytes)}</span></div>`;
+}
+function ownCountText(){
+  const o=state.own;
+  const bytes=o.a.rows.reduce((n,r)=>n+(o.picked.has(r.entry)?r.bytes:0),0);
+  return `${o.picked.size}/${o.a.row_count} ticked · about ${MB(bytes)}`;
+}
+// Only the header count is repainted on a tick — the checkbox already shows its
+// own new state, and a mod can have 1500 rows here.
+function ownPick(name,on){
+  on?state.own.picked.add(name):state.own.picked.delete(name);
+  ownStale();
+  const el=document.getElementById('ownCount'); if(el)el.textContent=ownCountText();
+}
+function ownAll(on){
+  const o=state.own;
+  // `null` means "every entry the server finds", which is not the same as the
+  // rows on screen when the list was capped — that is the whole reason the
+  // payload can say "all" rather than naming them.
+  o.picked=new Set(on?o.a.rows.map(r=>r.entry):[]);
+  o.allRows=on;
+  document.querySelectorAll('.cllist input[type=checkbox]').forEach(cb=>{cb.checked=on;});
+  ownStale();
+  const el=document.getElementById('ownCount'); if(el)el.textContent=ownCountText();
+}
+function ownStale(){const b=document.getElementById('ownPreview');
+  if(b&&state.own.plan){state.own.plan=null;b.innerHTML='';}}
+function ownPayload(){
+  const o=state.own;
+  const all=o.allRows!==false&&o.picked.size===o.a.rows.length;
+  return {mod:o.a.mod, mode:o.mode,
+    // Everything ticked and the list was not narrowed: send no `entries` at all,
+    // so the server works on every entry it finds rather than on the capped page.
+    ...(all?{}:{entries:[...o.picked]})};
+}
+async function ownPreview(){
+  const box=document.getElementById('ownPreview'); if(!box)return null;
+  box.innerHTML='<div class="preview">Planning…</div>';
+  const r=await api.post('/api/bmdb/ownership_plan',ownPayload());
+  if(r.error){box.innerHTML=`<div class="preview w-bad">${esc(r.error)}</div>`;return null;}
+  state.own.plan=r;
+  box.innerHTML=ownPlanHtml(r); return r;
+}
+/* The edit planner reports one line per entry, and this is a job that touches a
+   thousand of them — so the plan box shows the shape and a sample rather than
+   every line. The full list is in `config/server.log`, which is where a job this
+   size belongs anyway. */
+function ownPlanHtml(r){
+  const p=r.plan||{},ch=p.changes||[];
+  const li=(cls,items)=>(items||[]).slice(0,12).map(x=>`<div class="srow ${cls}"><span class="sicon">${
+      cls==='bad'?'✗':'!'}</span><span class="stext">${esc(x)}</span></div>`).join('');
+  return `<div class="sum" style="margin-top:10px">
+    <div class="srow shead"><span class="sicon">✎</span><span class="stext">What this writes</span></div>
+    <div class="srow"><span class="sicon">·</span><span class="stext">
+      <b>${r.entries||0}</b> entr${r.entries===1?'y':'ies'} in
+      <span class="path">data/unit_models/battle_models.modeldb</span></span></div>
+    ${ch.slice(0,8).map(x=>`<div class="srow"><span class="sicon">·</span>
+      <span class="stext">${esc(x)}</span></div>`).join('')}
+    ${ch.length>8?`<div class="srow"><span class="sicon">·</span><span class="stext">
+      <i>…and ${ch.length-8} more, listed in full in the 🕑 Log and in config/server.log</i>
+      </span></div>`:''}
+    ${li('warn',p.warnings)}${li('bad',p.errors)}</div>`;
+}
+async function ownApply(){
+  const o=state.own,a=o.a;
+  const r=o.plan||await ownPreview();
+  if(!r)return;
+  const p=r.plan||{};
+  if((p.errors||[]).length){toast(p.errors[0]);return;}
+  if(!r.entries){toast('Nothing to add');return;}
+  const bytes=a.rows.reduce((n,x)=>n+(o.picked.has(x.entry)?x.bytes:0),0);
+  if(!confirm(`Add the missing faction texture records to ${r.entries} `+
+      `entr${r.entries===1?'y':'ies'} of “${a.mod}”?\n\n`+
+      `Each new record is a clone of one the entry already has, so it points at the same `+
+      `texture. Nothing is removed.\n\n`+
+      `battle_models.modeldb grows by roughly ${MB(bytes)}.\n\n`+
+      `It is backed up first. 🕑 Log → Undo puts it back byte for byte.`))return;
+  const job=newJob();
+  const res=await runJob(job,`${OWN_MODES[o.mode].icon} ${esc(OWN_MODES[o.mode].title)}`,
+    `Adding the missing faction records to ${r.entries} entr${r.entries===1?'y':'ies'} and
+     rewriting ${esc(a.mod)}’s <code>battle_models.modeldb</code>. It is backed up first.`,
+    ()=>api.post('/api/bmdb/ownership_apply',{...ownPayload(),job}));
+  if(res.error){toast('Could not add the records: '+res.error);renderOwnership();return;}
+  toast(`${res.entries} entr${res.entries===1?'y':'ies'} given their missing faction `+
+        `record(s) ✓  (undo in 🕑 Log)`,5200);
+  // The list was built from a scan taken BEFORE the write, so it now describes a
+  // file that has changed — re-run rather than leave rows up inviting a second go.
+  state.bmdb=null;
+  loadBmdb();
+  await openOwnership(o.mode);
+}

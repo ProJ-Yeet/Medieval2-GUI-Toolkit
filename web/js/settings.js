@@ -256,6 +256,8 @@ const LOG_MODES=[
   {id:'transfer',   label:'⚔ Transfers'},
   {id:'edit',       label:'✎ Unit edits'},
   {id:'bmdb',       label:'🗄 BMDB'},
+  {id:'stratmap',   label:'🗺 Strat map'},
+  {id:'cards',      label:'🖼 Unit cards'},
   {id:'sounds',     label:'🔊 Sounds'},
   {id:'buildings',  label:'🏰 Buildings'},
   {id:'traits',     label:'🎖 Traits'},
@@ -330,6 +332,8 @@ function logItemHtml(e){
     <div class="top"><div><b>${esc(e.resolved_type||e.unit_type||'')}</b> <span class="pill">${
       e.mode==='sounds'?`🔊 voice edits in ${esc(e.dest)}`
       :e.mode==='bmdb'?`${e.action==='cleanup'?'🧹 cleaned out of':'🗄 bmdb edit in'} ${esc(e.dest)}`
+      :e.mode==='stratmap'?`🧹 strat map cleaned out of ${esc(e.dest)}`
+      :e.mode==='cards'?`${e.action==='consolidate'?'🖼 cards consolidated in':'🧹 cards cleaned out of'} ${esc(e.dest)}`
       :e.mode==='edit'?`${e.action==='delete'?'🗑 deleted in':'✎ edited in'} ${esc(e.dest)}`
       :e.mode&&e.mode!=='transfer'?`${esc(e.mode)} edit in ${esc(e.dest)}`
                      :`${esc(e.source)} → ${esc(e.dest)}`}</span></div>

@@ -902,6 +902,197 @@ def entry_detail(mod: Mod, name: str) -> dict:
     }
 
 
+
+# ---------------------------------------------------------------------------
+# faction skin coverage — "fix ownership"
+
+
+#: The two answers to "which factions should this entry have a skin for".
+#:
+#: ``units`` is the honest one: an entry needs a record for every faction that
+#: can actually field a unit drawn with it, which is the union of those units'
+#: ``ownership`` lines. ``all`` is the blunt one a modder reaches for when a
+#: model is meant to be usable by anybody — every faction slot in the roster.
+OWNERSHIP_MODES = ("units", "all")
+
+
+def unit_factions(mod: Mod) -> Dict[str, List[str]]:
+    """``entry name -> the faction slots the units drawn with it are owned by``.
+
+    Every model slot a unit names counts — ``soldier``, ``officer`` and every
+    ``armour_ug_models`` tier — because all of them are drawn on the field for
+    that unit's owner, so all of them need that owner's skin.
+
+    ``slave`` is included on purpose: it is a real texture record (the generic
+    rebel skin) and a rebel unit whose entry has none is exactly the gap this is
+    for. What is NOT included is an ownership token the faction roster does not
+    define — an ownership line may name a *culture*, and writing a culture into
+    the modeldb as if it were a faction would be inventing a skin nobody can
+    use. :func:`unknown_ownership` reports those instead.
+    """
+    slots = set(edit.mod_faction_slots(mod))
+    out: Dict[str, List[str]] = {}
+    for u in mod.edu.units:
+        own = [f for f in dict.fromkeys(x.lower() for x in u.ownership)
+               if not slots or f in slots]
+        if not own:
+            continue
+        for name in u.model_names():
+            seen = out.setdefault(name, [])
+            for f in own:
+                if f not in seen:
+                    seen.append(f)
+    return out
+
+
+def unknown_ownership(mod: Mod) -> Dict[str, List[str]]:
+    """``token -> the units that name it``, for ownership tokens with no faction slot.
+
+    Reported rather than added. There is no way to tell a typo from a culture
+    name from a faction the roster forgot, and all three would put a record in
+    the modeldb that no faction ever reads.
+    """
+    slots = set(edit.mod_faction_slots(mod))
+    out: Dict[str, List[str]] = {}
+    if not slots:
+        return out
+    for u in mod.edu.units:
+        for f in dict.fromkeys(x.lower() for x in u.ownership):
+            if f not in slots:
+                out.setdefault(f, []).append(u.type)
+    return out
+
+
+def _record_bytes(e: "modeldb.ModelEntry") -> int:
+    """Roughly what one more faction record costs this entry, both groups over.
+
+    An added record is a clone of an existing one, so an existing one's size is
+    the new one's size. Used only to tell the dialog how much bigger the modeldb
+    gets: M2TW loads the whole file into memory and a mod near the ceiling has to
+    know that before it presses the button, not after.
+    """
+    first = e.main_textures[:1]
+    per = sum(len(t.faction) + len(t.texture or "") + len(t.normal or "")
+              + len(t.sprite or "") + 12 for t in first) or 60
+    return per * (2 if e.attach_textures else 1)
+
+
+def ownership_audit(mod: Mod, mode: str = "units",
+                    progress: Progress = None) -> dict:
+    """Which entries are short of a faction skin, and which factions they are.
+
+    One row per entry that would gain something. Entries already covered are
+    counted and not listed — on a mod where the answer is "nothing to do" the
+    dialog should say so in one line rather than in two thousand.
+    """
+    say = _reporter(progress)
+    mode = mode if mode in OWNERSHIP_MODES else "units"
+    say(4, "reading the faction roster")
+    slots = edit.mod_faction_slots(mod)
+    say(10, "parsing battle_models.modeldb")
+    entries = mod.modeldb.by_name()
+    say(30, "reading which factions own the units")
+    wanted_by_entry = unit_factions(mod)
+    unknown = unknown_ownership(mod)
+
+    rows: List[dict] = []
+    covered = no_unit = no_record = 0
+    added_total = bytes_total = 0
+    seen: set = set()
+    say(55, f"checking {len(entries)} entries for missing faction skins")
+    for e in mod.modeldb.entries:
+        if e.name in seen:
+            continue                        # duplicate names are one piece of work
+        seen.add(e.name)
+        have = [t.faction.lower() for t in e.main_textures]
+        if not have:
+            no_record += 1                  # nothing to clone a new record FROM
+            continue
+        used = wanted_by_entry.get(e.name, [])
+        want = slots if mode == "all" else used
+        missing = [f for f in dict.fromkeys(want) if f and f not in have]
+        if not missing:
+            if not used:
+                no_unit += 1                # no unit is drawn with it at all
+            else:
+                covered += 1
+            continue
+        grew = _record_bytes(e) * len(missing)
+        added_total += len(missing)
+        bytes_total += grew
+        rows.append({
+            "entry": e.name,
+            "have": len(have),
+            "missing": missing,
+            "bytes": grew,
+            "used_by": sorted({u.type for u in mod.edu.units
+                               if e.name in u.model_names()})[:12],
+        })
+    say(100, "done")
+    out = {
+        "mod": mod.name,
+        "mode": mode,
+        "entry_count": len(entries),
+        "slots": slots,
+        "slot_count": len(slots),
+        "has_roster": bool(slots),
+        "rows": rows[:1500],
+        "row_count": len(rows),
+        "added_records": added_total,
+        "bytes": bytes_total,
+        "modeldb_bytes": (mod.modeldb_path.stat().st_size
+                          if mod.modeldb_path.is_file() else 0),
+        "covered": covered,
+        "no_unit": no_unit,
+        "no_records": no_record,
+        "unknown_ownership": [{"faction": f, "units": u[:8], "count": len(u)}
+                              for f, u in sorted(unknown.items())],
+    }
+    log.info("BMDB   ownership audit %s (%s): %d of %d entries short of a faction "
+             "skin, %d record(s) to add, about %d bytes; %d covered, %d used by no "
+             "unit, %d with no texture record to clone from",
+             mod.name, mode, len(rows), len(entries), added_total, bytes_total,
+             covered, no_unit, no_record)
+    return out
+
+
+def ownership_edits(mod: Mod, mode: str = "units",
+                    only: Optional[Sequence[str]] = None) -> List[dict]:
+    """The ``model_edits`` payload that adds the missing records.
+
+    Built here rather than in the page for two reasons: the page would otherwise
+    have to be told every entry's current faction list — thirty tokens times two
+    thousand entries — and, more to the point, the list has to be re-derived from
+    the mod at the moment of writing rather than from an audit that may be older
+    than the file it describes.
+
+    The value handed over is ``current + missing``, in that order. It goes
+    through :func:`unittransfer.edit.plan_bmdb` exactly as the model card's own
+    faction checklist does — one engine, so this inherits the backup, the undo,
+    the "an entry needs at least one record" guard and the padded-first-entry
+    handling rather than reimplementing any of them. Because nothing is ever
+    dropped from the list, that path can only append.
+    """
+    slots = edit.mod_faction_slots(mod)
+    wanted_by_entry = {} if mode == "all" else unit_factions(mod)
+    pick = {str(n).lower() for n in only} if only is not None else None
+    edits: List[dict] = []
+    seen: set = set()
+    for e in mod.modeldb.entries:
+        if e.name in seen or (pick is not None and e.name not in pick):
+            continue
+        seen.add(e.name)
+        have = [t.faction.lower() for t in e.main_textures]
+        if not have:
+            continue
+        want = slots if mode == "all" else wanted_by_entry.get(e.name, [])
+        missing = [f for f in dict.fromkeys(want) if f and f not in have]
+        if not missing:
+            continue
+        edits.append({"entry": e.name, "factions": have + missing})
+    return edits
+
+
 # ---------------------------------------------------------------------------
 # cleanup: plan
 

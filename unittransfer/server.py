@@ -68,7 +68,28 @@ BMDB mode (the whole battle_models.modeldb, see :mod:`unittransfer.bmdb`)
   GET  /api/bmdb/audit?mod=      -> unused entries, soldier-merge twins, orphan files
   POST /api/bmdb/cleanup_plan    -> what a cleanup would move/remove
   POST /api/bmdb/cleanup_apply   -> do it (backups + undo, assets exported first)
+  GET  /api/bmdb/ownership?mod=&mode=units|all
+                                 -> entries with no texture record for a faction
+                                    that fields a unit drawn with them (or for
+                                    every faction in the roster)
+  POST /api/bmdb/ownership_plan | /ownership_apply
+                                 -> add those records (backups + undo, through
+                                    the same planner the model card uses)
   GET  /api/progress?job=ID      -> where a long job (audit / cleanup) has got to
+
+Strat map mode (descr_model_strat.txt + data/models_strat, see
+:mod:`unittransfer.stratmap`)
+  GET  /api/stratmap/entries?mod= -> every strat model, with who uses it
+  GET  /api/stratmap/entry?mod=&name= -> one entry, block verbatim
+  GET  /api/stratmap/audit?mod=  -> unused strat models and orphan files
+  POST /api/stratmap/cleanup_plan  -> what a cleanup would move/remove
+  POST /api/stratmap/cleanup_apply -> do it (backups + undo, assets exported first)
+
+Unit / info cards (see :mod:`unittransfer.cards`)
+  GET  /api/cards/audit?mod=     -> cards for units that are gone, cards copied
+                                    identically into several faction folders, and
+                                    the sets that really do differ per faction
+  POST /api/cards/plan | /apply  -> remove them, or fold them into the merc folder
 
 Sprites mode (far-LOD unit sprites, see :mod:`unittransfer.sprites`)
   GET  /api/sprites?mod=         -> models, CFG state, what's waiting in export/,
@@ -207,7 +228,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from . import bmdb, buildings, cleaner, codeview, config, edit, modflags, modfiles, sounds
+from . import (bmdb, buildings, cards, cleaner, codeview, config, edit, modflags,
+               modfiles, sounds, stratmap)
 from . import ancillaries, edusort, factions, images, mesh, minorfiles, portrecords, sprites, strings, traits, triggers
 from . import eop as _eop
 from . import logutil
@@ -815,6 +837,51 @@ def _cleanup_payload(plan) -> dict:
     }
 
 
+def _strat_payload(plan) -> dict:
+    """Preview shape of a strat-map cleanup plan — the same fields the BMDB one
+    answers with wherever the two mean the same thing, so the page's plan box is
+    one function rather than two that drift."""
+    return {
+        "mod": plan.mod.name,
+        "target": str(plan.target or ""),
+        "file": stratmap.REL,
+        "entry_deletes": list(plan.entry_deletes),
+        "file_rewritten": bool(plan.strat_text),
+        "export_count": len(plan.exports),
+        "exports": [rel for _src, rel in plan.exports[:300]],
+        "kept_files": plan.kept_files[:60],
+        "kept_count": len(plan.kept_files),
+        "orphan_count": plan.orphan_count,
+        "orphan_bytes": plan.orphan_bytes,
+        "changes": plan.changes,
+        "warnings": plan.warnings,
+        "errors": plan.errors,
+        "summary": plan.summary(),
+    }
+
+
+def _cards_payload(plan) -> dict:
+    """Preview shape of a card cleanup plan. File lists capped: consolidating a
+    big mod's info cards moves three thousand files and the browser needs enough
+    to show what is happening, not all of it."""
+    return {
+        "mod": plan.mod.name,
+        "target": str(plan.target or ""),
+        "removed": plan.removed,
+        "consolidated": plan.consolidated,
+        "freed": plan.freed,
+        "copy_count": len(plan.copies),
+        "copies": [rel for _src, rel in plan.copies[:200]],
+        "export_count": len(plan.exports),
+        "exports": [rel for _src, rel in plan.exports[:300]],
+        "delete_count": len(plan.deletes),
+        "changes": plan.changes,
+        "warnings": plan.warnings,
+        "errors": plan.errors,
+        "summary": plan.summary(),
+    }
+
+
 def _sound_payload(plan) -> dict:
     """Preview shape of a voice-edit plan (never the whole rewritten voice bank —
     it is a megabyte of text the browser has no use for)."""
@@ -1234,7 +1301,7 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/progress":
                 return self._json(_progress_read((q.get("job") or [""])[0]))
             if u.path in ("/api/bmdb/entries", "/api/bmdb/entry", "/api/bmdb/audit",
-                          "/api/bmdb/skeletons"):
+                          "/api/bmdb/skeletons", "/api/bmdb/ownership"):
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
@@ -1251,8 +1318,45 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(bmdb.entry_detail(mod, (q.get("name") or [""])[0]))
                 if u.path == "/api/bmdb/skeletons":
                     return self._json(bmdb.skeleton_index(mod))
+                if u.path == "/api/bmdb/ownership":
+                    # which entries have no texture record for a faction that
+                    # fields a unit drawn with them (mode=units), or for every
+                    # faction in the roster (mode=all)
+                    return self._json(bmdb.ownership_audit(
+                        mod, (q.get("mode") or ["units"])[0], progress=sink))
                 log.info("BMDB   audit of %s", name)
                 return self._json(bmdb.audit(mod, progress=sink))
+            if u.path in ("/api/stratmap/entries", "/api/stratmap/entry",
+                          "/api/stratmap/audit"):
+                # The strat-map half of the same job: descr_model_strat.txt and
+                # data/models_strat, rather than the modeldb and unit_models.
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                job = (q.get("job") or [""])[0]
+                sink = _progress_sink(job) if job else None
+                if sink:
+                    sink(1, f"reading {name}'s files")
+                mod = self.registry.get(name)
+                if u.path == "/api/stratmap/entries":
+                    return self._json(stratmap.overview(mod, progress=sink))
+                if u.path == "/api/stratmap/entry":
+                    return self._json(stratmap.entry_detail(
+                        mod, (q.get("name") or [""])[0]))
+                log.info("STRAT  audit of %s", name)
+                return self._json(stratmap.audit(mod, progress=sink))
+            if u.path == "/api/cards/audit":
+                # Every unit card and info card in the mod, grouped by the
+                # dictionary they belong to — see :mod:`unittransfer.cards`.
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                job = (q.get("job") or [""])[0]
+                sink = _progress_sink(job) if job else None
+                if sink:
+                    sink(1, f"reading {name}'s files")
+                log.info("CARDS  audit of %s", name)
+                return self._json(cards.audit(self.registry.get(name), progress=sink))
             if u.path == "/api/sounds":
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
@@ -1532,6 +1636,21 @@ class Handler(BaseHTTPRequestHandler):
                     edit.plan_bmdb(mod, edit.bmdb_request_from_dict(body))))
             if u.path == "/api/bmdb/apply":
                 return self._json(self._bmdb_apply(body))
+            if u.path == "/api/cards/plan":
+                mod = self.registry.get(body["mod"])
+                return self._json(_cards_payload(cards.plan_cleanup(
+                    mod, cards.cleanup_request_from_dict(body))))
+            if u.path == "/api/cards/apply":
+                return self._json(self._cards_cleanup(body))
+            if u.path == "/api/stratmap/cleanup_plan":
+                mod = self.registry.get(body["mod"])
+                return self._json(_strat_payload(stratmap.plan_cleanup(
+                    mod, stratmap.cleanup_request_from_dict(body))))
+            if u.path == "/api/stratmap/cleanup_apply":
+                return self._json(self._strat_cleanup(body))
+            if u.path in ("/api/bmdb/ownership_plan", "/api/bmdb/ownership_apply"):
+                return self._json(self._bmdb_ownership(
+                    body, apply=u.path.endswith("apply")))
             if u.path == "/api/bmdb/cleanup_plan":
                 mod = self.registry.get(body["mod"])
                 return self._json(_cleanup_payload(bmdb.plan_cleanup(
@@ -2092,6 +2211,43 @@ class Handler(BaseHTTPRequestHandler):
         log.info("BMDB   done id=%s", rec.get("id"))
         return {"record": rec, "plan": _edit_payload(plan)}
 
+    def _bmdb_ownership(self, body, apply: bool):
+        """Add the missing faction texture records, through the ordinary edit path.
+
+        The ``model_edits`` are built HERE rather than in the page — see
+        :func:`unittransfer.bmdb.ownership_edits` — and then handed to the same
+        planner the model card's faction checklist uses, so the write inherits
+        its backup, its undo record and its guards instead of getting its own.
+        """
+        sink = _progress_sink(body.get("job") or "")
+        if sink:
+            sink(1, "working out which records are missing")
+        mod = self.registry.get(body["mod"])
+        mode = str(body.get("mode") or "units")
+        only = body.get("entries")
+        edits = bmdb.ownership_edits(
+            mod, mode, only if isinstance(only, list) else None)
+        if not edits:
+            return {"plan": {"changes": ["no changes"], "warnings": [], "errors": [],
+                             "summary": "nothing to add"}, "empty": True}
+        if sink:
+            sink(20, f"planning {len(edits)} entr"
+                     f"{'y' if len(edits) == 1 else 'ies'}")
+        payload = {"mod": body["mod"], "model_edits": edits}
+        if not apply:
+            plan = edit.plan_bmdb(mod, edit.bmdb_request_from_dict(payload))
+            return {"plan": _edit_payload(plan), "entries": len(edits),
+                    "records": sum(len(e["factions"]) for e in edits)}
+        log.info("BMDB   ownership fix (%s) on %s: %d entries", mode, mod.name,
+                 len(edits))
+        if sink:
+            sink(45, "writing battle_models.modeldb")
+        out = self._bmdb_apply(payload)
+        out["entries"] = len(edits)
+        if sink:
+            sink(100, "done")
+        return out
+
     def _bmdb_cleanup(self, body):
         sink = _progress_sink(body.get("job") or "")
         if sink:
@@ -2112,6 +2268,39 @@ class Handler(BaseHTTPRequestHandler):
                 sink(99, "clearing the unit-text cache")
             _clear_cache(mod.root, out, rec, mod.name)
         return out
+
+    # ---- unit / info cards ----
+    def _cards_cleanup(self, body):
+        sink = _progress_sink(body.get("job") or "")
+        if sink:
+            sink(1, "working out what moves")
+        mod = self.registry.get(body["mod"])
+        plan = cards.plan_cleanup(mod, cards.cleanup_request_from_dict(body))
+        log.info("CARDS  cleanup %s -> %s (%d removed, %d consolidated, %d files)",
+                 mod.name, plan.target, plan.removed, plan.consolidated,
+                 len(plan.deletes))
+        rec = cards.apply_cleanup(plan, progress=sink)
+        self.registry.invalidate(body["mod"])
+        for line in plan.summary().splitlines()[1:]:
+            if line.strip():
+                log.info("   %s", line.strip())
+        return {"record": rec, "plan": _cards_payload(plan)}
+
+    # ---- strat-map mode ----
+    def _strat_cleanup(self, body):
+        sink = _progress_sink(body.get("job") or "")
+        if sink:
+            sink(1, "working out what moves")
+        mod = self.registry.get(body["mod"])
+        plan = stratmap.plan_cleanup(mod, stratmap.cleanup_request_from_dict(body))
+        log.info("STRAT  cleanup %s -> %s (%d entries, %d files)", mod.name,
+                 plan.target, len(plan.entry_deletes), len(plan.exports))
+        rec = stratmap.apply_cleanup(plan, progress=sink)
+        self.registry.invalidate(body["mod"])
+        for line in plan.summary().splitlines()[1:]:
+            if line.strip():
+                log.info("   %s", line.strip())
+        return {"record": rec, "plan": _strat_payload(plan)}
 
     def _base_fields(self, q):
         """EDU fields of ``unit`` after applying ``base``'s stat template.

@@ -61,6 +61,7 @@ running the test suite, and running `graphify update .`.
 | 14j | Replace any picture (v2.0.1) | S | ✅ done |
 | 15 | 3D model viewer (v2.1.0) | L | ✅ done (15a–15d) |
 | 15e | Port between mods, M2EX flag, docked viewer (v2.1.2) | M | ✅ done |
+| 15f | Strat-map + card cleaners, faction skins, resizable viewer (v2.1.3) | M | ✅ done |
 | 16 | Campaign Map Editor — flagship, LAST | XL | 5+ (16a–16e) |
 
 Dependency shape: 1 and 2 are independent; 3 gates 4; 4 gates every editor
@@ -1650,6 +1651,57 @@ convention (v=0 at the top), not OpenGL's. `.cas` is **not** decoded: it is a
 reconnaissance recorded in `mesh.py`. **15b uses hand-rolled WebGL, not a
 vendored three.js** (user's decision, 2026-08-20): a static textured model needs
 little of what three.js offers, and it keeps the no-build-step rule intact.
+
+## v2.1.3 — two more cleaners, faction skins and a resizable viewer ✅ (2026-08-26)
+
+Not a phase: the same shape as 15e, features found by using the tool. BMDB mode
+grows from two tabs to four, and the model viewer stops taking the screen over.
+
+- **Strat map** (`unittransfer/stratmap.py`, `web/js/stratmap.js`,
+  `tests/test_stratmap.py`, 43 checks). `descr_model_strat.txt` and
+  `data/models_strat` audited and cleaned the way `bmdb.py` does the modeldb:
+  browse every `type` block with who references it, then a 🧹 dialog for the
+  models no `strat_model` line, script or `descr_*.txt` names and the files
+  nothing points at. References come from `descr_character.txt`, another block's
+  `model_sprite`, `descr_sm_factions.txt`, `descr_sm_resources.txt`,
+  `descr_cultures.txt`, every campaign script and every `.lua`.
+  **Two rules make it safe rather than catastrophic**, and both were found by
+  running it against a real mod before writing the UI: `models_strat/residences`
+  is skipped entirely (the game reads a faction's settlement variant out of that
+  tree by folder — nothing names the file), and `x.tga`, `x.tga.dds` and `x.dds`
+  are ONE texture (M2TW prefers the DDS for a line that says `.tga`; without that
+  rule the first scan called 387 MB of Divide and Conquer's live art unnamed).
+  With them, DaC's real answer is 4 MB of dead models and 54 MB of unnamed files.
+- **Unit cards** (`unittransfer/cards.py`, `web/js/cards.js`,
+  `tests/test_cards.py`, 39 checks). Every unit and info card hashed, then sorted
+  into three questions: art for a dictionary no unit claims, the same picture
+  copied identically into N faction folders, and sets that genuinely differ per
+  faction. The first two are facts and are ticked; the third is a question and is
+  shown as pictures side by side with "keep all" selected. Consolidation writes
+  one copy into `ui/units/mercs` / `ui/unit_info/merc`, the folder the engine
+  already falls back to, and moves the rest out. DaC: 645 MB of 1.2 GB. Refuses
+  to touch a file that is not shaped like a card (the agent pictures), a unit
+  that pins `*_pic_dir`, or a dictionary only a `.lua` script names.
+- **🛡 Fix ownership / 🌐 All factions** (`bmdb.ownership_audit` /
+  `ownership_edits`, `tests/test_ownership.py`, 41 checks). An entry's faction
+  texture records against the `ownership` of the units drawn with it — every
+  model slot counts, `slave` counts, an ownership token the roster does not
+  define does not and is reported instead. The second button asks the roster
+  rather than the units. Records are only ever added, a new one is a clone of an
+  existing one, and the dialog states the size cost first: All factions on Third
+  Age Reforged is +9.4 MB on a 1.4 MB file. Routed through `edit.plan_bmdb`, the
+  same planner the model card's faction checklist uses.
+- **A draggable divider** (`core.js` `splitInstall`) on both docked viewers, with
+  the width saved per screen; in BMDB mode the panel now opens at half the window
+  and already showing.
+- **One sheet is one texture.** The viewer used to glue every skin to a second
+  sheet, falling back to a copy of the main one when the entry named no
+  attachment — a canvas, a second decode and a 2048-wide atlas for a result
+  identical to wrapping the single sheet. It now binds the one sheet and scales u
+  by 1.0 instead of 0.5 (`uUScale`). Every ordinary mount is that case. Entries
+  that really carry two sheets are unchanged.
+
+Notes: `merge/RELEASE_2_1_3.md`. Suite: 65 of 65 modules.
 
 ## Phase 16 — Campaign Map Editor — flagship, LAST (5+ sessions)
 

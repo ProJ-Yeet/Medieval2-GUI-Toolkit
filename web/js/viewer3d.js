@@ -92,7 +92,7 @@ void main(){
   gl_Position = uProj * uView * uModel * vec4(aPos, 1.0);
 }`;
 
-/* ONE texture, and it is the two sheets side by side.
+/* ONE texture, and it is usually the two sheets side by side.
 
    This is how the game does it and it is not the same thing as picking a sheet
    per part. A model's modeldb entry names a main texture and an attachment
@@ -102,26 +102,38 @@ void main(){
    anything outside repeats — the whole pair tiles, infinitely, in both axes.
 
    Which is why the shader does nothing clever: the UVs go in as the modeller
-   authored them and only the halving that turns "two sheets wide" into "one
-   texture wide" is applied. That halving is NOT redundant with anything the
-   decoder does, and removing it is the bug to not reintroduce: the FILE stores
-   u normalised over the pair (main 0..0.5), mesh.py doubles it on read into
-   the space above — the space IWTE and the Blender addon use — and this halves
-   it again to land in the atlas. Take either step out and every model samples a
-   squeezed stripe of one sheet. Nothing is wrapped, folded or normalised into
-   0..1, and no branch decides a part's sheet — the coordinate already says.
-   The 112 groups with u < 0 and the 268 with v outside 0..1 in one mod alone
-   are the proof that the tiling is real and must not be clamped away. */
+   authored them and only the scaling that turns "the sheets the entry named"
+   into "one texture wide" is applied. That scaling is NOT redundant with
+   anything the decoder does, and removing it is the bug to not reintroduce: the
+   FILE stores u normalised over the pair (main 0..0.5), mesh.py doubles it on
+   read into the space above — the space IWTE and the Blender addon use — and
+   this brings it back down to land in the bound texture. Take either step out
+   and every model samples a squeezed stripe of one sheet. Nothing is wrapped,
+   folded or normalised into 0..1, and no branch decides a part's sheet — the
+   coordinate already says. The 112 groups with u < 0 and the 268 with v outside
+   0..1 in one mod alone are the proof that the tiling is real and must not be
+   clamped away.
+
+   `uUScale` is 0.5 for a real pair and 1.0 for an entry that names ONE sheet —
+   every ordinary mount (a horse, a wolf, a camel) is that second case, and so
+   is any unit entry whose attachment slot is empty or repeats the main file.
+   The two are the same picture: gluing a sheet to a copy of itself and then
+   halving u samples exactly what wrapping the single sheet at full u does, tile
+   for tile, because the pair repeats anyway. Doing it with the uniform instead
+   costs no canvas, no second decode and half the texture memory — and it keeps
+   a 1024 skin a power of two instead of pushing the atlas to 2048 wide. Entries
+   that really do carry an attachment sheet (the Balrog, hero models with a
+   separate weapon sheet) are untouched and still glued. */
 const V3_FRAG = `
 precision mediump float;
 varying vec3 vNormal; varying vec2 vUv;
 uniform sampler2D uTex;
-uniform float uHasTex, uFlat;
+uniform float uHasTex, uFlat, uUScale;
 uniform vec3 uKey, uEye;
 ${V3_ENV}
 void main(){
   vec4 base = uHasTex > 0.5
-    ? texture2D(uTex, vec2(vUv.x * 0.5, vUv.y))
+    ? texture2D(uTex, vec2(vUv.x * uUScale, vUv.y))
     : vec4(0.72, 0.66, 0.56, 1.0);
   if(base.a < 0.35) discard;          // the alpha channel is a cut-out mask
   if(uFlat > 0.5){ gl_FragColor = vec4(0.92, 0.94, 0.98, 1.0); return; }
@@ -451,6 +463,11 @@ function v3Randomize(){
   v3Parts();
 }
 
+/* Whether the bound texture is one sheet rather than a glued pair — the state
+   `v3Apply` acted on, read back so the facts panel says the same thing the
+   shader is doing. */
+const v3SoloSheet = () => !!(v3 && v3.tex && !v3.texAtt);
+
 function v3Facts(){
   const host = document.getElementById('v3facts');
   if(!host || !v3) return;
@@ -466,15 +483,17 @@ function v3Facts(){
     g.bones.length ? `rigged to ${g.bones.length} bones` : 'no skeleton — a static model',
     skin && skin.rel ? `main texture <code>${esc(skin.rel)}</code>${skin.exists?'':' — <b>not in this mod</b>'}`
                      : 'no texture listed on this entry',
-    skin && skin.attach
+    skin && skin.attach && !v3SoloSheet()
       ? `attachment texture <code>${esc(skin.attach)}</code>${skin.attach_exists?'':' — <b>not in this mod</b>'}`
-      : '',
+      : v3SoloSheet()
+        ? 'one sheet, not a pair — nothing is glued beside it and u wraps at 1'
+        : '',
     // the honest answer to "why does this look right in the game and not here":
     // an entry can name an attachment sheet that no group's UVs ever reach
     onAtt ? `${onAtt} group${onAtt===1?'':'s'} reach into the attachment sheet — their UVs pass u 1`
           : 'every group stays in the main sheet, u 0 to 1',
     v3.info.skins.length === 1 && (v3.info.skins[0].factions||[]).length > 1
-      ? `every one of its ${v3.info.skins[0].factions.length} factions uses that same pair`
+      ? `every one of its ${v3.info.skins[0].factions.length} factions uses that same skin`
       : `${v3.info.skins.length} distinct skin${v3.info.skins.length===1?'':'s'} across its factions`,
     g.lod_name ? `the file calls itself <code>${esc(g.lod_name)}</code>` : ''
   ]) + (g.notes||[]).map(n => `<div class="w-warn" style="margin-top:6px">${esc(n)}</div>`).join('');
@@ -526,9 +545,15 @@ function v3Fetch(rel, want, into){
 async function v3LoadSkin(want){
   if(!v3) return;
   const skin = v3Skin();
-  v3.tex = null; v3.texAtt = null;
+  v3.tex = null; v3.texAtt = null; v3.uScale = 1.0;
   v3Fetch(skin && skin.exists ? skin.rel : '', want, 'tex');
-  v3Fetch(skin && skin.attach_exists ? skin.attach : '', want, 'texAtt');
+  // An attachment sheet that IS the main sheet is not a second sheet. Mods write
+  // the main file into the attach slot all the time (it is what the Blender
+  // addon exports when the slot is empty), and taking it at face value would
+  // glue a picture to a copy of itself for nothing.
+  const same = skin && skin.attach && skin.rel
+            && skin.attach.toLowerCase() === skin.rel.toLowerCase();
+  v3Fetch(skin && skin.attach_exists && !same ? skin.attach : '', want, 'texAtt');
 }
 
 function v3Note(msg, bad){
@@ -608,7 +633,8 @@ function v3Start(canvas){
     uHasTex: gl.getUniformLocation(prog,'uHasTex'),
     uKey: gl.getUniformLocation(prog,'uKey'),
     uEye: gl.getUniformLocation(prog,'uEye'),
-    uFlat: gl.getUniformLocation(prog,'uFlat')
+    uFlat: gl.getUniformLocation(prog,'uFlat'),
+    uUScale: gl.getUniformLocation(prog,'uUScale')
   };
   // the backdrop: its own tiny program over one full-screen quad
   v3.bg = v3Program(gl, V3_BG_VERT, V3_BG_FRAG);
@@ -681,16 +707,18 @@ function v3Buffers(gl){
 
 /* The two sheets glued into the one image the UVs are addressing: main in the
    left half, attachment in the right, each exactly one unit of u wide however
-   big the source files are. An entry with no attachment sheet of its own — or
-   one the mod does not ship — gets the main sheet in both halves, which is
-   what the addon's exporter does with an empty attach slot (`attach_name =
-   plan['attach'][1] or main_name`) and keeps the tiling continuous.
+   big the source files are.
 
    Gluing beats binding two textures and choosing per part, which is what this
    did before and what got it wrong: the choice is not the viewer's to make.
    A group whose UVs run 0.41 to 1.38 is one piece of art crossing from one
    sheet onto the other, and any per-part rule has to put the whole of it on
-   one sheet or the other and be wrong about half of it. */
+   one sheet or the other and be wrong about half of it.
+
+   Only ever called for an entry that really names two sheets. One that names a
+   single sheet used to be glued to a copy of ITSELF here, which is a canvas, a
+   second draw and twice the texture for a result the wrap mode already gives —
+   see `uUScale` on the fragment shader. */
 function v3Atlas(main, att){
   const w = main.width, h = main.height;
   const c = document.createElement('canvas');
@@ -699,7 +727,7 @@ function v3Atlas(main, att){
   x.drawImage(main, 0, 0, w, h);
   // scaled into its half, so u 1..2 is the whole attachment sheet whatever
   // size it came in at
-  x.drawImage(att || main, w, 0, w, h);
+  x.drawImage(att, w, 0, w, h);
   return c;
 }
 
@@ -708,7 +736,13 @@ function v3Apply(){
   const gl = v3.gl;
   if(v3.texture){ gl.deleteTexture(v3.texture); v3.texture = null; }
   if(!v3.tex) return;
-  const atlas = v3Atlas(v3.tex, v3.texAtt);
+  // One sheet or two — the whole difference between the two cases, and the only
+  // place it is decided. `texAtt` is already null when the entry named no
+  // attachment, named one the mod does not ship, or named the main file again
+  // (see v3LoadSkin), so a mount lands here with one sheet and stays that way.
+  const pair = !!v3.texAtt;
+  v3.uScale = pair ? 0.5 : 1.0;
+  const atlas = pair ? v3Atlas(v3.tex, v3.texAtt) : v3.tex;
   const t = gl.createTexture();
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, t);
@@ -720,9 +754,9 @@ function v3Apply(){
   // the same for every body and skirt group on that sheet.
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlas);
-  // REPEAT is the whole point — the pair tiles, and UVs really do run past the
+  // REPEAT is the whole point — the sheets tile, and UVs really do run past the
   // two tiles and below zero. A skin is served square and no bigger than 1024,
-  // so the atlas is 2048 wide at most and a power of two in both axes, which
+  // so a glued pair is 2048 wide at most and a power of two in both axes, which
   // is what WebGL 1 demands before it will repeat anything at all.
   const pot = n => n > 0 && (n & (n-1)) === 0;
   if(pot(atlas.width) && pot(atlas.height)){
@@ -814,6 +848,8 @@ function v3Draw(){
     gl.uniform1i(v3.loc.uTex, 0);
   }
   gl.uniform1f(v3.loc.uHasTex, textured ? 1 : 0);
+  // 0.5 for a glued pair, 1.0 for a lone sheet — v3Apply sets it with the bind
+  gl.uniform1f(v3.loc.uUScale, v3.uScale || 0.5);
 
   const visible = v3Visible();
   gl.uniform1f(v3.loc.uFlat, 0);

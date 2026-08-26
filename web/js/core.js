@@ -629,6 +629,8 @@ const MODES=[
   {id:'sounds',   icon:'🔊', name:'Unit Sounds',   hint:'pick which voice entry each unit speaks with'},
   {id:'minor',    icon:'🗺', name:'Minor Files',   hint:'rebels, religions, cultures, traits, factions and text'},
   {id:'sprites',  icon:'🖼', name:'Sprites',       sub:true, hint:'generate and wire the far-LOD unit sprites'},
+  {id:'stratmap', icon:'🗺', name:'Strat map models', sub:true, hint:'descr_model_strat.txt, and clearing out what the campaign map never draws'},
+  {id:'cards',    icon:'🖼', name:'Unit & info cards', sub:true, hint:'the two pictures per unit, deduplicated into the merc folder'},
   {id:'traits',   icon:'🎖', name:'Traits',        sub:true, hint:'character traits, their levels and the triggers that give them'},
   {id:'ancillaries',icon:'🏅', name:'Ancillaries',  sub:true, hint:'the items and followers a character picks up'},
   {id:'factions', icon:'🛡', name:'Factions',      sub:true, hint:'each faction’s culture, religion, colours and horde'},
@@ -692,10 +694,104 @@ function findingsHtml(key,list,onopen){
 }
 function findingsToggle(key){state.findOpen[key]=!state.findOpen[key]; render();}
 
+/* ---------- the draggable divider between a list and its 3D column ----------
+   Two screens dock the model viewer beside something else — the unit editor
+   beside its fields, BMDB mode beside its entry list — and both used to give it
+   a width decided here and no way to change it. Full screen was the only way to
+   see a model bigger, and full screen takes the thing you were reading with it.
+
+   So the column gets a grab bar. One implementation for both, because the two
+   splits differ in nothing but which element and which saved key: the panel is
+   always the LAST child, the bar goes immediately before it, and the drag moves
+   the boundary rather than either side, so the list simply takes what is left.
+
+   The width is per-screen and persisted (`/api/settings`), because the answer to
+   "how much room should the model get" depends on what you are doing and not on
+   which dialog you last opened. Double-click puts back the default. */
+const SPLIT_MIN_PANEL = 240;    // narrower than this and the viewer's own bar wraps
+const SPLIT_MIN_MAIN  = 320;    // narrower than this and the list beside it is unreadable
+
+/* The width to open at: what was saved, else the screen's own default, clamped
+   so neither side can be squeezed out of existence by a window that has since
+   been made narrower. `fallback` may be a number or a function of the space. */
+function splitWidth(split, key, fallback){
+  const avail = split.clientWidth || 0;
+  const saved = +(state.settings && state.settings[key]) || 0;
+  const want = saved > 0 ? saved
+             : (typeof fallback === 'function' ? fallback(avail) : fallback);
+  if(!avail) return want;
+  return Math.max(SPLIT_MIN_PANEL, Math.min(want, Math.max(SPLIT_MIN_PANEL, avail - SPLIT_MIN_MAIN)));
+}
+
+/* Size the panel and put a working grab bar in front of it.
+
+   Called from the same place the panel is appended, every render — the pages
+   these live on rebuild their HTML wholesale (a keystroke in the BMDB search
+   box does), so the bar is a fresh element each time while the panel itself is
+   the detached-and-reattached live canvas. */
+function splitInstall(split, panel, key, fallback){
+  if(!split || !panel) return;
+  panel.style.flex = '0 0 ' + Math.round(splitWidth(split, key, fallback)) + 'px';
+  let bar = split.querySelector(':scope > .splitbar');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.className = 'splitbar';
+    bar.title = 'Drag to resize the 3D panel · double-click for the default width';
+  }
+  split.insertBefore(bar, panel);
+  bar.onpointerdown = ev => {
+    // Left button only, and never let the drag select the list behind it.
+    if(ev.button) return;
+    ev.preventDefault();
+    const startX = ev.clientX, startW = panel.getBoundingClientRect().width;
+    const room = split.clientWidth;
+    try{ bar.setPointerCapture(ev.pointerId); }catch(e){}
+    bar.classList.add('drag');
+    document.body.classList.add('splitting');
+    // The panel is on the RIGHT, so dragging left (a falling clientX) makes it
+    // wider. The viewer's canvas re-reads its own clientWidth every frame, so
+    // nothing has to be told the size changed.
+    const move = e => {
+      const w = Math.max(SPLIT_MIN_PANEL,
+                Math.min(startW + (startX - e.clientX),
+                         Math.max(SPLIT_MIN_PANEL, room - SPLIT_MIN_MAIN)));
+      panel.style.flex = '0 0 ' + Math.round(w) + 'px';
+    };
+    const up = () => {
+      bar.removeEventListener('pointermove', move);
+      bar.removeEventListener('pointerup', up);
+      bar.removeEventListener('pointercancel', up);
+      bar.classList.remove('drag');
+      document.body.classList.remove('splitting');
+      splitSave(key, Math.round(panel.getBoundingClientRect().width));
+    };
+    bar.addEventListener('pointermove', move);
+    bar.addEventListener('pointerup', up);
+    bar.addEventListener('pointercancel', up);
+  };
+  bar.ondblclick = () => {
+    const w = Math.round(splitWidth(split, '', fallback));
+    panel.style.flex = '0 0 ' + w + 'px';
+    splitSave(key, w);
+  };
+}
+function splitSave(key, px){
+  if(!key || !(px > 0)) return;
+  state.settings[key] = px;
+  api.post('/api/settings', {[key]: px});
+}
+
+/* Which cleanup dialog the toolbar's 🧹 button opens. One lookup rather than a
+   chain of ifs at the click site, because every tab of BMDB mode that grows a
+   cleaner adds a row here and nothing else. */
+const cleanupFor=mode=>({bmdb:openCleanup, stratmap:openStratCleanup}[mode]
+  || (()=>toast('Nothing to clean up on this tab.')));
+
 /* ---------- the BMDB tab strip ----------
    Sprites are the far-LOD half of a modeldb entry, so they are a tab of the
    BMDB editor rather than a module of their own. */
-const BMDB_TABS=[{mode:'bmdb',label:'Model entries'},{mode:'sprites',label:'Sprites'}];
+const BMDB_TABS=[{mode:'bmdb',label:'Model entries'},{mode:'sprites',label:'Sprites'},
+  {mode:'stratmap',label:'Strat map'},{mode:'cards',label:'Unit cards'}];
 const bmdbTabsHtml=note=>`<div class="mftabs">${BMDB_TABS.map(t=>
   `<button class="mftab${state.mode===t.mode?' on':''}" onclick="setAppMode('${t.mode}')"
     >${esc(t.label)}</button>`).join('')}${
@@ -716,8 +812,8 @@ function setAppMode(id){
 // keeps the header label and the menu's highlighted row honest — called from
 // applyMode so every way of switching (menu, pack mount, building hop) lands here
 // A sub-mode has no row of its own in the menu, so its HOST row lights up.
-const MODE_HOST={sprites:'bmdb',traits:'minor',ancillaries:'minor',
-  factions:'minor',strings:'minor'};
+const MODE_HOST={sprites:'bmdb',stratmap:'bmdb',cards:'bmdb',traits:'minor',
+  ancillaries:'minor',factions:'minor',strings:'minor'};
 function syncNav(){
   const d=modeDef(state.mode), host=MODE_HOST[state.mode]||state.mode;
   navCur.textContent=d.icon+' '+d.name;
@@ -785,7 +881,9 @@ function wire(){
   logBtn.onclick=()=>openLog();
   selBtn.onclick=toggleSelMode; batchBtn.onclick=openBatch; clearSelBtn.onclick=clearSelection;
   packBtn.onclick=()=>packExport([...state.selected]); importPackBtn.onclick=packImport;
-  cleanBtn.onclick=openCleanup; unusedOnly.onchange=render; sndBtn.onclick=sndApply;
+  cleanBtn.onclick=()=>cleanupFor(state.mode)(); unusedOnly.onchange=render;
+  ownBtn.onclick=()=>openOwnership('units'); allFacBtn.onclick=()=>openOwnership('all');
+  sndBtn.onclick=sndApply;
   backBldBtn.onclick=backToBuilding;
   /* Click the backdrop to close — but only a click that BEGAN on the backdrop.
 
@@ -834,20 +932,28 @@ function applyMode(persist){
   importPackBtn.style.display=one?'none':'inline-block';
   newUnitBtn.style.display=edit?'inline-block':'none';
   tidyEduBtn.style.display=edit?'inline-block':'none';
-  cleanBtn.style.display=bm?'inline-block':'none';
+  const stm=state.mode==='stratmap', crd=state.mode==='cards';
+  cleanBtn.style.display=(bm||stm)?'inline-block':'none';
+  // the two faction-record fixers are about the modeldb itself, so they belong
+  // to the Model entries tab and nowhere else
+  ownBtn.style.display=allFacBtn.style.display=bm?'inline-block':'none';
+  if(bm||stm)cleanBtn.textContent=bm?'🧹 Clean up BMDB…':'🧹 Clean up strat map…';
   sndBtn.style.display=snd?'inline-block':'none';
-  unusedWrap.style.display=bm?'inline-flex':'none';
-  mercOnly.parentElement.style.display=(bm||snd||spr||bld||str||trt||anc||mnr||fac||home)?'none':'inline-flex';
+  unusedWrap.style.display=(bm||stm)?'inline-flex':'none';
+  mercOnly.parentElement.style.display=
+    (bm||snd||spr||bld||str||trt||anc||mnr||fac||home||stm||crd)?'none':'inline-flex';
   // these bring their own filters — the sidebar's faction/era ones say nothing
   // about a voice entry, and nothing at all about a modeldb record or a sprite
   document.getElementById('unitFilters').style.display=
-    (bm||snd||spr||bld||str||trt||anc||mnr||fac||home)?'none':'';
+    (bm||snd||spr||bld||str||trt||anc||mnr||fac||home||stm||crd)?'none':'';
   document.getElementById('bldFilters').style.display=bld?'':'none';
   // Only offered while the unit editor is what you'd be going back FROM: in
   // buildings mode the building is already on screen.
   backBldBtn.style.display=(edit&&state.bldReturn)?'inline-block':'none';
   if(state.bldReturn)backBldBtn.textContent=`← Back to ${state.bldReturn.label}`;
-  search.placeholder=bm?'Search entries…':snd?'Search units…':spr?'Search models…'
+  search.placeholder=bm?'Search entries…':stm?'Search strat models…'
+                    :crd?'Search units and cards…'
+                    :snd?'Search units…':spr?'Search models…'
                     :bld?'Search buildings…':str?'Search tags and text…'
                     :trt?'Search traits…'
                     :anc?'Search ancillaries and types…'
@@ -919,6 +1025,8 @@ function render(){
   if(state.mode==='bmdb')return renderBmdb();
   if(state.mode==='sounds')return renderSounds();
   if(state.mode==='sprites')return renderSprites();
+  if(state.mode==='stratmap')return state.stm?renderStratmap():loadStratmap();
+  if(state.mode==='cards')return state.cards?renderCards():loadCards();
   if(state.mode==='buildings')return renderBuildings();
   if(state.mode==='strings')return state.str?renderStrings():loadStrings();
   if(state.mode==='traits')return state.tr?renderTraits():loadTraits();
