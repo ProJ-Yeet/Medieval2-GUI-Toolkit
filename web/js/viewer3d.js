@@ -597,10 +597,22 @@ function v3Frame(){
   if(!v3 || !v3.geo) return;
   const g = v3.geo;
   v3.centre = [0,1,2].map(k => (g.min[k]+g.max[k])/2);
-  // to fit a sphere of radius r at this field of view the camera wants
-  // r / sin(fov/2) — about 1.15 spans — and a little margin on top of it
-  const span = Math.max(...[0,1,2].map(k => g.max[k]-g.min[k])) || 1;
-  v3.dist = span * 1.35;
+  /* A unit is a standing figure, and its HEIGHT is what should fill the frame.
+
+     Fitting the largest extent instead let a spear held straight out — two
+     metres of it, and not the subject — decide how far away the man stood, so
+     every unit sat in the middle distance with most of the panel empty. Height
+     leads now, and the width only takes the framing back on something that is
+     genuinely wide rather than long-armed: a spear roughly doubles a man's
+     width, which is where the halving comes from, while a siege engine is wide
+     all the way through and still gets fitted.
+
+     A weapon that runs off the sides is the intended trade. The wheel zooms out,
+     and Recentre comes back here. */
+  const tall = g.max[1] - g.min[1];
+  const wide = Math.max(g.max[0]-g.min[0], g.max[2]-g.min[2]);
+  const span = Math.max(tall, wide/2) || 1;
+  v3.dist = span * 1.12;
   v3.yaw = 0.6; v3.pitch = 0.25;
 }
 

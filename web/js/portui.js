@@ -140,7 +140,7 @@ function portRender(){
       <span class="count" id="portSel"></span>
       ${cleanerBoxHtml()}
       <button onclick="closeModal()">Close</button>
-      <button onclick="portPreview()">Preview</button>
+      <button onclick="portPreview()">Probe</button>
       <button class="primary" onclick="portApply()">Port them</button>
     </div>`;
   portRowsPaint();

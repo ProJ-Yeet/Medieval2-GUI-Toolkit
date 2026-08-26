@@ -656,7 +656,7 @@ function renderBuildingEditor(){
         Fix unit <b>ownership</b> to match</label>
       ${cleanerBoxHtml('building')}
       <button onclick="bldClose()">Close</button>
-      <button onclick="bldPreview()">Preview</button>
+      <button onclick="bldPreview()">Probe</button>
       <button class="primary" onclick="bldSave()">Save changes</button>
     </div>`;
   bldRenderBody(lv,orig);
@@ -2461,7 +2461,7 @@ function bldAddPicked(types){
 
    The server works them out (buildings.line_checks); everything here is the
    panel that shows them and the one-click fixes. A fix never writes: it stages
-   rows into the working copy exactly as adding a unit by hand does, so Preview,
+   rows into the working copy exactly as adding a unit by hand does, so Probe,
    Save, Ctrl+Z and the log all behave the same.
    ========================================================================= */
 async function bldLoadChecks(force){
@@ -2508,7 +2508,7 @@ function bldAlsoHtml(){
             r.line==null?'new':'edited'}</span>`).join(' · ')}</div></div>
           <button onclick="bldAlsoDrop('${q1(esc(l))}','${q1(esc(lvl))}')">Drop</button></div>`
         ).join('')}</div></div>`).join('')}
-    <div class="bnote">These are written in the same pass as this building, so Preview shows them
+    <div class="bnote">These are written in the same pass as this building, so Probe shows them
       and one Undo takes the lot back.</div></div>`;
 }
 function bldAlsoDrop(line,level){
@@ -2818,7 +2818,8 @@ function bldVarRender(){
   }
   const gaps=r.only_a+r.only_b;
   const tab=(k,label,n)=>`<button class="${vc.only===k?'on':''}"
-    onclick="bldVarFilter('${k}')">${label}${n==null?'':` <span class="badge">${n}</span>`}</button>`;
+    onclick="bldVarFilter('${k}')">${label}${n==null?''
+      :` <span class="badge" id="vcTab_${k}">${n}</span>`}</button>`;
   modal.innerHTML=`<h2>${esc(r.line_label||r.line)}
       <span class="pill">city and castle, side by side</span></h2>
     <div class="mbody">
@@ -2836,7 +2837,9 @@ function bldVarRender(){
           +'numbers. That is often deliberate, so it is not counted as a gap.':'',
         'A <code>requires</code> clause that differs is not counted either: a city '
           +'clause names the city factions and a castle clause names the castle ones.',
-        'Nothing is written until you Save the building, and a mirror into the '
+        'The four numbers on either side can be typed into, and <b>Copy</b> under '
+          +'them puts all four onto the other half in one click.',
+        'Nothing is written until you Save the building, and an edit to the '
           +'other half is listed under <b>Also changing</b> first.'])}</div>
       <div class="sndtabs" style="margin:8px 0">
         ${tab('gaps','Only on one side',gaps)}
@@ -2851,6 +2854,18 @@ function bldVarRender(){
       <span class="count">${bldAlsoCount()?`${bldAlsoCount()} row(s) staged for other lines`:''}</span>
       <button onclick="bldPickCancel()">Back to the building</button>
     </div>`;
+  bldVarWire();
+}
+/* The boxes are live from the keystroke, not from an Apply button: this panel
+   has never had one — a mirror is staged the moment it is clicked — and a second
+   way of saying "yes, that number" would only be a way of losing one. */
+function bldVarWire(){
+  const modal=document.getElementById('modal');
+  wireNumBoxes(modal);
+  modal.querySelectorAll('[data-vc]').forEach(inp=>{
+    inp.addEventListener('input',()=>bldVarSet(+inp.dataset.vcli,inp.dataset.vcu,
+                                               inp.dataset.vcside,inp.dataset.vc,inp.value));
+  });
 }
 function bldVarLevelHtml(lv,i){
   const r=state.bld.vc.r;
@@ -2860,32 +2875,75 @@ function bldVarLevelHtml(lv,i){
     return `<fieldset class="vclv"><legend>${esc(lv.level_label||lv.level)}</legend>
       <div class="bnote">This tier has no facing tier in <code>${esc(r.twin)}</code>,
         so there is nothing to compare it with.</div></fieldset>`;
+  // The column names go on the line directly above the boxes, which is the only
+  // place they fit: a box is 66px wide, and the long name and what the number
+  // does are on the box's own tooltip.
+  const head=side=>`<span class="vcn"><b>${esc(side)}</b>
+    <span class="vcnums">${VAR_NUM_KEYS.map(k=>`<span title="${esc(POOL_LABEL[k])}">${
+      esc(VAR_NUM_HEAD[k])}</span>`).join('')}</span></span>`;
   return `<fieldset class="vclv"><legend>${esc(lv.level_label||lv.level)}
       <span class="count">tier ${i+1}</span> ⇄ ${esc(lv.twin_level_label||lv.twin_level)}</legend>
     <div class="vcbar">
-      <span class="count">${lv.units.length} unit(s) across both halves${
-        gaps?` · <b class="w-warn">${gaps}</b> on one side only`:' · none missing'}${
-        lv.differs?` · ${lv.differs} with different numbers`:''}</span>
+      <span class="count" id="vcBar_${i}">${bldVarBarText(lv)}</span>
       ${gaps?`<button style="margin-left:auto" onclick="bldVarMirrorLevel(${i})"
         title="Copy every unit this tier is missing into whichever half is missing it">
         ⇄ Mirror this tier (${gaps})</button>`:''}
     </div>
     ${rows.length?`<div class="vclist">
       <div class="vcrow vchd"><span class="vcu">Unit</span><span class="vcw">Trained by</span>
-        <span class="vcn">${esc(r.settlement)}</span>
-        <span class="vcn">${esc(r.twin_settlement)}</span>
+        ${head(r.settlement)}${head(r.twin_settlement)}
         <span class="vca"></span></div>
       ${rows.map(u=>bldVarRowHtml(u,i)).join('')}</div>`
      :'<div class="bnote">Nothing to show here with the current filter.</div>'}
   </fieldset>`;
 }
-// The four numbers of one side, or a plain "not trained here".
-function bldVarNums(p){
-  if(!p)return '<span class="w-warn">not trained</span>';
-  return `<span title="${esc(POOL_LABEL.initial)}">${esc(p.initial)}</span>
-    <span title="${esc(POOL_LABEL.per_turn)}">${esc(p.per_turn)}</span>
-    <span title="${esc(POOL_LABEL.maximum)}">${esc(p.maximum)}</span>
-    <span title="${esc(POOL_SHORT.experience)}">${esc(p.experience)}</span>`;
+// The tier's one-line tally. Its own function because a number typed into a box
+// can change it, and repainting the line is cheaper - and far less rude - than
+// redrawing the panel out from under the caret.
+function bldVarBarText(lv){
+  const gaps=lv.only_a+lv.only_b;
+  return `${lv.units.length} unit(s) across both halves${
+    gaps?` · <b class="w-warn">${gaps}</b> on one side only`:' · none missing'}${
+    lv.differs?` · ${lv.differs} with different numbers`:''}`;
+}
+//: The four numbers of a pool, in the order the `recruit_pool` line writes them.
+const VAR_NUM_KEYS=['initial','per_turn','maximum','experience'];
+//: How far one ▲▼ click moves each of them — a rate steps by a whole TURN, and a
+//: pool count steps through 0.99 (see numBump).
+const VAR_NUM_STEP={initial:'pool',per_turn:'turns',maximum:'pool',experience:'1'};
+//: Short enough to sit over a box, and to name a difference in the row's own
+//: column. POOL_LABEL has the full name.
+const VAR_NUM_HEAD={initial:'Initial',per_turn:'Rate',maximum:'Max',experience:'XP'};
+/* The four numbers of one side, editable wherever that side trains the unit.
+
+   Read-only, this panel could say that the two halves disagree and nothing more:
+   the fix was two further trips into two separate building forms, one of them
+   for a line that is not even the one you have open. A number typed here is
+   staged the moment it is typed, exactly as the ⇄ Mirror beside it is — into the
+   working copy for this half, into `also` for the twin. Nothing reaches disk
+   until the building is saved, and one Undo takes the lot back.
+
+   A side that does not train the unit has no numbers to show and none to take:
+   that is a gap, and ⇄ Mirror is what closes it. */
+function bldVarNums(u,li,side){
+  const p=side==='a'?u.a:u.b;
+  if(!p)return '<span class="vcnums"><span class="w-warn">not trained</span></span>';
+  return `<span class="vcnums">${VAR_NUM_KEYS.map(k=>numBox(
+    `data-vc="${k}" data-vcside="${side}" data-vcli="${li}"`
+    +` data-vcu="${esc(u.unit)}" title="${esc(POOL_LABEL[k])}"`,
+    p[k],VAR_NUM_STEP[k])).join('')}</span>`;
+}
+// All four across the divide at once, which is the commonest thing to want once
+// the two halves are side by side and one of them is plainly the right one.
+function bldVarCopyBtn(u,li,from){
+  if(u.where!=='both')return '';
+  const r=state.bld.vc.r;
+  const src=from==='a'?r.settlement:r.twin_settlement;
+  const dst=from==='a'?r.twin_settlement:r.settlement;
+  return `<button class="vccopy" onclick="bldVarCopy(${li},'${q1(esc(u.unit))}','${from}')"
+    title="Put all four of the ${esc(src)} half's numbers onto the ${esc(dst)} half.
+Staged like everything else on this page — nothing is written until you Save the building."
+    >Copy ${esc(src)} → ${esc(dst)}</button>`;
 }
 function bldVarRowHtml(u,li){
   const r=state.bld.vc.r;
@@ -2894,23 +2952,131 @@ function bldVarRowHtml(u,li){
     : u.where==='a'
       ? `<span class="badge" title="Only the ${esc(r.settlement)} half trains it here.">${esc(r.settlement)} only</span>`
       : `<span class="badge cls" title="Only the ${esc(r.twin_settlement)} half trains it here.">${esc(r.twin_settlement)} only</span>`;
-  const act=u.where==='both'
-    ? (u.numbers_differ
-        ? `<span class="count" title="${esc(u.diff.join(', '))}">Different ${
-             esc(u.diff.filter(f=>f!=='requires').join(', '))}</span>`
-        : '<span class="count">In step</span>')
-    : `<button onclick="bldVarMirrorOne(${li},'${q1(esc(u.unit))}')"
-        title="Copy this unit into the half that is missing it. Nothing is written until you Save.">⇄ Mirror</button>`;
-  return `<div class="vcrow ${u.where==='both'?'':'gap'}">
+  return `<div class="vcrow ${u.where==='both'?'':'gap'}" data-vcrow="${esc(bldVarKey(li,u.unit))}">
     <span class="vcu">
       <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.src,u.unit)}" alt="">
       <span class="vcnm"><span class="nm">${esc(u.name||u.unit)}</span>
         <span class="ty">${u.missing?'<span class="w-bad">Not in this mod’s EDU</span>'
                                      :esc(u.unit)}</span></span></span>
     <span class="vcw">${where}</span>
-    <span class="vcn ${u.where==='b'?'off':''}">${bldVarNums(u.a)}</span>
-    <span class="vcn ${u.where==='a'?'off':''}">${bldVarNums(u.b)}</span>
-    <span class="vca">${act}</span></div>`;
+    <span class="vcn ${u.where==='b'?'off':''}">${bldVarNums(u,li,'a')}${bldVarCopyBtn(u,li,'a')}</span>
+    <span class="vcn ${u.where==='a'?'off':''}">${bldVarNums(u,li,'b')}${bldVarCopyBtn(u,li,'b')}</span>
+    <span class="vca">${bldVarActHtml(u,li)}</span></div>`;
+}
+// What the row's last column says: which of the four disagree, or the offer to
+// close a gap. Repainted on its own when a box is typed into.
+function bldVarActHtml(u,li){
+  if(u.where!=='both')
+    return `<button onclick="bldVarMirrorOne(${li},'${q1(esc(u.unit))}')"
+      title="Copy this unit into the half that is missing it. Nothing is written until you Save."
+      >⇄ Mirror</button>`;
+  if(!u.numbers_differ)return '<span class="count">In step</span>';
+  return `<span class="count" title="${esc((u.diff||[]).join(', '))}">Different ${
+    esc((u.diff||[]).filter(f=>f!=='requires').map(f=>VAR_NUM_HEAD[f]||f).join(', '))}</span>`;
+}
+//: Which row on screen a unit is, for the repaints below. Tier index and unit
+//: name: a unit appears once per tier, and the panel keys everything by name.
+const bldVarKey=(li,unit)=>li+'|'+unit;
+
+/* ---- a number typed into one of the boxes ----
+
+   Which side it was typed on decides where it is staged, and both answers are
+   ones this editor already had:
+
+   * this half is the line the form behind the panel has open, so its row is
+     already in the working copy — found by the EDB line it came from, the same
+     key the unit view uses, falling back to the unit name for a row this panel
+     staged a moment ago (a mirrored row has no line in the file yet);
+   * the twin is a building that is not on screen, so its row is staged in
+     `work.also` against the line it occupies. That is an in-place rewrite rather
+     than a second copy of the unit, and it appears under "Also changing" like
+     every other edit made to a building from somewhere else.
+
+   The panel's own copy of the answer is edited too, so the marks beside the box
+   stay honest without a redraw that would take the box out from under the caret. */
+function bldVarSet(li,unit,side,key,val){
+  const vc=state.bld.vc; if(!vc)return;
+  const lv=vc.r.levels[li]; if(!lv)return;
+  const u=lv.units.find(x=>x.unit===unit); if(!u)return;
+  const p=side==='a'?u.a:u.b; if(!p)return;
+  p[key]=val;
+  if(side==='a')bldVarStageHere(lv,u); else bldVarStageTwin(lv,u);
+  bldVarRepaint(li,lv,u);
+  bldTouched();
+}
+const bldVarPool=p=>({unit:p.unit,initial:p.initial,per_turn:p.per_turn,
+                      maximum:p.maximum,experience:p.experience});
+function bldVarStageHere(lv,u){
+  const work=state.bld.work.levels[lv.level_index]; if(!work||!u.a)return;
+  const rows=[...work.caps,...work.fcaps].filter(c=>c.pool&&!c.del);
+  const key=u.unit.toLowerCase();
+  const row=(u.a.cap_line!=null&&rows.find(c=>c.line===u.a.cap_line))
+         ||rows.find(c=>c.pool.unit.toLowerCase()===key);
+  if(row)Object.assign(row.pool,bldVarPool(u.a));
+}
+function bldVarStageTwin(lv,u){
+  const r=state.bld.vc.r;
+  if(!lv.twin_level||!u.b)return;
+  const rows=bldAlso(r.twin,lv.twin_level),key=u.unit.toLowerCase();
+  const at=u.b.cap_line==null?null:u.b.cap_line;
+  const prev=(at!=null&&rows.find(x=>x.pool&&x.line===at))
+          ||rows.find(x=>x.pool&&x.pool.unit.toLowerCase()===key);
+  if(prev){Object.assign(prev.pool,bldVarPool(u.b)); return;}
+  // The clause goes back as the text the file already holds: re-emitting an
+  // untouched one from structure would quietly re-tidy it, and a city clause and
+  // a castle clause are supposed to differ.
+  rows.push({line:at,keyword:'recruit_pool',args:'',requires:u.b.requires||'',
+    conds:[],condEdited:false,bonus:false,value:'',pool:bldVarPool(u.b),
+    comment:'',faction:!!u.b.faction,del:false});
+}
+// Which of the four now disagree, and the clause with them: the server works
+// this out on the way in, and a typed number is the one thing that can change it
+// afterwards.
+function bldVarDiff(u){
+  if(u.where!=='both'||!u.a||!u.b)return;
+  const same=k=>String(u.a[k]).trim()===String(u.b[k]).trim();
+  const diff=VAR_NUM_KEYS.filter(k=>!same(k));
+  u.numbers_differ=diff.length>0;
+  if(!same('requires'))diff.push('requires');
+  u.diff=diff; u.same=!diff.length;
+}
+// The row's last column, the tier's tally and the tab that counts differences:
+// everything a typed number makes stale, and nothing else. A row that has just
+// come into step is NOT taken off a filtered list — pulling the line you are
+// typing on out from under you would be the worst possible reward for fixing it.
+function bldVarRepaint(li,lv,u){
+  const r=state.bld.vc.r;
+  bldVarDiff(u);
+  lv.differs=lv.units.filter(x=>x.numbers_differ).length;
+  r.differs=r.levels.reduce((n,l)=>n+l.differs,0);
+  const modal=document.getElementById('modal');
+  const cell=modal.querySelector(`.vcrow[data-vcrow="${cssq(bldVarKey(li,u.unit))}"] .vca`);
+  if(cell)cell.innerHTML=bldVarActHtml(u,li);
+  const bar=document.getElementById('vcBar_'+li);
+  if(bar)bar.innerHTML=bldVarBarText(lv);
+  const tab=document.getElementById('vcTab_numbers');
+  if(tab)tab.textContent=r.only_a+r.only_b+r.differs;
+}
+/* ⇄ Copy: all four numbers from one half onto the other, in one click. */
+function bldVarCopy(li,unit,from){
+  const vc=state.bld.vc; if(!vc)return;
+  const lv=vc.r.levels[li]; if(!lv)return;
+  const u=lv.units.find(x=>x.unit===unit); if(!u||u.where!=='both')return;
+  const r=vc.r;
+  const src=from==='a'?u.a:u.b, dst=from==='a'?u.b:u.a;
+  if(!src||!dst)return;
+  const from_label=from==='a'?r.settlement:r.twin_settlement;
+  const into=from==='a'?r.twin_settlement:r.settlement;
+  if(VAR_NUM_KEYS.every(k=>String(src[k]).trim()===String(dst[k]).trim()))
+    return toast(`The ${into} half already trains ${u.name||u.unit} with those four numbers.`);
+  VAR_NUM_KEYS.forEach(k=>{dst[k]=src[k];});
+  if(from==='a')bldVarStageTwin(lv,u); else bldVarStageHere(lv,u);
+  bldVarDiff(u);
+  lv.differs=lv.units.filter(x=>x.numbers_differ).length;
+  r.differs=r.levels.reduce((n,l)=>n+l.differs,0);
+  bldTouched(); bldVarRender();
+  toast(`${u.name||u.unit}: the ${from_label} half’s numbers put onto the ${into} half. `
+       +'Save the building to write them.',4200);
 }
 /* Copy one unit into the half that does not train it.
 
@@ -2930,8 +3096,13 @@ function bldVarMirrorApply(lv,u){
 // The panel's own copy of the answer is what it draws from, so a mirrored row
 // has to be marked there too or it would offer the same button again.
 function bldVarTake(lv,u){
-  if(u.where==='a'){u.b=Object.assign({},u.a);}
-  else{u.a=Object.assign({},u.b);}
+  // The copy is a row that does not exist in the file yet, so it carries no line
+  // of its own and sits in an ordinary capability block. Letting it keep the
+  // other side's `cap_line` would point a later edit of these boxes at a line in
+  // the WRONG building.
+  const fresh=p=>Object.assign({},p,{cap_line:null,faction:false});
+  if(u.where==='a'){u.b=fresh(u.a);}
+  else{u.a=fresh(u.b);}
   u.where='both'; u.same=true; u.diff=[]; u.numbers_differ=false; u.staged=true;
   lv.only_a=lv.units.filter(x=>x.where==='a').length;
   lv.only_b=lv.units.filter(x=>x.where==='b').length;
@@ -3090,7 +3261,7 @@ function bldUnitRender(){
           <div class="count"><code>${esc(c.unit)}</code>${c.r.info.missing
             ?' · <span class="w-bad">not in this mod’s EDU</span>':''}</div>
           <div class="count">Every building line that trains it. Change a number here and it is
-            staged like any other edit. Preview and Save write the lot in one pass.</div></div>
+            staged like any other edit. Probe and Save write the lot in one pass.</div></div>
       </div>
       <div class="cvsplit${c.cv?'':' off'}">
         <div id="bcGui">${rows.length?`<div class="poollist" id="bcList">
@@ -3343,7 +3514,7 @@ function bldPlanHtml(p,stale){
                p.loc_rewritten?'text/export_buildings.txt':'',
                p.edu_rewritten?'export_descr_unit.txt':'',
                p.modeldb_rewritten?'unit_models/battle_models.modeldb':''].filter(Boolean);
-  return `<div class="bsec" style="margin-top:14px"><h4>Preview${
+  return `<div class="bsec" style="margin-top:14px"><h4>Probe${
       stale?' <span class="w-warn">(out of date: edited since)</span>':''}</h4>
     <div class="sum">${rows.join('')}
       ${files.length?`<div class="srow shead" style="margin-top:6px"><span class="sicon">→</span>
@@ -3486,7 +3657,7 @@ function bldNtHint(){
     `<code>building ${esc(name)}</code> with ${kept.length} level${kept.length===1?'':'s'} at the
      end of the EDB.`,
     `${kept.length*3} text key${kept.length*3===1?'':'s'} in <code>text/export_buildings.txt</code>.`,
-    'Preview first: nothing is written until you press Create.'])}</div>`;
+    'Probe first: nothing is written until you press Create.'])}</div>`;
 }
 function bldNtPaint(){
   const b=state.bld,ov=b.ov,n=b.nt;
@@ -3557,7 +3728,7 @@ function bldNtPaint(){
     </div>
     <div class="foot">
       <button onclick="bldNtCancel()">Cancel</button>
-      <button onclick="bldNtPreview()">Preview</button>
+      <button onclick="bldNtPreview()">Probe</button>
       <button class="primary" onclick="bldNtCreate()">Create</button>
     </div>`;
   if(n.plan)document.getElementById('ntPlan').innerHTML=bldNtPlanHtml(n.plan);

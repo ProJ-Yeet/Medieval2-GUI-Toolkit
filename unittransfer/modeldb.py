@@ -134,13 +134,19 @@ class _Desync(ValueError):
     person can actually go and look.
     """
 
-    def __init__(self, at: int, what: str):
+    def __init__(self, at: int, what: str, exact: bool = False):
         self.at = at
         self.what = what
         #: what the reader was counting through when it lost the thread, set by
         #: whichever loop knows — a list whose count is one too many is the
         #: commonest hand-edit in this file and the only one worth naming.
         self.note = ""
+        #: True when ``what`` is pointing AT the mistake rather than at where the
+        #: read fell over. The long explanation below — "the number that did this
+        #: is somewhere above" — is for the second case; printing it after a
+        #: sentence that just named the exact character reads like the tool does
+        #: not know what it found.
+        self.exact = exact
         super().__init__(what)
 
 
@@ -195,6 +201,38 @@ class _Reader:
             return float(tok)
         except ValueError:
             raise _Desync(at, f"expected a number here and found {tok!r}") from None
+
+    def get_attach_sprite(self) -> str:
+        """The fourth field of an ATTACHMENT texture group.
+
+        It is the sprite slot, and an attachment has no sprite: every valid file
+        writes it as a bare ``0``, which is this format's way of saying *no name
+        follows*. So a number other than 0 here is not a length — there is no
+        name for it to be the length of. It is a stray character left on the end
+        of the ``0`` by a hand edit, and without this the read swallows the next
+        field and dies two lines further down on a word that was fine where it
+        was. Seen in the wild: a ``slave`` skin deleted by hand and the ``1``
+        from a removed line left glued to the ``0``, giving ``... .texture 01``.
+
+        Named rather than recovered from. The entry reader could assume the 0 and
+        carry on, but half a dozen span walkers further down this file re-walk
+        the same bytes to place an edit, and one of them reading a file
+        differently from the others is how a save writes at the wrong offset. So
+        this refuses, and says which character to delete.
+        """
+        self._skip_ws()
+        at, tok = self.i, self.token()
+        try:
+            length = int(tok)
+        except ValueError:
+            raise _Desync(
+                at, f"expected the length of a name here and found {tok!r}") from None
+        if length == 0:
+            return ""
+        raise _Desync(at, f"an attachment texture's sprite length is written as {tok!r} "
+                          f"here, and 0 is the only value it can be — an attachment has "
+                          f"no sprite, and the 0 is what says so. Delete what follows the "
+                          f"0 at this spot and the file reads", exact=True)
 
     def get_string(self) -> str:
         self._skip_ws()
@@ -292,7 +330,11 @@ def _read_entry(r: _Reader, pad: bool = False) -> ModelEntry:
         for k in range(cnt):
             try:
                 fac = r.get_string().lower()
-                tex, nrm, spr = r.get_string(), r.get_string(), r.get_string()
+                tex, nrm = r.get_string(), r.get_string()
+                # the sprite: a real one on a main texture, and on an attachment
+                # the 0 that means there is none (see get_attach_sprite)
+                spr = (r.get_attach_sprite() if what == "attachment"
+                       else r.get_string())
             except _Desync as e:
                 # A list that says 2 and holds 1 — what deleting a faction's
                 # skin without touching the number above it leaves behind — puts
@@ -360,6 +402,9 @@ def _suspect(text: str, r: "_Reader") -> str:
 def _desync_message(text: str, r: "_Reader", e: "_Desync", n: int) -> str:
     line, col = _line_col(text, e.at)
     who = f" ({r.entry!r})" if r.entry else ""
+    if e.exact:
+        return (f"Reading model entry #{n + 1}{who} it stopped at line {line}, "
+                f"column {col}: {e.what}. Here: {_snippet(text, e.at)}")
     return (f"Reading model entry #{n + 1}{who} it stopped making sense at line {line}, "
             f"column {col}: {e.what}. Every name in this file is stored as "
             f"'<length> <name>', so one length that does not match the name after it "

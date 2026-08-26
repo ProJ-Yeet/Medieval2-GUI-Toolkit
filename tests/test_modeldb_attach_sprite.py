@@ -1,0 +1,140 @@
+"""The one field in a modeldb that can only ever hold 0.
+
+An attachment texture group is four names — faction, texture, normal, sprite —
+and an attachment has no sprite, so its fourth field is always the bare ``0``
+that means *no name follows*. A number other than 0 there is not a length: there
+is no name for it to be the length of.
+
+It happens. A modder deletes a faction's skin by hand and the digit from a
+removed line is left glued to the 0, giving ``... .texture 01``. The reader then
+takes 1 as a length, eats the next field as a one-character name, and dies two
+lines further down on a word that is perfectly fine where it is — which is the
+single worst kind of error this format can produce, because the line it names has
+nothing wrong with it.
+
+So the reader knows this slot, and refuses AT the stray character with the fix in
+the sentence. It refuses rather than assuming the 0 and carrying on: half a dozen
+span walkers in ``modeldb.py`` re-walk the same bytes to place an edit, and one
+of them reading a file differently from the others is how a save writes at the
+wrong offset.
+
+    python -m tests.test_modeldb_attach_sprite
+"""
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from unittransfer import modeldb
+
+ok = []
+
+
+def check(label, cond):
+    ok.append(bool(cond))
+    print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
+
+
+#: One entry with the shape the reader walks: name, scale, one LOD, one main
+#: texture (which DOES carry a sprite), one attachment texture (whose sprite slot
+#: is the 0 under test), one animation, and the torch line. Every name is emitted
+#: through `nm`, so no length in here can be wrong by hand — the file is about
+#: ONE wrong number and it must be the one the test put there.
+def nm(v: str) -> str:
+    return f"{len(v)} {v}"
+
+
+ATT_NORM = "attachments/guard_at_norm.texture"
+
+
+def entry(attach_sprite: str) -> str:
+    return "\n".join([
+        nm("guard"),                                 # name
+        "1 1",                                       # scale + lod count
+        nm("units/guard.mesh") + " 6400",            # lod path + distance
+        "1",                                         # main texture count
+        nm("bulgaria"),
+        nm("textures/guard.texture"),
+        nm("textures/guard_norm.texture"),
+        nm("unit_sprites/guard.spr"),
+        "1",                                         # attachment texture count
+        nm("bulgaria"),
+        nm("attachments/guard_at.texture"),
+        nm(ATT_NORM) + " " + attach_sprite,
+        "1",                                         # animation count
+        nm("None"),                                  # mount type
+        nm("MTW2_Fast_2H_Axe") + " 0",               # primary skeleton, no secondary
+        "1",
+        nm("MTW2_2H_Axe_primary"),
+        "0",
+        "16 -0.09 0 0 -0.35 0.8 0.6",                # torch index + six floats
+        "",
+    ])
+
+
+def file_with(attach_sprite: str) -> str:
+    head = f"{len(modeldb.ARCHIVE_MAGIC)} {modeldb.ARCHIVE_MAGIC} 0 0 0 0 0 2 0 0\n"
+    blank = nm("blank") + " " + " ".join(["0"] * 39) + "\n"
+    return head + blank + entry(attach_sprite)
+
+
+#: which line of the whole file the stray character sits on: the header and the
+#: blank sentinel are one line each, and `entry` counts from 0
+def stray_line(stray: str) -> int:
+    return entry(stray).split("\n").index(nm(ATT_NORM) + " " + stray) + 3
+
+
+print("\n== the 0 that means 'no sprite on an attachment' ==")
+db = modeldb.parse_text(file_with("0"))
+check("a well-formed entry parses", len(db.entries) == 1)
+check("...and its attachment sprite is empty",
+      db.entries[0].attach_textures[0].sprite == "")
+check("...while the main texture's sprite is the real one",
+      db.entries[0].main_textures[0].sprite == "unit_sprites/guard.spr")
+check("...and the entry round-trips byte-exact",
+      db.to_text() == file_with("0"))
+
+print("\n== a digit left glued to that 0 ==")
+#: `01` is the one seen in the wild; `1` and `12` are the same mistake, and the
+#: point of all three is that the sentence must be about THIS character.
+for stray in ("01", "1", "12"):
+    try:
+        modeldb.parse_text(file_with(stray))
+        check(f"{stray!r} is refused", False)
+        continue
+    except ValueError as e:
+        msg = str(e)
+    check(f"{stray!r} is refused", True)
+    check(f"{stray!r}: the sentence names the value it found",
+          repr(stray) in msg)
+    check(f"{stray!r}: ...says what the only legal value is",
+          "0 is the only value it can be" in msg)
+    check(f"{stray!r}: ...and says what to do about it",
+          "Delete what follows the 0" in msg)
+    # The generic "the number that did this is somewhere above you" explanation
+    # is for a read that died away from the mistake. Here it did not, and saying
+    # both things at once is how a good error message stops being one.
+    check(f"{stray!r}: it does not then send you looking elsewhere",
+          "shifts every field that follows" not in msg)
+    # and the line it names is the line the stray character is ON — the whole
+    # point, since the old failure named the innocent line two below it
+    line = msg.split("line ")[1].split(",")[0]
+    want = str(stray_line(stray))
+    check(f"{stray!r}: it points at the line the character is on"
+          f" (says {line}, want {want})", line == want)
+
+print("\n== and a name in that slot is still not allowed ==")
+#: Not "a length that happens to fit": the field cannot hold a name at all, so
+#: even a self-consistent one is the same mistake and gets the same sentence.
+try:
+    modeldb.parse_text(file_with("9 guard.spr"))
+    check("a self-consistent name is refused too", False)
+except ValueError as e:
+    check("a self-consistent name is refused too",
+          "0 is the only value it can be" in str(e))
+
+print()
+print(f"{sum(ok)}/{len(ok)} checks — "
+      + ("ALL PASSED" if all(ok) else f"{len(ok) - sum(ok)} FAILED"))
+sys.exit(0 if all(ok) else 1)

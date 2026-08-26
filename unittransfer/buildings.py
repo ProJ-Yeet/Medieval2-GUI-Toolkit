@@ -2632,6 +2632,20 @@ def _pool_brief(r: dict) -> dict:
             ("unit", "initial", "per_turn", "maximum", "experience", "requires")}
 
 
+def _pool_side(r: Optional[dict]) -> Optional[dict]:
+    """One half of a city/castle pair's pool, as that panel needs it.
+
+    :func:`_pool_brief` plus the EDB line the row occupies and whether it sits in
+    a ``faction_capability`` block. Those two are what let a number typed on
+    either side of the panel be staged as a rewrite of *that* row rather than as
+    a second copy of the unit — the same key the unit view stages an edit to
+    another building line by.
+    """
+    if r is None:
+        return None
+    return dict(_pool_brief(r), cap_line=r["cap_line"], faction=r["faction"])
+
+
 def line_checks(edb: EdbFile, bl: BuildingLine,
                 pairs: Optional[Dict[str, str]] = None) -> dict:
     """Continuity, mirror and duplicate findings for one building line."""
@@ -2904,8 +2918,8 @@ def variant_compare(mod, line: str, culture: str = "") -> dict:
                 "same": not diff,
                 "diff": diff,
                 "numbers_differ": bool([f for f in diff if f != "requires"]),
-                "a": _pool_brief(a) if a else None,
-                "b": _pool_brief(b) if b else None,
+                "a": _pool_side(a),
+                "b": _pool_side(b),
             })
         head["levels"].append({
             "level": blk.name,

@@ -231,7 +231,7 @@ function renderCleanup(){
     <div class="foot">
       ${cleanerBoxHtml()}
       <button onclick="closeModal()">Close</button>
-      <button onclick="clPreview()">Preview</button>
+      <button onclick="clPreview()">Probe</button>
       <button class="primary" onclick="clApply()">Move them out</button>
     </div>`;
 }
@@ -484,7 +484,7 @@ function edDeleteDialog(){
       <div id="edPreview"></div>
     </div>
     <div class="foot"><button onclick="renderEditor()">Cancel</button>
-      <button onclick="edDeletePreview()">Preview</button>
+      <button onclick="edDeletePreview()">Probe</button>
       <button class="danger" onclick="edDoDelete()">Delete unit</button></div>`;
   edDeletePreview();
 }

@@ -1,7 +1,61 @@
 # STATE — Medieval 2 GUI Toolkit V2
-_Updated: 2026-08-26 · **v2.1.3 released** · a feature subrelease on top of 2.1.2_
+_Updated: 2026-08-27 · **v2.1.4 released** · a feature subrelease on top of 2.1.3_
 
 ## Next up
+**v2.1.4 IS A SUBRELEASE, same standing as 14j, 2.1.2 and 2.1.3 — real features,
+not folded into Phase 16 because Phase 16 (the Campaign Map Editor) is a
+different program.** All of it is the tool getting out of the way.
+
+**The browser's Back button steps back through the toolkit's own screens** rather
+than out of the page (`web/js/core.js`, `NAV_LAYERS` / `uiBack`). No recorded
+history is replayed: every layer already knows how to close itself, so a press
+asks the layers innermost-first "are you what is on top?" and the first that says
+yes goes back exactly as its own on-screen button would — a press and a click can
+never become two different ways out of one screen. One spare history entry sits
+ahead of the page and each press spends it; a press that closed something puts it
+back. At Home with nothing open the spare is left spent, so a second press leaves
+the page: the tool does not trap you in itself.
+
+**The four numbers in "City and castle, side by side" are editable on both
+sides**, with **Copy city → castle** under each half. This half's row is already
+in the working copy; the twin's is staged in `work.also` against the EDB line it
+already occupies — an in-place rewrite, not a second copy of the unit — which is
+why `variant_compare` now sends `cap_line` and `faction` per side (`_pool_side`
+in `unittransfer/buildings.py`). A row that comes into step as you type is not
+pulled out from under the caret.
+
+**Unit cards on disk / Info cards on disk** show each picture at the size the
+slot above shows it, and that slot drops its own picture as soon as there IS a
+list — it was only whichever faction folder resolved first, i.e. a copy of the
+first row below. It keeps what only it has: the import that fans one picture into
+every faction folder that owns the unit. **The 3D viewer opens closer**: a unit's
+height fills the frame (92% on Gondor Spearmen, up from 48%) instead of a
+horizontal spear deciding how far away the man stands. And **Preview is called
+Probe** everywhere the word is on screen — the word only: function names, CSS
+classes, `/preview_image` and the `model_preview` setting are untouched, and the
+3D viewer's own "3D preview" keeps its name, because it is a picture, not a plan.
+
+**A modeldb whose read died on an innocent line now names the character that did
+it.** An attachment texture group's fourth field is the sprite slot, and an
+attachment has no sprite, so it is always the bare `0` that means "no name
+follows". A digit left glued to it by a hand edit (`... .texture 01`) made the
+reader eat the next field and die two lines lower on a word that was fine —
+reported from the wild on Tsardoms MP, entry #333, and now refused AT the
+character with the fix in the sentence (`_Reader.get_attach_sprite`). It refuses
+rather than assuming the 0: the span walkers in `modeldb.py` re-walk the same
+bytes to place an edit, and one of them reading a file differently from the
+others is how a save writes at the wrong offset.
+
+Notes: `merge/RELEASE_2_1_4.md`. New: `tests/test_back_button.py` (21),
+`tests/test_variant_edits.py` (46), `tests/test_modeldb_attach_sprite.py` (23).
+Suite: 68 of 68 modules.
+
+**The one rule that carries the risk in this release:** an edit typed on the
+twin's side is staged by the **EDB line that row already occupies**, so a row the
+panel mirrored a moment ago — which has no line in the file yet — must not
+inherit the *other* building's line number. `bldVarTake` clears `cap_line` on the
+copy for exactly that reason, and `tests/test_variant_edits.py` pins it.
+
 **v2.1.3 IS A SUBRELEASE, same standing as 14j and 2.1.2 — real features, not
 folded into Phase 16 because Phase 16 (the Campaign Map Editor) is a different
 program.** It is about disk, and about gaps nothing else can see. BMDB mode goes

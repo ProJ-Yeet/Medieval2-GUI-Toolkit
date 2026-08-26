@@ -114,7 +114,10 @@ const state={mods:[],src:null,dst:null,xferDst:null,data:null,destData:null,fact
   mode:'home', ed:null, bmdb:null, clean:null, snd:null, destSnd:null, str:null,
   tr:null, an:null, mf:null, fac:null,
   // bld survives a hop into the unit editor and back — see openUnitFromBuilding
-  bld:null, bldReturn:null};
+  bld:null, bldReturn:null,
+  // the modules opened before this one, oldest first — what the Back button
+  // walks out through once every dialog above it is shut (see NAV_LAYERS)
+  modeTrail:[]};
 
 const VANILLA_UNIT_LIMIT=500;   // M2TW vanilla EDU cap; M2TWEOP/EOP raise it.
 const VANILLA_FACTION_LIMIT=31; // M2TW vanilla descr_sm_factions cap; M2EX raises it.
@@ -803,9 +806,17 @@ function navOpen(open){
 }
 // NB: not "setMode" — the composer already owns that name (its new/base/replace
 // switch), and function declarations hoist, so the later one would silently win.
-function setAppMode(id){
+// `returning` is the Back button coming the other way: the trail is being
+// walked out of, so nothing new goes onto it.
+function setAppMode(id,returning){
   navOpen(false);
   if(id===state.mode)return;
+  if(!returning){
+    state.modeTrail.push(state.mode);
+    // A session wanders — twenty-four steps back is already further than anyone
+    // presses, and the oldest of them are not worth carrying.
+    if(state.modeTrail.length>24)state.modeTrail.shift();
+  }
   activity('opened',`${modeDef(id).name} (mod: ${state.src||'none'})`);
   state.mode=id;applyMode(true);
 }
@@ -902,6 +913,7 @@ function wire(){
   let overlayDown=false;
   overlay.addEventListener('mousedown',e=>{overlayDown=(e.target.id==='overlay');});
   overlay.onclick=e=>{if(e.target.id==='overlay'&&overlayDown)closeModal();};
+  uiBackWire();
 }
 /* ---------- mode switching ---------- */
 // Edit and bmdb modes work on ONE mod in place, so the destination always mirrors
@@ -1182,3 +1194,79 @@ function closeModal(){
   if(typeof edPrevDrop==='function')edPrevDrop();
   // the unit editor widens the modal — put it back for the next dialog
   document.getElementById('modal').className='modal';}
+
+/* ---------- the browser's Back button ----------
+
+   The whole toolkit is one page. A module, a dialog over it, sometimes a second
+   panel stacked on the first — none of that is a browser page, so Back used to
+   leave the tool outright, usually to the blank tab the launcher opened it in.
+   It now steps back through the screens the tool actually has, and so do the
+   mouse's own back button and Alt+←, which the browser sends down the same wire.
+
+   There is no recorded history of screens to replay, and there deliberately
+   isn't: every layer already knows how to close itself, and its on-screen
+   Back / Cancel / ✕ is the call that does it. A press therefore asks the layers,
+   innermost first, "are you what is on top?" — and the first one that says yes
+   goes back exactly as its own button would, including whatever that button
+   stops to ask first. A press and a click can never become two different ways
+   out of one screen.
+
+   One spare history entry is what makes a press reach us at all: it sits ahead
+   of the page, each press spends it, and a press we answered puts it back. A
+   press nothing answers is Home with nothing open — the tool's own root — and
+   there the spare is left spent, so a second press leaves the page the way it
+   always did. The next thing the user clicks arms it again. */
+
+//: false = the spare has been spent and not replaced.
+let uiBackArmed=false;
+function uiBackArm(){
+  if(uiBackArmed)return;
+  // A page served over file:// (or a browser refusing the entry) must not take
+  // the rest of the UI down with it — Back simply keeps its old behaviour there.
+  try{ history.pushState({m2gt:'step'},''); uiBackArmed=true; }catch(e){}
+}
+/* The screens a press steps back through, innermost first.
+
+   The three inside a dialog are the panels a dialog can stack on top of itself.
+   Each keeps its OWN snapshot of the markup it covered up — that is what tells
+   the layer it is the one on top, and it is the same field its Back button
+   hands back. */
+const NAV_LAYERS=[
+  {on:()=>navMenu.classList.contains('open'), back:()=>navOpen(false)},
+  {on:()=>drawer.classList.contains('open'), back:()=>drawer.classList.remove('open')},
+  {on:()=>modalOpen()&&!!mpBack, back:()=>mpCancel()},
+  {on:()=>modalOpen()&&!!imgBack, back:()=>imgCancel()},
+  {on:()=>modalOpen()&&!!(state.bld&&state.bld.clause), back:()=>bldClauseCancel()},
+  {on:()=>modalOpen()&&!!(state.bld&&(state.bld.cmp||state.bld.vc||state.bld.stash)),
+   back:()=>bldPickCancel()},
+  {on:()=>modalOpen(), back:()=>closeModal()},
+  // Out of the dialogs: a unit editor reached FROM a building goes back to the
+  // building, which is the trip the header's own ← button makes.
+  {on:()=>state.mode==='edit'&&!!state.bldReturn, back:()=>backToBuilding()},
+  // …and then the modules, in the order they were opened.
+  {on:()=>state.modeTrail.length>0, back:()=>setAppMode(state.modeTrail.pop(),true)},
+];
+/* Step back one screen. Returns whether anything did.
+
+   A layer whose module never loaded (a dropped <script> is a real thing here —
+   see uiFailedFiles) would throw on the name that is not there, and taking the
+   Back button down with it would be a poor way to report it. Such a layer is
+   simply not open. */
+function uiBack(){
+  const layer=NAV_LAYERS.find(l=>{try{return l.on();}catch(e){return false;}});
+  if(!layer)return false;
+  layer.back();
+  return true;
+}
+function uiBackWire(){
+  uiBackArm();
+  window.addEventListener('popstate',()=>{
+    uiBackArmed=false;                   // the spare has just been spent
+    if(uiBack())uiBackArm();
+  });
+  // Re-arming on a click keeps the arming in one place instead of in every
+  // screen: a screen you can go back FROM is one you clicked your way into.
+  // Capture, so a handler that stops the event still arms the way out of what
+  // it just opened.
+  document.addEventListener('click',()=>uiBackArm(),true);
+}

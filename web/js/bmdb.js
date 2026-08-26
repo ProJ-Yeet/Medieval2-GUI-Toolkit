@@ -327,7 +327,7 @@ function renderBmdbEditor(){
         ⌨ Ctrl+Z undo · Ctrl+Y redo</span>
       ${cleanerBoxHtml()}
       <button onclick="closeModal()">Close</button>
-      <button onclick="edPreview()">Preview</button>
+      <button onclick="edPreview()">Probe</button>
       <button class="primary" onclick="edSave()">Save changes</button>
     </div>`;
   edRenderTab();
@@ -502,7 +502,7 @@ function renderOwnership(){
     </div>
     <div class="foot">
       <button onclick="closeModal()">Close</button>
-      <button onclick="ownPreview()" ${a.row_count?'':'disabled'}>Preview</button>
+      <button onclick="ownPreview()" ${a.row_count?'':'disabled'}>Probe</button>
       <button class="primary" onclick="ownApply()" ${a.row_count&&a.has_roster?'':'disabled'}>
         Add the missing records</button>
     </div>`;

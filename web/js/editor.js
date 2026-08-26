@@ -103,7 +103,7 @@ function edCvUserEdited(){
   if(!cv||cv.kind!=='edu'||!cv.loaded)return false;
   return cv.base!==cv.pristine&&cv.base!==cv.auto;
 }
-// The text pane can't be read, so neither Preview nor Save may run: they would
+// The text pane can't be read, so neither Probe nor Save may run: they would
 // act on the last good text while the screen shows something else.
 function edCvBlocked(){
   const cv=state.ed&&state.ed.cv;
@@ -192,7 +192,7 @@ function renderEditor(){
         title="Return to the building editor exactly as you left it">← ${esc(state.bldReturn.label)}</button>`:''}
       ${cleanerBoxHtml()}
       <button onclick="closeModal()">Close</button>
-      <button onclick="edPreview()">Preview</button>
+      <button onclick="edPreview()">Probe</button>
       <button class="primary" onclick="edSave()">Save changes</button>
     </div>`;
   edRenderTab();
@@ -480,7 +480,7 @@ function edIdentity(){
           "Rewritten: <code>export_descr_buildings.txt</code>, every campaign's "
             +'<code>descr_strat.txt</code> and <code>campaign_script.txt</code>, the voice bank, '
             +"<code>descr_mercenaries.txt</code> and the mod's <code>.lua</code> scripts.",
-          'Preview lists every file and how many lines in each. Undo puts them all back.',
+          'Probe lists every file and how many lines in each. Undo puts them all back.',
           'Spellings that differ only in capitalisation are reported, not rewritten. Other '
             +'things share these files.'])}</div></div>
       <div><label>Dictionary (localisation + unit-card key)
@@ -517,38 +517,7 @@ function edIdentity(){
              copy into. Set <code>ownership</code> first.`,
         'A <code>.png</code>/<code>.jpg</code> is converted to <code>.tga</code>; the engine reads '
           +'nothing else.'])}</div>
-      <div class="icoprev">
-        <div class="icoslot">
-          <div class="icowrap">
-            <img class="card" onerror="this.style.display='none'"
-              title="Replace the unit card" onclick="edPickIcon('cardSrc')"
-              src="${e.cardSrc?'/preview_image?path='+enc(e.cardSrc):iconUrl(e.mod,e.unit)}">
-            <button class="icoedit" title="Replace the unit card"
-              onclick="edPickIcon('cardSrc')">✎</button>
-          </div>
-          <div class="k">Unit card</div>
-          <div class="fn">${e.cardSrc?esc(e.cardSrc.split(/[\\/]/).pop()):'current'}</div>
-          <div class="sprrow">
-            ${edRevealBtn('card')}
-            ${e.cardSrc?`<button class="danger" onclick="edClearIcon('cardSrc')">✕</button>`:''}
-          </div>
-        </div>
-        <div class="icoslot">
-          <div class="icowrap">
-            <img class="info" onerror="this.style.display='none'"
-              title="Replace the info card" onclick="edPickIcon('infoSrc')"
-              src="${e.infoSrc?'/preview_image?path='+enc(e.infoSrc):iconUrl(e.mod,e.unit,'info')}">
-            <button class="icoedit" title="Replace the info card"
-              onclick="edPickIcon('infoSrc')">✎</button>
-          </div>
-          <div class="k">Info card</div>
-          <div class="fn">${e.infoSrc?esc(e.infoSrc.split(/[\\/]/).pop()):'current'}</div>
-          <div class="sprrow">
-            ${edRevealBtn('info')}
-            ${e.infoSrc?`<button class="danger" onclick="edClearIcon('infoSrc')">✕</button>`:''}
-          </div>
-        </div>
-      </div>
+      <div class="icoprev">${edIconSlot('card')}${edIconSlot('info')}</div>
       ${edCardVariants('card','Unit cards on disk')}
       ${edCardVariants('info','Info cards on disk')}
       ${(e.cardSrc||e.infoSrc)?`<div class="count w-good" style="margin-top:8px">
@@ -556,25 +525,72 @@ function edIdentity(){
     </fieldset>
   </div>`;
 }
+/* One of the two slots over the lists.
+
+   Its picture is the one thing the lists below can also show: the slot resolves
+   whichever faction folder came first, and where a mod ships more than one
+   distinct picture that is a copy of the first row underneath, now at the same
+   size. So the picture is dropped as soon as there IS a list — repeating it said
+   nothing — and the slot keeps what only it has: the import that renames one
+   file and copies it into EVERY faction folder that owns the unit, which is a
+   different job from replacing one file where it lies.
+
+   A staged import brings the picture back, whatever is on disk. That one is not
+   a repeat of anything: it is the art that is about to be written. */
+function edIconSlot(kind){
+  const e=state.ed, card=kind==='card';
+  const key=card?'cardSrc':'infoSrc', src=e[key]||'';
+  const what=card?'unit card':'info card';
+  const many=((e.d.icon_variants||{})[kind]||[]).length;
+  const pic=!!src||many<2;
+  return `<div class="icoslot">
+    ${pic?`<div class="icowrap">
+      <img class="${card?'card':'info'}" onerror="this.style.display='none'"
+        title="Replace the ${what}" onclick="edPickIcon('${key}')"
+        src="${src?'/preview_image?path='+enc(src):iconUrl(e.mod,e.unit,card?'':'info')}">
+      <button class="icoedit" title="Replace the ${what}"
+        onclick="edPickIcon('${key}')">✎</button>
+    </div>`:''}
+    <div class="k">${card?'Unit card':'Info card'}</div>
+    <div class="fn">${src?esc(src.split(/[\\/]/).pop())
+      :(pic?'current':`${many} different pictures — below`)}</div>
+    <div class="sprrow">
+      ${pic?'':`<button onclick="edPickIcon('${key}')"
+        title="Import one picture and copy it into every faction folder that owns this unit.
+Replacing a single file where it lies is what the list below does.">✎ Replace for every faction…</button>`}
+      ${edRevealBtn(kind)}
+      ${src?`<button class="danger" onclick="edClearIcon('${key}')">✕</button>`:''}
+    </div>
+  </div>`;
+}
 /* Every DISTINCT card on disk, and which factions share it. The game looks a
    card up under the PLAYER's faction folder, so a mod may ship one picture for
    ten factions or ten different ones — and the preview above can only ever show
    whichever folder was found first. Grouped by file content on the server
-   (edit.icon_variants), so ten identical copies are one row. */
+   (edit.icon_variants), so ten identical copies are one row.
+
+   Each row shows its picture at the size the one above the buttons is — a unit
+   card as a portrait, an info card as the wide banner it is. The whole reason
+   this list exists is that these pictures DIFFER, and a 56px thumbnail of a
+   400px banner is too small to tell you how. */
 function edCardVariants(kind,title){
   const e=state.ed;
   const rows=((e.d.icon_variants||{})[kind])||[];
   if(rows.length<2)return '';           // one picture for everyone: nothing to say
-  return `<div class="cardvars">
+  return `<div class="cardvars" data-kind="${kind}">
     <div class="k">${esc(title)} <span class="count">${rows.length} different
       picture${rows.length===1?'':'s'} across ${rows.reduce((n,r)=>n+r.factions.length,0)}
       faction folder${rows.reduce((n,r)=>n+r.factions.length,0)===1?'':'s'}</span></div>
     <div class="cardvarlist">${rows.map(r=>{
       // one variant is ONE file, so it can be swapped on its own — which is the
-      // point of the list: the whole reason it exists is that these differ
+      // point of the list: the whole reason it exists is that these differ.
+      // Not `loading="lazy"` like the grid's cards: an info card is sized by the
+      // picture itself, so an unloaded one is a zero-high box, and a zero-high
+      // box never scrolls into view to be loaded. There are two or three of
+      // these, not three hundred.
       const url=`/icon?mod=${enc(e.mod)}&kind=modfile&rel=${enc(r.rel)}`;
       return `<figure>
-      <div class="icowrap"><img loading="lazy" onerror="iconRetry(this)"
+      <div class="icowrap"><img onerror="iconRetry(this)"
         title="Replace this picture" onclick="imgPick('${q1(esc(url))}','edRenderTab')"
         src="${url}" alt="">${imgEditBtn(url,'edRenderTab')}</div>
       <figcaption>
@@ -1907,7 +1923,7 @@ function edPlanHtml(r,stale){
       cls==='bad'?'✗':cls==='warn'?'!':'·'}</span><span class="stext">${esc(x)}</span></div>`).join('');
   return `<div class="sum" style="margin-top:10px">
     <div class="srow shead"><span class="sicon">✎</span><span class="stext">Pending changes${
-      stale?' <span class="w-warn">Edited since this preview. Press Preview again.</span>':''}</span></div>
+      stale?' <span class="w-warn">Edited since this probe. Press Probe again.</span>':''}</span></div>
     ${li('',r.changes.length?r.changes:['no changes'])}
     ${r.files_written.length?`<div class="srow"><span class="sicon">💾</span><span class="stext">writes ${
       r.files_written.map(f=>`<span class="path">${esc(f)}</span>`).join(', ')}</span></div>`:''}

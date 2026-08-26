@@ -518,12 +518,21 @@
   .cardvarlist{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
   .cardvarlist figure{margin:0;display:flex;gap:8px;align-items:flex-start;
     border:1px solid var(--edge);border-radius:7px;padding:6px;background:var(--panel2)}
-  .cardvarlist img{width:56px;height:74px;object-fit:contain;background:#0d0f13;
-    border-radius:4px;flex:0 0 56px}
-  /* the picture is wrapped now so the ✎ can sit on it, and the wrapper is what
-     the row's flex sizes — the img inside it is already fixed at 56px */
-  .cardvarlist .icowrap{flex:0 0 56px}
-  .cardvarlist .icoedit{top:3px;left:3px;padding:0 4px;font-size:11px}
+  /* Each row shows its picture at the size the slot above the buttons shows it:
+     a unit card is a small portrait, an info card is a wide banner. Both used to
+     be squeezed into one 56px thumbnail, which is too small to tell two of them
+     apart — and telling them apart is the only reason this list is here. The
+     picture is wrapped so the ✎ can sit on it, and the wrapper is what the row's
+     flex sizes. */
+  .cardvarlist img{object-fit:contain;background:#0d0f13;border-radius:4px}
+  .cardvars[data-kind=card] .cardvarlist img{width:96px;height:128px;flex:0 0 96px}
+  .cardvars[data-kind=card] .cardvarlist .icowrap{flex:0 0 96px}
+  /* An info card is wider than any caption, so its row stacks instead of sitting
+     side by side — the same shape the Info card slot above already has. */
+  .cardvars[data-kind=info] .cardvarlist figure{flex-direction:column}
+  .cardvars[data-kind=info] .cardvarlist img{max-width:420px;height:auto}
+  .cardvars[data-kind=info] .cardvarlist .icowrap{flex:0 0 auto;max-width:420px}
+  .cardvars[data-kind=info] .cardvarlist figcaption{max-width:420px}
   .cardvarlist figcaption{max-width:260px;font-size:11px}
   .cardvarlist figcaption .sprrow{margin-top:5px}
   .cardvarlist figcaption .sprrow button{padding:2px 7px;font-size:11px}
@@ -1231,10 +1240,23 @@
     text-overflow:ellipsis}
   .vcrow .vcnm .ty{display:block;font-size:10px;color:var(--dim);white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis}
-  .vcrow .vcw{flex:0 0 110px}
-  .vcrow .vcn{flex:0 0 150px;display:flex;gap:8px;font-size:11.5px;
-    font-family:ui-monospace,Consolas,monospace;color:var(--dim)}
+  .vcrow .vcw{flex:0 0 100px}
+  /* Each half is a little column: the four numbers, and under them the button
+     that puts all four onto the other half. Stacked rather than strung out on
+     one line because eight number boxes and two buttons across do not fit a
+     laptop screen - and stacked, the button plainly belongs to the numbers it
+     is going to copy. The header names the side above the same four slots. */
+  .vcrow .vcn{flex:0 0 316px;display:flex;flex-direction:column;align-items:flex-start;
+    gap:3px;font-size:11.5px;color:var(--dim)}
+  .vcrow .vcn>b{color:var(--fg)}
+  .vcrow .vcnums{display:flex;gap:4px;align-items:center}
+  .vcrow .vcnums>*{flex:0 0 76px;min-width:0}
+  .vcrow .vcn .numwrap{flex:0 0 76px;gap:2px}
+  .vcrow .vcn input{min-width:0;padding:3px 4px;font-size:11.5px;
+    font-family:ui-monospace,Consolas,monospace}
+  .vcrow .vcn .spin button{width:13px;height:12px}
   .vcrow .vcn.off{opacity:.55}
+  .vcrow .vccopy{padding:2px 7px;font-size:10.5px;white-space:nowrap}
   .vcrow .vca{flex:0 0 110px;text-align:right}
   .vcrow .vca button{padding:3px 8px;font-size:11.5px}
   /* ---- requires clauses ---- */

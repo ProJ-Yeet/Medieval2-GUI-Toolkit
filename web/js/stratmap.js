@@ -213,7 +213,7 @@ function renderStratCleanup(){
     </div>
     <div class="foot">
       <button onclick="closeModal()">Close</button>
-      <button onclick="stmPreview()">Preview</button>
+      <button onclick="stmPreview()">Probe</button>
       <button class="primary" onclick="stmApply()">Move them out</button>
     </div>`;
 }

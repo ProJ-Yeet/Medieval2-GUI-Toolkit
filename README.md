@@ -58,7 +58,7 @@ library it needs are bundled inside.
 
 Name collisions are detected and resolved (reuse identical content, rename on a
 real conflict, or overwrite/skip — your choice), and every step is shown in a
-preview before anything is written.
+probe before anything is written.
 
 ### What the transfer creates
 
@@ -129,7 +129,7 @@ source mod, and then gets out of the way: the source dropdown switches to it
 That is the point. A pack import **is** a transfer, so it gets every check a
 transfer gets — name collisions resolved, models renamed where they clash,
 the mount brought across and renamed if the destination already has a different
-one, assets relocated into their own folder, ownership fixed, a preview before
+one, assets relocated into their own folder, ownership fixed, a probe before
 anything is written, and one entry in **🕑 Log → Undo** afterwards. There is no
 second import path that could drift out of step with the first.
 
@@ -163,7 +163,7 @@ instead of two. Click any unit to open its editor:
   `export_descr_buildings.txt` (every recruitment pool), each campaign's
   `descr_strat.txt` and `campaign_script.txt`, `descr_mercenaries.txt`, the
   voice bank, any other `data/*.txt` that names it, and every `.lua` script the
-  mod has. Preview lists each file and how many lines in it; Undo puts them all
+  mod has. Probe lists each file and how many lines in it; Undo puts them all
   back with everything else. Only whole names are matched, and the longest one
   wins — renaming `Catapult` never touches `Ent Catapult`. Spellings that differ
   only in capitalisation are **reported, not rewritten**: other things live in
@@ -177,7 +177,14 @@ instead of two. Click any unit to open its editor:
   card doesn't show. Ownership changed in the same save decides the folders, and
   `slave` is dropped unless it is the only owner. A `.png`/`.jpg` is re-encoded
   to `.tga`, since the engine reads nothing else. Backed up and undoable like
-  any other edit
+  any other edit.
+  Under the two slots, **Unit cards on disk** and **Info cards on disk** list
+  every *distinct* picture the mod actually ships for this unit and the folders
+  that hold each one — because the slot above can only ever show whichever folder
+  was found first. Each is shown at the same size as the slot above it (a card as
+  a portrait, an info card as the full-width banner), since telling two of them
+  apart is the only reason the list is there, and either can be replaced on its
+  own
 - **EDU fields** — every field of the unit's block, edited in place, in one of
   two views (see [Guided vs raw fields](#guided-vs-raw-fields)). `✕` removes
   a line outright, which is not the same as blanking its value — the game still
@@ -269,7 +276,7 @@ instead of two. Click any unit to open its editor:
 - **🗑 Delete unit** — removes the EDU block and, if you ask for them, its text
   entry, its now-unused model entries, their mesh/texture files and its icons
 
-Every save is previewed first and backed up, so **🕑 Log → Undo** reverts an edit
+Every save is probed first and backed up, so **🕑 Log → Undo** reverts an edit
 or a deletion byte-exact, exactly like a transfer.
 
 ### 🧹 Clean up the unit file
@@ -286,13 +293,13 @@ Three rules make that safe to run on a 35 000-line file:
   it already was. The only bytes this authors are the section banners.
 - **It prefers the order already in the file**, so a file already in shape comes
   back byte for byte and a second run is a no-op.
-- **The preview is refused outright** if the result is not purely a reordering:
+- **The probe is refused outright** if the result is not purely a reordering:
   same units, same field lines, not one comment lost, all checked before a byte
   reaches disk. One backup, one log entry, one Undo.
 
 **Clean up** is what to do and what it would change. The four section-banner
 settings live here — width, the rule character, what the line starts with, and
-whether the name is capitalised — with a live sample above the preview. The
+whether the name is capitalised — with a live sample above the probe. The
 defaults are what the tool has always written.
 
 **Order and tiers** is the roster as a list, one row per unit, with the three
@@ -919,7 +926,7 @@ event counter, hidden resource and settlement condition held at the same time.
 The second is an upper bound on purpose — which of a mod's conditions can truly
 coincide is not answerable from the EDB alone, and a check that under-counts is
 worse than one that occasionally over-counts. The same warning appears in the
-save preview.
+save probe.
 
 The **✎ Edit** button on any recruited unit switches to the Unit Editor for that
 unit; the **← Back to <building>** button in the header brings you back to the
@@ -974,7 +981,13 @@ otherwise do by eye:
 - The two halves in one table, **tier by tier**, using the same pairing the
   Checks panel uses (marker-free names, falling back to position).
 - Every unit marked as trained by **both** halves or by one of them, with each
-  side's four numbers beside it.
+  side's four numbers beside it — **editable in place, on either side**. A number
+  typed into the city column edits the line you have open; one typed into the
+  castle column is staged against that building's own row and appears in **Also
+  changing**. Either way it is one Save and one Undo.
+- **Copy city → castle** under each side puts all four of that half's numbers
+  onto the other half in one click, which is what you usually want once the two
+  are in front of you and one of them is plainly right.
 - **⇄ Mirror** on a one-sided unit copies it into the half that is missing it.
   **⇄ Mirror every gap** does the whole line at once, tier by tier.
 - Three filters: only the gaps (what you came for), gaps plus units whose
@@ -997,7 +1010,7 @@ and a box for *"mirror into the castle half"*. One trip through the picker can
 fill a five-level chain in both settlement types.
 
 Everything staged against another building line is listed in an **Also changing**
-panel before you save — Save writes the lot in one pass, Preview shows it, and
+panel before you save — Save writes the lot in one pass, Probe shows it, and
 one Undo takes it all back.
 
 ### Adding and editing pools in bulk
@@ -1204,7 +1217,7 @@ them elsewhere (remove them all to go back to auto-detection). Only `.txt` files
 that really contain unit blocks are read, so scripts, JSON and notes sitting in
 the same folder are ignored.
 
-**On a transfer**, the preview gains a *Which file this unit is written to* box:
+**On a transfer**, the probe gains a *Which file this unit is written to* box:
 
 - **Same as the source** (default) — an EOP unit stays an EOP unit, a normal unit
   stays a normal unit
@@ -1213,7 +1226,7 @@ the same folder are ignored.
 - **export_descr_unit.txt** — force it into the EDU
 
 If the destination has no EOP folder configured, the block goes into the EDU and
-the preview says so — writing into a folder the extender is not set up to read
+the probe says so — writing into a folder the extender is not set up to read
 would make the unit vanish with no error anywhere.
 
 The 500-unit warning counts only what is in `export_descr_unit.txt`. EOP units are
@@ -1252,7 +1265,7 @@ Two things it does that a plain file copy would not:
 
 - **A unit card fans out to every faction folder that holds one.** The game
   looks a card up under the *player's* faction folder, so one card is routinely
-  the same picture copied into ten of them. Replacing only the one the preview
+  the same picture copied into ten of them. Replacing only the one the probe
   happened to resolve would leave the other nine showing the old art to anyone
   playing those factions.
 - **Art the mod is borrowing from the game creates the mod's first copy.** Most
@@ -1273,6 +1286,12 @@ created in.
 
 ## Features
 
+- **Back goes back through the tool, not out of it** — the whole toolkit is one
+  page, so the browser's Back button (and the mouse's, and Alt+←) used to leave
+  it. It now closes whatever is on top: a picker stacked in a dialog, then the
+  dialog, then the trip back to a building you came from, then the module you
+  were in before this one. At Home with nothing open there is nothing left to
+  close, and a press leaves the page the way it always did.
 - **Faction-wise browser** — units grouped by owning faction, with real faction
   names, filters (category, class, era, mercenary), and search
 - **Filters stay put** — what you tick survives editing or transferring a unit,
@@ -1510,9 +1529,29 @@ damage a file on save. `tests/test_compare_and_bulk.py` does the same for the tw
 features that are decided entirely in the page: that every stat the comparison
 colours still names a real slot of the field it claims, that it calls a winner
 only where there is one, and that pasting a `requires` clause onto other recruit
-pools is a copy, is idempotent, and leaves no dangling `and`. Both skip that half
-(rather than failing) when `node` isn't on PATH; node is not a dependency of the
-tool itself.
+pools is a copy, is idempotent, and leaves no dangling `and`.
+
+`tests/test_variant_edits.py` and `tests/test_back_button.py` run under `node`
+for the same reason. The first drives the city/castle panel's boxes: a number
+typed on this half must rewrite the row already in the working copy, one typed
+on the twin must be staged against the EDB line that row already occupies — and
+two of them in a row must land on ONE staged row — while a row the panel
+mirrored a moment ago must not inherit the *other* building's line number. It
+then checks that every side of every pair, in every installed mod, actually
+names the `recruit_pool` line it claims. The second checks the Back button's
+layers: that a press takes the innermost screen first, that a layer whose module
+never loaded is simply not open rather than an exception, and that the trail of
+modules runs out at Home where a press is let through. All of these skip that
+half (rather than failing) when `node` isn't on PATH; node is not a dependency
+of the tool itself.
+
+`tests/test_modeldb_attach_sprite.py` builds a modeldb of its own around the one
+field that can only ever hold `0` — an attachment texture's sprite slot, since an
+attachment has no sprite. A digit left glued to that 0 by a hand edit used to make
+the reader eat the next field and die two lines lower on a word that was fine
+where it was, so the test pins that the refusal points at the stray character,
+says what the only legal value is, says what to delete, and does *not* then send
+you looking somewhere else.
 
 `tests/test_images.py` builds its own mod folder of pictures rather than
 borrowing one, so the picture-replacement rules — the URL and path refusals, the

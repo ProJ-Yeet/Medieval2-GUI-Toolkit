@@ -301,7 +301,7 @@ function cvDebounce(cv,fn,ms,what){
   cv.pending=what;
   cv.timer=setTimeout(()=>{cv.timer=null;cv.pending='';fn();},ms);
 }
-/* Anything about to ACT on the record — Preview, Save — must wait for the last
+/* Anything about to ACT on the record — Probe, Save — must wait for the last
    keystroke to have been read. The debounce means `base` can be a quarter of a
    second behind what the box shows, and saving that would quietly drop the
    user's last word. A pending render is simply dropped instead: it only redraws

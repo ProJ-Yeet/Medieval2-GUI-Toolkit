@@ -143,7 +143,7 @@ function eduTidyClean(){
     <div class="count" style="margin-top:6px">${docPoints(
       'This rewrites the whole unit file in one go.',[
       'It only ever <b>moves</b> a block. No unit, field or comment of yours is changed or lost, '+
-        'and the preview is refused outright if that is not true of the result.',
+        'and the probe is refused outright if that is not true of the result.',
       'A tier read from a banner is written onto the unit as <code>;@m2gt tier=2</code>, so the '+
         'next run does not have to read it again.',
       'One backup, one entry in the log, one Undo.'])}</div>

@@ -121,7 +121,7 @@ function renderCards(){
       <div class="cardsfoot">
         <span class="count" id="cdTally">${cdTally()}</span>
         <span style="flex:1"></span>
-        <button onclick="cdPreview()">Preview</button>
+        <button onclick="cdPreview()">Probe</button>
         <button class="primary" onclick="cdApply()">Move them out</button>
       </div>
     </div>`;

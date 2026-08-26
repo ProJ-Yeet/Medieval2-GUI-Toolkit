@@ -194,9 +194,9 @@ async function renderComposer(){
          `<b>Engine files can't be relocated</b>, because each mesh has its texture paths baked in.`,[
          `Overwriting a shared one also re-skins ${esc(state.dst)}'s own engines.`,
          `So the default keeps the destination's file, and the imported engine may then wear its skin.`,
-         'Preview lists them and lets you flip that.'])}</div>`}
+         'Probe lists them and lets you flip that.'])}</div>`}
        <div class="count" style="margin-top:5px">Vanilla files the engine uses aren't copied. If ${esc(state.dst)} overrides
-         one, its version wins and may not match. The preview flags those.</div>
+         one, its version wins and may not match. The probe flags those.</div>
        <div class="count" style="margin-top:5px">Not ported: effect / particle / sound references and
          <code>crew_animations</code> names, so check those exist in ${esc(state.dst)}.</div>
      </fieldset>`:''}
@@ -286,7 +286,7 @@ async function renderComposer(){
    <div class="foot">
      ${cleanerBoxHtml()}
      <button onclick="closeModal()">Cancel</button>
-     <button onclick="doPreview()">Preview${batch?' this unit':''}</button>
+     <button onclick="doPreview()">Probe${batch?' this unit':''}</button>
      <button class="primary" onclick="doApply()">${batch?'Apply all':'Apply'}</button>
    </div>`;
   // wire per-unit option persistence (disabled inputs — absent models — never fire)
