@@ -19,6 +19,9 @@ A subrelease: same standing as 14j, 2.1.2, 2.1.3 and 2.1.4 — real features, no
 folded into Phase 16 because Phase 16 (the Campaign Map Editor) is a different
 program.
 
+**This release also puts the vanilla building art back in the download.** If you
+are on 2.1.1, 2.1.2, 2.1.3 or 2.1.4, you are missing it — see below.
+
 ---
 
 ## The short list
@@ -41,6 +44,8 @@ program.
   — and the tool now says so out loud.
 - **The text scan streams**, so a mod with a two-gigabyte file in it no longer
   runs the server out of memory.
+- **The vanilla building art is back in the download** — 2.1.1 to 2.1.4 shipped
+  without it by mistake.
 
 ---
 
@@ -231,6 +236,28 @@ how much of it, so a clean verdict can be checked rather than taken on faith.
   the live modeldb, and what is left still parses
 - a run whose backup and export folder are both gone is still reported, is marked
   unrecoverable, and fails with a reason rather than pretending if reverted anyway
+
+---
+
+## The download has the vanilla building art in it again
+
+**If you are running 2.1.1, 2.1.2, 2.1.3 or 2.1.4, your copy is missing it.**
+Those four zips are ~19 MB; this one is ~54 MB, and the difference is
+`vanilla_ui/` — the packed vanilla building icons that Buildings mode falls back
+to for every icon a mod does not ship its own copy of. Without it you get a
+placeholder wherever a mod leaves a slot to vanilla, which is most slots in most
+mods. Nothing was wrong with the tool; the art simply was not in the box.
+
+The cause was a build flag. Bundling that folder was opt-in
+(`--with-vanilla-ui`), and it was forgotten four releases running — a flag you
+have to remember is not a decision, it is a trap. So it now ships by default
+(`BUNDLED_DIRS`), a missing `vanilla_ui/` stops the build outright instead of
+logging a shrug and carrying on, and the last step of a build reads the finished
+zip back and refuses to hand over one that does not contain the art. There is
+still a `--no-vanilla-ui` for a deliberately slim build; nothing routine passes
+it.
+
+Upgrading is the whole fix — unzip 2.1.5 as usual. Your `config/` is untouched.
 
 ---
 

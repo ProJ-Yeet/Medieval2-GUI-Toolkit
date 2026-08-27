@@ -3,6 +3,7 @@
     python build_release.py            # portable build (bundles Python + Pillow)
     python build_release.py --no-runtime   # code only; the target PC needs Python
     python build_release.py --version v1.4.0   # name the zip for a release
+  python build_release.py --no-vanilla-ui    # slim build, NOT for a release
 
 The point is that the person you send it to installs nothing. The zip carries
 Python's official *embeddable* distribution with Pillow already in it, so they
@@ -45,10 +46,15 @@ INCLUDE_FILES = ("app.py", "transfer_cli.py", "Full Cleaner.bat")
 #: Sprites mode shells out to for TGA -> DXT5. ~1MB, and without it the convert
 #: step can't run at all — so it ships rather than being a manual download.
 INCLUDE_DIRS = ("unittransfer", "web", "tools")
-#: The packed vanilla building art Buildings mode falls back to. Left OUT by
-#: default: it is ~60 MB against a ~19 MB app, and the tool works without it
-#: (missing icons just show a placeholder). `--with-vanilla-ui` puts it in.
-OPTIONAL_DIRS = ("vanilla_ui",)
+#: The packed vanilla building art Buildings mode falls back to. SHIPS BY
+#: DEFAULT and must keep doing so: without it, Buildings mode shows a placeholder
+#: wherever a mod doesn't ship its own icon, which is most of them, and the
+#: release looks broken to the person who unzipped it. It used to be opt-in
+#: behind a flag and was then forgotten for four releases running (2.1.1 to
+#: 2.1.4 all went out at ~19 MB instead of ~51 MB) — a flag you have to remember
+#: is not a decision, it is a trap. `--no-vanilla-ui` still exists for a
+#: deliberately slim build; nothing routine should pass it.
+BUNDLED_DIRS = ("vanilla_ui",)
 #: never ship these, whatever they contain
 EXCLUDE_NAMES = {"__pycache__", ".pytest_cache", ".DS_Store"}
 
@@ -119,23 +125,36 @@ def _copy_tree(src: Path, dst: Path) -> int:
     return n
 
 
-def stage_app(stage: Path, with_vanilla_ui: bool = False) -> None:
-    """Copy the tool's own files into the staging folder."""
+def stage_app(stage: Path, with_vanilla_ui: bool = True) -> None:
+    """Copy the tool's own files into the staging folder.
+
+    ``with_vanilla_ui`` defaults to True on purpose — see :data:`BUNDLED_DIRS`.
+    A missing ``vanilla_ui/`` is a hard failure rather than a shrug, because the
+    whole point is that a release can never quietly go out without it.
+    """
     for name in INCLUDE_FILES:
         shutil.copy2(ROOT / name, stage / name)
     total = len(INCLUDE_FILES)
     for name in INCLUDE_DIRS:
         total += _copy_tree(ROOT / name, stage / name)
     log(f"app files: {total}")
-    if with_vanilla_ui:
-        for name in OPTIONAL_DIRS:
-            src = ROOT / name
-            if not src.is_dir():
-                log(f"vanilla UI: {name}/ isn't there — skipped")
-                continue
-            n = _copy_tree(src, stage / name)
-            size = sum(p.stat().st_size for p in (stage / name).rglob("*") if p.is_file())
-            log(f"vanilla UI: {n} files, {size / 1e6:.0f} MB")
+    if not with_vanilla_ui:
+        log("vanilla UI: LEFT OUT (--no-vanilla-ui) — Buildings mode will show "
+            "placeholders for any icon a mod doesn't ship")
+        return
+    for name in BUNDLED_DIRS:
+        src = ROOT / name
+        if not src.is_dir():
+            # Not "skipped": this is the failure the flag-shaped version used to
+            # let through silently, and a half-built release is worse than none.
+            raise SystemExit(
+                f"BUILD STOPPED: {name}/ is missing from {ROOT}.\n"
+                "  It ships in every release — Buildings mode falls back to it\n"
+                "  for the icons a mod doesn't provide. Restore it, or pass\n"
+                "  --no-vanilla-ui if you really mean to build without it.")
+        n = _copy_tree(src, stage / name)
+        size = sum(p.stat().st_size for p in (stage / name).rglob("*") if p.is_file())
+        log(f"vanilla UI: {n} files, {size / 1e6:.0f} MB")
 
 
 def fetch_embed_zip() -> Path:
@@ -516,6 +535,29 @@ def write_docs(stage: Path, portable: bool) -> None:
         README.format(runtime_note=note, check_cmd=cmd), encoding="utf-8")
 
 
+def assert_bundled(out: Path, expect_vanilla_ui: bool) -> None:
+    """Read the finished zip back and check the big optional payload is IN it.
+
+    The last check before the file is handed to somebody, and it reads the
+    artefact rather than the staging folder — every earlier step could be right
+    and the zip still wrong. This exists because four releases in a row shipped
+    without the vanilla UI and nothing in the build said a word: the size on
+    screen was the only tell, and nobody reads a size.
+    """
+    with zipfile.ZipFile(out) as z:
+        names = z.namelist()
+    for name in BUNDLED_DIRS:
+        prefix = f"{APP_NAME}/{name}/"
+        n = sum(1 for x in names if x.startswith(prefix))
+        if expect_vanilla_ui and not n:
+            raise SystemExit(
+                f"refusing to ship {out.name}: it contains no {name}/.\n"
+                "  Buildings mode falls back to that art for every icon a mod\n"
+                "  doesn't provide, so the release would look broken.")
+        log(f"verified: {name}/ is in the zip ({n} files)"
+            if n else f"verified: {name}/ deliberately left out")
+
+
 def make_zip(stage: Path, out: Path) -> Path:
     out.parent.mkdir(parents=True, exist_ok=True)
     if out.exists():
@@ -535,9 +577,10 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=None, help="output .zip path")
     ap.add_argument("--version", default=None,
                     help="name the build for a release (e.g. v1.4.0) instead of today's date")
-    ap.add_argument("--with-vanilla-ui", action="store_true",
-                    help="also bundle vanilla_ui/ (~60 MB) so Buildings mode has "
-                         "vanilla art for the icons a mod doesn't ship")
+    ap.add_argument("--no-vanilla-ui", action="store_true",
+                    help="build WITHOUT vanilla_ui/ (~35 MB). Not for releases: "
+                         "Buildings mode then shows a placeholder for every icon "
+                         "a mod doesn't ship")
     args = ap.parse_args(argv)
     portable = not args.no_runtime
 
@@ -551,7 +594,7 @@ def main(argv=None) -> int:
         rmtree(stage)
     stage.mkdir(parents=True)
 
-    stage_app(stage, with_vanilla_ui=args.with_vanilla_ui)
+    stage_app(stage, with_vanilla_ui=not args.no_vanilla_ui)
     if portable:
         stage_runtime(stage)
     write_docs(stage, portable)
@@ -561,6 +604,7 @@ def main(argv=None) -> int:
 
     out = Path(args.out) if args.out else DIST / f"{name}.zip"
     make_zip(stage, out)
+    assert_bundled(out, expect_vanilla_ui=not args.no_vanilla_ui)
     print(f"\n{out}")
     print(f"  {out.stat().st_size / 1e6:.1f} MB — send this to anyone; "
           f"they unzip it and run 'Medieval 2 GUI Toolkit.bat'.")

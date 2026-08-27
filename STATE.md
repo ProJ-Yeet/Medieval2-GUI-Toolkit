@@ -77,6 +77,20 @@ Also **`app.py --no-browser`**: serve without throwing a tab at the system
 default browser, for anything driving the UI itself. The "no browser loaded the
 page" warning is suppressed under it, because there that is the expected outcome.
 
+**The release zip has the vanilla building art in it again.** v2.1.1 to v2.1.4
+all shipped WITHOUT `vanilla_ui/` — ~19 MB instead of ~54 MB — so Buildings mode
+showed a placeholder for every icon a mod doesn't ship its own copy of, which is
+most of them. The cause was that bundling it was an opt-in flag
+(`--with-vanilla-ui`) and it was forgotten four releases running. It now ships by
+default (`BUNDLED_DIRS` in `build_release.py`), a missing `vanilla_ui/` stops the
+build with a `SystemExit` instead of logging a shrug, and `assert_bundled()`
+reads the FINISHED ZIP back and refuses to hand over one without the art —
+because every earlier step can be right and the artefact still wrong.
+`--no-vanilla-ui` remains for a deliberately slim build; nothing routine passes
+it. **A portable release zip is ~50–55 MB; ~19 MB means the UI is missing.**
+The rule is written down in `HANDOFF.md` under STRICT RULES, along with "release
+means do the release, all of it, including the upload".
+
 Notes: `merge/RELEASE_2_1_5.md`. `tests/test_bmdb.py` 104 → 143 checks.
 Suite: 68 of 68 modules.
 
