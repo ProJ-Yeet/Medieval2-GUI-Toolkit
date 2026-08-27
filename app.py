@@ -6,6 +6,7 @@ Usage:
   python app.py --port 9000
   python app.py --check         # run the startup checks and exit (no server)
   python app.py --serve         # run the server in THIS process (no launcher wrapper)
+  python app.py --no-browser    # start the server but open no tab (scripts, tests, agents)
 
 Startup, as the launcher does it:
 
@@ -53,6 +54,7 @@ CACHE_DIR = config.cache_dir("icons")
 def _parse(argv):
     port, root, verbose, mode = 8756, None, False, "launch"
     wait_port = False
+    no_browser = False
     passthrough = []
     it = iter(argv)
     for a in it:
@@ -70,14 +72,21 @@ def _parse(argv):
             mode = "check"
         elif a == "--serve":
             mode = "serve"          # internal: the detached child, or a manual run
+        elif a == "--no-browser":
+            # Serve, but hijack nobody's browser. For anything driving the UI
+            # itself — a test, a script, an agent with its own browser — where a
+            # tab thrown at the user's default browser is an interruption, not a
+            # convenience.
+            no_browser = True
+            passthrough.append(a)
         else:
             root = a
             passthrough.append(a)
-    return port, root, verbose, mode, passthrough, wait_port
+    return port, root, verbose, mode, passthrough, wait_port, no_browser
 
 
 def main(argv):
-    port, root, verbose, mode, passthrough, wait_port = _parse(argv)
+    port, root, verbose, mode, passthrough, wait_port, no_browser = _parse(argv)
 
     if root:
         config.save_settings(med2_root=str(Path(root)))
@@ -117,15 +126,17 @@ def main(argv):
     # Already running on this port? Just show that window — don't start a second
     # server only to have it fail to bind.
     if mode != "serve" and _already_ours(port):
-        log.info("The Medieval 2 GUI Toolkit is already running on port %d — opening that "
-                 "window instead of starting a second one.", port)
-        _open_browser(log, port)
+        log.info("The Medieval 2 GUI Toolkit is already running on port %d — %s", port,
+                 "leaving it alone (--no-browser)." if no_browser
+                 else "opening that window instead of starting a second one.")
+        if not no_browser:
+            _open_browser(log, port)
         return 0
 
     keep_console = bool(config.load_settings().get("show_console", False))
     if mode == "launch" and not keep_console:
         return _launch_detached(log, port, passthrough)
-    return _run_server(log, port, verbose, keep_console)
+    return _run_server(log, port, verbose, keep_console, no_browser)
 
 
 def _launch_detached(log, port: int, passthrough) -> int:
@@ -157,12 +168,17 @@ def _launch_detached(log, port: int, passthrough) -> int:
     return 0
 
 
-def _run_server(log, port: int, verbose: bool, keep_console: bool) -> int:
+def _run_server(log, port: int, verbose: bool, keep_console: bool,
+                no_browser: bool = False) -> int:
     """Actually serve. Used by the detached child and by --serve / show-console."""
     settings = config.load_settings()
     stopping = threading.Event()
 
     def open_browser():
+        if no_browser:
+            log.info("--no-browser: serving on http://127.0.0.1:%d/ — opening no tab.",
+                     port)
+            return
         _open_browser(log, port)
 
     def on_ready():
@@ -189,7 +205,10 @@ def _run_server(log, port: int, verbose: bool, keep_console: bool) -> int:
                 log.warning("icon prewarm failed (continuing)", exc_info=True)
             if stopping.is_set():
                 return
-            _watch_for_page(log, port, stopping)
+            # Nobody was sent to the page, so "no page loaded" is the expected
+            # outcome rather than the failure that check exists to shout about.
+            if not no_browser:
+                _watch_for_page(log, port, stopping)
             log.info("%s — server ready on port %d.%s", startup.READY_MARKER, port,
                      "  Ctrl+C here, or Quit in the UI, to stop."
                      if keep_console else "  Stop it with Quit in the UI.")

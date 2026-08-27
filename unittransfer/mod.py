@@ -238,9 +238,20 @@ class Mod:
         return modflags.is_m2ex(self)
 
     @cached_property
+    def scanned_files(self) -> Dict[str, List[Path]]:
+        """Every file the bmdb cleanup's safety nets read, from ONE tree walk.
+
+        ``{"lua", "campaign", "modeldb"}`` — see :func:`luascan.mod_files`.
+        Cached because finding them means walking the whole mod (a hundred
+        thousand files on an overhaul) and three callers need three slices of the
+        same answer.
+        """
+        return luascan.mod_files(self)
+
+    @cached_property
     def lua_files(self) -> List[Path]:
-        """Every ``.lua`` script in the mod. Cached — finding them is a tree walk."""
-        return luascan.lua_files(self)
+        """Every ``.lua`` script in the mod."""
+        return list(self.scanned_files["lua"])
 
     @cached_property
     def lua_tokens(self) -> Dict[str, "luascan.LuaHit"]:

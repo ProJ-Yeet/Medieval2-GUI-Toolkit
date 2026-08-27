@@ -68,6 +68,9 @@ BMDB mode (the whole battle_models.modeldb, see :mod:`unittransfer.bmdb`)
   GET  /api/bmdb/audit?mod=      -> unused entries, soldier-merge twins, orphan files
   POST /api/bmdb/cleanup_plan    -> what a cleanup would move/remove
   POST /api/bmdb/cleanup_apply   -> do it (backups + undo, assets exported first)
+  GET  /api/bmdb/recheck?mod=    -> what PAST cleanups removed that today's wider
+                                    safety nets say they should not have
+  POST /api/bmdb/recheck_revert  -> put the ticked ones back (itself undoable)
   GET  /api/bmdb/ownership?mod=&mode=units|all
                                  -> entries with no texture record for a faction
                                     that fields a unit drawn with them (or for
@@ -1301,7 +1304,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/progress":
                 return self._json(_progress_read((q.get("job") or [""])[0]))
             if u.path in ("/api/bmdb/entries", "/api/bmdb/entry", "/api/bmdb/audit",
-                          "/api/bmdb/skeletons", "/api/bmdb/ownership"):
+                          "/api/bmdb/skeletons", "/api/bmdb/ownership",
+                          "/api/bmdb/recheck"):
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
@@ -1324,6 +1328,11 @@ class Handler(BaseHTTPRequestHandler):
                     # faction in the roster (mode=all)
                     return self._json(bmdb.ownership_audit(
                         mod, (q.get("mode") or ["units"])[0], progress=sink))
+                if u.path == "/api/bmdb/recheck":
+                    # what PAST cleanups of this mod took out that today's wider
+                    # nets would have refused to touch — see bmdb.recheck
+                    log.info("BMDB   recheck of %s", name)
+                    return self._json(bmdb.recheck(mod, progress=sink))
                 log.info("BMDB   audit of %s", name)
                 return self._json(bmdb.audit(mod, progress=sink))
             if u.path in ("/api/stratmap/entries", "/api/stratmap/entry",
@@ -1657,6 +1666,8 @@ class Handler(BaseHTTPRequestHandler):
                     mod, bmdb.cleanup_request_from_dict(body))))
             if u.path == "/api/bmdb/cleanup_apply":
                 return self._json(self._bmdb_cleanup(body))
+            if u.path == "/api/bmdb/recheck_revert":
+                return self._json(self._bmdb_recheck_revert(body))
             if u.path in ("/api/strings/plan", "/api/strings/apply"):
                 return self._json(self._strings(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/traits/plan", "/api/traits/apply"):
@@ -2267,6 +2278,20 @@ class Handler(BaseHTTPRequestHandler):
             if sink:
                 sink(99, "clearing the unit-text cache")
             _clear_cache(mod.root, out, rec, mod.name)
+        return out
+
+    def _bmdb_recheck_revert(self, body):
+        """Put back the rows the recheck dialog ticked."""
+        sink = _progress_sink(body.get("job") or "")
+        if sink:
+            sink(1, "reading the cleanup log")
+        mod = self.registry.get(body["mod"])
+        picks = [p for p in (body.get("picks") or [])
+                 if p.get("kind") in ("file", "entry") and p.get("name")]
+        if not picks:
+            return {"error": "nothing was ticked"}
+        out = bmdb.revert_recheck(mod, picks, progress=sink)
+        self.registry.invalidate(body["mod"])
         return out
 
     # ---- unit / info cards ----

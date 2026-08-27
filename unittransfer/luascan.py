@@ -92,21 +92,48 @@ def _files_for(mod) -> List[Path]:
     return list(cached) if isinstance(cached, list) else lua_files(mod)
 
 
-def lua_files(mod, limit: int = 4000) -> List[Path]:
-    """Every ``.lua`` under the mod root, nearest the top first.
+# Files that are not scripts but that the bmdb cleanup's safety nets must read
+# just as widely, so they are collected by the same walk rather than by a second
+# one. ``campaign`` is "a file that writes `battle_model` inline": the campaign
+# and battle scripts, wherever a mod hides them — nested under
+# ``campaign/custom/<name>/``, under ``world/maps/battle/custom/``, or in an
+# installer's alternate tree (``Activate/``, ``extra/``) that gets copied over
+# ``data/`` later.
+CAMPAIGN_NAMES = {"descr_strat.txt", "campaign_script.txt", "descr_battle.txt"}
+MODELDB_SUFFIX = ".modeldb"
+# Anything that could hold a filename in it. Wide on purpose — reading one more
+# .txt costs nothing next to missing the reference that breaks the mod — and
+# collected here rather than by a walk of its own, because on an overhaul the
+# walk is the expensive half and this list shares it with the other two.
+#
+# `.dat` is NOT here and must not be added: in M2TW that suffix belongs to the
+# engine's binary containers, and `data/sounds/Music.dat` alone is two gigabytes.
+# Anything else binary that slips in by suffix is caught by the NUL-byte check in
+# `bmdb.unit_model_refs`, which is the real guard — this list is just the cheap
+# half of it.
+TEXT_SUFFIXES = {".txt", ".lua", ".xml", ".cfg", ".ini", ".csv", ".json", ".sd",
+                 ".bak", ".text"}
+
+
+def mod_files(mod, limit: int = 4000) -> Dict[str, List[Path]]:
+    """One walk of the mod root -> ``{"lua", "campaign", "text"}``.
 
     The whole mod folder is walked, not just ``data/``: M2TWEOP keeps its scripts
     in ``eopData/`` beside ``data/`` rather than inside it, and mods scatter more
-    of them in campaign folders. ``limit`` is a runaway guard only — no real mod
-    comes close, and the count is reported so a mod that does hit it says so
-    rather than silently scanning half of itself.
+    of them in campaign folders. The same is true of everything else here — see
+    :data:`CAMPAIGN_NAMES` — which is why one walk collects all three kinds
+    instead of each caller paying for a pass over a hundred thousand files.
+
+    ``limit`` is a runaway guard on the script list only — no real mod comes
+    close, and the count is reported so a mod that does hit it says so rather
+    than silently scanning half of itself.
     """
     root = Path(getattr(mod, "root", mod))
+    out: Dict[str, List[Path]] = {"lua": [], "campaign": [], "text": []}
     if not root.is_dir():
-        return []
-    out: List[Path] = []
+        return out
     stack = [root]
-    while stack and len(out) < limit:
+    while stack:
         cur = stack.pop()
         try:
             children = sorted(cur.iterdir(), key=lambda p: p.name.lower())
@@ -116,12 +143,32 @@ def lua_files(mod, limit: int = 4000) -> List[Path]:
             if p.is_dir():
                 if p.name.lower() not in SKIP_DIRS:
                     stack.append(p)
-            elif p.suffix.lower() == ".lua":
-                out.append(p)
-                if len(out) >= limit:
-                    break
-    out.sort(key=lambda p: (len(p.relative_to(root).parts), str(p).lower()))
+                continue
+            name, suffix = p.name.lower(), p.suffix.lower()
+            if MODELDB_SUFFIX in name:
+                # Never scanned as text, and never read as a second opinion about
+                # what is alive. A modeldb names thousands of files, so reading
+                # one would make every one of them "mentioned somewhere" — and the
+                # extra copies a mod carries (`.modeldb.bak`, `battle_models_og`,
+                # whatever another tool wrote out) are backups of older states, so
+                # trusting them would pin every file the mod has EVER used and
+                # nothing could ever be cleaned up again.
+                continue
+            if suffix == ".lua":
+                if len(out["lua"]) < limit:
+                    out["lua"].append(p)
+            elif name in CAMPAIGN_NAMES:
+                out["campaign"].append(p)
+            if suffix in TEXT_SUFFIXES:
+                out["text"].append(p)
+    for kind, paths in out.items():
+        paths.sort(key=lambda p: (len(p.relative_to(root).parts), str(p).lower()))
     return out
+
+
+def lua_files(mod, limit: int = 4000) -> List[Path]:
+    """Every ``.lua`` under the mod root, nearest the top first."""
+    return mod_files(mod, limit)["lua"]
 
 
 def _read(path: Path) -> str:

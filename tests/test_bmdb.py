@@ -323,13 +323,67 @@ check(f"'{in_script}' (campaign_script.txt) is no longer unused", in_script not 
 check(f"'{in_comment}' (only in a commented-out line) is still unused",
       in_comment in unused_e)
 slots_e = bmdb_mod.entry_users(mod_e2)
+# The label is the file's path inside the mod, not its parent folder: the same
+# two filenames now turn up in half a dozen trees (custom campaigns, custom
+# battles, an installer's alternate copies), and "imperial_campaign/descr_strat.txt"
+# no longer says which of them was read.
 check("the reference is attributed to the campaign file it came from",
-      slots_e[in_strat]["campaign"] == ["file:imperial_campaign/descr_strat.txt"])
+      slots_e[in_strat]["campaign"]
+      == ["file:data/world/maps/campaign/imperial_campaign/descr_strat.txt"])
 pe = bmdb_mod.plan_cleanup(mod_e2, bmdb_mod.CleanupRequest(
     target=str(Path(tempfile.mkdtemp(prefix="ut_exp_"))), entries=[in_strat]))
 check("asked to remove it anyway, the cleanup refuses", not pe.entry_deletes)
 check("and says which campaign file still names it",
       any("descr_strat.txt" in w for w in pe.warnings))
+
+print("\n== change_battle_model: the script command that puts the model LAST ==")
+# `change_battle_model <faction> <who> <model>` swaps a character's model
+# mid-campaign. It breaks both of the other patterns at once — the bare-word one
+# never fires (the character before `battle_model` is `_`, not a space), and if it
+# were loosened to fire it would capture the FACTION. An entry named only this way
+# is invisible to every other net here, so it reads as textbook dead weight: this
+# is how a mod loses the model its faction leader becomes at the climax of its own
+# campaign.
+check("the inline form still yields its FIRST argument",
+      bmdb_mod.script_models(
+          "character\tG, named character, age 22, portrait P, battle_model gandalf_white, "
+          "hero_ability WHITE_GANDALF, label g2") == ["gandalf_white"])
+check("the command form yields its LAST argument, not the faction",
+      bmdb_mod.script_models("        change_battle_model turks leader aragorn_arnor")
+      == ["aragorn_arnor"])
+check("an unknown *_battle_model command is read as a command, not ignored",
+      bmdb_mod.script_models("set_battle_model england general someone_new")
+      == ["someone_new"])
+check("both forms are picked up out of one file, in order",
+      bmdb_mod.script_models("change_battle_model france leader saruman\n"
+                             "  spawn, battle_model legolas, x 1\n") == ["saruman", "legolas"])
+
+root_g = fresh_mod()
+dead_g = [u["entry"] for u in bmdb_mod.audit(Mod(root_g), scan_orphans=False)["unused"]]
+swapped, inline_g = dead_g[0], dead_g[1]
+camp_g = root_g / "data/world/maps/campaign/imperial_campaign"
+camp_g.mkdir(parents=True)
+(camp_g / "campaign_script.txt").write_text(
+    "monitor_event PreFactionTurnStart FactionIsLocal\n"
+    "    if I_EventCounter house_of_kings_finished = 1\n"
+    f"        change_battle_model turks leader {swapped}\n"
+    "    end_if\n"
+    "    spawn_army\n"
+    f"        character\tGandalf, named character, age 22, battle_model {inline_g}, label g2\n"
+    "    end\n"
+    "end_monitor\n",
+    encoding="latin-1")
+mod_g = Mod(root_g)
+a_g = bmdb_mod.audit(mod_g, scan_orphans=False)
+unused_g = {u["entry"] for u in a_g["unused"]}
+check(f"'{swapped}' (change_battle_model) is no longer unused", swapped not in unused_g)
+check(f"'{inline_g}' (inline battle_model) is no longer unused", inline_g not in unused_g)
+check("the faction name on the command is NOT mistaken for the model",
+      "turks" not in {n for n, _w in bmdb_mod._campaign_models(mod_g)})
+pg = bmdb_mod.plan_cleanup(mod_g, bmdb_mod.CleanupRequest(
+    target=str(Path(tempfile.mkdtemp(prefix="ut_exp2_"))), entries=[swapped]))
+check("asked to remove the swapped-to model anyway, the cleanup refuses",
+      not pg.entry_deletes and any("campaign_script.txt" in w for w in pg.warnings))
 
 print("\n== descr_model_strat.txt is not a reference ==")
 # The "any descr_*.txt that mentions it" net is deliberately over-cautious, but
@@ -531,6 +585,184 @@ check("what is left still parses, padding intact",
 exported = modeldb.parse_file(tgt_f / bmdb_mod.EXPORT_DB_NAME)
 check("the export of a sentinel-less file gets a sentinel of its own so it reads back",
       sorted(exported.by_name()) == ["second_e", "third_e"] and bool(exported.blank_raw))
+
+print("\n== the wider campaign net: nested, custom-battle and alternate trees ==")
+# Every one of these is a real place a mod puts a file that names a battle model,
+# and every one of them used to be invisible to the cleanup: the campaign folder's
+# immediate children were walked and nothing else was.
+root_w = fresh_mod()
+dead_w = [u["entry"] for u in bmdb_mod.audit(Mod(root_w), scan_orphans=False)["unused"]]
+nested, battle, activate, eop_extra = dead_w[0], dead_w[1], dead_w[2], dead_w[3]
+places = {
+    # a custom campaign: one folder DEEPER than the walk used to reach
+    "data/world/maps/campaign/custom/Shattered_Alliances/descr_strat.txt":
+        f"character\tX, general, male, age 23, x 1, y 2, battle_model {nested}, hero_ability W\n",
+    # a custom battle map: a whole file kind that was never opened at all
+    "data/world/maps/battle/custom/Cair_Andros/descr_battle.txt":
+        f"character\tY, general, battle_model {battle}, x 3, y 4\n",
+    # an installer's alternate tree — a copy now, the live mod the moment the
+    # mod's own switcher runs
+    "Activate/NORMAL/data/world/maps/campaign/imperial_campaign/campaign_script.txt":
+        f"    spawn_character England, agent spy, battle_model {activate}, x 5, y 6\n",
+    "extra/kdSkip/world/maps/campaign/imperial_campaign/campaign_script.txt":
+        f"    spawn_character England, agent spy, battle_model {eop_extra}, x 7, y 8\n",
+}
+for rel, text in places.items():
+    p = root_w / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(text, encoding="latin-1")
+mod_w = Mod(root_w)
+a_w = bmdb_mod.audit(mod_w, scan_orphans=False)
+unused_w = {u["entry"] for u in a_w["unused"]}
+check(f"all {len(places)} of them are found", len(a_w["campaign_files"]) == len(places))
+for label, name in (("nested custom campaign", nested), ("custom battle map", battle),
+                    ("an Activate/ alternate tree", activate),
+                    ("an extra/ alternate tree", eop_extra)):
+    check(f"'{name}' named only by {label} is no longer unused", name not in unused_w)
+check("each is attributed to its own full path inside the mod",
+      sorted(a_w["campaign_files"]) == sorted(places))
+
+print("\n== the mod's OTHER battle_models.modeldb files are NOT a second opinion ==")
+# A mod carries several: `battle_models.modeldb.bak`, `battle_models_og.modeldb`,
+# a copy some other tool wrote out. Every one of them is a snapshot of an OLDER
+# state of the live file, not an alternate database the game ever loads — so
+# honouring them would hold alive every file the mod has ever used at any point
+# in its history, and no cleanup could free anything again. Only the live
+# `data/unit_models/battle_models.modeldb` is believed.
+root_s = fresh_mod()
+# the backup names a file the live database has since stopped naming — exactly
+# the shape a stale `.bak` has
+(root_s / "data/unit_models/from_modeldb").mkdir(parents=True, exist_ok=True)
+for stale_rel in ("data/unit_models/battle_models.modeldb.bak",
+                  "data/unit_models/battle_models_og.modeldb",
+                  "data/unit_models/from_modeldb/battle_models_new.modeldb"):
+    shutil.copy2(Mod(root_s).modeldb_path, root_s / stale_rel)
+live_s = modeldb.parse_file(Mod(root_s).modeldb_path)
+victim_s = next(e for e in live_s.entries if e.mesh_files())
+stale_file = victim_s.mesh_files()[0].replace("\\", "/")
+p_stale = root_s / "data" / stale_file
+p_stale.parent.mkdir(parents=True, exist_ok=True)
+p_stale.write_bytes(b"named only by the backups now")
+live_s.entries = [e for e in live_s.entries if e.name != victim_s.name]
+live_s.write(Mod(root_s).modeldb_path)
+mod_s = Mod(root_s)
+check("the live database no longer names the file",
+      stale_file.lower() not in {f.replace("\\", "/").lower()
+                                 for e in mod_s.modeldb.entries for f in e.mesh_files()})
+a_s = bmdb_mod.audit(mod_s)
+check("a file only the backup copies still name IS offered as an orphan",
+      stale_file.lower() in {o["rel"].lower() for o in a_s["orphans"]})
+check("and no .modeldb is ever offered for removal itself",
+      not [o for o in a_s["orphans"] if ".modeldb" in o["rel"].lower()])
+# …nor may a modeldb be read as text: it names thousands of files, so token-
+# scanning one would make every file in the mod "mentioned somewhere"
+check("a .modeldb is never collected as a text file to scan",
+      not [p for p in mod_s.scanned_files["text"] if ".modeldb" in p.name.lower()])
+check("so the text scan does not resurrect it either",
+      stale_file.lower() not in bmdb_mod.unit_model_refs(mod_s))
+
+print("\n== recheck: what a past cleanup took out that today's nets would keep ==")
+# The morning after. A cleanup ran under the narrower nets, the mod now crashes,
+# and the thing that broke it is by definition no longer IN the mod — so only the
+# cleanup's own log entry remembers it. This is the pass that reads that back.
+root_r = fresh_mod()
+mod_r0 = Mod(root_r)
+needed = root_r / "data/unit_models/_units/needed_after_all_lod0.mesh"
+needed.parent.mkdir(parents=True, exist_ok=True)
+needed.write_bytes(b"the mesh a script needs")
+junk_r = root_r / "data/unit_models/_units/really_is_junk_lod0.mesh"
+junk_r.write_bytes(b"nothing names this")
+tgt_r = Path(tempfile.mkdtemp(prefix="ut_export5_")) / "out"
+pr = bmdb_mod.plan_cleanup(mod_r0, bmdb_mod.CleanupRequest(
+    target=str(tgt_r),
+    orphans=["unit_models/_units/needed_after_all_lod0.mesh",
+             "unit_models/_units/really_is_junk_lod0.mesh"]))
+rec_r = bmdb_mod.apply_cleanup(pr)
+check("both files are out of the mod", not needed.is_file() and not junk_r.is_file())
+
+# …and only NOW does a script that names one of them turn up (the same shape as a
+# reference the older build could not see).
+script_r = root_r / "eopData/eopScripts/spawn.lua"
+script_r.parent.mkdir(parents=True, exist_ok=True)
+script_r.write_text(
+    'M2TWEOP.setModel(unit, "unit_models/_units/needed_after_all_lod0.mesh")\n',
+    encoding="latin-1")
+mod_r = Mod(root_r)
+rr = bmdb_mod.recheck(mod_r)
+flagged = {x["name"] for x in rr["rows"]}
+check("the cleanup is found in the log", len(rr["runs"]) == 1 and rr["runs"][0]["hits"] == 1)
+check("the file the script names is flagged",
+      "unit_models/_units/needed_after_all_lod0.mesh" in flagged)
+check("the file nothing names is not",
+      "unit_models/_units/really_is_junk_lod0.mesh" not in flagged)
+row_r = rr["rows"][0]
+check("it says why", any("spawn.lua" in w for w in row_r["why"]))
+check("and that a copy still exists to put it back from",
+      row_r["revertable"] and row_r["source"] in ("backup", "export"))
+
+back = bmdb_mod.revert_recheck(mod_r, [{"kind": "file", "run": row_r["run"],
+                                        "name": row_r["name"]}])
+check("reverting puts the file back, byte-exact",
+      needed.is_file() and needed.read_bytes() == b"the mesh a script needs")
+check("it is reported as restored and nothing failed",
+      back["restored"] == [row_r["name"]] and not back["failed"])
+check("the file that really was junk is still gone", not junk_r.is_file())
+rr2 = bmdb_mod.recheck(Mod(root_r))
+check("a second recheck is clean — a file that is back is not a finding", not rr2["rows"])
+undo(back["id"])
+check("the revert is itself undoable", not needed.is_file())
+
+print("\n== recheck: an entry, and a run whose copies are all gone ==")
+root_x = fresh_mod()
+mod_x0 = Mod(root_x)
+doomed_x = [u["entry"] for u in bmdb_mod.audit(mod_x0, scan_orphans=False)["unused"]][0]
+tgt_x = Path(tempfile.mkdtemp(prefix="ut_export6_")) / "out"
+px = bmdb_mod.plan_cleanup(mod_x0, bmdb_mod.CleanupRequest(
+    target=str(tgt_x), entries=[doomed_x]))
+rec_x = bmdb_mod.apply_cleanup(px)
+check("the entry is out of the modeldb",
+      doomed_x not in {e.name for e in Mod(root_x).modeldb.entries})
+check("the run wrote down which entries it removed, so a later recheck can ask",
+      bmdb_mod.removed_entries(rec_x) == [doomed_x])
+# something starts naming it again
+(root_x / "data/descr_campaign_ai_db.txt").write_text(
+    f"; the AI picks {doomed_x} for its bodyguard\n", encoding="latin-1")
+rx = bmdb_mod.recheck(Mod(root_x))
+check("the entry is flagged", [r["name"] for r in rx["rows"]] == [doomed_x])
+backx = bmdb_mod.revert_recheck(Mod(root_x), [{"kind": "entry", "run": rec_x["id"],
+                                               "name": doomed_x}])
+check("reverting puts the entry back into the live modeldb",
+      doomed_x in {e.name for e in Mod(root_x).modeldb.entries} and not backx["failed"])
+check("and what is left still parses", len(Mod(root_x).modeldb.entries) > 1)
+
+# a run whose backup AND export folder have both since been deleted: still
+# reported (the log remembers), but honestly marked as unrecoverable
+shutil.rmtree(rec_x["backup_root"], ignore_errors=True)
+shutil.rmtree(tgt_x, ignore_errors=True)
+root_y = fresh_mod()
+mod_y0 = Mod(root_y)
+gone_y = root_y / "data/unit_models/_units/gone_forever_lod0.mesh"
+gone_y.parent.mkdir(parents=True, exist_ok=True)
+gone_y.write_bytes(b"x")
+tgt_y = Path(tempfile.mkdtemp(prefix="ut_export7_")) / "out"
+py_ = bmdb_mod.plan_cleanup(mod_y0, bmdb_mod.CleanupRequest(
+    target=str(tgt_y), orphans=["unit_models/_units/gone_forever_lod0.mesh"]))
+rec_y = bmdb_mod.apply_cleanup(py_)
+(root_y / "eopData").mkdir(parents=True, exist_ok=True)
+(root_y / "eopData/x.lua").write_text(
+    'setModel("unit_models/_units/gone_forever_lod0.mesh")\n', encoding="latin-1")
+shutil.rmtree(rec_y["backup_root"], ignore_errors=True)
+shutil.rmtree(tgt_y, ignore_errors=True)
+ry = bmdb_mod.recheck(Mod(root_y))
+check("a run with no surviving copies is still reported", len(ry["rows"]) == 1)
+check("but the row says plainly that it cannot be put back",
+      not ry["rows"][0]["revertable"] and ry["revertable"] == 0)
+check("and the run row says both copies are gone",
+      not ry["runs"][0]["backup_here"] and not ry["runs"][0]["export_here"])
+fail_y = bmdb_mod.revert_recheck(Mod(root_y), [{"kind": "file", "run": ry["rows"][0]["run"],
+                                                "name": ry["rows"][0]["name"]}])
+check("asked to revert it anyway, it fails with a reason rather than pretending",
+      not fail_y["restored"] and any("no copy left" in f for f in fail_y["failed"]))
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)

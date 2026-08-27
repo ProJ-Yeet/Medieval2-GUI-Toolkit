@@ -513,6 +513,22 @@ per-row checkboxes and **Select all** / **None**:
 3. **Files under `unit_models` no entry mentions** — every file in that tree that
    no modeldb entry names, removed or kept
 
+Campaign scripts get read wherever a mod actually keeps them, not just in
+`data/world/maps/campaign/<name>/`: a custom campaign sits a folder deeper
+(`campaign/custom/<name>/`), a custom battle names its characters' models in
+`world/maps/battle/custom/<name>/descr_battle.txt`, and an installer's alternate
+trees (`Activate\`, `extra\`) are the live mod the moment you run the mod's own
+configuration switcher. Both ways a script can name a model count — inline
+(`… , battle_model gandalf_white, …`) and the command that swaps one
+mid-campaign (`change_battle_model turks leader aragorn_arnor`, where the model
+is the **last** word).
+
+The mod's *other* `battle_models.modeldb` files — `battle_models.modeldb.bak`,
+`battle_models_og.modeldb`, a working copy under `from_modeldb\` — are
+deliberately **not** read. Each is a snapshot of an older state of the live file,
+so treating one as a second opinion would hold alive every file the mod has ever
+used and nothing could ever be cleaned up again.
+
 Nothing is deleted. You choose a destination folder (outside the mod) and
 everything ticked is **moved** there, laid out like the mod itself:
 
@@ -530,6 +546,29 @@ restores the files, and the entries can be pasted back out of
 never moved. The removal itself is backed up like any other change, so
 **🕑 Log → Undo** restores the mod byte-exact (the destination folder is a copy
 and is left alone).
+
+### 🧹 Clean up BMDB → Recheck past cleanups
+
+Every list above answers "may this go?" *before* anything moves. **Recheck past
+cleanups** answers the question that only comes up afterwards, usually with the
+game already refusing to launch: *an older clean-up ran with a narrower idea of
+what counts as a reference than this build has — did it take out something that
+today it would refuse to touch?*
+
+No scan of the mod can answer that, because the thing that broke it is by
+definition no longer in the mod. So the recheck reads the **cleanup log**,
+re-derives what each run removed, re-tests all of it against the current nets,
+and lists what should not have gone — with why, and whether a copy still exists.
+Ticked rows are copied back: files from the run's backup or its export folder,
+entries out of the modeldb they were saved into. The revert is backed up like any
+other change, so **🕑 Log → Undo** takes it away again.
+
+A run whose backup *and* export folder have both since been deleted is still
+reported — the log remembers what it removed — but the row says so plainly
+instead of offering a button that would fail; those files have to come from a
+fresh copy of the mod. The dialog lists exactly what it read (how many campaign
+and battle scripts, how many `.lua`, every text file in the mod) so a clean
+verdict can be checked rather than taken on faith.
 
 ### 🛡 Fix ownership · 🌐 All factions
 
@@ -1398,7 +1437,14 @@ created in.
 - **Modeldb cleanup** — find the battle-model entries nothing references and the
   files under `unit_models` nothing mentions, and move them out of the mod into
   a folder laid out like the mod itself. Anything a `.lua` script names is
-  protected and never offered
+  protected and never offered, as is anything named by a campaign or battle
+  script anywhere in the mod — including the `change_battle_model` command, whose
+  model sits at the end of the line
+- **Recheck past cleanups** — re-read the cleanup log and re-test everything an
+  older, narrower clean-up removed against the current safety nets, then put back
+  whatever should not have gone (from that run's backup or export folder). The
+  one question no scan of the mod can answer, because what broke it is no longer
+  in the mod
 - **M2TWEOP units** — units defined in the extender's own folder instead of
   `export_descr_unit.txt` are read as part of the mod's roster, badged
   <kbd>EOP</kbd> everywhere, edited in place in their own file, and left out of

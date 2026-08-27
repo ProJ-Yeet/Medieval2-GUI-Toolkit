@@ -223,14 +223,16 @@ function renderCleanup(){
       ${a.mentioned_mounts.length?`<div class="count">${a.mentioned_mounts.length} mount${
         a.mentioned_mounts.length===1?' is':'s are'} ridden by no unit but still named in a
         <code>descr_*.txt</code>, so they are not offered above.</div>`:''}
-      ${a.campaign_files.length?`<div class="count">Campaign files also read for
-        <code>battle_model</code> references:
-        <code>${a.campaign_files.map(esc).join('</code>, <code>')}</code>.</div>`:''}
+      ${a.campaign_files.length?`<div class="count">Campaign and battle scripts also read for
+        <code>battle_model</code> references (${a.campaign_files.length}):
+        <code>${a.campaign_files.slice(0,8).map(esc).join('</code>, <code>')}</code>${
+          a.campaign_files.length>8?`, and ${a.campaign_files.length-8} more`:''}.</div>`:''}
       <div id="clPreview"></div>
     </div>
     <div class="foot">
       ${cleanerBoxHtml()}
       <button onclick="closeModal()">Close</button>
+      <button onclick="openRecheck()" title="Re-test what earlier cleanups removed against this build's wider safety nets">Recheck past cleanups</button>
       <button onclick="clPreview()">Probe</button>
       <button class="primary" onclick="clApply()">Move them out</button>
     </div>`;
@@ -462,6 +464,159 @@ async function clApply(){
   // behind the dialog and has nothing to do with what the dialog shows.
   loadSource();
   await openCleanup();
+}
+
+/* ---- recheck: what a PAST cleanup took out that today's nets would have kept ----
+
+   The cleanup dialog above answers "may this go?" before anything moves. This one
+   is for the morning after: a cleanup ran under an older, narrower idea of what
+   counts as a reference, the mod now crashes, and the thing that broke it is by
+   definition NOT in the mod any more — so no scan of the mod can find it. The
+   server re-reads the cleanup log instead, re-tests everything each run removed
+   against the current nets, and reports what can be put back and from where.
+
+   Two states worth designing for, because both are common: a row that is wrong
+   AND recoverable (tick it, it goes back), and a row that is wrong and whose
+   backup and export folder have both since been deleted. The second cannot be
+   fixed from here and says so plainly rather than offering a button that fails. */
+async function openRecheck(){
+  const modal=document.getElementById('modal');
+  modal.className='modal wide';
+  overlay.classList.add('open');
+  const job=newJob();
+  let r;
+  try{ r=await runJob(job,`Recheck ${esc(state.src)}’s past cleanups`,
+        `Re-reading every campaign and battle script, every other
+         <code>battle_models.modeldb</code> in the mod, and every text file that could
+         name a file under <code>data/unit_models</code> — then testing what past
+         cleanups removed against all of it.`,
+        ()=>api.get(`/api/bmdb/recheck?mod=${enc(state.src)}&job=${enc(job)}`)); }
+  catch(e){ r={error:''+e}; }
+  if(r.error){ modal.innerHTML=`<h2>Recheck</h2><div class="mbody w-bad">${esc(r.error)}</div>
+    <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
+  state.recheck={r,picks:new Set(r.rows.filter(x=>x.revertable).map(rcKey))};
+  renderRecheck();
+}
+const rcKey=x=>`${x.kind}:${x.run}:${x.name}`;
+function renderRecheck(){
+  const s=state.recheck,r=s.r;
+  const n=r.rows.length,ok=r.revertable,lost=n-ok;
+  document.getElementById('modal').innerHTML=`
+    <h2>Recheck ${esc(r.mod)}’s past cleanups</h2>
+    <div class="mbody">
+      ${rcNetsHtml(r)}
+      ${rcRunsHtml(r)}
+      ${n?`<fieldset class="assetconf" style="margin-top:10px;border-color:var(--bad)">
+        <legend class="w-bad">Removed, but needed</legend>
+        <div class="count"><b>${n}</b> thing${n===1?'':'s'} a past cleanup took out
+          ${n===1?'is':'are'} named by something this build now reads and the older one did not.
+          ${ok?`<b>${ok}</b> can be put back from a backup or the export folder.`:''}
+          ${lost?`<span class="w-bad">${ok?`The other <b>${lost}</b> cannot`
+            :`None of them can be put back from here`} — the backup and the export folder
+            are both gone, so ${lost===1?'that file has':'they have'} to come from a fresh
+            copy of the mod.</span>`:''}</div>
+        <div class="clbar">
+          <button onclick="rcAll(true)">Select all that can go back</button>
+          <button onclick="rcAll(false)">None</button></div>
+        <div class="cllist">${r.rows.map(rcRowHtml).join('')}</div>
+      </fieldset>`
+      :`<div class="sum" style="margin-top:10px"><div class="srow">
+          <span class="sicon">✓</span><span class="stext">Nothing a past cleanup removed is named
+          by anything this build reads. ${r.checked_files+r.checked_entries
+            ?`All ${r.checked_files} file(s) and ${r.checked_entries} entr${
+              r.checked_entries===1?'y':'ies'} removed so far re-check clean.`
+            :'No cleanup of this mod has been applied.'}</span></div></div>`}
+    </div>
+    <div class="foot">
+      <button onclick="closeModal()">Close</button>
+      <button onclick="openCleanup()">Back to clean-up</button>
+      ${ok?`<button class="primary" onclick="rcApply()">Put the ticked ones back</button>`:''}
+    </div>`;
+}
+/* Said up front, not buried at the bottom: a clean result is only worth as much
+   as the net that produced it, and the user has to be able to see that the file
+   they are worried about was actually read. */
+function rcNetsHtml(r){
+  const n=r.nets||{};
+  const cf=n.campaign_files||[];
+  return `<div class="count" style="margin-bottom:10px">Read for this check:
+    <b>${cf.length}</b> campaign / battle script${cf.length===1?'':'s'}
+    ${cf.length?`(<code>${cf.slice(0,6).map(esc).join('</code>, <code>')}</code>${
+      cf.length>6?`, and ${cf.length-6} more`:''})`:''} ·
+    <b>${n.lua_files||0}</b> <code>.lua</code> script${(n.lua_files||0)===1?'':'s'} ·
+    every text file in the mod, for a <code>unit_models</code> filename
+    (<b>${n.text_refs||0}</b> found). The mod's other
+    <code>battle_models.modeldb</code> files are <b>not</b> read: they are backups of
+    older states of the live one, so believing them would hold alive every file the
+    mod has ever used.</div>`;
+}
+/* The runs themselves, because "can this be undone at all" is decided here and
+   not in the row list: a run whose backup AND export folder are both gone can
+   still be reported on — the log remembers what it removed — but nothing it took
+   out can be put back by this tool, and that is worth knowing before reading a
+   list of things to tick. */
+function rcRunsHtml(r){
+  if(!r.runs.length)return '';
+  return `<fieldset><legend>Cleanups of this mod that are still applied</legend>
+    <div class="cllist">${r.runs.map(x=>`<div class="clrow ${
+      x.hits&&!x.backup_here&&!x.export_here?'risky':''}">
+      <div class="grow"><span class="nm">${esc(x.when)}</span>
+        ${x.hits?`<span class="badge w-bad" style="border-color:var(--bad)">${x.hits} flagged</span>`
+          :'<span class="badge" style="color:var(--good);border-color:var(--good)">nothing flagged</span>'}
+        <div class="sub">${x.files} file(s) and ${x.entries} entr${x.entries===1?'y':'ies'}
+          removed · ${x.missing} still missing from the mod</div>
+        <div class="sub">backup ${x.backup_here?'<b class="w-good">present</b>'
+          :`<b class="w-bad">gone</b> (${esc(x.backup||'not recorded')})`} ·
+          export folder ${x.export_here?'<b class="w-good">present</b>'
+          :`<b class="w-bad">gone</b> (${esc(x.export||'not recorded')})`}</div>
+      </div></div>`).join('')}</div></fieldset>`;
+}
+function rcRowHtml(x){
+  const k=rcKey(x),on=state.recheck.picks.has(k);
+  return `<div class="clrow ${x.revertable?'':'risky'}">
+    <input type="checkbox" ${on?'checked':''} ${x.revertable?'':'disabled'}
+      onchange="rcPick('${q1(esc(k))}',this.checked)">
+    <div class="grow">
+      <span class="nm">${esc(x.name)}</span>
+      <span class="badge">${x.kind==='entry'?'modeldb entry':'file'}</span>
+      ${x.revertable?`<span class="badge" style="color:var(--good);border-color:var(--good)">
+        from the ${esc(x.source)}</span>`
+        :`<span class="badge w-bad" style="border-color:var(--bad)">no copy left</span>`}
+      <div class="sub">${x.why.map(esc).join(' · ')}</div>
+      <div class="sub" style="color:var(--dim)">removed ${esc(x.when)}${
+        x.from?` · ${esc(x.from)}`:''}</div>
+    </div></div>`;
+}
+function rcPick(k,on){const p=state.recheck.picks; on?p.add(k):p.delete(k);}
+function rcAll(on){
+  const s=state.recheck;
+  s.picks=new Set(on?s.r.rows.filter(x=>x.revertable).map(rcKey):[]);
+  renderRecheck();
+}
+async function rcApply(){
+  const s=state.recheck;
+  const picks=s.r.rows.filter(x=>s.picks.has(rcKey(x)));
+  if(!picks.length){toast('Nothing is ticked');return;}
+  const files=picks.filter(x=>x.kind==='file').length;
+  const entries=picks.length-files;
+  if(!confirm(`Put ${files} file(s)${entries?` and ${entries} modeldb entr${
+      entries===1?'y':'ies'}`:''} back into “${s.r.mod}”?\n\n`+
+      `They are copied from the backups and export folders the cleanups wrote.\n`+
+      `This is itself backed up — 🕑 Log → Undo takes it away again.`))return;
+  const job=newJob();
+  const res=await runJob(job,'Putting them back…',
+    `Copying ${files} file(s) back into ${esc(s.r.mod)}${
+      entries?` and appending ${entries} entr${entries===1?'y':'ies'} to its modeldb`:''}.`,
+    ()=>api.post('/api/bmdb/recheck_revert',
+      {mod:s.r.mod,job,picks:picks.map(x=>({kind:x.kind,run:x.run,name:x.name}))}));
+  if(res.error){toast('Revert failed: '+res.error);return;}
+  toast(`Put ${res.restored.length} thing(s) back ✓${
+    res.failed.length?`  (${res.failed.length} could not be)`:''}  (undo in 🕑 Log)`,5200);
+  state.bmdb=null; state.destData=null;
+  loadSource();
+  // Re-run rather than leaving the list up: the rows that just went back are no
+  // longer findings, and a list that still shows them invites a second revert.
+  await openRecheck();
 }
 
 function edDeleteDialog(){

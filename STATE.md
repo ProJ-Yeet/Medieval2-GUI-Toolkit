@@ -1,7 +1,91 @@
 # STATE — Medieval 2 GUI Toolkit V2
-_Updated: 2026-08-27 · **v2.1.4 released** · a feature subrelease on top of 2.1.3_
+_Updated: 2026-08-27 · **v2.1.5 released** · a feature subrelease on top of 2.1.4_
 
 ## Next up
+**v2.1.5 IS A SUBRELEASE, same standing as 14j, 2.1.2, 2.1.3 and 2.1.4 — real
+features, not folded into Phase 16 because Phase 16 (the Campaign Map Editor) is
+a different program.** All of it is the modeldb cleanup deciding what is dead,
+and being wrong about it. It came out of a mod that stopped launching after a
+clean-up; chasing that turned up three separate places where a model the game
+genuinely needs was invisible to the scan.
+
+**`change_battle_model` is read** (`bmdb.script_models` /
+`_BATTLE_MODEL_KEYWORD_RE`). The script command that swaps a character's model
+mid-campaign broke both existing patterns at once: the bare-word one never fired
+because the character before `battle_model` is `_` rather than a space or comma,
+and loosening it to fire would have captured `turks` — the faction, because this
+form puts the model on the END. So the keyword is matched with whatever prefix it
+carries and the prefix decides where the model sits; taking the LAST argument
+rather than the third also keeps a two-argument variant working and reads an
+unknown future `*_battle_model` command as a command instead of ignoring it. An
+entry named only this way is invisible to every other net here — no unit fields
+it, no mount or `descr_character.txt` names it — so it reads as textbook dead
+weight. 17 occurrences on Divide and Conquer, naming three models, one of which
+exists nowhere else in the mod.
+
+**Campaign files are found where mods actually put them** (`bmdb.campaign_files`,
+`luascan.mod_files`). The old walk listed the immediate children of
+`data/world/maps/campaign/`, which misses a custom campaign (`campaign/custom/<name>/`,
+one folder deeper), a custom battle (`world/maps/battle/custom/<name>/descr_battle.txt`,
+a file kind never opened at all), and an installer's alternate trees (`Activate/`,
+`extra/`) — copies now, the live mod the second somebody runs the mod's own
+switcher. The whole mod root is walked instead: 2 campaign files became 15. Each
+is labelled by its path inside the mod, because the parent folder stopped
+identifying a file once those two filenames turned up in six trees.
+
+**One tree walk, not four** (`Mod.scanned_files`). `lua_files` already walked a
+hundred thousand files and kept only the `.lua`; it now keeps the campaign
+scripts and the text files too, and three callers take three slices of one cached
+answer.
+
+**🧹 Clean up BMDB → Recheck past cleanups** (`bmdb.recheck` /
+`revert_recheck`, `GET /api/bmdb/recheck`, `POST /api/bmdb/recheck_revert`).
+Every other net answers "may this go?" before anything moves; this answers the
+question that only comes up afterwards, with the game already refusing to launch.
+It cannot be part of the audit and that IS the point: the audit describes the mod
+as it is, and a file that is gone is not in the mod to be described — the only
+surviving record it ever existed is the cleanup's own log entry. So it reads the
+log, re-derives what each run removed, re-tests all of it against today's nets,
+and says whether a copy survives to put back. Reverts go through the same
+backup-and-log machinery as every other write here, so a wrong revert is itself
+undoable. A run whose backup AND export folder are both gone is still reported —
+the log remembers — but marked unrecoverable, with no button that would fail.
+A cleanup now also **writes down which entries it removed**, so that stays
+answerable after the backups are gone; older runs are recovered from the export
+folder's `removed_battle_models.modeldb`, or by diffing the backed-up modeldb.
+
+**The mod's other `battle_models.modeldb` files stay ignored, on purpose.**
+`battle_models.modeldb.bak`, `battle_models_og.modeldb`, a working copy under
+`from_modeldb/` — they look like a second opinion about which meshes are alive
+and are not one: each is a snapshot of an OLDER state of the same file, so
+honouring them would hold alive every file the mod has ever used and no cleanup
+could free anything again. Never read, never token-scanned as text either (a
+modeldb names thousands of files, so reading one as text makes every file in the
+mod "mentioned somewhere"). New is that the reasoning is written at the skip, the
+Recheck dialog states it on screen, and a test pins it.
+
+**The text scan streams** (`bmdb.unit_model_refs`). Holding a whole file plus a
+lower-cased copy of it is a `MemoryError` on a mod carrying
+`data/sounds/Music.dat` — two gigabytes — and the server returned a 500 with the
+scan half done. `.dat` was the mistake and is out of `TEXT_SUFFIXES` (in M2TW
+that suffix is the engine's binary containers), but the fix is the scan: a line
+at a time, so no file can double itself whatever its suffix claims, with a
+NUL-byte sniff skipping anything else binary. Line numbers fall out for free.
+292s → 22s; the whole recheck 356s → 26s.
+
+Also **`app.py --no-browser`**: serve without throwing a tab at the system
+default browser, for anything driving the UI itself. The "no browser loaded the
+page" warning is suppressed under it, because there that is the expected outcome.
+
+Notes: `merge/RELEASE_2_1_5.md`. `tests/test_bmdb.py` 104 → 143 checks.
+Suite: 68 of 68 modules.
+
+**The one rule that carries the risk in this release:** the recheck is only as
+good as the nets behind it, so a clean verdict must never read as more than it
+is — it means nothing a past cleanup removed is named by anything THIS BUILD
+reads. The dialog lists exactly what it read and how much of it, so the verdict
+can be checked rather than believed.
+
 **v2.1.4 IS A SUBRELEASE, same standing as 14j, 2.1.2 and 2.1.3 — real features,
 not folded into Phase 16 because Phase 16 (the Campaign Map Editor) is a
 different program.** All of it is the tool getting out of the way.
