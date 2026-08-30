@@ -1,7 +1,50 @@
 # STATE — Medieval 2 GUI Toolkit V2
-_Updated: 2026-08-30 · **v2.1.6 released** · a subrelease on top of 2.1.5_
+_Updated: 2026-08-30 · **v2.1.7 released** · a subrelease on top of 2.1.6_
 
-## v2.1.6
+## v2.1.7
+**A subrelease, same standing as 2.1.2 through 2.1.6.** Both halves are the
+modeldb reader being wrong about a file that was not, and they arrived together
+from two mods on one evening.
+
+**An attachment texture's sprite slot can hold a name** (`modeldb.get_attach_sprite`).
+It is a bare `0` on very nearly every entry of every mod, and the reader had that
+written down as the only value the field could take — a number there was "not a
+length, because there is no name for it to be the length of". Thera_Redux and
+BOTET each put a real `unit_sprites/....spr` in one. Read as names, both files run
+to a clean EOF and round-trip byte-exact, which a desynced read does not do across
+another eight hundred entries; the TWCenter syntax checker in `Reference/` walks
+attachment groups with the same routine it walks body groups, for the same reason.
+Worth noting where the old rule was NOT enforced: every span walker in this file
+already read that slot with plain `get_string`, so the entry reader was the odd one
+out and this puts it back in line with them rather than away.
+
+The `01` case the guard was written for is real and still refused. The two are told
+apart by looking rather than by rule: a sprite is a `.spr` path that fills exactly
+the characters its length claims and stops on whitespace, and a stray digit's
+"name" is none of those three. `tests/test_modeldb_attach_sprite.py` carries both
+mods' real sprites as fixtures, plus `5 horse` — a self-consistent name that is not
+a sprite — so the discriminator is pinned as "it is a sprite path", not "the
+arithmetic works out".
+
+**Evidence outranks inference in the desync message** (`modeldb._desync_message`).
+A wrong count and a wrong length land the reader in the same place, and the message
+led with the count in both cases: `e.note or _suspect(...)`. `_suspect` reports a
+length the reader WATCHED overrun its own name; the note is worked out from where
+the read stopped. So the sighting goes first now. BOTET's `mount_elephant_rocket`
+is why: its count of 2 is honest and a normal map's length is written 64 for a
+61-character name, and the old sentence sent its owner to delete a texture group.
+`_suspect` also measures the rest of the line when a name ran off the end of one,
+which is the number to type — hedged deliberately, because paths in this file
+contain spaces (`Final European Light_hre_diff`) and that measurement is where the
+name probably ends, not where it certainly does.
+
+A third thing fell out of pointing the suite at a real file:
+`tests/test_modeldb_header.py` asserted `entries + 1 == header count`
+unconditionally, and a modeldb with no leading `blank` sentinel counts every entry
+as real. Thera_Redux is one, so the check failed on the mod rather than on the
+tool. It now uses the same rule `ModelDb.to_text` writes back with.
+
+## Previously (v2.1.6)
 **A subrelease, same standing as 2.1.2 through 2.1.5.** Three things, and the
 first two are one thread.
 
@@ -40,7 +83,7 @@ closing brace whatever order the list is in, and edits existing lines in place b
 the EDB line they came from, so the file is byte-identical to what the old push
 produced. A batch keeps its pick order.
 
-## Previously (v2.1.5)
+## Earlier still (v2.1.5)
 **v2.1.5 IS A SUBRELEASE, same standing as 14j, 2.1.2, 2.1.3 and 2.1.4 — real
 features, not folded into Phase 16 because Phase 16 (the Campaign Map Editor) is
 a different program.** All of it is the modeldb cleanup deciding what is dead,

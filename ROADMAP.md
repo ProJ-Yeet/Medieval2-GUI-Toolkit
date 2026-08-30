@@ -30,7 +30,7 @@ running the test suite, and running `graphify update .`.
   server-side with backup/undo on every write.
 - **Don't vendor their `dist/`** or any bulk assets from the reference repo.
 - **Versioning:** **2.0.0 shipped at the end of Phase 14** (2026-08-19), with
-  every V2 editor module complete. Release titles are "Medieval 2 GUI Toolkit
+  every V2 editor module complete. Release titles are "M2 GUIkit
   vX.Y.Z — …".
   *This supersedes the original rule, which was "stay on 1.x until the Campaign
   Map Editor lands".* The reason it changed: 1.9.9 shipped a unit-transfer tool,

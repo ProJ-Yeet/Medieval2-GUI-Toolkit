@@ -95,6 +95,37 @@ BAD_MDB = HEADER + BLANK + entry("peasant_archer", "unit_models/x/pa.texture",
 #: the line the bad count sits on, counted the way a text editor does
 BAD_COUNT_LINE = BAD_MDB[:BAD_MDB.index("\n2 \n4 ever")].count("\n") + 2
 
+TEX = "unit_models/x/pa.texture"
+SPR = "unit_sprites/pa.spr"
+
+
+def group(faction, norm_len=None):
+    """One faction's four names. ``norm_len`` overrides the normal map's length."""
+    return (f"\n{len(faction)} {faction} \n{len(TEX)} {TEX} "
+            f"\n{norm_len if norm_len is not None else len(TEX)} {TEX} "
+            f"\n{len(SPR)} {SPR} ")
+
+
+def two_texture_entry(name, norm_len=None):
+    """An entry whose texture count of 2 is HONEST and holds two groups.
+
+    BOTET's ``mount_elephant_rocket`` reduced to its bones: nothing is wrong with
+    the count, and one normal map's length is written too long.
+    """
+    return (f"\n{len(name)} {name} \n1.0 \n1 "
+            f"\n{len('m/' + name + '.mesh')} m/{name}.mesh 121 "
+            f"\n2 " + group("ever", norm_len) + group("also") +
+            f"\n0 "
+            f"\n1 \n5 horse \n3 pri \n3 sec \n0 \n0 "
+            f"\n-1 0.0 0.0 0.0 0.0 0.0 0.0 ")
+
+
+#: the same shape with the length written three characters too long, so the name
+#: it takes runs off the end of its own line
+LONG_LEN = len(TEX) + 3
+LONG_MDB = HEADER + BLANK + two_texture_entry("peasant_archer", norm_len=LONG_LEN)
+LONG_LINE = LONG_MDB[:LONG_MDB.index(f"\n{LONG_LEN} {TEX}")].count("\n") + 2
+
 med2 = Path(tempfile.mkdtemp(prefix="ut_broken_"))
 
 
@@ -128,6 +159,28 @@ except ValueError as e:
     check("and never says 'invalid literal' at anyone", "invalid literal" not in msg)
 check("the same file with an honest count still parses",
       len(modeldb.parse_text(GOOD_MDB).entries) == 1)
+
+# A wrong length inside a texture list lands the reader in exactly the place a
+# wrong count does, so the count is the easy thing to blame and it is the wrong
+# thing: told to lower an honest 2, you delete a texture group that was fine.
+# The reader WATCHED the length overrun its own line, so that sighting leads.
+print("\n== ...and when the count is honest, it says so about the length ==")
+try:
+    modeldb.parse_text(LONG_MDB)
+    check("a length that overruns its own line is refused", False)
+except ValueError as e:
+    msg = str(e)
+    check("a length that overruns its own line is refused", True)
+    check("it names the line that length is on, not the line it died on",
+          f"line {LONG_LINE} column 1" in msg)
+    check("it names the number written there", f"is {LONG_LEN} characters long" in msg)
+    check("and measures what the line actually holds",
+          f"the rest of that line measures {len(TEX)}" in msg)
+    check("it does not send you to delete a group the count honestly holds",
+          "texture list says it holds" not in msg)
+check("the same entry with an honest length parses",
+      len(modeldb.parse_text(HEADER + BLANK + two_texture_entry("peasant_archer"))
+          .entries) == 1)
 
 print("\n== a missing file is a sentence, not a traceback ==")
 try:

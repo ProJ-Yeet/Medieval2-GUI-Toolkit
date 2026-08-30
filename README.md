@@ -192,10 +192,10 @@ python app.py --no-browser   # serve without opening a browser tab
 ## Building a release
 
 ```bash
-python build_release.py --version v2.1.6
+python build_release.py --version v2.1.7
 ```
 
-Produces `dist/Medieval2-GUI-Toolkit-v2.1.6.zip`: the tool, a bundled Python
+Produces `dist/Medieval2-GUI-Toolkit-v2.1.7.zip`: the tool, a bundled Python
 runtime, Pillow, and the packed vanilla building art. `--no-runtime` builds a
 code-only zip for a machine that already has Python.
 

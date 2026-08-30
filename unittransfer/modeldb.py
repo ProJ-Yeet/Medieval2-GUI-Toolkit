@@ -203,22 +203,32 @@ class _Reader:
             raise _Desync(at, f"expected a number here and found {tok!r}") from None
 
     def get_attach_sprite(self) -> str:
-        """The fourth field of an ATTACHMENT texture group.
+        """The fourth field of an ATTACHMENT texture group: a ``0``, or a sprite.
 
-        It is the sprite slot, and an attachment has no sprite: every valid file
-        writes it as a bare ``0``, which is this format's way of saying *no name
-        follows*. So a number other than 0 here is not a length — there is no
-        name for it to be the length of. It is a stray character left on the end
-        of the ``0`` by a hand edit, and without this the read swallows the next
-        field and dies two lines further down on a word that was fine where it
-        was. Seen in the wild: a ``slave`` skin deleted by hand and the ``1``
-        from a removed line left glued to the ``0``, giving ``... .texture 01``.
+        Almost every file writes a bare ``0`` here — this format's way of saying
+        *no name follows* — and it is easy to conclude the slot can hold nothing
+        else. It can. Mods fill it: BOTET writes
+        ``44 unit_sprites/france_Elector_count_sprite.spr`` into one and
+        Thera_Redux writes another, and with those names read as names both files
+        run to a clean EOF and round-trip byte-exact. The TWCenter syntax checker
+        walks attachment groups with the same routine it walks body groups, for
+        the same reason.
 
-        Named rather than recovered from. The entry reader could assume the 0 and
-        carry on, but half a dozen span walkers further down this file re-walk
-        the same bytes to place an edit, and one of them reading a file
-        differently from the others is how a save writes at the wrong offset. So
-        this refuses, and says which character to delete.
+        What is NOT a length is the stray character a hand edit leaves glued to
+        the ``0`` — a ``slave`` skin deleted by hand and the ``1`` off the removed
+        line left behind, giving ``... .texture 01``. Read 1 as a length and the
+        next field is eaten as a one-character name, and the read dies two lines
+        down on a word that is fine where it sits, which is the worst error this
+        format can produce.
+
+        The two are told apart by looking. A real sprite is a ``.spr`` path that
+        fills exactly the characters its length claims and stops on whitespace; a
+        stray digit's "name" is none of those things. So a name that holds up is
+        read, and anything else is refused AT the stray character with the fix in
+        the sentence — refused rather than assumed away, because half a dozen span
+        walkers further down this file re-walk the same bytes to place an edit,
+        and one of them reading a file differently from the others is how a save
+        writes at the wrong offset.
         """
         self._skip_ws()
         at, tok = self.i, self.token()
@@ -229,10 +239,24 @@ class _Reader:
                 at, f"expected the length of a name here and found {tok!r}") from None
         if length == 0:
             return ""
+        before = self.i
+        self._skip_ws()
+        val = self.s[self.i:self.i + length]
+        if (len(val) == length
+                and not any(c.isspace() for c in val)
+                and val.lower().endswith(".spr")
+                and (self.i + length >= self.n or self.s[self.i + length].isspace())):
+            self.i += length
+            self.trail.append((at, length, val, self.i))
+            del self.trail[:-6]
+            return val
+        self.i = before
         raise _Desync(at, f"an attachment texture's sprite length is written as {tok!r} "
-                          f"here, and 0 is the only value it can be — an attachment has "
-                          f"no sprite, and the 0 is what says so. Delete what follows the "
-                          f"0 at this spot and the file reads", exact=True)
+                          f"here, and it is neither the 0 that says this attachment has "
+                          f"no sprite nor the length of a sprite path written after it. "
+                          f"A digit left glued to the 0 by a hand edit reads exactly like "
+                          f"this. Delete what follows the 0 at this spot and the file "
+                          f"reads", exact=True)
 
     def get_string(self) -> str:
         self._skip_ws()
@@ -331,8 +355,9 @@ def _read_entry(r: _Reader, pad: bool = False) -> ModelEntry:
             try:
                 fac = r.get_string().lower()
                 tex, nrm = r.get_string(), r.get_string()
-                # the sprite: a real one on a main texture, and on an attachment
-                # the 0 that means there is none (see get_attach_sprite)
+                # the sprite: always a name on a main texture, and on an
+                # attachment usually — not always — the 0 that means there is
+                # none (see get_attach_sprite)
                 spr = (r.get_attach_sprite() if what == "attachment"
                        else r.get_string())
             except _Desync as e:
@@ -389,17 +414,41 @@ def _suspect(text: str, r: "_Reader") -> str:
     it swallowed a line break. Both are things a reader can only see by looking
     back, and both name the ONE number worth editing — which is the difference
     between "your modeldb is broken somewhere" and a line to open.
+
+    A name that ran off its own line gets one thing more: how long the rest of
+    that line is. Paths in this file contain spaces (``Final European
+    Light_hre_diff``), so that measurement is where the name PROBABLY ends rather
+    than where it certainly does — but it is the number to try first, and for
+    BOTET's ``Elephant_normal2`` it is exactly the 61 that a 64 was written for.
     """
     for at, length, val, end in r.trail:
-        if "\n" in val or (end < r.n and not text[end].isspace()):
-            line, col = _line_col(text, at)
-            return (f" The name at line {line} column {col} is written as {length} "
-                    f"characters and reads {val!r}, which does not end where the file "
-                    f"does — that number is the likely culprit.")
+        line, col = _line_col(text, at)
+        if "\n" in val:
+            start = end - length
+            rest = text[start:text.index("\n", start)].rstrip()
+            return (f" The name at line {line} column {col} says it is {length} "
+                    f"characters long and so runs off the end of its own line — that "
+                    f"number is the likely culprit, and the rest of that line "
+                    f"measures {len(rest)}.")
+        if end < r.n and not text[end].isspace():
+            return (f" The name at line {line} column {col} says it is {length} "
+                    f"characters long and reads {val!r}, which stops in the middle of "
+                    f"the word after it — that number is the likely culprit.")
     return ""
 
 
 def _desync_message(text: str, r: "_Reader", e: "_Desync", n: int) -> str:
+    """The failure as a sentence — which entry, which line, which number to doubt.
+
+    Two things can name that number, and they are not equally sure of themselves.
+    :func:`_suspect` reports a length the reader WATCHED overrun its own name;
+    ``e.note`` reports a texture count that disagrees with how far the list got,
+    which is inferred from where the read landed — and a wrong length lands it in
+    exactly the same place. So the sighting outranks the inference: BOTET's
+    ``mount_elephant_rocket`` has an honest count of 2 above a normal-map length
+    written 64 for a 61-character name, and led with the count it sent the reader
+    off to delete a texture group that was never the problem.
+    """
     line, col = _line_col(text, e.at)
     who = f" ({r.entry!r})" if r.entry else ""
     if e.exact:
@@ -410,7 +459,7 @@ def _desync_message(text: str, r: "_Reader", e: "_Desync", n: int) -> str:
             f"'<length> <name>', so one length that does not match the name after it "
             f"shifts every field that follows by one and the read dies further down, "
             f"on a word that is fine where it is."
-            f"{e.note or _suspect(text, r)} Here: {_snippet(text, e.at)}")
+            f"{_suspect(text, r) or e.note} Here: {_snippet(text, e.at)}")
 
 
 def parse_text(text: str) -> ModelDb:

@@ -99,8 +99,11 @@ if sample.is_file():
         print(f"    {e}")
     if db is not None:
         check(f"parses ({len(db.entries)} entries)", len(db.entries) > 0)
-        check("entry count matches the header's count-1",
-              len(db.entries) + 1 == db.header_ints[5])
+        # The header counts the leading `blank` sentinel, when the file has one
+        # -- and a sentinel-less file (Thera_Redux is one) counts every entry as
+        # real. Same rule `to_text` writes back with.
+        check("entry count matches the header's count",
+              len(db.entries) + (1 if db.blank_raw else 0) == db.header_ints[5])
         check("round-trips byte-exact", db.to_text() == text)
         check("no entry name looks like a swallowed path",
               not any("/" in e.name for e in db.entries))

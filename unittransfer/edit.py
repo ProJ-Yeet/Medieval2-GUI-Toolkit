@@ -150,8 +150,11 @@ class EditRequest:
 
 
 # Texture slots a faction record exposes to the editor. The attachment *sprite*
-# is deliberately absent: the engine has no attachment sprites, so that slot is
-# always the literal "0" and showing it only invites breaking it.
+# is deliberately absent: it is the bare "0" meaning "no sprite" in all but a
+# handful of entries across every mod tested, and a field that is empty on
+# essentially every unit is one more thing to break by accident. The rare entry
+# that does carry one keeps it — a save rewrites the spans it was handed and
+# leaves every other byte of the entry alone.
 TEXTURE_KINDS = {("main", "texture"): "texture",
                  ("main", "normal"): "normal",
                  ("main", "sprite"): "sprite",
