@@ -1154,6 +1154,10 @@ async function openCredits(){
     </div></div>
     <div style="padding:16px;line-height:1.7">
       <div style="margin-bottom:14px">
+        <div class="lbl" style="margin-bottom:4px">Sponsored by</div>
+        <b>FeatherLeaf</b>
+      </div>
+      <div style="margin-bottom:14px">
         <div class="lbl" style="margin-bottom:4px">Built on the work of</div>
         <b>Mylae</b>, for the
         <a href="https://github.com/Machiavello-1441/m2tw-editor" target="_blank"
