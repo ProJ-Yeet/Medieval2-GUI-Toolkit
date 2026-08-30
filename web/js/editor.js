@@ -125,10 +125,36 @@ function edModelEdits(){
     const me=e.mEdits[name]||{};
     if(!me._touched&&name!==cvName)return null;
     const m=e.d.models.find(x=>x.name===name); if(!m)return null;
+    /* Which faction slots are sent as OVERRIDES, and which are left to follow
+       the default. Getting this wrong is invisible in the form and total in the
+       file: the server writes a faction's override in preference to the default,
+       so a faction sent as an override is a faction the default cannot reach.
+
+       "Anything that differs from the default is an override" was the rule, and
+       it compared against the default AS JUST TYPED. So editing the default box
+       — the one that says "used by every faction unless it has its own" — made
+       every faction differ from it by definition, and all of them were sent
+       pinned to the value they already had. The new default was written and then
+       overridden 29 times by the old one: the boxes reverted on save, while the
+       LOD meshes (which have no override layer, just indexed paths) stayed. That
+       is the shape the bug was reported in.
+
+       A faction is an override when one of two things is true, and neither of
+       them is about the value being typed right now:
+         * its own box was edited this session — a value typed against ONE
+           faction is that faction's, whatever it equals; or
+         * it already had a value of its own on disk, meaning it differed from
+           the default IT WAS FOLLOWING — the original one, not the new one.
+       Everything else follows the default, which is what makes editing the
+       default box reach exactly the factions that were sharing it. */
     const v=edTexView(m), kinds=edKinds(m), faction_paths={};
     edFacs(m).forEach(f=>{
-      const o={},cur=v.facs[f]||{};
-      kinds.forEach(k=>{ if(cur[k]&&cur[k]!==v.defs[k])o[k]=cur[k]; });
+      const o={},cur=v.facs[f]||{},own=(me.faction_paths||{})[f]||{},was=m.textures[f]||{};
+      kinds.forEach(k=>{
+        if(!cur[k])return;
+        if(k in own){o[k]=cur[k];return;}
+        if(was[k]&&was[k]!==m.texture_defaults[k])o[k]=cur[k];
+      });
       if(Object.keys(o).length)faction_paths[f]=o;
     });
     return {entry:name,new_name:me.new_name||'',paths:me.paths||{},copies:me.copies||[],
