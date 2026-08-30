@@ -67,4 +67,6 @@ disappearing off the bottom of the list.
   are appended above the block's closing brace, and existing lines are edited in
   place by the line they came from.
 
-* The README links the video walkthrough, and credits FeatherLeaf as sponsor.
+* **FeatherLeaf is credited as sponsor**, in the app's own credits dialog
+  (☰ menu > Credits) and in the README.
+* The README links the video walkthrough.
