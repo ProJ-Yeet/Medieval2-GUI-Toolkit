@@ -432,6 +432,18 @@ class Mod:
         return projectiles_mod.effect_sets(self.data)
 
     @cached_property
+    def effect_index(self):
+        """The effect-set and effect BLOCKS this mod declares, not just the names.
+
+        :attr:`effect_sets` answers "does this mod define that set?", which is all
+        the placeholder rule needs. Importing a set instead of blanking it needs
+        the text, the effects it lists and the files those name — see
+        :mod:`unittransfer.effects`. Cached because reading it is four files.
+        """
+        from . import effects as effects_mod
+        return effects_mod.index(self.data)
+
+    @cached_property
     def edu_vocab(self) -> Dict[str, object]:
         """Drop-down values for the guided EDU editor (see :mod:`vocab`).
 

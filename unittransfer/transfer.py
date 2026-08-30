@@ -25,7 +25,8 @@ from dataclasses import dataclass, field, asdict, replace as dc_replace
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from . import (config, edu as edu_mod, engines as engines_mod, eop, localization,
+from . import (config, edu as edu_mod, effects as effects_mod,
+               engines as engines_mod, eop, localization,
                modeldb, mounts, projectiles as projectiles_mod, sounds)
 from . import keyblock as kb
 from .logutil import block, counted, file_op, fingerprint, log
@@ -177,7 +178,7 @@ class AssetConflict:
     identical: bool          # True -> byte-for-byte equal (will be reused, no copy)
     src_size: int
     dst_size: int
-    kind: str = "texture"    # "texture" | "mesh" | "icon"
+    kind: str = "texture"    # "texture" | "mesh" | "icon" | "engine" | "effect"
 
 
 @dataclass
@@ -247,6 +248,14 @@ class TransferPlan:
     projectile_raws: List[str] = field(default_factory=list)   # blocks to append
     projectile_actions: List[Tuple[str, str, str]] = field(default_factory=list)  # (name,action,detail)
     projectile_effects_blanked: int = 0    # effect lines rewritten to placeholder
+    # Effect-sets carried across instead of blanked, which only happens when the
+    # DESTINATION is marked M2EX (see `_plan_effects`). Blocks are (file, raw)
+    # pairs appended to the destination's file of that name; `effect_assets` are
+    # their .CAS/texture paths, tracked apart from the rest so the conflict scan
+    # can name them for what they are.
+    effect_blocks: List[Tuple[str, str]] = field(default_factory=list)
+    effect_actions: List[Tuple[str, str, str]] = field(default_factory=list)
+    effect_assets: List[str] = field(default_factory=list)
     # siege engines (descr_engines.txt / descr_mounted_engines.txt /
     # descr_engine_skeleton.txt). See `_resolve_engines`.
     engine_actions: List[Tuple[str, str, str]] = field(default_factory=list)  # (name,action,detail)
@@ -451,6 +460,14 @@ class TransferPlan:
         if self.projectile_effects_blanked:
             L.append(f"      {self.projectile_effects_blanked} effect line(s) -> "
                      "'invisible_placeholder_set' (effects not ported — re-add by hand)")
+        for name, action, detail in self.effect_actions:
+            verb = {"add": "ADDED to", "reuse": "already in",
+                    "missing": "NOT in the source's"}.get(action, action)
+            L.append(f"      effect set '{name}' -> {verb} {detail}")
+        if self.effect_assets:
+            L.append(f"      effect files copied: {len(self.effect_assets)} "
+                     f"({', '.join(self.effect_assets[:4])}"
+                     f"{', …' if len(self.effect_assets) > 4 else ''})")
         for name, action, detail in self.engine_actions:
             # `detail` opens with the file the action applies to — descr_engines.txt
             # for a ground engine, descr_mounted_engines.txt for a mounted one
@@ -803,6 +820,12 @@ def _resolve_projectiles(plan: "TransferPlan", source: Mod, dest: Mod,
     flaming_map = {old: new for old, new in resolved.items()
                    if new and new.lower() != old}
 
+    # Between the passes: work out which effect-sets can travel with the
+    # projectiles instead of being blanked. Whatever comes back counts as valid
+    # for the rewrite below, so those effect lines are left pointing at their real
+    # names — which is the whole point, and why this runs BEFORE the emit loop.
+    valid_effects = set(valid_effects) | _plan_effects(plan, source, dest, to_emit)
+
     # Second pass: build the raw blocks with names/flaming/effects rewritten, and
     # copy each projectile's .cas model files (outside unit_models/, so they're
     # never relocated — they keep their data/models_missile paths).
@@ -829,18 +852,94 @@ def _resolve_projectiles(plan: "TransferPlan", source: Mod, dest: Mod,
                 plan.missing_assets.append(rel)
 
     added = [a for a in plan.projectile_actions if a[1] in ("add", "rename")]
-    if added:
+    if added and plan.projectile_effects_blanked:
         plan.warnings.append(
             "PROJECTILE IMPORT: special effects are NOT imported — the projectile's "
             "effect/impact lines were pointed at 'invisible_placeholder_set' where the "
             "destination lacks them. Re-add the real effects manually in "
-            "descr_effect_impacts.txt / the arrow-trail files.")
+            "descr_effect_impacts.txt / the arrow-trail files."
+            + ("" if dest.m2ex else
+               "  (Mark the destination as M2EX on its Home card and the sets the "
+               "source defines are carried across instead.)"))
         if any(source.projectile_def(a[0]) and source.projectile_def(a[0]).models
                for a in added):
             plan.warnings.append(
                 "projectile model (.cas) files were copied, but their textures under "
                 "data/models_missile/textures/ are not chased — verify the missile model "
                 "renders and copy its texture if it's missing in the destination.")
+
+
+def _plan_effects(plan: "TransferPlan", source: Mod, dest: Mod, to_emit) -> set:
+    """Carry the projectiles' effect-sets across, for an M2EX destination only.
+
+    A projectile names effect-SETS, and the sets live in four files this transfer
+    has never touched. Porting one has always meant pointing its effect lines at
+    ``invisible_placeholder_set`` and telling the user to re-add the real thing by
+    hand, because the alternative is writing into files shared by every projectile
+    in the mod — and on a vanilla engine that is a real risk: how many effects it
+    will load is one of the hardcoded tables, and a mod already near the end of it
+    gets nothing for what sits past there. Silently.
+
+    M2EX replaces those tables (see :mod:`unittransfer.modflags`), so a
+    destination marked for it has the room, and the honest thing is to bring the
+    effect across rather than a placeholder. That is the whole gate: the mark on
+    the DESTINATION, because the destination is what gets written.
+
+    "If found" is the other half. The effect files are mostly inherited from
+    vanilla — the source mod does not contain those definitions either, it just
+    references them — so a set the source does not declare is left to the
+    placeholder exactly as before. Only what the source really has can travel.
+
+    Returns the set names that came across, which the caller adds to the valid
+    list so their effect lines keep pointing at the real name.
+    """
+    if not to_emit or not getattr(dest, "m2ex", False):
+        return set()
+    wanted = [v for sp in to_emit for v in sp.effects.values() if v]
+    if not wanted:
+        return set()
+
+    have_sets = {e.lower() for e in dest.effect_sets}
+    have_effects = set(dest.effect_index.effects)
+    blocks, missing = effects_mod.resolve(source.effect_index, wanted,
+                                          have_sets, have_effects)
+
+    for name in dict.fromkeys(w.lower() for w in wanted):
+        if name in have_sets:
+            plan.effect_actions.append((name, "reuse", "the destination's own files"))
+    for name in missing:
+        plan.effect_actions.append(
+            (name, "missing", "effect files either — left as the placeholder"))
+
+    imported = set()
+    seen_assets = {rel for _, rel in plan.asset_files}
+    for b in blocks:
+        plan.effect_blocks.append((b.rel, b.raw))
+        if b.kind == effects_mod.SET:
+            imported.add(b.name.lower())
+            plan.effect_actions.append((b.name, "add", b.rel))
+        # The .CAS models and textures the effect draws with. Same rule the
+        # projectile's own models follow: what the source has is copied, and what
+        # it does not have is vanilla's and left alone rather than reported
+        # missing — the source was relying on the engine's own copy too.
+        for rel in b.assets():
+            if rel in seen_assets:
+                continue
+            seen_assets.add(rel)
+            src_abs = source.data / rel
+            if src_abs.exists():
+                plan.asset_files.append((src_abs, rel))
+                plan.effect_assets.append(rel)
+
+    if imported:
+        plan.warnings.append(
+            f"EFFECTS IMPORTED: {len(imported)} effect set(s) the destination did not "
+            "have were copied into its effect files, because it is marked as M2EX. "
+            "On a vanilla engine this is what the 'effects are not imported' rule "
+            "protects against: the engine's effect table has a fixed size and "
+            "silently drops whatever is past the end of it. Untick M2EX to go back "
+            "to placeholders.")
+    return imported
 
 
 # --------------------------------------------------------------------------
@@ -1848,8 +1947,13 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                           dst_size=d_size, kind=kind))
 
     engine_rels = {r.lower() for r in plan.engine_assets}
+    effect_rels = {r.lower() for r in plan.effect_assets}
     for src_abs, rel in plan.asset_files:
         kind = ("engine" if rel.lower() in engine_rels
+                # "effect" is not one of the modes, so an effect file follows the
+                # ordinary asset rule — which is right: it sits outside
+                # unit_models/ but it is not an engine's baked-in mesh either.
+                else "effect" if rel.lower() in effect_rels
                 else "mesh" if rel.lower().endswith(".mesh") else "texture")
         scan_conflict(src_abs, rel, kind)
     for src_abs, rel in plan.icon_files:
@@ -2127,6 +2231,26 @@ def apply_transfer(plan: TransferPlan) -> Dict:
         if not ptext.endswith(nl):
             ptext += nl
         write_text("descr_projectile.txt", ptext, projectiles_mod.ENCODING, exact=True)
+
+    # ---- 3c2) effect sets the projectiles reference (M2EX destinations) ----
+    # Appended to the destination's own file of the same name, because which of
+    # the four files a set lives in is what the set MEANS to the engine (see
+    # unittransfer.effects). Grouped so a file is read, appended to and written
+    # once however many blocks landed in it.
+    if plan.effect_blocks:
+        by_file = {}
+        for rel, raw in plan.effect_blocks:
+            by_file.setdefault(rel, []).append(raw)
+        for rel, raws in by_file.items():
+            current = dest.data / rel
+            etext = kb.read_text(current, effects_mod.ENCODING) if current.exists() else ""
+            nl = kb.newline_of(etext)     # same rule as the projectiles above
+            blk = (nl + nl).join(r.strip("\r\n") for r in raws)
+            etext = (etext.rstrip("\r\n") + nl + nl + blk) if etext.strip() else blk
+            etext = kb.to_newline(etext, nl)
+            if not etext.endswith(nl):
+                etext += nl
+            write_text(rel, etext, effects_mod.ENCODING, exact=True)
 
     # ---- 3d) siege engines ----
     for rel, raws, current in (

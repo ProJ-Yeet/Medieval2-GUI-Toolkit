@@ -8,6 +8,10 @@ Formerly released as "Unit Transfer".
 Runs as a local web server with a UI in your browser. No game files are touched
 except the mod you point it at, and every write is backed up and undoable.
 
+Video walkthrough: <https://www.youtube.com/watch?v=NZl8gCqlTE0>
+
+Sponsored by FeatherLeaf.
+
 ## Install
 
 Download the latest build from [Releases](../../releases/latest), unzip it, and
@@ -42,7 +46,8 @@ the unit depends on and carries it across:
 * every battle model it uses (soldier, officers, mount, crew): meshes, textures,
   normal maps and far-LOD sprite sheets
 * the mount definition, if mounted
-* the projectile definition, if it is a missile unit
+* the projectile definition, if it is a missile unit (and its effect sets too,
+  when the destination is marked M2EX — see below)
 * for artillery, the full siege engine: the `descr_engines.txt` blocks, each
   model group's animation skeleton, every referenced mesh, bone map, collision
   and reference-points file, and the textures baked into those meshes
@@ -150,8 +155,19 @@ edited, renamed, deleted and given a voice. Edits are written back to their own
 file. A transfer can choose which file a unit is written to, which is how a unit
 is kept outside the 500-unit cap.
 
-A mod can be marked as M2EX on its Home card, which stops the toolkit reporting
-the five engine limits M2EX removes.
+A mod can be marked as M2EX on its Home card. That stops the toolkit reporting
+the five engine limits M2EX removes, and it changes one thing about transfers
+into that mod: a projectile's effect sets are carried across with it, rather than
+being replaced by `invisible_placeholder_set`.
+
+Effects are normally not imported because they live in files shared by every
+projectile in the mod, and how many the engine will load is another of the
+hardcoded tables — what sits past the end is dropped without a message. M2EX
+replaces that table, so for a mod marked for it the toolkit copies each effect
+set the source actually defines, the effects that set lists, and the models and
+textures those name. A set the source does not define itself is left as a
+placeholder as before: it comes from vanilla, and vanilla's copy is not the
+toolkit's to move.
 
 ## Running from source
 
@@ -176,10 +192,10 @@ python app.py --no-browser   # serve without opening a browser tab
 ## Building a release
 
 ```bash
-python build_release.py --version v2.1.5
+python build_release.py --version v2.1.6
 ```
 
-Produces `dist/Medieval2-GUI-Toolkit-v2.1.5.zip`: the tool, a bundled Python
+Produces `dist/Medieval2-GUI-Toolkit-v2.1.6.zip`: the tool, a bundled Python
 runtime, Pillow, and the packed vanilla building art. `--no-runtime` builds a
 code-only zip for a machine that already has Python.
 

@@ -1,7 +1,46 @@
 # STATE — Medieval 2 GUI Toolkit V2
-_Updated: 2026-08-27 · **v2.1.5 released** · a feature subrelease on top of 2.1.4_
+_Updated: 2026-08-30 · **v2.1.6 released** · a subrelease on top of 2.1.5_
 
-## Next up
+## v2.1.6
+**A subrelease, same standing as 2.1.2 through 2.1.5.** Three things, and the
+first two are one thread.
+
+**The M2EX mark did not survive being read back.** `modflags` stores it per mod
+folder and accepted either a Mod or a bare path; the bare-path branch was
+`getattr(mod, "root", mod)`, and a `Path` HAS a `.root` — its anchor, `\` on
+Windows. So every path-shaped read keyed to the drive root of the working
+directory: one shared row for every mod on the machine. `/api/mods` is exactly
+that read, which is why ticking the box looked right (answered from a Mod) and
+the next fetch of the mod list showed it clear. `modflags._root_of` now only
+treats `.root` as a mod root when the thing is not a path. The regression test is
+in `tests/test_modflags.py`, and it is the two-readers-agree shape: off a Mod,
+off a Path, off a string, and no row keyed to a drive root.
+
+**Projectile effects now travel to an M2EX destination** (`unittransfer/effects.py`,
+`transfer._plan_effects`). Effects were never ported, for a good reason: they live
+in four files shared by every projectile in the mod, and how many the engine loads
+is another hardcoded table — what is past the end is dropped silently. M2EX
+replaces that table, so for a destination marked for it the set block, the effects
+it lists and the `.CAS`/texture files those name are copied, each block back into
+the file of the same name it came from (which file a set lives in is what it MEANS
+to the engine). A set the SOURCE does not declare is still placeholdered — it is
+vanilla's and not ours to move.
+
+Two things about real effect files that the old scanner got wrong, and that any
+future reader of them must not: `effect_set < 3 4 > name` declares one body of a
+set per graphics-detail band and the NAME follows the brackets (the old regex
+recorded seven sets per stock mod as `<` and dropped the real names, so a
+projectile pointing at a set the destination DID define was blanked anyway); and
+DaC's impacts file leaves a brace open, so a block ends at the next header or at
+depth zero, whichever comes first.
+
+**A unit added to a building's recruitment lands at the top** (`bldAddPoolRow`).
+Display order only: the server appends every new capability above the block's
+closing brace whatever order the list is in, and edits existing lines in place by
+the EDB line they came from, so the file is byte-identical to what the old push
+produced. A batch keeps its pick order.
+
+## Previously (v2.1.5)
 **v2.1.5 IS A SUBRELEASE, same standing as 14j, 2.1.2, 2.1.3 and 2.1.4 — real
 features, not folded into Phase 16 because Phase 16 (the Campaign Map Editor) is
 a different program.** All of it is the modeldb cleanup deciding what is dead,

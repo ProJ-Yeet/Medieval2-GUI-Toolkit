@@ -52,6 +52,25 @@ CAP_FINDINGS = frozenset({
 _SETTING = "m2ex"
 
 
+def _root_of(mod) -> "Path | str":
+    """The mod folder, whether the caller had a :class:`~unittransfer.mod.Mod` or a
+    plain path.
+
+    ``getattr(mod, "root", mod)`` is what this used to be, and on a ``Path`` it is
+    a trap: ``Path.root`` is the path's own ANCHOR — ``'\'`` on Windows — not a
+    folder anyone means. Every mod handed in as a path therefore keyed to the
+    drive root of the process's working directory instead of itself, so
+    ``/api/mods`` (which reads the flag straight off the discovered path) reported
+    every mod's mark as whatever one shared bogus row said. Ticking a mod on the
+    Home card still looked right — that response is answered from a ``Mod``, which
+    has a real ``.root`` — and the tick then vanished the next time the mod list
+    was fetched.
+    """
+    if isinstance(mod, (str, Path)):
+        return mod
+    return getattr(mod, "root", None) or mod
+
+
 def _key(root) -> str:
     """The settings-table key for a mod root — resolved, slashed and folded.
 
@@ -68,14 +87,14 @@ def _key(root) -> str:
 
 def is_m2ex(mod) -> bool:
     """Has this mod been marked as running on M2EX?"""
-    root = getattr(mod, "root", None) or mod
+    root = _root_of(mod)
     table = config.load_settings().get(_SETTING) or {}
     return bool(table.get(_key(root)))
 
 
 def set_m2ex(mod, on: bool) -> bool:
     """Mark (or unmark) this mod. Returns what it is now."""
-    root = getattr(mod, "root", None) or mod
+    root = _root_of(mod)
     settings = config.load_settings()
     table = dict(settings.get(_SETTING) or {})
     if on:

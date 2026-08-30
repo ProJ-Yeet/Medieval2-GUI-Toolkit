@@ -174,7 +174,7 @@ async function renderComposer(){
            own model. Only its animation set is taken from <code>${esc(bU.mount)}</code>, and only
            where the skeletons it asks for are missing here.</div>`:''}
        ${hasCrew?`<div class="optnames"><span class="k">Crew</span>${crwBase?`<span class="frombase">${insteadMsg(c.base_type)}</span>`:modelChecks(u.crew,crwOn,c)}</div>`:''}
-       ${hasProj?`<div class="optnames"><span class="k">Projectile</span>${proj.map(o=>`<span class="chip">${esc(o)}</span>`).join('')}${projBase?`<span class="frombase">${insteadMsg(c.base_type)} stats (its projectile)</span>`:'→ added to descr_projectile.txt, effects blanked'}</div>`:''}
+       ${hasProj?`<div class="optnames"><span class="k">Projectile</span>${proj.map(o=>`<span class="chip">${esc(o)}</span>`).join('')}${projBase?`<span class="frombase">${insteadMsg(c.base_type)} stats (its projectile)</span>`:projEffects()}</div>`:''}
        ${hasEng?`<div class="optnames"><span class="k">Siege engine</span><span class="chip">${esc(eng)}</span>${engBase?`<span class="frombase">${insteadMsg(c.base_type)}</span>`:engMounted?`→ added to descr_mounted_engines.txt with its reference points${engClass?`; its <code>class ${esc(engClass)}</code> descr_engine_skeleton.txt entry is added only if ${esc(state.dst)} lacks it`:''}`:`→ added to descr_engines.txt + descr_engine_skeleton.txt, with its meshes/bone maps/collision/reference points, the textures baked into those meshes, and its engine animations`}</div>`:''}
        <div class="count" style="margin-top:5px">An unticked group keeps its source name, which must already exist in ${esc(state.dst)}. Or take it from ${rep?`“${esc(c.base_type)}”`:'the base'} above.</div>
      </fieldset>
@@ -900,6 +900,16 @@ function eopBound(type){
 // without anyone having to dismiss it — the same answer the per-mod override
 // gives, reached from the fact rather than from the dismissal.
 const modIsM2ex=mod=>!!((state.mods||[]).find(m=>m.name===mod)||{}).m2ex;
+/* What happens to the projectile's effect lines, which depends on the same mark.
+   A projectile names effect-SETS, and those live in files shared by every
+   projectile in the mod. Writing into them on a vanilla engine risks going past
+   the fixed size of its effect table, which fails silently, so the sets are
+   normally replaced by a placeholder. An M2EX destination has no such table, so
+   the ones the source actually defines are carried across instead. */
+const projEffects=()=>modIsM2ex(state.dst)
+  ? `→ added to descr_projectile.txt; its effect sets come too, where
+     ${esc(state.src)} defines them (${esc(state.dst)} is marked M2EX)`
+  : '→ added to descr_projectile.txt, effects blanked';
 const limitIgnored=mod=>modIsM2ex(mod)
   ||(state.settings.unit_limit_ignored||[]).includes(mod);
 function unitLimitBanner(){

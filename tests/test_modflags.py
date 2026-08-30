@@ -67,6 +67,28 @@ check("marking it sticks", one.m2ex)
 check("and it is per mod — the other one is untouched", not two.m2ex)
 check("the same folder spelled the other way is the same mod",
       modflags.is_m2ex(FakeMod(str(cfg / "ModOne").replace("\\", "/"), "again")))
+
+# The mark is read two ways: off a Mod, and off a bare path — /api/mods answers
+# the header dropdown before anything has been parsed, so it has only the folder
+# the registry discovered. Those two have to agree.
+#
+# They did not. `getattr(mod, "root", mod)` looks like it means "the Mod's root,
+# or the path itself", but a Path HAS a `.root`: its anchor, "\\" on Windows.
+# Every path-shaped caller therefore keyed to the drive root of the working
+# directory instead of to its own folder — one shared row for every mod on the
+# machine. Ticking a mod still looked right, because that response is answered
+# from a Mod; the tick then vanished the next time the mod list was fetched, and
+# came back on a mod nobody had marked.
+check("reading the mark off a bare Path agrees with reading it off a Mod",
+      modflags.is_m2ex(Path(cfg / "ModOne")))
+check("...and off a string",
+      modflags.is_m2ex(str(cfg / "ModOne")))
+check("an unmarked mod read as a bare Path is still unmarked",
+      not modflags.is_m2ex(Path(cfg / "ModTwo")))
+check("no row is keyed to a drive root",
+      not any(len(k.rstrip("/")) <= 2
+              for k in (config.load_settings().get("m2ex") or {})))
+
 modflags.set_m2ex(one, False)
 check("unmarking it sticks too", not one.m2ex)
 

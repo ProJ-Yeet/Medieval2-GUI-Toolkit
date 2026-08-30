@@ -2384,7 +2384,23 @@ function bldAddPoolRow(type,lvIndex,nums,conds){
                              maximum:nums.maximum,experience:nums.experience}:{},
                        {unit:type}),
     comment:'',faction:false,del:false};
-  lv.caps.push(row);
+  /* At the TOP of the list, not the bottom. A level in a big mod holds dozens of
+     pools, and a unit added at the end is a unit you then have to go and find:
+     the picker closes, the editor redraws at the top, and the row you came for
+     is off the bottom of the pane.
+
+     This is display order only. The server never writes a new capability where
+     the list happens to put it — every added line is appended just above the
+     block's closing brace, and existing lines are edited in place by the EDB
+     line they came from (see buildings._plan_capabilities). So the file comes
+     out byte-for-byte the same as it did when this pushed.
+
+     A batch keeps the order it was ticked in: each new row goes after the ones
+     already added rather than in front of them, so twelve units added at once
+     read down the list the way they read in the picker. */
+  let at=0;
+  while(at<lv.caps.length&&lv.caps[at].line==null)at++;
+  lv.caps.splice(at,0,row);
   return row;
 }
 function bldAddPool(type){ bldAddPicked([type]); }

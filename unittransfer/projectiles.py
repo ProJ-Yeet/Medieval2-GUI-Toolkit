@@ -219,7 +219,14 @@ def rewrite_projectile_raw(raw: str, *, name_new: Optional[str] = None,
 
 
 # --- destination effect-set registry -------------------------------------
-_EFFECT_SET_RE = re.compile(r"^\s*effect_set\s+(\S+)", re.IGNORECASE)
+# `effect_set < 3 4 > fiery_arrow_set` declares one body of a set for a range of
+# graphics-detail levels; the NAME is what follows the brackets. Reading the token
+# straight after the keyword recorded seven sets per stock mod as being called
+# "<" — and, worse, left the sets they actually name out of the registry, so a
+# projectile pointing at one the destination really does define had its effect
+# line blanked to the placeholder anyway.
+_EFFECT_SET_RE = re.compile(r"^\s*effect_set\s+(?:<[^>]*>\s*)?(\S+)",
+                            re.IGNORECASE)
 # files that declare `effect_set <name>` entries a projectile may reference
 _EFFECT_FILES = (
     "descr_effect_impacts.txt",

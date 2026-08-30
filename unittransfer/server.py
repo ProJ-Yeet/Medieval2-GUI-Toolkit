@@ -1032,6 +1032,10 @@ def _plan_payload(plan) -> dict:
         "projectile_actions": [{"name": n, "action": a, "detail": d}
                                for n, a, d in plan.projectile_actions],
         "projectile_effects_blanked": plan.projectile_effects_blanked,
+        # what the M2EX destinations carry across instead of blanking
+        "effect_actions": [{"name": n, "action": a, "detail": d}
+                           for n, a, d in plan.effect_actions],
+        "effect_assets": plan.effect_assets,
         "engine_conflict": plan.options.engine_conflict,
         "engine_actions": [{"name": n, "action": a, "detail": d}
                            for n, a, d in plan.engine_actions],
