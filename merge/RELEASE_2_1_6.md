@@ -1,8 +1,9 @@
 # v2.1.6
 
-Fixes the M2EX mark, which did not survive being read back. Adds the projectile
-effect import that mark now unlocks, and stops a unit added to a building
-disappearing off the bottom of the list.
+Fixes two edits that did not survive being saved: the M2EX mark on a mod, and an
+entry's textures in the modeldb editor. Adds the projectile effect import that the
+M2EX mark now unlocks, and stops a unit added to a building disappearing off the
+bottom of the list.
 
 ## Fixed
 
@@ -21,6 +22,23 @@ disappearing off the bottom of the list.
   Ticking the box still looked correct because that response is answered from a
   parsed mod, which has a real folder. The next fetch of the mod list is where it
   went.
+
+* **Editing an entry's textures now sticks.** In the modeldb editor (and the unit
+  editor's Models tab), changing the default texture — the box that says "used by
+  every faction unless it has its own" — reverted on save. The LOD meshes kept
+  their new values, which made it look like only textures were affected.
+
+  The page decides which faction slots to send as overrides, and the server
+  writes an override in preference to the default. The rule was "anything that
+  differs from the default is an override", compared against the default *as just
+  typed* — so typing in the default box made every faction differ from it by
+  definition, and all of them were sent back pinned to the value they already
+  had. On an entry with 29 faction records that is 29 overrides undoing one edit.
+  Meshes were unaffected because they are indexed paths with no override layer.
+
+  A faction is now an override only if its own box was edited, or if it already
+  had a value of its own on disk. Editing the default reaches exactly the factions
+  that were sharing it, and leaves the ones that were not.
 
 * **`effect_set < 3 4 > name` is now read correctly.** An effect set can be
   declared once per graphics-detail band, and the name follows the brackets. The
