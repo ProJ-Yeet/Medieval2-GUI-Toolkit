@@ -145,9 +145,14 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
                                     two map colours, horde size, findings
   GET  /api/faction?mod=&name=   -> one in full: every line, the pickers its
                                     boxes need, and its expanded.txt name
+  POST /api/factions/clone_plan|/clone_apply
+                                 -> ADD a faction, by cloning one that already
+                                    works into all twelve files that name a slot
+                                    plus its art (backups + undo, one id for the
+                                    lot). See :mod:`unittransfer.factionclone`.
   POST /api/factions/plan|/apply -> edit one faction and its shown name together
                                     (backups + undo). Editing only: a faction
-                                    slot lives in eight or nine files at once
+                                    slot lives in twelve files at once
 
 EDU cleanup (export_descr_unit.txt as a whole, see :mod:`unittransfer.edusort`)
   GET  /api/edu/order?mod=       -> every section and the units in it, in the
@@ -233,7 +238,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, edit, modflags,
                modfiles, sounds, stratmap)
-from . import ancillaries, edusort, factions, images, mesh, minorfiles, portrecords, sprites, strings, traits, triggers
+from . import ancillaries, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, strings, traits, triggers
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1682,6 +1687,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._port(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/factions/plan", "/api/factions/apply"):
                 return self._json(self._factions(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/factions/clone_plan", "/api/factions/clone_apply"):
+                return self._json(
+                    self._faction_clone(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/minor/plan", "/api/minor/apply"):
                 return self._json(self._minor(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/edu/sort/plan", "/api/edu/sort/apply"):
@@ -2035,7 +2043,7 @@ class Handler(BaseHTTPRequestHandler):
         """Preview or write one faction and its shown name together.
 
         Editing only, and the refusal is the format's: a faction slot lives in
-        eight or nine files at once, so one that exists only in this file is a
+        twelve files at once, so one that exists only in this file is a
         mod that will not load — see :data:`factions.REFUSED`.
         """
         try:
@@ -2053,6 +2061,37 @@ class Handler(BaseHTTPRequestHandler):
             return out
         out.update(factions.apply(plan))
         self.registry.invalidate(body["mod"])       # the file changed on disk
+        return out
+
+    # ---- adding a faction, by cloning one that works ----
+    def _faction_clone(self, action, body):
+        """Preview or write a whole new faction slot copied from an existing one.
+
+        The other half of :meth:`_factions`' refusal. That one will not create a
+        slot because a slot lives in twelve files; this one creates it *in* all
+        twelve — see :mod:`unittransfer.factionclone`, which also says why
+        ``descr_strat.txt`` is reported rather than written.
+
+        One transfer id covers every file and every copied picture, so undo puts
+        the whole faction back out of existence in one go.
+        """
+        try:
+            mod = self.registry.get(body["mod"])
+            plan = factionclone.plan(mod, body)
+        except (KeyError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "clone_plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        if not plan.touched():
+            out["error"] = "nothing to change"
+            return out
+        out.update(factionclone.apply(plan))
+        # twelve files and a folder of art changed: everything cached about this
+        # mod is now stale, the faction roster most of all
+        self.registry.invalidate(body["mod"])
         return out
 
     # ---- the EDU cleanup ----

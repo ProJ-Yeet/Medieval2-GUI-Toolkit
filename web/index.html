@@ -511,6 +511,57 @@
   .v3part .v3nm{font-weight:600}
   .v3part .count{font-size:11px;color:var(--dim)}
   .v3facts code{color:var(--accent);overflow-wrap:anywhere}
+  /* ---- adding a faction (the clone dialog) ---- */
+  .fcadd{float:right;font:inherit;font-size:11.5px;font-weight:600;padding:2px 9px;
+    cursor:pointer;background:var(--panel2);color:var(--accent);
+    border:1px solid var(--edge);border-radius:6px}
+  .fcadd:hover:not(:disabled){border-color:var(--accent)}
+  .fcadd:disabled{color:var(--dim);cursor:not-allowed}
+  .fcintro{line-height:1.55;margin:0 0 12px}
+  .fcgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:8px}
+  .fcgrid input,.fcgrid select{font:inherit;font-size:13px;background:var(--panel2);
+    color:var(--ink);border:1px solid var(--edge);border-radius:6px;padding:5px 7px;
+    width:100%;box-sizing:border-box}
+  .fcgrid input:focus,.fcgrid select:focus{outline:none;border-color:var(--accent)}
+  .fcart{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;
+    color:var(--dim);line-height:1.45;margin-bottom:4px}
+  .fcart input{margin-top:2px;flex:0 0 auto}
+  .fcplan{margin-top:14px;border:1px solid var(--edge);border-radius:8px;
+    padding:10px 12px;background:var(--panel2)}
+  .fcplan .k{font-size:11px;color:var(--dim);text-transform:uppercase;
+    letter-spacing:.04em;margin-bottom:6px}
+  .fcplan .k .count{text-transform:none;letter-spacing:0;margin-left:6px}
+  /* count first, so the eye runs down one column of numbers */
+  .fcrow{display:grid;grid-template-columns:52px minmax(0,1.1fr) minmax(0,1.4fr);
+    gap:4px 10px;align-items:baseline;padding:4px 0;font-size:12.5px;
+    border-top:1px solid var(--edge)}
+  .fcrow.off{opacity:.5}
+  .fcrow .fcc{font-variant-numeric:tabular-nums;font-weight:600;color:var(--accent);
+    text-align:right}
+  .fcrow.off .fcc{color:var(--dim);font-weight:400}
+  .fcrow .fcn{font-weight:600}
+  .fcrow .fcf{display:block;font-size:11px;font-weight:400;color:var(--dim);
+    font-family:ui-monospace,Consolas,monospace;overflow-wrap:anywhere}
+  .fcrow .fcw{font-size:11.5px;line-height:1.4}
+  /* the review row is a report, not a write — dimmer, and marked off from the
+     files above it that really will change */
+  .fcrev{opacity:.75;border-top:1px dashed var(--edge)}
+  .fcrev .fcc{color:var(--dim);font-weight:400}
+  .fcmsg{margin-top:10px;font-size:12px;line-height:1.5}
+  @media (max-width:720px){
+    .fcgrid{grid-template-columns:1fr}
+    .fcrow{grid-template-columns:44px 1fr}
+    .fcrow .fcw{grid-column:2}
+  }
+  /* the key to UV mode, shown only while UV mode is on — four swatches for the
+     four things the shader is saying at once */
+  .v3uvkey{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;
+    font-size:11.5px;color:var(--dim);border:1px solid var(--edge);border-radius:7px;
+    padding:8px 10px;background:var(--panel2)}
+  .v3uvkey b{grid-column:1/-1;font-size:11px;color:var(--ink);text-transform:uppercase;
+    letter-spacing:.04em;font-weight:600}
+  .v3uvkey i{width:22px;height:12px;border-radius:3px;border:1px solid var(--edge);
+    display:block}
   /* every DISTINCT card on disk, and who shares each one */
   .cardvars{margin-top:12px}
   .cardvars>.k{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}

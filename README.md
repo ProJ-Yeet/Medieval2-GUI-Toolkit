@@ -33,7 +33,7 @@ one containing `mods`).
 | Sprites | Generate and wire up the far-LOD unit sprites |
 | Strings | Read and write the compiled `data/text/*.txt.strings.bin` files |
 | Traits / Ancillaries | Full editors for both, definitions and triggers together |
-| Factions | Faction definitions, with map colours edited via a colour picker |
+| Factions | Faction definitions, with map colours edited via a colour picker, and **Add a faction** — a new slot cloned from an existing one across all twelve files that name a faction |
 | Minor Files | Rebel factions, religions, cultures, resources and character names |
 
 ## Transfers
@@ -87,6 +87,26 @@ Other transfer options:
   applied, in the browser, with nothing installed. Orbit it, toggle parts off,
   and step through the head, helmet and shield variants the engine picks between
   per soldier. Docks beside the entry list or the editor.
+* **Show UVs** in that viewer, for when the skin is the thing you are debugging.
+  Paints the UV coordinate instead of the art, in the space the game samples:
+  blue is the main sheet, amber the attachment sheet, the dark tiles are the two
+  repeating, and a red line marks where the pair starts over. Thirty-two checker
+  cells to a sheet, so art stretched over a part shows up as stretched cells.
+* **Add a faction.** Copies one that already works into all twelve files that
+  name a faction slot — the roster, `expanded.txt`, unit ownership, the
+  modeldb's faction skins, every `requires factions { … }` clause in the EDB
+  (which is what lets it build and recruit), the voice accent, diplomatic
+  standing, agents, strat models, names, populace and off-map navies — and
+  copies its symbols, banners, captain cards and unit card folders under the new
+  name. Shows exactly what each file would gain before writing, backs every one
+  up, and undoes the whole faction in one go.
+
+  It also names what it will **not** touch, rather than letting you find out
+  later. Traits named after the faction, an ancillary's `FactionType` condition
+  and prebattle speeches are judgements rather than lists, so they are counted
+  and reported. So is the campaign start position: two factions cannot begin in
+  the same settlement, so there is nothing there to copy that would still be
+  right.
 * **Replace any picture.** Right-click any image for Replace image and Open file
   location. Warns when resolutions differ, converts `.png` to the `.tga` the
   engine reads, and copies a unit card into every faction folder that holds one.

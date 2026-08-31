@@ -21,8 +21,12 @@
        every `requires factions { … }` clause, descr_names and its own
        expanded.txt entry all point at it. The head line's modifier after the
        comma (`faction egypt, spawned_on_event`) is shown but not edited here.
-     * NO CREATE, NO DELETE. A faction lives in eight or nine files at once, and
-       one that exists only in this file is a mod that will not load.
+     * ADD BY CLONING, NEVER DELETE. A faction lives in twelve files at once,
+       so one that exists only in this file is a mod that will not load — which
+       is an argument for writing all twelve, not for refusing. ＋ Add a faction
+       copies a working faction into every one of them (factionclone.py).
+       Deleting stays out: a clone copies the donor's answer, and a delete would
+       have to invent one for every line that names the slot.
      * A MISSING PICTURE IS NOT A FAULT. `symbol` and `rebel_symbol` are .CAS 3D
        models, and not one of the 90 real factions measured ships its
        `loading_logo` unpacked — they are all inside the game's .pack archives.
@@ -32,8 +36,9 @@
    The colours ARE ours to show, and they are the only genuinely visual thing in
    the file: `primary_colour red 55, green 75, blue 48` gets a swatch and a picker.
 
-   THE PAGE NEVER PARSES A GAME FILE: /api/factions, /api/faction and
-   /api/factions/plan|apply do all of it. */
+   THE PAGE NEVER PARSES A GAME FILE: /api/factions, /api/faction,
+   /api/factions/plan|apply and /api/factions/clone_plan|clone_apply do all of
+   it — including working out which twelve files a new faction would change. */
 
 async function loadFactions(){
   const mod = state.src;
@@ -66,7 +71,12 @@ function renderFactions(){
       ${findingsHtml('factions', f.finding_list, 'facOpen')}
       <div class="trnote">${f.limit ? `${f.count}/${f.limit} faction slots used`
         : `${f.count} faction slots — this mod is marked <b>M2EX</b>, so the
-           engine's ${VANILLA_FACTION_LIMIT} is not its ceiling`}</div>
+           engine's ${VANILLA_FACTION_LIMIT} is not its ceiling`}
+        ${f.can_clone ? `<button class="fcadd" onclick="facCloneOpen()"
+          ${facFull() ? 'disabled' : ''} title="${facFull()
+            ? 'Every faction slot the engine has is already used'
+            : 'Add a faction by copying one that already works, into all twelve files that name a slot'}"
+          >＋ Add a faction</button>` : ''}</div>
       <div class="trrows">${rows.map(facRowHtml).join('')
         || '<div class="count" style="padding:8px">No faction matches.</div>'}</div>
     </div>
@@ -477,4 +487,224 @@ async function facSave(){
   const keep = body.faction;
   await loadFactions();
   if(keep) facOpen(keep);
+}
+
+
+/* ---- adding a faction, by cloning one that already works ------------------
+
+   The roster tab spent its whole life explaining why it would NOT do this: a
+   faction slot lives in twelve files, and one that exists only in
+   descr_sm_factions.txt is a mod that will not load. That is still true — the
+   answer is to write all twelve, which is what /api/factions/clone_plan does
+   (see unittransfer/factionclone.py).
+
+   The page's job here is narrow and it matters: this is the one action in the
+   Factions tab that touches files the tab does not otherwise own — the EDU, the
+   modeldb, descr_character — and it copies a folder of pictures besides. So
+   nothing is written until the plan has been fetched and SHOWN, file by file,
+   with the count of what each one would gain. The Create button stays disabled
+   until that plan exists and is clean. */
+
+/* Whether the engine's faction table has any room left. Asked in two places —
+   the button and the dialog's own banner — so it is one answer, not two. A mod
+   marked M2EX reports no limit at all, and 0 is never "full". */
+function facFull(){
+  const f = state.fac;
+  return !!(f && f.limit && f.count >= f.limit);
+}
+
+function facCloneOpen(source){
+  const f = state.fac;
+  if(!f || !f.factions || !f.factions.length) return;
+  const rows = f.factions.filter(r => r.slot !== 'slave');
+  const donor = source || f.sel || (rows[0] && rows[0].name) || '';
+  f.clone = {source: fcSlotOf(donor), name: '', label: '', art: true,
+             plan: null, busy: false, err: ''};
+  facCloneRender();
+  overlay.classList.add('open');
+}
+
+/* The head line may carry a modifier after a comma (`egypt, spawned_on_event`)
+   and everything else in a mod points at the part before it — the same rule as
+   factions.py's slot_of, which is why this never sends a whole head line. */
+function fcSlotOf(name){ return String(name || '').split(',')[0].trim(); }
+
+/* The plan and the Create button, without rebuilding the fields.
+
+   Redrawing the whole dialog every time a plan lands takes the caret out of the
+   box the person is still typing in — they type `arnor`, the preview returns
+   280ms later, and the next letter goes nowhere. So the debounced preview
+   repaints only the two things it actually changes. */
+function facClonePaint(){
+  const c = state.fac && state.fac.clone;
+  if(!c) return;
+  const host = document.getElementById('fcPlan');
+  if(!host) return facCloneRender();          // dialog not up: draw it whole
+  host.innerHTML = facClonePlanHtml();
+  const go = document.querySelector('.foot .primary');
+  if(go) go.disabled = !(c.plan && c.plan.ok && !c.busy);
+  const note = document.getElementById('fcNote');
+  if(note) note.textContent = c.busy ? 'Working out what would change…' : '';
+}
+
+function facCloneRender(){
+  const f = state.fac, c = f.clone;
+  if(!c) return;
+  // whatever was focused has to come back after innerHTML replaces it
+  const live = document.activeElement || {};
+  const keep = (live.id === 'fcName' || live.id === 'fcLabel') ? live.id : '';
+  const at = keep ? live.selectionStart : 0;
+  const rows = f.factions.filter(r => r.slot !== 'slave');
+  const p = c.plan || null;
+  const full = facFull();
+  document.getElementById('modal').innerHTML = `
+    <h2>Add a faction <span class="pill">${esc(f.mod || state.src)}</span></h2>
+    <div class="mbody" style="padding:14px 16px">
+      <div class="count fcintro">
+        A faction is added by <b>copying one that already works</b> — into all
+        twelve files that name a faction slot, plus its symbols, banners and unit
+        cards. The clone starts identical to the faction it copies; change what
+        you want afterwards in this tab and the editors beside it.
+      </div>
+      ${full ? `<div class="w-warn fcmsg">This mod already uses all ${f.limit}
+        of the engine's faction slots, so nothing can be added until one goes.</div>` : ''}
+      <div class="fcgrid">
+        <label class="v3f"><span>Copy from</span>
+          <select onchange="facCloneSet('source', this.value)">
+            ${rows.map(r => `<option value="${q1(esc(r.slot))}"${
+              r.slot === c.source ? ' selected' : ''
+            }>${esc(r.label)}</option>`).join('')}
+          </select></label>
+        <label class="v3f"><span>New faction slot</span>
+          <input type="text" id="fcName" value="${q1(esc(c.name))}"
+            placeholder="e.g. gondor_south" spellcheck="false"
+            oninput="facCloneSet('name', this.value)"></label>
+        <label class="v3f"><span>Shown name <span class="count">(optional)</span></span>
+          <input type="text" id="fcLabel" value="${q1(esc(c.label))}"
+            placeholder="what the game calls it"
+            oninput="facCloneSet('label', this.value)"></label>
+      </div>
+      <div class="count fcintro">
+        The slot is what every other file points at, so it has to be one bare
+        word: lower case, digits and underscores. It cannot be renamed later
+        without orphaning every line that names it. The shown name is the only
+        text filled in for you — the faction's other thirty text entries stay
+        the donor's until you edit them.
+      </div>
+      <label class="fcart"><input type="checkbox"${c.art ? ' checked' : ''}
+        onchange="facCloneSet('art', this.checked)">
+        <span>Copy the art too — symbols, banners, captain cards and the unit
+        card folders, each renamed for the new slot</span></label>
+      <div id="fcPlan">${facClonePlanHtml()}</div>
+    </div>
+    <div class="foot">
+      <span class="count" id="fcNote">${c.busy ? 'Working out what would change…' : ''}</span>
+      <button onclick="facCloneClose()">Cancel</button>
+      <button class="primary"${(p && p.ok && !c.busy) ? '' : ' disabled'}
+        onclick="facCloneApply()">Create faction</button>
+    </div>`;
+  if(keep){
+    const box = document.getElementById(keep);
+    if(box){ box.focus(); box.setSelectionRange(at, at); }
+  }
+}
+
+/* The plan, file by file. A file that would gain nothing is shown greyed with
+   the reason rather than hidden: "descr_character.txt — sicily is not named in
+   it" is a fact about the mod worth reading before you write, not noise. */
+function facClonePlanHtml(){
+  const c = state.fac.clone, p = c.plan;
+  if(c.err) return `<div class="w-warn fcmsg">${esc(c.err)}</div>`;
+  if(!p) return `<div class="count fcintro">Name the new faction to see exactly
+    which files would change, and by how much.</div>`;
+  if((p.errors || []).length)
+    return `<div class="w-warn fcmsg">${p.errors.map(esc).join('<br>')}</div>`;
+  const files = p.files || [];
+  return `<div class="fcplan">
+    <div class="k">What would be written
+      <span class="count">${files.filter(x => x.written).length} file(s)${
+        p.asset_files ? ` · ${p.asset_files} art file(s), ${
+          (p.asset_bytes / 1048576).toFixed(1)} MB` : ''}</span></div>
+    ${files.map(x => `<div class="fcrow${x.written ? '' : ' off'}">
+      <span class="fcc">${x.written ? '+' + x.count : '—'}</span>
+      <span class="fcn">${esc(x.label)}
+        <span class="fcf">${esc(x.rel)}</span></span>
+      <span class="fcw count">${esc(x.written ? (x.note || '') : (x.skipped || ''))}</span>
+    </div>`).join('')}
+    ${(p.review || []).length ? `<div class="fcrow fcrev">
+      <span class="fcc">—</span>
+      <span class="fcn">Left for you to decide
+        <span class="fcf">${p.review.map(r => esc(r.rel) + ' (' + r.hits + ')').join(', ')}</span></span>
+      <span class="fcw count">the donor is named here in ways that are a
+        judgement, not a list — a trait named after it, an ancillary's condition,
+        a prebattle speech</span></div>` : ''}
+    ${(p.warnings || []).map(w => `<div class="w-warn fcmsg">${esc(w)}</div>`).join('')}
+    ${(p.notes || []).map(n => `<div class="fcmsg count">${esc(n)}</div>`).join('')}
+  </div>`;
+}
+
+function facCloneClose(){ if(state.fac) state.fac.clone = null; closeModal(); }
+
+function facCloneSet(key, value){
+  const c = state.fac.clone;
+  if(!c) return;
+  // the slot is typed as it will be written: one lower-case word
+  c[key] = (key === 'name')
+    ? String(value).toLowerCase().replace(/[^a-z0-9_]+/g, '_') : value;
+  facCloneRender();
+  clearTimeout(state.fac._fcT);
+  state.fac._fcT = setTimeout(facClonePreview, key === 'art' ? 0 : 280);
+}
+
+async function facClonePreview(){
+  const c = state.fac && state.fac.clone;
+  if(!c) return;
+  if(!c.name){ c.plan = null; c.err = ''; facClonePaint(); return; }
+  c.busy = true; c.err = '';
+  const note = document.getElementById('fcNote');
+  if(note) note.textContent = 'Working out what would change…';
+  let r;
+  try{ r = await api.post('/api/factions/clone_plan', facCloneBody()); }
+  catch(e){ r = {error: String((e && e.message) || e)}; }
+  finally{ c.busy = false; }
+  if(!state.fac || state.fac.clone !== c) return;   // the dialog moved on
+  c.plan = r.plan || null;
+  // an error the plan already carries is drawn in place; anything else is ours
+  c.err = (r.error && !(r.plan && (r.plan.errors || []).length)) ? r.error : '';
+  facClonePaint();
+}
+
+function facCloneBody(){
+  const c = state.fac.clone;
+  return {mod: state.src, source: c.source, new: c.name,
+          label: c.label, art: !!c.art};
+}
+
+async function facCloneApply(){
+  const f = state.fac, c = f.clone, p = c && c.plan;
+  if(!p || !p.ok || c.busy) return;
+  const files = (p.files || []).filter(x => x.written);
+  if(!confirm(`Add faction ${c.name}, copied from ${c.source}?\n\n`
+    + files.map(x => `  ${x.rel}  +${x.count}`).join('\n')
+    + (p.asset_files ? `\n  ${p.asset_files} art file(s), copied and renamed` : '')
+    // the review files live in `review`, not in the note, so this dialog names
+    // them itself — it has no row to draw them in the way the plan pane does
+    + ((p.review || []).length ? '\n\nLeft for you to decide:\n'
+        + p.review.map(r => `  ${r.rel}  (${r.hits} mention(s))`).join('\n') : '')
+    + '\n\nEvery file is backed up first, and 🕑 Log undoes the whole faction '
+    + 'in one go.\n\n' + (p.notes || []).join('\n\n'))) return;
+  c.busy = true;
+  facCloneRender();
+  let res;
+  try{ res = await api.post('/api/factions/clone_apply', facCloneBody()); }
+  finally{ c.busy = false; }
+  if(res.error){ c.err = res.error; facCloneRender(); toast('✗ ' + res.error, 6000); return; }
+  activity('added faction', `${c.name}, cloned from ${c.source} in ${state.src}`);
+  const keep = c.name;
+  f.clone = null;
+  closeModal();
+  toast(`Added ${keep} — ${res.files.length} file(s), ${res.asset_files} art file(s). `
+        + '🕑 Log can undo it.', 5000);
+  await loadFactions();
+  facOpen(keep);
 }

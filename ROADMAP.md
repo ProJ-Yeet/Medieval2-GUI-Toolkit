@@ -30,8 +30,8 @@ running the test suite, and running `graphify update .`.
   server-side with backup/undo on every write.
 - **Don't vendor their `dist/`** or any bulk assets from the reference repo.
 - **Versioning:** **2.0.0 shipped at the end of Phase 14** (2026-08-19), with
-  every V2 editor module complete. Release titles are "M2 GUIkit
-  vX.Y.Z — …".
+  every V2 editor module complete. Release titles are "M2 GUI-Kit
+  VX.Y.Z — …".
   *This supersedes the original rule, which was "stay on 1.x until the Campaign
   Map Editor lands".* The reason it changed: 1.9.9 shipped a unit-transfer tool,
   and what is in 2.0.0 is a different program — a rebrand, six new editor
@@ -62,6 +62,7 @@ running the test suite, and running `graphify update .`.
 | 15 | 3D model viewer (v2.1.0) | L | ✅ done (15a–15d) |
 | 15e | Port between mods, M2EX flag, docked viewer (v2.1.2) | M | ✅ done |
 | 15f | Strat-map + card cleaners, faction skins, resizable viewer (v2.1.3) | M | ✅ done |
+| 15g | Add a faction (clone across twelve files) + viewer UV mode (v2.1.8) | M | ✅ done |
 | 16 | Campaign Map Editor — flagship, LAST | XL | 5+ (16a–16e) |
 
 Dependency shape: 1 and 2 are independent; 3 gates 4; 4 gates every editor
@@ -1702,6 +1703,89 @@ grows from two tabs to four, and the model viewer stops taking the screen over.
   that really carry two sheets are unchanged.
 
 Notes: `merge/RELEASE_2_1_3.md`. Suite: 65 of 65 modules.
+
+## Phase 15g — Add a faction, and UV mode ✅ (v2.1.8, done 2026-08-31)
+
+Two unrelated asks in one session, both extending a module that already existed.
+
+**Add a faction** (`unittransfer/factionclone.py`, new). Phase 11 shipped the
+Factions editor with a written refusal: a slot lives in nine files, so one that
+exists only in `descr_sm_factions.txt` is a mod that will not load, therefore no
+create and no delete. The refusal was right about the problem and wrong about
+the conclusion — the answer is to write them all. **Twelve, as it turned out**,
+not nine: grepping the installed mods for a slot found `export_descr_buildings`
+(101 and 424 `requires factions { … }` clauses — what lets a faction build and
+recruit at all), `descr_sounds_accents` and `descr_faction_standing` on top of
+the nine the phase-11 docstring listed. The count in that docstring was a
+plausible number nobody had measured, which is exactly the kind this project
+does not keep. TWCenter's own step-by-step
+(`Reference/TWCenter/Creating a world - adding a new faction/`) is the spec, and
+its method is why this is safe: **it never invents a value.** Every step is
+"find where the donor is named and name the clone too, with the same value", so
+there is no question of what colour or roster the new faction gets. Nine cloners,
+not one search-and-replace, because the donor's name is doing something different
+in each file — a record to re-head, a section to copy, a braced block, a shared
+comma list to join, length-prefixed texture records (straight to
+`modeldb.add_texture_factions`, which already fixes the group counts).
+
+Art is **found, not listed**: anything under `ui`, `menu` or `banners` carrying
+the slot as a token, copied and renamed. Roots whose art a *line* points at
+(`models_strat/textures`, `loading_screen`) are deliberately excluded — the
+clone's own copies of those lines already name the donor's file, so copying it
+would leave a duplicate nothing refers to.
+
+`descr_strat.txt` is **reported, not written**, and that is the ruling to keep:
+a campaign entry is a region, a settlement, a starting army and map coordinates,
+and two factions cannot begin in the same settlement. There is no donor answer to
+copy, so the plan says so in as many words. Deleting a faction stays refused for
+the same reason — it needs a decision, not a copy.
+
+Four bugs found by testing, each worth remembering:
+- **The game files are CRLF and `$` sits after the `\r`.** Three of the nine
+  cloners silently matched nothing and two more ate the `\r` and left the file
+  half CRLF. Cloners now see `\n` throughout and the file gets its own ending
+  back on write. A cloner that changes nothing and reports no error was the worst
+  failure available here, so the test asserts a per-file non-zero count.
+- **`_` is a word character in a data file and a separator in a text key.**
+  One boundary found `{SICILY}` and none of the sixty `EMT_` keys. Two helpers
+  now, `_tok` and `_key_tok`, and the filename matcher takes the *longest*
+  roster slot in a name so cloning `sicily` never steals `sicily_clone`'s art.
+- **`add_texture_factions` reads ONE entry's raw text.** Handed the whole
+  modeldb it finds no groups and changes nothing — a clone with no skins.
+- **A file may spell the same list two ways.** `descr_faction_standing.txt`
+  writes both `factions { … }` and `exclude_factions { … }`, and which one it
+  prefers is per mod: Reforged has 96 and 20, DaC has 164 and **none**. Matching
+  only the second would have cloned nothing at all in one of the two installed
+  mods — and the count that revealed it came from grepping both, not from
+  reading one.
+
+**What it refuses to guess at, it counts and names.** `REVIEW_FILES` +
+`review_mentions`: traits named after the faction (`Trait Fearssicily`, and the
+engine effect `Combat_V_Faction_Sicily`), an ancillary's `and FactionType sicily`
+— one operand of a boolean, not a list — and prebattle speeches. Appending to
+any of those would invent a trait the engine has never heard of or silently
+rewrite a condition. So they are reported with hit counts and left to the Traits
+and Ancillaries editors, which already open them.
+
+- **Exit:** met. `tests/test_factionclone.py` 64/64 against the real mods,
+  read-only; `tests/test_factionclone_apply.py` 30/30 writes a synthetic mod and
+  undoes it, proving restore is byte-exact and nothing is left behind. That
+  second suite exists because `transfer.undo` deletes a created path with
+  `unlink()`, which raises on a directory and is swallowed — so copied art is
+  listed in the manifest one file at a time, never as a folder.
+
+**Show UVs** (`web/js/viewer3d.js`). Paints the UV coordinate instead of the art
+in the same space the sampler uses, so the tiling the shader comment has always
+described is now visible: blue main sheet, amber attachment sheet, dark for the
+repeats, red where the pair restarts. 32 checker cells to a sheet is **measured,
+not picked** — real parts span 0.07 to 0.33 of u each, so a coarser grid gives a
+head less than one whole cell and says nothing about it. Verified in-browser on a
+real pair (body main, bow and quiver attachment) and on a lone-sheet mount, which
+correctly shows no amber and drops that row from the legend.
+
+Notes: `merge/RELEASE_2_1_8.md`. Suite: 71 of 71 modules.
+
+---
 
 ## Phase 16 — Campaign Map Editor — flagship, LAST (5+ sessions)
 

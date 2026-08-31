@@ -124,19 +124,65 @@ void main(){
    a 1024 skin a power of two instead of pushing the atlas to 2048 wide. Entries
    that really do carry an attachment sheet (the Balrog, hero models with a
    separate weapon sheet) are untouched and still glued. */
+/* UV mode paints the coordinate instead of the art, in the SAME space the
+   texture sample uses — `vUv` as the modeller authored it, main sheet 0..1,
+   attachment sheet 1..2, everything outside a repeat. Nothing is clamped or
+   folded here either, for the same reason the sampler does not: the wrapping is
+   the thing being shown.
+
+   Four facts, one picture:
+
+     * **the checker** — 32 cells to a sheet, so a stretched cell is art
+       stretched over that triangle and a mirrored one is a flipped shell.
+       32 is measured, not picked: the parts of a real unit span 0.07 to 0.33
+       of u each (a head 0.07, a body 0.30, a leg 0.33), so a coarser grid
+       gives a head less than one whole cell and says nothing about it;
+     * **the tint** — blue is the main sheet, amber the attachment sheet, and it
+       is `mod(floor(u), 2.0)` that decides, never a per-part rule, because a
+       group whose UVs run 0.41..1.38 really is one piece of art crossing the
+       seam and has to read as both;
+     * **the dimming** — the tile the art was authored in stays bright and every
+       repeat of it goes dark, which is what makes the tiling visible as tiling;
+     * **the lines** — white at a sheet edge, red where the whole pair starts
+       over. Fixed width in UV space, not screen space, because `fwidth` wants
+       an extension this viewer does not ask for.
+
+   A lone sheet (`uUScale` 1.0) has no attachment half, so it is all blue and
+   its pair boundary is every integer u instead of every second one. */
+const V3_UV = `
+vec3 v3UvPaint(vec2 uv, float pair){
+  float period = pair > 0.5 ? 2.0 : 1.0;   // how wide one repeat of the art is
+  float attach = pair > 0.5 ? mod(floor(uv.x), 2.0) : 0.0;
+  vec3 col = mix(vec3(0.29, 0.51, 0.80), vec3(0.88, 0.56, 0.20), attach);
+  vec2 cell = floor(uv * 32.0);
+  col *= mix(0.60, 1.0, mod(cell.x + cell.y, 2.0));
+  // tile (0,0) is the art as authored; everything else on screen is the wrap
+  if(floor(uv.x / period) != 0.0 || floor(uv.y) != 0.0) col *= 0.42;
+  const float w = 0.004;   // a third of a cell; thicker and it eats the grid
+  float edge = min(abs(uv.x - floor(uv.x + 0.5)), abs(uv.y - floor(uv.y + 0.5)));
+  col = mix(col, vec3(1.0), (1.0 - smoothstep(0.0, w, edge)) * 0.85);
+  float restart = abs(uv.x / period - floor(uv.x / period + 0.5)) * period;
+  col = mix(col, vec3(1.0, 0.24, 0.34), (1.0 - smoothstep(0.0, w, restart)) * 0.9);
+  return col;
+}`;
+
 const V3_FRAG = `
 precision mediump float;
 varying vec3 vNormal; varying vec2 vUv;
 uniform sampler2D uTex;
-uniform float uHasTex, uFlat, uUScale;
+uniform float uHasTex, uFlat, uUScale, uUv;
 uniform vec3 uKey, uEye;
 ${V3_ENV}
+${V3_UV}
 void main(){
   vec4 base = uHasTex > 0.5
     ? texture2D(uTex, vec2(vUv.x * uUScale, vUv.y))
     : vec4(0.72, 0.66, 0.56, 1.0);
   if(base.a < 0.35) discard;          // the alpha channel is a cut-out mask
   if(uFlat > 0.5){ gl_FragColor = vec4(0.92, 0.94, 0.98, 1.0); return; }
+  // the coordinate stands in for the art, and is then lit like the art, so the
+  // form still reads and you can see which way a shell is wrapped over it
+  if(uUv > 0.5) base.rgb = v3UvPaint(vUv, uUScale < 0.75 ? 1.0 : 0.0);
 
   vec3 n = normalize(vNormal);
   // ambient straight out of the environment, so a surface facing the sky picks
@@ -244,7 +290,7 @@ async function v3Begin(mod, entry, host){
   // has no one path to name it by
   v3 = {mod, entry, info, host: host || '', lod: 0, skin: 0,
         geo: null, tex: null, texAtt: null, hidden: {}, variant: {},
-        wire: false, spin: false,
+        wire: false, spin: false, uv: false,
         yaw: 0.6, pitch: 0.25, dist: 3, centre: [0,0,0], gl: null, err: ''};
   // open on the first LOD the mod actually ships — an entry whose lod0 lives in
   // a .pack still has lod1 and lod2 on disk more often than not
@@ -351,14 +397,18 @@ function v3Render(){
         <div class="v3btns">
           <button id="v3spin" class="${v3.spin?'on':''}" onclick="v3Toggle('spin')">Rotate</button>
           <button id="v3wire" class="${v3.wire?'on':''}" onclick="v3Toggle('wire')">Wireframe</button>
+          <button id="v3uv" class="${v3.uv?'on':''}" onclick="v3Toggle('uv')"
+            ${(v3.geo && !v3.geo.has_uvs) ? 'disabled title="This model carries no UV set"' : 'title="Paint the UV coordinate instead of the art: blue is the main sheet, amber the attachment sheet, and the dark tiles are the sheets repeating"'}>Show UVs</button>
           <button onclick="v3Frame()">Recentre</button>
         </div>
+        <div id="v3uvkey"></div>
         <div class="v3parts" id="v3parts"></div>
         <div class="v3facts" id="v3facts"></div>
       </aside>
     </div>`;
   v3Parts();
   v3Facts();
+  v3UvKey();
   const c = document.getElementById('v3canvas');
   if(c && v3.geo) v3Start(c);
 }
@@ -592,6 +642,26 @@ function v3Toggle(what){
   v3[what] = !v3[what];
   const b = document.getElementById('v3' + what);
   if(b) b.classList.toggle('on', v3[what]);
+  if(what === 'uv') v3UvKey();
+}
+
+/* What the four colours mean, on screen only while they are on screen. The
+   attachment row is dropped for an entry that names one sheet, because that
+   model has no amber on it to explain — same read as `v3SoloSheet`. */
+function v3UvKey(){
+  const host = document.getElementById('v3uvkey');
+  if(!host) return;
+  if(!v3 || !v3.uv){ host.className = ''; host.innerHTML = ''; return; }
+  const pair = !!(v3 && v3.texAtt);
+  const row = (css, text) => `<i style="background:${css}"></i><span>${text}</span>`;
+  host.className = 'v3uvkey';
+  host.innerHTML = '<b>UV mode</b>'
+    + row('#4a82cc', 'the main sheet — u 0 to 1')
+    + (pair ? row('#e08f33', 'the attachment sheet — u 1 to 2') : '')
+    + row('#2a3a4d', `outside the ${pair ? 'pair' : 'sheet'} — the art repeating`)
+    + row('#ff3d57', 'where the tiling starts over')
+    + `<span style="grid-column:1/-1">32 checker cells to a sheet: a stretched
+       cell is art stretched over that triangle.</span>`;
 }
 function v3Frame(){
   if(!v3 || !v3.geo) return;
@@ -646,7 +716,8 @@ function v3Start(canvas){
     uKey: gl.getUniformLocation(prog,'uKey'),
     uEye: gl.getUniformLocation(prog,'uEye'),
     uFlat: gl.getUniformLocation(prog,'uFlat'),
-    uUScale: gl.getUniformLocation(prog,'uUScale')
+    uUScale: gl.getUniformLocation(prog,'uUScale'),
+    uUv: gl.getUniformLocation(prog,'uUv')
   };
   // the backdrop: its own tiny program over one full-screen quad
   v3.bg = v3Program(gl, V3_BG_VERT, V3_BG_FRAG);
@@ -784,6 +855,11 @@ function v3Apply(){
          + 'repeat here', true);
   }
   v3.texture = t;
+  // The legend names the sheets, and whether there are two of them is decided
+  // right here — a skin loads asynchronously, so a legend drawn before this ran
+  // is describing a pair as a lone sheet (or the other way round after a skin
+  // change). Repainting it with the decision keeps the two in step.
+  v3UvKey();
 }
 
 function v3Draw(){
@@ -862,6 +938,8 @@ function v3Draw(){
   gl.uniform1f(v3.loc.uHasTex, textured ? 1 : 0);
   // 0.5 for a glued pair, 1.0 for a lone sheet — v3Apply sets it with the bind
   gl.uniform1f(v3.loc.uUScale, v3.uScale || 0.5);
+  // UV mode needs the coordinate, not the art, so it survives a missing texture
+  gl.uniform1f(v3.loc.uUv, (v3.uv && g.has_uvs) ? 1 : 0);
 
   const visible = v3Visible();
   gl.uniform1f(v3.loc.uFlat, 0);
@@ -873,6 +951,7 @@ function v3Draw(){
   if(v3.wire){
     gl.uniform1f(v3.loc.uFlat, 1);
     gl.uniform1f(v3.loc.uHasTex, 0);
+    gl.uniform1f(v3.loc.uUv, 0);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, v3.bLines);
     for(const idx of visible){
       const grp = g.groups[idx];

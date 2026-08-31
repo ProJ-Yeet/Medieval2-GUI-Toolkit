@@ -265,8 +265,13 @@ check("and the head modifier rides along", ov["factions"][1]["modifier"]
       == "spawned_on_event")
 check("the roster says how full it is", ov["limit"] == fa.FACTION_LIMIT
       and ov["count"] == 2)
-check("creating and deleting are refused, with the reason",
-      ov["actions"] == ["edit"] and "eight or nine files" in ov["refused"])
+# This module still only EDITS. Adding a faction is a different endpoint
+# (factionclone), and the overview says so with `can_clone`; deleting one has
+# no donor to copy an answer from and stays refused.
+check("this module edits, and says adding is elsewhere and deleting is refused",
+      ov["actions"] == ["edit"] and ov["can_clone"] is True
+      and "will not remove a faction" in ov["refused"]
+      and "twelve files" in ov["refused"])
 
 d = fa.detail(mod, "sicily")
 check("detail carries the record, its spans and its text key",
@@ -301,8 +306,8 @@ check("the rest of the file is untouched",
       and [u.value for u in after.records[1].repeats] == ["Miners", "Peasants"])
 
 p = fa.plan(mod, {"faction": "sicily", "action": "add"})
-check("creating a faction is refused, with the reason",
-      not p.payload()["ok"] and "eight or nine files" in p.errors[0])
+check("this endpoint still will not create one — that is factionclone's job",
+      not p.payload()["ok"] and "twelve files" in p.errors[0])
 p = fa.plan(mod, {"faction": "sicily", "action": "delete"})
 check("so is deleting one", not p.payload()["ok"])
 p = fa.plan(mod, {"faction": "sicily", "action": "edit",

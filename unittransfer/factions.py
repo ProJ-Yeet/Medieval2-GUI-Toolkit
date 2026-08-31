@@ -33,13 +33,14 @@ Measured over those 90 factions, and each one shaped something here:
 
 And two things this module deliberately does **not** do:
 
-**It does not add or delete a faction.** A faction slot lives in eight or nine
-files — ``descr_strat.txt``, ``expanded.txt``, the banners, ``descr_names.txt``,
-the UI folders, the EDU's ownership lines, every ``requires factions { … }``
-clause — and TWCenter has a step-by-step tutorial for it precisely because one
-file is never the job. A faction that exists only here is a mod that will not
-load, so the module edits and says why it will not create. Same ruling as the
-cultures tab in :mod:`unittransfer.minorfiles`, for the same reason.
+**It does not delete a faction, and it adds one only by cloning.** A faction
+slot lives in twelve files — ``descr_strat.txt``, ``expanded.txt``, the banners,
+``descr_names.txt``, the UI folders, the EDU's ownership lines, every
+``requires factions { … }`` clause — and TWCenter has a step-by-step tutorial
+for it precisely because one file is never the job. Doing all twelve is
+:mod:`unittransfer.factionclone`, which copies a working faction's answer into
+each; this module keeps the editing. Deleting is refused outright, because
+there is no donor to copy from — see :data:`REFUSED`.
 
 **It does not claim a missing picture is a fault.** ``symbol`` and
 ``rebel_symbol`` name ``.CAS`` *3D strat models*, not textures — those belong to
@@ -453,15 +454,21 @@ def check_file(rf: fr.RecordFile, mod=None) -> List[Dict]:
 # what the editor's list and its detail pane are made of
 
 
-#: this module edits records; it does not create or destroy faction slots
+#: this module edits records; adding one is :mod:`unittransfer.factionclone`
 ACTIONS: Tuple[str, ...] = ("edit",)
 
-REFUSED = ("A faction slot lives in eight or nine files at once — descr_strat, "
+#: Deleting is still refused, and for the reason creating used to be. Removing a
+#: slot means finding every ``ownership`` line, every ``requires factions { … }``
+#: clause, every texture record and every campaign reference that names it and
+#: deciding what each should say INSTEAD — and there is no donor to copy that
+#: answer from, which is exactly what makes cloning safe and deleting not.
+REFUSED = ("A faction slot lives in twelve files at once — descr_strat, "
            "expanded.txt, the banners, descr_names, the UI folders, every unit's "
-           "ownership line and every `requires factions { … }` clause. A faction "
-           "that exists only in this one is a mod that will not load, so this "
-           "module changes factions and leaves creating and deleting them to the "
-           "step-by-step job they are.")
+           "ownership line and every `requires factions { … }` clause. Deleting "
+           "one means deciding what all of those should say instead, and nothing "
+           "can work that out for you, so this module will not remove a faction. "
+           "Adding one it can do: `Add a faction` writes all twelve files at "
+           "once, copying the donor's answer into each.")
 
 
 def overview(mod) -> Dict:
@@ -470,6 +477,9 @@ def overview(mod) -> Dict:
     out: Dict = {"mod": getattr(mod, "name", ""), "file": REL,
                  "exists": path.is_file(), "factions": [], "findings": 0,
                  "count": 0, "actions": list(ACTIONS), "refused": REFUSED,
+                 # the roster can be added to (by cloning) but never subtracted
+                 # from — see REFUSED for which half is which and why
+                 "can_clone": True,
                  # 0 means "no ceiling to count against": an M2EX mod has
                  # replaced the engine table this number came out of
                  "limit": 0 if getattr(mod, "m2ex", False) else FACTION_LIMIT,

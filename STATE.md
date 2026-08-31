@@ -1,7 +1,70 @@
 # STATE — Medieval 2 GUI Toolkit V2
-_Updated: 2026-08-30 · **v2.1.7 released** · a subrelease on top of 2.1.6_
+_Updated: 2026-08-31 · **v2.1.8 released** · a subrelease on top of 2.1.7_
 
-## v2.1.7
+## v2.1.8
+**A subrelease, same standing as 2.1.2 through 2.1.7.** Two asks in one session,
+both extending a module that already existed, and neither of them a bug.
+
+**A faction can be added, by cloning one that works** (`unittransfer/factionclone.py`,
+new; `/api/factions/clone_plan|clone_apply`; the **＋ Add a faction** dialog in
+`web/js/factions.js`). Phase 11 shipped the Factions editor with a written
+refusal — a slot lives in nine files, so one that exists only in
+`descr_sm_factions.txt` is a mod that will not load, therefore no create. Right
+about the problem, wrong about the conclusion: the answer is to write them all.
+**Twelve, as it turned out.** Grepping the installed mods for a slot found
+`export_descr_buildings` (the `requires factions { … }` clauses that let a
+faction build and recruit at all), `descr_sounds_accents` and
+`descr_faction_standing` on top of the nine that docstring listed — a plausible
+number nobody had measured, which is the kind this project does not keep. Every
+surface that said nine now says twelve.
+
+TWCenter's own step-by-step (`Reference/TWCenter/Creating a world - adding a new
+faction/`) is the spec, and its method is why this is safe: **it never invents a
+value.** Every step is "find where the donor is named and name the clone too,
+with the same value", so there is no question of what colour or roster the new
+faction gets. Nine cloners rather than one search-and-replace, because the
+donor's name is doing something different in each file — a record to re-head, a
+section to copy, a braced block, a shared comma list to join, length-prefixed
+texture records. Art is **found, not listed**: anything under `ui`, `menu` or
+`banners` carrying the slot as a token. One transfer id covers the lot, so undo
+puts the whole faction back out of existence in one go.
+
+**Three files name the donor as a judgement** — a trait named after it, an
+ancillary's `FactionType` operand, a prebattle speech — and are counted and
+reported, never appended to. `descr_strat` is reported and not written for the
+same class of reason: two factions cannot start in the same settlement, so there
+is no donor answer that would still be right. **Deleting stays refused**, and
+now for a sharper reason than phase 11's: a clone copies the donor's answer, a
+delete would have to invent one.
+
+Four bugs the tests caught, each worth remembering: the game files are **CRLF**
+and `$` sits after the `
+` (three cloners matched nothing, two ate the `
+`);
+`_` is a word character in a data file and a **separator** in a text key (one
+boundary found `{SICILY}` and none of the sixty `EMT_` keys); `add_texture_factions`
+reads **one entry's** raw text, not the file (handed the whole modeldb it finds
+no groups — a clone with no skins); and a file may spell the same list two ways
+(`descr_faction_standing` writes both `factions { … }` and `exclude_factions
+{ … }`, and DaC has 164 of the first and **none** of the second, so matching only
+the second would have cloned nothing at all in one of the two installed mods).
+`tests/test_factionclone.py` 64/64 against the real mods, read-only;
+`tests/test_factionclone_apply.py` 30/30 writes a synthetic mod and undoes it
+byte-exact. That second suite exists because `transfer.undo` deletes a created
+path with `unlink()`, which raises on a directory and is swallowed — so copied
+art is listed in the manifest one file at a time, never as a folder.
+
+**Show UVs in the 3D viewer** (`web/js/viewer3d.js`). Paints the UV coordinate
+instead of the art in the same space the sampler uses, so the tiling the shader
+comment has always described is visible: blue main sheet, amber attachment
+sheet, dark for the repeats, red where the pair restarts. 32 checker cells to a
+sheet is **measured, not picked** — real parts span 0.07 to 0.33 of u each, so a
+coarser grid gives a head less than one whole cell and says nothing about it.
+Verified in-browser on a real pair (body main, bow and quiver attachment) and on
+a lone-sheet mount, which correctly shows no amber and drops that row from the
+legend.
+
+## Previously (v2.1.7)
 **A subrelease, same standing as 2.1.2 through 2.1.6.** Both halves are the
 modeldb reader being wrong about a file that was not, and they arrived together
 from two mods on one evening.
@@ -44,7 +107,7 @@ unconditionally, and a modeldb with no leading `blank` sentinel counts every ent
 as real. Thera_Redux is one, so the check failed on the mod rather than on the
 tool. It now uses the same rule `ModelDb.to_text` writes back with.
 
-## Previously (v2.1.6)
+## Earlier still (v2.1.6)
 **A subrelease, same standing as 2.1.2 through 2.1.5.** Three things, and the
 first two are one thread.
 
@@ -83,7 +146,7 @@ closing brace whatever order the list is in, and edits existing lines in place b
 the EDB line they came from, so the file is byte-identical to what the old push
 produced. A batch keeps its pick order.
 
-## Earlier still (v2.1.5)
+## Before that (v2.1.5)
 **v2.1.5 IS A SUBRELEASE, same standing as 14j, 2.1.2, 2.1.3 and 2.1.4 — real
 features, not folded into Phase 16 because Phase 16 (the Campaign Map Editor) is
 a different program.** All of it is the modeldb cleanup deciding what is dead,
@@ -707,6 +770,7 @@ underneath. Both fixed; see ROADMAP.md's 14f outcome.
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
+| 15g — add a faction, viewer UV mode | **done** | **v2.1.8.** `unittransfer/factionclone.py` (new) + `/api/factions/clone_plan\|clone_apply` + the **＋ Add a faction** dialog in `web/js/factions.js`. Clones a donor into all **twelve** files that name a slot — nine plus `export_descr_buildings` (the `requires factions { … }` clauses that let it build and recruit), `descr_sounds_accents` and `descr_faction_standing`, found by grepping the mods rather than trusting phase 11's unmeasured "nine" — plus convention-named art (`ui`/`menu`/`banners`), one transfer id for the lot. Three more files name the donor as a *judgement* (a trait named after it, an ancillary's `FactionType` operand, a prebattle speech) and are counted and reported, never appended to. Phase 11's "no create" refusal is retired; **delete stays refused** — a clone copies the donor's answer, a delete would have to invent one. `descr_strat` is reported, never written: two factions cannot start in the same settlement. Four bugs the tests caught — the mods are **CRLF** and `$` sits after the `\r` (three cloners matched nothing, two ate the `\r`); `_` is a word character in a data file and a **separator** in a text key (one boundary found 1 of 61 keys); `add_texture_factions` takes **one entry's** raw text, not the file; and a file may spell the same list two ways (`descr_faction_standing` writes `factions { … }` *and* `exclude_factions { … }`, and DaC has none of the second). `test_factionclone` 64/64 (real mods, read-only), `test_factionclone_apply` 30/30 (synthetic mod, written then undone byte-exact). Viewer **Show UVs**: paints the coordinate in the sampler's own space, 32 cells/sheet because real parts span 0.07–0.33 of u |
 | 15e — port, M2EX, docked viewer | **done** | **v2.1.2.** `unittransfer/portrecords.py` + `web/js/portui.js`: copy a trait/ancillary between installed mods (block + triggers + text keys, one job); `unittransfer/modflags.py`: per-mod M2EX flag drops only the five engine-ceiling finding kinds, everything else still checked; the 3D viewer (`v3Mount`/`v3Unmount`) docks beside the Unit Editor and BMDB list instead of taking the modal over. Plus a dozen fixes, the sharpest being a silent one: a brand-new text key's wording was discarded if typed in the same sitting as the key (Traits/Ancillaries/Minor Files), because the words box was bound to the key's value at render time rather than to the field. `test_modflags` 18/18, `test_port` 50/50 |
 | 0–12 | done | see ROADMAP.md for each phase's exit criteria |
 | UX correction pass | done | 17 of 18 items; the 18th (prose sweep) is now finished |
