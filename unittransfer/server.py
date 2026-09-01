@@ -213,7 +213,7 @@ Buildings mode (export_descr_buildings.txt, see :mod:`unittransfer.buildings`)
                                  -> every recruit pool in the mod that trains one
                                     unit, so its numbers can be compared (and
                                     edited) across all the trees at once
-  GET  /building_icon?mod=&culture=&level=&kind=
+  GET  /building_icon?mod=&culture=&level=&kind=&any=
                                  -> the small / constructed icon, falling back to
                                     unpacked vanilla art, then to a placeholder
   POST /api/buildings/plan|/apply-> preview then write EDB + building-name edits
@@ -2568,7 +2568,10 @@ class Handler(BaseHTTPRequestHandler):
             if name and culture and level and name in self.registry.names():
                 mod = self.registry.get(name)
                 src, source = mod.find_building_icon(
-                    culture, level, kind, config.get_vanilla_ui_root())
+                    culture, level, kind, config.get_vanilla_ui_root(),
+                    # `any=1`: the caller is not showing a culture, so a level
+                    # only one of them draws is still that level's art
+                    (q.get("any") or [""])[0] == "1")
                 if src is not None:
                     data = self.registry.icons.png_bytes(src)
                 else:

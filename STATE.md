@@ -1,5 +1,77 @@
 # STATE — Medieval 2 GUI Toolkit V2
-_Updated: 2026-09-01 · **v2.1.9 released** · a subrelease on top of 2.1.8_
+_Updated: 2026-09-02 · **v2.1.10 released** · a subrelease on top of 2.1.9_
+
+## v2.1.10
+**A subrelease, same standing as 2.1.2 through 2.1.9.** Three asks: the model
+beside a transfer, the building's art beside a recruit pool, and that pool's
+row laid out as two halves instead of four columns.
+
+**The 3D column, over the composer** (`web/js/transfer.js`, `cmpPrev*`; the
+`#cmpSplit` wrapper in `renderComposer`). The third host for `v3Mount` after the
+unit editor's and BMDB's, and a copy of the editor's shape rather than a
+refactor of it: the three differ in what they list, which mod they draw it from
+and which setting turns them off, and the shared part is already `v3Mount`
+itself. The three careful things are the editor column's three — the canvas is
+DETACHED across a re-render rather than rebuilt (`renderComposer` runs on every
+tick box, so rebuilding would refetch a 30 MB mesh per click), there is only
+ever one viewer on the page, and folding pauses the draw loop without giving up
+the mesh.
+
+**What it lists is BOTH MODS.** A transfer is the one screen where the models on
+the page belong to two different mods: the source unit's entries, and — once a
+base or replaced unit is picked — that unit's own out of the destination, each
+`<optgroup>` labelled with where it came from and `v3Mount` handed the mod per
+entry, not per screen. "Is this the unit I meant to overwrite" is what the
+replace mode exists to get wrong. The entry list is derived from the UNIT LIST's
+fields (`models`, `soldier_model`, `armour_ug_models`, `officers`) rather than
+the editor's payload — the composer never loads a unit detail — and it applies
+the editor's own rule about `armour_ug_models` on top, plus one the editor does
+not: the men before their officers, since `model_names()` reads the soldier line
+first and a unit whose soldier line was dropped would otherwise open on its
+standard bearer.
+
+The composer goes `modal wide` whenever the column is on (a model squeezed
+beside a 640px dialog is not a model), the choice rides on
+`state.settings.transfer_preview`, and the column is given up — context, loop
+and node — by `closeModal`, by `doApply` before the progress card takes the
+modal, and by `openComposer` before it rewrites the modal for the next unit.
+`v3Open`'s markup stash detaches it for the same reason it detaches the
+editor's.
+
+**Building art on the Recruitment tab**, and the culture question it opens.
+A tier's picture is `/building_icon`, which is keyed by CULTURE — and this tab
+is not showing a culture: its rows come from every building line in the mod. So
+the row's own `requires` answers it, through `ov.faction_cultures`: a pool gated
+to `factions { aztecs, }` wears what those factions build. Measured on DaC,
+that alone was not enough — a mod-invented level like `ancestral_dun` is drawn
+for exactly ONE culture, and every other row would have been a placeholder.
+
+`buildings.find_icon` gained `any_culture`, off by default: after the picked
+culture's own art and its vanilla fallback, it sweeps the mod's other culture
+folders. It stays OFF for the building browser, which is showing one culture on
+purpose — a level that culture has no art for is a fact about that culture, and
+the grid says so — and the Recruitment tab and its ＋ picker pass `&any=1`.
+Verified against DaC: all six of a Dunlending unit's tiers answer `mod` where
+`greek` (the browser's last culture) answered `placeholder` for every one.
+
+**The pool row is two halves, not four columns.** WHAT it sits on — the art, the
+line's name, the tier — is the left of the top line, touching, because "a
+barracks" and "which barracks" are one answer; the numbers hold the right,
+pushed there by a new `.ernums` wrapper and still at a fixed width. WHO may use
+it is the second line, right-aligned to end where the numbers and the row's
+buttons do, growing back leftwards across the full width when a clause needs it.
+`.erb` stopped being `flex:1 1 150px` — a growing name column is what put the
+tier at the far end of the row's slack. The header's own `.eract` now reserves a
+button's width, which is what it takes for "the header labels sit over the boxes
+they name" to be true; they had been 33px to the right of them since the tab was
+written.
+
+`tests/test_buildings.py` grew section 11 — four checks on the sweep against a
+planted two-culture art tree: off, a culture with no art for the level is a
+placeholder; on, the one culture that draws it supplies the art; the culture's
+own art still wins when it has any; and a level nobody draws is still a
+placeholder. `test_buildings_http` checks `&any=1` is accepted. Suite: 72 of 72
+modules, all green.
 
 ## v2.1.9
 **A subrelease, same standing as 2.1.2 through 2.1.8.** One ask and the tail of
@@ -931,6 +1003,7 @@ underneath. Both fixed; see ROADMAP.md's 14f outcome.
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
+| 15i — the model beside a transfer, art beside a pool | **done** | **v2.1.10.** The 3D column docks into the transfer composer (`transfer.js` `cmpPrev*`, `#cmpSplit`), listing the source unit's battle-model entries AND the base/replaced unit's out of the destination mod, grouped by mod and drawn from it — the third `v3Mount` host, same detach-across-render / one-viewer / fold-pauses rules as the editor's. Entries come off the unit LIST's fields, with the `armour_ug_models` rule and men-before-officers ordering. The Recruitment tab's rows and its ＋ picker carry the tier's art, keyed by the pool's OWN `requires` through `ov.faction_cultures`, with a new opt-in `any_culture` sweep in `buildings.find_icon` (`&any=1`) for the levels a mod draws for one culture only — OFF for the building browser, which is showing one culture on purpose. Row layout re-cut as two halves: tier against the name, `requires` right-aligned on its own line, and the header finally aligned with the boxes it names. `test_buildings` §11 + `test_buildings_http`; 72 of 72 modules |
 | 15h — recruitment on the unit, UV layout | **done** | **v2.1.9.** `web/js/edrecruit.js` (new) — a Recruitment tab in the unit editor listing every building line that trains it, with the four pool numbers, the `requires` clause, a delete and a ＋ that adds the unit to any line and tier. **No Python**: `buildings.unit_instances` reads and `buildings.plan_edit` writes, so this is a second FRONT rather than a second implementation. The one new request shape is `also`-only — every edit in `also`, the body carrying a line name and no levels — which is also what makes `_check_recruit_limit` merge the file instead of counting three rows as a level. The clause dialog is borrowed with `kind:'edrec'`, which re-renders the editor instead of unstashing markup, because the modal holds a live WebGL column. `?building=&lvl=&unit=` opens a building in its own tab, on the tier, with the unit’s rows flashed. A save now moves EDB line numbers, so a building left open behind the editor drops its working copy and `backToBuilding` re-reads it. `test_unit_recruitment` 42/42; verified in-browser, three pools over two lines written and undone byte-exact. Plus the viewer’s **UV layout** and the mount-texture bug it found |
 | 15g — add a faction, viewer UV mode | **done** | **v2.1.8.** `unittransfer/factionclone.py` (new) + `/api/factions/clone_plan\|clone_apply` + the **＋ Add a faction** dialog in `web/js/factions.js`. Clones a donor into all **twelve** files that name a slot — nine plus `export_descr_buildings` (the `requires factions { … }` clauses that let it build and recruit), `descr_sounds_accents` and `descr_faction_standing`, found by grepping the mods rather than trusting phase 11's unmeasured "nine" — plus convention-named art (`ui`/`menu`/`banners`), one transfer id for the lot. Three more files name the donor as a *judgement* (a trait named after it, an ancillary's `FactionType` operand, a prebattle speech) and are counted and reported, never appended to. Phase 11's "no create" refusal is retired; **delete stays refused** — a clone copies the donor's answer, a delete would have to invent one. `descr_strat` is reported, never written: two factions cannot start in the same settlement. Four bugs the tests caught — the mods are **CRLF** and `$` sits after the `\r` (three cloners matched nothing, two ate the `\r`); `_` is a word character in a data file and a **separator** in a text key (one boundary found 1 of 61 keys); `add_texture_factions` takes **one entry's** raw text, not the file; and a file may spell the same list two ways (`descr_faction_standing` writes `factions { … }` *and* `exclude_factions { … }`, and DaC has none of the second). `test_factionclone` 64/64 (real mods, read-only), `test_factionclone_apply` 30/30 (synthetic mod, written then undone byte-exact). Viewer **Show UVs**: paints the coordinate in the sampler's own space, 32 cells/sheet because real parts span 0.07–0.33 of u |
 | 15e — port, M2EX, docked viewer | **done** | **v2.1.2.** `unittransfer/portrecords.py` + `web/js/portui.js`: copy a trait/ancillary between installed mods (block + triggers + text keys, one job); `unittransfer/modflags.py`: per-mod M2EX flag drops only the five engine-ceiling finding kinds, everything else still checked; the 3D viewer (`v3Mount`/`v3Unmount`) docks beside the Unit Editor and BMDB list instead of taking the modal over. Plus a dozen fixes, the sharpest being a silent one: a brand-new text key's wording was discarded if typed in the same sitting as the key (Traits/Ancillaries/Minor Files), because the words box was bound to the key's value at render time rather than to the field. `test_modflags` 18/18, `test_port` 50/50 |

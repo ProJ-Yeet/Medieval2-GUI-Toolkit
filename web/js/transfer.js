@@ -58,12 +58,198 @@ async function ensureDestSnd(){
   return state.destSnd;
 }
 
+/* ======================= THE 3D PREVIEW COLUMN =======================
+   The same docked model viewer the unit editor and the BMDB browser carry, over
+   the composer this time.
+
+   A transfer is a decision about MODELS — which soldier entry crosses, whether
+   the officers come with it, whether the destination unit being replaced is the
+   right one to replace — and every one of those was being taken off a name in a
+   dropdown. The viewer already paints into any element it is handed (`v3Mount`),
+   so the model belongs beside the boxes that decide which model it is.
+
+   What it offers that the editor's column does not is BOTH SIDES: the source
+   unit's entries, and, once a base or replaced unit is picked, that unit's own
+   entries out of the destination mod. "Is this the horse I meant to overwrite"
+   is the question the replace mode exists to get wrong, and it is a question
+   about two mods at once — so the picker groups the entries by where they come
+   from and `v3Mount` is handed the mod each one belongs to.
+
+   The three careful things are the editor column's three, for the same reasons:
+   the canvas is DETACHED across a re-render rather than rebuilt (renderComposer
+   runs on every tick box), there is only ever ONE viewer on the page, and
+   folding the column pauses the draw loop without giving up the mesh. */
+
+const CMP_PREV_HOST='cmpV3Host';
+let cmpPrevNode=null;           // the column itself, kept across re-renders
+let cmpPrevFolded=false;        // minimised: paused, still on the GPU
+let cmpPrevWant={};             // per unit type, which entry was last picked
+
+// On unless it has been turned off, like the editor's. The composer is where a
+// wrong model costs the most, so it is not a panel you have to go and ask for.
+const cmpPrevOn=()=>state.settings.transfer_preview!==false;
+// A pipe, not the NUL the other pair-keys in this toolkit use: this one is
+// written into an <option value> and an HTML parser turns a NUL into U+FFFD.
+// Neither a mod folder name nor a battle-model entry name can contain one.
+const CMP_PREV_SEP='|';
+/* One unit's entries worth drawing.
+
+   A unit that carries `armour_ug_models` is DRAWN from that list, one model per
+   armour level, and the model on its `soldier` line is never seen — so it is
+   dropped, unless it is also an upgrade model or an officer's. A unit with no
+   upgrade list is the other way round: the soldier line IS what gets drawn.
+   Same test the unit editor's column makes, off the fields the unit LIST
+   carries rather than the editor's own payload. */
+function cmpPrevOwn(u){
+  const all=(u.models||[]).filter(Boolean);
+  const ug=(u.armour_ug_models||[]).map(x=>x.toLowerCase());
+  const sol=(u.soldier_model||'').toLowerCase();
+  const off=(u.officers||[]).map(x=>x.toLowerCase());
+  const drop=(ug.length&&sol&&!ug.includes(sol)&&!off.includes(sol))?sol:'';
+  const keep=all.filter(n=>n.toLowerCase()!==drop);
+  // …and the MEN before their officers, whatever order the EDU lists them in.
+  // `model_names` reads the soldier line first and then the officers, so a unit
+  // whose soldier line was dropped opens on its standard bearer — which is not
+  // what anyone came to look at.
+  const isOff=n=>off.includes(n.toLowerCase());
+  return keep.filter(n=>!isOff(n)).concat(keep.filter(isOff));
+}
+function cmpPrevEntries(){
+  const out=[],seen={};
+  const push=(mod,role,list)=>(list||[]).forEach(n=>{
+    const k=mod+CMP_PREV_SEP+n;
+    if(!seen[k]){ seen[k]=1; out.push({mod,entry:n,role,key:k}); }
+  });
+  const u=state.data&&state.data.units.find(x=>x.type===state.editing);
+  if(u)push(state.src,state.src===state.dst?'this unit':'from '+state.src,cmpPrevOwn(u));
+  const c=cfgFor(state.editing),b=baseUnitOf(c);
+  if(b)push(state.dst,(isReplace(c)?'replacing ':'base ')+b.type,cmpPrevOwn(b));
+  return out;
+}
+function cmpPrevEntry(){
+  const list=cmpPrevEntries(),want=cmpPrevWant[state.editing];
+  return list.find(e=>e.key===want)||list[0]||null;
+}
+
+function cmpPrevDetach(){
+  if(cmpPrevNode&&cmpPrevNode.parentNode)cmpPrevNode.parentNode.removeChild(cmpPrevNode);
+}
+function cmpPrevAttach(){
+  const split=document.getElementById('cmpSplit');
+  if(!split)return;
+  if(!cmpPrevOn())return cmpPrevDrop();
+  if(!cmpPrevNode){
+    cmpPrevNode=document.createElement('aside');
+    cmpPrevNode.className='edprev'+(cmpPrevFolded?' min':'');
+    cmpPrevNode.id='cmpPrevCol';
+    cmpPrevNode.innerHTML=`<div class="edprevbar" id="cmpPrevBar"></div>
+      <div class="edprevbody" id="${CMP_PREV_HOST}"></div>`;
+  }
+  split.appendChild(cmpPrevNode);
+  // folded to its bar it sizes itself, so the width is not ours to write
+  if(cmpPrevFolded)cmpPrevNode.style.flex='';
+  else splitInstall(split,cmpPrevNode,'v3_dock_px',340);
+  cmpPrevBar();
+  cmpPrevMount();
+}
+/* Give the column up entirely — the WebGL context, the draw loop and the node.
+   Called when the composer closes and before anything else takes the modal
+   over, because a paused canvas parked in a dialog that is gone is a leak. */
+function cmpPrevDrop(){
+  if(typeof v3!=='undefined'&&v3&&v3.host===CMP_PREV_HOST)v3Unmount();
+  cmpPrevDetach();
+  cmpPrevNode=null;
+}
+// The bar only — never the body, which is the canvas.
+function cmpPrevBar(){
+  const el=document.getElementById('cmpPrevBar');
+  if(!el)return;
+  const list=cmpPrevEntries(),cur=cmpPrevEntry();
+  // grouped by where the entry comes from: with a base picked the list spans two
+  // mods, and "which of these is the unit I am overwriting" has to be readable
+  const roles=[];
+  list.forEach(e=>{ if(!roles.includes(e.role))roles.push(e.role); });
+  el.innerHTML=`<b>3D</b>
+    ${list.length>1
+      ? `<select title="Which battle-model entry to draw"
+           onchange="cmpPrevPick(this.value)">${roles.map(r=>
+           `<optgroup label="${esc(r)}">${list.filter(e=>e.role===r).map(e=>
+             `<option value="${esc(e.key)}"${cur&&e.key===cur.key?' selected':''}>${
+             esc(e.entry)}</option>`).join('')}</optgroup>`).join('')}</select>`
+      : `<span class="count" title="${esc(cur?cur.entry:'')}">${
+           esc(cur?cur.entry:'no entry')}</span>`}
+    <span class="sp"></span>
+    <button onclick="cmpPrevFull()" title="Full screen &mdash; Esc comes back">&#10530;</button>
+    <button onclick="cmpPrevFold()" title="${cmpPrevFolded?'Unfold the preview':'Fold the preview away'}"
+      >${cmpPrevFolded?'&#9656;':'&#9662;'}</button>
+    <button onclick="cmpPrevHide()" title="Hide the preview. The button at the top of the dialog brings it back, and the choice is remembered.">&#10005;</button>`;
+}
+async function cmpPrevMount(){
+  const host=document.getElementById(CMP_PREV_HOST);
+  if(!host)return;
+  if(cmpPrevFolded){ v3Pause(true); return; }
+  const e=cmpPrevEntry();
+  if(!e){
+    if(typeof v3!=='undefined'&&v3&&v3.host===CMP_PREV_HOST)v3Unmount();
+    host.innerHTML=`<div class="empty">This unit names no battle-model entry,
+      so there is nothing to draw.</div>`;
+    return;
+  }
+  v3Pause(false);
+  await v3Mount(CMP_PREV_HOST,e.mod,e.entry);
+}
+function cmpPrevPick(key){
+  cmpPrevWant[state.editing]=key;
+  cmpPrevBar();
+  cmpPrevMount();
+}
+function cmpPrevFold(){
+  cmpPrevFolded=!cmpPrevFolded;
+  if(cmpPrevNode)cmpPrevNode.classList.toggle('min',cmpPrevFolded);
+  // folded and unfolded in place rather than re-rendered (the canvas is live),
+  // so the width and its grab bar are put right here
+  const bar=document.querySelector('#cmpSplit > .splitbar');
+  if(cmpPrevFolded){
+    if(cmpPrevNode)cmpPrevNode.style.flex='';
+    if(bar)bar.style.display='none';
+  }else{
+    if(bar)bar.style.display='';
+    cmpPrevAttach();
+  }
+  cmpPrevBar();
+  cmpPrevMount();
+}
+function cmpPrevHide(){
+  cmpPrevDrop();
+  state.settings.transfer_preview=false;
+  api.post('/api/settings',{transfer_preview:false});
+  renderComposer();
+}
+function cmpPrevShow(){
+  state.settings.transfer_preview=true;
+  api.post('/api/settings',{transfer_preview:true});
+  renderComposer();
+}
+function cmpPrevFull(){
+  const el=cmpPrevNode;
+  if(!el)return;
+  if(document.fullscreenElement)return document.exitFullscreen();
+  if(cmpPrevFolded)cmpPrevFold();          // nothing to look at folded
+  const go=el.requestFullscreen||el.webkitRequestFullscreen;
+  if(!go){ toast('This browser will not go full screen here.',3000); return; }
+  Promise.resolve(go.call(el)).catch(e=>
+    toast('Full screen was refused: '+((e&&e.message)||e),4000));
+}
+
 /* ---------- composer (single or batch) ---------- */
 let composerList=[];
 async function openComposer(types){
   composerList=types.slice(); state.editing=types[0];
   state.ed=null;                // the composer, not a unit editor, owns this dialog
   const m=document.getElementById('modal');
+  // whatever the last composer left docked goes now: the modal is about to be
+  // rewritten under it, and a paused canvas with no parent is a leaked context
+  cmpPrevDrop();
   m.className='modal';
   m.innerHTML='<h2>Opening…</h2><div class="mbody"><div class="count">Reading '+
     esc(state.dst)+'…</div></div>';
@@ -137,14 +323,24 @@ async function renderComposer(){
   const engBase=crwBase; const engOn=hasEng&&!engBase;
   const sameMod=state.src===state.dst;      // edit mode's "new unit from this one"
   // the guided field editor lays its boxes out in rows — give it the same room
-  // the unit editor gets, instead of the default 640px dialog
-  m.className=gfMode()==='guided'?'modal wide':'modal';
+  // the unit editor gets, instead of the default 640px dialog. So does the 3D
+  // column: a model squeezed beside a 640px dialog is not a model you can read.
+  m.className=(cmpPrevOn()||gfMode()==='guided')?'modal wide':'modal';
+  // The preview is a live WebGL canvas holding a mesh that took a moment to
+  // fetch, so it is DETACHED here and appended again below (see cmpPrevAttach).
+  // renderComposer runs on every tick box; rewriting the modal around it would
+  // take the context with it and refetch the model each time.
+  cmpPrevDetach();
   m.innerHTML=`<h2>${batch?`Batch transfer: ${composerList.length} units`
       :sameMod?`New unit from “${esc(u.name)}”`
       :rep?`Replace “${esc(c.base_type)}” with “${esc(u.name)}”`
       :`Transfer “${esc(u.name)}”`} <span class="pill">${
-      sameMod?'in '+esc(state.src):esc(state.src)+' → '+esc(state.dst)}</span></h2>
-   <div class="mbody">
+      sameMod?'in '+esc(state.src):esc(state.src)+' → '+esc(state.dst)}</span>
+     ${cmpPrevOn()?'':`<button class="edprevon" onclick="cmpPrevShow()"
+       title="Draw this unit's battle model beside the options">&#129482; 3D preview</button>`}</h2>
+   <div class="edsplit" id="cmpSplit">
+    <div class="edmain">
+     <div class="mbody">
      ${unitLimitBanner()}
      ${strip}
      <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
@@ -282,6 +478,8 @@ async function renderComposer(){
          value. Fields the source unit doesn't have can't be switched.</div>`}
      </fieldset>
      <div id="previewBox"></div>
+     </div>
+    </div>
    </div>
    <div class="foot">
      ${cleanerBoxHtml()}
@@ -289,6 +487,7 @@ async function renderComposer(){
      <button onclick="doPreview()">Probe${batch?' this unit':''}</button>
      <button class="primary" onclick="doApply()">${batch?'Apply all':'Apply'}</button>
    </div>`;
+  cmpPrevAttach();                 // the live column, back where it belongs
   // wire per-unit option persistence (disabled inputs — absent models — never fire)
   // with a base, toggling an include box changes which unit supplies that group
   // group toggles re-render so the per-model checkboxes enable/disable in step
@@ -1351,6 +1550,9 @@ async function runJob(job,title,note,run){
 }
 async function doApply(){
   const types=composerList.length?composerList:[state.editing];
+  // renderProgress rewrites the modal, and the run ends in closeModal either
+  // way — the column has nothing left to be docked to from here on
+  cmpPrevDrop();
   // ensure conflicts are resolved: preview each; if conflict and not yet resolved, focus it
   for(const t of types){
     const r=await api.post('/api/plan',{source:state.src,dest:state.dst,unit:t,options:optsPayload(t)});

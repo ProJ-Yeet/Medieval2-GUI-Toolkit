@@ -137,6 +137,28 @@ function edRecOpenBuilding(line,levelIndex){
               +`&unit=${enc(e.unit)}`,'_blank');
 }
 
+/* ---- whose art a row wears ----
+   A pool is not shown "in a culture" here: the rows come from every building
+   line in the mod, and the tier they name is drawn once per culture that builds
+   it. The row's OWN `requires` is the answer where it has one — a pool gated to
+   `factions { aztecs, }` is Dunlending, so it wears the Dunlending stable — and
+   the browser's current culture is the fallback for a pool open to everyone.
+   `bldIcon`'s `any` flag catches the rest: a mod-invented level like DaC's
+   `ancestral_dun` exists in exactly one culture's folder, and a placeholder
+   would be claiming the building has no art when it plainly has. */
+function edRecCulture(conds){
+  const fc=(state.bld&&state.bld.ov&&state.bld.ov.faction_cultures)||{};
+  const facs=(conds||[]).filter(x=>x.kind==='factions'&&!x.negate)
+                        .reduce((a,x)=>a.concat(x.values||[]),[]);
+  for(const f of facs){
+    const k=String(f||'').toLowerCase();
+    // a clause names factions, but a mod may write the culture's own name there
+    if(fc[k])return fc[k];
+    if(Object.keys(fc).some(x=>fc[x]===k))return k;
+  }
+  return bldCultureNow();
+}
+
 /* ---- editing a pool's `requires` ----
    The building editor's own clause dialog, given a host of our own: these rows
    come from a dozen building blocks, none of them loaded into a working copy,
@@ -215,7 +237,8 @@ function edRecTab(){
     </div>`:''}
     ${rows.length||r.adds.length?`<div class="poollist" id="edRecList" style="margin-top:10px">
       <div class="erhd"><span class="erb">Building</span><span class="erlv">Tier</span>
-        ${KEYS.map(([k,l])=>`<span class="ern" title="${esc(POOL_HELP[k]||'')}">${esc(l)}</span>`).join('')}
+        <span class="ernums">${KEYS.map(([k,l])=>
+          `<span class="ern" title="${esc(POOL_HELP[k]||'')}">${esc(l)}</span>`).join('')}</span>
         <span class="eract"></span></div>
       ${rows.map(row=>edRecRowHtml(row,KEYS,common)).join('')}
       ${r.adds.map((a,i)=>edRecAddRowHtml(a,i,KEYS)).join('')}
@@ -235,12 +258,19 @@ function edRecTab(){
 }
 const edRecBusy=()=>`<div class="frm"><div class="empty">Reading every building line…</div></div>`;
 
-/* One pool row, in two lines. The building and the four numbers keep the top
-   line, which is what the eye scans down; the `requires` clause has no natural
-   width — a real one names half a dozen factions and a settlement level — so it
-   gets the second line and the whole width of the panel. That is the shape the
-   building editor's own pool rows settled on, and this tab shares the modal
-   with the 3D preview column, so it has even less room to argue with.
+/* One pool row, in two lines, read as two halves rather than four columns.
+
+   WHAT the pool sits on is the left of the top line — the tier's own art, the
+   line's name, and the tier, in that order and touching, because "a barracks"
+   and "which barracks" are one answer and not two. The four numbers hold the
+   right, at a fixed width so the header labels sit over the boxes they name.
+
+   WHO may use it is the second line, ending where the numbers do: the `requires`
+   clause has no natural width — a real one names half a dozen factions and a
+   settlement level — so it keeps a line of its own and grows leftwards into it
+   as it needs to, rather than squeezing the name it belongs to. That is the
+   shape the building editor's own pool rows settled on, and this tab shares the
+   modal with the 3D preview column, so it has even less room to argue with.
 
    Both callers hand it the same fields; what differs is where they came from
    (a `recruit_pool` in the file, or one staged here) and what the button on the
@@ -249,12 +279,14 @@ function edRecPoolHtml(o){
   return `<div class="erpool ${o.cls}" ${o.attr}>
     <div class="ertop">
       <span class="erb" title="${esc(o.line)}">
+        <img class="erico" loading="lazy" onerror="iconRetry(this)" alt=""
+          src="${bldIcon(o.level,'small',o.culture,true)}">
         <a class="ulink" title="Open ${esc(o.lineLabel)} in a new browser tab, on this tier"
           onclick="edRecOpenBuilding('${q1(esc(o.line))}',${o.levelIndex})">${esc(o.lineLabel)}</a>
         ${o.badges}</span>
       <span class="erlv count" title="${esc(o.level)}">${esc(o.levelLabel)}
         <span class="count">(${o.levelIndex+1}/${o.levelCount})</span></span>
-      ${o.nums}
+      <span class="ernums">${o.nums}</span>
       <span class="eract">${o.act}</span>
     </div>
     <div class="erbot"><span class="prk">Requires</span>
@@ -271,6 +303,7 @@ function edRecRowHtml(row,KEYS,common){
     line:row.line, lineLabel:row.line_label||row.line,
     level:row.level, levelLabel:row.level_label||row.level,
     levelIndex:row.level_index, levelCount:row.level_count,
+    culture:edRecCulture(row.conditions),
     badges:`<span class="badge ${row.settlement==='castle'?'cls':''}">${
         esc(row.settlement||'both')}</span>`
       +(row.faction?`<span class="badge"
@@ -297,6 +330,7 @@ function edRecAddRowHtml(a,i,KEYS){
     line:a.line, lineLabel:a.line_label||a.line,
     level:a.level, levelLabel:a.level_label||a.level,
     levelIndex:a.level_index, levelCount:a.level_count,
+    culture:edRecCulture(a.conds),
     badges:'<span class="badge good">new</span>',
     nums:KEYS.map(([k])=>`<span class="ern">${
       numBox(`data-eradd="${k}" data-eraddi="${i}"`,a[k],
@@ -411,7 +445,9 @@ function edRecPickList(){
     ||(l.levels||[]).some(n=>n.toLowerCase().includes(q)));
   const box=document.getElementById('erList');
   box.innerHTML=lines.length?lines.map(l=>`<div class="erline">
-      <div class="erhead"><b>${esc(l.label||l.name)}</b>
+      <div class="erhead"><img class="erico" loading="lazy" onerror="iconRetry(this)" alt=""
+          src="${bldIcon((l.levels||[])[(l.levels||[]).length-1]||l.name,'small','',true)}">
+        <b>${esc(l.label||l.name)}</b>
         <code class="count">${esc(l.name)}</code>
         <span class="badge ${l.settlement==='castle'?'cls':''}">${esc(l.settlement||'both')}</span>
         <button style="margin-left:auto" onclick="edRecPickAll('${q1(esc(l.name))}')"
@@ -422,7 +458,9 @@ function edRecPickList(){
         return `<button class="ertier ${on?'on':''}" ${t?'disabled':''}
           title="${t?(t===2?'Already staged on the Recruitment tab':'This tier already trains the unit')
                    :esc(lv)}"
-          onclick="edRecPickTier('${q1(esc(l.name))}','${q1(esc(lv))}')">${
+          onclick="edRecPickTier('${q1(esc(l.name))}','${q1(esc(lv))}')"><img class="erico"
+          loading="lazy" onerror="iconRetry(this)" alt=""
+          src="${bldIcon(lv,'small','',true)}">${
           i+1}. ${esc((l.level_labels||[])[i]||lv)}${t?' ✓':''}</button>`;
       }).join('')}</div></div>`).join('')
     :`<div class="empty">No building line matches “${esc(p.q)}”.</div>`;

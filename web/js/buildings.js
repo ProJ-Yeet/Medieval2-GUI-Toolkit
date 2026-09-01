@@ -105,9 +105,14 @@ function wireNumBoxes(root){
   });
 }
 
-function bldIcon(level,kind,culture){
+/* `anyCulture` is for screens that are not showing a culture at all — see
+   `buildings.find_icon`. The building browser never passes it: a level the
+   picked culture has no art for is a fact about that culture, and the grid
+   says so. The unit editor's Recruitment tab does, because its rows come from
+   every line in the mod and belong to no one culture. */
+function bldIcon(level,kind,culture,anyCulture){
   return `/building_icon?mod=${enc(state.src)}&culture=${enc(culture||bldCultureNow())}`
-       + `&level=${enc(level)}&kind=${kind||'small'}`;
+       + `&level=${enc(level)}&kind=${kind||'small'}${anyCulture?'&any=1':''}`;
 }
 function bldCultureNow(){
   const b=state.bld; return (b&&b.culture)||'';

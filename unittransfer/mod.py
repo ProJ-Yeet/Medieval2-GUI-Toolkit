@@ -422,9 +422,10 @@ class Mod:
         return buildings_mod.faction_cultures(self)
 
     def find_building_icon(self, culture: str, level: str, kind: str = "small",
-                           vanilla_root=None):
+                           vanilla_root=None, any_culture: bool = False):
         """(path, source) for one building icon — see :func:`buildings.find_icon`."""
-        return buildings_mod.find_icon(self, culture, level, kind, vanilla_root)
+        return buildings_mod.find_icon(self, culture, level, kind, vanilla_root,
+                                       any_culture)
 
     @cached_property
     def effect_sets(self) -> set:

@@ -1209,6 +1209,8 @@ function closeModal(){
   // to hand it back rather than leaving a WebGL context and a draw loop running
   // for a dialog that is gone
   if(typeof edPrevDrop==='function')edPrevDrop();
+  // …and the transfer composer's, which is the same column over a different dialog
+  if(typeof cmpPrevDrop==='function')cmpPrevDrop();
   // the unit editor widens the modal — put it back for the next dialog
   document.getElementById('modal').className='modal';}
 

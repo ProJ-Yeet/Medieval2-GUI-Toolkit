@@ -64,6 +64,7 @@ running the test suite, and running `graphify update .`.
 | 15f | Strat-map + card cleaners, faction skins, resizable viewer (v2.1.3) | M | ✅ done |
 | 15g | Add a faction (clone across twelve files) + viewer UV mode (v2.1.8) | M | ✅ done |
 | 15h | Recruitment on the unit + the UV layout (v2.1.9) | M | ✅ done |
+| 15i | The model beside a transfer, art beside a pool (v2.1.10) | S | ✅ done |
 | 16 | Campaign Map Editor — flagship, LAST | XL | 5+ (16a–16e) |
 
 Dependency shape: 1 and 2 are independent; 3 gates 4; 4 gates every editor
@@ -1843,6 +1844,57 @@ per-triangle texel-space Jacobians: real pairs read 1.21–1.24 at half u, lone
 sheets 1.08–1.47 at half and 2.00–2.22 at full.
 
 Notes: `merge/RELEASE_2_1_9.md`. Suite: 72 of 72 modules.
+
+---
+
+## Phase 15i — The model beside a transfer, art beside a pool ✅ (v2.1.10, done 2026-09-02)
+
+**The 3D column, over the transfer composer** (`web/js/transfer.js`, `cmpPrev*`).
+The third host for `v3Mount`, after the unit editor's column (15e) and BMDB's.
+A transfer is a decision about MODELS — which soldier entry crosses, whether the
+officers come with it, which destination unit is the right one to replace — and
+all of them were being taken off a name in a dropdown. Written as a copy of the
+editor's shape rather than a refactor of the two into one: they differ in what
+they list, which mod they draw it from and which setting turns them off, and the
+part that is genuinely shared is `v3Mount` itself.
+
+**It lists BOTH MODS**, which nothing else does: the source unit's entries and,
+once a base or replaced unit is picked, that unit's own out of the DESTINATION,
+each `<optgroup>` labelled and the mod handed to `v3Mount` per entry. The list is
+derived from the unit LIST's fields — the composer never loads a unit detail —
+with the editor's `armour_ug_models` rule applied on top and men ordered before
+officers, since `model_names()` reads the soldier line first and a unit whose
+soldier line was dropped would open on its standard bearer.
+
+The column is given up — context, draw loop and node — by `closeModal`, by
+`doApply` before the progress card takes the modal, and by `openComposer` before
+it rewrites the modal; `v3Open` detaches it before stashing the modal as markup,
+for the reason it already detached the editor's.
+
+**Building art on the Recruitment tab**, and the culture problem underneath it.
+`/building_icon` is keyed by culture; this tab is not showing one. The row's own
+`requires` answers it through `ov.faction_cultures`, and for the rest
+`buildings.find_icon` gained an opt-in `any_culture` sweep over the mod's other
+culture folders (`&any=1`) — because a mod-invented level like DaC's
+`ancestral_dun` is drawn for exactly one culture and every other row would have
+been a placeholder. It stays OFF for the building browser, which is showing one
+culture on purpose.
+
+**The pool row re-cut as two halves.** The tier moved against the building's
+name and art; the `requires` clause moved to the right of its own line, ending
+where the numbers and the row's buttons do. `.erb` stopped growing, which is
+what had been pushing the tier to the far end of the row's slack, and the header
+now reserves the button column so its labels sit over the boxes they name.
+
+- **Exit:** met. `tests/test_buildings.py` §11 — four checks on the sweep against
+  a planted two-culture art tree — plus an `&any=1` route check in
+  `test_buildings_http`. Verified in-browser against DaC and Reforged: a
+  Dunlending unit's tiers all resolve to `mod` art where the browser's culture
+  gave placeholders for every one; the composer's column draws entries from both
+  mods, survives a re-render without refetching, folds, hides and is dropped
+  clean on close.
+
+Notes: `merge/RELEASE_2_1_10.md`. Suite: 72 of 72 modules.
 
 ---
 

@@ -494,6 +494,50 @@ else:
     plan = buildings.plan_edit(mod, dict(body, fix_ownership=False))
     check("without fix_ownership the EDU is left alone", not plan.edu_text)
 
+# ---- 11) building art, and the any-culture sweep ----------------------------
+# A mod draws each level for the cultures that build it and no others: DaC's
+# `ancestral_dun` exists only under northern_european. The building browser is
+# showing ONE culture on purpose and gets a placeholder for the rest, but the
+# unit editor's Recruitment tab is showing pools from every line in the mod and
+# has no culture to be right about — so it asks for the sweep (`&any=1`).
+print("\n11) building icons: the any-culture fallback")
+
+art = Path(tempfile.mkdtemp(prefix="ut_art_"))
+
+
+class _ArtMod:
+    """Just enough of a Mod for find_icon: where data/ lives, and its cultures."""
+    def __init__(self, root):
+        self.data = root / "data"
+        self.cultures = ["northern_european", "mesoamerican"]
+
+
+am = _ArtMod(art)
+for culture, level in (("northern_european", "ancestral_dun"),
+                       ("northern_european", "shared_level"),
+                       ("mesoamerican", "shared_level")):
+    d = am.data / "ui" / culture / "buildings"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / f"{buildings.icon_stem(culture, level)}.tga").write_bytes(b"\0" * 64)
+
+hit, src = buildings.find_icon(am, "mesoamerican", "ancestral_dun", "small", None)
+check("without the sweep, a level this culture has no art for is a placeholder",
+      hit is None and src == "")
+hit, src = buildings.find_icon(am, "mesoamerican", "ancestral_dun", "small", None,
+                               any_culture=True)
+check("with it, the one culture that draws the level supplies the art",
+      hit is not None and src == "mod"
+      and hit.name.lower() == "#northern_european_ancestral_dun.tga")
+hit, src = buildings.find_icon(am, "mesoamerican", "shared_level", "small", None,
+                               any_culture=True)
+check("the culture's OWN art still wins when it has any",
+      hit is not None and hit.name.lower() == "#mesoamerican_shared_level.tga")
+hit, src = buildings.find_icon(am, "mesoamerican", "no_such_level", "small", None,
+                               any_culture=True)
+check("a level no culture draws is still a placeholder", hit is None and src == "")
+
+shutil.rmtree(art, ignore_errors=True)
+
 shutil.rmtree(work.parent, ignore_errors=True)
 shutil.rmtree(cfg, ignore_errors=True)
 print("\n" + ("ALL PASSED" if all(ok) else "SOME FAILED"))

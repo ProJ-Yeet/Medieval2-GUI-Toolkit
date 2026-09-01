@@ -251,6 +251,7 @@ async function v3Open(mod, entry){
   // a blank canvas nothing is drawing to, beside a real one with no parent. Take
   // it out before the snapshot; v3Close puts it back properly.
   if(typeof edPrevDetach === 'function') edPrevDetach();
+  if(typeof cmpPrevDetach === 'function') cmpPrevDetach();
   v3Back = wasOpen ? {html: modal.innerHTML, cls: modal.className, scroll: stashPlace()} : {};
   modal.className = 'modal wide';
   modal.innerHTML = `<h2>Model — ${esc(entry)}</h2>
@@ -358,6 +359,7 @@ function v3Close(){
     if(typeof edRenderTab === 'function' && state.ed) edRenderTab();
     // the live preview column, taken out above, goes back where it belongs
     if(typeof edPrevAttach === 'function' && state.ed) edPrevAttach();
+    if(typeof cmpPrevAttach === 'function' && !state.ed) cmpPrevAttach();
   }else{
     document.getElementById('overlay').classList.remove('open');
     modal.className = 'modal'; modal.innerHTML = '';

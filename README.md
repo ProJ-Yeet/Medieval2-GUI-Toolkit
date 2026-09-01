@@ -70,6 +70,12 @@ Other transfer options:
 * **Unit packs.** Export selected units as a zip and send it to someone whose
   mod is not on your machine. A pack is a mod, so importing one is an ordinary
   transfer.
+* **The model, beside the transfer.** The 3D viewer docks into the composer and
+  draws both sides: the source unit's battle-model entries, and — once a base or
+  replaced unit is picked — that unit's own entries out of the destination mod,
+  grouped by which mod each comes from. Which soldier crosses, and which
+  destination unit is the right one to replace, stop being decisions taken off a
+  name in a dropdown.
 
 ## Editing
 
@@ -90,6 +96,11 @@ Other transfer options:
   a building** offers every line and every tier — the ones that already train it
   shown as such — so making a unit recruitable somewhere new never leaves the
   unit, and neither does taking it off a building.
+
+  Every row carries the tier's own picture, and so does the ＋ picker; nineteen
+  rows that all say "Barracks" are told apart by their art. The art follows the
+  pool's own `requires`, so a pool gated to a set of factions wears the buildings
+  those factions build.
 * **Code View.** The raw game file beside the form in every editor, with
   hover-to-highlight both ways and live two-way editing. Can hide comment-only
   lines and restore them exactly.
@@ -114,7 +125,8 @@ Other transfer options:
 * **Drag the bar under the docked canvas** to trade height between the model and
   its controls; double-click for the default. The width of the whole column is
   draggable too, from the bar down its left edge.
-* The unit editor's preview offers the models the unit is actually **seen** in:
+* The unit editor's and the composer's previews offer the models the unit is
+  actually **seen** in:
   when it carries `armour_ug_models` the engine draws those, one per armour
   level, and never the model on its `soldier` line, so that one is not offered.
 * **Add a faction.** Copies one that already works into all twelve files that

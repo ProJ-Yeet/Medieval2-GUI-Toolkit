@@ -1266,35 +1266,56 @@
   .bcreq>:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .bcreq.changed{color:var(--accent)}
   /* ---- the unit editor's Recruitment tab ----
-     Two lines per pool, not one. The building and the four numbers keep the top
-     line, which is what the eye scans down; the `requires` clause has no natural
-     width — a real one names half a dozen factions and a settlement level — so
-     it gets a line to itself, the same shape the building editor's own pool rows
-     settled on. This tab shares the modal with the 3D preview column, and one
-     line could not hold all of it beside that without a sideways scrollbar.
+     Two lines per pool, not one, and each line is read as two halves.
 
-     The number columns are a fixed width rather than auto, so the header labels
-     sit over the boxes they name instead of near them. */
+     WHAT the pool sits on takes the left of the top line: the tier's own art,
+     the building line's name and the tier itself, touching, because “a
+     barracks” and “which barracks” are one answer. The four numbers hold the
+     right of it, pushed there by `.ernums`, at a fixed width rather than auto
+     so the header labels sit over the boxes they name instead of near them.
+
+     WHO may use it is the second line, ending where the numbers do. The
+     `requires` clause has no natural width — a real one names half a dozen
+     factions and a settlement level — so it keeps a line of its own and grows
+     leftwards into it as it needs to, rather than squeezing the name it belongs
+     to. This tab shares the modal with the 3D preview column, and one line
+     could not hold all of it beside that without a sideways scrollbar. */
   .erpool{padding:6px 8px;border-bottom:1px solid var(--edge)}
   .erpool:last-child{border-bottom:none}
   .ertop{display:flex;gap:8px;align-items:center}
-  .erbot{display:flex;gap:8px;align-items:center;margin-top:4px}
-  .erbot .prk{flex:0 0 auto;font-size:9px;text-transform:uppercase;letter-spacing:.5px;
-    color:var(--dim)}
+  /* right-aligned, and `.prk`'s auto margin is what pushes the pair over: the
+     clause answers the numbers above it, not the name at the far left */
+  .erbot{display:flex;gap:8px;align-items:center;margin-top:4px;justify-content:flex-end}
+  .erbot .prk{flex:0 0 auto;margin-left:auto;font-size:9px;text-transform:uppercase;
+    letter-spacing:.5px;color:var(--dim)}
   .erhd{display:flex;gap:8px;padding:5px 8px;border-bottom:1px solid var(--edge);
     font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim)}
   .erhd .ern{white-space:normal;line-height:1.15}
-  .erb{flex:1 1 150px;min-width:80px;font-size:12px;overflow:hidden;text-overflow:ellipsis;
-    white-space:nowrap}
-  .erlv{flex:0 1 112px;min-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* the header carries no buttons, so it has to reserve their column by hand:
+     without this the labels sit a button's width to the right of the boxes
+     they name, which is the one thing the fixed number columns are for */
+  .erhd .eract{flex:0 0 25px}
+  /* a fixed basis, not `1 1`: the tier sits against the name rather than at the
+     far end of whatever slack the row has */
+  .erb{flex:0 1 210px;min-width:0;font-size:12px;display:flex;gap:6px;align-items:center}
+  .erb>a,.erb>b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .erb .badge{flex:0 0 auto}
+  /* the tier's own art, at the shape `/building_icon` serves it in */
+  .erico{flex:0 0 auto;width:26px;height:21px;object-fit:cover;border-radius:3px;
+    border:1px solid var(--edge);background:var(--panel2)}
+  .erlv{flex:0 1 122px;min-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ernums{flex:0 0 auto;margin-left:auto;display:flex;gap:8px;align-items:center}
   .ern{flex:0 0 90px;min-width:0}
   .ern.odd input{border-color:var(--warn);color:var(--warn)}
-  .eract{flex:0 0 auto;margin-left:auto;display:flex;gap:4px}
+  .eract{flex:0 0 auto;display:flex;gap:4px}
   .erpool.gone{opacity:.45}
   .erpool.gone .erb a{text-decoration:line-through}
+  .erpool.gone .erico{filter:grayscale(1)}
   .erpool.fresh{background:rgba(92,201,138,.07)}
-  .erreq{flex:1;min-width:70px;font-family:ui-monospace,Consolas,monospace;font-size:10.5px;
-    display:flex;gap:6px;align-items:center}
+  /* `0 1 auto`, so a short clause hugs the right and a long one still spreads
+     back across the whole line before it ellipsises */
+  .erreq{flex:0 1 auto;min-width:70px;font-family:ui-monospace,Consolas,monospace;
+    font-size:10.5px;display:flex;gap:6px;align-items:center}
   .erreq>:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .erreq.changed{color:var(--accent)}
   /* the ＋ picker: one block per building line, its tiers as toggles */
@@ -1303,7 +1324,9 @@
   .erhead{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
   .erhead code{font-size:10.5px}
   .ertiers{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
-  .ertier{padding:3px 8px;font-size:11.5px}
+  .ertier{padding:3px 8px;font-size:11.5px;display:inline-flex;gap:5px;align-items:center}
+  /* the same art, at button size: enough to tell a stable from a barracks */
+  .ertier .erico{width:20px;height:16px}
   .ertier.on{background:var(--accent2);color:#fff;border-color:var(--accent2)}
   /* the Variant drop-down and its ＋, which swaps it for a text box */
   .tiervar{display:flex;gap:6px;align-items:center}

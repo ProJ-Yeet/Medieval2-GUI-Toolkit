@@ -853,7 +853,8 @@ def vanilla_ui(root) -> Optional["VanillaUi"]:
 
 
 def find_icon(mod, culture: str, level: str, kind: str = "small",
-              vanilla_root: Optional[Path] = None) -> Tuple[Optional[Path], str]:
+              vanilla_root: Optional[Path] = None,
+              any_culture: bool = False) -> Tuple[Optional[Path], str]:
     """Locate a building icon, falling back to unpacked vanilla art.
 
     Mods routinely ship only the icons they changed and let the game fall back to
@@ -862,20 +863,42 @@ def find_icon(mod, culture: str, level: str, kind: str = "small",
 
     ``mod``      the mod's own ``data/ui/<culture>/buildings``
     ``vanilla``  the same culture in the unpacked vanilla UI
+    ``mod``      with ``any_culture``: the same level drawn for one of the mod's
+                 OTHER cultures
     ``vanilla*`` any vanilla culture (a mod culture like ``gondor`` has no vanilla
                  namesake, so this is the only way it can borrow one)
     ``""``       nothing found — the caller paints the placeholder
+
+    ``any_culture`` is off by default and stays off for the building browser,
+    which is showing one culture on purpose: a level the picked culture has no
+    art for is a fact about that culture, and the grid says so with a
+    placeholder. It is on for screens that are not showing a culture at all —
+    the unit editor's Recruitment tab lists pools from every line in the mod,
+    where a mod-invented level like DaC's ``ancestral_dun`` is drawn once, for
+    the one culture that builds it, and a placeholder would be saying "this
+    building has no art" when it plainly has.
     """
     stem = icon_stem(culture, level, kind)
     hit = _lookup(mod.data / "ui" / culture / "buildings", stem)
     if hit is not None:
         return hit, "mod"
     van = vanilla_ui(vanilla_root)
+    # the picked culture's own vanilla art beats the mod's art for a culture
+    # nobody asked about, so this stays ahead of the any-culture sweep
+    if van is not None:
+        hit = van.lookup(culture, stem)
+        if hit is not None:
+            return hit, "vanilla"
+    if any_culture:
+        for other in mod.cultures:
+            if other == culture:
+                continue
+            hit = _lookup(mod.data / "ui" / other / "buildings",
+                          icon_stem(other, level, kind))
+            if hit is not None:
+                return hit, "mod"
     if van is None:
         return None, ""
-    hit = van.lookup(culture, stem)
-    if hit is not None:
-        return hit, "vanilla"
     for other in van.cultures:
         if other == culture:
             continue

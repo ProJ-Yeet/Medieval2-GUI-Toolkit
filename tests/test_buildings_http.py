@@ -129,6 +129,10 @@ try:
     check("the placeholder is a real PNG", png[:8] == b"\x89PNG\r\n\x1a\n" and len(png) > 100)
     check("a bad mod name still returns an image, not a 500",
           head("/building_icon?mod=nope&culture=x&level=y&kind=small") == (200, "placeholder"))
+    # the Recruitment tab's flag: it widens the search, it never breaks the route
+    check("&any=1 is accepted and still answers with an image",
+          head(f"/building_icon?mod=TestMod&culture={culture}"
+               f"&level={urllib.request.quote(lvl['name'])}&kind=small&any=1")[0] == 200)
 
     # ---- 4) plan, exactly as the page builds it ----
     print("\n4) /api/buildings/plan")
