@@ -80,6 +80,16 @@ Other transfer options:
   available on a toggle. Validation reports what the engine will actually do:
   attack above the cap of 63, a missile weapon with no ammunition, a secondary
   missile weapon (never fired), a model nothing defines, and similar.
+* **Recruitment, from the unit.** A tab in the unit editor listing every
+  building line in the mod that trains it, with all four pool numbers and the
+  `requires` clause editable in place — the same `recruit_pool` lines the
+  Buildings module writes, saved with the unit in one pass and taken back by one
+  undo. A value that disagrees with what most of the other pools use is marked,
+  which is usually why you opened it. A building's name opens that line in a new
+  browser tab, on the tier the pool is on, with the unit's rows flashed. **＋ Add
+  a building** offers every line and every tier — the ones that already train it
+  shown as such — so making a unit recruitable somewhere new never leaves the
+  unit, and neither does taking it off a building.
 * **Code View.** The raw game file beside the form in every editor, with
   hover-to-highlight both ways and live two-way editing. Can hide comment-only
   lines and restore them exactly.
@@ -92,6 +102,21 @@ Other transfer options:
   blue is the main sheet, amber the attachment sheet, the dark tiles are the two
   repeating, and a red line marks where the pair starts over. Thirty-two checker
   cells to a sheet, so art stretched over a part shows up as stretched cells.
+* **UV layout** beside the model, the way a UV editor shows it: the texture
+  sheet — both squares of it where the entry names a pair — with this model's
+  islands drawn over the art they sit on, one colour per part and the same
+  colour beside that part in the list. Pan, zoom, and click an island to be told
+  which part wears it and which pixels of which sheet it covers. Only the parts
+  actually on the soldier are drawn, so switching a variant or hiding a slot
+  changes the map with it. Where `Show UVs` answers "is this shell stretched",
+  this answers "where on the art does this part live" — the view a retexture is
+  done against.
+* **Drag the bar under the docked canvas** to trade height between the model and
+  its controls; double-click for the default. The width of the whole column is
+  draggable too, from the bar down its left edge.
+* The unit editor's preview offers the models the unit is actually **seen** in:
+  when it carries `armour_ug_models` the engine draws those, one per armour
+  level, and never the model on its `soldier` line, so that one is not offered.
 * **Add a faction.** Copies one that already works into all twelve files that
   name a faction slot — the roster, `expanded.txt`, unit ownership, the
   modeldb's faction skins, every `requires factions { … }` clause in the EDB
@@ -156,6 +181,9 @@ path, and recruitment.
 * **City and castle, side by side**, with controls to copy a pool across.
 * **Bulk editing** of recruitment pools: one requires clause, pool numbers, or
   removal, applied to a selection built from several searches.
+* The same pools are editable from the **other end** — the unit editor's
+  Recruitment tab, above — for when the question is "where can this unit be
+  hired" rather than "what does this building train".
 
 ## Safety
 

@@ -1,5 +1,166 @@
 # STATE — Medieval 2 GUI Toolkit V2
-_Updated: 2026-08-31 · **v2.1.8 released** · a subrelease on top of 2.1.7_
+_Updated: 2026-09-01 · **v2.1.9 released** · a subrelease on top of 2.1.8_
+
+## v2.1.9
+**A subrelease, same standing as 2.1.2 through 2.1.8.** One ask and the tail of
+the session before it: recruitment reachable from the unit, and the UV layout
+beside the model.
+
+**Recruitment is a tab on the unit** (`web/js/edrecruit.js`, new; the
+`?building=&lvl=&unit=` route in `core.js`; `.erpool` and the ＋ picker's styles
+in `web/index.html`). Everything a unit IS was on four tabs; where it can be
+HIRED was in another module, reached by leaving the unit, finding one of the
+four or five building lines that train it, and reading its numbers off a row
+among sixty. The building browser already had the panel that puts those rows
+side by side (`bldShowUnit`) — this is that view from the unit's side, and
+editing: all four pool numbers, the `requires` clause, a 🗑 that takes the pool
+off the building, and a ＋ that puts the unit on a new one.
+
+**No Python.** A `recruit_pool` line already had a reader
+(`buildings.unit_instances`) and a writer (`buildings.plan_edit`), and this is a
+second FRONT for them rather than a second implementation — the same capability
+ops, the same clause dialog, the same plan → apply road — so a pool edited from
+the unit and one edited from the building cannot drift apart. The one shape that
+had never been sent before is the request: this tab reaches into several
+building lines at once and belongs to none of them, so **every** edit rides in
+`also` and the main body carries a line name with an empty `levels`. That is
+also the right way round for the recruitment-limit check, which merges the
+file's existing pools for an `also` line and would otherwise count a payload of
+three rows as the whole level. Measured against both installed mods, one Save
+over three building lines wrote exactly its three edits, moved nothing else, and
+one Undo restored the EDB byte for byte.
+
+**The clause dialog is borrowed, not copied** (`kind:'edrec'` in
+`bldClauseApply` / `bldClauseCancel`). It could not take the usual route: it
+stashes the modal as MARKUP, and the unit editor holds a live WebGL column
+inside that modal, so putting the string back would install a dead copy of the
+canvas and orphan the real one. The two `edrec` branches re-render the editor
+from state instead, which hands the column over the way a tab switch does. Same
+reason the ＋ picker keeps no stash. `loadBuildings` also stopped writing
+"Reading …'s buildings…" into `main` when a dialog is open over it — this tab
+asks for the overview from behind one, and the message was what you found on
+screen the moment you closed the editor.
+
+**A building is one click away, in its own tab.** `?building=&lvl=&unit=` opens
+the Buildings module on that line, at the tier the pool sits on, and flashes the
+unit's rows (`bldJumpPool`) — a barracks trains sixty units and scrolling for
+the one you came for is the step the link exists to skip. And because a
+recruitment save moves EDB line numbers, a building left open behind the editor
+has its working copy dropped rather than carried back into it: its capability
+rows are numbered against the file as it was, and `backToBuilding`'s comment
+that "a unit edit never touches the EDB" stopped being true the moment this tab
+could write one.
+
+`tests/test_unit_recruitment.py`, 42/42 across DaC and Reforged: the row payload
+carries every field the tab keys on, `cap_line` is unique, an `also`-only request
+plans, a rewrite moves no line and leaves the 173 capability lines it never
+mentions byte-identical, and rewrite + delete + append across three lines come
+back as three changes with the other two lines named.
+
+**The UV layout, beside the model** (`web/js/viewer3d.js`, `.v3uvpane` in
+`web/index.html`). `Show UVs` paints the coordinate onto the MODEL; this is the
+other half of the same question — the SHEET, with the mesh's islands drawn over
+the art they sit on, which is what a UV editor shows and what a retexture is
+actually done against. A 2D canvas, not a second WebGL context: the drawing is
+one image and a few thousand lines, and a second context is a second copy of the
+mesh on the GPU for a picture the CPU draws in a millisecond.
+
+**It is drawn in the BOUND IMAGE's own space**, not in the mesh's u: one square
+per sheet, at the aspect the art really is, with the UVs put through the same
+scaling the sampler puts them through to land on it. A pair is two squares side
+by side; a mount's lone sheet is ONE square, and the two units of u its mesh is
+written in are half a square each. Framing on the mesh's u instead drew a 1024
+square sheet across two tiles — a picture of the coordinate rather than a
+picture of the art, and stretched art is exactly what this view exists to catch.
+**v goes down**, because M2TW is Direct3D and the texture is bound unflipped, so
+the sheet is drawn from its top-left at (0,0) and an island sits over the art it
+names rather than its mirror. Nothing is folded into 0..1: an island running
+past the sheet is drawn where it lands, on a repeat dimmed to 30% so that
+leaving the sheet reads as leaving it.
+
+One colour per part, on the island and on that part's row in the list, so the
+two can be read off each other; only the groups the viewer is DRAWING are drawn,
+so a variant swap or a hidden slot changes the map with it (three heads laid
+over one sheet is not a UV map). Click picks by testing every drawn triangle —
+exact, where a nearest-island guess is wrong on overlapping shells — and names
+the part, its u/v box, and whether it leaves the sheet it was authored in; the
+cursor readout gives u, v, which sheet, and the pixel. Side by side with the
+model when there is room for two; docked, or under 1100px, the layout takes the
+stage and the button is the way back. `v3Draw` now returns on a zero-size canvas
+rather than sizing to a made-up 640, which is what that takeover leaves behind.
+
+Verified in-browser against DaC: `lossarnach_ug0` (a real pair — picking
+returned `hair`, `head`, `eyes`, `clap` from their own centroids, zoom held its
+anchor to 4e-4 of u, and the caption read `head u 1.33–1.55 · v 0.73–0.87`), and
+`mount_naru_horse` (one texture, and the case below).
+
+**Every mount in every mod was drawn with its texture tiled twice** (`v3Apply`,
+`v3TexCase`). Chasing the UV layout's framing of a horse turned up a bug in the
+RENDERER, not the drawing: the layout was faithfully showing a space the shader
+had wrong. There are **three** shapes an entry's texture set comes in and the
+viewer knew two:
+
+  * a real pair, glued here — u halved, as always;
+  * an entry that **names** an attachment and it is the main file again (which
+    mods write constantly — it is what the Blender addon exports for an empty
+    slot) or one the mod does not ship. The game glues two sheets, so the art
+    repeats every unit and binding the one sheet at FULL u reproduces
+    main-glued-to-main exactly. This is the case the old comment described, and
+    it stays;
+  * an entry naming **no** attachment texture at all — every ordinary mount.
+    There is nothing to glue and no far half to reach, so its one sheet spans
+    the whole two-unit space and u must be halved TOO. It was not, and that
+    tiles the sheet twice across the model.
+
+The two were collapsed into "one sheet or two", and the empty slot took the
+wrong branch. With `uUScale` telling the truth again, `Show UVs` needed no new
+period after all — its dimming and its red line go back to keying off that one
+uniform, and the only thing it gained is `uPair`, because "how far was u scaled"
+and "are there two sheets to tell apart" had quietly become different questions. **Measured, not reasoned**: map each triangle's texel-space edges
+onto its own 3D plane and the singular values of that Jacobian say how far from
+square its texels are. Whole models, median —
+
+| entry | attachment slot | full u | half u |
+|---|---|---|---|
+| `lossarnach_ug0`, `ox_mount`, `crag_warg_riders` | real pair | **1.21–1.24** | 2.02–2.04 |
+| `mount_naru_horse` | empty | 2.00 | **1.08** |
+| `anorien_barded_horse` | empty | 2.02 | **1.18** |
+| `mount_eastern_armoured_horse_grey` | empty | 2.22 | **1.47** |
+
+The pairs are the control and they answer the way they must; the mounts invert,
+and the 2.0 is the factor of two standing up to be counted. Confirmed against the
+art as well: `mount_naru_horse`'s groups, halved, land exactly on it — Body
+0.005–0.662 on flanks painted across x 0–0.66, `armor` 0.017–0.463 on barding at
+x 0–0.47 (and its v 0.271–0.567 matches that band untouched, which is what pins
+the axis that was never wrong). On screen the barding stops being striped and
+becomes plates, and the layout's islands sit on the art they name.
+
+So `uUScale` is 0.5 whenever what is bound SPANS the two units and 1.0 only for
+the glue-it-to-itself case, and the parts list stops labelling half of a lone
+sheet an "attach sheet" when the entry carries no such texture — it says "right
+half" instead. Those labels are repainted from `v3Apply` as well as from the
+render, because a skin arrives after the panel is drawn and the panel would
+otherwise be describing a pair as a lone sheet. v2.1.8's "a lone sheet's pair
+boundary is every integer u" was true only of the case that names one.
+
+**The unit editor's preview picker drops the `soldier` line's model when the
+unit has `armour_ug_models`** (`edPrevEntries`). The engine draws the upgrade
+list, one model per armour level, and never that entry: Uruk-hai Bodyguards
+names `heavy_uruk_sword` on its soldier line and puts `isengard_bodyguard` in
+both upgrade slots, so the picker was offering a model the unit is never seen
+in. The test is per MODEL, not per unit — Uruk Bodyguard's
+`mordor_uruk_bodyguards` is the soldier line AND upgrade 1, and an entry earns
+its place by any slot that is not the soldier line. A unit with no upgrade list
+is the other way round and keeps it, and the list can never come back empty.
+
+**The docked viewer's canvas is resizable** (`v3GripDown`, `.v3grip`). The column
+already had a draggable left edge; inside it the canvas sat at the stylesheet's
+240px floor and took whatever a twenty-one-row parts list left, which on a tall
+model is a letterbox. The bar under the canvas drags that boundary and the height
+persists (`v3_dock_px`), double-click restores the default. It sizes the STAGE,
+not the controls: the docked column is as tall as its contents, so giving the
+controls a height grows the panel and leaves the model exactly where it was —
+measured, after the obvious way round moved nothing.
 
 ## v2.1.8
 **A subrelease, same standing as 2.1.2 through 2.1.7.** Two asks in one session,
@@ -770,6 +931,7 @@ underneath. Both fixed; see ROADMAP.md's 14f outcome.
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
+| 15h — recruitment on the unit, UV layout | **done** | **v2.1.9.** `web/js/edrecruit.js` (new) — a Recruitment tab in the unit editor listing every building line that trains it, with the four pool numbers, the `requires` clause, a delete and a ＋ that adds the unit to any line and tier. **No Python**: `buildings.unit_instances` reads and `buildings.plan_edit` writes, so this is a second FRONT rather than a second implementation. The one new request shape is `also`-only — every edit in `also`, the body carrying a line name and no levels — which is also what makes `_check_recruit_limit` merge the file instead of counting three rows as a level. The clause dialog is borrowed with `kind:'edrec'`, which re-renders the editor instead of unstashing markup, because the modal holds a live WebGL column. `?building=&lvl=&unit=` opens a building in its own tab, on the tier, with the unit’s rows flashed. A save now moves EDB line numbers, so a building left open behind the editor drops its working copy and `backToBuilding` re-reads it. `test_unit_recruitment` 42/42; verified in-browser, three pools over two lines written and undone byte-exact. Plus the viewer’s **UV layout** and the mount-texture bug it found |
 | 15g — add a faction, viewer UV mode | **done** | **v2.1.8.** `unittransfer/factionclone.py` (new) + `/api/factions/clone_plan\|clone_apply` + the **＋ Add a faction** dialog in `web/js/factions.js`. Clones a donor into all **twelve** files that name a slot — nine plus `export_descr_buildings` (the `requires factions { … }` clauses that let it build and recruit), `descr_sounds_accents` and `descr_faction_standing`, found by grepping the mods rather than trusting phase 11's unmeasured "nine" — plus convention-named art (`ui`/`menu`/`banners`), one transfer id for the lot. Three more files name the donor as a *judgement* (a trait named after it, an ancillary's `FactionType` operand, a prebattle speech) and are counted and reported, never appended to. Phase 11's "no create" refusal is retired; **delete stays refused** — a clone copies the donor's answer, a delete would have to invent one. `descr_strat` is reported, never written: two factions cannot start in the same settlement. Four bugs the tests caught — the mods are **CRLF** and `$` sits after the `\r` (three cloners matched nothing, two ate the `\r`); `_` is a word character in a data file and a **separator** in a text key (one boundary found 1 of 61 keys); `add_texture_factions` takes **one entry's** raw text, not the file; and a file may spell the same list two ways (`descr_faction_standing` writes `factions { … }` *and* `exclude_factions { … }`, and DaC has none of the second). `test_factionclone` 64/64 (real mods, read-only), `test_factionclone_apply` 30/30 (synthetic mod, written then undone byte-exact). Viewer **Show UVs**: paints the coordinate in the sampler's own space, 32 cells/sheet because real parts span 0.07–0.33 of u |
 | 15e — port, M2EX, docked viewer | **done** | **v2.1.2.** `unittransfer/portrecords.py` + `web/js/portui.js`: copy a trait/ancillary between installed mods (block + triggers + text keys, one job); `unittransfer/modflags.py`: per-mod M2EX flag drops only the five engine-ceiling finding kinds, everything else still checked; the 3D viewer (`v3Mount`/`v3Unmount`) docks beside the Unit Editor and BMDB list instead of taking the modal over. Plus a dozen fixes, the sharpest being a silent one: a brand-new text key's wording was discarded if typed in the same sitting as the key (Traits/Ancillaries/Minor Files), because the words box was bound to the key's value at render time rather than to the field. `test_modflags` 18/18, `test_port` 50/50 |
 | 0–12 | done | see ROADMAP.md for each phase's exit criteria |

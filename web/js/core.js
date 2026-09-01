@@ -387,15 +387,28 @@ async function init(){
     // and opens the editor for this tab only; the remembered mod is not changed.
     const qs=new URLSearchParams(location.search);
     const qMod=qs.get('mod'),qEdit=qs.get('edit');
+    /* ?building=&lvl=&unit= — how the unit editor's Recruitment tab says "go and
+       look at that building". The line opens at the tier the pool sits on and
+       the unit's rows are flashed there, which is the whole point of the trip:
+       a barracks trains sixty units and scrolling for the one you came for is
+       the step the link exists to skip. `unit` is optional — without it this is
+       just "open this building line". */
+    const qBld=qs.get('building'),qLvl=qs.get('lvl'),qJump=qs.get('unit');
     // A launch lands on Home, whatever module you were in last time — that is
     // the point of having one. The remembered mode is not forgotten: Home offers
     // it as "last time you were in …", so it is a click rather than an ambush.
-    state.mode=qEdit?'edit':'home';
+    state.mode=qEdit?'edit':qBld?'buildings':'home';
     await refreshMods(qMod||s.last_source,qMod||s.last_dest);
     wire(); applyMode(false);
     if(qEdit){
       if(state.data&&state.data.units.some(u=>u.type===qEdit))openEditor(qEdit);
       else toast(`“${qEdit}” is not a unit in ${state.src}`,4000);
+    }
+    else if(qBld){
+      const lvl=parseInt(qLvl,10);
+      await openBuilding(qBld,false,isFinite(lvl)?Math.max(0,lvl):undefined);
+      // openBuilding gives up with a message of its own if the line is not there
+      if(qJump&&state.bld&&state.bld.line===qBld)bldJumpPool(qJump);
     }
   }catch(e){
     // Every line of the startup is inside this try, so the catch used to blame

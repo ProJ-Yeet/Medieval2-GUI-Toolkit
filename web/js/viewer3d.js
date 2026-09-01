@@ -114,16 +114,24 @@ void main(){
    0..1 in one mod alone are the proof that the tiling is real and must not be
    clamped away.
 
-   `uUScale` is 0.5 for a real pair and 1.0 for an entry that names ONE sheet —
-   every ordinary mount (a horse, a wolf, a camel) is that second case, and so
-   is any unit entry whose attachment slot is empty or repeats the main file.
-   The two are the same picture: gluing a sheet to a copy of itself and then
-   halving u samples exactly what wrapping the single sheet at full u does, tile
-   for tile, because the pair repeats anyway. Doing it with the uniform instead
-   costs no canvas, no second decode and half the texture memory — and it keeps
-   a 1024 skin a power of two instead of pushing the atlas to 2048 wide. Entries
-   that really do carry an attachment sheet (the Balrog, hero models with a
-   separate weapon sheet) are untouched and still glued. */
+   `uUScale` is 0.5 whenever what is bound SPANS those two units, and 1.0 only
+   when it is one sheet the game would have glued to a copy of itself. Three
+   cases, not two, and collapsing them to two was a bug that hit every mount in
+   every mod (see `v3Apply`):
+
+     * a real pair, glued here into one image two sheets wide — halved;
+     * an entry naming NO attachment texture, which is every ordinary mount.
+       There is nothing to glue and no second half to reach: its one sheet is
+       the whole space, so it is halved too. Binding it at full u instead tiles
+       it twice across the model, which is a horse painted in texels twice as
+       wide as they are tall;
+     * an entry that NAMES an attachment this viewer did not glue — the main
+       file over again (which mods write all the time, and which is what the
+       Blender addon exports for an empty slot), or one the mod does not ship.
+       The GAME glues two sheets there, so the art really does repeat every
+       unit, and binding the one sheet at FULL u reproduces main-glued-to-main
+       exactly — no canvas, no second decode, half the texture memory, and a
+       1024 skin stays a power of two instead of pushing the atlas to 2048. */
 /* UV mode paints the coordinate instead of the art, in the SAME space the
    texture sample uses — `vUv` as the modeller authored it, main sheet 0..1,
    attachment sheet 1..2, everything outside a repeat. Nothing is clamped or
@@ -141,17 +149,26 @@ void main(){
        is `mod(floor(u), 2.0)` that decides, never a per-part rule, because a
        group whose UVs run 0.41..1.38 really is one piece of art crossing the
        seam and has to read as both;
-     * **the dimming** — the tile the art was authored in stays bright and every
-       repeat of it goes dark, which is what makes the tiling visible as tiling;
-     * **the lines** — white at a sheet edge, red where the whole pair starts
-       over. Fixed width in UV space, not screen space, because `fwidth` wants
-       an extension this viewer does not ask for.
+     * **the dimming** — the two units of u the model was UNWRAPPED in stay
+       bright and everything past them goes dark. Always two, for every model:
+       the file normalises u over the pair and mesh.py doubles it whatever the
+       entry turns out to name;
+     * **the lines** — white at a sheet edge, red where the art starts over.
+       Those are two different places for a sheet glued to a copy of itself,
+       which is why the red line is on its own period. Fixed width in UV space,
+       not screen space, because `fwidth` wants an extension this viewer does
+       not ask for.
 
-   A lone sheet (`uUScale` 1.0) has no attachment half, so it is all blue and
-   its pair boundary is every integer u instead of every second one. */
+   An entry with no attachment sheet has no amber on it — there is no second
+   sheet to tell apart — but it still fills both units, and its red line still
+   falls every second one. */
 const V3_UV = `
-vec3 v3UvPaint(vec2 uv, float pair){
-  float period = pair > 0.5 ? 2.0 : 1.0;   // how wide one repeat of the art is
+vec3 v3UvPaint(vec2 uv, float wide, float pair){
+  // "wide" is whether one copy of the ART is two units of u (a glued pair, or a
+  // lone sheet spanning the space) or one (a sheet glued to a copy of itself).
+  // "pair" is the different question of whether there are two sheets to tell
+  // apart — only then does amber mean anything.
+  float period = wide > 0.5 ? 2.0 : 1.0;
   float attach = pair > 0.5 ? mod(floor(uv.x), 2.0) : 0.0;
   vec3 col = mix(vec3(0.29, 0.51, 0.80), vec3(0.88, 0.56, 0.20), attach);
   vec2 cell = floor(uv * 32.0);
@@ -170,7 +187,7 @@ const V3_FRAG = `
 precision mediump float;
 varying vec3 vNormal; varying vec2 vUv;
 uniform sampler2D uTex;
-uniform float uHasTex, uFlat, uUScale, uUv;
+uniform float uHasTex, uFlat, uUScale, uUv, uPair;
 uniform vec3 uKey, uEye;
 ${V3_ENV}
 ${V3_UV}
@@ -182,7 +199,7 @@ void main(){
   if(uFlat > 0.5){ gl_FragColor = vec4(0.92, 0.94, 0.98, 1.0); return; }
   // the coordinate stands in for the art, and is then lit like the art, so the
   // form still reads and you can see which way a shell is wrapped over it
-  if(uUv > 0.5) base.rgb = v3UvPaint(vUv, uUScale < 0.75 ? 1.0 : 0.0);
+  if(uUv > 0.5) base.rgb = v3UvPaint(vUv, uUScale < 0.75 ? 1.0 : 0.0, uPair);
 
   vec3 n = normalize(vNormal);
   // ambient straight out of the environment, so a surface facing the sky picks
@@ -291,6 +308,9 @@ async function v3Begin(mod, entry, host){
   v3 = {mod, entry, info, host: host || '', lod: 0, skin: 0,
         geo: null, tex: null, texAtt: null, hidden: {}, variant: {},
         wire: false, spin: false, uv: false,
+        // the UV layout pane: whether it is open, how it is framed (null until
+        // it first opens and can measure itself), and which island is named
+        uved: false, uvv: null, uvSel: null, uvOpt: {tex: true, solo: false},
         yaw: 0.6, pitch: 0.25, dist: 3, centre: [0,0,0], gl: null, err: ''};
   // open on the first LOD the mod actually ships — an entry whose lod0 lives in
   // a .pack still has lod1 and lod2 on disk more often than not
@@ -383,11 +403,31 @@ function v3Render(){
   // beside it, because 300px of width does not hold both.
   host.innerHTML = `
     <div class="v3wrap${v3.host ? ' dock' : ''}">
-      <div class="v3stage">
-        <canvas id="v3canvas"></canvas>
-        <div class="v3hint">drag to turn · wheel to zoom · right-drag to pan</div>
-        <div class="v3msg" id="v3msg"></div>
+      <div class="v3stage${v3.uved ? ' uv' : ''}" id="v3stage">
+        <div class="v3gl">
+          <canvas id="v3canvas"></canvas>
+          <div class="v3hint">drag to turn · wheel to zoom · right-drag to pan</div>
+          <div class="v3msg" id="v3msg"></div>
+        </div>
+        <div class="v3uvpane">
+          <div class="v3uvbar">
+            <label><input type="checkbox" ${v3.uvOpt.tex?'checked':''}
+              onchange="v3UvOpt('tex', this.checked)"> Sheet</label>
+            <label title="Draw only the island you picked, for a part buried under the others"><input
+              type="checkbox" ${v3.uvOpt.solo?'checked':''}
+              onchange="v3UvOpt('solo', this.checked)"> Just this part</label>
+            <button onclick="v3UvFit()">Fit</button>
+          </div>
+          <div class="v3uvsel" id="v3uvsel"></div>
+          <div class="v3uvstage">
+            <canvas id="v3uvcanvas"></canvas>
+            <div class="v3hint" id="v3uvpos">drag to pan · wheel to zoom · click an island</div>
+          </div>
+        </div>
       </div>
+      ${v3.host ? `<div class="v3grip" onpointerdown="v3GripDown(event)"
+        ondblclick="v3GripReset()"
+        title="Drag to give the model more room, or its controls more · double-click for the default"></div>` : ''}
       <aside class="v3side">
         <button class="v3roll" onclick="v3Randomize()" title="Pick a variant for every part the way the game does, one soldier at a time">🎲 Randomize variations</button>
         <label class="v3f"><span>Level of detail</span>
@@ -399,6 +439,8 @@ function v3Render(){
           <button id="v3wire" class="${v3.wire?'on':''}" onclick="v3Toggle('wire')">Wireframe</button>
           <button id="v3uv" class="${v3.uv?'on':''}" onclick="v3Toggle('uv')"
             ${(v3.geo && !v3.geo.has_uvs) ? 'disabled title="This model carries no UV set"' : 'title="Paint the UV coordinate instead of the art: blue is the main sheet, amber the attachment sheet, and the dark tiles are the sheets repeating"'}>Show UVs</button>
+          <button id="v3uved" class="${v3.uved?'on':''}" onclick="v3Toggle('uved')"
+            ${(v3.geo && !v3.geo.has_uvs) ? 'disabled title="This model carries no UV set"' : 'title="Open the UV layout beside the model: the texture sheet with this model&#39;s islands drawn over it, the way a UV editor shows them"'}>UV layout</button>
           <button onclick="v3Frame()">Recentre</button>
         </div>
         <div id="v3uvkey"></div>
@@ -411,6 +453,104 @@ function v3Render(){
   v3UvKey();
   const c = document.getElementById('v3canvas');
   if(c && v3.geo) v3Start(c);
+  // The pane is in the markup whether or not it is showing — CSS hides it — so
+  // opening it is a class flip rather than a rebuild, and a rebuild does not
+  // tear down the GL context the model is living in.
+  const uc = document.getElementById('v3uvcanvas');
+  if(uc && v3.geo){ v3UvPointers(uc); v3UvBar(); if(v3.uved) v3UvEdDraw(); }
+  v3GripInstall();
+}
+
+/* --- the grab bar between the canvas and its controls (docked only) --------
+   `splitInstall` gives the docked viewer a draggable LEFT edge, so the column
+   can be made wider than the list beside it. Inside that column the same
+   argument runs the other way and had no answer: the canvas took what was left
+   over after a parts list that had grown to twenty-one rows, and on a tall
+   model that left a letterbox. This is the same bargain on the other axis —
+   the controls are given a height, and the canvas takes the rest.
+
+   Docked only. In the dialog the two are side by side with the whole page's
+   height to share, which is a different split and not one anybody has run out
+   of room in. Persisted like the other one, and for the same reason: how much
+   of the panel the model deserves depends on what you are doing with it. */
+const V3_MIN_STAGE = 150;   // below this the model is a thumbnail
+const V3_MIN_SIDE  = 74;    // below this not one whole parts row is left showing
+
+/* What the drag moves is the CANVAS, not the controls under it.
+
+   The obvious way round — give the controls a height and let the canvas take
+   what is left — does nothing here, because the docked column is as tall as its
+   contents rather than a fixed box: the stage sits at the stylesheet's 240px
+   floor and the panel scrolls. Growing the controls in that layout grows the
+   panel and leaves the model exactly where it was. Sizing the stage moves the
+   boundary whichever way the column is sized, which is what the bar looks like
+   it should do. */
+function v3GripSet(stage, room, want){
+  const cap = Math.max(V3_MIN_STAGE, (room || 0) - V3_MIN_SIDE);
+  const px = Math.round(Math.max(V3_MIN_STAGE, Math.min(want, cap)));
+  stage.style.flex = '0 0 ' + px + 'px';
+  stage.style.minHeight = px + 'px';   // the stylesheet floors it at 240
+  return px;
+}
+
+/* The panel's own scrolling box is the room there is to share: past it the
+   column scrolls, so a stage taller than that is a canvas you cannot see the
+   bottom of without scrolling the controls off. */
+function v3GripRoom(){
+  const host = v3HostEl();
+  return (host && host.clientHeight) || Math.round(window.innerHeight * 0.7);
+}
+
+function v3GripStage(){
+  const host = v3HostEl();
+  const wrap = host && host.querySelector('.v3wrap.dock');
+  return wrap ? wrap.querySelector('.v3stage') : null;
+}
+
+/* v3Render rebuilds the panel's markup, so the dragged height is re-applied
+   from settings each time rather than living on the element. */
+function v3GripInstall(){
+  const stage = v3GripStage();
+  const saved = +(state.settings && state.settings.v3_dock_px) || 0;
+  if(stage && saved > 0) v3GripSet(stage, v3GripRoom(), saved);
+}
+
+function v3GripDown(ev){
+  if(ev.button) return;              // left button only
+  ev.preventDefault();               // and never let the drag select the list
+  const grip = ev.currentTarget;
+  const stage = grip.parentNode && grip.parentNode.querySelector('.v3stage');
+  if(!stage) return;
+  const startY = ev.clientY, startH = stage.getBoundingClientRect().height;
+  const room = v3GripRoom();
+  try{ grip.setPointerCapture(ev.pointerId); }catch(e){}
+  grip.classList.add('drag');
+  document.body.classList.add('vsplitting');
+  // The bar sits UNDER the canvas, so dragging down (a rising clientY) makes it
+  // taller. The canvas re-reads its own size every frame, so nothing has to be
+  // told the stage changed.
+  const move = e => v3GripSet(stage, room, startH + (e.clientY - startY));
+  const up = () => {
+    grip.removeEventListener('pointermove', move);
+    grip.removeEventListener('pointerup', up);
+    grip.removeEventListener('pointercancel', up);
+    grip.classList.remove('drag');
+    document.body.classList.remove('vsplitting');
+    splitSave('v3_dock_px', Math.round(stage.getBoundingClientRect().height));
+  };
+  grip.addEventListener('pointermove', move);
+  grip.addEventListener('pointerup', up);
+  grip.addEventListener('pointercancel', up);
+}
+
+/* Back to the height the stylesheet picks. Written through `api.post` rather
+   than `splitSave`, which refuses to store a zero — and zero is exactly what
+   "no saved height" has to be written as to clear one. */
+function v3GripReset(){
+  const stage = v3GripStage();
+  if(stage){ stage.style.flex = ''; stage.style.minHeight = ''; }
+  state.settings.v3_dock_px = 0;
+  api.post('/api/settings', {v3_dock_px: 0});
 }
 
 /* --- parts ----------------------------------------------------------------
@@ -474,25 +614,43 @@ function v3Parts(){
   const parts = v3PartMap();
   const att = [...parts.values()].filter(p => p.list.some(v => v.g.sheets !== 'main')).length;
   host.innerHTML = `<div class="k">Parts <span class="count">${parts.size} slots`
-    + (att ? ` · ${att} reaching the attachment sheet` : '') + `</span></div>`
-    + [...parts.values()].map(p => {
+    + (att ? ` · ${att} reaching the ${v3TexCase() === 'pair'
+        ? 'attachment sheet' : 'right half of the sheet'}` : '') + `</span></div>`
+    + [...parts.values()].map((p, n) => {
     const box = `<input type="checkbox" ${v3.hidden[p.key]?'':'checked'}
         onchange="v3TogglePart('${q1(esc(p.key))}')">`;
-    // which sheet the art is ON, said rather than acted on — the UVs do the
-    // choosing themselves, and a part can genuinely straddle the two
-    const sheet = p.list.some(v => v.g.sheets === 'both') ? 'both sheets'
-                : p.list.every(v => v.g.sheets === 'attach') ? 'attach sheet'
-                : p.list.some(v => v.g.sheets !== 'main') ? 'both sheets' : '';
+    /* While the UV layout is open every row carries the colour its island is
+       drawn in — that pairing is what turns a wireframe into a map you can
+       read. The chip selects too, and has to call off the click first: it sits
+       inside the row's <label>, and a click on a label is a click on its
+       checkbox, so without this, naming a part would also hide it. */
+    const dot = v3.uved
+      ? `<i class="v3dot" title="find this part in the UV layout"
+           style="background:${v3UvColour(n, v3.uvSel === p.key)}"
+           onclick="event.preventDefault();event.stopPropagation();v3UvSelect('${q1(esc(p.key))}')"></i>`
+      : '';
+    const rowcls = v3.uvSel === p.key && v3.uved ? ' sel' : '';
+    // Which sheet the art is ON, said rather than acted on — the UVs do the
+    // choosing themselves, and a part can genuinely straddle the two. mesh.py
+    // labels the HALF of the space a group sits in; on an entry with no second
+    // sheet the halves are halves of the one it has, and calling that an
+    // "attach sheet" would name a texture the entry does not carry.
+    const two = v3TexCase() === 'pair';
+    const far = two ? 'attach sheet' : 'right half';
+    const straddle = two ? 'both sheets' : 'both halves';
+    const sheet = p.list.some(v => v.g.sheets === 'both') ? straddle
+                : p.list.every(v => v.g.sheets === 'attach') ? far
+                : p.list.some(v => v.g.sheets !== 'main') ? straddle : '';
     const tags = (p.optional ? '<span class="v3tag">optional</span>' : '')
                + (sheet ? `<span class="v3tag">${sheet}</span>` : '');
     if(p.list.length === 1){
       const {g} = p.list[0];
-      return `<label class="v3part">${box}
+      return `<label class="v3part${rowcls}">${box}${dot}
         <span class="v3nm">${esc(p.label)}</span>${tags}
         <span class="count">${esc(g.texture_group||'')} · ${g.count/3} tris</span></label>`;
     }
     const chosen = v3Chosen(p);
-    return `<div class="v3part v3var"><label class="v3nm">${box} ${esc(p.label)} ${tags}</label>
+    return `<div class="v3part v3var${rowcls}"><label class="v3nm">${box}${dot} ${esc(p.label)} ${tags}</label>
       <select onchange="v3SetVariant('${q1(esc(p.key))}', this.value)">
         ${p.list.map(({g, idx}) => `<option value="${idx}" ${idx===chosen?'selected':''}
           >${esc(g.texture_group || ('variant ' + (idx+1)))} · ${g.count/3} tris</option>`).join('')}
@@ -511,12 +669,8 @@ function v3Randomize(){
     v3.hidden[p.key] = v3SlotHidden(p.key) || (p.optional && Math.random() < 0.5);
   });
   v3Parts();
+  v3UvEdDraw();
 }
-
-/* Whether the bound texture is one sheet rather than a glued pair — the state
-   `v3Apply` acted on, read back so the facts panel says the same thing the
-   shader is doing. */
-const v3SoloSheet = () => !!(v3 && v3.tex && !v3.texAtt);
 
 function v3Facts(){
   const host = document.getElementById('v3facts');
@@ -533,15 +687,19 @@ function v3Facts(){
     g.bones.length ? `rigged to ${g.bones.length} bones` : 'no skeleton — a static model',
     skin && skin.rel ? `main texture <code>${esc(skin.rel)}</code>${skin.exists?'':' — <b>not in this mod</b>'}`
                      : 'no texture listed on this entry',
-    skin && skin.attach && !v3SoloSheet()
+    v3TexCase() === 'pair'
       ? `attachment texture <code>${esc(skin.attach)}</code>${skin.attach_exists?'':' — <b>not in this mod</b>'}`
-      : v3SoloSheet()
-        ? 'one sheet, not a pair — nothing is glued beside it and u wraps at 1'
-        : '',
+      : v3TexCase() === 'self'
+        ? `its attachment slot names <code>${esc((skin&&skin.attach)||'')}</code>`
+          + `${skin && skin.attach_exists ? ' — the main file again, so the game glues that sheet to a copy of itself and u wraps at 1'
+                                          : ' — <b>not in this mod</b>, so u wraps at 1 on the main sheet instead'}`
+        : 'no attachment texture on this entry, so this one sheet is the whole '
+          + 'space and u wraps at 2 — every ordinary mount is built this way',
     // the honest answer to "why does this look right in the game and not here":
     // an entry can name an attachment sheet that no group's UVs ever reach
-    onAtt ? `${onAtt} group${onAtt===1?'':'s'} reach into the attachment sheet — their UVs pass u 1`
-          : 'every group stays in the main sheet, u 0 to 1',
+    onAtt ? `${onAtt} group${onAtt===1?'':'s'} reach past u 1 — into the `
+            + (v3TexCase() === 'pair' ? 'attachment sheet' : 'right half of that sheet')
+          : 'every group stays in the left half of the space, u 0 to 1',
     v3.info.skins.length === 1 && (v3.info.skins[0].factions||[]).length > 1
       ? `every one of its ${v3.info.skins[0].factions.length} factions uses that same skin`
       : `${v3.info.skins.length} distinct skin${v3.info.skins.length===1?'':'s'} across its factions`,
@@ -571,6 +729,9 @@ async function v3Load(){
   try{ v3.geo = v3Parse(buf); }
   catch(e){ return v3Note(''+(e.message||e), true); }
   v3.variant = {};
+  // a new LOD is new islands: the framing and the named part belonged to the
+  // old one, and a part key that survives the change is a coincidence
+  v3.uvv = null; v3.uvSel = null;
   // the stances a model ships but does not wear at once start off
   v3.hidden = {};
   v3PartMap().forEach(p => { if(v3SlotHidden(p.key)) v3.hidden[p.key] = true; });
@@ -635,34 +796,426 @@ function v3Parse(buf){
 
 function v3SetLod(v){ if(!v3) return; v3.lod = +v; v3Stop(); v3.geo = null; v3Load(); }
 function v3SetSkin(v){ if(!v3) return; v3.skin = +v; v3LoadSkin(v3Gen); v3Facts(); }
-function v3SetVariant(part, idx){ if(!v3) return; v3.variant[part] = +idx; }
-function v3TogglePart(key){ if(!v3) return; v3.hidden[key] = !v3.hidden[key]; }
+// the 3D view redraws itself every frame; the UV pane draws on demand, so
+// anything that changes WHICH groups are drawn has to say so
+function v3SetVariant(part, idx){ if(!v3) return; v3.variant[part] = +idx; v3UvEdDraw(); }
+function v3TogglePart(key){ if(!v3) return; v3.hidden[key] = !v3.hidden[key]; v3UvEdDraw(); }
 function v3Toggle(what){
   if(!v3) return;
   v3[what] = !v3[what];
   const b = document.getElementById('v3' + what);
   if(b) b.classList.toggle('on', v3[what]);
   if(what === 'uv') v3UvKey();
+  // the parts list grows a colour chip per row while the layout is open, so it
+  // is repainted either way round
+  if(what === 'uved'){ v3UvEdOn(); v3Parts(); }
 }
 
-/* What the four colours mean, on screen only while they are on screen. The
-   attachment row is dropped for an entry that names one sheet, because that
-   model has no amber on it to explain — same read as `v3SoloSheet`. */
+/* What the colours mean, on screen only while they are on screen. The amber row
+   is dropped for an entry with no second sheet, because that model has no amber
+   on it to explain — and which of the three shapes it is in decides what the
+   blue row can honestly claim. See `v3TexCase`. */
 function v3UvKey(){
   const host = document.getElementById('v3uvkey');
   if(!host) return;
   if(!v3 || !v3.uv){ host.className = ''; host.innerHTML = ''; return; }
-  const pair = !!(v3 && v3.texAtt);
+  const kind = v3TexCase();
   const row = (css, text) => `<i style="background:${css}"></i><span>${text}</span>`;
   host.className = 'v3uvkey';
   host.innerHTML = '<b>UV mode</b>'
-    + row('#4a82cc', 'the main sheet — u 0 to 1')
-    + (pair ? row('#e08f33', 'the attachment sheet — u 1 to 2') : '')
-    + row('#2a3a4d', `outside the ${pair ? 'pair' : 'sheet'} — the art repeating`)
-    + row('#ff3d57', 'where the tiling starts over')
+    + (kind === 'pair'
+        ? row('#4a82cc', 'the main sheet — u 0 to 1')
+          + row('#e08f33', 'the attachment sheet — u 1 to 2')
+        : kind === 'self'
+          ? row('#4a82cc', 'the sheet — and u 1 to 2 is that same file again, '
+                         + 'which is what this entry names in its attachment slot')
+          : row('#4a82cc', 'the sheet — it has no attachment beside it, so it '
+                         + 'spans all of u 0 to 2 on its own'))
+    + row('#2a3a4d', 'outside u 0 to 2 — past the space the model was unwrapped in')
+    + row('#ff3d57', `where the art starts over — every ${
+        v3UvSpan() === 2 ? 'second unit' : 'unit'} of u`)
     + `<span style="grid-column:1/-1">32 checker cells to a sheet: a stretched
        cell is art stretched over that triangle.</span>`;
 }
+
+/* --- the UV layout --------------------------------------------------------
+   The other half of "check the UVs": Blender's UV editor, which is the sheet
+   itself with the mesh's islands drawn over it. `Show UVs` paints the
+   coordinate onto the MODEL and answers "is this shell stretched, and which
+   sheet is it on". This answers the question that one cannot — "where on the
+   art does this part sit, and what is under it" — and it is the view a
+   retexture is actually done against.
+
+   Plain 2D canvas, not a second WebGL context. The whole drawing is an image
+   and a few thousand lines; a second context on the page is a second copy of
+   the mesh on the GPU for a picture the CPU draws in a millisecond.
+
+   Three things it has to get right, and they are the same three the shader
+   already fights with (see V3_UV):
+
+     * **the space is the modeller's, untouched.** u 0..1 is the main sheet,
+       1..2 the attachment sheet, and everything outside is the pair repeating.
+       Nothing is wrapped or folded into 0..1 here either — an island running to
+       u 1.38 is DRAWN at 1.38, over the repeat it really lands on, because
+       "this part leaves its sheet" is exactly what you opened this to see;
+     * **v goes DOWN.** M2TW is a Direct3D game and puts v=0 at the top, which
+       is why the texture is bound unflipped in v3Apply — so the sheet is drawn
+       from its top-left corner at (0,0) and v grows downward, and an island
+       sits over the art it names rather than over its mirror image;
+     * **one colour per part.** The parts list carries the same colour beside
+       each row, so an island and the slot that wears it can be read off one
+       another. That is the whole reason this is not one flat wireframe.
+
+   Only the groups the viewer is DRAWING are drawn here — one variant per part,
+   minus the parts switched off. A model ships three heads and two shields, and
+   laying every one of them over the same sheet is a plate of spaghetti rather
+   than a UV map. */
+
+/* Islands are coloured by walking the wheel at the golden angle, so twenty
+   consecutive parts come out twenty distinguishable hues instead of twenty
+   blues. */
+function v3UvColour(n, sel){
+  return `hsla(${((n * 137.508) % 360).toFixed(0)}, 85%, ${sel ? 70 : 58}%, ${sel ? 1 : 0.78})`;
+}
+
+/* Which part each drawable group belongs to, and where that part sits in the
+   list — the colour and the parts row both key off that position. */
+function v3UvOwners(){
+  const map = new Map();
+  [...v3PartMap().values()].forEach((p, n) => p.list.forEach(v => map.set(v.idx, {p, n})));
+  return map;
+}
+
+/* The layout is drawn in the BOUND IMAGE's own space: one square per sheet,
+   at the size the art really is, and the UVs put through the same scaling the
+   sampler puts them through to land on it.
+
+   Which means it does not matter here that the mesh's u runs 0..2 on a mount
+   and 0..2 on a pair for different reasons — `uUScale` already holds the
+   difference, and going through it is what keeps a 1024 square sheet drawn as
+   a square. Stretching one across two tiles because the mesh's u happens to
+   span two is a picture of the coordinate rather than a picture of the art,
+   and the art is what you are trying to paint. */
+
+/* One copy of the bound art, measured in units of u: two for anything that
+   spans the space (a glued pair, or a mount's lone sheet), one for the sheet
+   the game glues to a copy of itself. This is `uUScale` inverted. */
+function v3UvSpan(){ return v3TexCase() === 'self' ? 1 : 2; }
+
+/* And how many SHEETS wide that copy is drawn — the only thing that decides
+   the picture's aspect, so a lone sheet is one square and a pair is two. */
+function v3UvSheets(){ return v3TexCase() === 'pair' ? 2 : 1; }
+
+/* Pixels across one unit of u, given the pixels across one unit of v. The two
+   differ by exactly the scaling above: a mount's sheet is one square holding
+   two units of u, so a unit of u is half a square. */
+function v3UvPxU(px){ return px * v3UvSheets() / v3UvSpan(); }
+
+/* Which of the three shapes an entry's texture set is in. It is not a two-way
+   question, and reading it as one is what put every mount in the game on the
+   wrong half of its own sheet — see `v3Apply`.
+
+     'pair'  two different sheets, glued: main in u 0..1, attachment in 1..2
+     'self'  the entry NAMES an attachment and it is the main file again (or a
+             file this mod does not ship). The game glues main to main, so the
+             art repeats every ONE unit of u
+     'solo'  the entry names no attachment at all. There is nothing to glue, so
+             the one sheet IS the two-unit space and the art repeats every TWO
+*/
+function v3TexCase(){
+  if(!v3) return 'solo';
+  if(v3.texAtt) return 'pair';
+  const skin = v3Skin();
+  return skin && skin.attach ? 'self' : 'solo';
+}
+
+/* Turning the button on is what sizes the view: the pane has no width until
+   the class lands, so the fit has to happen after it. */
+function v3UvEdOn(){
+  if(!v3) return;
+  const stage = document.getElementById('v3stage');
+  if(stage) stage.classList.toggle('uv', !!v3.uved);
+  if(!v3.uved) return;
+  if(!v3.uvv) v3UvFit(false);
+  v3UvBar();
+  v3UvEdDraw();
+}
+
+/* The bound image in the pane, at its own aspect, with a little air round it.
+   `px` is pixels across one unit of v — one sheet's height — so the fit is
+   against how many SHEETS wide the picture is, not how many units of u it
+   happens to be written in. */
+function v3UvFit(redraw){
+  if(!v3) return;
+  const c = document.getElementById('v3uvcanvas');
+  const w = (c && c.clientWidth) || 480, h = (c && c.clientHeight) || 360;
+  v3.uvv = {u: v3UvSpan()/2, v: 0.5,
+            px: Math.max(24, Math.min(w/(v3UvSheets()*1.06), h/1.06))};
+  if(redraw !== false) v3UvEdDraw();
+}
+
+function v3UvOpt(what, on){
+  if(!v3) return;
+  v3.uvOpt[what] = !!on;
+  v3UvEdDraw();
+}
+
+/* Clicking an island names it; clicking it again, or clicking bare sheet, lets
+   it go. */
+function v3UvSelect(key){
+  if(!v3) return;
+  v3.uvSel = (key && key !== v3.uvSel) ? key : null;
+  v3Parts();
+  v3UvBar();
+  v3UvEdDraw();
+}
+
+/* The box one part's UVs really occupy. Read off the variant being DRAWN, not
+   off the part as a whole: two variants of a head are two different islands,
+   and the numbers under the picture have to be the picture's. */
+function v3UvBounds(p){
+  const g = v3.geo, uvs = g.uvs, ind = g.indices;
+  const grp = g.groups[v3Chosen(p)];
+  let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity;
+  for(let t = grp.start; t < grp.start + grp.count; t++){
+    const i = ind[t]*2, u = uvs[i], v = uvs[i+1];
+    if(u < u0) u0 = u;
+    if(u > u1) u1 = u;
+    if(v < v0) v0 = v;
+    if(v > v1) v1 = v;
+  }
+  const span = v3UvSpan();
+  return {u0, u1, v0, v1,
+          out: u0 < -0.001 || u1 > span + 0.001 || v0 < -0.001 || v1 > 1.001};
+}
+
+/* The caption under the toolbar: which part is selected, and where it lives. */
+function v3UvBar(){
+  const el = document.getElementById('v3uvsel');
+  if(!el || !v3 || !v3.geo) return;
+  const parts = [...v3PartMap().values()];
+  const n = parts.findIndex(p => p.key === v3.uvSel);
+  if(n < 0){
+    el.innerHTML = '<span class="count">click an island to name the part wearing it</span>';
+    return;
+  }
+  const p = parts[n], b = v3UvBounds(p);
+  el.innerHTML = `<i class="v3dot" style="background:${v3UvColour(n, true)}"></i>`
+    + `<b>${esc(p.label)}</b> <span class="count">u ${b.u0.toFixed(2)}–${b.u1.toFixed(2)} ·`
+    + ` v ${b.v0.toFixed(2)}–${b.v1.toFixed(2)}`
+    + (b.out ? ' · runs outside the sheet it was authored in' : '') + '</span>';
+}
+
+/* --- drawing --------------------------------------------------------------- */
+
+function v3UvEdDraw(){
+  const c = document.getElementById('v3uvcanvas');
+  if(!c || !v3 || !v3.uved || !v3.geo) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = c.clientWidth || 480, h = c.clientHeight || 360;
+  if(c.width !== Math.round(w*dpr) || c.height !== Math.round(h*dpr)){
+    c.width = Math.round(w*dpr); c.height = Math.round(h*dpr);
+  }
+  const x = c.getContext('2d');
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  x.fillStyle = '#0b0d11';
+  x.fillRect(0, 0, w, h);
+  if(!v3.geo.has_uvs){
+    x.fillStyle = '#8a93a3';
+    x.font = '13px system-ui, sans-serif';
+    x.textAlign = 'center';
+    x.fillText('this model carries no UV set', w/2, h/2);
+    return;
+  }
+  if(!v3.uvv) v3UvFit(false);
+  // pixels across a unit of v is pixels across a SHEET; a unit of u is worth
+  // whatever the sampler's scaling makes it, which is what keeps the art square
+  const s = v3.uvv, px = s.px, pxU = v3UvPxU(px);
+  const X = u => w/2 + (u - s.u) * pxU;
+  const Y = v => h/2 + (v - s.v) * px;
+  const span = v3UvSpan(), sheets = v3UvSheets();
+
+  // which copies of the art are on screen — capped, because zoomed far enough
+  // out the honest answer is "thousands", and none of them readable
+  const uMin = s.u - (w/2)/pxU, uMax = s.u + (w/2)/pxU;
+  const vMin = s.v - (h/2)/px, vMax = s.v + (h/2)/px;
+  const i0 = Math.max(-8, Math.floor(uMin/span)), i1 = Math.min(8, Math.floor(uMax/span));
+  const j0 = Math.max(-8, Math.floor(vMin)), j1 = Math.min(8, Math.floor(vMax));
+
+  // crisp texels once one is bigger than a screen pixel: this is a tool for
+  // seeing where a seam falls, and blur is the enemy of that
+  x.imageSmoothingEnabled = px < 1200;
+  for(let i = i0; i <= i1; i++){
+    for(let j = j0; j <= j1; j++){
+      // tile (0,0) is the art as it was authored; every other tile on screen is
+      // the wrap, and is dimmed so the difference reads
+      x.globalAlpha = (i === 0 && j === 0) ? 1 : 0.30;
+      const top = Y(j), left = X(i*span);
+      if(v3.uvOpt.tex && v3.tex){
+        // one square per sheet, whatever span of u that square is addressed by
+        x.drawImage(v3.tex, left, top, px, px);
+        if(v3.texAtt) x.drawImage(v3.texAtt, left + px, top, px, px);
+      }else{
+        x.fillStyle = '#171b21';
+        x.fillRect(left, top, px*sheets, px);
+      }
+      x.globalAlpha = 1;
+    }
+  }
+
+  // the vertical lines: red where the art starts over, white for the seam
+  // between a pair's two sheets, which is a change of picture and not a repeat
+  x.lineWidth = 1;
+  for(let n = i0; n <= i1 + 1; n++){
+    for(let k = 0; k < sheets; k++){
+      const u = (n + k/sheets) * span;
+      x.strokeStyle = k === 0 ? 'rgba(255,61,87,0.85)' : 'rgba(255,255,255,0.35)';
+      x.beginPath(); x.moveTo(X(u) + 0.5, 0); x.lineTo(X(u) + 0.5, h); x.stroke();
+    }
+  }
+  x.strokeStyle = 'rgba(255,61,87,0.85)';
+  for(let v = Math.floor(vMin); v <= Math.ceil(vMax); v++){
+    x.beginPath(); x.moveTo(0, Y(v) + 0.5); x.lineTo(w, Y(v) + 0.5); x.stroke();
+  }
+
+  // the islands, one path per group so the whole of a part strokes at once
+  const g = v3.geo, uvs = g.uvs, ind = g.indices, owners = v3UvOwners();
+  x.lineJoin = 'round';
+  for(const gi of v3Visible()){
+    const o = owners.get(gi);
+    if(!o) continue;
+    const sel = v3.uvSel === o.p.key;
+    if(v3.uvOpt.solo && v3.uvSel && !sel) continue;
+    const grp = g.groups[gi];
+    const path = new Path2D();
+    for(let t = grp.start; t < grp.start + grp.count; t += 3){
+      const a = ind[t]*2, b = ind[t+1]*2, cc = ind[t+2]*2;
+      path.moveTo(X(uvs[a]), Y(uvs[a+1]));
+      path.lineTo(X(uvs[b]), Y(uvs[b+1]));
+      path.lineTo(X(uvs[cc]), Y(uvs[cc+1]));
+      path.closePath();
+    }
+    if(sel){
+      x.fillStyle = `hsla(${((o.n * 137.508) % 360).toFixed(0)}, 85%, 60%, 0.18)`;
+      x.fill(path);
+    }
+    x.strokeStyle = v3UvColour(o.n, sel);
+    x.lineWidth = sel ? 1.7 : 0.9;
+    x.stroke(path);
+  }
+}
+
+/* Resize is the one change nothing else notices: the pane is a flex child of a
+   stage that moves with the window, and the canvas only learns about it here.
+   Everything else that changes the picture calls the draw itself. */
+function v3UvEdTick(){
+  const c = document.getElementById('v3uvcanvas');
+  if(!c) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if(c.width !== Math.round((c.clientWidth||0)*dpr)
+  || c.height !== Math.round((c.clientHeight||0)*dpr)) v3UvEdDraw();
+}
+
+/* --- pan, zoom and picking ------------------------------------------------- */
+
+function v3UvAt(canvas, e){
+  const r = canvas.getBoundingClientRect(), s = v3.uvv;
+  return {u: s.u + (e.clientX - r.left - r.width/2)/v3UvPxU(s.px),
+          v: s.v + (e.clientY - r.top - r.height/2)/s.px};
+}
+
+function v3UvPointers(canvas){
+  let last = null, moved = 0;
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  canvas.addEventListener('pointerdown', e => {
+    last = [e.clientX, e.clientY]; moved = 0;
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointerup', e => {
+    // a press that never travelled is a pick; one that did was a pan
+    if(last && moved < 4 && v3 && v3.uvv) v3UvSelect(v3UvPick(v3UvAt(canvas, e)));
+    last = null;
+    try{ canvas.releasePointerCapture(e.pointerId); }catch(err){}
+  });
+  canvas.addEventListener('pointermove', e => {
+    if(!v3 || !v3.uvv) return;
+    v3UvReadout(v3UvAt(canvas, e));
+    if(!last) return;
+    const dx = e.clientX - last[0], dy = e.clientY - last[1];
+    moved += Math.abs(dx) + Math.abs(dy);
+    last = [e.clientX, e.clientY];
+    v3.uvv.u -= dx / v3UvPxU(v3.uvv.px);
+    v3.uvv.v -= dy / v3.uvv.px;
+    v3UvEdDraw();
+  });
+  canvas.addEventListener('wheel', e => {
+    if(!v3 || !v3.uvv) return;
+    e.preventDefault();
+    // zoom about the cursor: the texel under it has to stay under it, or you
+    // lose the seam you leaned in to look at
+    const before = v3UvAt(canvas, e);
+    v3.uvv.px = Math.max(16, Math.min(60000, v3.uvv.px * (e.deltaY > 0 ? 1/1.12 : 1.12)));
+    const after = v3UvAt(canvas, e);
+    v3.uvv.u += before.u - after.u;
+    v3.uvv.v += before.v - after.v;
+    v3UvEdDraw();
+  }, {passive:false});
+}
+
+/* Where the cursor is, in the coordinate the mesh is written in — and, when it
+   is over the art rather than a repeat of it, which pixel of which sheet that
+   is. A retexture is done in pixels, so the pixel is worth saying. */
+function v3UvReadout(at){
+  const el = document.getElementById('v3uvpos');
+  if(!el) return;
+  const home = at.u >= 0 && at.u < v3UvSpan() && at.v >= 0 && at.v < 1;
+  // Where in the BOUND image this coordinate falls: one copy of the art is
+  // `art` units of u wide, so this is the position across that copy.
+  const span = v3UvSpan();
+  const a = (((at.u % span) + span) % span) / span;
+  const kind = v3TexCase();
+  // naming an "attachment sheet" on an entry that has none would be a lie, and
+  // on the one that has the main file twice the honest word is "again"
+  const sheet = !home ? 'outside the space'
+              : kind === 'pair' ? (a < 0.5 ? 'main sheet' : 'attachment sheet')
+              : kind === 'self' ? (at.u < 1 ? 'the sheet' : 'the same sheet again')
+              : 'the sheet';
+  const img = (kind === 'pair' && a >= 0.5) ? v3.texAtt : v3.tex;
+  const across = kind === 'pair' ? (a % 0.5) * 2 : a;
+  const px = (home && img)
+    ? ` · ${Math.floor(across * img.width)}, ${Math.floor(at.v * img.height)} px` : '';
+  el.textContent = `u ${at.u.toFixed(3)}  v ${at.v.toFixed(3)} · ${sheet}${px}`;
+}
+
+/* Which part is under the cursor. Every drawn triangle, tested — a few thousand
+   of them on a click, which is nothing, and it is exact where a nearest-island
+   guess would be wrong on the overlapping shells a soldier is made of. */
+function v3UvPick(at){
+  const g = v3.geo;
+  if(!g || !g.uvs) return null;
+  const uvs = g.uvs, ind = g.indices, owners = v3UvOwners();
+  for(const gi of v3Visible()){
+    const o = owners.get(gi);
+    if(!o) continue;
+    if(v3.uvOpt.solo && v3.uvSel && o.p.key !== v3.uvSel) continue;
+    const grp = g.groups[gi];
+    for(let t = grp.start; t < grp.start + grp.count; t += 3){
+      if(v3UvHit(at.u, at.v, uvs, ind[t], ind[t+1], ind[t+2])) return o.p.key;
+    }
+  }
+  return null;
+}
+
+function v3UvHit(u, v, a, i, j, k){
+  const x1 = a[i*2], y1 = a[i*2+1], x2 = a[j*2], y2 = a[j*2+1],
+        x3 = a[k*2], y3 = a[k*2+1];
+  const d = (y2-y3)*(x1-x3) + (x3-x2)*(y1-y3);
+  if(!d) return false;
+  const s = ((y2-y3)*(u-x3) + (x3-x2)*(v-y3)) / d;
+  const t = ((y3-y1)*(u-x3) + (x1-x3)*(v-y3)) / d;
+  return s >= 0 && t >= 0 && s + t <= 1;
+}
+
 function v3Frame(){
   if(!v3 || !v3.geo) return;
   const g = v3.geo;
@@ -717,6 +1270,7 @@ function v3Start(canvas){
     uEye: gl.getUniformLocation(prog,'uEye'),
     uFlat: gl.getUniformLocation(prog,'uFlat'),
     uUScale: gl.getUniformLocation(prog,'uUScale'),
+    uPair: gl.getUniformLocation(prog,'uPair'),
     uUv: gl.getUniformLocation(prog,'uUv')
   };
   // the backdrop: its own tiny program over one full-screen quad
@@ -744,6 +1298,7 @@ function v3Start(canvas){
     if(!v3.paused){
       if(v3.spin && !v3.drag) v3.yaw += 0.006;
       v3Draw();
+      if(v3.uved) v3UvEdTick();
     }
     v3.raf = requestAnimationFrame(tick);
   };
@@ -818,14 +1373,33 @@ function v3Apply(){
   if(!v3 || !v3.gl) return;
   const gl = v3.gl;
   if(v3.texture){ gl.deleteTexture(v3.texture); v3.texture = null; }
-  if(!v3.tex) return;
-  // One sheet or two — the whole difference between the two cases, and the only
-  // place it is decided. `texAtt` is already null when the entry named no
-  // attachment, named one the mod does not ship, or named the main file again
-  // (see v3LoadSkin), so a mount lands here with one sheet and stays that way.
-  const pair = !!v3.texAtt;
-  v3.uScale = pair ? 0.5 : 1.0;
-  const atlas = pair ? v3Atlas(v3.tex, v3.texAtt) : v3.tex;
+  if(!v3.tex){ v3UvEdDraw(); return; }
+  /* Whatever is bound has to fill the two units of u the mesh was unwrapped in,
+     and how far u has to be scaled to do that is NOT the same question as how
+     many sheets were bound. Reading it as one question was a real bug, and its
+     victims were the mounts:
+
+       * a glued pair spans the two units, so u is halved — as it always was;
+       * an entry naming NO attachment has nothing to glue, and its one sheet
+         spans those same two units, so u is halved TOO. This is the fix. It
+         used to bind that sheet at full u, which tiles it twice across the
+         model and paints every horse in the game with texels twice as wide as
+         they are tall;
+       * an entry that NAMES an attachment this viewer did not glue — the main
+         file over again, or one the mod does not ship — is the one case that
+         keeps full u, and it is the case the old comment was describing. There
+         the GAME really does glue two sheets, so the art repeats every unit,
+         and wrapping one sheet at full u reproduces main-glued-to-main exactly.
+
+     Measured, not reasoned: map each triangle's texel-space edges onto its own
+     3D plane and the two singular values of that Jacobian say how far from
+     square its texels are. Over whole models, a real pair comes out 1.21 at
+     half u and 2.02 at full u; `mount_naru_horse` (attachment slot empty) comes
+     out 2.00 at full u and 1.08 at half. Three pairs and four mounts, and the
+     2.0 is the tell — it is the factor of two, standing up to be counted. */
+  const solo = v3TexCase() !== 'self';
+  v3.uScale = solo ? 0.5 : 1.0;
+  const atlas = v3.texAtt ? v3Atlas(v3.tex, v3.texAtt) : v3.tex;
   const t = gl.createTexture();
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, t);
@@ -855,15 +1429,26 @@ function v3Apply(){
          + 'repeat here', true);
   }
   v3.texture = t;
-  // The legend names the sheets, and whether there are two of them is decided
-  // right here — a skin loads asynchronously, so a legend drawn before this ran
-  // is describing a pair as a lone sheet (or the other way round after a skin
-  // change). Repainting it with the decision keeps the two in step.
+  // Which of the three shapes this entry is in is decided right here, and a
+  // skin loads asynchronously — so everything that SAYS which shape it is was
+  // drawn before the answer existed, and is describing a pair as a lone sheet
+  // (or the other way round after a skin change). Repainting them with the
+  // decision keeps every surface in step: the legend, the parts list's
+  // half-of-the-space tags, and the facts panel.
   v3UvKey();
+  v3Parts();
+  v3Facts();
+  // and the layout is drawn from those same two images, so it waits on this
+  // too — a pane opened before the skin landed is showing bare wireframe
+  v3UvEdDraw();
 }
 
 function v3Draw(){
   const gl = v3.gl, c = gl.canvas, g = v3.geo;
+  // narrow, the UV pane takes the whole stage and the model's canvas is laid
+  // out at nothing — there is no frame to draw, and sizing to a made-up 640
+  // would only throw the aspect ratio away for when it comes back
+  if(!c.clientWidth || !c.clientHeight) return;
   const w = c.clientWidth || 640, h = c.clientHeight || 420;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   if(c.width !== Math.round(w*dpr) || c.height !== Math.round(h*dpr)){
@@ -938,6 +1523,9 @@ function v3Draw(){
   gl.uniform1f(v3.loc.uHasTex, textured ? 1 : 0);
   // 0.5 for a glued pair, 1.0 for a lone sheet — v3Apply sets it with the bind
   gl.uniform1f(v3.loc.uUScale, v3.uScale || 0.5);
+  // whether there are two sheets to tell apart, which is not the same as how
+  // far u was scaled — a lone sheet spanning the space is halved too
+  gl.uniform1f(v3.loc.uPair, v3.texAtt ? 1 : 0);
   // UV mode needs the coordinate, not the art, so it survives a missing texture
   gl.uniform1f(v3.loc.uUv, (v3.uv && g.has_uvs) ? 1 : 0);
 

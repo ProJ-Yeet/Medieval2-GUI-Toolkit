@@ -124,7 +124,11 @@ async function loadBuildings(force){
   const want=state.settings.bld_culture||'';
   if(state.bld&&state.bld.mod===state.src&&!force)return state.bld;
   if(_bldLoading&&_bldLoading.mod===state.src&&!force)return _bldLoading.p;
-  main.innerHTML='<div class="empty">Reading '+esc(state.src)+'’s buildings…</div>';
+  // The unit editor's Recruitment tab asks for this with a dialog OVER `main`,
+  // and a "reading…" left behind there is what you would be looking at the
+  // moment the dialog closes. Only the screen that is actually waiting says so.
+  if(!overlay.classList.contains('open'))
+    main.innerHTML='<div class="empty">Reading '+esc(state.src)+'’s buildings…</div>';
   const mod=state.src;
   const p=(async()=>{
     let ov=await api.get('/api/buildings?mod='+enc(mod)+'&culture='+enc(want));
@@ -1751,6 +1755,10 @@ function bldClauseUnstash(){
 }
 function bldClauseCancel(){
   const b=state.bld,unit=b.clause&&b.clause.kind==='unit';
+  // The unit editor's Recruitment tab has no stash: its modal holds a live
+  // WebGL column that a markup snapshot would replace with a dead copy, so it
+  // is rebuilt from state instead. See edRecEditReq.
+  if(b.clause&&b.clause.kind==='edrec'){ b.clause=null; renderEditor(); return; }
   bldClauseUnstash(); b.clause=null;
   // The stash is markup, not a live panel: whichever screen we came from has to
   // be drawn again or its inputs come back unwired.
@@ -1773,6 +1781,9 @@ function bldClauseApply(){
     c.host.conds=c.conds; c.host.condEdited=true;
     c.host.requires=bldClauseText(c.conds);
   }
+  // …and the same on the way out — rebuilt from state, and not a building edit:
+  // these pools are saved by the unit editor, through its own payload.
+  if(c.kind==='edrec'){ b.clause=null; renderEditor(); return; }
   const unit=c.kind==='unit';
   bldClauseUnstash(); b.clause=null;
   if(unit){ bldUnitRender(); return; }   // its own screen, and not a building edit yet
@@ -3423,7 +3434,7 @@ function openUnitFromBuilding(type){
 }
 async function backToBuilding(){
   const r=state.bldReturn,b=state.bld; if(!r||!b)return;
-  if(state.ed&&(edDirty()||edCmpDirty())
+  if(state.ed&&(edDirty()||edCmpDirty()||edRecDirty())
      &&!confirm('Discard the unsaved unit changes and go back to the building?'))return;
   state.ed=null; closeModal();
   state.bldReturn=null;

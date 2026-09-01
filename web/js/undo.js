@@ -85,10 +85,14 @@ function edSnap(){
   // Only the compared unit's EDITS go in — not which unit it is, and not the
   // server payload it was loaded from. Undo takes back a typed number, and
   // "un-picking" a comparison would mean re-fetching a unit to put it back.
+  // …and the same for the Recruitment tab: the three buckets of staged pool
+  // edits go in, the building list they were read from does not.
+  const r=e.rec;
   return {ov:e.ov,rm:[...e.rm],added:[...(e.added||[])],loc:e.loc,newType:e.newType,
           newDict:e.newDict,mEdits:e.mEdits,newModels:e.newModels,
           cardSrc:e.cardSrc||'',infoSrc:e.infoSrc||'',removeOldIcons:!!e.removeOldIcons,
-          cmpOv:c?c.ov:{},cmpRm:c?[...c.rm]:[],cmpAdded:c?[...c.added]:[]};
+          cmpOv:c?c.ov:{},cmpRm:c?[...c.rm]:[],cmpAdded:c?[...c.added]:[],
+          recEdits:r?r.edits:{},recDels:r?r.dels:[],recAdds:r?r.adds:[]};
 }
 function edRestore(v){
   const e=state.ed;
@@ -97,6 +101,8 @@ function edRestore(v){
   e.cardSrc=v.cardSrc; e.infoSrc=v.infoSrc; e.removeOldIcons=v.removeOldIcons;
   if(e.cmp){ e.cmp.ov=v.cmpOv||{}; e.cmp.rm=new Set(v.cmpRm||[]);
              e.cmp.added=new Set(v.cmpAdded||[]); }
+  if(e.rec){ e.rec.edits=v.recEdits||{}; e.rec.dels=v.recDels||[];
+             e.rec.adds=v.recAdds||[]; }
 }
 // The underscore keys of a per-unit config are server answers cached on it
 // (the field list, the conflict report) — big, and not something to undo.
@@ -121,7 +127,7 @@ function paintDirty(){
   const bld=document.getElementById('bldDirtyNote');
   if(bld)bld.innerHTML=dirtyChip(!!(state.bld&&state.bld.work&&bldDirty()));
   const ed=document.getElementById('edDirtyNote');
-  if(ed)ed.innerHTML=dirtyChip(!!(state.ed&&(edDirty()||edCmpDirty())));
+  if(ed)ed.innerHTML=dirtyChip(!!(state.ed&&(edDirty()||edCmpDirty()||edRecDirty())));
 }
 
 const undo={key:'',cur:null,ck:null,past:[],future:[]};

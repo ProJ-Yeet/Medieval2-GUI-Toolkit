@@ -366,14 +366,38 @@
   /* the 3D model viewer: canvas on the left, everything you can change on the
      right, and the canvas gets whatever height is going — a soldier is tall */
   .v3wrap{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
-  .v3stage{position:relative;flex:1 1 520px;min-width:320px;min-height:62vh;
+  .v3stage{position:relative;display:flex;flex:1 1 520px;min-width:320px;min-height:62vh;
     background:#0e1013;border:1px solid var(--edge);border-radius:8px;overflow:hidden}
+  .v3gl{position:relative;flex:1 1 0;min-width:0}
   .v3stage canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
   .v3stage canvas:active{cursor:grabbing}
   .v3hint{position:absolute;left:10px;bottom:8px;font-size:11px;color:var(--dim);
     pointer-events:none;text-shadow:0 1px 2px #000}
   .v3msg{position:absolute;left:10px;top:8px;right:10px;font-size:12px;
     pointer-events:none;text-shadow:0 1px 2px #000}
+  /* The UV layout, beside the model: the sheet with the mesh's islands over it.
+     It is always in the markup and hidden here, so opening it is a class flip
+     rather than a rebuild — a rebuild would take the WebGL context with it. */
+  .v3uvpane{display:none;flex:1 1 0;min-width:0;flex-direction:column;
+    border-left:1px solid var(--edge);background:#0b0d11}
+  .v3stage.uv .v3uvpane{display:flex}
+  .v3uvbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 9px;
+    font-size:11.5px;color:var(--dim);border-bottom:1px solid var(--edge)}
+  .v3uvbar label{display:flex;gap:4px;align-items:center;cursor:pointer}
+  .v3uvbar button{margin-left:auto;font:inherit;font-size:11.5px;padding:2px 9px;cursor:pointer;
+    background:var(--panel2);color:var(--ink);border:1px solid var(--edge);border-radius:6px}
+  .v3uvsel{display:flex;gap:6px;align-items:center;padding:5px 9px;font-size:12px;
+    border-bottom:1px solid var(--edge);min-height:19px}
+  .v3uvstage{position:relative;flex:1 1 auto;min-height:0}
+  /* absolute, because a percentage height against a flex item that has not been
+     laid out yet is zero, and this canvas sizes itself from what it is given */
+  .v3uvstage canvas{position:absolute;inset:0;width:100%;height:100%}
+  /* the readout tracks the cursor and has to stay off the art */
+  .v3uvstage .v3hint{right:10px;background:rgba(8,10,14,.72);padding:2px 6px;border-radius:5px}
+  /* the chip that ties a parts row to its island */
+  .v3dot{width:10px;height:10px;flex:0 0 auto;border-radius:3px;cursor:pointer;
+    border:1px solid rgba(0,0,0,.5)}
+  .v3part.sel{background:var(--panel2)}
   .v3side{flex:0 1 330px;min-width:260px;display:flex;flex-direction:column;gap:10px;
     max-height:62vh;overflow:auto}
   /* docked in a side panel: one narrow column, canvas on top of its controls */
@@ -381,6 +405,21 @@
   .v3wrap.dock .v3stage{flex:1 1 auto;min-width:0;min-height:240px}
   .v3wrap.dock .v3side{flex:0 0 auto;min-width:0;max-height:34vh}
   .v3wrap.dock .v3hint{font-size:10px}
+  /* The grab bar between the canvas and its controls, the horizontal twin of
+     `.splitbar`. Docked only — in the dialog the two sit side by side with the
+     page's whole height to share. */
+  .v3grip{display:none}
+  .v3wrap.dock .v3grip{display:block;flex:0 0 6px;cursor:row-resize;
+    position:relative;border-radius:3px}
+  .v3wrap.dock .v3grip::after{content:'';position:absolute;left:0;right:0;top:2px;
+    height:2px;border-radius:2px;background:var(--edge)}
+  .v3wrap.dock .v3grip:hover::after,.v3wrap.dock .v3grip.drag::after{background:var(--accent)}
+  body.vsplitting{user-select:none;cursor:row-resize}
+  /* Side by side needs room for two. Under it — docked in the editor's preview
+     column, or on a narrow window — the layout takes the stage instead, and the
+     button is the way back to the model. */
+  .v3wrap.dock .v3stage.uv .v3gl{display:none}
+  @media (max-width:1100px){ .v3stage.uv .v3gl{display:none} }
   /* The unit editor's 3D column. The fields keep the width they had; the
      preview takes what is left, and folds to its bar when it is in the way. */
   .edsplit{display:flex;gap:12px;align-items:stretch;min-height:0}
@@ -1226,6 +1265,46 @@
     display:flex;gap:6px;align-items:center}
   .bcreq>:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .bcreq.changed{color:var(--accent)}
+  /* ---- the unit editor's Recruitment tab ----
+     Two lines per pool, not one. The building and the four numbers keep the top
+     line, which is what the eye scans down; the `requires` clause has no natural
+     width — a real one names half a dozen factions and a settlement level — so
+     it gets a line to itself, the same shape the building editor's own pool rows
+     settled on. This tab shares the modal with the 3D preview column, and one
+     line could not hold all of it beside that without a sideways scrollbar.
+
+     The number columns are a fixed width rather than auto, so the header labels
+     sit over the boxes they name instead of near them. */
+  .erpool{padding:6px 8px;border-bottom:1px solid var(--edge)}
+  .erpool:last-child{border-bottom:none}
+  .ertop{display:flex;gap:8px;align-items:center}
+  .erbot{display:flex;gap:8px;align-items:center;margin-top:4px}
+  .erbot .prk{flex:0 0 auto;font-size:9px;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--dim)}
+  .erhd{display:flex;gap:8px;padding:5px 8px;border-bottom:1px solid var(--edge);
+    font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim)}
+  .erhd .ern{white-space:normal;line-height:1.15}
+  .erb{flex:1 1 150px;min-width:80px;font-size:12px;overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap}
+  .erlv{flex:0 1 112px;min-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ern{flex:0 0 90px;min-width:0}
+  .ern.odd input{border-color:var(--warn);color:var(--warn)}
+  .eract{flex:0 0 auto;margin-left:auto;display:flex;gap:4px}
+  .erpool.gone{opacity:.45}
+  .erpool.gone .erb a{text-decoration:line-through}
+  .erpool.fresh{background:rgba(92,201,138,.07)}
+  .erreq{flex:1;min-width:70px;font-family:ui-monospace,Consolas,monospace;font-size:10.5px;
+    display:flex;gap:6px;align-items:center}
+  .erreq>:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .erreq.changed{color:var(--accent)}
+  /* the ＋ picker: one block per building line, its tiers as toggles */
+  .erline{padding:7px 9px;border-bottom:1px solid var(--edge)}
+  .erline:last-child{border-bottom:none}
+  .erhead{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+  .erhead code{font-size:10.5px}
+  .ertiers{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+  .ertier{padding:3px 8px;font-size:11.5px}
+  .ertier.on{background:var(--accent2);color:#fff;border-color:var(--accent2)}
   /* the Variant drop-down and its ＋, which swaps it for a text box */
   .tiervar{display:flex;gap:6px;align-items:center}
   .tiervar select,.tiervar input{flex:1;min-width:0}
@@ -1817,6 +1896,7 @@
 <script src="js/guided.js"></script>
 <script src="js/modelpicker.js"></script>
 <script src="js/buildings.js"></script>
+<script src="js/edrecruit.js"></script>
 <script src="js/traits.js"></script>
 <script src="js/ancillaries.js"></script>
 <script src="js/portui.js"></script>

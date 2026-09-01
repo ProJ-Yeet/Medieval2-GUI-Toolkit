@@ -47,6 +47,9 @@ async function openEditor(type){
             // the Compare tab: a SECOND unit loaded beside this one, with edits
             // of its own that Save writes as a second, independent unit save
             cmp:null,cmpQ:'',cmpSame:false,
+            // the Recruitment tab: every building line that trains this unit,
+            // fetched the first time the tab is opened — see edrecruit.js
+            rec:null,
             ug:null};      // the armour-tier ＋ menu, closed
   undoReset();
   resetPlace();            // a different unit starts at the top, not where the last one sat
@@ -182,7 +185,10 @@ function edPayload(extra){
 }
 function renderEditor(){
   const e=state.ed,d=e.d;
-  const tab=(k,label)=>`<button class="${e.tab===k?'on':''}" onclick="edTab('${k}')">${label}</button>`;
+  // the id is for the Recruitment tab's count badge, which changes without the
+  // tab bar being redrawn — see edRecPaintTab
+  const tab=(k,label)=>`<button id="edTab_${k}" class="${e.tab===k?'on':''}"
+    onclick="edTab('${k}')">${label}</button>`;
   // The preview column is a live WebGL canvas holding a mesh that took a moment
   // to fetch, so it is DETACHED here rather than destroyed, and appended again
   // below — see edPrevAttach. Rewriting the modal around it would take the
@@ -205,7 +211,8 @@ function renderEditor(){
             : 'Defined in <code>data/export_descr_unit.txt</code>.'}</div></div>
       </div>
       <div class="tabs">${tab('identity','Identity & text')}${tab('fields','EDU fields')}
-        ${tab('models','Battle models (bmdb)')}${tab('compare','⇄ Compare')}</div>
+        ${tab('models','Battle models (bmdb)')}${tab('recruit',edRecTabLabel())}${
+        tab('compare','⇄ Compare')}</div>
       <div class="mbody" id="edBody"></div>
      </div>
     </div>
@@ -254,8 +261,27 @@ const ED_PREV_HOST = 'edV3Host';
 // On unless it has been turned off, because a preview you have to go and ask
 // for is the trip to BMDB mode again with fewer steps.
 const edPrevOn = () => state.settings.model_preview !== false;
-const edPrevEntries = () => ((state.ed && state.ed.d && state.ed.d.models) || [])
-  .filter(m => m && !m.missing).map(m => m.name);
+/* Which of the unit's battle-model entries are worth offering.
+
+   A unit that carries `armour_ug_models` is DRAWN from that list, one model per
+   armour level, and the model on its `soldier` line is never seen — Uruk-hai
+   Bodyguards names `heavy_uruk_sword` there and puts `isengard_bodyguard` in
+   both upgrade slots, so offering the first is offering a model this unit never
+   appears in. It is dropped, and the officers, the upgrade models and the mount
+   are left. A unit with no upgrade list is the other way round: the soldier
+   line IS what gets drawn, so it stays.
+
+   The test is per model, not per unit, because the same entry is often in both
+   places (Uruk Bodyguard's `mordor_uruk_bodyguards` is the soldier AND upgrade
+   1) — an entry earns its place by any slot that is not the soldier line. */
+const edPrevEntries = () => {
+  const all = ((state.ed && state.ed.d && state.ed.d.models) || []).filter(m => m && !m.missing);
+  const upgraded = all.some(m => (m.slots || []).some(x => x.indexOf('armour_ug_models') === 0));
+  const keep = upgraded
+    ? all.filter(m => !((m.slots || []).length && m.slots.every(x => x === 'soldier')))
+    : all;
+  return (keep.length ? keep : all).map(m => m.name);
+};
 function edPrevEntry(){
   const list = edPrevEntries(), want = state.ed && state.ed.prevEntry;
   return (want && list.includes(want)) ? want : (list[0] || '');
@@ -383,6 +409,7 @@ function edRenderTab(){
   const gbody=document.getElementById('gfBody');
   const wasG=gbody?gbody.scrollTop:0;
   b.innerHTML=(e.tab==='identity'?edIdentity():e.tab==='fields'?edFields()
+              :e.tab==='recruit'?edRecTab()
               :e.tab==='compare'?edCompare():edModels())
     // bmdb mode edits an entry with no unit around it, so "who uses this?" has
     // nowhere else to live — it goes at the bottom of the entry itself
@@ -395,6 +422,7 @@ function edRenderTab(){
   if(e.tab==='identity')edWireIdentity();
   if(e.tab==='models')edWireModels();
   if(e.tab==='compare')edWireCompare();
+  if(e.tab==='recruit')edWireRecruit();
   const nowFields=document.getElementById('allFields');
   if(nowFields&&wasFields)nowFields.scrollTop=wasFields;
   const nowG=document.getElementById('gfBody');
@@ -1936,6 +1964,15 @@ async function edPreview(){
       : `<div class="count" style="margin-top:8px">…and for
           <b>${esc(state.ed.cmp.unit)}</b>:</div>`+edPlanHtml(cr));
   }
+  // …and so is the Recruitment tab: a different file, planned by the buildings
+  // planner, so it gets its own block rather than being folded into the unit's
+  if(edRecDirty()){
+    const rr=await api.post('/api/buildings/plan',edRecPayload());
+    box.insertAdjacentHTML('beforeend',
+      `<div class="count" style="margin-top:8px">…and for
+        <b>recruitment</b> (<code>export_descr_buildings.txt</code>):</div>`
+      +bldPlanHtml(rr,false));
+  }
   return r;
 }
 function edStale(){const e=state.ed;
@@ -1964,8 +2001,8 @@ async function edSave(){
   await cvSettle(e.cv);                 // the last keystroke counts
   const blocked=edCvBlocked();
   if(blocked){toast(blocked); return;}
-  const one=edDirty(),two=edCmpDirty();
-  if(!one&&!two){toast('Nothing to save');return;}
+  const one=edDirty(),two=edCmpDirty(),rec=edRecDirty();
+  if(!one&&!two&&!rec){toast('Nothing to save');return;}
   // Both units are planned BEFORE either is written, so a problem with the
   // second one is found while nothing has been touched — half a save is worse
   // than none when the two were being balanced against each other.
@@ -1982,8 +2019,18 @@ async function edSave(){
     if(cr.error){toast(`Error in ${e.cmp.unit}: ${cr.error}`);return;}
     if(cr.errors&&cr.errors.length){toast(`${e.cmp.unit}: ${cr.errors[0]}`);return;}
   }
+  // The recruit pools are a third, independent write — a different file, planned
+  // by the buildings planner — and it is checked here with the other two so a
+  // problem in it is found while nothing has been touched.
+  if(rec){
+    const rp=await api.post('/api/buildings/plan',edRecPayload());
+    if(rp.error){toast('Recruitment: '+rp.error,5000);return;}
+    if(rp.errors&&rp.errors.length){toast('Recruitment: '+rp.errors[0],5000);return;}
+  }
   const what=bm?e.d.models[0].name:e.unit;
-  const writing=[one?what:null,two?e.cmp.unit:null].filter(Boolean).join(' and ');
+  const writing=[one?what:null,two?e.cmp.unit:null,
+                 rec?`${edRecChangeCount()} recruit pool(s)`:null]
+    .filter(Boolean).join(' and ');
   document.getElementById('modal').innerHTML=`<h2>Saving…</h2>
     <div class="mbody"><div class="progress-track"><div class="progress-fill" style="width:60%"></div></div>
     <div class="count" style="margin-top:8px">Writing ${esc(writing)} into ${esc(e.mod)}…</div></div>`;
@@ -2000,8 +2047,33 @@ async function edSave(){
     if(!res)res=res2;
     e.cmp.ov={}; e.cmp.rm=new Set(); e.cmp.added=new Set();
   }
+  let pools=0;
+  if(rec){
+    pools=edRecChangeCount();
+    const res3=await api.post('/api/buildings/apply',edRecPayload());
+    if(res3.error){
+      toast(`${(one||two)?'The unit was saved, but the ':'The '}recruit pools failed: ${
+        res3.error}`,6000);
+      // the unit's own save landed; the tab has to stop showing what did not
+      await edRecReload();
+      renderEditor(); return;
+    }
+    /* The EDB has moved under everything that indexes it. A building line left
+       open behind this editor numbers its capability rows against the old file,
+       so its working copy goes — `backToBuilding` then re-reads the line from
+       disk rather than splicing against numbers that have shifted. With nothing
+       to go back to, the whole overview goes and the next visit re-reads it,
+       recruit counts and all; the sidebar filters are rewired with it, since
+       they hold a reference to the object being dropped. */
+    if(state.bldReturn&&state.bld){
+      state.bld.work=null; state.bld.plan=null; state.bld.checks=null; state.bld.cmp=null;
+    }else{ state.bld=null; _bldFiltersFor=''; }
+  }
   closeModal();
   const saved=[one?(bm?what:res.plan.resolved_type):null,two?e.cmp.unit:null].filter(Boolean);
-  toast(`Saved ${saved.map(s=>'“'+s+'”').join(' and ')} ✓${binMsg(res)}  (undo in 🕑 Log)`,4200);
+  const note=saved.length
+    ? `Saved ${saved.map(s=>'“'+s+'”').join(' and ')}${pools?` and ${pools} recruit pool(s)`:''} ✓`
+    : `Saved ${pools} recruit pool(s) ✓`;
+  toast(`${note}${binMsg(res)}  (undo in 🕑 Log)`,4200);
   state.destData=null; state.bmdb=null; loadSource();
 }

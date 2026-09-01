@@ -63,6 +63,7 @@ running the test suite, and running `graphify update .`.
 | 15e | Port between mods, M2EX flag, docked viewer (v2.1.2) | M | ✅ done |
 | 15f | Strat-map + card cleaners, faction skins, resizable viewer (v2.1.3) | M | ✅ done |
 | 15g | Add a faction (clone across twelve files) + viewer UV mode (v2.1.8) | M | ✅ done |
+| 15h | Recruitment on the unit + the UV layout (v2.1.9) | M | ✅ done |
 | 16 | Campaign Map Editor — flagship, LAST | XL | 5+ (16a–16e) |
 
 Dependency shape: 1 and 2 are independent; 3 gates 4; 4 gates every editor
@@ -1784,6 +1785,64 @@ real pair (body main, bow and quiver attachment) and on a lone-sheet mount, whic
 correctly shows no amber and drops that row from the legend.
 
 Notes: `merge/RELEASE_2_1_8.md`. Suite: 71 of 71 modules.
+
+---
+
+## Phase 15h — Recruitment on the unit, and the UV layout ✅ (v2.1.9, done 2026-09-01)
+
+**Recruitment as a tab on the unit** (`web/js/edrecruit.js`, new). Everything a
+unit IS was on four tabs; where it can be HIRED was in another module, reached
+by leaving the unit, finding one of the four or five building lines that train
+it, and reading its numbers off a row among sixty. The building browser already
+had the panel that puts those rows side by side (`bldShowUnit`, phase 14f) —
+this is that view from the unit's side, and editing.
+
+**No Python, on purpose.** A `recruit_pool` line already had a reader
+(`buildings.unit_instances`) and a writer (`buildings.plan_edit`); the tab is a
+second FRONT for them, not a second implementation, so a pool edited from the
+unit and one edited from the building cannot drift apart. The one shape that had
+never been sent before is the request: this tab reaches into several building
+lines at once and belongs to none of them, so **every** edit rides in `also` and
+the main body carries a line name with an empty `levels`. That is also the right
+way round for `_check_recruit_limit`, which merges the file's existing pools for
+an `also` line and would otherwise count a payload of three rows as the whole
+level.
+
+**The clause dialog is borrowed, not copied** (`kind:'edrec'` in
+`bldClauseApply` / `bldClauseCancel`). It could not take the usual route:
+`bldClauseStash` stashes the modal as MARKUP, and the unit editor holds a live
+WebGL column inside that modal, so putting the string back would install a dead
+copy of the canvas and orphan the real one. The `edrec` branches re-render the
+editor from state instead, which hands the column over the way a tab switch
+does — same reason the ＋ picker keeps no stash either.
+
+**A recruitment save moves EDB line numbers**, which retires an assumption
+`backToBuilding` had written down: "capability line numbers index the EDB, which
+a unit edit never touches". A building left open behind the editor now has its
+working copy dropped after such a save, so the way back re-reads the line from
+disk rather than splicing against numbers that have shifted.
+
+- **Exit:** met. `tests/test_unit_recruitment.py` 42/42 across DaC and Reforged
+  — the row payload carries every field the tab keys on, `cap_line` is unique,
+  an `also`-only request plans, a rewrite moves no line and leaves the 173
+  capability lines it never mentions byte-identical, and rewrite + delete +
+  append across three lines come back as three changes with the other two lines
+  named. Verified in-browser end to end against DaC: three pools across two
+  building lines written in one save, the diff exactly those three lines, and
+  one Undo restoring the 1.6 MB EDB byte for byte.
+
+**The UV layout** (`web/js/viewer3d.js`, `.v3uvpane`). `Show UVs` paints the
+coordinate onto the MODEL; this is the other half — the SHEET, with the mesh's
+islands drawn over the art they sit on, in the **bound image's** own space
+rather than the mesh's u. A 2D canvas, not a second WebGL context: the drawing
+is one image and a few thousand lines. Chasing its framing of a horse turned up
+a bug in the RENDERER — an entry naming **no** attachment texture (every
+ordinary mount) has one sheet spanning the whole two-unit space, and u must be
+halved for it too; it was not, and that tiled the sheet twice. Measured with
+per-triangle texel-space Jacobians: real pairs read 1.21–1.24 at half u, lone
+sheets 1.08–1.47 at half and 2.00–2.22 at full.
+
+Notes: `merge/RELEASE_2_1_9.md`. Suite: 72 of 72 modules.
 
 ---
 
