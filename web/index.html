@@ -633,6 +633,69 @@
     letter-spacing:.04em;font-weight:600}
   .v3uvkey i{width:22px;height:12px;border-radius:3px;border:1px solid var(--edge);
     display:block}
+  /* ---- the campaign map (16c) ----
+     Canvas on the left taking whatever height is going, the layer stack and
+     the picked region on the right. The canvas is absolutely positioned inside
+     its stage for the same reason the UV one is: a percentage height against a
+     flex item that has not been laid out yet is zero. */
+  .cmwrap{display:flex;gap:12px;align-items:stretch;height:calc(100vh - 108px);
+    margin-top:10px}
+  .cmstage{position:relative;flex:1 1 0;min-width:320px;background:#0e1013;
+    border:1px solid var(--edge);border-radius:8px;overflow:hidden}
+  .cmstage canvas{position:absolute;inset:0;width:100%;height:100%;
+    touch-action:none;cursor:crosshair;display:block}
+  .cmstage canvas:active{cursor:grabbing}
+  .cmbar{position:absolute;left:8px;top:8px;display:flex;gap:5px;align-items:center;
+    background:rgba(10,12,16,.8);border:1px solid var(--edge);border-radius:7px;
+    padding:4px 6px}
+  .cmbar button{font:inherit;font-size:12px;padding:2px 8px;border-radius:5px}
+  .cmbar .count{padding:0 4px;white-space:nowrap}
+  /* the two readouts sit on the art, so they carry their own backing */
+  .cmread,.cmperf{position:absolute;bottom:8px;font-size:11.5px;color:var(--dim);
+    background:rgba(8,10,14,.78);padding:2px 7px;border-radius:5px;
+    pointer-events:none;white-space:nowrap}
+  .cmread{left:8px} .cmperf{right:8px}
+  .cmread b{color:var(--ink);font-family:ui-monospace,Consolas,monospace}
+  .cmside{flex:0 0 336px;min-width:280px;display:flex;flex-direction:column;gap:9px;
+    overflow:auto}
+  .cmhead{display:flex;flex-direction:column;gap:2px}
+  .cmside .k{font-size:11px;color:var(--dim);text-transform:uppercase;
+    letter-spacing:.04em;font-weight:600}
+  .cmside .k .count{text-transform:none;letter-spacing:0;margin-left:6px;
+    font-weight:400}
+  .cmfind{display:flex;flex-direction:column;gap:4px;font-size:11.5px;
+    border:1px solid var(--edge);border-radius:7px;padding:7px 9px;
+    background:var(--panel2)}
+  .cmlayers{display:flex;flex-direction:column;gap:2px}
+  /* a layer row: tickbox and name, the two order arrows, then the slider and
+     its number, with whatever is wrong with the file underneath */
+  .cmlayer{display:grid;grid-template-columns:1fr auto 92px 34px;gap:4px 7px;
+    align-items:center;padding:4px 6px;border:1px solid transparent;border-radius:6px}
+  .cmlayer.on{background:var(--panel2);border-color:var(--edge)}
+  .cmlayer.off{opacity:.55}
+  .cmlayer .cmnm{color:var(--ink);font-size:12.5px}
+  .cmlayer.on .cmnm{font-weight:600}
+  .cmmove{display:flex;gap:2px}
+  .cmmove button{font:inherit;font-size:9px;line-height:1;padding:3px 4px;
+    border-radius:4px;color:var(--dim)}
+  .cmlayer input[type=range]{width:92px;accent-color:var(--accent);margin:0}
+  .cmpct{font-size:11px;color:var(--dim);text-align:right}
+  .cmnote{grid-column:1/-1;font-size:11px;color:var(--dim);overflow-wrap:anywhere}
+  .cmpick .cmcard{border:1px solid var(--edge);border-radius:7px;padding:9px 10px;
+    background:var(--panel2);margin-top:5px}
+  .cmcard .nm{display:flex;align-items:center;gap:7px;font-weight:600;
+    margin-bottom:7px;overflow-wrap:anywhere}
+  .cmcard .nm i{width:14px;height:14px;flex:0 0 14px;border-radius:3px;
+    border:1px solid rgba(0,0,0,.5)}
+  .cmkv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12px}
+  .cmkv span{color:var(--dim)}
+  .cmkv b{font-weight:600;overflow-wrap:anywhere}
+  .cmcard .w-warn{display:block;margin-top:8px;font-size:11.5px}
+  @media (max-width:1000px){
+    .cmwrap{flex-direction:column;height:auto}
+    .cmstage{min-height:60vh}
+    .cmside{flex:0 0 auto}
+  }
   /* every DISTINCT card on disk, and who shares each one */
   .cardvars{margin-top:12px}
   .cardvars>.k{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
@@ -1960,6 +2023,7 @@
 <script src="js/factions.js"></script>
 <script src="js/edusort.js"></script>
 <script src="js/images.js"></script>
+<script src="js/campmap.js"></script>
 <script src="js/viewer3d.js"></script>
 <script src="js/boot.js"></script>
 </body>

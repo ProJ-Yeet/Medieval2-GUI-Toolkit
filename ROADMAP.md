@@ -78,7 +78,7 @@ running the test suite, and running `graphify update .`.
 | 15h | Recruitment on the unit + the UV layout (v2.1.9) | M | ✅ done |
 | 15i | The model beside a transfer, art beside a pool (v2.1.10) | S | ✅ done |
 | 15j | Resizable panels, the strings warning, no em dashes (v2.1.11) | S | ✅ done |
-| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ |
+| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ |
 | V3.1 | OSM backdrop + coastline tracer | M | future |
 | V3.2 | Map resize + create-from-scratch | L | future |
 | V3.3 | Overlay and layer generators | M | future |
@@ -2137,6 +2137,7 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `unittransfer/campstrat.py` | `descr_strat.txt` as a line-preserving block model with an interval index |
 | `unittransfer/mapcheck.py` | the validator and its auto-fixes |
 | `web/js/campmap.js` | viewer, layers, legend, inspector |
+| `campmap.view` / `layer_png` | the manifest and the PNG the browser is served (16c) |
 | `web/js/campaint.js` | the paint tool and its undo |
 
 Reuse: `keyblock.py` for the splice discipline (`flatrecord.py` does **not**
@@ -2233,18 +2234,87 @@ and server-side validation possible at all.
   single `fort`, so the vanilla `fort <x> <y>` form is exercised only by the
   synthetic half of the suite; DaC's 105 forts are all the long form.
 
-- **16c - Renderer core.** `web/js/campmap.js`. Layers served as PNG from
-  `/api/map/layer`, composited on one canvas with per-layer opacity and draw
-  order; pan, zoom and picking lifted from the UV canvas; dirty-rect redraw;
-  default zoom fitted to the map.
-  Exit: 60 fps pan and zoom on DaC's map; the picked pixel is the exact pixel
-  under the cursor at every zoom, and a dragged icon stays under it - their
-  one-frame lag and off-pixel placement are the anti-goals.
+- **16c - Renderer core.** ✅ **done 2026-09-04.** `web/js/campmap.js` (823
+  lines), the map's view in `campmap.py` (+300) and two routes in `server.py`,
+  with `tests/test_campview.py` at **50 checks, all passing** over vanilla's map
+  and DaC's. The first sub-phase with any UI in it.
 
-- **16d - Layers, legend, inspector.** Layer checkboxes and opacity sliders
-  persisted like `pane_sizes`; a pixel probe naming every layer's value from the
-  vocabularies, localised name first and code name in brackets; click a region
-  for an editable panel (owner, creator, rebel tribe, resources, triumph value,
+  **The two routes.** `/api/map` is one manifest - the tile grid, all ten layers
+  with what is wrong with each, and the region table - and `/api/map/layer` is
+  one layer as PNG. Every layer that has a relationship to the tile grid is
+  served **at one pixel per tile**, sampled the way the engine samples it
+  (`2t+1` for a `2W+1` layer, `2t` for a `2W x 2H` one), so the composite is one
+  canvas and a picked pixel is a tile. `water_surface` and `map_FE` have no
+  relationship to the grid, so they come back at their own size and the manifest
+  says `aligned: false` rather than pretending. PNGs are cached on disk keyed by
+  the layer's mtime, through the same never-torn route the icons use, so 16e's
+  next stroke is a miss rather than a stale picture.
+
+  **Exit, measured on DaC in the real browser.** A pan frame is **0.02 to 0.18
+  ms** from zoom 0.4x to 64x, against a 16.7 ms budget - one drawImage of the
+  visible sub-rect out of a composite that pan and zoom never rebuild. A hover
+  step, which repaints the cell the cursor left and the cell it entered and
+  nothing else, is **0.046 ms**. The whole first read is 588 ms cold and 1.1 ms
+  warm. **The picked pixel is exact**: 792 assertions over eleven zooms, four
+  origins and both edges of a tile, all passing, and the zoom-about-a-point
+  invariant holds in all twenty cases tried - the tile under the cursor does not
+  move. Read back off the canvas at 24x, the centre of a settlement tile is
+  `(0,0,0)` to the byte and its neighbours are the region's own colour, which is
+  the off-pixel-placement anti-goal answered by measurement rather than by eye.
+
+  **The claim the whole picking design rests on is now a test.** The browser
+  reads the colour under the cursor off its own copy of `map_regions.tga` and
+  looks it up in the manifest by packed key; no round trip, no second parser.
+  That is only sound if the served PNG and the Python index agree pixel for
+  pixel, so every region on every installed map is checked at its own anchor:
+  116 of 116 on vanilla, 200 of 200 on DaC.
+
+  **Vanilla's map is a second real map, and 16a never saw it** - it lives under
+  the game root, not under `mods/`, so `_realmod.installed()` misses it. It is
+  295x189 to DaC's 510x487, 116 regions to 200, and this suite runs on both.
+
+  **The sea heuristic, measured rather than deferred.** One pass over the label
+  image and the sea mask - 6 ms on vanilla, 43 ms on DaC - counts how many of
+  each colour's tiles are sea, and it is what tells the ocean from a hole in the
+  mod. **Vanilla has four colours `descr_regions.txt` never declares and all
+  four are 100% sea**; three of them are one-channel misses of the ocean's own
+  `(41,140,233)` - `(41,141,243)`, `(41,140,235)`, `(41,141,237)` - the same
+  lossy-paint slips 16a found in `map_climates.tga`. DaC's ocean is 73,904 of
+  73,950 tiles sea, and **its undeclared 517-tile province has not one sea tile
+  in it**, which turns 16a's inference into a measurement. 16f owns the rule;
+  this is the count it will be built on, and it is here because a screen that
+  calls the Atlantic an undeclared province is not worth looking at.
+
+  **Two faults found by writing the tests.** A layer the wrong shape used to
+  come out of `_owner_of_port` as an `IndexError` and a 500: the sea mask and
+  the label image are one byte per tile and index each other, so a 7x5
+  `map_features.tga` on a 510x487 map walked off the end. `require_grid` now
+  refuses by name and `view` degrades to the layer list, because the manifest is
+  the only thing that will say *which* file to fix. And the map was being read
+  through `Registry.get`, which warms the unit databases first - so a mod that
+  ships only a map, or one whose roster is missing, could not have its map read
+  at all. It reads through `describe` now, the same fix Home's readiness report
+  got.
+
+  **A dropped layer request is retried before it is believed.** Measured
+  happening here: one of three layers asked for at once came back
+  `ERR_CONNECTION_REFUSED` and the same URL answered 200 two milliseconds later.
+  An `<img>` only ever learns *that* it failed, so after three tries the server
+  is asked again for its sentence - and read as JSON only when the status says
+  it is an error, because a 200 there means something else entirely.
+
+  **Deferred to 16d, deliberately:** the layer set and opacities are not
+  persisted yet, and `map_features.tga` / `map_trade_routes.tga` composite as
+  what they are - opaque layers whose "nothing here" colour is black, so ticking
+  one at 100% hides the map under it. Making a "nothing here" colour punch
+  through is a legend decision, and the legend is 16d's.
+
+- **16d - Layers, legend, inspector.** The layer checkboxes, opacity sliders and
+  draw order 16c built, **persisted** like `pane_sizes`; a legend, in which a
+  layer's "nothing here" colour becomes transparent so features and trade routes
+  read as overlays rather than hiding the map; a pixel probe naming every
+  layer's value from the vocabularies, localised name first and code name in
+  brackets; click a region for an editable panel (owner, creator, rebel tribe, resources, triumph value,
   base farming level, religions, settlement and port coordinates, region ID,
   neighbours); Code View over `descr_regions.txt`.
   Exit: edit a region end to end with undo; legend state persisted; a religion

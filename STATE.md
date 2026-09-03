@@ -1,14 +1,78 @@
 # STATE - Medieval 2 GUI Toolkit V2 and V3
-_Updated: 2026-09-03 · **v2.1.11 released** · V3 under way: 16a and 16b done, 16c next_
+_Updated: 2026-09-04 · **v2.1.11 released** · V3 under way: 16a, 16b and 16c done, 16d next_
 
 ## Next up
-Start **16c** - `web/js/campmap.js`: the renderer. Layers served as PNG from
-`/api/map/layer` and composited on one canvas with per-layer opacity and draw
-order; pan, zoom and picking lifted from the UV canvas in `viewer3d.js`;
-dirty-rect redraw. The anti-goals are named in ROADMAP.md: their one-frame lag
-and their off-pixel placement. This is the first sub-phase with any UI in it, so
-it is also the first that needs `server.py` routes. Run
-`python tools/upstream_sync.py sync` first, as before every sub-phase.
+Start **16d** - layers, legend and inspector. The layer checkboxes, opacity
+sliders and draw order that 16c built are not persisted yet, so that is the
+first piece: `pane_sizes` on `/api/settings` is the pattern. Then the legend,
+where a layer's "nothing here" colour becomes transparent - tick
+`map_features.tga` at 100% today and it hides the map under it, because most of
+that layer is `(0,0,0)` meaning nothing, and compositing it honestly is what
+that looks like. Then the pixel probe (`campmap.probe_pixel` already answers it,
+16a wrote it and nothing calls it yet) and the editable region panel over
+`descr_regions.txt`, with the religion-total rule enforced.
+
+Run `python tools/upstream_sync.py sync` first, as before every sub-phase.
+
+## 16c - the renderer (2026-09-04)
+`web/js/campmap.js` (823 lines), the view half of `campmap.py`, two routes in
+`server.py`, and `tests/test_campview.py` at **50 checks, all passing** over
+vanilla's map and DaC's. The first screen in V3.
+
+**Python decodes, the browser draws.** `/api/map` is one manifest and
+`/api/map/layer` is one layer as PNG. Every layer with a relationship to the
+tile grid is served at **one pixel per tile**, sampled the way the engine
+samples it, so the composite is one canvas and a picked pixel is a tile;
+`water_surface` and `map_FE` have no such relationship and come back at their
+own size, saying so, rather than being quietly stretched by the server. Layer
+PNGs are cached on disk keyed by mtime, through the icons' never-torn route.
+
+**The numbers, measured in the browser on DaC.** A pan frame is 0.02 to 0.18 ms
+across zoom 0.4x to 64x, against 16.7 ms for 60 fps. A hover step - the cell the
+cursor left and the cell it entered, and nothing else - is 0.046 ms. Building a
+region's outline, the one per-pixel pass in the file, is 5.2 ms on a 74,000-tile
+region and it runs on the click, once, cached. First read 588 ms cold, 1.1 ms
+warm.
+
+**The picked pixel is the pixel under the cursor**, and that is asserted rather
+than claimed: 792 checks over eleven zooms, four origins and both edges of a
+tile; the zoom-about-a-point invariant in all twenty cases tried; and, read back
+off the canvas at 24x, the centre of a settlement tile is `(0,0,0)` to the byte
+with the region's own colour on either side.
+
+**Picking costs no round trip, and the test says why that is sound.** The
+browser reads the colour under the cursor off its own copy of
+`map_regions.tga` and looks it up in the manifest by packed key. That works only
+if the served PNG and the Python index agree pixel for pixel, so every region on
+every installed map is checked at its own anchor: 116 of 116 on vanilla, 200 of
+200 on DaC.
+
+**Vanilla's map is a second real map, and 16a never saw it** - it is under the
+game root, not under `mods/`, so `_realmod.installed()` misses it. 295x189
+against DaC's 510x487, 116 regions against 200. Both are now under test.
+
+**The sea heuristic, measured.** One pass over the label image and the sea mask
+- 6 ms on vanilla, 43 ms on DaC - counts each colour's sea tiles, and it is what
+tells the ocean from a hole in the mod. Vanilla has four colours
+`descr_regions.txt` never declares and **all four are 100% sea**; three are
+one-channel misses of the ocean's own `(41,140,233)`, the same lossy-paint slips
+16a found in the climates layer. DaC's ocean is 73,904 of 73,950 tiles sea, and
+its undeclared 517-tile province has **not one** sea tile in it - 16a's
+inference, now a measurement. 16f owns the rule; this is its count.
+
+**Two faults the tests found.** A layer the wrong shape came out of
+`_owner_of_port` as an `IndexError` and a 500, because the sea mask and the
+label image are one byte per tile and index each other; `require_grid` refuses
+by name now and the manifest degrades to the layer list, which is the only thing
+that says which file to fix. And the map was read through `Registry.get`, which
+warms the unit databases first, so a mod that ships only a map could not have
+its map read at all - `describe` now, the same fix Home's readiness report got.
+
+**A dropped layer request is retried before it is believed.** One of three
+layers asked for at once came back `ERR_CONNECTION_REFUSED` and the same URL
+answered 200 two milliseconds later. After three tries the server is asked for
+its sentence, and that answer is read as JSON only when the status says it is an
+error.
 
 ## V3 planned (2026-09-03)
 The Campaign Map Editor is scoped and written into ROADMAP.md as **Phase 16,

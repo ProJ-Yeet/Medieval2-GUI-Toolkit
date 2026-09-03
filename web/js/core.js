@@ -641,6 +641,7 @@ const MODES=[
   {id:'edit',     icon:'✎', name:'Unit Editor',   hint:'change, clone or delete one mod’s units'},
   {id:'transfer', icon:'⚔', name:'Unit Transfer', hint:'copy a unit from one mod into another'},
   {id:'buildings',icon:'🏰', name:'Buildings',     hint:'browse and edit export_descr_buildings'},
+  {id:'campmap',  icon:'🌍', name:'Campaign Map',  hint:'the ten map layers, the regions painted on them and what the game reads'},
   {id:'bmdb',     icon:'🗄', name:'BMDB + Sprites Editor', hint:'battle_models.modeldb, and the sprites it points at'},
   {id:'sounds',   icon:'🔊', name:'Unit Sounds',   hint:'pick which voice entry each unit speaks with'},
   {id:'minor',    icon:'🗺', name:'Minor Files',   hint:'rebels, religions, cultures, traits, factions and text'},
@@ -1257,7 +1258,9 @@ function applyMode(persist){
   srcSel.style.display=home?'none':'';
   document.getElementById('srcLbl').textContent=one?'Mod':'From';
   document.getElementById('dstWrap').style.display=(one||home)?'none':'';
-  search.style.display=home?'none':'';
+  // The map has nothing to search until 16g brings the query engine, and an
+  // input that does nothing is worse than no input.
+  search.style.display=(home||state.mode==='campmap')?'none':'';
   selBtn.style.display=one?'none':'';
   batchBtn.style.display=(!one&&state.selMode)?'inline-block':'none';
   clearSelBtn.style.display=(!one&&state.selMode&&state.selected.size)?'inline-block':'none';
@@ -1268,7 +1271,8 @@ function applyMode(persist){
   importPackBtn.style.display=one?'none':'inline-block';
   newUnitBtn.style.display=edit?'inline-block':'none';
   tidyEduBtn.style.display=edit?'inline-block':'none';
-  const stm=state.mode==='stratmap', crd=state.mode==='cards';
+  const stm=state.mode==='stratmap', crd=state.mode==='cards',
+        cmp=state.mode==='campmap';
   cleanBtn.style.display=(bm||stm)?'inline-block':'none';
   // the two faction-record fixers are about the modeldb itself, so they belong
   // to the Model entries tab and nowhere else
@@ -1277,11 +1281,11 @@ function applyMode(persist){
   sndBtn.style.display=snd?'inline-block':'none';
   unusedWrap.style.display=(bm||stm)?'inline-flex':'none';
   mercOnly.parentElement.style.display=
-    (bm||snd||spr||bld||str||trt||anc||mnr||fac||home||stm||crd)?'none':'inline-flex';
+    (bm||snd||spr||bld||str||trt||anc||mnr||fac||home||stm||crd||cmp)?'none':'inline-flex';
   // these bring their own filters - the sidebar's faction/era ones say nothing
   // about a voice entry, and nothing at all about a modeldb record or a sprite
   document.getElementById('unitFilters').style.display=
-    (bm||snd||spr||bld||str||trt||anc||mnr||fac||home||stm||crd)?'none':'';
+    (bm||snd||spr||bld||str||trt||anc||mnr||fac||home||stm||crd||cmp)?'none':'';
   document.getElementById('bldFilters').style.display=bld?'':'none';
   // Only offered while the unit editor is what you'd be going back FROM: in
   // buildings mode the building is already on screen.
@@ -1363,6 +1367,7 @@ function render(){
   if(state.mode==='sprites')return renderSprites();
   if(state.mode==='stratmap')return state.stm?renderStratmap():loadStratmap();
   if(state.mode==='cards')return state.cards?renderCards():loadCards();
+  if(state.mode==='campmap')return state.cmap?renderCampmap():loadCampmap();
   if(state.mode==='buildings')return renderBuildings();
   if(state.mode==='strings')return state.str?renderStrings():loadStrings();
   if(state.mode==='traits')return state.tr?renderTraits():loadTraits();

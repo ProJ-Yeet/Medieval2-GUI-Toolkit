@@ -103,15 +103,46 @@ class IconCache:
         data = _decode_to_png(src, max_side)
         log.debug("ICON   converted %s -> %d bytes of PNG in %.0f ms", src, len(data),
                   (time.perf_counter() - started) * 1000)
-        # Write atomically: concurrent requests for the same uncached icon must
-        # never leave a torn/partial file that a later reader would serve.
-        try:
-            tmp = cached.with_name(f"{cached.stem}.{os.getpid()}.{id(data) & 0xffffff:x}.tmp")
-            tmp.write_bytes(data)
-            os.replace(tmp, cached)
-        except OSError:
-            pass
+        _write_cached(cached, data)
         return data
+
+    def cached_png(self, token: str, build) -> bytes:
+        """PNG bytes built once and kept on disk, under a key the caller names.
+
+        :meth:`png_bytes` is this with the key fixed at "a source file and a
+        size cap". The campaign map's layers want the same disk cache, the same
+        atomic write and the same never-torn read, but their key has a
+        projection in it as well as a path - a layer served at tile fit and the
+        same layer served at its own size are two different answers, and one
+        must not be handed out for the other. So the route is shared and the
+        token is the caller's; put the mtime in it or a stale layer outlives
+        the paint stroke that changed it.
+        """
+        h = hashlib.sha1(token.encode("utf-8")).hexdigest()[:20]
+        path = self.cache_dir / f"{h}.png"
+        hit = _read_cached(path)
+        if hit is not None:
+            return hit
+        started = time.perf_counter()
+        data = build()
+        log.debug("PNG    built %s -> %d bytes in %.0f ms", token, len(data),
+                  (time.perf_counter() - started) * 1000)
+        _write_cached(path, data)
+        return data
+
+
+def _write_cached(path: Path, data: bytes) -> None:
+    """Put bytes in the cache, atomically, and never mind if it cannot.
+
+    Concurrent requests for the same uncached picture must never leave a
+    torn or partial file that a later reader would serve.
+    """
+    try:
+        tmp = path.with_name(f"{path.stem}.{os.getpid()}.{id(data) & 0xffffff:x}.tmp")
+        tmp.write_bytes(data)
+        os.replace(tmp, path)
+    except OSError:
+        pass
 
 
 #: First eight bytes of every PNG. A cache entry that doesn't start with them is

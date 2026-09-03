@@ -66,6 +66,7 @@ not an index.
 """
 from __future__ import annotations
 
+import io
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -914,16 +915,43 @@ class CampaignMap:
 
     # -- derived -------------------------------------------------------------
 
+    def require_grid(self, *codes: str) -> None:
+        """Refuse, by name, before reading a layer that is the wrong shape.
+
+        The sea mask and the region index are one byte per tile and index each
+        other, so a layer whose size does not match ``descr_terrain.txt`` walks
+        off the end of the other one. It did: a 7x5 ``map_features.tga`` on a
+        510x487 map came out of :func:`_owner_of_port` as an ``IndexError``,
+        which is the least useful sentence there is about a map whose layers
+        disagree - and being told is the whole reason someone opens this screen.
+
+        A layer the wrong shape is the classic map crash, so this is a refusal
+        rather than a reshape. :func:`view` catches it and still serves the
+        manifest, because the manifest is what says which file is wrong.
+        """
+        for code in codes:
+            want = self.terrain.expected_size(LAYER_BY_CODE[code]["size"])
+            if not want:
+                continue
+            got = self.layer(code).size
+            if got != want:
+                raise MapError(
+                    f"{LAYER_BY_CODE[code]['file']} is {got[0]}x{got[1]}, and "
+                    f"descr_terrain.txt says the map is {self.terrain.width}x"
+                    f"{self.terrain.height}, so it should be {want[0]}x{want[1]}")
+
     @property
     def sea(self) -> bytes:
         """One byte per tile: 1 where the engine treats the tile as sea."""
         if self._sea is None:
+            self.require_grid("heights", "features")
             self._sea = sea_mask(self.centres("heights"), self.layer("features"))
         return self._sea
 
     @property
     def index(self) -> RegionIndex:
         if self._index is None:
+            self.require_grid("regions")
             self._index = build_index(self.layer("regions"), self.sea,
                                       self.regions.records)
         return self._index
@@ -988,3 +1016,275 @@ class CampaignMap:
 
         out["sea"] = bool(self.sea[y * t.width + x])
         return out
+
+
+# ---------------------------------------------------------------------------
+# the browser's view of the map (16c)
+#
+# The renderer never sees a TGA. Python decodes, projects and encodes; the
+# browser gets PNGs and one JSON manifest, and it owns nothing but the
+# compositing and the pointer. That is the "one engine" rule, and it is what
+# lets 16e's undo, backups and server-side validation exist at all.
+
+#: How a layer's pixels are handed to the browser.
+#:
+#: ``tile``    one pixel per tile, sampled the way the engine samples it. Every
+#:             layer that has a relationship to the grid comes back ``W x H``,
+#:             so the composite is one canvas and a picked pixel is a tile.
+#: ``native``  the file's own pixels, untouched.
+#:
+#: Tile fit is what the editor speaks: ``descr_strat.txt`` writes tiles, the
+#: region index is one byte per tile, and a stroke in 16e paints tiles. It does
+#: throw something away and this is where to say so - a ``2W+1`` layer carries
+#: values *between* the tile centres (the shared corners the terrain mesh is
+#: interpolated across), and tile fit does not show them. ``native`` does.
+FITS = ("tile", "native")
+
+
+def _block_sample(img: Image.Image, width: int, height: int,
+                  offset: float) -> Image.Image:
+    """Downsample 2:1 by picking one pixel of each 2x2 block, in Pillow's C.
+
+    ``AFFINE`` maps output pixel centre ``x + 0.5`` through the matrix, so a
+    scale of 2 with ``offset`` 0 samples input ``2x + 1`` - which is exactly the
+    centre rule the ``2W+1`` layers are read by. ``offset`` ``-0.5`` takes
+    ``2x`` instead, the top-left of the block, which is all a ``2W x 2H`` layer
+    can be said to have: it has no centre pixel, only a block.
+    """
+    return img.transform((width, height), Image.AFFINE,
+                         (2, 0, offset, 0, 2, offset), Image.NEAREST)
+
+
+#: Draw order, and what the map looks like before anybody touches a control.
+#:
+#: ``order`` is bottom-first, so the last entry paints over everything. The two
+#: defaults are the view the map is actually read in - the ground under the
+#: provinces, the provinces half-transparent over it - because a first frame
+#: that shows nothing teaches nothing, and both a layer's opacity and its place
+#: in the order are visible from the moment the screen opens.
+DISPLAY: Dict[str, dict] = {
+    "fe":            {"order": 0, "on": False, "opacity": 1.0},
+    "water_surface": {"order": 1, "on": False, "opacity": 1.0},
+    "heights":       {"order": 2, "on": False, "opacity": 1.0},
+    "ground_types":  {"order": 3, "on": True,  "opacity": 1.0},
+    "climates":      {"order": 4, "on": False, "opacity": 1.0},
+    "roughness":     {"order": 5, "on": False, "opacity": 1.0},
+    "regions":       {"order": 6, "on": True,  "opacity": 0.55},
+    "trade_routes":  {"order": 7, "on": False, "opacity": 1.0},
+    "features":      {"order": 8, "on": False, "opacity": 1.0},
+    "fog":           {"order": 9, "on": False, "opacity": 1.0},
+}
+
+
+def tile_view(cm: "CampaignMap", code: str) -> Image.Image:
+    """One layer at one pixel per tile, sampled the way the engine samples it.
+
+    ``tile``    already is. ``centre`` takes ``(2t+1, 2t+1)``, the block centre.
+    ``double``  takes ``(2t, 2t)``, the block's top-left, because a ``2W x 2H``
+                layer has no centre pixel to take.
+
+    ``advisory`` and ``free`` have no relationship to the grid at all, so they
+    come back at their own size and the caller is told - :func:`layer_view`'s
+    ``aligned`` - that stretching one over the map is a guess, not a mapping.
+    """
+    img = cm.layer(code)
+    rule = LAYER_BY_CODE[code]["size"]
+    if rule == "centre":
+        return cm.centres(code)
+    if rule == "double":
+        return _block_sample(img, cm.terrain.width, cm.terrain.height, -0.5)
+    return img
+
+
+def layer_png(cm: "CampaignMap", code: str, fit: str = "tile") -> bytes:
+    """One layer as PNG bytes, ready to hand to a canvas.
+
+    Always RGB: DaC's layers decode to RGBA and vanilla's to RGB, and a colour
+    the browser picks off the canvas has to be the same triple :mod:`mapvocab`
+    names, with no fourth number to disagree about.
+    """
+    if code not in LAYER_BY_CODE:
+        raise MapError(f"no such layer {code!r}")
+    if fit not in FITS:
+        raise MapError(f"no such fit {fit!r} - it is one of {', '.join(FITS)}")
+    img = cm.layer(code) if fit == "native" else tile_view(cm, code)
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, "PNG", optimize=False)
+    return buf.getvalue()
+
+
+def layer_view(cm: "CampaignMap", code: str) -> dict:
+    """What the renderer needs to know about one layer before it asks for it.
+
+    Never raises. A layer that is missing, or whose header will not read, comes
+    back ``present: False`` with the reason in ``problem`` - the screen has to
+    be able to say *which* file is wrong, and a manifest that died on the first
+    bad one would say nothing about the other nine.
+    """
+    ly = LAYER_BY_CODE[code]
+    d = DISPLAY.get(code, {"order": 99, "on": False, "opacity": 1.0})
+    out = {"code": code, "label": ly["label"], "file": ly["file"],
+           "size": ly["size"], "required": ly["required"],
+           "order": d["order"], "on": d["on"], "opacity": d["opacity"],
+           "aligned": ly["size"] in ("tile", "double", "centre"),
+           "present": False, "problem": "", "fit": "native",
+           "native": None, "width": 0, "height": 0}
+    path = cm.base / ly["file"]
+    if not path.exists():
+        out["problem"] = "missing" if ly["required"] else "not in this mod"
+        return out
+    try:
+        info = probe(path)
+    except TgaError as exc:
+        out["problem"] = str(exc)
+        return out
+    out["present"] = True
+    out["native"] = [info.width, info.height]
+    want = cm.terrain.expected_size(ly["size"])
+    if want and (info.width, info.height) != want:
+        # Reported, not corrected. A layer the wrong shape is the classic map
+        # crash, and serving it at tile fit would be a lie about it: it would
+        # come back the right size with its pixels silently off the grid.
+        out["problem"] = f"{info.width}x{info.height}, expected {want[0]}x{want[1]}"
+        out["aligned"] = False
+    if out["aligned"]:
+        out["fit"] = "tile"
+        out["width"], out["height"] = cm.terrain.width, cm.terrain.height
+    else:
+        out["width"], out["height"] = info.width, info.height
+    return out
+
+
+def sea_pixels(cm: "CampaignMap") -> Dict[int, int]:
+    """How many tiles of each region colour the engine treats as sea.
+
+    One pass over the label image and the sea mask together - 6 ms on vanilla,
+    43 ms on DaC - and it is what tells the ocean from a province nobody wrote
+    down. Both maps have colours ``descr_regions.txt`` never declares, and the
+    two kinds are not alike:
+
+        vanilla   four undeclared colours, all four 100% sea. Three of them
+                  are near-misses of the ocean's own (41,140,233) -
+                  (41,141,243), (41,140,235), (41,141,237) - the same
+                  one-channel slips of a lossy paint that 16a found in
+                  ``map_climates.tga``.
+        DaC       two. The ocean, 73,904 of 73,950 tiles sea, and a 517-tile
+                  province at (318,54)-(372,68) with **not one sea tile in
+                  it** - which is the hole in the mod 16a reported, now
+                  measured rather than inferred.
+
+    Exact, not sampled. 16f owns the rule that turns this into a complaint;
+    this is the count it will be built on, and it is here because a screen that
+    calls the Atlantic an undeclared province is not worth looking at.
+    """
+    labels, sea = cm.index.labels, cm.sea
+    counts = [0] * len(cm.index.colours)
+    for i, lab in enumerate(labels):
+        if sea[i]:
+            counts[lab] += 1
+    return {key(rgb): counts[i] for i, rgb in enumerate(cm.index.colours)}
+
+
+def region_view(r: Region, sea: int = 0) -> dict:
+    """One region, for the manifest. Image coordinates throughout.
+
+    ``declared`` is whether the colour on the map and a record in
+    ``descr_regions.txt`` agree. False is a real state a real mod is in, not an
+    error to hide: DaC paints a 517-pixel province the file never declares.
+    ``sea`` is how many of its tiles are sea, which is what separates that from
+    the ocean - see :func:`sea_pixels`.
+    """
+    rec = r.record
+    return {
+        "id": r.region_id, "rgb": list(r.rgb), "key": key(r.rgb),
+        "name": r.name, "pixels": r.pixels, "sea": sea,
+        "bbox": list(r.bbox), "anchor": list(r.anchor),
+        "centroid": [round(r.centroid[0], 1), round(r.centroid[1], 1)],
+        "settlement": list(r.settlement) if r.settlement else None,
+        "port": list(r.port) if r.port else None,
+        "settlement_name": rec.settlement if rec else "",
+        "faction": rec.faction if rec else "",
+        "rebels": rec.rebels if rec else "",
+        "declared": rec is not None,
+    }
+
+
+def _terrain_view(t: Terrain) -> dict:
+    """``descr_terrain.txt``'s numbers, for the inspector 16d builds."""
+    return {"min_sea_height": t.min_sea_height, "max_land_height": t.max_land_height,
+            "roughness_min": t.roughness_min, "roughness_max": t.roughness_max,
+            "fractal_multiplier": t.fractal_multiplier,
+            "latitude_min": t.latitude_min, "latitude_max": t.latitude_max}
+
+
+def view(cm: "CampaignMap", name: str = "") -> dict:
+    """The whole manifest in one call: what to draw, and what a pixel means.
+
+    Everything here is small and everything here is wanted before the first
+    frame, so it is one request rather than five. The pixels are not in it -
+    they arrive as PNG, one request per layer, cached on disk.
+
+    The region table is why picking costs nothing at run time. The browser
+    reads the colour under the cursor off its own copy of ``map_regions.tga``
+    and looks it up here by packed key; there is no round trip per pixel, and
+    no second parser to disagree with this one.
+    """
+    t = cm.terrain
+    layers = sorted((layer_view(cm, ly["code"]) for ly in LAYERS),
+                    key=lambda d: d["order"])
+    try:
+        idx = cm.index
+    except MapError as exc:
+        # A map whose layers disagree still has a manifest, and it is the only
+        # thing that will tell anyone which file to fix. The layer list above is
+        # built from headers alone and already carries the sizes; what is lost
+        # is the region table, so picking is off until the shape is fixed.
+        return {"mod": name or getattr(cm.mod, "name", ""),
+                "width": t.width, "height": t.height, "tiles": t.tiles,
+                "terrain": _terrain_view(t), "layers": layers, "regions": [],
+                "markers": {"settlement": list(SETTLEMENT_RGB),
+                            "port": list(PORT_RGB)},
+                "findings": {"layers": cm.check_layers() or [str(exc)],
+                             "unclaimed": [], "undeclared_land": [],
+                             "sea_colours": 0, "empty_records": [],
+                             "orphan_settlements": [], "extra_settlements": [],
+                             "extra_ports": [], "undecided_ports": [],
+                             "record_problems": [{"name": r.name,
+                                                  "problems": r.problems}
+                                                 for r in cm.regions.records
+                                                 if r.problems]}}
+    # numbered regions first, in engine order, then the ones the engine skips
+    regions = sorted(idx.regions, key=lambda r: (r.region_id < 0, r.region_id))
+    sea = sea_pixels(cm)
+    # Which undeclared colours are the ocean, and which are holes in the mod.
+    # The line is drawn at half, and the measurements say it is nowhere near
+    # anything: vanilla's four undeclared colours are 100% sea, DaC's ocean is
+    # 99.94% (46 of its 73,950 tiles are the underwater land the region scan
+    # skips), and DaC's undeclared province is 0%. Three orders of magnitude of
+    # daylight either side, so the exact threshold decides nothing.
+    undeclared = [r for r in idx.regions if r.record is None]
+    is_sea = lambda r: r.pixels and sea.get(key(r.rgb), 0) * 2 >= r.pixels
+    return {
+        "mod": name or getattr(cm.mod, "name", ""),
+        "width": t.width, "height": t.height, "tiles": t.tiles,
+        "terrain": _terrain_view(t),
+        "layers": layers,
+        "regions": [region_view(r, sea.get(key(r.rgb), 0)) for r in regions],
+        "markers": {"settlement": list(SETTLEMENT_RGB), "port": list(PORT_RGB)},
+        "findings": {
+            "layers": cm.check_layers(),
+            "unclaimed": [list(c) for c in idx.unclaimed],
+            "undeclared_land": [{"rgb": list(r.rgb), "pixels": r.pixels,
+                                 "sea": sea.get(key(r.rgb), 0),
+                                 "bbox": list(r.bbox), "anchor": list(r.anchor)}
+                                for r in undeclared if not is_sea(r)],
+            "sea_colours": sum(1 for r in undeclared if is_sea(r)),
+            "empty_records": [r.name for r in idx.empty_records],
+            "orphan_settlements": [list(p) for p in idx.orphan_settlements],
+            "extra_settlements": [list(p) for p in idx.extra_settlements],
+            "extra_ports": [list(p) for p in idx.extra_ports],
+            "undecided_ports": [list(p) for p in idx.undecided_ports],
+            "record_problems": [{"name": r.name, "problems": r.problems}
+                                for r in cm.regions.records if r.problems],
+        },
+    }

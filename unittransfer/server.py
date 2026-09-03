@@ -241,7 +241,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, edit, modflags,
                modfiles, sounds, stratmap)
-from . import ancillaries, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, strings, traits, triggers
+from . import ancillaries, campmap, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, strings, traits, triggers
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -439,6 +439,20 @@ def _clear_cache(mod_root, out: dict, rec: dict, mod_name: str,
     config.update_log(rec.get("id", ""), strings_bin=res)
 
 
+def _stat_sig(path: Path) -> tuple:
+    """(name, size, mtime) of one file, or a miss that compares unequal to none.
+
+    A file that is not there and a file that is are different states, and both
+    have to be noticed: a layer added to a mod while the tool is open must
+    invalidate what was read without it.
+    """
+    try:
+        st = path.stat()
+        return (path.name, st.st_size, int(st.st_mtime_ns))
+    except OSError:
+        return (path.name, -1, -1)
+
+
 def _safe_stem(name: str) -> str:
     """A mod name reduced to something safe to use as a folder name."""
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", (name or "pack").strip()).strip("._") or "pack"
@@ -469,6 +483,9 @@ class Registry:
         # An on-disk edit still shows up without a restart, just up to a second
         # later - and our own writes call invalidate(), so they are immediate.
         self._checked: Dict[str, float] = {}
+        # name -> (signature, CampaignMap). Its own cache rather than a field on
+        # Mod: the map is half a second to read and most modes never touch it.
+        self._maps: Dict[str, tuple] = {}
 
     @staticmethod
     def _signature(mod: Mod) -> tuple:
@@ -632,6 +649,69 @@ class Registry:
             self._mods.pop(name, None)
             self._sigs.pop(name, None)
             self._checked.pop(name, None)
+            self._maps.pop(name, None)
+
+    # ---- the campaign map, kept because building its index is not free ----
+
+    @staticmethod
+    def _map_signature(mod: Mod) -> tuple:
+        """(size, mtime) of every file the map is read out of.
+
+        The same trick as :meth:`_signature`, over a different set: the terrain
+        header, the regions file and the ten layers. 16e paints through this
+        server and calls :meth:`invalidate`, but a layer edited in Photoshop
+        while the tool is open is a real workflow too, and this is what makes
+        the next request notice.
+        """
+        base = mod.data / campmap.BASE_REL
+        sig = []
+        for rel in ("descr_terrain.txt", "descr_regions.txt"):
+            sig.append(_stat_sig(base / rel))
+        for ly in campmap.LAYERS:
+            sig.append(_stat_sig(base / ly["file"]))
+        return tuple(sig)
+
+    def campaign_map(self, name: str) -> "campmap.CampaignMap":
+        """This mod's campaign map, read once and kept.
+
+        Reading it is about half a second on DaC - the ten layers, the exact
+        label image and the per-region pass - and every layer request, every
+        probe and every stroke would otherwise pay it again. Held per mod,
+        dropped when any file it was read from changes on disk.
+
+        Raises :class:`campmap.MapError` when the mod has no map of its own,
+        which is normal: most mods ship units and let the game's own map stand.
+
+        :meth:`describe` rather than :meth:`get`, deliberately. A map needs
+        ``data/world/maps/base`` and nothing else, and warming the unit
+        databases first would mean a mod that ships only a map - or one whose
+        roster is missing - could not have its map read at all, which is the
+        same mistake Home's readiness report was fixed for.
+        """
+        mod = self.describe(name)
+        with self._lock:
+            held = self._maps.get(name)
+            sig = self._map_signature(mod)
+            if held is not None and held[0] == sig:
+                return held[1]
+            started = time.perf_counter()
+            cm = campmap.CampaignMap(mod)
+            # The expensive half, warmed inside the lock so two requests never
+            # build it twice. Warmed in a try: a map whose layers disagree
+            # cannot have an index, and refusing the whole map for it would
+            # take away the one screen that says WHICH file is the wrong shape.
+            # campmap.view degrades to the layer list; that is the answer here.
+            try:
+                regions = len(cm.index.regions)
+            except campmap.MapError as exc:
+                regions = -1
+                log.info("MAP    %s: %s", name, exc)
+            self._maps[name] = (sig, cm)
+        log.info("MAP    %s: %dx%d, %s, read in %.2fs", name,
+                 cm.terrain.width, cm.terrain.height,
+                 f"{regions} regions" if regions >= 0 else "no index (see above)",
+                 time.perf_counter() - started)
+        return cm
 
 
 def _engine_groups(m: Mod, u) -> list:
@@ -1527,6 +1607,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
                 return self._json(sprites.overview(self.registry.get(name)))
+            if u.path.startswith("/api/map"):
+                return self._map_route(u.path, q)
             if u.path == "/api/log":
                 return self._json(log_page(
                     mode=(q.get("mode") or [""])[0],
@@ -2663,6 +2745,60 @@ class Handler(BaseHTTPRequestHandler):
             return self._err(400, str(e))
         return self._send(200, mesh.geometry_payload(decoded),
                           "application/octet-stream")
+
+    def _map_route(self, path: str, q):
+        """The two things the campaign map renderer asks for.
+
+        ``/api/map`` is the manifest - the tile grid, the ten layers with what
+        is wrong with each, and the region table the browser picks against.
+        ``/api/map/layer`` is one layer as PNG.
+
+        A mod with no map of its own answers 404 with that sentence rather than
+        an empty screen, because it is the ordinary case: most mods ship units
+        and let the game's own map stand.
+        """
+        name = (q.get("mod") or [None])[0]
+        if not name or name not in self.registry.names():
+            return self._err(404, "unknown mod")
+        try:
+            cm = self.registry.campaign_map(name)
+        except campmap.MapError as exc:
+            return self._err(404, str(exc))
+        except (ModDataError, OSError) as exc:
+            return self._err(404, f"{name}'s campaign map could not be read: {exc}")
+
+        if path == "/api/map":
+            return self._json(campmap.view(cm, name))
+
+        if path != "/api/map/layer":
+            return self._err(404, f"no such map route {path}")
+
+        code = (q.get("code") or [""])[0]
+        fit = (q.get("fit") or ["tile"])[0]
+        if code not in campmap.LAYER_BY_CODE:
+            return self._err(404, f"no such layer {code!r}")
+        src = cm.path(code)
+        if not src.exists():
+            return self._err(404, f"{name} has no {campmap.LAYER_BY_CODE[code]['file']}")
+        # The mtime is in the cache key, so a layer repainted underneath us -
+        # by 16e, or by the user in Photoshop - is a miss rather than a stale
+        # picture that outlives the edit.
+        token = f"maplayer|{src}|{_stat_sig(src)}|{fit}"
+        try:
+            data = self.registry.icons.cached_png(
+                token, lambda: campmap.layer_png(cm, code, fit))
+        except campmap.MapError as exc:
+            return self._err(400, str(exc))
+        except Exception as exc:
+            # Said out loud rather than served as a blank: a layer is the
+            # picture, and a silently empty one reads as a map with nothing on
+            # it. /icon's never-raise rule is for the dozens of small pictures
+            # in a grid, which is a different problem.
+            log.debug("map layer failed", exc_info=True)
+            return self._err(500, f"{campmap.LAYER_BY_CODE[code]['file']} "
+                                  f"could not be decoded: {exc}")
+        return self._send(200, data, "image/png",
+                          {"X-Map-Fit": fit, "X-Map-Layer": code})
 
     def _icon(self, q):
         # Icons must NEVER 500: a failed response paints a broken-image glyph in
