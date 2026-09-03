@@ -78,7 +78,7 @@ running the test suite, and running `graphify update .`.
 | 15h | Recruitment on the unit + the UV layout (v2.1.9) | M | ✅ done |
 | 15i | The model beside a transfer, art beside a pool (v2.1.10) | S | ✅ done |
 | 15j | Resizable panels, the strings warning, no em dashes (v2.1.11) | S | ✅ done |
-| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ |
+| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ |
 | V3.1 | OSM backdrop + coastline tracer | M | future |
 | V3.2 | Map resize + create-from-scratch | L | future |
 | V3.3 | Overlay and layer generators | M | future |
@@ -2191,17 +2191,47 @@ and server-side validation possible at all.
   line by looking for the first comma, which is right until a region carries a
   single resource.
 
-- **16b - `descr_strat.txt`, read.** `campstrat.py`. Faction rosters, faction
-  blocks, settlements with their building lists, characters (including DaC's
-  `hero_ability` and `label`), armies and units, forts in both the vanilla
-  `fort x y` and DaC's `fort x y <type> culture <culture>` forms, watchtowers,
-  resources, `relative` lines, `faction_standings`, campaign globals. A
-  line-preserving block model with an interval index, so a lookup is never a
-  scan and an edit is never a re-parse.
-  Exit: DaC's 13,153-line file parses in one pass - 105 forts, 295 watchtowers,
-  1,131 resources, 305 characters, 1,468 units, 79 relatives, 812 standings -
-  and round-trips byte-exact. Every faction and settlement enumerated (their
-  sidebar bug fixed at the data layer).
+- **16b - `descr_strat.txt`, read.** ✅ **done 2026-09-03.** `campstrat.py`
+  (895 lines) with `tests/test_campstrat.py` at 75 checks, all passing. Faction
+  rosters, faction blocks, settlements with their building lists, characters
+  (including DaC's `hero_ability` and `label`, and vanilla's
+  `character sub_faction <faction>, <name>, …` prefix), armies and units, forts
+  in both forms, watchtowers, resources, `relative` lines, `character_record`,
+  `faction_standings`, `faction_relationships`, the regions section and the
+  campaign globals. Every node carries its line span and every field the index
+  of the line it came from.
+  Exit, measured: DaC's file parses **in one pass in 144 ms** into 6,100 nodes -
+  31 factions, 199 settlements, 1,044 buildings, 305 characters, 286 armies,
+  1,468 units, 161 character_records, 79 relatives, 812 standings, 57
+  relationships, 126 regions, 105 forts, 295 watchtowers, 1,131 resources - and
+  **round-trips byte-exact**, as do both of vanilla's campaigns. Every
+  settlement and every character resolves to a faction: 199 of 199 and 305 of
+  305, which is the sidebar bug fixed at the data layer.
+
+  **The interval index needs no sort.** A node is appended the moment its first
+  line is read, so `StratFile.nodes` comes out of the parse already in document
+  order and a block plus everything inside it is contiguous. `node_at` is a
+  bisect and a walk up the parents; `descendants_of` is a bisect and a slice, so
+  "every unit in this faction" costs nothing.
+
+  **Three pieces of format knowledge this session added.** `undiscovered` is a
+  faction flag, found in vanilla on the Aztecs, who do not exist until somebody
+  sails far enough west; `character sub_faction <faction>, <name>, …` is a real
+  character form and the reason a positional read of that line fails; and brace
+  depth has to be counted on the line **with its comment stripped** - Mylae's
+  `factionBlockOps.js` has the depth rule but counts braces on the raw line, so
+  a commented-out brace shifts it.
+
+  **Nine lines in DaC do not parse, and all nine are the mod's own defects**:
+  a trailing comma (3747), Sauron with no `age` at all (5376), `settlement
+  tyuiop` (8464), `named character, general` twice over (9703, 10438), `rmour`
+  for `armour` three times (9983, 10947, 10948) and a truncated `weapon_lv`
+  (10581). Vanilla's two campaigns have none. Every one is read as far as it can
+  be, kept in the tree, and reported by line number for 16f.
+
+  **One caveat, stated rather than hidden.** Neither vanilla campaign contains a
+  single `fort`, so the vanilla `fort <x> <y>` form is exercised only by the
+  synthetic half of the suite; DaC's 105 forts are all the long form.
 
 - **16c - Renderer core.** `web/js/campmap.js`. Layers served as PNG from
   `/api/map/layer`, composited on one canvas with per-layer opacity and draw

@@ -1,12 +1,14 @@
 # STATE - Medieval 2 GUI Toolkit V2 and V3
-_Updated: 2026-09-03 · **v2.1.11 released** · V3 under way: 16a done, 16b next_
+_Updated: 2026-09-03 · **v2.1.11 released** · V3 under way: 16a and 16b done, 16c next_
 
 ## Next up
-Start **16b** - `unittransfer/campstrat.py`: `descr_strat.txt` as a
-line-preserving block model with an interval index. DaC's file is 13,153 lines
-and the exit is a byte-exact round trip plus the counts in ROADMAP.md. Run
-`python tools/upstream_sync.py sync` first: his `stratParser.jsx` changed by 130
-lines in the batch reviewed on 2026-09-03, and that file is 16b's subject.
+Start **16c** - `web/js/campmap.js`: the renderer. Layers served as PNG from
+`/api/map/layer` and composited on one canvas with per-layer opacity and draw
+order; pan, zoom and picking lifted from the UV canvas in `viewer3d.js`;
+dirty-rect redraw. The anti-goals are named in ROADMAP.md: their one-frame lag
+and their off-pixel placement. This is the first sub-phase with any UI in it, so
+it is also the first that needs `server.py` routes. Run
+`python tools/upstream_sync.py sync` first, as before every sub-phase.
 
 ## V3 planned (2026-09-03)
 The Campaign Map Editor is scoped and written into ROADMAP.md as **Phase 16,
@@ -39,6 +41,50 @@ The format facts banked from the read - layer size rules, the sea-is-not-
 greyscale test, the `(2t+1, 2t+1)` centre sampling, the TGA descriptor byte M2TW
 crashes on, port ownership, region ID derivation, the 200-region cap - are all
 in Phase 16's preamble in ROADMAP.md rather than repeated here.
+
+## 16b - descr_strat.txt, read (2026-09-03)
+`unittransfer/campstrat.py` and `tests/test_campstrat.py` at **75 checks, all
+passing** over vanilla's two campaigns and DaC's. The file the whole campaign is
+defined in, as a tree of line spans.
+
+**Lines plus an index, never objects plus a serialiser.** Every node carries the
+line it starts on, the line it ends on and the line each field came from;
+`serialise()` joins the lines back. All three real files round-trip byte-exact,
+DaC's included, and DaC's has no trailing newline, which a serialiser that
+rebuilt the file would have quietly added. Demir's tool re-parses the whole file
+after every edit, eight to ten times to save one faction detail, and it can
+afford to only because it throws the formatting away.
+
+**One pass, 144 ms, 6,100 nodes**, and every scoped count matches: 31 factions,
+199 settlements, 1,044 buildings, 305 characters, 286 armies, 1,468 units, 161
+character_records, 79 relatives, 812 standings, 57 relationships, 126 regions,
+105 forts, 295 watchtowers, 1,131 resources. Every settlement and every
+character resolves to a faction, 199 of 199 and 305 of 305.
+
+**The interval index needs no sort at all.** A node is appended the moment its
+first line is read, so the node list comes out of the parse already in document
+order and a block plus its contents is contiguous in it. `node_at` is a bisect
+plus a walk up the parents; `descendants_of` is a bisect plus a slice.
+
+**Three pieces of format knowledge added.** `undiscovered` is a faction flag,
+found in vanilla on the Aztecs. `character sub_faction <faction>, <name>, …` is
+a real character form, and it is why reading that line positionally fails.
+And brace depth must be counted on the line **with its comment stripped**:
+Mylae's `factionBlockOps.js` has the depth rule, which is the right rule, but
+counts braces on the raw line, so a commented-out brace shifts it. Depth is what
+tells a settlement's own `region` field from the regions section at the bottom
+of the file, and nothing else can.
+
+**Nine lines in DaC do not parse and all nine are the mod's own.** A trailing
+comma (3747), Sauron with no `age` (5376), `settlement tyuiop` (8464),
+`named character, general` twice (9703, 10438), `rmour` for `armour` three times
+(9983, 10947, 10948) and a truncated `weapon_lv` (10581). Vanilla has none. Each
+is read as far as it can be, kept in the tree, and reported by line number,
+because a parser that refused any of them would refuse DaC.
+
+**One caveat.** Neither vanilla campaign contains a single `fort`, so the short
+`fort <x> <y>` form is covered only by the synthetic half of the suite. DaC's
+105 forts are all the long form.
 
 ## 16a - the map files, read (2026-09-03)
 `unittransfer/maptga.py`, `mapvocab.py` and `campmap.py`, plus
@@ -1156,7 +1202,7 @@ underneath. Both fixed; see ROADMAP.md's 14f outcome.
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
-| 16 - Campaign Map Editor (V3.0.0) | **16a done, 16b next** | Scoped 2026-09-03 from four references into eleven sessions, 16a-16k, with V3.1-V3.3 as future releases. Pillow only, no numpy and no C extension - measured, see ROADMAP.md Phase 16. **16a landed 2026-09-03**: `maptga.py`, `mapvocab.py`, `campmap.py`, `tests/test_campmap.py` 61/61 on DaC - see the 16a section above. Still to come: `campstrat.py`, `mapcheck.py`, `web/js/campmap.js`, `campaint.js`; **not** `stratmap.py`, which is a different concern |
+| 16 - Campaign Map Editor (V3.0.0) | **16a+16b done, 16c next** | Scoped 2026-09-03 from four references into eleven sessions, 16a-16k, with V3.1-V3.3 as future releases. Pillow only, no numpy and no C extension - measured, see ROADMAP.md Phase 16. **16a and 16b landed 2026-09-03**: `maptga.py`, `mapvocab.py`, `campmap.py` (61/61) and `campstrat.py` (75/75), each written up in its own section above. The whole read half of the engine is done and every file it touches round-trips byte-exact. Still to come: `mapcheck.py`, `web/js/campmap.js`, `campaint.js`; **not** `stratmap.py`, which is a different concern |
 | 15j - resizable panels, the strings warning, no em dashes | **done** | **v2.1.11.** `rsz*` in `core.js`: `resize:vertical` on every scroll box the stylesheet declares (found by reading `document.styleSheets`, 31 selectors, `.wpop` and `.modal` skipped), `resize:both` on `#modal`, a `.drawergrip` bar on the right-pinned drawer, sizes in `pane_sizes` on `/api/settings`. The two real problems are `max-height` outranking a dragged `height` (cleared on capture-phase `mousedown` at the corner) and wholesale re-renders throwing the result away (a `MutationObserver`, coalesced on `setTimeout` rather than `requestAnimationFrame`, because an occluded window gets no frames). Nothing is pinned until it is dragged. Plus the strings list's stale-`.txt` warning rewritten with a `qm()` card, and 4176 em dashes swept out of 171 files with `ANY_EM` added to `prose_check` to keep them out. `test_web_modules` 10/10; verified in-browser (pin, save, survive re-render, reopen at the saved size, double-click reset) |
 | 15i - the model beside a transfer, art beside a pool | **done** | **v2.1.10.** The 3D column docks into the transfer composer (`transfer.js` `cmpPrev*`, `#cmpSplit`), listing the source unit's battle-model entries AND the base/replaced unit's out of the destination mod, grouped by mod and drawn from it - the third `v3Mount` host, same detach-across-render / one-viewer / fold-pauses rules as the editor's. Entries come off the unit LIST's fields, with the `armour_ug_models` rule and men-before-officers ordering. The Recruitment tab's rows and its ＋ picker carry the tier's art, keyed by the pool's OWN `requires` through `ov.faction_cultures`, with a new opt-in `any_culture` sweep in `buildings.find_icon` (`&any=1`) for the levels a mod draws for one culture only - OFF for the building browser, which is showing one culture on purpose. Row layout re-cut as two halves: tier against the name, `requires` right-aligned on its own line, and the header finally aligned with the boxes it names. `test_buildings` §11 + `test_buildings_http`; 72 of 72 modules |
 | 15h - recruitment on the unit, UV layout | **done** | **v2.1.9.** `web/js/edrecruit.js` (new) - a Recruitment tab in the unit editor listing every building line that trains it, with the four pool numbers, the `requires` clause, a delete and a ＋ that adds the unit to any line and tier. **No Python**: `buildings.unit_instances` reads and `buildings.plan_edit` writes, so this is a second FRONT rather than a second implementation. The one new request shape is `also`-only - every edit in `also`, the body carrying a line name and no levels - which is also what makes `_check_recruit_limit` merge the file instead of counting three rows as a level. The clause dialog is borrowed with `kind:'edrec'`, which re-renders the editor instead of unstashing markup, because the modal holds a live WebGL column. `?building=&lvl=&unit=` opens a building in its own tab, on the tier, with the unit’s rows flashed. A save now moves EDB line numbers, so a building left open behind the editor drops its working copy and `backToBuilding` re-reads it. `test_unit_recruitment` 42/42; verified in-browser, three pools over two lines written and undone byte-exact. Plus the viewer’s **UV layout** and the mount-texture bug it found |
