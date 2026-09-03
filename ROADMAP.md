@@ -2234,7 +2234,7 @@ and server-side validation possible at all.
   single `fort`, so the vanilla `fort <x> <y>` form is exercised only by the
   synthetic half of the suite; DaC's 105 forts are all the long form.
 
-- **16c - Renderer core.** ✅ **done 2026-09-04.** `web/js/campmap.js` (823
+- **16c - Renderer core.** ✅ **done 2026-09-04.** `web/js/campmap.js` (834
   lines), the map's view in `campmap.py` (+300) and two routes in `server.py`,
   with `tests/test_campview.py` at **50 checks, all passing** over vanilla's map
   and DaC's. The first sub-phase with any UI in it.
