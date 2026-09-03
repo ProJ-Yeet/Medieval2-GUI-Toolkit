@@ -1499,7 +1499,7 @@ async function openCredits(){
       </div>
       <div>
         <div class="lbl" style="margin-bottom:4px">Testing</div>
-        <b>Jayzinski</b> and <b>TheHolyPilgrim</b>
+        <b>Jayzinski</b>, <b>TheHolyPilgrim</b>, <b>Espartan</b>, <b>Anhlego</b> and <b>Lupinemaverick</b>
       </div>
     </div>
     <div style="padding:0 16px 16px;text-align:right">
