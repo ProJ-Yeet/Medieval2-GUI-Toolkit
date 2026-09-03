@@ -127,7 +127,14 @@ def regions(mod, hidden_names=()) -> List[dict]:
 
     Display names for both the region and its settlement come from
     ``text/imperial_campaign_regions_and_settlement_names.txt``.
+
+    **The parser itself lives in :mod:`unittransfer.campmap`**, which is the
+    module that owns this file, exactly as religions, cultures and resources
+    come from :mod:`unittransfer.minorfiles` above. It used to be a second
+    parser sitting beside that one, finding the resource line by looking for
+    the first comma - which is right until a region carries a single resource.
     """
+    from . import campmap
     text = _read(mod.data / REGIONS_REL)
     if not text:
         return []
@@ -138,58 +145,21 @@ def regions(mod, hidden_names=()) -> List[dict]:
     hidden_set = {h.lower() for h in hidden_names}
 
     out: List[dict] = []
-
-    def flush(header: str, body: List[str]) -> None:
-        rows, legion = [], ""
-        for ln in body:
-            s = ln.split(";", 1)[0].strip()
-            if not s:
-                continue
-            if s.lower().startswith("legion:"):
-                legion = s.split(":", 1)[1].strip()
-                continue
-            rows.append(s)
-        if len(rows) < 5:
-            return
-        # the resource line is the first comma-separated one after the RGB triple
-        res_at = next((i for i, r in enumerate(rows[4:], 4) if "," in r), None)
-        resources_all = ([t.strip() for t in rows[res_at].split(",") if t.strip()]
-                         if res_at is not None else [])
-        rel = {}
-        m = re.search(r"religions\s*\{([^}]*)\}", " ".join(rows))
-        if m:
-            toks = m.group(1).split()
-            rel = {toks[i]: toks[i + 1] for i in range(0, len(toks) - 1, 2)}
-        out.append({
-            "region": header,
-            "name": (names.get(header) or "").strip() or header,
-            "settlement": rows[0],
-            "settlement_name": (names.get(rows[0]) or "").strip() or rows[0],
-            "faction": rows[1],
-            "rebels": rows[2] if len(rows) > 2 else "",
-            "legion": legion,
-            "hidden_resources": [r for r in resources_all if r.lower() in hidden_set],
-            "resources": [r for r in resources_all if r.lower() not in hidden_set],
-            "religions": rel,
-        })
-
-    header, current = "", []
-    for line in text.splitlines():
-        if not line.strip() or line.lstrip().startswith(";"):
+    for rec in campmap.parse_regions(text).records:
+        if rec.rgb_line < 0:
             continue
-        # A region starts unindented - except that Third Age 6 writes its
-        # `religions { … }` line flush left too, and treating that as a new
-        # region would both lose the religions and invent a phantom record.
-        starts_region = (line[:1] not in (" ", "\t")
-                         and not line.lstrip().lower().startswith("religions"))
-        if starts_region:
-            if header:
-                flush(header, current)
-            header, current = line.strip(), []
-        elif header:
-            current.append(line)
-    if header:
-        flush(header, current)
+        out.append({
+            "region": rec.name,
+            "name": (names.get(rec.name) or "").strip() or rec.name,
+            "settlement": rec.settlement,
+            "settlement_name": (names.get(rec.settlement) or "").strip() or rec.settlement,
+            "faction": rec.faction,
+            "rebels": rec.rebels,
+            "legion": rec.legion,
+            "hidden_resources": [r for r in rec.resources if r.lower() in hidden_set],
+            "resources": [r for r in rec.resources if r.lower() not in hidden_set],
+            "religions": {k: str(v) for k, v in rec.religions.items()},
+        })
     return out
 
 
