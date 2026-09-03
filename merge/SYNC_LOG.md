@@ -4,6 +4,37 @@ Every review of Mylae's `main`, newest first. Written by
 `tools/upstream_sync.py sync --accept`. His commit messages all say
 "File changes", so these entries are the only record of what actually moved.
 
+## 2026-09-03 - e6e6982..ac503ac
+
+27 commits, 31 files changed.
+
+### port-concept (14)
+- `A` `src/components/factions/DuplicateFactionModal.jsx` - phase 11,16  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `A` `src/components/factions/FactionZipExport.jsx` - phase 11  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `A` `src/components/factions/factionBulkDuplicate.js` - phase 11,16  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `A` `src/components/map/factionBlockOps.js` - phase 16  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/factions/BannersTab.jsx` - phase 11,14  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/factions/DescriptionsTab.jsx` - phase 11  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/factions/FactionSymbolsTab.jsx` - phase 11  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/factions/MiscTab.jsx` - phase 11  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/home/DataFolderPicker.jsx` - phase 5  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/map/FactionsCampaignTab.jsx` - phase 16  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/map/stratParser.jsx` - phase 16  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/pages/CampaignMap.jsx` - phase 16  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/pages/FactionsEditor.jsx` - phase 11  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/pages/Home.jsx` - phase 5  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+
+### audit (1)
+- `A` `src/lib/utf16.js` - phase 3,12
+
+### out-of-scope (9)
+
+Counted only.
+
+### skip (7)
+
+Counted only.
+
 ## 2026-08-20 - b4768d5..e6e6982
 
 19 commits, 18 files changed.

@@ -1,4 +1,4 @@
-# Medieval 2 GUI Toolkit - V2 Roadmap
+# Medieval 2 GUI Toolkit - V2 and V3 Roadmap
 
 **Reference tool:** [Mylae's M2TW Editor](https://github.com/Machiavello-1441/m2tw-editor)
 (React/Base44, ~59.6k LOC, works directly on `main`, no releases - used with the
@@ -22,8 +22,20 @@ running the test suite, and running `graphify update .`.
   code, hover-highlight, two-way live edits, server-side parsing with a
   field→line span map). Built in Phase 4, adopted by every editor after it.
 - **No AI / autogenerate features. Hard no.** Excludes porting their
-  `LuaAiAssistant`, `ScriptAIAssistant`, symbol generator, OSM/Köppen/land-cover
-  fetchers.
+  `LuaAiAssistant`, `ScriptAIAssistant` and symbol generator. **Amended
+  2026-09-03:** the OSM / Köppen / land-cover fetchers were swept in here by the
+  same rule and are now *deferred, not excluded* - they land in V3.1 and V3.3
+  (see below), opt-in and off by default, because a map editor is the one module
+  where a real-world backdrop is worth the network call. The three AI assistants
+  above stay a permanent no.
+- **V3 is the Campaign Map Editor** (Phase 16, sessions 16a-16k). It goes as
+  deep as the reference tools do - map layers, regions, painting, validation,
+  and the whole `descr_strat.txt` campaign database including characters,
+  family trees, diplomacy and faction creation.
+- **Pillow only, for the map too.** Measured on DaC's real map: all ten TGA
+  layers decode in under 100 ms, the unique-colour census is 6 ms, the region
+  label image 5 ms. The reference tool's lag is repeated work, not a slow
+  language, so no numpy and no C extension - see Phase 16's preamble.
 - **Localised names first** everywhere in the UI, code name in brackets -
   `Town Hall (core_building)`.
 - **Self-hosted local app.** Never a hosted browser app; file access stays
@@ -65,7 +77,11 @@ running the test suite, and running `graphify update .`.
 | 15g | Add a faction (clone across twelve files) + viewer UV mode (v2.1.8) | M | ✅ done |
 | 15h | Recruitment on the unit + the UV layout (v2.1.9) | M | ✅ done |
 | 15i | The model beside a transfer, art beside a pool (v2.1.10) | S | ✅ done |
-| 16 | Campaign Map Editor - flagship, LAST | XL | 5+ (16a–16e) |
+| 15j | Resizable panels, the strings warning, no em dashes (v2.1.11) | S | ✅ done |
+| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ |
+| V3.1 | OSM backdrop + coastline tracer | M | future |
+| V3.2 | Map resize + create-from-scratch | L | future |
+| V3.3 | Overlay and layer generators | M | future |
 
 Dependency shape: 1 and 2 are independent; 3 gates 4; 4 gates every editor
 phase (5–12, 15, 16 UIs); 7 gates 8/9; 6 is reused by 11.
@@ -1898,54 +1914,442 @@ Notes: `merge/RELEASE_2_1_10.md`. Suite: 72 of 72 modules.
 
 ---
 
-## Phase 16 - Campaign Map Editor - flagship, LAST (5+ sessions)
+## Phase 15j - Resizable panels, the strings warning, no em dashes ✅ (v2.1.11, done 2026-09-03)
 
-- **Goal:** Complete and surpass their half-finished map editor: fast accurate
-  canvas rendering, layer legend, region inspector, query/highlight, correct
-  sidebar enumeration, working 3D strat preview.
-- **Preconditions:** Phases 4, 5, 10 (regions/religions/resources vocab), 15
-  (viewer for strat models); **run the upstream sync first** - `map/` is where
-  he is actively working.
-- **Sub-phases, each one session with its own exit:**
-  - **16a - Python foundations:** `unittransfer/stratmap.py`: `descr_strat`,
-    `descr_regions`, `map_regions.tga` + companion TGAs decode (Pillow),
-    settlement/character/resource models. Exit: parse both test mods with full
-    round-trip; every faction and settlement enumerated correctly (their
-    sidebar bug fixed at the data layer).
-  - **16b - Renderer core:** single canvas with layered offscreen buffers,
-    device-pixel exact picking (their one-frame icon lag and off-pixel
-    placement are the anti-goals), sensible default zoom fitted to the map.
-    Exit: 60 fps pan/zoom on DaC's map; dragged icons stay under the cursor on
-    the exact pixel.
-  - **16c - Layers + inspector:** checkbox legend (settlements on, all else
-    off by default); click region → editable side panel (owner, religion,
-    resources, triumph value…) with plan→apply writes. Exit: edit a region
-    end-to-end with undo; legend state persisted.
-  - **16d - Query/highlight:** pick a hidden resource (or any attribute) →
-    all matching regions highlight; localised names throughout. Exit: resource,
-    religion-majority and owner queries work on both test mods.
-  - **16e - 3D strat preview:** fix navigation/origin using Phase 15's viewer.
-    **This sub-phase now owns the `.cas` decoder**, which 15a did not land: a
-    strat model is a 3ds-max scene export (float `3.2`, frame rate, key times,
-    a node hierarchy, animation tracks, then the mesh and its material), not a
-    `.mesh` variant. What is known about it is at the bottom of
-    `unittransfer/mesh.py`; `probe()` already tells the two formats apart.
-    Exit: settlement/character strat models render and orbit correctly.
-- **Future expansion (V2.1+, not V2):** mercenary-pool view/edit by region and
-  faction (data layer lands in 16a; UI deferred).
-- **Risks:** biggest phase, and upstream is churning here - re-triage before
-  every sub-phase. TGA layer semantics are subtle (TWCenter index is the
-  arbiter). This phase alone gates **3.0.0** (it gated 2.0.0 until Phase 14
-  shipped as 2.0.0 without it - see Locked decisions).
+**Every panel takes the size you drag it to** (`web/js/core.js`, the `rsz*`
+block beside `splitInstall`; `::-webkit-resizer` and `.drawergrip` in
+`index.html`). Every scroll box gets `resize:vertical`, the dialog gets
+`resize:both`, and the drawer gets a hand-rolled left-edge bar because its right
+edge is pinned and the browser's own corner would drag it off the screen. Sizes
+live in `pane_sizes` on `/api/settings`, keyed by a box's `id` or its classes
+and a dialog's class, and clamped to the window on the way back in.
+
+**The boxes find themselves.** A scroll box in this stylesheet is a rule that
+sets `max-height` and `overflow:auto` together and there is no second kind, so
+`rszSelectors` reads `document.styleSheets` once at startup and collects the 31
+selectors that do - which means a list written next month is resizable the day
+it is written. `.wpop` is skipped (a menu that closes on the next click must not
+carry a remembered height) and `.modal` is skipped because `rszModal` sizes it
+in both directions instead.
+
+**Two things the browser gets wrong on its own, and most of the code is undoing
+them.** A `max-height` outranks the `height` a drag writes, so the ceiling is
+cleared on `mousedown` in the corner, in the **capture phase** - the last moment
+before the browser starts its own drag. Without that, the first drag on any box
+did nothing and only the second appeared to work. And these screens rebuild
+wholesale (a keystroke in the pool filter replaces every row), so a
+`MutationObserver` on `document.body` puts the size back on the element that
+replaced the one that was dragged. That observer coalesces on a **`setTimeout`,
+not `requestAnimationFrame`**: a window the OS considers occluded is given no
+frames at all, and a dialog opened behind another window came up with none of
+its boxes wired. Nothing is touched until it is dragged, so an untouched screen
+lays out exactly as before.
+
+**"`<name>.txt` is newer"** (`web/js/strings.js`) was a comparison of two file
+dates presented as a warning, with no statement of what was wrong. It now reads
+"…is newer than this `.bin`" and carries a `qm()` card: the game reads the
+`.bin`, the `.txt` was saved after it was built, so what the `.txt` has been
+made to say since is not on screen in the game - which is usually how the mod
+was written and not a fault at all.
+
+**No em dashes.** 4176 of them across 171 tracked files, swept to plain hyphens
+in one pass; every occurrence was ` - `, a dash left at the end of a wrapped
+line, or a lone dash standing for "nothing here", and a hyphen is right for all
+three. `tools/prose_check.py` grew `ANY_EM`, which scans whole files rather than
+UI strings, so one that comes back is a reported hit.
+
+**Also in the build:** battle-model-entries-only transfers (`models_only`,
+`GET /api/unit_models`, `transfer.unit_model_index`), a swatch-plus-hex colour
+picker on the faction editor that no longer closes the OS picker on every drag
+through the gradient, a player-visible name for a newly cloned unit
+("`<name>` (new)"), and the OS folder dialog raised to the front from a watcher
+thread instead of opening behind the browser.
+
+- **Exit:** met. `test_web_modules` 10/10, and `tools/prose_check.py` reports 0
+  em dashes where it had 4176. Verified in-browser: pin a size, save it, survive
+  a wholesale re-render, reopen at the saved size, double-click to reset, and a
+  dialog opened behind another window comes up with its boxes wired.
+
+Notes: `merge/RELEASE_2_1_11.md`. Suite: 72 of 72 modules.
 
 ---
 
-## Explicitly out of scope for V2 (future expansion only)
+## Phase 16 - Campaign Map Editor - V3.0.0, flagship, LAST (11 sessions)
+
+- **Goal:** Complete and surpass every reference tool at once - fast accurate
+  canvas rendering, the paint tool, the union of all four validators, a region
+  inspector, query/highlight, and the whole `descr_strat.txt` campaign database
+  down to characters, family trees, diplomacy and faction creation. This phase
+  alone is **3.0.0**.
+- **Preconditions:** Phases 4, 5, 10 (regions/religions/resources vocab), 15
+  (viewer for strat models); **run the upstream sync first** - `map/` is where
+  he is actively working.
+
+### The four references, and what each one is for
+
+`Reference/Map/` holds three of them; the fourth is mirrored in this repo at
+`refs/upstream/editor/main` and tracked by `tools/upstream_sync.py`.
+
+- **`Reference/Map/Demir.html`** ("StratMap Forge v0.4", 350 KB, one `<script>`)
+  - the deepest **validation rule set** in the folder and the only **campaign
+  database editor**. Its rules are the most valuable artifact in it. It is also
+  the one that lags; the anatomy is below.
+- **Mylae's `src/components/map/`** - the **paint tool**: layer picker,
+  pencil/bucket/pipette, per-layer colour presets (`paintPresets.jsx`), the
+  three-step new-region wizard, and the one performance fix he already found
+  (debounced bitmap rebuild, per-layer async `toBlob` encode).
+- **`Reference/Map/TWMapReader_source/`** (Java, ~25k lines) - the
+  **reverse-engineered engine behaviour** nobody else has: region ID derivation,
+  port ownership, the three coordinate systems, adjacency across land bridges
+  and river crossings.
+- **`Reference/Map/Geomod_Tool_and_Manual/`** plus
+  `Reference/TWCenter/Creating a World – Basic mapping from scratch` - the
+  **format arbiter**: layer sizes, the full colour tables, the river rules, the
+  200-region cap and the crash list.
+
+### Why this is Python and not C++
+
+Measured with Pillow against DaC's real map (`map_regions.tga` 510x487, the
+2x+1 layers 1021x975):
+
+| operation | time |
+|---|---|
+| decode one RLE 32-bit `map_heights.tga` | 13 ms |
+| decode all ten layers | 117 ms |
+| unique region colours (`Image.getcolors`) | 202 colours, 13 ms |
+| region-id label image, exact | 61 ms |
+| per-region count, bbox and centroid, one pass | 180 ms |
+| sea mask (`ImageChops`, in C) | ~5 ms |
+| centre-sample a 2W+1 layer (`Image.transform`, affine) | 3 ms |
+| `map_regions.tga` to PNG for the browser | 74 ms, 22 KB |
+| worst case: exact per-pixel scan in pure Python | 106 ms |
+
+**Two of those numbers were wrong when this phase was scoped, and 16a corrected
+them by measuring.** `Image.quantize` with a fixed palette builds a label image
+in 3 ms and is *approximate*: its nearest-colour matching put 1,320 of DaC's
+248,370 pixels on the wrong region even with every colour in the image present
+in the palette exactly. An index that is 99.5% right is not an index, so the
+label image is an exact dictionary pass over the raw bytes at 61 ms. The whole
+read of DaC's map, index included, is about 450 ms, once, at load.
+
+`descr_terrain.txt` caps width and height at 510, so the largest layer any mod
+can have is about a megapixel. **The reference tool does not lag because the
+work is large - it lags because it repeats it.** In `Demir.html`: `paintAt`
+(1224) nulls the layer canvas, so the next `render()` allocates a fresh
+`<canvas>` and `putImageData`s the *whole* image, and `paintLine` (1723) calls
+it per Bresenham pixel, so one 40 px drag is 40 full-image uploads inside a
+single input event. The water brush (1235) invalidates the terrain composite,
+which then rebuilds over ~820k pixels calling `sampleMapLayer` seven times per
+pixel, each call allocating a three-element array and a `join(',')` string for a
+Map lookup - about **5.7 M array and 1.6 M string allocations per painted
+pixel**. `validate()` (1403) runs after every edit and is O(descr_strat lines x
+army objects), 30 to 180 million iterations on a real mod. `commitStratLines`
+re-parses the entire file after every edit, eight to ten times to save one
+faction detail. Colour keys are template-literal strings allocated per pixel in
+three separate builders.
+
+None of that is a language problem. **Decision: Pillow only** - no numpy, no C
+extension - which keeps the vanilla-UI, zero-build-step, one-dependency rule,
+the 50-55 MB release zip and the disk headroom on `D:`. Speed comes from four
+architectural rules instead:
+
+1. **A label image, built once.** Borders, selection masks, thematic recolour,
+   hit tests, unknown-colour audits and per-region counts all read a
+   `region_id` byte array, never RGB triples. Packed integer keys
+   (`r<<16|g<<8|b`), never strings.
+2. **Dirty rectangles.** An edit touches at most `brush^2` pixels; only that
+   sub-rect is re-encoded and re-sent.
+3. **Parse once, splice after.** The line-index-preserving edit model is the one
+   thing Demir gets right - it keeps comments, tabs and unknown directives
+   intact. Keep it, add a block interval index, never re-parse the world.
+4. **Nothing O(pixels) on the interaction path.** Validation, adjacency and
+   region IDs run on demand, never per stroke.
+
+### Format knowledge banked before a line is written
+
+Every item below is either measured on DaC or sourced to the arbiter, and each
+one is a rule at least one reference tool gets wrong.
+
+- **DaC's `descr_regions.txt` uses a `legion:` line**, making the record ten
+  lines, not nine. Mylae's parser hard-codes RGB at offset 4 and its resync
+  guard then skips **every DaC region** silently. Demir and TWMapReader both
+  handle it.
+- **A wasteland short form** exists (three lines, no settlement), and a
+  wasteland province must be the **last entry in the file**.
+- **The two bare numbers are triumph value then base farming level.** Confirmed
+  twice over: the 2026-08-20 sync measured vanilla's 112 regions, and Geomod's
+  manual says "Victory ... leave it at 5, other numbers may cause a crash" and
+  "Agriculture ... 4 is approximately average, 6-7 highly fertile".
+- **Religion percentages must sum to 100** or the game crashes.
+- **A tile is sea iff its `map_heights.tga` pixel is not greyscale, or is pure
+  black**, not from ground types. River crossings are force-excluded from the
+  test. Measured at tile centres on DaC, where the rule is actually applied:
+  74,317 tiles come out sea and 74,247 of those are also sea by ground type, so
+  the two agree to 99.9%; the 70 that disagree are the underwater-land tiles the
+  region-id scan has to skip. (An earlier note here said 165 of DaC's 420 height
+  colours are `(0,0,B)` blues. 165 of them are non-greyscale; only 19 are blue,
+  and the rest are near-greys like `(65,64,63)` living between the tile centres.)
+- **The 2x+1 layers sample the block centre**: tile `(tx,ty)` reads pixel
+  `(2*tx+1, 2*ty+1)`. Corner sampling is wrong.
+- **Layer sizes**: `map_regions`, `map_features`, `map_trade_routes` at `W x H`;
+  `map_roughness` at `2W x 2H`; `map_heights`, `map_fog`, `map_ground_types`,
+  `map_climates` at `2W+1 x 2H+1`; `water_surface` nominally 256x256, but DaC
+  ships 1021x975, so that one is advisory.
+- **Three coordinate systems**: image (y down), game/`descr_strat` (y up,
+  `game_y = H - 1 - image_y`), and double-size. Every accessor names which.
+- **The TGA descriptor byte matters.** TWMapReader's `Utils.writeTGA` carries a
+  field note that M2TW *crashed* on descriptor `0x18` and `0x20`, and that
+  `0x08` is what works; every real DaC layer is `0x08` or `0x00`. Demir's writer
+  flattens everything to uncompressed 24-bit `0x00`. Ours preserves type, depth,
+  origin, any ID field and any 26-byte v2.0 footer, and all ten of DaC's layers
+  re-encode **byte for byte identically** through it, RLE included. One trap
+  found in 16a: `water_surface.tga` carries a 495-byte v2.0 extension area whose
+  position is an *absolute file offset* stored in the footer, so a layer that
+  re-encodes to a different length has to have that offset moved or the file is
+  quietly broken.
+- **200 regions maximum, sea colours included.** DaC has 202 unique colours in
+  `map_regions.tga`, two of them the black/white markers - it is on the cap.
+- **Rivers**: no diagonal connections, no rejoins, extend two pixels past the
+  coastline, white pixel at the source, `0,255,255` for a ford.
+- **A settlement or port pixel may not touch another region's pixel**, not even
+  at a corner, and must not sit on a river/ford/source/volcano feature pixel
+  (back-to-menu crash) or on impassable ground.
+- **Port ownership** is decided by the four cardinal neighbours: a direction is
+  a "dock" if it is sea and the opposite neighbour is on-map and not sea. Three
+  docks picks the middle, two picks the most northerly, one picks itself, zero
+  or four is undeterminable.
+- **Region IDs** are the order of first appearance scanning row-major over
+  `map_regions.tga`, skipping settlement and port pixels, and skipping tiles
+  that `map_regions` calls land but `map_heights` calls sea.
+- DaC's `map_features.tga` holds one stray `(1,1,1)` pixel - a live test case.
+
+### Module layout
+
+**Not `unittransfer/stratmap.py`.** That name is taken by the
+`descr_model_strat.txt` cleaner (1046 lines, a different concern); the earlier
+draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
+
+| module | owns |
+|---|---|
+| `unittransfer/campmap.py` | `descr_terrain.txt`, the ten TGA layers, `descr_regions.txt`, the region index, the coordinate transforms |
+| `unittransfer/maptga.py` | TGA read/write preserving type, depth, origin and footer (Pillow decodes; the header is ours) |
+| `unittransfer/mapvocab.py` | ground/climate/feature/height colour tables with localised names, in `edbvocab.py`'s shape |
+| `unittransfer/campstrat.py` | `descr_strat.txt` as a line-preserving block model with an interval index |
+| `unittransfer/mapcheck.py` | the validator and its auto-fixes |
+| `web/js/campmap.js` | viewer, layers, legend, inspector |
+| `web/js/campaint.js` | the paint tool and its undo |
+
+Reuse: `keyblock.py` for the splice discipline (`flatrecord.py` does **not**
+fit - `descr_regions.txt` is positional, not `keyword value`);
+`IconCache.png_bytes` for the disk-cached never-raises PNG route;
+`triggers.split_lines` so a line number means the same thing in every editor;
+`v3UvEdDraw` / `v3UvPointers` / `v3UvAt` (`web/js/viewer3d.js:1013-1219`) for
+pan, zoom, DPR and the "a press that moved under 4 px is a pick" rule.
+
+**The browser never parses a TGA.** Python decodes, serves PNG and owns the
+canonical pixel buffer; the browser paints a local RGBA preview and posts stroke
+operations. That is the "one engine" rule, and it is what makes undo, backups
+and server-side validation possible at all.
+
+### Sub-phases, each one session with its own exit
+
+- **16a - The map files, read.** ✅ **done 2026-09-03.** `campmap.py` (990
+  lines), `maptga.py` (310) and `mapvocab.py` (259), with `tests/test_campmap.py`
+  at 61 checks, all passing on DaC. `descr_terrain.txt`; all ten layers through
+  Pillow with the size relationships checked from headers alone; the colour
+  vocabularies, with climates read out of the mod because every mod renames
+  them; `descr_regions.txt` in every form with each field carrying its source
+  line index; the region index; the three coordinate systems.
+  Exit, measured: 202 unique region colours, 199 settlement pixels, 77 port
+  pixels; `descr_regions.txt` re-serialises byte-exact including CRLF and tabs
+  (198 records, 197 of them in the `legion:` form); region IDs contiguous 0-199
+  and identical across two independent reads; every port resolves to an owner;
+  all ten TGA layers re-encode byte for byte. Reforged is not installed here, so
+  the suite runs over every installed mod that has a `world/maps/base` and says
+  so; the DaC numbers above are asserted by name.
+
+  **Four things found by measuring, all of them now in this roadmap's preamble:**
+  the exact-label-image correction above; the extension-area offset trap in
+  `water_surface.tga`; `map_climates.tga` carrying five colours no climate
+  declares (10 pixels, all one-channel misses of a real climate, from a lossy
+  paint); and a genuine hole in DaC, a 517-pixel region at image (318,54)-(372,68)
+  painted `(100,160,100)` - one channel off `Dunland_Province`'s `100 150 100` -
+  which `descr_regions.txt` never declares and which has a settlement pixel
+  standing in it at image (339,65). All four are 16f test cases and the index
+  reports them rather than papering over them.
+
+  **One inference is ours, and is flagged as ours in the source.** DaC's port at
+  image (75,107) has its dock west and a *settlement pixel* on the land side, so
+  TWMapReader's rule returns black rather than a region colour. The port is
+  resolved through that marker to the region the settlement belongs to; no
+  source states this, but a port attached to the settlement beside it beats a
+  port attached to nothing. Without it, 76 of DaC's 77 ports find an owner.
+
+  Also done here: the `stratmap.py` line in this roadmap is corrected (below),
+  and `edbvocab.regions()` now delegates to `campmap.parse_regions` instead of
+  keeping a second parser for the same file - its own copy found the resource
+  line by looking for the first comma, which is right until a region carries a
+  single resource.
+
+- **16b - `descr_strat.txt`, read.** `campstrat.py`. Faction rosters, faction
+  blocks, settlements with their building lists, characters (including DaC's
+  `hero_ability` and `label`), armies and units, forts in both the vanilla
+  `fort x y` and DaC's `fort x y <type> culture <culture>` forms, watchtowers,
+  resources, `relative` lines, `faction_standings`, campaign globals. A
+  line-preserving block model with an interval index, so a lookup is never a
+  scan and an edit is never a re-parse.
+  Exit: DaC's 13,153-line file parses in one pass - 105 forts, 295 watchtowers,
+  1,131 resources, 305 characters, 1,468 units, 79 relatives, 812 standings -
+  and round-trips byte-exact. Every faction and settlement enumerated (their
+  sidebar bug fixed at the data layer).
+
+- **16c - Renderer core.** `web/js/campmap.js`. Layers served as PNG from
+  `/api/map/layer`, composited on one canvas with per-layer opacity and draw
+  order; pan, zoom and picking lifted from the UV canvas; dirty-rect redraw;
+  default zoom fitted to the map.
+  Exit: 60 fps pan and zoom on DaC's map; the picked pixel is the exact pixel
+  under the cursor at every zoom, and a dragged icon stays under it - their
+  one-frame lag and off-pixel placement are the anti-goals.
+
+- **16d - Layers, legend, inspector.** Layer checkboxes and opacity sliders
+  persisted like `pane_sizes`; a pixel probe naming every layer's value from the
+  vocabularies, localised name first and code name in brackets; click a region
+  for an editable panel (owner, creator, rebel tribe, resources, triumph value,
+  base farming level, religions, settlement and port coordinates, region ID,
+  neighbours); Code View over `descr_regions.txt`.
+  Exit: edit a region end to end with undo; legend state persisted; a religion
+  set that does not total 100 is refused with the reason.
+
+- **16e - The paint tool.** Pencil, brush, bucket and pipette (Geomod's four)
+  plus Demir's water brush. **Region-colour snapping**: the brush always writes
+  the selected region's canonical RGB, so drift is impossible and black or white
+  can never be produced by accident. Water paints `map_regions`, `map_heights`
+  and `map_ground_types` together from the inferred water palette, skipping
+  settlement and port pixels and reporting how many it protected. Per-layer
+  presets from `mapvocab.py`. Mylae's three-step new-region wizard (paint, place
+  settlement, place port or skip) with the touching-another-region rule
+  enforced. **Unlimited undo** - Geomod has one level, Demir has none, Mylae has
+  one snapshot. Strokes post to Python, which owns the bytes, the backup and the
+  undo entry. `map.rwm` deleted on save.
+  Exit: paint a new region, place its city and port, save, and the game loads
+  the campaign. A layer written back and re-read is byte-identical outside the
+  painted rectangle. Undo restores the mod byte-exact.
+
+- **16f - The validator.** `mapcheck.py`. The union of Demir's rule set,
+  Mylae's eight checks, TWMapReader's twenty-three and Geomod's debugger: layer
+  size relationships, duplicate and reserved region colours, zero-pixel regions,
+  unmapped colours with the sea heuristic, more than one settlement per region,
+  settlement or port on sea / impassable ground / a river-ford-source-volcano
+  pixel, ports completely inland, unknown feature colours, diagonal river
+  connections and rejoins, resource tags that are neither hidden nor trade
+  resources, a port building with no port pixel, faction blocks after the
+  diplomacy section, missing localisation keys. **Baseline fingerprinting** so
+  problems already present in the untouched mod are shown but do not block a
+  save. Auto-fixes with jump-to-pixel, including Geomod's three debugger actions
+  (ambiguous `0,0,0` altitudes to `1,1,1` for the Ragusa port bug, invalid
+  positions, duplicate resources).
+  Exit: the whole rule set runs on DaC in under a second and reports the stray
+  `(1,1,1)` pixel in its `map_features.tga`; a deliberately broken copy of each
+  rule is caught; every auto-fix is undoable.
+
+- **16g - Query, highlight and information maps.** TWMapReader's filter engine
+  (hidden resource, trade resource, starting regions, has port, win conditions,
+  music type, mercenary pool, culture/faction tag, creator, starting wall,
+  culture, building, building tree, rebel tribe) with faction, religion and
+  culture themes and political borders. Geomod's information maps: agriculture,
+  creators, factions, mercenary and rebel pools, population, and one map per
+  hidden resource, religion and trade resource. Batch per-faction TGA export.
+  Exit: resource, religion-majority and owner queries work on both test mods;
+  the information maps match Geomod's output for the same mod.
+
+- **16h - `descr_strat.txt`, write: settlements and buildings.** Level, city or
+  castle, population, `plan_set`, `faction_creator`, year founded, and the
+  building list with EDB-driven level compatibility. Owner reassignment moves
+  the whole settlement block between faction blocks. The capital must be the
+  faction's first region in the file.
+  Exit: change a settlement's owner, tier and buildings on both test mods and
+  the game loads; byte-exact outside the edited blocks; undo restores.
+
+- **16i - `descr_strat.txt`, write: characters, armies, family tree.** Add,
+  edit, move and delete characters; traits and ancillaries; army unit lists with
+  the bodyguard-first rule; leader and heir flags; `relative` lines with the
+  sixteen-year and oldest-first constraints; `descr_names` pool insertion with
+  auto-localisation. A new character is inserted after the last existing
+  character **of the same faction**, not at the head of the list.
+  Exit: add a general with an army to a faction on both test mods and load the
+  campaign; every character rule in 16f passes on the result.
+
+- **16j - Factions, hordes, diplomacy, win conditions.** Faction creation by
+  cloning a template, including the horde variant; `descr_sm_factions.txt`
+  colours and horde keys; `faction_standings` and `faction_relationships`; win
+  conditions; campaign globals (start and end date, timescale, brigand and
+  pirate spawn, the three rosters); name pools. Reuses `factionclone.py` and the
+  Phase 11 editor where they already do the job.
+  Exit: create a faction and a horde faction on a test mod, both selectable and
+  playable in game; the faction-block-before-diplomacy rule is enforced.
+
+- **16k - 3D strat preview and the `.cas` decoder.** **This sub-phase owns the
+  `.cas` decoder**, which 15a did not land: a strat model is a 3ds-max scene
+  export (float `3.2`, frame rate, key times, a node hierarchy, animation
+  tracks, then the mesh and its material), not a `.mesh` variant. What is known
+  is at the bottom of `unittransfer/mesh.py`; `probe()` already tells the two
+  formats apart. Navigation and origin fixed against Phase 15's viewer.
+  Exit: settlement and character strat models render and orbit correctly.
+
+- **Future expansion (V3.1+, not V3.0.0):** mercenary-pool view/edit by region
+  and faction (data layer lands in 16b; UI deferred).
+- **Risks:** the biggest phase in the project, and upstream is churning here -
+  re-triage `merge/PORT_MANIFEST.json` before every sub-phase. TGA layer
+  semantics are subtle (the TWCenter index is the arbiter, then Geomod's
+  manual). 16h-16j write the file the whole campaign is defined in, so the
+  byte-exact round trip in 16b is the gate on all three.
+
+---
+
+## V3.1 - OSM backdrop and coastline tracer (future)
+
+Mylae's `OsmBackground`, `OsmRegionSearch` and `CoastlineTracer`: an
+OpenStreetMap backdrop aligned by `bbox_coords.txt`, and Overpass
+`natural=coastline` ways chained and Bresenham-projected onto the heights layer
+as editable pixels. Needs the Locked-decisions amendment above, and is the first
+thing in the toolkit that touches the network, so it is **opt-in and off by
+default** with the mirror list visible in settings.
+
+---
+
+## V3.2 - Map resize and create-from-scratch (future)
+
+Geomod's resize - add surface area on any edge and rewrite every coordinate in
+`descr_strat.txt` - plus building a map from nothing against the TWCenter
+tutorial's recipe. Deferred because it touches every coordinate in the mod, and
+because shrinking requires the affected regions to be emptied by hand first,
+which Geomod's own manual calls unfinished.
+
+---
+
+## V3.3 - Overlay and layer generators (future)
+
+Mylae's `OverlayMapGenerator`, `BboxLayerGenerator`, `FeaturesLayerGenerator`,
+`autoGroundTypes` and the Köppen / land-cover fetchers. Same amendment and the
+same opt-in rule as V3.1.
+
+---
+
+## Explicitly out of scope for V2 and V3 (future expansion only)
 
 Script editor (eventual Scratch-style block UI for faction events), Animations,
 Unit Card Generator, Goat Tools, LUA Scripts, New Map Editor, Export/validation
 dashboard. Tracked in `merge/PORT_MANIFEST.json` as `out-of-scope`; nothing in
-V2 may depend on them.
+V2 or V3.0.0 may depend on them.
+
+**Reclassified 2026-09-03.** These were in the same bucket and are now scheduled
+rather than excluded: `OsmBackground`, `OsmRegionSearch` and
+`CoastlineTracer` move to **V3.1**; `OverlayMapGenerator`,
+`BboxLayerGenerator`, `FeaturesLayerGenerator`, `autoGroundTypes` and the
+Köppen / land-cover fetchers move to **V3.3**. Re-triage them in
+`merge/PORT_MANIFEST.json` when V3.1 starts. `LuaAiAssistant`,
+`ScriptAIAssistant` and `SymbolGenerator` are **not** reclassified - they are
+the AI/autogenerate rule and stay a permanent no.
 
 ---
 

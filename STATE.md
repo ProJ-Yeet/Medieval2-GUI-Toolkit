@@ -1,5 +1,105 @@
-# STATE - Medieval 2 GUI Toolkit V2
-_Updated: 2026-09-03 · **v2.1.11 released** · a subrelease on top of 2.1.10_
+# STATE - Medieval 2 GUI Toolkit V2 and V3
+_Updated: 2026-09-03 · **v2.1.11 released** · V3 under way: 16a done, 16b next_
+
+## Next up
+Start **16b** - `unittransfer/campstrat.py`: `descr_strat.txt` as a
+line-preserving block model with an interval index. DaC's file is 13,153 lines
+and the exit is a byte-exact round trip plus the counts in ROADMAP.md. Run
+`python tools/upstream_sync.py sync` first: his `stratParser.jsx` changed by 130
+lines in the batch reviewed on 2026-09-03, and that file is 16b's subject.
+
+## V3 planned (2026-09-03)
+The Campaign Map Editor is scoped and written into ROADMAP.md as **Phase 16,
+sessions 16a-16k**, plus V3.1 to V3.3 as future releases. Four references were
+read end to end: `Reference/Map/Demir.html` (the validation rule set and the
+campaign database editor), Mylae's `src/components/map/` at
+`refs/upstream/editor/main` (the paint tool), `Reference/Map/TWMapReader_source/`
+(the reverse-engineered engine behaviour) and Geomod's manual plus the TWCenter
+mapping tutorial (the format arbiter).
+
+**The rewrite is Pillow, not C++, and that is measured, not assumed.** On DaC's
+real map all ten TGA layers decode in under 100 ms, the unique-colour census is
+6 ms for 202 colours, the region label image 5 ms and the per-region pixel
+counts 9 ms. `descr_terrain.txt` caps a map at 510x510, so the biggest layer any
+mod can have is about a megapixel. Demir's tool lags because it repeats the work
+- a full-image `putImageData` per Bresenham pixel of a drag, ~5.7 M array
+allocations per painted water pixel, an O(lines x objects) validator after every
+edit, and the whole of `descr_strat.txt` re-parsed eight to ten times to save one
+faction detail. Ported to C++ that is still wrong. The fix is a label image built
+once, dirty rectangles, parse-once-splice-after, and nothing O(pixels) on the
+interaction path.
+
+**Two names are already wrong and 16a corrects them.**
+`unittransfer/stratmap.py` is the `descr_model_strat.txt` cleaner, not the
+campaign map, so the map modules are new files; and Mylae's `parseDescrRegions`
+silently drops **every DaC region**, because DaC's records carry a `legion:`
+line and his parser hard-codes RGB at line offset 4.
+
+The format facts banked from the read - layer size rules, the sea-is-not-
+greyscale test, the `(2t+1, 2t+1)` centre sampling, the TGA descriptor byte M2TW
+crashes on, port ownership, region ID derivation, the 200-region cap - are all
+in Phase 16's preamble in ROADMAP.md rather than repeated here.
+
+## 16a - the map files, read (2026-09-03)
+`unittransfer/maptga.py`, `mapvocab.py` and `campmap.py`, plus
+`tests/test_campmap.py` at **61 checks, all passing** on DaC. The read half of
+the map editor's engine: nothing paints, saves or validates yet, and everything
+that will stands on the index built here.
+
+**The header is ours, the pixels are Pillow's.** `maptga.py` parses the 18-byte
+TGA header itself and hands only the pixel data to Pillow, because the header is
+where the game is fussy: TWMapReader's author recorded that M2TW *crashed* on
+descriptor `0x18` and `0x20` and that `0x08` is what works. DaC's ten layers are
+nine RLE and one uncompressed, two descriptors, one with an ID field, and every
+one with a v2.0 footer. All ten now **re-encode byte for byte identically**,
+RLE included, which was not a design goal so much as the proof that nothing is
+being quietly reshaped. `water_surface.tga` also carries a 495-byte extension
+area addressed by an *absolute file offset* in the footer, so a layer that
+re-encodes to a different length has that offset moved; without that the file is
+broken in a way nothing would notice until the game read it.
+
+**`descr_regions.txt` is positional, and the anchor is the RGB line.** Mylae's
+parser hard-codes the RGB at line offset 4, so its resync guard silently drops
+**every DaC region** - DaC writes the ten-line `legion:` form. Here the `R G B`
+line is found by shape, the three lines before it are settlement, creator and
+rebel type, and what follows is resources, triumph value, base farming level and
+religions. 198 records read, 197 of them in the legion form, the file
+re-serialises byte-exact with its CRLF and tabs, and every field carries the
+index of the line it came from so an edit in 16d is a one-line splice.
+`edbvocab.regions()` now delegates here rather than keeping a second parser: its
+own copy found the resource line by looking for the first comma, which is right
+until a region carries a single resource.
+
+**The index, and the two rules nobody else implements.** Region IDs are the
+order a colour is first met scanning row-major, skipping settlement and port
+pixels *and* skipping tiles that `map_regions` calls land while `map_heights`
+calls sea; ports belong to the land opposite their dock, by the cardinal rule
+Gigantus established. On DaC: 202 unique colours, 199 settlement pixels, 77 port
+pixels, ids contiguous 0-199 and identical across two independent reads, every
+port resolving to an owner. About 450 ms for the whole read, once, at load,
+and nothing O(pixels) anywhere near an interaction.
+
+**Two of the scoping numbers were wrong and measuring corrected them.**
+`Image.quantize` with a fixed palette builds the label image in 3 ms and is
+approximate - it put 1,320 of DaC's 248,370 pixels on the wrong region even with
+every colour of the image in the palette exactly - so the label image is an
+exact dictionary pass at 61 ms instead. And the sea rule's evidence was
+misstated: 165 of DaC's 420 height colours are non-greyscale, of which only 19
+are `(0,0,B)` blues. At tile centres, where the rule is actually applied, it
+agrees with ground types on 99.9% of tiles.
+
+**Four defects found in DaC, all now 16f's test cases.** The stray `(1,1,1)`
+pixel in `map_features.tga`; five colours in `map_climates.tga` that no climate
+declares (10 pixels, each a one-channel miss of a real climate); a 517-pixel
+region painted `(100,160,100)`, one channel off `Dunland_Province`'s
+`100 150 100`, that `descr_regions.txt` never declares; and the settlement pixel
+standing inside it at image (339,65). The index reports each of them rather than
+rounding it to the nearest sensible answer.
+
+**One inference is ours and says so in the source.** DaC's port at image
+(75,107) has a settlement pixel on its land side, so the dock rule returns black.
+It is resolved through the marker to that settlement's region; no source states
+this, but 77 of 77 ports find an owner with it and 76 without.
 
 ## v2.1.11
 **A subrelease, same standing as 2.1.2 through 2.1.10.** One ask with a long
@@ -1056,6 +1156,7 @@ underneath. Both fixed; see ROADMAP.md's 14f outcome.
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
+| 16 - Campaign Map Editor (V3.0.0) | **16a done, 16b next** | Scoped 2026-09-03 from four references into eleven sessions, 16a-16k, with V3.1-V3.3 as future releases. Pillow only, no numpy and no C extension - measured, see ROADMAP.md Phase 16. **16a landed 2026-09-03**: `maptga.py`, `mapvocab.py`, `campmap.py`, `tests/test_campmap.py` 61/61 on DaC - see the 16a section above. Still to come: `campstrat.py`, `mapcheck.py`, `web/js/campmap.js`, `campaint.js`; **not** `stratmap.py`, which is a different concern |
 | 15j - resizable panels, the strings warning, no em dashes | **done** | **v2.1.11.** `rsz*` in `core.js`: `resize:vertical` on every scroll box the stylesheet declares (found by reading `document.styleSheets`, 31 selectors, `.wpop` and `.modal` skipped), `resize:both` on `#modal`, a `.drawergrip` bar on the right-pinned drawer, sizes in `pane_sizes` on `/api/settings`. The two real problems are `max-height` outranking a dragged `height` (cleared on capture-phase `mousedown` at the corner) and wholesale re-renders throwing the result away (a `MutationObserver`, coalesced on `setTimeout` rather than `requestAnimationFrame`, because an occluded window gets no frames). Nothing is pinned until it is dragged. Plus the strings list's stale-`.txt` warning rewritten with a `qm()` card, and 4176 em dashes swept out of 171 files with `ANY_EM` added to `prose_check` to keep them out. `test_web_modules` 10/10; verified in-browser (pin, save, survive re-render, reopen at the saved size, double-click reset) |
 | 15i - the model beside a transfer, art beside a pool | **done** | **v2.1.10.** The 3D column docks into the transfer composer (`transfer.js` `cmpPrev*`, `#cmpSplit`), listing the source unit's battle-model entries AND the base/replaced unit's out of the destination mod, grouped by mod and drawn from it - the third `v3Mount` host, same detach-across-render / one-viewer / fold-pauses rules as the editor's. Entries come off the unit LIST's fields, with the `armour_ug_models` rule and men-before-officers ordering. The Recruitment tab's rows and its ＋ picker carry the tier's art, keyed by the pool's OWN `requires` through `ov.faction_cultures`, with a new opt-in `any_culture` sweep in `buildings.find_icon` (`&any=1`) for the levels a mod draws for one culture only - OFF for the building browser, which is showing one culture on purpose. Row layout re-cut as two halves: tier against the name, `requires` right-aligned on its own line, and the header finally aligned with the boxes it names. `test_buildings` §11 + `test_buildings_http`; 72 of 72 modules |
 | 15h - recruitment on the unit, UV layout | **done** | **v2.1.9.** `web/js/edrecruit.js` (new) - a Recruitment tab in the unit editor listing every building line that trains it, with the four pool numbers, the `requires` clause, a delete and a ＋ that adds the unit to any line and tier. **No Python**: `buildings.unit_instances` reads and `buildings.plan_edit` writes, so this is a second FRONT rather than a second implementation. The one new request shape is `also`-only - every edit in `also`, the body carrying a line name and no levels - which is also what makes `_check_recruit_limit` merge the file instead of counting three rows as a level. The clause dialog is borrowed with `kind:'edrec'`, which re-renders the editor instead of unstashing markup, because the modal holds a live WebGL column. `?building=&lvl=&unit=` opens a building in its own tab, on the tier, with the unit’s rows flashed. A save now moves EDB line numbers, so a building left open behind the editor drops its working copy and `backToBuilding` re-reads it. `test_unit_recruitment` 42/42; verified in-browser, three pools over two lines written and undone byte-exact. Plus the viewer’s **UV layout** and the mount-texture bug it found |
@@ -1137,8 +1238,24 @@ failure on a regression (memory `unit-transfer-test-mods`).
   `tests/test_web_modules.py`.
 
 ## Upstream
-reference tool reviewed SHA **e6e6982** (2026-08-20). **The Phase 15 sync is
-done** - the write-up is the newest entry in `merge/SYNC_LOG.md`.
+reference tool reviewed SHA **ac503ac** (2026-09-03), 27 commits and 31 files on
+from e6e6982. **The 16a sync is done** and the write-up is the newest entry in
+`merge/SYNC_LOG.md`.
+
+**Nothing in that batch touches 16a.** His three changed `map/` files are
+`stratParser.jsx`, `FactionsCampaignTab.jsx` and a new `factionBlockOps.js`, all
+of them `descr_strat.txt` faction blocks, which is 16b and 16j; no layer, no
+`descr_regions.txt`, no coordinate rule. Ten new files were triaged by hand:
+`factionBlockOps.js` is the one worth reading before 16b, because it finds
+faction block boundaries with brace-depth tracking so a settlement's own
+`region` and `faction_creator` lines are not mistaken for headers, which is
+exactly what `campstrat.py`'s interval index has to get right. The other nine
+are two faction-clone helpers and a clone dialog (port-concept, compare with
+`factionclone.py`), a UTF-16 encoder (audit; ours already writes the BOM, and
+his splits astral characters), the New Map Editor's rotated-bbox resampler
+(out-of-scope, and OSM besides) and four pieces of cloud and browser-storage
+plumbing (skip). The manifest also had five `phases` lists written as numbers
+rather than strings, which crashed `sync --accept`; they are strings now.
 
 All 19 of his commits since b4768d5 land in the campaign map editor or the New
 Map Editor, so **nothing had to be ported to keep 2.0.0 correct**, and Phase 15
@@ -1158,14 +1275,30 @@ corrected too, so new files land on the right number.
 audit verdict in `notes`.
 
 ## Open questions for the user
-- `OsmBackground.jsx` / `OsmRegionSearch.jsx` (phase 16) fetch OpenStreetMap tiles
-  as a tracing backdrop. Reference layer, not generated mod data - but an external
-  fetch. Port or drop?
+- ~~`OsmBackground.jsx` / `OsmRegionSearch.jsx` - port or drop?~~ **Answered
+  2026-09-03: ported, deferred to V3.1**, opt-in and off by default, together
+  with `CoastlineTracer`. The generators go to V3.3. The Locked-decisions rule
+  that swept them into permanent out-of-scope is amended in ROADMAP.md; the
+  three AI assistants are not reclassified.
 - `descr_sounds_*.txt` (32 files in DaC) is a real coverage gap this audit
   measured and did not close - the engine's sound scripts, a grammar of its own.
   Its own phase later, or out of scope for V2?
 
 ## Decisions
+- 2026-09-03: **The map editor is Python with Pillow, and the reason is a
+  measurement.** All ten of DaC's TGA layers decode in under 100 ms, the
+  unique-colour census is 6 ms and the region label image 5 ms; a map is capped
+  at 510x510 by `descr_terrain.txt`. The reference tool's lag is repeated work,
+  not a slow language, so numpy and a C extension both buy nothing and cost the
+  zero-build-step rule, a second dependency and release-zip size.
+- 2026-09-03: **The browser never parses a TGA.** Python decodes, serves PNG and
+  owns the canonical pixel buffer; the browser paints a local preview and posts
+  stroke operations. That is the "one engine" rule, and it is what makes undo,
+  backups and server-side validation possible at all.
+- 2026-09-03: **A reference tool's parser is evidence, not truth.** Mylae's
+  `parseDescrRegions` drops every DaC region, because DaC writes a `legion:`
+  line and he hard-codes RGB at line offset 4. Every format rule taken from the
+  references was re-measured against DaC before it went into the roadmap.
 - 2026-08-19: **A twin is compared per TIER, never per building.** A city/castle
   counterpart that trains the unit five levels up is not the same building, and
   a column that said "yes, somewhere" would be worse than none. `unit_instances`

@@ -3,8 +3,8 @@
   "remote": "upstream-editor",
   "ref": "refs/upstream/editor/main",
   "clone_url": "https://github.com/Machiavello-1441/m2tw-editor.git",
-  "reviewed_sha": "e6e69820dbf2655703123200e299743a1e44e07e",
-  "reviewed_date": "2026-08-20"
+  "reviewed_sha": "ac503ac9237cd29535afc43e8ab1ac0ff6d0aea4",
+  "reviewed_date": "2026-09-03"
  },
  "dispositions": {
   "port-concept": "rebuild the idea in our stack; a change here may mean the format knowledge changed",
@@ -873,7 +873,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Traces a coastline from the heightmap the user supplies - a drawing aid, so kept in scope. Flagged because it sits next to the excluded generators."
+   "notes": "Deferred to V3.1 (decided 2026-09-03, ROADMAP.md) - the DECISION NEEDED above is answered: ported, not dropped. An OSM backdrop and coastline tracer for the map editor, opt-in and OFF by default, with the Overpass mirror list visible in settings; it is the first thing in the toolkit that touches the network. NOT part of V3.0.0 (phase 16)."
   },
   "src/components/map/DisastersTab.jsx": {
    "disposition": "port-concept",
@@ -993,7 +993,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "DECISION NEEDED: pulls OpenStreetMap tiles as a backdrop to trace over. A reference layer, not generated mod data - but it is an external fetch, so confirm before porting."
+   "notes": "Deferred to V3.1 (decided 2026-09-03, ROADMAP.md) - the DECISION NEEDED above is answered: ported, not dropped. An OSM backdrop and coastline tracer for the map editor, opt-in and OFF by default, with the Overpass mirror list visible in settings; it is the first thing in the toolkit that touches the network. NOT part of V3.0.0 (phase 16)."
   },
   "src/components/map/OsmRegionSearch.jsx": {
    "disposition": "port-concept",
@@ -1003,7 +1003,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "DECISION NEEDED: searches OSM to locate a place. Same call as OsmBackground."
+   "notes": "Deferred to V3.1 (decided 2026-09-03, ROADMAP.md) - the DECISION NEEDED above is answered: ported, not dropped. An OSM backdrop and coastline tracer for the map editor, opt-in and OFF by default, with the Overpass mirror list visible in settings; it is the first thing in the toolkit that touches the network. NOT part of V3.0.0 (phase 16)."
   },
   "src/components/map/OverlayMapGenerator.jsx": {
    "disposition": "out-of-scope",
@@ -1011,7 +1011,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": ""
+   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/map/PositionPickerButton.jsx": {
    "disposition": "port-concept",
@@ -1400,7 +1400,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": ""
+   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/newmap/BboxLayerGenerator.jsx": {
    "disposition": "out-of-scope",
@@ -1408,7 +1408,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": ""
+   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/newmap/ExportPanel.jsx": {
    "disposition": "out-of-scope",
@@ -1424,7 +1424,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": ""
+   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/newmap/GeoImportPanel.jsx": {
    "disposition": "out-of-scope",
@@ -1456,7 +1456,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": ""
+   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/newmap/LandCoverFetcher.jsx": {
    "disposition": "out-of-scope",
@@ -1464,7 +1464,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": ""
+   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/newmap/LayerPreviewPanel.jsx": {
    "disposition": "out-of-scope",
@@ -1520,7 +1520,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": ""
+   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/newmap/OsmTagOverlayEditor.jsx": {
    "disposition": "out-of-scope",
@@ -2296,7 +2296,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "EXCLUDED as a generator, but it carries the canonical M2TW ground-type RGB table (fertile_low=0,128,128 etc). That table is format knowledge phase 15 needs to READ map_ground_types.tga - extract the constants, never the generator. Cross-check against Reference/TWCenter before trusting them."
+   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/lib/casAnimCodec.js": {
    "disposition": "out-of-scope",
@@ -2434,7 +2434,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": ""
+   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/main.jsx": {
    "disposition": "skip",
@@ -2706,6 +2706,99 @@
    "status": "triaged",
    "first_seen": "e6e6982",
    "notes": "out-of-scope: the only two importers are newmap/OsmTagOverlayEditor.jsx and pages/NewMapEditor.jsx, and the New Map Editor is out of V2. It is Overpass bbox-splitting arithmetic, not M2TW format knowledge."
+  },
+  "src/components/AuthLayout.jsx": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "cloud plumbing",
+   "status": "triaged",
+   "first_seen": "ac503ac",
+   "notes": "Sign-in page chrome for his hosted build. This toolkit runs on the user's own machine with no account, so there is nothing here to port."
+  },
+  "src/components/factions/DuplicateFactionModal.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "11",
+    "16"
+   ],
+   "reason": "faction cloning UI",
+   "status": "triaged",
+   "first_seen": "ac503ac",
+   "notes": "The source-beside-target field pairs for a clone's display name, adjective and titles. A UI idea for the Phase 11 editor and for 16j's faction creation, not a format finding."
+  },
+  "src/components/factions/FactionZipExport.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "11"
+   ],
+   "reason": "export a faction as a zip",
+   "status": "triaged",
+   "first_seen": "ac503ac",
+   "notes": "Packs one faction's edited files, symbols and strings bins into a zip. Interesting as a shape for sharing a clone; we write into the mod folder instead, so this is a maybe, not a plan."
+  },
+  "src/components/factions/factionBulkDuplicate.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "11",
+    "16"
+   ],
+   "reason": "faction cloning - compare with factionclone.py",
+   "status": "triaged",
+   "first_seen": "ac503ac",
+   "notes": "Bulk faction duplication across banners, descr_character, descr_model_strat and the strings bins. We already clone a faction (unittransfer/factionclone.py, Phase 11); this is the same job over more files, so it is a list of files to check rather than a design to copy."
+  },
+  "src/components/map/factionBlockOps.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "descr_strat faction blocks - 16b and 16j",
+   "status": "triaged",
+   "first_seen": "ac503ac",
+   "notes": "Finds top-level faction blocks in descr_strat.txt and moves one with its settlements, characters and relatives, tracking brace depth so a settlement's own region/faction_creator lines are not mistaken for headers. That boundary rule is exactly what campstrat.py's interval index needs in 16b, and the move is 16j's."
+  },
+  "src/lib/bigFileStore.js": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "browser storage we do not need",
+   "status": "triaged",
+   "first_seen": "ac503ac",
+   "notes": "localStorage with an in-memory fallback for files too big for the quota. Our equivalent problem does not exist: Python holds the file and the browser is handed only what it draws."
+  },
+  "src/lib/factionSymbolStore.js": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "browser storage we do not need",
+   "status": "triaged",
+   "first_seen": "ac503ac",
+   "notes": "Window-scoped store for faction symbol TGAs awaiting a bulk download. Same reason as bigFileStore.js: the bytes live in the mod folder here, not in a tab."
+  },
+  "src/lib/rotatedBbox.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "New Map Editor + OSM basemap",
+   "status": "triaged",
+   "first_seen": "ac503ac",
+   "notes": "Rotated-bbox resampling in Mercator space, for the New Map Editor and the OSM basemap. The New Map Editor is out of scope outright and the OSM work is V3.1/V3.3, so this is not V3.0.0 either way."
+  },
+  "src/lib/utf16.js": {
+   "disposition": "audit",
+   "phases": [
+    "3",
+    "12"
+   ],
+   "reason": "we already do this",
+   "status": "triaged",
+   "first_seen": "ac503ac",
+   "notes": "UTF-16LE with a BOM for data/text/, which unittransfer/strings.py and localization.py already write. Worth a read to confirm nothing differs on the BOM or on surrogate pairs; his encoder writes one code unit per JS char, so an astral character would be split."
+  },
+  "src/pages/OAuthConsent.jsx": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "cloud plumbing",
+   "status": "triaged",
+   "first_seen": "ac503ac",
+   "notes": "OAuth consent screen for his hosted MCP server; its own header comment says the fetch calls and the ctx handle must not be changed. Nothing local about it."
   }
  }
 }
