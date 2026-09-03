@@ -4,28 +4,28 @@ Writes to the console (when there is one) and always to a ``server.log``, so a
 windowless launch still leaves a trail. Import ``log`` and use it directly.
 
 Under ``pythonw`` there is no stdout at all, so the stream handler is only
-attached when one actually exists — otherwise logging would raise.
+attached when one actually exists - otherwise logging would raise.
 
 The log normally lives in ``config/server.log`` next to the app. If that folder
-can't be written — the app was unzipped somewhere read-only like Program Files,
-or a synced/locked folder — it falls back to ``%LOCALAPPDATA%``. Silently having
+can't be written - the app was unzipped somewhere read-only like Program Files,
+or a synced/locked folder - it falls back to ``%LOCALAPPDATA%``. Silently having
 no log at all is the worst possible outcome when someone reports "it just opens
 and closes", so there is always somewhere to look; :func:`log_path` says where.
 
 The file is the *diagnostic* copy and the console is the readable one. Everything
-below DEBUG-level detail — the per-file trail, the mod fingerprints, the full
-lists the console truncates — goes to the file only, because the whole point of
+below DEBUG-level detail - the per-file trail, the mod fingerprints, the full
+lists the console truncates - goes to the file only, because the whole point of
 the file is that a user hits a problem, sends it, and it says what happened
 without them having to reproduce anything. Helpers for writing that detail live
 here so every mode records it the same way:
 
-* :func:`banner` — one block per launch: version, Python, OS, where things are.
+* :func:`banner` - one block per launch: version, Python, OS, where things are.
   Also the marker that separates one run from the previous one in an appended file.
-* :func:`fingerprint` — what a mod looked like *before* it was touched: paths,
+* :func:`fingerprint` - what a mod looked like *before* it was touched: paths,
   sizes, mtimes, counts. Half of "what went wrong" is "which files were these".
-* :func:`block` — a header plus an indented list, truncated on the console and
+* :func:`block` - a header plus an indented list, truncated on the console and
   written in full to the file.
-* :func:`file_op` — one line per file written / backed up / copied / skipped.
+* :func:`file_op` - one line per file written / backed up / copied / skipped.
   Called from every mode's write helper, so "what files got moved" is answerable
   from the log alone.
 
@@ -53,7 +53,7 @@ _CONSOLE_FMT = "%(asctime)s  %(levelname)-7s %(message)s"
 _FILE_FMT = "%(asctime)s  %(levelname)-7s %(message)s"
 
 #: Rotation. Four megabytes is many thousands of operations, and two backups mean
-#: the run before last is still there when someone reports a problem a day late —
+#: the run before last is still there when someone reports a problem a day late -
 #: while the live file stays small enough to attach to a message.
 MAX_BYTES = 4 * 1024 * 1024
 BACKUP_COUNT = 2
@@ -128,7 +128,7 @@ def setup(verbose: bool = False) -> logging.Logger:
         except OSError:
             continue                             # try the next location
     if _log_path is None:
-        log.warning("No writable location for server.log — this session is not "
+        log.warning("No writable location for server.log - this session is not "
                     "being logged to a file.")
     elif _log_path.parent != config.CONFIG_DIR:
         log.warning("config/ is not writable; logging to %s instead", _log_path)
@@ -198,25 +198,25 @@ def block(header: str, lines: Iterable[str], limit: int = CONSOLE_LIST_LIMIT,
 def banner(port: Optional[int] = None) -> None:
     """One block per launch: which build this is and where it is running.
 
-    First thing in the file for a reason — an appended log needs a visible seam
+    First thing in the file for a reason - an appended log needs a visible seam
     between runs, and every question about a bug report starts with "which
     version, on what". ``frozen`` matters because the packaged build and a source
     checkout resolve ``config/`` differently.
     """
     from . import __version__
     log.info("=" * 78)
-    log.info("Unit Transfer %s — session started %s", __version__,
+    log.info("Unit Transfer %s - session started %s", __version__,
              time.strftime("%Y-%m-%d %H:%M:%S"))
     log.info("=" * 78)
     rows = [
         f"version      {__version__}",
         f"python       {platform.python_version()} ({platform.architecture()[0]}) "
-        f"— {sys.executable}",
+        f"- {sys.executable}",
         f"os           {platform.platform()}",
         f"frozen       {'yes (packaged build)' if getattr(sys, 'frozen', False) else 'no (running from source)'}",
         f"app folder   {config.PROJECT_ROOT}",
         f"config       {config.CONFIG_DIR}",
-        f"log file     {_log_path or '(none — not writable)'}",
+        f"log file     {_log_path or '(none - not writable)'}",
         f"backups      {config.BACKUP_DIR}",
         f"med2 root    {config.get_med2_root() or '(not set)'}",
         f"cwd          {Path.cwd()}",
@@ -230,12 +230,12 @@ def fingerprint(mod) -> None:
     """What a mod looked like before we touched it: paths, sizes, counts.
 
     Logged once per mod per session (the flag lives on the Mod, so a re-parse
-    after a write logs it again — which is the point: the second fingerprint is
+    after a write logs it again - which is the point: the second fingerprint is
     the "after" picture).
 
     Nothing here is allowed to *do* work. ``Mod``'s interesting attributes are
     ``cached_property``, and ``lua_files`` in particular is a walk of the entire
-    mod folder — reading it to write a log line would put a tree walk in front of
+    mod folder - reading it to write a log line would put a tree walk in front of
     every transfer. So the cached values are reported when some real job has
     already paid for them and skipped otherwise; the rest is file metadata, which
     is a handful of stats.
@@ -245,10 +245,10 @@ def fingerprint(mod) -> None:
     try:
         mod._ut_fingerprinted = True
     except Exception:
-        pass                                     # not our object — log it anyway
+        pass                                     # not our object - log it anyway
 
     def cached(attr: str):
-        """The value only if it is already computed — never triggers the property."""
+        """The value only if it is already computed - never triggers the property."""
         return getattr(mod, "__dict__", {}).get(attr)
 
     try:
@@ -266,7 +266,7 @@ def fingerprint(mod) -> None:
             else ", ".join(str(p) for p in eop_dirs) or "(none found)"))
         lua = cached("lua_files")
         rows.append("lua scripts  " + (
-            "(not scanned yet — only the modeldb cleanup needs them)"
+            "(not scanned yet - only the modeldb cleanup needs them)"
             if lua is None else str(len(lua))))
         edu = cached("edu")
         if edu is not None:
@@ -286,7 +286,7 @@ def file_op(verb: str, path, note: str = "", size: Optional[int] = None) -> None
     ``verb`` is a fixed-width tag so the trail can be read as a column and
     grepped: WRITE / BACKUP / COPY / DELETE / SAME / KEEP / EXPORT. This is the
     answer to "what files got moved", so it is emitted from inside the write
-    helpers rather than alongside them — a path that never reaches a helper never
+    helpers rather than alongside them - a path that never reaches a helper never
     reaches the disk either, and the two cannot drift apart.
     """
     p = Path(path)
@@ -296,7 +296,7 @@ def file_op(verb: str, path, note: str = "", size: Optional[int] = None) -> None
         except OSError:
             size = None
     tail = f"  ({_fmt_size(size)})" if size is not None else ""
-    log.debug("  %-6s %s%s%s", verb, p, tail, f"  — {note}" if note else "")
+    log.debug("  %-6s %s%s%s", verb, p, tail, f"  - {note}" if note else "")
 
 
 def counted(manifest: dict, extra: Sequence[str] = ()) -> None:

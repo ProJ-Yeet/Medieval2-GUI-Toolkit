@@ -18,7 +18,7 @@ API
                                     undoable job. See :mod:`unittransfer.portrecords`
   POST /api/m2ex                 -> {mod[, on]} -> {m2ex}. Whether the mod runs on
                                     M2EX, which replaces the engine's hardcoded
-                                    ceilings — so the toolkit stops reporting
+                                    ceilings - so the toolkit stops reporting
                                     them. See :mod:`unittransfer.modflags`
   POST /api/browse_folder        -> {title} -> {path}  (native OS folder dialog)
   POST /api/reveal               -> {mod, rel} -> show that file in the OS file
@@ -27,7 +27,7 @@ API
                                     /icon or /building_icon URL is, where a
                                     replacement lands, and every warning about it
                                     (resolution mismatch above all)
-  POST /api/image/replace        -> the same, applied — backups + undo included
+  POST /api/image/replace        -> the same, applied - backups + undo included
   POST /api/image/reveal         -> "Open file location" for that same URL, which
                                     can land outside the mod when the art is the
                                     game's own
@@ -44,6 +44,9 @@ Unit packs (see :mod:`unittransfer.pack`)
   POST /api/pack/unmount         -> drop it again and delete what was unpacked
   GET  /api/units?mod=NAME       -> {mod, factions, categories, classes, units}
   GET  /icon?mod=&type=&kind=    -> image/png
+  GET  /api/unit_models?mod=&type= -> the battle-model entries a unit is
+                                    affiliated with + the folder each lives in
+                                    (the composer's "bmdb entries only" list)
   POST /api/plan                 -> {source,dest,unit,options} -> plan preview
   POST /api/apply                -> {source,dest,unit,options} -> apply + record
   GET  /api/log[?mode=&limit=&offset=]  -> a PAGE of the log, newest first
@@ -61,7 +64,7 @@ Unit-editor mode (edits inside ONE mod, see :mod:`unittransfer.edit`)
 BMDB mode (the whole battle_models.modeldb, see :mod:`unittransfer.bmdb`)
   GET  /api/bmdb/entries?mod=    -> every entry, light (the browser list)
   GET  /api/bmdb/skeletons?mod=  -> every entry keyed by the animation skeleton(s)
-                                    it uses, plus a tally per skeleton — what the
+                                    it uses, plus a tally per skeleton - what the
                                     soldier-model picker searches
   GET  /api/bmdb/entry?mod=&name= -> one entry, in the editor's model-card shape
   POST /api/bmdb/plan | /apply   -> edit entries that belong to no single unit
@@ -172,7 +175,7 @@ Minor Files mode (the five small campaign files, see :mod:`unittransfer.minorfil
                                  -> one record in full: its fields, spans, the
                                     pickers its boxes need and its text key
   POST /api/minor/plan|/apply    -> add, edit or delete one record. A religion's
-                                    save is four files at once — its block, the
+                                    save is four files at once - its block, the
                                     `religions` list, descr_religions_lookup.txt
                                     and text/religions.txt (backups + undo)
 
@@ -219,7 +222,7 @@ Buildings mode (export_descr_buildings.txt, see :mod:`unittransfer.buildings`)
   POST /api/buildings/plan|/apply-> preview then write EDB + building-name edits
                                     (backups + undo, same as a transfer). `also`
                                     carries edits to further building lines, saved
-                                    in the same pass — mirroring into the castle
+                                    in the same pass - mirroring into the castle
                                     variant and cross-tree pool edits both use it
 """
 from __future__ import annotations
@@ -246,7 +249,7 @@ from .icons import IconCache
 from .mod import Mod, ModDataError
 from .transfer import (TransferOptions, plan_transfer, apply_transfer, undo, revert_to,
                        base_field_groups_for, compose_with_base, mount_base_import,
-                       officer_base_import)
+                       officer_base_import, unit_model_index)
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
@@ -266,7 +269,7 @@ def page_ever_loaded() -> bool:
 
     The one trustworthy "did a browser really open?" signal. ``webbrowser.open()``
     returns True on Windows even when nothing opens (no default browser, a broken
-    file association, a blocked handler), so the launcher can't rely on it — but a
+    file association, a blocked handler), so the launcher can't rely on it - but a
     heartbeat can only come from a real page that really loaded.
     """
     return _LIVENESS["last_beat"] is not None
@@ -283,12 +286,12 @@ _NOT_ALIVE = ("/api/ping", "/api/bye")
 
 
 def note_request(path: str) -> None:
-    """Any request from the page is proof the page is alive — not just heartbeats.
+    """Any request from the page is proof the page is alive - not just heartbeats.
 
     The heartbeat used to be the only thing keeping the server up, and it is a
     ``setInterval`` in the tab: the browser throttles those in a background tab,
     and it shares the origin's ~6 connections with every unit-card request the
-    grid is making. Both happened at once here — hundreds of slow icon reads out
+    grid is making. Both happened at once here - hundreds of slow icon reads out
     of a cloud-synced cache filled the connection pool, no heartbeat got through
     for two and a half minutes, and the watchdog shut down a server that was busy
     serving that very page. From the browser: black unit cards, "TypeError:
@@ -315,15 +318,15 @@ def _restart_into(httpd, console: bool) -> None:
     app = Path(__file__).resolve().parent.parent / "app.py"
     port = httpd.server_address[1]
     # Spawn BEFORE stopping. Stopping first ends serve_forever, which unwinds
-    # main() and takes the whole process with it — including this thread, before
+    # main() and takes the whole process with it - including this thread, before
     # it ever got to the spawn. The child is told to wait for the port instead.
     try:
         startup.spawn_server(app, ["--port", str(port), "--wait-port"],
                              console=console)
-        log.info("RESTART replacement server starting%s — handing over port %d",
+        log.info("RESTART replacement server starting%s - handing over port %d",
                  " with a console" if console else "", port)
     except Exception:
-        log.error("restart: could not start the replacement — staying up",
+        log.error("restart: could not start the replacement - staying up",
                   exc_info=True)
         return
     try:
@@ -341,7 +344,7 @@ def should_stop(now: float, liveness: Optional[dict] = None) -> str:
 
     Two ways a server outlives its page: the tab was closed (it said so), or the
     tab went away without saying so (a crash, a killed browser). The second is a
-    guess, and it used to be a bad one — see :func:`note_request`.
+    guess, and it used to be a bad one - see :func:`note_request`.
     """
     lv = _LIVENESS if liveness is None else liveness
     lb, pc, ls = lv["last_beat"], lv["pending_close"], lv.get("last_seen")
@@ -358,7 +361,7 @@ def _liveness_watchdog(httpd) -> None:
         time.sleep(2)
         why = should_stop(time.time())
         if why:
-            log.info("browser %s — shutting down", why)
+            log.info("browser %s - shutting down", why)
             threading.Thread(target=httpd.shutdown, daemon=True).start()
             return
 
@@ -401,7 +404,7 @@ def _strings_bin_wanted(body: dict) -> bool:
     """Whether to clear ``export_units.txt.strings.bin`` after this job.
 
     One setting, ``clear_strings_bin`` (on by default), decides it for every
-    transfer / edit / voice change / cleanup — the game keeps showing the OLD
+    transfer / edit / voice change / cleanup - the game keeps showing the OLD
     unit text until that cache is gone, and it writes a fresh one on the next
     launch, so there is nothing to lose by clearing it every time.
 
@@ -419,7 +422,7 @@ def _clear_cache(mod_root, out: dict, rec: dict, mod_name: str,
     """Refresh the compiled cache for a finished job and record what it did.
 
     Recompiles it from the ``.txt`` the job just wrote where it can, and falls
-    back to the old delete-and-let-the-game-rebuild where it cannot — see
+    back to the old delete-and-let-the-game-rebuild where it cannot - see
     :func:`cleaner.refresh_strings_bin`.
     """
     res = cleaner.refresh_strings_bin(mod_root, rel)
@@ -430,7 +433,7 @@ def _clear_cache(mod_root, out: dict, rec: dict, mod_name: str,
     elif res.get("deleted"):
         log.info("CACHE  cleared %s in %s", rel, mod_name)
     elif res.get("missing"):
-        log.info("CACHE  %s not present in %s — nothing to clear", rel, mod_name)
+        log.info("CACHE  %s not present in %s - nothing to clear", rel, mod_name)
     else:
         log.warning("CACHE  not cleared: %s", res.get("error"))
     config.update_log(rec.get("id", ""), strings_bin=res)
@@ -464,7 +467,7 @@ class Registry:
         # be answered, all of it inside the lock above: a screen of unit cards is
         # hundreds of requests, so they queued behind each other for no reason.
         # An on-disk edit still shows up without a restart, just up to a second
-        # later — and our own writes call invalidate(), so they are immediate.
+        # later - and our own writes call invalidate(), so they are immediate.
         self._checked: Dict[str, float] = {}
 
     @staticmethod
@@ -472,7 +475,7 @@ class Registry:
         """(size, mtime) of a mod's key data files, so an edit on disk is noticed.
 
         Lets a running server pick up a changed source bmdb / EDU / projectile file
-        without a restart — every request rebuilds the Mod when the files move.
+        without a restart - every request rebuilds the Mod when the files move.
         """
         sig = []
         for p in (mod.edu_path, mod.export_units_path, mod.modeldb_path,
@@ -505,7 +508,7 @@ class Registry:
             for child in sorted(mr.iterdir()):
                 if child.is_dir() and (child / "data").is_dir():
                     out[child.name] = child
-        # A mounted unit pack is a mod like any other from here on — that is the
+        # A mounted unit pack is a mod like any other from here on - that is the
         # whole point of the format (see :mod:`unittransfer.pack`). Registering it
         # here means the composer, the base picker, the conflict handling, the
         # preview and the undo log all work on it with no import-specific code.
@@ -601,7 +604,7 @@ class Registry:
                 self._mods[name] = cached
                 self._sigs[name] = self._signature(cached)
             if not warm:
-                # describe(): the object, not its contents — see its docstring
+                # describe(): the object, not its contents - see its docstring
                 return cached
             if cold:
                 # The log has to say what the tool was doing while the screen was
@@ -616,7 +619,7 @@ class Registry:
             _ = cached.edu, cached.loc, cached.faction_names, cached.mounts
             if cold:
                 # `faction_names` is the mod's whole name lookup, not its factions
-                # (which /api/units counts) — say which, or the number reads as a
+                # (which /api/units counts) - say which, or the number reads as a
                 # mod with 1941 factions in it.
                 log.info("PARSE  %s: %d units, %d mounts, %d localised names in %.2fs",
                          name, len(cached.edu.units), len(cached.mounts),
@@ -649,7 +652,7 @@ def _mounted_engine_class(m: Mod, u) -> str:
     """The ``descr_engine_skeleton.txt`` entry a mounted engine's ``class`` names.
 
     A mounted engine has no model groups (the model is the mount's), so ``class``
-    is the only thing pointing at an animation set — usually ``serpentine``,
+    is the only thing pointing at an animation set - usually ``serpentine``,
     ``rocket_launcher`` or ``ballista``. '' when the unit has no mounted engine or
     this mod doesn't define it.
     """
@@ -680,7 +683,7 @@ def _unit_payload(m: Mod, u) -> dict:
         # crew = ship / engine / mounted_engine / animal (drives the "Crew"
         # transfer option, greyed out when the unit has none). These name entries
         # in descr_ship / descr_engines / descr_mounted_engines / descr_animals,
-        # NOT battle models — the siege engine is resolved separately below.
+        # NOT battle models - the siege engine is resolved separately below.
         "crew": [x for x in (u.ship, u.engine, u.mounted_engine, u.animal) if x],
         # siege engine: the descr_engines.txt / descr_mounted_engines.txt entry
         # this unit drives, and how many blocks + model groups it spans.
@@ -702,9 +705,9 @@ def _unit_payload(m: Mod, u) -> dict:
 
 #: How many log entries one page carries.
 LOG_PAGE = 40
-#: A summary longer than this is cut for the LIST. Nothing is lost — the whole
+#: A summary longer than this is cut for the LIST. Nothing is lost - the whole
 #: record is still in `config/transfers.json`, and the diagnostic log has the
-#: detail — but one 310 KB entry (a mod-wide cleanup's file-by-file account) must
+#: detail - but one 310 KB entry (a mod-wide cleanup's file-by-file account) must
 #: not decide how long the log takes to open.
 LOG_SUMMARY_CAP = 4000
 #: Dropped from a listed entry. `manifest` is the backup bookkeeping undo reads
@@ -722,7 +725,7 @@ def log_page(mode: str = "", offset: int = 0, limit: int = LOG_PAGE) -> dict:
     report comes from.
 
     `counts` is over the WHOLE log (a filter has to say what it would show), and
-    `newer_count` is computed here because it needs the whole log too — it is
+    `newer_count` is computed here because it needs the whole log too - it is
     what "Revert to here" reverts, and the page must not have to hold 480 entries
     to work out one number.
     """
@@ -784,7 +787,7 @@ def build_units_response(m: Mod) -> dict:
         "edu_count": len(m.edu.main_units),
         "faction_names": {f: m.faction_names.get(f.lower(), "") for f in factions},
         # "categories" is the refined kind (cavalry split into Cavalry /
-        # Cavalry_Lance / Cavalry_Archer) — it drives the filter and the base picker.
+        # Cavalry_Lance / Cavalry_Archer) - it drives the filter and the base picker.
         "categories": sorted({u.kind() for u in m.edu.units if u.kind()}),
         "classes": sorted({u.class_type for u in m.edu.units if u.class_type}),
         "units": units,
@@ -792,7 +795,7 @@ def build_units_response(m: Mod) -> dict:
 
 
 def _edit_payload(plan) -> dict:
-    """Preview shape of an edit plan (never the whole rewritten files —
+    """Preview shape of an edit plan (never the whole rewritten files -
     the modeldb alone is 20+ MB on a big mod)."""
     return {
         "mod": plan.mod.name,
@@ -822,7 +825,7 @@ def _edit_payload(plan) -> dict:
 
 
 def _cleanup_payload(plan) -> dict:
-    """Preview shape of a cleanup plan (file lists capped — a big mod exports
+    """Preview shape of a cleanup plan (file lists capped - a big mod exports
     thousands of files and the browser only needs enough to show the user)."""
     return {
         "mod": plan.mod.name,
@@ -846,7 +849,7 @@ def _cleanup_payload(plan) -> dict:
 
 
 def _strat_payload(plan) -> dict:
-    """Preview shape of a strat-map cleanup plan — the same fields the BMDB one
+    """Preview shape of a strat-map cleanup plan - the same fields the BMDB one
     answers with wherever the two mean the same thing, so the page's plan box is
     one function rather than two that drift."""
     return {
@@ -891,7 +894,7 @@ def _cards_payload(plan) -> dict:
 
 
 def _sound_payload(plan) -> dict:
-    """Preview shape of a voice-edit plan (never the whole rewritten voice bank —
+    """Preview shape of a voice-edit plan (never the whole rewritten voice bank -
     it is a megabyte of text the browser has no use for)."""
     return {
         "mod": plan.mod.name,
@@ -909,7 +912,7 @@ def _building_payload(plan) -> dict:
     """Preview shape of a building-edit plan.
 
     Like the voice-edit preview, the rewritten file itself is deliberately left
-    out — the EDB is 17k lines and the page only needs the change list."""
+    out - the EDB is 17k lines and the page only needs the change list."""
     return {
         "mod": plan.mod.name,
         "line": plan.line,
@@ -968,9 +971,11 @@ def _options_from(d: dict) -> TransferOptions:
         on_conflict=d.get("on_conflict", "rename"),
         new_type=d.get("new_type") or None,
         new_dictionary=d.get("new_dictionary") or None,
+        new_name=d.get("new_name") or None,
         base_type=d.get("base_type") or None,
         mode=d.get("mode", "new"),
         replace_type=d.get("replace_type") or None,
+        models_only=[str(m).lower() for m in (d.get("models_only") or [])],
         import_card=bool(d.get("import_card", False)),
         import_info_card=bool(d.get("import_info_card", False)),
         soldier_from=d.get("soldier_from", "source"),
@@ -997,14 +1002,20 @@ def _plan_payload(plan) -> dict:
         "unit_type": plan.unit_type,
         "resolved_type": plan.resolved_type,
         "resolved_dict": plan.resolved_dict,
+        # what the player will see the unit called ("" = the source's own name)
+        "resolved_name": plan.resolved_name,
         "unit_conflict": plan.unit_conflict,
         "skipped": plan.skipped,
         "on_conflict": plan.options.on_conflict,
         "base_type": plan.options.base_type or "",
         # "replace an existing unit": the destination unit rewritten in place
         # ("" in the normal mode). The composer uses it to say what happened and
-        # to keep the 500-unit banner honest — a replacement adds no unit.
+        # to keep the 500-unit banner honest - a replacement adds no unit.
         "mode": plan.options.mode,
+        # "battle-model entries only": no unit is written at all, so the composer
+        # drops every panel that describes one and the summary reads differently
+        "models_mode": plan.models_mode,
+        "models_only": list(plan.options.models_only),
         "replace_type": plan.replace_type,
         "import_card": plan.options.import_card,
         "import_info_card": plan.options.import_info_card,
@@ -1051,7 +1062,7 @@ def _plan_payload(plan) -> dict:
         "engine_dest_overrides": plan.engine_dest_overrides,
         "reroute_dir": plan.reroute_dir,
         "relocated_count": len(plan.path_map),
-        # Only EDU units count against the vanilla 500 cap — M2TWEOP units are
+        # Only EDU units count against the vanilla 500 cap - M2TWEOP units are
         # loaded from the extender's own files, which is the point of them.
         "dest_unit_count": len(plan.dest.edu.main_units),
         "dest_eop_count": len(plan.dest.edu.eop_units),
@@ -1066,7 +1077,7 @@ def _plan_payload(plan) -> dict:
         "missing_models": plan.missing_models,
         "missing_skeletons": plan.missing_skeletons,
         # which copied model asks for each missing skeleton, and the subset the
-        # Soldier row owns — the composer warns beside that row, not in general
+        # Soldier row owns - the composer warns beside that row, not in general
         "skeleton_models": plan.skeleton_models,
         "soldier_model_name": plan.soldier_model_name,
         "soldier_skeletons_missing": plan.soldier_skeletons_missing(),
@@ -1106,7 +1117,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache")
         # Say the connection is closing, because it is (HTTP/1.0, above). Left
         # unsaid, the browser is free to decide otherwise and write its NEXT
-        # request into a socket this handler is about to close — and a socket
+        # request into a socket this handler is about to close - and a socket
         # closed with unread bytes in it is reset rather than finished, which
         # throws away the reply we just wrote. That is not theoretical: a page
         # load here would log a clean 200 for two dozen scripts and the browser
@@ -1137,8 +1148,8 @@ class Handler(BaseHTTPRequestHandler):
         Half of "what happened" was missing: the log recorded every file the tool
         wrote and nothing at all about the clicks that led there, so reading it
         back meant inferring intent from effects. The page reports its own actions
-        here — mode opened, mod picked, record opened, field changed from X to Y,
-        dialog closed with edits still pending — batched, so a burst of typing is
+        here - mode opened, mod picked, record opened, field changed from X to Y,
+        dialog closed with edits still pending - batched, so a burst of typing is
         one request rather than one per keystroke.
 
         Never trusted, only recorded: each line is truncated, the whole batch is
@@ -1172,7 +1183,7 @@ class Handler(BaseHTTPRequestHandler):
         even be there (see :func:`unittransfer.logutil.setup`). A button that
         hands them the file removes every one of those steps.
         """
-        # Flush first — a diagnostic download that stops one line short of the
+        # Flush first - a diagnostic download that stops one line short of the
         # thing that went wrong is worse than useless.
         for h in log.handlers:
             try:
@@ -1182,7 +1193,7 @@ class Handler(BaseHTTPRequestHandler):
         text = logutil.tail()
         path = logutil.log_path()
         if not text:
-            text = (f"(no log file — logutil found nowhere writable)\n"
+            text = (f"(no log file - logutil found nowhere writable)\n"
                     f"Expected location: {path or config.CONFIG_DIR / 'server.log'}\n")
         name = f"unit-transfer-log-{time.strftime('%Y%m%d-%H%M%S')}.txt"
         log.info("DIAG   log downloaded from the UI (%d bytes from %s)", len(text), path)
@@ -1243,6 +1254,20 @@ class Handler(BaseHTTPRequestHandler):
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
                 return self._json(build_units_response(self.registry.get(name)))
+            if u.path == "/api/unit_models":
+                # Every battle-model entry this unit is affiliated with, and the
+                # folder each one's files live in - what the composer's
+                # "battle-model entries only" mode ticks off (see
+                # transfer.unit_model_index).
+                name = (q.get("mod") or [None])[0]
+                utype = (q.get("type") or [None])[0]
+                if not name or name not in self.registry.names() or not utype:
+                    return self._err(404, "unknown mod/unit")
+                try:
+                    models = unit_model_index(self.registry.get(name), utype)
+                except KeyError as e:
+                    return self._err(404, str(e))
+                return self._json({"mod": name, "type": utype, "models": models})
             if u.path == "/api/unit_fields":
                 name = (q.get("mod") or [None])[0]
                 utype = (q.get("type") or [None])[0]
@@ -1298,7 +1323,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self.registry.get(name).edu_vocab)
             if u.path == "/api/base_fields":
                 # Fields the unit would have AFTER inheriting from a destination
-                # base unit — so the editor shows what will actually be written.
+                # base unit - so the editor shows what will actually be written.
                 return self._json(self._base_fields(q))
             if u.path == "/api/dirs":
                 return self._json(self._dirs(q))
@@ -1339,7 +1364,7 @@ class Handler(BaseHTTPRequestHandler):
                         mod, (q.get("mode") or ["units"])[0], progress=sink))
                 if u.path == "/api/bmdb/recheck":
                     # what PAST cleanups of this mod took out that today's wider
-                    # nets would have refused to touch — see bmdb.recheck
+                    # nets would have refused to touch - see bmdb.recheck
                     log.info("BMDB   recheck of %s", name)
                     return self._json(bmdb.recheck(mod, progress=sink))
                 log.info("BMDB   audit of %s", name)
@@ -1365,7 +1390,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(stratmap.audit(mod, progress=sink))
             if u.path == "/api/cards/audit":
                 # Every unit card and info card in the mod, grouped by the
-                # dictionary they belong to — see :mod:`unittransfer.cards`.
+                # dictionary they belong to - see :mod:`unittransfer.cards`.
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
@@ -1450,7 +1475,7 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/triggers/vocab":
                 # the condition/event vocabulary the trigger builder draws its
                 # pickers from. Generated data (tools/trigger_vocab.py), not code,
-                # and the same for every mod — so `mod` only adds that mod's own
+                # and the same for every mod - so `mod` only adds that mod's own
                 # trait / ancillary / faction names as operand suggestions.
                 name = (q.get("mod") or [""])[0]
                 mod = (self.registry.get(name)
@@ -1468,7 +1493,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
                 mod = self.registry.get(name)
-                # which culture's building names to resolve — see buildings.loc_key
+                # which culture's building names to resolve - see buildings.loc_key
                 culture = (q.get("culture") or [""])[0]
                 if u.path == "/api/buildings":
                     return self._json(buildings.overview(mod, culture))
@@ -1493,7 +1518,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._building_icon(q)
             if u.path == "/preview_image":
                 # Preview of a file the user just picked in the native browse
-                # dialog — it lives outside the mod, so /icon (mod + unit) can't
+                # dialog - it lives outside the mod, so /icon (mod + unit) can't
                 # reach it. Decoded to PNG rather than served raw, and only for
                 # image extensions, so this can't be used to read arbitrary files.
                 return self._preview_image((q.get("path") or [""])[0])
@@ -1516,7 +1541,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._err(404, "not found")
         except ModDataError as e:
             # A file this mod needs is missing or will not parse. The sentence is
-            # the whole answer — which file, and where in it — so it goes back as
+            # the whole answer - which file, and where in it - so it goes back as
             # the reply rather than into a traceback nobody reads, and the log
             # keeps one line instead of twenty.
             log.warning("GET %s: %s", u.path, e)
@@ -1530,7 +1555,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._err(500, f"{type(e).__name__}: {e}")
 
     # `_send` already withholds the body for HEAD, so the same routing serves both
-    # — without this, BaseHTTPRequestHandler answers every HEAD with a 501.
+    # - without this, BaseHTTPRequestHandler answers every HEAD with a 501.
     do_HEAD = do_GET
 
     # ---- POST ----
@@ -1557,7 +1582,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(s)
             if u.path == "/api/browse_folder":
                 # a browser page can't hand back a real filesystem path from its
-                # own file input, so pop the OS's native folder dialog instead —
+                # own file input, so pop the OS's native folder dialog instead -
                 # the server IS this machine, unlike a normal web app.
                 from .folder_dialog import browse_for_folder
                 path = browse_for_folder(body.get("title") or "Select a folder")
@@ -1637,7 +1662,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"path": path})
             if u.path == "/api/edit/model_folder":
                 # "do all this entry's files live in one folder, and who else
-                # would a move affect" — answered before the user commits to it.
+                # would a move affect" - answered before the user commits to it.
                 mod = self.registry.get(body.get("mod") or "")
                 return self._json(edit.model_folder_report(
                     mod, body.get("entry") or "", body.get("target") or ""))
@@ -1728,7 +1753,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(rec)
             if u.path == "/api/restart":
                 # "Keep the console window open" is read once, at launch, so a
-                # session that is already running cannot grow a console — which
+                # session that is already running cannot grow a console - which
                 # is why ticking the box looked like it did nothing. This puts the
                 # setting into effect now: reply first, then let go of the port
                 # and start a replacement, with or without a console as asked.
@@ -1739,7 +1764,7 @@ class Handler(BaseHTTPRequestHandler):
                                  daemon=True).start()
                 return None
             if u.path == "/api/quit":
-                log.info("QUIT requested from the UI — shutting down")
+                log.info("QUIT requested from the UI - shutting down")
                 # Silent mode has no console to Ctrl+C, so the UI can stop us.
                 # shutdown() blocks until serve_forever returns, so it must not
                 # run on this handler's thread.
@@ -1802,7 +1827,7 @@ class Handler(BaseHTTPRequestHandler):
         beside the offending line and keeps the state it already had.
 
         The per-kind context (which mod, which entry's padding, the text last
-        known good) is assembled by :func:`codeview.context` — the endpoints
+        known good) is assembled by :func:`codeview.context` - the endpoints
         deliberately don't know what each kind needs, so a new kind adds nothing
         here. ``base`` from the request wins over the on-disk text, because after
         a hand edit the pane's own last-good text is what a repair must diff
@@ -1834,7 +1859,7 @@ class Handler(BaseHTTPRequestHandler):
                                       body.get("edits") or {}, ctx)
         except codeview.CodeViewError as e:
             # the line the parser objected to counts the comments the pane is
-            # not showing, so it is moved onto the view's numbering — pointing
+            # not showing, so it is moved onto the view's numbering - pointing
             # at the wrong line is worse than pointing at none
             line = e.line
             if hide and line and what != "render":
@@ -1916,7 +1941,7 @@ class Handler(BaseHTTPRequestHandler):
 
         Same plan-then-apply shape as every other editor, so the page can show
         exactly what a save would do before it does it. A file or row this mod
-        does not have comes back as ``{error}`` rather than an HTTP failure —
+        does not have comes back as ``{error}`` rather than an HTTP failure -
         the browser is showing a list that may be a moment out of date.
         """
         try:
@@ -1942,7 +1967,7 @@ class Handler(BaseHTTPRequestHandler):
 
         Same plan-then-apply shape as every other editor. A save here can touch
         the EDCT twice over (the trait block and the triggers hundreds of lines
-        below it) and ``export_VnVs.txt`` as well — one job, one backup set, one
+        below it) and ``export_VnVs.txt`` as well - one job, one backup set, one
         undo, because half of it landing is a mod that crashes.
         """
         try:
@@ -1966,7 +1991,7 @@ class Handler(BaseHTTPRequestHandler):
     def _ancillaries(self, action, body):
         """Preview or write one ancillary, its triggers and its text keys together.
 
-        The traits handler with one word changed — the two editors share their
+        The traits handler with one word changed - the two editors share their
         request shape because they share their file format.
         """
         try:
@@ -2010,7 +2035,7 @@ class Handler(BaseHTTPRequestHandler):
         """Preview or write a port: the blocks, their triggers and their text.
 
         Same plan-then-apply shape as every other editor, and the same backup
-        set — one job, because a definition that lands without its text keys is
+        set - one job, because a definition that lands without its text keys is
         a crash the first time anyone gets the record.
         """
         names = self.registry.names()
@@ -2044,7 +2069,7 @@ class Handler(BaseHTTPRequestHandler):
 
         Editing only, and the refusal is the format's: a faction slot lives in
         twelve files at once, so one that exists only in this file is a
-        mod that will not load — see :data:`factions.REFUSED`.
+        mod that will not load - see :data:`factions.REFUSED`.
         """
         try:
             mod = self.registry.get(body["mod"])
@@ -2069,7 +2094,7 @@ class Handler(BaseHTTPRequestHandler):
 
         The other half of :meth:`_factions`' refusal. That one will not create a
         slot because a slot lives in twelve files; this one creates it *in* all
-        twelve — see :mod:`unittransfer.factionclone`, which also says why
+        twelve - see :mod:`unittransfer.factionclone`, which also says why
         ``descr_strat.txt`` is reported rather than written.
 
         One transfer id covers every file and every copied picture, so undo puts
@@ -2098,7 +2123,7 @@ class Handler(BaseHTTPRequestHandler):
     def _edu_sort(self, action, body):
         """Preview or write a whole-file cleanup of ``export_descr_unit.txt``.
 
-        One file, so one backup and one undo entry — but the widest single write
+        One file, so one backup and one undo entry - but the widest single write
         in the toolkit, which is why :func:`edusort.plan` refuses to hand over a
         text that is not purely a reordering of the one it read.
         """
@@ -2133,7 +2158,7 @@ class Handler(BaseHTTPRequestHandler):
 
         The ancillaries handler with a tab on it. What is different is on the
         other side: a religion's save writes four files, so ``plan`` is what says
-        which — and all four ride one backup set, because a religion that reaches
+        which - and all four ride one backup set, because a religion that reaches
         three of them is a religion that half exists.
         """
         try:
@@ -2268,8 +2293,8 @@ class Handler(BaseHTTPRequestHandler):
     def _bmdb_ownership(self, body, apply: bool):
         """Add the missing faction texture records, through the ordinary edit path.
 
-        The ``model_edits`` are built HERE rather than in the page — see
-        :func:`unittransfer.bmdb.ownership_edits` — and then handed to the same
+        The ``model_edits`` are built HERE rather than in the page - see
+        :func:`unittransfer.bmdb.ownership_edits` - and then handed to the same
         planner the model card's faction checklist uses, so the write inherits
         its backup, its undo record and its guards instead of getting its own.
         """
@@ -2404,7 +2429,7 @@ class Handler(BaseHTTPRequestHandler):
         keys = _edu.REPLACE_COPY_KEYS if replacing else _edu.BASE_COPY_KEYS
         groups = base_field_groups_for(opts)
         # a group goes back to the source when its models are being imported over
-        # the base's (only their animations are borrowed) — the composed preview
+        # the base's (only their animations are borrowed) - the composed preview
         # has to show the same block the transfer will actually write
         if mount_base_import(base, self.registry.get(dname), unit, opts)[0]:
             groups = [g for g in groups if g != "mount"]
@@ -2445,7 +2470,7 @@ class Handler(BaseHTTPRequestHandler):
         name = body.get("mod") or ""
         if name not in self.registry.names():
             return {"error": f"unknown mod {name!r}"}
-        # Folders on disk, so nothing has to be parsed to answer — which matters
+        # Folders on disk, so nothing has to be parsed to answer - which matters
         # for the one mod this panel is most likely to be opened on: the one
         # whose roster the toolkit just refused to read.
         mod = self.registry.describe(name)
@@ -2464,7 +2489,7 @@ class Handler(BaseHTTPRequestHandler):
             out["edu_count"] = len(mod.edu.main_units)
         except ModDataError as e:
             # The folder list is the point of this panel and it is still true, so
-            # an unreadable roster costs the two counts and says why — not the
+            # an unreadable roster costs the two counts and says why - not the
             # whole answer.
             out["note"] = str(e)
         return out
@@ -2505,7 +2530,7 @@ class Handler(BaseHTTPRequestHandler):
                  ".svg": "image/svg+xml", ".png": "image/png"}
 
     def _web_asset(self, url_path: str):
-        """Serve a file from web/ — the UI's own scripts, nothing else.
+        """Serve a file from web/ - the UI's own scripts, nothing else.
 
         The path is resolved and then checked to be *inside* web/, so `..` or an
         absolute path cannot walk out of it and turn the tool into a file reader
@@ -2522,7 +2547,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._err(404, f"no such asset: {rel}")
         self._send(200, p.read_bytes(), ctype)
 
-    #: what the browse dialog is allowed to preview — the formats a card can be
+    #: what the browse dialog is allowed to preview - the formats a card can be
     #: imported from, and nothing that would turn this into a file reader
     PREVIEW_EXTS = {".tga", ".dds", ".png", ".jpg", ".jpeg", ".bmp", ".gif"}
 
@@ -2545,7 +2570,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             pass
 
-    #: Native sizes of M2TW building art — the small browser icon and the big
+    #: Native sizes of M2TW building art - the small browser icon and the big
     #: "constructed" picture. Used only for the placeholder, so a missing icon
     #: occupies exactly the space the real one would.
     BUILDING_ICON_SIZE = {"small": (78, 62), "large": (300, 245)}
@@ -2601,7 +2626,7 @@ class Handler(BaseHTTPRequestHandler):
         ``/model_texture`` is a skin as a PNG.
 
         A model that will not decode answers 400 with the decoder's own
-        sentence, because that sentence is the useful part — the viewer puts it
+        sentence, because that sentence is the useful part - the viewer puts it
         on screen rather than showing an empty box.
         """
         name = (q.get("mod") or [None])[0]
@@ -2612,7 +2637,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/model_texture":
             # `rel` comes from the entry we just served, but it is still a path
             # out of a mod's own file, so it is resolved and then checked to be
-            # under data/ — the same rule /icon's `rel` routes follow.
+            # under data/ - the same rule /icon's `rel` routes follow.
             src = factions.picture_path(mod, (q.get("rel") or [""])[0])
             return self._send(200, self.registry.icons.png_bytes(
                 src, self.MODEL_TEXTURE_MAX), "image/png")
@@ -2630,7 +2655,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._err(404, f"{entry.name} has no LOD {lod}")
         src = factions.picture_path(mod, rels[lod])
         if src is None or not src.is_file():
-            return self._err(404, f"{rels[lod]} is not in {name} — the mod "
+            return self._err(404, f"{rels[lod]} is not in {name} - the mod "
                                   f"references it but does not ship it")
         try:
             decoded = mesh.read_mesh(src)
@@ -2689,7 +2714,7 @@ class _Server(ThreadingHTTPServer):
     # surface as broken images).
     request_queue_size = 128
     # HTTPServer defaults this to 1, but on Windows SO_REUSEADDR lets a SECOND
-    # instance bind a port that is already serving — the two then fight over
+    # instance bind a port that is already serving - the two then fight over
     # requests. Off on Windows so a duplicate launch fails loudly instead.
     allow_reuse_address = (os.name != "nt")
 
@@ -2700,7 +2725,7 @@ def serve(cache_dir: Path, host="127.0.0.1", port=8756, on_ready=None, verbose=F
     Handler.registry = Registry(cache_dir)
     httpd = _Server((host, port), Handler)     # socket is bound + listening here
     log.info("Unit Transfer UI  ->  http://%s:%d/", host, port)
-    log.info("MED2 root: %s", config.get_med2_root() or "(not set — choose it in the UI)")
+    log.info("MED2 root: %s", config.get_med2_root() or "(not set - choose it in the UI)")
     log.info("Mods found: %s", ", ".join(Handler.registry.names()) or "(none yet)")
     log.info("Ctrl+C to stop (or use Quit in the UI's settings, or close the browser tab).")
     threading.Thread(target=_liveness_watchdog, args=(httpd,), daemon=True).start()
@@ -2712,7 +2737,7 @@ def serve(cache_dir: Path, host="127.0.0.1", port=8756, on_ready=None, verbose=F
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        log.info("interrupted — stopping")
+        log.info("interrupted - stopping")
         httpd.shutdown()
     log.info("server stopped")
     return httpd

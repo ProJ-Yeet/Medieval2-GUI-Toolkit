@@ -12,7 +12,7 @@ bottom of the list.
   anything else that re-read the mod list, showed the box clear again.
 
   The mark is stored per mod folder. Reading it back accepted either a mod or a
-  bare path, and the bare-path case took `Path.root` — which is the path's
+  bare path, and the bare-path case took `Path.root` - which is the path's
   *anchor* (`\` on Windows), not the mod's folder. So every read that started
   from a path keyed to the drive root of the working directory instead: one
   shared row for every mod on the machine. `/api/mods`, which answers the header
@@ -24,14 +24,14 @@ bottom of the list.
   went.
 
 * **Editing an entry's textures now sticks.** In the modeldb editor (and the unit
-  editor's Models tab), changing the default texture — the box that says "used by
-  every faction unless it has its own" — reverted on save. The LOD meshes kept
+  editor's Models tab), changing the default texture - the box that says "used by
+  every faction unless it has its own" - reverted on save. The LOD meshes kept
   their new values, which made it look like only textures were affected.
 
   The page decides which faction slots to send as overrides, and the server
   writes an override in preference to the default. The rule was "anything that
   differs from the default is an override", compared against the default *as just
-  typed* — so typing in the default box made every faction differ from it by
+  typed* - so typing in the default box made every faction differ from it by
   definition, and all of them were sent back pinned to the value they already
   had. On an entry with 29 faction records that is 29 overrides undoing one edit.
   Meshes were unaffected because they are indexed paths with no override layer.
@@ -62,7 +62,7 @@ bottom of the list.
 
   Effects are still not imported for anything else, and that is deliberate. They
   live in files shared by every projectile in the mod, and how many the engine
-  will load is one of its hardcoded tables — what sits past the end is dropped
+  will load is one of its hardcoded tables - what sits past the end is dropped
   with no message. M2EX replaces that table, which is what makes this safe there
   and not elsewhere.
 
@@ -71,7 +71,7 @@ bottom of the list.
   copy is not the toolkit's to move.
 
   The probe says which sets travelled and which were left, and the transfer is
-  undoable like any other — including removing an effect file the import had to
+  undoable like any other - including removing an effect file the import had to
   create.
 
 ## Changed

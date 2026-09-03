@@ -1,4 +1,4 @@
-"""Unit EDITOR — the battle-model half of the editor (Stage 14 layout rework).
+"""Unit EDITOR - the battle-model half of the editor (Stage 14 layout rework).
 
 Works on a throwaway copy of Third_Age_Reforged's data files, so the real mods
 are never touched. Covers what the new bmdb tab drives:
@@ -53,7 +53,7 @@ mod = Mod(root)
 entries = mod.modeldb.by_name()
 
 # A unit whose soldier model has several faction skins AND is used by at least
-# one OTHER unit — that is what makes the mod-wide rename worth testing.
+# one OTHER unit - that is what makes the mod-wide rename worth testing.
 users = {}
 for u in mod.edu.units:
     for m in u.model_names():
@@ -121,7 +121,7 @@ check("EDU still parses to the same unit count",
       len(mod.edu.units) == len(edu.parse_text(edu_before.decode(edu.ENCODING)).units))
 
 # ------------------------------------------------------- 2) faction skins
-print("\n2) faction checklist — add a skin, drop a skin")
+print("\n2) faction checklist - add a skin, drop a skin")
 e = mod.modeldb.by_name()[RENAMED]
 before_facs = [t.faction for t in e.main_textures]
 before_attach = len(e.attach_textures)

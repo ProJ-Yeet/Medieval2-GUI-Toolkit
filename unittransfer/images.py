@@ -1,6 +1,6 @@
 """Replace any picture the toolkit shows, wherever that picture lives.
 
-Every screen in the UI paints its art through one of two URLs — ``/icon`` for
+Every screen in the UI paints its art through one of two URLs - ``/icon`` for
 unit cards, info cards, ancillary pictures, faction art and the loose files the
 Minor Files editor lists, and ``/building_icon`` for building art. Both take a
 *question* ("the card for `merc_spearmen` in this mod") and answer with PNG
@@ -11,9 +11,9 @@ the one the unit editor had special-cased.
 This module closes that. It takes the same URL the page already built for the
 ``<img>``, works out:
 
-* **what is showing** — the actual file, its size in pixels, and whether it came
+* **what is showing** - the actual file, its size in pixels, and whether it came
   out of the mod or was borrowed from the unpacked vanilla UI
-* **where a replacement goes** — one or more paths under the mod's own
+* **where a replacement goes** - one or more paths under the mod's own
   ``data/``, because a unit card has to be written into every owning faction's
   folder and borrowed vanilla art has to be written into the mod for the first
   time
@@ -32,7 +32,7 @@ Two rules the engine imposes, and this module enforces:
 
 Resolution is *reported, never enforced*. The game does not require a card to be
 80x24, but every mod's art is that size for a reason, and a 512x512 card is a
-mistake far more often than it is a choice — so a mismatch comes back as a
+mistake far more often than it is a choice - so a mismatch comes back as a
 warning the dialog shows before the write, not as a refusal.
 """
 from __future__ import annotations
@@ -101,7 +101,7 @@ def encode(src: Path, ext: str) -> Optional[bytes]:
     """The bytes to write for ``src`` at a target extension, or ``None`` to copy.
 
     ``None`` means "the picked file is already in a format the engine reads and
-    keeps its own extension" — copy it and keep its mtime, rather than paying a
+    keeps its own extension" - copy it and keep its mtime, rather than paying a
     decode + re-encode that can only lose something (a .dds's mipmaps, a .tga's
     exact channel layout).
     """
@@ -170,7 +170,7 @@ def _unit_targets(mod, unit, kind: str) -> Tuple[List[str], str]:
     card is routinely the same picture copied into ten of them. Replacing the
     one the preview happened to resolve would leave the other nine showing the
     old art to anyone playing those factions, which is exactly the bug the
-    editor's card-variant list exists to make visible — so a replacement goes to
+    editor's card-variant list exists to make visible - so a replacement goes to
     all of them.
     """
     from .edit import _unit_icon_files
@@ -206,7 +206,7 @@ def locate(mod, url: str, vanilla_root=None) -> Dict:
         kind      which sort of art this is
         label     what to call it in the dialog
         showing   the file the preview came from ("" if there is none)
-        source    "mod" | "vanilla" | ""  — borrowed art is worth saying
+        source    "mod" | "vanilla" | ""  - borrowed art is worth saying
         targets   the mod-relative path(s) a replacement is written to
         current   :func:`probe` of `showing`
 
@@ -237,7 +237,7 @@ def locate(mod, url: str, vanilla_root=None) -> Dict:
         if own:
             out["targets"] = [own]
         elif source:
-            out["note"] = ("this mod has no icon of its own here — it is showing "
+            out["note"] = ("this mod has no icon of its own here - it is showing "
                            "the game's, and saving writes the mod's first copy")
         out["current"] = probe(src)
         out["ok"] = bool(out["targets"][0])
@@ -257,7 +257,7 @@ def locate(mod, url: str, vanilla_root=None) -> Dict:
                    targets=[inside or f"{ancillaries.IMAGE_DIR}/{name}"],
                    current=probe(src))
         if src is not None and not inside:
-            out["note"] = ("this picture comes from the game's own ancillary art — "
+            out["note"] = ("this picture comes from the game's own ancillary art - "
                            "saving writes the mod's first copy")
         out["ok"] = True
         return out
@@ -291,7 +291,7 @@ def locate(mod, url: str, vanilla_root=None) -> Dict:
                source="mod" if src else "", current=probe(src))
     if not targets:
         out["error"] = (f"'{utype}' has no ownership, so there is no faction "
-                        f"folder to put a {kind} in — set ownership first")
+                        f"folder to put a {kind} in - set ownership first")
         return out
     out["ok"] = True
     return out
@@ -302,7 +302,7 @@ def reveal_target(mod, url: str, vanilla_root=None) -> Dict:
 
     Three answers, in the order they are worth having:
 
-    * the file that is actually showing, wherever it lives — including the
+    * the file that is actually showing, wherever it lives - including the
       unpacked vanilla UI, because "which file am I looking at" is the question,
       and the answer being outside the mod is itself the interesting part
     * the folder a replacement would land in, when there is no file yet
@@ -324,7 +324,7 @@ def reveal_target(mod, url: str, vanilla_root=None) -> Dict:
         return {"ok": True, "path": str(folder), "outside": False,
                 "source": "", "folder_only": True}
     return {"ok": False,
-            "error": "there is no file here yet, and no folder for one either — "
+            "error": "there is no file here yet, and no folder for one either - "
                      "import a picture and it is created"}
 
 
@@ -352,7 +352,7 @@ def plan(mod, url: str, src_path: str, vanilla_root=None) -> Dict:
     if src.suffix.lower() not in IMPORT_EXTS:
         out["ok"] = False
         out["error"] = (f"{src.suffix or 'that file'} is not an image this tool "
-                        f"reads — pick a {', '.join(IMPORT_EXTS)}")
+                        f"reads - pick a {', '.join(IMPORT_EXTS)}")
         return out
     try:
         if src.stat().st_size > MAX_IMPORT_BYTES:
@@ -384,14 +384,14 @@ def plan(mod, url: str, src_path: str, vanilla_root=None) -> Dict:
     if cur["ok"] and (cur["width"], cur["height"]) != (inc["width"], inc["height"]):
         out["warnings"].append(
             f"the picture on disk is {cur['width']}x{cur['height']} and this one "
-            f"is {inc['width']}x{inc['height']} — the game does not rescale UI "
+            f"is {inc['width']}x{inc['height']} - the game does not rescale UI "
             f"art, so it will be drawn stretched or cropped into the same box")
     elif not cur["ok"] and cur["error"] and out["showing"]:
         out["warnings"].append(
             f"the size of the picture already there could not be read "
             f"({cur['error']}), so this one could not be checked against it")
 
-    # what actually happens on disk, path by path — including the siblings that
+    # what actually happens on disk, path by path - including the siblings that
     # have to go so two files cannot answer to one name
     for rel in out["targets"]:
         target = Path(mod.data) / rel
@@ -465,7 +465,7 @@ def apply(mod, url: str, src_path: str, vanilla_root=None) -> Dict:
                 old.unlink()
                 manifest.setdefault("deleted", []).append(rel)
                 dropped.append(rel)
-                file_op("DELETE", old, "same name, other extension — Undo puts it back")
+                file_op("DELETE", old, "same name, other extension - Undo puts it back")
             except OSError as exc:
                 p["warnings"].append(f"could not remove data/{rel}: {exc}")
 
@@ -484,7 +484,7 @@ def apply(mod, url: str, src_path: str, vanilla_root=None) -> Dict:
         "manifest": manifest, "backup_root": str(backup_root),
     }
     config.append_log(rec)
-    log.info("IMAGE  replace %s in %s — %d file(s), id=%s",
+    log.info("IMAGE  replace %s in %s - %d file(s), id=%s",
              p["targets"][0], mod.name, len(written), tid)
     return {"ok": True, "id": tid, "written": written, "dropped": dropped,
             "warnings": p["warnings"], "summary": summary, "record": rec,

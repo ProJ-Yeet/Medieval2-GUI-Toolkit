@@ -65,7 +65,7 @@ check("entry content is identical across layouts",
 
 print("\n== a UTF-8 BOM in front of the header ==")
 # What a modder gets for opening a modeldb in Notepad and saving it. The first
-# token of the file is a NUMBER, so the mark lands glued to it — this used to
+# token of the file is a NUMBER, so the mark lands glued to it - this used to
 # die on int() with nothing to tell the user what to fix.
 for label, text in (("single-line", SINGLE_LINE), ("wrapped", WRAPPED)):
     bom = modeldb._BOM + text
@@ -87,7 +87,7 @@ print("\n== a real wrapped-header file, if present ==")
 sample = Path(r"C:\Users\projy\Downloads\battle_models.modeldb")
 if sample.is_file():
     text = sample.read_text(encoding=modeldb.ENCODING)
-    # Whatever modeldb was last dropped there — so it can be a file that really
+    # Whatever modeldb was last dropped there - so it can be a file that really
     # will not parse. That is a failing check and its sentence, not a traceback
     # that takes the rest of this run down with it: the reason a real file was
     # refused is the whole value of pointing the suite at one.
@@ -110,5 +110,5 @@ if sample.is_file():
 else:
     print("  (skipped -- sample file not on this machine)")
 
-print(f"\n{sum(ok)}/{len(ok)} checks — " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
+print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

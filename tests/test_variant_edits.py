@@ -3,8 +3,8 @@
 The panel that puts a building's two halves side by side used to be able to say
 only that they disagreed. Now the four numbers on either side are boxes, and a
 button under each side puts all four onto the other half. Nothing about that is a
-server call — the panel edits the same working copy the building form behind it
-is editing, and stages the twin's rows in ``work.also`` — so what can go quietly
+server call - the panel edits the same working copy the building form behind it
+is editing, and stages the twin's rows in ``work.also`` - so what can go quietly
 wrong is *which row* an edit lands on:
 
   * a number typed on THIS half must rewrite the row already in the working copy,
@@ -13,7 +13,7 @@ wrong is *which row* an edit lands on:
     already occupies, so the server rewrites it where it stands. Two numbers
     typed one after the other must land on ONE staged row, not two;
   * a row this panel mirrored a moment ago has no line in the file yet, and must
-    not inherit the *other* building's line number — that would point a later
+    not inherit the *other* building's line number - that would point a later
     edit of the same boxes at a line in the wrong building.
 
 So this suite runs the page's own functions under node against a hand-built
@@ -180,7 +180,7 @@ const here=()=>state.bld.work.levels[0].caps.filter(c=>c.pool&&!c.del);
   say('a row that is not in the file yet carries no line', staged()[0].line,null);
   bldVarSet(0,'archers','b','maximum','6');
   say('typing on it updates that row rather than adding another', staged().length,1);
-  say('…and it still carries no line — it is not the city half\u2019s',
+  say('…and it still carries no line - it is not the city half\u2019s',
       [staged()[0].line,staged()[0].pool.maximum],[null,'6']);
 }
 {
@@ -240,7 +240,7 @@ console.log(JSON.stringify(out));
 print("\n-- the city/castle panel's boxes (node) --")
 node = shutil.which("node")
 if not node:
-    print("  [skip] node is not on PATH — the page's own JS cannot be exercised")
+    print("  [skip] node is not on PATH - the page's own JS cannot be exercised")
 elif not WEB.exists():
     print("  [skip] web/index.html not found")
 else:
@@ -319,6 +319,6 @@ for mod in mods:
 
 
 print()
-print(f"{sum(ok)}/{len(ok)} checks — "
+print(f"{sum(ok)}/{len(ok)} checks - "
       + ("ALL PASSED" if all(ok) else f"{len(ok) - sum(ok)} FAILED"))
 sys.exit(0 if all(ok) else 1)

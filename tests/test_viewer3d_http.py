@@ -1,4 +1,4 @@
-"""The 3D viewer over HTTP — the three calls the page makes.
+"""The 3D viewer over HTTP - the three calls the page makes.
 
     /api/model             which LODs and skins the entry has, and which of
                            them this mod actually ships
@@ -11,7 +11,7 @@ makes the geometry assertions exact rather than approximate: the suite knows
 how many vertices and triangles should come back, because it put the file there.
 
 The refusals matter as much as the successes. A viewer is opened from a list of
-model entries, and plenty of those name files the mod does not ship — the
+model entries, and plenty of those name files the mod does not ship - the
 answer has to be a sentence saying so, with the right status code, not a 500 and
 not an empty canvas.
 """
@@ -59,7 +59,7 @@ def raw(path):
 
 
 def status(path):
-    """``(code, error text)`` — a refusal is a result here, not an exception."""
+    """``(code, error text)`` - a refusal is a result here, not an exception."""
     try:
         with urllib.request.urlopen(BASE + path, timeout=300) as r:
             return r.status, ""
@@ -75,7 +75,7 @@ def enc(s):
 
 
 if not REFERENCE.is_file():
-    print(f"SKIPPED — the reference model is not readable at {REFERENCE}")
+    print(f"SKIPPED - the reference model is not readable at {REFERENCE}")
     sys.exit(0)
 
 mod_src = _realmod.pick("Divide_and_Conquer_EUR", "Third_Age_Reforged",
@@ -106,7 +106,7 @@ entry = next((e for e in db.entries
               if e.mesh_files() and [t for t in e.main_textures
                                      if t.texture and t.texture != "0"]), None)
 if entry is None:
-    print("SKIPPED — no modeldb entry with both a mesh and a texture path")
+    print("SKIPPED - no modeldb entry with both a mesh and a texture path")
     sys.exit(0)
 
 lod_rel = entry.mesh_files()[0].replace("\\", "/")
@@ -144,7 +144,7 @@ print(f"serving {BASE} · mod {mod_src.name} · entry {entry.name}")
 
 try:
     # ---------------------------------------------------------------
-    print("\n== /api/model — what the picker opens on ==")
+    print("\n== /api/model - what the picker opens on ==")
     info = get(f"/api/model?mod=ViewerMod&entry={enc(entry.name)}")
     check("the entry comes back named, with its LODs and skins",
           info["name"] == entry.name and info["lods"] and "skins" in info)
@@ -157,8 +157,8 @@ try:
     check(f"and the ones we did not, do not ({len(missing)} of "
           f"{len(info['lods'])-1} other LODs)",
           len(info["lods"]) == 1 or bool(missing))
-    check("a skin is a PAIR — the main sheet and the attachment sheet a faction "
-          "wears together — deduplicated on the pair",
+    check("a skin is a PAIR - the main sheet and the attachment sheet a faction "
+          "wears together - deduplicated on the pair",
           len({(s["rel"], s["attach"]) for s in info["skins"]}) == len(info["skins"])
           and all({"rel", "exists", "attach", "attach_exists", "factions"} <= set(s)
                   for s in info["skins"]))
@@ -171,7 +171,7 @@ try:
           <= {f for s in info["skins"] for f in s["factions"]})
 
     # ---------------------------------------------------------------
-    print("\n== /api/model/geometry — the binary payload ==")
+    print("\n== /api/model/geometry - the binary payload ==")
     blob = raw(f"/api/model/geometry?mod=ViewerMod&entry={enc(entry.name)}&lod=0")
     check("it opens with the payload magic", blob[:4] == mesh.PAYLOAD_MAGIC)
     hlen = struct.unpack_from("<I", blob, 4)[0]
@@ -183,7 +183,7 @@ try:
           len(head["groups"]) == len(horse.groups)
           and [g["name"] for g in head["groups"]] == [g.name for g in horse.groups])
     # the page samples the two sheets glued into one image and lets the UVs
-    # choose, so `sheets` is a LABEL for the part list — but it still has to
+    # choose, so `sheets` is a LABEL for the part list - but it still has to
     # agree with the decoder, and it has to admit a group that straddles both
     check("each group says which sheet its art lands on, and whether the game "
           "treats it as optional",
@@ -196,7 +196,7 @@ try:
     check(f"the bones came across ({len(head['bones'])})",
           head["bones"] == horse.bones)
     # the page rejects a payload whose length disagrees with its header, so the
-    # server had better not send one — this is that same arithmetic
+    # server had better not send one - this is that same arithmetic
     n = head["vertices"]
     want = (8 + hlen + n * 12 + (n * 12 if head["has_normals"] else 0)
             + (n * 8 if head["has_uvs"] else 0)
@@ -207,7 +207,7 @@ try:
           (8 + hlen) % 4 == 0)
 
     # ---------------------------------------------------------------
-    print("\n== /model_texture — a skin as a PNG ==")
+    print("\n== /model_texture - a skin as a PNG ==")
     if real_tex is None:
         print("  [skip] no loose .texture in this mod to plant")
     else:

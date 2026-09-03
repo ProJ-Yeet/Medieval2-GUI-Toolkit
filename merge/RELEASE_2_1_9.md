@@ -16,12 +16,12 @@ sit on.
   several buildings whose numbers drifted apart over years of edits.
 
   Clicking a building's name opens that line in a **new browser tab**, on the
-  tier the pool sits on, with the unit's rows flashed — so going to look at the
+  tier the pool sits on, with the unit's rows flashed - so going to look at the
   building does not close the unit you were editing.
 
 * **＋ Add a building**, in that tab. Every line in the mod and every tier in it;
   the tiers that already train the unit are shown as such and cannot be picked
-  twice. Making a unit recruitable somewhere new never leaves the unit — and
+  twice. Making a unit recruitable somewhere new never leaves the unit - and
   neither does taking it off a building, which is the 🗑 on each row.
 
   These are the same `recruit_pool` lines the Buildings module writes, through
@@ -31,14 +31,14 @@ sit on.
   building lines it touched.
 
 * **UV layout** in the 3D viewer, beside the model, the way a UV editor shows
-  it: the texture sheet — both squares of it where the entry names a pair — with
+  it: the texture sheet - both squares of it where the entry names a pair - with
   this model's islands drawn over the art they cover. One colour per part, the
   same colour beside that part in the list. Pan, zoom, and click an island to be
   told which part wears it, which pixels of which sheet it covers, and whether
   it runs off the sheet it was authored in.
 
   It draws only the parts actually on the soldier, so switching a variant or
-  hiding a slot changes the map with it — three heads laid over one sheet is not
+  hiding a slot changes the map with it - three heads laid over one sheet is not
   a UV map. Where **Show UVs** answers "is this shell stretched", this answers
   "where on the art does this part live", which is the view a retexture is done
   against.
@@ -51,17 +51,17 @@ sit on.
 ## Fixed
 
 * **Every mount in every mod was drawn with its texture tiled twice.** An entry
-  that names no attachment texture at all — which is every ordinary mount — has
+  that names no attachment texture at all - which is every ordinary mount - has
   one sheet spanning the whole space its UVs are written in, and the viewer was
   treating it as the case where a sheet is glued to itself. Measured rather than
   reasoned: mapping each triangle's texel-space edges onto its own plane says
   how far from square its texels are, and whole-model medians invert exactly
-  where they should — real pairs read 1.2 at half-width and 2.0 at full, lone
+  where they should - real pairs read 1.2 at half-width and 2.0 at full, lone
   sheets the other way round. Barding stops being striped and becomes plates.
 
 * **The unit editor's 3D preview no longer offers a model the unit is never seen
   in.** When a unit carries `armour_ug_models` the engine draws those, one per
-  armour level, and never the model on its `soldier` line — Uruk-hai Bodyguards
+  armour level, and never the model on its `soldier` line - Uruk-hai Bodyguards
   names one model there and puts another in both upgrade slots. The test is per
   model, so an entry that is the soldier line *and* an upgrade still appears, and
   a unit with no upgrade list is unaffected.

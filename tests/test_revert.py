@@ -1,4 +1,4 @@
-"""Focused test for transfer.revert_to — staged 'revert to this stage'.
+"""Focused test for transfer.revert_to - staged 'revert to this stage'.
 
 Applies 3 transfers to a temp dest, snapshots state after #2, applies #3, then
 reverts to #2 and checks the mod is byte-exact back to the post-#2 snapshot.

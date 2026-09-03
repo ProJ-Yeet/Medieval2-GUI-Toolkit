@@ -1,4 +1,4 @@
-"""BMDB mode over HTTP — exactly the calls the browser page makes.
+"""BMDB mode over HTTP - exactly the calls the browser page makes.
 
 Runs a real server against a throwaway MED2 root (one mini mod copied from
 Third_Age_Reforged) and drives the two flows the page has:
@@ -125,7 +125,7 @@ try:
 
     print("\n== audit ==")
     # The audit is one long request, so the page polls /api/progress?job= beside
-    # it — exactly what this does, on the same server, at the same time.
+    # it - exactly what this does, on the same server, at the same time.
     seen, stop = [], threading.Event()
     def _poll():
         while not stop.is_set():

@@ -8,18 +8,18 @@ remember that a trait is never only its block.
 A trait or an ancillary is **three things in two files**, and a port that brings
 one of them is worse than no port at all:
 
-  * **the definition block** — the ``Trait`` / ``Ancillary`` lines at the top of
+  * **the definition block** - the ``Trait`` / ``Ancillary`` lines at the top of
     the file. Pasted alone, the record exists and nothing ever grants it.
-  * **the triggers that give it** — hundreds of lines below, past
+  * **the triggers that give it** - hundreds of lines below, past
     ``;== TRIGGER DATA ==`` in the same file, keyed by ``Affects <trait>`` or
     ``AcquireAncillary <name>``. Left behind, the record is unreachable; brought
     without the definition, the trigger is the "Trait not recognized" error.
-  * **its text keys** — in ``text/export_VnVs.txt`` for a trait,
+  * **its text keys** - in ``text/export_VnVs.txt`` for a trait,
     ``text/export_ancillaries.txt`` for an ancillary. Left behind, the character
     screen crashes the first time anyone has it. This is not a cosmetic third:
     it is the half that turns a working port into a save-game-ending one.
 
-So all three move together, in one job, with one backup set and one undo — the
+So all three move together, in one job, with one backup set and one undo - the
 same contract every other write in the toolkit makes.
 
 What this deliberately does NOT do
@@ -28,7 +28,7 @@ What this deliberately does NOT do
 ``Characters``, its ``ExcludeCultures`` and its ``AntiTraits``; a ported
 ancillary keeps its ``Image`` and its ``ExcludedAncillaries``; the triggers keep
 every condition they had. Those name cultures, religions, other traits and
-picture files that the destination mod may not have — and guessing a
+picture files that the destination mod may not have - and guessing a
 substitution is how a port silently becomes a different trait. Instead every one
 of them is CHECKED against the destination and reported before the write, so the
 list of what will not work is in front of you while it is still a preview.
@@ -38,8 +38,8 @@ list of what will not work is in front of you while it is still a preview.
 the Images tool is what puts one there.
 
 The two record types are one module because they are one format. The EDA is the
-EDCT with the level ladder taken out — same header keywords, same trigger
-language underneath, same "its name is a key in a text file" — which is already
+EDCT with the level ladder taken out - same header keywords, same trigger
+language underneath, same "its name is a key in a text file" - which is already
 why :mod:`unittransfer.triggers` serves both. :data:`KINDS` is the whole of the
 difference between them.
 """
@@ -54,7 +54,7 @@ from .logutil import log
 
 
 class PortError(ValueError):
-    """The port cannot be planned — a missing file, or a record that is not there."""
+    """The port cannot be planned - a missing file, or a record that is not there."""
 
 
 @dataclass(frozen=True)
@@ -105,8 +105,8 @@ def _read(mod, k: Kind):
     """The mod's whole file, parsed both ways: as records and as triggers.
 
     Both halves come out of ONE read of ONE file. They are two views of the same
-    bytes — :mod:`unittransfer.traits` reads the top of it and
-    :mod:`unittransfer.triggers` the bottom — and reading the file twice is how
+    bytes - :mod:`unittransfer.traits` reads the top of it and
+    :mod:`unittransfer.triggers` the bottom - and reading the file twice is how
     they would end up disagreeing about it.
     """
     path = _path(mod, k)
@@ -125,7 +125,7 @@ def givers(tf: triggers.TriggerFile, keyword: str, name: str) -> List[triggers.T
 
     Not :func:`triggers.orphaned_by`, which asks the narrower question a DELETE
     needs ("does this trigger serve ONLY that record"). A port wants every
-    trigger that feeds the record, including one that feeds two — it is copied
+    trigger that feeds the record, including one that feeds two - it is copied
     whole, and what it does for the other record is said in the warnings rather
     than edited out. Editing a trigger down on the way through would produce a
     trigger the source mod does not have and nobody asked for.
@@ -182,7 +182,7 @@ class PortPlan:
     names: List[str] = field(default_factory=list)
     with_triggers: bool = True
     overwrite: bool = False
-    #: the destination file as it would be written — empty when nothing changes
+    #: the destination file as it would be written - empty when nothing changes
     text: str = ""
     #: ``{tag: text}`` this port would write into the destination's text file
     loc_writes: Dict[str, str] = field(default_factory=dict)
@@ -265,7 +265,7 @@ def _port_one(p: PortPlan, k: Kind, text: str, sparsed, stf, rec, known) -> str:
     if here is not None and not p.overwrite:
         p.skipped.append(rec.name)
         p.warnings.append(
-            f"{p.dest.name} already has {_a(k.noun)} called `{rec.name}` — it was "
+            f"{p.dest.name} already has {_a(k.noun)} called `{rec.name}` - it was "
             "left alone. Tick “replace what is already there” to overwrite it")
         return text
     if here is not None:
@@ -311,7 +311,7 @@ def _port_triggers(p: PortPlan, k: Kind, text: str, stf, name: str, row: Dict) -
     Appended, never inserted: the engine reads triggers in order, and the end is
     the only position that cannot change when an existing trigger fires. A
     trigger whose NAME the destination already uses is skipped with a warning
-    rather than renamed — a trigger name is what the destination's own file
+    rather than renamed - a trigger name is what the destination's own file
     already refers to, and quietly writing a second one under a new name would
     make the record fire twice.
     """
@@ -320,7 +320,7 @@ def _port_triggers(p: PortPlan, k: Kind, text: str, stf, name: str, row: Dict) -
         if dtf.get(trig.name) is not None:
             p.warnings.append(
                 f"{name}: {p.dest.name} already has a trigger called "
-                f"`{trig.name}`, so it was not copied — check that the one it "
+                f"`{trig.name}`, so it was not copied - check that the one it "
                 "has still does what this record needs")
             continue
         text = triggers.append_block(dtf, stf.block_text(trig))
@@ -330,7 +330,7 @@ def _port_triggers(p: PortPlan, k: Kind, text: str, stf, name: str, row: Dict) -
                          if e.keyword == k.keyword and e.args and e.args[0] != name})
         if others:
             p.warnings.append(
-                f"{name}: trigger `{trig.name}` also gives {kb.and_list(others)} — "
+                f"{name}: trigger `{trig.name}` also gives {kb.and_list(others)} - "
                 f"port {'those' if len(others) > 1 else 'that'} too, or the "
                 "trigger names something this mod has not got")
     if not row["triggers"] and p.with_triggers:
@@ -368,7 +368,7 @@ def _dest_vocab(dest) -> Dict[str, set]:
 def _missing_in_dest(k: Kind, rec, known: Dict[str, set], dest) -> List[str]:
     """What this record names that the destination has not got.
 
-    Reported, never rewritten — see the module docstring. Each line is something
+    Reported, never rewritten - see the module docstring. Each line is something
     that will not work over there and that a person has to decide about.
     """
     out: List[str] = []
@@ -379,7 +379,7 @@ def _missing_in_dest(k: Kind, rec, known: Dict[str, set], dest) -> List[str]:
             return                      # could not be checked; not "all missing"
         missing = [w for w in wanted if w and w not in have]
         if missing:
-            out.append(f"{label} {kb.and_list(sorted(set(missing)))} — "
+            out.append(f"{label} {kb.and_list(sorted(set(missing)))} - "
                        f"not in {getattr(dest, 'name', 'the destination')}")
 
     gone("cultures", getattr(rec, "exclude_cultures", []) or [],
@@ -392,7 +392,7 @@ def _missing_in_dest(k: Kind, rec, known: Dict[str, set], dest) -> List[str]:
         image = (rec.get("Image") or "").strip()
         if image and ancillaries.image_path(dest, image) is None:
             out.append(f"its picture `{image}` is not in "
-                       f"{getattr(dest, 'name', 'the destination')} — the port "
+                       f"{getattr(dest, 'name', 'the destination')} - the port "
                        "does not copy art, so add it with the Images tool")
     return out
 
@@ -412,7 +412,7 @@ def _plan_loc(p: PortPlan, k: Kind, sparsed) -> None:
     if not txt.exists() and not stringsbin.bin_path_for(txt).exists():
         p.warnings.append(
             f"{p.dest.name} has no {Path(k.loc_rel).name}, so no text key could be "
-            f"written — every ported {k.noun} will show its tags in game")
+            f"written - every ported {k.noun} will show its tags in game")
         return
     for row in p.rows:
         for tag in row["keys"]:
@@ -483,7 +483,7 @@ def apply(p: PortPlan) -> Dict:
         txt = Path(dest.data) / k.loc_rel
         if txt.exists():
             target = keep(k.loc_rel)
-            # the compiled cache is rewritten below, so it is backed up too — an
+            # the compiled cache is rewritten below, so it is backed up too - an
             # undo that restored the .txt and left the .bin would put the file
             # back and leave the game still reading the ported text
             keep(k.loc_rel + ".strings.bin")

@@ -8,7 +8,7 @@ back).
 
 Two halves:
   * a hand-built mod with every file shape that matters, so the awkward cases can
-    actually be arranged — a name that is the tail of a LONGER unit's name, a
+    actually be arranged - a name that is the tail of a LONGER unit's name, a
     name inside a longer identifier, a differing-case spelling;
   * the same rename against real files copied out of Third_Age_6 / DaC, to prove
     the scan reaches a real mod's export_descr_buildings.txt, its campaign folder
@@ -168,7 +168,7 @@ check("a differing-case spelling is reported, not rewritten",
 
 new_edb = res.texts[root / "data" / "export_descr_buildings.txt"]
 check("its own recruit_pool is renamed", '"Trebuchet"' in new_edb)
-check("the LONGER unit's name is left intact — “Ent Catapult” is another unit",
+check("the LONGER unit's name is left intact - “Ent Catapult” is another unit",
       '"Ent Catapult"' in new_edb and '"Ent Trebuchet"' not in new_edb)
 check("the third unit is untouched", '"Peasants"' in new_edb)
 
@@ -233,7 +233,7 @@ if real.lua_files:
     check(f"all {len(real.lua_files)} .lua script(s) are among them",
           sum(n.endswith(".lua") for n in names) == len(real.lua_files))
 else:
-    print(f"  [ -- ] {real.name} ships no .lua scripts — nothing to scan for")
+    print(f"  [ -- ] {real.name} ships no .lua scripts - nothing to scan for")
 check("export_descr_unit.txt is not", "export_descr_unit.txt" not in names)
 check("data/text/ is not scanned (UTF-16, keyed by dictionary)",
       not any("text" in p.parts and p.name == "export_units.txt" for p in paths))

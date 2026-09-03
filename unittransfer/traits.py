@@ -1,7 +1,7 @@
 """The trait definitions of ``export_descr_character_traits.txt``.
 
 An EDCT is two files in one. The bottom half is the trigger language, which
-:mod:`unittransfer.triggers` owns. The top half — this module — is the traits
+:mod:`unittransfer.triggers` owns. The top half - this module - is the traits
 themselves: what each one is called, who can get it, which cultures cannot, and
 the ladder of levels a character climbs as points accumulate::
 
@@ -32,7 +32,7 @@ traits in the three installed mods:
 
 **The header's line order is load-bearing.** ``Characters`` must be the line
 directly under ``Trait``, and the optional lines that follow have a fixed order
-too. Get it wrong and the game does not report a bad trait — it stops
+too. Get it wrong and the game does not report a bad trait - it stops
 recognising every trait defined *after* it, and the crash surfaces hundreds of
 lines away at the first condition that names one. So a header line this module
 adds is inserted at its canonical position, never appended.
@@ -54,7 +54,7 @@ and in ``descr_strat``. :func:`check` is where that shows up: it reads both
 halves of the file and says which of those references point at nothing.
 
 As in :mod:`unittransfer.triggers`, **lines are kept verbatim and every edit is a
-splice** — ``parse_text(t).text() == t`` for every file, always.
+splice** - ``parse_text(t).text() == t`` for every file, always.
 """
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ ENCODING = triggers.ENCODING
 TRAIT_KW = "Trait"
 LEVEL_KW = "Level"
 
-#: the optional header lines, **in the order the engine demands** — see the
+#: the optional header lines, **in the order the engine demands** - see the
 #: module docstring. ``Characters`` is not in here because it is not optional.
 HEADER_ORDER = ("Hidden", "ExcludeCultures", "NoGoingBackLevel", "AntiTraits")
 
@@ -94,7 +94,7 @@ CHARACTER_TYPES = ("spy", "assassin", "diplomat", "admiral", "family", "priest",
                    "merchant", "princess", "heretic", "witch", "inquisitor", "all")
 
 #: where the localised name of a trait level and its descriptions come from,
-#: relative to ``data/`` — and the compiled cache beside it, which
+#: relative to ``data/`` - and the compiled cache beside it, which
 #: :mod:`unittransfer.cleaner` addresses from the mod root instead
 VNV_REL = "text/export_VnVs.txt"
 VNV_BIN_REL = "data/" + VNV_REL + ".strings.bin"
@@ -122,7 +122,7 @@ class TraitError(kb.BlockError):
 
 @dataclass
 class Effect:
-    """``Effect Command 1`` — one attribute this level changes."""
+    """``Effect Command 1`` - one attribute this level changes."""
     attribute: str = ""
     amount: str = ""            # kept as written: "-1", "50", "+2" all occur
     line: int = 0
@@ -201,12 +201,12 @@ class TraitFile:
     traits: List[Trait] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     trailing_newline: bool = True
-    #: 0-based line of the first ``Trigger`` — where the other half starts, and
+    #: 0-based line of the first ``Trigger`` - where the other half starts, and
     #: the line a brand-new trait has to be inserted above
     trigger_start: int = -1
 
     def text(self) -> str:
-        """The file exactly as it was read — the property everything else rests on."""
+        """The file exactly as it was read - the property everything else rests on."""
         out = self.newline.join(self.lines)
         return out + self.newline if self.trailing_newline and self.lines else out
 
@@ -267,7 +267,7 @@ def parse_text(text: str) -> TraitFile:
         if head == LEVEL_KW:
             if len(cur.levels) >= MAX_LEVELS:
                 cur.warnings.append(
-                    f"line {i + 1}: level {len(cur.levels) + 1} — a trait can have "
+                    f"line {i + 1}: level {len(cur.levels) + 1} - a trait can have "
                     f"at most {MAX_LEVELS}")
             lvl = Level(name=words[1] if len(words) > 1 else "", start=i, end=i + 1)
             cur.levels.append(lvl)
@@ -314,14 +314,14 @@ def parse_block(text: str) -> Trait:
     """
     tf = parse_text(text if text.endswith("\n") else text + "\n")
     if not tf.traits:
-        raise TraitError("a trait block starts with a `Trait <name>` line — "
+        raise TraitError("a trait block starts with a `Trait <name>` line - "
                          "this text has none", 1)
     if len(tf.traits) > 1:
         raise TraitError(
-            f"this text holds {len(tf.traits)} trait blocks — one at a time",
+            f"this text holds {len(tf.traits)} trait blocks - one at a time",
             tf.traits[1].start + 1)
     if tf.trigger_start >= 0:
-        raise TraitError("there is a `Trigger` block in this text — the trigger "
+        raise TraitError("there is a `Trigger` block in this text - the trigger "
                          "section is edited on its own", tf.trigger_start + 1)
     return tf.traits[0]
 
@@ -334,7 +334,7 @@ def check(trait: Trait, known: Optional[set] = None) -> List[Dict]:
     """Findings for one trait: what the engine will refuse, and what will not work.
 
     ``known`` is every trait name defined in the file, which is what makes an
-    ``AntiTraits`` line checkable — the engine does not validate that list, so a
+    ``AntiTraits`` line checkable - the engine does not validate that list, so a
     misspelt antitrait loads happily and simply never cancels anything.
     """
     out: List[Dict] = []
@@ -346,14 +346,14 @@ def check(trait: Trait, known: Optional[set] = None) -> List[Dict]:
     chars_line = trait.lines.get("Characters", -1)
     if chars_line < 0:
         add("no-characters", trait.start,
-            "this trait has no `Characters` line — the game stops loading the file "
+            "this trait has no `Characters` line - the game stops loading the file "
             "here with \"Unknown identifier ... when expecting characters\"")
     else:
         above = [k for k, ln in trait.lines.items() if ln < chars_line]
         if above:
             add("header-order", chars_line,
                 f"`Characters` must be the line under `Trait`, but {kb.and_list(above)} "
-                "sits above it — the engine then stops recognising every trait "
+                "sits above it - the engine then stops recognising every trait "
                 "defined after this one, and crashes at whatever names one first")
         wrong = [c for c in trait.characters if c not in CHARACTER_TYPES]
         if wrong:
@@ -362,7 +362,7 @@ def check(trait: Trait, known: Optional[set] = None) -> List[Dict]:
         if len(trait.characters) > 1:
             add("characters-list", chars_line,
                 "the engine reads only the first type in a `Characters` list, so "
-                f"only {trait.characters[0]} can ever get this trait — use `all` "
+                f"only {trait.characters[0]} can ever get this trait - use `all` "
                 "and a condition in the trigger, or one trait per type")
 
     order = [k for k in HEADER_ORDER if k in trait.lines]
@@ -374,7 +374,7 @@ def check(trait: Trait, known: Optional[set] = None) -> List[Dict]:
 
     if len(trait.levels) > MAX_LEVELS:
         add("too-many-levels", trait.levels[MAX_LEVELS].start,
-            f"level {MAX_LEVELS + 1} — a trait can have at most {MAX_LEVELS}")
+            f"level {MAX_LEVELS + 1} - a trait can have at most {MAX_LEVELS}")
     if not trait.levels and not trait.hidden:
         add("no-levels", trait.start,
             "a trait with no levels can never be seen or acquired; if that is "
@@ -383,12 +383,12 @@ def check(trait: Trait, known: Optional[set] = None) -> List[Dict]:
     anti = trait.anti_traits
     if len(anti) > MAX_ANTITRAITS:
         add("too-many-antitraits", trait.lines["AntiTraits"],
-            f"{len(anti)} antitraits — more than {MAX_ANTITRAITS} crashes the game")
+            f"{len(anti)} antitraits - more than {MAX_ANTITRAITS} crashes the game")
     if known is not None:
         for name in anti:
             if name not in known:
                 add("unknown-antitrait", trait.lines["AntiTraits"],
-                    f"`{name}` is not a trait this file defines — the engine does "
+                    f"`{name}` is not a trait this file defines - the engine does "
                     "not check antitrait names, so this one simply never cancels "
                     "anything")
     if trait.name in anti:
@@ -403,7 +403,7 @@ def check(trait: Trait, known: Optional[set] = None) -> List[Dict]:
         for key in ("Description", "EffectsDescription", "Threshold"):
             if key not in lv.lines:
                 add("missing-level-line", lv.start,
-                    f"level {n} ({lv.name or '?'}) has no `{key}` line — a "
+                    f"level {n} ({lv.name or '?'}) has no `{key}` line - a "
                     "character who reaches it crashes the character detail screen")
         t = lv.threshold
         if t:
@@ -415,11 +415,11 @@ def check(trait: Trait, known: Optional[set] = None) -> List[Dict]:
             else:
                 if n_points < 1:
                     add("bad-threshold", lv.lines["Threshold"],
-                        f"a threshold of {n_points} — the hardcoded minimum is 1")
+                        f"a threshold of {n_points} - the hardcoded minimum is 1")
                 elif seen_thresholds and n_points <= seen_thresholds[-1]:
                     add("unreachable-level", lv.lines["Threshold"],
                         f"level {n} needs {n_points} points, which level {n - 1} "
-                        f"already reached at {seen_thresholds[-1]} — the game shows "
+                        f"already reached at {seen_thresholds[-1]} - the game shows "
                         "the highest level whose threshold is met, so this one "
                         "never appears")
                 seen_thresholds.append(n_points)
@@ -450,7 +450,7 @@ def check_file(tf: TraitFile, trigger_file=None) -> List[Dict]:
             out.append({"kind": "duplicate-trait", "trait": t.name,
                         "line": t.start + 1,
                         "message": f"`{t.name}` is already defined on line "
-                                   f"{seen[t.name] + 1} — trait names must be unique"})
+                                   f"{seen[t.name] + 1} - trait names must be unique"})
         else:
             seen[t.name] = t.start
         out.extend(check(t, known))
@@ -465,7 +465,7 @@ def check_file(tf: TraitFile, trigger_file=None) -> List[Dict]:
                 out.append({"kind": "unknown-affects", "trait": eff.args[0],
                             "line": eff.line + 1,
                             "message": f"trigger `{trig.name}` affects `{eff.args[0]}`, "
-                                       "which this file does not define — the points "
+                                       "which this file does not define - the points "
                                        "go nowhere, and the game reports \"Trait not "
                                        "recognized\""})
     return out
@@ -498,7 +498,7 @@ def loc(mod) -> Dict[str, str]:
     """``{tag: text}`` from the mod's ``export_VnVs.txt``, or its compiled archive.
 
     Every level name, description, effects description, gain and lose message and
-    epithet in an EDCT is a tag in this one file, flat — no ``_descr`` pairing
+    epithet in an EDCT is a tag in this one file, flat - no ``_descr`` pairing
     like the unit file has, so it is read as plain pairs rather than through
     :class:`~unittransfer.localization.Localization`. A mod that ships only the
     compiled ``.strings.bin`` still gets real names, through Phase 6's codec.
@@ -517,14 +517,14 @@ def loc(mod) -> Dict[str, str]:
 
 
 def label(trait: Trait, names: Dict[str, str]) -> str:
-    """``"Good Commander (NaturalMilitarySkill)"`` — the toolkit's naming rule.
+    """``"Good Commander (NaturalMilitarySkill)"`` - the toolkit's naming rule.
 
     A trait has no name of its own: what the player reads is the name of whatever
     level they have reached, so the first level's name is the honest label.
     """
     tag = trait.levels[0].name if trait.levels else ""
     shown = (names.get(tag) or "").strip()
-    # a text entry whose value is just its own key is a placeholder, not a name —
+    # a text entry whose value is just its own key is a placeholder, not a name -
     # the same ruling the buildings editor makes about a shared key
     if not shown or shown == tag:
         return trait.name
@@ -535,7 +535,7 @@ def text_tags(trait: Trait) -> List[str]:
     """Every ``export_VnVs.txt`` tag this trait's levels name, in order.
 
     All five level fields are keys in that file, and a character who reaches a
-    level whose key is missing crashes the character detail screen — so this is
+    level whose key is missing crashes the character detail screen - so this is
     the list a save has to make sure exists.
     """
     out: List[str] = []
@@ -633,10 +633,10 @@ def detail(mod, name: str) -> Dict:
 def render_block(base: str, edits: Optional[Dict] = None) -> str:
     """Apply GUI edits to one trait block and give back its text.
 
-    ``edits`` is the save request's own shape — ``{name, characters, hidden,
+    ``edits`` is the save request's own shape - ``{name, characters, hidden,
     exclude_cultures, no_going_back_level, anti_traits, levels: [{name,
     description, effects_description, gain_message, lose_message, epithet,
-    threshold, effects: [{attribute, amount}]}]}`` — and every key is optional at
+    threshold, effects: [{attribute, amount}]}]}`` - and every key is optional at
     every depth. What is not named is not touched, right down to the comment
     banner between two levels.
 
@@ -727,7 +727,7 @@ def _new_level(w: Dict, lvl_indent: str, body_indent: str) -> List[str]:
     # `setdefault` was not enough: the editor sends every level field, so the
     # three the engine cannot do without arrive as EMPTY STRINGS rather than as
     # missing keys when their boxes were left blank. The level was then written
-    # without them — a CTD the moment a character reaches it, and a block this
+    # without them - a CTD the moment a character reaches it, and a block this
     # module's own `_edit_level` refuses to save again ("a level needs its
     # `EffectsDescription` line"). Blank means "give it the usual key", not
     # "leave the line out".
@@ -807,7 +807,7 @@ def block_fields(block: str) -> List[Tuple[str, str]]:
 # One save can touch three things at once: the trait block, the triggers that
 # feed it (which sit hundreds of lines below, in the same file) and the
 # export_VnVs.txt keys its levels name. They belong in one job because they fail
-# together — a trait whose text keys are missing crashes the character screen the
+# together - a trait whose text keys are missing crashes the character screen the
 # first time anyone gets it, and a trigger left pointing at a deleted trait is
 # the "Trait not recognized" the guide warns about.
 
@@ -821,11 +821,11 @@ class TraitPlan:
     warnings: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
     findings: List[Dict] = field(default_factory=list)
-    #: the whole EDCT as it would be written — empty when nothing would change
+    #: the whole EDCT as it would be written - empty when nothing would change
     text: str = ""
     #: the new block, for the preview
     block: str = ""
-    #: ``{tag: text}`` this save would write into export_VnVs — the keys the
+    #: ``{tag: text}`` this save would write into export_VnVs - the keys the
     #: trait needs and does not have, plus any wording the user retyped
     loc_writes: Dict[str, str] = field(default_factory=dict)
     #: which of those are keys the file did not have at all
@@ -850,7 +850,7 @@ def plan(mod, body: dict) -> TraitPlan:
 
     ``body`` is ``{trait, action, edits, raw_block, triggers: {edits, adds,
     removes}, write_loc}``. ``edits`` is :func:`render_block`'s own shape, and
-    ``raw_block`` is text the user hand-edited in the Code View — which wins over
+    ``raw_block`` is text the user hand-edited in the Code View - which wins over
     ``edits`` and reaches disk verbatim, the same ruling every other editor makes.
     """
     p = TraitPlan(mod=mod, action=str(body.get("action") or "edit"),
@@ -912,12 +912,12 @@ def _plan_trait(p: TraitPlan, text: str, body: dict) -> str:
     base = tf.block_text(trait)
     raw = body.get("raw_block")
     if raw is not None and str(raw).strip():
-        # hand-edited text goes to disk as written — reordering, indenting and
+        # hand-edited text goes to disk as written - reordering, indenting and
         # comments are edits no field map can express
         block = str(raw).strip("\r\n")
         if parse_block(block + "\n").name != p.name:
             raise TraitError(
-                f"this trait is `{p.name}` — renaming it here would orphan every "
+                f"this trait is `{p.name}` - renaming it here would orphan every "
                 "trigger, antitrait list and starting character that names it")
     else:
         block = render_block(base, dict(body.get("edits") or {}))
@@ -968,7 +968,7 @@ def _plan_triggers(p: TraitPlan, text: str, body: dict) -> str:
     """The trigger half of a trait save, and the cleanup a delete owes it.
 
     The editing itself is :func:`triggers.edit_section`, shared with the
-    ancillaries editor — both own the trigger section of their own file. What is
+    ancillaries editor - both own the trigger section of their own file. What is
     specific here is that deleting a trait must not leave an `Affects` pointing
     at it, which is the guide's "Trait not recognized".
     """
@@ -989,7 +989,7 @@ def _plan_loc(p: TraitPlan, mod, trait: Trait, wanted: Dict) -> None:
     """What this save would write into ``export_VnVs.txt``.
 
     Two things at once, because they are the same write. **The keys the trait
-    needs and the mod has not got** — a missing one is not cosmetic, it is the
+    needs and the mod has not got** - a missing one is not cosmetic, it is the
     guide's CTD when a character reaches that level, so it is created with the
     tag itself as placeholder text: visible, obviously unfinished, not a crash.
     And **wording the user retyped**, since what a trait says on screen is as
@@ -1001,7 +1001,7 @@ def _plan_loc(p: TraitPlan, mod, trait: Trait, wanted: Dict) -> None:
     from . import stringsbin
     if not txt.exists() and not stringsbin.bin_path_for(txt).exists():
         p.warnings.append(f"this mod has no {txt.name}, so its text key(s) could "
-                          "not be written — the trait will show its tags in game")
+                          "not be written - the trait will show its tags in game")
         return
     for tag in text_tags(trait):
         want = str(wanted.get(tag, "")).strip() if wanted else ""
@@ -1074,14 +1074,14 @@ def apply(p: TraitPlan) -> Dict:
         "manifest": manifest, "backup_root": str(backup_root),
     }
     config.append_log(rec)
-    log.info("TRAIT  %s %s in %s — %d change(s), id=%s",
+    log.info("TRAIT  %s %s in %s - %d change(s), id=%s",
              p.action, p.name, mod.name, len(p.changes), tid)
     out["record"] = rec
     return out
 
 
 def _write_loc(p: TraitPlan, keep, stringsbin, cleaner, file_op) -> Dict:
-    """Add the missing text keys — to the ``.txt`` if there is one, the ``.bin`` if not.
+    """Add the missing text keys - to the ``.txt`` if there is one, the ``.bin`` if not.
 
     A mod that ships only the compiled archive is not a broken mod, it is most
     released ones, so the keys go straight into it through Phase 6's codec rather
@@ -1090,7 +1090,7 @@ def _write_loc(p: TraitPlan, keep, stringsbin, cleaner, file_op) -> Dict:
     txt = Path(p.mod.data) / VNV_REL
     if txt.exists():
         target = keep(VNV_REL)
-        # the compiled cache is rewritten below, so it is backed up too — an undo
+        # the compiled cache is rewritten below, so it is backed up too - an undo
         # that restored the .txt and left the .bin would put the file back and
         # leave the game still reading the new text
         keep(VNV_REL + ".strings.bin")

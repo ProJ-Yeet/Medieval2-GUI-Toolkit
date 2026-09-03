@@ -1,4 +1,4 @@
-"""Code View — the server half of "the GUI and the raw file, side by side".
+"""Code View - the server half of "the GUI and the raw file, side by side".
 
 Every editor in the toolkit shows a mod file as labelled boxes. Code View adds
 the other view of the same bytes: the text as the game reads it, with a map
@@ -9,18 +9,18 @@ The rule this module exists to enforce is that **the browser never parses a game
 file**. The page owns pixels; ``unittransfer`` owns formats. So the widget asks
 here for three things and nothing else:
 
-  * :func:`document` — text + fields + spans for something already on disk
-  * :func:`parse` — the user typed in the text pane: re-read it, or say why not
-  * :func:`render` — the user typed in a box: re-serialise, through the very
+  * :func:`document` - text + fields + spans for something already on disk
+  * :func:`parse` - the user typed in the text pane: re-read it, or say why not
+  * :func:`render` - the user typed in a box: re-serialise, through the very
     serialiser the save path uses, so the text pane can never promise a byte the
     save would not write
-  * :func:`repair` — optional, for a format whose text carries bookkeeping a
+  * :func:`repair` - optional, for a format whose text carries bookkeeping a
     person cannot be expected to maintain by hand (the modeldb's length
     prefixes). Never automatic: the page offers it as a button.
 
 A *kind* is one file shape (``edu``, ``edb``, ``bmdb``, ``strings``, ``traits``,
 ``ancillaries`` today; the minor files join later). Each kind supplies a parse
-function and a render function and gets the whole widget for free — that is the
+function and a render function and gets the whole widget for free - that is the
 point of building it once.
 
 ``render``'s ``edits`` argument is kind-shaped, and deliberately so: it is
@@ -95,7 +95,7 @@ def part_spans(text: str, spans: Dict[str, List[List[int]]]
 
     A guided box edits ONE value of a line that holds eleven of them, so hovering
     it should light that value up and not the whole line. Every format here spells
-    a multi-value line the same way — ``keyword`` then a comma-separated list — so
+    a multi-value line the same way - ``keyword`` then a comma-separated list - so
     this is derived from the text and the line spans rather than being a third
     thing each kind has to produce. Columns are visual (tabs expanded), because
     that is what the pane can position a box at.
@@ -118,7 +118,7 @@ def part_spans(text: str, spans: Dict[str, List[List[int]]]
         indent = len(body) - len(stripped)
         if stripped.lower().startswith(key.lower()):
             start = indent + len(key)
-        else:                             # not a `keyword value` line — first gap
+        else:                             # not a `keyword value` line - first gap
             gap = len(stripped) - len(stripped.lstrip(" \t"))
             first = stripped.find(" ")
             tab = stripped.find("\t")
@@ -157,13 +157,13 @@ def _edu_parse(text: str, ctx: dict) -> Doc:
     parsed = edu_mod.parse_text(text)
     if not parsed.units:
         raise CodeViewError(
-            "a unit block needs a `type` line — this text has none", 1)
+            "a unit block needs a `type` line - this text has none", 1)
     if len(parsed.units) > 1:
         # the line the second block starts on, so the editor can point at it
         first = parsed.units[0].raw.count("\n")
         pre = parsed.preamble.count("\n")
         raise CodeViewError(
-            f"this text holds {len(parsed.units)} unit blocks — a code view edits "
+            f"this text holds {len(parsed.units)} unit blocks - a code view edits "
             "one unit at a time, so the extra `type` line(s) must go",
             pre + first + 1)
     unit = parsed.units[0]
@@ -195,7 +195,7 @@ def _edu_tidy(text: str, ctx: dict) -> str:
     unit means reading down the value column. This only ever rewrites the gap
     BETWEEN a keyword and its value: nothing is reordered, nothing is dropped,
     and a comment or a blank line is passed through untouched. It is a button,
-    never automatic — see the `owns` rule in web/js/codeview.js.
+    never automatic - see the `owns` rule in web/js/codeview.js.
     """
     out = []
     for raw in text.split("\n"):
@@ -225,7 +225,7 @@ def _edu_tidy(text: str, ctx: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# hiding the comment lines — DISPLAY ONLY
+# hiding the comment lines - DISPLAY ONLY
 #
 # A unit block in a real mod carries the faction distinguishers and whatever the
 # last person to touch it wrote down, and none of it is a field. Reading around
@@ -240,7 +240,7 @@ def _edu_tidy(text: str, ctx: dict) -> str:
 # this format, which is the rule the rest of the module already follows.
 
 #: What opens a comment in each kind's file. A kind that is absent cannot hide
-#: anything — the modeldb stores lengths rather than text a person comments, and
+#: anything - the modeldb stores lengths rather than text a person comments, and
 #: the strings archives have a convention this has not measured. `#` is on the
 #: EDB because Phase 13 ruled it a modder's annotation there, and every parser in
 #: buildings.py already skips it.
@@ -283,14 +283,14 @@ def line_map(kind: str, text: str) -> Dict[int, int]:
 
 
 def hide_comments(kind: str, text: str) -> Tuple[str, List[dict]]:
-    """``(view, hidden)`` — the text without its comment-only lines, and how to
+    """``(view, hidden)`` - the text without its comment-only lines, and how to
     put them back.
 
     Each hidden line remembers three things about where it was: how many view
     lines stood in front of it, the text of the line it sat above, and that
     line's keyword. They are tried in the opposite order to how much they can
-    tell you: the exact line first, then the keyword — every format here is
-    keyword-first, so typing a new VALUE does not move it — and the count last,
+    tell you: the exact line first, then the keyword - every format here is
+    keyword-first, so typing a new VALUE does not move it - and the count last,
     for when the line it sat above is gone altogether.
     """
     marks = comment_marks(kind)
@@ -371,7 +371,7 @@ def _hidden_spans(kind: str, text: str, spans: Dict[str, List[List[int]]]
 def view_payload(doc: Doc, hide: bool = False) -> dict:
     """:meth:`Doc.payload` as the pane should draw it.
 
-    ``full`` is always the record's real text — the bytes a save writes. With
+    ``full`` is always the record's real text - the bytes a save writes. With
     hiding on, ``text``, ``spans``, ``part_spans`` and ``lines`` all describe the
     view WITHOUT its comment-only lines, and ``hidden`` says how to rebuild the
     rest. The pane holds both: it shows ``text`` and it saves ``full``.
@@ -381,7 +381,7 @@ def view_payload(doc: Doc, hide: bool = False) -> dict:
     out["full"] = doc.text
     out["hidden"] = []
     out["can_hide"] = bool(marks)
-    # how many there are, whether or not they are being hidden — the pane's
+    # how many there are, whether or not they are being hidden - the pane's
     # button says what it would hide before anyone has pressed it
     out["comments"] = sum(1 for line in doc.text.split("\n")
                           if _is_comment(line, marks))
@@ -406,17 +406,17 @@ def _shift(spans: Dict[str, List[List[int]]], by: int) -> Dict[str, List[List[in
 
 
 # ---------------------------------------------------------------------------
-# the EDB kind — one `building … { … }` line of export_descr_buildings.txt
+# the EDB kind - one `building … { … }` line of export_descr_buildings.txt
 
 def _edb_parse(text: str, ctx: dict) -> Doc:
     from . import buildings as bld
     sub = bld.parse_text(text)
     if not sub.buildings:
         raise CodeViewError(
-            "a building line starts with `building <name> {` — this text has none", 1)
+            "a building line starts with `building <name> {` - this text has none", 1)
     if len(sub.buildings) > 1:
         raise CodeViewError(
-            f"this text holds {len(sub.buildings)} building lines — a code view "
+            f"this text holds {len(sub.buildings)} building lines - a code view "
             "edits one line at a time",
             sub.buildings[1].start + 1)
     bl = sub.buildings[0]
@@ -425,7 +425,7 @@ def _edb_parse(text: str, ctx: dict) -> Doc:
     note = "; ".join(sub.warnings) if sub.warnings else ""
     mod = ctx.get("mod")
     # The boxes are a tree, not a field list, so they are redrawn from a full
-    # detail payload rather than from `fields` — built off the block just read,
+    # detail payload rather than from `fields` - built off the block just read,
     # with art and localisation still coming from the mod (they are not in it).
     detail = (bld.detail(mod, bl.name, ctx.get("culture") or "", bl=bl)
               if mod is not None else None)
@@ -440,7 +440,7 @@ def _edb_render(base: str, edits: dict, ctx: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# the BMDB kind — one entry of unit_models/battle_models.modeldb
+# the BMDB kind - one entry of unit_models/battle_models.modeldb
 #
 # The only kind whose text carries bookkeeping the person editing it cannot
 # reasonably maintain: every string is written `<length> <that many chars>`, so
@@ -461,7 +461,7 @@ def _bmdb_parse(text: str, ctx: dict) -> Doc:
                 f"line {first['line']}'s length says {first['said']} but the text "
                 f"beside it is {first['should']} characters"
                 + (f" (and {len(bad) - 1} more like it)" if len(bad) > 1 else "")
-                + " — every modeldb string is written `<length> <text>`",
+                + " - every modeldb string is written `<length> <text>`",
                 first["line"]) from None
         raise CodeViewError(f"this text isn't a modeldb entry: {e}", 0) from None
     # the whole card, not a slot list: hand-edited text can add or drop a faction
@@ -492,11 +492,11 @@ def _bmdb_repair(text: str, ctx: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# the strings kind — one entry of a compiled *.txt.strings.bin
+# the strings kind - one entry of a compiled *.txt.strings.bin
 #
 # The archive is binary, but its entries are exactly the `{tag}text` lines of the
 # .txt beside it, so that is what the pane shows: the format modders already
-# write, not a decoded surrogate. One entry is one line — a real line break in a
+# write, not a decoded surrogate. One entry is one line - a real line break in a
 # value is written `\n`, which is what the game's own compiler reads.
 
 def _strings_parse(text: str, ctx: dict) -> Doc:
@@ -511,7 +511,7 @@ def _strings_parse(text: str, ctx: dict) -> Doc:
         # would silently orphan whatever names it. Same ruling as a building
         # line and a modeldb entry, and for the same reason.
         raise CodeViewError(
-            f"this entry's tag is `{locked}` — renaming a tag in the text pane "
+            f"this entry's tag is `{locked}` - renaming a tag in the text pane "
             "would orphan everything that looks the string up by it", 1)
     return Doc(kind="strings", text=text,
                fields=[("tag", tag), ("text", value)],
@@ -530,10 +530,10 @@ def _strings_render(base: str, edits: dict, ctx: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# the traits kind — one `Trait … Level …` block of export_descr_character_traits
+# the traits kind - one `Trait … Level …` block of export_descr_character_traits
 #
 # The block below the header is a ladder, not a field list, so the boxes are
-# redrawn from a whole trait payload rather than from `fields` — the same ruling
+# redrawn from a whole trait payload rather than from `fields` - the same ruling
 # the buildings kind needed for its capability tree.
 
 def _traits_parse(text: str, ctx: dict) -> Doc:
@@ -548,7 +548,7 @@ def _traits_parse(text: str, ctx: dict) -> Doc:
         # traits' `AntiTraits` lists, the EDA's conditions and descr_strat all
         # point at. Same ruling as a building line, and for the same reason.
         raise CodeViewError(
-            f"this trait is `{locked}` — renaming it in the text pane would "
+            f"this trait is `{locked}` - renaming it in the text pane would "
             "orphan every trigger, antitrait list and starting character that "
             "names it", 1)
     known = set(ctx.get("known") or ())
@@ -568,7 +568,7 @@ def _traits_render(base: str, edits: dict, ctx: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# the ancillaries kind — one `Ancillary … Effect …` block of the EDA
+# the ancillaries kind - one `Ancillary … Effect …` block of the EDA
 #
 # EDCT's smaller sibling: a flat record rather than a ladder, so its boxes are a
 # field list and a `detail` payload both, exactly as the traits kind is.
@@ -585,7 +585,7 @@ def _anc_parse(text: str, ctx: dict) -> Doc:
         # `ExcludedAncillaries` entries, a condition operand, a descr_strat entry
         # AND its own text key. Same ruling as a trait, for four more reasons.
         raise CodeViewError(
-            f"this ancillary is `{locked}` — renaming it in the text pane would "
+            f"this ancillary is `{locked}` - renaming it in the text pane would "
             "orphan every trigger, exclusion list, starting character and text "
             "entry that names it", 1)
     known = set(ctx.get("known") or ())
@@ -605,7 +605,7 @@ def _anc_render(base: str, edits: dict, ctx: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# the minor-file kinds — one record of each of the five small campaign files
+# the minor-file kinds - one record of each of the five small campaign files
 #
 # All five names are keys another file points at: `descr_regions.txt` names a
 # region's rebel type and lists its religions by name, `descr_sm_factions.txt`
@@ -616,7 +616,7 @@ def _anc_render(base: str, edits: dict, ctx: dict) -> str:
 def _minor_locked(kind: str, ident: str, found: str, points_at: str) -> None:
     if ident and found != ident:
         raise CodeViewError(
-            f"this {kind} is `{ident}` — renaming it in the text pane would orphan "
+            f"this {kind} is `{ident}` - renaming it in the text pane would orphan "
             f"{points_at}", 1)
 
 
@@ -713,7 +713,7 @@ def _names_render(base: str, edits: dict, ctx: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# the factions kind — one record of descr_sm_factions.txt
+# the factions kind - one record of descr_sm_factions.txt
 #
 # The fourth flat-record file, and the one whose name is load-bearing in the most
 # places: descr_strat, every unit's ownership line, every `requires factions { … }`
@@ -730,7 +730,7 @@ def _factions_parse(text: str, ctx: dict) -> Doc:
     locked = ctx.get("faction") or ""
     if locked and fac.slot_of(rec.name) != fac.slot_of(locked):
         raise CodeViewError(
-            f"this faction is `{fac.slot_of(locked)}` — renaming a slot in the text "
+            f"this faction is `{fac.slot_of(locked)}` - renaming a slot in the text "
             "pane would orphan descr_strat, every unit's ownership line, every "
             "`requires factions { … }` clause and its own text entry", 1)
     findings = fac.check_file(fac.parse_text(text if text.endswith("\n") else text + "\n"))
@@ -786,7 +786,7 @@ def render(kind: str, base: str, edits: Optional[dict] = None,
     """Apply GUI edits to ``base`` and re-read the result.
 
     Goes through the same serialiser the save path uses, so what the text pane
-    shows is what a save would write — including the whitespace and comments the
+    shows is what a save would write - including the whitespace and comments the
     serialiser preserves. ``edits`` is kind-shaped: see the module docstring.
     """
     ctx = ctx or {}
@@ -848,7 +848,7 @@ def entry_document(mod, name: str) -> Doc:
     if entry is None:
         raise KeyError(f"no model entry {name!r} in {mod.name}")
     doc = parse("bmdb", entry.raw, {"pad": entry.first_entry_pad, "base": entry.raw})
-    doc.note = ("every string here is written `<length> <text>` — edit a path and "
+    doc.note = ("every string here is written `<length> <text>` - edit a path and "
                 "the length beside it needs to follow, which the ⟲ button does")
     return doc
 
@@ -857,7 +857,7 @@ def strings_document(mod, ident: str) -> Doc:
     """The code view of one ``.strings.bin`` entry, addressed ``<rel>|<tag>``.
 
     An untagged archive has no names to address a row by, so its rows are
-    ``<rel>|#<position>`` instead — the same handle the editor lists them under.
+    ``<rel>|#<position>`` instead - the same handle the editor lists them under.
     """
     from . import strings as strings_mod
     rel, tag, pos, value = strings_mod.locate(mod, ident)
@@ -894,8 +894,8 @@ def sounds_document(mod, unit_name: str) -> Doc:
     only means anything inside the ``accent`` / ``class`` / ``vocal`` headers
     above it, and the Sounds module's whole job is moving an entry BETWEEN those
     headers. Text pasted here would have to be re-attached to a block the text
-    does not contain. So this shows what the file says — which is what the
-    module was missing — and the staged edits stay the way to change it.
+    does not contain. So this shows what the file says - which is what the
+    module was missing - and the staged edits stay the way to change it.
     """
     from pathlib import Path
     from . import sounds as snd
@@ -917,7 +917,7 @@ def sounds_document(mod, unit_name: str) -> Doc:
                fields=[("accent", entry.accent), ("class", entry.voice_class),
                        ("vocal", entry.vocal), ("unit", entry.name)],
                note=f"in accent {entry.accent} / class {entry.voice_class} "
-                    f"— read-only here; use the rows above to move or copy it")
+                    f"- read-only here; use the rows above to move or copy it")
 
 
 def pools_document(mod, unit: str) -> Doc:
@@ -925,7 +925,7 @@ def pools_document(mod, unit: str) -> Doc:
 
     READ-ONLY, and for the same reason :func:`sounds_document` is. Every other
     kind here is ONE record: a block with a beginning and an end that a
-    serialiser can write back. This is the opposite shape — the unit view
+    serialiser can write back. This is the opposite shape - the unit view
     gathers lines from a dozen building blocks scattered through
     ``export_descr_buildings.txt``, and text pasted here would have to be taken
     apart and posted back to blocks the text does not contain.
@@ -965,7 +965,7 @@ def pools_document(mod, unit: str) -> Doc:
     return Doc(kind="pools", text="\n".join(out), ident=unit,
                spans=spans, fields=fields,
                note=f"{len(rows)} recruit pool(s) across "
-                    f"{len({r['line'] for r in rows})} building line(s) — read-only "
+                    f"{len({r['line'] for r in rows})} building line(s) - read-only "
                     "here; the boxes beside it are how they change")
 
 
@@ -984,7 +984,7 @@ def minor_document(mod, tab_id: str, name: str) -> Doc:
     """The code view of one record of a minor file, as it sits in the mod.
 
     One function for all five, because the only thing that differs between them
-    is which parser reads the file — the reason they share a module at all.
+    is which parser reads the file - the reason they share a module at all.
     """
     from . import keyblock as kb
     from . import minorfiles as mf

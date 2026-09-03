@@ -2,7 +2,7 @@
 
 Buildings mode falls back to vanilla building art for the icons a mod doesn't
 ship. Straight out of the game's .pack files that art is ~305 MB of uncompressed
-TGA — too big to commit, and over half of it is the same picture saved under
+TGA - too big to commit, and over half of it is the same picture saved under
 several names (18 buildings share one "constructed" harbour picture, and so on).
 
 This turns such a folder into::
@@ -12,13 +12,13 @@ This turns such a folder into::
       art/ab/abcd….webp    one file per DISTINCT picture, lossless WebP
 
 which is about 6x smaller and holds no duplicate bytes at all. Lossless, so the
-art is bit-identical to the TGA once decoded — these are reference pictures, and
+art is bit-identical to the TGA once decoded - these are reference pictures, and
 a lossy pass would be visible on the flat colour the icons are full of.
 
     python tools/pack_vanilla_ui.py unpackaded_vanilla_ui vanilla_ui
 
 Reading the result is :class:`unittransfer.buildings.VanillaUi`, which also still
-reads a raw unpacked folder — nobody has to run this to use their own copy.
+reads a raw unpacked folder - nobody has to run this to use their own copy.
 """
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ WANTED_SUBDIR = "buildings"
 
 
 #: WebP effort level. Measured on this art: 4 and 6 land within 0.5% of each
-#: other on size, but 6 costs ~2s an image against ~0.16s — over an hour of extra
+#: other on size, but 6 costs ~2s an image against ~0.16s - over an hour of extra
 #: work across 1 200 pictures to save a couple of hundred KB. So: 4.
 WEBP_METHOD = 4
 

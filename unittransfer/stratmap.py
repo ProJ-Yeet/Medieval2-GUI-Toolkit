@@ -1,37 +1,37 @@
-"""The campaign map's models and textures — the strat-map half of the cleanup.
+"""The campaign map's models and textures - the strat-map half of the cleanup.
 
 :mod:`unittransfer.bmdb` does this for ``battle_models.modeldb`` and
 ``data/unit_models``: work out which entries nothing references, which files no
 entry names, and move both out of the mod without deleting anything. This module
-is the same job on the other model tree — ``descr_model_strat.txt`` and
-``data/models_strat`` — and it is a job worth doing for the same reason. A big
+is the same job on the other model tree - ``descr_model_strat.txt`` and
+``data/models_strat`` - and it is a job worth doing for the same reason. A big
 overhaul carries generals, agents, heroes and faction symbols that were tried,
 replaced and never taken out, and the strat map is where an unused ``.CAS`` and
 its 2 MB texture sit unnoticed, because nothing in game ever draws them.
 
 **What names a strat model type** (``type <name>`` in ``descr_model_strat.txt``):
 
-  * ``descr_character.txt`` — ``strat_model`` lines, the overwhelming majority:
+  * ``descr_character.txt`` - ``strat_model`` lines, the overwhelming majority:
     every general, heir, leader, custom character and agent a faction fields;
   * ``model_sprite`` inside ``descr_model_strat.txt`` itself, which may name
     another *type* rather than a distance and so is a real cross-reference;
-  * **every ``.lua`` script in the mod** — M2TWEOP spawns characters and swaps
+  * **every ``.lua`` script in the mod** - M2TWEOP spawns characters and swaps
     strat models from Lua, and none of it is written down in a ``.txt``
     (:mod:`unittransfer.luascan`);
   * anything else: any ``data/descr_*.txt``, and every campaign's
     ``descr_strat.txt`` / ``campaign_script.txt``, that merely *mentions* the
-    name counts too, bar :data:`DESCR_SKIP`. Over-cautious on purpose — a false
+    name counts too, bar :data:`DESCR_SKIP`. Over-cautious on purpose - a false
     "still used" costs nothing, a false "unused" silently breaks a mod.
 
 **What names a file under ``data/models_strat``**:
 
   * the ``texture`` / ``model_flexi*`` / ``shadow_model_flexi`` lines of the
     entries above;
-  * ``descr_sm_factions.txt`` — ``symbol`` and ``rebel_symbol``, the ``.CAS``
+  * ``descr_sm_factions.txt`` - ``symbol`` and ``rebel_symbol``, the ``.CAS``
     each faction's map banner is;
-  * ``descr_sm_resources.txt`` — ``item`` and the file-level ``mine``, the little
+  * ``descr_sm_resources.txt`` - ``item`` and the file-level ``mine``, the little
     models scattered over the map;
-  * ``descr_cultures.txt`` — settlements, forts, ports, watchtowers;
+  * ``descr_cultures.txt`` - settlements, forts, ports, watchtowers;
   * again, any other ``descr_*.txt``, campaign file or ``.lua`` that names the
     path, or even just the bare filename.
 
@@ -42,13 +42,13 @@ makes this robust against a mod using a line this module has never heard of.
 
 **``models_strat/residences`` is skipped entirely.** The settlement models live
 there, and the game reads a faction's variant of one out of that tree *by
-folder*, with nothing naming the file anywhere — so "no file names it" would be
+folder*, with nothing naming the file anywhere - so "no file names it" would be
 wrong about the whole subtree. It also cannot hold anything unused worth finding:
 a settlement nobody can see is the first thing a player notices.
 
 Nothing is deleted outright. Everything ticked moves to an export folder in the
 mod's own layout, every rewritten file is backed up first, and 🕑 Log → Undo puts
-it all back — the same contract :mod:`unittransfer.bmdb` makes.
+it all back - the same contract :mod:`unittransfer.bmdb` makes.
 """
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ from .mod import Mod
 #: CRLF and lone LF comes back byte for byte the way it went in.
 ENCODING = "latin-1"
 
-#: Relative to ``data/``. The file is ``descr_model_strat.txt`` — singular — in
+#: Relative to ``data/``. The file is ``descr_model_strat.txt`` - singular - in
 #: every version of the game; the plural spelling is a common slip and a mod that
 #: ships it would be one the game ignores, so only the real name is read.
 REL = "descr_model_strat.txt"
@@ -77,7 +77,7 @@ REL = "descr_model_strat.txt"
 #: The tree this module cleans, relative to ``data/``.
 MODELS_DIR = "models_strat"
 
-#: The one subtree left alone — see the module docstring.
+#: The one subtree left alone - see the module docstring.
 SKIP_SUBDIR = "residences"
 
 #: Keywords whose value is a file under ``models_strat``. ``texture`` and
@@ -92,7 +92,7 @@ DESCR_SKIP = {
     # Where the types are *defined*: every entry names itself on its `type` line,
     # so including this would mark all of them mentioned and nothing could ever
     # be removed. Its real cross-references (`model_sprite <other type>`) are
-    # read structurally instead — see `entry_users`.
+    # read structurally instead - see `entry_users`.
     REL,
 }
 
@@ -160,7 +160,7 @@ def _strip_comments(text: str) -> str:
 def norm(rel: str) -> str:
     """A models_strat path as the one string every net compares against.
 
-    Lower-cased, forward slashes, no leading ``data/`` and no leading slash — so
+    Lower-cased, forward slashes, no leading ``data/`` and no leading slash - so
     ``data\\models_strat\\Textures\\X.TGA`` and ``models_strat/textures/x.tga``
     are recognised as the one file they are.
     """
@@ -191,8 +191,8 @@ def texture_siblings(rel: str) -> List[str]:
     them, and every single one would have looked like a file nothing names.
 
     So a reference to any one of the three counts as a reference to all three,
-    and removing an entry takes all three with it. Non-textures — the ``.CAS``
-    meshes — have no second spelling and come back as themselves.
+    and removing an entry takes all three with it. Non-textures - the ``.CAS``
+    meshes - have no second spelling and come back as themselves.
     """
     p = norm(rel)
     for ext in _TEX_EXT:
@@ -203,7 +203,7 @@ def texture_siblings(rel: str) -> List[str]:
 
 
 def expand(rels) -> set:
-    """A set of paths widened to every spelling of each — see :func:`texture_siblings`."""
+    """A set of paths widened to every spelling of each - see :func:`texture_siblings`."""
     out: set = set()
     for rel in rels:
         out.update(texture_siblings(rel))
@@ -277,7 +277,7 @@ class StratFile:
                                        if e.name.lower() not in drop)
 
     def only(self, names: Sequence[str]) -> str:
-        """Just the named blocks, in file order — what the export folder gets."""
+        """Just the named blocks, in file order - what the export folder gets."""
         keep = {str(n).lower() for n in names}
         return "".join(e.raw for e in self.entries if e.name.lower() in keep)
 
@@ -296,7 +296,7 @@ def _entry_paths(body: str) -> Tuple[List[Tuple[str, str]], List[str], str]:
         if key == "model_sprite":
             # `model_sprite <distance>, ...` generates a sprite; anything else in
             # that slot is the name of a type defined EARLIER in this file, whose
-            # sprite this one borrows — a genuine reference between two entries.
+            # sprite this one borrows - a genuine reference between two entries.
             head = rest.split(",")[0].strip()
             if head and not head[0].isdigit():
                 sprite_of = head
@@ -309,7 +309,7 @@ def _entry_paths(body: str) -> Tuple[List[Tuple[str, str]], List[str], str]:
                 continue
             if _PATH_RE.fullmatch(f) or MODELS_DIR + "/" in f.replace("\\", "/").lower():
                 files.append((key, norm(f)))
-                # `texture <faction>, <path>` — whatever came before the path on a
+                # `texture <faction>, <path>` - whatever came before the path on a
                 # texture line is the faction it dresses
                 if key.startswith("texture") and i and fields[0]:
                     factions.append(fields[0].lower())
@@ -357,7 +357,7 @@ def strat_file(mod: Mod) -> StratFile:
     """The mod's parsed ``descr_model_strat.txt``, read once per Mod object.
 
     A one-line alias for :attr:`Mod.strat_models` so this module reads the file
-    the same way it reads every other — and so a write goes on invalidating it
+    the same way it reads every other - and so a write goes on invalidating it
     through :meth:`Mod.drop_caches` rather than through a cache only this file
     knows about.
     """
@@ -401,8 +401,8 @@ def entry_users(mod: Mod) -> Dict[str, Dict[str, List[str]]]:
     Two kinds, because those are the two places a strat model type is *used*
     rather than merely mentioned: ``character`` is a ``strat_model`` line in
     ``descr_character.txt``, and ``sprite`` is another entry in this same file
-    borrowing this one's sprite. Everything else — a name in some other
-    ``descr_*.txt``, a name in a Lua script — is a *mention*, handled by
+    borrowing this one's sprite. Everything else - a name in some other
+    ``descr_*.txt``, a name in a Lua script - is a *mention*, handled by
     :func:`name_mentions`, because we cannot say what it is doing there.
     """
     out: Dict[str, Dict[str, List[str]]] = {}
@@ -445,14 +445,14 @@ def _descr_tokens(mod: Mod) -> Dict[str, str]:
 def name_mentions(mod: Mod,
                   report: Optional[Callable[[float, str], None]] = None
                   ) -> Dict[str, dict]:
-    """``token -> {"file", "lua", "in_comment"}`` — the whole safety net.
+    """``token -> {"file", "lua", "in_comment"}`` - the whole safety net.
 
     Exactly the shape :func:`unittransfer.bmdb.name_mentions` builds, and for the
     same reason: membership here is what keeps an entry off the unused list AND
     what makes :func:`plan_cleanup` refuse to remove it, so one dictionary is
     both the explanation and the guard. A definition file wins the label when
-    both a ``.txt`` and a script name a token — it is the more concrete answer to
-    "why is this still here" — and the Lua hit stays on the row either way.
+    both a ``.txt`` and a script name a token - it is the more concrete answer to
+    "why is this still here" - and the Lua hit stays on the row either way.
     """
     if "lua_tokens" not in mod.__dict__:
         mod.__dict__["lua_tokens"] = luascan.scan(mod, report)
@@ -536,7 +536,7 @@ def _describe(users: Dict[str, Dict[str, List[str]]], name: str) -> List[str]:
 
 def orphan_files(mod: Mod, referenced: set, named: Dict[str, str],
                  report: Optional[Callable[[float, str], None]] = None) -> List[dict]:
-    """Files under ``data/models_strat`` nothing names — ``residences`` excluded.
+    """Files under ``data/models_strat`` nothing names - ``residences`` excluded.
 
     Walked a top-level folder at a time so the bar can say where it is: a mod
     with faction settlement variants has thousands of files down there, and one
@@ -588,7 +588,7 @@ def audit(mod: Mod, scan_orphans: bool = True, progress: Progress = None) -> dic
     say(14, "reading data/descr_*.txt and the mod's .lua scripts")
     mentions = name_mentions(
         mod, lambda frac, where: say(14 + 16 * frac,
-                                     f"reading .lua scripts{' — ' + where if where else ''}"))
+                                     f"reading .lua scripts{' - ' + where if where else ''}"))
     lua_count = len(mod.lua_files)
 
     say(34, "listing the files every entry names")
@@ -664,7 +664,7 @@ def _log_audit(mod: Mod, a: dict) -> None:
     """What the scan looked at and what it concluded, in full.
 
     The cleanup is a job that removes things, so "what got detected" has to be
-    readable afterwards from the log alone — a broken mod can just send it.
+    readable afterwards from the log alone - a broken mod can just send it.
     """
     log.info("STRAT  audit %s: %d entries (%d names), %d unused, %d mentioned only, "
              "%d orphan file(s) totalling %d bytes, %d .lua scanned",
@@ -688,7 +688,7 @@ def overview(mod: Mod, progress: Progress = None) -> dict:
     say(45, "reading data/descr_*.txt and the mod's .lua scripts")
     mentions = name_mentions(
         mod, lambda frac, where: say(45 + 40 * frac,
-                                     f"reading .lua scripts{' — ' + where if where else ''}"))
+                                     f"reading .lua scripts{' - ' + where if where else ''}"))
     say(90, "counting")
     counts: Dict[str, int] = {}
     for e in sf.entries:
@@ -719,7 +719,7 @@ def overview(mod: Mod, progress: Progress = None) -> dict:
 
 
 def entry_detail(mod: Mod, name: str) -> dict:
-    """One entry, with its block verbatim — what the read-only card shows."""
+    """One entry, with its block verbatim - what the read-only card shows."""
     e = strat_file(mod).by_name().get((name or "").lower())
     if e is None:
         return {"error": f"no strat model {name!r} in {mod.name}"}
@@ -788,7 +788,7 @@ def _resolve_target(mod: Mod, raw: str) -> Tuple[Optional[Path], str]:
     except OSError as exc:
         return None, f"bad destination: {exc}"
     if target == mod.root.resolve() or mod.root.resolve() in target.parents:
-        return None, (f"'{target}' is inside {mod.name} — pick a folder outside the mod, "
+        return None, (f"'{target}' is inside {mod.name} - pick a folder outside the mod, "
                       "otherwise the files never actually leave it")
     if target.exists() and not target.is_dir():
         return None, f"'{target}' is a file, not a folder"
@@ -807,7 +807,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
     entries = sf.by_name()
     # Re-checked against the mod rather than trusted: a scan can be older than the
     # mod it describes, and a request can arrive from a saved selection. This is
-    # the last line of defence, not a duplicate of the audit — the audit decides
+    # the last line of defence, not a duplicate of the audit - the audit decides
     # what to OFFER, this decides what may actually be written.
     users = entry_users(mod)
     mentions = name_mentions(mod)
@@ -817,17 +817,17 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
         key = raw.lower()
         e = entries.get(key)
         if e is None:
-            plan.warnings.append(f"{raw} is not in {REL} any more — skipped")
+            plan.warnings.append(f"{raw} is not in {REL} any more - skipped")
             continue
         who = _describe(users, e.name)
         if who:
             plan.warnings.append(
-                f"{e.name} is used by {', '.join(who[:3])} — kept")
+                f"{e.name} is used by {', '.join(who[:3])} - kept")
             continue
         row = mentions.get(key)
         if row:
             plan.warnings.append(
-                f"{e.name} is named in {row['file']} — kept")
+                f"{e.name} is named in {row['file']} - kept")
             continue
         if key not in [w.lower() for w in wanted]:
             wanted.append(e.name)
@@ -873,11 +873,11 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
     for rel in req.orphans:
         key = norm(rel)
         if not key.startswith(MODELS_DIR + "/") or _skipped(key):
-            plan.warnings.append(f"{rel} is not a file this cleanup may touch — skipped")
+            plan.warnings.append(f"{rel} is not a file this cleanup may touch - skipped")
             continue
         src = mod.data / key
         if not src.is_file():
-            plan.warnings.append(f"{rel} is not there any more — skipped")
+            plan.warnings.append(f"{rel} is not there any more - skipped")
             continue
         if key in seen_files or key in still_used or key in outside:
             plan.kept_files.append(key)
@@ -898,14 +898,14 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
     if moved:
         plan.changes.append(f"{moved} mesh/texture file(s) of those entries moved out")
     if plan.kept_files:
-        plan.changes.append(f"{len(plan.kept_files)} file(s) left in place — something "
+        plan.changes.append(f"{len(plan.kept_files)} file(s) left in place - something "
                             f"that stays still names them")
     if not plan.changes and not plan.errors:
         plan.warnings.append("nothing is ticked")
     return plan
 
 
-_README = """{mod} — unused strat-map models and textures
+_README = """{mod} - unused strat-map models and textures
 Moved out by the Medieval 2 GUI Toolkit on {when}.
 
 {file}
@@ -948,7 +948,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
     n_exports = len(plan.exports) or 1
     for i, (src, rel) in enumerate(plan.exports):
         if i % 10 == 0:
-            say(2 + 68 * i / n_exports, f"copying files out — {i}/{len(plan.exports)}")
+            say(2 + 68 * i / n_exports, f"copying files out - {i}/{len(plan.exports)}")
         dest = target / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest)
@@ -986,7 +986,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
     n_deletes = len(plan.deletes) or 1
     for i, rel in enumerate(plan.deletes):
         if i % 10 == 0:
-            say(84 + 15 * i / n_deletes, f"taking files out of the mod — {i}/{len(plan.deletes)}")
+            say(84 + 15 * i / n_deletes, f"taking files out of the mod - {i}/{len(plan.deletes)}")
         t = mod.data / rel
         if t.exists():
             backup_and(rel)                     # backed up, then removed: Undo puts it back
@@ -1030,7 +1030,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
 
 
 def _log_cleanup_plan(plan: CleanupPlan) -> None:
-    """Exactly what the cleanup is about to remove and move — by name."""
+    """Exactly what the cleanup is about to remove and move - by name."""
     log.info("  removing %d strat model(s) from %s", len(plan.entry_deletes), REL)
     for name in plan.entry_deletes:
         log.info("    - %s", name)

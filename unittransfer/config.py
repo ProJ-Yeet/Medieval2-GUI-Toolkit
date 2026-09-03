@@ -26,7 +26,7 @@ SETTINGS_PATH = CONFIG_DIR / "settings.json"
 LOG_PATH = CONFIG_DIR / "transfers.json"
 
 
-#: One writer at a time within this process — two threads racing on the same temp
+#: One writer at a time within this process - two threads racing on the same temp
 #: name would have each other's bytes, which is the bug this is here to stop.
 _WRITE_LOCK = threading.Lock()
 
@@ -35,7 +35,7 @@ _REPLACE_TRIES = 8
 
 
 #: path -> ((size, mtime_ns), the file's TEXT). :func:`get_med2_root` is called
-#: on every mod the server resolves — that was a disk read per icon request — and
+#: on every mod the server resolves - that was a disk read per icon request - and
 #: every one of those reads is also a file handle open on the very file a settings
 #: save is trying to rename over. The stat is what tells us we can skip both.
 #:
@@ -65,7 +65,7 @@ def _read_json(path: Path, default):
     body = hit[1] if hit is not None else None
     # GONE is not the same as BUSY, and the fallback below is only for busy. A
     # file that no longer exists really has no contents, and remembering the last
-    # ones made a deleted settings file invisible for the rest of the run — the
+    # ones made a deleted settings file invisible for the rest of the run - the
     # tool went on reporting a MED2 root that had been removed. `os.replace` never
     # leaves the destination missing, so nothing legitimate lands here.
     if stamp is None and not path.exists():
@@ -96,7 +96,7 @@ def _write_json(path: Path, obj) -> None:
     while the page's ``POST /api/settings`` was inside that gap, any other
     request resolving a mod called :func:`get_med2_root` -> :func:`load_settings`,
     read a truncated file, got ``{}`` back and concluded the machine had no
-    Medieval II install — so every mod vanished for that instant and the request
+    Medieval II install - so every mod vanished for that instant and the request
     404'd. It was invisible because the page's GET helper retries; the retry
     always landed after the write finished. Measured as a real 404 on
     ``/api/codeview`` the moment an editor saved the ``code_view`` toggle and
@@ -184,7 +184,7 @@ VANILLA_UI_DIRS = (PROJECT_ROOT / "vanilla_ui", PROJECT_ROOT / "unpackaded_vanil
 
 
 def get_vanilla_ui_root() -> Optional[Path]:
-    """Folder holding vanilla building art, packed or raw — or None.
+    """Folder holding vanilla building art, packed or raw - or None.
 
     Mods ship only the building icons they changed and let the game fall back to
     the vanilla ones, so without this the browser would show a placeholder for
@@ -199,7 +199,7 @@ def get_vanilla_ui_root() -> Optional[Path]:
 
 
 def get_vanilla_ancillary_dir() -> Optional[Path]:
-    """Folder holding the GAME's own ``ui/ancillaries`` pictures — or None.
+    """Folder holding the GAME's own ``ui/ancillaries`` pictures - or None.
 
     Not the same thing as :func:`get_vanilla_ui_root`, which holds *building*
     art (its manifest says so) and no ancillary pictures at all. Reading one as
@@ -207,7 +207,7 @@ def get_vanilla_ancillary_dir() -> Optional[Path]:
     blank slot: the fallback it was checked against could never contain it.
 
     Vanilla ships these inside its ``.pack`` archives, so there is usually
-    nothing on disk to point at and this answers None — which means "cannot be
+    nothing on disk to point at and this answers None - which means "cannot be
     checked", not "the picture is missing". A user who unpacks the UI can set
     ``vanilla_ancillaries_dir`` and get the check back.
     """
@@ -237,7 +237,7 @@ def _cache_candidates():
     Dropbox puts a *synced* folder in the middle of every icon read, and a synced
     file can be dehydrated into a cloud placeholder: reading it then blocks on a
     download that can take seconds, or fails outright with ``OSError: [Errno 22]``.
-    Measured on this machine — 400 cached icons took over two minutes to read back
+    Measured on this machine - 400 cached icons took over two minutes to read back
     out of a OneDrive folder, with the server's own liveness heartbeat queued
     behind them. ``config/`` stays where it is because it is the user's own data
     and it is small; a cache is recomputable and has no reason to be synced.

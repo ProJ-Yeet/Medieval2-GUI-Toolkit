@@ -13,7 +13,7 @@ Divide_and_Conquer_EUR (2192 models): both parse to a clean EOF and round-trip
 byte-exact through :meth:`ModelDb.to_text`.
 
 For every entry we keep the *raw source substring* that produced it, so a
-transfer appends a source entry verbatim and only bumps the header count —
+transfer appends a source entry verbatim and only bumps the header count -
 untouched entries are never re-serialized.
 """
 from __future__ import annotations
@@ -127,7 +127,7 @@ class _Desync(ValueError):
     """The stream stopped making sense, and where.
 
     Every field in this file is found by counting from the one before it, so the
-    first wrong number does not fail — it silently shifts everything after it by
+    first wrong number does not fail - it silently shifts everything after it by
     a field, and the read dies somewhere else entirely, on whatever innocent word
     now sits where a number should be. ``at`` is that landing point;
     :func:`_desync_message` turns it and the reader's trail back into the place a
@@ -138,12 +138,12 @@ class _Desync(ValueError):
         self.at = at
         self.what = what
         #: what the reader was counting through when it lost the thread, set by
-        #: whichever loop knows — a list whose count is one too many is the
+        #: whichever loop knows - a list whose count is one too many is the
         #: commonest hand-edit in this file and the only one worth naming.
         self.note = ""
         #: True when ``what`` is pointing AT the mistake rather than at where the
-        #: read fell over. The long explanation below — "the number that did this
-        #: is somewhere above" — is for the second case; printing it after a
+        #: read fell over. The long explanation below - "the number that did this
+        #: is somewhere above" - is for the second case; printing it after a
         #: sentence that just named the exact character reads like the tool does
         #: not know what it found.
         self.exact = exact
@@ -169,7 +169,7 @@ class _Reader:
         self.i = 0
         self.n = len(text)
         #: the last few strings read, as (offset, declared length, value, end
-        #: offset) — kept only so a failure can point back at the number that
+        #: offset) - kept only so a failure can point back at the number that
         #: caused it
         self.trail: List[Tuple[int, int, str, int]] = []
         #: name of the entry being read, for the same reason
@@ -205,8 +205,8 @@ class _Reader:
     def get_attach_sprite(self) -> str:
         """The fourth field of an ATTACHMENT texture group: a ``0``, or a sprite.
 
-        Almost every file writes a bare ``0`` here — this format's way of saying
-        *no name follows* — and it is easy to conclude the slot can hold nothing
+        Almost every file writes a bare ``0`` here - this format's way of saying
+        *no name follows* - and it is easy to conclude the slot can hold nothing
         else. It can. Mods fill it: BOTET writes
         ``44 unit_sprites/france_Elector_count_sprite.spr`` into one and
         Thera_Redux writes another, and with those names read as names both files
@@ -215,7 +215,7 @@ class _Reader:
         the same reason.
 
         What is NOT a length is the stray character a hand edit leaves glued to
-        the ``0`` — a ``slave`` skin deleted by hand and the ``1`` off the removed
+        the ``0`` - a ``slave`` skin deleted by hand and the ``1`` off the removed
         line left behind, giving ``... .texture 01``. Read 1 as a length and the
         next field is eaten as a one-character name, and the read dies two lines
         down on a word that is fine where it sits, which is the worst error this
@@ -225,7 +225,7 @@ class _Reader:
         fills exactly the characters its length claims and stops on whitespace; a
         stray digit's "name" is none of those things. So a name that holds up is
         read, and anything else is refused AT the stray character with the fix in
-        the sentence — refused rather than assumed away, because half a dozen span
+        the sentence - refused rather than assumed away, because half a dozen span
         walkers further down this file re-walk the same bytes to place an edit,
         and one of them reading a file differently from the others is how a save
         writes at the wrong offset.
@@ -356,13 +356,13 @@ def _read_entry(r: _Reader, pad: bool = False) -> ModelEntry:
                 fac = r.get_string().lower()
                 tex, nrm = r.get_string(), r.get_string()
                 # the sprite: always a name on a main texture, and on an
-                # attachment usually — not always — the 0 that means there is
+                # attachment usually - not always - the 0 that means there is
                 # none (see get_attach_sprite)
                 spr = (r.get_attach_sprite() if what == "attachment"
                        else r.get_string())
             except _Desync as e:
-                # A list that says 2 and holds 1 — what deleting a faction's
-                # skin without touching the number above it leaves behind — puts
+                # A list that says 2 and holds 1 - what deleting a faction's
+                # skin without touching the number above it leaves behind - puts
                 # the reader into the NEXT field entirely, and everything it
                 # says after that is about the wrong place. Say which count.
                 line, col = _line_col(r.s, cnt_at)
@@ -399,7 +399,7 @@ def _read_entry(r: _Reader, pad: bool = False) -> ModelEntry:
 
 
 #: The mark Notepad writes into anything it saves as UTF-8 (:data:`kb.BOMS`).
-#: A modeldb's very first token is a NUMBER — the length of the magic string —
+#: A modeldb's very first token is a NUMBER - the length of the magic string -
 #: so the mark lands glued to it and the file used to die on int(). Skipped for
 #: parsing and left in `header_raw`, so a file that arrived with one is written
 #: back with one: this reads the file, it does not quietly repair it.
@@ -412,13 +412,13 @@ def _suspect(text: str, r: "_Reader") -> str:
     A length that does not match its name leaves a mark right where it is: the
     slice it took ends in the middle of the next token instead of on a space, or
     it swallowed a line break. Both are things a reader can only see by looking
-    back, and both name the ONE number worth editing — which is the difference
+    back, and both name the ONE number worth editing - which is the difference
     between "your modeldb is broken somewhere" and a line to open.
 
     A name that ran off its own line gets one thing more: how long the rest of
     that line is. Paths in this file contain spaces (``Final European
     Light_hre_diff``), so that measurement is where the name PROBABLY ends rather
-    than where it certainly does — but it is the number to try first, and for
+    than where it certainly does - but it is the number to try first, and for
     BOTET's ``Elephant_normal2`` it is exactly the 61 that a 64 was written for.
     """
     for at, length, val, end in r.trail:
@@ -427,23 +427,23 @@ def _suspect(text: str, r: "_Reader") -> str:
             start = end - length
             rest = text[start:text.index("\n", start)].rstrip()
             return (f" The name at line {line} column {col} says it is {length} "
-                    f"characters long and so runs off the end of its own line — that "
+                    f"characters long and so runs off the end of its own line - that "
                     f"number is the likely culprit, and the rest of that line "
                     f"measures {len(rest)}.")
         if end < r.n and not text[end].isspace():
             return (f" The name at line {line} column {col} says it is {length} "
                     f"characters long and reads {val!r}, which stops in the middle of "
-                    f"the word after it — that number is the likely culprit.")
+                    f"the word after it - that number is the likely culprit.")
     return ""
 
 
 def _desync_message(text: str, r: "_Reader", e: "_Desync", n: int) -> str:
-    """The failure as a sentence — which entry, which line, which number to doubt.
+    """The failure as a sentence - which entry, which line, which number to doubt.
 
     Two things can name that number, and they are not equally sure of themselves.
     :func:`_suspect` reports a length the reader WATCHED overrun its own name;
     ``e.note`` reports a texture count that disagrees with how far the list got,
-    which is inferred from where the read landed — and a wrong length lands it in
+    which is inferred from where the read landed - and a wrong length lands it in
     exactly the same place. So the sighting outranks the inference: BOTET's
     ``mount_elephant_rocket`` has an honest count of 2 above a normal-map length
     written 64 for a 61-character name, and led with the count it sent the reader
@@ -482,7 +482,7 @@ def parse_text(text: str) -> ModelDb:
     count = header_ints[5]
 
     # The body starts at the first token AFTER the header ints. Locating it by
-    # the first newline instead would assume the header is exactly one line —
+    # the first newline instead would assume the header is exactly one line -
     # true for most mods, but some wrap it (`...0 0 \n595 \n0 0 \n5 blank`),
     # and reading from mid-header makes the next int look like a string length
     # and swallows the first entry.
@@ -554,10 +554,10 @@ def entry_path_spans(raw: str, pad: bool = False) -> List[Tuple[int, int, str, s
 
     Returns (start, end, value, kind) tuples where kind is
     ``mesh`` | ``texture`` | ``normal`` | ``sprite``. Faction names, skeletons and
-    weapon names are deliberately excluded — they are not file paths.
+    weapon names are deliberately excluded - they are not file paths.
 
     ``pad`` must be True when ``raw`` came from a :class:`ModelEntry` with
-    ``first_entry_pad`` set (see ``_read_entry``) — otherwise this walk
+    ``first_entry_pad`` set (see ``_read_entry``) - otherwise this walk
     desyncs on the extra reserved ints and misidentifies path spans.
     """
     r = _SpanReader(raw)
@@ -615,7 +615,7 @@ def rewrite_entry_paths(raw: str, path_map: Dict[str, str], pad: bool = False) -
     Only the path strings are touched, and each replacement re-emits its own
     ``<len> <chars>`` prefix so the length numbering stays correct. Every other
     byte (floats, counts, whitespace) is preserved verbatim, which keeps entries
-    that we did not reroute byte-identical. ``pad`` — see ``entry_path_spans``.
+    that we did not reroute byte-identical. ``pad`` - see ``entry_path_spans``.
     """
     if not path_map:
         return raw
@@ -641,7 +641,7 @@ def rewrite_paths_indexed(raw: str, index_map: Dict[int, str],
     :func:`rewrite_entry_paths` (which maps by value) this addresses one slot at
     a time, so two LODs that happen to share a mesh file can be pointed at
     different files. Each replacement re-emits its own ``<len> <chars>`` prefix;
-    every other byte is preserved. ``pad`` — see :func:`entry_path_spans`.
+    every other byte is preserved. ``pad`` - see :func:`entry_path_spans`.
     """
     index_map = {int(k): v for k, v in (index_map or {}).items() if v is not None}
     if not index_map:
@@ -666,7 +666,7 @@ def animation_spans(raw: str, pad: bool = False) -> List[Dict[str, Tuple[int, in
     ``[{"mount_type": (s, e, value), "primary": …, "secondary": …}, …]`` in file
     order. The weapon lists are deliberately not reported: they are the model's
     own weapons, and nothing here has any business rewriting them.
-    ``pad`` — see :func:`entry_path_spans`.
+    ``pad`` - see :func:`entry_path_spans`.
     """
     r = _SpanReader(raw)
 
@@ -719,12 +719,12 @@ def rewrite_animations(raw: str, anims: List["Animation"],
     Only those three strings move; the record count, the weapon lists and every
     other byte stay exactly as they were, so an entry keeps its own weapons while
     borrowing another entry's animation set. When ``raw`` has more records than
-    ``anims``, the last of ``anims`` is reused for the rest — a mount with two
+    ``anims``, the last of ``anims`` is reused for the rest - a mount with two
     records and a donor with one still ends up driven entirely by the donor.
     A name that only differs in case is left alone: the game does not care, and
     rewriting it would churn bytes for nothing (a parsed ``mount_type`` is
     lower-cased, so writing one back would otherwise never be a no-op).
-    ``pad`` — see :func:`entry_path_spans`.
+    ``pad`` - see :func:`entry_path_spans`.
     """
     if not anims:
         return raw
@@ -738,7 +738,7 @@ def rewrite_animations(raw: str, anims: List["Animation"],
             start, end, old = rec[key]
             if (old or "").lower() == (value or "").lower():
                 continue
-            # an empty string is the bare "0" token — no trailing space, or the
+            # an empty string is the bare "0" token - no trailing space, or the
             # next read would start one byte later than the writer meant
             edits.append((start, end, f"{len(value)} {value}" if value else "0"))
     if not edits:
@@ -767,7 +767,7 @@ def path_slots_raw(raw: str, pad: bool = False) -> List[dict]:
     """:func:`path_slots` straight off an entry's raw text.
 
     The editor rewrites an entry in stages (faction records added/removed, then
-    per-faction texture paths set), and every stage shifts the span indices — so
+    per-faction texture paths set), and every stage shifts the span indices - so
     each stage has to re-derive the slots from the text it is about to edit
     rather than from the originally parsed :class:`ModelEntry`.
     """
@@ -797,7 +797,7 @@ def path_slots_raw(raw: str, pad: bool = False) -> List[dict]:
 def path_slots(entry: "ModelEntry") -> List[dict]:
     """Describe every editable path slot of an entry, in span-index order.
 
-    Returns ``{"i", "kind", "value", "group", "faction", "label"}`` per slot —
+    Returns ``{"i", "kind", "value", "group", "faction", "label"}`` per slot -
     the shape the editor UI renders. The span order is fixed by the format:
     LOD meshes, then main-texture records (faction: texture/normal/sprite),
     then attachment-texture records.
@@ -814,7 +814,7 @@ def _texture_group_spans(raw: str, pad: bool = False) -> List[dict]:
 
     Each group reports its count token span, every record's span, and where the
     group ends, so records can be appended and the count fixed in place.
-    ``pad`` — see ``entry_path_spans``.
+    ``pad`` - see ``entry_path_spans``.
     """
     r = _SpanReader(raw)
 
@@ -861,9 +861,9 @@ def add_texture_factions(raw: str, factions, prefer: Optional[str] = None,
 
     A faction with no record has no skin, so the game fails to show the unit.
     Missing factions are given a clone of an existing record (same texture /
-    normal / sprite paths), and each group's count token is bumped to match —
+    normal / sprite paths), and each group's count token is bumped to match -
     this is what makes a transfer valid after a base unit changes ownership.
-    ``pad`` — see ``entry_path_spans``.
+    ``pad`` - see ``entry_path_spans``.
     """
     wanted = [f for f in dict.fromkeys(factions) if f]
     if not wanted:
@@ -906,9 +906,9 @@ def set_texture_factions(raw: str, factions, prefer: Optional[str] = None,
     editor's faction checklist needs: ticking a faction clones an existing record
     for it, unticking one drops that record, and each group's count token is
     rewritten to match. A kept record is spliced back **verbatim**, so its own
-    texture/normal/sprite paths survive the reshuffle. Refuses to empty a group —
+    texture/normal/sprite paths survive the reshuffle. Refuses to empty a group -
     a texture group with zero records is not a model the game can draw.
-    ``pad`` — see :func:`entry_path_spans`.
+    ``pad`` - see :func:`entry_path_spans`.
     """
     wanted = [f for f in dict.fromkeys((f or "").strip().lower() for f in factions) if f]
     if not wanted:
@@ -949,8 +949,8 @@ def set_texture_factions(raw: str, factions, prefer: Optional[str] = None,
 def parse_entry_text(raw: str, pad: bool = False) -> ModelEntry:
     """Read ONE entry out of its own text, as :func:`parse_text` reads them all.
 
-    The same :func:`_read_entry` the file parser uses — there is no second reader
-    — plus the check the file parser gets for free from knowing the entry count:
+    The same :func:`_read_entry` the file parser uses - there is no second reader
+    - plus the check the file parser gets for free from knowing the entry count:
     that the text holds exactly one entry and nothing after it. Without that,
     text with a stray extra record would read as one entry and silently drop the
     rest on the next save.
@@ -1022,13 +1022,13 @@ def prefix_problems(base: str, edited: str, pad: bool = False) -> List[dict]:
     A modeldb string is written ``<length> <that many characters>``, so editing a
     texture path in a text box and not also counting its new characters desyncs
     the reader for the whole rest of the file. The length is bookkeeping, not
-    content, and nobody should be asked to maintain it by hand — so the editor
+    content, and nobody should be asked to maintain it by hand - so the editor
     has to be able to say exactly which line is wrong and offer to fix it.
 
     Doing that needs to know which lines hold a *string* at all: a count (``5``),
     a torch index followed by six floats (``0 -1 0 0 0 0 0 0``) and a texture
     path all look alike from the outside. Guessing gets those wrong, so this
-    takes the answer from ``base`` — text that parsed — and only reports lines
+    takes the answer from ``base`` - text that parsed - and only reports lines
     the span walkers already identified as strings there. That means the two
     texts must still line up: once a line has been added or removed, this reports
     nothing and the reader's own error stands.

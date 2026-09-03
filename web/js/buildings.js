@@ -1,21 +1,21 @@
-/* buildings.js — Buildings mode: export_descr_buildings.txt — levels, recruit
+/* buildings.js - Buildings mode: export_descr_buildings.txt - levels, recruit
    pools, requires clauses, upgrades and cross-tree editing
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
 /* =========================================================================
-   Buildings mode — data/export_descr_buildings.txt
+   Buildings mode - data/export_descr_buildings.txt
 
    A building "line" is an upgrade chain (Barracks -> Militia Barracks -> …).
    The grid lists lines; opening one gives a tab per level with its stats, its
    capabilities and, the point of the whole screen, its recruit pools: which
    units it trains, at what rate, for whom.
 
-   Building art is per CULTURE, not per faction — data/ui/<culture>/buildings/
+   Building art is per CULTURE, not per faction - data/ui/<culture>/buildings/
    #<culture>_<level>.tga is the small icon and #<culture>_<level>_constructed.tga
    the big one. A mod ships only what it changed, so anything it doesn't have
    falls back to unpacked vanilla art and then to a drawn placeholder; the badge
@@ -44,7 +44,7 @@ const POOL_HELP={
 
    `step` is how far one click moves the value, with one special case: 'turns'
    moves a recruit rate by one whole TURN rather than by a fraction. A rate of
-   0.066667 is "a unit every 15 turns", and nobody thinks in the fraction — ▲
+   0.066667 is "a unit every 15 turns", and nobody thinks in the fraction - ▲
    there gives 1/14 = 0.071429, still "the number goes up". */
 const numFmt=n=>String(+(+n).toFixed(6));
 function numBox(attrs,value,step,after){
@@ -94,7 +94,7 @@ function wireNumBoxes(root){
     w.querySelectorAll('[data-bump]').forEach(btn=>{
       btn.onclick=e=>{e.preventDefault();numBump(inp,+btn.dataset.bump);};
     });
-    // ↑/↓ in the box do what the arrows beside it do — including the 1 → 0.99 → 0
+    // ↑/↓ in the box do what the arrows beside it do - including the 1 → 0.99 → 0
     // step on a pool count, which is the whole reason to reach for the key
     inp.addEventListener('keydown',e=>{
       const dir=e.key==='ArrowUp'?1:e.key==='ArrowDown'?-1:0;
@@ -105,7 +105,7 @@ function wireNumBoxes(root){
   });
 }
 
-/* `anyCulture` is for screens that are not showing a culture at all — see
+/* `anyCulture` is for screens that are not showing a culture at all - see
    `buildings.find_icon`. The building browser never passes it: a level the
    picked culture has no art for is a fact about that culture, and the grid
    says so. The unit editor's Recruitment tab does, because its rows come from
@@ -118,7 +118,7 @@ function bldCultureNow(){
   const b=state.bld; return (b&&b.culture)||'';
 }
 // One in-flight request per mod, shared by every caller. render() fires again on
-// each keystroke and filter tick, and switching mod nulls state.bld mid-await —
+// each keystroke and filter tick, and switching mod nulls state.bld mid-await -
 // without this the second caller could resume before the first had assigned.
 //
 // The overview is also per CULTURE, because a building's name is: DaC names
@@ -141,7 +141,7 @@ async function loadBuildings(force){
     // has it, else the first culture folder that holds building art.
     const culture=(ov.cultures||[]).includes(want)?want:(ov.cultures||[])[0]||'';
     // the remembered culture is not one this mod has, so the names that came
-    // back are the wrong culture's — ask again for the one actually on show
+    // back are the wrong culture's - ask again for the one actually on show
     if(culture!==want)ov=await api.get('/api/buildings?mod='+enc(mod)+'&culture='+enc(culture));
     const b={mod,ov,culture,line:null,d:null,work:null,lvl:0,plan:null,own:{},
              view:state.settings.bld_view==='grid'?'grid':'rows',
@@ -161,7 +161,7 @@ async function renderBuildings(){
   catch(e){ main.innerHTML=`<div class="empty">Couldn't read the buildings of “${esc(state.src)}”.<br>
     <span class="count">${esc(errText(e))}</span><br><br>
     <button class="primary" onclick="render()">Retry</button></div>`; return; }
-  // the picker moved on while we were loading — whoever it moved to will render
+  // the picker moved on while we were loading - whoever it moved to will render
   if(!b||b.mod!==state.src||state.mode!=='buildings')return;
   const ov=b.ov;
   if(!ov.has_file){
@@ -207,7 +207,7 @@ offer the base game's five. If it defines its own, add that file.">using vanilla
    Two ways of reading the same list, and which one is useful depends on what you
    came for. The gallery shows every line's finished picture, which is how you
    recognise a building you have seen in game; the tree shows the whole EDB at
-   once — DaC's 136 lines and 499 levels fit on two screens — which is how you
+   once - DaC's 136 lines and 499 levels fit on two screens - which is how you
    find the level a unit is trained from. The choice is remembered, because
    nobody wants to re-pick it every launch. */
 const bldBrowse=()=>(state.settings.bld_browse==='tree'?'tree':'gallery');
@@ -280,7 +280,7 @@ function bldArtSource(l,culture){
   return a.large||a.small||'';
 }
 // Most building lines are culture-specific, so with one culture picked the
-// majority of the grid would be placeholders for buildings the mod HAS drawn —
+// majority of the grid would be placeholders for buildings the mod HAS drawn -
 // just for someone else. So a line with nothing in the chosen culture borrows
 // the art of a culture that does have it, and the badge says whose.
 function bldCardArt(l){
@@ -308,7 +308,7 @@ culture either, so another vanilla culture's picture is standing in.">falling ba
 }
 /* One of the two art panes in the building editor, with the swap on it.
    "Drop a .tga in to override it" is what `bldArtWhose` has been telling people
-   to do by hand since the browser was written — this is that, done here: the ✎
+   to do by hand since the browser was written - this is that, done here: the ✎
    writes the mod's own copy at the path the fallback message names. */
 function bldArtFig(size,level,caption,source){
   const url=bldIcon(level,size);
@@ -430,7 +430,7 @@ async function openBuilding(name,keepLevel,atLevel){
 /* ---- which of a level's per-culture names is the one on show ----
    The same fallback the server uses (buildings._best_loc), redone here so the
    editor stays live when the culture picker moves: the culture's own key wins,
-   then the shared key, then whichever culture DOES have text — a shared key
+   then the shared key, then whichever culture DOES have text - a shared key
    whose value is just the key itself is a placeholder, not a name. */
 function bldLocPlaceholder(rec){
   const n=((rec&&rec.name)||'').trim();
@@ -450,7 +450,7 @@ function bldLevelLabel(i){
   return ((rec.name||'').trim())||lv.name;
 }
 // `conds` is the structured form of `requires`; `condEdited` says whether it has
-// been touched. Only a touched clause is sent back as structure — an untouched
+// been touched. Only a touched clause is sent back as structure - an untouched
 // one goes back as its original text, so the server never re-emits (and quietly
 // tidies) a clause nobody edited.
 /* The working copy the form edits, built from a /api/building detail payload.
@@ -474,7 +474,7 @@ function bldWorkFrom(d){
       locAll:JSON.parse(JSON.stringify(lv.loc_all||{'':Object.assign({present:true},lv.loc)})),
       caps:lv.capabilities.map(c=>bldCapCopy(c,false)),
       fcaps:lv.faction_capabilities.map(c=>bldCapCopy(c,true))}))};
-  // Edits staged against OTHER building lines — the castle twin of this one, or
+  // Edits staged against OTHER building lines - the castle twin of this one, or
   // every tree that trains some unit. Kept inside `work` so dirty-tracking, undo
   // and Save pick them up with no special case: {line: {level: [rows]}}.
   work.also={};
@@ -498,8 +498,8 @@ function bldDirty(){
 
    A building line is a tree, not a field list, so re-reading hand-edited text
    hands back a whole detail payload and the form is rebuilt from it. And once
-   the pane has done that, the save must go through the text FOREVER after —
-   `bldCvOwns` — because the capability rows now carry line numbers relative to
+   the pane has done that, the save must go through the text FOREVER after -
+   `bldCvOwns` - because the capability rows now carry line numbers relative to
    the pane's text rather than to the file, and planning those against the whole
    EDB would edit the wrong lines. */
 const bldCvEdited=()=>{const cv=state.bld&&state.bld.cv;
@@ -550,7 +550,7 @@ function bldCvHost(){
    on, and /api/building counts those from the top of the 30 000-line EDB while the
    pane counts them from the top of the block. Two conventions on one screen is a
    bug waiting for the first capability edit, so the pane's parse becomes the only
-   one — and from then on the save goes through the pane's text (`owns`), which is
+   one - and from then on the save goes through the pane's text (`owns`), which is
    the only text those numbers mean anything against.
 
    Box edits made while the pane was still loading are left alone; the pane simply
@@ -565,7 +565,7 @@ function bldCvAdoptLoad(cv){
   b.orig=JSON.stringify(b.work);
   cv.owns=true;
 }
-// A redraw of the form only — never of the pane, which has the caret in it.
+// A redraw of the form only - never of the pane, which has the caret in it.
 function bldCvRefresh(){
   const b=state.bld;
   if(!b||!b.work)return;
@@ -576,7 +576,7 @@ function bldCvRefresh(){
   paintDirty();
 }
 /* Which span the hovered element belongs to. The form's rows are `data-scalar`,
-   `data-settlement` and `data-cap` — adding a second set of attributes to a
+   `data-settlement` and `data-cap` - adding a second set of attributes to a
    three-thousand-line file would be churn, so the mapping lives here instead
    (codeview.js takes `label`/`find` from the host for exactly this). */
 function bldCvLabel(el){
@@ -692,7 +692,7 @@ tier by tier, and close any unit one of them trains and the other does not.">
 }
 function bldPickLevel(i){
   const b=state.bld; b.lvl=i; b.plan=null;
-  // the ticks belong to the level they were made on — every row here is a
+  // the ticks belong to the level they were made on - every row here is a
   // different object, and carrying a stale selection across only confuses
   if(b.bulk)b.bulk.sel.clear();
   renderBuildingEditor();
@@ -707,8 +707,8 @@ function bldRenderBody(lv,orig){
   const b=state.bld,ov=b.ov;
   const body=document.getElementById('bldBody');
   /* The form is not always the thing in the dialog. Every panel that takes the
-     modal over — Add units, the per-unit comparison, the city/castle comparison
-     — leaves `#bldBody` out of the document, and a repaint aimed at it then
+     modal over - Add units, the per-unit comparison, the city/castle comparison
+     - leaves `#bldBody` out of the document, and a repaint aimed at it then
      threw on a null. That throw came out of an onclick, so it killed the click
      that caused it and everything after it: the page stopped responding, which
      is what "the tool crashed" looks like from the outside.
@@ -814,8 +814,8 @@ function bldRenderBody(lv,orig){
   paintDirty();
 }
 /* ---- name & description, per culture ----
-   One level can be called something different for every culture — Warg Breeder
-   for the orcs, Stables for everyone else — and DaC does exactly that for its
+   One level can be called something different for every culture - Warg Breeder
+   for the orcs, Stables for everyone else - and DaC does exactly that for its
    whole EDB, leaving the shared key a "DO NOT TRANSLATE" placeholder. So the
    editor picks a culture the way the game does, and writing to one culture
    leaves the others alone. */
@@ -874,7 +874,7 @@ function bldLocSection(lv,orig){
    copy so the count tracks pools as they are added, removed and re-gated.
 
    Two numbers, because they answer different questions. `always` is pools the
-   faction gets with NO further condition — if that is over the limit the
+   faction gets with NO further condition - if that is over the limit the
    building is already broken. `most` assumes every event counter, hidden
    resource and settlement size holds at the same time; it is an upper bound on
    purpose, since which of a mod's conditions can truly coincide is not
@@ -939,7 +939,7 @@ function bldRequiresHelp(){
     : 'No conditions. Anyone can build this, at any time.'}</div>`;
 }
 // Switching culture changes both the art and the NAMES, and the names come from
-// the server — so the grid is re-fetched. The open editor is not: it already
+// the server - so the grid is re-fetched. The open editor is not: it already
 // holds every culture's text (`loc_all`), and re-fetching would throw away
 // whatever has been typed into it.
 async function bldSetCulture(c){
@@ -1041,15 +1041,15 @@ function bldSetView(v){
 /* Repaint the level the editor is on, or do nothing at all.
    Everything that changes how the recruitment list LOOKS lands here rather than
    reaching into `state.bld.work` itself: a mod switch nulls `state.bld` and a
-   closed dialog leaves `work` null, and a control that survives either — the
-   sidebar, a remembered setting, a keystroke — would otherwise throw on a stale
+   closed dialog leaves `work` null, and a control that survives either - the
+   sidebar, a remembered setting, a keystroke - would otherwise throw on a stale
    object and take the whole page down with it. */
 function bldRedrawLevel(){
   const b=state.bld;
   if(!b||!b.work||!b.d||!b.work.levels[b.lvl]||!b.d.levels[b.lvl])return;
   bldRenderBody(b.work.levels[b.lvl],b.d.levels[b.lvl]);
 }
-// The cached ownership answer for a pool, if one has been fetched — drawn as a
+// The cached ownership answer for a pool, if one has been fetched - drawn as a
 // small flag on the row rather than fetched eagerly for hundreds of units.
 function bldPoolOwnFlag(c){
   const b=state.bld;
@@ -1162,7 +1162,7 @@ function bldPoolActs(c,i){
 /* =========================================================================
    Bulk edit over recruit pools
 
-   Nothing here is a new kind of edit — every one of these actions is something
+   Nothing here is a new kind of edit - every one of these actions is something
    the single-row buttons already do. What it changes is the arithmetic: giving
    twenty freshly added units the same `requires factions { … }` was twenty trips
    through the clause dialog, and the twentieth was where the typo went in.
@@ -1174,7 +1174,7 @@ function bldPoolActs(c,i){
 const bldBulk=()=>(state.bld.bulk||(state.bld.bulk={on:false,sel:new Set()}));
 const bldBulkOn=()=>!!(state.bld&&state.bld.bulk&&state.bld.bulk.on);
 const bldBulkHas=c=>bldBulkOn()&&bldBulk().sel.has(c);
-// Only rows still in the level count — a new row that was dropped again is gone
+// Only rows still in the level count - a new row that was dropped again is gone
 // from lv.caps but may still be sitting in the Set.
 function bldBulkSel(){
   const sel=bldBulk().sel;
@@ -1207,7 +1207,7 @@ const bldRenderBodyNow=()=>bldRenderBody(state.bld.work.levels[state.bld.lvl],
                                          state.bld.d.levels[state.bld.lvl]);
 /* ---- carrying one row's clause to the others ----
    The clipboard lives on `state`, not on the building, so a clause copied out of
-   the town watch can be pasted into the barracks — which is most of why anyone
+   the town watch can be pasted into the barracks - which is most of why anyone
    would copy one at all. It holds a deep copy: pasting must not hand every row a
    reference to the same terms, or editing one afterwards edits all of them. */
 function bldCopyBtn(i){
@@ -1230,7 +1230,7 @@ function bldCopyCond(i){
 }
 /* Put a clause onto one row. `replace` swaps it outright; `add` joins the new
    terms onto what is already there. M2TW evaluates a clause left to right with
-   no brackets, so "add" really is a concatenation — the incoming terms are
+   no brackets, so "add" really is a concatenation - the incoming terms are
    ANDed onto the end, and a term the row already carries is skipped rather than
    written twice. */
 function bldCondsOnto(host,conds,mode){
@@ -1272,7 +1272,7 @@ function bldBulkDelete(){
   bldTouched();
   toast(`${sel.length} recruit pool${sel.length===1?'':'s'} marked for removal.`);
 }
-// Only the boxes you actually filled in are written — a blank one leaves that
+// Only the boxes you actually filled in are written - a blank one leaves that
 // number alone, so "give these twelve units max 4" doesn't also zero their
 // starting points.
 function bldBulkNums(){
@@ -1300,7 +1300,7 @@ const POOL_SHORT={initial:'Initial Pool',per_turn:'Replenish Rate',
 /* Which unit a clause is taken FROM is its own choice, not "whichever you ticked
    first": the unit you want to copy is usually one you have NOT ticked, because
    the ticks are the units you are about to paste onto. So it is a box over every
-   pool on the level — ticked ones marked — rather than a button. */
+   pool on the level - ticked ones marked - rather than a button. */
 function bldCopySelect(sel){
   const b=state.bld,list=bldCapList();
   const pools=list.map((c,i)=>({c,i})).filter(x=>x.c.pool&&!x.c.del);
@@ -1349,7 +1349,7 @@ function bldBulkBar(shown){
   </div>`;
 }
 /* One clause dialog over many rows. It opens on what they already say when they
-   all say the same thing — the common case straight after adding a batch, where
+   all say the same thing - the common case straight after adding a batch, where
    every one of them carries its own ownership and you are about to narrow that
    to one faction. When they disagree it opens empty rather than picking a winner
    arbitrarily. */
@@ -1455,7 +1455,7 @@ function bldUpgradesSection(lv,orig){
 }
 /* An `upgrades` entry is a level name and, sometimes, a clause of its own:
    `ce_wooden_wall requires event_counter cex_avail_wooden_wall_erebor 1`. The
-   level is the first word — the server's `buildings.upgrade_name` says the same
+   level is the first word - the server's `buildings.upgrade_name` says the same
    thing, and both are wanted, because the page draws the row and the file
    writes it. */
 const bldUpgName=u=>String(u||'').split(/\s+/)[0]||'';
@@ -1473,7 +1473,7 @@ function bldUpgAdd(name){
   bldTouched();
 }
 /* The keyword picker, in groups. There are 60 of them and they were one flat
-   alphabetical list, which is a list you read rather than choose from —
+   alphabetical list, which is a list you read rather than choose from -
    `construction_cost_bonus_stone` and `weapon_melee_blade` are not neighbours in
    anybody's head. The grouping is the one thing worth taking from the reference
    tool's EDB half; the hint carries the range the engine accepts beside it. */
@@ -1621,7 +1621,7 @@ function bldDirtyNote(){
    Every other editor that adopted the pane calls `cvFromGui` the moment one of
    its boxes changes, which is what makes the pane a promise about the bytes a
    save would write rather than a picture of the record as it opened. This one
-   never did: cost, culture, name, a `requires` term, a recruit pool's numbers —
+   never did: cost, culture, name, a `requires` term, a recruit pool's numbers -
    all of it changed the working copy, none of it reached the pane, and the text
    beside the form went on showing the file. It is called from the two places
    every change in this editor already goes through, so a new control gets it
@@ -1643,7 +1643,7 @@ function bldAddCap(){
 /* =========================================================================
    `requires` clauses, as structure
 
-   A clause is a flat list of terms joined left-to-right by and/or — M2TW has no
+   A clause is a flat list of terms joined left-to-right by and/or - M2TW has no
    precedence, so there is no tree to draw. Each term names something declared
    elsewhere in the mod (a faction, an event counter, a hidden resource) by its
    CODE name, and a typo there is invisible: the game doesn't complain, the
@@ -1651,7 +1651,7 @@ function bldAddCap(){
    from the mod's own lists, shown by real name with the code in brackets.
 
    Anything the parser didn't recognise stays as raw text rather than being
-   dropped — a couple of real mods have malformed clauses and they must survive
+   dropped - a couple of real mods have malformed clauses and they must survive
    a round trip untouched.
    ========================================================================= */
 
@@ -1725,7 +1725,7 @@ function bldCondSummary(c){
    trick the unit picker uses. */
 function bldEditClause(kind,index){
   const b=state.bld,lv=b.work.levels[b.lvl];
-  // An upgrade row has no host object of its own — the entry is a string in
+  // An upgrade row has no host object of its own - the entry is a string in
   // `lv.upgrades`. So it gets a stand-in whose conds the dialog edits, and
   // bldClauseApply writes the two back into the string as one.
   const host=kind==='level'?lv
@@ -1745,7 +1745,7 @@ function bldEditClause(kind,index){
 }
 /* The clause dialog keeps its OWN snapshot of what it covered up.
    It used to borrow `b.stash`, which the add-unit picker and the unit view also
-   use — and the unit view can open this dialog on top of itself, so the two
+   use - and the unit view can open this dialog on top of itself, so the two
    took turns clearing one slot and the building form underneath was lost. One
    slot per layer, and the nesting stops mattering. */
 function bldClauseStash(){
@@ -1786,7 +1786,7 @@ function bldClauseApply(){
     c.host.conds=c.conds; c.host.condEdited=true;
     c.host.requires=bldClauseText(c.conds);
   }
-  // …and the same on the way out — rebuilt from state, and not a building edit:
+  // …and the same on the way out - rebuilt from state, and not a building edit:
   // these pools are saved by the unit editor, through its own payload.
   if(c.kind==='edrec'){ b.clause=null; renderEditor(); return; }
   const unit=c.kind==='unit';
@@ -1835,7 +1835,7 @@ function renderClauseDialog(){
 }
 /* The head of the bulk clause dialog: who it will land on, and whether it
    replaces what they say or is added to it. Replace is the default when they all
-   already agree — you are narrowing one shared clause. When they disagree the
+   already agree - you are narrowing one shared clause. When they disagree the
    dialog opens empty and defaults to ADD, because replacing a clause you were
    never shown is how a level quietly stops training half its units. */
 function bldBulkClauseHead(c){
@@ -1943,7 +1943,7 @@ function condOptions(list,dep){
       label:(e.title?e.title+'. ':'')+(e.source==='edb'?'Used in this EDB'
         :e.source==='script'?'set by a script':'from historic_events.txt')}));
     // Each of these means "the regions where it holds", so descr_regions.txt is
-    // what the picker shows — a bare code name says nothing about where it bites.
+    // what the picker shows - a bare code name says nothing about where it bites.
     case 'religion': return (v.religion_rows||(v.religions||[]).map(r=>({code:r})))
       .map(r=>({value:r.code,label:r.regions
         ? `${r.regions} region${r.regions===1?'':'s'} follow it, up to ${r.max}%`
@@ -1967,7 +1967,7 @@ function condOptions(list,dep){
    `requires hidden_resource Arthedain` says nothing about where it bites: the
    name is invented by the mod and only means the handful of regions that carry
    it, out of descr_regions.txt. So the picker gets a marker that names the
-   SETTLEMENTS on hover — the thing you recognise on the campaign map — with the
+   SETTLEMENTS on hover - the thing you recognise on the campaign map - with the
    region and its starting owner beside each. */
 function condPlaces(kind,code){
   const v=bldVocab();
@@ -2168,7 +2168,7 @@ function bldOwnHtml(row){
     <b>Fix unit ownership</b> at the bottom of the editor to leave it alone.</div>`;
 }
 // Over many units the individual warnings would be a wall of text, so they are
-// rolled into one line per problem naming the units — the answer you want is
+// rolled into one line per problem naming the units - the answer you want is
 // "which of these twelve can't the Danes actually field", not twelve paragraphs.
 function bldOwnManyHtml(rows){
   const bad=rows.filter(r=>r&&(!r.known||r.missing_ownership.length||r.missing_textures.length));
@@ -2357,10 +2357,10 @@ function bldPickRender(){
   if(add){add.textContent=n?`Add ${n} unit${n===1?'':'s'}`:'Add';add.disabled=!n;}
 }
 /* A pool with no clause is trained by EVERY faction that can build the level,
-   which is almost never what adding one unit means — and for the factions that
+   which is almost never what adding one unit means - and for the factions that
    don't own the unit the building silently trains nothing. So a new pool starts
    gated to the unit's own EDU `ownership`: the set that can actually field it.
-   It is a starting point, not a rule — the row's Requirements button opens the
+   It is a starting point, not a rule - the row's Requirements button opens the
    clause like any other. A unit with no ownership gets no clause, because an
    empty `factions { }` would train nothing for anyone; the editor's existing
    "no ownership" warning is the thing to fix there. */
@@ -2371,7 +2371,7 @@ function bldPoolOwnership(type){
   return own.length?[{join:'',negate:false,kind:'factions',values:own,raw:''}]:[];
 }
 // One new pool row, appended to the level. Returns it, so the caller can say
-// what it did — nothing here touches the DOM, because adding twenty units must
+// what it did - nothing here touches the DOM, because adding twenty units must
 // redraw once rather than twenty times.
 function bldAddPoolRow(type,lvIndex,nums,conds){
   const b=state.bld,lv=b.work.levels[lvIndex==null?b.lvl:lvIndex];
@@ -2380,7 +2380,7 @@ function bldAddPoolRow(type,lvIndex,nums,conds){
   // the picker gets its EDU ownership instead (see bldPoolOwnership).
   const raw=(nums&&nums.requires!==undefined)?String(nums.requires||''):null;
   conds=conds||(raw===null?bldPoolOwnership(type):[]);
-  // `d.units` only indexes the units this line ALREADY trains — the server sends
+  // `d.units` only indexes the units this line ALREADY trains - the server sends
   // it once per line rather than the mod's whole EDU. A unit added here is by
   // definition not in it yet, so the row would call itself missing from the EDU
   // until the next save. It came out of the picker, which reads that same EDU.
@@ -2406,7 +2406,7 @@ function bldAddPoolRow(type,lvIndex,nums,conds){
      is off the bottom of the pane.
 
      This is display order only. The server never writes a new capability where
-     the list happens to put it — every added line is appended just above the
+     the list happens to put it - every added line is appended just above the
      block's closing brace, and existing lines are edited in place by the EDB
      line they came from (see buildings._plan_capabilities). So the file comes
      out byte-for-byte the same as it did when this pushed.
@@ -2422,7 +2422,7 @@ function bldAddPoolRow(type,lvIndex,nums,conds){
 function bldAddPool(type){ bldAddPicked([type]); }
 /* Commit the picker's ticks. The rows land ticked in bulk edit as well, because
    the thing you do straight after adding twelve units is give all twelve the
-   same requires clause — and hunting them back down in a list of three hundred
+   same requires clause - and hunting them back down in a list of three hundred
    is exactly the work this is meant to save. */
 function bldAddPicked(types){
   const b=state.bld;
@@ -2460,7 +2460,7 @@ function bldAddPicked(types){
   if(rows.some(r=>!bldPoolMatches(r))&&b.poolFac)b.poolFac.clear();
   b.bulk=b.bulk||{sel:new Set()};
   b.bulk.on=true; b.bulk.sel=new Set(rows);
-  // the picker replaced the editor's markup — rebuild it, then show the new rows
+  // the picker replaced the editor's markup - rebuild it, then show the new rows
   const modal=document.getElementById('modal');
   if(b.stash){ modal.innerHTML=b.stash; b.stash=null; }
   usePlace(b.stashScroll); b.stashScroll=null;
@@ -2485,7 +2485,7 @@ function bldAddPicked(types){
    line, and all three are mistakes a mod actually ships:
 
      * a unit recruitable at tier 2 that silently stops being recruitable when
-       the player upgrades to tier 3 — the building "loses" units as it grows;
+       the player upgrades to tier 3 - the building "loses" units as it grows;
      * a unit the city half trains and the castle half does not, when the two are
        meant to be the same building;
      * the same unit listed twice in one level, which the game reads as two pools
@@ -2522,8 +2522,8 @@ function bldTwinLevel(i){
 function bldChecksHtml(){
   return `<div class="bsec" id="bldChecks">${bldChecksInner()}</div>`;
 }
-/* Edits staged against other building lines are invisible in this form — they
-   belong to buildings that are not on screen — so they get a panel of their own.
+/* Edits staged against other building lines are invisible in this form - they
+   belong to buildings that are not on screen - so they get a panel of their own.
    Without it, Save would write changes the page never showed. */
 function bldAlsoHtml(){
   const also=(state.bld.work||{}).also||{};
@@ -2609,7 +2609,7 @@ function bldChecksInner(){
     ${elsewhere>0?`<div class="bnote">${elsewhere} more finding(s) on other tiers of this line.
       Switch tier above to see them.</div>`:''}`;
 }
-// Scroll the recruitment list to a unit and flash its rows — the useful answer
+// Scroll the recruitment list to a unit and flash its rows - the useful answer
 // to "this unit is listed twice" is being shown both of them.
 function bldJumpPool(unit){
   const key=unit.toLowerCase();
@@ -2653,7 +2653,7 @@ function bldAlsoCount(){
     n+Object.values(byLevel).reduce((m,rows)=>m+rows.length,0),0);
 }
 function bldAlsoLines(){ return Object.keys((state.bld.work||{}).also||{}); }
-// Whether the twin building already trains a unit at one of its levels — a
+// Whether the twin building already trains a unit at one of its levels - a
 // mirror that duplicates what is there is exactly the "same unit twice" mistake
 // the checks panel above flags.
 function bldTwinHas(level,unit){
@@ -2680,7 +2680,7 @@ function bldHasUnit(lvIndex,unit){
   return [...lv.caps,...lv.fcaps].some(c=>c.pool&&!c.del&&c.pool.unit.toLowerCase()===key);
 }
 
-// "the tiers above" is only meaningful if it says WHICH — a barracks line can
+// "the tiers above" is only meaningful if it says WHICH - a barracks line can
 // be five levels deep and the names are what the modder knows them by.
 function bldTiersAboveNames(){
   const b=state.bld;
@@ -2787,8 +2787,8 @@ function bldTiersRowNow(i){
    The city half and the castle half, side by side
 
    A settlement building is written as TWO lines in the EDB with nothing tying
-   them together — `barracks` and `castle_barracks` are as unrelated to the file
-   as any two buildings in it — so over years of edits they drift. A unit gets
+   them together - `barracks` and `castle_barracks` are as unrelated to the file
+   as any two buildings in it - so over years of edits they drift. A unit gets
    added to the city chain and forgotten in the castle one, and the only way to
    find that was to open both lines and read them against each other by eye.
 
@@ -2799,7 +2799,7 @@ function bldTiersRowNow(i){
    Nothing here writes to disk. A unit copied INTO this line goes into its
    working copy exactly as one added by hand does; a unit copied into the twin is
    staged in `work.also` and appears in the editor's "Also changing" panel. Both
-   are written by the same Save, with the same backup and the same Undo — the
+   are written by the same Save, with the same backup and the same Undo - the
    same road every other edit in this editor takes.
    ========================================================================= */
 async function bldCompareVariants(){
@@ -2822,7 +2822,7 @@ async function bldCompareVariants(){
   bldVarRender();
 }
 // Which rows the panel shows. Both halves of a real building agree about most of
-// their roster, so "everything" is a thousand rows of nothing to do — the gaps
+// their roster, so "everything" is a thousand rows of nothing to do - the gaps
 // are what the panel is opened for, and they lead.
 function bldVarFilter(v){ if(state.bld.vc){state.bld.vc.only=v; bldVarRender();} }
 function bldVarRows(lv){
@@ -2889,7 +2889,7 @@ function bldVarRender(){
   bldVarWire();
 }
 /* The boxes are live from the keystroke, not from an Apply button: this panel
-   has never had one — a mirror is staged the moment it is clicked — and a second
+   has never had one - a mirror is staged the moment it is clicked - and a second
    way of saying "yes, that number" would only be a way of losing one. */
 function bldVarWire(){
   const modal=document.getElementById('modal');
@@ -2940,7 +2940,7 @@ function bldVarBarText(lv){
 }
 //: The four numbers of a pool, in the order the `recruit_pool` line writes them.
 const VAR_NUM_KEYS=['initial','per_turn','maximum','experience'];
-//: How far one ▲▼ click moves each of them — a rate steps by a whole TURN, and a
+//: How far one ▲▼ click moves each of them - a rate steps by a whole TURN, and a
 //: pool count steps through 0.99 (see numBump).
 const VAR_NUM_STEP={initial:'pool',per_turn:'turns',maximum:'pool',experience:'1'};
 //: Short enough to sit over a box, and to name a difference in the row's own
@@ -2951,7 +2951,7 @@ const VAR_NUM_HEAD={initial:'Initial',per_turn:'Rate',maximum:'Max',experience:'
    Read-only, this panel could say that the two halves disagree and nothing more:
    the fix was two further trips into two separate building forms, one of them
    for a line that is not even the one you have open. A number typed here is
-   staged the moment it is typed, exactly as the ⇄ Mirror beside it is — into the
+   staged the moment it is typed, exactly as the ⇄ Mirror beside it is - into the
    working copy for this half, into `also` for the twin. Nothing reaches disk
    until the building is saved, and one Undo takes the lot back.
 
@@ -2974,7 +2974,7 @@ function bldVarCopyBtn(u,li,from){
   const dst=from==='a'?r.twin_settlement:r.settlement;
   return `<button class="vccopy" onclick="bldVarCopy(${li},'${q1(esc(u.unit))}','${from}')"
     title="Put all four of the ${esc(src)} half's numbers onto the ${esc(dst)} half.
-Staged like everything else on this page — nothing is written until you Save the building."
+Staged like everything else on this page - nothing is written until you Save the building."
     >Copy ${esc(src)} → ${esc(dst)}</button>`;
 }
 function bldVarRowHtml(u,li){
@@ -3016,7 +3016,7 @@ const bldVarKey=(li,unit)=>li+'|'+unit;
    ones this editor already had:
 
    * this half is the line the form behind the panel has open, so its row is
-     already in the working copy — found by the EDB line it came from, the same
+     already in the working copy - found by the EDB line it came from, the same
      key the unit view uses, falling back to the unit name for a row this panel
      staged a moment ago (a mirrored row has no line in the file yet);
    * the twin is a building that is not on screen, so its row is staged in
@@ -3074,7 +3074,7 @@ function bldVarDiff(u){
 }
 // The row's last column, the tier's tally and the tab that counts differences:
 // everything a typed number makes stale, and nothing else. A row that has just
-// come into step is NOT taken off a filtered list — pulling the line you are
+// come into step is NOT taken off a filtered list - pulling the line you are
 // typing on out from under you would be the worst possible reward for fixing it.
 function bldVarRepaint(li,lv,u){
   const r=state.bld.vc.r;
@@ -3224,7 +3224,7 @@ function bldUnitDirtyRows(){
    Read-only, because this screen is the one shape in the toolkit that is not a
    record: its rows come from a dozen building blocks scattered through the EDB,
    so there is nothing for a serialiser to write back to. What it answers is the
-   question the boxes cannot — what do these pools actually SAY in the file —
+   question the boxes cannot - what do these pools actually SAY in the file -
    and hovering a row lights its line. See codeview.pools_document. */
 function bldUnitCvHost(){
   const c=state.bld.cmp;
@@ -3349,7 +3349,7 @@ function bldUnitRow(r,i,KEYS,modal){
    A city/castle pair drifting apart is what this panel is opened to find, and
    the answer is per TIER: a twin that trains the unit five levels up is not the
    same building. `⇄ Mirror` puts the row into the twin, staged like every other
-   edit — the same call the building editor's own mirror uses. */
+   edit - the same call the building editor's own mirror uses. */
 function bldUnitTwinCell(r){
   if(!r.twin)
     return `<span class="count bctw" title="This building line has no city/castle counterpart.">None</span>`;
@@ -3392,7 +3392,7 @@ function bldUnitApply(){
       experience:e.experience!==undefined?e.experience:r.experience};
     if(r.line===b.line){
       // the building on screen already has this row in its working copy, found
-      // by the EDB line it came from — edit it there so the form stays truthful
+      // by the EDB line it came from - edit it there so the form stays truthful
       const row=[...b.work.levels[r.level_index].caps,...b.work.levels[r.level_index].fcaps]
         .find(x=>x.line===r.cap_line);
       if(row&&row.pool){
@@ -3423,7 +3423,7 @@ function bldUnitApply(){
 
 /* ---- hop to the Unit Editor and back ----
    The building editor's whole state (which line, which level, every unsaved
-   edit) lives in state.bld, which nothing here clears — so coming back is just
+   edit) lives in state.bld, which nothing here clears - so coming back is just
    re-rendering it. bldReturn only records what the Back button should say and
    which level to land on. */
 function openUnitFromBuilding(type){
@@ -3496,7 +3496,7 @@ function bldPayload(){
     }
     if(Object.keys(cultures).length)out.loc_cultures=cultures;
     return out;}),
-    // Rows staged against other building lines — the castle twin, or every tree
+    // Rows staged against other building lines - the castle twin, or every tree
     // that trains one unit. Planned against the same parse and spliced in the
     // same pass, so this stays one edit and one undo step.
     also:Object.entries((b.work.also)||{}).map(([line,byLevel])=>({
@@ -3512,8 +3512,8 @@ function bldCapOp(c){
   const op={line:c.line,keyword:c.keyword,args,requires:c.requires,delete:!!c.del};
   // Structure only where the clause was actually built here. A row copied from
   // somewhere else is new but its clause is not: it carries the original text,
-  // and re-emitting that from structure would quietly re-tidy — or, for a row
-  // with no parsed conditions, silently drop — a clause nobody edited.
+  // and re-emitting that from structure would quietly re-tidy - or, for a row
+  // with no parsed conditions, silently drop - a clause nobody edited.
   if(c.condEdited)op.conditions=c.conds||[];
   return op;
 }
@@ -3578,8 +3578,8 @@ async function bldSave(){
 
 /* ========================= a new building tree =========================
    The one thing the Buildings screen could not do: every other operation here
-   edits a line that is already in the file. A tree is three things at once —
-   the EDB block, three text keys per level, and the per-culture cards — and the
+   edits a line that is already in the file. A tree is three things at once -
+   the EDB block, three text keys per level, and the per-culture cards - and the
    first two have to land together, because a level with no `{name}` key crashes
    the game at the construction panel (all 1099 levels in the three installed
    mods have all three of theirs). The cards are art and stay yours to draw; the
@@ -3590,7 +3590,7 @@ async function bldSave(){
    and what Create writes cannot be two different things.
 
    THE LEVELS CHAIN FORWARD. Each one's `upgrades` block names the next and never
-   the other way about — all 771 upgrade entries measured across the three mods
+   the other way about - all 771 upgrade entries measured across the three mods
    point at a level listed later on the `levels` line, which is what TWCenter's
    hardcoded-limits note says the engine requires. */
 
@@ -3611,7 +3611,7 @@ function bldNewTree(){
   document.getElementById('modal').className='modal wide';
   bldNtPaint();
 }
-/* A level whose name you have not touched follows the line's — type `forge` and
+/* A level whose name you have not touched follows the line's - type `forge` and
    the three rows become forge_1, forge_2, forge_3. Touch one and it stops
    following, because renaming it back under you is the worse failure. */
 function bldNtRenumber(){

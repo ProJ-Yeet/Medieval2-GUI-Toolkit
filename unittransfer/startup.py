@@ -4,18 +4,18 @@ The launcher always gives the tool a real console so a failed start is *readable
 instead of a window that flashes and vanishes. This module provides the pieces
 that behaviour needs:
 
-  * :func:`preflight` — check everything that can stop the tool booting and report
+  * :func:`preflight` - check everything that can stop the tool booting and report
     each result as a line, so the console says *why* it failed.
-  * :func:`prewarm_icons` — decode a mod's unit cards up front with a progress
+  * :func:`prewarm_icons` - decode a mod's unit cards up front with a progress
     line, because a cold cache means hundreds of TGA→PNG conversions and the grid
     otherwise sits there looking broken.
-  * :func:`spawn_server` / :func:`follow_until_ready` — run the server as a
+  * :func:`spawn_server` / :func:`follow_until_ready` - run the server as a
     detached child and mirror its log into the console until it reports ready, so
     the console can simply *exit* once startup is done.
 
 Why a detached child rather than hiding our own window: on Windows Terminal (the
 default console host since Win11) ``ShowWindow(GetConsoleWindow(), SW_HIDE)`` is a
-no-op — the visible window belongs to WindowsTerminal.exe, not to us. Ending the
+no-op - the visible window belongs to WindowsTerminal.exe, not to us. Ending the
 console *process* is the only thing that reliably closes the window, so the
 server has to be a separate process that outlives it.
 
@@ -38,11 +38,11 @@ from .logutil import log
 MIN_PYTHON = (3, 9)
 
 #: logged by the server once it is listening, the tab is open and the icons are
-#: warm — the launcher waits for this line, then closes the console.
+#: warm - the launcher waits for this line, then closes the console.
 READY_MARKER = "STARTUP-COMPLETE"
 #: logged when the server came up fine but no browser could be opened. The
 #: launcher must then KEEP its window, because auto-closing it would leave the
-#: user with no window and no tab — indistinguishable from "nothing happened".
+#: user with no window and no tab - indistinguishable from "nothing happened".
 BROWSER_FAILED_MARKER = "BROWSER-NOT-OPENED"
 
 
@@ -59,7 +59,7 @@ class Check:
 
     def line(self) -> str:
         mark = "ok  " if self.ok else ("FAIL" if self.fatal else "warn")
-        return f"  [{mark}] {self.name}" + (f" — {self.detail}" if self.detail else "")
+        return f"  [{mark}] {self.name}" + (f" - {self.detail}" if self.detail else "")
 
 
 def _port_state(port: int, host: str = "127.0.0.1") -> Tuple[bool, str]:
@@ -68,17 +68,17 @@ def _port_state(port: int, host: str = "127.0.0.1") -> Tuple[bool, str]:
         s.settimeout(0.5)
         if s.connect_ex((host, port)) != 0:
             return True, "free"
-    # something is listening — is it us?
+    # something is listening - is it us?
     import json
     import urllib.request
     try:
         with urllib.request.urlopen(f"http://{host}:{port}/api/ping", timeout=2) as r:
             info = json.loads(r.read().decode("utf-8"))
         if info.get("app") == "unit-transfer":
-            return False, f"already running (pid {info.get('pid')}) — its window will be reopened"
+            return False, f"already running (pid {info.get('pid')}) - its window will be reopened"
     except Exception:
         pass
-    return False, "in use by another program — relaunch with --port 8757"
+    return False, "in use by another program - relaunch with --port 8757"
 
 
 def preflight(port: int, web_dir: Path) -> List[Check]:
@@ -97,7 +97,7 @@ def preflight(port: int, web_dir: Path) -> List[Check]:
         checks.append(Check("Pillow (unit icons)", True, f"version {PIL.__version__}"))
     except Exception as exc:                              # noqa: BLE001
         checks.append(Check("Pillow (unit icons)", False,
-                            f"not importable ({exc}) — run: pip install pillow", fatal=True))
+                            f"not importable ({exc}) - run: pip install pillow", fatal=True))
 
     idx = web_dir / "index.html"
     checks.append(Check("web/index.html", idx.is_file(),
@@ -115,22 +115,22 @@ def preflight(port: int, web_dir: Path) -> List[Check]:
 
     root = config.get_med2_root()
     if not root:
-        checks.append(Check("MED2 root", False, "not set yet — choose it in the UI (⚙)"))
+        checks.append(Check("MED2 root", False, "not set yet - choose it in the UI (⚙)"))
     else:
         rp = Path(root)
         mods = rp / "mods" if (rp / "mods").is_dir() else rp
         if not rp.exists():
-            checks.append(Check("MED2 root", False, f"{rp} no longer exists — reset it in the UI (⚙)"))
+            checks.append(Check("MED2 root", False, f"{rp} no longer exists - reset it in the UI (⚙)"))
         else:
             found = sorted(c.name for c in mods.iterdir()
                            if c.is_dir() and (c / "data").is_dir()) if mods.is_dir() else []
             checks.append(Check(
                 "MED2 root", bool(found),
-                f"{mods} — {len(found)} mod(s): {', '.join(found)}" if found
+                f"{mods} - {len(found)} mod(s): {', '.join(found)}" if found
                 else f"{mods} has no folders with a data/ subfolder"))
 
     free, detail = _port_state(port)
-    # A port held by ANOTHER program is fatal — nothing downstream can recover.
+    # A port held by ANOTHER program is fatal - nothing downstream can recover.
     # A port held by our own server is not: that path reopens the running window.
     ours = "already running" in detail
     checks.append(Check(f"port {port}", free, detail, fatal=not ours))
@@ -145,7 +145,7 @@ def report(checks: List[Check]) -> bool:
     bad = [c for c in checks if c.blocking]
     if bad:
         log.error("")
-        log.error("STARTUP FAILED — %d check(s) did not pass:", len(bad))
+        log.error("STARTUP FAILED - %d check(s) did not pass:", len(bad))
         for c in bad:
             log.error("   * %s%s", c.name, f": {c.detail}" if c.detail else "")
         log.error("Full log: %s", config.CONFIG_DIR / "server.log")
@@ -159,8 +159,8 @@ def prewarm_icons(registry, mod_names: List[str], every: float = 0.5,
     """Decode the unit CARDS of ``mod_names`` to PNG, logging progress.
 
     A cold icon cache means one TGA→PNG conversion per unit (hundreds per mod),
-    which is the slowest part of a first run. Doing it up front — with a progress
-    line at most every ``every`` seconds — means the console reports what the tool
+    which is the slowest part of a first run. Doing it up front - with a progress
+    line at most every ``every`` seconds - means the console reports what the tool
     is busy with while the grid fills in. Cached icons are near-free, so a warm
     start passes through in a moment.
 
@@ -200,16 +200,16 @@ def prewarm_icons(registry, mod_names: List[str], every: float = 0.5,
             now = time.monotonic()
             if now - last >= every or i == total:
                 last = now
-                log.info("icons: %s  %d/%d (%d%%) — %d converted, %d already cached",
+                log.info("icons: %s  %d/%d (%d%%) - %d converted, %d already cached",
                          name, i, total, i * 100 // max(total, 1), misses, hits)
-        log.info("icons: %s done — %d converted, %d cached, %.1fs",
+        log.info("icons: %s done - %d converted, %d cached, %.1fs",
                  name, misses, hits, time.monotonic() - started)
     return converted
 
 
 # --------------------------------------------------------------------------
 def server_log_path() -> Path:
-    """Where the log is actually being written (may not be config/ — see logutil)."""
+    """Where the log is actually being written (may not be config/ - see logutil)."""
     from .logutil import log_path
     return log_path() or (config.CONFIG_DIR / "server.log")
 
@@ -234,7 +234,7 @@ def port_free(port: int, host: str = "127.0.0.1") -> bool:
     Asked by binding rather than connecting, because connecting cannot answer it.
     With a timeout set, ``connect_ex`` returns ``WSAEWOULDBLOCK`` both for a
     closed port and for a listener whose accept queue is full; and on a machine
-    that filters loopback, a *closed* port times out instead of refusing — so
+    that filters loopback, a *closed* port times out instead of refusing - so
     "the connection failed" means neither free nor held. Binding is the actual
     question a starting server asks, and the OS answers it exactly.
 
@@ -275,7 +275,7 @@ def spawn_server(app_path: Path, args: List[str],
     the console interpreter so its output actually lands there. That is what
     "Keep the console window open" does to a session that is *already* running:
     the setting is read once, at launch, so switching it used to do nothing until
-    the next one — which reads as the setting being broken.
+    the next one - which reads as the setting being broken.
     """
     flags = 0
     exe = _pythonw()
@@ -303,7 +303,7 @@ def follow_until_ready(proc: subprocess.Popen, offset: int,
 
     Returns (ok, reason, browser_ok). ok=False means the child died or timed out.
     browser_ok=False means the server is fine but nothing opened on screen, which
-    the caller must treat as "keep this window" — otherwise the user is left with
+    the caller must treat as "keep this window" - otherwise the user is left with
     no console and no tab and no idea the tool is running.
     """
     path = server_log_path()

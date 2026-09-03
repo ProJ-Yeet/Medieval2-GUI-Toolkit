@@ -1,15 +1,15 @@
 """Unit packs: units in a zip you can hand to someone else.
 
-The problem this solves is not "copy a unit" — :mod:`unittransfer.transfer`
+The problem this solves is not "copy a unit" - :mod:`unittransfer.transfer`
 already does that, and does it well: it resolves name collisions, follows armour
 upgrades, brings the mount and its animation set, renames colliding projectiles,
 fixes ownership and puts every touched file in the undo log. The problem is that
 all of that only works when *both* mods are on the same machine.
 
 So a pack is not a new format the importer has to understand. **A pack is a
-mod.** The zip holds a real ``data/`` tree — an EDU with just those units, a
+mod.** The zip holds a real ``data/`` tree - an EDU with just those units, a
 modeldb with just their entries, their meshes, textures, icons, voice lines and
-whatever ``descr_*`` blocks they name — and importing one unzips it and hands it
+whatever ``descr_*`` blocks they name - and importing one unzips it and hands it
 to :func:`unittransfer.transfer.plan_transfer` as an ordinary source mod.
 
 That is the whole design. Every check a normal transfer makes, a pack import
@@ -24,7 +24,7 @@ What travels:
 
 What deliberately does not: anything the receiving mod already has to decide for
 itself. A pack carries no ownership rewrites, no building recruit pools and no
-opinion about which faction should field the unit — those are the importer's
+opinion about which faction should field the unit - those are the importer's
 options, and they are asked on the way in.
 """
 from __future__ import annotations
@@ -47,12 +47,12 @@ PACK_VERSION = 1
 MANIFEST_NAME = "unitpack.json"
 
 #: Files a pack may contain outside ``data/``. Anything else in the zip is
-#: ignored on import — see :func:`_safe_members`.
+#: ignored on import - see :func:`_safe_members`.
 _ALLOWED_TOP = {MANIFEST_NAME, "README.txt"}
 
 
 class PackError(Exception):
-    """Something the user can fix — surfaced in the UI, not a traceback."""
+    """Something the user can fix - surfaced in the UI, not a traceback."""
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +112,7 @@ def _icon_files(mod: Mod, unit) -> List[Tuple[Path, str]]:
 
 # Voices deliberately do not travel. A unit's line in the voice bank is a name
 # inside another faction's accent/class block, not a block of its own, so there
-# is no honest way to lift one out — and the transfer already gives an imported
+# is no honest way to lift one out - and the transfer already gives an imported
 # unit a voice from the DESTINATION's bank, which is what you want anyway: a
 # Mordor accent that does not exist in the receiving mod would be silence.
 
@@ -178,14 +178,14 @@ def plan_pack(mod: Mod, unit_types: Sequence[str]) -> PackPlan:
     for n in models:
         if n.lower() not in known:
             plan.warnings.append(
-                f"'{n}' is not an entry in this mod's battle_models.modeldb — "
+                f"'{n}' is not an entry in this mod's battle_models.modeldb - "
                 "the pack cannot carry it")
 
     plan.assets = _entry_files(mod, models)
     for u in plan.units:
         plan.icons += _icon_files(mod, u)
         if not mod.find_unit_card(u):
-            plan.warnings.append(f"{u.type} has no unit card in this mod — "
+            plan.warnings.append(f"{u.type} has no unit card in this mod - "
                                  "the import will have nothing to show on its row")
         if u.mount and mod.mount_def(u.mount) is None:
             plan.warnings.append(f"{u.type} rides '{u.mount}', which this mod's "
@@ -296,7 +296,7 @@ def write_pack(plan: PackPlan, dest_zip: Path) -> dict:
             text("data/descr_mounted_engines.txt",
                  mod.mounted_engine_file.preamble + meng, edu_mod.ENCODING)
         # An engine names skeletons by string and the file is small, so it goes
-        # whole rather than filtered — a missing skeleton is a broken engine.
+        # whole rather than filtered - a missing skeleton is a broken engine.
         if (eng or meng) and mod.descr_engine_skeleton_path.is_file():
             try:
                 z.write(mod.descr_engine_skeleton_path, "data/descr_engine_skeleton.txt")
@@ -328,7 +328,7 @@ def _tool_version() -> str:
 
 
 _README = """\
-Unit Transfer — unit pack
+Unit Transfer - unit pack
 =========================
 
 From: {mod}
@@ -339,7 +339,7 @@ Units in this pack:
 
 This zip is a miniature mod: everything under "data" is laid out exactly as a
 real mod's data folder is. To use it, open Unit Transfer, pick the mod you want
-the units in, and use "Import a unit pack" — the import runs the same checks,
+the units in, and use "Import a unit pack" - the import runs the same checks,
 conflict handling and options a normal transfer does, and lands in the same undo
 log.
 
@@ -360,7 +360,7 @@ def _safe_members(z: zipfile.ZipFile) -> List[zipfile.ZipInfo]:
     A zip can name ``../`` and absolute paths, and this one arrives from another
     person by design. Anything that does not resolve to a relative path inside
     ``data/`` (or one of the two files at the root) is dropped rather than
-    sanitised — a pack should not contain one.
+    sanitised - a pack should not contain one.
     """
     out: List[zipfile.ZipInfo] = []
     for info in z.infolist():
@@ -388,7 +388,7 @@ def read_manifest(zip_path: Path) -> dict:
                 return json.loads(z.read(MANIFEST_NAME).decode("utf-8"))
             if "data/export_descr_unit.txt" not in names:
                 raise PackError(
-                    "that zip is not a unit pack — it has no unitpack.json and no "
+                    "that zip is not a unit pack - it has no unitpack.json and no "
                     "data/export_descr_unit.txt")
     except zipfile.BadZipFile:
         raise PackError(f"{zip_path.name} is not a readable zip file")
@@ -412,7 +412,7 @@ def unpack(zip_path: Path, into: Path) -> Mod:
     except zipfile.BadZipFile:
         raise PackError(f"{zip_path.name} is not a readable zip file")
     if not (into / "data").is_dir():
-        raise PackError(f"{zip_path.name} has no data/ folder — it is not a unit pack")
+        raise PackError(f"{zip_path.name} has no data/ folder - it is not a unit pack")
     if not (into / "data" / "export_descr_unit.txt").is_file():
         raise PackError(f"{zip_path.name} carries no export_descr_unit.txt, so it "
                         "names no units")

@@ -1,14 +1,14 @@
-"""BMDB mode — the whole battle_models.modeldb, not one unit's slice of it.
+"""BMDB mode - the whole battle_models.modeldb, not one unit's slice of it.
 
 Runs on a throwaway copy of Third_Age_Reforged's data files, so the real mods are
 never touched. Covers:
   * the audit: what nothing references, what only a `soldier` line names, and
     which files under unit_models no entry mentions at all
-  * the safety nets: an entry named in a descr_*.txt — or inline in a campaign's
-    descr_strat.txt / campaign_script.txt — is never called unused, and the padded
+  * the safety nets: an entry named in a descr_*.txt - or inline in a campaign's
+    descr_strat.txt / campaign_script.txt - is never called unused, and the padded
     first entry of a sentinel-less modeldb is never removed
   * mounts no unit rides: reported, removable from descr_mount.txt, and the model
-    entry they were the last referrer of comes free with them — including when a
+    entry they were the last referrer of comes free with them - including when a
     mount is named after a model, where the audit has two differently shaped
     mention maps in play and used to read the wrong one
   * cleanup: entries dropped, their files exported mirroring the mod's layout,
@@ -123,7 +123,7 @@ check("every target offered is an entry something still references",
 check("...including the default pick",
       all(is_referenced(c["into"]) for c in a["merges"]))
 # "already an armour tier of the same unit" is a fact about the picked twin, so the
-# audit says it for EVERY option — the UI's picker can be changed after the scan.
+# audit says it for EVERY option - the UI's picker can be changed after the scan.
 by_type = mod.edu.by_type()
 def _own_tiers(c):
     return {x.lower() for t in c["units"] if by_type.get(t)
@@ -291,7 +291,7 @@ rec_c = bmdb_mod.apply_cleanup(pc)
 check("it moves into the export's unused folder, path mirrored",
       (tgt_c / bmdb_mod.UNUSED_SUBDIR / "data/unit_models/_Junk/nobody_reads_this.texture").is_file())
 check("and is gone from the mod", not junk.exists())
-check("the modeldb was not rewritten — no entry was touched",
+check("the modeldb was not rewritten - no entry was touched",
       Mod(root_c).modeldb_path.read_bytes() == before_db)
 undo(rec_c["id"])
 check("undo restores it", junk.is_file())
@@ -338,7 +338,7 @@ check("and says which campaign file still names it",
 
 print("\n== change_battle_model: the script command that puts the model LAST ==")
 # `change_battle_model <faction> <who> <model>` swaps a character's model
-# mid-campaign. It breaks both of the other patterns at once — the bare-word one
+# mid-campaign. It breaks both of the other patterns at once - the bare-word one
 # never fires (the character before `battle_model` is `_`, not a space), and if it
 # were loosened to fire it would capture the FACTION. An entry named only this way
 # is invisible to every other net here, so it reads as textbook dead weight: this
@@ -387,7 +387,7 @@ check("asked to remove the swapped-to model anyway, the cleanup refuses",
 
 print("\n== descr_model_strat.txt is not a reference ==")
 # The "any descr_*.txt that mentions it" net is deliberately over-cautious, but
-# descr_model_strat.txt only ever names STRAT-map models (data/models_strat) — a
+# descr_model_strat.txt only ever names STRAT-map models (data/models_strat) - a
 # battle-model name matching in there is a coincidence that would pin a genuinely
 # dead entry in place forever.
 root_g = fresh_mod()
@@ -418,7 +418,7 @@ dmp.write_text(dmp.read_text(encoding="latin-1") +
                "radius\t\t\t1.2\nheight\t\t\t2.0\nmass\t\t\t1.0\n", encoding="latin-1")
 mod_f = Mod(root_f)
 a_f = bmdb_mod.audit(mod_f, scan_orphans=False)
-check("the planted mount's model is no longer 'unused' — the mount references it",
+check("the planted mount's model is no longer 'unused' - the mount references it",
       free_me not in {u["entry"] for u in a_f["unused"]})
 row = next((r for r in a_f["unused_mounts"] if r["mount"] == "ut_test_mount"), None)
 check("the mount is reported as ridden by nobody", row is not None)
@@ -461,7 +461,7 @@ print("\n== a mount named after a model: the two mention maps stay apart ==")
 # per name, `_mount_mentions` is keyed by MOUNT name and holds a bare filename.
 # mount_audit used one name for both, the second assignment shadowing the first,
 # so the two model-keyed lookups read the mount map. That answers for the wrong
-# thing the moment a mount and an entry share a name — four of them do in DaC —
+# thing the moment a mount and an entry share a name - four of them do in DaC -
 # and hands mention_file a string where it wants a row, which crashed the whole
 # audit before it returned anything.
 root_c = fresh_mod()
@@ -483,7 +483,7 @@ dmc.write_text(
 # splits a path into tokens, so it sees the name in the first file; the mount
 # sweep matches the whole phrase and will not match one preceded by `/`, so it
 # only sees the second. Whichever filename comes back on the row therefore says
-# which map the lookup went to — that is what makes this a real check and not
+# which map the lookup went to - that is what makes this a real check and not
 # just "it did not crash".
 (root_c / "data/descr_ut_aaa.txt").write_text(
     f"; a path, so only the token sweep finds it\nmodels/{collide}/body.cas\n",
@@ -513,7 +513,7 @@ check("'mentioned_in' is read from the ENTRY map, which is the one keyed by mode
       bool(row_c) and row_c["mentioned_in"] == "descr_ut_aaa.txt")
 
 # mention_file itself takes either shape, because both maps are legitimately
-# passed to it — see its docstring.
+# passed to it - see its docstring.
 check("mention_file reads a row", bmdb_mod.mention_file(
     {"x": {"file": "descr_a.txt", "lua": False, "in_comment": False}}, "X")
     == "descr_a.txt")
@@ -547,7 +547,7 @@ check(f"all {len(users)} of them name the new one",
 
 print("\n== padded first entry (a modeldb with no 'blank' sentinel) ==")
 # Such a file keeps its reserved int-pairs in the FIRST entry, so that entry can
-# never be the one we drop — the next entry has no padding and the file would stop
+# never be the one we drop - the next entry has no padding and the file would stop
 # parsing. Built by hand (same shape as tests/test_modeldb_no_blank_entry.py).
 P = "0 0 "
 def _padded(name, tex):
@@ -600,7 +600,7 @@ places = {
     # a custom battle map: a whole file kind that was never opened at all
     "data/world/maps/battle/custom/Cair_Andros/descr_battle.txt":
         f"character\tY, general, battle_model {battle}, x 3, y 4\n",
-    # an installer's alternate tree — a copy now, the live mod the moment the
+    # an installer's alternate tree - a copy now, the live mod the moment the
     # mod's own switcher runs
     "Activate/NORMAL/data/world/maps/campaign/imperial_campaign/campaign_script.txt":
         f"    spawn_character England, agent spy, battle_model {activate}, x 5, y 6\n",
@@ -625,12 +625,12 @@ check("each is attributed to its own full path inside the mod",
 print("\n== the mod's OTHER battle_models.modeldb files are NOT a second opinion ==")
 # A mod carries several: `battle_models.modeldb.bak`, `battle_models_og.modeldb`,
 # a copy some other tool wrote out. Every one of them is a snapshot of an OLDER
-# state of the live file, not an alternate database the game ever loads — so
+# state of the live file, not an alternate database the game ever loads - so
 # honouring them would hold alive every file the mod has ever used at any point
 # in its history, and no cleanup could free anything again. Only the live
 # `data/unit_models/battle_models.modeldb` is believed.
 root_s = fresh_mod()
-# the backup names a file the live database has since stopped naming — exactly
+# the backup names a file the live database has since stopped naming - exactly
 # the shape a stale `.bak` has
 (root_s / "data/unit_models/from_modeldb").mkdir(parents=True, exist_ok=True)
 for stale_rel in ("data/unit_models/battle_models.modeldb.bak",
@@ -663,7 +663,7 @@ check("so the text scan does not resurrect it either",
 
 print("\n== recheck: what a past cleanup took out that today's nets would keep ==")
 # The morning after. A cleanup ran under the narrower nets, the mod now crashes,
-# and the thing that broke it is by definition no longer IN the mod — so only the
+# and the thing that broke it is by definition no longer IN the mod - so only the
 # cleanup's own log entry remembers it. This is the pass that reads that back.
 root_r = fresh_mod()
 mod_r0 = Mod(root_r)
@@ -708,7 +708,7 @@ check("it is reported as restored and nothing failed",
       back["restored"] == [row_r["name"]] and not back["failed"])
 check("the file that really was junk is still gone", not junk_r.is_file())
 rr2 = bmdb_mod.recheck(Mod(root_r))
-check("a second recheck is clean — a file that is back is not a finding", not rr2["rows"])
+check("a second recheck is clean - a file that is back is not a finding", not rr2["rows"])
 undo(back["id"])
 check("the revert is itself undoable", not needed.is_file())
 

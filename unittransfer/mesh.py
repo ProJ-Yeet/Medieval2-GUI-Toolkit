@@ -3,7 +3,7 @@
 The format had to be read out of the bytes rather than out of a spec. Neither
 reference we hold describes it:
 
-* the Blender addon in ``Reference/Medieval-2-Toolkit/`` never parses a model —
+* the Blender addon in ``Reference/Medieval-2-Toolkit/`` never parses a model -
   it writes an IWTE task file and shells out to ``IWTE.exe`` (``tasks/iwte_run``);
 * the reference tool's ``src/lib/casCodec.js`` documents ``.mesh`` as "uint32
   version, uint32 submesh count, 32-byte vertices", which matches no real file.
@@ -11,7 +11,7 @@ reference we hold describes it:
 
 What a ``.mesh`` really is
 --------------------------
-A **boost::serialization binary archive** — every file opens with
+A **boost::serialization binary archive** - every file opens with
 ``16 00 00 00 "serialization::archive"``. Which means the byte layout is not a
 flat struct: boost writes a class descriptor the FIRST time it meets a type
 (class id, tracking flag, version) and only the class id on every later mention,
@@ -32,7 +32,7 @@ The record layout on top of it::
         uint32  stream type, uint32 count, count * stride bytes
     then a bounding sphere and a bone table:
         uint32  bone count, then (uint32 name length, chars, uint32 index)
-    then a per-LOD block, named but not decoded — see below.
+    then a per-LOD block, named but not decoded - see below.
 
 **Indices are global.** Every group indexes one shared vertex pool, so a group
 is a face range, not a mesh of its own. The variants a unit shows at random
@@ -44,13 +44,13 @@ per faction, and the game treats them as one image twice as wide: main on the
 left, attachment on the right. **In the file, u is normalised over that PAIR**:
 u 0..0.5 is the main sheet, u 0.5..1 the attachment sheet, and the pair tiles
 with period 1. Measured, not assumed: across 900 models in one mod, 1,092 of
-the 1,179 weapon and shield groups — the art an attachment sheet exists for —
+the 1,179 weapon and shield groups - the art an attachment sheet exists for -
 sit in u 0.5..1, with bodies, heads and beards packed into 0..0.5.
 
-Everyone downstream of IWTE speaks the DOUBLED version of that coordinate —
+Everyone downstream of IWTE speaks the DOUBLED version of that coordinate -
 the Blender addon keeps main-texture objects in u 0..1 and attach objects in
 u 1..2 (``export_checks.checkUVSpace``), because IWTE doubles u when it turns
-a .mesh into a scene — so :func:`_read_streams` doubles u the same way and
+a .mesh into a scene - so :func:`_read_streams` doubles u the same way and
 everything this module hands out uses the community convention: main 0..1,
 attachment 1..2, tiling with period 2. Nobody has to know the file stores it
 halved except this docstring.
@@ -66,7 +66,7 @@ label, not an instruction.
 **The models are left-handed.** Right is +X, up is +Y and forward is +Z, which
 is the Direct3D convention and the opposite of OpenGL's. Measured, not assumed:
 a horse's head sits at +Z and its tail at -Z, and on a soldier the ``shield0``
-group sits at -X with ``primaryactive0`` at +X — shield in the left hand,
+group sits at -X with ``primaryactive0`` at +X - shield in the left hand,
 weapon in the right. Anything drawing these coordinates in a right-handed
 viewer has to negate one axis or every model comes out mirrored.
 
@@ -85,25 +85,25 @@ type    stride   meaning
 0       12       position, 3 floats
 1        8       bone weights, 2 floats (they sum to 1)
 2        4       bone indices, 4 bytes
-3        4 / 12  normal, either packed or three floats — see below
-4        8       texture coordinates, 2 floats; u stored halved — see above
+3        4 / 12  normal, either packed or three floats - see below
+4        8       texture coordinates, 2 floats; u stored halved - see above
 8, 9     4       colour and lighting channels, settlement meshes only
 10      4 / 12   tangent, written like the normal
 11      4 / 12   binormal, written like the normal
 13, 14   4       two more settlement-only channels
 ======  =======  =========================================================
 
-**There are two vertex formats sharing these type numbers.** A skinned model —
-soldiers, mounts, settlements — packs the normal, tangent and binormal
+**There are two vertex formats sharing these type numbers.** A skinned model -
+soldiers, mounts, settlements - packs the normal, tangent and binormal
 D3DCOLOR-style: unsigned bytes biased around 127.5, z-y-x order, pad byte last
-(see :func:`_unpack_normals` for how that was established). A static one —
-siege engines, sky domes — writes the same three as three floats each. Nothing in a stream header
+(see :func:`_unpack_normals` for how that was established). A static one -
+siege engines, sky domes - writes the same three as three floats each. Nothing in a stream header
 says which, so :func:`_resolve_stride` settles it by trying both and keeping the
 one the rest of the file can be read from. The same split shows up in the
 archive header, which is four words long for a skinned model and three for a
 static one (:func:`_read_header`).
 
-Skinning is out of scope for V2 — a static pose is enough for the viewer — so
+Skinning is out of scope for V2 - a static pose is enough for the viewer - so
 the weight and bone-index streams are read for the byte count and then dropped.
 Bone NAMES are kept: they cost nothing and they say what a model is rigged to.
 A settlement mesh under ``blockset`` is the same format with no bones at all; a
@@ -113,8 +113,8 @@ How far the decode goes, and how we know it is right
 ----------------------------------------------------
 Everything from the first byte to the end of the bone table is read as a
 grammar: no searching, no strides taken on faith. Reaching the bone table at
-all is the proof, because a single wrong stride anywhere before it — one index
-block, one vertex stream — puts the table outside the short window it is looked
+all is the proof, because a single wrong stride anywhere before it - one index
+block, one vertex stream - puts the table outside the short window it is looked
 for in, and the count read there lands on nonsense instead of a bone.
 
 What is NOT decoded is the block that closes the file: a per-LOD record of
@@ -127,17 +127,17 @@ block.
 
 The one place the reader searches rather than parses is the gap between vertex
 streams, where boost's bookkeeping changes length depending on which classes
-the archive has already introduced — see :func:`_find_stream`, which explains
+the archive has already introduced - see :func:`_find_stream`, which explains
 what constrains the search.
 
 ``tests/test_mesh.py`` holds this to the reference models in ``Reference/`` and
 to every model in whatever mods are installed. **4,700 of the 4,702 .mesh files
 in Divide and Conquer and Third Age Reforged decode** with every invariant
-holding — every unit model, mount, settlement piece and siege engine in both.
+holding - every unit model, mount, settlement piece and siege engine in both.
 
 The two that do not are sky domes under ``globallighting``, and they are
 refused rather than half-read: a file can hold SEVERAL models one after another,
-and this reader takes a single-model file. The tell is the closing block — a
+and this reader takes a single-model file. The tell is the closing block - a
 model that ends names it (``characterlod0``), and one followed by another model
 has no name to give, which is how :func:`_finish` tells the two apart and says
 which it found.
@@ -145,12 +145,12 @@ which it found.
 What a ``.cas`` is, and why there is no reader for one here
 -----------------------------------------------------------
 :func:`probe` tells a strat-map ``.cas`` from a battle ``.mesh``, and
-:func:`read_mesh` refuses one by name rather than by crashing — but the
+:func:`read_mesh` refuses one by name rather than by crashing - but the
 geometry is not decoded, because a ``.cas`` is not a variation on this format,
 it is a different one. It opens with the float ``3.2``, and what follows is a
 whole 3ds-max scene export: a frame rate and a table of key times, a node
 hierarchy (``Scene Root``, then the bones), animation tracks over those nodes,
-then the mesh, then the material and its texture — ``textures\\Daritai.tga`` sits
+then the mesh, then the material and its texture - ``textures\\Daritai.tga`` sits
 in the last 60 bytes of the file. Reverse-engineering it is a second job of the
 size this one was, and it belongs to the campaign map's strat preview, which is
 where the roadmap always had it. Recorded here so that phase starts from what is
@@ -173,7 +173,7 @@ CAS_SIGNATURE = b"\xcd\xccL@"
 
 #: Bytes per vertex in each vertex stream, by the stream's type number, as the
 #: lengths that type is ever written at. Types 8, 9, 13 and 14 only turn up in
-#: the settlement meshes under ``blockset`` — colour and lighting channels a
+#: the settlement meshes under ``blockset`` - colour and lighting channels a
 #: building has and a soldier does not.
 #:
 #: Types 3, 10 and 11 have two lengths because two vertex formats share these
@@ -218,11 +218,11 @@ class MeshGroup:
 
     So: :attr:`name` is the group TYPE, :attr:`texture_group` is the MESH NAME,
     and :attr:`flag` is required/optional. Which is also where the Blender
-    addon's ``objectname__comment__opt`` convention comes from — IWTE joins the
+    addon's ``objectname__comment__opt`` convention comes from - IWTE joins the
     type and the mesh name with ``__`` and appends ``__opt`` when the flag is 1.
     """
 
-    #: group TYPE — the slot the game fills: Body, Head, Legs, primaryactive0,
+    #: group TYPE - the slot the game fills: Body, Head, Legs, primaryactive0,
     #: shield0, Attachments1. Several groups sharing a type are variants and
     #: the game picks one per soldier.
     name: str
@@ -235,7 +235,7 @@ class MeshGroup:
     #: Which of the entry's two textures this group's art lands on:
     #: ``"main"``, ``"attach"``, or ``"both"`` for one piece of art that
     #: crosses from one onto the other. Not a field in the file and NOT a
-    #: rendering instruction — the UVs already address both sheets as one
+    #: rendering instruction - the UVs already address both sheets as one
     #: image, and a renderer picking a sheet per group would have to be wrong
     #: about every ``"both"``. This is for saying what a part uses, nothing
     #: more. See :func:`_classify_sheets`.
@@ -263,7 +263,7 @@ class MeshFile:
     bones: List[str] = field(default_factory=list)
     #: the closing block's name: characterlod0, buildingalphaskinnedlod0, …
     lod_name: str = ""
-    #: bytes after the bone table — the LOD/attachment block, see the module
+    #: bytes after the bone table - the LOD/attachment block, see the module
     #: docstring. Measured, deliberately not decoded.
     trailer: int = 0
     #: anything read but not understood, said out loud rather than swallowed
@@ -305,7 +305,7 @@ class _Archive:
     The only subtlety worth stating: :meth:`obj` is how a pointer to a tracked
     object reads, and it is two bytes longer the first time a class id turns up
     (the tracking flag and the class version follow it). Miss that and every
-    offset after the first record is wrong — which is exactly the shape of bug
+    offset after the first record is wrong - which is exactly the shape of bug
     that leaves a parser producing plausible-looking rubbish.
     """
 
@@ -356,7 +356,7 @@ class _Archive:
         if n > MAX_COUNT:
             raise MeshError(
                 f"{Path(self.source).name} asks for {n:,} {what} at offset "
-                f"{self.p - 4} — not a model file this tool understands")
+                f"{self.p - 4} - not a model file this tool understands")
         return n
 
     def text(self) -> str:
@@ -380,7 +380,7 @@ class _Archive:
         A run of zero words can precede the class id (boost's optional-class-id
         slots, plus the odd empty field that lands in the same place). No real
         class id is zero, so consuming them until a non-zero word appears is
-        unambiguous — and the byte-exhaustion check at the end of the parse is
+        unambiguous - and the byte-exhaustion check at the end of the parse is
         what proves we never ate a byte that meant something.
         """
         while self.peek16() == 0:
@@ -398,7 +398,7 @@ class _Archive:
 
         Used only after the vertex streams. :func:`_find_stream` jumps over the
         bookkeeping between streams rather than reading it, so from there on
-        :attr:`seen` no longer knows which classes have been declared — and the
+        :attr:`seen` no longer knows which classes have been declared - and the
         classes the tail names are exactly the ones those skipped preambles
         introduced. Reading them as plain references is right for every model
         measured, and wrong loudly rather than quietly if it ever is not: the
@@ -432,7 +432,7 @@ def _read_header(a: _Archive) -> None:
     There are four of those words in a skinned model and three in a static one
     (siege engines, the skydome, anything with no skeleton). Rather than guess
     from the file's folder, take the length that leaves the cursor on a class
-    descriptor — a wrong choice puts it on a length or a flag instead, which
+    descriptor - a wrong choice puts it on a length or a flag instead, which
     :func:`_looks_like_descriptor` can see.
     """
     sig = a.text()
@@ -477,7 +477,7 @@ def _read_groups(a: _Archive) -> List[MeshGroup]:
 
 
 #: How far ahead of a finished stream the next one's header may sit. The gap is
-#: boost's own bookkeeping — object ids and class descriptors — and the longest
+#: boost's own bookkeeping - object ids and class descriptors - and the longest
 #: measured across every model in two mods and the reference set is 40 bytes.
 STREAM_GAP = 96
 
@@ -487,7 +487,7 @@ def _find_stream(a: _Archive, verts: int,
     """``(type, offset of the data)`` for the next stream, or ``None``.
 
     The bytes between two streams are boost's class bookkeeping, and their
-    length depends on which classes the archive has already introduced — the
+    length depends on which classes the archive has already introduced - the
     first stream sits 40 bytes past the previous block, a later one 26. Rather
     than model class definitions we do not have, look ahead for the header
     itself: a known stream type, this file's exact vertex count, and room for
@@ -496,7 +496,7 @@ def _find_stream(a: _Archive, verts: int,
 
     Three things keep the search honest: the window is small, a type already
     read is not matched twice, and every stream after this one has to be found
-    from wherever this one ends — so a coincidence does not survive the chain.
+    from wherever this one ends - so a coincidence does not survive the chain.
     """
     limit = min(a.p + STREAM_GAP, len(a.d) - 8)
     for off in range(a.p, limit + 1, 2):
@@ -517,7 +517,7 @@ def _resolve_stride(a: _Archive, stype: int, start: int, verts: int,
     """Which of a type's possible strides this file uses.
 
     A skinned model packs its normal, tangent and binormal into three signed
-    bytes and a pad; a static one — a siege engine, the skydome — writes the
+    bytes and a pad; a static one - a siege engine, the skydome - writes the
     same three attributes as three floats. Same type number, four bytes per
     vertex against twelve. Nothing in the stream header says which, so try
     them and keep the one that leaves the cursor somewhere the rest of the
@@ -568,7 +568,7 @@ def _read_streams(a: _Archive, out: MeshFile) -> None:
         packed[stype] = a.blob(verts * stride)
 
     if POSITION_STREAM not in packed:
-        raise MeshError(f"{Path(a.source).name} has no vertex positions — "
+        raise MeshError(f"{Path(a.source).name} has no vertex positions - "
                         f"found streams {sorted(packed) or 'none'}")
     out.positions = array("f")
     out.positions.frombytes(packed[POSITION_STREAM])
@@ -578,7 +578,7 @@ def _read_streams(a: _Archive, out: MeshFile) -> None:
         # The file normalises u over the two-sheet PAIR: main is 0..0.5 and
         # the attachment sheet 0.5..1. Doubling here is what puts every UV
         # this module hands out into the convention IWTE and the Blender
-        # addon speak — main in u 0..1, attachment in u 1..2 — see the
+        # addon speak - main in u 0..1, attachment in u 1..2 - see the
         # module docstring. v is per sheet already and stays as written.
         for i in range(0, len(out.uvs), 2):
             out.uvs[i] *= 2.0
@@ -593,12 +593,12 @@ def _unpack_normals(raw: bytes, verts: int) -> array:
 
     Twelve bytes a vertex are already three floats. Four are a D3DCOLOR-style
     packed vector: unsigned bytes biased around 127.5 (``b / 255 * 2 - 1``),
-    laid out BGRA-fashion — **x in the third byte, y in the second, z in the
+    laid out BGRA-fashion - **x in the third byte, y in the second, z in the
     first**, and the fourth a pad that is always zero. Settled by measurement,
     not guesswork: decoded this way the vectors come back unit length to
     within 0.004 and agree with the face normals computed from the positions
     (mean dot +0.9, 4 of 6,783 opposed on the model measured); read as signed
-    bytes in x-y-z order — the first guess — their lengths ranged 0.74..1.43
+    bytes in x-y-z order - the first guess - their lengths ranged 0.74..1.43
     and half of them pointed against their own faces, which on screen was a
     model covered in dark patches with hard seams between them.
     """
@@ -617,7 +617,7 @@ def _read_bones(a: _Archive, out: MeshFile) -> None:
     """The bounding sphere and bone table that follow the vertex streams.
 
     A settlement mesh under ``blockset`` has no skeleton and writes a count of
-    zero here — same grammar, empty table, and no class descriptor because
+    zero here - same grammar, empty table, and no class descriptor because
     there are no entries to describe.
     """
     a.ref()
@@ -656,7 +656,7 @@ def read_mesh(path) -> MeshFile:
     return out
 
 
-#: A texel's worth of slack at a sheet boundary, for LABELLING only — never
+#: A texel's worth of slack at a sheet boundary, for LABELLING only - never
 #: for sampling. It is the addon's own UV-space tolerance, and it is about one
 #: texel of a 1024 sheet, which is the point.
 TILE_EPS = 0.001
@@ -666,8 +666,8 @@ def _classify_sheets(m: MeshFile) -> None:
     """Say which of the entry's two textures each group's art lands on.
 
     A modeldb entry names two textures per faction, a main one and an
-    attachment one, and **the game lays them out as ONE image twice as wide** —
-    main on the left, attachment on the right — which is what the mesh's single
+    attachment one, and **the game lays them out as ONE image twice as wide** -
+    main on the left, attachment on the right - which is what the mesh's single
     UV set addresses. In the coordinates this module hands out (u doubled by
     :func:`_read_streams` from the file's pair-normalised form), u 0..1 is the
     main sheet, u 1..2 is the attachment sheet, and the pair repeats in both
@@ -679,20 +679,20 @@ def _classify_sheets(m: MeshFile) -> None:
 
     Nothing here is a rendering instruction. A renderer samples the glued pair
     at ``u/2`` and the coordinate picks the sheet by itself; it must NOT choose
-    per group, because a group's art can cross the boundary — 124 of this mod's
-    groups do — and picking one sheet for such a group is wrong about half of
+    per group, because a group's art can cross the boundary - 124 of this mod's
+    groups do - and picking one sheet for such a group is wrong about half of
     it. Nor may it wrap a coordinate into 0..1: 112 groups have u below zero
     and 268 have v outside 0..1, and those tile on purpose.
 
     What this is for is the answer to "what does this part use", which the
-    viewer's part list shows. It is worked out the way the shader samples — the
+    viewer's part list shows. It is worked out the way the shader samples - the
     half of the glued pair a coordinate lands in is ``u mod 2``, below 1 for
-    main and at or above 1 for attachment — so the label cannot disagree with
+    main and at or above 1 for attachment - so the label cannot disagree with
     the picture about anything you could see.
 
     The range is pulled in by :data:`TILE_EPS` first, and that is not a fudge.
-    Meshes routinely have an edge vertex a fraction over a boundary — the
-    ``avari_horselords`` body runs to u = -0.004 — and the render does sample
+    Meshes routinely have an edge vertex a fraction over a boundary - the
+    ``avari_horselords`` body runs to u = -0.004 - and the render does sample
     the far sheet's last texel column there, exactly as the game does. But it
     is one column under one vertex, and calling the whole body "both sheets"
     over it tells the reader something false about the part.
@@ -722,7 +722,7 @@ def _classify_sheets(m: MeshFile) -> None:
 
 
 def _read_lod_name(a: _Archive) -> str:
-    """The name of the block that closes the file — ``characterlod0`` and the
+    """The name of the block that closes the file - ``characterlod0`` and the
     like. Read for the name alone: the rest of the block is per-LOD material
     and attachment settings, and nothing the viewer draws is in it."""
     mark = a.p
@@ -766,8 +766,8 @@ def _finish(a: _Archive, out: MeshFile) -> None:
     out.trailer = len(a.d) - a.p
     if out.trailer > MAX_TRAILER:
         # A model that ends here names its closing block. One that does not is
-        # a file holding SEVERAL models back to back — the sky domes under
-        # globallighting do this — and the geometry read so far is only the
+        # a file holding SEVERAL models back to back - the sky domes under
+        # globallighting do this - and the geometry read so far is only the
         # first of them. Saying which of the two it is beats one vague message
         # for both.
         if not out.lod_name:
@@ -778,7 +778,7 @@ def _finish(a: _Archive, out: MeshFile) -> None:
                 f"and {out.trailer:,} bytes follow it")
         raise MeshError(
             f"{Path(a.source).name}: {out.trailer:,} of {len(a.d):,} bytes left "
-            f"after the bone table — the layout does not match, so the geometry "
+            f"after the bone table - the layout does not match, so the geometry "
             f"cannot be trusted")
     top = len(out.positions) // 3
     for g in out.groups:
@@ -793,7 +793,7 @@ def _wrong_format(path: Path, data: bytes, wanted: str) -> str:
     if found == wanted:
         return f"{path.name} is a {wanted} file but its header is damaged"
     if found == "cas":
-        return (f"{path.name} is a .cas strat-map model, not a battle .mesh — "
+        return (f"{path.name} is a .cas strat-map model, not a battle .mesh - "
                 f"this tool does not read .cas geometry yet")
     return (f"{path.name} is not a Medieval II model file "
             f"(first bytes: {data[:8].hex(' ') or 'empty'})")
@@ -829,7 +829,7 @@ PAYLOAD_MAGIC = b"M2GT"
 def entry_view(entry, data_dir: Path) -> dict:
     """A modeldb entry as the viewer's picker needs it: LODs and skins.
 
-    Cheap on purpose — it stats files and decodes nothing, because this is what
+    Cheap on purpose - it stats files and decodes nothing, because this is what
     the dialog opens on and the geometry is a second request. ``exists`` is the
     interesting column: a mod that references vanilla art is normal, and the
     viewer has to say "not in this mod" rather than draw nothing and look broken.
@@ -846,7 +846,7 @@ def entry_view(entry, data_dir: Path) -> dict:
         })
     # A skin is a PAIR of files, not one file. Every faction on the entry gets
     # a main texture and an attachment texture, and a model draws from BOTH at
-    # once — the groups whose UVs sit in the second tile take the attachment
+    # once - the groups whose UVs sit in the second tile take the attachment
     # sheet (see _classify_attachments). Offering the two files as separate
     # choices, which is what listing them one row per file did, means whichever
     # one you pick paints the whole model and half of it comes out wrong.

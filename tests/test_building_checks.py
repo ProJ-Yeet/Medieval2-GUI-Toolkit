@@ -8,7 +8,7 @@ that fix them. Covers:
   * variant_pairs pairs one city line to one castle line, and refuses to guess
     when a key has two candidates on a side
   * pair_levels matches marker-free level names first, then falls back to
-    position — a mod that renamed its castle tiers still lines tier 1 up to tier 1
+    position - a mod that renamed its castle tiers still lines tier 1 up to tier 1
   * line_checks finds a unit that stops being recruitable further up a chain, a
     unit one settlement type has and the other does not, and a unit listed twice
     in one level (flagging identical clauses separately from per-faction ones)
@@ -277,7 +277,7 @@ check("a line that does not exist is an error, not a silent skip",
 print("\n== the recruit limit sees the twin's existing pools ==")
 
 # One added row can only push a level over the limit when the rows already there
-# are counted too — an `also` payload carries just the addition.
+# are counted too - an `also` payload carries just the addition.
 limit = buildings.RECRUIT_LIMIT
 big = ["\t\t\t\trecruit_pool \"U%d\"  1  0.5  2  0\n" % i for i in range(limit + 1)]
 CROWDED = EDB.replace('\t\t\t\trecruit_pool "Spearmen"  1  0.5  2  0\n'
@@ -299,5 +299,5 @@ import shutil
 shutil.rmtree(root, ignore_errors=True)
 shutil.rmtree(cfg, ignore_errors=True)
 bad = ok.count(False)
-print(f"\n{len(ok) - bad}/{len(ok)} checks — " + ("ALL PASSED" if not bad else "SOME FAILED"))
+print(f"\n{len(ok) - bad}/{len(ok)} checks - " + ("ALL PASSED" if not bad else "SOME FAILED"))
 sys.exit(1 if bad else 0)

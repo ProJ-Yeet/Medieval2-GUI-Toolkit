@@ -1,15 +1,15 @@
 """Replace mode: write a transferred unit's models INTO an existing dest unit.
 
 The alternative to "use another unit as base": instead of a new EDU entry that
-inherits a destination unit's stats, the destination unit itself is rewritten —
-same type, same dictionary, same localisation, same stats — with the transferred
+inherits a destination unit's stats, the destination unit itself is rewritten -
+same type, same dictionary, same localisation, same stats - with the transferred
 unit's models. Checked here:
 
   * no unit is added (same EDU unit count, dest_new_units == 0) and the block
     stays exactly where it was in the file
   * identity + stats + ownership stay the replaced unit's; the models become the
     transferred unit's (soldier, officers, armour upgrades)
-  * localisation is NOT touched — the unit keeps its name and description
+  * localisation is NOT touched - the unit keeps its name and description
   * icons are opt-in: nothing by default, and `import_card` writes the source
     card under the REPLACED unit's dictionary
   * the officer / armour-upgrade groups can be kept instead of ported
@@ -162,7 +162,7 @@ shutil.rmtree(dest_root, ignore_errors=True)
 dest_root = fresh_dest()
 dest = Mod(dest_root)
 # `import_officers_with_base` is ON by default, and it means "from base" brings
-# the SOURCE's officers over with the base's animations instead — which drops
+# the SOURCE's officers over with the base's animations instead - which drops
 # `officer` from the kept groups on purpose (transfer.py, officer_base_import).
 # That path is test_mount_base_import's; this section is the literal keep.
 plan = plan_transfer(src, UNIT, dest,

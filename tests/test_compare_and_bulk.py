@@ -1,20 +1,20 @@
 """The unit comparison table, and bulk requires-clause edits over recruit pools.
 
-Both features are pure JavaScript in ``web/index.html`` — no server call decides
+Both features are pure JavaScript in ``web/index.html`` - no server call decides
 which unit "wins" a stat, and no server call merges one recruit pool's clause
 onto twenty others. So this suite runs the page's own functions under node,
 against real mod data, and checks the parts that are easy to get quietly wrong:
 
   * every stat named in ``CMP_MERIT`` / ``CMP_ORDER`` still exists as a slot of
-    the field it claims to belong to. These are string keys — ``stat_pri|Attack``
-    — so renaming a part label in ``GF_FIELDS`` would silently stop colouring the
+    the field it claims to belong to. These are string keys - ``stat_pri|Attack``
+    - so renaming a part label in ``GF_FIELDS`` would silently stop colouring the
     slot rather than fail, and the table would just look duller.
   * ``cmpVerdict`` calls a winner only where there is one: bigger wins for
     attack, smaller wins for upkeep, the training ladder is ordered, and a line
     one of the two units does not HAVE never loses on its zeroes.
   * ``cmpBuild`` over two real units accounts for every slot exactly once and
     keeps identity lines (``type``, ``dictionary``) out of a stat comparison.
-  * ``bldCondsOnto`` — replace swaps the clause, add concatenates, a term the
+  * ``bldCondsOnto`` - replace swaps the clause, add concatenates, a term the
     row already carries is not written twice, and applying the same paste again
     changes nothing. That last one matters: pasting is a button you press when
     you are not sure whether it took.
@@ -80,12 +80,12 @@ const V=(what,key,name,a,b,absent)=>{
   const v=cmpVerdict(key,name?pl(key,name):null,a,b,absent||'');
   out.verdict.push({what,win:v.win||'',gap:v.gap||'',same:!!v.same,diff:!!v.diff});
 };
-V('attack 12 vs 8 — bigger wins',      'stat_pri','Attack','12','8');
-V('attack 8 vs 12 — the other side',   'stat_pri','Attack','8','12');
-V('attack 10 vs 10 — identical',       'stat_pri','Attack','10','10');
-V('weapon delay 20 vs 25 — faster wins','stat_pri','Delay','20','25');
-V('upkeep 120 vs 300 — cheaper wins',  'stat_cost','Upkeep','120','300');
-V('recruit turns 1 vs 2 — fewer wins', 'stat_cost','Turns','1','2');
+V('attack 12 vs 8 - bigger wins',      'stat_pri','Attack','12','8');
+V('attack 8 vs 12 - the other side',   'stat_pri','Attack','8','12');
+V('attack 10 vs 10 - identical',       'stat_pri','Attack','10','10');
+V('weapon delay 20 vs 25 - faster wins','stat_pri','Delay','20','25');
+V('upkeep 120 vs 300 - cheaper wins',  'stat_cost','Upkeep','120','300');
+V('recruit turns 1 vs 2 - fewer wins', 'stat_cost','Turns','1','2');
 V('free picks is a setting, not a merit','stat_cost','Free picks','2','5');
 V('skeleton factor has no better side','stat_pri','Skel. factor','1','1.1');
 V('training ladder is ordered',        'stat_mental','Training','highly_trained','trained');
@@ -93,7 +93,7 @@ V('impetuous is different, not better','stat_mental','Discipline','impetuous','d
 V('a hit sound is just different',     'stat_pri','Hit sound','axe','sword');
 V('morale 18 vs 19',                   'stat_mental','Morale','18','19');
 V('armour 8 vs 7',                     'stat_pri_armour','Armour','8','7');
-V('heat fatigue 4 vs 1 — less is better','stat_heat','Heat','4','1');
+V('heat fatigue 4 vs 1 - less is better','stat_heat','Heat','4','1');
 V('nothing wins a line one of them lacks','stat_armour_ex','Armour 0','0','12','a');
 V('a non-numeric value never wins',    'stat_pri','Attack','lots','8');
 
@@ -159,7 +159,7 @@ const say=(what,got,want)=>out.conds.push({what,got,want,ok:got===want});
   say('add concatenates onto what is there',
       bldClauseText(r.conds),'hidden_resource Arthedain and factions { gondor, }');
   bldCondsOnto(r,[C('factions',['gondor'])],'add');
-  say('add is idempotent — the same term is not written twice',
+  say('add is idempotent - the same term is not written twice',
       bldClauseText(r.conds),'hidden_resource Arthedain and factions { gondor, }');
   bldCondsOnto(r,[C('event_counter',['x','1'])],'add');
   say('add still appends a term that IS new',
@@ -198,14 +198,14 @@ print("\n-- compare & bulk (node) --")
 node = shutil.which("node")
 mods = installed_mods()
 if not node:
-    print("  [skip] node is not on PATH — the page's own JS cannot be exercised")
+    print("  [skip] node is not on PATH - the page's own JS cannot be exercised")
 elif not WEB.exists():
     print("  [skip] web/index.html not found")
 elif not mods:
     print("  [skip] no mod installed to compare units from")
 else:
     # Since the Phase 3 split the page's code is web/js/*.js, loaded as plain
-    # <script src> tags — one global scope, so concatenating them in tag order IS
+    # <script src> tags - one global scope, so concatenating them in tag order IS
     # the page's program. (Scraping an inline <script> block, as this used to,
     # now finds the HTML comment that explains the split and reads the comment.)
     src = WEB.read_text(encoding="utf-8")
@@ -240,12 +240,12 @@ else:
 
         print("\n  -- who wins a slot --")
         want = {
-            'attack 12 vs 8 — bigger wins': ('a', '4'),
-            'attack 8 vs 12 — the other side': ('b', '4'),
-            'attack 10 vs 10 — identical': ('=', ''),
-            'weapon delay 20 vs 25 — faster wins': ('a', '5'),
-            'upkeep 120 vs 300 — cheaper wins': ('a', '180'),
-            'recruit turns 1 vs 2 — fewer wins': ('a', '1'),
+            'attack 12 vs 8 - bigger wins': ('a', '4'),
+            'attack 8 vs 12 - the other side': ('b', '4'),
+            'attack 10 vs 10 - identical': ('=', ''),
+            'weapon delay 20 vs 25 - faster wins': ('a', '5'),
+            'upkeep 120 vs 300 - cheaper wins': ('a', '180'),
+            'recruit turns 1 vs 2 - fewer wins': ('a', '1'),
             'free picks is a setting, not a merit': ('~', ''),
             'skeleton factor has no better side': ('~', ''),
             'training ladder is ordered': ('a', ''),
@@ -253,7 +253,7 @@ else:
             'a hit sound is just different': ('~', ''),
             'morale 18 vs 19': ('b', '1'),
             'armour 8 vs 7': ('a', '1'),
-            'heat fatigue 4 vs 1 — less is better': ('b', '3'),
+            'heat fatigue 4 vs 1 - less is better': ('b', '3'),
             'nothing wins a line one of them lacks': ('~', ''),
             'a non-numeric value never wins': ('~', ''),
         }

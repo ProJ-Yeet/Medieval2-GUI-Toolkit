@@ -1,9 +1,14 @@
 """Find UI prose that breaks the toolkit's two writing rules.
 
-The rules (ROADMAP, 2026-08-18): a note in the UI is a lead line plus points
-through ``docPoints()``, never prose joined by em dashes; and every sentence
-starts with a capital. Em dashes are fine in code comments and in short
-appositives — this only flags the ones doing a full stop's job.
+The rules: a note in the UI is a lead line plus points through ``docPoints()``,
+never prose strung together on dashes; and every sentence starts with a capital.
+A dash is fine in a short appositive and fine anywhere in code, so this only
+flags the ones doing a full stop's job.
+
+The third rule has no judgement in it at all: the em dash is not used in this
+project, anywhere. The whole tree was swept to plain hyphens in 2.1.11, so one
+that reappears was typed by something that was not looking rather than chosen,
+and it is reported wherever it is - comment, string or doc - not just in UI text.
 
     python tools/prose_check.py            # a summary and the worst offenders
     python tools/prose_check.py --all      # every hit
@@ -25,7 +30,11 @@ ROOT = Path(__file__).resolve().parents[1]
 #: and starts being a clause the dash is holding together.
 CLAUSE_CHARS = 55
 
-DASH = re.compile(r"\s[—–]\s")
+DASH = re.compile(r"\s[-–]\s")
+#: The em dash itself. Not a style opinion and not scoped to UI strings:
+#: the character is not written in this project at all, so any one at all is
+#: a hit, in whatever kind of line it turns up in.
+ANY_EM = re.compile("\u2014")
 #: A line of code rather than prose: no point flagging a dash inside a regex, a
 #: path or an identifier.
 CODE_ISH = re.compile(r"^(//|/\*|\*|rem\s|#)")
@@ -34,10 +43,10 @@ CODE_ISH = re.compile(r"^(//|/\*|\*|rem\s|#)")
 #: An inline style, not a sentence. ``'flex:0 0 88px'`` and
 #: ``'margin-left:auto;display:flex'`` have spaces and letters like prose does,
 #: and they were being stitched onto the title next to them and then reported
-#: for opening in lower case — which they are supposed to do.
+#: for opening in lower case - which they are supposed to do.
 CSS_DECL = re.compile(r"^[a-z-]+\s*:\s*[^;]+(?:;\s*[a-z-]+\s*:\s*[^;]+)*;?$")
 
-#: `+( … )+` — a value spliced into the middle of a sentence. See :func:`_fold`.
+#: `+( … )+` - a value spliced into the middle of a sentence. See :func:`_fold`.
 INTERP = re.compile(r"\+\s*\([^()]*\)\s*\+")
 
 
@@ -49,11 +58,11 @@ def _literals(line: str):
     the middle of a sentence (``'on a '+esc(cat)+' unit the engine…'``). Both
     are halves of one sentence.
 
-    Anything else between them — a ``?``, a ``:``, a comma, markup — means they
+    Anything else between them - a ``?``, a ``:``, a comma, markup - means they
     are separate strings that only happen to share a line, and joining those
     invents sentences nobody wrote. The two branches of a ternary were being
-    read as one, which is where "the replaced unit — pick one first the base
-    unit — pick one" came from.
+    read as one, which is where "the replaced unit - pick one first the base
+    unit - pick one" came from.
     """
     out = []
     end = 0
@@ -86,7 +95,7 @@ def _literals(line: str):
 
 
 def _groups(line: str):
-    """The logical strings on one line — ``+``-glued literals joined into one."""
+    """The logical strings on one line - ``+``-glued literals joined into one."""
     groups = []
     for s, glued in _literals(line):
         if glued and groups:
@@ -103,7 +112,7 @@ def _fold(text: str):
     was left at the END of a line. This codebase overwhelmingly writes it at the
     START of the continuation instead::
 
-        help:'The weapon’s attack factor — how much damage a blow does. '
+        help:'The weapon’s attack factor - how much damage a blow does. '
           +'A higher number is stored but behaves as 63.'
 
     and every one of those continuations was being flushed as a string of its
@@ -134,8 +143,8 @@ def ui_strings(text: str):
     case. Reading them line by line reported 589 "lower-case sentence starts",
     almost all of which were the second half of a sentence that began correctly
     on the line above. So the fragments of one expression are stitched back
-    together before anything is measured — :func:`_fold` across lines, and
-    :func:`_groups` within one — and nothing else is: two literals that merely
+    together before anything is measured - :func:`_fold` across lines, and
+    :func:`_groups` within one - and nothing else is: two literals that merely
     share a line stay two strings.
     """
     for i, line in _fold(text):
@@ -146,7 +155,7 @@ def ui_strings(text: str):
 
 
 def clause_dashes(s: str):
-    """Dashes with a long stretch of text after them — a full stop's work."""
+    """Dashes with a long stretch of text after them - a full stop's work."""
     out = []
     for m in DASH.finditer(s):
         after = s[m.end():]
@@ -164,7 +173,7 @@ def lower_starts(s: str):
     A label is not a sentence: "mercs only", "per turn" and "pool" are exactly
     right in lower case, and flagging them buries the real hits. A run of text
     counts as a sentence when it ends in a full stop or is long enough to be
-    prose — which is the same line the eye draws.
+    prose - which is the same line the eye draws.
     """
     plain = re.sub(r"<[^>]*>", " ", s)
     plain = re.sub(r"\$\{[^}]*\}", "", plain).strip()
@@ -184,7 +193,7 @@ def lower_starts(s: str):
     # tried and abandoned: a sentence may legitimately open with a code identifier
     # ("`no` means a melee weapon", "`spear` also carries a penalty"), an EDU
     # keyword is lower case by definition, and there is no way to tell those from
-    # a real slip without reading the line — which is what the work list is for.
+    # a real slip without reading the line - which is what the work list is for.
     if s.lstrip().startswith("<"):
         return []                      # opens inside markup: <code>keyword</code>
     # Opens on a value, not a word: "${n} pool(s) added…" reads "3 pool(s)
@@ -201,6 +210,13 @@ def scan(paths):
     hits = []
     for p in paths:
         text = p.read_text(encoding="utf-8")
+        # Whole file, not just its UI strings: a banned character in a comment is
+        # as much of a slip as one on screen, and cheaper to catch here than in
+        # a review.
+        for m in ANY_EM.finditer(text):
+            line = text.count("\n", 0, m.start()) + 1
+            hits.append(("em", p, line,
+                         text[max(0, m.start() - 30):m.start() + 30].replace("\n", " ")))
         for line, s in ui_strings(text):
             for bad in clause_dashes(s):
                 hits.append(("dash", p, line, bad))
@@ -223,8 +239,10 @@ def main(argv):
 
     dashes = sum(1 for h in hits if h[0] == "dash")
     cases = sum(1 for h in hits if h[0] == "case")
-    print(f"{len(hits)} hits in {len(per_file)} files — "
-          f"{dashes} clause-joining dashes, {cases} lower-case sentence starts\n")
+    ems = sum(1 for h in hits if h[0] == "em")
+    print(f"{len(hits)} hits in {len(per_file)} files - "
+          f"{dashes} clause-joining dashes, {cases} lower-case sentence starts, "
+          f"{ems} em dashes\n")
     for name in sorted(per_file, key=lambda n: -len(per_file[n])):
         rows = per_file[name]
         print(f"  {len(rows):3}  {name}")

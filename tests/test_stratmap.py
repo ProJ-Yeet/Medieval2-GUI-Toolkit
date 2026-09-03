@@ -1,11 +1,11 @@
-"""Strat-map mode — descr_model_strat.txt and data/models_strat.
+"""Strat-map mode - descr_model_strat.txt and data/models_strat.
 
 Runs on a mod this file builds from scratch, so it needs no game install and
 measures exactly the cases it is about:
 
   * the audit: which declared strat models nothing references, and which files
     under ``data/models_strat`` nothing names;
-  * the safety nets — a model named in another ``descr_*.txt``, one named only by
+  * the safety nets - a model named in another ``descr_*.txt``, one named only by
     a ``.lua`` script, and one another entry borrows the sprite of, are all kept;
   * ``models_strat/residences`` is invisible to the whole pass, which is the one
     rule a settlement mod's disk depends on;
@@ -43,7 +43,7 @@ def check(label, cond):
 CRLF = "\r\n"
 
 # Deliberately CRLF, tab-aligned, with trailing `;` comments and one ALL-CAPS
-# extension — every shape a real file has, so "the bytes come back as they went
+# extension - every shape a real file has, so "the bytes come back as they went
 # in" is a claim about a realistic file rather than a tidy one.
 STRAT = CRLF.join([
     "; the mod's strat models",
@@ -119,7 +119,7 @@ ASSETS = {
     "models_strat/used.CAS": b"used-mesh",
     "models_strat/textures/used.tga": b"used-texture",
     "models_strat/shared_shadow.cas": b"shared-shadow",
-    # dead_general's own art — this is what a cleanup should take
+    # dead_general's own art - this is what a cleanup should take
     "models_strat/dead.CAS": b"dead-mesh",
     "models_strat/textures/dead.tga": b"dead-texture",
     # …and the compressed twin of that texture, which no line names and which
@@ -201,7 +201,7 @@ check("the model no character names is the only unused one",
 check("a `strat_model` line keeps its model out of the unused list",
       "used_general" not in unused)
 check("a strat_model line parked behind a `;` is not a use, but IS a mention "
-      "— over-cautious on purpose, the same rule the BMDB cleanup follows",
+      "- over-cautious on purpose, the same rule the BMDB cleanup follows",
       "commented_general" not in unused
       and mentioned.get("commented_general", {}).get("file") == "descr_character.txt")
 check("a name in another descr_*.txt keeps a model, and says which file",
@@ -219,7 +219,7 @@ check("a .CAS named only by descr_sm_factions.txt is NOT an orphan",
       not any("symbol_" in o for o in orphans))
 check("the .tga.dds beside a named .tga is NOT an orphan",
       "models_strat/textures/used.tga.dds" not in orphans)
-check("a dead model's own files are not orphans — they belong to the entry",
+check("a dead model's own files are not orphans - they belong to the entry",
       "models_strat/dead.CAS" not in orphans)
 check("nothing under models_strat/residences is ever listed",
       not any("residences" in o for o in orphans))
@@ -323,5 +323,5 @@ check("says so rather than raising",
       empty["has_file"] is False and empty["entry_count"] == 0
       and empty["unused"] == [])
 
-print(f"\n{sum(ok)}/{len(ok)} checks — {'ALL PASSED' if all(ok) else 'FAILURES ABOVE'}")
+print(f"\n{sum(ok)}/{len(ok)} checks - {'ALL PASSED' if all(ok) else 'FAILURES ABOVE'}")
 sys.exit(0 if all(ok) else 1)

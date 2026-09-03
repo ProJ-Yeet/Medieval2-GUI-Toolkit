@@ -3,16 +3,16 @@
 An EDU ``type`` is a string, and the rest of the mod refers to the unit by that
 string from files the EDU knows nothing about:
 
-  * ``export_descr_buildings.txt`` — every ``recruit_pool`` / ``recruit`` line
-  * each campaign's ``descr_strat.txt`` — the starting armies
-  * each campaign's ``campaign_script.txt`` — ``spawn_army`` and friends
-  * ``descr_mercenaries.txt`` — the merc pools
-  * ``export_descr_sounds_units_voice.txt`` — the ``unit <type>`` voice entries
+  * ``export_descr_buildings.txt`` - every ``recruit_pool`` / ``recruit`` line
+  * each campaign's ``descr_strat.txt`` - the starting armies
+  * each campaign's ``campaign_script.txt`` - ``spawn_army`` and friends
+  * ``descr_mercenaries.txt`` - the merc pools
+  * ``export_descr_sounds_units_voice.txt`` - the ``unit <type>`` voice entries
   * ``descr_rebel_factions.txt``, ``descr_win_conditions.txt``, …
   * the mod's ``.lua`` scripts (M2TWEOP does a lot from Lua)
 
 Renaming the EDU entry alone leaves every one of those pointing at a unit that no
-longer exists — a recruitment slot that lists nothing, a campaign that fails to
+longer exists - a recruitment slot that lists nothing, a campaign that fails to
 start. So the editor rewrites them together with the block.
 
 Two rules keep the rewrite honest:
@@ -26,8 +26,8 @@ OTHER type names first: if a longer type also covers that spot, the spot belongs
 to that unit and is left alone.
 
 **Exact case rewrites, different case reports.** The engine does not care about
-case, but other namespaces share these files — ``ballista`` is a unit type AND a
-descr_engines entry — and rewriting case-insensitively would rename things that
+case, but other namespaces share these files - ``ballista`` is a unit type AND a
+descr_engines entry - and rewriting case-insensitively would rename things that
 are not this unit. So only exact matches are rewritten, and near-misses that
 differ only in case are reported so the user can look at them.
 
@@ -52,7 +52,7 @@ _BOUND = r"[A-Za-z0-9_]"
 # Folders that hold copies rather than the mod the game runs.
 SKIP_DIRS = {".git", ".svn", "__pycache__", "node_modules", "backup", "backups"}
 
-# `data/text/` is UTF-16 and keyed by `dictionary`, not by `type` — nothing in it
+# `data/text/` is UTF-16 and keyed by `dictionary`, not by `type` - nothing in it
 # names a unit type, and reading it as latin-1 would only waste time.
 SKIP_DATA_SUBDIRS = {"text"}
 
@@ -65,7 +65,7 @@ OWNED_ELSEWHERE = {"export_descr_unit.txt"}
 class Ref:
     """One place a unit type is named."""
     path: Path
-    rel: str            # mod-relative, posix-style — what the user is shown
+    rel: str            # mod-relative, posix-style - what the user is shown
     line: int           # 1-based
     text: str           # the line itself, stripped
     exact: bool = True  # False -> matched only when case is ignored
@@ -128,7 +128,7 @@ def scan_paths(mod) -> List[Path]:
             for p in sorted(world.rglob("*.txt")):
                 if not any(part.lower() in SKIP_DIRS for part in p.parts):
                     add(p)
-    # `Mod.lua_files` is a cached property — finding the scripts is a walk of the
+    # `Mod.lua_files` is a cached property - finding the scripts is a walk of the
     # whole mod tree (seconds on a big one), and the editor asks for this on every
     # preview, so never call the uncached function when the mod can answer.
     lua = getattr(mod, "lua_files", None)
@@ -177,7 +177,7 @@ def find_refs(mod, unit_type: str, all_types: Optional[Iterable[str]] = None,
               paths: Optional[Sequence[Path]] = None) -> RenameResult:
     """Every reference to ``unit_type`` outside the EDU, with the rewritten text.
 
-    ``texts`` is left empty here — :func:`rename_refs` fills it. This split lets
+    ``texts`` is left empty here - :func:`rename_refs` fills it. This split lets
     the editor show what a rename would touch (and count it) without building the
     new content for files nobody is going to write.
     """
@@ -190,7 +190,7 @@ def rename_refs(mod, old: str, new: str,
     """Rewrite ``old`` -> ``new`` everywhere outside the EDU.
 
     Returns the references found and, per file that changes, its whole new text.
-    Nothing is written — the caller backs the files up and writes them.
+    Nothing is written - the caller backs the files up and writes them.
     """
     return _scan(mod, old, new, all_types, paths, rewrite=bool(new and new != old))
 

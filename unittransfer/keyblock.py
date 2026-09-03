@@ -17,7 +17,7 @@ Both formats punish the same two mistakes, so the handling is here once rather
 than in each of them:
 
 **Line order is load-bearing.** An EDCT header in the wrong order does not
-report a bad trait — it stops the engine recognising every trait defined after
+report a bad trait - it stops the engine recognising every trait defined after
 it. So :func:`edit_keys` inserts a line at its place in the format's own order,
 never appends, and works that place out from the lines that are already there.
 
@@ -29,7 +29,7 @@ written as a bare keyword the game will not load.
 And one thing neither format survives without: **an edit is a splice.** These
 files are hand-written and full of comment banners, mixed tabs and blank lines
 inside a record. A form posts every box on save, so a value that has not changed
-must not rewrite its line — see :func:`same_value`, which compares a list as a
+must not rewrite its line - see :func:`same_value`, which compares a list as a
 list because 128 real traits write ``greek,  noldor`` with two spaces.
 """
 from __future__ import annotations
@@ -58,7 +58,7 @@ def read_text(path: Path, encoding: str) -> str:
     """Read a file with its line endings exactly as they are.
 
     ``Path.read_text`` turns every ``\\r\\n`` into ``\\n`` on the way in and
-    ``Path.write_text`` turns every ``\\n`` back into ``\\r\\n`` on the way out —
+    ``Path.write_text`` turns every ``\\n`` back into ``\\r\\n`` on the way out -
     fine for the editors whose serialisers emit ``\\n`` and let Windows put the
     ``\\r`` back, but not for these, whose whole claim is that the bytes come
     back as they went in. So they do their own I/O and never let the platform
@@ -69,7 +69,7 @@ def read_text(path: Path, encoding: str) -> str:
 
 
 def write_text(path: Path, text: str, encoding: str) -> None:
-    """Write text exactly as given — see :func:`read_text`."""
+    """Write text exactly as given - see :func:`read_text`."""
     with open(path, "w", encoding=encoding, newline="") as fh:
         fh.write(text)
 
@@ -79,7 +79,7 @@ def write_text(path: Path, text: str, encoding: str) -> None:
 
 
 def newline_of(text: str) -> str:
-    """The line ending this text mostly uses — ``\\r\\n`` unless ``\\n`` is commoner.
+    """The line ending this text mostly uses - ``\\r\\n`` unless ``\\n`` is commoner.
 
     Asked before appending to a file that already exists, so a block added to
     it is written the way the rest of it is written. Third Age Reforged's
@@ -137,7 +137,7 @@ def indent_of(line: str) -> str:
 def body_indent(lines: List[str], present: Dict[str, int], start: int) -> str:
     """The indent a new line in this block should copy.
 
-    These files are lined up by eye — some with two spaces, some with tabs — and
+    These files are lined up by eye - some with two spaces, some with tabs - and
     a new line landing in a different column is the first thing anyone notices.
     """
     if present:
@@ -154,7 +154,7 @@ def is_int(s: str) -> bool:
 
 
 def and_list(items) -> str:
-    """``[a, b, c]`` as ``"`a`, `b` and `c`"`` — for a finding's message."""
+    """``[a, b, c]`` as ``"`a`, `b` and `c`"`` - for a finding's message."""
     items = list(items)
     if len(items) < 2:
         return "".join(f"`{i}`" for i in items)
@@ -181,12 +181,12 @@ def sub_head(line: str, keyword: str, value: str) -> str:
 
 
 def head_prefix(line: str, keyword: str) -> str:
-    """``"\\tcategory\\t\\t\\t"`` — a line's indent, keyword and the gap after it.
+    """``"\\tcategory\\t\\t\\t"`` - a line's indent, keyword and the gap after it.
 
     The campaign files the minor-files module reads are laid out in tab columns
     rather than by one space, and a rewritten value that lands in a different
     column is the first thing anyone notices about a save. So the gap a line
-    already has is data, and it is copied rather than normalised — both when a
+    already has is data, and it is copied rather than normalised - both when a
     value is replaced and when a new line joins a run of them.
     """
     code = line.partition(";")[0]
@@ -204,7 +204,7 @@ def sub_value(line: str, keyword: str, value: str) -> str:
 
 #: What a tab is worth in these files. Measured: at 4, **1731 of the ~1800
 #: value-bearing lines in the three installed ``descr_sm_factions.txt`` start in
-#: column 28** — one dominant column, which is what "laid out in tab columns"
+#: column 28** - one dominant column, which is what "laid out in tab columns"
 #: actually means. At 8 the same lines scatter across 40, 48 and 32.
 TAB_WIDTH = 4
 
@@ -227,8 +227,8 @@ def pad_to_column(keyword: str, indent: str, column: int,
     """``indent + keyword`` plus the tabs that put a value in ``column``.
 
     The gap between keyword and value is data in these files, and it is a
-    *column*, not a string. Copying the gap of the line above — which is what
-    this used to do — only lands right when the two keywords are the same
+    *column*, not a string. Copying the gap of the line above - which is what
+    this used to do - only lands right when the two keywords are the same
     length: inserting ``can_build_siege_towers`` with ``culture``'s four tabs
     pushed its value five columns past everything else in the record.
 
@@ -342,7 +342,7 @@ def edit_keys(sp: Splice, lines: List[str], present: Dict[str, int],
               noun: str = "record", align: bool = False) -> None:
     """Rewrite, delete or insert the ``keyword value`` lines of one block.
 
-    An inserted line goes at its place in ``order`` — under the last of its
+    An inserted line goes at its place in ``order`` - under the last of its
     predecessors that exists, or under the block's own first line when none do.
     That is the whole reason this is not an append: see the module docstring.
 
@@ -350,12 +350,12 @@ def edit_keys(sp: Splice, lines: List[str], present: Dict[str, int],
     ``edits`` is the request's field names, mapped back by ``key_field``.
 
     ``align`` keeps the whitespace between keyword and value instead of writing
-    one space — see :func:`head_prefix`. The EDCT and EDA indent their values by
+    one space - see :func:`head_prefix`. The EDCT and EDA indent their values by
     a single space; the campaign files line them up in tab columns.
     """
     write = sub_value if align else sub_head
     gap = " "
-    #: the column this record puts its values in — the commonest one among the
+    #: the column this record puts its values in - the commonest one among the
     #: lines it already has, so an inserted line joins the column rather than
     #: copying one keyword's tab count (see :func:`pad_to_column`)
     column = 0
@@ -425,7 +425,7 @@ def edit_effects(sp: Splice, lines: List[str], effects, wanted: List[Dict],
         if (attribute, amount) == (eff.attribute, eff.amount):
             continue
         if not attribute or not amount:
-            raise BlockError("an Effect line is `Effect <attribute> <points>` — "
+            raise BlockError("an Effect line is `Effect <attribute> <points>` - "
                              "both are needed", eff.line + 1)
         sp.replace(eff.line,
                    keep_comment(lines[eff.line],

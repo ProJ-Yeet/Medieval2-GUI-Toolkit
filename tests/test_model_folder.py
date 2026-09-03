@@ -4,7 +4,7 @@ The editor's folder box was calling a perfectly tidy entry scattered, for two
 reasons that have nothing to do with the mod being untidy:
 
   * the model folder and its ``textures/`` sub-folder were counted as two
-    folders — but that IS the layout the editor standardises on;
+    folders - but that IS the layout the editor standardises on;
   * the mesh path and the texture paths often spell the same folder with
     different capitalisation (the modeldb is hand-edited and Windows does not
     care), which read as two different folders.

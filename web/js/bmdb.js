@@ -1,24 +1,24 @@
-/* bmdb.js — BMDB + Sprites Editor mode: the whole battle_models.modeldb as a list
+/* bmdb.js - BMDB + Sprites Editor mode: the whole battle_models.modeldb as a list
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
 /* =====================================================================
-   BMDB MODE — the whole battle_models.modeldb, not one unit's slice of it.
+   BMDB MODE - the whole battle_models.modeldb, not one unit's slice of it.
 
    The list is every entry in the mod; opening one loads it in the SAME model
    card the unit editor uses (server-side it is literally the same payload and
    the same plan engine), so an entry can be edited without going through a unit
    that happens to reference it. Entries nothing references are flagged, and
-   "Clean up" moves them — and the files under unit_models nothing mentions —
+   "Clean up" moves them - and the files under unit_models nothing mentions -
    out of the mod entirely. */
 async function loadBmdb(){
   const mod=state.src;
   // A real mod's modeldb is 30 MB and several seconds to read, parse and
-  // cross-reference. The bar is the server's own progress, not a guess — see
+  // cross-reference. The bar is the server's own progress, not a guess - see
   // bmdb.overview's `progress` sink.
   const job=newJob();
   main.innerHTML=`<div class="empty" style="max-width:420px;margin:60px auto">
@@ -50,7 +50,7 @@ function renderBmdb(){
     (!qq||e.name.includes(qq)||(e.folder||'').toLowerCase().includes(qq)
       ||e.used_by.some(u=>u.toLowerCase().includes(qq)))
     &&(!unusedOnly.checked||e.unused));
-  // Open by default, seeded with the first row that survived the search box —
+  // Open by default, seeded with the first row that survived the search box -
   // done here rather than on entering the mode because this is the first point
   // at which there IS a row to show.
   if(!bmPrevNode && bmPrevOn() && rows.length) bmPrevMake(rows[0].name);
@@ -99,7 +99,7 @@ function bmdbRow(e){
 /* ======================= THE 3D PANEL BESIDE THE LIST =======================
    "View in 3D" opens the model viewer to the side of the browser instead of over
    it. The dialog viewer (`v3Open`) is still there and still the right thing when
-   looking at ONE model is the errand; this is for the other errand — going down
+   looking at ONE model is the errand; this is for the other errand - going down
    a list of two thousand entries deciding which of them is the horse.
 
    Same node-detach trick as the unit editor's preview column, for the same
@@ -116,8 +116,8 @@ function bmPrevAttach(){
   const split = document.getElementById('bmSplit');
   if(!split || !bmPrevNode) return;
   split.appendChild(bmPrevNode);
-  // Half the split by default — this mode's errand is looking AT models, not
-  // reading a list with a thumbnail beside it — and draggable from there.
+  // Half the split by default - this mode's errand is looking AT models, not
+  // reading a list with a thumbnail beside it - and draggable from there.
   splitInstall(split, bmPrevNode, 'bmdb_prev_px', avail => Math.round(avail / 2));
   bmPrevBar();
   bmPrevMount();
@@ -168,7 +168,7 @@ function bmPrevBar(){
     <span class="sp"></span>
     ${bmPrevEntry?`<button onclick="openBmdbEntry('${q1(esc(bmPrevEntry))}')"
       title="Open this entry's editor">✎</button>
-    <button onclick="bmPrevFull()" title="Full screen — Esc comes back">⤢</button>`:''}
+    <button onclick="bmPrevFull()" title="Full screen - Esc comes back">⤢</button>`:''}
     <button onclick="bmPrevClose()" title="Close the panel">✕</button>`;
 }
 async function bmPrevMount(){
@@ -190,7 +190,7 @@ function bmPrevFull(){
     toast('Full screen was refused: ' + ((e && e.message) || e), 4000));
 }
 // Opening an entry builds exactly the state the unit editor's model tab runs on,
-// with a one-entry `models` list and no unit — so edModels(), the faction
+// with a one-entry `models` list and no unit - so edModels(), the faction
 // checklist, the folder box and "＋ New entry from this" all work unchanged.
 async function openBmdbEntry(name){
   const modal=document.getElementById('modal');
@@ -223,8 +223,8 @@ async function openBmdbEntry(name){
    This is the one record whose text carries bookkeeping nobody should be asked
    to type: a modeldb string is stored as `<length> <that many characters>`, so
    retyping a path leaves the number beside it wrong and desyncs the reader for
-   everything after. The pane therefore refuses such text — naming the line and
-   the number it should be — and offers ⟲ Fix lengths, which is the only kind
+   everything after. The pane therefore refuses such text - naming the line and
+   the number it should be - and offers ⟲ Fix lengths, which is the only kind
    with a repair. */
 const bmCvEdited=()=>{const cv=state.ed&&state.ed.cv;
   return !!(cv&&cv.kind==='bmdb'&&cv.loaded&&cv.owns);};
@@ -254,11 +254,11 @@ function bmCvHost(name,gui,redraw){
   return {kind:'bmdb', mod:e.mod, id:m.name,
     where:'data/unit_models/battle_models.modeldb',
     // the same ModelEdit the save sends, minus the parts that are not text in
-    // this entry (imported files, folder moves) — the pane can only show text
+    // this entry (imported files, folder moves) - the pane can only show text
     edits:()=>{const me=(state.ed.mEdits[m.name])||{};
       return {paths:me.paths||{}, new_name:me.new_name||''};},
     adopt:cv=>{
-      // The whole card is rebuilt from the re-read text — typing can add or drop
+      // The whole card is rebuilt from the re-read text - typing can add or drop
       // a faction record, which patching slot by slot would not survive. What
       // the card knows and the entry does not (who else uses it, which EDU slot
       // points here) is carried across.
@@ -274,7 +274,7 @@ function bmCvHost(name,gui,redraw){
     refreshGui:()=>{paint(); cvBindHover(bmCvOf(m.name),document.getElementById(guiId));},
     label:el=>bmCvLabel(el,m.name), find:l=>bmCvFind(l,guiId)};
 }
-// whichever live view is pointed at this entry — the BMDB dialog's or the unit
+// whichever live view is pointed at this entry - the BMDB dialog's or the unit
 // editor's Models tab
 const bmCvOf=name=>{const e=state.ed;
   return (e.mcv&&e.mcvName===name)?e.mcv:e.cv;};
@@ -338,7 +338,7 @@ function renderBmdbEditor(){
    Closed by default and only counted in the header: an entry a hundred units
    share would otherwise push the thing you came to edit off the screen. Opened,
    every user is a card with its own icon, and clicking one opens that unit in a
-   new browser tab — so following "this model is also used by X" never costs you
+   new browser tab - so following "this model is also used by X" never costs you
    the edits in the tab you are in. */
 function edUsersOpen(){ return !!(state.ed&&state.ed.usersOpen); }
 function edToggleUsers(){ state.ed.usersOpen=!edUsersOpen(); edRenderTab(); }
@@ -375,12 +375,12 @@ const short=w=>w.replace(/^(mount|file):/,'');
    A modeldb entry carries one texture record per faction, and the game reads
    the record for the faction whose army is on the field. An entry with no
    record for a faction that fields a unit drawn with it is a unit that does not
-   show up right for that faction — and it is invisible in every file, because
+   show up right for that faction - and it is invisible in every file, because
    nothing in the EDU or the modeldb says the two lists have to agree.
 
    So this is that comparison, mod-wide, in two flavours a modder actually
    wants. Both are the same dialog and the same write; they differ in one
-   question — which factions an entry SHOULD have a record for:
+   question - which factions an entry SHOULD have a record for:
 
      * **Fix ownership** takes the answer from the units: every faction that
        owns a unit whose `soldier`, `officer` or `armour_ug_models` names this
@@ -393,8 +393,8 @@ const short=w=>w.replace(/^(mount|file):/,'');
 
    Nothing is ever REMOVED from a faction list here: the value handed to the
    planner is `current + missing`, so the write can only append. It goes through
-   `edit.plan_bmdb` — the same engine as the model card's own faction checklist
-   — so the backup, the undo record and the guards are the ones that already
+   `edit.plan_bmdb` - the same engine as the model card's own faction checklist
+   - so the backup, the undo record and the guards are the ones that already
    exist rather than new ones. */
 const OWN_MODES={
   units:{icon:'🛡', title:'Fix faction ownership',
@@ -418,7 +418,7 @@ async function openOwnership(mode){
     <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
   state.own={a,mode,
     // Ticked by default: every row is a record the entry is missing, which is a
-    // fact about the file rather than a judgement — the same reason the BMDB
+    // fact about the file rather than a judgement - the same reason the BMDB
     // cleanup pre-ticks the entries nothing references.
     picked:new Set(a.rows.map(r=>r.entry)),
     plan:null};
@@ -444,7 +444,7 @@ function renderOwnership(){
       </div>
       <div class="count" style="margin:8px 0 10px">Every entry gets a texture record for
         <b>${esc(def.short)}</b>. A new record is a <b>clone of one the entry already has</b>,
-        so it points at the same texture until you give it its own — the entry stops having a
+        so it points at the same texture until you give it its own - the entry stops having a
         gap, and no art is invented. Records are only ever <b>added</b>: nothing here can take
         a faction skin away.</div>
 
@@ -460,15 +460,15 @@ function renderOwnership(){
           ${a.slot_count} faction slot${a.slot_count===1?'':'s'}</span></div>
         <div class="srow ${heavy?'warn':''}"><span class="sicon">${heavy?'!':'📦'}</span>
           <span class="stext">battle_models.modeldb grows by about <b>${MB(a.bytes)}</b>
-          ${a.modeldb_bytes?`— from ${MB(a.modeldb_bytes)} to ${MB(a.modeldb_bytes+a.bytes)}, <b>${
+          ${a.modeldb_bytes?`- from ${MB(a.modeldb_bytes)} to ${MB(a.modeldb_bytes+a.bytes)}, <b>${
             (1+grow).toFixed(1)}×</b> its size`:''}${heavy?`. M2TW loads the whole file into
-          memory, and a mod near that ceiling is exactly what <b>🧹 Clean up BMDB</b> is for —
+          memory, and a mod near that ceiling is exactly what <b>🧹 Clean up BMDB</b> is for -
           worth running first.`:'.'}</span></div>
         ${a.covered?`<div class="srow"><span class="sicon">✓</span><span class="stext">
           ${a.covered} entr${a.covered===1?'y':'ies'} already ha${a.covered===1?'s':'ve'} every
           record ${o.mode==='all'?'the roster asks for':'their units need'}</span></div>`:''}
         ${a.no_unit?`<div class="srow"><span class="sicon">·</span><span class="stext">
-          ${a.no_unit} entr${a.no_unit===1?'y is':'ies are'} drawn for no unit at all — a mount,
+          ${a.no_unit} entr${a.no_unit===1?'y is':'ies are'} drawn for no unit at all - a mount,
           a general, or something nothing uses${o.mode==='units'?', so this mode has nothing to say about '
           +(a.no_unit===1?'it':'them'):''}</span></div>`:''}
         ${a.no_records?`<div class="srow warn"><span class="sicon">!</span><span class="stext">
@@ -479,7 +479,7 @@ function renderOwnership(){
       ${a.unknown_ownership.length?`<fieldset class="assetconf" style="margin-top:10px">
         <legend class="w-warn">Ownership tokens that are not faction slots</legend>
         <div class="count">These appear on a unit's <code>ownership</code> line but
-          <code>descr_sm_factions.txt</code> does not define them — a culture name, or a typo.
+          <code>descr_sm_factions.txt</code> does not define them - a culture name, or a typo.
           A record written for one of them is a skin no faction ever reads, so they are
           <b>reported and not added</b>.</div>
         <div class="flist" style="margin-top:6px">${a.unknown_ownership.map(x=>`<div class="frow">
@@ -494,7 +494,7 @@ function renderOwnership(){
           <span class="count" id="ownCount">${ownCountText()}</span></div>
         <div class="cllist">${a.rows.map(ownRowHtml).join('')}</div>
         ${a.row_count>a.rows.length?`<div class="count">…and ${a.row_count-a.rows.length}
-          more, not listed. <b>Select all</b> covers them too — the list is capped for the
+          more, not listed. <b>Select all</b> covers them too - the list is capped for the
           page, the write is not.</div>`:''}`
        :'<div class="count" style="margin-top:10px">Nothing to add. Every entry already has a record for '
         +esc(def.short)+'. 🎉</div>'}
@@ -526,7 +526,7 @@ function ownCountText(){
   const bytes=o.a.rows.reduce((n,r)=>n+(o.picked.has(r.entry)?r.bytes:0),0);
   return `${o.picked.size}/${o.a.row_count} ticked · about ${MB(bytes)}`;
 }
-// Only the header count is repainted on a tick — the checkbox already shows its
+// Only the header count is repainted on a tick - the checkbox already shows its
 // own new state, and a mod can have 1500 rows here.
 function ownPick(name,on){
   on?state.own.picked.add(name):state.own.picked.delete(name);
@@ -536,7 +536,7 @@ function ownPick(name,on){
 function ownAll(on){
   const o=state.own;
   // `null` means "every entry the server finds", which is not the same as the
-  // rows on screen when the list was capped — that is the whole reason the
+  // rows on screen when the list was capped - that is the whole reason the
   // payload can say "all" rather than naming them.
   o.picked=new Set(on?o.a.rows.map(r=>r.entry):[]);
   o.allRows=on;
@@ -563,7 +563,7 @@ async function ownPreview(){
   box.innerHTML=ownPlanHtml(r); return r;
 }
 /* The edit planner reports one line per entry, and this is a job that touches a
-   thousand of them — so the plan box shows the shape and a sample rather than
+   thousand of them - so the plan box shows the shape and a sample rather than
    every line. The full list is in `config/server.log`, which is where a job this
    size belongs anyway. */
 function ownPlanHtml(r){
@@ -605,7 +605,7 @@ async function ownApply(){
   toast(`${res.entries} entr${res.entries===1?'y':'ies'} given their missing faction `+
         `record(s) ✓  (undo in 🕑 Log)`,5200);
   // The list was built from a scan taken BEFORE the write, so it now describes a
-  // file that has changed — re-run rather than leave rows up inviting a second go.
+  // file that has changed - re-run rather than leave rows up inviting a second go.
   state.bmdb=null;
   loadBmdb();
   await openOwnership(o.mode);

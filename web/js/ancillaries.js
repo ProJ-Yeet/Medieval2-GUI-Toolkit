@@ -1,14 +1,14 @@
-/* ancillaries.js — Ancillaries mode: export_descr_ancillaries.txt, both halves
+/* ancillaries.js - Ancillaries mode: export_descr_ancillaries.txt, both halves
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
 /* ======================= ANCILLARIES MODE =======================
    The retinue: the items and followers a character picks up. EDA is EDCT's
-   smaller sibling — same file shape, same trigger language below — so this
+   smaller sibling - same file shape, same trigger language below - so this
    screen is the traits screen with the level ladder taken out and a picture put
    in. What differs is worth knowing:
 
@@ -19,8 +19,8 @@
      * Two limits are silent and hardcoded: more than 3 ExcludedAncillaries is an
        errorless crash, more than 8 effects makes the ancillary impossible to
        gain from a trigger. Both are checked before a save, not after.
-     * Its name is its own text key — unlike a trait, which borrows its first
-       level's — so the box beside the name IS what the player reads.
+     * Its name is its own text key - unlike a trait, which borrows its first
+       level's - so the box beside the name IS what the player reads.
 
    THE PAGE NEVER PARSES A GAME FILE: /api/ancillaries, /api/ancillary and
    /api/ancillaries/plan|apply do all of it, and a save posts back the shape the
@@ -60,7 +60,7 @@ function renderAncillaries(){
     <div class="trlist">
       <button class="trnew" onclick="anNew()">＋ New ancillary</button>
       <button class="trnew" onclick="portOpen('ancillaries')" title="Copy ancillaries
-out of another mod on this machine — the block, the triggers that grant it, and its
+out of another mod on this machine - the block, the triggers that grant it, and its
 text keys, in one backed-up job.">⇩ Port from another mod</button>
       ${findingsHtml('ancillaries', a.finding_list, 'anOpen')}
       <div class="trrows">${rows.map(anRowHtml).join('')
@@ -71,7 +71,7 @@ text keys, in one backed-up job.">⇩ Port from another mod</button>
 }
 
 // Filtered in the page: 700 rows is a list, and the file was parsed once to
-// build it anyway. The type is searchable too — it is how a modder groups them.
+// build it anyway. The type is searchable too - it is how a modder groups them.
 function anRows(){
   const q = search.value.trim().toLowerCase();
   const rows = state.an.ancillaries || [];
@@ -142,7 +142,7 @@ function anPaint(){
   anWireTriggers();
 }
 
-// The form only — never the pane, which has the caret in it.
+// The form only - never the pane, which has the caret in it.
 function anPaintForm(){
   const d = state.an.d, el = document.getElementById('anGui');
   if(!d || !el) return;
@@ -189,13 +189,13 @@ function anFindingsHtml(d){
 }
 
 function anFormHtml(w, d){
-  /* The key on the left, the words the player reads on the right — and the words
+  /* The key on the left, the words the player reads on the right - and the words
      box is bound to the FIELD, not to the key that field holds right now. Bound
      to the key, the handler baked in whatever the box held when the form was
      last drawn, and typing a key does not redraw the form: the words went in
      under the old (usually empty) tag, never reached the save, and the ancillary
      was written with its own code name as its text. The box is always drawn for
-     the same reason — a key typed into an empty box would otherwise have nowhere
+     the same reason - a key typed into an empty box would otherwise have nowhere
      to put its words until something else redrew. */
   const key = (k, label, hint) => {
     const tag = (w[k] || '').trim();
@@ -373,7 +373,7 @@ function anDelEffect(k){
 }
 /* `locEdits` is keyed by the FIELD typed into (`name`, `description`,
    `effects_description`), not by the key that field held when the form was
-   drawn. The tags are resolved once, at save time, in `anLocBody` — which is
+   drawn. The tags are resolved once, at save time, in `anLocBody` - which is
    also what carries typed words across a rename of the key they belong to. */
 const anHasKey = (d, tag) => tag && (d.loc||{})[tag] !== undefined;
 const anTagAt = (d, field) => String((d && d.w && d.w[field]) || '').trim();

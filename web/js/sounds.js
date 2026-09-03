@@ -1,8 +1,8 @@
-/* sounds.js — Unit Sounds mode: which voice-bank entry a unit speaks with
+/* sounds.js - Unit Sounds mode: which voice-bank entry a unit speaks with
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
@@ -12,14 +12,14 @@
 
    A unit's voice needs two things that have to agree: a `unit <type>` entry inside
    one accent/class block of the bank, and the EDU's `accent` + `voice_type` fields
-   pointing at that same block. Get one without the other and the unit is silent —
+   pointing at that same block. Get one without the other and the unit is silent -
    which is why every row here writes both, and why the accent/class of a row snap
    to whatever donor you pick instead of being editable independently.
 
    Everything is staged in memory and written in one apply, straight into the mod,
    through the same backups + 🕑 Log undo as a transfer. (The prototype this grew
    out of needed a .bat to generate reference files, a hand-run editor, exported
-   patch CSVs, and a second .bat to fold them back in — none of that exists here.) */
+   patch CSVs, and a second .bat to fold them back in - none of that exists here.) */
 async function loadSounds(){
   const mod=state.src;
   main.innerHTML='<div class="empty">Reading '+esc(mod)+'’s voice bank…</div>';
@@ -47,7 +47,7 @@ function sndDonors(accent,cls){
 }
 function sndOp(type){const s=state.snd; return s.ops[type]||(s.ops[type]={});}
 // The value a row currently shows: what's staged, else the bank's (existing units)
-// or the EDU's if the bank has a block for it (missing units — a unit whose EDU
+// or the EDU's if the bank has a block for it (missing units - a unit whose EDU
 // already names a real accent is nearly always meant to stay there).
 function sndVal(u,key){
   const op=state.snd.ops[u.type]||{};
@@ -80,7 +80,7 @@ function sndOps(){
   return out;
 }
 /* One place where every staged change is made, and the ONLY place the row is
-   repainted from — state first, paint second. Doing it the other way round is what
+   repainted from - state first, paint second. Doing it the other way round is what
    made the prototype need two clicks to take a unit: picking a donor rebuilt the
    dropdown from a `copyFrom` that had not been written yet, so the first pick was
    thrown away and only the second one stuck. */
@@ -106,7 +106,7 @@ function sndToggleRemove(i,on){
 function sndTab(t){state.snd.tab=t; renderSounds();}
 function sndFilter(key,v){state.snd[key]=v; renderSounds();}
 function sndReset(){state.snd.ops={}; renderSounds(); toast('Staged voice changes cleared.');}
-// Give every visible row the same donor in one go — the usual job here is "these
+// Give every visible row the same donor in one go - the usual job here is "these
 // forty new units should all sound like that one", and doing it row by row is the
 // step this replaces.
 function sndBulk(){

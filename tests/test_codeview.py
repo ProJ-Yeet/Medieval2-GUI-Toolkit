@@ -1,18 +1,18 @@
 """Code View: the span map, the two edit directions, and the save that follows.
 
 The widget's whole claim is that the text pane is not a picture of the file but
-the file — so this suite is about fidelity, not about pixels:
+the file - so this suite is about fidelity, not about pixels:
 
   * a span map that lands on the right lines, including repeated keys, comments,
     blank lines and a block that does not start at line 1
   * ``render`` (a box was typed into) goes through the SAME serialiser as a save,
-    so what the pane shows is what gets written — checked by planning the edit
+    so what the pane shows is what gets written - checked by planning the edit
     and comparing bytes
   * ``parse`` (the text was typed into) either returns fields or says why not,
     and the refusals are the two that would corrupt a file: no ``type`` line, and
     two unit blocks in a pane that replaces one
-  * a hand-edited block survives to disk verbatim — line order, indent, comments
-    and all — which is the thing field overrides alone cannot do
+  * a hand-edited block survives to disk verbatim - line order, indent, comments
+    and all - which is the thing field overrides alone cannot do
   * the endpoints stay fast enough to run on every keystroke (they are debounced
     at 250 ms; the budget is 50 ms) against a DaC-sized EDU
 
@@ -141,7 +141,7 @@ except codeview.CodeViewError as e:
     check("…and it points at the second block's line",
           e.line == len(BLOCK.splitlines()) + 1)
 
-# A block that does not start at line 1 — the pane shows whatever text it is
+# A block that does not start at line 1 - the pane shows whatever text it is
 # given, so the spans have to be shifted by the lines above it.
 shifted = codeview.parse("edu", ";; a note above the unit\n\n" + BLOCK)
 check("spans shift when the block starts further down",
@@ -202,7 +202,7 @@ data = mod_root / "data"
 (data / "text" / "export_units.txt").write_text(
     "﻿{test_spearmen}Test Spearmen\r\n{test_spearmen_descr}Spears.\r\n"
     "{test_spearmen_descr_short}Spears.\r\n", encoding="utf-16-le")
-# an empty but valid archive header — nothing here edits a model, but plan_edit
+# an empty but valid archive header - nothing here edits a model, but plan_edit
 # parses the modeldb on the way past
 (data / "unit_models" / "battle_models.modeldb").write_text(
     "22 serialization::archive 3 0 0 0 0 0 0 0\n", encoding="latin-1")
@@ -382,7 +382,7 @@ edb_mod = fresh_mod()
 edoc = codeview.building_document(edb_mod, "test_barracks")
 edb_lines = edoc.text.split("\n")
 check("a building line loads into a code view", edoc.ident == "test_barracks")
-check("the text is the block only — not the file, not the next line",
+check("the text is the block only - not the file, not the next line",
       edoc.text.startswith("building test_barracks")
       and "other_line" not in edoc.text and "hidden_resources" not in edoc.text)
 check("`building` is line 1", edoc.spans["building"] == [[1, 1]])
@@ -579,7 +579,7 @@ eplan = edit.plan_edit(fresh_mod(), edit.request_from_dict(
     {"unit": "Test Spearmen",
      "model_edits": [{"entry": "test_model",
                       "raw_entry": mdb.rename_entry_raw(ENTRY, "other_name")}]}))
-check("renaming an entry in the text is refused — the rename box chases the EDU",
+check("renaming an entry in the text is refused - the rename box chases the EDU",
       any("use the rename box" in e for e in eplan.errors))
 
 
@@ -680,7 +680,7 @@ edu_path.write_bytes(before_hide)
 edbv, edbh = codeview.hide_comments("edb", "#  a modder's note\nbuilding x\n; and a real one\n")
 check("the EDB hides `#` annotations as well as `;` (Phase 13's ruling)",
       edbv == "building x\n" and len(edbh) == 2)
-check("…and the EDU does not — `#` is not a comment there",
+check("…and the EDU does not - `#` is not a comment there",
       codeview.hide_comments("edu", "#3 something\ntype x\n")[1] == [])
 
 # ---------------------------------------------------------------------------
@@ -776,5 +776,5 @@ finally:
 shutil.rmtree(med2, ignore_errors=True)
 shutil.rmtree(cfg, ignore_errors=True)
 
-print(f"\n{sum(ok)}/{len(ok)} checks — " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
+print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

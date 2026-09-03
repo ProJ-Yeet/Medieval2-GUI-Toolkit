@@ -4,17 +4,17 @@ Two of these arrived from one person's log on the same evening, both as HTTP 500
 with a traceback in the server's log and nothing on screen but "HTTP 500":
 
   * a folder under ``mods/`` with a ``data/`` in it and no
-    ``export_descr_unit.txt`` — which every stock install has four of, because
+    ``export_descr_unit.txt`` - which every stock install has four of, because
     the Kingdoms campaigns keep their files inside ``data/packs/*.pack``. The
     toolkit lists them (they look exactly like mods), and the first one is
     alphabetically ``americas``, so it was auto-picked and died before the page
-    had finished drawing. Worse, ``/api/mod_files`` — the report whose entire job
-    is to say WHICH of a mod's files are missing — died on the same read, so the
+    had finished drawing. Worse, ``/api/mod_files`` - the report whose entire job
+    is to say WHICH of a mod's files are missing - died on the same read, so the
     Home card could not explain what the header had just tripped over.
 
   * a ``battle_models.modeldb`` with one entry whose texture list says it holds
     two and holds one. The reader fell a field out of step and died 400
-    characters later on the word ``france``, and the message named that word — a
+    characters later on the word ``france``, and the message named that word - a
     word that is perfectly fine where it sits, in a line nobody needs to touch.
 
 So: a mod's own broken or absent file is a :class:`ModDataError` carrying a
@@ -42,7 +42,7 @@ def check(label, cond):
 
 
 def get(path):
-    """GET, returning (status, body) — a refusal is an answer here, not a raise."""
+    """GET, returning (status, body) - a refusal is an answer here, not a raise."""
     try:
         with urllib.request.urlopen(BASE + path, timeout=60) as r:
             return r.status, json.loads(r.read().decode("utf-8"))
@@ -73,7 +73,7 @@ EDU = ("type\t\t\tPeasant Archers\n"
 def entry(name, tex, main_count=1):
     """One modeldb entry: 1 LOD, 1 main texture written out, 0 attach, 1 anim.
 
-    ``main_count`` is written into the file as given — the whole point of the
+    ``main_count`` is written into the file as given - the whole point of the
     fixture is that it can disagree with what actually follows it.
     """
     return (
@@ -247,5 +247,5 @@ try:
 finally:
     httpd.shutdown()
 
-print(f"\n{sum(ok)}/{len(ok)} checks — " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
+print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

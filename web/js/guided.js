@@ -1,8 +1,8 @@
-/* guided.js — the guided field editor: an EDU line's positional slots, named
+/* guided.js - the guided field editor: an EDU line's positional slots, named
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
@@ -17,13 +17,13 @@
 
    The guided view gives each slot its own labelled box, a drop-down wherever the
    engine only accepts a fixed set of words, a one-line explanation, and a warning
-   when a value would not work — while writing back the very same line, so a unit
+   when a value would not work - while writing back the very same line, so a unit
    edited here is byte-identical to one edited by hand. Anything it does not
    recognise (a mod's own field, a repeated line, a value count the engine does
    not use) falls back to the raw box for that one field rather than guessing.
 
-   The same code drives both places EDU fields are edited — the transfer composer
-   and the unit editor — through a small host object; see gfHostComposer /
+   The same code drives both places EDU fields are edited - the transfer composer
+   and the unit editor - through a small host object; see gfHostComposer /
    gfHostEditor for what each supplies.
    ====================================================================== */
 
@@ -91,7 +91,7 @@ function gfVocabFor(mod){
 }
 const gfV=(host,name)=>((host.vocab||GF_STATIC)[name])||[];
 // Names a mod file actually defines, for "this points at nothing" warnings. An
-// empty list means the file is missing or unparsed — then we say nothing.
+// empty list means the file is missing or unparsed - then we say nothing.
 const gfDefined=(host,name)=>((host.vocab||{}).defined||{})[name]||[];
 const gfHas=(list,v)=>{const t=(v||'').trim().toLowerCase();
   return !t||list.some(x=>(''+x).toLowerCase()===t);};
@@ -110,7 +110,7 @@ const gfAddId=label=>'gfadd-'+label.replace(/\W/g,'_');
    decimals to keep. Only ONE of these limits is a real engine cap (attack, 63);
    the rest sit above the highest value found across vanilla, Third Age and DaC,
    so a stepper cannot run away while nothing a real mod does is out of reach.
-   Typing is never clamped — an existing value the engine dislikes is reported by
+   Typing is never clamped - an existing value the engine dislikes is reported by
    the checks, not silently rewritten under the cursor. */
 const gfN=(pl,o)=>gfP(pl,'num',o);                       // number box
 const gfS=(pl,v,o)=>gfP(pl,'sel',Object.assign({v},o));  // closed drop-down
@@ -549,8 +549,8 @@ const GF_SECTIONS=[
   {id:'men',t:'Men & mounts',keys:['soldier','officer','mount','ship','engine','mounted_engine',
     'animal','stat_health','stat_stl','move_speed_mod','armour_ug_levels','armour_ug_models']},
   /* Abilities used to be a group of its own, holding two lines: `attributes` and
-     `mount_effect`. Two cards is not a tab — it sat there half empty while the
-     Weapons tab beside it carried nine — and the two are read together anyway,
+     `mount_effect`. Two cards is not a tab - it sat there half empty while the
+     Weapons tab beside it carried nine - and the two are read together anyway,
      because what a unit can DO and what it does it WITH are the same question.
      They lead the group: `attributes` is the widest-reaching line on the unit
      and belongs at the top of whatever tab it is on. */
@@ -573,7 +573,7 @@ const gfKey=label=>label.replace(/#\d+$/,'');
    pushes the next one off the screen, and a guided unit is forty cards long.
 
    These groups sit side by side instead. A group is emitted where its FIRST
-   member appears, in the group's own order rather than the file's — the pairs
+   member appears, in the group's own order rather than the file's - the pairs
    below are next to each other in a normal EDU, but a mod that has moved a line
    should not lose the pairing over it. Repeats come along: `officer`,
    `officer#2` and `officer#3` are one key and land on one row. */
@@ -728,7 +728,7 @@ function gfComposerFields(c){
 /* The modeldb entries this transfer is about to CREATE in the destination.
    `/api/edu_vocab` lists what the destination has today, so without this every
    new unit's own soldier and armour-upgrade models were flagged "not an entry in
-   this mod's battle_models.modeldb" — true of the mod as it stands, false of the
+   this mod's battle_models.modeldb" - true of the mod as it stands, false of the
    mod the moment the transfer lands, and it is the same job that writes both. */
 function gfComposerCreates(){
   const u=(state.data&&state.data.units||[]).find(x=>x.type===state.editing);
@@ -759,7 +759,7 @@ function gfState(host){
 
 /* ---- warnings ------------------------------------------------------------
    Things the engine will not do, or will do differently from what the numbers
-   suggest. They never block a save — a mod may know better — but the point of a
+   suggest. They never block a save - a mod may know better - but the point of a
    guided editor is that you find out here rather than at the loading screen. */
 function gfWarnings(host){
   const out={},add=(l,h,k)=>{(out[l]||(out[l]=[])).push({h,k:k||'warn'});};
@@ -826,7 +826,7 @@ function gfWarnings(host){
     add('armour_ug_models',`<b>${lv.length}</b> armour levels share <b>${md.length}</b> model(s), so the last `
       +'model carries the levels above it. Common and fine; add models only if the tiers should look different.','info');
   const defModels=gfDefined(host,'model');
-  // plus whatever this job is about to write into the modeldb — see host.creates
+  // plus whatever this job is about to write into the modeldb - see host.creates
   const coming=new Set((host.creates?host.creates():[]).map(x=>(''+x).trim().toLowerCase()));
   const knownModel=m=>gfHas(defModels,m)||coming.has((m||'').trim().toLowerCase());
   if(defModels.length){
@@ -854,7 +854,7 @@ function gfWarnings(host){
   });
   if(has('soldier')){
     // NB: not "fewer than 4". The guide gives 4 as the minimum, but shipped mods
-    // field 2-man scout and monster units that work perfectly well — only a unit
+    // field 2-man scout and monster units that work perfectly well - only a unit
     // with no men at all is definitely wrong.
     const men=num(parts('soldier')[1]);
     if(men!==null&&men<1)add('soldier','A unit with no men, so nothing will be recruited.','bad');
@@ -903,7 +903,7 @@ function gfRender(host){
     const n=groups[s.id].length;
     if(!n&&s.id==='other')return '';
     const hits=groups[s.id].filter(l=>gfReal(warns[l]).length);
-    // the badge names the fields, not just how many — a bare "3 things to look
+    // the badge names the fields, not just how many - a bare "3 things to look
     // at" makes you open all three sections to find out which
     const why=hits.length?hits.join(', ')+'. Hover or click the section to read them.':'';
     return `<button class="${!q&&gf.tab===s.id?'on':''}" onclick="gfTab('${s.id}')">${esc(s.t)}
@@ -945,7 +945,7 @@ function gfSumHtml(host,warns){
 function gfShowWarnings(){
   const el=document.querySelector('#gfBody .gfnote.bad,#gfBody .gfnote.warn');
   if(el){el.scrollIntoView({block:'center'});return;}
-  // the first problem is in another section — find it and switch there
+  // the first problem is in another section - find it and switch there
   const w=gfWarnings(gfHost()),first=Object.keys(w).find(k=>gfReal(w[k]).length); if(!first)return;
   gfTab(GF_SECTION_OF[gfKey(first)]||'other');
   setTimeout(()=>{const e2=document.querySelector('#gfBody .gfnote.bad,#gfBody .gfnote.warn');
@@ -1079,7 +1079,7 @@ function gfParts(host,label,spec,parsed){
     }
     // the wrapper carries the part index too (but NOT data-gfp, which is the
     // "this is an editable control" marker) so hovering the part's NAME lights
-    // the same one value in the code view — see cvPartOf
+    // the same one value in the code view - see cvPartOf
     return `<div class="${cls}" data-i="${i}"><span class="pl">${qmSpec(key,i)}${esc(p.pl)}${
       p.optional?' <span style="opacity:.6">(opt)</span>':''}</span>${ctl}</div>`;
   }).join('');
@@ -1088,7 +1088,7 @@ function gfParts(host,label,spec,parsed){
 /* A number box with its own ▴▾. The browser's own <input type=number> is not
    used on purpose: EDU values are decimals, negatives and occasionally blanks,
    and a number input quietly refuses or reformats those. This keeps a plain text
-   box — so any value in the file survives being looked at — and puts the
+   box - so any value in the file survives being looked at - and puts the
    stepping in buttons and the ↑/↓ keys, which are the only things that clamp. */
 const gfSpin=(attr,v,cls)=>`<span class="gfspin"><input ${attr} class="gfnum${cls||''}" value="${esc(v)}"
     spellcheck="false" inputmode="decimal"><span class="gfsp">
@@ -1106,7 +1106,7 @@ const gfSpin=(attr,v,cls)=>`<span class="gfspin"><input ${attr} class="gfnum${cl
    uses, which pulls a full card out of GF_FIELDS instead of a line of text.
    Both are read by the same delegated handler below. */
 // The markers are deliberately NOT tab stops: there is one per field, and a
-// guided unit has four hundred of them — putting each in the tab order would
+// guided unit has four hundred of them - putting each in the tab order would
 // double the keystrokes to cross a form. Keyboard users get the same card when
 // they focus the field itself (see the focusin handler), and the marker keeps a
 // plain `title` so it still has an accessible name of its own.
@@ -1115,7 +1115,7 @@ const qm=(text,title)=>!text?'':`<span class="qm" tabindex="-1"
   data-tiptext="${esc(text)}">?</span>`;
 const qmSpec=(key,i)=>`<span class="qm" tabindex="-1" title="What is this?"
   data-tip="${esc(key)}"${i==null?'':` data-tipi="${i}"`}>?</span>`;
-// A field's documentation as plain text, for the raw view — GF_FIELDS writes its
+// A field's documentation as plain text, for the raw view - GF_FIELDS writes its
 // `doc` as HTML, and a ? marker carries text.
 function gfPlainDoc(key){
   const spec=GF_FIELDS[key];
@@ -1171,7 +1171,7 @@ function gfTipShow(el){
   gfTipEl.style.left=x+'px'; gfTipEl.style.top=y+'px';
 }
 function gfTipHide(){if(gfTipEl)gfTipEl.style.display='none';}
-// bound once, on the document — the guided body is replaced wholesale on edits
+// bound once, on the document - the guided body is replaced wholesale on edits
 const TIP_SEL='[data-tip],[data-tiptext]';
 document.addEventListener('mouseover',ev=>{
   const el=ev.target&&ev.target.closest&&ev.target.closest(TIP_SEL);
@@ -1182,7 +1182,7 @@ document.addEventListener('mouseover',ev=>{
 document.addEventListener('mouseleave',gfTipHide,true);
 window.addEventListener('scroll',gfTipHide,true);
 /* Focusing a field shows its ? card, so the help is reachable without a mouse
-   even though the markers themselves are out of the tab order — but only when
+   even though the markers themselves are out of the tab order - but only when
    the focus came from the KEYBOARD. Clicking into a box to type in it was
    dropping a help card over the row you were about to edit, which reads as the ?
    button opening itself. `:focus-visible` can't tell these apart: browsers match

@@ -1,19 +1,19 @@
-/* packs.js — unit packs — units in a zip you can send someone
+/* packs.js - unit packs - units in a zip you can send someone
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
 /* =========================================================================
-   Unit packs — units in a zip you can send someone
+   Unit packs - units in a zip you can send someone
 
    Export builds a miniature mod: the units' EDU blocks, their modeldb entries,
    the meshes, textures and icons those name, and whatever descr_* blocks they
    reach for. Import mounts that zip as an ordinary source mod and then gets out
-   of the way: the source dropdown switches to it and every existing screen —
-   the composer, the base picker, conflicts, preview, Save, the undo log — works
+   of the way: the source dropdown switches to it and every existing screen -
+   the composer, the base picker, conflicts, preview, Save, the undo log - works
    on it unchanged. There is no separate "import" screen to keep in step with
    the transfer one, because the import IS a transfer.
    ========================================================================= */
@@ -166,7 +166,7 @@ async function openCleanup(){
   if(a.error){ modal.innerHTML=`<h2>Clean up</h2><div class="mbody w-bad">${esc(a.error)}</div>
     <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
   // Re-opened straight after a cleanup (see clApply), the folder that was typed
-  // in and the sections that were unfolded are still the ones being worked in —
+  // in and the sections that were unfolded are still the ones being worked in -
   // only the LISTS are out of date, and it is those the fresh audit replaces.
   const was=(state.clean&&state.clean.a&&state.clean.a.mod===a.mod)?state.clean:null;
   state.clean={a,target:(was&&was.target)||state.settings.last_cleanup_target||'',
@@ -288,7 +288,7 @@ function clUnusedBody(){
     </div>`).join('')}</div>`;
 }
 /* Suggestions, never decisions: the twin has the same animations, skeletons and
-   torch block, but its meshes and textures are its own — so every row is ticked
+   torch block, but its meshes and textures are its own - so every row is ticked
    by hand (or with "Agree to all" once you have read them). */
 function clMergeBody(){
   const c=state.clean,rows=c.a.merges;
@@ -320,7 +320,7 @@ function clMergeBody(){
       </div></div>`;}).join('')}</div>`;
 }
 /* "already an armour tier of the same unit" is a fact about the PICKED twin, not
-   about the row — the picker offers up to 12, and only some of them are models the
+   about the row - the picker offers up to 12, and only some of them are models the
    unit already draws. So the badge is re-evaluated on every change instead of being
    frozen at whatever the server suggested. */
 const clIsOwn=(m,into)=>(m.own_options||[]).includes(into);
@@ -332,7 +332,7 @@ function clInto(entry,into){
   clStale();
 }
 /* A mount nothing rides is dead weight in descr_mount.txt, and its model entry is
-   usually alive for that reason alone — so ticking one here is what lets the entry
+   usually alive for that reason alone - so ticking one here is what lets the entry
    go too (that is what "frees ..." means on the row). Not pre-ticked: this is the
    one part of the cleanup that rewrites descr_mount.txt. */
 function clMountBody(){
@@ -388,7 +388,7 @@ function clCountText(k){
 function clCounts(){['unused','merges','mounts','orphans'].forEach(k=>{
   const el=document.getElementById('clc_'+k); if(el)el.textContent=clCountText(k);});}
 // The checkbox already shows its own new state, so only the header count needs
-// touching — that keeps ticking one of 3000 rows instant.
+// touching - that keeps ticking one of 3000 rows instant.
 function clPick(key,id,on){const s=state.clean[key]; on?s.add(id):s.delete(id);
   clStale(); clCounts();}
 function clAll(key,on){
@@ -406,7 +406,7 @@ function clAll(key,on){
 function clPayload(){
   const c=state.clean;
   // A ticked mount carries its model with it, so the freed entries ride along in
-  // `entries` — they are never in the unused list (the mount was referencing them).
+  // `entries` - they are never in the unused list (the mount was referencing them).
   const freed=c.a.unused_mounts.filter(m=>c.mounts.has(m.mount)&&m.frees_model).map(m=>m.model);
   return {mod:c.a.mod,target:c.target,
     entries:[...new Set([...c.entries,...freed])],
@@ -460,7 +460,7 @@ async function clApply(){
   // so leaving them up shows entries that are no longer in the mod and invites
   // ticking them again. The audit is re-run here rather than left to whoever
   // reopens the dialog: the mod on disk changed, and the answer on screen has
-  // to change with it. `loadSource` is not awaited — it repaints the page
+  // to change with it. `loadSource` is not awaited - it repaints the page
   // behind the dialog and has nothing to do with what the dialog shows.
   loadSource();
   await openCleanup();
@@ -471,7 +471,7 @@ async function clApply(){
    The cleanup dialog above answers "may this go?" before anything moves. This one
    is for the morning after: a cleanup ran under an older, narrower idea of what
    counts as a reference, the mod now crashes, and the thing that broke it is by
-   definition NOT in the mod any more — so no scan of the mod can find it. The
+   definition NOT in the mod any more - so no scan of the mod can find it. The
    server re-reads the cleanup log instead, re-tests everything each run removed
    against the current nets, and reports what can be put back and from where.
 
@@ -488,7 +488,7 @@ async function openRecheck(){
   try{ r=await runJob(job,`Recheck ${esc(state.src)}’s past cleanups`,
         `Re-reading every campaign and battle script, every other
          <code>battle_models.modeldb</code> in the mod, and every text file that could
-         name a file under <code>data/unit_models</code> — then testing what past
+         name a file under <code>data/unit_models</code> - then testing what past
          cleanups removed against all of it.`,
         ()=>api.get(`/api/bmdb/recheck?mod=${enc(state.src)}&job=${enc(job)}`)); }
   catch(e){ r={error:''+e}; }
@@ -512,7 +512,7 @@ function renderRecheck(){
           ${n===1?'is':'are'} named by something this build now reads and the older one did not.
           ${ok?`<b>${ok}</b> can be put back from a backup or the export folder.`:''}
           ${lost?`<span class="w-bad">${ok?`The other <b>${lost}</b> cannot`
-            :`None of them can be put back from here`} — the backup and the export folder
+            :`None of them can be put back from here`} - the backup and the export folder
             are both gone, so ${lost===1?'that file has':'they have'} to come from a fresh
             copy of the mod.</span>`:''}</div>
         <div class="clbar">
@@ -552,7 +552,7 @@ function rcNetsHtml(r){
 }
 /* The runs themselves, because "can this be undone at all" is decided here and
    not in the row list: a run whose backup AND export folder are both gone can
-   still be reported on — the log remembers what it removed — but nothing it took
+   still be reported on - the log remembers what it removed - but nothing it took
    out can be put back by this tool, and that is worth knowing before reading a
    list of things to tick. */
 function rcRunsHtml(r){
@@ -602,7 +602,7 @@ async function rcApply(){
   if(!confirm(`Put ${files} file(s)${entries?` and ${entries} modeldb entr${
       entries===1?'y':'ies'}`:''} back into “${s.r.mod}”?\n\n`+
       `They are copied from the backups and export folders the cleanups wrote.\n`+
-      `This is itself backed up — 🕑 Log → Undo takes it away again.`))return;
+      `This is itself backed up - 🕑 Log → Undo takes it away again.`))return;
   const job=newJob();
   const res=await runJob(job,'Putting them back…',
     `Copying ${files} file(s) back into ${esc(s.r.mod)}${

@@ -1,4 +1,4 @@
-"""Unit cards and info cards — the merc-folder consolidation.
+"""Unit cards and info cards - the merc-folder consolidation.
 
 Runs on a mod this file builds from scratch, so it needs no game install and
 each case is exactly the one it names:
@@ -9,7 +9,7 @@ each case is exactly the one it names:
     copies that DIFFER are a variant set, and consolidating one is refused until
     the caller says which picture survives;
   * consolidating writes the survivor into ``ui/units/mercs`` /
-    ``ui/unit_info/merc`` and takes every other copy out — and writes nothing at
+    ``ui/unit_info/merc`` and takes every other copy out - and writes nothing at
     all when the survivor is already the merc copy;
   * a unit that pins ``card_pic_dir`` is left alone, and so is a file in those
     folders that is not shaped like a card (the agent pictures);
@@ -80,14 +80,14 @@ ART = {
     "ui/unit_info/england/alpha_info.tga": b"alpha-info",
     "ui/unit_info/france/alpha_info.tga": b"alpha-info",
     # beta: genuinely DIFFERENT cards per faction, plus a third folder that
-    # agrees with england — so the commonest picture is england's, two to one
+    # agrees with england - so the commonest picture is england's, two to one
     "ui/units/england/#beta.tga": b"beta-card-england",
     "ui/units/france/#beta.tga": b"beta-card-france",
     "ui/units/spain/#beta.tga": b"beta-card-england",
     # gamma: pins card_pic_dir, so its card is counted and never consolidated
     "ui/units/england/#gamma.tga": b"gamma-card",
     "ui/units/france/#gamma.tga": b"gamma-card",
-    # delta: identical, and one of the copies is ALREADY the merc one — the case
+    # delta: identical, and one of the copies is ALREADY the merc one - the case
     # where consolidating should write no new file at all
     "ui/units/mercs/#delta.tga": b"delta-card",
     "ui/units/england/#delta.tga": b"delta-card",
@@ -263,5 +263,5 @@ empty = cards.audit(Mod(bare))
 check("says so rather than raising",
       all(k["dictionaries"] == 0 and k["unused"] == [] for k in empty["kinds"]))
 
-print(f"\n{sum(ok)}/{len(ok)} checks — {'ALL PASSED' if all(ok) else 'FAILURES ABOVE'}")
+print(f"\n{sum(ok)}/{len(ok)} checks - {'ALL PASSED' if all(ok) else 'FAILURES ABOVE'}")
 sys.exit(0 if all(ok) else 1)

@@ -1,6 +1,6 @@
 """The EDU cleanup: the tier marker, and the whole-file sorter.
 
-Phase 14e's two halves. The **marker** is the tool's own metadata — a tier
+Phase 14e's two halves. The **marker** is the tool's own metadata - a tier
 exists in no game file, so it is written as a comment above a unit's ``type``
 line under one owned prefix. The **sorter** groups the roster the way a
 hand-organised ``export_descr_unit.txt`` is grouped, and the whole of its
@@ -11,18 +11,18 @@ What each part is here to catch:
   * **the marker travels with its own unit.** A comment above ``type`` belongs
     to the PREVIOUS block under the old boundary rule, which would have left the
     marker behind on every transfer, replace and sort. The block now starts at
-    the marker, and the parse of a file that has none is unchanged — which is
+    the marker, and the parse of a file that has none is unchanged - which is
     every real file, so the round-trip sweeps still mean what they meant.
   * **setting, changing and clearing a tier is lossless**, and clearing the last
     key deletes the line rather than leaving a bare prefix.
   * **the sorter only ever moves a block.** Same units, same fields, same
-    comments — asserted here from outside, not by trusting the plan's own check.
+    comments - asserted here from outside, not by trusting the plan's own check.
   * **it is idempotent.** Running it twice must not differ from running it once,
     which is the exit criterion and the thing most easily broken: the first
     banner of a sorted file lands in the PREAMBLE when it is read back, and
     emitting it again grows the file a banner per run.
   * **an untiered unit does not acquire a tier** by being written under a
-    banner and read back — that would move it on the second run.
+    banner and read back - that would move it on the second run.
   * **tiers are read from the file's own banners**, because 907 of DaC's 916
     units already sit under one and nobody should type them again.
 
@@ -83,7 +83,7 @@ check("a unit with no marker has no tier", f.units[0].tier == "")
 check("the marker is INSIDE its own unit's block",
       f.units[1].raw.startswith(";@m2gt"))
 check("…and not in the block above it", ";@m2gt" not in f.units[0].raw)
-check("the banner above it stays with the block above — it is that unit's filler",
+check("the banner above it stays with the block above - it is that unit's filler",
       "GONDOR TIER 2" in f.units[0].raw)
 check("the preamble is unchanged by the rule",
       f.preamble == ";  the mod's own header\n\n")
@@ -145,7 +145,7 @@ print("\n== the sorter, on every installed mod ==")
 mods = [m for m in _realmod.installed()
         if (m / "data" / "export_descr_unit.txt").is_file()]
 if not mods:
-    print("  (no installed mod with an EDU — the sweep is skipped)")
+    print("  (no installed mod with an EDU - the sweep is skipped)")
 for src in mods:
     name = src.name
     work = Path(tempfile.mkdtemp()) / name

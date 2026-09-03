@@ -1,4 +1,4 @@
-"""The M2EX mark: what it turns off, and — more importantly — what it does not.
+"""The M2EX mark: what it turns off, and - more importantly - what it does not.
 
 M2EX replaces the engine's hardcoded tables, so a mod that runs on it is over
 several of the ceilings the toolkit checks against by design. The mark exists
@@ -9,7 +9,7 @@ that were all deliberate.
 The risk in a feature like this is that it becomes a mute button. So the gate
 here is two-sided:
 
-  * the ceiling findings go — and go for the right mod, since the mark is stored
+  * the ceiling findings go - and go for the right mod, since the mark is stored
     per mod root and two mods must not share it;
   * **every other finding stays.** A missing text key, a header line in the wrong
     order, an antitrait naming a trait the file does not define: none of those
@@ -46,7 +46,7 @@ config.LOG_PATH = cfg / "transfers.json"
 
 
 class FakeMod:
-    """Just a root and a name — the mark is stored by path and reads nothing."""
+    """Just a root and a name - the mark is stored by path and reads nothing."""
 
     def __init__(self, root, name):
         self.root = Path(root)
@@ -64,18 +64,18 @@ print("the mark itself")
 check("a mod starts unmarked", not one.m2ex)
 modflags.set_m2ex(one, True)
 check("marking it sticks", one.m2ex)
-check("and it is per mod — the other one is untouched", not two.m2ex)
+check("and it is per mod - the other one is untouched", not two.m2ex)
 check("the same folder spelled the other way is the same mod",
       modflags.is_m2ex(FakeMod(str(cfg / "ModOne").replace("\\", "/"), "again")))
 
-# The mark is read two ways: off a Mod, and off a bare path — /api/mods answers
+# The mark is read two ways: off a Mod, and off a bare path - /api/mods answers
 # the header dropdown before anything has been parsed, so it has only the folder
 # the registry discovered. Those two have to agree.
 #
 # They did not. `getattr(mod, "root", mod)` looks like it means "the Mod's root,
 # or the path itself", but a Path HAS a `.root`: its anchor, "\\" on Windows.
 # Every path-shaped caller therefore keyed to the drive root of the working
-# directory instead of to its own folder — one shared row for every mod on the
+# directory instead of to its own folder - one shared row for every mod on the
 # machine. Ticking a mod still looked right, because that response is answered
 # from a Mod; the tick then vanished the next time the mod list was fetched, and
 # came back on a mod nobody had marked.
@@ -129,7 +129,7 @@ check("...and the antitraits it names that the file has not got, which is not a 
 t_left = {f["kind"] for f in modflags.uncapped(t_found, one)}
 check("marked M2EX, both ceilings go",
       not ({"too-many-levels", "too-many-antitraits"} & t_left))
-check("and the unknown antitrait stays — M2EX does not make that legal",
+check("and the unknown antitrait stays - M2EX does not make that legal",
       "unknown-antitrait" in t_left)
 
 ANC = (
@@ -149,7 +149,7 @@ check("an ancillary over both of its ceilings reports both",
 a_left = {f["kind"] for f in modflags.uncapped(a_found, one)}
 check("marked M2EX, both go",
       not ({"too-many-excluded", "too-many-effects"} & a_left))
-check("and `Transferable 2` still stands — that is a wrong value, not a ceiling",
+check("and `Transferable 2` still stands - that is a wrong value, not a ceiling",
       "bad-transferable" in a_left)
 
 check("every kind in the list is one a module actually raises",

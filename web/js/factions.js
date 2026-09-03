@@ -1,15 +1,15 @@
-/* factions.js — Factions mode: descr_sm_factions.txt, the faction roster
+/* factions.js - Factions mode: descr_sm_factions.txt, the faction roster
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
 /* ======================= FACTIONS MODE =======================
    What a faction IS: its culture and religion, the two colours it paints the
    campaign map with, the strat models it puts on it, what it may and may not do,
-   and — for the few that have one — its horde.
+   and - for the few that have one - its horde.
 
    Four things about this screen that the file decided:
 
@@ -22,14 +22,14 @@
        expanded.txt entry all point at it. The head line's modifier after the
        comma (`faction egypt, spawned_on_event`) is shown but not edited here.
      * ADD BY CLONING, NEVER DELETE. A faction lives in twelve files at once,
-       so one that exists only in this file is a mod that will not load — which
+       so one that exists only in this file is a mod that will not load - which
        is an argument for writing all twelve, not for refusing. ＋ Add a faction
        copies a working faction into every one of them (factionclone.py).
        Deleting stays out: a clone copies the donor's answer, and a delete would
        have to invent one for every line that names the slot.
      * A MISSING PICTURE IS NOT A FAULT. `symbol` and `rebel_symbol` are .CAS 3D
        models, and not one of the 90 real factions measured ships its
-       `loading_logo` unpacked — they are all inside the game's .pack archives.
+       `loading_logo` unpacked - they are all inside the game's .pack archives.
        So the paths are shown and a found one is marked; an unfound one is not
        called missing.
 
@@ -38,7 +38,7 @@
 
    THE PAGE NEVER PARSES A GAME FILE: /api/factions, /api/faction,
    /api/factions/plan|apply and /api/factions/clone_plan|clone_apply do all of
-   it — including working out which twelve files a new faction would change. */
+   it - including working out which twelve files a new faction would change. */
 
 async function loadFactions(){
   const mod = state.src;
@@ -70,7 +70,7 @@ function renderFactions(){
     <div class="trlist">
       ${findingsHtml('factions', f.finding_list, 'facOpen')}
       <div class="trnote">${f.limit ? `${f.count}/${f.limit} faction slots used`
-        : `${f.count} faction slots — this mod is marked <b>M2EX</b>, so the
+        : `${f.count} faction slots - this mod is marked <b>M2EX</b>, so the
            engine's ${VANILLA_FACTION_LIMIT} is not its ceiling`}
         ${f.can_clone ? `<button class="fcadd" onclick="facCloneOpen()"
           ${facFull() ? 'disabled' : ''} title="${facFull()
@@ -280,19 +280,46 @@ function facYesNo(d, key){
     </select></div>`;
 }
 
+/* The two colours, as a swatch and a hex code.
+
+   Two things this row must not do. It must not REPAINT while the swatch is
+   being used: the OS colour picker is anchored to that very `<input>`, and
+   `oninput` fires on every drag through the gradient - rebuilding the form under
+   it replaced the element and shut the picker, so a colour could only be chosen
+   one blind click at a time. So the swatch writes straight into the record and
+   updates its two siblings by hand, and nothing here re-renders.
+
+   And it must offer the hex, because hex is what a palette, an image editor and
+   every other tool on the internet hand you. The file's own words (`red 55,
+   green 75, blue 48`) stay on show underneath - that is what is written to disk,
+   and the code view edits it verbatim - but they are not what anyone wants to
+   type. Either box drives the other. */
 function facColour(d, key, label){
   const hex = (d.colours||{})[key] || '#000000';
   return `<label class="lbl" data-label="${key}">${esc(label)}</label>
-    <div class="faccol">
-      <input type="color" value="${esc(hex)}"
-        oninput="facSetColour('${key}',this.value)">
-      <input value="${esc(d.w[key]||'')}" class="faccolt"
-        oninput="facSet('${key}',this.value.trim())">
+    <div>
+      <div class="faccol">
+        <input type="color" id="fcs_${key}" value="${esc(hex)}"
+          title="Pick a colour. The box stays open until you close it."
+          oninput="facSetColour('${key}',this.value)">
+        <input class="faccolt" id="fch_${key}" value="${esc(hex)}"
+          spellcheck="false" maxlength="7" placeholder="#rrggbb"
+          title="The colour as a hex code - paste one from anywhere."
+          oninput="facSetHex('${key}',this.value)">
+      </div>
+      <div class="trhint count" id="fcr_${key}">${esc(d.w[key]||'')}</div>
     </div>`;
+}
+//: `#rgb` and `#rrggbb`, with or without the hash - what a paste actually looks like
+const FAC_HEX = /^#?(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+function facHexFull(text){
+  const s = (text||'').trim().replace(/^#/,'');
+  if(!FAC_HEX.test(s)) return '';
+  return '#' + (s.length === 3 ? s.split('').map(c => c + c).join('') : s).toLowerCase();
 }
 
 /* The faction's pictures. The roster names none of them (see factions.py), so
-   they are found where the game itself looks — and a mod that keeps its art in
+   they are found where the game itself looks - and a mod that keeps its art in
    a .pack archive simply has none to show, which is not a fault. */
 function facPictures(d){
   const pics = d.pictures || [];
@@ -381,12 +408,33 @@ function facSet(key, value){
   d.w[key] = value;
   facTouched(false);
 }
-function facSetColour(key, hex){
+/* Write one colour down, and update the row IN PLACE.
+
+   `facTouched(false)` deliberately: repainting the form here is what used to
+   close the OS colour picker on every drag (see facColour). The three things
+   the row shows are set by hand instead, and `skip` leaves alone whichever box
+   the user is currently typing in - writing a value back into the input you are
+   mid-way through editing moves the caret to the end. */
+function facWriteColour(key, hex, skip){
   const d = state.fac.d; if(!d) return;
   const n = parseInt(hex.slice(1), 16);
   d.w[key] = `red ${(n>>16)&255}, green ${(n>>8)&255}, blue ${n&255}`;
-  d.colours[key] = hex;
-  facTouched(true);
+  (d.colours = d.colours || {})[key] = hex;
+  const sw = document.getElementById('fcs_' + key);
+  const hx = document.getElementById('fch_' + key);
+  const raw = document.getElementById('fcr_' + key);
+  if(sw && skip !== 'swatch') sw.value = hex;
+  if(hx && skip !== 'hex') hx.value = hex;
+  if(raw) raw.textContent = d.w[key];
+  facTouched(false);
+}
+function facSetColour(key, hex){ facWriteColour(key, hex, 'swatch'); }
+/* Typed or pasted hex. An incomplete one (someone is still typing "#3a") is not
+   an error and not a value - the record keeps what it had until the box holds a
+   whole colour, so a half-typed code never lands in the file. */
+function facSetHex(key, text){
+  const hex = facHexFull(text);
+  if(hex) facWriteColour(key, hex, 'hex');
 }
 function facSetLoc(value){
   const d = state.fac.d; if(!d) return;
@@ -442,7 +490,7 @@ async function facCvToggle(){
 /* ---- writing ---- */
 function facEdits(){
   const d = state.fac.d, w = d.w, v = d.vocab || {};
-  // Send a key when it has a value (unchanged ones cost nothing — the server
+  // Send a key when it has a value (unchanged ones cost nothing - the server
   // skips a key whose value has not moved) or when the record HAD it and the
   // box is now empty, which is how an optional line gets deleted. The repeat
   // key rides as `units`, which is what the shared serialiser calls it.
@@ -494,19 +542,19 @@ async function facSave(){
 
    The roster tab spent its whole life explaining why it would NOT do this: a
    faction slot lives in twelve files, and one that exists only in
-   descr_sm_factions.txt is a mod that will not load. That is still true — the
+   descr_sm_factions.txt is a mod that will not load. That is still true - the
    answer is to write all twelve, which is what /api/factions/clone_plan does
    (see unittransfer/factionclone.py).
 
    The page's job here is narrow and it matters: this is the one action in the
-   Factions tab that touches files the tab does not otherwise own — the EDU, the
-   modeldb, descr_character — and it copies a folder of pictures besides. So
+   Factions tab that touches files the tab does not otherwise own - the EDU, the
+   modeldb, descr_character - and it copies a folder of pictures besides. So
    nothing is written until the plan has been fetched and SHOWN, file by file,
    with the count of what each one would gain. The Create button stays disabled
    until that plan exists and is clean. */
 
-/* Whether the engine's faction table has any room left. Asked in two places —
-   the button and the dialog's own banner — so it is one answer, not two. A mod
+/* Whether the engine's faction table has any room left. Asked in two places -
+   the button and the dialog's own banner - so it is one answer, not two. A mod
    marked M2EX reports no limit at all, and 0 is never "full". */
 function facFull(){
   const f = state.fac;
@@ -525,14 +573,14 @@ function facCloneOpen(source){
 }
 
 /* The head line may carry a modifier after a comma (`egypt, spawned_on_event`)
-   and everything else in a mod points at the part before it — the same rule as
+   and everything else in a mod points at the part before it - the same rule as
    factions.py's slot_of, which is why this never sends a whole head line. */
 function fcSlotOf(name){ return String(name || '').split(',')[0].trim(); }
 
 /* The plan and the Create button, without rebuilding the fields.
 
    Redrawing the whole dialog every time a plan lands takes the caret out of the
-   box the person is still typing in — they type `arnor`, the preview returns
+   box the person is still typing in - they type `arnor`, the preview returns
    280ms later, and the next letter goes nowhere. So the debounced preview
    repaints only the two things it actually changes. */
 function facClonePaint(){
@@ -561,7 +609,7 @@ function facCloneRender(){
     <h2>Add a faction <span class="pill">${esc(f.mod || state.src)}</span></h2>
     <div class="mbody" style="padding:14px 16px">
       <div class="count fcintro">
-        A faction is added by <b>copying one that already works</b> — into all
+        A faction is added by <b>copying one that already works</b> - into all
         twelve files that name a faction slot, plus its symbols, banners and unit
         cards. The clone starts identical to the faction it copies; change what
         you want afterwards in this tab and the editors beside it.
@@ -588,12 +636,12 @@ function facCloneRender(){
         The slot is what every other file points at, so it has to be one bare
         word: lower case, digits and underscores. It cannot be renamed later
         without orphaning every line that names it. The shown name is the only
-        text filled in for you — the faction's other thirty text entries stay
+        text filled in for you - the faction's other thirty text entries stay
         the donor's until you edit them.
       </div>
       <label class="fcart"><input type="checkbox"${c.art ? ' checked' : ''}
         onchange="facCloneSet('art', this.checked)">
-        <span>Copy the art too — symbols, banners, captain cards and the unit
+        <span>Copy the art too - symbols, banners, captain cards and the unit
         card folders, each renamed for the new slot</span></label>
       <div id="fcPlan">${facClonePlanHtml()}</div>
     </div>
@@ -610,7 +658,7 @@ function facCloneRender(){
 }
 
 /* The plan, file by file. A file that would gain nothing is shown greyed with
-   the reason rather than hidden: "descr_character.txt — sicily is not named in
+   the reason rather than hidden: "descr_character.txt - sicily is not named in
    it" is a fact about the mod worth reading before you write, not noise. */
 function facClonePlanHtml(){
   const c = state.fac.clone, p = c.plan;
@@ -626,17 +674,17 @@ function facClonePlanHtml(){
         p.asset_files ? ` · ${p.asset_files} art file(s), ${
           (p.asset_bytes / 1048576).toFixed(1)} MB` : ''}</span></div>
     ${files.map(x => `<div class="fcrow${x.written ? '' : ' off'}">
-      <span class="fcc">${x.written ? '+' + x.count : '—'}</span>
+      <span class="fcc">${x.written ? '+' + x.count : '-'}</span>
       <span class="fcn">${esc(x.label)}
         <span class="fcf">${esc(x.rel)}</span></span>
       <span class="fcw count">${esc(x.written ? (x.note || '') : (x.skipped || ''))}</span>
     </div>`).join('')}
     ${(p.review || []).length ? `<div class="fcrow fcrev">
-      <span class="fcc">—</span>
+      <span class="fcc">-</span>
       <span class="fcn">Left for you to decide
         <span class="fcf">${p.review.map(r => esc(r.rel) + ' (' + r.hits + ')').join(', ')}</span></span>
       <span class="fcw count">the donor is named here in ways that are a
-        judgement, not a list — a trait named after it, an ancillary's condition,
+        judgement, not a list - a trait named after it, an ancillary's condition,
         a prebattle speech</span></div>` : ''}
     ${(p.warnings || []).map(w => `<div class="w-warn fcmsg">${esc(w)}</div>`).join('')}
     ${(p.notes || []).map(n => `<div class="fcmsg count">${esc(n)}</div>`).join('')}
@@ -688,7 +736,7 @@ async function facCloneApply(){
     + files.map(x => `  ${x.rel}  +${x.count}`).join('\n')
     + (p.asset_files ? `\n  ${p.asset_files} art file(s), copied and renamed` : '')
     // the review files live in `review`, not in the note, so this dialog names
-    // them itself — it has no row to draw them in the way the plan pane does
+    // them itself - it has no row to draw them in the way the plan pane does
     + ((p.review || []).length ? '\n\nLeft for you to decide:\n'
         + p.review.map(r => `  ${r.rel}  (${r.hits} mention(s))`).join('\n') : '')
     + '\n\nEvery file is backed up first, and 🕑 Log undoes the whole faction '
@@ -703,7 +751,7 @@ async function facCloneApply(){
   const keep = c.name;
   f.clone = null;
   closeModal();
-  toast(`Added ${keep} — ${res.files.length} file(s), ${res.asset_files} art file(s). `
+  toast(`Added ${keep} - ${res.files.length} file(s), ${res.asset_files} art file(s). `
         + '🕑 Log can undo it.', 5000);
   await loadFactions();
   facOpen(keep);

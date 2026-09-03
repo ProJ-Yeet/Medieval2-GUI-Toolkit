@@ -12,21 +12,21 @@ What each part is here to catch:
     do: CRLF, comment banners between traits, inline comments, tabs and spaces
     mixed, blank lines inside a level, a hidden trait with no levels at all
   * the header's **line order**, which is the one thing in this format that
-    crashes the game hundreds of lines away from the mistake — an inserted
+    crashes the game hundreds of lines away from the mistake - an inserted
     ``Hidden`` or ``ExcludeCultures`` must land at its canonical place, never
     appended, and ``check`` must say so when a file already has it wrong
   * edits as splices: an untouched line keeps its exact bytes (indent and inline
     comment included), an emptied optional field deletes its line, an emptied
     required one is refused, and added or removed levels and effects move only
     themselves
-  * the findings that reading the file cannot show you — a level whose threshold
+  * the findings that reading the file cannot show you - a level whose threshold
     a lower level already reached (so it never appears), and an ``Affects`` line
     naming a trait the file does not define
   * Code View: the span map lands on the right lines, and renaming the trait in
     the text pane is refused because that name is a key four other places use
   * the editor's whole round trip against a scratch mod on disk: create a trait
     and its text keys, edit it, build a trigger for it in the GUI's own shape,
-    delete it and watch the triggers that only fed it go with it — then undo the
+    delete it and watch the triggers that only fed it go with it - then undo the
     lot and get every file back
 
 Needs no game install for any of the above. When mods ARE installed it also
@@ -56,7 +56,7 @@ def _undo_puts_back(work, edct, before):
     """Undo the last job and say whether BOTH files went back to what they were.
 
     A trait save can write the EDCT and the text file and its compiled cache, so
-    the thing worth testing is not that undo restores a file — it is that it
+    the thing worth testing is not that undo restores a file - it is that it
     restores all of them. An undo that put the EDCT back and left the new text
     keys behind would leave a mod the log claims is untouched.
     """
@@ -176,7 +176,7 @@ check("no edits changes no bytes", same == base)
 
 out = traits.render_block(base, {"no_going_back_level": "3"})
 check("a changed value changes its line", "NoGoingBackLevel 3" in out)
-check("and nothing else moves — one line differs, in place",
+check("and nothing else moves - one line differs, in place",
       [a == b for a, b in zip(out.split("\r\n"), base.split("\r\n"))].count(False) == 1
       and len(out.split("\r\n")) == len(base.split("\r\n")))
 check("the whole file is still one trait", len(traits.parse_text(out + "\n").traits) == 1)
@@ -373,7 +373,7 @@ except codeview.CodeViewError as e:
 
 print("\nthe editor: overview, detail, and a save that goes to disk")
 # A scratch mod, so add/edit/delete can be applied for real and read back. Only
-# the two files this module touches are copied — that IS the mod, as far as
+# the two files this module touches are copied - that IS the mod, as far as
 # traits are concerned.
 work = Path(tempfile.mkdtemp(prefix="tk-traits-")) / "TestMod"
 (work / "data" / "text").mkdir(parents=True)
@@ -432,7 +432,7 @@ check("the text keys reached export_VnVs.txt",
 check("the compiled archive was written too",
       (work / "data" / "text" / "export_VnVs.txt.strings.bin").exists())
 
-check("…and the log can undo the whole job — every file it wrote",
+check("…and the log can undo the whole job - every file it wrote",
       _undo_puts_back(work, edct, FILE))
 traits.apply(traits.plan(mod, {"trait": "Wary", "action": "add", "edits": {
     "characters": ["spy"], "hidden": True,
@@ -507,7 +507,7 @@ root = config.get_med2_root()
 mods = sorted((Path(root) / "mods").glob("*/data/export_descr_character_traits.txt")) \
     if root else []
 if not mods:
-    print("  (no mods installed — the sweep that matters is skipped)")
+    print("  (no mods installed - the sweep that matters is skipped)")
 else:
     total_traits = total_levels = 0
     for path in mods:

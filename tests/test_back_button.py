@@ -1,7 +1,7 @@
 """The browser's Back button, stepping back through the toolkit's own screens.
 
 The whole tool is one page, so Back used to leave it. It now walks out the way
-the user walked in — and the walk is decided entirely in the page, by
+the user walked in - and the walk is decided entirely in the page, by
 ``NAV_LAYERS`` in ``web/js/core.js``: an ordered list of "is this what is on top?"
 against "then this is how it closes". Two things about that are easy to get
 quietly wrong, and neither would fail loudly in a browser:
@@ -14,7 +14,7 @@ quietly wrong, and neither would fail loudly in a browser:
     from the missing file must not take the Back button down with it.
 
 Then the trail of modules underneath: it records where Back goes, must not
-record the trip Back itself makes, and must run out at Home — where a press is
+record the trip Back itself makes, and must run out at Home - where a press is
 let through, because leaving is the only thing left for it to mean.
 
 This runs ``web/js/*.js`` under node with a hand-built page around it. Each
@@ -191,7 +191,7 @@ function shut(){
   fired=[]; WIRED.popstate();
   say('a press that closed something puts the spare back',[PUSHES,fired],[2,['dialog']]);
   fired=[]; WIRED.popstate();
-  say('a press nothing answered leaves it spent — the next one leaves the page',
+  say('a press nothing answered leaves it spent - the next one leaves the page',
       PUSHES,2);
   uiBackArm();
   say('…and the next thing the user clicks arms it again',PUSHES,3);
@@ -204,7 +204,7 @@ console.log(JSON.stringify(out));
 print("\n-- the Back button's layers (node) --")
 node = shutil.which("node")
 if not node:
-    print("  [skip] node is not on PATH — the page's own JS cannot be exercised")
+    print("  [skip] node is not on PATH - the page's own JS cannot be exercised")
 elif not WEB.exists():
     print("  [skip] web/index.html not found")
 else:
@@ -228,6 +228,6 @@ else:
 
 
 print()
-print(f"{sum(ok)}/{len(ok)} checks — "
+print(f"{sum(ok)}/{len(ok)} checks - "
       + ("ALL PASSED" if all(ok) else f"{len(ok) - sum(ok)} FAILED"))
 sys.exit(0 if all(ok) else 1)

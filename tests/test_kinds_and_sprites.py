@@ -134,7 +134,7 @@ if TATR.exists() and DAC.exists():
         check(spr in rels, f"plan copies the .spr itself ({spr})")
         missing = [r for _, r in sheets if r not in rels]
         check(not missing, f"plan copies all {len(sheets)} sheet texture(s)"
-                           + (f" — missing {missing[:3]}" if missing else ""))
+                           + (f" - missing {missing[:3]}" if missing else ""))
         check(not plan.applied if hasattr(plan, "applied") else True, "plan only (nothing applied)")
 else:
     print("  skip (test mods not present)")

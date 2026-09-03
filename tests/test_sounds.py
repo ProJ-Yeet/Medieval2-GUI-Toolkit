@@ -2,7 +2,7 @@
 
 The whole point of the parser is that it never rewrites a line it wasn't asked to
 touch, so most of these checks are byte-for-byte comparisons against the original
-file — including "add then remove gives you exactly what you started with".
+file - including "add then remove gives you exactly what you started with".
 
 Uses a TEMP mod (the voice bank + the 3 DB files copied from DaC) and a TEMP config
 dir, so neither the real mods nor the project config are touched.
@@ -68,7 +68,7 @@ def main():
     check("found Unit_Select entries", len(bank.unit_entries()) > 100)
     check("found accents and classes", bank.accents() and bank.classes())
     check("no parse warnings", not bank.warnings)
-    # an accent heads several separate blocks in DaC — the parser must not merge them
+    # an accent heads several separate blocks in DaC - the parser must not merge them
     heads = [v.accent for v in bank.vocals if v.vocal == S.UNIT_SELECT]
     check("repeated accent blocks kept separate", len(heads) > len(set(heads)))
 
@@ -178,7 +178,7 @@ def main():
     delta = [l for l in difflib.unified_diff(raw_before.decode(S.ENCODING).splitlines(True),
                                              raw_after.decode(S.ENCODING).splitlines(True), n=0)
              if l[0] in "+-" and not l.startswith(("---", "+++"))]
-    check("every changed line is an addition — nothing was rewritten",
+    check("every changed line is an addition - nothing was rewritten",
           len(delta) == added and all(l.startswith("+") for l in delta))
 
     print("\n=== E2: a plan that can't work reports it instead of guessing ===")

@@ -1,8 +1,8 @@
-/* modelpicker.js — the soldier-model picker (it also picks the animation set)
+/* modelpicker.js - the soldier-model picker (it also picks the animation set)
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
@@ -11,12 +11,12 @@
 
    Swapping the model on a `soldier` line swaps the unit's animation set with it,
    because the skeleton lives on the modeldb entry. So the question is almost
-   never "what is this entry called" — it is "which entries move the way I want",
+   never "what is this entry called" - it is "which entries move the way I want",
    and a datalist of two thousand names cannot answer that. Three ways in:
 
      by skeleton  pick an animation set, get every entry that uses it
      by name      the plain search, with LOD/skin counts and how many units share it
-     from a unit  take another unit's whole soldier line — men, mass and all
+     from a unit  take another unit's whole soldier line - men, mass and all
 
    Opens over the field editor and puts it straight back, the same stash/restore
    the building picker uses.
@@ -40,7 +40,7 @@ async function mpOpen(label,part){
   const cur=(gfParse(GF_FIELDS[gfKey(label)],host.get(label)).parts[part]||'').trim();
   state.mp.tab='skel'; state.mp.q=''; state.mp.skel=''; state.mp.uq='';
   state.mp.cur=cur;
-  // open on the skeleton the current entry already uses — "something else that
+  // open on the skeleton the current entry already uses - "something else that
   // moves like this" is the commonest reason to be here at all
   const now=state.mp.entries.find(e=>e.name.toLowerCase()===cur.toLowerCase());
   if(now&&now.skeletons.length)state.mp.skel=now.skeletons[0];
@@ -174,8 +174,8 @@ function gfListAdd(label){
   host.set(label,list.join(', ')); host.stale(); gfRerenderBody();
 }
 /* What a list field said before you touched it. A plain "the field changed"
-   flag is no use on a list of forty factions — you want to see WHICH ones are
-   yours — so every list widget marks its own entries against this. Membership
+   flag is no use on a list of forty factions - you want to see WHICH ones are
+   yours - so every list widget marks its own entries against this. Membership
    only: reordering `ownership` is a change to the field, not to any one entry. */
 function gfListWas(host,label){
   return new Set(csv((host.orig?host.orig(label):'')||''));
@@ -404,7 +404,7 @@ function gfRaw(label){const gf=state.gf;
 function gfRemove(label){gfHost().toggleRemove(label);}
 
 function gfWire(host){
-  // one slot of a line: write the whole line back, but never re-render — that
+  // one slot of a line: write the whole line back, but never re-render - that
   // would take the caret out of the box being typed into
   const write=(label,i,value)=>{
     const spec=GF_FIELDS[gfKey(label)];
@@ -432,7 +432,7 @@ function gfWire(host){
     el.oninput=()=>{host.set(label,el.value); host.stale(); gfAfterEdit(host,label,true);};
     el.onblur=()=>{const spec=GF_FIELDS[gfKey(label)];
       // a retyped raw line can change how many values it has, which changes the
-      // boxes above it — redraw once the user has finished with it
+      // boxes above it - redraw once the user has finished with it
       if(spec&&spec.parts)gfRerenderBody();};
   });
   // mount_effect's paired boxes
@@ -447,7 +447,7 @@ function gfWire(host){
   host.count();
 }
 // The ↑/↓ keys and the ▴▾ buttons of one number box. The buttons repeat while
-// held — a cost field is a long way from 0 one click at a time.
+// held - a cost field is a long way from 0 one click at a time.
 function gfWireNum(el,p,fire){
   el.onkeydown=ev=>gfNumKey(ev,p,el,fire);
   const box=el.parentElement;
@@ -467,7 +467,7 @@ function gfWireNum(el,p,fire){
 }
 /* Stepping a number box, from either the ▴▾ buttons or the ↑/↓ keys.
    `dir` is +1 / -1 and Shift multiplies by 10. The part's own min/max clamp the
-   RESULT — and only the result: a value already outside the range (a mod's
+   RESULT - and only the result: a value already outside the range (a mod's
    attack of 65, say) is left alone until you step it, and typing is never
    touched at all. An empty box starts from the minimum, or 0. */
 function gfStep(p,el,dir,big){

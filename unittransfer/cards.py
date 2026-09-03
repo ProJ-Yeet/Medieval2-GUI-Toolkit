@@ -1,33 +1,33 @@
-"""Unit cards and info cards — the same picture, filed under thirty factions.
+"""Unit cards and info cards - the same picture, filed under thirty factions.
 
 The game looks a unit's card up under the *player's* faction folder:
 ``data/ui/units/<faction>/#<dictionary>.tga`` for the little recruitment card,
 ``data/ui/unit_info/<faction>/<dictionary>_info.tga`` for the big one. So a unit
-that thirty factions can field needs its card in thirty folders — and mods do
+that thirty factions can field needs its card in thirty folders - and mods do
 exactly that, byte for byte identical, thirty times over. Divide and Conquer
 ships 4,294 info cards for 917 units: 1.2 GB where 264 MB of it is art for units
 that no longer exist and most of the rest is the same picture copied out.
 
 The way out is the folder the engine falls back to. ``data/ui/units/mercs`` and
 ``data/ui/unit_info/merc`` are searched for any unit whose own faction folder has
-nothing — which is why DaC already keeps 1,181 of its 1,554 cards there and
+nothing - which is why DaC already keeps 1,181 of its 1,554 cards there and
 nowhere else. One copy in the merc folder does the job of thirty, and this module
 is the pass that gets a mod from one to the other:
 
-  * **cards for units that are gone.** A dictionary no unit in the mod claims —
-    ``export_descr_unit.txt`` and any M2TWEOP unit file — is art the game can
+  * **cards for units that are gone.** A dictionary no unit in the mod claims -
+    ``export_descr_unit.txt`` and any M2TWEOP unit file - is art the game can
     never reach. Offered for removal.
   * **the same picture in several folders.** Every copy hashed; when they all
     agree, one goes to the merc folder and the rest are removed. Nothing to
     decide, because there is only one picture.
   * **genuinely different pictures per faction.** Some mods really do give a
-    unit a different card per faction. Those are NOT consolidated on their own —
+    unit a different card per faction. Those are NOT consolidated on their own -
     the module lists the distinct pictures and who holds each, and the choice of
     which becomes the single copy (or to leave the set alone) is the user's.
 
 **Nothing is deleted.** Everything removed is copied to an export folder in the
 mod's own layout first and backed up second, so 🕑 Log → Undo restores the mod
-exactly — the contract :mod:`unittransfer.bmdb` and :mod:`unittransfer.stratmap`
+exactly - the contract :mod:`unittransfer.bmdb` and :mod:`unittransfer.stratmap`
 make.
 
 Two deliberate refusals, both of them "we cannot prove this is safe":
@@ -36,8 +36,8 @@ Two deliberate refusals, both of them "we cannot prove this is safe":
     its own is left out of consolidation. The pin is a mod saying "look here",
     and this pass is not the place to find out whether the fallback still runs
     after it;
-  * a file in these folders that is **not** shaped like a card — the agent
-    pictures (``spy.tga``, ``diplomat.tga``), loose art somebody dropped in — is
+  * a file in these folders that is **not** shaped like a card - the agent
+    pictures (``spy.tga``, ``diplomat.tga``), loose art somebody dropped in - is
     counted, reported and never touched. Its name says nothing about which unit
     it belongs to, so there is no honest way to call it unused.
 """
@@ -83,7 +83,7 @@ class Kind:
         return f"{self.base}/{folder}/{self.filename(dictionary, ext)}"
 
 
-#: The card folder is ``mercs`` and the info folder is ``merc`` — not a typo on
+#: The card folder is ``mercs`` and the info folder is ``merc`` - not a typo on
 #: either side, that is what the game ships and what :meth:`edu.Unit.card_dirs`
 #: already searches.
 CARD = Kind("card", "ui/units", "mercs", "unit card",
@@ -110,7 +110,7 @@ def _digest(path: Path) -> str:
 
     Byte-identical is the only test used. Two visually identical TGAs saved by
     different tools are different files, and treating them as one would mean
-    silently choosing which of two pictures a mod ships — this pass never does
+    silently choosing which of two pictures a mod ships - this pass never does
     that. They come out as a variant set instead, and the user picks.
     """
     h = hashlib.blake2b(digest_size=16)
@@ -203,7 +203,7 @@ def _live_dictionaries(mod: Mod) -> Dict[str, str]:
     This is the whole test for "is this card reachable": the game finds a card by
     the unit's ``dictionary``, so a dictionary no unit claims is art nothing can
     ever draw. ``Mod.edu.units`` already holds both the EDU's units and any
-    M2TWEOP ones, which is exactly the roster wanted here — an EOP unit's card
+    M2TWEOP ones, which is exactly the roster wanted here - an EOP unit's card
     is filed the same way and must not look unused for living somewhere else.
     """
     return {u.dictionary.lower(): u.type for u in mod.edu.units if u.dictionary}
@@ -224,7 +224,7 @@ def audit(mod: Mod, progress: Progress = None) -> dict:
     if "lua_tokens" not in mod.__dict__:
         mod.__dict__["lua_tokens"] = luascan.scan(
             mod, lambda frac, where: say(6 + 10 * frac,
-                                         f"reading .lua scripts{' — ' + where if where else ''}"))
+                                         f"reading .lua scripts{' - ' + where if where else ''}"))
     lua = mod.lua_tokens
 
     kinds = []
@@ -266,7 +266,7 @@ def _classify(mod: Mod, kind: Kind, found: Dict[str, List[Copy]], strays: List[d
         if name not in live:
             hit = lua.get(name)
             if hit:
-                # named by a script and by nothing else — the same rule that
+                # named by a script and by nothing else - the same rule that
                 # protects a battle model, for the same reason
                 lua_kept.append({"name": name, "file": hit.label(),
                                  "in_comment": hit.in_comment,
@@ -330,7 +330,7 @@ def _preferred(group: List[Copy], merc: str) -> Copy:
     """Which copy of one identical set to keep: the merc one if there is one.
 
     Keeping the copy that is already where it is going means the common case
-    writes no new file at all — it only deletes the other twenty-nine.
+    writes no new file at all - it only deletes the other twenty-nine.
     """
     for c in group:
         if c.folder.lower() == merc:
@@ -341,7 +341,7 @@ def _preferred(group: List[Copy], merc: str) -> Copy:
 def _log_audit(mod: Mod, a: dict) -> None:
     log.info("CARDS  audit %s: %d units", mod.name, a["units"])
     for k in a["kinds"]:
-        log.info("  %-5s %d dictionaries in %d file(s), %.1f MB — %d gone (%.1f MB), "
+        log.info("  %-5s %d dictionaries in %d file(s), %.1f MB - %d gone (%.1f MB), "
                  "%d duplicated (%.1f MB to save), %d with different pictures, "
                  "%d already merc-only, %d pinned, %d not a card",
                  k["kind"], k["dictionaries"], k["file_count"], k["bytes"] / 1048576,
@@ -357,11 +357,11 @@ def _log_audit(mod: Mod, a: dict) -> None:
 @dataclass
 class CleanupRequest:
     target: str
-    #: ``{"card": [dictionary, …], "info": […]}`` — art for units that are gone.
+    #: ``{"card": [dictionary, …], "info": […]}`` - art for units that are gone.
     remove: Dict[str, List[str]] = field(default_factory=dict)
-    #: ``{"card": [dictionary, …]}`` — identical copies to fold into the merc folder.
+    #: ``{"card": [dictionary, …]}`` - identical copies to fold into the merc folder.
     consolidate: Dict[str, List[str]] = field(default_factory=dict)
-    #: ``{"card": {dictionary: digest}}`` — a variant set the user resolved by
+    #: ``{"card": {dictionary: digest}}`` - a variant set the user resolved by
     #: choosing which picture survives. Anything not in here is left alone.
     choose: Dict[str, Dict[str, str]] = field(default_factory=dict)
 
@@ -385,7 +385,7 @@ class CleanupPlan:
     mod: Mod
     request: CleanupRequest
     target: Optional[Path] = None
-    #: ``(src abs, rel under data/)`` — the one copy that moves into the merc folder.
+    #: ``(src abs, rel under data/)`` - the one copy that moves into the merc folder.
     copies: List[Tuple[Path, str]] = field(default_factory=list)
     exports: List[Tuple[Path, str]] = field(default_factory=list)
     deletes: List[str] = field(default_factory=list)
@@ -411,7 +411,7 @@ def _resolve_target(mod: Mod, raw: str) -> Tuple[Optional[Path], str]:
     except OSError as exc:
         return None, f"bad destination: {exc}"
     if target == mod.root.resolve() or mod.root.resolve() in target.parents:
-        return None, (f"'{target}' is inside {mod.name} — pick a folder outside the mod, "
+        return None, (f"'{target}' is inside {mod.name} - pick a folder outside the mod, "
                       "otherwise the files never actually leave it")
     if target.exists() and not target.is_dir():
         return None, f"'{target}' is a file, not a folder"
@@ -437,11 +437,11 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
         for name in req.remove.get(kind.key, []):
             copies = found.get(name)
             if not copies:
-                plan.warnings.append(f"no {kind.label} for '{name}' any more — skipped")
+                plan.warnings.append(f"no {kind.label} for '{name}' any more - skipped")
                 continue
             if name in live:
                 plan.warnings.append(
-                    f"'{name}' is {live[name]}'s dictionary after all — its "
+                    f"'{name}' is {live[name]}'s dictionary after all - its "
                     f"{kind.label} is kept")
                 continue
             for c in copies:
@@ -455,27 +455,27 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
         for name in wanted + [n for n in chosen if n not in wanted]:
             copies = found.get(name)
             if not copies:
-                plan.warnings.append(f"no {kind.label} for '{name}' any more — skipped")
+                plan.warnings.append(f"no {kind.label} for '{name}' any more - skipped")
                 continue
             if name not in live:
                 plan.warnings.append(
-                    f"no unit claims '{name}' — its {kind.label} is not consolidated")
+                    f"no unit claims '{name}' - its {kind.label} is not consolidated")
                 continue
             if name in pins:
                 plan.warnings.append(
-                    f"'{name}' pins its {kind.label} to '{pins[name]}' — left alone")
+                    f"'{name}' pins its {kind.label} to '{pins[name]}' - left alone")
                 continue
             digests = {c.digest for c in copies}
             if len(digests) > 1 and name not in chosen:
                 plan.warnings.append(
                     f"'{name}' has {len(digests)} different {kind.label}s and none was "
-                    f"chosen — left alone")
+                    f"chosen - left alone")
                 continue
             want = chosen.get(name) or next(iter(digests))
             group = [c for c in copies if c.digest == want]
             if not group:
                 plan.warnings.append(
-                    f"the {kind.label} chosen for '{name}' is not there any more — skipped")
+                    f"the {kind.label} chosen for '{name}' is not there any more - skipped")
                 continue
             keeper = _preferred(group, merc)
             dest = kind.rel(kind.merc, name, Path(keeper.rel).suffix.lower())
@@ -492,7 +492,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
             plan.consolidated += 1
 
     if plan.removed:
-        plan.changes.append(f"{plan.removed} dictionary/ies worth of card art removed — "
+        plan.changes.append(f"{plan.removed} dictionary/ies worth of card art removed - "
                             f"no unit in the mod claims them")
     if plan.consolidated:
         plan.changes.append(f"{plan.consolidated} card(s) folded into the merc folder")
@@ -507,7 +507,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
     return plan
 
 
-_README = """{mod} — unit and info cards taken out
+_README = """{mod} - unit and info cards taken out
 Moved out by the Medieval 2 GUI Toolkit on {when}.
 
 data\\ui\\...
@@ -548,7 +548,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
     n_exports = len(plan.exports) or 1
     for i, (src, rel) in enumerate(plan.exports):
         if i % 25 == 0:
-            say(2 + 58 * i / n_exports, f"copying cards out — {i}/{len(plan.exports)}")
+            say(2 + 58 * i / n_exports, f"copying cards out - {i}/{len(plan.exports)}")
         dest = target / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -592,7 +592,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
     n_deletes = len(plan.deletes) or 1
     for i, rel in enumerate(plan.deletes):
         if i % 25 == 0:
-            say(70 + 28 * i / n_deletes, f"taking cards out of the mod — {i}/{len(plan.deletes)}")
+            say(70 + 28 * i / n_deletes, f"taking cards out of the mod - {i}/{len(plan.deletes)}")
         t = mod.data / rel
         if t.exists():
             backup_and(rel)                # backed up, then removed: Undo puts it back

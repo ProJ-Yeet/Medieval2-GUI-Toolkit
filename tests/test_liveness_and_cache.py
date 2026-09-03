@@ -4,7 +4,7 @@ and a cache entry it cannot read must not turn into a black unit card.
 Both were one incident. Reading the icon cache out of a OneDrive-synced folder
 took seconds per file and sometimes failed outright (``OSError: [Errno 22]``),
 which filled the browser's handful of connections with slow icon requests; the
-page's heartbeat — a ``setInterval`` sharing those same connections — never got
+page's heartbeat - a ``setInterval`` sharing those same connections - never got
 through; and after 150 seconds the liveness watchdog concluded the tab was gone
 and stopped a server that was busy serving it. What the user saw was black unit
 cards, "TypeError: Failed to fetch", a grey transfer dialog and a dead Settings
@@ -136,7 +136,7 @@ check("a card whose case differs from the dictionary is still found",
 # The folder is listed once and remembered, and the mtime is what says when to
 # list it again. Both halves of that are asserted here by COUNTING the listings,
 # because "was it served from the index" is not visible in the path that comes
-# back — the old test compared the two results, which are equal either way, and
+# back - the old test compared the two results, which are equal either way, and
 # so could not have failed however the cache behaved.
 folder = card.parent
 listings = [0]
@@ -162,8 +162,8 @@ try:
     check("a settled folder is listed once and then served from the index",
           listings[0] == before)
 
-    # And now the case the mtime cannot see. A file is REPLACED — one unlinked,
-    # another created — and the folder's mtime comes out of it unchanged, which
+    # And now the case the mtime cannot see. A file is REPLACED - one unlinked,
+    # another created - and the folder's mtime comes out of it unchanged, which
     # on this machine is what really happens 3.5% of the time (measured: 70 of
     # 2000 rounds). Pinning the mtime back by hand is that 3.5% made certain, so
     # this asserts the fix instead of sampling it: the entry was listed while its
@@ -185,5 +185,5 @@ finally:
 import shutil                                                        # noqa: E402
 shutil.rmtree(tmp, ignore_errors=True)
 
-print(f"\n{sum(ok)}/{len(ok)} checks — " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
+print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

@@ -1,4 +1,4 @@
-# Minor files — what the reference tool has, and what we took
+# Minor files - what the reference tool has, and what we took
 
 _Phase 10a. Compared against `refs/upstream/editor/main` at the SHA in
 `merge/SYNC_LOG.md`: `src/pages/MinorFiles.jsx`, `src/pages/CulturesEditor.jsx`,
@@ -8,7 +8,7 @@ and `src/components/cultures/culturesParser.jsx`._
 
 **Verdict: the tab layout taken, all five parsers rejected.** This is the first
 audit where the reference implementation is not merely lossy but *wrong about the
-format* — three of its four small-file parsers cannot read a single real file
+format* - three of its four small-file parsers cannot read a single real file
 correctly, and two of its serialisers write files the engine will not load. Every
 claim below was checked against all 15 of these files in the three installed
 mods (Divide_and_Conquer_EUR, third_age_3, Third_Age_6).
@@ -26,14 +26,14 @@ the `.txt` *and* the `.strings.bin` beside it. Ours does the same through the
 Home module's readiness matrix, which already knows how to say "this file is not
 here".
 
-**A unit picker for rebel `unit` lines** (`RebelUnitPicker.jsx`) — a rebel
+**A unit picker for rebel `unit` lines** (`RebelUnitPicker.jsx`) - a rebel
 faction names EDU unit types, and typing them by hand is how you get a rebel
 faction that spawns nothing. Ours reads the mod's own EDU, which is the same
 idea; theirs reads whatever EDU was uploaded.
 
 ## What we did not take, and why
 
-### `ReligionsTab.jsx` — reads no religion and writes an unloadable file
+### `ReligionsTab.jsx` - reads no religion and writes an unloadable file
 
 Its parser looks for `icon`, `pip` or `anti_pip`. The real key is **`pip_path`**,
 and it sits inside a brace block:
@@ -60,20 +60,20 @@ religion catholic
 	icon	ui/pips/pip_evil.tga
 ```
 
-— no braces, no `religions { … }` list, and a key the engine has never had. The
+- no braces, no `religions { … }` list, and a key the engine has never had. The
 `religions` list is the part the engine actually reads as the set of religions;
 a file without it is not a descr_religions at all.
 
 It also has no idea `descr_religions_lookup.txt` must agree (it offers an
 "export lookup" button that regenerates it from the block order, which is a
 reasonable instinct pointed at the wrong list). Ours checks all four places a
-religion is written down — the list, its block, the lookup and
-`text/religions.txt` — because geeko's *How to add a religion* says all four, and
+religion is written down - the list, its block, the lookup and
+`text/religions.txt` - because geeko's *How to add a religion* says all four, and
 because **Third Age 3 disagrees with itself on three of them**: `heretic` has two
 blocks, the `religions` list is one short of the blocks, and the lookup still
 carries `rohirrim`, `wicked` and `uruk`, which the file no longer defines.
 
-### `ResourcesTab.jsx` — the model line is `item`, not `model`
+### `ResourcesTab.jsx` - the model line is `item`, not `model`
 
 Same shape of failure, one word: every one of the 84 real resource records writes
 `item data/models_strat/resource_x.CAS` and none writes `model`. Their parser
@@ -90,7 +90,7 @@ loosened: the engine's resource list is **closed**. All three mods ship the same
 `minorfiles.KNOWN_RESOURCES` reports an invented `type` as a line that is read
 and then ignored.
 
-### `RebelFactionsTab.jsx` — invents a syntax for the `unit` line
+### `RebelFactionsTab.jsx` - invents a syntax for the `unit` line
 
 Its parser splits `unit` on commas into `unitName, minExp, maxCount`, and its
 serialiser always writes all three back:
@@ -100,7 +100,7 @@ lines.push(`\tunit\t\t\t\t${padded}${u.minExp}, ${u.maxCount}`);
 ```
 
 **Not one of the 215 real `unit` lines in the three mods has a comma.** The rest
-of the line is the unit type and nothing else — and the types have spaces in
+of the line is the unit type and nothing else - and the types have spaces in
 them (`unit Mordor Orcs Invasion`, `unit Cave Trolls2`), which is exactly what a
 comma-splitting parser is least able to see. Round-tripping DaC through their
 editor rewrites all 151 of its unit lines.
@@ -109,10 +109,10 @@ The parser also accepts `rebel_faction` and `faction` as alternative head
 keywords "(legacy/alternate)". Neither appears in any real file; the head keyword
 is `rebel_type`.
 
-Their `CATEGORIES` list of four is right, and we kept it — measured, all 68 real
+Their `CATEGORIES` list of four is right, and we kept it - measured, all 68 real
 records use one of exactly those four.
 
-### `culturesParser.jsx` — right about the shape, wrong about where a record ends
+### `culturesParser.jsx` - right about the shape, wrong about where a record ends
 
 The best of the four. It reads the nested settlement braces correctly, and its
 `parsePath` split on the comma is the right idea. Two things stop it being
@@ -132,12 +132,12 @@ and its reading of the agent line as seven columns. What the last two numbers on
 an agent line mean is not in any document on this machine and all 234 real agent
 lines write `1 1`, so ours carries them by position and never rewrites them.
 
-### `CharacterNamesTab.jsx` — no findings, and no way to have any
+### `CharacterNamesTab.jsx` - no findings, and no way to have any
 
 `descr_names.txt` is 25 903 names in Third Age 6 and their tab is a flat list.
 Ours reads sections per faction (`characters`, `women`, and `settlements` from
 the file's own header comment, which none of the three mods uses) and reports
-duplicates — 97 real ones across the three mods, each of which is a name the
+duplicates - 97 real ones across the three mods, each of which is a name the
 engine will simply never pick twice as often as intended.
 
 ## The general point
@@ -145,7 +145,7 @@ engine will simply never pick twice as often as intended.
 Their four small-file parsers are the same code four times: strip comments,
 regex the keys someone remembered, re-emit the whole file from the model. Ours
 are three shapes and one splice, so a save touches the lines it changed and
-nothing else — and the tab columns these files are laid up in survive it, which
+nothing else - and the tab columns these files are laid up in survive it, which
 is what `keyblock.head_prefix` / `sub_value` / `sub_tokens` were added for.
 
 `unittransfer/minorfiles.py` and `tests/test_minorfiles.py` are the record: 15

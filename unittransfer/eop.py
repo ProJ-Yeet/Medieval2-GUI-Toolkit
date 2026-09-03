@@ -2,8 +2,8 @@
 
 M2TWEOP (the engine extender) lifts the game's 500-unit ceiling by loading extra
 unit definitions from its own folder instead of from ``data/export_descr_unit.txt``.
-Each of those files is plain EDU text — the same ``type`` / ``soldier`` /
-``stat_pri`` block a normal unit has — it just is not in the EDU. That is the
+Each of those files is plain EDU text - the same ``type`` / ``soldier`` /
+``stat_pri`` block a normal unit has - it just is not in the EDU. That is the
 whole difference, and it is why the rest of this tool can treat an EOP unit like
 any other once it has been read: same parser, same model references, same icons,
 same voice bank, same battle_models.modeldb entries.
@@ -11,7 +11,7 @@ same voice bank, same battle_models.modeldb entries.
 What EOP units do *not* share is where they are written back. So the contract is:
 
   * :func:`parse` reads them and tags each one ``is_eop`` with the file it came
-    from, and :class:`unittransfer.mod.Mod` merges them into ``mod.edu.units`` —
+    from, and :class:`unittransfer.mod.Mod` merges them into ``mod.edu.units`` -
     which is what makes every feature EOP-aware without knowing it;
   * :meth:`unittransfer.edu.EduFile.to_text` emits only the *main* file's units,
     so nothing can accidentally paste an EOP unit into export_descr_unit.txt;
@@ -21,7 +21,7 @@ What EOP units do *not* share is where they are written back. So the contract is
 Where the files are is a per-mod setting, exactly as ModdingTool models it (a list
 of "EOP directories" saved against the mod). :func:`detect_dirs` guesses the usual
 M2TWEOP layout so most mods need no setting up, and every ``.txt`` found is
-checked with :func:`looks_like_units` before it is parsed — an EOP folder holds
+checked with :func:`looks_like_units` before it is parsed - an EOP folder holds
 scripts, JSON and notes as well as unit files, and misreading one of those as a
 unit list would invent units that do not exist.
 """
@@ -38,7 +38,7 @@ from . import edu as edu_mod
 from .logutil import file_op, log
 
 # Folder names M2TWEOP installs use, checked case-insensitively against every
-# directory near the top of the mod. Detection is a convenience only — a mod that
+# directory near the top of the mod. Detection is a convenience only - a mod that
 # keeps its unit files somewhere else is handled by adding the folder in settings.
 EOP_DIR_NAMES = ("eopdata", "eop_data", "eopdata_units", "eop")
 
@@ -63,7 +63,7 @@ _UNITISH_RE = re.compile(r"^[ \t]*(soldier|dictionary|stat_pri|category)[ \t]+\S
 
 
 def _key(root: Path) -> str:
-    """The settings key for one mod — its resolved root, case-folded.
+    """The settings key for one mod - its resolved root, case-folded.
 
     Windows paths differ only in case all the time (the folder picker and a saved
     path rarely agree), and a settings entry that silently fails to match would
@@ -140,7 +140,7 @@ def detect_dirs(mod) -> List[Path]:
 def eop_dirs(mod) -> List[Path]:
     """The folders this mod's EOP units are read from and written back to.
 
-    A saved setting wins outright — if the user named the folders, guessing more
+    A saved setting wins outright - if the user named the folders, guessing more
     of them would write a transferred unit somewhere they did not ask for.
     """
     return configured_dirs(mod) or detect_dirs(mod)
@@ -247,7 +247,7 @@ class Split:
     """What a rewrite of the unit list means on disk.
 
     ``main`` and ``files`` hold only what actually *changed*, because every plan
-    in this tool uses "" / empty to mean "leave that file alone" — a compose that
+    in this tool uses "" / empty to mean "leave that file alone" - a compose that
     always returned text would make every edit look like it rewrote the EDU.
     """
     main: str = ""                                   # "" = export_descr_unit.txt unchanged
@@ -262,7 +262,7 @@ def compose(mod, units: Sequence["edu_mod.Unit"], *,
             main_preamble: Optional[str] = None) -> Split:
     """Turn an edited unit list back into the files it came from.
 
-    ``units`` is the mod's WHOLE unit list after the edit — every block, EOP and
+    ``units`` is the mod's WHOLE unit list after the edit - every block, EOP and
     main-file alike, in the order they should be written. Each unit goes back to
     the file it came from; a unit with no ``eop_file`` goes to the EDU.
 
@@ -304,7 +304,7 @@ def write_split(mod, texts: Dict[str, str], removes: Sequence[str],
     """Write the EOP side of a plan, backing every touched file up first.
 
     EOP files sit *outside* ``data/``, and often outside the mod root altogether
-    when the user pointed the setting at a shared folder — so the usual
+    when the user pointed the setting at a shared folder - so the usual
     ``manifest["backed_up"]`` list, whose entries are resolved against
     ``<mod>/data/``, cannot describe them. They get their own manifest keys
     holding absolute paths plus the absolute path of each backup, which is all
@@ -355,8 +355,8 @@ def write_split(mod, texts: Dict[str, str], removes: Sequence[str],
 def restore_split(manifest: dict) -> None:
     """Undo counterpart of :func:`write_split`: put the EOP files back.
 
-    Restoring a backup covers both an overwrite and a removal — the file is
-    written back either way — and a file this plan created is deleted, the same
+    Restoring a backup covers both an overwrite and a removal - the file is
+    written back either way - and a file this plan created is deleted, the same
     shape :func:`unittransfer.transfer.undo` uses for everything under ``data/``.
     """
     for rec in manifest.get("ext_backed_up") or []:
@@ -382,7 +382,7 @@ def edited(units: Iterable["edu_mod.Unit"], blocks: Dict[str, str],
     """The unit list with some blocks swapped and some units dropped, by ``type``.
 
     A convenience so every rewrite site can hand :func:`compose` a full unit list
-    without hand-rolling the "keep everything, change these" loop — and, more to
+    without hand-rolling the "keep everything, change these" loop - and, more to
     the point, without dropping the ``is_eop`` / ``eop_file`` tags that decide
     where each block gets written. Copies are made rather than mutating the cached
     parse, which must stay pristine for the next plan.
@@ -409,7 +409,7 @@ def rewrite_all(units: Iterable["edu_mod.Unit"], fn) -> List["edu_mod.Unit"]:
 def new_unit_file(mod, unit_type: str, target_dir=None) -> Optional[Path]:
     """Where a newly transferred EOP unit's own file should go, or None.
 
-    One file per unit, named after the unit — that is what M2TWEOP installs look
+    One file per unit, named after the unit - that is what M2TWEOP installs look
     like and what makes an EOP unit findable by hand later. Returns None when the
     mod has no EOP folder at all, which is the caller's cue to fall back to the
     EDU rather than invent a folder the extender is not configured to read.

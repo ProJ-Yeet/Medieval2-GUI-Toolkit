@@ -1,9 +1,9 @@
-/* core.js — shared state, the API client, the module registry and the burger
+/* core.js - shared state, the API client, the module registry and the burger
    menu, mod loading, filters, and the card grid every mode paints into
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
@@ -14,7 +14,7 @@
    index.html asks for two dozen files at once, and the page loads whether or
    not they all arrive: a missing one leaves its module's functions simply
    absent, so the first call into it throws a ReferenceError far from the cause
-   — and the startup screen said the server could not be reached, while that
+   - and the startup screen said the server could not be reached, while that
    server's own log showed every request of that same second answered. It is
    the one place the reader would never look.
 
@@ -24,7 +24,7 @@
    (a file may not depend on one loaded after it), and only give up out loud,
    naming the file, once it really will not come. */
 const uiFailedFiles=[];
-// A resource error does not bubble, so this is a CAPTURING listener on window —
+// A resource error does not bubble, so this is a CAPTURING listener on window -
 // the one place that sees it. core.js is first in index.html precisely so this
 // is armed before any of the others are fetched.
 window.addEventListener('error',e=>{
@@ -73,7 +73,7 @@ async function retryDroppedUiFiles(){
 function uiLoadFailed(lost){
   const names=lost.map(s=>s.split('/').pop().split('#')[0]).join(', ');
   main.innerHTML=`<div class="empty">The tool did not finish loading.<br>
-    <span class="count">The server is running — it answered for the rest of this page —
+    <span class="count">The server is running - it answered for the rest of this page -
     but the browser never received ${names?`<b>${esc(names)}</b>`:'part of the interface'}.
     Reloading fetches it again.</span><br><br>
     <button class="primary" onclick="location.reload()">Reload the page</button></div>`;
@@ -81,7 +81,7 @@ function uiLoadFailed(lost){
 
 /* Start the app once every file it is made of is actually here.
 
-   boot.js calls this, and so does window's load event — because boot.js is one
+   boot.js calls this, and so does window's load event - because boot.js is one
    of the two dozen and can be the file that goes missing, in which case nothing
    would ever start at all. Whichever gets here first wins. */
 async function startUi(){
@@ -96,7 +96,7 @@ window.addEventListener('load',()=>startUi());
 
 // `dst` is the mod being written to right now, which a single-mod mode mirrors
 // onto the source. `xferDst` is the destination the user actually PICKED, kept
-// apart so that entering Edit/Buildings doesn't quietly overwrite it — see
+// apart so that entering Edit/Buildings doesn't quietly overwrite it - see
 // applyMode.
 const state={mods:[],src:null,dst:null,xferDst:null,data:null,destData:null,factionNames:{},
   sel:{faction:new Set(),category:new Set(),class:new Set(),era:new Set()},
@@ -113,9 +113,9 @@ const state={mods:[],src:null,dst:null,xferDst:null,data:null,destData:null,fact
   //           cultures, character names) behind one tab strip
   mode:'home', ed:null, bmdb:null, clean:null, snd:null, destSnd:null, str:null,
   tr:null, an:null, mf:null, fac:null,
-  // bld survives a hop into the unit editor and back — see openUnitFromBuilding
+  // bld survives a hop into the unit editor and back - see openUnitFromBuilding
   bld:null, bldReturn:null,
-  // the modules opened before this one, oldest first — what the Back button
+  // the modules opened before this one, oldest first - what the Back button
   // walks out through once every dialog above it is shut (see NAV_LAYERS)
   modeTrail:[]};
 
@@ -126,14 +126,14 @@ const VANILLA_FACTION_LIMIT=31; // M2TW vanilla descr_sm_factions cap; M2EX rais
    Two things every request in this app needs, so they live here rather than in
    twenty modules: it can be ABANDONED (picking another mod half way through a
    load must not paint the mod you just left), and it is what the loading bar
-   watches. A module gets both by doing nothing at all — see `loadbar` below. */
+   watches. A module gets both by doing nothing at all - see `loadbar` below. */
 
 // Thrown by a request that was abandoned. Callers check for it and return
 // quietly: nothing went wrong, the answer simply stopped being wanted.
 const ABORTED='__aborted__';
 const isAborted=e=>e===ABORTED||(e&&e.name==='AbortError');
 // Bumped by every new load. A response carrying an older number is dropped
-// instead of painted — the reason a fast switch back and forth can't leave the
+// instead of painted - the reason a fast switch back and forth can't leave the
 // screen showing the other mod.
 let _loadGen=0,_loadAbort=null;
 function newLoad(){
@@ -144,7 +144,7 @@ function newLoad(){
 }
 const loadStale=gen=>gen!==_loadGen;
 
-// GET with a few automatic retries — a page's request can be dropped transiently
+// GET with a few automatic retries - a page's request can be dropped transiently
 // (e.g. during an icon burst, or if the tab was open across a server restart),
 // and we must never hang forever on such a blip. An abandoned request is never
 // retried: nobody is waiting for it.
@@ -161,7 +161,7 @@ const api={
         catch(e){
           if(isAborted(e)||(o.signal&&o.signal.aborted))throw ABORTED;
           err=e;
-          if(e.deliberate)break;   // an answer, not a blip — asking again changes nothing
+          if(e.deliberate)break;   // an answer, not a blip - asking again changes nothing
           if(i<tries-1) await new Promise(res=>setTimeout(res,200*(i+1)));}
       }
       throw apiFailed(err,u);
@@ -186,13 +186,13 @@ const api={
 /* What the server said, and whether asking again could change it.
 
    A non-OK reply used to become the string "HTTP 500" and then be retried four
-   times. Both halves were wrong. The reply carries the reason in its body —
-   which file, which line, what to fix — and that is the only thing worth
+   times. Both halves were wrong. The reply carries the reason in its body -
+   which file, which line, what to fix - and that is the only thing worth
    putting on the screen; and a 404 or a 409 is an answer the server chose, so
    three more of them only put three more stack traces in its log and make the
    wait four times longer. A dropped request is not this: it fails with no
    status at all and is still retried, which is what the retries were for.
-   502/503/504 stay retryable too — that is the shape of a server still coming
+   502/503/504 stay retryable too - that is the shape of a server still coming
    up. */
 async function httpAnswer(r){
   let said='';
@@ -208,7 +208,7 @@ async function httpAnswer(r){
 
    Every module ends its catch by printing `''+e`, which on an Error object is
    "Error: " and then the part worth reading. Now that a refusal arrives carrying
-   the server's own explanation — which file, which line, what to change — that
+   the server's own explanation - which file, which line, what to change - that
    prefix is the only thing standing between the reader and it. */
 const errText=e=>(e&&e.message)||String(e);
 
@@ -229,8 +229,8 @@ function apiFailed(e,u){
    why every module has one without a line of its own code: opened/closed are
    called by the API client above, the bar appears once a burst has lasted long
    enough to be worth mentioning, and the fraction is "answered / asked for so
-   far". Traffic that isn't a load — the heartbeat, a progress poll, a settings
-   save — is ignored, or the bar would blink every four seconds forever. */
+   far". Traffic that isn't a load - the heartbeat, a progress poll, a settings
+   save - is ignored, or the bar would blink every four seconds forever. */
 const LOADBAR_IGNORE=[/\/api\/heartbeat/,/\/api\/bye/,/\/api\/progress/,/\/api\/settings$/];
 const LOADBAR_DELAY=180;     // ms a burst must last before the bar is worth showing
 const loadbar={
@@ -315,7 +315,7 @@ document.addEventListener('change',e=>{
     return activity('ticked',`${name} -> ${el.checked?'on':'off'}`);
   const was=_actWas.get(el);
   if(was===el.value)return;
-  // No focusin means nothing typed in this box — a picker set by code, or a
+  // No focusin means nothing typed in this box - a picker set by code, or a
   // control drawn and changed in one go. Saying so beats printing an empty "was".
   activity('changed',was==null?`${name} -> “${(el.value||'').slice(0,120)}” (was not read)`
     :`${name}: “${was.slice(0,120)}” -> “${(el.value||'').slice(0,120)}”`);
@@ -331,8 +331,8 @@ const q1=v=>v.replace(/'/g,"\\'");
 const docPoints=(lead,points)=>{const ps=points.filter(Boolean);
   return ps.length?lead+'<ul>'+ps.map(p=>'<li>'+p+'</li>').join('')+'</ul>':lead;};
 function toast(m,ms=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),ms);}
-// A faction has two names — the EDU's code ("teutonic_order") and the in-game one
-// ("Clans of Enedwaith") — and which one you look for depends on what you are
+// A faction has two names - the EDU's code ("teutonic_order") and the in-game one
+// ("Clans of Enedwaith") - and which one you look for depends on what you are
 // doing. Whichever is picked leads and sorts; the other rides along in brackets so
 // the row is still readable either way.
 const facBy=()=>(state.settings.faction_sort==='code'?'code':'name');
@@ -357,7 +357,7 @@ function facCheckRow(code,name,onchange,checked,note,edited){
 const iconUrl=(mod,type,kind)=>`/icon?mod=${encodeURIComponent(mod)}&type=${encodeURIComponent(type)}&kind=${kind||'card'}`;
 // Icon requests can be dropped when a page fires dozens at once (connection
 // bursts). A missing icon returns a valid blank PNG (onload), so onerror only
-// fires on a genuine connection failure — retry it a few times with backoff.
+// fires on a genuine connection failure - retry it a few times with backoff.
 function iconRetry(img){
   const n=(+img.dataset.try||0)+1; img.dataset.try=n;
   if(n>4) return;                       // give up quietly after 4 tries
@@ -383,18 +383,18 @@ async function init(){
     const s=await api.get('/api/settings');state.settings=s;
     facSort.value=facBy();                 // remembered across runs like the rest
     restoreFilters();                      // …and so are the filters themselves
-    // ?mod=&edit= — how "open this unit in a new tab" arrives. It picks the mod
+    // ?mod=&edit= - how "open this unit in a new tab" arrives. It picks the mod
     // and opens the editor for this tab only; the remembered mod is not changed.
     const qs=new URLSearchParams(location.search);
     const qMod=qs.get('mod'),qEdit=qs.get('edit');
-    /* ?building=&lvl=&unit= — how the unit editor's Recruitment tab says "go and
+    /* ?building=&lvl=&unit= - how the unit editor's Recruitment tab says "go and
        look at that building". The line opens at the tier the pool sits on and
        the unit's rows are flashed there, which is the whole point of the trip:
        a barracks trains sixty units and scrolling for the one you came for is
-       the step the link exists to skip. `unit` is optional — without it this is
+       the step the link exists to skip. `unit` is optional - without it this is
        just "open this building line". */
     const qBld=qs.get('building'),qLvl=qs.get('lvl'),qJump=qs.get('unit');
-    // A launch lands on Home, whatever module you were in last time — that is
+    // A launch lands on Home, whatever module you were in last time - that is
     // the point of having one. The remembered mode is not forgotten: Home offers
     // it as "last time you were in …", so it is a click rather than an ambush.
     state.mode=qEdit?'edit':qBld?'buildings':'home';
@@ -412,7 +412,7 @@ async function init(){
     }
   }catch(e){
     // Every line of the startup is inside this try, so the catch used to blame
-    // the server for anything that happened in any of them — including a plain
+    // the server for anything that happened in any of them - including a plain
     // error in the UI's own code, which is exactly what a dropped <script>
     // looks like (the module's functions are not there, so the first call into
     // it throws). "Is the launcher still running?" is the wrong place to send
@@ -427,9 +427,9 @@ async function init(){
         <button class="primary" onclick="init()">Retry</button></div>`
       : e&&e.apiFailure
       ? `<div class="empty">The server is running, but it answered with an error.<br>
-        <span class="count">${why} from <code>${esc(e.request||'')}</code> — the reason is in <code>config\\server.log</code>.</span><br><br>
+        <span class="count">${why} from <code>${esc(e.request||'')}</code> - the reason is in <code>config\\server.log</code>.</span><br><br>
         <button class="primary" onclick="init()">Retry</button></div>`
-      : `<div class="empty">The server is fine — the page is not.<br>
+      : `<div class="empty">The server is fine - the page is not.<br>
         <span class="count">${why}<br>A UI file that failed to download does exactly this, and a reload fetches it again. F12 → Console has the full trace.</span><br><br>
         <button class="primary" onclick="location.reload()">Reload</button>
         <button onclick="init()">Retry</button></div>`;
@@ -442,7 +442,7 @@ async function refreshMods(pSrc,pDst){
   const opt=m=>`<option value="${esc(m.name)}">${esc(m.pack?'📦 '+m.name:m.name)}</option>`;
   srcSel.innerHTML=state.mods.map(opt).join('');
   // A mounted unit pack can only ever be a SOURCE: it holds a handful of units
-  // and nothing else, and writing into it would go nowhere — it is deleted when
+  // and nothing else, and writing into it would go nowhere - it is deleted when
   // the pack is unmounted.
   dstSel.innerHTML=realMods().map(opt).join('');
   if(!state.mods.length){main.innerHTML='<div class="empty">No mods found. Click ⚙ Settings to point at your Medieval II folder.</div>';return;}
@@ -451,7 +451,7 @@ async function refreshMods(pSrc,pDst){
   state.dst=pDst&&real.some(m=>m.name===pDst)?pDst:(real[1]?.name||real[0].name);
   // Older builds persisted a single-mod mode's mirrored destination as
   // last_dest, so a remembered pair can arrive as A -> A. Starting Transfer
-  // pointed at the source mod reads as "copy this onto itself" — pick a real
+  // pointed at the source mod reads as "copy this onto itself" - pick a real
   // second mod instead, exactly as a first run would.
   if(state.mode==='transfer'&&state.dst===state.src&&real.length>1)
     state.dst=real.find(m=>m.name!==state.src).name;
@@ -463,7 +463,7 @@ async function refreshMods(pSrc,pDst){
 /* What the unit list says when the mod behind it could not be read.
 
    Two places paint it and they must not disagree: the load's own catch, and
-   render() — which runs again on every mode switch, and had only "Loading…" to
+   render() - which runs again on every mode switch, and had only "Loading…" to
    put there. That is what the person in the log was left looking at: the reason
    was drawn for a moment, then a screen that said the tool was still reading a
    mod nothing was being read for, under a header that had already given up. */
@@ -501,7 +501,7 @@ async function loadSource(){
   state.factionNames=state.data.faction_names||{};
   // Keep whatever is ticked. Saving a unit or finishing a transfer reloads this
   // list, and re-ticking the same filters every time was maddening. Only values
-  // this mod doesn't have are dropped — a filter that can never match would hide
+  // this mod doesn't have are dropped - a filter that can never match would hide
   // everything with no visible reason why.
   let dropped=false;
   const prune=(key,values)=>{const ok=new Set(values||[]);
@@ -630,8 +630,8 @@ function buildFilter(id,values,key,useLabel){
   paintFilterFolds();
 }
 /* ---------- burger menu ----------
-   The single registry of modules. Everything the menu shows — and the header
-   label, and the per-mode document title — comes from here, so a new module is
+   The single registry of modules. Everything the menu shows - and the header
+   label, and the per-mode document title - comes from here, so a new module is
    one entry in this array plus its render function. */
 // `sub:true` = still a real mode, but reached through a tab strip inside its
 // host rather than from this menu (Sprites lives in the BMDB editor; Traits,
@@ -685,7 +685,7 @@ function minorGo(tab,mode){
 }
 
 /* ---------- the findings banner ----------
-   "14 things to look at — the marked rows below" was the whole message, so the
+   "14 things to look at - the marked rows below" was the whole message, so the
    only way to learn WHAT was to open every marked row. It now opens: one line
    per finding, each a link to the record it is about. Shared by Traits,
    Ancillaries, Factions and Minor Files, which all produce the same shape.
@@ -711,8 +711,8 @@ function findingsHtml(key,list,onopen){
 function findingsToggle(key){state.findOpen[key]=!state.findOpen[key]; render();}
 
 /* ---------- the draggable divider between a list and its 3D column ----------
-   Two screens dock the model viewer beside something else — the unit editor
-   beside its fields, BMDB mode beside its entry list — and both used to give it
+   Two screens dock the model viewer beside something else - the unit editor
+   beside its fields, BMDB mode beside its entry list - and both used to give it
    a width decided here and no way to change it. Full screen was the only way to
    see a model bigger, and full screen takes the thing you were reading with it.
 
@@ -741,7 +741,7 @@ function splitWidth(split, key, fallback){
 
 /* Size the panel and put a working grab bar in front of it.
 
-   Called from the same place the panel is appended, every render — the pages
+   Called from the same place the panel is appended, every render - the pages
    these live on rebuild their HTML wholesale (a keystroke in the BMDB search
    box does), so the bar is a fresh element each time while the panel itself is
    the detached-and-reattached live canvas. */
@@ -797,6 +797,316 @@ function splitSave(key, px){
   api.post('/api/settings', {[key]: px});
 }
 
+/* ---------- panes the user can resize ----------
+
+   Every list in this tool sits in a box whose height someone chose once: 340px
+   for a building's recruitment pools, 230px for a unit's upgrade list, 92vh for
+   the dialog holding either. Those are fine defaults and wrong for half the
+   work. A barracks that trains sixty units gets the same 340px as one that
+   trains two, on a monitor the tool never asked about, and the only ways out
+   were scrolling a list inside a scrolling dialog or not looking.
+
+   So every scroll box on the page grows a grab corner, and so do the dialog and
+   the unit drawer. Three decisions keep that one small piece of code instead of
+   fifty scattered ones:
+
+     * **the boxes find themselves.** A scroll box in this stylesheet is a rule
+       that sets `max-height` and `overflow:auto` together, and there is no
+       second kind of one. `rszSelectors` reads the page's own CSS once at
+       startup and collects those selectors, so a list written next month is
+       resizable the day it is written, with nothing to remember here.
+     * **the browser does the dragging.** `resize` is a real CSS property with a
+       real grip and real hit-testing. Two things stop it working out of the
+       box: a `max-height` caps the drag, and these screens rebuild their markup
+       wholesale so the result is thrown away on the next keystroke. Undoing
+       those two is the whole job.
+     * **nothing is touched until it is dragged.** A box keeps the height the
+       stylesheet gave it, shrink-to-fit and all, until the pointer goes down on
+       its corner. Only then does it get a pinned height, so a screen nobody has
+       resized still lays out exactly as it always did.
+
+   Sizes are remembered per box, in `pane_sizes` on `/api/settings`, because how
+   tall the recruitment list should be is a fact about the user's screen and
+   habits rather than about the dialog that happens to be open. Double-click a
+   grip to hand the box back to the stylesheet. */
+
+//: Nothing may be dragged smaller than this: a box with no room for a row is a
+//: box that looks broken rather than small.
+const RSZ_MIN=64;
+//: The browser's grip is a small square in the bottom-right corner. This is how
+//: far in from that corner a press still counts as aiming at it.
+const RSZ_GRIP=20;
+/* Boxes this sweep must NOT claim. A `.wpop` is a menu that opens under a
+   button and closes on the next click, so a height remembered for it would
+   outlive the thing it was measured on. `.modal` passes the same test the sweep
+   looks for and is deliberately left to `rszModal`, which sizes it in both
+   directions rather than one. */
+const RSZ_SKIP=/\.wpop\b|^\.modal\b/;
+
+//: Built once by `rszInit`, from the stylesheet. Empty until then.
+let rszSel='';
+//: The box the pointer went down on, waiting for the release that sizes it.
+let rszDragging=null;
+let rszSaveTimer=0;
+
+/* Every selector in the page's own CSS that describes a scroll box.
+
+   Reading `document.styleSheets` rather than keeping a list here is what makes
+   this maintenance-free, and it is safe to do: the toolkit's CSS is a `<style>`
+   block in index.html, same origin as the page, so `cssRules` is readable. A
+   sheet that refuses is skipped rather than fatal. */
+function rszSelectors(){
+  const out=[];
+  for(const sheet of document.styleSheets){
+    let rules=null;
+    try{ rules=sheet.cssRules; }catch(e){ continue; }   // a cross-origin sheet gives none
+    for(const rule of rules||[]){
+      const st=rule.style;
+      if(!st||!rule.selectorText)continue;
+      // `overflow:auto` and `overflow-y:auto` are the same intent written two ways
+      const ov=st.overflow||st.overflowY;
+      if(!st.maxHeight||!/^(auto|scroll)$/.test(ov||''))continue;
+      if(RSZ_SKIP.test(rule.selectorText))continue;
+      out.push(rule.selectorText);
+    }
+  }
+  return out.join(',');
+}
+
+//: The saved sizes, as a live object on `state.settings` so a write is seen by
+//: the next read without a round trip.
+function rszSizes(){
+  const s=state.settings||(state.settings={});
+  if(!s.pane_sizes||typeof s.pane_sizes!=='object')s.pane_sizes={};
+  return s.pane_sizes;
+}
+
+/* What a box is called in the saved sizes. Its `id` when it has one: the
+   recruitment list is `#bldPools` in both its row and its grid form, and one
+   remembered height for "the recruitment list" is the right answer either way.
+   Failing that, its classes, which is where the height came from to begin with. */
+function rszKey(el){
+  if(el.id)return el.id;
+  const c=(el.getAttribute('class')||'').trim().replace(/\s+/g,'.');
+  return c?'.'+c:'';
+}
+
+//: Save, coalesced: a drag ends once but several boxes can be sized in a burst,
+//: and settings.json is rewritten whole either way.
+function rszSave(){
+  const map=rszSizes();
+  clearTimeout(rszSaveTimer);
+  rszSaveTimer=setTimeout(()=>{
+    try{ api.post('/api/settings',{pane_sizes:map}); }catch(e){}
+  },400);
+}
+
+/* Give a box an explicit height, which means taking the stylesheet's ceiling off
+   first: `max-height` outranks `height`, so leaving it in place is why dragging
+   a 340px list downwards used to do nothing at all. The ceiling is remembered on
+   the element so a double-click has something to put back. */
+function rszPin(el,px){
+  if(el.dataset.rszDef===undefined){
+    const d=parseFloat(getComputedStyle(el).maxHeight);
+    el.dataset.rszDef=(d>0?Math.round(d):'');
+  }
+  el.style.maxHeight='none';
+  el.style.height=Math.max(RSZ_MIN,Math.round(px))+'px';
+}
+
+//: Hand a box back to the stylesheet, and forget it was ever dragged.
+function rszReset(el){
+  el.style.height=''; el.style.maxHeight=''; el.style.width=''; el.style.maxWidth='';
+  delete rszSizes()[rszKey(el)];
+  rszSave();
+}
+
+/* Turn the grip on for every scroll box under `root`, and put back the height
+   any of them was last dragged to.
+
+   `dataset.rszOn` is per ELEMENT, not per key: these screens replace their
+   markup rather than update it, so the box here now is a different object from
+   the one that was here a frame ago and has to be set up again. That is also
+   what makes the flag a cheap enough guard to run on every mutation. */
+function rszApply(root){
+  if(!rszSel)return;
+  let els;
+  try{ els=(root||document).querySelectorAll(rszSel); }catch(e){ return; }
+  const map=rszSizes();
+  els.forEach(el=>{
+    if(el.dataset.rszOn)return;
+    el.dataset.rszOn='1';
+    el.style.resize='vertical';
+    /* No `title` here on purpose: one on every list means a tooltip trailing the
+       pointer across a screen made of lists. The corner is drawn to be seen
+       instead, by `::-webkit-resizer` in index.html. */
+    const saved=map[rszKey(el)];
+    if(saved>0)rszPin(el,saved);
+  });
+}
+
+/* The dialog itself, which is one element reused by every screen that opens one
+   (`#modal`, put back to a bare `class="modal"` by `closeModal`). So its size is
+   remembered against the class it is wearing: the wide editor dialog and the
+   narrow confirm boxes are different windows to everyone except the DOM.
+
+   Width as well as height here, because a dialog is the one box whose left edge
+   is not pinned to something the user already chose. */
+function rszModal(){
+  const m=document.getElementById('modal');
+  if(!m)return;
+  const key='dlg:'+(m.getAttribute('class')||'modal').trim().replace(/\s+/g,'.');
+  if(m.dataset.rszKey===key)return;      // the same dialog repainting, not a new one
+  m.dataset.rszKey=key;
+  m.style.resize='both';
+  m.style.width=''; m.style.height=''; m.style.maxWidth=''; m.style.maxHeight='';
+  const s=rszSizes()[key];
+  if(!s||!(s.w>0)||!(s.h>0))return;
+  // A size saved on a bigger monitor must not open a dialog wider than the
+  // window it is centred in, so both are clamped to what there is now.
+  m.style.maxWidth='none'; m.style.maxHeight='none';
+  m.style.width=Math.max(320,Math.min(s.w,window.innerWidth-24))+'px';
+  m.style.height=Math.max(160,Math.min(s.h,window.innerHeight-24))+'px';
+}
+
+/* The unit drawer slides in from the right and stays pinned there, so the
+   browser's own grip is no use: it sits in the bottom-right corner and drags the
+   panel off the screen. This one is a bar down the drawer's LEFT edge, worked
+   the way the 3D splitter above is, and it is the only hand-rolled resizer
+   here. */
+const RSZ_DRAWER_MIN=280;
+function rszDrawer(){
+  const d=document.getElementById('drawer');
+  if(!d)return;
+  if(!d.dataset.rszOn){
+    d.dataset.rszOn='1';
+    const saved=rszSizes()['drawer'];
+    if(saved>0)d.style.width=Math.max(RSZ_DRAWER_MIN,Math.min(saved,window.innerWidth-40))+'px';
+  }
+  // The drawer is repainted by assigning its innerHTML, which takes the bar with
+  // it. Asking whether the bar is there beats remembering that it once was.
+  if(d.querySelector(':scope > .drawergrip'))return;
+  const bar=document.createElement('div');
+  bar.className='drawergrip';
+  bar.title='Drag to resize this panel · double-click for the default width';
+  // First child, not last: the bar floats beside the content rather than under
+  // the end of it, and a drawer scrolled to the bottom still has one.
+  d.insertBefore(bar,d.firstChild);
+  bar.onpointerdown=ev=>{
+    if(ev.button)return;
+    ev.preventDefault();
+    const startX=ev.clientX,startW=d.getBoundingClientRect().width;
+    try{ bar.setPointerCapture(ev.pointerId); }catch(e){}
+    document.body.classList.add('splitting');
+    // The drawer's right edge is fixed, so dragging LEFT is what widens it.
+    const move=e=>{
+      d.style.width=Math.round(Math.max(RSZ_DRAWER_MIN,
+        Math.min(startW+(startX-e.clientX),window.innerWidth-40)))+'px';
+    };
+    const up=()=>{
+      bar.removeEventListener('pointermove',move);
+      bar.removeEventListener('pointerup',up);
+      bar.removeEventListener('pointercancel',up);
+      document.body.classList.remove('splitting');
+      rszSizes()['drawer']=Math.round(d.getBoundingClientRect().width);
+      rszSave();
+    };
+    bar.addEventListener('pointermove',move);
+    bar.addEventListener('pointerup',up);
+    bar.addEventListener('pointercancel',up);
+  };
+  bar.ondblclick=()=>{ d.style.width=''; delete rszSizes()['drawer']; rszSave(); };
+}
+
+/* Was this press aimed at the browser's grip? The grip is painted by the box
+   itself and hit-tested ahead of its own contents, exactly like a scrollbar, so
+   a press on it names the BOX as its target even when a child is sitting under
+   the corner. That is what tells a grab from a click on the last row. */
+function rszAtGrip(el,ev){
+  if(ev.target!==el)return false;
+  const r=el.getBoundingClientRect();
+  return ev.clientX>=r.right-RSZ_GRIP&&ev.clientY>=r.bottom-RSZ_GRIP;
+}
+
+//: The scroll box or dialog a press landed on the grip of, or null.
+function rszTarget(ev){
+  const t=ev.target;
+  if(!t||!t.closest)return null;
+  const el=t.closest(rszSel?rszSel+',.modal':'.modal');
+  return el&&rszAtGrip(el,ev)?el:null;
+}
+
+function rszInit(){
+  rszSel=rszSelectors();
+  const paint=()=>{ rszApply(document.body); rszModal(); rszDrawer(); };
+
+  /* One observer for the whole page rather than a call at the end of thirty
+     render functions. Every screen here rebuilds by assigning `innerHTML`, so
+     "a box appeared" is exactly a childList mutation, and folding a burst of
+     them into one frame keeps the cost at a single query per repaint. */
+  let queued=false;
+  const bump=recs=>{
+    let worth=false;
+    for(const r of recs){
+      if(r.type==='attributes'){ if(r.target.id==='modal')worth=true; }
+      else if(r.addedNodes.length)worth=true;
+      if(worth)break;
+    }
+    if(!worth||queued)return;
+    queued=true;
+    /* A timeout rather than `requestAnimationFrame`, which is the obvious choice
+       and the wrong one: a window the OS considers occluded gets no frames at
+       all, so a dialog opened behind another window came up with none of its
+       boxes wired and stayed that way until something forced a repaint. This
+       work is a query and a few style writes, not drawing, so it does not need
+       to be in a frame to be right. */
+    setTimeout(()=>{ queued=false; paint(); },0);
+  };
+  new MutationObserver(bump).observe(document.body,
+    {childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+
+  /* The press has to pin the height BEFORE the browser starts its drag, or the
+     `max-height` the box still carries caps that first drag and only the second
+     one appears to work. Capture phase on mousedown is the last moment that is
+     still true. */
+  document.addEventListener('mousedown',ev=>{
+    if(ev.button)return;
+    const el=rszTarget(ev);
+    if(!el)return;
+    const r=el.getBoundingClientRect();
+    if(el.id==='modal'){
+      el.style.maxWidth='none'; el.style.maxHeight='none';
+      el.style.width=Math.round(r.width)+'px';
+      el.style.height=Math.round(r.height)+'px';
+    }else rszPin(el,r.height);
+    rszDragging=el;
+  },true);
+
+  document.addEventListener('mouseup',()=>{
+    const el=rszDragging; rszDragging=null;
+    if(!el)return;
+    const r=el.getBoundingClientRect();
+    if(el.id==='modal')rszSizes()[el.dataset.rszKey||'dlg:modal']=
+      {w:Math.round(r.width),h:Math.round(r.height)};
+    else rszSizes()[rszKey(el)]=Math.round(r.height);
+    rszSave();
+  },true);
+
+  //: Double-click the grip for the size the stylesheet meant.
+  document.addEventListener('dblclick',ev=>{
+    const el=rszTarget(ev);
+    if(!el)return;
+    ev.preventDefault();
+    if(el.id==='modal'){
+      el.style.width=''; el.style.height=''; el.style.maxWidth=''; el.style.maxHeight='';
+      delete rszSizes()[el.dataset.rszKey||'dlg:modal'];
+      rszSave();
+    }else rszReset(el);
+  },true);
+
+  paint();
+}
+
 /* Which cleanup dialog the toolbar's 🧹 button opens. One lookup rather than a
    chain of ifs at the click site, because every tab of BMDB mode that grows a
    cleaner adds a row here and nothing else. */
@@ -817,7 +1127,7 @@ function navOpen(open){
   navBack.classList.toggle('open',open);
   navMenu.setAttribute('aria-hidden',open?'false':'true');
 }
-// NB: not "setMode" — the composer already owns that name (its new/base/replace
+// NB: not "setMode" - the composer already owns that name (its new/base/replace
 // switch), and function declarations hoist, so the later one would silently win.
 // `returning` is the Back button coming the other way: the trail is being
 // walked out of, so nothing new goes onto it.
@@ -826,14 +1136,14 @@ function setAppMode(id,returning){
   if(id===state.mode)return;
   if(!returning){
     state.modeTrail.push(state.mode);
-    // A session wanders — twenty-four steps back is already further than anyone
+    // A session wanders - twenty-four steps back is already further than anyone
     // presses, and the oldest of them are not worth carrying.
     if(state.modeTrail.length>24)state.modeTrail.shift();
   }
   activity('opened',`${modeDef(id).name} (mod: ${state.src||'none'})`);
   state.mode=id;applyMode(true);
 }
-// keeps the header label and the menu's highlighted row honest — called from
+// keeps the header label and the menu's highlighted row honest - called from
 // applyMode so every way of switching (menu, pack mount, building hop) lands here
 // A sub-mode has no row of its own in the menu, so its HOST row lights up.
 const MODE_HOST={sprites:'bmdb',stratmap:'bmdb',cards:'bmdb',traits:'minor',
@@ -864,7 +1174,7 @@ function wire(){
     const v=e.target.value;
     if(v!==state.src)
       activity('picked mod',`${state.mode==='transfer'?'source: ':''}${v} (was ${state.src})`);
-    // A ticked pile belongs to the mod it was ticked in — carrying it to another
+    // A ticked pile belongs to the mod it was ticked in - carrying it to another
     // mod would transfer whatever happens to share a type name over there.
     if(v!==state.src)clearSelection();
     // Edit / bmdb mode works on a single mod, so both sides follow the picker.
@@ -872,7 +1182,7 @@ function wire(){
       state.cfg={};state.bmdb=null;state.snd=null;state.destSnd=null;state.str=null;
       state.tr=null;state.an=null;state.mf=null;state.fac=null;
       state.bld=null;state.bldReturn=null;
-      // the mirrored destination is not the user's transfer pick — don't save it
+      // the mirrored destination is not the user's transfer pick - don't save it
       await api.post('/api/settings',{last_source:v,last_dest:state.xferDst||v});return loadSource();}
     if(v===state.dst){state.dst=state.xferDst=state.src;dstSel.value=state.dst;state.destData=null;}
     state.src=v;srcSel.value=v;state.cfg={};
@@ -909,14 +1219,14 @@ function wire(){
   ownBtn.onclick=()=>openOwnership('units'); allFacBtn.onclick=()=>openOwnership('all');
   sndBtn.onclick=sndApply;
   backBldBtn.onclick=backToBuilding;
-  /* Click the backdrop to close — but only a click that BEGAN on the backdrop.
+  /* Click the backdrop to close - but only a click that BEGAN on the backdrop.
 
      A `click` is dispatched on the nearest ancestor the mousedown and the mouseup
      still share, so if anything replaces the markup under the pointer between
      the two halves of one press, the click lands on #overlay and the dialog
      shuts. Several dialogs here re-render on `input` and on `change`, which
      makes that a real sequence: press inside a box, the box is rebuilt under the
-     finger, release — and the window the user was typing in disappears. Whether
+     finger, release - and the window the user was typing in disappears. Whether
      it happens at all depends on how long the re-render takes, which is why it
      shows up on one machine and not another.
 
@@ -927,6 +1237,7 @@ function wire(){
   overlay.addEventListener('mousedown',e=>{overlayDown=(e.target.id==='overlay');});
   overlay.onclick=e=>{if(e.target.id==='overlay'&&overlayDown)closeModal();};
   uiBackWire();
+  rszInit();
 }
 /* ---------- mode switching ---------- */
 // Edit and bmdb modes work on ONE mod in place, so the destination always mirrors
@@ -951,7 +1262,7 @@ function applyMode(persist){
   batchBtn.style.display=(!one&&state.selMode)?'inline-block':'none';
   clearSelBtn.style.display=(!one&&state.selMode&&state.selected.size)?'inline-block':'none';
   // A pack is made from the SOURCE mod and imported into the destination, so
-  // both live in transfer mode — which is also the only mode where "the other
+  // both live in transfer mode - which is also the only mode where "the other
   // mod" is a thing at all.
   packBtn.style.display=(!one&&state.selMode&&state.selected.size)?'inline-block':'none';
   importPackBtn.style.display=one?'none':'inline-block';
@@ -967,7 +1278,7 @@ function applyMode(persist){
   unusedWrap.style.display=(bm||stm)?'inline-flex':'none';
   mercOnly.parentElement.style.display=
     (bm||snd||spr||bld||str||trt||anc||mnr||fac||home||stm||crd)?'none':'inline-flex';
-  // these bring their own filters — the sidebar's faction/era ones say nothing
+  // these bring their own filters - the sidebar's faction/era ones say nothing
   // about a voice entry, and nothing at all about a modeldb record or a sprite
   document.getElementById('unitFilters').style.display=
     (bm||snd||spr||bld||str||trt||anc||mnr||fac||home||stm||crd)?'none':'';
@@ -987,7 +1298,7 @@ function applyMode(persist){
   document.title=modeDef(state.mode).name+' · Medieval 2 GUI Toolkit';
   if(one&&state.selMode)toggleSelMode();
   // A single-mod mode mirrors the destination onto the source, but the pick the
-  // user made in Transfer is remembered rather than overwritten — both in
+  // user made in Transfer is remembered rather than overwritten - both in
   // `xferDst` and in the persisted setting, so neither this switch nor the next
   // run turns the transfer pair into A -> A. Transfer never shows A -> A anyway
   // (that is what Edit's "new unit from this one" is for), so coming back to it
@@ -1006,7 +1317,7 @@ function applyMode(persist){
   render();
 }
 
-// Leaving select mode keeps WHAT was ticked — you step out to look at a unit in
+// Leaving select mode keeps WHAT was ticked - you step out to look at a unit in
 // the drawer, or to change a filter, and coming back to an empty pile after
 // ticking twenty units was the worst way to lose work here. Only the highlight
 // goes (a ticked card outside select mode just looks broken); ✕ Clear, switching
@@ -1038,8 +1349,8 @@ function unitMatches(u){
   return true;
 }
 /* Every workspace is loaded asynchronously and the mode picker does not wait for
-   it, so a read that takes a while — a 6000-entry modeldb, a whole voice bank,
-   the first units load of a big mod — can come back after you have already moved
+   it, so a read that takes a while - a 6000-entry modeldb, a whole voice bank,
+   the first units load of a big mod - can come back after you have already moved
    on. Whoever started a load has to check it is still the one on screen before
    painting, or the new mode ends up wearing the old workspace's content (the
    toolbar and title switch, the body does not). `renderBuildings` has always
@@ -1058,7 +1369,7 @@ function render(){
   if(state.mode==='ancillaries')return state.an?renderAncillaries():loadAncillaries();
   if(state.mode==='minor')return state.mf?renderMinor():loadMinor();
   if(state.mode==='factions')return state.fac?renderFactions():loadFactions();
-  // the unit list is still loading, or its load failed — which are different
+  // the unit list is still loading, or its load failed - which are different
   // things and must not look the same, or a mod that cannot be read presents as
   // one that is taking a long time
   if(!state.data){
@@ -1070,7 +1381,7 @@ function render(){
   count.textContent=`${units.length}/${state.data.units.length}`;
   const gb=groupBy.value;
   if(!units.length){main.innerHTML='<div class="empty">No units match.</div>';return;}
-  // Ticking a filter says "this is what I'm here for", so its group leads —
+  // Ticking a filter says "this is what I'm here for", so its group leads -
   // otherwise picking one faction buries it under every OTHER faction its units
   // are also owned by (a unit renders once per faction it belongs to). Alphabetical
   // within the picked ones, then alphabetical for the rest.
@@ -1081,7 +1392,7 @@ function render(){
   else if(gb==='faction'){const map=new Map();for(const u of units){for(const f of (u.ownership.length?u.ownership:['(none)']))(map.get(f)||map.set(f,[]).get(f)).push(u);}
     groups=[...map.entries()].sort((a,b)=>byPicked(a[0],b[0],facLabel(a[0]),facLabel(b[0]))).map(([f,us])=>[facLabel(f),us]);}
   // An era is a list of factions per era slot, so a unit lands in every era it
-  // is fielded in — the same one-card-per-group rule faction grouping follows.
+  // is fielded in - the same one-card-per-group rule faction grouping follows.
   else if(gb==='era'){const map=new Map();
     for(const u of units){const in_=ERA_KEYS.filter(e=>(u.eras[e]||[]).length);
       for(const e of (in_.length?in_:['-']))(map.get(e)||map.set(e,[]).get(e)).push(u);}
@@ -1127,7 +1438,7 @@ function onCard(type){
 }
 // A unit owned by several factions renders one card per faction group (and the
 // same goes for the other group-by modes), so EVERY copy has to reflect the
-// selection — querySelector would only ever find the first, making a selected
+// selection - querySelector would only ever find the first, making a selected
 // unit look unselected under its other factions.
 function markCardSel(type){const on=state.selMode&&state.selected.has(type);
   main.querySelectorAll(`.card[data-type="${cssq(type)}"]`).forEach(c=>c.classList.toggle('sel',on));}
@@ -1205,19 +1516,19 @@ function closeModal(){
   // would hand a dead snapshot to whatever re-draws next.
   usePlace(null);
   // the unit editor's 3D column is held outside the modal's markup so it can
-  // survive a re-render (see edPrevAttach) — which means closing the dialog has
+  // survive a re-render (see edPrevAttach) - which means closing the dialog has
   // to hand it back rather than leaving a WebGL context and a draw loop running
   // for a dialog that is gone
   if(typeof edPrevDrop==='function')edPrevDrop();
   // …and the transfer composer's, which is the same column over a different dialog
   if(typeof cmpPrevDrop==='function')cmpPrevDrop();
-  // the unit editor widens the modal — put it back for the next dialog
+  // the unit editor widens the modal - put it back for the next dialog
   document.getElementById('modal').className='modal';}
 
 /* ---------- the browser's Back button ----------
 
    The whole toolkit is one page. A module, a dialog over it, sometimes a second
-   panel stacked on the first — none of that is a browser page, so Back used to
+   panel stacked on the first - none of that is a browser page, so Back used to
    leave the tool outright, usually to the blank tab the launcher opened it in.
    It now steps back through the screens the tool actually has, and so do the
    mouse's own back button and Alt+←, which the browser sends down the same wire.
@@ -1225,14 +1536,14 @@ function closeModal(){
    There is no recorded history of screens to replay, and there deliberately
    isn't: every layer already knows how to close itself, and its on-screen
    Back / Cancel / ✕ is the call that does it. A press therefore asks the layers,
-   innermost first, "are you what is on top?" — and the first one that says yes
+   innermost first, "are you what is on top?" - and the first one that says yes
    goes back exactly as its own button would, including whatever that button
    stops to ask first. A press and a click can never become two different ways
    out of one screen.
 
    One spare history entry is what makes a press reach us at all: it sits ahead
    of the page, each press spends it, and a press we answered puts it back. A
-   press nothing answers is Home with nothing open — the tool's own root — and
+   press nothing answers is Home with nothing open - the tool's own root - and
    there the spare is left spent, so a second press leaves the page the way it
    always did. The next thing the user clicks arms it again. */
 
@@ -1241,13 +1552,13 @@ let uiBackArmed=false;
 function uiBackArm(){
   if(uiBackArmed)return;
   // A page served over file:// (or a browser refusing the entry) must not take
-  // the rest of the UI down with it — Back simply keeps its old behaviour there.
+  // the rest of the UI down with it - Back simply keeps its old behaviour there.
   try{ history.pushState({m2gt:'step'},''); uiBackArmed=true; }catch(e){}
 }
 /* The screens a press steps back through, innermost first.
 
    The three inside a dialog are the panels a dialog can stack on top of itself.
-   Each keeps its OWN snapshot of the markup it covered up — that is what tells
+   Each keeps its OWN snapshot of the markup it covered up - that is what tells
    the layer it is the one on top, and it is the same field its Back button
    hands back. */
 const NAV_LAYERS=[
@@ -1267,7 +1578,7 @@ const NAV_LAYERS=[
 ];
 /* Step back one screen. Returns whether anything did.
 
-   A layer whose module never loaded (a dropped <script> is a real thing here —
+   A layer whose module never loaded (a dropped <script> is a real thing here -
    see uiFailedFiles) would throw on the name that is not there, and taking the
    Back button down with it would be a poor way to report it. Such a layer is
    simply not open. */

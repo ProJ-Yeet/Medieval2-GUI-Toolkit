@@ -8,7 +8,7 @@
  },
  "dispositions": {
   "port-concept": "rebuild the idea in our stack; a change here may mean the format knowledge changed",
-  "audit": "we already do this — compare and take the small wins",
+  "audit": "we already do this - compare and take the small wins",
   "skip": "boilerplate, cloud plumbing, or something we own outright",
   "out-of-scope": "excluded from V2 (ROADMAP.md); AI/autogenerate is permanent",
   "untriaged": "new upstream file nobody has classified yet"
@@ -33,7 +33,7 @@
   "base44/config.jsonc": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 cloud entity schemas — no cloud in our design",
+   "reason": "Base44 cloud entity schemas - no cloud in our design",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -41,7 +41,7 @@
   "base44/entities/CampaignData.jsonc": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 cloud entity schemas — no cloud in our design",
+   "reason": "Base44 cloud entity schemas - no cloud in our design",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -49,7 +49,7 @@
   "base44/entities/Character.jsonc": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 cloud entity schemas — no cloud in our design",
+   "reason": "Base44 cloud entity schemas - no cloud in our design",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -57,7 +57,7 @@
   "base44/entities/Faction.jsonc": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 cloud entity schemas — no cloud in our design",
+   "reason": "Base44 cloud entity schemas - no cloud in our design",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -65,7 +65,7 @@
   "base44/entities/HistoricEvent.jsonc": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 cloud entity schemas — no cloud in our design",
+   "reason": "Base44 cloud entity schemas - no cloud in our design",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -73,7 +73,7 @@
   "base44/entities/Region.jsonc": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 cloud entity schemas — no cloud in our design",
+   "reason": "Base44 cloud entity schemas - no cloud in our design",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -81,7 +81,7 @@
   "base44/entities/ScriptTemplate.jsonc": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 cloud entity schemas — no cloud in our design",
+   "reason": "Base44 cloud entity schemas - no cloud in our design",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -89,7 +89,7 @@
   "base44/entities/SkeletonPose.jsonc": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 cloud entity schemas — no cloud in our design",
+   "reason": "Base44 cloud entity schemas - no cloud in our design",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -97,7 +97,7 @@
   "base44/entities/User.jsonc": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 cloud entity schemas — no cloud in our design",
+   "reason": "Base44 cloud entity schemas - no cloud in our design",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -105,7 +105,7 @@
   "base44/functions/uploadToDrive/entry.ts": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 cloud entity schemas — no cloud in our design",
+   "reason": "Base44 cloud entity schemas - no cloud in our design",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -113,7 +113,7 @@
   "components.json": {
    "disposition": "skip",
    "phases": [],
-   "reason": "JS toolchain — we have no build step",
+   "reason": "JS toolchain - we have no build step",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -121,7 +121,7 @@
   "eslint.config.js": {
    "disposition": "skip",
    "phases": [],
-   "reason": "JS toolchain — we have no build step",
+   "reason": "JS toolchain - we have no build step",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -137,7 +137,7 @@
   "jsconfig.json": {
    "disposition": "skip",
    "phases": [],
-   "reason": "JS toolchain — we have no build step",
+   "reason": "JS toolchain - we have no build step",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -145,7 +145,7 @@
   "package-lock.json": {
    "disposition": "skip",
    "phases": [],
-   "reason": "JS toolchain — we have no build step",
+   "reason": "JS toolchain - we have no build step",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -153,7 +153,7 @@
   "package.json": {
    "disposition": "skip",
    "phases": [],
-   "reason": "JS toolchain — we have no build step",
+   "reason": "JS toolchain - we have no build step",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -161,7 +161,7 @@
   "postcss.config.js": {
    "disposition": "skip",
    "phases": [],
-   "reason": "JS toolchain — we have no build step",
+   "reason": "JS toolchain - we have no build step",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -169,7 +169,7 @@
   "src/App.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "React app shell — our shell is web/index.html",
+   "reason": "React app shell - our shell is web/index.html",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -177,7 +177,7 @@
   "src/Layout.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "React app shell — our shell is web/index.html",
+   "reason": "React app shell - our shell is web/index.html",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -185,7 +185,7 @@
   "src/api/base44Client.js": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 auth/cloud plumbing — we are self-hosted",
+   "reason": "Base44 auth/cloud plumbing - we are self-hosted",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -209,7 +209,7 @@
   "src/components/UserNotRegisteredError.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 auth/cloud plumbing — we are self-hosted",
+   "reason": "Base44 auth/cloud plumbing - we are self-hosted",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -267,7 +267,7 @@
   "src/components/anim/AnimBoneEditor.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -275,7 +275,7 @@
   "src/components/anim/AnimInspector.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -283,7 +283,7 @@
   "src/components/anim/CasAnimParser.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -291,7 +291,7 @@
   "src/components/animation/BoneDataTable.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -299,7 +299,7 @@
   "src/components/animation/CasFileInfo.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -307,7 +307,7 @@
   "src/components/animation/ScalePanel.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -315,7 +315,7 @@
   "src/components/animation/SkeletonViewer.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -323,7 +323,7 @@
   "src/components/animation/SurveyPanel.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -371,7 +371,7 @@
   "src/components/assets/PoseEditor.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "animation posing — future expansion",
+   "reason": "animation posing - future expansion",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -391,7 +391,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -401,7 +401,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -411,7 +411,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -421,7 +421,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -511,7 +511,7 @@
    "phases": [
     "12"
    ],
-   "reason": "their EDB parser vs our buildings.py — compare field coverage",
+   "reason": "their EDB parser vs our buildings.py - compare field coverage",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -521,7 +521,7 @@
    "phases": [
     "12"
    ],
-   "reason": "their EDB parser vs our buildings.py — compare field coverage",
+   "reason": "their EDB parser vs our buildings.py - compare field coverage",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -531,7 +531,7 @@
    "phases": [
     "12"
    ],
-   "reason": "their EDB parser vs our buildings.py — compare field coverage",
+   "reason": "their EDB parser vs our buildings.py - compare field coverage",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -679,7 +679,7 @@
   "src/components/export/CampaignPackagePicker.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -687,7 +687,7 @@
   "src/components/export/ModValidator.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -695,7 +695,7 @@
   "src/components/export/TriggerValidationPanel.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -703,7 +703,7 @@
   "src/components/export/ValidationDashboard.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -762,7 +762,7 @@
   "src/components/factions/SymbolGenerator.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "AI/autogenerate — permanently excluded",
+   "reason": "AI/autogenerate - permanently excluded",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -790,7 +790,7 @@
   "src/components/lua/ImGuiEditor.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -798,7 +798,7 @@
   "src/components/lua/LuaAiAssistant.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "AI/autogenerate — permanently excluded",
+   "reason": "AI/autogenerate - permanently excluded",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -806,7 +806,7 @@
   "src/components/lua/LuaApiReference.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -814,7 +814,7 @@
   "src/components/lua/LuaCodeEditor.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -822,7 +822,7 @@
   "src/components/lua/LuaScriptManager.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -830,7 +830,7 @@
   "src/components/lua/m2tweop_api.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -840,7 +840,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -850,37 +850,37 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "descr_events.txt, NOT the script editor — the out-of-scope ruling was about ScriptEditor.jsx/ScriptingPanel. Kept in phase 15 deliberately."
+   "notes": "descr_events.txt, NOT the script editor - the out-of-scope ruling was about ScriptEditor.jsx/ScriptingPanel. Kept in phase 15 deliberately."
   },
   "src/components/map/CharactersTab.jsx": {
    "disposition": "port-concept",
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "2026-08-20 sync: a new character is inserted after the last existing character OF THE SAME FACTION rather than at the head of the item list — in descr_strat a character belongs to the faction block it sits in, so list order is file order. Phase 16a's writer has the same constraint."
+   "notes": "2026-08-20 sync: a new character is inserted after the last existing character OF THE SAME FACTION rather than at the head of the item list - in descr_strat a character belongs to the faction block it sits in, so list order is file order. Phase 16a's writer has the same constraint."
   },
   "src/components/map/CoastlineTracer.jsx": {
    "disposition": "port-concept",
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Traces a coastline from the heightmap the user supplies — a drawing aid, so kept in scope. Flagged because it sits next to the excluded generators."
+   "notes": "Traces a coastline from the heightmap the user supplies - a drawing aid, so kept in scope. Flagged because it sits next to the excluded generators."
   },
   "src/components/map/DisastersTab.jsx": {
    "disposition": "port-concept",
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -890,7 +890,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -900,7 +900,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -910,7 +910,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -920,7 +920,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -930,7 +930,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -940,7 +940,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -950,7 +950,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -960,7 +960,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -970,7 +970,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -980,7 +980,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -990,17 +990,17 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "DECISION NEEDED: pulls OpenStreetMap tiles as a backdrop to trace over. A reference layer, not generated mod data — but it is an external fetch, so confirm before porting."
+   "notes": "DECISION NEEDED: pulls OpenStreetMap tiles as a backdrop to trace over. A reference layer, not generated mod data - but it is an external fetch, so confirm before porting."
   },
   "src/components/map/OsmRegionSearch.jsx": {
    "disposition": "port-concept",
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": "DECISION NEEDED: searches OSM to locate a place. Same call as OsmBackground."
@@ -1008,7 +1008,7 @@
   "src/components/map/OverlayMapGenerator.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "auto-generates map data from external sources — excluded",
+   "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1018,7 +1018,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1028,7 +1028,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1038,17 +1038,17 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "2026-08-20 sync: he swapped the labels on descr_regions' two bare numbers — first is the triumph value, second the base farming level (he had them the other way round). MEASURED AND CONFIRMED against vanilla's 112 regions: first is 5 on 110 of them, second spreads 1–6. Our edbvocab.regions docstring had the same error and is corrected. Phase 16c's region inspector needs this."
+   "notes": "2026-08-20 sync: he swapped the labels on descr_regions' two bare numbers - first is the triumph value, second the base farming level (he had them the other way round). MEASURED AND CONFIRMED against vanilla's 112 regions: first is 5 on 110 of them, second spreads 1–6. Our edbvocab.regions docstring had the same error and is corrected. Phase 16c's region inspector needs this."
   },
   "src/components/map/ReligionsEditor.jsx": {
    "disposition": "port-concept",
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1056,7 +1056,7 @@
   "src/components/map/ScriptAIAssistant.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "AI/autogenerate — permanently excluded",
+   "reason": "AI/autogenerate - permanently excluded",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1064,7 +1064,7 @@
   "src/components/map/ScriptReferenceSidebar.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "script editor — future expansion (Scratch-style block UI)",
+   "reason": "script editor - future expansion (Scratch-style block UI)",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1072,7 +1072,7 @@
   "src/components/map/ScriptTemplateSidebar.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "script editor — future expansion (Scratch-style block UI)",
+   "reason": "script editor - future expansion (Scratch-style block UI)",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1080,7 +1080,7 @@
   "src/components/map/ScriptingPanel.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "script editor — future expansion (Scratch-style block UI)",
+   "reason": "script editor - future expansion (Scratch-style block UI)",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1090,7 +1090,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1100,7 +1100,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1110,7 +1110,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1120,17 +1120,17 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "See CampaignEventsTab — descr_events data, not scripting."
+   "notes": "See CampaignEventsTab - descr_events data, not scripting."
   },
   "src/components/map/campaignImporter.jsx": {
    "disposition": "port-concept",
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1140,7 +1140,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1150,7 +1150,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1160,7 +1160,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1170,7 +1170,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1180,7 +1180,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1188,7 +1188,7 @@
   "src/components/map/scriptAutocomplete.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "script editor — future expansion (Scratch-style block UI)",
+   "reason": "script editor - future expansion (Scratch-style block UI)",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1196,7 +1196,7 @@
   "src/components/map/scriptReferenceData.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "script editor — future expansion (Scratch-style block UI)",
+   "reason": "script editor - future expansion (Scratch-style block UI)",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1206,7 +1206,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": "2026-08-20 sync: a fort's comment moved OUT of the fort line (inline `;;;;; text`) onto its own `;;; text` line above it, and he reads both on parse. His serialiser also now appends a new fort after the last fort/watchtower already in the region block rather than before the block's closing brace. For phase 16a: expect a comment line above a fort, and treat the inline form as legacy input we must still read."
@@ -1216,7 +1216,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1226,7 +1226,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1397,7 +1397,7 @@
   "src/components/newmap/BBoxGenerator.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "auto-generates map data from external sources — excluded",
+   "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1405,7 +1405,7 @@
   "src/components/newmap/BboxLayerGenerator.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "auto-generates map data from external sources — excluded",
+   "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1413,7 +1413,7 @@
   "src/components/newmap/ExportPanel.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1421,7 +1421,7 @@
   "src/components/newmap/FeaturesLayerGenerator.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "auto-generates map data from external sources — excluded",
+   "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1429,7 +1429,7 @@
   "src/components/newmap/GeoImportPanel.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1437,7 +1437,7 @@
   "src/components/newmap/GeoImporter.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1445,7 +1445,7 @@
   "src/components/newmap/GroundTypeRangeEditor.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1453,7 +1453,7 @@
   "src/components/newmap/KoppenClimateFetcher.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "auto-generates map data from external sources — excluded",
+   "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1461,7 +1461,7 @@
   "src/components/newmap/LandCoverFetcher.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "auto-generates map data from external sources — excluded",
+   "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1469,7 +1469,7 @@
   "src/components/newmap/LayerPreviewPanel.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1477,7 +1477,7 @@
   "src/components/newmap/LayerSidebar.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1485,7 +1485,7 @@
   "src/components/newmap/MapCanvas.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1493,7 +1493,7 @@
   "src/components/newmap/MapEditorCanvas.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1501,7 +1501,7 @@
   "src/components/newmap/MapStatusBar.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1509,7 +1509,7 @@
   "src/components/newmap/OhmOverlay.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1517,7 +1517,7 @@
   "src/components/newmap/OsmHistoricTagFetcher.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "auto-generates map data from external sources — excluded",
+   "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1525,7 +1525,7 @@
   "src/components/newmap/OsmTagOverlayEditor.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1533,7 +1533,7 @@
   "src/components/newmap/ReferenceLayers.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1541,7 +1541,7 @@
   "src/components/newmap/RegionsWorkshop.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1549,7 +1549,7 @@
   "src/components/newmap/RiverChecker.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1557,7 +1557,7 @@
   "src/components/newmap/SelectionBox.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1565,7 +1565,7 @@
   "src/components/newmap/SelectionPanel.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1573,7 +1573,7 @@
   "src/components/newmap/SettlementBoundaryButton.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1581,7 +1581,7 @@
   "src/components/newmap/SvgMapDownloader.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1589,7 +1589,7 @@
   "src/components/newmap/TileRasterizer.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1597,7 +1597,7 @@
   "src/components/newmap/ToolSettings.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1605,7 +1605,7 @@
   "src/components/newmap/WorkflowPanel.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1613,7 +1613,7 @@
   "src/components/newmap/boundaryRasterizer.js": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1643,7 +1643,7 @@
    "phases": [
     "4"
    ],
-   "reason": "shared UI patterns — Code View may reuse",
+   "reason": "shared UI patterns - Code View may reuse",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1653,7 +1653,7 @@
    "phases": [
     "4"
    ],
-   "reason": "shared UI patterns — Code View may reuse",
+   "reason": "shared UI patterns - Code View may reuse",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1673,7 +1673,7 @@
    "phases": [
     "4"
    ],
-   "reason": "shared UI patterns — Code View may reuse",
+   "reason": "shared UI patterns - Code View may reuse",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1713,7 +1713,7 @@
    "phases": [
     "4"
    ],
-   "reason": "shared UI patterns — Code View may reuse",
+   "reason": "shared UI patterns - Code View may reuse",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1781,7 +1781,7 @@
   "src/components/ui/accordion.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1789,7 +1789,7 @@
   "src/components/ui/alert-dialog.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1797,7 +1797,7 @@
   "src/components/ui/alert.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1805,7 +1805,7 @@
   "src/components/ui/aspect-ratio.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1813,7 +1813,7 @@
   "src/components/ui/avatar.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1821,7 +1821,7 @@
   "src/components/ui/badge.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1829,7 +1829,7 @@
   "src/components/ui/breadcrumb.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1837,7 +1837,7 @@
   "src/components/ui/button.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1845,7 +1845,7 @@
   "src/components/ui/calendar.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1853,7 +1853,7 @@
   "src/components/ui/card.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1861,7 +1861,7 @@
   "src/components/ui/carousel.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1869,7 +1869,7 @@
   "src/components/ui/chart.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1877,7 +1877,7 @@
   "src/components/ui/checkbox.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1885,7 +1885,7 @@
   "src/components/ui/collapsible.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1893,7 +1893,7 @@
   "src/components/ui/command.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1901,7 +1901,7 @@
   "src/components/ui/context-menu.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1909,7 +1909,7 @@
   "src/components/ui/dialog.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1917,7 +1917,7 @@
   "src/components/ui/drawer.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1925,7 +1925,7 @@
   "src/components/ui/dropdown-menu.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1933,7 +1933,7 @@
   "src/components/ui/form.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1941,7 +1941,7 @@
   "src/components/ui/hover-card.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1949,7 +1949,7 @@
   "src/components/ui/input-otp.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1957,7 +1957,7 @@
   "src/components/ui/input.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1965,7 +1965,7 @@
   "src/components/ui/label.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1973,7 +1973,7 @@
   "src/components/ui/menubar.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1981,7 +1981,7 @@
   "src/components/ui/navigation-menu.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1989,7 +1989,7 @@
   "src/components/ui/pagination.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -1997,7 +1997,7 @@
   "src/components/ui/popover.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2005,7 +2005,7 @@
   "src/components/ui/progress.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2013,7 +2013,7 @@
   "src/components/ui/radio-group.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2021,7 +2021,7 @@
   "src/components/ui/resizable.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2029,7 +2029,7 @@
   "src/components/ui/scroll-area.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2037,7 +2037,7 @@
   "src/components/ui/select.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2045,7 +2045,7 @@
   "src/components/ui/separator.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2053,7 +2053,7 @@
   "src/components/ui/sheet.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2061,7 +2061,7 @@
   "src/components/ui/sidebar.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2069,7 +2069,7 @@
   "src/components/ui/skeleton.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2077,7 +2077,7 @@
   "src/components/ui/slider.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2085,7 +2085,7 @@
   "src/components/ui/sonner.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2093,7 +2093,7 @@
   "src/components/ui/switch.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2101,7 +2101,7 @@
   "src/components/ui/table.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2109,7 +2109,7 @@
   "src/components/ui/tabs.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2117,7 +2117,7 @@
   "src/components/ui/textarea.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2125,7 +2125,7 @@
   "src/components/ui/toast.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2133,7 +2133,7 @@
   "src/components/ui/toaster.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2141,7 +2141,7 @@
   "src/components/ui/toggle-group.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2149,7 +2149,7 @@
   "src/components/ui/toggle.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2157,7 +2157,7 @@
   "src/components/ui/tooltip.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2165,7 +2165,7 @@
   "src/components/ui/use-toast.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "shadcn/ui boilerplate — we have our own CSS",
+   "reason": "shadcn/ui boilerplate - we have our own CSS",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2175,7 +2175,7 @@
    "phases": [
     "13"
    ],
-   "reason": "their EDU fields/dropdowns vs ours — adopt fields, never their hardcoded vocab",
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": "Phase 13 (merge/audit-edu-sounds.md): NOTHING adopted. Its vocab is RTW-era or invented in 9 of 11 closed slots against 1756 real units (tech type, hit sound, discipline, training, formation `schiltron`, armour `plate`, weapon type, category, class). serializeUnit re-emits a unit from parsed values and drops every keyword its switch has no case for. Its hardcoded BANNER_HOLY did prompt the one change: banner names now come from the mod's descr_banners_new.xml."
@@ -2185,7 +2185,7 @@
    "phases": [
     "13"
    ],
-   "reason": "their EDU fields/dropdowns vs ours — adopt fields, never their hardcoded vocab",
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": "Phase 13: nothing adopted. Its one candidate feature, 'duplicate faction texture', we have twice over and wired in: modeldb.add_texture_factions / set_texture_factions, reached from the unit editor, the transfer flow and the building-ownership fix."
@@ -2195,7 +2195,7 @@
    "phases": [
     "13"
    ],
-   "reason": "their EDU fields/dropdowns vs ours — adopt fields, never their hardcoded vocab",
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": "Phase 13: nothing adopted. Falls back to 24 hardcoded vanilla factions for a mod whose factions are Gondor and Mordor. Its missing-modeldb-texture warning is one we already have AND already offer to fix on save."
@@ -2205,7 +2205,7 @@
    "phases": [
     "13"
    ],
-   "reason": "their EDU fields/dropdowns vs ours — adopt fields, never their hardcoded vocab",
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": "Phase 13: nothing adopted. Re-encodes an imported card to 48x56 and an info pic to 260x350; measured over DaC's art, 1440 of 1440 cards are 48x64 and no info pic is 260x350 (432x172 dominates 4290 files)."
@@ -2215,7 +2215,7 @@
    "phases": [
     "13"
    ],
-   "reason": "their EDU fields/dropdowns vs ours — adopt fields, never their hardcoded vocab",
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": "Phase 13: nothing adopted. Tab layout only; ours is the guided/raw split plus Code View."
@@ -2225,7 +2225,7 @@
    "phases": [
     "13"
    ],
-   "reason": "their EDU fields/dropdowns vs ours — adopt fields, never their hardcoded vocab",
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": "Phase 13: nothing adopted. Browser-side image handling; ours is the server icon pipeline."
@@ -2235,7 +2235,7 @@
    "phases": [
     "13"
    ],
-   "reason": "their EDU fields/dropdowns vs ours — adopt fields, never their hardcoded vocab",
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": "Phase 13: nothing adopted. Search over type/category; ours filters, sorts and shows art."
@@ -2245,7 +2245,7 @@
    "phases": [
     "13"
    ],
-   "reason": "their EDU fields/dropdowns vs ours — adopt fields, never their hardcoded vocab",
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": "Phase 13: nothing adopted. Layout primitive."
@@ -2253,7 +2253,7 @@
   "src/hooks/use-mobile.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "React app shell — our shell is web/index.html",
+   "reason": "React app shell - our shell is web/index.html",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2261,7 +2261,7 @@
   "src/index.css": {
    "disposition": "skip",
    "phases": [],
-   "reason": "React app shell — our shell is web/index.html",
+   "reason": "React app shell - our shell is web/index.html",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2269,7 +2269,7 @@
   "src/lib/AuthContext.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 auth/cloud plumbing — we are self-hosted",
+   "reason": "Base44 auth/cloud plumbing - we are self-hosted",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2277,7 +2277,7 @@
   "src/lib/PageNotFound.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 auth/cloud plumbing — we are self-hosted",
+   "reason": "Base44 auth/cloud plumbing - we are self-hosted",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2285,7 +2285,7 @@
   "src/lib/app-params.js": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 auth/cloud plumbing — we are self-hosted",
+   "reason": "Base44 auth/cloud plumbing - we are self-hosted",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2293,15 +2293,15 @@
   "src/lib/autoGroundTypes.js": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "auto-generates map data from external sources — excluded",
+   "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "EXCLUDED as a generator, but it carries the canonical M2TW ground-type RGB table (fertile_low=0,128,128 etc). That table is format knowledge phase 15 needs to READ map_ground_types.tga — extract the constants, never the generator. Cross-check against Reference/TWCenter before trusting them."
+   "notes": "EXCLUDED as a generator, but it carries the canonical M2TW ground-type RGB table (fertile_low=0,128,128 etc). That table is format knowledge phase 15 needs to READ map_ground_types.tga - extract the constants, never the generator. Cross-check against Reference/TWCenter before trusting them."
   },
   "src/lib/casAnimCodec.js": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "animation — future expansion",
+   "reason": "animation - future expansion",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2311,7 +2311,7 @@
    "phases": [
     "15"
    ],
-   "reason": "binary mesh/texture codecs — cross-check vs the Blender addon",
+   "reason": "binary mesh/texture codecs - cross-check vs the Blender addon",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2331,7 +2331,7 @@
    "phases": [
     "13"
    ],
-   "reason": "their modeldb codec vs our modeldb.py — we own this format",
+   "reason": "their modeldb codec vs our modeldb.py - we own this format",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": "Phase 13: nothing adopted. We own this format (modeldb.py, splice-based)."
@@ -2341,7 +2341,7 @@
    "phases": [
     "13"
    ],
-   "reason": "their modeldb codec vs our modeldb.py — we own this format",
+   "reason": "their modeldb codec vs our modeldb.py - we own this format",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": "Phase 13: nothing adopted. localStorage plumbing."
@@ -2351,7 +2351,7 @@
    "phases": [
     "15"
    ],
-   "reason": "binary mesh/texture codecs — cross-check vs the Blender addon",
+   "reason": "binary mesh/texture codecs - cross-check vs the Blender addon",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2359,7 +2359,7 @@
   "src/lib/query-client.js": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 auth/cloud plumbing — we are self-hosted",
+   "reason": "Base44 auth/cloud plumbing - we are self-hosted",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2367,7 +2367,7 @@
   "src/lib/skeletonPoser.js": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "animation — future expansion",
+   "reason": "animation - future expansion",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2375,7 +2375,7 @@
   "src/lib/slerpUtils.js": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "animation — future expansion",
+   "reason": "animation - future expansion",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2395,7 +2395,7 @@
    "phases": [
     "15"
    ],
-   "reason": "binary mesh/texture codecs — cross-check vs the Blender addon",
+   "reason": "binary mesh/texture codecs - cross-check vs the Blender addon",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2405,7 +2405,7 @@
    "phases": [
     "15"
    ],
-   "reason": "binary mesh/texture codecs — cross-check vs the Blender addon",
+   "reason": "binary mesh/texture codecs - cross-check vs the Blender addon",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2415,7 +2415,7 @@
    "phases": [
     "15"
    ],
-   "reason": "binary mesh/texture codecs — cross-check vs the Blender addon",
+   "reason": "binary mesh/texture codecs - cross-check vs the Blender addon",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2423,7 +2423,7 @@
   "src/lib/utils.js": {
    "disposition": "skip",
    "phases": [],
-   "reason": "Base44 auth/cloud plumbing — we are self-hosted",
+   "reason": "Base44 auth/cloud plumbing - we are self-hosted",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2431,7 +2431,7 @@
   "src/lib/worldCover.js": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "auto-generates map data from external sources — excluded",
+   "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2439,7 +2439,7 @@
   "src/main.jsx": {
    "disposition": "skip",
    "phases": [],
-   "reason": "React app shell — our shell is web/index.html",
+   "reason": "React app shell - our shell is web/index.html",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2447,7 +2447,7 @@
   "src/pages.config.js": {
    "disposition": "skip",
    "phases": [],
-   "reason": "React app shell — our shell is web/index.html",
+   "reason": "React app shell - our shell is web/index.html",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2465,7 +2465,7 @@
   "src/pages/AnimationEditor.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2473,7 +2473,7 @@
   "src/pages/AssetsConverter.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2483,7 +2483,7 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2493,17 +2493,17 @@
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "2026-08-20 sync: painting reworked — the pixel buffer is mutated in place and the bitmap rebuilt on a 120 ms debounce instead of per frame, because a full-buffer copy plus createImageBitmap at 60 fps was the freeze. React-specific, but 16b faces the same arithmetic."
+   "notes": "2026-08-20 sync: painting reworked - the pixel buffer is mutated in place and the bitmap rebuilt on a 120 ms debounce instead of per frame, because a full-buffer copy plus createImageBitmap at 60 fps was the freeze. React-specific, but 16b faces the same arithmetic."
   },
   "src/pages/CampaignSettings.jsx": {
    "disposition": "port-concept",
    "phases": [
     "16"
    ],
-   "reason": "campaign map + descr_strat — the flagship phase",
+   "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2542,7 +2542,7 @@
   "src/pages/Export.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2560,7 +2560,7 @@
   "src/pages/GoatTools.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2578,7 +2578,7 @@
   "src/pages/LuaScripts.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2596,7 +2596,7 @@
   "src/pages/NewMapEditor.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2604,7 +2604,7 @@
   "src/pages/ScriptEditor.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2634,7 +2634,7 @@
    "phases": [
     "4"
    ],
-   "reason": "raw text editing — informs Code View",
+   "reason": "raw text editing - informs Code View",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2652,7 +2652,7 @@
   "src/pages/UnitCardGenerator.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2662,7 +2662,7 @@
    "phases": [
     "13"
    ],
-   "reason": "their EDU fields/dropdowns vs ours — adopt fields, never their hardcoded vocab",
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": "Phase 13: nothing adopted. Holds the whole EDU, the strings file and every decoded card in localStorage; its parseExportUnits reads text and re-emits from a map. Phase 6's stringsbin.py owns that file, byte-exact over 81 real archives."
@@ -2670,7 +2670,7 @@
   "src/utils/index.ts": {
    "disposition": "skip",
    "phases": [],
-   "reason": "React app shell — our shell is web/index.html",
+   "reason": "React app shell - our shell is web/index.html",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2678,7 +2678,7 @@
   "tailwind.config.js": {
    "disposition": "skip",
    "phases": [],
-   "reason": "JS toolchain — we have no build step",
+   "reason": "JS toolchain - we have no build step",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2686,7 +2686,7 @@
   "vite.config.js": {
    "disposition": "skip",
    "phases": [],
-   "reason": "JS toolchain — we have no build step",
+   "reason": "JS toolchain - we have no build step",
    "status": "triaged",
    "first_seen": "7cab442",
    "notes": ""
@@ -2694,7 +2694,7 @@
   "src/components/newmap/HeightmapAdjustPanel.jsx": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "e6e6982",
    "notes": "out-of-scope (New Map Editor), but it states a format fact worth keeping for phase 16a: an M2TW heightmap carries elevation in R and G and sea/water level in B, so any adjustment touches R and G only. Verify against the TWCenter index before leaning on it."
@@ -2702,7 +2702,7 @@
   "src/lib/osmTiles.js": {
    "disposition": "out-of-scope",
    "phases": [],
-   "reason": "V2 out of scope — future expansion only",
+   "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "e6e6982",
    "notes": "out-of-scope: the only two importers are newmap/OsmTagOverlayEditor.jsx and pages/NewMapEditor.jsx, and the New Map Editor is out of V2. It is Overpass bbox-splitting arithmetic, not M2TW format knowledge."

@@ -1,14 +1,14 @@
-/* portui.js — “Port from another mod”, shared by the Traits and Ancillaries modes
+/* portui.js - “Port from another mod”, shared by the Traits and Ancillaries modes
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
 /* ======================= PORT =======================
    The one dialog in the toolkit that reads TWO mods: pick records in another
-   mod, and they land in this one — the definition block, the triggers that
+   mod, and they land in this one - the definition block, the triggers that
    grant it, and its text keys, in one backed-up job.
 
    One file for both modes because the server has one engine for both
@@ -23,7 +23,7 @@
 
    The warnings are the point of the preview, not decoration. A ported trait
    keeps its ExcludeCultures and AntiTraits, a ported ancillary keeps its Image
-   and ExcludedAncillaries, and the triggers keep every condition — none of that
+   and ExcludedAncillaries, and the triggers keep every condition - none of that
    is rewritten to suit the destination, because guessing a substitution is how a
    port silently becomes a different trait. What will not work over there is
    listed instead, while it is still a preview. */
@@ -34,7 +34,7 @@ let portState = null;
 const PORT_NOUN = {traits:'trait', ancillaries:'ancillary'};
 
 /* Opened from the Traits or the Ancillaries list. The destination is always the
-   mod being edited — this is a way IN to the mod on screen, not a general
+   mod being edited - this is a way IN to the mod on screen, not a general
    two-mod transfer, and offering a destination picker would only invite writing
    into a mod you are not looking at. */
 function portOpen(kind){
@@ -111,7 +111,7 @@ function portRender(){
         'its block, at the top of the file',
         'every trigger in the other mod that grants it, appended to this mod’s '
           + 'trigger section',
-        'its text keys — without them the character screen crashes the first time '
+        'its text keys - without them the character screen crashes the first time '
           + `anyone has the ${esc(noun)}`])}</div>
       <div class="barrow">
         <span class="count">Read from</span>
@@ -125,7 +125,7 @@ function portRender(){
           onchange="portState.withTriggers=this.checked;portStale()">
           bring the triggers that grant it</label>
         <div class="count" style="margin:2px 0 6px">Off, the ${esc(noun)} exists in
-          this mod and nothing ever gives it — useful only when you mean to write
+          this mod and nothing ever gives it - useful only when you mean to write
           your own trigger for it.</div>
         <label class="chk"><input type="checkbox" ${p.overwrite?'checked':''}
           onchange="portState.overwrite=this.checked;portStale()">
@@ -159,7 +159,7 @@ function portRowHtml(r){
   </label>`;
 }
 
-// The list only. Ticking a row must not rebuild the dialog around it — 799 rows
+// The list only. Ticking a row must not rebuild the dialog around it - 799 rows
 // is the biggest list in the toolkit outside Strings.
 function portRowsPaint(){
   const p = portState; if(!p || !p.ov || p.ov.error) return;
@@ -231,7 +231,7 @@ async function portApply(){
   const pl = p.plan || await portPreview();
   if(!pl) return;
   if((pl.errors||[]).length){ toast('✗ ' + pl.errors[0], 6000); return; }
-  if(!pl.ok){ toast('Nothing to write — everything picked is already here.', 5000); return; }
+  if(!pl.ok){ toast('Nothing to write - everything picked is already here.', 5000); return; }
   const noun = PORT_NOUN[p.kind] || 'record';
   const lines = (pl.changes||[]).slice(0, 12);
   const warn = (pl.warnings||[]).slice(0, 5).map(w => '⚠ ' + w);

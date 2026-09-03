@@ -20,7 +20,7 @@ factions in the three installed mods parse byte-exact and re-render unchanged
 against a :class:`Shape` and no new code at all. A fourth caller is the point at
 which "the shape the minor files share" stops being a fact about the minor files.
 
-The layer below is :mod:`unittransfer.keyblock`, which owns one record's lines —
+The layer below is :mod:`unittransfer.keyblock`, which owns one record's lines -
 the splice, the insert-at-its-place rule and the column-preserving rewrite. This
 layer owns the *file*: where the records are, and how one of them is swapped out
 without touching a byte of the rest.
@@ -38,7 +38,7 @@ from . import triggers
 #: codec that promises the bytes come back as they went in
 ENCODING = "latin-1"
 
-#: how they are split into lines — the EDCT's splitter, so a line number means
+#: how they are split into lines - the EDCT's splitter, so a line number means
 #: the same thing in every editor
 split_lines = triggers.split_lines
 
@@ -62,7 +62,7 @@ class LineFile:
 
     @property
     def items(self) -> List:
-        """Every record in this file — one name for five different lists.
+        """Every record in this file - one name for five different lists.
 
         The editor is one module over five files, so it has to be able to say
         "the records of this file" without knowing which file it is holding.
@@ -70,7 +70,7 @@ class LineFile:
         return []
 
     def text(self) -> str:
-        """The file exactly as it was read — what every round-trip test asserts."""
+        """The file exactly as it was read - what every round-trip test asserts."""
         out = self.newline.join(self.lines)
         return out + self.newline if self.trailing_newline and self.lines else out
 
@@ -125,7 +125,7 @@ class Shape:
         return {k: k for k in self.order}
 
 
-#: ``descr_rebel_factions.txt`` — all 68 records in the three installed mods write
+#: ``descr_rebel_factions.txt`` - all 68 records in the three installed mods write
 
 @dataclass
 class Repeat:
@@ -234,11 +234,11 @@ def parse_record_block(shape: Shape, text: str) -> Record:
     """Read ONE record, as a code view pane holds it."""
     rf = parse_records(shape, text if text.endswith("\n") else text + "\n")
     if not rf.records:
-        raise RecordError(f"a {shape.noun} starts with a `{shape.kw} <name>` line — "
+        raise RecordError(f"a {shape.noun} starts with a `{shape.kw} <name>` line - "
                          "this text has none", 1)
     if len(rf.records) > 1:
         raise RecordError(
-            f"this text holds {len(rf.records)} {shape.noun}s — one at a time",
+            f"this text holds {len(rf.records)} {shape.noun}s - one at a time",
             rf.records[1].start + 1)
     return rf.records[0]
 
@@ -246,8 +246,8 @@ def parse_record_block(shape: Shape, text: str) -> Record:
 def render_record(shape: Shape, base: str, edits: Optional[Dict] = None) -> str:
     """Apply GUI edits to one record and give back its text.
 
-    ``edits`` is the save request's own shape — the body keywords by name, plus
-    ``name`` and (for rebels) ``units: [str]`` — and every key is optional. What
+    ``edits`` is the save request's own shape - the body keywords by name, plus
+    ``name`` and (for rebels) ``units: [str]`` - and every key is optional. What
     is not named is not touched, so a form that posts every box does not
     reformat the lines nobody edited.
     """
@@ -351,9 +351,9 @@ def check_records(shape: Shape, rf: RecordFile) -> List[Dict]:
 
     Three, and each is a file the game will not load or will silently misread:
     a name used twice, a required line missing, and lines out of the order every
-    real record writes them in. What a *particular* file means by its values —
+    real record writes them in. What a *particular* file means by its values -
     that ``brigands`` is one of four rebel categories, that a faction's culture
-    must be one this mod defines — belongs to that file's own module.
+    must be one this mod defines - belongs to that file's own module.
     """
     out: List[Dict] = []
     seen: Dict[str, int] = {}
@@ -364,14 +364,14 @@ def check_records(shape: Shape, rf: RecordFile) -> List[Dict]:
     for rec in rf.records:
         if rec.name in seen:
             add("duplicate", rec.name, rec.start,
-                f"`{rec.name}` is already defined on line {seen[rec.name] + 1} — "
+                f"`{rec.name}` is already defined on line {seen[rec.name] + 1} - "
                 "names must be unique")
         else:
             seen[rec.name] = rec.start
         for key in shape.required:
             if key not in rec.lines:
                 add("missing-line", rec.name, rec.start,
-                    f"no `{key}` line — the game will not load this {shape.noun}")
+                    f"no `{key}` line - the game will not load this {shape.noun}")
         order = [k for k in shape.order if k in rec.lines]
         placed = sorted(order, key=lambda k: rec.lines[k])
         if order != placed:

@@ -5,16 +5,16 @@ say. Runs on throwaway copies of a real mod's text files, with an ``eopData``
 folder and a ``.lua`` script planted in them, so nothing real is touched.
 
 Covers:
-  * **Lua protection** — an entry only a ``.lua`` script names is never called
+  * **Lua protection** - an entry only a ``.lua`` script names is never called
     unused, is never offered as a merge source, and ``plan_cleanup`` refuses to
     remove it even when it is asked to outright. Comments count too.
-  * **EOP units** — files under the mod's EOP folder are parsed into the roster,
+  * **EOP units** - files under the mod's EOP folder are parsed into the roster,
     flagged, and kept OUT of ``export_descr_unit.txt``; a file that is not unit
     blocks is ignored; the folder can be auto-detected or configured.
-  * **EOP writes** — editing an EOP unit rewrites its own file and leaves the EDU
+  * **EOP writes** - editing an EOP unit rewrites its own file and leaves the EDU
     byte-identical; deleting one removes its file; a voice edit and a bmdb soldier
     merge both follow it there; and undo puts all of it back byte-exact.
-  * **EOP transfers** — a unit transferred as an EOP unit lands in its own file,
+  * **EOP transfers** - a unit transferred as an EOP unit lands in its own file,
     the EDU is untouched, and it does not count against the 500-unit cap.
 """
 import shutil, sys, tempfile
@@ -40,7 +40,7 @@ def check(label, cond):
 
 
 def fresh_mod(prefix="ut_eop_") -> Path:
-    """A copy of the mod's text files only — enough for every path under test."""
+    """A copy of the mod's text files only - enough for every path under test."""
     root = Path(tempfile.mkdtemp(prefix=prefix))
     data = root / "data"
     (data / "text").mkdir(parents=True)
@@ -102,7 +102,7 @@ unused = {u["entry"] for u in a["unused"]}
 check("the live-referenced entry is not on the unused list", live_name not in unused)
 check("the commented-referenced entry is not on the unused list either",
       commented_name not in unused)
-check("the control entry — named nowhere — IS still offered as unused",
+check("the control entry - named nowhere - IS still offered as unused",
       control_name in unused)
 check(f"the audit reports {a['lua_files']} lua file(s) scanned", a["lua_files"] == 1)
 kept = {m["entry"]: m for m in a["lua_kept"]}
@@ -151,7 +151,7 @@ block = edu_mod.rewrite_block(edu_mod.strip_trailing_filler(donor.raw),
                               dict_new=donor.dictionary)
 (eopdir / "eop_test_guard.txt").write_text("; M2TWEOP unit\n" + block,
                                            encoding=edu_mod.ENCODING)
-# a file in the same folder that is NOT unit blocks — must be ignored
+# a file in the same folder that is NOT unit blocks - must be ignored
 (eopdir / "notes.txt").write_text("just some notes about the type of thing\n",
                                   encoding="utf-8")
 
@@ -229,7 +229,7 @@ check("undo brings the deleted unit file back",
 
 print("\n== a bmdb soldier merge follows an EOP unit into its own file ==")
 # A merge repoints a `soldier` line. When the unit owning that line is an EOP
-# unit, the rewrite belongs in its file — writing it into the EDU would both miss
+# unit, the rewrite belongs in its file - writing it into the EDU would both miss
 # the unit and leave the merged entry named by a model that is no longer there.
 mroot = fresh_mod("ut_merge_")
 mm = Mod(mroot)
@@ -283,7 +283,7 @@ dest = Mod(droot)
 dest_edu_bytes = dest.edu_path.read_bytes()
 dest_main = len(dest.edu.main_units)
 src = Mod(SRC)
-# The destination is a copy of the same mod, so every type collides — rename is
+# The destination is a copy of the same mod, so every type collides - rename is
 # the realistic shape of this transfer anyway (that is what the composer does).
 pick = next(u for u in src.edu.units if u.soldier_model)
 NEW_TYPE = "eop_xfer_test"
@@ -331,5 +331,5 @@ check("clearing it goes back to detection",
       [p.name for p in Mod(eroot).eop_dirs] == ["eopData"])
 
 
-print(f"\n{sum(ok)}/{len(ok)} checks — {'ALL PASSED' if all(ok) else 'SOME FAILED'}")
+print(f"\n{sum(ok)}/{len(ok)} checks - {'ALL PASSED' if all(ok) else 'SOME FAILED'}")
 sys.exit(0 if all(ok) else 1)

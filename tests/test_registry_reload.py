@@ -5,7 +5,7 @@ running server. The Registry re-parses when a mod's files change.
 
 It checks the *cost* of that promise too. Re-stating it as of Phase 14a: a
 resolved mod is trusted for :data:`server.REVALIDATE_SECONDS` before its files
-are stat'ed again, because the check used to run on every single request —
+are stat'ed again, because the check used to run on every single request -
 scanning the mods folder and stat-ing twelve files, all of it inside one lock,
 for each of the hundreds of unit-card requests one screen makes. Our own writes
 call ``invalidate()`` and are therefore still immediate; somebody else's edit is
@@ -60,7 +60,7 @@ import os
 # force a distinct mtime even on coarse clocks
 os.utime(edu_path, (time.time() + 2, time.time() + 2))
 
-# inside the revalidation window the cached parse is still served — deliberate
+# inside the revalidation window the cached parse is still served - deliberate
 check("an edit within the window keeps the cached object", reg.get("TestMod") is m1)
 
 # once the window is out, somebody else's edit is picked up

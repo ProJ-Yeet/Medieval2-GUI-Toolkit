@@ -1,5 +1,58 @@
-# STATE — Medieval 2 GUI Toolkit V2
-_Updated: 2026-09-02 · **v2.1.10 released** · a subrelease on top of 2.1.9_
+# STATE - Medieval 2 GUI Toolkit V2
+_Updated: 2026-09-03 · **v2.1.11 released** · a subrelease on top of 2.1.10_
+
+## v2.1.11
+**A subrelease, same standing as 2.1.2 through 2.1.10.** One ask with a long
+reach, one piece of wording, and a sweep.
+
+**Every panel resizes** (`web/js/core.js`, the `rsz*` block beside
+`splitInstall`; `::-webkit-resizer` and `.drawergrip` in index.html). Every
+scroll box on the page gets `resize:vertical`, the dialog gets `resize:both`,
+and the drawer gets a hand-rolled left-edge bar because its right edge is
+pinned and the browser's own corner would drag it off the screen. Sizes live
+in `pane_sizes` on `/api/settings`, keyed by a box's `id` or its classes and a
+dialog's class, clamped to the window on the way back in.
+
+**The boxes find themselves.** A scroll box in this stylesheet is a rule that
+sets `max-height` and `overflow:auto` together and there is no second kind, so
+`rszSelectors` reads `document.styleSheets` once at startup and collects the
+31 selectors that do - which means a list written next month is resizable the
+day it is written. `.wpop` is skipped (a menu that closes on the next click
+must not carry a remembered height) and `.modal` is skipped because
+`rszModal` sizes it in both directions instead.
+
+**Two things the browser gets wrong on its own, and the whole of the code is
+undoing them.** A `max-height` outranks the `height` a drag writes, so the
+ceiling is cleared on `mousedown` in the corner, in the capture phase, which
+is the last moment before the browser starts its own drag - without that the
+first drag on any box did nothing and only the second appeared to work. And
+these screens rebuild wholesale (a keystroke in the pool filter replaces every
+row), so a `MutationObserver` on `document.body` puts the size back on the
+element that replaced the one that was dragged. That observer coalesces on a
+**`setTimeout`, not `requestAnimationFrame`**: a window the OS considers
+occluded is given no frames at all, and a dialog opened behind another window
+came up with none of its boxes wired. Nothing is touched until it is dragged,
+so an untouched screen lays out exactly as before.
+
+**"<name>.txt is newer"** (`web/js/strings.js`) was a comparison of two file
+dates presented as a warning, with no statement of what was wrong. It now
+reads "…is newer than this .bin" and carries a `qm()` card: the game reads the
+`.bin`, the `.txt` was saved after it was built, so what the `.txt` has been
+made to say since is not on screen in the game - which is usually how the mod
+was written and not a fault at all.
+
+**No em dashes.** 4176 of them across 171 tracked files, swept to plain
+hyphens in one pass - every occurrence was ` - `, a dash left at the end of a
+wrapped line, or a lone dash standing for "nothing here", and a hyphen is
+right for all three. `tools/prose_check.py` grew `ANY_EM`, which scans whole
+files rather than UI strings, so one that comes back is a reported hit.
+
+**Also in the build:** battle-model-entries-only transfers (`models_only`,
+`GET /api/unit_models`, `transfer.unit_model_index`), a swatch-plus-hex colour
+picker on the faction editor that no longer closes the OS picker on every
+drag, a player-visible name for a newly cloned unit, and the OS folder dialog
+raised to the front from a watcher thread instead of opening behind the
+browser.
 
 ## v2.1.10
 **A subrelease, same standing as 2.1.2 through 2.1.9.** Three asks: the model
@@ -11,20 +64,20 @@ row laid out as two halves instead of four columns.
 unit editor's and BMDB's, and a copy of the editor's shape rather than a
 refactor of it: the three differ in what they list, which mod they draw it from
 and which setting turns them off, and the shared part is already `v3Mount`
-itself. The three careful things are the editor column's three — the canvas is
+itself. The three careful things are the editor column's three - the canvas is
 DETACHED across a re-render rather than rebuilt (`renderComposer` runs on every
 tick box, so rebuilding would refetch a 30 MB mesh per click), there is only
 ever one viewer on the page, and folding pauses the draw loop without giving up
 the mesh.
 
 **What it lists is BOTH MODS.** A transfer is the one screen where the models on
-the page belong to two different mods: the source unit's entries, and — once a
-base or replaced unit is picked — that unit's own out of the destination, each
+the page belong to two different mods: the source unit's entries, and - once a
+base or replaced unit is picked - that unit's own out of the destination, each
 `<optgroup>` labelled with where it came from and `v3Mount` handed the mod per
 entry, not per screen. "Is this the unit I meant to overwrite" is what the
 replace mode exists to get wrong. The entry list is derived from the UNIT LIST's
 fields (`models`, `soldier_model`, `armour_ug_models`, `officers`) rather than
-the editor's payload — the composer never loads a unit detail — and it applies
+the editor's payload - the composer never loads a unit detail - and it applies
 the editor's own rule about `armour_ug_models` on top, plus one the editor does
 not: the men before their officers, since `model_names()` reads the soldier line
 first and a unit whose soldier line was dropped would otherwise open on its
@@ -32,41 +85,41 @@ standard bearer.
 
 The composer goes `modal wide` whenever the column is on (a model squeezed
 beside a 640px dialog is not a model), the choice rides on
-`state.settings.transfer_preview`, and the column is given up — context, loop
-and node — by `closeModal`, by `doApply` before the progress card takes the
+`state.settings.transfer_preview`, and the column is given up - context, loop
+and node - by `closeModal`, by `doApply` before the progress card takes the
 modal, and by `openComposer` before it rewrites the modal for the next unit.
 `v3Open`'s markup stash detaches it for the same reason it detaches the
 editor's.
 
 **Building art on the Recruitment tab**, and the culture question it opens.
-A tier's picture is `/building_icon`, which is keyed by CULTURE — and this tab
+A tier's picture is `/building_icon`, which is keyed by CULTURE - and this tab
 is not showing a culture: its rows come from every building line in the mod. So
 the row's own `requires` answers it, through `ov.faction_cultures`: a pool gated
 to `factions { aztecs, }` wears what those factions build. Measured on DaC,
-that alone was not enough — a mod-invented level like `ancestral_dun` is drawn
+that alone was not enough - a mod-invented level like `ancestral_dun` is drawn
 for exactly ONE culture, and every other row would have been a placeholder.
 
 `buildings.find_icon` gained `any_culture`, off by default: after the picked
 culture's own art and its vanilla fallback, it sweeps the mod's other culture
 folders. It stays OFF for the building browser, which is showing one culture on
-purpose — a level that culture has no art for is a fact about that culture, and
-the grid says so — and the Recruitment tab and its ＋ picker pass `&any=1`.
+purpose - a level that culture has no art for is a fact about that culture, and
+the grid says so - and the Recruitment tab and its ＋ picker pass `&any=1`.
 Verified against DaC: all six of a Dunlending unit's tiers answer `mod` where
 `greek` (the browser's last culture) answered `placeholder` for every one.
 
-**The pool row is two halves, not four columns.** WHAT it sits on — the art, the
-line's name, the tier — is the left of the top line, touching, because "a
+**The pool row is two halves, not four columns.** WHAT it sits on - the art, the
+line's name, the tier - is the left of the top line, touching, because "a
 barracks" and "which barracks" are one answer; the numbers hold the right,
 pushed there by a new `.ernums` wrapper and still at a fixed width. WHO may use
 it is the second line, right-aligned to end where the numbers and the row's
 buttons do, growing back leftwards across the full width when a clause needs it.
-`.erb` stopped being `flex:1 1 150px` — a growing name column is what put the
+`.erb` stopped being `flex:1 1 150px` - a growing name column is what put the
 tier at the far end of the row's slack. The header's own `.eract` now reserves a
 button's width, which is what it takes for "the header labels sit over the boxes
 they name" to be true; they had been 33px to the right of them since the tab was
 written.
 
-`tests/test_buildings.py` grew section 11 — four checks on the sweep against a
+`tests/test_buildings.py` grew section 11 - four checks on the sweep against a
 planted two-culture art tree: off, a culture with no art for the level is a
 placeholder; on, the one culture that draws it supplies the art; the culture's
 own art still wins when it has any; and a level nobody draws is still a
@@ -84,14 +137,14 @@ in `web/index.html`). Everything a unit IS was on four tabs; where it can be
 HIRED was in another module, reached by leaving the unit, finding one of the
 four or five building lines that train it, and reading its numbers off a row
 among sixty. The building browser already had the panel that puts those rows
-side by side (`bldShowUnit`) — this is that view from the unit's side, and
+side by side (`bldShowUnit`) - this is that view from the unit's side, and
 editing: all four pool numbers, the `requires` clause, a 🗑 that takes the pool
 off the building, and a ＋ that puts the unit on a new one.
 
 **No Python.** A `recruit_pool` line already had a reader
 (`buildings.unit_instances`) and a writer (`buildings.plan_edit`), and this is a
-second FRONT for them rather than a second implementation — the same capability
-ops, the same clause dialog, the same plan → apply road — so a pool edited from
+second FRONT for them rather than a second implementation - the same capability
+ops, the same clause dialog, the same plan → apply road - so a pool edited from
 the unit and one edited from the building cannot drift apart. The one shape that
 had never been sent before is the request: this tab reaches into several
 building lines at once and belongs to none of them, so **every** edit rides in
@@ -109,13 +162,13 @@ inside that modal, so putting the string back would install a dead copy of the
 canvas and orphan the real one. The two `edrec` branches re-render the editor
 from state instead, which hands the column over the way a tab switch does. Same
 reason the ＋ picker keeps no stash. `loadBuildings` also stopped writing
-"Reading …'s buildings…" into `main` when a dialog is open over it — this tab
+"Reading …'s buildings…" into `main` when a dialog is open over it - this tab
 asks for the overview from behind one, and the message was what you found on
 screen the moment you closed the editor.
 
 **A building is one click away, in its own tab.** `?building=&lvl=&unit=` opens
 the Buildings module on that line, at the tier the pool sits on, and flashes the
-unit's rows (`bldJumpPool`) — a barracks trains sixty units and scrolling for
+unit's rows (`bldJumpPool`) - a barracks trains sixty units and scrolling for
 the one you came for is the step the link exists to skip. And because a
 recruitment save moves EDB line numbers, a building left open behind the editor
 has its working copy dropped rather than carried back into it: its capability
@@ -131,7 +184,7 @@ back as three changes with the other two lines named.
 
 **The UV layout, beside the model** (`web/js/viewer3d.js`, `.v3uvpane` in
 `web/index.html`). `Show UVs` paints the coordinate onto the MODEL; this is the
-other half of the same question — the SHEET, with the mesh's islands drawn over
+other half of the same question - the SHEET, with the mesh's islands drawn over
 the art they sit on, which is what a UV editor shows and what a retexture is
 actually done against. A 2D canvas, not a second WebGL context: the drawing is
 one image and a few thousand lines, and a second context is a second copy of the
@@ -142,7 +195,7 @@ per sheet, at the aspect the art really is, with the UVs put through the same
 scaling the sampler puts them through to land on it. A pair is two squares side
 by side; a mount's lone sheet is ONE square, and the two units of u its mesh is
 written in are half a square each. Framing on the mesh's u instead drew a 1024
-square sheet across two tiles — a picture of the coordinate rather than a
+square sheet across two tiles - a picture of the coordinate rather than a
 picture of the art, and stretched art is exactly what this view exists to catch.
 **v goes down**, because M2TW is Direct3D and the texture is bound unflipped, so
 the sheet is drawn from its top-left at (0,0) and an island sits over the art it
@@ -153,15 +206,15 @@ leaving the sheet reads as leaving it.
 One colour per part, on the island and on that part's row in the list, so the
 two can be read off each other; only the groups the viewer is DRAWING are drawn,
 so a variant swap or a hidden slot changes the map with it (three heads laid
-over one sheet is not a UV map). Click picks by testing every drawn triangle —
-exact, where a nearest-island guess is wrong on overlapping shells — and names
+over one sheet is not a UV map). Click picks by testing every drawn triangle -
+exact, where a nearest-island guess is wrong on overlapping shells - and names
 the part, its u/v box, and whether it leaves the sheet it was authored in; the
 cursor readout gives u, v, which sheet, and the pixel. Side by side with the
 model when there is room for two; docked, or under 1100px, the layout takes the
 stage and the button is the way back. `v3Draw` now returns on a zero-size canvas
 rather than sizing to a made-up 640, which is what that takeover leaves behind.
 
-Verified in-browser against DaC: `lossarnach_ug0` (a real pair — picking
+Verified in-browser against DaC: `lossarnach_ug0` (a real pair - picking
 returned `hair`, `head`, `eyes`, `clap` from their own centroids, zoom held its
 anchor to 4e-4 of u, and the caption read `head u 1.33–1.55 · v 0.73–0.87`), and
 `mount_naru_horse` (one texture, and the case below).
@@ -172,25 +225,25 @@ RENDERER, not the drawing: the layout was faithfully showing a space the shader
 had wrong. There are **three** shapes an entry's texture set comes in and the
 viewer knew two:
 
-  * a real pair, glued here — u halved, as always;
+  * a real pair, glued here - u halved, as always;
   * an entry that **names** an attachment and it is the main file again (which
-    mods write constantly — it is what the Blender addon exports for an empty
+    mods write constantly - it is what the Blender addon exports for an empty
     slot) or one the mod does not ship. The game glues two sheets, so the art
     repeats every unit and binding the one sheet at FULL u reproduces
     main-glued-to-main exactly. This is the case the old comment described, and
     it stays;
-  * an entry naming **no** attachment texture at all — every ordinary mount.
+  * an entry naming **no** attachment texture at all - every ordinary mount.
     There is nothing to glue and no far half to reach, so its one sheet spans
     the whole two-unit space and u must be halved TOO. It was not, and that
     tiles the sheet twice across the model.
 
 The two were collapsed into "one sheet or two", and the empty slot took the
 wrong branch. With `uUScale` telling the truth again, `Show UVs` needed no new
-period after all — its dimming and its red line go back to keying off that one
+period after all - its dimming and its red line go back to keying off that one
 uniform, and the only thing it gained is `uPair`, because "how far was u scaled"
 and "are there two sheets to tell apart" had quietly become different questions. **Measured, not reasoned**: map each triangle's texel-space edges
 onto its own 3D plane and the singular values of that Jacobian say how far from
-square its texels are. Whole models, median —
+square its texels are. Whole models, median -
 
 | entry | attachment slot | full u | half u |
 |---|---|---|---|
@@ -201,7 +254,7 @@ square its texels are. Whole models, median —
 
 The pairs are the control and they answer the way they must; the mounts invert,
 and the 2.0 is the factor of two standing up to be counted. Confirmed against the
-art as well: `mount_naru_horse`'s groups, halved, land exactly on it — Body
+art as well: `mount_naru_horse`'s groups, halved, land exactly on it - Body
 0.005–0.662 on flanks painted across x 0–0.66, `armor` 0.017–0.463 on barding at
 x 0–0.47 (and its v 0.271–0.567 matches that band untouched, which is what pins
 the axis that was never wrong). On screen the barding stops being striped and
@@ -209,7 +262,7 @@ becomes plates, and the layout's islands sit on the art they name.
 
 So `uUScale` is 0.5 whenever what is bound SPANS the two units and 1.0 only for
 the glue-it-to-itself case, and the parts list stops labelling half of a lone
-sheet an "attach sheet" when the entry carries no such texture — it says "right
+sheet an "attach sheet" when the entry carries no such texture - it says "right
 half" instead. Those labels are repainted from `v3Apply` as well as from the
 render, because a skin arrives after the panel is drawn and the panel would
 otherwise be describing a pair as a lone sheet. v2.1.8's "a lone sheet's pair
@@ -220,7 +273,7 @@ unit has `armour_ug_models`** (`edPrevEntries`). The engine draws the upgrade
 list, one model per armour level, and never that entry: Uruk-hai Bodyguards
 names `heavy_uruk_sword` on its soldier line and puts `isengard_bodyguard` in
 both upgrade slots, so the picker was offering a model the unit is never seen
-in. The test is per MODEL, not per unit — Uruk Bodyguard's
+in. The test is per MODEL, not per unit - Uruk Bodyguard's
 `mordor_uruk_bodyguards` is the soldier line AND upgrade 1, and an entry earns
 its place by any slot that is not the soldier line. A unit with no upgrade list
 is the other way round and keeps it, and the list can never come back empty.
@@ -231,7 +284,7 @@ already had a draggable left edge; inside it the canvas sat at the stylesheet's
 model is a letterbox. The bar under the canvas drags that boundary and the height
 persists (`v3_dock_px`), double-click restores the default. It sizes the STAGE,
 not the controls: the docked column is as tall as its contents, so giving the
-controls a height grows the panel and leaves the model exactly where it was —
+controls a height grows the panel and leaves the model exactly where it was -
 measured, after the obvious way round moved nothing.
 
 ## v2.1.8
@@ -241,13 +294,13 @@ both extending a module that already existed, and neither of them a bug.
 **A faction can be added, by cloning one that works** (`unittransfer/factionclone.py`,
 new; `/api/factions/clone_plan|clone_apply`; the **＋ Add a faction** dialog in
 `web/js/factions.js`). Phase 11 shipped the Factions editor with a written
-refusal — a slot lives in nine files, so one that exists only in
+refusal - a slot lives in nine files, so one that exists only in
 `descr_sm_factions.txt` is a mod that will not load, therefore no create. Right
 about the problem, wrong about the conclusion: the answer is to write them all.
 **Twelve, as it turned out.** Grepping the installed mods for a slot found
 `export_descr_buildings` (the `requires factions { … }` clauses that let a
 faction build and recruit at all), `descr_sounds_accents` and
-`descr_faction_standing` on top of the nine that docstring listed — a plausible
+`descr_faction_standing` on top of the nine that docstring listed - a plausible
 number nobody had measured, which is the kind this project does not keep. Every
 surface that said nine now says twelve.
 
@@ -256,14 +309,14 @@ faction/`) is the spec, and its method is why this is safe: **it never invents a
 value.** Every step is "find where the donor is named and name the clone too,
 with the same value", so there is no question of what colour or roster the new
 faction gets. Nine cloners rather than one search-and-replace, because the
-donor's name is doing something different in each file — a record to re-head, a
+donor's name is doing something different in each file - a record to re-head, a
 section to copy, a braced block, a shared comma list to join, length-prefixed
 texture records. Art is **found, not listed**: anything under `ui`, `menu` or
 `banners` carrying the slot as a token. One transfer id covers the lot, so undo
 puts the whole faction back out of existence in one go.
 
-**Three files name the donor as a judgement** — a trait named after it, an
-ancillary's `FactionType` operand, a prebattle speech — and are counted and
+**Three files name the donor as a judgement** - a trait named after it, an
+ancillary's `FactionType` operand, a prebattle speech - and are counted and
 reported, never appended to. `descr_strat` is reported and not written for the
 same class of reason: two factions cannot start in the same settlement, so there
 is no donor answer that would still be right. **Deleting stays refused**, and
@@ -277,21 +330,21 @@ and `$` sits after the `
 `_` is a word character in a data file and a **separator** in a text key (one
 boundary found `{SICILY}` and none of the sixty `EMT_` keys); `add_texture_factions`
 reads **one entry's** raw text, not the file (handed the whole modeldb it finds
-no groups — a clone with no skins); and a file may spell the same list two ways
+no groups - a clone with no skins); and a file may spell the same list two ways
 (`descr_faction_standing` writes both `factions { … }` and `exclude_factions
 { … }`, and DaC has 164 of the first and **none** of the second, so matching only
 the second would have cloned nothing at all in one of the two installed mods).
 `tests/test_factionclone.py` 64/64 against the real mods, read-only;
 `tests/test_factionclone_apply.py` 30/30 writes a synthetic mod and undoes it
 byte-exact. That second suite exists because `transfer.undo` deletes a created
-path with `unlink()`, which raises on a directory and is swallowed — so copied
+path with `unlink()`, which raises on a directory and is swallowed - so copied
 art is listed in the manifest one file at a time, never as a folder.
 
 **Show UVs in the 3D viewer** (`web/js/viewer3d.js`). Paints the UV coordinate
 instead of the art in the same space the sampler uses, so the tiling the shader
 comment has always described is visible: blue main sheet, amber attachment
 sheet, dark for the repeats, red where the pair restarts. 32 checker cells to a
-sheet is **measured, not picked** — real parts span 0.07 to 0.33 of u each, so a
+sheet is **measured, not picked** - real parts span 0.07 to 0.33 of u each, so a
 coarser grid gives a head less than one whole cell and says nothing about it.
 Verified in-browser on a real pair (body main, bow and quiver attachment) and on
 a lone-sheet mount, which correctly shows no amber and drops that row from the
@@ -304,7 +357,7 @@ from two mods on one evening.
 
 **An attachment texture's sprite slot can hold a name** (`modeldb.get_attach_sprite`).
 It is a bare `0` on very nearly every entry of every mod, and the reader had that
-written down as the only value the field could take — a number there was "not a
+written down as the only value the field could take - a number there was "not a
 length, because there is no name for it to be the length of". Thera_Redux and
 BOTET each put a real `unit_sprites/....spr` in one. Read as names, both files run
 to a clean EOF and round-trip byte-exact, which a desynced read does not do across
@@ -318,8 +371,8 @@ The `01` case the guard was written for is real and still refused. The two are t
 apart by looking rather than by rule: a sprite is a `.spr` path that fills exactly
 the characters its length claims and stops on whitespace, and a stray digit's
 "name" is none of those three. `tests/test_modeldb_attach_sprite.py` carries both
-mods' real sprites as fixtures, plus `5 horse` — a self-consistent name that is not
-a sprite — so the discriminator is pinned as "it is a sprite path", not "the
+mods' real sprites as fixtures, plus `5 horse` - a self-consistent name that is not
+a sprite - so the discriminator is pinned as "it is a sprite path", not "the
 arithmetic works out".
 
 **Evidence outranks inference in the desync message** (`modeldb._desync_message`).
@@ -330,7 +383,7 @@ the read stopped. So the sighting goes first now. BOTET's `mount_elephant_rocket
 is why: its count of 2 is honest and a normal map's length is written 64 for a
 61-character name, and the old sentence sent its owner to delete a texture group.
 `_suspect` also measures the rest of the line when a name ran off the end of one,
-which is the number to type — hedged deliberately, because paths in this file
+which is the number to type - hedged deliberately, because paths in this file
 contain spaces (`Final European Light_hre_diff`) and that measurement is where the
 name probably ends, not where it certainly does.
 
@@ -346,7 +399,7 @@ first two are one thread.
 
 **The M2EX mark did not survive being read back.** `modflags` stores it per mod
 folder and accepted either a Mod or a bare path; the bare-path branch was
-`getattr(mod, "root", mod)`, and a `Path` HAS a `.root` — its anchor, `\` on
+`getattr(mod, "root", mod)`, and a `Path` HAS a `.root` - its anchor, `\` on
 Windows. So every path-shaped read keyed to the drive root of the working
 directory: one shared row for every mod on the machine. `/api/mods` is exactly
 that read, which is why ticking the box looked right (answered from a Mod) and
@@ -358,11 +411,11 @@ off a Path, off a string, and no row keyed to a drive root.
 **Projectile effects now travel to an M2EX destination** (`unittransfer/effects.py`,
 `transfer._plan_effects`). Effects were never ported, for a good reason: they live
 in four files shared by every projectile in the mod, and how many the engine loads
-is another hardcoded table — what is past the end is dropped silently. M2EX
+is another hardcoded table - what is past the end is dropped silently. M2EX
 replaces that table, so for a destination marked for it the set block, the effects
 it lists and the `.CAS`/texture files those name are copied, each block back into
 the file of the same name it came from (which file a set lives in is what it MEANS
-to the engine). A set the SOURCE does not declare is still placeholdered — it is
+to the engine). A set the SOURCE does not declare is still placeholdered - it is
 vanilla's and not ours to move.
 
 Two things about real effect files that the old scanner got wrong, and that any
@@ -380,7 +433,7 @@ the EDB line they came from, so the file is byte-identical to what the old push
 produced. A batch keeps its pick order.
 
 ## Before that (v2.1.5)
-**v2.1.5 IS A SUBRELEASE, same standing as 14j, 2.1.2, 2.1.3 and 2.1.4 — real
+**v2.1.5 IS A SUBRELEASE, same standing as 14j, 2.1.2, 2.1.3 and 2.1.4 - real
 features, not folded into Phase 16 because Phase 16 (the Campaign Map Editor) is
 a different program.** All of it is the modeldb cleanup deciding what is dead,
 and being wrong about it. It came out of a mod that stopped launching after a
@@ -391,13 +444,13 @@ genuinely needs was invisible to the scan.
 `_BATTLE_MODEL_KEYWORD_RE`). The script command that swaps a character's model
 mid-campaign broke both existing patterns at once: the bare-word one never fired
 because the character before `battle_model` is `_` rather than a space or comma,
-and loosening it to fire would have captured `turks` — the faction, because this
+and loosening it to fire would have captured `turks` - the faction, because this
 form puts the model on the END. So the keyword is matched with whatever prefix it
 carries and the prefix decides where the model sits; taking the LAST argument
 rather than the third also keeps a two-argument variant working and reads an
 unknown future `*_battle_model` command as a command instead of ignoring it. An
-entry named only this way is invisible to every other net here — no unit fields
-it, no mount or `descr_character.txt` names it — so it reads as textbook dead
+entry named only this way is invisible to every other net here - no unit fields
+it, no mount or `descr_character.txt` names it - so it reads as textbook dead
 weight. 17 occurrences on Divide and Conquer, naming three models, one of which
 exists nowhere else in the mod.
 
@@ -406,7 +459,7 @@ exists nowhere else in the mod.
 `data/world/maps/campaign/`, which misses a custom campaign (`campaign/custom/<name>/`,
 one folder deeper), a custom battle (`world/maps/battle/custom/<name>/descr_battle.txt`,
 a file kind never opened at all), and an installer's alternate trees (`Activate/`,
-`extra/`) — copies now, the live mod the second somebody runs the mod's own
+`extra/`) - copies now, the live mod the second somebody runs the mod's own
 switcher. The whole mod root is walked instead: 2 campaign files became 15. Each
 is labelled by its path inside the mod, because the parent folder stopped
 identifying a file once those two filenames turned up in six trees.
@@ -421,20 +474,20 @@ answer.
 Every other net answers "may this go?" before anything moves; this answers the
 question that only comes up afterwards, with the game already refusing to launch.
 It cannot be part of the audit and that IS the point: the audit describes the mod
-as it is, and a file that is gone is not in the mod to be described — the only
+as it is, and a file that is gone is not in the mod to be described - the only
 surviving record it ever existed is the cleanup's own log entry. So it reads the
 log, re-derives what each run removed, re-tests all of it against today's nets,
 and says whether a copy survives to put back. Reverts go through the same
 backup-and-log machinery as every other write here, so a wrong revert is itself
-undoable. A run whose backup AND export folder are both gone is still reported —
-the log remembers — but marked unrecoverable, with no button that would fail.
+undoable. A run whose backup AND export folder are both gone is still reported -
+the log remembers - but marked unrecoverable, with no button that would fail.
 A cleanup now also **writes down which entries it removed**, so that stays
 answerable after the backups are gone; older runs are recovered from the export
 folder's `removed_battle_models.modeldb`, or by diffing the backed-up modeldb.
 
 **The mod's other `battle_models.modeldb` files stay ignored, on purpose.**
 `battle_models.modeldb.bak`, `battle_models_og.modeldb`, a working copy under
-`from_modeldb/` — they look like a second opinion about which meshes are alive
+`from_modeldb/` - they look like a second opinion about which meshes are alive
 and are not one: each is a snapshot of an OLDER state of the same file, so
 honouring them would hold alive every file the mod has ever used and no cleanup
 could free anything again. Never read, never token-scanned as text either (a
@@ -444,7 +497,7 @@ Recheck dialog states it on screen, and a test pins it.
 
 **The text scan streams** (`bmdb.unit_model_refs`). Holding a whole file plus a
 lower-cased copy of it is a `MemoryError` on a mod carrying
-`data/sounds/Music.dat` — two gigabytes — and the server returned a 500 with the
+`data/sounds/Music.dat` - two gigabytes - and the server returned a 500 with the
 scan half done. `.dat` was the mistake and is out of `TEXT_SUFFIXES` (in M2TW
 that suffix is the engine's binary containers), but the fix is the scan: a line
 at a time, so no file can double itself whatever its suffix claims, with a
@@ -456,13 +509,13 @@ default browser, for anything driving the UI itself. The "no browser loaded the
 page" warning is suppressed under it, because there that is the expected outcome.
 
 **The release zip has the vanilla building art in it again.** v2.1.1 to v2.1.4
-all shipped WITHOUT `vanilla_ui/` — ~19 MB instead of ~54 MB — so Buildings mode
+all shipped WITHOUT `vanilla_ui/` - ~19 MB instead of ~54 MB - so Buildings mode
 showed a placeholder for every icon a mod doesn't ship its own copy of, which is
 most of them. The cause was that bundling it was an opt-in flag
 (`--with-vanilla-ui`) and it was forgotten four releases running. It now ships by
 default (`BUNDLED_DIRS` in `build_release.py`), a missing `vanilla_ui/` stops the
 build with a `SystemExit` instead of logging a shrug, and `assert_bundled()`
-reads the FINISHED ZIP back and refuses to hand over one without the art —
+reads the FINISHED ZIP back and refuses to hand over one without the art -
 because every earlier step can be right and the artefact still wrong.
 `--no-vanilla-ui` remains for a deliberately slim build; nothing routine passes
 it. **A portable release zip is ~50–55 MB; ~19 MB means the UI is missing.**
@@ -474,11 +527,11 @@ Suite: 68 of 68 modules.
 
 **The one rule that carries the risk in this release:** the recheck is only as
 good as the nets behind it, so a clean verdict must never read as more than it
-is — it means nothing a past cleanup removed is named by anything THIS BUILD
+is - it means nothing a past cleanup removed is named by anything THIS BUILD
 reads. The dialog lists exactly what it read and how much of it, so the verdict
 can be checked rather than believed.
 
-**v2.1.4 IS A SUBRELEASE, same standing as 14j, 2.1.2 and 2.1.3 — real features,
+**v2.1.4 IS A SUBRELEASE, same standing as 14j, 2.1.2 and 2.1.3 - real features,
 not folded into Phase 16 because Phase 16 (the Campaign Map Editor) is a
 different program.** All of it is the tool getting out of the way.
 
@@ -486,7 +539,7 @@ different program.** All of it is the tool getting out of the way.
 than out of the page (`web/js/core.js`, `NAV_LAYERS` / `uiBack`). No recorded
 history is replayed: every layer already knows how to close itself, so a press
 asks the layers innermost-first "are you what is on top?" and the first that says
-yes goes back exactly as its own on-screen button would — a press and a click can
+yes goes back exactly as its own on-screen button would - a press and a click can
 never become two different ways out of one screen. One spare history entry sits
 ahead of the page and each press spends it; a press that closed something puts it
 back. At Home with nothing open the spare is left spent, so a second press leaves
@@ -495,19 +548,19 @@ the page: the tool does not trap you in itself.
 **The four numbers in "City and castle, side by side" are editable on both
 sides**, with **Copy city → castle** under each half. This half's row is already
 in the working copy; the twin's is staged in `work.also` against the EDB line it
-already occupies — an in-place rewrite, not a second copy of the unit — which is
+already occupies - an in-place rewrite, not a second copy of the unit - which is
 why `variant_compare` now sends `cap_line` and `faction` per side (`_pool_side`
 in `unittransfer/buildings.py`). A row that comes into step as you type is not
 pulled out from under the caret.
 
 **Unit cards on disk / Info cards on disk** show each picture at the size the
 slot above shows it, and that slot drops its own picture as soon as there IS a
-list — it was only whichever faction folder resolved first, i.e. a copy of the
+list - it was only whichever faction folder resolved first, i.e. a copy of the
 first row below. It keeps what only it has: the import that fans one picture into
 every faction folder that owns the unit. **The 3D viewer opens closer**: a unit's
 height fills the frame (92% on Gondor Spearmen, up from 48%) instead of a
 horizontal spear deciding how far away the man stands. And **Preview is called
-Probe** everywhere the word is on screen — the word only: function names, CSS
+Probe** everywhere the word is on screen - the word only: function names, CSS
 classes, `/preview_image` and the `model_preview` setting are untouched, and the
 3D viewer's own "3D preview" keeps its name, because it is a picture, not a plan.
 
@@ -515,7 +568,7 @@ classes, `/preview_image` and the `model_preview` setting are untouched, and the
 it.** An attachment texture group's fourth field is the sprite slot, and an
 attachment has no sprite, so it is always the bare `0` that means "no name
 follows". A digit left glued to it by a hand edit (`... .texture 01`) made the
-reader eat the next field and die two lines lower on a word that was fine —
+reader eat the next field and die two lines lower on a word that was fine -
 reported from the wild on Tsardoms MP, entry #333, and now refused AT the
 character with the fix in the sentence (`_Reader.get_attach_sprite`). It refuses
 rather than assuming the 0: the span walkers in `modeldb.py` re-walk the same
@@ -528,11 +581,11 @@ Suite: 68 of 68 modules.
 
 **The one rule that carries the risk in this release:** an edit typed on the
 twin's side is staged by the **EDB line that row already occupies**, so a row the
-panel mirrored a moment ago — which has no line in the file yet — must not
+panel mirrored a moment ago - which has no line in the file yet - must not
 inherit the *other* building's line number. `bldVarTake` clears `cap_line` on the
 copy for exactly that reason, and `tests/test_variant_edits.py` pins it.
 
-**v2.1.3 IS A SUBRELEASE, same standing as 14j and 2.1.2 — real features, not
+**v2.1.3 IS A SUBRELEASE, same standing as 14j and 2.1.2 - real features, not
 folded into Phase 16 because Phase 16 (the Campaign Map Editor) is a different
 program.** It is about disk, and about gaps nothing else can see. BMDB mode goes
 from two tabs to four: **Strat map** (`unittransfer/stratmap.py`,
@@ -543,11 +596,11 @@ dictionaries no unit claims and folds the identical copies into the merc folder
 the engine already falls back to. Together, **700 MB** off Divide and Conquer.
 Beside 🧹 Clean up BMDB there are now **🛡 Fix ownership** and **🌐 All factions**
 (`bmdb.ownership_audit` / `ownership_edits`), which give a model entry a texture
-record for every faction that fields a unit drawn with it — or for every faction
+record for every faction that fields a unit drawn with it - or for every faction
 in the mod. The **3D viewer's divider is draggable** on both docks
 (`core.js` `splitInstall`, width saved per screen), in BMDB mode the panel opens
 at half the window already showing, and an entry that names ONE texture is no
-longer glued to a copy of itself — every ordinary mount. Notes:
+longer glued to a copy of itself - every ordinary mount. Notes:
 `merge/RELEASE_2_1_3.md`. New: `tests/test_stratmap.py` (43),
 `tests/test_cards.py` (39), `tests/test_ownership.py` (41). Suite: 65 of 65
 modules. Committed, pushed, tagged `v2.1.3` and released with the portable zip:
@@ -556,18 +609,18 @@ modules. Committed, pushed, tagged `v2.1.3` and released with the portable zip:
 **Three rules are the whole safety of this release, and two of them came out of
 running a scan against a real mod before writing any UI:**
 
-1. `stratmap`: **`models_strat/residences` is skipped entirely** — the game picks
+1. `stratmap`: **`models_strat/residences` is skipped entirely** - the game picks
    a faction's settlement variant out of that tree by folder, so nothing names
    the file and "nothing names it" would be wrong about all 2,443 of them.
 2. `stratmap`: **`x.tga` / `x.tga.dds` / `x.dds` are ONE texture.** M2TW prefers
    the DDS for a line that says `.tga`. Without this the first run reported
    387 MB of Divide and Conquer's *live* art as unnamed; with it, 54 MB.
 3. `cards`: the merc folder is the fallback for **any** unit, not only
-   mercenaries — which is what makes one copy able to replace thirty. DaC already
+   mercenaries - which is what makes one copy able to replace thirty. DaC already
    keeps 1,181 of its 1,554 unit cards there and nowhere else, and `edu.py`
    `_icon_dirs` has encoded the same rule since long before this. If that ever
    turns out to be wrong for some engine build, cards go blank and 🕑 Log → Undo
-   is the way back — which is why the whole feature moves files rather than
+   is the way back - which is why the whole feature moves files rather than
    deleting them.
 
 `cards.py` refuses three things by design and says so on the page: a file not
@@ -576,17 +629,17 @@ dictionary only a `.lua` script names. `bmdb.ownership_*` refuses a fourth: an
 ownership token the faction roster does not define, since an `ownership` line
 may name a culture.
 
-**v2.1.2 IS A SUBRELEASE, same standing as 14j — real features, not folded
+**v2.1.2 IS A SUBRELEASE, same standing as 14j - real features, not folded
 into Phase 16 because Phase 16 (the Campaign Map Editor) is a different
 program.** Three things: **porting a trait or an ancillary out of another
-installed mod** (`unittransfer/portrecords.py` + `web/js/portui.js`) — the
+installed mod** (`unittransfer/portrecords.py` + `web/js/portui.js`) - the
 block, the triggers that grant it and its text keys, together, because that is
 what a trait or an ancillary actually is; **the M2EX per-mod flag**
 (`unittransfer/modflags.py`) so a mod that runs on it stops being told about
 the five engine ceilings M2EX replaces, while every other check keeps running;
 and **the 3D viewer docked beside the Unit Editor and the BMDB list** instead
 of taking the screen over. Alongside those, a dozen bugs found by using the
-tool — the sharpest was silent: typing a brand-new trait/ancillary/minor-file
+tool - the sharpest was silent: typing a brand-new trait/ancillary/minor-file
 text key and its wording in the same sitting threw the wording away, because
 the words box was bound to the key's value at render time rather than to the
 field itself. Notes: `merge/RELEASE_2_1_2.md`. New: `tests/test_modflags.py`
@@ -594,10 +647,10 @@ field itself. Notes: `merge/RELEASE_2_1_2.md`. New: `tests/test_modflags.py`
 released with the portable zip:
 <https://github.com/ProJ-Yeet/medieval2-gui-toolkit/releases/tag/v2.1.2>
 
-**v2.1.1 was a fix subrelease — no phase, no features.** It came out of one
+**v2.1.1 was a fix subrelease - no phase, no features.** It came out of one
 user's log: a stock install lists the four Kingdoms campaign folders as mods
 (they have a `data/`, their files are inside `data/packs/*.pack`), the header
-auto-picked the first one alphabetically — `americas` — and every read of it
+auto-picked the first one alphabetically - `americas` - and every read of it
 answered HTTP 500 with a traceback. The same log carried a second one: a mod
 whose `battle_models.modeldb` has an entry claiming two textures and listing
 one, which desynced the reader and died 400 characters later on an innocent
@@ -609,18 +662,18 @@ Committed, pushed, tagged `v2.1.1` and released with the portable zip:
 
 The rule that came out of it: **a mod's own missing or damaged file is a
 `ModDataError` and a 409, never a 500.** It subclasses `OSError` *and*
-`ValueError` on purpose — the best-effort guards in `factions`, `minorfiles` and
+`ValueError` on purpose - the best-effort guards in `factions`, `minorfiles` and
 the checks already say `except (OSError, AttributeError, ValueError)`, and a
 plain `Exception` subclass walks straight past all of them.
 
-**PHASE 15 IS COMPLETE — 15a, 15b, 15c and 15d — and v2.1.0 IS PUBLISHED.**
+**PHASE 15 IS COMPLETE - 15a, 15b, 15c and 15d - and v2.1.0 IS PUBLISHED.**
 The 3D model viewer works end to end, is committed, pushed, tagged `v2.1.0` and
 released with the portable zip. Notes: `merge/RELEASE_2_1_0.md`.
 
 **Phase 16 is the Campaign Map Editor**, the flagship, and it gates 3.0.0. Run
-the upstream sync before 16a — `map/` is where he is actively working.
+the upstream sync before 16a - `map/` is where he is actively working.
 
-**PHASE 14 IS COMPLETE — 14a through 14j — and v2.0.1 IS PUBLISHED.**
+**PHASE 14 IS COMPLETE - 14a through 14j - and v2.0.1 IS PUBLISHED.**
 The suite is green: **58 of 58 modules** (15b added `test_viewer3d_http`,
 22 checks after 15c; 15a added `test_mesh`, 38 checks after 15d;
 14j added `test_images`, 53 checks; 14i added `test_variants_and_marks`, 82;
@@ -643,7 +696,7 @@ one down anywhere it is typed fresh.
 asked for it that way: the tag, the version string and the release page all stay
 2.0.0, and `merge/RELEASE_2_0_0.md` carries the new work as a "The correction
 pass" section rather than a changelog of its own. If a future round is asked for
-as a version of its own, that is 2.0.1 — read memory `release-numbering` first.
+as a version of its own, that is 2.0.1 - read memory `release-numbering` first.
 
 **The 2.0.0 numbering overrode a locked decision, on purpose.** The old rule
 reserved 2.0.0 for the Campaign Map Editor; the user was shown the conflict and
@@ -656,19 +709,19 @@ decisions section carries the reasoning; don't re-propose the old rule.
 Phase 15's file set. One `descr_regions` correction came out of the sync and is
 applied. See Upstream below.
 
-### What 15c did — the viewer against the addon
+### What 15c did - the viewer against the addon
 15b's viewer drew models, and drew several of them wrong. Every fault here was
 settled against `Reference/Medieval-2-Toolkit/` (Mylae's Blender addon) and
 against the mods' own bytes, not by eye.
 
 **A model is painted from the two textures GLUED SIDE BY SIDE, and the UVs
 address the pair.** A modeldb entry names a main texture and an attachment
-texture per faction, and the game treats them as **one image twice as wide** —
-main on the left, attachment on the right — which is what the mesh's single UV
+texture per faction, and the game treats them as **one image twice as wide** -
+main on the left, attachment on the right - which is what the mesh's single UV
 set is written against. u 0..1 is the main sheet, u 1..2 is the attachment
 sheet, and the pair **tiles infinitely** outside that.
 
-**15c got the SPACE right and the STORAGE wrong — see 15d.** The file does not
+**15c got the SPACE right and the STORAGE wrong - see 15d.** The file does not
 store `u` in that range: it normalises over the pair (main 0..0.5, attachment
 0.5..1) and IWTE doubles it on the way into Blender. 15c passed the file's own
 `u` through to a shader that halves it again, so every model sampled a squeezed
@@ -684,8 +737,8 @@ are worth keeping because both mistakes are easy to make again:
 
 - **Choosing a sheet per group is wrong**, even though the addon's material
   split (`__main` / `__attach`) makes it look right. One group's art can CROSS
-  the boundary — 124 groups in TATR do, e.g. `mount_eastern_armoured_horse`'s
-  `Body` at u 0.41..1.38 — and any per-group rule has to put the whole of it
+  the boundary - 124 groups in TATR do, e.g. `mount_eastern_armoured_horse`'s
+  `Body` at u 0.41..1.38 - and any per-group rule has to put the whole of it
   on one sheet and be wrong about the rest.
 - **Shifting an attachment group's u by -1 to sample a separate texture is
   also wrong**, for the same reason and because it throws the tiling away.
@@ -694,7 +747,7 @@ are worth keeping because both mistakes are easy to make again:
   free; a per-group shift cannot.
 
 An entry with no attachment sheet, or one the mod does not ship, gets the main
-sheet in both halves — the same fallback the addon's exporter uses for an empty
+sheet in both halves - the same fallback the addon's exporter uses for an empty
 attach slot (`attach_name = plan['attach'][1] or main_name`).
 
 `mesh._classify_sheets` still records `"main"` / `"attach"` / `"both"` per
@@ -704,11 +757,11 @@ the picture. Verified by drawing a model's UV mesh onto the glued pair at
 `u * 0.5`: every triangle lands on its own art, face on face in the left half
 and shoulder cape on cape cloth in the right.
 
-**Models were mirrored — shield arm and sword arm swapped.** M2TW is
+**Models were mirrored - shield arm and sword arm swapped.** M2TW is
 **left-handed** (right +X, up +Y, forward +Z; Direct3D), and 15b handed those
 coordinates straight to a right-handed camera. Measured from the models: a
 horse's head sits at +Z and its tail at -Z, and on a soldier `shield0` sits at
--X with `primaryactive0` at +X — shield in the left hand, weapon in the right,
+-X with `primaryactive0` at +X - shield in the left hand, weapon in the right,
 so the model's own right is +X and a figure facing the camera was showing its
 right side on the viewer's right. `uModel` negates X. For a mirror the
 inverse-transpose normals want is the matrix itself, so `mat3(uModel)` stays.
@@ -718,27 +771,27 @@ mesh has a group type that is IWTE's own unanswered prompt, saved verbatim into
 the file: _"enter a group type: cloak"_ / _"enter a group flag (0 for required,
 1 for optional.)"_. So the first string is the group TYPE, the second is the
 MESH NAME, and the uint32 15b called a variant marker is **required/optional**.
-That is exactly the addon's `objectname__comment__opt` — IWTE joins the two
+That is exactly the addon's `objectname__comment__opt` - IWTE joins the two
 with `__` and appends `__opt` when the flag is 1. The parts panel now folds by
 type (case-folded: nineteen meshes across the two mods spell the same part
 `Arms` and `arms` in ONE file), spells the engine's fixed equipment vocabulary
-out from the addon's `PART_PREFIXES` ("Secondary weapon — drawn", not
+out from the addon's `PART_PREFIXES` ("Secondary weapon - drawn", not
 `secondaryactive0`), tags parts the mesh flags optional, and starts with
-`shieldpassive*` and `secondaryactive*` switched off — the same call the
+`shieldpassive*` and `secondaryactive*` switched off - the same call the
 addon's importer makes in `hideVariations`.
 
 **Randomize variations**, a button at the top of the panel: a variant per part
 and a coin toss on the optional ones, which is what the game does filling a
 unit out of one model.
 
-**The V axis was NOT wrong** — 15b had it right, and this was checked properly
+**The V axis was NOT wrong** - 15b had it right, and this was checked properly
 this time rather than by a luminance heuristic: drawing the head groups' UV
 boxes on a Lossarnach noble's sheet puts them exactly on the faces painted
 along the sheet's TOP edge (v 0.00..0.10), and the same for every body and
 skirt group. `v=0` is the top. Flipped, the model renders as garbage.
 
 **The backdrop is an environment, not a flat near-black.** One `v3Env()`
-function — sky above, warm ground below, a bright band at the horizon — paints
+function - sky above, warm ground below, a bright band at the horizon - paints
 the background AND lights the model, which is the part of an HDRI that matters
 for an inspection viewer without shipping a megabyte of `.hdr` and a decoder.
 Plus a mid-tone curve, because unit art is sRGB and a linear multiply of 0.5
@@ -747,14 +800,14 @@ of silhouettes. **Turntable is now "Rotate" and starts OFF.**
 
 `test_viewer3d_http` is 22/22 (the payload now has to say which sheet each
 group draws from and whether it is optional); `test_mesh` was 34/34 here, with
-its UV assertion widened from `[0,1]` to the two u tiles — which passed
+its UV assertion widened from `[0,1]` to the two u tiles - which passed
 vacuously, because nothing was reaching the second tile yet. 15d is what made
 that assertion bite.
 
-### What 15d did — two decode bugs the user caught in Blender
+### What 15d did - two decode bugs the user caught in Blender
 Both were found the same way and it is the way to find the next one: the user
 opened the same models in Blender through Mylae's addon and put its picture
-beside the viewer's. Neither bug was visible as "broken" — both looked like a
+beside the viewer's. Neither bug was visible as "broken" - both looked like a
 viewer that sort of worked.
 
 **The UVs were squeezed into one sheet, and every part wore the wrong art.**
@@ -762,11 +815,11 @@ The file normalises `u` over the two-sheet PAIR: main is 0..0.5, attachment is
 0.5..1, tiling with period 1. Everyone downstream of IWTE speaks the DOUBLED
 version of that (main 0..1, attachment 1..2), which is the space the addon
 enforces in `export_checks.checkUVSpace` and the space 15c wrote the viewer
-against — so the file's own `u` met the shader's `u * 0.5` and halved twice.
+against - so the file's own `u` met the shader's `u * 0.5` and halved twice.
 `mesh._read_streams` doubles `u` on read, so everything this tool hands out is
 in the addon's space and nothing else had to change. Measured before believing
 it: across 900 TATR models, **1,092 of the 1,179 weapon and shield groups sit
-in u 0.5..1** — the half an attachment sheet exists for — with bodies, heads
+in u 0.5..1** - the half an attachment sheet exists for - with bodies, heads
 and beards packed into 0..0.5. Verified by drawing each group's triangles onto
 the glued pair: face on face, scabbard on scabbard.
 
@@ -776,21 +829,21 @@ sheet" / "both sheets" tags only started telling the truth here.
 
 **The packed normals are `D3DCOLOR`, not signed bytes.** Unsigned, biased around
 127.5 (`b / 255 * 2 - 1`), stored **z-y-x** with a pad byte last. Read as signed
-bytes over 127 in x-y-z order — 15a's guess, and the obvious one — the vectors
+bytes over 127 in x-y-z order - 15a's guess, and the obvious one - the vectors
 come back 0.74..1.43 long with **half of them pointing away from their own
 faces** (mean dot -0.11). That is what the dark blotches and hard seams were.
 Decoded properly: unit length to within 0.004, mean dot **+0.897** against the
 face normals computed from the positions, 4 of 6,783 opposed.
 
 `test_mesh`'s normal-length bound was **0.9..1.2, which the broken decode passed
-at 1.08** — it is 0.98..1.02 now. Also added: the reference horse must use both
+at 1.08** - it is 0.98..1.02 now. Also added: the reference horse must use both
 u tiles (catches forgetting to double, and doubling twice), and its saddle must
 classify `main`, its rear barding cloth `attach`, its body `both`.
 
 **The lesson for the next format bug:** a plausible decode that renders
 something is the dangerous case. Both of these were settled by measuring the
-decode against a second source — the face normals the positions imply, and the
-addon's own UV convention — not by looking at the canvas.
+decode against a second source - the face normals the positions imply, and the
+addon's own UV convention - not by looking at the canvas.
 
 ### What 15b did
 **`web/js/viewer3d.js` draws the model, in plain WebGL, with no library.** The
@@ -799,13 +852,13 @@ shader, an orbit camera and a texture bind, and 600 KB of someone else's dist/
 in a project whose whole point is that it has no build step is a bad trade.
 About 400 lines, and the only maths in it is perspective and look-at.
 
-**Three routes, all in `server._model_route`:** `/api/model` (the picker — LODs
+**Three routes, all in `server._model_route`:** `/api/model` (the picker - LODs
 and skins, and which of them the mod actually ships), `/api/model/geometry`
 (one LOD as a binary payload) and `/model_texture` (one skin as a PNG).
 
 **The geometry goes over as ONE binary blob, not JSON.** `mesh.geometry_payload`
 writes `"M2GT"`, a JSON header for the structure, then the arrays raw, padded so
-the floats stay 4-byte aligned — the page views each one in place with no copy
+the floats stay 4-byte aligned - the page views each one in place with no copy
 and no parse. JSON would have been about six times the bytes.
 
 **Two real bugs were found by looking at pixels rather than at the screen**, and
@@ -817,7 +870,7 @@ both would have shipped as "the viewer sort of works":
   Measured by sampling the texture at the mesh's own UVs: mean luminance 48
   against 16, pure black 2% against 62%.
 - **The camera orbited the wrong axis.** I had assumed Z-up. **Models are
-  Y-up** — across six DaC soldiers the `Head` group's centroid sits ~1.4 above
+  Y-up** - across six DaC soldiers the `Head` group's centroid sits ~1.4 above
   the `Legs` group's in Y and level in X and Z. Orbiting Z lays every man in
   the game on his side. Now written into `mesh.py`'s docstring so nobody
   re-derives it.
@@ -825,13 +878,13 @@ both would have shipped as "the viewer sort of works":
 **The variant problem is the thing that makes this UI worth having.** A model
 carries several heads, helmets and shields and the game picks one per soldier;
 drawing them all puts nine helmets on one orc. `gundabad_pale_uruk_new2` has 27
-groups and the viewer draws **12** — one per part, the rest offered in
+groups and the viewer draws **12** - one per part, the rest offered in
 drop-downs. Verified in the browser against the real DOM.
 
 **Skins are deduplicated rather than listed per faction** (`mesh.entry_view`).
 Entries routinely list 29 factions against one texture; 29 identical rows told
 you nothing. One row per distinct skin, labelled "portugal (Remnants of Angmar)
-+28 more". _15c changed what a "skin" is — see below._
++28 more". _15c changed what a "skin" is - see below._
 
 **`icons.py` grew two things** both of which everything else can now use:
 `.texture` files unwrap to DDS through `sprites.texture_to_dds` before Pillow
@@ -853,28 +906,28 @@ name. `probe(path)` tells a `.mesh` from a `.cas` without decoding either.
 the files instead.** There is no loader to port: the Blender addon in
 `Reference/Medieval-2-Toolkit/` never parses a model, it writes an IWTE task
 file and shells out to `IWTE.exe` (`tasks/iwte_run.py`). And upstream's
-`src/lib/casCodec.js` — the "port-concept" entry in the manifest — documents
+`src/lib/casCodec.js` - the "port-concept" entry in the manifest - documents
 `.mesh` as "uint32 version, uint32 submesh count, 32-byte vertices", which
 matches no real file and cannot parse one. **A `.mesh` is a
 boost::serialization binary archive**, which is why: boost writes a class
 descriptor the first time it meets a type and only the class id afterwards, so
 the same record is two bytes longer on its first appearance and no fixed-stride
-reader can work. The format is written up in full at the top of `mesh.py` —
-group table, the eleven vertex stream types with their strides, the bone table —
+reader can work. The format is written up in full at the top of `mesh.py` -
+group table, the eleven vertex stream types with their strides, the bone table -
 and that docstring is the spec now, because nothing else is.
 
 **What proves it: reaching the bone table.** One wrong stride anywhere before it
 puts the table outside the short window it is looked for in, and the count read
 there lands on nonsense. **4,700 of the 4,702 `.mesh` files in the two test mods
-decode** — every unit model, mount, settlement piece and siege engine in Divide
-and Conquer (3,500 of 3,500) and Third Age Reforged (1,200 of 1,202) — plus the
+decode** - every unit model, mount, settlement piece and siege engine in Divide
+and Conquer (3,500 of 3,500) and Third Age Reforged (1,200 of 1,202) - plus the
 seven reference templates. The two exceptions are sky domes that hold SEVERAL
 models one after another; they are refused by name rather than half-read.
 
 **There are two vertex formats, and finding the second one cost the most time.**
 A skinned model (soldiers, mounts, settlements) packs normal, tangent and
 binormal into three signed bytes and a pad; a static one (siege engines, sky
-domes) writes them as three floats — same stream type numbers, four bytes a
+domes) writes them as three floats - same stream type numbers, four bytes a
 vertex against twelve. The archive header is four words in the first and three
 in the second. Neither is announced anywhere, so `_read_header` and
 `_resolve_stride` both try the alternatives and keep whichever leaves the rest
@@ -889,7 +942,7 @@ draws is inside it.
 
 **`.cas` was asked for and did not land, and that was the agreed fallback.**
 `probe` identifies one and `read_mesh` refuses it by name, but there is no `.cas`
-geometry reader. It is not a variant of `.mesh` — it opens with the float `3.2`
+geometry reader. It is not a variant of `.mesh` - it opens with the float `3.2`
 and is a whole 3ds-max scene export: frame rate, key times, a node hierarchy
 (`Scene Root`, then bones), animation tracks, then the mesh, then the material,
 with `textures\…\.tga` in the last 60 bytes. That is a second job the size this
@@ -898,15 +951,15 @@ preview. The reconnaissance is written down at the bottom of `mesh.py` so 16e
 starts from something.
 
 **For 15b:** the geometry is renderer-ready as it stands. Indices are GLOBAL
-into one pool, so a group is a face range, not a mesh of its own — draw the pool
+into one pool, so a group is a face range, not a mesh of its own - draw the pool
 once and issue one index range per group. Several groups share a group TYPE
 (`Body`/`horse_body_01`, `_02`, `_03`) and are variants of one part, and drawing
 all of them at once stacks three heads on one soldier: pick one variant per part.
-`MeshGroup.flag` is not that — 15c showed it is required/optional — and
+`MeshGroup.flag` is not that - 15c showed it is required/optional - and
 `MeshGroup.sheets` LABELS which of the entry's two textures a group's art
 lands on, without being a rendering instruction: the two are glued into one
 image and the UVs pick by themselves.
-Textures need no new code — `sprites.texture_to_dds()` then Pillow reads DXT1,
+Textures need no new code - `sprites.texture_to_dds()` then Pillow reads DXT1,
 DXT3 and DXT5 out of a real `.texture` at 1024² and 2048², which is the whole
 texture path. `tools/meshdump.py` is the debugging tool: `--sweep <folder>` over
 a mod, `--raw <file>` on one that will not open.
@@ -917,7 +970,7 @@ The list that came back from actually using 2.0.0. Ten items, no new direction.
 **Two of them were real defects with a single cause each.** "Open file location"
 opened Documents, every time, for everyone: `explorer /select,<path>` was passed
 as an argument LIST, and `subprocess.list2cmdline` quotes the whole
-`/select,C:\…` token the moment the path has a space in it — Explorer then fails
+`/select,C:\…` token the moment the path has a space in it - Explorer then fails
 to parse the switch and falls back to the default folder. Every real mod path has
 a space in it. It is one command STRING now, with the path quoted inside the
 switch. And Ctrl+Z did nothing in the Code View, because undo.js takes the
@@ -927,7 +980,7 @@ editor so undo walks out of the text and into the form.
 
 **The freeze report was `bldRenderBody` throwing on a null.** Every panel that
 takes the dialog over leaves `#bldBody` out of the document, and the throw came
-out of an onclick — so it killed that click and everything after it. `bldTouched`
+out of an onclick - so it killed that click and everything after it. `bldTouched`
 now returns early for any stashed panel, `bldRenderBody` returns early with no
 body at all, and the stale-`state.bld` paths around the settlement filter, the
 level list and the faction picker are closed with it.
@@ -955,7 +1008,7 @@ could be swapped: the unit card, through the editor's own staged import.
 
 **What made it small is that the page hands back the `<img>`'s own `src`.**
 Every picture on every screen is painted through `/icon` or `/building_icon`,
-and that URL is a complete description of the question the server answered — so
+and that URL is a complete description of the question the server answered - so
 one engine (`unittransfer/images.py`) and one dialog (`web/js/images.js`) cover
 unit cards, info cards, ancillary pictures, faction art, the Minor Files pips
 and settlement cards, and building icons.
@@ -974,21 +1027,21 @@ game looks it up under the *player's* faction folder.
 
 **Borrowed art creates rather than overwrites.** A building icon or ancillary
 picture the mod does not own is served out of the vanilla UI, so a replacement
-writes the mod's *first* copy at the path the game looks for — which is the
+writes the mod's *first* copy at the path the game looks for - which is the
 "drop a .tga in to override it" the building browser had only ever said in a
 tooltip.
 
 New server surface: `POST /api/image/plan | /replace | /reveal`. The write goes
 through the same backup + log record as every other job, so it is in the log and
 undoes like a transfer. `tests/test_images.py`, 53 checks, builds its own folder
-of pictures — only the fan-out section needs a mod installed.
+of pictures - only the fan-out section needs a mod installed.
 
 ### What 14f did
 The unit view was already the screen that gathered every building line training
 one unit; what it could not do was any of the things you go there to do.
 Requires is editable from the unit's side now, through the same dialog and into
 the same save. A **Twin** column says whether the city/castle counterpart trains
-the unit **at the facing tier**, with a `⇄` that stages the pool across —
+the unit **at the facing tier**, with a `⇄` that stages the pool across -
 **239 rows in DaC diverge and none in Reforged do**, which is what makes the
 column worth its width. The panel got a **read-only Code View**, the three
 recruitment numbers got **names** (Immediate recruitment, Replenish rate, Max
@@ -997,43 +1050,44 @@ finally shows the pips, icons and cards it had only ever shown as file paths.
 
 Two bugs in shared machinery came out of it, both ours: `bldTouched()` re-drew a
 form that was not on screen, and the clause dialog shared one stash slot with
-the unit view that can open it — so a clause edit wiped the building editor
+the unit view that can open it - so a clause edit wiped the building editor
 underneath. Both fixed; see ROADMAP.md's 14f outcome.
 
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
-| 15i — the model beside a transfer, art beside a pool | **done** | **v2.1.10.** The 3D column docks into the transfer composer (`transfer.js` `cmpPrev*`, `#cmpSplit`), listing the source unit's battle-model entries AND the base/replaced unit's out of the destination mod, grouped by mod and drawn from it — the third `v3Mount` host, same detach-across-render / one-viewer / fold-pauses rules as the editor's. Entries come off the unit LIST's fields, with the `armour_ug_models` rule and men-before-officers ordering. The Recruitment tab's rows and its ＋ picker carry the tier's art, keyed by the pool's OWN `requires` through `ov.faction_cultures`, with a new opt-in `any_culture` sweep in `buildings.find_icon` (`&any=1`) for the levels a mod draws for one culture only — OFF for the building browser, which is showing one culture on purpose. Row layout re-cut as two halves: tier against the name, `requires` right-aligned on its own line, and the header finally aligned with the boxes it names. `test_buildings` §11 + `test_buildings_http`; 72 of 72 modules |
-| 15h — recruitment on the unit, UV layout | **done** | **v2.1.9.** `web/js/edrecruit.js` (new) — a Recruitment tab in the unit editor listing every building line that trains it, with the four pool numbers, the `requires` clause, a delete and a ＋ that adds the unit to any line and tier. **No Python**: `buildings.unit_instances` reads and `buildings.plan_edit` writes, so this is a second FRONT rather than a second implementation. The one new request shape is `also`-only — every edit in `also`, the body carrying a line name and no levels — which is also what makes `_check_recruit_limit` merge the file instead of counting three rows as a level. The clause dialog is borrowed with `kind:'edrec'`, which re-renders the editor instead of unstashing markup, because the modal holds a live WebGL column. `?building=&lvl=&unit=` opens a building in its own tab, on the tier, with the unit’s rows flashed. A save now moves EDB line numbers, so a building left open behind the editor drops its working copy and `backToBuilding` re-reads it. `test_unit_recruitment` 42/42; verified in-browser, three pools over two lines written and undone byte-exact. Plus the viewer’s **UV layout** and the mount-texture bug it found |
-| 15g — add a faction, viewer UV mode | **done** | **v2.1.8.** `unittransfer/factionclone.py` (new) + `/api/factions/clone_plan\|clone_apply` + the **＋ Add a faction** dialog in `web/js/factions.js`. Clones a donor into all **twelve** files that name a slot — nine plus `export_descr_buildings` (the `requires factions { … }` clauses that let it build and recruit), `descr_sounds_accents` and `descr_faction_standing`, found by grepping the mods rather than trusting phase 11's unmeasured "nine" — plus convention-named art (`ui`/`menu`/`banners`), one transfer id for the lot. Three more files name the donor as a *judgement* (a trait named after it, an ancillary's `FactionType` operand, a prebattle speech) and are counted and reported, never appended to. Phase 11's "no create" refusal is retired; **delete stays refused** — a clone copies the donor's answer, a delete would have to invent one. `descr_strat` is reported, never written: two factions cannot start in the same settlement. Four bugs the tests caught — the mods are **CRLF** and `$` sits after the `\r` (three cloners matched nothing, two ate the `\r`); `_` is a word character in a data file and a **separator** in a text key (one boundary found 1 of 61 keys); `add_texture_factions` takes **one entry's** raw text, not the file; and a file may spell the same list two ways (`descr_faction_standing` writes `factions { … }` *and* `exclude_factions { … }`, and DaC has none of the second). `test_factionclone` 64/64 (real mods, read-only), `test_factionclone_apply` 30/30 (synthetic mod, written then undone byte-exact). Viewer **Show UVs**: paints the coordinate in the sampler's own space, 32 cells/sheet because real parts span 0.07–0.33 of u |
-| 15e — port, M2EX, docked viewer | **done** | **v2.1.2.** `unittransfer/portrecords.py` + `web/js/portui.js`: copy a trait/ancillary between installed mods (block + triggers + text keys, one job); `unittransfer/modflags.py`: per-mod M2EX flag drops only the five engine-ceiling finding kinds, everything else still checked; the 3D viewer (`v3Mount`/`v3Unmount`) docks beside the Unit Editor and BMDB list instead of taking the modal over. Plus a dozen fixes, the sharpest being a silent one: a brand-new text key's wording was discarded if typed in the same sitting as the key (Traits/Ancillaries/Minor Files), because the words box was bound to the key's value at render time rather than to the field. `test_modflags` 18/18, `test_port` 50/50 |
+| 15j - resizable panels, the strings warning, no em dashes | **done** | **v2.1.11.** `rsz*` in `core.js`: `resize:vertical` on every scroll box the stylesheet declares (found by reading `document.styleSheets`, 31 selectors, `.wpop` and `.modal` skipped), `resize:both` on `#modal`, a `.drawergrip` bar on the right-pinned drawer, sizes in `pane_sizes` on `/api/settings`. The two real problems are `max-height` outranking a dragged `height` (cleared on capture-phase `mousedown` at the corner) and wholesale re-renders throwing the result away (a `MutationObserver`, coalesced on `setTimeout` rather than `requestAnimationFrame`, because an occluded window gets no frames). Nothing is pinned until it is dragged. Plus the strings list's stale-`.txt` warning rewritten with a `qm()` card, and 4176 em dashes swept out of 171 files with `ANY_EM` added to `prose_check` to keep them out. `test_web_modules` 10/10; verified in-browser (pin, save, survive re-render, reopen at the saved size, double-click reset) |
+| 15i - the model beside a transfer, art beside a pool | **done** | **v2.1.10.** The 3D column docks into the transfer composer (`transfer.js` `cmpPrev*`, `#cmpSplit`), listing the source unit's battle-model entries AND the base/replaced unit's out of the destination mod, grouped by mod and drawn from it - the third `v3Mount` host, same detach-across-render / one-viewer / fold-pauses rules as the editor's. Entries come off the unit LIST's fields, with the `armour_ug_models` rule and men-before-officers ordering. The Recruitment tab's rows and its ＋ picker carry the tier's art, keyed by the pool's OWN `requires` through `ov.faction_cultures`, with a new opt-in `any_culture` sweep in `buildings.find_icon` (`&any=1`) for the levels a mod draws for one culture only - OFF for the building browser, which is showing one culture on purpose. Row layout re-cut as two halves: tier against the name, `requires` right-aligned on its own line, and the header finally aligned with the boxes it names. `test_buildings` §11 + `test_buildings_http`; 72 of 72 modules |
+| 15h - recruitment on the unit, UV layout | **done** | **v2.1.9.** `web/js/edrecruit.js` (new) - a Recruitment tab in the unit editor listing every building line that trains it, with the four pool numbers, the `requires` clause, a delete and a ＋ that adds the unit to any line and tier. **No Python**: `buildings.unit_instances` reads and `buildings.plan_edit` writes, so this is a second FRONT rather than a second implementation. The one new request shape is `also`-only - every edit in `also`, the body carrying a line name and no levels - which is also what makes `_check_recruit_limit` merge the file instead of counting three rows as a level. The clause dialog is borrowed with `kind:'edrec'`, which re-renders the editor instead of unstashing markup, because the modal holds a live WebGL column. `?building=&lvl=&unit=` opens a building in its own tab, on the tier, with the unit’s rows flashed. A save now moves EDB line numbers, so a building left open behind the editor drops its working copy and `backToBuilding` re-reads it. `test_unit_recruitment` 42/42; verified in-browser, three pools over two lines written and undone byte-exact. Plus the viewer’s **UV layout** and the mount-texture bug it found |
+| 15g - add a faction, viewer UV mode | **done** | **v2.1.8.** `unittransfer/factionclone.py` (new) + `/api/factions/clone_plan\|clone_apply` + the **＋ Add a faction** dialog in `web/js/factions.js`. Clones a donor into all **twelve** files that name a slot - nine plus `export_descr_buildings` (the `requires factions { … }` clauses that let it build and recruit), `descr_sounds_accents` and `descr_faction_standing`, found by grepping the mods rather than trusting phase 11's unmeasured "nine" - plus convention-named art (`ui`/`menu`/`banners`), one transfer id for the lot. Three more files name the donor as a *judgement* (a trait named after it, an ancillary's `FactionType` operand, a prebattle speech) and are counted and reported, never appended to. Phase 11's "no create" refusal is retired; **delete stays refused** - a clone copies the donor's answer, a delete would have to invent one. `descr_strat` is reported, never written: two factions cannot start in the same settlement. Four bugs the tests caught - the mods are **CRLF** and `$` sits after the `\r` (three cloners matched nothing, two ate the `\r`); `_` is a word character in a data file and a **separator** in a text key (one boundary found 1 of 61 keys); `add_texture_factions` takes **one entry's** raw text, not the file; and a file may spell the same list two ways (`descr_faction_standing` writes `factions { … }` *and* `exclude_factions { … }`, and DaC has none of the second). `test_factionclone` 64/64 (real mods, read-only), `test_factionclone_apply` 30/30 (synthetic mod, written then undone byte-exact). Viewer **Show UVs**: paints the coordinate in the sampler's own space, 32 cells/sheet because real parts span 0.07–0.33 of u |
+| 15e - port, M2EX, docked viewer | **done** | **v2.1.2.** `unittransfer/portrecords.py` + `web/js/portui.js`: copy a trait/ancillary between installed mods (block + triggers + text keys, one job); `unittransfer/modflags.py`: per-mod M2EX flag drops only the five engine-ceiling finding kinds, everything else still checked; the 3D viewer (`v3Mount`/`v3Unmount`) docks beside the Unit Editor and BMDB list instead of taking the modal over. Plus a dozen fixes, the sharpest being a silent one: a brand-new text key's wording was discarded if typed in the same sitting as the key (Traits/Ancillaries/Minor Files), because the words box was bound to the key's value at render time rather than to the field. `test_modflags` 18/18, `test_port` 50/50 |
 | 0–12 | done | see ROADMAP.md for each phase's exit criteria |
 | UX correction pass | done | 17 of 18 items; the 18th (prose sweep) is now finished |
 | Prose sweep | done | 19 note blocks in `buildings/transfer/editor/sprites.js` rewritten as lead + points via a shared `docPoints()` in core.js |
-| 13 — EDU + Sounds audit | done | `merge/audit-edu-sounds.md`; measured over 1756 real units; **nothing adopted from their code**, banners rederived from the mod's own file, two silent rewrites of ours fixed |
+| 13 - EDU + Sounds audit | done | `merge/audit-edu-sounds.md`; measured over 1756 real units; **nothing adopted from their code**, banners rederived from the mod's own file, two silent rewrites of ours fixed |
 | EDB corpus follow-up | done | `#` annotation lines no longer read as capabilities (3 parsers + regression case); the `plugins` and upgrade-clause sweeps no longer depend on which mods are installed; `merge/audit-edb.md` corrected |
-| 15a — the model decoder | **done** | `unittransfer/mesh.py` + `tools/meshdump.py`. A `.mesh` is a **boost::serialization archive**, reverse-engineered from the files: neither the Blender addon (it shells out to IWTE) nor upstream's `casCodec.js` (its spec matches no real file) could be ported. **4,700 of 4,702 models decode** (the 2 are multi-model sky domes, refused by name), proven by reaching the bone table. Two vertex formats: skinned packs normals to bytes, static writes floats. `.cas` NOT decoded — a whole 3ds-max scene format, handed to 16e. `test_mesh` 34/34 |
-| 15b — the viewer | **done** | `web/js/viewer3d.js`, hand-rolled WebGL (no three.js, user's call). `/api/model`, `/api/model/geometry` (binary payload, not JSON), `/model_texture`. **View model** on the shared model card. Parts, variant pickers, skins, LODs. Models are **Y-up**, not Z-up — caught by measuring group centroids. `test_viewer3d_http` 21/21 |
-| 15c — the viewer against the addon | **done** | Four faults, all settled against Mylae's Blender addon and the mods' bytes. The main and attachment textures are **glued side by side into one image** and the UVs address the pair — sample at `u * 0.5` with REPEAT, never choose a sheet per group (124 groups straddle the boundary) and never normalise into 0..1 (112 groups have u < 0, 268 have v outside 0..1). Models were **mirrored** — M2TW is left-handed, so `uModel` negates X. The two group strings are **type** and **mesh name** and the uint32 is **required/optional**, proven by an IWTE prompt left in a TATR mesh; parts fold by type with the addon's equipment vocabulary. Procedural-HDRI backdrop and lighting, **Randomize variations**, Turntable renamed **Rotate** and off by default. The V axis was already right. `test_viewer3d_http` 22/22 |
-| 14 — bug-fix and polish pass | **done** | 14a–14j |
-| 14j — replace any picture | done | **v2.0.1.** `unittransfer/images.py` + `web/js/images.js`; `POST /api/image/plan\|replace\|reveal`. Right-click any image anywhere, or the ✎ where a picture is the subject. Resolution mismatch warned (never refused), `.png` → `.tga`, unit cards fanned out to every faction folder, borrowed vanilla art creating the mod's first copy. `test_images` 53/53 |
-| 14i — the post-release correction pass | done | repo renamed to `medieval2-gui-toolkit`; Code View Ctrl+Z/Y; folding sidebars; "Open file location" fixed (Explorer arg quoting); ＋ on tier Variant; Abilities folded into **Weapons & abilities**; editable banner format + the ordering screen as a unit list with tier/variant/**classification**; **⇄ Compare city / castle** (`/api/buildings/variants`); **Initial Pool / Replenish Rate / Max Pool** everywhere; two-line recruit rows; building Code View follows field edits; faction sort as a toggle; unit cards on voice rows; ~300 em dashes → 0. Folded into the 2.0.0 release notes, not a new version |
-| 14f — EDB unit view, twin compare | done | Requires editable from the unit side, a per-TIER **Twin** column (239 divergences in DaC, 0 in Reforged) with `⇄` to close one, a read-only `pools` code view, the recruitment numbers named, BMDB → **BMDB + Sprites Editor**, Minor Files art. Two shared-machinery bugs fixed. `test_unit_view` 25/25 |
-| 14g — the second prose sweep | done | 21 clause-joining dashes → **0**, four documented keeps. 6 of the old 115 hits' causes were defects in `tools/prose_check.py` itself, not in the writing |
-| 14e — EDU cleanup and unit tiers | done | `unittransfer/edusort.py` + the `;@m2gt` marker in `edu.py`. Tiers are READ from the mod's own banners (907 of DaC's 916 sit under one). DaC: 15% of the roster moves, and a second run is byte-identical. `test_edusort` 56/56 |
+| 15a - the model decoder | **done** | `unittransfer/mesh.py` + `tools/meshdump.py`. A `.mesh` is a **boost::serialization archive**, reverse-engineered from the files: neither the Blender addon (it shells out to IWTE) nor upstream's `casCodec.js` (its spec matches no real file) could be ported. **4,700 of 4,702 models decode** (the 2 are multi-model sky domes, refused by name), proven by reaching the bone table. Two vertex formats: skinned packs normals to bytes, static writes floats. `.cas` NOT decoded - a whole 3ds-max scene format, handed to 16e. `test_mesh` 34/34 |
+| 15b - the viewer | **done** | `web/js/viewer3d.js`, hand-rolled WebGL (no three.js, user's call). `/api/model`, `/api/model/geometry` (binary payload, not JSON), `/model_texture`. **View model** on the shared model card. Parts, variant pickers, skins, LODs. Models are **Y-up**, not Z-up - caught by measuring group centroids. `test_viewer3d_http` 21/21 |
+| 15c - the viewer against the addon | **done** | Four faults, all settled against Mylae's Blender addon and the mods' bytes. The main and attachment textures are **glued side by side into one image** and the UVs address the pair - sample at `u * 0.5` with REPEAT, never choose a sheet per group (124 groups straddle the boundary) and never normalise into 0..1 (112 groups have u < 0, 268 have v outside 0..1). Models were **mirrored** - M2TW is left-handed, so `uModel` negates X. The two group strings are **type** and **mesh name** and the uint32 is **required/optional**, proven by an IWTE prompt left in a TATR mesh; parts fold by type with the addon's equipment vocabulary. Procedural-HDRI backdrop and lighting, **Randomize variations**, Turntable renamed **Rotate** and off by default. The V axis was already right. `test_viewer3d_http` 22/22 |
+| 14 - bug-fix and polish pass | **done** | 14a–14j |
+| 14j - replace any picture | done | **v2.0.1.** `unittransfer/images.py` + `web/js/images.js`; `POST /api/image/plan\|replace\|reveal`. Right-click any image anywhere, or the ✎ where a picture is the subject. Resolution mismatch warned (never refused), `.png` → `.tga`, unit cards fanned out to every faction folder, borrowed vanilla art creating the mod's first copy. `test_images` 53/53 |
+| 14i - the post-release correction pass | done | repo renamed to `medieval2-gui-toolkit`; Code View Ctrl+Z/Y; folding sidebars; "Open file location" fixed (Explorer arg quoting); ＋ on tier Variant; Abilities folded into **Weapons & abilities**; editable banner format + the ordering screen as a unit list with tier/variant/**classification**; **⇄ Compare city / castle** (`/api/buildings/variants`); **Initial Pool / Replenish Rate / Max Pool** everywhere; two-line recruit rows; building Code View follows field edits; faction sort as a toggle; unit cards on voice rows; ~300 em dashes → 0. Folded into the 2.0.0 release notes, not a new version |
+| 14f - EDB unit view, twin compare | done | Requires editable from the unit side, a per-TIER **Twin** column (239 divergences in DaC, 0 in Reforged) with `⇄` to close one, a read-only `pools` code view, the recruitment numbers named, BMDB → **BMDB + Sprites Editor**, Minor Files art. Two shared-machinery bugs fixed. `test_unit_view` 25/25 |
+| 14g - the second prose sweep | done | 21 clause-joining dashes → **0**, four documented keeps. 6 of the old 115 hits' causes were defects in `tools/prose_check.py` itself, not in the writing |
+| 14e - EDU cleanup and unit tiers | done | `unittransfer/edusort.py` + the `;@m2gt` marker in `edu.py`. Tiers are READ from the mod's own banners (907 of DaC's 916 sit under one). DaC: 15% of the roster moves, and a second run is byte-identical. `test_edusort` 56/56 |
 | Release check (14h) | done | `merge/audit-codebase-2.md`. A BOM cost the EDU and factions parsers their first record SILENTLY (DaC really lost a faction); mixed line endings no longer normalised; cache invalidation derived from `Mod`; the 56 "missing ancillary picture" findings were ours, not the mod's; three suites that could not run, run. **52/52 green.** |
-| 14a — loading, switching, Transfer | done | one bug, four masks: the watchdog was killing a live server. Cache out of OneDrive, any request counts as liveness, 224k globs and a per-request folder scan gone, abort + generation on every load, loading bar. `test_liveness_and_cache` 21/21 |
-| 14c — launcher, Home, prose | done | launcher exit code 2 + no more guessing, restart-in-place for the console setting, `port_free` asks by binding, Home steps 1 and 3. Its prose item became **14g**, now finished. `test_startup` 48/48 |
-| 14d — guided view + Code View | done | seven paired rows, tidy on open without making the dialog dirty, the sticky bug (it was `align-items:start`, not sticky), comment hiding as a hide/show PAIR so nothing is lost, raw lines side by side to 1 px, "Open file location", the dead click on the card, folding headings + an Era group-by. `test_codeview` 141/141 |
-| 14b — log and undo/redo | done | log paging (571 ms → 51 ms, 1.1 MB → 29 KB), mode filter, diagnostic button moved in, Ctrl+Z/Ctrl+Y wired for the five editors that never had a scope, and the log now records what the user did beside what the tool did. `test_log_and_activity` 26/26 |
+| 14a - loading, switching, Transfer | done | one bug, four masks: the watchdog was killing a live server. Cache out of OneDrive, any request counts as liveness, 224k globs and a per-request folder scan gone, abort + generation on every load, loading bar. `test_liveness_and_cache` 21/21 |
+| 14c - launcher, Home, prose | done | launcher exit code 2 + no more guessing, restart-in-place for the console setting, `port_free` asks by binding, Home steps 1 and 3. Its prose item became **14g**, now finished. `test_startup` 48/48 |
+| 14d - guided view + Code View | done | seven paired rows, tidy on open without making the dialog dirty, the sticky bug (it was `align-items:start`, not sticky), comment hiding as a hide/show PAIR so nothing is lost, raw lines side by side to 1 px, "Open file location", the dead click on the card, folding headings + an Era group-by. `test_codeview` 141/141 |
+| 14b - log and undo/redo | done | log paging (571 ms → 51 ms, 1.1 MB → 29 KB), mode filter, diagnostic button moved in, Ctrl+Z/Ctrl+Y wired for the five editors that never had a scope, and the log now records what the user did beside what the tool did. `test_log_and_activity` 26/26 |
 
 ## In-progress detail
 Clean. 14a, 14b, 14d and 14e are finished and verified in a running browser;
 14c is part-done. Phases 0–13, both passes, 14a, 14b, 14d and 14e are in the
 working tree, **not committed or released**.
 
-**The EDU cleanup is the widest single write in the toolkit** — it rewrites
-every block of a 35 000-line file — so `edusort.plan` refuses to hand over a
+**The EDU cleanup is the widest single write in the toolkit** - it rewrites
+every block of a 35 000-line file - so `edusort.plan` refuses to hand over a
 text that is not purely a reordering: same units, same fields, every comment
 still present, checked before a byte reaches disk. Measured on both mods: DaC
 916 units / 15% moved, Reforged 427 / 39%, both byte-identical on a second run,
@@ -1048,7 +1102,7 @@ thing. Anything that saves must read `base`; four adopters (`traits.js`,
 `ancillaries.js`, `factions.js`, `minorfiles.js`) were saving `text` and would
 have deleted every comment in the record. Check this on any new adopter.
 
-**Green: 52 of 52 modules, 2156 checks.** The six that used to fail are closed —
+**Green: 52 of 52 modules, 2156 checks.** The six that used to fail are closed -
 one was a real defect of ours (the ancillary image check, see the audit) and the
 rest were tests asserting something the code never promised. Detail per suite is
 in `merge/audit-codebase-2.md` §3.
@@ -1056,7 +1110,7 @@ in `merge/audit-codebase-2.md` §3.
 A test no longer hardcodes a mod NAME: `tests/_realmod.pick()` takes the
 preferred mod if it is installed, any other installed mod otherwise, and prints
 SKIPPED with status 0 when there is none. Three suites used to die on a
-`FileNotFoundError` for `Third_Age_6` instead — and a suite that cannot run looks
+`FileNotFoundError` for `Third_Age_6` instead - and a suite that cannot run looks
 exactly like one that passes. Still check the installed mod set before blaming a
 failure on a regression (memory `unit-transfer-test-mods`).
 
@@ -1064,33 +1118,33 @@ failure on a regression (memory `unit-transfer-test-mods`).
 `test_bmdb_http` were updated for it.
 
 ## Read first
-- ROADMAP.md — phases, exit criteria, locked decisions.
-- `unittransfer/flatrecord.py` — **check here before writing any parser.** Phase 11
+- ROADMAP.md - phases, exit criteria, locked decisions.
+- `unittransfer/flatrecord.py` - **check here before writing any parser.** Phase 11
   needed no code at all, which is why it exists.
-- `unittransfer/buildings.py` — the biggest module and the only one that CREATES a
+- `unittransfer/buildings.py` - the biggest module and the only one that CREATES a
   record. Everything else in it is a SPLICE of verbatim lines; 7203 of its real
   input lines carry a comment and a re-emitting serialiser loses all of them.
-- `unittransfer/edusort.py` — the whole-file EDU cleanup, and the one module that
+- `unittransfer/edusort.py` - the whole-file EDU cleanup, and the one module that
   decides where a unit BELONGS rather than what it says. Read its docstring
   before changing any grouping rule: every one of them is a measurement over the
   two installed mods, and the obvious rule was wrong in all four cases.
-- `unittransfer/vocab.py` — what a drop-down may offer: engine sets hardcoded, and
+- `unittransfer/vocab.py` - what a drop-down may offer: engine sets hardcoded, and
   everything a mod DEFINES read from the file that defines it, with a `defined`
   map behind the broken-reference warnings. Phase 13 moved banners onto that rule.
-- `web/js/core.js` — `MODES` in `wire()`, and `docPoints()`, which every note in
+- `web/js/core.js` - `MODES` in `wire()`, and `docPoints()`, which every note in
   the UI is written through. One global scope, no build step; adding a module means
   a new file + a `<script>` tag + a MODES entry, all three guarded by
   `tests/test_web_modules.py`.
 
 ## Upstream
 reference tool reviewed SHA **e6e6982** (2026-08-20). **The Phase 15 sync is
-done** — the write-up is the newest entry in `merge/SYNC_LOG.md`.
+done** - the write-up is the newest entry in `merge/SYNC_LOG.md`.
 
 All 19 of his commits since b4768d5 land in the campaign map editor or the New
 Map Editor, so **nothing had to be ported to keep 2.0.0 correct**, and Phase 15
 (the 3D model viewer) can start without waiting on anything of his. One
 correction came out of it and is applied: `descr_regions`' two bare numbers are
-**triumph value then base farming level**, not farming level then unknown —
+**triumph value then base farming level**, not farming level then unknown -
 measured over vanilla's 112 regions, not taken on his word, because both test
 mods write 5 and 1 everywhere and cannot tell the two apart. Three facts for
 Phase 16 are banked in the manifest's `notes`.
@@ -1105,10 +1159,10 @@ audit verdict in `notes`.
 
 ## Open questions for the user
 - `OsmBackground.jsx` / `OsmRegionSearch.jsx` (phase 16) fetch OpenStreetMap tiles
-  as a tracing backdrop. Reference layer, not generated mod data — but an external
+  as a tracing backdrop. Reference layer, not generated mod data - but an external
   fetch. Port or drop?
 - `descr_sounds_*.txt` (32 files in DaC) is a real coverage gap this audit
-  measured and did not close — the engine's sound scripts, a grammar of its own.
+  measured and did not close - the engine's sound scripts, a grammar of its own.
   Its own phase later, or out of scope for V2?
 
 ## Decisions
@@ -1118,17 +1172,17 @@ audit verdict in `notes`.
   pairs the blocks once per line (`pair_levels`) rather than once per row.
 - 2026-08-19: **A finding is only worth showing if it can come out zero.** The
   Twin column earns its width because DaC has 239 divergent rows and Third Age
-  Reforged has none — the same check over both mods is what proves it is reading
+  Reforged has none - the same check over both mods is what proves it is reading
   the file rather than describing its own assumptions.
 - 2026-08-19: **The one code view that is not a record is read-only BY
   CONSTRUCTION.** `pools` gathers `recruit_pool` lines from a dozen building
-  blocks, so no `parse`/`render` pair is registered for it at all — the pane
+  blocks, so no `parse`/`render` pair is registered for it at all - the pane
   cannot be saved from because the machinery to do so does not exist for that
   kind, not because a flag says no. Its `; building` headings are the module's
   own, so it is deliberately absent from `COMMENT_MARKS`.
 - 2026-08-19: **One stash slot per LAYER.** The clause dialog used to borrow the
   slot the add-unit picker and the unit view also use, and the unit view can
-  open the clause dialog on top of itself — so the two took turns clearing one
+  open the clause dialog on top of itself - so the two took turns clearing one
   slot and the building form underneath was lost. The dialog has its own now
   (`bldClauseStash`), and how deep the nesting goes stops mattering.
 - 2026-08-19: **A redrawing helper checks that its target is on screen.**
@@ -1137,7 +1191,7 @@ audit verdict in `notes`.
   from another panel marks the working copy and lets that panel draw itself.
 - 2026-08-19: **Two files may disagree about a path prefix and both be right.**
   A resource icon is written `data/ui/…` and a religion's pip `ui/pips/…`. The
-  redundant half is dropped where the picture is requested, never in a parser —
+  redundant half is dropped where the picture is requested, never in a parser -
   neither file is wrong about its own format, and a parser that "corrected" one
   of them would stop round-tripping.
 - 2026-08-19: **A unit tier is `;@m2gt tier=3 variant=aor`, on the line above
@@ -1147,13 +1201,13 @@ audit verdict in `notes`.
   block.** Otherwise a comment above `type` belongs to the PREVIOUS unit, so the
   marker would describe one unit while living inside another and be left behind
   by every transfer, replace and sort. The change is safe precisely because the
-  marker is ours — no real file contains one, so no existing byte-exact
+  marker is ours - no real file contains one, so no existing byte-exact
   round-trip can be affected by it.
 - 2026-08-19: **The mod's own EDU banners are read before the user is asked for
   anything.** A tier is in no game file, but a hand-organised EDU has already
   written one: **907 of DaC's 916 units sit under a `;--- X TIER N CAT ---`
   banner.** The tier is harvested from there and RECORDED on the unit, which is
-  also what breaks a circle — the cleanup rewrites the banners, so a tier living
+  also what breaks a circle - the cleanup rewrites the banners, so a tier living
   only in a banner would be regenerated from itself.
 - 2026-08-19: **A table of contents is not a layout.** DaC's TOC names a
   GENERALS section and MERCENARIES / SIEGE / SHIPS sections; the file has none
@@ -1165,7 +1219,7 @@ audit verdict in `notes`.
   localised faction name (a modder writes `CRAG`, `DORWINION`), and `ownership`
   cannot stand in because most units list a dozen factions and the line is a
   set, not a ranking. Section ORDER is likewise taken from where it is expressed
-  — the median position of each section's units — not from
+  - the median position of each section's units - not from
   `descr_sm_factions.txt`, which is a genuinely different order. Together these
   took DaC from 44% of the roster moving to 15%.
 - 2026-08-19: **An untiered unit is never handed a tier by the banner written
@@ -1181,15 +1235,15 @@ audit verdict in `notes`.
   engine never reads does not belong among them, and putting it there would
   blur the distinction the "toolkit only" badge exists to make.
 - 2026-08-19: **A byte-order mark is skipped for reading and KEPT for writing.**
-  `keyblock.BOMS` / `without_bom` is the one definition, and `code_of` — the only
-  function that turns a line into a keyword — drops it, which is safe precisely
+  `keyblock.BOMS` / `without_bom` is the one definition, and `code_of` - the only
+  function that turns a line into a keyword - drops it, which is safe precisely
   because nothing splices `code_of`'s result back. Stripping it on READ would
   have quietly rewritten the first three bytes of the user's file; this tool
   reads a file, it does not repair it behind their back.
 - 2026-08-19: **"Not shipped here" is not the same as "missing".** A check may
   only assert the harsh reading when it can see the thing that would disprove it.
   The ancillary image check asserted a blank slot against a store of BUILDING art
-  that could never hold an ancillary picture — 58 false findings across the two
+  that could never hold an ancillary picture - 58 false findings across the two
   mods. When the evidence is not there the tool says so once, with the count and
   the way to get the check back, not 56 times.
 - 2026-08-19: **A parser reads line endings the way its writer writes them, and
@@ -1204,13 +1258,13 @@ audit verdict in `notes`.
   `ownership_factions` was answering out of an EDU that had already been replaced.
 - 2026-08-19: **A test names the mod it PREFERS, never the mod it requires**
   (`tests/_realmod.pick`). A suite that dies because a mod is not installed tells
-  you nothing, and its silence is indistinguishable from a pass — three suites
+  you nothing, and its silence is indistinguishable from a pass - three suites
   had been hiding two real defects that way.
 - 2026-08-19: **The audit's two mention maps are not interchangeable, and no
   longer share a name.** `name_mentions` is keyed by modeldb ENTRY name with a
   row per name; `_mount_mentions` is keyed by MOUNT name with a bare filename.
   `mount_audit` took the first as a parameter and then shadowed it with the
-  second, so its two model-keyed lookups read the mount map — wrong answers for
+  second, so its two model-keyed lookups read the mount map - wrong answers for
   `frees_model`, and a hard `TypeError` out of `mention_file` the moment a mount
   and an entry shared a name (four do in DaC, which is why `test_eop_and_lua`
   could not get past its first audit). The mount map is now `by_mount` and each
@@ -1220,8 +1274,8 @@ audit verdict in `notes`.
   comment-only lines from what it SHOWS, and the server rebuilds the real bytes
   from the view plus an opaque `hidden` list before anything parses or saves.
   The page still never learns what a comment looks like in a game file, and
-  `buildings.py`'s rule — every one of the 7203 commented lines goes back byte
-  for byte — is kept by construction rather than by care.
+  `buildings.py`'s rule - every one of the 7203 commented lines goes back byte
+  for byte - is kept by construction rather than by care.
 - 2026-08-19: **A hidden line is anchored to the KEYWORD of the line it sat
   above**, then to that line's exact text, then to its index. Anything else and
   typing a new value into the line below a comment moves the comment.
@@ -1237,7 +1291,7 @@ audit verdict in `notes`.
 - 2026-08-19: **Rows are placed from spans, never by counting.** Raw-lines mode
   lines each box up with the file line the SERVER says it came from. Counting
   rows drifts the moment a block has a `type` line, a hidden comment or a repeat
-  — which every real block does.
+  - which every real block does.
 - 2026-08-19: **A reveal is mod-relative.** `POST /api/reveal` takes a mod and a
   path under that mod's data folder and resolves it there; it never accepts an
   absolute path from the page.
@@ -1253,7 +1307,7 @@ audit verdict in `notes`.
 - 2026-08-18: `config._read_json` tells **gone** from **busy**: the last-read
   fallback is for the moment `os.replace` makes a file unopenable, not for a file
   that has been deleted (audit §1.5).
-- 2026-08-18: The log is **paged** — `/api/log` answers with a window plus the
+- 2026-08-18: The log is **paged** - `/api/log` answers with a window plus the
   counts a filter needs, and computes `newer_count` itself, because "revert to
   here" was the only reason the page ever wanted the whole file.
 - 2026-08-18: **The log records the user's actions too**, batched through
@@ -1265,14 +1319,14 @@ audit verdict in `notes`.
 - 2026-08-18: **A cache never lives next to the app.** `config.cache_dir()` puts
   derived data in `%LOCALAPPDATA%`, because the app can be unzipped into OneDrive
   and a synced cache file can take 79 seconds to read or fail outright.
-  `config/` stays put — it is the user's own data, not derived.
+  `config/` stays put - it is the user's own data, not derived.
 - 2026-08-18: **Traffic is liveness.** Any request keeps the server up; the
   heartbeat only still proves that a page really rendered. A heartbeat can be
   starved by the page's own requests, and the watchdog was killing live sessions.
 - 2026-08-18: A resolved mod is trusted for one second before its files are
   re-checked (our own writes call `invalidate()`), and every load takes a
-  generation and an abort signal — a superseded load is dropped, never painted.
-- 2026-08-13: V2 architecture locked — vanilla-UI ports only; shared 2-way Code View widget built once (Phase 4); rebrand everywhere except GitHub repo name; version stays 1.x until Campaign Map lands (=2.0.0).
+  generation and an abort signal - a superseded load is dropped, never painted.
+- 2026-08-13: V2 architecture locked - vanilla-UI ports only; shared 2-way Code View widget built once (Phase 4); rebrand everywhere except GitHub repo name; version stays 1.x until Campaign Map lands (=2.0.0).
 - 2026-08-13: Author permission obtained for reference-tool reuse; no licensing blocker.
 - 2026-08-18: Every note in the UI is a lead line plus points (`docPoints()`), not prose joined by em dashes. Em dashes stay in code comments and in short appositives.
 - 2026-08-19: **A measurement is fixed before the thing it measures.** 14g opened
@@ -1286,7 +1340,7 @@ audit verdict in `notes`.
   EDU term that is lower case by definition; a string spliced into a sentence
   built at render time cannot be judged on its own first letter. Both are now
   rules in the checker, alongside the older "a label is not a sentence".
-- 2026-08-18: A vocabulary the mod's own file declares is read from that file, never hardcoded — banners were the last EDU list breaking that rule.
+- 2026-08-18: A vocabulary the mod's own file declares is read from that file, never hardcoded - banners were the last EDU list breaking that rule.
 - 2026-08-18: A test that measures a shipped mod reports the finding and asserts only OUR behaviour; it never fails because a mod has a bug.
-- 2026-08-18: `#` at the start of an EDB line is a modder's annotation, not a keyword (the file's comment marker is `;`) — skipped by every parser in buildings.py, preserved verbatim on write.
-- 2026-08-18: A count measured over installed mods is load-bearing only when the code leans on it. `plan_new_tree` writes an empty `plugins { }` because every real one is empty, NOT because every line has one — Third Age Reforged omits it on 45 of 112 and runs.
+- 2026-08-18: `#` at the start of an EDB line is a modder's annotation, not a keyword (the file's comment marker is `;`) - skipped by every parser in buildings.py, preserved verbatim on write.
+- 2026-08-18: A count measured over installed mods is load-bearing only when the code leans on it. `plan_new_tree` writes an empty `plugins { }` because every real one is empty, NOT because every line has one - Third Age Reforged omits it on 45 of 112 and runs.

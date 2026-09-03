@@ -1,9 +1,9 @@
-"""Mod-wide battle_models.modeldb tools — the third mode of the app.
+"""Mod-wide battle_models.modeldb tools - the third mode of the app.
 
 :mod:`unittransfer.edit` edits the modeldb entries *one unit* points at. This
 module works on the file as a whole:
 
-  * **browse / edit every entry**, not just a unit's — the payload it hands the
+  * **browse / edit every entry**, not just a unit's - the payload it hands the
     UI is exactly the one the unit editor's model card renders
     (:func:`unittransfer.edit.model_payload`), and edits are planned by
     :func:`unittransfer.edit.plan_bmdb`, so both modes share one engine;
@@ -21,17 +21,17 @@ module works on the file as a whole:
 
 Why it matters: M2TW loads the entire modeldb into memory and big overhauls sit
 near the engine's limits, so entries and meshes that nothing references cost real
-budget. Nothing is deleted outright — everything moves to the export folder and
+budget. Nothing is deleted outright - everything moves to the export folder and
 every touched file is backed up, so 🕑 Log → Undo restores the mod exactly.
 
 What counts as "referenced":
-  * ``export_descr_unit.txt`` — ``soldier`` / ``officer`` / ``armour_ug_models``
-  * ``descr_mount.txt`` — a mount's model
-  * ``descr_character.txt`` — ``battle_model`` (generals, agents)
-  * every campaign and battle script in the mod — ``descr_strat.txt``,
+  * ``export_descr_unit.txt`` - ``soldier`` / ``officer`` / ``armour_ug_models``
+  * ``descr_mount.txt`` - a mount's model
+  * ``descr_character.txt`` - ``battle_model`` (generals, agents)
+  * every campaign and battle script in the mod - ``descr_strat.txt``,
     ``campaign_script.txt`` and ``descr_battle.txt``, wherever they live:
     ``battle_model`` again, but written inline in a comma-separated character
-    line rather than on its own, so those get a looser pattern — *and*
+    line rather than on its own, so those get a looser pattern - *and*
     ``change_battle_model <faction> <who> <model>``, the script command that
     swaps a character's model mid-campaign and puts the model last. See
     :func:`script_models`. The whole mod
@@ -39,17 +39,17 @@ What counts as "referenced":
     campaign sits a folder deeper, a custom battle sits on another tree entirely,
     and an installer's ``Activate/`` or ``extra/`` copy becomes the live mod the
     moment somebody runs the mod's own switcher. See :func:`campaign_files`.
-  * **every ``.lua`` script in the mod** — M2TWEOP mods create units, swap models
+  * **every ``.lua`` script in the mod** - M2TWEOP mods create units, swap models
     and spawn characters from Lua, and none of that is written down in any
     ``.txt``. Any entry name a script mentions is off limits; see
     :mod:`unittransfer.luascan`.
   * anything else: any ``data/descr_*.txt`` that merely *mentions* the name is
     treated as a reference too, bar the two in :data:`DESCR_SKIP` that cannot
-    name a battle model at all. That is deliberately over-cautious — a false
+    name a battle model at all. That is deliberately over-cautious - a false
     "still used" costs nothing, a false "unused" silently breaks a mod.
 
-And when the nets were not wide enough — which is a thing that is only ever
-discovered afterwards, with the mod already crashing — :func:`recheck` reads the
+And when the nets were not wide enough - which is a thing that is only ever
+discovered afterwards, with the mod already crashing - :func:`recheck` reads the
 cleanup log back, re-tests everything past runs removed against the nets above as
 they stand *today*, and reports what should not have gone and whether a copy of it
 still exists to put back. :func:`revert_recheck` does the putting back.
@@ -72,7 +72,7 @@ from .mod import Mod
 
 # Slot kinds an entry can be referenced from. "soldier" is called out separately
 # because it is the one the merge suggestions are about; OTHER_KINDS is "doing a
-# real job somewhere a soldier merge cannot follow", which is every other kind —
+# real job somewhere a soldier merge cannot follow", which is every other kind -
 # spelling it out that way means a new kind is covered everywhere by adding it here.
 SLOT_KINDS = ("soldier", "officer", "armour", "mount", "character", "campaign")
 OTHER_KINDS = tuple(k for k in SLOT_KINDS if k != "soldier")
@@ -90,7 +90,7 @@ CAMPAIGN_FILES = ("descr_strat.txt", "campaign_script.txt")
 
 # data/descr_*.txt files the over-cautious "somebody still mentions it" net skips.
 # Everything else in that glob counts, so a file only belongs here when it CANNOT
-# name a battle model or a mount — otherwise a false "unused" breaks a mod.
+# name a battle model or a mount - otherwise a false "unused" breaks a mod.
 DESCR_SKIP = {
     # Where mounts are *defined*, not used: the only battle model a mount block
     # names is its `model` line, which `entry_users` already counts as a real
@@ -98,7 +98,7 @@ DESCR_SKIP = {
     # "mentioned somewhere else" and the dead-mount pass could never free one.
     "descr_mount.txt",
     # Strat-map models only: its `model_flexi` / `texture` lines point at
-    # data/models_strat, never at a unit_models battle model — so a name matching
+    # data/models_strat, never at a unit_models battle model - so a name matching
     # in here is a coincidence, and one that pins a genuinely dead entry in place.
     "descr_model_strat.txt",
 }
@@ -118,7 +118,7 @@ _BATTLE_MODEL_RE = re.compile(r"^\s*battle_model\s+(\S+)", re.IGNORECASE | re.MU
 #
 # which breaks both patterns above at once. The bare-word one never fires,
 # because the character before `battle_model` is `_` rather than a space or a
-# comma; and if it were loosened to fire, it would capture `turks` — the faction,
+# comma; and if it were loosened to fire, it would capture `turks` - the faction,
 # not the model. An entry named only this way is invisible to every other net in
 # this module (no unit fields it, no mount or descr_character.txt names it), so
 # it looks like textbook dead weight and the cleanup deletes the model a mod
@@ -127,7 +127,7 @@ _BATTLE_MODEL_RE = re.compile(r"^\s*battle_model\s+(\S+)", re.IGNORECASE | re.MU
 # So the keyword is matched with whatever prefix it carries, and where the model
 # sits is decided from that prefix: `battle_model` is followed by its model,
 # anything_else_battle_model is a command whose LAST argument is the model. That
-# also covers a variant nobody has written yet — an unknown `*_battle_model`
+# also covers a variant nobody has written yet - an unknown `*_battle_model`
 # command is read as a command rather than silently ignored.
 _BATTLE_MODEL_KEYWORD_RE = re.compile(r"(?:^|[\s,])([a-z_]*battle_model)[\s,]+([^\n;]+)",
                                       re.IGNORECASE | re.MULTILINE)
@@ -136,7 +136,7 @@ _BATTLE_MODEL_INLINE_RE = re.compile(r"(?:^|[\s,])battle_model[\s,]+([^\s,]+)",
 
 
 # A scan / cleanup of a big mod is one multi-second call, so both take an optional
-# ``(percent, label)`` sink the server exposes to the page — the bar then shows
+# ``(percent, label)`` sink the server exposes to the page - the bar then shows
 # where the job really is instead of sitting at a made-up width.
 Progress = Optional[Callable[[int, str], None]]
 
@@ -171,7 +171,7 @@ def _read_text(path: Path) -> str:
 def entry_users(mod: Mod) -> Dict[str, Dict[str, List[str]]]:
     """``entry name -> {slot kind: [referrers]}`` across every file that names one.
 
-    A referrer is a unit type, a ``mount:<name>`` or a ``character:<type>`` — the
+    A referrer is a unit type, a ``mount:<name>`` or a ``character:<type>`` - the
     thing the UI shows so "unused" can be checked by eye before anything moves.
     """
     users: Dict[str, Dict[str, List[str]]] = {}
@@ -224,17 +224,17 @@ def _kept_by_mention(name: str, row: dict, merge: bool = False) -> str:
     """The warning line for an entry a file or a script names by string.
 
     Worth spelling out rather than saying "still used": the reference is not in
-    any unit's block, so the user looking at the mod would not find it — the point
+    any unit's block, so the user looking at the mod would not find it - the point
     of the message is to name the file they should open.
     """
     what = "merge skipped" if merge else "kept"
     if row.get("lua"):
         why = ("a Lua script names it" if not row.get("in_comment")
-               else "a Lua script names it (in a comment — left protected on purpose)")
-        return (f"'{name}' — {what}: {why}, at {row['file']}. M2TWEOP scripts refer to "
+               else "a Lua script names it (in a comment - left protected on purpose)")
+        return (f"'{name}' - {what}: {why}, at {row['file']}. M2TWEOP scripts refer to "
                 "battle models by name, so removing the entry would break that script "
                 "the first time it runs.")
-    return (f"'{name}' — {what}: {row['file']} names it. Nothing in the EDU points at "
+    return (f"'{name}' - {what}: {row['file']} names it. Nothing in the EDU points at "
             "it, but that file does, so it is left alone.")
 
 
@@ -258,18 +258,18 @@ def campaign_files(mod: Mod) -> List[Path]:
     than the campaign folder, because a mod puts these files in more places than
     one, and every place it puts them is a place the cleanup can be wrong about:
 
-      * ``data/world/maps/campaign/<name>/`` — all of them, not just
+      * ``data/world/maps/campaign/<name>/`` - all of them, not just
         ``imperial_campaign``: overhauls rename it, and a model kept alive only by
         an alternate campaign must not be reported as dead;
-      * one folder *deeper* than that — ``campaign/custom/<name>/`` is how custom
+      * one folder *deeper* than that - ``campaign/custom/<name>/`` is how custom
         campaigns are shipped, and a walk of the campaign folder's immediate
         children misses every one of them;
-      * ``data/world/maps/battle/custom/<name>/descr_battle.txt`` — a custom
+      * ``data/world/maps/battle/custom/<name>/descr_battle.txt`` - a custom
         battle names its characters' battle models the same inline way a
         ``descr_strat.txt`` does, on a tree the cleanup never used to open;
       * an installer's alternate trees (``Activate/``, ``extra/`` and friends).
         Those are copies *now* and the live mod the moment somebody runs the
-        mod's own switcher, so a model only they name is not dead weight — it is
+        mod's own switcher, so a model only they name is not dead weight - it is
         the model the next configuration needs;
       * ``eopData/`` beside ``data/``. M2TWEOP keeps its own
         ``campaign_script.txt`` there and that copy is the one such a mod really
@@ -292,7 +292,7 @@ def campaign_files(mod: Mod) -> List[Path]:
 
 
 def campaign_label(mod: Mod, path: Path) -> str:
-    """How a campaign file is named in the UI — its path inside the mod.
+    """How a campaign file is named in the UI - its path inside the mod.
 
     ``<folder>/<file>`` was enough while only the campaign folder was read; now
     that the same two filenames turn up in half a dozen trees, the parent folder
@@ -304,8 +304,8 @@ def campaign_label(mod: Mod, path: Path) -> str:
         return f"{path.parent.name}/{path.name}"
 
 
-# The other battle_models.modeldb files a mod carries — `battle_models.modeldb.bak`,
-# `battle_models_og.modeldb`, a copy some other tool wrote under `from_modeldb/` —
+# The other battle_models.modeldb files a mod carries - `battle_models.modeldb.bak`,
+# `battle_models_og.modeldb`, a copy some other tool wrote under `from_modeldb/` -
 # are deliberately NOT read, by anything here. They look like a second opinion
 # about which meshes are alive and they are not one: every one of them is a
 # snapshot of an OLDER state of the same file, so honouring them would hold alive
@@ -317,12 +317,12 @@ def campaign_label(mod: Mod, path: Path) -> str:
 def script_models(text: str) -> List[str]:
     """Every model a campaign / battle script's ``*battle_model`` keywords name.
 
-    Both forms, in one pass — see :data:`_BATTLE_MODEL_KEYWORD_RE` for why there
+    Both forms, in one pass - see :data:`_BATTLE_MODEL_KEYWORD_RE` for why there
     are two:
 
-      * ``battle_model <model>`` — inline in a comma-separated character line, so
+      * ``battle_model <model>`` - inline in a comma-separated character line, so
         the model is the first argument and a comma ends it;
-      * ``change_battle_model <faction> <who> <model>`` — a script command, where
+      * ``change_battle_model <faction> <who> <model>`` - a script command, where
         the model is the argument on the *end*. Taking the last one rather than
         the third also keeps a two-argument variant working, which matters
         because this is the form nothing was reading at all.
@@ -344,7 +344,7 @@ def script_models(text: str) -> List[str]:
 def _campaign_models(mod: Mod) -> List[Tuple[str, str]]:
     """``(model name, "<path in the mod>")`` for every model a script names.
 
-    These name the model a *specific* character on the campaign map fights with —
+    These name the model a *specific* character on the campaign map fights with -
     nothing in the EDU or descr_mount points at them, so without this pass they
     look completely unreferenced and the cleanup would happily delete them.
     Comments are stripped first: campaign_script.txt is mostly commented-out
@@ -373,7 +373,7 @@ def _mount_mentions(mod: Mod,
     The same over-cautious net the entries get, but by whole name rather than by
     token: mount names contain spaces ("gondor horse"), so they cannot be looked
     up in :func:`_descr_tokens`. :data:`DESCR_SKIP` is left out for the reasons
-    given there. The mod's Lua scripts are searched the same way — a mount a
+    given there. The mod's Lua scripts are searched the same way - a mount a
     script hands to the engine is as ridden as one an EDU line names.
 
     Every name goes into ONE alternation so each file is scanned once. A regex per
@@ -386,7 +386,7 @@ def _mount_mentions(mod: Mod,
 
     # Whitespace in the name may be a tab in the file, and a name must not match as
     # a fragment of a longer one ("horse" inside "war horse"). `/ \ . -` are in the
-    # boundary class as well so a name never matches a path segment — a mount called
+    # boundary class as well so a name never matches a path segment - a mount called
     # "camel" is not a reference just because descr_skeleton.txt loads
     # animations/camel/Camel_Idle.CAS.
     def body(name: str) -> str:
@@ -435,7 +435,7 @@ def mount_audit(mod: Mod, users: Dict[str, Dict[str, List[str]]],
     below therefore has to pick the one that matches its key: a mount name goes to
     ``by_mount``, a model name to ``mentions``. They used to share the name
     ``mentions``, the second assignment shadowing the parameter, and the two
-    model-keyed lookups silently read the mount map — which answers for the wrong
+    model-keyed lookups silently read the mount map - which answers for the wrong
     thing whenever a mount and an entry share a name (four of them in DaC) and
     hands :func:`mention_file` a string where it wants a row.
     """
@@ -500,14 +500,14 @@ def _descr_tokens(mod: Mod) -> Dict[str, str]:
 def name_mentions(mod: Mod,
                   report: Optional[Callable[[float, str], None]] = None
                   ) -> Dict[str, dict]:
-    """``token -> {"file", "lua", "in_comment"}`` — the whole "somebody names it" net.
+    """``token -> {"file", "lua", "in_comment"}`` - the whole "somebody names it" net.
 
     Two sources, one lookup: the ``data/descr_*.txt`` token sweep
     (:func:`_descr_tokens`) and every ``.lua`` script in the mod
     (:func:`unittransfer.luascan.scan`). Membership in this dict is what keeps an
     entry off the unused list and what makes :func:`plan_cleanup` refuse to remove
     it, so a name a Lua script uses is protected by exactly the same machinery
-    that already protects one a definition file uses — no separate code path to
+    that already protects one a definition file uses - no separate code path to
     forget about.
 
     A definition file wins the label when both name a token: it is the more
@@ -559,7 +559,7 @@ def footer_key(e: "modeldb.ModelEntry") -> tuple:
 
     Two entries with the same footer are driven by the same skeletons and hold
     the same weapons, which is what has to match before one can stand in for the
-    other. Meshes/textures are excluded on purpose — that is exactly the part the
+    other. Meshes/textures are excluded on purpose - that is exactly the part the
     merge is meant to be free of.
     """
     return (tuple((a.mount_type, a.primary_skeleton, a.secondary_skeleton,
@@ -589,7 +589,7 @@ def merge_candidates(mod: Mod, users: Dict[str, Dict[str, List[str]]],
     """Entries only a ``soldier`` line names, paired with an identical-footer twin.
 
     A unit that also lists ``armour_ug_models`` draws those models, so its
-    ``soldier`` entry mostly exists to be named — pointing that line at an entry
+    ``soldier`` entry mostly exists to be named - pointing that line at an entry
     the mod already has frees a whole modeldb slot. Every pairing is a
     *suggestion*: it changes which model the line names, so the UI ticks them one
     by one (that is what the manual checkbox is for).
@@ -599,13 +599,13 @@ def merge_candidates(mod: Mod, users: Dict[str, Dict[str, List[str]]],
     ever offered to move onto. Being referenced is what keeps an entry off the
     unused list and what makes ``plan_cleanup`` refuse to remove it, so a target
     picked here cannot go anywhere. Twins suggest each other, though, and a merge
-    is the single way a referenced entry may still be dropped — so the pairings
+    is the single way a referenced entry may still be dropped - so the pairings
     are worked out per footer group rather than one entry at a time. When a group
     has somewhere safe to land the whole group can go; when it does not, one
     member is held back to be the entry the others point at.
 
-    A merge *deletes* its source entry, so anything ``mentions`` protects — a name
-    some ``descr_*.txt`` or Lua script uses — is never offered as one. Repointing
+    A merge *deletes* its source entry, so anything ``mentions`` protects - a name
+    some ``descr_*.txt`` or Lua script uses - is never offered as one. Repointing
     the EDU would not help there: the script still names the entry by string, and
     the entry would no longer be in the file to find.
     """
@@ -657,7 +657,7 @@ def merge_candidates(mod: Mod, users: Dict[str, Dict[str, List[str]]],
         if not options:
             continue
         units = slots["soldier"]
-        # Best twin: one the same unit already lists as an armour upgrade — the
+        # Best twin: one the same unit already lists as an armour upgrade - the
         # unit is already drawing it, so the swap changes nothing on screen.
         own: List[str] = []
         for t in units:
@@ -713,7 +713,7 @@ def orphan_files(mod: Mod, referenced: set,
             if not p.is_file():
                 continue
             rel = p.relative_to(mod.data).as_posix()
-            # never offer a modeldb (the real one, or somebody's .modeldb backup) —
+            # never offer a modeldb (the real one, or somebody's .modeldb backup) -
             # the whole audit is derived from it
             if ".modeldb" in p.name.lower() or _norm(rel) in referenced:
                 continue
@@ -732,7 +732,7 @@ def audit(mod: Mod, scan_orphans: bool = True, progress: Progress = None) -> dic
     """Everything the cleanup dialog needs, in one pass over the mod.
 
     The percentages handed to ``progress`` are the shares each phase really takes
-    on a big mod — parsing the modeldb and walking ``unit_models`` are most of the
+    on a big mod - parsing the modeldb and walking ``unit_models`` are most of the
     wait, and the walk reports its own way through as it goes.
     """
     say = _reporter(progress)
@@ -741,7 +741,7 @@ def audit(mod: Mod, scan_orphans: bool = True, progress: Progress = None) -> dic
     say(8, "reading data/descr_*.txt and the mod's .lua scripts")
     mentions = name_mentions(
         mod, lambda frac, where: say(8 + 12 * frac,
-                                     f"reading .lua scripts{' — ' + where if where else ''}"))
+                                     f"reading .lua scripts{' - ' + where if where else ''}"))
     lua_count = len(mod.lua_files)
     say(20, "parsing battle_models.modeldb")
     entries = mod.modeldb.by_name()
@@ -767,13 +767,13 @@ def audit(mod: Mod, scan_orphans: bool = True, progress: Progress = None) -> dic
         row = mentions.get(e.name)
         if row:
             # named in a definition file we don't parse, in a comment in one we do,
-            # or by a Lua script — keep it and say where, rather than guess it is
+            # or by a Lua script - keep it and say where, rather than guess it is
             # really dead
             mentioned.append({"entry": e.name, "file": row["file"],
                               "lua": row["lua"], "in_comment": row["in_comment"]})
             continue
         if e.first_entry_pad:
-            mentioned.append({"entry": e.name, "file": "(padded first entry — never removed)",
+            mentioned.append({"entry": e.name, "file": "(padded first entry - never removed)",
                               "lua": False, "in_comment": False})
             continue
         unused_names.add(e.name)
@@ -795,7 +795,7 @@ def audit(mod: Mod, scan_orphans: bool = True, progress: Progress = None) -> dic
     dead_mounts, held_mounts = mount_audit(
         mod, users, mentions,
         lambda frac, where: say(85 + 14 * frac,
-                                f"checking mounts no unit rides{' — ' + where if where else ''}"))
+                                f"checking mounts no unit rides{' - ' + where if where else ''}"))
     say(100, "done")
     _log_audit(mod, entries, unused, mentioned, orphans, dead_mounts, lua_count)
     return {
@@ -825,8 +825,8 @@ def _log_audit(mod: Mod, entries: dict, unused: List[dict], mentioned: List[dict
 
     The cleanup is the one job that *deletes*, so "what got detected" has to be
     recoverable from the log without re-running anything: which nets were cast
-    (and over how many files), what each net caught, and — the part that matters
-    when a mod breaks — the name of every entry the scan called dead. If a report
+    (and over how many files), what each net caught, and - the part that matters
+    when a mod breaks - the name of every entry the scan called dead. If a report
     says the cleanup removed something it needed, this block is where the entry
     either appears as protected (so the bug is elsewhere) or does not.
     """
@@ -841,7 +841,7 @@ def _log_audit(mod: Mod, entries: dict, unused: List[dict], mentioned: List[dict
     lua_named = [m for m in mentioned if m.get("lua")]
     lua_only = [m for m in lua_named if str(m.get("file", "")).lower().endswith(
         (".lua", ".lua (in a comment)")) or ".lua:" in str(m.get("file", ""))]
-    log.info("BMDB   audit of %s — %d entries, %d unused, %d protected, "
+    log.info("BMDB   audit of %s - %d entries, %d unused, %d protected, "
              "%d orphan files, %d dead mounts",
              mod.name, len(entries), len(unused), len(mentioned),
              len(orphans), len(dead_mounts))
@@ -851,11 +851,11 @@ def _log_audit(mod: Mod, entries: dict, unused: List[dict], mentioned: List[dict
         f"{len(campaign)} campaign file(s): " + (", ".join(campaign) or "(none)"),
         f"{len(descr)} data/descr_*.txt token-scanned"
         + (f" (skipped: {', '.join(sorted(DESCR_SKIP))})" if DESCR_SKIP else ""),
-        f"{lua_count} .lua script(s) under {mod.root} — token + phrase scan, "
+        f"{lua_count} .lua script(s) under {mod.root} - token + phrase scan, "
         "comments included",
     ])
     if lua_only:
-        block(f"  a .lua script is the ONLY thing keeping these ({len(lua_only)}) — "
+        block(f"  a .lua script is the ONLY thing keeping these ({len(lua_only)}) - "
               "without the Lua scan the cleanup would have offered to delete them:",
               [f"{m['entry']}  <- {m['file']}" for m in lua_only])
     both = [m for m in lua_named if m not in lua_only]
@@ -867,7 +867,7 @@ def _log_audit(mod: Mod, entries: dict, unused: List[dict], mentioned: List[dict
           [f"{m['entry']}  <- {m['file']}" for m in mentioned] or ["(none)"],
           level=logging.DEBUG)
     block(f"  nothing references these ({len(unused)}):",
-          [f"{u['entry']}  — {len(u['files'])} file(s), {u['on_disk']} on disk"
+          [f"{u['entry']}  - {len(u['files'])} file(s), {u['on_disk']} on disk"
            + (f", {u['copies']} duplicate blocks" if u["copies"] > 1 else "")
            for u in unused] or ["(none)"], level=logging.DEBUG)
 
@@ -880,8 +880,8 @@ def name_counts(mod: Mod) -> Dict[str, int]:
     """How many entry blocks each name owns.
 
     Real mods do ship a modeldb with the same name twice (an entry pasted in
-    again over the years). Nothing can tell the copies apart — a unit names a
-    model by string — so every part of this module works per *name* and reports
+    again over the years). Nothing can tell the copies apart - a unit names a
+    model by string - so every part of this module works per *name* and reports
     the copy count, rather than pretending they are separate models.
     """
     out: Dict[str, int] = {}
@@ -893,7 +893,7 @@ def name_counts(mod: Mod) -> Dict[str, int]:
 def overview(mod: Mod, progress: Progress = None) -> dict:
     """Every entry in the mod, light enough to render a few thousand rows.
 
-    Several seconds on a big mod — the modeldb parse alone is most of it — so it
+    Several seconds on a big mod - the modeldb parse alone is most of it - so it
     takes the same ``(percent, label)`` sink the audit does and the page shows a
     real bar instead of a frozen "Reading…".
     """
@@ -917,7 +917,7 @@ def overview(mod: Mod, progress: Progress = None) -> dict:
         slots = users.get(e.name) or {k: [] for k in SLOT_KINDS}
         refs = [w for k in SLOT_KINDS for w in slots[k]]
         # a name no slot uses but a descr_*.txt or a .lua still mentions is NOT
-        # unused — say which file, so the row explains itself instead of looking blank
+        # unused - say which file, so the row explains itself instead of looking blank
         row = mentions.get(e.name) if not refs else None
         mention = row["file"] if row else ""
         rows.append({
@@ -943,7 +943,7 @@ def skeleton_index(mod: Mod) -> dict:
 
     Swapping a unit's ``soldier`` model swaps its animation set with it, so the
     question when picking one is nearly always "which entries move like this one
-    already does?" — and nothing in the game files answers it. The modeldb does,
+    already does?" - and nothing in the game files answers it. The modeldb does,
     one ``skeleton`` line at a time, across a few thousand entries.
     """
     users = entry_users(mod)
@@ -1000,7 +1000,7 @@ def entry_detail(mod: Mod, name: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# faction skin coverage — "fix ownership"
+# faction skin coverage - "fix ownership"
 
 
 #: The two answers to "which factions should this entry have a skin for".
@@ -1008,21 +1008,21 @@ def entry_detail(mod: Mod, name: str) -> dict:
 #: ``units`` is the honest one: an entry needs a record for every faction that
 #: can actually field a unit drawn with it, which is the union of those units'
 #: ``ownership`` lines. ``all`` is the blunt one a modder reaches for when a
-#: model is meant to be usable by anybody — every faction slot in the roster.
+#: model is meant to be usable by anybody - every faction slot in the roster.
 OWNERSHIP_MODES = ("units", "all")
 
 
 def unit_factions(mod: Mod) -> Dict[str, List[str]]:
     """``entry name -> the faction slots the units drawn with it are owned by``.
 
-    Every model slot a unit names counts — ``soldier``, ``officer`` and every
-    ``armour_ug_models`` tier — because all of them are drawn on the field for
+    Every model slot a unit names counts - ``soldier``, ``officer`` and every
+    ``armour_ug_models`` tier - because all of them are drawn on the field for
     that unit's owner, so all of them need that owner's skin.
 
     ``slave`` is included on purpose: it is a real texture record (the generic
     rebel skin) and a rebel unit whose entry has none is exactly the gap this is
     for. What is NOT included is an ownership token the faction roster does not
-    define — an ownership line may name a *culture*, and writing a culture into
+    define - an ownership line may name a *culture*, and writing a culture into
     the modeldb as if it were a faction would be inventing a skin nobody can
     use. :func:`unknown_ownership` reports those instead.
     """
@@ -1078,7 +1078,7 @@ def ownership_audit(mod: Mod, mode: str = "units",
     """Which entries are short of a faction skin, and which factions they are.
 
     One row per entry that would gain something. Entries already covered are
-    counted and not listed — on a mod where the answer is "nothing to do" the
+    counted and not listed - on a mod where the answer is "nothing to do" the
     dialog should say so in one line rather than in two thousand.
     """
     say = _reporter(progress)
@@ -1157,14 +1157,14 @@ def ownership_edits(mod: Mod, mode: str = "units",
     """The ``model_edits`` payload that adds the missing records.
 
     Built here rather than in the page for two reasons: the page would otherwise
-    have to be told every entry's current faction list — thirty tokens times two
-    thousand entries — and, more to the point, the list has to be re-derived from
+    have to be told every entry's current faction list - thirty tokens times two
+    thousand entries - and, more to the point, the list has to be re-derived from
     the mod at the moment of writing rather than from an audit that may be older
     than the file it describes.
 
     The value handed over is ``current + missing``, in that order. It goes
     through :func:`unittransfer.edit.plan_bmdb` exactly as the model card's own
-    faction checklist does — one engine, so this inherits the backup, the undo,
+    faction checklist does - one engine, so this inherits the backup, the undo,
     the "an entry needs at least one record" guard and the padded-first-entry
     handling rather than reimplementing any of them. Because nothing is ever
     dropped from the list, that path can only append.
@@ -1254,7 +1254,7 @@ def _resolve_target(mod: Mod, raw: str) -> Tuple[Optional[Path], str]:
     """The export folder as an absolute path, refusing anywhere inside the mod.
 
     Exporting into the mod would move files from one part of it to another and
-    then hand back a folder that is itself part of the mod — the opposite of
+    then hand back a folder that is itself part of the mod - the opposite of
     taking the weight off it.
     """
     if not raw:
@@ -1264,7 +1264,7 @@ def _resolve_target(mod: Mod, raw: str) -> Tuple[Optional[Path], str]:
     except OSError as exc:
         return None, f"bad destination: {exc}"
     if target == mod.root.resolve() or mod.root.resolve() in target.parents:
-        return None, (f"'{target}' is inside {mod.name} — pick a folder outside the mod, "
+        return None, (f"'{target}' is inside {mod.name} - pick a folder outside the mod, "
                       "otherwise the files never actually leave it")
     if target.exists() and not target.is_dir():
         return None, f"'{target}' is a file, not a folder"
@@ -1283,7 +1283,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
     # Removing an entry something still names breaks the game on load, so the
     # request is re-checked against the mod rather than trusted: a scan can be
     # older than the mod it describes. A `soldier` reference counts like any
-    # other — the merge pass below is the only way a referenced entry may go, and
+    # other - the merge pass below is the only way a referenced entry may go, and
     # only because it repoints that soldier line first.
     users = entry_users(mod)
     # The same re-check for the "somebody merely names it" net, Lua included. This
@@ -1301,7 +1301,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
     for name in dict.fromkeys(req.entries):
         e = entries.get(name)
         if e is None:
-            plan.warnings.append(f"'{name}' is not in this mod's modeldb — skipped")
+            plan.warnings.append(f"'{name}' is not in this mod's modeldb - skipped")
             continue
         if e.first_entry_pad:
             plan.warnings.append(edit.PAD_ENTRY_KEPT.format(name=name))
@@ -1313,13 +1313,13 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
         used = _describe_users(users, name)
         if used:
             # merges add their own entry to `doomed`, but only once the pairing
-            # has passed every check below — being asked for is not enough.
+            # has passed every check below - being asked for is not enough.
             if name not in merging:
                 slots = users.get(name) or {}
                 only_mounts = bool(slots.get("mount")) and not any(
                     slots.get(k) for k in SLOT_KINDS if k != "mount")
                 plan.warnings.append(
-                    f"'{name}' is still {used} — kept, removing it would stop the game "
+                    f"'{name}' is still {used} - kept, removing it would stop the game "
                     + ("loading. Tick that mount for removal too and the entry comes "
                        "free with it." if only_mounts else
                        "loading. Re-scan the mod to pick it up as a merge."))
@@ -1331,7 +1331,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
     for m in req.merges:
         name, into = m["entry"], m["into"]
         if name not in entries:
-            plan.warnings.append(f"'{name}' is not in this mod's modeldb — merge skipped")
+            plan.warnings.append(f"'{name}' is not in this mod's modeldb - merge skipped")
             continue
         if name in mentions:
             # A merge deletes `name`. Repointing the EDU does not help a script
@@ -1346,17 +1346,17 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
             continue
         if into == name or into in merging or into in doomed:
             # Repointing a soldier line at something this same cleanup deletes
-            # leaves it naming a model that is not in the file — exactly the
+            # leaves it naming a model that is not in the file - exactly the
             # error the game refuses to start on. Footer twins suggest each
             # other, so a mutual pair is the way this happens.
             plan.errors.append(
                 f"'{name}' would be pointed at '{into}', which this cleanup also "
-                "removes — untick one of the two, they are twins of each other")
+                "removes - untick one of the two, they are twins of each other")
             continue
         if footer_key(entries[name]) != footer_key(entries[into]):
             plan.errors.append(
                 f"'{name}' and '{into}' no longer have the same animations/torch "
-                "footer — re-run the scan")
+                "footer - re-run the scan")
             continue
         model_map[name] = into
         plan.merges.append((name, into))
@@ -1371,14 +1371,14 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
                     u.raw, model_map[u.soldier_model.lower()])
                 touched.append(u.type)
             # An entry only reachable through `soldier` cannot appear in another
-            # slot — but a *different* unit could still name it, so anything left
+            # slot - but a *different* unit could still name it, so anything left
             # pointing at a merged entry is a hard error rather than a silent break.
             leftovers = [m for m in u.model_names()
                          if m in model_map and m != (u.soldier_model or "").lower()]
             if leftovers:
                 plan.errors.append(
                     f"'{u.type}' still names {', '.join(sorted(set(leftovers)))} outside "
-                    "its soldier line — that entry cannot be merged away")
+                    "its soldier line - that entry cannot be merged away")
         if touched:
             # An M2TWEOP unit's soldier line is in that unit's own file, so the
             # repoint is split across the EDU and whichever EOP files are involved.
@@ -1407,7 +1407,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
         if extra:
             plan.changes.append(
                 f"{extra} of those {'is a duplicate copy' if extra == 1 else 'are duplicate copies'}"
-                " of a name already on the list — nothing can tell the copies apart, so all go")
+                " of a name already on the list - nothing can tell the copies apart, so all go")
 
     # ---- files: only the ones no surviving entry still uses
     drop = set(doomed)
@@ -1434,11 +1434,11 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
     if plan.exports:
         plan.changes.append(f"{len(plan.exports)} asset file(s) moved to the export folder")
     if plan.kept_files:
-        plan.changes.append(f"{len(plan.kept_files)} file(s) left in the mod — "
+        plan.changes.append(f"{len(plan.kept_files)} file(s) left in the mod - "
                             "entries that stay still use them")
     if any(f.lower().endswith(".spr") for _s, f in plan.exports):
         plan.warnings.append(
-            "sprite (.spr) files were exported — their companion sprite sheet is "
+            "sprite (.spr) files were exported - their companion sprite sheet is "
             "not named in the modeldb, so check data/unit_sprites before deleting "
             "anything from the export folder by hand.")
 
@@ -1446,7 +1446,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
     for rel in dict.fromkeys(req.orphans):
         src = mod.data / rel
         if not src.is_file():
-            plan.warnings.append(f"data/{rel} is not on disk — skipped")
+            plan.warnings.append(f"data/{rel} is not on disk - skipped")
             continue
         try:
             plan.orphan_bytes += src.stat().st_size
@@ -1470,7 +1470,7 @@ def _plan_mounts(plan: CleanupPlan, users: Dict[str, Dict[str, List[str]]]) -> N
 
     Mutates ``users`` in place: a mount that is going stops counting as a reason to
     keep its model, which is the whole point of offering the removal. Everything is
-    re-checked against the mod — a unit that started riding the mount since the scan
+    re-checked against the mod - a unit that started riding the mount since the scan
     keeps it, because a dangling ``mount`` line stops the unit appearing at all, and
     so does a mount some ``descr_*.txt`` or Lua script names.
 
@@ -1488,11 +1488,11 @@ def _plan_mounts(plan: CleanupPlan, users: Dict[str, Dict[str, List[str]]]) -> N
     for want in dict.fromkeys(m.strip().lower() for m in req.mounts):
         mount = by_type.get(want)
         if mount is None:
-            plan.warnings.append(f"mount '{want}' is not in this mod's descr_mount.txt — skipped")
+            plan.warnings.append(f"mount '{want}' is not in this mod's descr_mount.txt - skipped")
             continue
         if want in mentions:
             plan.warnings.append(
-                f"mount '{mount.type}' is named in {mentions[want]} — kept. Nothing in "
+                f"mount '{mount.type}' is named in {mentions[want]} - kept. Nothing in "
                 "the EDU rides it, but that file does, so removing the block would "
                 "break whatever reads it.")
             continue
@@ -1500,7 +1500,7 @@ def _plan_mounts(plan: CleanupPlan, users: Dict[str, Dict[str, List[str]]]) -> N
             riders = [u.type for u in mod.edu.units if u.mount.lower() == want]
             plan.warnings.append(
                 f"mount '{mount.type}' is ridden by {', '.join(riders[:3])}"
-                f"{'…' if len(riders) > 3 else ''} — kept, removing it would leave those "
+                f"{'…' if len(riders) > 3 else ''} - kept, removing it would leave those "
                 "units with a mount that does not exist")
             continue
         keep.append(mount.type)
@@ -1538,7 +1538,7 @@ def export_modeldb_text(mod: Mod, names: Sequence[str]) -> str:
     """A loadable modeldb holding only ``names``, in their original file order.
 
     Reuses each entry's verbatim source text, so the export is byte-identical to
-    what was cut out of the mod — that is what makes copying it back safe.
+    what was cut out of the mod - that is what makes copying it back safe.
     """
     drop = {n.lower() for n in names}
     kept = [e for e in mod.modeldb.entries if e.name in drop]
@@ -1547,7 +1547,7 @@ def export_modeldb_text(mod: Mod, names: Sequence[str]) -> str:
     if not blank and not (kept and kept[0].first_entry_pad):
         # This mod's file has no `blank` sentinel, so its own first entry carries
         # the reserved padding. Whatever we exported does not, so give the export
-        # a sentinel of its own instead — otherwise nothing could read it back.
+        # a sentinel of its own instead - otherwise nothing could read it back.
         blank = "5 blank" + " 0" * 39 + "\n"
     db = modeldb.ModelDb(header_ints=list(src.header_ints), blank_raw=blank,
                          entries=kept, trailing=src.trailing, header_raw="")
@@ -1555,7 +1555,7 @@ def export_modeldb_text(mod: Mod, names: Sequence[str]) -> str:
 
 
 _README = """\
-Unit Transfer — battle-model cleanup export
+Unit Transfer - battle-model cleanup export
 ===========================================
 
 Moved out of: {mod}
@@ -1581,7 +1581,7 @@ When:         {when}
       mod had a "mount" line naming them. Paste them back into data\\descr_mount.txt
       to restore them.
 
-Undo: the removal itself is in the tool's log (the clock button) — "Undo" puts
+Undo: the removal itself is in the tool's log (the clock button) - "Undo" puts
 every removed file and the original modeldb / export_descr_unit.txt back. This
 folder is a copy and is never touched by Undo, so it is safe to keep or delete.
 """
@@ -1613,10 +1613,10 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
     target.mkdir(parents=True, exist_ok=True)
     n_exports = len(plan.exports)
     for i, (src, rel) in enumerate(plan.exports):
-        # copying is most of the wall clock, and its total is known — so this is
+        # copying is most of the wall clock, and its total is known - so this is
         # the one part of the job whose bar is a straight count of real work.
         if i % 10 == 0:
-            say(2 + 68 * i / n_exports, f"copying files out — {i}/{n_exports}")
+            say(2 + 68 * i / n_exports, f"copying files out - {i}/{n_exports}")
         dest = target / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest)
@@ -1671,7 +1671,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
     n_deletes = len(plan.deletes)
     for i, rel in enumerate(plan.deletes):
         if i % 10 == 0:
-            say(84 + 15 * i / n_deletes, f"taking files out of the mod — {i}/{n_deletes}")
+            say(84 + 15 * i / n_deletes, f"taking files out of the mod - {i}/{n_deletes}")
         t = mod.data / rel
         if t.exists():
             backup_and(rel)                     # backed up, then removed: Undo restores it
@@ -1724,7 +1724,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
 
 
 def _log_cleanup_plan(plan: CleanupPlan) -> None:
-    """Exactly what the cleanup is about to remove, merge and move — by name.
+    """Exactly what the cleanup is about to remove, merge and move - by name.
 
     Written before the first file is touched, so a run that dies half-way still
     leaves a record of what it was going to do; the ``EXPORT``/``DELETE`` lines
@@ -1748,7 +1748,7 @@ def _log_cleanup_plan(plan: CleanupPlan) -> None:
     block(f"  files being deleted from data/ ({len(plan.deletes)}):",
           plan.deletes or ["(none)"], level=logging.DEBUG)
     if plan.kept_files:
-        block(f"  files kept — still shared with an entry that stays ({len(plan.kept_files)}):",
+        block(f"  files kept - still shared with an entry that stays ({len(plan.kept_files)}):",
               plan.kept_files, level=logging.DEBUG)
     if plan.warnings:
         block(f"  warnings ({len(plan.warnings)}):", plan.warnings)
@@ -1772,7 +1772,7 @@ def _modeldb_without(plan: CleanupPlan) -> str:
 # Every net above answers "may this go?" before anything moves. This section
 # answers the question that only comes up afterwards, usually with the game
 # already crashing: *the last cleanup ran with a narrower idea of what counts as
-# a reference than the one this build has — did it take something out that today
+# a reference than the one this build has - did it take something out that today
 # it would refuse to touch?*
 #
 # It is deliberately a separate pass rather than part of `audit`. The audit
@@ -1818,7 +1818,7 @@ def removed_entries(rec: dict) -> List[str]:
     an older build did not write the names down:
 
       1. the log record itself (every run from this build onwards);
-      2. ``removed_battle_models.modeldb`` in the export folder — the standalone
+      2. ``removed_battle_models.modeldb`` in the export folder - the standalone
          database the cleanup wrote of exactly those entries;
       3. the backed-up modeldb minus the live one. Last resort: it is a diff, so
          anything edited since shows up in it too.
@@ -1846,7 +1846,7 @@ def removed_entries(rec: dict) -> List[str]:
 
 
 def _revert_source(rec: dict, rel: str) -> Tuple[str, Optional[Path]]:
-    """``("backup"|"export"|"", path)`` — where ``data/<rel>`` can be copied from.
+    """``("backup"|"export"|"", path)`` - where ``data/<rel>`` can be copied from.
 
     The export folder holds a removed entry's own files under ``data/`` and the
     files no entry mentioned under ``unused_files/data/``, so both are tried:
@@ -1865,7 +1865,7 @@ def _revert_source(rec: dict, rel: str) -> Tuple[str, Optional[Path]]:
 
 
 def _revert_source_entry(rec: dict) -> Tuple[str, Optional[Path]]:
-    """Where a removed *entry* can be read back from — a modeldb, not a file."""
+    """Where a removed *entry* can be read back from - a modeldb, not a file."""
     backup = (Path(rec.get("backup_root") or "|") / "data" / "unit_models"
               / "battle_models.modeldb")
     if backup.is_file():
@@ -1881,7 +1881,7 @@ def _revert_source_entry(rec: dict) -> Tuple[str, Optional[Path]]:
 # line: a mod ships text files with millions of lines and half of them mention a
 # `.texture` somewhere, so a per-line tokeniser spends all its time on words that
 # could never be a filename. Path separators are outside the class on purpose, so
-# `data/unit_models/x/y.mesh` yields `y.mesh` — the part the index is keyed by.
+# `data/unit_models/x/y.mesh` yields `y.mesh` - the part the index is keyed by.
 _UM_FILE_RE = re.compile(r"[a-z0-9_.\-]+\.(?:mesh|texture|cas|spr|tga|dds)",
                          re.IGNORECASE)
 # How much of a file is sniffed for a NUL byte before deciding it is binary. A
@@ -1895,7 +1895,7 @@ def unit_model_refs(mod: Mod, also: Sequence[str] = (),
     """``data-relative unit_models file -> "<file>:<line>"`` for every text mention.
 
     The one net the rest of this module does not cast: a file under
-    ``data/unit_models`` named by a text file *as a file* — written as a path
+    ``data/unit_models`` named by a text file *as a file* - written as a path
     (``data/unit_models/foo/bar.mesh``) or as a bare filename (``bar.mesh``) in a
     campaign script, a Lua script, or any ``.txt`` the mod ships. Nothing in the
     modeldb has to know about such a file for the game to need it, so nothing in
@@ -1904,7 +1904,7 @@ def unit_model_refs(mod: Mod, also: Sequence[str] = (),
     A bare filename must carry its extension to count. A mesh called
     ``rohan_rider.mesh`` shares its stem with half the ``rohan_rider`` names in a
     mod, and matching on the stem turns every one of those into a false "still
-    used" that pins real dead weight in place forever — the one direction this
+    used" that pins real dead weight in place forever - the one direction this
     module is otherwise happy to be wrong in, but not at that hit rate.
 
     ``also`` is data-relative paths to look for that are NOT on disk. The recheck
@@ -1965,7 +1965,7 @@ def recheck(mod: Mod, progress: Progress = None) -> dict:
     One row per removed thing, carrying the three facts a decision needs: what was
     removed, why this build now thinks it was needed, and whether a copy still
     exists to put it back from. Anything already back on disk is dropped from the
-    report — it is not a problem any more, however it got fixed.
+    report - it is not a problem any more, however it got fixed.
     """
     say = _reporter(progress)
     say(2, "reading the cleanup log")
@@ -1981,7 +1981,7 @@ def recheck(mod: Mod, progress: Progress = None) -> dict:
     say(24, "reading data/descr_*.txt and the mod's .lua scripts")
     mentions = name_mentions(
         mod, lambda frac, where: say(24 + 16 * frac,
-                                     f"reading .lua scripts{' — ' + where if where else ''}"))
+                                     f"reading .lua scripts{' - ' + where if where else ''}"))
     say(40, "reading every text file for a unit_models filename")
     # The files those runs removed are handed to the scan by name: they are not on
     # disk to be indexed, and they are the only files this whole pass is about.
@@ -1990,7 +1990,7 @@ def recheck(mod: Mod, progress: Progress = None) -> dict:
     text_refs = unit_model_refs(
         mod, gone,
         lambda frac, where: say(40 + 45 * frac,
-                                f"reading text files{' — ' + where if where else ''}"))
+                                f"reading text files{' - ' + where if where else ''}"))
     say(86, "checking what past cleanups removed")
 
     live_files = set()
@@ -2077,13 +2077,13 @@ def _net_summary(mod: Mod, text_refs: Dict[str, str]) -> dict:
 
 
 def _log_recheck(mod: Mod, out: dict) -> None:
-    """The whole finding, by name — this is a report about a mod that broke."""
-    log.info("BMDB   recheck of %s — %d past cleanup(s), %d file(s) and %d entr(y/ies) "
+    """The whole finding, by name - this is a report about a mod that broke."""
+    log.info("BMDB   recheck of %s - %d past cleanup(s), %d file(s) and %d entr(y/ies) "
              "removed in total, %d now look wrong (%d can be put back)",
              mod.name, len(out["runs"]), out["checked_files"], out["checked_entries"],
              len(out["rows"]), out["revertable"])
     for r in out["runs"]:
-        log.info("  %s  %s — %d file(s) / %d entr(y/ies) removed, %d still missing, "
+        log.info("  %s  %s - %d file(s) / %d entr(y/ies) removed, %d still missing, "
                  "%d flagged; backup %s, export %s", r["id"], r["when"], r["files"],
                  r["entries"], r["missing"], r["hits"],
                  "present" if r["backup_here"] else "GONE",
@@ -2118,13 +2118,13 @@ def revert_recheck(mod: Mod, picks: Sequence[dict], progress: Progress = None) -
     restored: List[str] = []
     failed: List[str] = []
 
-    log.info("BMDB   recheck revert id=%s  %s — %d file(s), %d entr(y/ies)",
+    log.info("BMDB   recheck revert id=%s  %s - %d file(s), %d entr(y/ies)",
              tid, mod.name, len(files), len(entries))
 
     total = len(files) or 1
     for i, pick in enumerate(files):
         if i % 10 == 0:
-            say(4 + 70 * i / total, f"putting files back — {i}/{len(files)}")
+            say(4 + 70 * i / total, f"putting files back - {i}/{len(files)}")
         rel = str(pick.get("name") or "").replace("\\", "/")
         rec = runs.get(pick.get("run"))
         if rec is None:

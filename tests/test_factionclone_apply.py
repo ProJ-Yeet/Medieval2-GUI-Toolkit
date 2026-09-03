@@ -3,7 +3,7 @@
 Run:  python -m tests.test_factionclone_apply
 
 The read-only suite (``test_factionclone``) measures the nine cloners against
-the real mods. This one is the other half — the part that touches the disk — and
+the real mods. This one is the other half - the part that touches the disk - and
 it deliberately does NOT use a real mod. It builds a small one in a temp folder
 with the same shapes and the same CRLF line endings, clones into it, and then
 undoes the clone through the toolkit's own :func:`unittransfer.transfer.undo`.
@@ -11,7 +11,7 @@ undoes the clone through the toolkit's own :func:`unittransfer.transfer.undo`.
 Two things only a real write can prove:
 
 * **the art copy is undoable.** ``undo`` removes a created path with
-  ``Path.unlink()``, which raises on a directory and is swallowed — so an entry
+  ``Path.unlink()``, which raises on a directory and is swallowed - so an entry
   copied with ``copytree`` and listed in the manifest as a folder would survive
   the undo, leaving the clone's unit cards behind after the faction was taken
   back out. The manifest therefore lists files, and this test is what says so.
@@ -50,7 +50,7 @@ def crlf(text: str) -> str:
 #: A mod small enough to read in one screen and shaped exactly like a real one.
 #: Three factions: `sicily` is the donor, `milan` is a bystander, and
 #: `sicily_clone` exists purely to prove the donor's name is matched as a whole
-#: slot — its art must not be dragged along by a clone of `sicily`.
+#: slot - its art must not be dragged along by a clone of `sicily`.
 FILES = {
 "descr_sm_factions.txt": """
 faction						sicily
@@ -387,7 +387,7 @@ rf = fa.parse_file(fa.path_for(reread))
 check(f"the written roster re-parses with every faction ({len(rf.records)})",
       len(rf.records) == 4 and rf.get("sicily_two") is not None)
 # `start`/`end` are where the record sits in the file and `name` is the slot
-# itself — everything else has to have come across untouched
+# itself - everything else has to have come across untouched
 drop = ("name", "start", "end")
 vals = lambda r: {k: v for k, v in r.as_dict(fa.SHAPE).items() if k not in drop}
 check("the clone's every value is the donor's",
@@ -409,7 +409,7 @@ check(f"undo left no file behind ({len(left)} extra)" + (f": {left[:3]}" if left
 check("the roster is the donor's again",
       "sicily_two" not in kb.read_text(data / "descr_sm_factions.txt", fc.ENCODING))
 
-config.update_log(tid, note="test_factionclone_apply — synthetic mod, discarded")
+config.update_log(tid, note="test_factionclone_apply - synthetic mod, discarded")
 shutil.rmtree(tmp, ignore_errors=True)
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")

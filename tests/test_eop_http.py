@@ -1,4 +1,4 @@
-"""M2TWEOP + Lua over HTTP — the shapes the browser page actually reads.
+"""M2TWEOP + Lua over HTTP - the shapes the browser page actually reads.
 
 Runs a real server against a throwaway MED2 root holding one mini mod with an
 ``eopData`` folder (one unit file, one Lua script), and checks every field the
@@ -12,7 +12,7 @@ page depends on is really there:
   /api/bmdb/audit       the Lua-protected list the cleanup dialog renders
 
 A mismatch between the UI's field names and the server's is exactly what this
-catches — the Python-level tests never go through JSON.
+catches - the Python-level tests never go through JSON.
 """
 import json, shutil, sys, tempfile, threading, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
@@ -77,7 +77,7 @@ def make_mod(name: str, with_eop: bool):
 
 src_root = make_mod("SourceMod", with_eop=True)
 dst_root = make_mod("DestMod", with_eop=True)
-# An entry the audit ITSELF calls removable before any Lua exists — so "protected
+# An entry the audit ITSELF calls removable before any Lua exists - so "protected
 # after the script names it" is a real change of answer, not a coincidence.
 import unittransfer.bmdb as _b
 free = next(u["entry"] for u in _b.audit(Mod(src_root), scan_orphans=False)["unused"])
@@ -141,7 +141,7 @@ try:
           (p.get("eop_file") or "").startswith("eopData/"))
     check("it adds nothing to the EDU count", p.get("dest_new_units") == 0)
     dd = get("/api/units?mod=DestMod")
-    check("dest_unit_count excludes EOP units — that is what the banner counts",
+    check("dest_unit_count excludes EOP units - that is what the banner counts",
           p.get("dest_unit_count") == len(dd["units"]) - 1)
     check("and dest_eop_count reports them separately", p.get("dest_eop_count") == 1)
 
@@ -163,5 +163,5 @@ try:
 finally:
     httpd.shutdown()
 
-print(f"\n{sum(ok)}/{len(ok)} checks — {'ALL PASSED' if all(ok) else 'SOME FAILED'}")
+print(f"\n{sum(ok)}/{len(ok)} checks - {'ALL PASSED' if all(ok) else 'SOME FAILED'}")
 sys.exit(0 if all(ok) else 1)

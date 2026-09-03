@@ -5,7 +5,7 @@ in, so a file worked on for years ends up with units wherever there was room.
 Divide and Conquer's is the counter-example, and its shape is deliberate:
 generals first, then one contiguous run per faction sub-sectioned by banner
 comments reading ``;--- GONDOR TIER 1 INFANTRY ---``, then the sections that
-belong to no faction — rebels, mercenaries, siege, ships.
+belong to no faction - rebels, mercenaries, siege, ships.
 
 This module puts any mod's EDU into that shape. Three rules run through it:
 
@@ -19,14 +19,14 @@ This module puts any mod's EDU into that shape. Three rules run through it:
   byte for byte. That is also what makes a second run a no-op.
 * **A tier is read before it is asked for.** The tier a unit sorts by is the
   tool's own metadata (:data:`unittransfer.edu.MARKER`) and no game file has it
-  — but a mod that has organised its EDU by hand has already *written* it, in
+  - but a mod that has organised its EDU by hand has already *written* it, in
   the banners. 907 of DaC's 916 units sit under one. So :func:`harvest_tiers`
   reads the file's own banners rather than asking anyone to type 916 numbers,
   which is the same rule the rest of the toolkit follows for vocabularies: what
   the mod's file declares is read from the file that declares it.
 
-The preamble — everything above the first unit, which in DaC is a hand-written
-table of contents — is never touched. It names factions in words this module
+The preamble - everything above the first unit, which in DaC is a hand-written
+table of contents - is never touched. It names factions in words this module
 cannot re-derive, and rewriting it would mean guessing.
 """
 from __future__ import annotations
@@ -44,11 +44,11 @@ ENCODING = edu_mod.ENCODING
 #: A section banner: ``;---- GONDOR TIER 1 INFANTRY ----``. 319 of DaC's 320
 #: banners match this, which is what makes it safe both to read tiers out of and
 #: to recognise as the tool's own furniture on write. The faction name is not
-#: captured for sorting — a unit's own ``ownership`` says which faction it is
+#: captured for sorting - a unit's own ``ownership`` says which faction it is
 #: in, and the banner text is display.
 #: The sub-group words a banner may end on. Reading is lenient because real
-#: files are spelt by hand — DaC writes ``CALVARY`` 8 times and ``HORSE ARCHER``
-#: once — while writing is always the canonical spelling. A banner ending on a
+#: files are spelt by hand - DaC writes ``CALVARY`` 8 times and ``HORSE ARCHER``
+#: once - while writing is always the canonical spelling. A banner ending on a
 #: word that is NOT in this list is not ours: it is left alone and carried
 #: through as an ordinary comment rather than consumed and rewritten.
 CAT_WORDS = ("INFANTRY", "ARCHERS", "ARCHER", "HORSE ARCHERS", "HORSE ARCHER",
@@ -60,7 +60,7 @@ CAT_WORDS = ("INFANTRY", "ARCHERS", "ARCHER", "HORSE ARCHERS", "HORSE ARCHER",
 #: worse than no banner at all: the next run would carry it as an ordinary
 #: comment AND write a fresh one, so a file would gain a banner on every pass.
 #: Broadening it also picks up the `;====== GONDOR INFANTRY ======` a mod wrote
-#: by hand, which is our furniture by any reasonable reading — and the trailing
+#: by hand, which is our furniture by any reasonable reading - and the trailing
 #: :data:`CAT_WORDS` still has to match, so an ordinary rule of equals signs
 #: over a paragraph of notes is not mistaken for one.
 BANNER_FILL = "-=*~#_+."
@@ -80,7 +80,7 @@ BANNER_WIDTH = 95
 
 #: Sub-groups within a faction, in the order DaC writes them. The key is what
 #: :meth:`unittransfer.edu.Unit.kind` returns; the value is the banner word.
-#: ``CALVARY`` appears 8 times in DaC and ``HORSE ARCHER`` once — real files are
+#: ``CALVARY`` appears 8 times in DaC and ``HORSE ARCHER`` once - real files are
 #: spelt by hand, so reading is lenient (see :data:`BANNER_RE`) while writing is
 #: consistent.
 CATEGORIES: Tuple[Tuple[str, ...], ...] = (
@@ -93,7 +93,7 @@ _CAT_RANK: Dict[str, int] = {k: i for i, g in enumerate(CATEGORIES) for k in g[1
 _CAT_NAME: Dict[int, str] = {i: g[0] for i, g in enumerate(CATEGORIES)}
 
 #: Sections that are not one faction's roster, in the order DaC's own table of
-#: contents lists them — after every faction, never before.
+#: contents lists them - after every faction, never before.
 REBELS, MERCS, SIEGE, SHIPS = "rebels", "mercs", "siege", "ships"
 TAIL: Tuple[str, ...] = (REBELS, MERCS, SIEGE, SHIPS)
 
@@ -102,7 +102,7 @@ SECTION_TITLES = {
     SIEGE: "SIEGE UNITS", SHIPS: "SHIPS",
 }
 
-#: A general leads its faction's run, so it sorts in front of tier 0 — and a
+#: A general leads its faction's run, so it sorts in front of tier 0 - and a
 #: unit somebody placed by hand leads even that, because it is the one position
 #: in the file a person actually chose.
 GENERAL_TIER = -1
@@ -117,7 +117,7 @@ HAND_TIER = -2
 #: exactly the ones a hand-organised EDU keeps at the head of a faction's run,
 #: and the sorter used to bury them among the tier 1 spearmen.
 #:
-#: So the classification is editable, per unit, from the ordering screen — with
+#: So the classification is editable, per unit, from the ordering screen - with
 #: whatever was detected filled in, so agreeing with the tool costs nothing.
 #: ``none`` is a real value and not a blank: it means "I looked, and this unit
 #: is ordinary", which is how you overrule a detection you disagree with.
@@ -149,11 +149,11 @@ def harvest(text: str) -> Dict[str, Tuple[str, str]]:
     module could derive:
 
     * the **tier**, which exists in no game file at all;
-    * the **group** — the author's own word for the section, like ``GONDOR`` or
+    * the **group** - the author's own word for the section, like ``GONDOR`` or
       ``NORTHERN DUNEDAIN``. It is deliberately kept as *text* and never
       resolved to a faction slot. Measured, only 146 of DaC's 916 banner names
       match a localised faction name, because a modder writes ``CRAG`` and
-      ``DORWINION`` rather than whatever ``descr_sm_factions.txt`` calls them —
+      ``DORWINION`` rather than whatever ``descr_sm_factions.txt`` calls them -
       and a unit's own ``ownership`` cannot stand in either, since most units
       list a dozen factions and the line is a set, not a ranking.
 
@@ -179,7 +179,7 @@ def harvest(text: str) -> Dict[str, Tuple[str, str]]:
 
 
 def harvest_tiers(text: str) -> Dict[str, str]:
-    """``{unit type: tier}`` — the tier half of :func:`harvest`."""
+    """``{unit type: tier}`` - the tier half of :func:`harvest`."""
     return {t: tier for t, (_, tier) in harvest(text).items() if tier}
 
 
@@ -200,19 +200,19 @@ def apply_tiers(text: str, tiers: Dict[str, str]) -> str:
 
 
 def section_of(u: edu_mod.Unit) -> Tuple[str, str]:
-    """``(section, faction slot)`` for one unit — the slot is ``""`` off-roster.
+    """``(section, faction slot)`` for one unit - the slot is ``""`` off-roster.
 
     **Faction first, kind second**, and that is a measurement rather than a
-    preference. The obvious reading of DaC's table of contents — a global
+    preference. The obvious reading of DaC's table of contents - a global
     GENERALS block at the top and MERCENARIES, SIEGE and SHIPS blocks at the
-    bottom — is not how the file is actually laid out: all 31 of its generals
+    bottom - is not how the file is actually laid out: all 31 of its generals
     sit at the head of their own faction's run, and its 127 mercenaries are
     spread from unit 11 to unit 891 because most of them are somebody's
     area-of-recruitment troops. Hoisting either into a section of its own moves
     ~140 units their author deliberately placed.
 
     So a unit that any faction can field belongs to that faction, and only the
-    handful nobody owns — 13 units in DaC, 3 in Third Age Reforged — fall
+    handful nobody owns - 13 units in DaC, 3 in Third Age Reforged - fall
     through to the shared sections at the end. Generals still come first, but
     first *within their faction* (see :func:`tier_rank`).
     """
@@ -280,7 +280,7 @@ def tier_rank(u: edu_mod.Unit) -> int:
 class Block:
     """One unit's lines, split into what moves and what separates."""
     unit: edu_mod.Unit
-    body: str                 # the unit's own lines — marker, type, fields, notes
+    body: str                 # the unit's own lines - marker, type, fields, notes
     kept: List[str]           # trailing comment lines that are not our banners
     index: int                # where it was, which is the tie-break for a stable sort
     section: str = ""
@@ -300,7 +300,7 @@ def _split_blocks(f: edu_mod.EduFile, groups: Dict[str, Tuple[str, str]],
     A recognised banner is dropped here and regenerated on write: it is the
     tool's own furniture, and carrying a stale one alongside a fresh one is how
     a file ends up with two. Every other comment line is kept and stays with the
-    unit it followed — this module deletes nobody's writing.
+    unit it followed - this module deletes nobody's writing.
     """
     out: List[Block] = []
     for i, u in enumerate(f.main_units):
@@ -319,7 +319,7 @@ def _name_the_rest(blocks: List[Block], names: Dict[str, str]) -> None:
     """Give a section to every unit no banner covered.
 
     A faction whose roster sits under banners usually has a few units that do
-    not — DaC's bodyguards live above the first banner in the file. Calling
+    not - DaC's bodyguards live above the first banner in the file. Calling
     those by the localised faction name would file them apart from their own
     faction, because the author's banner word is rarely the localised name
     (``MORIA`` against ``GOBLINS OF MORIA``). So a faction that already has a
@@ -377,7 +377,7 @@ def _moved(ordered: List[Block]) -> List[str]:
 
 
 def group_order(blocks: List[Block]) -> List[str]:
-    """Which section comes first — taken from the file's own layout.
+    """Which section comes first - taken from the file's own layout.
 
     ``descr_sm_factions.txt`` also puts the factions in an order, and it is
     tempting to use that. Measured, it is not the same order: DaC's roster file
@@ -385,7 +385,7 @@ def group_order(blocks: List[Block]) -> List[str]:
     laid out ``sicily, turks, russia, milan, normans``. Sorting by the wrong one
     moves hundreds of units that were already where their author put them.
 
-    So the order is read from where it is actually expressed — the median
+    So the order is read from where it is actually expressed - the median
     position of each section's units right now. The median rather than the
     first, so one stray early unit cannot drag a whole section to the top. The
     shared sections at the end keep :data:`TAIL` order.
@@ -423,7 +423,7 @@ def order_blocks(blocks: List[Block], order: Sequence[str]) -> List[Block]:
     file already in shape is returned untouched and a second run cannot differ
     from the first.
 
-    A unit placed by hand leads its section, in the order it was given — and
+    A unit placed by hand leads its section, in the order it was given - and
     that placement is read from the unit's own marker rather than passed in
     beside it, so every later run honours it too (see :func:`apply_hand`).
     """
@@ -436,7 +436,7 @@ def apply_hand(text: str, hand: Optional[Dict[str, List[str]]]) -> str:
 
     The sorter is right about most units and wrong about the ones a mod treats
     specially, which is the whole reason the ordering screen exists. A placement
-    made there has to OUTLIVE the cleanup that follows it — otherwise the next
+    made there has to OUTLIVE the cleanup that follows it - otherwise the next
     run puts the unit back where its tier said and the screen was a waste of
     everyone's time. So it is written onto the unit the way its tier is, and
     read back the same way. Nothing else in an EDU records position: in this
@@ -465,8 +465,8 @@ def apply_marks(text: str, marks: Optional[Dict[str, Dict[str, str]]]) -> Tuple[
     piece of this tool's metadata is: onto the unit's own ``;@m2gt`` line, above
     its ``type``, where the engine skips it and the next run reads it back.
 
-    A key set to ``""`` is REMOVED rather than written blank — that is how you
-    take a classification off a unit again — and :func:`unittransfer.edu.set_marker`
+    A key set to ``""`` is REMOVED rather than written blank - that is how you
+    take a classification off a unit again - and :func:`unittransfer.edu.set_marker`
     deletes a marker that has nothing left on it, so a unit cleared of all three
     comes out with no marker line at all rather than a bare prefix.
 
@@ -499,8 +499,8 @@ def apply_marks(text: str, marks: Optional[Dict[str, Dict[str, str]]]) -> Tuple[
 # writing it back
 
 
-#: How a section banner is drawn. The defaults are what the real files use — a
-#: 96-column rule of hyphens with the section name centred in it — and every one
+#: How a section banner is drawn. The defaults are what the real files use - a
+#: 96-column rule of hyphens with the section name centred in it - and every one
 #: of them is a matter of taste rather than of format, so all four are the user's.
 #: :data:`BANNER_RE` still has to read the result back, which is the one
 #: constraint: the line starts ``;``, the fill repeats at least twice, and the
@@ -550,7 +550,7 @@ def banner(title: str, style: Optional[Dict] = None) -> str:
 
 
 def _title(b: Block) -> str:
-    """The banner a block sits under — its section, then its sub-group.
+    """The banner a block sits under - its section, then its sub-group.
 
     Written so :data:`BANNER_RE` reads it straight back: the section survives a
     round trip through the file itself, which is what lets the next run see the
@@ -561,7 +561,7 @@ def _title(b: Block) -> str:
     cat = _CAT_NAME.get(category_rank(b.unit), "OTHER")
     tier = tier_rank(b.unit)
     # An untiered unit gets a banner with no tier in it, so reading the file
-    # back does not hand it a tier nobody chose — that would move it out of the
+    # back does not hand it a tier nobody chose - that would move it out of the
     # untiered group on the second run and cost the sorter its idempotence.
     return f"{b.group} TIER {tier} {cat}" if tier != UNTIERED else f"{b.group} {cat}"
 
@@ -577,8 +577,8 @@ def render(f: edu_mod.EduFile, blocks: List[Block],
     # preamble whole would then print it a second time, and the file would grow
     # a banner on every run. Ours are dropped here for the same reason they are
     # dropped from a block's filler: they are furniture, and they are rewritten
-    # below. Everything else in the preamble — DaC's hand-written table of
-    # contents included — is passed through untouched.
+    # below. Everything else in the preamble - DaC's hand-written table of
+    # contents included - is passed through untouched.
     out: List[str] = ["".join(l for l in f.preamble.splitlines(keepends=True)
                               if not BANNER_RE.match(l))]
     last = None
@@ -620,7 +620,7 @@ class SortPlan:
         return "; ".join(self.changes) or "nothing to change"
 
     def payload(self) -> Dict:
-        """What the page is shown — never the whole new file, which is 1.2 MB."""
+        """What the page is shown - never the whole new file, which is 1.2 MB."""
         return {
             "changes": self.changes, "warnings": self.warnings,
             "errors": self.errors, "summary": self.summary(),
@@ -673,7 +673,7 @@ def overview(mod) -> Dict:
             "name": names_of.get(b.type, ""),
             "tier": b.unit.tier,
             "variant": b.unit.variant,
-            # what the marker says, and — separately — what the unit's own lines
+            # what the marker says, and - separately - what the unit's own lines
             # say. The screen fills the drop-down in from the second when the
             # first is empty, so agreeing with the tool costs no clicks and
             # disagreeing with it is still one.
@@ -685,7 +685,7 @@ def overview(mod) -> Dict:
         })
     # What the drop-downs may offer: the standard set first, then whatever this
     # mod's own units have added to it. The same rule as everywhere else in the
-    # toolkit — a value a mod uses is a value the mod may be offered — and it
+    # toolkit - a value a mod uses is a value the mod may be offered - and it
     # matters most on a mod that has never been cleaned up, where the units carry
     # no markers at all and a list built only from them would be empty.
     from .vocab import TIER, TIER_VARIANT
@@ -721,13 +721,13 @@ def plan(mod, *, banners: bool = True, tidy: bool = True, group: bool = True,
     original = path.read_text(encoding=ENCODING)
     f = edu_mod.parse_text(original)
     if not f.main_units:
-        p.errors.append(f"no units found in {REL} — refusing to rewrite it")
+        p.errors.append(f"no units found in {REL} - refusing to rewrite it")
         return p
 
     # The tier a banner already states is written onto the unit's own marker
     # before anything is sorted. It has to be: this pass REWRITES the banners,
     # so a tier that lived only in one would be regenerated from itself. Reading
-    # it once and recording it is what breaks the circle — and it is reading the
+    # it once and recording it is what breaks the circle - and it is reading the
     # mod's own file, not inventing a value. A unit that already has a marker
     # keeps it; the marker is the answer, the banner is only where it was found.
     found = harvest(original)
@@ -788,7 +788,7 @@ def plan(mod, *, banners: bool = True, tidy: bool = True, group: bool = True,
     if p.untiered:
         p.warnings.append(
             f"{len(p.untiered)} unit(s) have no tier yet, so they sort after the "
-            "tiered ones in their group — read the file's own banners in to give "
+            "tiered ones in their group - read the file's own banners in to give "
             "them one")
     _verify(p, original, text)
     return p
@@ -799,7 +799,7 @@ def _verify(p: SortPlan, before: str, after: str) -> None:
 
     Position is the only thing this module is allowed to change, so the check is
     a multiset comparison: the same units, each with the same field lines, and
-    no comment line of anybody's lost. It is cheap next to what it prevents —
+    no comment line of anybody's lost. It is cheap next to what it prevents -
     silently rewriting a 35 000-line roster.
     """
     import collections
@@ -873,6 +873,6 @@ def apply(p: SortPlan) -> Dict:
         "manifest": manifest, "backup_root": str(backup_root),
     }
     config.append_log(rec)
-    log.info("EDU cleanup in %s — %d unit(s) moved, id=%s",
+    log.info("EDU cleanup in %s - %d unit(s) moved, id=%s",
              mod.name, len(p.moved), tid)
     return {"id": tid, "moved": len(p.moved), "record": rec}

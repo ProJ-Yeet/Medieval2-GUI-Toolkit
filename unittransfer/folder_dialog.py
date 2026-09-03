@@ -3,7 +3,7 @@
 The UI is a browser page, and browsers deliberately never expose a real
 filesystem path from an `<input type="file">` picker. But the server IS this
 machine, so it can pop the OS's own folder dialog (`SHBrowseForFolderW`) and
-hand the chosen path back over the API — the same trick a desktop app would
+hand the chosen path back over the API - the same trick a desktop app would
 use, just triggered over HTTP instead of a local button handler.
 
 ctypes + shell32 only (no tkinter): the portable build's embeddable Python
@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import ctypes
 import sys
+import threading
 from ctypes import wintypes
 from typing import Optional
 
@@ -87,13 +88,13 @@ OFN_EXPLORER = 0x00080000
 # the browser made. Windows refuses to hand the foreground to a process in that
 # position (the foreground lock, `SetForegroundWindow` returning FALSE), so the
 # dialog opened somewhere behind the browser window and, on most people's
-# machines, as nothing but a flashing taskbar button — which reads exactly like
+# machines, as nothing but a flashing taskbar button - which reads exactly like
 # "Browse... is stuck loading".
 #
-# The fix is to give the dialog an OWNER: a 0x0, never-painted popup this
+# The fix is to give the dialog an OWNER: a 1x1, fully transparent popup this
 # process does own. Two properties of ownership do the work. An owned window is
 # always drawn above its owner, and a WS_EX_TOPMOST owner passes topmost on to
-# it — so the dialog cannot end up behind the browser whatever the foreground
+# it - so the dialog cannot end up behind the browser whatever the foreground
 # lock says. Then, to make it the ACTIVE window rather than merely a visible one,
 # the thread borrows the foreground thread's input state
 # (`AttachThreadInput`) for the moment it takes to call `SetForegroundWindow`,
@@ -105,8 +106,21 @@ OFN_EXPLORER = 0x00080000
 # thread that made it.
 
 WS_POPUP = 0x80000000
+# The owner has to be VISIBLE. `SetForegroundWindow` refuses a hidden or
+# zero-size window, so a 0x0 never-shown popup could never take the foreground -
+# which is how the dialog ended up behind the browser with nothing but a
+# flashing taskbar button, reading as "Replace image... does nothing". A 1x1
+# layered window at full transparency is visible to the window manager and
+# invisible to the eye, so it satisfies the API without ever being seen.
+WS_VISIBLE = 0x10000000
 WS_EX_TOPMOST = 0x00000008
 WS_EX_TOOLWINDOW = 0x00000080
+WS_EX_LAYERED = 0x00080000
+LWA_ALPHA = 0x00000002
+HWND_TOPMOST = -1
+SWP_NOMOVE = 0x0002
+SWP_NOSIZE = 0x0001
+SWP_NOACTIVATE = 0x0010
 
 _user32 = ctypes.windll.user32
 _user32.CreateWindowExW.restype = wintypes.HWND
@@ -121,31 +135,72 @@ _user32.BringWindowToTop.argtypes = [wintypes.HWND]
 _user32.GetWindowThreadProcessId.restype = wintypes.DWORD
 _user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.c_void_p]
 _user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+_user32.SetLayeredWindowAttributes.argtypes = [
+    wintypes.HWND, wintypes.COLORREF, ctypes.c_ubyte, wintypes.DWORD]
+_user32.GetLastActivePopup.restype = wintypes.HWND
+_user32.GetLastActivePopup.argtypes = [wintypes.HWND]
+_user32.SetWindowPos.argtypes = [
+    wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int,
+    ctypes.c_int, ctypes.c_int, wintypes.UINT]
+_user32.IsWindowVisible.argtypes = [wintypes.HWND]
 
 
 class _Owner:
     """A hidden top-level window to hang a modal dialog off, as a context manager.
 
-    ``with _Owner() as hwnd:`` — ``hwnd`` may be ``None`` (window creation is not
+    ``with _Owner() as hwnd:`` - ``hwnd`` may be ``None`` (window creation is not
     worth failing a Browse over), and every dialog below already accepts a null
     owner, which is what it always used to pass.
     """
 
     def __enter__(self):
         self.hwnd = None
+        self._stop = threading.Event()
         try:
             # "STATIC" is a class the system has already registered, so there is
             # no window class of our own to register, name-clash or clean up.
+            # WS_VISIBLE and a 1x1 size are what make it eligible for the
+            # foreground at all; WS_EX_LAYERED at alpha 0 is what stops anyone
+            # seeing the pixel it occupies.
             self.hwnd = _user32.CreateWindowExW(
-                WS_EX_TOPMOST | WS_EX_TOOLWINDOW, "STATIC", "", WS_POPUP,
-                0, 0, 0, 0, None, None, None, None)
+                WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_LAYERED,
+                "STATIC", "", WS_POPUP | WS_VISIBLE,
+                0, 0, 1, 1, None, None, None, None)
         except OSError:
             self.hwnd = None
         if self.hwnd:
+            try:
+                _user32.SetLayeredWindowAttributes(self.hwnd, 0, 0, LWA_ALPHA)
+            except OSError:
+                pass
             _force_foreground(self.hwnd)
+            # …and once the dialog is up, put it in front on its own account.
+            # Ownership alone only guarantees it sits above THIS window, and the
+            # foreground lock can still refuse us at the moment the owner is
+            # made; the dialog is a second chance at the same thing, taken from
+            # a thread because the call that opens it does not return until the
+            # user has answered.
+            self._watch = threading.Thread(target=self._raise_dialog, daemon=True)
+            self._watch.start()
         return self.hwnd
 
+    def _raise_dialog(self) -> None:
+        """Poll for the dialog this owner is about to get, and raise it."""
+        for _ in range(60):                       # ~3s, then give up quietly
+            if self._stop.wait(0.05):
+                return
+            try:
+                dlg = _user32.GetLastActivePopup(self.hwnd)
+                if dlg and dlg != self.hwnd and _user32.IsWindowVisible(dlg):
+                    _user32.SetWindowPos(dlg, HWND_TOPMOST, 0, 0, 0, 0,
+                                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE)
+                    _force_foreground(dlg)
+                    return
+            except OSError:
+                return
+
     def __exit__(self, *exc):
+        self._stop.set()
         if self.hwnd:
             try:
                 _user32.DestroyWindow(self.hwnd)
@@ -182,7 +237,7 @@ def browse_for_file(title: str = "Select a file", filter_spec: str = "",
     """Blocking native file-open dialog. Returns the chosen path or None.
 
     ``filter_spec`` is the Win32 double-NUL filter form, given here as
-    ``"Meshes (*.mesh)|*.mesh|All files (*.*)|*.*"`` — the editor needs a real
+    ``"Meshes (*.mesh)|*.mesh|All files (*.*)|*.*"`` - the editor needs a real
     filesystem path for the mesh/texture to import, which a browser file input
     can never hand back.
     """
@@ -219,7 +274,7 @@ def browse_for_save(title: str = "Save as", filter_spec: str = "",
 
     The counterpart to :func:`browse_for_file`: exporting a unit pack has to end
     up somewhere the user picked, and a browser download would hand back a name
-    with no path — which is no use to a server that has to write the file itself.
+    with no path - which is no use to a server that has to write the file itself.
     Windows does the overwrite prompt for us (``OFN_OVERWRITEPROMPT``).
     """
     if sys.platform != "win32":
@@ -306,7 +361,7 @@ def reveal(path: str) -> bool:
         elif sys.platform == "darwin":
             subprocess.Popen(["open", "-R", target])
         else:
-            # no portable "select the file" on Linux — open the folder it is in
+            # no portable "select the file" on Linux - open the folder it is in
             subprocess.Popen(["xdg-open", os.path.dirname(target)])
     except OSError:
         return False

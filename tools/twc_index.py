@@ -3,17 +3,17 @@
     python tools/twc_index.py              # rebuild the index
     python tools/twc_index.py --check      # report what would change, write nothing
 
-`Reference/TWCenter/` is 3.4 GB of saved tutorials, guides and tool dumps — the
+`Reference/TWCenter/` is 3.4 GB of saved tutorials, guides and tool dumps - the
 accumulated knowledge of how Medieval II's files actually work, in 300-odd
 documents whose only organising principle is the filename someone saved them
 under. This walks it once and writes two files next to it:
 
-  INDEX.json  every document as a record — path, title, tags, the game files it
+  INDEX.json  every document as a record - path, title, tags, the game files it
               mentions (with how often), a one-line summary, and which roadmap
               phases it bears on
   INDEX.md    the same thing as a table you can read or grep
 
-Both are committed (the archive itself is not — see .gitignore); regenerate
+Both are committed (the archive itself is not - see .gitignore); regenerate
 after adding tutorials.
 
 Finding the tutorial for a format is then a grep:
@@ -23,7 +23,7 @@ Finding the tutorial for a format is then a grep:
 
 Extraction is best-effort by design. A scanned PDF with no text layer yields
 nothing to search, so it is tagged `needs-manual-read` and listed in its own
-section rather than being silently indexed as empty — the archive holds a few,
+section rather than being silently indexed as empty - the archive holds a few,
 and a phase that needs one has to open it by hand.
 
 Dev-only. Nothing here ships in a release; the PDF readers are not runtime
@@ -47,7 +47,7 @@ OUT_JSON = ARCHIVE / "INDEX.json"
 OUT_MD = ARCHIVE / "INDEX.md"
 
 #: Extensions worth reading. Everything else in the archive (textures, meshes,
-#: .exe tools, video) is an asset, not a document — it is counted per folder as
+#: .exe tools, video) is an asset, not a document - it is counted per folder as
 #: context but never given an entry of its own.
 DOC_EXTS = {".pdf", ".txt", ".docx", ".md", ".htm", ".html", ".xlsx"}
 
@@ -107,7 +107,7 @@ def _docx_text(path: Path) -> str:
 
 
 def _xlsx_text(path: Path) -> str:
-    """Cell values of a spreadsheet — the Docudemons field references are xlsx."""
+    """Cell values of a spreadsheet - the Docudemons field references are xlsx."""
     try:
         import openpyxl
     except ImportError:
@@ -143,7 +143,7 @@ def _html_text(path: Path) -> str:
 
 
 def _plain_text(path: Path) -> str:
-    """A .txt that may be UTF-16 — M2TW's own text files usually are."""
+    """A .txt that may be UTF-16 - M2TW's own text files usually are."""
     raw = path.read_bytes()[: MAX_TEXT * 2]
     if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
         return raw.decode("utf-16", "replace")
@@ -384,7 +384,7 @@ def title_for(path: Path) -> str:
     stem = path.stem
     stem = re.sub(r"^\[(?:Modding|Tutorial|Resource|TW Guide|FIX|M2TW modding tutorial)\]\s*",
                   "", stem, flags=re.I)
-    stem = re.sub(r"\s+", " ", stem.replace("_", " ")).strip(" -–—")
+    stem = re.sub(r"\s+", " ", stem.replace("_", " ")).strip(" -–")
     return stem or path.stem
 
 
@@ -392,7 +392,7 @@ def is_doc(path: Path) -> bool:
     if path.suffix.lower() not in DOC_EXTS:
         return False
     # The index writes itself into the archive it walks. Left in, each run would
-    # index the previous run's output — the tags of every topic at once — and the
+    # index the previous run's output - the tags of every topic at once - and the
     # file would never settle.
     if path.name in (OUT_JSON.name, OUT_MD.name):
         return False
@@ -409,7 +409,7 @@ def _primary(paths: list[Path], folder: Path) -> Path:
 
     Prefer a prose document named after its folder, then any prose document,
     then the biggest file. `Mongol invasion script/` holds the PDF of the guide
-    and the .txt of the script it hands you — the PDF is the document, the .txt
+    and the .txt of the script it hands you - the PDF is the document, the .txt
     is its attachment.
     """
     prose = [p for p in paths if p.suffix.lower() in PROSE_EXTS]
@@ -430,7 +430,7 @@ def build(archive: Path) -> dict:
     # scripts, data files and converted text it ships with. Indexing every one
     # of those as its own document buried the 300 real guides under a folder of
     # 35 one-line script fragments. Files at the archive root are each their own
-    # document — nothing groups them.
+    # document - nothing groups them.
     groups: dict[Path, list[Path]] = {}
     for p in paths:
         groups.setdefault(p.parent, []).append(p)
@@ -450,11 +450,11 @@ def build(archive: Path) -> dict:
         print(f"  [{i:>3}/{len(units)}] {rel[:78]}", flush=True)
         text = clean(extract(path))[:MAX_TEXT]
         name = title_for(path)
-        # The folder name carries subject too — "Mongol invasion script/x.pdf"
+        # The folder name carries subject too - "Mongol invasion script/x.pdf"
         # is about scripting even when the file inside is called "x".
         parent = path.parent.name if path.parent != archive else ""
         name_hay = f"{name} {parent} {' '.join(p.stem for p in extra[:40])}"
-        # Game-file detection reads the RAW names — `title_for` turns underscores
+        # Game-file detection reads the RAW names - `title_for` turns underscores
         # into spaces for readability, which stops `export_descr_unit.txt` from
         # matching itself. That matters most for the archive's copies of the game
         # files themselves, which are the format examples worth finding.
@@ -497,7 +497,7 @@ def render_md(index: dict) -> str:
     untagged = [d for d in docs if not [t for t in d["tags"] if t != "needs-manual-read"]]
 
     # The coverage table is about FORMATS, so a tutorial's own asset ("grape.cas",
-    # "symbol_rebels.cas") is dropped here — it stays on the document's own row,
+    # "symbol_rebels.cas") is dropped here - it stays on the document's own row,
     # where naming one specific model is the useful thing.
     format_re = re.compile(r"^(?:export_|descr_|campaign_script|map_[a-z_]+\.tga$"
                            r"|battle_models\.modeldb$)|\.(?:sd|strings\.bin|cfg)$", re.I)
@@ -508,7 +508,7 @@ def render_md(index: dict) -> str:
                 files[gf["file"]] += 1
 
     out = [
-        "# TWCenter archive — index",
+        "# TWCenter archive - index",
         "",
         f"{len(docs)} documents covering {index['files_indexed']} files, generated by "
         "`tools/twc_index.py`. Rebuild after adding tutorials: "
@@ -529,12 +529,12 @@ def render_md(index: dict) -> str:
         "```",
         "",
         "Paths are relative to `Reference/TWCenter/`. `needs-manual-read` means "
-        "no text layer (a scan or an image-only export) — open it by hand.",
+        "no text layer (a scan or an image-only export) - open it by hand.",
         "",
         "## Game files by coverage",
         "",
         "How many documents mention each file. A file with no entry here is one "
-        "nothing in the archive explains — worth knowing before a phase starts.",
+        "nothing in the archive explains - worth knowing before a phase starts.",
         "",
         "| Game file | Documents |",
         "|---|---|",
@@ -543,7 +543,7 @@ def render_md(index: dict) -> str:
         out.append(f"| `{f}` | {n} |")
 
     # Reading list per roadmap phase. The topic sections below are organised for
-    # browsing; this is organised for the question an actual session asks —
+    # browsing; this is organised for the question an actual session asks -
     # "I am starting phase 8, what in here explains the file I am about to parse?"
     out += ["", "## Reading list by roadmap phase", "",
             "See `ROADMAP.md` for what each phase builds. Ranked by how much of "
@@ -554,18 +554,18 @@ def render_md(index: dict) -> str:
             by_phase.setdefault(p, []).append(d)
     for phase in sorted(by_phase, key=int):
         # Rank by how central this phase's subject is to the document, not by how
-        # many files it name-drops — "Crashes and how to fix them" mentions half
+        # many files it name-drops - "Crashes and how to fix them" mentions half
         # the game and is nobody's first read. `tags` is already strongest-first,
         # so the position of the phase's own tag is the measure.
         def centrality(d, _p=phase):
             spots = [i for i, t in enumerate(d["tags"]) if _p in TAG_PHASES.get(t, ())]
             return min(spots) if spots else 99
         entries = sorted(by_phase[phase], key=lambda d: (centrality(d), -d["chars"]))
-        out += [f"**phase:{phase}** — {len(entries)} documents", ""]
+        out += [f"**phase:{phase}** - {len(entries)} documents", ""]
         for d in entries[:10]:
-            gf = ", ".join(f"`{g['file']}`" for g in d["game_files"][:3]) or "—"
+            gf = ", ".join(f"`{g['file']}`" for g in d["game_files"][:3]) or "-"
             flag = " ⚠" if "needs-manual-read" in d["tags"] else ""
-            out.append(f"- [{_text(d['title'])}]({_link(d['path'])}){flag} — {gf}")
+            out.append(f"- [{_text(d['title'])}]({_link(d['path'])}){flag} - {gf}")
         if len(entries) > 10:
             out.append(f"- …{len(entries) - 10} more under the topic sections below")
         out.append("")
@@ -578,7 +578,7 @@ def render_md(index: dict) -> str:
         out += [head, "", f"{len(entries)} documents.", "",
                 "| Document | Game files | Summary |", "|---|---|---|"]
         for d in entries:
-            gf = ", ".join(f"`{g['file']}`" for g in d["game_files"][:4]) or "—"
+            gf = ", ".join(f"`{g['file']}`" for g in d["game_files"][:4]) or "-"
             summary = (d["summary"] or "").replace("|", "\\|")[:160]
             flag = " ⚠" if "needs-manual-read" in d["tags"] else ""
             att = f" +{len(d['attachments'])}" if d["attachments"] else ""
@@ -588,10 +588,10 @@ def render_md(index: dict) -> str:
 
     if untagged:
         out += ["## Untagged", "",
-                "Nothing matched — usually a tool's own readme or a data dump.", "",
+                "Nothing matched - usually a tool's own readme or a data dump.", "",
                 "| Document | Game files |", "|---|---|"]
         for d in sorted(untagged, key=lambda d: d["title"].lower()):
-            gf = ", ".join(f"`{g['file']}`" for g in d["game_files"][:4]) or "—"
+            gf = ", ".join(f"`{g['file']}`" for g in d["game_files"][:4]) or "-"
             out.append(f"| [{_text(d['title'])}]({_link(d['path'])}) | {gf} |")
         out.append("")
 

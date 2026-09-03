@@ -1,8 +1,8 @@
-/* sprites.js — Sprites mode: generating and wiring the far-LOD unit sprites
+/* sprites.js - Sprites mode: generating and wiring the far-LOD unit sprites
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
@@ -38,7 +38,7 @@ async function loadSprites(){
 function sprSet(k,v){state.spr[k]=v;renderSprites();}
 function sprPick(name,on){const s=state.spr;on?s.picked.add(name):s.picked.delete(name);renderSprites();}
 function sprPickShown(on){const s=state.spr;sprShown().forEach(m=>on?s.picked.add(m.name):s.picked.delete(m.name));renderSprites();}
-// The models a unit visibly *switches to* — its armour-upgrade levels. An entry
+// The models a unit visibly *switches to* - its armour-upgrade levels. An entry
 // that is only ever somebody's soldier, officer or general model is skipped:
 // picking those alongside is what makes a batch balloon from thirty models to
 // two thousand, and they are covered by their own unit's row anyway.
@@ -236,7 +236,7 @@ function renderSprites(){
           <code>unit_sprites/</code> that no modeldb line names.</div>`:''}
       </div></div>`;
 }
-// Two folders when the mod lives outside the install that launches it — both are
+// Two folders when the mod lives outside the install that launches it - both are
 // scanned, and naming both is what makes "nothing found" diagnosable.
 function sprExportDirs(s){
   const d=(s.export_dirs&&s.export_dirs.length)?s.export_dirs

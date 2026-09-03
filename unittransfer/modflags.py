@@ -9,7 +9,7 @@ effects, the 32 recruitment slots a building may offer. A mod built for it sits
 over several of them by design.
 
 Which is why this is a flag and not a guess. The toolkit cannot detect M2EX from
-a mod's files — nothing in ``data/`` says so — and reporting the caps anyway
+a mod's files - nothing in ``data/`` says so - and reporting the caps anyway
 turned every check on such a mod into a page of findings that were all
 deliberate. So the person who knows says so once, on the Home screen or in
 Settings, and from then on:
@@ -19,7 +19,7 @@ Settings, and from then on:
     the warning itself already did.
 
 Nothing else changes. A cap finding is *only* the "you are over the engine's
-number" one — every other check on the same record (a missing text key, a
+number" one - every other check on the same record (a missing text key, a
 line in the wrong order, a name nothing defines) still runs, because none of
 those are things M2EX makes legal.
 
@@ -35,8 +35,8 @@ from typing import Dict, Iterable, List
 from . import config
 
 #: The finding kinds that are engine ceilings, and nothing else. Each one is a
-#: count against a number baked into the vanilla executable — the number M2EX
-#: replaces — so these are exactly the findings that stop being true on a mod
+#: count against a number baked into the vanilla executable - the number M2EX
+#: replaces - so these are exactly the findings that stop being true on a mod
 #: that runs on it.
 CAP_FINDINGS = frozenset({
     "too-many-factions",        # descr_sm_factions.txt: vanilla loads 31
@@ -57,13 +57,13 @@ def _root_of(mod) -> "Path | str":
     plain path.
 
     ``getattr(mod, "root", mod)`` is what this used to be, and on a ``Path`` it is
-    a trap: ``Path.root`` is the path's own ANCHOR — ``'\'`` on Windows — not a
+    a trap: ``Path.root`` is the path's own ANCHOR - ``'\'`` on Windows - not a
     folder anyone means. Every mod handed in as a path therefore keyed to the
     drive root of the process's working directory instead of itself, so
     ``/api/mods`` (which reads the flag straight off the discovered path) reported
     every mod's mark as whatever one shared bogus row said. Ticking a mod on the
-    Home card still looked right — that response is answered from a ``Mod``, which
-    has a real ``.root`` — and the tick then vanished the next time the mod list
+    Home card still looked right - that response is answered from a ``Mod``, which
+    has a real ``.root`` - and the tick then vanished the next time the mod list
     was fetched.
     """
     if isinstance(mod, (str, Path)):
@@ -72,7 +72,7 @@ def _root_of(mod) -> "Path | str":
 
 
 def _key(root) -> str:
-    """The settings-table key for a mod root — resolved, slashed and folded.
+    """The settings-table key for a mod root - resolved, slashed and folded.
 
     The same normalisation :func:`unittransfer.eop._key` uses, and for the same
     reason: the browser hands back a path with whatever separators and casing the
@@ -113,8 +113,8 @@ def marked_roots() -> List[str]:
 def uncapped(findings: Iterable[Dict], mod) -> List[Dict]:
     """``findings`` with the engine-ceiling ones dropped when ``mod`` is M2EX.
 
-    Called where a module hands its findings out with the mod in hand — its
-    overview, its detail pane and its plan — rather than inside the ``check``
+    Called where a module hands its findings out with the mod in hand - its
+    overview, its detail pane and its plan - rather than inside the ``check``
     functions themselves, which are pure and take a parsed file rather than a
     mod. One seam, one list of kinds, and every editor gets the same answer.
     """

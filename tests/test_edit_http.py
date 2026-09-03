@@ -1,4 +1,4 @@
-"""Unit-editor mode over HTTP — exactly the calls the browser page makes.
+"""Unit-editor mode over HTTP - exactly the calls the browser page makes.
 
 Runs a real server against a throwaway MED2 root (one mini mod copied from
 Third_Age_Reforged) and drives /api/edit/unit -> /api/edit/plan ->
@@ -174,7 +174,7 @@ try:
     # ---- "Open file location" only ever points inside the mod ----
     # Only the refusals are exercised: a reveal that succeeds opens a real
     # Explorer window, which a test suite has no business doing. The refusals
-    # are the half that matters anyway — the page hands over a path, and this is
+    # are the half that matters anyway - the page hands over a path, and this is
     # what stops that path being anywhere at all.
     r = post("/api/reveal", {"mod": "TestMod", "rel": "../../../../Windows"})
     check("a rel that climbs out of the mod is refused",

@@ -1,19 +1,19 @@
-/* stratmap.js — Strat map tab: descr_model_strat.txt and data/models_strat
+/* stratmap.js - Strat map tab: descr_model_strat.txt and data/models_strat
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
 /* =====================================================================
-   THE STRAT MAP'S MODELS — the other half of a mod's 3D art.
+   THE STRAT MAP'S MODELS - the other half of a mod's 3D art.
 
    BMDB mode's list is every battle model; this is every *campaign map* model:
    the generals, agents, heroes and faction symbols `descr_model_strat.txt`
    declares and the `.CAS` meshes and textures under `data/models_strat` they
    point at. The two screens do the same job on different trees, so this one is
-   deliberately the same shape — a list you can search, a row per entry saying
+   deliberately the same shape - a list you can search, a row per entry saying
    who uses it, and one 🧹 dialog that moves the dead weight out of the mod
    (backed up, exported, undoable) rather than deleting anything.
 
@@ -23,7 +23,7 @@
    texture goes on shipping. Divide and Conquer carries 54 MB of files under
    models_strat that nothing in the mod names.
 
-   `models_strat/residences` is left out of all of it — see stratmap.py: the
+   `models_strat/residences` is left out of all of it - see stratmap.py: the
    game reads a faction's settlement variant out of that tree by folder, with
    nothing naming the file, so "nothing names it" would be wrong about all of it.
    ===================================================================== */
@@ -97,7 +97,7 @@ function stmRow(e){
 }
 
 /* One entry, read-only: the block exactly as the file stores it, and what each
-   of its lines points at. Read-only on purpose — this tab exists to find what is
+   of its lines points at. Read-only on purpose - this tab exists to find what is
    dead, and a strat model is edited by editing eight tab-aligned lines, which a
    form would make worse rather than better. The block is here so you can check
    what you are about to remove without leaving the tool. */
@@ -137,7 +137,7 @@ async function openStratEntry(name){
 /* ======================= 🧹 CLEAN UP THE STRAT MAP =======================
    Same two questions the BMDB cleanup asks, on the other tree: which declared
    models nothing references, and which files under models_strat nothing names.
-   Same contract too — everything ticked is MOVED to a folder outside the mod,
+   Same contract too - everything ticked is MOVED to a folder outside the mod,
    in the mod's own layout, and every rewritten file is backed up first. */
 async function openStratCleanup(){
   const modal=document.getElementById('modal');
@@ -155,7 +155,7 @@ async function openStratCleanup(){
   const was=(state.strclean&&state.strclean.a&&state.strclean.a.mod===a.mod)?state.strclean:null;
   state.strclean={a,target:(was&&was.target)||state.settings.last_stratmap_target
                                             ||state.settings.last_cleanup_target||'',
-    // unused: pre-ticked, they are dead by definition. Files: NOT pre-ticked —
+    // unused: pre-ticked, they are dead by definition. Files: NOT pre-ticked -
     // a texture with no entry naming it is a likelier false positive than a
     // block with no character naming it, and this is the tick that frees the
     // megabytes, so it is the one worth reading first.
@@ -205,7 +205,7 @@ function renderStratCleanup(){
         They are left alone.</div>`:''}
       ${a.held_file_count?`<div class="count">${a.held_file_count} file${
         a.held_file_count===1?' is':'s are'} named by no model, but their bare filename turns up in a
-        <code>descr_*.txt</code> or a script — so they are not offered above either.</div>`:''}
+        <code>descr_*.txt</code> or a script - so they are not offered above either.</div>`:''}
       <div class="count"><code>${esc(a.skipped_dir)}</code> is skipped entirely: the game picks a
         faction's settlement variant out of that folder without any file naming it, so
         "nothing names it" would be wrong about every file in there.</div>
@@ -240,7 +240,7 @@ function stmOrphanBody(){
   const c=state.strclean,rows=c.a.orphans;
   if(!rows.length)return '<div class="count" style="margin-top:8px">None. Every file under models_strat is named by something.</div>';
   return `<div class="count" style="margin-top:7px">Files sitting in <code>data/models_strat</code> that
-      <b>nothing</b> in the mod names — not a model block, not a faction symbol, not a resource,
+      <b>nothing</b> in the mod names - not a model block, not a faction symbol, not a resource,
       not a script. They go to <code>unused_files\\</code> in the destination, paths mirrored.
       A <code>.tga</code> and the <code>.tga.dds</code> beside it count as one texture, so ticking
       one never leaves the other stranded.</div>
@@ -285,7 +285,7 @@ function stmCountText(k){
 function stmCounts(){['unused','orphans'].forEach(k=>{
   const el=document.getElementById('stc_'+k); if(el)el.textContent=stmCountText(k);});}
 // The checkbox already shows its own new state, so only the header count needs
-// touching — that keeps ticking one of 600 rows instant.
+// touching - that keeps ticking one of 600 rows instant.
 function stmPick(key,id,on){const s=state.strclean[key]; on?s.add(id):s.delete(id);
   stmStale(); stmCounts();}
 function stmAll(key,on){
@@ -340,7 +340,7 @@ async function stmApply(){
         `${res.plan.export_count} file(s) ✓  (undo in 🕑 Log)`,5200);
   // The lists in this dialog were built from an audit taken BEFORE the cleanup,
   // so the mod on disk has changed and the answer on screen has to change with
-  // it — re-run rather than leave stale rows up inviting a second tick.
+  // it - re-run rather than leave stale rows up inviting a second tick.
   state.stm=null;
   loadStratmap();
   await openStratCleanup();

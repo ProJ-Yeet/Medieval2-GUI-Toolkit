@@ -1,32 +1,32 @@
-/* cards.js — Unit cards tab: the two pictures a unit has, deduplicated
+/* cards.js - Unit cards tab: the two pictures a unit has, deduplicated
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
 /* =====================================================================
-   UNIT AND INFO CARDS — one picture, thirty folders.
+   UNIT AND INFO CARDS - one picture, thirty folders.
 
    The game finds a unit's card under the PLAYER's faction folder, so a unit
    thirty factions can field needs its card in thirty of them. Mods do exactly
    that, byte for byte, and it is where the disk goes: Divide and Conquer ships
    1.2 GB of info cards for 917 units. The engine also falls back to the merc
-   folder for any unit whose own faction folder has nothing — which is where one
+   folder for any unit whose own faction folder has nothing - which is where one
    copy can do the job of thirty.
 
    So this tab is three questions, per kind of card:
 
-     * whose art is for a unit that is GONE — a dictionary no unit claims;
-     * which are the SAME picture in several folders — one hash, nothing to
+     * whose art is for a unit that is GONE - a dictionary no unit claims;
+     * which are the SAME picture in several folders - one hash, nothing to
        decide, fold them into the merc folder;
-     * which really DIFFER per faction — the tool will not choose between two
+     * which really DIFFER per faction - the tool will not choose between two
        pictures a mod deliberately ships, so those are shown side by side and
        the pick is yours, "leave them alone" included.
 
    Everything ticked is MOVED to a folder outside the mod, backed up first and
-   undoable from 🕑 Log — the same contract the other two cleaners make. It is a
+   undoable from 🕑 Log - the same contract the other two cleaners make. It is a
    page rather than a dialog because choosing between card variants is reading
    work, and reading work does not belong in a modal.
    ===================================================================== */
@@ -65,7 +65,7 @@ async function loadCards(){
     target:(was&&was.target)||state.settings.last_cards_target
                             ||state.settings.last_cleanup_target||'',
     // Gone and duplicated are pre-ticked: both are facts, not judgements. The
-    // variant sets are not — every one of them is a question.
+    // variant sets are not - every one of them is a question.
     pick:Object.fromEntries(a.kinds.map(k=>[k.kind,{
       remove:new Set(k.unused.map(u=>u.name)),
       cons:new Set(k.duplicates.map(d=>d.name)),
@@ -82,8 +82,8 @@ const cdPick=key=>state.cards.pick[key];
 
    Filtering rather than ignoring it, because a mod's info cards run to six
    hundred rows and finding one unit among them by scrolling is not finding it.
-   The header counts stay whole-list — a tick is a tick whether or not the row it
-   is on is on screen — while "Select all" follows what you can see, which is the
+   The header counts stay whole-list - a tick is a tick whether or not the row it
+   is on is on screen - while "Select all" follows what you can see, which is the
    only reading of it that is not a trap while a filter is up. */
 const cdQuery=()=>search.value.trim().toLowerCase();
 const cdMatch=(row,q)=>!q||row.name.toLowerCase().includes(q)
@@ -91,7 +91,7 @@ const cdMatch=(row,q)=>!q||row.name.toLowerCase().includes(q)
   ||(row.folders||[]).some(f=>f.toLowerCase().includes(q));
 const cdRows=(list)=>{const q=cdQuery(); return list.filter(r=>cdMatch(r,q));};
 const cdShownNote=(shown,all)=>shown.length===all.length?''
-  :`<div class="count" style="margin-top:6px">${shown.length} of ${all.length} shown —
+  :`<div class="count" style="margin-top:6px">${shown.length} of ${all.length} shown -
      the rest are filtered out by the search box, and stay as they are.</div>`;
 
 function renderCards(){
@@ -170,7 +170,7 @@ function cdKindHtml(k){
       k.already?` · ${k.already} already live only in <code>${esc(k.merc)}</code>`:''}</span></h3>
     ${sec('unused','For units that are gone',()=>cdUnusedBody(k))}
     ${sec('dups','The same picture in several folders',()=>cdDupBody(k))}
-    ${sec('vars','Different pictures per faction — your call',()=>cdVarBody(k))}
+    ${sec('vars','Different pictures per faction - your call',()=>cdVarBody(k))}
     ${cdNotesHtml(k)}
   </section>`;
 }
@@ -213,7 +213,7 @@ function cdUnusedBody(k){
 
 function cdDupBody(k){
   const p=cdPick(k.kind);
-  if(!k.duplicates.length)return '<div class="count" style="margin-top:8px">None — no card is copied into more than one folder.</div>';
+  if(!k.duplicates.length)return '<div class="count" style="margin-top:8px">None - no card is copied into more than one folder.</div>';
   const rows=cdRows(k.duplicates);
   return `<div class="count" style="margin-top:7px">Every copy of these is byte for byte the
       same file. One goes to <code>data/${esc(k.base)}/${esc(k.merc)}/</code>, which is where the
@@ -231,22 +231,22 @@ function cdDupBody(k){
         <span class="badge">${esc(d.unit)}</span>
         <div class="sub">${d.folders.length} identical cop${d.folders.length===1?'y':'ies'}:
           ${esc(d.folders.slice(0,8).join(', '))}${d.folders.length>8?` +${d.folders.length-8}`:''}${
-          d.options[0].in_merc?' — one of them is already the merc copy':''}</div></div>
+          d.options[0].in_merc?' - one of them is already the merc copy':''}</div></div>
       <span class="count">−${MB(d.bytes_saved)}</span></div>`).join('')}</div>`;
 }
 
 /* The one part of this page that is a question rather than a fact. Each row is a
    unit whose factions really do hold DIFFERENT pictures; the tool shows them
    side by side and takes no view. "Keep all" is the default and stays selected
-   until you say otherwise — silently collapsing a mod's per-faction art into one
+   until you say otherwise - silently collapsing a mod's per-faction art into one
    picture is exactly the thing this must not do on its own. */
 function cdVarBody(k){
   const p=cdPick(k.kind);
-  if(!k.variants.length)return '<div class="count" style="margin-top:8px">None — where a card is in several folders, every copy is the same picture.</div>';
+  if(!k.variants.length)return '<div class="count" style="margin-top:8px">None - where a card is in several folders, every copy is the same picture.</div>';
   const rows=cdRows(k.variants);
   return `<div class="count" style="margin-top:7px">These units have <b>different</b> cards in
       different faction folders. Pick the one that should become the single copy in
-      <code>${esc(k.merc)}</code> — the others move out — or leave the set as it is.
+      <code>${esc(k.merc)}</code> - the others move out - or leave the set as it is.
       Nothing here is ticked for you.</div>
     ${cdShownNote(rows,k.variants)}
     <div class="clbar">
@@ -282,8 +282,8 @@ already share, for every row at once. Read them first.">Take the commonest, ever
 function cdNotesHtml(k){
   const bits=[];
   if(k.stray_count)bits.push(`${k.stray_count} file${k.stray_count===1?'':'s'} in these folders
-    ${k.stray_count===1?'is':'are'} not shaped like a ${esc(k.label)} (the agent pictures —
-    <code>spy.tga</code>, <code>diplomat.tga</code> — and whatever else has been dropped in there,
+    ${k.stray_count===1?'is':'are'} not shaped like a ${esc(k.label)} (the agent pictures -
+    <code>spy.tga</code>, <code>diplomat.tga</code> - and whatever else has been dropped in there,
     ${MB(k.stray_bytes)}). Their names say nothing about which unit they belong to, so they are
     counted and left alone.`);
   if(k.pinned.length)bits.push(`${k.pinned.length} unit${k.pinned.length===1?'':'s'} pin their
@@ -291,7 +291,7 @@ function cdNotesHtml(k){
     A pin is the mod saying “look here”, so those are left out of the consolidation.`);
   if(k.lua_kept.length)bits.push(`${k.lua_kept.length} ${esc(k.label)}${
     k.lua_kept.length===1?'':'s'} belong to a dictionary no unit claims, but which one of the mod's
-    <code>.lua</code> scripts names — M2TWEOP can build a unit at runtime, so
+    <code>.lua</code> scripts names - M2TWEOP can build a unit at runtime, so
     ${k.lua_kept.length===1?'it is':'they are'} not offered for removal.`);
   return bits.length?`<div class="count cardnotes">${bits.map(b=>`<div>· ${b}</div>`).join('')}</div>`:'';
 }

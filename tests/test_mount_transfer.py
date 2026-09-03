@@ -88,7 +88,7 @@ for u in src.edu.units:
         same = u
         break
 if same is None:
-    print("  (no identical shared mount found — skipped)")
+    print("  (no identical shared mount found - skipped)")
 else:
     print(f"unit={same.type!r}  mount={same.mount!r}")
     mpath = dest_root / "data" / "descr_mount.txt"
@@ -112,7 +112,7 @@ for u in src.edu.units:
         diff = u
         break
 if diff is None:
-    print("  (no clashing mount found — skipped)")
+    print("  (no clashing mount found - skipped)")
 else:
     print(f"unit={diff.type!r}  mount={diff.mount!r}")
     p = plan_transfer(src, diff.type, Mod(dest_root), TransferOptions())

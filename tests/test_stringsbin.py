@@ -7,13 +7,13 @@ installed and on hand-built ones where they are not.
 
 What each part is here to catch:
 
-  * the two things the reference tool's codec gets wrong — a 16-bit entry count
+  * the two things the reference tool's codec gets wrong - a 16-bit entry count
     (fine until an archive passes 65 535 entries, which ``names.txt`` is already
     within sight of) and a single zero word where the trailing tag index goes
     (which truncates two thirds of Third Age's ``export_buildings``)
   * an edit that leaves everything it did not touch alone, byte for byte
   * a new tag landing in code-point order, because the game binary-searches them
-  * the ``.txt`` compiler agreeing with the game's own compiler — the reason
+  * the ``.txt`` compiler agreeing with the game's own compiler - the reason
     ``cleaner`` can now refresh a cache instead of deleting it
   * refusals: a renamed tag in the Code View pane, a path outside ``data/text``,
     and removing a row from an archive addressed by position
@@ -72,7 +72,7 @@ check("peek reads the count without decoding", stringsbin.peek.__name__ == "peek
 
 # The count is 32 bits. Reading it as a u16 + padding word, as the reference
 # tool's codec does, happens to agree below 65 536 and silently halves the file
-# above it — so prove the wide field is really there.
+# above it - so prove the wide field is really there.
 big = build(rows=[(f"tag{i:06d}", f"v{i}") for i in range(70000)])
 wide = stringsbin.encode(big)
 check("70 000 entries survive a round trip (a 16-bit count could not hold them)",
@@ -258,7 +258,7 @@ check("faction names read through the compiled archive",
 print("\n== every .strings.bin on this machine ==")
 found = sorted(REAL_MODS.rglob("*.strings.bin")) if REAL_MODS.is_dir() else []
 if not found:
-    print("  (no mods installed — the hand-built fixtures above are the whole check)")
+    print("  (no mods installed - the hand-built fixtures above are the whole check)")
 else:
     bad = []
     for p in found:
@@ -274,5 +274,5 @@ else:
 shutil.rmtree(med2, ignore_errors=True)
 shutil.rmtree(cfg, ignore_errors=True)
 
-print(f"\n{sum(ok)}/{len(ok)} checks — " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
+print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

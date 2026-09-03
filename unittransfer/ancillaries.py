@@ -16,14 +16,14 @@ a definition above that is one flat record instead of a ladder of levels::
         Effect PersonalSecurity 2
 
 The block machinery is :mod:`unittransfer.keyblock` and the trigger half is
-:mod:`unittransfer.triggers`, both already written — the two formats are one
+:mod:`unittransfer.triggers`, both already written - the two formats are one
 language and Squid's guide documents them in one document for that reason. What
 is left here is what EDA does *differently*, and there are four things:
 
 **``Type`` and ``Transferable`` are not in the guide.** That guide is RTW's; both
 lines are M2TW additions and both are present in all 1134 ancillaries the three
 installed mods define, always as lines two and three. ``Type`` is a free-form
-grouping name — a character holds one ancillary per type — and ``Transferable``
+grouping name - a character holds one ancillary per type - and ``Transferable``
 is ``0`` or ``1``: whether it can be handed to another character.
 
 **The trigger half grants rather than adds.** EDCT triggers say ``Affects <trait>
@@ -38,7 +38,7 @@ transferred). Both are from TWCenter's *List of Hardcoded Limits*; no installed
 mod is over either, so :func:`check` reporting one means something.
 
 **An ancillary has a picture.** ``Image`` names a file under
-``data/ui/ancillaries``, which the mods here ship unpacked — so it can be shown
+``data/ui/ancillaries``, which the mods here ship unpacked - so it can be shown
 beside the record the way a unit card is.
 
 Text keys live in ``data/text/export_ancillaries.txt`` rather than
@@ -69,7 +69,7 @@ BODY_ORDER = ("Type", "Transferable", "Image", "Unique", "ExcludedAncillaries",
 #: the lines the engine will not do without
 REQUIRED = ("Type", "Transferable", "Image", "Description", "EffectsDescription")
 
-#: lines that are the whole line — present or absent, never a value
+#: lines that are the whole line - present or absent, never a value
 FLAGS = ("Unique",)
 
 #: keys whose value is a comma-separated list
@@ -80,7 +80,7 @@ MAX_EXCLUDED = 3
 MAX_EFFECTS = 8
 
 #: where an ancillary's displayed name and descriptions come from, relative to
-#: ``data/`` — and its compiled cache, which :mod:`unittransfer.cleaner`
+#: ``data/`` - and its compiled cache, which :mod:`unittransfer.cleaner`
 #: addresses from the mod root instead
 LOC_REL = "text/export_ancillaries.txt"
 LOC_BIN_REL = "data/" + LOC_REL + ".strings.bin"
@@ -157,11 +157,11 @@ class AncillaryFile:
     ancillaries: List[Ancillary] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     trailing_newline: bool = True
-    #: 0-based line of the first ``Trigger`` — where the other half starts
+    #: 0-based line of the first ``Trigger`` - where the other half starts
     trigger_start: int = -1
 
     def text(self) -> str:
-        """The file exactly as it was read — the property everything else rests on."""
+        """The file exactly as it was read - the property everything else rests on."""
         out = self.newline.join(self.lines)
         return out + self.newline if self.trailing_newline and self.lines else out
 
@@ -244,13 +244,13 @@ def parse_block(text: str) -> Ancillary:
     af = parse_text(text if text.endswith("\n") else text + "\n")
     if not af.ancillaries:
         raise AncillaryError("an ancillary block starts with an `Ancillary <name>` "
-                             "line — this text has none", 1)
+                             "line - this text has none", 1)
     if len(af.ancillaries) > 1:
         raise AncillaryError(
-            f"this text holds {len(af.ancillaries)} ancillary blocks — one at a time",
+            f"this text holds {len(af.ancillaries)} ancillary blocks - one at a time",
             af.ancillaries[1].start + 1)
     if af.trigger_start >= 0:
-        raise AncillaryError("there is a `Trigger` block in this text — the trigger "
+        raise AncillaryError("there is a `Trigger` block in this text - the trigger "
                              "section is edited on its own", af.trigger_start + 1)
     return af.ancillaries[0]
 
@@ -270,7 +270,7 @@ def check(anc: Ancillary, known: Optional[set] = None) -> List[Dict]:
     for key in REQUIRED:
         if key not in anc.lines:
             add("missing-line", anc.start,
-                f"no `{key}` line — the game will not load this ancillary")
+                f"no `{key}` line - the game will not load this ancillary")
 
     order = [k for k in BODY_ORDER if k in anc.lines]
     placed = sorted(order, key=lambda k: anc.lines[k])
@@ -282,12 +282,12 @@ def check(anc: Ancillary, known: Optional[set] = None) -> List[Dict]:
     transferable = anc.get("Transferable").strip()
     if "Transferable" in anc.lines and transferable not in ("0", "1"):
         add("bad-transferable", anc.lines["Transferable"],
-            f"`{transferable}` — Transferable is 0 or 1")
+            f"`{transferable}` - Transferable is 0 or 1")
 
     excluded = anc.excluded_ancillaries
     if len(excluded) > MAX_EXCLUDED:
         add("too-many-excluded", anc.lines["ExcludedAncillaries"],
-            f"{len(excluded)} excluded ancillaries — more than {MAX_EXCLUDED} is an "
+            f"{len(excluded)} excluded ancillaries - more than {MAX_EXCLUDED} is an "
             "errorless crash")
     if known is not None:
         for name in excluded:
@@ -303,7 +303,7 @@ def check(anc: Ancillary, known: Optional[set] = None) -> List[Dict]:
 
     if len(anc.effects) > MAX_EFFECTS:
         add("too-many-effects", anc.effects[MAX_EFFECTS].line,
-            f"{len(anc.effects)} effects — more than {MAX_EFFECTS} makes this "
+            f"{len(anc.effects)} effects - more than {MAX_EFFECTS} makes this "
             "ancillary impossible to gain from a trigger")
     attrs = set(triggers.vocab().get("attributes", []))
     for eff in anc.effects:
@@ -321,7 +321,7 @@ def check_file(af: AncillaryFile, trigger_file=None, mod=None) -> List[Dict]:
 
     An ``AcquireAncillary`` naming an ancillary this file does not define is the
     guide's errorless CTD, and no amount of reading the definition half shows it.
-    ``mod`` adds the findings that need the folder rather than the file — an
+    ``mod`` adds the findings that need the folder rather than the file - an
     ``Image`` line naming a picture nobody shipped.
     """
     known = {a.name for a in af.ancillaries if a.name}
@@ -338,7 +338,7 @@ def check_file(af: AncillaryFile, trigger_file=None, mod=None) -> List[Dict]:
             out.append({"kind": "duplicate-ancillary", "ancillary": a.name,
                         "line": a.start + 1,
                         "message": f"`{a.name}` is already defined on line "
-                                   f"{seen[a.name] + 1} — names must be unique"})
+                                   f"{seen[a.name] + 1} - names must be unique"})
         else:
             seen[a.name] = a.start
         out.extend(check(a, known))
@@ -347,7 +347,7 @@ def check_file(af: AncillaryFile, trigger_file=None, mod=None) -> List[Dict]:
 
     # With the game's own pictures in view, an absent one really is a blank slot
     # and each is worth naming. Without them, "not shipped here" is all anyone
-    # can say, and saying it 56 times buries the findings that are real — so it
+    # can say, and saying it 56 times buries the findings that are real - so it
     # is said once, against the first one, with the count.
     if checkable:
         out.extend(_image_finding(a, a.get("Image"), True) for a in unshipped)
@@ -370,7 +370,7 @@ def check_file(af: AncillaryFile, trigger_file=None, mod=None) -> List[Dict]:
                             "line": eff.line + 1,
                             "message": f"trigger `{trig.name}` grants "
                                        f"`{eff.args[0]}`, which this file does not "
-                                       "define — an errorless crash when it fires"})
+                                       "define - an errorless crash when it fires"})
     return out
 
 
@@ -398,11 +398,11 @@ def loc(mod) -> Dict[str, str]:
 
 
 def label(anc: Ancillary, names: Dict[str, str]) -> str:
-    """``"Iron Guard (iron_guard)"`` — the toolkit's naming rule.
+    """``"Iron Guard (iron_guard)"`` - the toolkit's naming rule.
 
     Unlike a trait, an ancillary's own name IS a text key, so there is no level to
     borrow one from. A text entry whose value is just its own key is a
-    placeholder, not a name — the same ruling the buildings editor makes.
+    placeholder, not a name - the same ruling the buildings editor makes.
     """
     shown = (names.get(anc.name) or "").strip()
     if not shown or shown == anc.name:
@@ -423,7 +423,7 @@ def image_path(mod, image: str) -> Optional[Path]:
     """Where an ``Image`` line's file actually is, or ``None``.
 
     The mod's own folder first, then the game's own ``ui/ancillaries`` if it has
-    been unpacked — an ancillary that keeps a stock picture names it without
+    been unpacked - an ancillary that keeps a stock picture names it without
     shipping it.
 
     It used to look in ``config.get_vanilla_ui_root()``, which holds *building*
@@ -450,8 +450,8 @@ def image_path(mod, image: str) -> Optional[Path]:
 def vanilla_images() -> Optional[Path]:
     """The game's unpacked ``ui/ancillaries``, or ``None`` when there is none.
 
-    ``None`` is the normal answer — vanilla keeps these inside its ``.pack``
-    archives — and it means *cannot be checked*, never *the picture is missing*.
+    ``None`` is the normal answer - vanilla keeps these inside its ``.pack``
+    archives - and it means *cannot be checked*, never *the picture is missing*.
     Every caller below branches on it rather than assuming absence is proof.
     """
     try:
@@ -468,10 +468,10 @@ def _image_finding(anc, image: str, checkable: bool) -> Dict:
             "ancillary": anc.name,
             "line": anc.lines.get("Image", anc.start) + 1,
             "message": (f"`{image}` is not in {IMAGE_DIR} here or in the game's "
-                        "own copies — the character screen shows a blank slot")
+                        "own copies - the character screen shows a blank slot")
             if checkable else
             (f"`{image}` is not in {IMAGE_DIR} here. It is fine if it is one of "
-             "the game's own pictures, which stay inside its .pack files — "
+             "the game's own pictures, which stay inside its .pack files - "
              "unpack them and set `vanilla_ancillaries_dir` to have this checked")}
 
 
@@ -558,9 +558,9 @@ def detail(mod, name: str) -> Dict:
 def render_block(base: str, edits: Optional[Dict] = None) -> str:
     """Apply GUI edits to one ancillary block and give back its text.
 
-    ``edits`` is the save request's own shape — ``{name, type, transferable,
+    ``edits`` is the save request's own shape - ``{name, type, transferable,
     image, unique, excluded_ancillaries, exclude_cultures, description,
-    effects_description, effects: [{attribute, amount}]}`` — and every key is
+    effects_description, effects: [{attribute, amount}]}`` - and every key is
     optional. What is not named is not touched.
     """
     try:
@@ -603,7 +603,7 @@ def new_block(edits: Dict) -> str:
     # Blank means "give it the usual value", not "leave the line out". The editor
     # posts every field, so an untouched box arrives as an EMPTY STRING rather
     # than as a missing key, and `setdefault` alone let a new ancillary be
-    # written without its Image, Description or EffectsDescription — one of
+    # written without its Image, Description or EffectsDescription - one of
     # :data:`REQUIRED`, so the block then crashed the character screen and this
     # module's own `apply_field_edits` refused to save it again.
     for field, default in (("type", "item"), ("transferable", "1"),
@@ -672,7 +672,7 @@ class AncillaryPlan:
     warnings: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
     findings: List[Dict] = field(default_factory=list)
-    #: the whole EDA as it would be written — empty when nothing would change
+    #: the whole EDA as it would be written - empty when nothing would change
     text: str = ""
     block: str = ""
     #: ``{tag: text}`` this save would write into export_ancillaries.txt
@@ -697,7 +697,7 @@ def plan(mod, body: dict) -> AncillaryPlan:
     """Work out the whole new EDA for one save, without touching the disk.
 
     ``body`` is ``{ancillary, action, edits, raw_block, loc, triggers: {edits,
-    adds, removes}, write_loc}`` — the traits editor's request shape with one
+    adds, removes}, write_loc}`` - the traits editor's request shape with one
     word changed, because the two editors are the same editor.
     """
     p = AncillaryPlan(mod=mod, action=str(body.get("action") or "edit"),
@@ -768,7 +768,7 @@ def _plan_block(p: AncillaryPlan, text: str, body: dict) -> str:
         block = str(raw).strip("\r\n")
         if parse_block(block + "\n").name != p.name:
             raise AncillaryError(
-                f"this ancillary is `{p.name}` — renaming it here would orphan "
+                f"this ancillary is `{p.name}` - renaming it here would orphan "
                 "every trigger, exclusion list, starting character and text entry "
                 "that names it")
     else:
@@ -801,8 +801,8 @@ def _plan_triggers(p: AncillaryPlan, text: str, body: dict) -> str:
 def _plan_loc(p: AncillaryPlan, mod, anc: Ancillary, wanted: Dict) -> None:
     """What this save would write into ``export_ancillaries.txt``.
 
-    The keys the ancillary needs and the mod has not got — missing one is the
-    guide's errorless CTD the moment anybody acquires it — plus any wording the
+    The keys the ancillary needs and the mod has not got - missing one is the
+    guide's errorless CTD the moment anybody acquires it - plus any wording the
     user retyped, since what an ancillary says on screen is part of it.
     """
     from . import stringsbin
@@ -810,7 +810,7 @@ def _plan_loc(p: AncillaryPlan, mod, anc: Ancillary, wanted: Dict) -> None:
     txt = Path(mod.data) / LOC_REL
     if not txt.exists() and not stringsbin.bin_path_for(txt).exists():
         p.warnings.append(f"this mod has no {txt.name}, so its text key(s) could "
-                          "not be written — it will show its tags in game")
+                          "not be written - it will show its tags in game")
         return
     for tag in text_tags(anc):
         want = str(wanted.get(tag, "")).strip() if wanted else ""
@@ -866,7 +866,7 @@ def apply(p: AncillaryPlan) -> Dict:
         txt = Path(mod.data) / LOC_REL
         if txt.exists():
             target = keep(LOC_REL)
-            # the compiled cache is rewritten below, so it is backed up too — an
+            # the compiled cache is rewritten below, so it is backed up too - an
             # undo that restored the .txt and left the .bin would put the file
             # back and leave the game still reading the new text
             keep(LOC_REL + ".strings.bin")
@@ -902,7 +902,7 @@ def apply(p: AncillaryPlan) -> Dict:
         "manifest": manifest, "backup_root": str(backup_root),
     }
     config.append_log(rec)
-    log.info("ANC    %s %s in %s — %d change(s), id=%s",
+    log.info("ANC    %s %s in %s - %d change(s), id=%s",
              p.action, p.name, mod.name, len(p.changes), tid)
     out["record"] = rec
     return out

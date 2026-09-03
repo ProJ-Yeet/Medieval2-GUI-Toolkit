@@ -1,13 +1,13 @@
-/* traits.js — Traits mode: export_descr_character_traits.txt, both halves of it
+/* traits.js - Traits mode: export_descr_character_traits.txt, both halves of it
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
 /* ======================= TRAITS MODE =======================
-   A trait is two things in two places. The top of the EDCT says what it IS — who
+   A trait is two things in two places. The top of the EDCT says what it IS - who
    can have it, which cultures cannot, and the ladder of levels with their
    effects. Hundreds of lines below, past `;== TRIGGER DATA ==`, the triggers say
    how anyone ever GETS it. Reading one without the other tells you nothing, so
@@ -26,7 +26,7 @@
      * A level's five text fields are keys in data/text/export_VnVs.txt, and a
        character who reaches a level whose key is missing crashes the character
        screen. Missing keys are listed on the trait, and a save writes them.
-     * Deleting a trait has to take its triggers with it — an `Affects` naming a
+     * Deleting a trait has to take its triggers with it - an `Affects` naming a
        trait that no longer exists is the "Trait not recognized" error. The
        confirmation says exactly which ones go. */
 
@@ -63,7 +63,7 @@ function renderTraits(){
     <div class="trlist">
       <button class="trnew" onclick="trNew()">＋ New trait</button>
       <button class="trnew" onclick="portOpen('traits')" title="Copy traits out of
-another mod on this machine — the block, the triggers that give it, and its text
+another mod on this machine - the block, the triggers that give it, and its text
 keys, in one backed-up job.">⇩ Port from another mod</button>
       ${findingsHtml('traits', t.finding_list, 'trOpen')}
       <div class="trrows">${rows.map(trRowHtml).join('')
@@ -114,7 +114,7 @@ async function trOpen(name){
 
 /* The working copy the boxes are bound to. Kept beside the payload the server
    sent so a save can post the whole form and the server can write only the lines
-   that actually differ — which is what keeps a save from reformatting 20 lines
+   that actually differ - which is what keeps a save from reformatting 20 lines
    the user never touched. */
 function trWorking(d){
   d.w = JSON.parse(JSON.stringify(d.trait));
@@ -146,7 +146,7 @@ function trPaint(){
   trWireTriggers();
 }
 
-// The form only — never the pane, which has the caret in it.
+// The form only - never the pane, which has the caret in it.
 function trPaintForm(){
   const d = state.tr.d, el = document.getElementById('trGui');
   if(!d || !el) return;
@@ -248,14 +248,14 @@ function trLevelsHtml(w, d){
 
 /* A level is a key on the left and the words the player reads on the right.
    The key is in the EDCT, the words are in data/text/export_VnVs.txt, and a key
-   with no entry crashes the character screen — so both are edited here, in one
+   with no entry crashes the character screen - so both are edited here, in one
    row, and one save writes both files. */
 function trLevelHtml(lv, i, d){
   const key = `level#${i+1}`;
   /* The key on the left and the words on the right, and the words box is bound
      to the SLOT rather than to the key it happens to hold right now. Binding it
      to the key baked the key in at paint time, and a level's key box does not
-     repaint as it is typed into — so on a new trait the words landed under the
+     repaint as it is typed into - so on a new trait the words landed under the
      empty tag, never reached the save, and the level was written with its own
      code name as its text. Same reason the box is always drawn: a key typed
      into an empty box would otherwise have no words box beside it until
@@ -306,7 +306,7 @@ function trLevelHtml(lv, i, d){
 
 // An attribute the engine does not have is marked but never refused: M2TWEOP
 // adds some, and the generated list is what the mods and the Docudemons sheet
-// between them know about — not a spec.
+// between them know about - not a spec.
 function trEffectHtml(e, i, k, d){
   const attrs = d.attributes || [];
   const known = !e.attribute || attrs.includes(e.attribute)
@@ -387,7 +387,7 @@ function trSetLevel(i, key, value){
 
    Keying by slot is what makes renaming a key carry its words with it, and what
    makes words typed beside a key that was itself typed this session reach the
-   save at all — `trSetLevel` deliberately does not repaint, so a handler with
+   save at all - `trSetLevel` deliberately does not repaint, so a handler with
    the key baked into it goes on writing under the key the box held when the
    form was last drawn. The tags are resolved once, at save time, in
    `trLocBody`. */
@@ -437,7 +437,7 @@ function trDelLevel(i){
   const d = state.tr.d; if(!d) return;
   d.w.levels.splice(i, 1);
   // the words typed this session are keyed by level INDEX, so the ones below the
-  // removed level have to slide down with it — otherwise they would be written
+  // removed level have to slide down with it - otherwise they would be written
   // out against the next level's keys
   const moved = {};
   for(const [slot, value] of Object.entries(d.locEdits || {})){

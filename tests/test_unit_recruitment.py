@@ -1,12 +1,12 @@
 """The unit editor's Recruitment tab: the payload it sends, planned for real.
 
-The tab itself is `web/js/edrecruit.js` and adds no Python — on purpose. Where
+The tab itself is `web/js/edrecruit.js` and adds no Python - on purpose. Where
 a unit can be hired is `recruit_pool` lines in the EDB, and those already have
 a reader (`buildings.unit_instances`) and a writer (`buildings.plan_edit`); the
 tab is a second FRONT for them, not a second implementation, so a pool edited
 from the unit and one edited from the building cannot drift apart.
 
-What that leaves worth testing is the seam — the request shape the tab sends,
+What that leaves worth testing is the seam - the request shape the tab sends,
 which no other screen sends:
 
   * the tab reaches into several building lines at once and belongs to none of
@@ -16,7 +16,7 @@ which no other screen sends:
     been planned before.
   * a level payload lists only the pools the tab touched. The rest of the
     level's capabilities are not sent, and must be left exactly where they are.
-  * the three ops the tab can produce — rewrite, delete, append — go in one
+  * the three ops the tab can produce - rewrite, delete, append - go in one
     request, so one Save is one 🕑 Log entry and one undo.
 
 Nothing here writes: `plan_edit` computes the whole new file as text
@@ -46,7 +46,7 @@ def check(cond, label, detail=""):
         print(f"  [OK ] {label}")
     else:
         fail += 1
-        print(f"  [BAD] {label}" + (f" — {detail}" if detail else ""))
+        print(f"  [BAD] {label}" + (f" - {detail}" if detail else ""))
 
 
 def note(text):
@@ -88,7 +88,7 @@ def pick_unit(mod, want_lines=2):
 
 
 def free_level(mod, unit):
-    """A (line, level) this unit is NOT trained at — what ＋ Add offers."""
+    """A (line, level) this unit is NOT trained at - what ＋ Add offers."""
     key = unit.strip().lower()
     for bl in mod.edb.buildings:
         for blk in bl.blocks:
@@ -103,7 +103,7 @@ def run(mod):
     print(f"\n== {mod.name} ==")
     unit, rows = pick_unit(mod)
     if not rows:
-        note("no unit in this mod is trained by any building — nothing to plan")
+        note("no unit in this mod is trained by any building - nothing to plan")
         return
 
     # ---- what the tab reads ----
@@ -112,7 +112,7 @@ def run(mod):
           str(sorted(set(ROW_KEYS) - set(rows[0]))))
     caps = [r["cap_line"] for r in rows]
     check(len(caps) == len(set(caps)),
-          "cap_line is unique per row — it is the tab's whole row identity")
+          "cap_line is unique per row - it is the tab's whole row identity")
 
     lines = sorted({r["line"] for r in rows})
     note(f"{unit}: {len(rows)} pool(s) across {len(lines)} building line(s)")
@@ -168,7 +168,7 @@ def run(mod):
     # ---- ＋ Add a building ----
     line, level = free_level(mod, unit)
     if not line:
-        note("every level in this mod already trains this unit — nothing to add")
+        note("every level in this mod already trains this unit - nothing to add")
     else:
         new = {"initial": "1", "per_turn": "0.5", "maximum": "2", "experience": "0"}
         body = payload(mod, [{"line": line, "levels": [
@@ -241,7 +241,7 @@ def run(mod):
 def main():
     mods = _realmod.installed()
     if not mods:
-        print(f"SKIPPED — no installed mod to test against under {_realmod.MODS}")
+        print(f"SKIPPED - no installed mod to test against under {_realmod.MODS}")
         return 0
     for path in mods:
         run(Mod(path))

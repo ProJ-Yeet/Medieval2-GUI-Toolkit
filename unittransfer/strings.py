@@ -1,4 +1,4 @@
-"""Strings mode — browse and edit a mod's compiled ``data/text/*.strings.bin``.
+"""Strings mode - browse and edit a mod's compiled ``data/text/*.strings.bin``.
 
 The codec lives in :mod:`unittransfer.stringsbin`; this module is the part that
 knows about a *mod*: which archives it has, what state each one is in relative to
@@ -9,7 +9,7 @@ Two things worth knowing before reading on.
 
 **The ``.txt`` is not the truth.** The game reads the ``.bin``. A mod folder can
 easily hold a ``.txt`` edited last week and a ``.bin`` compiled last year, and
-the game will show you last year's text — that is the bug the "delete the .bin"
+the game will show you last year's text - that is the bug the "delete the .bin"
 folklore exists to work around. So every file row carries whether the two are in
 step, and ``rebuild`` is offered as an explicit action.
 
@@ -32,7 +32,7 @@ from .logutil import file_op, log
 #: where a mod keeps its localisation, relative to ``data/``
 TEXT_REL = "text"
 
-#: rows returned by :func:`entries` when the caller does not ask for more — a
+#: rows returned by :func:`entries` when the caller does not ask for more - a
 #: 20 757-entry ``names.txt`` is not a list anyone scrolls, it is one they search
 PAGE = 400
 
@@ -93,7 +93,7 @@ def _state(bin_path: Path) -> Dict:
 def overview(mod) -> Dict:
     """Every archive in the mod, with its size, entry count and ``.txt`` state.
 
-    Only each file's 8-byte header is read (:func:`stringsbin.peek`) — the entry
+    Only each file's 8-byte header is read (:func:`stringsbin.peek`) - the entry
     count lives there, and decoding a whole folder to draw a list costs half a
     second on Third Age for a number we already have.
     """
@@ -155,7 +155,7 @@ def _split_ident(ident: str) -> Tuple[str, str]:
     rel, sep, row = (ident or "").partition("|")
     if not sep:
         raise StringsError(
-            f"{ident!r} does not name a row — expected <file>|<tag>")
+            f"{ident!r} does not name a row - expected <file>|<tag>")
     return rel, row
 
 
@@ -182,13 +182,13 @@ def locate(mod, ident: str) -> Tuple[str, str, int, str]:
 def record_line(tag: str, value: str, pos: int = -1) -> str:
     """The ``{tag}text`` line a Code View shows for one row.
 
-    Untagged archives have no such line and never get one — see the module
+    Untagged archives have no such line and never get one - see the module
     docstring.
     """
     if not tag:
         raise StringsError(
             "this archive's entries have no tags, so there is no {tag}text form "
-            "of them — edit the value in the box instead")
+            "of them - edit the value in the box instead")
     return stringsbin.record_text(tag, value)
 
 
@@ -205,7 +205,7 @@ class StringsPlan:
     changes: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
-    #: the bytes that would be written — empty when nothing would change
+    #: the bytes that would be written - empty when nothing would change
     data: bytes = b""
     before: int = 0
     after: int = 0
@@ -272,7 +272,7 @@ def plan(mod, body: dict) -> StringsPlan:
     for a in (body.get("adds") or []):
         tag = str(a.get("tag") or "").strip()
         if not sb.tagged:
-            p.errors.append("this archive's entries have no tags — nothing to add")
+            p.errors.append("this archive's entries have no tags - nothing to add")
             break
         if not tag:
             p.errors.append("a new entry needs a tag")
@@ -287,7 +287,7 @@ def plan(mod, body: dict) -> StringsPlan:
         if not sb.tagged:
             p.errors.append(
                 "this archive's entries are addressed by position, so removing one "
-                "would renumber every entry after it — edit the value instead")
+                "would renumber every entry after it - edit the value instead")
             break
         pos = row_pos(ident)
         if pos < 0 or pos >= len(sb):
@@ -302,7 +302,7 @@ def plan(mod, body: dict) -> StringsPlan:
     if sb.index and (p.after != p.before):
         p.warnings.append(
             f"the trailing tag index ({len(sb.index)} names) is carried through "
-            "unchanged — the game rebuilds it when it recompiles the .txt")
+            "unchanged - the game rebuilds it when it recompiles the .txt")
     new = stringsbin.encode(sb)
     p.data = b"" if new == original else new
     if not p.data and not p.errors:
@@ -397,6 +397,6 @@ def apply(p: StringsPlan) -> Dict:
         "backup_root": str(backup_root),
     }
     config.append_log(rec)
-    log.info("STRING %s %s in %s — %d change(s), id=%s",
+    log.info("STRING %s %s in %s - %d change(s), id=%s",
              p.action, p.rel, mod.name, len(p.changes), tid)
     return rec

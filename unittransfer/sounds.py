@@ -31,7 +31,7 @@ own selection barks.
 Non-destructive by construction
 -------------------------------
 The bundled "Sounds Parser" prototype round-tripped this file through a CSV and
-re-emitted it from scratch. That loses anything the CSV has no column for —
+re-emitted it from scratch. That loses anything the CSV has no column for -
 comments, blank lines, the exact indent of every line, repeated ``accent`` blocks
 (Divide and Conquer has ``accent English`` four separate times) and the file's
 line endings. Here the file is kept as its **verbatim lines** and every edit is a
@@ -39,7 +39,7 @@ splice: a unit entry is a contiguous line range that can be copied, renamed,
 removed or re-inserted. Nothing outside the spliced range is ever rewritten.
 
 The prototype's EDU side (``edu_parser.py``: EDU -> JSON -> EDU) is dropped
-entirely — it drops unknown fields and re-indents every line. :mod:`unittransfer.edu`
+entirely - it drops unknown fields and re-indents every line. :mod:`unittransfer.edu`
 already keeps each unit block verbatim, so the EDU half of a voice edit goes
 through :func:`set_voice_fields` instead.
 """
@@ -64,7 +64,7 @@ EDS_REL = "export_descr_sounds_units_voice.txt"
 UNIT_SELECT = "Unit_Select"
 
 #: Structural keywords, i.e. the lines that are NOT sound-file paths. Recognised
-#: only outside an open ``event`` block — inside one, every line is a path and a
+#: only outside an open ``event`` block - inside one, every line is a path and a
 #: file could legitimately be called ``unit_something.wav``.
 _STRUCT = ("accent", "class", "vocal", "unit", "engine")
 
@@ -183,7 +183,7 @@ def parse_text(text: str) -> SoundBank:
         """End the open entry, not counting blank/comment lines that trail it.
 
         A block runs up to the NEXT keyword line, so it would otherwise swallow
-        the blank line or section comment that really introduces what follows —
+        the blank line or section comment that really introduces what follows -
         and copying an entry would drag that along, while deleting one would take
         it away.
         """
@@ -211,7 +211,7 @@ def parse_text(text: str) -> SoundBank:
         if not s or s.startswith(";"):
             continue
 
-        # Inside an open event every line is a sound path until `end` — this test
+        # Inside an open event every line is a sound path until `end` - this test
         # MUST come first, or a file named `engine_fire.wav` would be read as a
         # sub-entry. (The prototype tolerated `endd`-style typos; so do we.)
         if inside_event:
@@ -272,7 +272,7 @@ def _reindent(block: List[str], old: str, new: str) -> List[str]:
     """Shift a copied block from one indent level to another.
 
     Every level of this file sits at a fixed depth, so a donor entry from another
-    accent normally needs no shift at all — but a hand-edited file can mix tabs
+    accent normally needs no shift at all - but a hand-edited file can mix tabs
     and spaces, and pasting a block at the wrong depth is how you get a voice bank
     the game silently ignores.
     """
@@ -323,7 +323,7 @@ def add_unit(bank: SoundBank, unit_name: str, donor: VoiceEntry,
     """Return the file text with ``unit_name`` added, copying ``donor``'s sounds.
 
     Raises ``ValueError`` when the accent/class pair has no ``Unit_Select`` block
-    to add to — inventing a whole accent bank would be a guess, and a silently
+    to add to - inventing a whole accent bank would be a guess, and a silently
     misplaced entry is worse than a refusal the user can act on.
     """
     block = bank.unit_select(accent, voice_class)
@@ -346,7 +346,7 @@ def remove_unit(bank: SoundBank, unit_name: str) -> str:
     if e is None:
         return bank.to_text()
     if len(e.names) > 1:
-        # the line names several units — drop just this one rather than the block
+        # the line names several units - drop just this one rather than the block
         keep = [n for n in e.names if n != unit_name]
         out = list(bank.lines)
         out[e.start] = _rename_keyword_line(out[e.start], ", ".join(keep))
@@ -361,7 +361,7 @@ def move_unit(bank: SoundBank, unit_name: str, accent: str, voice_class: str,
     """Move an existing entry to another accent/class, optionally re-copying sounds.
 
     ``donor`` replaces the entry's sound paths; ``None`` keeps its own. The move
-    is a delete + insert, so the file is re-parsed in between — line numbers shift
+    is a delete + insert, so the file is re-parsed in between - line numbers shift
     the moment anything is spliced out.
     """
     e = bank.get(unit_name)
@@ -377,7 +377,7 @@ def move_unit(bank: SoundBank, unit_name: str, accent: str, voice_class: str,
         raise ValueError(f"no '{accent}' / '{voice_class}' Unit_Select block in the voice bank")
     copied = _reindent(src, _indent_of(src[0]), entry_indent(block, after))
     copied[0] = _rename_keyword_line(copied[0], unit_name)
-    # the donor's own entry may have shifted with the removal — re-find it
+    # the donor's own entry may have shifted with the removal - re-find it
     ref = after.get(donor.name) if donor is not None else None
     at = _insert_at(block, ref)
     out = list(after.lines)
@@ -476,7 +476,7 @@ def plan_sounds(mod, ops: List[SoundOp]) -> SoundPlan:
     """Work out the whole new voice-bank + EDU text for a batch of voice edits.
 
     Every op is applied to the *running* text and the result re-parsed, because a
-    splice moves every line after it — planning them all against the original file
+    splice moves every line after it - planning them all against the original file
     would put the second edit in the wrong place.
     """
     plan = SoundPlan(mod=mod, ops=list(ops))
@@ -547,7 +547,7 @@ def plan_sounds(mod, ops: List[SoundOp]) -> SoundPlan:
             edu_edits[op.unit] = (op.accent, op.voice_class)
         else:
             plan.warnings.append(
-                f"{op.unit}: no such unit in {mod.name}'s EDU — the voice entry is "
+                f"{op.unit}: no such unit in {mod.name}'s EDU - the voice entry is "
                 f"written but nothing points at it")
 
     if plan.errors:
@@ -570,7 +570,7 @@ def _edu_with_voice(mod, edits: Dict[str, Tuple[str, str]]) -> "eop.Split":
     """The mod's unit files with only the named units' voice fields changed.
 
     An M2TWEOP unit's ``accent`` / ``voice_type`` are in its own file, so this
-    returns a split rather than one blob — writing the change into
+    returns a split rather than one blob - writing the change into
     export_descr_unit.txt would both miss the unit and corrupt the EDU.
     """
     blocks = {u.type: set_voice_fields(u.raw, *edits[u.type])
@@ -593,7 +593,7 @@ def apply_sounds(plan: SoundPlan) -> Dict:
     manifest: Dict[str, List[str]] = {"backed_up": [], "created": []}
 
     fingerprint(mod)
-    log.info("VOICE  id=%s in %s — %d edit(s)", tid, mod.name, len(plan.ops))
+    log.info("VOICE  id=%s in %s - %d edit(s)", tid, mod.name, len(plan.ops))
     log.info("  backups -> %s", backup_root)
 
     def write_text(rel: str, text: str, encoding: str) -> None:
@@ -656,7 +656,7 @@ def overview(mod) -> dict:
     """Everything Sounds mode needs for one mod, in one request.
 
     Units are split into those the voice bank already has an entry for and those
-    it doesn't — the same two lists the prototype's HTML editor showed, except the
+    it doesn't - the same two lists the prototype's HTML editor showed, except the
     accents/classes and donors come from the mod being edited rather than from
     files a .bat had to generate first.
     """
@@ -674,7 +674,7 @@ def overview(mod) -> dict:
         # A ship has no voice and cannot be given one: the unit voice bank is
         # `Unit_Select` barks shouted by soldiers, and a naval unit's sounds come
         # out of the ship banks instead. Every one of them therefore turned up in
-        # "No voice entry" forever, and there are dozens — a permanent block of
+        # "No voice entry" forever, and there are dozens - a permanent block of
         # rows nothing can be done about, in front of the units that CAN be
         # fixed. They are counted and said, not listed. (A ship that somehow does
         # have a bank entry is still shown under "Has a voice entry", where it
@@ -723,7 +723,7 @@ def overview(mod) -> dict:
         "missing": missing,
         "existing": existing,
         "orphans": orphans,
-        #: naval units left out of `missing` — they have no unit voice to give
+        #: naval units left out of `missing` - they have no unit voice to give
         "ships_skipped": ships,
         "warnings": bank.warnings[:20],
     }

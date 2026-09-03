@@ -1,4 +1,4 @@
-"""Medieval 2 GUI Toolkit — launch the local web UI.
+"""Medieval 2 GUI Toolkit - launch the local web UI.
 
 Usage:
   python app.py                 # use the remembered MED2 root (choose it in the UI if unset)
@@ -12,7 +12,7 @@ Startup, as the launcher does it:
 
   1. A console always opens, so a failed start is readable instead of a window
      that flashes and vanishes.
-  2. The preflight checks run and print — Python, Pillow, web/, config/, the MED2
+  2. The preflight checks run and print - Python, Pillow, web/, config/, the MED2
      root, the port. Anything fatal stops here with the reason on screen, and the
      launcher holds the window open.
   3. "Show console window" ON  -> the server runs right here: output keeps
@@ -22,7 +22,7 @@ Startup, as the launcher does it:
      reports ready, then exits and the window closes. The server keeps running;
      stop it with Quit in the UI.
 
-The browser tab opens in the system DEFAULT browser — whatever Windows has
+The browser tab opens in the system DEFAULT browser - whatever Windows has
 registered. The tool never picks a specific one.
 """
 from __future__ import annotations
@@ -43,10 +43,10 @@ APP_PATH = Path(__file__).resolve()
 # ---- what our exit codes mean, for Launch-Medieval2-GUI-Toolkit.bat ----
 #: A startup check failed. The console already carries the reason, check by check.
 EXIT_PREFLIGHT = 2
-#: The server IS running, but no browser opened by itself — so the launcher keeps
+#: The server IS running, but no browser opened by itself - so the launcher keeps
 #: its window, because the address in it is the user's only way in.
 EXIT_NO_BROWSER = 3
-#: Decoded icons. Not next to the app — see :func:`config.cache_dir` for why a
+#: Decoded icons. Not next to the app - see :func:`config.cache_dir` for why a
 #: cache must not sit in a folder OneDrive or Dropbox is syncing.
 CACHE_DIR = config.cache_dir("icons")
 
@@ -74,7 +74,7 @@ def _parse(argv):
             mode = "serve"          # internal: the detached child, or a manual run
         elif a == "--no-browser":
             # Serve, but hijack nobody's browser. For anything driving the UI
-            # itself — a test, a script, an agent with its own browser — where a
+            # itself - a test, a script, an agent with its own browser - where a
             # tab thrown at the user's default browser is an interruption, not a
             # convenience.
             no_browser = True
@@ -94,14 +94,14 @@ def main(argv):
     # Logs go to the console (when there is one) and always to config/server.log,
     # so the detached server still leaves a full trail.
     log = setup_logging(verbose)
-    log.info("Medieval 2 GUI Toolkit %s — %s", mode, APP_PATH.parent)
+    log.info("Medieval 2 GUI Toolkit %s - %s", mode, APP_PATH.parent)
 
     # A restart-in-place starts us while the server being replaced still holds the
     # port: it cannot answer the request that asked for the restart *after* it has
-    # stopped, so it replies, spawns us, and only then lets go. Waiting here — and
-    # before the preflight port check — is what makes that order work.
+    # stopped, so it replies, spawns us, and only then lets go. Waiting here - and
+    # before the preflight port check - is what makes that order work.
     if wait_port and not startup.wait_for_port(port):
-        log.error("Port %d never came free — the server being replaced is still "
+        log.error("Port %d never came free - the server being replaced is still "
                   "holding it. Nothing was started.", port)
         return EXIT_PREFLIGHT
 
@@ -123,10 +123,10 @@ def main(argv):
         log.info("Startup checks passed (--check: not starting the server).")
         return 0
 
-    # Already running on this port? Just show that window — don't start a second
+    # Already running on this port? Just show that window - don't start a second
     # server only to have it fail to bind.
     if mode != "serve" and _already_ours(port):
-        log.info("The Medieval 2 GUI Toolkit is already running on port %d — %s", port,
+        log.info("The Medieval 2 GUI Toolkit is already running on port %d - %s", port,
                  "leaving it alone (--no-browser)." if no_browser
                  else "opening that window instead of starting a second one.")
         if not no_browser:
@@ -141,7 +141,7 @@ def main(argv):
 
 def _launch_detached(log, port: int, passthrough) -> int:
     """Start the server as a child, mirror its startup, then close this console."""
-    log.info("Starting the server (detached) — this window closes once it's up.")
+    log.info("Starting the server (detached) - this window closes once it's up.")
     log.info("Turn on Settings → Show console window to keep it open instead.")
     # Take the offset AFTER our own lines are written: launcher and server share
     # server.log, and mirroring from an earlier point would echo them back.
@@ -156,13 +156,13 @@ def _launch_detached(log, port: int, passthrough) -> int:
         return 1
     ok, reason, browser_ok = startup.follow_until_ready(proc, offset)
     if not ok:
-        log.error("STARTUP FAILED — %s", reason)
+        log.error("STARTUP FAILED - %s", reason)
         log.error("Full log: %s", startup.server_log_path())
         return 1
     log.info("Server is up: http://127.0.0.1:%d/", port)
     log.info("Stop the tool with Quit in the UI. Log: %s", startup.server_log_path())
     if not browser_ok:
-        log.error("No browser opened — leaving this window up so the address "
+        log.error("No browser opened - leaving this window up so the address "
                   "above stays readable.")
         return EXIT_NO_BROWSER
     return 0
@@ -176,7 +176,7 @@ def _run_server(log, port: int, verbose: bool, keep_console: bool,
 
     def open_browser():
         if no_browser:
-            log.info("--no-browser: serving on http://127.0.0.1:%d/ — opening no tab.",
+            log.info("--no-browser: serving on http://127.0.0.1:%d/ - opening no tab.",
                      port)
             return
         _open_browser(log, port)
@@ -184,7 +184,7 @@ def _run_server(log, port: int, verbose: bool, keep_console: bool,
     def on_ready():
         """Listening: open the tab now, then warm the icons behind it.
 
-        The tab comes first so the UI is usable immediately — a cold cache for a
+        The tab comes first so the UI is usable immediately - a cold cache for a
         big mod is ~30s of conversions and the grid fills in as they land. The
         console mirrors that progress; only when it finishes do we declare
         startup complete (which is what lets the launcher window close).
@@ -199,7 +199,7 @@ def _run_server(log, port: int, verbose: bool, keep_console: bool,
                     startup.prewarm_icons(Handler.registry, names,
                                           should_stop=stopping.is_set)
                 else:
-                    log.info("icons: no remembered mods yet — they'll convert as you "
+                    log.info("icons: no remembered mods yet - they'll convert as you "
                              "pick a source and destination.")
             except Exception:
                 log.warning("icon prewarm failed (continuing)", exc_info=True)
@@ -209,7 +209,7 @@ def _run_server(log, port: int, verbose: bool, keep_console: bool,
             # outcome rather than the failure that check exists to shout about.
             if not no_browser:
                 _watch_for_page(log, port, stopping)
-            log.info("%s — server ready on port %d.%s", startup.READY_MARKER, port,
+            log.info("%s - server ready on port %d.%s", startup.READY_MARKER, port,
                      "  Ctrl+C here, or Quit in the UI, to stop."
                      if keep_console else "  Stop it with Quit in the UI.")
         threading.Thread(target=work, name="icon-prewarm", daemon=True).start()
@@ -224,10 +224,10 @@ def _run_server(log, port: int, verbose: bool, keep_console: bool,
         # first, but a race is possible). If the port is OUR server, just show it.
         log.error("Could not start on port %d: %s", port, e)
         if _already_ours(port):
-            log.info("The Medieval 2 GUI Toolkit is already running on port %d — "
+            log.info("The Medieval 2 GUI Toolkit is already running on port %d - "
                      "opening that window instead.", port)
             open_browser()
-            log.info("%s — reused the running instance.", startup.READY_MARKER)
+            log.info("%s - reused the running instance.", startup.READY_MARKER)
             return 0
         _alert(f"Medieval 2 GUI Toolkit could not start on port {port}.\n\n{e}\n\n"
                f"Something else is using that port. Launch with --port 8757 "
@@ -246,7 +246,7 @@ def _watch_for_page(log, port: int, stopping: threading.Event,
     """Give the browser a moment to actually load, and shout if it never does.
 
     The UI heartbeats within a few seconds of loading. If none arrives, no page
-    is on screen — almost always a browser that didn't open — so we emit the
+    is on screen - almost always a browser that didn't open - so we emit the
     marker that tells the launcher to KEEP its window (the address there is then
     the user's only way in). Emitted BEFORE the ready marker so the launcher sees
     it in the same batch.
@@ -260,7 +260,7 @@ def _watch_for_page(log, port: int, stopping: threading.Event,
     if page_ever_loaded() or stopping.is_set():
         return
     url = f"http://127.0.0.1:{port}/"
-    log.error("%s — no browser has loaded the tool. It IS running; open this "
+    log.error("%s - no browser has loaded the tool. It IS running; open this "
               "address yourself: %s", startup.BROWSER_FAILED_MARKER, url)
 
 
@@ -270,8 +270,8 @@ def _open_browser(log, port: int) -> None:
     ``webbrowser.open()`` hands the URL to whatever Windows has registered
     (Brave, Edge, Firefox...). The tool never picks a specific browser.
 
-    Its return value is NOT trustworthy on Windows — it reports success even when
-    no browser appears — so whether a page really loaded is confirmed separately
+    Its return value is NOT trustworthy on Windows - it reports success even when
+    no browser appears - so whether a page really loaded is confirmed separately
     by waiting for the UI's heartbeat (see ``_watch_for_page``).
     """
     url = f"http://127.0.0.1:{port}/"
@@ -295,7 +295,7 @@ def _already_ours(port: int) -> bool:
 
 
 def _alert(msg: str) -> None:
-    """Message box — the only feedback the DETACHED server can give (it has no
+    """Message box - the only feedback the DETACHED server can give (it has no
     console). The launcher prints to its own console instead."""
     print(msg)
     try:

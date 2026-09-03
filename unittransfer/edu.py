@@ -19,7 +19,7 @@ from typing import Dict, List, Optional
 ENCODING = "latin-1"
 
 # --- the tool's own metadata line ----------------------------------------
-# A unit's TIER is not a field, not a value and appears in no game file — it is
+# A unit's TIER is not a field, not a value and appears in no game file - it is
 # ours, and it exists so the Phase 14e sorter has something to sort by. It is
 # written as a comment the engine never reads, under one owned prefix, on the
 # line directly above the unit's `type`:
@@ -30,8 +30,8 @@ ENCODING = "latin-1"
 # That placement is why :func:`parse_text` starts a block at the marker rather
 # than at `type`: a comment above a `type` line otherwise belongs to the
 # PREVIOUS unit, so the marker would describe one unit while living inside
-# another, and every operation that moves a block — transfer, replace, the
-# sorter — would leave it behind. Starting the block at the marker makes it
+# another, and every operation that moves a block - transfer, replace, the
+# sorter - would leave it behind. Starting the block at the marker makes it
 # travel with ``Unit.raw`` without any of them knowing it exists.
 MARKER = ";@m2gt"
 
@@ -51,7 +51,7 @@ def _split_fields(line: str) -> tuple[str, List[str]]:
     # strip trailing comment
     if ";" in line:
         # keep ai_unit_value / value_per lines intact (they use ';' as data marker
-        # in ModdingTool) — but for field parsing we only need the pre-';' part.
+        # in ModdingTool) - but for field parsing we only need the pre-';' part.
         line = line.split(";", 1)[0]
     line = line.rstrip()
     if not line.strip():
@@ -106,15 +106,15 @@ class Unit:
     stat_sec: List[str] = field(default_factory=list)   # CSV values of stat_sec
     tier: str = ""                       # tool metadata, not a game field (see MARKER)
     variant: str = ""                    # tool metadata, not a game field (see MARKER)
-    #: ``general`` / ``hero`` / ``none`` … — the roster classification the EDU
+    #: ``general`` / ``hero`` / ``none`` … - the roster classification the EDU
     #: cleanup sorts special units by. Tool metadata like the two above; see
     #: :data:`unittransfer.edusort.SPECIAL_VALUES` for what it may say.
     special: str = ""
     order: str = ""                      # hand-placed position within its section
     raw: str = ""                        # verbatim block text (incl. leading blank/comment lines)
     # M2TWEOP unit: this block lives in one of the extender's own files rather than
-    # in data/export_descr_unit.txt. Everything else about it is a normal unit —
-    # same fields, same models, same icons — so the flag exists purely to say where
+    # in data/export_descr_unit.txt. Everything else about it is a normal unit -
+    # same fields, same models, same icons - so the flag exists purely to say where
     # an edit to it gets written back. See :mod:`unittransfer.eop`.
     is_eop: bool = False
     eop_file: str = ""                   # absolute path of that file ("" for EDU units)
@@ -122,7 +122,7 @@ class Unit:
     def kind(self) -> str:
         """Refined category used for grouping and base-unit matching.
 
-        ``cavalry`` and ``infantry`` split by what the unit actually fights with —
+        ``cavalry`` and ``infantry`` split by what the unit actually fights with -
         the 6th CSV slot of ``stat_pri``/``stat_sec`` (the weapon's tech type:
         ``missile`` / ``thrown`` / ``melee`` / ``no``):
           * cavalry, ``stat_pri`` slot 6 == ``missile``  -> ``Cavalry_Archer``
@@ -198,7 +198,7 @@ class Unit:
                    other_merc: str) -> List[str]:
         """Faction folders to search for one icon kind, best-first.
 
-        ``card_pic_dir`` and ``info_pic_dir`` are INDEPENDENT EDU fields — a unit
+        ``card_pic_dir`` and ``info_pic_dir`` are INDEPENDENT EDU fields - a unit
         can pin its card to ``mercs`` while leaving ``info_pic_dir`` unset (so the
         info card is looked up under its ownership faction instead). Each kind
         therefore needs its OWN pic_dir here, not the card's.
@@ -226,12 +226,12 @@ class Unit:
 
 @dataclass
 class EduFile:
-    """The mod's units — ``export_descr_unit.txt`` plus any M2TWEOP unit files.
+    """The mod's units - ``export_descr_unit.txt`` plus any M2TWEOP unit files.
 
     ``units`` deliberately holds both kinds, because every feature in the tool
     wants the mod's full roster: a unit is a unit whether the engine read it from
     the EDU or from the extender's folder. What must NOT blur is where they are
-    written back, so :meth:`to_text` — the "this is the EDU file" accessor — emits
+    written back, so :meth:`to_text` - the "this is the EDU file" accessor - emits
     only the main file's units, and EOP blocks are routed by
     :func:`unittransfer.eop.compose`.
     """
@@ -258,7 +258,7 @@ class EduFile:
         return [u for u in self.units if u.is_eop]
 
     def to_text(self) -> str:
-        """The text of ``export_descr_unit.txt`` — EOP units excluded on purpose."""
+        """The text of ``export_descr_unit.txt`` - EOP units excluded on purpose."""
         return self.preamble + "".join(u.raw for u in self.main_units)
 
     def write(self, path: str | Path) -> None:
@@ -270,7 +270,7 @@ def marker_fields(raw: str) -> Dict[str, str]:
 
     Only the marker line above ``type`` is read. A token without an ``=`` is
     ignored rather than guessed at, so a marker written by a later version of
-    the tool degrades to the part this one understands instead of being lost —
+    the tool degrades to the part this one understands instead of being lost -
     :func:`set_marker` rewrites only the keys it was given for the same reason.
     """
     out: Dict[str, str] = {}
@@ -396,7 +396,7 @@ def parse_text(text: str) -> EduFile:
             # not a comment line
             if not line.lstrip().startswith(";"):
                 # A marker directly above `type` belongs to THIS unit, not the
-                # one before it — see :data:`MARKER`.
+                # one before it - see :data:`MARKER`.
                 starts.append(idx - 1 if idx and is_marker(lines[idx - 1]) else idx)
     if not starts:
         return EduFile(preamble=text, units=[])
@@ -507,7 +507,7 @@ def block_spans(raw: str) -> Dict[str, List[List[int]]]:
     """Map each :func:`block_fields` label to the block line(s) it occupies.
 
     Lines are 1-based and inclusive, counted from the start of the block, and a
-    span is ``[first, last]`` — one line per EDU field today, but the shape is a
+    span is ``[first, last]`` - one line per EDU field today, but the shape is a
     range because Code View is shared with formats whose fields wrap.
 
     This is the other half of :func:`block_fields`: same labels, same skipping of
@@ -553,7 +553,7 @@ BASE_COPY_KEYS = [
 # Fields the REPLACED unit provides when a transfer overwrites an existing unit
 # ("replace an existing unit" mode). Same stats as a base template, plus the two
 # icon-folder pins: the replaced unit keeps its identity, so its card and info
-# card must still be looked up where they have always been — carrying the source
+# card must still be looked up where they have always been - carrying the source
 # unit's `card_pic_dir` across would send the game to a folder that only makes
 # sense in the mod the unit came from.
 REPLACE_COPY_KEYS = BASE_COPY_KEYS + ["card_pic_dir", "info_pic_dir"]
@@ -583,7 +583,7 @@ def apply_base_template(unit_block: str, base_block: str,
             # else: drop (base has no such field, or already inserted)
         else:
             out.append(line)
-    # Base fields the unit didn't have must still be added — at the position the
+    # Base fields the unit didn't have must still be added - at the position the
     # BASE keeps them (accent after voice_type, era 2 after era 1, ...), not
     # dumped at the bottom of the block.
     base_order = _key_order(base_block)
@@ -666,7 +666,7 @@ def copy_field_group(unit_block: str, base_block: str, key: str) -> str:
             continue                      # drop the unit's own line
         out.append(line)
     if not found and base_lines:
-        # unit has no such field — place it where the base keeps it
+        # unit has no such field - place it where the base keeps it
         _insert_positioned(out, key, base_lines, _key_order(base_block))
     return "".join(out)
 
@@ -674,7 +674,7 @@ def copy_field_group(unit_block: str, base_block: str, key: str) -> str:
 def add_attribute(block: str, attr: str) -> str:
     """Add ``attr`` to the block's ``attributes`` line (no-op if already listed).
 
-    The rest of the line — order, spacing, trailing comment — is left alone; the
+    The rest of the line - order, spacing, trailing comment - is left alone; the
     attribute is appended to the end of the value list. If the unit has no
     ``attributes`` line at all, one is created.
     """
@@ -729,7 +729,7 @@ def strip_trailing_filler(block: str) -> str:
 
     A parsed block runs up to the next ``type`` line (see ``parse_text``), so it
     can end with blank lines and a decorative section-banner comment that
-    actually introduces the NEXT unit in that file — noise that shouldn't be
+    actually introduces the NEXT unit in that file - noise that shouldn't be
     dragged along when this one unit is copied alone into a different file.
     """
     lines = block.splitlines(keepends=True)
@@ -764,7 +764,7 @@ def set_field_before(block: str, key: str, value: str, anchor_keys: tuple) -> st
     the first line matching one of ``anchor_keys`` (falling back to right after
     the block's last real field line when none of them are present).
 
-    Updating an already-present ``key`` behaves exactly like ``set_field`` —
+    Updating an already-present ``key`` behaves exactly like ``set_field`` -
     only the append path gets positioned.
     """
     if any(line_key(l) == key for l in block.splitlines(keepends=True)):
@@ -777,7 +777,7 @@ def set_field_before(block: str, key: str, value: str, anchor_keys: tuple) -> st
                 lines[i - 1] += "\n"
             lines.insert(i, new_line)
             return "".join(lines)
-    # no anchor present — append right after the last real field line
+    # no anchor present - append right after the last real field line
     cut = len(lines)
     for i in range(len(lines) - 1, -1, -1):
         s = lines[i].strip()
@@ -891,8 +891,8 @@ def set_field_indexed(block: str, key: str, occurrence: int, value: str) -> str:
 def remove_field(block: str, key: str, occurrence: int = 1) -> str:
     """Delete the ``occurrence``-th ``key`` line outright (no-op if absent).
 
-    Blanking a field's value is NOT the same as removing it — the game still
-    parses the empty line — so the editor needs a real delete.
+    Blanking a field's value is NOT the same as removing it - the game still
+    parses the empty line - so the editor needs a real delete.
     """
     lines = block.splitlines(keepends=True)
     idxs = _line_indices(block, key)

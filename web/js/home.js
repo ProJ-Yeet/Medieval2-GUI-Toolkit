@@ -1,8 +1,8 @@
-/* home.js — Home mode: the mods this machine has, and what each one is ready for
+/* home.js - Home mode: the mods this machine has, and what each one is ready for
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
@@ -16,7 +16,7 @@
    Each card asks the server (`/api/mod_files`) which of the files a module reads
    are actually there, so a module that cannot work on this mod says why on the
    card instead of being found out three clicks later. That report is read-only
-   and shallow — file stats and an encoding sniff, never a parse — and it is
+   and shallow - file stats and an encoding sniff, never a parse - and it is
    cached per mod for the session, because it is a landing page and it has to
    feel like one.
 
@@ -55,7 +55,7 @@ function renderHome(){
 // The buttons are the same two the settings dialog has, put here directly: a step
 // that says "your mods live here" and then sends you to a dialog to change it is
 // one hop longer than it needs to be, and the dialog is a worse place to do it
-// from — this line is what you are looking at when you notice it is wrong.
+// from - this line is what you are looking at when you notice it is wrong.
 function homeRootHtml(){
   const root = state.settings.med2_root || '';
   return `<div class="homestep">
@@ -70,7 +70,7 @@ function homeRootHtml(){
   </div>`;
 }
 // Both reuse the settings dialog's own actions, then re-read the mods and repaint
-// Home — the point of doing it here is that the card grid below answers straight
+// Home - the point of doing it here is that the card grid below answers straight
 // away whether the folder was the right one.
 async function homeSetRoot(path){
   const st = document.getElementById('homeRootStatus');
@@ -99,8 +99,8 @@ async function homeAutoDetect(){
 }
 
 // Step 3: the settings that are worth having in front of you rather than behind a
-// dialog. The dialog stays — it owns the awkward ones (the M2TWEOP folders, the
-// unit-limit overrides) — but nothing here should need it.
+// dialog. The dialog stays - it owns the awkward ones (the M2TWEOP folders, the
+// unit-limit overrides) - but nothing here should need it.
 function homePrefsHtml(){
   const s = state.settings || {};
   // One row per preference: the tick box and its label on the left, the hint
@@ -195,14 +195,14 @@ const homeKey = name => (''+name).replace(/[^A-Za-z0-9_-]/g,'_');
    It is not the M2TWEOP setting further down in ⚙ Settings and must not be
    confused with it. That one says where a mod keeps extra unit FILES. This one
    says the engine's hardcoded tables have been replaced, so the ceilings the
-   toolkit checks against — 31 factions, 500 units, a trait's 9 levels, an
-   ancillary's 8 effects, a building's 32 recruitment slots — are not this mod's
+   toolkit checks against - 31 factions, 500 units, a trait's 9 levels, an
+   ancillary's 8 effects, a building's 32 recruitment slots - are not this mod's
    ceilings and reporting them is noise. Every other check still runs. */
 function homeM2exHtml(m){
   return `<label class="chk hcm2ex" title="Tick this only for a mod that runs on M2EX.
-It stops the toolkit reporting the engine's hardcoded ceilings for this mod —
+It stops the toolkit reporting the engine's hardcoded ceilings for this mod -
 31 factions, ${VANILLA_UNIT_LIMIT} units, 9 trait levels, 8 ancillary effects,
-32 recruitment slots — because M2EX replaces the tables those numbers come from.
+32 recruitment slots - because M2EX replaces the tables those numbers come from.
 Every other check is unaffected. This is NOT the M2TWEOP unit-folder setting.">
     <input type="checkbox" ${m.m2ex?'checked':''}
       onchange="homeSetM2ex('${q1(esc(m.name))}',this.checked)">
@@ -219,7 +219,7 @@ async function homeSetM2ex(name, on){
     state.data = state.destData = null;
     state.tr = state.an = state.fac = state.mf = state.bld = null;
   }
-  toast(on ? `${name} is marked as M2EX — its engine-limit findings are off.`
+  toast(on ? `${name} is marked as M2EX - its engine-limit findings are off.`
            : `${name} is no longer marked as M2EX.`, 4500);
   renderHome();
 }

@@ -1,7 +1,7 @@
 """The guided EDU field editor: its vocabularies, and that it never rewrites a line.
 
 The guided view splits every EDU line into labelled boxes and writes it back from
-them. That is only safe if the split-and-rejoin is lossless — a unit opened and
+them. That is only safe if the split-and-rejoin is lossless - a unit opened and
 saved untouched has to come out byte-identical, or every save quietly damages a
 mod. This suite checks exactly that, over every unit of every installed mod:
 
@@ -9,7 +9,7 @@ mod. This suite checks exactly that, over every unit of every installed mod:
     defines or already uses (a mod's own attribute must not vanish from a list)
   * the "defined" lists really come from the mod's descr_* files
   * every EDU line either round-trips through gfParse/gfBuild unchanged, or is
-    refused by gfParse and shown raw — never silently reshaped
+    refused by gfParse and shown raw - never silently reshaped
   * the lines that ARE refused are only the malformed ones
 
 The round-trip half runs the page's own JavaScript under node; it is skipped
@@ -89,7 +89,7 @@ for mod in mods:
               f"are offered", lower(used) <= lower(v["banner_" + kind]))
 
     # Phase 13: banner names are DECLARED by descr_banners_new.xml, one XML
-    # section per EDU line — they are the mod's own vocabulary, not an engine set
+    # section per EDU line - they are the mod's own vocabulary, not an engine set
     declared = vocab.banner_names(mod.data)
     has_file = (mod.data / "descr_banners_new.xml").exists()
     check(f"    {mod.name}: descr_banners_new.xml is read at all", 
@@ -103,7 +103,7 @@ for mod in mods:
         # A name the EDU uses but the XML does not declare is a finding about
         # the MOD, not about us: it is reported, and the only thing asserted is
         # that the value is still offered (the picker must never invite you to
-        # throw a mod's own value away). Third Age Reforged has exactly one —
+        # throw a mod's own value away). Third Age Reforged has exactly one -
         # `Bomb Platforms` flies `main_none`.
         stray = sorted(x for x in used_banners.get(kind, set())
                        if x.lower() not in lower(declared[kind]))
@@ -114,7 +114,7 @@ for mod in mods:
               f"name(s) are still offered",
               lower(stray) <= lower(v["banner_" + kind]))
 
-    # "defined" is what a file really declares — that is what a broken-reference
+    # "defined" is what a file really declares - that is what a broken-reference
     # warning is measured against, so it must not be padded with EDU values
     defined = v["defined"]
     # a mod may ship its modeldb packed (Third Age Reforged does); there is then
@@ -147,12 +147,12 @@ if mods:
 print("\n-- guided round-trip (node) --")
 node = shutil.which("node")
 if not node:
-    print("  [skip] node is not on PATH — the page's own JS cannot be exercised")
+    print("  [skip] node is not on PATH - the page's own JS cannot be exercised")
 elif not WEB.exists():
     print("  [skip] web/index.html not found")
 else:
     # Since the Phase 3 split the page's code is web/js/*.js, loaded as plain
-    # <script src> tags — one global scope, so concatenating them in tag order
+    # <script src> tags - one global scope, so concatenating them in tag order
     # IS the page's program. (Scraping an inline <script> block, as this used to,
     # now finds the HTML comment that explains the split and reads the comment.)
     src = WEB.read_text(encoding="utf-8")
@@ -282,7 +282,7 @@ console.log(JSON.stringify(out));
         print(proc.stderr[-1500:])
     else:
         r = json.loads(proc.stdout.strip().splitlines()[-1])
-        print(f"  {r['units']} units, {r['lines']} lines — {r['guided']} guided, "
+        print(f"  {r['units']} units, {r['lines']} lines - {r['guided']} guided, "
               f"{r['widget']} widget, {r['raw']} raw")
         for st in r.get("steps", []):
             check(f"stepper: {st['what']}"
@@ -300,7 +300,7 @@ console.log(JSON.stringify(out));
         rows = pairs["rows"]
         check("every paired key is a field that exists", not pairs["missing"])
         check("no key is claimed by two rows", not pairs["dupe"])
-        check("no row is split across sections — it could never form one",
+        check("no row is split across sections - it could never form one",
               not pairs["split"])
         check("the identity and description rows pair up",
               rows["basics"][:3] == [["type", "dictionary"],
@@ -311,7 +311,7 @@ console.log(JSON.stringify(out));
         check("a pair whose other half the unit lacks is not padded out",
               rows["thin"] == [["type", "dictionary"], ["category", "class"],
                                ["banner faction"]])
-        check("a repeated key shares one row — the three officers",
+        check("a repeated key shares one row - the three officers",
               rows["officers"] == [["soldier"],
                                    ["officer", "officer#2", "officer#3"],
                                    ["mount"]])

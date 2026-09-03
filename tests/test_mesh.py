@@ -1,16 +1,16 @@
-"""The model decoder — unittransfer/mesh.py.
+"""The model decoder - unittransfer/mesh.py.
 
 The .mesh format was reverse-engineered from the bytes (nothing we hold
 describes it), so the job of this suite is to make that decode falsifiable
 rather than merely plausible. Three kinds of check:
 
-  * the REFERENCE models in Reference/TWCenter/ — seven files that ship with
+  * the REFERENCE models in Reference/TWCenter/ - seven files that ship with
     this repo, so the core of the suite runs on a machine with no game on it;
   * INVARIANTS that a wrong stride would break: every index inside the vertex
     pool, UVs in [0, 1], normals of unit length, LODs that get simpler, and
     the parse reaching the bone table with only the LOD block left over;
   * a SWEEP over whatever mods are installed, which is the check that matters
-    most — thousands of models by hundreds of hands, and a layout mistake shows
+    most - thousands of models by hundreds of hands, and a layout mistake shows
     up as a decode failure rather than as quiet rubbish.
 
 The sweep reports what it measured and asserts only our behaviour, per the rule
@@ -105,7 +105,7 @@ def invariants(m, label):
               len(m.uvs) == top * 2)
         # [0, 2] and not [0, 1]: the file normalises u over the two-sheet
         # PAIR (main 0..0.5, attachment 0.5..1) and the reader doubles it
-        # into the convention IWTE and the Blender addon use — main in the
+        # into the convention IWTE and the Blender addon use - main in the
         # first tile, attachment in the second (see mesh._classify_sheets).
         # These horses use both tiles nearly edge to edge, so a reader that
         # forgot to double, or doubled twice, fails here.
@@ -122,7 +122,7 @@ def invariants(m, label):
                    for i in range(0, min(len(m.normals), 3000), 3)]
         # packed to a biased byte, so a unit vector comes back within about
         # 0.005 of length one; the loose old bound (0.9..1.2) let a wrong
-        # decode through — the signed-byte misread averaged 1.08 and passed
+        # decode through - the signed-byte misread averaged 1.08 and passed
         check(f"{label}: normals are unit vectors (mean length "
               f"{sum(lengths) / len(lengths):.3f})",
               0.98 <= sum(lengths) / len(lengths) <= 1.02)
@@ -155,7 +155,7 @@ def refuses(label, data, name="thing.mesh"):
     try:
         mesh.read_mesh(p)
     except mesh.MeshError as e:
-        check(f"{label} — {str(e)[:60]}…", True)
+        check(f"{label} - {str(e)[:60]}…", True)
         return
     except Exception as e:                       # anything else is a defect
         check(f"{label} (raised {type(e).__name__} instead of MeshError)", False)
@@ -220,7 +220,7 @@ else:
         print(f"          {name}: {why[:90]}")
     check("and none of them read anything the decoder could not place", notes == 0)
 
-    # the settlement meshes are the same format with no skeleton — worth
+    # the settlement meshes are the same format with no skeleton - worth
     # measuring separately, because "0 bones" is a real answer there and a
     # symptom anywhere else
     blockset = mod / "data" / "blockset"
@@ -261,14 +261,14 @@ else:
                 if 0.9 <= sum(lengths) / len(lengths) <= 1.2:
                     floats += 1
         print(f"  {mod.name}: {len(engines)} siege engines read")
-        check("siege engines decode — the static vertex format, not the skinned one",
+        check("siege engines decode - the static vertex format, not the skinned one",
               not bad)
         check(f"and their float normals come out unit length ({floats}/{len(engines)})",
               floats == len(engines) - len(bad))
         for line in bad[:5]:
             print(f"          {line[:90]}")
 
-    # A file can hold several models back to back — the sky domes are the only
+    # A file can hold several models back to back - the sky domes are the only
     # ones in either test mod, and which of them do varies by mod. So the check
     # is not "these are refused" (that would pass vacuously where none are) but
     # "each one either decodes or is refused BY NAME": a vague error here would
@@ -285,7 +285,7 @@ else:
                     named += 1
                 else:
                     vague.append(f"{path.name}: {e}")
-        print(f"  {mod.name}: {len(domes)} sky domes — {read} decoded, "
+        print(f"  {mod.name}: {len(domes)} sky domes - {read} decoded, "
               f"{named} refused as multi-model, {len(vague)} otherwise")
         check("every sky dome either decodes or is refused by name, never vaguely",
               not vague and read + named == len(domes))

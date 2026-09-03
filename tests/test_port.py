@@ -1,6 +1,6 @@
 """Porting a trait or an ancillary out of one mod and into another.
 
-The gate here is not "does the block arrive" — it is **does all three of it
+The gate here is not "does the block arrive" - it is **does all three of it
 arrive, and does nothing else move**. A trait or an ancillary is a definition
 block, the triggers that grant it, and its text keys, in two files; a port that
 brings one or two of them produces a mod that either does nothing new or crashes
@@ -9,7 +9,7 @@ the character screen the first time somebody has the record.
 So what each part is here to catch:
 
   * the definition lands **above the trigger section**, where the engine is still
-    reading definitions, and byte-for-byte as the source mod wrote it — indent,
+    reading definitions, and byte-for-byte as the source mod wrote it - indent,
     inline comments and all;
   * the triggers that name it come with it, appended at the END of the trigger
     section, which is the only position that cannot change what already fires;
@@ -18,7 +18,7 @@ So what each part is here to catch:
   * the destination file still round-trips: nothing outside the spliced ranges
     was rewritten;
   * a name the destination already has is **skipped and said so**, not silently
-    doubled — and `overwrite` is what changes that;
+    doubled - and `overwrite` is what changes that;
   * what the record names and the destination has not got (a culture, an
     antitrait, an ancillary picture) is REPORTED rather than rewritten, because
     guessing a substitution turns a port into a different record;
@@ -53,9 +53,9 @@ def check(label, cond):
 
 
 # --------------------------------------------------------------------------
-# two scratch mods. The source's files carry everything a real one does — a
+# two scratch mods. The source's files carry everything a real one does - a
 # comment banner, tab alignment, an inline comment inside the block being
-# ported — because keeping those is most of what "byte for byte" means here.
+# ported - because keeping those is most of what "byte for byte" means here.
 
 SRC_EDCT = (
     ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\r\n"
@@ -247,7 +247,7 @@ check("nothing would be written", not p2.payload()["ok"])
 p3 = pr.plan(src, dst, "traits", ["Homesick"], overwrite=True)
 check("`overwrite` is what changes that",
       any(c.startswith("~ Homesick") for c in p3.changes))
-check("...and it does not double the triggers either — they are already there",
+check("...and it does not double the triggers either - they are already there",
       not p3.rows[0]["triggers"])
 
 
@@ -305,7 +305,7 @@ except pr.PortError as e:
 print("\nthe real mods")
 mods = _realmod.installed()
 if len(mods) < 2:
-    print("  (fewer than two mods installed — nothing to sweep)")
+    print("  (fewer than two mods installed - nothing to sweep)")
 else:
     a, b = Mod(mods[0]), Mod(mods[1])
     for kind_id in ("traits", "ancillaries"):

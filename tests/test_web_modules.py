@@ -1,6 +1,6 @@
 """The UI's split JavaScript: one global scope, so nothing may collide.
 
-`web/index.html` loads `web/js/*.js` as plain <script> tags — no build step, no
+`web/index.html` loads `web/js/*.js` as plain <script> tags - no build step, no
 module system. Everything therefore shares ONE global scope, which makes two
 mistakes silent and expensive:
 
@@ -10,7 +10,7 @@ mistakes silent and expensive:
     menu's until it was renamed `setAppMode`.
   * **a file that stops being loaded.** Deleting a <script> tag, or adding a
     module file and forgetting the tag, leaves the page half-wired at runtime
-    rather than failing at build time — there is no build.
+    rather than failing at build time - there is no build.
 
 So this test reads the script tags out of index.html and holds them against the
 files on disk, then scans every top-level declaration for collisions. It needs
@@ -39,7 +39,7 @@ def check(label, cond):
     print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
 
-#: A top-level declaration starts at column 0 — everything nested is indented.
+#: A top-level declaration starts at column 0 - everything nested is indented.
 #: That is the file's own convention and the split preserved it.
 DECL = re.compile(
     r"^(?:async\s+function|function)\s+([A-Za-z_$][\w$]*)"
@@ -70,9 +70,9 @@ check(f"every tag exists on disk ({len(tags)} tags)",
 missing = sorted(set(on_disk) - set(tags))
 check(f"every file on disk is loaded{': ' + ', '.join(missing) if missing else ''}",
       not missing)
-check("core.js is loaded first — it declares the state everything reads",
+check("core.js is loaded first - it declares the state everything reads",
       tags and tags[0] == "core.js")
-check("boot.js is loaded last — it calls init()", tags and tags[-1] == "boot.js")
+check("boot.js is loaded last - it calls init()", tags and tags[-1] == "boot.js")
 check("no inline <script> block is left in index.html",
       not re.search(r"<script>\s*\n", html))
 
@@ -89,7 +89,7 @@ check(f"{len(where)} top-level names, none declared twice", not dupes)
 print("\n== the modules are syntactically valid ==")
 node = shutil.which("node")
 if not node:
-    print("  [skip] node not on PATH — syntax check needs it")
+    print("  [skip] node not on PATH - syntax check needs it")
 else:
     bad = []
     for name in tags:
@@ -101,7 +101,7 @@ else:
         print(f"       {b}")
     check(f"all {len(tags)} module files parse", not bad)
 
-    # Loaded together they must also be one valid program — a stray brace in one
+    # Loaded together they must also be one valid program - a stray brace in one
     # file can parse alone and still break the page.
     joined = "\n".join((JS / n).read_text(encoding="utf-8") for n in tags)
     # encoding= is not optional: the UI is full of emoji and the Windows default
@@ -111,5 +111,5 @@ else:
         input=joined, capture_output=True, text=True, encoding="utf-8")
     check("concatenated in load order, they parse as one program", r.returncode == 0)
 
-print(f"\n{sum(ok)}/{len(ok)} checks — " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
+print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

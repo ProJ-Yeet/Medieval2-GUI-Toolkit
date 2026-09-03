@@ -6,7 +6,7 @@ faction's override in preference to the default, so which slots the browser send
 as overrides decides entirely whether editing the default box does anything.
 
 It did not. The rule was "anything that differs from the default is an override",
-compared against the default *as just typed* — so typing in the default box made
+compared against the default *as just typed* - so typing in the default box made
 every faction differ from it by definition, and all of them were sent back pinned
 to the value they already had. The new default was written and then overridden
 once per faction by the old one. On screen the boxes reverted on save, while the
@@ -60,7 +60,7 @@ config.LOG_PATH = cfg / "transfers.json"
 # --------------------------------------------------------------- browser ----
 # An entry shaped like a real one: three factions, two of them sharing the
 # default texture and one carrying its own. That third faction is the whole
-# point — it must keep what it has when the default moves, and the other two
+# point - it must keep what it has when the default moves, and the other two
 # must follow.
 DEFAULT_TEX = "unit_models/x/textures/base_diff.texture"
 DEFAULT_NRM = "unit_models/x/textures/base_norm.texture"
@@ -113,7 +113,7 @@ CASES = {
     # both at once
     "both": {"defaults": {"texture": NEW_TEX},
              "faction_paths": {"france": {"texture": PINNED}}},
-    # nothing typed at all — opening an entry and saving must change nothing
+    # nothing typed at all - opening an entry and saving must change nothing
     "untouched": {},
 }
 
@@ -121,7 +121,7 @@ print("what the browser sends")
 node = shutil.which("node")
 sent = None
 if not node:
-    print("  (skipped — Node is not installed)")
+    print("  (skipped - Node is not installed)")
 else:
     drv = cfg / "drive.js"
     drv.write_text(DRIVER, encoding="utf-8")
@@ -174,9 +174,9 @@ if sent:
 # ---------------------------------------------------------------- server ----
 print("\nand what the file gets back")
 if not sent:
-    print("  (skipped — no payload to apply)")
+    print("  (skipped - no payload to apply)")
 elif not TATR.is_dir():
-    print("  (skipped — Third_Age_Reforged is not installed)")
+    print("  (skipped - Third_Age_Reforged is not installed)")
 else:
     def fresh_mod():
         root = Path(tempfile.mkdtemp(prefix="ut_texmod_"))
@@ -200,7 +200,7 @@ else:
             name = e.name
             break
     if not name:
-        print("  (skipped — no entry in this mod shares one texture across factions)")
+        print("  (skipped - no entry in this mod shares one texture across factions)")
     else:
         facs = [t.faction for t in mod.modeldb.by_name()[name].main_textures]
         print(f"  entry {name!r}: {len(facs)} faction records, all on one texture")

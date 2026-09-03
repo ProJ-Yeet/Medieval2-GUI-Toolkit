@@ -2,7 +2,7 @@
 
 This is the tool the ``.mesh`` format was reverse-engineered with, kept because
 it is also the answer to "the viewer will not open this file, why". It reads a
-model and prints its groups, its vertex pool and its bones — and with ``--raw``
+model and prints its groups, its vertex pool and its bones - and with ``--raw``
 it walks the bytes instead, which is what you want when a file will NOT decode.
 
     python tools/meshdump.py <file.mesh> [more files...]
@@ -51,7 +51,7 @@ def show(path: str) -> int:
 
 
 def raw(path: str) -> int:
-    """Walk the bytes without trusting the parser — for a file that will not open."""
+    """Walk the bytes without trusting the parser - for a file that will not open."""
     d = Path(path).read_bytes()
     print(f"{Path(path).name}  {len(d):,} bytes   kind={mesh.probe_bytes(d) or 'unknown'}")
     print("  head " + d[:48].hex(" "))

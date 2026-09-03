@@ -2,7 +2,7 @@
 
 Every other buildings operation edits a line the EDB already has. A new tree is
 the first one that writes a block that was not there, and it lands in two files
-at once — the EDB and ``text/export_buildings.txt`` — so the checks here are
+at once - the EDB and ``text/export_buildings.txt`` - so the checks here are
 mostly about refusing rather than writing.
 
 What each part is here to catch:
@@ -12,7 +12,7 @@ What each part is here to catch:
     so a new tree that reuses one is refused before either file is touched.
   * **the levels chain forward.** All 771 upgrade entries in the three installed
     mods point at a level listed *after* them on the `levels` line, which is
-    what TWCenter's hardcoded-limits note says the engine requires — so the
+    what TWCenter's hardcoded-limits note says the engine requires - so the
     scaffold builds the chain in that direction and the test asserts the sweep.
   * **an `upgrades` entry can carry its own clause** (``ce_wooden_wall requires
     event_counter … 1``), 41 of those 771. `upgrade_name` is the one place that
@@ -26,7 +26,7 @@ What each part is here to catch:
     line also carries a `religion`, and `core_` is two engine chains that both
     already exist.
   * **the cards are art.** They are listed, never written, and a blank one is
-    never called a fault — Phase 10a's ruling about pips and settlement cards.
+    never called a fault - Phase 10a's ruling about pips and settlement cards.
   * **create → undo puts the mod back byte for byte**, both files.
 
 The scaffold, the refusals and the render need no game install. The sweeps and
@@ -54,7 +54,7 @@ def check(label, cond):
     print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
 
-# Read where the game is BEFORE the config paths are redirected below — the
+# Read where the game is BEFORE the config paths are redirected below - the
 # scratch settings.json the rest of this file writes into knows about no install.
 _root = config.get_med2_root()
 MODS = (Path(_root) / "mods") if _root else None
@@ -96,7 +96,7 @@ check("the scalars are written",
                                "cost": "1200", "settlement_min": "town"})
 check("there is a capability block for the editor to add pools to",
       bl.blocks[0].cap_span != (0, 0) and bl.blocks[0].capabilities == [])
-check("and an empty plugins block — optional, but every real one is empty",
+check("and an empty plugins block - optional, but every real one is empty",
       bl.plugins_span != (0, 0) and bl.plugins == [])
 check("the block round-trips through the parser",
       B.block_text(edb, bl) == text)
@@ -122,7 +122,7 @@ check("a level with no settlement word is 'both'",
 # ---------------------------------------------------------------------------
 print("\n1b) a `#` annotation line is not a keyword")
 # The EDB's comment marker is `;`. A line starting with `#` is therefore not a
-# comment as far as the format goes — but it is not a keyword either, and the
+# comment as far as the format goes - but it is not a keyword either, and the
 # engine ignores it: Divide and Conquer ships 109 of them inside one capability
 # block, grouping its recruit_pool lines by faction, and the mod runs. Reading
 # one as a capability put `#` in the capability picker as engine vocabulary.
@@ -164,7 +164,7 @@ check("the two real capabilities are read, the two `#` lines are not",
 check("a `#` line among the scalars is not a scalar",
       sorted(hl.scalars) == ["construction", "cost", "material", "settlement_min"])
 check("a `#` line in an upgrades block is not an upgrade", hl.upgrades == [])
-check("and the file is given back byte for byte — the annotations survive "
+check("and the file is given back byte for byte - the annotations survive "
       "because nothing re-emits the block",
       B.block_text(ha, hb) == ANNOTATED)
 
@@ -184,7 +184,7 @@ installed = ([d.parent.parent for d in sorted(MODS.glob("*/data/" + B.EDB_REL))]
              if MODS and MODS.is_dir() else [])
 
 if not installed:
-    print("  (no mods installed — the refusals and the sweeps are skipped)")
+    print("  (no mods installed - the refusals and the sweeps are skipped)")
 else:
     mod = Mod(installed[0])
     taken_line = mod.edb.buildings[0].name
@@ -221,7 +221,7 @@ else:
 
     deep = {"name": "zz_deep",
             "levels": [{"name": f"zz_d{i}"} for i in range(B.VANILLA_MAX_LEVELS + 2)]}
-    check(f"past {B.VANILLA_MAX_LEVELS} levels is a warning, not a refusal — mods "
+    check(f"past {B.VANILLA_MAX_LEVELS} levels is a warning, not a refusal - mods "
           "run deeper on M2TWEOP",
           not errs(deep) and any("vanilla stops" in w for w in warns(deep)))
     check("a guild_ line says it needs an export_descr_guilds entry",
@@ -326,7 +326,7 @@ check("dropping the clause leaves a bare level name",
 
 print("\n4) the sweeps: what the real files say about a tree")
 if not installed:
-    print("  (no mods installed — skipped)")
+    print("  (no mods installed - skipped)")
 else:
     refs = clauses = backward = unknown = 0
     lines = levels = triple = deepest = 0
@@ -374,10 +374,10 @@ else:
           f"{len(installed)} mod(s)")
     check(f"all {refs} upgrade entries point at a level of their own line "
           f"({unknown} do not)", unknown == 0)
-    check(f"and every one of them points FORWARD ({backward} do not) — which is "
+    check(f"and every one of them points FORWARD ({backward} do not) - which is "
           "why the scaffold chains in that direction", backward == 0)
     # How many real entries carry a clause depends entirely on which mods are
-    # installed — 41 of 771 when the Phase 12 audit measured it, 0 of these 248
+    # installed - 41 of 771 when the Phase 12 audit measured it, 0 of these 248
     # lines today. So that is reported, and what is ASSERTED is our own function
     # against every real entry; `upgrade_name`'s clause handling has a synthetic
     # case of its own in section 2, which is where the behaviour is pinned.
@@ -387,20 +387,20 @@ else:
           f"({firstword_bad} disagree)", firstword_bad == 0)
     # The block is OPTIONAL: Third Age Reforged omits it on 45 of its 112 lines
     # and runs. What the scaffold actually leans on is that a real one is always
-    # empty, so writing an empty one can lose nothing — that is what is asserted;
+    # empty, so writing an empty one can lose nothing - that is what is asserted;
     # how many lines carry one at all is reported, not required.
     print(f"  plugins blocks: {lines - plugins_missing} of {lines} real lines "
           f"carry one ({plugins_missing} omit it entirely)")
     check(f"every plugins block in the {lines} real lines is empty "
           f"({plugins_filled} are not), which is why writing an empty one is safe",
           plugins_filled == 0)
-    check(f"all {levels} real levels have all three text keys ({triple}) — which "
+    check(f"all {levels} real levels have all three text keys ({triple}) - which "
           "is why the scaffold writes three", triple == levels)
     check(f"all {temples} temple_ lines also carry a religion "
           f"({temples_with_religion})", temples == temples_with_religion)
     check(f"all {guild_lines} guild_ lines are named in export_descr_guilds.txt "
           f"({guild_paired})", guild_lines == guild_paired)
-    check(f"the deepest real tree is {deepest} levels — past vanilla's "
+    check(f"the deepest real tree is {deepest} levels - past vanilla's "
           f"{B.VANILLA_MAX_LEVELS}, so that limit is said and not enforced",
           deepest > B.VANILLA_MAX_LEVELS)
 
@@ -421,7 +421,7 @@ else:
                "upgrade_bodyguard", "weapon_melee_simple")
     check(f"the {len(adopted)} taken from the reference sheet are all in the "
           "picker", all(k in B.CAP_HELP for k in adopted))
-    check("and not one of them is used by any installed mod — they are adopted as "
+    check("and not one of them is used by any installed mod - they are adopted as "
           "engine vocabulary, not as a habit of these three files",
           not [k for k in adopted if k in used])
     check("every keyword has a group and the group is one the picker shows",
@@ -438,7 +438,7 @@ else:
 # ---------------------------------------------------------------------------
 print("\n5) create it for real, then undo it")
 if not installed:
-    print("  (no mods installed — skipped)")
+    print("  (no mods installed - skipped)")
 else:
     src_root = installed[0]
     work = Path(tempfile.mkdtemp(prefix="ut_newtree_")) / src_root.name

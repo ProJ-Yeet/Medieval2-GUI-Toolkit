@@ -1,8 +1,8 @@
 """What a ``requires`` clause in the EDB is allowed to name.
 
 Every condition in ``export_descr_buildings.txt`` refers to something declared
-somewhere else in the mod — a faction, a religion, an event counter, a hidden
-resource — by its code name. Typing those by hand is how a building silently
+somewhere else in the mod - a faction, a religion, an event counter, a hidden
+resource - by its code name. Typing those by hand is how a building silently
 stops being buildable: the game does not complain about
 ``requires event_counter anduin_citys 1``, it just never fires.
 
@@ -23,7 +23,7 @@ Everything here is best-effort: a mod missing one of these files gets an empty
 list for it, never an error, and the clause editor always keeps a raw-text
 escape hatch for anything not on a list.
 
-Three of the lists — cultures, religions and resources — are *not* parsed here.
+Three of the lists - cultures, religions and resources - are *not* parsed here.
 They come from :mod:`unittransfer.minorfiles`, which is the module that edits
 those files, so the names the clause editor offers and the names that module
 writes can never drift apart. One engine, one parser per format.
@@ -64,20 +64,20 @@ def _read_utf16(path: Path) -> str:
 
 
 # Three of these lists come out of files the Minor Files module owns, and it owns
-# them properly — the same parser that edits them, not a regex beside it. That is
+# them properly - the same parser that edits them, not a regex beside it. That is
 # the whole point of the one-engine rule: `descr_cultures.txt` in particular has
 # a `culture` keyword on its agent lines' neighbours and a tail outside the
 # brace, and a regex for `^culture (\S+)` was only ever right by luck.
 
 
 def religions(mod) -> List[str]:
-    """Religion names — :func:`unittransfer.minorfiles.religion_names` is the source."""
+    """Religion names - :func:`unittransfer.minorfiles.religion_names` is the source."""
     from . import minorfiles
     return minorfiles.religion_names(mod)
 
 
 def cultures(mod) -> List[str]:
-    """Culture names — from descr_cultures.txt, plus any a faction claims."""
+    """Culture names - from descr_cultures.txt, plus any a faction claims."""
     from . import minorfiles
     out = list(minorfiles.culture_names(mod))
     for c in mod.faction_cultures.values():
@@ -87,7 +87,7 @@ def cultures(mod) -> List[str]:
 
 
 def resources(mod) -> List[str]:
-    """Trade resources — :func:`unittransfer.minorfiles.resource_names` is the source."""
+    """Trade resources - :func:`unittransfer.minorfiles.resource_names` is the source."""
     from . import minorfiles
     return sorted(set(minorfiles.resource_names(mod)))
 
@@ -103,12 +103,12 @@ def regions(mod, hidden_names=()) -> List[dict]:
     A positional record: the region name unindented, then an indented block whose
     lines are, in order::
 
-        legion: <name>          (optional — the legion recruitment name)
+        legion: <name>          (optional - the legion recruitment name)
         <settlement>
         <faction that owns it at the start>
         <rebel type that spawns there>
         <r> <g> <b>             (its colour on the map image)
-        <resources, comma separated — trade AND hidden, mixed>
+        <resources, comma separated - trade AND hidden, mixed>
         <triumph value>
         <base farming level>
         religions { catholic 7 elven 5 … }
@@ -118,7 +118,7 @@ def regions(mod, hidden_names=()) -> List[dict]:
     all but two records while the second runs 1–6 with a real spread, which is
     a fertility level and not a score. Both test mods write 5 and 1 for every
     region, so neither could have told them apart. Nothing reads either value
-    yet — the region inspector of the campaign map editor is what will.
+    yet - the region inspector of the campaign map editor is what will.
 
     The resource line is the interesting one, and it mixes the two kinds: a name
     declared on the EDB's ``hidden_resources`` line is a hidden resource, and
@@ -177,7 +177,7 @@ def regions(mod, hidden_names=()) -> List[dict]:
     for line in text.splitlines():
         if not line.strip() or line.lstrip().startswith(";"):
             continue
-        # A region starts unindented — except that Third Age 6 writes its
+        # A region starts unindented - except that Third Age 6 writes its
         # `religions { … }` line flush left too, and treating that as a new
         # region would both lose the religions and invent a phantom record.
         starts_region = (line[:1] not in (" ", "\t")
@@ -210,14 +210,14 @@ def event_counters(mod) -> List[dict]:
     """Every event counter this mod knows about: ``{name, title, source}``.
 
     Three sources, and the same event usually appears in more than one under a
-    different casing — DaC's EDB tests ``adunaim_gondor_allied`` while
+    different casing - DaC's EDB tests ``adunaim_gondor_allied`` while
     historic_events.txt calls it ``{ADUNAIM_GONDOR_ALLIED_TITLE}``. So they are
     merged case-insensitively, keeping the spelling that has to be *typed* and
     the title that can be *read*:
 
-    ``text``    a ``{NAME_TITLE}`` in text/historic_events.txt — an event with
+    ``text``    a ``{NAME_TITLE}`` in text/historic_events.txt - an event with
                 written copy, which is what a modder thinks of as "an event"
-    ``script``  a ``set_event_counter NAME`` in the campaign scripts — the thing
+    ``script``  a ``set_event_counter NAME`` in the campaign scripts - the thing
                 that actually moves the counter the EDB tests
     ``edb``     already used by a ``requires event_counter`` in this EDB, so it
                 is certainly spelled the way the game expects

@@ -2,18 +2,18 @@
 
 Three pieces of new surface, and the one property each of them has to keep.
 
-  * ``buildings.variant_compare`` — one building line beside its twin, tier by
+  * ``buildings.variant_compare`` - one building line beside its twin, tier by
     tier. Every unit either half trains appears exactly once per tier, marked
     ``both`` / ``a`` / ``b``; ``diff`` names the fields that disagree rather
     than answering yes-or-no, because on a real pair almost every shared unit
     differs in ``requires`` alone and a bare flag would report the whole roster.
     A line with no twin is an answer, not an error.
-  * ``edusort.banner_style`` / ``banner`` — the section banner is the only text
+  * ``edusort.banner_style`` / ``banner`` - the section banner is the only text
     the cleanup authors, so its shape is the user's. The default has to stay
     byte for byte what it was before the style existed, a banner written in any
     style has to be read back by ``BANNER_RE``, and a nonsense style out of a
     text box must fall back rather than raise.
-  * ``edusort.apply_marks`` and ``special_of`` — tier, variant and
+  * ``edusort.apply_marks`` and ``special_of`` - tier, variant and
     classification written onto the unit's own ``;@m2gt`` line. Setting one may
     not touch another unit or another key, clearing one has to remove it, and a
     marked general has to sort where the marker says rather than where its
@@ -159,7 +159,7 @@ building lonely
 
 
 class FakeEdu:
-    """A mod with no units at all — every pool then reads as "not in the EDU",
+    """A mod with no units at all - every pool then reads as "not in the EDU",
     which is a real state and the one that exercises the fallback."""
     units = ()
 
@@ -356,13 +356,13 @@ print("\n== against the installed mods ==")
 edb_mods = [m for m in _realmod.installed()
             if (m / "data" / "export_descr_buildings.txt").is_file()]
 if not edb_mods:
-    print("  (no installed mod with an EDB — the sweep is skipped)")
+    print("  (no installed mod with an EDB - the sweep is skipped)")
 for src in edb_mods:
     real = Mod(src)
     pairs = buildings.variant_pairs(real.edb)
     lines = [n for n in pairs if real.edb.get(n) is not None]
     if not lines:
-        print(f"  ({src.name} has no city/castle pair — skipped)")
+        print(f"  ({src.name} has no city/castle pair - skipped)")
         continue
     both_ways = 0
     for name in lines[:6]:
@@ -444,5 +444,5 @@ for src in edu_mods:
 shutil.rmtree(root, ignore_errors=True)
 shutil.rmtree(cfg, ignore_errors=True)
 bad = ok.count(False)
-print(f"\n{len(ok) - bad}/{len(ok)} checks — " + ("ALL PASSED" if not bad else "SOME FAILED"))
+print(f"\n{len(ok) - bad}/{len(ok)} checks - " + ("ALL PASSED" if not bad else "SOME FAILED"))
 sys.exit(1 if bad else 0)

@@ -7,7 +7,7 @@
 
 The reference tool ships no tags, no releases and no branches: every change lands
 on `main`, auto-pushed from the Base44 builder under the message "File changes".
-The messages therefore carry nothing — **this tool reads diffs and never commit
+The messages therefore carry nothing - **this tool reads diffs and never commit
 subjects.**
 
 His history is mirrored into our own repo under `refs/upstream/editor/*`, so it
@@ -16,17 +16,17 @@ touched by it. `merge/PORT_MANIFEST.json` then records what we intend to do with
 each of his files:
 
   port-concept  he knows something we want to rebuild in our stack. A change
-                here may mean the FORMAT KNOWLEDGE changed — the loudest signal
+                here may mean the FORMAT KNOWLEDGE changed - the loudest signal
                 this tool emits, because our Python parser may now be wrong.
   audit         we already do this; compare and take the small wins.
   skip          boilerplate, cloud plumbing, or something we own outright.
-  out-of-scope  excluded from V2 (see ROADMAP.md) — includes everything
+  out-of-scope  excluded from V2 (see ROADMAP.md) - includes everything
                 AI/autogenerate, which is a permanent no.
 
 `sync` diffs `reviewed_sha..upstream/main`, buckets every changed path by its
 disposition, and writes a dated entry to `merge/SYNC_LOG.md`. Files he adds that
 the manifest has never seen are reported as **untriaged** and must be given a
-disposition by hand — that is the one thing this tool will not guess for you
+disposition by hand - that is the one thing this tool will not guess for you
 after the initial pass.
 
 Run it weekly, and always before starting a phase that ports from a directory he
@@ -53,7 +53,7 @@ CLONE_URL = "https://github.com/Machiavello-1441/m2tw-editor.git"
 DISPOSITIONS = {
     "port-concept": "rebuild the idea in our stack; a change here may mean the "
                     "format knowledge changed",
-    "audit": "we already do this — compare and take the small wins",
+    "audit": "we already do this - compare and take the small wins",
     "skip": "boilerplate, cloud plumbing, or something we own outright",
     "out-of-scope": "excluded from V2 (ROADMAP.md); AI/autogenerate is permanent",
     "untriaged": "new upstream file nobody has classified yet",
@@ -68,40 +68,40 @@ DISPOSITIONS = {
 RULES: tuple[tuple[str, str, tuple[str, ...], str], ...] = (
     # --- the hard no. Anything that generates content goes here and stays. ---
     (r"(LuaAiAssistant|ScriptAIAssistant|SymbolGenerator)", "out-of-scope", (),
-     "AI/autogenerate — permanently excluded"),
+     "AI/autogenerate - permanently excluded"),
     (r"(KoppenClimateFetcher|LandCoverFetcher|OsmHistoricTagFetcher|worldCover|"
      r"OverlayMapGenerator|BboxLayerGenerator|BBoxGenerator|FeaturesLayerGenerator|"
      r"autoGroundTypes)",
-     "out-of-scope", (), "auto-generates map data from external sources — excluded"),
+     "out-of-scope", (), "auto-generates map data from external sources - excluded"),
 
     # --- explicitly out of V2 (ROADMAP "Explicitly out of scope") ---
     (r"^src/pages/(ScriptEditor|AnimationEditor|UnitCardGenerator|GoatTools|"
      r"LuaScripts|NewMapEditor|Export|AssetsConverter)\.jsx$", "out-of-scope", (),
-     "V2 out of scope — future expansion only"),
+     "V2 out of scope - future expansion only"),
     (r"^src/components/(newmap|export|lua|anim|animation)/", "out-of-scope", (),
-     "V2 out of scope — future expansion only"),
+     "V2 out of scope - future expansion only"),
     # NB: the campaign EVENTS tab is deliberately not here. `descr_events.txt` is
     # campaign data the map module edits; the script editor is the thing that was
     # ruled out, and the two only look alike from a distance.
     (r"^src/components/map/(Scripting|ScriptTemplate|ScriptReference|scriptReference|"
      r"scriptAutocomplete)", "out-of-scope", (),
-     "script editor — future expansion (Scratch-style block UI)"),
+     "script editor - future expansion (Scratch-style block UI)"),
     (r"^src/lib/(casAnimCodec|skeletonPoser|slerpUtils)\.js$", "out-of-scope", (),
-     "animation — future expansion"),
+     "animation - future expansion"),
     (r"^src/components/assets/PoseEditor", "out-of-scope", (),
-     "animation posing — future expansion"),
+     "animation posing - future expansion"),
 
     # --- cloud plumbing and framework boilerplate ---
-    (r"^src/components/ui/", "skip", (), "shadcn/ui boilerplate — we have our own CSS"),
+    (r"^src/components/ui/", "skip", (), "shadcn/ui boilerplate - we have our own CSS"),
     (r"^src/api/base44Client\.js$|^src/lib/(app-params|AuthContext|query-client|"
      r"PageNotFound|utils)\.jsx?$|UserNotRegisteredError", "skip", (),
-     "Base44 auth/cloud plumbing — we are self-hosted"),
-    (r"^base44/", "skip", (), "Base44 cloud entity schemas — no cloud in our design"),
+     "Base44 auth/cloud plumbing - we are self-hosted"),
+    (r"^base44/", "skip", (), "Base44 cloud entity schemas - no cloud in our design"),
     (r"^(package|package-lock|jsconfig|components|tailwind\.config|vite\.config|"
-     r"postcss\.config|eslint\.config)", "skip", (), "JS toolchain — we have no build step"),
+     r"postcss\.config|eslint\.config)", "skip", (), "JS toolchain - we have no build step"),
     (r"^(index\.html|README\.md|\.gitignore)$", "skip", (), "project scaffolding"),
     (r"^src/(App\.jsx|Layout\.jsx|main\.jsx|index\.css|pages\.config\.js|utils/|hooks/)",
-     "skip", (), "React app shell — our shell is web/index.html"),
+     "skip", (), "React app shell - our shell is web/index.html"),
     (r"^src/components/(AppErrorBoundary|ProtectedRoute)", "skip", (), "React app shell"),
 
     # --- phase 6: strings ---
@@ -139,16 +139,16 @@ RULES: tuple[tuple[str, str, tuple[str, ...], str], ...] = (
 
     # --- phase 12: EDB ---
     (r"^src/components/edb/(EDBParser|EDBExporter|EDBValidator)", "audit", ("12",),
-     "their EDB parser vs our buildings.py — compare field coverage"),
+     "their EDB parser vs our buildings.py - compare field coverage"),
     (r"^src/components/edb/|^src/pages/EDBEditor", "port-concept", ("12",),
      "EDB editor UI: collapsible tree, new-tree flow, capability/requirement builders"),
 
     # --- phase 13: units, sounds, projectiles, mounts (we own these) ---
     (r"^src/components/units/|^src/pages/UnitEditor", "audit", ("13",),
-     "their EDU fields/dropdowns vs ours — adopt fields, never their hardcoded vocab"),
+     "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab"),
     (r"^src/pages/SoundEditor", "audit", ("13",), "their sound editor vs our sounds.py"),
     (r"^src/lib/modeldb(Codec|Store)\.js$", "audit", ("13",),
-     "their modeldb codec vs our modeldb.py — we own this format"),
+     "their modeldb codec vs our modeldb.py - we own this format"),
 
     # --- phase 15: 3D model viewer, textures ---
     # These said 14 until 2026-08-20. The manifest was written before ROADMAP.md
@@ -156,13 +156,13 @@ RULES: tuple[tuple[str, str, tuple[str, ...], str], ...] = (
     # to 15 and the campaign map to 16. A phase number that names the wrong phase
     # is worse than none, because `sync` prints it beside every changed file.
     (r"^src/lib/(casCodec|ms3dCodec|textureCodec|textureLoader|tgaEncoder)\.js$",
-     "port-concept", ("15",), "binary mesh/texture codecs — cross-check vs the Blender addon"),
+     "port-concept", ("15",), "binary mesh/texture codecs - cross-check vs the Blender addon"),
     (r"^src/components/assets/", "port-concept", ("15",), "3D model + texture viewer"),
 
     # --- phase 16: campaign map ---
     (r"^src/components/map/|^src/pages/(CampaignMap|CampaignManager|CampaignSettings)|"
      r"^src/components/campaigns?/", "port-concept", ("16",),
-     "campaign map + descr_strat — the flagship phase"),
+     "campaign map + descr_strat - the flagship phase"),
     (r"^src/lib/(mapLayerStore|autoGroundTypes|tgaLoader)\.js$", "port-concept", ("16",),
      "map layer handling"),
     (r"^src/components/minorfiles/stratmap/", "port-concept", ("16",), "strat map characters"),
@@ -172,10 +172,10 @@ RULES: tuple[tuple[str, str, tuple[str, ...], str], ...] = (
      "which files they read and how they discover them"),
 
     # --- leftovers worth a look ---
-    (r"^src/components/shared/", "audit", ("4",), "shared UI patterns — Code View may reuse"),
-    (r"^src/pages/TextEditor", "audit", ("4",), "raw text editing — informs Code View"),
-    (r"^src/lib/", "audit", (), "library code — classify properly when its phase arrives"),
-    (r"^src/pages/", "audit", (), "page shell — classify when its phase arrives"),
+    (r"^src/components/shared/", "audit", ("4",), "shared UI patterns - Code View may reuse"),
+    (r"^src/pages/TextEditor", "audit", ("4",), "raw text editing - informs Code View"),
+    (r"^src/lib/", "audit", (), "library code - classify properly when its phase arrives"),
+    (r"^src/pages/", "audit", (), "page shell - classify when its phase arrives"),
 )
 
 
@@ -223,7 +223,7 @@ def changed(since: str, until: str = REF) -> list[tuple[str, str]]:
     for line in git("diff", "--name-status", f"{since}..{until}").splitlines():
         parts = line.split("\t")
         if len(parts) >= 2:
-            # A rename arrives as "R100 old new" — the new path is what we track.
+            # A rename arrives as "R100 old new" - the new path is what we track.
             out.append((parts[0][0], parts[-1]))
     return out
 
@@ -247,7 +247,7 @@ def save(m: dict) -> None:
 
 
 def triage(m: dict, sha: str, *, redo: bool = False) -> tuple[int, int]:
-    """File every upstream path. Existing decisions are left alone — this tool
+    """File every upstream path. Existing decisions are left alone - this tool
     proposes, a human disposes, and re-running must never silently undo that."""
     added = updated = 0
     for path in upstream_files():
@@ -297,7 +297,7 @@ def cmd_status(args) -> int:
         print(f"  phase {p:<3} {n:>4}")
     untriaged = [p for p, r in m["files"].items() if r["disposition"] == "untriaged"]
     if untriaged:
-        print(f"\nUNTRIAGED ({len(untriaged)}) — give these a disposition by hand:")
+        print(f"\nUNTRIAGED ({len(untriaged)}) - give these a disposition by hand:")
         for p in untriaged[:20]:
             print(f"  {p}")
     return 0
@@ -320,10 +320,10 @@ def cmd_sync(args) -> int:
     m = load()
     since = m["upstream"]["reviewed_sha"]
     if not since:
-        print("no reviewed SHA yet — run `triage` first")
+        print("no reviewed SHA yet - run `triage` first")
         return 2
     if since == sha:
-        print(f"up to date at {sha[:7]} — nothing new since "
+        print(f"up to date at {sha[:7]} - nothing new since "
               f"{m['upstream']['reviewed_date']}")
         return 0
 
@@ -335,7 +335,7 @@ def cmd_sync(args) -> int:
         disp = rec["disposition"] if rec else "untriaged"
         buckets.setdefault(disp, []).append((st, path))
 
-    print(f"\n{since[:7]}..{sha[:7]} — {ncommits} commits, {len(delta)} files changed")
+    print(f"\n{since[:7]}..{sha[:7]} - {ncommits} commits, {len(delta)} files changed")
     print("(commit messages are all \"File changes\" upstream; this is diff-driven)\n")
 
     order = ["port-concept", "audit", "untriaged", "out-of-scope", "skip"]
@@ -355,7 +355,7 @@ def cmd_sync(args) -> int:
             continue
         for st, path in sorted(items):
             rec = m["files"].get(path, {})
-            ph = ",".join(rec.get("phases", [])) or "—"
+            ph = ",".join(rec.get("phases", [])) or "-"
             # ASCII only past this point: this prints to a Windows console that
             # is cp1252 by default, and an arrow glyph is not worth a traceback.
             flag = ""
@@ -364,7 +364,7 @@ def cmd_sync(args) -> int:
             elif disp == "untriaged":
                 flag = "  <-- NEW FILE, needs a disposition"
             print(f"  {st} {path}  [phase {ph}]{flag}")
-            lines.append(f"- `{st}` `{path}` — phase {ph}{flag}")
+            lines.append(f"- `{st}` `{path}` - phase {ph}{flag}")
         lines.append("")
 
     # New files are filed as untriaged so the next `status` keeps nagging until
@@ -374,7 +374,7 @@ def cmd_sync(args) -> int:
         print(f"\n{added} new file(s) filed as untriaged, {updated} record(s) updated")
 
     if args.accept:
-        entry = "\n".join([f"## {time.strftime('%Y-%m-%d')} — {since[:7]}..{sha[:7]}", "",
+        entry = "\n".join([f"## {time.strftime('%Y-%m-%d')} - {since[:7]}..{sha[:7]}", "",
                            f"{ncommits} commits, {len(delta)} files changed.", ""]
                           + lines).rstrip()
         SYNC_LOG.write_text(_prepend_entry(entry), encoding="utf-8")
@@ -385,7 +385,7 @@ def cmd_sync(args) -> int:
         print("remember to update STATE.md's Upstream line")
     else:
         save(m)
-        print("\n(dry run — pass --accept to record this review and bump the SHA)")
+        print("\n(dry run - pass --accept to record this review and bump the SHA)")
     return 0
 
 
@@ -397,7 +397,7 @@ LOG_HEADER = ("# Upstream sync log\n\n"
 
 
 def _prepend_entry(entry: str) -> str:
-    """Newest entry directly under the header — the log is read top-down and the
+    """Newest entry directly under the header - the log is read top-down and the
     interesting review is always the last one."""
     prev = SYNC_LOG.read_text(encoding="utf-8") if SYNC_LOG.exists() else LOG_HEADER
     header, sep, rest = prev.partition("\n## ")

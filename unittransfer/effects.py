@@ -28,7 +28,7 @@ effect names and nothing else::
 
 So an effect-set is two levels deep: the set names effects, and the effects name
 the ``.CAS`` models and textures that actually draw. Carrying one across means
-carrying the set block, every effect block it lists, and the files those name —
+carrying the set block, every effect block it lists, and the files those name -
 which is what this module finds and :mod:`unittransfer.transfer` emits.
 
 **Which file a block goes back into matters.** The engine loads the four files
@@ -37,7 +37,7 @@ a trail, and the same text in ``descr_effect_impacts.txt`` is not. So every bloc
 here remembers the data-relative file it was read from, and a transfer writes it
 back into the file of the same name in the destination.
 
-Blocks are kept verbatim. Nothing here rewrites one — a name collision is
+Blocks are kept verbatim. Nothing here rewrites one - a name collision is
 resolved by *not* importing (the destination already declares a set by that name,
 so a projectile pointing at it is pointing at something real), which means there
 is no renaming to do and no reason to re-emit text nobody edited.
@@ -51,11 +51,11 @@ Two things real files do that the shape above does not show:
   * **Braces do not always balance.** Divide and Conquer's impacts file leaves an
     ``effect`` block open, and a reader that trusted the depth count swallowed the
     next two sets whole. So a block ends at the next header OR when the depth
-    closes it, whichever comes first — the same rule
+    closes it, whichever comes first - the same rule
     :mod:`unittransfer.projectiles` uses on its own blocks.
 
 ``;`` starts a comment, and a comment may hold a brace, so the depth count reads
-past it first. A header and its ``{`` may be separated by blank lines — the stock
+past it first. A header and its ``{`` may be separated by blank lines - the stock
 files do it both ways.
 """
 from __future__ import annotations
@@ -86,14 +86,14 @@ SET, EFFECT = "effect_set", "effect"
 #: the only three the stock files use, and a mod's are the same keys.
 ASSET_KEYS = ("model", "debris_model", "texture")
 
-#: ``effect_set < 3 4 > fiery_arrow_set`` — the optional ``< … >`` is the range of
+#: ``effect_set < 3 4 > fiery_arrow_set`` - the optional ``< … >`` is the range of
 #: graphics-detail levels this body is for, and the NAME is what follows it.
 _HEAD_RE = re.compile(r"^\s*(effect_set|effect)\s+(?:<[^>]*>\s*)?(\S+)\s*$",
                       re.IGNORECASE)
 
 
 def _code(line: str) -> str:
-    """The line with its ``;`` comment removed — a brace in a comment is not code."""
+    """The line with its ``;`` comment removed - a brace in a comment is not code."""
     return line.split(";", 1)[0]
 
 
@@ -168,7 +168,7 @@ def parse_text(text: str, rel: str = "") -> List[Block]:
             continue
         kind, name = head
         # Find the opening brace. Anything other than blank lines before it means
-        # this header has no body — malformed, and not ours to repair: skip it.
+        # this header has no body - malformed, and not ours to repair: skip it.
         j, opened = i + 1, False
         while j < len(lines):
             code = _code(lines[j])
@@ -212,12 +212,12 @@ def parse_file(path, rel: str = "") -> List[Block]:
 class EffectIndex:
     """Every block a mod's four effect files declare, by name.
 
-    Names are matched case-insensitively — the engine does, and a mod that writes
+    Names are matched case-insensitively - the engine does, and a mod that writes
     ``Default_Arrow_Trail_Set`` in one file and the lower-case spelling in another
     means one set, not two.
 
     A set maps to a LIST because of the ``< 3 4 >`` detail-band form: one name can
-    have three bodies, and all of them are the set. An effect maps to one block —
+    have three bodies, and all of them are the set. An effect maps to one block -
     nothing in the stock files declares an effect twice, and if a mod does, the
     first declaration is the one the engine keeps.
     """
@@ -253,13 +253,13 @@ def resolve(idx: EffectIndex, names: Iterable[str],
 
     Returns ``(blocks, missing)``:
 
-      * ``blocks`` — the set blocks and the effect blocks they list, in the order
+      * ``blocks`` - the set blocks and the effect blocks they list, in the order
         they must be written, skipping anything the destination already declares
         (``have_sets`` / ``have_effects``). A set is emitted before the effects it
         names, so a file read top to bottom introduces the set first, the way the
         stock files do. A set declared once per detail band contributes all of its
         bodies: half of them would leave the set undefined at the other settings.
-      * ``missing`` — the names the SOURCE does not declare either. Those are the
+      * ``missing`` - the names the SOURCE does not declare either. Those are the
         ones a transfer still has to point at the placeholder: the source mod is
         inheriting them from vanilla, and vanilla's copy is not ours to copy.
     """
@@ -294,6 +294,6 @@ def resolve(idx: EffectIndex, names: Iterable[str],
             # An effect the source does not declare either is vanilla's, like the
             # set case above. It is NOT reported as missing: the set itself came
             # across, so the projectile points at something real, and the engine
-            # falls back to its own copy of the member — which is what the source
+            # falls back to its own copy of the member - which is what the source
             # mod was relying on too.
     return blocks, missing

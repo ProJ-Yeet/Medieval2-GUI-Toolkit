@@ -1,9 +1,9 @@
-/* edrecruit.js — the unit editor's Recruitment tab: every building that trains
+/* edrecruit.js - the unit editor's Recruitment tab: every building that trains
    this unit, editable in place, and the ＋ that adds it to one more
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
@@ -13,14 +13,14 @@
    entirely, reached by leaving the unit, finding one of the four or five
    building lines that train it, and reading its numbers off a row among sixty.
    The building browser already had the panel that puts them side by side
-   (`bldShowUnit`) — this is that view, from the unit's side, and editing.
+   (`bldShowUnit`) - this is that view, from the unit's side, and editing.
 
    Three things make it a tab rather than a link to that panel:
 
      * **it is reached from the unit.** No building has to be open, so there is
        no `state.bld.work` under it and nothing to stage into. The edits are
        their own bucket on `state.ed`, and Save writes them through
-       `/api/buildings/apply` as one pass over the EDB — beside the unit's own
+       `/api/buildings/apply` as one pass over the EDB - beside the unit's own
        save, never inside it, because they are different files.
      * **a building is a click away, in its own tab.** The row's name opens the
        Buildings module at that line, on that tier, with the unit's rows
@@ -39,7 +39,7 @@
 
 //: The four numbers of a pool, in the order the `recruit_pool` line writes them.
 const ED_REC_KEYS=['initial','per_turn','maximum','experience'];
-// Whitespace-only differences are not edits — the clause editor re-emits with
+// Whitespace-only differences are not edits - the clause editor re-emits with
 // one space where the file often has three. Same test the server applies.
 const edRecNorm=s=>String(s==null?'':s).replace(/\s+/g,' ').trim();
 const edRecOn=()=>(state.ed&&state.ed.rec)||null;
@@ -69,7 +69,7 @@ async function edRecLoad(force){
   // the dialog may have been closed, or moved to another unit, while this was out
   if(state.ed&&state.ed.rec===rec)edRecRedraw();
 }
-/* Repaint whatever of this tab is on screen — which may be none of it.
+/* Repaint whatever of this tab is on screen - which may be none of it.
    The load is also kicked off from `edRecReload` after a save, and the modal is
    showing the "Saving…" card then: there is no tab body to write into, and the
    editor is rebuilt whole a moment later anyway. */
@@ -127,7 +127,7 @@ function edRecChangeCount(){
 
 /* ---- open the building itself ----
    Its own browser tab, because this one holds unsaved unit edits and the
-   building is being opened to LOOK at — the same reasoning as `openUnitTab`.
+   building is being opened to LOOK at - the same reasoning as `openUnitTab`.
    `lvl` lands on the tier the pool is on and `unit` flashes its rows there; a
    recruitment edit staged here is not in that tab, and the hint under the table
    says so rather than pretending the two are one document. */
@@ -140,8 +140,8 @@ function edRecOpenBuilding(line,levelIndex){
 /* ---- whose art a row wears ----
    A pool is not shown "in a culture" here: the rows come from every building
    line in the mod, and the tier they name is drawn once per culture that builds
-   it. The row's OWN `requires` is the answer where it has one — a pool gated to
-   `factions { aztecs, }` is Dunlending, so it wears the Dunlending stable — and
+   it. The row's OWN `requires` is the answer where it has one - a pool gated to
+   `factions { aztecs, }` is Dunlending, so it wears the Dunlending stable - and
    the browser's current culture is the fallback for a pool open to everyone.
    `bldIcon`'s `any` flag catches the rest: a mod-invented level like DaC's
    `ancestral_dun` exists in exactly one culture's folder, and a placeholder
@@ -167,14 +167,14 @@ function edRecCulture(conds){
    requirement edited here save exactly like one edited from the building.
 
    It does NOT go through `bldClauseStash`: that stashes the modal as MARKUP,
-   and the unit editor's 3D column is a live WebGL canvas inside it — restoring
+   and the unit editor's 3D column is a live WebGL canvas inside it - restoring
    the string would put back a dead copy and orphan the real one. Coming back
    re-renders the editor from state instead, which hands the column over
    properly (`edPrevAttach`). See `bldClauseApply` / `bldClauseCancel`. */
 function edRecEditReq(kind,id){
   const r=edRecOn();
   // the dialog is built out of the building overview's vocabulary, so it cannot
-  // open before that has arrived — which, having drawn a row, it has
+  // open before that has arrived - which, having drawn a row, it has
   if(!r||!state.bld||!state.bld.ov)return;
   let host;
   const unit=state.ed.unit;
@@ -209,7 +209,7 @@ function edRecTab(){
     <div class="bnote">Recruitment is read from <code>data/export_descr_buildings.txt</code>.
       A mod without one has nothing to show here.</div></div>`;
   const rows=edRecRows();
-  //: The EDU/EDB keyword on the left, what the column is CALLED on the right —
+  //: The EDU/EDB keyword on the left, what the column is CALLED on the right -
   //: the same names every other screen in the toolkit gives these four numbers.
   const KEYS=[['initial',POOL_LABEL.initial],['per_turn',POOL_LABEL.per_turn],
               ['maximum',POOL_LABEL.maximum],['experience',POOL_SHORT.experience]];
@@ -233,7 +233,7 @@ function edRecTab(){
     ${e.newType&&e.newType!==e.d.type?`<div class="ownwarn" style="margin:10px 0 0">
       Renaming the unit to <code>${esc(e.newType)}</code> rewrites these pools as part of the
       <b>unit</b> save. The rows below still name <code>${esc(e.d.type)}</code>, which is what a
-      recruitment change written now would use — save the rename first if you are doing both.
+      recruitment change written now would use - save the rename first if you are doing both.
     </div>`:''}
     ${rows.length||r.adds.length?`<div class="poollist" id="edRecList" style="margin-top:10px">
       <div class="erhd"><span class="erb">Building</span><span class="erlv">Tier</span>
@@ -250,7 +250,7 @@ function edRecTab(){
         +'barracks and tier 2 of a five-level one are both “2”. The <b>odd</b> mark is a value '
         +'that disagrees with what most of the other pools use.',
       (rows.length||r.adds.length)&&'The building’s name opens it in a <b>new browser tab</b>, on '
-        +'that tier, with this unit’s rows flashed. That tab reads the file — changes staged here '
+        +'that tier, with this unit’s rows flashed. That tab reads the file - changes staged here '
         +'are not in it until you save.',
       '<b>Save changes</b> writes these to <code>export_descr_buildings.txt</code> alongside the '
         +'unit’s own save. One 🕑 Log entry, one undo.'])}</div>
@@ -260,14 +260,14 @@ const edRecBusy=()=>`<div class="frm"><div class="empty">Reading every building 
 
 /* One pool row, in two lines, read as two halves rather than four columns.
 
-   WHAT the pool sits on is the left of the top line — the tier's own art, the
+   WHAT the pool sits on is the left of the top line - the tier's own art, the
    line's name, and the tier, in that order and touching, because "a barracks"
    and "which barracks" are one answer and not two. The four numbers hold the
    right, at a fixed width so the header labels sit over the boxes they name.
 
    WHO may use it is the second line, ending where the numbers do: the `requires`
-   clause has no natural width — a real one names half a dozen factions and a
-   settlement level — so it keeps a line of its own and grows leftwards into it
+   clause has no natural width - a real one names half a dozen factions and a
+   settlement level - so it keeps a line of its own and grows leftwards into it
    as it needs to, rather than squeezing the name it belongs to. That is the
    shape the building editor's own pool rows settled on, and this tab shares the
    modal with the 3D preview column, so it has even less room to argue with.
@@ -292,7 +292,7 @@ function edRecPoolHtml(o){
     <div class="erbot"><span class="prk">Requires</span>
       <span class="erreq ${o.reqEdited?'changed':''}" title="${esc(o.req||'no conditions')}">
         <span>${o.req?esc(o.req)
-          :'<span class="count">Always — anyone who can build the tier</span>'}</span>
+          :'<span class="count">Always - anyone who can build the tier</span>'}</span>
         <button class="reqbtn" title="Edit who can recruit it from this building"
           onclick="${o.reqEdit}">✎</button></span></div></div>`;
 }
@@ -342,7 +342,7 @@ function edRecAddRowHtml(a,i,KEYS){
 }
 /* The count on the tab button itself. Adding or dropping a row redraws the tab
    BODY and not the bar above it, and a badge that only catches up on the next
-   tab switch is worse than no badge — so the one button is repainted here. */
+   tab switch is worse than no badge - so the one button is repainted here. */
 function edRecPaintTab(){
   const b=document.getElementById('edTab_recruit');
   if(b)b.innerHTML=edRecTabLabel();
@@ -370,7 +370,7 @@ function edWireRecruit(){
    Every line in the mod and every tier in it, because "which building should
    train this" is a question about the whole tree and not about the one that
    happens to be open. A tier the unit is already trained at is shown as such
-   and cannot be picked twice — the same refusal `bldStagePool` makes, since a
+   and cannot be picked twice - the same refusal `bldStagePool` makes, since a
    unit listed twice in one level is a finding the building checks report.
 
    The numbers are the dialog's own and are used LITERALLY on every tier picked:
@@ -385,10 +385,10 @@ function edRecAddOpen(){
 }
 function edRecAddClose(){
   const r=edRecOn(); if(r)r.pick=null;
-  renderEditor();                     // rebuilt from state — nothing to unstash
+  renderEditor();                     // rebuilt from state - nothing to unstash
 }
 /* Which (line, level) pairs are spoken for: in the file already, or staged.
-   Keyed on a NUL between the two names rather than a space — EDB identifiers do
+   Keyed on a NUL between the two names rather than a space - EDB identifiers do
    not carry one, but a key that can be split back apart wrongly is the kind of
    bug that only shows up on somebody else's mod. */
 const ED_REC_SEP=String.fromCharCode(0);
@@ -421,7 +421,7 @@ function edRecAddRender(){
             numBox('data-ern="experience"',p.nums.experience,'1')}</label>
         </div>
         <div class="bnote">Used as typed on every tier ticked. Each row can be corrected on the
-          Recruitment tab before you save, and <b>Requires</b> is set there too — a new pool starts
+          Recruitment tab before you save, and <b>Requires</b> is set there too - a new pool starts
           with no conditions, which means every faction that can build the tier can hire the unit.</div>
       </div>
     </div>
@@ -435,7 +435,7 @@ function edRecAddRender(){
   edRecPickList();
 }
 function edRecPickFilter(v){ edRecOn().pick.q=v; edRecPickList(); }
-// Only the list is redrawn as you type — re-rendering the dialog would take the
+// Only the list is redrawn as you type - re-rendering the dialog would take the
 // caret out of the filter box.
 function edRecPickList(){
   const p=edRecOn().pick,q=p.q.trim().toLowerCase();
@@ -512,7 +512,7 @@ function edRecAddApply(){
    touches: every line rides in `also`, which the server plans against one parse
    and splices in one pass, so this is one edit and one undo step rather than
    one per building. The main body carries the first line's name (the plan needs
-   a line to re-read and check) and no levels of its own — every real edit is in
+   a line to re-read and check) and no levels of its own - every real edit is in
    `also`, where the recruitment-limit check merges what the file already has
    rather than counting our handful of rows as the whole level. */
 function edRecOps(){
@@ -561,7 +561,7 @@ function edRecPayload(extra){
   return Object.assign({mod:e.mod,line:lines[0].line,levels:[],
                         fix_ownership:true,also:lines},extra||{});
 }
-// After the write, the panel is looking at a file it no longer matches — the
+// After the write, the panel is looking at a file it no longer matches - the
 // EDB line numbers every row is keyed on have moved. Re-read rather than patch.
 async function edRecReload(){
   const e=state.ed; if(!e||!e.rec)return;

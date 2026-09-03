@@ -1,13 +1,13 @@
-/* viewer3d.js — the 3D model viewer
+/* viewer3d.js - the 3D model viewer
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
 /* =========================================================================
-   THE MODEL VIEWER — a battle model, drawn, from the entry that names it.
+   THE MODEL VIEWER - a battle model, drawn, from the entry that names it.
 
    Plain WebGL, no library. A static textured model needs one shader, one
    orbit camera and a texture bind, and the alternative was vendoring 600 KB
@@ -21,10 +21,10 @@
    Four things about the format drive the whole UI here (see mesh.py):
 
      * indices are GLOBAL into one shared vertex pool, so a group is a face
-       range rather than a mesh of its own — one buffer, one draw call per
+       range rather than a mesh of its own - one buffer, one draw call per
        visible group, no per-group vertex data;
-     * a group is named `type` + `mesh name` — the two halves of the Blender
-       addon's `objectname__comment` — and carries a required/optional flag,
+     * a group is named `type` + `mesh name` - the two halves of the Blender
+       addon's `objectname__comment` - and carries a required/optional flag,
        its `__opt`. Groups sharing a TYPE are variants of one part and the game
        picks one per soldier. Drawing them all at once puts three heads on one
        man, so the viewer picks one per part and offers the others, which is
@@ -34,7 +34,7 @@
        axes outside that. The UVs address the pair, so they go to the
        shader untouched and no code chooses a sheet for a part;
      * the models are LEFT-handed (Direct3D). Handed straight to a right-handed
-       viewer they come out mirrored — shield on the wrong arm — so the model
+       viewer they come out mirrored - shield on the wrong arm - so the model
        matrix negates X.
    ========================================================================= */
 
@@ -86,7 +86,7 @@ uniform mat4 uProj, uView; uniform mat4 uModel;
 varying vec3 vNormal; varying vec2 vUv;
 void main(){
   // uModel mirrors X (see v3Draw), and for a mirror the inverse-transpose that
-  // normals want is the matrix itself — so mat3(uModel) is right here.
+  // normals want is the matrix itself - so mat3(uModel) is right here.
   vNormal = mat3(uModel) * aNormal;
   vUv = aUv;
   gl_Position = uProj * uView * uModel * vec4(aPos, 1.0);
@@ -99,17 +99,17 @@ void main(){
    texture; the game lays them out as one image twice as wide, main on the left
    and attachment on the right, and the mesh's single UV set addresses THAT.
    So u 0..1 lands on the main sheet, u 1..2 lands on the attachment sheet, and
-   anything outside repeats — the whole pair tiles, infinitely, in both axes.
+   anything outside repeats - the whole pair tiles, infinitely, in both axes.
 
    Which is why the shader does nothing clever: the UVs go in as the modeller
    authored them and only the scaling that turns "the sheets the entry named"
    into "one texture wide" is applied. That scaling is NOT redundant with
    anything the decoder does, and removing it is the bug to not reintroduce: the
    FILE stores u normalised over the pair (main 0..0.5), mesh.py doubles it on
-   read into the space above — the space IWTE and the Blender addon use — and
+   read into the space above - the space IWTE and the Blender addon use - and
    this brings it back down to land in the bound texture. Take either step out
    and every model samples a squeezed stripe of one sheet. Nothing is wrapped,
-   folded or normalised into 0..1, and no branch decides a part's sheet — the
+   folded or normalised into 0..1, and no branch decides a part's sheet - the
    coordinate already says. The 112 groups with u < 0 and the 268 with v outside
    0..1 in one mod alone are the proof that the tiling is real and must not be
    clamped away.
@@ -119,55 +119,55 @@ void main(){
    cases, not two, and collapsing them to two was a bug that hit every mount in
    every mod (see `v3Apply`):
 
-     * a real pair, glued here into one image two sheets wide — halved;
+     * a real pair, glued here into one image two sheets wide - halved;
      * an entry naming NO attachment texture, which is every ordinary mount.
        There is nothing to glue and no second half to reach: its one sheet is
        the whole space, so it is halved too. Binding it at full u instead tiles
        it twice across the model, which is a horse painted in texels twice as
        wide as they are tall;
-     * an entry that NAMES an attachment this viewer did not glue — the main
+     * an entry that NAMES an attachment this viewer did not glue - the main
        file over again (which mods write all the time, and which is what the
        Blender addon exports for an empty slot), or one the mod does not ship.
        The GAME glues two sheets there, so the art really does repeat every
        unit, and binding the one sheet at FULL u reproduces main-glued-to-main
-       exactly — no canvas, no second decode, half the texture memory, and a
+       exactly - no canvas, no second decode, half the texture memory, and a
        1024 skin stays a power of two instead of pushing the atlas to 2048. */
 /* UV mode paints the coordinate instead of the art, in the SAME space the
-   texture sample uses — `vUv` as the modeller authored it, main sheet 0..1,
+   texture sample uses - `vUv` as the modeller authored it, main sheet 0..1,
    attachment sheet 1..2, everything outside a repeat. Nothing is clamped or
    folded here either, for the same reason the sampler does not: the wrapping is
    the thing being shown.
 
    Four facts, one picture:
 
-     * **the checker** — 32 cells to a sheet, so a stretched cell is art
+     * **the checker** - 32 cells to a sheet, so a stretched cell is art
        stretched over that triangle and a mirrored one is a flipped shell.
        32 is measured, not picked: the parts of a real unit span 0.07 to 0.33
        of u each (a head 0.07, a body 0.30, a leg 0.33), so a coarser grid
        gives a head less than one whole cell and says nothing about it;
-     * **the tint** — blue is the main sheet, amber the attachment sheet, and it
+     * **the tint** - blue is the main sheet, amber the attachment sheet, and it
        is `mod(floor(u), 2.0)` that decides, never a per-part rule, because a
        group whose UVs run 0.41..1.38 really is one piece of art crossing the
        seam and has to read as both;
-     * **the dimming** — the two units of u the model was UNWRAPPED in stay
+     * **the dimming** - the two units of u the model was UNWRAPPED in stay
        bright and everything past them goes dark. Always two, for every model:
        the file normalises u over the pair and mesh.py doubles it whatever the
        entry turns out to name;
-     * **the lines** — white at a sheet edge, red where the art starts over.
+     * **the lines** - white at a sheet edge, red where the art starts over.
        Those are two different places for a sheet glued to a copy of itself,
        which is why the red line is on its own period. Fixed width in UV space,
        not screen space, because `fwidth` wants an extension this viewer does
        not ask for.
 
-   An entry with no attachment sheet has no amber on it — there is no second
-   sheet to tell apart — but it still fills both units, and its red line still
+   An entry with no attachment sheet has no amber on it - there is no second
+   sheet to tell apart - but it still fills both units, and its red line still
    falls every second one. */
 const V3_UV = `
 vec3 v3UvPaint(vec2 uv, float wide, float pair){
   // "wide" is whether one copy of the ART is two units of u (a glued pair, or a
   // lone sheet spanning the space) or one (a sheet glued to a copy of itself).
   // "pair" is the different question of whether there are two sheets to tell
-  // apart — only then does amber mean anything.
+  // apart - only then does amber mean anything.
   float period = wide > 0.5 ? 2.0 : 1.0;
   float attach = pair > 0.5 ? mod(floor(uv.x), 2.0) : 0.0;
   vec3 col = mix(vec3(0.29, 0.51, 0.80), vec3(0.88, 0.56, 0.20), attach);
@@ -209,7 +209,7 @@ void main(){
   light += vec3(0.62, 0.70, 0.85) * 0.20 * max(dot(n, normalize(vec3(-0.6, 0.2, -0.7))), 0.0);
   light += vec3(1.0) * 0.18 * max(dot(n, normalize(uEye)), 0.0);   // fill from the camera
   // Unit art is sRGB and this multiply is linear, so a light of 0.5 lands far
-  // darker than half-lit looks — which is how a viewer of dark armour and dark
+  // darker than half-lit looks - which is how a viewer of dark armour and dark
   // cloth ends up a viewer of silhouettes. The curve lifts the mid-tones back
   // without touching what is already fully lit. An inspection tool, not a
   // render: you have to be able to SEE the thing.
@@ -217,7 +217,7 @@ void main(){
 }`;
 
 /* The backdrop: one full-screen triangle, each pixel asking the environment
-   what lies along its own view ray — so the horizon sits still while the model
+   what lies along its own view ray - so the horizon sits still while the model
    turns, and pitching the camera up shows sky and down shows ground. */
 const V3_BG_VERT = `
 attribute vec2 aQuad;
@@ -247,14 +247,14 @@ async function v3Open(mod, entry){
   const overlay = document.getElementById('overlay');
   const wasOpen = overlay.classList.contains('open');
   // The unit editor's preview column is a live canvas parked in the modal, and
-  // `modal.innerHTML` would stash a DEAD COPY of it — restored on the way out as
+  // `modal.innerHTML` would stash a DEAD COPY of it - restored on the way out as
   // a blank canvas nothing is drawing to, beside a real one with no parent. Take
   // it out before the snapshot; v3Close puts it back properly.
   if(typeof edPrevDetach === 'function') edPrevDetach();
   if(typeof cmpPrevDetach === 'function') cmpPrevDetach();
   v3Back = wasOpen ? {html: modal.innerHTML, cls: modal.className, scroll: stashPlace()} : {};
   modal.className = 'modal wide';
-  modal.innerHTML = `<h2>Model — ${esc(entry)}</h2>
+  modal.innerHTML = `<h2>Model - ${esc(entry)}</h2>
     <div class="mbody"><div class="empty">Reading ${esc(entry)}…</div></div>
     <div class="foot"><button onclick="v3Close()">Close</button></div>`;
   overlay.classList.add('open');
@@ -267,7 +267,7 @@ async function v3Open(mod, entry){
    BESIDE something else: the unit editor, where the preview sits next to the
    fields being edited, and the BMDB browser, where it sits next to the list.
    Both hand in the id of an element to paint into instead, and everything below
-   this line — the controls, the parts list, the orbit, the WebGL — is the same
+   this line - the controls, the parts list, the orbit, the WebGL - is the same
    code either way.
 
    Still ONE viewer at a time. A second WebGL context on the same page is a
@@ -303,8 +303,8 @@ async function v3Begin(mod, entry, host){
   catch(e){ return v3Fail(''+e, host); }
   if(info.error) return v3Fail(info.error, host);
 
-  // `skin` indexes info.skins, because a skin is a PAIR of files now — the
-  // main sheet and the attachment sheet a faction uses together — and a pair
+  // `skin` indexes info.skins, because a skin is a PAIR of files now - the
+  // main sheet and the attachment sheet a faction uses together - and a pair
   // has no one path to name it by
   v3 = {mod, entry, info, host: host || '', lod: 0, skin: 0,
         geo: null, tex: null, texAtt: null, hidden: {}, variant: {},
@@ -313,7 +313,7 @@ async function v3Begin(mod, entry, host){
         // it first opens and can measure itself), and which island is named
         uved: false, uvv: null, uvSel: null, uvOpt: {tex: true, solo: false},
         yaw: 0.6, pitch: 0.25, dist: 3, centre: [0,0,0], gl: null, err: ''};
-  // open on the first LOD the mod actually ships — an entry whose lod0 lives in
+  // open on the first LOD the mod actually ships - an entry whose lod0 lives in
   // a .pack still has lod1 and lod2 on disk more often than not
   const there = info.lods.find(l => l.exists);
   v3.lod = there ? there.index : 0;
@@ -330,7 +330,7 @@ function v3HostEl(host){
 }
 
 /* What to call a skin in the picker: the faction that uses it, and how many
-   others share it. A skin used by everyone is named for the file instead —
+   others share it. A skin used by everyone is named for the file instead -
    there is no one faction it belongs to. */
 function v3SkinLabel(s){
   const n = (s.factions||[]).length;
@@ -355,7 +355,7 @@ function v3Close(){
     modal.className = v3Back.cls; modal.innerHTML = v3Back.html;
     usePlace(v3Back.scroll);
     // the restored markup is inert until its own module rebinds it, and only
-    // the model card ever opens this — so it is the one that gets asked
+    // the model card ever opens this - so it is the one that gets asked
     if(typeof edRenderTab === 'function' && state.ed) edRenderTab();
     // the live preview column, taken out above, goes back where it belongs
     if(typeof edPrevAttach === 'function' && state.ed) edPrevAttach();
@@ -389,14 +389,14 @@ function v3Render(){
   const i = v3.info;
   const lods = i.lods.map(l =>
     `<option value="${l.index}" ${l.index===v3.lod?'selected':''} ${l.exists?'':'disabled'}>
-       LOD ${l.index}${l.distance?` · from ${l.distance}m`:''}${l.exists?'':' — not in this mod'}
+       LOD ${l.index}${l.distance?` · from ${l.distance}m`:''}${l.exists?'':' - not in this mod'}
      </option>`).join('');
   // one option per PAIR of files: an entry that lists 29 factions against the
   // same main and attachment textures has one skin, and saying so is more use
   // than 29 identical rows
   const skins = i.skins.length
     ? i.skins.map((s, n) => `<option value="${n}" ${n===v3.skin?'selected':''}
-        ${s.exists?'':'disabled'}>${esc(v3SkinLabel(s))}${s.exists?'':' — not in this mod'}</option>`).join('')
+        ${s.exists?'':'disabled'}>${esc(v3SkinLabel(s))}${s.exists?'':' - not in this mod'}</option>`).join('')
     : '<option>no skins on this entry</option>';
 
   const host = v3HostEl();
@@ -455,7 +455,7 @@ function v3Render(){
   v3UvKey();
   const c = document.getElementById('v3canvas');
   if(c && v3.geo) v3Start(c);
-  // The pane is in the markup whether or not it is showing — CSS hides it — so
+  // The pane is in the markup whether or not it is showing - CSS hides it - so
   // opening it is a class flip rather than a rebuild, and a rebuild does not
   // tear down the GL context the model is living in.
   const uc = document.getElementById('v3uvcanvas');
@@ -468,7 +468,7 @@ function v3Render(){
    can be made wider than the list beside it. Inside that column the same
    argument runs the other way and had no answer: the canvas took what was left
    over after a parts list that had grown to twenty-one rows, and on a tall
-   model that left a letterbox. This is the same bargain on the other axis —
+   model that left a letterbox. This is the same bargain on the other axis -
    the controls are given a height, and the canvas takes the rest.
 
    Docked only. In the dialog the two are side by side with the whole page's
@@ -480,8 +480,8 @@ const V3_MIN_SIDE  = 74;    // below this not one whole parts row is left showin
 
 /* What the drag moves is the CANVAS, not the controls under it.
 
-   The obvious way round — give the controls a height and let the canvas take
-   what is left — does nothing here, because the docked column is as tall as its
+   The obvious way round - give the controls a height and let the canvas take
+   what is left - does nothing here, because the docked column is as tall as its
    contents rather than a fixed box: the stage sits at the stylesheet's 240px
    floor and the panel scrolls. Growing the controls in that layout grows the
    panel and leaves the model exactly where it was. Sizing the stage moves the
@@ -546,7 +546,7 @@ function v3GripDown(ev){
 }
 
 /* Back to the height the stylesheet picks. Written through `api.post` rather
-   than `splitSave`, which refuses to store a zero — and zero is exactly what
+   than `splitSave`, which refuses to store a zero - and zero is exactly what
    "no saved height" has to be written as to clear one. */
 function v3GripReset(){
   const stage = v3GripStage();
@@ -558,25 +558,25 @@ function v3GripReset(){
 /* --- parts ----------------------------------------------------------------
    A group's first string is its TYPE: the slot the game fills. Most are the
    modeller's own words for a body part (Body, Head, hair, bracers), but the
-   equipment slots are a fixed vocabulary the engine knows — the same list the
+   equipment slots are a fixed vocabulary the engine knows - the same list the
    Blender addon offers under "Apply Prefix" (panels/qol_panel.PART_PREFIXES).
    Spelling them out beats showing "shieldpassive0" and leaving you to work out
    which shield that is. */
 const V3_SLOTS = {
   weapon0: 'Weapon', weapon1: 'Weapon 2',
-  primaryactive0: 'Primary weapon — drawn', primaryactive1: 'Primary weapon 2 — drawn',
-  primarypassive0: 'Primary weapon — stowed', primarypassive1: 'Primary weapon 2 — stowed',
-  secondaryactive0: 'Secondary weapon — drawn', secondaryactive1: 'Secondary weapon 2 — drawn',
-  secondarypassive0: 'Secondary weapon — stowed', secondarypassive1: 'Secondary weapon 2 — stowed',
+  primaryactive0: 'Primary weapon - drawn', primaryactive1: 'Primary weapon 2 - drawn',
+  primarypassive0: 'Primary weapon - stowed', primarypassive1: 'Primary weapon 2 - stowed',
+  secondaryactive0: 'Secondary weapon - drawn', secondaryactive1: 'Secondary weapon 2 - drawn',
+  secondarypassive0: 'Secondary weapon - stowed', secondarypassive1: 'Secondary weapon 2 - stowed',
   shield0: 'Shield', shield1: 'Shield 2',
-  shieldactive0: 'Shield — carried', shieldactive1: 'Shield 2 — carried',
-  shieldpassive0: 'Shield — slung', shieldpassive1: 'Shield 2 — slung',
+  shieldactive0: 'Shield - carried', shieldactive1: 'Shield 2 - carried',
+  shieldpassive0: 'Shield - slung', shieldpassive1: 'Shield 2 - slung',
   ramrod0: 'Ramrod', 'cannon ball0': 'Cannon ball', 'ballista arrow0': 'Ballista bolt'
 };
 
-/* Which slots start hidden. A model ships both stances of the same kit — the
+/* Which slots start hidden. A model ships both stances of the same kit - the
    shield on the arm AND the shield on the back, the drawn sword AND the
-   sheathed one — and showing every one of them at once hangs three swords off
+   sheathed one - and showing every one of them at once hangs three swords off
    one soldier. The addon's importer makes the same call in hideVariations: it
    hides `shieldpassive` and `secondaryactive` and leaves the primary stance
    showing. Tick them back on to see the rest. */
@@ -586,7 +586,7 @@ function v3SlotHidden(key){
 
 /* The model's groups folded into parts: one entry per group TYPE, holding its
    variants. Case-folded, because the same part is spelled `Arms` in one mod's
-   mesh and `arms` in another's — and, in nineteen files across both installed
+   mesh and `arms` in another's - and, in nineteen files across both installed
    mods, both ways inside ONE mesh, where they are plainly the same arms. */
 function v3PartMap(){
   const parts = new Map();
@@ -598,7 +598,7 @@ function v3PartMap(){
     parts.get(key).list.push({g, idx});
   });
   // a part every one of whose variants is flagged optional is one the game
-  // only puts on some soldiers — the addon's __opt marker
+  // only puts on some soldiers - the addon's __opt marker
   parts.forEach(p => { p.optional = p.list.every(v => v.g.optional); });
   return parts;
 }
@@ -622,7 +622,7 @@ function v3Parts(){
     const box = `<input type="checkbox" ${v3.hidden[p.key]?'':'checked'}
         onchange="v3TogglePart('${q1(esc(p.key))}')">`;
     /* While the UV layout is open every row carries the colour its island is
-       drawn in — that pairing is what turns a wireframe into a map you can
+       drawn in - that pairing is what turns a wireframe into a map you can
        read. The chip selects too, and has to call off the click first: it sits
        inside the row's <label>, and a click on a label is a click on its
        checkbox, so without this, naming a part would also hide it. */
@@ -632,7 +632,7 @@ function v3Parts(){
            onclick="event.preventDefault();event.stopPropagation();v3UvSelect('${q1(esc(p.key))}')"></i>`
       : '';
     const rowcls = v3.uvSel === p.key && v3.uved ? ' sel' : '';
-    // Which sheet the art is ON, said rather than acted on — the UVs do the
+    // Which sheet the art is ON, said rather than acted on - the UVs do the
     // choosing themselves, and a part can genuinely straddle the two. mesh.py
     // labels the HALF of the space a group sits in; on an entry with no second
     // sheet the halves are halves of the one it has, and calling that an
@@ -657,12 +657,12 @@ function v3Parts(){
         ${p.list.map(({g, idx}) => `<option value="${idx}" ${idx===chosen?'selected':''}
           >${esc(g.texture_group || ('variant ' + (idx+1)))} · ${g.count/3} tris</option>`).join('')}
       </select>
-      <span class="count">${p.list.length} variants — the game picks one per soldier</span></div>`;
+      <span class="count">${p.list.length} variants - the game picks one per soldier</span></div>`;
   }).join('');
 }
 
 /* One soldier's worth of choices: a variant per part, and a coin toss on the
-   parts the mesh flags optional — which is what the game itself does as it
+   parts the mesh flags optional - which is what the game itself does as it
    fills a unit out of one model. */
 function v3Randomize(){
   if(!v3 || !v3.geo) return;
@@ -686,20 +686,20 @@ function v3Facts(){
     `<b>${g.vertices.toLocaleString()}</b> vertices, <b>${g.triangles.toLocaleString()}</b> triangles`,
     `${g.groups.length} group${g.groups.length===1?'':'s'} over one shared vertex pool`,
     `${size[0]} × ${size[1]} × ${size[2]} in game units`,
-    g.bones.length ? `rigged to ${g.bones.length} bones` : 'no skeleton — a static model',
-    skin && skin.rel ? `main texture <code>${esc(skin.rel)}</code>${skin.exists?'':' — <b>not in this mod</b>'}`
+    g.bones.length ? `rigged to ${g.bones.length} bones` : 'no skeleton - a static model',
+    skin && skin.rel ? `main texture <code>${esc(skin.rel)}</code>${skin.exists?'':' - <b>not in this mod</b>'}`
                      : 'no texture listed on this entry',
     v3TexCase() === 'pair'
-      ? `attachment texture <code>${esc(skin.attach)}</code>${skin.attach_exists?'':' — <b>not in this mod</b>'}`
+      ? `attachment texture <code>${esc(skin.attach)}</code>${skin.attach_exists?'':' - <b>not in this mod</b>'}`
       : v3TexCase() === 'self'
         ? `its attachment slot names <code>${esc((skin&&skin.attach)||'')}</code>`
-          + `${skin && skin.attach_exists ? ' — the main file again, so the game glues that sheet to a copy of itself and u wraps at 1'
-                                          : ' — <b>not in this mod</b>, so u wraps at 1 on the main sheet instead'}`
+          + `${skin && skin.attach_exists ? ' - the main file again, so the game glues that sheet to a copy of itself and u wraps at 1'
+                                          : ' - <b>not in this mod</b>, so u wraps at 1 on the main sheet instead'}`
         : 'no attachment texture on this entry, so this one sheet is the whole '
-          + 'space and u wraps at 2 — every ordinary mount is built this way',
+          + 'space and u wraps at 2 - every ordinary mount is built this way',
     // the honest answer to "why does this look right in the game and not here":
     // an entry can name an attachment sheet that no group's UVs ever reach
-    onAtt ? `${onAtt} group${onAtt===1?'':'s'} reach past u 1 — into the `
+    onAtt ? `${onAtt} group${onAtt===1?'':'s'} reach past u 1 - into the `
             + (v3TexCase() === 'pair' ? 'attachment sheet' : 'right half of that sheet')
           : 'every group stays in the left half of the space, u 0 to 1',
     v3.info.skins.length === 1 && (v3.info.skins[0].factions||[]).length > 1
@@ -744,8 +744,8 @@ async function v3Load(){
 
 let v3Gen = 0;          // so a slow LOD cannot land after a newer one
 
-/* One image per sheet. They land independently and either may be missing — a
-   mod that references vanilla art ships neither — so each one applies as it
+/* One image per sheet. They land independently and either may be missing - a
+   mod that references vanilla art ships neither - so each one applies as it
    arrives rather than waiting for the pair. */
 function v3Fetch(rel, want, into){
   if(!rel){ v3[into] = null; v3Apply(); return; }
@@ -815,7 +815,7 @@ function v3Toggle(what){
 
 /* What the colours mean, on screen only while they are on screen. The amber row
    is dropped for an entry with no second sheet, because that model has no amber
-   on it to explain — and which of the three shapes it is in decides what the
+   on it to explain - and which of the three shapes it is in decides what the
    blue row can honestly claim. See `v3TexCase`. */
 function v3UvKey(){
   const host = document.getElementById('v3uvkey');
@@ -826,15 +826,15 @@ function v3UvKey(){
   host.className = 'v3uvkey';
   host.innerHTML = '<b>UV mode</b>'
     + (kind === 'pair'
-        ? row('#4a82cc', 'the main sheet — u 0 to 1')
-          + row('#e08f33', 'the attachment sheet — u 1 to 2')
+        ? row('#4a82cc', 'the main sheet - u 0 to 1')
+          + row('#e08f33', 'the attachment sheet - u 1 to 2')
         : kind === 'self'
-          ? row('#4a82cc', 'the sheet — and u 1 to 2 is that same file again, '
+          ? row('#4a82cc', 'the sheet - and u 1 to 2 is that same file again, '
                          + 'which is what this entry names in its attachment slot')
-          : row('#4a82cc', 'the sheet — it has no attachment beside it, so it '
+          : row('#4a82cc', 'the sheet - it has no attachment beside it, so it '
                          + 'spans all of u 0 to 2 on its own'))
-    + row('#2a3a4d', 'outside u 0 to 2 — past the space the model was unwrapped in')
-    + row('#ff3d57', `where the art starts over — every ${
+    + row('#2a3a4d', 'outside u 0 to 2 - past the space the model was unwrapped in')
+    + row('#ff3d57', `where the art starts over - every ${
         v3UvSpan() === 2 ? 'second unit' : 'unit'} of u`)
     + `<span style="grid-column:1/-1">32 checker cells to a sheet: a stretched
        cell is art stretched over that triangle.</span>`;
@@ -844,8 +844,8 @@ function v3UvKey(){
    The other half of "check the UVs": Blender's UV editor, which is the sheet
    itself with the mesh's islands drawn over it. `Show UVs` paints the
    coordinate onto the MODEL and answers "is this shell stretched, and which
-   sheet is it on". This answers the question that one cannot — "where on the
-   art does this part sit, and what is under it" — and it is the view a
+   sheet is it on". This answers the question that one cannot - "where on the
+   art does this part sit, and what is under it" - and it is the view a
    retexture is actually done against.
 
    Plain 2D canvas, not a second WebGL context. The whole drawing is an image
@@ -857,18 +857,18 @@ function v3UvKey(){
 
      * **the space is the modeller's, untouched.** u 0..1 is the main sheet,
        1..2 the attachment sheet, and everything outside is the pair repeating.
-       Nothing is wrapped or folded into 0..1 here either — an island running to
+       Nothing is wrapped or folded into 0..1 here either - an island running to
        u 1.38 is DRAWN at 1.38, over the repeat it really lands on, because
        "this part leaves its sheet" is exactly what you opened this to see;
      * **v goes DOWN.** M2TW is a Direct3D game and puts v=0 at the top, which
-       is why the texture is bound unflipped in v3Apply — so the sheet is drawn
+       is why the texture is bound unflipped in v3Apply - so the sheet is drawn
        from its top-left corner at (0,0) and v grows downward, and an island
        sits over the art it names rather than over its mirror image;
      * **one colour per part.** The parts list carries the same colour beside
        each row, so an island and the slot that wears it can be read off one
        another. That is the whole reason this is not one flat wireframe.
 
-   Only the groups the viewer is DRAWING are drawn here — one variant per part,
+   Only the groups the viewer is DRAWING are drawn here - one variant per part,
    minus the parts switched off. A model ships three heads and two shields, and
    laying every one of them over the same sheet is a plate of spaghetti rather
    than a UV map. */
@@ -881,7 +881,7 @@ function v3UvColour(n, sel){
 }
 
 /* Which part each drawable group belongs to, and where that part sits in the
-   list — the colour and the parts row both key off that position. */
+   list - the colour and the parts row both key off that position. */
 function v3UvOwners(){
   const map = new Map();
   [...v3PartMap().values()].forEach((p, n) => p.list.forEach(v => map.set(v.idx, {p, n})));
@@ -893,7 +893,7 @@ function v3UvOwners(){
    sampler puts them through to land on it.
 
    Which means it does not matter here that the mesh's u runs 0..2 on a mount
-   and 0..2 on a pair for different reasons — `uUScale` already holds the
+   and 0..2 on a pair for different reasons - `uUScale` already holds the
    difference, and going through it is what keeps a 1024 square sheet drawn as
    a square. Stretching one across two tiles because the mesh's u happens to
    span two is a picture of the coordinate rather than a picture of the art,
@@ -904,7 +904,7 @@ function v3UvOwners(){
    the game glues to a copy of itself. This is `uUScale` inverted. */
 function v3UvSpan(){ return v3TexCase() === 'self' ? 1 : 2; }
 
-/* And how many SHEETS wide that copy is drawn — the only thing that decides
+/* And how many SHEETS wide that copy is drawn - the only thing that decides
    the picture's aspect, so a lone sheet is one square and a pair is two. */
 function v3UvSheets(){ return v3TexCase() === 'pair' ? 2 : 1; }
 
@@ -915,7 +915,7 @@ function v3UvPxU(px){ return px * v3UvSheets() / v3UvSpan(); }
 
 /* Which of the three shapes an entry's texture set is in. It is not a two-way
    question, and reading it as one is what put every mount in the game on the
-   wrong half of its own sheet — see `v3Apply`.
+   wrong half of its own sheet - see `v3Apply`.
 
      'pair'  two different sheets, glued: main in u 0..1, attachment in 1..2
      'self'  the entry NAMES an attachment and it is the main file again (or a
@@ -944,7 +944,7 @@ function v3UvEdOn(){
 }
 
 /* The bound image in the pane, at its own aspect, with a little air round it.
-   `px` is pixels across one unit of v — one sheet's height — so the fit is
+   `px` is pixels across one unit of v - one sheet's height - so the fit is
    against how many SHEETS wide the picture is, not how many units of u it
    happens to be written in. */
 function v3UvFit(redraw){
@@ -1037,7 +1037,7 @@ function v3UvEdDraw(){
   const Y = v => h/2 + (v - s.v) * px;
   const span = v3UvSpan(), sheets = v3UvSheets();
 
-  // which copies of the art are on screen — capped, because zoomed far enough
+  // which copies of the art are on screen - capped, because zoomed far enough
   // out the honest answer is "thousands", and none of them readable
   const uMin = s.u - (w/2)/pxU, uMax = s.u + (w/2)/pxU;
   const vMin = s.v - (h/2)/px, vMax = s.v + (h/2)/px;
@@ -1164,7 +1164,7 @@ function v3UvPointers(canvas){
   }, {passive:false});
 }
 
-/* Where the cursor is, in the coordinate the mesh is written in — and, when it
+/* Where the cursor is, in the coordinate the mesh is written in - and, when it
    is over the art rather than a repeat of it, which pixel of which sheet that
    is. A retexture is done in pixels, so the pixel is worth saying. */
 function v3UvReadout(at){
@@ -1189,7 +1189,7 @@ function v3UvReadout(at){
   el.textContent = `u ${at.u.toFixed(3)}  v ${at.v.toFixed(3)} · ${sheet}${px}`;
 }
 
-/* Which part is under the cursor. Every drawn triangle, tested — a few thousand
+/* Which part is under the cursor. Every drawn triangle, tested - a few thousand
    of them on a click, which is nothing, and it is exact where a nearest-island
    guess would be wrong on the overlapping shells a soldier is made of. */
 function v3UvPick(at){
@@ -1224,8 +1224,8 @@ function v3Frame(){
   v3.centre = [0,1,2].map(k => (g.min[k]+g.max[k])/2);
   /* A unit is a standing figure, and its HEIGHT is what should fill the frame.
 
-     Fitting the largest extent instead let a spear held straight out — two
-     metres of it, and not the subject — decide how far away the man stood, so
+     Fitting the largest extent instead let a spear held straight out - two
+     metres of it, and not the subject - decide how far away the man stood, so
      every unit sat in the middle distance with most of the panel empty. Height
      leads now, and the width only takes the framing back on something that is
      genuinely wide rather than long-armed: a spear roughly doubles a man's
@@ -1357,7 +1357,7 @@ function v3Buffers(gl){
 
    Only ever called for an entry that really names two sheets. One that names a
    single sheet used to be glued to a copy of ITSELF here, which is a canvas, a
-   second draw and twice the texture for a result the wrap mode already gives —
+   second draw and twice the texture for a result the wrap mode already gives -
    see `uUScale` on the fragment shader. */
 function v3Atlas(main, att){
   const w = main.width, h = main.height;
@@ -1381,14 +1381,14 @@ function v3Apply(){
      many sheets were bound. Reading it as one question was a real bug, and its
      victims were the mounts:
 
-       * a glued pair spans the two units, so u is halved — as it always was;
+       * a glued pair spans the two units, so u is halved - as it always was;
        * an entry naming NO attachment has nothing to glue, and its one sheet
          spans those same two units, so u is halved TOO. This is the fix. It
          used to bind that sheet at full u, which tiles it twice across the
          model and paints every horse in the game with texels twice as wide as
          they are tall;
-       * an entry that NAMES an attachment this viewer did not glue — the main
-         file over again, or one the mod does not ship — is the one case that
+       * an entry that NAMES an attachment this viewer did not glue - the main
+         file over again, or one the mod does not ship - is the one case that
          keeps full u, and it is the case the old comment was describing. There
          the GAME really does glue two sheets, so the art repeats every unit,
          and wrapping one sheet at full u reproduces main-glued-to-main exactly.
@@ -1398,7 +1398,7 @@ function v3Apply(){
      square its texels are. Over whole models, a real pair comes out 1.21 at
      half u and 2.02 at full u; `mount_naru_horse` (attachment slot empty) comes
      out 2.00 at full u and 1.08 at half. Three pairs and four mounts, and the
-     2.0 is the tell — it is the factor of two, standing up to be counted. */
+     2.0 is the tell - it is the factor of two, standing up to be counted. */
   const solo = v3TexCase() !== 'self';
   v3.uScale = solo ? 0.5 : 1.0;
   const atlas = v3.texAtt ? v3Atlas(v3.tex, v3.texAtt) : v3.tex;
@@ -1406,14 +1406,14 @@ function v3Apply(){
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, t);
   // NOT flipped. WebGL's own habit is to flip, because OpenGL puts v=0 at the
-  // bottom — M2TW is a Direct3D game and puts it at the top, so flipping sends
+  // bottom - M2TW is a Direct3D game and puts it at the top, so flipping sends
   // every UV to the mirrored half of the sheet. Checked against the art rather
   // than assumed: on a Lossarnach noble the head groups' UVs (v 0.00..0.10)
   // land exactly on the faces painted along the TOP edge of its texture, and
   // the same for every body and skirt group on that sheet.
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlas);
-  // REPEAT is the whole point — the sheets tile, and UVs really do run past the
+  // REPEAT is the whole point - the sheets tile, and UVs really do run past the
   // two tiles and below zero. A skin is served square and no bigger than 1024,
   // so a glued pair is 2048 wide at most and a power of two in both axes, which
   // is what WebGL 1 demands before it will repeat anything at all.
@@ -1432,7 +1432,7 @@ function v3Apply(){
   }
   v3.texture = t;
   // Which of the three shapes this entry is in is decided right here, and a
-  // skin loads asynchronously — so everything that SAYS which shape it is was
+  // skin loads asynchronously - so everything that SAYS which shape it is was
   // drawn before the answer existed, and is describing a pair as a lone sheet
   // (or the other way round after a skin change). Repainting them with the
   // decision keeps every surface in step: the legend, the parts list's
@@ -1441,14 +1441,14 @@ function v3Apply(){
   v3Parts();
   v3Facts();
   // and the layout is drawn from those same two images, so it waits on this
-  // too — a pane opened before the skin landed is showing bare wireframe
+  // too - a pane opened before the skin landed is showing bare wireframe
   v3UvEdDraw();
 }
 
 function v3Draw(){
   const gl = v3.gl, c = gl.canvas, g = v3.geo;
   // narrow, the UV pane takes the whole stage and the model's canvas is laid
-  // out at nothing — there is no frame to draw, and sizing to a made-up 640
+  // out at nothing - there is no frame to draw, and sizing to a made-up 640
   // would only throw the aspect ratio away for when it comes back
   if(!c.clientWidth || !c.clientHeight) return;
   const w = c.clientWidth || 640, h = c.clientHeight || 420;
@@ -1496,7 +1496,7 @@ function v3Draw(){
   gl.uniformMatrix4fv(v3.loc.uView, false, v3LookAt(eye, v3.centre, [0,1,0]));
   // X negated: M2TW models are LEFT-handed (right +X, up +Y, forward +Z, the
   // Direct3D convention) and this camera is right-handed. Handed over as they
-  // are, every soldier came out mirrored — shield arm and sword arm swapped.
+  // are, every soldier came out mirrored - shield arm and sword arm swapped.
   // Measured from the models themselves: shield0 sits at -X and primaryactive0
   // at +X, which is shield in the left hand and weapon in the right.
   gl.uniformMatrix4fv(v3.loc.uModel, false,
@@ -1514,7 +1514,7 @@ function v3Draw(){
   bind(v3.bNormal, v3.loc.aNormal, 3);
   bind(v3.bUv, v3.loc.aUv, 2);
 
-  // One texture for the whole model — the glued pair — so every group is the
+  // One texture for the whole model - the glued pair - so every group is the
   // same bind and the UVs alone decide which sheet a triangle lands on.
   const textured = !!(v3.texture && g.has_uvs);
   if(textured){
@@ -1523,10 +1523,10 @@ function v3Draw(){
     gl.uniform1i(v3.loc.uTex, 0);
   }
   gl.uniform1f(v3.loc.uHasTex, textured ? 1 : 0);
-  // 0.5 for a glued pair, 1.0 for a lone sheet — v3Apply sets it with the bind
+  // 0.5 for a glued pair, 1.0 for a lone sheet - v3Apply sets it with the bind
   gl.uniform1f(v3.loc.uUScale, v3.uScale || 0.5);
   // whether there are two sheets to tell apart, which is not the same as how
-  // far u was scaled — a lone sheet spanning the space is halved too
+  // far u was scaled - a lone sheet spanning the space is halved too
   gl.uniform1f(v3.loc.uPair, v3.texAtt ? 1 : 0);
   // UV mode needs the coordinate, not the art, so it survives a missing texture
   gl.uniform1f(v3.loc.uUv, (v3.uv && g.has_uvs) ? 1 : 0);

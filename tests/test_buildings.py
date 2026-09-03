@@ -1,7 +1,7 @@
 """Buildings mode: parse, edit and write data/export_descr_buildings.txt.
 
 The EDB is the biggest hand-maintained file in a mod (Divide and Conquer's is
-17.5k lines) and it is full of things a re-emitting parser destroys — trailing
+17.5k lines) and it is full of things a re-emitting parser destroys - trailing
 ``;ok old_pool=…`` comments on recruit_pool lines, mixed tabs and spaces, comma
 separated ``levels`` lists. So the load-bearing checks here are:
 
@@ -9,7 +9,7 @@ separated ``levels`` lists. So the load-bearing checks here are:
   * every level named in a ``levels`` line has a block, and vice versa
   * an edit is a SPLICE: only the lines that changed change, and re-saving an
     untouched level writes nothing at all
-  * capabilities compare by meaning, not by text — re-sending
+  * capabilities compare by meaning, not by text - re-sending
     ``1 0.135 3 0`` with different spacing is not an edit
   * apply writes the file, logs a backup manifest, and undo restores it exactly
   * a building rename rewrites text/export_buildings.txt with all three keys
@@ -31,7 +31,7 @@ from unittransfer.mod import Mod
 from unittransfer.transfer import undo
 
 MODS = Path(r"C:/Users/projy/Downloads/Games/Total War MEDIEVAL II Definitive Edition/mods")
-#: Every mod installed on this machine — the parser must cope with all of them.
+#: Every mod installed on this machine - the parser must cope with all of them.
 CANDIDATES = ("Divide_and_Conquer_EUR", "Third_Age_6", "third_age_3")
 #: The one edits are applied to (copied into a temp folder first, never in place).
 EDIT_MOD = "Divide_and_Conquer_EUR"
@@ -52,7 +52,7 @@ config.LOG_PATH = cfg / "transfers.json"
 
 installed = [m for m in CANDIDATES if (MODS / m / "data").is_dir()]
 if not installed:
-    print(f"none of {CANDIDATES} is installed under {MODS} — nothing to test")
+    print(f"none of {CANDIDATES} is installed under {MODS} - nothing to test")
     sys.exit(0)
 
 # ---- 1) parse every installed mod ------------------------------------------
@@ -99,7 +99,7 @@ for rel in (buildings.LOC_REL, "export_descr_unit.txt", "text/export_units.txt",
         shutil.copy2(src, work / "data" / rel)
 
 # A mod's cultures are its data/ui/<culture>/buildings folders, and the copy
-# above brings no art across — recreate the folders (empty) so the per-culture
+# above brings no art across - recreate the folders (empty) so the per-culture
 # name keys have the same culture list to work against as the real mod.
 for c in buildings.cultures_of(Mod(src_root)):
     (work / "data" / "ui" / c / "buildings").mkdir(parents=True, exist_ok=True)
@@ -168,7 +168,7 @@ check("the EDB would be rewritten", bool(plan.edb_text))
 
 old_lines = original.splitlines()
 new_lines = plan.edb_text.splitlines()
-# one capability added, one removed — so the file grows by one line only when
+# one capability added, one removed - so the file grows by one line only when
 # there was no plain capability to delete
 check("the file grows by the added line and shrinks by the removed one",
       len(new_lines) == len(old_lines) + 1 - (1 if plain is not None else 0))
@@ -499,7 +499,7 @@ else:
 # `ancestral_dun` exists only under northern_european. The building browser is
 # showing ONE culture on purpose and gets a placeholder for the rest, but the
 # unit editor's Recruitment tab is showing pools from every line in the mod and
-# has no culture to be right about — so it asks for the sweep (`&any=1`).
+# has no culture to be right about - so it asks for the sweep (`&any=1`).
 print("\n11) building icons: the any-culture fallback")
 
 art = Path(tempfile.mkdtemp(prefix="ut_art_"))

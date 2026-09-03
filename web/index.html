@@ -7,7 +7,7 @@
 <style>
   :root{--bg:#14171c;--panel:#1c2128;--panel2:#232a33;--edge:#333c47;--ink:#e6e9ee;--dim:#98a3b3;
     --accent:#c8a45c;--accent2:#5b8def;--good:#5cc98a;--warn:#e0b341;--bad:#e06c6c;
-    /* the label column every path row in a model card shares — one value so
+    /* the label column every path row in a model card shares - one value so
        meshes, textures, sprites and attachments all start at the same column */
     --plw:190px;}
   *{box-sizing:border-box}
@@ -44,7 +44,7 @@
   .filters .fgbody.shut{display:none}
   .filters .opt{display:block;padding:2px 0;font-size:13px;cursor:pointer}
   .filters .opt input{vertical-align:middle;margin-right:6px}
-  /* NB: no top padding on the scroll container — a scroll-container's top padding
+  /* NB: no top padding on the scroll container - a scroll-container's top padding
      stays inside the scrollport and shows as a gap above a top:0 sticky header.
      Breathing room comes from the first group's margin, which scrolls away. */
   main{flex:1;overflow:auto;padding:0 16px 16px}
@@ -77,10 +77,10 @@
     color:var(--dim);border:1px solid var(--edge);margin-right:3px}
   .badge.merc{color:var(--warn);border-color:var(--warn)}
   /* M2TWEOP unit: defined in the extender's own files, not export_descr_unit.txt.
-     Deliberately the loudest badge on the card — which file a unit lives in
+     Deliberately the loudest badge on the card - which file a unit lives in
      changes where every edit to it is written. */
   .badge.eop{color:var(--accent);border-color:var(--accent);font-weight:600}
-  /* class badge sits next to the category one — dimmer so category reads first */
+  /* class badge sits next to the category one - dimmer so category reads first */
   .badge.cls{background:transparent}
   .chip{display:inline-block;background:var(--panel2);border:1px solid var(--edge);border-radius:5px;
     padding:2px 7px;margin:2px 3px 2px 0;font-size:12px}
@@ -131,7 +131,7 @@
   .proglist-row .pi{width:14px;text-align:center;flex:0 0 auto}
   .proglist-row.w-warn .pi{animation:spin 1s linear infinite;display:inline-block}
   @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-  /* structured plan summary — each row keeps its own indent column so wrapped
+  /* structured plan summary - each row keeps its own indent column so wrapped
      text aligns under itself instead of snapping back to the left margin */
   .sum{background:var(--panel2);border:1px solid var(--edge);border-radius:8px;
     padding:9px 11px;max-height:280px;overflow:auto;font-size:12px;line-height:1.5}
@@ -160,7 +160,7 @@
   .lbtrack{height:4px;border-radius:3px;background:var(--panel2);overflow:hidden}
   .lbfill{height:100%;width:4%;border-radius:3px;background:var(--accent);
     transition:width .18s ease-out}
-  /* One request on its own has no fraction to report — a bar parked at 4% reads
+  /* One request on its own has no fraction to report - a bar parked at 4% reads
      as "stuck". It sweeps instead, and only becomes a real measure once there
      is something to measure (a burst of several requests). */
   .loadbar.busy .lbfill{width:38%;transition:none;animation:lbsweep 1.15s ease-in-out infinite}
@@ -173,7 +173,7 @@
   .log-item .when{color:var(--dim);font-size:11px}
   .log-item pre{font:11px/1.35 ui-monospace,Consolas,monospace;white-space:pre-wrap;margin:8px 0 0;color:var(--dim);max-height:130px;overflow:auto}
   /* a game-file block shown verbatim (the strat-model card). Tab-aligned text,
-     so it must NOT wrap — the alignment is how the file is read. */
+     so it must NOT wrap - the alignment is how the file is read. */
   .rawblock{font:11.5px/1.45 ui-monospace,Consolas,monospace;white-space:pre;margin:0;
     padding:8px 10px;background:var(--panel2);border:1px solid var(--edge);border-radius:6px;
     color:var(--ink);max-height:320px;overflow:auto;tab-size:4}
@@ -225,6 +225,19 @@
   label.chk.mini{background:var(--panel2);border:1px solid var(--edge);border-radius:5px;
     padding:2px 7px;margin:2px 4px 2px 0}
   .frombase{color:var(--accent);font-size:11px;margin-left:6px}
+  /* "battle-model entries only": one row per entry, with the folder its files
+     live in under the name - the folder is what is actually being imported, so
+     it gets a line of its own rather than a tooltip */
+  .mdlbar{display:flex;gap:8px;align-items:center;margin:8px 0 6px}
+  .mdlbar .count{margin-left:auto}
+  .mdllist{max-height:340px;overflow:auto;border:1px solid var(--edge);border-radius:6px}
+  .mdlrow{padding:7px 9px;border-bottom:1px solid var(--edge)}
+  .mdlrow:last-child{border-bottom:none}
+  .mdlrow.off{opacity:.55}
+  .mdlrow label.chk{margin-right:6px}
+  .mdlrow .pill{font-size:10px;vertical-align:1px}
+  .mdlfolders{margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 8px}
+  .mdlfolders .path{font-size:11px}
   /* per-group "source or base" toggles, directly above the field editor */
   .basefrom{margin-bottom:8px;padding:7px 9px;border:1px solid var(--edge);
     border-radius:6px;background:var(--panel2)}
@@ -233,7 +246,7 @@
   .basefrom .bftitle b{color:var(--accent)}
   .sbrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:2px 0}
   /* 84px, not 66: the widest label here is "Armour upgrades" and one of the rows
-     carries a ? marker in front of its label — both have to fit without wrapping
+     carries a ? marker in front of its label - both have to fit without wrapping
      or the radios below them stop lining up. */
   .sbrow .k{flex:0 0 150px;color:var(--dim);text-transform:uppercase;font-size:10px;letter-spacing:.5px}
   .sbrow label{font-size:12px;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
@@ -250,7 +263,7 @@
   .sbanim b+ul+b{display:inline-block;margin-top:7px}
   /* base picker faction filter */
   .basebar{display:flex;gap:6px} .basebar input{flex:1;min-width:0} .basebar select{flex:0 0 150px}
-  /* "inherited from base" badge in the field editor — a button when the source
+  /* "inherited from base" badge in the field editor - a button when the source
      unit has a value of its own to switch back to, a flat marker when it doesn't */
   .ibadge{display:inline-block;margin-left:5px;font-size:9px;background:var(--accent);color:#1a1a1a;
     border-radius:3px;padding:0 4px;font-weight:700;vertical-align:middle;
@@ -283,7 +296,7 @@
   /* ---- unit editor (edit mode) ---- */
   /* ---- burger menu: the module switcher. A drawer, not a dropdown, because the
      module list is growing past what a <select> can present without eating the
-     header. Items are built from MODES in one place — adding a module is one
+     header. Items are built from MODES in one place - adding a module is one
      array entry, not new markup. ---- */
   .navbtn{color:var(--accent);font-weight:600;letter-spacing:.4px;display:inline-flex;
     gap:8px;align-items:center;white-space:nowrap}
@@ -333,7 +346,7 @@
   .icoprev .card{width:96px;height:128px;object-fit:contain;padding:0}
   .icoprev .info{max-width:420px;height:auto;object-fit:contain}
   /* the ✎ sits ON the picture, top-left, because that is where you look when
-     you have decided the picture is wrong — and the picture itself does the
+     you have decided the picture is wrong - and the picture itself does the
      same thing. It inherited .card's pointer cursor and hover border and then
      did nothing with a click, which is a promise the size of the whole card. */
   .icowrap{position:relative;display:inline-block;line-height:0}
@@ -354,7 +367,7 @@
   .imgmenu button{text-align:left;border:0;background:none;padding:6px 9px;border-radius:5px;
     font-size:12px}
   .imgmenu button:hover{background:var(--panel2);color:var(--accent)}
-  /* before beside after, at the size each actually is — a card that is about to
+  /* before beside after, at the size each actually is - a card that is about to
      be replaced by something four times its resolution should LOOK wrong here */
   .imgcmp{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
   .imgcmp figure{margin:0;flex:1 1 200px;min-width:180px;text-align:center}
@@ -364,7 +377,7 @@
   .imgcmp figcaption .count{display:block;overflow-wrap:anywhere}
   .imgarrow{color:var(--dim);font-size:20px;flex:0 0 auto}
   /* the 3D model viewer: canvas on the left, everything you can change on the
-     right, and the canvas gets whatever height is going — a soldier is tall */
+     right, and the canvas gets whatever height is going - a soldier is tall */
   .v3wrap{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
   .v3stage{position:relative;display:flex;flex:1 1 520px;min-width:320px;min-height:62vh;
     background:#0e1013;border:1px solid var(--edge);border-radius:8px;overflow:hidden}
@@ -377,7 +390,7 @@
     pointer-events:none;text-shadow:0 1px 2px #000}
   /* The UV layout, beside the model: the sheet with the mesh's islands over it.
      It is always in the markup and hidden here, so opening it is a class flip
-     rather than a rebuild — a rebuild would take the WebGL context with it. */
+     rather than a rebuild - a rebuild would take the WebGL context with it. */
   .v3uvpane{display:none;flex:1 1 0;min-width:0;flex-direction:column;
     border-left:1px solid var(--edge);background:#0b0d11}
   .v3stage.uv .v3uvpane{display:flex}
@@ -406,7 +419,7 @@
   .v3wrap.dock .v3side{flex:0 0 auto;min-width:0;max-height:34vh}
   .v3wrap.dock .v3hint{font-size:10px}
   /* The grab bar between the canvas and its controls, the horizontal twin of
-     `.splitbar`. Docked only — in the dialog the two sit side by side with the
+     `.splitbar`. Docked only - in the dialog the two sit side by side with the
      page's whole height to share. */
   .v3grip{display:none}
   .v3wrap.dock .v3grip{display:block;flex:0 0 6px;cursor:row-resize;
@@ -415,8 +428,8 @@
     height:2px;border-radius:2px;background:var(--edge)}
   .v3wrap.dock .v3grip:hover::after,.v3wrap.dock .v3grip.drag::after{background:var(--accent)}
   body.vsplitting{user-select:none;cursor:row-resize}
-  /* Side by side needs room for two. Under it — docked in the editor's preview
-     column, or on a narrow window — the layout takes the stage instead, and the
+  /* Side by side needs room for two. Under it - docked in the editor's preview
+     column, or on a narrow window - the layout takes the stage instead, and the
      button is the way back to the model. */
   .v3wrap.dock .v3stage.uv .v3gl{display:none}
   @media (max-width:1100px){ .v3stage.uv .v3gl{display:none} }
@@ -457,16 +470,35 @@
   .portrow.here .pn{color:var(--dim)}
   /* The grab bar between a list and its 3D column (core.js `splitInstall`).
      It sits in the flex gap, so it is 6px of hit area with a 2px line drawn in
-     the middle of it — thin enough not to be furniture, wide enough to catch. */
+     the middle of it - thin enough not to be furniture, wide enough to catch. */
   .splitbar{flex:0 0 6px;align-self:stretch;min-height:120px;cursor:col-resize;
     position:relative;border-radius:3px}
   .splitbar::after{content:'';position:absolute;top:0;bottom:0;left:2px;width:2px;
     border-radius:2px;background:var(--edge)}
   .splitbar:hover::after,.splitbar.drag::after{background:var(--accent)}
   /* While a drag is running the pointer is captured by the bar, but the text it
-     passes over would still highlight — and a half-selected list left behind is
+     passes over would still highlight - and a half-selected list left behind is
      the tell that this was bolted on. */
   body.splitting{user-select:none;cursor:col-resize}
+  /* ---- resizable panes (core.js `rszInit`) ----
+     Every scroll box on the page is given `resize:vertical` at runtime, and the
+     dialog `resize:both`, so the corner below is the grip for all of them. The
+     browser's own is two faint hairlines that vanish on a dark panel, which
+     makes a feature look like it is not there; this is the same corner drawn to
+     be seen, and it lights up under the pointer the way the split bars do. */
+  ::-webkit-resizer{background:
+    linear-gradient(135deg,transparent 0 46%,var(--dim) 46% 54%,transparent 54% 66%,
+      var(--dim) 66% 74%,transparent 74%)}
+  /* The drawer is pinned to the right edge, so the browser's bottom-right grip
+     would drag it off the screen. It gets a bar down its LEFT edge instead, the
+     same 6px-of-hit-area-with-a-2px-line as `.splitbar`. Sticky and 100vh tall
+     so a drawer scrolled to the bottom still has one; floated with the width
+     given straight back as a negative margin so it costs the content nothing. */
+  .drawergrip{position:sticky;top:0;float:left;width:7px;height:100vh;
+    margin-right:-7px;cursor:col-resize;z-index:5}
+  .drawergrip::after{content:'';position:absolute;top:0;bottom:0;left:2px;width:2px;
+    border-radius:2px;background:var(--edge)}
+  .drawergrip:hover::after{background:var(--accent)}
   /* BMDB mode's side panel: the list keeps the page, the model takes a column */
   .bmsplit{display:flex;gap:12px;align-items:flex-start}
   .bmmain{flex:1 1 auto;min-width:0}
@@ -484,7 +516,7 @@
     flex-wrap:wrap}
   .cardkind h3 .count{font-weight:400}
   .cardnotes{margin:8px 2px 0;display:flex;flex-direction:column;gap:4px}
-  /* the thumbnail on a row: small, fixed, and never allowed to move the text —
+  /* the thumbnail on a row: small, fixed, and never allowed to move the text -
      hundreds of these load lazily as the list is scrolled */
   .cdthumb{width:34px;height:34px;object-fit:contain;flex:0 0 auto;
     background:var(--panel2);border:1px solid var(--edge);border-radius:4px}
@@ -582,7 +614,7 @@
   .fcrow .fcf{display:block;font-size:11px;font-weight:400;color:var(--dim);
     font-family:ui-monospace,Consolas,monospace;overflow-wrap:anywhere}
   .fcrow .fcw{font-size:11.5px;line-height:1.4}
-  /* the review row is a report, not a write — dimmer, and marked off from the
+  /* the review row is a report, not a write - dimmer, and marked off from the
      files above it that really will change */
   .fcrev{opacity:.75;border-top:1px dashed var(--edge)}
   .fcrev .fcc{color:var(--dim);font-weight:400}
@@ -592,7 +624,7 @@
     .fcrow{grid-template-columns:44px 1fr}
     .fcrow .fcw{grid-column:2}
   }
-  /* the key to UV mode, shown only while UV mode is on — four swatches for the
+  /* the key to UV mode, shown only while UV mode is on - four swatches for the
      four things the shader is saying at once */
   .v3uvkey{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;
     font-size:11.5px;color:var(--dim);border:1px solid var(--edge);border-radius:7px;
@@ -611,14 +643,14 @@
   /* Each row shows its picture at the size the slot above the buttons shows it:
      a unit card is a small portrait, an info card is a wide banner. Both used to
      be squeezed into one 56px thumbnail, which is too small to tell two of them
-     apart — and telling them apart is the only reason this list is here. The
+     apart - and telling them apart is the only reason this list is here. The
      picture is wrapped so the ✎ can sit on it, and the wrapper is what the row's
      flex sizes. */
   .cardvarlist img{object-fit:contain;background:#0d0f13;border-radius:4px}
   .cardvars[data-kind=card] .cardvarlist img{width:96px;height:128px;flex:0 0 96px}
   .cardvars[data-kind=card] .cardvarlist .icowrap{flex:0 0 96px}
   /* An info card is wider than any caption, so its row stacks instead of sitting
-     side by side — the same shape the Info card slot above already has. */
+     side by side - the same shape the Info card slot above already has. */
   .cardvars[data-kind=info] .cardvarlist figure{flex-direction:column}
   .cardvars[data-kind=info] .cardvarlist img{max-width:420px;height:auto}
   .cardvars[data-kind=info] .cardvarlist .icowrap{flex:0 0 auto;max-width:420px}
@@ -633,8 +665,8 @@
   .mentry>.mhead .mn{font-family:ui-monospace,Consolas,monospace;font-weight:600}
   .mentry>.mhead .grow{flex:1}
   .mentry .mbody2{padding:0 11px 11px;border-top:1px solid var(--edge)}
-  /* Every path row in a model card is the SAME grid, so the label column ends —
-     and therefore every box starts — at one column whatever the label says. The
+  /* Every path row in a model card is the SAME grid, so the label column ends -
+     and therefore every box starts - at one column whatever the label says. The
      box then takes all the width that is left (an input does not shrink to its
      value, so `width:100%` + `min-width:0` is what actually lets a 60-character
      path show in full instead of scrolling inside a 148px default box). */
@@ -817,7 +849,7 @@
   .sndbar .grow{flex:1;min-width:120px}
   .sndlist{border:1px solid var(--edge);border-radius:8px;background:var(--panel);margin-top:10px}
   /* The unit column had 1.5fr and squeezed "In game now" into 88px, which cut off
-     the one thing the row is telling you ("English — generic", "Gondor/General ✗").
+     the one thing the row is telling you ("English - generic", "Gondor/General ✗").
      Half the width is plenty for a name over its type, and the freed space goes
      where the text actually is. */
   .sndrow{display:grid;grid-template-columns:minmax(170px,.9fr) minmax(150px,.6fr) 130px 100px minmax(180px,1.6fr) 46px;
@@ -829,7 +861,7 @@
   .sndrow.dropping{background:rgba(224,108,108,.08);box-shadow:inset 3px 0 0 var(--bad)}
   .sndrow select{width:100%;padding:3px 6px;font-size:12px;min-width:0}
   .sndrow select:disabled{opacity:.55}
-  /* the unit card beside the name — the voice bank is hundreds of rows of type
+  /* the unit card beside the name - the voice bank is hundreds of rows of type
      names, and a type name is the one thing about a unit nobody recognises */
   .sndrow .un{min-width:0;display:flex;align-items:center;gap:8px;cursor:pointer}
   .sndrow .un .uc{width:26px;height:34px;object-fit:contain;background:#0d0f13;
@@ -853,8 +885,8 @@
      The GUI and the file's own text, side by side. The highlight is a stack of
      empty rows BEHIND a transparent textarea rather than a second copy of the
      text: one copy of the characters means no font, no tab stop and no ligature
-     can make the two drift apart. All three columns — gutter, overlay, textarea
-     — therefore have to agree on the line box exactly, which is what --cvlh and
+     can make the two drift apart. All three columns - gutter, overlay, textarea
+     - therefore have to agree on the line box exactly, which is what --cvlh and
      the shared padding are for. */
   /* `align-items:stretch`, not `start`, and that is the whole reason .cvpane's
      `position:sticky` works. Every adopter wraps cvHtml() in a column div, so
@@ -871,7 +903,7 @@
   .cvpane.bad{border-color:var(--bad)}
   .cvbar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
   .cvbar .sp{flex:1}
-  /* Tall enough that a whole unit block is usually on screen at once — the pane
+  /* Tall enough that a whole unit block is usually on screen at once - the pane
      stays sticky, so it cannot simply grow with the page. */
   .cvwrap{display:flex;height:min(78vh,900px);border:1px solid var(--edge);border-radius:6px;
     background:var(--panel2);overflow:hidden}
@@ -905,7 +937,7 @@
      both are expanded to their full height (set in px by edRawAlign / cvExpand,
      which know the line count) and the dialog is the only thing that moves.
      The rows are absolutely positioned from the spans the server sends, not
-     stacked in order — a block has a `type` line, hidden comment lines and
+     stacked in order - a block has a `type` line, hidden comment lines and
      repeats, so counting rows would drift. --cvlh grows to the height of a box
      for the same reason: it is the unit both sides measure in. */
   .cvsplit.rawpair .cvpane{position:static;--cvlh:26px}
@@ -915,7 +947,7 @@
   .allfields.aligned{position:relative}
   .allfields.aligned .afrow{position:absolute;left:6px;right:6px;height:26px;margin:0}
   .allfields.aligned .afrow input{height:22px}
-  /* a field the file has no line for yet — it sits under the block, not in it */
+  /* a field the file has no line for yet - it sits under the block, not in it */
   .allfields.aligned .afrow.unplaced{opacity:.75;border-left:2px dashed var(--edge);
     padding-left:5px}
   /* the box on the GUI side whose line the pointer (or the caret) is on */
@@ -925,7 +957,7 @@
   /* ================= guided field editor ==================================
      The default view of a unit's EDU lines: every comma-separated slot gets its
      own labelled box, a drop-down where the engine only accepts a fixed set, and
-     a one-line explanation of what it does. `.gfraw` is the escape hatch — the
+     a one-line explanation of what it does. `.gfraw` is the escape hatch - the
      whole line as text, exactly what the raw view shows. */
   .allfields.guided{max-height:none;overflow:visible;border:none;padding:0;background:none}
   .gfmode{display:inline-flex;border:1px solid var(--edge);border-radius:6px;overflow:hidden}
@@ -947,7 +979,7 @@
   .gfintro{font-size:12px;color:var(--dim);margin:0 0 10px;line-height:1.5}
   .gfcard{border:1px solid var(--edge);border-radius:8px;background:var(--panel);padding:9px 11px 11px;
     margin-bottom:9px}
-  /* Cards that are one drop-down each, sitting on one line — see GF_PAIRS.
+  /* Cards that are one drop-down each, sitting on one line - see GF_PAIRS.
      `--gfn` is how many are on this row; the fallbacks below are for a window
      too narrow to give each of them a usable box. */
   .gfpair{display:grid;gap:0 9px;align-items:stretch;
@@ -969,7 +1001,7 @@
   .gfhead .rm:hover{border-color:var(--bad);color:var(--bad)}
   .gfdoc{font-size:11.5px;color:var(--dim);margin:5px 0 0;line-height:1.5}
   .gfdoc code{background:var(--panel2);padding:0 3px;border-radius:3px}
-  /* every note is written as a lead line and then points — see docPoints() */
+  /* every note is written as a lead line and then points - see docPoints() */
   .gfdoc ul,.gftip .tb ul,.count ul,.bnote ul,.sprnote ul{margin:4px 0 0;padding-left:16px}
   .gfdoc li,.gftip .tb li,.count li,.bnote li,.sprnote li{margin:2px 0}
   .gfgrid{display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:8px}
@@ -1063,7 +1095,7 @@
     font-family:system-ui,sans-serif;letter-spacing:0;text-transform:none}
   .qm:hover,.qm:focus{border-color:var(--accent);color:var(--accent);
     background:var(--panel);outline:none}
-  /* "⚠ unsaved changes" — a state to act on, not another grey line to read past */
+  /* "⚠ unsaved changes" - a state to act on, not another grey line to read past */
   .dirtychip{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;
     font-size:11.5px;font-weight:600;color:var(--warn);border:1px solid var(--warn);
     background:#2a2410;border-radius:5px;padding:2px 9px;white-space:nowrap}
@@ -1143,8 +1175,8 @@
   .bart figcaption .sprrow{margin-top:5px;justify-content:center}
   .bart figcaption .sprrow button{padding:2px 6px;font-size:10.5px}
   /* ---- number boxes with ▲▼ ----
-     Every number in this screen is one a modder nudges rather than retypes — a
-     cost, a build time, a recruit rate — so each gets a stepper. The buttons are
+     Every number in this screen is one a modder nudges rather than retypes - a
+     cost, a build time, a recruit rate - so each gets a stepper. The buttons are
      sized to be hit repeatedly, not to be decorative. */
   .numwrap{display:flex;align-items:center;gap:3px;min-width:0;flex:1}
   .numwrap>input{min-width:0;flex:1}
@@ -1160,7 +1192,7 @@
   .brow{display:flex;gap:8px;align-items:center;margin:5px 0}
   .brow>.k{flex:0 0 128px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);text-align:right}
   .brow input,.brow select{flex:1;min-width:0;padding:4px 7px;font-size:12.5px}
-  /* One amber for every box in this screen, not just the ones in a .brow — a
+  /* One amber for every box in this screen, not just the ones in a .brow - a
      recruit pool's numbers and a capability's value are the values you actually
      come here to change, and they were the two that never lit up. */
   #bldBody input.changed,#bldBody select.changed,#bldBody textarea.changed{
@@ -1275,8 +1307,8 @@
      so the header labels sit over the boxes they name instead of near them.
 
      WHO may use it is the second line, ending where the numbers do. The
-     `requires` clause has no natural width — a real one names half a dozen
-     factions and a settlement level — so it keeps a line of its own and grows
+     `requires` clause has no natural width - a real one names half a dozen
+     factions and a settlement level - so it keeps a line of its own and grows
      leftwards into it as it needs to, rather than squeezing the name it belongs
      to. This tab shares the modal with the 3D preview column, and one line
      could not hold all of it beside that without a sideways scrollbar. */
@@ -1430,7 +1462,7 @@
   .condrow .ckind{flex:0 0 160px;font-size:11.5px;color:var(--dim);cursor:help}
   .condrow input,.condrow select{padding:3px 6px;font-size:12px;min-width:0}
   .condrow .x{flex:0 0 auto;padding:2px 7px}
-  /* "📍 8 settlements" — hover it for the list out of descr_regions.txt */
+  /* "📍 8 settlements" - hover it for the list out of descr_regions.txt */
   .where{position:relative;flex:0 0 auto;font-size:11px;color:var(--accent2);cursor:help;
     border:1px solid var(--edge);border-radius:5px;padding:2px 7px;white-space:nowrap}
   .where.none{color:var(--bad);border-color:var(--bad)}
@@ -1451,8 +1483,8 @@
   .faclist{max-height:210px;overflow:auto;border:1px solid var(--edge);border-radius:7px;
     background:var(--panel2);padding:3px}
   /* The NAME is what you are looking for, so it gets the whole row. The code and
-     culture behind it — the bit you need once, to check you ticked the right
-     "Mordor" — appear over the row on hover instead of squeezing the name into
+     culture behind it - the bit you need once, to check you ticked the right
+     "Mordor" - appear over the row on hover instead of squeezing the name into
      an ellipsis. Positioned, so revealing one moves nothing. */
   .facrow{display:flex;gap:8px;align-items:center;padding:3px 7px;border-radius:5px;
     cursor:pointer;position:relative}
@@ -1490,7 +1522,7 @@
   .ucard.gone{opacity:.4}
   /* The name block is a FIXED height. Names run from "Archers" to "Dunedain
      Rangers of the North", and letting it grow to fit put the stat boxes at a
-     different height in every card — and moved them again whenever the culture
+     different height in every card - and moved them again whenever the culture
      picker changed the names. Two lines, clamped, always. */
   .ucard .top{display:flex;gap:7px;align-items:flex-start;height:50px}
   .ucard img{width:38px;height:50px;object-fit:contain;background:#0d0f13;border-radius:4px;flex:0 0 38px}
@@ -1514,7 +1546,7 @@
   /* ---- the upgrade graph ---- */
   .pathwrap{overflow-x:auto;border:1px solid var(--edge);border-radius:7px;background:var(--panel2);padding:10px}
   /* SCOPED to the graph. Unscoped, this rule (later in the sheet) also hit the
-     model card's `.prow`, turning its grid into a flex row — which is what made
+     model card's `.prow`, turning its grid into a flex row - which is what made
      every path box shrink to 148px and every label start at a different x. */
   .pathwrap .prow{display:flex;gap:8px;align-items:center;margin:3px 0;white-space:nowrap}
   .pnode{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--edge);border-radius:7px;
@@ -1532,7 +1564,7 @@
   .upglist{border:1px solid var(--edge);border-radius:7px;background:var(--panel2)}
   /* ---- bulk edit over recruit pools ----
      Filling out a level means giving twenty units the same requires clause, not
-     one — so the pools get a selection of their own: tick rows, then act on all
+     one - so the pools get a selection of their own: tick rows, then act on all
      of them at once. The bar is amber like every other "this is staged" surface
      in the dialog. */
   .bulkbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px;padding:7px 9px;
@@ -1558,7 +1590,7 @@
   /* ---- comparing two units ----
      The same stat twice with the better side coloured. The point is to see the
      gap and close it without leaving the page, so both columns are live boxes
-     rather than text — the unit you opened is on the left, the one you compared
+     rather than text - the unit you opened is on the left, the one you compared
      against on the right, and Save writes both. */
   .cmphead{display:flex;gap:10px;align-items:center;padding:8px 10px;margin-bottom:10px;
     border:1px solid var(--edge);border-radius:8px;background:var(--panel2)}
@@ -1608,7 +1640,7 @@
   .hchead>div:first-child{flex:1 1 auto;min-width:0}
   .hchead .nm{font-size:16px;font-weight:600;overflow-wrap:anywhere}
   /* a mod path is 90 characters and the card is 340 wide, so it wraps rather
-     than ellipsising — the tail is the half that identifies the mod */
+     than ellipsising - the tail is the half that identifies the mod */
   .hchead .sub{color:var(--dim);font-size:11px;font-family:ui-monospace,Consolas,monospace;
     max-width:100%;overflow-wrap:anywhere;line-height:1.35;margin-top:2px}
   .homestep{display:flex;gap:10px;align-items:center;margin:14px 0 0;padding:10px 12px;
@@ -1620,7 +1652,7 @@
   .homestep .t .p{color:var(--dim);font-size:11px;font-family:ui-monospace,Consolas,monospace;
     overflow-wrap:anywhere;line-height:1.35}
   /* Step 3's preference rows: one per line. Two columns was tried and read as a
-     jumble — each row is a tick box, a label and a hint of its own length, so
+     jumble - each row is a tick box, a label and a hint of its own length, so
      side by side there was no column edge for the eye to follow. */
   .homeprefs{display:flex;flex-direction:column;gap:2px;margin-top:6px}
   .homeprefs > div{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;
@@ -1628,7 +1660,7 @@
   .homeprefs > div:last-child{border-bottom:0}
   .homeprefs .chk{align-items:baseline;margin:0}
   .homeprefs .count{font-size:11px;margin-left:auto;text-align:right}
-  /* The M2EX mark: its own line under the card's head, quiet until it is on —
+  /* The M2EX mark: its own line under the card's head, quiet until it is on -
      it is a fact about the mod, not an action, and most mods are not M2EX. */
   .hcm2ex{display:flex;gap:6px;align-items:baseline;margin-top:8px;font-size:12px;
     padding:4px 7px;border:1px solid var(--edge);border-radius:6px}
@@ -1724,7 +1756,7 @@
   .anhead{display:flex;gap:12px;align-items:flex-start}
   .anbig{width:96px;height:96px;object-fit:contain;flex:0 0 auto;
     background:var(--panel2);border:1px solid var(--edge);border-radius:6px}
-  /* the picture, the ✎ on it, and "Where is it?" under it — one column, so the
+  /* the picture, the ✎ on it, and "Where is it?" under it - one column, so the
      buttons never push the fields beside it out of line */
   .anpicbox{flex:0 0 auto;display:flex;flex-direction:column;gap:5px;align-items:stretch}
   .anpicbox button:not(.icoedit){padding:3px 7px;font-size:11px}
@@ -1740,7 +1772,7 @@
   .mfag{flex:0 0 84px;font-size:12px;color:var(--dim)}
   /* the art a minor file points at: a religion pip, a resource icon, a
      settlement or agent card. A slot the mod does not ship unpacked is left
-     blank and never marked as a fault — see mfArt in minorfiles.js */
+     blank and never marked as a fault - see mfArt in minorfiles.js */
   .mfart{display:flex;gap:8px;align-items:center}
   .mfart input{flex:1;min-width:0}
   .mfpip{width:32px;height:32px;object-fit:contain;flex:0 0 32px;
@@ -1760,7 +1792,8 @@
   .faccol{display:flex;gap:6px;align-items:center}
   .faccol input[type=color]{flex:0 0 42px;height:26px;padding:0;border:1px solid var(--edge);
     border-radius:4px;background:none}
-  .faccolt{flex:1;min-width:0}
+  /* the hex box: a code, so it reads as one */
+  .faccolt{flex:0 0 92px;min-width:0;font-family:ui-monospace,Consolas,monospace}
   .facpics{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 10px}
   .facpics figure{margin:0;display:flex;flex-direction:column;gap:4px;align-items:center}
   .facpics img{width:84px;height:84px;object-fit:contain;background:var(--panel2);
@@ -1888,7 +1921,7 @@
 <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
 <div class="toast" id="toast"></div>
 <!-- The loading bar. Bottom of the window, above everything, on whichever menu
-     is open — see `loadbar` in core.js, which drives it from the API client. -->
+     is open - see `loadbar` in core.js, which drives it from the API client. -->
 <div class="loadbar" id="loadbar">
   <div class="lbtrack"><div class="lbfill"></div></div>
   <div class="lbrow"><span class="lbtext"></span><span class="lbnum"></span></div>
@@ -1896,7 +1929,7 @@
 
 <!-- The UI's code, split by module. Plain <script> tags sharing ONE global
      scope: no build step, no module system, nothing to install. The ORDER
-     matters — core declares the state every other file reads, and boot calls
+     matters - core declares the state every other file reads, and boot calls
      init() once the rest exists. A new module goes in next to its peers and
      gets an entry in core.js's MODES array; a top-level name must be unique
      across all of them (a duplicate silently wins by hoisting). -->

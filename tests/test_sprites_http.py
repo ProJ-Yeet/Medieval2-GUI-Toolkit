@@ -1,4 +1,4 @@
-"""Sprites mode over HTTP — exactly the calls the browser page makes.
+"""Sprites mode over HTTP - exactly the calls the browser page makes.
 
 Runs a real server against a throwaway MED2 root so a mismatch between the UI's
 request shape and the engine is caught here:
@@ -59,7 +59,7 @@ if MODS.is_dir():
     donor = next((m for m in (MODS / "third_age_3", MODS / "Divide_and_Conquer_EUR")
                   if (m / "data/unit_models/battle_models.modeldb").is_file()), None)
 if donor is None or not sprites.NVCOMPRESS.is_file():
-    print("no donor mod or no nvcompress — skipping")
+    print("no donor mod or no nvcompress - skipping")
     sys.exit(0)
 
 # ---- throwaway config + mod ----

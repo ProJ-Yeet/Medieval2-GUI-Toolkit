@@ -1,8 +1,8 @@
-/* editor.js — Unit Editor mode: EDU fields, identity, model entries, textures
+/* editor.js - Unit Editor mode: EDU fields, identity, model entries, textures
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
@@ -42,13 +42,13 @@ async function openEditor(type){
             // open, and the last /api/edit/model_folder answer for its folder box
             facOpen:{},folder:{},
             // the Code View pane on the EDU fields tab (null until it's opened),
-            // and the modeldb one on the Models tab — one card at a time
+            // and the modeldb one on the Models tab - one card at a time
             cv:null,mcv:null,mcvName:'',
             // the Compare tab: a SECOND unit loaded beside this one, with edits
             // of its own that Save writes as a second, independent unit save
             cmp:null,cmpQ:'',cmpSame:false,
             // the Recruitment tab: every building line that trains this unit,
-            // fetched the first time the tab is opened — see edrecruit.js
+            // fetched the first time the tab is opened - see edrecruit.js
             rec:null,
             ug:null};      // the armour-tier ＋ menu, closed
   undoReset();
@@ -85,7 +85,7 @@ function edDirty(){
 // this stays true while the pane shows an error: the last GOOD text is still
 // the one a save would write, and dropping it silently back to the file's
 // version would throw away work the user can still see on screen. What an error
-// does stop is the save itself — see edCvBlocked().
+// does stop is the save itself - see edCvBlocked().
 // Keyed on the kind because bmdb mode shares `state.ed`: its pane holds a
 // modeldb entry, which goes to the save as `raw_entry` on the model edit, never
 // as the unit block's `raw_block`.
@@ -96,7 +96,7 @@ function edCvEdited(){
 /* …and the narrower question the DIALOG asks: is there anything to save.
 
    The pane lines the block up the moment it opens (cvAutoTidy), so opening it
-   already makes `edCvEdited` true — and a view toggle that says "unsaved
+   already makes `edCvEdited` true - and a view toggle that says "unsaved
    changes" and offers to throw work away on close is a lie about what the user
    did. The tool's own layout pass is remembered as `cv.auto`, so this can tell
    the two apart: it is not a reason to save on its own, and the moment there IS
@@ -117,7 +117,7 @@ function edCvBlocked(){
 /* ---- what each touched bmdb entry sends ----
    Texture paths go by faction + kind, never by span index: ticking a faction on
    or off renumbers every texture slot in the entry, so an index captured by the
-   page would land on the wrong one. Meshes keep using indices — those are stable. */
+   page would land on the wrong one. Meshes keep using indices - those are stable. */
 function edModelEdits(){
   const e=state.ed;
   // an entry hand-edited in Code View is a change even if no box was touched
@@ -135,7 +135,7 @@ function edModelEdits(){
 
        "Anything that differs from the default is an override" was the rule, and
        it compared against the default AS JUST TYPED. So editing the default box
-       — the one that says "used by every faction unless it has its own" — made
+       - the one that says "used by every faction unless it has its own" - made
        every faction differ from it by definition, and all of them were sent
        pinned to the value they already had. The new default was written and then
        overridden 29 times by the old one: the boxes reverted on save, while the
@@ -144,10 +144,10 @@ function edModelEdits(){
 
        A faction is an override when one of two things is true, and neither of
        them is about the value being typed right now:
-         * its own box was edited this session — a value typed against ONE
+         * its own box was edited this session - a value typed against ONE
            faction is that faction's, whatever it equals; or
          * it already had a value of its own on disk, meaning it differed from
-           the default IT WAS FOLLOWING — the original one, not the new one.
+           the default IT WAS FOLLOWING - the original one, not the new one.
        Everything else follows the default, which is what makes editing the
        default box reach exactly the factions that were sharing it. */
     const v=edTexView(m), kinds=edKinds(m), faction_paths={};
@@ -177,7 +177,7 @@ function edPayload(extra){
     field_overrides:e.ov,remove_fields:[...e.rm],loc:locChanged?e.loc:null,
     model_edits:edModelEdits(),new_models:e.newModels,
     card_src:e.cardSrc||'',info_src:e.infoSrc||'',
-    // absent (not "") unless the user touched it — clearing a tier and never
+    // absent (not "") unless the user touched it - clearing a tier and never
     // setting one are different requests, and the server tells them apart
     tier:(e.tierEdit&&'tier' in e.tierEdit)?e.tierEdit.tier:null,
     tier_variant:(e.tierEdit&&'tier_variant' in e.tierEdit)?e.tierEdit.tier_variant:null,
@@ -186,12 +186,12 @@ function edPayload(extra){
 function renderEditor(){
   const e=state.ed,d=e.d;
   // the id is for the Recruitment tab's count badge, which changes without the
-  // tab bar being redrawn — see edRecPaintTab
+  // tab bar being redrawn - see edRecPaintTab
   const tab=(k,label)=>`<button id="edTab_${k}" class="${e.tab===k?'on':''}"
     onclick="edTab('${k}')">${label}</button>`;
   // The preview column is a live WebGL canvas holding a mesh that took a moment
   // to fetch, so it is DETACHED here rather than destroyed, and appended again
-  // below — see edPrevAttach. Rewriting the modal around it would take the
+  // below - see edPrevAttach. Rewriting the modal around it would take the
   // context with it and reload the model on every tab switch.
   edPrevDetach();
   document.getElementById('modal').innerHTML=`
@@ -247,7 +247,7 @@ function edTab(t){state.ed.tab=t;renderEditor();}
      * **the canvas outlives a re-render.** `renderEditor` replaces the whole
        modal on every tab switch. The column is detached first and appended
        again after, so the WebGL context, the uploaded buffers and the mesh
-       survive — otherwise every tab switch refetched a 30 MB model.
+       survive - otherwise every tab switch refetched a 30 MB model.
      * **one viewer at a time.** `v3Mount` drops whatever was mounted, so
        opening the full-screen viewer or the BMDB side panel takes this one
        down rather than leaving two GL contexts and two animation loops running.
@@ -264,7 +264,7 @@ const edPrevOn = () => state.settings.model_preview !== false;
 /* Which of the unit's battle-model entries are worth offering.
 
    A unit that carries `armour_ug_models` is DRAWN from that list, one model per
-   armour level, and the model on its `soldier` line is never seen — Uruk-hai
+   armour level, and the model on its `soldier` line is never seen - Uruk-hai
    Bodyguards names `heavy_uruk_sword` there and puts `isengard_bodyguard` in
    both upgrade slots, so offering the first is offering a model this unit never
    appears in. It is dropped, and the officers, the upgrade models and the mount
@@ -273,7 +273,7 @@ const edPrevOn = () => state.settings.model_preview !== false;
 
    The test is per model, not per unit, because the same entry is often in both
    places (Uruk Bodyguard's `mordor_uruk_bodyguards` is the soldier AND upgrade
-   1) — an entry earns its place by any slot that is not the soldier line. */
+   1) - an entry earns its place by any slot that is not the soldier line. */
 const edPrevEntries = () => {
   const all = ((state.ed && state.ed.d && state.ed.d.models) || []).filter(m => m && !m.missing);
   const upgraded = all.some(m => (m.slots || []).some(x => x.indexOf('armour_ug_models') === 0));
@@ -303,7 +303,7 @@ function edPrevAttach(){
   }
   split.appendChild(edPrevNode);
   // Folded to its bar, the column is as wide as that bar and a divider would be
-  // dragging nothing — `.edprev.min` sizes itself, so the width is not ours.
+  // dragging nothing - `.edprev.min` sizes itself, so the width is not ours.
   if(state.ed.prevMin) edPrevNode.style.flex = '';
   else splitInstall(split, edPrevNode, 'v3_dock_px', 340);
   edPrevBar();
@@ -315,7 +315,7 @@ function edPrevDrop(){
   edPrevNode = null;
 }
 
-// The bar only — never the body, which is the canvas.
+// The bar only - never the body, which is the canvas.
 function edPrevBar(){
   const el = document.getElementById('edPrevBar');
   if(!el) return;
@@ -385,7 +385,7 @@ async function edPrevShow(){
 /* Full screen is the browser's own, not a bigger box inside the dialog: the
    model is the whole point of going full screen, and the modal is most of the
    window already. Esc leaves it, which is what everyone expects. The canvas
-   needs nothing done to it — v3Draw sizes itself from the element every frame. */
+   needs nothing done to it - v3Draw sizes itself from the element every frame. */
 function edPrevFull(){
   const el = edPrevNode || document.getElementById('edPrevCol');
   if(!el) return;
@@ -399,7 +399,7 @@ function edPrevFull(){
 function edRenderTab(){
   const e=state.ed,b=document.getElementById('edBody');
   // Editing anything re-renders the whole tab, and replacing innerHTML throws
-  // every scroll position back to the top — both the dialog's and the EDU field
+  // every scroll position back to the top - both the dialog's and the EDU field
   // list's own box. Ticking a faction 40 rows down must leave you looking at it,
   // not at the top of the unit, so both are put back afterwards.
   const modal=document.getElementById('modal');
@@ -412,11 +412,11 @@ function edRenderTab(){
               :e.tab==='recruit'?edRecTab()
               :e.tab==='compare'?edCompare():edModels())
     // bmdb mode edits an entry with no unit around it, so "who uses this?" has
-    // nowhere else to live — it goes at the bottom of the entry itself
+    // nowhere else to live - it goes at the bottom of the entry itself
     +(e.bmdb?edEntryUsers(e.d.models[0]):'')
     +'<div id="edPreview"></div>';
   // keep the last preview visible across cosmetic re-renders (tab switch, expanding
-  // an entry) — flagged as stale once anything has been edited since it was made
+  // an entry) - flagged as stale once anything has been edited since it was made
   if(e.plan)document.getElementById('edPreview').innerHTML=edPlanHtml(e.plan,e.planStale);
   if(e.tab==='fields')edWireFields();
   if(e.tab==='identity')edWireIdentity();
@@ -506,7 +506,7 @@ function edSetField(label,val){
   if(val===((f||['',''])[1])&&!e.added.has(label)) delete e.ov[label]; else e.ov[label]=val;
   e.rm.delete(label); edStale();
 }
-// Put a field back exactly as it was — including "it wasn't there at all", which
+// Put a field back exactly as it was - including "it wasn't there at all", which
 // setting it to "" would not do (an empty EDU line is still a line).
 function edRestoreField(label,val){
   const e=state.ed;
@@ -584,8 +584,8 @@ function edIdentity(){
    Its picture is the one thing the lists below can also show: the slot resolves
    whichever faction folder came first, and where a mod ships more than one
    distinct picture that is a copy of the first row underneath, now at the same
-   size. So the picture is dropped as soon as there IS a list — repeating it said
-   nothing — and the slot keeps what only it has: the import that renames one
+   size. So the picture is dropped as soon as there IS a list - repeating it said
+   nothing - and the slot keeps what only it has: the import that renames one
    file and copies it into EVERY faction folder that owns the unit, which is a
    different job from replacing one file where it lies.
 
@@ -607,7 +607,7 @@ function edIconSlot(kind){
     </div>`:''}
     <div class="k">${card?'Unit card':'Info card'}</div>
     <div class="fn">${src?esc(src.split(/[\\/]/).pop())
-      :(pic?'current':`${many} different pictures — below`)}</div>
+      :(pic?'current':`${many} different pictures - below`)}</div>
     <div class="sprrow">
       ${pic?'':`<button onclick="edPickIcon('${key}')"
         title="Import one picture and copy it into every faction folder that owns this unit.
@@ -619,11 +619,11 @@ Replacing a single file where it lies is what the list below does.">✎ Replace 
 }
 /* Every DISTINCT card on disk, and which factions share it. The game looks a
    card up under the PLAYER's faction folder, so a mod may ship one picture for
-   ten factions or ten different ones — and the preview above can only ever show
+   ten factions or ten different ones - and the preview above can only ever show
    whichever folder was found first. Grouped by file content on the server
    (edit.icon_variants), so ten identical copies are one row.
 
-   Each row shows its picture at the size the one above the buttons is — a unit
+   Each row shows its picture at the size the one above the buttons is - a unit
    card as a portrait, an info card as the wide banner it is. The whole reason
    this list exists is that these pictures DIFFER, and a 56px thumbnail of a
    400px banner is too small to tell you how. */
@@ -636,7 +636,7 @@ function edCardVariants(kind,title){
       picture${rows.length===1?'':'s'} across ${rows.reduce((n,r)=>n+r.factions.length,0)}
       faction folder${rows.reduce((n,r)=>n+r.factions.length,0)===1?'':'s'}</span></div>
     <div class="cardvarlist">${rows.map(r=>{
-      // one variant is ONE file, so it can be swapped on its own — which is the
+      // one variant is ONE file, so it can be swapped on its own - which is the
       // point of the list: the whole reason it exists is that these differ.
       // Not `loading="lazy"` like the grid's cards: an info card is sized by the
       // picture itself, so an unloaded one is a zero-high box, and a zero-high
@@ -711,7 +711,7 @@ function edTierBox(){
   // A value typed through ＋ is not in the mod's list until the mod is read
   // again, so it is added to the list here. Without this the drop-down came back
   // with nothing selected and the new variant looked like it had been thrown
-  // away — it was still staged, which is worse than losing it outright.
+  // away - it was still staged, which is worse than losing it outright.
   const opts=(list,cur)=>{
     const all=(list||[]).slice();
     if(cur&&all.indexOf(cur)<0)all.push(cur);
@@ -720,7 +720,7 @@ function edTierBox(){
         (list||[]).indexOf(v)<0?' (new)':''}</option>`)).join('');
   };
   const v=gfVocabFor(e.mod)||{};
-  /* The variant list is the mod's OWN vocabulary — every value any of its units
+  /* The variant list is the mod's OWN vocabulary - every value any of its units
      already uses, read back out of the markers the tool wrote (vocab.py's
      `_marker_values`). So a mod that has never had a variant offers an empty
      drop-down, and the note underneath used to answer that with "type one in the
@@ -783,7 +783,7 @@ function edWireIdentity(){
   const tv=document.getElementById('edTierVar');
   if(tv)tv.onchange=()=>edSetTier('tier_variant',tv.value);
   // the typed-in variant writes as it is typed, and must not redraw the box it
-  // is being typed into — so it sets the value directly rather than via edSetTier
+  // is being typed into - so it sets the value directly rather than via edSetTier
   const tn=document.getElementById('edTierVarNew');
   if(tn)tn.oninput=()=>{
     const w=state.ed; w.tierEdit=w.tierEdit||{};
@@ -813,7 +813,7 @@ function edFields(){
       ${cv?`<div id="edCodeCol">${cvHtml(cv)}</div>`:''}
     </div></fieldset>`;
 }
-// Just the boxes — redrawn on its own when the text pane re-reads the block,
+// Just the boxes - redrawn on its own when the text pane re-reads the block,
 // because redrawing the whole tab would take the caret out of the text.
 function edFieldsCol(){
   return gfMode()==='guided'
@@ -869,7 +869,7 @@ function edRawFields(){
   const e=state.ed,d=e.d;
   const present=new Set(d.fields.map(([l])=>l.replace(/#\d+$/,'')));
   const missing=(d.known_fields||[]).filter(k=>!present.has(k));
-  // type/dictionary/soldier define the block — the engine refuses to drop them
+  // type/dictionary/soldier define the block - the engine refuses to drop them
   const PROTECTED=new Set(['type','dictionary','soldier']);
   const rmBtn=(label,gone)=>PROTECTED.has(label.replace(/#\d+$/,''))
     ? '<span class="rm" title="This field defines the unit and can\'t be removed"> </span>'
@@ -914,8 +914,8 @@ function edWireFields(){
    own lines, and it is only worth having if row n really is line n. Counting
    will not give that: the block also has its `type` line, whatever comment
    lines the pane is hiding, and a repeated field is two rows for one key. The
-   server already says where every field's line is — that is what the hover
-   highlight runs on — so the rows are PLACED from those spans and the two sides
+   server already says where every field's line is - that is what the hover
+   highlight runs on - so the rows are PLACED from those spans and the two sides
    agree whatever the block looks like. A row the spans do not cover (a field
    just added, which is not in the file yet) is stacked below the block. */
 function edRawAlign(){
@@ -966,13 +966,13 @@ function edAddField(){
 }
 
 /* =========================================================================
-   COMPARE — the same unit table twice, side by side
+   COMPARE - the same unit table twice, side by side
 
    "Is my new spearman better than the one it replaces, and by how much" is a
    question the EDU answers only if you hold two blocks of eleven-value lines in
    your head at once. So the second unit is loaded beside the first and the lines
-   are split into their named slots — attack against attack, morale against
-   morale — with the better side green and the worse red.
+   are split into their named slots - attack against attack, morale against
+   morale - with the better side green and the worse red.
 
    Which side is "better" is only claimed where it is genuinely a merit: attack
    and armour go up, cost and heat fatigue go down, and everything else (a hit
@@ -980,14 +980,14 @@ function edAddField(){
    Guessing a winner for a setting that has none would be worse than saying
    nothing, because it reads as advice.
 
-   Both columns are live boxes and both are written by Save — the whole point is
+   Both columns are live boxes and both are written by Save - the whole point is
    to close a gap you can see, in whichever of the two units is wrong. */
 
 /* One slot's verdict. `absent` names a side that has no such LINE at all, which
-   makes its zeroes meaningless — a unit with no `stat_armour_ex` does not have
-   0 armour, it has the ordinary line instead — so nothing wins those. */
-/* The whole table as data, from two field lookups. Pure — it never touches the
-   page — so the same call builds the view and answers "how many differences are
+   makes its zeroes meaningless - a unit with no `stat_armour_ex` does not have
+   0 armour, it has the ordinary line instead - so nothing wins those. */
+/* The whole table as data, from two field lookups. Pure - it never touches the
+   page - so the same call builds the view and answers "how many differences are
    there" for the header, and the test suite can drive it under node. */
 /* ---- the two sides ----
    'a' is the unit the editor opened on and writes through the ordinary edit
@@ -1030,7 +1030,7 @@ function edCompare(){
     ${cmpDatalists()}</div>`;
 }
 /* Which vocabularies the table needs a datalist for, emitted once at the bottom
-   rather than once per box — a `soldier` model list is two thousand entries and
+   rather than once per box - a `soldier` model list is two thousand entries and
    the table has forty of them. */
 function edWireCompare(){
   const e=state.ed;
@@ -1078,7 +1078,7 @@ function edDrop(ev,label,i){
   edDrag=null; edSetField(label,list.join(', ')); edRenderTab();
 }
 // `opt.cls` styles the list (armour tiers use it to lift their ✕ above the chip)
-// and `opt.rm` swaps in a different remove call — an armour tier has to drop its
+// and `opt.rm` swaps in a different remove call - an armour tier has to drop its
 // armour_ug_levels entry with it, which the plain list remove knows nothing about.
 function edChips(label,items,extra,opt){
   const o=opt||{},cls=o.cls?' '+o.cls:'';
@@ -1160,7 +1160,7 @@ function edFactionField(label,cur){
 /* ---- armour_ug_models: reorder tiers, jump to an entry, add the next one ----
    Each tier carries a ✕ above its chip, because dropping one is not just a list
    remove: armour_ug_levels is positional too and has to lose the same slot.
-   The ＋ opens a four-mode panel — see edUgPanel. */
+   The ＋ opens a four-mode panel - see edUgPanel. */
 function edArmourField(label,cur){
   const models=csv(cur),levels=csv(edFieldVal('armour_ug_levels'));
   const jump=(v)=>`<button title="Edit ${esc(v)} in the Battle models tab"
@@ -1179,11 +1179,11 @@ function edArmourField(label,cur){
 }
 
 /* ---- the ＋ menu: four ways to add an armour tier -------------------------
-   1 repeat the last tier — the SAME entry again, so the armour upgrade is a
+   1 repeat the last tier - the SAME entry again, so the armour upgrade is a
                             stat change with no model change
-   2 take a unit's ugs    — read another unit's armour_ug_models, tick what to import
-   3 pick an existing entry — search the whole modeldb and point a tier at one
-   4 new entry from a tier — clone a chosen entry and give it its own mesh/texture
+   2 take a unit's ugs    - read another unit's armour_ug_models, tick what to import
+   3 pick an existing entry - search the whole modeldb and point a tier at one
+   4 new entry from a tier - clone a chosen entry and give it its own mesh/texture
    Only mode 4 creates a modeldb entry. 1-3 just name entries that already exist:
    armour_ug_models is a list of bmdb entry names, and a new entry is only worth
    making when the tier is actually going to look different. */
@@ -1225,8 +1225,8 @@ function edUgPanel(){
 const edUgSnapshot=()=>({models:edFieldVal('armour_ug_models'),
                          levels:edFieldVal('armour_ug_levels')});
 // `opt.repeat` allows a name the list already has. Naming the same entry twice is
-// a real M2TW pattern, not a mistake — it is how a unit gets the armour upgrade
-// without a different model — so only the accidental case is guarded against.
+// a real M2TW pattern, not a mistake - it is how a unit gets the armour upgrade
+// without a different model - so only the accidental case is guarded against.
 function edUgAppend(names,donorLevels,opt){
   const models=csv(edFieldVal('armour_ug_models')),levels=csv(edFieldVal('armour_ug_levels'));
   const added=[];
@@ -1234,7 +1234,7 @@ function edUgAppend(names,donorLevels,opt){
     const name=(raw||'').trim().toLowerCase();
     if(!name||(models.includes(name)&&!(opt||{}).repeat))return;
     models.push(name); added.push(name);
-    // armour_ug_levels has to stay ascending — the game reads it as "this model
+    // armour_ug_levels has to stay ascending - the game reads it as "this model
     // from this armour level up". So a donor's own level is kept only when it is
     // still above everything here; otherwise the tier goes one past the highest.
     const nums=levels.map(x=>parseInt(x,10)).filter(x=>!isNaN(x));
@@ -1259,7 +1259,7 @@ function edUgRemove(i){
   if(i<levels.length)levels.splice(i,1);
   edSetField('armour_ug_models',models.join(', '));
   if(hadLevels)edSetField('armour_ug_levels',levels.join(', '));
-  // a pending entry that exists only to be this tier has nothing left to be —
+  // a pending entry that exists only to be this tier has nothing left to be -
   // unless the tier was repeated and another slot still names it
   const at=e.newModels.findIndex(n=>n._tier&&n.name===gone);
   if(at>=0&&!models.includes(gone))e.newModels.splice(at,1);
@@ -1269,7 +1269,7 @@ function edUgRemove(i){
 /* -- mode 1: repeat the last tier -- */
 // The SAME entry name again, not a copy of it. armour_ug_models is a list of
 // bmdb entry names, so repeating one gives the unit the armour upgrade in its
-// stats while the model on the field stays exactly as it was — vanilla and DaC
+// stats while the model on the field stays exactly as it was - vanilla and DaC
 // both do it (isengard_bodyguard twice, at levels 3 and 6). Cloning the entry
 // instead would put a second copy of the same meshes and textures in the modeldb
 // for no visible difference.
@@ -1293,7 +1293,7 @@ function edUgNewSpec(srcName){
   if(!src||!d.models.some(m=>m.name===src)){
     toast('No existing model entry to clone this tier from'); return null;}
   // strip an existing tier suffix so tiers stay <stem>_ug1.._ugN rather than
-  // growing one per clone — mods write both `_ug3` and `_upg3`
+  // growing one per clone - mods write both `_ug3` and `_upg3`
   const stem=src.replace(/_u(p)?g\d+$/i,'');
   let n=models.length+1,name=`${stem}_ug${n}`;
   while(d.model_names.includes(name)||e.newModels.some(x=>x.name===name)||models.includes(name))
@@ -1352,7 +1352,7 @@ function edUgUnitBody(){
     <div class="baselist" id="ugUnitList">${rows}</div>
     ${donor}`;
 }
-// Rows only — the filter handler rewrites just this, so typing never loses the
+// Rows only - the filter handler rewrites just this, so typing never loses the
 // caret and the donor's tick list below is left as it is.
 function edUgUnitRows(){
   const e=state.ed,u=e.ug,f=u.f,all=(state.data&&state.data.units)||[];
@@ -1394,7 +1394,7 @@ async function edUgPickUnit(type){
   const get=k=>(((r.fields||[]).find(([l])=>l===k))||['',''])[1];
   u.donor={models:csv(get('armour_ug_models')),levels:csv(get('armour_ug_levels')),
            soldier:(get('soldier').split(',')[0]||'').trim()};
-  // a tier this unit already has is offered but not pre-ticked — importing it
+  // a tier this unit already has is offered but not pre-ticked - importing it
   // would be a deliberate repeat, not something to do by default
   const have=new Set(csv(edFieldVal('armour_ug_models')));
   u.donor.models.forEach((m,i)=>{u.pick[i]=!have.has(m);});
@@ -1440,7 +1440,7 @@ function edUgBrowseHits(){
       all.length===1?'y':'ies'}${hits.length>shown.length
         ? ` · showing the first ${shown.length}, keep typing`:''}</div>`;
 }
-// Only the results are redrawn — re-rendering the tab would take the focus out
+// Only the results are redrawn - re-rendering the tab would take the focus out
 // of the box on every keystroke.
 function edUgFilter(v){
   const e=state.ed; if(!e.ug)return;
@@ -1485,7 +1485,7 @@ function edJumpModel(name){
 }
 // Mode 4 of the ＋ menu: clone `src` (the last tier when unset) into a brand-new
 // entry, add it as the next tier, bump armour_ug_levels, and open the form to
-// give it its own mesh/texture — an upgrade tier pointing at the same files as
+// give it its own mesh/texture - an upgrade tier pointing at the same files as
 // the tier below it is not an upgrade.
 function edAddArmourTier(src){
   const e=state.ed,spec=edUgNewSpec(src);
@@ -1506,12 +1506,12 @@ function edAddArmourTier(src){
    override panel where a faction needs its own skin), and the folder its files
    live in. */
 const TEX_KINDS=['texture','normal','sprite','attach_texture','attach_normal'];
-// the sub-folder the standard layout keeps a model's textures in — mirrors
+// the sub-folder the standard layout keeps a model's textures in - mirrors
 // edit.TEXTURE_SUBDIR, and the two have to agree or the preview lies
 const TEX_SUBDIR='textures';
 const KIND_LABEL={texture:'Texture',normal:'Normal map',sprite:'Sprite (.spr)',
   attach_texture:'Attachment texture',attach_normal:'Attachment normal map'};
-// An attachment has no sprite — the format stores an empty string there — so
+// An attachment has no sprite - the format stores an empty string there - so
 // that slot is never offered.
 const edKinds=m=>['texture','normal','sprite'].concat(
   m.has_attach?['attach_texture','attach_normal']:[]);
@@ -1519,9 +1519,9 @@ const edFacs=m=>((state.ed.mEdits[m.name]||{}).factions)||m.factions;
 // What each faction's slots read right now: the entry's own values, with the
 // edits made in this session on top. Anything equal to the default is *not* sent
 // as an override, so changing a default really does reach every faction that
-// shares it — and only those.
+// shares it - and only those.
 // With a folder move pending, every path shown (and sent) is the one it will
-// have AFTER the move — otherwise the boxes would still read the old folder and
+// have AFTER the move - otherwise the boxes would still read the old folder and
 // send it straight back.
 function edRebase(name,val,kind){
   const me=state.ed.mEdits[name]||{};
@@ -1582,7 +1582,7 @@ function edModelCard(m,idx){
       <span class="grow count">${m.slots.map(esc).join(', ')
         ||(e.bmdb?'<span class="w-warn">nothing references it</span>':'referenced by this unit')}
         · ${m.lods.length} LOD${m.lods.length===1?'':'s'} · ${facs.length} skin${facs.length===1?'':'s'}</span>
-      <button title="Draw this model — its parts, its variants and the skin each
+      <button title="Draw this model - its parts, its variants and the skin each
 faction gets. Reads the .mesh the entry names."
         onclick="event.stopPropagation();v3Open('${q1(esc(e.mod||state.src))}','${q1(esc(m.name))}')"
         >View model</button>
@@ -1613,7 +1613,7 @@ battle_models.modeldb stores it, beside the boxes."
 }
 /* The modeldb pane on the unit editor's Models tab. The BMDB mode has had one
    since Phase 4b; this is the same widget on the same kind, pointed at whichever
-   model card is open — one at a time, because two panes of the same file side by
+   model card is open - one at a time, because two panes of the same file side by
    side is two answers to the same question. */
 async function edModelCv(name){
   const e=state.ed;
@@ -1626,7 +1626,7 @@ async function edModelCv(name){
   await cvLoad(e.mcv);
   if(state.ed===e&&e.mcv&&e.mcvName===name)edRenderTab();
 }
-/* "shared with" — every unit that references this entry, each a link that opens
+/* "shared with" - every unit that references this entry, each a link that opens
    that unit in its own tab. */
 function edSharedDrop(m){
   const users=m.used_by||[],bm=!!state.ed.bmdb;
@@ -1752,7 +1752,7 @@ function edFolderBox(m){
   // `folders` is already collapsed server-side: a model folder and its
   // textures/ sub-folder are ONE folder (that is the layout), and two spellings
   // of the same folder are one folder too. Attachment sets live in `external`
-  // and are never counted — they are shared packs, like sprites.
+  // and are never counted - they are shared packs, like sprites.
   const folders=f.folders||[...new Set((f.mesh_dirs||[]).concat(f.texture_dirs||[]))];
   const ext=f.external_dirs||[];
   const extNote=ext.length?`<div class="count" style="margin-top:4px">Attachment textures live
@@ -1830,7 +1830,7 @@ function edME(name){const e=state.ed;
   if(!e.mEdits[name])e.mEdits[name]={new_name:'',paths:{},copies:[],defaults:{},
     faction_paths:{},factions:null,move_dir:'',move_shared:false,_touched:false};
   return e.mEdits[name];}
-// Only a *touched* entry is sent to the server — opening a card must never
+// Only a *touched* entry is sent to the server - opening a card must never
 // rewrite paths that merely happened to be displayed.
 function edTouch(name){const me=edME(name); me._touched=true; edStale(); return me;}
 function edRename(name,idx,v){
@@ -1930,7 +1930,7 @@ function edAddNewModel(){
   if(at===undefined)e.newModels.push(entry); else e.newModels[at]=entry;
   e.form=null; edRenderTab(); edPreview();
 }
-// Discarding a pending entry has to undo what adding it changed — an armour tier
+// Discarding a pending entry has to undo what adding it changed - an armour tier
 // also wrote armour_ug_models / armour_ug_levels.
 function edDropNew(i){
   const e=state.ed,[gone]=e.newModels.splice(i,1);
@@ -1942,7 +1942,7 @@ function edDropNew(i){
 }
 
 /* ---- preview / save / delete ---- */
-// bmdb mode posts the very same body to the very same planner, minus the unit —
+// bmdb mode posts the very same body to the very same planner, minus the unit -
 // see unittransfer.edit.plan_bmdb.
 const edApi=p=>(state.ed&&state.ed.bmdb?'/api/bmdb/':'/api/edit/')+p;
 async function edPreview(){
@@ -2004,7 +2004,7 @@ async function edSave(){
   const one=edDirty(),two=edCmpDirty(),rec=edRecDirty();
   if(!one&&!two&&!rec){toast('Nothing to save');return;}
   // Both units are planned BEFORE either is written, so a problem with the
-  // second one is found while nothing has been touched — half a save is worse
+  // second one is found while nothing has been touched - half a save is worse
   // than none when the two were being balanced against each other.
   let r=null,cr=null;
   if(one){
@@ -2019,8 +2019,8 @@ async function edSave(){
     if(cr.error){toast(`Error in ${e.cmp.unit}: ${cr.error}`);return;}
     if(cr.errors&&cr.errors.length){toast(`${e.cmp.unit}: ${cr.errors[0]}`);return;}
   }
-  // The recruit pools are a third, independent write — a different file, planned
-  // by the buildings planner — and it is checked here with the other two so a
+  // The recruit pools are a third, independent write - a different file, planned
+  // by the buildings planner - and it is checked here with the other two so a
   // problem in it is found while nothing has been touched.
   if(rec){
     const rp=await api.post('/api/buildings/plan',edRecPayload());
@@ -2060,7 +2060,7 @@ async function edSave(){
     }
     /* The EDB has moved under everything that indexes it. A building line left
        open behind this editor numbers its capability rows against the old file,
-       so its working copy goes — `backToBuilding` then re-reads the line from
+       so its working copy goes - `backToBuilding` then re-reads the line from
        disk rather than splicing against numbers that have shifted. With nothing
        to go back to, the whole overview goes and the next visit re-reads it,
        recruit counts and all; the sidebar filters are rewired with it, since

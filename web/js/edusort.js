@@ -6,7 +6,7 @@
    what the section banners it writes will look like; **Order** lists every unit
    of every section and lets its tier, variant and classification be set from
    there, or the unit dragged to where the sorter should have put it. Nothing is
-   written until Apply, and the whole job is one backup and one Undo entry — see
+   written until Apply, and the whole job is one backup and one Undo entry - see
    unittransfer/edusort.py.
 
    A hand placement is remembered per section and sent back with the next plan,
@@ -16,7 +16,7 @@
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. */
+   index.html - there is no build step and no module system. */
 
 const eduTidy={mod:'',plan:null,view:'clean',sections:[],hand:{},busy:false,
                // per-unit tier / variant / classification, keyed by unit type
@@ -79,8 +79,8 @@ function eduTidySet(k,v){eduTidy.opts[k]=v; eduTidyPlan();}
    live sample, and the sample is the real function: a rule of hyphens is not
    something anybody can picture from "width 96".
 
-   The reader still has to be able to read it back — that is what keeps a
-   cleanup idempotent — so the shape is fixed and only its furniture moves. */
+   The reader still has to be able to read it back - that is what keeps a
+   cleanup idempotent - so the shape is fixed and only its furniture moves. */
 function eduTidyStyleBox(){
   const s=eduTidy.style;
   const fills=['-','=','*','~','#','_','+','.'];
@@ -175,7 +175,7 @@ function eduTidyClean(){
 /* ---- the per-section order screen ----------------------------------------
    This was a row of draggable chips, and dragging was the only thing it could
    do. But the reason a unit is in the wrong place is almost never "the sorter
-   guessed badly at an order" — it is that the unit has no tier, or the wrong
+   guessed badly at an order" - it is that the unit has no tier, or the wrong
    one, or is a bodyguard nothing marked as one. Dragging it papers over that
    for one run; setting the tier fixes it for every run, and for every other
    screen in the toolkit that reads the same marker.
@@ -236,8 +236,8 @@ const eduTidyEdited=(type,key)=>eduTidyMark(type,key)!==null;
 function eduTidyMarkCount(){return Object.keys(eduTidy.marks).length;}
 /* A drop-down changed. Only that ROW is redrawn.
 
-   The list is the whole roster — 916 units on Divide and Conquer, each with
-   three drop-downs — and rebuilding it takes most of a second. Doing that on
+   The list is the whole roster - 916 units on Divide and Conquer, each with
+   three drop-downs - and rebuilding it takes most of a second. Doing that on
    every pick made the list feel broken: the box you had just used was replaced
    under the pointer, and picking three values in a row meant waiting three
    times. Nothing outside the row changes except the count in the footer, so
@@ -296,7 +296,7 @@ function eduTidyRow(section,u){
   const hand=(t.hand[section]||[]).indexOf(u.type)>=0;
   const special=eduTidyVal(u,'special');
   // "detected" says the value in the box is the tool's reading rather than
-  // anyone's decision — the difference matters when you are deciding whether to
+  // anyone's decision - the difference matters when you are deciding whether to
   // trust it.
   const from=(!u.special&&u.detected_special&&special===u.detected_special)
     ? '<span class="count">Detected</span>' : '';

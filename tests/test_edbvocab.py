@@ -1,7 +1,7 @@
 """What a building's ``requires`` clause is allowed to name.
 
 Every condition in the EDB refers to something declared in another file by its
-code name, and a typo there is invisible in game — the building simply never
+code name, and a typo there is invisible in game - the building simply never
 becomes available. So the editor offers checklists instead of a text box, and
 this checks the lists are actually read out of the mod:
 
@@ -9,7 +9,7 @@ this checks the lists are actually read out of the mod:
   * religions, and how many regions follow each
   * hidden resources (declared at the top of the EDB) and which regions carry them
   * events, merged across historic_events.txt, the campaign scripts and the EDB
-    itself — the same event is spelled three different ways in DaC
+    itself - the same event is spelled three different ways in DaC
   * regions, from descr_regions.txt's positional record
 
 Plus the vanilla art pack: a folder of duplicate TGAs in, a manifest and one
@@ -43,7 +43,7 @@ def check(label, cond):
 installed = [m for m in CANDIDATES
              if (MODS / m / "data" / buildings.EDB_REL).exists()]
 if not installed:
-    print(f"no mod with an EDB installed under {MODS} — nothing to test")
+    print(f"no mod with an EDB installed under {MODS} - nothing to test")
     sys.exit(0)
 
 # ---- 1) the vocabulary, per mod --------------------------------------------
@@ -128,7 +128,7 @@ except ImportError:
 
 if Image is not None:
     raw = Path(tempfile.mkdtemp(prefix="ut_van_"))
-    # two cultures, and the same picture under three names — the duplication the
+    # two cultures, and the same picture under three names - the duplication the
     # packer exists to remove
     same = Image.new("RGBA", (12, 9), (10, 20, 30, 255))
     other = Image.new("RGBA", (8, 8), (200, 10, 10, 255))

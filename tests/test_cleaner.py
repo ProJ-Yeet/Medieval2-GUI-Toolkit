@@ -1,8 +1,8 @@
 """Clearing the unit-text cache (`unittransfer.cleaner`) and when it runs.
 
 The tool used to shell out to the mod's "Full Cleaner.bat", which deleted mod
-files the game never rebuilds. It now deletes exactly one file — the compiled
-`data/text/export_units.txt.strings.bin` — and does it for every job unless the
+files the game never rebuilds. It now deletes exactly one file - the compiled
+`data/text/export_units.txt.strings.bin` - and does it for every job unless the
 `clear_strings_bin` setting says otherwise.
 
 Needs no game install: it works on temp folders and a temp settings file.
@@ -92,5 +92,5 @@ check("setting on is overridable per job (batch: last unit only)",
 
 config.CONFIG_DIR, config.SETTINGS_PATH = real_cfg, real_settings
 
-print(f"\n{sum(ok)}/{len(ok)} checks — " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
+print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

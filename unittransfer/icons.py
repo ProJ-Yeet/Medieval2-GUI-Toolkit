@@ -89,7 +89,7 @@ class IconCache:
         if src is None or not Path(src).exists():
             # Not a fault: mods ship the art they changed and leave the rest to
             # the game's own files. The caller says which unit it was asking
-            # about — this layer only ever sees a path, and "(no path)" tells
+            # about - this layer only ever sees a path, and "(no path)" tells
             # nobody anything.
             if src is not None:
                 log.debug("ICON   listed but missing on disk: %s", src)
@@ -126,7 +126,7 @@ def _read_cached(path: Path) -> Optional[bytes]:
     a real filesystem in normal use, but it can end up somewhere a read *fails*:
     a cloud-synced folder hands back ``OSError: [Errno 22]`` for a dehydrated
     placeholder, and a file that is still syncing can read short. Both used to
-    surface as a black unit card — the icon handler catches the error and paints
+    surface as a black unit card - the icon handler catches the error and paints
     a blank, so the grid filled up with nothing and looked like a failed
     conversion. Treating it as a miss re-decodes from the mod's own TGA instead,
     which is the one copy that is always there.

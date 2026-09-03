@@ -5,7 +5,7 @@ Covers:
   * engine block parsing: model groups, skeletons, file refs, attack_stat projectiles
   * texture extraction from a .mesh binary (the paths exist in NO text file)
   * a plan ADDS the engine block, its skeleton entries, its files and its baked textures
-  * vanilla references (absent from the source) are reported, not copied — and the
+  * vanilla references (absent from the source) are reported, not copied - and the
     "destination overrides a vanilla file" case is flagged
   * a name collision RENAMES the engine and repoints the EDU `engine` field
   * apply writes all three engine files; undo restores them byte-exact
@@ -13,7 +13,7 @@ Covers:
   * include_engine=False ports nothing
   * regression: `engine`/`mounted_engine` no longer leak into missing_models
   * mounted engines: `class` (not engine_skeleton) names the descr_engine_skeleton
-    entry — added when the destination lacks it, kept + flagged when it already
+    entry - added when the destination lacks it, kept + flagged when it already
     exists, never renamed; the reference_points file is copied
 
     python -m tests.test_engines
@@ -116,7 +116,7 @@ check("file_refs covers refpoints+bonemaps+collision+meshes, deduped",
                "siege_engines/bonemaps/huge_bombard_destroy.xml"])
 
 # Both test mods happen to give every culture's tower its own type name, but the
-# format allows one type to span several culture/variant blocks — a lookup has to
+# format allows one type to span several culture/variant blocks - a lookup has to
 # return all of them or the engine only half-exists in the destination.
 multi = engines.parse_text(
     "type\tsiege_tower\nculture\tdwarves\nvariant\tsmall\n"
@@ -410,7 +410,7 @@ dr = fresh_dest()
 ref = "siege_engines/Elephant_cannon_lod0.modelReferencePoints"
 srcref = TATR / "data" / ref
 made = not srcref.exists()
-if made:                                   # vanilla file — stand one in to prove the copy
+if made:                                   # vanilla file - stand one in to prove the copy
     srcref.parent.mkdir(parents=True, exist_ok=True)
     srcref.write_bytes(b"REFPOINTS")
 try:
@@ -443,5 +443,5 @@ check(f"all {len(siege)} siege units plan with no bogus missing models", not bad
 shutil.rmtree(dr, ignore_errors=True)
 
 shutil.rmtree(cfg, ignore_errors=True)
-print(f"\n{sum(ok)}/{len(ok)} checks — " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
+print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

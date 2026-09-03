@@ -63,7 +63,7 @@ def _card_folder(u):
 
 
 # A normal (non-mercenary) unit with real models whose card is NOT already in the
-# mercs folder — otherwise "icon retargeted to mercs" would pass for free.
+# mercs folder - otherwise "icon retargeted to mercs" would pass for free.
 UNIT = next(u.type for u in src.edu.units
             if not u.mercenary_unit and u.attributes
             and src.modeldb.get(u.soldier_model)

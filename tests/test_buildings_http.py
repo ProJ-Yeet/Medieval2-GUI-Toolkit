@@ -1,4 +1,4 @@
-"""Buildings mode over HTTP — exactly the calls the browser page makes.
+"""Buildings mode over HTTP - exactly the calls the browser page makes.
 
 Runs a real server against a throwaway MED2 root (one mini mod holding only the
 EDB, its localisation and the unit files a recruit pool points at) and drives
@@ -47,7 +47,7 @@ def head(path):
 
 
 if SOURCE is None:
-    print(f"no mod with an EDB installed under {MODS} — nothing to test")
+    print(f"no mod with an EDB installed under {MODS} - nothing to test")
     sys.exit(0)
 print(f"source mod: {SOURCE.name}")
 
@@ -91,7 +91,7 @@ try:
           all(v in ("mod", "vanilla", "") for l in ov["lines"]
               for a in l["art"].values() for v in a.values()))
 
-    # a line with recruit pools — the one the editor is actually for
+    # a line with recruit pools - the one the editor is actually for
     line = next(l for l in ov["lines"] if l["recruit_count"])
     print(f"  line={line['name']!r} ({line['level_count']} levels, "
           f"{line['recruit_count']} units)")
@@ -206,7 +206,7 @@ try:
               and c["pool"]["per_turn"] == "0.9" for c in rlvl["capabilities"]))
 
     # What the page does after a save: re-read the line and rebuild the form from
-    # it. Saving again from that must be a no-op — otherwise every visit to a
+    # it. Saving again from that must be a no-op - otherwise every visit to a
     # building would rewrite it. (Re-posting the OLD body would legitimately add
     # a second copy of the new pool: its `line: null` means "append one".)
     fresh = post("/api/buildings/apply",

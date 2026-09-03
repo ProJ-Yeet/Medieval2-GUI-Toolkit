@@ -1,6 +1,6 @@
 """Phase 14b: the log is paged, and it records what the person did too.
 
-Two halves of one complaint — "opening the log lags a lot, up to a few minutes"
+Two halves of one complaint - "opening the log lags a lot, up to a few minutes"
 and "the logs don't seem to be displaying everything honestly":
 
   * :func:`server.log_page` answers with a WINDOW of the log instead of all of
@@ -169,5 +169,5 @@ import shutil                                                        # noqa: E40
 shutil.rmtree(cfg, ignore_errors=True)
 config._JSON_CACHE.clear()
 
-print(f"\n{sum(ok)}/{len(ok)} checks — " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
+print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

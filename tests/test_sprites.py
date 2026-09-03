@@ -1,4 +1,4 @@
-"""Sprites mode — generation prep, the conversion chain, dedup and wire-up.
+"""Sprites mode - generation prep, the conversion chain, dedup and wire-up.
 
 Self-contained: the codec, naming and CFG cases build their own fixtures, so this
 runs without any mod installed. The audit/scan cases use a throwaway copy of a
@@ -37,7 +37,7 @@ def check(label, cond):
 
 
 def make_tga(path: Path, w=32, h=32) -> None:
-    """A minimal uncompressed 32-bit TGA — what the generator emits."""
+    """A minimal uncompressed 32-bit TGA - what the generator emits."""
     hdr = struct.pack('<BBBHHBHHHHBB', 0, 0, 2, 0, 0, 0, 0, 0, w, h, 32, 8)
     px = bytearray()
     for y in range(h):
@@ -179,7 +179,7 @@ else:
                  mod_root / "data/unit_models/battle_models.modeldb")
     mod = Mod(mod_root)
 
-    # A real entry with at least two factions, so dedup has something to do —
+    # A real entry with at least two factions, so dedup has something to do -
     # and preferably two whose sprite lines ALREADY follow
     # `<faction>_<model>_sprite`, because three checks below are about the
     # wire-up reproducing such a line untouched. Most records in a real mod do
@@ -263,7 +263,7 @@ else:
         check("reproduces an already-correct line byte-exact", want == existing)
     else:
         print(f"  [ -- ] this entry's line is {existing!r}, not the generated "
-              f"{want!r} — a shared sprite, which the wire-up would repoint")
+              f"{want!r} - a shared sprite, which the wire-up would repoint")
 
     from unittransfer import edit as edit_mod
     req = edit_mod.bmdb_request_from_dict({"model_edits": edits})
@@ -290,7 +290,7 @@ else:
 
     # --- audit resolves the freshly installed sprite against the modeldb.
     # The donor's line already names this file, so it lands in `ok`, not in
-    # `orphans` — an orphan here would mean the naming contract was broken.
+    # `orphans` - an orphan here would mean the naming contract was broken.
     a = sprites.audit(mod)
     stem = sprites.sprite_stem(real_faction, real_model).lower()
     if conventional:
@@ -301,7 +301,7 @@ else:
                   for r in a.ok))
     else:
         print("  [ -- ] the modeldb line does not name the generated file, so the "
-              "audit is right to call it an orphan — nothing of ours to assert")
+              "audit is right to call it an orphan - nothing of ours to assert")
 
     shutil.rmtree(root, ignore_errors=True)
 

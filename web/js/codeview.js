@@ -1,16 +1,16 @@
-/* codeview.js — the shared two-pane widget: the boxes on one side, the file's
+/* codeview.js - the shared two-pane widget: the boxes on one side, the file's
    own text on the other.
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it.
 
    ======================= CODE VIEW =======================
    Built once, adopted by every editor. A GUI hides the file, which is fine
-   until the moment you need to know what the file actually says — then it is
+   until the moment you need to know what the file actually says - then it is
    the whole problem. So each editor can show the record's real text beside its
    boxes, with the two kept in step:
 
@@ -18,7 +18,7 @@
      * edit a box, the text is re-serialised by the server and redrawn;
      * edit the text, the server re-reads it and the boxes follow;
      * text the parser rejects shows the reason on the offending line and
-       changes nothing — the last good state is still there to save.
+       changes nothing - the last good state is still there to save.
 
    THE PAGE NEVER PARSES A GAME FILE. Every arrow above goes through
    `unittransfer/codeview.py`, which uses the same parser and the same
@@ -26,15 +26,15 @@
    rather than a guess: what it shows is the bytes a save would write.
 
    A host (the editor adopting the widget) supplies:
-     kind      'edu' | 'edb' | 'bmdb' — the file shape, matching a KINDS entry
+     kind      'edu' | 'edb' | 'bmdb' - the file shape, matching a KINDS entry
                on the server
      mod, id   which record to load
      edits()   the GUI's pending edits, in whatever shape that kind's save
-               request already uses — the pane and the save then take the same
+               request already uses - the pane and the save then take the same
                road, which is what makes the pane a promise
      adopt(cv) the user typed in the text pane and it parsed: take cv.fields /
                cv.detail as the new truth
-     refreshGui()  redraw the GUI side only (never the text pane — the caret is
+     refreshGui()  redraw the GUI side only (never the text pane - the caret is
                in it)
      label(el) which field the hovered element is, and find(label) the reverse.
                Optional: the default reads data-label / data-card, which is all
@@ -58,7 +58,7 @@ function cvLh(cv){
 }
 let CV_SEQ = 0;                   // unique DOM ids when two views are open at once
 /* Live views by uid. An onclick attribute in the pane's own markup can only
-   carry a string, and the pane must not assume it belongs to any one editor —
+   carry a string, and the pane must not assume it belongs to any one editor -
    so it looks itself up here rather than reaching into `state.ed` or `state.bld`. */
 const CV_LIVE = {};
 const cvOf = uid => CV_LIVE[uid];
@@ -66,13 +66,13 @@ const cvOf = uid => CV_LIVE[uid];
 function cvCreate(o){
   CV_SEQ += 1;
   const cv = {kind:o.kind||'edu', mod:o.mod, id:o.id, uid:'cv'+CV_SEQ, host:o,
-    // `base` is the text a save would start from — the file's block until the
+    // `base` is the text a save would start from - the file's block until the
     // user hand-edits it, theirs afterwards. `text` is what the box holds right
     // now, which during typing is ahead of the last successful parse.
-    // what the file is called, for the status line — the host knows (an EOP
+    // what the file is called, for the status line - the host knows (an EOP
     // unit's block is not in export_descr_unit.txt at all)
     where:o.where||'the file',
-    // Some records are not editable AS TEXT — a voice entry only means anything
+    // Some records are not editable AS TEXT - a voice entry only means anything
     // under the accent/class headers above it, which the block does not contain.
     // The pane still earns its place: it says what the file actually holds.
     readonly:!!o.readonly,
@@ -82,11 +82,11 @@ function cvCreate(o){
     base:'', pristine:'', text:'', fields:[], spans:{}, partSpans:{}, note:'',
     detail:null,
     // the comment-only lines this view is not showing, and how to put them
-    // back — opaque to the page, see codeview.py's hide_comments
+    // back - opaque to the page, see codeview.py's hide_comments
     hidden:[], canHide:false, comments:0,
     // the layout was lined up when the record opened, and this is the text that
     // produced. A host tells "the tool did that" from "the user did that" by
-    // comparing against it — see edCvUserEdited.
+    // comparing against it - see edCvUserEdited.
     auto:null,
     err:null, errLine:0, busy:false, edited:false, loaded:false, canRepair:false,
     canTidy:false, timer:null, seq:0, applying:false,
@@ -101,7 +101,7 @@ function cvCreate(o){
    Both are on by default, and both are why the pane is worth opening on a real
    mod's file: a hand-written EDU block is a ragged mix of tabs and spaces with
    the faction distinguishers written in among the fields, and reading down a
-   value column is not possible in it. Neither changes a byte on its own — see
+   value column is not possible in it. Neither changes a byte on its own - see
    cvAutoTidy for what "the tool lined it up" does and does not count as. */
 const cvTidyOn=()=>((state.settings||{}).code_view_tidy!==false);
 const cvHideOn=()=>((state.settings||{}).code_view_comments!=='show');
@@ -136,13 +136,13 @@ function cvTakeView(cv,r){
 }
 /* Line the record up the moment it opens.
 
-   The button this grew out of was explicit on purpose — a layout the user wrote
-   is theirs — and that rule survives in what this does NOT do. The fields are
+   The button this grew out of was explicit on purpose - a layout the user wrote
+   is theirs - and that rule survives in what this does NOT do. The fields are
    identical (only the gap between a keyword and its value moved), so the boxes
    are not rebuilt from it and nothing pending in them is thrown away; and the
    host is told the result is the TOOL's (`cv.auto`), so merely opening the pane
    does not make the dialog dirty. From the first real change on, the save writes
-   this text — which is what keeps the pane a promise rather than a picture. */
+   this text - which is what keeps the pane a promise rather than a picture. */
 async function cvAutoTidy(cv){
   if(!cv.loaded||cv.err||!cv.canTidy||cv.readonly||!cvTidyOn())return cv;
   let r;
@@ -264,8 +264,8 @@ function cvRedrawLines(cv){
 /* Grow the pane to hold the whole record, so it never scrolls.
 
    Raw-lines mode puts one box per EDU line beside the file's own lines and the
-   promise is row for row. Two scrollers cannot keep that promise — the moment
-   either moves, row n is no longer opposite line n — so both sides are fully
+   promise is row for row. Two scrollers cannot keep that promise - the moment
+   either moves, row n is no longer opposite line n - so both sides are fully
    expanded and the dialog is the only thing that scrolls. */
 function cvExpand(cv,on){
   const pane=document.getElementById('cvp-'+cv.uid);
@@ -301,7 +301,7 @@ function cvDebounce(cv,fn,ms,what){
   cv.pending=what;
   cv.timer=setTimeout(()=>{cv.timer=null;cv.pending='';fn();},ms);
 }
-/* Anything about to ACT on the record — Probe, Save — must wait for the last
+/* Anything about to ACT on the record - Probe, Save - must wait for the last
    keystroke to have been read. The debounce means `base` can be a quarter of a
    second behind what the box shows, and saving that would quietly drop the
    user's last word. A pending render is simply dropped instead: it only redraws
@@ -355,7 +355,7 @@ function cvTook(cv,r,text){
 /* ---- put right what the format keeps in the text but nobody should type ----
    Only the modeldb has any: every string there is `<length> <text>`, so editing
    a path means editing a number nobody can be asked to count. The button is
-   explicit and the corrected numbers appear on screen — nothing is fixed behind
+   explicit and the corrected numbers appear on screen - nothing is fixed behind
    the user's back. */
 async function cvRepair(cv){
   const text=cv.text,before=cv.text;
@@ -439,7 +439,7 @@ function cvPaintErrLine(cv){
 }
 
 /* ---- Ctrl+Z / Ctrl+Y inside the text pane ------------------------------
-   The pane is a textarea, so the browser had its own undo for it — until this
+   The pane is a textarea, so the browser had its own undo for it - until this
    page took the keystroke away. undo.js listens on the document and, whenever
    an editor is open, calls preventDefault and restores a snapshot of that
    editor's BOXES. Typing in the pane is not in those snapshots, so Ctrl+Z there
@@ -452,7 +452,7 @@ function cvPaintErrLine(cv){
 
    * A text change nobody typed re-baselines the stack (`cvUndoInit`): the boxes
      writing the text is the BOXES' step, and undo.js owns that one.
-   * An empty stack means "not mine" — the handler below returns without
+   * An empty stack means "not mine" - the handler below returns without
      touching the event, so undo.js runs next and takes back the box edit. Undo
      therefore walks back through the pane's typing first and then out into the
      editor around it, which is the order the edits were made in.
@@ -544,7 +544,7 @@ async function cvRender(cv){
   if(box&&document.activeElement!==box)box.value=cv.text;
   // The boxes wrote this, so it is THEIR undo step, not the pane's. Re-baselining
   // empties the pane's stack, and an empty stack is what hands Ctrl+Z back to the
-  // editor's own — see cvUndoStep.
+  // editor's own - see cvUndoStep.
   cvUndoInit(cv);
   cvRedrawLines(cv); cvPaintStatus(cv);
 }
@@ -565,7 +565,7 @@ function cvLineAtY(cv,ta,clientY){
   const n=Math.floor((clientY-r.top-CV_PAD+ta.scrollTop)/cvLh(cv))+1;
   return (n>=1&&n<=cvLines(cv.text).length)?n:0;
 }
-/* Light the file's line(s) for these labels — called when a box is hovered.
+/* Light the file's line(s) for these labels - called when a box is hovered.
 
    `part` is the index of ONE value on the line, which is what the guided editor
    hovers: `stat_pri 14, 4, no, 0, 0, melee, …` is eleven settings, and lighting
@@ -640,7 +640,7 @@ function cvLitGui(cv,labels){
   const find=cv.host.find||cvDefaultFind;
   labels.forEach(l=>(find(l)||[]).forEach(el=>el.classList.add('cvlit')));
 }
-/* The GUI side's hover, bound by delegation on whatever box holds the rows —
+/* The GUI side's hover, bound by delegation on whatever box holds the rows -
    they are rebuilt constantly (every keystroke in guided mode redraws a card),
    and a listener per row would be re-attached each time or, worse, forgotten.
 
@@ -673,7 +673,7 @@ function cvBindHover(cv,hostEl){
     if(key!==cv.hovLabel){cv.hovLabel=key; cvPaintSpans(cv,ls,part);}
   };
   el.onmouseleave=()=>{cv.hovLabel=''; cvPaintSpans(cv,[]);};
-  // clicking a row's name scrolls the file to it — a 60-line record does not fit
+  // clicking a row's name scrolls the file to it - a 60-line record does not fit
   el.onclick=ev=>{
     const lab=ev.target.closest&&ev.target.closest('label,.gfhead .k,.k,h4');
     if(!lab)return;

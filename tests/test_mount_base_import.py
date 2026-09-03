@@ -1,13 +1,13 @@
 """“Mount from the base unit” now brings the SOURCE unit's mount across.
 
 Picking a base unit is about the destination having the animations, not about
-wanting a different horse — so with `import_mount_with_base` (on by default) a
+wanting a different horse - so with `import_mount_with_base` (on by default) a
 mounted transfer whose `mount_from` is "base" still copies:
 
   * the source's descr_mount.txt block, and
   * the mount's battle_models.modeldb entry,
 
-and takes only the ANIMATION SET from the base unit's mount — and only where the
+and takes only the ANIMATION SET from the base unit's mount - and only where the
 skeletons the source entry asks for are missing from the destination's modeldb,
 which is the one part of a mount that copying files cannot fix.
 
@@ -141,8 +141,8 @@ src_entry = src.modeldb.get(mount_model)
 before = Mod(dest_root)          # re-read: apply_transfer wrote the file
 donor = before.modeldb.get((before.mount_model(base.mount) or "").lower())
 # The copy is looked up under the name it ENDED with, not the one it arrived
-# with. A destination that already owns an entry of that name keeps its own —
-# DaC has its own `mount_sauron` — and the incoming one is renamed out of the
+# with. A destination that already owns an entry of that name keeps its own -
+# DaC has its own `mount_sauron` - and the incoming one is renamed out of the
 # way, so `mount_model` here would find the destination's untouched entry and
 # report the swap as having silently not happened.
 final_model = (before.mount_model(new_unit.mount) or mount_model).lower()
@@ -155,7 +155,7 @@ check("the copied entry now uses the base mount's skeletons",
       copied is not None and copied.skeletons() == donor.skeletons())
 check("...which is not what it arrived with",
       copied is not None and copied.skeletons() != src_entry.skeletons())
-check("it is still its own model — same meshes (relocated, not replaced)",
+check("it is still its own model - same meshes (relocated, not replaced)",
       copied is not None and [m.rsplit("/", 1)[-1] for m, _d in copied.lods]
       == [m.rsplit("/", 1)[-1] for m, _d in src_entry.lods])
 check("those skeletons are no longer reported missing",

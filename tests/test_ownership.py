@@ -1,4 +1,4 @@
-"""Faction skin coverage — 🛡 Fix ownership and 🌐 All factions.
+"""Faction skin coverage - 🛡 Fix ownership and 🌐 All factions.
 
 A modeldb entry carries one texture record per faction and the game reads the
 record for the faction whose army is on the field, so an entry with no record for
@@ -10,15 +10,15 @@ Built on a mod this file writes from scratch. Covers:
 
   * which factions an entry *should* have, read off the units: every model slot
     counts (`soldier`, `officer`, `armour_ug_models`), `slave` counts, and an
-    ownership token the faction roster does not define does NOT — it is reported
+    ownership token the faction roster does not define does NOT - it is reported
     instead, because a culture name written into the modeldb is a skin no faction
     reads;
   * `mode="all"`, which takes the answer from the roster instead;
   * the write: records are only ever ADDED, a new one is a clone of an existing
     record (same texture paths), the group counts are bumped to match, and the
     entry re-parses;
-  * an entry with no texture record at all is left alone — there is nothing to
-    clone from — and one already covered is not touched;
+  * an entry with no texture record at all is left alone - there is nothing to
+    clone from - and one already covered is not touched;
   * undo restores the modeldb byte-exact.
 
     python -m tests.test_ownership
@@ -67,7 +67,7 @@ EDU = "\n".join([
     "armour_ug_models\tshared_ug",
     "ownership\tengland, france",
     "",
-    # spain only, same soldier entry — so `shared` needs three factions in all
+    # spain only, same soldier entry - so `shared` needs three factions in all
     "type\t\tbeta unit",
     "dictionary\tbeta",
     "category\tinfantry",
@@ -84,7 +84,7 @@ EDU = "\n".join([
     "soldier\t\trebel_model, 60, 0, 1.2",
     "ownership\tslave",
     "",
-    # ownership naming something the roster does not define — reported, never written
+    # ownership naming something the roster does not define - reported, never written
     "type\t\tdelta unit",
     "dictionary\tdelta",
     "category\tinfantry",
@@ -100,7 +100,7 @@ def _s(v: str) -> str:
     return f"{len(v)} {v}"
 
 
-#: The vanilla ``blank`` sentinel a modeldb opens with — the name, then 39
+#: The vanilla ``blank`` sentinel a modeldb opens with - the name, then 39
 #: reserved ints. Present on purpose: a file WITHOUT one makes the game pad its
 #: first real entry with eight extra int pairs (``ModelEntry.first_entry_pad``),
 #: and a fixture that tripped over that would be testing the reader, not this.
@@ -111,7 +111,7 @@ def entry_text(name, factions, texture="unit_models/x/textures/x.texture"):
     """One modeldb entry: one LOD, one texture group and one attachment group.
 
     Hand-written in the file's own format rather than serialised, because there
-    is no serialiser — entries are kept verbatim — and because the whole point of
+    is no serialiser - entries are kept verbatim - and because the whole point of
     the code under test is that it keeps every ``<length>`` right when it adds a
     record. A fixture built by the writer could not catch the writer being wrong.
     """
@@ -130,9 +130,9 @@ def entry_text(name, factions, texture="unit_models/x/textures/x.texture"):
 
 
 ENTRIES = [
-    # short of `spain` (beta unit's ownership) — the headline case
+    # short of `spain` (beta unit's ownership) - the headline case
     ("shared", ["england", "france"]),
-    # short of `france` — an armour upgrade tier is drawn on the field too
+    # short of `france` - an armour upgrade tier is drawn on the field too
     ("shared_ug", ["england"]),
     # an officer model is drawn on the field too, and this one has only england
     ("officer_model", ["england"]),
@@ -140,7 +140,7 @@ ENTRIES = [
     ("rebel_model", ["england"]),
     # already covered: nothing should touch it
     ("culture_model", ["england"]),
-    # nothing is drawn with it — "units" mode has nothing to say, "all" does
+    # nothing is drawn with it - "units" mode has nothing to say, "all" does
     ("orphan_model", ["england"]),
 ]
 
@@ -177,7 +177,7 @@ print("\n== which factions the units ask for ==")
 want = bmdb.unit_factions(mod)
 check("a soldier entry collects every owner of every unit that names it",
       sorted(want["shared"]) == ["england", "france", "spain"])
-check("an armour upgrade tier counts — it is drawn on the field",
+check("an armour upgrade tier counts - it is drawn on the field",
       sorted(want["shared_ug"]) == ["england", "france"])
 check("so does an officer", sorted(want["officer_model"]) == ["spain"])
 check("slave counts: it is the generic rebel skin, not a placeholder",
@@ -244,7 +244,7 @@ after = mod.modeldb.by_name()
 check("the entry now has the record",
       [t.faction for t in after["shared"].main_textures]
       == ["england", "france", "spain"])
-check("the attachment group got it too — both groups or neither",
+check("the attachment group got it too - both groups or neither",
       [t.faction for t in after["shared"].attach_textures]
       == ["england", "france", "spain"])
 check("the new record is a clone: same texture path as the ones beside it",
@@ -259,7 +259,7 @@ check("the entry that was already covered is untouched",
 check("so is the one no unit is drawn with",
       [t.faction for t in after["orphan_model"].main_textures] == ["england"])
 check("the file still holds every entry", len(after) == len(ENTRIES))
-check("the length prefixes are still right — the file re-parses from disk",
+check("the length prefixes are still right - the file re-parses from disk",
       modeldb.parse_file(mod.modeldb_path).by_name()["shared"].main_textures[2].faction
       == "spain")
 
@@ -289,5 +289,5 @@ check("mode=all adds nothing without one", noroster["row_count"] == 0)
 check("and reports no unknown tokens, since it cannot tell",
       noroster["unknown_ownership"] == [])
 
-print(f"\n{sum(ok)}/{len(ok)} checks — {'ALL PASSED' if all(ok) else 'FAILURES ABOVE'}")
+print(f"\n{sum(ok)}/{len(ok)} checks - {'ALL PASSED' if all(ok) else 'FAILURES ABOVE'}")
 sys.exit(0 if all(ok) else 1)

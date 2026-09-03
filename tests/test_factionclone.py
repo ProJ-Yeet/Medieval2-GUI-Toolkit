@@ -2,7 +2,7 @@
 
 Run:  python -m tests.test_factionclone
 
-Every cloner is measured on the mod's own bytes and the result is thrown away —
+Every cloner is measured on the mod's own bytes and the result is thrown away -
 the plan is computed but never applied, so this reads the mods and leaves them
 exactly as it found them.
 
@@ -16,8 +16,8 @@ The four things worth proving, because each one was a real bug first:
   rather than merely "it did not crash".
 * **the line endings survive.** The two cloners that *did* fire ate the ``\\r``
   and left the file half CRLF and half LF.
-* **the clone is bounded.** ``descr_names.txt`` once cloned 10,000 lines — every
-  faction from the donor to the end of the file — because the section-end
+* **the clone is bounded.** ``descr_names.txt`` once cloned 10,000 lines - every
+  faction from the donor to the end of the file - because the section-end
   pattern never matched. So the added line count is compared against the
   donor's own section, not just checked for being positive.
 * **nothing else moves.** Removing the clone's own added lines has to give back
@@ -106,13 +106,13 @@ for rel, edit in written.items():
 
     # Two shapes of clone, and they have to be judged differently.
     #
-    # Most files gain WHOLE LINES and no existing line may move — take the new
+    # Most files gain WHOLE LINES and no existing line may move - take the new
     # ones out and the original comes back exactly.
     #
     # `ownership` and `descr_character`'s `faction` are the exception by design:
     # the block underneath is shared by everyone named on the line, so the clone
     # JOINS the line. There the rule is that every rewritten line is the old one
-    # with nothing but the clone appended — no faction dropped, none reordered.
+    # with nothing but the clone appended - no faction dropped, none reordered.
     import difflib
     b, a = before.split(want), after.split(want)
     ops = difflib.SequenceMatcher(None, b, a, autojunk=False).get_opcodes()
@@ -137,7 +137,7 @@ for rel, edit in written.items():
         continue
     if not joins:
         kept = [ln for tag, i1, i2, _, _ in ops if tag == "equal" for ln in b[i1:i2]]
-        check(f"{rel}: only added lines — nothing removed or rewritten "
+        check(f"{rel}: only added lines - nothing removed or rewritten "
               f"({len(a) - len(b)} added)", not lost and not edited and kept == b)
         continue
     bad = []
@@ -241,7 +241,7 @@ check("the campaign gap is reported rather than guessed at",
       any("descr_strat" in n for n in plan.notes))
 
 # The EDB clauses are what let a faction build and recruit, so a clone that
-# misses them is a faction that can do neither — worth its own check rather than
+# misses them is a faction that can do neither - worth its own check rather than
 # being one row among twelve.
 edb = written.get("export_descr_buildings.txt")
 if edb:
@@ -252,7 +252,7 @@ if edb:
           >= edb.count)
 
 # What is NOT cloned has to be named, or it is a silent gap rather than a
-# reported one — the whole difference this module claims to make.
+# reported one - the whole difference this module claims to make.
 check(f"the files that name the donor as a judgement are listed "
       f"({len(plan.review)})",
       all(set(r) == {"rel", "hits"} and r["hits"] > 0 for r in plan.review))
@@ -260,7 +260,7 @@ check("none of them is a file the cloner also writes",
       not ({r["rel"] for r in plan.review} & set(written)))
 if plan.review:
     # The division of labour: `review` carries the files, a note explains why
-    # they are left out. The note must NOT re-list them — the dialog draws both
+    # they are left out. The note must NOT re-list them - the dialog draws both
     # and saying it twice reads as noise.
     check("a note explains why they are left out",
           any("decision rather than a list" in n for n in plan.notes))

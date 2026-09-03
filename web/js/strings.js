@@ -1,15 +1,15 @@
-/* strings.js — Strings mode: the compiled .txt.strings.bin files, read and written
+/* strings.js - Strings mode: the compiled .txt.strings.bin files, read and written
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
 /* ======================= STRINGS MODE =======================
    Every piece of text the game shows lives in data/text as a pair: a .txt anyone
    can read, and a .strings.bin the game compiled from it. **The game reads the
-   .bin.** Edit the .txt and nothing changes on screen until the .bin agrees —
+   .bin.** Edit the .txt and nothing changes on screen until the .bin agrees -
    which is where "delete the .bin and let the game rebuild it" comes from, and
    why a mod can sit for years showing text its own .txt has not said in months.
 
@@ -19,7 +19,7 @@
    recompiles the whole archive from the text file beside it, for when the .txt
    is the one that is right.
 
-   Rows are filtered on the SERVER (see unittransfer/strings.py) — names.txt runs
+   Rows are filtered on the SERVER (see unittransfer/strings.py) - names.txt runs
    to 20 757 entries and shipping all of them so the browser can hide 20 000 is
    how a local tool starts feeling like a website.
 
@@ -60,10 +60,34 @@ function renderStrings(){
   </div>`;
 }
 
+/* "<name>.txt is newer" is a comparison of two file dates, and on its own it
+   reads like an accusation without saying what was done. What it means is one
+   specific thing: the plain-text file was saved AFTER the .bin beside it was
+   last compiled, and the game reads the .bin. So anything the .txt has been
+   made to say since then is not on screen in the game, and will not be until
+   something compiles it across.
+
+   That is a fact worth showing and almost never a fault: hand-editing the .txt
+   and never rebuilding is how most mods are written, and copying files in the
+   wrong order does it too. Nothing is broken by it, so the wording stays a
+   quiet warning colour and the whole explanation hangs off a ? rather than
+   crowding a list of forty files. */
+const STR_STALE_HELP =
+  'The game does not read the .txt. It reads the compiled .strings.bin beside '
+  + 'it, and this mod saved the .txt more recently than the .bin was built. So '
+  + 'whatever the .txt has been made to say since then is not on screen in the '
+  + 'game yet. That is usually just how the mod was written, not a fault. The '
+  + 'rows here are the .bin’s real contents: edit them and the game says '
+  + 'the new thing on the next launch, with nothing to rebuild. Use '
+  + '⟳ Rebuild from .txt only when the .txt is the version you want to '
+  + 'keep, because it compiles the whole text file over this archive.';
+
 function strFileRow(f){
   const on = state.str.file === f.rel;
   const state_ = f.error ? `<span class="w-bad">unreadable</span>`
-    : f.stale ? `<span class="w-warn">${esc(f.txt)} is newer</span>`
+    : f.stale ? `<span class="w-warn"
+        title="${esc(f.txt)} was saved after this .strings.bin was built, and the game reads the .bin.">${
+        esc(f.txt)} is newer than this .bin</span>${qm(STR_STALE_HELP, 'What “is newer” means')}`
     : f.txt ? `<span class="count">${esc(f.txt)}</span>`
     : `<span class="count">No .txt beside it</span>`;
   return `<button class="strfile${on?' on':''}" onclick="strOpen('${q1(esc(f.rel))}')">
@@ -187,7 +211,7 @@ function strMore(){
 
 /* ---- one entry as the .txt writes it ----
    The archive is binary, but an entry is exactly the `{tag}text` line of the
-   .txt beside it, so that is what the Code View shows — the format modders
+   .txt beside it, so that is what the Code View shows - the format modders
    already write, not a decoded stand-in. */
 function strCode(id){
   const s = state.str;
@@ -230,7 +254,7 @@ async function strCodeModal(cv, row){
   const pane = document.getElementById('strCvPane');
   if(pane){ pane.innerHTML = cvHtml(cv); cvWire(cv); }
   // cvLoad shows what is ON DISK. If this row already has an unsaved edit, the
-  // pane would be showing a different string from the box right above it — so
+  // pane would be showing a different string from the box right above it - so
   // re-render it from the pending value, through the same writer a save uses.
   if(cv.detail && cv._value !== cv.detail.value){ await cvRender(cv); cvRedrawLines(cv); }
 }

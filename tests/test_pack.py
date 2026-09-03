@@ -1,6 +1,6 @@
 """Unit packs: export to a zip, and import it as an ordinary transfer source.
 
-A pack is a miniature mod, and that is the whole claim being tested here — not
+A pack is a miniature mod, and that is the whole claim being tested here - not
 that some bespoke import routine works, but that the zip round-trips into
 something :func:`unittransfer.transfer.plan_transfer` treats like any other
 source. Checked:
@@ -9,7 +9,7 @@ source. Checked:
     only files that actually exist
   * the written zip holds the four files a mod is made of, and nothing outside
     ``data/`` except the manifest and the README
-  * the EDU and modeldb inside carry ONLY the packed units/entries — a pack that
+  * the EDU and modeldb inside carry ONLY the packed units/entries - a pack that
     quietly shipped the whole source mod would be 400 MB and would overwrite the
     receiving mod if anyone unzipped it by hand
   * reading it back gives the same units, with the manifest intact
@@ -186,5 +186,5 @@ else:
 shutil.rmtree(tmp, ignore_errors=True)
 shutil.rmtree(cfg, ignore_errors=True)
 bad = ok.count(False)
-print(f"\n{len(ok) - bad}/{len(ok)} checks — " + ("ALL PASSED" if not bad else "SOME FAILED"))
+print(f"\n{len(ok) - bad}/{len(ok)} checks - " + ("ALL PASSED" if not bad else "SOME FAILED"))
 sys.exit(1 if bad else 0)

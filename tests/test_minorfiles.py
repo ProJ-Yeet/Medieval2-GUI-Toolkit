@@ -7,11 +7,11 @@ one back byte for byte.
 
 What is specific to these five, and what each part is here to catch:
 
-  * **a religion's key is ``pip_path``, inside a brace block** — not the
+  * **a religion's key is ``pip_path``, inside a brace block** - not the
     reference tool's ``icon`` / ``pip`` / ``anti_pip``, none of which appears in
     any real file. Its serialiser also drops the braces and the ``religions { … }``
     list, which is a file the engine cannot read at all.
-  * **a resource's model line is ``item``, not ``model``** — same failure.
+  * **a resource's model line is ``item``, not ``model``** - same failure.
   * **a rebel ``unit`` line is a unit type and nothing else.** Their serialiser
     appends ``, 1, 1``; no real ``unit`` line has a comma and the names have
     spaces in them, so the rest of the line IS the name.
@@ -19,7 +19,7 @@ What is specific to these five, and what each part is here to catch:
     itself on all three: a duplicate ``heretic`` block, a name missing from the
     ``religions`` list, and three religions in the lookup file that no longer
     exist.
-  * **a culture's record does not end at its closing brace** — the forts, ports,
+  * **a culture's record does not end at its closing brace** - the forts, ports,
     watchtowers and agents come after it, and a parser that stops at the brace
     loses two thirds of the record.
   * **``descr_names.txt`` has no keywords at all**: a section header and a name
@@ -49,7 +49,7 @@ def check(label, cond):
 
 
 # --------------------------------------------------------------------------
-# the samples — everything the real files do: comment banners, tab alignment,
+# the samples - everything the real files do: comment banners, tab alignment,
 # inline comments, blank lines inside a record, CRLF throughout.
 
 REBELS_TXT = (
@@ -206,7 +206,7 @@ cultures = mf.parse_cultures(CULTURES_TXT)
 check("a cultures file comes back byte for byte", cultures.text() == CULTURES_TXT)
 check("with no unknown constructs", cultures.warnings == [])
 se = cultures.get("southern_european")
-check("the record does NOT end at the closing brace — the tail is part of it",
+check("the record does NOT end at the closing brace - the tail is part of it",
       se is not None and se.get("fort_cost") == "500"
       and "spy" in se.agents and len(se.ports) == 2)
 check("the settlement ladder is read inside the brace",
@@ -232,7 +232,7 @@ check("a faction's sections are told apart from its names",
 check("and the next faction starts a new record",
       [f.name for f in names.factions] == ["papal_states", "england"])
 
-print("\nthe splices — an unchanged box must not rewrite its line")
+print("\nthe splices - an unchanged box must not rewrite its line")
 for shape, text in ((mf.REBELS, REBELS_TXT), (mf.RESOURCES, RESOURCES_TXT)):
     rf = mf.parse_records(shape, text)
     same = True
@@ -563,7 +563,7 @@ root = config.get_med2_root()
 mods = sorted((Path(root) / "mods").glob("*/data")) if root else []
 mods = [m for m in mods if any((m / t.rel).exists() for t in mf.TABS)]
 if not mods:
-    print("  (no mods installed — the sweep that matters is skipped)")
+    print("  (no mods installed - the sweep that matters is skipped)")
 else:
     swept = 0
     for data in mods:
@@ -651,7 +651,7 @@ else:
             commas += sum(
                 1 for r in mf.parse_rebels(kb.read_text(path, mf.ENCODING)).records
                 for u in r.repeats if "," in u.value)
-    check("no real rebel `unit` line has a comma in it — the name is the whole line",
+    check("no real rebel `unit` line has a comma in it - the name is the whole line",
           commas == 0)
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")

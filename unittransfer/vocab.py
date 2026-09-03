@@ -5,7 +5,7 @@ drop-down is only useful if it offers the values *this mod* actually accepts.
 Two sources feed each list:
 
 * the engine's own fixed sets (weapon type, damage type, formation, discipline,
-  …) — these are hardcoded in the executable, so they are hardcoded here too;
+  …) - these are hardcoded in the executable, so they are hardcoded here too;
 * the mod's own files (``descr_projectile``, ``descr_mount``, ``descr_engines``,
   the modeldb, …) *plus* every value its EDU already uses.
 
@@ -55,7 +55,7 @@ WEAPON_ATTR = [
     "spear_bonus_10", "spear_bonus_12", "thrown", "launching", "area", "prec",
 ]
 
-# the `attributes` line. Ability/behaviour flags first, AI hints last — the
+# the `attributes` line. Ability/behaviour flags first, AI hints last - the
 # guided editor groups them under those headings.
 UNIT_ATTR = [
     "sea_faring", "can_swim", "can_horde", "can_withdraw", "can_run_amok",
@@ -69,7 +69,7 @@ UNIT_ATTR = [
     "command", "has_eagles", "legionary_name", "may_charge_without_orders",
     "has_dogs", "has_pigs", "wagon_fort",
 ]
-# AI usage hints — no effect on the unit itself, they tell the AI what it is
+# AI usage hints - no effect on the unit itself, they tell the AI what it is
 AI_ATTR = [
     "peasant", "pike", "crossbow", "gunmen", "guncavalry", "artillery",
     "cannon", "rocket", "mortar", "explode", "incendiary", "standard",
@@ -116,7 +116,7 @@ def _type_names(path: Path) -> List[str]:
     """``type <name>`` lines of a simple descr_* file, in file order.
 
     Used for ``descr_ship.txt`` and ``descr_animals.txt``, which this tool has no
-    reason to parse properly — the editor only needs the names.
+    reason to parse properly - the editor only needs the names.
     """
     try:
         text = path.read_text(encoding=edu_mod.ENCODING, errors="replace")
@@ -249,7 +249,7 @@ def _harvest(mod) -> Dict[str, List[str]]:
 def _marker_values(mod, key: str) -> List[str]:
     """Every value this mod's own unit markers already use for one marker key.
 
-    The same rule as every other list here — what the mod uses is offered —
+    The same rule as every other list here - what the mod uses is offered -
     except that the file being read is one the tool wrote itself. This is what
     "a way to add more" means for tiers and variants: a value typed once
     becomes part of the mod's vocabulary, and nothing has to be hardcoded to
@@ -316,7 +316,7 @@ def build(mod) -> Dict[str, object]:
         "banner_holy": _merge(banners["holy"] or BANNER_HOLY, got["banner_holy"]),
         "banner_unit": _merge(banners["unit"], got["banner_unit"]),
         "fire_effect": _merge(effects, got["fire_effect"]),
-        # the tool's own metadata, not a game field — see unittransfer.edu.MARKER
+        # the tool's own metadata, not a game field - see unittransfer.edu.MARKER
         "tier": _merge(TIER, _marker_values(mod, "tier")),
         "tier_variant": _merge(TIER_VARIANT, _marker_values(mod, "variant")),
     })

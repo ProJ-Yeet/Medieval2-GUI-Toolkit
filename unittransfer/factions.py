@@ -2,7 +2,7 @@
 
 The file that says what a faction *is*: its culture and religion, its two map
 colours, the strat models it puts on the campaign map, whether it can sap a wall
-or field a princess, and — for the handful that have one — its horde.
+or field a princess, and - for the handful that have one - its horde.
 
 **It needed no new parser.** ``descr_sm_factions.txt`` is the fourth file to be a
 run of ``<head> <name>`` records with ``keyword value`` lines under it, so it is
@@ -14,18 +14,18 @@ means, which is a different question from how its lines are laid out.
 Measured over those 90 factions, and each one shaped something here:
 
 * **The line order is canonical and nobody disagrees.** Thirteen distinct
-  orderings appear, but they are thirteen *subsets* of one order — a topological
+  orderings appear, but they are thirteen *subsets* of one order - a topological
   sort over all 90 records finds **zero conflicts**. So :data:`ORDER` is derived,
   not guessed, and an inserted line goes to its place in it.
-* **Sixteen keys are in 100% of factions and the rest are optional groups** —
+* **Sixteen keys are in 100% of factions and the rest are optional groups** -
   the four movies (63%), the eight horde keys (11%), ``can_build_siege_towers``
   (23%), and three that barely appear at all.
 * **``horde_unit`` repeats**, up to 16 times in one faction, exactly as a rebel
   faction's ``unit`` does. It is the shape's ``repeat_kw``.
 * **The head line can carry a modifier after a comma**: ``faction egypt,
   spawned_on_event``, and ``shadowing`` / ``shadowed_by`` naming another faction.
-  Five real factions do this. The slot is the part before the comma — which is
-  what everything else in the mod points at — and :func:`slot_of` is why nothing
+  Five real factions do this. The slot is the part before the comma - which is
+  what everything else in the mod points at - and :func:`slot_of` is why nothing
   here ever compares a whole head line to a faction name.
 * **``has_family_tree`` is not a boolean.** It is ``yes``, ``no`` or
   ``teutonic``, and 24 of the 90 say ``teutonic``. A checkbox would have written
@@ -34,20 +34,20 @@ Measured over those 90 factions, and each one shaped something here:
 And two things this module deliberately does **not** do:
 
 **It does not delete a faction, and it adds one only by cloning.** A faction
-slot lives in twelve files — ``descr_strat.txt``, ``expanded.txt``, the banners,
+slot lives in twelve files - ``descr_strat.txt``, ``expanded.txt``, the banners,
 ``descr_names.txt``, the UI folders, the EDU's ownership lines, every
-``requires factions { … }`` clause — and TWCenter has a step-by-step tutorial
+``requires factions { … }`` clause - and TWCenter has a step-by-step tutorial
 for it precisely because one file is never the job. Doing all twelve is
 :mod:`unittransfer.factionclone`, which copies a working faction's answer into
 each; this module keeps the editing. Deleting is refused outright, because
-there is no donor to copy from — see :data:`REFUSED`.
+there is no donor to copy from - see :data:`REFUSED`.
 
 **It does not claim a missing picture is a fault.** ``symbol`` and
-``rebel_symbol`` name ``.CAS`` *3D strat models*, not textures — those belong to
+``rebel_symbol`` name ``.CAS`` *3D strat models*, not textures - those belong to
 the model viewer, not here. ``loading_logo`` names a ``.tga`` that **none of the
 90 real factions ships unpacked**: all 90 live in the game's ``.pack`` archives,
 which the toolkit cannot read. So the paths are shown, resolved when they happen
-to be on disk, and never marked missing when they are not — the ruling Phase 10a
+to be on disk, and never marked missing when they are not - the ruling Phase 10a
 already made about pips and settlement cards.
 
 What IS visual and IS in this file is the two colours, and those are shown as
@@ -71,7 +71,7 @@ ENCODING = fr.ENCODING
 REL = "descr_sm_factions.txt"
 
 #: The canonical line order, derived by topological sort over all 90 real
-#: factions — thirteen observed orderings, zero conflicts between them.
+#: factions - thirteen observed orderings, zero conflicts between them.
 ORDER: Tuple[str, ...] = (
     "culture", "religion", "special_faction_type", "symbol", "rebel_symbol",
     "primary_colour", "secondary_colour", "loading_logo", "standard_index",
@@ -94,7 +94,7 @@ REQUIRED: Tuple[str, ...] = (
 SHAPE = fr.Shape(rel=REL, label="Factions", kw="faction", noun="faction",
                  order=ORDER, required=REQUIRED, repeat_kw="horde_unit")
 
-#: the eight keys that only mean anything together — a horde is all of them or none
+#: the eight keys that only mean anything together - a horde is all of them or none
 HORDE_KEYS: Tuple[str, ...] = tuple(k for k in ORDER if k.startswith("horde_"))
 
 #: keys whose value is ``yes`` or ``no`` and nothing else (measured: no real
@@ -121,12 +121,12 @@ ART_KEYS: Tuple[str, ...] = ("symbol", "rebel_symbol", "loading_logo")
 
 #: M2TW's faction cap. Vanilla ships 31 slots; two of the three installed mods
 #: sit at exactly 31 and none is above it. (TWCenter's *List of Hardcoded Limits*
-#: says 21, but that entry is RTW's — the same guide is RTW-era throughout, as
+#: says 21, but that entry is RTW's - the same guide is RTW-era throughout, as
 #: the traits phase already found.)
 FACTION_LIMIT = 31
 
 #: where a faction's shown name lives, relative to ``data/``. The tag is the slot
-#: in UPPER CASE — ``{SICILY}Kingdom of Gondor`` — which is worth knowing before
+#: in UPPER CASE - ``{SICILY}Kingdom of Gondor`` - which is worth knowing before
 #: writing one: a lower-case tag creates a second entry the game never reads.
 LOC_REL = "text/expanded.txt"
 
@@ -168,7 +168,7 @@ def parse_colour(value: str) -> Optional[Tuple[int, int, int]]:
 
 
 def format_colour(rgb) -> str:
-    """``(55, 75, 48)`` -> ``"red 55, green 75, blue 48"`` — the file's own words."""
+    """``(55, 75, 48)`` -> ``"red 55, green 75, blue 48"`` - the file's own words."""
     r, g, b = (max(0, min(255, int(c))) for c in rgb)
     return f"red {r}, green {g}, blue {b}"
 
@@ -226,7 +226,7 @@ def faction_cultures(mod) -> Dict[str, str]:
     """slot -> culture, lower-cased. The single source of truth for that question.
 
     Building icons are picked by *culture* while a level's ``requires`` clause
-    names *factions*, so the buildings browser has always needed this map — it
+    names *factions*, so the buildings browser has always needed this map - it
     just used to read the file with a regex of its own.
     """
     path = path_for(mod)
@@ -272,7 +272,7 @@ def loc_tag(name: str) -> str:
 
 
 def label(name: str, names: Dict[str, str]) -> str:
-    """``"Kingdom of Gondor (sicily)"`` — and here it earns its keep.
+    """``"Kingdom of Gondor (sicily)"`` - and here it earns its keep.
 
     Mods reuse vanilla slots wholesale: DaC's ``sicily`` is the Kingdom of
     Gondor and its ``turks`` are somebody else entirely. Without the real name
@@ -285,7 +285,7 @@ def label(name: str, names: Dict[str, str]) -> str:
 
 #: Where a faction's pictures actually sit when a mod ships them unpacked, as
 #: ``(label, path template)``. `{f}` is the faction slot. The roster itself names
-#: none of these — see the module docstring — so they are found by convention,
+#: none of these - see the module docstring - so they are found by convention,
 #: which is exactly how the game finds them too.
 PICTURE_DIRS: Tuple[Tuple[str, str], ...] = (
     ("Faction symbol", "ui/faction_symbols/{f}.tga"),
@@ -301,7 +301,7 @@ def pictures(mod, slot: str) -> List[Dict]:
     """Every faction picture of ``slot`` this mod actually has on disk.
 
     An empty list is the normal answer for a mod that keeps its art in a
-    ``.pack`` archive, and is never reported as a fault — the same ruling the
+    ``.pack`` archive, and is never reported as a fault - the same ruling the
     settlement cards and religion pips got.
     """
     out: List[Dict] = []
@@ -356,7 +356,7 @@ def art_path(mod, rel: str) -> Optional[Path]:
 def check_file(rf: fr.RecordFile, mod=None) -> List[Dict]:
     """Findings for the whole roster.
 
-    Deliberately silent about the art it names — see the module docstring.
+    Deliberately silent about the art it names - see the module docstring.
     """
     out: List[Dict] = fr.check_records(SHAPE, rf)
 
@@ -379,14 +379,14 @@ def check_file(rf: fr.RecordFile, mod=None) -> List[Dict]:
     if len(rf.records) > FACTION_LIMIT:
         first = rf.records[FACTION_LIMIT]
         add("too-many-factions", first.name, first.start,
-            f"{len(rf.records)} factions — the engine loads {FACTION_LIMIT} and this "
+            f"{len(rf.records)} factions - the engine loads {FACTION_LIMIT} and this "
             "one is past the end")
 
     for rec in rf.records:
         mod_kw = modifier_of(rec.name).split()[0] if modifier_of(rec.name) else ""
         if mod_kw and mod_kw not in HEAD_MODIFIERS:
             add("unknown-modifier", rec.name, rec.start,
-                f"`{mod_kw}` is not a head-line modifier — the engine knows "
+                f"`{mod_kw}` is not a head-line modifier - the engine knows "
                 + kb.and_list(HEAD_MODIFIERS))
         if mod_kw in ("shadowing", "shadowed_by"):
             other = modifier_of(rec.name).split()[1:2]
@@ -416,10 +416,10 @@ def check_file(rf: fr.RecordFile, mod=None) -> List[Dict]:
             value = rec.get(key)
             if key in rec.lines and value not in ("yes", "no"):
                 add("bad-yes-no", rec.name, rec.lines[key],
-                    f"`{value}` — `{key}` is yes or no")
+                    f"`{value}` - `{key}` is yes or no")
         if "has_family_tree" in rec.lines and rec.get("has_family_tree") not in FAMILY_TREE:
             add("bad-family-tree", rec.name, rec.lines["has_family_tree"],
-                f"`{rec.get('has_family_tree')}` — has_family_tree is "
+                f"`{rec.get('has_family_tree')}` - has_family_tree is "
                 + kb.and_list(FAMILY_TREE))
         special = rec.get("special_faction_type")
         if special and special not in SPECIAL_TYPES:
@@ -430,11 +430,11 @@ def check_file(rf: fr.RecordFile, mod=None) -> List[Dict]:
         if have_horde and rec.repeats and len(have_horde) < len(HORDE_KEYS):
             missing = [k for k in HORDE_KEYS if k not in rec.lines]
             add("part-horde", rec.name, rec.lines[have_horde[0]],
-                "this faction has some horde lines and not others — no "
+                "this faction has some horde lines and not others - no "
                 + kb.and_list(missing))
         if have_horde and not rec.repeats:
             add("horde-no-units", rec.name, rec.lines[have_horde[0]],
-                "horde settings but no `horde_unit` line — the horde has nothing "
+                "horde settings but no `horde_unit` line - the horde has nothing "
                 "to spawn")
         for rep in rec.repeats:
             if units is not None and rep.value not in units:
@@ -446,7 +446,7 @@ def check_file(rf: fr.RecordFile, mod=None) -> List[Dict]:
         holders = [r for r in rf.records if r.get("special_faction_type") == keyword]
         if len(holders) > 1:
             add("duplicate-special", holders[1].name, holders[1].start,
-                f"{len(holders)} factions are `{keyword}` — the engine wants one")
+                f"{len(holders)} factions are `{keyword}` - the engine wants one")
     return out
 
 
@@ -460,9 +460,9 @@ ACTIONS: Tuple[str, ...] = ("edit",)
 #: Deleting is still refused, and for the reason creating used to be. Removing a
 #: slot means finding every ``ownership`` line, every ``requires factions { … }``
 #: clause, every texture record and every campaign reference that names it and
-#: deciding what each should say INSTEAD — and there is no donor to copy that
+#: deciding what each should say INSTEAD - and there is no donor to copy that
 #: answer from, which is exactly what makes cloning safe and deleting not.
-REFUSED = ("A faction slot lives in twelve files at once — descr_strat, "
+REFUSED = ("A faction slot lives in twelve files at once - descr_strat, "
            "expanded.txt, the banners, descr_names, the UI folders, every unit's "
            "ownership line and every `requires factions { … }` clause. Deleting "
            "one means deciding what all of those should say instead, and nothing "
@@ -478,7 +478,7 @@ def overview(mod) -> Dict:
                  "exists": path.is_file(), "factions": [], "findings": 0,
                  "count": 0, "actions": list(ACTIONS), "refused": REFUSED,
                  # the roster can be added to (by cloning) but never subtracted
-                 # from — see REFUSED for which half is which and why
+                 # from - see REFUSED for which half is which and why
                  "can_clone": True,
                  # 0 means "no ceiling to count against": an M2EX mod has
                  # replaced the engine table this number came out of
@@ -610,7 +610,7 @@ class FactionPlan:
 def plan(mod, body: dict) -> FactionPlan:
     """Work out the whole new roster for one save, without touching the disk.
 
-    ``body`` is ``{mod, faction, action, edits, raw_block, loc, write_loc}`` —
+    ``body`` is ``{mod, faction, action, edits, raw_block, loc, write_loc}`` -
     the ancillaries request shape again, because every editor in the toolkit
     sends the same thing.
     """
@@ -639,12 +639,12 @@ def plan(mod, body: dict) -> FactionPlan:
             block = str(raw).strip("\r\n")
             if slot_of(parse_block(block + "\n").name) != slot_of(p.name):
                 raise FactionError(
-                    f"this faction is `{slot_of(p.name)}` — renaming a slot here "
+                    f"this faction is `{slot_of(p.name)}` - renaming a slot here "
                     "would orphan descr_strat, every unit's ownership line, every "
                     "`requires factions { … }` clause and its own text entry")
         else:
             edits = dict(body.get("edits") or {})
-            edits.pop("name", None)      # the slot is not editable — see above
+            edits.pop("name", None)      # the slot is not editable - see above
             block = render_block(base, edits)
     except fr.RecordError as e:
         p.errors.append(e.message)
@@ -677,7 +677,7 @@ def _plan_loc(p: FactionPlan, mod, rec, wanted: Dict) -> None:
     txt = Path(mod.data) / LOC_REL
     if not txt.exists() and not stringsbin.bin_path_for(txt).exists():
         p.warnings.append(f"this mod has no {Path(LOC_REL).name}, so this faction's "
-                          "name could not be written — it will show its slot in game")
+                          "name could not be written - it will show its slot in game")
         return
     want = str(wanted.get(tag, "")).strip() if wanted else ""
     if tag not in have:
@@ -762,7 +762,7 @@ def apply(p: FactionPlan) -> Dict:
         "manifest": manifest, "backup_root": str(backup_root),
     }
     config.append_log(rec)
-    log.info("FACTION %s %s in %s — %d change(s), id=%s",
+    log.info("FACTION %s %s in %s - %d change(s), id=%s",
              p.action, p.name, mod.name, len(p.changes), tid)
     out["record"] = rec
     return out

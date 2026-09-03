@@ -12,7 +12,7 @@ unzip and double-click `Medieval 2 GUI Toolkit.bat`.
 Only the bare minimum ships: `app.py`, `transfer_cli.py`, `Full Cleaner.bat`,
 `unittransfer/`, `web/`, the launcher, `Install-Dependencies.bat` and a README.
 Never `config/` (personal settings, backups and the transfer log), `.cache/`,
-`tests/`, `graphify-out/` or `__pycache__` — shipping `config/` would hand over
+`tests/`, `graphify-out/` or `__pycache__` - shipping `config/` would hand over
 someone else's mod paths and undo history.
 """
 from __future__ import annotations
@@ -38,20 +38,20 @@ EMBED_URL = (f"https://www.python.org/ftp/python/{PY_VERSION}/"
              f"python-{PY_VERSION}-embed-amd64.zip")
 
 #: everything the tool needs at runtime, and nothing else
-#: Full Cleaner.bat is not run by the tool any more — unittransfer/cleaner.py
+#: Full Cleaner.bat is not run by the tool any more - unittransfer/cleaner.py
 #: deletes export_units.txt.strings.bin itself instead. It still ships so anyone
 #: who wants the full sweep can copy it into a mod and run it by hand.
 INCLUDE_FILES = ("app.py", "transfer_cli.py", "Full Cleaner.bat")
 #: tools/ carries nvcompress.exe + its DLLs (NVIDIA Texture Tools 2.0), which
 #: Sprites mode shells out to for TGA -> DXT5. ~1MB, and without it the convert
-#: step can't run at all — so it ships rather than being a manual download.
+#: step can't run at all - so it ships rather than being a manual download.
 INCLUDE_DIRS = ("unittransfer", "web", "tools")
 #: The packed vanilla building art Buildings mode falls back to. SHIPS BY
 #: DEFAULT and must keep doing so: without it, Buildings mode shows a placeholder
 #: wherever a mod doesn't ship its own icon, which is most of them, and the
 #: release looks broken to the person who unzipped it. It used to be opt-in
 #: behind a flag and was then forgotten for four releases running (2.1.1 to
-#: 2.1.4 all went out at ~19 MB instead of ~51 MB) — a flag you have to remember
+#: 2.1.4 all went out at ~19 MB instead of ~51 MB) - a flag you have to remember
 #: is not a decision, it is a trap. `--no-vanilla-ui` still exists for a
 #: deliberately slim build; nothing routine should pass it.
 BUNDLED_DIRS = ("vanilla_ui",)
@@ -68,7 +68,7 @@ def rmtree(path: Path) -> None:
 
     A previous build's runtime may still have read-only files or a handle that
     hasn't been released (antivirus, Explorer preview, or a subprocess we only
-    just waited on — Windows can keep the handle alive for a moment after the
+    just waited on - Windows can keep the handle alive for a moment after the
     process exits), so clear the read-only bit and retry a few times rather than
     failing the build. If it still won't go, say so here, with the real OS
     error, instead of letting the leftovers surface later as a confusing
@@ -108,7 +108,7 @@ def rmtree(path: Path) -> None:
         time.sleep(0.5 * (attempt + 1))
     detail = f"\n  {first_error}" if first_error else ""
     raise SystemExit(
-        f"could not remove {path} — close anything using it and retry{detail}")
+        f"could not remove {path} - close anything using it and retry{detail}")
 
 
 def _copy_tree(src: Path, dst: Path) -> int:
@@ -128,7 +128,7 @@ def _copy_tree(src: Path, dst: Path) -> int:
 def stage_app(stage: Path, with_vanilla_ui: bool = True) -> None:
     """Copy the tool's own files into the staging folder.
 
-    ``with_vanilla_ui`` defaults to True on purpose — see :data:`BUNDLED_DIRS`.
+    ``with_vanilla_ui`` defaults to True on purpose - see :data:`BUNDLED_DIRS`.
     A missing ``vanilla_ui/`` is a hard failure rather than a shrug, because the
     whole point is that a release can never quietly go out without it.
     """
@@ -139,7 +139,7 @@ def stage_app(stage: Path, with_vanilla_ui: bool = True) -> None:
         total += _copy_tree(ROOT / name, stage / name)
     log(f"app files: {total}")
     if not with_vanilla_ui:
-        log("vanilla UI: LEFT OUT (--no-vanilla-ui) — Buildings mode will show "
+        log("vanilla UI: LEFT OUT (--no-vanilla-ui) - Buildings mode will show "
             "placeholders for any icon a mod doesn't ship")
         return
     for name in BUNDLED_DIRS:
@@ -149,7 +149,7 @@ def stage_app(stage: Path, with_vanilla_ui: bool = True) -> None:
             # let through silently, and a half-built release is worse than none.
             raise SystemExit(
                 f"BUILD STOPPED: {name}/ is missing from {ROOT}.\n"
-                "  It ships in every release — Buildings mode falls back to it\n"
+                "  It ships in every release - Buildings mode falls back to it\n"
                 "  for the icons a mod doesn't provide. Restore it, or pass\n"
                 "  --no-vanilla-ui if you really mean to build without it.")
         n = _copy_tree(src, stage / name)
@@ -221,7 +221,7 @@ def stage_runtime(stage: Path) -> None:
 
 
 def smoke_test(stage: Path, portable: bool) -> None:
-    """Run the staged copy's own preflight — catches a broken bundle before it ships.
+    """Run the staged copy's own preflight - catches a broken bundle before it ships.
 
     Uses ``--check`` so nothing is served and no browser opens. It runs against
     the staged folder, so a missing file or an unimportable package fails the
@@ -252,7 +252,7 @@ def clean_stage(stage: Path) -> None:
     The smoke test runs the staged runtime's own python.exe, which writes
     __pycache__ next to the packages it imports; Windows can still hold a handle
     on those folders for a moment after that process exits. Delete through
-    ``rmtree`` so it retries — with ignore_errors the failure was silent and only
+    ``rmtree`` so it retries - with ignore_errors the failure was silent and only
     showed up as assert_clean refusing to package.
     """
     removed = 0
@@ -280,7 +280,7 @@ def assert_clean(stage: Path) -> None:
                                  or p.name in FORBIDDEN_NAMES)):
             bad.append(str(rel))
     if bad:
-        raise SystemExit("refusing to package — these must not ship:\n  "
+        raise SystemExit("refusing to package - these must not ship:\n  "
                          + "\n  ".join(bad[:20])
                          + (f"\n  …and {len(bad) - 20} more" if len(bad) > 20 else ""))
     log("verified: no config/, logs or caches in the package")
@@ -401,7 +401,7 @@ pause
 endlocal
 """
 
-README = """Medieval 2 GUI Toolkit — edit Medieval II: Total War mods
+README = """Medieval 2 GUI Toolkit - edit Medieval II: Total War mods
 =======================================================
 
 Getting started
@@ -412,7 +412,7 @@ Getting started
 3. A window appears with the startup checks, then your browser opens the tool.
    The window closes on its own once everything is up.
 4. First run only: click the gear icon and point it at your Medieval II
-   install folder — the one containing a `mods` folder.
+   install folder - the one containing a `mods` folder.
 
 {runtime_note}
 
@@ -423,33 +423,33 @@ Using it
 * Click a unit, then **Transfer to <mod>**.
 * Set the options, hit **Preview** to see exactly what will change, then
   **Apply**.
-* Every transfer is undoable from the clock icon — it backs up each file it
+* Every transfer is undoable from the clock icon - it backs up each file it
   touches first.
 
 The other modes
 ---------------
 The dropdown in the top-left corner switches what you are working on:
 
-* **Unit Editor** — one mod instead of two. Click a unit to edit every EDU
+* **Unit Editor** - one mod instead of two. Click a unit to edit every EDU
   field, its name and description, the battle-model entries it uses, to build a
   new unit from it, or to delete it.
-* **BMDB Editor** — the mod's whole battle_models.modeldb. Browse and edit any
+* **BMDB Editor** - the mod's whole battle_models.modeldb. Browse and edit any
   entry, even ones no unit points at, and use **Clean up BMDB** to find the
   entries nothing references, the soldier-only entries that could share an
   existing model, and the files under unit_models nothing mentions. Nothing is
   deleted: you choose a folder and everything ticked is moved there, laid out
-  like the mod itself so it can be pasted straight back — and the whole removal
+  like the mod itself so it can be pasted straight back - and the whole removal
   is undoable from the clock icon like anything else.
-* **Unit Sounds** — the mod's voice bank, which decides what a unit's soldiers
+* **Unit Sounds** - the mod's voice bank, which decides what a unit's soldiers
   shout when you select them. Three tabs: units with no voice entry, units with
   one, and entries whose unit no longer exists. Pick the unit to copy the
   sounds from and the row is ready; **Set all shown to copy** does a whole
   filtered list at once. It writes the voice bank AND the matching accent /
   voice_type lines in the EDU, because a unit is silent unless those two agree.
-* **Buildings** — the mod's export_descr_buildings.txt, as a picture grid of
+* **Buildings** - the mod's export_descr_buildings.txt, as a picture grid of
   every building line. Open one and you get a tab per level with its icons, its
   name and description, its cost, build time, material and settlement size, its
-  capabilities, its upgrade path, and — the main event — its recruitment: which
+  capabilities, its upgrade path, and - the main event - its recruitment: which
   units it trains, the starting pool, the per-turn refill, the cap, the starting
   experience and the conditions on each, as rows or as a card grid. Add or
   remove units, filter the list to one faction, and hit the pencil on any unit
@@ -462,8 +462,8 @@ The dropdown in the top-left corner switches what you are working on:
   religions show which regions they actually apply to. If you let a faction
   recruit a unit it doesn't own, the editor says so and saving puts it right.
 
-  The upgrade path is drawn as a graph — lines branch, and one of DaC's is a
-  single root with everything hanging off it — and every building in it is
+  The upgrade path is drawn as a graph - lines branch, and one of DaC's is a
+  single root with everything hanging off it - and every building in it is
   clickable.
 
   Building icons are per culture, so there is a culture picker in the sidebar.
@@ -476,7 +476,7 @@ What gets carried across
 ------------------------
 The unit's EDU entry, its localised name and description, its battle models and
 all their meshes/textures/sprites, its unit card and info card, its mount, its
-projectile, its voice, and — for artillery — its full siege engine: the
+projectile, its voice, and - for artillery - its full siege engine: the
 descr_engines block, the engine skeletons and animations, the meshes, bone maps,
 collision models, and the textures baked inside those meshes.
 
@@ -491,7 +491,7 @@ Something went wrong?
 ---------------------
 **The window opened and closed and nothing happened.**
 That usually means the tool started fine but your browser didn't open by
-itself. The tool is still running — open this address manually:
+itself. The tool is still running - open this address manually:
 
     http://127.0.0.1:8756/
 
@@ -499,7 +499,7 @@ If that page loads, everything is working. (Newer builds keep the window open
 and tell you when this happens.)
 
 **Still stuck?** Run **Troubleshoot.bat**. It never closes on its own, prints
-what it finds, and saves `troubleshoot-output.txt` — send that file on for help.
+what it finds, and saves `troubleshoot-output.txt` - send that file on for help.
 
 Every run is logged in detail to `config\\server.log` (or, if this folder can't
 be written, to `%LOCALAPPDATA%\\UnitTransfer\\server.log`).
@@ -523,7 +523,7 @@ def write_docs(stage: Path, portable: bool) -> None:
     (stage / "Install-Dependencies.bat").write_text(
         (ROOT / "Install-Dependencies.bat").read_text(encoding="utf-8"),
         encoding="utf-8")
-    note = ("Nothing else to install — Python and the image library are already\n"
+    note = ("Nothing else to install - Python and the image library are already\n"
             "inside this folder (`runtime\\`)."
             if portable else
             "This build does NOT include Python. Run Install-Dependencies.bat first:\n"
@@ -539,7 +539,7 @@ def assert_bundled(out: Path, expect_vanilla_ui: bool) -> None:
     """Read the finished zip back and check the big optional payload is IN it.
 
     The last check before the file is handed to somebody, and it reads the
-    artefact rather than the staging folder — every earlier step could be right
+    artefact rather than the staging folder - every earlier step could be right
     and the zip still wrong. This exists because four releases in a row shipped
     without the vanilla UI and nothing in the build said a word: the size on
     screen was the only tell, and nobody reads a size.
@@ -606,7 +606,7 @@ def main(argv=None) -> int:
     make_zip(stage, out)
     assert_bundled(out, expect_vanilla_ui=not args.no_vanilla_ui)
     print(f"\n{out}")
-    print(f"  {out.stat().st_size / 1e6:.1f} MB — send this to anyone; "
+    print(f"  {out.stat().st_size / 1e6:.1f} MB - send this to anyone; "
           f"they unzip it and run 'Medieval 2 GUI Toolkit.bat'.")
     return 0
 

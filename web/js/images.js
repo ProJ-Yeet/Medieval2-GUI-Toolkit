@@ -1,8 +1,8 @@
-/* images.js — replace any picture the toolkit shows, from wherever it shows it
+/* images.js - replace any picture the toolkit shows, from wherever it shows it
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
@@ -10,9 +10,9 @@
    Replacing a picture, anywhere
 
    Until this file, exactly one picture in the whole toolkit could be swapped:
-   the unit card, through the editor's own staged import. Every other image —
+   the unit card, through the editor's own staged import. Every other image -
    info cards, the building browser's art, ancillary pictures, faction symbols,
-   the religion pips and settlement cards in Minor Files — was something you
+   the religion pips and settlement cards in Minor Files - was something you
    could look at and nothing else, even though the tool knew perfectly well
    which file it had just decoded.
 
@@ -32,7 +32,7 @@
    Both end in the same confirm dialog, which is where the resolution check
    lives: the game does not rescale UI art, so a 512x512 file dropped in for an
    80x24 card is drawn stretched into the same box. That is a warning and never
-   a refusal — a mod is free to change what size its own art is, as long as it
+   a refusal - a mod is free to change what size its own art is, as long as it
    is told what it is doing.
    ========================================================================= */
 
@@ -41,7 +41,7 @@ const IMG_ROUTES = ['/icon?', '/building_icon?'];
 
 /* The `src` with the noise taken off. `iconRetry` appends `#r2` and a refresh
    after a save appends `&_ib=<time>`, and neither is part of the question the
-   URL asks — sending them back would still work (the server ignores what it
+   URL asks - sending them back would still work (the server ignores what it
    does not read) but the dialog's own previews would inherit a stale buster. */
 function imgUrlOf(el){
   const raw = (el && el.getAttribute && el.getAttribute('src')) || '';
@@ -120,7 +120,7 @@ async function imgWhere(url){
   catch(e){ r = {ok:false, error:''+e}; }
   if(!r || !r.ok) return toast((r && r.error) || 'that folder could not be opened');
   if(r.outside) toast('that picture is the game’s own, not this mod’s');
-  else if(r.folder_only) toast('nothing there yet — opened the folder it would go in');
+  else if(r.folder_only) toast('nothing there yet - opened the folder it would go in');
 }
 
 /* ---------- pick, confirm, write ---------- */
@@ -131,10 +131,28 @@ async function imgPick(url, after){
   try{ p = await api.post('/api/image/plan', {mod, url, src:''}); }
   catch(e){ return toast(''+e); }
   if(!p.ok) return toast(p.error || 'that picture cannot be replaced');
-  const f = await api.post('/api/browse_file',
-    {title: 'Pick the picture to use for ' + p.label,
-     filter: 'Images (*.tga;*.dds;*.png;*.jpg;*.jpeg;*.bmp)|'
-           + '*.tga;*.dds;*.png;*.jpg;*.jpeg;*.bmp|All files (*.*)|*.*'});
+  /* The picker is a NATIVE Windows dialog opened by the server process, and the
+     request does not come back until it is answered. The tool does everything it
+     can to put that window in front (see folder_dialog._Owner), but Windows has
+     the last word on which process may take the foreground - and when it says no
+     the dialog opens behind the browser as a flashing taskbar button, which read
+     as "Replace image… does nothing at all". So the page says what is waiting.
+     The toast is re-shown while the dialog is up, because a 2.8s one that fired
+     before the user looked away is no better than silence. */
+  let waiting = true;
+  const nag = () => { if(waiting) toast(
+    'A file picker is open - pick a picture there. If you cannot see it, check '
+    + 'the taskbar: Windows sometimes opens it behind this window.', 4000); };
+  nag();
+  const nagger = setInterval(nag, 4000);
+  let f;
+  try{
+    f = await api.post('/api/browse_file',
+      {title: 'Pick the picture to use for ' + p.label,
+       filter: 'Images (*.tga;*.dds;*.png;*.jpg;*.jpeg;*.bmp)|'
+             + '*.tga;*.dds;*.png;*.jpg;*.jpeg;*.bmp|All files (*.*)|*.*'});
+  }catch(e){ return toast(''+e); }
+  finally{ waiting = false; clearInterval(nagger); }
   if(!f.path) return;
   let q;
   try{ q = await api.post('/api/image/plan', {mod, url, src:f.path}); }
@@ -176,7 +194,7 @@ function imgDialog(url, mod, src, p, after){
       ${(p.replaces||[]).length ? `<div class="count" style="margin-top:10px">${
         docPoints(`This writes ${p.replaces.length} file${
           p.replaces.length===1?'':'s'} under the mod's own data folder:`,
-          p.replaces.map(r => `<code>${esc(r.rel)}</code> — ${
+          p.replaces.map(r => `<code>${esc(r.rel)}</code> - ${
             r.exists ? 'overwritten' : '<b>created</b>'}${
             r.drops.length ? `, and <code>${r.drops.map(esc).join('</code> <code>')
               }</code> removed` : ''}`))
@@ -221,7 +239,7 @@ async function imgApply(url, mod, src){
 /* Every picture on the page, re-fetched.
    The server sends `Cache-Control: no-cache`, but a replacement can touch ten
    faction folders at once and the page has no idea which of its thumbnails came
-   out of which of them — so the cheap, correct answer is to re-ask for all of
+   out of which of them - so the cheap, correct answer is to re-ask for all of
    them rather than to guess. */
 function imgBust(){
   const stamp = Date.now();

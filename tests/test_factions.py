@@ -2,7 +2,7 @@
 
 Phase 11's first result was that there was nothing to parse. ``descr_sm_factions.txt``
 is the fourth file to be a run of ``<head> <name>`` records with ``keyword value``
-lines under it, so it is a :class:`unittransfer.flatrecord.Shape` and no more —
+lines under it, so it is a :class:`unittransfer.flatrecord.Shape` and no more -
 all 90 factions in the three installed mods parse byte-exact and re-render
 unchanged against it with no code of its own. What is tested here is therefore
 mostly what a *faction* means, plus the sweep that proves the claim above.
@@ -12,7 +12,7 @@ What each part is here to catch:
   * **the canonical line order is derived, not guessed.** Thirteen orderings
     appear across the 90 real factions and a topological sort finds zero
     conflicts between them, so an inserted line has one right place to go.
-  * **the head line can carry a modifier** — ``faction egypt, spawned_on_event``,
+  * **the head line can carry a modifier** - ``faction egypt, spawned_on_event``,
     and ``shadowing`` / ``shadowed_by`` naming another faction. The slot is the
     part before the comma, and everything else in the mod points at the slot.
   * **``has_family_tree`` is not a boolean.** yes / no / ``teutonic``, and 24 of
@@ -20,7 +20,7 @@ What each part is here to catch:
   * **``horde_unit`` repeats**, like a rebel faction's ``unit``.
   * **the colours are the one genuinely visual thing in the file**, and they
     round-trip through hex without moving.
-  * **a slot cannot be renamed** — in the form or in the text pane.
+  * **a slot cannot be renamed** - in the form or in the text pane.
   * **art is never called missing.** Not one of the 90 real factions ships its
     ``loading_logo`` unpacked; they are all inside ``.pack`` archives.
 
@@ -97,7 +97,7 @@ FILE = (
     "has_family_tree\t\tyes\r\n"
 )
 
-print("the shape it shares — no parser of its own")
+print("the shape it shares - no parser of its own")
 rf = fa.parse_text(FILE)
 check("a roster comes back byte for byte", rf.text() == FILE)
 check("with no unknown constructs", rf.warnings == [])
@@ -126,7 +126,7 @@ check("hex round-trips without moving",
 check("a value out of range is not a colour", fa.parse_colour("red 300, green 0, blue 0") is None)
 check("nor is a line that is not one at all", fa.parse_colour("bright red") is None)
 
-print("\nthe splice — an unchanged box must not rewrite its line")
+print("\nthe splice - an unchanged box must not rewrite its line")
 same = True
 for rec in rf.records:
     block = rf.block_text(rec)
@@ -185,7 +185,7 @@ check("a clean roster has nothing to say", fa.check_file(rf) == [])
 check("has_family_tree = maybe is reported",
       "bad-family-tree" in kinds(FILE.replace("has_family_tree\t\tteutonic",
                                               "has_family_tree\t\tmaybe")))
-check("but `teutonic` is not — 24 of 90 real factions say it",
+check("but `teutonic` is not - 24 of 90 real factions say it",
       "bad-family-tree" not in kinds(FILE))
 check("a yes/no line that is neither is reported",
       "bad-yes-no" in kinds(FILE.replace("can_sap\t\t\t\tno", "can_sap\t\t\t\tsometimes")))
@@ -254,7 +254,7 @@ mod = Mod(work)
 ov = fa.overview(mod)
 check("overview lists every faction",
       [r["slot"] for r in ov["factions"]] == ["sicily", "egypt"])
-check("the localised name leads, the slot follows — the whole point here",
+check("the localised name leads, the slot follows - the whole point here",
       ov["factions"][0]["label"] == "Kingdom of Gondor (sicily)")
 check("a faction with no expanded.txt entry shows its slot alone",
       ov["factions"][1]["label"] == "egypt")
@@ -306,7 +306,7 @@ check("the rest of the file is untouched",
       and [u.value for u in after.records[1].repeats] == ["Miners", "Peasants"])
 
 p = fa.plan(mod, {"faction": "sicily", "action": "add"})
-check("this endpoint still will not create one — that is factionclone's job",
+check("this endpoint still will not create one - that is factionclone's job",
       not p.payload()["ok"] and "twelve files" in p.errors[0])
 p = fa.plan(mod, {"faction": "sicily", "action": "delete"})
 check("so is deleting one", not p.payload()["ok"])
@@ -344,7 +344,7 @@ root = config.get_med2_root()
 mods = sorted((Path(root) / "mods").glob("*/data")) if root else []
 mods = [m for m in mods if (m / fa.REL).exists()]
 if not mods:
-    print("  (no mods installed — the sweep that matters is skipped)")
+    print("  (no mods installed - the sweep that matters is skipped)")
 else:
     total = logos = symbols = teutonic = 0
     orders = set()
@@ -379,11 +379,11 @@ else:
     check(f"every one of the {len(orders)} observed line orders is a subset of "
           "the canonical one",
           all(list(o) == [k for k in fa.ORDER if k in o] for o in orders))
-    check(f"{teutonic} real factions say has_family_tree teutonic — it is not a "
+    check(f"{teutonic} real factions say has_family_tree teutonic - it is not a "
           "boolean", teutonic > 0)
     check(f"not one of the {total} loading_logo files is unpacked ({logos} found) "
-          "— so a missing one is never a fault", logos == 0)
-    check(f"symbols, by contrast, often ARE shipped ({symbols}/{total}) — which is "
+          "- so a missing one is never a fault", logos == 0)
+    check(f"symbols, by contrast, often ARE shipped ({symbols}/{total}) - which is "
           "why they are marked when found", symbols > 0)
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")

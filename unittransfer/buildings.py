@@ -1,7 +1,7 @@
 """Parser + surgical editor for ``data/export_descr_buildings.txt`` (the EDB).
 
 The EDB is the settlement-building database. It is a brace-nested tree of
-*building lines* — a group of buildings that upgrade into one another::
+*building lines* - a group of buildings that upgrade into one another::
 
     building cannon
     {
@@ -46,7 +46,7 @@ Non-destructive by construction
 -------------------------------
 Same rule as :mod:`unittransfer.sounds`: the file is kept as its **verbatim
 lines** and every edit is a splice of a known line range. That matters more here
-than anywhere else in the tool — Divide and Conquer's EDB is 17.5k lines whose
+than anywhere else in the tool - Divide and Conquer's EDB is 17.5k lines whose
 ``recruit_pool`` lines carry hand-written trailing comments
 (``;ok old_pool=2 new_pool=2 (Orc infantry T4 @ T5)``), the indentation mixes
 tabs and spaces line by line, and a re-emitted file would lose all of it. Nothing
@@ -70,7 +70,7 @@ from . import (config, edbvocab, edu as edu_mod, eop, localization,
                minorfiles, modeldb as modeldb_mod, stringsbin)
 from .logutil import counted, file_op, fingerprint, log
 
-#: EDB is plain 8-bit text, like the EDU — latin-1 round-trips every byte.
+#: EDB is plain 8-bit text, like the EDU - latin-1 round-trips every byte.
 ENCODING = "latin-1"
 
 #: Path of the EDB relative to a mod's ``data/`` folder.
@@ -82,7 +82,7 @@ LOC_REL = "text/export_buildings.txt"
 #: The settlement types a level line may be pinned to. Omitted = both.
 SETTLEMENT_TYPES = ("city", "castle")
 
-#: Settlement sizes, smallest first — what ``settlement_min`` names.
+#: Settlement sizes, smallest first - what ``settlement_min`` names.
 SETTLEMENT_LEVELS = ("village", "town", "large_town", "city", "large_city", "huge_city")
 
 #: Scalar keys inside a level block (everything that is not a nested block).
@@ -104,7 +104,7 @@ BONUS_CAPS = frozenset({
     "construction_time_bonus_other", "construction_time_bonus_religious",
     "income_bonus", "taxable_income_bonus", "trade_level_bonus",
     "recruits_exp_bonus", "recruits_morale_bonus",
-    # from the reference tool's capability sheet — see merge/audit-edb.md
+    # from the reference tool's capability sheet - see merge/audit-edb.md
     "construction_cost_bonus_defensive", "construction_cost_bonus_military",
     "construction_cost_bonus_other", "construction_cost_bonus_religious",
     "construction_time_bonus_military", "construction_time_bonus_stone",
@@ -173,20 +173,20 @@ CAP_HELP: Dict[str, str] = {
     "construction_cost_bonus_defensive": "Core (settlement) buildings cost 1% less per point.",
     "construction_cost_bonus_other": "Buildings that are neither core nor temple_ cost 1% less per point.",
     "construction_cost_bonus_religious": "temple_ buildings cost 1% less per point.",
-    "construction_cost_bonus_military": "No effect — the engine reads it and does nothing with it.",
+    "construction_cost_bonus_military": "No effect - the engine reads it and does nothing with it.",
     "construction_time_bonus_stone": "Stone buildings are built 1% faster per point.",
     "construction_time_bonus_wooden": "Wooden buildings are built 1% faster per point.",
-    "construction_time_bonus_military": "No effect — the engine reads it and does nothing with it.",
+    "construction_time_bonus_military": "No effect - the engine reads it and does nothing with it.",
     "gate_defences": "Boiling oil over the gate. 0 none, 1 oil.",
     "upgrade_bodyguard": "Lets generals' bodyguards be upgraded after the Marian reforms event.",
     "weapon_melee_simple": "Upgrades the weapons of melee troops that use blunt weapons.",
-    "fire_risk": "No effect — the fire disaster was cut before Rome shipped.",
+    "fire_risk": "No effect - the fire disaster was cut before Rome shipped.",
 }
 
 #: ``keyword -> (group, argument range)`` for the capability picker: what to
 #: file it under and what the engine will accept. Groups come from the reference
 #: tool's spreadsheet, which is the one thing in its EDB half that our own list
-#: had nothing like — a flat alphabetical list of 60 keywords is a list you scan,
+#: had nothing like - a flat alphabetical list of 60 keywords is a list you scan,
 #: not one you choose from. A keyword absent here falls under "Other".
 CAP_META: Dict[str, Tuple[str, str]] = {
     "recruit_pool": ("Recruitment", ""),
@@ -255,7 +255,7 @@ CAP_META: Dict[str, Tuple[str, str]] = {
 CAP_GROUPS = ("Recruitment", "Unit upgrades", "Weapons", "Defence", "Agents",
               "Population", "Economy", "Religion", "Construction", "Other")
 
-#: Vanilla's five religions — a last resort only. A building line's `religion`
+#: Vanilla's five religions - a last resort only. A building line's `religion`
 #: names whatever ``descr_religions.txt`` defines, and a mod routinely replaces
 #: the lot (DaC has ten, none of them `pagan`), so the real list comes from
 #: :func:`unittransfer.minorfiles.religion_names` via the mod's own vocab.
@@ -268,7 +268,7 @@ _WS = re.compile(r"^(\s*)")
 
 
 def _strip_comment(line: str) -> Tuple[str, str]:
-    """Split an EDB line into (code, comment) — the comment keeps its ``;``."""
+    """Split an EDB line into (code, comment) - the comment keeps its ``;``."""
     i = line.find(";")
     if i < 0:
         return line, ""
@@ -288,7 +288,7 @@ def _is_annotation(code: str) -> bool:
     """Is this line a modder's ``#`` note rather than something the engine reads?
 
     The EDB's comment marker is ``;``, so a line starting with ``#`` is not a
-    comment as far as the format is concerned — but it is not a keyword either,
+    comment as far as the format is concerned - but it is not a keyword either,
     and the engine evidently ignores it: Divide and Conquer ships **109** of
     them, all inside one capability block, grouping its ``recruit_pool`` lines by
     faction (``# GONDOR``, ``# ERIADOR``, …), and the mod runs.
@@ -386,7 +386,7 @@ class RecruitPool:
 
 @dataclass
 class LevelBlock:
-    """One building inside a line — a ``gunsmith``, a ``stone_wall``…"""
+    """One building inside a line - a ``gunsmith``, a ``stone_wall``…"""
     name: str = ""
     settlement: str = ""          # 'city' | 'castle' | '' (both)
     requires: str = ""
@@ -442,7 +442,7 @@ class BuildingLine:
 
     @property
     def settlement(self) -> str:
-        """'city', 'castle' or 'both' — what kind of settlement this line is for."""
+        """'city', 'castle' or 'both' - what kind of settlement this line is for."""
         kinds = {b.settlement for b in self.blocks}
         kinds.discard("")
         if kinds == {"city"}:
@@ -488,8 +488,8 @@ def parse_text(text: str) -> EdbFile:
     A hand-rolled brace walker rather than a tokeniser: braces can share a line
     with code (``upgrades { }``), a level header can carry a ``requires`` clause
     with its own braces (``factions { england, }``) and comments can appear
-    anywhere. Only *structural* braces — the ones that open a block on their own
-    line, or trail a block keyword — change the nesting.
+    anywhere. Only *structural* braces - the ones that open a block on their own
+    line, or trail a block keyword - change the nesting.
     """
     lines = text.splitlines(keepends=True)
     edb = EdbFile(lines=lines)
@@ -551,7 +551,7 @@ def _matching_close(lines: List[str], open_idx: int, n: int) -> int:
         if code:
             opens, closes = code.count("{"), code.count("}")
             if opens and opens == closes and i != open_idx:
-                pass                      # inline `factions { … }` — no net change
+                pass                      # inline `factions { … }` - no net change
             depth += opens - closes
             if depth <= 0 and i > open_idx:
                 return i
@@ -694,7 +694,7 @@ def _parse_capabilities(lines: List[str], open_idx: int, close_idx: int) -> List
 def _parse_plugins(lines: List[str], open_idx: int, close_idx: int) -> List[Plugin]:
     """Plugins are shaped like building lines but have no capability block.
 
-    Only the outline is parsed — the tool doesn't edit plugins, it just shows a
+    Only the outline is parsed - the tool doesn't edit plugins, it just shows a
     line that has them so nothing looks missing.
     """
     out: List[Plugin] = []
@@ -728,11 +728,11 @@ def _parse_plugins(lines: List[str], open_idx: int, close_idx: int) -> List[Plug
 
 #: Building icons live per culture: ``data/ui/<culture>/buildings/#<culture>_<level>.tga``
 #: is the small (build-browser) icon and ``…_constructed.tga`` the big one shown
-#: once it stands. ``.dds`` is accepted too — some mods ship that instead, and
+#: once it stands. ``.dds`` is accepted too - some mods ship that instead, and
 #: ``.webp`` is what the packed vanilla fallback stores.
 ICON_EXTS = (".tga", ".dds", ".png", ".webp")
 
-#: Names inside a packed vanilla art folder — see ``tools/pack_vanilla_ui.py``.
+#: Names inside a packed vanilla art folder - see ``tools/pack_vanilla_ui.py``.
 MANIFEST_NAME = "manifest.json"
 PACK_ART_DIR = "art"
 
@@ -781,7 +781,7 @@ class VanillaUi:
     Two shapes are accepted, because one of them is what anyone gets by
     unpacking the game themselves:
 
-    ``packed``  a folder holding ``manifest.json`` + ``art/`` — deduplicated
+    ``packed``  a folder holding ``manifest.json`` + ``art/`` - deduplicated
                 lossless WebP, ~6x smaller, what this repo ships
     ``raw``     ``<culture>/buildings/#<culture>_<level>.tga``, i.e. the .pack
                 files' own layout, straight out of any unpacker
@@ -838,7 +838,7 @@ def vanilla_ui(root) -> Optional["VanillaUi"]:
     """A cached :class:`VanillaUi` for ``root``, or None when there isn't one.
 
     Cached by path for the life of the process. This art is a static download,
-    not something a mod edits under us — and it is asked about thousands of times
+    not something a mod edits under us - and it is asked about thousands of times
     per page, so re-stat'ing it each time showed up as most of a request.
     """
     if not root:
@@ -867,12 +867,12 @@ def find_icon(mod, culture: str, level: str, kind: str = "small",
                  OTHER cultures
     ``vanilla*`` any vanilla culture (a mod culture like ``gondor`` has no vanilla
                  namesake, so this is the only way it can borrow one)
-    ``""``       nothing found — the caller paints the placeholder
+    ``""``       nothing found - the caller paints the placeholder
 
     ``any_culture`` is off by default and stays off for the building browser,
     which is showing one culture on purpose: a level the picked culture has no
     art for is a fact about that culture, and the grid says so with a
-    placeholder. It is on for screens that are not showing a culture at all —
+    placeholder. It is on for screens that are not showing a culture at all -
     the unit editor's Recruitment tab lists pools from every line in the mod,
     where a mod-invented level like DaC's ``ancestral_dun`` is drawn once, for
     the one culture that builds it, and a placeholder would be saying "this
@@ -918,7 +918,7 @@ def cultures_of(mod) -> List[str]:
 
 
 def faction_cultures(mod) -> Dict[str, str]:
-    """faction slot -> culture — :mod:`unittransfer.factions` is the source.
+    """faction slot -> culture - :mod:`unittransfer.factions` is the source.
 
     Building icons are picked by *culture*, but a level's ``requires`` clause
     names *factions*, so this is what lets the browser show the right art for
@@ -951,7 +951,7 @@ def clause_factions(clause: str) -> List[str]:
 #: Most units M2TW will show in a settlement's recruitment panel for one
 #: building. Past this the panel overflows and the game can crash on opening it,
 #: which is the sort of failure that only shows up on the one save where enough
-#: conditions have lined up at once — hence the check.
+#: conditions have lined up at once - hence the check.
 RECRUIT_LIMIT = 32
 
 
@@ -994,7 +994,7 @@ def recruitment_pressure(blk: "LevelBlock", faction_cultures: Dict[str, str],
         over the limit the building is already broken, on every save.
     ``most``
         every pool whose ``factions { }`` admits it, taking every other
-        condition — event counters, hidden resources, settlement size — as
+        condition - event counters, hidden resources, settlement size - as
         satisfied at the same time. This is an upper bound, and deliberately so:
         working out which of a mod's conditions can truly hold at once is not
         decidable from the EDB alone, and a warning that under-counts is worse
@@ -1023,7 +1023,7 @@ def recruitment_pressure(blk: "LevelBlock", faction_cultures: Dict[str, str],
 
 
 #: How many arguments each condition takes after its keyword, and what they mean.
-#: Anything not here is kept as raw text — the EDB has a few malformed clauses in
+#: Anything not here is kept as raw text - the EDB has a few malformed clauses in
 #: the wild (``requires woe_unlock_siege.``) and a typo must not become a crash.
 CONDITION_ARGS: Dict[str, Tuple[str, ...]] = {
     "factions": ("factions",),                       # a { a, b, } list
@@ -1041,7 +1041,7 @@ CONDITION_ARGS: Dict[str, Tuple[str, ...]] = {
 #: What each condition means, for the editor's tooltips.
 CONDITION_HELP = {
     "factions": "Only these factions (or whole cultures) can build it. `all` means everyone.",
-    "hidden_resource": "The region must carry this hidden resource — the list at the top of the EDB.",
+    "hidden_resource": "The region must carry this hidden resource - the list at the top of the EDB.",
     "resource": "The region must produce this trade resource.",
     "event_counter": "An event counter must have this value. 1 = after the event, 0 = before.",
     "region_religion": "At least this percentage of the region must follow the religion.",
@@ -1101,7 +1101,7 @@ def parse_clause(clause: str) -> List[Condition]:
     masked = "".join(masked)
 
     # Spans on the masked copy index the real string exactly (masking is 1:1), so
-    # the terms are sliced out rather than reassembled — the joiners are padded
+    # the terms are sliced out rather than reassembled - the joiners are padded
     # with runs of whitespace in the wild and any length arithmetic gets it wrong.
     out: List[Condition] = []
     pos, join = 0, ""
@@ -1132,7 +1132,7 @@ def _parse_term(term: str, join: str) -> Condition:
         return Condition(join=join, negate=negate, kind="raw", raw=body)
     rest = body.split()[1:]
     if len(rest) != len(spec):
-        # right keyword, wrong number of arguments — keep it verbatim rather than
+        # right keyword, wrong number of arguments - keep it verbatim rather than
         # silently dropping or inventing one
         return Condition(join=join, negate=negate, kind="raw", raw=body)
     return Condition(join=join, negate=negate, kind=head, values=rest, raw=term)
@@ -1171,7 +1171,7 @@ def clause_payload(clause: str) -> List[dict]:
 
 
 # ---------------------------------------------------------------------------
-# editing — every operation is a splice of known line indices
+# editing - every operation is a splice of known line indices
 
 
 @dataclass
@@ -1201,7 +1201,7 @@ def _insert_before(lines: List[str], idx: int, text: str) -> LineEdit:
 
     Written as a *replacement* of line ``idx`` with ``text + that line`` rather
     than a zero-width insert, so two edits that both target ``idx`` can't be
-    applied twice over — the splice is index-stable either way, and a pure insert
+    applied twice over - the splice is index-stable either way, and a pure insert
     that also re-emitted the anchor line silently duplicated it.
     """
     return LineEdit(idx, idx + 1, text + lines[idx])
@@ -1226,7 +1226,7 @@ def _scalar_line(indent: str, key: str, value: str, comment: str = "") -> str:
 
 
 def _norm(text: str) -> str:
-    """Collapse runs of whitespace — for comparing two capabilities by meaning."""
+    """Collapse runs of whitespace - for comparing two capabilities by meaning."""
     return " ".join((text or "").split())
 
 
@@ -1236,7 +1236,7 @@ def _same_capability(old: Capability, new: Capability) -> bool:
     Compared field by field rather than as text: the EDB lines up its
     ``recruit_pool`` numbers with runs of spaces and tabs, and an editor that
     re-emits ``1 0.135 3 0`` with a different gap has changed nothing. Without
-    this, opening a level and saving would rewrite — and re-space — every one of
+    this, opening a level and saving would rewrite - and re-space - every one of
     its several hundred pool lines.
     """
     return (old.keyword == new.keyword
@@ -1280,7 +1280,7 @@ def plan_level_edit(edb: EdbFile, bl: BuildingLine, blk: LevelBlock,
         else:
             requires = str(changes.get("requires", blk.requires) or "").strip()
         if settlement and settlement not in SETTLEMENT_TYPES:
-            warn.append(f"{blk.name}: '{settlement}' is not a settlement type — ignored")
+            warn.append(f"{blk.name}: '{settlement}' is not a settlement type - ignored")
             settlement = blk.settlement
         # whitespace-only differences are not edits: the clause editor re-emits
         # with one space where the file often has two or three
@@ -1346,8 +1346,8 @@ def _plan_capabilities(edb: EdbFile, blk: LevelBlock, ops: List[dict],
                        faction: bool) -> List[LineEdit]:
     """Rewrite / delete / append capability lines, one splice each.
 
-    Existing lines are edited *in place* so their neighbours — including the
-    hand-written trailing comments DaC's EDB is full of — stay byte-exact. New
+    Existing lines are edited *in place* so their neighbours - including the
+    hand-written trailing comments DaC's EDB is full of - stay byte-exact. New
     lines are appended just above the block's closing brace.
     """
     lines = edb.lines
@@ -1382,7 +1382,7 @@ def _plan_capabilities(edb: EdbFile, blk: LevelBlock, ops: List[dict],
             continue
         cap = existing.get(int(idx))
         if cap is None:
-            warn.append(f"{blk.name}: capability line {idx} is no longer there — skipped")
+            warn.append(f"{blk.name}: capability line {idx} is no longer there - skipped")
             continue
         if op.get("delete"):
             edits.append(LineEdit(cap.line, cap.line + 1, ""))
@@ -1397,7 +1397,7 @@ def _plan_capabilities(edb: EdbFile, blk: LevelBlock, ops: List[dict],
         # is the commonest edit here, and a note that repeated the unchanged
         # numbers on both sides read as "nothing happened".
         if _norm(cap.args) == _norm(new.args) and cap.keyword == new.keyword:
-            notes.append(f"{blk.name}: {cap.keyword} {cap.args} — requires "
+            notes.append(f"{blk.name}: {cap.keyword} {cap.args} - requires "
                          f"{cap.requires or '(none)'} -> {new.requires or '(none)'}")
         else:
             what = f"{cap.keyword} {cap.args} -> {new.keyword} {new.args}".rstrip()
@@ -1440,8 +1440,8 @@ def ownership_report(mod, checks) -> List[dict]:
     """For each ``{unit, factions}``, who can't actually field it and why.
 
     A ``recruit_pool`` naming a faction is not enough on its own. The unit also
-    has to list that faction in its EDU ``ownership`` — otherwise the building
-    trains nothing for them — and its battle model needs a texture record for
+    has to list that faction in its EDU ``ownership`` - otherwise the building
+    trains nothing for them - and its battle model needs a texture record for
     the faction, or the soldiers turn up untextured. Both are quiet failures in
     game, so they are worth saying out loud here.
     """
@@ -1492,7 +1492,7 @@ def _plan_ownership(mod, plan: "BuildingPlan", checks) -> None:
         if not row["known"]:
             plan.warnings.append(
                 f"{row['unit']}: named by a recruit pool but not a unit in {mod.name} "
-                f"— ownership not changed")
+                f"- ownership not changed")
             continue
         unit = next(u for u in mod.edu.units if u.type.lower() == row["unit"].lower())
         if row["missing_ownership"]:
@@ -1552,7 +1552,7 @@ class BuildingPlan:
     #: True when this plan CREATES the line rather than editing one.
     created: bool = False
     #: For a create: the building-card files the new levels will want. Reported,
-    #: never written — see :func:`icon_slots`.
+    #: never written - see :func:`icon_slots`.
     slots: List[dict] = field(default_factory=list)
 
     def summary(self) -> str:
@@ -1572,7 +1572,7 @@ class BuildingPlan:
 def _all_line_bodies(body: dict) -> List[dict]:
     """The building lines this request touches: the main one, then any extras.
 
-    ``also`` carries ``[{"line": …, "levels": [...]}]`` — mirroring a pool into
+    ``also`` carries ``[{"line": …, "levels": [...]}]`` - mirroring a pool into
     the castle variant, or pushing one unit's numbers across every tree that
     trains it, both land here. They are planned against the same parse and
     spliced in the same pass as the main line, so one Save is one edit and one
@@ -1589,8 +1589,8 @@ def plan_edit(mod, body: dict) -> BuildingPlan:
     """Plan every level edit in one request.
 
     All edits are planned against the *original* line indices and spliced
-    back-to-front in one pass, so several levels — and, via ``also``, several
-    building lines — can be saved together without any of them moving the others.
+    back-to-front in one pass, so several levels - and, via ``also``, several
+    building lines - can be saved together without any of them moving the others.
     """
     # a new tree is its own job: there is no line to splice into yet, and the
     # two files it writes have to fail together
@@ -1614,7 +1614,7 @@ def plan_edit(mod, body: dict) -> BuildingPlan:
         if bl is None:
             bl = cur
         # A line hand-edited in Code View replaces its whole block, and the box
-        # edits then apply on top of THAT text — line order, indenting and the
+        # edits then apply on top of THAT text - line order, indenting and the
         # EDB's many hand-written comments are edits no level payload can carry,
         # so re-deriving them from the boxes would throw them away.
         raw = str(part.get("raw_block") or "")
@@ -1647,7 +1647,7 @@ def plan_edit(mod, body: dict) -> BuildingPlan:
             reparsed = parse_text(text)
             if reparsed.warnings or not reparsed.get(plan.line):
                 plan.errors.append(
-                    "the edit would produce an EDB this tool can no longer read — "
+                    "the edit would produce an EDB this tool can no longer read - "
                     "refusing to write it")
                 return plan
 
@@ -1740,7 +1740,7 @@ def _check_recruit_limit(mod, bl: Optional[BuildingLine], body: dict,
             if a > RECRUIT_LIMIT:
                 plan.warnings.append(
                     f"{name}: {label} can already train {a} units here with no "
-                    f"conditions attached — over the {RECRUIT_LIMIT} the "
+                    f"conditions attached - over the {RECRUIT_LIMIT} the "
                     f"recruitment panel holds")
             else:
                 plan.warnings.append(
@@ -1760,7 +1760,7 @@ def _raw_line_edit(plan: BuildingPlan, bl: BuildingLine, part: dict,
     exactly one building line, and still be *this* one. Renaming a line in the
     text would leave every `levels` list, plugin and settlement plan that names
     it pointing at nothing, and unlike a unit's `type` there is no rename flow
-    to hand that to — so it is refused rather than warned about.
+    to hand that to - so it is refused rather than warned about.
     """
     from . import codeview
     try:
@@ -1771,7 +1771,7 @@ def _raw_line_edit(plan: BuildingPlan, bl: BuildingLine, part: dict,
         return LineEdit(bl.start, bl.start, "")
     if doc.ident != bl.name:
         plan.errors.append(
-            f"the text renames the line to '{doc.ident}' — a building line's name is "
+            f"the text renames the line to '{doc.ident}' - a building line's name is "
             f"used by its levels list and by the settlement plans, so '{bl.name}' "
             "has to stay. Rename it everywhere by hand, or not at all.")
         return LineEdit(bl.start, bl.start, "")
@@ -1819,7 +1819,7 @@ def _plan_line_fields(edb: EdbFile, bl: BuildingLine, body: dict,
 # creating a building tree
 #
 # The one thing this module could not do before: every other operation edits a
-# line that is already there. A new tree is three files at once — the EDB block,
+# line that is already there. A new tree is three files at once - the EDB block,
 # three text keys per level in export_buildings.txt (a level short of any one of
 # them is a CTD, and all 1099 real levels measured have all three), and the
 # per-culture icons, which are art and stay the modder's to draw.
@@ -1828,8 +1828,8 @@ def _plan_line_fields(edb: EdbFile, bl: BuildingLine, body: dict,
 def upgrade_name(entry: str) -> str:
     """The level an ``upgrades`` entry points at.
 
-    An entry may carry its own clause — ``ce_wooden_wall requires event_counter
-    cex_avail_wooden_wall_erebor 1`` — so the level is the first word and the
+    An entry may carry its own clause - ``ce_wooden_wall requires event_counter
+    cex_avail_wooden_wall_erebor 1`` - so the level is the first word and the
     rest is a condition on taking that branch. 41 of the 771 upgrade entries in
     the three installed mods are of that shape.
     """
@@ -1838,8 +1838,8 @@ def upgrade_name(entry: str) -> str:
 
 
 #: Vanilla's ceiling on levels in one tree (TWCenter, *List of Hardcoded
-#: Limits*). M2TWEOP raises it and mods lean on that — Third Age 6's
-#: ``core_building`` is 51 levels deep — so passing it is said, not refused.
+#: Limits*). M2TWEOP raises it and mods lean on that - Third Age 6's
+#: ``core_building`` is 51 levels deep - so passing it is said, not refused.
 VANILLA_MAX_LEVELS = 9
 
 #: Upgrades one level may offer (same source). The deepest real level offers 6.
@@ -1847,12 +1847,12 @@ MAX_UPGRADES = 8
 
 #: Prefixes the game reads on a building line's name, with what each one costs
 #: you. Written from a sweep of the 277 real building lines in the three
-#: installed mods, not from the reference tool's four one-line hints — two of
+#: installed mods, not from the reference tool's four one-line hints - two of
 #: which are claims about the engine that the real files do not support (see
 #: ``merge/audit-edb.md``).
 TREE_PREFIXES: List[Dict[str, str]] = [
     {"prefix": "", "label": "(no prefix)",
-     "hint": "An ordinary settlement building — what 145 of the 277 real lines are."},
+     "hint": "An ordinary settlement building - what 145 of the 277 real lines are."},
     {"prefix": "hinterland_", "label": "hinterland_",
      "hint": "Vanilla's province-wide lines (roads, farms, mines, ports) carry it. "
              "Nothing restricts it: the mods use it for 66 different things, "
@@ -1862,11 +1862,11 @@ TREE_PREFIXES: List[Dict[str, str]] = [
              "so pick a religion below if you take this."},
     {"prefix": "guild_", "label": "guild_",
      "hint": "Needs a matching entry in data/export_descr_guilds.txt. All 19 real "
-             "guild_ lines have one, and nothing else in that file does — a "
+             "guild_ lines have one, and nothing else in that file does - a "
              "guild the file does not name is never offered."},
     {"prefix": "core_", "label": "core_",
-     "hint": "The settlement's own chain. Every mod measured defines exactly two — "
-             "core_building and core_castle_building — and both already exist, so "
+     "hint": "The settlement's own chain. Every mod measured defines exactly two - "
+             "core_building and core_castle_building - and both already exist, so "
              "a third is not a thing any real mod does."},
 ]
 
@@ -1876,7 +1876,7 @@ TREE_PREFIXES: List[Dict[str, str]] = [
 TREE_ACTIONS = {"create": True, "delete": False, "rename": False}
 
 TREE_REFUSED = {
-    "delete": "A building line is named from outside the EDB — every settlement in "
+    "delete": "A building line is named from outside the EDB - every settlement in "
               "descr_strat.txt that has one built, the twin line's `convert_to`, "
               "export_descr_guilds.txt for a guild, and the campaign script. "
               "Deleting the block here would leave a save game and a campaign start "
@@ -1885,7 +1885,7 @@ TREE_REFUSED = {
               "first, by hand.",
     "rename": "The name is the key its levels list, its twin's `convert_to`, the "
               "settlement plans and every script line that builds it all point at "
-              "— the same ruling the text pane already makes.",
+              "- the same ruling the text pane already makes.",
 }
 
 _NAME_OK = re.compile(r"^[A-Za-z0-9_]+$")
@@ -1911,7 +1911,7 @@ def new_tree_text(spec: dict, indent: str = "\t") -> str:
     """Render a whole ``building … { … }`` block from the new-tree form.
 
     Every level is chained into the next through its ``upgrades`` block, because
-    that is the only thing that makes a tree a tree — and the direction is
+    that is the only thing that makes a tree a tree - and the direction is
     forced: all 771 upgrade entries in the three installed mods point at a level
     listed *after* them on the `levels` line, which is what TWCenter's hardcoded
     limits say the engine requires.
@@ -1957,7 +1957,7 @@ def _default_requires(mod) -> str:
     """``factions { … }`` naming every culture the mod has.
 
     A new tree nobody can build is the easiest thing in the world to write here
-    — Third Age 6 ships four levels whose clause is a literal `factions { }` —
+    - Third Age 6 ships four levels whose clause is a literal `factions { }` -
     so the default is "everyone", spelled with this mod's own names rather than
     with vanilla's. The reference tool's new-building default is a hardcoded
     ``northern_european, southern_european``, which in Divide and Conquer means
@@ -2012,14 +2012,14 @@ def icon_slots(mod, spec: dict) -> List[dict]:
     """The building-card files a new tree will want, and which already exist.
 
     Written down rather than written: these are TGA art, and the toolkit has
-    nothing to put in them. A level with no card is not a crash — the same
-    ruling Phase 10a made about pips and settlement cards — so this is a list to
+    nothing to put in them. A level with no card is not a crash - the same
+    ruling Phase 10a made about pips and settlement cards - so this is a list to
     draw against, not a list of faults.
 
     One row per level and culture, carrying both files: they are drawn as a pair
     (the button and the constructed picture) and nobody makes one without the
     other. Only the cultures with a ``data/ui/<culture>/buildings`` folder are
-    listed — a culture the mod has no art folder for has no slot to fill.
+    listed - a culture the mod has no art folder for has no slot to fill.
     """
     vanilla = config.get_vanilla_ui_root()
     out: List[dict] = []
@@ -2042,7 +2042,7 @@ def plan_new_tree(mod, spec: dict) -> BuildingPlan:
 
     Refuses rather than half-writes. A name already in the file, a level name
     already used *anywhere* in the EDB (level names are the EDB's one global
-    namespace — ``EdbFile.by_level`` and every text key rely on it) or a name the
+    namespace - ``EdbFile.by_level`` and every text key rely on it) or a name the
     game cannot read all stop the plan, because the second half of this job
     writes into a different file and there is no such thing as a tree that
     reached one of them.
@@ -2059,7 +2059,7 @@ def plan_new_tree(mod, spec: dict) -> BuildingPlan:
     if not name:
         plan.errors.append("the new building line needs a name")
     elif not _NAME_OK.match(name):
-        plan.errors.append(f"{name!r} is not a name the EDB can carry — letters, "
+        plan.errors.append(f"{name!r} is not a name the EDB can carry - letters, "
                            "digits and underscores only, and no spaces")
     elif edb.get(name) is not None:
         plan.errors.append(f"{mod.name} already has a building line called {name!r}")
@@ -2078,7 +2078,7 @@ def plan_new_tree(mod, spec: dict) -> BuildingPlan:
             owner = taken[lname][0].name
             plan.errors.append(
                 f"{mod.name} already has a level called {lname!r}, in the {owner!r} "
-                "line — a level name is the key its text, its icons and every "
+                "line - a level name is the key its text, its icons and every "
                 "settlement plan use, so two of them cannot share one")
         elif lname in seen:
             plan.errors.append(f"level {lname!r} is in the new line twice")
@@ -2091,11 +2091,11 @@ def plan_new_tree(mod, spec: dict) -> BuildingPlan:
 
     if len(levels) > VANILLA_MAX_LEVELS:
         plan.warnings.append(
-            f"{len(levels)} levels — vanilla stops at {VANILLA_MAX_LEVELS} per tree "
+            f"{len(levels)} levels - vanilla stops at {VANILLA_MAX_LEVELS} per tree "
             "and crashes past it. M2TWEOP raises the ceiling and mods use that "
             "(Third Age 6's core_building is 51 deep), so this only works with EOP.")
     for prefix, why in (("guild_", "needs a matching entry in "
-                                   "data/export_descr_guilds.txt — all 19 real "
+                                   "data/export_descr_guilds.txt - all 19 real "
                                    "guild_ lines have one, and a guild that file "
                                    "does not name is never offered"),
                         ("core_", "is the settlement's own chain; every mod "
@@ -2121,7 +2121,7 @@ def plan_new_tree(mod, spec: dict) -> BuildingPlan:
     new = reparsed.get(name)
     if reparsed.warnings or new is None or len(new.blocks) != len(levels):
         plan.errors.append("the new line would produce an EDB this tool can no "
-                           "longer read — refusing to write it")
+                           "longer read - refusing to write it")
         return plan
     plan.edb_text = text
     plan.changes.append(f"{name}: new building line, {len(levels)} level"
@@ -2134,7 +2134,7 @@ def plan_new_tree(mod, spec: dict) -> BuildingPlan:
     if missing:
         plan.warnings.append(
             f"{len(missing)} of {len(plan.slots)} building cards have no picture "
-            "yet — those levels show a blank card until you draw them. The paths "
+            "yet - those levels show a blank card until you draw them. The paths "
             "are listed below; this is art, not a fault.")
     return plan
 
@@ -2142,7 +2142,7 @@ def plan_new_tree(mod, spec: dict) -> BuildingPlan:
 def _plan_new_localisation(mod, spec: dict, plan: BuildingPlan) -> str:
     """The text keys a new tree needs in ``data/text/export_buildings.txt``.
 
-    Three per level — ``{x}``, ``{x_desc}``, ``{x_desc_short}`` — because all
+    Three per level - ``{x}``, ``{x_desc}``, ``{x_desc_short}`` - because all
     1099 levels in the three installed mods have all three and a level short of
     one crashes the game at the construction panel. The tree's own
     ``{<line>_name}`` is written too when the form gave it a name: it is the
@@ -2153,7 +2153,7 @@ def _plan_new_localisation(mod, spec: dict, plan: BuildingPlan) -> str:
     if not path.exists():
         plan.errors.append(
             f"{mod.name} has no data/{LOC_REL}, so the new levels would have no "
-            "names — and a level with no text key crashes the game. Nothing written.")
+            "names - and a level with no text key crashes the game. Nothing written.")
         return ""
     text = path.read_text(encoding=localization.ENCODING)
     for lv in (spec.get("levels") or []):
@@ -2212,7 +2212,7 @@ def block_spans(edb: EdbFile, bl: BuildingLine) -> Dict[str, List[List[int]]]:
 
     put("building", bl.start)
     # convert_to / religion / the extras are found the way _plan_line_fields
-    # finds them to edit them — same scan, so the two can never disagree
+    # finds them to edit them - same scan, so the two can never disagree
     for j in range(bl.start + 1, bl.end):
         head = _code(edb.lines[j]).split(None, 1)[:1]
         if head and head[0] in ("convert_to", "religion", "classification", "factions"):
@@ -2239,7 +2239,7 @@ def block_spans(edb: EdbFile, bl: BuildingLine) -> Dict[str, List[List[int]]]:
         for i, c in enumerate(blk.capabilities, 1):
             put(f"{key}:cap#{i}", c.line)
             # the editor's rows carry a capability's LINE, not its position, so
-            # the same span is addressable that way too — that is what survives
+            # the same span is addressable that way too - that is what survives
             # rows being filtered, reordered or hidden in the list
             put(f"capline#{c.line}", c.line)
         for i, c in enumerate(blk.faction_capabilities, 1):
@@ -2251,7 +2251,7 @@ def block_spans(edb: EdbFile, bl: BuildingLine) -> Dict[str, List[List[int]]]:
 def block_fields(edb: EdbFile, bl: BuildingLine) -> List[Tuple[str, str]]:
     """``(label, value)`` for every span :func:`block_spans` reports.
 
-    A flat list of what the block says, in the same vocabulary as the spans —
+    A flat list of what the block says, in the same vocabulary as the spans -
     enough for the page to show a value beside a highlight without walking the
     tree itself.
     """
@@ -2284,7 +2284,7 @@ def render_block(base: str, body: dict) -> str:
     """Apply the editor's level-edit payload to ONE building line's text.
 
     The same :func:`plan_level_edit` and :func:`splice` the save runs, just
-    pointed at the block on its own instead of at the whole 30 000-line EDB — so
+    pointed at the block on its own instead of at the whole 30 000-line EDB - so
     the code view shows exactly the bytes a save would put in the file, and
     there is no second serialiser to drift from the first.
     """
@@ -2322,7 +2322,7 @@ def _plan_localisation(mod, body: dict, plan: BuildingPlan) -> str:
         return ""
     path = mod.data / LOC_REL
     if not path.exists():
-        plan.warnings.append(f"{mod.name} has no data/{LOC_REL} — names not written")
+        plan.warnings.append(f"{mod.name} has no data/{LOC_REL} - names not written")
         return ""
     text = path.read_text(encoding=localization.ENCODING)
     changed = False
@@ -2366,7 +2366,7 @@ def apply_edit(plan: BuildingPlan) -> Dict:
     manifest: Dict[str, List[str]] = {"backed_up": [], "created": []}
 
     fingerprint(mod)
-    log.info("BUILD  id=%s in %s — %r (%d change(s))", tid, mod.name, plan.line,
+    log.info("BUILD  id=%s in %s - %r (%d change(s))", tid, mod.name, plan.line,
              len(plan.changes))
     log.info("  backups -> %s", backup_root)
 
@@ -2443,7 +2443,7 @@ def _placeholder(key: str, name: str) -> bool:
     """True when a key's value is not a real name.
 
     Divide and Conquer writes the key's own text back as its value for ~3000
-    base keys — ``{stables}stables``, described as "DO NOT TRANSLATE" — because
+    base keys - ``{stables}stables``, described as "DO NOT TRANSLATE" - because
     every one of its buildings is named per culture instead. Treating that as a
     name is what made the browser show code names for the whole mod.
     """
@@ -2479,8 +2479,8 @@ def _loc_all(mod, level: str) -> Dict[str, dict]:
 def _best_loc(mod, level: str, culture: str = "") -> dict:
     """The record a level actually shows, for the culture being looked at.
 
-    Same order the game reads them in — the culture's own key first, then the
-    base key — with one addition: a base key that is only a placeholder falls
+    Same order the game reads them in - the culture's own key first, then the
+    base key - with one addition: a base key that is only a placeholder falls
     through to whichever culture DOES have text, so a mod that names everything
     per culture still reads as names rather than as code.
     """
@@ -2545,8 +2545,8 @@ def _units_index(mod) -> Dict[str, dict]:
 # ---------------------------------------------------------------------------
 # city / castle variants
 #
-# Nearly every recruitment building in a real mod exists twice — once for cities
-# and once for castles — and the two are expected to stay in step. Nothing in the
+# Nearly every recruitment building in a real mod exists twice - once for cities
+# and once for castles - and the two are expected to stay in step. Nothing in the
 # EDB says which two lines are a pair, though: the file just has two independent
 # `building` blocks whose names differ by a marker the mod picked. Divide and
 # Conquer alone ships all four spellings below, sometimes in the same file.
@@ -2561,7 +2561,7 @@ def variant_key(name: str) -> str:
 
     ``castle_barracks``, ``c_barracks``, ``barracks_castle`` and
     ``temple_c_academic`` all key as their marker-free form, so the two halves of
-    a pair meet in the middle. Nothing else is normalised — two names that differ
+    a pair meet in the middle. Nothing else is normalised - two names that differ
     by anything but a marker are different buildings.
 
     A name that is *only* a marker (the ``castle`` level of a core castle line)
@@ -2661,7 +2661,7 @@ def _pool_side(r: Optional[dict]) -> Optional[dict]:
     :func:`_pool_brief` plus the EDB line the row occupies and whether it sits in
     a ``faction_capability`` block. Those two are what let a number typed on
     either side of the panel be staged as a rewrite of *that* row rather than as
-    a second copy of the unit — the same key the unit view stages an edit to
+    a second copy of the unit - the same key the unit view stages an edit to
     another building line by.
     """
     if r is None:
@@ -2682,7 +2682,7 @@ def line_checks(edb: EdbFile, bl: BuildingLine,
     for r in rows:
         at.setdefault(r["unit_key"], set()).add(r["level_index"])
         names.setdefault(r["unit_key"], r["unit"])
-        # the highest tier that does train it — what a filled-in gap should copy,
+        # the highest tier that does train it - what a filled-in gap should copy,
         # since the numbers a mod gives a unit tend to climb with the building
         cur = best.get(r["unit_key"])
         if cur is None or r["level_index"] > cur["level_index"]:
@@ -2857,8 +2857,8 @@ def variant_compare(mod, line: str, culture: str = "") -> dict:
     was to open both lines and read them against each other by eye. This puts
     them in one answer.
 
-    The pairing is the same one the mirror findings use — :func:`variant_pairs`
-    for the lines, :func:`pair_levels` for the tiers within them — so what this
+    The pairing is the same one the mirror findings use - :func:`variant_pairs`
+    for the lines, :func:`pair_levels` for the tiers within them - so what this
     shows and what "⇄ Mirror" acts on can never disagree.
 
     A tier is a row of units, and every unit carries ``where``:
@@ -2924,7 +2924,7 @@ def variant_compare(mod, line: str, culture: str = "") -> dict:
             info = units.get(key) or {}
             where = "both" if a and b else ("a" if a else "b")
             # WHICH fields disagree, not just that some do. Measured on Divide
-            # and Conquer's barracks pair, 411 of 466 shared units "differ" —
+            # and Conquer's barracks pair, 411 of 466 shared units "differ" -
             # nearly all of them only in `requires`, because a city clause names
             # the city factions and a castle clause names the castle ones. A
             # single yes/no would therefore flag the whole roster and mean
@@ -3042,7 +3042,7 @@ def overview(mod, culture: str = "") -> dict:
                          for k, v in sorted(CAP_HELP.items())],
         "capability_groups": list(CAP_GROUPS),
         # what a `requires` clause may name, so the editor can offer checklists
-        # of real names instead of a free-text box — see :mod:`edbvocab`
+        # of real names instead of a free-text box - see :mod:`edbvocab`
         "vocab": mod.edb_vocab,
         "condition_kinds": [{"kind": k, "args": list(a),
                              "help": CONDITION_HELP.get(k, "")}
@@ -3061,7 +3061,7 @@ def overview(mod, culture: str = "") -> dict:
 
 
 def detail(mod, name: str, culture: str = "", bl: "BuildingLine" = None) -> dict:
-    """One building line in full — every level, capability and recruit pool.
+    """One building line in full - every level, capability and recruit pool.
 
     Unlike the browser grid this carries every culture's name and description
     (``loc_all``), because the editor has to be able to show and write any of
@@ -3069,8 +3069,8 @@ def detail(mod, name: str, culture: str = "", bl: "BuildingLine" = None) -> dict
 
     ``bl`` overrides the mod's own parse of the line. Code View passes the line
     it just re-read out of hand-edited text, so the boxes can be redrawn from
-    text that is not on disk yet, while art, localisation and the unit index —
-    none of which live in the block — still come from the mod.
+    text that is not on disk yet, while art, localisation and the unit index -
+    none of which live in the block - still come from the mod.
     """
     bl = bl if bl is not None else mod.edb.get(name)
     if bl is None:
@@ -3078,7 +3078,7 @@ def detail(mod, name: str, culture: str = "", bl: "BuildingLine" = None) -> dict
     units = _units_index(mod)
     vanilla = config.get_vanilla_ui_root()
     #: Only the units this line can actually train, keyed by lower-cased type.
-    #: Sent once for the whole line rather than inlined per pool — a big barracks
+    #: Sent once for the whole line rather than inlined per pool - a big barracks
     #: has hundreds of pools and most of them name the same handful of units.
     referenced: Dict[str, dict] = {}
     levels = []
@@ -3116,7 +3116,7 @@ def detail(mod, name: str, culture: str = "", bl: "BuildingLine" = None) -> dict
             "scalars": dict(blk.scalars),
             "upgrades": list(blk.upgrades),
             # the same list taken apart: an upgrade entry may carry its own
-            # clause (`wooden_wall requires factions { … }` — 41 of the 771 in
+            # clause (`wooden_wall requires factions { … }` - 41 of the 771 in
             # the installed mods), and the editor needs it as conditions to put
             # a picker on it rather than a read-only chip. The strings above are
             # still what a save sends, so nothing else has to change shape.
@@ -3129,7 +3129,7 @@ def detail(mod, name: str, culture: str = "", bl: "BuildingLine" = None) -> dict
             "faction_capabilities": fcaps,
             "has_faction_capability": blk.fcap_span != (0, 0),
             "art": art,
-            # factions this level could offer too many units at once — see
+            # factions this level could offer too many units at once - see
             # recruitment_pressure. The page recomputes it as pools are edited;
             # this is what it starts from.
             "recruit_pressure": recruitment_pressure(blk, mod.faction_cultures),

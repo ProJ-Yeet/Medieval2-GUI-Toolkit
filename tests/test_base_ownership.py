@@ -78,7 +78,7 @@ check("not three+ blank lines", not before.endswith("\n\n\n\n"))
 
 parsed = edu.parse_text(text)
 new_unit = parsed.units[-1]
-# NB: compare against the RESOLVED name — the destination may already contain the
+# NB: compare against the RESOLVED name - the destination may already contain the
 # unit (e.g. from an earlier real transfer), in which case it is renamed.
 check(f"appended unit parses as {plan.resolved_type!r}", new_unit.type == plan.resolved_type)
 check("ownership inherited from base", set(new_unit.ownership) == set(base_unit.ownership))
@@ -91,7 +91,7 @@ check("era 2 sits directly after era 1", directly_after("era 1", "era 2"))
 check("block does not end on a base-only field",
       keys[-1] not in ("accent", "era 2", "mount_effect"))
 
-# nothing may follow an internal blank line — that's what the stray tail looked like
+# nothing may follow an internal blank line - that's what the stray tail looked like
 lines = new_unit.raw.splitlines()
 blank_seen = False
 stray = []

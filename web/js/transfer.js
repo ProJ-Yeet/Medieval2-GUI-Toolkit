@@ -1,27 +1,34 @@
-/* transfer.js — Unit Transfer mode: the composer, base/replace, conflict
+/* transfer.js - Unit Transfer mode: the composer, base/replace, conflict
    resolution, the asset and icon resolvers, and batch transfers
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
 /* ---------- per-unit config ---------- */
 function cfgFor(type){
   if(!state.cfg[type]) state.cfg[type]={include_officers:true,include_mount:true,include_crew:true,include_projectile:true,include_engine:true,engine_conflict:'use_existing',
-    // How the unit lands in the destination — see setMode(). 'base_type' is the
+    // How the unit lands in the destination - see setMode(). 'base_type' is the
     // destination unit the 'base' and 'replace' modes both lean on (the stat
     // donor / the unit being rewritten); '' while the mode is 'new'.
     mode:'new',import_card:false,import_info_card:false,
+    // 'models' mode: which of the unit's battle-model entries to import. null =
+    // all of them, which is what a freshly-opened list is ticked as.
+    models_only:null,
     base_type:'',soldier_from:(state.settings&&state.settings.soldier_from_base)?'base':'source',
     officer_from:'source',mount_from:'source',crew_from:'source',upgrade_from:'source',
     // "Port + base animations" for the mount / officers: bring the source's own
     // models across and take only their animations from the base's (fromBasePanel)
     import_mount_with_base:true,import_officers_with_base:true,
-    field_overrides:{},on_conflict:'rename',new_type:'',new_dictionary:'',make_mercenary:false,merc_icons:false,exclude_models:[],
+    field_overrides:{},on_conflict:'rename',new_type:'',new_dictionary:'',
+    // null, not '': conflictUI prefills it with the source's own name the first
+    // time it draws, and an empty string is a name the user cleared on purpose
+    new_name:null,
+    make_mercenary:false,merc_icons:false,exclude_models:[],
     asset_conflict:'mod_folder',asset_reroute_dir:'',icon_conflict:'use_existing',
-    // voice: 'base' (copy the base unit's barks — the default), 'unit' (copy some
+    // voice: 'base' (copy the base unit's barks - the default), 'unit' (copy some
     // other destination unit's), 'none'. snd_accent/snd_class only filter the
     // donor list; the accent/class actually written are always the donor's.
     sound_mode:'base',sound_donor:'',snd_accent:'',snd_class:'',
@@ -34,18 +41,25 @@ function cfgFor(type){
 /* ---- transfer mode ----------------------------------------------------------
    'new'     the unit arrives as its own EDU entry, with its own name and icons.
    'base'    same, but the stats/attributes/ownership/era are inherited from a
-             destination unit — a new unit built on an existing one.
+             destination unit - a new unit built on an existing one.
    'replace' the picked destination unit IS what gets written: its block is
              rewritten with this unit's models and nothing is added to the mod.
              It keeps its type, name, description, stats and cards; each stat can
              still be switched over one at a time with the B buttons below, and
              the cards have their own tick boxes.
+   'models'  no unit at all: only the battle_models.modeldb entries this unit is
+             drawn from, and the mesh/texture files they name. It is the mode for
+             "I want this mod's ARMOUR, not its roster" - and for getting the
+             models into the destination before anything is built on them. The
+             dialog shrinks to the list of those entries and the folder question,
+             because nothing else applies when no unit is written.
    The last two share one picker (`base_type`) because they ask the same question
-   — which destination unit — and both are restricted to the SAME unit kind: a
+   - which destination unit - and both are restricted to the SAME unit kind: a
    cavalry model in an infantry entry has neither the right stats nor the right
    animations. */
 const modeOf=c=>c.mode||'new';
 const isReplace=c=>modeOf(c)==='replace'&&!!c.base_type;
+const isModels=c=>modeOf(c)==='models';
 // what the picked unit is called in prose, per mode
 const donorRole=c=>modeOf(c)==='replace'?'replaced unit':'base unit';
 // The destination's voice bank, fetched once per destination mod. Needed to know
@@ -57,14 +71,69 @@ async function ensureDestSnd(){
   }
   return state.destSnd;
 }
+/* ---- the unit's own battle-model entries ('models' mode) -------------------
+   The EDU names a model on its soldier line, on each officer line and in its
+   armour-upgrade list, and the descr_mount.txt block its `mount` names points at
+   one more. That set - with the FOLDER each entry's meshes and textures live in
+   - is what "battle-model entries only" ticks off, and the folder is half the
+   answer: importing an entry is importing the files it names, and the entry name
+   never says where those are. Fetched once per (mod, unit) and kept, because the
+   composer re-renders on every tick box. */
+const CMP_MODEL_SEP=String.fromCharCode(0);   // same pair-key as edrecruit.js
+const cmpModels={};   // mod + SEP + unit type -> [{name,slot,folders,…}]
+const MODEL_SLOT={soldier:'Soldier',mount:'Mount',officer:'Officer',armour:'Armour upgrade'};
+async function ensureUnitModels(type){
+  const key=state.src+CMP_MODEL_SEP+type;
+  if(!cmpModels[key]){
+    try{
+      const r=await api.get('/api/unit_models?mod='+enc(state.src)+'&type='+enc(type));
+      cmpModels[key]=r.models||[];
+    }catch(e){ cmpModels[key]=null; }   // null = the fetch failed, said so below
+  }
+  return cmpModels[key];
+}
+const unitModels=type=>cmpModels[state.src+CMP_MODEL_SEP+type];
+/* Which entries are ticked. `models_only` null means "all of them" - the state a
+   freshly-opened list is in - so it is only materialised once something is
+   unticked, and an empty array really does mean none (which the planner refuses). */
+function importedModels(c,list){
+  return c.models_only===null||c.models_only===undefined
+    ? (list||[]).filter(m=>m.found).map(m=>m.name)
+    : c.models_only;
+}
+function toggleImportModel(name,on){
+  const c=cfgFor(state.editing);
+  const set=new Set(importedModels(c,unitModels(state.editing)).map(s=>s.toLowerCase()));
+  if(on)set.add(name.toLowerCase()); else set.delete(name.toLowerCase());
+  c.models_only=[...set];
+  renderComposer();
+}
+function allImportModels(on){
+  const c=cfgFor(state.editing);
+  c.models_only=on?null:[];
+  renderComposer();
+}
+/* Nothing ticked, with the list actually loaded.
+
+   An empty `models_only` means "every entry" on the wire - that is the sensible
+   default for a caller that just asks for the mode and names nothing - so the
+   one reading it cannot be sent to the planner as-is: it would quietly import
+   the lot. The composer is where the difference is known, so it is caught here,
+   before the plan, in both the probe and the apply. */
+function modelsPickEmpty(type){
+  const c=cfgFor(type);
+  if(!isModels(c)) return false;
+  const list=unitModels(type);
+  return !!list && importedModels(c,list).length===0;
+}
 
 /* ======================= THE 3D PREVIEW COLUMN =======================
    The same docked model viewer the unit editor and the BMDB browser carry, over
    the composer this time.
 
-   A transfer is a decision about MODELS — which soldier entry crosses, whether
+   A transfer is a decision about MODELS - which soldier entry crosses, whether
    the officers come with it, whether the destination unit being replaced is the
-   right one to replace — and every one of those was being taken off a name in a
+   right one to replace - and every one of those was being taken off a name in a
    dropdown. The viewer already paints into any element it is handed (`v3Mount`),
    so the model belongs beside the boxes that decide which model it is.
 
@@ -72,7 +141,7 @@ async function ensureDestSnd(){
    unit's entries, and, once a base or replaced unit is picked, that unit's own
    entries out of the destination mod. "Is this the horse I meant to overwrite"
    is the question the replace mode exists to get wrong, and it is a question
-   about two mods at once — so the picker groups the entries by where they come
+   about two mods at once - so the picker groups the entries by where they come
    from and `v3Mount` is handed the mod each one belongs to.
 
    The three careful things are the editor column's three, for the same reasons:
@@ -95,7 +164,7 @@ const CMP_PREV_SEP='|';
 /* One unit's entries worth drawing.
 
    A unit that carries `armour_ug_models` is DRAWN from that list, one model per
-   armour level, and the model on its `soldier` line is never seen — so it is
+   armour level, and the model on its `soldier` line is never seen - so it is
    dropped, unless it is also an upgrade model or an officer's. A unit with no
    upgrade list is the other way round: the soldier line IS what gets drawn.
    Same test the unit editor's column makes, off the fields the unit LIST
@@ -109,7 +178,7 @@ function cmpPrevOwn(u){
   const keep=all.filter(n=>n.toLowerCase()!==drop);
   // …and the MEN before their officers, whatever order the EDU lists them in.
   // `model_names` reads the soldier line first and then the officers, so a unit
-  // whose soldier line was dropped opens on its standard bearer — which is not
+  // whose soldier line was dropped opens on its standard bearer - which is not
   // what anyone came to look at.
   const isOff=n=>off.includes(n.toLowerCase());
   return keep.filter(n=>!isOff(n)).concat(keep.filter(isOff));
@@ -152,7 +221,7 @@ function cmpPrevAttach(){
   cmpPrevBar();
   cmpPrevMount();
 }
-/* Give the column up entirely — the WebGL context, the draw loop and the node.
+/* Give the column up entirely - the WebGL context, the draw loop and the node.
    Called when the composer closes and before anything else takes the modal
    over, because a paused canvas parked in a dialog that is gone is a leak. */
 function cmpPrevDrop(){
@@ -160,7 +229,7 @@ function cmpPrevDrop(){
   cmpPrevDetach();
   cmpPrevNode=null;
 }
-// The bar only — never the body, which is the canvas.
+// The bar only - never the body, which is the canvas.
 function cmpPrevBar(){
   const el=document.getElementById('cmpPrevBar');
   if(!el)return;
@@ -285,7 +354,8 @@ async function renderComposer(){
       const bimg=cc.base_type?`<img onerror="iconRetry(this)" src="${iconUrl(state.dst,cc.base_type)}">`:'';
       return `<div class="bchip ${t===type?'sel':''}" onclick="switchUnit('${q1(esc(t))}')">
         <img onerror="iconRetry(this)" src="${iconUrl(state.src,t)}"><div class="t">${esc(t)}</div>
-        <div class="base">${!cc.base_type?'new unit'
+        <div class="base">${isModels(cc)?'models only'
+          :!cc.base_type?'new unit'
           :(isReplace(cc)?'replaces: ':'base: ')+esc(cc.base_type)}</div></div>`;}).join('')}</div>` : '';
   const hasOff=u.officers.length>0, hasMount=!!u.mount, hasCrew=!!(u.crew&&u.crew.length);
   const proj=u.projectiles||[]; const hasProj=proj.length>0;
@@ -293,11 +363,20 @@ async function renderComposer(){
   const eng=u.engine||u.mounted_engine||''; const hasEng=!!eng;
   const engMounted=!u.engine&&!!u.mounted_engine;
   const engGroups=u.engine_groups||[];
-  // a mounted engine has no model groups — its `class` names the descr_engine_skeleton entry
+  // a mounted engine has no model groups - its `class` names the descr_engine_skeleton entry
   const engClass=engMounted?(u.engine_class||''):'';
-  // a group supplied by the base — or kept by the unit being replaced — makes its
+  // a group supplied by the base - or kept by the unit being replaced - makes its
   // "include the source's" box moot
   const rep=isReplace(c);
+  // "battle-model entries only": no unit is written, so every panel that
+  // describes one goes - the include boxes, the engine, the voice, the mercenary
+  // flags and the field editor all answer questions about a unit that will not
+  // exist. What is left is the entry list and the folder the files land in.
+  const mo=isModels(c);
+  // fetched once per unit, and the composer redrawn when it lands - the dialog is
+  // never held up for it, and modelsFieldset says "Reading…" until then
+  if(mo&&unitModels(type)===undefined) ensureUnitModels(type).then(()=>{
+    if(state.editing===type&&isModels(cfgFor(type))) renderComposer();});
   const kw=rep?'(kept)':'(from base)';           // why a group's box is greyed out
   const insteadMsg=n=>rep?`→ keeping ${esc(n)}’s own`:`→ using ${esc(n)}’s instead`;
   const crwBase=c.crew_from==='base'&&!!c.base_type;
@@ -322,7 +401,7 @@ async function renderComposer(){
   // crew group is taken from it
   const engBase=crwBase; const engOn=hasEng&&!engBase;
   const sameMod=state.src===state.dst;      // edit mode's "new unit from this one"
-  // the guided field editor lays its boxes out in rows — give it the same room
+  // the guided field editor lays its boxes out in rows - give it the same room
   // the unit editor gets, instead of the default 640px dialog. So does the 3D
   // column: a model squeezed beside a 640px dialog is not a model you can read.
   m.className=(cmpPrevOn()||gfMode()==='guided')?'modal wide':'modal';
@@ -334,6 +413,7 @@ async function renderComposer(){
   m.innerHTML=`<h2>${batch?`Batch transfer: ${composerList.length} units`
       :sameMod?`New unit from “${esc(u.name)}”`
       :rep?`Replace “${esc(c.base_type)}” with “${esc(u.name)}”`
+      :mo?`Import “${esc(u.name)}”’s battle models`
       :`Transfer “${esc(u.name)}”`} <span class="pill">${
       sameMod?'in '+esc(state.src):esc(state.src)+' → '+esc(state.dst)}</span>
      ${cmpPrevOn()?'':`<button class="edprevon" onclick="cmpPrevShow()"
@@ -349,10 +429,10 @@ async function renderComposer(){
          ${hasProj?`<div class="projline">🏹 projectile: ${proj.map(p=>`<span class="chip">${esc(p)}</span>`).join('')}</div>`:''}
          ${hasEng?`<div class="projline">🏰 siege engine: <span class="chip">${esc(eng)}</span>${engMounted?'<span class="count"> (mounted)</span>':''}${engGroups.length?`<span class="count"> · ${engGroups.map(esc).join(' / ')}</span>`:''}${engClass?`<span class="count"> · class: ${esc(engClass)}</span>`:''}</div>`:''}</div>
      </div>
-     ${sameMod?'':`${projOn?`<div class="warnbox">⚠ <b>Projectile effects aren't imported.</b> The definition
+     ${sameMod?'':`${projOn&&!mo?`<div class="warnbox">⚠ <b>Projectile effects aren't imported.</b> The definition
        (damage, velocity, angles) comes across; effect lines fall back to <code>invisible_placeholder_set</code>
        where ${esc(state.dst)} lacks them. Re-add them in <code>descr_effect_impacts.txt</code>.</div>`:''}
-     <fieldset><legend>Include secondary models</legend>
+     ${mo?'':`<fieldset><legend>Include secondary models</legend>
        <label class="chk${offOn?'':' off'}"><input type="checkbox" id="optOff" ${offOn&&c.include_officers?'checked':''} ${offOn?'':'disabled'}> Officers ${!hasOff?'(none)':offBase?kw:`(${u.officers.length})`}</label>
        <label class="chk${mntOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optMount" ${mntOn&&c.include_mount?'checked':''} ${mntOn?'':'disabled'}> Mount${!hasMount?' (none)':mntBase?' '+kw:` (${esc(u.mount)})`}</label>
        <label class="chk${crwOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optCrew" ${crwOn&&c.include_crew?'checked':''} ${crwOn?'':'disabled'}> Crew${!hasCrew?' (none)':crwBase?' '+kw:` (${u.crew.length})`}</label>
@@ -373,8 +453,8 @@ async function renderComposer(){
        ${hasProj?`<div class="optnames"><span class="k">Projectile</span>${proj.map(o=>`<span class="chip">${esc(o)}</span>`).join('')}${projBase?`<span class="frombase">${insteadMsg(c.base_type)} stats (its projectile)</span>`:projEffects()}</div>`:''}
        ${hasEng?`<div class="optnames"><span class="k">Siege engine</span><span class="chip">${esc(eng)}</span>${engBase?`<span class="frombase">${insteadMsg(c.base_type)}</span>`:engMounted?`→ added to descr_mounted_engines.txt with its reference points${engClass?`; its <code>class ${esc(engClass)}</code> descr_engine_skeleton.txt entry is added only if ${esc(state.dst)} lacks it`:''}`:`→ added to descr_engines.txt + descr_engine_skeleton.txt, with its meshes/bone maps/collision/reference points, the textures baked into those meshes, and its engine animations`}</div>`:''}
        <div class="count" style="margin-top:5px">An unticked group keeps its source name, which must already exist in ${esc(state.dst)}. Or take it from ${rep?`“${esc(c.base_type)}”`:'the base'} above.</div>
-     </fieldset>
-     ${engOn&&c.include_engine!==false?`<fieldset><legend>Siege engine: <code>${esc(eng)}</code></legend>
+     </fieldset>`}
+     ${engOn&&c.include_engine!==false&&!mo?`<fieldset><legend>Siege engine: <code>${esc(eng)}</code></legend>
        <div class="count">Copied: the <code>${engMounted?'descr_mounted_engines.txt':'descr_engines.txt'}</code> block${engGroups.length?` (${engGroups.length} model group${engGroups.length>1?'s':''}: ${engGroups.map(esc).join(', ')})`:''}
          ${engMounted?`and the <code>reference_points</code> file it names.`
          :`, ${engGroups.length?`each group's animation entry, `:''}every mesh / bone map / collision /
@@ -406,8 +486,11 @@ async function renderComposer(){
          <label><input type="radio" name="tmode" value="replace" ${modeOf(c)==='replace'?'checked':''}>
            <b>Replace an existing unit</b>: no new entry, so a destination unit keeps its name and
            stats, and gets “${esc(u.name)}”’s models</label>
+         <label><input type="radio" name="tmode" value="models" ${mo?'checked':''}>
+           <b>Battle-model entries only</b>: no unit at all - just the models “${esc(u.name)}” is
+           drawn from, and the files they name</label>
        </div>
-       <div id="baseArea" style="margin-top:8px;${modeOf(c)==='new'?'display:none':''}">
+       <div id="baseArea" style="margin-top:8px;${modeOf(c)==='new'||mo?'display:none':''}">
          <div class="count" style="margin-bottom:6px">${modeOf(c)==='replace'
            ? docPoints(`Pick the <b>${esc(state.dst)}</b> unit to rewrite.`,[
                'It keeps everything except its models.',
@@ -441,7 +524,7 @@ async function renderComposer(){
        <div class="count" style="margin-top:6px">Stats are imported one at a time with the
          <span class="ibadge">B</span> buttons in <b>Edit fields</b>.</div>
      </fieldset>`:''}`}
-     ${soundFieldset(c,u)}
+     ${mo?modelsFieldset(type):`${soundFieldset(c,u)}
      <fieldset><legend>Mercenary attribute</legend>
        <label class="chk"><input type="checkbox" id="optMerc" ${c.make_mercenary?'checked':''}> Make this a mercenary unit</label>
        <div class="count" style="margin-top:5px">Adds the <code>mercenary_unit</code> attribute and a
@@ -476,7 +559,7 @@ async function renderComposer(){
          <b>${esc(u.type)}</b>'s own value instead; click again to go back. Greyed out <span class="ibadge off"
          style="background:transparent;color:var(--dim);border-color:var(--edge)">B</span> = the source's
          value. Fields the source unit doesn't have can't be switched.</div>`}
-     </fieldset>
+     </fieldset>`}
      <div id="previewBox"></div>
      </div>
     </div>
@@ -488,7 +571,7 @@ async function renderComposer(){
      <button class="primary" onclick="doApply()">${batch?'Apply all':'Apply'}</button>
    </div>`;
   cmpPrevAttach();                 // the live column, back where it belongs
-  // wire per-unit option persistence (disabled inputs — absent models — never fire)
+  // wire per-unit option persistence (disabled inputs - absent models - never fire)
   // with a base, toggling an include box changes which unit supplies that group
   // group toggles re-render so the per-model checkboxes enable/disable in step
   // the secondary-model / base fieldsets are absent when creating a new unit
@@ -503,29 +586,32 @@ async function renderComposer(){
   // re-render: the whole voice panel (locks, donor list, notes) changes with the mode
   document.querySelectorAll('input[name=sndmode]').forEach(r=>r.onchange=()=>{
     c.sound_mode=r.value; renderComposer();});
-  optMerc.onchange=()=>{c.make_mercenary=optMerc.checked; doPreview();};
-  optMercIcons.onchange=()=>{c.merc_icons=optMercIcons.checked; doPreview();};
-  // new unit / based on one / replace one — a whole different composer each time
+  // absent in 'models' mode - a mercenary flag is a unit's, and no unit is written
+  if(window.optMerc)optMerc.onchange=()=>{c.make_mercenary=optMerc.checked; doPreview();};
+  if(window.optMercIcons)optMercIcons.onchange=()=>{c.merc_icons=optMercIcons.checked; doPreview();};
+  // new unit / based on one / replace one - a whole different composer each time
   document.querySelectorAll('input[name=tmode]').forEach(r=>r.onchange=()=>setMode(r.value));
   if(window.optImpCard)optImpCard.onchange=()=>{c.import_card=optImpCard.checked; importedIcons(c); doPreview();};
   if(window.optImpInfo)optImpInfo.onchange=()=>{c.import_info_card=optImpInfo.checked; importedIcons(c); doPreview();};
-  // per-group source/base toggles — re-render so the include boxes grey out.
+  // per-group source/base toggles - re-render so the include boxes grey out.
   // officer_from / mount_from are the three-way rows and wire themselves through
   // grp3Set, because each of their values sets TWO options.
   ['soldier_from','crew_from','upgrade_from'].forEach(k=>
     document.querySelectorAll(`input[name=${k}]`).forEach(r=>r.onchange=()=>{
       c[k]=r.value; renderComposer();}));
-  loadFields(type); if(modeOf(c)!=='new')renderBaseList();
+  // no EDU block is written in 'models' mode, so there are no fields to edit and
+  // no base to pick - both panels are absent from the dialog
+  if(!mo){ loadFields(type); if(modeOf(c)!=='new')renderBaseList(); }
   doPreview();   // auto-plan so limit / asset-conflict warnings surface immediately
 }
 /* Switching mode rebuilds the composer: the picker, the per-group rows, the field
    editor's baseline and the voice panel all mean something different in each one.
-   Going back to a plain new unit drops the pick — nothing else uses it — but the
+   Going back to a plain new unit drops the pick - nothing else uses it - but the
    pick SURVIVES a base<->replace switch, since it answers the same question. */
 /* Importing a card over a unit that already has one only does something if the
    existing file is replaced: the replaced unit's card sits at the very path the
    import writes to (ui/units/<faction>/#<its dict>.tga), and the default "use
-   existing" would keep it — the tick box would appear to do nothing. So asking
+   existing" would keep it - the tick box would appear to do nothing. So asking
    for a card sets the icon rule to overwrite; clearing both puts it back. The
    radios in the preview still win if you change them afterwards. */
 function importedIcons(c){
@@ -535,10 +621,13 @@ function setMode(v){
   const c=cfgFor(state.editing);
   const prev=modeOf(c);
   c.mode=v;
+  // 'models' has no destination unit either, but the pick is kept: it is the one
+  // mode you flip through on the way to (or back from) replacing something, and
+  // losing the unit you had picked each time is its own annoyance.
   if(v==='new')c.base_type='';
   // "Soldier from the base" (⚙ setting) is the default for BOTH modes that have a
-  // base unit: "base" means the same thing in each — the destination unit supplies
-  // the soldier line — so a user who set that default meant it when replacing too.
+  // base unit: "base" means the same thing in each - the destination unit supplies
+  // the soldier line - so a user who set that default meant it when replacing too.
   // Entering base/replace re-applies it; a per-unit pick still wins afterwards.
   if(v!==prev&&v!=='new')
     c.soldier_from=(state.settings&&state.settings.soldier_from_base)?'base':'source';
@@ -550,12 +639,12 @@ function setMode(v){
 function baseUnitOf(c){
   return (c.base_type&&state.destData)
     ? state.destData.units.find(x=>x.type===c.base_type) : null;}
-// "Take from base" toggles — one row per group, shown only when the BASE has it.
+// "Take from base" toggles - one row per group, shown only when the BASE has it.
 // Replacing reads the same rows the other way round: "Source" ports the
 // transferred unit's models over the replaced unit's, "Base" leaves that group
 // exactly as the replaced unit has it. Both send the same `<group>_from=base`,
 // because in both modes "base" means "the destination unit supplies this group"
-// — which is why the label is "Base" either way.
+// - which is why the label is "Base" either way.
 /* The three-way rows (Officers, Mount) encode two server options at once. Their
    models are entries of their own and carry their own animation set, so there
    are three different answers and not two:
@@ -604,7 +693,7 @@ function fromBasePanel(c,u){
     +(rep?'Base':'Base')+': the unit animates like '
     +(rep?'the replaced unit':'the base unit')+' instead, which always loads but '
     +'may fight unexpectedly.');
-  // Filled in by paintSoldierAnim() from the plan — a missing-animation warning
+  // Filled in by paintSoldierAnim() from the plan - a missing-animation warning
   // only belongs here when the SOLDIER model is the one asking for it, since
   // flipping this row is the fix. See TransferPlan.soldier_skeletons_missing.
   rows+=`<div class="sbanim" id="soldierAnim" hidden></div>`;
@@ -642,8 +731,8 @@ function fromBasePanel(c,u){
    A unit's barks are not in its EDU block: they are a `unit <type>` entry inside one
    accent/class block of the destination's voice bank, and the EDU's `accent` +
    `voice_type` are what point the game at that block. Copying a voice therefore
-   pins those two fields to the donor's — an entry the EDU doesn't point at is never
-   read — which is exactly why the accent and class controls here lock as soon as a
+   pins those two fields to the donor's - an entry the EDU doesn't point at is never
+   read - which is exactly why the accent and class controls here lock as soon as a
    donor is in play, rather than letting you set a combination that can't work. */
 // The donor a config resolves to, plus why it can or can't be used.
 function soundDonor(c){
@@ -652,7 +741,7 @@ function soundDonor(c){
   if(c.sound_mode==='none')return {mode:'none'};
   // Replacing: "the base's voice" would be the replaced unit's own entry, copied
   // onto itself. It already has it, and its accent/voice_type come across with
-  // its stats — so the default means "leave the voice alone", and nothing is
+  // its stats - so the default means "leave the voice alone", and nothing is
   // locked. Picking another unit still copies that unit's barks as usual.
   if(c.sound_mode==='base'&&isReplace(c))return {mode:'keep',name:c.base_type};
   const name=c.sound_mode==='base'?(c.base_type||''):(c.sound_donor||'');
@@ -805,7 +894,7 @@ async function loadFields(type){
     c._orig={}; for(const [label,val] of c._fields) c._orig[label]=val;   // baseline for diffing
     c._fieldsKey=key;
     // With a base, the SOURCE unit's own values are what a B can be switched back
-    // to, so they are fetched alongside (once per unit — they never change).
+    // to, so they are fetched alongside (once per unit - they never change).
     if(c.base_type&&!c._srcFields){
       try{
         const s=await api.get(`/api/unit_fields?mod=${encodeURIComponent(state.src)}`
@@ -844,10 +933,10 @@ function renderAllFields(type){
     : null;
   // A unit that has no `accent` line at all still GETS one when a voice is copied
   // (the game can't find the block without it), so show that row rather than
-  // writing a field the panel never mentioned. It goes where the EDU keeps it —
+  // writing a field the panel never mentioned. It goes where the EDU keeps it -
   // right after voice_type / class.
   // Replacing a unit does not rename it: `type` and `dictionary` ARE the unit
-  // being rewritten. They stay the destination's and are shown as such — editing
+  // being rewritten. They stay the destination's and are shown as such - editing
   // one here would rename the unit and orphan its localisation entry and icons,
   // which is the one thing this mode exists to avoid.
   const rb=baseUnitOf(c);
@@ -901,7 +990,7 @@ function renderAllFields(type){
 }
 /* The B beside an inherited field is a switch, not a label: ON the field carries
    the base unit's value, OFF it carries the source unit's own. Nothing new is
-   stored for it — "off" is just a field override holding the source's value, which
+   stored for it - "off" is just a field override holding the source's value, which
    is what the transfer engine already knows how to write. It follows that typing
    your own value turns the B off too: the field is no longer the base's. */
 const baseSrcVal=(c,label)=>(c._srcFields||{})[label];
@@ -928,7 +1017,7 @@ Not switchable: ${why}.">B</span><span class="bwhy">${why}</span>`;
 function toggleBaseField(label){
   const c=cfgFor(state.editing);
   const src=baseSrcVal(c,label); if(src===undefined)return;
-  // guided mode has no single box holding the line — the value lives in the
+  // guided mode has no single box holding the line - the value lives in the
   // override map and the boxes are drawn from it, so flip it there and redraw
   if(document.querySelector('#allFields .gfwrap')){
     const cur=(label in c.field_overrides)?c.field_overrides[label]:c._orig[label];
@@ -960,7 +1049,7 @@ function filterFields(){const qq=(document.getElementById('fieldFilter')?.value|
     const l=(r.dataset.label||'').toLowerCase(); r.style.display=(!qq||l.includes(qq))?'':'none';});}
 /* ---- clearing data/text/export_units.txt.strings.bin ----------------------
    The game reads that compiled cache, not export_units.txt, and only rebuilds
-   it when it is missing — so until it is deleted a transferred or renamed unit
+   it when it is missing - so until it is deleted a transferred or renamed unit
    keeps showing the OLD name and description. Deleting it costs nothing: the
    next launch writes a fresh one.
 
@@ -970,7 +1059,7 @@ function filterFields(){const qq=(document.getElementById('fieldFilter')?.value|
    every transfer / save / voice change / cleanup. The box under each Apply is
    the same setting, put where you would look for it. */
 const clearBinOn=()=>(state.settings||{}).clear_strings_bin!==false;
-// `what` names the text file whose cache this job would clear — export_units.txt
+// `what` names the text file whose cache this job would clear - export_units.txt
 // for anything unit-shaped, export_buildings.txt for a building rename.
 function cleanerBoxHtml(what){
   const kind=what||'unit';
@@ -994,6 +1083,57 @@ function binMsg(r){
 
 // per-model checkboxes for a secondary group (officers / crew), so models can be
 // picked individually rather than all-or-none. Disabled when the group is off.
+/* 'models' mode: the whole body of the dialog.
+
+   One row per battle-model entry the unit is drawn from, ticked by default,
+   each showing the FOLDER its meshes and textures sit in - because that is what
+   is actually being imported, and the entry name never says where its files are.
+   The row also carries the animation set, since an entry whose skeleton the
+   destination hasn't got is fine sitting in the modeldb and crashes the moment a
+   unit is pointed at it. Where the files LAND is the "Textures / meshes" panel
+   below the summary, which every mode shares. */
+function modelsFieldset(type){
+  const c=cfgFor(type);
+  const list=unitModels(type);
+  if(list===undefined) return `<fieldset><legend>Battle-model entries</legend>
+    <div class="count">Reading “${esc(type)}”’s models…</div></fieldset>`;
+  if(list===null) return `<fieldset style="border-color:var(--warn)">
+    <legend class="w-warn">Battle-model entries</legend>
+    <div class="count">Couldn’t read this unit’s battle models. Close the dialog and
+      open the transfer again.</div></fieldset>`;
+  const on=new Set(importedModels(c,list).map(s=>s.toLowerCase()));
+  const usable=list.filter(m=>m.found);
+  const picked=usable.filter(m=>on.has(m.name.toLowerCase())).length;
+  const rows=list.map(m=>{
+    const lit=on.has(m.name.toLowerCase())&&m.found;
+    return `<div class="mdlrow${m.found?'':' off'}">
+      <label class="chk"><input type="checkbox" ${lit?'checked':''} ${m.found?'':'disabled'}
+        onchange="toggleImportModel('${q1(esc(m.name))}',this.checked)"> <b>${esc(m.name)}</b></label>
+      <span class="pill">${esc(MODEL_SLOT[m.slot]||m.slot)}</span>
+      ${m.found?`<div class="count">${m.meshes} mesh${m.meshes===1?'':'es'},
+          ${m.textures} texture${m.textures===1?'':'s'}${
+          m.missing?` · <b class="w-warn">${m.missing} file(s) not on disk</b>`:''}${
+          m.skeletons.length?` · animates as ${m.skeletons.map(s=>`<code>${esc(s)}</code>`).join(', ')}`:''}</div>
+        <div class="mdlfolders">${m.folders.map(f=>`<span class="path">${esc(f)}/</span>`).join('')}</div>`
+        :`<div class="count w-warn">Named by the unit, but ${esc(state.src)}’s
+          battle_models.modeldb has no such entry - nothing to import.</div>`}
+    </div>`;}).join('');
+  return `<fieldset><legend>Battle-model entries to import</legend>
+    <div class="count">${docPoints(
+      `Every entry “${esc(type)}” is drawn from, and the folder each one’s files live in.`,[
+      'Each one brings its <code>battle_models.modeldb</code> record and the meshes / textures it names.',
+      `<b>No unit is created.</b> ${esc(state.dst)} gets the models and nothing else - no entry in
+       export_descr_unit.txt, no name, no cards, no stats.`,
+      'Where the files land is <b>Textures / meshes</b>, below.'])}</div>
+    <div class="mdlbar">
+      <button onclick="allImportModels(true)">Tick all</button>
+      <button onclick="allImportModels(false)">Untick all</button>
+      <span class="count">${picked} of ${usable.length} entr${usable.length===1?'y':'ies'}</span>
+    </div>
+    <div class="mdllist">${rows}</div>
+    ${picked?'':`<div class="count w-warn" style="margin-top:6px">Tick at least one entry
+      before applying.</div>`}</fieldset>`;
+}
 function modelChecks(models,groupOn,c){
   const ex=new Set((c.exclude_models||[]).map(s=>s.toLowerCase()));
   return models.map(m=>{
@@ -1010,13 +1150,14 @@ function toggleModel(name,on){
 function optsPayload(type){const c=cfgFor(type);
   // The engine applies field overrides AFTER pinning accent/voice_type to the voice
   // donor's block, so an override left over from before the lock would quietly undo
-  // it — drop those two while a donor is in play.
+  // it - drop those two while a donor is in play.
   let fo=c.field_overrides;
   if(soundDonor(c).accent&&('accent' in fo||'voice_type' in fo)){
     fo=Object.assign({},fo); delete fo.accent; delete fo.voice_type;
   }
   const rep=isReplace(c);
-  // the replaced unit's identity is not editable — the engine ignores these two
+  const mdl=isModels(c);
+  // the replaced unit's identity is not editable - the engine ignores these two
   // when replacing, and sending them would only make the preview lie
   if(rep&&('type' in fo||'dictionary' in fo)){
     fo=Object.assign({},fo); delete fo.type; delete fo.dictionary;
@@ -1024,10 +1165,13 @@ function optsPayload(type){const c=cfgFor(type);
   return {include_officers:c.include_officers,include_mount:c.include_mount,include_crew:c.include_crew,
     include_projectile:c.include_projectile!==false,include_engine:c.include_engine!==false,
     exclude_models:c.exclude_models||[],
-    // one picker, two meanings: a stat template, or the unit being rewritten
-    mode:rep?'replace':'new',
-    base_type:rep?null:(c.base_type||null),
+    // one picker, two meanings: a stat template, or the unit being rewritten.
+    // 'models' uses neither - it writes no unit, so it names no destination one.
+    mode:mdl?'models':rep?'replace':'new',
+    base_type:(mdl||rep)?null:(c.base_type||null),
     replace_type:rep?c.base_type:null,
+    // null (= every entry) is sent as [], which the planner reads as "all of them"
+    models_only:mdl?importedModels(c,unitModels(type)):[],
     import_card:!!c.import_card,import_info_card:!!c.import_info_card,
     field_overrides:fo,
     soldier_from:c.soldier_from||'source',officer_from:c.officer_from||'source',
@@ -1036,6 +1180,9 @@ function optsPayload(type){const c=cfgFor(type);
     import_mount_with_base:c.import_mount_with_base!==false,
     import_officers_with_base:c.import_officers_with_base!==false,
     on_conflict:c.on_conflict,new_type:c.new_type||null,new_dictionary:c.new_dictionary||null,
+    // null = keep the source unit's own name, which is what a cross-mod transfer
+    // of the SAME unit wants; the box only exists where a new record is written
+    new_name:(c.new_name||'').trim()||null,
     eop_target:c.eop_target||'auto',
     asset_conflict:c.asset_conflict||'mod_folder',
     asset_reroute_dir:c.asset_reroute_dir||null,
@@ -1073,12 +1220,13 @@ function projectedDestCount(){
   const dd=state.destData; if(!dd) return null;
   const have=new Set(dd.units.map(u=>u.type));
   // The cap is a property of export_descr_unit.txt, so M2TWEOP units are not
-  // counted — being outside that file is exactly what they are for.
+  // counted - being outside that file is exactly what they are for.
   const current=(dd.edu_count!=null)?dd.edu_count:dd.units.length;
   let add=0, eopAdd=0;
   for(const t of composerList){ const c=cfgFor(t);
     const toEop=eopBound(t);
     if(isReplace(c)) continue;               // rewrites a unit that already exists
+    if(isModels(c)) continue;                // writes no unit type at all
     if(have.has(t) && c.on_conflict!=='rename') continue;  // overwrite/skip: no net type
     if(toEop) eopAdd++; else add++;
   }
@@ -1096,7 +1244,7 @@ function eopBound(type){
   return !!(u&&u.eop);
 }
 // A mod marked M2EX has no 500-unit ceiling at all, so the warning is off for it
-// without anyone having to dismiss it — the same answer the per-mod override
+// without anyone having to dismiss it - the same answer the per-mod override
 // gives, reached from the fact rather than from the dismissal.
 const modIsM2ex=mod=>!!((state.mods||[]).find(m=>m.name===mod)||{}).m2ex;
 /* What happens to the projectile's effect lines, which depends on the same mark.
@@ -1130,7 +1278,7 @@ function unitLimitBanner(){
       <span class="count">${hasEop?'':'Set the mod’s EOP folder in ⚙ Settings to use the first option. '}Re-enable in ⚙ Settings.</span>
     </div></div>`;
 }
-/* Flip every unit in the composer to "write as an M2TWEOP unit" — the one-click
+/* Flip every unit in the composer to "write as an M2TWEOP unit" - the one-click
    answer to the limit banner, which is the moment the user is actually thinking
    about where these units land. */
 function allToEop(){
@@ -1190,7 +1338,7 @@ async function restartServer(){
   setTimeout(tick,1200);
 }
 /* Hand the user the diagnostic log as a file. A link rather than fetch+Blob so
-   the browser's own download UI names it and drops it in Downloads — the point
+   the browser's own download UI names it and drops it in Downloads - the point
    is that they can attach it to a message without ever finding config/. */
 function downloadDiag(){
   const a=document.createElement('a');
@@ -1216,7 +1364,7 @@ function assetConflictUI(type,r){
   const list=r.asset_conflicts||[];
   // three buckets, each with its own resolution mode: battle-model assets (which
   // can be relocated), icons (located by name, can't be) and siege-engine files
-  // (can't be either — their textures are baked into the mesh binaries).
+  // (can't be either - their textures are baked into the mesh binaries).
   const aConf=list.filter(x=>x.kind!=='icon'&&x.kind!=='engine');
   const iConf=list.filter(x=>x.kind==='icon');
   const eConf=list.filter(x=>x.kind==='engine');
@@ -1353,6 +1501,11 @@ function brMakeSub(){const n=(document.getElementById('brNew')?.value||'').trim(
 
 async function doPreview(){
   const type=state.editing; const box=document.getElementById('previewBox'); if(!box)return null;
+  if(modelsPickEmpty(type)){
+    box.innerHTML=`<div class="preview w-warn">No battle-model entries are ticked, so there is
+      nothing to import. Tick at least one above.</div>`;
+    return null;
+  }
   box.innerHTML='<div class="preview">Planning…</div>';
   const r=await api.post('/api/plan',{source:state.src,dest:state.dst,unit:type,options:optsPayload(type)});
   if(state.editing!==type) return r;          // user switched units mid-plan
@@ -1364,7 +1517,7 @@ async function doPreview(){
     .filter(l=>!/ANIMATION WARNING \(soldier line\)/.test(l)).join('\n'));
   cfgFor(type)._conflict=r.unit_conflict;
   // Having rendered the conflict fieldset (with its pre-filled rename defaults, editable
-  // right here) IS the review step — don't also force a redundant "Apply again" pause in
+  // right here) IS the review step - don't also force a redundant "Apply again" pause in
   // doApply() for a unit whose resolution the user already saw and could adjust.
   if(r.unit_conflict) cfgFor(type)._resolved=true;
   if(r.unit_conflict) html+=conflictUI(type);
@@ -1374,7 +1527,7 @@ async function doPreview(){
   return r;
 }
 /* Missing animations, shown against the row that can fix them.
-   A skeleton is an animation pack the destination either has or hasn't — copying a
+   A skeleton is an animation pack the destination either has or hasn't - copying a
    battle model does not bring one along, and M2TW does not shrug it off: a model
    asking for an animation set the mod doesn't have takes the game down on load.
    The plan reports every missing skeleton in the summary, but this warning belongs
@@ -1405,7 +1558,7 @@ function paintSoldierAnim(r){
       </ul>`);
   }
   // Taking the base's soldier entry always loads, but it also swaps the animation
-  // set — a pikeman animated as a swordsman fights wrong and nothing says why.
+  // set - a pikeman animated as a swordsman fights wrong and nothing says why.
   const chg=(r&&r.soldier_anim_changed)||[];
   if(chg[0]&&chg[1]&&chg[0]!==chg[1]){
     out.push(`<b>⚠ Different animation set</b>
@@ -1429,11 +1582,13 @@ function paintSoldierAnim(r){
   el.hidden=!out.length;
 }
 /* Where the unit's EDU block gets written. Shown whenever the destination has an
-   M2TWEOP folder OR the source unit is an EOP unit — the second case matters even
+   M2TWEOP folder OR the source unit is an EOP unit - the second case matters even
    with no folder, because that is the transfer that silently demotes a unit into
    the EDU and pushes the mod towards the 500 cap. */
 function eopUI(type,r){
   const c=cfgFor(type);
+  // no unit is written in 'models' mode, so there is no file for one to go in
+  if(r.models_mode) return '';
   // Replacing has nothing to choose: the rewritten block stays in whichever file
   // the replaced unit already lives in, EDU or M2TWEOP.
   if(r.replace_type) return `<fieldset class="assetconf" style="margin-top:10px;border-color:var(--edge)">
@@ -1465,8 +1620,24 @@ function eopUI(type,r){
 function wireEop(type){const c=cfgFor(type);
   document.querySelectorAll('input[name=eopt]').forEach(x=>x.onchange=()=>{c.eop_target=x.value;doPreview();});
 }
+/* Naming the unit that is about to be written.
+
+   THREE names, not two, and the third is the one anyone actually meant. `type`
+   is the engine's internal key and `dictionary` is the localisation key; neither
+   is seen in game. What the player reads is the `name` half of the
+   text/export_units.txt record, and a new dictionary key gets a brand-new
+   record - which used to be copied wholesale from the source unit. So "New
+   unit" would take every field you filled in, write the unit under its new type
+   and its new dictionary, and still call it what the original was called, with
+   no box anywhere that said otherwise.
+
+   It is prefilled with the source's name because that is what the record would
+   have said, so the box shows the truth before it is touched. */
 function conflictUI(type){const c=cfgFor(type);const u=state.data.units.find(x=>x.type===type);
   if(!c.new_type)c.new_type=type+' (copy)'; if(!c.new_dictionary)c.new_dictionary=u.dictionary+'_copy';
+  if(c.new_name==null)c.new_name=u.name||'';
+  const nameRow=`<label>Displayed name <span class="count">what the player reads</span>
+      <input id="nn" value="${esc(c.new_name)}"></label>`;
   // Same mod = the "new unit" flow: the clash with the original is the whole point,
   // so ask for the new unit's names instead of warning about a conflict.
   const sameMod=state.src===state.dst;
@@ -1474,8 +1645,12 @@ function conflictUI(type){const c=cfgFor(type);const u=state.data.units.find(x=>
     <div class="rename-fields" id="rf" style="padding-left:0">
       <label>New type<input id="nt" value="${esc(c.new_type)}"></label>
       <label>New dictionary<input id="nd" value="${esc(c.new_dictionary)}"></label>
+      ${nameRow}
     </div>
-    <div class="count">The original “${esc(type)}” stays as it is.</div></fieldset>`;
+    <div class="count">${docPoints(`The original “${esc(type)}” stays as it is.`,[
+      '<b>Type</b> and <b>dictionary</b> are internal keys - no one sees either in game.',
+      '<b>Displayed name</b> is the one on the recruitment panel and the unit card.',
+      'The descriptions are copied from the original; edit them in the Unit Editor.'])}</div></fieldset>`;
   return `<fieldset style="margin-top:10px;border-color:var(--warn)"><legend class="w-warn">Unit already exists in destination</legend>
     <div class="radio-row">
       <label><input type="radio" name="cf" value="rename" ${c.on_conflict==='rename'?'checked':''}> Rename</label>
@@ -1485,12 +1660,15 @@ function conflictUI(type){const c=cfgFor(type);const u=state.data.units.find(x=>
     <div class="rename-fields" id="rf">
       <label>New type<input id="nt" value="${esc(c.new_type)}"></label>
       <label>New dictionary<input id="nd" value="${esc(c.new_dictionary)}"></label>
+      ${nameRow}
     </div></fieldset>`;
 }
 function wireConflict(type){const c=cfgFor(type);
   document.querySelectorAll('input[name=cf]').forEach(r=>r.onchange=()=>{c.on_conflict=r.value;document.getElementById('rf').style.display=r.value==='rename'?'':'none';});
   const nt=document.getElementById('nt'),nd=document.getElementById('nd');
+  const nn=document.getElementById('nn');
   if(nt)nt.oninput=()=>c.new_type=nt.value; if(nd)nd.oninput=()=>c.new_dictionary=nd.value;
+  if(nn)nn.oninput=()=>c.new_name=nn.value;
   const rf=document.getElementById('rf');
   if(rf&&state.src!==state.dst)rf.style.display=c.on_conflict==='rename'?'':'none';
 }
@@ -1516,7 +1694,7 @@ function renderProgress(types,status){
 
 /* Real progress for the long BMDB jobs (the scan and the cleanup). Each is ONE
    request that runs for seconds, so the server reports where it is under a job id
-   and this polls that id alongside the request — a bar parked at a made-up width
+   and this polls that id alongside the request - a bar parked at a made-up width
    is exactly what this replaces. Polling stops the moment the request settles. */
 const newJob=()=>'j'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function jobBox(title,note){
@@ -1528,7 +1706,7 @@ function jobBox(title,note){
       <div class="count" style="margin-top:10px">${note}</div>
     </div>`;
 }
-// Only touches the bar if it is still on screen — the job's own result replaces
+// Only touches the bar if it is still on screen - the job's own result replaces
 // the modal, and a late poll must not paint over it.
 function jobPaint(pct,label){
   const f=document.getElementById('jobFill'); if(!f)return;
@@ -1551,10 +1729,14 @@ async function runJob(job,title,note,run){
 async function doApply(){
   const types=composerList.length?composerList:[state.editing];
   // renderProgress rewrites the modal, and the run ends in closeModal either
-  // way — the column has nothing left to be docked to from here on
+  // way - the column has nothing left to be docked to from here on
   cmpPrevDrop();
   // ensure conflicts are resolved: preview each; if conflict and not yet resolved, focus it
   for(const t of types){
+    if(modelsPickEmpty(t)){
+      state.editing=t; renderComposer();
+      toast(`“${t}”: tick at least one battle-model entry to import.`); return;
+    }
     const r=await api.post('/api/plan',{source:state.src,dest:state.dst,unit:t,options:optsPayload(t)});
     if(r.error){toast(`${t}: ${r.error}`);state.editing=t;renderComposer();await doPreview();return;}
     if(r.base_error){toast(`${t}: ${r.base_error}`);state.editing=t;renderComposer();return;}
@@ -1570,7 +1752,7 @@ async function doApply(){
     status[i]='current'; renderProgress(types,status);
     const res=await api.post('/api/apply',{source:state.src,dest:state.dst,unit:t,
       options:optsPayload(t),
-      // once per batch, after the last unit — clearing it earlier just lets the
+      // once per batch, after the last unit - clearing it earlier just lets the
       // game recompile the cache before the batch has finished writing
       clear_strings_bin:clearBinOn()&&i===types.length-1});
     if(res.error){status[i]='error';renderProgress(types,status);toast(`${t}: ${res.error}`);return;}
@@ -1580,9 +1762,14 @@ async function doApply(){
   }
   closeModal();
   const repl=types.filter(t=>isReplace(cfgFor(t))).length;
-  toast(`${state.src===state.dst?'Created':repl===ok?'Replaced':'Transferred'} ${ok} unit(s)${
-    repl&&repl!==ok?` (${repl} replaced)`:''}${skip?`, skipped ${skip}`:''} ✓${binMsg(last)}  (undo in 🕑 Log)`,4200);
-  // these ones are done — leaving them ticked invites transferring them twice
+  const mdl=types.filter(t=>isModels(cfgFor(t))).length;
+  // a models-only run wrote no unit, so counting units is the one thing not to say
+  toast(mdl===ok
+    ? `Imported the battle models of ${ok} unit(s) into ${state.dst} - no unit was created ✓  (undo in 🕑 Log)`
+    : `${state.src===state.dst?'Created':repl===ok?'Replaced':'Transferred'} ${ok} unit(s)${
+      repl&&repl!==ok?` (${repl} replaced)`:''}${mdl?`, ${mdl} models-only`:''}${
+      skip?`, skipped ${skip}`:''} ✓${binMsg(last)}  (undo in 🕑 Log)`,4200);
+  // these ones are done - leaving them ticked invites transferring them twice
   clearSelection();
   state.cfg={};
   if(state.dst===state.src)loadSource();

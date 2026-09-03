@@ -6,7 +6,7 @@ provinces trade, what its settlements look like and what its people are called.
 
 They are three shapes, not five, which is why they are here together:
 
-**Flat records** — ``descr_rebel_factions.txt`` and ``descr_sm_resources.txt``.
+**Flat records** - ``descr_rebel_factions.txt`` and ``descr_sm_resources.txt``.
 A head line names the record and ``keyword value`` lines follow, exactly the
 shape :mod:`unittransfer.keyblock` was written for by the traits editor::
 
@@ -17,11 +17,11 @@ shape :mod:`unittransfer.keyblock` was written for by the traits editor::
       unit              Cave Trolls2         has_mine
       unit              Mordor Orcs Invasion
 
-**Brace blocks** — ``descr_religions.txt`` and ``descr_cultures.txt``. A name
+**Brace blocks** - ``descr_religions.txt`` and ``descr_cultures.txt``. A name
 line, then a ``{ … }`` body; cultures nest one level further for the settlement
 ladder and then carry a *tail* of flat lines after the closing brace.
 
-**Indented sections** — ``descr_names.txt``. ``faction: x``, then ``characters``
+**Indented sections** - ``descr_names.txt``. ``faction: x``, then ``characters``
 and ``women`` sections holding one bare name per line, 25 903 of them in Third
 Age 6.
 
@@ -30,7 +30,7 @@ Phase 8: these files are hand-aligned with tab stops and comment banners, and
 ``parse_text(t).text() == t`` for all 15 real files is the gate.
 
 What measurement corrected in the reference tool's own parsers (all three break
-files that load today — see ``merge/audit-minorfiles.md``):
+files that load today - see ``merge/audit-minorfiles.md``):
 
 * **a religion's key is ``pip_path`` inside a brace block.** Their parser looks
   for ``icon`` / ``pip`` / ``anti_pip``, finds none of them in any real file, and
@@ -44,8 +44,8 @@ files that load today — see ``merge/audit-minorfiles.md``):
 
 And two things the files themselves say:
 
-* **a religion is written down three times** — the ``religions { … }`` list, its
-  own ``religion x { … }`` block, and ``descr_religions_lookup.txt`` — plus a
+* **a religion is written down three times** - the ``religions { … }`` list, its
+  own ``religion x { … }`` block, and ``descr_religions_lookup.txt`` - plus a
   name in ``text/religions.txt`` (geeko's *How to add a religion*). Third Age 3
   disagrees with itself on all three counts: ``heretic`` has two blocks, the list
   is missing one name, and the lookup carries three religions that no longer
@@ -75,12 +75,12 @@ from . import keyblock as kb
 #: codec that promises the bytes come back as they went in
 ENCODING = fr.ENCODING
 
-#: how they are split into lines — the EDCT's splitter, so a line number means
+#: how they are split into lines - the EDCT's splitter, so a line number means
 #: the same thing in every editor
 split_lines = fr.split_lines
 
 #: The flat-record half of this module lives in :mod:`unittransfer.flatrecord`
-#: now — ``descr_sm_factions.txt`` needed exactly it and nothing else, and a
+#: now - ``descr_sm_factions.txt`` needed exactly it and nothing else, and a
 #: fourth caller is where "the shape the minor files share" stops being a fact
 #: about the minor files. These names are re-exported because they are this
 #: module's published API and its tests, its Code View kinds and the server all
@@ -156,7 +156,7 @@ REBELS = Shape(
 REBEL_CATEGORIES = ("gladiator_revolt", "brigands", "pirates", "peasant_revolt")
 
 #: ``descr_sm_resources.txt``. ``mine`` is a file-level line naming the model a
-#: mined resource shows, not a per-resource key — ``has_mine`` is the per-resource
+#: mined resource shows, not a per-resource key - ``has_mine`` is the per-resource
 #: flag that opts into it.
 RESOURCES = Shape(
     rel="descr_sm_resources.txt", label="Resources", kw="type", noun="resource",
@@ -165,7 +165,7 @@ RESOURCES = Shape(
     flags=("has_mine",),
     preamble_keys=("mine",))
 
-#: the 28 resource names all three installed mods ship — in three different
+#: the 28 resource names all three installed mods ship - in three different
 #: orders, and with no additions. The engine's list is closed: a `type` it does
 #: not know is read and ignored.
 KNOWN_RESOURCES = (
@@ -179,8 +179,8 @@ KNOWN_RESOURCES = (
 def check_records(shape: Shape, rf: RecordFile, mod=None) -> List[Dict]:
     """Findings for a whole flat-record file.
 
-    The three any such file can have — a duplicate name, a missing required line,
-    lines out of order — come from :func:`unittransfer.flatrecord.check_records`.
+    The three any such file can have - a duplicate name, a missing required line,
+    lines out of order - come from :func:`unittransfer.flatrecord.check_records`.
     What is left here is what these two files MEAN by their values.
     """
     out: List[Dict] = fr.check_records(shape, rf)
@@ -208,7 +208,7 @@ def check_records(shape: Shape, rf: RecordFile, mod=None) -> List[Dict]:
                     f"`{chance}` is not a whole number")
             if not rec.repeats:
                 add("no-units", rec.name, rec.start,
-                    "no `unit` line — a rebel faction with no units cannot spawn")
+                    "no `unit` line - a rebel faction with no units cannot spawn")
             for rep in rec.repeats:
                 if units is not None and rep.value not in units:
                     add("unknown-unit", rec.name, rep.line,
@@ -222,7 +222,7 @@ def check_records(shape: Shape, rf: RecordFile, mod=None) -> List[Dict]:
             if rec.name and rec.name not in KNOWN_RESOURCES:
                 add("unknown-resource", rec.name, rec.start,
                     f"`{rec.name}` is not one of the 28 resources the engine knows "
-                    "— the line is read and then ignored")
+                    "- the line is read and then ignored")
     return out
 
 
@@ -241,12 +241,12 @@ def parse_resources(text: str) -> RecordFile:
 #: its own name.
 REBELS_LOC_REL = "text/rebel_faction_descr.txt"
 
-#: …and a resource's, which is a different kind of file — see :data:`LOC_FILES`.
+#: …and a resource's, which is a different kind of file - see :data:`LOC_FILES`.
 RESOURCES_LOC_REL = "text/strat.txt"
 
 
 def rebel_loc(mod) -> Dict[str, str]:
-    """``{tag: text}`` from ``text/rebel_faction_descr.txt`` — a rebel's shown name."""
+    """``{tag: text}`` from ``text/rebel_faction_descr.txt`` - a rebel's shown name."""
     return _loc(mod, REBELS_LOC_REL)
 
 
@@ -263,7 +263,7 @@ def resource_tag(name: str) -> str:
 # ---------------------------------------------------------------------------
 # shape two, first file: descr_religions.txt
 #
-# A religion is written down three times and the three can disagree — see the
+# A religion is written down three times and the three can disagree - see the
 # module docstring. The `religions { … }` list is what the engine reads as the
 # set; the `religion x { … }` block is where its pip comes from.
 
@@ -381,9 +381,9 @@ def parse_religion_block(text: str) -> Religion:
     rf = parse_religions(text if text.endswith("\n") else text + "\n")
     if not rf.religions:
         raise MinorError("a religion starts with a `religion <name>` line followed "
-                         "by `{` — this text has none", 1)
+                         "by `{` - this text has none", 1)
     if len(rf.religions) > 1:
-        raise MinorError(f"this text holds {len(rf.religions)} religions — "
+        raise MinorError(f"this text holds {len(rf.religions)} religions - "
                          "one at a time", rf.religions[1].start + 1)
     return rf.religions[0]
 
@@ -404,7 +404,7 @@ def render_religion(base: str, edits: Optional[Dict] = None) -> str:
         value = str(edits["pip_path"] or "").strip()
         line = rel.lines.get("pip_path", -1)
         if not value:
-            raise MinorError("a religion needs its `pip_path` line — the pip is what "
+            raise MinorError("a religion needs its `pip_path` line - the pip is what "
                              "the campaign map draws for it",
                              (line + 1) or (rel.start + 1))
         if line >= 0:
@@ -432,7 +432,7 @@ def edit_religions_file(text: str, add: str = "", remove: str = "",
                         block: str = "") -> str:
     """The whole ``descr_religions.txt`` with one religion joined or dropped.
 
-    A religion is written down twice inside this one file — once in the
+    A religion is written down twice inside this one file - once in the
     ``religions { … }`` list the engine reads as the set, and once as its own
     ``religion x { … }`` block, which is where its pip comes from. Adding one
     that lands in only the list has no pip; adding one that lands in only the
@@ -444,7 +444,7 @@ def edit_religions_file(text: str, add: str = "", remove: str = "",
         if rf.get(add) is not None or add in rf.listed_lines:
             raise MinorError(f"`{add}` is already a religion in this file")
         if rf.list_start < 0:
-            raise MinorError("this file has no `religions { … }` list to join — the "
+            raise MinorError("this file has no `religions { … }` list to join - the "
                              "engine reads that list, so a religion outside it does "
                              "not exist")
         last = max(rf.listed_lines.values()) if rf.listed_lines else rf.list_start
@@ -477,7 +477,7 @@ def edit_lookup(text: str, add: str = "", remove: str = "") -> str:
     file's *order* (Third Age 3 has islam and orthodox the other way round from
     its own ``religions`` list) and about its *contents* (Third Age 6 lists a
     ``wicked`` that no longer exists), and all three run. So a save keeps it in
-    step by name only — appending or dropping a line, never reordering one.
+    step by name only - appending or dropping a line, never reordering one.
     """
     lines, newline, trailing = split_lines(text)
     sp = kb.Splice(lines)
@@ -510,19 +510,19 @@ def religion_fields(block: str) -> List[Tuple[str, str]]:
 
 
 def parse_lookup(text: str) -> List[str]:
-    """``descr_religions_lookup.txt`` — one religion per line, in index order."""
+    """``descr_religions_lookup.txt`` - one religion per line, in index order."""
     return [kb.code_of(ln) for ln in text.replace("\r\n", "\n").split("\n")
             if kb.code_of(ln)]
 
 
 def religion_loc(mod) -> Dict[str, str]:
-    """``{tag: text}`` from ``text/religions.txt`` — the name shown in game."""
+    """``{tag: text}`` from ``text/religions.txt`` - the name shown in game."""
     return _loc(mod, RELIGIONS_LOC_REL)
 
 
 def check_religions(rf: ReligionFile, lookup: Optional[List[str]] = None,
                     names: Optional[Dict[str, str]] = None) -> List[Dict]:
-    """Findings for the religion set — mostly, the three lists disagreeing.
+    """Findings for the religion set - mostly, the three lists disagreeing.
 
     A religion has to be in the ``religions { … }`` list, have its own block, be
     in ``descr_religions_lookup.txt`` and have a name in ``text/religions.txt``
@@ -538,13 +538,13 @@ def check_religions(rf: ReligionFile, lookup: Optional[List[str]] = None,
     for rel in rf.religions:
         if rel.name in seen:
             add("duplicate-block", rel.name, rel.start,
-                f"`{rel.name}` already has a block on line {seen[rel.name] + 1} — "
+                f"`{rel.name}` already has a block on line {seen[rel.name] + 1} - "
                 "the second one is dead text")
         else:
             seen[rel.name] = rel.start
         if "pip_path" not in rel.lines:
             add("missing-pip", rel.name, rel.start,
-                "no `pip_path` line — the campaign map has no pip to draw")
+                "no `pip_path` line - the campaign map has no pip to draw")
 
     for name in rf.listed:
         if name not in seen:
@@ -554,7 +554,7 @@ def check_religions(rf: ReligionFile, lookup: Optional[List[str]] = None,
     for rel in rf.religions:
         if rel.name and rel.name not in rf.listed_lines:
             add("block-without-listing", rel.name, rel.start,
-                f"`{rel.name}` has a block but is not in the `religions` list — the "
+                f"`{rel.name}` has a block but is not in the `religions` list - the "
                 "engine reads the list, so this religion does not exist")
 
     if lookup is not None:
@@ -572,7 +572,7 @@ def check_religions(rf: ReligionFile, lookup: Optional[List[str]] = None,
         for name in rf.listed:
             if name not in names:
                 add("missing-name", name, rf.listed_lines.get(name, rf.list_start),
-                    f"no `{{{name}}}` entry in {RELIGIONS_LOC_REL} — the religion "
+                    f"no `{{{name}}}` entry in {RELIGIONS_LOC_REL} - the religion "
                     "shows its code name in game")
     return out
 
@@ -581,8 +581,8 @@ def check_religions(rf: ReligionFile, lookup: Optional[List[str]] = None,
 # shape two, second file: descr_cultures.txt
 #
 # The one file here with two levels of braces. A culture is a head line, a
-# `{ … }` holding the settlement ladder, and then a TAIL of flat lines — forts,
-# ports, watchtowers and the six agents — that belong to the culture even though
+# `{ … }` holding the settlement ladder, and then a TAIL of flat lines - forts,
+# ports, watchtowers and the six agents - that belong to the culture even though
 # they sit outside its brace. That shape is why the record ends at the next
 # `culture` line rather than at a closing brace.
 
@@ -599,11 +599,11 @@ CULTURE_HEAD = ("portrait_mapping", "rebel_standard_index")
 CULTURE_TAIL = ("fort", "fort_cost", "fort_wall", "fishing_village",
                 "watchtower", "watchtower_cost")
 
-#: the tail keys that repeat — a port level is a `port_land` / `port_sea` pair
+#: the tail keys that repeat - a port level is a `port_land` / `port_sea` pair
 CULTURE_PORT_KEYS = ("port_land", "port_sea")
 
 #: one line each, seven tokens: keyword, three .tga names, a cost, and two more
-#: numbers that no document on this machine explains — all 234 real agent lines
+#: numbers that no document on this machine explains - all 234 real agent lines
 #: write `1 1` for them, so they are carried by position and never rewritten
 CULTURE_AGENTS = ("spy", "assassin", "diplomat", "admiral", "merchant", "priest")
 
@@ -791,10 +791,10 @@ def parse_culture_block(text: str) -> Culture:
     """Read ONE culture record, as a code view pane holds it."""
     cf = parse_cultures(text if text.endswith("\n") else text + "\n")
     if not cf.cultures:
-        raise MinorError("a culture starts with a `culture <name>` line — this text "
+        raise MinorError("a culture starts with a `culture <name>` line - this text "
                          "has none", 1)
     if len(cf.cultures) > 1:
-        raise MinorError(f"this text holds {len(cf.cultures)} cultures — one at a "
+        raise MinorError(f"this text holds {len(cf.cultures)} cultures - one at a "
                          "time", cf.cultures[1].start + 1)
     return cf.cultures[0]
 
@@ -825,7 +825,7 @@ def render_culture(base: str, edits: Optional[Dict] = None) -> str:
         value = str(edits[key] or "").strip()
         line = cul.lines.get(key, -1)
         if line < 0:
-            raise MinorError(f"this culture has no `{key}` line to edit — adding one "
+            raise MinorError(f"this culture has no `{key}` line to edit - adding one "
                              "means saying where it goes, which the file's own order "
                              "decides", cul.start + 1)
         if not value:
@@ -887,7 +887,7 @@ def _edit_level(sp: kb.Splice, lines: List[str], lvl: CultureLevel,
 
 
 def replace_culture(cf: CultureFile, cul: Culture, block: str) -> str:
-    """The whole file with one culture's lines — brace, tail and all — swapped."""
+    """The whole file with one culture's lines - brace, tail and all - swapped."""
     return cf.replace(cul.start, cul.end, block)
 
 
@@ -929,7 +929,7 @@ def culture_fields(block: str) -> List[Tuple[str, str]]:
 def check_cultures(cf: CultureFile) -> List[Dict]:
     """Findings for the culture file: a missing level, a missing agent, a duplicate.
 
-    Deliberately says nothing about the ``.tga`` files it names — see the module
+    Deliberately says nothing about the ``.tga`` files it names - see the module
     docstring on why art references are not checked here.
     """
     out: List[Dict] = []
@@ -954,25 +954,25 @@ def check_cultures(cf: CultureFile) -> List[Dict]:
         for key in CULTURE_HEAD:
             if key not in cul.lines:
                 add("missing-line", cul.name, cul.start,
-                    f"no `{key}` line — the game will not load this culture")
+                    f"no `{key}` line - the game will not load this culture")
         missing = [l for l in CULTURE_LEVELS if l in used and l not in have]
         if missing:
             add("missing-levels", cul.name, cul.brace_start if cul.brace_start >= 0
                 else cul.start,
                 f"no {kb.and_list(missing)} block, which the other cultures here "
-                "have — a settlement at that level has no model to draw")
+                "have - a settlement at that level has no model to draw")
         for agent in CULTURE_AGENTS:
             if agent not in cul.agents:
                 add("missing-agent", cul.name, cul.start,
-                    f"no `{agent}` line — this culture cannot recruit one")
+                    f"no `{agent}` line - this culture cannot recruit one")
     return out
 
 
 def culture_names(mod) -> List[str]:
     """Every culture this mod defines, in file order. The single source of truth.
 
-    :attr:`unittransfer.mod.Mod.cultures` answers a different question — which
-    culture folders hold building icons — and a mod can perfectly well define a
+    :attr:`unittransfer.mod.Mod.cultures` answers a different question - which
+    culture folders hold building icons - and a mod can perfectly well define a
     culture with no icon folder of its own.
     """
     path = Path(mod.data) / CULTURES_REL
@@ -986,7 +986,7 @@ def religion_names(mod) -> List[str]:
     """Every religion this mod defines, in the order the `religions` list gives.
 
     The list block is the answer because the list is what the engine reads as the
-    set — a religion with a block and no listing does not exist. A file with no
+    set - a religion with a block and no listing does not exist. A file with no
     list block at all falls back to its blocks, because that is a file we have no
     better reading of, not because the two are the same thing.
     """
@@ -1012,7 +1012,7 @@ def resource_names(mod) -> List[str]:
 # ---------------------------------------------------------------------------
 # shape three: descr_names.txt
 #
-# No braces and no keywords — a faction, then sections of bare names, one per
+# No braces and no keywords - a faction, then sections of bare names, one per
 # line. A section header and a name are both a single word, so they are told
 # apart the way the engine tells them apart: by the three names a section can
 # have. Indentation agrees with that on 43 158 of 43 161 real lines, which is
@@ -1107,7 +1107,7 @@ def parse_names(text: str) -> NameFile:
             fac.end = i + 1
             continue
         if len(code.split()) > 1:
-            fac.warnings.append(f"line {i + 1}: `{code}` has a space in it — a name "
+            fac.warnings.append(f"line {i + 1}: `{code}` has a space in it - a name "
                                 "is one word")
         sec.entries.append(Repeat(value=code, line=i))
         sec.end = fac.end = i + 1
@@ -1123,7 +1123,7 @@ def parse_names_block(text: str) -> NameFaction:
     if not nf.factions:
         raise MinorError("this text has no `faction: <name>` line", 1)
     if len(nf.factions) > 1:
-        raise MinorError(f"this text holds {len(nf.factions)} factions — "
+        raise MinorError(f"this text holds {len(nf.factions)} factions - "
                          "one at a time", nf.factions[1].start + 1)
     return nf.factions[0]
 
@@ -1153,7 +1153,7 @@ def render_names(base: str, edits: Optional[Dict] = None) -> str:
         rows = [str(v).strip() for v in (wanted or [])]
         for value in rows:
             if len(value.split()) > 1:
-                raise MinorError(f"`{value}` has a space in it — a name is one word",
+                raise MinorError(f"`{value}` has a space in it - a name is one word",
                                  sec.start + 1)
         _edit_entries(sp, lines, sec, rows)
     return newline.join(sp.result())
@@ -1199,7 +1199,7 @@ def new_names(edits: Dict) -> str:
             continue
         for value in rows:
             if len(value.split()) > 1:
-                raise MinorError(f"`{value}` has a space in it — a name is one word")
+                raise MinorError(f"`{value}` has a space in it - a name is one word")
         out += ["\t" + which] + ["\t\t" + v for v in rows] + [""]
     while out and not out[-1]:
         out.pop()
@@ -1243,7 +1243,7 @@ def check_names(nf: NameFile, mod=None) -> List[Dict]:
     for fac in nf.factions:
         if fac.name in seen:
             add("duplicate", fac.name, fac.start,
-                f"`{fac.name}` already has a block on line {seen[fac.name] + 1} — the "
+                f"`{fac.name}` already has a block on line {seen[fac.name] + 1} - the "
                 "engine reads the first and ignores this one")
         else:
             seen[fac.name] = fac.start
@@ -1252,7 +1252,7 @@ def check_names(nf: NameFile, mod=None) -> List[Dict]:
                 f"`{fac.name}` is not a faction in descr_sm_factions.txt")
         if not fac.sections:
             add("no-sections", fac.name, fac.start,
-                "no `characters` section — a faction with no names cannot generate "
+                "no `characters` section - a faction with no names cannot generate "
                 "a family")
         for sec in fac.sections:
             if not sec.entries:
@@ -1277,7 +1277,7 @@ def _loc(mod, rel: str) -> Dict[str, str]:
     """``{tag: text}`` from a ``{tag}text`` file, or its compiled archive.
 
     The same read the traits and ancillaries editors make, through Phase 6's
-    codec when a mod ships only the ``.strings.bin`` — which for a released mod
+    codec when a mod ships only the ``.strings.bin`` - which for a released mod
     is the normal case.
     """
     from . import stringsbin
@@ -1294,10 +1294,10 @@ def _loc(mod, rel: str) -> Dict[str, str]:
 
 
 def label(name: str, names: Dict[str, str], tag: str = "") -> str:
-    """``"Timber (timber)"`` — the toolkit's naming rule, localised name first.
+    """``"Timber (timber)"`` - the toolkit's naming rule, localised name first.
 
     A text entry whose value is just its own key is a placeholder rather than a
-    name, and shows as the code name alone — the same ruling the buildings and
+    name, and shows as the code name alone - the same ruling the buildings and
     ancillaries editors make.
     """
     shown = (names.get(tag or name) or "").strip()
@@ -1315,7 +1315,7 @@ def label(name: str, names: Dict[str, str], tag: str = "") -> str:
 
 @dataclass(frozen=True)
 class MinorKind:
-    #: the tab id, which is also its :mod:`unittransfer.codeview` kind — one name
+    #: the tab id, which is also its :mod:`unittransfer.codeview` kind - one name
     #: for one file shape, so a tab cannot end up pointed at another tab's parser
     id: str
     label: str
@@ -1346,13 +1346,13 @@ def path_for(mod, tab_id: str) -> Path:
 #: tab -> the actions it offers. Two of the five are edit-only, and both
 #: refusals are the format talking rather than the session running out:
 #:
-#: * **resources** — the engine's list is closed. All three installed mods ship
+#: * **resources** - the engine's list is closed. All three installed mods ship
 #:   the same 28 names in three different orders and none has ever added one; a
 #:   ``type`` the engine does not know is read and then ignored, so "create a
 #:   resource" is a button that writes a line nothing reads. Deleting one is
 #:   worse: ``descr_regions.txt`` places resources by name, and the map would
 #:   keep placing a resource this file no longer defines.
-#: * **cultures** — a culture is eleven settlement models, eleven settlement
+#: * **cultures** - a culture is eleven settlement models, eleven settlement
 #:   cards, a fort, a port ladder, a watchtower and six agents, none of which a
 #:   text editor can conjure. Deleting one orphans every faction whose
 #:   ``culture`` line names it and every building that requires one.
@@ -1366,12 +1366,12 @@ ACTIONS: Dict[str, Tuple[str, ...]] = {
 
 #: why an edit-only tab is edit-only, shown where its buttons would be
 REFUSED: Dict[str, str] = {
-    "resources": "The engine's resource list is closed — all three mods measured "
+    "resources": "The engine's resource list is closed - all three mods measured "
                  "ship the same 28 names and a `type` it does not know is read and "
                  "ignored, so a resource can be changed but not created. Deleting "
                  "one leaves descr_regions.txt placing a resource nothing defines.",
     "cultures": "A culture is eleven settlement models and cards, a fort, a port "
-                "ladder, a watchtower and six agents — nothing a text editor can "
+                "ladder, a watchtower and six agents - nothing a text editor can "
                 "create from nothing. Deleting one orphans every faction whose "
                 "`culture` line names it.",
 }
@@ -1379,12 +1379,12 @@ REFUSED: Dict[str, str] = {
 #: tab -> (the ``data/text`` file its names live in, whether a save may write it).
 #:
 #: ``strat.txt`` is the odd one and the reason this is a pair rather than a path.
-#: Its compiled archive is **style 1 — 1307 bare strings with no tags at all**,
+#: Its compiled archive is **style 1 - 1307 bare strings with no tags at all**,
 #: read by position, and identical in length across all three installed mods. Our
 #: own :func:`unittransfer.stringsbin.refresh_from_txt` already refuses to rebuild
 #: an untagged archive, and appending a line to the ``.txt`` would shift every
 #: index after it. So the resources tab *shows* the name and sends anyone who
-#: wants to change it to the Strings module, which edits that file by position —
+#: wants to change it to the Strings module, which edits that file by position -
 #: the one place that can do it safely.
 LOC_FILES: Dict[str, Tuple[str, bool]] = {
     "rebels": (REBELS_LOC_REL, True),
@@ -1439,7 +1439,7 @@ def render_any(tab_id: str, base: str, edits: Optional[Dict] = None) -> str:
 
 
 def new_any(tab_id: str, edits: Dict) -> str:
-    """A whole record written from scratch — only for the tabs that allow it."""
+    """A whole record written from scratch - only for the tabs that allow it."""
     if tab_id in ("rebels", "resources"):
         return new_record(shape_of(tab_id), edits)
     if tab_id == "religions":
@@ -1450,7 +1450,7 @@ def new_any(tab_id: str, edits: Dict) -> str:
 
 
 def parse_block_any(tab_id: str, text: str):
-    """Read ONE record of whichever shape this tab is — the code view's parse."""
+    """Read ONE record of whichever shape this tab is - the code view's parse."""
     if tab_id in ("rebels", "resources"):
         return parse_record_block(shape_of(tab_id), text)
     if tab_id == "religions":
@@ -1486,7 +1486,7 @@ def check_any(mod, tab_id: str, parsed: LineFile) -> List[Dict]:
 
 
 def loc_names(mod, tab_id: str) -> Dict[str, str]:
-    """``{tag: text}`` for the tab's own localisation file — ``{}`` when it has none."""
+    """``{tag: text}`` for the tab's own localisation file - ``{}`` when it has none."""
     rel = LOC_FILES.get(tab_id, ("", False))[0]
     return _loc(mod, rel) if rel else {}
 
@@ -1508,7 +1508,7 @@ def loc_tag(tab_id: str, rec) -> str:
 
 
 def record_label(mod, tab_id: str, rec, names: Dict[str, str]) -> str:
-    """``"Brigands (brigands)"`` — the toolkit's naming rule for one record."""
+    """``"Brigands (brigands)"`` - the toolkit's naming rule for one record."""
     if tab_id == "names":
         shown = (getattr(mod, "faction_names", {}) or {}).get(rec.name.lower(), "")
         return f"{shown} ({rec.name})" if shown and shown != rec.name else rec.name
@@ -1522,7 +1522,7 @@ def record_label(mod, tab_id: str, rec, names: Dict[str, str]) -> str:
 
 def _row(mod, tab_id: str, rec, parsed: LineFile, names: Dict[str, str],
          counted: Dict[str, int]) -> Dict:
-    """One row of a tab's list — light enough to paint 200 factions of names."""
+    """One row of a tab's list - light enough to paint 200 factions of names."""
     row: Dict = {"name": rec.name, "label": record_label(mod, tab_id, rec, names),
                  "line": rec.start + 1, "findings": counted.get(rec.name, 0)}
     if tab_id == "rebels":
@@ -1581,7 +1581,7 @@ def overview(mod, tab_id: str) -> Dict:
 
 
 def vocab(mod, tab_id: str, parsed: LineFile) -> Dict:
-    """What this tab's pickers offer — always the mod's own values, never a list.
+    """What this tab's pickers offer - always the mod's own values, never a list.
 
     A rebel faction's ``unit`` lines are the reason this exists: they name EDU
     types with spaces in them, and typing one by hand is how a rebel faction
@@ -1653,7 +1653,7 @@ def detail(mod, tab_id: str, name: str) -> Dict:
     if tab_id == "resources":
         out["loc_note"] = ("This name lives in text/strat.txt, whose compiled "
                            "archive holds 1307 bare strings read by position, not "
-                           "by tag — so it is the Strings module that edits it "
+                           "by tag - so it is the Strings module that edits it "
                            "safely, not this one.")
     if tab_id == "religions":
         out["listed"] = rec.name in parsed.listed_lines
@@ -1666,7 +1666,7 @@ def detail(mod, tab_id: str, name: str) -> Dict:
 # The ancillaries editor's save with one difference: a record here can live in
 # more than one file at once. Adding a religion writes its block, joins it to the
 # `religions { … }` list, appends it to descr_religions_lookup.txt and creates its
-# name in text/religions.txt — four writes that are worthless one at a time, so
+# name in text/religions.txt - four writes that are worthless one at a time, so
 # they are one job with one backup set and one undo.
 
 
@@ -1680,7 +1680,7 @@ class MinorPlan:
     warnings: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
     findings: List[Dict] = field(default_factory=list)
-    #: the tab's own file as it would be written — empty when nothing would change
+    #: the tab's own file as it would be written - empty when nothing would change
     text: str = ""
     block: str = ""
     #: the OTHER campaign files this save rewrites: relative path -> whole text
@@ -1711,7 +1711,7 @@ class MinorPlan:
 def plan(mod, body: dict) -> MinorPlan:
     """Work out every file one save would write, without touching the disk.
 
-    ``body`` is ``{mod, tab, name, action, edits, raw_block, loc, write_loc}`` —
+    ``body`` is ``{mod, tab, name, action, edits, raw_block, loc, write_loc}`` -
     the ancillaries request shape with ``tab`` added, because five files behind
     one module is exactly one more thing than that editor had to say.
     """
@@ -1762,7 +1762,7 @@ def _drop_settled(p: MinorPlan) -> None:
 
     The checks read the *file* the save would write and the *companion files* as
     they still are on disk, so a new religion always came back "not in
-    descr_religions_lookup.txt" and "no name in text/religions.txt" — in the same
+    descr_religions_lookup.txt" and "no name in text/religions.txt" - in the same
     preview whose change list says it is writing both. A warning about the thing
     you are already doing is a warning nobody can act on.
     """
@@ -1821,7 +1821,7 @@ def _plan_record(p: MinorPlan, text: str, body: dict) -> str:
         block = str(raw).strip("\r\n")
         if parse_block_any(p.tab, block + "\n").name != p.name:
             raise MinorError(
-                f"this {noun} is `{p.name}` — renaming it here would orphan every "
+                f"this {noun} is `{p.name}` - renaming it here would orphan every "
                 "campaign file that names it")
     else:
         block = render_any(p.tab, base, dict(body.get("edits") or {}))
@@ -1857,7 +1857,7 @@ def _plan_lookup(p: MinorPlan, mod) -> None:
 def _plan_loc(p: MinorPlan, mod, rec, wanted: Dict) -> None:
     """What this save would write into the tab's ``data/text`` file.
 
-    Only for the two tabs whose file the toolkit may write — see
+    Only for the two tabs whose file the toolkit may write - see
     :data:`LOC_FILES` on why ``text/strat.txt`` is not one of them.
     """
     from . import stringsbin
@@ -1868,14 +1868,14 @@ def _plan_loc(p: MinorPlan, mod, rec, wanted: Dict) -> None:
     p.loc_rel = rel
     if not writable:
         if wanted.get(tag):
-            p.warnings.append(f"{rel} is read by position, not by tag — change this "
+            p.warnings.append(f"{rel} is read by position, not by tag - change this "
                               "name in the Strings module, which can do it safely")
         return
     have = loc_names(mod, p.tab)
     txt = Path(mod.data) / rel
     if not txt.exists() and not stringsbin.bin_path_for(txt).exists():
         p.warnings.append(f"this mod has no {Path(rel).name}, so this {tab(p.tab).noun}"
-                          "'s name could not be written — it will show its tag in game")
+                          "'s name could not be written - it will show its tag in game")
         return
     want = str(wanted.get(tag, "")).strip() if wanted else ""
     if tag not in have:
@@ -1932,7 +1932,7 @@ def apply(p: MinorPlan) -> Dict:
         txt = Path(mod.data) / p.loc_rel
         if txt.exists():
             target = keep(p.loc_rel)
-            # the compiled cache is rewritten below, so it is backed up too — an
+            # the compiled cache is rewritten below, so it is backed up too - an
             # undo that put the .txt back and left the .bin would leave the game
             # still reading the new text
             keep(p.loc_rel + ".strings.bin")
@@ -1969,7 +1969,7 @@ def apply(p: MinorPlan) -> Dict:
         "manifest": manifest, "backup_root": str(backup_root),
     }
     config.append_log(rec)
-    log.info("MINOR  %s %s %s in %s — %d change(s), id=%s",
+    log.info("MINOR  %s %s %s in %s - %d change(s), id=%s",
              p.action, p.tab, p.name, mod.name, len(p.changes), tid)
     out["record"] = rec
     return out

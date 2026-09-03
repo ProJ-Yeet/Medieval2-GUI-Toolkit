@@ -2,15 +2,15 @@
 
 A projectile names effect-SETS, and every transfer until now pointed those lines
 at ``invisible_placeholder_set`` and told you to re-add the real thing by hand.
-That is the right default — how many effects the engine will load is one of its
-hardcoded tables, and what sits past the end is dropped silently — but it is not
+That is the right default - how many effects the engine will load is one of its
+hardcoded tables, and what sits past the end is dropped silently - but it is not
 right for a destination running on M2EX, which replaces those tables.
 
 So the import is gated on the DESTINATION's M2EX mark, and on the source actually
 declaring the set. Both halves are checked here, along with the two things about
 real effect files that a naive reader gets wrong:
 
-  * ``effect_set < 3 4 > fiery_arrow_set`` — a set declared once per graphics
+  * ``effect_set < 3 4 > fiery_arrow_set`` - a set declared once per graphics
     detail band. The name is the LAST token, and all of the bodies are the set.
     Reading the token straight after the keyword named seven sets "<" per stock
     mod and left the ones they really name out of the registry entirely, so a
@@ -188,7 +188,7 @@ check("a set the SOURCE does not declare is reported missing, not invented",
 
 # ------------------------------------------------------- the transfer gate ----
 if not (TATR.is_dir() and DAC.is_dir()):
-    print("\n(transfer half skipped — the mods are not installed)")
+    print("\n(transfer half skipped - the mods are not installed)")
     shutil.rmtree(cfg, ignore_errors=True)
     print(f"\n{sum(ok)}/{len(ok)} checks passed")
     sys.exit(0 if all(ok) else 1)
@@ -213,7 +213,7 @@ scratch = Mod(fresh_dest())
 src_idx = src.effect_index
 
 # a missile unit whose projectile names a set THIS SOURCE DECLARES and the
-# destination does not — the only case the import has anything to do
+# destination does not - the only case the import has anything to do
 UNIT = PROJ = SET_NAME = None
 for u in src.edu.units:
     for pn in u.projectiles():
@@ -230,7 +230,7 @@ for u in src.edu.units:
         break
 
 if not UNIT:
-    print("\n(no unit in this install exercises the import — skipped)")
+    print("\n(no unit in this install exercises the import - skipped)")
 else:
     print(f"\n== off by default: unit={UNIT!r} projectile={PROJ!r} set={SET_NAME!r} ==")
     dest = Mod(fresh_dest())
@@ -249,7 +249,7 @@ else:
 
     # `None` for a file this destination does not have. It happens: the set that
     # travels here lives in descr_arrow_trail_custom_effects.txt, which Divide and
-    # Conquer does not ship, so the import CREATES it — and undo has to take it
+    # Conquer does not ship, so the import CREATES it - and undo has to take it
     # away again.
     before = {rel: (kb.read_text(dest.data / rel, effects.ENCODING)
                     if (dest.data / rel).exists() else None)
@@ -279,7 +279,7 @@ else:
           and any(v.lower() == SET_NAME.lower() for v in written.effects.values()))
 
     # The blocks are APPENDED. Whatever a file said before has to still say it,
-    # byte for byte, above what was added — these files are shared by every
+    # byte for byte, above what was added - these files are shared by every
     # projectile in the mod, so a rewrite here is a rewrite of all of them.
     def now_of(rel):
         p = dest.data / rel

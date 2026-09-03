@@ -1,8 +1,8 @@
-/* settings.js — the settings dialog, M2TWEOP folders, and the log/undo panel
+/* settings.js - the settings dialog, M2TWEOP folders, and the log/undo panel
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
@@ -33,7 +33,7 @@ function openNewUnitPicker(){
 }
 // A labelled list (factions) is ordered by what it SHOWS, so a picker follows the
 // same A→Z as the sidebar; a plain one keeps the order it came in.
-// `sel` keeps a picker's choice through a re-render — the armour-tier menu redraws
+// `sel` keeps a picker's choice through a re-render - the armour-tier menu redraws
 // on every edit, unlike this dialog, which is built once.
 const opts=(allLabel,values,label,sel)=>`<option value="">${allLabel}</option>`+
   (label?[...values].sort((a,b)=>label(a).localeCompare(label(b))):values)
@@ -65,6 +65,10 @@ function startNewUnit(type){
   c.on_conflict='rename';
   c.new_type=type+' (new)';
   c.new_dictionary=(u.dictionary||type)+'_new';
+  // …and the name the PLAYER reads, which is a third name and the one this flow
+  // is really about: a new type and a new dictionary still leave the unit called
+  // whatever the original was called, because the localisation record is copied.
+  c.new_name=((u.name||type)+' (new)');
   // nothing needs relocating inside one mod: identical models/cards are reused
   c.asset_conflict='use_existing'; c.icon_conflict='use_existing'; c.engine_conflict='use_existing';
   c._resolved=true;
@@ -129,7 +133,7 @@ async function openSettings(){
           that runs on it has none of the ceilings the toolkit otherwise checks against:
           ${VANILLA_FACTION_LIMIT} factions, ${VANILLA_UNIT_LIMIT} units, 9 levels on a trait, 8 effects on an
           ancillary, 32 recruitment slots in a building level. Ticked, those findings stop being reported for
-          that mod — <b>and nothing else changes</b>: every other check still runs.</div>
+          that mod - <b>and nothing else changes</b>: every other check still runs.</div>
         <div class="count" style="margin-bottom:8px">This is <b>not</b> the M2TWEOP setting below. That one is
           about where a mod keeps extra unit files; this one is about the engine it runs on. A mod can be both,
           either or neither.</div>
@@ -194,7 +198,7 @@ async function loadEopDirs(){
     explicit?`<button onclick="removeEopDir('${q1(esc(d))}')">Remove</button>`:'<span class="count">Auto-detected</span>'}</div>`).join('');
   box.innerHTML=(rows||'<div class="count">No EOP folder found or set, so this mod\'s units all live in export_descr_unit.txt.</div>')
     // The counts need the roster read; the folders above do not. A mod whose
-    // export_descr_unit.txt is missing or broken still gets the folder list —
+    // export_descr_unit.txt is missing or broken still gets the folder list -
     // with the reason in place of the two numbers, which is the answer anyone
     // opening this panel on that mod is actually after.
     +(r.note?`<div class="count w-warn" style="margin-top:8px">${esc(r.note)}</div>`
@@ -209,7 +213,7 @@ async function addEopDir(){
   if(!r.path)return;
   const cur=await eopApi({});
   // an explicit list replaces detection outright, so seed it with what was
-  // detected — otherwise adding one folder silently drops the others
+  // detected - otherwise adding one folder silently drops the others
   const dirs=(cur.configured.length?cur.configured:cur.detected).slice();
   if(!dirs.includes(r.path)) dirs.push(r.path);
   await eopApi({dirs});
@@ -248,8 +252,8 @@ async function browseRoot(){
    Everything the tool has done, and the way back out of any of it.
 
    It is PAGED. The whole log used to arrive in one piece and be turned into
-   markup in one piece — 480 entries, 1.1 MB of JSON, 600 KB of HTML for a screen
-   that shows about six of them — which is why opening it could take minutes.
+   markup in one piece - 480 entries, 1.1 MB of JSON, 600 KB of HTML for a screen
+   that shows about six of them - which is why opening it could take minutes.
    The server now answers with a page and the counts the filter needs. */
 const LOG_MODES=[
   {id:'',           label:'Everything'},
@@ -336,6 +340,9 @@ function logItemHtml(e){
       :e.mode==='cards'?`${e.action==='consolidate'?'🖼 cards consolidated in':'🧹 cards cleaned out of'} ${esc(e.dest)}`
       :e.mode==='edit'?`${e.action==='delete'?'🗑 deleted in':'✎ edited in'} ${esc(e.dest)}`
       :e.mode&&e.mode!=='transfer'?`${esc(e.mode)} edit in ${esc(e.dest)}`
+      // a transfer that wrote no unit: its models only, which is what the row
+      // would otherwise claim was a unit called after the source's
+      :e.action==='models'?`🗄 ${esc(e.source)} → ${esc(e.dest)} · battle models only`
                      :`${esc(e.source)} → ${esc(e.dest)}`}</span></div>
       <div style="display:flex;gap:8px;align-items:center"><span class="when">${esc(e.when)}</span>
       ${undoBtn}${revBtn}

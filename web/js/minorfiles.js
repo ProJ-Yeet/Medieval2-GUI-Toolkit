@@ -1,8 +1,8 @@
-/* minorfiles.js — Minor Files mode: the five small campaign files, one screen
+/* minorfiles.js - Minor Files mode: the five small campaign files, one screen
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
@@ -14,12 +14,12 @@
 
    They are three shapes, not five (see unittransfer/minorfiles.py), and that is
    what lets one list, one pane and one save serve all five tabs. What differs
-   per tab is the form — and two tabs are deliberately edit-only:
+   per tab is the form - and two tabs are deliberately edit-only:
 
-     * RESOURCES — the engine's list of 28 is closed. A `type` it does not know
+     * RESOURCES - the engine's list of 28 is closed. A `type` it does not know
        is read and then ignored, so "create a resource" would be a button that
        writes a line nothing reads.
-     * CULTURES — a culture is eleven settlement models and cards, a fort, a
+     * CULTURES - a culture is eleven settlement models and cards, a fort, a
        port ladder, a watchtower and six agents. Nothing a text editor creates.
 
    And one tab writes four files at once: adding a religion writes its block,
@@ -77,7 +77,7 @@ function renderMinor(){
 const mfTabsHtml = () => minorTabsHtml(state.mf.tab, 'data/' + state.mf.file);
 
 // Filtered in the page. The biggest list here is 28 factions of names or 68
-// rebel factions — the file was parsed once to build it, and there is nothing
+// rebel factions - the file was parsed once to build it, and there is nothing
 // left to page.
 function mfRows(){
   const q = search.value.trim().toLowerCase();
@@ -128,7 +128,7 @@ function mfWorking(d){
   return d;
 }
 
-// A blank record per tab, in the shape that tab's `edits` takes — the same shape
+// A blank record per tab, in the shape that tab's `edits` takes - the same shape
 // the server's own new_any() writes from, so a create and a save agree.
 function mfBlank(tab){
   if(tab === 'rebels') return {name:'', category:'brigands', chance:'50',
@@ -173,7 +173,7 @@ function mfClone(){
   if(f.tab === 'rebels') w.description = name;
   const was = d.loc_tag || '';
   // both tabs that have a writable text key are keyed by something that just
-  // became the new name — a rebel by its `description`, a religion by itself
+  // became the new name - a rebel by its `description`, a religion by itself
   const tag = (f.tab === 'rebels' || f.tab === 'religions') ? name : '';
   const shown = was ? ((d.locEdits||{})['#name'] !== undefined ? d.locEdits['#name']
                        : ((d.loc||{})[was] || '')) : '';
@@ -188,12 +188,12 @@ function mfClone(){
   const carried = f.tab === 'rebels'
     ? `${(w.units||[]).length} unit(s) and every field came with it`
     : 'every field came with it';
-  toast(`Copied ${d.name} as “${name}” — ${carried}. `
+  toast(`Copied ${d.name} as “${name}” - ${carried}. `
     + 'Nothing is written until you press Create.', 6500);
 }
 
 // The pickers (this mod's unit list, its settlement levels) come with a record,
-// and a brand-new one has no record to come with — so fetch them off any
+// and a brand-new one has no record to come with - so fetch them off any
 // existing row rather than shipping a second endpoint for the same answer.
 async function mfLoadVocab(){
   const f = state.mf;
@@ -215,7 +215,7 @@ function mfPaint(){
   if(d && d.cv){ cvWire(d.cv); cvBindHover(d.cv, document.getElementById('mfGui')); }
 }
 
-// The form only — never the pane, which has the caret in it.
+// The form only - never the pane, which has the caret in it.
 function mfPaintForm(){
   const d = state.mf.d, el = document.getElementById('mfGui');
   if(!d || !el) return;
@@ -276,7 +276,7 @@ function mfFormHtml(d){
 }
 
 // The name box and, beside it, what the player actually reads. Same widget the
-// traits and ancillaries editors use — except on the resources tab, where the
+// traits and ancillaries editors use - except on the resources tab, where the
 // text file behind it is read by position and only the Strings module can write
 // it safely.
 /* ---- the art these files point at ----
@@ -284,7 +284,7 @@ function mfFormHtml(d){
    `.tga` paths under the mod's data/, and until now the editor showed them as
    text while the Buildings gallery showed its own art as pictures. Same server
    route as a faction symbol (`kind=modfile`), which is what keeps the path
-   inside data/ — the page never gets to name an absolute file.
+   inside data/ - the page never gets to name an absolute file.
 
    A blank slot is NOT reported as a fault, and that is Phase 10a's ruling, not
    an oversight: every pip and settlement card in these files can legitimately
@@ -294,12 +294,12 @@ function mfArt(rel){
   // The two files disagree about the prefix and both are right: a resource icon
   // and a settlement card are written `data/ui/…` while a religion's pip is
   // written `ui/pips/…`. The server resolves everything under the mod's data/,
-  // so the redundant half is dropped here rather than in one of the parsers —
+  // so the redundant half is dropped here rather than in one of the parsers -
   // neither file is wrong about its own format.
   const r=(rel||'').trim().replace(/\\/g,'/').replace(/^data\//i,'');
   if(!r)return '<span class="mfnoart" title="No path set">none</span>';
   // These sit in dense tables with no room for a pair of buttons, so the pip
-  // itself is the ✎ — a click replaces it, and a right-click gets the same menu
+  // itself is the ✎ - a click replaces it, and a right-click gets the same menu
   // (with "Open file location" on it) that every other picture in the tool has.
   const url=`/icon?mod=${enc(state.mf.mod)}&kind=modfile&rel=${enc(r)}`;
   return `<img class="mfpip act" loading="lazy" src="${url}"
@@ -550,7 +550,7 @@ function mfSet(key, value){
 }
 /* The shown name is stored under one slot, `#name`, and the KEY it goes to is
    worked out at save time by `mfLocTag`. A rebel faction is keyed by its
-   `description` value, which is a box on the same form — bake the key into the
+   `description` value, which is a box on the same form - bake the key into the
    handler and retyping the description quietly sends the words to the old key. */
 function mfSetLocName(value){
   const d = state.mf.d; if(!d) return;
@@ -569,7 +569,7 @@ function mfLocBody(){
   return tag ? {[tag]: e['#name']} : {};
 }
 /* A rebel `unit` line is a unit TYPE and the whole rest of the line is the name,
-   spaces and all — `Mordor Orcs Invasion`. So this box could not be trimmed as
+   spaces and all - `Mordor Orcs Invasion`. So this box could not be trimmed as
    it was typed into and repainted from the trimmed value: every space the user
    pressed was cut back off and written over the box before the next keystroke,
    which is the space bar "not working" in the picker. Trimming belongs at save
@@ -642,7 +642,7 @@ function mfEdits(){
   if(f.tab === 'religions') return {name:(w.name||'').trim(), pip_path:w.pip_path};
   if(f.tab === 'names') return {name:(w.name||'').trim(),
     sections:Object.fromEntries((w.sections||[]).map(s => [s.name, s.entries]))};
-  // cultures: only the keys this culture actually HAS a line for — the server
+  // cultures: only the keys this culture actually HAS a line for - the server
   // refuses to invent one, because where it would go is the file's own order
   const out = {name:(w.name||'').trim(), levels:{}, agents:{}};
   const v = f.d.vocab || {};

@@ -6,7 +6,7 @@ every EDA on the machine and hand the file back byte for byte.
 
 What is specific to this format, and what each part is here to catch:
 
-  * ``Type`` and ``Transferable`` — two required lines the RTW guide does not
+  * ``Type`` and ``Transferable`` - two required lines the RTW guide does not
     mention at all, because they are M2TW's. All 1134 real ancillaries have both,
     always as lines two and three.
   * the two silent hardcoded limits: more than 3 ``ExcludedAncillaries`` is an
@@ -16,7 +16,7 @@ What is specific to this format, and what each part is here to catch:
   * ``AcquireAncillary`` is EDA's ``Affects``: deleting an ancillary has to take
     the triggers that only granted it, or the next one to fire crashes.
   * an ancillary has a *picture*, and DaC has two that name a file nobody
-    shipped — a blank slot on the character screen and nothing in any log.
+    shipped - a blank slot on the character screen and nothing in any log.
   * the shared machinery actually being shared: the block splices are
     :mod:`unittransfer.keyblock` and the trigger section is
     :mod:`unittransfer.triggers`, both written for the traits editor first.
@@ -90,7 +90,7 @@ check("two ancillaries, and the triggers are not among them", len(af.ancillaries
 check("nothing to warn about", af.warnings == [])
 
 guard = af.get("iron_guard")
-check("Type and Transferable — the two lines the guide never mentions",
+check("Type and Transferable - the two lines the guide never mentions",
       guard.get("Type") == "follower" and guard.transferable is False)
 check("Image ignores the inline comment", guard.get("Image") == "iron_guard.tga")
 check("Unique is a line, not a value", guard.unique is True)
@@ -143,7 +143,7 @@ out = ancillaries.render_block(base, {"exclude_cultures": []})
 check("an emptied optional line is deleted", "ExcludeCultures" not in out)
 check("…and nothing else went with it",
       "ExcludedAncillaries" in out and "Description" in out)
-check("a list re-sent unchanged rewrites nothing — `greek,  noldor` has two spaces",
+check("a list re-sent unchanged rewrites nothing - `greek,  noldor` has two spaces",
       ancillaries.render_block(base, {"exclude_cultures": ["greek", "noldor"]}) == base)
 
 for field_, why in (("type", "Type"), ("image", "Image"),
@@ -266,7 +266,7 @@ check("the types the mod uses are collected for the picker",
       ov["types"] == ["follower", "item"])
 # A picture the mod does not ship means two different things, and the tool is
 # only allowed to say the harsher one when it can see the game's own copies.
-# Vanilla keeps them inside its .pack files, so on most machines it cannot —
+# Vanilla keeps them inside its .pack files, so on most machines it cannot -
 # and asserting a blank slot anyway produced 56 false findings on Third Age
 # Reforged and 2 on DaC. `vanilla_images` is the seam, so the test drives it.
 _real_vanilla = ancillaries.vanilla_images
@@ -378,7 +378,7 @@ root = config.get_med2_root()
 mods = sorted((Path(root) / "mods").glob("*/data/export_descr_ancillaries.txt")) \
     if root else []
 if not mods:
-    print("  (no mods installed — the sweep that matters is skipped)")
+    print("  (no mods installed - the sweep that matters is skipped)")
 else:
     total = 0
     for path in mods:

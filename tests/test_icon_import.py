@@ -1,7 +1,7 @@
 """Importing a replacement unit card / info card in the unit editor.
 
 The game looks a card up in ``ui/units/<the player's faction>/`` under the unit's
-*dictionary* name — not wherever the file came from — so one import has to fan
+*dictionary* name - not wherever the file came from - so one import has to fan
 out to a copy per owning faction, renamed. Covers:
 
   * a .tga import lands in every owning faction folder + the mercs/merc fallback
@@ -34,7 +34,7 @@ def check(label, cond):
 donor = next((m for m in (MODS / "third_age_3", MODS / "Divide_and_Conquer_EUR")
               if (m / "data/export_descr_unit.txt").is_file()), None) if MODS.is_dir() else None
 if donor is None:
-    print("no donor mod available — skipping")
+    print("no donor mod available - skipping")
     sys.exit(0)
 
 cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))

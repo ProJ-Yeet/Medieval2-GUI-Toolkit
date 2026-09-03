@@ -249,7 +249,7 @@ check("Quit stopped the detached server", ping(lport) is None)
 # ---- restart in place (Phase 14c) ---------------------------------------
 print("\n== handing the port over to a replacement server ==")
 # "Keep the console window open" is read once, at launch, so a running session
-# could never grow a console — which read as the setting being broken. A restart
+# could never grow a console - which read as the setting being broken. A restart
 # in place applies it, and it turns on this handover: the replacement starts
 # first and waits, because the server it replaces cannot stop before it has
 # answered the request that asked it to.
@@ -291,7 +291,7 @@ check("and it returns as soon as the port is let go",
       startup.wait_for_port(held_port, timeout=10.0) and time.time() - t0 < 5)
 
 # a console child must run on the console interpreter, or its output has nowhere
-# to go — pythonw.exe would swallow the very thing the setting asks to see
+# to go - pythonw.exe would swallow the very thing the setting asks to see
 if sys.platform == "win32":
     import subprocess as _sp
     seen = {}
@@ -351,5 +351,5 @@ check("it points at the printed checks instead",
 if saved is not None:
     config.save_settings(show_console=saved)
 shutil.rmtree(cfg, ignore_errors=True)
-print(f"\n{sum(ok)}/{len(ok)} checks — " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
+print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

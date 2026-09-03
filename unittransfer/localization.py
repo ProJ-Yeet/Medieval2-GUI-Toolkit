@@ -5,17 +5,17 @@ character, U+00AC, also begins comment lines). Each unit contributes three keys:
 
     {<dict>}<Localized Name>
     {<dict>_descr}
-    <long description — on the FOLLOWING line(s)>
+    <long description - on the FOLLOWING line(s)>
     {<dict>_descr_short}
-    <short description — on the FOLLOWING line(s)>
+    <short description - on the FOLLOWING line(s)>
 
 IMPORTANT: a key's value is whatever follows on the same line PLUS every
 subsequent line up to the next ``{key}`` or ``¬`` line. In practice the name sits
 on the key line while the descriptions sit on the lines after it, so reading only
 the key line yields an empty description.
 
-``data/text/export_buildings.txt`` is the same format with a different suffix —
-``_desc`` / ``_desc_short`` rather than ``_descr`` / ``_descr_short`` — so every
+``data/text/export_buildings.txt`` is the same format with a different suffix -
+``_desc`` / ``_desc_short`` rather than ``_descr`` / ``_descr_short`` - so every
 entry point here takes a ``descr_suffix``. The two never collide: a key ending in
 ``_descr`` does not end in ``_desc``.
 """

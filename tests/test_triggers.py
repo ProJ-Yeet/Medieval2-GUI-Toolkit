@@ -2,7 +2,7 @@
 
 The gate for Phase 7 is that this parser can read every trigger in every EDCT and
 EDA on the machine, name every construct in them, and hand back the file byte for
-byte. Nothing built on top of it — the traits editor, the ancillaries editor — is
+byte. Nothing built on top of it - the traits editor, the ancillaries editor - is
 worth anything if that is not true, because both of them save by splicing lines
 back into a file the user has spent years hand-formatting.
 
@@ -11,7 +11,7 @@ What each part is here to catch:
   * ``parse_text(t).text() == t`` on hand-built files with every awkward thing
     real ones have: CRLF, tabs, comment banners, inline comments, blank lines
     inside a condition block, a trigger with no conditions
-  * every construct classified — a term the vocabulary has never heard of is
+  * every construct classified - a term the vocabulary has never heard of is
     *reported*, not dropped, and still round-trips
   * ``render_block`` edits: an untouched clause keeps its exact line (indent and
     inline comment included), a changed one changes, and added/removed clauses
@@ -20,7 +20,7 @@ What each part is here to catch:
     not export, with the "or" alternatives read correctly (``Religion`` accepts
     any one of six, and reading that as one literal type would cry wolf on a
     hundred sound triggers)
-  * the builder's own logic under ``node`` — the requirement/export test it draws
+  * the builder's own logic under ``node`` - the requirement/export test it draws
     its warnings from must agree with the Python one
 
 Needs no game install for any of the above. When mods ARE installed it also
@@ -116,7 +116,7 @@ check("…and the file still round-trips", tf.text() == FILE)
 
 print("\n== a trigger that can never fire ==")
 if triggers.vocab().get("missing"):
-    print("  (no trigger_vocab.json — run tools/trigger_vocab.py)")
+    print("  (no trigger_vocab.json - run tools/trigger_vocab.py)")
 else:
     findings = triggers.check(tf.triggers[0])
     check("PostBattle + IsGeneral + Trait + WonBattle is sound", not findings)
@@ -126,7 +126,7 @@ else:
     f = triggers.check(bad)
     check("a condition needing `settlement` under an event that exports none is caught",
           len(f) == 1 and f[0]["kind"] == "missing-export" and "settlement" in f[0]["message"])
-    # Religion's requirement is a disjunction — six alternatives, any one enough.
+    # Religion's requirement is a disjunction - six alternatives, any one enough.
     rel = triggers.parse_text(
         "Trigger t\r\n  WhenToTest CharacterTurnEnd\r\n"
         "  Condition Religion catholic\r\n").triggers[0]
@@ -220,7 +220,7 @@ print("\n== the builder agrees with the parser (node) ==")
 node = shutil.which("node")
 js = (ROOT / "web" / "js" / "triggerui.js")
 if not node:
-    print("  (node not on PATH — skipped; node is not a dependency of the tool)")
+    print("  (node not on PATH - skipped; node is not a dependency of the tool)")
 elif not js.exists():
     check("web/js/triggerui.js exists", False)
 else:
@@ -254,7 +254,7 @@ if mods and mods.is_dir():
             if p.exists():
                 found.append(p)
 if not found:
-    print("  (no mods installed — the hand-built file above is the whole check)")
+    print("  (no mods installed - the hand-built file above is the whole check)")
 else:
     bad, unknown_all, trig_n, cond_n = [], [], 0, 0
     for p in found:
@@ -273,7 +273,7 @@ else:
     # Every clause re-emits to the same TOKENS it was read from. Not the same
     # characters: real files put tabs between a term and its operand, and the
     # canonical form uses single spaces. That difference can never reach a file,
-    # because an unedited clause is never re-emitted at all — which the next
+    # because an unedited clause is never re-emitted at all - which the next
     # check is what proves.
     off = []
     for p in found:
@@ -301,5 +301,5 @@ else:
     check(f"re-rendering a real block with its own clauses rewrites nothing "
           + (f"({len(churn)} churned, e.g. {churn[:2]})" if churn else ""), not churn)
 
-print(f"\n{sum(ok)}/{len(ok)} checks — " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
+print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

@@ -1,8 +1,8 @@
-/* compare.js — the compare tab — the same unit table twice, side by side
+/* compare.js - the compare tab - the same unit table twice, side by side
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
@@ -60,7 +60,7 @@ function cmpVerdict(key,part,va,vb,absent){
 }
 // The two lines that are the unit's IDENTITY rather than a stat. They differ
 // between any two units by definition, so they would head the table with a
-// difference nobody came to look at — and `type` in particular is renamed
+// difference nobody came to look at - and `type` in particular is renamed
 // through its own machinery on the Identity tab, not by writing the field.
 const CMP_SKIP=new Set(['type','dictionary']);
 function cmpBuild(A,B,labels){
@@ -121,7 +121,7 @@ function cmpPart(w,label,pi){
   return p.ok?(p.parts[pi]==null?'':p.parts[pi]):raw;
 }
 // Typing into one box rewrites the whole line it belongs to, exactly as the
-// guided editor does — a slot has no existence of its own in the EDU.
+// guided editor does - a slot has no existence of its own in the EDU.
 function cmpWrite(w,label,pi,val){
   const key=gfKey(label),spec=GF_FIELDS[key];
   if(pi<0||!spec||!spec.parts||!spec.parts.length)return cmpSet(w,label,val);
@@ -302,7 +302,7 @@ function cmpRepaint(el){
   paintDirty();
 }
 
-// The compared unit is a second, ordinary unit edit — same endpoint, its own
+// The compared unit is a second, ordinary unit edit - same endpoint, its own
 // request. Nothing but the field overrides can be changed from the Compare tab,
 // so the rest of the payload is the neutral form.
 function edCmpPayload(extra){

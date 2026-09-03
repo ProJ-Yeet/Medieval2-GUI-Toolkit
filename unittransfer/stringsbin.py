@@ -2,7 +2,7 @@
 
 The game reads the ``.bin``, never the ``.txt`` beside it, and only recompiles
 one when it is missing. Until this module existed the whole of our answer to that
-was :mod:`unittransfer.cleaner` — delete the ``.bin`` and let the next launch
+was :mod:`unittransfer.cleaner` - delete the ``.bin`` and let the next launch
 rebuild it. That works, but it throws away a file we could simply have kept
 correct, and it cannot show anyone what is inside one.
 
@@ -25,22 +25,22 @@ Two details the reference tool's codec gets wrong, and which cost real files:
 
 * **``count`` is 32 bits, not 16.** Reading it as ``u16`` plus a padding word
   happens to agree while a file holds under 65 536 entries, and silently reads
-  half a file when it doesn't — ``names.txt`` in Third Age already carries
+  half a file when it doesn't - ``names.txt`` in Third Age already carries
   20 757, and a merged names file goes past the line.
 * **There is a trailing index section**, not a single zero word. It is a list of
   tags in the order the source ``.txt`` had them (the entries themselves are
-  sorted), and it can be far longer than the entry list — Third Age's
+  sorted), and it can be far longer than the entry list - Third Age's
   ``export_buildings`` has 480 entries and 13 482 index strings, mostly stale
   vanilla tags. Writing a lone zero word there truncates the file.
 
 The index is bookkeeping we cannot regenerate faithfully, and the game plainly
 does not need it: many shipped files have an empty one. So it is carried through
-an edit **verbatim** and left empty when we compile a ``.bin`` from scratch —
+an edit **verbatim** and left empty when we compile a ``.bin`` from scratch -
 never invented.
 
 Untagged files (``battle``, ``shared``, ``strat``, ``tooltips``) are the ones
 alpaca's converter refused: their strings are addressed by position, so there is
-nothing to name a row by. We still read and write them — a value can be edited in
+nothing to name a row by. We still read and write them - a value can be edited in
 place by index, which is all anyone could do with them anyway.
 
 Text form
@@ -61,7 +61,7 @@ from typing import Dict, List, Optional, Tuple
 TAGGED = 2
 #: ``style`` word: entries are bare strings, addressed only by their position
 UNTAGGED = 1
-#: the second header word — constant in every file examined, but carried through
+#: the second header word - constant in every file examined, but carried through
 FLAVOUR = 2048
 
 #: the ``.txt`` beside a ``.bin`` is UTF-16 with a BOM, and opens with a ¬ comment
@@ -89,7 +89,7 @@ class StringsBin:
     flavour: int = FLAVOUR
     tags: List[str] = field(default_factory=list)
     values: List[str] = field(default_factory=list)
-    #: the trailing tag index, kept exactly as read — see the module docstring
+    #: the trailing tag index, kept exactly as read - see the module docstring
     index: List[str] = field(default_factory=list)
 
     @property
@@ -100,7 +100,7 @@ class StringsBin:
         return len(self.values)
 
     def rows(self) -> List[Tuple[str, str]]:
-        """``[(tag, value), …]`` — tag is ``''`` throughout an untagged file."""
+        """``[(tag, value), …]`` - tag is ``''`` throughout an untagged file."""
         if not self.tagged:
             return [("", v) for v in self.values]
         return list(zip(self.tags, self.values))
@@ -130,12 +130,12 @@ class StringsBin:
     def set(self, tag: str, value: str) -> int:
         """Set ``tag``'s value, adding the entry in sort position if it is new.
 
-        Every tagged file ships with its tags in code-point order — all 69 of
-        them — and the game binary-searches them, so a new tag goes where that
+        Every tagged file ships with its tags in code-point order - all 69 of
+        them - and the game binary-searches them, so a new tag goes where that
         order puts it rather than on the end.
         """
         if not self.tagged:
-            raise StringsBinError("this file's entries have no tags — edit by position")
+            raise StringsBinError("this file's entries have no tags - edit by position")
         i = self.index_of(tag)
         if i >= 0:
             self.values[i] = value
@@ -236,7 +236,7 @@ def encode(sb: StringsBin) -> bytes:
     """Re-encode an archive. ``encode(decode(b)) == b`` for every shipped file."""
     if sb.tagged and len(sb.tags) != len(sb.values):
         raise StringsBinError(
-            f"{len(sb.tags)} tags but {len(sb.values)} values — the two must match")
+            f"{len(sb.tags)} tags but {len(sb.values)} values - the two must match")
     out = bytearray(struct.pack("<HHI", sb.style, sb.flavour, len(sb.values)))
     for i, value in enumerate(sb.values):
         if sb.tagged:
@@ -257,7 +257,7 @@ def peek(path: str | Path) -> Dict:
     """``{style, flavour, count, tagged}`` from the 8-byte header alone.
 
     What a file listing needs. Decoding a whole folder of archives to count their
-    entries costs half a second on Third Age — and the count is right there in the
+    entries costs half a second on Third Age - and the count is right there in the
     header, so nobody should pay that to draw a list.
     """
     with Path(path).open("rb") as fh:
@@ -293,7 +293,7 @@ def unescape(text: str) -> str:
 
 
 def record_text(tag: str, value: str) -> str:
-    """The one line a tagged entry occupies in the ``.txt`` — the code view's text."""
+    """The one line a tagged entry occupies in the ``.txt`` - the code view's text."""
     return "{" + tag + "}" + escape(value)
 
 
@@ -302,7 +302,7 @@ def parse_record(text: str) -> Tuple[str, str]:
     s = text.strip("\ufeff").strip("\r\n")
     if "\n" in s:
         raise StringsBinError(
-            "an entry is one line — write a line break as \\n rather than pressing Enter")
+            "an entry is one line - write a line break as \\n rather than pressing Enter")
     s = s.strip()
     if not s.startswith("{"):
         raise StringsBinError("an entry starts with its tag in braces: {tag}text")
@@ -325,7 +325,7 @@ def to_txt(sb: StringsBin, newline: str = "\r\n") -> str:
 
 
 #: what the game trims off a value when it compiles a ``.txt``: tabs and line
-#: breaks, but NOT spaces — ``{AZTECS_WEAKNESS} `` compiles to a single space and
+#: breaks, but NOT spaces - ``{AZTECS_WEAKNESS} `` compiles to a single space and
 #: a trailing space survives too (measured, see :func:`from_txt`)
 _EDGE = "\t\r\n"
 
@@ -335,13 +335,13 @@ def from_txt(text: str) -> List[Tuple[str, str]]:
 
     This reproduces what the game's own compiler does, established by reading
     Third Age's ``export_units.txt`` and ``expanded.txt`` and comparing against
-    the ``.bin`` files the game had written from them — 3393 of 3395 entries
+    the ``.bin`` files the game had written from them - 3393 of 3395 entries
     identical, the two exceptions being keys the mod edited after that ``.bin``
     was last built. The rules that came out of it:
 
     * comment lines (``¬``) and blanks are skipped;
-    * a value continued on the lines below its key — which ``export_units.txt``
-      does for every description — is folded back into one value with newlines,
+    * a value continued on the lines below its key - which ``export_units.txt``
+      does for every description - is folded back into one value with newlines,
       because that is how the compiled file stores it;
     * the result is trimmed of tabs and line breaks but **not** of spaces;
     * ``\\n`` in the text becomes a real newline.
@@ -380,13 +380,13 @@ def upsert_txt(body: str, writes: Dict[str, str]) -> str:
     """Set these tags in a ``.txt``, leaving every other line exactly alone.
 
     A tag already in the file has its line rewritten *and its continuation lines
-    dropped* — a value may be written across the lines below its key (that is how
+    dropped* - a value may be written across the lines below its key (that is how
     the game's own compiler reads it, see :func:`from_txt`), so replacing only
     the ``{tag}`` line would leave the old wording behind as an orphan and the
     compiled result would still say it. A tag that is not there is appended.
 
     Used by the editors that own a record whose text keys live in one of these
-    files — the traits editor's ``export_VnVs.txt`` and the ancillaries editor's
+    files - the traits editor's ``export_VnVs.txt`` and the ancillaries editor's
     ``export_ancillaries.txt``.
     """
     nl = "\r\n" if "\r\n" in body else "\n"
@@ -419,7 +419,7 @@ def upsert_txt(body: str, writes: Dict[str, str]) -> str:
 def compile_txt(text: str, template: Optional[StringsBin] = None) -> StringsBin:
     """Build an archive from a ``.txt``, in the order the game searches.
 
-    ``template`` lends its header words and its tag index — used when a ``.bin``
+    ``template`` lends its header words and its tag index - used when a ``.bin``
     already exists beside the ``.txt``, so recompiling changes only what the text
     changed. With no template the index is left empty, which is a state plenty of
     shipped files are already in.
@@ -457,7 +457,7 @@ def refresh_from_txt(txt_path: str | Path) -> Dict:
     The point of the whole module: the game shows the OLD text until its cache
     agrees with the file we edited, and this makes it agree instead of deleting
     it and making the next launch do the work. Returns a small record; never
-    raises — a cache that could not be refreshed is the caller's cue to fall back
+    raises - a cache that could not be refreshed is the caller's cue to fall back
     to deleting it, not a reason to fail a finished edit.
     """
     txt = Path(txt_path)
@@ -477,7 +477,7 @@ def refresh_from_txt(txt_path: str | Path) -> Dict:
             template = None          # unreadable cache: compile a fresh one over it
         else:
             if not template.tagged:
-                return {**out, "error": f"{target.name} has no tags — refusing to rebuild it"}
+                return {**out, "error": f"{target.name} has no tags - refusing to rebuild it"}
     try:
         sb = compile_txt(text, template)
         write(target, sb)
@@ -489,7 +489,7 @@ def refresh_from_txt(txt_path: str | Path) -> Dict:
 
 
 def load_pairs(path: str | Path) -> Dict[str, str]:
-    """``{tag: value}`` from a ``.strings.bin`` — ``{}`` if it can't be read.
+    """``{tag: value}`` from a ``.strings.bin`` - ``{}`` if it can't be read.
 
     The read-through other modules use when a mod ships the compiled file and
     not the ``.txt`` beside it, which is common once a mod has been released.

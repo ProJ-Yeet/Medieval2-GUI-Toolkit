@@ -186,7 +186,7 @@ if UNIT2:
           af.get(PROJ2).content_equals(dac.projectile_file.get(PROJ2)))
     shutil.rmtree(dr, ignore_errors=True)
 else:
-    print("  (no collision case found — skipped)")
+    print("  (no collision case found - skipped)")
 
 # ---- base template does NOT port a projectile (stats come from base) ----
 print("\n== base template skips projectile ==")

@@ -6,7 +6,7 @@ read, and stops it naming the wrong number when a modeldb really is damaged.
 ## Fixed
 
 * **An attachment's sprite may be a sprite.** The fourth field of an attachment
-  texture group is a bare `0` — meaning no sprite — on very nearly every entry of
+  texture group is a bare `0` - meaning no sprite - on very nearly every entry of
   every mod, and the reader had been told that 0 was the *only* thing that field
   could hold. Thera_Redux and BOTET each write a real `unit_sprites/....spr`
   there, so both mods were refused outright, and the sentence asked their owner to
@@ -18,8 +18,8 @@ read, and stops it naming the wrong number when a modeldb really is damaged.
   byte for byte, which is the only reading under which they do.
 
   The thing that is genuinely broken in that slot still is. A digit left glued to
-  the 0 by a hand edit — `... .texture 01`, what deleting a faction's skin leaves
-  behind — is refused at the character with the fix in the sentence, because
+  the 0 by a hand edit - `... .texture 01`, what deleting a faction's skin leaves
+  behind - is refused at the character with the fix in the sentence, because
   reading it as a length eats the next field and kills the read two lines further
   down on a word that is perfectly fine where it sits.
 
@@ -33,6 +33,6 @@ read, and stops it naming the wrong number when a modeldb really is damaged.
 
   A length the reader actually watched overrun its own line now leads instead,
   naming the line that number sits on and how long the rest of that line measures
-  — so the message says "line 4625, that 64, the rest of the line is 61" rather
+  - so the message says "line 4625, that 64, the rest of the line is 61" rather
   than sending you to a count that was never wrong. The count still leads when it
   is the one at fault.

@@ -1,20 +1,20 @@
-/* undo.js — Ctrl+Z/Ctrl+Y across every editor, the "unsaved changes" guard,
+/* undo.js - Ctrl+Z/Ctrl+Y across every editor, the "unsaved changes" guard,
    and the scroll/focus restoration that makes a redraw invisible
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
-   index.html — there is no build step and no module system. Two rules
+   index.html - there is no build step and no module system. Two rules
    follow from that: a top-level name must be unique across all of
    them, and a file's top-level side effects may not depend on a file
    loaded after it. */
 /* =========================================================================
-   Undo / redo — Ctrl+Z, Ctrl+Y (and Ctrl+Shift+Z)
+   Undo / redo - Ctrl+Z, Ctrl+Y (and Ctrl+Shift+Z)
 
    Every editor on this page keeps its pending changes in one plain-object
    working model and re-draws from it, so undo is a stack of SNAPSHOTS of that
    model rather than a log of commands: after any interaction the model is
    stringified and, if it differs from the top of the stack, pushed. Ctrl+Z
-   restores the snapshot below and re-draws — which is why it takes back one
+   restores the snapshot below and re-draws - which is why it takes back one
    value instead of closing the dialog and losing everything.
 
    Consecutive keystrokes in the same box collapse into one step (the box's
@@ -45,13 +45,13 @@ const UNDO_SCOPES=[
    get:()=>state.snd.ops, set:v=>{state.snd.ops=v;}, draw:()=>renderSounds()},
 
   /* The editors built after this file. Every one of them was undoable in
-     principle — they all keep a deep-cloned working copy at `state.<x>.d.w` and
+     principle - they all keep a deep-cloned working copy at `state.<x>.d.w` and
      repaint their form from it, which is exactly the shape the snapshot stack
-     wants — and none of them had a scope, so Ctrl+Z did nothing in any of them.
+     wants - and none of them had a scope, so Ctrl+Z did nothing in any of them.
      That is the whole of the "Ctrl+Z is broken everywhere" report: it was never
      wired for Traits, Ancillaries, Factions, the five Minor Files tabs or
      Strings. They are all page editors rather than dialogs, hence `!modalOpen()`
-     — a dialog on top of one owns the keystroke while it is open.
+     - a dialog on top of one owns the keystroke while it is open.
 
      A scope's `id` includes which record is open, so moving to another trait
      clears the stack instead of letting Ctrl+Z pour one record's values into
@@ -82,7 +82,7 @@ const edBmdbName=()=>((state.ed.d.models[0]||{}).name||'');
 // a snapshot, and the two Sets have to survive the JSON round trip as arrays.
 function edSnap(){
   const e=state.ed,c=e.cmp;
-  // Only the compared unit's EDITS go in — not which unit it is, and not the
+  // Only the compared unit's EDITS go in - not which unit it is, and not the
   // server payload it was loaded from. Undo takes back a typed number, and
   // "un-picking" a comparison would mean re-fetching a unit to put it back.
   // …and the same for the Recruitment tab: the three buckets of staged pool
@@ -105,7 +105,7 @@ function edRestore(v){
              e.rec.adds=v.recAdds||[]; }
 }
 // The underscore keys of a per-unit config are server answers cached on it
-// (the field list, the conflict report) — big, and not something to undo.
+// (the field list, the conflict report) - big, and not something to undo.
 function cfgSnap(){
   const out={};
   for(const t of Object.keys(state.cfg)){
@@ -119,7 +119,7 @@ function cfgRestore(v){ for(const t of Object.keys(v)) Object.assign(cfgFor(t),v
 
 /* ---- "⚠ unsaved changes" ----
    Amber and badged, because it is a state you have to act on before closing the
-   dialog — not another line of grey chrome to read past. One painter for every
+   dialog - not another line of grey chrome to read past. One painter for every
    editor, driven off the same interactions the undo stack watches, so it can
    never fall out of step with what is actually pending. */
 const dirtyChip=on=>on?'<span class="dirtychip">⚠ unsaved changes</span>':'';
@@ -143,8 +143,8 @@ function undoReset(){
   undo.ck=null; undo.past.length=0; undo.future.length=0;
 }
 // Take a baseline for what is open now, but only if the stack does not already
-// belong to it. For a view that reloads without changing what is being edited —
-// Strings paging through the same file, say — a full reset would throw away undo
+// belong to it. For a view that reloads without changing what is being edited -
+// Strings paging through the same file, say - a full reset would throw away undo
 // history for edits that are still pending.
 function undoBaseline(){
   const s=undoScope();
@@ -205,7 +205,7 @@ function undoFocus(){
 let _tipQuiet=false;    // read by the ?-card focusin handler further down
 function undoRefocus(where){
   if(!where)return;
-  // a string is the pre-existing selector-only form — still accepted
+  // a string is the pre-existing selector-only form - still accepted
   if(typeof where==='string')where={sel:where,path:null,caret:null};
   let t=where.sel?document.querySelector(where.sel):null;
   if(!t&&where.path){
@@ -215,7 +215,7 @@ function undoRefocus(where){
     if(n&&n.tagName===where.tag&&(n.type||'')===where.type)t=n;
   }
   if(!t)return;
-  // putting the caret back is not the user reaching for help — see the focusin
+  // putting the caret back is not the user reaching for help - see the focusin
   // handler, which would otherwise pop a ? card on every keystroke that redraws
   _tipQuiet=true;
   t.focus({preventScroll:true});
@@ -227,7 +227,7 @@ function undoRefocus(where){
   }catch(e){}
 }
 /* Undo re-draws from the model, which replaces the dialog's innerHTML and so
-   throws away where you were scrolled to — landing you at the top of a 300-pool
+   throws away where you were scrolled to - landing you at the top of a 300-pool
    building every time. The containers below are the ones that scroll; they are
    matched back up by position because a re-draw of the SAME editor rebuilds the
    same structure, and an id would only cover two of them. */
@@ -269,7 +269,7 @@ function scrollRestore(snap){
 }
 
 /* Every workspace re-draws by replacing innerHTML, so *any* button that changes
-   the model — pick a soldier, tick a faction, add a pool row — used to drop you
+   the model - pick a soldier, tick a faction, add a pool row - used to drop you
    back at the top with the caret gone. Undo already had to solve this; the fix
    is the same one, applied to the re-draws themselves rather than to each of the
    couple of hundred buttons that call them. */
@@ -279,8 +279,8 @@ let _placeSkip=0;
 function resetPlace(){_placeSkip=1;}
 /* A sub-dialog (edit a requires clause, pick factions, add units, compare a unit
    across trees) replaces the whole modal and puts the stashed markup back on the
-   way out. By then the scroll it is "restoring" is already gone — assigning
-   innerHTML zeroes it — so the re-draw that follows has nothing to put back and
+   way out. By then the scroll it is "restoring" is already gone - assigning
+   innerHTML zeroes it - so the re-draw that follows has nothing to put back and
    you land at the top of a three-hundred-row level. Stash the positions with the
    markup and the next re-draw uses those instead of what it can see. */
 let _placePending=null;
@@ -304,7 +304,7 @@ function keepPlace(draw){
   if(r&&typeof r.then==='function'){ r.then(done,done); return r; }
   done(); return r;
 }
-// Wrapped after every declaration has been hoisted — see the call at the end of
+// Wrapped after every declaration has been hoisted - see the call at the end of
 // this script. Nested re-draws are harmless: the outermost restore runs last.
 const PLACE_KEPT=['renderComposer','renderAllFields','renderEditor','edRenderTab',
   'renderBuildingEditor','bldRenderBody','renderSprites','renderSounds','renderBmdb',
@@ -352,6 +352,6 @@ document.addEventListener('keydown',e=>{
   const k=(e.key||'').toLowerCase();
   const redo=(k==='y')||(k==='z'&&e.shiftKey);
   if(k!=='z'&&k!=='y')return;
-  // nothing of ours to undo here — leave the browser's own undo alone
+  // nothing of ours to undo here - leave the browser's own undo alone
   if(undoStep(redo))e.preventDefault();
 });

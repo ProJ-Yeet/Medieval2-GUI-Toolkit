@@ -1,6 +1,6 @@
-"""The field in a modeldb that almost always holds 0 — and sometimes does not.
+"""The field in a modeldb that almost always holds 0 - and sometimes does not.
 
-An attachment texture group is four names — faction, texture, normal, sprite —
+An attachment texture group is four names - faction, texture, normal, sprite -
 and the fourth is nearly always the bare ``0`` that means *no name follows*,
 because attachments are drawn with the model and rarely carry a sprite of their
 own. Nearly always is not always: Thera_Redux and BOTET each write a real
@@ -12,13 +12,13 @@ What is genuinely broken is the other thing that turns up in that slot. A modder
 deletes a faction's skin by hand and the digit from the removed line is left glued
 to the 0, giving ``... .texture 01``. Take 1 as a length and the reader eats the
 next field as a one-character name and dies two lines further down on a word that
-is perfectly fine where it is — the single worst kind of error this format can
+is perfectly fine where it is - the single worst kind of error this format can
 produce, because the line it names has nothing wrong with it.
 
 So the reader looks before it decides: a sprite is a ``.spr`` path that fills
 exactly the characters its length claims and stops on whitespace, and a stray
 digit's "name" is none of those. A name that holds up is read; anything else is
-refused AT the stray character with the fix in the sentence — refused rather than
+refused AT the stray character with the fix in the sentence - refused rather than
 assumed away, because half a dozen span walkers in ``modeldb.py`` re-walk the same
 bytes to place an edit, and one of them reading a file differently from the others
 is how a save writes at the wrong offset.
@@ -44,7 +44,7 @@ def check(label, cond):
 #: One entry with the shape the reader walks: name, scale, one LOD, one main
 #: texture (which DOES carry a sprite), one attachment texture (whose sprite slot
 #: is the field under test), one animation, and the torch line. Every name is emitted
-#: through `nm`, so no length in here can be wrong by hand — the file is about
+#: through `nm`, so no length in here can be wrong by hand - the file is about
 #: ONE wrong number and it must be the one the test put there.
 def nm(v: str) -> str:
     return f"{len(v)} {v}"
@@ -122,7 +122,7 @@ for stray in ("01", "1", "12"):
     # both things at once is how a good error message stops being one.
     check(f"{stray!r}: it does not then send you looking elsewhere",
           "shifts every field that follows" not in msg)
-    # and the line it names is the line the stray character is ON — the whole
+    # and the line it names is the line the stray character is ON - the whole
     # point, since the old failure named the innocent line two below it
     line = msg.split("line ")[1].split(",")[0]
     want = str(stray_line(stray))
@@ -131,7 +131,7 @@ for stray in ("01", "1", "12"):
 
 print("\n== and a real sprite in that slot is read, not refused ==")
 #: The two mods this came from. A length that fits a `.spr` path exactly, with
-#: whitespace after it, is a name — the only reading under which those files
+#: whitespace after it, is a name - the only reading under which those files
 #: reach EOF at all.
 for spr in ("9 guard.spr", "44 unit_sprites/france_Elector_count_sprite.spr",
             "52 unit_sprites/teutonic_order_Dummy_NE_Crew_sprite.spr"):
@@ -150,7 +150,7 @@ for spr in ("9 guard.spr", "44 unit_sprites/france_Elector_count_sprite.spr",
           want in db.entries[0].texture_files())
 
 print("\n== a length that fits, on something that is not a sprite, still is not ==")
-#: The discriminator is not "the arithmetic works out" — `01` in this fixture
+#: The discriminator is not "the arithmetic works out" - `01` in this fixture
 #: lands a one-character slice that also ends on whitespace. It is that a sprite
 #: is a `.spr` path, and nothing else belongs in this slot.
 try:
@@ -161,6 +161,6 @@ except ValueError as e:
           "Delete what follows the 0" in str(e))
 
 print()
-print(f"{sum(ok)}/{len(ok)} checks — "
+print(f"{sum(ok)}/{len(ok)} checks - "
       + ("ALL PASSED" if all(ok) else f"{len(ok) - sum(ok)} FAILED"))
 sys.exit(0 if all(ok) else 1)

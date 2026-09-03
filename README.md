@@ -33,7 +33,7 @@ one containing `mods`).
 | Sprites | Generate and wire up the far-LOD unit sprites |
 | Strings | Read and write the compiled `data/text/*.txt.strings.bin` files |
 | Traits / Ancillaries | Full editors for both, definitions and triggers together |
-| Factions | Faction definitions, with map colours edited via a colour picker, and **Add a faction** — a new slot cloned from an existing one across all twelve files that name a faction |
+| Factions | Faction definitions, with map colours edited via a colour picker, and **Add a faction** - a new slot cloned from an existing one across all twelve files that name a faction |
 | Minor Files | Rebel factions, religions, cultures, resources and character names |
 
 ## Transfers
@@ -47,7 +47,7 @@ the unit depends on and carries it across:
   normal maps and far-LOD sprite sheets
 * the mount definition, if mounted
 * the projectile definition, if it is a missile unit (and its effect sets too,
-  when the destination is marked M2EX — see below)
+  when the destination is marked M2EX - see below)
 * for artillery, the full siege engine: the `descr_engines.txt` blocks, each
   model group's animation skeleton, every referenced mesh, bone map, collision
   and reference-points file, and the textures baked into those meshes
@@ -71,8 +71,8 @@ Other transfer options:
   mod is not on your machine. A pack is a mod, so importing one is an ordinary
   transfer.
 * **The model, beside the transfer.** The 3D viewer docks into the composer and
-  draws both sides: the source unit's battle-model entries, and — once a base or
-  replaced unit is picked — that unit's own entries out of the destination mod,
+  draws both sides: the source unit's battle-model entries, and - once a base or
+  replaced unit is picked - that unit's own entries out of the destination mod,
   grouped by which mod each comes from. Which soldier crosses, and which
   destination unit is the right one to replace, stop being decisions taken off a
   name in a dropdown.
@@ -88,13 +88,13 @@ Other transfer options:
   missile weapon (never fired), a model nothing defines, and similar.
 * **Recruitment, from the unit.** A tab in the unit editor listing every
   building line in the mod that trains it, with all four pool numbers and the
-  `requires` clause editable in place — the same `recruit_pool` lines the
+  `requires` clause editable in place - the same `recruit_pool` lines the
   Buildings module writes, saved with the unit in one pass and taken back by one
   undo. A value that disagrees with what most of the other pools use is marked,
   which is usually why you opened it. A building's name opens that line in a new
   browser tab, on the tier the pool is on, with the unit's rows flashed. **＋ Add
-  a building** offers every line and every tier — the ones that already train it
-  shown as such — so making a unit recruitable somewhere new never leaves the
+  a building** offers every line and every tier - the ones that already train it
+  shown as such - so making a unit recruitable somewhere new never leaves the
   unit, and neither does taking it off a building.
 
   Every row carries the tier's own picture, and so does the ＋ picker; nineteen
@@ -114,13 +114,13 @@ Other transfer options:
   repeating, and a red line marks where the pair starts over. Thirty-two checker
   cells to a sheet, so art stretched over a part shows up as stretched cells.
 * **UV layout** beside the model, the way a UV editor shows it: the texture
-  sheet — both squares of it where the entry names a pair — with this model's
+  sheet - both squares of it where the entry names a pair - with this model's
   islands drawn over the art they sit on, one colour per part and the same
   colour beside that part in the list. Pan, zoom, and click an island to be told
   which part wears it and which pixels of which sheet it covers. Only the parts
   actually on the soldier are drawn, so switching a variant or hiding a slot
   changes the map with it. Where `Show UVs` answers "is this shell stretched",
-  this answers "where on the art does this part live" — the view a retexture is
+  this answers "where on the art does this part live" - the view a retexture is
   done against.
 * **Drag the bar under the docked canvas** to trade height between the model and
   its controls; double-click for the default. The width of the whole column is
@@ -130,10 +130,10 @@ Other transfer options:
   when it carries `armour_ug_models` the engine draws those, one per armour
   level, and never the model on its `soldier` line, so that one is not offered.
 * **Add a faction.** Copies one that already works into all twelve files that
-  name a faction slot — the roster, `expanded.txt`, unit ownership, the
+  name a faction slot - the roster, `expanded.txt`, unit ownership, the
   modeldb's faction skins, every `requires factions { … }` clause in the EDB
   (which is what lets it build and recruit), the voice accent, diplomatic
-  standing, agents, strat models, names, populace and off-map navies — and
+  standing, agents, strat models, names, populace and off-map navies - and
   copies its symbols, banners, captain cards and unit card folders under the new
   name. Shows exactly what each file would gain before writing, backs every one
   up, and undoes the whole faction in one go.
@@ -193,8 +193,8 @@ path, and recruitment.
 * **City and castle, side by side**, with controls to copy a pool across.
 * **Bulk editing** of recruitment pools: one requires clause, pool numbers, or
   removal, applied to a selection built from several searches.
-* The same pools are editable from the **other end** — the unit editor's
-  Recruitment tab, above — for when the question is "where can this unit be
+* The same pools are editable from the **other end** - the unit editor's
+  Recruitment tab, above - for when the question is "where can this unit be
   hired" rather than "what does this building train".
 
 ## Safety
@@ -222,7 +222,7 @@ being replaced by `invisible_placeholder_set`.
 
 Effects are normally not imported because they live in files shared by every
 projectile in the mod, and how many the engine will load is another of the
-hardcoded tables — what sits past the end is dropped without a message. M2EX
+hardcoded tables - what sits past the end is dropped without a message. M2EX
 replaces that table, so for a mod marked for it the toolkit copies each effect
 set the source actually defines, the effects that set lists, and the models and
 textures those name. A set the source does not define itself is left as a

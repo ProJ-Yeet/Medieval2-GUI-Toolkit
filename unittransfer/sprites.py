@@ -10,14 +10,14 @@ Two generation methods exist and this module supports both, because they differ
 *only* in how the TGAs get produced:
 
 classic (Caliban/Gigantus, TWC thread 663024)
-    ``sprite_script.txt`` in the Medieval II Total War **root** (not the mod —
+    ``sprite_script.txt`` in the Medieval II Total War **root** (not the mod -
     that is the single most common failure in the thread), one modeldb model
     name per line, ``bypass_sprite_script = 1`` under ``[misc]`` in whichever
     CFG actually launches the mod, then run the mod once. Works everywhere.
 
 eop (M2TWEOP console)
     ``M2TWEOP.generateSprite("model")`` from the main menu. No CFG edit, no
-    restart per batch — strictly nicer when the mod runs EOP, so it is the
+    restart per batch - strictly nicer when the mod runs EOP, so it is the
     default when we can see an EOP install.
 
 Everything after generation is ours:
@@ -25,7 +25,7 @@ Everything after generation is ours:
 * **Convert.** The published route is a GUI (``_1 Convert TGA to DDS.exe``) then
   a Python **2** script. We drive the GUI's own engine, ``nvcompress.exe``,
   headless from ``tools/nvtt/`` and re-implement the ``.texture`` container in
-  Python 3 — see :func:`dds_to_texture`. That removes the Python 2.6 install the
+  Python 3 - see :func:`dds_to_texture`. That removes the Python 2.6 install the
   tutorial demands and the manual folder-browsing step.
 * **Dedup.** The engine emits one sprite set per faction in the entry's
   ownership list. Identical sets are the norm, so we keep one and repoint the
@@ -51,7 +51,7 @@ from .logutil import log
 from .mod import Mod
 
 # Where the game always writes sprites, relative to the Medieval II Total War
-# root. Not configurable — the engine hard-codes it, which is why the tutorial
+# root. Not configurable - the engine hard-codes it, which is why the tutorial
 # insists the folder must exist at the root and not under the mod.
 EXPORT_REL = Path("export") / "unit_sprites"
 
@@ -66,7 +66,7 @@ AUDIT_CAP = 500
 
 # The bundled NVIDIA Texture Tools compressor. Vendored (996K) so the workspace
 # works out of the box; ``bin/settings.xml`` from the published setup is what
-# fixes the flags below — DXT5, clamped.
+# fixes the flags below - DXT5, clamped.
 NVTT_DIR = config.PROJECT_ROOT / "tools" / "nvtt"
 NVCOMPRESS = NVTT_DIR / "nvcompress.exe"
 
@@ -89,7 +89,7 @@ TEXTURE_HEADER_LEN = 48
 
 
 class SpriteError(Exception):
-    """Something the user can fix — surfaced in the UI, not a traceback."""
+    """Something the user can fix - surfaced in the UI, not a traceback."""
 
 
 def dds_to_texture(dds: bytes) -> bytes:
@@ -104,7 +104,7 @@ def dds_to_texture(dds: bytes) -> bytes:
     code = _DXT_CODE.get(bytes(dds[84:88]))
     if code is None:
         got = bytes(dds[84:88]).decode("ascii", "replace")
-        raise SpriteError(f"unsupported DDS format {got!r} — need DXT5 or DXT1")
+        raise SpriteError(f"unsupported DDS format {got!r} - need DXT5 or DXT1")
     out = bytearray()
     for i in _INIT:
         out += struct.pack(">i", i)
@@ -122,7 +122,7 @@ def dds_to_texture(dds: bytes) -> bytes:
 
 
 def texture_to_dds(tex: bytes) -> bytes:
-    """Unwrap a .texture back to DDS — the inverse of :func:`dds_to_texture`."""
+    """Unwrap a .texture back to DDS - the inverse of :func:`dds_to_texture`."""
     if len(tex) <= TEXTURE_HEADER_LEN:
         raise SpriteError("truncated .texture file")
     return tex[TEXTURE_HEADER_LEN:]
@@ -135,7 +135,7 @@ _SPRITE_RE = re.compile(r"^(?P<faction>[a-z0-9_]+?)_(?P<model>[a-z0-9_]+)_sprite
 
 
 def sprite_stem(faction: str, model: str) -> str:
-    """``<faction>_<model>_sprite`` — the name the engine derives, not a choice.
+    """``<faction>_<model>_sprite`` - the name the engine derives, not a choice.
 
     The generator names its output from the modeldb entry's faction record, so a
     modeldb sprite line that says anything else points at a file that will never
@@ -143,7 +143,7 @@ def sprite_stem(faction: str, model: str) -> str:
 
     Casing is preserved, not normalised: the generator copies the entry's own
     casing (real mods carry ``england_Mount_Pony_sprite.spr``), and lowercasing
-    here would rewrite every sprite line in a mod's modeldb to no effect —
+    here would rewrite every sprite line in a mod's modeldb to no effect -
     Windows resolves either spelling to the same file.
     """
     return f"{faction.strip()}_{model.strip()}_sprite"
@@ -157,7 +157,7 @@ def sprite_line(faction: str, model: str) -> str:
 def _model_casing(entry: "modeldb.ModelEntry") -> str:
     """How the modeldb spells this entry's name *inside its sprite paths*.
 
-    ``ModelEntry.name`` is lowercased by the parser, but the paths are not — real
+    ``ModelEntry.name`` is lowercased by the parser, but the paths are not - real
     mods carry ``aztecs_Mount_Pony_sprite.spr`` for an entry keyed
     ``mount_pony``, and the generator copies that casing onto the files it
     writes. Recovering it from an existing line is what makes a wire-up a no-op
@@ -193,7 +193,7 @@ def split_sprite_stem(stem: str) -> Optional[Tuple[str, str]]:
     """``milan_guardofthecaves_sprite`` -> ``("milan", "guardofthecaves")``.
 
     Ambiguous by construction (both halves may contain underscores), so the
-    caller is expected to disambiguate against real model names — see
+    caller is expected to disambiguate against real model names - see
     :func:`_match_stem`.
     """
     m = _SPRITE_RE.match(stem)
@@ -282,7 +282,7 @@ def _strip_mods(p: Path) -> Path:
 
     :func:`unittransfer.server.Registry.mods_root` deliberately accepts a mods
     folder as the configured root, so ``med2_root`` legitimately points one level
-    too deep for us. Left unstripped that yields ``mods/export/unit_sprites`` —
+    too deep for us. Left unstripped that yields ``mods/export/unit_sprites`` -
     a path the engine never writes to and where nothing is ever found.
 
     The test is on the folder itself rather than on its parent: the engine's
@@ -307,7 +307,7 @@ def _med2_root(mod: Mod) -> Path:
     root = config.get_med2_root()
     if not root:
         raise SpriteError(
-            "can't locate the Medieval II Total War root — set it in Settings")
+            "can't locate the Medieval II Total War root - set it in Settings")
     return _strip_mods(Path(root))
 
 
@@ -315,8 +315,8 @@ def export_dirs(mod: Mod) -> List[Path]:
     """Where the generator might have written this mod's sprites, best first.
 
     Normally one: ``<install>/export/unit_sprites``. But a mod folder does not
-    have to live inside the install that launches it — a working copy kept
-    outside the game is common — and then the mod-derived root and the configured
+    have to live inside the install that launches it - a working copy kept
+    outside the game is common - and then the mod-derived root and the configured
     root disagree. The second entry is a fallback only: :func:`scan_export` stops
     at the first folder that yields anything, so a mod that sits inside its own
     install never looks at another one's output.
@@ -346,7 +346,7 @@ def find_cfgs(mod: Mod) -> List[str]:
     """CFG files that plausibly launch this mod, best guess first.
 
     The flag has to go in the CFG the *launcher* uses, which is why the thread is
-    full of "nothing happened" — a mod commonly ships several.
+    full of "nothing happened" - a mod commonly ships several.
     """
     root = _med2_root(mod)
     seen: List[Path] = []
@@ -387,7 +387,7 @@ def plan_prep(mod: Mod, req: PrepRequest) -> PrepPlan:
             plan.unknown.append(n)
 
     if not plan.known:
-        plan.warnings.append("no valid model names — nothing would be generated")
+        plan.warnings.append("no valid model names - nothing would be generated")
 
     plan.export_dir = root / EXPORT_REL
 
@@ -403,7 +403,7 @@ def plan_prep(mod: Mod, req: PrepRequest) -> PrepPlan:
         cfg = Path(cands[0]) if cands else None
     if cfg is None:
         plan.warnings.append(
-            "no CFG found — add 'bypass_sprite_script = 1' under [misc] by hand")
+            "no CFG found - add 'bypass_sprite_script = 1' under [misc] by hand")
     elif not cfg.is_file():
         plan.warnings.append(f"{cfg} does not exist")
     else:
@@ -490,7 +490,7 @@ def apply_prep(plan: PrepPlan) -> dict:
 
 
 def revert_prep(cfg_path: str) -> dict:
-    """Comment the bypass flag back out — the step everyone forgets.
+    """Comment the bypass flag back out - the step everyone forgets.
 
     Leaving it on means the next normal launch re-renders sprites instead of
     starting the game, which reads as a crash.
@@ -529,7 +529,7 @@ def scan_export(mod: Mod) -> Dict[str, SpriteSet]:
     the sheets (``..._sprite_000.tga``), so they group by the ``_sprite`` stem.
 
     Candidate folders are tried in order and the first that yields anything wins
-    — see :func:`export_dirs`.
+    - see :func:`export_dirs`.
     """
     models = list(mod.modeldb.by_name().keys())
     out: Dict[str, SpriteSet] = {}
@@ -612,7 +612,7 @@ def plan_convert(mod: Mod, req: ConvertRequest) -> ConvertPlan:
     if not plan.sets:
         where = " or ".join(str(d) for d in export_dirs(mod)) or "the export folder"
         plan.warnings.append(
-            f"nothing to convert in {where} — has the generator run yet?")
+            f"nothing to convert in {where} - has the generator run yet?")
     return plan
 
 
@@ -755,7 +755,7 @@ def wire_model_edits(mod: Mod, models: Dict[str, List[str]],
 # ---------------------------------------------------------------------------
 # "done by hand" marks
 #
-# Plenty of models get their sprites from outside this tool — inherited from the
+# Plenty of models get their sprites from outside this tool - inherited from the
 # base game, copied out of another mod, built in IWTE years ago. The audit can
 # only see whether a line resolves, so it cannot tell "already handled elsewhere"
 # from "still to do" when a mod simply never wrote the line. The user says which
@@ -764,7 +764,7 @@ def wire_model_edits(mod: Mod, models: Dict[str, List[str]],
 
 
 def _mod_key(mod: Mod) -> str:
-    """The settings key for one mod — its resolved root, case-folded.
+    """The settings key for one mod - its resolved root, case-folded.
 
     Same rule as the EOP folder table: Windows paths differ only in case all the
     time, and a key that silently fails to match reads as "my marks vanished".
@@ -864,7 +864,7 @@ def audit(mod: Mod) -> SpriteAudit:
 
 
 #: The slots a modeldb entry can be filled into, in the order the UI badges them.
-#: ``armour`` is the interesting one — an armour-upgrade level is a model a unit
+#: ``armour`` is the interesting one - an armour-upgrade level is a model a unit
 #: visibly switches to, so it needs its own sprite, whereas an entry that is only
 #: ever somebody's soldier model is already covered by that unit's own row.
 ROLE_KINDS = ("soldier", "armour", "officer", "mount")
@@ -891,7 +891,7 @@ def model_roles(mod: Mod) -> Dict[str, set]:
         # An `armour_ug_models` line beats the soldier line. Level 0 of a real
         # upgrade ladder is usually the soldier model restated, and skipping it
         # for that reason dropped models the unit visibly switches between out of
-        # "pick armour upgrades" — they need a sprite like every other level. A
+        # "pick armour upgrades" - they need a sprite like every other level. A
         # one-entry list is not a ladder, so that one stays a soldier model.
         if len(u.armour_ug_models) > 1:
             for a in u.armour_ug_models:
@@ -953,7 +953,7 @@ def overview(mod: Mod) -> dict:
         "cfgs": find_cfgs(mod) if root else [],
         "cfg_state": {c: _cfg_state(Path(c)) for c in (find_cfgs(mod) if root else [])},
         # a sentinel-less modeldb carries a padded first entry with no name at
-        # all (see modeldb._read_entry) — it is not a model and can't be generated
+        # all (see modeldb._read_entry) - it is not a model and can't be generated
         "models": [{"name": n,
                     "factions": sorted({t.faction for t in e.main_textures}),
                     "is_mount": n in mount_models,
@@ -970,7 +970,7 @@ def overview(mod: Mod) -> dict:
                     for s in sorted(pending.values(), key=lambda x: x.stem)],
         # A real mod produces thousands of `missing` rows (units that simply have
         # no sprite yet) and the page only counts them, so only the rows it
-        # actually renders — and the misnamed ones it can act on — travel.
+        # actually renders - and the misnamed ones it can act on - travel.
         "audit": {"ok": len(a.ok),
                   "missing": len(a.missing),
                   "misnamed": a.misnamed[:AUDIT_CAP],

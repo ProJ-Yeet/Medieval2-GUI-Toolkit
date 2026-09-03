@@ -21,7 +21,7 @@ So an engine transfer needs FOUR things in the destination:
   1. the ``descr_engines.txt`` block(s),
   2. every file named on a ``reference_points`` / ``pathfinding_data`` /
      ``engine_bone_map`` / ``engine_collision`` / ``engine_mesh`` line,
-  3. the **textures** those meshes use — which are *baked into the .mesh binary*,
+  3. the **textures** those meshes use - which are *baked into the .mesh binary*,
      not named in any text file (see :func:`mesh_textures`),
   4. each model group's ``engine_skeleton`` entry from
      ``descr_engine_skeleton.txt``, plus the ``.CAS``/``.evt`` animation files it
@@ -31,7 +31,7 @@ So an engine transfer needs FOUR things in the destination:
 Blocks start at a line whose first token is ``type`` and run until the next one.
 Verbatim block text is kept so a transfer can append it unchanged. Note a single
 engine ``type`` may appear in SEVERAL blocks (one per ``culture`` / ``variant``,
-e.g. the per-culture siege towers) — lookups therefore return a list.
+e.g. the per-culture siege towers) - lookups therefore return a list.
 ``;`` starts a comment.
 """
 from __future__ import annotations
@@ -129,7 +129,7 @@ class Engine:
         A mounted engine (elephant cannon, camel gun, …) has NO
         ``engine_model_group``: its model comes from the unit's mount, so the
         block only carries ``reference_points``. Its ``class`` line is what names
-        the ``descr_engine_skeleton.txt`` entry — the mounted equivalent of a
+        the ``descr_engine_skeleton.txt`` entry - the mounted equivalent of a
         ground engine's ``engine_skeleton`` (usually ``serpentine``,
         ``rocket_launcher`` or ``ballista``).
 
@@ -493,7 +493,7 @@ def unique_engine_name(base: str, taken, tag: str = "") -> str:
 # A siege-engine mesh is a `serialization::archive` stream of length-prefixed
 # strings (4-byte little-endian length + that many bytes) and raw numbers. The
 # texture paths a mesh uses are stored as such strings near the end of the file
-# and appear NOWHERE in the text files — descr_engines only names the .mesh. So
+# and appear NOWHERE in the text files - descr_engines only names the .mesh. So
 # copying an engine without reading its mesh means guessing which textures it
 # needs; this reads them exactly.
 TEXTURE_EXTS = (".texture", ".dds", ".tga")

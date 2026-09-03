@@ -1,4 +1,4 @@
-"""Replacing any picture the toolkit shows — :mod:`unittransfer.images`.
+"""Replacing any picture the toolkit shows - :mod:`unittransfer.images`.
 
 Every screen paints its art through ``/icon`` or ``/building_icon``, and the URL
 the page put in the ``<img>`` is the whole question. This module hands that URL
@@ -12,7 +12,7 @@ warnings that belong in the confirm dialog. What is pinned here:
   * borrowed art (the mod ships none, the game's own is showing) plans a
     **created** file inside the mod rather than an overwrite of the game's
   * **a resolution mismatch is a warning**, both ways round, and matching sizes
-    produce none — the point of the whole feature
+    produce none - the point of the whole feature
   * a .png is re-encoded as a .tga, and the target's extension changes with it
   * a same-stem sibling in the other native extension is dropped, so two files
     cannot answer to one name
@@ -210,7 +210,7 @@ donor = next((m for m in sorted(MODS.iterdir())
               if (m / "data/export_descr_unit.txt").is_file()),
              None) if MODS.is_dir() else None
 if donor is None:
-    print("  (no mod installed — skipped)")
+    print("  (no mod installed - skipped)")
 else:
     real = Path(tempfile.mkdtemp(prefix="ut_imgu_"))
     (real / "data/text").mkdir(parents=True)
@@ -219,7 +219,7 @@ else:
             shutil.copy2(donor / "data" / rel, real / "data" / rel)
     rmod = Mod(real)
     # Painted into the folders the GAME looks in (`card_dirs`, which honours
-    # card_pic_dir), not into ownership — a merc's card lives under `mercs` and
+    # card_pic_dir), not into ownership - a merc's card lives under `mercs` and
     # the preview would find nothing in an ownership folder.
     unit = next((u for u in rmod.edu.units if len(u.card_dirs()) > 1), rmod.edu.units[0])
     for fac_ in unit.card_dirs():

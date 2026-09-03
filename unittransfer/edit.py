@@ -1,21 +1,21 @@
-"""Unit *editing* engine — the second mode of the tool (Stage 13).
+"""Unit *editing* engine - the second mode of the tool (Stage 13).
 
 Where :mod:`unittransfer.transfer` moves a unit from one mod into another, this
 module changes a unit **inside a single mod**:
 
-  * edit any EDU field of an existing unit (including deleting a field outright —
+  * edit any EDU field of an existing unit (including deleting a field outright -
     blanking a value is not the same thing to the game);
   * rename its ``type`` / ``dictionary`` (the dictionary rename carries the
     localisation record and the unit-card files with it, otherwise the unit
     silently loses its name and icons);
   * edit its localised name / description / short description;
-  * edit the battle_models.modeldb entries it uses — every mesh / texture /
+  * edit the battle_models.modeldb entries it uses - every mesh / texture /
     normal-map / sprite path, and the entry name (EDU refs follow the rename);
   * create a NEW modeldb entry cloned from one the unit already uses: you point
     at a mesh and a texture on disk and say which folder inside ``data/`` they
     should land in, and the files are copied there and the entry rewritten to
     reference them. Sprites, the faction (ownership) texture records and the
-    footer — animations/skeletons and the torch block — come from the cloned
+    footer - animations/skeletons and the torch block - come from the cloned
     entry, so the new model stays valid;
   * delete a unit, optionally taking its localisation record, its now-unused
     modeldb entries and its icons with it.
@@ -51,7 +51,7 @@ from .transfer import MERC_CARD_DIR, MERC_INFO_DIR
 
 
 # A unit block *is* its `type` line (that's where parsing starts), the game finds
-# its name/icons through `dictionary`, and it needs a body model — removing any of
+# its name/icons through `dictionary`, and it needs a body model - removing any of
 # these doesn't edit the unit, it corrupts the file.
 PROTECTED_FIELDS = {"type", "dictionary", "soldier"}
 
@@ -59,7 +59,7 @@ PROTECTED_FIELDS = {"type", "dictionary", "soldier"}
 # reserved int-pairs the game expects there (see modeldb._read_entry's ``pad``).
 # Deleting it would leave an unpadded entry in that position and the file would no
 # longer parse, so it is always kept.
-PAD_ENTRY_KEPT = ("'{name}' is the modeldb's padded first entry — removing it would "
+PAD_ENTRY_KEPT = ("'{name}' is the modeldb's padded first entry - removing it would "
                   "corrupt the file (this mod has no 'blank' sentinel entry), so it "
                   "is kept.")
 
@@ -71,7 +71,7 @@ class ModelEdit:
     ``paths`` addresses individual slots by span index (that's how meshes are
     edited). Textures go through ``defaults`` / ``faction_paths`` instead, keyed
     by faction + kind, because ticking a faction on or off in ``factions``
-    renumbers every texture span — an index captured by the browser before that
+    renumbers every texture span - an index captured by the browser before that
     would land on the wrong slot.
     """
     entry: str                                   # entry name as it is today
@@ -82,7 +82,7 @@ class ModelEdit:
     raw_entry: str = ""
     paths: Dict[int, str] = field(default_factory=dict)   # span index -> new path
     copies: List[dict] = field(default_factory=list)      # [{"i", "src"}] files to bring in
-    # files copied into the mod without owning a slot — a texture imported for
+    # files copied into the mod without owning a slot - a texture imported for
     # the default/per-faction boxes is named by ``defaults``/``faction_paths``,
     # not by span index, so the copy has to be requested separately
     imports: List[dict] = field(default_factory=list)     # [{"src", "dest_dir"}]
@@ -124,14 +124,14 @@ class EditRequest:
     new_dictionary: str = ""
     # The unit's EDU block as the user hand-edited it in Code View. Empty means
     # "use what's on disk", which is every request that never opened the text
-    # pane. When it is set it REPLACES the block wholesale — line order, spacing
-    # and comments included — and `field_overrides` then apply on top of it, so a
+    # pane. When it is set it REPLACES the block wholesale - line order, spacing
+    # and comments included - and `field_overrides` then apply on top of it, so a
     # box edited after a text edit still lands.
     raw_block: str = ""
     field_overrides: Dict[str, str] = field(default_factory=dict)
     remove_fields: List[str] = field(default_factory=list)
     # The tool's own tier metadata (:data:`unittransfer.edu.MARKER`), which is a
-    # comment line and so cannot ride in `field_overrides` — `block_fields`
+    # comment line and so cannot ride in `field_overrides` - `block_fields`
     # skips comments, by design. ``None`` means "leave it alone"; ``""`` clears
     # it, which is not the same thing and has to be tellable apart.
     tier: Optional[str] = None
@@ -140,7 +140,7 @@ class EditRequest:
     model_edits: List[ModelEdit] = field(default_factory=list)
     new_models: List[NewModel] = field(default_factory=list)
     # Replacement card / info card imported from anywhere on disk. Copied into
-    # EVERY owning faction's folder under the dictionary-derived name — see
+    # EVERY owning faction's folder under the dictionary-derived name - see
     # :func:`_plan_icon_import`.
     card_src: str = ""
     info_src: str = ""
@@ -153,7 +153,7 @@ class EditRequest:
 # is deliberately absent: it is the bare "0" meaning "no sprite" in all but a
 # handful of entries across every mod tested, and a field that is empty on
 # essentially every unit is one more thing to break by accident. The rare entry
-# that does carry one keeps it — a save rewrites the spans it was handed and
+# that does carry one keeps it - a save rewrites the spans it was handed and
 # leaves every other byte of the entry alone.
 TEXTURE_KINDS = {("main", "texture"): "texture",
                  ("main", "normal"): "normal",
@@ -166,7 +166,7 @@ def _clean_paths(d) -> Dict[str, str]:
     """Keep only the texture kinds we know, with a non-blank value.
 
     A blank field in the editor means "fall back to the default", never "write an
-    empty path" — an entry with an empty texture string is one the game can't load.
+    empty path" - an entry with an empty texture string is one the game can't load.
     """
     known = set(TEXTURE_KINDS.values())
     return {str(k): str(v).replace("\\", "/").strip()
@@ -240,7 +240,7 @@ class EditPlan:
     edu_block: str = ""                          # the unit's block after editing
     edu_text: str = ""                           # whole file after editing ("" = unchanged)
     # M2TWEOP unit files this edit rewrites: {absolute path: new text}. Separate
-    # from ``edu_text`` because an EOP unit's block does not live in the EDU —
+    # from ``edu_text`` because an EOP unit's block does not live in the EDU -
     # editing one must leave export_descr_unit.txt byte-identical.
     eop_texts: Dict[str, str] = field(default_factory=dict)
     eop_removes: List[str] = field(default_factory=list)   # files whose last unit went
@@ -285,7 +285,7 @@ def _rel_under_data(mod: Mod, raw: str) -> Optional[str]:
     """Normalise a user-supplied destination to a path relative to ``data/``.
 
     Accepts ``data/unit_models/x``, ``unit_models/x`` or an absolute path inside
-    the mod. Returns None when it would land outside ``data/`` — the game can't
+    the mod. Returns None when it would land outside ``data/`` - the game can't
     load those, and we must never write outside the mod.
     """
     s = (raw or "").replace("\\", "/").strip().strip("/")
@@ -330,7 +330,7 @@ def _tga_bytes(src: Path) -> bytes:
     """Re-encode an imported image as a 32-bit TGA.
 
     A .png or .jpg copied straight in would sit there under the right *name* and
-    still never render — the engine reads .tga/.dds only — so importing one of
+    still never render - the engine reads .tga/.dds only - so importing one of
     those silently produces a unit with no card. Pillow already ships with the
     tool for the icon previews, so converting costs nothing.
     """
@@ -347,7 +347,7 @@ def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> N
     """Place an imported card / info card in every owning faction's folder.
 
     The game looks the card up in ``ui/units/<the player's faction>/`` under the
-    unit's *dictionary* name, not wherever the file came from — so one import has
+    unit's *dictionary* name, not wherever the file came from - so one import has
     to fan out to a copy per owning faction, renamed. The ``mercs``/``merc``
     fallback folder is included too, since a unit whose ``*_pic_dir`` isn't
     pinned falls back to it.
@@ -396,7 +396,7 @@ def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> N
         # two files that differ only by name.
         if plan.resolved_dict != unit.dictionary:
             plan.warnings.append(
-                f"{kind} written under the new dictionary '{plan.resolved_dict}' — "
+                f"{kind} written under the new dictionary '{plan.resolved_dict}' - "
                 f"tick 'remove the old icons' to drop the '{unit.dictionary}' ones")
 
 
@@ -404,7 +404,7 @@ def _unit_icon_files(mod: Mod, dictionary: str) -> List[Tuple[Path, str, str]]:
     """Every card/info file on disk for a dictionary: (abs, rel, new-name stem).
 
     Icons are found by faction folder + dictionary, so a rename has to touch all
-    of them — not just the one the browser happens to show.
+    of them - not just the one the browser happens to show.
     """
     out: List[Tuple[Path, str, str]] = []
     for base, pattern, kind in ((mod.ui_units_dir, f"*/#{dictionary}.tga", "card"),
@@ -417,7 +417,7 @@ def _unit_icon_files(mod: Mod, dictionary: str) -> List[Tuple[Path, str, str]]:
 
 
 def icon_variants(mod: Mod, dictionary: str) -> Dict[str, List[dict]]:
-    """``{'card': [...], 'info': [...]}`` — the DISTINCT pictures, and who shares each.
+    """``{'card': [...], 'info': [...]}`` - the DISTINCT pictures, and who shares each.
 
     A unit's card is looked up under the *player's* faction folder, so a mod may
     ship one picture for ten factions or ten different ones. The editor showed
@@ -450,15 +450,15 @@ def _raw_block(plan: "EditPlan", unit, req: EditRequest) -> str:
     """The block a plan starts from: the file's, or the one typed in Code View.
 
     Hand-edited text is checked before it is trusted with the file. Text that no
-    longer reads as exactly one unit block is refused outright — the save
+    longer reads as exactly one unit block is refused outright - the save
     replaces one block, so a second `type` line would be swallowed into the
-    first one's slot — and the plan falls back to what is on disk.
+    first one's slot - and the plan falls back to what is on disk.
 
     A `type` line renamed in the text is allowed but flagged, exactly as
     renaming it in the field boxes is: only the Identity tab's rename chases the
     name through recruitment, the campaigns and the voice bank
     (:func:`_plan_type_refs`). If the Identity tab *is* renaming as well, that
-    rename wins — step 5 rewrites the line either way.
+    rename wins - step 5 rewrites the line either way.
     """
     if not req.raw_block:
         return unit.raw
@@ -470,7 +470,7 @@ def _raw_block(plan: "EditPlan", unit, req: EditRequest) -> str:
         return unit.raw
     if doc.ident != unit.type and not req.new_type:
         plan.warnings.append(
-            f"the text renames `type` to '{doc.ident}' — nothing else in the mod "
+            f"the text renames `type` to '{doc.ident}' - nothing else in the mod "
             "follows that. Use the Identity tab's rename to update the files that "
             "recruit this unit.")
     if req.raw_block != unit.raw:
@@ -514,10 +514,10 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
         key = edu_mod.split_label(label)[0]
         if key in PROTECTED_FIELDS:
             plan.errors.append(
-                f"'{key}' cannot be removed — a unit block is defined by it "
+                f"'{key}' cannot be removed - a unit block is defined by it "
                 "(rename or edit it instead)")
         elif key in ("category", "class"):
-            plan.warnings.append(f"removing '{key}' — the game needs it on every unit")
+            plan.warnings.append(f"removing '{key}' - the game needs it on every unit")
     if req.field_overrides or req.remove_fields:
         before = block
         block = edu_mod.apply_field_edits(block, req.field_overrides, req.remove_fields)
@@ -573,7 +573,7 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
         if mounted:
             plan.warnings.append(
                 f"mount(s) {', '.join(mounted)} name the renamed entry in "
-                "descr_mount.txt — that file is not rewritten, fix it by hand.")
+                "descr_mount.txt - that file is not rewritten, fix it by hand.")
     if block != unit.raw or plan.entry_renames:
         _take_split(plan, _replace_block(mod, unit, block, model_map=plan.entry_renames))
 
@@ -594,7 +594,7 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
             if others:
                 plan.warnings.append(
                     f"'{unit.dictionary}' is also used by {', '.join(others[:3])}"
-                    f"{'…' if len(others) > 3 else ''} — its old text entry is kept.")
+                    f"{'…' if len(others) > 3 else ''} - its old text entry is kept.")
             else:
                 text = localization.remove_record(text, unit.dictionary)
                 plan.changes.append(f"text entry '{unit.dictionary}' removed")
@@ -616,7 +616,7 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
                 plan.deletes.append(rel)
         if not icons:
             plan.warnings.append(
-                f"no unit card found for '{unit.dictionary}' — the renamed unit "
+                f"no unit card found for '{unit.dictionary}' - the renamed unit "
                 f"will need data/ui/units/<faction>/#{plan.resolved_dict}.tga.")
 
     # ---- 8) an imported card / info card fans out to every owning faction ----
@@ -633,7 +633,7 @@ def _plan_type_refs(plan: EditPlan, mod: Mod, old: str, new: str) -> None:
     """Chase a renamed unit ``type`` through every other file that names it.
 
     A unit type is a plain string, and recruitment, the campaigns, the voice bank
-    and the mod's Lua all refer to the unit by it — none of which the EDU knows
+    and the mod's Lua all refer to the unit by it - none of which the EDU knows
     about. Renaming the block alone used to leave all of those pointing at a unit
     that no longer exists, which the editor could only warn about. Now they are
     rewritten with it (and backed up with it, so one Undo puts everything back).
@@ -657,12 +657,12 @@ def _plan_type_refs(plan: EditPlan, mod: Mod, old: str, new: str) -> None:
         spots = ", ".join(r.label() for r in res.case_refs[:5])
         plan.warnings.append(
             f"{len(res.case_refs)} place(s) spell '{old}' with different "
-            f"capitalisation and were NOT rewritten — check them by hand: {spots}"
+            f"capitalisation and were NOT rewritten - check them by hand: {spots}"
             f"{'…' if len(res.case_refs) > 5 else ''}")
 
 
 def bmdb_request_from_dict(d: dict) -> EditRequest:
-    """Parse a *mod-wide* modeldb edit — the same body as an edit request minus
+    """Parse a *mod-wide* modeldb edit - the same body as an edit request minus
     the unit, so the browser can post the exact payload the unit editor builds."""
     return request_from_dict({"model_edits": d.get("model_edits"),
                               "new_models": d.get("new_models"), "unit": ""})
@@ -671,8 +671,8 @@ def bmdb_request_from_dict(d: dict) -> EditRequest:
 def plan_bmdb(mod: Mod, req: EditRequest) -> EditPlan:
     """Plan modeldb edits that belong to no particular unit (bmdb mode).
 
-    Same engine as :func:`plan_edit` — the entry editor, the new-entry cloner and
-    the folder standardiser are shared verbatim — but nothing here reads or writes
+    Same engine as :func:`plan_edit` - the entry editor, the new-entry cloner and
+    the folder standardiser are shared verbatim - but nothing here reads or writes
     a unit block *except* to chase a renamed entry through the whole EDU, which is
     mandatory: units name their models by string, so a rename that stopped at the
     modeldb would leave every user of the entry pointing at nothing.
@@ -689,7 +689,7 @@ def plan_bmdb(mod: Mod, req: EditRequest) -> EditPlan:
         if nm.assign_to:
             plan.warnings.append(
                 f"'{nm.name}': bmdb mode edits no unit, so nothing was pointed at "
-                f"the new entry — set '{nm.assign_to}' in the unit editor.")
+                f"the new entry - set '{nm.assign_to}' in the unit editor.")
     for me in req.model_edits:
         _plan_model_edit(plan, mod, me, entries, taken)
 
@@ -697,7 +697,7 @@ def plan_bmdb(mod: Mod, req: EditRequest) -> EditPlan:
         users = sorted({u.type for u in mod.edu.units
                         if any(m in plan.entry_renames for m in u.model_names())})
         if users:
-            # the rename is chased through EOP unit files too — an EOP unit naming
+            # the rename is chased through EOP unit files too - an EOP unit naming
             # the old entry would break exactly like an EDU one
             _take_split(plan, eop.compose(mod, eop.rewrite_all(
                 mod.edu.units,
@@ -711,7 +711,7 @@ def plan_bmdb(mod: Mod, req: EditRequest) -> EditPlan:
         if mounted:
             plan.warnings.append(
                 f"mount(s) {', '.join(mounted)} name the renamed entry in "
-                "descr_mount.txt — that file is not rewritten, fix it by hand.")
+                "descr_mount.txt - that file is not rewritten, fix it by hand.")
     if not (plan.edu_text or plan.modeldb_touched or plan.copies or plan.deletes):
         plan.changes.append("no changes")
     return plan
@@ -755,7 +755,7 @@ def _plan_file_copy(plan: EditPlan, mod: Mod, src: Path, dest_dir: str) -> Optio
 
 # The layout the editor standardises on: meshes sit directly in the model's
 # folder, every texture/normal in a `textures` sub-folder of it. Sprites are
-# left where they are — they are usually shared pack files far away from the
+# left where they are - they are usually shared pack files far away from the
 # model, and rehoming them would break every other entry that reads them.
 TEXTURE_SUBDIR = "textures"
 
@@ -779,14 +779,14 @@ def _same_dir(a: str, b: str) -> bool:
 
     Case-insensitively: M2TW runs on Windows, so ``unit_models/_units/Foo`` and
     ``unit_models/_Units/Foo`` ARE one folder on disk, and a mod that spells the
-    mesh path one way and its textures the other (very common — the modeldb is
+    mesh path one way and its textures the other (very common - the modeldb is
     hand-edited) was being told its files were "spread across 2 folders".
     """
     return (a or "").lower() == (b or "").lower()
 
 
 def _under(d: str, base: str) -> bool:
-    """Is ``d`` the model's own folder — ``base`` itself or its ``textures/``?
+    """Is ``d`` the model's own folder - ``base`` itself or its ``textures/``?
 
     The layout this editor standardises on puts meshes in ``base`` and textures in
     ``base/textures``, so those two are one folder as far as the user is concerned
@@ -800,7 +800,7 @@ def folder_info_of(slots: List[dict], name: str = "") -> dict:
     """Where a set of path slots' mesh/texture files live, and whether that is
     one folder.
 
-    ``base`` is non-empty only when they already follow the standard layout —
+    ``base`` is non-empty only when they already follow the standard layout -
     every mesh in one folder, every texture in that folder or its ``textures/``
     sub-folder (the two count as ONE folder; see :func:`_under`). Otherwise the
     files are scattered and the editor offers to standardise them.
@@ -867,7 +867,7 @@ def folder_moves_of(info: dict, target: str) -> Dict[str, str]:
     if not target:
         return {}
     if info["standardized"] and _same_dir(info["base"], target):
-        return {}                      # already the layout asked for — touch nothing
+        return {}                      # already the layout asked for - touch nothing
     moves: Dict[str, str] = {}
     for p in info["mesh_files"]:
         new = f"{target}/{_basename(p)}"
@@ -898,7 +898,7 @@ def entries_using(mod: Mod, rels, skip=()) -> Dict[str, List[str]]:
 
 
 def model_folder_report(mod: Mod, entry_name: str, target: str = "") -> dict:
-    """What moving an entry's files into ``target`` would do — the payload the
+    """What moving an entry's files into ``target`` would do - the payload the
     editor's folder box needs *before* the user commits to it.
     """
     entry = mod.modeldb.by_name().get((entry_name or "").lower())
@@ -948,7 +948,7 @@ def _plan_folder_move(plan: EditPlan, mod: Mod, entry: "modeldb.ModelEntry",
         if len(olds) > 1:
             plan.errors.append(
                 f"{entry.name}: {len(olds)} different files would both become "
-                f"data/{new} ({', '.join(sorted(olds))}) — rename one first")
+                f"data/{new} ({', '.join(sorted(olds))}) - rename one first")
     if plan.errors:
         return raw
 
@@ -958,7 +958,7 @@ def _plan_folder_move(plan: EditPlan, mod: Mod, entry: "modeldb.ModelEntry",
         plan.warnings.append(
             f"{len(users)} other model entr{'y' if len(users) == 1 else 'ies'} "
             f"({', '.join(users[:4])}{'…' if len(users) > 4 else ''}) also use these "
-            "files — they keep pointing at the old location, so the old files are "
+            "files - they keep pointing at the old location, so the old files are "
             "copied, not moved.")
 
     raw = modeldb.rewrite_entry_paths(raw, moves, pad=entry.first_entry_pad)
@@ -966,7 +966,7 @@ def _plan_folder_move(plan: EditPlan, mod: Mod, entry: "modeldb.ModelEntry",
         src = mod.data / old
         if not src.is_file():
             plan.warnings.append(
-                f"data/{old} is not on disk — '{entry.name}' now points at "
+                f"data/{old} is not on disk - '{entry.name}' now points at "
                 f"data/{new}, put the file there yourself.")
             continue
         if (mod.data / new).exists() and (mod.data / new).resolve() != src.resolve():
@@ -1018,7 +1018,7 @@ def _raw_entry(plan: "EditPlan", entry, me: ModelEdit) -> str:
 
     Hand-edited text is read back before it is trusted, by the same reader the
     file parser uses. A modeldb entry is length-prefixed, so a bad edit is not a
-    typo in one line — the reader desyncs and everything after it is garbage —
+    typo in one line - the reader desyncs and everything after it is garbage -
     which is why this refuses rather than writing something it could not read.
     Renaming the entry in the text is left to the rename box, which is the only
     path that chases the name through the EDU.
@@ -1035,7 +1035,7 @@ def _raw_entry(plan: "EditPlan", entry, me: ModelEdit) -> str:
         return entry.raw
     if doc.ident != entry.name and not me.new_name:
         plan.errors.append(
-            f"the text renames the entry to '{doc.ident}' — use the rename box so "
+            f"the text renames the entry to '{doc.ident}' - use the rename box so "
             "the units pointing at it follow.")
         return entry.raw
     if me.raw_entry != entry.raw:
@@ -1048,7 +1048,7 @@ def _plan_model_edit(plan: EditPlan, mod: Mod, me: ModelEdit,
     """Apply one entry's edits, in the only order that keeps them all meaningful.
 
     Indexed paths first (they were captured against the entry as it is on disk),
-    then the faction records — which renumber every texture span — then the
+    then the faction records - which renumber every texture span - then the
     by-faction texture values, re-derived from the text at that point. The folder
     move comes last and re-reads every path again, so it owns the final layout
     instead of being undone by a path the browser captured before it.
@@ -1085,7 +1085,7 @@ def _plan_model_edit(plan: EditPlan, mod: Mod, me: ModelEdit,
         if not wanted:
             plan.errors.append(
                 f"{entry.name}: a battle model needs at least one faction texture "
-                "record — the game can't draw a unit with none.")
+                "record - the game can't draw a unit with none.")
         elif wanted != current:
             raw = modeldb.set_texture_factions(raw, wanted, pad=pad)
             added = [f for f in wanted if f not in current]
@@ -1103,7 +1103,7 @@ def _plan_model_edit(plan: EditPlan, mod: Mod, me: ModelEdit,
                 if using:
                     plan.warnings.append(
                         f"{entry.name}: {', '.join(dropped[:4])} still own "
-                        f"{', '.join(using[:3])}{'…' if len(using) > 3 else ''} — those "
+                        f"{', '.join(using[:3])}{'…' if len(using) > 3 else ''} - those "
                         "units lose their skin unless you change their ownership too.")
             if not added and not dropped:
                 plan.changes.append(f"{entry.name}: faction skins reordered")
@@ -1113,7 +1113,7 @@ def _plan_model_edit(plan: EditPlan, mod: Mod, me: ModelEdit,
         index_map = _texture_index_map(raw, pad, me.defaults, me.faction_paths)
         if index_map:
             # report the factions/kinds that really move, not everything the
-            # browser sent — most of what it sends is the entry's own values
+            # browser sent - most of what it sends is the entry's own values
             slots = {s["i"]: s for s in modeldb.path_slots_raw(raw, pad=pad)}
             touched: Dict[str, set] = {}
             for i in index_map:
@@ -1199,7 +1199,7 @@ def _plan_new_model(plan: EditPlan, mod: Mod, nm: NewModel,
         f"{'…' if len(facs) > 6 else ''}; sprites, ownership and animations kept)")
     if not mesh_rel and not tex_rel:
         plan.warnings.append(
-            f"'{nm.name}' points at exactly the same files as '{clone.name}' — "
+            f"'{nm.name}' points at exactly the same files as '{clone.name}' - "
             "give it a mesh and/or a texture to make it a different model.")
     for skel in dict.fromkeys(clone.skeletons()):
         if skel and skel not in mod.modeldb.all_skeletons():
@@ -1219,7 +1219,7 @@ def _plan_delete(plan: EditPlan, unit) -> EditPlan:
     if opts.remove_loc:
         if others_same_dict:
             plan.warnings.append(
-                f"text entry '{unit.dictionary}' kept — still used by "
+                f"text entry '{unit.dictionary}' kept - still used by "
                 f"{', '.join(others_same_dict[:3])}")
         else:
             text = mod.export_units_path.read_text(encoding=localization.ENCODING)
@@ -1279,7 +1279,7 @@ def _replace_block(mod: Mod, unit, new_block: str,
 
     In place, not appended: an edit must leave every other byte of the file
     (including the unit's position in it) untouched. ``model_map`` (a modeldb
-    entry rename) is additionally applied to every *other* unit's block — a
+    entry rename) is additionally applied to every *other* unit's block - a
     rename that only fixed the edited unit would leave every other unit of that
     model pointing at a name the modeldb no longer has.
 
@@ -1356,7 +1356,7 @@ def apply_edit(plan: EditPlan) -> Dict:
     manifest: Dict[str, List[str]] = {"backed_up": [], "created": []}
 
     fingerprint(mod)
-    log.info("%s id=%s in %s — %s", "BMDB  " if not plan.unit_type else "EDIT  ",
+    log.info("%s id=%s in %s - %s", "BMDB  " if not plan.unit_type else "EDIT  ",
              tid, mod.name, plan.resolved_type or plan.unit_type or "(modeldb only)")
     log.info("  backups -> %s", backup_root)
 
@@ -1392,7 +1392,7 @@ def apply_edit(plan: EditPlan) -> Dict:
     if plan.loc_text:
         write_text("text/export_units.txt", plan.loc_text, localization.ENCODING)
     if plan.ref_texts:
-        # buildings / campaigns / voice bank / Lua — some live outside data/, so
+        # buildings / campaigns / voice bank / Lua - some live outside data/, so
         # they go in the manifest by absolute path (same shape as the EOP files)
         unitrefs.write_refs(plan.ref_texts, backup_root, manifest)
     if plan.modeldb_touched:
@@ -1451,7 +1451,7 @@ def apply_edit(plan: EditPlan) -> Dict:
 
 
 def _invalidate(mod: Mod) -> None:
-    """Every cached read of this mod is now stale — see :meth:`Mod.drop_caches`."""
+    """Every cached read of this mod is now stale - see :meth:`Mod.drop_caches`."""
     mod.drop_caches()
 
 
@@ -1496,7 +1496,7 @@ def unit_detail(mod: Mod, unit_type: str) -> dict:
         "type": unit.type,
         "dictionary": unit.dictionary,
         # M2TWEOP: which file this unit's block is in, so the editor can say where
-        # a save lands — an EOP unit's edit never touches export_descr_unit.txt.
+        # a save lands - an EOP unit's edit never touches export_descr_unit.txt.
         "eop": unit.is_eop,
         "eop_file": eop.rel_to_root(mod, unit.eop_file) if unit.is_eop else "",
         "fields": edu_mod.block_fields(unit.raw),
@@ -1561,7 +1561,7 @@ MODELDB_SPECIAL = ("merc",)
 def mod_faction_slots(mod: Mod) -> List[str]:
     """The faction slots this mod really has, from ``descr_sm_factions.txt``.
 
-    Empty when the mod has no roster — then every caller falls back to what the
+    Empty when the mod has no roster - then every caller falls back to what the
     files use, which is the old behaviour.
     """
     from . import factions as fac_mod
@@ -1574,7 +1574,7 @@ def mod_faction_slots(mod: Mod) -> List[str]:
 def all_mod_factions(mod: Mod) -> List[str]:
     """Every faction slot the skin checklists may offer.
 
-    The roster is the truth: `data/ui/units/<folder>` is NOT — a mod inherits
+    The roster is the truth: `data/ui/units/<folder>` is NOT - a mod inherits
     hundreds of vanilla folders it has no faction for, which is where names like
     `anduin` and both `merc` and `mercs` came from. Ownership lines are not the
     truth either, since one may name a CULTURE rather than a faction.
@@ -1585,7 +1585,7 @@ def all_mod_factions(mod: Mod) -> List[str]:
     """
     slots = mod_faction_slots(mod)
     used = {t.faction.lower() for e in mod.modeldb.entries for t in e.main_textures}
-    if not slots:                           # no roster — fall back to what is used
+    if not slots:                           # no roster - fall back to what is used
         return sorted(used | {f.lower() for u in mod.edu.units for f in u.ownership})
     return sorted(set(slots) | used | set(MODELDB_SPECIAL))
 
@@ -1612,7 +1612,7 @@ def _texture_table(slots: List[dict]) -> Dict[str, Dict[str, str]]:
 def _texture_defaults(slots: List[dict]) -> Dict[str, str]:
     """The value each texture kind most factions already share.
 
-    That is what "default textures — used by every faction unless it has its own"
+    That is what "default textures - used by every faction unless it has its own"
     is seeded with, so opening an entry and saving it changes nothing.
     """
     buckets: Dict[str, List[str]] = {}

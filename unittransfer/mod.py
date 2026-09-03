@@ -19,11 +19,11 @@ from . import (buildings as buildings_mod, edu, engines as engines_mod,
 
 
 #: How long after a folder's recorded mtime a second change to it could still
-#: land on that same mtime — the window :meth:`Mod._dir_index` will not trust a
+#: land on that same mtime - the window :meth:`Mod._dir_index` will not trust a
 #: cached listing inside.
 #:
 #: Not a measurement of one machine: NTFS stores 100 ns timestamps but they are
-#: written from the system clock, whose granularity is the timer tick — 15.625 ms
+#: written from the system clock, whose granularity is the timer tick - 15.625 ms
 #: by default on Windows, and lower only while some process happens to have asked
 #: for a finer one (0.5 ms was what this machine measured, with Pillow loaded).
 #: 50 ms clears the default tick three times over and still means "the folder was
@@ -38,7 +38,7 @@ class ModDataError(OSError, ValueError):
     Kept apart from the exceptions that mean "the toolkit is broken", because
     this one never does. A mod whose roster still lives inside a ``.pack``, or
     whose modeldb was hand-edited until no reader can follow it, is a mod
-    problem — and the person holding it can fix it the moment they are told
+    problem - and the person holding it can fix it the moment they are told
     which file and where. So the server answers these with the sentence and a
     409 instead of a 500 and a traceback nobody outside this repo can read.
 
@@ -98,7 +98,7 @@ class Mod:
 
     @property
     def models_strat_dir(self) -> Path:
-        """The strat map's model tree — the other half of a mod's 3D art."""
+        """The strat map's model tree - the other half of a mod's 3D art."""
         return self.data / "models_strat"
 
     @property
@@ -166,7 +166,7 @@ class Mod:
 
     # ---- parsed databases (cached) -------------------------------------
     def _rel(self, path: Path) -> str:
-        """``data/export_descr_unit.txt`` — the way a person names the file."""
+        """``data/export_descr_unit.txt`` - the way a person names the file."""
         try:
             return path.relative_to(self.root).as_posix()
         except ValueError:
@@ -175,8 +175,8 @@ class Mod:
     def _read_required(self, path: Path, parse, missing: str):
         """Parse a file this mod cannot be opened without, or say why not.
 
-        Two failures used to leave the same mark — a raw traceback and an HTTP
-        500 — and both are ordinary states for a folder that merely LOOKS like a
+        Two failures used to leave the same mark - a raw traceback and an HTTP
+        500 - and both are ordinary states for a folder that merely LOOKS like a
         mod: the file is not there, or it is there and something has desynced
         it. Neither is a fault here, so both come back as a
         :class:`ModDataError` naming the file, with whatever the parser worked
@@ -191,21 +191,21 @@ class Mod:
                 f"{self.name}: {self._rel(path)} could not be read. {e}") from e
         except OSError as e:
             raise ModDataError(
-                f"{self.name}: {self._rel(path)} could not be opened — {e}") from e
+                f"{self.name}: {self._rel(path)} could not be opened - {e}") from e
 
     #: Said about every missing file that lives in a released mod's ``.pack``
     #: archives. The four Kingdoms campaign folders under a stock install are
     #: exactly this: a ``data/`` folder with almost nothing loose in it, which
     #: is why they show up as mods at all.
-    _PACKED = ("A mod that still keeps its files inside data/packs/*.pack — the four "
-               "Kingdoms campaigns (americas, british_isles, crusades, teutonic) do — "
+    _PACKED = ("A mod that still keeps its files inside data/packs/*.pack - the four "
+               "Kingdoms campaigns (americas, british_isles, crusades, teutonic) do - "
                "has to be unpacked before any tool can read it.")
 
     @cached_property
     def edu(self) -> edu.EduFile:
         """Every unit the mod defines: the EDU *plus* its M2TWEOP unit files.
 
-        Merged into one list on purpose — the unit picker, the transfer planner,
+        Merged into one list on purpose - the unit picker, the transfer planner,
         the editor, the voice bank and the modeldb cleanup all want the mod's real
         roster, and an EOP unit that was invisible to the cleanup is exactly how a
         still-used battle model gets deleted. Each EOP unit keeps ``is_eop`` and
@@ -229,7 +229,7 @@ class Mod:
     def m2ex(self) -> bool:
         """Has this mod been marked as running on M2EX?
 
-        A per-mod setting somebody ticked, not something read off the files —
+        A per-mod setting somebody ticked, not something read off the files -
         nothing in ``data/`` records it. What it turns off is the engine's
         hardcoded ceilings, which M2EX replaces: see
         :mod:`unittransfer.modflags`. Separate from :attr:`eop_dirs`, which is
@@ -241,7 +241,7 @@ class Mod:
     def scanned_files(self) -> Dict[str, List[Path]]:
         """Every file the bmdb cleanup's safety nets read, from ONE tree walk.
 
-        ``{"lua", "campaign", "modeldb"}`` — see :func:`luascan.mod_files`.
+        ``{"lua", "campaign", "modeldb"}`` - see :func:`luascan.mod_files`.
         Cached because finding them means walking the whole mod (a hundred
         thousand files on an overhaul) and three callers need three slices of the
         same answer.
@@ -280,7 +280,7 @@ class Mod:
                      ) -> localization.Localization:
         """A :class:`Localization` built from a ``.txt``'s compiled ``.strings.bin``.
 
-        Empty when there is no readable archive — the callers all treat a missing
+        Empty when there is no readable archive - the callers all treat a missing
         localisation as "show the code name", which is the right answer anyway.
         """
         from . import stringsbin
@@ -315,7 +315,7 @@ class Mod:
         :mod:`unittransfer.stratmap` needs :class:`Mod` and this needs it back,
         and one of the two circles has to be broken somewhere. A cached_property
         rather than the module's own dict so :meth:`drop_caches` forgets it with
-        everything else after a write — which is the whole reason it is here and
+        everything else after a write - which is the whole reason it is here and
         not in stratmap.py.
         """
         from . import stratmap as stratmap_mod
@@ -390,7 +390,7 @@ class Mod:
 
     @cached_property
     def building_loc(self) -> localization.Localization:
-        """Building names/descriptions — same format as export_units.txt, but
+        """Building names/descriptions - same format as export_units.txt, but
         keyed with ``_desc`` / ``_desc_short`` instead of ``_descr``."""
         p = self.building_loc_path
         if not p.exists():
@@ -423,7 +423,7 @@ class Mod:
 
     def find_building_icon(self, culture: str, level: str, kind: str = "small",
                            vanilla_root=None, any_culture: bool = False):
-        """(path, source) for one building icon — see :func:`buildings.find_icon`."""
+        """(path, source) for one building icon - see :func:`buildings.find_icon`."""
         return buildings_mod.find_icon(self, culture, level, kind, vanilla_root,
                                        any_culture)
 
@@ -438,7 +438,7 @@ class Mod:
 
         :attr:`effect_sets` answers "does this mod define that set?", which is all
         the placeholder rule needs. Importing a set instead of blanking it needs
-        the text, the effects it lists and the files those name — see
+        the text, the effects it lists and the files those name - see
         :mod:`unittransfer.effects`. Cached because reading it is four files.
         """
         from . import effects as effects_mod
@@ -515,7 +515,7 @@ class Mod:
         """Locate the info card: data/ui/unit_info/<faction>/<dict>_info.tga.
 
         Uses ``info_pic_dir`` (falling back to ownership / mercenary status), NOT
-        ``card_pic_dir`` — a unit can pin its card to ``mercs`` while its info
+        ``card_pic_dir`` - a unit can pin its card to ``mercs`` while its info
         card stays looked up under its ownership faction, and conflating the two
         made the info card silently unfindable for exactly that (common) case.
         """
@@ -530,7 +530,7 @@ class Mod:
         used to get that by globbing the whole faction folder per extension per
         candidate faction. Building the list of a mod's unit cards then cost
         **224,712 globs** and 4.8 of the 4.9 seconds it took to answer
-        ``/api/units`` for Divide and Conquer — the visible half of "switching
+        ``/api/units`` for Divide and Conquer - the visible half of "switching
         mods doesn't switch the units".
 
         One listing per folder replaces all of it. The folder's mtime is the
@@ -544,15 +544,15 @@ class Mod:
         mtime, and then the cache is served for a folder that no longer looks
         like that. Measured on NTFS here: replacing a file in place (unlink, then
         create under a different name) left the folder's mtime untouched in
-        **70 of 2000 rounds — 3.5%**, and every one of those is a unit card the
+        **70 of 2000 rounds - 3.5%**, and every one of those is a unit card the
         tool then reports as missing.
 
         So an entry listed while its folder's mtime was still inside that window
         is marked *racy* and re-listed next time, which is the rule git uses for
         exactly this problem ("racily clean" index entries). It costs one extra
         listing per lookup, but only for a folder something wrote to within the
-        last :data:`_MTIME_GRAIN_NS`; a folder that has been sitting still — which
-        is every folder, during the bulk lookup this index exists to make fast —
+        last :data:`_MTIME_GRAIN_NS`; a folder that has been sitting still - which
+        is every folder, during the bulk lookup this index exists to make fast -
         is answered from the cache as before.
         """
         try:

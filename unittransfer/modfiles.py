@@ -1,8 +1,8 @@
-"""What one mod actually has on disk, per module — the Home page's readiness matrix.
+"""What one mod actually has on disk, per module - the Home page's readiness matrix.
 
 The reference tool opens with an upload box: you pick a ``data`` folder and it
 tells you which files it found. We already know where every mod is, so the same
-question is answered the other way round — for each mod the toolkit can see, say
+question is answered the other way round - for each mod the toolkit can see, say
 which of the files each module needs are there, how big they are, and whether
 they can be read at all.
 
@@ -122,10 +122,10 @@ def _entry(mod, k: Known) -> Dict:
     except OSError:
         # A missing file the module can live without is not worth a red mark, and
         # a compiled .strings.bin standing in for a missing .txt is not missing at
-        # all — the game reads the compiled one.
+        # all - the game reads the compiled one.
         if not k.folder and (mod.data / (k.rel + ".strings.bin")).exists():
             row["state"] = "compiled"
-            row["note"] = "only the compiled .strings.bin is here — the game reads that"
+            row["note"] = "only the compiled .strings.bin is here - the game reads that"
         return row
     if k.folder:
         if not path.is_dir():
@@ -174,7 +174,7 @@ def campaign_title(mod) -> str:
     """The mod's campaign as it is named in game, or ``''``.
 
     Read through the compiled ``.strings.bin`` when the ``.txt`` is absent, which
-    for a released mod is the normal case — see :mod:`unittransfer.stringsbin`.
+    for a released mod is the normal case - see :mod:`unittransfer.stringsbin`.
     """
     from . import stringsbin
     for name, keys in (("menu_english.txt", ("UI_NEW_GAME_IMPERIAL_CAMPAIGN",)),
@@ -204,7 +204,7 @@ def report(mod) -> Dict:
         "mod": mod.name,
         "root": str(mod.root),
         "title": title,
-        # localised name first, code name in brackets — the rule the whole UI uses
+        # localised name first, code name in brackets - the rule the whole UI uses
         "label": f"{title} ({mod.name})" if title else mod.name,
         "files": files,
         "modules": _module_rows(files),
