@@ -9,9 +9,13 @@
 /* =====================================================================
    THE CAMPAIGN MAP - ten TGA layers, one canvas.
 
-   Phase 16c: the renderer core. It draws, it pans, it zooms and it tells you
-   which tile is under the cursor. It does not paint, validate or edit - 16d
-   adds the legend and the region panel, 16e the brush, 16f the validator.
+   Phase 16c built the renderer: it draws, it pans, it zooms and it tells you
+   which tile is under the cursor. Phase 16d added the three things that make
+   it readable and the one that makes it an editor - the layer stack remembered
+   between sessions, a legend in which a layer's "nothing here" colour stops
+   being drawn, a probe naming one tile on all ten layers at once, and the
+   region record itself with its Code View. It still does not paint or
+   validate: 16e is the brush, 16f the validator.
 
    THE BROWSER NEVER PARSES A TGA. Python decodes every layer, projects it to
    one pixel per tile and serves PNG from /api/map/layer; the manifest at
@@ -115,20 +119,113 @@ async function loadCampmap(){
    composite - one canvas at map size that everything on screen is copied out
    of. `sel` and `hover` are tile coordinates or null, never a pixel colour,
    because the colour is a lookup away and a stale one would be a lie. */
+/* ---------- what the screen remembers ---------- */
+
+/* The layer stack, kept across sessions in `map_layers` on /api/settings.
+
+   Same reasoning and the same road as `pane_sizes` in core.js: which layers a
+   person works with, how transparent they want the provinces over the ground,
+   and which draw on top are facts about how they read a map, not about the mod
+   they happen to have open. 16c built all three controls and remembered none of
+   them, so every visit started at the defaults.
+
+   Kept per USER, not per mod, and that is deliberate: the layer codes are the
+   engine's own ten and mean the same thing in every mod there is. What is not
+   kept is anything about a particular map - the view, the selection and the
+   picked tile all start fresh, because they are about a place rather than a
+   habit. */
+function cmapSettings(){
+  const s = state.settings || (state.settings = {});
+  const m = s.map_layers && typeof s.map_layers === 'object' ? s.map_layers : {};
+  if(!m.on || typeof m.on !== 'object') m.on = {};
+  if(!m.opacity || typeof m.opacity !== 'object') m.opacity = {};
+  if(!m.hide || typeof m.hide !== 'object') m.hide = {};
+  if(!Array.isArray(m.order)) m.order = [];
+  s.map_layers = m;
+  return m;
+}
+
+let cmapSaveTimer = 0;
+//: Coalesced: dragging an opacity slider fires `input` per pixel of travel, and
+//: settings.json is rewritten whole either way.
+function cmapSaveLayers(){
+  const c = state.cmap, m = cmapSettings();
+  if(!c) return;
+  m.order = c.order.slice();
+  m.on = {}; m.opacity = {}; m.hide = {};
+  for(const [code, L] of Object.entries(c.layers)){
+    m.on[code] = !!L.on;
+    m.opacity[code] = L.opacity;
+    if(L.hide.size) m.hide[code] = [...L.hide];
+  }
+  clearTimeout(cmapSaveTimer);
+  cmapSaveTimer = setTimeout(() => {
+    try{ api.post('/api/settings', {map_layers:m}); }catch(e){}
+  }, 400);
+}
+
+/* The saved draw order, reconciled with the layers this manifest actually has.
+
+   A saved order is a list of codes written by an older run of the tool, and the
+   two ways it can be wrong are both ordinary: a layer the manifest no longer
+   lists (it was renamed, or this build knows fewer) and a layer the saved list
+   never saw. Codes that are still real keep their saved place, anything new
+   goes where the server put it, and nothing is dropped or invented. */
+function cmapOrder(man, saved){
+  const real = man.layers.map(l => l.code);
+  const out = (saved || []).filter(c => real.includes(c));
+  for(let i = 0; i < real.length; i++)
+    if(!out.includes(real[i])) out.splice(Math.min(i, out.length), 0, real[i]);
+  return out;
+}
+
+/* The screen's whole state, in one object, rebuilt whenever the mod changes.
+
+   `layers` is keyed by code and each entry owns its own <img>: a layer is
+   fetched once and stays, so ticking it off and on again is free. `comp` is the
+   composite - one canvas at map size that everything on screen is copied out
+   of. `sel` and `hover` are tile coordinates or null, never a pixel colour,
+   because the colour is a lookup away and a stale one would be a lie.
+
+   A layer also carries a `hide` set of packed colour keys and the `masked`
+   canvas that set produced. Both start from the manifest's own `blank` - the
+   colour that layer uses for "there is nothing here" - so features and trade
+   routes open as overlays rather than as a sheet over the map, before any
+   legend has been fetched. */
 function cmapNew(mod, man){
   const byKey = new Map();
   for(const r of man.regions) byKey.set(r.key, r);
+  const saved = cmapSettings();
+  const layers = {};
+  for(const l of man.layers){
+    const hide = (l.code in saved.hide) ? (saved.hide[l.code] || [])
+               : (l.blank ? [l.blank.key] : []);
+    layers[l.code] = {
+      def: l,
+      on: (l.code in saved.on ? !!saved.on[l.code] : l.on) && l.present,
+      opacity: typeof saved.opacity[l.code] === 'number'
+        ? saved.opacity[l.code] : l.opacity,
+      img: null, loading: false, failed: '',
+      hide: new Set(hide), masked: null, maskKey: '',
+      legend: null, legendBusy: false, legendErr: '', open: false,
+    };
+  }
   return {
     mod, man, byKey,
-    // draw order is the server's to start with; the arrows in the panel move a
-    // layer within this array and nothing else has to know
-    order: man.layers.map(l => l.code),
-    layers: Object.fromEntries(man.layers.map(l =>
-      [l.code, {def: l, on: l.on && l.present, opacity: l.opacity,
-                img: null, loading: false, failed: ''}])),
+    // draw order is the server's until somebody has moved a layer, and then it
+    // is theirs - the arrows move a layer within this array and nothing else
+    // has to know
+    order: cmapOrder(man, saved.order),
+    layers,
     comp: null, compKey: '',
     view: {zoom: 1, ox: 0, oy: 0, fitted: false},
     hover: null, sel: null, outline: null, outlineKey: -1,
+    // the browser's own copy of the region layer, built on the first hover and
+    // read one pixel at a time - see cmapRegionAt
+    scratch: null,
+    // the picked tile, what all ten layers say about it, and the region record
+    // it belongs to with the working copy the form edits
+    pick: null, probe: null, probeErr: '', det: null, busy: false,
     ms: 0,
   };
 }
@@ -152,7 +249,7 @@ function renderCampmap(){
         <div class="cmread" id="cmRead">move the pointer over the map</div>
         <div class="cmperf" id="cmPerf"></div>
       </div>
-      <div class="cmside">
+      <div class="cmside" id="cmSide">
         <div class="cmhead">
           <b>${esc(c.mod)}</b>
           <span class="count">${m.width}×${m.height} tiles ·
@@ -166,6 +263,7 @@ function renderCampmap(){
       </div>
     </div>`;
   cmapWire();
+  cmapPickPaint();
   cmapResize();
   if(!c.view.fitted) cmapFit(); else cmapPaint();
   if(typeof rszApply === 'function') rszApply(main);
@@ -220,41 +318,48 @@ function cmapLayersHtml(){
           grid - stretched to fit</span>`
       : `<span class="count">${d.file}${d.native[0] !== d.width
           ? ` · ${d.native[0]}×${d.native[1]}, sampled per tile` : ''}</span>`;
+    // how much of this layer is not being drawn, so a layer that is on and
+    // invisible is never a mystery
+    const hid = L.hide.size ? ` <span class="cmhid" title="colours punched through">
+      ${L.hide.size} hidden</span>` : '';
     return `<div class="cmlayer${L.on ? ' on' : ''}${d.present ? '' : ' off'}" data-code="${code}">
       <label class="chk"><input type="checkbox" ${L.on ? 'checked' : ''}
         ${d.present ? '' : 'disabled'} data-lcheck="${code}">
         <span class="cmnm">${esc(d.label)}</span></label>
       <span class="cmmove">
+        <button data-lleg="${code}" ${d.present ? '' : 'disabled'} class="${L.open ? 'on' : ''}"
+          title="What every colour on this layer means, and how much of the map it covers"
+          >${L.open ? '▾' : '▸'}</button>
         <button data-lup="${code}" ${i === 0 ? 'disabled' : ''} title="Draw later (up)">▲</button>
         <button data-ldn="${code}" ${i === c.order.length - 1 ? 'disabled' : ''}
           title="Draw earlier (down)">▼</button></span>
       <input type="range" min="0" max="100" value="${Math.round(L.opacity * 100)}"
         data-lop="${code}" ${d.present && L.on ? '' : 'disabled'}>
       <span class="cmpct">${Math.round(L.opacity * 100)}%</span>
-      <div class="cmnote">${note}</div>
+      <div class="cmnote">${note}${hid}</div>
+      ${L.open ? cmapLegendHtml(code) : ''}
     </div>`;
   }).reverse().join('');
 }
 
-function cmapWire(){
-  const box = document.getElementById('cmLayers');
-  box.querySelectorAll('[data-lcheck]').forEach(cb => cb.onchange = () => {
-    const L = state.cmap.layers[cb.dataset.lcheck];
-    L.on = cb.checked;
-    activity('map layer', `${L.on ? 'showed' : 'hid'} ${cb.dataset.lcheck}`);
-    cmapLoadLayers();
-    cmapRepanel();
-  });
-  // `input` rather than `change`: an opacity slider that only answers on release
-  // is a slider you cannot judge a blend with
-  box.querySelectorAll('[data-lop]').forEach(sl => sl.oninput = () => {
-    state.cmap.layers[sl.dataset.lop].opacity = (+sl.value) / 100;
-    sl.parentElement.querySelector('.cmpct').textContent = sl.value + '%';
-    cmapCompose(); cmapPaint();
-  });
-  box.querySelectorAll('[data-lup]').forEach(b => b.onclick = () => cmapMove(b.dataset.lup, 1));
-  box.querySelectorAll('[data-ldn]').forEach(b => b.onclick = () => cmapMove(b.dataset.ldn, -1));
-  cmapPointers(document.getElementById('cmCanvas'));
+/* The canvas's handlers, bound ONCE per screen.
+
+   Kept apart from the panel's on purpose, and that separation is a bug fix
+   rather than tidiness: `cmapRepanel` rebuilds the layer list and re-wires it,
+   and it used to re-wire this too - so every tick of a layer added another full
+   set of pointer listeners to the same canvas and a 10-pixel drag moved the map
+   by 10 pixels per listener. Measured at 110 after eleven repanels. 16d ticks
+   far more often than 16c did (every legend opened, every colour hidden), which
+   is what made it visible.
+
+   `state.cmapBound` is the canvas element itself rather than a flag, because a
+   new mod rebuilds the markup and hands us a different <canvas> that does need
+   wiring. */
+function cmapWireCanvas(){
+  const cv = document.getElementById('cmCanvas');
+  if(!cv || state.cmapBound === cv) return;
+  state.cmapBound = cv;
+  cmapPointers(cv);
   cmapKeys();
   // The canvas is a flex child of a stage that moves with the window, and it is
   // the one thing on the page that has to be told.
@@ -263,20 +368,57 @@ function cmapWire(){
   state.cmapRO.observe(document.getElementById('cmStage'));
 }
 
+function cmapWire(){
+  cmapWireCanvas();
+  cmapWireLayers();
+}
+
+//: The layer list's own handlers. Re-run every time that markup is rebuilt,
+//: which is often - and nothing outside the list is touched by it.
+function cmapWireLayers(){
+  const box = document.getElementById('cmLayers');
+  if(!box) return;
+  box.querySelectorAll('[data-lcheck]').forEach(cb => cb.onchange = () => {
+    const L = state.cmap.layers[cb.dataset.lcheck];
+    L.on = cb.checked;
+    activity('map layer', `${L.on ? 'showed' : 'hid'} ${cb.dataset.lcheck}`);
+    cmapLoadLayers();
+    cmapSaveLayers();
+    cmapRepanel();
+  });
+  // `input` rather than `change`: an opacity slider that only answers on release
+  // is a slider you cannot judge a blend with
+  box.querySelectorAll('[data-lop]').forEach(sl => sl.oninput = () => {
+    state.cmap.layers[sl.dataset.lop].opacity = (+sl.value) / 100;
+    sl.parentElement.querySelector('.cmpct').textContent = sl.value + '%';
+    cmapCompose(); cmapPaint(); cmapSaveLayers();
+  });
+  box.querySelectorAll('[data-lup]').forEach(b => b.onclick = () => cmapMove(b.dataset.lup, 1));
+  box.querySelectorAll('[data-ldn]').forEach(b => b.onclick = () => cmapMove(b.dataset.ldn, -1));
+  box.querySelectorAll('[data-lleg]').forEach(b => b.onclick = () => {
+    const L = state.cmap.layers[b.dataset.lleg];
+    L.open = !L.open;
+    cmapRepanel();
+    if(L.open) cmapLegend(b.dataset.lleg);
+  });
+  box.querySelectorAll('[data-lhide]').forEach(cb => cb.onchange = () =>
+    cmapHideColour(cb.dataset.lhide, +cb.dataset.key, cb.checked));
+}
+
 //: Redraw the panel in place. The canvas is deliberately not in it - rebuilding
 //: the markup would throw away the <canvas> and its context with it.
 function cmapRepanel(){
   const box = document.getElementById('cmLayers');
   if(!box) return;
   box.innerHTML = cmapLayersHtml();
-  cmapWire();
+  cmapWireLayers();
 }
 
 function cmapMove(code, dir){
   const o = state.cmap.order, i = o.indexOf(code), j = i + dir;
   if(i < 0 || j < 0 || j >= o.length) return;
   o[i] = o[j]; o[j] = code;
-  cmapCompose(); cmapPaint(); cmapRepanel();
+  cmapCompose(); cmapPaint(); cmapSaveLayers(); cmapRepanel();
 }
 
 /* ---------- the layer pictures ---------- */
@@ -295,6 +437,7 @@ async function cmapLoadLayers(){
   if(!want.length){ cmapCompose(); cmapPaint(); return; }
   await Promise.all(want.map(code => cmapFetchLayer(c, code)));
   if(state.cmap !== c) return;
+  for(const code of want) cmapMask(c, code);
   cmapCompose();
   cmapPaint();
   cmapRepanel();
@@ -360,7 +503,10 @@ function cmapCompose(){
   if(!c) return;
   const m = c.man;
   const shown = c.order.filter(code => c.layers[code].on && c.layers[code].img);
-  const key = shown.map(code => `${code}:${c.layers[code].opacity}`).join('|');
+  // the hide set is in the key: punching a colour through changes the picture,
+  // and a composite that did not notice would show the old one
+  const key = shown.map(code => `${code}:${c.layers[code].opacity}`
+    + `:${[...c.layers[code].hide].sort().join('.')}`).join('|');
   if(key === c.compKey && c.comp) return;
   if(!c.comp){
     c.comp = document.createElement('canvas');
@@ -380,7 +526,7 @@ function cmapCompose(){
     // A layer with no relationship to the tile grid - the front-end picture,
     // the water surface - is stretched over the map rather than left out. It
     // is a guess and the panel says so; leaving it out would be a different lie.
-    x.drawImage(L.img, 0, 0, m.width, m.height);
+    x.drawImage(L.masked || L.img, 0, 0, m.width, m.height);
   }
   x.globalAlpha = 1;
   c.compKey = key;
@@ -700,14 +846,18 @@ function cmapRegionAt(tx, ty){
   const c = state.cmap, L = c.layers.regions;
   if(!L || !L.img) return null;
   if(tx < 0 || ty < 0 || tx >= c.man.width || ty >= c.man.height) return null;
-  if(!c.probe){
-    c.probe = document.createElement('canvas');
-    c.probe.width = c.man.width; c.probe.height = c.man.height;
-    const px = c.probe.getContext('2d', {willReadFrequently: true});
+  // `scratch`, not `probe`: 16d took that word for the pixel probe, which is
+  // the panel naming this tile on all ten layers. This is the browser's own
+  // copy of the region layer, kept so a hover costs a 1x1 getImageData rather
+  // than a megabyte held twice or a round trip per pointer event.
+  if(!c.scratch){
+    c.scratch = document.createElement('canvas');
+    c.scratch.width = c.man.width; c.scratch.height = c.man.height;
+    const px = c.scratch.getContext('2d', {willReadFrequently: true});
     px.imageSmoothingEnabled = false;
     px.drawImage(L.img, 0, 0);
   }
-  const d = c.probe.getContext('2d', {willReadFrequently: true})
+  const d = c.scratch.getContext('2d', {willReadFrequently: true})
               .getImageData(tx, ty, 1, 1).data;
   const k = (d[0] << 16) | (d[1] << 8) | d[2];
   const mk = c.man.markers;
@@ -715,18 +865,6 @@ function cmapRegionAt(tx, ty){
     return 'settlement';
   if(k === ((mk.port[0] << 16) | (mk.port[1] << 8) | mk.port[2])) return 'port';
   return c.byKey.get(k) || null;
-}
-
-function cmapPick(tile){
-  const c = state.cmap;
-  const [tx, ty] = tile;
-  const hit = cmapRegionAt(tx, ty);
-  const r = (hit && typeof hit === 'object') ? hit : null;
-  c.sel = r;
-  activity('map pick', `${c.mod} ${tx},${ty} -> ${r ? r.name || 'undeclared' : hit || 'nothing'}`);
-  cmapOutline(r);
-  cmapPaint();
-  cmapPickPanel(tx, ty, hit);
 }
 
 /* The selected region, outlined.
@@ -742,8 +880,8 @@ function cmapOutline(r){
   const L = c.layers.regions;
   if(!L || !L.img){ c.outline = null; return; }
   const W = c.man.width, H = c.man.height;
-  if(!c.probe) cmapRegionAt(0, 0);           // builds the scratch copy
-  const src = c.probe.getContext('2d', {willReadFrequently: true})
+  if(!c.scratch) cmapRegionAt(0, 0);         // builds the scratch copy
+  const src = c.scratch.getContext('2d', {willReadFrequently: true})
                 .getImageData(0, 0, W, H).data;
   const out = document.createElement('canvas');
   out.width = W; out.height = H;
@@ -774,38 +912,542 @@ function cmapOutline(r){
   c.outline = out; c.outlineKey = r.key;
 }
 
-/* The clicked region, as a card. Read-only here on purpose: an editable panel
-   is 16d's, and it needs the religion totals and the resource vocabulary that
-   16d brings with it. */
-function cmapPickPanel(tx, ty, hit){
+/* ---------- the legend ---------- */
+
+/* One layer's colours, named. Fetched once per layer, on the disclosure.
+
+   16c composited every layer honestly and that is what made two of them
+   useless: `map_features.tga` is 97.7% black on DaC, black there means "nothing
+   here", and ticking the layer at full opacity therefore hid the map under a
+   black sheet with a few rivers on it. The fix is not a blend mode - it is
+   knowing what the colours MEAN, which is the server's to say, because the
+   vocabularies and the mod's own descr_climates.txt live there. */
+async function cmapLegend(code){
+  const c = state.cmap, L = c.layers[code];
+  if(L.legend || L.legendBusy) return;
+  L.legendBusy = true; L.legendErr = '';
+  cmapRepanel();
+  let r;
+  try{ r = await api.get(`/api/map/legend?mod=${enc(c.mod)}&code=${enc(code)}`); }
+  catch(e){ r = null; L.legendErr = errText(e); }
+  if(state.cmap !== c) return;
+  L.legendBusy = false;
+  if(r) L.legend = r;
+  cmapRepanel();
+}
+
+function cmapLegendHtml(code){
+  const L = state.cmap.layers[code];
+  if(L.legendBusy) return `<div class="cmleg"><span class="count">reading the layer…</span></div>`;
+  if(L.legendErr) return `<div class="cmleg"><span class="w-bad">${esc(L.legendErr)}</span></div>`;
+  const g = L.legend;
+  if(!g) return '';
+  const rows = g.colours.map(k => {
+    const pct = g.total ? (k.count * 100 / g.total) : 0;
+    // the localised name first and the code name in brackets, which is the
+    // shape every other picker in this toolkit uses - and an empty code name
+    // is a colour no table knows, said as that rather than rounded to a guess
+    const nm = k.code_name
+      ? `${esc(k.name)} <span class="count">(${esc(k.code_name)})</span>`
+      : `<span class="w-warn">no table names this colour</span>`;
+    return `<div class="cmlegrow${L.hide.has(k.key) ? ' hid' : ''}">
+      <label class="chk" title="Stop drawing this colour, so what is under it shows through">
+        <input type="checkbox" data-lhide="${code}" data-key="${k.key}"
+          ${L.hide.has(k.key) ? 'checked' : ''}></label>
+      <i style="background:rgb(${k.rgb.join(',')})"></i>
+      <span class="cmlegnm">${nm}</span>
+      <span class="count">${k.count.toLocaleString()} ·
+        ${pct >= 0.1 ? pct.toFixed(1) : '<0.1'}%</span>
+    </div>`;
+  }).join('');
+  const b = g.blank;
+  return `<div class="cmleg">
+    ${b ? `<div class="count">Hiding <b style="color:rgb(${b.rgb.join(',')})">
+      rgb(${b.rgb.join(', ')})</b> makes this an overlay: it means ${esc(b.why)}.
+      ${b.sourced ? '' : 'Measured on both real maps rather than stated by any reference.'}
+      </div>` : ''}
+    ${rows || '<span class="count">nothing to list</span>'}
+    ${g.note ? `<div class="count">${esc(g.note)}</div>` : ''}
+  </div>`;
+}
+
+/* A layer picture with some of its colours punched out.
+
+   One pass over at most a megapixel, on the tick that changes the hide set,
+   cached by that set - never per frame, never per pointer event. Rule 4 of this
+   phase holds: the interaction path does not touch it. */
+function cmapMask(c, code){
+  const L = c.layers[code];
+  const want = [...L.hide].sort().join(',');
+  if(!L.img || !L.hide.size){ L.masked = null; L.maskKey = ''; return; }
+  if(L.masked && L.maskKey === want) return;
+  const w = L.img.naturalWidth || L.img.width, h = L.img.naturalHeight || L.img.height;
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const x = cv.getContext('2d', {willReadFrequently: true});
+  x.imageSmoothingEnabled = false;
+  x.drawImage(L.img, 0, 0);
+  const im = x.getImageData(0, 0, w, h), d = im.data;
+  for(let i = 0, n = w * h; i < n; i++){
+    const p = i * 4;
+    if(L.hide.has((d[p] << 16) | (d[p + 1] << 8) | d[p + 2])) d[p + 3] = 0;
+  }
+  x.putImageData(im, 0, 0);
+  L.masked = cv; L.maskKey = want;
+}
+
+function cmapHideColour(code, key, on){
+  const c = state.cmap, L = c.layers[code];
+  if(on) L.hide.add(key); else L.hide.delete(key);
+  cmapMask(c, code);
+  cmapCompose(); cmapPaint(); cmapSaveLayers();
+  cmapRepanel();
+}
+
+/* ---------- the picked tile ---------- */
+
+/* A pick is two questions and they have two different answers.
+
+   "What is this tile?" is every layer at once, and only Python can name the
+   colours - the ground and feature tables are the arbiter's, and the climate
+   names come out of this mod's own descr_climates.txt, because DaC renames all
+   twelve. "What is this region?" is a record in descr_regions.txt plus what the
+   pixels say about it, and it is editable.
+
+   Both are one small request on a CLICK. The hover readout stays where 16c put
+   it - answered in the browser off the region layer it already has - because
+   that one runs per pointer event and a round trip there would be the exact
+   thing this phase's rules exist to prevent. */
+async function cmapPick(tile){
+  const c = state.cmap;
+  const [tx, ty] = tile;
+  const hit = cmapRegionAt(tx, ty);
+  const r = (hit && typeof hit === 'object') ? hit : null;
+  c.sel = r;
+  c.pick = (tx >= 0 && ty >= 0 && tx < c.man.width && ty < c.man.height) ? [tx, ty] : null;
+  c.probe = null; c.probeErr = '';
+  activity('map pick', `${c.mod} ${tx},${ty} -> ${r ? r.name || 'undeclared' : hit || 'nothing'}`);
+  cmapOutline(r);
+  cmapPaint();
+  cmapPickPaint();
+  if(!c.pick) return;
+  const want = c.pick.join(',');
+  cmapProbe(c, tx, ty, want);
+  // A region with no record has nothing to edit, and saying so is better than
+  // an empty form: the ocean is the usual case, and a colour nobody declared is
+  // the interesting one - both are named by cmapRegionName.
+  if(r && r.name) cmapOpenRegion(r.name);
+  else { c.det = null; c.cv = null; cmapPickPaint(); }
+}
+
+async function cmapProbe(c, tx, ty, want){
+  let p;
+  try{ p = await api.get(`/api/map/probe?mod=${enc(c.mod)}&x=${tx}&y=${ty}`); }
+  catch(e){ if(state.cmap === c && c.pick && c.pick.join(',') === want){
+    c.probeErr = errText(e); cmapPickPaint(); } return; }
+  if(state.cmap !== c || !c.pick || c.pick.join(',') !== want) return;
+  c.probe = p;
+  cmapPickPaint();
+}
+
+/* One region's record, its pixels and the pickers its boxes need.
+
+   `w` is the working copy every box edits and every save is built from - the
+   same shape the traits, ancillaries, factions and minor-file editors use, and
+   the shape Ctrl+Z snapshots (see UNDO_SCOPES). The values beside it are what
+   came off disk, so whether anything has changed is a comparison rather than a
+   flag somebody has to remember to set. */
+async function cmapOpenRegion(name){
+  const c = state.cmap;
+  if(c.det && c.det.name === name && !c.det.error) return;
+  c.det = {name, loading: true};
+  c.cv = null;
+  cmapPickPaint();
+  let d;
+  try{ d = await api.get(`/api/map/region?mod=${enc(c.mod)}&name=${enc(name)}`); }
+  catch(e){ d = {error: errText(e)}; }
+  if(state.cmap !== c || !c.det || c.det.name !== name) return;
+  c.det = d.error ? {name, error: d.error} : Object.assign({name}, d, {
+    w: {legion: d.legion, faction: d.faction, rebels: d.rebels,
+        resources: d.resources.slice(), triumph: d.triumph, farming: d.farming,
+        religions: Object.assign({}, d.religions)},
+    raw: '',
+  });
+  cmapPickPaint();
+  undoReset();          // the working copy exists now: this is Ctrl+Z's baseline
+}
+
+//: Everything below the layer stack: what the tile is, and what the region is.
+//: The canvas is deliberately not in it - rebuilding that markup would throw
+//: away the <canvas> and its 2d context with it.
+function cmapPickPaint(){
   const el = document.getElementById('cmPick');
   if(!el) return;
+  el.innerHTML = cmapProbeHtml() + cmapRegionHtml();
   const c = state.cmap;
-  if(!hit){ el.innerHTML = `<div class="k">Picked</div>
-    <div class="count">${tx}, ${ty} has no region on it.</div>`; return; }
-  if(typeof hit === 'string'){ el.innerHTML = `<div class="k">Picked</div>
-    <div class="count">${tx}, ${ty} is the ${esc(hit)} marker pixel.
-    It belongs to whichever region surrounds it.</div>`; return; }
-  const g = p => p ? `${p[0]}, ${c.man.height - 1 - p[1]}` : '-';
-  el.innerHTML = `<div class="k">Picked <span class="count">read-only until 16d</span></div>
-    <div class="cmcard">
-      <div class="nm"><i style="background:rgb(${hit.rgb.join(',')})"></i>
-        ${cmapRegionName(hit)}</div>
-      <div class="cmkv">
-        <span>Region ID</span><b>${hit.id >= 0 ? hit.id : '-'}</b>
-        <span>Colour</span><b>${hit.rgb.join(', ')}</b>
-        <span>Settlement</span><b>${esc(hit.settlement_name || '-')}</b>
-        <span>Owner</span><b>${esc(hit.faction || '-')}</b>
-        <span>Rebels</span><b>${esc(hit.rebels || '-')}</b>
-        <span>Tiles</span><b>${hit.pixels}${hit.sea
-          ? ` <span class="count">${hit.sea} of them sea</span>` : ''}</b>
-        <span>Settlement at</span><b>${g(hit.settlement)} <span class="count">game</span></b>
-        <span>Port at</span><b>${g(hit.port)} <span class="count">game</span></b>
-      </div>
-      ${hit.declared || hit.sea * 2 >= hit.pixels ? '' : `<div class="w-warn">This colour is
-        painted on the map and declared nowhere in <code>descr_regions.txt</code>, and none
-        of it is sea. The game has no region for this land.</div>`}
+  const side = document.getElementById('cmSide');
+  if(side) side.classList.toggle('wide', !!(c.det && c.det.cv));
+  if(c.det && c.det.cv){
+    cvWire(c.det.cv);
+    cvBindHover(c.det.cv, document.getElementById('cmGui'));
+  }
+}
+
+//: The form only, never the pane - the caret is in the pane.
+function cmapRegionPaint(){
+  const el = document.getElementById('cmGui');
+  if(!el) return;
+  el.innerHTML = cmapFormHtml();
+  const d = state.cmap.det;
+  if(d && d.cv) cvBindHover(d.cv, el);
+}
+
+function cmapProbeHtml(){
+  const c = state.cmap;
+  if(!c.pick) return `<div class="k">This tile</div>
+    <div class="count">Click the map to name a tile on every layer at once.</div>`;
+  const [tx, ty] = c.pick;
+  const head = `<div class="k">This tile
+    <span class="count">${tx}, ${ty} image · ${tx}, ${c.man.height - 1 - ty} game</span></div>`;
+  if(c.probeErr) return head + `<div class="w-bad">${esc(c.probeErr)}</div>`;
+  if(!c.probe) return head + `<div class="count">reading the ten layers…</div>`;
+  const p = c.probe;
+  const rows = p.layers.map(L => {
+    const val = L.problem
+      ? `<span class="count">${esc(L.problem)}</span>`
+      : L.code_name
+        ? `${esc(L.name)} <span class="count">(${esc(L.code_name)})</span>`
+        : `<span class="w-warn">${esc(L.name) || 'no table names this colour'}</span>`;
+    // one line per layer, and it has to READ as one line at 336px: the label,
+    // the value and the raw triple in that order, wrapping rather than each
+    // fighting the others for a column of its own
+    return `<div class="cmtrow">
+      <i style="background:${L.rgb ? `rgb(${L.rgb.join(',')})` : 'transparent'}"></i>
+      <span class="cmtval"><span class="cmtnm">${esc(L.label)}</span> ${val}${
+        L.rgb ? ` <span class="count">· ${L.rgb.join(', ')}</span>` : ''}</span>
     </div>`;
+  }).join('');
+  const marker = p.marker
+    ? `<div class="w-good">This is the ${esc(p.marker)} marker pixel. It belongs to
+       whichever region surrounds it, and it is skipped when the engine numbers
+       regions.</div>` : '';
+  return head + marker + `<div class="cmprobe">${rows}</div>
+    <div class="count">The engine treats this tile as
+    <b>${p.sea === null ? 'unknown' : p.sea ? 'sea' : 'land'}</b> - from map_heights, not
+    from the ground type, with river crossings excluded.</div>`;
+}
+
+/* ---------- the region, editable ---------- */
+
+function cmapRegionHtml(){
+  const c = state.cmap, d = c.det;
+  if(!c.pick) return '';
+  if(!d) return `<div class="k">This region</div>
+    <div class="count">${c.sel ? esc(cmapRegionName(c.sel)).replace(/<[^>]+>/g, '')
+      : 'No region record on this tile'} - nothing in
+    <code>descr_regions.txt</code> to edit.</div>`;
+  if(d.loading) return `<div class="k">This region</div>
+    <div class="count">reading ${esc(d.name)}…</div>`;
+  if(d.error) return `<div class="k">This region</div>
+    <div class="w-bad">${esc(d.error)}</div>`;
+  return `<div class="cmbar2">
+      <div><b>${esc(d.shown || d.name)}</b>
+        <span class="count">${esc(d.file)}, lines ${d.lines[0]}-${d.lines[1]}</span></div>
+      <span class="sp"></span>
+      <button class="${d.cv ? 'on' : ''}" onclick="cmapCvToggle()"
+        title="Show this region exactly as descr_regions.txt stores it, beside the form."
+        >&lt;/&gt; Code view</button>
+      <button class="primary" onclick="cmapSave()">Save</button>
+    </div>
+    <div id="cmGui">${cmapFormHtml()}</div>
+    ${d.cv ? `<div id="cmCodeCol" style="padding-top:12px">${cvHtml(d.cv)}</div>` : ''}`;
+}
+
+//: The three fields nobody may retype here, and why. Said on the form rather
+//: than only when a save is refused, because a box you cannot use should look
+//: like one before you have typed into it.
+const CMAP_LOCKED = {
+  name: 'Descr_strat.txt, the win conditions, the campaign script and every '
+      + 'legion: line point at this name',
+  settlement: 'Descr_strat.txt, the campaign script and the settlement name '
+      + 'text file all point at this name',
+  rgb: 'This is the colour the region is painted on map_regions.tga. Changing '
+     + 'the number without repainting the pixels would leave the region with no '
+     + 'tiles at all, and the brush is 16e',
+};
+
+function cmapFormHtml(){
+  const d = state.cmap.det, w = d.w, v = d.vocab;
+  const lock = (label, value, why, extra) => `<div class="cmfield">
+    <label>${esc(label)} <span class="cmlock" title="${esc(why)}">locked</span></label>
+    <input value="${esc(value)}" readonly>
+    ${extra ? `<div class="count">${extra}</div>` : ''}</div>`;
+  const pick = (label, slot, list, labels) => `<div class="cmfield">
+    <label>${esc(label)}</label>
+    <input list="cml-${slot}" value="${esc(w[slot] || '')}"
+      oninput="cmapSet('${slot}', this.value)">
+    <datalist id="cml-${slot}">${(list || []).map(x =>
+      `<option value="${esc(x)}">${esc((labels && labels[x]) || '')}</option>`).join('')}
+    </datalist></div>`;
+  const total = cmapReligionTotal();
+  const px = d.pixels;
+  return cmapFindingsHtml2() + `
+    <div class="cmform">
+      ${lock('Region name', d.name, CMAP_LOCKED.name,
+             d.shown ? `shown in game as <b>${esc(d.shown)}</b>` : '')}
+      ${d.has.settlement ? lock('Settlement', d.settlement, CMAP_LOCKED.settlement,
+             d.settlement_shown ? `shown in game as <b>${esc(d.settlement_shown)}</b>` : '')
+        : `<div class="count">This is the short wasteland form: no settlement, no
+           creator and no rebel type. The arbiter says such a province must be the
+           last entry in the file.</div>`}
+      ${lock('Colour', d.rgb.join(' '), CMAP_LOCKED.rgb,
+             `<i class="cmsw" style="background:rgb(${d.rgb.join(',')})"></i>
+              region ID ${px && px.region_id >= 0 ? px.region_id : '-'}`)}
+      ${pick('Legion', 'legion', [d.name])}
+      ${d.has.faction ? pick('Creator faction', 'faction', v.factions, v.faction_labels) : ''}
+      ${d.has.rebels ? pick('Rebel type', 'rebels', v.rebels) : ''}
+      ${d.has.resources || !d.wasteland ? cmapResourceHtml() : ''}
+      ${d.has.triumph ? `<div class="cmfield"><label>Triumph value</label>
+        <input type="number" value="${w.triumph}" min="0" max="20"
+          oninput="cmapSet('triumph', this.value)">
+        <div class="count">Geomod's manual: leave it at 5, other numbers may cause
+        a crash.</div></div>` : ''}
+      ${d.has.farming ? `<div class="cmfield"><label>Base farming level</label>
+        <input type="number" value="${w.farming}" min="0" max="7"
+          oninput="cmapSet('farming', this.value)">
+        <div class="count">4 is about average, 6-7 highly fertile.</div></div>` : ''}
+    </div>
+    ${d.has.religions ? `<div class="k">Religions
+      <span class="${total === 100 ? 'count' : 'w-bad'}">total ${total}${
+        total === 100 ? '' : ` - the game crashes on load unless this is 100 (${
+        total > 100 ? '+' : ''}${total - 100})`}</span></div>
+      <div class="cmrels">${cmapReligionRows()}</div>` : ''}
+    ${cmapPixelHtml()}`;
+}
+
+function cmapFindingsHtml2(){
+  const d = state.cmap.det;
+  return (d.findings || []).map(f =>
+    `<div class="cmfind2 ${f.fatal ? 'w-bad' : 'w-warn'}">line ${f.line}:
+      ${esc(f.message)}</div>`).join('');
+}
+
+/* The resource line, and what the tool makes of it.
+
+   One box, comma separated, because that is what the line is - and beneath it
+   the split into the two kinds, which is the thing no reference tool shows.
+   A name in neither list is not silently dropped: it is shown as unknown,
+   which is 16f's rule brought forward to where somebody can fix it. */
+function cmapResourceHtml(){
+  const d = state.cmap.det, w = d.w, v = d.vocab;
+  const hidden = new Set(v.hidden_resources.map(x => x.toLowerCase()));
+  const trade = new Set(v.trade_resources.map(x => x.toLowerCase()));
+  const chip = (r) => {
+    const k = r.toLowerCase();
+    const cls = hidden.has(k) ? 'h' : trade.has(k) ? 't' : 'u';
+    const why = cls === 'h' ? 'hidden resource (the EDB declares it)'
+      : cls === 't' ? 'trade resource (descr_sm_resources.txt names it)'
+      : 'neither a hidden resource nor a trade resource this mod has';
+    return `<span class="cmchip ${cls}" title="${esc(why)}">${esc(r)}</span>`;
+  };
+  const all = v.hidden_resources.concat(v.trade_resources);
+  return `<div class="cmfield"><label>Resources</label>
+    <input list="cml-res" value="${esc(w.resources.join(', '))}"
+      oninput="cmapSetResources(this.value)">
+    <datalist id="cml-res">${all.map(x =>
+      `<option value="${esc(x)}">`).join('')}</datalist>
+    <div class="cmchips">${w.resources.map(chip).join('') ||
+      '<span class="count">none</span>'}</div>
+    <div class="count">${v.hidden_resources.length} hidden resources on the EDB's
+      own line, ${v.trade_resources.length} trade resources in
+      descr_sm_resources.txt.</div></div>`;
+}
+
+//: Every religion the mod declares, plus any this region names that it does
+//: not - because a percentage pointing at a religion nobody declared is read
+//: and ignored by the engine, and dropping the box would hide it.
+function cmapReligionNames(){
+  const d = state.cmap.det;
+  const out = (d.vocab.religions || []).slice();
+  for(const n of Object.keys(d.w.religions))
+    if(!out.some(x => x.toLowerCase() === n.toLowerCase())) out.push(n);
+  return out;
+}
+function cmapReligionTotal(){
+  return Object.values(state.cmap.det.w.religions)
+    .reduce((a, b) => a + (parseInt(b, 10) || 0), 0);
+}
+function cmapReligionRows(){
+  const d = state.cmap.det, known = new Set((d.vocab.religions || [])
+    .map(x => x.toLowerCase()));
+  return cmapReligionNames().map(n => {
+    const has = n in d.w.religions;
+    return `<div class="cmrel${known.has(n.toLowerCase()) ? '' : ' odd'}">
+      <span>${esc(n)}${known.has(n.toLowerCase()) ? ''
+        : ' <span class="w-warn" title="descr_religions.txt does not declare this'
+        + ' one, so the engine reads the number and ignores it">?</span>'}</span>
+      <input type="number" min="0" max="100" value="${has ? d.w.religions[n] : ''}"
+        placeholder="${has ? '' : '-'}"
+        oninput="cmapSetReligion('${esc(n)}', this.value)"></div>`;
+  }).join('');
+}
+
+//: What the pixels say, which is read-only here on purpose: moving a settlement
+//: or a border means painting map_regions.tga, and the brush is 16e's.
+function cmapPixelHtml(){
+  const d = state.cmap.det, px = d.pixels;
+  if(d.pixels_problem) return `<div class="k">On the map</div>
+    <div class="w-bad">${esc(d.pixels_problem)}</div>`;
+  if(!px) return '';
+  if(!px.count) return `<div class="k">On the map</div>
+    <div class="w-bad">This region is declared in descr_regions.txt and not one
+    pixel of map_regions.tga is painted its colour. That is legal to write and
+    fatal to play.</div>`;
+  const g = p => p ? `${p[0]}, ${p[1]}` : '-';
+  return `<div class="k">On the map <span class="count">read-only until 16e</span></div>
+    <div class="cmkv">
+      <span>Region ID</span><b>${px.region_id >= 0 ? px.region_id : '-'}</b>
+      <span>Tiles</span><b>${px.count.toLocaleString()}${px.sea
+        ? ` <span class="count">${px.sea.toLocaleString()} of them sea</span>` : ''}</b>
+      <span>Settlement at</span><b>${g(px.settlement_game)}
+        <span class="count">game</span> · ${g(px.settlement)}
+        <span class="count">image</span></b>
+      <span>Port at</span><b>${px.port_game ? `${g(px.port_game)}
+        <span class="count">game</span> · ${g(px.port)}
+        <span class="count">image</span>` : 'none'}</b>
+      <span>Bounding box</span><b>${px.bbox.join(', ')}</b>
+    </div>
+    <div class="k">Neighbours <span class="count">${px.neighbours.length} sharing an
+      edge on map_regions.tga</span></div>
+    <div class="cmnb">${px.neighbours.map(n => `<button class="cmchip n"
+      onclick="cmapGoRegion(${n.key})"
+      title="${esc(n.declared ? 'region ' + n.region_id : 'declared nowhere in descr_regions.txt')}"
+      ><i style="background:rgb(${n.rgb.join(',')})"></i>${
+      esc(n.name || 'undeclared')}</button>`).join('')}</div>
+    <div class="count">Adjacency on the region layer alone. Land bridges and
+      river crossings connect provinces these pixels do not, and that rule is
+      16f's.</div>`;
+}
+
+//: Click a neighbour: select it on the canvas exactly as a click on its own
+//: pixels would, so the outline, the probe and the form all follow.
+function cmapGoRegion(key){
+  const c = state.cmap, r = c.byKey.get(key);
+  if(!r || !r.anchor) return;
+  cmapPick(r.anchor);
+}
+
+/* ---- the working copy ---- */
+function cmapSet(slot, value){
+  const d = state.cmap.det; if(!d || !d.w) return;
+  d.w[slot] = value;
+  cmapTouched(false);
+}
+function cmapSetResources(text){
+  const d = state.cmap.det; if(!d || !d.w) return;
+  d.w.resources = text.split(',').map(v => v.trim()).filter(Boolean);
+  // the chips under the box are the point of it, so this one does repaint -
+  // and it repaints the FORM, not the pane, because the caret is in the box
+  cmapTouched(true);
+}
+function cmapSetReligion(name, value){
+  const d = state.cmap.det; if(!d || !d.w) return;
+  const v = value.trim();
+  if(v === '') delete d.w.religions[name];
+  else d.w.religions[name] = parseInt(v, 10) || 0;
+  cmapTouched(true);
+}
+function cmapTouched(repaint){
+  const d = state.cmap.det;
+  if(repaint) cmapRegionPaint();
+  else{
+    // the running total is the one thing that has to move on every keystroke,
+    // because it is the rule a save is refused by
+    const el = document.querySelector('.cmrels');
+    const k = el && el.previousElementSibling
+      ? el.previousElementSibling.querySelector('span') : null;
+    if(k){
+      const t = cmapReligionTotal();
+      k.className = t === 100 ? 'count' : 'w-bad';
+      k.textContent = `total ${t}` + (t === 100 ? ''
+        : ` - the game crashes on load unless this is 100 (${t > 100 ? '+' : ''}${t - 100})`);
+    }
+  }
+  if(d && d.cv) cvFromGui(d.cv);
+}
+
+/* ---- the code view ---- */
+async function cmapCvToggle(){
+  const c = state.cmap, d = c.det;
+  if(!d || !d.w) return;
+  if(d.cv){ cvDrop(d.cv); d.cv = null; state.settings.code_view = false;
+    api.post('/api/settings', {code_view:false}); cmapPickPaint(); return; }
+  state.settings.code_view = true; api.post('/api/settings', {code_view:true});
+  d.cv = cvCreate({kind:'regions', mod:c.mod, id:d.name, where:'data/' + d.file,
+    edits:() => cmapEdits(),
+    adopt:cv => { const s = state.cmap.det;
+      if(!cv.detail) return;
+      s.w = {legion:cv.detail.legion, faction:cv.detail.faction,
+             rebels:cv.detail.rebels, resources:cv.detail.resources.slice(),
+             triumph:cv.detail.triumph, farming:cv.detail.farming,
+             religions:Object.assign({}, cv.detail.religions)};
+      // `base`, never `text`: with comment hiding on, `text` is the view with
+      // the comment-only lines cut out, and saving that would delete every one
+      s.raw = cv.edited ? cv.base : ''; },
+    refreshGui:() => cmapRegionPaint()});
+  cmapPickPaint();
+  await cvLoad(d.cv);
+  if(state.cmap !== c || state.cmap.det !== d || !d.cv) return;
+  cmapPickPaint();
+}
+
+/* ---- writing ----
+   `edits` is exactly what campmap.render_block takes, so the pane and the save
+   cannot produce different bytes. */
+function cmapEdits(){
+  const w = state.cmap.det.w;
+  return {legion:(w.legion || '').trim(), faction:(w.faction || '').trim(),
+          rebels:(w.rebels || '').trim(),
+          resources:w.resources.map(r => r.trim()).filter(Boolean),
+          triumph:w.triumph, farming:w.farming,
+          religions:Object.assign({}, w.religions)};
+}
+
+async function cmapSave(){
+  const c = state.cmap, d = c.det;
+  if(!d || !d.w || c.busy) return;
+  const total = cmapReligionTotal();
+  if(total !== 100 && d.has.religions){
+    toast(`✗ The religion percentages total ${total}. The game crashes on load `
+      + `unless they total 100 - ${total > 100 ? 'take' : 'add'} `
+      + `${Math.abs(total - 100)} ${total > 100 ? 'off' : 'on'} before saving.`, 7000);
+    return;
+  }
+  const body = {mod:c.mod, region:d.name, edits:cmapEdits()};
+  if(d.raw) body.raw_block = d.raw;
+  c.busy = true;
+  let plan;
+  try{ plan = await api.post('/api/map/plan', body); }
+  finally{ c.busy = false; }
+  if(plan.error){ toast('✗ ' + plan.error, 7000); return; }
+  const p = plan.plan || {};
+  const lines = (p.changes || []).slice(0, 14);
+  const warn = (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x);
+  if(!confirm(`Write: save ${d.name}?\n\n`
+    + (lines.join('\n') || 'no visible change')
+    + ((p.changes || []).length > 14 ? `\n…and ${p.changes.length - 14} more` : '')
+    + (warn.length ? '\n\n' + warn.join('\n') : '')
+    + '\n\nmap.rwm is deleted too, or the game loads the old compiled map and '
+    + 'shows none of this.\n\nBacked up first, and 🕑 Log can undo it.')) return;
+  c.busy = true;
+  let res;
+  try{ res = await api.post('/api/map/apply', body); }
+  finally{ c.busy = false; }
+  if(res.error){ toast('✗ ' + res.error, 7000); return; }
+  toast('Saved. map.rwm deleted. 🕑 Log can undo it.');
+  const at = c.pick;
+  await loadCampmap();
+  if(at && state.cmap) cmapPick(at);
 }
 
 /* ---------- keys ---------- */
@@ -824,9 +1466,10 @@ function cmapKeys(){
     else if(e.key === '1'){ cmapZoomTo(1); }
     else if(e.key === '+' || e.key === '='){ cmapZoomBy(1.4); }
     else if(e.key === '-' || e.key === '_'){ cmapZoomBy(1 / 1.4); }
-    else if(e.key === 'Escape' && state.cmap.sel){
-      state.cmap.sel = null; cmapOutline(null); cmapPaint();
-      cmapPickPanel(0, 0, null);
+    else if(e.key === 'Escape' && (state.cmap.sel || state.cmap.pick)){
+      const c = state.cmap;
+      c.sel = null; c.pick = null; c.probe = null; c.det = null;
+      cmapOutline(null); cmapPaint(); cmapPickPaint();
     }
     else return;
     e.preventDefault();

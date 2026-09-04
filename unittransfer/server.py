@@ -167,6 +167,24 @@ EDU cleanup (export_descr_unit.txt as a whole, see :mod:`unittransfer.edusort`)
                                     file (one backup + undo). `plan` never
                                     returns the new text, only what would change
 
+Campaign Map mode (the ten TGA layers and descr_regions.txt, see
+:mod:`unittransfer.campmap`)
+  GET  /api/map?mod=             -> the manifest: tile grid, ten layers with
+                                    what is wrong with each, the region table
+  GET  /api/map/layer?mod=&code=&fit=
+                                 -> one layer as PNG, cached on disk by mtime
+  GET  /api/map/legend?mod=&code=
+                                 -> that layer's colours named and counted, and
+                                    which of them means "nothing here"
+  GET  /api/map/probe?mod=&x=&y= -> one tile as all ten layers name it
+  GET  /api/map/region?mod=&name=
+                                 -> one region: its record, its pixels, its
+                                    neighbours and the pickers its boxes need
+  POST /api/map/plan|/apply      -> edit one region of descr_regions.txt. The
+                                    save also deletes map.rwm, because the game
+                                    reads the compiled map in preference to the
+                                    text (one backup set + undo)
+
 Minor Files mode (the five small campaign files, see :mod:`unittransfer.minorfiles`)
   GET  /api/minor?mod=&tab=      -> one tab's whole list (rebels / religions /
                                     resources / cultures / names), with the
@@ -1368,7 +1386,13 @@ class Handler(BaseHTTPRequestHandler):
                 ident = (q.get("id") or [None])[0]
                 if not name or name not in self.registry.names() or not ident:
                     return self._err(404, "unknown mod/record")
-                mod = self.registry.get(name)
+                # `describe` for the map's kind, `get` for the rest: a region
+                # record needs data/world/maps/base and nothing else, and
+                # warming the unit databases first would mean a mod that ships
+                # only a map could not have its regions read at all. Same fix
+                # the map routes and Home's readiness report already carry.
+                mod = (self.registry.describe(name) if kind == "regions"
+                       else self.registry.get(name))
                 loaders = {"edu": codeview.unit_document,
                            "bmdb": codeview.entry_document,
                            "strings": codeview.strings_document,
@@ -1377,6 +1401,7 @@ class Handler(BaseHTTPRequestHandler):
                            "factions": codeview.faction_document,
                            "sounds": codeview.sounds_document,
                            "pools": codeview.pools_document,
+                           "regions": codeview.region_document,
                            "edb": lambda m, i: codeview.building_document(
                                m, i, (q.get("culture") or [""])[0])}
                 # the five minor files: the kind IS the tab, one name for one
@@ -1799,6 +1824,8 @@ class Handler(BaseHTTPRequestHandler):
                     self._faction_clone(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/minor/plan", "/api/minor/apply"):
                 return self._json(self._minor(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/map/plan", "/api/map/apply"):
+                return self._json(self._map_write(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/edu/sort/plan", "/api/edu/sort/apply"):
                 return self._json(self._edu_sort(u.path.rsplit("/", 1)[-1], body))
             if u.path == "/api/sounds/plan":
@@ -2257,6 +2284,34 @@ class Handler(BaseHTTPRequestHandler):
             out["error"] = "nothing to change"
             return out
         out.update(minorfiles.apply(plan))
+        self.registry.invalidate(body["mod"])       # the file changed on disk
+        return out
+
+    # ---- the campaign map, written ----
+    def _map_write(self, action, body):
+        """Preview or write one region of ``descr_regions.txt``.
+
+        The minor-files handler with a different plan in it, and one thing of
+        its own: the mod is reached through :meth:`Registry.describe` rather
+        than :meth:`get`, for the same reason the map is read that way - a mod
+        that ships a map and no roster still has a map to edit.
+
+        A save deletes ``map.rwm``, which is why the answer says so: the game
+        reads the compiled binary in preference to the text files, and a mod
+        whose regions changed under a stale one loads the old map and shows
+        none of the edit.
+        """
+        try:
+            mod = self.registry.describe(body["mod"])
+            plan = campmap.plan_region(mod, body)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        out.update(campmap.apply_region(plan))
         self.registry.invalidate(body["mod"])       # the file changed on disk
         return out
 
@@ -2747,11 +2802,16 @@ class Handler(BaseHTTPRequestHandler):
                           "application/octet-stream")
 
     def _map_route(self, path: str, q):
-        """The two things the campaign map renderer asks for.
+        """Everything the campaign map screen reads.
 
         ``/api/map`` is the manifest - the tile grid, the ten layers with what
         is wrong with each, and the region table the browser picks against.
-        ``/api/map/layer`` is one layer as PNG.
+        ``/api/map/layer`` is one layer as PNG. 16d adds three more, all of
+        them small and all of them on a click rather than on the pointer:
+        ``/api/map/legend`` is one layer's colours named, ``/api/map/probe`` is
+        one tile named by all ten layers, and ``/api/map/region`` is one
+        region's record, its pixels, its neighbours and the pickers its boxes
+        need.
 
         A mod with no map of its own answers 404 with that sentence rather than
         an empty screen, because it is the ordinary case: most mods ship units
@@ -2769,6 +2829,38 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/map":
             return self._json(campmap.view(cm, name))
+
+        if path == "/api/map/legend":
+            code = (q.get("code") or [""])[0]
+            if code not in campmap.LAYER_BY_CODE:
+                return self._err(404, f"no such layer {code!r}")
+            try:
+                return self._json(campmap.layer_legend(cm, code))
+            except campmap.MapError as exc:
+                return self._err(400, str(exc))
+
+        if path == "/api/map/probe":
+            # One tile, named by every layer at once. It is a click rather than
+            # a hover - the browser answers the hover itself off the region
+            # layer it already has - so one small request per pick is the right
+            # trade for having the vocabularies stay on this side.
+            try:
+                x = int((q.get("x") or ["-1"])[0])
+                y = int((q.get("y") or ["-1"])[0])
+            except ValueError:
+                return self._err(400, "x and y must be whole numbers")
+            out = cm.probe_pixel(x, y)
+            if not out:
+                return self._err(404, f"{x},{y} is off the {cm.terrain.width}x"
+                                      f"{cm.terrain.height} tile grid")
+            return self._json(out)
+
+        if path == "/api/map/region":
+            try:
+                return self._json(campmap.region_detail(
+                    cm, (q.get("name") or [""])[0]))
+            except campmap.MapError as exc:
+                return self._err(404, str(exc))
 
         if path != "/api/map/layer":
             return self._err(404, f"no such map route {path}")

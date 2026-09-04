@@ -68,6 +68,16 @@ const UNDO_SCOPES=[
   {id:()=>(!modalOpen()&&state.mode==='minor'&&state.mf&&state.mf.d&&state.mf.d.w)
       ?'mf:'+state.src+':'+(state.mf.tab||'')+':'+(state.mf.sel||'(new)'):'',
    get:()=>state.mf.d.w, set:v=>{state.mf.d.w=v;}, draw:()=>mfPaint()},
+  // The campaign map's region panel (16d). It is a page editor like the four
+  // above, and its working copy is `state.cmap.det.w` - the record's editable
+  // fields and nothing else, so the pixels, the neighbours and the vocabularies
+  // that came with it are not carried through a snapshot. Picking a different
+  // region changes the key, which clears the stack rather than letting Ctrl+Z
+  // pour one province's religions into another's.
+  {id:()=>(!modalOpen()&&state.mode==='campmap'&&state.cmap&&state.cmap.det
+      &&state.cmap.det.w)?'cmap:'+state.cmap.mod+':'+state.cmap.det.name:'',
+   get:()=>state.cmap.det.w, set:v=>{state.cmap.det.w=v;},
+   draw:()=>cmapRegionPaint()},
   // Strings is the odd one out: its working copy is the map of pending edits,
   // keyed by row id, not a cloned record.
   {id:()=>(!modalOpen()&&state.mode==='strings'&&state.str&&state.str.rows)
@@ -237,7 +247,9 @@ const UNDO_SCROLLERS='#modal,#bldBody,#edBody,.mbody,.poollist,.caplist,.faclist
   +'.batchstrip,.filters,.tiplist,.usergrid,.cklist,.dblist,'
   // the Phase 8–12 screens: traits, ancillaries, minor files and factions all
   // share one list/detail shell, and Strings has its own
-  +'.trrows,.trlist,.trmain,.strlist,.strmain,.mplist,.ntslots,.cvta,.findlist';
+  +'.trrows,.trlist,.trmain,.strlist,.strmain,.mplist,.ntslots,.cvta,.findlist,'
+  // …and the campaign map's side panel, which is where the region form lives
+  +'.cmside';
 // Matched back up by where they sit in the tree rather than by position in the
 // query result: a re-draw routinely changes how many of these exist (a filter
 // narrows a list, a panel closes), and an index would then hand one container's

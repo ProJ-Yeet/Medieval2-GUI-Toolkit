@@ -281,11 +281,21 @@ else:
               f"{sum(1 for c in cl if c['rgb'])} with a colour)",
               cl and all(c["rgb"] for c in cl))
 
+        # 16d widened this from five named keys to one row per layer, so the
+        # inspector is a loop rather than ten special cases and so the layers
+        # 16a never probed - fog, roughness, trade routes - are named too.
         probe = cm.probe_pixel(*idx.regions[0].anchor)
-        check("a pixel probe names every layer under it",
-              probe["region"]["rgb"] == idx.regions[0].rgb
-              and set(probe) >= {"image", "game", "region", "ground_types",
-                                 "features", "climates", "sea"})
+        rows = {r["code"]: r for r in probe["layers"]}
+        named = [c for c, r in rows.items() if r["code_name"]]
+        check(f"a pixel probe names all ten layers under it ({len(named)} of "
+              f"{len(rows)} had a value here)",
+              probe["region"]["rgb"] == list(idx.regions[0].rgb)
+              and set(rows) == {ly["code"] for ly in campmap.LAYERS}
+              and set(probe) >= {"image", "game", "region", "marker", "sea"})
+        check("and the two pictures say they have no value at a tile, rather "
+              "than being sampled at coordinates that mean nothing in them",
+              all(rows[c]["rgb"] is None and "tile grid" in rows[c]["problem"]
+                  for c in ("water_surface", "fe")))
 
         if mod.name.lower().startswith("divide_and_conquer"):
             print("    (DaC: the numbers this phase was scoped against)")

@@ -831,6 +831,49 @@ def _number_regions(index: RegionIndex, sea: bytes, region_keys) -> None:
 # the front door
 
 
+def _adjacency(index: RegionIndex) -> Dict[int, List[int]]:
+    """``{packed key: [packed keys]}`` - which regions share an edge.
+
+    Reads the label image, never RGB triples: one byte per tile, compared with
+    its right and lower neighbour so each shared edge is visited once rather
+    than four times. The two marker colours are dropped on both sides - a
+    settlement pixel sits inside a region and touching it says nothing about
+    who its neighbours are.
+
+    The answer is symmetric and each list is sorted by the neighbour's region
+    id, so the panel reads in the engine's own order rather than in whatever
+    order the scan happened to find them.
+    """
+    labels, colours = index.labels, index.colours
+    w, h = index.width, index.height
+    skip = {i for i, c in enumerate(colours) if c in (SETTLEMENT_RGB, PORT_RGB)}
+    pairs: set = set()
+    for y in range(h):
+        row = y * w
+        for x in range(w):
+            a = labels[row + x]
+            if a in skip:
+                continue
+            if x + 1 < w:
+                b = labels[row + x + 1]
+                if b != a and b not in skip:
+                    pairs.add((a, b) if a < b else (b, a))
+            if y + 1 < h:
+                b = labels[row + w + x]
+                if b != a and b not in skip:
+                    pairs.add((a, b) if a < b else (b, a))
+    out: Dict[int, List[int]] = {key(c): [] for i, c in enumerate(colours)
+                                 if i not in skip}
+    for a, b in pairs:
+        out[key(colours[a])].append(key(colours[b]))
+        out[key(colours[b])].append(key(colours[a]))
+    rank = {key(r.rgb): (r.region_id if r.region_id >= 0 else 1 << 20)
+            for r in index.regions}
+    for k in out:
+        out[k].sort(key=lambda n: (rank.get(n, 1 << 21), n))
+    return out
+
+
 class CampaignMap:
     """One mod's campaign map, read on demand.
 
@@ -846,8 +889,10 @@ class CampaignMap:
         self.regions = read_regions(mod)
         self._layers: Dict[str, Image.Image] = {}
         self._infos: Dict[str, TgaInfo] = {}
+        self._tiles: Dict[str, Image.Image] = {}
         self._index: Optional[RegionIndex] = None
         self._sea: Optional[bytes] = None
+        self._neighbours: Optional[Dict[int, List[int]]] = None
 
     # -- layers --------------------------------------------------------------
 
@@ -884,6 +929,20 @@ class CampaignMap:
             return img
         return img.transform((self.terrain.width, self.terrain.height),
                              Image.AFFINE, (2, 0, 0, 0, 2, 0), Image.NEAREST)
+
+    def tiles(self, code: str) -> Image.Image:
+        """One layer at one pixel per tile, in RGB, and kept.
+
+        The projection is :func:`tile_view`'s; what is added here is that the
+        result is held. The probe reads ten layers at one tile and the legend
+        censuses one, and both used to pay for the resample and the
+        ``convert("RGB")`` every time they were asked - about 30 ms a layer,
+        which on a click that names all ten is a third of a second of nothing.
+        Dropped by :meth:`invalidate` with everything else the pixels imply.
+        """
+        if code not in self._tiles:
+            self._tiles[code] = tile_view(self, code).convert("RGB")
+        return self._tiles[code]
 
     def check_layers(self) -> List[str]:
         """Every layer's header against its size rule. A list of complaints.
@@ -956,6 +1015,31 @@ class CampaignMap:
                                       self.regions.records)
         return self._index
 
+    @property
+    def neighbours(self) -> Dict[int, List[int]]:
+        """Which regions touch which, by packed colour key.
+
+        One pass over the label image comparing each tile with the one to its
+        right and the one below - so every shared edge is seen exactly once -
+        and the marker labels are skipped, because a settlement pixel touching
+        two provinces does not make them neighbours.
+
+        **Four-connected, not eight.** A province that meets another only at a
+        corner is not adjacent to it in the engine either: land movement is
+        cardinal. Sea is left in rather than filtered out, because a region
+        whose only neighbour is the ocean is exactly what someone opening this
+        panel wants to be told.
+
+        Land bridges and river crossings connect regions the label image does
+        not - that is TWMapReader's finding and it is 16f's rule, not this
+        one. This is adjacency on the region layer alone, and the panel says so.
+
+        Measured: 27 ms on DaC (248,370 tiles), 6 ms on vanilla, once, cached.
+        """
+        if self._neighbours is None:
+            self._neighbours = _adjacency(self.index)
+        return self._neighbours
+
     def invalidate(self, *codes: str) -> None:
         """Forget decoded layers and everything derived from them.
 
@@ -965,8 +1049,10 @@ class CampaignMap:
         for c in codes or tuple(self._layers):
             self._layers.pop(c, None)
             self._infos.pop(c, None)
+            self._tiles.pop(c, None)
         self._index = None
         self._sea = None
+        self._neighbours = None
 
     # -- coordinates ---------------------------------------------------------
 
@@ -979,44 +1065,82 @@ class CampaignMap:
         return x, self.terrain.game_y(game_y)
 
     def probe_pixel(self, x: int, y: int) -> dict:
-        """Everything every layer says about one tile, named, for the inspector.
+        """Everything all ten layers say about one tile, named.
 
-        Image coordinates in. Values come back as ``{code, name, rgb}`` so the
-        UI can show the localised name with the code name in brackets, and an
-        unknown colour comes back with ``code: None`` rather than a guess.
+        Image coordinates in. Every layer answers in the same shape -
+        ``{rgb, name, code_name, problem}`` - so the panel is one loop rather
+        than ten special cases, and ``code_name: None`` means *no table this
+        toolkit has names this colour*. That is a finding, never a guess: DaC's
+        ``map_features.tga`` carries a stray ``(1,1,1)`` and its
+        ``map_climates.tga`` five colours no climate declares, and rounding
+        either to the nearest known value would hide exactly the thing someone
+        opened the probe to see.
+
+        Layers are read through :meth:`tiles`, so the samples are the pixels
+        the browser was served and sampled the way the engine samples them -
+        ``(2t+1, 2t+1)`` for a ``2W+1`` layer, ``(2t, 2t)`` for a ``2W x 2H``
+        one. A layer that is missing, unreadable or the wrong shape answers
+        with its reason instead of a colour; a layer with no relationship to
+        the tile grid at all (the water surface, the front-end picture) says so
+        rather than being sampled at coordinates that mean nothing in it.
         """
         t = self.terrain
         if not t.in_bounds(x, y):
             return {}
-        out: dict = {"image": (x, y), "game": self.game_xy(x, y)}
+        out: dict = {"image": [x, y], "game": list(self.game_xy(x, y)),
+                     "marker": "", "layers": []}
 
-        reg = self.index.at(x, y)
-        out["region"] = {
-            "rgb": reg.rgb if reg else None,
-            "name": reg.name if reg else "",
-            "region_id": reg.region_id if reg else -1,
-        }
-        px = self.layer("regions").convert("RGB").getpixel((x, y))
-        if px == SETTLEMENT_RGB:
-            out["marker"] = "settlement"
-        elif px == PORT_RGB:
-            out["marker"] = "port"
+        reg = None
+        try:
+            reg = self.index.at(x, y)
+        except MapError as exc:
+            out["region"] = {"rgb": None, "key": 0, "name": "", "region_id": -1,
+                             "declared": False, "problem": str(exc)}
+        else:
+            out["region"] = {
+                "rgb": list(reg.rgb) if reg else None,
+                "key": key(reg.rgb) if reg else 0,
+                "name": reg.name if reg else "",
+                "region_id": reg.region_id if reg else -1,
+                "declared": bool(reg and reg.record is not None),
+                "problem": "",
+            }
+        try:
+            out["sea"] = bool(self.sea[y * t.width + x])
+        except MapError as exc:
+            out["sea"] = None
+            out["sea_problem"] = str(exc)
 
-        for code, table in (("ground_types", mapvocab.ground_at),
-                            ("features", mapvocab.feature_at)):
-            colour = self.centres(code).convert("RGB").getpixel((x, y))
-            hit = table(colour)
-            out[code] = {"rgb": colour, "code": hit["code"] if hit else None,
-                         "name": hit["name"] if hit else ""}
-
-        colour = self.centres("climates").convert("RGB").getpixel((x, y))
-        hit = mapvocab.climate_index(self.mod).get(key(colour))
-        out["climates"] = {"rgb": colour, "code": hit["code"] if hit else None,
-                           "name": hit["name"] if hit else ""}
-
-        out["sea"] = bool(self.sea[y * t.width + x])
+        climates = mapvocab.climate_index(self.mod)
+        for ly in LAYERS:
+            code = ly["code"]
+            row = {"code": code, "label": ly["label"], "file": ly["file"],
+                   "rgb": None, "name": "", "code_name": None, "problem": ""}
+            out["layers"].append(row)
+            if ly["size"] in ("advisory", "free"):
+                row["problem"] = ("no relationship to the tile grid, so it has no "
+                                  "value at this tile")
+                continue
+            want = t.expected_size(ly["size"])
+            try:
+                got = self.layer(code).size
+            except MapError as exc:
+                row["problem"] = str(exc)
+                continue
+            if want and got != want:
+                row["problem"] = (f"{got[0]}x{got[1]}, expected {want[0]}x{want[1]} - "
+                                  "sampling it per tile would be a lie about where "
+                                  "its pixels are")
+                continue
+            rgb = self.tiles(code).getpixel((x, y))
+            row["rgb"] = list(rgb)
+            if code == "regions":
+                if rgb == SETTLEMENT_RGB:
+                    out["marker"] = "settlement"
+                elif rgb == PORT_RGB:
+                    out["marker"] = "port"
+            row["name"], row["code_name"] = _colour_name(self, code, rgb, climates)
         return out
-
 
 # ---------------------------------------------------------------------------
 # the browser's view of the map (16c)
@@ -1123,11 +1247,17 @@ def layer_view(cm: "CampaignMap", code: str) -> dict:
     """
     ly = LAYER_BY_CODE[code]
     d = DISPLAY.get(code, {"order": 99, "on": False, "opacity": 1.0})
+    b = BLANK.get(code)
     out = {"code": code, "label": ly["label"], "file": ly["file"],
            "size": ly["size"], "required": ly["required"],
            "order": d["order"], "on": d["on"], "opacity": d["opacity"],
            "aligned": ly["size"] in ("tile", "double", "centre"),
            "present": False, "problem": "", "fit": "native",
+           # which colour on this layer means "nothing here", so the renderer
+           # can punch it through and make an overlay of the layer without
+           # waiting for the legend to arrive. See BLANK for the sources.
+           "blank": ({"rgb": list(b["rgb"]), "key": key(b["rgb"]),
+                      "why": b["why"], "sourced": b["sourced"]} if b else None),
            "native": None, "width": 0, "height": 0}
     path = cm.base / ly["file"]
     if not path.exists():
@@ -1153,6 +1283,186 @@ def layer_view(cm: "CampaignMap", code: str) -> dict:
     else:
         out["width"], out["height"] = info.width, info.height
     return out
+
+
+# ---------------------------------------------------------------------------
+# the legend (16d)
+#
+# 16c composited every layer honestly, and that is exactly what made two of
+# them useless: map_features.tga is 97.7% black on DaC and 96.4% on vanilla,
+# and black there means "nothing here", so ticking it at full opacity hides the
+# map under a black sheet with a few rivers drawn on it. The answer is not a
+# blend mode, it is a legend - say what each colour in the layer MEANS, and let
+# the one that means nothing stop being drawn.
+#
+# Every colour below is measured on both real maps, and where no reference
+# states which colour is the empty one, that is said rather than guessed.
+
+#: The colour that means "there is nothing here on this layer", and where the
+#: claim comes from. ``sourced`` is whether a reference states it, or whether
+#: it is ours from measuring the two real maps.
+#:
+#:   features       (0,0,0) is ``none`` in the arbiter's own table. Sourced.
+#:   trade_routes   vanilla paints 995 white tiles out of 54,760 and DaC paints
+#:                  none at all, so black is the empty one. Measured.
+#:   roughness      a greyscale magnitude and black is its zero. DaC's whole
+#:                  layer is black; vanilla's is 236 grey levels off it.
+#:   fog            white is 87% of vanilla's layer and 98% of DaC's. Which way
+#:                  round the engine reads this layer is written down nowhere in
+#:                  the four references, so the panel says "the colour most of
+#:                  the map is" and claims nothing further.
+#:
+#: The four layers with a real vocabulary - regions, ground types, climates,
+#: heights - have no empty colour, and that is why they have no entry here:
+#: black ground is `wilderness`, black heights is sea, and a black region pixel
+#: is a settlement marker. Punching any of those through would delete data from
+#: the picture, so the checkbox is not offered for them at all.
+BLANK: Dict[str, dict] = {
+    "features": {"rgb": (0, 0, 0), "sourced": True,
+                 "why": "none - no river, ford, source, cliff, volcano or land bridge"},
+    "trade_routes": {"rgb": (0, 0, 0), "sourced": False,
+                     "why": "no trade route: vanilla marks 995 tiles out of 54,760, "
+                            "and DaC marks none at all"},
+    "roughness": {"rgb": (0, 0, 0), "sourced": False,
+                  "why": "flat - the layer is a greyscale magnitude and black is its zero"},
+    "fog": {"rgb": (255, 255, 255), "sourced": False,
+            "why": "the colour most of the map is (87% of vanilla, 98% of DaC); no "
+                   "reference says which way round the engine reads this layer"},
+}
+
+#: How many colours a legend lists before it starts counting instead. Heights
+#: has 308 on DaC and roughness 236 on vanilla, and both are magnitudes rather
+#: than vocabularies - a list of 308 near-identical greys is not a legend.
+LEGEND_MAX = 48
+
+#: …except the region layer, whose colours ARE the vocabulary. DaC has 202 of
+#: them and every one is a province someone wants to find, so the ceiling there
+#: is the engine's own plus the two markers rather than a display limit.
+LEGEND_MAX_REGIONS = mapvocab.MAX_REGION_COLOURS + 56
+
+
+def _height_name(rgb: Rgb) -> Tuple[str, Optional[str]]:
+    """Heights has a rule where the other layers have a table - see mapvocab."""
+    if mapvocab.is_sea_height(rgb):
+        return (("Sea (pure black)", "sea") if rgb == (0, 0, 0)
+                else ("Sea (not greyscale)", "sea"))
+    return f"Land, height {rgb[0]} of 255", "land"
+
+
+def _colour_name(cm: "CampaignMap", code: str, rgb: Rgb,
+                 climates: Dict[int, dict]) -> Tuple[str, Optional[str]]:
+    """``(what a person would call this colour, its code name)``.
+
+    ``None`` for the code name is the important half: a colour no table claims
+    is *reported* as unknown, never rounded to the nearest known one. DaC's
+    stray ``(1,1,1)`` in map_features.tga is exactly that - 16f's job is to
+    complain about it, and this one's is to make it visible.
+    """
+    if code == "regions":
+        if rgb == SETTLEMENT_RGB:
+            return "Settlement marker", "settlement"
+        if rgb == PORT_RGB:
+            return "Port marker", "port"
+        reg = cm.index.by_key.get(key(rgb))
+        if reg is not None and reg.record is not None:
+            return reg.record.name, reg.record.name
+        return "", None
+    if code == "heights":
+        return _height_name(rgb)
+    if code == "ground_types":
+        hit = mapvocab.ground_at(rgb)
+        return (hit["name"], hit["code"]) if hit else ("", None)
+    if code == "features":
+        hit = mapvocab.feature_at(rgb)
+        if not hit:
+            return "", None
+        # the table writes `none` as "-", which is right in a picker and reads
+        # as a missing value in a legend
+        return ("Nothing here" if hit["code"] == "none" else hit["name"]), hit["code"]
+    if code == "climates":
+        hit = climates.get(key(rgb))
+        return (hit["name"], hit["code"]) if hit else ("", None)
+    if code == "trade_routes":
+        return ("No trade route", "none") if rgb == (0, 0, 0) else ("Trade route", "route")
+    if code == "roughness":
+        r, g, b = rgb
+        if r != g or g != b:
+            return "", None
+        return ("Flat", "flat") if r == 0 else (f"Roughness {r} of 255", "rough")
+    if code == "fog":
+        if rgb == (255, 255, 255):
+            return "Unmarked", "unmarked"
+        if rgb == (0, 0, 0):
+            return "Marked", "marked"
+        return "", None
+    return "", None
+
+
+def layer_legend(cm: "CampaignMap", code: str) -> dict:
+    """Every colour actually in one layer, named, biggest first.
+
+    A census of the pixels the browser was served - tile fit, so the counts are
+    tiles and they add up to the tile grid - joined to whatever vocabulary that
+    layer has. Three things come out of it that nothing else says:
+
+      * **which colour means nothing**, so the layer can be an overlay instead
+        of a sheet laid over the map. That is 16c's one deferred item, and
+        :data:`BLANK` is where the claim and its source live.
+      * **which colours no table knows.** ``code_name`` is ``None`` for those,
+        and they are listed with the rest rather than dropped, because a colour
+        nobody declared is the interesting one on a real mod's map.
+      * how much of the map each one covers, which is what tells the ocean from
+        a hole in the mod at a glance.
+
+    The two pictures - ``water_surface`` and ``map_FE`` - are refused by name.
+    They are artwork with no relationship to the tile grid and no vocabulary
+    naming their colours; a photograph does not have a legend.
+    """
+    if code not in LAYER_BY_CODE:
+        raise MapError(f"no such layer {code!r}")
+    ly = LAYER_BY_CODE[code]
+    out: dict = {"code": code, "label": ly["label"], "file": ly["file"],
+                 "colours": [], "total": 0, "listed": 0, "more": 0, "note": "",
+                 "blank": None}
+    if ly["size"] in ("advisory", "free"):
+        out["note"] = (f"{ly['file']} is a picture, not a coded layer. It has no "
+                       "relationship to the tile grid and no vocabulary names its "
+                       "colours, so there is nothing to list.")
+        return out
+    b = BLANK.get(code)
+    if b:
+        out["blank"] = {"rgb": list(b["rgb"]), "key": key(b["rgb"]),
+                        "why": b["why"], "sourced": b["sourced"]}
+
+    census = cm.tiles(code).getcolors(1 << 20)
+    if census is None:
+        out["note"] = f"{ly['file']} has more than a million distinct colours."
+        return out
+    census.sort(key=lambda t: -t[0])
+    out["total"] = sum(n for n, _ in census)
+    climates = mapvocab.climate_index(cm.mod) if code == "climates" else {}
+    blank_key = key(b["rgb"]) if b else None
+    cap = LEGEND_MAX_REGIONS if code == "regions" else LEGEND_MAX
+    for n, rgb in census[:cap]:
+        name, cname = _colour_name(cm, code, rgb, climates)
+        out["colours"].append({"rgb": list(rgb), "key": key(rgb), "count": n,
+                               "name": name, "code_name": cname,
+                               "blank": key(rgb) == blank_key})
+    out["listed"] = len(out["colours"])
+    out["more"] = max(0, len(census) - cap)
+    notes = []
+    if out["more"]:
+        notes.append(f"{len(census)} distinct colours in {ly['file']}; the {cap} "
+                     "largest are listed. A layer carrying this many is a "
+                     "magnitude rather than a vocabulary.")
+    unknown = sum(1 for c in out["colours"] if c["code_name"] is None)
+    if unknown:
+        notes.append(f"{unknown} of the colours listed "
+                     f"{'is one' if unknown == 1 else 'are ones'} no table this "
+                     "toolkit has names.")
+    out["note"] = " ".join(notes)
+    return out
+
 
 
 def sea_pixels(cm: "CampaignMap") -> Dict[int, int]:
@@ -1288,3 +1598,645 @@ def view(cm: "CampaignMap", name: str = "") -> dict:
                                 for r in cm.regions.records if r.problems],
         },
     }
+
+
+# ---------------------------------------------------------------------------
+# the region record, written (16d)
+#
+# Rule 3 of this phase - parse once, splice after. An edit rewrites the ONE line
+# the field came from and nothing else, so a file full of hand formatting comes
+# back out with its comments, its tabs and its CRLF intact. Demir's editor
+# re-parses the whole of descr_strat.txt eight to ten times to save one faction
+# detail; this writes a line.
+#
+# WHAT IS NOT EDITABLE HERE, AND WHY. A region's own name and its settlement's
+# name are keys: descr_strat.txt, descr_win_conditions.txt, the campaign script,
+# the region and settlement name text file and every `legion:` line in this very
+# file point at them, so renaming one in a box would orphan all of it. That is
+# the same ruling a trait, an ancillary and a building line already make, and
+# the text pane makes it too. The colour is not editable either, for a different
+# reason: it is the map's own pixels, and changing the number without repainting
+# them would hand the region to no tiles at all. The brush is 16e's.
+
+#: The fields of a record this session will write, in the order they appear.
+#: `legion` is in the list and may be absent from a record - the two forms of
+#: the file differ by exactly that line - so adding and removing it is part of
+#: the job rather than a refusal.
+EDITABLE = ("legion", "faction", "rebels", "resources", "triumph", "farming",
+            "religions")
+
+#: Geomod's manual, on the first of the two bare numbers: "Victory ... leave it
+#: at 5, other numbers may cause a crash". Vanilla writes 5 on 110 of its 112
+#: regions. So a different value is a warning with a source, not a refusal.
+TRIUMPH_USUAL = 5
+
+#: …and on the second: "Agriculture ... 4 is approximately average, 6-7 highly
+#: fertile". Nothing states a ceiling, so the check is for a number outside the
+#: range any real file uses rather than for an engine limit nobody wrote down.
+FARMING_RANGE = (0, 7)
+
+
+def _indent_of(line: str) -> str:
+    return line[:len(line) - len(line.lstrip())]
+
+
+def _comment_of(line: str) -> str:
+    """The ``;`` tail of a line, kept through an edit because it is the modder's."""
+    at = line.find(";")
+    return line[at:] if at >= 0 else ""
+
+
+def _set_line(lines: List[str], idx: int, value: str) -> None:
+    """Rewrite one line's value, keeping its indent and its trailing comment."""
+    old = lines[idx]
+    tail = _comment_of(old)
+    lines[idx] = _indent_of(old) + value + ((" " + tail) if tail else "")
+
+
+def _religions_text(religions: Dict[str, int]) -> str:
+    inner = " ".join(f"{n} {v}" for n, v in religions.items())
+    return "religions { " + inner + " }" if inner else "religions { }"
+
+
+def parse_block(text: str) -> RegionRecord:
+    """One record's own lines, read. Raises :class:`MapError` for anything else.
+
+    The header line is the one that is not indented, so a block that has lost
+    its first line - or that carries two records - is caught here rather than
+    quietly writing one region's values into another's lines.
+    """
+    rf = parse_regions(text if text.endswith("\n") else text + "\n")
+    real = [r for r in rf.records if r.name]
+    if not real:
+        raise MapError("this is not a region record - no unindented region name "
+                       "line to start it")
+    if len(real) > 1:
+        raise MapError(f"this is {len(real)} region records, not one: "
+                       + ", ".join(r.name for r in real[:4]))
+    return real[0]
+
+
+def render_block(base: str, edits: dict) -> str:
+    """``base`` with ``edits`` spliced into it, line by line.
+
+    ``edits`` is the panel's own save body and the text pane takes the same
+    road, so what the pane shows is what a save would write - down to the tab
+    the mod indents with and the ``; kept from 2007`` on the end of a line.
+
+    Three of the fields can be absent from a record and present in the edit, so
+    this inserts a line where the record has none: ``legion:`` goes straight
+    under the name (which is where both real forms of the file put it), and a
+    resource line goes immediately above the triumph value. Clearing a legion
+    removes its line rather than leaving ``legion:`` with nothing after it.
+    """
+    text = base if base.endswith("\n") else base + "\n"
+    rec = parse_block(text)
+    lines, newline, trailing = _split_lines(text)
+    drop: List[int] = []
+    insert: List[Tuple[int, str]] = []
+    # the indent this record actually uses, so an inserted line matches its
+    # neighbours instead of announcing itself
+    body = [lines[i] for i in range(rec.span[0] + 1, min(rec.span[1], len(lines) - 1) + 1)
+            if lines[i].strip()]
+    indent = _indent_of(body[0]) if body else "\t"
+
+    if "legion" in edits:
+        want = str(edits["legion"] or "").strip()
+        if rec.legion_line >= 0 and want:
+            _set_line(lines, rec.legion_line, f"legion: {want}")
+        elif rec.legion_line >= 0:
+            drop.append(rec.legion_line)
+        elif want:
+            insert.append((rec.name_line + 1, f"{indent}legion: {want}"))
+
+    for slot in ("faction", "rebels"):
+        if slot not in edits:
+            continue
+        at = getattr(rec, f"{slot}_line")
+        want = str(edits[slot] or "").strip()
+        if at < 0:
+            raise MapError(f"this record has no {slot} line to write to - it is "
+                           "the short wasteland form, and the arbiter says a "
+                           "wasteland has no settlement, creator or rebel type")
+        if not want:
+            raise MapError(f"a region's {slot} cannot be blank")
+        _set_line(lines, at, want)
+
+    if "resources" in edits:
+        res = [str(r).strip() for r in (edits["resources"] or []) if str(r).strip()]
+        line = ", ".join(res)
+        if rec.resources_line >= 0:
+            if res:
+                _set_line(lines, rec.resources_line, line)
+            else:
+                drop.append(rec.resources_line)
+        elif res:
+            at = rec.triumph_line if rec.triumph_line >= 0 else rec.rgb_line + 1
+            insert.append((at, indent + line))
+
+    for slot in ("triumph", "farming"):
+        if slot not in edits:
+            continue
+        at = getattr(rec, f"{slot}_line")
+        try:
+            n = int(str(edits[slot]).strip())
+        except (TypeError, ValueError):
+            raise MapError(f"{slot} must be a whole number, "
+                           f"not {edits[slot]!r}") from None
+        if at < 0:
+            raise MapError(f"this record has no {slot} line to write to")
+        _set_line(lines, at, str(n))
+
+    if "religions" in edits:
+        rel: Dict[str, int] = {}
+        for name, value in (edits["religions"] or {}).items():
+            name = str(name).strip()
+            if not name:
+                continue
+            try:
+                rel[name] = int(str(value).strip() or 0)
+            except ValueError:
+                raise MapError(f"religion {name} must be a whole "
+                               f"percentage, not {value!r}") from None
+        if rec.religions_line < 0:
+            raise MapError("this record has no religions line to write to")
+        _set_line(lines, rec.religions_line, _religions_text(rel))
+
+    for at, line in sorted(insert, reverse=True):
+        lines.insert(at, line)
+    for at in sorted(drop, reverse=True):
+        lines.pop(at)
+    return newline.join(lines) + (newline if trailing else "")
+
+
+def block_fields(text: str) -> List[Tuple[str, str]]:
+    """``[(label, value)]`` for one record, in the order its lines appear."""
+    rec = parse_block(text)
+    rows: List[Tuple[int, str, str]] = [(rec.name_line, "name", rec.name)]
+    for slot in ("legion", "settlement", "faction", "rebels"):
+        at = getattr(rec, f"{slot}_line")
+        if at >= 0:
+            rows.append((at, slot, getattr(rec, slot)))
+    if rec.rgb_line >= 0:
+        rows.append((rec.rgb_line, "rgb", " ".join(str(v) for v in rec.rgb)))
+    if rec.resources_line >= 0:
+        rows.append((rec.resources_line, "resources", ", ".join(rec.resources)))
+    for slot in ("triumph", "farming"):
+        at = getattr(rec, f"{slot}_line")
+        if at >= 0:
+            rows.append((at, slot, str(getattr(rec, slot))))
+    if rec.religions_line >= 0:
+        rows.append((rec.religions_line, "religions",
+                     " ".join(f"{n} {v}" for n, v in rec.religions.items())))
+    rows.sort()
+    return [(label, value) for _, label, value in rows]
+
+
+def block_spans(text: str) -> Dict[str, List[List[int]]]:
+    """``{label: [[first, last]]}``, 1-based, for one record.
+
+    One line each, because that is what this format is: every field IS a line,
+    which is also why an edit here can be a splice rather than a re-render.
+    """
+    rec = parse_block(text)
+    spans: Dict[str, List[List[int]]] = {}
+    for slot in ("name", "legion", "settlement", "faction", "rebels", "rgb",
+                 "resources", "triumph", "farming", "religions"):
+        at = getattr(rec, f"{slot}_line")
+        if at >= 0:
+            spans[slot] = [[at + 1, at + 1]]
+    return spans
+
+
+def record_text(rf: RegionsFile, rec: RegionRecord) -> str:
+    """The record's own lines, exactly as the file holds them.
+
+    The span runs to the line before the next record's header, comments and
+    blank lines included, because those belong to the record a person is
+    looking at and a save that dropped them would be a save that edits things
+    nobody asked it to.
+    """
+    first, last = rec.span
+    return rf.newline.join(rf.lines[first:last + 1]) + rf.newline
+
+
+def replace_record(rf: RegionsFile, rec: RegionRecord, block: str) -> str:
+    """The whole file with one record's lines swapped for ``block``."""
+    first, last = rec.span
+    body, _, _ = _split_lines(block if block.endswith("\n") else block + "\n")
+    while body and not body[-1].strip():
+        body.pop()
+    lines = rf.lines[:first] + body + rf.lines[last + 1:]
+    return rf.newline.join(lines) + (rf.newline if rf.trailing_newline else "")
+
+
+def check_record(rec: RegionRecord, vocab: Optional[dict] = None) -> List[dict]:
+    """What is wrong with one record. ``fatal`` is what stops a save.
+
+    Two of these are crashes with a source behind them and the rest are
+    warnings, and the difference is kept because a real mod's file is full of
+    the warnings. The religion total is the one everybody meets: the arbiter
+    says the percentages must sum to 100 or the game crashes on load, and
+    nothing in the file or the game says which of ten numbers is wrong, so it
+    is refused at the point where the person can still see what they typed.
+    """
+    v = vocab or {}
+    out: List[dict] = []
+
+    def add(fatal: bool, field_name: str, message: str) -> None:
+        at = getattr(rec, f"{field_name}_line", -1)
+        out.append({"fatal": fatal, "field": field_name, "message": message,
+                    "line": at + 1})
+
+    for problem in rec.problems:
+        add(False, "name", problem)
+
+    if rec.religions_line >= 0:
+        total = rec.religion_total
+        if total != 100:
+            add(True, "religions",
+                f"the religion percentages total {total}, and the game crashes on "
+                f"load unless they total 100 ({total - 100:+d})")
+        for name, value in rec.religions.items():
+            if value < 0:
+                add(True, "religions", f"{name} is {value}; a percentage cannot be "
+                                       "negative")
+        known = {r.lower() for r in (v.get("religions") or ())}
+        if known:
+            for name in rec.religions:
+                if name.lower() not in known:
+                    add(False, "religions",
+                        f"{name} is not one of the religions descr_religions.txt "
+                        "declares, so the game reads the line and ignores it")
+
+    if rec.triumph_line >= 0 and rec.triumph != TRIUMPH_USUAL:
+        add(False, "triumph",
+            f"triumph value {rec.triumph}. Geomod's manual says to leave it at "
+            f"{TRIUMPH_USUAL}, and that other numbers may cause a crash")
+    lo, hi = FARMING_RANGE
+    if rec.farming_line >= 0 and not lo <= rec.farming <= hi:
+        add(False, "farming",
+            f"base farming level {rec.farming} is outside {lo}-{hi}; the manual "
+            "calls 4 average and 6-7 highly fertile")
+
+    rebels = {r.lower() for r in (v.get("rebels") or ())}
+    if rebels and rec.rebels and rec.rebels.lower() not in rebels:
+        add(False, "rebels",
+            f"{rec.rebels} is not a rebel type descr_rebel_factions.txt declares")
+    factions = {f.lower() for f in (v.get("factions") or ())}
+    if factions and rec.faction and rec.faction.lower() not in factions:
+        add(False, "faction",
+            f"{rec.faction} is not a faction this mod has")
+
+    hidden = {h.lower() for h in (v.get("hidden_resources") or ())}
+    trade = {t.lower() for t in (v.get("trade_resources") or ())}
+    if hidden or trade:
+        for name in rec.resources:
+            if name.lower() not in hidden and name.lower() not in trade:
+                add(False, "resources",
+                    f"{name} is neither a hidden resource the EDB declares nor a "
+                    "trade resource descr_sm_resources.txt names")
+    seen = set()
+    for name in rec.resources:
+        if name.lower() in seen:
+            add(False, "resources", f"{name} is listed twice")
+        seen.add(name.lower())
+    return out
+
+
+def region_vocab(mod) -> dict:
+    """Every list the region panel offers a value from, in one call.
+
+    All four come out of the modules that own those files rather than from a
+    regex beside them - the one-engine rule, same as :mod:`edbvocab`'s three.
+    A mod missing one of the files gets an empty list, and an empty list turns
+    the picker into a plain box rather than into a refusal.
+    """
+    from . import edbvocab, minorfiles
+    out = {"religions": [], "rebels": [], "trade_resources": [],
+           "hidden_resources": [], "factions": [], "faction_labels": {}}
+    try:
+        out["religions"] = list(minorfiles.religion_names(mod))
+    except Exception:                                  # noqa: BLE001 - a mod file
+        pass                                           # that will not read is not
+    try:                                               # a reason to lose the panel
+        out["rebels"] = sorted(r.name for r in
+                               minorfiles.parse_rebels(_read_mod_text(
+                                   mod, minorfiles.REBELS.rel)).records)
+    except Exception:                                  # noqa: BLE001
+        pass
+    try:
+        out["trade_resources"] = sorted(edbvocab.resources(mod))
+    except Exception:                                  # noqa: BLE001
+        pass
+    try:
+        out["hidden_resources"] = sorted(mod.edb.hidden_resources)
+    except Exception:                                  # noqa: BLE001
+        pass
+    try:
+        out["factions"] = sorted(mod.faction_cultures)
+        out["faction_labels"] = {f: mod.faction_label(f) for f in out["factions"]}
+    except Exception:                                  # noqa: BLE001
+        pass
+    return out
+
+
+def _read_mod_text(mod, rel: str) -> str:
+    from .keyblock import read_text
+    try:
+        return read_text(mod.data / rel, ENCODING)
+    except OSError:
+        return ""
+
+
+REGION_NAMES_REL = "text/imperial_campaign_regions_and_settlement_names.txt"
+
+
+def shown_names(mod) -> Dict[str, str]:
+    """``{code name: what the player reads}`` for regions and settlements.
+
+    The same UTF-16 file :mod:`edbvocab` reads. It is here as well because the
+    panel names a region twice - the words on the campaign map and the key the
+    rest of the mod points at - and showing only the second is what makes a
+    region editor feel like a hex editor.
+    """
+    from . import edbvocab
+    text = edbvocab._read_utf16(mod.data / REGION_NAMES_REL)
+    if not text:
+        return {}
+    return {k.strip(): v.strip()
+            for k, v in re.findall(r"^\{([^}]+)\}(.*)$", text, re.M)}
+
+
+def region_detail(cm: "CampaignMap", name: str) -> dict:
+    """One region, everything the panel shows, in one call.
+
+    Three sources joined: the record in ``descr_regions.txt`` (editable), what
+    the pixels say (read-only until 16e paints them) and the vocabularies every
+    picker in the panel offers. The neighbours come from the region layer alone
+    - land bridges and river crossings connect provinces the pixels do not, and
+    that is 16f's rule, not this one.
+    """
+    rec = cm.regions.by_name(name)
+    if rec is None:
+        raise MapError(f"no region called {name!r} in descr_regions.txt")
+    loc = shown_names(cm.mod)
+    vocab = region_vocab(cm.mod)
+    out = {
+        "name": rec.name,
+        "shown": loc.get(rec.name, ""),
+        "settlement": rec.settlement,
+        "settlement_shown": loc.get(rec.settlement, ""),
+        "legion": rec.legion,
+        "faction": rec.faction,
+        "rebels": rec.rebels,
+        "rgb": list(rec.rgb),
+        "key": rec.rgb_key,
+        "resources": list(rec.resources),
+        "triumph": rec.triumph,
+        "farming": rec.farming,
+        "religions": dict(rec.religions),
+        "religion_total": rec.religion_total,
+        "wasteland": rec.wasteland,
+        "has": {slot: getattr(rec, f"{slot}_line") >= 0
+                for slot in ("legion", "settlement", "faction", "rebels", "rgb",
+                             "resources", "triumph", "farming", "religions")},
+        "lines": [rec.span[0] + 1, rec.span[1] + 1],
+        "text": record_text(cm.regions, rec),
+        "findings": check_record(rec, vocab),
+        "vocab": vocab,
+        "file": REGIONS_REL,
+        "pixels": None,
+    }
+    hidden = {h.lower() for h in vocab["hidden_resources"]}
+    out["hidden_resources"] = [r for r in rec.resources if r.lower() in hidden]
+    out["trade_resources"] = [r for r in rec.resources if r.lower() not in hidden]
+    try:
+        reg = cm.index.by_key.get(rec.rgb_key)
+    except MapError as exc:
+        out["pixels_problem"] = str(exc)
+        return out
+    out["pixels_problem"] = ""
+    if reg is None:
+        # legal to write and fatal to play: 16f's rule, said here because this
+        # is the screen where somebody can see it and fix it
+        out["pixels"] = {"count": 0, "region_id": -1}
+        return out
+    names = {}
+    try:
+        names = {key(r.rgb): r for r in cm.index.regions}
+        near = cm.neighbours.get(rec.rgb_key, [])
+    except MapError as exc:
+        out["pixels_problem"] = str(exc)
+        near = []
+    out["pixels"] = {
+        "count": reg.pixels,
+        "region_id": reg.region_id,
+        "bbox": list(reg.bbox),
+        "anchor": list(reg.anchor),
+        "centroid": [round(reg.centroid[0], 1), round(reg.centroid[1], 1)],
+        "settlement": list(reg.settlement) if reg.settlement else None,
+        "settlement_game": (list(cm.game_xy(*reg.settlement))
+                            if reg.settlement else None),
+        "port": list(reg.port) if reg.port else None,
+        "port_game": list(cm.game_xy(*reg.port)) if reg.port else None,
+        "sea": sea_pixels(cm).get(rec.rgb_key, 0),
+        "neighbours": [{"key": k, "rgb": list(names[k].rgb),
+                        "name": names[k].name,
+                        "region_id": names[k].region_id,
+                        "declared": names[k].record is not None}
+                       for k in near if k in names],
+    }
+    return out
+
+
+@dataclass
+class RegionPlan:
+    """One region's save, worked out without touching the disk."""
+
+    mod: object = None
+    name: str = ""
+    changes: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
+    findings: List[dict] = field(default_factory=list)
+    #: the whole file as it would be written - empty when nothing would change
+    text: str = ""
+    #: the record's new lines, for the preview
+    block: str = ""
+    path: Optional[Path] = None
+
+    def summary(self) -> str:
+        head = (f"edit region {self.name} in {getattr(self.mod, 'name', '?')} "
+                f"({len(self.changes)} change(s))")
+        return "\n".join([head] + [f"  {c}" for c in self.changes])
+
+    def payload(self) -> dict:
+        return {"name": self.name, "changes": list(self.changes),
+                "warnings": list(self.warnings), "errors": list(self.errors),
+                "findings": list(self.findings), "block": self.block,
+                "ok": not self.errors and bool(self.text)}
+
+
+def _describe(before: RegionRecord, after: RegionRecord) -> List[str]:
+    """What changed, said the way somebody would say it out loud."""
+    out: List[str] = []
+    for slot, label in (("legion", "legion"), ("faction", "creator faction"),
+                        ("rebels", "rebel type")):
+        a, b = getattr(before, slot), getattr(after, slot)
+        if a != b:
+            out.append(f"{label}: {a or '(none)'} -> {b or '(none)'}")
+    if before.resources != after.resources:
+        gone = [r for r in before.resources if r not in after.resources]
+        new = [r for r in after.resources if r not in before.resources]
+        if new:
+            out.append("resources added: " + ", ".join(new))
+        if gone:
+            out.append("resources removed: " + ", ".join(gone))
+    if before.triumph != after.triumph:
+        out.append(f"triumph value: {before.triumph} -> {after.triumph}")
+    if before.farming != after.farming:
+        out.append(f"base farming level: {before.farming} -> {after.farming}")
+    if before.religions != after.religions:
+        for name in sorted(set(before.religions) | set(after.religions)):
+            a = before.religions.get(name)
+            b = after.religions.get(name)
+            if a != b:
+                out.append(f"religion {name}: {a if a is not None else '(none)'}"
+                           f" -> {b if b is not None else '(none)'}")
+        out.append(f"religions now total {after.religion_total}")
+    return out
+
+
+def plan_region(mod, body: dict) -> RegionPlan:
+    """Work out the whole new ``descr_regions.txt`` for one save.
+
+    ``body`` is ``{mod, region, edits, raw_block}``. ``raw_block`` is text the
+    user hand-edited in the Code View, and it wins over ``edits`` and reaches
+    disk verbatim - the same ruling every other editor in this toolkit makes.
+
+    Nothing is written. What comes back is the whole file as it would be, the
+    record as it would read, and the reasons it would be refused.
+    """
+    p = RegionPlan(mod=mod, name=str(body.get("region") or "").strip())
+    try:
+        rf = read_regions(mod)
+    except MapError as exc:
+        p.errors.append(str(exc))
+        return p
+    p.path = rf.path
+    rec = rf.by_name(p.name)
+    if rec is None:
+        p.errors.append(f"no region called {p.name!r} in descr_regions.txt")
+        return p
+
+    base = record_text(rf, rec)
+    raw = str(body.get("raw_block") or "")
+    try:
+        block = raw if raw.strip() else render_block(base, dict(body.get("edits") or {}))
+        after = parse_block(block)
+    except MapError as exc:
+        p.errors.append(str(exc))
+        return p
+    if after.name != rec.name:
+        p.errors.append(
+            f"this region is `{rec.name}` - renaming it would orphan every "
+            "descr_strat.txt settlement, win condition, script line and "
+            "`legion:` entry that names it")
+        return p
+    if after.rgb != rec.rgb:
+        p.errors.append(
+            f"this region is painted {rec.rgb[0]} {rec.rgb[1]} {rec.rgb[2]} on "
+            "map_regions.tga. Changing the number here without repainting the "
+            "pixels would leave the region with no tiles at all - the brush is "
+            "16e's job")
+        return p
+    if after.settlement != rec.settlement:
+        p.errors.append(
+            f"this settlement is `{rec.settlement}` - descr_strat.txt, the "
+            "campaign script and the settlement name text file all point at "
+            "that name")
+        return p
+
+    vocab = region_vocab(mod)
+    p.findings = check_record(after, vocab)
+    p.errors += [f["message"] for f in p.findings if f["fatal"]]
+    p.warnings += [f["message"] for f in p.findings if not f["fatal"]]
+    p.block = block
+    p.changes = _describe(rec, after)
+    text = replace_record(rf, rec, block)
+    p.text = "" if text == rf.serialise() else text
+    if not p.text and not p.errors:
+        p.errors.append("nothing to change")
+    return p
+
+
+def apply_region(p: RegionPlan) -> dict:
+    """Write a planned save, with the same backups and undo as any other job.
+
+    The old ``descr_regions.txt`` goes to ``config/backups/<id>/data/…`` and
+    the manifest goes in the transfer log, so the Log's Undo puts it back
+    byte-exact.
+
+    ``map.rwm`` is deleted, and that is not housekeeping: the game reads the
+    compiled binary in preference to the text files, so a mod whose
+    ``descr_regions.txt`` has changed under a stale ``map.rwm`` loads the old
+    map and shows none of the edit. It goes into the backup set like everything
+    else, so an undo puts it back too.
+    """
+    import shutil
+    import time
+
+    from . import config
+    from .keyblock import write_text
+    from .logutil import file_op, log
+
+    if p.errors:
+        raise ValueError("cannot apply: " + "; ".join(p.errors))
+    if not p.text:
+        raise ValueError("nothing to change")
+    mod = p.mod
+    tid = config.new_transfer_id()
+    backup_root = config.backup_root_for(tid)
+    manifest: Dict[str, List[str]] = {"backed_up": [], "created": [], "deleted": []}
+
+    def keep(rel: str) -> Path:
+        target = Path(mod.data) / rel
+        bpath = backup_root / "data" / rel
+        bpath.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists():
+            shutil.copy2(target, bpath)
+            manifest["backed_up"].append(rel)
+            file_op("BACKUP", target, f"-> {bpath}")
+        else:
+            manifest["created"].append(rel)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        return target
+
+    target = keep(REGIONS_REL)
+    write_text(target, p.text, ENCODING)
+    file_op("WRITE", target, f"{len(p.text)} bytes")
+
+    rwm = Path(mod.data) / RWM_REL
+    if rwm.exists():
+        keep(RWM_REL)
+        rwm.unlink()
+        manifest["deleted"].append(RWM_REL)
+        file_op("DELETE", rwm, "stale compiled map - the game would load it instead")
+
+    rec = {
+        "id": tid,
+        "when": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "mode": "campmap",
+        "action": "region",
+        "source": mod.name, "source_root": str(mod.root),
+        "dest": mod.name, "dest_root": str(mod.root),
+        "unit_type": p.name, "resolved_type": p.name,
+        "options": {}, "applied": True, "undone": False, "note": "",
+        "summary": p.summary(), "warnings": list(p.warnings),
+        "manifest": manifest, "backup_root": str(backup_root),
+    }
+    config.append_log(rec)
+    log.info("REGION %s in %s - %d change(s), id=%s",
+             p.name, mod.name, len(p.changes), tid)
+    return {"id": tid, "region": p.name, "record": rec}

@@ -251,6 +251,7 @@ COMMENT_MARKS: Dict[str, Tuple[str, ...]] = {
     "edu": (";",), "edb": (";", "#"), "traits": (";",), "ancillaries": (";",),
     "factions": (";",), "sounds": (";",), "rebels": (";",), "resources": (";",),
     "religions": (";",), "cultures": (";",), "names": (";",),
+    "regions": (";",),
 }
 
 
@@ -749,6 +750,52 @@ def _factions_render(base: str, edits: dict, ctx: dict) -> str:
         raise CodeViewError(e.message, e.line) from None
 
 
+# ---------------------------------------------------------------------------
+# the regions kind - one record of descr_regions.txt (16d)
+#
+# The only POSITIONAL record with a code view. Every other kind here is
+# `keyword value` and can be read line by line in any order; this one is a
+# region name followed by lines whose meaning is their place in the block, and
+# the anchor that makes sense of them is the `R G B` line found by shape. That
+# is why campmap owns the parser and this is nine lines of adapter.
+#
+# Three of its fields refuse a rename for three different reasons, and all
+# three are checked in campmap.plan_region as well, so the pane and the save
+# cannot disagree about what is allowed.
+
+def _regions_parse(text: str, ctx: dict) -> Doc:
+    from . import campmap
+    try:
+        rec = campmap.parse_block(text)
+    except campmap.MapError as e:
+        raise CodeViewError(str(e), 1) from None
+    locked = ctx.get("region")
+    if locked and rec.name != locked:
+        raise CodeViewError(
+            f"this region is `{locked}` - renaming it in the text pane would "
+            "orphan every descr_strat.txt settlement, win condition, campaign "
+            "script line and `legion:` entry that names it", 1)
+    findings = campmap.check_record(rec, ctx.get("vocab") or {})
+    return Doc(kind="regions", text=text,
+               fields=campmap.block_fields(text),
+               spans=campmap.block_spans(text), ident=rec.name,
+               note="; ".join(f["message"] for f in findings[:2]),
+               detail={"name": rec.name, "settlement": rec.settlement,
+                       "legion": rec.legion, "faction": rec.faction,
+                       "rebels": rec.rebels, "rgb": list(rec.rgb),
+                       "resources": list(rec.resources), "triumph": rec.triumph,
+                       "farming": rec.farming, "religions": dict(rec.religions),
+                       "religion_total": rec.religion_total,
+                       "findings": findings})
+
+
+def _regions_render(base: str, edits: dict, ctx: dict) -> str:
+    from . import campmap
+    try:
+        return campmap.render_block(base, edits or {})
+    except campmap.MapError as e:
+        raise CodeViewError(str(e), 1) from None
+
 #: kind -> {parse, render, repair?}. One entry per file shape; adding a kind is
 #: what makes a new editor code-viewable, and nothing else has to change.
 KINDS: Dict[str, dict] = {
@@ -766,6 +813,7 @@ KINDS: Dict[str, dict] = {
     "cultures": {"parse": _cultures_parse, "render": _cultures_render},
     "names": {"parse": _names_parse, "render": _names_render},
     "factions": {"parse": _factions_parse, "render": _factions_render},
+    "regions": {"parse": _regions_parse, "render": _regions_render},
 }
 
 
@@ -1008,6 +1056,23 @@ def minor_document(mod, tab_id: str, name: str) -> Doc:
     return parse(meta.id, parsed.block_text(rec), {"ident": name})
 
 
+def region_document(mod, name: str) -> Doc:
+    """The code view of one region, as ``descr_regions.txt`` holds it.
+
+    The block is the record's whole span - the comments and blank lines between
+    it and the next region included - because those belong to the region a
+    person is looking at, and a save that dropped them would be a save that
+    edits things nobody asked it to.
+    """
+    from . import campmap
+    rf = campmap.read_regions(mod)
+    rec = rf.by_name(name)
+    if rec is None:
+        raise KeyError(f"no region {name!r} in {campmap.REGIONS_REL}")
+    return parse("regions", campmap.record_text(rf, rec),
+                 context("regions", mod, rec.name))
+
+
 def context(kind: str, mod, ident: str, culture: str = "") -> dict:
     """The per-record context a kind's parse/render/repair needs.
 
@@ -1038,4 +1103,7 @@ def context(kind: str, mod, ident: str, culture: str = "") -> dict:
         return {"ident": ident}
     if kind == "factions":
         return {"faction": ident}
+    if kind == "regions":
+        from . import campmap
+        return {"region": ident, "vocab": campmap.region_vocab(mod)}
     return {}
