@@ -1073,41 +1073,27 @@ def check_new_region(cm: CampaignMap, spec: dict) -> List[dict]:
 def _marker_problems(cm: CampaignMap, at: Sequence[int], kind: str):
     """What is wrong with the tile a settlement or a port is standing on.
 
-    The two rules that crash rather than annoy, both from the TWCenter index:
-    a marker on impassable or sea ground, and a marker on a river, ford, source
-    or volcano. A port is the exception to the first - it stands on the coast
-    and its dock is in the water - so its ground is checked the other way round.
+    **The rule is not here.** It is :func:`mapcheck.marker_faults`, and this is
+    the wizard's view of it: the same four checks the validator runs over every
+    marker already on the map, asked about one that is about to be placed. Two
+    copies of "a settlement may not stand on a river" would be two copies that
+    drift, and 16f's brief said so before either was written.
+
+    The import is deferred because :mod:`mapcheck` imports :func:`block` from
+    here. Same shape as ``config`` and ``logutil`` in :func:`apply_paint`.
     """
+    from . import mapcheck
     x, y = int(at[0]), int(at[1])
-    i = y * cm.terrain.width + x
     out = []
-    try:
-        g = cm.tiles("ground_types").tobytes()
-        f = cm.tiles("features").tobytes()
-    except MapError as exc:
-        return [(False, str(exc))]
-    ground = mapvocab.ground_at(((g[i * 3]), g[i * 3 + 1], g[i * 3 + 2]))
-    feat = mapvocab.feature_at((f[i * 3], f[i * 3 + 1], f[i * 3 + 2]))
-    if kind == "settlement":
-        if ground and ground["code"] in mapvocab.BLOCKING_GROUND:
-            out.append((True, f"the settlement pixel at {x},{y} stands on "
-                              f"{ground['name']} ground, which nothing can stand "
-                              f"on - the game drops back to the menu"))
-        if cm.sea[i]:
-            out.append((True, f"the settlement pixel at {x},{y} stands on a tile "
-                              f"map_heights.tga says is sea"))
-    if feat and feat["code"] in mapvocab.FATAL_UNDER_SETTLEMENT:
-        out.append((True, f"the {kind} pixel at {x},{y} stands on a "
-                          f"{feat['name'].lower()} on map_features.tga, which is "
-                          f"the back-to-menu crash"))
-    if kind == "port":
-        w, h = cm.terrain.width, cm.terrain.height
-        near = [j for j, ok in ((i - 1, x > 0), (i + 1, x < w - 1),
-                                (i - w, y > 0), (i + w, y < h - 1)) if ok]
-        if not any(cm.sea[j] for j in near):
-            out.append((False, f"the port pixel at {x},{y} has no sea tile beside "
-                               f"it, so it is a harbour inland - the ships have "
-                               f"nowhere to sail from"))
+    for f in mapcheck.marker_faults(cm, (x, y), kind):
+        if f["code"] == "layer.size":                  # a layer would not read
+            return [(False, f["tail"])]
+        # An inland port is a warning at placement time and a fatal in the
+        # report, and that difference is deliberate: the wizard is standing at
+        # the moment somebody can still put it somewhere else, and a refusal
+        # there would stop a province being made over a pixel they can move.
+        fatal = f["fatal"] and f["code"] != "port.inland"
+        out.append((fatal, f"the {kind} pixel at {x},{y} {f['tail'].rstrip('.')}"))
     return out
 
 

@@ -1,29 +1,68 @@
 # STATE - Medieval 2 GUI Toolkit V2 and V3
-_Updated: 2026-09-04 · **v2.1.11 released** · V3 under way: 16a-16e done, 16f next_
+_Updated: 2026-09-04 · **v2.1.11 released** · V3 under way: 16a-16f done, 16g next_
 
 ## Next up
-Start **16f** - the validator, `mapcheck.py`. The union of Demir's rule set,
-Mylae's eight checks, TWMapReader's twenty-three and Geomod's debugger, with
-**baseline fingerprinting** so a problem the untouched mod already had is shown
-without blocking a save. Most of what it needs is standing and several of its
-rules are already written once: `check_new_region` in `campaint.py` enforces the
-settlement-on-sea, settlement-on-impassable, marker-on-a-river and
-religions-total-100 rules for a NEW province, and 16f is where they become
-rules about every province - so the move is to lift them out of `campaint` into
-`mapcheck` and have `campaint` call them, rather than write a second copy that
-can drift from the first. The index already reports the findings a read can see
-(`campmap.view`'s `findings`), the vocabularies already say which colours no
-table names, and `plan_paint` already refuses a save that would leave a region
-with no tiles.
+Start **16g** - query, highlight and information maps. The screen can now read
+the map, edit a record, paint it and say whether it will load; 16g is the one
+that makes it answer questions about itself. TWMapReader's filter engine
+(hidden resource, trade resource, starting regions, has port, win conditions,
+music type, mercenary pool, culture/faction tag, creator, starting wall,
+culture, building, building tree, rebel tribe) with faction, religion and
+culture themes and political borders; Geomod's information maps (agriculture,
+creators, factions, mercenary and rebel pools, population, and one map per
+hidden resource, religion and trade resource); and batch per-faction TGA export.
 
-The four test cases 16a banked are still the exit criteria: DaC's stray
-`(1,1,1)` pixel in `map_features.tga`, its 517-tile undeclared province at
-image (318,54)-(372,68), the five one-channel misses in `map_climates.tga`, and
-the extension-area offset trap in `water_surface.tga`. Add a fifth from 16e:
-vanilla's `map_fog.tga` repacks rather than round-tripping byte for byte, which
-is legal and worth a baseline entry rather than a complaint.
+Most of the reading is already standing and none of it should be written twice.
+`campstrat.StratFile` already indexes every settlement, building, character and
+resource by line with `descr_strat.txt`'s own shape intact, which is where
+"has a port", "starts with a wall", "which faction created it" and every
+building filter come from. `campmap.RegionIndex` already holds the label image,
+the per-region pixel runs and the four-connected adjacency the political
+borders need, and `campmap.sea_pixels` and `region_vocab` already say which
+colours are ocean and which vocabulary a value has to come out of. A theme is
+therefore a recolour of the label image the browser already has rather than a
+new layer to fetch: 16c's `cmapMask` punches colours out of one, and a theme is
+the same operation with a lookup table over region IDs.
+
+Two rulings from 16f that carry straight into it. **A rule with no evidence
+reports nothing** - a filter over a vocabulary the mod does not ship is off with
+a reason, never an empty result that reads as "none". And **the browser decides
+nothing**: Python builds the region-to-colour table and the browser paints it,
+the same division the paint tool and the validator both make.
 
 Run `python tools/upstream_sync.py sync` first, as before every sub-phase.
+
+## 16f - the validator (2026-09-04)
+`mapcheck.py` (1,567 lines), `web/js/mapcheck.js` (387), four routes on
+`server.py`, and `tests/test_mapcheck.py` at **82 checks, all passing**.
+**30 rules**, each carrying the tool, manual or measurement that says it is a
+rule, and each with a deliberately broken map under test that only it may
+catch. The whole set runs on DaC in 609 ms and on vanilla in 120 ms.
+
+**A rule with no evidence reports nothing.** The stock game's `data/` is packed:
+`descr_climates.txt` is not on disk and neither is the region and settlement
+name file. A checker that reads "no climate is declared" as "every climate
+colour is undeclared" reports 11 faults, 55,755 tiles and 112 missing name keys
+against the map that ships with the game and works. So a rule that needs a
+vocabulary asks for it first and, when it is not there, puts a line in
+`skipped` naming the file that would let it run.
+
+**A finding is identified by what it is about, never by where it is written** -
+the rule, the file and the thing, so inserting a comment above a finding does
+not make it a new one. That is what makes the baseline real: `take_baseline`
+stamps what a mod already had, those rows stay visible and counted, and only
+what appears afterwards blocks a save.
+
+**Vanilla found the bug the fix is named after.** Its `map_heights.tga` has 55
+tiles painted pure black where `map_ground_types.tga` says land, and two of
+them have a port standing on them: Nottingham's, and **Ragusa's** - the port bug
+Geomod's manual names its debugger action after, shipped in the stock game.
+`heights_black` is Geomod's own fix, 77 pixels over 55 tiles, and the picture
+does not change.
+
+Every fix writes through one backup set and one log entry, so the Log's Undo
+puts it back byte-exact. The four marker rules exist once, in
+`mapcheck.marker_faults`, which the paint wizard calls rather than copies.
 
 ## 16e - the paint tool (2026-09-04)
 `campaint.py` (1,381 lines), `web/js/campaint.js` (871), nine routes on
@@ -1432,8 +1471,8 @@ underneath. Both fixed; see ROADMAP.md's 14f outcome.
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
-| 16 - Campaign Map Editor (V3.0.0) | **16a-16e done, 16f next** | Scoped 2026-09-03 from four references into eleven sessions, 16a-16k, with V3.1-V3.3 as future releases. Pillow only, no numpy and no C extension - measured, see ROADMAP.md Phase 16. **16a and 16b landed 2026-09-03**: `maptga.py`, `mapvocab.py`, `campmap.py` (62/62) and `campstrat.py` (75/75). The whole read half of the engine is done and every file it touches round-trips byte-exact. **16c landed 2026-09-04**: `web/js/campmap.js`, the manifest and PNG half of `campmap.py`, `/api/map` and `/api/map/layer`, `test_campview.py` (50/50) over vanilla's map as well as DaC's; a pan frame is 0.02 to 0.18 ms and the picked pixel is exact. **16d landed 2026-09-04**: the layer stack remembered on `/api/settings`, `layer_legend` and the `BLANK` table that turns a layer into an overlay, `probe_pixel` over all ten layers, region adjacency, and the editable `descr_regions.txt` record with its Code View, its religion rule and its undo - `test_campedit.py` (85/85) over both maps, and every record of both re-renders byte-exact. Each is written up in its own section above. **16e landed 2026-09-04**: `campaint.py` and `web/js/campaint.js` - five tools, region-colour snapping, closed palettes, the measured water brush, unlimited undo over pixel deltas, and Mylae's three-step new-region wizard; `test_campaint.py` (95/95 here, six more per
-additional installed map), every painted layer byte-identical outside the painted tiles and an undo that restores it byte-exact. Still to come: `mapcheck.py`; **not** `stratmap.py`, which is a different concern |
+| 16 - Campaign Map Editor (V3.0.0) | **16a-16f done, 16g next** | Scoped 2026-09-03 from four references into eleven sessions, 16a-16k, with V3.1-V3.3 as future releases. Pillow only, no numpy and no C extension - measured, see ROADMAP.md Phase 16. **16a and 16b landed 2026-09-03**: `maptga.py`, `mapvocab.py`, `campmap.py` (62/62) and `campstrat.py` (75/75). The whole read half of the engine is done and every file it touches round-trips byte-exact. **16c landed 2026-09-04**: `web/js/campmap.js`, the manifest and PNG half of `campmap.py`, `/api/map` and `/api/map/layer`, `test_campview.py` (50/50) over vanilla's map as well as DaC's; a pan frame is 0.02 to 0.18 ms and the picked pixel is exact. **16d landed 2026-09-04**: the layer stack remembered on `/api/settings`, `layer_legend` and the `BLANK` table that turns a layer into an overlay, `probe_pixel` over all ten layers, region adjacency, and the editable `descr_regions.txt` record with its Code View, its religion rule and its undo - `test_campedit.py` (85/85) over both maps, and every record of both re-renders byte-exact. Each is written up in its own section above. **16e landed 2026-09-04**: `campaint.py` and `web/js/campaint.js` - five tools, region-colour snapping, closed palettes, the measured water brush, unlimited undo over pixel deltas, and Mylae's three-step new-region wizard; `test_campaint.py` (95/95 here, six more per
+additional installed map), every painted layer byte-identical outside the painted tiles and an undo that restores it byte-exact. **16f landed 2026-09-04**: `mapcheck.py` and `web/js/mapcheck.js` - 30 rules each carrying its source and each with a broken map under test that only it may catch, fingerprinted findings so a baseline survives an edit above them, and Geomod's three debugger actions written through one backup set; `test_mapcheck.py` (82/82), 609 ms on DaC and 120 ms on vanilla, and it reports the Ragusa port bug in the stock game. Still to come: 16g-16k; **not** `stratmap.py`, which is a different concern |
 | 15j - resizable panels, the strings warning, no em dashes | **done** | **v2.1.11.** `rsz*` in `core.js`: `resize:vertical` on every scroll box the stylesheet declares (found by reading `document.styleSheets`, 31 selectors, `.wpop` and `.modal` skipped), `resize:both` on `#modal`, a `.drawergrip` bar on the right-pinned drawer, sizes in `pane_sizes` on `/api/settings`. The two real problems are `max-height` outranking a dragged `height` (cleared on capture-phase `mousedown` at the corner) and wholesale re-renders throwing the result away (a `MutationObserver`, coalesced on `setTimeout` rather than `requestAnimationFrame`, because an occluded window gets no frames). Nothing is pinned until it is dragged. Plus the strings list's stale-`.txt` warning rewritten with a `qm()` card, and 4176 em dashes swept out of 171 files with `ANY_EM` added to `prose_check` to keep them out. `test_web_modules` 10/10; verified in-browser (pin, save, survive re-render, reopen at the saved size, double-click reset) |
 | 15i - the model beside a transfer, art beside a pool | **done** | **v2.1.10.** The 3D column docks into the transfer composer (`transfer.js` `cmpPrev*`, `#cmpSplit`), listing the source unit's battle-model entries AND the base/replaced unit's out of the destination mod, grouped by mod and drawn from it - the third `v3Mount` host, same detach-across-render / one-viewer / fold-pauses rules as the editor's. Entries come off the unit LIST's fields, with the `armour_ug_models` rule and men-before-officers ordering. The Recruitment tab's rows and its ＋ picker carry the tier's art, keyed by the pool's OWN `requires` through `ov.faction_cultures`, with a new opt-in `any_culture` sweep in `buildings.find_icon` (`&any=1`) for the levels a mod draws for one culture only - OFF for the building browser, which is showing one culture on purpose. Row layout re-cut as two halves: tier against the name, `requires` right-aligned on its own line, and the header finally aligned with the boxes it names. `test_buildings` §11 + `test_buildings_http`; 72 of 72 modules |
 | 15h - recruitment on the unit, UV layout | **done** | **v2.1.9.** `web/js/edrecruit.js` (new) - a Recruitment tab in the unit editor listing every building line that trains it, with the four pool numbers, the `requires` clause, a delete and a ＋ that adds the unit to any line and tier. **No Python**: `buildings.unit_instances` reads and `buildings.plan_edit` writes, so this is a second FRONT rather than a second implementation. The one new request shape is `also`-only - every edit in `also`, the body carrying a line name and no levels - which is also what makes `_check_recruit_limit` merge the file instead of counting three rows as a level. The clause dialog is borrowed with `kind:'edrec'`, which re-renders the editor instead of unstashing markup, because the modal holds a live WebGL column. `?building=&lvl=&unit=` opens a building in its own tab, on the tier, with the unit’s rows flashed. A save now moves EDB line numbers, so a building left open behind the editor drops its working copy and `backToBuilding` re-reads it. `test_unit_recruitment` 42/42; verified in-browser, three pools over two lines written and undone byte-exact. Plus the viewer’s **UV layout** and the mount-texture bug it found |
@@ -1562,6 +1601,31 @@ audit verdict in `notes`.
   Its own phase later, or out of scope for V2?
 
 ## Decisions
+- 2026-09-04: **A rule with no evidence reports nothing.** The validator's
+  rules that need a vocabulary ask for it first and, when the file is not on
+  disk, say which file would let them run instead of reporting everything as
+  missing. The stock game's data is packed, and reading "no climate is
+  declared" as "every climate colour is undeclared" reports 11 faults and
+  55,755 tiles against a map that ships with the game and works.
+- 2026-09-04: **A finding is identified by what it is about, never by where it
+  is written.** `mapcheck.Finding.key` hashes the rule, the file and the thing
+  (a region's name, a tile's coordinates, a resource's name and position) and
+  never a line number, which is what lets a stamped baseline survive an edit
+  above it. Without that, one inserted comment would make every finding below
+  it new and the baseline worthless.
+- 2026-09-04: **A baseline shows and stops blocking; it never hides.** A mod is
+  somebody else's work with somebody else's bugs in it - vanilla's own map has
+  62 findings - and a tool that refuses to save until 40 inherited faults are
+  fixed is one nobody uses twice. A tool that hides them is one nobody believes.
+- 2026-09-04: **A rejoin is a loop, not a junction.** Vanilla has 26 river tiles
+  with three cardinal neighbours and every one is an ordinary tributary, so
+  counting neighbours is not the rule. The rule is a cycle in the four-connected
+  river graph, found as the edge that closes it, and vanilla has none.
+- 2026-09-04: **A rule the paint tool also enforces exists once.**
+  `mapcheck.marker_faults` is the only copy of the four marker rules; the
+  new-province wizard calls it. Where the two differ - an inland port is a
+  warning while the pixel can still be moved and a fatal once it is on the map -
+  the difference is written at the place it is made.
 - 2026-09-03: **The map editor is Python with Pillow, and the reason is a
   measurement.** All ten of DaC's TGA layers decode in under 100 ms, the
   unique-colour census is 6 ms and the region label image 5 ms; a map is capped

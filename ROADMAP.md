@@ -78,7 +78,7 @@ running the test suite, and running `graphify update .`.
 | 15h | Recruitment on the unit + the UV layout (v2.1.9) | M | ✅ done |
 | 15i | The model beside a transfer, art beside a pool (v2.1.10) | S | ✅ done |
 | 15j | Resizable panels, the strings warning, no em dashes (v2.1.11) | S | ✅ done |
-| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ 16e ✅ |
+| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ 16e ✅ 16f ✅ |
 | V3.1 | OSM backdrop + coastline tracer | M | future |
 | V3.2 | Map resize + create-from-scratch | L | future |
 | V3.3 | Overlay and layer generators | M | future |
@@ -2136,7 +2136,8 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `unittransfer/mapvocab.py` | ground/climate/feature/height colour tables with localised names, in `edbvocab.py`'s shape |
 | `unittransfer/campstrat.py` | `descr_strat.txt` as a line-preserving block model with an interval index |
 | `unittransfer/campaint.py` | strokes, the undo stack, the palettes and the paint save (16e) |
-| `unittransfer/mapcheck.py` | the validator and its auto-fixes |
+| `unittransfer/mapcheck.py` | the 30 rules, the baseline and the three auto-fixes (16f) |
+| `web/js/mapcheck.js` | the validator panel, its filters and jump-to-pixel (16f) |
 | `web/js/campmap.js` | viewer, layers, legend, inspector (16c, 16d) |
 | `campmap.view` / `layer_png` | the manifest and the PNG the browser is served (16c) |
 | `campmap.layer_legend` / `probe_pixel` | what a colour means, and what one tile is (16d) |
@@ -2486,22 +2487,97 @@ and server-side validation possible at all.
   and the true one is the shape and the picture, which `maptga`'s docstring and
   `test_campmap` now both say.
 
-- **16f - The validator.** `mapcheck.py`. The union of Demir's rule set,
-  Mylae's eight checks, TWMapReader's twenty-three and Geomod's debugger: layer
-  size relationships, duplicate and reserved region colours, zero-pixel regions,
-  unmapped colours with the sea heuristic, more than one settlement per region,
-  settlement or port on sea / impassable ground / a river-ford-source-volcano
-  pixel, ports completely inland, unknown feature colours, diagonal river
-  connections and rejoins, resource tags that are neither hidden nor trade
-  resources, a port building with no port pixel, faction blocks after the
-  diplomacy section, missing localisation keys. **Baseline fingerprinting** so
-  problems already present in the untouched mod are shown but do not block a
-  save. Auto-fixes with jump-to-pixel, including Geomod's three debugger actions
-  (ambiguous `0,0,0` altitudes to `1,1,1` for the Ragusa port bug, invalid
-  positions, duplicate resources).
-  Exit: the whole rule set runs on DaC in under a second and reports the stray
-  `(1,1,1)` pixel in its `map_features.tga`; a deliberately broken copy of each
-  rule is caught; every auto-fix is undoable.
+- **16f - The validator.** ✅ **done 2026-09-04.** `mapcheck.py` (1,567 lines),
+  `web/js/mapcheck.js` (387), four routes on `server.py`, and
+  `tests/test_mapcheck.py` at **82 checks, all passing**. **30 rules**, each one
+  carrying the tool, manual or measurement that says it is a rule, and each one
+  with a deliberately broken map under test that only it may catch. The whole
+  set runs on DaC in **609 ms**, on vanilla in 120 ms.
+
+  **A rule with no evidence reports nothing**, and that is the decision the
+  phase turns on. The stock game's `data/` is packed: `descr_climates.txt` is
+  not on disk, neither is the region and settlement name file. A checker that
+  reads "no climate is declared" as "every climate colour is undeclared"
+  reports 11 faults, 55,755 tiles and 112 missing name keys against the map
+  that ships with the game and works. So a rule that needs a vocabulary asks
+  for it first and, when it is not there, puts a line in `skipped` naming the
+  file that would let it run. Absence of the evidence is never the finding.
+
+  **A finding is identified by what it is about, never by where it is
+  written.** The fingerprint is the rule, the file and the thing - a region's
+  name, a tile's coordinates, a resource's name and position - so inserting a
+  comment above a finding does not make it a new one. That is what makes the
+  baseline real: `take_baseline` stamps what a mod already had, those rows stay
+  visible and counted, and only what appears afterwards blocks a save. A mod is
+  somebody else's work with somebody else's bugs in it, and vanilla's own map
+  has 62 findings.
+
+  **Vanilla is a better exit measurement than the one this phase was scoped
+  with, and it found the bug the fix is named after.** `map_heights.tga` has 55
+  tiles painted pure black where `map_ground_types.tga` says land, and
+  `is_sea_height` has to read black as sea because the engine does. Two of those
+  55 have a port standing on them: **Nottingham's, and Ragusa's** - the port bug
+  Geomod's manual names its debugger action after, shipped in the stock game and
+  reported here by name and coordinate. `heights_black` is Geomod's own fix:
+  black becomes `(1,1,1)`, land beyond argument, 77 pixels over 55 tiles, and
+  the picture does not change.
+
+  **A rejoin is a loop, not a junction.** Vanilla has 26 river tiles with three
+  cardinal neighbours and every one is an ordinary tributary, so degree is not
+  the rule. A rejoin is a cycle in the four-connected river graph, found as the
+  edge that closes it by one union-find pass. Vanilla has none, which is the
+  zero the rule was checked against.
+
+  The rule set: layer shapes and the 200-colour cap; duplicate, reserved and
+  zero-pixel region colours; undeclared land with 16c's sea heuristic; every
+  field rule 16d's `check_record` already enforces (the religion total, the
+  triumph value, unknown rebels, factions and resource tags); a settlement-less
+  record that is not last; regions with no settlement pixel, second markers,
+  orphaned markers, a marker on blocking ground, on a river-ford-source-volcano
+  or on a tile the engine reads as sea; ports with no water beside them;
+  colours no feature, ground or climate table names; diagonal-only rivers,
+  isolated river tiles and rejoins; ambiguous altitudes; every line
+  `descr_strat.txt` will not parse; a faction block after the diplomacy
+  section; duplicate resources and resources off the map or in the sea; a
+  settlement in a region nobody declares; a region no settlement block claims;
+  a port building with no port pixel; and missing localisation keys.
+
+  What it finds on the two real maps, all of it real: **DaC** - the stray
+  `(1,1,1)` in `map_features.tga` this phase was scoped to catch, five port
+  pixels standing on Sea Deep or Impassable, the orphan settlement at (339,65)
+  16a found, the 517-tile province at `rgb(100,160,100)` nobody declares, a
+  settlement placed in `Erebor_Province` which `descr_regions.txt` does not
+  declare, **63 duplicate `resource` lines**, and the nine unparseable lines 16b
+  wrote down. **Vanilla** - the two ambiguous ports, one river tile at (175,14)
+  with no course through it, a `timber` at 199,57 sitting in the sea, and
+  Durazzo, which no settlement block claims.
+
+  Every fix goes through the same route a paint save does: one backup set, one
+  log entry, `map.rwm` deleted when a layer moved, so the Log's Undo puts every
+  fixed file back byte-exact. The plan re-runs the rule rather than trusting the
+  list on screen, so a fix can never act on a finding that stopped being true
+  since the report was drawn. Line deletions are applied bottom-up.
+
+  **The four marker rules exist once**, as this phase's brief required.
+  `mapcheck.marker_faults` is the predicate - a marker on blocking ground, on a
+  fatal feature, on a tile the engine reads as sea, a port with no water beside
+  it - and `campaint._marker_problems` is the new-province wizard's view of the
+  same function rather than a second copy of it. Two differences are deliberate
+  and written down where they are made: an inland port is a warning while
+  somebody can still move the pixel and a fatal once it is on the map, and a
+  port on sea GROUND is a warning rather than a crash, because 142 of the 142
+  port pixels on the shipped maps measured sit on land ground and DaC ships five
+  that do not and runs anyway.
+
+  **The measurement was fixed before the thing it measured, again.**
+  `tools/prose_check.py` opened at 49 hits on this module and every one was the
+  reader: it stitches `+`-joined continuations because that is what JavaScript
+  writes, and Python joins adjacent literals with nothing at all, so every
+  second line of a wrapped message was flushed as a sentence of its own. It also
+  measured the code inside an f-string hole as prose, reporting
+  `{len(tiles) - ROW_MAX:,}` as a clause-joining dash. Both are fixed in the
+  checker; the standing JavaScript measurement is unchanged at 29, and this
+  module is at 2, both of which are correct as written.
 
 - **16g - Query, highlight and information maps.** TWMapReader's filter engine
   (hidden resource, trade resource, starting regions, has port, win conditions,

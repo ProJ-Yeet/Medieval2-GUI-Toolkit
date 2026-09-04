@@ -262,12 +262,14 @@ function renderCampmap(){
             ${m.regions.filter(r => r.port).length} ports</span>
         </div>
         ${cmapFindingsHtml(m.findings)}
+        <div id="cmCheck"></div>
         <div id="cmPaint"></div>
         <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
         <div class="cmpick" id="cmPick"></div>
       </div>
     </div>`;
   cmapWire();
+  cchkOpen();
   cpaintOpen();
   cmapPickPaint();
   cmapResize();

@@ -49,6 +49,19 @@ CSS_DECL = re.compile(r"^[a-z-]+\s*:\s*[^;]+(?:;\s*[a-z-]+\s*:\s*[^;]+)*;?$")
 #: `+( … )+` - a value spliced into the middle of a sentence. See :func:`_fold`.
 INTERP = re.compile(r"\+\s*\([^()]*\)\s*\+")
 
+#: A value spliced into a sentence: JavaScript writes `${x}`, Python writes
+#: `{x}`. Both are a value at render time, and neither is prose - the code
+#: inside one was being measured as if it were. `{len(tiles) - ROW_MAX:,}` was
+#: reported as a clause-joining dash, and `{getattr(m, 'name', '?')}` as two
+#: lower-case sentences, in a module where every message is an f-string.
+HOLE = re.compile(r"\$?\{[^{}]*\}")
+
+#: A line that opens a string literal, with Python's optional f/r/b prefix
+#: captured so :func:`_fold` can drop it. Python concatenates adjacent literals
+#: with nothing between them, which is the same continuation the `+` rule above
+#: handles in JavaScript.
+ADJACENT = re.compile(r"""^([frbFRB]{0,2})['"`]""")
+
 
 def _literals(line: str):
     """``[(text, glued)]`` for the quoted runs that look like visible text.
@@ -120,14 +133,32 @@ def _fold(text: str):
     were that, and nothing else. Folding the physical lines into logical ones
     before any literal is read fixes the measurement at the source, rather than
     asking 90 sentences to be rewritten around a quirk of the reader.
+
+    **Python joins its continuations with nothing at all**, which is the same
+    construct without the ``+``::
+
+        f"the tile at {x},{y} is land in map_ground_types.tga and "
+        f"pure black in map_heights.tga, which the engine reads as sea."
+
+    So a line that STARTS with a quote, directly under one that ENDS with a
+    quote, is the rest of the sentence above it. The end-with-a-quote half is
+    what keeps this out of JavaScript, where the same shape is a list and the
+    line above ends on a comma: 49 of mapcheck.py's 49 hits were this, and the
+    two rules together leave it at 4.
     """
     out = []
     for i, line in enumerate(text.splitlines(), 1):
         s = line.strip()
         if out and (s.startswith("+") or out[-1][1].rstrip().endswith("+")):
             out[-1] = (out[-1][0], out[-1][1] + " " + s)
-        else:
-            out.append((i, line))
+            continue
+        m = ADJACENT.match(s)
+        if m and out and out[-1][1].rstrip().endswith(("'", '"', "`")):
+            # the `f` prefix goes with the join, or the separator between the
+            # two literals reads as code rather than as a plus
+            out[-1] = (out[-1][0], out[-1][1] + " + " + s[m.end(1):])
+            continue
+        out.append((i, line))
     # A choice dropped into the middle of a sentence is one value, not two
     # strings: in `'animates like '+(rep?'the replaced unit':'the base unit')+'
     # instead…'` the branches are words in a slot, and reading them as literals
@@ -155,13 +186,18 @@ def ui_strings(text: str):
 
 
 def clause_dashes(s: str):
-    """Dashes with a long stretch of text after them - a full stop's work."""
+    """Dashes with a long stretch of text after them - a full stop's work.
+
+    The holes come out FIRST, not just out of the tail being measured. A hole
+    is code, and code has arithmetic in it: ``{len(tiles) - ROW_MAX:,}`` was
+    being read as a dash holding two clauses together in a sentence whose only
+    dash is inside an expression the reader never sees.
+    """
+    s = HOLE.sub(" ", s)
     out = []
     for m in DASH.finditer(s):
         after = s[m.end():]
-        # strip markup and template holes before measuring
-        plain = re.sub(r"<[^>]*>", "", after)
-        plain = re.sub(r"\$\{[^}]*\}", "", plain).strip()
+        plain = re.sub(r"<[^>]*>", "", after).strip()
         if len(plain) >= CLAUSE_CHARS:
             out.append(plain[:70])
     return out
@@ -176,7 +212,7 @@ def lower_starts(s: str):
     prose - which is the same line the eye draws.
     """
     plain = re.sub(r"<[^>]*>", " ", s)
-    plain = re.sub(r"\$\{[^}]*\}", "", plain).strip()
+    plain = HOLE.sub("", plain).strip()
     if not plain:
         return []
     sentence_ish = plain.endswith((".", "!", "?")) or len(plain) >= 60
@@ -198,8 +234,10 @@ def lower_starts(s: str):
         return []                      # opens inside markup: <code>keyword</code>
     # Opens on a value, not a word: "${n} pool(s) added…" reads "3 pool(s)
     # added…" on screen. Stripping the hole and then judging the first letter
-    # asks a sentence that starts with a number to start with a capital.
-    if s.lstrip().startswith("${"):
+    # asks a sentence that starts with a number to start with a capital. A bare
+    # `{` is the same thing in Python: "{rec.name} owns 16 tiles…" renders as
+    # "Aland owns 16 tiles…" and is capitalised by whatever the value is.
+    if s.lstrip().startswith(("${", "{")):
         return []
     if not re.match(r"[a-z]{3,}\b", plain) or plain.startswith(("px", "em", "rem")):
         return []

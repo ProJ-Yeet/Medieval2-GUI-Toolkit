@@ -203,6 +203,18 @@ show the unsaved map rather than the one on disk.
                                  -> write every painted layer, and the new
                                     region's record, in one backup set + undo
 
+The validator (16f, see :mod:`unittransfer.mapcheck`). Run against the map the
+session is holding, so it answers "would what I am about to save load?" rather
+than "does what is on disk load?".
+  GET  /api/map/check?mod=&campaign=
+                                 -> every rule, its findings, what could not be
+                                    checked and why, and the stamped baseline
+  POST /api/map/baseline         -> stamp what is already wrong as inherited, or
+                                    clear the stamp (`action`: take / clear)
+  POST /api/map/fix_plan|fix_apply
+                                 -> Geomod's three debugger actions, in one
+                                    backup set + undo
+
 Minor Files mode (the five small campaign files, see :mod:`unittransfer.minorfiles`)
   GET  /api/minor?mod=&tab=      -> one tab's whole list (rebels / religions /
                                     resources / cultures / names), with the
@@ -277,7 +289,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, edit, modflags,
                modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campmap, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, strings, traits, triggers
+from . import ancillaries, campaint, campmap, mapcheck, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, strings, traits, triggers
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1847,6 +1859,9 @@ class Handler(BaseHTTPRequestHandler):
             if (u.path.startswith("/api/map/paint")
                     or u.path in ("/api/map/region_start", "/api/map/region_cancel")):
                 return self._json(self._paint(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/map/baseline", "/api/map/fix_plan",
+                          "/api/map/fix_apply"):
+                return self._json(self._mapcheck(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/edu/sort/plan", "/api/edu/sort/apply"):
                 return self._json(self._edu_sort(u.path.rsplit("/", 1)[-1], body))
             if u.path == "/api/sounds/plan":
@@ -2402,6 +2417,56 @@ class Handler(BaseHTTPRequestHandler):
                             "had not been saved are gone")
         return out
 
+    # ---- the campaign map, checked (16f) ----
+    def _mapcheck(self, action, body):
+        """The baseline stamp, and Geomod's three auto-fixes.
+
+        The plan re-runs the rules rather than trusting the finding list the
+        browser is holding, so a fix acts on the map as it is now. What the
+        browser sends is which fixes to run and, optionally, which findings of
+        them - never what to change.
+
+        A fix that writes a layer invalidates the mod, which drops the map,
+        which is what makes the next request read the file this one wrote. A
+        paint session over the same map is dropped with it: the strokes were
+        never on disk, and silently reapplying them over a fixed layer would be
+        the one way a fix could make a map worse.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            cm = self.registry.campaign_map(name)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        campaign = body.get("campaign") or ""
+        try:
+            if action == "baseline":
+                if body.get("action") == "clear":
+                    mapcheck.clear_baseline(mod)
+                    stamp = {"taken": "", "keys": []}
+                else:
+                    stamp = mapcheck.take_baseline(
+                        mod, mapcheck.run(mod, cm, campaign, use_baseline=False))
+                rep = mapcheck.run(mod, cm, campaign)
+                return {"ok": True, "baseline": {"taken": stamp.get("taken", ""),
+                                                 "keys": len(stamp.get("keys") or ())},
+                        "report": rep.payload(cm)}
+            plan = mapcheck.plan_fix(mod, body.get("fixes") or [], cm, campaign,
+                                     body.get("keys") or None)
+            out = {"plan": plan.payload()}
+            if action == "fix_plan" or plan.errors:
+                if plan.errors:
+                    out["error"] = "; ".join(plan.errors)
+                return out
+            out.update(mapcheck.apply_fix(plan))
+            campaint.drop(name)
+            self.registry.invalidate(name)          # the files changed on disk
+            fresh = self.registry.campaign_map(name)
+            out["report"] = mapcheck.run(mod, fresh, campaign).payload(fresh)
+            return out
+        except (campmap.MapError, ValueError, OSError) as e:
+            return {"error": str(e)}
+
     # ---- unit packs ----
     def _pack(self, action, body):
         """Export units to a zip, or mount someone else's zip as a source mod.
@@ -2954,6 +3019,15 @@ class Handler(BaseHTTPRequestHandler):
                     cm, (q.get("name") or [""])[0]))
             except campmap.MapError as exc:
                 return self._err(404, str(exc))
+
+        if path == "/api/map/check":
+            # Run against `cm`, which is the object the paint session has been
+            # painting, so an unsaved stroke is checked rather than the file it
+            # has not been written to yet. That is the whole reason the
+            # validator takes a map instead of a mod.
+            mod = self.registry.describe(name)
+            rep = mapcheck.run(mod, cm, (q.get("campaign") or [""])[0])
+            return self._json(rep.payload(cm))
 
         if path != "/api/map/layer":
             return self._err(404, f"no such map route {path}")

@@ -840,6 +840,30 @@
     border:1px solid var(--edge);background:var(--panel);color:var(--ink)}
   .cpmk.on{border-color:var(--accent);color:var(--accent)}
   .cpundo button{font:inherit;font-size:11.5px;padding:2px 9px;border-radius:6px}
+  /* ---- 16f: the validator ----
+     Every name starts `cchk`, and it reuses the paint tool's buttons rather
+     than growing a second set that looks nearly the same. */
+  .cchksum{display:flex;align-items:center;gap:7px;font-size:11px}
+  .cchkpanel{display:flex;flex-direction:column;gap:7px;border:1px solid var(--edge);
+    border-radius:7px;padding:8px 9px;background:var(--panel2);font-size:11.5px}
+  .cchkviews{display:flex;flex-wrap:wrap;gap:4px}
+  .cchkbase{display:flex;flex-direction:column;gap:5px;font-size:11px;
+    color:var(--dim);border-bottom:1px solid var(--edge);padding-bottom:7px}
+  .cchkbase b{color:var(--ink)}
+  /* the dot, the sentence, and the two buttons that go and look */
+  .cchkrow{display:grid;grid-template-columns:12px 1fr auto;gap:3px 7px;
+    align-items:start;padding:4px 0;border-top:1px solid var(--edge)}
+  .cchkrow.was{opacity:.55}
+  .cchkrow>span{font-size:10px;line-height:1.5}
+  .cchkmsg{color:var(--ink);line-height:1.45;overflow-wrap:anywhere}
+  .cchkbtn{display:flex;flex-direction:column;gap:3px;align-items:stretch}
+  .cchkbtn button{white-space:nowrap}
+  .cchkfix,.cchkskip{display:flex;flex-direction:column;gap:5px;
+    border-top:1px solid var(--edge);padding-top:7px}
+  .cchkfixrow{display:flex;flex-direction:column;gap:3px}
+  .cchkfixrow>button{align-self:flex-start}
+  .cchkplan{display:flex;flex-direction:column;gap:5px;border:1px solid var(--accent);
+    border-radius:6px;padding:6px 8px;background:var(--panel)}
   @media (max-width:1000px){
     .cmwrap{flex-direction:column;height:auto}
     .cmstage{min-height:60vh}
@@ -2174,6 +2198,7 @@
 <script src="js/images.js"></script>
 <script src="js/campmap.js"></script>
 <script src="js/campaint.js"></script>
+<script src="js/mapcheck.js"></script>
 <script src="js/viewer3d.js"></script>
 <script src="js/boot.js"></script>
 </body>
