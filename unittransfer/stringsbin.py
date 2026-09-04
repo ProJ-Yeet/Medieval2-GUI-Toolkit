@@ -16,7 +16,7 @@ three test mods (see ``tests/test_stringsbin.py``)::
     u32  count
     count × record      tagged:   <str tag> <str value>
                         untagged: <str value>
-    u32  index_count    tagged files only
+    u32  index_count    tagged files only; may be omitted when zero
     index_count × <str>
 
     <str> = u16 length in UTF-16 code units, then that many LE code units
@@ -91,6 +91,10 @@ class StringsBin:
     values: List[str] = field(default_factory=list)
     #: the trailing tag index, kept exactly as read - see the module docstring
     index: List[str] = field(default_factory=list)
+    #: whether the zero-length tag-index count was present in the source bytes
+    has_index_section: bool = True
+    #: width of the source index count (legacy empty archives use 0 or 2)
+    index_count_width: int = 4
 
     @property
     def tagged(self) -> bool:
@@ -218,14 +222,23 @@ def decode(data: bytes) -> StringsBin:
             sb.tags.append(tag)
         value, pos = _read_str(data, pos)
         sb.values.append(value)
-    if style == TAGGED:
-        if pos + 4 > len(data):
-            raise StringsBinError("file ends before its tag index", pos)
+    if style == TAGGED and pos + 4 <= len(data):
         (index_count,) = struct.unpack_from("<I", data, pos)
         pos += 4
         for _ in range(index_count):
             s, pos = _read_str(data, pos)
             sb.index.append(s)
+    elif style == TAGGED and data[pos:] == b"\0\0":
+        # A few game archives use a 16-bit zero marker for an empty index.
+        sb.index_count_width = 2
+        pos += 2
+    elif style == TAGGED:
+        if pos != len(data):
+            raise StringsBinError("file ends before its tag index", pos)
+        # Some game-generated archives omit the empty index-count word entirely.
+        # Preserve these legacy variants so opening is byte-for-byte lossless.
+        sb.has_index_section = False
+        sb.index_count_width = 0
     if pos != len(data):
         raise StringsBinError(
             f"{len(data) - pos} unexplained bytes after the last string", pos)
@@ -242,8 +255,11 @@ def encode(sb: StringsBin) -> bytes:
         if sb.tagged:
             _write_str(out, sb.tags[i])
         _write_str(out, value)
-    if sb.tagged:
-        out += struct.pack("<I", len(sb.index))
+    if sb.tagged and sb.has_index_section:
+        if sb.index_count_width == 2 and not sb.index:
+            out += b"\0\0"
+        else:
+            out += struct.pack("<I", len(sb.index))
         for s in sb.index:
             _write_str(out, s)
     return bytes(out)
@@ -432,7 +448,11 @@ def compile_txt(text: str, template: Optional[StringsBin] = None) -> StringsBin:
     sb = StringsBin(style=TAGGED,
                     flavour=template.flavour if template else FLAVOUR,
                     tags=tags, values=[seen[t] for t in tags],
-                    index=list(template.index) if template else [])
+                    index=list(template.index) if template else [],
+                    has_index_section=(template.has_index_section
+                                       if template else True),
+                    index_count_width=(template.index_count_width
+                                       if template else 4))
     return sb
 
 
