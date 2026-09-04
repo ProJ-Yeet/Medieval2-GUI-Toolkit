@@ -234,22 +234,22 @@ check("the capital is the first settlement in the block",
       stratedit.capital_of(sf, eng) == "London_Province"
       and stratedit.capital_of(sf, fr) == "Paris_Province")
 
-span = stratedit._detach_span(sf, london, eng)
+span = stratedit.detach_span(sf, london, eng)
 check("a block takes the blank line after it with it, and nothing more",
       span == (london.start, london.end + 1)
       and sf.lines[span[1]] == ""
       and sf.lines[span[1] + 1].strip().startswith("settlement"))
 
 check("`first` lands in front of the faction's first settlement",
-      stratedit._insert_at(sf, fr, "first") == paris.start)
+      stratedit.insert_at(sf, fr, "first") == paris.start)
 check("`last` lands after the last one, blank line included",
-      stratedit._insert_at(sf, eng, "last")
-      == stratedit._detach_span(sf, notts, eng)[1] + 1)
+      stratedit.insert_at(sf, eng, "last")
+      == stratedit.detach_span(sf, notts, eng)[1] + 1)
 check("a faction holding nothing takes it in front of its first character",
-      stratedit._insert_at(sf, eng, "first", skip=london)
+      stratedit.insert_at(sf, eng, "first", skip=london)
       == notts.start)
 
-moved = stratedit._move_lines(list(sf.lines), span, paris.start)
+moved = stratedit.move_lines(list(sf.lines), span, paris.start)
 check("a move keeps every line in the file, and the same number of them",
       sorted(moved) == sorted(sf.lines) and len(moved) == len(sf.lines))
 after = campstrat.parse_strat(CR.join(moved) + CR)

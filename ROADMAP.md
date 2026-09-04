@@ -78,7 +78,7 @@ running the test suite, and running `graphify update .`.
 | 15h | Recruitment on the unit + the UV layout (v2.1.9) | M | ✅ done |
 | 15i | The model beside a transfer, art beside a pool (v2.1.10) | S | ✅ done |
 | 15j | Resizable panels, the strings warning, no em dashes (v2.1.11) | S | ✅ done |
-| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ 16e ✅ 16f ✅ 16g ✅ 16h ✅ |
+| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ 16e ✅ 16f ✅ 16g ✅ 16h ✅ 16i ✅ |
 | V3.1 | OSM backdrop + coastline tracer | M | future |
 | V3.2 | Map resize + create-from-scratch | L | future |
 | V3.3 | Overlay and layer generators | M | future |
@@ -2142,6 +2142,8 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `web/js/mapquery.js` | the query panel, the legends and the recolour of the region layer (16g) |
 | `unittransfer/stratedit.py` | the settlement block written back: its fields, its buildings, the move between faction blocks (16h) |
 | `web/js/stratedit.js` | the settlement panel, its building rows and the live plan under them (16h) |
+| `unittransfer/stratchar.py` | the character block written back: the line, the traits, the army, the family rules, the move between factions (16i) |
+| `web/js/stratchar.js` | the people panel, its trait and regiment rows and the family tab (16i) |
 | `web/js/campmap.js` | viewer, layers, legend, inspector (16c, 16d) |
 | `campmap.view` / `layer_png` | the manifest and the PNG the browser is served (16c) |
 | `campmap.layer_legend` / `probe_pixel` | what a colour means, and what one tile is (16d) |
@@ -2711,14 +2713,67 @@ and server-side validation possible at all.
   of. The campaign file is not, and it is read fresh every time a campaign
   starts, so deleting the binary would cost a recompile and change nothing.
 
-- **16i - `descr_strat.txt`, write: characters, armies, family tree.** Add,
-  edit, move and delete characters; traits and ancillaries; army unit lists with
-  the bodyguard-first rule; leader and heir flags; `relative` lines with the
-  sixteen-year and oldest-first constraints; `descr_names` pool insertion with
-  auto-localisation. A new character is inserted after the last existing
-  character **of the same faction**, not at the head of the list.
-  Exit: add a general with an army to a faction on both test mods and load the
-  campaign; every character rule in 16f passes on the result.
+- **16i - `descr_strat.txt`, write: characters, armies, family tree.**
+  ✅ **done 2026-09-05.** `stratchar.py` (1,480 lines), `web/js/stratchar.js`
+  (575), three routes on `server.py`, and `tests/test_stratchar.py` at
+  **86 checks, all passing**. The gate is 16h's, on a bigger record: **479
+  character blocks across vanilla's two campaigns and Third Age Reforged
+  re-render byte for byte** with no edits, tabs, trailing spaces and the comment
+  somebody left on a regiment included. Edit, add, delete and move are the same
+  request with a different `action`, because in the file they are the same edit.
+
+  **It is built on 16h rather than beside it.** Eleven helpers in `stratedit.py`
+  were promoted out of the private namespace and are imported here: the line
+  rewriter that keeps an indent and a comment, the assembler, the span mover,
+  the serialiser, the finding shape. A settlement block and a character block
+  are different records with one discipline, and a second copy of that
+  discipline is a second chance for one of them to drift.
+
+  **A character block already ends on the blank line after it**, which a
+  settlement block does not: 16b closes a character at the next thing that can
+  only start something else, so 216 of vanilla's 216 spans and 245 of Third Age
+  Reforged's 246 end on their own separator. Moving one is therefore a straight
+  slice, and the suite proves it the strong way - same line count, same multiset
+  of lines, every other line identical in order, and the block that lands byte
+  for byte the block that left.
+
+  **The bodyguard-first rule is vanilla's habit, not the engine's rule.** This
+  was going to be a refusal. Third Age Reforged has **213 characters with an
+  army and only 14 that hold a unit the EDU marks `general_unit` anywhere at
+  all**, never mind first; 199 lead armies with no bodyguard in them, and the
+  mod plays. So it is a warning with that number on it, and only when there is
+  an EDU on disk. **And the attribute is what is read, never the name**: that
+  mod calls 19 units Bodyguard and marks 6, so its Gondor, Arnor, Dunedain,
+  Lindon and Mithril Bodyguards are ordinary regiments as far as the engine is
+  concerned, and a check that went by the word would clear all of them.
+
+  **The two family constraints are real and real files break them.** A living
+  parent should be sixteen years older than a child: vanilla breaks it once, on
+  Egypt's Al-Zahir at 60 with Al-Mustansir at 45. Children should be oldest
+  first: vanilla breaks it twice, on Philip's four and Heinrich's three. Ages
+  are only comparable between the living, because a dead ancestor's `age` is the
+  age they died at. Both warn. So does a second leader in one faction, a family
+  line naming somebody who is not in it, and two characters of one name - which
+  five of Third Age Reforged's factions have, and which matters because a
+  `relative` line addresses people by name and nothing else.
+
+  **Fatal is what the engine's own vocabulary has no room for**, 16h's ruling in
+  its fourth phase: a type that is not one of the twelve, an age or a coordinate
+  that is not a whole number, a tile off the map, and a unit, trait or ancillary
+  the mod's own file does not declare, that last only when the file is on disk.
+
+  **A new record is written in the shape of the one beside it.** The three
+  campaigns do not agree on their own whitespace - vanilla puts a trailing space
+  on 215 of 216 character lines and the prologue on 9 of 17, and the padding
+  between a regiment's name and its numbers runs from two tabs to five - so the
+  separators are read off the nearest line of the same kind rather than decided
+  here, and a regiment is padded like every other copy of that same unit.
+
+  **Two things found by building it.** `character_record` carries a
+  `current_heir` that 16b's four leadership words did not cover, so three of
+  Third Age Reforged's records came back with no leadership at all; `campstrat`
+  now names all six. And `rewrite_line` was trimming trailing whitespace, which
+  no settlement field had and 215 of vanilla's 216 character lines do.
 
 - **16j - Factions, hordes, diplomacy, win conditions.** Faction creation by
   cloning a template, including the horde variant; `descr_sm_factions.txt`

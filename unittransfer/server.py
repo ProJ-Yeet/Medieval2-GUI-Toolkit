@@ -243,6 +243,20 @@ the three sub-phases that write descr_strat.txt itself.
                                     from between two faction blocks and put back
                                     between two others (one backup + undo)
 
+Characters, armies and the family tree (16i, see :mod:`unittransfer.stratchar`)
+  GET  /api/map/faction?mod=&campaign=&faction=
+                                 -> that faction's people: every character with
+                                    their traits, ancillaries and army, the
+                                    leader and heir, the character_records and
+                                    the relative lines, and the pickers the
+                                    boxes need
+  POST /api/map/character_plan|_apply
+                                 -> `action`: edit / add / delete / move. A new
+                                    character is inserted after the faction's
+                                    last one; a move is the block's own span
+                                    lifted into another faction (one backup +
+                                    undo)
+
 Minor Files mode (the five small campaign files, see :mod:`unittransfer.minorfiles`)
   GET  /api/minor?mod=&tab=      -> one tab's whole list (rebels / religions /
                                     resources / cultures / names), with the
@@ -317,7 +331,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, edit, modflags,
                modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campmap, campstrat, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, stratedit, strings, traits, triggers
+from . import ancillaries, campaint, campmap, campstrat, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, stratchar, stratedit, strings, traits, triggers
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1935,6 +1949,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/map/settlement_plan", "/api/map/settlement_apply"):
                 return self._json(self._settlement(
                     u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/map/character_plan", "/api/map/character_apply"):
+                return self._json(self._character(
+                    u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/map/query", "/api/map/export"):
                 return self._json(self._mapquery(
                     u.path.rsplit("/", 1)[-1], body))
@@ -2575,6 +2592,35 @@ class Handler(BaseHTTPRequestHandler):
         self.registry.invalidate(name)              # the file changed on disk
         return out
 
+    # ---- the campaign map's characters, written (16i) ----
+    def _character(self, action, body):
+        """Preview or write one character block of ``descr_strat.txt``.
+
+        The settlement handler above with a different plan in it, and the same
+        division of labour: the fact table is the vocabulary and the map the
+        coordinates are checked against, and the file the plan splices is read
+        from disk inside
+        :func:`~unittransfer.stratchar.plan_character`.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            facts = self.registry.map_facts(name, body.get("campaign") or "")
+            plan = stratchar.plan_character(mod, facts, body)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(stratchar.apply_character(plan))
+        except (OSError, ValueError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)              # the file changed on disk
+        return out
+
     # ---- the campaign map, checked (16f) ----
     def _mapcheck(self, action, body):
         """The baseline stamp, and Geomod's three auto-fixes.
@@ -3203,6 +3249,17 @@ class Handler(BaseHTTPRequestHandler):
                 facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
                 return self._json(stratedit.settlement_detail(
                     facts, (q.get("region") or [""])[0]))
+            except (campmap.MapError, ModDataError, OSError) as exc:
+                return self._err(404, str(exc))
+
+        if path == "/api/map/faction":
+            # 16i. Through the fact table for the same reason 16h's settlement
+            # form is: the parse of descr_strat.txt is already done and cached,
+            # so opening a faction's people costs nothing.
+            try:
+                facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
+                return self._json(stratchar.faction_detail(
+                    facts, (q.get("faction") or [""])[0]))
             except (campmap.MapError, ModDataError, OSError) as exc:
                 return self._err(404, str(exc))
 

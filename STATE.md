@@ -1,37 +1,90 @@
 # STATE - Medieval 2 GUI Toolkit V2 and V3
-_Updated: 2026-09-04 · **v2.1.11 released** · V3 under way: 16a-16h done, 16i next_
+_Updated: 2026-09-05 · **v2.1.11 released** · V3 under way: 16a-16i done, 16j next_
 
 ## Next up
-Start **16i** - `descr_strat.txt`, write: characters, armies, the family tree.
-The campaign file is now writable: 16h splices a settlement block, moves it
-between faction blocks and reads the file back to check what it would write.
-16i is the same discipline on the half of the file that is people. Add, edit,
-move and delete characters; traits and ancillaries; army unit lists with the
-bodyguard-first rule; leader and heir flags; `relative` lines with the
-sixteen-year and oldest-first constraints; `descr_names` pool insertion with
-auto-localisation. **A new character is inserted after the last existing
-character of the same faction**, not at the head of the list, which is the same
-"where does the block go" question 16h answered for settlements.
+Start **16j** - factions, hordes, diplomacy and win conditions. Both halves of a
+faction block can now be written: 16h its settlements, 16i its people. 16j is
+the block itself and the sections after it. Faction creation by cloning a
+template, including the horde variant; `descr_sm_factions.txt` colours and horde
+keys; `faction_standings` and `faction_relationships`; win conditions; the
+campaign globals (start and end date, timescale, brigand and pirate spawn, the
+three rosters); name pools. It reuses `factionclone.py` and the Phase 11 editor
+where those already do the job, which is most of the file half.
 
-Almost all of the machinery is standing and none of it should be written twice.
-`stratedit.render_block` is the pattern for a block rewritten a line at a time,
-`_move_lines` and `_detach_span` already move a slice between two faction
-blocks with its trailing blank, `_guard` already refuses a save that changed a
-record nobody named, and `apply_settlement` already backs up, logs and undoes.
-`campstrat` reads every character, army, unit, `character_record` and
-`relative` with its span and its field lines, and 16f already owns the
-character rules that 16i's exit criterion runs against.
+The machinery is standing and none of it should be written twice.
+`stratedit.py` holds the eleven shared helpers 16i already imports - the line
+rewriter that keeps an indent and a comment, the assembler, the span mover, the
+serialiser - and both write modules show the shape a third one takes: splice,
+re-parse, check the tree that comes out, guard it against the tree that went in,
+then back up, log and let the Log undo it. `campstrat` reads the rosters,
+`faction_standings`, `faction_relationships` and the campaign globals with their
+spans and field lines already, and `mapcheck` owns the one ordering rule that
+matters here: **a faction block may not come after the diplomacy section**, and
+16j is the phase that can create one in the wrong place.
 
-Four rulings carry into it, three from 16g and one 16h added. **One fact table,
-read by everything** - the form reads `Facts`; the write re-reads the file,
-because a writer that writes out of a cache writes over whatever changed under
-it. **A rule with no evidence reports nothing** - vanilla ships no EDU or
-`descr_names` on disk, so a bodyguard picker with nothing to read offers what
-the campaign file itself already writes. **Python owns the bytes.** And **the
-plan reads back what it would write**: splice, re-parse, check the tree that
-comes out, and guard it against the tree that went in.
+Four rulings carry in. **One fact table, read by everything** - the form reads
+`Facts`; the write re-reads the file, because a writer that writes out of a
+cache writes over whatever changed under it. **A rule with no evidence reports
+nothing** - the stock game keeps `descr_sm_factions.txt` inside its packed data,
+so on vanilla a colour picker has nothing to read and says so by name. **Python
+owns the bytes.** And **the plan reads back what it would write.**
 
 Run `python tools/upstream_sync.py sync` first, as before every sub-phase.
+
+## 16i - characters, armies and the family tree, written (2026-09-05)
+`stratchar.py` (1,480 lines), `web/js/stratchar.js` (575), three routes on
+`server.py`, and `tests/test_stratchar.py` at **86 checks, all passing**. The
+gate is 16h's on a bigger record: **479 character blocks across vanilla's two
+campaigns and Third Age Reforged re-render byte for byte**, tabs, trailing
+spaces and the comment somebody left on a regiment included. Edit, add, delete
+and move are one request with a different `action`, because in the file they are
+the same edit.
+
+**Built on 16h rather than beside it.** Eleven helpers in `stratedit.py` were
+promoted out of the private namespace and imported here rather than written
+again: the line rewriter that keeps an indent and a comment, the assembler, the
+span mover, the serialiser, the finding shape.
+
+**A character block already ends on the blank line after it**, which a
+settlement block does not: 216 of vanilla's 216 spans and 245 of Third Age
+Reforged's 246 end on their own separator, so a move is a straight slice. The
+suite proves it the strong way: same line count, same multiset of lines, every
+other line identical in order, and the block that lands byte for byte the block
+that left.
+
+**The bodyguard-first rule is vanilla's habit, not the engine's rule.** It was
+going to be a refusal. Third Age Reforged has **213 characters with an army and
+only 14 holding a `general_unit` anywhere at all**; 199 lead armies with no
+bodyguard, and it plays. Warning, with that number on it, and only when there is
+an EDU on disk. **The attribute is read, never the name**: that mod calls 19
+units Bodyguard and marks 6, so a check that went by the word would clear its
+Gondor, Arnor, Dunedain, Lindon and Mithril Bodyguards without a murmur.
+
+**The family constraints are real and real files break them.** A living parent
+sixteen years older than a child: vanilla breaks it once, on Egypt's Al-Zahir.
+Children oldest first: twice, on Philip's four and Heinrich's three. Ages are
+only comparable between the living, because a dead ancestor's `age` is the age
+they died at. All warnings, as are a second leader, a family line naming
+somebody who is not in the faction, and two characters of one name - which five
+of Third Age Reforged's factions have, and which matters because a `relative`
+line addresses people by name and nothing else.
+
+**Fatal is what the engine's vocabulary has no room for**: a type outside the
+twelve, an age or coordinate that is not a whole number, a tile off the map, and
+a unit, trait or ancillary the mod's own file does not declare, the last only
+when that file is on disk.
+
+**A new record is written in the shape of the one beside it.** The campaigns do
+not agree on their own whitespace - a trailing space on 215 of vanilla's 216
+character lines and 9 of the prologue's 17, and regiment padding from two tabs
+to five - so separators are read off the nearest line of the same kind, and a
+regiment is padded like every other copy of that same unit.
+
+**Two things found by building it.** `character_record` carries a `current_heir`
+that 16b's four leadership words did not cover, so three of Third Age Reforged's
+records came back with no leadership at all; `campstrat` now names all six. And
+`rewrite_line` was trimming trailing whitespace, which no settlement field had
+and almost every character line does.
 
 ## 16h - settlements and buildings, written (2026-09-04)
 `stratedit.py` (1,083 lines), `web/js/stratedit.js` (462), three routes on

@@ -102,15 +102,22 @@ NUMERIC = ("year_founded", "population")
 _INT = re.compile(r"-?\d+")
 
 
+# The helpers below this line are public because 16i reuses every one of them.
+# A settlement block and a character block are different records with the same
+# discipline - rewrite the line the field came from, keep its indent and its
+# comment, move the span rather than rebuild it - and a second copy of that
+# discipline is a second chance for one of them to drift.
+
+
 def _clean(line: str) -> str:
     return line.split(";", 1)[0].strip()
 
 
-def _indent_of(line: str) -> str:
+def indent_of(line: str) -> str:
     return line[:len(line) - len(line.lstrip("\t "))]
 
 
-def _comment_of(line: str) -> str:
+def comment_of(line: str) -> str:
     """The ``;`` comment on a line, with the space before it, or ``""``."""
     at = line.find(";")
     if at < 0:
@@ -120,12 +127,19 @@ def _comment_of(line: str) -> str:
     return line[at - keep:]
 
 
-def _rewrite(line: str, body: str) -> str:
-    """``body`` put back on this line with its indent and its comment kept."""
-    return _indent_of(line) + body + _comment_of(line)
+def rewrite_line(line: str, body: str) -> str:
+    """``body`` put back on this line with its indent and its comment kept.
+
+    And its trailing whitespace, when there is no comment to hold the end of
+    the line. 16i found that one: 215 of vanilla's 216 character lines end in a
+    space, and a rewrite that quietly trimmed it would change a byte on a line
+    nobody asked about.
+    """
+    got = comment_of(line)
+    return indent_of(line) + body + (got or line[len(line.rstrip()):])
 
 
-def _is_int(value) -> bool:
+def is_int(value) -> bool:
     return bool(_INT.fullmatch(str(value).strip())) if value is not None else False
 
 
@@ -168,7 +182,7 @@ def capital_of(sf: StratFile, faction: Node) -> str:
     return str(ss[0].get("region") or "") if ss else ""
 
 
-def _detach_span(sf: StratFile, node: Node, faction: Node) -> Tuple[int, int]:
+def detach_span(sf: StratFile, node: Node, faction: Node) -> Tuple[int, int]:
     """The block's own lines, plus the blank ones that follow it.
 
     A settlement block ends on its closing brace and every real file puts a
@@ -183,7 +197,7 @@ def _detach_span(sf: StratFile, node: Node, faction: Node) -> Tuple[int, int]:
     return node.start, end
 
 
-def _insert_at(sf: StratFile, faction: Node, place: str,
+def insert_at(sf: StratFile, faction: Node, place: str,
                skip: Optional[Node] = None) -> int:
     """Which line a block goes in front of to land ``first`` or ``last``.
 
@@ -196,7 +210,7 @@ def _insert_at(sf: StratFile, faction: Node, place: str,
     ss = [n for n in settlements_of(sf, faction) if n is not skip]
     if ss:
         return ss[0].start if place == "first" \
-            else _detach_span(sf, ss[-1], faction)[1] + 1
+            else detach_span(sf, ss[-1], faction)[1] + 1
     after = [n for n in sf.children_of(faction)
              if n.kind in ("character", "character_record", "relative")]
     return after[0].start if after else faction.end + 1
@@ -318,7 +332,7 @@ class Vocabulary:
 # what is wrong with a settlement as it stands
 
 
-def _finding(code: str, fatal: bool, message: str, **extra) -> dict:
+def finding(code: str, fatal: bool, message: str, **extra) -> dict:
     out = {"code": code, "fatal": fatal, "message": message}
     out.update(extra)
     return out
@@ -337,25 +351,25 @@ def check_settlement(voc: Vocabulary, kind: str, level: str, population,
     """
     out: List[dict] = []
     if kind not in SETTLEMENT_TYPES:
-        out.append(_finding(
+        out.append(finding(
             "settlement.type", True,
             f"The header says {kind!r}. The engine reads `settlement` and "
             f"`settlement castle` and nothing else."))
     if level not in LADDER:
-        out.append(_finding(
+        out.append(finding(
             "settlement.level", True,
             f"{level or '(nothing)'} is not a settlement level. The six are "
             + ", ".join(LADDER) + ", for a castle as much as for a city."))
     for slot, value in (("population", population),
                         ("year_founded", year_founded)):
         text = "" if value is None else str(value).strip()
-        if not _is_int(text):
-            out.append(_finding(
+        if not is_int(text):
+            out.append(finding(
                 f"settlement.{slot}", True,
                 f"{slot.replace('_', ' ')} is {text or '(nothing)'}, which is "
                 f"not a whole number."))
         elif slot == "population" and int(text) < 0:
-            out.append(_finding(
+            out.append(finding(
                 "settlement.population", True,
                 "A settlement cannot start with a negative population."))
 
@@ -364,7 +378,7 @@ def check_settlement(voc: Vocabulary, kind: str, level: str, population,
     for line, lvl in buildings:
         info = voc.levels.get(lvl)
         if voc.have_edb and (info is None or not info.declared):
-            out.append(_finding(
+            out.append(finding(
                 "building.unknown", True,
                 f"{lvl or '(nothing)'} is not a building level "
                 f"export_descr_buildings.txt declares, so the campaign has "
@@ -373,7 +387,7 @@ def check_settlement(voc: Vocabulary, kind: str, level: str, population,
         if info is None:
             continue
         if info.declared and line and info.line and line != info.line:
-            out.append(_finding(
+            out.append(finding(
                 "building.line", False,
                 f"{lvl} is a level of {info.line} and this line says {line}. "
                 f"The engine goes by the level; the line name beside it is "
@@ -382,7 +396,7 @@ def check_settlement(voc: Vocabulary, kind: str, level: str, population,
         key = (info.line or line).lower()
         seen[key] = seen.get(key, 0) + 1
         if seen[key] == 2:
-            out.append(_finding(
+            out.append(finding(
                 "building.repeat", False,
                 f"Two levels of {info.line or line} stand in this settlement at "
                 f"once. Third Age Reforged ships four settlements like it, so "
@@ -391,14 +405,14 @@ def check_settlement(voc: Vocabulary, kind: str, level: str, population,
         if not info.declared:
             continue
         if info.pin and kind and info.pin != kind:
-            out.append(_finding(
+            out.append(finding(
                 "building.pin", False,
                 f"{lvl} is declared for a {info.pin} and this is a {kind}. It "
                 f"stands and works; nobody can build it back if it falls.",
                 level=lvl, line=info.line))
         lo = info.settlement_min
         if lo in LADDER and at >= 0 and at < LADDER.index(lo):
-            out.append(_finding(
+            out.append(finding(
                 "building.min", False,
                 f"{lvl} wants a {lo.replace('_', ' ')} and this is a "
                 f"{level.replace('_', ' ')}. The campaign may start with it "
@@ -406,7 +420,7 @@ def check_settlement(voc: Vocabulary, kind: str, level: str, population,
                 level=lvl, line=info.line))
         hi = info.settlement_max
         if hi in LADDER and at >= 0 and at > LADDER.index(hi):
-            out.append(_finding(
+            out.append(finding(
                 "building.max", False,
                 f"{lvl} is declared up to a {hi.replace('_', ' ')} and this is "
                 f"a {level.replace('_', ' ')}.",
@@ -516,7 +530,7 @@ def _faction_rows(sf: StratFile, facts) -> List[dict]:
 # the block, rewritten a line at a time
 
 
-def _assemble(base: List[str], rewrites: Dict[int, str], drop: set,
+def assemble(base: List[str], rewrites: Dict[int, str], drop: set,
               inserts: Dict[int, List[str]]) -> List[str]:
     """``base`` with those three edits applied, in one pass and in order."""
     out: List[str] = []
@@ -542,12 +556,12 @@ def _field_home(node: Node, base: List[str], key: str) -> Tuple[int, str]:
         at = node.field_lines.get(nxt)
         if at is not None:
             local = at - node.start
-            return local, _indent_of(base[local])
+            return local, indent_of(base[local])
     homes = [node.field_lines.get(k) for k in ("region",) + FIELDS]
     last = max((a for a in homes if a is not None), default=None)
     if last is not None:
         local = last - node.start
-        return local + 1, _indent_of(base[local])
+        return local + 1, indent_of(base[local])
     return max(1, len(base) - 1), "\t"
 
 
@@ -576,7 +590,7 @@ def render_block(sf: StratFile, node: Node, edits: Optional[dict] = None,
     kind = str(edits.get("settlement_type")
                or node.get("settlement_type") or "city").strip()
     if kind != str(node.get("settlement_type") or "city"):
-        rewrites[0] = _rewrite(
+        rewrites[0] = rewrite_line(
             base[0], "settlement" if kind == "city" else f"settlement {kind}")
 
     for key in FIELDS:
@@ -589,7 +603,7 @@ def render_block(sf: StratFile, node: Node, edits: Optional[dict] = None,
         at = node.field_lines.get(key)
         if at is not None:
             local = at - node.start
-            rewrites[local] = _rewrite(base[local], f"{key} {want}".rstrip())
+            rewrites[local] = rewrite_line(base[local], f"{key} {want}".rstrip())
         elif want:
             local, indent = _field_home(node, base, key)
             inserts.setdefault(local, []).append(f"{indent}{key} {want}")
@@ -597,18 +611,18 @@ def render_block(sf: StratFile, node: Node, edits: Optional[dict] = None,
     if buildings is not None:
         old = sf.children_of(node, "building")
         if old:
-            indent = _indent_of(base[old[0].start - node.start])
+            indent = indent_of(base[old[0].start - node.start])
         else:
             # Nothing to copy the shape from, so the block's own fields say how
             # deep a line inside it sits. The opening brace is no use for this:
             # every real file writes it one level out from what it opens.
             home = next((node.field_lines[k] for k in ("region",) + FIELDS
                          if k in node.field_lines), None)
-            indent = _indent_of(base[home - node.start]) if home is not None \
-                else _indent_of(base[-1]) + "\t"
+            indent = indent_of(base[home - node.start]) if home is not None \
+                else indent_of(base[-1]) + "\t"
         first_type = next((b.field_lines["type"] for b in old
                            if "type" in b.field_lines), None)
-        inner = _indent_of(sf.lines[first_type]) if first_type is not None \
+        inner = indent_of(sf.lines[first_type]) if first_type is not None \
             else indent + "\t"
         want = list(buildings)
         for i, (line, level) in enumerate(want[:len(old)]):
@@ -622,7 +636,7 @@ def render_block(sf: StratFile, node: Node, edits: Optional[dict] = None,
                     _building_block(indent, inner, line, level))
                 continue
             local = at - node.start
-            rewrites[local] = _rewrite(base[local], f"type {line} {level}".rstrip())
+            rewrites[local] = rewrite_line(base[local], f"type {line} {level}".rstrip())
         for b in old[len(want):]:
             drop |= set(range(b.start - node.start, b.end - node.start + 1))
         if len(want) > len(old):
@@ -632,10 +646,10 @@ def render_block(sf: StratFile, node: Node, edits: Optional[dict] = None,
                 extra += _building_block(indent, inner, line, level)
             inserts.setdefault(home, []).extend(extra)
 
-    return _assemble(base, rewrites, drop, inserts)
+    return assemble(base, rewrites, drop, inserts)
 
 
-def _split_block(text: str) -> List[str]:
+def split_block(text: str) -> List[str]:
     """Hand-typed block text as lines, whatever the box put in it for newlines."""
     return text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
 
@@ -644,7 +658,7 @@ def _split_block(text: str) -> List[str]:
 # moving the block between faction blocks
 
 
-def _move_lines(lines: List[str], span: Tuple[int, int], at: int) -> List[str]:
+def move_lines(lines: List[str], span: Tuple[int, int], at: int) -> List[str]:
     """``lines`` with ``span`` lifted out and put back in front of ``at``.
 
     ``at`` is a line number in the list as it stands now, which is why it is
@@ -703,13 +717,13 @@ class StratPlan:
                 "ok": not self.errors and bool(self.text)}
 
 
-def _serialise(sf: StratFile, lines: List[str]) -> str:
+def serialise(sf: StratFile, lines: List[str]) -> str:
     """A new set of lines in the file's own newline and trailing-newline shape."""
     return (sf.newline.join(lines)
             + (sf.newline if sf.trailing_newline else ""))
 
 
-def _blocks_by_region(sf: StratFile) -> Tuple[Dict[str, str], List[str]]:
+def blocks_by_region(sf: StratFile) -> Tuple[Dict[str, str], List[str]]:
     """Every settlement's own text, keyed by the province it stands in.
 
     The guard below compares two of these. It is the whole byte-exactness claim
@@ -760,7 +774,7 @@ def _guard(before: StratFile, after: StratFile, region: str) -> List[str]:
     if before.globals != after.globals:
         out.append("this would change the campaign's own header values")
 
-    (a, a_odd), (b, b_odd) = _blocks_by_region(before), _blocks_by_region(after)
+    (a, a_odd), (b, b_odd) = blocks_by_region(before), blocks_by_region(after)
     if set(a) != set(b):
         gone = sorted(set(a) - set(b))
         got = sorted(set(b) - set(a))
@@ -878,7 +892,7 @@ def plan_settlement(mod, facts, body: dict) -> StratPlan:
     # -- 1) the block itself
     raw = str(body.get("raw_block") or "")
     if raw.strip():
-        block = _split_block(raw)
+        block = split_block(raw)
         head = _clean(block[0]) if block else ""
         if not head.lower().startswith("settlement"):
             p.errors.append(
@@ -911,7 +925,7 @@ def plan_settlement(mod, facts, body: dict) -> StratPlan:
         # brace after it sits. A parse costs a fifth of a second on the largest
         # campaign installed; a stale span costs somebody their campaign. When
         # nothing moves this parse is skipped, because step 3 does it anyway.
-        mid = campstrat.parse_strat(_serialise(sf, lines))
+        mid = campstrat.parse_strat(serialise(sf, lines))
         node2 = find_settlement(mid, p.region)
         if node2 is None:
             p.errors.append(_LOST_REGION.format(region=p.region))
@@ -931,12 +945,12 @@ def plan_settlement(mod, facts, body: dict) -> StratPlan:
             place = "" if same else "last"
         if place:
             held = mid.children_of(dest, "settlement")
-            at = _insert_at(mid, dest, place, skip=node2 if same else None)
-            span = _detach_span(mid, node2, src2) if src2 is not None \
+            at = insert_at(mid, dest, place, skip=node2 if same else None)
+            span = detach_span(mid, node2, src2) if src2 is not None \
                 else (node2.start, node2.end)
             if span[0] <= at <= span[1] + 1:
                 at = span[1] + 1                  # already where it is going
-            lines = _move_lines(mid.lines, span, at)
+            lines = move_lines(mid.lines, span, at)
             if not same:
                 p.moved = f"{source} -> {dest_name}"
                 p.owner_to = dest_name
@@ -946,7 +960,7 @@ def plan_settlement(mod, facts, body: dict) -> StratPlan:
                 p.moved = f"no longer {source}'s first settlement"
 
     # -- 3) read back exactly what would be written, and check that
-    text = _serialise(sf, lines)
+    text = serialise(sf, lines)
     done = campstrat.parse_strat(text)
     node3 = find_settlement(done, p.region)
     if node3 is None:

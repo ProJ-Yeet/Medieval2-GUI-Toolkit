@@ -271,6 +271,7 @@ function renderCampmap(){
         <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
         <div class="cmpick" id="cmPick"></div>
         <div class="cmsettle" id="cmSettle"></div>
+        <div class="cmchars" id="cmChars"></div>
       </div>
     </div>`;
   cmapWire();
@@ -279,6 +280,7 @@ function renderCampmap(){
   cpaintOpen();
   cmapPickPaint();
   csPaint();          // 16h: kept out of cmapPickPaint, which owns #cmPick only
+  cxPaint();          // 16i, for the same reason
   cmapResize();
   if(!c.view.fitted) cmapFit(); else cmapPaint();
   if(typeof rszApply === 'function') rszApply(main);
@@ -1136,9 +1138,9 @@ async function cmapPick(tile){
   // A region with no record has nothing to edit, and saying so is better than
   // an empty form: the ocean is the usual case, and a colour nobody declared is
   // the interesting one - both are named by cmapRegionName.
-  if(r && r.name){ cmapOpenRegion(r.name); csOpen(r.name); }
-  else { c.det = null; c.cv = null; state.cset = null;
-         cmapPickPaint(); csPaint(); }
+  if(r && r.name){ cmapOpenRegion(r.name); csOpen(r.name); cmapOpenPeople(r.name); }
+  else { c.det = null; c.cv = null; state.cset = null; state.cx = null;
+         cmapPickPaint(); csPaint(); cxPaint(); }
 }
 
 async function cmapProbe(c, tx, ty, want){
@@ -1149,6 +1151,25 @@ async function cmapProbe(c, tx, ty, want){
   if(state.cmap !== c || !c.pick || c.pick.join(',') !== want) return;
   c.probe = p;
   cmapPickPaint();
+}
+
+/* Whose people to show beside a province: the faction that starts holding it.
+
+   16i's panel is about a faction rather than about a tile, and the map has no
+   other way to name one - so picking a province opens the people of whoever
+   owns it, which is what somebody clicking on Nottingham to find its garrison
+   is asking for. A province nobody holds leaves the panel where it was rather
+   than emptying it, because that is a click on the sea, not a decision. */
+async function cmapOpenPeople(region){
+  const c = state.cmap;
+  let owner = '';
+  try{
+    const d = await api.get(`/api/map/settlement?mod=${enc(c.mod)}`
+      + `&region=${enc(region)}`);
+    owner = d.owner || '';
+  }catch(e){ return; }
+  if(state.cmap !== c || !owner) return;
+  cxOpen(owner);
 }
 
 /* One region's record, its pixels and the pickers its boxes need.
@@ -1572,8 +1593,8 @@ function cmapKeys(){
     else if(e.key === 'Escape' && (state.cmap.sel || state.cmap.pick)){
       const c = state.cmap;
       c.sel = null; c.pick = null; c.probe = null; c.det = null;
-      state.cset = null;
-      cmapOutline(null); cmapPaint(); cmapPickPaint(); csPaint();
+      state.cset = null; state.cx = null;
+      cmapOutline(null); cmapPaint(); cmapPickPaint(); csPaint(); cxPaint();
     }
     else return;
     e.preventDefault();

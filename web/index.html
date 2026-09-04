@@ -927,7 +927,50 @@
   .csown{display:flex;flex-direction:column;gap:5px}
   .csfind{display:flex;flex-direction:column;gap:4px;
     border-top:1px solid var(--edge);padding-top:7px;line-height:1.45}
-  .csbtns{display:flex;gap:6px}
+  .csbtns{display:flex;gap:6px;flex-wrap:wrap}
+  /* ---- 16i: the people a faction starts with ----
+     Every name starts `cx`. It reuses the settlement panel's fields, rows and
+     buttons wholesale; only the shapes 16h had no equivalent of are new. */
+  .cxpanel{display:flex;flex-direction:column;gap:9px;border:1px solid var(--edge);
+    border-radius:7px;padding:8px 9px;background:var(--panel2);font-size:11.5px}
+  .cxpanel select,.cxpanel input{font:inherit;font-size:11.5px;padding:3px 6px;
+    border-radius:6px;border:1px solid var(--edge);background:var(--panel);
+    color:var(--ink);min-width:0}
+  .cxlist{display:flex;flex-direction:column;max-height:210px;overflow-y:auto}
+  /* one character. The whole row picks them, like the validator's finding. */
+  .cxrow{display:flex;align-items:baseline;gap:6px;padding:4px 5px;
+    border-top:1px solid var(--edge);cursor:pointer;line-height:1.4;flex-wrap:wrap}
+  .cxrow:hover{background:var(--panel)}
+  .cxrow.on{background:var(--panel);border-left:2px solid var(--accent);
+    padding-left:3px}
+  .cxrow>.count{flex:1 1 auto;min-width:0}
+  .cxform{display:flex;flex-direction:column;gap:8px;
+    border-top:1px solid var(--edge);padding-top:8px}
+  .cxxy{display:flex;gap:4px}
+  .cxxy input{flex:1 1 0;min-width:0}
+  .cxxy button{font:inherit;font-size:11px;padding:2px 8px;border-radius:5px;
+    border:1px solid var(--edge);background:var(--panel2);color:var(--ink)}
+  .cxbits,.cxblds{display:flex;flex-direction:column;gap:4px}
+  /* one trait, and one regiment: the same row with different boxes in it */
+  .cxbit,.cxbld{display:flex;align-items:center;gap:4px;flex-wrap:wrap;
+    border:1px solid var(--edge);border-radius:6px;padding:4px 6px;
+    background:var(--panel)}
+  .cxbit>input:first-child{flex:1 1 50%}
+  .cxbit>input[type=number]{width:56px}
+  .cxbld>select{flex:1 1 45%}
+  .cxbld>input[type=number]{width:48px}
+  .cxbit button,.cxbld button{font:inherit;font-size:11px;padding:2px 7px;
+    border-radius:5px;border:1px solid var(--edge);background:var(--panel2);
+    color:var(--ink)}
+  .cxtags{display:flex;flex-wrap:wrap;gap:4px}
+  .cxtag{display:inline-flex;align-items:center;gap:4px;font-size:11px;
+    border:1px solid var(--edge);border-radius:11px;padding:1px 4px 1px 8px;
+    background:var(--panel)}
+  .cxtag button{font:inherit;font-size:10px;padding:0 4px;border-radius:9px;
+    border:1px solid var(--edge);background:var(--panel2);color:var(--ink)}
+  .cxfams{display:flex;flex-direction:column;gap:3px}
+  .cxfam{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;
+    line-height:1.45;padding:2px 0;border-top:1px solid var(--edge)}
   .cqsw i{flex:0 0 auto;width:13px;height:13px;border-radius:3px;
     border:1px solid var(--edge)}
   @media (max-width:1000px){
@@ -2267,6 +2310,7 @@
 <script src="js/mapcheck.js"></script>
 <script src="js/mapquery.js"></script>
 <script src="js/stratedit.js"></script>
+<script src="js/stratchar.js"></script>
 <script src="js/viewer3d.js"></script>
 <script src="js/boot.js"></script>
 </body>

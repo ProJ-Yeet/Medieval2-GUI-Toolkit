@@ -107,6 +107,16 @@ CHARACTER_TYPES = ("named character", "general", "admiral", "spy", "merchant",
                    "diplomat", "priest", "assassin", "princess", "heretic",
                    "witch", "inquisitor")
 
+#: The last field of a ``character_record``, and where each word was found.
+#: ``never_a_leader`` is all vanilla writes - 61 in the imperial campaign and 4
+#: in the prologue - and 16i found ``current_heir`` on three of Third Age
+#: Reforged's, which the first four words here did not cover, so those three
+#: records came back with no leadership at all. The pairs are kept whole rather
+#: than reduced to a rule, because a word the engine does not know is a defect
+#: worth reporting rather than a pattern to match loosely.
+LEADERSHIP = ("past_leader", "never_a_leader", "current_leader", "current_heir",
+              "leader", "heir")
+
 #: a depth-0 keyword that closes whatever faction block is open
 _FACTION_TERMINATORS = ("faction_standings", "faction_relationships",
                         "action_relationships", "script")
@@ -745,7 +755,7 @@ def _character_record(p: _Parser, i: int, s: str) -> None:
             bits = low.split()
             node.fields["dead"] = int(bits[1]) if len(bits) > 1 and \
                 re.fullmatch(r"-?\d+", bits[1]) else 0
-        elif low in ("past_leader", "never_a_leader", "leader", "heir"):
+        elif low in LEADERSHIP:
             node.fields["leadership"] = low
     for k in node.fields:
         node.field_lines[k] = i
