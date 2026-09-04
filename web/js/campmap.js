@@ -225,6 +225,9 @@ function cmapNew(mod, man){
     order: cmapOrder(man, saved.order),
     layers,
     comp: null, compKey: '',
+    // 16g's colouring: the region layer recoloured through a table the server
+    // built, drawn over the whole stack. Null when nothing is themed.
+    overlay: null, overlayKey: '', overlayAlpha: 0.85,
     view: {zoom: 1, ox: 0, oy: 0, fitted: false},
     hover: null, sel: null, outline: null, outlineKey: -1,
     // the picked tile, what all ten layers say about it, and the region record
@@ -263,6 +266,7 @@ function renderCampmap(){
         </div>
         ${cmapFindingsHtml(m.findings)}
         <div id="cmCheck"></div>
+        <div id="cmQuery"></div>
         <div id="cmPaint"></div>
         <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
         <div class="cmpick" id="cmPick"></div>
@@ -270,6 +274,7 @@ function renderCampmap(){
     </div>`;
   cmapWire();
   cchkOpen();
+  cqOpen();
   cpaintOpen();
   cmapPickPaint();
   cmapResize();
@@ -514,7 +519,8 @@ function cmapCompose(){
   // the hide set is in the key: punching a colour through changes the picture,
   // and a composite that did not notice would show the old one
   const key = shown.map(code => `${code}:${c.layers[code].opacity}`
-    + `:${[...c.layers[code].hide].sort().join('.')}`).join('|');
+    + `:${[...c.layers[code].hide].sort().join('.')}`).join('|')
+    + `|${c.overlayKey || ''}:${c.overlayAlpha}`;
   if(key === c.compKey && c.comp) return;
   if(!c.comp){
     c.comp = document.createElement('canvas');
@@ -535,6 +541,14 @@ function cmapCompose(){
     // the water surface - is stretched over the map rather than left out. It
     // is a guess and the panel says so; leaving it out would be a different lie.
     x.drawImage(L.masked || L.cv || L.img, 0, 0, m.width, m.height);
+  }
+  // 16g's colouring, drawn over everything. It is a recolour of the region
+  // layer rather than another layer, so it belongs on top of the stack and not
+  // in it: the stack stays the ten files the map is made of, and ticking one
+  // off while a theme is on still does what it says.
+  if(c.overlay){
+    x.globalAlpha = c.overlayAlpha == null ? 0.85 : c.overlayAlpha;
+    x.drawImage(c.overlay, 0, 0, m.width, m.height);
   }
   x.globalAlpha = 1;
   c.compKey = key;
@@ -1068,7 +1082,14 @@ function cmapAfterPaint(codes){
     cmapMask(c, code);
   }
   c.compKey = '';
-  if(codes.indexOf('regions') >= 0){ c.outline = null; c.outlineKey = -1; }
+  if(codes.indexOf('regions') >= 0){
+    c.outline = null; c.outlineKey = -1;
+    // A colouring is a recolour of THIS layer, so a stroke on it makes the one
+    // on screen a picture of pixels that have moved. It is dropped rather than
+    // rebuilt: rebuilding would need the table for a province the server has
+    // not been told about yet, and a stale theme is worse than none.
+    if(c.overlay){ c.overlay = null; c.overlayKey = ''; }
+  }
   cmapCompose();
   cmapPaint();
 }

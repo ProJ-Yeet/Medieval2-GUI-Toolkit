@@ -215,6 +215,21 @@ than "does what is on disk load?".
                                  -> Geomod's three debugger actions, in one
                                     backup set + undo
 
+Query, themes and information maps (16g, see :mod:`unittransfer.mapquery`)
+  GET  /api/map/query/vocab?mod=&campaign=
+                                 -> every filter with the values it can take,
+                                    every theme and information map, and the
+                                    reason on each one that cannot be asked
+  GET  /api/map/colouring?mod=&code=&campaign=
+                                 -> one theme or information map: the region to
+                                    colour table the browser paints, its legend
+                                    and any faction colour that had to be swapped
+  POST /api/map/query            -> {rules, match} -> which provinces match, why
+                                    each one does, and the colour table for them
+  POST /api/map/export           -> the same as a TGA in the cache: one picture
+                                    (`what`: colouring / query) or Geomod's batch
+                                    (`what`: factions, one file per faction)
+
 Minor Files mode (the five small campaign files, see :mod:`unittransfer.minorfiles`)
   GET  /api/minor?mod=&tab=      -> one tab's whole list (rebels / religions /
                                     resources / cultures / names), with the
@@ -289,7 +304,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, edit, modflags,
                modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campmap, mapcheck, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, strings, traits, triggers
+from . import ancillaries, campaint, campmap, campstrat, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, strings, traits, triggers
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -534,6 +549,9 @@ class Registry:
         # name -> (signature, CampaignMap). Its own cache rather than a field on
         # Mod: the map is half a second to read and most modes never touch it.
         self._maps: Dict[str, tuple] = {}
+        #: (mod, campaign) -> (the map it was built from, the campaign
+        #: files' signature, the fact table). See :meth:`map_facts`.
+        self._facts: Dict[tuple, tuple] = {}
 
     @staticmethod
     def _signature(mod: Mod) -> tuple:
@@ -698,6 +716,8 @@ class Registry:
             self._sigs.pop(name, None)
             self._checked.pop(name, None)
             self._maps.pop(name, None)
+            for k in [k for k in self._facts if k[0] == name]:
+                self._facts.pop(k, None)
 
     # ---- the campaign map, kept because building its index is not free ----
 
@@ -718,6 +738,46 @@ class Registry:
         for ly in campmap.LAYERS:
             sig.append(_stat_sig(base / ly["file"]))
         return tuple(sig)
+
+    @staticmethod
+    def _campaign_signature(mod: Mod, campaign: str) -> tuple:
+        """(size, mtime) of the campaign files the fact table is joined from.
+
+        The map's own signature is not enough: a query reads descr_strat.txt,
+        the mercenary pools and the win conditions, and none of those is a
+        layer. Editing descr_strat.txt in a text editor while the panel is open
+        is an ordinary workflow, and this is what makes the next query notice.
+        """
+        base = mod.data / campstrat.CAMPAIGN_DIR_REL / campaign
+        return tuple(_stat_sig(base / rel) for rel in
+                     (campstrat.STRAT_NAME, mapquery.MERCS_NAME,
+                      mapquery.WIN_NAME)) + (
+            _stat_sig(mod.data / mapquery.MUSIC_REL),)
+
+    def map_facts(self, name: str, campaign: str = "") -> "mapquery.Facts":
+        """This mod's campaign-map fact table, built once and kept.
+
+        Held beside the map rather than inside it, and dropped when either the
+        map object it was built from is replaced or a campaign file it was
+        joined from changes on disk. The join is the expensive half of a query
+        - one pass over descr_strat.txt and every settlement's buildings - and
+        the filters after it are dictionary lookups, so a panel that changes a
+        dropdown pays nothing.
+        """
+        campaign = campaign or campstrat.DEFAULT_CAMPAIGN
+        mod = self.describe(name)
+        cm = self.campaign_map(name)
+        sig = self._campaign_signature(mod, campaign)
+        with self._lock:
+            held = self._facts.get((name, campaign))
+            if held is not None and held[0] is cm and held[1] == sig:
+                return held[2]
+        facts = mapquery.Facts(mod, cm, campaign)
+        with self._lock:
+            self._facts[(name, campaign)] = (cm, sig, facts)
+        log.info("QUERY  %s/%s: %d regions in %d ms", name, campaign,
+                 len(facts.regions), facts.ms)
+        return facts
 
     def campaign_map(self, name: str) -> "campmap.CampaignMap":
         """This mod's campaign map, read once and kept.
@@ -1859,6 +1919,9 @@ class Handler(BaseHTTPRequestHandler):
             if (u.path.startswith("/api/map/paint")
                     or u.path in ("/api/map/region_start", "/api/map/region_cancel")):
                 return self._json(self._paint(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/map/query", "/api/map/export"):
+                return self._json(self._mapquery(
+                    u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/baseline", "/api/map/fix_plan",
                           "/api/map/fix_apply"):
                 return self._json(self._mapcheck(u.path.rsplit("/", 1)[-1], body))
@@ -2416,6 +2479,51 @@ class Handler(BaseHTTPRequestHandler):
             out["reset"] = ("the map was re-read from disk, so the strokes that "
                             "had not been saved are gone")
         return out
+
+    # ---- the campaign map, queried (16g) ----
+    def _mapquery(self, action, body):
+        """Run a set of filters over the map, or write a picture of one.
+
+        The browser sends which filters to run and what is picked in each; it
+        never sends what matched. Every rule is Python's, the same division the
+        validator and the paint tool make, so there is no second copy of
+        "has a port" on the far side to drift out of step with this one.
+
+        An export writes into the cache rather than into the mod - it is
+        derived data about somebody else's files - and answers with the folder,
+        which the browser then reveals.
+        """
+        try:
+            name = body["mod"]
+            facts = self.registry.map_facts(name, body.get("campaign") or "")
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+
+        rules = body.get("rules") or []
+        match = body.get("match") or "all"
+        if action == "query":
+            return mapquery.run_query(facts, rules, match).payload(facts)
+
+        what = str(body.get("what") or "")
+        try:
+            if what == "factions":
+                out = mapquery.export_factions(facts)
+            elif what == "query":
+                out = mapquery.export_query(
+                    facts, mapquery.run_query(facts, rules, match))
+            else:
+                out = mapquery.export_colouring(facts, str(body.get("code") or ""))
+        except (campmap.MapError, OSError, ValueError) as e:
+            return {"error": str(e)}
+        got = out.payload()
+        if not got["count"]:
+            got["error"] = "; ".join(f"{s['what']}: {s['why']}"
+                                     for s in out.skipped) or "nothing to write"
+        elif body.get("reveal") and out.folder:
+            from .folder_dialog import reveal
+            got["revealed"] = bool(reveal(str(Path(out.folder)
+                                              / out.files[0]["name"])))
+        return got
 
     # ---- the campaign map, checked (16f) ----
     def _mapcheck(self, action, body):
@@ -3017,6 +3125,22 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 return self._json(campmap.region_detail(
                     cm, (q.get("name") or [""])[0]))
+            except campmap.MapError as exc:
+                return self._err(404, str(exc))
+
+        if path in ("/api/map/query/vocab", "/api/map/colouring"):
+            # 16g. Both go through the fact table, which is where every filter,
+            # theme and information map reads from; building it is the whole
+            # cost and it is cached per (mod, campaign) on the registry.
+            try:
+                facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
+            except (campmap.MapError, ModDataError, OSError) as exc:
+                return self._err(404, str(exc))
+            if path == "/api/map/query/vocab":
+                return self._json(mapquery.vocab(facts))
+            code = (q.get("code") or [""])[0]
+            try:
+                return self._json(mapquery.colouring(facts, code).payload(facts))
             except campmap.MapError as exc:
                 return self._err(404, str(exc))
 

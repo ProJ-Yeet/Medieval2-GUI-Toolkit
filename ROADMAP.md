@@ -78,7 +78,7 @@ running the test suite, and running `graphify update .`.
 | 15h | Recruitment on the unit + the UV layout (v2.1.9) | M | ✅ done |
 | 15i | The model beside a transfer, art beside a pool (v2.1.10) | S | ✅ done |
 | 15j | Resizable panels, the strings warning, no em dashes (v2.1.11) | S | ✅ done |
-| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ 16e ✅ 16f ✅ |
+| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ 16e ✅ 16f ✅ 16g ✅ |
 | V3.1 | OSM backdrop + coastline tracer | M | future |
 | V3.2 | Map resize + create-from-scratch | L | future |
 | V3.3 | Overlay and layer generators | M | future |
@@ -2138,6 +2138,8 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `unittransfer/campaint.py` | strokes, the undo stack, the palettes and the paint save (16e) |
 | `unittransfer/mapcheck.py` | the 30 rules, the baseline and the three auto-fixes (16f) |
 | `web/js/mapcheck.js` | the validator panel, its filters and jump-to-pixel (16f) |
+| `unittransfer/mapquery.py` | the fact table, the 24 filters, the themes, Geomod's information maps and the TGA export (16g) |
+| `web/js/mapquery.js` | the query panel, the legends and the recolour of the region layer (16g) |
 | `web/js/campmap.js` | viewer, layers, legend, inspector (16c, 16d) |
 | `campmap.view` / `layer_png` | the manifest and the PNG the browser is served (16c) |
 | `campmap.layer_legend` / `probe_pixel` | what a colour means, and what one tile is (16d) |
@@ -2579,15 +2581,72 @@ and server-side validation possible at all.
   checker; the standing JavaScript measurement is unchanged at 29, and this
   module is at 2, both of which are correct as written.
 
-- **16g - Query, highlight and information maps.** TWMapReader's filter engine
-  (hidden resource, trade resource, starting regions, has port, win conditions,
-  music type, mercenary pool, culture/faction tag, creator, starting wall,
-  culture, building, building tree, rebel tribe) with faction, religion and
-  culture themes and political borders. Geomod's information maps: agriculture,
-  creators, factions, mercenary and rebel pools, population, and one map per
-  hidden resource, religion and trade resource. Batch per-faction TGA export.
-  Exit: resource, religion-majority and owner queries work on both test mods;
-  the information maps match Geomod's output for the same mod.
+- **16g - Query, highlight and information maps.** ✅ **done 2026-09-04.**
+  `mapquery.py` (1,934 lines), `web/js/mapquery.js` (581), four routes on
+  `server.py`, and `tests/test_mapquery.py` at **90 checks, all passing**.
+  **24 filters** - all fourteen TWMapReader asks for plus religion majority,
+  religion share, settlement level, city-or-castle, population, triumph, size in
+  tiles, name and "no settlement pixel" - three themes with political borders,
+  and **93 colourings on Third Age Reforged**: Geomod's nine fixed information
+  maps plus one per hidden resource, religion and trade resource actually on the
+  map.
+
+  **One fact table, read by everything.** A filter, a theme, an information map
+  and an export are four views of the same handful of sentences about a
+  province, so they are joined once - `descr_regions.txt`, the region index,
+  `descr_strat.txt` and the three small files nothing else in the toolkit read -
+  and nothing below `Facts` opens a file. 199 provinces in **384 ms** on Third
+  Age Reforged, 108 ms on vanilla, cached per (mod, campaign) on the registry
+  and dropped when a campaign file changes on disk. Every filter after that is a
+  dictionary lookup: the whole 199-province map answers a two-filter query in
+  **0 ms**.
+
+  **A rule with no evidence reports nothing**, carried straight over from 16f
+  and measured on the same map. The stock game keeps `descr_sm_factions.txt` and
+  `export_descr_buildings.txt` inside its packed data, so on vanilla the culture
+  filter is **off with that file named** rather than empty, and a query holding
+  it does not run it at all - under `all` it would empty the result, under `any`
+  it would quietly widen it, and neither is an honest answer to a question that
+  could not be asked. The building-tree filter survives the same absence,
+  because `descr_strat.txt` writes `type <line> <level>` and the line name is
+  already in the campaign file: 48 provinces on vanilla with no EDB on disk.
+
+  **A theme and an information map are the same object**, so one `Colouring`
+  builds the payload, one function writes the TGA and one draws it. The browser
+  recolours the region layer it is already holding through a table keyed by the
+  region's map colour - the same operation 16d's `cmapMask` does - and the
+  border pass compares the GROUP each region is in rather than its colour, so
+  two provinces of one faction get no line between them and the picture on
+  screen and the file on disk agree about where a frontier is.
+
+  **Two colour rulings, both measured against a real mod.** A faction keeps the
+  colour `descr_sm_factions.txt` gives it, so the map reads the way the
+  campaign's own does - unless something else on the map is already using it.
+  Third Age Reforged declares `england` as `0 0 0`, which is exactly the
+  settlement marker, and `france` as `37 37 37`, which at map size is the border
+  line; nine of its twenty-nine factions are swapped for the fallback palette
+  and the legend says which and what each clashed with, because a legend that
+  quietly recolours a faction is lying about the mod in a quieter way. And every
+  magnitude map runs along a **three-stop ramp**, not two: the first version was
+  purple to yellow through one midpoint of its own, and Third Age Reforged uses
+  farming levels 0 to 2, so the whole picture came out inside a few units of the
+  sea behind it.
+
+  Exports land in the cache, never in the mod - it is derived data about
+  somebody else's files, and a tool that drops forty TGAs into
+  `data/world/maps/base` has changed a mod nobody asked it to change - and each
+  one is written in the shape of the mod's own `map_regions.tga`, round-tripping
+  pixel for pixel. Geomod's batch writes one file per faction plus the map they
+  are all on, in one call from one fact table, because forty exports taken over
+  forty minutes are forty pictures of forty slightly different working copies.
+
+  **Two things found by building it.** `values_of` counted occurrences rather
+  than provinces, so a province with two vineyards made the count beside
+  `trade_resource = vineyard` disagree with the answer the filter gave; it now
+  counts each province once. And a resource is allowed to stand **on** a
+  settlement or port pixel - the index does not answer for a marker tile,
+  because a marker has no region colour of its own - so the region that owns the
+  marker answers instead.
 
 - **16h - `descr_strat.txt`, write: settlements and buildings.** Level, city or
   castle, population, `plan_set`, `faction_creator`, year founded, and the

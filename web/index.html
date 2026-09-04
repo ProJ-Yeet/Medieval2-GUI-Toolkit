@@ -864,6 +864,46 @@
   .cchkfixrow>button{align-self:flex-start}
   .cchkplan{display:flex;flex-direction:column;gap:5px;border:1px solid var(--accent);
     border-radius:6px;padding:6px 8px;background:var(--panel)}
+  /* ---- 16g: the query panel, the themes and the information maps ----
+     Every name starts `cq`, and it reuses the paint tool's bar and the
+     validator's panel shell rather than growing a third set that looks nearly
+     the same. */
+  .cqpanel{display:flex;flex-direction:column;gap:8px;border:1px solid var(--edge);
+    border-radius:7px;padding:8px 9px;background:var(--panel2);font-size:11.5px}
+  .cqtabs{display:flex;gap:4px;flex-wrap:wrap}
+  .cqtabs button{font:inherit;font-size:11px;padding:3px 9px;border-radius:6px;
+    border:1px solid var(--edge);background:var(--panel);color:var(--ink)}
+  .cqtabs button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+  .cqhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .cqhead select,.cqhead input[type=text],.cqhead input[type=number]{font:inherit;
+    font-size:11px}
+  .cqmatch{display:flex;gap:8px;font-size:11px;color:var(--dim)}
+  .cqrules,.cqmaps,.cqexport{display:flex;flex-direction:column;gap:7px}
+  /* one filter: what it is, what is picked in it, and what it is reading */
+  .cqrule{display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+    border:1px solid var(--edge);border-radius:6px;padding:5px 7px;
+    background:var(--panel)}
+  .cqrule select,.cqrule input{font:inherit;font-size:11px}
+  .cqrule>.count{flex-basis:100%;line-height:1.45}
+  .cqsrc{opacity:.75;font-style:italic}
+  .cqoff,.cqskip{display:flex;flex-direction:column;gap:4px;
+    border-top:1px solid var(--edge);padding-top:7px}
+  .cqres{display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--edge);
+    padding-top:7px}
+  .cqres>button{align-self:flex-start}
+  /* one matched province. The whole row is the jump, like the validator's. */
+  .cqrow{padding:4px 0;border-top:1px solid var(--edge);cursor:pointer;
+    line-height:1.45}
+  .cqrow:hover{background:var(--panel)}
+  .cqrow b{color:var(--ink)}
+  .cqleg{display:flex;flex-direction:column;gap:6px}
+  .cqleg>button{align-self:flex-start}
+  .cqswatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:3px 10px}
+  .cqsw{display:flex;align-items:center;gap:6px;font-size:11px;min-width:0}
+  .cqsw b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cqsw i{flex:0 0 auto;width:13px;height:13px;border-radius:3px;
+    border:1px solid var(--edge)}
   @media (max-width:1000px){
     .cmwrap{flex-direction:column;height:auto}
     .cmstage{min-height:60vh}
@@ -2199,6 +2239,7 @@
 <script src="js/campmap.js"></script>
 <script src="js/campaint.js"></script>
 <script src="js/mapcheck.js"></script>
+<script src="js/mapquery.js"></script>
 <script src="js/viewer3d.js"></script>
 <script src="js/boot.js"></script>
 </body>
