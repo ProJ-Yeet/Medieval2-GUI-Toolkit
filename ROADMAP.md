@@ -78,7 +78,7 @@ running the test suite, and running `graphify update .`.
 | 15h | Recruitment on the unit + the UV layout (v2.1.9) | M | ✅ done |
 | 15i | The model beside a transfer, art beside a pool (v2.1.10) | S | ✅ done |
 | 15j | Resizable panels, the strings warning, no em dashes (v2.1.11) | S | ✅ done |
-| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ |
+| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ 16e ✅ |
 | V3.1 | OSM backdrop + coastline tracer | M | future |
 | V3.2 | Map resize + create-from-scratch | L | future |
 | V3.3 | Overlay and layer generators | M | future |
@@ -2135,6 +2135,7 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `unittransfer/maptga.py` | TGA read/write preserving type, depth, origin and footer (Pillow decodes; the header is ours) |
 | `unittransfer/mapvocab.py` | ground/climate/feature/height colour tables with localised names, in `edbvocab.py`'s shape |
 | `unittransfer/campstrat.py` | `descr_strat.txt` as a line-preserving block model with an interval index |
+| `unittransfer/campaint.py` | strokes, the undo stack, the palettes and the paint save (16e) |
 | `unittransfer/mapcheck.py` | the validator and its auto-fixes |
 | `web/js/campmap.js` | viewer, layers, legend, inspector (16c, 16d) |
 | `campmap.view` / `layer_png` | the manifest and the PNG the browser is served (16c) |
@@ -2392,20 +2393,98 @@ and server-side validation possible at all.
   four-column grid silently won - the reason CSS names are now checked against
   the sheet the same way top-level JS names are.
 
-- **16e - The paint tool.** Pencil, brush, bucket and pipette (Geomod's four)
-  plus Demir's water brush. **Region-colour snapping**: the brush always writes
-  the selected region's canonical RGB, so drift is impossible and black or white
-  can never be produced by accident. Water paints `map_regions`, `map_heights`
-  and `map_ground_types` together from the inferred water palette, skipping
-  settlement and port pixels and reporting how many it protected. Per-layer
-  presets from `mapvocab.py`. Mylae's three-step new-region wizard (paint, place
-  settlement, place port or skip) with the touching-another-region rule
-  enforced. **Unlimited undo** - Geomod has one level, Demir has none, Mylae has
-  one snapshot. Strokes post to Python, which owns the bytes, the backup and the
-  undo entry. `map.rwm` deleted on save.
-  Exit: paint a new region, place its city and port, save, and the game loads
-  the campaign. A layer written back and re-read is byte-identical outside the
-  painted rectangle. Undo restores the mod byte-exact.
+- **16e - The paint tool.** ✅ **done 2026-09-04.** `campaint.py` (1,381
+  lines), `web/js/campaint.js` (871), nine routes on `server.py`, `repixel` on
+  `CampaignMap`, and `tests/test_campaint.py` at **95 checks, all passing** on
+  a map the suite writes itself and on vanilla's, with six more per additional
+  installed map. The screen stops being a viewer with an editable record and
+  starts changing the map.
+
+  **Python owns the bytes, and there is one set of them.** The browser draws a
+  provisional trail under the cursor and posts the pointer samples; `campaint`
+  expands them, snaps the colour, refuses what must not be written, applies it
+  to *the layer image the whole server is already serving from*, and answers
+  with the tiles that actually moved. The browser throws its trail away and
+  writes that answer into its own copy. So the probe, the legend and the layer
+  PNGs all show the unsaved map - there is no second copy of the pixels to
+  disagree with the first - and a disagreement between the preview and the file
+  cannot outlive one pointer-up. `CampaignMap.repixel` is the other half of
+  that: the decoded image and its header stay, everything derived from them
+  goes, and the index, the sea mask and the adjacency are dropped only when a
+  layer that feeds them moved.
+
+  **Region-colour snapping is a name, not a colour.** A stroke on
+  `map_regions.tga` sends the region's NAME; the server writes that record's own
+  RGB. Drift is impossible, the palette for that layer is the region list, and
+  the two marker colours cannot be produced by a brush at all - they are placed
+  one tile at a time by the wizard, and a stroke that would cover one skips it
+  and says how many it protected.
+
+  **The block is what a tile owns, and the blocks partition the layer exactly.**
+  Three layers are one pixel per tile; the rest are 2W x 2H or 2W+1 x 2H+1, and
+  a tile there is a rectangle. `block()` is that rule, asserted pixel by pixel:
+  every pixel of an aligned layer belongs to exactly one tile, the `2W+1`
+  layers' leading row and column included - otherwise nothing owns them and a
+  painted coastline keeps a one-pixel seam of the old map along two edges - and
+  the pixel the engine samples is always inside its own tile's block.
+
+  **Unlimited undo, because a stroke is one colour.** Every tool writes a single
+  value per layer, so a stroke is a tile list plus one RGB rather than a bitmap,
+  and the stack holds pixel deltas in an `array("i")`. Geomod has one level,
+  Mylae keeps one snapshot of the layer and Demir has none, and all three are
+  paying for a model where a stroke could have been anything. Backwards is not
+  "paint the old colour over it": the pixels a stroke covered were not all one
+  colour, so the old value is stored per pixel and put back per pixel, which is
+  what makes an undo byte-exact rather than merely plausible. The one bound is
+  memory (`UNDO_BUDGET`), and the panel says when it bites.
+
+  **The water brush measures rather than assumes.** Demir writes a hard-coded
+  triple per layer, which is right for one mod and wrong for the next: the sea
+  colour on `map_regions.tga` is declared in no record, so it is whatever the
+  author used, and vanilla and DaC do not agree. So it is the commonest colour
+  among the tiles the engine calls sea, per layer, with the count beside it on
+  screen - vanilla measures `(41,140,233)` / `(0,0,253)` / `(196,0,0)` from
+  20,012 sea tiles.
+
+  **The palettes are closed where a table exists and open where a rule does.**
+  Regions, ground types, features and climates are held to their vocabulary and
+  a colour outside it is refused by name, because an unknown colour on
+  `map_ground_types.tga` is precisely what 16f exists to report and a tool that
+  can create one manufactures its own bug reports. Heights, roughness, fog and
+  trade routes are magnitudes, so their palette is the map's own colours and the
+  rule that governs them is said on the screen.
+
+  **The wizard's steps are questions about the pixels, never a counter.** How
+  many tiles carry this colour, is there a settlement pixel this region owns, is
+  there a port - counted every time, so the panel cannot claim a step is done
+  when the map says otherwise. Marker ownership is Gigantus's cardinal rule, the
+  same one `_owner_of_marker` gives the index, with the pending region counted
+  as a region: proximity would have reported the city next door as this one's.
+  The rules enforced: name and settlement name free, colour free and not a
+  marker, contiguity, Mylae's touching-a-declared-region rule, the settlement on
+  one of its own tiles and not on sea, impassable ground or a
+  river/ford/source/volcano, religions totalling 100, a creator faction present.
+  A save also refuses to leave any region with no tiles at all, and warns that a
+  new province renumbers every region the engine scans after it.
+
+  Also here: `descr_regions.txt` gets the new record spliced in front of a
+  wasteland entry rather than after it (the arbiter says a settlement-less
+  record must be last), in the file's own indent and `legion:` form; every
+  painted layer, the record and `map.rwm` go into ONE backup set, so the Log's
+  Undo reverses the whole save; and a plan compares BYTES rather than stroke
+  counts, so painting and then undoing back to the start saves nothing.
+
+  **Two things found by building it.** A session holds the `CampaignMap` it
+  painted, and the registry drops that object when a file the map was read from
+  changes on disk - so a layer edited in Photoshop under unsaved strokes ends
+  the session, and every answer from then on carries `reset` saying so rather
+  than a fresh session appearing silently under somebody's hand. And vanilla's
+  `map_fog.tga` does **not** re-encode byte for byte: whatever packed it wrote a
+  five-pixel literal where `maptga._rle_row` starts a run, so ours is 11,327
+  bytes against 12,009, pixel for pixel identical and settled on a second pass.
+  RLE has more than one legal packing of a row; 16a's claim was byte-for-byte
+  and the true one is the shape and the picture, which `maptga`'s docstring and
+  `test_campmap` now both say.
 
 - **16f - The validator.** `mapcheck.py`. The union of Demir's rule set,
   Mylae's eight checks, TWMapReader's twenty-three and Geomod's debugger: layer

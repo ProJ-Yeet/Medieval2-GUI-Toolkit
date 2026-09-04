@@ -30,6 +30,16 @@ file. So a layer written here goes back **in the shape it arrived in** - same
 image type, same depth, same descriptor, same ID field, same footer - and the
 only thing that changes is the pixels the user painted.
 
+That promise is the shape and the pixels, and **not** byte-for-byte, because RLE
+has more than one legal packing of the same row. Byte-for-byte is what usually
+falls out of it - all ten of DaC's layers, and nine of vanilla's ten - and there
+is one case in the wild where it does not: vanilla's ``map_fog.tga`` writes a
+five-pixel literal packet where :func:`_rle_row` starts a run, so what comes
+back out is 11,327 bytes against 12,009, pixel for pixel identical, and settled
+(a second pass produces the same bytes again). Both files are valid TGA and the
+engine reads either. Said here rather than left for somebody to find as a failing
+test: the guarantee is the picture and the header, not the packing.
+
 The other half of the split is orientation. TGA stores rows bottom-up unless
 descriptor bit 5 says otherwise, and columns right-to-left if bit 4 is set.
 Everything above this module works in **image coordinates** (0,0 top-left,

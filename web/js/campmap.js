@@ -14,8 +14,11 @@
    it readable and the one that makes it an editor - the layer stack remembered
    between sessions, a legend in which a layer's "nothing here" colour stops
    being drawn, a probe naming one tile on all ten layers at once, and the
-   region record itself with its Code View. It still does not paint or
-   validate: 16e is the brush, 16f the validator.
+   region record itself with its Code View. Phase 16e made it an editor of the
+   pixels as well: campaint.js arms a brush over this canvas, writes through
+   `cmapPixels` and repaints through `cmapAfterPaint`, and everything in this
+   file that reads a layer reads the painted copy rather than the picture that
+   arrived. It still does not validate; 16f is the validator.
 
    THE BROWSER NEVER PARSES A TGA. Python decodes every layer, projects it to
    one pixel per tile and serves PNG from /api/map/layer; the manifest at
@@ -207,6 +210,10 @@ function cmapNew(mod, man){
         ? saved.opacity[l.code] : l.opacity,
       img: null, loading: false, failed: '',
       hide: new Set(hide), masked: null, maskKey: '',
+      // the browser's own readable/writable copy of this layer's pixels, made
+      // on first need and from then on the truth about the layer - see
+      // cmapPixels. 16c kept one of these for the region layer alone.
+      cv: null, px: null,
       legend: null, legendBusy: false, legendErr: '', open: false,
     };
   }
@@ -220,9 +227,6 @@ function cmapNew(mod, man){
     comp: null, compKey: '',
     view: {zoom: 1, ox: 0, oy: 0, fitted: false},
     hover: null, sel: null, outline: null, outlineKey: -1,
-    // the browser's own copy of the region layer, built on the first hover and
-    // read one pixel at a time - see cmapRegionAt
-    scratch: null,
     // the picked tile, what all ten layers say about it, and the region record
     // it belongs to with the working copy the form edits
     pick: null, probe: null, probeErr: '', det: null, busy: false,
@@ -258,11 +262,13 @@ function renderCampmap(){
             ${m.regions.filter(r => r.port).length} ports</span>
         </div>
         ${cmapFindingsHtml(m.findings)}
+        <div id="cmPaint"></div>
         <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
         <div class="cmpick" id="cmPick"></div>
       </div>
     </div>`;
   cmapWire();
+  cpaintOpen();
   cmapPickPaint();
   cmapResize();
   if(!c.view.fitted) cmapFit(); else cmapPaint();
@@ -526,7 +532,7 @@ function cmapCompose(){
     // A layer with no relationship to the tile grid - the front-end picture,
     // the water surface - is stretched over the map rather than left out. It
     // is a guess and the panel says so; leaving it out would be a different lie.
-    x.drawImage(L.masked || L.img, 0, 0, m.width, m.height);
+    x.drawImage(L.masked || L.cv || L.img, 0, 0, m.width, m.height);
   }
   x.globalAlpha = 1;
   c.compKey = key;
@@ -661,6 +667,22 @@ function cmapOverlay(x, s0, t0, s1, t1){
                 cmapX(s0), cmapY(t0), (s1 - s0) * v.zoom, (t1 - t0) * v.zoom);
   }
 
+  /* The stroke being drawn right now, before the server has answered.
+
+     A map-sized canvas that tiles are added to as the pointer passes over them
+     and blitted here like the outline, rather than a few thousand strokeRects
+     per frame. It is a promise, not a result: what lands is what Python did
+     with the same samples, and this is thrown away and replaced by that on
+     pointer-up. */
+  const trail = cpaintTrail();
+  if(trail){
+    x.imageSmoothingEnabled = false;
+    x.globalAlpha = 0.7;
+    x.drawImage(trail, s0, t0, s1 - s0, t1 - t0,
+                cmapX(s0), cmapY(t0), (s1 - s0) * v.zoom, (t1 - t0) * v.zoom);
+    x.globalAlpha = 1;
+  }
+
   if(v.zoom >= CMAP_GLYPH_ZOOM){
     // A glyph is drawn ON the tile, from the same two lines as everything else,
     // so it cannot drift off the pixel it is about however far you zoom in.
@@ -718,17 +740,29 @@ function cmapCellRect(tx, ty){
    frame costs a fraction of a millisecond here, and scheduling it would put the
    picture one event behind the pointer - which is the exact thing named as this
    sub-phase's anti-goal. */
+/* …and one thing 16e adds: which of the two the left button is for.
+
+   With the paint tool armed the left button draws and the other two still pan,
+   because a tool you have to put down to move the view is a tool you fight.
+   With it off, nothing below behaves differently from 16c. */
 function cmapPointers(cv){
-  let last = null, moved = 0;
+  let last = null, moved = 0, mode = '';
   cv.addEventListener('contextmenu', e => e.preventDefault());
   cv.addEventListener('pointerdown', e => {
     last = [e.clientX, e.clientY]; moved = 0;
     cv.setPointerCapture(e.pointerId);
+    mode = (e.button === 0 && cpaintArmed()) ? 'paint' : 'pan';
+    if(mode === 'paint') cpaintDown(cmapEventTile(cv, e));
   });
   cv.addEventListener('pointerup', e => {
-    if(last && moved < CMAP_DRAG_SLOP && state.cmap) cmapPick(cmapEventTile(cv, e));
-    last = null;
+    if(mode === 'paint') cpaintUp();
+    else if(last && moved < CMAP_DRAG_SLOP && state.cmap) cmapPick(cmapEventTile(cv, e));
+    last = null; mode = '';
     try{ cv.releasePointerCapture(e.pointerId); }catch(err){}
+  });
+  cv.addEventListener('pointercancel', () => {
+    if(mode === 'paint') cpaintCancel();
+    last = null; mode = '';
   });
   cv.addEventListener('pointerleave', () => {
     const c = state.cmap;
@@ -740,6 +774,11 @@ function cmapPointers(cv){
   cv.addEventListener('pointermove', e => {
     const c = state.cmap;
     if(!c) return;
+    if(mode === 'paint'){
+      cpaintMove(cmapEventTile(cv, e));
+      cmapHover(cmapEventTile(cv, e));
+      return;
+    }
     if(last){
       const dx = e.clientX - last[0], dy = e.clientY - last[1];
       moved += Math.abs(dx) + Math.abs(dy);
@@ -842,23 +881,37 @@ function cmapRegionName(r){
   return 'a region <code>descr_regions.txt</code> never declares';
 }
 
-function cmapRegionAt(tx, ty){
-  const c = state.cmap, L = c.layers.regions;
+/* One layer's pixels as a canvas the browser can read AND write.
+
+   16c kept one of these for the region layer alone and called it `scratch`,
+   because the hover readout needs a colour per pointer event and a round trip
+   there is the exact thing this screen's rules exist to prevent. 16e paints, so
+   any layer can need one - and once a layer has been painted, this canvas
+   rather than its <img> is the truth about it. So everything that reads or
+   draws a layer goes through here: there is one copy per layer, and never two
+   that can disagree.
+
+   Layers are served at tile fit, so one pixel here is one tile, which is the
+   coordinate system every stroke and every answer from the server is in. */
+function cmapPixels(code){
+  const c = state.cmap, L = c && c.layers[code];
   if(!L || !L.img) return null;
-  if(tx < 0 || ty < 0 || tx >= c.man.width || ty >= c.man.height) return null;
-  // `scratch`, not `probe`: 16d took that word for the pixel probe, which is
-  // the panel naming this tile on all ten layers. This is the browser's own
-  // copy of the region layer, kept so a hover costs a 1x1 getImageData rather
-  // than a megabyte held twice or a round trip per pointer event.
-  if(!c.scratch){
-    c.scratch = document.createElement('canvas');
-    c.scratch.width = c.man.width; c.scratch.height = c.man.height;
-    const px = c.scratch.getContext('2d', {willReadFrequently: true});
-    px.imageSmoothingEnabled = false;
-    px.drawImage(L.img, 0, 0);
+  if(!L.cv){
+    L.cv = document.createElement('canvas');
+    L.cv.width = L.img.naturalWidth || L.img.width;
+    L.cv.height = L.img.naturalHeight || L.img.height;
+    L.px = L.cv.getContext('2d', {willReadFrequently: true});
+    L.px.imageSmoothingEnabled = false;
+    L.px.drawImage(L.img, 0, 0);
   }
-  const d = c.scratch.getContext('2d', {willReadFrequently: true})
-              .getImageData(tx, ty, 1, 1).data;
+  return L.cv;
+}
+
+function cmapRegionAt(tx, ty){
+  const c = state.cmap;
+  if(tx < 0 || ty < 0 || tx >= c.man.width || ty >= c.man.height) return null;
+  if(!cmapPixels('regions')) return null;
+  const d = c.layers.regions.px.getImageData(tx, ty, 1, 1).data;
   const k = (d[0] << 16) | (d[1] << 8) | d[2];
   const mk = c.man.markers;
   if(k === ((mk.settlement[0] << 16) | (mk.settlement[1] << 8) | mk.settlement[2]))
@@ -877,12 +930,9 @@ function cmapOutline(r){
   const c = state.cmap;
   if(!r){ c.outline = null; c.outlineKey = -1; return; }
   if(c.outlineKey === r.key) return;
-  const L = c.layers.regions;
-  if(!L || !L.img){ c.outline = null; return; }
   const W = c.man.width, H = c.man.height;
-  if(!c.scratch) cmapRegionAt(0, 0);         // builds the scratch copy
-  const src = c.scratch.getContext('2d', {willReadFrequently: true})
-                .getImageData(0, 0, W, H).data;
+  if(!cmapPixels('regions')){ c.outline = null; return; }
+  const src = c.layers.regions.px.getImageData(0, 0, W, H).data;
   const out = document.createElement('canvas');
   out.width = W; out.height = H;
   const im = out.getContext('2d').createImageData(W, H);
@@ -986,7 +1036,9 @@ function cmapMask(c, code){
   cv.width = w; cv.height = h;
   const x = cv.getContext('2d', {willReadFrequently: true});
   x.imageSmoothingEnabled = false;
-  x.drawImage(L.img, 0, 0);
+  // from the painted copy when there is one - a hidden colour has to be punched
+  // out of the layer as it is NOW, not as it arrived
+  x.drawImage(L.cv || L.img, 0, 0);
   const im = x.getImageData(0, 0, w, h), d = im.data;
   for(let i = 0, n = w * h; i < n; i++){
     const p = i * 4;
@@ -994,6 +1046,29 @@ function cmapMask(c, code){
   }
   x.putImageData(im, 0, 0);
   L.masked = cv; L.maskKey = want;
+}
+
+/* The layers whose pixels just changed, put back on screen.
+
+   Called by the paint tool after it has written the server's answer into
+   `cmapPixels`. Three things are stale after that and all three are named here
+   rather than left to a cache key that cannot see pixels: the punched-through
+   copy of a layer whose hidden colours may now cover different tiles, the
+   composite (whose key is the layer SET, which has not changed), and the
+   selected region's outline when it was the region layer that moved. */
+function cmapAfterPaint(codes){
+  const c = state.cmap;
+  if(!c) return;
+  for(const code of codes){
+    const L = c.layers[code];
+    if(!L) continue;
+    L.maskKey = '';
+    cmapMask(c, code);
+  }
+  c.compKey = '';
+  if(codes.indexOf('regions') >= 0){ c.outline = null; c.outlineKey = -1; }
+  cmapCompose();
+  cmapPaint();
 }
 
 function cmapHideColour(code, key, on){
@@ -1173,7 +1248,7 @@ const CMAP_LOCKED = {
       + 'text file all point at this name',
   rgb: 'This is the colour the region is painted on map_regions.tga. Changing '
      + 'the number without repainting the pixels would leave the region with no '
-     + 'tiles at all, and the brush is 16e',
+     + 'tiles at all. Arm the brush above and repaint them instead',
 };
 
 function cmapFormHtml(){
@@ -1292,8 +1367,9 @@ function cmapReligionRows(){
   }).join('');
 }
 
-//: What the pixels say, which is read-only here on purpose: moving a settlement
-//: or a border means painting map_regions.tga, and the brush is 16e's.
+//: What the pixels say. Read-only in this panel on purpose: moving a border or
+//: a settlement means painting map_regions.tga, which is what the brush above
+//: is for - a number typed into a box here could not move a pixel.
 function cmapPixelHtml(){
   const d = state.cmap.det, px = d.pixels;
   if(d.pixels_problem) return `<div class="k">On the map</div>
@@ -1304,7 +1380,8 @@ function cmapPixelHtml(){
     pixel of map_regions.tga is painted its colour. That is legal to write and
     fatal to play.</div>`;
   const g = p => p ? `${p[0]}, ${p[1]}` : '-';
-  return `<div class="k">On the map <span class="count">read-only until 16e</span></div>
+  return `<div class="k">On the map <span class="count">counted off the
+      pixels - arm the brush to change them</span></div>
     <div class="cmkv">
       <span>Region ID</span><b>${px.region_id >= 0 ? px.region_id : '-'}</b>
       <span>Tiles</span><b>${px.count.toLocaleString()}${px.sea

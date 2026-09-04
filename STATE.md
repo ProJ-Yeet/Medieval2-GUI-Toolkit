@@ -1,20 +1,99 @@
 # STATE - Medieval 2 GUI Toolkit V2 and V3
-_Updated: 2026-09-04 · **v2.1.11 released** · V3 under way: 16a-16d done, 16e next_
+_Updated: 2026-09-04 · **v2.1.11 released** · V3 under way: 16a-16e done, 16f next_
 
 ## Next up
-Start **16e** - the paint tool. Pencil, brush, bucket and pipette plus Demir's
-water brush, with region-colour snapping so the brush always writes the selected
-region's canonical RGB and drift is impossible. The pieces it needs are all
-standing: `campmap.tiles()` caches the tile-fit picture of every layer,
-`invalidate()` already drops the index, the sea mask and the tile cache
-together, `maptga.encode` round-trips all ten of DaC's layers byte for byte, and
-the region panel is the thing a stroke will be aimed by. Unlimited undo is the
-part no reference tool has - Geomod has one level, Demir none, Mylae one
-snapshot - and the shape for it is `apply_region`'s: back the layer up, write,
-log, and let the Log's Undo reverse it. `map.rwm` is deleted on save, which 16d
-already does.
+Start **16f** - the validator, `mapcheck.py`. The union of Demir's rule set,
+Mylae's eight checks, TWMapReader's twenty-three and Geomod's debugger, with
+**baseline fingerprinting** so a problem the untouched mod already had is shown
+without blocking a save. Most of what it needs is standing and several of its
+rules are already written once: `check_new_region` in `campaint.py` enforces the
+settlement-on-sea, settlement-on-impassable, marker-on-a-river and
+religions-total-100 rules for a NEW province, and 16f is where they become
+rules about every province - so the move is to lift them out of `campaint` into
+`mapcheck` and have `campaint` call them, rather than write a second copy that
+can drift from the first. The index already reports the findings a read can see
+(`campmap.view`'s `findings`), the vocabularies already say which colours no
+table names, and `plan_paint` already refuses a save that would leave a region
+with no tiles.
+
+The four test cases 16a banked are still the exit criteria: DaC's stray
+`(1,1,1)` pixel in `map_features.tga`, its 517-tile undeclared province at
+image (318,54)-(372,68), the five one-channel misses in `map_climates.tga`, and
+the extension-area offset trap in `water_surface.tga`. Add a fifth from 16e:
+vanilla's `map_fog.tga` repacks rather than round-tripping byte for byte, which
+is legal and worth a baseline entry rather than a complaint.
 
 Run `python tools/upstream_sync.py sync` first, as before every sub-phase.
+
+## 16e - the paint tool (2026-09-04)
+`campaint.py` (1,381 lines), `web/js/campaint.js` (871), nine routes on
+`server.py`, `repixel` on `CampaignMap`, and `tests/test_campaint.py` at
+**95 checks, all passing** on a map the suite writes itself and on vanilla's,
+with six more per additional installed map. The map stops being a picture here.
+
+**Python owns the bytes, and there is one set of them.** The browser draws a
+provisional trail under the cursor and posts the pointer samples, once per
+stroke rather than per pointer event; `campaint` expands them, snaps the colour,
+refuses what must not be written, applies it to *the layer image the whole
+server is already serving from*, and answers with the tiles that actually moved.
+The browser throws its trail away and writes that answer into its own copy. So
+the probe, the legend and the layer PNGs all show the unsaved map, and a
+disagreement between the preview and the file cannot outlive one pointer-up.
+`repixel` is the other half: the decoded image and its header stay, everything
+derived from them goes, and the index, the sea mask and the adjacency are
+dropped only when a layer that feeds them moved.
+
+**Snapping is a name, not a colour.** A stroke on `map_regions.tga` sends the
+region's NAME and the server writes that record's own RGB, so a province cannot
+drift a channel, the palette for that layer is the region list, and the two
+marker colours cannot come out of a brush at all. They are placed one tile at a
+time by the wizard, and a stroke that would cover one skips it and says how many
+it protected.
+
+**A tile owns a rectangle, and the rectangles partition the layer exactly.**
+`block()` is that rule, asserted pixel by pixel on all three grids - the `2W+1`
+layers' leading row and column included, or nothing owns them and a painted
+coastline keeps a one-pixel seam of the old map along two edges. The pixel the
+engine samples is always inside its own tile's block, so what the tile view
+shows after a stroke is what was painted.
+
+**Unlimited undo, because a stroke is one colour.** Every tool writes a single
+value per layer, so a stroke is a tile list plus one RGB rather than a bitmap
+and the stack is pixel deltas in an `array("i")`. Undo is not "paint the old
+colour back": the covered pixels were not all one colour, so the old value is
+stored and restored per pixel, which is what makes it byte-exact rather than
+plausible. Geomod has one level, Mylae one snapshot, Demir none.
+
+**The water brush measures.** Demir hard-codes a triple per layer; the sea
+colour on `map_regions.tga` is declared in no record, so it is whatever the
+author used and vanilla and DaC do not agree. It is the commonest colour among
+the tiles the engine calls sea, per layer, with the count on screen - vanilla
+measures `(41,140,233)` / `(0,0,253)` / `(196,0,0)` from 20,012 sea tiles.
+
+**Closed palettes where a table exists, open where a rule does.** Regions,
+ground types, features and climates refuse a colour outside their vocabulary by
+name; heights, roughness, fog and trade routes are magnitudes, so their palette
+is the map's own colours and the rule is said on the screen.
+
+**The wizard's steps are questions about the pixels.** How many tiles carry this
+colour, is there a settlement pixel this region owns, is there a port - counted
+every time. Marker ownership is Gigantus's cardinal rule, the same one the index
+uses, with the pending region counted as a region; proximity would have reported
+the city next door as this one's. Every painted layer, the new record and
+`map.rwm` go into ONE backup set, so the Log's Undo reverses the whole save, and
+a plan compares BYTES rather than stroke counts - paint and undo back to the
+start and there is nothing to save.
+
+**Two things found by building it.** A session holds the `CampaignMap` it
+painted and the registry drops that object when a file the map was read from
+changes on disk, so a layer edited in Photoshop under unsaved strokes ends the
+session and every answer from then on says so - better than a fresh one
+appearing silently. And vanilla's `map_fog.tga` does **not** re-encode byte for
+byte: whatever packed it wrote a five-pixel literal where `_rle_row` starts a
+run, so ours is 11,327 bytes against 12,009, pixel for pixel identical and
+settled on a second pass. RLE has more than one legal packing of a row; the
+guarantee is the shape and the picture, and `maptga`'s docstring and
+`test_campmap` now both say that instead of claiming the packing.
 
 ## 16d - layers, legend, inspector (2026-09-04)
 `campmap.py` (+560), `web/js/campmap.js` (834 to 1,455), a `regions` kind in
@@ -1353,7 +1432,8 @@ underneath. Both fixed; see ROADMAP.md's 14f outcome.
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
-| 16 - Campaign Map Editor (V3.0.0) | **16a-16d done, 16e next** | Scoped 2026-09-03 from four references into eleven sessions, 16a-16k, with V3.1-V3.3 as future releases. Pillow only, no numpy and no C extension - measured, see ROADMAP.md Phase 16. **16a and 16b landed 2026-09-03**: `maptga.py`, `mapvocab.py`, `campmap.py` (62/62) and `campstrat.py` (75/75). The whole read half of the engine is done and every file it touches round-trips byte-exact. **16c landed 2026-09-04**: `web/js/campmap.js`, the manifest and PNG half of `campmap.py`, `/api/map` and `/api/map/layer`, `test_campview.py` (50/50) over vanilla's map as well as DaC's; a pan frame is 0.02 to 0.18 ms and the picked pixel is exact. **16d landed 2026-09-04**: the layer stack remembered on `/api/settings`, `layer_legend` and the `BLANK` table that turns a layer into an overlay, `probe_pixel` over all ten layers, region adjacency, and the editable `descr_regions.txt` record with its Code View, its religion rule and its undo - `test_campedit.py` (85/85) over both maps, and every record of both re-renders byte-exact. Each is written up in its own section above. Still to come: `mapcheck.py`, `campaint.js`; **not** `stratmap.py`, which is a different concern |
+| 16 - Campaign Map Editor (V3.0.0) | **16a-16e done, 16f next** | Scoped 2026-09-03 from four references into eleven sessions, 16a-16k, with V3.1-V3.3 as future releases. Pillow only, no numpy and no C extension - measured, see ROADMAP.md Phase 16. **16a and 16b landed 2026-09-03**: `maptga.py`, `mapvocab.py`, `campmap.py` (62/62) and `campstrat.py` (75/75). The whole read half of the engine is done and every file it touches round-trips byte-exact. **16c landed 2026-09-04**: `web/js/campmap.js`, the manifest and PNG half of `campmap.py`, `/api/map` and `/api/map/layer`, `test_campview.py` (50/50) over vanilla's map as well as DaC's; a pan frame is 0.02 to 0.18 ms and the picked pixel is exact. **16d landed 2026-09-04**: the layer stack remembered on `/api/settings`, `layer_legend` and the `BLANK` table that turns a layer into an overlay, `probe_pixel` over all ten layers, region adjacency, and the editable `descr_regions.txt` record with its Code View, its religion rule and its undo - `test_campedit.py` (85/85) over both maps, and every record of both re-renders byte-exact. Each is written up in its own section above. **16e landed 2026-09-04**: `campaint.py` and `web/js/campaint.js` - five tools, region-colour snapping, closed palettes, the measured water brush, unlimited undo over pixel deltas, and Mylae's three-step new-region wizard; `test_campaint.py` (95/95 here, six more per
+additional installed map), every painted layer byte-identical outside the painted tiles and an undo that restores it byte-exact. Still to come: `mapcheck.py`; **not** `stratmap.py`, which is a different concern |
 | 15j - resizable panels, the strings warning, no em dashes | **done** | **v2.1.11.** `rsz*` in `core.js`: `resize:vertical` on every scroll box the stylesheet declares (found by reading `document.styleSheets`, 31 selectors, `.wpop` and `.modal` skipped), `resize:both` on `#modal`, a `.drawergrip` bar on the right-pinned drawer, sizes in `pane_sizes` on `/api/settings`. The two real problems are `max-height` outranking a dragged `height` (cleared on capture-phase `mousedown` at the corner) and wholesale re-renders throwing the result away (a `MutationObserver`, coalesced on `setTimeout` rather than `requestAnimationFrame`, because an occluded window gets no frames). Nothing is pinned until it is dragged. Plus the strings list's stale-`.txt` warning rewritten with a `qm()` card, and 4176 em dashes swept out of 171 files with `ANY_EM` added to `prose_check` to keep them out. `test_web_modules` 10/10; verified in-browser (pin, save, survive re-render, reopen at the saved size, double-click reset) |
 | 15i - the model beside a transfer, art beside a pool | **done** | **v2.1.10.** The 3D column docks into the transfer composer (`transfer.js` `cmpPrev*`, `#cmpSplit`), listing the source unit's battle-model entries AND the base/replaced unit's out of the destination mod, grouped by mod and drawn from it - the third `v3Mount` host, same detach-across-render / one-viewer / fold-pauses rules as the editor's. Entries come off the unit LIST's fields, with the `armour_ug_models` rule and men-before-officers ordering. The Recruitment tab's rows and its ＋ picker carry the tier's art, keyed by the pool's OWN `requires` through `ov.faction_cultures`, with a new opt-in `any_culture` sweep in `buildings.find_icon` (`&any=1`) for the levels a mod draws for one culture only - OFF for the building browser, which is showing one culture on purpose. Row layout re-cut as two halves: tier against the name, `requires` right-aligned on its own line, and the header finally aligned with the boxes it names. `test_buildings` §11 + `test_buildings_http`; 72 of 72 modules |
 | 15h - recruitment on the unit, UV layout | **done** | **v2.1.9.** `web/js/edrecruit.js` (new) - a Recruitment tab in the unit editor listing every building line that trains it, with the four pool numbers, the `requires` clause, a delete and a ＋ that adds the unit to any line and tier. **No Python**: `buildings.unit_instances` reads and `buildings.plan_edit` writes, so this is a second FRONT rather than a second implementation. The one new request shape is `also`-only - every edit in `also`, the body carrying a line name and no levels - which is also what makes `_check_recruit_limit` merge the file instead of counting three rows as a level. The clause dialog is borrowed with `kind:'edrec'`, which re-renders the editor instead of unstashing markup, because the modal holds a live WebGL column. `?building=&lvl=&unit=` opens a building in its own tab, on the tier, with the unit’s rows flashed. A save now moves EDB line numbers, so a building left open behind the editor drops its working copy and `backToBuilding` re-reads it. `test_unit_recruitment` 42/42; verified in-browser, three pools over two lines written and undone byte-exact. Plus the viewer’s **UV layout** and the mount-texture bug it found |

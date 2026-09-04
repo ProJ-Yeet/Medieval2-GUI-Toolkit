@@ -185,6 +185,24 @@ Campaign Map mode (the ten TGA layers and descr_regions.txt, see
                                     reads the compiled map in preference to the
                                     text (one backup set + undo)
 
+The paint tool (16e, see :mod:`unittransfer.campaint`). Every route below acts
+on one unsaved paint session per mod, held in memory; the strokes go into the
+very layer images the routes above are served from, so the probe and the legend
+show the unsaved map rather than the one on disk.
+  GET  /api/map/palette?mod=     -> what each paintable layer may be painted,
+                                    and the sea colours measured off this map
+  POST /api/map/paint            -> one stroke: pointer samples in, the tiles
+                                    that changed out
+  POST /api/map/paint_undo|_redo -> one step of the unlimited stack
+  POST /api/map/paint_state      -> what is unsaved, without changing anything
+  POST /api/map/paint_discard    -> throw the session away and re-read the disk
+  POST /api/map/region_start|_cancel
+                                 -> the new-region wizard's record, decided
+                                    before a pixel of it is painted
+  POST /api/map/paint_plan|_apply
+                                 -> write every painted layer, and the new
+                                    region's record, in one backup set + undo
+
 Minor Files mode (the five small campaign files, see :mod:`unittransfer.minorfiles`)
   GET  /api/minor?mod=&tab=      -> one tab's whole list (rebels / religions /
                                     resources / cultures / names), with the
@@ -259,7 +277,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, edit, modflags,
                modfiles, sounds, stratmap)
-from . import ancillaries, campmap, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, strings, traits, triggers
+from . import ancillaries, campaint, campmap, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, strings, traits, triggers
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1826,6 +1844,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._minor(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/plan", "/api/map/apply"):
                 return self._json(self._map_write(u.path.rsplit("/", 1)[-1], body))
+            if (u.path.startswith("/api/map/paint")
+                    or u.path in ("/api/map/region_start", "/api/map/region_cancel")):
+                return self._json(self._paint(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/edu/sort/plan", "/api/edu/sort/apply"):
                 return self._json(self._edu_sort(u.path.rsplit("/", 1)[-1], body))
             if u.path == "/api/sounds/plan":
@@ -2313,6 +2334,72 @@ class Handler(BaseHTTPRequestHandler):
             return out
         out.update(campmap.apply_region(plan))
         self.registry.invalidate(body["mod"])       # the file changed on disk
+        return out
+
+    # ---- the campaign map, painted ----
+    def _paint(self, action, body):
+        """Every stroke, undo and save of the paint tool (16e).
+
+        One session per mod, and it is fetched rather than created here so the
+        one thing that can lose work says so: the session holds the
+        :class:`~unittransfer.campmap.CampaignMap` it painted, and
+        :meth:`Registry.campaign_map` hands back a different object once a file
+        the map was read from changes on disk. When that happens the strokes are
+        gone, and every answer from then on carries ``reset`` saying why -
+        rather than a fresh session appearing silently under somebody's hand.
+
+        A save invalidates the mod, which drops the map, which is what makes the
+        next request re-read the layers this one just wrote.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            cm = self.registry.campaign_map(name)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        sess, reset = campaint.session(name, mod, cm)
+        try:
+            if action == "paint":
+                out = campaint.paint(sess, body)
+            elif action == "paint_undo":
+                out = campaint.undo_stroke(sess)
+            elif action == "paint_redo":
+                out = campaint.redo_stroke(sess)
+            elif action == "paint_state":
+                out = {"ok": True, "state": sess.state()}
+            elif action == "paint_discard":
+                campaint.drop(name)
+                self.registry.invalidate(name)      # re-read, the strokes go
+                # the state AFTER, like every other answer here: an empty one,
+                # because that is what the next request will build
+                out = {"ok": True, "discarded": True,
+                       "state": campaint.PaintSession(mod, cm).state()}
+            elif action == "region_start":
+                out = campaint.start_region(sess, body)
+            elif action == "region_cancel":
+                out = campaint.cancel_region(sess)
+            elif action in ("paint_plan", "paint_apply"):
+                plan = campaint.plan_paint(sess)
+                out = {"plan": plan.payload(), "state": sess.state()}
+                if action == "paint_plan" or plan.errors:
+                    if plan.errors:
+                        out["error"] = "; ".join(plan.errors)
+                else:
+                    out.update(campaint.apply_paint(plan))
+                    campaint.drop(name)
+                    self.registry.invalidate(name)  # the files changed on disk
+                    # the state in `out` was taken before the write and says
+                    # there are unsaved strokes, which stopped being true a line
+                    # ago - the screen reads this to decide whether to offer a
+                    # save, so it has to be the state after
+                    out["state"] = campaint.PaintSession(mod, cm).state()
+            else:
+                return {"error": f"no such paint action {action!r}"}
+        except (campmap.MapError, ValueError, OSError) as e:
+            return {"error": str(e), "state": sess.state()}
+        if reset:
+            out["reset"] = ("the map was re-read from disk, so the strokes that "
+                            "had not been saved are gone")
         return out
 
     # ---- unit packs ----
@@ -2829,6 +2916,12 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/map":
             return self._json(campmap.view(cm, name))
+
+        if path == "/api/map/palette":
+            # Everything the brush may write, in one call: eight small tables
+            # and the three sea colours measured off this mod's own map. Read
+            # once when the paint panel opens, like /api/map itself.
+            return self._json(campaint.palettes(cm))
 
         if path == "/api/map/legend":
             code = (q.get("code") or [""])[0]

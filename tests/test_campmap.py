@@ -19,7 +19,9 @@ where that mod is DaC it checks the numbers this phase was scoped against:
 
     python -m tests.test_campmap
 """
+import shutil
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -265,16 +267,45 @@ else:
               f"({len(idx.undecided_ports)} undecided)",
               not idx.undecided_ports)
 
-        exact = []
+        # Two claims, and they are not the same claim. What the writer
+        # PROMISES is that a layer goes back in the shape it arrived in with the
+        # pixels it arrived with; byte-for-byte is what usually falls out of
+        # that, and it is not guaranteed, because RLE has more than one legal
+        # packing of the same row. Vanilla's map_fog.tga is the case in the
+        # wild: whatever packed it wrote a five-pixel literal where this encoder
+        # starts a run, so ours is 682 bytes shorter and pixel for pixel the
+        # same. All ten of DaC's are byte-exact.
+        exact, lossy, unstable = [], [], []
         for ly in campmap.LAYERS:
             p = cm.base / ly["file"]
             if not p.exists():
                 continue
             img, info = maptga.read(p)
-            exact.append((ly["file"], maptga.encode(img, info) == p.read_bytes()))
-        bad = [f for f, good in exact if not good]
-        check(f"all {len(exact)} TGA layers re-encode byte-exact"
-              f"{'' if not bad else ': ' + str(bad)}", not bad)
+            data = maptga.encode(img, info)
+            if data == p.read_bytes():
+                exact.append(ly["file"])
+                continue
+            # not byte-exact: then it must at least be the same picture, in the
+            # same shape, and settled - a second pass may not drift again
+            tmp = Path(tempfile.mkdtemp(prefix="ut_rt_")) / ly["file"]
+            tmp.write_bytes(data)
+            again, info2 = maptga.read(tmp)
+            if (again.tobytes() != img.tobytes()
+                    or info2.describe() != info.describe()):
+                lossy.append(ly["file"])
+            elif maptga.encode(again, info2) != data:
+                unstable.append(ly["file"])
+            shutil.rmtree(tmp.parent, ignore_errors=True)
+        repacked = [ly["file"] for ly in campmap.LAYERS
+                    if (cm.base / ly["file"]).exists()
+                    and ly["file"] not in exact]
+        check(f"{len(exact)} TGA layers re-encode byte-exact"
+              f"{'' if not repacked else f'; {repacked} repack'}",
+              len(exact) + len(repacked) > 0)
+        check(f"and every layer that repacks is the same picture in the same "
+              f"shape, and settles on one packing"
+              f"{'' if not (lossy + unstable) else ': ' + str(lossy + unstable)}",
+              not lossy and not unstable)
 
         cl = mapvocab.climates(mod)
         check(f"the mod's own climates read ({len(cl)}, "

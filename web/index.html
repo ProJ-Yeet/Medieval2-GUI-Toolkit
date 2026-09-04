@@ -757,6 +757,89 @@
   .cmrel input{font:inherit;font-size:12px;padding:2px 6px;border-radius:5px;
     border:1px solid var(--edge);background:var(--panel);color:var(--ink);width:100%}
   .cmfind2{font-size:11.5px;margin-bottom:4px}
+  /* ---- 16e: the paint tool ----
+     Every name here starts `cp`, and none of them existed anywhere else in this
+     sheet before this phase - checked, because 16d lost an afternoon to `cmprow`
+     already belonging to the compare screen four hundred lines further down. */
+  .cpbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .cptog{font:inherit;font-size:12.5px;padding:4px 11px;border-radius:7px;
+    border:1px solid var(--edge);background:var(--panel2);color:var(--ink)}
+  .cptog.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+  .cpun{font-size:11px;color:var(--accent);border:1px solid var(--edge);
+    border-radius:5px;padding:1px 6px}
+  .cppanel{display:flex;flex-direction:column;gap:7px;border:1px solid var(--edge);
+    border-radius:7px;padding:8px 9px;background:var(--panel2)}
+  /* five tools on one row at 336px: the glyph over the word, so nothing wraps */
+  .cptools{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+  .cptool{font:inherit;font-size:15px;line-height:1.1;padding:5px 2px;
+    border-radius:6px;border:1px solid var(--edge);background:var(--panel);
+    color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:2px}
+  .cptool span{font-size:9.5px;color:var(--dim);letter-spacing:.02em}
+  .cptool.on{border-color:var(--accent);background:var(--panel2)}
+  .cptool.on span{color:var(--accent)}
+  .cprow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .cprow>.count{font-size:11px}
+  .cpsz{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);
+    flex:1 1 auto}
+  .cpsz input[type=range]{flex:1 1 auto;min-width:70px;accent-color:var(--accent)}
+  .cpszn{font-size:11.5px;min-width:18px;text-align:right}
+  .cpshape{font:inherit;font-size:11px;padding:2px 7px;border-radius:5px;
+    border:1px solid var(--edge);background:var(--panel);color:var(--dim)}
+  .cpshape.on{border-color:var(--accent);color:var(--accent)}
+  .cpnote{font-size:11px;color:var(--dim);line-height:1.45}
+  .cpnote i{width:11px;height:11px;border-radius:2px;display:inline-block;
+    border:1px solid rgba(0,0,0,.5);vertical-align:-1px;margin:0 3px 0 6px}
+  .cptg{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);
+    flex:1 1 100%}
+  .cptg select{flex:1 1 auto;font:inherit;font-size:12px;padding:3px 6px;
+    border-radius:6px;border:1px solid var(--edge);background:var(--panel);
+    color:var(--ink)}
+  /* what is going to be written, said before it is */
+  .cppick{display:flex;align-items:center;gap:7px;font-size:12px;
+    border:1px solid var(--edge);border-radius:6px;padding:5px 7px;
+    background:var(--panel)}
+  .cppick>i,.cpsw{width:16px;height:16px;flex:0 0 16px;border-radius:3px;
+    border:1px solid rgba(0,0,0,.5);display:inline-block}
+  .cpsearch{flex:1 1 120px;font:inherit;font-size:12px;padding:3px 7px;
+    border-radius:6px;border:1px solid var(--edge);background:var(--panel);
+    color:var(--ink)}
+  /* the palette scrolls rather than pushing the save button off the panel */
+  .cppal{display:flex;flex-wrap:wrap;gap:3px;max-height:230px;overflow:auto;
+    padding:1px}
+  .cprg,.cpsw2{display:inline-flex;align-items:center;gap:5px;font:inherit;
+    font-size:11px;padding:2px 7px;border-radius:5px;border:1px solid var(--edge);
+    background:var(--panel);color:var(--ink);max-width:100%}
+  .cprg i,.cpsw2 i{width:11px;height:11px;flex:0 0 11px;border-radius:2px;
+    border:1px solid rgba(0,0,0,.5)}
+  .cpsw2 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cprg.on,.cpsw2.on{border-color:var(--accent);color:var(--accent)}
+  .cpnew{font:inherit;font-size:12px;padding:3px 10px;border-radius:6px}
+  /* the wizard: three steps, each one a question about the pixels */
+  .cpwiz{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--edge);
+    padding-top:7px}
+  .cpwiz .k{font-size:11px;color:var(--dim);text-transform:uppercase;
+    letter-spacing:.04em;font-weight:600}
+  .cpwiz .k .count{text-transform:none;letter-spacing:0;margin-left:6px;
+    font-weight:400}
+  .cpfield{display:flex;flex-direction:column;gap:2px}
+  .cpfield>label{font-size:10.5px;color:var(--dim);text-transform:uppercase;
+    letter-spacing:.04em;font-weight:600}
+  .cpfield>label .count{text-transform:none;letter-spacing:0;font-weight:400}
+  .cpfield input{font:inherit;font-size:12px;padding:3px 7px;border-radius:6px;
+    border:1px solid var(--edge);background:var(--panel);color:var(--ink);
+    flex:1 1 auto;min-width:0}
+  .cpstep{display:flex;align-items:center;gap:7px;font-size:11.5px;
+    color:var(--dim)}
+  .cpstep>b{width:17px;height:17px;flex:0 0 17px;border-radius:50%;font-size:10px;
+    display:flex;align-items:center;justify-content:center;font-weight:600;
+    border:1px solid var(--edge);color:var(--dim)}
+  .cpstep.done{color:var(--ink)}
+  .cpstep.done>b{border-color:var(--accent);color:var(--accent)}
+  .cpstep>span{flex:1 1 auto}
+  .cpmk{font:inherit;font-size:10.5px;padding:1px 7px;border-radius:5px;
+    border:1px solid var(--edge);background:var(--panel);color:var(--ink)}
+  .cpmk.on{border-color:var(--accent);color:var(--accent)}
+  .cpundo button{font:inherit;font-size:11.5px;padding:2px 9px;border-radius:6px}
   @media (max-width:1000px){
     .cmwrap{flex-direction:column;height:auto}
     .cmstage{min-height:60vh}
@@ -2090,6 +2173,7 @@
 <script src="js/edusort.js"></script>
 <script src="js/images.js"></script>
 <script src="js/campmap.js"></script>
+<script src="js/campaint.js"></script>
 <script src="js/viewer3d.js"></script>
 <script src="js/boot.js"></script>
 </body>

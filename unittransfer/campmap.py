@@ -1,9 +1,9 @@
 """The campaign map, read: the terrain header, the ten layers and the regions.
 
 This is the read half of the map editor's engine. Nothing here paints, saves or
-validates - 16e and 16f own those - but everything they do stands on the index
-this module builds, so the rules it gets right are the rules the whole editor
-gets right.
+validates - :mod:`unittransfer.campaint` paints and 16f will validate - but
+everything they do stands on the index this module builds, so the rules it gets
+right are the rules the whole editor gets right.
 
 **Not** :mod:`unittransfer.stratmap`. That name has belonged to the
 ``descr_model_strat.txt`` cleaner since Phase 15 and it is a different concern
@@ -1043,8 +1043,9 @@ class CampaignMap:
     def invalidate(self, *codes: str) -> None:
         """Forget decoded layers and everything derived from them.
 
-        The paint tool calls this after it writes; keeping a stale index would
-        put the next stroke on the wrong region.
+        For a layer that changed **on disk**. The paint tool does not use this:
+        it changes the image this object is holding, which is a different thing
+        - see :meth:`repixel`.
         """
         for c in codes or tuple(self._layers):
             self._layers.pop(c, None)
@@ -1053,6 +1054,26 @@ class CampaignMap:
         self._index = None
         self._sea = None
         self._neighbours = None
+
+    def repixel(self, *codes: str) -> None:
+        """A layer's pixels changed **in memory**. Drop what was derived.
+
+        The decoded image and its header stay - they are the thing that just
+        changed and the thing a save will re-encode - and everything computed
+        off them goes, so the next probe, legend or PNG is of the painted map
+        rather than of the one that was read.
+
+        The index, the sea mask and the adjacency are dropped only when a layer
+        that feeds them moved, because rebuilding them is a quarter of a second
+        on DaC and a stroke on ``map_climates.tga`` cannot change which tile
+        belongs to which province.
+        """
+        for c in codes:
+            self._tiles.pop(c, None)
+        if set(codes) & {"regions", "heights", "features"}:
+            self._index = None
+            self._sea = None
+            self._neighbours = None
 
     # -- coordinates ---------------------------------------------------------
 
@@ -1148,7 +1169,8 @@ class CampaignMap:
 # The renderer never sees a TGA. Python decodes, projects and encodes; the
 # browser gets PNGs and one JSON manifest, and it owns nothing but the
 # compositing and the pointer. That is the "one engine" rule, and it is what
-# lets 16e's undo, backups and server-side validation exist at all.
+# lets the paint tool's undo, its backups and server-side validation exist
+# at all.
 
 #: How a layer's pixels are handed to the browser.
 #:
@@ -1158,7 +1180,7 @@ class CampaignMap:
 #: ``native``  the file's own pixels, untouched.
 #:
 #: Tile fit is what the editor speaks: ``descr_strat.txt`` writes tiles, the
-#: region index is one byte per tile, and a stroke in 16e paints tiles. It does
+#: region index is one byte per tile, and a stroke paints tiles. It does
 #: throw something away and this is where to say so - a ``2W+1`` layer carries
 #: values *between* the tile centres (the shared corners the terrain mesh is
 #: interpolated across), and tile fit does not show them. ``native`` does.
@@ -1616,7 +1638,8 @@ def view(cm: "CampaignMap", name: str = "") -> dict:
 # the same ruling a trait, an ancillary and a building line already make, and
 # the text pane makes it too. The colour is not editable either, for a different
 # reason: it is the map's own pixels, and changing the number without repainting
-# them would hand the region to no tiles at all. The brush is 16e's.
+# them would hand the region to no tiles at all. Repainting them is the brush's
+# job, in :mod:`unittransfer.campaint`.
 
 #: The fields of a record this session will write, in the order they appear.
 #: `legion` is in the list and may be absent from a record - the two forms of
@@ -1972,7 +1995,7 @@ def region_detail(cm: "CampaignMap", name: str) -> dict:
     """One region, everything the panel shows, in one call.
 
     Three sources joined: the record in ``descr_regions.txt`` (editable), what
-    the pixels say (read-only until 16e paints them) and the vocabularies every
+    the pixels say (read-only here - the brush is what moves them) and every
     picker in the panel offers. The neighbours come from the region layer alone
     - land bridges and river crossings connect provinces the pixels do not, and
     that is 16f's rule, not this one.
@@ -2148,8 +2171,8 @@ def plan_region(mod, body: dict) -> RegionPlan:
         p.errors.append(
             f"this region is painted {rec.rgb[0]} {rec.rgb[1]} {rec.rgb[2]} on "
             "map_regions.tga. Changing the number here without repainting the "
-            "pixels would leave the region with no tiles at all - the brush is "
-            "16e's job")
+            "pixels would leave the region with no tiles at all - arm the "
+            "brush and repaint them instead")
         return p
     if after.settlement != rec.settlement:
         p.errors.append(
