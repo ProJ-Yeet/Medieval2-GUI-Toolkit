@@ -70,6 +70,21 @@ check("a value keeps its embedded newline", back.get("with_break") == "first lin
 check("a value that is one space stays one space", back.get("with_space") == " ")
 check("peek reads the count without decoding", stringsbin.peek.__name__ == "peek")
 
+# Game-generated tagged archives may omit the four-byte zero index count.  It
+# means the same thing as an empty index and must still round-trip byte-exact.
+without_index_section = stringsbin.encode(build(rows=ROWS))[:-4]
+without_index_back = stringsbin.decode(without_index_section)
+check("a tagged archive may omit an empty index section",
+      without_index_back.index == [] and not without_index_back.has_index_section)
+check("an omitted empty index section round-trips byte for byte",
+      stringsbin.encode(without_index_back) == without_index_section)
+short_index_section = stringsbin.encode(build(rows=ROWS))[:-2]
+short_index_back = stringsbin.decode(short_index_section)
+check("a tagged archive may use a 16-bit empty index marker",
+      short_index_back.index == [] and short_index_back.index_count_width == 2)
+check("a 16-bit empty index marker round-trips byte for byte",
+      stringsbin.encode(short_index_back) == short_index_section)
+
 # The count is 32 bits. Reading it as a u16 + padding word, as the reference
 # tool's codec does, happens to agree below 65 536 and silently halves the file
 # above it - so prove the wide field is really there.
