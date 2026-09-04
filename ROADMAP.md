@@ -78,7 +78,7 @@ running the test suite, and running `graphify update .`.
 | 15h | Recruitment on the unit + the UV layout (v2.1.9) | M | ✅ done |
 | 15i | The model beside a transfer, art beside a pool (v2.1.10) | S | ✅ done |
 | 15j | Resizable panels, the strings warning, no em dashes (v2.1.11) | S | ✅ done |
-| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ 16e ✅ 16f ✅ 16g ✅ |
+| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ 16e ✅ 16f ✅ 16g ✅ 16h ✅ |
 | V3.1 | OSM backdrop + coastline tracer | M | future |
 | V3.2 | Map resize + create-from-scratch | L | future |
 | V3.3 | Overlay and layer generators | M | future |
@@ -2140,6 +2140,8 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `web/js/mapcheck.js` | the validator panel, its filters and jump-to-pixel (16f) |
 | `unittransfer/mapquery.py` | the fact table, the 24 filters, the themes, Geomod's information maps and the TGA export (16g) |
 | `web/js/mapquery.js` | the query panel, the legends and the recolour of the region layer (16g) |
+| `unittransfer/stratedit.py` | the settlement block written back: its fields, its buildings, the move between faction blocks (16h) |
+| `web/js/stratedit.js` | the settlement panel, its building rows and the live plan under them (16h) |
 | `web/js/campmap.js` | viewer, layers, legend, inspector (16c, 16d) |
 | `campmap.view` / `layer_png` | the manifest and the PNG the browser is served (16c) |
 | `campmap.layer_legend` / `probe_pixel` | what a colour means, and what one tile is (16d) |
@@ -2648,13 +2650,66 @@ and server-side validation possible at all.
   because a marker has no region colour of its own - so the region that owns the
   marker answers instead.
 
-- **16h - `descr_strat.txt`, write: settlements and buildings.** Level, city or
-  castle, population, `plan_set`, `faction_creator`, year founded, and the
-  building list with EDB-driven level compatibility. Owner reassignment moves
-  the whole settlement block between faction blocks. The capital must be the
-  faction's first region in the file.
-  Exit: change a settlement's owner, tier and buildings on both test mods and
-  the game loads; byte-exact outside the edited blocks; undo restores.
+- **16h - `descr_strat.txt`, write: settlements and buildings.** ✅ **done
+  2026-09-04.** `stratedit.py` (1,083 lines), `web/js/stratedit.js` (462),
+  three routes on `server.py`, and `tests/test_stratedit.py` at **85 checks,
+  all passing**. The exit criterion is the one 16b was built for and it is
+  measured rather than argued: **316 settlement blocks across vanilla's two
+  campaigns and Third Age Reforged re-render byte for byte**, with no edits and
+  again with their own building lists handed back, and a real edit leaves the
+  file identical outside the block it touched.
+
+  **The ladder is one ladder and both kinds of settlement climb it.** `level`
+  on a `settlement castle` is written with the same six city words - vanilla
+  has 14 castles at `level village` and 21 at `level town` - and the castle's
+  own tier is the level of its `core_castle_building` rather than the word on
+  the `level` line. So the picker offers the six, and prints the castle tier
+  beside them for somebody who thinks in mottes and citadels.
+
+  **The first settlement in a faction block is that faction's capital**, which
+  is what makes a change of owner a move rather than a rewrite. Nineteen of
+  vanilla's nineteen landed factions have theirs first and nothing before it -
+  London, Paris, Frankfurt, Leon, Venice, Palermo, Milan, Edinburgh,
+  Constantinople, Novgorod, Cordoba, Iconium, Cairo, Arhus, Lisbon, Cracow,
+  Budapest, Rome, Tenochtitlan - and the plan says whose capital moves on both
+  sides of a transfer before it is saved rather than after it is played.
+
+  **The EDB's settlement rules gate building, not starting.** Third Age
+  Reforged ships **432 of its 1,518 starting buildings below the
+  `settlement_min` its own EDB declares** for them, and **248 in the wrong kind
+  of settlement altogether** - 27 merchant vaults, 25 conservatoriums and 24
+  docklands standing in castles - and the mod loads and plays. Four of its
+  settlements carry two or three levels of one building line at once. So
+  `settlement_min`, `settlement_max`, the `city`/`castle` pin and the repeated
+  line are warnings with that number beside them and never a refusal. What is
+  fatal is a value the engine's own vocabulary has no room for: a level off the
+  ladder, a settlement kind that is neither `city` nor `castle`, a population
+  that is not a whole number, and a `type` line naming a level the EDB does not
+  declare - that last one only when there is an EDB on disk to say so, which is
+  16f and 16g's ruling carried into a third phase.
+
+  **The plan reads back what it would write.** The block is spliced, the file
+  is re-parsed and every check runs against the tree that comes out, so a
+  hand-edited block with a brace missing is caught by the parse rather than by
+  a rule written to expect it. A guard then compares the two trees: any count
+  but the building count that moved, any roster or campaign global that
+  changed, any *other* settlement whose text is not what it was, and the save
+  is refused naming what it did that nobody asked for.
+
+  **Two objects, and they are not interchangeable.** The form is built out of
+  16g's fact table, which is a cache; the file the plan splices is re-read from
+  disk inside `plan_settlement`. A writer that writes out of a cache writes
+  over whatever changed under it. That division is stated where it is made,
+  and it is the reason the panel can ask for a whole plan on a 450 ms debounce
+  while somebody is still typing: the findings under the form are the findings
+  the save would produce, not a browser's guess at them. A plan is 250 ms on
+  the largest campaign installed and there is no copy of any rule on the far
+  side.
+
+  **`map.rwm` is not deleted here, and that is a decision.** 16d deletes it
+  because it writes `descr_regions.txt`, which the compiled map is built out
+  of. The campaign file is not, and it is read fresh every time a campaign
+  starts, so deleting the binary would cost a recompile and change nothing.
 
 - **16i - `descr_strat.txt`, write: characters, armies, family tree.** Add,
   edit, move and delete characters; traits and ancillaries; army unit lists with

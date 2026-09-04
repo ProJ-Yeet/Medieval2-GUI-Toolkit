@@ -1,34 +1,95 @@
 # STATE - Medieval 2 GUI Toolkit V2 and V3
-_Updated: 2026-09-04 · **v2.1.11 released** · V3 under way: 16a-16g done, 16h next_
+_Updated: 2026-09-04 · **v2.1.11 released** · V3 under way: 16a-16h done, 16i next_
 
 ## Next up
-Start **16h** - `descr_strat.txt`, write: settlements and buildings. The screen
-can now read the map, edit a region record, paint the pixels, say whether it
-will load and ask it which provinces are which; 16h is where the campaign file
-itself becomes editable. Level, city or castle, population, `plan_set`,
-`faction_creator`, year founded, and the building list with EDB-driven level
-compatibility. Owner reassignment moves the whole settlement block between
-faction blocks, and the capital must be the faction's first region in the file.
+Start **16i** - `descr_strat.txt`, write: characters, armies, the family tree.
+The campaign file is now writable: 16h splices a settlement block, moves it
+between faction blocks and reads the file back to check what it would write.
+16i is the same discipline on the half of the file that is people. Add, edit,
+move and delete characters; traits and ancillaries; army unit lists with the
+bodyguard-first rule; leader and heir flags; `relative` lines with the
+sixteen-year and oldest-first constraints; `descr_names` pool insertion with
+auto-localisation. **A new character is inserted after the last existing
+character of the same faction**, not at the head of the list, which is the same
+"where does the block go" question 16h answered for settlements.
 
-Most of the reading is already standing and none of it should be written twice.
-`campstrat.StratFile` holds every settlement block as a span with its fields
-indexed by line, which is what a splice needs; `mapquery.Facts` already joins
-each of those blocks to the province it is in, its owner, its buildings and the
-tree each building belongs to, so "which levels may this settlement have" is a
-lookup rather than a second read of `export_descr_buildings.txt`. Owner
-reassignment is a move of a `[start, end]` slice between two other spans and
-nothing else, and `mapcheck` already owns the rule that a faction block may not
-come after the diplomacy section.
+Almost all of the machinery is standing and none of it should be written twice.
+`stratedit.render_block` is the pattern for a block rewritten a line at a time,
+`_move_lines` and `_detach_span` already move a slice between two faction
+blocks with its trailing blank, `_guard` already refuses a save that changed a
+record nobody named, and `apply_settlement` already backs up, logs and undoes.
+`campstrat` reads every character, army, unit, `character_record` and
+`relative` with its span and its field lines, and 16f already owns the
+character rules that 16i's exit criterion runs against.
 
-Three rulings from 16g carry into it. **One fact table, read by everything** -
-16h's forms should read `Facts` rather than open `descr_strat.txt` again, and
-whatever it adds belongs on `RegionFacts` where the query engine can filter by
-it for free. **A rule with no evidence reports nothing** - a level picker with
-no EDB on disk offers what the campaign file itself already writes rather than
-an empty list. And **Python owns the bytes**: the browser posts what a person
-typed and nothing about what to change.
+Four rulings carry into it, three from 16g and one 16h added. **One fact table,
+read by everything** - the form reads `Facts`; the write re-reads the file,
+because a writer that writes out of a cache writes over whatever changed under
+it. **A rule with no evidence reports nothing** - vanilla ships no EDU or
+`descr_names` on disk, so a bodyguard picker with nothing to read offers what
+the campaign file itself already writes. **Python owns the bytes.** And **the
+plan reads back what it would write**: splice, re-parse, check the tree that
+comes out, and guard it against the tree that went in.
 
 Run `python tools/upstream_sync.py sync` first, as before every sub-phase.
+
+## 16h - settlements and buildings, written (2026-09-04)
+`stratedit.py` (1,083 lines), `web/js/stratedit.js` (462), three routes on
+`server.py`, and `tests/test_stratedit.py` at **85 checks, all passing**. The
+exit criterion is 16b's promise, measured: **316 settlement blocks across
+vanilla's two campaigns and Third Age Reforged re-render byte for byte**, with
+no edits and again with their own building lists handed back.
+
+**The ladder is one ladder and both kinds of settlement climb it.** `level` on
+a `settlement castle` is written with the same six city words - vanilla has 14
+castles at `level village` and 21 at `level town` - and the castle's own tier
+is the level of its `core_castle_building`, not the word on the `level` line.
+The picker offers the six and prints the castle tier beside them.
+
+**The first settlement in a faction block is that faction's capital**, which is
+what makes a change of owner a move rather than a rewrite. Nineteen of
+vanilla's nineteen landed factions have theirs first: London, Paris, Frankfurt,
+Leon, Venice, Palermo, Milan, Edinburgh, Constantinople, Novgorod, Cordoba,
+Iconium, Cairo, Arhus, Lisbon, Cracow, Budapest, Rome, Tenochtitlan. The plan
+says whose capital moves on both sides before it is saved.
+
+**The EDB's settlement rules gate building, not starting.** Third Age Reforged
+ships **432 of its 1,518 starting buildings below the `settlement_min` its own
+EDB declares**, and **248 in the wrong kind of settlement** - 27 merchant
+vaults, 25 conservatoriums and 24 docklands standing in castles - and it loads
+and plays. Four of its settlements carry two or three levels of one line at
+once. So all of those are warnings with the number beside them and never a
+refusal. Fatal is only what the engine's own vocabulary has no room for: a
+level off the ladder, a kind that is neither `city` nor `castle`, a population
+that is not a whole number, and a `type` line naming a level the EDB does not
+declare - the last one only when there is an EDB on disk to say so.
+
+**The plan reads back what it would write.** Splice, re-parse, and run every
+check against the tree that comes out, so a hand-edited block with a brace
+missing is caught by the parse rather than by a rule written to expect it. A
+guard then compares the two trees: any count but the building count that moved,
+any roster or campaign global that changed, any other settlement whose text is
+not what it was, and the save is refused naming what it did that nobody asked
+for.
+
+**Two objects, and they are not interchangeable.** The form is built out of
+16g's fact table, which is a cache; the file the plan splices is re-read from
+disk. That is what lets the panel ask for a whole plan on a 450 ms debounce
+while somebody is still typing - a plan is 250 ms on the largest campaign
+installed - so the findings under the form are the findings the save would
+produce rather than a browser's guess, and no rule has a second copy on the far
+side.
+
+**`map.rwm` is not deleted here.** 16d deletes it because it writes
+`descr_regions.txt`, which the compiled map is built out of. The campaign file
+is not, and it is read fresh at every campaign start.
+
+**Two things found by building it.** The building block's indent was being
+taken from the settlement's opening brace when the block had no building to
+copy the shape from, which is one level too shallow - every real file writes
+`{` one level out from what it opens - so it now comes from the block's own
+field lines. And `settlement_min` was almost written as a refusal; the 432 was
+counted first, which is the only reason it is not.
 
 ## 16g - query, themes and information maps (2026-09-04)
 `mapquery.py` (1,934 lines), `web/js/mapquery.js` (581), four routes on

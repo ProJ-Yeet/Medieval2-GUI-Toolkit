@@ -230,6 +230,19 @@ Query, themes and information maps (16g, see :mod:`unittransfer.mapquery`)
                                     (`what`: colouring / query) or Geomod's batch
                                     (`what`: factions, one file per faction)
 
+Settlements and buildings (16h, see :mod:`unittransfer.stratedit`). The first of
+the three sub-phases that write descr_strat.txt itself.
+  GET  /api/map/settlement?mod=&campaign=&region=
+                                 -> one settlement: its fields, its buildings
+                                    with what the EDB says about each, who owns
+                                    it, whether it is that faction's capital,
+                                    and the pickers its boxes need
+  POST /api/map/settlement_plan|_apply
+                                 -> edit the fields, the building list and the
+                                    owner. A move is one slice of lines lifted
+                                    from between two faction blocks and put back
+                                    between two others (one backup + undo)
+
 Minor Files mode (the five small campaign files, see :mod:`unittransfer.minorfiles`)
   GET  /api/minor?mod=&tab=      -> one tab's whole list (rebels / religions /
                                     resources / cultures / names), with the
@@ -304,7 +317,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, edit, modflags,
                modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campmap, campstrat, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, strings, traits, triggers
+from . import ancillaries, campaint, campmap, campstrat, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, stratedit, strings, traits, triggers
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1919,6 +1932,9 @@ class Handler(BaseHTTPRequestHandler):
             if (u.path.startswith("/api/map/paint")
                     or u.path in ("/api/map/region_start", "/api/map/region_cancel")):
                 return self._json(self._paint(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/map/settlement_plan", "/api/map/settlement_apply"):
+                return self._json(self._settlement(
+                    u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/map/query", "/api/map/export"):
                 return self._json(self._mapquery(
                     u.path.rsplit("/", 1)[-1], body))
@@ -2524,6 +2540,40 @@ class Handler(BaseHTTPRequestHandler):
             got["revealed"] = bool(reveal(str(Path(out.folder)
                                               / out.files[0]["name"])))
         return got
+
+    # ---- the campaign map's settlements, written (16h) ----
+    def _settlement(self, action, body):
+        """Preview or write one settlement block of ``descr_strat.txt``.
+
+        Two objects go in and they are not interchangeable. The fact table is
+        the vocabulary - which factions there are, which building levels the
+        EDB declares, what ``settlement_min`` each one wants - and it is a
+        cache. The file the plan splices is read from disk inside
+        :func:`~unittransfer.stratedit.plan_settlement`, so a save writes over
+        the file as it is now rather than over the copy this process happened
+        to be holding.
+
+        A save invalidates the mod, which drops the map and the fact table with
+        it, so the next request reads the file this one just wrote.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            facts = self.registry.map_facts(name, body.get("campaign") or "")
+            plan = stratedit.plan_settlement(mod, facts, body)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(stratedit.apply_settlement(plan))
+        except (OSError, ValueError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)              # the file changed on disk
+        return out
 
     # ---- the campaign map, checked (16f) ----
     def _mapcheck(self, action, body):
@@ -3142,6 +3192,18 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 return self._json(mapquery.colouring(facts, code).payload(facts))
             except campmap.MapError as exc:
+                return self._err(404, str(exc))
+
+        if path == "/api/map/settlement":
+            # 16h. Through the fact table like the query panel, because the
+            # form's pickers are the same joined sentences the filters are:
+            # who owns this province, what is standing in it, and which
+            # export_descr_buildings.txt line each of those belongs to.
+            try:
+                facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
+                return self._json(stratedit.settlement_detail(
+                    facts, (q.get("region") or [""])[0]))
+            except (campmap.MapError, ModDataError, OSError) as exc:
                 return self._err(404, str(exc))
 
         if path == "/api/map/check":

@@ -270,6 +270,7 @@ function renderCampmap(){
         <div id="cmPaint"></div>
         <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
         <div class="cmpick" id="cmPick"></div>
+        <div class="cmsettle" id="cmSettle"></div>
       </div>
     </div>`;
   cmapWire();
@@ -277,6 +278,7 @@ function renderCampmap(){
   cqOpen();
   cpaintOpen();
   cmapPickPaint();
+  csPaint();          // 16h: kept out of cmapPickPaint, which owns #cmPick only
   cmapResize();
   if(!c.view.fitted) cmapFit(); else cmapPaint();
   if(typeof rszApply === 'function') rszApply(main);
@@ -1134,8 +1136,9 @@ async function cmapPick(tile){
   // A region with no record has nothing to edit, and saying so is better than
   // an empty form: the ocean is the usual case, and a colour nobody declared is
   // the interesting one - both are named by cmapRegionName.
-  if(r && r.name) cmapOpenRegion(r.name);
-  else { c.det = null; c.cv = null; cmapPickPaint(); }
+  if(r && r.name){ cmapOpenRegion(r.name); csOpen(r.name); }
+  else { c.det = null; c.cv = null; state.cset = null;
+         cmapPickPaint(); csPaint(); }
 }
 
 async function cmapProbe(c, tx, ty, want){
@@ -1569,7 +1572,8 @@ function cmapKeys(){
     else if(e.key === 'Escape' && (state.cmap.sel || state.cmap.pick)){
       const c = state.cmap;
       c.sel = null; c.pick = null; c.probe = null; c.det = null;
-      cmapOutline(null); cmapPaint(); cmapPickPaint();
+      state.cset = null;
+      cmapOutline(null); cmapPaint(); cmapPickPaint(); csPaint();
     }
     else return;
     e.preventDefault();

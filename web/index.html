@@ -902,6 +902,32 @@
     gap:3px 10px}
   .cqsw{display:flex;align-items:center;gap:6px;font-size:11px;min-width:0}
   .cqsw b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* ---- 16h: the settlement a province starts with ----
+     Every name starts `cs`. It reuses the paint tool's bar and the region
+     form's fields rather than growing a third set that looks nearly the
+     same, which is the same call 16g made. */
+  .cspanel{display:flex;flex-direction:column;gap:9px;border:1px solid var(--edge);
+    border-radius:7px;padding:8px 9px;background:var(--panel2);font-size:11.5px}
+  .cshead{display:flex;flex-direction:column;gap:2px}
+  .csrow2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .cspanel select,.cspanel input{font:inherit;font-size:11.5px;padding:3px 6px;
+    border-radius:6px;border:1px solid var(--edge);background:var(--panel);
+    color:var(--ink);min-width:0}
+  .csblds{display:flex;flex-direction:column;gap:4px}
+  /* one building: its line, its level, where it sits and whether it stays */
+  .csbld{display:flex;align-items:center;gap:4px;flex-wrap:wrap;
+    border:1px solid var(--edge);border-radius:6px;padding:4px 6px;
+    background:var(--panel)}
+  .csbld>select:first-child{flex:1 1 40%}
+  .csbld>select:nth-child(2){flex:1 1 30%}
+  .csbld button{font:inherit;font-size:11px;padding:2px 7px;border-radius:5px;
+    border:1px solid var(--edge);background:var(--panel2);color:var(--ink)}
+  .csnote{flex-basis:100%;line-height:1.4;font-style:italic;opacity:.8}
+  .csadd select{width:100%}
+  .csown{display:flex;flex-direction:column;gap:5px}
+  .csfind{display:flex;flex-direction:column;gap:4px;
+    border-top:1px solid var(--edge);padding-top:7px;line-height:1.45}
+  .csbtns{display:flex;gap:6px}
   .cqsw i{flex:0 0 auto;width:13px;height:13px;border-radius:3px;
     border:1px solid var(--edge)}
   @media (max-width:1000px){
@@ -2240,6 +2266,7 @@
 <script src="js/campaint.js"></script>
 <script src="js/mapcheck.js"></script>
 <script src="js/mapquery.js"></script>
+<script src="js/stratedit.js"></script>
 <script src="js/viewer3d.js"></script>
 <script src="js/boot.js"></script>
 </body>
