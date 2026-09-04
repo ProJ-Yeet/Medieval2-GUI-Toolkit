@@ -1,18 +1,104 @@
 # STATE - Medieval 2 GUI Toolkit V2 and V3
-_Updated: 2026-09-04 · **v2.1.11 released** · V3 under way: 16a, 16b and 16c done, 16d next_
+_Updated: 2026-09-04 · **v2.1.11 released** · V3 under way: 16a-16d done, 16e next_
 
 ## Next up
-Start **16d** - layers, legend and inspector. The layer checkboxes, opacity
-sliders and draw order that 16c built are not persisted yet, so that is the
-first piece: `pane_sizes` on `/api/settings` is the pattern. Then the legend,
-where a layer's "nothing here" colour becomes transparent - tick
-`map_features.tga` at 100% today and it hides the map under it, because most of
-that layer is `(0,0,0)` meaning nothing, and compositing it honestly is what
-that looks like. Then the pixel probe (`campmap.probe_pixel` already answers it,
-16a wrote it and nothing calls it yet) and the editable region panel over
-`descr_regions.txt`, with the religion-total rule enforced.
+Start **16e** - the paint tool. Pencil, brush, bucket and pipette plus Demir's
+water brush, with region-colour snapping so the brush always writes the selected
+region's canonical RGB and drift is impossible. The pieces it needs are all
+standing: `campmap.tiles()` caches the tile-fit picture of every layer,
+`invalidate()` already drops the index, the sea mask and the tile cache
+together, `maptga.encode` round-trips all ten of DaC's layers byte for byte, and
+the region panel is the thing a stroke will be aimed by. Unlimited undo is the
+part no reference tool has - Geomod has one level, Demir none, Mylae one
+snapshot - and the shape for it is `apply_region`'s: back the layer up, write,
+log, and let the Log's Undo reverse it. `map.rwm` is deleted on save, which 16d
+already does.
 
 Run `python tools/upstream_sync.py sync` first, as before every sub-phase.
+
+## 16d - layers, legend, inspector (2026-09-04)
+`campmap.py` (+560), `web/js/campmap.js` (834 to 1,455), a `regions` kind in
+`codeview.py`, four routes in `server.py`, and `tests/test_campedit.py` at
+**85 checks, all passing** over vanilla's map and DaC's. The screen stops being
+a viewer here.
+
+**The layer stack is remembered**, in `map_layers` on `/api/settings` - the
+`pane_sizes` road. Per user rather than per mod: the ten layer codes are the
+engine's own and mean the same thing in every mod there is. A saved order is
+reconciled with the manifest rather than trusted, so a layer this build no
+longer lists is dropped and a new one goes where the server put it.
+
+**16c's one deferred item, answered by the legend.** `map_features.tga` is 97.7%
+black on DaC and 96.5% on vanilla, black there means "nothing here", and ticking
+it at full opacity therefore hid the map under a black sheet with a few rivers
+on it. `layer_legend` censuses the layer the browser was served, names every
+colour from the vocabularies and flags the one that means nothing; the browser
+punches that colour out of its own copy in one 4.4 ms pass, cached by the hide
+set, and features and trade routes become overlays. **The claim and its source
+live together in `BLANK`, and each entry says which it is.** `features` is the
+arbiter's own `none`. `trade_routes` is black because vanilla marks 995 tiles
+out of 54,760 and DaC marks none at all. `roughness` is black because the layer
+is a greyscale magnitude. `fog` is white because that is 87% of vanilla's layer
+and 98% of DaC's - and **nothing in the four references says which way round the
+engine reads that layer**, so the panel says "the colour most of the map is" and
+claims nothing more. The four layers with a real vocabulary have no blank colour
+and are not offered the checkbox: black ground is `wilderness`, black heights is
+sea, and a black region pixel is a settlement marker.
+
+**The legend is the region list too.** The cap is 48 colours for a magnitude and
+the engine's own 200 for `map_regions.tga`, so DaC's 202 all list with province
+name, tile count and share of the map. A colour no table knows is listed as
+that, which puts DaC's stray `(1,1,1)` feature pixel on the screen rather than
+only in 16f's future report.
+
+**The probe names one tile on all ten layers** - localised name first, code name
+in brackets - in **0.17 ms warm on vanilla and 0.80 ms on DaC**. One small
+request on the CLICK: the hover readout stays where 16c put it, answered in the
+browser off the region layer it already has, because that one runs per pointer
+event. The two pictures say they have no value at a tile rather than being
+sampled at coordinates that mean nothing in them.
+
+**The region record is editable, and an edit is one line.** Legion, creator
+faction, rebel type, resources, triumph value, base farming level, religions -
+spliced into the line each field came from. Asserted rather than claimed: **all
+198 of DaC's records and all 112 of vanilla's re-render byte-exact with no
+edits**, and one field edited changes exactly one line of a 1,990-line file,
+CRLF, tabs and the modder's own trailing comments intact. A missing `legion:` or
+resource line is inserted where the format puts it, at the indent its neighbours
+use. Three fields refuse a rename with the reason - in the form, in the text
+pane and at the plan: the region's name and the settlement's are keys
+`descr_strat.txt`, the win conditions, the campaign script and every `legion:`
+line point at, and the colour is the map's own pixels, which is 16e's.
+
+**The religion rule is enforced twice** - live in the form and again at the plan
+- because it is the one that crashes the game on load. A set that does not total
+100 says by how much and is refused before a byte is written. Warnings are kept
+apart from refusals and carry their sources: Geomod's "leave it at 5" for the
+triumph value, "4 is average, 6-7 highly fertile" for farming, and 16f's rule
+about a resource that is neither hidden nor a trade resource, brought forward to
+where somebody can fix it.
+
+Also here: neighbours from the label image (27 ms on DaC, four-connected,
+markers skipped, and the panel says land bridges and river crossings are 16f's),
+Code View over `descr_regions.txt` with a span per field, Ctrl+Z over the
+working copy, and a save that backs the file up, writes the Log entry that
+undoes it, and **deletes `map.rwm`** - or the game loads the compiled map and
+shows none of the edit.
+
+**Two faults found by building it, both 16c's, both browser-side.**
+`cmapRepanel` re-ran the canvas's wiring as well as the panel's, so every layer
+ticked added another set of pointer listeners to the same canvas: measured at
+eleven, where a 10-pixel drag moved the map 110 pixels. 16c ticked rarely enough
+to hide it; 16d ticks on every legend opened and every colour hidden. And the
+probe's row class `cmprow` was already the compare screen's, four hundred lines
+further down the same stylesheet, so its four-column grid silently won - **a CSS
+class name is as global as a top-level JS name in this page, and now gets
+checked the same way.**
+
+Measured in the browser after both fixes, on DaC: a pan frame is 0.010 to
+0.023 ms from zoom 0.4x to 64x, a hover step 0.18 ms, the composite rebuild
+0.015 ms, the hide-set mask 4.4 ms and a region outline 8.2 ms - the last two on
+a click, once, cached.
 
 ## 16c - the renderer (2026-09-04)
 `web/js/campmap.js` (834 lines), the view half of `campmap.py`, two routes in
@@ -152,7 +238,8 @@ because a parser that refused any of them would refuse DaC.
 
 ## 16a - the map files, read (2026-09-03)
 `unittransfer/maptga.py`, `mapvocab.py` and `campmap.py`, plus
-`tests/test_campmap.py` at **61 checks, all passing** on DaC. The read half of
+`tests/test_campmap.py` at **62 checks, all passing** on DaC (61 in 16a; 16d
+widened the probe's). The read half of
 the map editor's engine: nothing paints, saves or validates yet, and everything
 that will stands on the index built here.
 
@@ -1266,7 +1353,7 @@ underneath. Both fixed; see ROADMAP.md's 14f outcome.
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
-| 16 - Campaign Map Editor (V3.0.0) | **16a-16c done, 16d next** | Scoped 2026-09-03 from four references into eleven sessions, 16a-16k, with V3.1-V3.3 as future releases. Pillow only, no numpy and no C extension - measured, see ROADMAP.md Phase 16. **16a and 16b landed 2026-09-03**: `maptga.py`, `mapvocab.py`, `campmap.py` (61/61) and `campstrat.py` (75/75). The whole read half of the engine is done and every file it touches round-trips byte-exact. **16c landed 2026-09-04**: `web/js/campmap.js`, the manifest and PNG half of `campmap.py`, `/api/map` and `/api/map/layer`, `test_campview.py` (50/50) over vanilla's map as well as DaC's; a pan frame is 0.02 to 0.18 ms and the picked pixel is exact. Each is written up in its own section above. Still to come: `mapcheck.py`, `campaint.js`; **not** `stratmap.py`, which is a different concern |
+| 16 - Campaign Map Editor (V3.0.0) | **16a-16d done, 16e next** | Scoped 2026-09-03 from four references into eleven sessions, 16a-16k, with V3.1-V3.3 as future releases. Pillow only, no numpy and no C extension - measured, see ROADMAP.md Phase 16. **16a and 16b landed 2026-09-03**: `maptga.py`, `mapvocab.py`, `campmap.py` (62/62) and `campstrat.py` (75/75). The whole read half of the engine is done and every file it touches round-trips byte-exact. **16c landed 2026-09-04**: `web/js/campmap.js`, the manifest and PNG half of `campmap.py`, `/api/map` and `/api/map/layer`, `test_campview.py` (50/50) over vanilla's map as well as DaC's; a pan frame is 0.02 to 0.18 ms and the picked pixel is exact. **16d landed 2026-09-04**: the layer stack remembered on `/api/settings`, `layer_legend` and the `BLANK` table that turns a layer into an overlay, `probe_pixel` over all ten layers, region adjacency, and the editable `descr_regions.txt` record with its Code View, its religion rule and its undo - `test_campedit.py` (85/85) over both maps, and every record of both re-renders byte-exact. Each is written up in its own section above. Still to come: `mapcheck.py`, `campaint.js`; **not** `stratmap.py`, which is a different concern |
 | 15j - resizable panels, the strings warning, no em dashes | **done** | **v2.1.11.** `rsz*` in `core.js`: `resize:vertical` on every scroll box the stylesheet declares (found by reading `document.styleSheets`, 31 selectors, `.wpop` and `.modal` skipped), `resize:both` on `#modal`, a `.drawergrip` bar on the right-pinned drawer, sizes in `pane_sizes` on `/api/settings`. The two real problems are `max-height` outranking a dragged `height` (cleared on capture-phase `mousedown` at the corner) and wholesale re-renders throwing the result away (a `MutationObserver`, coalesced on `setTimeout` rather than `requestAnimationFrame`, because an occluded window gets no frames). Nothing is pinned until it is dragged. Plus the strings list's stale-`.txt` warning rewritten with a `qm()` card, and 4176 em dashes swept out of 171 files with `ANY_EM` added to `prose_check` to keep them out. `test_web_modules` 10/10; verified in-browser (pin, save, survive re-render, reopen at the saved size, double-click reset) |
 | 15i - the model beside a transfer, art beside a pool | **done** | **v2.1.10.** The 3D column docks into the transfer composer (`transfer.js` `cmpPrev*`, `#cmpSplit`), listing the source unit's battle-model entries AND the base/replaced unit's out of the destination mod, grouped by mod and drawn from it - the third `v3Mount` host, same detach-across-render / one-viewer / fold-pauses rules as the editor's. Entries come off the unit LIST's fields, with the `armour_ug_models` rule and men-before-officers ordering. The Recruitment tab's rows and its ＋ picker carry the tier's art, keyed by the pool's OWN `requires` through `ov.faction_cultures`, with a new opt-in `any_culture` sweep in `buildings.find_icon` (`&any=1`) for the levels a mod draws for one culture only - OFF for the building browser, which is showing one culture on purpose. Row layout re-cut as two halves: tier against the name, `requires` right-aligned on its own line, and the header finally aligned with the boxes it names. `test_buildings` §11 + `test_buildings_http`; 72 of 72 modules |
 | 15h - recruitment on the unit, UV layout | **done** | **v2.1.9.** `web/js/edrecruit.js` (new) - a Recruitment tab in the unit editor listing every building line that trains it, with the four pool numbers, the `requires` clause, a delete and a ＋ that adds the unit to any line and tier. **No Python**: `buildings.unit_instances` reads and `buildings.plan_edit` writes, so this is a second FRONT rather than a second implementation. The one new request shape is `also`-only - every edit in `also`, the body carrying a line name and no levels - which is also what makes `_check_recruit_limit` merge the file instead of counting three rows as a level. The clause dialog is borrowed with `kind:'edrec'`, which re-renders the editor instead of unstashing markup, because the modal holds a live WebGL column. `?building=&lvl=&unit=` opens a building in its own tab, on the tier, with the unit’s rows flashed. A save now moves EDB line numbers, so a building left open behind the editor drops its working copy and `backToBuilding` re-reads it. `test_unit_recruitment` 42/42; verified in-browser, three pools over two lines written and undone byte-exact. Plus the viewer’s **UV layout** and the mount-texture bug it found |

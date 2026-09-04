@@ -78,7 +78,7 @@ running the test suite, and running `graphify update .`.
 | 15h | Recruitment on the unit + the UV layout (v2.1.9) | M | ✅ done |
 | 15i | The model beside a transfer, art beside a pool (v2.1.10) | S | ✅ done |
 | 15j | Resizable panels, the strings warning, no em dashes (v2.1.11) | S | ✅ done |
-| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ |
+| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ |
 | V3.1 | OSM backdrop + coastline tracer | M | future |
 | V3.2 | Map resize + create-from-scratch | L | future |
 | V3.3 | Overlay and layer generators | M | future |
@@ -2136,8 +2136,10 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `unittransfer/mapvocab.py` | ground/climate/feature/height colour tables with localised names, in `edbvocab.py`'s shape |
 | `unittransfer/campstrat.py` | `descr_strat.txt` as a line-preserving block model with an interval index |
 | `unittransfer/mapcheck.py` | the validator and its auto-fixes |
-| `web/js/campmap.js` | viewer, layers, legend, inspector |
+| `web/js/campmap.js` | viewer, layers, legend, inspector (16c, 16d) |
 | `campmap.view` / `layer_png` | the manifest and the PNG the browser is served (16c) |
+| `campmap.layer_legend` / `probe_pixel` | what a colour means, and what one tile is (16d) |
+| `campmap.render_block` / `plan_region` | one region's record, spliced and saved (16d) |
 | `web/js/campaint.js` | the paint tool and its undo |
 
 Reuse: `keyblock.py` for the splice discipline (`flatrecord.py` does **not**
@@ -2156,7 +2158,7 @@ and server-side validation possible at all.
 
 - **16a - The map files, read.** ✅ **done 2026-09-03.** `campmap.py` (990
   lines), `maptga.py` (310) and `mapvocab.py` (259), with `tests/test_campmap.py`
-  at 61 checks, all passing on DaC. `descr_terrain.txt`; all ten layers through
+  at 62 checks (16d widened the probe's), all passing on DaC. `descr_terrain.txt`; all ten layers through
   Pillow with the size relationships checked from headers alone; the colour
   vocabularies, with climates read out of the mod because every mod renames
   them; `descr_regions.txt` in every form with each field carrying its source
@@ -2309,16 +2311,86 @@ and server-side validation possible at all.
   one at 100% hides the map under it. Making a "nothing here" colour punch
   through is a legend decision, and the legend is 16d's.
 
-- **16d - Layers, legend, inspector.** The layer checkboxes, opacity sliders and
-  draw order 16c built, **persisted** like `pane_sizes`; a legend, in which a
-  layer's "nothing here" colour becomes transparent so features and trade routes
-  read as overlays rather than hiding the map; a pixel probe naming every
-  layer's value from the vocabularies, localised name first and code name in
-  brackets; click a region for an editable panel (owner, creator, rebel tribe, resources, triumph value,
-  base farming level, religions, settlement and port coordinates, region ID,
-  neighbours); Code View over `descr_regions.txt`.
-  Exit: edit a region end to end with undo; legend state persisted; a religion
-  set that does not total 100 is refused with the reason.
+- **16d - Layers, legend, inspector.** ✅ **done 2026-09-04.** `campmap.py`
+  (+560), `web/js/campmap.js` (834 to 1,455), a `regions` kind in
+  `codeview.py`, four routes in `server.py` and `tests/test_campedit.py` at
+  **85 checks, all passing** over vanilla's map and DaC's. The screen stops
+  being a viewer here.
+
+  **The layer stack is remembered**, in `map_layers` on `/api/settings` - the
+  `pane_sizes` road, and per user rather than per mod, because the ten layer
+  codes are the engine's own and mean the same thing in every mod. A saved
+  order is reconciled with the manifest rather than trusted: codes that are
+  still real keep their place, anything new goes where the server put it, and
+  nothing is dropped or invented.
+
+  **16c's deferred item, answered by the legend.** `map_features.tga` is 97.7%
+  black on DaC and 96.5% on vanilla, and black there means "nothing here", so
+  ticking the layer at full opacity hid the map under a black sheet with a few
+  rivers on it. `layer_legend` censuses the layer the browser was served, names
+  every colour from the vocabularies and flags the one that means nothing;
+  the browser punches that colour out of its own copy in one 4.4 ms pass, once
+  per change of the hide set, and features and trade routes are overlays. The
+  claim and its source live in one table, `BLANK`, and each entry says whether
+  a reference states it or whether we measured it: `features` is the arbiter's
+  own `none`; `trade_routes` is black because vanilla marks 995 tiles out of
+  54,760 and DaC marks none at all; `roughness` is black because the layer is a
+  magnitude; `fog` is white because that is 87% of vanilla's layer and 98% of
+  DaC's, and **no reference in the folder says which way round the engine reads
+  it**, which is said on the screen rather than guessed at. The four layers with
+  a real vocabulary have no blank colour at all - black ground is `wilderness`,
+  black heights is sea, a black region pixel is a settlement marker - so the
+  checkbox is not offered for them.
+
+  **The legend is also the region list.** The cap is 48 colours for a magnitude
+  and the engine's own 200 for `map_regions.tga`, so DaC's 202 colours all list,
+  each with its province name, its tile count and its share of the map. Any
+  colour no table knows is listed as that - DaC's stray `(1,1,1)` feature pixel
+  is visible on the screen now, not only in 16f's future report.
+
+  **The probe names one tile on all ten layers**, localised name first and code
+  name in brackets, in **0.17 ms on vanilla and 0.80 ms on DaC** warm - one
+  small request on the click, not on the pointer, because the hover readout is
+  answered in the browser and a round trip there is the thing this phase's rules
+  exist to prevent. The two pictures say they have no value at a tile rather
+  than being sampled at coordinates that mean nothing in them, and a layer the
+  wrong shape says which file to fix.
+
+  **The region record is editable, and an edit is one line.** Legion, creator
+  faction, rebel type, resources, triumph value, base farming level and the
+  religions, spliced into the line each field came from - asserted, not claimed:
+  **all 198 of DaC's records and all 112 of vanilla's re-render byte-exact with
+  no edits**, and one field edited changes exactly one line of a 1,990-line
+  file, CRLF, tabs and the modder's own trailing comments intact. A missing
+  `legion:` or resource line is inserted where the format puts it, at the indent
+  its neighbours use. Three fields refuse a rename with the reason, in the form,
+  in the text pane and at the plan: the region's name and the settlement's are
+  keys `descr_strat.txt`, the win conditions, the campaign script and every
+  `legion:` line point at, and the colour is the map's own pixels, which is 16e's.
+
+  **The religion rule is enforced twice**, live in the form and again at the
+  plan, because it is the one that crashes the game on load. A set that does not
+  total 100 says by how much and is refused before anything is written.
+  Warnings are separated from refusals with their sources: Geomod's "leave it at
+  5" for the triumph value, "4 is average, 6-7 highly fertile" for farming, and
+  16f's rule about a resource that is neither hidden nor a trade resource,
+  brought forward to where somebody can fix it.
+
+  Also here: neighbours from the label image (27 ms on DaC, four-connected,
+  markers skipped, and the panel says land bridges are 16f's), Code View over
+  `descr_regions.txt` with a span per field, Ctrl+Z over the working copy, and a
+  save that backs the file up, writes the log entry the Log's Undo reverses, and
+  **deletes `map.rwm`** - or the game loads the compiled map and shows none of
+  the edit.
+
+  **Two faults found by building it, both 16c's.** `cmapRepanel` re-ran the
+  canvas's wiring as well as the panel's, so every layer ticked added another
+  set of pointer listeners: measured at eleven, where a 10-pixel drag moved the
+  map 110 pixels. 16c ticked rarely enough to hide it and 16d ticks on every
+  legend opened. And the probe's row class `cmprow` was already the compare
+  screen's, four hundred lines further down the same stylesheet, so its
+  four-column grid silently won - the reason CSS names are now checked against
+  the sheet the same way top-level JS names are.
 
 - **16e - The paint tool.** Pencil, brush, bucket and pipette (Geomod's four)
   plus Demir's water brush. **Region-colour snapping**: the brush always writes
