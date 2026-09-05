@@ -111,5 +111,42 @@ else:
         input=joined, capture_output=True, text=True, encoding="utf-8")
     check("concatenated in load order, they parse as one program", r.returncode == 0)
 
+print("\n== every menu module is on the Home readiness matrix ==")
+# 17a: Home filters MODES down to the non-`sub` modes and reads
+# `report.modules[id]`; a module with no entry there renders '' and vanishes
+# with no error, which is how Campaign Map was missing from every mod card for a
+# whole phase. This asserts the class of bug rather than the one instance.
+from unittransfer import campmap, modfiles                      # noqa: E402
+
+core = (JS / "core.js").read_text(encoding="utf-8")
+block = re.search(r"^const MODES=\[(.*?)^\];", core, re.S | re.M)
+check("core.js declares MODES", bool(block))
+menu = re.findall(r"\{id:'([a-z]+)',(.*?)\}", block.group(1) if block else "")
+top = [mid for mid, rest in menu if mid != "home" and "sub:true" not in rest]
+subs = [mid for mid, rest in menu if "sub:true" in rest]
+check(f"MODES parsed: {len(top)} menu modules, {len(subs)} sub modes", len(top) > 5)
+gap = [m for m in top if m not in modfiles.MODULES]
+check("every menu module has a MODULES entry"
+      + (": " + ", ".join(gap) if gap else ""), not gap)
+# A sub mode may still have a MODULES entry - Traits and Sprites do, and their
+# rows are what the file table under a mod card is built from. What must not
+# happen is a card per sub mode, so Home's filter is the thing checked.
+home = (JS / "home.js").read_text(encoding="utf-8")
+check(f"Home's module cards drop the {len(subs)} sub modes",
+      "MODES.filter(d => d.id !== 'home' && !d.sub)" in home)
+
+# The campmap rows are spelled out in modfiles rather than imported from here,
+# so that drawing a mod card does not cost a Pillow import. This is what stops
+# the two lists drifting apart.
+rows = {k.rel.rsplit("/", 1)[-1]: k for k in modfiles.KNOWN if "campmap" in k.modules}
+layers = {ly["file"]: ly for ly in campmap.LAYERS}
+absent = sorted(set(layers) - set(rows))
+check("all ten map layers are declared" + (": " + ", ".join(absent) if absent else ""),
+      not absent)
+wrong = [f for f, ly in layers.items()
+         if f in rows and rows[f].required != ly["required"]]
+check("each layer's `required` matches campmap.LAYERS"
+      + (": " + ", ".join(wrong) if wrong else ""), not wrong)
+
 print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

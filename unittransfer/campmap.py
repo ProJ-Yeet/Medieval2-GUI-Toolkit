@@ -1541,6 +1541,28 @@ def region_view(r: Region, sea: int = 0) -> dict:
     }
 
 
+def _vocab_view(cm: "CampaignMap") -> dict:
+    """The three tables that name a colour, small enough to travel with the map.
+
+    17e's hover tooltip names every layer under the cursor, and it does that in
+    the browser: a round trip per pointer event is the one thing this screen's
+    rules exist to prevent, which is why 16d put the full probe behind a click.
+    These are the only tables it cannot derive - the arbiter's ground types and
+    features, and this mod's own climates, because DaC renames all twelve. Three
+    dozen rows in total, sent once with the manifest.
+
+    The layers that have a *rule* rather than a table - heights, roughness,
+    trade routes, fog - are not here: their rule is stated in
+    :func:`_colour_name` and mirrored in `cmapNameColour`, and neither end
+    nearest-colour matches. A colour no table claims is reported as unnamed.
+    """
+    return {
+        "ground_types": mapvocab.GROUND_TYPES,
+        "features": mapvocab.FEATURES,
+        "climates": mapvocab.climates(cm.mod),
+    }
+
+
 def _terrain_view(t: Terrain) -> dict:
     """``descr_terrain.txt``'s numbers, for the inspector 16d builds."""
     return {"min_sea_height": t.min_sea_height, "max_land_height": t.max_land_height,
@@ -1574,6 +1596,7 @@ def view(cm: "CampaignMap", name: str = "") -> dict:
         return {"mod": name or getattr(cm.mod, "name", ""),
                 "width": t.width, "height": t.height, "tiles": t.tiles,
                 "terrain": _terrain_view(t), "layers": layers, "regions": [],
+                "vocab": _vocab_view(cm),
                 "markers": {"settlement": list(SETTLEMENT_RGB),
                             "port": list(PORT_RGB)},
                 "findings": {"layers": cm.check_layers() or [str(exc)],
@@ -1601,6 +1624,7 @@ def view(cm: "CampaignMap", name: str = "") -> dict:
         "width": t.width, "height": t.height, "tiles": t.tiles,
         "terrain": _terrain_view(t),
         "layers": layers,
+        "vocab": _vocab_view(cm),
         "regions": [region_view(r, sea.get(key(r.rgb), 0)) for r in regions],
         "markers": {"settlement": list(SETTLEMENT_RGB), "port": list(PORT_RGB)},
         "findings": {

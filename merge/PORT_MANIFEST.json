@@ -3,8 +3,8 @@
   "remote": "upstream-editor",
   "ref": "refs/upstream/editor/main",
   "clone_url": "https://github.com/Machiavello-1441/m2tw-editor.git",
-  "reviewed_sha": "ac503ac9237cd29535afc43e8ab1ac0ff6d0aea4",
-  "reviewed_date": "2026-09-03"
+  "reviewed_sha": "319ae564af1f02b53ac5b6b8da611d28af3295b5",
+  "reviewed_date": "2026-09-05"
  },
  "dispositions": {
   "port-concept": "rebuild the idea in our stack; a change here may mean the format knowledge changed",
@@ -873,7 +873,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to V3.1 (decided 2026-09-03, ROADMAP.md) - the DECISION NEEDED above is answered: ported, not dropped. An OSM backdrop and coastline tracer for the map editor, opt-in and OFF by default, with the Overpass mirror list visible in settings; it is the first thing in the toolkit that touches the network. NOT part of V3.0.0 (phase 16)."
+   "notes": "Deferred to Phase 25 (decided 2026-09-03; renumbered from V3.1 on 2026-09-05, ROADMAP.md) - the DECISION NEEDED above is answered: ported, not dropped. An OSM backdrop and coastline tracer for the map editor, opt-in and OFF by default, with the Overpass mirror list visible in settings; it is the first thing in the toolkit that touches the network. NOT part of V3.0.0 (phase 16)."
   },
   "src/components/map/DisastersTab.jsx": {
    "disposition": "port-concept",
@@ -993,7 +993,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to V3.1 (decided 2026-09-03, ROADMAP.md) - the DECISION NEEDED above is answered: ported, not dropped. An OSM backdrop and coastline tracer for the map editor, opt-in and OFF by default, with the Overpass mirror list visible in settings; it is the first thing in the toolkit that touches the network. NOT part of V3.0.0 (phase 16)."
+   "notes": "Deferred to Phase 25 (decided 2026-09-03; renumbered from V3.1 on 2026-09-05, ROADMAP.md) - the DECISION NEEDED above is answered: ported, not dropped. An OSM backdrop and coastline tracer for the map editor, opt-in and OFF by default, with the Overpass mirror list visible in settings; it is the first thing in the toolkit that touches the network. NOT part of V3.0.0 (phase 16)."
   },
   "src/components/map/OsmRegionSearch.jsx": {
    "disposition": "port-concept",
@@ -1003,7 +1003,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to V3.1 (decided 2026-09-03, ROADMAP.md) - the DECISION NEEDED above is answered: ported, not dropped. An OSM backdrop and coastline tracer for the map editor, opt-in and OFF by default, with the Overpass mirror list visible in settings; it is the first thing in the toolkit that touches the network. NOT part of V3.0.0 (phase 16)."
+   "notes": "Deferred to Phase 25 (decided 2026-09-03; renumbered from V3.1 on 2026-09-05, ROADMAP.md) - the DECISION NEEDED above is answered: ported, not dropped. An OSM backdrop and coastline tracer for the map editor, opt-in and OFF by default, with the Overpass mirror list visible in settings; it is the first thing in the toolkit that touches the network. NOT part of V3.0.0 (phase 16)."
   },
   "src/components/map/OverlayMapGenerator.jsx": {
    "disposition": "out-of-scope",
@@ -1011,7 +1011,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
+   "notes": "Deferred to Phase 27 (decided 2026-09-03; renumbered from V3.3 on 2026-09-05, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as Phase 25. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/map/PositionPickerButton.jsx": {
    "disposition": "port-concept",
@@ -1400,7 +1400,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
+   "notes": "Deferred to Phase 27 (decided 2026-09-03; renumbered from V3.3 on 2026-09-05, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as Phase 25. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/newmap/BboxLayerGenerator.jsx": {
    "disposition": "out-of-scope",
@@ -1408,7 +1408,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
+   "notes": "Deferred to Phase 27 (decided 2026-09-03; renumbered from V3.3 on 2026-09-05, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as Phase 25. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/newmap/ExportPanel.jsx": {
    "disposition": "out-of-scope",
@@ -1424,7 +1424,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
+   "notes": "Deferred to Phase 27 (decided 2026-09-03; renumbered from V3.3 on 2026-09-05, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as Phase 25. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/newmap/GeoImportPanel.jsx": {
    "disposition": "out-of-scope",
@@ -1456,7 +1456,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
+   "notes": "Deferred to Phase 27 (decided 2026-09-03; renumbered from V3.3 on 2026-09-05, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as Phase 25. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/newmap/LandCoverFetcher.jsx": {
    "disposition": "out-of-scope",
@@ -1464,7 +1464,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
+   "notes": "Deferred to Phase 27 (decided 2026-09-03; renumbered from V3.3 on 2026-09-05, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as Phase 25. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/newmap/LayerPreviewPanel.jsx": {
    "disposition": "out-of-scope",
@@ -1520,7 +1520,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
+   "notes": "Deferred to Phase 27 (decided 2026-09-03; renumbered from V3.3 on 2026-09-05, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as Phase 25. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/components/newmap/OsmTagOverlayEditor.jsx": {
    "disposition": "out-of-scope",
@@ -2296,7 +2296,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
+   "notes": "Deferred to Phase 27 (decided 2026-09-03; renumbered from V3.3 on 2026-09-05, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as Phase 25. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/lib/casAnimCodec.js": {
    "disposition": "out-of-scope",
@@ -2434,7 +2434,7 @@
    "reason": "auto-generates map data from external sources - excluded",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to V3.3 (decided 2026-09-03, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as V3.1. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
+   "notes": "Deferred to Phase 27 (decided 2026-09-03; renumbered from V3.3 on 2026-09-05, ROADMAP.md) - ported, not dropped. Generates a map layer from external data; same opt-in rule as Phase 25. NOT part of V3.0.0 (phase 16). This lifts it out of the AI/autogenerate sweep, which was too wide - LuaAiAssistant, ScriptAIAssistant and SymbolGenerator stay a permanent no."
   },
   "src/main.jsx": {
    "disposition": "skip",
@@ -2779,7 +2779,7 @@
    "reason": "New Map Editor + OSM basemap",
    "status": "triaged",
    "first_seen": "ac503ac",
-   "notes": "Rotated-bbox resampling in Mercator space, for the New Map Editor and the OSM basemap. The New Map Editor is out of scope outright and the OSM work is V3.1/V3.3, so this is not V3.0.0 either way."
+   "notes": "Rotated-bbox resampling in Mercator space, for the New Map Editor and the OSM basemap. The New Map Editor is out of scope outright and the OSM work is Phase 25 / Phase 27, so this is not V3.0.0 either way."
   },
   "src/lib/utf16.js": {
    "disposition": "audit",

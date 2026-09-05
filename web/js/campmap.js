@@ -161,6 +161,7 @@ function cmapSaveLayers(){
     m.opacity[code] = L.opacity;
     if(L.hide.size) m.hide[code] = [...L.hide];
   }
+  m.tip = c.tip !== false;
   clearTimeout(cmapSaveTimer);
   cmapSaveTimer = setTimeout(() => {
     try{ api.post('/api/settings', {map_layers:m}); }catch(e){}
@@ -230,9 +231,16 @@ function cmapNew(mod, man){
     overlay: null, overlayKey: '', overlayAlpha: 0.85,
     view: {zoom: 1, ox: 0, oy: 0, fitted: false},
     hover: null, sel: null, outline: null, outlineKey: -1,
+    // 17e's tooltip: where the pointer is in the stage, whether the panel is
+    // wanted at all, and whether a drag is holding it down
+    ptr: null, tip: saved.tip !== false, tipHold: false, saidTip: '', tipKey: '',
+    stageW: 0, stageH: 0,
     // the picked tile, what all ten layers say about it, and the region record
     // it belongs to with the working copy the form edits
     pick: null, probe: null, probeErr: '', det: null, busy: false,
+    // which marker the pick landed on, if any, and the tile->region index 17c
+    // answers it from
+    marker: '', markerAt: null,
     ms: 0,
   };
 }
@@ -251,9 +259,14 @@ function renderCampmap(){
           <button onclick="cmapZoomTo(1)" title="One screen pixel per tile (1)">1:1</button>
           <button onclick="cmapZoomBy(1/1.4)" title="Zoom out (−)">−</button>
           <button onclick="cmapZoomBy(1.4)" title="Zoom in (+)">+</button>
+          <button id="cmTipBtn" class="${c.tip === false ? '' : 'on'}"
+            onclick="cmapTipToggle()"
+            title="Name the tile under the pointer on every layer at once (T).
+Answered here, out of the map you were already sent - no request per pixel.">ⓘ Names</button>
           <span class="count" id="cmZoom"></span>
         </div>
         <div class="cmread" id="cmRead">move the pointer over the map</div>
+        <div class="cmtip" id="cmTip" hidden></div>
         <div class="cmperf" id="cmPerf"></div>
       </div>
       <div class="cmside" id="cmSide">
@@ -589,6 +602,11 @@ function cmapResize(){
   if(!cv) return false;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const w = Math.round((cv.clientWidth || 1) * dpr), h = Math.round((cv.clientHeight || 1) * dpr);
+  // The stage's size, kept here because 17e's tooltip decides which side of the
+  // cursor to sit on from it, and reading it back per pointer event would force
+  // a layout on the one path that is not allowed to cost anything.
+  const c = state.cmap, st = document.getElementById('cmStage');
+  if(c && st){ c.stageW = st.clientWidth; c.stageH = st.clientHeight; }
   if(cv.width === w && cv.height === h) return false;
   cv.width = w; cv.height = h;
   return true;
@@ -651,7 +669,23 @@ function cmapPaint(dirty){
   const x = cv.getContext('2d');
   x.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  const R = dirty || [0, 0, w, h];
+  /* 17b - the trail the hover box left behind.
+
+     A dirty rectangle is worked out in CSS pixels and the canvas is backed at
+     devicePixelRatio, which on a 150% Windows display is 1.5. A rectangle on a
+     CSS pixel boundary therefore lands half way through a device pixel, and the
+     clip, the fill and the blit are all antialiased against that edge - so the
+     boundary pixel keeps half of the frame before it. One tile of hover leaves
+     a one-pixel darker outline, and a pointer sweep leaves a trail of them:
+     1,330 pixels of residue over two sweeps on this machine, measured by
+     diffing the dirty-rect frame against a full repaint of the same view.
+
+     Snapping the rectangle outwards to whole device pixels costs at most one
+     pixel of extra repaint per edge and removes the class of fault, rather than
+     the hover box's instance of it. */
+  const snap = r => [Math.floor(r[0] * dpr) / dpr, Math.floor(r[1] * dpr) / dpr,
+                     Math.ceil(r[2] * dpr) / dpr, Math.ceil(r[3] * dpr) / dpr];
+  const R = dirty ? snap(dirty) : [0, 0, w, h];
   x.save();
   if(dirty){ x.beginPath(); x.rect(R[0], R[1], R[2] - R[0], R[3] - R[1]); x.clip(); }
   x.fillStyle = '#0e1013';
@@ -782,6 +816,7 @@ function cmapPointers(cv){
     if(mode === 'paint') cpaintUp();
     else if(last && moved < CMAP_DRAG_SLOP && state.cmap) cmapPick(cmapEventTile(cv, e));
     last = null; mode = '';
+    if(state.cmap){ state.cmap.tipHold = false; cmapTipPaint(); }
     try{ cv.releasePointerCapture(e.pointerId); }catch(err){}
   });
   cv.addEventListener('pointercancel', () => {
@@ -790,14 +825,24 @@ function cmapPointers(cv){
   });
   cv.addEventListener('pointerleave', () => {
     const c = state.cmap;
-    if(!c || !c.hover) return;
+    if(!c) return;
+    c.ptr = null;
+    if(!c.hover){ cmapTipPaint(); return; }
     const was = cmapCellRect(...c.hover);
     c.hover = null;
     cmapPaint(was);
+    cmapTipPaint();
   });
   cv.addEventListener('pointermove', e => {
     const c = state.cmap;
     if(!c) return;
+    // where the panel goes, in the stage's own pixels. 17e.
+    const b = cv.getBoundingClientRect(), st = document.getElementById('cmStage');
+    const s = st ? st.getBoundingClientRect() : b;
+    c.ptr = [e.clientX - s.left, e.clientY - s.top];
+    // A drag is not a read: the panel would sit under the stroke being painted
+    // and follow a pan it is not about, so it stands down until the button is up
+    c.tipHold = !!(mode || last);
     if(mode === 'paint'){
       cpaintMove(cmapEventTile(cv, e));
       cmapHover(cmapEventTile(cv, e));
@@ -811,6 +856,7 @@ function cmapPointers(cv){
       // a pan moves everything, so this is the one interaction that is a whole
       // frame - and a whole frame is one drawImage of a sub-rect
       cmapPaint();
+      cmapTipPaint();
       return;
     }
     cmapHover(cmapEventTile(cv, e));
@@ -841,12 +887,13 @@ function cmapHover(tile){
   const next = on ? [tx, ty] : null;
   const same = (!next && !c.hover) || (next && c.hover && next[0] === c.hover[0]
                                        && next[1] === c.hover[1]);
-  if(same){ cmapReadout(); return; }
+  if(same){ cmapReadout(); cmapTipPaint(); return; }
   const was = c.hover ? cmapCellRect(...c.hover) : null;
   c.hover = next;
   if(next) cmapPaint(cmapCellRect(tx, ty));
   if(was) cmapPaint(was);
   if(!next && !was) cmapReadout();
+  cmapTipPaint();
 }
 
 /* What is under the cursor, said in the three things worth saying: the tile,
@@ -871,6 +918,9 @@ function cmapReadout(){
   const pt = `${c.ms.toFixed(2)} ms/frame`;
   if(pe && c.saidPerf !== pt){ pe.textContent = pt; c.saidPerf = pt; }
 
+  // 17e: with the pointer on the map the tooltip beside it says all of this and
+  // nine layers more, so the corner line would be the same tile twice, two
+  // centimetres apart. It goes back to being the affordance it started as.
   let html = 'move the pointer over the map';
   if(c.hover){
     const [tx, ty] = c.hover;
@@ -883,7 +933,238 @@ function cmapReadout(){
        : r ? `${cmapRegionName(r)}${r.id >= 0 ? ` <span class="count">#${r.id}</span>` : ''}`
        : '<span class="count">no region</span>');
   }
-  if(c.saidRead !== html){ el.innerHTML = html; c.saidRead = html; }
+  const hide = !!(c.hover && c.tip !== false);
+  if(el.hidden !== hide) el.hidden = hide;
+  if(!hide && c.saidRead !== html){ el.innerHTML = html; c.saidRead = html; }
+}
+
+/* ---------- the hover tooltip (17e) ----------
+
+   Mylae's `MapPixelTooltip` is the thing his map reads best: hover a tile and a
+   small panel beside the cursor names it on every layer at once. 16d had the
+   same answer already - `campmap.probe_pixel` names one tile across all ten
+   layers in 0.17 ms on vanilla and 0.80 ms on DaC - but put it behind a CLICK,
+   because a round trip on the pointer is what this screen's rules exist to
+   prevent. So this is the probe's answer, worked out in the browser: the layer
+   pixels are the ones it was already served and the three tables it cannot
+   derive travel with the manifest (`_vocab_view`).
+
+   Two things his version gets wrong and this one does not. He nearest-colour
+   matches a layer's legend within a distance of 30, which names colours that
+   are not in the file at all, and tolerance-matches regions within 6, which on
+   a map carrying a one-channel painting slip - and both real maps carry
+   several - confidently names the wrong province. Every match here is exact,
+   and a colour no table claims is said to be one. */
+
+/* The panel on or off, remembered with the layer settings.
+
+   It is on by default: naming what is under the pointer is the whole point of
+   a map editor, and the cost is ten 1x1 reads. Off is for painting a long
+   stroke, or for a screenshot. */
+function cmapTipToggle(){
+  const c = state.cmap;
+  if(!c) return;
+  c.tip = c.tip === false;
+  const b = document.getElementById('cmTipBtn');
+  if(b) b.classList.toggle('on', c.tip !== false);
+  c.saidRead = null;
+  cmapReadout();
+  cmapTipPaint();
+  cmapSaveLayers();
+}
+
+/* What one layer's colour at this tile is called, and its code name.
+
+   A mirror of `campmap._colour_name`, and deliberately a small one: the tables
+   arrive in the manifest and the four rules are four rules. `code` of null is
+   the load-bearing half - it means NO TABLE THIS TOOLKIT HAS NAMES THIS
+   COLOUR, which on DaC is a real answer (a stray (1,1,1) in map_features.tga,
+   five colours in map_climates.tga that no climate declares) and is never
+   rounded to the nearest thing that is named. */
+function cmapNameColour(code, rgb){
+  const c = state.cmap, v = (c.man && c.man.vocab) || {};
+  const [r, g, b] = rgb;
+  const k = (r << 16) | (g << 8) | b;
+  const hit = list => (list || []).find(e => e.rgb && ((e.rgb[0] << 16) | (e.rgb[1] << 8) | e.rgb[2]) === k);
+  if(code === 'regions'){
+    const mk = c.man.markers;
+    if(k === ((mk.settlement[0] << 16) | (mk.settlement[1] << 8) | mk.settlement[2]))
+      return {name: 'Settlement marker', code: 'settlement'};
+    if(k === ((mk.port[0] << 16) | (mk.port[1] << 8) | mk.port[2]))
+      return {name: 'Port marker', code: 'port'};
+    const reg = c.byKey.get(k);
+    if(reg && reg.name) return {name: reg.name, code: reg.name, region: reg};
+    return {name: '', code: null, region: reg || null};
+  }
+  if(code === 'heights'){
+    // the measured rule, not the ground types: sea iff not greyscale, or black
+    if(r === 0 && g === 0 && b === 0) return {name: 'Sea (pure black)', code: 'sea'};
+    if(!(r === g && g === b)) return {name: 'Sea (not greyscale)', code: 'sea'};
+    return {name: `Land, height ${r} of 255`, code: 'land'};
+  }
+  if(code === 'ground_types'){
+    const e = hit(v.ground_types);
+    return e ? {name: e.name, code: e.code} : {name: '', code: null};
+  }
+  if(code === 'features'){
+    const e = hit(v.features);
+    if(!e) return {name: '', code: null};
+    return {name: e.code === 'none' ? 'Nothing here' : e.name, code: e.code};
+  }
+  if(code === 'climates'){
+    const e = hit(v.climates);
+    return e ? {name: e.name, code: e.code} : {name: '', code: null};
+  }
+  if(code === 'trade_routes')
+    return k === 0 ? {name: 'No trade route', code: 'none'}
+                   : {name: 'Trade route', code: 'route'};
+  if(code === 'roughness'){
+    if(!(r === g && g === b)) return {name: '', code: null};
+    return r === 0 ? {name: 'Flat', code: 'flat'}
+                   : {name: `Roughness ${r} of 255`, code: 'rough'};
+  }
+  if(code === 'fog'){
+    if(r === 255 && g === 255 && b === 255) return {name: 'Unmarked', code: 'unmarked'};
+    if(r === 0 && g === 0 && b === 0) return {name: 'Marked', code: 'marked'};
+    return {name: '', code: null};
+  }
+  return {name: '', code: null};
+}
+
+/* One layer's pixel at one tile, or null.
+
+   Layers are served at tile fit, so this is a 1x1 read at the tile's own
+   coordinates - O(1) per layer, ten of them, which is what keeps rule 4. A
+   layer that is not aligned to the grid has no value at a tile and says so
+   rather than being sampled at coordinates that mean nothing in it. */
+function cmapLayerRgb(code, tx, ty){
+  const cv = cmapPixels(code);
+  if(!cv || tx < 0 || ty < 0 || tx >= cv.width || ty >= cv.height) return null;
+  const d = state.cmap.layers[code].px.getImageData(tx, ty, 1, 1).data;
+  return [d[0], d[1], d[2]];
+}
+
+function cmapTipRow(ly, tx, ty){
+  if(!ly.present || !ly.aligned){
+    // A layer that is missing is the side panel's news, not the pointer's; a
+    // layer that is present and the wrong shape is the classic map crash, and
+    // it is worth saying where somebody is looking.
+    if(!ly.present || !ly.problem) return '';
+    return `<div class="cmtiprow"><i class="none"></i>
+      <span class="cmtipk">${esc(ly.label)}</span>
+      <span class="w-bad">${esc(ly.problem)}</span></div>`;
+  }
+  const rgb = cmapLayerRgb(ly.code, tx, ty);
+  if(!rgb) return '';
+  const n = cmapNameColour(ly.code, rgb);
+  const val = n.code
+    ? `${esc(n.name)}${n.code !== n.name ? ` <span class="count">(${esc(n.code)})</span>` : ''}`
+    : `<span class="w-warn">no table names this colour</span>
+       <span class="count">rgb(${rgb.join(', ')})</span>`;
+  return `<div class="cmtiprow"><i style="background:rgb(${rgb.join(',')})"></i>
+    <span class="cmtipk">${esc(ly.label)}</span>
+    <span class="cmtipv">${val}</span></div>`;
+}
+
+/* The panel's contents. Region first, because it is what the map is about. */
+function cmapTipHtml(tx, ty){
+  const c = state.cmap, m = c.man;
+  const gy = m.height - 1 - ty;
+  const rgb = cmapLayerRgb('regions', tx, ty);
+  const n = rgb ? cmapNameColour('regions', rgb) : null;
+  let head = '';
+  if(n && (n.code === 'settlement' || n.code === 'port')){
+    // 17c again: the marker belongs to the region around it, and saying which
+    // is the whole difference between a readout and an answer
+    const own = cmapMarkerOwner(tx, ty);
+    head = `<div class="cmtipn w-good">${esc(n.name)}</div>`
+      + (own ? `<div class="count">${esc(own.region.settlement_name
+                                        || own.region.name)} · ${esc(own.region.name)}</div>`
+             : `<div class="w-warn">no region claims this marker</div>`);
+  }else if(n && n.region && n.region.name){
+    const r = n.region;
+    head = `<div class="cmtipn">${esc(r.name)}
+        ${r.id >= 0 ? `<span class="count">#${r.id}</span>` : ''}</div>`
+      + (r.settlement_name ? `<div class="count">${esc(r.settlement_name)}${
+          r.faction ? ` · ${esc(r.faction)}` : ''}</div>` : '');
+  }else if(n){
+    // the sea, or a colour descr_regions.txt never declares - which is a real
+    // state both real maps are in, and the sentence cmapRegionName already owns
+    head = `<div class="cmtipn count">${n.region ? cmapRegionName(n.region)
+                                                 : 'no region'}</div>`;
+  }
+  const rows = m.layers.map(ly => cmapTipRow(ly, tx, ty)).join('');
+  return `${head}
+    <div class="cmtipxy"><b>${tx}, ${ty}</b> image · <b>${tx}, ${gy}</b> game</div>
+    ${rows}`;
+}
+
+/* The layers the panel needs, which are not the layers on screen.
+
+   Naming every layer means holding every layer, and only the ticked ones are
+   fetched - so the first hover asks for the rest, once, and never again. They
+   are not ticked by asking: `cmapCompose` draws what `on` says, and these
+   arrive with it false, so the picture does not change. Each is one PNG the
+   server already has on disk, keyed by the file's mtime.
+
+   A layer that will not load is not retried here and not complained about
+   twice: `cmapFetchLayer` has already put the server's own sentence on the
+   layer row in the side panel, and the tooltip just has one row fewer. */
+function cmapTipLoad(){
+  const c = state.cmap;
+  if(!c || c.tipLoad) return;
+  const want = Object.keys(c.layers).filter(code => {
+    const L = c.layers[code];
+    return L.def.present && L.def.aligned && !L.img && !L.loading && !L.failed;
+  });
+  if(!want.length){ c.tipLoad = !Object.values(c.layers).some(L => L.loading); return; }
+  c.tipLoad = true;
+  Promise.all(want.map(code => cmapFetchLayer(c, code))).then(() => {
+    if(state.cmap !== c) return;
+    c.saidTip = ''; c.tipKey = '';   // the panel can say more now than it could
+    cmapTipPaint();
+  });
+}
+
+/* Draw it, and put it where it can be read.
+
+   Beside the cursor, flipped to the other side when it would run off the stage,
+   so the panel never leaves the window and never sits under the pointer. The
+   HTML is rebuilt only when it changed, for the same reason the corner readout
+   is: writing into the DOM forces a style recalculation whether the text is
+   different or not, and this runs per pointer event. */
+function cmapTipPaint(){
+  const c = state.cmap, el = document.getElementById('cmTip');
+  if(!el || !c) return;
+  if(!c.hover || !c.ptr || c.tip === false || c.tipHold){
+    if(!el.hidden){ el.hidden = true; c.saidTip = ''; }
+    return;
+  }
+  cmapTipLoad();
+  /* The panel is about a TILE and it follows a POINTER, and at any zoom over
+     1:1 most pointer events are still inside the tile the last one was in. So
+     the contents are worked out when the tile changes and only the two edge
+     offsets below are written when it does not: 0.65 ms against 0.17 ms,
+     measured on Third Age Reforged with all eight aligned layers named. */
+  const tile = `${c.hover[0]},${c.hover[1]}`;
+  if(c.tipKey !== tile){
+    const html = cmapTipHtml(c.hover[0], c.hover[1]);
+    if(c.saidTip !== html){ el.innerHTML = html; c.saidTip = html; }
+    c.tipKey = tile;
+  }
+  if(el.hidden) el.hidden = false;
+  /* Which side of the cursor, decided from the pointer and the stage rather
+     than from the panel's own width. Asking the panel how big it is means
+     reading `offsetWidth` right after writing its HTML, which forces a layout
+     per pointer event - so the panel is anchored by whichever two edges are
+     furthest from the cursor and CSS lays it out afterwards. It also means the
+     panel cannot leave the stage however long a province name is. */
+  const [px, py] = c.ptr;
+  const W = c.stageW || 0, H = c.stageH || 0;
+  if(W && px > W * 0.55){ el.style.left = 'auto'; el.style.right = `${Math.round(W - px + 18)}px`; }
+  else { el.style.right = 'auto'; el.style.left = `${Math.round(px + 18)}px`; }
+  if(H && py > H * 0.6){ el.style.top = 'auto'; el.style.bottom = `${Math.round(H - py + 14)}px`; }
+  else { el.style.bottom = 'auto'; el.style.top = `${Math.round(py + 14)}px`; }
 }
 
 /* The region a tile belongs to, or the string 'settlement' / 'port' when the
@@ -929,6 +1210,25 @@ function cmapPixels(code){
     L.px.drawImage(L.img, 0, 0);
   }
   return L.cv;
+}
+
+/* The region a settlement or port marker belongs to, from the manifest.
+
+   Built once and kept: 200 regions is 265 markers on this map, and a Map keyed
+   by the tile answers a click in one lookup. `null` is a real answer - a marker
+   the read could not pair with a region is exactly what `findings.orphan_
+   settlements` and `extra_settlements` are about, and 17c's rule is that a dead
+   click says why rather than doing nothing. */
+function cmapMarkerOwner(tx, ty){
+  const c = state.cmap;
+  if(!c.markerAt){
+    c.markerAt = new Map();
+    for(const r of c.man.regions){
+      if(r.settlement) c.markerAt.set(r.settlement.join(','), {region: r, kind: 'settlement'});
+      if(r.port) c.markerAt.set(r.port.join(','), {region: r, kind: 'port'});
+    }
+  }
+  return c.markerAt.get(`${tx},${ty}`) || null;
 }
 
 function cmapRegionAt(tx, ty){
@@ -1128,11 +1428,32 @@ async function cmapPick(tile){
   const c = state.cmap;
   const [tx, ty] = tile;
   const hit = cmapRegionAt(tx, ty);
-  const r = (hit && typeof hit === 'object') ? hit : null;
+  let r = (hit && typeof hit === 'object') ? hit : null;
+  /* 17c - the settlement is the thing people click on, and it was the one tile
+     that answered nothing.
+
+     A settlement pixel is black and a port pixel is white, neither is a region
+     colour, and both are excluded from the region-id scan - so the colour under
+     the pointer named no region and the panel said "no region record on this
+     tile" while the pointer was on Nottingham. Measured on Third Age Reforged:
+     199 of its 200 settlements and all 65 ports behaved that way, which is most
+     of "not every region is clickable".
+
+     The marker belongs to whatever region surrounds it and the manifest already
+     says which - `descr_regions.txt` names the settlement, and the read paired
+     it with the pixel. This is the same hole `mapquery` had to close for a
+     resource standing on a marker, closed the same way. */
+  c.marker = '';
+  if(!r && (hit === 'settlement' || hit === 'port')){
+    const own = cmapMarkerOwner(tx, ty);
+    if(own){ r = own.region; c.marker = own.kind; }
+    else c.marker = `${hit}-orphan`;
+  }
   c.sel = r;
   c.pick = (tx >= 0 && ty >= 0 && tx < c.man.width && ty < c.man.height) ? [tx, ty] : null;
   c.probe = null; c.probeErr = '';
-  activity('map pick', `${c.mod} ${tx},${ty} -> ${r ? r.name || 'undeclared' : hit || 'nothing'}`);
+  activity('map pick', `${c.mod} ${tx},${ty} -> ${r ? r.name || 'undeclared' : hit || 'nothing'}`
+    + (c.marker ? ` (on the ${c.marker} marker)` : ''));
   cmapOutline(r);
   cmapPaint();
   cmapPickPaint();
@@ -1268,10 +1589,21 @@ function cmapProbeHtml(){
 function cmapRegionHtml(){
   const c = state.cmap, d = c.det;
   if(!c.pick) return '';
-  if(!d) return `<div class="k">This region</div>
-    <div class="count">${c.sel ? esc(cmapRegionName(c.sel)).replace(/<[^>]+>/g, '')
-      : 'No region record on this tile'} - nothing in
-    <code>descr_regions.txt</code> to edit.</div>`;
+  if(!d){
+    // 17c: a click that opens no form says which of the three reasons it is,
+    // rather than the one sentence that used to cover all of them.
+    if(c.marker && c.marker.endsWith('-orphan')){
+      const kind = c.marker.split('-')[0];
+      return `<div class="k">This region</div>
+        <div class="w-warn">This is a ${esc(kind)} marker pixel and no region in
+        <code>descr_regions.txt</code> claims it. The read calls that an orphan
+        ${esc(kind)}; Check lists them.</div>`;
+    }
+    return `<div class="k">This region</div>
+      <div class="count">${c.sel ? esc(cmapRegionName(c.sel)).replace(/<[^>]+>/g, '')
+        : 'No region record on this tile'} - nothing in
+      <code>descr_regions.txt</code> to edit.</div>`;
+  }
   if(d.loading) return `<div class="k">This region</div>
     <div class="count">reading ${esc(d.name)}…</div>`;
   if(d.error) return `<div class="k">This region</div>
@@ -1594,6 +1926,7 @@ function cmapKeys(){
     else if(e.key === '1'){ cmapZoomTo(1); }
     else if(e.key === '+' || e.key === '='){ cmapZoomBy(1.4); }
     else if(e.key === '-' || e.key === '_'){ cmapZoomBy(1 / 1.4); }
+    else if(e.key === 't' || e.key === 'T'){ cmapTipToggle(); }
     else if(e.key === 'Escape' && (state.cmap.sel || state.cmap.pick)){
       const c = state.cmap;
       c.sel = null; c.pick = null; c.probe = null; c.det = null;

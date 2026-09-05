@@ -35,6 +35,7 @@ MODULES: Dict[str, str] = {
     "ancillaries": "Ancillaries",
     "minor": "Minor Files",
     "strings": "Strings",
+    "campmap": "Campaign Map",
 }
 
 
@@ -47,6 +48,12 @@ class Known:
     required: bool = True          # False = the module works without it, but poorer
     folder: bool = False
 
+
+#: The two folders the campaign map lives in. Spelled out rather than imported
+#: from campmap/campstrat, which pull in Pillow: a mod card must not cost what
+#: opening the mod costs, and this module is the one that says so.
+_MAP = "world/maps/base"
+_CAMP = "world/maps/campaign/imperial_campaign"
 
 #: Every game file the toolkit reads today. Ordered as a person would look for
 #: them: the roster first, then what a unit points at, then the rest.
@@ -86,6 +93,31 @@ KNOWN: List[Known] = [
     Known("descr_sm_resources.txt", "Trade resources", ("minor",)),
     Known("descr_cultures.txt", "Cultures and settlements", ("minor",)),
     Known("descr_names.txt", "Character names", ("minor",)),
+    # The campaign map, in two halves. The map half is the ten TGA layers and
+    # the two text files beside them under world/maps/base; the campaign half is
+    # descr_strat.txt and descr_win_conditions.txt in the campaign folder, which
+    # a map-only mod legitimately does not have. `required` mirrors
+    # campmap.LAYERS exactly - five layers the engine will not start without and
+    # five it treats as optional - and test_modfiles asserts the two agree, so
+    # this list cannot drift from the module that reads them.
+    Known(f"{_MAP}/descr_terrain.txt", "Map tile grid (descr_terrain)", ("campmap",)),
+    Known(f"{_MAP}/descr_regions.txt", "Map regions", ("campmap",)),
+    Known(f"{_MAP}/map_regions.tga", "Regions layer", ("campmap",)),
+    Known(f"{_MAP}/map_heights.tga", "Heights layer", ("campmap",)),
+    Known(f"{_MAP}/map_ground_types.tga", "Ground types layer", ("campmap",)),
+    Known(f"{_MAP}/map_climates.tga", "Climates layer", ("campmap",)),
+    Known(f"{_MAP}/map_features.tga", "Features layer", ("campmap",)),
+    Known(f"{_MAP}/map_fog.tga", "Fog layer", ("campmap",), required=False),
+    Known(f"{_MAP}/map_trade_routes.tga", "Trade routes layer", ("campmap",),
+          required=False),
+    Known(f"{_MAP}/map_roughness.tga", "Roughness layer", ("campmap",), required=False),
+    Known(f"{_MAP}/water_surface.tga", "Water surface layer", ("campmap",),
+          required=False),
+    Known(f"{_MAP}/map_FE.tga", "Front-end map layer", ("campmap",), required=False),
+    Known(f"{_CAMP}/descr_strat.txt", "Campaign setup (descr_strat)", ("campmap",),
+          required=False),
+    Known(f"{_CAMP}/descr_win_conditions.txt", "Victory conditions", ("campmap",),
+          required=False),
     Known("text", "Localisation folder", ("strings",), folder=True),
     Known("ui/units", "Unit cards", ("transfer", "edit"), required=False, folder=True),
     Known("ui/unit_info", "Unit info cards", ("transfer", "edit"),

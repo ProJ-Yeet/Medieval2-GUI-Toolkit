@@ -4,6 +4,14 @@ Every review of Mylae's `main`, newest first. Written by
 `tools/upstream_sync.py sync --accept`. His commit messages all say
 "File changes", so these entries are the only record of what actually moved.
 
+## 2026-09-05 - ac503ac..319ae56
+
+1 commits, 2 files changed.
+
+### skip (2)
+
+Counted only.
+
 ## 2026-09-03 - e6e6982..ac503ac
 
 27 commits, 31 files changed.
