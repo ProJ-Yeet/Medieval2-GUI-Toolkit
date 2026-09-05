@@ -75,10 +75,15 @@ async function cjOpen(force){
   catch(e){ d = {error: errText(e)}; }
   if(state.cj !== k) return;
   k.loading = false;
-  if(d.error){ k.err = d.error; cjPaint(); return; }
+  if(d.error){
+    // 17f: no campaign file is not no factions. The panel falls back to the
+    // faction screen alone, which reads a different file entirely.
+    k.err = d.error; cjPaint(); cjSmOpen(); return;
+  }
   k.d = d;
   cjReset();
   cjPaint();
+  if(k.tab === 'faction') cjSmOpen(k.faction);
 }
 
 function cjToggle(){
@@ -95,6 +100,9 @@ function cjTab(name){
   k.preview = null;
   cjReset();
   cjPaint();
+  // 17f: the faction tab is two files now, and the second one is read the
+  // moment the tab is opened rather than when the picker is touched
+  if(name === 'faction') cjSmOpen(cjEnsureFaction());
 }
 
 /* The working copy every box edits and every save is built from - the same
@@ -189,6 +197,68 @@ function cjPickFaction(name){
   k.preview = null;
   cjReset();
   cjPaint();
+  cjSmOpen(name);
+}
+
+/* ---------- 17f: the other half of the same faction ----------
+
+   `descr_sm_factions.txt` says what a faction IS - its culture, its religion,
+   the two colours it paints the map with, its horde and its art. This file says
+   what it starts the campaign WITH - its AI, its purse, its diplomacy. Nobody
+   thinks of those as two modules, so they are one screen; they are still two
+   engines and two saves, because they are two files and combining the SCREENS
+   must not combine the WRITES.
+
+   factions.js owns that half exactly as it did in its own mode: the same
+   `/api/faction` read, the same `/api/factions/plan|apply` save, the same
+   confirmation, the same undo. What changed there is only where it paints. */
+async function cjSmOpen(slot){
+  const c = state.cmap;
+  if(!c || typeof facOpen !== 'function') return;
+  if(slot && state.fac && state.fac.mod === c.mod
+     && state.fac.sel === slot && state.fac.d) return;
+  try{
+    if(!state.fac || state.fac.mod !== c.mod) await facFetch(c.mod);
+  }catch(e){
+    state.fac = null;
+    const el = document.getElementById('facMain');
+    if(el) el.innerHTML = `<div class="empty"><span class="w-bad">✗ ${
+      esc(errText(e))}</span></div>`;
+    return;
+  }
+  if(state.mode !== 'campmap' || !state.cmap || state.cmap.mod !== c.mod) return;
+  // the roster has arrived, so the picker can be drawn now whether or not the
+  // campaign half ever read
+  const want = slot || cjEnsureFaction();
+  cjPaint();
+  if(want) facOpen(want);
+}
+
+//: The faction the screen is on, defaulted to the first one either file has.
+//: Returns '' when neither file has read yet, which is the only case where
+//: there is nothing to draw at all.
+function cjEnsureFaction(){
+  const k = state.cj;
+  if(!k) return '';
+  const list = cjFactionList();
+  if(!list.length) return '';
+  if(!k.faction || !list.some(f => f.name === k.faction)) k.faction = list[0].name;
+  return k.faction;
+}
+
+//: Every faction either file knows, in one list, with which of the two has it.
+//: A slot in one and not the other is a real state - a mod with no campaign has
+//: all of them in that state - and the screen says which rather than blanking.
+function cjFactionList(){
+  const k = state.cj, out = new Map();
+  for(const f of ((k && k.d && k.d.factions) || []))
+    out.set(f.name, {name: f.name, label: f.label || f.name, camp: true, sm: false});
+  for(const r of ((state.fac && state.fac.factions) || [])){
+    const e = out.get(r.name);
+    if(e) e.sm = true;
+    else out.set(r.name, {name: r.name, label: r.label || r.name, camp: false, sm: true});
+  }
+  return [...out.values()].sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /* ---------- the boxes ---------- */
@@ -395,7 +465,21 @@ function cjSaveRelations(){
 
 /* ---------- drawing ---------- */
 
+/* 17f: the faction screen is two forms wide, and `descr_sm_factions.txt`'s half
+   was drawn in a full-width pane in its own mode. The side column already knows
+   how to be 620px - the code view asks for it - so the faction tab asks too,
+   and gives it back on any other tab. */
+function cjWide(){
+  const k = state.cj, side = document.getElementById('cmSide');
+  if(!side) return;
+  const want = !!(k && k.open && k.tab === 'faction');
+  if(want) side.classList.add('wide');
+  else if(!(state.cmap && state.cmap.det && state.cmap.det.cv)) side.classList.remove('wide');
+  if(typeof cmapResize === 'function' && cmapResize()) cmapPaint();
+}
+
 function cjPaint(){
+  cjWide();
   const el = document.getElementById('cmCamp');
   if(!el) return;
   el.innerHTML = cjHtml();
@@ -417,8 +501,17 @@ function cjHtml(){
   if(!k.open) return head;
   if(k.loading) return head + `<div class="cxpanel count">reading the
     campaign…</div>`;
-  if(k.err) return head + `<div class="cxpanel w-warn">${esc(k.err)}</div>`;
-  if(!d || !k.w) return head;
+  /* 17f - the campaign half can be missing and the faction half still be
+     there. A mod with no `descr_strat.txt` still has a `descr_sm_factions.txt`
+     with every faction it ships in it, and the rule 16f and 16g settled applies
+     here too: name the file that is missing, do not blank the form. */
+  if(k.err || !d || !k.w){
+    const slot = cjEnsureFaction();
+    return head + `<div class="cxpanel">
+      ${k.err ? `<div class="w-warn">${esc(k.err)}</div>` : ''}
+      ${slot ? `<div class="cxform">${cjFactionPickerHtml()}${cjSmHtml()}</div>`
+             : ''}</div>`;
+  }
   const tabs = [['campaign', 'When it runs'], ['rosters', 'Who plays'],
                 ['faction', 'Each faction'], ['diplomacy', 'Diplomacy'],
                 ['create', 'New faction'], ['wins', 'Winning']];
@@ -503,21 +596,54 @@ function cjFactionPickerHtml(){
   const k = state.cj;
   return `<div class="cmfield"><label>Faction</label>
     <select onchange="cjPickFaction(this.value)">
-      ${k.d.factions.map(f => `<option value="${esc(f.name)}"${
-        f.name === k.faction ? ' selected' : ''}>${esc(f.label || f.name)
-        }</option>`).join('')}
+      ${cjFactionList().map(f => `<option value="${esc(f.name)}"${
+        f.name === k.faction ? ' selected' : ''}>${esc(f.label)}${
+        f.camp && f.sm ? '' : f.camp ? ' · not in descr_sm_factions.txt'
+                                     : ' · not in descr_strat.txt'}</option>`).join('')}
     </select></div>`;
 }
 
 function cjFactionHtml(){
   const k = state.cj, w = k.w, v = k.d.vocab;
   const f = k.d.factions.find(x => x.name === k.faction) || {};
+  return `<div class="cxform">
+    ${cjFactionPickerHtml()}
+    ${cjCampFactionHtml(f, w, v)}
+    ${cjSmHtml()}
+  </div>`;
+}
+
+//: The `descr_sm_factions.txt` half, drawn by factions.js into a div of its
+//: own. 17f: one screen, two forms, two Save buttons, and each one writes the
+//: file it has always written.
+function cjSmHtml(){
+  const has = !!(state.fac && state.fac.exists);
+  return `<div class="cjsm">
+    <div class="cjsmhead">The faction itself
+      <span class="count">data/descr_sm_factions.txt - its culture, religion,
+        colours, horde and art. A separate file and a separate save.</span></div>
+    ${has ? '' : `<div class="count">reading descr_sm_factions.txt…</div>`}
+    <div id="facMain">${(typeof facDetailHtml === 'function' && state.fac)
+      ? facDetailHtml() : ''}</div>
+  </div>`;
+}
+
+//: What `descr_strat.txt` says this faction starts with. A slot the campaign
+//: file has no block for says so rather than showing an empty form somebody
+//: could type into and save into nothing.
+function cjCampFactionHtml(f, w, v){
+  if(!f.name) return `<div class="cjsmhead">The campaign
+      <span class="count">data/${esc((state.cj.d && state.cj.d.campaign)
+        || 'world/maps/campaign')}/descr_strat.txt</span></div>
+    <div class="w-warn">This campaign has no block for
+      <b>${esc(state.cj.faction || 'this faction')}</b>, so there is nothing here
+      to edit. New faction, on the tab beside this one, writes one.</div>`;
   const list = `<datalist id="cjl-ai">${(v.ai || []).map(x =>
     `<option value="${esc(x)}">`).join('')}</datalist>
     <datalist id="cjl-label">${(v.ai_labels || []).map(x =>
     `<option value="${esc(x)}">`).join('')}</datalist>`;
-  return `<div class="cxform">
-    ${cjFactionPickerHtml()}
+  return `<div class="cjsmhead">The campaign
+      <span class="count">descr_strat.txt - what it starts the campaign with</span></div>
     <div class="count">line ${f.line} · ${f.settlements} settlement${
       f.settlements === 1 ? '' : 's'} · ${f.characters} character${
       f.characters === 1 ? '' : 's'}${f.roster ? ' · ' + f.roster : ''}</div>
@@ -547,9 +673,9 @@ function cjFactionHtml(){
     </div>
     ${list}
     <div class="csbtns">
-      <button class="primary" onclick="cjSave()">Save ${esc(k.faction)}</button>
-    </div>
-  </div>`;
+      <button class="primary" onclick="cjSave()">Save ${esc(state.cj.faction)}
+        in descr_strat.txt</button>
+    </div>`;
 }
 
 /* The diplomacy grid.

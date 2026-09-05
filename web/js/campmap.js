@@ -107,6 +107,9 @@ async function loadCampmap(){
       the ten TGA layers. Without them the game uses its own map, and there is
       nothing here to draw.</span><br><br>
       <button class="primary" onclick="loadCampmap()">Try again</button></div>`;
+    // 17f: somebody asked for this mod's factions through the Minor Files tab
+    // and this mod has no map to put them on. The old mode is where they are.
+    if(campmapWantFactions){ campmapWantFactions = false; setAppMode('factions'); }
     return;
   }
   if(stale('campmap', mod)) return;
@@ -301,6 +304,13 @@ Answered here, out of the map you were already sent - no request per pixel.">ⓘ
   cjOpen();           // 16j, and it reads nothing until somebody opens it
   cmodOpen();         // 16k, the strat models, and the same on both counts
   cmapResize();
+  // 17f: arrived here from Minor Files' Factions tab, which is now a route to
+  // the combined faction screen rather than to a mode of its own
+  if(campmapWantFactions){
+    campmapWantFactions = false;
+    if(!state.cj || !state.cj.open) cjToggle();
+    cjTab('faction');
+  }
   if(!c.view.fitted) cmapFit(); else cmapPaint();
   if(typeof rszApply === 'function') rszApply(main);
 }

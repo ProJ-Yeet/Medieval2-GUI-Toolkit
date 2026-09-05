@@ -686,6 +686,16 @@
   .cmkfold{font:inherit;padding:0 6px;border-radius:5px}
   .cmkcats{display:flex;flex-direction:column;gap:2px}
   .cmkcat.none{opacity:.45}
+  /* 17f - one faction screen, two files. The second half is drawn by
+     factions.js into #facMain, so it needs a rule of its own only for the
+     divider that says where one file stops and the other starts. */
+  .cjsmhead{font-size:11px;color:var(--dim);text-transform:uppercase;
+    letter-spacing:.04em;font-weight:600;margin-top:4px}
+  .cjsmhead .count{text-transform:none;letter-spacing:0;font-weight:400;
+    display:block;margin-top:2px}
+  .cjsm{margin-top:10px;padding-top:9px;border-top:1px solid var(--edge)}
+  .cjsm .trbar{position:static;padding:0 0 6px}
+  .cjsm .trsec{padding:0}
   .cmside{flex:0 0 336px;min-width:280px;display:flex;flex-direction:column;gap:9px;
     overflow:auto}
   .cmhead{display:flex;flex-direction:column;gap:2px}

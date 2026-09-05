@@ -668,14 +668,20 @@ const MINOR_TABS=[
   {id:'names',       label:'Character names'},
   {mode:'traits',      label:'Traits'},
   {mode:'ancillaries', label:'Ancillaries'},
-  {mode:'factions',    label:'Factions'},
+  // 17f: a faction is two files - what it IS (descr_sm_factions.txt) and what
+  // it starts the campaign WITH (descr_strat.txt) - and they are one screen
+  // now, inside the Campaign Map. This tab still lands somewhere, and where it
+  // lands depends on whether the mod has a map at all: with one, the combined
+  // screen; without one, the old mode, which is the only place that mod's
+  // factions can be edited.
+  {mode:'factions', label:'Factions', go:'minorFactions()'},
   {mode:'strings',     label:'Strings'},
 ];
 let minorWantTab=null;
 function minorTabsHtml(active,note){
   return `<div class="mftabs">${MINOR_TABS.map(t=>{
     const on=t.mode?state.mode===t.mode:(state.mode==='minor'&&active===t.id);
-    const go=t.mode?`minorGo(null,'${t.mode}')`:`minorGo('${t.id}')`;
+    const go=t.go?t.go:t.mode?`minorGo(null,'${t.mode}')`:`minorGo('${t.id}')`;
     return `<button class="mftab${on?' on':''}" onclick="${go}">${esc(t.label)}</button>`;
   }).join('')}${note?`<span class="count" style="margin-left:auto">${esc(note)}</span>`:''}</div>`;
 }
@@ -684,6 +690,21 @@ function minorGo(tab,mode){
   if(state.mode==='minor')return mfTab(tab);
   minorWantTab=tab; state.mf=null; setAppMode('minor');
 }
+
+/* Where the Factions tab goes now (17f).
+
+   To the combined screen when this mod has a campaign map to put it on, and to
+   the old mode when it has not - a mod that ships units and lets the game's own
+   map stand is the ordinary case, and it still has factions to edit. The map's
+   readiness is the same one Home shows, so the two never disagree. */
+function minorFactions(){
+  campmapWantFactions=true;
+  setAppMode('campmap');
+}
+//: Set by the tab above and read once by the campaign map: it opens the faction
+//: screen when it has drawn, and hands the mode back to `factions` when this
+//: mod has no map to draw at all.
+let campmapWantFactions=false;
 
 /* ---------- the findings banner ----------
    "14 things to look at - the marked rows below" was the whole message, so the

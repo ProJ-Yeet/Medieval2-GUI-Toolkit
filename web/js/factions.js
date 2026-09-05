@@ -40,17 +40,29 @@
    /api/factions/plan|apply and /api/factions/clone_plan|clone_apply do all of
    it - including working out which twelve files a new faction would change. */
 
+/* The roster, into `state.fac`, without drawing anything.
+
+   17f put this form on two screens: its own mode, and the campaign map's
+   faction screen, where the same faction's `descr_strat.txt` half is edited
+   beside it. Only the mode owns `main`, so the read and the drawing are two
+   things now - the panel calls this and paints itself. */
+async function facFetch(mod){
+  const r = await api.get('/api/factions?mod=' + enc(mod));
+  const keep = (state.fac && state.fac.mod === mod) ? state.fac.sel : '';
+  state.fac = Object.assign({sel: keep, d: null, busy: false}, r);
+  return state.fac;
+}
+
 async function loadFactions(){
   const mod = state.src;
   main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s factions…</div>';
-  let r;
-  try{ r = await api.get('/api/factions?mod=' + enc(mod)); }
+  try{ await facFetch(mod); }
   catch(e){ if(stale('factions', mod)) return;
     main.innerHTML = `<div class="empty">Couldn't read the faction roster.<br>
       <span class="count">${esc(errText(e))}</span><br><br>
       <button class="primary" onclick="loadFactions()">Retry</button></div>`; return; }
   if(stale('factions', mod)) return;
-  state.fac = Object.assign({sel:'', d:null, busy:false}, r);
+  state.fac.sel = '';
   undoReset();
   renderFactions();
 }
@@ -111,15 +123,21 @@ function facRowHtml(r){
   </button>`;
 }
 
+//: The two screens this form is drawn on (17f), and which of them is up. The
+//: mode owns the whole page; the campaign map's faction screen owns one div in
+//: the middle of a panel, so the paint target is asked for rather than assumed.
+function facHosted(){ return state.mode === 'factions' || state.mode === 'campmap'; }
+
 async function facOpen(name){
   activity('opened faction', `${name} in ${state.src}`);
   const f = state.fac;
+  if(!f) return;
   f.sel = name; f.d = null;
-  renderFactions();
+  if(state.mode === 'factions') renderFactions(); else facPaint();
   let d;
   try{ d = await api.get(`/api/faction?mod=${enc(f.mod)}&name=${enc(name)}`); }
   catch(e){ d = {error:''+e}; }
-  if(state.mode !== 'factions' || state.fac !== f || f.sel !== name) return;
+  if(!facHosted() || state.fac !== f || f.sel !== name) return;
   f.d = d.error ? d : facWorking(d);
   undoReset();          // the working copy exists now: this is Ctrl+Z's baseline
   facPaint();
@@ -139,7 +157,7 @@ function facWorking(d){
 function facPaint(){
   const el = document.getElementById('facMain');
   if(el) el.innerHTML = facDetailHtml();
-  const d = state.fac.d;
+  const d = state.fac && state.fac.d;
   if(d && d.cv){ cvWire(d.cv); cvBindHover(d.cv, document.getElementById('facGui')); }
 }
 
@@ -533,7 +551,11 @@ async function facSave(){
   if(res.error){ toast('✗ ' + res.error, 6000); return; }
   toast('Saved. 🕑 Log can undo it.');
   const keep = body.faction;
-  await loadFactions();
+  // 17f: the roster is re-read either way, but only the mode may redraw the
+  // page. On the campaign map this form is one div inside a panel, and
+  // rebuilding `main` under it would take the map with it.
+  try{ await facFetch(f.mod); }catch(e){ toast('✗ ' + errText(e), 6000); return; }
+  if(state.mode === 'factions') renderFactions();
   if(keep) facOpen(keep);
 }
 
