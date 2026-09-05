@@ -1,35 +1,99 @@
 # STATE - Medieval 2 GUI Toolkit V2 and V3
-_Updated: 2026-09-05 · **v2.1.11 released** · V3 under way: 16a-16i done, 16j next_
+_Updated: 2026-09-05 · **v2.1.11 released** · V3 under way: 16a-16j done, 16k next_
 
 ## Next up
-Start **16j** - factions, hordes, diplomacy and win conditions. Both halves of a
-faction block can now be written: 16h its settlements, 16i its people. 16j is
-the block itself and the sections after it. Faction creation by cloning a
-template, including the horde variant; `descr_sm_factions.txt` colours and horde
-keys; `faction_standings` and `faction_relationships`; win conditions; the
-campaign globals (start and end date, timescale, brigand and pirate spawn, the
-three rosters); name pools. It reuses `factionclone.py` and the Phase 11 editor
-where those already do the job, which is most of the file half.
+Start **16k** - the 3D strat preview and the `.cas` decoder. Every text file the
+campaign is made of can now be read and written; what is left of Phase 16 is the
+one binary that cannot be. **This sub-phase owns the `.cas` decoder**, which 15a
+did not land: a strat model is a 3ds-max scene export - float `3.2`, frame rate,
+key times, a node hierarchy, animation tracks, then the mesh and its material -
+and not a `.mesh` variant. What is known about the format is at the bottom of
+`unittransfer/mesh.py`, and `probe()` already tells the two apart. Navigation and
+origin are fixed against Phase 15's viewer.
+Exit: settlement and character strat models render and orbit correctly.
 
-The machinery is standing and none of it should be written twice.
-`stratedit.py` holds the eleven shared helpers 16i already imports - the line
-rewriter that keeps an indent and a comment, the assembler, the span mover, the
-serialiser - and both write modules show the shape a third one takes: splice,
-re-parse, check the tree that comes out, guard it against the tree that went in,
-then back up, log and let the Log undo it. `campstrat` reads the rosters,
-`faction_standings`, `faction_relationships` and the campaign globals with their
-spans and field lines already, and `mapcheck` owns the one ordering rule that
-matters here: **a faction block may not come after the diplomacy section**, and
-16j is the phase that can create one in the wrong place.
-
-Four rulings carry in. **One fact table, read by everything** - the form reads
-`Facts`; the write re-reads the file, because a writer that writes out of a
-cache writes over whatever changed under it. **A rule with no evidence reports
-nothing** - the stock game keeps `descr_sm_factions.txt` inside its packed data,
-so on vanilla a colour picker has nothing to read and says so by name. **Python
-owns the bytes.** And **the plan reads back what it would write.**
+The four rulings that carried through 16f to 16j carry into it unchanged. **One
+fact table, read by everything** - the form reads `Facts`; a write re-reads the
+file, because a writer that writes out of a cache writes over whatever changed
+under it. **A rule with no evidence reports nothing** - the stock game keeps
+`descr_sm_factions.txt` inside its packed data, so on vanilla the roster-slot
+check does not run and says so by name. **Python owns the bytes.** And **the
+plan reads back what it would write.**
 
 Run `python tools/upstream_sync.py sync` first, as before every sub-phase.
+
+## 16j-2 - a faction's campaign entry, and the win conditions (2026-09-05)
+Two more saves on `stratcamp.py` (`create` and `delete`, taking it to 1,681
+lines), `winconds.py` (781), two more tabs on `web/js/stratcamp.js` (753), three
+more routes on `server.py`, and `tests/test_stratcamp.py` at **107 checks, all
+passing**.
+
+**The gate: a faction made and then unmade leaves the file byte for byte as it
+was** - the block, its blank separator, its place in a roster, its own diplomacy
+rows and every other faction's line that named it - on all three installed
+campaigns.
+
+**It is built on `factionclone`'s ruling rather than against it.** Phase 11's
+cloner does twelve files and says why `descr_strat.txt` is not one of them: two
+factions cannot start in the same city, so there is no campaign entry to copy.
+So a new faction gets the donor's AI, label, purse and diplomacy and **nothing
+else** - no settlement, no character, no coordinate - and the plan says so:
+that is the shape vanilla's Mongols and Timurids already are, which is why it is
+a warning and not a refusal. 16h hands it a city; 16i hands it a general.
+Deleting refuses while the faction still holds anything and names what it holds.
+
+**The guard stopped being a diff.** Every declared run now carries a third
+number - how many lines go back in where those came out - and the two files are
+walked side by side. A whole-faction save touches the roster on line 4 and the
+diplomacy section on line 10,800, so there is no small middle to trim to and
+`difflib` took **four seconds** over it; the walk is linear, exact, and does not
+have to guess which of several equivalent places a blank line was meant to go.
+**113 ms** on the largest campaign installed.
+
+**`descr_win_conditions.txt` was the last file in the campaign folder nothing
+could edit.** 16g reads it; `winconds.py` writes it, as the fourth file to be
+lines plus an index over them. Two things it is built on: **`short_campaign` is
+a switch, not a line**, and computing which line carries it off the first
+*stated* slot rather than the first *written* one put two of them in one record;
+and **`hold_regions` with nothing after it is a real line**, which 45 of the 74
+real short campaigns write, so the switch stays on it when its provinces go.
+Vanilla's 21 comments survive an edit, the `;take_regions 35` included.
+
+**Name pools needed nothing.** `descr_names.txt` is already read and edited by
+`minorfiles.py` and already cloned per faction by `factionclone.py`.
+
+## 16j-1 - the campaign's own settings, written (2026-09-05)
+`stratcamp.py`, `web/js/stratcamp.js`, three routes on `server.py`, and the
+first half of `tests/test_stratcamp.py`. What is left at depth zero once 16h has
+the settlements and 16i the people: the campaign header, the three rosters, the
+diplomacy section, and a faction block's own scalars. **Five saves and one
+endpoint**, because in the file they are one file.
+
+**The gate: all 99 faction rows of the diplomacy matrix across the three
+installed campaigns re-render byte for byte** - the three tabs after `hre,`, the
+five spaces before Third Age Reforged's `1.00`, its habit of restating that
+value in front of every target, and the tab left hanging off the end of the
+line.
+
+**A standings line is a list of pairs and the value is sticky**, and that had a
+bug under it. `faction_standings <who>, <value> <faction>[, <value> <faction>]…`
+- a target with no number in front takes the last one stated. Vanilla never
+repeats the value (46 lines of 46), so the old reading was right there by
+accident; Third Age Reforged repeats it on nearly all of its 204, so Sicily held
+an opinion of a faction called `1.00` and its opinion of Milan was gone.
+
+**A row's lines are its shape, not just their whitespace.** Grouping the cells
+by value and writing one line each rewrote 13 rows nobody had touched: vanilla
+puts Egypt's two -0.6 opinions on separate lines and Third Age Reforged gives
+the Aztecs twelve lines all reading -1.00. Each existing line keeps what it
+still has, an emptied line leaves its slot for whatever moved into that value,
+and the file's own order of `allied_to` and `at_war_with` wins.
+
+**One header word was being dropped without a word.** Third Age Reforged writes
+`marian_reforms_activated`, which the engine does not read, and the campaign
+header is the only region of the file where an unrecognised line has no open
+block to record itself on. `campstrat` reads it now; `stratcamp` reports it as
+the dead line it is.
 
 ## 16i - characters, armies and the family tree, written (2026-09-05)
 `stratchar.py` (1,480 lines), `web/js/stratchar.js` (575), three routes on

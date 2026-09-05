@@ -257,6 +257,27 @@ Characters, armies and the family tree (16i, see :mod:`unittransfer.stratchar`)
                                     lifted into another faction (one backup +
                                     undo)
 
+The campaign's own settings (16j, see :mod:`unittransfer.stratcamp`). The third
+sub-phase that writes descr_strat.txt, and the half of it that only ever
+rewrites lines that are already there.
+  GET  /api/map/campaign?mod=&campaign=
+                                 -> the header's globals and flags, the three
+                                    faction lists, the whole diplomacy matrix
+                                    both ways, and every faction's own scalars
+  POST /api/map/campaign_plan|_apply
+                                 -> `what`: globals / rosters / standings /
+                                    relationships / faction / create / delete.
+                                    A save declares the runs of the file it may
+                                    touch and how many lines it puts back, and
+                                    the guard walks the two files rather than
+                                    diffing them (one backup + undo)
+  GET  /api/map/wins?mod=&campaign=
+                                 -> descr_win_conditions.txt: every faction's
+                                    long and short campaign, with the provinces
+                                    checked against the map
+  POST /api/map/wins_plan|_apply -> `action`: edit / add / delete, one faction's
+                                    win conditions (one backup + undo)
+
 Minor Files mode (the five small campaign files, see :mod:`unittransfer.minorfiles`)
   GET  /api/minor?mod=&tab=      -> one tab's whole list (rebels / religions /
                                     resources / cultures / names), with the
@@ -331,7 +352,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, edit, modflags,
                modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campmap, campstrat, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, stratchar, stratedit, strings, traits, triggers
+from . import ancillaries, campaint, campmap, campstrat, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1952,6 +1973,12 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/map/character_plan", "/api/map/character_apply"):
                 return self._json(self._character(
                     u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/map/campaign_plan", "/api/map/campaign_apply"):
+                return self._json(self._campaign(
+                    u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/map/wins_plan", "/api/map/wins_apply"):
+                return self._json(self._wins(
+                    u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/map/query", "/api/map/export"):
                 return self._json(self._mapquery(
                     u.path.rsplit("/", 1)[-1], body))
@@ -2621,6 +2648,63 @@ class Handler(BaseHTTPRequestHandler):
         self.registry.invalidate(name)              # the file changed on disk
         return out
 
+    # ---- the campaign's own settings, written (16j) ----
+    def _campaign(self, action, body):
+        """Preview or write the campaign header, a roster or a diplomacy row.
+
+        The character handler above with a different plan in it, and the same
+        division of labour: the fact table is the vocabulary - which factions
+        this mod declares and what they are called - and the file the plan
+        splices is read from disk inside
+        :func:`~unittransfer.stratcamp.plan_campaign`.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            facts = self.registry.map_facts(name, body.get("campaign") or "")
+            plan = stratcamp.plan_campaign(mod, facts, body)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(stratcamp.apply_campaign(plan))
+        except (OSError, ValueError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)              # the file changed on disk
+        return out
+
+    # ---- what a faction has to do to win (16j-2) ----
+    def _wins(self, action, body):
+        """Preview or write one faction's ``descr_win_conditions.txt`` record.
+
+        The campaign handler above with a different file under it. The fact
+        table is the vocabulary - which provinces this map declares and which
+        factions this campaign runs - and the file the plan splices is read from
+        disk inside :func:`~unittransfer.winconds.plan_win`.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            facts = self.registry.map_facts(name, body.get("campaign") or "")
+            plan = winconds.plan_win(mod, facts, body)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(winconds.apply_win(plan))
+        except (OSError, ValueError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)              # the file changed on disk
+        return out
+
     # ---- the campaign map, checked (16f) ----
     def _mapcheck(self, action, body):
         """The baseline stamp, and Geomod's three auto-fixes.
@@ -3260,6 +3344,27 @@ class Handler(BaseHTTPRequestHandler):
                 facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
                 return self._json(stratchar.faction_detail(
                     facts, (q.get("faction") or [""])[0]))
+            except (campmap.MapError, ModDataError, OSError) as exc:
+                return self._err(404, str(exc))
+
+        if path == "/api/map/campaign":
+            # 16j. Through the fact table for the reason 16h and 16i are: the
+            # parse of descr_strat.txt is already done and cached, so opening
+            # the campaign's settings costs nothing.
+            try:
+                facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
+                return self._json(stratcamp.campaign_detail(facts))
+            except (campmap.MapError, ModDataError, OSError) as exc:
+                return self._err(404, str(exc))
+
+        if path == "/api/map/wins":
+            # 16j-2. Off the disk rather than out of the fact table, unlike
+            # every other detail route here: `facts` carries the parsed
+            # conditions but not the file's own lines, and this panel edits
+            # lines.
+            try:
+                facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
+                return self._json(winconds.win_detail(facts))
             except (campmap.MapError, ModDataError, OSError) as exc:
                 return self._err(404, str(exc))
 

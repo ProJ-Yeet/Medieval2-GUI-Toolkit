@@ -272,6 +272,7 @@ function renderCampmap(){
         <div class="cmpick" id="cmPick"></div>
         <div class="cmsettle" id="cmSettle"></div>
         <div class="cmchars" id="cmChars"></div>
+        <div class="cmcamp" id="cmCamp"></div>
       </div>
     </div>`;
   cmapWire();
@@ -281,6 +282,7 @@ function renderCampmap(){
   cmapPickPaint();
   csPaint();          // 16h: kept out of cmapPickPaint, which owns #cmPick only
   cxPaint();          // 16i, for the same reason
+  cjOpen();           // 16j, and it reads nothing until somebody opens it
   cmapResize();
   if(!c.view.fitted) cmapFit(); else cmapPaint();
   if(typeof rszApply === 'function') rszApply(main);

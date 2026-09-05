@@ -78,7 +78,7 @@ running the test suite, and running `graphify update .`.
 | 15h | Recruitment on the unit + the UV layout (v2.1.9) | M | ✅ done |
 | 15i | The model beside a transfer, art beside a pool (v2.1.10) | S | ✅ done |
 | 15j | Resizable panels, the strings warning, no em dashes (v2.1.11) | S | ✅ done |
-| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ 16e ✅ 16f ✅ 16g ✅ 16h ✅ 16i ✅ |
+| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ 16e ✅ 16f ✅ 16g ✅ 16h ✅ 16i ✅ 16j ✅ |
 | V3.1 | OSM backdrop + coastline tracer | M | future |
 | V3.2 | Map resize + create-from-scratch | L | future |
 | V3.3 | Overlay and layer generators | M | future |
@@ -2775,14 +2775,107 @@ and server-side validation possible at all.
   now names all six. And `rewrite_line` was trimming trailing whitespace, which
   no settlement field had and 215 of vanilla's 216 character lines do.
 
-- **16j - Factions, hordes, diplomacy, win conditions.** Faction creation by
-  cloning a template, including the horde variant; `descr_sm_factions.txt`
-  colours and horde keys; `faction_standings` and `faction_relationships`; win
-  conditions; campaign globals (start and end date, timescale, brigand and
-  pirate spawn, the three rosters); name pools. Reuses `factionclone.py` and the
-  Phase 11 editor where they already do the job.
-  Exit: create a faction and a horde faction on a test mod, both selectable and
-  playable in game; the faction-block-before-diplomacy rule is enforced.
+- **16j-1 - `descr_strat.txt`, write: the campaign's own settings.**
+  ✅ **done 2026-09-05.** `stratcamp.py` (1,303 lines), `web/js/stratcamp.js`
+  (467), three routes on `server.py`, and `tests/test_stratcamp.py`. What is
+  left at depth zero once 16h has the settlements and 16i the people: the
+  campaign header, the three rosters, the diplomacy section, and a faction
+  block's own scalars. **Five saves and one endpoint**, because in the file they
+  are one file - `globals`, `rosters`, `standings`, `relationships`, `faction`.
+  The half that only ever rewrites lines that are already there; creating a
+  faction is 16j-2.
+
+  **The gate is the diplomacy matrix: all 99 faction rows across the three
+  installed campaigns re-render byte for byte** - the three tabs after `hre,`,
+  the five spaces before Third Age Reforged's `1.00`, its habit of restating
+  that value in front of every target, and the tab left hanging off the end of
+  the line, all included.
+
+  **A standings line is a list of pairs and the value is sticky**, which had a
+  bug under it. The grammar is `faction_standings <who>, <value> <faction>[,
+  <value> <faction>]…` and a target with no number in front of it takes the last
+  number stated. Vanilla never repeats the value - 46 lines of 46 - so the old
+  reading, first number then a list of factions, was right there by accident.
+  Third Age Reforged repeats it on nearly all of its 204, so Sicily held an
+  opinion of a faction called `1.00` and its opinion of Milan was gone.
+
+  **A row's lines are its shape, not just their whitespace.** Grouping the cells
+  by value and writing one line each looked right and rewrote 13 rows nobody had
+  touched: vanilla puts Egypt's two -0.6 opinions on separate lines and Third
+  Age Reforged gives the Aztecs twelve lines all reading -1.00. Each existing
+  line keeps the targets it still has, a line that empties leaves its slot for
+  whatever moved into that value, and the file's own order of `allied_to` and
+  `at_war_with` wins over any order this phase would have picked.
+
+  **The guard is the strongest of the three write phases, because all five edits
+  are region-local.** A save declares the runs of the file it may touch and
+  every difference between the file that went in and the one that came out has
+  to fall inside them, by line number. That check is affordable only because the
+  identical head and tail are trimmed before anything is diffed: on 11,063 lines
+  that is four milliseconds instead of four seconds.
+
+  **One word in the header was being dropped without a word.** Third Age
+  Reforged writes `marian_reforms_activated`, which the engine does not read,
+  and the campaign header is the only region of the file where an unrecognised
+  line has no open block to record itself on - so it vanished at parse and would
+  not have survived an edit. `campstrat` reads it now and `stratcamp` reports it
+  as the dead line it is.
+
+- **16j-2 - A faction's campaign entry, and the win conditions.**
+  ✅ **done 2026-09-05.** Two more saves on `stratcamp.py` (`create` and
+  `delete`, taking it to 1,681 lines), `winconds.py` (781), two more tabs on
+  `web/js/stratcamp.js` (753), three more routes on `server.py`, and
+  `tests/test_stratcamp.py` at **107 checks, all passing**.
+
+  **The gate is that a faction made and then unmade leaves the file byte for
+  byte as it was** - the block, the blank line that separates it, its place in
+  a roster, its own diplomacy rows and every other faction's line that named it
+  - on all three installed campaigns.
+
+  **The one file `factionclone` would not touch.** Phase 11's cloner does twelve
+  files and says in as many words why `descr_strat.txt` is not one of them: a
+  faction's campaign entry is a settlement, an army and a family tree, and two
+  factions cannot start in the same city. That ruling stands and this is built
+  on it rather than against it. **A new faction gets the donor's AI, label,
+  purse and diplomacy and nothing else** - no settlement, no character, no
+  coordinate - and the plan says so by name: it is the shape vanilla's Mongols
+  and Timurids already are, which is why that is a warning and not a refusal.
+  16h hands it a city and 16i hands it a general.
+
+  **Deleting refuses while the faction still holds anything**, and names what:
+  three settlements and twelve characters for vanilla's England. Taking a block
+  out would take them with it, and the two panels that move them already exist.
+
+  **The guard stopped being a diff.** Every run a save declares now carries a
+  third number - how many lines it puts back - and the two files are walked side
+  by side instead of compared. That is what made a whole-faction save affordable:
+  it touches the roster on line 4 and the diplomacy section on line 10,800, so
+  there is no small middle to trim to, and `difflib` took **four seconds** over
+  it. The walk is linear, it is exact, and it does not have to guess which of
+  several equivalent places a blank line was meant to go. **113 ms** on the
+  largest campaign installed.
+
+  **`descr_win_conditions.txt` was the last file in the campaign folder nothing
+  could edit.** 16g reads it already, to answer which factions a province is in
+  the win conditions of; `winconds.py` writes it, as the fourth file in the
+  project to be lines plus an index over them. Two things it is built on:
+  **`short_campaign` is a switch, not a line** - it prefixes whichever short
+  condition comes first, and computing that off the first *stated* slot rather
+  than the first *written* one put two of them in one record; and
+  **`hold_regions` with nothing after it is a real line**, which 45 of the 74
+  real short campaigns write, so the switch stays on it when its provinces go.
+  Vanilla's file keeps its 21 comments through an edit, including the
+  `;take_regions 35` somebody left commented out mid-record.
+
+  **Name pools needed nothing.** `descr_names.txt` is already read and edited by
+  `minorfiles.py` and already cloned per faction by `factionclone.py`; a third
+  copy of it here would have been a third chance for one of them to drift.
+
+  Exit: a faction is created on a test mod, lands before the diplomacy section,
+  joins a roster and inherits the donor's diplomacy both ways; the
+  faction-block-before-diplomacy rule is enforced twice, by `mapcheck` since 16f
+  and by this phase's guard on the file it is about to write, before it writes
+  it.
 
 - **16k - 3D strat preview and the `.cas` decoder.** **This sub-phase owns the
   `.cas` decoder**, which 15a did not land: a strat model is a 3ds-max scene

@@ -85,11 +85,18 @@ DEFAULT_CAMPAIGN = "imperial_campaign"
 #: the three faction lists at the top, in the order the file writes them
 ROSTERS = ("playable", "unlockable", "nonplayable")
 
-#: single-word flags on the campaign header
+#: Single-word flags on the campaign header. ``marian_reforms_activated`` is
+#: the odd one: it is not a word the engine reads, but Third Age Reforged writes
+#: it where ``marian_reforms_disabled`` would go, and a parser that did not know
+#: it dropped the line on the floor without a word - the header is the one place
+#: an unrecognised line had nothing open to record itself on. It is read here so
+#: it survives a round trip; :mod:`unittransfer.stratcamp` is what says it does
+#: nothing.
 CAMPAIGN_FLAGS = (
-    "marian_reforms_disabled", "rebelling_characters_active",
-    "gladiator_uprising_disabled", "night_battles_enabled",
-    "show_date_as_turns", "disable_all_ai_battle_participation",
+    "marian_reforms_disabled", "marian_reforms_activated",
+    "rebelling_characters_active", "gladiator_uprising_disabled",
+    "night_battles_enabled", "show_date_as_turns",
+    "disable_all_ai_battle_participation",
 )
 
 #: ``keyword value`` globals on the campaign header
@@ -786,19 +793,56 @@ _STANDING = re.compile(r"^faction_standings\s+(?P<who>\w+)\s*,\s*"
                        r"(?P<value>-?[\d.]+)\s+(?P<toward>.+)$", re.I)
 
 
+#: a token on a standings line that is a number rather than a faction
+_NUMBER = re.compile(r"-?\d+(?:\.\d+)?$")
+
+
 def _standings(p: _Parser, i: int, s: str) -> None:
+    """``faction_standings <who>, <value> <faction>[, <value> <faction>]…``
+
+    **The value is sticky and the line is a list of pairs**, which is measured
+    rather than assumed. Vanilla only ever writes one value per line - 46 of 46
+    - so a parser that read the first number and called the rest targets was
+    right there by accident. Third Age Reforged writes 204 standings lines and
+    repeats the value on almost every one::
+
+        faction_standings   sicily,     1.00    denmark, 1.00   milan
+        faction_standings   denmark,    1.00    sicily, milan
+
+    The first line sets two factions to 1.00 each; the second sets both to the
+    one value it states. Reading them the old way put ``1.00`` in the list of
+    factions Sicily has an opinion about, so :attr:`Node.fields` held a faction
+    called ``1.00`` and Milan's standing was lost.
+
+    ``toward`` therefore stays what it always was - the factions named, and only
+    those - so nothing reading it has to change, and ``pairs`` is the reading
+    that is actually true: ``[(faction, value)]`` in the order written.
+    """
     node = p.record("faction_standings", i)
     m = _STANDING.match(s)
     if not m:
         node.problems.append(f"faction_standings does not read as "
                              f"`faction_standings <faction>, <value> <faction…>`: {s!r}")
         return
+    value = float(m.group("value"))
+    pairs: List[Tuple[str, float]] = []
+    toward: List[str] = []
+    for tok in (t.strip() for t in re.split(r"[,\s]+", m.group("toward"))):
+        if not tok:
+            continue
+        if _NUMBER.match(tok):
+            value = float(tok)
+            continue
+        pairs.append((tok, value))
+        toward.append(tok)
     node.name = m.group("who")
     node.fields.update(faction=m.group("who"), value=float(m.group("value")),
-                       toward=[t.strip() for t in re.split(r"[,\s]+", m.group("toward"))
-                               if t.strip()])
-    for k in ("faction", "value", "toward"):
+                       toward=toward, pairs=pairs)
+    for k in ("faction", "value", "toward", "pairs"):
         node.field_lines[k] = i
+    if not pairs:
+        node.problems.append("a faction_standings line names no faction to "
+                             "hold an opinion of")
 
 
 _RELATIONSHIP = re.compile(r"^(?:faction|action)_relationships\s+(?P<who>\w+)\s*,\s*"
