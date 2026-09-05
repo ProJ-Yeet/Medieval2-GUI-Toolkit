@@ -292,31 +292,85 @@ function v3Unmount(){
   v3 = null;
 }
 
-async function v3Begin(mod, entry, host){
+/* --- the strat map's models, 16k -------------------------------------------
+   A .cas is the campaign map's model - a settlement, a general, a resource -
+   and it is a different file format read by a different decoder. It reaches
+   this viewer as the same payload a .mesh does, because cas.as_mesh lays a
+   scene's meshes into one vertex pool and hands back the same MeshFile; what
+   is different is everything ABOVE the geometry, and all of it is here:
+
+     * there are no LODs and no skins. A .cas is one model at one detail, and
+       it names its own textures instead of getting them from a modeldb entry;
+     * it can want SEVERAL textures at once. A settlement is walls, buildings
+       and a faction banner with a material each, so the draw loop binds per
+       group rather than once for the model;
+     * u is not halved. A .mesh addresses a pair of sheets glued side by side
+       and this one does not - its UVs run 0 to 1 on the one sheet named
+       against that mesh, which is the reason v3Apply asks v3.cas first.
+
+   Everything else - the orbit, the framing, the wireframe, the grip bar - is
+   the same code, and that is the point of routing it through here at all. */
+async function v3OpenCas(mod, rel){
+  const modal = document.getElementById('modal');
+  const overlay = document.getElementById('overlay');
+  const wasOpen = overlay.classList.contains('open');
+  if(typeof edPrevDetach === 'function') edPrevDetach();
+  if(typeof cmpPrevDetach === 'function') cmpPrevDetach();
+  v3Back = wasOpen ? {html: modal.innerHTML, cls: modal.className, scroll: stashPlace()} : {};
+  const name = rel.split('/').pop();
+  modal.className = 'modal wide';
+  modal.innerHTML = `<h2>Strat model - ${esc(name)}</h2>
+    <div class="mbody"><div class="empty">Reading ${esc(name)}…</div></div>
+    <div class="foot"><button onclick="v3Close()">Close</button></div>`;
+  overlay.classList.add('open');
+  await v3Begin(mod, name, '', rel);
+}
+
+/* The same, docked into a panel the page owns - see v3Mount. */
+async function v3MountCas(hostId, mod, rel){
+  if(v3 && v3.host === hostId && v3.cas === rel && v3.mod === mod) return;
+  v3Stop();
+  v3Back = null; v3 = null;
+  const host = document.getElementById(hostId);
+  if(!host) return;
+  host.innerHTML = `<div class="empty">Reading ${esc(rel.split('/').pop())}…</div>`;
+  await v3Begin(mod, rel.split('/').pop(), hostId, rel);
+}
+
+async function v3Begin(mod, entry, host, cas){
   // Whatever was showing goes first. Two WebGL contexts on one page is two
   // copies of a 30 MB mesh and two animation loops, one of them for a view
   // nobody can see any more.
   v3Stop();
   v3 = null;
   let info;
-  try{ info = await api.get(`/api/model?mod=${enc(mod)}&entry=${enc(entry)}`); }
+  const url = cas ? `/api/map/model?mod=${enc(mod)}&rel=${enc(cas)}`
+                  : `/api/model?mod=${enc(mod)}&entry=${enc(entry)}`;
+  try{ info = await api.get(url); }
   catch(e){ return v3Fail(''+e, host); }
   if(info.error) return v3Fail(info.error, host);
 
   // `skin` indexes info.skins, because a skin is a PAIR of files now - the
   // main sheet and the attachment sheet a faction uses together - and a pair
   // has no one path to name it by
-  v3 = {mod, entry, info, host: host || '', lod: 0, skin: 0,
+  v3 = {mod, entry, info, cas: cas || '', host: host || '', lod: 0, skin: 0,
         geo: null, tex: null, texAtt: null, hidden: {}, variant: {},
         wire: false, spin: false, uv: false,
         // the UV layout pane: whether it is open, how it is framed (null until
         // it first opens and can measure itself), and which island is named
         uved: false, uvv: null, uvSel: null, uvOpt: {tex: true, solo: false},
         yaw: 0.6, pitch: 0.25, dist: 3, centre: [0,0,0], gl: null, err: ''};
-  // open on the first LOD the mod actually ships - an entry whose lod0 lives in
-  // a .pack still has lod1 and lod2 on disk more often than not
-  const there = info.lods.find(l => l.exists);
-  v3.lod = there ? there.index : 0;
+  if(cas){
+    // material path as the file writes it -> where that file really is under
+    // data/, which the server resolved because only it can look on disk
+    v3.casRel = new Map((info.materials||[])
+      .filter(m => m.texture).map(m => [m.texture, m.rel || '']));
+  }else{
+    // open on the first LOD the mod actually ships - an entry whose lod0 lives
+    // in a .pack still has lod1 and lod2 on disk more often than not
+    const there = info.lods.find(l => l.exists);
+    v3.lod = there ? there.index : 0;
+  }
   v3Render();
   await v3Load();
 }
@@ -431,11 +485,11 @@ function v3Render(){
         ondblclick="v3GripReset()"
         title="Drag to give the model more room, or its controls more · double-click for the default"></div>` : ''}
       <aside class="v3side">
-        <button class="v3roll" onclick="v3Randomize()" title="Pick a variant for every part the way the game does, one soldier at a time">🎲 Randomize variations</button>
+        ${v3.cas ? '' : `<button class="v3roll" onclick="v3Randomize()" title="Pick a variant for every part the way the game does, one soldier at a time">🎲 Randomize variations</button>
         <label class="v3f"><span>Level of detail</span>
           <select onchange="v3SetLod(this.value)">${lods}</select></label>
         <label class="v3f"><span>Skin</span>
-          <select onchange="v3SetSkin(this.value)" ${i.skins.length?'':'disabled'}>${skins}</select></label>
+          <select onchange="v3SetSkin(this.value)" ${i.skins.length?'':'disabled'}>${skins}</select></label>`}
         <div class="v3btns">
           <button id="v3spin" class="${v3.spin?'on':''}" onclick="v3Toggle('spin')">Rotate</button>
           <button id="v3wire" class="${v3.wire?'on':''}" onclick="v3Toggle('wire')">Wireframe</button>
@@ -613,6 +667,7 @@ function v3Chosen(part){
 function v3Parts(){
   const host = document.getElementById('v3parts');
   if(!host || !v3 || !v3.geo) return;
+  if(v3.cas) return v3CasParts(host);
   const parts = v3PartMap();
   const att = [...parts.values()].filter(p => p.list.some(v => v.g.sheets !== 'main')).length;
   host.innerHTML = `<div class="k">Parts <span class="count">${parts.size} slots`
@@ -679,6 +734,7 @@ function v3Facts(){
   if(!host || !v3) return;
   const g = v3.geo;
   if(!g) return host.innerHTML = '';
+  if(v3.cas) return v3CasFacts(host, g);
   const size = [0,1,2].map(k => (g.max[k]-g.min[k]).toFixed(2));
   const skin = v3Skin();
   const onAtt = g.groups.filter(x => x.sheets !== 'main').length;
@@ -717,7 +773,9 @@ async function v3Load(){
   v3Note('Reading the model…');
   let buf;
   try{
-    const r = await fetch(`/api/model/geometry?mod=${enc(v3.mod)}&entry=${enc(v3.entry)}&lod=${v3.lod}`);
+    const r = await fetch(v3.cas
+      ? `/api/map/model/geometry?mod=${enc(v3.mod)}&rel=${enc(v3.cas)}`
+      : `/api/model/geometry?mod=${enc(v3.mod)}&entry=${enc(v3.entry)}&lod=${v3.lod}`);
     if(!r.ok){
       // the decoder's own sentence is the useful part, so it is shown as-is
       let msg = `the server answered ${r.status}`;
@@ -757,6 +815,7 @@ function v3Fetch(rel, want, into){
 
 async function v3LoadSkin(want){
   if(!v3) return;
+  if(v3.cas) return v3LoadCasSkins(want);
   const skin = v3Skin();
   v3.tex = null; v3.texAtt = null; v3.uScale = 1.0;
   v3Fetch(skin && skin.exists ? skin.rel : '', want, 'tex');
@@ -1236,6 +1295,24 @@ function v3Frame(){
      and Recentre comes back here. */
   const tall = g.max[1] - g.min[1];
   const wide = Math.max(g.max[0]-g.min[0], g.max[2]-g.min[2]);
+  /* A strat model is not a standing figure and must not be framed as one. A
+     settlement is WIDER than it is tall - vanilla's northern castle is 1.17 by
+     0.77 - so the halving above puts the camera 0.86 away from something 1.17
+     across, which is inside its own courtyard looking at the back of a wall.
+     The subject here is the footprint, so the whole box is fitted and the
+     camera is lifted: a building is looked down on, the way the campaign map
+     looks down on it, and a general standing beside one is small in the frame
+     for the same reason he is small on the map. */
+  /* And the file says which of the two it is, so this is not a guess: a strat
+     model with a SKELETON is a person - a general, a diplomat, an assassin -
+     and gets the figure's framing below. One without is a settlement, a
+     resource or a banner, and gets the footprint's. */
+  if(v3.cas && !v3.info.skinned){
+    v3.centre[1] = g.min[1] + (g.max[1]-g.min[1]) * 0.4;
+    v3.dist = (Math.max(tall, wide) || 1) * 1.7;
+    v3.yaw = 0.6; v3.pitch = 0.5;
+    return;
+  }
   const span = Math.max(tall, wide/2) || 1;
   v3.dist = span * 1.12;
   v3.yaw = 0.6; v3.pitch = 0.25;
@@ -1245,6 +1322,18 @@ function v3Frame(){
    switched off. */
 function v3Visible(){
   const out = [];
+  // A .cas draws EVERY mesh it is not asked to hide. Folding same-named meshes
+  // into variants and drawing one is right for a .mesh - three heads on one
+  // soldier is one soldier's head - and wrong here: vanilla's northern castle
+  // is two meshes both called NE_castle, its walls and its buildings, and they
+  // stand together or the castle is half there.
+  // Keyed by POSITION and not by name, for the same reason: two meshes called
+  // NE_castle are two meshes, and one checkbox for the pair would drop half a
+  // castle for anyone who wanted a look behind its walls.
+  if(v3.cas){
+    v3.geo.groups.forEach((grp, idx) => { if(!v3.hidden['m' + idx]) out.push(idx); });
+    return out;
+  }
   v3PartMap().forEach(p => { if(!v3.hidden[p.key]) out.push(v3Chosen(p)); });
   return out;
 }
@@ -1375,7 +1464,8 @@ function v3Apply(){
   if(!v3 || !v3.gl) return;
   const gl = v3.gl;
   if(v3.texture){ gl.deleteTexture(v3.texture); v3.texture = null; }
-  if(!v3.tex){ v3UvEdDraw(); return; }
+  if(v3.casTexGl){ v3.casTexGl.forEach(t => gl.deleteTexture(t)); v3.casTexGl = null; }
+  if(!v3.cas && !v3.tex){ v3UvEdDraw(); return; }
   /* Whatever is bound has to fill the two units of u the mesh was unwrapped in,
      and how far u has to be scaled to do that is NOT the same question as how
      many sheets were bound. Reading it as one question was a real bug, and its
@@ -1399,6 +1489,7 @@ function v3Apply(){
      half u and 2.02 at full u; `mount_naru_horse` (attachment slot empty) comes
      out 2.00 at full u and 1.08 at half. Three pairs and four mounts, and the
      2.0 is the tell - it is the factor of two, standing up to be counted. */
+  if(v3.cas){ v3.uScale = 1.0; return v3CasApply(); }
   const solo = v3TexCase() !== 'self';
   v3.uScale = solo ? 0.5 : 1.0;
   const atlas = v3.texAtt ? v3Atlas(v3.tex, v3.texAtt) : v3.tex;
@@ -1516,7 +1607,8 @@ function v3Draw(){
 
   // One texture for the whole model - the glued pair - so every group is the
   // same bind and the UVs alone decide which sheet a triangle lands on.
-  const textured = !!(v3.texture && g.has_uvs);
+  const textured = !!(v3.cas ? (v3.casTexGl && v3.casTexGl.size && g.has_uvs)
+                             : (v3.texture && g.has_uvs));
   if(textured){
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, v3.texture);
@@ -1536,6 +1628,20 @@ function v3Draw(){
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, v3.bIdx);
   for(const idx of visible){
     const grp = g.groups[idx];
+    // A .cas names a texture per mesh, so the bind moves inside the loop: a
+    // settlement is walls on one sheet, buildings on another and the faction
+    // banner on a third, and one bind for the model would paint two of the
+    // three with the wrong art. A .mesh keeps the single bind above - its two
+    // sheets are glued and the UVs alone say which one a triangle lands on.
+    if(v3.cas){
+      const t = v3.casTexGl && v3.casTexGl.get(grp.texture || '');
+      if(t){
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, t);
+        gl.uniform1i(v3.loc.uTex, 0);
+      }
+      gl.uniform1f(v3.loc.uHasTex, (t && g.has_uvs) ? 1 : 0);
+    }
     gl.drawElements(gl.TRIANGLES, grp.count, gl.UNSIGNED_SHORT, grp.start*2);
   }
   if(v3.wire){
@@ -1584,4 +1690,108 @@ function v3Wire(canvas){
     e.preventDefault();
     v3.dist = Math.max(0.05, v3.dist * (e.deltaY > 0 ? 1.12 : 0.89));
   }, {passive:false});
+}
+
+
+/* --- the strat model's own three panels, 16k --------------------------------
+   A .cas has no LODs, no skins and no part variants, so the three surfaces a
+   .mesh fills with those say something else here: which meshes the scene holds
+   and what each is painted with, and what the decoder could not read. */
+
+/* One image per material, each applying as it lands. A settlement wants three
+   and a banner wants one, and a mod that names a texture it does not ship is
+   ordinary rather than an error - the mesh draws untextured and the facts
+   panel says which file is missing. */
+function v3LoadCasSkins(want){
+  v3.tex = null; v3.texAtt = null; v3.uScale = 1.0;
+  v3.casTex = new Map();
+  const rels = new Map();
+  (v3.geo ? v3.geo.groups : []).forEach(grp => {
+    const tex = grp.texture || '';
+    if(tex && v3.casRel && v3.casRel.get(tex)) rels.set(tex, v3.casRel.get(tex));
+  });
+  if(!rels.size){ v3Apply(); return; }
+  rels.forEach((rel, tex) => {
+    const img = new Image();
+    img.onload = () => { if(want===v3Gen && v3){ v3.casTex.set(tex, img); v3Apply(); } };
+    img.onerror = () => { if(want===v3Gen && v3){ v3.casTex.delete(tex); v3Apply(); } };
+    img.src = `/model_texture?mod=${enc(v3.mod)}&rel=${enc(rel)}`;
+  });
+}
+
+/* The GL side of the above: one texture object per sheet, keyed by the path
+   the material writes, which is the key the draw loop has on each group. */
+function v3CasApply(){
+  const gl = v3.gl;
+  v3.casTexGl = new Map();
+  (v3.casTex || new Map()).forEach((img, tex) => {
+    const t = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    // NOT flipped, for the reason v3Apply gives: M2TW is a Direct3D game and
+    // puts v=0 at the top. The strat models are exported by the same tool.
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    const pot = n => n > 0 && (n & (n-1)) === 0;
+    if(pot(img.width) && pot(img.height)){
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    }else{
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+    v3.casTexGl.set(tex, t);
+  });
+  v3Parts();
+  v3Facts();
+}
+
+/* One row per mesh in the scene, with the texture it is painted with. The
+   checkbox is the same one a .mesh part gets - a settlement's faction banner
+   is worth being able to drop to see the walls behind it. */
+function v3CasParts(host){
+  const groups = v3.geo.groups;
+  host.innerHTML = `<div class="k">Meshes <span class="count">${groups.length}`
+    + ` in this scene</span></div>`
+    + groups.map((grp, n) => {
+    const key = 'm' + n;
+    const rel = grp.texture ? (v3.casRel && v3.casRel.get(grp.texture)) : '';
+    const paint = !grp.texture ? '<span class="v3tag">no material</span>'
+      : rel ? `<span class="count">${esc(grp.texture.split(/[\\/]/).pop())}</span>`
+            : `<span class="v3tag">${esc(grp.texture.split(/[\\/]/).pop())} not in this mod</span>`;
+    return `<label class="v3part">
+      <input type="checkbox" ${v3.hidden[key]?'':'checked'}
+        onchange="v3TogglePart('${q1(esc(key))}')">
+      <span class="v3nm">${esc(grp.name || '(unnamed)')}</span>${paint}
+      <span class="count">${grp.count/3} tris</span></label>`;
+  }).join('');
+}
+
+function v3CasFacts(host, g){
+  const i = v3.info;
+  const size = [0,1,2].map(k => (g.max[k]-g.min[k]).toFixed(2));
+  const missing = (i.materials||[]).filter(m => m.texture && !m.rel);
+  host.innerHTML = docPoints('This model:', [
+    `<b>${g.vertices.toLocaleString()}</b> vertices, <b>${g.triangles.toLocaleString()}</b> triangles`,
+    `${g.groups.length} mesh${g.groups.length===1?'':'es'}, each with its own vertices`,
+    `${size[0]} × ${size[1]} × ${size[2]} in game units`,
+    `exported by 3ds max, file version ${i.version}`,
+    i.nodes && i.nodes.length > 1
+      ? `${i.nodes.length} nodes - a skeleton, ${esc(i.nodes[1])} first`
+      : 'one node, Scene Root - a static model',
+    i.keys ? `${i.keys} animation keys over ${i.length}s, which this viewer does not play`
+           : 'no animation keys',
+    (i.materials||[]).length
+      ? `${i.materials.length} material${i.materials.length===1?'':'s'}: `
+        + (i.materials.map(m => m.texture
+            ? `<code>${esc(m.texture)}</code>` : 'one with no texture').join(', '))
+      : 'no materials',
+    missing.length
+      ? `<b>${missing.length}</b> of those texture${missing.length===1?' is':'s are'} `
+        + 'not in this mod, so what uses them draws bare'
+      : ''
+  ]) + (g.notes||[]).map(n => `<div class="w-warn" style="margin-top:6px">${esc(n)}</div>`).join('');
 }

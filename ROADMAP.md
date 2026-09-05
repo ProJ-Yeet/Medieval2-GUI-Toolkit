@@ -78,7 +78,7 @@ running the test suite, and running `graphify update .`.
 | 15h | Recruitment on the unit + the UV layout (v2.1.9) | M | ✅ done |
 | 15i | The model beside a transfer, art beside a pool (v2.1.10) | S | ✅ done |
 | 15j | Resizable panels, the strings warning, no em dashes (v2.1.11) | S | ✅ done |
-| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | 11 (16a-16k), 16a ✅ 16b ✅ 16c ✅ 16d ✅ 16e ✅ 16f ✅ 16g ✅ 16h ✅ 16i ✅ 16j ✅ |
+| 16 | **Campaign Map Editor - V3.0.0**, flagship, LAST | XL | ✅ done (16a–16k) |
 | V3.1 | OSM backdrop + coastline tracer | M | future |
 | V3.2 | Map resize + create-from-scratch | L | future |
 | V3.3 | Overlay and layer generators | M | future |
@@ -2877,13 +2877,63 @@ and server-side validation possible at all.
   and by this phase's guard on the file it is about to write, before it writes
   it.
 
-- **16k - 3D strat preview and the `.cas` decoder.** **This sub-phase owns the
-  `.cas` decoder**, which 15a did not land: a strat model is a 3ds-max scene
-  export (float `3.2`, frame rate, key times, a node hierarchy, animation
-  tracks, then the mesh and its material), not a `.mesh` variant. What is known
-  is at the bottom of `unittransfer/mesh.py`; `probe()` already tells the two
-  formats apart. Navigation and origin fixed against Phase 15's viewer.
-  Exit: settlement and character strat models render and orbit correctly.
+- **16k - 3D strat preview and the `.cas` decoder.**
+  ✅ **done 2026-09-05.** `unittransfer/cas.py` (752 lines), three routes on
+  `server.py`, a strat branch through `web/js/viewer3d.js`, the picker in
+  `web/js/stratview.js`, and `tests/test_cas.py` at **45 checks, all passing**.
+  Every note 15a left at the bottom of `mesh.py` turned out to be right, and
+  none of it was the hard part.
+
+  **A `.cas` is a chunk list, and the meshes are one chunk kind of five.** That
+  is the thing the roadmap did not know and the thing everything else follows
+  from: there is no single vertex pool and no single object, so a settlement is
+  three named meshes with a material each in one file, and vanilla's northern
+  castle is its walls, its buildings and a faction banner. Sizes are absolute,
+  which is what makes the read checkable - the chain has to land exactly on the
+  end of the file, and on **472 of the 484 models installed** it does.
+
+  **Every file has all five chunk kinds, empty ones included**, and that is how
+  the rest was pinned down: a static model still carries an empty *skinned*
+  chunk and a skinned one an empty *static* chunk, so the two trailer lengths
+  are readable off a 16-byte chunk rather than guessed at.
+
+  **The header is two bytes off the 32-bit grid, and two RGB triples are why.**
+  Six bytes of colour in the middle of a run of 32-bit fields puts the node
+  count at 0x32 rather than 0x30, with two pad bytes after it to put the parent
+  table back on the grid. The proof that it is being read where it really is:
+  the parent table reads as a skeleton, giving `bone_pelvis` the Scene Root,
+  `bone_Rlowerleg` the `bone_RThigh` and the three cloak bones a chain.
+
+  **The material index was nearly missed.** It sits between a mesh's indices
+  and its UVs, reads 0 in three quarters of all meshes, and would have passed
+  for padding - except that a settlement has three meshes and three materials
+  and nothing else in the file says which wall gets which texture. On
+  `evil_men_huge_city.cas` it hands four meshes materials 2, 1, 3 and 0.
+
+  **A `.cas` is painted from ONE sheet and its UVs are not doubled**, which is
+  the plain difference from a `.mesh` and the thing habit would have got wrong.
+  So `v3Apply` asks `v3.cas` first, and the draw loop binds per group instead
+  of once for the model.
+
+  **The viewer is Phase 15's, unchanged.** `cas.as_mesh` lays a scene's meshes
+  into one pool and hands back a `MeshFile`, so `geometry_payload` serves a
+  settlement without knowing what a `.cas` is. What is different is the framing
+  - a settlement is wider than it is tall, and the figure's fit put the camera
+  inside its own courtyard - and the file itself says which of the two a model
+  is, because a person has a skeleton and a building does not.
+
+  **Twelve files do not decode and each says why by name.** Six are stamped
+  version 2.19 or 2.23 and lay their header out differently, three are Third
+  Age settlements whose own chunk size points past the end of a chunk, two are
+  zero bytes long, one is a material chunk a byte short of what it claims. Not
+  one is a model read wrongly and kept. A chunk that goes wrong loses that
+  chunk and not the file, which is what lets `se_fort.cas` name its problem -
+  a `CaozSceneCustomAttribNode`, a 3ds-max attribute holder whose record runs
+  to a length nothing states - instead of dying on it.
+
+  Exit met: settlement and character strat models render and orbit correctly,
+  checked in the browser on vanilla's northern European castle and fancy
+  general and on Third Age's dwarven castle.
 
 - **Future expansion (V3.1+, not V3.0.0):** mercenary-pool view/edit by region
   and faction (data layer lands in 16b; UI deferred).

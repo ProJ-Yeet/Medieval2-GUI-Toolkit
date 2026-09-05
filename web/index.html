@@ -937,6 +937,16 @@
     border-radius:6px;border:1px solid var(--edge);background:var(--panel);
     color:var(--ink);min-width:0}
   .cxlist{display:flex;flex-direction:column;max-height:210px;overflow-y:auto}
+  /* ---- 16k: the strat models. A list of files rather than a list of records,
+     so it borrows .cxpanel's box and nothing else. ---- */
+  .cmodlist{display:flex;flex-direction:column;max-height:260px;overflow-y:auto;
+    gap:1px}
+  .cmodrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+    text-align:left;font:inherit;font-size:11.5px;padding:3px 5px;border:0;
+    border-radius:5px;background:none;color:var(--ink);cursor:pointer;width:100%}
+  .cmodrow:hover{background:var(--panel)}
+  .cmodrow.on{background:var(--panel);border-left:2px solid var(--accent);
+    padding-left:3px}
   /* one character. The whole row picks them, like the validator's finding. */
   .cxrow{display:flex;align-items:baseline;gap:6px;padding:4px 5px;
     border-top:1px solid var(--edge);cursor:pointer;line-height:1.4;flex-wrap:wrap}
@@ -2327,6 +2337,7 @@
 <script src="js/stratedit.js"></script>
 <script src="js/stratchar.js"></script>
 <script src="js/stratcamp.js"></script>
+<script src="js/stratview.js"></script>
 <script src="js/viewer3d.js"></script>
 <script src="js/boot.js"></script>
 </body>

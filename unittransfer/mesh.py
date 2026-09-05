@@ -153,8 +153,15 @@ hierarchy (``Scene Root``, then the bones), animation tracks over those nodes,
 then the mesh, then the material and its texture - ``textures\\Daritai.tga`` sits
 in the last 60 bytes of the file. Reverse-engineering it is a second job of the
 size this one was, and it belongs to the campaign map's strat preview, which is
-where the roadmap always had it. Recorded here so that phase starts from what is
-known rather than from nothing.
+where the roadmap always had it.
+
+**16k did it, in :mod:`unittransfer.cas`.** Every note above turned out to be
+right, and none of it was the hard part: the file is a chunk list, the meshes
+are one chunk kind of five, and a settlement is several meshes with a material
+each rather than the single model this reader takes. What the two formats share
+is the far end - :func:`geometry_payload` serves either, because
+:func:`unittransfer.cas.as_mesh` lays a scene's meshes into one pool and hands
+back a :class:`MeshFile`.
 """
 from __future__ import annotations
 
@@ -168,8 +175,12 @@ from typing import Dict, List, Optional, Sequence, Tuple
 #: The signature every M2TW .mesh opens with.
 BOOST_SIGNATURE = b"serialization::archive"
 
-#: Version float a strat .cas opens with (3.2, as little-endian float bytes).
+#: Version float a strat .cas opens with. 3.2 is far the commonest and is what
+#: :data:`CAS_SIGNATURE` spells, but the installed set runs 2.19 to 3.21 - the
+#: exporter stamps its own version - so :func:`probe_bytes` takes the range and
+#: not the one value. See :mod:`unittransfer.cas`.
 CAS_SIGNATURE = b"\xcd\xccL@"
+CAS_VERSIONS = (2.0, 4.0)
 
 #: Bytes per vertex in each vertex stream, by the stream's type number, as the
 #: lengths that type is ever written at. Types 8, 9, 13 and 14 only turn up in
@@ -240,6 +251,10 @@ class MeshGroup:
     #: about every ``"both"``. This is for saying what a part uses, nothing
     #: more. See :func:`_classify_sheets`.
     sheets: str = "main"
+    #: the texture this part is painted with, where the file names one. A
+    #: ``.mesh`` never does - its modeldb entry does - so this stays empty for
+    #: one and carries the material's path for a ``.cas``.
+    texture: str = ""
 
     @property
     def triangles(self) -> int:
@@ -268,6 +283,9 @@ class MeshFile:
     trailer: int = 0
     #: anything read but not understood, said out loud rather than swallowed
     notes: List[str] = field(default_factory=list)
+    #: every texture the file itself names, in the order it names them. Empty
+    #: for a ``.mesh``, which leaves that to its modeldb entry.
+    textures: List[str] = field(default_factory=list)
 
     @property
     def vertices(self) -> int:
@@ -794,17 +812,26 @@ def _wrong_format(path: Path, data: bytes, wanted: str) -> str:
         return f"{path.name} is a {wanted} file but its header is damaged"
     if found == "cas":
         return (f"{path.name} is a .cas strat-map model, not a battle .mesh - "
-                f"this tool does not read .cas geometry yet")
+                f"unittransfer.cas reads that one")
     return (f"{path.name} is not a Medieval II model file "
             f"(first bytes: {data[:8].hex(' ') or 'empty'})")
 
 
 def probe_bytes(data: bytes) -> str:
-    """``"mesh"``, ``"cas"`` or ``""`` from a file's opening bytes."""
+    """``"mesh"``, ``"cas"`` or ``""`` from a file's opening bytes.
+
+    A .mesh is known by a string and a .cas by a number, so the two tests do
+    not look alike: the first four bytes of a .cas are the exporter's version
+    as a float, and any value inside :data:`CAS_VERSIONS` is one. Reading it as
+    the single float 3.2 - which is what this did before 16k - called the 128
+    files stamped 3.18 or 3.21 not a model file at all.
+    """
     if data.startswith(struct.pack("<I", len(BOOST_SIGNATURE)) + BOOST_SIGNATURE):
         return "mesh"
-    if data[:4] == CAS_SIGNATURE:
-        return "cas"
+    if len(data) >= 4:
+        version, = struct.unpack_from("<f", data, 0)
+        if CAS_VERSIONS[0] <= version <= CAS_VERSIONS[1]:
+            return "cas"
     return ""
 
 
@@ -909,6 +936,7 @@ def geometry_payload(m: MeshFile) -> bytes:
     for g in m.groups:
         groups.append({"name": g.name, "texture_group": g.texture_group,
                        "flag": g.flag, "optional": g.optional, "sheets": g.sheets,
+                       "texture": g.texture,
                        "start": offset, "count": len(g.indices)})
         offset += len(g.indices)
     lo, hi = m.bounds()
@@ -917,6 +945,8 @@ def geometry_payload(m: MeshFile) -> bytes:
         "triangles": m.triangles,
         "groups": groups,
         "bones": m.bones,
+        "format": m.format,
+        "textures": m.textures,
         "lod_name": m.lod_name,
         "has_normals": bool(m.normals),
         "has_uvs": bool(m.uvs),

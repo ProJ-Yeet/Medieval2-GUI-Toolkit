@@ -1,26 +1,70 @@
 # STATE - Medieval 2 GUI Toolkit V2 and V3
-_Updated: 2026-09-05 · **v2.1.11 released** · V3 under way: 16a-16j done, 16k next_
+_Updated: 2026-09-05 · **v2.1.11 released** · V3 feature-complete: 16a-16k all done_
 
 ## Next up
-Start **16k** - the 3D strat preview and the `.cas` decoder. Every text file the
-campaign is made of can now be read and written; what is left of Phase 16 is the
-one binary that cannot be. **This sub-phase owns the `.cas` decoder**, which 15a
-did not land: a strat model is a 3ds-max scene export - float `3.2`, frame rate,
-key times, a node hierarchy, animation tracks, then the mesh and its material -
-and not a `.mesh` variant. What is known about the format is at the bottom of
-`unittransfer/mesh.py`, and `probe()` already tells the two apart. Navigation and
-origin are fixed against Phase 15's viewer.
-Exit: settlement and character strat models render and orbit correctly.
+**Phase 16 is finished and V3.0.0 is feature-complete.** 16k landed the `.cas`
+decoder and the strat preview, which was the last thing the roadmap had. What
+is left before a release is release work rather than phase work: a version bump
+to 3.0.0, a `merge/RELEASE_3_0_0.md`, and a full-suite run.
 
-The four rulings that carried through 16f to 16j carry into it unchanged. **One
-fact table, read by everything** - the form reads `Facts`; a write re-reads the
-file, because a writer that writes out of a cache writes over whatever changed
-under it. **A rule with no evidence reports nothing** - the stock game keeps
-`descr_sm_factions.txt` inside its packed data, so on vanilla the roster-slot
-check does not run and says so by name. **Python owns the bytes.** And **the
-plan reads back what it would write.**
+Nothing is mid-flight. The next session picks one of:
+- **cut V3.0.0** - bump the version, write the release note, run every suite,
+  build and upload (a release zip is ~50-55 MB; ~19 MB means `vanilla_ui` is
+  missing, and D: needs ~130 MB free before staging);
+- **V3.1** - the OSM backdrop and the coastline tracer, which is the first
+  thing in the toolkit to touch the network and so is opt-in and off by
+  default. Re-triage `merge/PORT_MANIFEST.json` before starting it.
 
 Run `python tools/upstream_sync.py sync` first, as before every sub-phase.
+
+## 16k - the strat preview and the `.cas` decoder (2026-09-05)
+`unittransfer/cas.py` (752 lines), three routes on `server.py`, a strat branch
+through `web/js/viewer3d.js`, the picker in `web/js/stratview.js` (124), and
+`tests/test_cas.py` at **45 checks, all passing**. Phase 15 said a `.cas` was a
+second job the size the `.mesh` was, and it was.
+
+**A `.cas` is a chunk list, and the meshes are one chunk kind of five.** No
+single vertex pool and no single object: a settlement is three named meshes
+with a material each, and vanilla's northern castle is its walls, its buildings
+and a faction banner. Chunk sizes are absolute, so the chain has to land
+exactly on the end of the file, and on **472 of the 484 models installed** it
+does.
+
+**Every file carries all five chunk kinds, the empty ones included**, which is
+what made the rest readable: a static model still ships an empty *skinned*
+chunk and a skinned one an empty *static* chunk, so the two trailer lengths
+come off a 16-byte chunk rather than out of a guess.
+
+**The header is two bytes off the 32-bit grid and two RGB triples are why** -
+six bytes of colour among the 32-bit fields, then two pad bytes to put the
+parent table back. The check that it is being read where it really is: the
+parent table reads as a skeleton, `bone_pelvis` under Scene Root and the three
+cloak bones in a chain of their own.
+
+**The material index was nearly missed.** Between a mesh's indices and its UVs,
+0 in three quarters of all meshes, and it would have passed for padding -
+except that a settlement has three meshes and three materials and nothing else
+in the file says which wall gets which texture.
+
+**A `.cas` is painted from one sheet and its UVs are not doubled.** That is the
+plain difference from a `.mesh` and the thing habit would have got wrong, so
+the draw loop binds per group and `v3Apply` asks `v3.cas` before it halves u.
+The viewer is otherwise Phase 15's, unchanged: `cas.as_mesh` lays the scene's
+meshes into one pool and `geometry_payload` serves it without knowing what a
+`.cas` is. The framing is the exception, and the file settles it - a person has
+a skeleton and a building does not.
+
+**Twelve files do not decode and each says why by name**: six stamped version
+2.19 or 2.23, three Third Age settlements whose own chunk size points past the
+end of a chunk, two zero bytes long, one a material chunk a byte short. None is
+a model read wrongly and kept. A chunk that goes wrong loses that chunk and not
+the file, which is why `se_fort.cas` names its `CaozSceneCustomAttribNode`
+instead of dying on it.
+
+Also here: `mesh.probe_bytes` took a `.cas` to be the single float 3.2 and so
+called the 128 files stamped 3.18 or 3.21 not a model file at all; it takes the
+range now. And `tests/_tmp` sweeps the suite's temp folders up - seventy-five
+of 173 `mkdtemp` call sites never removed what they made, about 37 GB by today.
 
 ## 16j-2 - a faction's campaign entry, and the win conditions (2026-09-05)
 Two more saves on `stratcamp.py` (`create` and `delete`, taking it to 1,681

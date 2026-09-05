@@ -352,7 +352,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, edit, modflags,
                modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campmap, campstrat, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campmap, campstrat, cas, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1770,6 +1770,15 @@ class Handler(BaseHTTPRequestHandler):
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
                 return self._json(sprites.overview(self.registry.get(name)))
+            if u.path in ("/api/map/models", "/api/map/model",
+                          "/api/map/model/geometry"):
+                # 16k, and ahead of _map_route on purpose: a strat model is a
+                # file in the mod, not a layer of a map, and a mod that ships
+                # models and no map of its own should still preview them.
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._strat_model_route(u.path, name, q)
             if u.path.startswith("/api/map"):
                 return self._map_route(u.path, q)
             if u.path == "/api/log":
@@ -3239,6 +3248,48 @@ class Handler(BaseHTTPRequestHandler):
         except mesh.MeshError as e:
             return self._err(400, str(e))
         return self._send(200, mesh.geometry_payload(decoded),
+                          "application/octet-stream")
+
+    def _strat_model_route(self, path: str, name: str, q):
+        """The three things the strat preview asks for, 16k.
+
+        ``/api/map/models`` is the picker - every ``.cas`` in the mod, grouped.
+        ``/api/map/model`` is one scene's facts: its meshes, its materials and
+        anything the decoder could not read. ``/api/map/model/geometry`` is the
+        same scene as the binary payload Phase 15's viewer already draws, which
+        is the whole reason :func:`unittransfer.cas.as_mesh` exists.
+
+        A model that will not decode answers 400 with the decoder's sentence,
+        for the reason ``/api/model/geometry`` does: that sentence is the useful
+        part, and the viewer puts it on screen instead of an empty box.
+        """
+        mod = self.registry.get(name)
+        if path == "/api/map/models":
+            return self._json({"mod": name, "models": cas.list_models(mod.data)})
+
+        rel = (q.get("rel") or [""])[0]
+        # `rel` came out of the list we just served, but it is still a path from
+        # a query string, so it is resolved and checked to be under data/ - the
+        # rule every `rel` route in this server follows.
+        src = factions.picture_path(mod, rel)
+        if src is None or not src.is_file():
+            return self._err(404, f"{rel!r} is not a file in {name}")
+        try:
+            scene = cas.read_cas(src)
+        except cas.CasError as exc:
+            return self._err(400, str(exc))
+        if path == "/api/map/model":
+            view = cas.scene_view(scene)
+            for row, mat in zip(view["materials"], scene.materials):
+                found = cas.texture_path(src, mat.texture)
+                row["rel"] = (found.relative_to(mod.data).as_posix()
+                              if found else "")
+            return self._json(view)
+        try:
+            geometry = cas.as_mesh(scene)
+        except cas.CasError as exc:
+            return self._err(400, str(exc))
+        return self._send(200, mesh.geometry_payload(geometry),
                           "application/octet-stream")
 
     def _map_route(self, path: str, q):

@@ -273,6 +273,7 @@ function renderCampmap(){
         <div class="cmsettle" id="cmSettle"></div>
         <div class="cmchars" id="cmChars"></div>
         <div class="cmcamp" id="cmCamp"></div>
+        <div class="cmmodels" id="cmModels"></div>
       </div>
     </div>`;
   cmapWire();
@@ -283,6 +284,7 @@ function renderCampmap(){
   csPaint();          // 16h: kept out of cmapPickPaint, which owns #cmPick only
   cxPaint();          // 16i, for the same reason
   cjOpen();           // 16j, and it reads nothing until somebody opens it
+  cmodOpen();         // 16k, the strat models, and the same on both counts
   cmapResize();
   if(!c.view.fitted) cmapFit(); else cmapPaint();
   if(typeof rszApply === 'function') rszApply(main);
