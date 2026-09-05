@@ -947,3 +947,94 @@ def read_strat(mod, campaign: str = DEFAULT_CAMPAIGN) -> StratFile:
     out = parse_strat(read_text(path, ENCODING))
     out.path = path
     return out
+
+
+# ---------------------------------------------------------------------------
+# everything in the file that stands on a tile (17d)
+
+
+def _faction_of(sf: StratFile, node: Node) -> str:
+    """The faction block a record sits inside, or ``''`` for the ones outside.
+
+    Resources are written at the top of the file and belong to nobody; a fort,
+    a watchtower and a character all sit inside a faction. Walked rather than
+    stored, because the parse already holds the tree and a second copy of it on
+    every node is a second thing to keep true.
+    """
+    seen = 0
+    while node is not None and node.kind != "faction" and node.parent >= 0 and seen < 8:
+        node = sf.nodes[node.parent]
+        seen += 1
+    return node.name if node is not None and node.kind == "faction" else ""
+
+
+def _army_size(sf: StratFile, node: Node) -> int:
+    """How many ``unit`` lines a character is leading, through its army node."""
+    n = 0
+    for ci in node.children:
+        child = sf.nodes[ci]
+        if child.kind == "army":
+            n += sum(1 for gi in child.children if sf.nodes[gi].kind == "unit")
+        elif child.kind == "unit":
+            n += 1
+    return n
+
+
+def markers(sf: StratFile) -> List[dict]:
+    """Everything in ``descr_strat.txt`` that stands on a tile.
+
+    One flat list, in file order, in **the file's own coordinates** - the ones
+    ``descr_strat.txt`` writes, whose y counts up from the bottom of the map.
+    The flip to image coordinates is the map's to make and only the map knows
+    the height, so it is not made here; :meth:`CampaignMap.image_xy` and the
+    browser's own `mapMarkY` are the two places it happens.
+
+    A settlement is the exception and carries no coordinate, because it does not
+    have one: a settlement stands where its province's black marker pixel is on
+    ``map_regions.tga``, and that pairing is already in the map manifest. What
+    this adds is what the campaign file says about it - its level, its kind and
+    who starts holding it - keyed by region so the two can be joined.
+
+    ``line`` is the line the record starts on, which is what makes a marker
+    clickable through to the record behind it rather than only a dot.
+    """
+    out: List[dict] = []
+    for node in sf.nodes:
+        kind = node.kind
+        if kind == "settlement":
+            out.append({
+                "kind": "settlement",
+                "region": node.get("region", "") or node.name,
+                "name": node.get("region", "") or node.name,
+                "faction": _faction_of(sf, node),
+                "level": node.get("level", ""),
+                "settlement_type": node.get("settlement_type", ""),
+                "line": node.start,
+            })
+            continue
+        if kind not in ("character", "fort", "watchtower", "resource"):
+            continue
+        x, y = node.get("x"), node.get("y")
+        if not isinstance(x, int) or not isinstance(y, int):
+            continue                    # a record whose line did not read; its
+            # problems are already on the node, and a marker at no tile is worse
+            # than no marker
+        row = {"kind": kind, "name": node.name, "x": x, "y": y,
+               "faction": _faction_of(sf, node), "line": node.start}
+        # A fort and a watchtower are not written inside a faction block on
+        # either real mod - DaC writes all 105 of its forts and all 295 of its
+        # watchtowers inside the `region` blocks at the end of the file, where
+        # nobody owns them. The region they are in is what they DO name, and it
+        # is what the parser already recorded, so it travels with them.
+        if kind in ("fort", "watchtower"):
+            row["region"] = node.get("region", "")
+        if kind == "character":
+            row["type"] = node.get("type", "")
+            row["gender"] = node.get("gender", "")
+            row["rank"] = node.get("rank", "")
+            row["army"] = _army_size(sf, node)
+        elif kind == "fort":
+            row["type"] = node.get("type", "")
+            row["culture"] = node.get("culture", "")
+        out.append(row)
+    return out

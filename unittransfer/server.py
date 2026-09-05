@@ -177,6 +177,10 @@ Campaign Map mode (the ten TGA layers and descr_regions.txt, see
                                  -> that layer's colours named and counted, and
                                     which of them means "nothing here"
   GET  /api/map/probe?mod=&x=&y= -> one tile as all ten layers name it
+  GET  /api/map/markers?mod=&campaign=
+                                 -> everything in descr_strat.txt that stands on
+                                    a tile: settlements, characters, forts,
+                                    watchtowers and trade resources (17d)
   GET  /api/map/region?mod=&name=
                                  -> one region: its record, its pixels, its
                                     neighbours and the pickers its boxes need
@@ -3395,6 +3399,17 @@ class Handler(BaseHTTPRequestHandler):
                 facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
                 return self._json(stratchar.faction_detail(
                     facts, (q.get("faction") or [""])[0]))
+            except (campmap.MapError, ModDataError, OSError) as exc:
+                return self._err(404, str(exc))
+
+        if path == "/api/map/markers":
+            # 17d. Everything in descr_strat.txt that stands on a tile, in one
+            # call, through the same fact table - 855 markers on Third Age
+            # Reforged and about 110 KB of JSON, fetched when the layer is first
+            # turned on and never per frame.
+            try:
+                facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
+                return self._json(mapquery.marker_view(facts))
             except (campmap.MapError, ModDataError, OSError) as exc:
                 return self._err(404, str(exc))
 

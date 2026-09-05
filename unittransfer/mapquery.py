@@ -1932,3 +1932,65 @@ def vocab(facts: "Facts") -> dict:
         "border": list(BORDER),
         "ms": facts.ms,
     }
+
+
+# ---------------------------------------------------------------------------
+# the markers layer (17d)
+
+#: Where a mod keeps a trade resource's picture, and the name it gives it. Both
+#: real mods follow it: Third Age Reforged ships six of these and lets the game
+#: fall back to its own art for the rest, which is why a missing one is normal
+#: and is answered with an empty string rather than a fault.
+RESOURCE_ART = "ui/resources/resource_{name}.tga"
+
+
+def _resource_art(mod, name: str) -> str:
+    """The mod's own picture for one resource, as a path under ``data/``.
+
+    ``''`` when the mod ships none - which is the ordinary case, because the
+    stock game's copy is inside a ``.pack`` archive that nothing here reads. The
+    browser draws its own glyph then, rather than a broken image.
+    """
+    rel = RESOURCE_ART.format(name=re.sub(r"[^A-Za-z0-9_.-]", "", name or ""))
+    try:
+        return rel if (Path(mod.data) / rel).is_file() else ""
+    except OSError:
+        return ""
+
+
+def marker_view(facts: "Facts") -> dict:
+    """Everything in ``descr_strat.txt`` that stands on a tile, drawable.
+
+    17d. :func:`campstrat.markers` does the reading and knows nothing about
+    factions or art; this joins the two things a picture needs and nothing more
+    - what each faction is called and what colour it flies, which the fact table
+    already holds, and which resources this mod ships a picture for.
+
+    Coordinates are left exactly as the file writes them. The flip to image
+    coordinates belongs to whatever is holding the map's height, and doing it
+    twice in two places is how a marker ends up mirrored.
+    """
+    out: dict = {"mod": getattr(facts.mod, "name", ""), "campaign": facts.campaign,
+                 "items": [], "counts": {}, "factions": {}, "art": {},
+                 "skipped": [s for s in facts.skipped
+                             if campstrat.STRAT_NAME in str(s)]}
+    if facts.strat is None:
+        return out
+    items = campstrat.markers(facts.strat)
+    out["items"] = items
+    counts: Dict[str, int] = {}
+    for it in items:
+        counts[it["kind"]] = counts.get(it["kind"], 0) + 1
+    out["counts"] = counts
+    seen = {it["faction"] for it in items if it["faction"]}
+    for code in sorted(seen):
+        rgb = facts.faction_colours.get(code)
+        out["factions"][code] = {
+            "label": facts.faction_labels.get(code) or code,
+            "colour": list(rgb) if rgb else None,
+        }
+    for name in sorted({it["name"] for it in items if it["kind"] == "resource"}):
+        art = _resource_art(facts.mod, name)
+        if art:
+            out["art"][name] = art
+    return out

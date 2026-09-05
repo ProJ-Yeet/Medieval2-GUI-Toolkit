@@ -674,6 +674,18 @@
   .cmtiprow i.none{background:transparent;border-style:dashed}
   .cmtipk{color:var(--dim)}
   .cmtipv{color:var(--ink)}
+  /* what descr_strat.txt stands on this tile, above the layer rows (17d) */
+  .cmtipmk{color:var(--ink);margin-bottom:4px;padding-bottom:4px;
+    border-bottom:1px solid var(--edge)}
+  /* 17d - the markers layer's own panel, beside the layer list */
+  .cmmark{display:flex;flex-direction:column;gap:5px;font-size:11.5px;
+    border:1px solid var(--edge);border-radius:7px;padding:7px 9px;
+    background:var(--panel2)}
+  .cmkhead{display:flex;align-items:center;gap:6px}
+  .cmkhead .sp{flex:1}
+  .cmkfold{font:inherit;padding:0 6px;border-radius:5px}
+  .cmkcats{display:flex;flex-direction:column;gap:2px}
+  .cmkcat.none{opacity:.45}
   .cmside{flex:0 0 336px;min-width:280px;display:flex;flex-direction:column;gap:9px;
     overflow:auto}
   .cmhead{display:flex;flex-direction:column;gap:2px}
@@ -2350,6 +2362,7 @@
 <script src="js/images.js"></script>
 <script src="js/campmap.js"></script>
 <script src="js/campaint.js"></script>
+<script src="js/campmark.js"></script>
 <script src="js/mapcheck.js"></script>
 <script src="js/mapquery.js"></script>
 <script src="js/stratedit.js"></script>

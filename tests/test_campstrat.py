@@ -403,6 +403,45 @@ else:
                       sorted({line + 1 for line, _, _ in f.problems})
                       == [3747, 5376, 8464, 9703, 9983, 10438, 10581, 10947, 10948])
 
+print("\n== everything that stands on a tile (17d) ==")
+# The markers layer draws `campstrat.markers`, so what it may draw is what this
+# says. Two rules carry the whole feature: a settlement has no coordinate of its
+# own (it stands on its province's marker pixel, which the map manifest pairs
+# for it) and everything else is in the FILE's coordinates, whose y counts up
+# from the bottom. Flipping twice, or not at all, is how a marker ends up
+# mirrored, so the flip is not made here and the browser makes it once.
+for root in roots:
+    mod = Mod(root)
+    for name in campstrat.campaigns(mod)[:1]:
+        f = campstrat.read_strat(mod, name)
+        ms = campstrat.markers(f)
+        kinds = {k: sum(1 for m in ms if m["kind"] == k)
+                 for k in ("settlement", "character", "fort", "watchtower", "resource")}
+        counted = {k: len(f.of_kind(k)) for k in kinds}
+        label = f"{mod.name}/{name}"
+        check(f"{label}: every record that can stand on a tile is a marker "
+              f"({', '.join(f'{v} {k}' for k, v in kinds.items() if v)})",
+              all(kinds[k] == counted[k] for k in kinds))
+        check(f"{label}: a settlement carries no coordinate and everything "
+              f"else carries both",
+              all(("x" not in m) == (m["kind"] == "settlement") for m in ms))
+        check(f"{label}: every coordinate is a whole number",
+              all(isinstance(m["x"], int) and isinstance(m["y"], int)
+                  for m in ms if m["kind"] != "settlement"))
+        check(f"{label}: every character names the faction whose block it "
+              f"is in",
+              all(m["faction"] for m in ms if m["kind"] == "character"))
+        # DaC writes all 105 of its forts and all 295 of its watchtowers inside
+        # the `region` blocks at the end of the file rather than inside a
+        # faction, so what they name is a province and not an owner.
+        placed = [m for m in ms if m["kind"] in ("fort", "watchtower")]
+        check(f"{label}: every fort and watchtower names its faction or its "
+              f"region ({len(placed)} of them)",
+              all(m["faction"] or m.get("region") for m in placed))
+        owned = [m for m in ms if m["kind"] == "resource" and m["faction"]]
+        check(f"{label}: a trade resource belongs to nobody - it is written "
+              f"above the faction blocks", not owned)
+
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 print("ALL PASSED" if all(ok) else "SOME FAILED")
 sys.exit(0 if all(ok) else 1)

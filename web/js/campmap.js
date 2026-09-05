@@ -281,6 +281,7 @@ Answered here, out of the map you were already sent - no request per pixel.">ⓘ
         <div id="cmCheck"></div>
         <div id="cmQuery"></div>
         <div id="cmPaint"></div>
+        <div id="cmMarks"></div>
         <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
         <div class="cmpick" id="cmPick"></div>
         <div class="cmsettle" id="cmSettle"></div>
@@ -293,6 +294,7 @@ Answered here, out of the map you were already sent - no request per pixel.">ⓘ
   cchkOpen();
   cqOpen();
   cpaintOpen();
+  cmkOpen();          // 17d, and it reads nothing until the layer is ticked
   cmapPickPaint();
   csPaint();          // 16h: kept out of cmapPickPaint, which owns #cmPick only
   cxPaint();          // 16i, for the same reason
@@ -744,9 +746,15 @@ function cmapOverlay(x, s0, t0, s1, t1){
   if(v.zoom >= CMAP_GLYPH_ZOOM){
     // A glyph is drawn ON the tile, from the same two lines as everything else,
     // so it cannot drift off the pixel it is about however far you zoom in.
+    // 17d: with the markers layer drawing settlements, this glyph is the same
+    // pixel said twice - the campaign file's icon stands on it. The port glyph
+    // stays either way: no record in descr_strat.txt is a port, so nothing else
+    // draws one.
+    const settleGlyph = !(state.cmk && state.cmk.on && state.cmk.cats.settlement
+                          && state.cmk.groups.length);
     for(const r of c.man.regions){
       for(const [p, kind] of [[r.settlement, 's'], [r.port, 'p']]){
-        if(!p) continue;
+        if(!p || (kind === 's' && !settleGlyph)) continue;
         if(p[0] < s0 - 1 || p[0] > s1 || p[1] < t0 - 1 || p[1] > t1) continue;
         const X = cmapX(p[0]), Y = cmapY(p[1]), z = v.zoom;
         x.lineWidth = Math.max(1, z / 8);
@@ -763,6 +771,10 @@ function cmapOverlay(x, s0, t0, s1, t1){
       }
     }
   }
+
+  // 17d's markers sit above the layers and below the hover cell, so the cell
+  // the pointer is on is never hidden by what is standing on it
+  if(typeof cmkDraw === 'function') cmkDraw(x, s0, t0, s1, t1);
 
   if(c.hover){
     const [hx, hy] = c.hover;
@@ -810,10 +822,25 @@ function cmapPointers(cv){
     last = [e.clientX, e.clientY]; moved = 0;
     cv.setPointerCapture(e.pointerId);
     mode = (e.button === 0 && cpaintArmed()) ? 'paint' : 'pan';
+    // 17d: with the brush down the left button paints, as 16e settled. With it
+    // up, a left press that starts on a character takes the button off the pan
+    // and onto that character - the same rule, one layer further out.
+    if(mode === 'pan' && e.button === 0 && typeof cmkDragStart === 'function'
+       && cmkDragStart(cmapEventTile(cv, e))) mode = 'mark';
     if(mode === 'paint') cpaintDown(cmapEventTile(cv, e));
   });
   cv.addEventListener('pointerup', e => {
     if(mode === 'paint') cpaintUp();
+    else if(mode === 'mark'){
+      // a press on a character that never travelled is still a pick, exactly as
+      // it is anywhere else on the map - taking the click away from the tile
+      // because something is standing on it is how 17c happened
+      if(last && moved < CMAP_DRAG_SLOP){
+        if(state.cmk) state.cmk.drag = null;
+        cmapPaint();
+        cmapPick(cmapEventTile(cv, e));
+      }else cmkDrop();
+    }
     else if(last && moved < CMAP_DRAG_SLOP && state.cmap) cmapPick(cmapEventTile(cv, e));
     last = null; mode = '';
     if(state.cmap){ state.cmap.tipHold = false; cmapTipPaint(); }
@@ -821,6 +848,7 @@ function cmapPointers(cv){
   });
   cv.addEventListener('pointercancel', () => {
     if(mode === 'paint') cpaintCancel();
+    if(mode === 'mark' && state.cmk){ state.cmk.drag = null; cmapPaint(); }
     last = null; mode = '';
   });
   cv.addEventListener('pointerleave', () => {
@@ -845,6 +873,11 @@ function cmapPointers(cv){
     c.tipHold = !!(mode || last);
     if(mode === 'paint'){
       cpaintMove(cmapEventTile(cv, e));
+      cmapHover(cmapEventTile(cv, e));
+      return;
+    }
+    if(mode === 'mark'){
+      cmkDragMove(cmapEventTile(cv, e));
       cmapHover(cmapEventTile(cv, e));
       return;
     }
@@ -933,7 +966,17 @@ function cmapReadout(){
        : r ? `${cmapRegionName(r)}${r.id >= 0 ? ` <span class="count">#${r.id}</span>` : ''}`
        : '<span class="count">no region</span>');
   }
-  const hide = !!(c.hover && c.tip !== false);
+  // 17d: a drag holds the tooltip down, so this is the only line on screen
+  // while one is in progress - and where it would land, and why it may not, is
+  // the whole of what somebody dragging wants to read.
+  const drag = state.cmk && state.cmk.drag;
+  if(drag && drag.tile){
+    html = `<b>${esc(drag.item.name || drag.item.kind)}</b> → `
+      + `<b>${drag.tile[0]}, ${c.man.height - 1 - drag.tile[1]}</b> game`
+      + (drag.fault ? ` · <span class="w-bad">${esc(drag.fault)}</span>`
+                    : ' · <span class="w-good">drop to plan the move</span>');
+  }
+  const hide = !drag && !!(c.hover && c.tip !== false);
   if(el.hidden !== hide) el.hidden = hide;
   if(!hide && c.saidRead !== html){ el.innerHTML = html; c.saidRead = html; }
 }
@@ -1094,9 +1137,18 @@ function cmapTipHtml(tx, ty){
                                                  : 'no region'}</div>`;
   }
   const rows = m.layers.map(ly => cmapTipRow(ly, tx, ty)).join('');
+  // 17d: what descr_strat.txt stands on this tile, when that layer is on. It is
+  // above the layer rows because a general is what somebody is pointing AT and
+  // the ground under him is context.
+  const on = (typeof cmkAt === 'function') ? cmkAt(tx, ty) : [];
+  const marks = on.length
+    ? `<div class="cmtipmk">${on.slice(0, 6).map(it =>
+        `<div>${esc(cmkLabel(it))}</div>`).join('')}${
+        on.length > 6 ? `<div class="count">…and ${on.length - 6} more</div>` : ''}</div>`
+    : '';
   return `${head}
     <div class="cmtipxy"><b>${tx}, ${ty}</b> image · <b>${tx}, ${gy}</b> game</div>
-    ${rows}`;
+    ${marks}${rows}`;
 }
 
 /* The layers the panel needs, which are not the layers on screen.
