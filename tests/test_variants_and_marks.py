@@ -26,14 +26,15 @@ question about a whole-file rewrite is what it does to a real file.
 """
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _realmod  # noqa: E402
 
+from tests import _tmp
 from unittransfer import buildings, config, edu, edusort  # noqa: E402
 from unittransfer.mod import Mod  # noqa: E402
 
@@ -45,7 +46,7 @@ def check(label, cond):
     print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.SETTINGS_PATH = cfg / "settings.json"
 config.LOG_PATH = cfg / "transfers.json"
@@ -191,7 +192,7 @@ class FakeMod:
         return self.data / buildings.EDB_REL
 
 
-root = Path(tempfile.mkdtemp(prefix="ut_variants_"))
+root = Path(_tmp.mkdtemp(prefix="ut_variants_"))
 mod = FakeMod(root, EDB)
 
 print("== city and castle, side by side ==")
@@ -395,7 +396,7 @@ for src in edb_mods:
 edu_mods = [m for m in _realmod.installed()
             if (m / "data" / "export_descr_unit.txt").is_file()]
 for src in edu_mods:
-    work = Path(tempfile.mkdtemp()) / src.name
+    work = Path(_tmp.mkdtemp()) / src.name
     (work / "data").mkdir(parents=True)
     for rel in ("export_descr_unit.txt", "descr_sm_factions.txt", "text/expanded.txt"):
         s = src / "data" / rel

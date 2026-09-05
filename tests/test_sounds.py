@@ -11,11 +11,11 @@ Run:  python -m tests.test_sounds
 """
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from tests import _tmp  # noqa: E402
 from unittransfer import config, sounds as S  # noqa: E402
 from unittransfer.mod import Mod  # noqa: E402
 from unittransfer.transfer import (TransferOptions, plan_transfer,  # noqa: E402
@@ -35,7 +35,7 @@ def check(label, cond):
 
 
 def make_temp_mod(src_mod: Path) -> Path:
-    tmp = Path(tempfile.mkdtemp(prefix="ut_snd_"))
+    tmp = Path(_tmp.mkdtemp(prefix="ut_snd_"))
     data = tmp / "data"
     (data / "text").mkdir(parents=True)
     (data / "unit_models").mkdir(parents=True)
@@ -48,7 +48,7 @@ def make_temp_mod(src_mod: Path) -> Path:
 
 
 def use_temp_config():
-    tmp = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+    tmp = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
     config.CONFIG_DIR = tmp
     config.BACKUP_DIR = tmp / "backups"
     config.SETTINGS_PATH = tmp / "settings.json"

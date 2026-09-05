@@ -10,12 +10,12 @@ under any name.
 """
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, modeldb
 from unittransfer.mod import Mod
 from unittransfer.transfer import (TransferOptions, _canon_rel, _folder_tag,
@@ -37,13 +37,13 @@ def check(label, cond):
     print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
 config.LOG_PATH = cfg / "transfers.json"
 
-dest_root = Path(tempfile.mkdtemp(prefix="ut_dest_"))
+dest_root = Path(_tmp.mkdtemp(prefix="ut_dest_"))
 data = dest_root / "data"
 (data / "text").mkdir(parents=True)
 (data / "unit_models").mkdir(parents=True)

@@ -8,12 +8,13 @@ NEW ownership faction's ui/units folder). The fix copies the icon into every
 faction the unit ends up owned by (plus the mercs/merc fallback), so no
 *_pic_dir pin is needed at all -- each faction finds its own copy.
 """
-import shutil, sys, tempfile
+import shutil, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, edu
 from unittransfer.mod import Mod
 from unittransfer.transfer import (MERC_CARD_DIR, MERC_INFO_DIR,
@@ -28,11 +29,11 @@ ok = []
 def check(label, cond):
     ok.append(bool(cond)); print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
-dest_root = Path(tempfile.mkdtemp(prefix="ut_dest_"))
+dest_root = Path(_tmp.mkdtemp(prefix="ut_dest_"))
 data = dest_root / "data"
 (data / "text").mkdir(parents=True); (data / "unit_models").mkdir(parents=True)
 for rel in ("export_descr_unit.txt", "text/export_units.txt",

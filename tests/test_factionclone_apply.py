@@ -20,11 +20,11 @@ Two things only a real write can prove:
 """
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from tests import _tmp  # noqa: E402
 from unittransfer import config                                    # noqa: E402
 from unittransfer import factionclone as fc                        # noqa: E402
 from unittransfer import keyblock as kb                            # noqa: E402
@@ -280,7 +280,7 @@ def build(root: Path) -> None:
         path.write_bytes(b"TGA" + rel.encode("utf-8"))
 
 
-tmp = Path(tempfile.mkdtemp(prefix="m2gui_clone_"))
+tmp = Path(_tmp.mkdtemp(prefix="m2gui_clone_"))
 root = tmp / "TestMod"
 build(root)
 mod = Mod(root)

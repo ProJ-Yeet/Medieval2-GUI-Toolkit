@@ -14,13 +14,13 @@ button, none of which looks like "the server exited".
 """
 import os
 import sys
-import tempfile
 import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, icons, server                       # noqa: E402
 from unittransfer import mod as mod_mod
 from unittransfer.mod import Mod                                     # noqa: E402
@@ -75,7 +75,7 @@ finally:
 
 # ---- the icon cache -----------------------------------------------------
 print("\n== an unreadable cache entry is a miss, never a black card ==")
-tmp = Path(tempfile.mkdtemp(prefix="ut_icons_"))
+tmp = Path(_tmp.mkdtemp(prefix="ut_icons_"))
 cache = icons.IconCache(tmp / "cache")
 
 # a real source image to decode

@@ -11,12 +11,13 @@ unpacked vanilla UI, a drawn placeholder) are what the grid's badges read.
 
     python -m tests.test_buildings_http
 """
-import json, shutil, sys, tempfile, threading, urllib.request
+import json, shutil, sys, threading, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import buildings, config
 from unittransfer.server import Registry, Handler, _Server
 
@@ -52,11 +53,11 @@ if SOURCE is None:
 print(f"source mod: {SOURCE.name}")
 
 # ---- throwaway config + mod ----
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
-med2 = Path(tempfile.mkdtemp(prefix="ut_med2_"))
+med2 = Path(_tmp.mkdtemp(prefix="ut_med2_"))
 data = med2 / "mods" / "TestMod" / "data"
 (data / "text").mkdir(parents=True)
 for rel in (buildings.EDB_REL, buildings.LOC_REL, "export_descr_unit.txt",

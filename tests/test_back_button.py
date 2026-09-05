@@ -30,11 +30,12 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+
+from tests import _tmp
 
 WEB = ROOT / "web" / "index.html"
 
@@ -212,7 +213,7 @@ else:
     tags = [t for t in re.findall(r'<script src="js/([A-Za-z0-9_.-]+\.js)"></script>', src)
             if t != "boot.js"]          # boot.js starts the app; there is no server here
     script = "\n".join((WEB.parent / "js" / t).read_text(encoding="utf-8") for t in tags)
-    tmp = Path(tempfile.mkdtemp(prefix="ut_back_"))
+    tmp = Path(_tmp.mkdtemp(prefix="ut_back_"))
     js = tmp / "check.js"
     js.write_text(STUBS + script + HARNESS, encoding="utf-8")
     proc = subprocess.run([node, str(js)], capture_output=True, text=True,

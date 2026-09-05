@@ -21,7 +21,6 @@ where that mod is DaC it checks the numbers this phase was scoped against:
 """
 import shutil
 import sys
-import tempfile
 import time
 from pathlib import Path
 
@@ -30,7 +29,7 @@ sys.path.insert(0, str(ROOT))
 
 from PIL import Image
 
-from tests import _realmod
+from tests import _realmod, _tmp
 from unittransfer import campmap, maptga, mapvocab
 from unittransfer.mod import Mod
 
@@ -287,7 +286,7 @@ else:
                 continue
             # not byte-exact: then it must at least be the same picture, in the
             # same shape, and settled - a second pass may not drift again
-            tmp = Path(tempfile.mkdtemp(prefix="ut_rt_")) / ly["file"]
+            tmp = Path(_tmp.mkdtemp(prefix="ut_rt_")) / ly["file"]
             tmp.write_bytes(data)
             again, info2 = maptga.read(tmp)
             if (again.tobytes() != img.tobytes()

@@ -25,12 +25,12 @@ warnings that belong in the confirm dialog. What is pinned here:
 """
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, images
 from unittransfer.mod import Mod
 from unittransfer.transfer import undo
@@ -45,7 +45,7 @@ def check(label, cond):
     print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
@@ -62,7 +62,7 @@ def paint(path: Path, w, h, colour=(200, 40, 40, 255), fmt=None):
 # A mod is a folder with a data/ in it; nothing here needs an EDU, so the whole
 # fixture is built rather than borrowed. (The unit-card section below does need
 # one, and borrows there.)
-root = Path(tempfile.mkdtemp(prefix="ut_img_"))
+root = Path(_tmp.mkdtemp(prefix="ut_img_"))
 data = root / "data"
 paint(data / "ui" / "pips" / "religion_catholic.tga", 32, 32)
 paint(data / "ui" / "ancillaries" / "cool_hat.tga", 48, 48)
@@ -74,7 +74,7 @@ paint(data / "ui" / "northern_european" / "buildings" / "#northern_european_town
 (data / "export_descr_unit.txt").write_text("", encoding="latin-1")
 mod = Mod(root)
 
-src = Path(tempfile.mkdtemp(prefix="ut_imgsrc_"))
+src = Path(_tmp.mkdtemp(prefix="ut_imgsrc_"))
 same_tga = paint(src / "same_size.tga", 32, 32, (40, 200, 40, 255), "TGA")
 big_tga = paint(src / "way_too_big.tga", 256, 256, (40, 40, 200, 255), "TGA")
 a_png = paint(src / "from_photoshop.png", 32, 32, (200, 200, 40, 255))
@@ -212,7 +212,7 @@ donor = next((m for m in sorted(MODS.iterdir())
 if donor is None:
     print("  (no mod installed - skipped)")
 else:
-    real = Path(tempfile.mkdtemp(prefix="ut_imgu_"))
+    real = Path(_tmp.mkdtemp(prefix="ut_imgu_"))
     (real / "data/text").mkdir(parents=True)
     for rel in ("export_descr_unit.txt", "text/export_units.txt"):
         if (donor / "data" / rel).is_file():
@@ -253,7 +253,7 @@ import urllib.request
 
 from unittransfer.server import Handler, Registry, _Server
 
-med2 = Path(tempfile.mkdtemp(prefix="ut_med2_"))
+med2 = Path(_tmp.mkdtemp(prefix="ut_med2_"))
 shutil.copytree(root, med2 / "mods" / "ArtMod")
 config.save_settings(med2_root=str(med2))
 Handler.registry = Registry(cfg / "icons")

@@ -35,12 +35,12 @@ sweeps every real EDCT, which is the check that actually matters.
     python -m tests.test_traits
 """
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import codeview, config, keyblock, traits, triggers
 from unittransfer.mod import Mod
 
@@ -375,7 +375,7 @@ print("\nthe editor: overview, detail, and a save that goes to disk")
 # A scratch mod, so add/edit/delete can be applied for real and read back. Only
 # the two files this module touches are copied - that IS the mod, as far as
 # traits are concerned.
-work = Path(tempfile.mkdtemp(prefix="tk-traits-")) / "TestMod"
+work = Path(_tmp.mkdtemp(prefix="tk-traits-")) / "TestMod"
 (work / "data" / "text").mkdir(parents=True)
 # written the module's own way: Path.write_text would turn every \n in these
 # strings into \r\n on Windows, so the CRLF file would land with \r\r\n

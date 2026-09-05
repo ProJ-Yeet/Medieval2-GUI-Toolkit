@@ -32,14 +32,15 @@ finds the formats this never thought of.
 """
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+
 sys.path.insert(0, str(ROOT / "tests"))
 
 import _realmod
+from tests import _tmp
 from unittransfer import (ancillaries, config, keyblock as kb, portrecords as pr,
                           traits, transfer, triggers)
 from unittransfer.mod import Mod
@@ -167,7 +168,7 @@ def build(root: Path, edct: str, eda: str, vnv: dict, anc_loc: dict) -> Mod:
     return Mod(root)
 
 
-work = Path(tempfile.mkdtemp(prefix="tk-port-"))
+work = Path(_tmp.mkdtemp(prefix="tk-port-"))
 src = build(work / "SourceMod", SRC_EDCT, SRC_EDA,
             {"Homesick_1": "Homesick", "Homesick_1_desc": "He pines for home.",
              "Homesick_1_effects_desc": "-1 Loyalty",
@@ -182,7 +183,7 @@ dst = build(work / "DestMod", DEST_EDCT, DEST_EDA,
              "plain_ring_effects_desc": "No effect"})
 
 # config, backups and the transfer log go in the temp folder, never the real ones
-cfg = Path(tempfile.mkdtemp(prefix="tk-port-cfg-"))
+cfg = Path(_tmp.mkdtemp(prefix="tk-port-cfg-"))
 config.CONFIG_DIR = cfg
 config.SETTINGS_PATH = cfg / "settings.json"
 config.LOG_PATH = cfg / "transfers.json"

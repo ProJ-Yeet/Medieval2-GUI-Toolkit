@@ -27,12 +27,12 @@ check that actually proved the format.
 """
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import codeview, config, modfiles, stringsbin
 from unittransfer import strings as strings_mod
 
@@ -143,13 +143,13 @@ print("\n== a mod on disk: discovery, code view, plan -> apply -> undo ==")
 # so the sweep at the end can still find whatever is installed
 REAL_MODS = Path(config.get_med2_root() or ".") / "mods"
 
-cfg = Path(tempfile.mkdtemp(prefix="ut-cfg-"))
+cfg = Path(_tmp.mkdtemp(prefix="ut-cfg-"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
 config.LOG_PATH = cfg / "transfers.json"
 
-med2 = Path(tempfile.mkdtemp(prefix="ut-mod-"))
+med2 = Path(_tmp.mkdtemp(prefix="ut-mod-"))
 mod_root = med2 / "mods" / "StringsMod"
 text = mod_root / "data" / "text"
 text.mkdir(parents=True)

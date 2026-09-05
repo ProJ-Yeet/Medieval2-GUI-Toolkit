@@ -8,12 +8,13 @@ Applies a transfer with assets relocated into unit_models/<mod>, then verifies:
   * undo restores the modeldb byte-exact and removes the copied files
 Uses temp config + temp dest so the real mods are never touched.
 """
-import shutil, sys, tempfile
+import shutil, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, modeldb
 from unittransfer.mod import Mod
 from unittransfer.transfer import TransferOptions, plan_transfer, apply_transfer, undo
@@ -26,11 +27,11 @@ ok = []
 def check(label, cond):
     ok.append(bool(cond)); print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
-dest_root = Path(tempfile.mkdtemp(prefix="ut_dest_"))
+dest_root = Path(_tmp.mkdtemp(prefix="ut_dest_"))
 data = dest_root / "data"
 (data / "text").mkdir(parents=True); (data / "unit_models").mkdir(parents=True)
 shutil.copy2(DAC / "data/export_descr_unit.txt", data / "export_descr_unit.txt")

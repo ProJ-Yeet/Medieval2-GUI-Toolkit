@@ -20,12 +20,12 @@ lossless WebP per distinct picture out, and the same lookups still answered.
 import json
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import buildings, edbvocab
 from unittransfer.mod import Mod
 
@@ -127,7 +127,7 @@ except ImportError:
     Image = None
 
 if Image is not None:
-    raw = Path(tempfile.mkdtemp(prefix="ut_van_"))
+    raw = Path(_tmp.mkdtemp(prefix="ut_van_"))
     # two cultures, and the same picture under three names - the duplication the
     # packer exists to remove
     same = Image.new("RGBA", (12, 9), (10, 20, 30, 255))
@@ -144,7 +144,7 @@ if Image is not None:
     (raw / "northern_european" / "units").mkdir()
     same.save(raw / "northern_european" / "units" / "#ignore_me.tga")
 
-    packed = Path(tempfile.mkdtemp(prefix="ut_pack_"))
+    packed = Path(_tmp.mkdtemp(prefix="ut_pack_"))
     sys.path.insert(0, str(ROOT / "tools"))
     from pack_vanilla_ui import pack           # noqa: E402
     stats = pack(raw, packed)

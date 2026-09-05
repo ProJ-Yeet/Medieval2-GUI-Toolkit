@@ -20,12 +20,12 @@ each case is exactly the one it names:
 """
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import cards, config
 from unittransfer.mod import Mod
 from unittransfer.transfer import undo
@@ -104,7 +104,7 @@ ART = {
 
 
 def fresh_mod() -> Path:
-    root = Path(tempfile.mkdtemp(prefix="ut_cards_"))
+    root = Path(_tmp.mkdtemp(prefix="ut_cards_"))
     data = root / "data"
     (data / "text").mkdir(parents=True)
     (data / "export_descr_unit.txt").write_text(EDU, encoding="latin-1")
@@ -117,7 +117,7 @@ def fresh_mod() -> Path:
     return root
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
@@ -162,7 +162,7 @@ check("what consolidating saves is every copy but the one that stays",
       == len(b"alpha-card"))
 
 print("\n== the plan ==")
-target = Path(tempfile.mkdtemp(prefix="ut_cards_out_"))
+target = Path(_tmp.mkdtemp(prefix="ut_cards_out_"))
 shutil.rmtree(target)
 beta_england = card["variants"][0]["options"][0]["digest"]
 plan = cards.plan_cleanup(mod, cards.cleanup_request_from_dict({
@@ -256,7 +256,7 @@ check("and the merc copies this run created are gone again",
       and not (data / "ui/unit_info/merc/alpha_info.tga").exists())
 
 print("\n== a mod with no card folders at all ==")
-bare = Path(tempfile.mkdtemp(prefix="ut_cards_bare_"))
+bare = Path(_tmp.mkdtemp(prefix="ut_cards_bare_"))
 (bare / "data").mkdir()
 (bare / "data/export_descr_unit.txt").write_text(EDU, encoding="latin-1")
 empty = cards.audit(Mod(bare))

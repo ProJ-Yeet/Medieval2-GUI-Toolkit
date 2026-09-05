@@ -18,12 +18,13 @@ never touched. Covers:
   * mod-wide entry editing (plan_bmdb): a rename chases every unit in the EDU
   * undo restores the mod byte-exact
 """
-import shutil, sys, tempfile
+import shutil, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, edit, modeldb
 from unittransfer import bmdb as bmdb_mod
 from unittransfer.mod import Mod
@@ -39,7 +40,7 @@ def check(label, cond):
 
 def fresh_mod(with_assets=()) -> Path:
     """A copy of the mod's text files, plus any asset files the test needs."""
-    root = Path(tempfile.mkdtemp(prefix="ut_bmdb_"))
+    root = Path(_tmp.mkdtemp(prefix="ut_bmdb_"))
     data = root / "data"
     (data / "text").mkdir(parents=True)
     (data / "unit_models").mkdir(parents=True)
@@ -57,7 +58,7 @@ def fresh_mod(with_assets=()) -> Path:
     return root
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
@@ -139,7 +140,7 @@ check("an entry only a descr_*.txt mentions is never offered as a target",
            & {o for c in a["merges"] for o in c["options"]}))
 
 print("\n== cleanup plan ==")
-target = Path(tempfile.mkdtemp(prefix="ut_export_")) / "unused_assets"
+target = Path(_tmp.mkdtemp(prefix="ut_export_")) / "unused_assets"
 picked = sorted(unused)[:20]
 merge = a["merges"][0]
 plan = bmdb_mod.plan_cleanup(mod, bmdb_mod.CleanupRequest(
@@ -257,7 +258,7 @@ files = [f for f in au["files"]
          if (TATR / "data" / f).is_file() and owners[f.lower()] == {au["entry"]}][:3]
 root_b = fresh_mod(with_assets=files)
 mod_b = Mod(root_b)
-tgt_b = Path(tempfile.mkdtemp(prefix="ut_export2_")) / "out"
+tgt_b = Path(_tmp.mkdtemp(prefix="ut_export2_")) / "out"
 pb = bmdb_mod.plan_cleanup(mod_b, bmdb_mod.CleanupRequest(target=str(tgt_b), entries=[au["entry"]]))
 moved = [r for _s, r in pb.exports]
 check(f"'{au['entry']}': {len(moved)} of its files are on disk and queued to move", bool(moved))
@@ -284,7 +285,7 @@ check("no orphan is a file the modeldb actually names",
               for f in e.mesh_files() + e.texture_files()}))
 check("the modeldb itself is never offered as an orphan",
       not any(".modeldb" in r.lower() for r in rels))
-tgt_c = Path(tempfile.mkdtemp(prefix="ut_export3_")) / "out"
+tgt_c = Path(_tmp.mkdtemp(prefix="ut_export3_")) / "out"
 pc = bmdb_mod.plan_cleanup(mod_c, bmdb_mod.CleanupRequest(
     target=str(tgt_c), orphans=["unit_models/_Junk/nobody_reads_this.texture"]))
 rec_c = bmdb_mod.apply_cleanup(pc)
@@ -331,7 +332,7 @@ check("the reference is attributed to the campaign file it came from",
       slots_e[in_strat]["campaign"]
       == ["file:data/world/maps/campaign/imperial_campaign/descr_strat.txt"])
 pe = bmdb_mod.plan_cleanup(mod_e2, bmdb_mod.CleanupRequest(
-    target=str(Path(tempfile.mkdtemp(prefix="ut_exp_"))), entries=[in_strat]))
+    target=str(Path(_tmp.mkdtemp(prefix="ut_exp_"))), entries=[in_strat]))
 check("asked to remove it anyway, the cleanup refuses", not pe.entry_deletes)
 check("and says which campaign file still names it",
       any("descr_strat.txt" in w for w in pe.warnings))
@@ -381,7 +382,7 @@ check(f"'{inline_g}' (inline battle_model) is no longer unused", inline_g not in
 check("the faction name on the command is NOT mistaken for the model",
       "turks" not in {n for n, _w in bmdb_mod._campaign_models(mod_g)})
 pg = bmdb_mod.plan_cleanup(mod_g, bmdb_mod.CleanupRequest(
-    target=str(Path(tempfile.mkdtemp(prefix="ut_exp2_"))), entries=[swapped]))
+    target=str(Path(_tmp.mkdtemp(prefix="ut_exp2_"))), entries=[swapped]))
 check("asked to remove the swapped-to model anyway, the cleanup refuses",
       not pg.entry_deletes and any("campaign_script.txt" in w for w in pg.warnings))
 
@@ -427,11 +428,11 @@ ridden = next(u.mount for u in mod_f.edu.units if u.mount)
 check(f"a mount a unit actually rides ('{ridden}') is not offered",
       ridden not in {r["mount"] for r in a_f["unused_mounts"]})
 pf = bmdb_mod.plan_cleanup(mod_f, bmdb_mod.CleanupRequest(
-    target=str(Path(tempfile.mkdtemp(prefix="ut_exp_"))), mounts=[ridden]))
+    target=str(Path(_tmp.mkdtemp(prefix="ut_exp_"))), mounts=[ridden]))
 check("and asked for anyway it is refused, with the riders named",
       not pf.mount_deletes and any(ridden in w for w in pf.warnings))
 
-tgt_f = Path(tempfile.mkdtemp(prefix="ut_exp_"))
+tgt_f = Path(_tmp.mkdtemp(prefix="ut_exp_"))
 n_mounts = len(mod_f.mount_file.mounts)     # applying invalidates mod_f's cached parse
 pf2 = bmdb_mod.plan_cleanup(mod_f, bmdb_mod.CleanupRequest(
     target=str(tgt_f), mounts=["ut_test_mount"], entries=[free_me]))
@@ -574,7 +575,7 @@ af = bmdb_mod.audit(mod_f, scan_orphans=False)
 check("it is not even offered as unused",
       first.name not in {u["entry"] for u in af["unused"]}
       and first.name in {m["entry"] for m in af["mentioned"]})
-tgt_f = Path(tempfile.mkdtemp(prefix="ut_export4_")) / "out"
+tgt_f = Path(_tmp.mkdtemp(prefix="ut_export4_")) / "out"
 pf = bmdb_mod.plan_cleanup(mod_f, bmdb_mod.CleanupRequest(
     target=str(tgt_f), entries=[first.name, "second_e", "third_e"]))
 check("asked for anyway, it is refused with a reason",
@@ -672,7 +673,7 @@ needed.parent.mkdir(parents=True, exist_ok=True)
 needed.write_bytes(b"the mesh a script needs")
 junk_r = root_r / "data/unit_models/_units/really_is_junk_lod0.mesh"
 junk_r.write_bytes(b"nothing names this")
-tgt_r = Path(tempfile.mkdtemp(prefix="ut_export5_")) / "out"
+tgt_r = Path(_tmp.mkdtemp(prefix="ut_export5_")) / "out"
 pr = bmdb_mod.plan_cleanup(mod_r0, bmdb_mod.CleanupRequest(
     target=str(tgt_r),
     orphans=["unit_models/_units/needed_after_all_lod0.mesh",
@@ -716,7 +717,7 @@ print("\n== recheck: an entry, and a run whose copies are all gone ==")
 root_x = fresh_mod()
 mod_x0 = Mod(root_x)
 doomed_x = [u["entry"] for u in bmdb_mod.audit(mod_x0, scan_orphans=False)["unused"]][0]
-tgt_x = Path(tempfile.mkdtemp(prefix="ut_export6_")) / "out"
+tgt_x = Path(_tmp.mkdtemp(prefix="ut_export6_")) / "out"
 px = bmdb_mod.plan_cleanup(mod_x0, bmdb_mod.CleanupRequest(
     target=str(tgt_x), entries=[doomed_x]))
 rec_x = bmdb_mod.apply_cleanup(px)
@@ -744,7 +745,7 @@ mod_y0 = Mod(root_y)
 gone_y = root_y / "data/unit_models/_units/gone_forever_lod0.mesh"
 gone_y.parent.mkdir(parents=True, exist_ok=True)
 gone_y.write_bytes(b"x")
-tgt_y = Path(tempfile.mkdtemp(prefix="ut_export7_")) / "out"
+tgt_y = Path(_tmp.mkdtemp(prefix="ut_export7_")) / "out"
 py_ = bmdb_mod.plan_cleanup(mod_y0, bmdb_mod.CleanupRequest(
     target=str(tgt_y), orphans=["unit_models/_units/gone_forever_lod0.mesh"]))
 rec_y = bmdb_mod.apply_cleanup(py_)

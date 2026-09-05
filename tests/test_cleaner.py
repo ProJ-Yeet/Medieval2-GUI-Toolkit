@@ -10,12 +10,12 @@ Needs no game install: it works on temp folders and a temp settings file.
     python -m tests.test_cleaner
 """
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import cleaner, config
 from unittransfer.server import _strings_bin_wanted
 
@@ -28,7 +28,7 @@ def check(label, cond):
 
 
 def make_mod(with_bin=True) -> Path:
-    root = Path(tempfile.mkdtemp(prefix="ut_clean_"))
+    root = Path(_tmp.mkdtemp(prefix="ut_clean_"))
     text = root / "data" / "text"
     text.mkdir(parents=True)
     (root / "data" / "export_descr_unit.txt").write_text("type test\n", encoding="utf-8")
@@ -74,7 +74,7 @@ check("a held-open file either deletes or explains why not",
 
 print("\n== when it runs ==")
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 real_cfg, real_settings = config.CONFIG_DIR, config.SETTINGS_PATH
 config.CONFIG_DIR, config.SETTINGS_PATH = cfg, cfg / "settings.json"
 

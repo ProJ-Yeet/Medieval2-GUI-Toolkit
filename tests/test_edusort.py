@@ -33,7 +33,6 @@ one in a scratch copy, which is the check that actually matters.
 """
 import shutil
 import sys
-import tempfile
 from collections import Counter
 from pathlib import Path
 
@@ -43,6 +42,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _realmod  # noqa: E402
 
+from tests import _tmp
 from unittransfer import edu, edusort  # noqa: E402
 from unittransfer.mod import Mod  # noqa: E402
 
@@ -148,7 +148,7 @@ if not mods:
     print("  (no installed mod with an EDU - the sweep is skipped)")
 for src in mods:
     name = src.name
-    work = Path(tempfile.mkdtemp()) / name
+    work = Path(_tmp.mkdtemp()) / name
     (work / "data").mkdir(parents=True)
     for rel in ("export_descr_unit.txt", "descr_sm_factions.txt", "text/expanded.txt"):
         s = src / "data" / rel
@@ -223,7 +223,7 @@ for src in mods:
 print("\n== apply, and undo ==")
 if mods:
     src = mods[0]
-    work = Path(tempfile.mkdtemp()) / src.name
+    work = Path(_tmp.mkdtemp()) / src.name
     (work / "data").mkdir(parents=True)
     for rel in ("export_descr_unit.txt", "descr_sm_factions.txt", "text/expanded.txt"):
         s = src / "data" / rel

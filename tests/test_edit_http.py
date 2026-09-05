@@ -5,12 +5,13 @@ Third_Age_Reforged) and drives /api/edit/unit -> /api/edit/plan ->
 /api/edit/apply -> /api/undo with the same JSON payloads the page sends, so a
 mismatch between the UI's request shape and the engine is caught here.
 """
-import json, shutil, sys, tempfile, threading, urllib.error, urllib.request
+import json, shutil, sys, threading, urllib.error, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config
 from unittransfer.server import Registry, Handler, _Server
 
@@ -36,11 +37,11 @@ def post(path, body):
 
 
 # ---- throwaway config + mod ----
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
-med2 = Path(tempfile.mkdtemp(prefix="ut_med2_"))
+med2 = Path(_tmp.mkdtemp(prefix="ut_med2_"))
 mod_root = med2 / "mods" / "TestMod"
 data = mod_root / "data"
 (data / "text").mkdir(parents=True); (data / "unit_models").mkdir(parents=True)
@@ -49,7 +50,7 @@ for rel in ("export_descr_unit.txt", "text/export_units.txt",
     shutil.copy2(TATR / "data" / rel, data / rel)
 config.save_settings(med2_root=str(med2))
 
-imports = Path(tempfile.mkdtemp(prefix="ut_import_"))
+imports = Path(_tmp.mkdtemp(prefix="ut_import_"))
 mesh_src = imports / "http_test.mesh"; mesh_src.write_bytes(b"MESH-HTTP")
 tex_src = imports / "http_test.texture"; tex_src.write_bytes(b"TEX-HTTP")
 

@@ -13,12 +13,13 @@ are never touched. Covers what the new bmdb tab drives:
     repointed with it
   * undo of all of the above, byte-exact
 """
-import shutil, sys, tempfile
+import shutil, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, edu, modeldb
 from unittransfer.mod import Mod
 from unittransfer import edit
@@ -32,7 +33,7 @@ def check(label, cond):
 
 
 def fresh_mod() -> Path:
-    root = Path(tempfile.mkdtemp(prefix="ut_editmodels_"))
+    root = Path(_tmp.mkdtemp(prefix="ut_editmodels_"))
     data = root / "data"
     (data / "text").mkdir(parents=True)
     (data / "unit_models").mkdir(parents=True)
@@ -44,7 +45,7 @@ def fresh_mod() -> Path:
     return root
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 

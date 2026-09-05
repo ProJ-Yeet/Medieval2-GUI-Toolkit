@@ -8,7 +8,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import shutil, tempfile  # noqa: E402
+import shutil  # noqa: E402
+from tests import _tmp  # noqa: E402
 from unittransfer import edu, factions, localization, modeldb  # noqa: E402
 from unittransfer import keyblock as kb  # noqa: E402
 
@@ -89,7 +90,7 @@ def test_byte_order_mark():
     """
     print("\n=== a UTF-8 byte-order mark ===")
     ok = True
-    tmp = Path(tempfile.mkdtemp(prefix="ut_bom_"))
+    tmp = Path(_tmp.mkdtemp(prefix="ut_bom_"))
     EDU_TXT = (
         "type             Test Unit" + NL_ + "dictionary       Test_Unit" + NL_
         + "category         infantry" + NL_ + "class            light" + NL_

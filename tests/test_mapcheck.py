@@ -33,7 +33,6 @@ Five parts, the last two of which need a game install:
 import json
 import shutil
 import sys
-import tempfile
 import threading
 import urllib.request
 from pathlib import Path
@@ -43,7 +42,7 @@ sys.path.insert(0, str(ROOT))
 
 from PIL import Image
 
-from tests import _realmod
+from tests import _realmod, _tmp
 from unittransfer import campmap, campstrat, config, mapcheck, mapvocab, transfer
 from unittransfer.maptga import TgaInfo, encode, read
 from unittransfer.mod import Mod
@@ -257,14 +256,14 @@ def tiny_map(root: Path) -> Path:
     return base
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
 config.LOG_PATH = cfg / "transfers.json"
 config._cache_dir = cfg / "cache"                      # the baseline lives here
 
-tmp = Path(tempfile.mkdtemp(prefix="ut_check_"))
+tmp = Path(_tmp.mkdtemp(prefix="ut_check_"))
 clean_root = tmp / "mods" / "Clean"
 tiny_map(clean_root)
 clean = Mod(clean_root)
@@ -622,7 +621,7 @@ else:
 # ---- 5) the routes, over real HTTP -------------------------------------------
 print("\n5) /api/map/check, /baseline, /fix_plan and /fix_apply")
 
-med2 = Path(tempfile.mkdtemp(prefix="ut_med2_"))
+med2 = Path(_tmp.mkdtemp(prefix="ut_med2_"))
 http_root = med2 / "mods" / "CheckMod"
 tiny_map(http_root)
 black_port(http_root / "data")

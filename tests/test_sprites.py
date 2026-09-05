@@ -20,12 +20,12 @@ Covers:
 import shutil
 import struct
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import modeldb, sprites
 from unittransfer.mod import Mod
 
@@ -48,7 +48,7 @@ def make_tga(path: Path, w=32, h=32) -> None:
 
 def fake_med2(mod_name="TestMod") -> Path:
     """A Medieval II root with mods/<name>/data, enough for _med2_root()."""
-    root = Path(tempfile.mkdtemp(prefix="ut_spr_"))
+    root = Path(_tmp.mkdtemp(prefix="ut_spr_"))
     (root / "data").mkdir()
     (root / "mods" / mod_name / "data" / "unit_models").mkdir(parents=True)
     return root
@@ -58,7 +58,7 @@ def fake_med2(mod_name="TestMod") -> Path:
 print("\n.texture container")
 
 if sprites.NVCOMPRESS.is_file():
-    tmp = Path(tempfile.mkdtemp(prefix="ut_spr_codec_"))
+    tmp = Path(_tmp.mkdtemp(prefix="ut_spr_codec_"))
     tga, dds = tmp / "a.tga", tmp / "a.dds"
     make_tga(tga)
     sprites._run_nvcompress(tga, dds, mipmaps=False)
@@ -128,7 +128,7 @@ check("a bare model with no faction is rejected",
 # ---------------------------------------------------------------------------
 print("\nCFG bypass flag")
 
-tmp = Path(tempfile.mkdtemp(prefix="ut_spr_cfg_"))
+tmp = Path(_tmp.mkdtemp(prefix="ut_spr_cfg_"))
 
 cfg = tmp / "a.cfg"
 cfg.write_text("[features]\nmod = mods/X\n\n[misc]\nshow_hud_date = true\n")

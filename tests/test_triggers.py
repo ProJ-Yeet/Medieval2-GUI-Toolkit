@@ -33,12 +33,12 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, triggers
 
 ok = []
@@ -230,7 +230,7 @@ else:
     src = js.read_text(encoding="utf-8")
     harness = src + "\nconsole.log(JSON.stringify(" + json.dumps(
         [c[:2] for c in cases]) + ".map(a=>trgSatisfied(a[0],a[1]))));"
-    tmp = Path(tempfile.mkdtemp(prefix="ut-trg-")) / "h.js"
+    tmp = Path(_tmp.mkdtemp(prefix="ut-trg-")) / "h.js"
     tmp.write_text(harness, encoding="utf-8")
     res = subprocess.run([node, str(tmp)], capture_output=True, text=True)
     shutil.rmtree(tmp.parent, ignore_errors=True)

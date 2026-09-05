@@ -22,12 +22,12 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import edu, vocab
 from unittransfer.mod import Mod
 
@@ -272,7 +272,7 @@ console.log(JSON.stringify(out));
 """
     texts = [p.read_text(encoding="latin-1")
              for p in ([m.edu_path for m in mods] + [VANILLA_EDU]) if p.exists()]
-    tmp = Path(tempfile.mkdtemp(prefix="ut_guided_"))
+    tmp = Path(_tmp.mkdtemp(prefix="ut_guided_"))
     js = tmp / "check.js"
     js.write_text("const EDU_TEXTS=" + json.dumps(texts) + ";\n" + stubs + script + harness,
                   encoding="utf-8")

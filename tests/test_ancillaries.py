@@ -27,12 +27,12 @@ sweeps every real EDA, which is the check that actually matters.
     python -m tests.test_ancillaries
 """
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import ancillaries, codeview, config, keyblock, triggers
 from unittransfer.mod import Mod
 
@@ -244,7 +244,7 @@ except codeview.CodeViewError as e:
           "orphan" in e.message)
 
 print("\nthe editor: overview, detail, and a save that goes to disk")
-work = Path(tempfile.mkdtemp(prefix="tk-anc-")) / "TestMod"
+work = Path(_tmp.mkdtemp(prefix="tk-anc-")) / "TestMod"
 (work / "data" / "text").mkdir(parents=True)
 (work / "data" / "ui" / "ancillaries").mkdir(parents=True)
 keyblock.write_text(work / "data" / "export_descr_ancillaries.txt", FILE,

@@ -20,12 +20,12 @@ import json
 import re
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import buildings, config, localization
 from unittransfer.mod import Mod
 from unittransfer.transfer import undo
@@ -44,7 +44,7 @@ def check(label, cond):
     print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
@@ -85,7 +85,7 @@ for name in installed:
 # ---- 2) a copy to edit ------------------------------------------------------
 print(f"\n2) editing a copy of {EDIT_MOD}")
 src_root = MODS / EDIT_MOD
-work = Path(tempfile.mkdtemp(prefix="ut_edb_")) / EDIT_MOD
+work = Path(_tmp.mkdtemp(prefix="ut_edb_")) / EDIT_MOD
 (work / "data" / "text").mkdir(parents=True)
 shutil.copy2(src_root / "data" / buildings.EDB_REL, work / "data" / buildings.EDB_REL)
 for rel in (buildings.LOC_REL, "export_descr_unit.txt", "text/export_units.txt",
@@ -502,7 +502,7 @@ else:
 # has no culture to be right about - so it asks for the sweep (`&any=1`).
 print("\n11) building icons: the any-culture fallback")
 
-art = Path(tempfile.mkdtemp(prefix="ut_art_"))
+art = Path(_tmp.mkdtemp(prefix="ut_art_"))
 
 
 class _ArtMod:

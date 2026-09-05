@@ -10,12 +10,13 @@ Third_Age_Reforged) and drives the two flows the page has:
 
 so a mismatch between the UI's request shape and the engine is caught here.
 """
-import json, shutil, sys, tempfile, threading, urllib.request
+import json, shutil, sys, threading, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, modeldb
 from unittransfer.server import Registry, Handler, _Server
 
@@ -48,11 +49,11 @@ def post(path, body):
 
 
 # ---- throwaway config + mod ----
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
-med2 = Path(tempfile.mkdtemp(prefix="ut_med2_"))
+med2 = Path(_tmp.mkdtemp(prefix="ut_med2_"))
 mod_root = med2 / "mods" / "TestMod"
 data = mod_root / "data"
 (data / "text").mkdir(parents=True); (data / "unit_models").mkdir(parents=True)
@@ -72,7 +73,7 @@ config.save_settings(med2_root=str(med2), run_full_cleaner=False)
 
 before = {rel: (data / rel).read_bytes() for rel in
           ("export_descr_unit.txt", "unit_models/battle_models.modeldb")}
-target = Path(tempfile.mkdtemp(prefix="ut_target_")) / "TestMod_unused"
+target = Path(_tmp.mkdtemp(prefix="ut_target_")) / "TestMod_unused"
 
 Handler.registry = Registry(cfg / "icons")
 httpd = _Server(("127.0.0.1", 0), Handler)

@@ -22,12 +22,12 @@ measures exactly the cases it is about:
 """
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, stratmap
 from unittransfer.mod import Mod
 from unittransfer.transfer import undo
@@ -147,7 +147,7 @@ ASSETS = {
 
 
 def fresh_mod() -> Path:
-    root = Path(tempfile.mkdtemp(prefix="ut_strat_"))
+    root = Path(_tmp.mkdtemp(prefix="ut_strat_"))
     data = root / "data"
     (data / "text").mkdir(parents=True)
     for rel, text in (("descr_model_strat.txt", STRAT),
@@ -168,7 +168,7 @@ def fresh_mod() -> Path:
     return root
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
@@ -238,7 +238,7 @@ check("a mesh has only itself",
       stratmap.texture_siblings("models_strat/x.CAS") == ["models_strat/x.cas"])
 
 print("\n== the plan ==")
-target = Path(tempfile.mkdtemp(prefix="ut_strat_out_"))
+target = Path(_tmp.mkdtemp(prefix="ut_strat_out_"))
 shutil.rmtree(target)                       # it must be creatable, not existing
 req = stratmap.cleanup_request_from_dict({
     "target": str(target), "entries": ["dead_general"],
@@ -315,7 +315,7 @@ check("every removed file is back, byte for byte",
           for rel, blob in ASSETS.items()))
 
 print("\n== a mod with no descr_model_strat.txt ==")
-bare = Path(tempfile.mkdtemp(prefix="ut_strat_bare_"))
+bare = Path(_tmp.mkdtemp(prefix="ut_strat_bare_"))
 (bare / "data").mkdir()
 (bare / "data/export_descr_unit.txt").write_text("", encoding="latin-1")
 empty = stratmap.audit(Mod(bare))

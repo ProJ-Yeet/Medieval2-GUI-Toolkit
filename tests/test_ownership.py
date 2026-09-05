@@ -24,12 +24,12 @@ Built on a mod this file writes from scratch. Covers:
     python -m tests.test_ownership
 """
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import bmdb, config, edit, modeldb
 from unittransfer.mod import Mod
 from unittransfer.transfer import undo
@@ -153,7 +153,7 @@ MODELDB = (f"{len(modeldb.ARCHIVE_MAGIC)} {modeldb.ARCHIVE_MAGIC} "
 
 
 def fresh_mod() -> Path:
-    root = Path(tempfile.mkdtemp(prefix="ut_own_"))
+    root = Path(_tmp.mkdtemp(prefix="ut_own_"))
     data = root / "data"
     (data / "unit_models").mkdir(parents=True)
     (data / "export_descr_unit.txt").write_text(EDU, encoding="latin-1")
@@ -163,7 +163,7 @@ def fresh_mod() -> Path:
     return root
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
@@ -276,7 +276,7 @@ check("battle_models.modeldb is byte-exact again",
       (root / "data/unit_models/battle_models.modeldb").read_bytes() == before_db)
 
 print("\n== a mod with no faction roster ==")
-bare = Path(tempfile.mkdtemp(prefix="ut_own_bare_"))
+bare = Path(_tmp.mkdtemp(prefix="ut_own_bare_"))
 (bare / "data" / "unit_models").mkdir(parents=True)
 (bare / "data/export_descr_unit.txt").write_text(EDU, encoding="latin-1")
 (bare / "data/unit_models/battle_models.modeldb").write_text(

@@ -4,12 +4,13 @@ Applies 3 transfers to a temp dest, snapshots state after #2, applies #3, then
 reverts to #2 and checks the mod is byte-exact back to the post-#2 snapshot.
 Uses temp config + temp dest so the real mods/config are never touched.
 """
-import shutil, sys, tempfile
+import shutil, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config
 from unittransfer.mod import Mod
 from unittransfer.transfer import TransferOptions, plan_transfer, apply_transfer, revert_to
@@ -22,12 +23,12 @@ def check(label, cond):
     ok.append(cond); print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
 # temp config
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
 # temp dest (3 DB files from DaC)
-dest_root = Path(tempfile.mkdtemp(prefix="ut_dest_"))
+dest_root = Path(_tmp.mkdtemp(prefix="ut_dest_"))
 data = dest_root / "data"
 (data / "text").mkdir(parents=True); (data / "unit_models").mkdir(parents=True)
 shutil.copy2(DAC / "data/export_descr_unit.txt", data / "export_descr_unit.txt")

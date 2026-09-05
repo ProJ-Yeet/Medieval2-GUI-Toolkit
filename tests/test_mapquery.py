@@ -32,7 +32,6 @@ Five parts, the last two of which need a game install:
 import json
 import shutil
 import sys
-import tempfile
 import threading
 import urllib.request
 from pathlib import Path
@@ -42,7 +41,7 @@ sys.path.insert(0, str(ROOT))
 
 from PIL import Image
 
-from tests import _realmod
+from tests import _realmod, _tmp
 from unittransfer import campmap, campstrat, config, mapquery, mapvocab
 from unittransfer.maptga import TgaInfo, encode, read
 from unittransfer.mod import Mod
@@ -352,14 +351,14 @@ def tiny_mod(root: Path) -> Path:
     return base
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
 config.LOG_PATH = cfg / "transfers.json"
 config._cache_dir = cfg / "cache"                      # exports land here
 
-tmp = Path(tempfile.mkdtemp(prefix="ut_query_"))
+tmp = Path(_tmp.mkdtemp(prefix="ut_query_"))
 tiny_root = tmp / "mods" / "Tiny"
 tiny_mod(tiny_root)
 tiny = Mod(tiny_root)
@@ -631,7 +630,7 @@ else:
 # ---- 5) the routes -----------------------------------------------------------
 print("\n5) /api/map/query/vocab, /api/map/colouring, /api/map/query, /api/map/export")
 
-med2 = Path(tempfile.mkdtemp(prefix="ut_med2_"))
+med2 = Path(_tmp.mkdtemp(prefix="ut_med2_"))
 http_root = med2 / "mods" / "QueryMod"
 http_root.mkdir(parents=True)
 shutil.copytree(tiny_root / "data", http_root / "data")

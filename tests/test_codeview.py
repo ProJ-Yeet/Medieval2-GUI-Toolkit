@@ -23,7 +23,6 @@ Needs no game install: the EDU here is written by the test.
 import json
 import shutil
 import sys
-import tempfile
 import threading
 import time
 import urllib.request
@@ -32,6 +31,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import codeview, config, edit
 from unittransfer import edu as edu_mod
 
@@ -186,13 +186,13 @@ check("no edits at all is a byte-identical round trip",
 # ---------------------------------------------------------------------------
 print("\n== the pane shows what a save would write ==")
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
 config.LOG_PATH = cfg / "transfers.json"
 
-med2 = Path(tempfile.mkdtemp(prefix="ut_med2_"))
+med2 = Path(_tmp.mkdtemp(prefix="ut_med2_"))
 mod_root = med2 / "mods" / "CodeViewMod"
 data = mod_root / "data"
 (data / "text").mkdir(parents=True)

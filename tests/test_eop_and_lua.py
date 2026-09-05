@@ -17,12 +17,13 @@ Covers:
   * **EOP transfers** - a unit transferred as an EOP unit lands in its own file,
     the EDU is untouched, and it does not count against the 500-unit cap.
 """
-import shutil, sys, tempfile
+import shutil, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import bmdb as bmdb_mod
 from unittransfer import config, edit, eop, luascan, sounds
 from unittransfer.mod import Mod
@@ -41,7 +42,7 @@ def check(label, cond):
 
 def fresh_mod(prefix="ut_eop_") -> Path:
     """A copy of the mod's text files only - enough for every path under test."""
-    root = Path(tempfile.mkdtemp(prefix=prefix))
+    root = Path(_tmp.mkdtemp(prefix=prefix))
     data = root / "data"
     (data / "text").mkdir(parents=True)
     (data / "unit_models").mkdir(parents=True)
@@ -55,7 +56,7 @@ def fresh_mod(prefix="ut_eop_") -> Path:
     return root
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
@@ -116,7 +117,7 @@ check("nor as a merge target",
 print("\n== plan_cleanup refuses to remove one even when asked ==")
 before_db = lmod.modeldb_path.read_bytes()
 plan = bmdb_mod.plan_cleanup(lmod, bmdb_mod.CleanupRequest(
-    target=str(Path(tempfile.mkdtemp(prefix="ut_exp_"))),
+    target=str(Path(_tmp.mkdtemp(prefix="ut_exp_"))),
     entries=[live_name, commented_name]))
 check("neither entry is in the delete list",
       not (set(plan.entry_deletes) & {live_name, commented_name}))
@@ -256,7 +257,7 @@ else:
     check(f"the EOP unit's soldier line names '{A}'",
           mm.edu.by_type()["eop_merge_test"].soldier_model.lower() == A)
     mp = bmdb_mod.plan_cleanup(mm, bmdb_mod.CleanupRequest(
-        target=str(Path(tempfile.mkdtemp(prefix="ut_exp2_"))),
+        target=str(Path(_tmp.mkdtemp(prefix="ut_exp2_"))),
         merges=[{"entry": A, "into": B}]))
     check("the merge is planned", not mp.errors and (A, B) in mp.merges)
     check("the EDU is NOT rewritten for it", mp.edu_text == "")

@@ -20,14 +20,13 @@ import math
 import os
 import struct
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from unittransfer import mesh
-from tests import _realmod
+from tests import _realmod, _tmp
 
 ok = []
 
@@ -146,7 +145,7 @@ if horse is not None:
 # ---------------------------------------------------------------------------
 print("\nFiles that are not models fail with a sentence, not a hang")
 
-tmp = Path(tempfile.mkdtemp(prefix="ut_mesh_"))
+tmp = Path(_tmp.mkdtemp(prefix="ut_mesh_"))
 
 
 def refuses(label, data, name="thing.mesh"):

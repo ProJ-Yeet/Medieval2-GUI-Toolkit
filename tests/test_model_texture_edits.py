@@ -30,12 +30,12 @@ import json
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, edit
 from unittransfer.mod import Mod
 
@@ -50,7 +50,7 @@ def check(label, cond):
     print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_texedit_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_texedit_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
@@ -179,7 +179,7 @@ elif not TATR.is_dir():
     print("  (skipped - Third_Age_Reforged is not installed)")
 else:
     def fresh_mod():
-        root = Path(tempfile.mkdtemp(prefix="ut_texmod_"))
+        root = Path(_tmp.mkdtemp(prefix="ut_texmod_"))
         data = root / "data"
         (data / "text").mkdir(parents=True)
         (data / "unit_models").mkdir(parents=True)

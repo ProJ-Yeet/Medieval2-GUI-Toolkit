@@ -33,7 +33,6 @@ Six parts, the last three of which need a real game install:
 import json
 import shutil
 import sys
-import tempfile
 import threading
 import time
 import urllib.error
@@ -46,7 +45,7 @@ sys.path.insert(0, str(ROOT))
 
 from PIL import Image
 
-from tests import _realmod
+from tests import _realmod, _tmp
 from unittransfer import campmap, codeview, config, mapvocab
 from unittransfer.mod import Mod
 from unittransfer.server import Handler, Registry, _Server
@@ -405,13 +404,13 @@ if not roots:
     print("  SKIPPED - no map to serve")
 else:
     src = roots[-1]
-    cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+    cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
     config.CONFIG_DIR = cfg
     config.BACKUP_DIR = cfg / "backups"
     config.SETTINGS_PATH = cfg / "settings.json"
     config.LOG_PATH = cfg / "transfers.json"
 
-    med2 = Path(tempfile.mkdtemp(prefix="ut_med2_"))
+    med2 = Path(_tmp.mkdtemp(prefix="ut_med2_"))
     data = med2 / "mods" / "MapMod" / "data"
     (data / campmap.BASE_REL).mkdir(parents=True)
     for p in (src / "data" / campmap.BASE_REL).iterdir():

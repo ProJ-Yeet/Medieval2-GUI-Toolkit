@@ -10,12 +10,13 @@ request shape and the engine is caught here:
 
 Skips cleanly when no donor mod or no nvcompress is available.
 """
-import json, shutil, struct, sys, tempfile, threading, urllib.error, urllib.request
+import json, shutil, struct, sys, threading, urllib.error, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, sprites
 from unittransfer.server import Registry, Handler, _Server
 
@@ -63,11 +64,11 @@ if donor is None or not sprites.NVCOMPRESS.is_file():
     sys.exit(0)
 
 # ---- throwaway config + mod ----
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
-med2 = Path(tempfile.mkdtemp(prefix="ut_med2_"))
+med2 = Path(_tmp.mkdtemp(prefix="ut_med2_"))
 (med2 / "data").mkdir()
 mod_root = med2 / "mods" / "TestMod"
 data = mod_root / "data"

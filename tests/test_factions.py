@@ -30,12 +30,12 @@ sweeps every real roster, which is the check that actually matters.
     python -m tests.test_factions
 """
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import codeview, config, factions as fa, keyblock as kb
 from unittransfer.mod import Mod
 
@@ -235,7 +235,7 @@ except codeview.CodeViewError as e:
     check("a pane holding two factions is refused", "one at a time" in str(e))
 
 print("\nthe editor: overview, detail, and a save that goes to disk")
-work = Path(tempfile.mkdtemp(prefix="tk-fac-")) / "TestMod"
+work = Path(_tmp.mkdtemp(prefix="tk-fac-")) / "TestMod"
 (work / "data" / "text").mkdir(parents=True)
 kb.write_text(work / "data" / fa.REL, FILE, fa.ENCODING)
 kb.write_text(work / "data" / fa.LOC_REL,

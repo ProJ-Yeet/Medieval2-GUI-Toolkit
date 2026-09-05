@@ -36,12 +36,12 @@ the create/undo round trip run only when mods are there.
 """
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import buildings as B, config
 from unittransfer.mod import Mod
 from unittransfer.transfer import undo
@@ -59,7 +59,7 @@ def check(label, cond):
 _root = config.get_med2_root()
 MODS = (Path(_root) / "mods") if _root else None
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
@@ -441,7 +441,7 @@ if not installed:
     print("  (no mods installed - skipped)")
 else:
     src_root = installed[0]
-    work = Path(tempfile.mkdtemp(prefix="ut_newtree_")) / src_root.name
+    work = Path(_tmp.mkdtemp(prefix="ut_newtree_")) / src_root.name
     (work / "data" / "text").mkdir(parents=True)
     for rel in (B.EDB_REL, B.LOC_REL, "descr_sm_factions.txt", "descr_cultures.txt",
                 "descr_religions.txt", "text/expanded.txt"):
@@ -514,7 +514,7 @@ else:
           (mod.data / B.LOC_REL).read_bytes() == before_loc)
 
     # ---- a mod with no text file cannot have a tree created in it ----
-    bare = Path(tempfile.mkdtemp(prefix="ut_bare_")) / "bare"
+    bare = Path(_tmp.mkdtemp(prefix="ut_bare_")) / "bare"
     (bare / "data").mkdir(parents=True)
     shutil.copy2(src_root / "data" / B.EDB_REL, bare / "data" / B.EDB_REL)
     p = B.plan_new_tree(Mod(bare), {"name": "zz_forge", "levels": [{"name": "zz_1"}]})

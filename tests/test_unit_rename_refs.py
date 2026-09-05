@@ -14,12 +14,13 @@ Two halves:
     the scan reaches a real mod's export_descr_buildings.txt, its campaign folder
     and its .lua scripts, and that undo restores them byte-for-byte.
 """
-import shutil, sys, tempfile
+import shutil, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, edit, unitrefs
 from unittransfer.mod import Mod
 from unittransfer.transfer import undo
@@ -35,7 +36,7 @@ ok = []
 def check(label, cond):
     ok.append(bool(cond)); print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
@@ -125,7 +126,7 @@ accent Eastern
 
 
 def make_mod() -> Path:
-    root = Path(tempfile.mkdtemp(prefix="ut_refs_"))
+    root = Path(_tmp.mkdtemp(prefix="ut_refs_"))
     data = root / "data"
     (data / "text").mkdir(parents=True)
     (data / "unit_models").mkdir(parents=True)

@@ -34,7 +34,6 @@ Six parts, the last three of which need a game install:
 import json
 import shutil
 import sys
-import tempfile
 import threading
 import urllib.error
 import urllib.parse
@@ -46,7 +45,7 @@ sys.path.insert(0, str(ROOT))
 
 from PIL import Image
 
-from tests import _realmod
+from tests import _realmod, _tmp
 from unittransfer import campaint, campmap, config, mapvocab, transfer
 from unittransfer.maptga import TgaInfo, encode, probe, read
 from unittransfer.mod import Mod
@@ -216,7 +215,7 @@ def tiny_map(root: Path):
     return base
 
 
-tmp = Path(tempfile.mkdtemp(prefix="ut_tiny_"))
+tmp = Path(_tmp.mkdtemp(prefix="ut_tiny_"))
 tiny_root = tmp / "mods" / "Tiny"
 tiny_base = tiny_map(tiny_root)
 tiny = Mod(tiny_root)
@@ -520,7 +519,7 @@ else:
 
         campaint.redo_stroke(s)
         data = encode(cm.layer("regions"), cm.info("regions"))
-        tmp2 = Path(tempfile.mkdtemp(prefix="ut_rt_"))
+        tmp2 = Path(_tmp.mkdtemp(prefix="ut_rt_"))
         (tmp2 / "x.tga").write_bytes(data)
         again, info = read(tmp2 / "x.tga")
         c = again.convert("RGB").load()
@@ -550,13 +549,13 @@ if not roots:
     print("  SKIPPED - no map to serve")
 else:
     src = roots[-1]
-    cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+    cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
     config.CONFIG_DIR = cfg
     config.BACKUP_DIR = cfg / "backups"
     config.SETTINGS_PATH = cfg / "settings.json"
     config.LOG_PATH = cfg / "transfers.json"
 
-    med2 = Path(tempfile.mkdtemp(prefix="ut_med2_"))
+    med2 = Path(_tmp.mkdtemp(prefix="ut_med2_"))
     data = med2 / "mods" / "MapMod" / "data"
     (data / campmap.BASE_REL).mkdir(parents=True)
     for p in (src / "data" / campmap.BASE_REL).iterdir():

@@ -23,12 +23,13 @@ sentence says which entry, which line, and which number to doubt.
 
     python -m tests.test_broken_mod_files
 """
-import json, sys, tempfile, threading, urllib.error, urllib.request
+import json, sys, threading, urllib.error, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, modeldb
 from unittransfer.mod import Mod, ModDataError
 from unittransfer.server import Handler, Registry, _Server
@@ -126,7 +127,7 @@ LONG_LEN = len(TEX) + 3
 LONG_MDB = HEADER + BLANK + two_texture_entry("peasant_archer", norm_len=LONG_LEN)
 LONG_LINE = LONG_MDB[:LONG_MDB.index(f"\n{LONG_LEN} {TEX}")].count("\n") + 2
 
-med2 = Path(tempfile.mkdtemp(prefix="ut_broken_"))
+med2 = Path(_tmp.mkdtemp(prefix="ut_broken_"))
 
 
 def make_mod(name, edu=EDU, mdb=GOOD_MDB):
@@ -203,7 +204,7 @@ except (OSError, AttributeError, ValueError):
 check("a checker that skips what it cannot read still skips it", units is None)
 
 # ---- and over HTTP, which is where the 500s were -----------------------
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"

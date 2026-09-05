@@ -15,12 +15,12 @@ and "the logs don't seem to be displaying everything honestly":
 import json
 import logging
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, server                              # noqa: E402
 
 ok = []
@@ -32,7 +32,7 @@ def check(label, cond):
 
 
 # ---- a throwaway log to page through -----------------------------------
-cfg = Path(tempfile.mkdtemp(prefix="ut_log_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_log_"))
 config.CONFIG_DIR = cfg
 config.LOG_PATH = cfg / "transfers.json"
 config._JSON_CACHE.clear()

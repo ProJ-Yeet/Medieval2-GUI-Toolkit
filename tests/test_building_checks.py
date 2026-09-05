@@ -21,12 +21,12 @@ that fix them. Covers:
     python -m tests.test_building_checks
 """
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import buildings, config
 
 ok = []
@@ -37,7 +37,7 @@ def check(label, cond):
     print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.SETTINGS_PATH = cfg / "settings.json"
 config.LOG_PATH = cfg / "transfers.json"
@@ -232,7 +232,7 @@ class FakeMod:
         return self.data / buildings.EDB_REL
 
 
-root = Path(tempfile.mkdtemp(prefix="ut_bldchk_"))
+root = Path(_tmp.mkdtemp(prefix="ut_bldchk_"))
 mod = FakeMod(root, EDB)
 
 body = {
@@ -283,7 +283,7 @@ big = ["\t\t\t\trecruit_pool \"U%d\"  1  0.5  2  0\n" % i for i in range(limit +
 CROWDED = EDB.replace('\t\t\t\trecruit_pool "Spearmen"  1  0.5  2  0\n'
                       '\t\t\t\trecruit_pool "Knights"  2  0.25  3  1\n',
                       "".join(big))
-mod2 = FakeMod(Path(tempfile.mkdtemp(prefix="ut_bldchk2_")), CROWDED)
+mod2 = FakeMod(Path(_tmp.mkdtemp(prefix="ut_bldchk2_")), CROWDED)
 mod2.faction_cultures = {"england": "northern_european"}
 plan2 = buildings.plan_edit(mod2, {
     "mod": "fake", "line": "barracks", "levels": [],

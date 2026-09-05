@@ -8,12 +8,13 @@ reference, so the unit never appeared in game. This covers all three cases:
   * mount present but different      -> renamed, EDU repointed at the new name
 Uses temp config + temp dest so the real mods are never touched.
 """
-import shutil, sys, tempfile
+import shutil, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, edu, modeldb, mounts
 from unittransfer import keyblock as kb
 from unittransfer.mod import Mod
@@ -26,7 +27,7 @@ ok = []
 def check(label, cond):
     ok.append(bool(cond)); print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
@@ -34,7 +35,7 @@ REL = ("export_descr_unit.txt", "text/export_units.txt",
        "unit_models/battle_models.modeldb", "descr_mount.txt")
 
 def make_dest():
-    root = Path(tempfile.mkdtemp(prefix="ut_dest_"))
+    root = Path(_tmp.mkdtemp(prefix="ut_dest_"))
     (root / "data" / "text").mkdir(parents=True)
     (root / "data" / "unit_models").mkdir(parents=True)
     for rel in REL:

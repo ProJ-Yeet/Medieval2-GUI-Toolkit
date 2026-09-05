@@ -13,12 +13,13 @@ fake mesh/texture imports) so the real mods are never touched. Covers:
   * deleting a unit (localisation + orphaned model entries)
   * undo of every one of those, byte-exact
 """
-import shutil, sys, tempfile
+import shutil, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, edu, localization, modeldb
 from unittransfer.mod import Mod
 from unittransfer import edit
@@ -33,7 +34,7 @@ def check(label, cond):
 
 
 def fresh_mod() -> Path:
-    root = Path(tempfile.mkdtemp(prefix="ut_edit_"))
+    root = Path(_tmp.mkdtemp(prefix="ut_edit_"))
     data = root / "data"
     (data / "text").mkdir(parents=True)
     (data / "unit_models").mkdir(parents=True)
@@ -45,7 +46,7 @@ def fresh_mod() -> Path:
     return root
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
@@ -75,7 +76,7 @@ info_p = mod.data / "ui/unit_info" / INFO_DIR / f"{unit.dictionary}_info.tga"
 info_p.parent.mkdir(parents=True, exist_ok=True); info_p.write_bytes(b"INFO")
 
 # fake import sources for the new model entry
-imports = Path(tempfile.mkdtemp(prefix="ut_import_"))
+imports = Path(_tmp.mkdtemp(prefix="ut_import_"))
 mesh_src = imports / "brand_new_soldier.mesh"; mesh_src.write_bytes(b"MESHDATA")
 tex_src = imports / "brand_new_soldier.texture"; tex_src.write_bytes(b"TEXDATA")
 

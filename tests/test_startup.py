@@ -24,7 +24,6 @@ import socket
 import subprocess
 import sys
 import threading
-import tempfile
 import time
 import urllib.request
 from pathlib import Path
@@ -32,6 +31,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, server, startup
 from unittransfer.logutil import setup as setup_logging
 
@@ -55,7 +55,7 @@ def by_name(checks, prefix):
 
 setup_logging()
 real_cfg = config.CONFIG_DIR
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.SETTINGS_PATH = cfg / "settings.json"
 config.LOG_PATH = cfg / "transfers.json"
@@ -93,7 +93,7 @@ check("missing web/index.html is fatal", c.blocking)
 check("report() fails when something fatal fails",
       not startup.report(startup.preflight(port, ROOT / "no_such_web")))
 
-bad_cfg = Path(tempfile.mkdtemp(prefix="ut_ro_")) / "a_file_not_a_dir"
+bad_cfg = Path(_tmp.mkdtemp(prefix="ut_ro_")) / "a_file_not_a_dir"
 bad_cfg.write_text("x")
 config.CONFIG_DIR = bad_cfg / "config"      # can't mkdir under a file
 c = by_name(startup.preflight(port, ROOT / "web"), "config/ writable")
@@ -113,7 +113,7 @@ squatter.close()
 
 # ---- icon prewarm -------------------------------------------------------
 print("\n== icon prewarm ==")
-icon_cache = Path(tempfile.mkdtemp(prefix="ut_icons_"))
+icon_cache = Path(_tmp.mkdtemp(prefix="ut_icons_"))
 config.save_settings(med2_root=str(
     Path(r"C:/Users/projy/Downloads/Games/Total War MEDIEVAL II Definitive Edition")))
 reg = server.Registry(icon_cache)
@@ -132,7 +132,7 @@ check("unknown mod is skipped, not raised",
 shutil.rmtree(icon_cache, ignore_errors=True)
 
 stop = {"v": False}
-icon_cache2 = Path(tempfile.mkdtemp(prefix="ut_icons2_"))
+icon_cache2 = Path(_tmp.mkdtemp(prefix="ut_icons2_"))
 reg2 = server.Registry(icon_cache2)
 
 
@@ -150,7 +150,7 @@ shutil.rmtree(icon_cache2, ignore_errors=True)
 print("\n== log location fallback ==")
 from unittransfer import logutil
 
-blocker = Path(tempfile.mkdtemp(prefix="ut_ro_")) / "not_a_dir"
+blocker = Path(_tmp.mkdtemp(prefix="ut_ro_")) / "not_a_dir"
 blocker.write_text("x")
 saved_cfg = config.CONFIG_DIR
 config.CONFIG_DIR = blocker / "config"          # cannot mkdir under a file

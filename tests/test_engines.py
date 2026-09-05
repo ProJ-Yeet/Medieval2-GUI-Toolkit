@@ -20,12 +20,12 @@ Covers:
 """
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, edu, engines
 from unittransfer import keyblock as kb
 from unittransfer.mod import Mod
@@ -51,7 +51,7 @@ def check(label, cond):
     print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
@@ -60,7 +60,7 @@ config.LOG_PATH = cfg / "transfers.json"
 
 def fresh_dest():
     """A DaC-shaped destination with only the DB files (assets copied on demand)."""
-    root = Path(tempfile.mkdtemp(prefix="ut_dest_"))
+    root = Path(_tmp.mkdtemp(prefix="ut_dest_"))
     data = root / "data"
     data.mkdir(parents=True)
     for rel in DEST_FILES:

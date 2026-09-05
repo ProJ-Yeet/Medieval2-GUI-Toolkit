@@ -28,7 +28,6 @@ Five parts, the last two of which need a real game install:
 import json
 import shutil
 import sys
-import tempfile
 import threading
 import time
 import urllib.error
@@ -39,7 +38,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from tests import _realmod
+from tests import _realmod, _tmp
 from unittransfer import campmap, campstrat, config, mapquery, stratchar
 from unittransfer.keyblock import read_text
 from unittransfer.mod import Mod
@@ -278,7 +277,7 @@ class _Facts:
         self.mod, self.skipped = mod, []
 
 
-tmp = Path(tempfile.mkdtemp(prefix="ut_char_"))
+tmp = Path(_tmp.mkdtemp(prefix="ut_char_"))
 EDCT = "Trait GoodCommander\n Level Good\n  Threshold 1\n Level Better\n  Threshold 2\n"
 EDA = "Ancillary mentor\n Image mentor.tga\n"
 NAMES = "faction: england\n\tcharacters\n\t\tWilliam\n\t\tAldred\n"
@@ -347,7 +346,7 @@ check("a name the faction's own pool does not hold is a warning that says "
       == ["char.pool"]
       and not stratchar.check_pool(voc, "england", "Aldred"))
 
-blind = stratchar.Vocabulary(_Facts(_Fake(Path(tempfile.mkdtemp(prefix="ut_bl_")))), sf)
+blind = stratchar.Vocabulary(_Facts(_Fake(Path(_tmp.mkdtemp(prefix="ut_bl_")))), sf)
 check("with none of the four files on disk the vocabulary says so, by name",
       not blind.have_edu and not blind.have_edct and not blind.have_eda
       and not blind.have_pool and len(blind.skipped) == 4)
@@ -543,13 +542,13 @@ if not roots:
 else:
     src = roots[0]
     camp = campstrat.campaigns(Mod(src))[0]
-    cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+    cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
     config.CONFIG_DIR = cfg
     config.BACKUP_DIR = cfg / "backups"
     config.SETTINGS_PATH = cfg / "settings.json"
     config.LOG_PATH = cfg / "transfers.json"
 
-    med2 = Path(tempfile.mkdtemp(prefix="ut_med2_"))
+    med2 = Path(_tmp.mkdtemp(prefix="ut_med2_"))
     data = med2 / "mods" / "CharMod" / "data"
     (data / campmap.BASE_REL).mkdir(parents=True)
     for pth in (src / "data" / campmap.BASE_REL).iterdir():

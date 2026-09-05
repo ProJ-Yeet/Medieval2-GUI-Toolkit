@@ -14,12 +14,13 @@ out to a copy per owning faction, renamed. Covers:
   * a rename + import writes under the new dictionary and warns about the old
   * nothing is written by a plan, and undo restores the mod exactly
 """
-import shutil, sys, tempfile
+import shutil, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, edit
 from unittransfer.mod import Mod
 from unittransfer.transfer import undo
@@ -37,13 +38,13 @@ if donor is None:
     print("no donor mod available - skipping")
     sys.exit(0)
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
 
 def fresh_mod():
-    root = Path(tempfile.mkdtemp(prefix="ut_ico_"))
+    root = Path(_tmp.mkdtemp(prefix="ut_ico_"))
     data = root / "data"
     (data / "text").mkdir(parents=True)
     (data / "unit_models").mkdir(parents=True)
@@ -64,7 +65,7 @@ def make_tga(path, w=32, h=48):
     Image.new("RGBA", (w, h), (40, 200, 40, 255)).save(path, format="TGA")
 
 
-src_dir = Path(tempfile.mkdtemp(prefix="ut_src_"))
+src_dir = Path(_tmp.mkdtemp(prefix="ut_src_"))
 tga_src = src_dir / "MyCoolCard.tga";   make_tga(tga_src)
 png_src = src_dir / "from_photoshop.png"; make_png(png_src)
 info_src = src_dir / "big_info.tga";    make_tga(info_src, 200, 100)

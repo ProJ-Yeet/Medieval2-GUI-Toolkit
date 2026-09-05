@@ -23,13 +23,13 @@ source. Checked:
 """
 import shutil
 import sys
-import tempfile
 import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config, edu as edu_mod, modeldb as modeldb_mod, pack
 from unittransfer.mod import Mod
 
@@ -44,13 +44,13 @@ def check(label, cond):
     print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
 config.LOG_PATH = cfg / "transfers.json"
 
-tmp = Path(tempfile.mkdtemp(prefix="ut_pack_"))
+tmp = Path(_tmp.mkdtemp(prefix="ut_pack_"))
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +160,7 @@ else:
     from unittransfer.server import Registry
     from unittransfer.transfer import TransferOptions, plan_transfer
 
-    reg = Registry(Path(tempfile.mkdtemp(prefix="ut_cache_")))
+    reg = Registry(Path(_tmp.mkdtemp(prefix="ut_cache_")))
     info = reg.mount_pack(zpath)
     check("mounting names it after the mod it came from", src.name in info["name"])
     check("it shows up as a mod", info["name"] in reg.discover())

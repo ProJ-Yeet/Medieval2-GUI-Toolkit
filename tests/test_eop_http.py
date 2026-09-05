@@ -14,12 +14,13 @@ page depends on is really there:
 A mismatch between the UI's field names and the server's is exactly what this
 catches - the Python-level tests never go through JSON.
 """
-import json, shutil, sys, tempfile, threading, urllib.error, urllib.parse, urllib.request
+import json, shutil, sys, threading, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config
 from unittransfer import edu as edu_mod
 from unittransfer.mod import Mod
@@ -49,11 +50,11 @@ def post(path, body):
 if SRC is None:
     print("No source mod available under", MODS); sys.exit(1)
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
-med2 = Path(tempfile.mkdtemp(prefix="ut_med2_"))
+med2 = Path(_tmp.mkdtemp(prefix="ut_med2_"))
 
 
 def make_mod(name: str, with_eop: bool):

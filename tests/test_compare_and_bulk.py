@@ -28,12 +28,12 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer.mod import Mod
 
 MODS = Path(r"C:/Users/projy/Downloads/Games/Total War MEDIEVAL II Definitive Edition/mods")
@@ -219,7 +219,7 @@ else:
     script = "\n".join((WEB.parent / "js" / t).read_text(encoding="utf-8") for t in tags)
     edu = mods[0].edu_path.read_text(encoding="latin-1")
     print(f"  comparing the first two units of {mods[0].name}")
-    tmp = Path(tempfile.mkdtemp(prefix="ut_cmp_"))
+    tmp = Path(_tmp.mkdtemp(prefix="ut_cmp_"))
     js = tmp / "check.js"
     js.write_text("const EDU_TEXT=" + json.dumps(edu) + ";\n" + STUBS + script + HARNESS,
                   encoding="utf-8")

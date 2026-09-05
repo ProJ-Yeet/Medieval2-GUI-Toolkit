@@ -14,13 +14,13 @@ picked up a moment later instead of instantly, which is the trade this asserts.
     python -m tests.test_registry_reload
 """
 import sys
-import tempfile
 import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config
 from unittransfer.server import REVALIDATE_SECONDS, Registry
 
@@ -31,7 +31,7 @@ def check(label, cond):
 EDU_ONE = "type Alpha\ndictionary Alpha\ncategory infantry\nsoldier alpha_model, 30, 0, 1\n"
 EDU_TWO = EDU_ONE + "\ntype Beta\ndictionary Beta\ncategory infantry\nsoldier beta_model, 30, 0, 1\n"
 
-root = Path(tempfile.mkdtemp(prefix="ut_root_"))
+root = Path(_tmp.mkdtemp(prefix="ut_root_"))
 mod = root / "mods" / "TestMod"
 data = mod / "data"
 (data / "text").mkdir(parents=True)
@@ -40,7 +40,7 @@ edu_path.write_text(EDU_ONE, encoding="latin-1")
 (data / "text" / "export_units.txt").write_bytes(
     "﻿".encode("utf-16-le"))          # minimal (empty) loc file with BOM
 
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.SETTINGS_PATH = cfg / "settings.json"
 config.save_settings(med2_root=str(root))

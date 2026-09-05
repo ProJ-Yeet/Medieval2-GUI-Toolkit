@@ -8,13 +8,13 @@ so this runs without touching the real registry or requiring the game installed.
     python -m tests.test_med2_registry
 """
 import sys
-import tempfile
 import types
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import config
 
 ok = []
@@ -69,7 +69,7 @@ install_fake_winreg(found_at_flags=None)
 check("key missing everywhere -> None", config.detect_med2_root() is None)
 
 # ---- key present under the 32-bit (WOW6432Node) view, real folder -------
-real_dir = tempfile.mkdtemp(prefix="ut_med2_")
+real_dir = _tmp.mkdtemp(prefix="ut_med2_")
 install_fake_winreg(found_at_flags=0x0200, value=real_dir)
 check("found under WOW64_32KEY -> that path", config.detect_med2_root() == real_dir)
 
@@ -87,14 +87,14 @@ check("non-win32 -> None without consulting winreg", config.detect_med2_root() i
 sys.platform = real_platform
 
 print("\n== get_med2_root falls back only when unset ==")
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 real_cfg, real_settings = config.CONFIG_DIR, config.SETTINGS_PATH
 config.CONFIG_DIR, config.SETTINGS_PATH = cfg, cfg / "settings.json"
 
 install_fake_winreg(found_at_flags=0x0200, value=real_dir)
 check("nothing saved -> registry value used", config.get_med2_root() == real_dir)
 
-explicit = tempfile.mkdtemp(prefix="ut_explicit_")
+explicit = _tmp.mkdtemp(prefix="ut_explicit_")
 config.save_settings(med2_root=explicit)
 check("explicit setting wins over registry", config.get_med2_root() == explicit)
 

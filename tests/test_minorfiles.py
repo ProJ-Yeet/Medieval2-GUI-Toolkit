@@ -31,12 +31,12 @@ sweeps every real file, which is the check that actually matters.
     python -m tests.test_minorfiles
 """
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import codeview, config, keyblock as kb, minorfiles as mf
 from unittransfer.mod import Mod
 
@@ -403,7 +403,7 @@ except codeview.CodeViewError as e:
     check("a pane holding two records is refused", "one at a time" in str(e))
 
 print("\nthe editor: overview, detail, and saves that go to disk")
-work = Path(tempfile.mkdtemp(prefix="tk-minor-")) / "TestMod"
+work = Path(_tmp.mkdtemp(prefix="tk-minor-")) / "TestMod"
 (work / "data" / "text").mkdir(parents=True)
 for rel, body in ((mf.REBELS.rel, REBELS_TXT), (mf.RESOURCES.rel, RESOURCES_TXT),
                   (mf.RELIGIONS_REL, RELIGIONS_TXT), (mf.CULTURES_REL, CULTURES_TXT),

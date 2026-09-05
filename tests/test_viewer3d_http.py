@@ -19,7 +19,6 @@ import json
 import shutil
 import struct
 import sys
-import tempfile
 import threading
 import urllib.error
 import urllib.parse
@@ -31,7 +30,7 @@ sys.path.insert(0, str(ROOT))
 
 from unittransfer import config, mesh, modeldb
 from unittransfer.server import Registry, Handler, _Server
-from tests import _realmod
+from tests import _realmod, _tmp
 
 REFERENCE = (ROOT / "Reference" / "TWCenter" / "--- TOOLS n RESOURCES ---" /
              "TEMPLATE - Barded-Mailed Horses" / "Barded-Mailed Horses" /
@@ -82,13 +81,13 @@ mod_src = _realmod.pick("Divide_and_Conquer_EUR", "Third_Age_Reforged",
                         need="unit_models/battle_models.modeldb")
 
 # ---- a throwaway MED2 root with one mod in it ----
-cfg = Path(tempfile.mkdtemp(prefix="ut_cfg_"))
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
 config.CONFIG_DIR = cfg
 config.BACKUP_DIR = cfg / "backups"
 config.SETTINGS_PATH = cfg / "settings.json"
 config.LOG_PATH = cfg / "transfers.json"
 
-med2 = Path(tempfile.mkdtemp(prefix="ut_med2_"))
+med2 = Path(_tmp.mkdtemp(prefix="ut_med2_"))
 data = med2 / "mods" / "ViewerMod" / "data"
 (data / "text").mkdir(parents=True)
 (data / "unit_models").mkdir(parents=True)

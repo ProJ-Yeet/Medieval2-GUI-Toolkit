@@ -22,12 +22,12 @@ Needs no game install.
 """
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tests import _tmp
 from unittransfer import (config, factions, flatrecord as fr, modflags,
                           traits, ancillaries)
 
@@ -39,7 +39,7 @@ def check(label, cond):
     print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
 
-cfg = Path(tempfile.mkdtemp(prefix="tk-flags-"))
+cfg = Path(_tmp.mkdtemp(prefix="tk-flags-"))
 config.CONFIG_DIR = cfg
 config.SETTINGS_PATH = cfg / "settings.json"
 config.LOG_PATH = cfg / "transfers.json"
