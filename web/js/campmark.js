@@ -14,7 +14,7 @@
    `cq`, 16h `cs` and 16i `cx`.
 
    WHAT IS TAKEN FROM MYLAE'S `StratOverlay.jsx`, AND WHAT IS CHANGED. It is the
-   thing his map reads best: everything in descr_strat.txt with a coordinate
+   thing that map reads best: everything in descr_strat.txt with a coordinate
    gets an icon at that tile.
 
      * TAKEN - the pixel-grouping rule. Items on the same tile become one marker
@@ -29,12 +29,12 @@
        for the rest, so the fallback is the ordinary case rather than a fault -
        and the stock art is inside a .pack archive nothing here reads, so the
        glyph is what honesty looks like.
-     * CHANGED - the projection. His converts M2TW tiles to Leaflet lat/lng
+     * CHANGED - the projection. Theirs converts M2TW tiles to Leaflet lat/lng
        through an OSM bounding box; there is no Leaflet here and no bounding
        box, and 16c's canvas already maps a tile to a pixel exactly. `cmapX`
        and `cmapY` are that map, and they are what every glyph is drawn from.
-     * CHANGED - the drag. He moves a character by dragging its icon and writes
-       on pointer-up. A drop here PLANS: the same `/api/map/character_plan` the
+     * CHANGED - the drag. Theirs moves a character by dragging its icon and
+       writes on pointer-up. A drop here PLANS: the same `/api/map/character_plan` the
        form beside it uses, with the same confirmation and the same undo. What
        the drag itself previews is only what the browser can answer exactly -
        whether the tile is on the map, and whether it is sea by the measured
@@ -173,7 +173,10 @@ function cmkArt(){
     const img = new Image();
     img.onload = () => { if(state.cmk === k){ k.art[name] = img; cmapPaint(); } };
     img.onerror = () => {};
-    img.src = `/api/icon?mod=${enc(k.mod)}&kind=modfile&rel=${enc(rel)}`;
+    // `/icon`, not `/api/icon`: the picture routes are the one family that
+    // predates the /api prefix, and the wrong one 404s rather than falling back
+    // to a blank PNG, because it never reaches the handler that promises that.
+    img.src = `/icon?mod=${enc(k.mod)}&kind=modfile&rel=${enc(rel)}`;
     k.art[name] = img;                 // held while it loads; `complete` gates use
   }
 }
@@ -563,7 +566,7 @@ provinces is not a map any more.">
   const res = counts.resource || 0;
   return `<div class="cmmark">${head}
     <div class="cmkcats">${rows}</div>
-    <div class="count">Drag a character to move him: the drop plans the same
+    <div class="count">Drag a character to move them: the drop plans the same
       save the panel below does, with the same confirmation and the same undo.
       ${res ? `This mod ships its own picture for ${art} of the
         ${new Set((k.d.items || []).filter(i => i.kind === 'resource')
