@@ -244,6 +244,51 @@ def lower_starts(s: str):
     return [plain[:60]]
 
 
+#: Text that is a sentence BECAUSE OF WHERE IT IS, however short it is.
+#:
+#: 17g: every one of the burger menu's fifteen hints started in lower case, and
+#: this tool did not say so - `lower_starts` asks a run of text to look like
+#: prose first (a full stop, or sixty characters) so that "mercs only" and "per
+#: turn" are left alone, and "your mods, and what each one is ready for" is
+#: forty-one characters with no full stop. The label was right and the test was
+#: right; what was missing is that some text is a sentence by DECLARATION. A
+#: `hint:` under a module name, a `help:` under a box and the two lines the nav
+#: brand carries are all whole phrases shown to somebody as prose, so they are
+#: measured as prose at any length. The value has to contain a space to be
+#: one: `note: 'count'` is a severity mapped to a CSS class in two modules,
+#: and a single token is never a sentence.
+NAMED_PROSE = re.compile(r"""\b(?:hint|help|tip)\s*:\s*['"`]([^'"`]*\s[^'"`]*)['"`]""")
+#: The same thing in the page itself: the nav's brand subtitle and the hint
+#: under a nav item are written as markup rather than as a field.
+NAMED_HTML = re.compile(r"""class="(?:hint|s)"\s*>([^<>{]{4,})<""")
+
+
+def named_prose(text: str):
+    """``(line, string)`` for text that is prose wherever it appears."""
+    for i, line in enumerate(text.splitlines(), 1):
+        if CODE_ISH.match(line.strip()):
+            continue
+        for m in NAMED_PROSE.finditer(line):
+            yield i, m.group(1)
+        for m in NAMED_HTML.finditer(line):
+            yield i, m.group(1).strip()
+
+
+def named_lower(s: str):
+    """A declared sentence that opens in lower case. No length test, by design.
+
+    The three guards that are about reading rather than about length still
+    apply: markup, a value spliced in at render time, and a first word that is
+    not a word at all.
+    """
+    if s.lstrip().startswith(("<", "${", "{")):
+        return []
+    plain = HOLE.sub("", re.sub(r"<[^>]*>", " ", s)).strip()
+    if not re.match(r"[a-z]{3,}\b", plain):
+        return []
+    return [plain[:60]]
+
+
 def scan(paths):
     hits = []
     for p in paths:
@@ -255,11 +300,19 @@ def scan(paths):
             line = text.count("\n", 0, m.start()) + 1
             hits.append(("em", p, line,
                          text[max(0, m.start() - 30):m.start() + 30].replace("\n", " ")))
+        said = set()
         for line, s in ui_strings(text):
             for bad in clause_dashes(s):
                 hits.append(("dash", p, line, bad))
             for bad in lower_starts(s):
                 hits.append(("case", p, line, bad))
+                said.add((line, bad))
+        # A long hint is caught by both rules and is one fault, so the second
+        # one only reports what the first did not.
+        for line, s in named_prose(text):
+            for bad in named_lower(s):
+                if (line, bad) not in said:
+                    hits.append(("case", p, line, bad))
     return hits
 
 

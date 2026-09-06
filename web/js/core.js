@@ -637,21 +637,21 @@ function buildFilter(id,values,key,useLabel){
 // host rather than from this menu (Sprites lives in the BMDB editor; Traits,
 // Ancillaries, Factions and Strings live in Minor Files).
 const MODES=[
-  {id:'home',     icon:'⌂', name:'Home',          hint:'your mods, and what each one is ready for'},
-  {id:'edit',     icon:'✎', name:'Unit Editor',   hint:'change, clone or delete one mod’s units'},
-  {id:'transfer', icon:'⚔', name:'Unit Transfer', hint:'copy a unit from one mod into another'},
-  {id:'buildings',icon:'🏰', name:'Buildings',     hint:'browse and edit export_descr_buildings'},
-  {id:'campmap',  icon:'🌍', name:'Campaign Map',  hint:'the ten map layers, the regions painted on them and what the game reads'},
-  {id:'bmdb',     icon:'🗄', name:'BMDB + Sprites Editor', hint:'battle_models.modeldb, and the sprites it points at'},
-  {id:'sounds',   icon:'🔊', name:'Unit Sounds',   hint:'pick which voice entry each unit speaks with'},
-  {id:'minor',    icon:'🗺', name:'Minor Files',   hint:'rebels, religions, cultures, traits, factions and text'},
-  {id:'sprites',  icon:'🖼', name:'Sprites',       sub:true, hint:'generate and wire the far-LOD unit sprites'},
-  {id:'stratmap', icon:'🗺', name:'Strat map models', sub:true, hint:'descr_model_strat.txt, and clearing out what the campaign map never draws'},
-  {id:'cards',    icon:'🖼', name:'Unit & info cards', sub:true, hint:'the two pictures per unit, deduplicated into the merc folder'},
-  {id:'traits',   icon:'🎖', name:'Traits',        sub:true, hint:'character traits, their levels and the triggers that give them'},
-  {id:'ancillaries',icon:'🏅', name:'Ancillaries',  sub:true, hint:'the items and followers a character picks up'},
-  {id:'factions', icon:'🛡', name:'Factions',      sub:true, hint:'each faction’s culture, religion, colours and horde'},
-  {id:'strings',  icon:'🔤', name:'Strings',       sub:true, hint:'the compiled text files the game actually reads'},
+  {id:'home',     icon:'⌂', name:'Home',          hint:'Your mods, and what each one is ready for'},
+  {id:'edit',     icon:'✎', name:'Unit Editor',   hint:'Change, clone or delete one mod’s units'},
+  {id:'transfer', icon:'⚔', name:'Unit Transfer', hint:'Copy a unit from one mod into another'},
+  {id:'buildings',icon:'🏰', name:'Buildings',     hint:'Browse and edit export_descr_buildings'},
+  {id:'campmap',  icon:'🌍', name:'Campaign Map',  hint:'The ten map layers, the regions painted on them and what the game reads'},
+  {id:'bmdb',     icon:'🗄', name:'BMDB + Sprites Editor', hint:'What battle_models.modeldb names, and the sprites it points at'},
+  {id:'sounds',   icon:'🔊', name:'Unit Sounds',   hint:'Pick which voice entry each unit speaks with'},
+  {id:'minor',    icon:'🗺', name:'Minor Files',   hint:'Rebels, religions, cultures, traits, factions and text'},
+  {id:'sprites',  icon:'🖼', name:'Sprites',       sub:true, hint:'Generate and wire the far-LOD unit sprites'},
+  {id:'stratmap', icon:'🗺', name:'Strat map models', sub:true, hint:'What descr_model_strat.txt names, and what the campaign map never draws'},
+  {id:'cards',    icon:'🖼', name:'Unit & info cards', sub:true, hint:'The two pictures per unit, deduplicated into the merc folder'},
+  {id:'traits',   icon:'🎖', name:'Traits',        sub:true, hint:'Character traits, their levels and the triggers that give them'},
+  {id:'ancillaries',icon:'🏅', name:'Ancillaries',  sub:true, hint:'The items and followers a character picks up'},
+  {id:'factions', icon:'🛡', name:'Factions',      sub:true, hint:'Each faction’s culture, religion, colours and horde'},
+  {id:'strings',  icon:'🔤', name:'Strings',       sub:true, hint:'The compiled text files the game actually reads'},
 ];
 const modeDef=id=>MODES.find(m=>m.id===id)||MODES[0];
 
@@ -1504,24 +1504,37 @@ async function openCredits(){
     </div></div>
     <div style="padding:16px;line-height:1.7">
       <div style="margin-bottom:14px">
-        <div class="lbl" style="margin-bottom:4px">Sponsored by</div>
-        <b>FeatherLeaf</b>
+        <div class="lbl" style="margin-bottom:4px">Developed by</div>
+        <b>ProJYeet</b>
       </div>
       <div style="margin-bottom:14px">
-        <div class="lbl" style="margin-bottom:4px">Built on the work of</div>
-        <b>Mylae</b>, for the
-        <a href="https://github.com/Machiavello-1441/m2tw-editor" target="_blank"
-           style="color:var(--accent2)">M2TW Editor</a>, whose modules this toolkit adapts and builds on.
+        <div class="lbl" style="margin-bottom:4px">Co-developed by</div>
+        <b>Demir</b>
+      </div>
+      <div style="margin-bottom:14px">
+        <div class="lbl" style="margin-bottom:4px">Built on the work of, and
+          thanking them for permission to take reference from their code</div>
+        <div>Mylae’s
+          <a href="https://github.com/Machiavello-1441/m2tw-editor" target="_blank"
+             style="color:var(--accent2)">M2TW Editor</a></div>
+        <div><a href="https://www.twcenter.net/ubs/medieval-2-total-war-modding-tool.26/"
+             target="_blank" style="color:var(--accent2)">Fynn’s Medieval II Total
+             War Modding Tool</a></div>
+        <div>Bare Geomod, by <b>Sinople</b> and <b>Gigantus</b> -
+          <a href="https://www.moddb.com/mods/bare-geomod-and-tools" target="_blank"
+             style="color:var(--accent2)">moddb.com/mods/bare-geomod-and-tools</a></div>
+        <div>TWMapReader, by <b>Withwnar</b> -
+          <a href="https://www.twcenter.net/threads/tw-map-reader-v2-24-1-jul-2015-update.438278/"
+             target="_blank" style="color:var(--accent2)">twcenter.net</a></div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div class="lbl" style="margin-bottom:4px">Sponsored by</div>
+        <b>FeatherLeaf</b>
       </div>
       <div style="margin-bottom:14px">
         <div class="lbl" style="margin-bottom:4px">Special thanks</div>
         <b>Gigantus</b> and the <b>TWCenter</b> community, for the guides that
         taught everyone, this tool included, how these files actually work.
-      </div>
-      <div style="margin-bottom:14px">
-        <div class="lbl" style="margin-bottom:4px">Thanks</div>
-        <a href="https://www.twcenter.net/ubs/medieval-2-total-war-modding-tool.26/" target="_blank"
-           style="color:var(--accent2)">Fynn’s Medieval II Total War Modding Tool</a>, for the motivation.
       </div>
       <div>
         <div class="lbl" style="margin-bottom:4px">Testing</div>

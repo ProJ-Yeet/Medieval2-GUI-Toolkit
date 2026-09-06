@@ -368,7 +368,11 @@ function cmkLabel(it){
       + (it.army ? ` · ${it.army} unit${it.army === 1 ? '' : 's'}` : '')
       + (who ? ` · ${who}` : '');
   if(it.kind === 'resource') return it.name;
-  return `${it.kind}${it.type ? ` ${it.type}` : ''}${who ? ` · ${who}` : ''}`;
+  // A fort and a watchtower name a province rather than an owner: DaC writes
+  // all 105 and all 295 of them inside the `region` blocks at the end of the
+  // file, where nobody owns them, so that is what is worth saying about one.
+  return `${it.kind}${it.type ? `, ${it.type}` : ''}`
+    + (who ? ` · ${who}` : it.region ? ` · ${it.region}` : '');
 }
 
 /* ---------- the drag ----------
