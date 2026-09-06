@@ -301,7 +301,7 @@ function mfArt(rel){
   // These sit in dense tables with no room for a pair of buttons, so the pip
   // itself is the ✎ - a click replaces it, and a right-click gets the same menu
   // (with "Open file location" on it) that every other picture in the tool has.
-  const url=`/icon?mod=${enc(state.mf.mod)}&kind=modfile&rel=${enc(r)}`;
+  const url=`/icon?mod=${enc(state.mf.mod)}&kind=modfile&rel=${enc(r)}${iconBust()}`;
   return `<img class="mfpip act" loading="lazy" src="${url}"
     alt="" title="${esc(r)}. Blank here means the file is not unpacked in this mod, which is normal: it may be inside a .pack archive.
 Click to replace it; right-click for its file location."

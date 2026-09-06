@@ -1,17 +1,57 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-06 · **v2.1.11 released**, V3.0.0 feature-complete and uncut ·
-**Phase 17 is done** - all eight items, verified in a browser on both installed
-maps. The user has said to hold the release for now_
+_Updated: 2026-09-06 · **v3.0.0-beta released** - the campaign map editor, cut
+as a beta on the user's word · Phase 17 done, plus six unit-editor faults the
+user raised after it_
 
 ## Next up
 **Phase 18a, four files nobody could edit** (`ROADMAP.md`, Backlog). Phase 17
 closed on 2026-09-06 and its write-up is in `ROADMAP_ARCHIVE.md`.
 
-**The release is held.** V3.0.0 is feature-complete and correct - Phase 17 was
-the correction pass over it - but the user has said to hold. When it is called
-for, cutting it is: bump `unittransfer/__init__.py`, write
-`merge/RELEASE_3_0_0.md`, build, push and upload, per `HANDOFF.md`. Nothing
-about that is blocked; it is waiting on the word.
+**The release is cut.** V3.0.0 went out as **v3.0.0-beta** on 2026-09-06:
+`unittransfer/__init__.py` says `3.0.0-beta`, the notes are
+`merge/RELEASE_3_0_0_BETA.md`, and the zip is on GitHub. It is a beta because it
+is the first build in anyone's hands that writes to a campaign; the known limits
+are listed at the bottom of the notes (forts, watchtowers and resources are read
+and drawn but not placed, the terrain render is flat, delete-a-region and
+create-a-campaign are not in it). A **3.0.0 final** is the same feature set with
+whatever the beta turns up fixed.
+
+**Six unit-editor faults, fixed 2026-09-06** before the cut, all reported by the
+user against Phase 13-15 code and all verified in a running browser on
+Third_Age_Reforged:
+
+- a new bmdb entry could not be given its own attachment texture / normal map -
+  `NewModel.attach_texture_src` / `attach_normal_src`, and no sprite is written
+  into an attachment record any more
+- a staged entry read as "not an entry in this mod's battle_models.modeldb" -
+  `gfHostEditor.creates` returned `[]` while `state.ed.newModels` held it
+- the model picker and the field vocabulary are read once per mod and kept, so a
+  new entry stayed invisible - `edDropModCaches` on save, plus pending entries
+  offered by both
+- "Point EDU slot at it" replaced an armour tier instead of adding one -
+  `edAssignSlots` says what each choice replaces and ends with the next tier,
+  `edNextTierSlot` is the default, and `edu.sync_armour_levels` keeps
+  `armour_ug_levels` in step with an appended tier
+- an imported unit card never saved: `edDirty` did not count `cardSrc` /
+  `infoSrc`, so Save said "Nothing to save"
+- "Replace for every faction" now asks WHERE (a tick box per owning faction
+  folder plus the merc fallback, `card_folders` / `info_folders` on the request)
+  and WHICH (the pictures on disk, but only when the folders really hold more
+  than one); `edit._resolve_icon_src` reads a mod-relative source and will not
+  climb out of `data/`
+
+**And two more the user raised while the release was being cut:**
+
+- the card you replaced went on being the card you saw. `shutil.copy2` carries
+  the SOURCE's timestamps onto the copy and a mod's files share an mtime to the
+  second, so `IconCache._key` (path + mtime) never changed. `logutil.stamp_written`
+  is the fix, with the file size added to the key as a backstop; the page half is
+  `state.iconV` through `iconBust()`, because `imgBust` only ever patched the
+  `<img>` tags that were on screen and a save re-renders the whole grid.
+- renaming a staged entry left `armour_ug_models` on the old name -
+  `edRenamePending` / `edPendingRefs`, with the form saying which lines follow.
+
+`tests/test_new_entry_and_cards.py`, 34 checks.
 
 The plan after this needs no decisions: the audit's forty open
 items were classified on 2026-09-05 (20 Now, 7 Next, 13 Later, none skipped) and
@@ -32,13 +72,12 @@ Run `python tools/upstream_sync.py sync` first, as before every sub-phase.
 | 0-15j | done | shipped through v2.1.11. Exit criteria and write-ups in ROADMAP_ARCHIVE.md. |
 
 ## In-progress detail
-**Clean.** Nothing is mid-flight. Phase 17 is complete, tested and committed;
-the working tree is clean apart from the three untracked files the archive split
-left (`ROADMAP_ARCHIVE.md`, `STATE_ARCHIVE.md`, `merge/REFERENCE_GAPS.md`).
+**Clean.** Nothing is mid-flight. Phase 17 is complete, the six unit-editor
+faults above are fixed and tested, and v3.0.0-beta is built and uploaded.
 
-V3.0.0 is feature-complete and **uncut, deliberately** - the version in
-`unittransfer/__init__.py` is still 2.1.11 and there is no
-`merge/RELEASE_3_0_0.md`, because the user has said to hold the release.
+V3.0.0 is **cut, as v3.0.0-beta** - `unittransfer/__init__.py` says
+`3.0.0-beta` and the notes are `merge/RELEASE_3_0_0_BETA.md`. The next cut off
+this line is 3.0.0 final.
 
 What Phase 17 changed, in one line each (numbers and reasoning in
 `ROADMAP_ARCHIVE.md`):

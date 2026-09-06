@@ -12,6 +12,7 @@ things the editor could not do before:
     these" list), not just an absolute path off disk - and the folder the file
     already lives in is not copied onto itself
 """
+import os
 import shutil, sys
 from pathlib import Path
 
@@ -199,6 +200,63 @@ req = edit.request_from_dict({"unit": unit3.type, "card_src": "ui/units/nope/#no
 plan = edit.plan_edit(mod, req)
 check("a source that is not there is an error, not a traceback",
       any("not found" in e for e in plan.errors))
+
+# ---------------------------------------------------------------------------
+print("\n4) only the folders that were ticked")
+# not own[0]: that is the folder the source file itself lives in, and section 3
+# already covers a folder not being copied onto itself
+pick = [f for f in own if f != own[0]][:2]
+req = edit.request_from_dict({"unit": unit3.type, "card_src": rel, "card_folders": pick})
+plan = edit.plan_edit(mod, req)
+dests = [r for _s, r in plan.icon_copies]
+check("a subset writes those folders and no others",
+      not plan.errors and len(dests) == len(pick)
+      and all(r.split("/")[2] in pick for r in dests))
+check("the merc fallback is not slipped back in",
+      not any(r.startswith("ui/units/mercs/") for r in dests))
+
+other = [f for f in own if f != own[0]][:1]
+req = edit.request_from_dict({"unit": unit3.type, "card_src": rel, "card_folders": other})
+plan = edit.plan_edit(mod, req)
+check("the folders left out keep what they had",
+      [r for _s, r in plan.icon_copies]
+      == [f"ui/units/{other[0]}/#{unit3.dictionary}.tga"])
+
+req = edit.request_from_dict({"unit": unit3.type, "card_src": rel,
+                              "card_folders": ["../../../etc", "good_faction", ""]})
+check("a folder name that is path-shaped is dropped before it becomes a path",
+      req.card_folders == ["good_faction"])
+
+req = edit.request_from_dict({"unit": unit3.type, "card_src": rel,
+                              "card_folders": ["not_an_owner"]})
+plan = edit.plan_edit(mod, req)
+check("a folder outside ownership is written, but said out loud",
+      [r for _s, r in plan.icon_copies]
+      == [f"ui/units/not_an_owner/#{unit3.dictionary}.tga"]
+      and any("ownership" in w for w in plan.warnings))
+
+# ---------------------------------------------------------------------------
+print("\n5) a file this tool writes carries the time it wrote it")
+# A mod's files come out of one archive sharing a timestamp to the second, and
+# shutil.copy2 carries the source's timestamps onto the copy - so an icon
+# replaced by another of the same mod landed with the very mtime it already had,
+# and every mtime-keyed cache downstream went on serving the old picture. That
+# is the whole of "I replaced the card and the tool still shows the old one".
+src_card = mod.data / rel
+twin = mod.data / f"ui/units/{own[-1]}/#{unit3.dictionary}.tga"
+twin.parent.mkdir(parents=True, exist_ok=True)
+twin.write_bytes(b"A DIFFERENT PICTURE")
+st = src_card.stat()
+os.utime(twin, ns=(st.st_atime_ns, st.st_mtime_ns))
+check("the two start on one mtime, which is the trap",
+      twin.stat().st_mtime_ns == src_card.stat().st_mtime_ns)
+req = edit.request_from_dict({"unit": unit3.type, "card_src": rel,
+                              "card_folders": [own[-1]]})
+plan = edit.plan_edit(mod, req)
+edit.apply_edit(plan)
+check("the copy landed", twin.read_bytes() == src_card.read_bytes())
+check("and its mtime moved, so an mtime-keyed cache notices",
+      twin.stat().st_mtime_ns != src_card.stat().st_mtime_ns)
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)

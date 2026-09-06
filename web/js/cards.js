@@ -204,7 +204,7 @@ function cdUnusedBody(k){
       <input type="checkbox" ${p.remove.has(u.name)?'checked':''}
         onchange="cdPickOne('${k.kind}','remove','${q1(esc(u.name))}',this.checked)">
       <img class="cdthumb" loading="lazy" onerror="this.style.visibility='hidden'"
-        src="/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(u.showing)}" alt="">
+        src="/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(u.showing)}${iconBust()}" alt="">
       <div class="grow"><span class="nm">${esc(u.name)}</span>
         <div class="sub">${u.folders.length} folder${u.folders.length===1?'':'s'}:
           ${esc(u.folders.slice(0,8).join(', '))}${u.folders.length>8?` +${u.folders.length-8}`:''}</div></div>
@@ -226,7 +226,7 @@ function cdDupBody(k){
       <input type="checkbox" ${p.cons.has(d.name)?'checked':''}
         onchange="cdPickOne('${k.kind}','cons','${q1(esc(d.name))}',this.checked)">
       <img class="cdthumb" loading="lazy" onerror="this.style.visibility='hidden'"
-        src="/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(d.options[0].rel)}" alt="">
+        src="/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(d.options[0].rel)}${iconBust()}" alt="">
       <div class="grow"><span class="nm">${esc(d.name)}</span>
         <span class="badge">${esc(d.unit)}</span>
         <div class="sub">${d.folders.length} identical cop${d.folders.length===1?'y':'ies'}:
@@ -268,7 +268,7 @@ already share, for every row at once. Read them first.">Take the commonest, ever
               ${p.choose[v.name]===o.digest?'checked':''}
               onchange="cdChoose('${k.kind}','${q1(esc(v.name))}','${esc(o.digest)}')">
             <img loading="lazy" onerror="this.style.visibility='hidden'"
-              src="/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(o.rel)}" alt="">
+              src="/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(o.rel)}${iconBust()}" alt="">
             <span class="count">${esc(o.folders.slice(0,3).join(', '))}${
               o.folders.length>3?` +${o.folders.length-3}`:''}${
               o.in_merc?' ·&nbsp;merc':''}</span></label>`).join('')}

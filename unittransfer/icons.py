@@ -36,13 +36,21 @@ class IconCache:
 
     def _key(self, src: Path, max_side: int = 0) -> Path:
         try:
-            mtime = src.stat().st_mtime_ns
+            st = src.stat()
+            mtime, size = st.st_mtime_ns, st.st_size
         except OSError:
-            mtime = 0
+            mtime, size = 0, -1
         # `max_side` is part of the key: the same file served whole and served
         # shrunk are two different answers, and one must not be handed out for
         # the other.
-        h = hashlib.sha1(f"{src}|{mtime}|{max_side}".encode("utf-8")).hexdigest()[:20]
+        # The SIZE is part of it because the mtime alone has been caught lying.
+        # A mod's files are unpacked from one archive and share a timestamp to
+        # the second, and `shutil.copy2` carries a source's timestamps onto the
+        # copy - so replacing one unit card with another of the same mod left
+        # this key unchanged and the old picture cached. `logutil.stamp_written`
+        # is the real fix, on the writing side; this is the belt to its braces,
+        # and costs nothing since the stat is already being taken.
+        h = hashlib.sha1(f"{src}|{mtime}|{size}|{max_side}".encode("utf-8")).hexdigest()[:20]
         return self.cache_dir / f"{h}.png"
 
     def is_cached(self, src: Optional[Path]) -> bool:

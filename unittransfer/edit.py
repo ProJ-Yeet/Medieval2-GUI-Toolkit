@@ -31,6 +31,7 @@ existing Undo / "Revert to here" buttons work on edits too.
 from __future__ import annotations
 
 import hashlib
+import re
 import shutil
 import time
 from dataclasses import dataclass, field, replace as _dc_replace
@@ -40,7 +41,7 @@ from typing import Dict, List, Optional, Tuple
 from . import config
 from . import edu as edu_mod
 from . import eop, localization, modeldb, unitrefs
-from .logutil import counted, file_op, fingerprint, log
+from .logutil import counted, file_op, fingerprint, log, stamp_written
 from .mod import Mod
 # where a unit falls back to when card_pic_dir / info_pic_dir isn't pinned; shared
 # with the transfer engine so both put mercenary icons in the same place
@@ -144,11 +145,17 @@ class EditRequest:
     loc: Optional[dict] = None                   # {name, descr, descr_short}
     model_edits: List[ModelEdit] = field(default_factory=list)
     new_models: List[NewModel] = field(default_factory=list)
-    # Replacement card / info card imported from anywhere on disk. Copied into
-    # EVERY owning faction's folder under the dictionary-derived name - see
-    # :func:`_plan_icon_import`.
+    # Replacement card / info card imported from anywhere on disk, or named by
+    # its path under the mod's own data/. Copied into every owning faction's
+    # folder under the dictionary-derived name - see :func:`_plan_icon_import`.
     card_src: str = ""
     info_src: str = ""
+    # Which folders that copy actually reaches. Empty means every owning faction
+    # plus the merc fallback, which is what one picture for the whole unit means.
+    # A subset is a deliberate "these factions and not the others": a mod that
+    # ships different art per faction is not always wrong to.
+    card_folders: List[str] = field(default_factory=list)
+    info_folders: List[str] = field(default_factory=list)
     remove_old_icons: bool = False               # after a dictionary rename
     delete: bool = False
     delete_options: DeleteOptions = field(default_factory=DeleteOptions)
@@ -177,6 +184,23 @@ def _clean_paths(d) -> Dict[str, str]:
     return {str(k): str(v).replace("\\", "/").strip()
             for k, v in (d or {}).items()
             if str(k) in known and str(v).strip()}
+
+
+#: A faction folder name, as it appears under ``data/ui/units``. Anything the
+#: page sends is checked against this before it becomes part of a path: the
+#: folder list is the one place a card import takes a directory name from the
+#: browser, and a name that is not a plain folder name has no business there.
+_FOLDER_OK = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def _folder_list(v) -> List[str]:
+    """Clean a list of faction folder names, dropping anything path-shaped."""
+    out: List[str] = []
+    for x in (v or []):
+        name = str(x).strip().lower()
+        if name and name not in (".", "..") and _FOLDER_OK.match(name) and name not in out:
+            out.append(name)
+    return out
 
 
 def request_from_dict(d: dict) -> EditRequest:
@@ -222,6 +246,8 @@ def request_from_dict(d: dict) -> EditRequest:
                     for n in (d.get("new_models") or [])],
         card_src=(d.get("card_src") or "").strip(),
         info_src=(d.get("info_src") or "").strip(),
+        card_folders=_folder_list(d.get("card_folders")),
+        info_folders=_folder_list(d.get("info_folders")),
         remove_old_icons=bool(d.get("remove_old_icons", False)),
         delete=bool(d.get("delete", False)),
         delete_options=DeleteOptions(
@@ -399,6 +425,11 @@ def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> N
     Ownership is read from this same save's edits, so importing a card and
     changing ownership in one go still lands the file where the *new* factions
     will look.
+
+    ``card_folders`` / ``info_folders`` narrow that fan-out to the folders the
+    user ticked. A mod that ships different art per faction is not always wrong
+    to, so "replace it for these two and leave the rest" is a real request; an
+    empty list keeps the old meaning, which is all of them.
     """
     if not (req.card_src or req.info_src):
         return
@@ -408,11 +439,13 @@ def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> N
     # slave alone still needs a folder; slave alongside real factions does not
     folders = [f for f in own if f != "slave"] or own
 
-    for kind, src_str, merc_folder, base_dir, stem_fmt in (
-            ("card", req.card_src, MERC_CARD_DIR, "ui/units", "#{}"),
-            ("info", req.info_src, MERC_INFO_DIR, "ui/unit_info", "{}_info")):
+    for kind, src_str, merc_folder, base_dir, stem_fmt, chosen in (
+            ("card", req.card_src, MERC_CARD_DIR, "ui/units", "#{}", req.card_folders),
+            ("info", req.info_src, MERC_INFO_DIR, "ui/unit_info", "{}_info",
+             req.info_folders)):
         if not src_str:
             continue
+        want = chosen or list(dict.fromkeys(folders + [merc_folder]))
         src = _resolve_icon_src(mod, src_str)
         if src is None:
             plan.errors.append(f"{kind} image not found: {src_str}")
@@ -420,13 +453,22 @@ def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> N
         native = src.suffix.lower() in ICON_NATIVE_EXTS
         ext = src.suffix.lower() if native else ".tga"
         fname = stem_fmt.format(plan.resolved_dict) + ext
-        dests = [f"{base_dir}/{folder}/{fname}"
-                 for folder in dict.fromkeys(folders + [merc_folder])]
+        dests = [f"{base_dir}/{folder}/{fname}" for folder in dict.fromkeys(want)]
         if not dests:
             plan.warnings.append(
                 f"'{unit.type}' has no ownership, so there is no faction folder "
                 f"to put the {kind} in")
             continue
+        # A folder outside the unit's ownership is written anyway - the user
+        # asked for it and a mod may well pin a card somewhere the EDU does not
+        # mention - but it is said out loud, because the game will not read it
+        # under a faction that cannot field the unit.
+        stray = [f for f in want if f not in folders and f != merc_folder]
+        if stray:
+            plan.warnings.append(
+                f"{kind}: {', '.join(stray)} " + ("is" if len(stray) == 1 else "are")
+                + f" not in '{unit.type}'s ownership, so the game will not look "
+                  f"for the {kind} there")
         written = 0
         for rel in dests:
             # Picking one of the unit's own pictures to spread everywhere makes
@@ -445,9 +487,12 @@ def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> N
                 f"{kind} '{src.name}' is already the picture in every folder "
                 f"this unit is looked up under - nothing to copy")
             continue
+        scope = ("every folder this unit is looked up under"
+                 if not chosen else ", ".join(dict.fromkeys(want)))
         plan.changes.append(
             f"{kind} imported from {src.name} -> {written} faction folder(s) "
-            f"as {fname}" + ("" if native else f" (converted from {src.suffix})"))
+            f"as {fname} ({scope})"
+            + ("" if native else f" (converted from {src.suffix})"))
         # A card living under the OLD dictionary name in those same folders would
         # keep winning the lookup after a rename, so flag it rather than leaving
         # two files that differ only by name.
@@ -1467,6 +1512,7 @@ def apply_edit(plan: EditPlan) -> Dict:
         target = backup_and(rel)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, target)
+        stamp_written(target)
         file_op("COPY", target, f"from {src}")
 
     if plan.edu_text:

@@ -117,7 +117,9 @@ const state={mods:[],src:null,dst:null,xferDst:null,data:null,destData:null,fact
   bld:null, bldReturn:null,
   // the modules opened before this one, oldest first - what the Back button
   // walks out through once every dialog above it is shut (see NAV_LAYERS)
-  modeTrail:[]};
+  modeTrail:[],
+  // bumped by imgBust() whenever this tool writes a picture; see iconBust()
+  iconV:0};
 
 const VANILLA_UNIT_LIMIT=500;   // M2TW vanilla EDU cap; M2TWEOP/EOP raise it.
 const VANILLA_FACTION_LIMIT=31; // M2TW vanilla descr_sm_factions cap; M2EX raises it.
@@ -354,7 +356,19 @@ function facCheckRow(code,name,onchange,checked,note,edited){
     ${behind||edited?`<span class="fc">${esc(behind)}${
       edited?(behind?' · ':'')+(checked?'added by you':'removed by you'):''}</span>`:''}</div>`;
 }
-const iconUrl=(mod,type,kind)=>`/icon?mod=${encodeURIComponent(mod)}&type=${encodeURIComponent(type)}&kind=${kind||'card'}`;
+/* The stamp every picture URL carries once this tool has written one.
+
+   `Cache-Control: no-cache` is on every reply, and the browser mostly honours
+   it - but a card replaced by the editor kept showing the old picture anyway,
+   because patching the <img> tags that were on screen at the time (imgBust)
+   only ever fixed those, and the very next render built the URL again from
+   scratch. The stamp lives in state instead, so every URL built after a write
+   is a URL the cache has never seen. Zero until something is written, so a
+   normal session's URLs are exactly what they were.
+   `imgUrlOf` strips `_ib` again, which is what keeps a busted picture
+   right-clickable. */
+const iconBust=()=>state.iconV?`&_ib=${state.iconV}`:'';
+const iconUrl=(mod,type,kind)=>`/icon?mod=${encodeURIComponent(mod)}&type=${encodeURIComponent(type)}&kind=${kind||'card'}`+iconBust();
 // Icon requests can be dropped when a page fires dozens at once (connection
 // bursts). A missing icon returns a valid blank PNG (onload), so onerror only
 // fires on a genuine connection failure - retry it a few times with backoff.

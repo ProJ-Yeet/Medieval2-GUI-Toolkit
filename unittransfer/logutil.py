@@ -280,6 +280,31 @@ def fingerprint(mod) -> None:
         log.debug("could not fingerprint %r", getattr(mod, "name", mod), exc_info=True)
 
 
+def stamp_written(path) -> None:
+    """Give a file this tool just wrote into a mod the time it wrote it.
+
+    ``shutil.copy2`` carries the SOURCE's timestamps onto the copy. That is
+    right for a backup, where the point is to preserve the original, and wrong
+    for a file being put into a mod: the files of one mod are unpacked from one
+    archive and share a timestamp to the second, so copying one unit card over
+    another left the destination with the very mtime it already had.
+
+    Everything downstream that asks "has this changed?" by looking at the mtime
+    then answers no - the icon cache's key is ``path|mtime|size``, so it went on
+    handing out the PNG of the picture that had just been replaced, and the user
+    saw the old card until the whole tool was restarted. Measured on
+    Third_Age_Reforged, where every file under ``data/ui/units`` is stamped
+    2024-06-17.
+
+    Failure is ignored on purpose: a read-only timestamp is not a reason to fail
+    a save that has already written the bytes.
+    """
+    try:
+        os.utime(path, None)
+    except OSError:
+        pass
+
+
 def file_op(verb: str, path, note: str = "", size: Optional[int] = None) -> None:
     """One line per file the tool touched. DEBUG: the file keeps it, the console doesn't.
 

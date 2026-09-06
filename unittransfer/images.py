@@ -44,7 +44,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from .logutil import file_op, log
+from .logutil import file_op, log, stamp_written
 
 #: What the engine reads. A picked file with one of these extensions is copied
 #: verbatim; anything else is converted (see :func:`encode`).
@@ -454,6 +454,7 @@ def apply(mod, url: str, src_path: str, vanilla_root=None) -> Dict:
         target = keep(row["rel"])
         if data is None:
             shutil.copy2(src, target)
+            stamp_written(target)
             file_op("COPY", target, f"from {src}")
         else:
             target.write_bytes(data)

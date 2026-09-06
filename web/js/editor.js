@@ -181,6 +181,9 @@ function edPayload(extra){
     field_overrides:e.ov,remove_fields:[...e.rm],loc:locChanged?e.loc:null,
     model_edits:edModelEdits(),new_models:e.newModels,
     card_src:e.cardSrc||'',info_src:e.infoSrc||'',
+    // which faction folders that card reaches; empty = every one of them
+    card_folders:edIcoPayloadFolders('cardSrc'),
+    info_folders:edIcoPayloadFolders('infoSrc'),
     // absent (not "") unless the user touched it - clearing a tier and never
     // setting one are different requests, and the server tells them apart
     tier:(e.tierEdit&&'tier' in e.tierEdit)?e.tierEdit.tier:null,
@@ -601,7 +604,7 @@ function edIdentity(){
    `edit._resolve_icon_src` reads both out of the same field on the way back. */
 const edSrcAbs=s=>/^([a-zA-Z]:[\\/]|[\\/])/.test(s||'');
 const edSrcUrl=s=>edSrcAbs(s)?'/preview_image?path='+enc(s)
-  :`/icon?mod=${enc(state.ed.mod)}&kind=modfile&rel=${enc(s)}`;
+  :`/icon?mod=${enc(state.ed.mod)}&kind=modfile&rel=${enc(s)}${iconBust()}`;
 function edIconSlot(kind){
   const e=state.ed, card=kind==='card';
   const key=card?'cardSrc':'infoSrc', src=e[key]||'';
@@ -653,11 +656,14 @@ function edCardVariants(kind,title){
       // picture itself, so an unloaded one is a zero-high box, and a zero-high
       // box never scrolls into view to be loaded. There are two or three of
       // these, not three hundred.
+      // The stamp goes on the `src` only: imgPick sends the URL back to the
+      // server as the question "which file is this", and a cache-buster is no
+      // part of that question.
       const url=`/icon?mod=${enc(e.mod)}&kind=modfile&rel=${enc(r.rel)}`;
       return `<figure>
       <div class="icowrap"><img onerror="iconRetry(this)"
         title="Replace this picture" onclick="imgPick('${q1(esc(url))}','edRenderTab')"
-        src="${url}" alt="">${imgEditBtn(url,'edRenderTab')}</div>
+        src="${url}${iconBust()}" alt="">${imgEditBtn(url,'edRenderTab')}</div>
       <figcaption>
         <span class="count">${esc(r.rel)}</span>
         <span class="tags">${r.factions.map(f=>`<span class="badge">${esc(f)}</span>`).join('')}</span>
@@ -697,61 +703,131 @@ async function edReveal(rel){
   const r=await api.post('/api/reveal',{mod:state.ed.mod,rel});
   if(!r||!r.ok)toast((r&&r.error)||'that folder could not be opened');
 }
-/* ---- "Replace for every faction": one of these, or one off disk ----------
-   Two different jobs wear that one button. A unit whose factions ship several
-   DIFFERENT pictures already has the art - the question is only which of them
-   everybody should get - and the file dialog was a poor way to ask it: you had
-   to know the picture existed, find its faction folder in Explorer and hand the
-   file back. So what is on disk is offered first, as pictures, and "a file of
-   my own" is the row underneath.
+/* ---- Replacing a card: which folders, and which picture ------------------
+   The game looks a card up under the PLAYER's faction folder, so one unit's
+   card is a file per owning faction. Two questions follow from that, and the
+   old button asked neither: WHERE the new picture goes, and WHICH picture.
 
-   A picked variant is staged as its path under the mod's own `data/`, which is
+   Where: every owning faction plus the mercs/merc fallback, all ticked. A mod
+   that ships different art per faction is not always wrong to, so untick the
+   ones that should keep what they have and those are left alone.
+
+   Which: a file off disk, always - and, when the unit's folders really do hold
+   more than one DIFFERENT picture, those pictures too, so "make them all use
+   this one" is a click rather than a hunt through Explorer for the file. With
+   one picture everywhere there is nothing to standardise and that half is not
+   drawn.
+
+   A picked picture is staged as its path under the mod's own `data/`, which is
    the only name the page has for it; `edit._resolve_icon_src` reads both that
    and an absolute one out of the same field. */
 let edIconBack=null;
+const edIcoKind=key=>key==='cardSrc'?'card':'info';
+const edIcoMerc=kind=>kind==='card'?'mercs':'merc';
+// Every folder this unit's card is looked up under, ownership first and the
+// fallback last, which is the order _plan_icon_import writes them in.
+function edIcoFolders(kind){
+  return edOwnFolders().concat([edIcoMerc(kind)])
+    .filter((f,i,a)=>f&&a.indexOf(f)===i);
+}
+// What each folder holds today, out of the server's content-hashed grouping:
+// `folder -> the index of its variant`, so a row can show the picture it is
+// about to lose.
+function edIcoHas(kind){
+  const rows=((state.ed.d.icon_variants||{})[kind])||[],out={};
+  rows.forEach((r,i)=>(r.factions||[]).forEach(f=>{out[f]=i;}));
+  return out;
+}
+// The ticked folders, as a Set. The dialog opens with all of them ticked, which
+// is what an empty `card_folders` means to the server.
+function edIcoSel(key){
+  const e=state.ed;
+  e.icoSel=e.icoSel||{};
+  if(!e.icoSel[key])e.icoSel[key]=new Set(edIcoFolders(edIcoKind(key)));
+  return e.icoSel[key];
+}
 function edPickIcon(key){
-  const e=state.ed,kind=(key==='cardSrc')?'card':'info';
-  const rows=((e.d.icon_variants||{})[kind])||[];
-  // nothing on disk to choose between: go straight to the file picker rather
-  // than open a dialog whose only content is one button
-  if(!rows.length)return edBrowseIcon(key);
-  const modal=document.getElementById('modal');
   // the 3D preview is a live canvas, so it is taken out of the dialog rather
   // than thrown away with it - the same move renderEditor makes
   edPrevDetach();
   edIconBack={scroll:stashPlace()};
+  edIcoSel(key);
+  edIcoRender(key);
+}
+function edIcoRender(key){
+  const e=state.ed,kind=edIcoKind(key);
+  const rows=((e.d.icon_variants||{})[kind])||[];
   const what=kind==='card'?'unit card':'info card';
   const fname=kind==='card'?`#${e.d.dictionary}.tga`:`${e.d.dictionary}_info.tga`;
-  const folders=edOwnFolders();
-  modal.innerHTML=`<h2>Replace the ${what} everywhere</h2>
+  const folders=edIcoFolders(kind),merc=edIcoMerc(kind),sel=edIcoSel(key),has=edIcoHas(kind);
+  const n=folders.filter(f=>sel.has(f)).length;
+  const thumb=i=>rows[i]
+    ? `<img class="edicothumb" onerror="iconRetry(this)" alt=""
+        src="/icon?mod=${enc(e.mod)}&kind=modfile&rel=${enc(rows[i].rel)}${iconBust()}">`
+    : `<span class="edicothumb none">none</span>`;
+  document.getElementById('modal').innerHTML=`<h2>Replace the ${what}
+      <span class="pill">${esc(e.d.dictionary)}</span></h2>
     <div class="mbody">
       <div class="count">${docPoints(
-        `Whichever picture you pick is copied into every faction folder that owns this unit,
-         named <code>${esc(fname)}</code>.`,[
-        folders.length
-          ?`That is <b>${folders.length}</b> folder(s):
-            <code>${folders.map(esc).join('</code> <code>')}</code>, plus the merc fallback.`
-          :`<b class="w-warn">This unit has no ownership</b>, so there is no faction folder to copy
-            into. Set <code>ownership</code> first.`,
+        `The game looks a ${what} up under the <i>player's</i> faction folder, so this writes one
+         copy per folder, named <code>${esc(fname)}</code>.`,[
+        'Untick a folder to leave the picture it already has alone.',
         'Nothing is written until you press Save, and every file it touches is backed up first.'])}
       </div>
-      <div class="k" style="margin-top:12px">${rows.length} picture${rows.length===1?'':'s'}
-        this unit already has</div>
-      <div class="cardvars" data-kind="${kind}"><div class="cardvarlist">${rows.map((r,i)=>{
-        const url=`/icon?mod=${enc(e.mod)}&kind=modfile&rel=${enc(r.rel)}`;
-        return `<figure class="edicopick" onclick="edTakeIcon('${key}',${i})"
-            title="Copy this one into every faction folder">
-          <div class="icowrap"><img onerror="iconRetry(this)" src="${url}" alt=""></div>
-          <figcaption>
-            <span class="count">${esc(r.rel)}</span>
-            <span class="tags">${r.factions.map(f=>`<span class="badge">${esc(f)}</span>`).join('')}</span>
-            <button onclick="event.stopPropagation();edTakeIcon('${key}',${i})">Use this one</button>
-          </figcaption></figure>`;}).join('')}</div></div>
+
+      <fieldset style="margin-top:12px"><legend>Where it goes</legend>
+        ${folders.length?`
+        <div class="barrow">
+          <button onclick="edIcoAll('${key}',true)">Replace for all</button>
+          <button onclick="edIcoAll('${key}',false)">None</button>
+          <span class="count">${n} of ${folders.length} folder${folders.length===1?'':'s'} ticked</span>
+        </div>
+        <div class="edicofolders">${folders.map(f=>`
+          <label class="edicofold${sel.has(f)?' on':''}">
+            <input type="checkbox" ${sel.has(f)?'checked':''}
+              onchange="edIcoToggle('${key}','${q1(esc(f))}',this.checked)">
+            ${thumb(has[f])}
+            <span class="grow">
+              <span class="nm">${esc(f===merc?'Mercenary fallback':edFacLabel(f))}</span>
+              <span class="count">${esc(f)}${f===merc
+                ? ' · what the game reads when a faction folder has nothing':''}</span></span>
+          </label>`).join('')}</div>`
+        :`<div class="count w-warn">This unit has no ownership, so there is no faction folder to
+           copy into. Set <code>ownership</code> on the EDU fields tab first.</div>`}
+      </fieldset>
+
+      ${rows.length>1?`<fieldset style="margin-top:12px">
+        <legend>Use one of the pictures this unit already has</legend>
+        <div class="count">Its folders hold <b>${rows.length}</b> different ${esc(what)}s.
+          Pick one and every ticked folder gets that picture.</div>
+        <div class="cardvars" data-kind="${kind}"><div class="cardvarlist">${rows.map((r,i)=>`
+          <figure class="edicopick" onclick="edTakeIcon('${key}',${i})"
+              title="Give every ticked folder this picture">
+            <div class="icowrap"><img onerror="iconRetry(this)" alt=""
+              src="/icon?mod=${enc(e.mod)}&kind=modfile&rel=${enc(r.rel)}${iconBust()}"></div>
+            <figcaption>
+              <span class="count">${esc(r.rel)}</span>
+              <span class="tags">${r.factions.map(f=>
+                `<span class="badge">${esc(f)}</span>`).join('')}</span>
+              <button onclick="event.stopPropagation();edTakeIcon('${key}',${i})">Use this one</button>
+            </figcaption></figure>`).join('')}</div></div>
+      </fieldset>`:''}
     </div>
     <div class="foot">
       <button onclick="edIconCancel()">Cancel</button>
-      <button class="primary" onclick="edBrowseIcon('${key}')">Choose a file from disk…</button>
+      <button class="primary" ${n?'':'disabled'}
+        onclick="edBrowseIcon('${key}')">Choose a file from disk…</button>
     </div>`;
+}
+function edIcoToggle(key,folder,on){
+  const sel=edIcoSel(key);
+  on?sel.add(folder):sel.delete(folder);
+  edIcoRender(key);
+}
+function edIcoAll(key,on){
+  edIcoSel(key);                        // makes sure the map exists
+  state.ed.icoSel[key]=on?new Set(edIcoFolders(edIcoKind(key))):new Set();
+  edIcoRender(key);
 }
 // Back to the editor, rebuilt from state rather than from stashed markup: the
 // dialog is one screen deep and the whole editor is a render away, so the only
@@ -761,22 +837,38 @@ function edIconCancel(){
   renderEditor();
   if(back)usePlace(back.scroll);
 }
-function edTakeIcon(key,i){
-  const e=state.ed,kind=(key==='cardSrc')?'card':'info';
-  const row=(((e.d.icon_variants||{})[kind])||[])[i];
-  if(!row)return;
-  e[key]=row.rel;                       // mod-relative; the server resolves both
+/* What the save sends. All of them is the server's own default, and saying it
+   again would pin the list to the ownership as it stands rather than as this
+   same save leaves it - so a full tick sends nothing and only a real subset is
+   spelled out. */
+function edIcoPayloadFolders(key){
+  const sel=state.ed.icoSel&&state.ed.icoSel[key];
+  if(!sel)return [];
+  const all=edIcoFolders(edIcoKind(key)),picked=all.filter(f=>sel.has(f));
+  return picked.length===all.length?[]:picked;
+}
+function edIcoStaged(key,label){
+  const folders=edIcoPayloadFolders(key);
   edStale(); edIconCancel();
-  toast(`Staged ${esc(row.rel.split('/').pop())} for every faction folder. Save to write it.`,4200);
+  toast(`Staged ${label} for ${folders.length?folders.join(', ')
+        :'every folder this unit is looked up under'}. Save to write it.`,4600);
+}
+function edTakeIcon(key,i){
+  const e=state.ed,row=(((e.d.icon_variants||{})[edIcoKind(key)])||[])[i];
+  if(!row)return;
+  if(!edIcoSel(key).size)return toast('Tick at least one folder to replace');
+  e[key]=row.rel;                       // mod-relative; the server resolves both
+  edIcoStaged(key,row.rel.split('/').pop());
 }
 async function edBrowseIcon(key){
-  const kind=(key==='cardSrc')?'unit card':'info card';
+  const what=edIcoKind(key)==='card'?'unit card':'info card';
   const r=await api.post('/api/browse_file',
-    {title:`Select the image to use as the ${kind}`,
+    {title:`Select the image to use as the ${what}`,
      filter:'Images (*.tga;*.dds;*.png;*.jpg;*.jpeg;*.bmp)|*.tga;*.dds;*.png;*.jpg;*.jpeg;*.bmp|All files (*.*)|*.*'});
   if(!r.path)return edIconBack?edIconCancel():undefined;
   state.ed[key]=r.path;
-  edStale(); edIconBack?edIconCancel():edRenderTab();
+  if(edIconBack)edIcoStaged(key,r.path.split(/[\\/]/).pop());
+  else {edStale(); edRenderTab();}
 }
 /* ---- the tier: the toolkit's own note about a unit, not a game field ----
    Every other box on this screen writes a line the engine reads. This one does
@@ -1587,8 +1679,10 @@ function edAddArmourTier(src){
           mesh_src:'',texture_src:'',normal_src:'',sprite_src:'',
           attach_texture_src:'',attach_normal_src:'',
           // the tier was written into armour_ug_models above, so the EDU slot is
-          // already pointed at it - assigning again would append it twice
-          mesh_all_lods:true,apply_to_attach:false,assign_to:'',_tier:tier};
+          // already pointed at it - assigning again would append it twice, and
+          // `_named` is what that line says, so a rename in this form follows
+          mesh_all_lods:true,apply_to_attach:false,assign_to:'',
+          _named:spec.name,_tier:tier};
   e.ug=null; e.tab='models'; renderEditor();
 }
 
@@ -2032,7 +2126,13 @@ function edNewModelForm(){
     <div class="count" style="margin-top:3px">Sprites, the faction (ownership) texture records and the
       footer (animations, skeletons and torch) are copied from that entry, so the new model stays valid.</div>
     <div class="fbrow"><span class="k">Entry name</span>
-      <input value="${esc(f.name)}" oninput="edForm('name',this.value)"><span></span></div>
+      <input value="${esc(f.name)}" oninput="edForm('name',this.value)">
+      <span></span></div>
+    ${(()=>{const refs=edPendingRefs(f._named||'');
+      return refs.length?`<div class="fbrow"><span class="k"></span>
+        <div class="count">Renaming it here rewrites
+          <code>${refs.map(esc).join('</code> <code>')}</code> to match.</div>
+        <span></span></div>`:'';})()}
     <div class="fbrow"><span class="k">Copy files into</span>
       <input value="${esc(f.dest_dir)}" oninput="edForm('dest_dir',this.value)"
         placeholder="unit_models/my_folder">
@@ -2081,13 +2181,57 @@ async function edPickDir(){
   const r=await api.post('/api/browse_folder',{title:'Folder inside the mod’s data\\ to copy the files into'});
   if(r.path){state.ed.form.dest_dir=relInMod(r.path); edRenderTab();}
 }
+/* ---- a pending entry that an EDU line already names -----------------------
+   Mode 4 of the armour-tier menu writes the tier into `armour_ug_models` the
+   moment it is added and only then opens the form, so renaming the entry in
+   that form left the unit pointing at a name that was never going to exist.
+   The lines the PAGE wrote are followed here; `assign_to` needs none of this,
+   because the server writes whatever the entry is called at save time.
+
+   `_named` is what the entry is called in those lines right now, which is not
+   always what it was called last: the form can be reopened and renamed again. */
+function edPendingRefs(name){
+  const e=state.ed,out=[];
+  if(!name)return out;
+  if(csv(edFieldVal('armour_ug_models')).includes(name))out.push('armour_ug_models');
+  if((edFieldVal('soldier').split(',')[0]||'').trim().toLowerCase()===name)out.push('soldier');
+  e.d.fields.forEach(([l])=>{
+    if(l.replace(/#\d+$/,'')==='officer'
+       &&(edFieldVal(l)||'').trim().toLowerCase()===name)out.push(l);
+  });
+  return out;
+}
+function edRenamePending(from,to){
+  const e=state.ed,hit=edPendingRefs(from);
+  if(!from||!to||from===to||!hit.length)return [];
+  hit.forEach(label=>{
+    if(label==='armour_ug_models'){
+      edSetField(label,csv(edFieldVal(label)).map(m=>m===from?to:m).join(', '));
+    }else if(label==='soldier'){
+      const parts=edFieldVal(label).split(',');
+      const lead=parts[0].slice(0,parts[0].length-parts[0].replace(/^\s+/,'').length);
+      parts[0]=lead+to; edSetField(label,parts.join(','));
+    }else{
+      edSetField(label,to);
+    }
+  });
+  return hit;
+}
 function edAddNewModel(){
   const e=state.ed,f=e.form;
   if(!f.name.trim()){toast('The new entry needs a name');return;}
   const entry=Object.assign({},f,{name:f.name.trim().toLowerCase()});
   const at=entry._editing; delete entry._editing;
+  // what the unit's own lines call it at this moment: the name this form opened
+  // on for a tier, or the pending entry's previous name when it is being edited
+  const prev=(at===undefined)?(f._named||''):((e.newModels[at]||{}).name||'');
   if(at===undefined)e.newModels.push(entry); else e.newModels[at]=entry;
+  const moved=edRenamePending(prev,entry.name);
+  entry._named=moved.length?entry.name:(prev?prev:entry._named||'');
   e.form=null; edRenderTab(); edPreview();
+  if(moved.length)
+    toast(`Renamed to \u201c${entry.name}\u201d, and ${moved.join(' and ')} follow${
+      moved.length===1?'s':''} it \u2713`,4200);
 }
 // Discarding a pending entry has to undo what adding it changed - an armour tier
 // also wrote armour_ug_models / armour_ug_levels.

@@ -29,6 +29,7 @@ one containing `mods`).
 | Unit Editor | Change, clone or delete the units of a single mod |
 | BMDB + Sprites | Edit any `battle_models.modeldb` entry, view models in 3D, and clean out what nothing references |
 | Buildings | Browse and edit `export_descr_buildings.txt`, including recruitment |
+| Campaign Map | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, check the whole map against what the game will accept |
 | Unit Sounds | Choose which voice bank entry each unit uses |
 | Sprites | Generate and wire up the far-LOD unit sprites |
 | Strings | Read and write the compiled `data/text/*.txt.strings.bin` files |

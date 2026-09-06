@@ -345,7 +345,7 @@ function facPictures(d){
     No unpacked pictures for <code>${esc(d.slot)}</code>. Normal: most mods keep
     faction art inside the game's <code>.pack</code> archives.</div>`;
   return `<div class="facpics">${pics.map(p => {
-    const url = `/icon?mod=${enc(state.fac.mod)}&kind=faction&rel=${enc(p.rel)}`;
+    const url = `/icon?mod=${enc(state.fac.mod)}&kind=faction&rel=${enc(p.rel)}${iconBust()}`;
     return `<figure>
       <div class="icowrap"><img loading="lazy" onerror="iconRetry(this)"
         title="Replace this picture" onclick="imgPick('${q1(esc(url))}','facPaint')"

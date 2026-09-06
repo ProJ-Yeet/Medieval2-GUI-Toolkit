@@ -236,13 +236,21 @@ async function imgApply(url, mod, src){
   toast(r.summary || 'picture replaced');
 }
 
-/* Every picture on the page, re-fetched.
+/* Every picture on the page, re-fetched - and every one built after this too.
+
    The server sends `Cache-Control: no-cache`, but a replacement can touch ten
    faction folders at once and the page has no idea which of its thumbnails came
    out of which of them - so the cheap, correct answer is to re-ask for all of
-   them rather than to guess. */
+   them rather than to guess.
+
+   The stamp goes into `state.iconV` as well as onto the tags that are on screen
+   right now. Patching the tags alone was the bug behind "the card I just
+   replaced is still the old one": a save closes the editor and re-renders the
+   unit grid, and that render built every URL again without the stamp, straight
+   back out of the browser's cache. `iconBust()` in core.js is the other half. */
 function imgBust(){
   const stamp = Date.now();
+  state.iconV = stamp;
   document.querySelectorAll('img').forEach(el => {
     const url = imgUrlOf(el);
     if(imgReplaceable(url)) el.src = url + '&_ib=' + stamp;

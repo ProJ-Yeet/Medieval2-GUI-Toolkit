@@ -98,7 +98,7 @@ function anRowHtml(r){
 }
 
 const anImgUrl = image => `/icon?mod=${enc(state.an.mod)}&kind=ancillary`
-  + `&image=${enc(image||'')}`;
+  + `&image=${enc(image||'')}` + iconBust();
 
 async function anOpen(name){
   activity('opened ancillary', `${name} in ${state.src}`);
