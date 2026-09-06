@@ -651,17 +651,20 @@ function buildFilter(id,values,key,useLabel){
 // host rather than from this menu (Sprites lives in the BMDB editor; Traits,
 // Ancillaries, Factions and Strings live in Minor Files).
 // `off:true` = in the build, but on offer nowhere - not this menu, not a Home
-// card, not the resume button. The Campaign Map editor is the only one, and it
-// is off on the 2.x line: 2.2.0 carries the Unit Editor fixes to everyone
-// without also putting a half-tested editor that WRITES to a campaign in front
-// of them. It ships as 3.0.0-beta, where the flag is cleared, and the whole of
-// the 2.x menu is unchanged by its absence.
+// card, not the resume button. The Campaign Map editor is the only mode that
+// ever carries it, and on `master` it is NOT set: the map is on here, because
+// this is where it gets worked on and used.
+// The flag goes on ONLY while a public 2.x release is being built - a 2.x zip
+// carries the Unit Editor fixes to everyone without also putting a half-tested
+// editor that WRITES to a campaign in front of them - and comes straight back
+// off in the commit after the upload. The beta line ships with it clear, like
+// master. The rest of the menu is unchanged either way.
 const MODES=[
   {id:'home',     icon:'⌂', name:'Home',          hint:'Your mods, and what each one is ready for'},
   {id:'edit',     icon:'✎', name:'Unit Editor',   hint:'Change, clone or delete one mod’s units'},
   {id:'transfer', icon:'⚔', name:'Unit Transfer', hint:'Copy a unit from one mod into another'},
   {id:'buildings',icon:'🏰', name:'Buildings',     hint:'Browse and edit export_descr_buildings'},
-  {id:'campmap',  icon:'🌍', name:'Campaign Map',  off:true, hint:'The ten map layers, the regions painted on them and what the game reads'},
+  {id:'campmap',  icon:'🌍', name:'Campaign Map',  hint:'The ten map layers, the regions painted on them and what the game reads'},
   {id:'bmdb',     icon:'🗄', name:'BMDB + Sprites Editor', hint:'What battle_models.modeldb names, and the sprites it points at'},
   {id:'sounds',   icon:'🔊', name:'Unit Sounds',   hint:'Pick which voice entry each unit speaks with'},
   {id:'minor',    icon:'🗺', name:'Minor Files',   hint:'Rebels, religions, cultures, traits, factions and text'},

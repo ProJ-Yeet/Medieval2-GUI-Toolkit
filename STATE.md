@@ -1,7 +1,7 @@
 # STATE - Medieval 2 GUI Toolkit
 _Updated: 2026-09-06 · **two lines now: beta 2026-09-06 with the campaign map,
-and v2.2.0 with it hidden** · Phase 17 done, plus ten unit-editor faults the user
-raised after it_
+and v2.2.0 with it hidden - `master` itself keeps the map on** · Phase 17 done,
+plus ten unit-editor faults the user raised after it_
 
 ## Next up
 **Phase 18a, four files nobody could edit** (`ROADMAP.md`, Backlog). Phase 17
@@ -25,9 +25,15 @@ With the map off, the Factions tab falls back to the standalone `factions` mode,
 which is where a mod with no map has always landed. `tests/test_web_modules.py`
 asserts the flag's handling and that fallback.
 
-**`master` currently carries `off:true` and `__version__ = "2.2.0"`.** To cut the
-next beta: clear the flag, bump to the beta version, build, upload as a
-pre-release. To cut the next 2.x: leave the flag set and bump the 2.x number.
+**`master` carries the map ON.** The flag is not set here and is not meant to
+be: this is the tree the map is developed and used in, so a checkout of `master`
+has the Campaign Map on its menu like every other mode.
+
+`off:true` is a **release-time edit, not a state of `master`**. To cut a 2.x
+subrelease: set the flag, bump the 2.x number, build, upload `--latest`, then
+**put the flag straight back off** in the next commit. To cut a beta: leave the
+flag alone (clear, as it is), set the dated version, build, upload as a
+pre-release. `__version__` currently says `2.2.0`.
 
 **Betas are named by the DATE they were released, not by a version.** There is no
 `v3.0.1-beta`; the beta cut today is `beta 2026-09-06`. Everything about a beta
@@ -126,10 +132,11 @@ Run `python tools/upstream_sync.py sync` first, as before every sub-phase.
 faults above are fixed and tested, and both builds are uploaded: beta 2026-09-06
 as a pre-release and v2.2.0 as latest.
 
-`unittransfer/__init__.py` says `2.2.0` and `campmap` carries `off:true`, so this
-tree is the 2.x line as it stands. The next cut off the beta line is 3.0.0 final;
-see **THE TWO RELEASE LINES** at the top for the one flag that switches between
-them.
+`unittransfer/__init__.py` says `2.2.0`, and `campmap` has **no** `off:true` -
+the map is on this tree, which is how `master` stays. The flag is set only for
+the minutes it takes to build and upload a 2.x zip, and reverted immediately
+after. The next cut off the beta line is 3.0.0 final; see **THE TWO RELEASE
+LINES** at the top.
 
 What Phase 17 changed, in one line each (numbers and reasoning in
 `ROADMAP_ARCHIVE.md`):
