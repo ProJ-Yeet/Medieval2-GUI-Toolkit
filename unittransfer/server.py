@@ -69,6 +69,10 @@ BMDB mode (the whole battle_models.modeldb, see :mod:`unittransfer.bmdb`)
   GET  /api/bmdb/entry?mod=&name= -> one entry, in the editor's model-card shape
   POST /api/bmdb/plan | /apply   -> edit entries that belong to no single unit
   GET  /api/bmdb/audit?mod=      -> unused entries, soldier-merge twins, orphan files
+  GET  /api/bmdb/dupes?mod=      -> names the file carries twice (the game reads the
+                                    first block and ignores the rest)
+  POST /api/bmdb/dupes_plan | /dupes_apply
+                                 -> rename or remove the copies the game never reads
   POST /api/bmdb/cleanup_plan    -> what a cleanup would move/remove
   POST /api/bmdb/cleanup_apply   -> do it (backups + undo, assets exported first)
   GET  /api/bmdb/recheck?mod=    -> what PAST cleanups removed that today's wider
@@ -354,8 +358,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from . import (bmdb, buildings, cards, cleaner, codeview, config, edit, modflags,
-               modfiles, sounds, stratmap)
+from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
+               modflags, modfiles, sounds, stratmap)
 from . import ancillaries, campaint, campmap, campstrat, cas, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
@@ -1586,7 +1590,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(_progress_read((q.get("job") or [""])[0]))
             if u.path in ("/api/bmdb/entries", "/api/bmdb/entry", "/api/bmdb/audit",
                           "/api/bmdb/skeletons", "/api/bmdb/ownership",
-                          "/api/bmdb/recheck"):
+                          "/api/bmdb/recheck", "/api/bmdb/dupes"):
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
@@ -1609,6 +1613,12 @@ class Handler(BaseHTTPRequestHandler):
                     # faction in the roster (mode=all)
                     return self._json(bmdb.ownership_audit(
                         mod, (q.get("mode") or ["units"])[0], progress=sink))
+                if u.path == "/api/bmdb/dupes":
+                    # names the file carries more than once. The game reads the
+                    # first block and ignores the rest, so the later ones are
+                    # models the mod cannot reach - see unittransfer.dupes
+                    log.info("BMDB   duplicate scan of %s", name)
+                    return self._json(dupes.audit(mod))
                 if u.path == "/api/bmdb/recheck":
                     # what PAST cleanups of this mod took out that today's wider
                     # nets would have refused to touch - see bmdb.recheck
@@ -1951,6 +1961,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._strat_cleanup(body))
             if u.path in ("/api/bmdb/ownership_plan", "/api/bmdb/ownership_apply"):
                 return self._json(self._bmdb_ownership(
+                    body, apply=u.path.endswith("apply")))
+            if u.path in ("/api/bmdb/dupes_plan", "/api/bmdb/dupes_apply"):
+                return self._json(self._bmdb_dupes(
                     body, apply=u.path.endswith("apply")))
             if u.path == "/api/bmdb/cleanup_plan":
                 mod = self.registry.get(body["mod"])
@@ -2916,6 +2929,30 @@ class Handler(BaseHTTPRequestHandler):
         if sink:
             sink(100, "done")
         return out
+
+    def _bmdb_dupes(self, body, apply: bool):
+        """Preview or write a tidy-up of the names the modeldb carries twice.
+
+        One method for both because the preview IS the plan: the page shows
+        exactly the object that gets applied, and the apply re-plans from the
+        mod rather than trusting what the page was shown, so a file that
+        changed underneath cannot be written from a stale set of block indices.
+        """
+        mod = self.registry.get(body["mod"])
+        plan = dupes.plan(mod, dupes.request_from_dict(body))
+        payload = {"plan": {"changes": plan.changes, "warnings": plan.warnings,
+                            "errors": plan.errors, "summary": plan.summary()},
+                   "removes": plan.removes, "renames": plan.renames}
+        if not apply or plan.errors:
+            return payload
+        log.info("BMDB   duplicates in %s: %d remove(s), %d rename(s)",
+                 mod.name, len(plan.removes), len(plan.renames))
+        out = dupes.apply(plan)
+        self.registry.invalidate(body["mod"])
+        payload["record"] = out["record"]
+        payload["removed"] = out["removed"]
+        payload["renamed"] = out["renamed"]
+        return payload
 
     def _bmdb_cleanup(self, body):
         sink = _progress_sink(body.get("job") or "")

@@ -55,7 +55,7 @@ function renderBmdb(){
   // at which there IS a row to show.
   if(!bmPrevNode && bmPrevOn() && rows.length) bmPrevMake(rows[0].name);
   const nUnused=state.bmdb.entries.filter(e=>e.unused).length;
-  const dupes=state.bmdb.count-state.bmdb.names;
+  const dupBlocks=state.bmdb.count-state.bmdb.names;
   count.textContent=`${rows.length}/${state.bmdb.names}`;
   // the 3D panel is a live canvas: detached, not rewritten (see bmPrevAttach)
   bmPrevDetach();
@@ -67,8 +67,12 @@ function renderBmdb(){
       <h2>${esc(state.src)} · ${state.bmdb.names} battle-model entries</h2>
       <span class="count">${nUnused} referenced by nothing${
         nUnused?'. <b class="w-warn">🧹 Clean up BMDB…</b> moves them out.':''}${
-        dupes?` · ${dupes} duplicate entry block${dupes===1?'':'s'} share a name with another`:''}</span>
+        dupBlocks?` · ${dupBlocks} entry block${dupBlocks===1?'':'s'} share a name with another,
+          so the game never reads ${dupBlocks===1?'it':'them'}`:''}</span>
       <span class="sp" style="flex:1"></span>
+      ${dupBlocks?`<button onclick="openDupes()"
+        title="M2TW reads the first entry with a name and ignores every later one. Rename the
+copies so they can be used, or remove them.">🧬 Duplicates (${dupBlocks})</button>`:''}
       <button class="${bmPrevNode?'on':''}" onclick="bmPrevToggle()"
         title="Draw a battle model beside the list, without leaving it. Every row
 gets its own 🧊 button once this is open.">🧊 View in 3D</button>

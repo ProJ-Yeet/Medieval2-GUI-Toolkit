@@ -198,12 +198,13 @@ def entry_users(mod: Mod) -> Dict[str, Dict[str, List[str]]]:
     return users
 
 
-def _describe_users(users: Dict[str, Dict[str, List[str]]], name: str) -> str:
+def describe_users(users: Dict[str, Dict[str, List[str]]], name: str) -> str:
     """``"the soldier model for Gondor Infantry, …"``, or ``""`` if nothing names it.
 
     Phrased for a warning line, so the slot is named as well as the referrer: the
     whole point of the message is that the entry is not the dead weight the list
-    it came from said it was.
+    it came from said it was. :mod:`unittransfer.dupes` shows the same sentence
+    for a duplicated name, which is why this one is not private.
     """
     slots = users.get(name)
     if not slots:
@@ -1310,7 +1311,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
         if held:
             plan.warnings.append(_kept_by_mention(name, held))
             continue
-        used = _describe_users(users, name)
+        used = describe_users(users, name)
         if used:
             # merges add their own entry to `doomed`, but only once the pairing
             # has passed every check below - being asked for is not enough.
@@ -2031,7 +2032,7 @@ def recheck(mod: Mod, progress: Progress = None) -> dict:
             if name in have_entries:
                 continue                       # already put back
             why = []
-            described = _describe_users(users, name)
+            described = describe_users(users, name)
             if described:
                 why.append("still referenced as " + described)
             row = mentions.get(name)
