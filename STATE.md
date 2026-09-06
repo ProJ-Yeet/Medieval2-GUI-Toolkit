@@ -1,24 +1,68 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-06 · **v3.0.0-beta released** - the campaign map editor, cut
-as a beta on the user's word · Phase 17 done, plus six unit-editor faults the
-user raised after it_
+_Updated: 2026-09-06 · **two lines now: beta 2026-09-06 with the campaign map,
+and v2.2.0 with it hidden** · Phase 17 done, plus ten unit-editor faults the user
+raised after it_
 
 ## Next up
 **Phase 18a, four files nobody could edit** (`ROADMAP.md`, Backlog). Phase 17
 closed on 2026-09-06 and its write-up is in `ROADMAP_ARCHIVE.md`.
 
-**The release is cut.** V3.0.0 went out as **v3.0.0-beta** on 2026-09-06:
-`unittransfer/__init__.py` says `3.0.0-beta`, the notes are
-`merge/RELEASE_3_0_0_BETA.md`, and the zip is on GitHub. It is a beta because it
+## THE TWO RELEASE LINES - read this before cutting anything
+The project ships on **two lines off this one `master`**, and which line a change
+belongs to is decided by whether it touches the campaign map:
+
+* **Not campaign-map** (unit editor, transfer, buildings, BMDB, sprites, sounds,
+  minor files, strings) → a **2.x subrelease with the map hidden**, uploaded
+  `--latest`. First one is **v2.2.0**, 2026-09-06.
+* **Campaign-map** → committed here and shipped on the **beta line**, uploaded
+  as a **pre-release**. First one is **beta 2026-09-06**.
+
+The switch is **one flag**: `off:true` on the `campmap` entry in `MODES` in
+`web/js/core.js`. `menuModes()` and `modeOffered()` in the same file are what the
+burger menu, Home's readiness cards, the resume button and Minor Files' Factions
+tab all read, so hiding the mode is that single edit and nothing else drifts.
+With the map off, the Factions tab falls back to the standalone `factions` mode,
+which is where a mod with no map has always landed. `tests/test_web_modules.py`
+asserts the flag's handling and that fallback.
+
+**`master` currently carries `off:true` and `__version__ = "2.2.0"`.** To cut the
+next beta: clear the flag, bump to the beta version, build, upload as a
+pre-release. To cut the next 2.x: leave the flag set and bump the 2.x number.
+
+**Betas are named by the DATE they were released, not by a version.** There is no
+`v3.0.1-beta`; the beta cut today is `beta 2026-09-06`. Everything about a beta
+carries that date:
+
+| | |
+|---|---|
+| git tag | `beta-2026-09-06` |
+| GitHub title | `M2 GUIkit beta 2026-09-06` |
+| `__version__` | `beta-2026-09-06` |
+| notes | `merge/RELEASE_BETA_2026_09_06.md` |
+| zip | `python build_release.py --version beta-2026-09-06` |
+
+The 2.x line keeps its numbers - `v2.2.0`, `v2.2.1` - because those are the
+releases people are meant to compare. A beta is a snapshot of the map work on the
+day it was taken, and the date says everything the number was pretending to.
+
+## The releases
+**v2.2.0, 2026-09-06** - the ten unit-editor fixes below, campaign map off the
+menu. Notes in `merge/RELEASE_2_2_0.md`. This is the `--latest` release.
+
+**beta 2026-09-06** - the same toolkit with the campaign map switched on. It was
+cut from this tree before the flag went in; the notes are
+`merge/RELEASE_BETA_2026_09_06.md` and the zip is on GitHub as a pre-release. Its
+git tag is still `v3.0.0-beta`, because a published download link is not worth
+breaking for a rename; every beta after it is tagged by date. It is a beta because it
 is the first build in anyone's hands that writes to a campaign; the known limits
 are listed at the bottom of the notes (forts, watchtowers and resources are read
 and drawn but not placed, the terrain render is flat, delete-a-region and
 create-a-campaign are not in it). A **3.0.0 final** is the same feature set with
 whatever the beta turns up fixed.
 
-**Six unit-editor faults, fixed 2026-09-06** before the cut, all reported by the
-user against Phase 13-15 code and all verified in a running browser on
-Third_Age_Reforged:
+**Ten unit-editor faults, fixed 2026-09-06**, all reported by the user against
+Phase 13-15 code and all verified in a running browser on Third_Age_Reforged.
+They are what v2.2.0 exists to ship, and they are in the beta too. The first six:
 
 - a new bmdb entry could not be given its own attachment texture / normal map -
   `NewModel.attach_texture_src` / `attach_normal_src`, and no sprite is written
@@ -72,12 +116,14 @@ Run `python tools/upstream_sync.py sync` first, as before every sub-phase.
 | 0-15j | done | shipped through v2.1.11. Exit criteria and write-ups in ROADMAP_ARCHIVE.md. |
 
 ## In-progress detail
-**Clean.** Nothing is mid-flight. Phase 17 is complete, the six unit-editor
-faults above are fixed and tested, and v3.0.0-beta is built and uploaded.
+**Clean.** Nothing is mid-flight. Phase 17 is complete, the ten unit-editor
+faults above are fixed and tested, and both builds are uploaded: beta 2026-09-06
+as a pre-release and v2.2.0 as latest.
 
-V3.0.0 is **cut, as v3.0.0-beta** - `unittransfer/__init__.py` says
-`3.0.0-beta` and the notes are `merge/RELEASE_3_0_0_BETA.md`. The next cut off
-this line is 3.0.0 final.
+`unittransfer/__init__.py` says `2.2.0` and `campmap` carries `off:true`, so this
+tree is the 2.x line as it stands. The next cut off the beta line is 3.0.0 final;
+see **THE TWO RELEASE LINES** at the top for the one flag that switches between
+them.
 
 What Phase 17 changed, in one line each (numbers and reasoning in
 `ROADMAP_ARCHIVE.md`):

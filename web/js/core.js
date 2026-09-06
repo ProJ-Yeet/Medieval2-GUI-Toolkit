@@ -650,12 +650,18 @@ function buildFilter(id,values,key,useLabel){
 // `sub:true` = still a real mode, but reached through a tab strip inside its
 // host rather than from this menu (Sprites lives in the BMDB editor; Traits,
 // Ancillaries, Factions and Strings live in Minor Files).
+// `off:true` = in the build, but on offer nowhere - not this menu, not a Home
+// card, not the resume button. The Campaign Map editor is the only one, and it
+// is off on the 2.x line: 2.2.0 carries the Unit Editor fixes to everyone
+// without also putting a half-tested editor that WRITES to a campaign in front
+// of them. It ships as 3.0.0-beta, where the flag is cleared, and the whole of
+// the 2.x menu is unchanged by its absence.
 const MODES=[
   {id:'home',     icon:'⌂', name:'Home',          hint:'Your mods, and what each one is ready for'},
   {id:'edit',     icon:'✎', name:'Unit Editor',   hint:'Change, clone or delete one mod’s units'},
   {id:'transfer', icon:'⚔', name:'Unit Transfer', hint:'Copy a unit from one mod into another'},
   {id:'buildings',icon:'🏰', name:'Buildings',     hint:'Browse and edit export_descr_buildings'},
-  {id:'campmap',  icon:'🌍', name:'Campaign Map',  hint:'The ten map layers, the regions painted on them and what the game reads'},
+  {id:'campmap',  icon:'🌍', name:'Campaign Map',  off:true, hint:'The ten map layers, the regions painted on them and what the game reads'},
   {id:'bmdb',     icon:'🗄', name:'BMDB + Sprites Editor', hint:'What battle_models.modeldb names, and the sprites it points at'},
   {id:'sounds',   icon:'🔊', name:'Unit Sounds',   hint:'Pick which voice entry each unit speaks with'},
   {id:'minor',    icon:'🗺', name:'Minor Files',   hint:'Rebels, religions, cultures, traits, factions and text'},
@@ -668,6 +674,13 @@ const MODES=[
   {id:'strings',  icon:'🔤', name:'Strings',       sub:true, hint:'The compiled text files the game actually reads'},
 ];
 const modeDef=id=>MODES.find(m=>m.id===id)||MODES[0];
+//: The modes anything OFFERS: the burger menu, the Home readiness cards and the
+//: resume button all read this, so a mode is hidden in one place rather than in
+//: three that can drift apart.
+const menuModes=()=>MODES.filter(m=>!m.sub&&!m.off);
+//: Whether a mode is in this build's menu at all - `minorFactions` asks before
+//: it routes the Factions tab into the map.
+const modeOffered=id=>menuModes().some(m=>m.id===id);
 
 /* ---------- the Minor Files tab strip ----------
    Nine campaign files behind one strip. Five are shapes of one parser and are
@@ -712,6 +725,10 @@ function minorGo(tab,mode){
    map stand is the ordinary case, and it still has factions to edit. The map's
    readiness is the same one Home shows, so the two never disagree. */
 function minorFactions(){
+  // With the map off in this build there is no combined screen to land on, so
+  // the tab goes where a mod with no map has always sent it: the factions mode,
+  // which is the only place that mod's factions can be edited either way.
+  if(!modeOffered('campmap'))return setAppMode('factions');
   campmapWantFactions=true;
   setAppMode('campmap');
 }
@@ -1192,7 +1209,7 @@ function syncNav(){
 }
 function wire(){
   wireFilterFolds();
-  navModes.innerHTML=MODES.filter(m=>!m.sub).map(m=>`<button class="navitem" data-mode="${m.id}">
+  navModes.innerHTML=menuModes().map(m=>`<button class="navitem" data-mode="${m.id}">
       <span class="ic">${m.icon}</span>
       <span><span class="nm">${esc(m.name)}</span><span class="hint">${esc(m.hint)}</span></span>
     </button>`).join('');

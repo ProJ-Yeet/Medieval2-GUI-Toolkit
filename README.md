@@ -29,7 +29,7 @@ one containing `mods`).
 | Unit Editor | Change, clone or delete the units of a single mod |
 | BMDB + Sprites | Edit any `battle_models.modeldb` entry, view models in 3D, and clean out what nothing references |
 | Buildings | Browse and edit `export_descr_buildings.txt`, including recruitment |
-| Campaign Map | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, check the whole map against what the game will accept |
+| Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, check the whole map against what the game will accept. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`) |
 | Unit Sounds | Choose which voice bank entry each unit uses |
 | Sprites | Generate and wire up the far-LOD unit sprites |
 | Strings | Read and write the compiled `data/text/*.txt.strings.bin` files |
@@ -253,7 +253,7 @@ python app.py --no-browser   # serve without opening a browser tab
 ## Building a release
 
 ```bash
-python build_release.py --version v2.1.7
+python build_release.py --version v2.2.0
 ```
 
 Produces `dist/Medieval2-GUI-Toolkit-v2.1.7.zip`: the tool, a bundled Python

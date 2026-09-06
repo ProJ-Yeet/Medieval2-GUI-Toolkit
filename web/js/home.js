@@ -155,7 +155,7 @@ async function homePref(el){
 // somewhere you did not ask for is exactly what Home exists to stop.
 function homeResumeHtml(){
   const last = state.settings.mode;
-  if(!last || last === 'home' || !MODES.some(m => m.id === last)) return '';
+  if(!last || last === 'home' || !modeOffered(last)) return '';
   const d = modeDef(last);
   const mod = state.src || '';
   return `<div class="homeresume">
@@ -227,7 +227,7 @@ async function homeSetM2ex(name, on){
 function homeModulesHtml(m, r){
   if(!r) return '<span class="count">Reading the mod’s files…</span>';
   if(r.error) return `<span class="w-bad">✗ ${esc(r.error)}</span>`;
-  return MODES.filter(d => d.id !== 'home' && !d.sub).map(d => {
+  return menuModes().filter(d => d.id !== 'home').map(d => {
     const s = r.modules[d.id];
     if(!s) return '';
     const why = s.ready

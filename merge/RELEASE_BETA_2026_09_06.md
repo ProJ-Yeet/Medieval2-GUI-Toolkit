@@ -1,4 +1,4 @@
-# v3.0.0-beta
+# beta 2026-09-06
 
 The campaign map is editable. Ten TGA layers, `descr_regions.txt` and
 `descr_strat.txt` are one screen: paint a province and every file that names it

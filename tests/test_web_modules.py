@@ -122,18 +122,38 @@ core = (JS / "core.js").read_text(encoding="utf-8")
 block = re.search(r"^const MODES=\[(.*?)^\];", core, re.S | re.M)
 check("core.js declares MODES", bool(block))
 menu = re.findall(r"\{id:'([a-z]+)',(.*?)\}", block.group(1) if block else "")
-top = [mid for mid, rest in menu if mid != "home" and "sub:true" not in rest]
+top = [mid for mid, rest in menu
+       if mid != "home" and "sub:true" not in rest and "off:true" not in rest]
 subs = [mid for mid, rest in menu if "sub:true" in rest]
-check(f"MODES parsed: {len(top)} menu modules, {len(subs)} sub modes", len(top) > 5)
-gap = [m for m in top if m not in modfiles.MODULES]
+# `off:true` is a mode that is in the build and offered nowhere. It is how the
+# 2.x line ships without the Campaign Map editor, and it must still have its
+# MODULES entry so that clearing the flag needs no second edit.
+off = [mid for mid, rest in menu if "off:true" in rest]
+check(f"MODES parsed: {len(top)} menu modules, {len(subs)} sub modes, "
+      f"{len(off)} off", len(top) > 5)
+gap = [m for m in top + off if m not in modfiles.MODULES]
 check("every menu module has a MODULES entry"
       + (": " + ", ".join(gap) if gap else ""), not gap)
 # A sub mode may still have a MODULES entry - Traits and Sprites do, and their
 # rows are what the file table under a mod card is built from. What must not
-# happen is a card per sub mode, so Home's filter is the thing checked.
+# happen is a card per sub mode, so Home's filter is the thing checked. All
+# three readers - the menu, the Home cards and the resume button - go through
+# `menuModes()`/`modeOffered()` so that hiding a mode is one edit, not three.
+core_js = core
+check("core.js declares menuModes() dropping both sub and off",
+      "const menuModes=()=>MODES.filter(m=>!m.sub&&!m.off);" in core_js)
+check("the burger menu is built from menuModes()",
+      "navModes.innerHTML=menuModes().map(" in core_js)
 home = (JS / "home.js").read_text(encoding="utf-8")
-check(f"Home's module cards drop the {len(subs)} sub modes",
-      "MODES.filter(d => d.id !== 'home' && !d.sub)" in home)
+check(f"Home's module cards drop the {len(subs)} sub modes and {len(off)} off",
+      "menuModes().filter(d => d.id !== 'home')" in home)
+check("the resume button only offers a mode that is on the menu",
+      "!modeOffered(last)" in home)
+# 2.2.0: the Factions tab routed into the map's combined screen (17f). With the
+# map off there is nothing to route to, so it must fall back to `factions` -
+# the same place a mod with no map has always landed.
+check("the Factions tab falls back when the map is off",
+      "if(!modeOffered('campmap'))return setAppMode('factions');" in core_js)
 
 # The campmap rows are spelled out in modfiles rather than imported from here,
 # so that drawing a mod card does not cost a Pillow import. This is what stops
