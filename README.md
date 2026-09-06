@@ -25,7 +25,7 @@ Then, in this order:
    already inside the folder, so it will usually just say there is nothing to
    do - run it anyway, because that is the answer you want to have seen before
    the next step rather than after it.
-2. **Run `Medieval 2 GUI Toolkit.bat`.** This is the one you use from then on.
+2. **Run `Launch-Medieval 2 GUI Toolkit.bat`.** This is the one you use from then on.
 
 On first run, open Settings and point it at your Medieval II install folder (the
 one containing `mods`).
@@ -420,10 +420,10 @@ are created as they are needed and are not in the repository.
 **Built on the work of, and thanking them for permission to take reference from
 their code**
 
-* Mylae's [M2TW Editor](https://github.com/Machiavello-1441/m2tw-editor)
-* [Fynn's Medieval II Total War Modding Tool](https://www.twcenter.net/ubs/medieval-2-total-war-modding-tool.26/)
-* Bare Geomod, by Sinople and Gigantus - [moddb.com/mods/bare-geomod-and-tools](https://www.moddb.com/mods/bare-geomod-and-tools)
-* TWMapReader, by Withwnar - [twcenter.net](https://www.twcenter.net/threads/tw-map-reader-v2-24-1-jul-2015-update.438278/)
+* [M2TW Editor](https://github.com/Machiavello-1441/m2tw-editor) by Mylae
+* [Medieval II Total War Modding Tool](https://www.twcenter.net/ubs/medieval-2-total-war-modding-tool.26/) by Fynn
+* [Bare Geomod](https://www.moddb.com/mods/bare-geomod-and-tools) by Sinople and Gigantus
+* [TWMapReader](https://www.twcenter.net/threads/tw-map-reader-v2-24-1-jul-2015-update.438278/) by Withwnar
 
 **Sponsored by** FeatherLeaf
 

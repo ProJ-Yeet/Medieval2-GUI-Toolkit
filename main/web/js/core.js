@@ -1548,18 +1548,20 @@ async function openCredits(){
       <div style="margin-bottom:14px">
         <div class="lbl" style="margin-bottom:4px">Built on the work of, and
           thanking them for permission to take reference from their code</div>
-        <div>Mylae’s
-          <a href="https://github.com/Machiavello-1441/m2tw-editor" target="_blank"
-             style="color:var(--accent2)">M2TW Editor</a></div>
+        <!-- Tool by Creator, and the TOOL NAME is the link. Two of these used to
+             carry a bare URL off to the side instead, which read as a second,
+             lesser thing on the row and made the name itself dead text. The work
+             is what is being credited, so the work is what you click. -->
+        <div><a href="https://github.com/Machiavello-1441/m2tw-editor" target="_blank"
+             style="color:var(--accent2)">M2TW Editor</a> by <b>Mylae</b></div>
         <div><a href="https://www.twcenter.net/ubs/medieval-2-total-war-modding-tool.26/"
-             target="_blank" style="color:var(--accent2)">Fynn’s Medieval II Total
-             War Modding Tool</a></div>
-        <div>Bare Geomod, by <b>Sinople</b> and <b>Gigantus</b> -
-          <a href="https://www.moddb.com/mods/bare-geomod-and-tools" target="_blank"
-             style="color:var(--accent2)">moddb.com/mods/bare-geomod-and-tools</a></div>
-        <div>TWMapReader, by <b>Withwnar</b> -
-          <a href="https://www.twcenter.net/threads/tw-map-reader-v2-24-1-jul-2015-update.438278/"
-             target="_blank" style="color:var(--accent2)">twcenter.net</a></div>
+             target="_blank" style="color:var(--accent2)">Medieval II Total War Modding
+             Tool</a> by <b>Fynn</b></div>
+        <div><a href="https://www.moddb.com/mods/bare-geomod-and-tools" target="_blank"
+             style="color:var(--accent2)">Bare Geomod</a> by <b>Sinople</b> and
+             <b>Gigantus</b></div>
+        <div><a href="https://www.twcenter.net/threads/tw-map-reader-v2-24-1-jul-2015-update.438278/"
+             target="_blank" style="color:var(--accent2)">TWMapReader</a> by <b>Withwnar</b></div>
       </div>
       <div style="margin-bottom:14px">
         <div class="lbl" style="margin-bottom:4px">Sponsored by</div>

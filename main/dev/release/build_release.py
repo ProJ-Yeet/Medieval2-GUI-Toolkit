@@ -7,7 +7,7 @@
 
 The point is that the person you send it to installs nothing. The zip carries
 Python's official *embeddable* distribution with Pillow already in it, so they
-unzip and double-click `Medieval 2 GUI Toolkit.bat`.
+unzip and double-click `Launch-Medieval 2 GUI Toolkit.bat`.
 
 Only the bare minimum ships: `app.py`, `transfer_cli.py`, `Full Cleaner.bat`,
 `unittransfer/`, `web/`, the launcher, `Install-Dependencies.bat` and a README.
@@ -343,7 +343,7 @@ if "%RC%"=="3" (
     echo  Medieval 2 GUI Toolkit exited with an error ^(code %RC%^).
     echo ============================================================
     echo.
-    echo  * Port 8756 taken?   run:  "Medieval 2 GUI Toolkit.bat" --port 8757
+    echo  * Port 8756 taken?   run:  "Launch-Medieval 2 GUI Toolkit.bat" --port 8757
     echo  * Wrong mods folder? set it in the tool's settings ^(gear icon^)
     echo  * Blocked by antivirus/SmartScreen? unblock the folder and retry.
     echo.
@@ -363,7 +363,7 @@ setlocal
 title Medieval 2 GUI Toolkit - Troubleshoot
 cd /d "%~dp0"
 
-rem Run this when "Medieval 2 GUI Toolkit.bat" doesn't work. It never closes on its own,
+rem Run this when "Launch-Medieval 2 GUI Toolkit.bat" doesn't work. It never closes on its own,
 rem and writes everything to troubleshoot-output.txt to send on for help.
 
 echo ============================================================
@@ -415,7 +415,7 @@ Getting started
 ---------------
 1. Unzip this whole folder somewhere (Desktop is fine). Don't run it from
    inside the zip.
-2. Double-click **Medieval 2 GUI Toolkit.bat**.
+2. Double-click **Launch-Medieval 2 GUI Toolkit.bat**.
 3. A window appears with the startup checks, then your browser opens the tool.
    The window closes on its own once everything is up.
 4. First run only: click the gear icon and point it at your Medieval II
@@ -518,7 +518,7 @@ To re-run just the startup checks:
 
 
 def write_docs(stage: Path, portable: bool) -> None:
-    (stage / "Medieval 2 GUI Toolkit.bat").write_text(
+    (stage / "Launch-Medieval 2 GUI Toolkit.bat").write_text(
         PORTABLE_BAT if portable else (REPO / "Launch-Medieval2-GUI-Toolkit.bat").read_text(
             encoding="utf-8"),
         encoding="utf-8")
@@ -536,7 +536,7 @@ def write_docs(stage: Path, portable: bool) -> None:
             "This build does NOT include Python. Run Install-Dependencies.bat first:\n"
             "it installs Python for you (downloaded from python.org, your user only,\n"
             "no administrator prompt, added to PATH) along with the image library.\n"
-            "After that, Medieval 2 GUI Toolkit.bat works on its own.")
+            "After that, Launch-Medieval 2 GUI Toolkit.bat works on its own.")
     cmd = ("runtime\\python.exe app.py --check" if portable else "py app.py --check")
     (stage / "README.txt").write_text(
         README.format(runtime_note=note, check_cmd=cmd), encoding="utf-8")
@@ -614,7 +614,7 @@ def main(argv=None) -> int:
     assert_bundled(out, expect_vanilla_ui=not args.no_vanilla_ui)
     print(f"\n{out}")
     print(f"  {out.stat().st_size / 1e6:.1f} MB - send this to anyone; "
-          f"they unzip it and run 'Medieval 2 GUI Toolkit.bat'.")
+          f"they unzip it and run 'Launch-Medieval 2 GUI Toolkit.bat'.")
     return 0
 
 
