@@ -59,6 +59,23 @@ OPS = ("<=", ">=", "!=", "==", "<", ">", "=")
 TRIGGER_KW = "Trigger"
 BLOCK_ENDERS = ("Trait", "Ancillary", "Guild", "Faction")
 
+#: how many words a :data:`BLOCK_ENDERS` line has when it is a *definition*.
+#:
+#: ``export_descr_guilds.txt`` is the first file where the keyword that opens a
+#: definition is also the keyword of an effect line inside a trigger::
+#:
+#:     Guild assassins_guild                 <- a definition, 2 words
+#:         Guild assassins_guild s 25        <- an effect, 4 words
+#:
+#: Read without the count, every guild trigger ends at its own first effect and
+#: those effects are collected as definitions - the trigger keeps its
+#: ``WhenToTest`` and its conditions and loses everything it actually does.
+#: Measured across both installed mods before the rule was written: all 1,850
+#: ``Trait`` and ``Ancillary`` lines in the EDCT and the EDA are two words, and
+#: ``export_descr_guilds.txt`` is 21 two-word definitions against 507 four-word
+#: effects. So the count separates them and it costs the other two files nothing.
+DEFINITION_WORDS = 2
+
 #: how a condition clause may be joined to the one before it
 JOINERS = ("and", "or")
 
@@ -256,11 +273,12 @@ def parse_text(text: str) -> TriggerFile:
                 cur.warnings.append(f"line {i + 1}: this Trigger has no name")
             tf.triggers.append(cur)
             continue
-        if head in BLOCK_ENDERS:
-            # a trait/ancillary definition - the trigger section has not started,
-            # or (in a file that interleaves them) this one has ended
-            if len(words) > 1:
-                tf.definitions.setdefault(head, []).append(words[1])
+        if head in BLOCK_ENDERS and len(words) == DEFINITION_WORDS:
+            # a trait/ancillary/guild definition - the trigger section has not
+            # started, or (in a file that interleaves them) this one has ended.
+            # The word count is what tells a definition from an effect that
+            # happens to share its keyword; see DEFINITION_WORDS.
+            tf.definitions.setdefault(head, []).append(words[1])
             if cur is not None:
                 cur.end = i
                 cur = None

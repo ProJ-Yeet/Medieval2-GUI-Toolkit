@@ -673,6 +673,7 @@ const MODES=[
   {id:'cards',    icon:'🖼', name:'Unit & info cards', sub:true, hint:'The two pictures per unit, deduplicated into the merc folder'},
   {id:'traits',   icon:'🎖', name:'Traits',        sub:true, hint:'Character traits, their levels and the triggers that give them'},
   {id:'ancillaries',icon:'🏅', name:'Ancillaries',  sub:true, hint:'The items and followers a character picks up'},
+  {id:'guilds',   icon:'⚖', name:'Guilds',       sub:true, hint:'What each guild grants, and the triggers that earn its points'},
   {id:'factions', icon:'🛡', name:'Factions',      sub:true, hint:'Each faction’s culture, religion, colours and horde'},
   {id:'strings',  icon:'🔤', name:'Strings',       sub:true, hint:'The compiled text files the game actually reads'},
 ];
@@ -698,6 +699,7 @@ const MINOR_TABS=[
   {id:'names',       label:'Character names'},
   {mode:'traits',      label:'Traits'},
   {mode:'ancillaries', label:'Ancillaries'},
+  {mode:'guilds',      label:'Guilds'},
   // 17f: a faction is two files - what it IS (descr_sm_factions.txt) and what
   // it starts the campaign WITH (descr_strat.txt) - and they are one screen
   // now, inside the Campaign Map. This tab still lands somewhere, and where it
@@ -1305,6 +1307,7 @@ function applyMode(persist){
         snd=state.mode==='sounds', spr=state.mode==='sprites', bld=state.mode==='buildings',
         str=state.mode==='strings', trt=state.mode==='traits',
         anc=state.mode==='ancillaries', mnr=state.mode==='minor',
+        gld=state.mode==='guilds',
         fac=state.mode==='factions',
         home=state.mode==='home';
   // Home is the one screen that is ABOUT the mods, so it does not sit under a
@@ -1336,11 +1339,11 @@ function applyMode(persist){
   sndBtn.style.display=snd?'inline-block':'none';
   unusedWrap.style.display=(bm||stm)?'inline-flex':'none';
   mercOnly.parentElement.style.display=
-    (bm||snd||spr||bld||str||trt||anc||mnr||fac||home||stm||crd||cmp)?'none':'inline-flex';
+    (bm||snd||spr||bld||str||trt||anc||gld||mnr||fac||home||stm||crd||cmp)?'none':'inline-flex';
   // these bring their own filters - the sidebar's faction/era ones say nothing
   // about a voice entry, and nothing at all about a modeldb record or a sprite
   document.getElementById('unitFilters').style.display=
-    (bm||snd||spr||bld||str||trt||anc||mnr||fac||home||stm||crd||cmp)?'none':'';
+    (bm||snd||spr||bld||str||trt||anc||gld||mnr||fac||home||stm||crd||cmp)?'none':'';
   document.getElementById('bldFilters').style.display=bld?'':'none';
   // Only offered while the unit editor is what you'd be going back FROM: in
   // buildings mode the building is already on screen.
@@ -1352,6 +1355,7 @@ function applyMode(persist){
                     :bld?'Search buildings…':str?'Search tags and text…'
                     :trt?'Search traits…'
                     :anc?'Search ancillaries and types…'
+                    :gld?'Search guilds…'
                     :mnr?'Search this file…'
                     :fac?'Search factions…':'Search…';
   document.title=modeDef(state.mode).name+' · Medieval 2 GUI Toolkit';
@@ -1427,6 +1431,7 @@ function render(){
   if(state.mode==='strings')return state.str?renderStrings():loadStrings();
   if(state.mode==='traits')return state.tr?renderTraits():loadTraits();
   if(state.mode==='ancillaries')return state.an?renderAncillaries():loadAncillaries();
+  if(state.mode==='guilds')return state.gu?renderGuilds():loadGuilds();
   if(state.mode==='minor')return state.mf?renderMinor():loadMinor();
   if(state.mode==='factions')return state.fac?renderFactions():loadFactions();
   // the unit list is still loading, or its load failed - which are different

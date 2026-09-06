@@ -251,7 +251,7 @@ COMMENT_MARKS: Dict[str, Tuple[str, ...]] = {
     "edu": (";",), "edb": (";", "#"), "traits": (";",), "ancillaries": (";",),
     "factions": (";",), "sounds": (";",), "rebels": (";",), "resources": (";",),
     "religions": (";",), "cultures": (";",), "names": (";",),
-    "regions": (";",),
+    "regions": (";",), "guilds": (";",),
 }
 
 
@@ -569,6 +569,42 @@ def _traits_render(base: str, edits: dict, ctx: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
+# the guilds kind - one `Guild … building … levels` block (18a)
+#
+# A flat record, so the block editor is flatrecord's through guilds.py rather
+# than a third copy of it. The name is locked for the same reason a trait's is:
+# it is what every `Guild <name> <scope> <points>` line in the trigger section
+# below points at, and what the building line it grants is named after.
+
+
+def _guilds_parse(text: str, ctx: dict) -> Doc:
+    from . import guilds as guilds_mod
+    try:
+        rec = guilds_mod.parse_block(text)
+    except guilds_mod.GuildError as e:
+        raise CodeViewError(e.message, e.line) from None
+    locked = ctx.get("guild")
+    if locked and rec.name != locked:
+        raise CodeViewError(
+            f"this guild is `{locked}` - renaming it in the text pane would "
+            "orphan every trigger that awards it points and the building line "
+            "it grants", 1)
+    findings = guilds_mod.check_guild(rec, ctx.get("buildings"))
+    return Doc(kind="guilds", text=text, fields=guilds_mod.block_fields(text),
+               spans=guilds_mod.block_spans(text), ident=rec.name,
+               note="; ".join(f["message"] for f in findings[:2]),
+               detail=rec.as_dict())
+
+
+def _guilds_render(base: str, edits: dict, ctx: dict) -> str:
+    from . import guilds as guilds_mod
+    try:
+        return guilds_mod.render_block(base, edits or {})
+    except guilds_mod.GuildError as e:
+        raise CodeViewError(e.message, e.line) from None
+
+
+# ---------------------------------------------------------------------------
 # the ancillaries kind - one `Ancillary … Effect …` block of the EDA
 #
 # EDCT's smaller sibling: a flat record rather than a ladder, so its boxes are a
@@ -804,6 +840,7 @@ KINDS: Dict[str, dict] = {
     "bmdb": {"parse": _bmdb_parse, "render": _bmdb_render, "repair": _bmdb_repair},
     "strings": {"parse": _strings_parse, "render": _strings_render},
     "traits": {"parse": _traits_parse, "render": _traits_render},
+    "guilds": {"parse": _guilds_parse, "render": _guilds_render},
     "ancillaries": {"parse": _anc_parse, "render": _anc_render},
     "rebels": _record_kind("rebels", "REBELS",
                            "every region that spawns it in descr_regions.txt"),
@@ -922,6 +959,17 @@ def trait_document(mod, name: str) -> Doc:
         raise KeyError(f"no trait {name!r} in {mod.name}")
     return parse("traits", tf.block_text(trait),
                  {"trait": name, "known": set(tf.by_name())})
+
+
+def guild_document(mod, name: str) -> Doc:
+    """The code view of one guild as it sits in export_descr_guilds.txt."""
+    from . import guilds as guilds_mod
+    gf, _ = guilds_mod.read(mod)
+    rec = gf.get(name)
+    if rec is None:
+        raise KeyError(f"no guild {name!r} in {mod.name}")
+    return parse("guilds", gf.block_text(rec),
+                 {"guild": name, "buildings": guilds_mod.building_names(mod)})
 
 
 def ancillary_document(mod, name: str) -> Doc:
@@ -1097,6 +1145,11 @@ def context(kind: str, mod, ident: str, culture: str = "") -> dict:
         from . import ancillaries as anc_mod
         return {"ancillary": ident,
                 "known": set(anc_mod.parse_file(mod.eda_path).by_name())}
+    if kind == "guilds":
+        from . import guilds as guilds_mod
+        # `buildings` may be None - the mod keeps its EDB in the packed data -
+        # and the check that reads it does not run at all when it is
+        return {"guild": ident, "buildings": guilds_mod.building_names(mod)}
     if kind in ("rebels", "resources", "religions", "cultures", "names"):
         # all five lock their record's name for the same reason, so all five want
         # the same one thing: what that name is

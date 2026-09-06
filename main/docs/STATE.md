@@ -1,262 +1,119 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-06 · **v2.2.1 latest and beta 2026-09-06b alongside it, off
-the same tree - `master` itself keeps the map on** · the repository moved under
-`main/` on this date; see WHERE THINGS ARE below_
+_Updated: 2026-09-07 · **v2.2.1 latest and beta 2026-09-06b alongside it, off
+the same tree - `master` itself keeps the map on** · after Phase 18a, the four
+files nobody could edit_
 
 ## Next up
-**Phase 18a, four files nobody could edit** (`ROADMAP.md`, Backlog). Phase 17
-closed on 2026-09-06 and its write-up is in `ROADMAP_ARCHIVE.md`.
+**Phase 18b, events and disasters** (`ROADMAP.md`, Backlog). 18a closed on
+2026-09-07 and its write-up is in `ROADMAP_ARCHIVE.md`. Nothing is released off
+3.1.0 yet; the next cut on either line is still whatever the user asks for.
 
 ## WHERE THINGS ARE - the tree moved on 2026-09-06
-Only the three things a person opens are at the top of the repository: the two
-`.bat` files and `README.md`. **Everything else is under `main/`, and `main/` is
-now the code root** - it is what `config.PROJECT_ROOT` resolves to, what a test's
-`parents[1]` is, and what every path written in this file and in the source is
-relative to. So `web/js/core.js` still means `web/js/core.js`; it is just at
-`main/web/js/core.js` on disk.
-
-| | |
-|---|---|
-| `main/app.py`, `main/transfer_cli.py` | the two entry points |
-| `main/unittransfer/`, `main/web/` | unchanged, one level down |
-| `main/vendor/nvtt/` | was `tools/nvtt/`. The one binary that ships |
-| `main/docs/` | this file, ROADMAP, and both archives |
-| `main/docs/releases/` | the release notes (was half of `merge/`) |
-| `main/docs/upstream/` | the reference audits, port manifest, sync log (the other half) |
-| `main/docs/images/` | the README's screenshots, taken by `dev/docs/screenshots.py` |
-| `main/dev/` | scripts for working ON the toolkit, grouped by what they do: `release/`, `reference/`, `docs/`, `checks/`, `diagnose/`. **None of it ships.** See `dev/README.md` |
-
-The launcher works in both layouts: it steps into `main/` when `main/app.py` is
-there and runs from beside itself when it is not, because the same file is what
-goes into the release zip, where everything is flat.
+Only the two `.bat` files and `README.md` are at the top of the repository.
+**Everything else is under `main/`, and `main/` is the code root** - what
+`config.PROJECT_ROOT` resolves to, what a test's `parents[1]` is, and what every
+path in this file and in the source is relative to. `main/dev/` never ships.
 
 ## THE TWO RELEASE LINES - read this before cutting anything
-The project ships on **two lines off this one `master`**, and which line a change
-belongs to is decided by whether it touches the campaign map:
-
-* **Not campaign-map** (unit editor, transfer, buildings, BMDB, sprites, sounds,
-  minor files, strings) → a **2.x subrelease with the map hidden**, uploaded
-  `--latest`. First one was **v2.2.0**; latest is **v2.2.1**, 2026-09-06.
-* **Campaign-map** → committed here and shipped on the **beta line**, uploaded
-  as a **pre-release**. First one was **beta 2026-09-06**; latest is
-  **beta 2026-09-06b**.
-
-A **subrelease means both**: the user's word for it is one job, and it cuts the
-2.x zip with the map hidden AND the beta zip with it shown, from the same tree.
-The two builds are the same toolkit; only the menu differs.
+Two lines off this one `master`, chosen by whether a change touches the campaign
+map. **Not campaign-map** → a **2.x subrelease with the map hidden**, uploaded
+`--latest` (latest **v2.2.1**, 2026-09-06). **Campaign-map** → the **beta line**,
+uploaded as a **pre-release** (latest **beta 2026-09-06b**). A **subrelease means
+both**: one job, both zips, same tree.
 
 The switch is **one flag**: `off:true` on the `campmap` entry in `MODES` in
-`web/js/core.js`. `menuModes()` and `modeOffered()` in the same file are what the
-burger menu, Home's readiness cards, the resume button and Minor Files' Factions
-tab all read, so hiding the mode is that single edit and nothing else drifts.
-With the map off, the Factions tab falls back to the standalone `factions` mode,
-which is where a mod with no map has always landed. `tests/test_web_modules.py`
-asserts the flag's handling and that fallback.
+`web/js/core.js`, which `menuModes()` and `modeOffered()` are the only readers
+of. It is a **release-time edit, not a state of `master`** - set it, bump the 2.x
+number, build, upload, then put it straight back off in the next commit.
+`master` carries the map ON, and `__version__` says `beta-2026-09-06b` because
+the beta was the last thing cut, which is honest rather than untidy.
 
-**`master` carries the map ON.** The flag is not set here and is not meant to
-be: this is the tree the map is developed and used in, so a checkout of `master`
-has the Campaign Map on its menu like every other mode.
+Betas are named by the **date** they were released, with a letter for a second
+in one day. The GitHub title is `M2 GUI-Kit V<X.Y.Z>` - hyphenated **GUI-Kit**,
+capital **V**; run `gh release list --limit 3` and copy the newest title's shape
+rather than typing it from memory. The strict step-by-step is `HANDOFF.md`.
 
-`off:true` is a **release-time edit, not a state of `master`**. To cut a 2.x
-subrelease: set the flag, bump the 2.x number, build, upload `--latest`, then
-**put the flag straight back off** in the next commit. To cut a beta: leave the
-flag alone (clear, as it is), set the dated version, build, upload as a
-pre-release.
+**18a is on the 2.x side of that line** for one of its four screens and not the
+other three: Guilds is a mode of its own, and the campaign descriptions, the
+faction movies and the mercenary pool hang off the campaign map's faction and
+region panels, so a cut with the map hidden ships Guilds alone. That is correct,
+and it is the shape 17f's faction screen already has.
 
-`__version__` currently says `beta-2026-09-06b`, because the beta was the last
-thing cut. That is honest rather than untidy: a checkout of `master` has the map
-on its menu, so it IS the beta build, and the version string should say so. A 2.x
-cut sets the 2.x number for the length of the build and the beta cut sets it back.
-
-**Betas are named by the DATE they were released, not by a version.** There is no
-`v3.0.1-beta`. Everything about a beta carries its date, and a **second beta in
-one day takes a letter** - `2026-09-06b`, then `c` - because the first one's
-download link is published and should keep working:
-
-| | |
-|---|---|
-| git tag | `beta-2026-09-06b` |
-| GitHub title | `M2 GUI-Kit beta 2026-09-06b` |
-| `__version__` | `beta-2026-09-06b` |
-| notes | `docs/releases/RELEASE_BETA_2026_09_06B.md` |
-| zip | `python dev/release/build_release.py --version beta-2026-09-06b` |
-
-The 2.x line keeps its numbers - `v2.2.0`, `v2.2.1` - because those are the
-releases people are meant to compare. A beta is a snapshot of the map work on the
-day it was taken, and the date says everything the number was pretending to.
-
-The GitHub **title** is `M2 GUI-Kit V<X.Y.Z>` - hyphenated **GUI-Kit**, capital
-**V** - and has been for every release since V2.0.0; see `ROADMAP.md` under
-Versioning. V2.2.0 and the first beta both went up as "M2 GUIkit" and had to be
-renamed. Run `gh release list --limit 3` and copy the newest title's shape rather
-than typing it from memory.
-
-## The releases
-**v2.2.1, 2026-09-06** - the modeldb duplicate cleanup, HD textures in the 3D
-viewer, the tree reorganised under `main/`, and a README with ten generated
-screenshots and the credits in it. Campaign map off the menu. Notes in
-`docs/releases/RELEASE_2_2_1.md`. **This is the `--latest` release.**
-
-**beta 2026-09-06b** - the same toolkit as v2.2.1 with the campaign map switched
-on. Notes in `docs/releases/RELEASE_BETA_2026_09_06B.md`, which says what is new
-since the morning's beta rather than restating the map.
-
-**v2.2.0, 2026-09-06** - the ten unit-editor fixes below, campaign map off the
-menu. Notes in `docs/releases/RELEASE_2_2_0.md`.
-
-**beta 2026-09-06** - the same toolkit with the campaign map switched on. It was
-cut from this tree before the flag went in; the notes are
-`docs/releases/RELEASE_BETA_2026_09_06.md` and the zip is on GitHub as a pre-release. Its
-git tag is still `v3.0.0-beta`, because a published download link is not worth
-breaking for a rename; every beta after it is tagged by date. It is a beta because it
-is the first build in anyone's hands that writes to a campaign; the known limits
-are listed at the bottom of the notes (forts, watchtowers and resources are read
-and drawn but not placed, the terrain render is flat, delete-a-region and
-create-a-campaign are not in it). A **3.0.0 final** is the same feature set with
-whatever the beta turns up fixed.
-
-**Ten unit-editor faults, fixed 2026-09-06**, all reported by the user against
-Phase 13-15 code and all verified in a running browser on Third_Age_Reforged.
-They are what v2.2.0 exists to ship, and they are in the beta too. The first six:
-
-- a new bmdb entry could not be given its own attachment texture / normal map -
-  `NewModel.attach_texture_src` / `attach_normal_src`, and no sprite is written
-  into an attachment record any more
-- a staged entry read as "not an entry in this mod's battle_models.modeldb" -
-  `gfHostEditor.creates` returned `[]` while `state.ed.newModels` held it
-- the model picker and the field vocabulary are read once per mod and kept, so a
-  new entry stayed invisible - `edDropModCaches` on save, plus pending entries
-  offered by both
-- "Point EDU slot at it" replaced an armour tier instead of adding one -
-  `edAssignSlots` says what each choice replaces and ends with the next tier,
-  `edNextTierSlot` is the default, and `edu.sync_armour_levels` keeps
-  `armour_ug_levels` in step with an appended tier
-- an imported unit card never saved: `edDirty` did not count `cardSrc` /
-  `infoSrc`, so Save said "Nothing to save"
-- "Replace for every faction" now asks WHERE (a tick box per owning faction
-  folder plus the merc fallback, `card_folders` / `info_folders` on the request)
-  and WHICH (the pictures on disk, but only when the folders really hold more
-  than one); `edit._resolve_icon_src` reads a mod-relative source and will not
-  climb out of `data/`
-
-**And two more the user raised while the release was being cut:**
-
-- the card you replaced went on being the card you saw. `shutil.copy2` carries
-  the SOURCE's timestamps onto the copy and a mod's files share an mtime to the
-  second, so `IconCache._key` (path + mtime) never changed. `logutil.stamp_written`
-  is the fix, with the file size added to the key as a backstop; the page half is
-  `state.iconV` through `iconBust()`, because `imgBust` only ever patched the
-  `<img>` tags that were on screen and a save re-renders the whole grid.
-- renaming a staged entry left `armour_ug_models` on the old name -
-  `edRenamePending` / `edPendingRefs`, with the form saying which lines follow.
-
-`tests/test_new_entry_and_cards.py`, 34 checks.
-
-The plan after this needs no decisions: the audit's forty open
-items were classified on 2026-09-05 (20 Now, 7 Next, 13 Later, none skipped) and
-ROADMAP.md's Backlog turns that into fourteen sessions - Phases 18-21 as
-**3.1.0**, Phases 22-24 as **3.2.0**, the Later set unphased. Its "whole plan on
-one screen" table is the index.
-
-Run `python dev/reference/upstream_sync.py sync` first, as before every sub-phase.
+**3.0.0 final** is the beta's feature set with whatever the beta turns up fixed.
+**3.1.0** is Phases 18-21 and is one sub-phase in.
 
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
-| 17 - Campaign map correction pass | **done** | All eight items plus 17i's exit, 2026-09-06, five commits. Write-up in `ROADMAP_ARCHIVE.md`. Folds into 3.0.0. |
-| 16 - Campaign Map Editor (V3.0.0) | **done** | 16a-16k all landed 2026-09-03 to 2026-09-05: `campmap`, `maptga`, `mapvocab`, `campstrat`, `campaint`, `mapcheck`, `mapquery`, `stratedit`, `stratchar`, `stratcamp`, `winconds`, `cas`, and their seven web modules. Feature-complete and **not yet released**. Write-ups in ROADMAP_ARCHIVE.md, session detail in STATE_ARCHIVE.md. |
-| 18-21 - the Now set (3.1.0) | **scoped** | Eight sessions closing the twenty items marked Now. 18 is the five campaign files nothing could edit, 19 is the names nothing could follow, 20 is the map screen's second pass, 21 is two screens over data we already hold. Fifteen of the twenty are S-sized, five are M and none is L. |
-| 22-24 - the Next set (3.2.0) | **scoped** | Five sessions closing the seven Next items: placing forts, watchtowers and resources on the map (the largest single hole - 105, 295 and 1,131 of them read on DaC and nothing writes any), the textured terrain render, and delete-a-region / create-a-campaign. |
-| 25-27 | scoped, unscheduled | OSM backdrop, map resize, layer generators. **Renumbered from V3.1/V3.2/V3.3 on 2026-09-05**; the manifest's `notes` were updated to match. |
-| 0-15j | done | shipped through v2.1.11. Exit criteria and write-ups in ROADMAP_ARCHIVE.md. |
+| 18a - Four files nobody could edit | **done** | M5, M6, M13, G3 closed 2026-09-07. New: `guilds.py`, `campfiles.py`, `web/js/guilds.js`, two suites (62 + 76 checks). Write-up in `ROADMAP_ARCHIVE.md`. |
+| 18b - Events and disasters | **scoped** | The next session. `descr_events.txt` and `descr_disasters.txt`; the disaster's `position x, y` lines make it 17d's marker layer's second customer. |
+| 19-21 - the rest of the Now set (3.1.0) | **scoped** | Five sessions: the names nothing could follow, the map screen's second pass, two screens over data we already hold. |
+| 22-24 - the Next set (3.2.0) | **scoped** | Five sessions: placing forts, watchtowers and resources, the textured terrain render, delete-a-region and create-a-campaign. |
+| 25-27 | scoped, unscheduled | OSM backdrop, map resize, layer generators. |
+| 16-17 | done | The campaign map editor and its correction pass. Fold into 3.0.0, uncut. |
 
 ## In-progress detail
-**Clean.** Nothing is mid-flight. Phase 17 is complete, the ten unit-editor
-faults above are fixed and tested, and both builds are uploaded: beta 2026-09-06
-as a pre-release and v2.2.0 as latest.
+**Clean.** Nothing is mid-flight. All 88 suites were run after 18a; **84 pass and
+the four that do not fail identically on a stashed clean `master`** - they are
+hard-coded Divide and Conquer numbers (77 port pixels, 13,153 newlines, 305
+characters, 73,904 sea tiles) and the installed DaC is a different build.
+Stash and re-run before believing one of those four: `test_campmap`,
+`test_campstrat`, `test_campview`, `test_stratchar`.
 
-`unittransfer/__init__.py` says `2.2.0`, and `campmap` has **no** `off:true` -
-the map is on this tree, which is how `master` stays. The flag is set only for
-the minutes it takes to build and upload a 2.x zip, and reverted immediately
-after. The next cut off the beta line is 3.0.0 final; see **THE TWO RELEASE
-LINES** at the top.
+The other standing trap: the suite leaks `ut_*` temp directories into `%TEMP%`.
 
-What Phase 17 changed, in one line each (numbers and reasoning in
-`ROADMAP_ARCHIVE.md`):
-
-- `unittransfer/modfiles.py` - `campmap` on the readiness matrix with its
-  fourteen files; `test_web_modules` asserts every menu module has an entry.
-- `web/js/campmap.js` - dirty rectangles snapped to whole device pixels (the
-  hover trail), the marker click resolved to its region, and the hover tooltip.
-- `unittransfer/campmap.py` - `_vocab_view` in the manifest, so the tooltip
-  names every layer without a round trip.
-- `web/js/campmark.js` (new), `campstrat.markers`, `mapquery.marker_view`,
-  `GET /api/map/markers` - the markers layer, off by default, drag-to-plan.
-- `web/js/stratcamp.js` + `web/js/factions.js` - one faction screen over two
-  files, two saves; Minor Files' tab routes to it.
-- `web/js/core.js`, `web/index.html`, `dev/checks/prose_check.py` - the menu hints as
-  sentences, the rule that catches the next one, and the new credits.
-
-Two standing traps, neither of them mid-flight but both worth reading before a
-suite run: the installed mod here is **Third Age Reforged, not DaC**, so the DaC
-numbers quoted throughout the archive cannot be re-run on this machine (tests
-run via `python -m tests.test_X` and cold-start timing checks fail on a cold
-cache), and the suite leaks `ut_*` temp directories into `%TEMP%`.
+One change in 18a reaches outside its own files and is worth knowing about:
+**`triggers.DEFINITION_WORDS`**. A `BLOCK_ENDERS` line now ends a trigger only
+when it is exactly two words, because `export_descr_guilds.txt` writes `Guild x`
+as a definition and `Guild x s 25` as an effect. Without it every guild trigger
+ended at its own first effect. Measured before it was written: all 1,850 `Trait`
+and `Ancillary` lines in both mods are two words, so the EDCT and the EDA are
+unaffected, and their suites are unmoved at 112 and 85.
 
 ## Read first
 - `ROADMAP.md` - the backlog, the locked decisions, and the campaign map
-  reference. It is 600 lines now, not 3,000; read all of it.
-- `unittransfer/flatrecord.py` - **check here before writing any parser.** Phase
-  11 needed no code at all, which is why it exists.
+  reference. Read all of it.
+- `unittransfer/flatrecord.py` - **check here before writing any parser.** 18a
+  checked, used it for one guild *block*, and could not use it for the guild
+  *file*; the reason is in `guilds.py`'s docstring and is worth reading before
+  the next file that has two block types.
 - `unittransfer/campmap.py` and `unittransfer/campstrat.py` - the read half of
-  the map editor. Everything in Phase 16 above 16b is built on these two, and
-  the byte-exact round trip in `campstrat` is the gate on all four writers.
-- `web/js/core.js` - `MODES` in `wire()`, and `docPoints()`, which every note in
-  the UI is written through. One global scope, no build step; adding a module
-  means a new file, a `<script>` tag and a `MODES` entry, all three guarded by
-  `tests/test_web_modules.py`.
+  the map editor, and the byte-exact round trip every writer is gated on.
+- `web/js/core.js` - `MODES` in `wire()`, and `docPoints()`. One global scope, no
+  build step; adding a module means a new file, a `<script>` tag and a `MODES`
+  entry, all three guarded by `tests/test_web_modules.py`.
 
 ## Upstream
-Reference tool reviewed SHA **319ae56** (2026-09-06), run before Phase 17 as the
-rule asks. The one commit since `ac503ac` changed two files and both triage as
-`skip` - boilerplate we own outright - so nothing was ported, and Phase 17's two
-borrowings (`StratOverlay.jsx` for the markers layer, `MapPixelTooltip.jsx` for
-the tooltip) were read at that SHA. The log entry is the newest in
-`docs/upstream/SYNC_LOG.md`; the detail from the sync before it (what
-`factionBlockOps.js` taught 16b, the five `phases` lists written as numbers that
-crashed `sync --accept`, the phase renumbering) is in `STATE_ARCHIVE.md`.
+Reference tool reviewed SHA **319ae56** (2026-09-07, run before 18a as the rule
+asks; unchanged since 2026-09-05, nothing new to triage). 18a read
+`GuildsParser.jsx`, `GuildEditor.jsx`, `factionMoviesParser.jsx` and
+`CampaignDescriptionsStrings.jsx` at that SHA and ported **behaviour knowledge
+only**, as the rule says - and corrected three of the four along the way (their
+guild serialiser reformats the whole file, their movie serialiser rebuilds it
+from a model, and their scope letter set is missing `a`, which is 47 real lines).
 
-`src/components/map/` is where the reference tool's author is actively
-working, so a sub-phase that
-touches the map screen still runs `sync` first.
-
-`docs/upstream/PORT_MANIFEST.json` is authoritative. It triages all 310 upstream files:
-128 port-concept, 90 skip, 71 out-of-scope, 21 audit, none untriaged. The
-port-concept set is what `docs/upstream/REFERENCE_GAPS.md` measures against.
+`src/components/map/` is where the reference tool's author is actively working,
+so a sub-phase that touches the map screen still runs `sync` first.
+`docs/upstream/PORT_MANIFEST.json` is authoritative: 310 files triaged, none
+untriaged. `docs/upstream/REFERENCE_GAPS.md` now marks M5, M6, M13 and G3 done.
 
 ## Open questions for the user
-- ~~`docs/upstream/REFERENCE_GAPS.md` needs prioritising.~~ **Answered 2026-09-05:**
-  all forty open items classified, 20 Now / 7 Next / 13 Later / none skipped,
-  and written up as Phases 18-24. Two Later items are flagged in the roadmap as
-  cheap to take early if the user changes their mind - **G4** during 19a and
-  **D1** during 19b - and neither was moved.
 - `descr_sounds_*.txt` (32 files in DaC) is a real coverage gap the Phase 13
   audit measured and did not close - the engine's sound scripts, a grammar of
   its own. Its own phase later, or permanently out of scope?
-- ~~`OsmBackground.jsx` / `OsmRegionSearch.jsx` - port or drop?~~ **Answered
-  2026-09-03: ported, deferred to Phase 25**, opt-in and off by default,
-  together with `CoastlineTracer`. The generators are Phase 27.
 
 ## Decisions
+- 2026-09-07: **A file whose definition keyword is also an effect keyword is
+  told apart by word count, not by section.** `triggers.DEFINITION_WORDS`.
+  Measured rather than assumed, and it is the first thing to check if a third
+  trigger-bearing file is ever added.
+- 2026-09-07: **One screen over several files means one save per file.** 18a's
+  faction tab is four files and four Save buttons and the region panel is two.
+  This is 17f's ruling restated because 18a is where it stopped being about one
+  screen: combining the SCREENS must not combine the WRITES, or one undo puts
+  back more than the user changed.
 - 2026-09-05: **Future work gets a phase number; a version number is assigned
-  only when something is cut.** The three future releases were named `V3.1`,
-  `V3.2` and `V3.3` after the features in them, and none of those features is in
-  the Now or Next set - so all three would have shipped after work carrying no
-  number at all. They are Phases 25, 26 and 27 now. This is how Phases 0 to 16
-  worked, and `docs/upstream/PORT_MANIFEST.json`'s `notes` were updated in the same
-  commit so no cross-reference dangles.
-- 2026-09-05: **A finished phase leaves the roadmap.** `ROADMAP.md` had reached
-  3,031 lines and `STATE.md` 2,094, and every session was reading both in full
-  to find one sentence. Finished write-ups now move to `ROADMAP_ARCHIVE.md` and
-  session logs to `STATE_ARCHIVE.md`, in the same commit that marks the phase
-  done. The contract is at the bottom of `ROADMAP.md`.
+  only when something is cut.**
+- 2026-09-05: **A finished phase leaves the roadmap** - write-ups to
+  `ROADMAP_ARCHIVE.md`, session logs to `STATE_ARCHIVE.md`, in the same commit
+  that marks the phase done.

@@ -106,6 +106,7 @@ Backlog below with their own index.
 | 15i-15j | Model beside a transfer; resizable panels; no em dashes | 2.1.10, 2.1.11 |
 | 16a-16k | **Campaign Map Editor** - read, render, paint, validate, query, write, preview | 3.0.0 (uncut) |
 | 17a-17i | Campaign map correction pass - Home's card, the hover trail, the marker click, the markers layer, the tooltip, one faction screen, the prose and the credits | 3.0.0 (uncut) |
+| 18a | Four files nobody could edit - guilds, campaign descriptions, faction movies, the region's mercenary pool | 3.1.0 (uncut) |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
@@ -353,7 +354,6 @@ change, so no cross-reference dangles.
 
 | Phase | Sessions | Closes | Size |
 |---|---|---|---|
-| 18a - Four files nobody could edit | 1 | M5 M6 M13 G3 | 4S |
 | 18b - Events and disasters | 1 | M3 M4 | 1M 1S |
 | 19a - The keys a new record needs | 1 | D4 D5 | 2S |
 | 19b - Rename, and follow it | 1 | D2 D3 | 2M |
@@ -365,8 +365,9 @@ change, so no cross-reference dangles.
 | 23a-23b - A map that looks like the map | 2 | D7 T1 T12 | 2L 1M |
 | 24 - Make and unmake | 1 | G1 M15 | 2M |
 
-Fourteen sessions. Phase 17 is done (2026-09-06) and its write-up is in
-`ROADMAP_ARCHIVE.md`; nothing in the Later table is counted.
+Thirteen sessions left. Phase 17 (2026-09-06) and **18a** (2026-09-07) are
+done and their write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later table
+is counted.
 
 ---
 # 3.1.0 - the Now set (Phases 18-21)
@@ -383,6 +384,13 @@ to validate it and not well enough to edit it**, and that asymmetry is what
 
 Six campaign files. Five of them nothing in the repo writes at all, and one
 (`export_descr_guilds.txt`) we refuse against without being able to fix.
+
+**18a is done** (2026-09-07): guilds, the campaign descriptions, the faction
+movies and the region's mercenary pool. Its write-up, and the two things in its
+scope that measuring corrected, are in `ROADMAP_ARCHIVE.md`. What is left of
+Phase 18 is 18b.
+
+<details><summary>18a as it was scoped, kept because 18b inherits its rulings</summary>
 
 ### 18a - Four small files, one session
 
@@ -413,6 +421,8 @@ splices, so it goes through `render_block` like the other seven.
 Exit: each of the four round-trips byte-exact on every installed mod with no
 edits, one field edited changes one line, and each save goes through the one
 backup-and-log route every writer in this toolkit uses.
+
+</details>
 
 ### 18b - Events and disasters, one session
 

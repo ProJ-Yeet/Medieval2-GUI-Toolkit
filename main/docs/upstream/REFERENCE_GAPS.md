@@ -32,8 +32,8 @@ says "we do not", that was verified, and the verification is quoted.
 | Source | Items | Already scheduled | Already done, or a duplicate |
 |---|---|---|---|
 | Demir's StratMap Forge | 14 | 0 | 0 |
-| Mylae's M2TW Editor | 17 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11) |
-| Bare Geomod | 8 | 1 (G6) | 3 (G7, G8 done; G5 = D9) |
+| Mylae's M2TW Editor | 17 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11) · **M5, M6, M13 done 18a** |
+| Bare Geomod | 8 | 1 (G6) | 3 (G7, G8 done; G5 = D9) · **G3 done 18a** |
 | TWMapReader | 12 | 1 (T5, folded into 17d) | 0 |
 | **Total** | **51** | **6** | **5** |
 
@@ -264,7 +264,7 @@ Not touched here either. The `position x, y` lines make it a map-editor feature
 rather than a minor-files one: a disaster has coordinates, so it belongs with
 D9's placeable objects.
 
-### M5. Campaign description strings · S
+### M5. Campaign description strings · **done**
 
 `CampaignDescriptionsStrings.jsx` (312 lines) + `CampaignDescriptionsEditor.jsx`.
 The title, blurb and victory text a campaign shows on the menu.
@@ -273,10 +273,21 @@ The title, blurb and victory text a campaign shows on the menu.
 Small, self-contained, and the last unedited file in the campaign folder now
 that 16j-2 took `descr_win_conditions.txt`.
 
-### M6. Faction movies · S
+**Landed in 18a** (2026-09-07), on the faction screen. The keys are built from
+the campaign folder's name and the faction's rather than listed, so a faction the
+file has never mentioned still gets a form. There is no "victory text" in this
+file in either installed mod - that claim above was wrong, and a campaign's
+victory terms are `descr_win_conditions.txt`, which 16j-2 already writes.
+
+### M6. Faction movies · **done**
 
 `factionMoviesParser.jsx` (55 lines). The intro and victory movies per faction.
 Not read here. Tiny; belongs with the combined faction screen in 17f.
+
+**Landed in 18a** (2026-09-07), on that screen. It is `descr_faction_movies.xml`
+and it is in the campaign folder, not a `.txt` under `data/` - and neither
+installed mod's copy ends with a newline, which is why it is a line splice and
+not the reference tool's serialiser.
 
 ### M7. Import a campaign from another mod · L
 
@@ -327,7 +338,7 @@ zip.
 id. The bulk half is a loop over it with one plan; the zip half is `pack.py`'s
 machinery over the faction's files. Both are extensions of things that exist.
 
-### M13. Guild editor · S
+### M13. Guild editor · **done**
 
 `GuildEditor.jsx`, `GuildsParser.jsx`. `export_descr_guilds.txt`.
 
@@ -335,6 +346,14 @@ We **validate against** that file - `buildings.py` refuses a `guild_` requiremen
 the file does not declare, and says so with the count - and cannot edit it. A
 small `flatrecord`-shaped file, and the asymmetry (we know it well enough to
 refuse, not well enough to fix) is the argument for closing it.
+
+**Landed in 18a** (2026-09-07) as its own sub mode beside Traits and
+Ancillaries. Only the definition half is flat-record shaped; the file could not
+be read through `flatrecord` at all, because `Guild` opens a definition AND
+names an effect inside a trigger. That collision was also a live bug in
+`triggers.py` - every guild trigger ended at its own first effect - and the fix
+is `triggers.DEFINITION_WORDS`. Running the check it exists to run found that
+Divide and Conquer awards guild points to two guilds it never declares.
 
 ### M14. A raw text editor · S
 
@@ -400,11 +419,15 @@ skip a filter when it is absent; the region form does not offer it. One more
 field on a form that already writes seven, spliced into the line it came from,
 exactly as 16d does the rest.
 
-### G3. Region mercenary pool · S
+### G3. Region mercenary pool · **done**
 
 Which pool from `descr_mercenaries.txt` this province draws on. The roadmap has
 carried this as "data layer lands in 16b, UI deferred" since the phase was
 scoped, and the data layer did land. One picker.
+
+**Landed in 18a** (2026-09-07), on the region panel, reading 16b's parser and
+adding the write. No province is in two pools in either installed mod, which is
+what lets it be a single choice.
 
 ### G4. Legion label, with its name dialog · S
 

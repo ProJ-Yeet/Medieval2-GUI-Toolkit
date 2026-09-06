@@ -1737,12 +1737,90 @@ function cmapFormHtml(){
           oninput="cmapSet('farming', this.value)">
         <div class="count">4 is about average, 6-7 highly fertile.</div></div>` : ''}
     </div>
+    ${cmapMercHtml()}
     ${d.has.religions ? `<div class="k">Religions
       <span class="${total === 100 ? 'count' : 'w-bad'}">total ${total}${
         total === 100 ? '' : ` - the game crashes on load unless this is 100 (${
         total > 100 ? '+' : ''}${total - 100})`}</span></div>
       <div class="cmrels">${cmapReligionRows()}</div>` : ''}
     ${cmapPixelHtml()}`;
+}
+
+/* ---- the province's mercenary pool (18a, G3) ----
+
+   `descr_mercenaries.txt` groups provinces into pools and sells a different
+   roster in each. 16b read it and the picker has been deferred ever since.
+
+   It saves on its own rather than riding on the region save, and that is 17f's
+   ruling rather than a shortcut: this is one screen over two files, and the
+   pool is not a field of the region record - it is a word on a `regions` line
+   in another file, in the campaign folder. Two files, two saves, two undo
+   entries, each naming the file it put back.
+
+   Measured across both installed mods: 84 pools over 341 provinces, and not one
+   province is in two pools. That is what lets this be a single choice rather
+   than a set of tick boxes. */
+function cmapMercHtml(){
+  const d = state.cmap.det, m = d.mercenaries;
+  if(!m) return '';
+  if(!m.have) return `<div class="k">Mercenaries
+    <span class="count">${esc(m.problem || 'no pool file')}</span></div>`;
+  const now = d.mercPick === undefined ? m.pool : d.mercPick;
+  const dirty = now !== m.pool;
+  return `<div class="k">Mercenaries
+      <span class="count">which pool this province hires from</span></div>
+    <div class="cmform">
+      <div class="cmfield">
+        <label>Pool</label>
+        <select onchange="cmapMercSet(this.value)">
+          <option value="" ${now ? '' : 'selected'}>(none - nothing is hired here)</option>
+          ${(m.pools || []).map(p => `<option value="${esc(p.name)}"
+            ${p.name === now ? 'selected' : ''}>${esc(p.name)} · ${p.regions} province${
+              p.regions === 1 ? '' : 's'}, ${p.units} unit${
+              p.units === 1 ? '' : 's'}</option>`).join('')}
+        </select>
+        <div class="count">${m.units && m.units.length && !dirty
+          ? 'Sells ' + m.units.map(esc).join(', ')
+          : dirty ? 'Not saved yet - ' + esc(m.file) + ' is a second file, so it is '
+                    + 'a second save and a second undo'
+          : 'This province is in no pool, so no mercenary is ever recruitable here'}</div>
+        ${dirty ? `<button class="primary" style="margin-top:6px"
+          onclick="cmapMercSave()">Save mercenary pool</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function cmapMercSet(value){
+  const d = state.cmap.det;
+  if(!d) return;
+  d.mercPick = value;
+  cmapRegionPaint();
+}
+
+async function cmapMercSave(){
+  const c = state.cmap, d = c.det;
+  if(!d || c.busy || d.mercPick === undefined) return;
+  const body = {mod:c.mod, what:'mercenaries', campaign:d.campaign,
+                name:d.name, edits:{pool:d.mercPick}};
+  c.busy = true;
+  let plan;
+  try{ plan = await api.post('/api/campfiles/plan', body); }
+  finally{ c.busy = false; }
+  if(plan.error){ toast('✗ ' + plan.error, 7000); return; }
+  const p = plan.plan || {};
+  if(!confirm(`Write: ${(p.changes || []).join('\n') || 'no visible change'}?\n\n`
+    + ((p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '')
+    + `${d.mercenaries.file} only - the region record is not touched.\n\n`
+    + 'Backed up first, and 🕑 Log can undo it.')) return;
+  c.busy = true;
+  let res;
+  try{ res = await api.post('/api/campfiles/apply', body); }
+  finally{ c.busy = false; }
+  if(res.error){ toast('✗ ' + res.error, 7000); return; }
+  toast('Mercenary pool saved. 🕑 Log can undo it.');
+  const name = d.name;
+  c.det = null;
+  await cmapOpenRegion(name);
 }
 
 function cmapFindingsHtml2(){

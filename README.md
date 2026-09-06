@@ -39,11 +39,12 @@ one containing `mods`).
 | Unit Editor | Change, clone or delete the units of a single mod |
 | BMDB + Sprites | Edit any `battle_models.modeldb` entry, view models in 3D, and clean out what nothing references |
 | Buildings | Browse and edit `export_descr_buildings.txt`, including recruitment |
-| Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, check the whole map against what the game will accept. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
+| Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, set which mercenary pool a province hires from, name a faction on the new-game menu, check the whole map against what the game will accept. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
 | Unit Sounds | Choose which voice bank entry each unit uses |
 | Sprites | Generate and wire up the far-LOD unit sprites |
 | Strings | Read and write the compiled `data/text/*.txt.strings.bin` files |
 | Traits / Ancillaries | Full editors for both, definitions and triggers together |
+| Guilds | `export_descr_guilds.txt`: what each guild grants, the point thresholds its tiers sit at, and every trigger that earns it points |
 | Factions | Faction definitions, with map colours edited via a colour picker, and **Add a faction** - a new slot cloned from an existing one across all twelve files that name a faction |
 | Minor Files | Rebel factions, religions, cultures, resources and character names |
 
@@ -215,6 +216,20 @@ Other transfer options:
   engine reads, and copies a unit card into every faction folder that holds one.
 * **Port a trait or ancillary from another installed mod**, bringing the block,
   its triggers and its text keys together.
+* **Guilds.** `export_descr_guilds.txt` is two things in one file: what each
+  guild grants and the point thresholds its tiers sit at, then hundreds of lines
+  below, the triggers that earn those points. Both halves on one screen, with
+  every point line listed against the trigger it comes from and what its scope
+  letter actually means. It also answers the question the Buildings module could
+  only ask: a `guild_` requirement it refuses can now be fixed where it is, and
+  the reverse fault is reported too - Divide and Conquer awards guild points to
+  two guilds it never declares, and those points go nowhere.
+* **What a campaign calls a faction.** The title and the blurb the new-game menu
+  shows, edited on the faction screen beside the faction itself. A faction the
+  campaign has never named shows its code name in game and nothing on disk says
+  so, so the form is offered whether the text exists or not, and saving creates
+  it. The four faction movies are on the same screen, and so is the mercenary
+  pool a province hires from, over on the region panel.
 * **Ctrl+Z / Ctrl+Y** in every editor, one value at a time.
 
 ## Cleanup

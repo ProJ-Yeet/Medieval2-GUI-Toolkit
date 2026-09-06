@@ -2995,3 +2995,113 @@ asserted in a suite. `test_web_modules` covers the new module wiring, and 17a
 gets a test that asserts every non-`sub` entry in `MODES` has a `MODULES` entry.
 That is the class of bug rather than the instance, and it is the only reason
 this one survived a whole phase.
+
+---
+
+## Phase 18a - Four files nobody could edit - done 2026-09-07
+
+**Closes M5, M6, M13, G3.** The first sub-phase of 3.1.0, and the common shape
+of all four is the one the release exists to remove: *we know a file well enough
+to validate it and not well enough to edit it.*
+
+Two things in the scope were wrong and were corrected by measuring before a line
+was written, which is worth recording because both would have been built wrong:
+
+* **M6 is `descr_faction_movies.xml`, not `.txt`**, and it is in the campaign
+  folder rather than under `data/`. Both installed mods have one - Third Age
+  Reforged declares one faction, Divide and Conquer ships the empty shell - and
+  **neither has a trailing newline**, which is exactly why it is a line splice
+  and not a serialiser. The reference tool's `serializeFactionMovies` rebuilds
+  the file from its own model and would have rewritten both of them on the first
+  save of either.
+* **`flatrecord.py` does not cover three of the four.** The scope said it did.
+  M5 is a UTF-16 localisation file, M6 is XML, and G3 is a word on a `regions`
+  line inside a `pool` block. Only M13's *definition* half is a flat record, and
+  it is used as one - `guilds.SHAPE` is a real `flatrecord.Shape` and the block
+  editor, its span map and its field list are that module's rather than a third
+  copy. What could not go through it is the *file*, for the reason below.
+
+**M13 - `export_descr_guilds.txt`, and the bug it uncovered in `triggers.py`.**
+The file has two block types and **the keyword that opens a definition is also
+the keyword of an effect line inside a trigger**:
+
+    Guild assassins_guild                 <- a definition, 2 words
+        Guild assassins_guild s  10       <- an effect, 4 words
+
+`triggers.parse_text` ended a trigger on *any* line whose head word was in
+`BLOCK_ENDERS`, so every guild trigger ended at its own first effect: it kept
+its `WhenToTest` and its conditions and lost everything it actually did, and all
+507 effect lines were collected as definitions. EDCT and EDA never hit this
+because `Affects` is not `Trait`. The fix is `triggers.DEFINITION_WORDS = 2` and
+it was measured before it was written: **all 1,850 `Trait` and `Ancillary` lines
+in both mods' EDCT and EDA are two words**, and `export_descr_guilds.txt` is 21
+two-word definitions against 507 four-word effects. So the count separates them
+and costs the older two files nothing. `parse_records` still cannot read the
+file - it opens a record on every matching head line - which is why
+`guilds.parse_text` is the one new file-level parser in the phase.
+
+What the file says, counted rather than assumed:
+
+* **a definition has exactly two body keys.** All 21 records write `building`
+  and `levels` and nothing else. The reference parser also reads
+  `SettlementMinLevel` and `FactionSupport`; neither is in a single real file,
+  so both round-trip through an edit and neither is a form field.
+* **`levels` is three ascending thresholds** - 20 of the 21. The one that is not
+  is Third Age Reforged's `gwaith_i_mirdain_guild`, `levels 1000000 250`, two
+  values and descending. Reported, not refused: it is somebody else's mod and it
+  loads today.
+* **the scope letter is `s`, `o` or `a`** - 272, 188 and 47 uses. The reference
+  tool documents only the first two and defaults to `o`, which would silently
+  rewrite all 47 of the third kind.
+* **`all` and `this` are engine words, not guild names.** Both mods award points
+  to both and declare neither, so the "these points go nowhere" check skips
+  them rather than reporting 47 findings about words the engine owns.
+
+And the finding the module exists to make: **Divide and Conquer awards guild
+points to `avengers_guild` and `thiefs_guild` and declares neither** - 24 and 8
+trigger lines whose points go nowhere. That is the exact shadow `buildings.py`
+could see since Phase 12 and could not name.
+
+The mode is `sub:true` beside Traits and Ancillaries, with a Minor Files tab, a
+Code View kind, and the Phase 7 trigger builder under the block - because a
+guild is the same two-halves-of-one-file shape a trait is, and reading one half
+without the other tells you nothing.
+
+**M5, M6 and G3 - `campfiles.py`, one module over three files.** Not tidiness:
+all three answer "what does this campaign say about this faction, or this
+province", and each on its own is fifty lines and a screen nobody opens twice.
+
+* **M5.** The description keys are **built, not listed**: the campaign folder's
+  name upper-cased, then the faction's, then `_TITLE` or `_DESCR`. All 230 keys
+  across both mods fit it, and the only two suffixes are those. So a faction the
+  file has never mentioned still gets a form and saving creates the key - which
+  is the case worth having, because a faction with no description shows its code
+  name on the menu and nothing on disk says so. `REFERENCE_GAPS.md` also
+  promises "victory text" here; there is none in either mod, and a campaign's
+  victory terms are `descr_win_conditions.txt`, which 16j-2 already writes. The
+  write takes `traits._write_loc`'s two roads: into the `.txt` and recompile the
+  `.strings.bin` beside it, or straight into the archive when the mod ships only
+  that.
+* **G3.** 16b read the pools and the UI has been deferred ever since; what was
+  missing was the write, and the write is one word moved from one `regions` line
+  to another. Measured: 57 pools over 193 provinces in Divide and Conquer and 27
+  over 148 in Third Age Reforged, and **not one province is in two pools**,
+  which is what lets the picker be a single choice rather than a set of tick
+  boxes. `keyblock.sub_tokens` could not do the rewrite: it walks the tokens
+  already on the line and substitutes into them, so a shorter list leaves every
+  province past its end still on it. `campfiles.set_regions` owns the whole tail
+  of the line, which is what a variable-length list needs.
+
+All three of M5, M6 and G3 save on their own rather than riding on the region or
+the faction save, and that is **17f's ruling rather than a shortcut**: one
+screen over several files, one save and one undo per file, each naming the file
+it put back. The faction tab is four files and four Save buttons now.
+
+**Exit, all met.** Each of the four round-trips byte-exact on every installed
+mod with no edits (`parse(t).text() == t`, and every guild block re-renders to
+itself unchanged); one field edited changes one line; and each save goes through
+the one backup-and-log route every writer in this toolkit uses.
+`tests/test_guilds.py` (62 checks) and `tests/test_campfiles.py` (76) are new;
+`test_triggers`, `test_traits` and `test_ancillaries` were re-run against the
+`DEFINITION_WORDS` change and are unmoved at 49, 112 and 85. All four screens
+were driven in a running browser on Third Age Reforged.

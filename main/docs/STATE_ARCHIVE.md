@@ -25,6 +25,84 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 18a - four files nobody could edit (2026-09-07)
+`unittransfer/guilds.py` (620 lines), `unittransfer/campfiles.py` (700), the
+`guilds` code-view kind, six routes and two handlers on `server.py`, four
+readiness rows in `modfiles.py`, `web/js/guilds.js` (400), a section on
+`stratcamp.js`'s faction tab and a picker on `campmap.js`'s region panel, plus
+`tests/test_guilds.py` (62 checks) and `tests/test_campfiles.py` (76). Closes
+M5, M6, M13 and G3, which is all of Phase 18a. The reasoning is in
+`ROADMAP_ARCHIVE.md`; what a later session would not otherwise find out is here.
+
+**Measure the scope before building it.** Two of the four items were described
+wrongly in the roadmap and both would have produced wrong code:
+`descr_faction_movies` is `.xml` in the campaign folder, not `.txt` under
+`data/`; and `flatrecord.py` covers exactly one of the four, not three. Ten
+minutes of `find` and a Python one-liner over both installed mods caught both.
+
+**The bug 18a found in a module it was not touching.** `triggers.parse_text`
+ended a trigger on any line whose head word was in `BLOCK_ENDERS`. In
+`export_descr_guilds.txt` the effect lines are `Guild <name> <scope> <points>`,
+so every one of the 154 guild triggers in Third Age Reforged ended at its own
+first effect and all 282 effect lines were filed as definitions. Nothing had
+ever noticed because the EDCT and the EDA use `Affects` for effects and `Trait`
+/ `Ancillary` for definitions - two different words. The rule that fixes it,
+`DEFINITION_WORDS = 2`, was written only after counting: 1,850 of 1,850 real
+`Trait` and `Ancillary` lines are two words, and the guild file is 21 two-word
+definitions against 507 four-word effects.
+
+**`keyblock.sub_tokens` cannot write a variable-length list.** It walks the
+tokens already on the line and substitutes into them, which is right for the
+fixed columns it was written for and silently wrong for a `regions` line: moving
+a province OUT of a pool left every province past the new end of the list still
+on the line. `campfiles.set_regions` owns the whole tail of the line instead.
+The suite has the case as "and TAKES IT OUT of the old one - the short-list
+case", because it passed the naive way for the first province and only failed
+for the last.
+
+**What a two-step move does not restore.** Taking a province out of a pool and
+putting it back does not rebuild the file byte for byte - it comes back at the
+end of the `regions` list, because the file records no position for a province
+within a pool. The test asserts membership and "one line different", not bytes.
+Asserting bytes there would have been asserting something the format does not
+promise.
+
+**What the checks found in shipped mods.** Divide and Conquer awards guild
+points to `avengers_guild` (24 trigger lines) and `thiefs_guild` (8) and
+declares neither, so those points go nowhere - the exact fault `buildings.py`
+has been able to see the shadow of since Phase 12. Third Age Reforged's
+`gwaith_i_mirdain_guild` has `levels 1000000 250`: two thresholds instead of
+three, counting downward. Four findings across both mods and not a flood, which
+is the bar every check in this toolkit is held to.
+
+**`all` and `this` are engine words.** Both mods write `Guild all s 10` and
+`Guild this o 1` and neither declares a guild by either name, so the
+"undeclared guild" check skips them. Without that it reports 47 findings about
+words the engine owns. There is no ground-truth document for this in the repo -
+`Reference/` is not checked in - so the exemption rests on the measurement and
+says so in the source.
+
+**The scope letter has three values, not two.** `s`, `o` and `a`: 272, 188 and
+47 uses. The reference tool's parser documents `s` and `o` and defaults to `o`,
+which would have rewritten all 47 of the third kind on the first save.
+
+**Four screens, four files, four saves.** 17f's ruling did the work here without
+argument: the faction tab is now `descr_strat.txt`, `descr_sm_factions.txt`,
+`campaign_descriptions.txt` and `descr_faction_movies.xml`, each with its own
+Save button, its own backup set and its own undo entry. The region panel is
+`descr_regions.txt` and `descr_mercenaries.txt` the same way. Combining the
+screens must not combine the writes.
+
+All four screens were driven in a running browser on Third Age Reforged, not
+only asserted in a suite: the guild list and its findings, the Code View with
+its two-way binding, the shared Phase 7 trigger builder over guild triggers, the
+mercenary picker with its dirty state, and the menu-text and movie sections on
+the faction tab. The blurb box turned up one wording bug that way - it shows
+real line breaks because `stringsbin` unescapes `
+` on the way in, and the hint
+under it said the opposite.
+
+
 ## 16k - the strat preview and the `.cas` decoder (2026-09-05)
 `unittransfer/cas.py` (752 lines), three routes on `server.py`, a strat branch
 through `web/js/viewer3d.js`, the picker in `web/js/stratview.js` (124), and

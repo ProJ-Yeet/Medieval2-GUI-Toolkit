@@ -57,7 +57,10 @@ function cjNew(mod){
           // 16j-2's two tabs. `wins` is a second file and is not read until
           // somebody opens that tab, the way this whole panel is not read until
           // somebody opens it.
-          wins: null, ww: null, winPick: '', winErr: '', winLoading: false};
+          wins: null, ww: null, winPick: '', winErr: '', winLoading: false,
+          // 18a: the campaign's menu text and its faction movies, read once for
+          // the whole campaign when the faction tab is first opened
+          pres: null};
 }
 
 async function cjOpen(force){
@@ -101,8 +104,10 @@ function cjTab(name){
   cjReset();
   cjPaint();
   // 17f: the faction tab is two files now, and the second one is read the
-  // moment the tab is opened rather than when the picker is touched
-  if(name === 'faction') cjSmOpen(cjEnsureFaction());
+  // moment the tab is opened rather than when the picker is touched.
+  // 18a made it four; the other two are read the same way, and once for the
+  // whole campaign rather than once a faction.
+  if(name === 'faction'){ cjSmOpen(cjEnsureFaction()); cjPresOpen(); }
 }
 
 /* The working copy every box edits and every save is built from - the same
@@ -196,8 +201,10 @@ function cjPickFaction(name){
   k.faction = name;
   k.preview = null;
   cjReset();
+  cjPresReset();          // the two payloads answer for every faction already
   cjPaint();
   cjSmOpen(name);
+  cjPresOpen();
 }
 
 /* ---------- 17f: the other half of the same faction ----------
@@ -610,6 +617,7 @@ function cjFactionHtml(){
     ${cjFactionPickerHtml()}
     ${cjCampFactionHtml(f, w, v)}
     ${cjSmHtml()}
+    ${cjPresHtml()}
   </div>`;
 }
 
@@ -626,6 +634,181 @@ function cjSmHtml(){
     <div id="facMain">${(typeof facDetailHtml === 'function' && state.fac)
       ? facDetailHtml() : ''}</div>
   </div>`;
+}
+
+/* ---------- 18a: how the faction is presented, M5 and M6 ----------
+
+   Two more files about this same faction, and both of them are here for 17f's
+   reason: nobody thinks of "what my faction is called on the new-game menu" as
+   a module. The tab is now four files and four Save buttons, and each one
+   writes the file it has always written.
+
+     M5  data/text/campaign_descriptions.txt   the menu title and the blurb
+     M6  <campaign>/descr_faction_movies.xml   the four movies
+
+   Both are read once for the whole campaign, because both files answer for
+   every faction at once and re-reading them per faction would be a request per
+   click on the picker. The description keys are BUILT rather than looked up -
+   `IMPERIAL_CAMPAIGN_SICILY_TITLE` is the campaign folder's name and the
+   faction's - so a faction the file has never mentioned still gets a form, and
+   saving it creates the key. That is the case worth having: a faction with no
+   description shows its code name on the menu, and nothing on disk says so. */
+async function cjPresOpen(force){
+  const k = state.cj, c = state.cmap;
+  if(!k || !c) return;
+  const camp = (k.d && k.d.campaign) || '';
+  if(!force && k.pres && k.pres.mod === c.mod && k.pres.campaign === camp) return;
+  k.pres = {mod: c.mod, campaign: camp, loading: true, err: '',
+            descr: null, movies: null, w: null, busy: false};
+  cjPaint();
+  const q = `mod=${enc(c.mod)}${camp ? '&campaign=' + enc(camp) : ''}`;
+  let descr, movies;
+  try{
+    descr = await api.get('/api/campfiles/descriptions?' + q);
+    movies = await api.get('/api/campfiles/movies?' + q);
+  }catch(e){
+    if(state.cj !== k || !k.pres) return;
+    k.pres.loading = false; k.pres.err = errText(e);
+    cjPaint(); return;
+  }
+  if(state.cj !== k || !k.pres || k.pres.mod !== c.mod) return;
+  k.pres.loading = false;
+  k.pres.descr = descr;
+  k.pres.movies = movies;
+  cjPresReset();
+  cjPaint();
+}
+
+//: The working copy for the faction the screen is on, out of the two payloads
+//: that answered for every faction at once.
+function cjPresReset(){
+  const k = state.cj, p = k && k.pres;
+  if(!p || !p.descr) return;
+  const who = k.faction;
+  const row = (p.descr.rows || []).find(r => r.faction === who) || {};
+  const mv = (p.movies && (p.movies.rows || []).find(r => r.faction === who)) || {};
+  p.for = who;
+  p.w = {title: row.title || '', descr: row.descr || '',
+         intro: mv.intro || '', victory: mv.victory || '',
+         defeat: mv.defeat || '', death: mv.death || ''};
+  p.was = Object.assign({}, p.w);
+  p.hasBlock = !!(mv.lines && mv.lines.length);
+}
+
+function cjPresSet(key, value){
+  const p = state.cj && state.cj.pres;
+  if(!p || !p.w) return;
+  p.w[key] = value;
+  // no repaint: the caret is in the box. The Save buttons appear on the next
+  // paint the picker or a tab switch causes, and both saves check for
+  // themselves whether anything moved.
+}
+
+const CJ_MOVIE_SLOTS = ['intro', 'victory', 'defeat', 'death'];
+const cjPresDirty = keys => {
+  const p = state.cj && state.cj.pres;
+  return !!(p && p.w) && keys.some(x => p.w[x] !== p.was[x]);
+};
+
+function cjPresHtml(){
+  const k = state.cj, p = k.pres;
+  if(!p) return '';
+  if(p.loading) return `<div class="cjsm"><div class="cjsmhead">On the menu</div>
+    <div class="count">reading the campaign's text and movies…</div></div>`;
+  if(p.err) return `<div class="cjsm"><div class="cjsmhead">On the menu</div>
+    <div class="w-warn">${esc(p.err)}</div></div>`;
+  if(!p.w) return '';
+  const d = p.descr, mv = p.movies;
+  const row = (d.rows || []).find(r => r.faction === k.faction) || {};
+  return `<div class="cjsm">
+      <div class="cjsmhead">On the menu
+        <span class="count">data/${esc(d.file)} - the title and the blurb the
+          new-game screen shows for this faction. A separate file and a separate
+          save.</span></div>
+      ${row.title_set ? '' : `<div class="count">This campaign has never named
+        <b>${esc(k.faction)}</b>, so the menu shows its code name. Saving writes
+        <code>${esc(row.title_key || '')}</code>.</div>`}
+      <div class="cmfield"><label>Title</label>
+        <input value="${esc(p.w.title)}" placeholder="${esc(k.faction)}"
+          oninput="cjPresSet('title', this.value)">
+        <div class="count">${esc(row.title_key || '')}</div></div>
+      <div class="cmfield"><label>Blurb</label>
+        <textarea rows="5" oninput="cjPresSet('descr', this.value)"
+          >${esc(p.w.descr)}</textarea>
+        <div class="count">${esc(row.descr_key || '')} · press Enter for a line
+          break; the file stores it as <code>\\n</code> on one line, which is
+          what the game reads</div></div>
+      ${cjPresDirty(['title', 'descr'])
+        ? `<button class="primary" onclick="cjPresSaveText()">Save menu text</button>`
+        : ''}
+    </div>
+    <div class="cjsm">
+      <div class="cjsmhead">Movies
+        <span class="count">${esc(mv && mv.file || 'descr_faction_movies.xml')}${
+          mv && mv.have ? ' - paths under data/' + esc(mv.fmv) : ''}. A separate
+          file and a separate save.</span></div>
+      ${!mv || !mv.have
+        ? `<div class="count">${esc((mv && mv.problem)
+            || 'this campaign has no movie file')}</div>`
+        : `${p.hasBlock ? '' : `<div class="count">This campaign has no
+             <code>&lt;faction&gt;</code> block for <b>${esc(k.faction)}</b>, so it
+             plays no movies. Filling any box below writes one.</div>`}
+           ${CJ_MOVIE_SLOTS.map(s => `<div class="cmfield">
+             <label>${s[0].toUpperCase() + s.slice(1)}</label>
+             <input value="${esc(p.w[s])}" placeholder="faction/${esc(s)}.bik"
+               oninput="cjPresSet('${s}', this.value)"></div>`).join('')}
+           ${cjPresDirty(CJ_MOVIE_SLOTS)
+             ? `<button class="primary" onclick="cjPresSaveMovies()">Save movies</button>`
+             : ''}`}
+    </div>`;
+}
+
+async function cjPresSaveText(){
+  const k = state.cj, p = k.pres;
+  await cjPresApply({what: 'descriptions', campaign: p.campaign, name: k.faction,
+                     edits: {title: p.w.title, descr: p.w.descr}},
+                    `the menu text for ${k.faction}`);
+}
+
+async function cjPresSaveMovies(){
+  const k = state.cj, p = k.pres;
+  const edits = {};
+  for(const s of CJ_MOVIE_SLOTS) edits[s] = p.w[s];
+  // A faction with no block yet is an add, and it needs at least one path in it
+  // - an empty <faction> block names no movie and does nothing.
+  const action = p.hasBlock ? 'edit' : 'add';
+  if(action === 'add' && !CJ_MOVIE_SLOTS.some(s => (p.w[s] || '').trim())){
+    toast('A new <faction> block needs at least one movie path', 4000); return;
+  }
+  await cjPresApply({what: 'movies', campaign: p.campaign, name: k.faction,
+                     action, edits}, `the movies for ${k.faction}`);
+}
+
+async function cjPresApply(body, what){
+  const k = state.cj, p = k.pres;
+  if(!p || p.busy) return;
+  body = Object.assign({mod: p.mod}, body);
+  p.busy = true;
+  let plan;
+  try{ plan = await api.post('/api/campfiles/plan', body); }
+  finally{ p.busy = false; }
+  if(plan.error){ toast('✗ ' + plan.error, 7000); return; }
+  const q = plan.plan || {};
+  if(!confirm(`Write: ${what}?\n\n`
+    + ((q.changes || []).slice(0, 10).join('\n') || 'no visible change')
+    + ((q.warnings || []).length ? '\n\n' + (q.warnings || []).slice(0, 3)
+        .map(x => '⚠ ' + x).join('\n') : '')
+    + (q.loc_new && q.loc_new.length
+        ? `\n\n${q.loc_new.length} text key(s) this file has never had are created.`
+        : '')
+    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+  p.busy = true;
+  let res;
+  try{ res = await api.post('/api/campfiles/apply', body); }
+  finally{ p.busy = false; }
+  if(res.error){ toast('✗ ' + res.error, 7000); return; }
+  toast('Saved. 🕑 Log can undo it.');
+  await cjPresOpen(true);
 }
 
 //: What `descr_strat.txt` says this faction starts with. A slot the campaign

@@ -293,6 +293,31 @@ Minor Files mode (the five small campaign files, see :mod:`unittransfer.minorfil
   GET  /api/minor/record?mod=&tab=&name=
                                  -> one record in full: its fields, spans, the
                                     pickers its boxes need and its text key
+Guilds (18a, see :mod:`unittransfer.guilds`). ``export_descr_guilds.txt``, the
+file the building side has refused against since Phase 12 and could not open.
+  GET  /api/guilds?mod=          -> every guild, what it grants, how many trigger
+                                    lines feed it, and the file's own findings
+  GET  /api/guild?mod=&name=     -> one guild: its block, the triggers that award
+                                    it points, and the pickers its boxes need
+  POST /api/guilds/plan|/apply   -> add, edit or delete a guild and its triggers
+                                    (one backup set + undo)
+
+The campaign folder's small files (18a, see :mod:`unittransfer.campfiles`)
+  GET  /api/campfiles/descriptions?mod=&campaign=
+                                 -> the campaign's menu title and one row a
+                                    faction, from campaign_descriptions.txt
+  GET  /api/campfiles/movies?mod=&campaign=
+                                 -> descr_faction_movies.xml as one row a
+                                    faction, with the four movie slots
+  GET  /api/campfiles/mercenaries?mod=&campaign=&region=
+                                 -> every pool in descr_mercenaries.txt and
+                                    which one that province draws on
+  POST /api/campfiles/plan|/apply
+                                 -> one save over any of the three (`what`:
+                                    descriptions / movies / mercenaries). A
+                                    description write goes into the .txt and
+                                    recompiles the .strings.bin beside it
+
   POST /api/minor/plan|/apply    -> add, edit or delete one record. A religion's
                                     save is four files at once - its block, the
                                     `religions` list, descr_religions_lookup.txt
@@ -360,7 +385,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campmap, campstrat, cas, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1544,6 +1569,7 @@ class Handler(BaseHTTPRequestHandler):
                            "strings": codeview.strings_document,
                            "traits": codeview.trait_document,
                            "ancillaries": codeview.ancillary_document,
+                           "guilds": codeview.guild_document,
                            "factions": codeview.faction_document,
                            "sounds": codeview.sounds_document,
                            "pools": codeview.pools_document,
@@ -1729,6 +1755,43 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(traits.detail(mod, (q.get("name") or [""])[0]))
                 except KeyError as e:
                     return self._err(404, str(e))
+            if u.path in ("/api/guilds", "/api/guild"):
+                # 18a. One file, both halves: the definitions and the triggers
+                # that feed them, because the two cross-checks that matter -
+                # points awarded to a guild nothing declares, and a guild no
+                # trigger ever feeds - need both at once.
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                try:
+                    if u.path == "/api/guilds":
+                        return self._json(guilds.overview(mod))
+                    return self._json(guilds.detail(
+                        mod, (q.get("name") or [""])[0]))
+                except guilds.GuildError as e:
+                    return self._err(404, e.message)
+            if u.path in ("/api/campfiles/descriptions",
+                          "/api/campfiles/movies",
+                          "/api/campfiles/mercenaries"):
+                # 18a. The campaign folder's three small files. All three are
+                # per campaign, so all three take `campaign` and default to the
+                # one campstrat defaults to.
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                camp = (q.get("campaign") or [campfiles.DEFAULT_CAMPAIGN])[0]
+                what = u.path.rsplit("/", 1)[-1]
+                try:
+                    if what == "descriptions":
+                        return self._json(campfiles.descr_view(mod, camp))
+                    if what == "movies":
+                        return self._json(campfiles.movies_view(mod, camp))
+                    return self._json(campfiles.mercs_view(
+                        mod, camp, (q.get("region") or [""])[0]))
+                except (campfiles.CampFileError, OSError) as e:
+                    return self._err(404, getattr(e, "message", str(e)))
             if u.path == "/api/triggers/vocab":
                 # the condition/event vocabulary the trigger builder draws its
                 # pickers from. Generated data (dev/reference/trigger_vocab.py), not code,
@@ -1988,6 +2051,10 @@ class Handler(BaseHTTPRequestHandler):
                     self._faction_clone(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/minor/plan", "/api/minor/apply"):
                 return self._json(self._minor(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/guilds/plan", "/api/guilds/apply"):
+                return self._json(self._guilds(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/campfiles/plan", "/api/campfiles/apply"):
+                return self._json(self._campfiles(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/plan", "/api/map/apply"):
                 return self._json(self._map_write(u.path.rsplit("/", 1)[-1], body))
             if (u.path.startswith("/api/map/paint")
@@ -2279,6 +2346,57 @@ class Handler(BaseHTTPRequestHandler):
             return out
         out.update(traits.apply(plan))
         self.registry.invalidate(body["mod"])       # the file changed on disk
+        return out
+
+    # ---- guilds (18a) ----
+    def _guilds(self, action, body):
+        """Preview or write one guild and the triggers that feed it.
+
+        The traits handler's shape, because it is the same job over the same
+        two-halves-of-one-file grammar: the block and the triggers hundreds of
+        lines below it go into one backup set and come back on one undo.
+        """
+        try:
+            mod = self.registry.get(body["mod"])
+            plan = guilds.plan(mod, body)
+        except (KeyError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        if not plan.text:
+            out["error"] = "nothing to change"
+            return out
+        out.update(guilds.apply(plan))
+        self.registry.invalidate(body["mod"])       # the file changed on disk
+        return out
+
+    # ---- the campaign folder's small files (18a) ----
+    def _campfiles(self, action, body):
+        """Preview or write one of the three: descriptions, movies, mercenaries.
+
+        One handler over three files because a save is the same shape for all
+        three - ``what`` says which - and because two of them can be edited from
+        the same faction screen, where two handlers would mean two undo entries
+        for one visible action.
+        """
+        try:
+            mod = self.registry.get(body["mod"])
+            plan = campfiles.plan(mod, body)
+        except (KeyError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        if not plan.text and not plan.loc_writes:
+            out["error"] = "nothing to change"
+            return out
+        out.update(campfiles.apply(plan))
+        self.registry.invalidate(body["mod"])       # the files changed on disk
         return out
 
     # ---- ancillaries ----
@@ -3411,10 +3529,18 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/map/region":
             try:
-                return self._json(campmap.region_detail(
-                    cm, (q.get("name") or [""])[0]))
+                out = campmap.region_detail(cm, (q.get("name") or [""])[0])
             except campmap.MapError as exc:
                 return self._err(404, str(exc))
+            # 18a, G3. The mercenary pool is a campaign fact and the record is
+            # not, so it rides along rather than going into campmap.py: the
+            # region panel is one screen and this is one more picker on it. A
+            # campaign with no descr_mercenaries.txt comes back `have:false`
+            # with the reason, which is what the picker shows instead of itself.
+            camp = (q.get("campaign") or [""])[0] or campstrat.DEFAULT_CAMPAIGN
+            out["campaign"] = camp
+            out["mercenaries"] = campfiles.mercs_view(cm.mod, camp, out["name"])
+            return self._json(out)
 
         if path in ("/api/map/query/vocab", "/api/map/colouring"):
             # 16g. Both go through the fact table, which is where every filter,

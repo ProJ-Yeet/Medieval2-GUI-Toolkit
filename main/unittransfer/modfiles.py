@@ -35,6 +35,7 @@ MODULES: Dict[str, str] = {
     "ancillaries": "Ancillaries",
     "minor": "Minor Files",
     "strings": "Strings",
+    "guilds": "Guilds",
     "campmap": "Campaign Map",
 }
 
@@ -69,7 +70,7 @@ KNOWN: List[Known] = [
     Known("descr_mounted_engines.txt", "Mounted engines", ("transfer",), required=False),
     Known("descr_engine_skeleton.txt", "Engine skeletons", ("transfer",), required=False),
     Known("export_descr_sounds_units_voice.txt", "Unit voice bank", ("sounds",)),
-    Known("export_descr_buildings.txt", "Buildings (EDB)", ("buildings",)),
+    Known("export_descr_buildings.txt", "Buildings (EDB)", ("buildings", "guilds")),
     Known("text/export_buildings.txt", "Building names and descriptions",
           ("buildings",), required=False),
     Known("descr_sm_factions.txt", "Factions and cultures",
@@ -84,6 +85,11 @@ KNOWN: List[Known] = [
           ("ancillaries",), required=False),
     Known("ui/ancillaries", "Ancillary pictures", ("ancillaries",),
           required=False, folder=True),
+    # 18a. The guild file is required by its own module and optional to the
+    # buildings one, which is the asymmetry that module closes: the EDB reads
+    # perfectly well without it and every `guild_` requirement in it is then
+    # unverifiable.
+    Known("export_descr_guilds.txt", "Guilds", ("guilds",)),
     # The five small campaign files behind one module. All five are required
     # because each one IS a tab: a mod without descr_cultures.txt has no
     # settlements to draw, and saying so on the card is the point of the card.
@@ -117,6 +123,16 @@ KNOWN: List[Known] = [
     Known(f"{_CAMP}/descr_strat.txt", "Campaign setup (descr_strat)", ("campmap",),
           required=False),
     Known(f"{_CAMP}/descr_win_conditions.txt", "Victory conditions", ("campmap",),
+          required=False),
+    # 18a. The campaign folder's three small files. All three are optional: a
+    # campaign runs without any of them - a faction with no description shows
+    # its code name, a faction with no movie block plays none, and a province
+    # in no mercenary pool sells nothing.
+    Known(f"{_CAMP}/descr_mercenaries.txt", "Mercenary pools", ("campmap",),
+          required=False),
+    Known(f"{_CAMP}/descr_faction_movies.xml", "Faction movies", ("campmap",),
+          required=False),
+    Known("text/campaign_descriptions.txt", "Campaign menu text", ("campmap",),
           required=False),
     Known("text", "Localisation folder", ("strings",), folder=True),
     Known("ui/units", "Unit cards", ("transfer", "edit"), required=False, folder=True),

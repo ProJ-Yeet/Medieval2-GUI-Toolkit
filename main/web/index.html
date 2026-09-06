@@ -2159,6 +2159,13 @@
   .trgrid{display:grid;grid-template-columns:170px 1fr;gap:6px 10px;align-items:center}
   .trgrid input,.trgrid select{width:100%}
   .trhint{font-size:11px;margin-top:3px}
+  /* 18a: the guild point table, and the faction-fact rows on the campaign
+     screen. Both are read-mostly grids of short values, so they share one rule
+     rather than each inventing a layout. */
+  .gutbl{width:100%;border-collapse:collapse;font-size:12px}
+  .gutbl td{padding:3px 8px;border-top:1px solid var(--edge)}
+  .gutbl tr:first-child td{border-top:none}
+  .gutbl .count{white-space:nowrap}
   .trlevel{border:1px solid var(--edge);border-radius:6px;padding:8px 10px;
     margin-bottom:8px;background:var(--panel2)}
   .trlevhead{display:flex;gap:8px;align-items:center;margin-bottom:8px}
@@ -2384,6 +2391,7 @@
 <script src="js/edrecruit.js"></script>
 <script src="js/traits.js"></script>
 <script src="js/ancillaries.js"></script>
+<script src="js/guilds.js"></script>
 <script src="js/portui.js"></script>
 <script src="js/minorfiles.js"></script>
 <script src="js/factions.js"></script>
