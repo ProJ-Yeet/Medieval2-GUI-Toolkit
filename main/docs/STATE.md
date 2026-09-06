@@ -1,7 +1,7 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-06 · **two lines now: beta 2026-09-06 with the campaign map,
-and v2.2.0 with it hidden - `master` itself keeps the map on** · Phase 17 done,
-plus ten unit-editor faults the user raised after it_
+_Updated: 2026-09-06 · **v2.3.0 latest and beta 2026-09-06b alongside it, off
+the same tree - `master` itself keeps the map on** · the repository moved under
+`main/` on this date; see WHERE THINGS ARE below_
 
 ## Next up
 **Phase 18a, four files nobody could edit** (`ROADMAP.md`, Backlog). Phase 17
@@ -36,9 +36,14 @@ belongs to is decided by whether it touches the campaign map:
 
 * **Not campaign-map** (unit editor, transfer, buildings, BMDB, sprites, sounds,
   minor files, strings) → a **2.x subrelease with the map hidden**, uploaded
-  `--latest`. First one is **v2.2.0**, 2026-09-06.
+  `--latest`. First one was **v2.2.0**; latest is **v2.3.0**, 2026-09-06.
 * **Campaign-map** → committed here and shipped on the **beta line**, uploaded
-  as a **pre-release**. First one is **beta 2026-09-06**.
+  as a **pre-release**. First one was **beta 2026-09-06**; latest is
+  **beta 2026-09-06b**.
+
+A **subrelease means both**: the user's word for it is one job, and it cuts the
+2.x zip with the map hidden AND the beta zip with it shown, from the same tree.
+The two builds are the same toolkit; only the menu differs.
 
 The switch is **one flag**: `off:true` on the `campmap` entry in `MODES` in
 `web/js/core.js`. `menuModes()` and `modeOffered()` in the same file are what the
@@ -56,19 +61,25 @@ has the Campaign Map on its menu like every other mode.
 subrelease: set the flag, bump the 2.x number, build, upload `--latest`, then
 **put the flag straight back off** in the next commit. To cut a beta: leave the
 flag alone (clear, as it is), set the dated version, build, upload as a
-pre-release. `__version__` currently says `2.2.0`.
+pre-release.
+
+`__version__` currently says `beta-2026-09-06b`, because the beta was the last
+thing cut. That is honest rather than untidy: a checkout of `master` has the map
+on its menu, so it IS the beta build, and the version string should say so. A 2.x
+cut sets the 2.x number for the length of the build and the beta cut sets it back.
 
 **Betas are named by the DATE they were released, not by a version.** There is no
-`v3.0.1-beta`; the beta cut today is `beta 2026-09-06`. Everything about a beta
-carries that date:
+`v3.0.1-beta`. Everything about a beta carries its date, and a **second beta in
+one day takes a letter** - `2026-09-06b`, then `c` - because the first one's
+download link is published and should keep working:
 
 | | |
 |---|---|
-| git tag | `beta-2026-09-06` |
-| GitHub title | `M2 GUI-Kit beta 2026-09-06` |
-| `__version__` | `beta-2026-09-06` |
-| notes | `docs/releases/RELEASE_BETA_2026_09_06.md` |
-| zip | `python dev/release/build_release.py --version beta-2026-09-06` |
+| git tag | `beta-2026-09-06b` |
+| GitHub title | `M2 GUI-Kit beta 2026-09-06b` |
+| `__version__` | `beta-2026-09-06b` |
+| notes | `docs/releases/RELEASE_BETA_2026_09_06B.md` |
+| zip | `python dev/release/build_release.py --version beta-2026-09-06b` |
 
 The 2.x line keeps its numbers - `v2.2.0`, `v2.2.1` - because those are the
 releases people are meant to compare. A beta is a snapshot of the map work on the
@@ -81,8 +92,17 @@ renamed. Run `gh release list --limit 3` and copy the newest title's shape rathe
 than typing it from memory.
 
 ## The releases
+**v2.3.0, 2026-09-06** - the modeldb duplicate cleanup, HD textures in the 3D
+viewer, the tree reorganised under `main/`, and a README with ten generated
+screenshots and the credits in it. Campaign map off the menu. Notes in
+`docs/releases/RELEASE_2_3_0.md`. **This is the `--latest` release.**
+
+**beta 2026-09-06b** - the same toolkit as v2.3.0 with the campaign map switched
+on. Notes in `docs/releases/RELEASE_BETA_2026_09_06B.md`, which says what is new
+since the morning's beta rather than restating the map.
+
 **v2.2.0, 2026-09-06** - the ten unit-editor fixes below, campaign map off the
-menu. Notes in `docs/releases/RELEASE_2_2_0.md`. This is the `--latest` release.
+menu. Notes in `docs/releases/RELEASE_2_2_0.md`.
 
 **beta 2026-09-06** - the same toolkit with the campaign map switched on. It was
 cut from this tree before the flag went in; the notes are
