@@ -5,7 +5,14 @@ title Medieval 2 GUI Toolkit
 rem Launch the Medieval 2 GUI Toolkit. Runs from this file's own folder, so it works
 rem no matter where the shortcut is invoked from. Any arguments (e.g. a MED2 root
 rem path, or "--port 9000") are passed straight through to app.py.
+rem
+rem Two layouts, one file. In the repository the code lives in main\ and only this
+rem launcher, Install-Dependencies.bat and the README sit beside it; in the release
+rem zip everything is unpacked flat and app.py is right here. So look for main\app.py
+rem and work from wherever app.py actually is - the same copy of this file is what
+rem the build puts in the zip, and it has to be right in both.
 cd /d "%~dp0"
+if exist "main\app.py" cd /d "%~dp0main"
 
 rem This window ALWAYS opens, so a failed start is readable instead of a console
 rem that flashes and vanishes. app.py prints its startup checks and the unit-card

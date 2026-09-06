@@ -12,10 +12,20 @@ Video walkthrough: <https://www.youtube.com/watch?v=NZl8gCqlTE0>
 
 Sponsored by FeatherLeaf.
 
+![The Unit Editor: every unit in a mod, grouped by the faction that fields it](main/docs/images/unit-editor.png)
+
 ## Install
 
-Download the latest build from [Releases](../../releases/latest), unzip it, and
-run `Medieval 2 GUI Toolkit.bat`. Python and Pillow are bundled.
+Download the latest build from [Releases](../../releases/latest) and unzip it.
+Then, in this order:
+
+1. **Run `Install-Dependencies.bat`.** It checks for Python and Pillow and
+   installs whatever is missing, for your user only, with no administrator
+   prompt. It asks before downloading anything. On the portable build both are
+   already inside the folder, so it will usually just say there is nothing to
+   do - run it anyway, because that is the answer you want to have seen before
+   the next step rather than after it.
+2. **Run `Medieval 2 GUI Toolkit.bat`.** This is the one you use from then on.
 
 On first run, open Settings and point it at your Medieval II install folder (the
 one containing `mods`).
@@ -36,6 +46,61 @@ one containing `mods`).
 | Traits / Ancillaries | Full editors for both, definitions and triggers together |
 | Factions | Faction definitions, with map colours edited via a colour picker, and **Add a faction** - a new slot cloned from an existing one across all twelve files that name a faction |
 | Minor Files | Rebel factions, religions, cultures, resources and character names |
+
+## The screens
+
+All shot from the running tool against Third Age Reforged. Re-taken with
+`python main/dev/docs/screenshots.py`, so they are never a version out of date.
+
+### Home
+
+Every mod it can see, what each one is ready for, and where you left off.
+
+![Home](main/docs/images/home.png)
+
+### Unit Transfer
+
+Pick a unit in one mod, pick the mod to put it in, and the toolkit works out
+what has to come with it.
+
+![Unit Transfer](main/docs/images/unit-transfer.png)
+
+### BMDB + Sprites
+
+Every `battle_models.modeldb` entry, what names it, and what it draws with.
+
+![The BMDB entry list](main/docs/images/bmdb.png)
+
+Any entry opens in a 3D viewer: the LODs it ships, the skin each faction gets,
+the parts the game picks between per soldier, and its UV layout. **HD textures**
+draws the sheet at the size the mod ships it, which is the size the game draws.
+
+![The model viewer](main/docs/images/bmdb-3d.png)
+
+Names the file carries more than once get a screen of their own. M2TW reads the
+first block with a name and ignores every later one, so the rest are models the
+mod is carrying and cannot reach: rename one to make it reachable, or remove it.
+
+![Duplicate entries](main/docs/images/bmdb-duplicates.png)
+
+### Buildings
+
+`export_descr_buildings.txt` as a tree, with the recruitment each level unlocks.
+
+![Buildings](main/docs/images/buildings.png)
+
+### Campaign Map
+
+The ten map layers, the regions painted on them, and what `descr_strat.txt` puts
+on top. Ships on the dated beta pre-release; see the module table above.
+
+![Campaign Map](main/docs/images/campaign-map.png)
+
+### Factions and Traits
+
+![Factions](main/docs/images/factions.png)
+
+![Traits](main/docs/images/traits.png)
 
 ## Transfers
 
@@ -232,33 +297,34 @@ toolkit's to move.
 
 ## Running from source
 
-Requires Python 3.9+ and Pillow.
+Same two files, same order: **`Install-Dependencies.bat` first**, then
+**`Launch-Medieval2-GUI-Toolkit.bat`**. The first one installs Python 3.9+ and
+Pillow if they are not already there (official installer from python.org, your
+user only, no administrator prompt, added to PATH); the second one starts the
+tool and steps into `main/` on its own.
+
+By hand, if you would rather:
 
 ```bash
 pip install pillow
-python app.py
+python main/app.py
 ```
 
-Or run `Launch-Medieval2-GUI-Toolkit.bat`, which checks for both first. If
-Python is missing entirely, `Install-Dependencies.bat` will download the
-official installer, install it for the current user with no administrator
-prompt, add it to PATH, and then install Pillow. It prompts before downloading.
-
 ```bash
-python app.py --check        # startup checks only, no server
-python app.py --port 9000    # different port
-python app.py --no-browser   # serve without opening a browser tab
+python main/app.py --check        # startup checks only, no server
+python main/app.py --port 9000    # different port
+python main/app.py --no-browser   # serve without opening a browser tab
 ```
 
 ## Building a release
 
 ```bash
-python build_release.py --version v2.2.0
+python main/dev/release/build_release.py --version v2.2.0
 ```
 
-Produces `dist/Medieval2-GUI-Toolkit-v2.1.7.zip`: the tool, a bundled Python
-runtime, Pillow, and the packed vanilla building art. `--no-runtime` builds a
-code-only zip for a machine that already has Python.
+Produces `main/dist/Medieval2-GUI-Toolkit-v2.2.0.zip`: the tool, a bundled
+Python runtime, Pillow, and the packed vanilla building art. `--no-runtime`
+builds a code-only zip for a machine that already has Python.
 
 The vanilla building art ships by default and the build verifies the finished
 archive contains it. A release archive is approximately 50 to 55 MB.
@@ -266,7 +332,7 @@ archive contains it. A release archive is approximately 50 to 55 MB.
 ## Command-line transfer
 
 ```bash
-python transfer_cli.py --from "<source mod>" --to "<dest mod>" --unit "Unit Name" --out transfers/out
+python main/transfer_cli.py --from "<source mod>" --to "<dest mod>" --unit "Unit Name" --out transfers/out
 ```
 
 `--list` shows the source mod's unit types. `--dry-run` plans without writing.
@@ -274,9 +340,9 @@ python transfer_cli.py --from "<source mod>" --to "<dest mod>" --unit "Unit Name
 ## Tests
 
 ```bash
-python tests/test_parsers.py
-python tests/test_transfer_v2.py
-# one module per tests/test_*.py
+python main/tests/test_parsers.py
+python main/tests/test_transfer_v2.py
+# one module per main/tests/test_*.py
 ```
 
 Each suite is self-contained and safe to run against real mod installs. All
@@ -311,11 +377,60 @@ manually.
 
 ## Project layout
 
-* `unittransfer/`: parsers and writers for each file format, the transfer
-  engine, the in-mod edit engine, and the local HTTP server
-* `web/`: the browser UI, plain JavaScript with no build step
-* `tools/nvtt/`: NVIDIA Texture Tools 2.0, driven headless by Sprites mode
-* `tests/`: one module per area, runnable individually
+Only the three things a person actually opens sit at the top: the two `.bat`
+files you run, and this README. Everything else is under `main/`.
+
+```
+Install-Dependencies.bat        run this first
+Launch-Medieval2-GUI-Toolkit.bat  then this
+README.md
+main/
+├── app.py                      starts the local server
+├── transfer_cli.py             the same transfer, from a command line
+├── unittransfer/               parsers and writers for each file format, the
+│                               transfer engine, the in-mod edit engine and the
+│                               HTTP server
+├── web/                        the browser UI: plain JavaScript, no build step
+├── vanilla_ui/                 packed vanilla building art, the fallback for
+│                               any icon a mod does not ship
+├── vendor/nvtt/                NVIDIA Texture Tools 2.0, driven headless by
+│                               Sprites mode for TGA -> DXT5
+├── tests/                      one module per area, each runnable on its own
+├── docs/                       ROADMAP, STATE and their archives
+│   ├── releases/               the release notes, one file per version
+│   └── upstream/               the reference-tool audits, the port manifest
+│                               and the sync log
+└── dev/                        scripts for working ON the toolkit, never
+    ├── release/                shipped with it: build the zip, pack the art
+    ├── reference/              index and sync the reference material, and
+    │                           generate the trigger vocabulary from it
+    ├── checks/                 prose and documentation checks over the repo
+    └── diagnose/               decode one file and print what is in it
+```
+
+`main/config/` (settings, backups, the undo log) and `main/dist/` (build output)
+are created as they are needed and are not in the repository.
+
+## Credits
+
+**Developed by** ProJYeet
+
+**Co-developed by** Demir
+
+**Built on the work of, and thanking them for permission to take reference from
+their code**
+
+* Mylae's [M2TW Editor](https://github.com/Machiavello-1441/m2tw-editor)
+* [Fynn's Medieval II Total War Modding Tool](https://www.twcenter.net/ubs/medieval-2-total-war-modding-tool.26/)
+* Bare Geomod, by Sinople and Gigantus - [moddb.com/mods/bare-geomod-and-tools](https://www.moddb.com/mods/bare-geomod-and-tools)
+* TWMapReader, by Withwnar - [twcenter.net](https://www.twcenter.net/threads/tw-map-reader-v2-24-1-jul-2015-update.438278/)
+
+**Sponsored by** FeatherLeaf
+
+**Special thanks** Gigantus and the TWCenter community, for the guides that
+taught everyone, this tool included, how these files actually work.
+
+**Testing** Jayzinski, TheHolyPilgrim, Espartan, Anhlego and Lupinemaverick
 
 ## Changelog
 
