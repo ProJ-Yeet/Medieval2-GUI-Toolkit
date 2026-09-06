@@ -220,6 +220,32 @@ try:
               max(im.size) <= Handler.MODEL_TEXTURE_MAX)
         check("the skin the entry names reads as present in this mod",
               any(s["rel"] == tex_rel and s["exists"] for s in info["skins"]))
+        # hd=1 lifts the cap: the sheet comes back at the size the mod ships,
+        # which is the size the game draws it. Same route, separate cache key,
+        # so both answers can be held at once.
+        hd = raw(f"/model_texture?mod=ViewerMod&rel={enc(tex_rel)}&hd=1")
+        imhd = Image.open(io.BytesIO(hd))
+        check(f"hd=1 comes back as a PNG too ({len(hd):,} bytes, {imhd.width}x{imhd.height})",
+              hd[:8] == b"\x89PNG\r\n\x1a\n")
+        check("hd=1 is never smaller than the capped one",
+              imhd.width >= im.width and imhd.height >= im.height)
+
+    # The mod's own sheets are usually 1024 or under, where both answers are the
+    # same picture and prove nothing. So the over-the-cap case gets a sheet of
+    # this suite's own making, at a size no real one is: the point being checked
+    # is the cap and the flag that lifts it, not any particular mod's art.
+    big_rel = "unit_models/textures/ut_big_sheet.png"
+    big = data / big_rel
+    big.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (2048, 1536), (30, 90, 160)).save(big)
+    small = Image.open(io.BytesIO(raw(f"/model_texture?mod=ViewerMod&rel={enc(big_rel)}")))
+    full = Image.open(io.BytesIO(raw(f"/model_texture?mod=ViewerMod&rel={enc(big_rel)}&hd=1")))
+    check(f"a 2048x1536 sheet is halved to the cap by default ({small.width}x{small.height})",
+          max(small.size) == Handler.MODEL_TEXTURE_MAX)
+    check("and its aspect ratio is kept while it is",
+          round(small.width / small.height, 3) == round(2048 / 1536, 3))
+    check(f"hd=1 serves it at its own size ({full.width}x{full.height})",
+          full.size == (2048, 1536))
 
     # ---------------------------------------------------------------
     print("\n== what happens when it cannot be drawn ==")

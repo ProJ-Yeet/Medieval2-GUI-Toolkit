@@ -3242,6 +3242,17 @@ class Handler(BaseHTTPRequestHandler):
     #: A model's own texture can be 2048x2048, and the viewer draws it on a
     #: soldier a few hundred pixels tall. Halving the big ones costs nothing to
     #: look at and takes a 16 MB upload down to 4.
+    #:
+    #: The viewer asks for ``hd=1`` when the "HD textures" toggle is on, and
+    #: then the cap is lifted and the sheet is sent at the size the mod ships
+    #: it. That is the size the game draws, so it is the only size worth
+    #: looking at when the errand is checking a skin's own detail rather than
+    #: identifying which model this is. It is off by default because the
+    #: default errand is the second one, and because a 2048 sheet is four times
+    #: the bytes and the memory of a 1024 one for a soldier on screen at
+    #: 300 pixels. Both sizes are cached separately on disk (``max_side`` is
+    #: part of the icon cache's key), so toggling back and forth converts each
+    #: sheet once and never again.
     MODEL_TEXTURE_MAX = 1024
 
     def _model_route(self, path: str, q):
@@ -3266,8 +3277,13 @@ class Handler(BaseHTTPRequestHandler):
             # out of a mod's own file, so it is resolved and then checked to be
             # under data/ - the same rule /icon's `rel` routes follow.
             src = factions.picture_path(mod, (q.get("rel") or [""])[0])
-            return self._send(200, self.registry.icons.png_bytes(
-                src, self.MODEL_TEXTURE_MAX), "image/png")
+            hd = (q.get("hd") or ["0"])[0] == "1"
+            data = self.registry.icons.png_bytes(
+                src, 0 if hd else self.MODEL_TEXTURE_MAX)
+            # the viewer puts the served size on the facts panel, so "HD" can be
+            # seen to have done something rather than taken on trust
+            return self._send(200, data, "image/png",
+                              {"X-Texture-Full-Size": "1" if hd else "0"})
 
         entry = mod.modeldb.by_name().get((q.get("entry") or [""])[0].lower())
         if entry is None:

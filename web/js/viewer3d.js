@@ -497,6 +497,11 @@ function v3Render(){
             ${(v3.geo && !v3.geo.has_uvs) ? 'disabled title="This model carries no UV set"' : 'title="Paint the UV coordinate instead of the art: blue is the main sheet, amber the attachment sheet, and the dark tiles are the sheets repeating"'}>Show UVs</button>
           <button id="v3uved" class="${v3.uved?'on':''}" onclick="v3Toggle('uved')"
             ${(v3.geo && !v3.geo.has_uvs) ? 'disabled title="This model carries no UV set"' : 'title="Open the UV layout beside the model: the texture sheet with this model&#39;s islands drawn over it, the way a UV editor shows them"'}>UV layout</button>
+          <button id="v3hd" class="${v3HdOn()?'on':''}" onclick="v3ToggleHd()"
+            title="Draw the texture at the size the mod ships it, instead of halving anything over
+1024. That is the size the game draws, so it is the one to check a skin's own detail
+against. Off by default: a 2048 sheet is four times the bytes and the video memory
+for a soldier on screen a few hundred pixels tall.">HD textures</button>
           <button onclick="v3Frame()">Recentre</button>
         </div>
         <div id="v3uvkey"></div>
@@ -745,6 +750,16 @@ function v3Facts(){
     g.bones.length ? `rigged to ${g.bones.length} bones` : 'no skeleton - a static model',
     skin && skin.rel ? `main texture <code>${esc(skin.rel)}</code>${skin.exists?'':' - <b>not in this mod</b>'}`
                      : 'no texture listed on this entry',
+    // What is actually on the model right now, which is not always what the
+    // file holds: without HD, anything over 1024 arrived halved. Reading it off
+    // the loaded image rather than the file means the line cannot claim a size
+    // the viewer is not drawing.
+    v3.tex ? `drawn at <b>${v3.tex.naturalWidth} × ${v3.tex.naturalHeight}</b>`
+             + (v3HdOn() ? ' - the size the mod ships, as the game draws it'
+                         : Math.max(v3.tex.naturalWidth, v3.tex.naturalHeight) >= 1024
+                           ? ' - halved to fit; <b>HD textures</b> shows it full size'
+                           : ' - under the 1024 cap, so this is the file&rsquo;s own size')
+           : '',
     v3TexCase() === 'pair'
       ? `attachment texture <code>${esc(skin.attach)}</code>${skin.attach_exists?'':' - <b>not in this mod</b>'}`
       : v3TexCase() === 'self'
@@ -802,15 +817,42 @@ async function v3Load(){
 
 let v3Gen = 0;          // so a slow LOD cannot land after a newer one
 
+/* HD textures: the sheet at the size the mod ships it.
+
+   The server halves anything over 1024 by default, because the ordinary errand
+   here is "which model is this" and a soldier on screen 300 pixels tall gains
+   nothing from a 2048 sheet that costs four times the bytes and the video
+   memory. The other errand is checking a skin's own detail - a seam, a badge,
+   whether a face is actually painted or just noise - and for that the halving
+   is the whole problem, because the game draws the full sheet and this was
+   showing something the game never shows.
+
+   So it is a toggle rather than a default either way, it is remembered across
+   sessions like every other viewer preference, and the URL carries it so the
+   two sizes are separate entries in the browser's cache as well as the disk
+   one. Turning it on reloads only the skins, never the geometry. */
+const v3HdOn = () => state.settings.viewer_hd_textures === true;
+function v3ToggleHd(){
+  if(!v3) return;
+  const on = !v3HdOn();
+  state.settings.viewer_hd_textures = on;
+  api.post('/api/settings', {viewer_hd_textures: on});
+  const b = document.getElementById('v3hd');
+  if(b) b.classList.toggle('on', on);
+  v3LoadSkin(++v3Gen);
+}
+const v3TexUrl = rel =>
+  `/model_texture?mod=${enc(v3.mod)}&rel=${enc(rel)}${v3HdOn()?'&hd=1':''}`;
+
 /* One image per sheet. They land independently and either may be missing - a
    mod that references vanilla art ships neither - so each one applies as it
    arrives rather than waiting for the pair. */
 function v3Fetch(rel, want, into){
   if(!rel){ v3[into] = null; v3Apply(); return; }
   const img = new Image();
-  img.onload = () => { if(want===v3Gen && v3){ v3[into] = img; v3Apply(); } };
+  img.onload = () => { if(want===v3Gen && v3){ v3[into] = img; v3Apply(); v3Facts(); } };
   img.onerror = () => { if(want===v3Gen && v3){ v3[into] = null; v3Apply(); } };
-  img.src = `/model_texture?mod=${enc(v3.mod)}&rel=${enc(rel)}`;
+  img.src = v3TexUrl(rel);
 }
 
 async function v3LoadSkin(want){
@@ -1715,7 +1757,7 @@ function v3LoadCasSkins(want){
     const img = new Image();
     img.onload = () => { if(want===v3Gen && v3){ v3.casTex.set(tex, img); v3Apply(); } };
     img.onerror = () => { if(want===v3Gen && v3){ v3.casTex.delete(tex); v3Apply(); } };
-    img.src = `/model_texture?mod=${enc(v3.mod)}&rel=${enc(rel)}`;
+    img.src = v3TexUrl(rel);
   });
 }
 
