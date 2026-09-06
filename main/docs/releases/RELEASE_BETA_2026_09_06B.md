@@ -1,7 +1,7 @@
 # beta 2026-09-06b
 
-The second beta cut today. It is **everything in v2.3.0 with the campaign map
-switched on**, so if you have read the v2.3.0 notes you have read most of this
+The second beta cut today. It is **everything in v2.2.1 with the campaign map
+switched on**, so if you have read the v2.2.1 notes you have read most of this
 one: the duplicate-entry cleanup, HD textures in the 3D viewer, the reorganised
 repository and the README's screenshots are all here too.
 

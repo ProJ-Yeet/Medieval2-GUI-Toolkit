@@ -1,5 +1,5 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-06 · **v2.3.0 latest and beta 2026-09-06b alongside it, off
+_Updated: 2026-09-06 · **v2.2.1 latest and beta 2026-09-06b alongside it, off
 the same tree - `master` itself keeps the map on** · the repository moved under
 `main/` on this date; see WHERE THINGS ARE below_
 
@@ -36,7 +36,7 @@ belongs to is decided by whether it touches the campaign map:
 
 * **Not campaign-map** (unit editor, transfer, buildings, BMDB, sprites, sounds,
   minor files, strings) → a **2.x subrelease with the map hidden**, uploaded
-  `--latest`. First one was **v2.2.0**; latest is **v2.3.0**, 2026-09-06.
+  `--latest`. First one was **v2.2.0**; latest is **v2.2.1**, 2026-09-06.
 * **Campaign-map** → committed here and shipped on the **beta line**, uploaded
   as a **pre-release**. First one was **beta 2026-09-06**; latest is
   **beta 2026-09-06b**.
@@ -92,12 +92,12 @@ renamed. Run `gh release list --limit 3` and copy the newest title's shape rathe
 than typing it from memory.
 
 ## The releases
-**v2.3.0, 2026-09-06** - the modeldb duplicate cleanup, HD textures in the 3D
+**v2.2.1, 2026-09-06** - the modeldb duplicate cleanup, HD textures in the 3D
 viewer, the tree reorganised under `main/`, and a README with ten generated
 screenshots and the credits in it. Campaign map off the menu. Notes in
-`docs/releases/RELEASE_2_3_0.md`. **This is the `--latest` release.**
+`docs/releases/RELEASE_2_2_1.md`. **This is the `--latest` release.**
 
-**beta 2026-09-06b** - the same toolkit as v2.3.0 with the campaign map switched
+**beta 2026-09-06b** - the same toolkit as v2.2.1 with the campaign map switched
 on. Notes in `docs/releases/RELEASE_BETA_2026_09_06B.md`, which says what is new
 since the morning's beta rather than restating the map.
 

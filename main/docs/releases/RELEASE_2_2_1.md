@@ -1,4 +1,4 @@
-# v2.3.0
+# v2.2.1
 
 Two things the BMDB editor could not do before, a repository laid out so you can
 find anything in it, and a README that shows the tool instead of describing it.
