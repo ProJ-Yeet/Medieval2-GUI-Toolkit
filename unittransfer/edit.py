@@ -105,6 +105,11 @@ class NewModel:
     texture_src: str = ""             # absolute path of the .texture to import
     normal_src: str = ""
     sprite_src: str = ""              # blank -> keep the clone's sprites
+    # An attachment (the horse a rider sits on, a shield sheet) is a second
+    # texture group with its own files, so it gets its own two slots. Blank ->
+    # keep the clone's, unless `apply_to_attach` points them at the main texture.
+    attach_texture_src: str = ""
+    attach_normal_src: str = ""
     apply_to_attach: bool = False     # also repoint the attachment textures
     assign_to: str = ""               # EDU slot to point at the new entry
 
@@ -210,6 +215,8 @@ def request_from_dict(d: dict) -> EditRequest:
                              texture_src=(n.get("texture_src") or "").strip(),
                              normal_src=(n.get("normal_src") or "").strip(),
                              sprite_src=(n.get("sprite_src") or "").strip(),
+                             attach_texture_src=(n.get("attach_texture_src") or "").strip(),
+                             attach_normal_src=(n.get("attach_normal_src") or "").strip(),
                              apply_to_attach=bool(n.get("apply_to_attach", False)),
                              assign_to=(n.get("assign_to") or "").strip())
                     for n in (d.get("new_models") or [])],
@@ -343,6 +350,43 @@ def _tga_bytes(src: Path) -> bytes:
         return buf.getvalue()
 
 
+def _same_file(a: Path, b: Path) -> bool:
+    """Whether two paths name the same file on disk, case and links included."""
+    try:
+        return a.is_file() and b.is_file() and a.samefile(b)
+    except OSError:
+        return False
+
+
+def _resolve_icon_src(mod: Mod, src_str: str) -> Optional[Path]:
+    """The file an imported card comes from: off disk, or already in the mod.
+
+    The editor's "replace for every faction" offers two sources - a picture
+    picked from anywhere on disk (an absolute path) and one of the unit's own
+    existing cards, which the page only knows by its path under the mod's
+    ``data/`` (that is what ``icon_variants`` reports). Both arrive in the same
+    field, so both are resolved here; a mod-relative one is confined to the
+    mod's own data folder, since a card the tool is about to copy into thirty
+    faction folders is not a place to accept ``../``.
+    """
+    if not src_str:
+        return None
+    src = Path(src_str)
+    # only an ABSOLUTE path is taken as a file off disk: a relative one is the
+    # page naming a file inside the mod, and resolving it against whatever the
+    # server's working directory happens to be would be an accident waiting
+    if src.is_absolute() and src.is_file():
+        return src
+    try:
+        cand = (mod.data / src_str.replace("\\", "/")).resolve()
+        root = mod.data.resolve()
+    except OSError:
+        return None
+    if cand.is_file() and (cand == root or root in cand.parents):
+        return cand
+    return None
+
+
 def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> None:
     """Place an imported card / info card in every owning faction's folder.
 
@@ -369,9 +413,9 @@ def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> N
             ("info", req.info_src, MERC_INFO_DIR, "ui/unit_info", "{}_info")):
         if not src_str:
             continue
-        src = Path(src_str)
-        if not src.is_file():
-            plan.errors.append(f"{kind} image not found: {src}")
+        src = _resolve_icon_src(mod, src_str)
+        if src is None:
+            plan.errors.append(f"{kind} image not found: {src_str}")
             continue
         native = src.suffix.lower() in ICON_NATIVE_EXTS
         ext = src.suffix.lower() if native else ".tga"
@@ -383,13 +427,26 @@ def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> N
                 f"'{unit.type}' has no ownership, so there is no faction folder "
                 f"to put the {kind} in")
             continue
+        written = 0
         for rel in dests:
+            # Picking one of the unit's own pictures to spread everywhere makes
+            # the file its own destination in the folder it already lives in.
+            # Copying it onto itself is at best a no-op and at worst truncates
+            # it, so that one folder is left as it is.
+            if native and _same_file(mod.data / rel, src):
+                continue
             if native:
                 plan.icon_copies.append((src, rel))
             else:
                 plan.icon_converts.append((src, rel))
+            written += 1
+        if not written:
+            plan.changes.append(
+                f"{kind} '{src.name}' is already the picture in every folder "
+                f"this unit is looked up under - nothing to copy")
+            continue
         plan.changes.append(
-            f"{kind} imported from {src.name} -> {len(dests)} faction folder(s) "
+            f"{kind} imported from {src.name} -> {written} faction folder(s) "
             f"as {fname}" + ("" if native else f" (converted from {src.suffix})"))
         # A card living under the OLD dictionary name in those same folders would
         # keep winning the lookup after a rename, so flag it rather than leaving
@@ -548,6 +605,16 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
         if nm.assign_to and nm.name in planned:
             block = edu_mod.set_model_slot(block, nm.assign_to, nm.name)
             plan.changes.append(f"{nm.assign_to} -> {nm.name}")
+            # A slot past the end of armour_ug_models APPENDS a tier, and a tier
+            # with no armour_ug_levels entry of its own is one the game can never
+            # reach - the two lists are read position by position.
+            if edu_mod.split_label(nm.assign_to)[0] == "armour_ug_models":
+                levelled = edu_mod.sync_armour_levels(block)
+                if levelled != block:
+                    block = levelled
+                    plan.changes.append(
+                        "armour_ug_levels extended so the new tier has a level to "
+                        "trigger it")
 
     # ---- 5) type / dictionary rename ----
     if req.new_type and req.new_type != unit.type:
@@ -1172,6 +1239,10 @@ def _plan_new_model(plan: EditPlan, mod: Mod, nm: NewModel,
     tex_rel = _plan_file_copy(plan, mod, Path(nm.texture_src), nm.dest_dir) if nm.texture_src else None
     norm_rel = _plan_file_copy(plan, mod, Path(nm.normal_src), nm.dest_dir) if nm.normal_src else None
     spr_rel = _plan_file_copy(plan, mod, Path(nm.sprite_src), nm.dest_dir) if nm.sprite_src else None
+    att_tex_rel = (_plan_file_copy(plan, mod, Path(nm.attach_texture_src), nm.dest_dir)
+                   if nm.attach_texture_src else None)
+    att_norm_rel = (_plan_file_copy(plan, mod, Path(nm.attach_normal_src), nm.dest_dir)
+                    if nm.attach_normal_src else None)
 
     if mesh_rel:
         meshes = [s for s in slots if s["kind"] == "mesh"]
@@ -1179,8 +1250,21 @@ def _plan_new_model(plan: EditPlan, mod: Mod, nm: NewModel,
             if k == 0 or nm.mesh_all_lods:
                 index_map[s["i"]] = mesh_rel
     for s in slots:
-        if s["group"] == "attach" and not nm.apply_to_attach:
-            continue                       # attachments keep the clone's files
+        if s["group"] == "attach":
+            # the attachment's OWN imported files win; `apply_to_attach` then
+            # lets the main texture stand in for whichever of them was not
+            # given one. An attachment record's sprite is the bare "0" meaning
+            # "no sprite", so no sprite is ever written into one.
+            if s["kind"] == "texture" and att_tex_rel:
+                index_map[s["i"]] = att_tex_rel
+            elif s["kind"] == "normal" and att_norm_rel:
+                index_map[s["i"]] = att_norm_rel
+            elif nm.apply_to_attach:
+                if s["kind"] == "texture" and tex_rel:
+                    index_map[s["i"]] = tex_rel
+                elif s["kind"] == "normal" and norm_rel:
+                    index_map[s["i"]] = norm_rel
+            continue
         if s["kind"] == "texture" and tex_rel:
             index_map[s["i"]] = tex_rel
         elif s["kind"] == "normal" and norm_rel:
@@ -1197,7 +1281,7 @@ def _plan_new_model(plan: EditPlan, mod: Mod, nm: NewModel,
         f"new model entry '{nm.name}' cloned from '{clone.name}' "
         f"({len(clone.lods)} LOD(s), {len(facs)} faction skin(s): {', '.join(facs[:6])}"
         f"{'…' if len(facs) > 6 else ''}; sprites, ownership and animations kept)")
-    if not mesh_rel and not tex_rel:
+    if not mesh_rel and not tex_rel and not att_tex_rel:
         plan.warnings.append(
             f"'{nm.name}' points at exactly the same files as '{clone.name}' - "
             "give it a mesh and/or a texture to make it a different model.")

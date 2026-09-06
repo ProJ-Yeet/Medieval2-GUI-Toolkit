@@ -1095,6 +1095,12 @@
   .newmodel .fbrow{display:grid;grid-template-columns:120px 1fr auto;gap:6px;align-items:center;margin-top:6px}
   .newmodel .fbrow .k{font-size:11px;color:var(--dim)}
   .newmodel .fbrow input{font-size:12px;padding:4px 7px}
+  /* Choose… and its ✕ share the row's third column, or clearing a slot would
+     push the button onto a line of its own. */
+  .newmodel .fbrow .fbtn{display:flex;gap:4px;align-items:center}
+  /* "Replace for every faction": the pictures already on disk, as choices. */
+  .edicopick{cursor:pointer;border:1px solid transparent;border-radius:6px;padding:6px}
+  .edicopick:hover{border-color:var(--accent2);background:var(--panel2)}
   .pending{border:1px dashed var(--accent2);border-radius:8px;padding:8px 11px;margin-bottom:8px;
     background:#1b2330;font-size:12.5px}
   .pending .x{float:right;background:none;border:none;color:var(--dim);cursor:pointer}

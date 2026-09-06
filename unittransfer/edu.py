@@ -966,3 +966,33 @@ def set_model_slot(block: str, slot: str, name: str) -> str:
     lines[i] = (f"{indent}{key}{ws}{','.join(parts)}"
                 f"{(' ' + comment) if comment else ''}{eol}")
     return "".join(lines)
+
+
+def sync_armour_levels(block: str) -> str:
+    """Give every ``armour_ug_models`` tier a level to trigger it.
+
+    ``armour_ug_levels`` is positional: the Nth level is the armour level that
+    promotes the unit to the Nth model. So a models list longer than its levels
+    list has tiers the game can never reach - which is exactly what appending a
+    tier leaves behind. Missing levels are added one past the highest, ascending,
+    which is the only order the engine reads.
+
+    A block with no ``armour_ug_levels`` line is left alone: the unit has no
+    armour upgrades to level, and inventing the line would be a change nobody
+    asked for.
+    """
+    fields = dict(block_fields(block))
+    raw_levels = fields.get("armour_ug_levels")
+    models = [m.strip() for m in (fields.get("armour_ug_models") or "").split(",")
+              if m.strip()]
+    if raw_levels is None or not models:
+        return block
+    levels = [x.strip() for x in raw_levels.split(",") if x.strip()]
+    if len(levels) >= len(models):
+        return block
+    nums = [int(x) for x in levels if x.lstrip("-").isdigit()]
+    top = max(nums) if nums else 0
+    while len(levels) < len(models):
+        top += 1
+        levels.append(str(top))
+    return apply_field_edits(block, {"armour_ug_levels": ", ".join(levels)}, [])

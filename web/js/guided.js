@@ -660,7 +660,13 @@ function gfHostEditor(){
     add:k=>{e.d.fields=e.d.fields.concat([[k,'']]);e.added.add(k);e.ov[k]='';edRenderTab();},
     addLabel:(k,l)=>{e.d.fields=e.d.fields.concat([[l,'']]);e.added.add(l);e.ov[l]='';edRenderTab();},
     richArmour:true,          // the editor's ＋ tier menu and ✎ jump-to-model
-    creates:()=>[],           // editing in place creates no modeldb entry
+    // The entries this save is about to WRITE. The editor creates modeldb
+    // entries too - the Battle models tab's "＋ New entry from this" and the
+    // armour-tier menu both stage one - and without them here a line pointed at
+    // a staged entry was flagged "not an entry in this mod's
+    // battle_models.modeldb": true of the mod as it stands, false of the mod
+    // this same save leaves behind.
+    creates:()=>(e.newModels||[]).map(n=>n.name),
     rerender:()=>edRenderTab(),
     count:()=>edCount(),
     stale:()=>edStale(),
@@ -953,11 +959,19 @@ function gfShowWarnings(){
 }
 
 // One <datalist> per open drop-down, emitted once for the whole body.
+// The model list carries what this job is about to create as well as what the
+// mod has: a staged entry you cannot pick from the box that names entries is a
+// box lying about the save it is part of.
 function gfDatalists(host){
   const want=new Set();
   Object.values(GF_FIELDS).forEach(sp=>(sp.parts||[]).forEach(p=>{if(p.type==='combo')want.add(p.v);}));
-  return [...want].map(v=>`<datalist id="gfdl-${esc(v)}">${
-    gfV(host,v).map(x=>`<option value="${esc(x)}">`).join('')}</datalist>`).join('');
+  const coming=(host.creates?host.creates():[]).map(x=>(''+x).trim().toLowerCase()).filter(Boolean);
+  return [...want].map(v=>{
+    let list=gfV(host,v);
+    if(v==='model'&&coming.length)
+      list=list.concat(coming.filter(n=>!gfHas(list,n)));
+    return `<datalist id="gfdl-${esc(v)}">${
+      list.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>`;}).join('');
 }
 
 function gfCard(host,label,warns){

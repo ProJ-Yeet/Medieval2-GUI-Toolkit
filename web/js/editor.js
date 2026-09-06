@@ -77,6 +77,10 @@ function edDirty(){
   const e=state.ed; if(!e)return false;
   return !!(Object.keys(e.ov).length||e.rm.size||e.newModels.length||
             edModelEdits().length||e.newType||e.newDict||edCvUserEdited()||
+            // a staged card / info card is a save of its own: it writes no EDU
+            // line, so nothing else here notices it, and leaving it out is what
+            // made "Replace for every faction" end in "Nothing to save"
+            e.cardSrc||e.infoSrc||
             (e.tierEdit&&Object.keys(e.tierEdit).length)||
             JSON.stringify(e.loc)!==JSON.stringify(e.d.loc));
 }
@@ -591,6 +595,13 @@ function edIdentity(){
 
    A staged import brings the picture back, whatever is on disk. That one is not
    a repeat of anything: it is the art that is about to be written. */
+/* A staged picture is one of two things: a file picked from anywhere on disk
+   (an absolute path) or one of the mod's own cards, which the page knows only
+   by its path under `data/`. They are previewed through different routes, and
+   `edit._resolve_icon_src` reads both out of the same field on the way back. */
+const edSrcAbs=s=>/^([a-zA-Z]:[\\/]|[\\/])/.test(s||'');
+const edSrcUrl=s=>edSrcAbs(s)?'/preview_image?path='+enc(s)
+  :`/icon?mod=${enc(state.ed.mod)}&kind=modfile&rel=${enc(s)}`;
 function edIconSlot(kind){
   const e=state.ed, card=kind==='card';
   const key=card?'cardSrc':'infoSrc', src=e[key]||'';
@@ -601,7 +612,7 @@ function edIconSlot(kind){
     ${pic?`<div class="icowrap">
       <img class="${card?'card':'info'}" onerror="this.style.display='none'"
         title="Replace the ${what}" onclick="edPickIcon('${key}')"
-        src="${src?'/preview_image?path='+enc(src):iconUrl(e.mod,e.unit,card?'':'info')}">
+        src="${src?edSrcUrl(src):iconUrl(e.mod,e.unit,card?'':'info')}">
       <button class="icoedit" title="Replace the ${what}"
         onclick="edPickIcon('${key}')">✎</button>
     </div>`:''}
@@ -686,11 +697,86 @@ async function edReveal(rel){
   const r=await api.post('/api/reveal',{mod:state.ed.mod,rel});
   if(!r||!r.ok)toast((r&&r.error)||'that folder could not be opened');
 }
-async function edPickIcon(key){
+/* ---- "Replace for every faction": one of these, or one off disk ----------
+   Two different jobs wear that one button. A unit whose factions ship several
+   DIFFERENT pictures already has the art - the question is only which of them
+   everybody should get - and the file dialog was a poor way to ask it: you had
+   to know the picture existed, find its faction folder in Explorer and hand the
+   file back. So what is on disk is offered first, as pictures, and "a file of
+   my own" is the row underneath.
+
+   A picked variant is staged as its path under the mod's own `data/`, which is
+   the only name the page has for it; `edit._resolve_icon_src` reads both that
+   and an absolute one out of the same field. */
+let edIconBack=null;
+function edPickIcon(key){
+  const e=state.ed,kind=(key==='cardSrc')?'card':'info';
+  const rows=((e.d.icon_variants||{})[kind])||[];
+  // nothing on disk to choose between: go straight to the file picker rather
+  // than open a dialog whose only content is one button
+  if(!rows.length)return edBrowseIcon(key);
+  const modal=document.getElementById('modal');
+  // the 3D preview is a live canvas, so it is taken out of the dialog rather
+  // than thrown away with it - the same move renderEditor makes
+  edPrevDetach();
+  edIconBack={scroll:stashPlace()};
+  const what=kind==='card'?'unit card':'info card';
+  const fname=kind==='card'?`#${e.d.dictionary}.tga`:`${e.d.dictionary}_info.tga`;
+  const folders=edOwnFolders();
+  modal.innerHTML=`<h2>Replace the ${what} everywhere</h2>
+    <div class="mbody">
+      <div class="count">${docPoints(
+        `Whichever picture you pick is copied into every faction folder that owns this unit,
+         named <code>${esc(fname)}</code>.`,[
+        folders.length
+          ?`That is <b>${folders.length}</b> folder(s):
+            <code>${folders.map(esc).join('</code> <code>')}</code>, plus the merc fallback.`
+          :`<b class="w-warn">This unit has no ownership</b>, so there is no faction folder to copy
+            into. Set <code>ownership</code> first.`,
+        'Nothing is written until you press Save, and every file it touches is backed up first.'])}
+      </div>
+      <div class="k" style="margin-top:12px">${rows.length} picture${rows.length===1?'':'s'}
+        this unit already has</div>
+      <div class="cardvars" data-kind="${kind}"><div class="cardvarlist">${rows.map((r,i)=>{
+        const url=`/icon?mod=${enc(e.mod)}&kind=modfile&rel=${enc(r.rel)}`;
+        return `<figure class="edicopick" onclick="edTakeIcon('${key}',${i})"
+            title="Copy this one into every faction folder">
+          <div class="icowrap"><img onerror="iconRetry(this)" src="${url}" alt=""></div>
+          <figcaption>
+            <span class="count">${esc(r.rel)}</span>
+            <span class="tags">${r.factions.map(f=>`<span class="badge">${esc(f)}</span>`).join('')}</span>
+            <button onclick="event.stopPropagation();edTakeIcon('${key}',${i})">Use this one</button>
+          </figcaption></figure>`;}).join('')}</div></div>
+    </div>
+    <div class="foot">
+      <button onclick="edIconCancel()">Cancel</button>
+      <button class="primary" onclick="edBrowseIcon('${key}')">Choose a file from disk…</button>
+    </div>`;
+}
+// Back to the editor, rebuilt from state rather than from stashed markup: the
+// dialog is one screen deep and the whole editor is a render away, so the only
+// thing worth carrying across is where the page was scrolled to.
+function edIconCancel(){
+  const back=edIconBack; edIconBack=null;
+  renderEditor();
+  if(back)usePlace(back.scroll);
+}
+function edTakeIcon(key,i){
+  const e=state.ed,kind=(key==='cardSrc')?'card':'info';
+  const row=(((e.d.icon_variants||{})[kind])||[])[i];
+  if(!row)return;
+  e[key]=row.rel;                       // mod-relative; the server resolves both
+  edStale(); edIconCancel();
+  toast(`Staged ${esc(row.rel.split('/').pop())} for every faction folder. Save to write it.`,4200);
+}
+async function edBrowseIcon(key){
+  const kind=(key==='cardSrc')?'unit card':'info card';
   const r=await api.post('/api/browse_file',
-    {title:'Select the image to use as the unit card',
+    {title:`Select the image to use as the ${kind}`,
      filter:'Images (*.tga;*.dds;*.png;*.jpg;*.jpeg;*.bmp)|*.tga;*.dds;*.png;*.jpg;*.jpeg;*.bmp|All files (*.*)|*.*'});
-  if(r.path){state.ed[key]=r.path; edRenderTab();}
+  if(!r.path)return edIconBack?edIconCancel():undefined;
+  state.ed[key]=r.path;
+  edStale(); edIconBack?edIconCancel():edRenderTab();
 }
 /* ---- the tier: the toolkit's own note about a unit, not a game field ----
    Every other box on this screen writes a line the engine reads. This one does
@@ -1322,7 +1408,10 @@ function edUgUnitBody(){
         <code>${esc(u.donor.soldier)}</code>, which mode 3 can add`:''}.</div>`
     :`<div class="count" style="margin-top:9px">Tiers of <b>${esc(u.unit)}</b> to import:</div>
       <div class="uglist">${u.donor.models.map((m,i)=>{
-        const dup=have.has(m),known=(d.model_names||[]).includes(m);
+        // an entry staged on the Battle models tab counts as known: it is not in
+        // the modeldb yet, but the save that imports this tier writes it too
+        const dup=have.has(m),
+              known=(d.model_names||[]).includes(m)||e.newModels.some(n=>n.name===m);
         return `<label class="ugrow">
           <input type="checkbox" ${u.pick[i]?'checked':''}
             onchange="state.ed.ug.pick[${i}]=this.checked">
@@ -1496,6 +1585,9 @@ function edAddArmourTier(src){
   if(!edUgAppend([spec.name]).length)return;
   e.form={clone_from:spec.src,name:spec.name,dest_dir:spec.dest_dir,
           mesh_src:'',texture_src:'',normal_src:'',sprite_src:'',
+          attach_texture_src:'',attach_normal_src:'',
+          // the tier was written into armour_ug_models above, so the EDU slot is
+          // already pointed at it - assigning again would append it twice
           mesh_all_lods:true,apply_to_attach:false,assign_to:'',_tier:tier};
   e.ug=null; e.tab='models'; renderEditor();
 }
@@ -1549,7 +1641,9 @@ function edModels(){
       ${n.assign_to?` → <code>${esc(n.assign_to)}</code>`:''}
       ${n._tier?' <span class="count">· next armour tier</span>':''}
       <div class="count">${esc(n.dest_dir||'(no folder)')} · ${n.mesh_src?esc(n.mesh_src.split(/[\\\/]/).pop()):'(clone mesh)'}
-        · ${n.texture_src?esc(n.texture_src.split(/[\\\/]/).pop()):'(clone texture)'}
+        · ${n.texture_src?esc(n.texture_src.split(/[\\\/]/).pop()):'(clone texture)'}${
+        n.attach_texture_src?' · attach '+esc(n.attach_texture_src.split(/[\\\/]/).pop())
+          :n.apply_to_attach?' · attachments follow the main texture':''}
         <button style="padding:1px 7px;font-size:11px;margin-left:6px" onclick="edEditNew(${i})">Edit…</button></div></div>`).join('');
   const entries=d.models.map((m,i)=>edModelCard(m,i)).join('');
   return `${pending}${e.form?edNewModelForm():''}
@@ -1861,27 +1955,78 @@ async function edImportPath(name,i,kind){
 }
 
 /* ---- new bmdb entry cloned from an existing one ---- */
+// A name nothing in this mod, and nothing staged this session, has yet.
+function edFreeEntryName(base){
+  const e=state.ed;
+  const stem=(base||'').trim().toLowerCase().replace(/[^a-z0-9_]+/g,'_')||'new_entry';
+  const taken=n=>(e.d.model_names||[]).includes(n)||e.newModels.some(x=>x.name===n);
+  if(!taken(stem))return stem;
+  let n=2; while(taken(`${stem}_${n}`))n++;
+  return `${stem}_${n}`;
+}
 function edNewFrom(name){
   const e=state.ed,m=e.d.models.find(x=>x.name===name)||{};
-  e.form={clone_from:name,name:(e.newType||e.d.type).toLowerCase().replace(/[^a-z0-9_]+/g,'_'),
+  // Cloning an entry is nearly always making the next armour tier of it, so the
+  // form opens named and pointed like one: <stem>_ug<n>, into the tier after the
+  // unit's last. It used to open on `soldier` (or, worse, on whichever tier the
+  // clone already filled), so every new entry replaced a model the unit had
+  // rather than adding one. Both are still a box and a drop-down - change either.
+  const spec=e.bmdb?null:edUgNewSpec(name);
+  e.form={clone_from:name,
+          name:(spec&&spec.name)||edFreeEntryName(e.newType||e.d.type||name+'_new'),
           dest_dir:(m.folder&&(m.folder.base||m.folder.suggestion))
                    ||('unit_models/'+(e.mod||'').replace(/[^A-Za-z0-9._-]+/g,'_')),
           mesh_src:'',texture_src:'',normal_src:'',sprite_src:'',
+          attach_texture_src:'',attach_normal_src:'',
           mesh_all_lods:true,apply_to_attach:false,
-          assign_to:(m.slots||[])[0]||'soldier'};
+          assign_to:e.bmdb?'':edNextTierSlot()};
   e.open[name]=true; edRenderTab();
 }
 function edEditNew(i){
   const e=state.ed; e.form=Object.assign({_editing:i},e.newModels[i]); edRenderTab();
 }
+/* ---- where a new entry can be pointed --------------------------------------
+   The EDU slots this unit has, plus the one it does NOT have yet: the tier
+   after its last armour_ug_models entry. Without that last option the only
+   thing the drop-down could do with an armour upgrade was overwrite a tier the
+   unit already had, which is not what "add an armour tier" means. Existing
+   tiers say what they would replace, so picking one is a choice rather than an
+   accident.
+
+   armour_ug_models is read through edFieldVal, not off the file, so a tier
+   added earlier in this same session counts. */
+function edAssignSlots(){
+  const e=state.ed;
+  const out=[{v:'',t:'Don’t change the unit'},{v:'soldier',t:'soldier (replace)'}];
+  e.d.fields.forEach(([l])=>{
+    if(l.replace(/#\d+$/,'')!=='officer')return;
+    const lb=(l==='officer')?'officer#1':l;
+    out.push({v:lb,t:lb+' (replace)'});
+  });
+  const tiers=csv(edFieldVal('armour_ug_models'));
+  tiers.forEach((n,i)=>out.push({v:`armour_ug_models#${i+1}`,
+    t:`armour_ug_models#${i+1} (replace ${n})`}));
+  out.push({v:`armour_ug_models#${tiers.length+1}`,
+    t:`armour_ug_models#${tiers.length+1} (add as a new tier)`});
+  return out;
+}
+// The slot a new entry points at unless you say otherwise: the tier after the
+// last one. A new entry is nearly always an upgrade of the model it was cloned
+// from, and defaulting to `soldier` made every one of them replace the unit's
+// body model instead.
+const edNextTierSlot=()=>
+  `armour_ug_models#${csv(edFieldVal('armour_ug_models')).length+1}`;
 function edNewModelForm(){
   const e=state.ed,f=e.form;
-  const slots=['','soldier'];
-  e.d.fields.forEach(([l])=>{const k=l.replace(/#\d+$/,'');
-    if(k==='officer')slots.push(l==='officer'?'officer#1':l);});
-  const arm=(e.d.fields.find(([l])=>l==='armour_ug_models')||[])[1];
-  if(arm)arm.split(',').forEach((_x,i)=>slots.push('armour_ug_models#'+(i+1)));
+  const from=(e.d.models||[]).find(m=>m.name===f.clone_from)||{};
+  const slots=edAssignSlots();
   const file=(v)=>v?esc(v):'<span class="count">Not set, so the clone’s file is kept.</span>';
+  const pick=(key,label,filter)=>`<div class="fbrow"><span class="k">${label}</span>
+    <div>${file(f[key])}</div>
+    <span class="fbtn"><button onclick="edPickFile('${key}','${filter}')">Choose…</button>${
+      f[key]?`<button class="danger" title="Leave this slot on the clone's file"
+        onclick="edClearFormFile('${key}')">✕</button>`:''}</span></div>`;
+  const TEX='Textures (*.texture)|*.texture|All files (*.*)|*.*';
   return `<div class="newmodel">
     <b>New model entry cloned from <code>${esc(f.clone_from)}</code></b>
     <div class="count" style="margin-top:3px">Sprites, the faction (ownership) texture records and the
@@ -1892,27 +2037,41 @@ function edNewModelForm(){
       <input value="${esc(f.dest_dir)}" oninput="edForm('dest_dir',this.value)"
         placeholder="unit_models/my_folder">
       <button onclick="edPickDir()">Browse…</button></div>
-    <div class="fbrow"><span class="k">Mesh (.mesh)</span><div>${file(f.mesh_src)}</div>
-      <button onclick="edPickFile('mesh_src','Meshes (*.mesh)|*.mesh|All files (*.*)|*.*')">Choose…</button></div>
-    <div class="fbrow"><span class="k">Texture</span><div>${file(f.texture_src)}</div>
-      <button onclick="edPickFile('texture_src','Textures (*.texture)|*.texture|All files (*.*)|*.*')">Choose…</button></div>
-    <div class="fbrow"><span class="k">Normal map</span><div>${file(f.normal_src)}</div>
-      <button onclick="edPickFile('normal_src','Textures (*.texture)|*.texture|All files (*.*)|*.*')">Choose…</button></div>
-    <div class="fbrow"><span class="k">Sprite (.spr)</span><div>${file(f.sprite_src)}</div>
-      <button onclick="edPickFile('sprite_src','Sprites (*.spr)|*.spr|All files (*.*)|*.*')">Choose…</button></div>
+    ${pick('mesh_src','Mesh (.mesh)','Meshes (*.mesh)|*.mesh|All files (*.*)|*.*')}
+    ${pick('texture_src','Texture',TEX)}
+    ${pick('normal_src','Normal map',TEX)}
+    ${pick('sprite_src','Sprite (.spr)','Sprites (*.spr)|*.spr|All files (*.*)|*.*')}
+    ${from.has_attach?`
+      <div class="psec">Attachment textures</div>
+      <div class="count" style="margin-bottom:6px">${esc(f.clone_from)} has a second texture group -
+        the horse under a rider, a shield sheet - with its own files per faction. Give it its own
+        skin here, or tick the box below to hand it the main texture.</div>
+      ${pick('attach_texture_src','Attachment texture',TEX)}
+      ${pick('attach_normal_src','Attachment normal map',TEX)}`
+      :`<div class="count" style="margin-top:8px">${esc(f.clone_from)} has no attachment texture
+        group, so there is nothing to give one.</div>`}
     <div style="margin-top:8px">
       <label class="chk"><input type="checkbox" ${f.mesh_all_lods?'checked':''}
         onchange="edForm('mesh_all_lods',this.checked)"> use the mesh for every LOD</label>
-      <label class="chk" style="margin-left:14px"><input type="checkbox" ${f.apply_to_attach?'checked':''}
-        onchange="edForm('apply_to_attach',this.checked)"> also repoint attachment textures</label>
+      ${from.has_attach?`<label class="chk" style="margin-left:14px"
+        title="Point any attachment slot you did not give a file of its own at the main texture."
+        ><input type="checkbox" ${f.apply_to_attach?'checked':''}
+        onchange="edForm('apply_to_attach',this.checked)"> attachments fall back to the main texture</label>`:''}
     </div>
-    <div class="fbrow"><span class="k">Point EDU slot at it</span>
+    ${e.bmdb?`<div class="fbrow"><span class="k"></span>
+      <div class="count">No unit is open, so nothing is repointed at it. Use the entry from a unit's
+        Battle models tab afterwards.</div>
+      <button class="primary" onclick="edAddNewModel()">${
+        f._editing===undefined?'Add entry':'Save entry'}</button></div>`
+    :`<div class="fbrow"><span class="k">Point EDU slot at it</span>
       <select onchange="edForm('assign_to',this.value)">
-        ${slots.map(s=>`<option value="${esc(s)}" ${f.assign_to===s?'selected':''}>${s?esc(s):'Don’t change the unit'}</option>`).join('')}
+        ${slots.map(s=>`<option value="${esc(s.v)}" ${f.assign_to===s.v?'selected':''}>${
+          esc(s.t)}</option>`).join('')}
       </select><button class="primary" onclick="edAddNewModel()">${
-        f._editing===undefined?'Add entry':'Save entry'}</button></div>
+        f._editing===undefined?'Add entry':'Save entry'}</button></div>`}
   </div>`;
 }
+function edClearFormFile(key){state.ed.form[key]=''; edRenderTab();}
 function edForm(k,v){state.ed.form[k]=v; if(k==='mesh_all_lods'||k==='apply_to_attach')return; }
 async function edPickFile(key,filter){
   const r=await api.post('/api/browse_file',{title:'Select a file to import',filter});
@@ -1996,6 +2155,18 @@ function edPlanHtml(r,stale){
       }</span></div>`:''}
     ${li('warn',r.warnings)}${li('bad',r.errors)}</div>`;
 }
+/* Everything this page remembers about a mod's battle_models.modeldb, dropped.
+
+   Both are read once and kept for the session, which was right while the mod
+   only ever changed under us: the field editor's vocabulary (the `model` list
+   behind the soldier / armour_ug_models boxes) and the ⌕ picker's entry table.
+   A save that creates an entry makes both of them wrong, and being wrong here
+   reads as "the entry I just made is not in the modeldb" - so a save that could
+   have touched the file throws them away and the next question re-asks. */
+function edDropModCaches(mod){
+  if(state.vocab){delete state.vocab[mod]; delete state.vocab['?'+mod];}
+  if(state.mp&&state.mp.mod===mod)state.mp=null;
+}
 async function edSave(){
   const e=state.ed,bm=!!e.bmdb;
   await cvSettle(e.cv);                 // the last keystroke counts
@@ -2075,5 +2246,10 @@ async function edSave(){
     ? `Saved ${saved.map(s=>'“'+s+'”').join(' and ')}${pools?` and ${pools} recruit pool(s)`:''} ✓`
     : `Saved ${pools} recruit pool(s) ✓`;
   toast(`${note}${binMsg(res)}  (undo in 🕑 Log)`,4200);
-  state.destData=null; state.bmdb=null; loadSource();
+  state.destData=null; state.bmdb=null;
+  edDropModCaches(e.mod);
+  // a replaced card keeps its URL, so every <img> on the page has to be asked
+  // for again or the grid goes on showing the picture that was just overwritten
+  imgBust();
+  loadSource();
 }

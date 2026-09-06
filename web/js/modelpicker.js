@@ -59,9 +59,28 @@ function mpCancel(){
   if(host&&host.rerender)host.rerender();
 }
 function mpSet(k,v){ state.mp[k]=v; mpRender(); }
+/* The mod's entries, plus the ones the unit editor has staged but not written.
+
+   The table behind this dialog is read once per mod and kept for the session,
+   so an entry created on the Battle models tab was invisible here until the mod
+   was saved, closed and opened again - and picking it was the whole reason you
+   made it. A pending entry borrows the counts and skeleton of the entry it was
+   cloned from, which is what it will have once it lands. */
+function mpAllEntries(){
+  const base=(state.mp&&state.mp.entries)||[];
+  const pend=((state.ed&&state.ed.newModels)||[])
+    .filter(n=>n.name&&!base.some(e=>e.name===n.name));
+  if(!pend.length)return base;
+  const by={}; base.forEach(e=>{by[e.name]=e;});
+  return base.concat(pend.map(n=>{
+    const from=by[n.clone_from]||{};
+    return {name:n.name,skeletons:from.skeletons||[],lods:from.lods||0,
+            skins:from.skins||0,used_by:0,pending:true};
+  }));
+}
 function mpShown(){
   const s=state.mp,q=(s.q||'').trim().toLowerCase();
-  return s.entries.filter(e=>
+  return mpAllEntries().filter(e=>
     (s.tab!=='skel'||!s.skel||e.skeletons.includes(s.skel))
     &&(!q||e.name.includes(q)||e.skeletons.some(k=>k.includes(q))));
 }
@@ -90,7 +109,8 @@ function mpRender(){
             <span class="mn">${esc(e.name)}</span>
             <span class="msk">${esc(e.skeletons.join(' + ')||'no skeleton')}</span>
             <span class="count">${e.lods} LOD · ${e.skins} skin</span>
-            <span class="mu">${e.used_by?`${e.used_by} user${e.used_by===1?'':'s'}`
+            <span class="mu">${e.pending?'<span class="w-good">staged, saves with this unit</span>'
+              :e.used_by?`${e.used_by} user${e.used_by===1?'':'s'}`
               :'<span class="w-warn">unused</span>'}</span>
           </div>`).join(''):'<div class="caprow"><span class="count">Nothing matches.</span></div>'}</div>
         ${mpShown().length>400?`<div class="bnote">Showing the first 400. Narrow it down.</div>`:''}
