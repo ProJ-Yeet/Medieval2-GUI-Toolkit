@@ -36,7 +36,7 @@ carries that date:
 | | |
 |---|---|
 | git tag | `beta-2026-09-06` |
-| GitHub title | `M2 GUIkit beta 2026-09-06` |
+| GitHub title | `M2 GUI-Kit beta 2026-09-06` |
 | `__version__` | `beta-2026-09-06` |
 | notes | `merge/RELEASE_BETA_2026_09_06.md` |
 | zip | `python build_release.py --version beta-2026-09-06` |
@@ -44,6 +44,12 @@ carries that date:
 The 2.x line keeps its numbers - `v2.2.0`, `v2.2.1` - because those are the
 releases people are meant to compare. A beta is a snapshot of the map work on the
 day it was taken, and the date says everything the number was pretending to.
+
+The GitHub **title** is `M2 GUI-Kit V<X.Y.Z>` - hyphenated **GUI-Kit**, capital
+**V** - and has been for every release since V2.0.0; see `ROADMAP.md` under
+Versioning. V2.2.0 and the first beta both went up as "M2 GUIkit" and had to be
+renamed. Run `gh release list --limit 3` and copy the newest title's shape rather
+than typing it from memory.
 
 ## The releases
 **v2.2.0, 2026-09-06** - the ten unit-editor fixes below, campaign map off the
