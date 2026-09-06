@@ -664,7 +664,7 @@ const MODES=[
   {id:'edit',     icon:'✎', name:'Unit Editor',   hint:'Change, clone or delete one mod’s units'},
   {id:'transfer', icon:'⚔', name:'Unit Transfer', hint:'Copy a unit from one mod into another'},
   {id:'buildings',icon:'🏰', name:'Buildings',     hint:'Browse and edit export_descr_buildings'},
-  {id:'campmap',  icon:'🌍', name:'Campaign Map',  hint:'The ten map layers, the regions painted on them and what the game reads'},
+  {id:'campmap',  icon:'🌍', name:'Campaign Map',  off:true, hint:'The ten map layers, the regions painted on them and what the game reads'},
   {id:'bmdb',     icon:'🗄', name:'BMDB + Sprites Editor', hint:'What battle_models.modeldb names, and the sprites it points at'},
   {id:'sounds',   icon:'🔊', name:'Unit Sounds',   hint:'Pick which voice entry each unit speaks with'},
   {id:'minor',    icon:'🗺', name:'Minor Files',   hint:'Rebels, religions, cultures, traits, factions and text'},
