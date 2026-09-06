@@ -42,4 +42,4 @@ units together - so every feature is EOP-aware by default. Only the *write* side
 distinguishes them, via :func:`unittransfer.eop.compose`.
 """
 
-__version__ = "2.3.0"
+__version__ = "beta-2026-09-06b"
