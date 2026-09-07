@@ -11,6 +11,9 @@ OPTIONAL_SOUND_FILES = {
     "data/descr_sounds_weapons.txt",
 }
 EDU_FILE = "data/export_descr_unit.txt"
+# This file supplies display names/descriptions only; it cannot make a unit
+# reachable by the game.
+LOCALISATION_FILE = "data/text/export_units.txt"
 _WORD = r"A-Za-z0-9_"
 _VCS_DIRS = {".git", ".hg", ".svn", ".bzr", "_darcs", "cvs"}
 
@@ -69,7 +72,7 @@ def scan(mod, include_sound_registrations: bool = True,
             typ = by_fold.get(match.group(1).casefold())
             if typ:
                 found[typ].add(rel)
-    allowed = {EDU_FILE}
+    allowed = {EDU_FILE, LOCALISATION_FILE}
     if include_sound_registrations:
         allowed.update(OPTIONAL_SOUND_FILES)
     return {"units": [{"type": typ, "files": sorted(found[typ]),

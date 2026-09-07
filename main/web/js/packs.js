@@ -581,6 +581,41 @@ async function edDoDelete(){
   state.destData=null; loadSource();
 }
 
+function edBatchDeleteDialog(){
+  const types=[...state.selected];
+  if(!types.length){toast('Select at least one unit');return;}
+  overlay.classList.add('open');
+  document.getElementById('modal').innerHTML=`<h2 class="w-bad">Delete ${types.length} selected unit(s)</h2>
+    <div class="mbody"><div class="warnbox">Each unit is deleted through the normal unit deletion logic.
+      Every changed file is backed up and can be restored through 🕑 Log → Undo.</div>
+      <fieldset><legend>Also remove for every selected unit</legend>
+        <label class="chk"><input type="checkbox" id="bdOptLoc" checked> its text entry from export_units.txt</label><br>
+        <label class="chk"><input type="checkbox" id="bdOptModels"> battle-model entries no unit or mount uses</label><br>
+        <label class="chk"><input type="checkbox" id="bdOptAssets"> mesh/texture files of those unused entries</label><br>
+        <label class="chk"><input type="checkbox" id="bdOptIcons"> unit and info cards</label>
+      </fieldset><div class="count">${types.map(esc).join(', ')}</div></div>
+    <div class="foot"><button onclick="closeModal()">Cancel</button>
+      <button class="danger" onclick="edBatchDelete()">Delete selected units</button></div>`;
+}
+function edBatchDeleteOpts(){
+  const checked=id=>!!document.getElementById(id).checked;
+  return {remove_loc:checked('bdOptLoc'),remove_models:checked('bdOptModels'),
+    remove_assets:checked('bdOptAssets'),remove_icons:checked('bdOptIcons')};
+}
+async function edBatchDelete(){
+  const types=[...state.selected];
+  if(!confirm(`Delete ${types.length} selected unit(s)?\n\nThey are backed up first, so each can be undone from the 🕑 Log.`))return;
+  const opts=edBatchDeleteOpts();
+  const modal=document.getElementById('modal');
+  modal.innerHTML='<h2>Deleting selected units…</h2><div class="mbody"><div class="count">Applying the normal deletion rules to each unit.</div></div>';
+  const r=await api.post('/api/units/delete',
+    {mod:state.src,types,delete_options:opts});
+  if(r.error){toast('Deletion failed: '+r.error);closeModal();return;}
+  closeModal(); clearSelection();
+  toast(`Deleted ${r.deleted.length} selected unit(s)${r.errors.length?`; ${r.errors.length} could not be deleted`:''} ✓  (undo in 🕑 Log)`,5200);
+  state.destData=null; await loadSource();
+}
+
 /* ---- unused EDU units -------------------------------------------------- */
 function uuResultHtml(s){
   const unused=s.r.units.filter(x=>x.unused);

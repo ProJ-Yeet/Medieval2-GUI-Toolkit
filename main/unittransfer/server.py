@@ -47,6 +47,7 @@ Unit packs (see :mod:`unittransfer.pack`)
   GET  /api/units?mod=NAME       -> {mod, factions, categories, classes, units}
   GET  /api/units/unused?mod=&sounds=1 -> full-mod text-reference audit
   POST /api/units/delete_unused  -> delete unused units, re-scanning between passes
+  POST /api/units/delete         -> delete selected units through the edit planner
   GET  /icon?mod=&type=&kind=    -> image/png
   GET  /api/unit_models?mod=&type= -> the battle-model entries a unit is
                                     affiliated with + the folder each lives in
@@ -3132,6 +3133,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._edit_apply(body))
             if u.path == "/api/units/delete_unused":
                 return self._json(self._delete_unused_units(body))
+            if u.path == "/api/units/delete":
+                return self._json(self._delete_units(body))
             if u.path == "/api/progress/cancel":
                 _progress_cancel(body.get("job") or "")
                 return self._json({"ok": True})
@@ -3650,6 +3653,31 @@ class Handler(BaseHTTPRequestHandler):
         return {"deleted": deleted, "warnings": warnings,
                 "remaining": [row for row in unusedunits.scan(self.registry.get(name), sounds)["units"]
                               if row["unused"]]}
+
+    def _delete_units(self, body):
+        """Apply the regular unit-delete planner to an explicit selection."""
+        name = body.get("mod") or ""
+        if name not in self.registry.names():
+            return {"error": "unknown mod"}
+        raw_options = body.get("delete_options") or {}
+        options = edit.DeleteOptions(
+            remove_loc=bool(raw_options.get("remove_loc", True)),
+            remove_models=bool(raw_options.get("remove_models", False)),
+            remove_assets=bool(raw_options.get("remove_assets", False)),
+            remove_icons=bool(raw_options.get("remove_icons", False)))
+        deleted, errors = [], []
+        for typ in dict.fromkeys(str(x) for x in (body.get("types") or []) if str(x)):
+            mod = self.registry.get(name)
+            plan = edit.plan_edit(mod, edit.EditRequest(
+                unit=typ, delete=True, delete_options=options))
+            if plan.errors:
+                errors.append(f"{typ}: " + "; ".join(plan.errors))
+                continue
+            edit.apply_edit(plan)
+            deleted.append(typ)
+            self.registry.invalidate(name)
+        self.registry.invalidate(name)
+        return {"deleted": deleted, "errors": errors}
 
     # ---- sounds mode ----
     def _sounds_apply(self, body):
