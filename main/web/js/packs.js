@@ -580,3 +580,97 @@ async function edDoDelete(){
   closeModal(); toast(tt('packs.deleted_undo_in_log',{type:e.d.type}),4200);
   state.destData=null; loadSource();
 }
+
+/* ---- unused EDU units -------------------------------------------------- */
+function uuResultHtml(s){
+  const unused=s.r.units.filter(x=>x.unused);
+  const o=s.deleteOptions;
+  const rows=unused.map(x=>`<div class="srow${s.deleted.has(x.type)?' count':''}">
+    <span class="sicon">${s.deleted.has(x.type)?'✓':'!'}</span><span class="stext"><code>${esc(x.type)}</code>
+      <div class="count">Found in: ${x.files.length ? x.files.map(f=>`<span class="path">${esc(f)}</span>`).join(', ') : 'no text files'}</div>
+    </span></div>`).join('');
+  return `<h2>Unused units <span class="pill">${esc(s.mod)}</span></h2><div class="mbody">
+    <label class="chk"><input type="checkbox" id="uuSounds" ${s.sounds?'checked':''}
+      onchange="uuRescan()"> Treat the voice and weapon-sound files as registrations only</label>
+    <div class="count" style="margin:8px 0">Scanned ${s.r.files_scanned} file(s); skipped ${s.r.binary_skipped} binary file(s).</div>
+    <div class="warnbox">${unused.length ? `${unused.length} unit(s) have no gameplay reference outside their own definition${s.sounds?' (sound registrations ignored)':''}.` : 'No unused units found.'}</div>
+    <fieldset><legend>When deleting unused units, also remove</legend>
+      <label class="chk"><input type="checkbox" id="uuOptLoc" ${o.remove_loc?'checked':''}> their text entries from export_units.txt</label><br>
+      <label class="chk"><input type="checkbox" id="uuOptModels" ${o.remove_models?'checked':''}> battle-model entries that no unit or mount uses</label><br>
+      <label class="chk"><input type="checkbox" id="uuOptAssets" ${o.remove_assets?'checked':''}> mesh/texture files of those unused model entries</label><br>
+      <label class="chk"><input type="checkbox" id="uuOptIcons" ${o.remove_icons?'checked':''}> unit and info cards</label>
+    </fieldset>
+    <div class="sum" style="margin-top:10px">${rows||'<div class="count">Nothing to delete.</div>'}</div>
+    <div id="uuNote" class="count" style="margin-top:10px"></div></div>
+    <div class="foot"><button onclick="closeModal()">Close</button><button onclick="uuRescan()">Scan again</button>
+      <button class="danger" ${unused.length?'':'disabled'} onclick="uuDelete()">Delete all unused units</button></div>`;
+}
+async function openUnusedUnits(){
+  const s=state.uu={mod:state.src,sounds:true,r:null,deleted:new Set(),
+    deleteOptions:{remove_loc:true,remove_models:false,remove_assets:false,remove_icons:false}};
+  overlay.classList.add('open');
+  await uuScan(s,true);
+}
+async function uuScan(s,ask){
+  const job=newJob();
+  const abort=new AbortController(); s.scan={job,abort};
+  const work=runJob(job,'Finding unused units…','Searching every non-binary file in this mod, including scripts.',
+    ()=>api.get(`/api/units/unused?mod=${enc(s.mod)}&sounds=${s.sounds?1:0}&job=${enc(job)}`,
+      {signal:abort.signal}));
+  document.querySelector('#modal .mbody').insertAdjacentHTML('beforeend',
+    '<div style="margin-top:12px"><button onclick="uuCancelScan()">Cancel scan</button></div>');
+  let r;
+  try{r=await work;}catch(e){
+    if(isAborted(e)){
+      if(state.uu===s)document.getElementById('modal').innerHTML=`<h2>Unused-unit scan cancelled</h2>
+        <div class="mbody"><div class="count">No files were changed.</div></div>
+        <div class="foot"><button onclick="closeModal()">Close</button><button class="primary" onclick="openUnusedUnits()">Scan again</button></div>`;
+      return;
+    }
+    throw e;
+  }
+  if(s.scan&&s.scan.job===job)s.scan=null;
+  if(r.cancelled){
+    document.getElementById('modal').innerHTML=`<h2>Unused-unit scan cancelled</h2>
+      <div class="mbody"><div class="count">No files were changed.</div></div>
+      <div class="foot"><button onclick="closeModal()">Close</button><button class="primary" onclick="openUnusedUnits()">Scan again</button></div>`;
+    return;
+  }
+  if(r.error){toast('Scan failed: '+r.error);closeModal();return;}
+  if(state.uu!==s)return;
+  s.r=r; document.getElementById('modal').innerHTML=uuResultHtml(s);
+}
+function uuCancelScan(){
+  const s=state.uu, scan=s&&s.scan; if(!scan)return;
+  scan.abort.abort();
+  api.post('/api/progress/cancel',{job:scan.job}).catch(()=>{});
+  document.getElementById('modal').innerHTML=`<h2>Finding unused units…</h2><div class="mbody">
+    <div class="count">Cancelling the file scan…</div></div>`;
+}
+function uuDeleteOpts(){
+  const s=state.uu, take=(id,key)=>{const el=document.getElementById(id);return el?el.checked:s.deleteOptions[key];};
+  s.deleteOptions={remove_loc:take('uuOptLoc','remove_loc'),remove_models:take('uuOptModels','remove_models'),
+    remove_assets:take('uuOptAssets','remove_assets'),remove_icons:take('uuOptIcons','remove_icons')};
+  return s.deleteOptions;
+}
+async function uuRescan(){
+  const s=state.uu; if(!s)return;
+  const box=document.getElementById('uuSounds'); if(box)s.sounds=box.checked;
+  uuDeleteOpts();
+  s.deleted.clear(); await uuScan(s,false);
+}
+async function uuDelete(){
+  const s=state.uu; if(!s)return;
+  const n=s.r.units.filter(x=>x.unused&&!s.deleted.has(x.type)).length;
+  if(!n)return;
+  const opts=uuDeleteOpts();
+  if(!confirm(`Delete all ${n} unused unit(s)?\n\nEach deletion uses the normal unit deletion logic and the cleanup choices shown here. The scan results will stay open.`))return;
+  document.getElementById('uuNote').textContent='Deleting unused units…';
+  const r=await api.post('/api/units/delete_unused',
+    {mod:s.mod,sounds:s.sounds,delete_options:opts});
+  if(r.error){toast('Deletion failed: '+r.error);return;}
+  r.deleted.forEach(x=>s.deleted.add(x));
+  document.getElementById('modal').innerHTML=uuResultHtml(s);
+  document.getElementById('uuNote').textContent=`Deleted ${r.deleted.length} unit(s). The list remains available; scan again to refresh it.`;
+  state.destData=null; await loadSource();
+}
