@@ -316,6 +316,27 @@ def _split_blocks(f: edu_mod.EduFile, groups: Dict[str, Tuple[str, str]],
     return out
 
 
+def _edu_label(name: str, fallback: str) -> str:
+    """Return a localized banner label that can be written to an 8-bit EDU.
+
+    EDU is intentionally read as latin-1 so every original byte round-trips.
+    A localized faction name, however, comes from UTF-16 ``expanded.txt`` and
+    can contain a Windows-1252 character such as ``Œ``.  Preserve those by
+    converting them to their byte-equivalent latin-1 code point; a later
+    latin-1 write emits the original Windows-1252 byte.  A name that cannot
+    fit in either single-byte encoding cannot safely be put in this game file,
+    so use its ASCII faction slot instead.
+    """
+    try:
+        name.encode(ENCODING)
+        return name
+    except UnicodeEncodeError:
+        try:
+            return name.encode("cp1252").decode(ENCODING)
+        except UnicodeEncodeError:
+            return fallback
+
+
 def _name_the_rest(blocks: List[Block], names: Dict[str, str]) -> None:
     """Give a section to every unit no banner covered.
 
@@ -341,7 +362,7 @@ def _name_the_rest(blocks: List[Block], names: Dict[str, str]) -> None:
         elif b.slot in votes:
             b.group = votes[b.slot].most_common(1)[0][0]
         else:
-            b.group = (names.get(b.slot) or b.slot).upper()
+            b.group = _edu_label(names.get(b.slot) or b.slot, b.slot).upper()
 
 
 # ---------------------------------------------------------------------------
@@ -790,6 +811,13 @@ def plan(mod, *, banners: bool = True, tidy: bool = True, group: bool = True,
         p.warnings.append(
             _i18n.msg("eng.edusort.unit_s_have_no_tier_yet", "{untiered_n} unit(s) have no tier yet, so they sort after the tiered ones in their group - read the file's own banners in to give them one", untiered_n=len(p.untiered)))
     _verify(p, original, text)
+    try:
+        text.encode(ENCODING)
+    except UnicodeEncodeError as e:
+        p.errors.append(
+            f"the planned EDU contains a character {e.object[e.start]!r} that "
+            f"cannot be written using {ENCODING}")
+        return p
     return p
 
 
@@ -848,6 +876,11 @@ def apply(p: SortPlan) -> Dict:
     if not p.touched():
         raise ValueError(_i18n.msg("eng.edusort.nothing_to_change", "nothing to change"))
 
+    # Encode before creating the backup or opening the target in write mode.
+    # This protects the source file if an API caller supplied a marker value
+    # outside the 8-bit encoding used by EDU.
+    encoded = p.text.encode(ENCODING)
+
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)
@@ -860,8 +893,8 @@ def apply(p: SortPlan) -> Dict:
     manifest["backed_up"].append(REL)
     file_op("BACKUP", target, f"-> {bpath}")
 
-    target.write_text(p.text, encoding=ENCODING)
-    file_op("WRITE", target, f"{len(p.text)} bytes")
+    target.write_bytes(encoded)
+    file_op("WRITE", target, f"{len(encoded)} bytes")
 
     rec = {
         "id": tid,

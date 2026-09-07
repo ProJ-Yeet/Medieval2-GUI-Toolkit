@@ -152,6 +152,29 @@ untiered = edusort.BANNER_RE.match(edusort.banner("GONDOR INFANTRY"))
 check("an untiered banner round-trips WITHOUT inventing a tier",
       untiered is not None and not untiered.group("tier"))
 
+print("\n== localized names in an 8-bit EDU ==")
+work = Path(_tmp.mkdtemp())
+(work / "data").mkdir()
+(work / "data" / "export_descr_unit.txt").write_text(
+    "type\tTest Unit\ncategory\tinfantry\nownership\tengland\n",
+    encoding=edu.ENCODING)
+localized = type("LocalizedMod", (), {
+    "data": work / "data", "faction_names": {"england": "Œstland"},
+})()
+localized_plan = edusort.plan(localized)
+check("a Windows-1252 localized banner name writes as its original byte",
+      localized_plan.text is not None and b"\x8cSTLAND" in localized_plan.text.encode(edu.ENCODING))
+unsupported = type("UnsupportedLocalizedMod", (), {
+    "data": work / "data", "faction_names": {"england": "Київ"},
+})()
+unsupported_plan = edusort.plan(unsupported)
+check("a name outside the game's single-byte encodings falls back to its slot",
+      unsupported_plan.text is not None and "ENGLAND INFANTRY" in unsupported_plan.text)
+invalid_marks = edusort.plan(localized, marks={"Test Unit": {"variant": "Київ"}})
+check("a mark outside the EDU encoding is rejected before apply can write",
+      bool(invalid_marks.errors) and "cannot be written using latin-1" in invalid_marks.errors[0])
+shutil.rmtree(work, ignore_errors=True)
+
 print("\n== the sorter, on every installed mod ==")
 mods = [m for m in _realmod.installed()
         if (m / "data" / "export_descr_unit.txt").is_file()]
