@@ -25,6 +25,68 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 18b - events and disasters (2026-09-07)
+`unittransfer/campevents.py` (1,243 lines), two GET routes and one handler on
+`server.py`, one rule on `mapcheck.py`, two categories on `mapquery.marker_view`,
+two readiness rows in `modfiles.py`, `web/js/campevents.js` (649) with a panel
+on `campmap.js`, two glyphs and two labels on `campmark.js`, plus
+`tests/test_campevents.py` (82 checks). Closes M3 and M4, and with them Phase 18.
+The reasoning is in `ROADMAP_ARCHIVE.md`; what a later session would not
+otherwise find out is here.
+
+**The mods are not always the arbiter.** Both installed mods ship
+`descr_disasters.txt` at **0 bytes** and a `descr_events.txt` that is empty or a
+comment banner, so the usual "measure it on Divide and Conquer" had nothing to
+measure. The game's own unpacked `data/` is on this machine at
+`<mods>/../data`, and its two copies are full, working and self-documenting -
+`descr_disasters.txt` explains its own keys in its header and `descr_events.txt`
+lists the event categories in its. **Look there before concluding a format
+cannot be checked**; it is also how the `event.position` rule got a real fault
+to find. `tests/_realmod.MODS.parent` is the path.
+
+**The reference tool's docstring is not the vocabulary.** `disastersParser.jsx`
+carries the disaster type list, and `campaignEventsParser.jsx` reuses it as the
+*event* category list. It is wrong in both directions: it omits `counter` and
+`emergent_faction`, which the game's own file header names, and it offers
+`flood`, `storm`, `dustbowl`, `locusts` and `horde`, which no `descr_events.txt`
+on this machine uses. A census over every copy of the file took one line of awk
+and settled it: 26 `historic`, 4 `earthquake`, 5 `plague`, nothing else.
+
+**A value can be the thing with no evidence, not just a file.** The locked
+decision has always been read as "a check needs its vocabulary file". Vanilla
+writes `region the sea` in two disaster blocks and `the sea` is not in
+`descr_regions.txt`, so a region rule with a perfectly good vocabulary would
+still have reported the shipping game as broken. `campevents.SEA_REGION` is the
+exemption, and it is worth knowing the decision has this second shape.
+
+**A repeated key needs two descriptions of one edit.** Making a list of
+`climate` lines say `[sandy_desert, semi_arid]` when it said
+`[sandy_desert, rocky_desert, semi_arid]` is best written to disk as "rewrite
+line 2, drop line 3" - the smallest diff - and is unreadable said that way in a
+dialog, where it becomes "rocky_desert renamed to semi_arid, then semi_arid
+removed". `campevents._list_changes` computes the multiset difference for the
+human and lets the splice do the positional thing, and collapses one-out-one-in
+to `frequency 20 -> 25`. Any future repeatable-key editor wants both halves.
+
+**`kb.read_text`, never `Path.read_text`, in a test that compares bytes.** Three
+checks in the new suite failed on the first run for this and nothing else:
+`Path.read_text` turns `
+
+` into `
+` on the way in, so a file that really was
+byte-exact compared unequal. The module was right; the test was reading it
+wrong. `keyblock.read_text` exists for exactly this and the suites that came
+before this one all use it.
+
+**Two one-second timing bars are load-sensitive on this machine**, and neither
+is 18b's 9 ms rule. `test_mapcheck`'s rule-set bar measured 653 ms and 1,295 ms
+in two runs back to back and 968 ms with the new rule stashed out; its dominant
+cost is `layer.colour_cap` at 633 ms on Third Age Reforged, which predates this
+phase. `test_mapquery`'s warm fact-table bar is the other, and it is the wider
+spread of the two: Divide and Conquer lands anywhere from 98 to 743 ms against
+a 1,000 ms limit, and nothing in 18b is on that path. Both fail when anything
+else is using the disk. Re-run either idle before believing it.
+
 ## 18a - four files nobody could edit (2026-09-07)
 `unittransfer/guilds.py` (620 lines), `unittransfer/campfiles.py` (700), the
 `guilds` code-view kind, six routes and two handlers on `server.py`, four

@@ -32,7 +32,7 @@ says "we do not", that was verified, and the verification is quoted.
 | Source | Items | Already scheduled | Already done, or a duplicate |
 |---|---|---|---|
 | Demir's StratMap Forge | 14 | 0 | 0 |
-| Mylae's M2TW Editor | 17 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11) · **M5, M6, M13 done 18a** |
+| Mylae's M2TW Editor | 17 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11) · **M5, M6, M13 done 18a; M3, M4 done 18b** |
 | Bare Geomod | 8 | 1 (G6) | 3 (G7, G8 done; G5 = D9) · **G3 done 18a** |
 | TWMapReader | 12 | 1 (T5, folded into 17d) | 0 |
 | **Total** | **51** | **6** | **5** |
@@ -242,18 +242,28 @@ The tracked upstream. Seventeen items; five are already scheduled.
 
 `MapPixelTooltip.jsx`. **Phase 17e.** See `ROADMAP.md`.
 
-### M3. `descr_events.txt` editor · M
+### M3. `descr_events.txt` editor · **done**
 
 `CampaignEventsTab.jsx` (419 lines) + `campaignEventsParser.jsx`. The historical
 events a campaign fires: their dates, their text keys and their conditions.
 
-**Nothing in this repo touches that file** - verified by grep across
+**Nothing in this repo touched that file** - verified by grep across
 `unittransfer/` and `web/js/`. It was explicitly kept in scope during triage
 (`docs/upstream/SYNC_LOG.md`: the thing ruled out was the *script* editor, which is a
-different feature) and then never built. Geomod writes this file too. It is
-`flatrecord`-shaped, so check there before writing a parser.
+different feature) and then never built. Geomod writes this file too.
 
-### M4. `descr_disasters.txt` editor · S
+**Landed in 18b** (2026-09-07), as a panel on the campaign map screen, because
+the `position` lines are the half of it that needs a map. It is **not**
+`flatrecord`-shaped and the claim above that it is was wrong: `flatrecord` reads
+a run of `<head> <name>` records with `keyword value` lines and this file's
+keywords repeat - one event may carry four `date` lines and thirty-seven
+`position` lines. Two things measuring corrected in the reference: their parser
+holds a single `date`, so the three extra ones are lost, and their category list
+is the *disaster* list, missing `counter` and `emergent_faction` - which the
+game's own file header names, and the second of which is how a faction enters a
+campaign.
+
+### M4. `descr_disasters.txt` editor · **done**
 
 `DisastersTab.jsx` (222 lines) + `disastersParser.jsx`. Eight event types
 (earthquake, volcano, flood, storm, dustbowl, locusts, plague, horde), each with
@@ -263,6 +273,17 @@ position lines, and a min and max scale.
 Not touched here either. The `position x, y` lines make it a map-editor feature
 rather than a minor-files one: a disaster has coordinates, so it belongs with
 D9's placeable objects.
+
+**Landed in 18b** (2026-09-07), in the same panel. The file is under
+`world/maps/base` with the layers rather than in the campaign folder - one map
+has one set of disasters however many campaigns are painted on it. Both
+installed mods ship it **empty**, so the format arbiter is the game's own
+unpacked copy, which documents itself in its own header. Two more corrections
+there: their serialiser writes every key, and vanilla's `plague` block has no
+`warning` line, so the first save of any block in the file would add one; and
+vanilla's `storm` and `horde` both write `region the sea`, which is not a region
+in `descr_regions.txt` and never will be, so a region rule that did not know
+that would report the shipping game as broken.
 
 ### M5. Campaign description strings · **done**
 

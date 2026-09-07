@@ -1164,6 +1164,66 @@ def _r_localisation(ck: Check) -> Iterable[Finding]:
 
 
 # ---------------------------------------------------------------------------
+# 18b) the two files that put something on a tile without a character on it
+
+
+def _event_blocks(ck: "Check") -> List[Tuple[str, str, object]]:
+    """``(file, label, block)`` for every block in the two 18b files.
+
+    Both files are read here rather than in :class:`Check`'s constructor,
+    because both are optional and neither is read by any other rule: a mod with
+    no ``descr_disasters.txt`` is the normal case - both installed mods ship an
+    empty one - and a rule that cannot run has to be silent rather than absent.
+    """
+    from . import campevents
+    out: List[Tuple[str, str, object]] = []
+    try:
+        bf, _ = campevents.read_events(ck.mod, ck.campaign)
+        rel = f"{campstrat.CAMPAIGN_DIR_REL}/{ck.campaign}/{campevents.EVENTS_NAME}"
+        out += [(rel, b.name or b.kind, b) for b in bf.blocks]
+    except (campevents.CampEventError, OSError, ValueError):
+        pass
+    try:
+        df, _ = campevents.read_disasters(ck.mod)
+        out += [(campevents.DISASTERS_REL, b.kind, b) for b in df.blocks]
+    except (campevents.CampEventError, OSError, ValueError):
+        pass
+    return out
+
+
+@rule("event.position", "An event or disaster placed off the map or in the sea",
+      "warn", "descr_events.txt's own header: a volcano fires at the position "
+              "specified, a plague in the settlements at them")
+def _r_event_position(ck: Check) -> Iterable[Finding]:
+    """The rule 18b was told to teach this validator.
+
+    The resource rule's shape exactly - off the grid is fatal, sea is a warning
+    - because it is the same fault about the same kind of number, and a second
+    wording for it would only make the two harder to compare. What is different
+    is that these two files are optional and usually empty, so this yields
+    nothing at all far more often than it yields anything.
+    """
+    w, h = ck.width, ck.height
+    for rel, label, b in _event_blocks(ck):
+        for p in b.positions:
+            iy = ck.cm.terrain.image_y(p.y)
+            if not (0 <= p.x < w and 0 <= iy < h):
+                yield Finding(
+                    "event.position", "fatal",
+                    f"`{label}` is placed at {p.x},{p.y}, which is off a {w}x{h} "
+                    f"map altogether.",
+                    file=rel, line=p.line + 1,
+                    what=f"{label.lower()}|{p.x},{p.y}|off")
+            elif ck.is_sea(p.x, iy):
+                yield Finding(
+                    "event.position", "warn",
+                    f"`{label}` is placed at {p.x},{p.y}, on a tile the engine "
+                    f"reads as sea. A settlement event there reaches nobody.",
+                    file=rel, line=p.line + 1, tile=(p.x, iy),
+                    what=f"{label.lower()}|{p.x},{p.y}|sea")
+
+
+# ---------------------------------------------------------------------------
 # running the lot
 
 

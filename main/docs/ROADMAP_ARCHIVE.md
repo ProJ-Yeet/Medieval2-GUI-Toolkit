@@ -3105,3 +3105,108 @@ the one backup-and-log route every writer in this toolkit uses.
 `test_triggers`, `test_traits` and `test_ancillaries` were re-run against the
 `DEFINITION_WORDS` change and are unmoved at 49, 112 and 85. All four screens
 were driven in a running browser on Third Age Reforged.
+
+---
+
+## Phase 18b - Events and disasters - done 2026-09-07
+
+**Closes M3, M4**, and with them Phase 18. Two files that are the same sentence
+with a different subject: a `descr_events.txt` block is "on this date, this
+happens, here", a `descr_disasters.txt` block is "every so many years, this
+happens, somewhere that looks like this". Both are a head line, a run of
+`keyword value` lines under it, and repeatable `position x, y` lines - which is
+what made this a map phase rather than a minor-files one, and made it the first
+customer for 17d's marker layer after 17d itself.
+
+**Neither installed mod ships a word of either file.** `descr_disasters.txt` is
+**0 bytes** in Divide and Conquer, in Third Age Reforged and in Reforged's
+Fellowship campaign; Reforged's `descr_events.txt` is a five-line Geomod comment
+banner and Divide and Conquer's is empty. So the arbiter here is the **game's
+own unpacked copies**, which are on this machine: `descr_disasters.txt` (1,567
+bytes, eight blocks) documents its own format in its own header, and
+`descr_events.txt` (6,194 bytes, 35 live blocks) documents the event categories
+in its. That is a better arbiter than either mod would have been, and it is the
+reason this phase could measure at all.
+
+**Four things the reference tool gets wrong, each shown on its own files.**
+`campaignEventsParser.jsx` and `disastersParser.jsx` are 90-line readers with a
+serialiser each:
+
+* **both serialisers rebuild the file from a model**, so the first save of
+  either drops every comment. The game's `descr_events.txt` is more than half
+  commented-out test cases and format documentation, and it ends **without a
+  trailing newline**. Every edit here is a splice and `parse_*(t).text() == t`
+  is the gate, the same as every editor since Phase 8.
+* **their event parser holds one `date`** (`current.date = …`), so the last
+  `date` line wins. Reforged's Fellowship campaign writes four for one event -
+  `date 7 8` and three `date … turns …` lines - and three would be lost.
+* **their event categories are the disaster list.** The game's own header names
+  `counter`, `historic`, `volcano`, `plague` and `emergent_faction`, and its own
+  live lines also use `earthquake` - measured, a census over every
+  `descr_events.txt` on this machine is 26 `historic`, 4 `earthquake`, 5
+  `plague` and nothing else. Theirs has neither `counter` nor
+  `emergent_faction`, and the second is how a faction enters a campaign at all.
+* **their disaster serialiser writes every key.** Vanilla's `plague` block has
+  no `warning` line; theirs defaults the value rather than remembering the line
+  was absent, so it would add one to a block nobody edited. A slot that is not
+  there is a line to add, not a line to blank - 18a's ruling about a movie slot,
+  restated.
+
+**And one rule that would have called the shipping game broken.** Vanilla's
+`storm` and `horde` both write `region the sea`, and there is no `the sea` in
+`descr_regions.txt` - checked. So `campevents.SEA_REGION` is a declared value
+and the unknown-region rule passes over it. That is "a rule with no evidence
+reports nothing" applied to a **value** rather than to a missing file, which is
+the first time that decision has had to stretch that way.
+
+**What the checks will not say without evidence.** The event-picture rule
+(a missing `data/ui/<culture>/eventspic/<label>.tga` is a campaign CTD, per the
+TWCenter tutorial) runs only over the `eventspic` folders a mod actually ships,
+found by glob rather than listed - **neither installed mod ships one**, because
+the stock pictures are inside a `.pack`, so on both of them the rule is silent
+rather than reporting every event as broken. The text rule is the same shape and
+does have evidence: `historic_events.txt` keys are `<LABEL>_TITLE` and
+`<LABEL>_BODY`, measured across 1,796 keys in Divide and Conquer and 582 in
+Third Age Reforged with **no third suffix in either**. The climate, region and
+faction rules each go quiet when their vocabulary is not on disk.
+
+**`mapcheck` learned one rule, `event.position`**, in the resource rule's shape
+because it is the same fault about the same kind of number: off the grid is
+fatal, on a sea tile is a warning. It found exactly one thing in the game's own
+data - `black_death_3` has a position at 102,74, which is sea - so the stock
+map's baseline goes from 62 findings to 63, and the "a baseline shows and stops
+blocking" decision covers it exactly. The rule costs 9 ms on the game's map and
+nothing on a mod with empty files.
+
+**On the map**, an event's and a disaster's positions are two more categories of
+17d's one marker layer rather than a layer of their own: two overlays that each
+know half of what is standing on a tile is how a tooltip ends up telling half
+the truth. They are drawn as bursts - amber six-pointed for an event, red
+eight-pointed for a disaster - because a coordinate nothing owns should not be
+mistaken for one of the four things a faction does. `marker_view` reads them
+outside its `facts.strat` guard on purpose: a mod whose `descr_strat.txt` will
+not read still has a map, and its disasters are still painted on it.
+
+**There is no drag**, and that is a decision rather than an omission. 17d's drag
+moves a character because a character stands on exactly one tile; an event has a
+*list* of positions - the Black Death's third wave has seventeen - so dragging
+one is a gesture with no obvious subject. `＋ from the picked tile` is what
+replaces it: click the map, click the button, and the coordinate is written in
+the file's own convention (y up from the bottom) with nobody doing the
+arithmetic. The flip is made in exactly one place in the browser, which is the
+same rule `marker_view` follows in the other direction.
+
+**Exit, all met.** Both files round-trip byte-exact including comments - nine
+real copies on this machine, from 0 bytes to 6,194, every one of them; a
+disaster's and an event's positions appear on the map beside the settlements and
+the resources; and a position off the map is refused with its coordinate named,
+both by the save (`plan` returns the error and `apply` raises) and by the
+validator. Adding a block and deleting it again restores either file exactly.
+`tests/test_campevents.py` (82 checks) is new. The panel was driven in a running
+browser on Third Age Reforged: both tabs, both add forms, the picked-tile button,
+the marker glyphs and a refused off-map save.
+
+One thing outside its own files: **`dev/reference/upstream_sync.py status`
+sorted phase numbers with `int()`** and died the moment a manifest entry carried
+a sub-phase letter. Phase numbers in this roadmap have had letters since 16a, so
+the sort now tolerates one.

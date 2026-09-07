@@ -1959,14 +1959,23 @@ def _resource_art(mod, name: str) -> str:
 
 
 def marker_view(facts: "Facts") -> dict:
-    """Everything in ``descr_strat.txt`` that stands on a tile, drawable.
+    """Everything that stands on a tile, drawable, from three files.
 
     17d. :func:`campstrat.markers` does the reading and knows nothing about
     factions or art; this joins the two things a picture needs and nothing more
     - what each faction is called and what colour it flies, which the fact table
     already holds, and which resources this mod ships a picture for.
 
-    Coordinates are left exactly as the file writes them. The flip to image
+    **18b added the other two files.** An event's and a disaster's ``position``
+    lines are coordinates on this same map, so they are categories of this same
+    layer rather than a second one: two overlays that each know half of what is
+    standing on a tile is how a tooltip ends up telling you half the truth. They
+    come through :func:`unittransfer.campevents.positions`, which reads two
+    files that are between nothing and a few hundred lines - measured, the
+    game's own two are 106 positions together - so nothing here is fetched
+    lazily that was not already.
+
+    Coordinates are left exactly as the files write them. The flip to image
     coordinates belongs to whatever is holding the map's height, and doing it
     twice in two places is how a marker ends up mirrored.
     """
@@ -1974,9 +1983,13 @@ def marker_view(facts: "Facts") -> dict:
                  "items": [], "counts": {}, "factions": {}, "art": {},
                  "skipped": [s for s in facts.skipped
                              if campstrat.STRAT_NAME in str(s)]}
-    if facts.strat is None:
-        return out
-    items = campstrat.markers(facts.strat)
+    # 18b, and outside the `facts.strat` guard on purpose: a mod whose
+    # descr_strat.txt will not read still has a map, and its disasters are still
+    # painted on it.
+    from . import campevents
+    items = campevents.positions(facts.mod, facts.campaign)
+    if facts.strat is not None:
+        items = campstrat.markers(facts.strat) + items
     out["items"] = items
     counts: Dict[str, int] = {}
     for it in items:

@@ -318,6 +318,19 @@ The campaign folder's small files (18a, see :mod:`unittransfer.campfiles`)
                                     description write goes into the .txt and
                                     recompiles the .strings.bin beside it
 
+Events and disasters (18b, see :mod:`unittransfer.campevents`). The two files
+that say what happens without anybody doing it, and the first customers for
+17d's marker layer after 17d itself.
+  GET  /api/campevents/events?mod=&campaign=
+                                 -> every block in descr_events.txt with its
+                                    dates, positions and what is wrong with it
+  GET  /api/campevents/disasters?mod=
+                                 -> descr_disasters.txt (under world/maps/base,
+                                    not in the campaign folder), same shape
+  POST /api/campevents/plan|/apply
+                                 -> add, edit or delete one block in either
+                                    (`what`: events / disasters). Backups + undo
+
   POST /api/minor/plan|/apply    -> add, edit or delete one record. A religion's
                                     save is four files at once - its block, the
                                     `religions` list, descr_religions_lookup.txt
@@ -385,7 +398,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campevents, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1792,6 +1805,23 @@ class Handler(BaseHTTPRequestHandler):
                         mod, camp, (q.get("region") or [""])[0]))
                 except (campfiles.CampFileError, OSError) as e:
                     return self._err(404, getattr(e, "message", str(e)))
+            if u.path in ("/api/campevents/events", "/api/campevents/disasters"):
+                # 18b. Events are per campaign; disasters are not - that file is
+                # under world/maps/base with the layers, and one map has one set
+                # of them however many campaigns are painted on it. So only the
+                # first route takes `campaign`, and passing it to the other one
+                # would be a lie the URL told.
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                try:
+                    if u.path.endswith("/disasters"):
+                        return self._json(campevents.disasters_view(mod))
+                    return self._json(campevents.events_view(
+                        mod, (q.get("campaign") or [campevents.DEFAULT_CAMPAIGN])[0]))
+                except (campevents.CampEventError, OSError) as e:
+                    return self._err(404, getattr(e, "message", str(e)))
             if u.path == "/api/triggers/vocab":
                 # the condition/event vocabulary the trigger builder draws its
                 # pickers from. Generated data (dev/reference/trigger_vocab.py), not code,
@@ -2055,6 +2085,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._guilds(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/campfiles/plan", "/api/campfiles/apply"):
                 return self._json(self._campfiles(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/campevents/plan", "/api/campevents/apply"):
+                return self._json(self._campevents(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/plan", "/api/map/apply"):
                 return self._json(self._map_write(u.path.rsplit("/", 1)[-1], body))
             if (u.path.startswith("/api/map/paint")
@@ -2397,6 +2429,31 @@ class Handler(BaseHTTPRequestHandler):
             return out
         out.update(campfiles.apply(plan))
         self.registry.invalidate(body["mod"])       # the files changed on disk
+        return out
+
+    # ---- events and disasters (18b) ----
+    def _campevents(self, action, body):
+        """Preview or write one block of descr_events or descr_disasters.
+
+        The campfiles handler's shape over two files instead of three, and for
+        the same reason: a save is the same shape for both, ``what`` says which,
+        and one handler means one undo entry per visible action.
+        """
+        try:
+            mod = self.registry.get(body["mod"])
+            plan = campevents.plan(mod, body)
+        except (KeyError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        if not plan.text:
+            out["error"] = "nothing to change"
+            return out
+        out.update(campevents.apply(plan))
+        self.registry.invalidate(body["mod"])       # the file changed on disk
         return out
 
     # ---- ancillaries ----

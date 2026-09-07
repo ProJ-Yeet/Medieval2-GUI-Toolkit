@@ -134,6 +134,15 @@ KNOWN: List[Known] = [
           required=False),
     Known("text/campaign_descriptions.txt", "Campaign menu text", ("campmap",),
           required=False),
+    # 18b. Optional for the same reason, and more so: both installed mods ship
+    # an EMPTY descr_disasters.txt and an empty or comment-only
+    # descr_events.txt, so "not there" and "there and says nothing" are both the
+    # ordinary case rather than a fault. The disaster file sits under
+    # world/maps/base with the layers, not in the campaign folder.
+    Known(f"{_CAMP}/descr_events.txt", "Historical events", ("campmap",),
+          required=False),
+    Known(f"{_MAP}/descr_disasters.txt", "Natural disasters", ("campmap",),
+          required=False),
     Known("text", "Localisation folder", ("strings",), folder=True),
     Known("ui/units", "Unit cards", ("transfer", "edit"), required=False, folder=True),
     Known("ui/unit_info", "Unit info cards", ("transfer", "edit"),

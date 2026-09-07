@@ -285,6 +285,7 @@ Answered here, out of the map you were already sent - no request per pixel.">ⓘ
         <div id="cmQuery"></div>
         <div id="cmPaint"></div>
         <div id="cmMarks"></div>
+        <div id="cmEvents"></div>
         <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
         <div class="cmpick" id="cmPick"></div>
         <div class="cmsettle" id="cmSettle"></div>
@@ -298,6 +299,7 @@ Answered here, out of the map you were already sent - no request per pixel.">ⓘ
   cqOpen();
   cpaintOpen();
   cmkOpen();          // 17d, and it reads nothing until the layer is ticked
+  cevOpen();          // 18b, and it reads its two files only once opened
   cmapPickPaint();
   csPaint();          // 16h: kept out of cmapPickPaint, which owns #cmPick only
   cxPaint();          // 16i, for the same reason

@@ -848,12 +848,12 @@
   "src/components/map/CampaignEventsTab.jsx": {
    "disposition": "port-concept",
    "phases": [
-    "16"
+    "18"
    ],
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "descr_events.txt, NOT the script editor - the out-of-scope ruling was about ScriptEditor.jsx/ScriptingPanel. Kept in phase 15 deliberately."
+   "notes": "descr_events.txt, NOT the script editor - the out-of-scope ruling was about ScriptEditor.jsx/ScriptingPanel. Ported in 18b (unittransfer/campevents.py, web/js/campevents.js); their parser holds one `date` and the file allows several."
   },
   "src/components/map/CharactersTab.jsx": {
    "disposition": "port-concept",
@@ -878,12 +878,12 @@
   "src/components/map/DisastersTab.jsx": {
    "disposition": "port-concept",
    "phases": [
-    "16"
+    "18"
    ],
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": ""
+   "notes": "Ported in 18b, on the campaign map screen rather than in a mode of its own - the `position` lines are why."
   },
   "src/components/map/FactionsCampaignTab.jsx": {
    "disposition": "port-concept",
@@ -1118,12 +1118,12 @@
   "src/components/map/campaignEventsParser.jsx": {
    "disposition": "port-concept",
    "phases": [
-    "16"
+    "18"
    ],
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "See CampaignEventsTab - descr_events data, not scripting."
+   "notes": "Ported in 18b. Its EVENT_TYPES is the disaster list - it omits `counter` and `emergent_faction`, which the game's own file header names."
   },
   "src/components/map/campaignImporter.jsx": {
    "disposition": "port-concept",
@@ -1138,12 +1138,12 @@
   "src/components/map/disastersParser.jsx": {
    "disposition": "port-concept",
    "phases": [
-    "16"
+    "18"
    ],
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": ""
+   "notes": "Ported in 18b. Its serialiser writes every key and rebuilds the file, so it would add a `warning` line to vanilla's `plague` and drop every comment."
   },
   "src/components/map/factionMoviesParser.jsx": {
    "disposition": "port-concept",

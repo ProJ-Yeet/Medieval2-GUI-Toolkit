@@ -278,6 +278,12 @@ def triage(m: dict, sha: str, *, redo: bool = False) -> tuple[int, int]:
 # ---------------------------------------------------------------------------
 # commands
 # ---------------------------------------------------------------------------
+def _phase_key(kv) -> tuple:
+    """``("16a", 3)`` -> ``(16, "a")``, so 16a sorts under 16 and before 17."""
+    m = re.match(r"(\d+)(.*)", str(kv[0]))
+    return (int(m.group(1)), m.group(2)) if m else (1 << 30, str(kv[0]))
+
+
 def cmd_status(args) -> int:
     m = load()
     up = m["upstream"]
@@ -293,7 +299,12 @@ def cmd_status(args) -> int:
     for d, n in sorted(counts.items(), key=lambda kv: -kv[1]):
         print(f"  {d:<13} {n:>4}   {DISPOSITIONS.get(d, '')[:54]}")
     print("\nfiles per phase:")
-    for p, n in sorted(phases.items(), key=lambda kv: int(kv[0])):
+    # `int(kv[0])` here until 18b, which is when somebody first wrote a phase
+    # with a letter on it into the manifest and this command died on it. Phase
+    # numbers in ROADMAP.md carry sub-phase letters (16a, 17d, 18b), so a
+    # manifest entry may too, and a status listing is not the place to refuse
+    # one.
+    for p, n in sorted(phases.items(), key=_phase_key):
         print(f"  phase {p:<3} {n:>4}")
     untriaged = [p for p, r in m["files"].items() if r["disposition"] == "untriaged"]
     if untriaged:

@@ -62,7 +62,7 @@ running the test suite, and running `graphify update .`.
   16f, and it is why the stock game's packed `data/` does not produce 11 faults
   and 55,755 bad tiles against a map that ships with the game and works.
 - **A baseline shows and stops blocking; it never hides.** A mod is somebody
-  else's work with somebody else's bugs in it - vanilla's own map has 62
+  else's work with somebody else's bugs in it - vanilla's own map has 63
   findings - so an inherited fault stays visible and counted but does not refuse
   a save. A tool that blocks on 40 of them is one nobody uses twice; a tool that
   hides them is one nobody believes. Graduated 2026-09-05.
@@ -107,10 +107,11 @@ Backlog below with their own index.
 | 16a-16k | **Campaign Map Editor** - read, render, paint, validate, query, write, preview | 3.0.0 (uncut) |
 | 17a-17i | Campaign map correction pass - Home's card, the hover trail, the marker click, the markers layer, the tooltip, one faction screen, the prose and the credits | 3.0.0 (uncut) |
 | 18a | Four files nobody could edit - guilds, campaign descriptions, faction movies, the region's mercenary pool | 3.1.0 (uncut) |
+| 18b | Events and disasters - `descr_events.txt`, `descr_disasters.txt`, and their positions on the marker layer | 3.1.0 (uncut) |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
-gate later work is stated where it applies: 17d's markers layer is what 18b,
+gate later work is stated where it applies: 17d's markers layer is what 18b (done),
 20c and part of 22 build on, and Phase 22 gates the orphan-handling half of 24.
 
 `unittransfer/flatrecord.py` (extracted in Phase 11) is the shared engine for
@@ -299,6 +300,10 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `unittransfer/winconds.py` | `descr_win_conditions.txt` as lines plus an index over them (16j-2) |
 | `unittransfer/cas.py` | the `.cas` chunk list: meshes, materials, the node table and the skeleton, handed to Phase 15's viewer as a `MeshFile` (16k) |
 | `web/js/stratview.js` | the strat-model picker beside the map (16k) |
+| `web/js/campmark.js` | the markers layer: everything with a coordinate, drawn and grouped per tile (17d, extended by 18b) |
+| `unittransfer/campfiles.py` | the campaign folder's small files: menu text, faction movies, the region's mercenary pool (18a) |
+| `unittransfer/campevents.py` | `descr_events.txt` and `descr_disasters.txt`, both spliced, and the positions the marker layer draws (18b) |
+| `web/js/campevents.js` | the events and disasters panel, and `＋ from the picked tile` (18b) |
 
 Reuse: `keyblock.py` for the splice discipline (`flatrecord.py` does **not**
 fit - `descr_regions.txt` is positional, not `keyword value`);
@@ -346,7 +351,7 @@ change, so no cross-reference dangles.
 | Version | Phases | What it is |
 |---|---|---|
 | **3.0.0** | 16a-16k, plus 17 | The campaign map editor, and the correction pass over it. Feature-complete and uncut. |
-| **3.1.0** | 18-21 | The twenty Now items: five campaign files that had no editor, the names nothing could follow, and the map screen's second pass. |
+| **3.1.0** | 18-21 | The twenty Now items: the campaign files that had no editor, the names nothing could follow, and the map screen's second pass. |
 | **3.2.0** | 22-24 | The seven Next items: placing things on the map, a map that looks like the campaign map, and making or unmaking a region or a campaign. |
 | later | 25-27, and the Later table | Not scheduled. |
 
@@ -354,7 +359,6 @@ change, so no cross-reference dangles.
 
 | Phase | Sessions | Closes | Size |
 |---|---|---|---|
-| 18b - Events and disasters | 1 | M3 M4 | 1M 1S |
 | 19a - The keys a new record needs | 1 | D4 D5 | 2S |
 | 19b - Rename, and follow it | 1 | D2 D3 | 2M |
 | 20a - Three layers, read properly | 1 | D8 T2 T11 | 3S |
@@ -365,9 +369,9 @@ change, so no cross-reference dangles.
 | 23a-23b - A map that looks like the map | 2 | D7 T1 T12 | 2L 1M |
 | 24 - Make and unmake | 1 | G1 M15 | 2M |
 
-Thirteen sessions left. Phase 17 (2026-09-06) and **18a** (2026-09-07) are
-done and their write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later table
-is counted.
+Twelve sessions left. Phase 17 (2026-09-06) and all of Phase 18 (2026-09-07)
+are done and their write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later
+table is counted.
 
 ---
 # 3.1.0 - the Now set (Phases 18-21)
@@ -378,77 +382,9 @@ and screens that already exist. The common shape is **we know a file well enough
 to validate it and not well enough to edit it**, and that asymmetry is what
 3.1.0 removes.
 
----
-
-## Phase 18 - The files nothing could edit
-
-Six campaign files. Five of them nothing in the repo writes at all, and one
-(`export_descr_guilds.txt`) we refuse against without being able to fix.
-
-**18a is done** (2026-09-07): guilds, the campaign descriptions, the faction
-movies and the region's mercenary pool. Its write-up, and the two things in its
-scope that measuring corrected, are in `ROADMAP_ARCHIVE.md`. What is left of
-Phase 18 is 18b.
-
-<details><summary>18a as it was scoped, kept because 18b inherits its rulings</summary>
-
-### 18a - Four small files, one session
-
-**Closes M5, M6, M13, G3.** All four are the same shape and none needs a new
-engine.
-
-- **M5 - campaign description strings.** The title, blurb and victory text a
-  campaign shows on the menu. `modfiles.py` already knows the file exists.
-  With 16j-2 having taken `descr_win_conditions.txt`, this is the last unedited
-  file in the campaign folder.
-- **M6 - `descr_faction_movies.txt`.** The intro and victory movie per faction.
-  55 lines upstream, unread here. It is a faction fact, so it belongs on 17f's
-  combined faction screen rather than in a module of its own.
-- **M13 - `export_descr_guilds.txt`.** `buildings.py` refuses a `guild_`
-  requirement the file does not declare and says so with the count - all 19 real
-  `guild_` lines have a matching entry and nothing else in that file does. That
-  is enough knowledge to edit it.
-- **G3 - the region's mercenary pool.** `descr_mercenaries.txt`, per province.
-  The roadmap has carried this as "data layer lands in 16b, UI deferred" since
-  the phase was scoped and the data layer did land. One picker on a form that
-  already writes seven fields.
-
-**Check `flatrecord.py` before writing a single parser.** Phase 11 needed no
-code at all, and three of these four are runs of `<head> <name>` records with
-`keyword value` lines. G3 is not: it is a field on a record `campmap` already
-splices, so it goes through `render_block` like the other seven.
-
-Exit: each of the four round-trips byte-exact on every installed mod with no
-edits, one field edited changes one line, and each save goes through the one
-backup-and-log route every writer in this toolkit uses.
-
-</details>
-
-### 18b - Events and disasters, one session
-
-**Closes M3, M4.** Two files that are both "a thing that happens, under
-conditions", and the second one has coordinates.
-
-- **M3 - `descr_events.txt`.** The historical events a campaign fires: dates,
-  text keys, conditions. Nothing in the repo touches it, verified by grep. It
-  was explicitly kept in scope at triage - `docs/upstream/SYNC_LOG.md` records that what
-  was ruled out was the *script* editor, and that the two only look alike from a
-  distance - and then never built. Geomod writes this file too, so its manual is
-  a second source on the format.
-- **M4 - `descr_disasters.txt`.** Eight event types (earthquake, volcano, flood,
-  storm, dustbowl, locusts, plague, horde), each with a frequency in years, a
-  winter and summer flag, a warning flag, repeatable `climate` / `region` /
-  `position` lines and a min and max scale.
-
-**The `position x, y` lines are why this is a map phase and not a minor-files
-one.** A disaster has coordinates, so it draws as a marker and it is placed by
-clicking, which means 17d has to be done first and M4 is the first customer for
-the marker layer after 17d itself. `mapcheck` should also learn that a disaster
-position off the map or in the sea is a finding, the way a resource already is.
-
-Exit: both files round-trip byte-exact including comments; a disaster's
-positions appear on the map beside the settlements and resources; a position off
-the map is refused with its coordinate named.
+**Phase 18 is done** - 18a on 2026-09-07 and 18b the same day. Its six
+files are the five nothing wrote and the one the building side could only refuse
+against; the write-ups are in `ROADMAP_ARCHIVE.md`.
 
 ---
 

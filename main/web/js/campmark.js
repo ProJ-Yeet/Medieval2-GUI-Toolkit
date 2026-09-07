@@ -55,13 +55,17 @@ const CMK_FAN_ZOOM = 14;
 const CMK_ICON_MIN = 9, CMK_ICON_MAX = 22;
 
 //: The categories, in the order the panel lists them, with the toggle default.
-//: Resources are off for the reason at the top of this file.
+//: Resources are off for the reason at the top of this file; the two 18b ones
+//: are on, because the largest set of them anywhere is the game's own 106 and
+//: because a coordinate being edited on the panel below has to be visible.
 const CMK_CATS = [
   {id: 'settlement', label: 'Settlements', on: true},
   {id: 'character', label: 'Characters', on: true},
   {id: 'fort', label: 'Forts', on: true},
   {id: 'watchtower', label: 'Watchtowers', on: true},
   {id: 'resource', label: 'Trade resources', on: false},
+  {id: 'event', label: 'Event positions', on: true},
+  {id: 'disaster', label: 'Disaster positions', on: true},
 ];
 
 /* One letter per character type, because eleven kinds of person will not fit
@@ -285,6 +289,27 @@ function cmkGlyph(x, it, px, py, size){
     }
     return;
   }
+  /* 18b - an event or a disaster position. Both are drawn as a burst rather
+     than a solid shape, so that a coordinate nothing owns is not mistaken for
+     one of the four things above that a faction does: these are places where
+     something happens TO the map, and the shape says so. A disaster is the
+     bigger burst of the two because it is the one that recurs. */
+  if(it.kind === 'event' || it.kind === 'disaster'){
+    const arms = it.kind === 'disaster' ? 8 : 6;
+    const outer = r * (it.kind === 'disaster' ? 0.95 : 0.8);
+    x.beginPath();
+    for(let i = 0; i < arms * 2; i++){
+      const a = Math.PI * i / arms - Math.PI / 2;
+      const rr = i % 2 ? outer * 0.42 : outer;
+      const fx = px + Math.cos(a) * rr, fy = py + Math.sin(a) * rr;
+      if(i) x.lineTo(fx, fy); else x.moveTo(fx, fy);
+    }
+    x.closePath();
+    x.fillStyle = it.kind === 'disaster' ? 'rgba(233,105,105,.95)'
+                                         : 'rgba(200,164,92,.95)';
+    x.fill(); x.stroke();
+    return;
+  }
   if(it.kind === 'fort' || it.kind === 'watchtower'){
     const s = r * 0.7;
     x.beginPath();
@@ -371,6 +396,13 @@ function cmkLabel(it){
       + (it.army ? ` · ${it.army} unit${it.army === 1 ? '' : 's'}` : '')
       + (who ? ` · ${who}` : '');
   if(it.kind === 'resource') return it.name;
+  // 18b. A date and a frequency are the whole reason one of these is here, so
+  // each says its own: an event happens once, a disaster happens again.
+  if(it.kind === 'event')
+    return `${it.name}${it.type ? ` · ${it.type}` : ''}`
+      + (it.date ? ` · turn ${it.date}` : '');
+  if(it.kind === 'disaster')
+    return `${it.name}${it.frequency ? ` · every ${it.frequency} years` : ''}`;
   // A fort and a watchtower name a province rather than an owner: DaC writes
   // all 105 and all 295 of them inside the `region` blocks at the end of the
   // file, where nobody owns them, so that is what is worth saying about one.
