@@ -1023,7 +1023,14 @@ NAMES_REL = "descr_names.txt"
 
 #: the sections a faction can hold. `settlements` is in the file's own header
 #: comment; none of the three installed mods uses it, and all three use `women`.
-NAME_SECTIONS = ("settlements", "characters", "women")
+#:
+#: **`surnames` was missing until 19a**, and one real file uses it: Third Age
+#: Reforged's `dolguldur` writes the heading with one name under it, and both of
+#: those lines were being read as characters. Two references settle it
+#: independently - Demir's `parseDescrNamePools` accepts all four, and
+#: TWMapReader's `TwDataReader` tests for `surnames` by name - which is why this
+#: is a correction here rather than a special case in the writer that found it.
+NAME_SECTIONS = ("settlements", "characters", "surnames", "women")
 
 
 @dataclass
@@ -1193,7 +1200,7 @@ def new_names(edits: Dict) -> str:
         raise MinorError("a new faction needs a name")
     out = [f"faction: {name}", ""]
     sections = dict(edits.get("sections") or {})
-    for which in ("characters", "women"):
+    for which in ("characters", "surnames", "women"):
         rows = [str(v).strip() for v in (sections.get(which) or []) if str(v).strip()]
         if which != "characters" and not rows:
             continue

@@ -425,7 +425,8 @@ function cpaintFreeColour(){
 function cpaintWizOpen(){
   const p = state.cpaint, c = state.cmap;
   if(p.st.new_region){ p.wizOpen = true; cpaintPaint(); return; }
-  p.wiz = {name: '', settlement: '', rgb: cpaintFreeColour(), faction: '',
+  p.wiz = {name: '', settlement: '', shown: '', settlement_shown: '',
+           rgb: cpaintFreeColour(), faction: '',
            rebels: '', resources: '', religions: '', port: true};
   p.wizOpen = true;
   cpaintPaint();
@@ -455,6 +456,8 @@ async function cpaintWizStart(){
   }
   const r = await cpaintPost('region_start', {
     name: w.name.trim(), settlement: w.settlement.trim(), rgb: w.rgb,
+    shown: (w.shown || '').trim(),
+    settlement_shown: (w.settlement_shown || '').trim(),
     faction: w.faction.trim(), rebels: w.rebels.trim(),
     resources: (w.resources || '').split(',').map(s => s.trim()).filter(Boolean),
     religions: rel, port: !!w.port});
@@ -717,6 +720,10 @@ function cpaintWizHtml(){
       <div class="k">A new province <span class="count">step 1 of 3: the record</span></div>
       ${box('name', 'Region name', 'New_Province', 'no spaces - it is a key')}
       ${box('settlement', 'Settlement name', 'Newtown', 'no spaces, same reason')}
+      ${box('shown', 'Shown on the map', 'New Province',
+        'what the player reads; blank means they read the key above')}
+      ${box('settlement_shown', 'Settlement, shown', 'Newtown',
+        'the same, for the town')}
       <div class="cpfield"><label>Colour on map_regions.tga
           <span class="count">free on this map</span></label>
         <div class="cprow"><i class="cpsw" style="background:rgb(${
@@ -741,7 +748,12 @@ function cpaintWizHtml(){
     <div class="k">${esc(spec.name)}
       <span class="count">rgb(${spec.rgb.join(', ')}) · ${
       esc(spec.settlement)}</span></div>
-    ${step(1, true, 'The record is open')}
+    ${step(1, true, 'The record is open', spec.shown || spec.settlement_shown
+      ? `<span class="count">${esc(spec.shown || spec.name)} · ${
+          esc(spec.settlement_shown || spec.settlement)}</span>`
+      : `<span class="w-warn" title="With no line in the names file the campaign
+          map shows the code name. Check reports it as loc.missing.">no shown
+          name</span>`)}
     ${step(2, pr.tiles > 0, `Paint the province`,
       `<span class="count">${pr.tiles.toLocaleString()} tile${
         pr.tiles === 1 ? '' : 's'}</span>`)}

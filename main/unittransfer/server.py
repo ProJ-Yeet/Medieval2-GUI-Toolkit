@@ -187,7 +187,9 @@ Campaign Map mode (the ten TGA layers and descr_regions.txt, see
                                     watchtowers and trade resources (17d)
   GET  /api/map/region?mod=&name=
                                  -> one region: its record, its pixels, its
-                                    neighbours and the pickers its boxes need
+                                    neighbours, the pickers its boxes need, its
+                                    mercenary pool (18a) and the two names the
+                                    player reads for it (19a)
   POST /api/map/plan|/apply      -> edit one region of descr_regions.txt. The
                                     save also deletes map.rwm, because the game
                                     reads the compiled map in preference to the
@@ -208,8 +210,9 @@ show the unsaved map rather than the one on disk.
                                  -> the new-region wizard's record, decided
                                     before a pixel of it is painted
   POST /api/map/paint_plan|_apply
-                                 -> write every painted layer, and the new
-                                    region's record, in one backup set + undo
+                                 -> write every painted layer, the new region's
+                                    record, and (19a) the two names the player
+                                    reads for it, in one backup set + undo
 
 The validator (16f, see :mod:`unittransfer.mapcheck`). Run against the map the
 session is holding, so it answers "would what I am about to save load?" rather
@@ -331,6 +334,19 @@ that say what happens without anybody doing it, and the first customers for
                                  -> add, edit or delete one block in either
                                     (`what`: events / disasters). Backups + undo
 
+The names a new record needs (19a, see :mod:`unittransfer.namekeys`). Both of
+these are "a record was written and the words the player reads for it were not",
+and one of them closes a finding the validator reports against our own output.
+  POST /api/namekeys/plan|/apply -> `what`: region_names writes the province and
+                                    settlement lines of
+                                    imperial_campaign_regions_and_settlement_names.txt;
+                                    name_pool puts a character's name in the
+                                    faction's descr_names.txt section AND gives
+                                    it a key in text/names.txt, which are one job
+                                    because either alone still shows a token.
+                                    Both recompile the .strings.bin they wrote
+                                    (one backup set + undo)
+
   POST /api/minor/plan|/apply    -> add, edit or delete one record. A religion's
                                     save is four files at once - its block, the
                                     `religions` list, descr_religions_lookup.txt
@@ -398,7 +414,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campevents, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, portrecords, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campevents, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2087,6 +2103,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._campfiles(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/campevents/plan", "/api/campevents/apply"):
                 return self._json(self._campevents(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/namekeys/plan", "/api/namekeys/apply"):
+                return self._json(self._namekeys(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/plan", "/api/map/apply"):
                 return self._json(self._map_write(u.path.rsplit("/", 1)[-1], body))
             if (u.path.startswith("/api/map/paint")
@@ -2454,6 +2472,28 @@ class Handler(BaseHTTPRequestHandler):
             return out
         out.update(campevents.apply(plan))
         self.registry.invalidate(body["mod"])       # the file changed on disk
+        return out
+
+    def _namekeys(self, action, body):
+        """Preview or write the text a new region or a new character needs (19a).
+
+        Two subjects and one handler, because both are the same sentence: a
+        record exists and the words the player reads for it do not. ``what``
+        says which - ``region_names`` is one file, ``name_pool`` is two written
+        together, and either way it is one undo entry for one visible action.
+        """
+        try:
+            mod = self.registry.get(body["mod"])
+            plan = namekeys.plan(mod, body)
+        except (KeyError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        out.update(namekeys.apply(plan))
+        self.registry.invalidate(body["mod"])       # the files changed on disk
         return out
 
     # ---- ancillaries ----
@@ -3597,6 +3637,15 @@ class Handler(BaseHTTPRequestHandler):
             camp = (q.get("campaign") or [""])[0] or campstrat.DEFAULT_CAMPAIGN
             out["campaign"] = camp
             out["mercenaries"] = campfiles.mercs_view(cm.mod, camp, out["name"])
+            # 19a, D4. The two words the player reads for this province, out of
+            # the file campmap has parsed since 16f and never written. It rides
+            # along for the same reason the pool above does - one more thing the
+            # panel shows about this region - and saves on its own, because it
+            # is one more file.
+            try:
+                out["names"] = namekeys.region_names(cm.mod, out["name"])
+            except namekeys.NameKeyError as exc:
+                out["names"] = {"have": False, "problem": str(exc), "rows": []}
             return self._json(out)
 
         if path in ("/api/map/query/vocab", "/api/map/colouring"):

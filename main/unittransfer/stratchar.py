@@ -226,7 +226,15 @@ class Vocabulary:
         self.ancillaries: set = set()
         self.have_eda = False
         self.pool: Dict[str, List[str]] = {}
+        #: the fourth section 19a taught the parser about - see
+        #: :data:`unittransfer.minorfiles.NAME_SECTIONS`. Kept apart from
+        #: :attr:`pool` because a surname is the *second* half of a name and
+        #: never a character on its own.
+        self.surnames: Dict[str, List[str]] = {}
         self.have_pool = False
+        #: ``text/names.txt`` - what the player reads for one pool token
+        self.name_keys: Dict[str, str] = {}
+        self.have_name_keys = False
         self._read_edu()
         self._read_traits()
         self._read_ancillaries()
@@ -332,6 +340,23 @@ class Vocabulary:
                 if s.name in ("characters", "women"):
                     got += [e.value for e in s.entries]
             self.pool[f.name] = got
+            sec = f.section("surnames")
+            self.surnames[f.name] = [e.value for e in sec.entries] if sec else []
+
+        # 19a. A pool entry is a token, and the words the player reads for it
+        # are in text/names.txt - 3,583 of Divide and Conquer's 3,583 pool names
+        # have a key there and 2,572 of Third Age Reforged's 2,573. A name in
+        # the pool with no key is the other half of the same fault, and it was
+        # the half nothing here could see.
+        from . import namekeys
+        state = namekeys.loc_state(self.facts.mod, namekeys.POOL_LOC_REL)
+        if not (state["txt"] or state["bin"]):
+            self.skip(namekeys.POOL_LOC_REL,
+                      "Neither the file nor the archive beside it is on disk, "
+                      "so no pool name can be called untranslated.")
+            return
+        self.name_keys = namekeys.loc_pairs(self.facts.mod, namekeys.POOL_LOC_REL)
+        self.have_name_keys = bool(self.name_keys)
 
     def _from_file(self, sf: StratFile) -> None:
         """What the campaign file itself writes, for the fields nothing declares.
@@ -385,6 +410,8 @@ class Vocabulary:
             "labels": list(self.labels),
             "factions": list(self.factions),
             "pool": {k: len(v) for k, v in self.pool.items()},
+            "surnames": {k: len(v) for k, v in self.surnames.items() if v},
+            "have_name_keys": self.have_name_keys,
             "skipped": list(self.skipped),
         }
 
@@ -745,20 +772,44 @@ def check_pool(voc: Vocabulary, faction: str, name: str) -> List[dict]:
     All 325 of Third Age Reforged's characters and records are in its pool, so
     a name that is not is worth saying out loud. The stock game keeps
     ``descr_names.txt`` inside its packed data, and then this reports nothing.
+
+    **19a split the name in two before asking.** A ``descr_strat`` name is one
+    or more parts, the last of which is a surname out of the ``surnames``
+    section, and the finding now names the half that is missing rather than the
+    whole name - which on a two-part name was the wrong thing to go looking for
+    in a list of first names. Every character in both installed campaigns has a
+    one-word name, so on those the two readings agree and this one also has a
+    section to point at. The finding it produces is what 19a's Add to pool
+    button writes.
     """
     if not voc.have_pool or not name:
         return []
+    from .namekeys import name_parts
     pool = voc.pool.get(faction) or []
-    if name in pool or name.replace(" ", "_") in pool:
-        return []
-    other = [f for f, names in voc.pool.items() if name in names]
-    return [finding(
-        "char.pool", False,
-        f"{name} is not in {faction}'s section of descr_names.txt"
-        + (f" - it is in {', '.join(other[:2])}'s. " if other else ". ")
-        + "Every one of Third Age Reforged's 325 characters is in its own "
-          "faction's pool, and a name that is not may come out untranslated.",
-        name=name)]
+    first, surname = name_parts(name)
+    out: List[dict] = []
+    for part, have, where in ((first, pool, "characters/women"),
+                              (surname, voc.surnames.get(faction) or [], "surnames")):
+        if not part:
+            continue
+        if part not in have:
+            other = [f for f, names in (voc.surnames if where == "surnames"
+                                        else voc.pool).items() if part in names]
+            out.append(finding(
+                "char.pool", False,
+                f"{part} is not in {faction}'s `{where}` section of descr_names.txt"
+                + (f" - it is in {', '.join(other[:2])}'s. " if other else ". ")
+                + "Every one of Third Age Reforged's 325 characters is in its own "
+                  "faction's pool, and a name that is not may come out untranslated.",
+                name=name, part=part))
+        elif voc.have_name_keys and part not in voc.name_keys:
+            out.append(finding(
+                "char.name_key", False,
+                f"{part} is in the pool but has no key in text/names.txt, so the "
+                f"player reads the token rather than a name. Every one of Divide "
+                f"and Conquer's 3,583 pool names has one.",
+                name=name, part=part))
+    return out
 
 
 # ---------------------------------------------------------------------------

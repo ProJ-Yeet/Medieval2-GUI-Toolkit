@@ -535,11 +535,78 @@ function cxFindingsHtml(){
     ${errors.filter(e => !said.includes(e))
       .map(e => `<div class="w-bad">${esc(e)}</div>`).join('')}
     ${findings.map(f => `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${
-      esc(f.message)}</div>`).join('')}
+      esc(f.message)}${cxPoolFixHtml(f)}</div>`).join('')}
     ${changes.length ? `<div class="count">Would change:
       ${changes.map(esc).join(' · ')}</div>`
       : p ? '<div class="count">Nothing to save yet.</div>' : ''}
   </div>`;
+}
+
+/* ---- 19a, D5: the two findings that now have a button ----
+
+   `char.pool` says the name is in no pool and `char.name_key` says it is in one
+   but has no line in text/names.txt. Both are "the record exists and the words
+   the player reads for it do not", and one write closes either - so the button
+   sits on the finding rather than in a screen of its own, which is where
+   somebody actually meets the problem.
+
+   It writes descr_names.txt and text/names.txt together and it is its own save:
+   nothing about the character block is touched, and the 🕑 Log entry names the
+   two files it put there. */
+function cxPoolFixHtml(f){
+  if(f.code !== 'char.pool' && f.code !== 'char.name_key') return '';
+  if(!f.part) return '';
+  return ` <button class="cxfix" onclick="cxPoolAdd('${esc(f.part)}')"
+    title="Put this name in the faction's pool and give it a key in text/names.txt. Its own save, and its own undo.">Add to pool</button>`;
+}
+
+async function cxPoolAdd(part){
+  const k = state.cx;
+  if(!k || !k.d || k.busy) return;
+  const name = (k.w && k.w.name) || (k.pick >= 0 ? k.d.characters[k.pick].name : '');
+  const gender = (k.w && k.w.gender) || 'male';
+  const shown = prompt(`What should the player read for "${part}"?\n\n`
+    + 'This is the value of its key in text/names.txt. Leave it as it is to use '
+    + 'the token with its underscores turned into spaces.',
+    part.replace(/_/g, ' '));
+  if(shown === null) return;
+  const body = {mod: k.mod, what: 'name_pool', faction: k.faction,
+                name, gender, edits: {[part]: shown}};
+  k.busy = true;
+  let plan;
+  try{ plan = await api.post('/api/namekeys/plan', body); }
+  catch(e){ plan = {error: errText(e)}; }
+  finally{ k.busy = false; }
+  if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
+  const p = plan.plan || {};
+  if(!confirm(`Write: ${(p.changes || []).join('\n') || 'no visible change'}?\n\n`
+    + ((p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '')
+    + `${(p.files || []).join(', ')} only - the character block is not touched.\n\n`
+    + 'Backed up first, and 🕑 Log can undo it.')) return;
+  k.busy = true;
+  let res;
+  try{ res = await api.post('/api/namekeys/apply', body); }
+  catch(e){ res = {error: errText(e)}; }
+  finally{ k.busy = false; }
+  if(res.error){ toast('✗ ' + res.error, 8000); return; }
+  toast(`${part} is in ${k.faction}'s pool. 🕑 Log can undo it.`);
+  activity('character', `${k.mod} ${k.faction}: pool + ${part}`);
+  // re-read the faction so the finding this button just fixed goes away, then
+  // put the same person back under the cursor: a save that closed the form
+  // would make fixing two names take two trips through the list
+  const faction = k.faction, was = k.adding ? null : name, form = k.w;
+  k.d = null;
+  await cxOpen(faction);
+  const now = state.cx;
+  if(!now || !now.d) return;
+  if(was){
+    const at = now.d.characters.findIndex(c => c.name === was);
+    if(at >= 0) cxPick(at);
+  }else if(form){
+    now.adding = true; now.pick = -1; now.w = form;
+    cxPaint();
+    cxPlanSoon();
+  }
 }
 
 /* The family tree, read only for now.

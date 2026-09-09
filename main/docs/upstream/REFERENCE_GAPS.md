@@ -31,7 +31,7 @@ says "we do not", that was verified, and the verification is quoted.
 
 | Source | Items | Already scheduled | Already done, or a duplicate |
 |---|---|---|---|
-| Demir's StratMap Forge | 14 | 0 | 0 |
+| Demir's StratMap Forge | 14 | 0 | **D4, D5 done 19a** |
 | Mylae's M2TW Editor | 17 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11) · **M5, M6, M13 done 18a; M3, M4 done 18b** |
 | Bare Geomod | 8 | 1 (G6) | 3 (G7, G8 done; G5 = D9) · **G3 done 18a** |
 | TWMapReader | 12 | 1 (T5, folded into 17d) | 0 |
@@ -89,7 +89,7 @@ it. Say so, and the feature is still worth having.
 the three that name it as a judgement and are reported rather than edited, so
 this is that module's list read in a different direction.
 
-### D4. Write the localisation key when a region or settlement is created · S
+### D4. Write the localisation key when a region or settlement is created · **done**
 
 `stageRegionLocalization`, `setLocalizationValue`, `localizationTargetPath`,
 `hasLocalizationKey`, `rebuildLocalizationIndex`. A new province needs an entry
@@ -104,7 +104,12 @@ already owns a UTF-16 writer with a BOM (`strings.py`, `stringsbin.py`) and the
 in the whole audit and it closes a finding the validator currently reports
 against our own output.
 
-### D5. Name pools for a new character · S
+**Done 19a**, in `unittransfer/namekeys.py`, and the wizard now writes it in the
+same backup set as the record it creates. Measured: 400 keys in Divide and
+Conquer and 398 in Third Age Reforged, covering every region and settlement in
+both, so a missing one is a record something built.
+
+### D5. Name pools for a new character · **done**
 
 `parseDescrNamePools`, `populateCharacterNameSelectors`,
 `resolveCharacterNameParts`, `ensureCharacterNameInFaction`,
@@ -118,6 +123,13 @@ already read and edited by `minorfiles.py` and already cloned per faction by
 this is `stratchar.js` calling the module that already owns the file. It also
 removes a class of fault: a character whose name is in no pool has no localised
 name in game.
+
+**Done 19a**, and it turned out to be two files rather than one: 3,583 of Divide
+and Conquer's 3,583 pool names and 2,572 of Third Age Reforged's 2,573 have a
+key in `text/names.txt`, and a pool entry without one shows the raw token in
+game. The one exception is the word `surnames`, which is `descr_names.txt`'s
+fourth section heading and which `minorfiles.NAME_SECTIONS` was reading as a
+name - corrected in the same phase, on Demir's and TWMapReader's word.
 
 ### D6. Faction dependency audit · M
 

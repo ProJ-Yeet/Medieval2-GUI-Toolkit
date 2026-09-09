@@ -1716,9 +1716,13 @@ function cmapFormHtml(){
   return cmapFindingsHtml2() + `
     <div class="cmform">
       ${lock('Region name', d.name, CMAP_LOCKED.name,
-             d.shown ? `shown in game as <b>${esc(d.shown)}</b>` : '')}
+             d.shown ? `shown in game as <b>${esc(d.shown)}</b>`
+                     : '<span class="w-warn">no line in the names file - the '
+                       + 'player reads this key</span>')}
       ${d.has.settlement ? lock('Settlement', d.settlement, CMAP_LOCKED.settlement,
-             d.settlement_shown ? `shown in game as <b>${esc(d.settlement_shown)}</b>` : '')
+             d.settlement_shown ? `shown in game as <b>${esc(d.settlement_shown)}</b>`
+                                : '<span class="w-warn">no line in the names file'
+                                  + '</span>')
         : `<div class="count">This is the short wasteland form: no settlement, no
            creator and no rebel type. The arbiter says such a province must be the
            last entry in the file.</div>`}
@@ -1739,6 +1743,7 @@ function cmapFormHtml(){
           oninput="cmapSet('farming', this.value)">
         <div class="count">4 is about average, 6-7 highly fertile.</div></div>` : ''}
     </div>
+    ${cmapNamesHtml()}
     ${cmapMercHtml()}
     ${d.has.religions ? `<div class="k">Religions
       <span class="${total === 100 ? 'count' : 'w-bad'}">total ${total}${
@@ -1746,6 +1751,84 @@ function cmapFormHtml(){
         total > 100 ? '+' : ''}${total - 100})`}</span></div>
       <div class="cmrels">${cmapReligionRows()}</div>` : ''}
     ${cmapPixelHtml()}`;
+}
+
+/* ---- the words the player reads (19a, D4) ----
+
+   `imperial_campaign_regions_and_settlement_names.txt` keys a province and its
+   settlement by their own code names. 16f has reported a missing key since it
+   was written and nothing in the toolkit could write one, which is a fault the
+   new-region wizard was creating and then complaining about.
+
+   Its own save, for 17f's reason and the mercenary pool's: a third file, a
+   third undo entry, each naming what it put back. The region record is not
+   touched by this button and this button does not touch the region record. */
+function cmapNamesHtml(){
+  const d = state.cmap.det, n = d.names;
+  if(!n) return '';
+  if(!n.have) return `<div class="k">Names the player reads
+    <span class="count">${esc(n.problem || 'no names file')}</span></div>`;
+  const pick = d.namePick || {};
+  const rows = (n.rows || []).map(r => {
+    const now = pick[r.slot] === undefined ? r.value : pick[r.slot];
+    return `<div class="cmfield">
+      <label>${r.slot === 'region' ? 'Province' : 'Settlement'}
+        <span class="count">{${esc(r.key)}}</span></label>
+      <input value="${esc(now)}" placeholder="${esc(r.key)}"
+        oninput="cmapNameSet('${esc(r.slot)}', this.value)">
+      ${r.set ? '' : '<div class="w-warn">no line in this file yet</div>'}</div>`;
+  }).join('');
+  const dirty = (n.rows || []).some(r =>
+    pick[r.slot] !== undefined && pick[r.slot] !== r.value);
+  return `<div class="k">Names the player reads
+      <span class="count">${esc(n.file)}, ${n.keys} key${
+        n.keys === 1 ? '' : 's'}</span></div>
+    <div class="cmform">${rows}
+      <div class="count">${dirty
+        ? 'Not saved yet - ' + esc(n.file) + ' is a third file, so it is a third '
+          + 'save and a third undo. The compiled .strings.bin beside it is '
+          + 'rebuilt, because that is the one the game reads.'
+        : 'Blank here and the campaign map shows the code name instead.'}</div>
+      ${dirty ? `<button class="primary" style="margin-top:6px"
+        onclick="cmapNamesSave()">Save names</button>` : ''}
+    </div>`;
+}
+
+function cmapNameSet(slot, value){
+  const d = state.cmap.det;
+  if(!d) return;
+  d.namePick = Object.assign({}, d.namePick || {}, {[slot]: value});
+  cmapRegionPaint();
+}
+
+async function cmapNamesSave(){
+  const c = state.cmap, d = c.det;
+  if(!d || c.busy || !d.namePick) return;
+  const edits = {};
+  for(const r of (d.names.rows || []))
+    if(d.namePick[r.slot] !== undefined && d.namePick[r.slot] !== r.value)
+      edits[r.slot] = d.namePick[r.slot];
+  if(!Object.keys(edits).length) return;
+  const body = {mod: c.mod, what: 'region_names', region: d.name, edits};
+  c.busy = true;
+  let plan;
+  try{ plan = await api.post('/api/namekeys/plan', body); }
+  finally{ c.busy = false; }
+  if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
+  const p = plan.plan || {};
+  if(!confirm(`Write: ${(p.changes || []).join('\n') || 'no visible change'}?\n\n`
+    + ((p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '')
+    + `${(p.files || []).join(', ')} only - the region record is not touched.\n\n`
+    + 'Backed up first, and 🕑 Log can undo it.')) return;
+  c.busy = true;
+  let res;
+  try{ res = await api.post('/api/namekeys/apply', body); }
+  finally{ c.busy = false; }
+  if(res.error){ toast('✗ ' + res.error, 8000); return; }
+  toast('Names saved, and the compiled archive rebuilt. 🕑 Log can undo it.');
+  const name = d.name;
+  c.det = null;
+  await cmapOpenRegion(name);
 }
 
 /* ---- the province's mercenary pool (18a, G3) ----

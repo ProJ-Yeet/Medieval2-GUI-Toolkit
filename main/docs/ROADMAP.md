@@ -108,6 +108,7 @@ Backlog below with their own index.
 | 17a-17i | Campaign map correction pass - Home's card, the hover trail, the marker click, the markers layer, the tooltip, one faction screen, the prose and the credits | 3.0.0 (uncut) |
 | 18a | Four files nobody could edit - guilds, campaign descriptions, faction movies, the region's mercenary pool | 3.1.0 (uncut) |
 | 18b | Events and disasters - `descr_events.txt`, `descr_disasters.txt`, and their positions on the marker layer | 3.1.0 (uncut) |
+| 19a | The keys a new record needs - the province and settlement names, and the pool a character's name comes out of | 3.1.0 (uncut) |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
@@ -384,7 +385,8 @@ to validate it and not well enough to edit it**, and that asymmetry is what
 
 **Phase 18 is done** - 18a on 2026-09-07 and 18b the same day. Its six
 files are the five nothing wrote and the one the building side could only refuse
-against; the write-ups are in `ROADMAP_ARCHIVE.md`.
+against; the write-ups are in `ROADMAP_ARCHIVE.md`. **19a is done too**, on
+2026-09-09.
 
 ---
 
@@ -392,41 +394,19 @@ against; the write-ups are in `ROADMAP_ARCHIVE.md`.
 
 Four items, and the honest heart of the release. Today the toolkit **refuses**
 three of these with a reason, which is correct and is not the same as being
-unable to do them.
+unable to do them. **Two of the four are closed** - 19a took D4 and D5 on
+2026-09-09 - and what is left is the rename half.
 
-### 19a - The keys a new record needs, one session
+**19a is done** - 2026-09-09, D4 and D5 closed; the write-up is in
+`ROADMAP_ARCHIVE.md`. It left `unittransfer/namekeys.py` behind, which is the
+module a rename in 19b writes its text keys through, and it corrected
+`minorfiles.NAME_SECTIONS`, which was missing `descr_names.txt`'s fourth
+section.
 
-**Closes D4, D5.** Both are "a record was created and the text that names it was
-not", and both close a finding the validator currently reports against our own
-output.
-
-- **D4 - the localisation key for a new region or settlement.** A new province
-  needs an entry in
-  `text/imperial_campaign_regions_and_settlement_names.txt` or the game shows
-  its code name. `campmap.shown_names` parses that file for the panel, 16f
-  reports a missing key as a finding, and 16e's wizard creates provinces that
-  will have one. We own a UTF-16 writer with a BOM (`strings.py`) and the
-  `.strings.bin` recompile beside it (`stringsbin.py`), so nothing new is
-  needed except the write and the plan around it.
-- **D5 - name pools for a new character.** 16i writes characters and takes the
-  name as free text; a character whose name is in no pool has no localised name
-  in game. `descr_names.txt` is already read and edited by `minorfiles.py` and
-  already cloned per faction by `factionclone.py`, and 16j-2 deliberately
-  refused to add a third copy of it. This is `stratchar.js` calling the module
-  that already owns the file, plus the write that adds a name to the pool.
-
-**G4 is nearly free here and is in the Later set.** The legion label is D4 in
-miniature - 16a made the `legion:` form a first-class case (197 of DaC's 198
-records use it) and 16d already edits the field; what is missing is the paired
-display name, which is exactly the write D4 adds. Taking it in this session
-costs almost nothing and doing it separately costs a whole second pass over the
-same file. **Flagged, not moved:** the user put G4 in Later and that stands
-unless they say otherwise.
-
-Exit: a province created by 16e's wizard has a name in game, checked by reading
-the compiled `.strings.bin` back; 16f's missing-key finding goes to zero on a
-mod whose regions were all created through the tool; a name added to a pool
-leaves every other entry byte-exact.
+**G4 is still in Later, and is now cheaper than it was.** The legion label is D4
+in miniature and the write it needs is the one 19a added; what is missing is the
+paired display name. Flagged, not moved - the user put G4 in Later and that
+stands unless they say otherwise.
 
 ### 19b - Rename, and follow it, one session
 

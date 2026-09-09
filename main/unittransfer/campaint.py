@@ -904,6 +904,12 @@ def start_region(sess: PaintSession, body: dict) -> dict:
                        f"declares it - fix that hole before adding to it")
     sess.new_region = {
         "name": name, "settlement": settlement, "rgb": list(rgb), "key": k,
+        # 19a, D4. The two words the player reads, decided here with everything
+        # else about the record: a province created without them shows its code
+        # name on the campaign map, which is the finding 16f already reports
+        # against this wizard's own output.
+        "shown": str(body.get("shown") or "").strip(),
+        "settlement_shown": str(body.get("settlement_shown") or "").strip(),
         "legion": str(body.get("legion") or ""),
         "faction": str(body.get("faction") or "").strip(),
         "rebels": str(body.get("rebels") or "").strip(),
@@ -1178,6 +1184,12 @@ class PaintPlan:
     findings: List[dict] = field(default_factory=list)
     #: code -> the whole file as it would be written
     data: Dict[str, bytes] = field(default_factory=dict)
+    #: 19a, D4. ``{key: what the player reads}`` for the new province and its
+    #: settlement. It rides in this save rather than in one of its own, and that
+    #: is not a departure from 17f's two-files-two-saves rule: creating a
+    #: province is one act, and an undo of it has to take back the name as well
+    #: as the record, or the mod keeps a key pointing at a region that is gone.
+    loc_writes: Dict[str, str] = field(default_factory=dict)
 
     def summary(self) -> str:
         head = (f"paint {getattr(self.mod, 'name', '?')}'s campaign map "
@@ -1191,6 +1203,7 @@ class PaintPlan:
                 "warnings": list(self.warnings), "errors": list(self.errors),
                 "findings": list(self.findings),
                 "region": dict(self.region) if self.region else None,
+                "loc_writes": dict(self.loc_writes),
                 "ok": not self.errors and bool(self.data or self.region_text)}
 
 
@@ -1264,6 +1277,7 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
                 f"descr_regions.txt: a new record for {spec['name']} "
                 f"({prog['tiles']:,} tiles, settlement at "
                 f"{prog['settlement'][0]},{prog['settlement'][1]})")
+            _plan_region_names(p, spec)
             # A region ID is the engine's scan order over map_regions.tga, not a
             # number written in any file, so a new province quietly renumbers
             # every one the scan reaches after it. Nothing in the mod has to be
@@ -1285,6 +1299,44 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
     if not p.data and not p.region_text and not p.errors:
         p.errors.append("nothing has been painted")
     return p
+
+
+def _plan_region_names(p: PaintPlan, spec: dict) -> None:
+    """19a, D4. The two lines that stop a new province showing its code name.
+
+    Skipped without complaint when the wizard's two boxes are empty - a province
+    whose name is deliberately its code name is legal, and 16f already reports
+    the state either way. The refusal is only for a mod with neither the ``.txt``
+    nor the archive beside it, which is the stock game and which the wizard
+    cannot write a province into in the first place.
+    """
+    from . import namekeys
+    writes = {}
+    for key, value in ((spec["name"], spec.get("shown")),
+                       (spec["settlement"], spec.get("settlement_shown"))):
+        if not str(value or "").strip():
+            continue
+        try:
+            writes[key] = namekeys.clean_value(value, "name")
+        except namekeys.NameKeyError as exc:
+            p.errors.append(str(exc))
+            return
+    if not writes:
+        p.warnings.append(
+            f"{spec['name']} is being created with no line in "
+            f"{Path(namekeys.REGION_NAMES_REL).name}, so the campaign map will "
+            f"show its code name. Check reports it as loc.missing until it has one")
+        return
+    state = namekeys.loc_state(p.mod, namekeys.REGION_NAMES_REL)
+    if not (state["txt"] or state["bin"]):
+        p.errors.append(
+            f"{getattr(p.mod, 'name', '?')} has neither "
+            f"{namekeys.REGION_NAMES_REL} nor the compiled archive beside it, so "
+            f"there is nothing to write these two names into")
+        return
+    p.loc_writes = writes
+    for key, value in writes.items():
+        p.changes.append(f"{state['file']}: + {key}: {value}")
 
 
 def _emptied(cm: CampaignMap) -> List[str]:
@@ -1339,6 +1391,11 @@ def apply_paint(p: PaintPlan) -> dict:
         target = keep(REGIONS_REL)
         write_text(target, p.region_text, ENCODING)
         file_op("WRITE", target, f"{len(p.region_text)} bytes")
+
+    if p.loc_writes:
+        from . import namekeys
+        namekeys._write_loc(mod, namekeys.REGION_NAMES_REL, p.loc_writes,
+                            keep, p.warnings)
 
     rwm = Path(mod.data) / RWM_REL
     if rwm.exists():

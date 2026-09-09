@@ -25,6 +25,49 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 19a - the keys a new record needs (2026-09-09)
+`unittransfer/namekeys.py` (new), one handler and one POST pair on `server.py`
+plus the names block riding on `/api/map/region`, a correction to
+`minorfiles.NAME_SECTIONS`, two additions to `stratchar.Vocabulary` and a second
+finding on `check_pool`, the loc write folded into `campaint`'s wizard save,
+three panels in `web/js/` and `tests/test_namekeys.py` (55 checks). Closes D4 and
+D5. The reasoning is in `ROADMAP_ARCHIVE.md`; what a later session would not
+otherwise find out is here.
+
+**Read the references before believing a parser that has never failed.**
+`minorfiles.parse_names` has been right about `descr_names.txt` since Phase 11
+and shipped a bug the whole time: the file has a fourth section, `surnames`, and
+`NAME_SECTIONS` listed three. Only one faction in one installed mod uses it -
+Third Age Reforged's `dolguldur`, one name - so no round-trip test could catch
+it: the file still came back byte for byte, it was just described wrong. What
+found it was a coverage measurement made for a different reason (every pool name
+against `text/names.txt`) turning up exactly one token with no key, and that
+token was the heading. Demir's `parseDescrNamePools` and TWMapReader's
+`TwDataReader` both name all four sections.
+
+**A localisation file is two files.** Every `{key}value` write in this toolkit
+has to recompile the `.strings.bin` beside it, because that is the file the game
+reads - and the backup has to take both, or an undo restores the text and leaves
+the game showing the new words. `namekeys._write_loc` is the one place that does
+it and it takes the caller's own `keep` closure, which is what let the paint
+tool's save adopt it without opening a second backup set.
+
+**One save per file, except when one act spans several.** 18a's rule stands and
+the region panel keeps it - the name boxes are a third file, a third Save and a
+third undo, exactly as the mercenary pool is a second. Creating a province is
+the other case: the layers, the record and the name are one act, so they are one
+backup set. The distinction is whether an undo of half of it would leave the mod
+in a state nobody asked for, and for a created province it would.
+
+**Three things measured that are worth not re-measuring.** Every region and
+settlement in both installed mods has a line in the names file (400 keys in
+Divide and Conquer, 398 in Third Age Reforged), so a missing one is ours. Every
+character in both campaigns has a **one-word** name - 305 and 246 of them - and
+every one of those words is in a pool, so the two-part first-name-plus-surname
+form the references model is unexercised by any real file and is supported on
+their word. And a name splits on **spaces, never underscores**: the pool holds
+`The_Dark_Lord` as one entry.
+
 ## 18b - events and disasters (2026-09-07)
 `unittransfer/campevents.py` (1,243 lines), two GET routes and one handler on
 `server.py`, one rule on `mapcheck.py`, two categories on `mapquery.marker_view`,

@@ -46,7 +46,8 @@ sys.path.insert(0, str(ROOT))
 from PIL import Image
 
 from tests import _realmod, _tmp
-from unittransfer import campaint, campmap, config, mapvocab, transfer
+from unittransfer import (campaint, campmap, config, mapcheck, mapvocab,
+                          stringsbin, transfer)
 from unittransfer.maptga import TgaInfo, encode, probe, read
 from unittransfer.mod import Mod
 from unittransfer.server import Handler, Registry, _Server
@@ -180,10 +181,22 @@ def write_tga(path, img, depth=32, image_type=10, desc=0x08):
     path.write_bytes(encode(img.convert(info.mode), info))
 
 
+#: 19a. The words the player reads, in the shape both real mods write it: UTF-16
+#: with a BOM, CRLF, one `{key}value` a line. Here so the wizard's fourth claim -
+#: a new province is named as well as recorded - has a file to write into.
+SHOWN = ("{A_Province}Aland\r\n{Atown}Ayton\r\n"
+         "{B_Province}Bland\r\n{Btown}Beeton\r\n"
+         "{C_Province}Cland\r\n{Ctown}Seaton\r\n")
+
+
 def tiny_map(root: Path):
-    """One complete little campaign map on disk: ten layers and two text files."""
+    """One complete little campaign map on disk: ten layers and three text files."""
     base = root / "data" / campmap.BASE_REL
     base.mkdir(parents=True, exist_ok=True)
+    (root / "data" / "text").mkdir(parents=True, exist_ok=True)
+    with open(root / "data" / campmap.REGION_NAMES_REL, "w",
+              encoding="utf-16", newline="") as fh:
+        fh.write(SHOWN)
     (base / "descr_terrain.txt").write_text(TERRAIN, encoding="latin-1")
     (base / "descr_regions.txt").write_bytes(RECORDS.encode("latin-1"))
     write_tga(base / "map_regions.tga", paint_img(W, H, lambda x, y: GRID[y][x], "RGBA"))
@@ -444,6 +457,52 @@ check("and the file it would write parses back to four records with the new "
       len(campmap.parse_regions(p.region_text).records) == 4
       and campmap.parse_regions(p.region_text).by_name("D_Province").religions
           == {"catholic": 100})
+
+# 19a, D4. The wizard was creating provinces the validator then reported as
+# nameless, which is the one finding the toolkit produced against its own
+# output. Two claims: without the boxes it warns rather than refuses, and with
+# them the name reaches the file the GAME reads - the compiled archive, not the
+# .txt beside it.
+check("with no shown name it warns, in the words the validator will use",
+      any("loc.missing" in w for w in p.warnings) and not p.errors)
+
+sess3n = campaint.PaintSession(tiny, campmap.CampaignMap(tiny))
+campaint.start_region(sess3n, dict(spec, shown="Dee Land",
+                                   settlement_shown="Deetown"))
+campaint.paint(sess3n, {"tool": "brush", "target": "regions",
+                        "region": "D_Province", "points": [[1, 2]], "size": 3})
+campaint.paint(sess3n, {"tool": "pencil", "target": "regions",
+                        "region": "D_Province", "marker": "settlement",
+                        "points": [[1, 2]]})
+pn = campaint.plan_paint(sess3n)
+check("with them it plans two text keys and no warning about the names file",
+      pn.loc_writes == {"D_Province": "Dee Land", "Dtown": "Deetown"}
+      and not any("loc.missing" in w for w in pn.warnings))
+names_before = (tiny_root / "data" / campmap.REGION_NAMES_REL).read_bytes()
+res = campaint.apply_paint(pn)
+check("the names file joins the one backup set the layers and the record are in",
+      campmap.REGION_NAMES_REL in res["record"]["manifest"]["backed_up"])
+check("…and its backup is byte-exact, so one undo puts the whole creation back",
+      (Path(res["record"]["backup_root"]) / "data"
+       / campmap.REGION_NAMES_REL).read_bytes() == names_before)
+check("the new province is named in the file the panel reads",
+      campmap.shown_names(tiny).get("D_Province") == "Dee Land")
+compiled = stringsbin.load_pairs(
+    tiny_root / "data" / (campmap.REGION_NAMES_REL + ".strings.bin"))
+check("…and in the compiled archive the GAME reads, which was not there before",
+      compiled.get("D_Province") == "Dee Land"
+      and compiled.get("Dtown") == "Deetown")
+check("the six keys already in the file are untouched",
+      all(compiled.get(k) == v for k, v in
+          (("A_Province", "Aland"), ("Atown", "Ayton"), ("B_Province", "Bland"),
+           ("Btown", "Beeton"), ("C_Province", "Cland"), ("Ctown", "Seaton"))))
+rep = mapcheck.run(tiny, campmap.CampaignMap(tiny))
+missing = [f for f in rep.findings if f.code == "loc.missing"]
+check(f"and 16f's missing-key finding is now zero on this mod ({len(missing)})",
+      not missing)
+transfer.undo(res["record"]["id"])
+check("undo puts the names file back byte for byte",
+      (tiny_root / "data" / campmap.REGION_NAMES_REL).read_bytes() == names_before)
 
 # the touching rule, on a region painted in the middle of the sea
 sess4 = campaint.PaintSession(tiny, campmap.CampaignMap(tiny))

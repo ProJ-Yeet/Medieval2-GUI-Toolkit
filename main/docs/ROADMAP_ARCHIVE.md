@@ -3210,3 +3210,83 @@ One thing outside its own files: **`dev/reference/upstream_sync.py status`
 sorted phase numbers with `int()`** and died the moment a manifest entry carried
 a sub-phase letter. Phase numbers in this roadmap have had letters since 16a, so
 the sort now tolerates one.
+
+---
+
+## Phase 19a - The keys a new record needs - done 2026-09-09
+
+**Closes D4 and D5.** Both are one sentence: a record was created and the text
+that names it was not. D4 closed a finding the validator has been reporting
+against the toolkit's own output since 16f - 16e's wizard makes a province,
+`loc.missing` then says the player will read its code name on the campaign map,
+and nothing here could write the line that fixes it.
+
+**`unittransfer/namekeys.py`** is new and owns neither parser. `descr_names.txt`
+belongs to `minorfiles.py`, which 16j-2 refused to copy a second time, and both
+`{key}value` files belong to `stringsbin.py`. What is in the new module is the
+*write* and the rules around it, and every read goes through the module that
+already owns the format - `minorfiles._loc` for the txt-or-archive read,
+`minorfiles.render_names` for the splice, `stringsbin.upsert_txt` for the line
+and `cleaner.refresh_strings_bin` for the cache.
+
+**D4 is one file and D5 turned out to be two.** Every one of Divide and
+Conquer's 3,583 pool names and 2,572 of Third Age Reforged's 2,573 has a key in
+`data/text/names.txt`; a pool entry without one shows the raw token in game. So
+the pool line and the text key are one job with one backup set and one undo -
+the ruling `minorfiles.plan` already makes over a religion's four files, which
+are worthless written one at a time. The single exception in that measurement is
+the word `surnames`, and it is the phase's other finding.
+
+**`descr_names.txt` has four sections, and `NAME_SECTIONS` listed three.** Third
+Age Reforged's `dolguldur` writes a `surnames` heading with one name under it,
+and the parser was reading both lines as characters - 248 characters instead of
+246 plus a surname. Two references settle it independently: Demir's
+`parseDescrNamePools` accepts `characters | surnames | women | settlements`, and
+TWMapReader's `TwDataReader` tests for `surnames` by name. It is corrected in
+`minorfiles.py` rather than worked around in the writer, because a writer that
+did not know would have appended a new name underneath a heading that is not the
+one it meant. `stratchar.Vocabulary` reads the fourth section into its own list,
+kept apart from the pool because a surname is the second half of a name and
+never a character on its own.
+
+**A name splits on spaces and never on underscores.** The old `check_pool`
+compared the whole `descr_strat` name against a list of first names, with a
+`name.replace(" ", "_")` fallback. Demir's rule is the other way round: the last
+word is a surname, the rest joins with an underscore, and an underscore is what
+a space *inside* one part becomes - Divide and Conquer's pool holds
+`The_Dark_Lord` as one entry and its `descr_strat` writes it as one word. All
+305 of that mod's characters and all 246 of Third Age Reforged's have a one-word
+name and every one of those words is in a pool, so on both installed mods the
+two readings agree; the two-part form is supported on the arbiter's word rather
+than on a measurement, and it is said so in `name_parts`.
+
+**The wizard names a province at creation, and that is not a departure from
+17f.** 18a's rule is that one screen over several files means one save per file,
+and the region panel keeps it: the name boxes are a third file, a third Save
+button and a third undo entry, exactly as the mercenary pool is a second.
+Creating a province is a different thing - one act across the layers, the record
+and the name - so `campaint.apply_paint` writes all three into one backup set,
+because an undo that took back the record and left the key would leave a mod
+pointing at a region that is gone. With the boxes empty the wizard warns in the
+words the validator will use rather than refusing: a province deliberately
+called by its code name is legal.
+
+**`check_pool` gained a second finding**, `char.name_key`, for the half nothing
+here could see: the name is in the pool and has no line in `text/names.txt`. Both
+findings carry the part they are about and both get an `Add to pool` button on
+the finding itself, which is where somebody meets the problem rather than in a
+screen they would have to know to go and find.
+
+**Exit, all met.** A province created by 16e's wizard has a name in game,
+checked by reading the compiled `.strings.bin` back rather than the `.txt`
+beside it; 16f's `loc.missing` count is zero on a mod whose regions were all
+created through the tool; a name added to a pool leaves every other entry
+byte-exact - one line more and no other line changed, measured on a copy of
+Third Age Reforged's 125 KB file - and one undo puts both files back byte for
+byte. `tests/test_namekeys.py` (55 checks) is new, and `tests/test_campaint.py`
+gained the wizard's fourth claim and a names file in its fixture. Both panels
+and both routes were driven in a running browser on Third Age Reforged.
+
+**G4 stays in Later.** The legion label is D4 in miniature and would have been
+nearly free here, and the roadmap says it stays unless the user moves it. It
+still would be nearly free: the write it needs is the one this phase added.
