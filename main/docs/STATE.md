@@ -1,14 +1,19 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-09 · **v2.2.1 latest and beta 2026-09-06b alongside it, off
+_Updated: 2026-09-09 · **v2.2.2 latest and beta 2026-09-09 alongside it, off
 the same tree - `master` itself keeps the map on** · after Phase 19a, the keys a
-new record needs_
+new record needs, cut on both lines_
 
 ## Next up
 **Phase 19b, rename and follow it** (`ROADMAP.md`, Backlog). 19a closed on
 2026-09-09; the write-up is in `ROADMAP_ARCHIVE.md`. It left
 `unittransfer/namekeys.py` behind, which is where 19b writes its text keys.
-Nothing is released off 3.1.0 yet; the next cut on either line is still whatever
-the user asks for.
+
+**Cut after every change, from 2026-09-09.** The user's standing instruction:
+every change is released as it lands, without being asked. **Which lines depends
+on what the change touched** - map-only work is **the beta alone**, and the 2.x
+subrelease is cut only when something outside the campaign map changed. 18a, 18b
+and 19a went out together as v2.2.2 and beta 2026-09-09 because they had piled
+up; from here a phase is cut as it lands.
 
 ## WHERE THINGS ARE - the tree moved on 2026-09-06
 Only the two `.bat` files and `README.md` are at the top of the repository.
@@ -19,15 +24,20 @@ path in this file and in the source is relative to. `main/dev/` never ships.
 ## THE TWO RELEASE LINES - read this before cutting anything
 Two lines off this one `master`, chosen by whether a change touches the campaign
 map. **Not campaign-map** → a **2.x subrelease with the map hidden**, uploaded
-`--latest` (latest **v2.2.1**, 2026-09-06). **Campaign-map** → the **beta line**,
-uploaded as a **pre-release** (latest **beta 2026-09-06b**). A **subrelease means
+`--latest` (latest **v2.2.2**, 2026-09-09). **Campaign-map** → the **beta line**,
+uploaded as a **pre-release** (latest **beta 2026-09-09**). A **subrelease means
 both**: one job, both zips, same tree.
+
+**Every change is cut as it lands, and the lines follow the change** (the user's
+rule, 2026-09-09). A change that touches **nothing outside the campaign map is
+the beta only** - do not cut a 2.x that carries no visible difference. A change
+that touches anything else is a subrelease, which is both. Nobody has to ask.
 
 The switch is **one flag**: `off:true` on the `campmap` entry in `MODES` in
 `web/js/core.js`, which `menuModes()` and `modeOffered()` are the only readers
 of. It is a **release-time edit, not a state of `master`** - set it, bump the 2.x
 number, build, upload, then put it straight back off in the next commit.
-`master` carries the map ON, and `__version__` says `beta-2026-09-06b` because
+`master` carries the map ON, and `__version__` says `beta-2026-09-09` because
 the beta was the last thing cut, which is honest rather than untidy.
 
 Betas are named by the **date** they were released, with a letter for a second
@@ -35,15 +45,15 @@ in one day. The GitHub title is `M2 GUI-Kit V<X.Y.Z>` - hyphenated **GUI-Kit**,
 capital **V**; run `gh release list --limit 3` and copy the newest title's shape
 rather than typing it from memory. The strict step-by-step is `HANDOFF.md`.
 
-**19a is split across that line, unlike 18b.** D4 is the map screen and the
-paint wizard, so a 2.x cut with the map hidden ships none of it. D5's two writes
-are reached from the map's character panel and so go the same way - but the
-`surnames` correction to `minorfiles.NAME_SECTIONS` is in the Minor Files
-module, which is on the menu in both lines, and it is the one piece of this
-phase a 2.x subrelease would carry.
+**What v2.2.2 actually carried**, out of three phases: 18a's Guilds editor and
+19a's `surnames` correction to `minorfiles.NAME_SECTIONS`, both of which are
+outside the map. Everything else in 18a, all of 18b and the rest of 19a is
+reached from the map screen and went to the beta alone. The `2.2.x` line was the
+user's call at the v2.2.1 cut and this stays on it.
 
 **3.0.0 final** is the beta's feature set with whatever the beta turns up fixed.
-**3.1.0** is Phases 18 to 21, and five of its sub-phases are now complete.
+**3.1.0** is Phases 18 to 21, and five of its sub-phases are now complete and
+published on the beta line.
 
 ## Phase status
 | Phase | Status | Note |
@@ -53,7 +63,7 @@ phase a 2.x subrelease would carry.
 | 20-21 - the rest of the Now set (3.1.0) | **scoped** | Three sessions: the map screen's second pass, two screens over data we already hold. |
 | 22-24 - the Next set (3.2.0) | **scoped** | Five sessions: placing forts, watchtowers and resources, the textured terrain render, delete-a-region and create-a-campaign. |
 | 25-27 | scoped, unscheduled | OSM backdrop, map resize, layer generators. |
-| 16-18 | done | The campaign map editor, its correction pass, and the six files nothing could edit. Fold into 3.0.0 and 3.1.0, both uncut. |
+| 16-18 | done | The campaign map editor, its correction pass, and the six files nothing could edit. Published on the beta line; the 3.0.0 and 3.1.0 numbers are still unassigned to a cut. |
 
 ## In-progress detail
 **Clean.** Nothing is mid-flight. All 90 suites were run after 19a: **86 pass
@@ -101,6 +111,11 @@ untriaged. `docs/upstream/REFERENCE_GAPS.md` now marks D4, D5, M3, M4, M5, M6,
 M13 and G3 done.
 
 ## Decisions
+- 2026-09-09: **Cut every change as it lands, and let the change pick the
+  lines.** The user's standing instruction: no asking, and no letting phases pile
+  up the way 18a, 18b and 19a did. Map-only work is **the beta alone**; anything
+  touching the rest of the toolkit is a subrelease, which is both lines.
+  `HANDOFF.md` rule 1 carries the steps.
 - 2026-09-09: **A round trip is not a proof that a format is understood.**
   `minorfiles.parse_names` reproduced `descr_names.txt` byte for byte while
   reading a `surnames` heading as a character name, because a line it misfiles

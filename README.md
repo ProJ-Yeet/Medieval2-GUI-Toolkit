@@ -39,7 +39,7 @@ one containing `mods`).
 | Unit Editor | Change, clone or delete the units of a single mod |
 | BMDB + Sprites | Edit any `battle_models.modeldb` entry, view models in 3D, and clean out what nothing references |
 | Buildings | Browse and edit `export_descr_buildings.txt`, including recruitment |
-| Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, set which mercenary pool a province hires from, name a faction on the new-game menu, edit the historical events a campaign fires and the natural disasters its map allows, check the whole map against what the game will accept. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
+| Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, set which mercenary pool a province hires from, name a faction on the new-game menu, edit the historical events a campaign fires and the natural disasters its map allows, name a province and its settlement as the player reads them, check the whole map against what the game will accept. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
 | Unit Sounds | Choose which voice bank entry each unit uses |
 | Sprites | Generate and wire up the far-LOD unit sprites |
 | Strings | Read and write the compiled `data/text/*.txt.strings.bin` files |
@@ -230,6 +230,15 @@ Other transfer options:
   so, so the form is offered whether the text exists or not, and saving creates
   it. The four faction movies are on the same screen, and so is the mercenary
   pool a province hires from, over on the region panel.
+* **The words the player actually reads.** A province, a settlement and a
+  character are each named twice in a mod: a code name the files point at, and a
+  line in a text file the game shows. Miss the second and the campaign map reads
+  `Anorien_Province`. Both are editable now - the province and its settlement on
+  the region panel, a character's name straight from the warning that says it is
+  in no pool - and a province created with the paint tool is named as you create
+  it. Every one of these writes rebuilds the compiled `.strings.bin` beside the
+  text file, because that is the file the game reads and a stale one is why
+  "delete the .bin" is folklore.
 * **Ctrl+Z / Ctrl+Y** in every editor, one value at a time.
 
 ## Cleanup
