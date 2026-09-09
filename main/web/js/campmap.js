@@ -1688,20 +1688,49 @@ function cmapRegionHtml(){
 //: The three fields nobody may retype here, and why. Said on the form rather
 //: than only when a save is refused, because a box you cannot use should look
 //: like one before you have typed into it.
+/* 19b corrected the settlement sentence. It used to say descr_strat.txt points
+   at a settlement's name, and measured over both installed mods it does not: a
+   settlement block carries `region <province>` and never names itself. Every
+   whole-word hit in either mod's descr_strat.txt is a unit type, a portrait or
+   a comment. */
 const CMAP_LOCKED = {
-  name: 'Descr_strat.txt, the win conditions, the campaign script and every '
-      + 'legion: line point at this name',
-  settlement: 'Descr_strat.txt, the campaign script and the settlement name '
-      + 'text file all point at this name',
+  name: 'Descr_strat.txt, the win conditions, the mercenary pools, the campaign '
+      + 'script and every legion: line point at this name. Rename follows all of '
+      + 'them and reports the script',
+  settlement: 'Its province’s record, the lookup file and the settlement name '
+      + 'text file point at this name, and so does the campaign script. Rename '
+      + 'follows the three files and reports the script',
   rgb: 'This is the colour the region is painted on map_regions.tga. Changing '
      + 'the number without repainting the pixels would leave the region with no '
      + 'tiles at all. Arm the brush above and repaint them instead',
 };
 
+/* ---- renaming the province or its settlement (19b, D2) ----
+
+   The box stays read-only and the rename is its own dialog, because it is its
+   own save: it rewrites files this panel has never opened - the win conditions,
+   the mercenary pools, the music types, a second campaign's descr_strat - and it
+   is one backup set over all of them rather than a field on this form.
+
+   Afterwards the panel re-opens under the NEW name: the record it was showing
+   does not exist any more, so repainting the old one would find nothing. */
+function cmapRename(subject){
+  const c = state.cmap, d = c.det;
+  if(!d || c.busy) return;
+  const was = d.name;
+  renameOpen(c.mod, subject, subject === 'region' ? d.name : d.settlement,
+             async (name) => { c.det = null;
+                               await cmapOpenRegion(subject === 'region' ? name : was); });
+}
+
 function cmapFormHtml(){
   const d = state.cmap.det, w = d.w, v = d.vocab;
-  const lock = (label, value, why, extra) => `<div class="cmfield">
-    <label>${esc(label)} <span class="cmlock" title="${esc(why)}">locked</span></label>
+  //: `rename` is the subject the rename dialog opens on, for the two fields a
+  //: rename can follow. The colour is not one of them: it is pixels, not a name.
+  const lock = (label, value, why, extra, rename) => `<div class="cmfield">
+    <label>${esc(label)} <span class="cmlock" title="${esc(why)}">locked</span>
+      ${rename ? `<button class="cmrename" title="${esc(why)}"
+        onclick="cmapRename('${esc(rename)}')">Rename…</button>` : ''}</label>
     <input value="${esc(value)}" readonly>
     ${extra ? `<div class="count">${extra}</div>` : ''}</div>`;
   const pick = (label, slot, list, labels) => `<div class="cmfield">
@@ -1718,11 +1747,11 @@ function cmapFormHtml(){
       ${lock('Region name', d.name, CMAP_LOCKED.name,
              d.shown ? `shown in game as <b>${esc(d.shown)}</b>`
                      : '<span class="w-warn">no line in the names file - the '
-                       + 'player reads this key</span>')}
+                       + 'player reads this key</span>', 'region')}
       ${d.has.settlement ? lock('Settlement', d.settlement, CMAP_LOCKED.settlement,
              d.settlement_shown ? `shown in game as <b>${esc(d.settlement_shown)}</b>`
                                 : '<span class="w-warn">no line in the names file'
-                                  + '</span>')
+                                  + '</span>', 'settlement')
         : `<div class="count">This is the short wasteland form: no settlement, no
            creator and no rebel type. The arbiter says such a province must be the
            last entry in the file.</div>`}

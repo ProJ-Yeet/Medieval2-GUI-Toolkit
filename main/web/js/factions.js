@@ -182,6 +182,10 @@ function facDetailHtml(){
         <span class="count">${esc(d.faction.culture||'')}${
           d.modifier?' · '+esc(d.modifier):''}</span></div>
       <span class="sp"></span>
+      <button title="Rename this slot in every file that names it - about twenty
+of them, the length-prefixed texture records in battle_models.modeldb, and the art
+the engine finds from the slot itself. The campaign script is reported, not edited."
+        onclick="facRename()">Rename slot…</button>
       <button class="${d.cv?'on':''}" title="Show this faction exactly as
 descr_sm_factions.txt stores it, beside the form."
         onclick="facCvToggle()">&lt;/&gt; Code view</button>
@@ -192,6 +196,26 @@ descr_sm_factions.txt stores it, beside the form."
       ${facFormHtml(d)}
     </div>
     ${d.cv ? `<div id="facCodeCol" style="padding-top:12px">${cvHtml(d.cv)}</div>` : ''}`;
+}
+
+/* ---- renaming the slot (19b, D3) ----
+
+   The Code View has refused this since 15g, and the refusal named the cost
+   exactly: a slot is what descr_strat, every unit's ownership line, every
+   `requires factions { … }` clause and its own text entry point at. That was
+   right about the problem. `unittransfer/renames.py` does all of them, and the
+   dialog shows the list before there is a button, because in a real mod the list
+   is twenty-four files and four thousand lines.
+
+   Not a field on this form: renaming rewrites files this screen has never
+   opened, so it is its own save, its own backup set and its own undo. */
+function facRename(){
+  const f = state.fac, d = f && f.d;
+  if(!d || d.error) return;
+  renameOpen(f.mod, 'faction', fcSlotOf(d.faction.name), async (name) => {
+    await loadFactions();              // the roster, the art and the labels moved
+    await facOpen(name);
+  });
 }
 
 function facFindingsHtml(d){

@@ -778,6 +778,10 @@
   .cmfield .count{font-size:11px;line-height:1.45}
   .cmlock{text-transform:none;letter-spacing:0;font-weight:400;font-size:10px;
     border:1px solid var(--edge);border-radius:4px;padding:0 4px;cursor:help}
+  /* the way out of a locked field (19b): the box stays read-only and this opens
+     the rename dialog, which is its own save over its own file set */
+  .cmrename{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:400;
+    font-size:10.5px;padding:1px 6px;border-radius:4px}
   .cmchips{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
   .cmchip{font-size:11px;border-radius:5px;padding:1px 6px;border:1px solid var(--edge);
     background:var(--panel2);color:var(--ink)}
@@ -2110,6 +2114,21 @@
   .hctab td.s{width:16px;text-align:center} .hctab td.r{text-align:right;white-space:nowrap}
   .hctab .count{font-size:10px}
 
+  /* ---- the rename dialog (web/js/renameui.js) ----
+     Its own block rather than the map drawer's `.k`, which is scoped to the
+     drawer and would have styled nothing here. */
+  .rnhead{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--dim);margin:14px 0 5px;display:flex;gap:8px;align-items:baseline}
+  .rntab{width:100%;border-collapse:collapse;font-size:12px}
+  .rntab th{text-align:left;font-weight:600;color:var(--dim);font-size:10.5px;
+    text-transform:uppercase;letter-spacing:.5px;padding:3px 6px}
+  .rntab td{padding:4px 6px;border-top:1px solid var(--edge);vertical-align:top}
+  .rntab td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .rnmono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;
+    color:var(--dim);white-space:pre-wrap;word-break:break-word}
+  .rnscroll{max-height:220px;overflow:auto;border:1px solid var(--edge);
+    border-radius:6px;padding:6px 8px;background:var(--panel2)}
+
   /* ---- the shared trigger builder (web/js/triggerui.js) ---- */
   .trg{border:1px solid var(--edge);border-radius:8px;padding:10px;background:var(--panel)}
   .trgrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -2375,6 +2394,7 @@
 <script src="js/core.js"></script>
 <script src="js/codeview.js"></script>
 <script src="js/triggerui.js"></script>
+<script src="js/renameui.js"></script>
 <script src="js/undo.js"></script>
 <script src="js/home.js"></script>
 <script src="js/transfer.js"></script>

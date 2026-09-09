@@ -3290,3 +3290,116 @@ and both routes were driven in a running browser on Third Age Reforged.
 **G4 stays in Later.** The legion label is D4 in miniature and would have been
 nearly free here, and the roadmap says it stays unless the user moves it. It
 still would be nearly free: the write it needs is the one this phase added.
+
+## Phase 19b - Rename, and follow it - done 2026-09-09
+
+**Closes D2 and D3.** 16d refused a region rename in three places and 15g
+refused a faction one, and both refusals named the cost exactly: the name is a
+key, and the files that point at it are files the panel has never opened. They
+were right about the problem and wrong about the conclusion, which is the same
+shape 15g's own `factionclone.py` had already argued about creating a faction.
+
+**`unittransfer/renames.py`** is new: three subjects, one engine, and every read
+through the module that already owns the file - `campmap.parse_regions` for the
+region records, `campstrat.parse_strat` for the campaign start position,
+`winconds.parse_wins` for the win conditions, `campfiles.parse_mercs` for the
+pools, `factions.parse_text` for the roster and `modeldb` for the length-prefixed
+texture records. Four files nobody owns - the lookup pairs, the music types, the
+custom battle tiles and the `{key}value` names file - get a finder of a dozen
+lines each rather than a parser.
+
+**It is position-aware everywhere, and that is measured rather than cautious.**
+The obvious implementation is `unitrefs.py`'s (walk the mod and rewrite the token
+wherever it stands alone) and over these three namespaces it corrupts real mods.
+Divide and Conquer's region `Eregion_Province` has the settlement `Eregion`, and
+`Eregion` is **also a hidden resource on the flags line of twenty other regions
+in the same file**; a token walk over `descr_regions.txt` renaming that
+settlement would have rewritten all twenty. `Dunland` is a settlement, a sound
+folder, the first word of eleven unit types, a `custom_location`, a climate
+comment and, in Third Age Reforged, a faction slot. Settlement names matched in
+**sixty files** across the two installed mods and most of those hits are
+coincidences. So a rename asks each file which of its *lines* may hold a name of
+this kind and rewrites the token only there; six span rules say where on such a
+line it may sit, and only a token equal to the old name is ever rewritten.
+
+**A province is a clean namespace and a settlement is not, and both were
+counted.** All 198 of Divide and Conquer's region names and all 199 of Third Age
+Reforged's appear in fifteen files and twelve, every one a campaign or base map
+file. That closed list is what makes D2 doable at all: the hard half of a region
+rename is not finding the references, it is knowing when to stop looking.
+
+**`descr_strat.txt` does not name a settlement, and 16d's refusal said it did.**
+A settlement block carries `region <province>` and never its own name; every one
+of the 578 and 147 whole-word hits in the two mods' `descr_strat.txt` is a unit
+type, a portrait, a character label or a comment. So a settlement lives in
+exactly three places (its province's record, the lookup file's pairs, and the
+`{key}` it is read through) plus the campaign script. The sentence is corrected
+in `campmap.py`, in `codeview.py` and in the panel's own `CMAP_LOCKED`, which is
+the same thing 19a did to `NAME_SECTIONS` and for the same reason: a claim that
+is nearly true is what a later session builds on.
+
+**`campaign_script.txt` is reported and never edited**, which is the ruling the
+plan asked for and the one 15g made about `descr_strat.txt`. Every occurrence
+comes back with its file, its line number and its line, and the dialog shows them
+in a scroll box under a red heading before there is a button to press. Renaming
+Divide and Conquer's `sicily` reports 423 of them.
+
+**A rename follows five files a clone refuses, and the difference is not an
+inconsistency.** `factionclone.REVIEW_FILES` are the files where naming the donor
+is a *judgement*: adding a clone to `and FactionType sicily` means rewriting a
+boolean's logic, and giving it a trait or a prebattle speech means inventing one.
+None of that applies to a rename, because the condition, the trait and the speech
+already exist and already mean this faction, which is now called something else.
+So traits, ancillaries, prebattle speeches, missions and guilds are sites here,
+read through an `operand` rule that follows the tail of a condition line and
+never a trait named `Fearssicily` or an engine effect called
+`Combat_V_Faction_Sicily`, neither of which is a token by the boundary rule
+anyway. `descr_strat.txt` is the mirror image: a clone leaves it alone because
+there is nothing to copy, and a rename must follow it because the block is
+already there.
+
+**The two things a faction rename has that the others do not.** Its texture
+records in `battle_models.modeldb` are length-prefixed, so `rename_modeldb`
+rewrites the count in front of each name through `modeldb._texture_group_spans`:
+3,160 records on Divide and Conquer's file, which still parses to the same entry
+count afterwards. And its art is found by convention rather than pointed at
+(`ui/units/sicily/`, `symbol24_sicily_roll.tga`), so those files **move**: the
+source is backed up file by file and then deleted and the destination recorded as
+created, which is exactly the pair `transfer.undo` needs to put a move back.
+
+**One backup set for all of it.** A rename half applied is a mod that will not
+load, so an undo that restored some of these files would be worse than one that
+restored none. Same ruling as 18a's created record, against 17f's usual one save
+per file.
+
+**Refused before a byte is planned:** a name this mod has not got, the name it
+already has, a name that is not one word, a faction slot that is not lower case,
+either end of a rename being one of the four reserved slots, and, the one worth
+saying, **a province renamed to an existing settlement's name**. A province and
+its settlement are keyed in one `{key}value` file, so a second `Anorien` would
+quietly take over the first one's line on the campaign map, which is a rename
+that looks like it worked.
+
+**`campaign_dirs` walks to any depth**, which `campstrat.campaigns` does not.
+Divide and Conquer keeps Shattered_Alliances under `custom/` and Third Age
+Reforged keeps Fellowship_Campaign there, and both are whole campaigns with their
+own `descr_strat`, win conditions, mercenaries and script. Reforged's also ships
+its own `descr_regions.txt` with all 199 regions in it, which is why
+`region_files` returns a list.
+
+**Exit, all met.** A province renamed on a copy of a real mod leaves the file set
+byte-exact except at the occurrences the plan listed; every occurrence in
+`campaign_script.txt` is reported with its line number and the script comes back
+byte for byte; one undo restores all of it; and a rename to a name already in use
+is refused before anything is written. `tests/test_renames.py` (56 checks) is
+new. One shared dialog, `web/js/renameui.js`, serves the region panel's two
+locked fields and the Factions screen's `Rename slot`, and shows the whole list
+before it offers the button, because in a real mod that list is twenty-four files
+and four thousand lines.
+
+**What a rename still cannot do, said out loud.** The campaign script, by the
+plan's own ruling. `descr_names.txt`'s `settlements` pool, which is a pool of
+words rather than a pointer at this settlement. And a mod whose second campaign
+names a province its `descr_regions.txt` never declares: both installed mods have
+exactly one of those, and it is the mod's own fault rather than something a
+rename can invent a record for.

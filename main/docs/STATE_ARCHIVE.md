@@ -25,6 +25,82 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 19b - rename, and follow it (2026-09-09)
+`unittransfer/renames.py` (new), `web/js/renameui.js` (new), one handler and one
+POST pair on `server.py`, a `rename_modeldb` built on `modeldb`'s existing span
+reader, `Rename` on the region panel's two locked fields, `Rename slot` on the
+Factions screen, and corrections to three refusal strings that were saying
+something untrue. `tests/test_renames.py` (56 checks) is new. Cut as **v2.2.3**
+and **beta 2026-09-09b**.
+
+**The session started with a measurement rather than with code**, and it is the
+reason the module looks the way it does. Two scripts walked every `.txt`, `.lua`
+and `.xml` in both installed mods looking for every region name, every settlement
+name and every faction slot as a whole token, and counted the hits per file. The
+answer split three ways:
+
+* **Region names are a closed set.** 198 names in Divide and Conquer and 199 in
+  Third Age Reforged, appearing in fifteen files and twelve, every one a campaign
+  or base map file. Nothing accidental at all.
+* **Settlement names are not.** Sixty files in Divide and Conquer, 4,145 hits in
+  `export_descr_buildings.txt` alone from 27 names, 2,384 in a modeldb text dump.
+  Almost all coincidence.
+* **Faction slots are worse.** 93,437 hits in one file, and `united`, `scripts`
+  and `slave` are English words.
+
+That is what settled the architecture: a rename asks each *file* which of its
+*lines* may hold a name of this kind, through the module that owns it, and
+rewrites the token only there. The example that would have been a real
+corruption is `Eregion`: it is a settlement in Divide and Conquer AND a hidden
+resource on the flags line of twenty other regions in the same
+`descr_regions.txt`. A token walk over that file would have rewritten all twenty
+and every test the project owns would still have passed.
+
+**The measurement also caught a false sentence in the code.** Three places -
+`campmap.plan`, `codeview._regions_parse` and the panel's `CMAP_LOCKED` - said
+`descr_strat.txt` points at a settlement's name. It does not: a settlement block
+carries `region <province>` and never its own name, and every whole-word hit in
+either mod's `descr_strat.txt` is a unit type, a portrait, a character label or a
+comment. `_find_strat` returns `{}` for the settlement subject and the test
+asserts that against every campaign in both mods. Same shape as 19a's
+`NAME_SECTIONS`, in prose instead of a parser.
+
+**The other correction went the other way: `factionclone.REVIEW_FILES` is a
+clone's list, not a rename's.** The first cut inherited it wholesale and left
+traits, ancillaries, prebattle speeches, missions and guilds unrenamed, which is
+wrong: a clone must invent a trait or a speech and a rename must not, because the
+condition already exists and already means this faction. Those five became sites,
+read through an `operand` rule that follows the tail of a `Condition` / `and` /
+`relationship` line. The boundary rule already excludes `Trait Fearssicily` and
+`Combat_V_Faction_Sicily`, which is what made the wider rule safe.
+
+**Two shapes needed their own rule and are worth remembering.**
+`export_descr_buildings.txt` opens its lines with `recruit_pool` and puts
+`requires factions { … }` most of the way along, so a keyword read off the front
+of the line found none of its 424 clauses - hence `_spans_braced`, which finds
+the clause wherever it sits. And `text/expanded.txt` writes the slot in UPPER
+CASE inside every key, so the replacement is upper-cased by `RULE_CASE`; writing
+the slot back as typed would have given the faction thirty `EMT_` keys the engine
+looks up in capitals and does not find.
+
+**Performance came from one line.** The whole-mod "also writes this word" scan
+reads tens of megabytes; looking for the substring in the raw bytes before
+decoding anything is what keeps a preview under a second on a warm mod.
+
+**Undo of a move** is the pair `transfer.undo` already had: back the source up
+(so it can be restored), record the destination as created (so it is deleted),
+then unlink the source. Nothing new was needed for the faction art.
+
+**Verified in a running browser** on both installed mods: the region panel's two
+Rename buttons, the Factions screen's Rename slot, the plan report with its file
+table and its campaign-script scroll box, and a refusal (`Sicily` as a slot). The
+write and undo paths are covered by `tests/test_renames.py` against a copy of a
+real mod rather than against the user's installed one.
+
+**Left undone, deliberately:** the campaign script, by the plan's own ruling;
+`descr_names.txt`'s `settlements` pool, which is a pool of words rather than a
+pointer at one settlement; and G4 and D1, which are still in Later.
+
 ## 19a - the keys a new record needs (2026-09-09)
 `unittransfer/namekeys.py` (new), one handler and one POST pair on `server.py`
 plus the names block riding on `/api/map/region`, a correction to

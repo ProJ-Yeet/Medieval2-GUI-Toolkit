@@ -2187,9 +2187,10 @@ def plan_region(mod, body: dict) -> RegionPlan:
         return p
     if after.name != rec.name:
         p.errors.append(
-            f"this region is `{rec.name}` - renaming it would orphan every "
-            "descr_strat.txt settlement, win condition, script line and "
-            "`legion:` entry that names it")
+            f"this region is `{rec.name}` - renaming it HERE would orphan every "
+            "descr_strat.txt settlement, win condition, mercenary pool, script "
+            "line and `legion:` entry that names it. The Rename button beside "
+            "the name follows all of them at once (19b)")
         return p
     if after.rgb != rec.rgb:
         p.errors.append(
@@ -2200,9 +2201,12 @@ def plan_region(mod, body: dict) -> RegionPlan:
         return p
     if after.settlement != rec.settlement:
         p.errors.append(
-            f"this settlement is `{rec.settlement}` - descr_strat.txt, the "
-            "campaign script and the settlement name text file all point at "
-            "that name")
+            f"this settlement is `{rec.settlement}` - the lookup file, the "
+            "settlement name text file and the campaign script point at that "
+            "name. The Rename button beside it follows the first two and "
+            "reports the third (19b). Measured over both installed mods, "
+            "descr_strat.txt is NOT one of them: a settlement block names its "
+            "province and never itself")
         return p
 
     vocab = region_vocab(mod)

@@ -769,7 +769,8 @@ def _factions_parse(text: str, ctx: dict) -> Doc:
         raise CodeViewError(
             f"this faction is `{fac.slot_of(locked)}` - renaming a slot in the text "
             "pane would orphan descr_strat, every unit's ownership line, every "
-            "`requires factions { … }` clause and its own text entry", 1)
+            "`requires factions { … }` clause and its own text entry. The Rename "
+            "slot button above follows all of them, and moves the art (19b)", 1)
     findings = fac.check_file(fac.parse_text(text if text.endswith("\n") else text + "\n"))
     return Doc(kind="factions", text=text, fields=fac.block_fields(text),
                spans=fac.block_spans(text), ident=rec.name,
@@ -809,8 +810,9 @@ def _regions_parse(text: str, ctx: dict) -> Doc:
     if locked and rec.name != locked:
         raise CodeViewError(
             f"this region is `{locked}` - renaming it in the text pane would "
-            "orphan every descr_strat.txt settlement, win condition, campaign "
-            "script line and `legion:` entry that names it", 1)
+            "orphan every descr_strat.txt settlement, win condition, mercenary "
+            "pool, campaign script line and `legion:` entry that names it. The "
+            "Rename button on the region panel follows all of them (19b)", 1)
     findings = campmap.check_record(rec, ctx.get("vocab") or {})
     return Doc(kind="regions", text=text,
                fields=campmap.block_fields(text),

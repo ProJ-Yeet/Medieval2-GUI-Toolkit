@@ -31,7 +31,7 @@ says "we do not", that was verified, and the verification is quoted.
 
 | Source | Items | Already scheduled | Already done, or a duplicate |
 |---|---|---|---|
-| Demir's StratMap Forge | 14 | 0 | **D4, D5 done 19a** |
+| Demir's StratMap Forge | 14 | 0 | **D4, D5 done 19a; D2, D3 done 19b** |
 | Mylae's M2TW Editor | 17 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11) · **M5, M6, M13 done 18a; M3, M4 done 18b** |
 | Bare Geomod | 8 | 1 (G6) | 3 (G7, G8 done; G5 = D9) · **G3 done 18a** |
 | TWMapReader | 12 | 1 (T5, folded into 17d) | 0 |
@@ -67,27 +67,35 @@ it**, which 16e already warns about when a province is created. `campaint`'s
 undo is a pixel-delta stack and would hold the whole change, so the machinery is
 there.
 
-### D2. Rename a region or a settlement everywhere · M
+### D2. Rename a region or a settlement everywhere · **done**
 
-`renameRegionReferencesEverywhere`, `regionReferenceRepairTarget`. **We refuse
-this too**, and say why in three places at once: the name is a key that
-`descr_strat.txt`, the win conditions, the campaign script and every `legion:`
-line point at.
+`renameRegionReferencesEverywhere`, `regionReferenceRepairTarget`. Closed by 19b
+(2026-09-09): `unittransfer/renames.py`, the `Rename` buttons on the region
+panel's two locked fields, and `POST /api/renames/plan|/apply`.
 
-The refusal is honest but it is not the same as being unable to do it. The
-follow-every-reference work is already written elsewhere in this toolkit -
-`unitrefs.py` and `factionclone.py` both walk a name across a dozen files - and
-`winconds.py` and `campstrat.py` own two of the four files a rename has to
-touch. What is missing is the campaign script, which is a scripting grammar
-nothing here parses, so a rename would have to report that file rather than edit
-it. Say so, and the feature is still worth having.
+Not the token walk `unitrefs.py` does, and that is measured rather than
+cautious: Divide and Conquer's settlement `Eregion` is also a hidden resource on
+twenty other regions' flags line in the same file, and settlement names matched
+in sixty files across the two installed mods. Each file is asked which of its
+lines may hold a name of this kind, through the module that already owns it.
 
-### D3. Rename a faction everywhere · M
+The campaign script is a scripting grammar nothing here parses, so every
+occurrence in it is reported with its line number and none is edited - which the
+plan said out loud before the work started. One correction fell out of it: the
+refusal claimed `descr_strat.txt` points at a settlement's name and it does not.
 
-`renameFactionEverywhere`. Same shape as D2 over a wider file set. 15g's
-`factionclone.py` already knows all twelve files that name a faction slot, plus
-the three that name it as a judgement and are reported rather than edited, so
-this is that module's list read in a different direction.
+### D3. Rename a faction everywhere · **done**
+
+`renameFactionEverywhere`. Closed by 19b, on the same engine as D2, plus two
+things a faction has that a province does not: length-prefixed texture records in
+`battle_models.modeldb` (the count in front of each name is rewritten with it)
+and art the engine finds from the slot itself, which moves rather than being
+copied. `Rename slot` on the Factions screen.
+
+**A rename follows five files a clone reports rather than writes**, and that is
+not an inconsistency with `factionclone.py`: adding a clone to
+`and FactionType sicily` means rewriting a boolean, while renaming it leaves the
+boolean meaning exactly what it did.
 
 ### D4. Write the localisation key when a region or settlement is created · **done**
 

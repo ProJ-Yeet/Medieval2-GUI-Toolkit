@@ -347,6 +347,16 @@ and one of them closes a finding the validator reports against our own output.
                                     Both recompile the .strings.bin they wrote
                                     (one backup set + undo)
 
+Renaming a thing whose name is its identity (19b, see :mod:`unittransfer.renames`).
+  POST /api/renames/plan|/apply  -> `subject`: region / settlement / faction,
+                                    `old`, `new`. The plan lists every file and
+                                    line it would rewrite, every occurrence in a
+                                    campaign script (which it refuses to edit),
+                                    and every other line in the mod that writes
+                                    the word and is left alone. One backup set
+                                    for all of it - a rename half applied is a
+                                    mod that will not load
+
   POST /api/minor/plan|/apply    -> add, edit or delete one record. A religion's
                                     save is four files at once - its block, the
                                     `religions` list, descr_religions_lookup.txt
@@ -414,7 +424,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campevents, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campevents, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, renames, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2105,6 +2115,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._campevents(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/namekeys/plan", "/api/namekeys/apply"):
                 return self._json(self._namekeys(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/renames/plan", "/api/renames/apply"):
+                return self._json(self._renames(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/plan", "/api/map/apply"):
                 return self._json(self._map_write(u.path.rsplit("/", 1)[-1], body))
             if (u.path.startswith("/api/map/paint")
@@ -2494,6 +2506,32 @@ class Handler(BaseHTTPRequestHandler):
             return out
         out.update(namekeys.apply(plan))
         self.registry.invalidate(body["mod"])       # the files changed on disk
+        return out
+
+    def _renames(self, action, body):
+        """Preview or write a rename of a province, a settlement or a faction (19b).
+
+        One handler for all three because they are one engine: the name is the
+        identity, the files that point at it are found by asking each file's own
+        parser which of its lines may hold one, and the campaign script is
+        reported line by line and never written. ``subject`` says which.
+
+        The preview is the whole point of the split - a faction rename in a real
+        mod rewrites twenty-four files and four thousand lines, and nobody should
+        be asked to agree to that without seeing the list first.
+        """
+        try:
+            mod = self.registry.get(body["mod"])
+            plan = renames.plan(mod, body)
+        except (KeyError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        out.update(renames.apply(plan))
+        self.registry.invalidate(body["mod"])       # the whole mod changed
         return out
 
     # ---- ancillaries ----

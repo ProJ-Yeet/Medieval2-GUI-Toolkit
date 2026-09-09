@@ -360,8 +360,6 @@ change, so no cross-reference dangles.
 
 | Phase | Sessions | Closes | Size |
 |---|---|---|---|
-| 19a - The keys a new record needs | 1 | D4 D5 | 2S |
-| 19b - Rename, and follow it | 1 | D2 D3 | 2M |
 | 20a - Three layers, read properly | 1 | D8 T2 T11 | 3S |
 | 20b - Getting to the thing you want | 1 | T9 T8 D14 | 3S |
 | 20c - Labels, and picking a tile | 1 | T4 M8 | 1M 1S |
@@ -370,9 +368,9 @@ change, so no cross-reference dangles.
 | 23a-23b - A map that looks like the map | 2 | D7 T1 T12 | 2L 1M |
 | 24 - Make and unmake | 1 | G1 M15 | 2M |
 
-Twelve sessions left. Phase 17 (2026-09-06) and all of Phase 18 (2026-09-07)
-are done and their write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later
-table is counted.
+Ten sessions left. Phase 17 (2026-09-06), all of Phase 18 (2026-09-07) and all
+of Phase 19 (2026-09-09) are done and their write-ups are in
+`ROADMAP_ARCHIVE.md`; nothing in the Later table is counted.
 
 ---
 # 3.1.0 - the Now set (Phases 18-21)
@@ -383,67 +381,43 @@ and screens that already exist. The common shape is **we know a file well enough
 to validate it and not well enough to edit it**, and that asymmetry is what
 3.1.0 removes.
 
-**Phase 18 is done** - 18a on 2026-09-07 and 18b the same day. Its six
-files are the five nothing wrote and the one the building side could only refuse
-against; the write-ups are in `ROADMAP_ARCHIVE.md`. **19a is done too**, on
-2026-09-09.
+**Phases 18 and 19 are done** - 18a and 18b on 2026-09-07, 19a and 19b on
+2026-09-09. Phase 18's six files are the five nothing wrote and the one the
+building side could only refuse against; Phase 19 is the four names nothing could
+follow. All four write-ups are in `ROADMAP_ARCHIVE.md`. **What is left of the
+Now set is Phase 20 and Phase 21.**
 
 ---
 
-## Phase 19 - The names nothing could follow
+## Phase 19 - The names nothing could follow - done
 
-Four items, and the honest heart of the release. Today the toolkit **refuses**
-three of these with a reason, which is correct and is not the same as being
-unable to do them. **Two of the four are closed** - 19a took D4 and D5 on
-2026-09-09 - and what is left is the rename half.
+**All four items are closed.** 19a took D4 and D5 on 2026-09-09 and 19b took D2
+and D3 the same day; both write-ups are in `ROADMAP_ARCHIVE.md`. What they left
+behind and a later phase will use:
 
-**19a is done** - 2026-09-09, D4 and D5 closed; the write-up is in
-`ROADMAP_ARCHIVE.md`. It left `unittransfer/namekeys.py` behind, which is the
-module a rename in 19b writes its text keys through, and it corrected
-`minorfiles.NAME_SECTIONS`, which was missing `descr_names.txt`'s fourth
-section.
+- **`unittransfer/namekeys.py`** - every write into a `{key}value` file goes
+  through `_write_loc`, which recompiles the `.strings.bin` beside it and joins
+  the caller's own backup set. A localisation edit that skips it leaves the game
+  reading the old words.
+- **`unittransfer/renames.py`** - three subjects on one engine, position-aware
+  everywhere because these three namespaces are not clean enough for a token
+  walk, and `campaign_dirs`, which finds a campaign folder at any depth where
+  `campstrat.campaigns` finds only the top level.
+- **two corrections to things that were nearly true** - `descr_names.txt` has a
+  fourth section (`surnames`), and `descr_strat.txt` does **not** name a
+  settlement. Both were stated confidently in code that had never been measured
+  against the second installed mod.
 
-**G4 is still in Later, and is now cheaper than it was.** The legion label is D4
-in miniature and the write it needs is the one 19a added; what is missing is the
+**D1 is in the Later set and is the one this cluster did not make cheaper.**
+Changing a region's colour is the same "the identity of a thing is spread across
+files" problem with pixels instead of text, and the extra cost is real: region
+IDs are first-appearance order in a row-major scan, so a recolour can renumber
+every region after it. A rename does not, which is why 19b could be done first.
+
+**G4 is still in Later, and is cheaper than it was.** The legion label is D4 in
+miniature and the write it needs is the one 19a added; what is missing is the
 paired display name. Flagged, not moved - the user put G4 in Later and that
 stands unless they say otherwise.
-
-### 19b - Rename, and follow it, one session
-
-**Closes D2, D3.** One rename engine, two subjects.
-
-- **D2 - rename a region or a settlement everywhere.** 16d refuses this in three
-  places at once and states the reason: the name is a key that
-  `descr_strat.txt`, the win conditions, the campaign script and every
-  `legion:` line point at.
-- **D3 - rename a faction everywhere.** The same shape over a wider file set.
-
-**Most of the work is already written and is pointed the other way.** 15g's
-`factionclone.py` knows all twelve files that name a faction slot, plus the
-three that name it as a *judgement* (a trait named after it, an ancillary's
-`FactionType` operand, a prebattle speech) which it counts and reports rather
-than appending to. `unitrefs.py` walks a name across a dozen files already.
-`winconds.py` and `campstrat.py` own two of the four files a region rename has
-to touch.
-
-**One file cannot be followed and the plan must say so rather than pretend.**
-`campaign_script.txt` is a scripting grammar nothing here parses. A rename
-reports every occurrence in it by line number and refuses to edit them - which
-is the same ruling 15g made about `descr_strat.txt` and the same one 16f makes
-about a vocabulary that is not on disk. A rename that silently left the script
-pointing at a dead name would be worse than no rename at all.
-
-**D1 sits in this cluster and is in the Later set.** Changing a region's colour
-is the same "the identity of a thing is spread across files" problem with pixels
-instead of text, and it is the one where the extra cost is real: region IDs are
-first-appearance order in a row-major scan, so a recolour can renumber every
-region after it. Flagged, not moved.
-
-Exit: a region renamed on a copy of a real mod leaves the file set byte-exact
-except at the occurrences the plan listed; every occurrence in
-`campaign_script.txt` is reported with its line number and none is edited; undo
-restores all of it; and a rename to a name already in use is refused before
-anything is written.
 
 ---
 
