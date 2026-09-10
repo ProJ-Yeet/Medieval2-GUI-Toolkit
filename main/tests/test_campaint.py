@@ -318,6 +318,15 @@ check("a round brush is a disc: the corner of its bounding box is not in it",
       here(0, 0) == (10, 20, 30))
 campaint.undo_stroke(sess)
 
+out = campaint.paint(sess, {"tool": "pencil", "target": "regions",
+                            "region": "C_Province", "points": [[2, 1]],
+                            "overwrite_markers": True})
+tv = cm.tiles("regions").tobytes()
+here = lambda x, y: tuple(tv[(y * W + x) * 3:(y * W + x) * 3 + 3])
+check("the explicit marker override writes a protected tile",
+      out["protected"] == 0 and out["tiles"] == 1 and here(2, 1) == (70, 80, 90))
+campaint.undo_stroke(sess)
+
 # -- the bucket ----------------------------------------------------------------
 fill = campaint.flood(cm, "regions", 0, 0)
 check(f"a bucket on A stops at B, at C and at the settlement marker "

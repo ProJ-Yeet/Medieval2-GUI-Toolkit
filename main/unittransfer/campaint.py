@@ -858,7 +858,7 @@ def _stroke_over(sess: PaintSession, tiles, colours: Dict[str, int],
     # Markers are protected on every stroke that is not itself placing one: a
     # brush that ran over a settlement pixel would delete a city, and a bucket
     # that flooded a sea would delete every port on its coast.
-    guard = not body.get("marker")
+    guard = not body.get("marker") and not body.get("overwrite_markers")
     reg = cm.tiles("regions").tobytes() if guard else b""
     protected = 0
 
