@@ -72,6 +72,15 @@ const CMAP_DRAG_SLOP = 4;
 //: the marker pixels in the regions layer say it better by themselves.
 const CMAP_GLYPH_ZOOM = 3;
 
+/* 20a, D8: what the river overlay is drawn in until somebody picks otherwise.
+
+   Not any of the three colours it replaces. `map_features.tga` writes a river
+   (0,0,255), a crossing (0,255,255) and a source (255,255,255), and the first
+   of those is near-black against the ground types the overlay is meant to be
+   read over. This is a light blue with enough luminance to sit on both the
+   ground layer's greens and the region layer's darker provinces. */
+const CMAP_RIVER_RGB = [86, 180, 255];
+
 /* ---------- opening the screen ---------- */
 
 async function loadCampmap(){
@@ -147,6 +156,11 @@ function cmapSettings(){
   if(!m.opacity || typeof m.opacity !== 'object') m.opacity = {};
   if(!m.hide || typeof m.hide !== 'object') m.hide = {};
   if(!Array.isArray(m.order)) m.order = [];
+  // 20a's two ways of reading a layer rather than looking at it. Both are
+  // habits rather than facts about a mod, so they are kept beside the rest.
+  if(!m.river || typeof m.river !== 'object') m.river = {};
+  if(!Array.isArray(m.river.rgb) || m.river.rgb.length !== 3)
+    m.river.rgb = CMAP_RIVER_RGB.slice();
   s.map_layers = m;
   return m;
 }
@@ -164,6 +178,8 @@ function cmapSaveLayers(){
     m.opacity[code] = L.opacity;
     if(L.hide.size) m.hide[code] = [...L.hide];
   }
+  m.river = {on: !!c.rivers, rgb: c.riverRgb.slice()};
+  m.height_alpha = !!c.heightAlpha;
   m.tip = c.tip !== false;
   clearTimeout(cmapSaveTimer);
   cmapSaveTimer = setTimeout(() => {
@@ -214,6 +230,10 @@ function cmapNew(mod, man){
         ? saved.opacity[l.code] : l.opacity,
       img: null, loading: false, failed: '',
       hide: new Set(hide), masked: null, maskKey: '',
+      // 20a: how many tiles the river overlay drew out of this layer, and the
+      // 256-entry height ramp T2's transparency is read off. Both are produced
+      // by the mask pass and both are null until it has run.
+      rivertiles: 0, ramp: null,
       // the browser's own readable/writable copy of this layer's pixels, made
       // on first need and from then on the truth about the layer - see
       // cmapPixels. 16c kept one of these for the region layer alone.
@@ -232,6 +252,14 @@ function cmapNew(mod, man){
     // 16g's colouring: the region layer recoloured through a table the server
     // built, drawn over the whole stack. Null when nothing is themed.
     overlay: null, overlayKey: '', overlayAlpha: 0.85,
+    // 20a's two readings. `rivers` lifts the three river colours out of the
+    // features layer and draws them in `riverRgb` alone; `heightAlpha` draws
+    // the heights layer as transparency instead of as grey. Both live on the
+    // screen rather than on the layer because each belongs to exactly one
+    // layer and there is nothing to key them by.
+    rivers: !!(saved.river && saved.river.on),
+    riverRgb: (saved.river && saved.river.rgb) || CMAP_RIVER_RGB.slice(),
+    heightAlpha: !!saved.height_alpha,
     view: {zoom: 1, ox: 0, oy: 0, fitted: false},
     hover: null, sel: null, outline: null, outlineKey: -1,
     // 17e's tooltip: where the pointer is in the stage, whether the panel is
@@ -258,8 +286,10 @@ function renderCampmap(){
       <div class="cmstage" id="cmStage">
         <canvas id="cmCanvas"></canvas>
         <div class="cmbar" id="cmBar">
-          <button onclick="cmapFit()" title="Fit the whole map (0)">⤢ Fit</button>
-          <button onclick="cmapZoomTo(1)" title="One screen pixel per tile (1)">1:1</button>
+          <button onclick="cmapFit()" title="Fit the whole map (Shift+0).
+The bare number keys tick a layer - 1 to 0, one for each of the ten.">⤢ Fit</button>
+          <button onclick="cmapZoomTo(1)"
+            title="One screen pixel per tile (Shift+1)">1:1</button>
           <button onclick="cmapZoomBy(1/1.4)" title="Zoom out (−)">−</button>
           <button onclick="cmapZoomBy(1.4)" title="Zoom in (+)">+</button>
           <button id="cmTipBtn" class="${c.tip === false ? '' : 'on'}"
@@ -368,12 +398,18 @@ function cmapLayersHtml(){
           ? ` · ${d.native[0]}×${d.native[1]}, sampled per tile` : ''}</span>`;
     // how much of this layer is not being drawn, so a layer that is on and
     // invisible is never a mystery
-    const hid = L.hide.size ? ` <span class="cmhid" title="colours punched through">
+    const hid = L.hide.size && !(code === 'features' && c.rivers)
+      ? ` <span class="cmhid" title="colours punched through">
       ${L.hide.size} hidden</span>` : '';
+    // 20a, T11: the key that ticks this layer, printed on the row it ticks. The
+    // digit is the server's - campmap.HOTKEYS - so the panel cannot promise a
+    // key the handler does not answer to.
+    const key = d.hotkey ? `<b class="cmkey" title="Press ${d.hotkey} to show or hide
+      this layer">${esc(d.hotkey)}</b>` : '';
     return `<div class="cmlayer${L.on ? ' on' : ''}${d.present ? '' : ' off'}" data-code="${code}">
       <label class="chk"><input type="checkbox" ${L.on ? 'checked' : ''}
         ${d.present ? '' : 'disabled'} data-lcheck="${code}">
-        <span class="cmnm">${esc(d.label)}</span></label>
+        ${key}<span class="cmnm">${esc(d.label)}</span></label>
       <span class="cmmove">
         <button data-lleg="${code}" ${d.present ? '' : 'disabled'} class="${L.open ? 'on' : ''}"
           title="What every colour on this layer means, and how much of the map it covers"
@@ -385,9 +421,117 @@ function cmapLayersHtml(){
         data-lop="${code}" ${d.present && L.on ? '' : 'disabled'}>
       <span class="cmpct">${Math.round(L.opacity * 100)}%</span>
       <div class="cmnote">${note}${hid}</div>
+      ${d.present ? cmapModeHtml(code) : ''}
       ${L.open ? cmapLegendHtml(code) : ''}
     </div>`;
   }).reverse().join('');
+}
+
+/* The two layers 20a gave a second way of being read, and their controls.
+
+   Neither is a layer of its own and that is the decision worth stating. The
+   stack is the ten files the map is made of - it is what the ten number keys
+   count, what the draw order orders and what `check_layers` validates - so a
+   river overlay that is `map_features.tga` read differently belongs ON that
+   layer's row rather than beside it as an eleventh entry. Same for the heights.
+   Ticking either one ticks its layer on, because a reading of a layer that is
+   not being drawn is a control that appears to do nothing. */
+function cmapModeHtml(code){
+  const c = state.cmap;
+  if(code === 'features'){
+    const n = c.layers.features.rivertiles;
+    return `<div class="cmmode">
+      <label class="chk" title="Draw only the river network - river, crossing and source -
+in one colour of your own, instead of three colours inside a layer that is almost
+all 'nothing here'. Open the legend for this map's own figure.">
+        <input type="checkbox" data-lriver ${c.rivers ? 'checked' : ''}>
+        <span>Rivers only</span></label>
+      <input type="color" data-lrivercol value="${cmapHex(c.riverRgb)}"
+        title="What the river network is drawn in" ${c.rivers ? '' : 'disabled'}>
+      ${c.rivers ? `<span class="count">${n.toLocaleString()} river
+        tile${n === 1 ? '' : 's'}${c.layers.features.hide.size
+          ? ' · the hidden colours do not apply while this is on' : ''}</span>` : ''}
+    </div>`;
+  }
+  if(code === 'heights'){
+    // A layer drawn as transparency is a layer you see THROUGH, so anything
+    // still drawn over it hides it whatever its alpha says - and the default
+    // stack has the ground types over the heights. Said, and offered, rather
+    // than done: the draw order is one of the three things this screen keeps
+    // between sessions, and a control that quietly rearranged it would be
+    // taking a habit away to make its own feature look better.
+    const over = c.heightAlpha
+      ? c.order.slice(c.order.indexOf('heights') + 1)
+          .filter(x => c.layers[x].on && c.layers[x].def.present) : [];
+    // this map's own median land height, counted by the pass that built the
+    // ramp. Zero until that pass has run, and then the sentence appears.
+    const med = (c.layers.heights.ramp || {}).median || 0;
+    return `<div class="cmmode">
+      <label class="chk" title="Darker is more transparent, so what is under the heights
+shows through the low ground">
+        <input type="checkbox" data-lalpha ${c.heightAlpha ? 'checked' : ''}>
+        <span>Height as transparency</span></label>
+      ${c.heightAlpha ? `<span class="count">the sea is not drawn, and the ramp is spread
+        over the heights THIS map has${med
+          ? ` - half its land is no higher than ${med} of 255` : ''}</span>` : ''}
+      ${over.length ? `<span class="w-warn">${esc(c.layers[over[over.length - 1]].def.label)}${
+        over.length > 1 ? ` and ${over.length - 1} more` : ''} still draw${
+        over.length > 1 ? '' : 's'} over it.</span>
+        <button data-ltop="heights" title="Put the heights at the top of the stack, so what
+is under them shows through">Put it on top</button>` : ''}
+    </div>`;
+  }
+  return '';
+}
+
+//: `#rrggbb` for an `<input type="color">`, and back. The screen keeps a triple
+//: because everything else about a map colour is one.
+function cmapHex(rgb){
+  return '#' + rgb.map(v => Math.max(0, Math.min(255, v | 0))
+    .toString(16).padStart(2, '0')).join('');
+}
+function cmapUnhex(hex){
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if(!m) return CMAP_RIVER_RGB.slice();
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/* A layer shown or hidden, from the tickbox or from its number key.
+
+   One path for both, which is 20a's doing: T11 gave every layer a key, and two
+   places that tick a layer are two places to forget to save the setting or to
+   fetch the picture. `want` omitted flips it, which is what a key does. */
+function cmapToggleLayer(code, want){
+  const c = state.cmap, L = c && c.layers[code];
+  // a layer this mod does not ship has a disabled tickbox, and its key does the
+  // same nothing rather than turning on a layer there is no picture for
+  if(!L || !L.def.present) return;
+  L.on = want === undefined ? !L.on : !!want;
+  activity('map layer', `${L.on ? 'showed' : 'hid'} ${code}`);
+  cmapLoadLayers();
+  cmapSaveLayers();
+  cmapRepanel();
+}
+
+/* One of 20a's two readings, switched. `field` is the flag on the screen state
+   and `code` is the layer it is a reading OF - the pair is fixed, and the panel
+   is the only caller.
+
+   The layer is ticked on when the reading is: `cmapCompose` draws what `on`
+   says, and a river overlay on a features layer nobody has ticked is a control
+   that does nothing and does not say why. */
+function cmapMode(code, field, on){
+  const c = state.cmap, L = c.layers[code];
+  c[field] = on;
+  if(on && L.def.present && !L.on){
+    L.on = true;
+    activity('map layer', `showed ${code}`);
+  }
+  L.maskKey = '';
+  if(L.img) cmapMask(c, code);
+  cmapCompose(); cmapPaint(); cmapSaveLayers(); cmapRepanel();
+  if(!L.img && L.on) cmapLoadLayers();
 }
 
 /* The canvas's handlers, bound ONCE per screen.
@@ -426,14 +570,8 @@ function cmapWire(){
 function cmapWireLayers(){
   const box = document.getElementById('cmLayers');
   if(!box) return;
-  box.querySelectorAll('[data-lcheck]').forEach(cb => cb.onchange = () => {
-    const L = state.cmap.layers[cb.dataset.lcheck];
-    L.on = cb.checked;
-    activity('map layer', `${L.on ? 'showed' : 'hid'} ${cb.dataset.lcheck}`);
-    cmapLoadLayers();
-    cmapSaveLayers();
-    cmapRepanel();
-  });
+  box.querySelectorAll('[data-lcheck]').forEach(cb => cb.onchange = () =>
+    cmapToggleLayer(cb.dataset.lcheck, cb.checked));
   // `input` rather than `change`: an opacity slider that only answers on release
   // is a slider you cannot judge a blend with
   box.querySelectorAll('[data-lop]').forEach(sl => sl.oninput = () => {
@@ -451,6 +589,26 @@ function cmapWireLayers(){
   });
   box.querySelectorAll('[data-lhide]').forEach(cb => cb.onchange = () =>
     cmapHideColour(cb.dataset.lhide, +cb.dataset.key, cb.checked));
+  // 20a's two readings
+  box.querySelectorAll('[data-lriver]').forEach(cb => cb.onchange = () => {
+    activity('map layer', `${cb.checked ? 'lifted the rivers out of' : 'put the rivers back into'} map_features.tga`);
+    cmapMode('features', 'rivers', cb.checked);
+  });
+  // `input` rather than `change`, same as the opacity slider: a colour you can
+  // only judge after closing the picker is a colour you pick twice
+  box.querySelectorAll('[data-lrivercol]').forEach(el => el.oninput = () => {
+    const c = state.cmap;
+    c.riverRgb = cmapUnhex(el.value);
+    const L = c.layers.features;
+    L.maskKey = '';
+    if(L.img) cmapMask(c, 'features');
+    cmapCompose(); cmapPaint(); cmapSaveLayers();
+  });
+  box.querySelectorAll('[data-ltop]').forEach(b => b.onclick = () => cmapMoveTop(b.dataset.ltop));
+  box.querySelectorAll('[data-lalpha]').forEach(cb => cb.onchange = () => {
+    activity('map layer', `drew the heights as ${cb.checked ? 'transparency' : 'grey'}`);
+    cmapMode('heights', 'heightAlpha', cb.checked);
+  });
 }
 
 //: Redraw the panel in place. The canvas is deliberately not in it - rebuilding
@@ -466,6 +624,16 @@ function cmapMove(code, dir){
   const o = state.cmap.order, i = o.indexOf(code), j = i + dir;
   if(i < 0 || j < 0 || j >= o.length) return;
   o[i] = o[j]; o[j] = code;
+  cmapCompose(); cmapPaint(); cmapSaveLayers(); cmapRepanel();
+}
+
+//: All the way up, in one press. The arrows are one step each and 20a made a
+//: nine-press journey worth having a button for - see `cmapModeHtml`.
+function cmapMoveTop(code){
+  const o = state.cmap.order, i = o.indexOf(code);
+  if(i < 0 || i === o.length - 1) return;
+  o.splice(i, 1); o.push(code);
+  activity('map layer', `drew ${code} last`);
   cmapCompose(); cmapPaint(); cmapSaveLayers(); cmapRepanel();
 }
 
@@ -551,10 +719,11 @@ function cmapCompose(){
   if(!c) return;
   const m = c.man;
   const shown = c.order.filter(code => c.layers[code].on && c.layers[code].img);
-  // the hide set is in the key: punching a colour through changes the picture,
-  // and a composite that did not notice would show the old one
+  // what the mask pass did is in the key: punching a colour through, lifting
+  // the rivers out or drawing the heights as transparency all change the
+  // picture, and a composite that did not notice would show the old one
   const key = shown.map(code => `${code}:${c.layers[code].opacity}`
-    + `:${[...c.layers[code].hide].sort().join('.')}`).join('|')
+    + `:${cmapModeKey(c, code)}`).join('|')
     + `|${c.overlayKey || ''}:${c.overlayAlpha}`;
   if(key === c.compKey && c.comp) return;
   if(!c.comp){
@@ -1380,6 +1549,9 @@ function cmapLegendHtml(code){
   if(L.legendErr) return `<div class="cmleg"><span class="w-bad">${esc(L.legendErr)}</span></div>`;
   const g = L.legend;
   if(!g) return '';
+  // 20a: the river overlay is a whitelist and it supersedes the hide set, so
+  // these say so rather than silently doing nothing while it is on
+  const whitelisted = code === 'features' && state.cmap.rivers;
   const rows = g.colours.map(k => {
     const pct = g.total ? (k.count * 100 / g.total) : 0;
     // the localised name first and the code name in brackets, which is the
@@ -1389,8 +1561,11 @@ function cmapLegendHtml(code){
       ? `${esc(k.name)} <span class="count">(${esc(k.code_name)})</span>`
       : `<span class="w-warn">no table names this colour</span>`;
     return `<div class="cmlegrow${L.hide.has(k.key) ? ' hid' : ''}">
-      <label class="chk" title="Stop drawing this colour, so what is under it shows through">
+      <label class="chk" title="${whitelisted
+        ? 'Rivers only is on, and it draws the three river colours and nothing else'
+        : 'Stop drawing this colour, so what is under it shows through'}">
         <input type="checkbox" data-lhide="${code}" data-key="${k.key}"
+          ${whitelisted ? 'disabled' : ''}
           ${L.hide.has(k.key) ? 'checked' : ''}></label>
       <i style="background:rgb(${k.rgb.join(',')})"></i>
       <span class="cmlegnm">${nm}</span>
@@ -1400,6 +1575,10 @@ function cmapLegendHtml(code){
   }).join('');
   const b = g.blank;
   return `<div class="cmleg">
+    ${whitelisted ? `<div class="count"><b>Rivers only</b> is on: the three river
+      colours are drawn in one colour of yours and every other colour on this
+      layer is punched through, so these tickboxes decide nothing until it is
+      off.</div>` : ''}
     ${b ? `<div class="count">Hiding <b style="color:rgb(${b.rgb.join(',')})">
       rgb(${b.rgb.join(', ')})</b> makes this an overlay: it means ${esc(b.why)}.
       ${b.sourced ? '' : 'Measured on both real maps rather than stated by any reference.'}
@@ -1409,15 +1588,113 @@ function cmapLegendHtml(code){
   </div>`;
 }
 
-/* A layer picture with some of its colours punched out.
+/* Which packed colours are a river, off the manifest's own vocabulary.
 
-   One pass over at most a megapixel, on the tick that changes the hide set,
-   cached by that set - never per frame, never per pointer event. Rule 4 of this
-   phase holds: the interaction path does not touch it. */
+   20a, D8. `mapvocab.RIVER_CODES` says which feature codes make up a river
+   network and `_vocab_view` sends both the codes and the table out with the
+   manifest, so the three colours are looked up here rather than written down a
+   second time. mapcheck's four-connected river graph walks exactly these, which
+   is the point: the overlay draws the tiles the validator complains about. */
+function cmapRiverKeys(){
+  const v = (state.cmap.man && state.cmap.man.vocab) || {};
+  const want = new Set(v.rivers || []);
+  const out = new Set();
+  for(const f of v.features || [])
+    if(want.has(f.code) && f.rgb)
+      out.add((f.rgb[0] << 16) | (f.rgb[1] << 8) | f.rgb[2]);
+  return out;
+}
+
+/* Grey level -> alpha for the heights layer, over the heights THIS map has.
+
+   20a, T2. TWMapReader's rule is "darker means more transparent", and taken
+   literally - alpha = the grey itself - it does not work on a real map. Land on
+   both installed mods runs 1 to 255 but is nowhere near evenly spread: the
+   median land tile is 32 of 255 on Divide and Conquer and 31 on Third Age
+   Reforged, and a quarter of the land is under 19. A linear ramp draws half the
+   continent at under 13% alpha, which is a layer you have ticked and cannot
+   see.
+
+   So the ramp is the land's own distribution: a tile's alpha is how much of the
+   land is no higher than it. Darker is still more transparent - the mapping is
+   monotonic, so no two heights swap places - but the ramp is spread over the
+   heights the map actually contains rather than over a 0-255 nothing uses the
+   top of. The panel says this in a sentence, because a ramp that is not the
+   obvious one has to be readable off the screen.
+
+   Sea is not on the ramp at all. `mapvocab.is_sea_height`'s measured rule - sea
+   iff the pixel is not greyscale, or is black - is the same one `cmapNameColour`
+   mirrors, and sea has no height to be a depth of.
+
+   Comes back with the map's own median land height beside the ramp, because the
+   panel has to be able to say what the ramp is spread over and the histogram is
+   already in hand. The two installed mods happen to agree at 32 and 31; that is
+   not a reason to print either of them over somebody else's map.
+
+   One pass to count and one to write, both inside the mask pass's own budget.
+   Cached on the layer and thrown away with the mask whenever the pixels move. */
+function cmapHeightRamp(img){
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const x = cv.getContext('2d', {willReadFrequently: true});
+  x.imageSmoothingEnabled = false;
+  x.drawImage(img, 0, 0);
+  const d = x.getImageData(0, 0, w, h).data;
+  const hist = new Float64Array(256);
+  let land = 0;
+  for(let i = 0, n = w * h; i < n; i++){
+    const p = i * 4, r = d[p];
+    if(r === 0 || r !== d[p + 1] || d[p + 1] !== d[p + 2]) continue;   // sea
+    hist[r]++; land++;
+  }
+  const alpha = new Uint8Array(256);
+  if(!land) return {alpha, median: 0, land: 0};
+  // the midpoint of its own band, so the lowest land is not invisible and the
+  // highest is not the only thing that is solid
+  let below = 0, median = 0;
+  for(let v = 1; v < 256; v++){
+    alpha[v] = Math.round(255 * (below + hist[v] / 2) / land);
+    below += hist[v];
+    if(!median && below * 2 >= land) median = v;
+  }
+  return {alpha, median, land};
+}
+
+//: Everything about a layer that changes its pixels rather than where they are
+//: drawn. Empty means the layer is drawn as it arrived and no copy is needed.
+function cmapModeKey(c, code){
+  const L = c.layers[code];
+  const bits = [...L.hide].sort().join('.');
+  const riv = (code === 'features' && c.rivers) ? `riv:${c.riverRgb.join(',')}` : '';
+  const alp = (code === 'heights' && c.heightAlpha) ? 'alpha' : '';
+  return [bits, riv, alp].filter(Boolean).join('|');
+}
+
+/* A layer picture with its colours punched out, lifted out, or turned into
+   transparency.
+
+   One pass over at most a megapixel, on the tick that changes what the pass
+   does, cached by that. Never per frame, never per pointer event: rule 4 of
+   this phase holds, and 20a added two more reasons to run it without adding
+   one to run it more often.
+
+   Three transforms, and the order they are in is the order they mean:
+
+     the river overlay   a whitelist. Every colour that is not one of the three
+                         river colours goes, and the three that stay become one
+                         colour - which is D8's whole point, because those three
+                         inside a layer that is 97.7% black are not a picture of
+                         a river system. It supersedes the hide set rather than
+                         combining with it, and the legend says so by disabling
+                         those tickboxes while it is on.
+     the hide set        16d's, unchanged: named colours stop being drawn.
+     height as alpha     T2's, and it is not a colour transform at all - the
+                         grey stays and the alpha is read off the ramp. */
 function cmapMask(c, code){
   const L = c.layers[code];
-  const want = [...L.hide].sort().join(',');
-  if(!L.img || !L.hide.size){ L.masked = null; L.maskKey = ''; return; }
+  const want = cmapModeKey(c, code);
+  if(!L.img || !want){ L.masked = null; L.maskKey = ''; L.rivertiles = 0; return; }
   if(L.masked && L.maskKey === want) return;
   const w = L.img.naturalWidth || L.img.width, h = L.img.naturalHeight || L.img.height;
   const cv = document.createElement('canvas');
@@ -1428,12 +1705,26 @@ function cmapMask(c, code){
   // out of the layer as it is NOW, not as it arrived
   x.drawImage(L.cv || L.img, 0, 0);
   const im = x.getImageData(0, 0, w, h), d = im.data;
+  const riv = (code === 'features' && c.rivers) ? cmapRiverKeys() : null;
+  const rgb = c.riverRgb;
+  const ramp = (code === 'heights' && c.heightAlpha)
+    ? (L.ramp || (L.ramp = cmapHeightRamp(L.cv || L.img))) : null;
+  let drawn = 0;
   for(let i = 0, n = w * h; i < n; i++){
-    const p = i * 4;
-    if(L.hide.has((d[p] << 16) | (d[p + 1] << 8) | d[p + 2])) d[p + 3] = 0;
+    const p = i * 4, r = d[p], g = d[p + 1], b = d[p + 2];
+    if(riv){
+      if(riv.has((r << 16) | (g << 8) | b)){
+        d[p] = rgb[0]; d[p + 1] = rgb[1]; d[p + 2] = rgb[2];
+        drawn++;
+      }else d[p + 3] = 0;
+      continue;
+    }
+    if(L.hide.has((r << 16) | (g << 8) | b)){ d[p + 3] = 0; continue; }
+    // sea has no height, and the ramp's own zero is the rest of the rule
+    if(ramp) d[p + 3] = (r === g && g === b) ? ramp.alpha[r] : 0;
   }
   x.putImageData(im, 0, 0);
-  L.masked = cv; L.maskKey = want;
+  L.masked = cv; L.maskKey = want; L.rivertiles = drawn;
 }
 
 /* The layers whose pixels just changed, put back on screen.
@@ -1450,7 +1741,9 @@ function cmapAfterPaint(codes){
   for(const code of codes){
     const L = c.layers[code];
     if(!L) continue;
-    L.maskKey = '';
+    // 20a: the height ramp is a count of the pixels, so a stroke on the heights
+    // layer invalidates it exactly as it invalidates the mask
+    L.maskKey = ''; L.ramp = null;
     cmapMask(c, code);
   }
   c.compKey = '';
@@ -2168,6 +2461,43 @@ async function cmapSave(){
 
 //: Bound once and left bound: the handler asks whether this screen is on top
 //: before it does anything, which is cheaper than wiring and unwiring it.
+/* Which number key this is, whatever it prints.
+
+   20a, T11. `e.key` for a digit is what the layout produces, and the top row
+   produces a digit only unshifted and only on some layouts: shift it on a US
+   keyboard and `1` is `!`, and on AZERTY the same key is `&` before it is
+   anything. `e.code` is the physical key, which is what "the number keys" means
+   when somebody is looking at their keyboard rather than at their layout. The
+   `e.key` arm is the fallback for anything that does not report one. */
+function cmapDigit(e){
+  const m = /^Digit([0-9])$/.exec(e.code || '');
+  if(m) return m[1];
+  return /^[0-9]$/.test(e.key) ? e.key : '';
+}
+
+/* The layer a number key ticks, or null. The manifest carries the digit with
+   each layer (`campmap.HOTKEYS`), so this is a lookup rather than a second
+   opinion about which key is which. */
+function cmapLayerForKey(digit){
+  const c = state.cmap;
+  for(const l of c.man.layers) if(l.hotkey === digit) return l.code;
+  return null;
+}
+
+/* The keyboard, and the one thing 20a had to take away to give T11 what it
+   asks for.
+
+   Ten layers and ten number keys leaves no digit for the two zoom commands 16c
+   put on `0` and `1`, so those moved to Shift and the toolbar's own tooltips
+   say so. Shift rather than a letter because the digit is the mnemonic - fit is
+   still zero - and because Ctrl+1 and Ctrl+0 are the browser's own and a page
+   cannot have them.
+
+   The point of the whole item is what it does NOT disturb: a layer is ticked
+   without the pointer moving, so the tile under it and the tooltip naming that
+   tile on all ten layers stay exactly where they were. `cmapMode`'s repanel
+   rebuilds the side panel and nothing else; the canvas, the hover and the
+   readout are untouched. */
 function cmapKeys(){
   if(state.cmapKeys) return;
   state.cmapKeys = true;
@@ -2176,8 +2506,17 @@ function cmapKeys(){
     if(overlay.classList.contains('open')) return;
     const t = e.target.tagName;
     if(t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
-    if(e.key === '0'){ cmapFit(); }
-    else if(e.key === '1'){ cmapZoomTo(1); }
+    const digit = (e.ctrlKey || e.metaKey || e.altKey) ? '' : cmapDigit(e);
+    if(digit && e.shiftKey){
+      if(digit === '0') cmapFit();
+      else if(digit === '1') cmapZoomTo(1);
+      else return;
+    }
+    else if(digit){
+      const code = cmapLayerForKey(digit);
+      if(!code) return;
+      cmapToggleLayer(code);
+    }
     else if(e.key === '+' || e.key === '='){ cmapZoomBy(1.4); }
     else if(e.key === '-' || e.key === '_'){ cmapZoomBy(1 / 1.4); }
     else if(e.key === 't' || e.key === 'T'){ cmapTipToggle(); }

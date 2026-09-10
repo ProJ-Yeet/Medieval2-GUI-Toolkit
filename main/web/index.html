@@ -721,6 +721,21 @@
   .cmlayer input[type=range]{width:92px;accent-color:var(--accent);margin:0}
   .cmpct{font-size:11px;color:var(--dim);text-align:right}
   .cmnote{grid-column:1/-1;font-size:11px;color:var(--dim);overflow-wrap:anywhere}
+  /* 20a: the number key that ticks this layer, on the row it ticks */
+  .cmkey{font-size:10px;line-height:1;padding:2px 4px;margin-right:5px;border-radius:3px;
+    background:var(--panel);border:1px solid var(--edge);color:var(--dim);
+    font-weight:600;font-variant-numeric:tabular-nums}
+  .cmlayer.on .cmkey{color:var(--ink);border-color:var(--accent)}
+  .cmlayer.off .cmkey{opacity:.5}
+  /* 20a: a second way of reading one layer - the rivers lifted out of the
+     features layer, the heights drawn as transparency */
+  .cmmode{grid-column:1/-1;display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+    font-size:11.5px;margin-top:3px}
+  .cmmode .chk{margin:0}
+  .cmmode .count{font-size:11px;line-height:1.4;flex:1 1 140px}
+  .cmmode input[type=color]{width:26px;height:18px;padding:0;border-radius:4px;
+    border:1px solid var(--edge);background:none;cursor:pointer}
+  .cmmode input[type=color]:disabled{opacity:.4;cursor:default}
   .cmpick .cmcard{border:1px solid var(--edge);border-radius:7px;padding:9px 10px;
     background:var(--panel2);margin-top:5px}
   .cmcard .nm{display:flex;align-items:center;gap:7px;font-weight:600;

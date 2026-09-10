@@ -109,6 +109,8 @@ Backlog below with their own index.
 | 18a | Four files nobody could edit - guilds, campaign descriptions, faction movies, the region's mercenary pool | 3.1.0 (uncut) |
 | 18b | Events and disasters - `descr_events.txt`, `descr_disasters.txt`, and their positions on the marker layer | 3.1.0 (uncut) |
 | 19a | The keys a new record needs - the province and settlement names, and the pool a character's name comes out of | 3.1.0 (uncut) |
+| 19b | Rename, and follow it - a province, a settlement and a faction slot, position-aware over twenty-four files | 3.1.0 (uncut) |
+| 20a | Three layers read properly - the river overlay, the heights as transparency, and a number key per layer | 3.1.0 (uncut) |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
@@ -280,7 +282,7 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 |---|---|
 | `unittransfer/campmap.py` | `descr_terrain.txt`, the ten TGA layers, `descr_regions.txt`, the region index, the coordinate transforms |
 | `unittransfer/maptga.py` | TGA read/write preserving type, depth, origin and footer (Pillow decodes; the header is ours) |
-| `unittransfer/mapvocab.py` | ground/climate/feature/height colour tables with localised names, in `edbvocab.py`'s shape |
+| `unittransfer/mapvocab.py` | ground/climate/feature/height colour tables with localised names, in `edbvocab.py`'s shape - **and `RIVER_CODES`**, which `mapcheck`'s river rules and the map screen's river overlay both read (20a) |
 | `unittransfer/campstrat.py` | `descr_strat.txt` as a line-preserving block model with an interval index |
 | `unittransfer/campaint.py` | strokes, the undo stack, the palettes and the paint save (16e) |
 | `unittransfer/mapcheck.py` | the 30 rules, the baseline and the three auto-fixes (16f) |
@@ -292,6 +294,8 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `unittransfer/stratchar.py` | the character block written back: the line, the traits, the army, the family rules, the move between factions (16i) |
 | `web/js/stratchar.js` | the people panel, its trait and regiment rows and the family tab (16i) |
 | `web/js/campmap.js` | viewer, layers, legend, inspector (16c, 16d) |
+| `cmapMask` / `cmapModeKey` | the one pixel pass: the hide set, the river whitelist, the height ramp. Anything that changes what a layer looks like without changing where it is drawn goes here, and the composite's cache key reads `cmapModeKey` (16d, 20a) |
+| `campmap.HOTKEYS` | which number key ticks which layer, sent out with the manifest so the panel and the handler cannot drift (20a) |
 | `campmap.view` / `layer_png` | the manifest and the PNG the browser is served (16c) |
 | `campmap.layer_legend` / `probe_pixel` | what a colour means, and what one tile is (16d) |
 | `campmap.render_block` / `plan_region` | one region's record, spliced and saved (16d) |
@@ -317,6 +321,14 @@ pan, zoom, DPR and the "a press that moved under 4 px is a pick" rule.
 canonical pixel buffer; the browser paints a local RGBA preview and posts stroke
 operations. That is the "one engine" rule, and it is what makes undo, backups
 and server-side validation possible at all.
+
+**The browser's own arithmetic is tested in node**, not reimplemented in Python
+to be tested there. `tests/test_maplayers.py` loads the real `campmap.js` into a
+bare V8 context with a stubbed canvas - the file has no top-level side effects,
+so `vm.runInContext` is enough and there is no DOM library - and hands it pixels
+the suite wrote and real layers projected through `campmap.tile_view`. 20a's
+mask pass is measured that way; 20c's label placement is the next thing that
+should be.
 
 
 ---
@@ -360,7 +372,6 @@ change, so no cross-reference dangles.
 
 | Phase | Sessions | Closes | Size |
 |---|---|---|---|
-| 20a - Three layers, read properly | 1 | D8 T2 T11 | 3S |
 | 20b - Getting to the thing you want | 1 | T9 T8 D14 | 3S |
 | 20c - Labels, and picking a tile | 1 | T4 M8 | 1M 1S |
 | 21 - Two screens over data we hold | 1 | D6 D11 | 1M 1S |
@@ -368,8 +379,8 @@ change, so no cross-reference dangles.
 | 23a-23b - A map that looks like the map | 2 | D7 T1 T12 | 2L 1M |
 | 24 - Make and unmake | 1 | G1 M15 | 2M |
 
-Ten sessions left. Phase 17 (2026-09-06), all of Phase 18 (2026-09-07) and all
-of Phase 19 (2026-09-09) are done and their write-ups are in
+Nine sessions left. Phase 17 (2026-09-06), all of Phase 18 (2026-09-07), all of
+Phase 19 (2026-09-09) and 20a (2026-09-10) are done and their write-ups are in
 `ROADMAP_ARCHIVE.md`; nothing in the Later table is counted.
 
 ---
@@ -382,10 +393,11 @@ to validate it and not well enough to edit it**, and that asymmetry is what
 3.1.0 removes.
 
 **Phases 18 and 19 are done** - 18a and 18b on 2026-09-07, 19a and 19b on
-2026-09-09. Phase 18's six files are the five nothing wrote and the one the
-building side could only refuse against; Phase 19 is the four names nothing could
-follow. All four write-ups are in `ROADMAP_ARCHIVE.md`. **What is left of the
-Now set is Phase 20 and Phase 21.**
+2026-09-09 - **and so is 20a**, on 2026-09-10. Phase 18's six files are the five
+nothing wrote and the one the building side could only refuse against; Phase 19
+is the four names nothing could follow; 20a is the three layers the map screen
+could draw and not read. All five write-ups are in `ROADMAP_ARCHIVE.md`. **What
+is left of the Now set is 20b, 20c and Phase 21.**
 
 ---
 
@@ -425,30 +437,21 @@ stands unless they say otherwise.
 
 Eight items across three sessions, all of them on a screen that already exists.
 Nothing here needs a new parser. Two of the three sessions are pure browser
-work.
+work. **20a is done** (2026-09-10, write-up in `ROADMAP_ARCHIVE.md`); 20b and
+20c are what is left.
 
-### 20a - Three layers, read properly, one session
+Three things 20a leaves for the two sessions after it:
 
-**Closes D8, T2, T11.**
-
-- **D8 - the river overlay.** Rivers lifted out of `map_features.tga` and drawn
-  as their own toggleable overlay with their own colour, instead of three
-  colours inside a layer that is 97.7% black on DaC and 96.5% on vanilla. 16d
-  already punches the blank colour out of that layer and makes it an overlay;
-  16f already builds the four-connected river graph to find rejoins. This is
-  those two facts joined into one control.
-- **T2 - heights drawn as transparency.** Darker means more transparent.
-  TWMapReader means it to lie over the textured view, which is Phase 23 - but it
-  works standalone over the heights layer we already serve at one pixel per tile
-  with its own opacity, so it does not wait for 23.
-- **T11 - the number keys toggle a layer.** Keys 1 to 0, ten layers, exactly ten
-  keys. The author's own reason is the feature: switching layers *without losing
-  the mouse position and the tile readout under it*. `campmap.js` has one
-  `keydown` handler already.
-
-Exit: measured, not asserted. A pan frame stays inside 16c's 0.02 to 0.18 ms and
-a hover step inside its 0.046 ms with all three on, because the whole point of
-16c's architecture was that adding a layer costs nothing per frame.
+- **The layer stack is the ten files and stays that way.** A reading of a layer
+  - the river overlay, the heights as transparency - lives on that layer's row.
+  The ten number keys count the stack, and an eleventh entry would break the
+  one-key-per-layer rule T11 is built on.
+- **`cmapMask` is the one pixel pass**, and everything that changes what a layer
+  looks like without changing where it is drawn belongs in it. It is keyed by
+  `cmapModeKey`, which is also what the composite's cache key reads.
+- **`tests/test_maplayers.py` runs the browser's own functions in node**, with a
+  stubbed canvas and no DOM library. 20c's label placement is the next thing
+  with real arithmetic in the browser, and this is where it can be measured.
 
 ### 20b - Getting to the thing you want, one session
 

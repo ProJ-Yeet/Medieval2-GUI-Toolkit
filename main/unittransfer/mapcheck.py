@@ -80,9 +80,15 @@ ROW_MAX = 60
 #: when the untouched mod did not already have it.
 SEVERITIES = ("fatal", "warn", "note")
 
-#: The four features that make up a river network on ``map_features.tga``. A
+#: The three features that make up a river network on ``map_features.tga``. A
 #: cliff or a land bridge is not part of it.
-RIVER_CODES = ("river", "river_crossing", "river_source")
+#:
+#: :mod:`unittransfer.mapvocab` owns the tuple as of 20a, because the map
+#: screen's river overlay draws exactly the tiles these rules walk, and a second
+#: list of what a river is made of is how a picture and its validator come to
+#: disagree. Kept re-exported under this name: the rules below read better for
+#: it, and it was already the name in use here.
+RIVER_CODES = mapvocab.RIVER_CODES
 
 
 # ---------------------------------------------------------------------------

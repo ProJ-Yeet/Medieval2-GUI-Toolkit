@@ -3403,3 +3403,112 @@ words rather than a pointer at this settlement. And a mod whose second campaign
 names a province its `descr_regions.txt` never declares: both installed mods have
 exactly one of those, and it is the mod's own fault rather than something a
 rename can invent a record for.
+
+---
+
+## Phase 20a - Three layers, read properly - done 2026-09-10
+
+**Closes D8, T2 and T11.** Three things on a screen that already existed, and
+none of them needed a new parser or a new route. What they needed was for the
+browser to be allowed to read a layer differently from the way it arrived.
+
+**D8 - the rivers are their own overlay now, in their own colour.** 16d had
+already found the fact this stands on: `map_features.tga` is **97.7% black on
+Divide and Conquer** and black there means *nothing here*, so the layer at full
+opacity is a black sheet with a few rivers under it. 16d's answer was the hide
+set - punch the blank colour through and the layer becomes an overlay - and it
+left the rivers as they are in the file, which is three colours: `(0,0,255)` for
+a river, `(0,255,255)` for a crossing and `(255,255,255)` for a source. Two of
+those three are near-invisible against the ground types they are meant to be
+read over, and a source is the same white as a port marker. So *Rivers only* is
+a **whitelist rather than a hide set**: every colour that is not one of the
+three goes, and the three that stay are drawn as one colour of the person's own
+choosing. On Divide and Conquer that is **5,466 tiles of 248,370**, and the row
+says so.
+
+**One list of what a river is made of.** `mapvocab.RIVER_CODES` owns the three
+codes and `mapcheck` now reads that tuple rather than keeping its own copy of
+it. That is not tidiness: `mapcheck` walks the four-connected river graph out of
+those colours to find a loop, an isolated tile or a diagonal-only join, and the
+overlay is the picture somebody looks at when it complains. A second list is how
+the picture and the validator come to disagree about where a river is.
+
+**T2 - the heights drawn as transparency, over a ramp that is the map's own.**
+TWMapReader's rule is "darker means more transparent" and taken literally -
+alpha is the grey - it does not work on a real map, which is the measurement
+this item turned on. Land on both installed mods runs the full 1 to 255, but it
+is nowhere near evenly spread: **the median land tile is 32 of 255 on Divide and
+Conquer and 31 on Third Age Reforged**, and a quarter of the land is under 19.
+A linear ramp draws **52% and 53% of the two continents at under 13% alpha** -
+a layer you have ticked and cannot see. So a tile's alpha is *how much of the
+land is no higher than it*: the mapping is still monotonic, so darker is still
+more transparent and no two heights swap places, but the ramp is spread over the
+heights the map actually contains. The median tile lands at 50% and 49%. Sea is
+not on the ramp at all, by `mapvocab.is_sea_height`'s measured rule - not
+greyscale, or black - because sea has no height to be a depth of.
+
+**And the control says what is still drawn over it.** The default stack has the
+heights at order 2 and the ground types at 3, so a heights layer drawn as
+transparency is a layer nothing can see through, because something opaque is
+still painted on top of it. The row names the layer that is doing it and offers
+a *Put it on top* button; it does not move the stack by itself, because the draw
+order is one of the three things this screen keeps between sessions and a
+control that quietly rearranged it would be taking a habit away to make its own
+feature look better.
+
+**T11 - the number keys tick a layer, and the pointer never moves.** Ten layers
+and ten keys, `1` to `0`, in `campmap.LAYERS`'s declaration order rather than in
+the draw order the manifest sorts by - draw order would put the front-end
+picture on `1` and the region layer on `7`. The digit travels out **with each
+layer in the manifest** (`campmap.HOTKEYS`) and the panel prints it on the row it
+ticks, so the screen cannot promise a key the handler does not answer to. The
+author's own reason for the item is the whole of the exit criterion, and it was
+checked in the browser: with the pointer resting on tile 227,183 of Divide and
+Conquer, pressing `3` turned the ground types off and left `c.hover`, the
+readout and the tooltip naming that tile on all ten layers byte-identical.
+
+**Two keys had to move to make room, and Shift is where they went.** 16c put
+Fit on `0` and 1:1 on `1`, and ten layers leave no digit spare. They are
+**Shift+0** and **Shift+1** now, and the toolbar's own tooltips say so. Shift
+rather than a letter because the digit is the mnemonic - fit is still zero - and
+because Ctrl+1 and Ctrl+0 belong to the browser and a page cannot have them. The
+key is read off `e.code`, not `e.key`: shifted, the top row prints `!` and `)` on
+a US layout and something else again on AZERTY, and "the number keys" means the
+physical row somebody is looking at.
+
+**All three run in the pass 16d already had.** `cmapMask` was one loop over at
+most a megapixel that punched named colours through; it is the same one loop,
+and it now also whitelists and ramps. Nothing was added to the interaction path,
+which is what the exit criterion was about.
+
+**The numbers, measured in the browser on Divide and Conquer with all three on**
+(the clock is coarsened to 0.1 ms, so each is a batch of 1,000 timed together
+and divided):
+
+    a pan frame        0.0093 to 0.0159 ms across zoom 0.4x to 64x
+                       (16c's bar: 0.02 to 0.18 ms)
+    a hover step       0.0375 ms          (16c's bar: 0.046 ms)
+    the composite      0.021 ms           (16d measured 0.015 ms)
+    the river mask     4.76 ms            on a tick, once, cached
+    the height ramp    6.99 ms            two passes over 248,370 tiles, on a
+                       and its mask       tick, once, cached
+
+**`tests/test_maplayers.py` (36 checks) is new, and half of it runs in node.**
+Two of these three items are arithmetic that lives in the browser, and the
+suite loads the real `campmap.js` into a bare V8 context with a stubbed canvas
+rather than testing a second copy of the maths in Python: the file has no
+top-level side effects, so `vm.runInContext` is enough and there is no DOM
+library. It checks the overlay against a row of every feature colour there is,
+the ramp against an even spread written by hand, and both against **every
+installed map's real heights layer**, projected through `campmap.tile_view` so
+they are the pixels the browser is actually served. The browser's own count of
+the tiles it drew and `campmap.layer_legend`'s census of the same file agree at
+5,466.
+
+**What is deliberately not here.** The rivers are not an eleventh layer. The
+stack is the ten files the map is made of - it is what the ten keys count, what
+the draw order orders and what `check_layers` validates - so a reading of
+`map_features.tga` belongs on that layer's row rather than beside it. Same
+ruling for the heights. And the three river colours become one, so the overlay
+cannot tell a crossing from a source; the tooltip still can, because it reads
+the layer's real pixels and not the picture.

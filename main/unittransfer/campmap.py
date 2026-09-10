@@ -121,6 +121,23 @@ LAYERS: Tuple[dict, ...] = (
 
 LAYER_BY_CODE: Dict[str, dict] = {ly["code"]: ly for ly in LAYERS}
 
+#: The key that ticks a layer on the map screen: ten layers, ten number keys,
+#: ``1`` to ``0`` in the order :data:`LAYERS` declares them (20a, T11).
+#:
+#: Declaration order, deliberately, and not the draw order the manifest sorts
+#: by. Draw order puts the front-end picture first and the region layer seventh,
+#: which would make the key nobody wants the easiest one to reach; declaration
+#: order is the five required layers first, and it is the same in every mod
+#: because it is this file's own list rather than anything a mod ships.
+#:
+#: It lives here rather than in the browser for the reason everything else on
+#: this screen does: the manifest carries it out with each layer, so the panel
+#: prints the key it will actually answer to and the two cannot drift.
+HOTKEYS: Dict[str, str] = {
+    ly["code"]: "1234567890"[i] if i < 10 else ""
+    for i, ly in enumerate(LAYERS)
+}
+
 
 class MapError(ValueError):
     """The map cannot be read at all - a missing layer, or a broken header."""
@@ -1272,6 +1289,7 @@ def layer_view(cm: "CampaignMap", code: str) -> dict:
     b = BLANK.get(code)
     out = {"code": code, "label": ly["label"], "file": ly["file"],
            "size": ly["size"], "required": ly["required"],
+           "hotkey": HOTKEYS.get(code, ""),
            "order": d["order"], "on": d["on"], "opacity": d["opacity"],
            "aligned": ly["size"] in ("tile", "double", "centre"),
            "present": False, "problem": "", "fit": "native",
@@ -1555,11 +1573,16 @@ def _vocab_view(cm: "CampaignMap") -> dict:
     trade routes, fog - are not here: their rule is stated in
     :func:`_colour_name` and mirrored in `cmapNameColour`, and neither end
     nearest-colour matches. A colour no table claims is reported as unnamed.
+
+    ``rivers`` is 20a's: which of the feature codes make up a river network, so
+    the screen's river overlay draws the tiles :mod:`unittransfer.mapcheck`
+    walks rather than a second opinion about which blue is which.
     """
     return {
         "ground_types": mapvocab.GROUND_TYPES,
         "features": mapvocab.FEATURES,
         "climates": mapvocab.climates(cm.mod),
+        "rivers": list(mapvocab.RIVER_CODES),
     }
 
 

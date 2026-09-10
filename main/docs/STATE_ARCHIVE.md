@@ -25,6 +25,72 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 20a - three layers, read properly (2026-09-10)
+`mapvocab.RIVER_CODES` and two helpers beside it, `campmap.HOTKEYS` out with
+every layer in the manifest, `mapcheck` reading the tuple rather than keeping
+its own, `cmapMask` widened from a hide set to three transforms, two controls
+and a key badge on the layer panel, and `tests/test_maplayers.py` (36 checks).
+Cut as **beta 2026-09-10** and no 2.x - all three items are on the map screen.
+
+**The item that changed shape under measurement was T2.** TWMapReader says the
+heights should be drawn as transparency, darker meaning more transparent, and
+the obvious implementation is one line: alpha is the grey. It was written, and
+then the layer was measured before it was believed. Land on Divide and Conquer
+runs 1 to 255 but **half of it is under 32**, and a quarter is under 19; Third
+Age Reforged is the same shape at 31 and 19. So the obvious version draws 52%
+and 53% of the two continents at under 13% alpha, which is a layer you tick and
+cannot see. What ships is the land's own cumulative distribution: a tile's alpha
+is how much of the land is no higher than it. Still monotonic, so the reference's
+rule still holds - darker is still more transparent - but spread over the heights
+the map has. The median tile goes from 12% to 50%.
+
+**Half of this suite runs in node, and that is new.** Two of 20a's three items
+are arithmetic in the browser, and the two ways of testing that in this project
+were both bad: reimplement the ramp in Python and test the copy, or assert
+nothing and call it a browser feature. The third way turned out to be free -
+`campmap.js` has no top-level side effects, so `vm.runInContext` loads it into a
+bare V8 with a `document.createElement` that returns a byte array, and the real
+`cmapMask`, `cmapHeightRamp` and `cmapRiverKeys` run on pixels the suite wrote.
+The real maps' heights go in through `campmap.tile_view`, so they are the pixels
+the browser is really served. The cross-check that made it worth doing: the
+browser's own count of the river tiles it drew and `campmap.layer_legend`'s
+census of the same file both say **5,466** on Divide and Conquer.
+
+**T11 cost two keys and the toolbar had to say so.** Ten layers and ten number
+keys leaves nothing for 16c's Fit on `0` and 1:1 on `1`, so those are Shift+0 and
+Shift+1 now. The digit is read off `e.code` rather than `e.key`: shifted, the top
+row prints `!` and `)` on a US layout, and on AZERTY the unshifted key prints `&`
+before it prints anything else. `e.code` is the physical key, which is what
+somebody looking at their keyboard means by "the number keys".
+
+**The thing T11 is actually for was checked rather than assumed.** With the
+pointer resting on tile 227,183 of Divide and Conquer, pressing `3` turned the
+ground types off and left the hover tile, the corner readout and the tooltip
+naming that tile on all ten layers identical. That is the author's own stated
+reason for the item - switch a layer without losing the mouse position - and it
+holds because `cmapMode` and `cmapToggleLayer` repanel the side column and
+nothing else.
+
+**A control that appears to do nothing was found in the browser, not in a
+test.** Ticking `Height as transparency` with the default draw order changes
+nothing on screen, because the heights sit at order 2 and the ground types at 3
+and something opaque is still painted over them. The row now names the layer
+doing it and offers a `Put it on top` button. It does not move the stack itself:
+the draw order is one of the three things this screen keeps between sessions, and
+a control that quietly rearranged it would be taking a habit away to make its own
+feature look better.
+
+**Measured in the browser with all three on**, on Divide and Conquer. The clock
+in this browser is coarsened to 0.1 ms, so a single frame is not resolvable and
+each of these is a batch of a thousand timed together and divided - worth knowing
+before anybody tries to reproduce them one frame at a time:
+
+    a pan frame     0.0093 to 0.0159 ms, zoom 0.4x to 64x   (16c: 0.02 to 0.18)
+    a hover step    0.0375 ms                               (16c: 0.046)
+    the composite   0.021 ms                                (16d: 0.015)
+    the river mask  4.76 ms      on a tick, once, cached
+    the height ramp 6.99 ms      two passes over 248,370 tiles, same
+
 ## 19b - rename, and follow it (2026-09-09)
 `unittransfer/renames.py` (new), `web/js/renameui.js` (new), one handler and one
 POST pair on `server.py`, a `rename_modeldb` built on `modeldb`'s existing span

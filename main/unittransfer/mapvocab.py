@@ -115,6 +115,16 @@ FEATURES: List[dict] = [
 #: TWCenter index describes, so 16f checks for it and 16e refuses to paint it
 FATAL_UNDER_SETTLEMENT = ("river", "river_crossing", "river_source", "volcano")
 
+#: The three features that make up a river network. A cliff or a land bridge is
+#: not part of it, and a volcano is not either.
+#:
+#: One tuple, and 20a is why it is here rather than in the module that first
+#: needed it. :mod:`unittransfer.mapcheck` walks the four-connected river graph
+#: out of these three colours to find a loop; the map screen draws the same
+#: three as one overlay in one colour. Two lists of what a river is made of is
+#: how the validator and the picture come to disagree about where one is.
+RIVER_CODES: Tuple[str, ...] = ("river", "river_crossing", "river_source")
+
 
 # ---------------------------------------------------------------------------
 # region markers - map_regions.tga
@@ -148,6 +158,21 @@ def feature_at(rgb: Rgb) -> Optional[dict]:
     """The feature this colour names, or ``None``. DaC's stray ``(1,1,1)``
     pixel is the reason this returns ``None`` rather than "no feature"."""
     return _FEATURE_BY_KEY.get(key(rgb))
+
+
+def river_rgbs() -> List[Rgb]:
+    """The colours a river is drawn in, in :data:`RIVER_CODES` order.
+
+    Built from the table rather than written out again, so a colour corrected in
+    one place is corrected in both readers of it.
+    """
+    return [f["rgb"] for f in (_FEATURE_BY_CODE[c] for c in RIVER_CODES)]
+
+
+def is_river(rgb: Rgb) -> bool:
+    """Is this ``map_features.tga`` colour part of a river network?"""
+    f = _FEATURE_BY_KEY.get(key(rgb))
+    return bool(f and f["code"] in RIVER_CODES)
 
 
 def ground(code: str) -> Optional[dict]:
