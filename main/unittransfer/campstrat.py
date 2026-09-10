@@ -928,7 +928,13 @@ def _index(out: StratFile) -> None:
 
 
 def campaigns(mod) -> List[str]:
-    """Every campaign folder that really has a ``descr_strat.txt`` in it."""
+    """The campaign folders **directly** under ``world/maps/campaign``.
+
+    The immediate children only, which is what the engine's own new-game menu
+    reads and not what a mod actually ships. Use :func:`campaign_paths` for the
+    whole set - 20b measured that every mod installed here keeps a second
+    campaign one level down and this list hides it.
+    """
     base = mod.data / CAMPAIGN_DIR_REL
     if not base.is_dir():
         return []
@@ -936,8 +942,61 @@ def campaigns(mod) -> List[str]:
                   if d.is_dir() and (d / STRAT_NAME).is_file())
 
 
+def campaign_paths(mod) -> List[str]:
+    """Every campaign in the mod, at any depth, as a relative posix name.
+
+    ``imperial_campaign``, and ``custom/Shattered_Alliances`` for one that is
+    nested. The deep walk was :func:`unittransfer.renames.campaign_dirs`
+    (19b), which needed it because a rename that skipped a mod's second campaign
+    leaves that campaign naming a region that no longer exists; it lives here
+    now, in the module that owns the file, and `renames` reads this one.
+
+    **20b, and it is a correction rather than an addition.** Divide and Conquer
+    keeps ``Shattered_Alliances`` under ``custom/`` and Third Age Reforged keeps
+    ``Fellowship_Campaign`` there - 30 factions and 199 settlements, and 16
+    factions and 129 settlements, both whole campaigns with their own strat,
+    win conditions, mercenaries and script. Every route on the map screen takes
+    a campaign and every one of them resolves a name with a slash in it, so the
+    only thing that made those two unreachable was the list nothing offered.
+    """
+    base = Path(mod.data) / CAMPAIGN_DIR_REL
+    if not base.is_dir():
+        return []
+    return sorted(p.parent.relative_to(base).as_posix()
+                  for p in base.rglob(STRAT_NAME) if p.is_file())
+
+
+def campaign_rel(campaign: str = DEFAULT_CAMPAIGN) -> str:
+    """A campaign name as a relative path under ``world/maps/campaign``.
+
+    The one choke point between a campaign name and a path on disk, and the
+    reason it exists is 20b: until the browser offered a campaign to pick, the
+    name was always the server's own default and never came off the page. A
+    nested campaign is a name with a slash in it, so "reject anything with a
+    separator" is not available; what is rejected is a step that leaves the
+    folder at all.
+    """
+    rel = str(campaign or DEFAULT_CAMPAIGN).replace("\\", "/").strip("/")
+    parts = [p for p in rel.split("/") if p]
+    if not parts or ":" in rel or any(p in (".", "..") for p in parts):
+        raise ValueError(f"{campaign!r} is not a campaign inside "
+                         f"{CAMPAIGN_DIR_REL}")
+    return "/".join(parts)
+
+
+def campaign_leaf(campaign: str = DEFAULT_CAMPAIGN) -> str:
+    """The campaign's own folder name, without whatever it is nested under.
+
+    ``custom/Shattered_Alliances`` -> ``Shattered_Alliances``. What a key built
+    out of a campaign's name is built out of - measured on Divide and Conquer,
+    whose nested campaign's description keys are ``SHATTERED_ALLIANCES_*`` and
+    not the path it is reached through.
+    """
+    return campaign_rel(campaign).rsplit("/", 1)[-1]
+
+
 def strat_path(mod, campaign: str = DEFAULT_CAMPAIGN) -> Path:
-    return mod.data / CAMPAIGN_DIR_REL / campaign / STRAT_NAME
+    return Path(mod.data) / CAMPAIGN_DIR_REL / campaign_rel(campaign) / STRAT_NAME
 
 
 def read_strat(mod, campaign: str = DEFAULT_CAMPAIGN) -> StratFile:

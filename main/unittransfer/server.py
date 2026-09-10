@@ -315,6 +315,11 @@ The campaign folder's small files (18a, see :mod:`unittransfer.campfiles`)
   GET  /api/campfiles/mercenaries?mod=&campaign=&region=
                                  -> every pool in descr_mercenaries.txt and
                                     which one that province draws on
+  GET  /api/map/campaigns?mod=   -> 20b, D14: every campaign the mod ships, at
+                                    any depth, with its dates, its rosters,
+                                    what stands in it, which of the campaign
+                                    folder's files it has and whether it ships
+                                    map layers of its own
   POST /api/campfiles/plan|/apply
                                  -> one save over any of the three (`what`:
                                     descriptions / movies / mercenaries). A
@@ -3621,6 +3626,15 @@ class Handler(BaseHTTPRequestHandler):
         name = (q.get("mod") or [None])[0]
         if not name or name not in self.registry.names():
             return self._err(404, "unknown mod")
+
+        if path == "/api/map/campaigns":
+            # 20b, D14. Before the map is read, deliberately: a campaign list
+            # is a folder walk and a parse of each descr_strat.txt, and none of
+            # it needs the ten layers. It is also the one map route that still
+            # answers for a mod whose layers will not decode, which is exactly
+            # when knowing the mod has two campaigns is worth something.
+            return self._json(campfiles.browse(self.registry.describe(name)))
+
         try:
             cm = self.registry.campaign_map(name)
         except campmap.MapError as exc:

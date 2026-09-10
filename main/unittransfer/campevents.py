@@ -314,7 +314,8 @@ def parse_disasters(text: str) -> BlockFile:
 
 
 def events_path(mod, campaign: str = DEFAULT_CAMPAIGN) -> Path:
-    return Path(mod.data) / CAMPAIGN_DIR_REL / campaign / EVENTS_NAME
+    return (Path(mod.data) / CAMPAIGN_DIR_REL
+            / campstrat.campaign_rel(campaign) / EVENTS_NAME)
 
 
 def disasters_path(mod) -> Path:

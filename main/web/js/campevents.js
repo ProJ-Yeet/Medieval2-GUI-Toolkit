@@ -59,7 +59,10 @@ async function cevOpen(force){
   const c = state.cmap;
   if(!c) return;
   const was = state.cev;
-  const camp = (state.cj && state.cj.d && state.cj.d.campaign) || '';
+  // 20b: the screen's own campaign, which the browser picks and every route
+  // now carries. The stratcamp panel's answer is the fallback for the one
+  // case it is still the better word - it is the campaign the SERVER used.
+  const camp = c.campaign || (state.cj && state.cj.d && state.cj.d.campaign) || '';
   if(was && was.mod === c.mod && was.ev && !force){ cevPaint(); return; }
   const k = state.cev = cevNew(c.mod, camp);
   k.open = was ? was.open : false;

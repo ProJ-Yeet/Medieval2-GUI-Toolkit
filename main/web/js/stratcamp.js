@@ -74,7 +74,7 @@ async function cjOpen(force){
   k.loading = true;
   cjPaint();
   let d;
-  try{ d = await api.get(`/api/map/campaign?mod=${enc(c.mod)}`); }
+  try{ d = await api.get(`/api/map/campaign?mod=${enc(c.mod)}${cmapCampQ()}`); }
   catch(e){ d = {error: errText(e)}; }
   if(state.cj !== k) return;
   k.loading = false;

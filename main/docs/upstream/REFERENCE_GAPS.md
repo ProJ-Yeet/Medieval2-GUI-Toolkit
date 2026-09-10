@@ -31,10 +31,10 @@ says "we do not", that was verified, and the verification is quoted.
 
 | Source | Items | Already scheduled | Already done, or a duplicate |
 |---|---|---|---|
-| Demir's StratMap Forge | 14 | 0 | **D4, D5 done 19a; D2, D3 done 19b** |
+| Demir's StratMap Forge | 14 | 0 | **D4, D5 done 19a; D2, D3 done 19b; D8 done 20a; D14 done 20b** |
 | Mylae's M2TW Editor | 17 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11) · **M5, M6, M13 done 18a; M3, M4 done 18b** |
 | Bare Geomod | 8 | 1 (G6) | 3 (G7, G8 done; G5 = D9) · **G3 done 18a** |
-| TWMapReader | 12 | 1 (T5, folded into 17d) | 0 |
+| TWMapReader | 12 | 1 (T5, folded into 17d) | **T2, T11 done 20a; T8, T9 done 20b** |
 | **Total** | **51** | **6** | **5** |
 
 So **40 genuinely open items**, of which 17d and 17e (M1 and M2) are the two
@@ -165,7 +165,7 @@ is missing is the compositing: one texture per (climate, ground type) pair,
 tiled, blended at the seams. It is the most expensive item in this document and
 the most visible.
 
-### D8. River overlay · S
+### D8. River overlay · **done**
 
 `buildRiverOverlayCanvases`, `updateRiverOverlayControl`. Rivers lifted out of
 `map_features.tga` and drawn as their own toggleable overlay with their own
@@ -237,7 +237,7 @@ because that is the shape vanilla's Mongols and Timurids already are. The horde
 keys themselves are already editable in Phase 11's faction editor. This is the
 missing half: the tool filling in the start rather than the modder.
 
-### D14. A campaign browser · S
+### D14. A campaign browser · **done**
 
 `renderCampaignBrowser`, `renderCampaignChooser`, `renderCampaignDetail`. A
 screen listing every campaign in the mod with what is in each one, before you
@@ -247,6 +247,14 @@ We have the picker (`campstrat.campaigns` lists every folder that really has a
 `descr_strat.txt`, and every map route takes `&campaign=`) and not the browser.
 Cosmetic, and cheap, and the kind of thing that makes a mod with six campaigns
 navigable.
+
+**Done 20b, and the paragraph above was wrong twice.** There was no picker at
+all - every route took a campaign and nothing ever sent one, so the server's own
+fallback answered all of them - and `campstrat.campaigns` lists the folders
+*directly under* `world/maps/campaign`. Divide and Conquer, Third Age Reforged
+and the stock game each keep a second campaign the map screen could not open;
+`campstrat.campaign_paths` is the list that finds them. So this was not cosmetic,
+and the write-up is in `ROADMAP_ARCHIVE.md` under Phase 20b.
 
 ---
 
@@ -522,7 +530,7 @@ Same feature as D7, and this is the better specification of the two, because the
 pink-for-missing rule is exactly the toolkit's own "a rule with no evidence
 reports nothing" applied to a picture. The winter set doubles it for free.
 
-### T2. Heights, drawn as transparency · S
+### T2. Heights, drawn as transparency · **done**
 
 "A variation of the Heights map, such that darker = more transparent." Meant to
 be laid over the textured view, and the author's own note is that the
@@ -585,7 +593,7 @@ and it is named in three places as the file a rename or a region delete cannot
 follow (D2, G1). A read-only scan for spawn coordinates is a much smaller job
 than a script parser and it closes part of that hole.
 
-### T8. Find a region, settlement or region ID · S
+### T8. Find a region, settlement or region ID · **done**
 
 The Find tab: type a name or an ID, and the result is shown on the map.
 
@@ -594,7 +602,7 @@ The Find tab: type a name or an ID, and the result is shown on the map.
 one-box search, which is a different thing from a filter panel: it is what you
 reach for when you know the name.
 
-### T9. Named view presets · S
+### T9. Named view presets · **done**
 
 The `.mps` state files: any number of saved view configurations - which layers,
 which opacities, which colours, which highlight - each named, listed and
@@ -620,7 +628,7 @@ Nothing in the map editor reaches the clipboard; `sprites.js` is the only module
 in the toolkit that does. The shift-X detail is the one to take: it is the
 difference between a coordinate you read and a coordinate you paste.
 
-### T11. Toggle layers with the number keys · S
+### T11. Toggle layers with the number keys · **done**
 
 "The maps can be toggled on/off by using the number keys 1..0. This can be
 useful when you wish to switch to another map without losing your mouse position

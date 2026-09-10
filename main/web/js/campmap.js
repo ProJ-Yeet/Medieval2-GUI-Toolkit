@@ -165,14 +165,17 @@ function cmapSettings(){
   return m;
 }
 
-let cmapSaveTimer = 0;
-//: Coalesced: dragging an opacity slider fires `input` per pixel of travel, and
-//: settings.json is rewritten whole either way.
-function cmapSaveLayers(){
-  const c = state.cmap, m = cmapSettings();
-  if(!c) return;
-  m.order = c.order.slice();
-  m.on = {}; m.opacity = {}; m.hide = {};
+/* The layer stack as one plain object, in the shape settings.json keeps it.
+
+   Split out of `cmapSaveLayers` by 20b, T9, and the split is the whole of that
+   item's design: a named view preset is this same snapshot with a name on it,
+   so there is one description of what the layer stack is and `mapviews.js`
+   copies rather than re-derives it. Adding a switch to this screen adds it to
+   both the remembered stack and every preset, in one place. */
+function cmapLayerState(){
+  const c = state.cmap;
+  if(!c) return {};
+  const m = {order: c.order.slice(), on: {}, opacity: {}, hide: {}};
   for(const [code, L] of Object.entries(c.layers)){
     m.on[code] = !!L.on;
     m.opacity[code] = L.opacity;
@@ -181,6 +184,16 @@ function cmapSaveLayers(){
   m.river = {on: !!c.rivers, rgb: c.riverRgb.slice()};
   m.height_alpha = !!c.heightAlpha;
   m.tip = c.tip !== false;
+  return m;
+}
+
+let cmapSaveTimer = 0;
+//: Coalesced: dragging an opacity slider fires `input` per pixel of travel, and
+//: settings.json is rewritten whole either way.
+function cmapSaveLayers(){
+  const c = state.cmap, m = cmapSettings();
+  if(!c) return;
+  Object.assign(m, cmapLayerState());
   clearTimeout(cmapSaveTimer);
   cmapSaveTimer = setTimeout(() => {
     try{ api.post('/api/settings', {map_layers:m}); }catch(e){}
@@ -196,7 +209,11 @@ function cmapSaveLayers(){
    goes where the server put it, and nothing is dropped or invented. */
 function cmapOrder(man, saved){
   const real = man.layers.map(l => l.code);
-  const out = (saved || []).filter(c => real.includes(c));
+  // Not a list at all is one of the ways it can be wrong, and 20b is what made
+  // that reachable: a preset comes out of settings.json, which is a file a
+  // person can open. Reconciling against the manifest means not trusting the
+  // type either.
+  const out = (Array.isArray(saved) ? saved : []).filter(c => real.includes(c));
   for(let i = 0; i < real.length; i++)
     if(!out.includes(real[i])) out.splice(Math.min(i, out.length), 0, real[i]);
   return out;
@@ -243,6 +260,17 @@ function cmapNew(mod, man){
   }
   return {
     mod, man, byKey,
+    /* 20b, D14: which campaign every route that takes one is asked for.
+
+       Empty means the server's own fallback (`imperial_campaign`), which is
+       what every request on this screen carried before 20b, so an empty string
+       is the same behaviour rather than a missing value. It starts empty on
+       every mod and is NOT remembered between sessions, which is the mirror of
+       16d's ruling about the layer stack: the layer codes are the engine's own
+       ten and mean the same thing everywhere, so they are a habit worth
+       keeping; a campaign is one mod's own folder and remembering it would mean
+       opening a mod into a campaign that only the last mod had. */
+    campaign: '',
     // draw order is the server's until somebody has moved a layer, and then it
     // is theirs - the arrows move a layer within this array and nothing else
     // has to know
@@ -274,6 +302,123 @@ function cmapNew(mod, man){
     marker: '', markerAt: null,
     ms: 0,
   };
+}
+
+/* `&campaign=…` for a request that takes one, or nothing at all.
+
+   Every campaign-fed route on this screen has accepted a campaign since 16g and
+   none of them was ever sent one: the server's fallback was the only campaign
+   the browser could name. This is the one place that appends it, so a route
+   added later cannot forget - and an empty `c.campaign` appends nothing, which
+   is byte-for-byte the request 16g to 19b were making. */
+function cmapCampQ(){
+  const c = state.cmap;
+  return (c && c.campaign) ? `&campaign=${enc(c.campaign)}` : '';
+}
+
+/* Read a different campaign, and drop everything that was read out of the last
+   one. 20b, D14 - the browser lists and asks; this is what a pick costs.
+
+   Five panels hold a parse of `descr_strat.txt` or something joined to it, and
+   every one of them keys its state on the mod alone, because until now the
+   campaign could not change without the mod changing. Rather than teach five
+   files a second key, the screen that owns the campaign nulls what it
+   invalidates and re-renders: each panel's own `…Open` then rebuilds from
+   scratch and re-reads if it was open.
+
+   Two things are deliberately kept. The paint session, because unsaved strokes
+   are pixels on the base map and the base map is the same map whichever
+   campaign reads it - throwing them away here would be a campaign switch that
+   destroys work it has nothing to do with. And the view: the zoom and the pan
+   are where you were looking, and a province does not move. */
+function cmapSetCampaign(rel){
+  const c = state.cmap;
+  if(!c) return;
+  const want = String(rel || '');
+  if(want === (c.campaign || '')) return;
+  // The one panel here with a dirty test of its own. The settlement and people
+  // forms save per field through their own debounce and hold no unsaved copy
+  // worth warning about; the events panel builds a whole block before it writes
+  // anything, and that is the one somebody can lose.
+  if(typeof cevDirty === 'function' && cevDirty()
+     && !confirm('Read a different campaign?\n\n'
+        + 'The events panel has an unsaved block in it, and it is a block in '
+        + 'the campaign you are leaving.')) return;
+  c.campaign = want;
+  // Which panels were open, so that switching campaign is not also a panel
+  // switch: every one of these keys its state on the mod alone, so the reset
+  // below takes it back to closed. They are re-opened through their own
+  // toggles rather than by writing their flags, because a toggle is also what
+  // knows to re-read - and re-reading is the point.
+  const was = {cbr: state.cbr && state.cbr.open,
+               cj: state.cj && state.cj.open,
+               cev: state.cev && state.cev.open,
+               cq: state.cq && state.cq.open,
+               cchk: state.cchk && state.cchk.open,
+               cmk: state.cmk && state.cmk.on};
+  // what was read out of the campaign that is being left
+  state.cj = null; state.cx = null; state.cset = null;
+  state.cmk = null; state.cev = null; state.cq = null; state.cchk = null;
+  c.det = null; c.cv = null; c.overlay = null; c.overlayKey = '';
+  activity('campaign browser', `read ${want || 'the default campaign'}`);
+  renderCampmap();
+  if(was.cj) cjToggle();
+  if(was.cev) cevToggle();
+  if(was.cq) cqToggle();
+  if(was.cchk) cchkToggle();
+  if(was.cmk) cmkToggleLayer();
+  if(was.cbr && state.cbr && !state.cbr.open) cbrToggle();
+  // the region that was open, re-read out of the campaign now being read: who
+  // holds it and what is standing in it are the campaign's answers, not the
+  // map's, and the province itself has not moved
+  if(c.sel && c.sel.name){
+    cmapOpenRegion(c.sel.name);
+    csOpen(c.sel.name);
+    cmapOpenPeople(c.sel.name);
+  }
+}
+
+/* Centre the map on a tile and pick it.
+
+   One copy of six lines that were written three times: the query panel's jump
+   to a province, the validator's jump to a finding, and 20b's find box. Three
+   callers is where a third copy stops being a coincidence - and the rule this
+   file states about the two transform lines applies to arriving as well as to
+   drawing. `zoom` is a floor rather than a setting: somebody already zoomed
+   further in than that was looking at something.
+
+   `region` is the province the caller already knows this tile is in, and it
+   closes a half-arrival all three of them had. `cmapPick` resolves a province
+   by reading the colour under the tile off the region layer's own pixels, so
+   with that layer never fetched - it is one tick away from off, and off is a
+   perfectly ordinary way to read a map - a jump would centre on the tile and
+   select nothing, with only the probe's sentence to say where you were. Every
+   caller that HAS the name passes it: a query row is a province and a find hit
+   is one. A finding is not - `mapcheck` reports a tile and a sentence about
+   what is wrong there, and half of those are faults with no province at all -
+   so the validator's jump passes nothing and is unchanged. The pick is given a
+   second chance from the manifest rather than a layer being turned on behind
+   somebody's back, which is the call 20a made about controls that rearrange
+   the stack. */
+function cmapGoTile(tile, zoom, region){
+  const c = state.cmap;
+  if(!c || !tile) return;
+  const [w, h] = cmapCanvasSize();
+  const v = c.view;
+  v.zoom = Math.max(v.zoom, zoom || 6);
+  v.ox = w / 2 - (tile[0] + 0.5) * v.zoom;
+  v.oy = h / 2 - (tile[1] + 0.5) * v.zoom;
+  v.fitted = true;
+  cmapPick(tile);
+  if(!region || c.sel) return;
+  const r = c.man.regions.find(x => x.name === region);
+  if(!r) return;
+  c.sel = r;
+  cmapOutline(r);                 // a no-op without the layer's pixels, by design
+  cmapPaint();
+  cmapOpenRegion(r.name);
+  csOpen(r.name);
+  cmapOpenPeople(r.name);
 }
 
 function renderCampmap(){
@@ -311,6 +456,9 @@ Answered here, out of the map you were already sent - no request per pixel.">ⓘ
             ${m.regions.filter(r => r.port).length} ports</span>
         </div>
         ${cmapFindingsHtml(m.findings)}
+        <div id="cmCamps"></div>
+        <div id="cmFind"></div>
+        <div id="cmViews"></div>
         <div id="cmCheck"></div>
         <div id="cmQuery"></div>
         <div id="cmPaint"></div>
@@ -325,6 +473,9 @@ Answered here, out of the map you were already sent - no request per pixel.">ⓘ
       </div>
     </div>`;
   cmapWire();
+  cbrOpen();          // 20b, D14, and it reads nothing until somebody opens it
+  cfdOpen();          // 20b, T8, and it never reads anything at all
+  cvwOpen();          // 20b, T9, out of the settings the page already has
   cchkOpen();
   cqOpen();
   cpaintOpen();
@@ -1847,7 +1998,7 @@ async function cmapOpenPeople(region){
   let owner = '';
   try{
     const d = await api.get(`/api/map/settlement?mod=${enc(c.mod)}`
-      + `&region=${enc(region)}`);
+      + `&region=${enc(region)}${cmapCampQ()}`);
     owner = d.owner || '';
   }catch(e){ return; }
   if(state.cmap !== c || !owner) return;
@@ -1868,7 +2019,8 @@ async function cmapOpenRegion(name){
   c.cv = null;
   cmapPickPaint();
   let d;
-  try{ d = await api.get(`/api/map/region?mod=${enc(c.mod)}&name=${enc(name)}`); }
+  try{ d = await api.get(`/api/map/region?mod=${enc(c.mod)}&name=${enc(name)}`
+    + cmapCampQ()); }
   catch(e){ d = {error: errText(e)}; }
   if(state.cmap !== c || !c.det || c.det.name !== name) return;
   c.det = d.error ? {name, error: d.error} : Object.assign({name}, d, {
@@ -2520,6 +2672,14 @@ function cmapKeys(){
     else if(e.key === '+' || e.key === '='){ cmapZoomBy(1.4); }
     else if(e.key === '-' || e.key === '_'){ cmapZoomBy(1 / 1.4); }
     else if(e.key === 't' || e.key === 'T'){ cmapTipToggle(); }
+    // 20b, T8. A letter and not a digit, because the ten digits are the ten
+    // layers; `f` for find, beside `t` for the tooltip, and the handler above
+    // has already returned if the cursor is in a box - including this one.
+    else if(e.key === 'f' || e.key === 'F'){
+      const k = state.cfd;
+      if(!k) return;
+      if(!k.open) cfdToggle(); else cfdFocus();
+    }
     else if(e.key === 'Escape' && (state.cmap.sel || state.cmap.pick)){
       const c = state.cmap;
       c.sel = null; c.pick = null; c.probe = null; c.det = null;

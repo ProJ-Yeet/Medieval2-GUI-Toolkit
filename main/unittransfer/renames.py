@@ -113,18 +113,22 @@ class RenameError(ValueError):
 # whole campaigns with their own descr_strat, win conditions, mercenaries and
 # script. A rename that skipped them would leave the mod's second campaign
 # pointing at a name that no longer exists.
+#
+# 20b moved the walk itself into `campstrat`, which owns the file, and found
+# that "right for a screen that offers a campaign to open" was wrong too - the
+# screen was offering one campaign of two. This is now that one list, as paths.
 
 
 def campaign_dirs(mod) -> List[Path]:
     """Every folder under ``world/maps/campaign`` holding a ``descr_strat.txt``.
 
     At any depth, which is the difference from
-    :func:`unittransfer.campstrat.campaigns`.
+    :func:`unittransfer.campstrat.campaigns`;
+    :func:`unittransfer.campstrat.campaign_paths` is the same list as names and
+    is what this reads.
     """
     base = Path(mod.data) / campstrat.CAMPAIGN_DIR_REL
-    if not base.is_dir():
-        return []
-    return sorted({p.parent for p in base.rglob(campstrat.STRAT_NAME)})
+    return [base / rel for rel in campstrat.campaign_paths(mod)]
 
 
 def region_files(mod) -> List[Path]:

@@ -46,6 +46,10 @@ const CCHK_VIEWS = [
 //: guard on the whole list, which on a map with a broken layer can be long.
 const CCHK_ROWS = 120;
 
+//: How far in the map zooms when it goes to a finding. Further than the query
+//: panel's jump to a province, because a finding is a single tile.
+const CCHK_ZOOM = 8;
+
 const CCHK_DOT = {fatal: '●', warn: '▲', note: '○'};
 
 /* ---------- state ---------- */
@@ -92,7 +96,8 @@ async function cchkRun(){
   k.busy = true; k.err = ''; k.plan = null;
   cchkPaint();
   try{
-    k.rep = await api.get(`/api/map/check?mod=${enc(k.mod)}`, {label: 'checking the map'});
+    k.rep = await api.get(`/api/map/check?mod=${enc(k.mod)}${cmapCampQ()}`,
+                          {label: 'checking the map'});
     k.ran = Date.now();
   }catch(e){ k.err = errText(e); }
   finally{ k.busy = false; }
@@ -172,17 +177,14 @@ function cchkFix(code){
    Not just a pick: a finding at 172,96 on a map fitted to the screen is four
    pixels wide and nobody can see which one it is. So the view zooms in far
    enough to count tiles, puts the tile in the middle and lets cmapPick do the
-   rest - the outline, the probe and the region card all follow from that. */
+   rest - the outline, the probe and the region card all follow from that.
+
+   `cmapGoTile` since 20b - one copy of that for the three panels that arrive
+   somewhere. Further in than the query panel's jump, deliberately: a finding
+   is one tile and a province is a shape. */
 function cchkGo(f){
-  const c = state.cmap;
-  if(!c || !f.tile) return;
-  const [w, h] = cmapCanvasSize();
-  const v = c.view;
-  v.zoom = Math.max(v.zoom, 8);
-  v.ox = w / 2 - (f.tile[0] + 0.5) * v.zoom;
-  v.oy = h / 2 - (f.tile[1] + 0.5) * v.zoom;
-  v.fitted = true;
-  cmapPick(f.tile);
+  if(!f || !f.tile) return;
+  cmapGoTile(f.tile, CCHK_ZOOM);
   activity('map check', `went to ${f.code} at ${f.tile.join(',')}`);
 }
 

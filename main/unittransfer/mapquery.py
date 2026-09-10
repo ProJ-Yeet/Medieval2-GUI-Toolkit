@@ -350,7 +350,10 @@ class Facts:
     def __init__(self, mod, cm: CampaignMap, campaign: str = ""):
         self.mod = mod
         self.cm = cm
-        self.campaign = campaign or campstrat.DEFAULT_CAMPAIGN
+        # `campaign_rel` and not the raw word - see mapcheck.Check, and
+        # 20b: every plan that writes descr_strat.txt takes its campaign
+        # from this attribute.
+        self.campaign = campstrat.campaign_rel(campaign)
         self.skipped: List[dict] = []
         self.regions: List[RegionFacts] = []
         self.by_name: Dict[str, RegionFacts] = {}

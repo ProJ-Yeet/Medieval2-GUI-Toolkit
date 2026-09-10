@@ -56,7 +56,7 @@ async function cxOpen(faction){
   cxPaint();
   let d;
   try{ d = await api.get(`/api/map/faction?mod=${enc(c.mod)}`
-    + `&faction=${enc(faction)}`); }
+    + `&faction=${enc(faction)}${cmapCampQ()}`); }
   catch(e){ d = {error: errText(e)}; }
   if(state.cx !== k) return;
   k.loading = false;

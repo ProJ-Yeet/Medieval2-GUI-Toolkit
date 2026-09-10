@@ -18,6 +18,7 @@ Split out of `ROADMAP.md` on 2026-09-05, verbatim.
 | 14a-14j - the bug-fix and polish pass, and v2.0.1 | below |
 | 15-15j - the 3D model viewer and everything on it, to v2.1.11 | below |
 | 16a-16k - the campaign map editor, V3.0.0 | below |
+| 17a-17i, 18a-18b, 19a-19b, 20a-20b - the correction pass and the Now set | below |
 
 ---
 
@@ -3512,3 +3513,151 @@ the draw order orders and what `check_layers` validates - so a reading of
 ruling for the heights. And the three river colours become one, so the overlay
 cannot tell a crossing from a source; the tooltip still can, because it reads
 the layer's real pixels and not the picture.
+
+## Phase 20b - Getting to the thing you want - done 2026-09-11
+
+**Closes T9, T8 and D14.** Three ways of arriving somewhere, on a screen that
+already existed. One of the three turned out not to be the item that was filed.
+
+**D14 was filed as cosmetic and was a hole.** The item reads "a screen listing
+every campaign in the mod with what is in each one, before you pick one", and
+both this roadmap and `REFERENCE_GAPS.md` said the picker behind it was already
+there: "`campstrat.campaigns` already lists every folder that really has a
+`descr_strat.txt`". It lists the folders **directly under**
+`world/maps/campaign`, and measured over what is installed here:
+
+    Divide and Conquer     imperial_campaign          31 factions, 199 settlements
+                           custom/Shattered_Alliances 30 factions, 199 settlements,
+                                                      25 playable, 11,686 lines
+    Third Age Reforged     imperial_campaign          29 factions, 196 settlements
+                           custom/Fellowship_Campaign 16 factions, 129 settlements,
+                                                      and ten map layers of its own
+    the stock game         imperial_campaign          22 factions, 111 settlements
+                           norman_prologue            5 factions, 9 settlements,
+                                                      and seven layers of its own
+
+Three of those six were unreachable, and **nothing about the routes was wrong**:
+every campaign-fed route on this screen has taken a `&campaign=` since 16g, and
+every one of them resolves a name with a slash in it - measured, not assumed.
+What was wrong was that the browser had no way to name one, so every request
+went out with nothing and the server's own fallback answered. So D14 is the list
+*and* the pick, and the deep walk 19b had built for renames
+(`renames.campaign_dirs`) moved into `campstrat.campaign_paths`, the module that
+owns the file, with `renames` reading it. **This is 19b's lesson twice in a
+row: a claim that is nearly true is what the next session builds on.**
+
+**A campaign name is now a word off the page, so there is a choke point.**
+`campstrat.campaign_rel` is the single conversion from a campaign name to a path
+under `world/maps/campaign`, and `strat_path`, `campfiles.campaign_dir`,
+`campevents.events_path`, `winconds.path_for`, `mapquery.Facts` and
+`mapcheck.Check` all go through it. A nested campaign IS a name with a
+separator in it, so "refuse anything with a slash" was not available; what is
+refused is a step that leaves the folder. Until 20b the campaign in every
+request was a server-side constant and none of this was reachable.
+
+**What a browser row says, and why each line is on it.** The menu title out of
+`campaign_descriptions.txt`, the dates and the timescale, the three rosters
+counted, what stands in it, and then three things that are measured facts about
+real mods rather than fields in a format:
+
+* **the folder and the header disagree.** DaC's `custom/Shattered_Alliances`
+  writes `campaign imperial_campaign` on its first line. Both names are shown,
+  because a mod's own files point at one or the other.
+* **a campaign with map layers of its own.** Fellowship ships all ten and the
+  Norman prologue seven, on the same tile grid as the base map. This screen
+  reads `world/maps/base`, always, so those are pixels it is not drawing - said
+  on the row rather than discovered later. `map_FE.tga` is deliberately not
+  counted: it is the menu picture, all six campaigns here have one, and counting
+  it would have reported "one layer of its own" about every campaign in
+  existence and meant nothing by it.
+* **no file to have a title in.** The stock game keeps
+  `campaign_descriptions.txt` inside its packed data, so every row's title is
+  empty and not one of them is a campaign nobody named. 16f's rule about a rule
+  with no evidence, on the field most likely to be blank.
+
+**And a correction to 18a, found by making a nested campaign reachable.**
+`campfiles.descr_token` upper-cased the campaign it was handed, which for
+`custom/Shattered_Alliances` would have built keys like
+`CUSTOM/SHATTERED_ALLIANCES_TITLE`. Divide and Conquer's own description file
+keys that campaign `SHATTERED_ALLIANCES_*` - measured, and checked in the suite
+against the file itself - so the token is the campaign's **leaf**, not the path
+it is reached through. 18a had no nested campaign to be wrong about because
+nothing offered one.
+
+**T8 - one box, and it asks the server nothing.** Every field it searches was
+already on its way to the browser: the province's code name, the settlement's
+code name and the region ID the engine numbers it with. The two that were not
+are the words the player actually reads, and `region_view` carries them now -
+two short strings a region, read once for the whole manifest through
+`campmap.shown_names`, against a request per keystroke. Searching a map for
+`Anorien_Province` when the game and the player both call it Anorien is a box
+only somebody who has already read the files can use.
+
+Three tiers, case-blind, and no fuzziness: exact, then starts-with, then
+contains. Nothing scores edit distance - a mod's provinces are called
+`Gap_of_Rohan_Province`, and a ranking nobody can predict is worse than a short
+list they can read. One row a province however many of its four names matched,
+and the row says **which** name it was, because "Sauron" being a settlement in
+Third Age Reforged and `Sauron_Province` being the region round it is exactly
+the ambiguity somebody typing it is trying to resolve. A settlement match goes
+to the settlement's own pixel; everything else goes to the province anchor,
+which 16c already worked out is a tile genuinely inside it. `f` opens the box
+and puts the cursor in it - a letter, because the ten digits are the ten layers.
+
+**And it closed a half-arrival all three jumps had.** `cmapPick` resolves a
+province by reading the colour under the tile off the region layer's own pixels,
+so with that layer never fetched - one tick from off, and off is an ordinary way
+to read a map - a jump centred on the tile and selected nothing, with only the
+probe's sentence to say where you were. Every caller already holds the name: a
+query row IS a province, a find hit is one. So `cmapGoTile(tile, zoom, region)`
+gives the pick a second chance from the manifest rather than turning a layer on
+behind somebody's back, which is the call 20a made about controls that rearrange
+the stack.
+
+**T9 - the same store, keyed by a name.** 16d already remembered one layer stack
+in `map_layers` on `/api/settings` and already did the hard part: a saved draw
+order is reconciled against the manifest rather than trusted, so codes that are
+still real keep their saved place, anything new goes where the server put it,
+and nothing is dropped or invented. A preset is that snapshot with a name on it,
+which is why `cmapSaveLayers` was split: `cmapLayerState` is the one description
+of what the layer stack is, and adding a switch to this screen now adds it to
+both the remembered stack and every preset in one place.
+
+A view is everything that changes what the map **looks** like - the layers,
+their order, their opacity, the colours punched out of each, 20a's two readings
+and 16g's colouring - and deliberately not the zoom, the pan, the selection or
+the tooltip. **A place is not a habit**, which is 16d's own ruling about
+`map_layers` applied whole; a preset that jumped the map somewhere is a preset
+nobody could use twice on two mods. The colouring is stored as its **code** and
+not its colours, because the colours are the server's answer about one mod's
+provinces.
+
+`cvwPlan` is pure - a manifest and a saved preset in, what to do about it out,
+including what it had to drop and what the manifest has that the preset never
+saw. That is what let the reconcile be measured in node against a preset naming
+a layer that does not exist, and it is where a settings file somebody hand-edited
+stops: three of a preset's fields are tables and one is a list, all four come out
+of a file a person can open, and anything that is not the shape it reads is
+treated as absent and lands on the manifest's own defaults.
+
+**`tests/test_mapgo.py` (142 checks) is new, and part of it runs in node**, on
+20a's harness. The real `cfdSearch` is run over **every installed map's real
+region table** - the exact-name tier, case blindness, the tier ordering, the
+localised name, the region ID, the settlement's own pixel, one row a province,
+and a painted colour the file never declared not being offered as a hit - and
+the real `cvwPlan` reconciles a preset written against a map that no longer
+exists. The Python half measures the two campaign lists against each other on
+whatever is installed and **fails loudly if a build ever puts the shallow list
+back in front of the browser**; part 5 serves a mod with two campaigns, one
+nested, and no map at all, which is what proves the route is a folder walk
+rather than a map read and that a campaign trying to leave the folder is
+refused rather than read.
+
+**What is deliberately not here.** The find box does not search characters,
+forts or anything else on 17d's marker layer: those are a campaign's contents
+and the box is about the map's places. It does not filter, either - that is
+16g's twenty-four filters, and a filter panel is a different thing from a box
+you reach for when you already know the name. A preset does not carry the zoom.
+And picking a campaign does not throw away an unsaved paint session: strokes are
+pixels on the base map, and the base map is the same map whichever campaign
+reads it.

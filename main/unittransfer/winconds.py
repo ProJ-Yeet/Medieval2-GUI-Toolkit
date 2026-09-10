@@ -207,7 +207,8 @@ def parse_wins(text: str) -> WinFile:
 
 
 def path_for(mod, campaign: str = campstrat.DEFAULT_CAMPAIGN) -> Path:
-    return mod.data / campstrat.CAMPAIGN_DIR_REL / campaign / REL_NAME
+    return (mod.data / campstrat.CAMPAIGN_DIR_REL
+            / campstrat.campaign_rel(campaign) / REL_NAME)
 
 
 def read_wins(mod, campaign: str = campstrat.DEFAULT_CAMPAIGN) -> WinFile:

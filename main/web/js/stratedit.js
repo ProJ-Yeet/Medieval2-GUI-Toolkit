@@ -66,7 +66,7 @@ async function csOpen(region){
   csPaint();
   let d;
   try{ d = await api.get(`/api/map/settlement?mod=${enc(c.mod)}`
-    + `&region=${enc(region)}`); }
+    + `&region=${enc(region)}${cmapCampQ()}`); }
   catch(e){ d = {error: errText(e)}; }
   if(state.cset !== k) return;
   k.loading = false;

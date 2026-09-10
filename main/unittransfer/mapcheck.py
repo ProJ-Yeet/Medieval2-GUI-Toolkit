@@ -238,7 +238,10 @@ class Check:
         self._px: Dict[str, Optional[bytes]] = {}
         self._rivers: Optional[Set[Tuple[int, int]]] = None
 
-        self.campaign = campaign or campstrat.DEFAULT_CAMPAIGN
+        # `campaign_rel` and not the raw word: 20b's browser is the first
+        # thing that lets a campaign name come off the page, and the label
+        # two lines down is what a backup is filed under.
+        self.campaign = campstrat.campaign_rel(campaign)
         self.strat: Optional[campstrat.StratFile] = None
         self.strat_rel = (f"{campstrat.CAMPAIGN_DIR_REL}/{self.campaign}/"
                           f"{campstrat.STRAT_NAME}")

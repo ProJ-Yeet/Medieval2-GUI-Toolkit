@@ -961,6 +961,51 @@
     gap:3px 10px}
   .cqsw{display:flex;align-items:center;gap:6px;font-size:11px;min-width:0}
   .cqsw b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* ---- 20b: three ways of arriving somewhere ----
+     The campaign browser (`cbr`), the find box (`cfd`) and the saved views
+     (`cvw`). All three reuse the paint tool's `cpbar`/`cptog` head and the
+     query panel's panel shell, which is the call 16g and 16h both made; what
+     is here is only what those two do not already describe. `cfd` and not
+     `cmfind` - that class is the read's own findings list and is four hundred
+     lines above this. */
+  .cbrpanel,.cfdpanel,.cvwpanel{display:flex;flex-direction:column;gap:7px;
+    border:1px solid var(--edge);border-radius:7px;padding:8px 9px;
+    background:var(--panel2);font-size:11.5px}
+  /* one campaign. The border goes solid on the one being read, so "which of
+     these am I looking at" is answered without reading a word. */
+  .cbrrow{display:flex;flex-direction:column;gap:2px;border:1px solid var(--edge);
+    border-radius:6px;padding:6px 8px;background:var(--panel);line-height:1.45}
+  .cbrrow.on{border-color:var(--accent)}
+  .cbrnm{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .cbrnm b{color:var(--ink);font-size:12.5px}
+  .cbrnm button{font:inherit;font-size:11px;padding:2px 8px;border-radius:5px;
+    margin-left:auto}
+  .cbrrow .w-warn,.cbrrow .w-bad{font-size:11px;line-height:1.45}
+  /* the find box: full width, and the list under it in the same shape as the
+     query panel's matched provinces, because it is the same act */
+  .cfdpanel input[type=search]{font:inherit;font-size:12.5px;padding:5px 8px;
+    border-radius:6px;border:1px solid var(--edge);background:var(--panel);
+    color:var(--ink);width:100%;box-sizing:border-box}
+  .cfdres{display:flex;flex-direction:column;gap:2px}
+  .cfdrow{padding:4px 0;border-top:1px solid var(--edge);cursor:pointer;
+    line-height:1.45;display:grid;grid-template-columns:1fr auto;gap:0 8px}
+  .cfdrow:hover{background:var(--panel)}
+  .cfdrow b{color:var(--ink)}
+  .cfdrow>.count{text-align:right;white-space:nowrap}
+  .cfdrow>div{grid-column:1/-1}
+  /* one saved view: its name is the button that loads it */
+  .cvwrow{display:grid;grid-template-columns:1fr auto;gap:2px 7px;
+    align-items:center;border-top:1px solid var(--edge);padding-top:5px}
+  .cvwrow:first-child{border-top:0;padding-top:0}
+  .cvwgo{font:inherit;font-size:12.5px;font-weight:600;text-align:left;
+    padding:3px 7px;border-radius:6px;border:1px solid var(--edge);
+    background:var(--panel);color:var(--ink);overflow-wrap:anywhere}
+  .cvwgo:hover{border-color:var(--accent);color:var(--accent)}
+  .cvwbtn{display:flex;gap:3px}
+  .cvwbtn button{font:inherit;font-size:10.5px;padding:2px 6px;border-radius:5px;
+    color:var(--dim)}
+  .cvwrow>.count{grid-column:1/-1;line-height:1.45}
+  .cvwpanel>button.primary{align-self:flex-start}
   /* ---- 16h: the settlement a province starts with ----
      Every name starts `cs`. It reuses the paint tool's bar and the region
      form's fields rather than growing a third set that looks nearly the
@@ -2437,6 +2482,9 @@
 <script src="js/edusort.js"></script>
 <script src="js/images.js"></script>
 <script src="js/campmap.js"></script>
+<script src="js/campbrowse.js"></script>
+<script src="js/mapfind.js"></script>
+<script src="js/mapviews.js"></script>
 <script src="js/campaint.js"></script>
 <script src="js/campmark.js"></script>
 <script src="js/mapcheck.js"></script>

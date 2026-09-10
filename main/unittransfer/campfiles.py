@@ -89,12 +89,151 @@ class CampFileError(kb.BlockError):
 
 
 def campaign_dir(mod, campaign: str = DEFAULT_CAMPAIGN) -> Path:
-    return Path(mod.data) / CAMPAIGN_DIR_REL / campaign
+    return Path(mod.data) / CAMPAIGN_DIR_REL / campstrat.campaign_rel(campaign)
 
 
 def campaigns(mod) -> List[str]:
-    """Every campaign folder with a ``descr_strat.txt`` - campstrat's own list."""
-    return campstrat.campaigns(mod)
+    """Every campaign this mod ships, at any depth - campstrat's own list.
+
+    :func:`unittransfer.campstrat.campaign_paths` rather than
+    ``campstrat.campaigns``, since 20b: the top-level list is what the engine's
+    menu reads, and every mod installed here keeps a whole second campaign one
+    folder further down.
+    """
+    return campstrat.campaign_paths(mod)
+
+
+# ---------------------------------------------------------------------------
+# D14 - the campaign browser (20b)
+#
+# What is in each campaign, before one is picked. It is here rather than in a
+# module of its own because it is a question about the campaign FOLDER, which
+# is what this module already owns, and because two of the four things it
+# reports are read by functions forty lines below it.
+
+#: The files a campaign folder can hold besides ``descr_strat.txt``, and what
+#: each one decides. Reported present or absent - the browser says what is
+#: there, and the panel that owns each file is what reads it.
+FOLDER_FILES: Tuple[Tuple[str, str], ...] = (
+    ("descr_strat.txt", "the campaign itself"),
+    ("descr_win_conditions.txt", "what each faction has to do to win"),
+    ("descr_mercenaries.txt", "the mercenary pools"),
+    ("descr_events.txt", "the historical events it fires"),
+    ("descr_faction_movies.xml", "the four movies a faction gets"),
+    ("campaign_script.txt", "its script"),
+    ("descr_regions.txt", "its own region list, instead of the base map's"),
+    ("descr_regions_and_settlement_name_lookup.txt", "the engine's own lookup"),
+)
+
+#: The node kinds worth counting on a browser row: what makes one campaign a
+#: different size from another. Not every kind in the file - `building`, `unit`
+#: and `relative` are counted inside these.
+FOLDER_COUNTS = ("faction", "settlement", "character", "fort", "watchtower",
+                 "resource")
+
+
+def browse(mod) -> Dict:
+    """Every campaign in the mod, with what is in each one. D14.
+
+    One parse of each ``descr_strat.txt`` and a folder listing - 40 to 70 ms a
+    campaign on the mods installed here, and nothing joined: the join is what
+    :class:`unittransfer.mapquery.Facts` is for and it costs three times as
+    much. This answers "which of these do I want open", so it reports the
+    numbers that tell two campaigns apart and stops there.
+
+    Three things it reports that nothing else does, all of them measured:
+
+    * **the folder and the header disagree.** Divide and Conquer's
+      ``custom/Shattered_Alliances`` writes ``campaign imperial_campaign`` on
+      its first line. Both names are shown, because a mod's own files point at
+      one or the other.
+    * **a campaign with layers of its own.** Vanilla's ``norman_prologue``
+      ships eight of the ten map layers inside its campaign folder and Third
+      Age Reforged's Fellowship campaign ships all ten, on the same tile grid
+      as the base map. The map screen reads ``world/maps/base``, always, so a
+      campaign with its own layers is a campaign whose pixels this tool is not
+      showing - said here rather than discovered later. ``map_FE.tga`` is not
+      counted: it is the menu picture, every campaign has its own, and counting
+      it would report "one layer of its own" about all six campaigns installed
+      here and mean nothing by it.
+    * **which campaign is the default**, since every route that takes a
+      campaign falls back to ``imperial_campaign`` and a mod whose campaign is
+      called something else has been reading a file nobody asked for.
+    """
+    import time
+
+    from . import campmap
+
+    t0 = time.perf_counter()
+    pairs = descr_pairs(mod)
+    #: every layer but the front-end picture - see the docstring
+    layer_names = {ly["file"].lower() for ly in campmap.LAYERS
+                   if ly["code"] != "fe"}
+    fe_name = campmap.LAYER_BY_CODE["fe"]["file"].lower()
+    rows: List[Dict] = []
+    for rel in campaigns(mod):
+        folder = campaign_dir(mod, rel)
+        row: Dict = {
+            "campaign": rel,
+            "leaf": campstrat.campaign_leaf(rel),
+            "nested": "/" in rel,
+            "folder": f"{CAMPAIGN_DIR_REL}/{rel}",
+            "default": rel == DEFAULT_CAMPAIGN,
+        }
+        title_key = descr_key(rel, "", "TITLE")
+        descr_key_ = descr_key(rel, "", "DESCR")
+        row["title"] = pairs.get(title_key, "")
+        row["title_key"] = title_key
+        row["blurb"] = pairs.get(descr_key_, "")
+        # the files, and the ones the base map owns instead
+        have = {}
+        for name, why in FOLDER_FILES:
+            have[name] = (folder / name).is_file()
+        row["files"] = [{"file": name, "why": why, "have": have[name]}
+                        for name, why in FOLDER_FILES]
+        try:
+            names = sorted(p.name for p in folder.iterdir() if p.is_file())
+        except OSError:
+            names = []
+        row["layers"] = sorted(n for n in names if n.lower() in layer_names)
+        row["frontend"] = any(n.lower() == fe_name for n in names)
+        row["files_total"] = len(names)
+        try:
+            sf = campstrat.read_strat(mod, rel)
+        except (OSError, ValueError) as exc:
+            row["read"] = False
+            row["problem"] = f"{rel}'s {campstrat.STRAT_NAME} could not be read ({exc})"
+            rows.append(row)
+            continue
+        counts = sf.counts()
+        row["read"] = True
+        row["problem"] = ""
+        row["name"] = sf.campaign
+        row["renamed"] = bool(sf.campaign) and sf.campaign != row["leaf"]
+        row["values"] = {k: str(sf.globals.get(k, ""))
+                         for k in campstrat.CAMPAIGN_VALUES
+                         if sf.globals.get(k, "") != ""}
+        row["rosters"] = {k: list(sf.rosters.get(k, []))
+                          for k in campstrat.ROSTERS}
+        row["counts"] = {k: counts.get(k, 0) for k in FOLDER_COUNTS}
+        row["lines"] = len(sf.lines)
+        row["problems"] = len(sf.problems)
+        rows.append(row)
+    return {
+        "mod": getattr(mod, "name", ""),
+        "dir": CAMPAIGN_DIR_REL,
+        "default": DEFAULT_CAMPAIGN,
+        "campaigns": rows,
+        # 16f's rule about a rule with no evidence, applied to a title. The
+        # stock game keeps campaign_descriptions.txt inside its packed data, so
+        # every row's title is empty and NOT ONE of them is a campaign nobody
+        # named - the browser says which of those two it is looking at.
+        "descriptions": {"file": DESCR_REL, "have": bool(pairs),
+                         "keys": len(pairs),
+                         "have_txt": descr_path(mod).exists()},
+        "base": campmap.BASE_REL,
+        "ms": int((time.perf_counter() - t0) * 1000),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -102,8 +241,15 @@ def campaigns(mod) -> List[str]:
 
 
 def descr_token(campaign: str) -> str:
-    """``imperial_campaign`` -> ``IMPERIAL_CAMPAIGN``. The whole key rule."""
-    return campaign.strip().upper()
+    """``imperial_campaign`` -> ``IMPERIAL_CAMPAIGN``. The whole key rule.
+
+    The campaign's own folder name, not the path it is reached through:
+    ``custom/Shattered_Alliances`` keys ``SHATTERED_ALLIANCES_*``, which is
+    measured off Divide and Conquer's own description file rather than assumed.
+    18a had no nested campaign to be wrong about because nothing offered one;
+    20b's browser does, and this is the half of it that had to be corrected.
+    """
+    return campstrat.campaign_leaf(campaign).upper()
 
 
 def descr_key(campaign: str, faction: str, kind: str) -> str:

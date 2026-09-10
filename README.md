@@ -39,7 +39,7 @@ one containing `mods`).
 | Unit Editor | Change, clone or delete the units of a single mod |
 | BMDB + Sprites | Edit any `battle_models.modeldb` entry, view models in 3D, and clean out what nothing references |
 | Buildings | Browse and edit `export_descr_buildings.txt`, including recruitment |
-| Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, set which mercenary pool a province hires from, name a faction on the new-game menu, edit the historical events a campaign fires and the natural disasters its map allows, name a province and its settlement as the player reads them, rename a province or a settlement everywhere it is named, read the river network as an overlay of its own and the heights as relief, tick any of the ten layers with its own number key, check the whole map against what the game will accept. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
+| Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, set which mercenary pool a province hires from, name a faction on the new-game menu, edit the historical events a campaign fires and the natural disasters its map allows, name a province and its settlement as the player reads them, rename a province or a settlement everywhere it is named, read the river network as an overlay of its own and the heights as relief, tick any of the ten layers with its own number key, find a province by the name the player reads or the one the files use, save what the map looks like under a name and come back to it, open any of the campaigns the mod ships rather than only the one the engine's menu lists, check the whole map against what the game will accept. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
 | Unit Sounds | Choose which voice bank entry each unit uses |
 | Sprites | Generate and wire up the far-LOD unit sprites |
 | Strings | Read and write the compiled `data/text/*.txt.strings.bin` files |
@@ -94,6 +94,16 @@ mod is carrying and cannot reach: rename one to make it reachable, or remove it.
 
 The ten map layers, the regions painted on them, and what `descr_strat.txt` puts
 on top. Ships on the dated beta pre-release; see the module table above.
+
+Three ways of arriving somewhere: **Find** takes a province, a settlement or a
+region ID and goes to it, matching the words the player reads as well as the
+code name the files use, out of the map already on screen and with nothing
+fetched per keystroke. **Views** saves what the map looks like - which layers, in
+what order, at what opacity, the colours punched out of each and the colouring
+over the top - under a name you can come back to, on any mod. **Campaign** lists
+every campaign the mod ships with what is in each one, and opens it: a mod
+routinely keeps a second campaign in a subfolder that the engine's own new-game
+menu never lists, and both mods this was measured against have one.
 
 ![Campaign Map](main/docs/images/campaign-map.png)
 

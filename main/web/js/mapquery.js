@@ -89,7 +89,7 @@ async function cqLoadVocab(){
   k.busy = true; k.err = '';
   cqPaint();
   try{
-    k.voc = await api.get(`/api/map/query/vocab?mod=${enc(k.mod)}`,
+    k.voc = await api.get(`/api/map/query/vocab?mod=${enc(k.mod)}${cmapCampQ()}`,
                           {label: 'reading what this map can be asked'});
   }catch(e){ k.err = errText(e); }
   finally{ k.busy = false; }
@@ -130,7 +130,8 @@ async function cqTheme(code){
   k.busy = true; k.err = '';
   cqPaint();
   try{
-    k.col = await api.get(`/api/map/colouring?mod=${enc(k.mod)}&code=${enc(code)}`,
+    k.col = await api.get(`/api/map/colouring?mod=${enc(k.mod)}&code=${enc(code)}`
+                          + cmapCampQ(),
                           {label: 'building that map'});
     k.theme = code;
     k.res = null;
@@ -309,17 +310,13 @@ function cqBordersToggle(on){
    Same as the validator's jump and for the same reason: a province nobody can
    find is an answer nobody can use. The tile is the region's anchor, which
    campmap already worked out is a pixel genuinely inside it rather than a
-   centroid that can land in the sea. */
+   centroid that can land in the sea.
+
+   The arithmetic itself is `cmapGoTile`, since 20b: this was one of three
+   copies of it and the find box would have been a fourth. */
 function cqGo(r){
-  const c = state.cmap;
-  if(!c || !r.tile) return;
-  const [w, h] = cmapCanvasSize();
-  const v = c.view;
-  v.zoom = Math.max(v.zoom, CQ_ZOOM);
-  v.ox = w / 2 - (r.tile[0] + 0.5) * v.zoom;
-  v.oy = h / 2 - (r.tile[1] + 0.5) * v.zoom;
-  v.fitted = true;
-  cmapPick(r.tile);
+  if(!r || !r.tile) return;
+  cmapGoTile(r.tile, CQ_ZOOM, r.name);
   activity('map query', `went to ${r.name}`);
 }
 

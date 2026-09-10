@@ -116,7 +116,7 @@ async function cmkLoad(){
   k.loading = true; k.err = '';
   cmkPaint();
   let d;
-  try{ d = await api.get(`/api/map/markers?mod=${enc(k.mod)}`); }
+  try{ d = await api.get(`/api/map/markers?mod=${enc(k.mod)}${cmapCampQ()}`); }
   catch(e){ d = {error: errText(e)}; }
   if(state.cmk !== k || !state.cmap || state.cmap.mod !== k.mod) return;
   k.loading = false;

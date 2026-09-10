@@ -1535,7 +1535,7 @@ def sea_pixels(cm: "CampaignMap") -> Dict[int, int]:
     return {key(rgb): counts[i] for i, rgb in enumerate(cm.index.colours)}
 
 
-def region_view(r: Region, sea: int = 0) -> dict:
+def region_view(r: Region, sea: int = 0, loc: Optional[Dict[str, str]] = None) -> dict:
     """One region, for the manifest. Image coordinates throughout.
 
     ``declared`` is whether the colour on the map and a record in
@@ -1543,8 +1543,17 @@ def region_view(r: Region, sea: int = 0) -> dict:
     error to hide: DaC paints a 517-pixel province the file never declares.
     ``sea`` is how many of its tiles are sea, which is what separates that from
     the ocean - see :func:`sea_pixels`.
+
+    ``loc`` is :func:`shown_names`, and the two words it adds are 20b's doing.
+    The manifest is what the find box searches, and searching a map for
+    ``Anorien_Province`` when the game and the player both call it Anórien is a
+    box only somebody who has read the files can use. Two short strings a
+    region, once, against a request per keystroke - which is the rule this
+    screen is built on.
     """
     rec = r.record
+    loc = loc or {}
+    settlement_name = rec.settlement if rec else ""
     return {
         "id": r.region_id, "rgb": list(r.rgb), "key": key(r.rgb),
         "name": r.name, "pixels": r.pixels, "sea": sea,
@@ -1552,7 +1561,9 @@ def region_view(r: Region, sea: int = 0) -> dict:
         "centroid": [round(r.centroid[0], 1), round(r.centroid[1], 1)],
         "settlement": list(r.settlement) if r.settlement else None,
         "port": list(r.port) if r.port else None,
-        "settlement_name": rec.settlement if rec else "",
+        "settlement_name": settlement_name,
+        "shown": loc.get(r.name, ""),
+        "shown_settlement": loc.get(settlement_name, ""),
         "faction": rec.faction if rec else "",
         "rebels": rec.rebels if rec else "",
         "declared": rec is not None,
@@ -1634,6 +1645,10 @@ def view(cm: "CampaignMap", name: str = "") -> dict:
     # numbered regions first, in engine order, then the ones the engine skips
     regions = sorted(idx.regions, key=lambda r: (r.region_id < 0, r.region_id))
     sea = sea_pixels(cm)
+    # 20b: read once for the whole manifest, not once a region. A mod with no
+    # names file at all answers an empty dict and every region shows its code
+    # name, which is what the game does too.
+    loc = shown_names(cm.mod)
     # Which undeclared colours are the ocean, and which are holes in the mod.
     # The line is drawn at half, and the measurements say it is nowhere near
     # anything: vanilla's four undeclared colours are 100% sea, DaC's ocean is
@@ -1648,7 +1663,7 @@ def view(cm: "CampaignMap", name: str = "") -> dict:
         "terrain": _terrain_view(t),
         "layers": layers,
         "vocab": _vocab_view(cm),
-        "regions": [region_view(r, sea.get(key(r.rgb), 0)) for r in regions],
+        "regions": [region_view(r, sea.get(key(r.rgb), 0), loc) for r in regions],
         "markers": {"settlement": list(SETTLEMENT_RGB), "port": list(PORT_RGB)},
         "findings": {
             "layers": cm.check_layers(),

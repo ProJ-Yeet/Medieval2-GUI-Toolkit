@@ -1,21 +1,25 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-10 · **v2.2.3 still the latest 2.x, beta 2026-09-10 alongside
-it off the same tree - `master` itself keeps the map on** · after Phase 20a,
-three layers read properly, cut on the beta line alone_
+_Updated: 2026-09-11 · **v2.2.3 still the latest 2.x, beta 2026-09-11 alongside
+it off the same tree - `master` itself keeps the map on** · after Phase 20b,
+getting to the thing you want, cut on the beta line alone_
 
 ## Next up
-**Phase 20b, getting to the thing you want** (`ROADMAP.md`) - named view
-presets, a search box over regions and settlements, and the campaign browser.
-20a closed on 2026-09-10 and its write-up is in `ROADMAP_ARCHIVE.md`. What is
-left of the 3.1.0 Now set is 20b, 20c and Phase 21.
+**Phase 20c, labels and picking a tile** (`ROADMAP.md`) - settlement names on
+the map placed to avoid overlap, and one shared pin control that writes a
+clicked tile into any coordinate field. 20b closed on 2026-09-11 and its
+write-up is in `ROADMAP_ARCHIVE.md`. What is left of the 3.1.0 Now set is 20c
+and Phase 21.
 
 **Cut after every change, from 2026-09-09.** The user's standing instruction:
 every change is released as it lands, without being asked. **Which lines depends
 on what the change touched** - map-only work is **the beta alone**, and the 2.x
 subrelease is cut only when something outside the campaign map changed. 19b was
-both, because renaming a faction is reached from the Factions screen. **20a was
-the beta alone**: three controls on the map screen and nothing outside it, so a
-2.x carrying it would carry no visible difference.
+both, because renaming a faction is reached from the Factions screen. **20a and
+20b were the beta alone**: everything a person can see in either one is on the
+map screen, and a 2.x carrying them would carry no visible difference. 20b did
+touch `renames.py`, which the Factions screen reaches - the deep campaign walk
+moved out of it into `campstrat.campaign_paths` - but it is the same list of the
+same folders, measured, so there is nothing to show for it outside the map.
 
 ## WHERE THINGS ARE - the tree moved on 2026-09-06
 Only the two `.bat` files and `README.md` are at the top of the repository.
@@ -27,7 +31,7 @@ path in this file and in the source is relative to. `main/dev/` never ships.
 Two lines off this one `master`, chosen by whether a change touches the campaign
 map. **Not campaign-map** → a **2.x subrelease with the map hidden**, uploaded
 `--latest` (latest **v2.2.3**, 2026-09-09). **Campaign-map** → the **beta line**,
-uploaded as a **pre-release** (latest **beta 2026-09-10**). A **subrelease means
+uploaded as a **pre-release** (latest **beta 2026-09-11**). A **subrelease means
 both**: one job, both zips, same tree.
 
 **Every change is cut as it lands, and the lines follow the change** (the user's
@@ -39,7 +43,7 @@ The switch is **one flag**: `off:true` on the `campmap` entry in `MODES` in
 `web/js/core.js`, which `menuModes()` and `modeOffered()` are the only readers
 of. It is a **release-time edit, not a state of `master`** - set it, bump the 2.x
 number, build, upload, then put it straight back off in the next commit.
-`master` carries the map ON, and `__version__` says `beta-2026-09-10` because
+`master` carries the map ON, and `__version__` says `beta-2026-09-11` because
 the beta was the last thing cut, which is honest rather than untidy.
 
 Betas are named by the **date** they were released, with a letter for a second
@@ -52,37 +56,47 @@ rather than typing it from memory. The strict step-by-step is `HANDOFF.md`.
 the Code View refusal that now names it. The region and settlement half of the
 same engine is reached from the map screen and went to the beta alone.
 
-**What beta 2026-09-10 carries**: 20a whole. `Rivers only` on the Features row,
-`Height as transparency` on the Heights row with the `Put it on top` its default
-draw order needs, and the ten number keys, one per layer, with Fit and 1:1 moved
-to Shift+0 and Shift+1. No 2.x went with it - all three are on the map screen.
+**What beta 2026-09-11 carries**: 20b whole, on top of 20a. The campaign
+browser and the three campaigns nothing had ever offered, the find box over a
+province, a settlement or a region ID, and named view presets. No 2.x went with
+it - everything visible in it is on the map screen. 20a is on the beta before
+it: `Rivers only` on the Features row, `Height as transparency` on the Heights
+row with the `Put it on top` its default draw order needs, and the ten number
+keys with Fit and 1:1 moved to Shift+0 and Shift+1.
 
 **3.0.0 final** is the beta's feature set with whatever the beta turns up fixed.
-**3.1.0** is Phases 18 to 21, and six of its sub-phases are now complete and
+**3.1.0** is Phases 18 to 21, and seven of its sub-phases are now complete and
 published on the beta line.
 
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
+| 20b - Getting to the thing you want | **done** | T9, T8 and D14 closed 2026-09-11, beta line only. New: `campstrat.campaign_paths` (every campaign at any depth - three installed campaigns nothing had ever offered) and `campstrat.campaign_rel` (the one conversion from a campaign name to a path, because 20b is what let one come off the page), `campfiles.browse`, `GET /api/map/campaigns`, `web/js/campbrowse.js`, `web/js/mapfind.js`, `web/js/mapviews.js`, `state.cmap.campaign` with `cmapCampQ()` and `cmapSetCampaign`, `cmapLayerState` split out of `cmapSaveLayers`, `cmapGoTile` as the one arrival, two localised names on `region_view`, `tests/test_mapgo.py` (142 checks, part of it in node). Corrected 18a's `descr_token` and the roadmap's claim about `campstrat.campaigns`. Write-up in `ROADMAP_ARCHIVE.md`. |
 | 20a - Three layers, read properly | **done** | D8, T2 and T11 closed 2026-09-10, beta line only. New: `mapvocab.RIVER_CODES` (and `mapcheck` reads it rather than keeping its own), `campmap.HOTKEYS` out with every layer in the manifest, `cmapMask` widened to a whitelist and a height ramp, `tests/test_maplayers.py` (36 checks, half of them the real `campmap.js` run in node). Write-up in `ROADMAP_ARCHIVE.md`. |
 | 19b - Rename, and follow it | **done** | D2 and D3 closed 2026-09-09. New: `renames.py`, `web/js/renameui.js`, `tests/test_renames.py` (56 checks), one POST pair, `Rename` on the region panel's two locked fields and `Rename slot` on Factions. Corrected the claim that `descr_strat.txt` names a settlement. Write-up in `ROADMAP_ARCHIVE.md`. |
 | 19 as a whole | **done** | All four items. 19a on 2026-09-09, 19b the same day. |
-| 20b, 20c, 21 - the rest of the Now set (3.1.0) | **scoped** | Three sessions: getting to the thing you want (20b), labels and picking a tile (20c), and two screens over data we already hold (21). |
+| 20c, 21 - the rest of the Now set (3.1.0) | **scoped** | Two sessions: labels and picking a tile (20c), and two screens over data we already hold (21). |
 | 22-24 - the Next set (3.2.0) | **scoped** | Five sessions: placing forts, watchtowers and resources, the textured terrain render, delete-a-region and create-a-campaign. |
 | 25-27 | scoped, unscheduled | OSM backdrop, map resize, layer generators. |
 | 16-18 | done | The campaign map editor, its correction pass, and the six files nothing could edit. Published on the beta line; the 3.0.0 and 3.1.0 numbers are still unassigned to a cut. |
 
 ## In-progress detail
-**Clean.** Nothing is mid-flight. All 92 suites were run after 20a: **88 pass
+**Clean.** Nothing is mid-flight. All 93 suites were run after 20b: **89 pass
 and the same four do not**, and those four fail identically on a stashed clean
 `master` - they are hard-coded Divide and Conquer numbers (77 port pixels,
 13,153 newlines, 305 characters, 73,904 sea tiles) and the installed DaC is a
 different build. Stash and re-run before believing one of those four:
 `test_campmap`, `test_campstrat`, `test_campview`, `test_stratchar`.
 
-**The 92nd is `tests/test_maplayers.py`, and it needs node** - it runs the
-browser's own pixel passes rather than a Python copy of them. Without node on
-PATH that half prints a skip line and the Python half still runs.
+**Two suites need node**: `tests/test_maplayers.py` (20a) and
+`tests/test_mapgo.py` (20b). Both run the browser's own functions rather than a
+Python copy of them, and without node on PATH each prints a skip line and its
+Python half still runs.
+
+**Two suites bind a socket and can collide inside a back-to-back run.**
+`test_buildings_http` and `test_viewer3d_http` both failed the 20b sweep on
+`WinError 10013` and both pass on their own. Re-run either alone before
+believing it - the same rule the two timing bars below have.
 
 **Two one-second timing bars are load-sensitive** and neither is any recent
 phase's doing: `test_mapcheck`'s rule-set bar and `test_mapquery`'s warm
@@ -96,10 +110,18 @@ The other standing trap: the suite leaks `ut_*` temp directories into `%TEMP%`.
   reference. Read all of it.
 - `unittransfer/renames.py` - **before adding any "follow this name" feature.**
   It is position-aware everywhere and the docstring says why with numbers: over
-  these namespaces a token walk corrupts real mods. It also holds
-  `campaign_dirs`, which finds a campaign folder at any depth where
-  `campstrat.campaigns` finds only the top level, and `region_files`, because a
-  campaign may ship its own `descr_regions.txt`.
+  these namespaces a token walk corrupts real mods. It also holds `region_files`,
+  because a campaign may ship its own `descr_regions.txt`. Its `campaign_dirs`
+  is now a wrapper: 20b moved the deep walk into
+  `campstrat.campaign_paths`, in the module that owns the file.
+- `unittransfer/campstrat.py`'s **two campaign lists, and the difference between
+  them** (20b). `campaigns` is the folders directly under
+  `world/maps/campaign` - what the engine's own new-game menu reads.
+  `campaign_paths` is every campaign at any depth, which is three more than the
+  first one finds across the three installs here, and is what anything offering
+  a campaign must use. `campaign_rel` is the ONE conversion from a campaign name
+  to a path, and every module that builds one goes through it, because since 20b
+  the name can come off the page.
 - `unittransfer/flatrecord.py` - **check here before writing any parser.** 18a
   used it for one block, 18b could not use it at all, and 19a and 19b needed no
   parser of their own: every file they touch was already owned. Check who owns a
@@ -120,20 +142,63 @@ The other standing trap: the suite leaks `ut_*` temp directories into `%TEMP%`.
 - `web/js/core.js` - `MODES` in `wire()`, and `docPoints()`. One global scope, no
   build step; adding a module means a new file, a `<script>` tag and a `MODES`
   entry, all three guarded by `tests/test_web_modules.py`.
+- **The map screen reads one campaign and `state.cmap.campaign` is which** (20b).
+  `cmapCampQ()` is the only place a request appends it and `cmapSetCampaign` is
+  the only place it changes - and that function owns the list of what a campaign
+  change invalidates, because five panels key their state on the mod alone.
+  A new panel over anything in `descr_strat.txt` appends `cmapCampQ()` and gets
+  the rest for free.
+- `cmapLayerState` in `campmap.js` - **the one description of what the layer
+  stack is** (20b). The remembered stack and every named view preset are both
+  copies of it, so a switch added to this screen is added to both in one place.
 
 ## Upstream
-Reference tool reviewed SHA **2740b0b**. `sync` was run again on 2026-09-10
-before 20a, as the rule asks for a phase touching the map screen, and it is
+Reference tool reviewed SHA **2740b0b**. `sync` was run again on 2026-09-11
+before 20b, as the rule asks for a phase touching the map screen, and it is
 **up to date at 2740b0b with nothing new since 2026-09-09** - so the last thing
 to review is still the one commit before it, two files, both `skip`.
 
 `src/components/map/` is where the reference tool's author is actively working,
 so a sub-phase that touches the map screen still runs `sync` first.
 `docs/upstream/PORT_MANIFEST.json` is authoritative: 310 files triaged, none
-untriaged. `docs/upstream/REFERENCE_GAPS.md` now marks D2, D3, D4, D5, M3, M4,
-M5, M6, M13 and G3 done.
+untriaged. `docs/upstream/REFERENCE_GAPS.md` now marks D2, D3, D4, D5, D8, D14,
+M3, M4, M5, M6, M13, G3, T2, T8, T9 and T11 done - **20a's three were missing
+from it and 20b added them**, which is the one step of the phase contract 20a
+skipped.
 
 ## Decisions
+- 2026-09-11: **A list something is picked from is part of the feature, and
+  "the picker already exists" is a claim to measure.** D14 was filed as a
+  cosmetic browser over a picker two documents said was already there. There was
+  no picker - every route took a campaign and nothing ever sent one - and the
+  list it would have been built on read only the top level of
+  `world/maps/campaign`, hiding a whole second campaign in all three installs
+  here. **This is 19b's lesson twice running: a claim that is nearly true is
+  what the next session builds on.**
+- 2026-09-11: **The moment a name can come off the page it needs one choke
+  point.** `campstrat.campaign_rel` is the only conversion from a campaign name
+  to a path under `world/maps/campaign`, and `strat_path`,
+  `campfiles.campaign_dir`, `campevents.events_path`, `winconds.path_for`,
+  `mapquery.Facts` and `mapcheck.Check` all go through it. A nested campaign IS
+  a name with a separator in it, so the rule is not "no separators" - it is
+  "no step that leaves the folder".
+- 2026-09-11: **A key built out of a campaign's name is built out of its leaf.**
+  Measured on Divide and Conquer, whose `custom/Shattered_Alliances` is keyed
+  `SHATTERED_ALLIANCES_*` in `campaign_descriptions.txt` and not by the path it
+  is reached through. 18a could not be wrong about this in practice because
+  nothing offered a nested campaign; 20b did, so it had to be corrected first.
+- 2026-09-11: **A search box is not a filter panel, and it answers out of what
+  the screen already has.** 16g's twenty-four filters are for a question; T8 is
+  for a name you already know, so it is one box, three tiers, no fuzziness, and
+  no request per keystroke. What that cost was two short strings a region on the
+  manifest - the words the player reads - because a box that only matches
+  `Anorien_Province` is a box only somebody who has read the files can use.
+- 2026-09-11: **A preset is a place-free copy of the layer stack.** 16d's ruling
+  about what `map_layers` keeps applies whole: the layers, their order, their
+  opacity, the punched colours and the colouring are habits; the zoom, the pan
+  and the selection are a place. So `cmapSaveLayers` was split and
+  `cmapLayerState` is the one snapshot both the remembered stack and every
+  preset are copies of.
 - 2026-09-10: **A different way of reading a layer is not another layer.** The
   stack is the ten files the map is made of: it is what T11's ten number keys
   count, what the draw order orders and what `check_layers` validates. So 20a's
