@@ -25,6 +25,29 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 22c - a campaign's own map (2026-09-11)
+Taken straight after 22b, on the user's word, as the follow-up 22b flagged:
+the map screen and ✓ Check still read world/maps/base for every campaign.
+Committed and not released.
+
+**Measured first:** five campaigns ship map files. The DaC and Reforged ones
+ship only `map_FE.tga`, vanilla's prologue eight layers, and Reforged's
+Fellowship campaign all twelve. On the base map, ✓ Check named the base
+`descr_regions.txt` nine times for Fellowship.
+
+**Built:** `Registry.map_for` behind every read route and the fact table, the
+layer each row is drawn from, findings and fixes naming the campaign's own
+file, and the brush refused, with the reason and where to go, where it would
+paint a map that is not on the screen. Rendering the paint panel's error when
+the brush is off was a gap found in the browser.
+
+**Verified** on a scratch copy of Reforged with both campaigns: the swap, the
+note, the refusal, an armed brush put down on the switch, and ✓ Check's file
+names. The scratch copy was deleted and the scratch launch entry removed.
+
+The full run afterwards was 99 suites: 95 pass, and the four that do not
+are the DaC four, each on its documented number.
+
 ## 22b - resources and the snap (2026-09-11)
 The second session of the Next set, on "continue next phase", committed and not
 released. Upstream `sync` was up to date at 2740b0b. It closes D9, D10, G5 and
@@ -2316,6 +2339,12 @@ evidence reports nothing**, and **a baseline shows and stops blocking; it never
 hides**. Two more were already locked there under different wording (Pillow
 only, and the browser never parses a TGA). They are left in the list below as
 well, because a dated entry is the record of when the call was made.
+
+Moved from `STATE.md` when 22c took the list past ten (2026-09-11):
+
+- 2026-09-11: **The first line of a crash log is the one to read.** B1 was filed
+  as "no settlement block", and the log's own first line - the game finding the
+  new pixel colour and not the record - named the bigger half.
 
 Moved from `STATE.md` when 22b took the list past ten (2026-09-11):
 

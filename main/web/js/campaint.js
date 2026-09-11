@@ -88,6 +88,19 @@ function cpaintArmed(){
 function cpaintToggle(){
   const p = state.cpaint;
   if(!p) return;
+  // A campaign that reads its own map is drawn from it, and the brush paints
+  // world/maps/base: arming it there would paint a map nobody can see. The
+  // server refuses the stroke too; this says so before anybody tries one.
+  const h = state.cmap && state.cmap.man && state.cmap.man.campaign_map;
+  if(!p.on && h && h.paints === false){
+    p.err = `${h.campaign} reads its own map from ${h.folder}, and the brush `
+      + 'paints world/maps/base, which it does not show. '
+      + ((h.readers || []).length
+        ? `Open ${h.readers.join(' or ')} with 🏰 Campaign to paint.`
+        : 'No campaign in this mod reads the base map.');
+    cpaintPaint();
+    return;
+  }
   p.on = !p.on;
   p.err = ''; p.note = '';
   activity('map paint', p.on ? 'armed the brush' : 'put the brush down');
@@ -128,7 +141,11 @@ async function cpaintPost(action, body){
   const p = state.cpaint;
   p.busy = true;
   let r;
-  try{ r = await api.post(`/api/map/${action}`, Object.assign({mod: p.mod}, body)); }
+  // the campaign on the screen, so the server can refuse a stroke that
+  // campaign would never show (campaint.paints_for)
+  const camp = (state.cmap && state.cmap.campaign) || '';
+  try{ r = await api.post(`/api/map/${action}`,
+                          Object.assign({mod: p.mod, campaign: camp}, body)); }
   catch(e){ r = {error: errText(e)}; }
   finally{ p.busy = false; }
   if(state.cpaint !== p) return null;
@@ -277,7 +294,8 @@ async function cpaintPipette(tile){
   const p = state.cpaint, c = state.cmap;
   const [tx, ty] = tile;
   let r;
-  try{ r = await api.get(`/api/map/probe?mod=${enc(p.mod)}&x=${tx}&y=${ty}`); }
+  try{ r = await api.get(`/api/map/probe?mod=${enc(p.mod)}&x=${tx}&y=${ty}`
+                         + cmapCampQ()); }
   catch(e){ toast('✗ ' + errText(e), 6000); return; }
   if(state.cpaint !== p) return;
   const L = (r.layers || []).find(l => l.code === p.target);
@@ -558,7 +576,9 @@ function cpaintHtml(){
         ? ` · ${st.dirty.length} layer${st.dirty.length === 1 ? '' : 's'}` : ''
       } unsaved</span>` : ''}
   </div>`;
-  if(!p.on) return head;
+  // a brush that would not arm says why, under the button that was pressed
+  if(!p.on) return head + (p.err ? `<div class="cppanel"><div class="w-warn">${
+    esc(p.err)}</div></div>` : '');
   if(p.palErr) return head + `<div class="cppanel"><div class="w-bad">${
     esc(p.palErr)}</div></div>`;
   if(!p.pal) return head + `<div class="cppanel"><span class="count">reading the

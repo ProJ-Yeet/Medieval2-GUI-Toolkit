@@ -441,6 +441,80 @@ function cmapSetCampaign(rel){
     csOpen(c.sel.name);
     cmapOpenPeople(c.sel.name);
   }
+  // and the map itself, when this campaign reads map files of its own
+  cmapRefetchMap();
+}
+
+/* A campaign that ships its own map files is drawn from them (22b's follow-up).
+
+   The engine reads each map file separately, a campaign folder's copy first,
+   so Third Age Reforged's Fellowship campaign is its own map and DaC's two
+   campaigns each have their own front-end picture. The server answers the
+   manifest for the campaign picked, and every layer row says which file it
+   is (`rel`). A layer whose file changed is dropped and fetched again; the
+   rest, and the view, stay - so a switch between two campaigns that read the
+   same base map costs one small request and draws nothing twice. */
+async function cmapRefetchMap(){
+  const c = state.cmap;
+  if(!c) return;
+  let man;
+  try{ man = await api.get(`/api/map?mod=${enc(c.mod)}${cmapCampQ()}`); }
+  catch(e){ toast('✗ ' + errText(e), 8000); return; }
+  if(state.cmap !== c) return;
+  const was = {};
+  for(const l of c.man.layers) was[l.code] = l.rel || '';
+  let changed = 0;
+  for(const l of man.layers){
+    const L = c.layers[l.code];
+    if(!L) continue;
+    if((l.rel || '') !== was[l.code]){
+      changed++;
+      Object.assign(L, {img: null, raw: null, cv: null, px: null, masked: null,
+                        maskKey: '', legend: null, legendErr: '', failed: '',
+                        loading: false});
+      L.on = L.on && l.present;
+    }
+    L.def = l;
+  }
+  const regionsMoved = (man.regions || []).length !== (c.man.regions || []).length
+    || JSON.stringify((man.campaign_map || {}).judged) !==
+       JSON.stringify((c.man.campaign_map || {}).judged);
+  c.man = man;
+  if(regionsMoved || changed){
+    c.byKey = new Map();
+    for(const r of man.regions) c.byKey.set(r.key, r);
+    c.comp = null; c.compKey = ''; c.outline = null; c.outlineKey = -1;
+    c.lab = null; c.tipKey = ''; c.saidTip = '';
+    // a selection is a province of the map that was on the screen
+    if(c.sel) c.sel = man.regions.find(r => r.name === c.sel.name) || null;
+  }
+  // an armed brush over a map it does not paint is put down, with the reason
+  const h = man.campaign_map || {};
+  if(state.cpaint && state.cpaint.on && h.paints === false){
+    state.cpaint.on = false;
+    cpaintToggle();                     // refuses, and says why in the panel
+  }
+  renderCampmap();
+  if(changed) cmapLoadLayers(); else { cmapCompose(); cmapPaint(); }
+}
+
+/* Where this campaign's map comes from, said under the Campaign button. Nothing
+   at all for a campaign that ships no map file, which is most of them. */
+function cmapHomeNote(){
+  const c = state.cmap;
+  const h = c && c.man && c.man.campaign_map;
+  if(!h || !(h.own || []).length) return '';
+  const own = h.own.map(f => `<code>${esc(f)}</code>`).join(', ');
+  if(!h.judged)
+    return `<div class="count">${esc(h.campaign)} ships its own ${own}, so that
+      layer is drawn from <code>${esc(h.folder)}</code>. Everything else is
+      <code>world/maps/base</code>, which is what the brush paints.</div>`;
+  const readers = (h.readers || []).map(esc).join(', ');
+  return `<div class="w-warn">${esc(h.campaign)} reads its own map: ${own}, from
+    <code>${esc(h.folder)}</code>. The layers, the names under the pointer and
+    ✓ Check are that map. The brush is off here, because it paints
+    <code>world/maps/base</code>${readers ? `, which ${readers} read${
+      h.readers.length === 1 ? 's' : ''}` : ''}.</div>`;
 }
 
 /* Centre the map on a tile and pick it.
@@ -968,7 +1042,7 @@ const CMAP_LAYER_TRIES = 3;
 function cmapFetchLayer(c, code){
   const L = c.layers[code];
   const url = `/api/map/layer?mod=${enc(c.mod)}&code=${enc(code)}`
-    + `&fit=${enc(L.def.fit)}&format=rgb`;
+    + `&fit=${enc(L.def.fit)}&format=rgb${cmapCampQ()}`;
   L.loading = true;
   const finish = why => {
     L.loading = false;
@@ -1919,7 +1993,8 @@ async function cmapLegend(code){
   L.legendBusy = true; L.legendErr = '';
   cmapRepanel();
   let r;
-  try{ r = await api.get(`/api/map/legend?mod=${enc(c.mod)}&code=${enc(code)}`); }
+  try{ r = await api.get(`/api/map/legend?mod=${enc(c.mod)}&code=${enc(code)}`
+                         + cmapCampQ()); }
   catch(e){ r = null; L.legendErr = errText(e); }
   if(state.cmap !== c) return;
   L.legendBusy = false;
@@ -2211,7 +2286,8 @@ async function cmapPick(tile){
 
 async function cmapProbe(c, tx, ty, want){
   let p;
-  try{ p = await api.get(`/api/map/probe?mod=${enc(c.mod)}&x=${tx}&y=${ty}`); }
+  try{ p = await api.get(`/api/map/probe?mod=${enc(c.mod)}&x=${tx}&y=${ty}`
+                         + cmapCampQ()); }
   catch(e){ if(state.cmap === c && c.pick && c.pick.join(',') === want){
     c.probeErr = errText(e); cmapPickPaint(); } return; }
   if(state.cmap !== c || !c.pick || c.pick.join(',') !== want) return;

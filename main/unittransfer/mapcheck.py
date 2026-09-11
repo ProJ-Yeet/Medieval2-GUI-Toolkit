@@ -66,7 +66,7 @@ from PIL import Image
 
 from . import campmap, campstrat, mapvocab
 from .campaint import block
-from .campmap import (BASE_REL, ENCODING, LAYER_BY_CODE, REGIONS_REL, RWM_REL,
+from .campmap import (ENCODING, LAYER_BY_CODE, RWM_REL,
                       CampaignMap, MapError, Rgb, key)
 from .maptga import encode
 from .mapvocab import PORT_RGB, SETTLEMENT_RGB
@@ -315,6 +315,15 @@ class Check:
     def in_grid(self, x: int, y: int) -> bool:
         return self.cm.terrain.in_bounds(x, y)
 
+    def rel(self, name: str) -> str:
+        """The file a finding about ``name`` names: the copy this map read.
+
+        A campaign that ships its own ``map_heights.tga`` is judged on it, so a
+        finding about its heights names that file and a fix writes it, rather
+        than world/maps/base's, which the campaign never reads.
+        """
+        return campmap.rel_of(self.cm, name)
+
 
 # ---------------------------------------------------------------------------
 # 1) the layers themselves
@@ -333,7 +342,7 @@ def _r_layer_size(ck: Check) -> Iterable[Finding]:
     for line in ck.cm.check_layers():
         name = line.split(":", 1)[0]
         yield Finding("layer.size", "fatal", line,
-                      file=f"{BASE_REL}/{name}" if name.endswith(".tga") else "",
+                      file=ck.rel(name) if name.endswith(".tga") else "",
                       what=line)
 
 
@@ -351,7 +360,7 @@ def _r_colour_cap(ck: Check) -> Iterable[Finding]:
             f"is {mapvocab.MAX_REGION_COLOURS}, the two marker colours "
             f"included. Everything past the cap is a province the game never "
             f"sees.",
-            file=f"{BASE_REL}/map_regions.tga", what="cap")
+            file=ck.rel("map_regions.tga"), what="cap")
 
 
 # ---------------------------------------------------------------------------
@@ -379,7 +388,7 @@ def _r_duplicate_colour(ck: Check) -> Iterable[Finding]:
             f"{rec.rgb[2]}), which {first.name} already has. The map cannot "
             f"tell them apart, so one of the two owns every tile and the other "
             f"owns none.",
-            file=REGIONS_REL, line=rec.rgb_line + 1, what=f"{rec.name}|{first.name}")
+            file=ck.rel("descr_regions.txt"), line=rec.rgb_line + 1, what=f"{rec.name}|{first.name}")
 
 
 @rule("region.reserved_colour", "Reserved colours", "fatal",
@@ -394,7 +403,7 @@ def _r_reserved_colour(ck: Check) -> Iterable[Finding]:
                     f"{rec.name} claims rgb({rgb[0]}, {rgb[1]}, {rgb[2]}), "
                     f"which is {what} rather than a province colour. The "
                     f"region scan skips it, so the province does not exist.",
-                    file=REGIONS_REL, line=rec.rgb_line + 1, what=rec.name)
+                    file=ck.rel("descr_regions.txt"), line=rec.rgb_line + 1, what=rec.name)
 
 
 @rule("region.no_pixels", "Regions with no tiles", "fatal",
@@ -410,7 +419,7 @@ def _r_no_pixels(ck: Check) -> Iterable[Finding]:
             f"{rec.rgb[2]}) and not one pixel of map_regions.tga is that "
             f"colour. A region with no tiles is legal to write and fatal to "
             f"play.",
-            file=REGIONS_REL, line=rec.rgb_line + 1, what=rec.name)
+            file=ck.rel("descr_regions.txt"), line=rec.rgb_line + 1, what=rec.name)
 
 
 @rule("region.undeclared", "Provinces nobody declared", "fatal",
@@ -439,7 +448,7 @@ def _r_undeclared(ck: Check) -> Iterable[Finding]:
             f"{r.rgb[2]}) and descr_regions.txt declares no region with that "
             f"colour. None of it is sea, so it is land the game has no "
             f"province for.",
-            file=f"{BASE_REL}/map_regions.tga", tile=r.anchor,
+            file=ck.rel("map_regions.tga"), tile=r.anchor,
             what=f"{r.rgb[0]},{r.rgb[1]},{r.rgb[2]}")
 
 
@@ -456,7 +465,7 @@ def _r_record_fields(ck: Check) -> Iterable[Finding]:
         for f in campmap.check_record(rec, ck.vocab):
             yield Finding("region.record", "fatal" if f["fatal"] else "warn",
                           f"{rec.name}: {f['message']}",
-                          file=REGIONS_REL, line=f["line"],
+                          file=ck.rel("descr_regions.txt"), line=f["line"],
                           what=f"{rec.name}|{f['field']}|{f['message'][:60]}")
 
 
@@ -471,7 +480,7 @@ def _r_wasteland_last(ck: Check) -> Iterable[Finding]:
                 f"{rec.name} has no settlement line, and the arbiter says such "
                 f"a record must be the last one in the file. It is entry "
                 f"{i + 1} of {len(recs)}.",
-                file=REGIONS_REL, line=rec.span[0] + 1, what=rec.name)
+                file=ck.rel("descr_regions.txt"), line=rec.span[0] + 1, what=rec.name)
 
 
 # ---------------------------------------------------------------------------
@@ -491,7 +500,7 @@ def _r_no_settlement(ck: Check) -> Iterable[Finding]:
             "marker.no_settlement", "fatal",
             f"{r.name} owns {r.pixels:,} tiles and has no settlement pixel on "
             f"any of them. The engine has nowhere to put the city.",
-            file=f"{BASE_REL}/map_regions.tga", tile=r.anchor, what=r.name)
+            file=ck.rel("map_regions.tga"), tile=r.anchor, what=r.name)
 
 
 @rule("marker.extra", "More than one marker in a region", "fatal",
@@ -508,7 +517,7 @@ def _r_extra_markers(ck: Check) -> Iterable[Finding]:
             + (f", in {owner}" if owner else "")
             + ". A region gets one city, and the engine takes the first it "
               "scans and leaves the other standing in nothing.",
-            file=f"{BASE_REL}/map_regions.tga", tile=at,
+            file=ck.rel("map_regions.tga"), tile=at,
             what=f"settlement|{at[0]},{at[1]}")
     for at in idx.extra_ports[:ROW_MAX]:
         owner = _marker_owner(idx, at, "port")
@@ -517,7 +526,7 @@ def _r_extra_markers(ck: Check) -> Iterable[Finding]:
             f"a second port pixel at {at[0]},{at[1]}"
             + (f", for {owner}" if owner else "")
             + ". Only one of them will ever be a port.",
-            file=f"{BASE_REL}/map_regions.tga", tile=at,
+            file=ck.rel("map_regions.tga"), tile=at,
             what=f"port|{at[0]},{at[1]}")
 
 
@@ -544,7 +553,7 @@ def _r_orphan_markers(ck: Check) -> Iterable[Finding]:
             f"The settlement pixel at {at[0]},{at[1]} has no region on any "
             f"cardinal side, so no province owns it. Usually a city painted on "
             f"the map and never written into descr_regions.txt.",
-            file=f"{BASE_REL}/map_regions.tga", tile=at,
+            file=ck.rel("map_regions.tga"), tile=at,
             what=f"settlement|{at[0]},{at[1]}")
     # A port with no sea at all beside it is also undecidable - the dock rule
     # needs water on one side - but "nobody owns it" is the vaguer half of that
@@ -558,7 +567,7 @@ def _r_orphan_markers(ck: Check) -> Iterable[Finding]:
             f"The port pixel at {at[0]},{at[1]} touches no single region the "
             f"cardinal rule can give it to, so which province gets the port is "
             f"whatever the engine decides.",
-            file=f"{BASE_REL}/map_regions.tga", tile=at,
+            file=ck.rel("map_regions.tga"), tile=at,
             what=f"port|{at[0]},{at[1]}")
 
 
@@ -574,10 +583,10 @@ def _has_sea_beside(cm: CampaignMap, sea: bytes, at: Tuple[int, int]) -> bool:
 #: file each names is the layer the fault is IN, which is where somebody has to
 #: go and paint to clear it - not ``map_regions.tga``, where the marker is.
 MARKER_LAYER = {
-    "marker.ground": f"{BASE_REL}/map_ground_types.tga",
-    "marker.feature": f"{BASE_REL}/map_features.tga",
-    "marker.sea": f"{BASE_REL}/map_heights.tga",
-    "port.inland": f"{BASE_REL}/map_regions.tga",
+    "marker.ground": "map_ground_types.tga",
+    "marker.feature": "map_features.tga",
+    "marker.sea": "map_heights.tga",
+    "port.inland": "map_regions.tga",
 }
 
 
@@ -670,7 +679,8 @@ def _marker_rule(ck: Check, code: str) -> Iterable[Finding]:
                     code, "fatal" if f["fatal"] else "warn",
                     f"{r.name or 'An undeclared region'}'s {kind} pixel at "
                     f"{at[0]},{at[1]} {f['tail']}",
-                    file=MARKER_LAYER.get(code, ""), tile=at,
+                    file=ck.rel(MARKER_LAYER[code]) if code in MARKER_LAYER
+                    else "", tile=at,
                     fix="heights_black" if f.get("ambiguous") else "",
                     what=f"{kind}|{at[0]},{at[1]}")
 
@@ -757,7 +767,7 @@ def _unknown_colours(ck: Check, code: str, namer, label: str, rule_code: str,
             f"{LAYER_BY_CODE[code]['file']} and {label}. The engine reads it as "
             f"whatever it happens to fall nearest to, which is not a decision "
             f"anybody made.",
-            file=f"{BASE_REL}/{LAYER_BY_CODE[code]['file']}",
+            file=ck.rel(LAYER_BY_CODE[code]['file']),
             tile=where[0] if where else None, count=count,
             what=f"{rgb[0]},{rgb[1]},{rgb[2]}")
 
@@ -842,7 +852,7 @@ def _r_river_diagonal(ck: Check) -> Iterable[Finding]:
             f"The river tile at {x},{y} touches the rest of the river only at "
             f"a corner. The engine steps a river north, south, east and west, "
             f"so the water stops here and starts again on the far side.",
-            file=f"{BASE_REL}/map_features.tga", tile=(x, y), what=f"{x},{y}")
+            file=ck.rel("map_features.tga"), tile=(x, y), what=f"{x},{y}")
 
 
 @rule("river.isolated", "A river tile on its own", "warn",
@@ -860,7 +870,7 @@ def _r_river_isolated(ck: Check) -> Iterable[Finding]:
             "river.isolated", "warn",
             f"The river tile at {x},{y} touches no other river tile at all. "
             f"One tile of water with no course through it.",
-            file=f"{BASE_REL}/map_features.tga", tile=(x, y), what=f"{x},{y}")
+            file=ck.rel("map_features.tga"), tile=(x, y), what=f"{x},{y}")
 
 
 @rule("river.rejoin", "A river that splits and rejoins", "warn",
@@ -903,7 +913,7 @@ def _r_river_rejoin(ck: Check) -> Iterable[Finding]:
                 f"The river closes a loop at {p[0]},{p[1]}: the water leaves "
                 f"here and comes back to the same tile. A river the engine can "
                 f"build is a tree, and a loop has no mouth.",
-                file=f"{BASE_REL}/map_features.tga", tile=p,
+                file=ck.rel("map_features.tga"), tile=p,
                 what=f"{p[0]},{p[1]}|{q[0]},{q[1]}")
 
 
@@ -956,14 +966,14 @@ def _r_height_black(ck: Check) -> Iterable[Finding]:
             "height.ambiguous", "warn",
             f"The tile at {at[0]},{at[1]} is land in map_ground_types.tga and "
             f"pure black in map_heights.tga, which the engine reads as sea.",
-            file=f"{BASE_REL}/map_heights.tga", tile=at, fix="heights_black",
+            file=ck.rel("map_heights.tga"), tile=at, fix="heights_black",
             what=f"{at[0]},{at[1]}")
     if len(tiles) > ROW_MAX:
         yield Finding(
             "height.ambiguous", "warn",
             f"Another {len(tiles) - ROW_MAX:,} tiles carry the same pure-black "
             f"altitude on land.",
-            file=f"{BASE_REL}/map_heights.tga", tile=tiles[ROW_MAX],
+            file=ck.rel("map_heights.tga"), tile=tiles[ROW_MAX],
             fix="heights_black", count=len(tiles) - ROW_MAX, what="rest")
 
 
@@ -1419,7 +1429,7 @@ FIXES: Dict[str, dict] = {
     "heights_black": {
         "label": "Set ambiguous altitudes to (1,1,1)",
         "rule": "height.ambiguous",
-        "file": f"{BASE_REL}/map_heights.tga",
+        "file": "map_heights.tga",
         "what": "Every pure-black altitude pixel on a tile the ground layer "
                 "calls land becomes (1,1,1). That is one step off black, land "
                 "beyond argument, and no visible change to the map.",
@@ -1557,7 +1567,7 @@ def _plan_heights(ck: Check, p: FixPlan) -> None:
     if not moved:
         return
     try:
-        p.data[f"{BASE_REL}/map_heights.tga"] = encode(img, info)
+        p.data[ck.rel("map_heights.tga")] = encode(img, info)
     except Exception as exc:                           # noqa: BLE001
         p.errors.append(f"map_heights.tga could not be re-encoded: {exc}")
         return
@@ -1640,13 +1650,16 @@ def apply_fix(p: FixPlan) -> dict:
 
     # Only a layer changing invalidates the compiled map; a descr_strat.txt edit
     # does not. It is deleted whenever one did, for the same reason a paint save
-    # deletes it: the game reads the binary in preference to the text.
-    if p.data:
-        rwm = Path(mod.data) / RWM_REL
+    # deletes it: the game reads the binary in preference to the text. The one
+    # beside the layer that changed - a campaign that ships its own heights
+    # ships its own map.rwm, and that is the one it would load.
+    for rw in sorted({str(Path(rel).parent.as_posix() + "/" + Path(RWM_REL).name)
+                      for rel in p.data}):
+        rwm = Path(mod.data) / rw
         if rwm.exists():
-            keep(RWM_REL)
+            keep(rw)
             rwm.unlink()
-            manifest["deleted"].append(RWM_REL)
+            manifest["deleted"].append(rw)
             file_op("DELETE", rwm, "stale compiled map - the game would load it "
                                    "instead")
 

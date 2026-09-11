@@ -192,9 +192,15 @@ EDU cleanup (export_descr_unit.txt as a whole, see :mod:`unittransfer.edusort`)
                                     returns the new text, only what would change
 
 Campaign Map mode (the ten TGA layers and descr_regions.txt, see
-:mod:`unittransfer.campmap`)
-  GET  /api/map?mod=             -> the manifest: tile grid, ten layers with
-                                    what is wrong with each, the region table
+:mod:`unittransfer.campmap`). Every read route below takes `&campaign=`: a
+campaign that ships its own copy of a map file is drawn, probed and checked on
+it (`Registry.map_for`, 22c). The palette and the brush stay on world/maps/base,
+and a stroke sent with a campaign that does not show the base map is refused.
+  GET  /api/map?mod=[&campaign=] -> the manifest: tile grid, ten layers with
+                                    what is wrong with each and which file each
+                                    is drawn from (`rel`), the region table, and
+                                    `campaign_map` - the files the campaign ships
+                                    and whether the brush paints what is shown
   GET  /api/map/layer?mod=&code=&fit=[&format=rgb]
                                  -> one layer as PNG, cached on disk by mtime;
                                     with format=rgb, its raw RGB bytes and its
@@ -934,7 +940,7 @@ class Registry:
         """
         campaign = campaign or campstrat.DEFAULT_CAMPAIGN
         mod = self.describe(name)
-        cm = self.campaign_map(name)
+        cm = self.map_for(name, campaign)
         sig = self._campaign_signature(mod, campaign)
         with self._lock:
             held = self._facts.get((name, campaign))
@@ -946,6 +952,21 @@ class Registry:
         log.info("QUERY  %s/%s: %d regions in %d ms", name, campaign,
                  len(facts.regions), facts.ms)
         return facts
+
+    def map_for(self, name: str, campaign: str = "") -> "campmap.CampaignMap":
+        """The map ``campaign`` is drawn and judged on.
+
+        :meth:`campaign_map` - the base map, the object the paint tool paints -
+        unless the campaign ships its own copy of a file a judgement reads, when
+        it is :func:`campmap.campaign_map`'s object reading that folder first.
+        Third Age Reforged's Fellowship campaign ships all twelve; nothing else
+        installed ships one that decides anything, so everywhere else this is
+        :meth:`campaign_map` itself and an unsaved stroke is seen as it was.
+        """
+        base = self.campaign_map(name)
+        with self._lock:
+            return campmap.campaign_map(self.describe(name),
+                                        campaign or campstrat.DEFAULT_CAMPAIGN, base)
 
     def campaign_map(self, name: str) -> "campmap.CampaignMap":
         """This mod's campaign map, read once and kept.
@@ -2904,6 +2925,9 @@ class Handler(BaseHTTPRequestHandler):
             cm = self.registry.campaign_map(name)
         except (KeyError, campmap.MapError, ModDataError, OSError) as e:
             return {"error": str(e)}
+        refused = campaint.paints_for(mod, body.get("campaign") or "", action)
+        if refused:
+            return {"error": refused}
         sess, reset = campaint.session(name, mod, cm)
         try:
             if action == "paint":
@@ -3163,10 +3187,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             name = body["mod"]
             mod = self.registry.describe(name)
-            cm = self.registry.campaign_map(name)
+            campaign = body.get("campaign") or ""
+            cm = self.registry.map_for(name, campaign)
         except (KeyError, campmap.MapError, ModDataError, OSError) as e:
             return {"error": str(e)}
-        campaign = body.get("campaign") or ""
         try:
             if action == "baseline":
                 if body.get("action") == "clear":
@@ -3189,7 +3213,7 @@ class Handler(BaseHTTPRequestHandler):
             out.update(mapcheck.apply_fix(plan))
             campaint.drop(name)
             self.registry.invalidate(name)          # the files changed on disk
-            fresh = self.registry.campaign_map(name)
+            fresh = self.registry.map_for(name, campaign)
             out["report"] = mapcheck.run(mod, fresh, campaign).payload(fresh)
             return out
         except (campmap.MapError, ValueError, OSError) as e:
@@ -3791,21 +3815,36 @@ class Handler(BaseHTTPRequestHandler):
             # when knowing the mod has two campaigns is worth something.
             return self._json(campfiles.browse(self.registry.describe(name)))
 
+        # The campaign whose map is on the screen (22b's follow-up). A campaign
+        # that ships its own map files is drawn, probed and checked on those; the
+        # palette and the brush stay on the base map, which is what they paint.
+        camp = (q.get("campaign") or [""])[0]
         try:
-            cm = self.registry.campaign_map(name)
+            base = self.registry.campaign_map(name)
+            cm = self.registry.map_for(name, camp)
         except campmap.MapError as exc:
             return self._err(404, str(exc))
         except (ModDataError, OSError) as exc:
             return self._err(404, f"{name}'s campaign map could not be read: {exc}")
 
         if path == "/api/map":
-            return self._json(campmap.view(cm, name))
+            man = campmap.view(cm, name)
+            mod = self.registry.describe(name)
+            # a picture the campaign ships its own copy of is drawn from it
+            # even on the base map's object - DaC's front-end map - so its row
+            # says which file that is
+            man["layers"] = [campmap.layer_view(campmap.layer_map(
+                                 mod, camp, cm, ly["code"]), ly["code"])
+                             for ly in man["layers"]]
+            man["campaign_map"] = campmap.home_view(mod, camp, cm)
+            return self._json(man)
 
         if path == "/api/map/palette":
             # Everything the brush may write, in one call: eight small tables
             # and the three sea colours measured off this mod's own map. Read
-            # once when the paint panel opens, like /api/map itself.
-            return self._json(campaint.palettes(cm))
+            # once when the paint panel opens, like /api/map itself. Always the
+            # base map's: the brush paints world/maps/base and nothing else.
+            return self._json(campaint.palettes(base))
 
         if path == "/api/map/legend":
             code = (q.get("code") or [""])[0]
@@ -3941,7 +3980,7 @@ class Handler(BaseHTTPRequestHandler):
             # has not been written to yet. That is the whole reason the
             # validator takes a map instead of a mod.
             mod = self.registry.describe(name)
-            rep = mapcheck.run(mod, cm, (q.get("campaign") or [""])[0])
+            rep = mapcheck.run(mod, cm, camp)
             return self._json(rep.payload(cm))
 
         if path != "/api/map/layer":
@@ -3951,6 +3990,7 @@ class Handler(BaseHTTPRequestHandler):
         fit = (q.get("fit") or ["tile"])[0]
         if code not in campmap.LAYER_BY_CODE:
             return self._err(404, f"no such layer {code!r}")
+        cm = campmap.layer_map(self.registry.describe(name), camp, cm, code)
         src = cm.path(code)
         if not src.exists():
             return self._err(404, f"{name} has no {campmap.LAYER_BY_CODE[code]['file']}")

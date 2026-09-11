@@ -4178,3 +4178,57 @@ Talsir_Province heading, dragged by the pointer into South-Umbar_Province,
 listed under it with the button, put on a sea tile and moved back with ⌖, and
 the Localize ring shown on it. The Log showed four ◆ entries, and undoing
 them left `descr_strat.txt` byte-identical to Reforged's own.
+
+## Phase 22c - A campaign's own map - done 2026-09-11
+
+**A follow-up to 22b, taken on the user's word.** 22b made the two writers that
+judge a tile read a campaign's own copy of a map file. The map screen, the
+validator and its fixes still read `world/maps/base` for every campaign, so a
+campaign that ships its own map was drawn and judged on the wrong one.
+
+**Measured first.** Across the base game and both installed mods, five
+campaigns ship map files of their own. Every DaC and Reforged campaign ships a
+`map_FE.tga` and nothing else a judgement reads. Vanilla's `norman_prologue`
+ships eight layers and neither text file. Reforged's Fellowship campaign ships
+all twelve: the same 510x487, 2% of its region tiles and 7% of its ground
+types different, and one island the base map does not have. On the base map,
+✓ Check named `world/maps/base/descr_regions.txt` nine times for it, and
+vanilla's prologue had 60 warnings where its own map has 49.
+
+**Built.** `campmap.shipped`, `campaign_home`, `layer_map`, `rel_of`,
+`base_readers` and `home_view`, with 22b's `campaign_map` now sharing one cached
+object per campaign folder. `Registry.map_for` is what every map read route
+and the fact table use; the palette stays on the base map. `mapcheck` names
+the file each finding is in through `Check.rel`, the height fix writes that
+copy, and the `map.rwm` it deletes is the one beside it. `campaint.paints_for`
+refuses a stroke, or the start of a new province, while a campaign that does
+not show the base map is on the screen. It names that campaign's files and the
+campaigns that do show it. In the browser, the manifest, layer, legend and
+probe requests carry the campaign, `cmapRefetchMap` swaps only the layers
+whose file changed when the campaign does, `cmapHomeNote` says under 🏰
+Campaign where the map comes from, and the Paint button says why it will not
+arm.
+
+**Two rules kept apart on purpose.** A campaign whose only copy is
+`map_FE.tga` is judged on the base map's own object, the one the brush paints,
+so an unsaved stroke is still seen by every campaign that reads it. Only that
+one layer is drawn from the campaign's folder. And `base_readers` is stricter
+than B1's `reads_base`, which asks about `map_regions.tga` alone because a new
+province is a regions question; a stroke on the heights is not.
+
+### Tests and verification
+
+`tests/test_campaignmap.py` (30 checks) is new. It builds a copy of a real mod
+with two campaigns: one that ships only `map_FE.tga`, and one whose own
+`map_heights.tga` sinks a settlement. It checks which object each is judged
+on, which file each layer comes from, what the screen is told and when the
+brush is refused. On the validator, the finding names the campaign's file, the
+height fix writes it and deletes the campaign's `map.rwm` while the base's
+stays. It drives the routes (manifest, layer bytes, probe, check, a refused
+stroke, the palette) and covers every installed campaign.
+
+Driven in the browser on a scratch copy of Reforged's map and both its
+campaigns. Opening Fellowship swapped the region pixels, and the note and the
+Paint refusal showed. An armed brush was put down on the switch, with the
+reason. ✓ Check named Fellowship's files, and switching back restored the base
+map.

@@ -1306,32 +1306,126 @@ class CampaignMap:
 MAP_FILES = ("map_regions.tga", "map_heights.tga", "map_ground_types.tga",
              "map_features.tga", Path(TERRAIN_REL).name, Path(REGIONS_REL).name)
 
+#: every file a campaign folder can ship a copy of: the ten layers and the two
+#: text files. Measured on the installed set: every campaign of DaC's and
+#: Reforged's ships its own map_FE.tga, vanilla's norman_prologue eight layers
+#: and neither text file, and Reforged's Fellowship campaign all twelve.
+ALL_FILES = tuple(ly["file"] for ly in LAYERS) + (
+    Path(TERRAIN_REL).name, Path(REGIONS_REL).name)
+
 _OWN: Dict[Tuple[str, str], Tuple[tuple, "CampaignMap"]] = {}
 
 
-def campaign_map(mod, campaign: str, base: Optional["CampaignMap"] = None
-                 ) -> "CampaignMap":
-    """The map ``campaign`` reads: ``base`` when it ships none of its own.
-
-    Kept while none of the files it was read from has changed on disk, so a
-    plan pays for decoding a campaign's own layers once rather than per save.
-    """
+def campaign_home(mod, campaign: str) -> Path:
+    """The campaign's own folder, through the one choke point for its name."""
     from .campstrat import CAMPAIGN_DIR_REL, DEFAULT_CAMPAIGN, campaign_rel
-    home = Path(mod.data) / CAMPAIGN_DIR_REL / campaign_rel(campaign or DEFAULT_CAMPAIGN)
-    own = [n for n in MAP_FILES if (home / n).is_file()]
-    if not own:
-        return base if base is not None else CampaignMap(mod)
-    key = (str(Path(mod.data).resolve()).lower(), str(campaign).lower())
+    return Path(mod.data) / CAMPAIGN_DIR_REL / campaign_rel(campaign or DEFAULT_CAMPAIGN)
+
+
+def shipped(mod, campaign: str) -> List[str]:
+    """The map files ``campaign`` ships a copy of, in :data:`ALL_FILES` order."""
+    home = campaign_home(mod, campaign)
+    return [n for n in ALL_FILES if (home / n).is_file()]
+
+
+def _home_map(mod, campaign: str, own: Sequence[str]) -> "CampaignMap":
+    """One :class:`CampaignMap` reading this campaign's folder first, kept.
+
+    Kept while none of the files it can read has changed on disk - its own and
+    the base's it falls back to - so a plan, a layer request and a check pay
+    for decoding a campaign's own layers once. Layers decode on first use, so
+    a campaign whose only copy is ``map_FE.tga`` costs that one file.
+    """
+    home = campaign_home(mod, campaign)
+    base = Path(mod.data) / BASE_REL
+    # keyed on the folder, so "" and "imperial_campaign" are one entry
+    key = (str(Path(mod.data).resolve()).lower(), str(home.resolve()).lower())
     stamp = tuple(sorted((n, (home / n).stat().st_mtime_ns) for n in own)) + (
-        tuple((n, (Path(mod.data) / BASE_REL / n).stat().st_mtime_ns)
-              for n in MAP_FILES if n not in own
-              and (Path(mod.data) / BASE_REL / n).is_file()),)
+        tuple((n, (base / n).stat().st_mtime_ns) for n in ALL_FILES
+              if n not in own and (base / n).is_file()),)
     hit = _OWN.get(key)
     if hit is not None and hit[0] == stamp:
         return hit[1]
     cm = CampaignMap(mod, home)
     _OWN[key] = (stamp, cm)
     return cm
+
+
+def campaign_map(mod, campaign: str, base: Optional["CampaignMap"] = None
+                 ) -> "CampaignMap":
+    """The map ``campaign`` is judged on: ``base`` unless it ships one of the
+    files a judgement reads (:data:`MAP_FILES`).
+
+    A campaign whose only copies are pictures nothing is decided on - DaC's
+    map_FE.tga - is judged on the base map's own object, which is also the one
+    the paint tool paints, so an unsaved stroke is seen by every campaign that
+    reads it. :func:`layer_map` is what draws that picture from the right file.
+    """
+    own = shipped(mod, campaign)
+    if not any(n in MAP_FILES for n in own):
+        return base if base is not None else CampaignMap(mod)
+    return _home_map(mod, campaign, own)
+
+
+def layer_map(mod, campaign: str, cm: "CampaignMap", code: str) -> "CampaignMap":
+    """The map object to draw one layer from, for this campaign.
+
+    ``cm`` is :func:`campaign_map`'s answer. A layer the campaign ships its own
+    copy of comes out of the campaign's folder even when ``cm`` is the base
+    map, which is DaC's front-end map on both its campaigns.
+    """
+    name = LAYER_BY_CODE[code]["file"]
+    if cm.home is not None:
+        return cm
+    own = shipped(mod, campaign)
+    return _home_map(mod, campaign, own) if name in own else cm
+
+
+def rel_of(cm: "CampaignMap", name: str) -> str:
+    """The data-relative path of the file ``cm`` reads for ``name``.
+
+    What a finding names, and what a fix writes: the campaign's own copy when
+    this map reads one, the base's otherwise.
+    """
+    if cm.home is not None and (cm.home / name).is_file():
+        path = cm.home / name
+    else:
+        path = cm.base / name
+    return path.relative_to(Path(cm.mod.data)).as_posix()
+
+
+def base_readers(mod) -> List[str]:
+    """The campaigns that show the base map: those shipping none of
+    :data:`MAP_FILES`. Stricter than :func:`campaint.map_campaigns`'s
+    ``reads_base``, which asks about ``map_regions.tga`` alone because a new
+    province is a regions question; a stroke on the heights is not."""
+    from .campstrat import campaign_paths
+    return [c for c in campaign_paths(mod)
+            if not any(n in MAP_FILES for n in shipped(mod, c))]
+
+
+def home_view(mod, campaign: str, cm: "CampaignMap") -> dict:
+    """What the map screen says about where this campaign's map comes from.
+
+    ``own`` is every file the campaign ships a copy of, ``judged`` whether the
+    screen is drawing and judging a map other than the base (the object the
+    paint tool paints), and ``paints`` whether painting world/maps/base is
+    something this campaign would see. ``readers`` names the campaigns that do
+    read the base, for the sentence that sends somebody there to paint.
+    """
+    from .campstrat import DEFAULT_CAMPAIGN
+    campaign = campaign or DEFAULT_CAMPAIGN
+    own = shipped(mod, campaign)
+    judged = cm.home is not None
+    try:
+        readers = base_readers(mod)
+    except (OSError, ValueError):
+        readers = []
+    home = campaign_home(mod, campaign).relative_to(Path(mod.data)).as_posix()
+    return {"campaign": campaign, "folder": home, "own": own, "judged": judged,
+            "paints": not judged, "readers": readers,
+            "files": {n: (f"{home}/{n}" if n in own else f"{BASE_REL}/{n}")
+                      for n in ALL_FILES}}
 
 
 def map_of(facts, campaign: str = "") -> Optional["CampaignMap"]:
@@ -1491,7 +1585,9 @@ def layer_view(cm: "CampaignMap", code: str) -> dict:
            "blank": ({"rgb": list(b["rgb"]), "key": key(b["rgb"]),
                       "why": b["why"], "sourced": b["sourced"]} if b else None),
            "native": None, "width": 0, "height": 0}
-    path = cm.base / ly["file"]
+    path = cm.path(code)
+    # which copy is drawn: a campaign's own, or world/maps/base (22b's follow-up)
+    out["rel"] = path.relative_to(Path(cm.mod.data)).as_posix()
     if not path.exists():
         out["problem"] = "missing" if ly["required"] else "not in this mod"
         return out

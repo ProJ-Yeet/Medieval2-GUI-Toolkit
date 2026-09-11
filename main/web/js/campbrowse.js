@@ -34,9 +34,10 @@
    are measured facts about real mods rather than fields in a format: a campaign
    whose folder name and whose `campaign` line disagree (DaC's nested one says
    `imperial_campaign` on its first line), a campaign that ships map layers of
-   its own (which the map screen does not read - it reads world/maps/base,
-   always), and a campaign nothing has ever named on the new-game menu. Each of
-   those is a thing somebody would otherwise find out much later.
+   its own (which the map screen reads when that campaign is open, since the
+   follow-up to 22b; before it, the screen drew world/maps/base always), and a
+   campaign nothing has ever named on the new-game menu. Each of those is a
+   thing somebody would otherwise find out much later.
    ===================================================================== */
 
 //: The counts on a row, in the order they answer "how big is this campaign".
@@ -135,7 +136,7 @@ function cbrHtml(){
       : esc(here || 'imperial_campaign')}${rows.length > 1
         ? ` · ${rows.length} in this mod` : ''}</span>
     ${k.loading ? '<span class="count">reading…</span>' : ''}
-  </div>`;
+  </div>${typeof cmapHomeNote === 'function' ? cmapHomeNote() : ''}`;
   if(!k.open) return head;
   if(k.err) return head + `<div class="cbrpanel w-bad">${esc(k.err)}</div>`;
   if(!d) return head + `<div class="cbrpanel count">reading every
@@ -151,8 +152,9 @@ function cbrHtml(){
     ${rows.map(r => cbrRowHtml(r, r.campaign === here)).join('')}
     <div class="count">${rows.length} campaign${rows.length === 1 ? '' : 's'}
       read in ${d.ms} ms. The ten map layers and the region list are in
-      <code>${esc(d.base)}</code> and are the same for all of them - what
-      changes here is who starts where, with what, and against whom.</div>
+      <code>${esc(d.base)}</code> for every campaign that ships no copy of
+      its own - what changes between those is who starts where, with what, and
+      against whom.</div>
   </div>`;
 }
 
@@ -200,11 +202,11 @@ function cbrRowHtml(r, open){
         r.problems === 1 ? '' : 's'} of it did not parse. Every one is reported
         with its number by the validator.</div>` : ''}
       ${cbrFilesHtml(r)}
-      ${r.layers.length ? `<div class="w-warn">It ships ${r.layers.length}
+      ${r.layers.length ? `<div class="count">It ships ${r.layers.length}
         map layer${r.layers.length === 1 ? '' : 's'} of its own
         (${esc(r.layers.slice(0, 3).join(', '))}${r.layers.length > 3
-          ? ', …' : ''}). This screen draws the base map, always, so those
-        pixels are not what you are looking at.</div>` : ''}`}
+          ? ', …' : ''}), which the engine reads instead of the base's. Open,
+        this screen draws those.</div>` : ''}`}
   </div>`;
 }
 

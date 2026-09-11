@@ -942,6 +942,42 @@ def map_campaigns(mod) -> List[dict]:
     return out
 
 
+#: what puts pixels on the base map, and so what a campaign that does not show
+#: the base map may not do. Undo, redo, save and discard act on strokes already
+#: made on a campaign that did show them, and stay open.
+PAINTS = ("paint", "region_start")
+
+
+def paints_for(mod, campaign: str, action: str = "paint") -> str:
+    """Why the brush may not paint while ``campaign`` is on the screen, or "".
+
+    The brush paints ``world/maps/base``. A campaign that ships its own copy of
+    a file the map is judged on is drawn from that copy
+    (:func:`campmap.campaign_map`), so a stroke there would change the map of
+    every campaign that reads the base and nothing on the screen - the one
+    thing a paint tool must never do. Refused with the files, and with the
+    campaigns that do read the base, so the sentence says where to go instead.
+    """
+    from .campmap import MAP_FILES, base_readers, shipped
+    from .campstrat import DEFAULT_CAMPAIGN
+    if action not in PAINTS:
+        return ""
+    campaign = campaign or DEFAULT_CAMPAIGN
+    own = [n for n in shipped(mod, campaign) if n in MAP_FILES]
+    if not own:
+        return ""
+    readers = base_readers(mod)
+    return (f"{campaign} reads its own " + ", ".join(own) + " from its campaign "
+            f"folder, so the map on the screen is that one. The brush paints "
+            f"world/maps/base, which {campaign} does not show: a stroke here "
+            f"would change the map of "
+            + (", ".join(readers) if readers else "no campaign at all")
+            + " and nothing you can see. "
+            + ("Pick " + ("that campaign" if len(readers) == 1 else
+                          "one of those campaigns") + " to paint the base map."
+               if readers else "Nothing in this mod reads the base map."))
+
+
 def region_vocab(mod) -> dict:
     """What the wizard's three pickers offer, and where each list came from. B1.
 

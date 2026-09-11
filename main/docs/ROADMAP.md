@@ -117,6 +117,7 @@ below with their own index.
 | 21 | Two screens over data we hold - is this faction complete, with each gap copied from a template, and a raw text editor for any file the toolkit reads | 3.1.0 (uncut) |
 | 22a | Forts and watchtowers - placed on a clicked tile, dragged, changed and deleted, one line each, filed under the province they stand in | 3.2.0 (uncut) |
 | 22b | Resources through the same writer, the nearest tile that would do for every placement rule, the Localize ring, and 17d's drag made to drop | 3.2.0 (uncut) |
+| 22c | A campaign that ships its own map files is drawn, probed, checked and fixed on them, and the brush is refused where it would paint a map nobody can see | 3.2.0 (uncut) |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
@@ -574,8 +575,8 @@ layer you can edit and starts being a map you work on.
 
 ## Phase 22 - Placing things on the map - done
 
-**Both sessions are closed** (2026-09-11), and with them D9, D10 and G5; the
-write-ups are in `ROADMAP_ARCHIVE.md`. What it leaves behind for later phases:
+**Both sessions are closed** (2026-09-11), and with them D9, D10 and G5, and
+22c followed in the same sitting; the write-ups are in `ROADMAP_ARCHIVE.md`. What it leaves behind for later phases:
 
 - **`stratobj.py` writes every one-line thing that stands on a tile.** A fort,
   a watchtower and a resource are one `plan` with a `kind`. Anything later that
@@ -585,12 +586,12 @@ write-ups are in `ROADMAP_ARCHIVE.md`. What it leaves behind for later phases:
   A new placement rule gets D10 for the price of a lambda, and the finding
   carries `near`. 24's reallocation of a deleted region's tiles and 26's
   resize both need "the nearest tile that...", and this is it.
-- **`campmap.campaign_map` is the map a campaign reads, file by file.** Only the
-  writers that judge a tile ask it so far (`stratobj`, `stratchar`, through
-  `campmap.map_of`). The map screen and ✓ Check still draw and judge the base
-  map for a campaign that ships its own, which here is Third Age Reforged's
-  Fellowship campaign; 23a's textures are the next thing that has to ask which
-  copy to draw.
+- **The map a campaign reads is asked, file by file, everywhere (22c).**
+  `Registry.map_for` is the object a campaign is drawn and judged on,
+  `campmap.layer_map` the one a single layer is drawn from, and
+  `campmap.rel_of` the file a finding names and a fix writes. 23a's textures
+  ask `layer_map` which ground and climate layer to composite, and a texture
+  built for one campaign is not another's.
 - **17d's drag drops now.** The pointer's travel was counted only for a pan, so
   every marker drag since 17d ended as a click. 22b found it by dragging with
   the pointer rather than calling the drop.

@@ -1,16 +1,17 @@
 # STATE - Medieval 2 GUI Toolkit
 _Updated: 2026-09-11 · v2.2.3 is still the latest 2.x and beta 2026-09-11 the
-latest beta · after 22b, resources and the snap, which closes Phase 22 ·
+latest beta · after 22b, resources and the snap, which closes Phase 22, and
+22c, a campaign's own map ·
 **nothing is released until the roadmap is finished**_
 
 ## Next up
 **Phase 23a, the texture composite** (`ROADMAP.md`): the map drawn with the
 game's own aerial-map ground textures, one per (climate, ground type) pair,
 built once and never rebuilt by a pan or a zoom, and a missing texture drawn
-pink and reported, TWMapReader's rule. It is the first thing on the map screen
-that has to ask which copy of a layer a campaign reads -
-`campmap.campaign_map`, 22b's. Then 23b and 24 - **three sessions left in
-all**, B2-B4 not counted. 22b's write-up is in `ROADMAP_ARCHIVE.md`.
+pink and reported, TWMapReader's rule. Which ground and climate layer to
+composite is `campmap.layer_map`'s answer for the campaign on the screen (22c).
+Then 23b and 24 - **three sessions left in all**, B2-B4 not counted. The 22b
+and 22c write-ups are in `ROADMAP_ARCHIVE.md`.
 
 **Do not release anything at the end of a session.** On 2026-09-11 the user
 said: "we wont publish until we finish all the sessions of our roadmap now".
@@ -43,7 +44,7 @@ the beta was the last thing cut.
 **21 belongs to BOTH lines.** Raw text is a menu mode of its own and the faction
 audit also draws in the Factions mode, so both are in the 2.x build with the map
 hidden; the audit's two campaign-row buttons appear only on the map screen.
-**22a and 22b are map work** and belong to the beta line only.
+**22a, 22b and 22c are map work** and belong to the beta line only.
 
 Betas are named by the **date** they were released, with a letter for a second
 in one day. The GitHub title is `M2 GUI-Kit V<X.Y.Z>` - hyphenated **GUI-Kit**,
@@ -54,14 +55,15 @@ rather than typing it from memory. The strict step-by-step is `HANDOFF.md`.
 `docs/releases/` (`RELEASE_2_2_4.md`, `RELEASE_BETA_2026_09_11B.md`) and the
 two fixes are committed. **Fold them into the end-of-roadmap cut** - and B1 has
 to be added to both notes, since the beta note's "Not fixed" section describes
-exactly what B1 fixed. 20b, 20c, B1, 21, the map hover fix, 22a and 22b are not
-in any note yet either - and 22b's drag fix is worth a line of its own, since
+exactly what B1 fixed. 20b, 20c, B1, 21, the map hover fix, 22a, 22b and 22c are
+not in any note yet either - and 22b's drag fix is worth a line of its own, since
 17d's drag never dropped in any cut.
 
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
-| 22b - Resources, and the snap | **done** | Closed 2026-09-11, committed, **not released**. Closes D9, D10, G5 and Phase 22. New: `unittransfer/mapsnap.py`, `campmap.campaign_map` / `map_of`, `mapcheck.position_faults` / `duplicate_message`; `stratobj` takes `resource` (`Layout`, `resource_home`, `Census`, `Vocabulary.snap`); `stratchar._shore`, `campaint._marker_near`; `cmapLocate` in `campmap.js`, and 17d's drag counts the pointer's travel. `tests/test_stratres.py` (67). |
+| 22c - A campaign's own map | **done** | Closed 2026-09-11, committed, **not released**. The follow-up 22b left: the map screen, ✓ Check and its fixes read a campaign's own map files. New: `Registry.map_for`, `campmap.shipped` / `layer_map` / `rel_of` / `base_readers` / `home_view`, `mapcheck.Check.rel`, `campaint.paints_for`; `cmapRefetchMap` / `cmapHomeNote` in `campmap.js`. `tests/test_campaignmap.py` (30). |
+| 22b - Resources, and the snap | done | Closed 2026-09-11, committed, **not released**. Closes D9, D10, G5 and Phase 22. New: `unittransfer/mapsnap.py`, `campmap.campaign_map` / `map_of`, `mapcheck.position_faults` / `duplicate_message`; `stratobj` takes `resource` (`Layout`, `resource_home`, `Census`, `Vocabulary.snap`); `stratchar._shore`, `campaint._marker_near`; `cmapLocate` in `campmap.js`, and 17d's drag counts the pointer's travel. `tests/test_stratres.py` (67). |
 | 22a - Forts and watchtowers | done | Closed 2026-09-11, committed, **not released**. First half of D9 (and G5). New: `unittransfer/stratobj.py` (`plan`, `apply`, `view`, `Vocabulary`, `render_line`, `new_section`), `web/js/campforts.js` (the 🏰 Forts panel), `GET /api/map/objects`, `POST /api/map/object_plan\|_apply`. 17d's drag takes forts and watchtowers (`CMK_DRAGGABLE`). `tests/test_stratobj.py` (65). |
 | 21 - Two screens over data we hold | done | Closed 2026-09-11, committed, **not released**. Closes D6, D11 (= M14) and the Now set. New: `unittransfer/factionaudit.py` (`Census`, `evaluate`, `audit`, `repair_plan`), `unittransfer/rawtext.py` (`files`, `read`, `splice`, `plan`, `apply`), `web/js/facaudit.js`, `web/js/rawtext.js`, the `rawtext` mode, `GET /api/factions/audit`, `POST /api/factions/repair_plan\|repair_apply`, `GET /api/raw/files\|file`, `POST /api/raw/plan\|apply`. `factionclone.clone_file` and `ClonePlan.action` (refactor, clone suites unchanged). `tests/test_factionaudit.py` (48), `tests/test_rawtext.py` (57). |
 | 23a-24 - the rest of the Next set (3.2.0) | **scoped** | Three sessions: the textured terrain render, winter and the tint, delete-a-region and create-a-campaign. |
@@ -70,7 +72,7 @@ in any note yet either - and 22b's drag fix is worth a line of its own, since
 | 16-21 | done | 16-20a published on the beta line; 20b onward committed and uncut. The 3.0.0 and 3.1.0 numbers are still unassigned to a cut. |
 
 ## In-progress detail
-**Clean.** Nothing is mid-flight. All 98 suites were run after 22b: **94 pass
+**Clean.** Nothing is mid-flight. All 99 suites were run after 22c: **95 pass
 and the same four do not**, the DaC four below, each on its documented number.
 
 **Four suites fail the same way on a clean `master`** - hard-coded Divide and
@@ -105,9 +107,10 @@ the edits out from under it (21 did it once; see the archive).
 - `unittransfer/factionaudit.py` - **before adding any check about a faction.**
   `Census` already counts every slot in every file; gap or note is measured on
   the installed mods, never copied from a reference.
-- `campmap.campaign_map` - **before 23a draws a layer.** The engine reads a
-  campaign's own copy of a map file where it ships one; the map screen still
-  draws the base copy, and the textures are where that stops being enough.
+- `Registry.map_for` and `campmap.layer_map` - **before 23a draws a layer.**
+  The engine reads a campaign's own copy of a map file where it ships one, and
+  so does the screen now; a texture built from the base map's ground layer is
+  not Fellowship's.
 - `unittransfer/mapsnap.py` - before writing any rule about where something may
   stand. The search is there; hand it the rule and put `near` on the finding.
 - `unittransfer/stratobj.py` - one writer for every one-line thing on the map.
@@ -123,6 +126,11 @@ files triaged, none untriaged; `src/pages/TextEditor.jsx` notes it done in 21.
 TWMapReader's texture rule; run `sync` first.
 
 ## Decisions
+- 2026-09-11: **The screen draws the map the campaign reads, and the brush
+  stays where it paints.** A campaign that ships its own map files is drawn and
+  judged on them, and the brush, which only ever paints world/maps/base, is
+  refused there with the campaigns that do show it. Painting a map nobody can
+  see would be the one stroke a paint tool must never make.
 - 2026-09-11: **A check of an interaction drives the interaction.** 22a's
   browser check called the drop and passed; 17d's drag had never dropped,
   because the pointer's travel was counted only for a pan. 22b dragged with the
@@ -170,6 +178,3 @@ TWMapReader's texture rule; run `sync` first.
   `world/maps/base` asks `campaint.map_campaigns` which campaigns see it and
   which copy of each file each one reads. B1's crash was the base record
   written and a campaign's own copy not.
-- 2026-09-11: **The first line of a crash log is the one to read.** B1 was filed
-  as "no settlement block", and the log's own first line - the game finding the
-  new pixel colour and not the record - named the bigger half.

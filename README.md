@@ -133,6 +133,11 @@ mod does not declare is refused; a tower on the sea, a resource on impassable
 land, or one standing in a different province from the one it is filed under
 is said, with the numbers behind it, and allowed.
 
+A campaign that ships its own map files, such as Third Age Reforged's
+Fellowship campaign, is drawn and checked from those files when you open it with
+**🏰 Campaign**, and the screen lists which files they are. The brush stays off
+there, because it paints `world/maps/base`, which that campaign never shows.
+
 When a tile is wrong for what you put on it, the message says where the
 nearest tile that would do is, and **⌖ Move it to** puts it there. The same
 answer comes with a character put on the wrong side of the shore and with a
