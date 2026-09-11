@@ -195,8 +195,12 @@ Campaign Map mode (the ten TGA layers and descr_regions.txt, see
 :mod:`unittransfer.campmap`)
   GET  /api/map?mod=             -> the manifest: tile grid, ten layers with
                                     what is wrong with each, the region table
-  GET  /api/map/layer?mod=&code=&fit=
-                                 -> one layer as PNG, cached on disk by mtime
+  GET  /api/map/layer?mod=&code=&fit=[&format=rgb]
+                                 -> one layer as PNG, cached on disk by mtime;
+                                    with format=rgb, its raw RGB bytes and its
+                                    size in X-Map-Width/-Height - what the map
+                                    screen reads, because a browser may alter a
+                                    picture's pixels (see campmap.layer_rgb)
   GET  /api/map/legend?mod=&code=
                                  -> that layer's colours named and counted, and
                                     which of them means "nothing here"
@@ -3898,6 +3902,21 @@ class Handler(BaseHTTPRequestHandler):
         # by 16e, or by the user in Photoshop - is a miss rather than a stale
         # picture that outlives the edit.
         token = f"maplayer|{src}|{_stat_sig(src)}|{fit}"
+        if (q.get("format") or [""])[0] == "rgb":
+            # the bytes the screen READS - see campmap.layer_rgb for why a
+            # picture is not good enough for that. Not cached: it is one
+            # resample of a layer the map object already holds decoded.
+            try:
+                w, h, data = campmap.layer_rgb(cm, code, fit)
+            except campmap.MapError as exc:
+                return self._err(400, str(exc))
+            except Exception as exc:
+                log.debug("map layer failed", exc_info=True)
+                return self._err(500, f"{campmap.LAYER_BY_CODE[code]['file']} "
+                                      f"could not be decoded: {exc}")
+            return self._send(200, data, "application/octet-stream",
+                              {"X-Map-Fit": fit, "X-Map-Layer": code,
+                               "X-Map-Width": str(w), "X-Map-Height": str(h)})
         try:
             data = self.registry.icons.cached_png(
                 token, lambda: campmap.layer_png(cm, code, fit))

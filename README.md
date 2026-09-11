@@ -114,6 +114,12 @@ the rest. Every x, y on the people and events panels has a **⌖** beside it:
 press it, click the map, and that tile is written into the field in the
 coordinates `descr_strat.txt` uses, without selecting anything on the way.
 
+**↺ Reset** on the map's toolbar puts everything about how the map is read
+back to how it first opens - which layers are on, their opacity and order, the
+colours punched out of them, the rivers and heights readings, names, the
+tooltip, the markers, the query panel's colouring and filters, and the zoom.
+Saved views, the campaign you are reading and unsaved painting are kept.
+
 A province made with **New region** now arrives in every campaign that reads the
 map: a settlement in each campaign's own start position (a village, held by the
 rebels unless you pick someone), the record in any campaign that keeps its own

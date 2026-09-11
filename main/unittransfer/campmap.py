@@ -1370,6 +1370,29 @@ def layer_png(cm: "CampaignMap", code: str, fit: str = "tile") -> bytes:
     return buf.getvalue()
 
 
+def layer_rgb(cm: "CampaignMap", code: str, fit: str = "tile") -> Tuple[int, int, bytes]:
+    """One layer as ``(width, height, raw RGB bytes)`` - what the browser reads.
+
+    The PNG above is a picture, and a picture is what the browser is entitled to
+    change: a page reading pixels back out of a canvas can be handed values that
+    are not the file's. Measured on a user's machine after 20c - the hover panel
+    said "no region" over most of Third Age Reforged and read dense forest,
+    ``0,64,0`` in every table, as ``0,65,1``. Canvas anti-fingerprinting (Brave's
+    default shields, Firefox's resist-fingerprinting, several privacy extensions)
+    adds exactly that one-step noise to every read, and colour management can
+    shift an image the same way. A region is identified by an exact colour, so
+    one step is a different region or none. Bytes fetched as bytes are not a
+    picture and nothing rewrites them, so the screen reads THESE and only ever
+    writes to its canvases.
+    """
+    if code not in LAYER_BY_CODE:
+        raise MapError(f"no such layer {code!r}")
+    if fit not in FITS:
+        raise MapError(f"no such fit {fit!r} - it is one of {', '.join(FITS)}")
+    img = (cm.layer(code) if fit == "native" else tile_view(cm, code)).convert("RGB")
+    return img.width, img.height, img.tobytes()
+
+
 def layer_view(cm: "CampaignMap", code: str) -> dict:
     """What the renderer needs to know about one layer before it asks for it.
 

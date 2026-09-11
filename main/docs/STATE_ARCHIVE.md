@@ -25,6 +25,32 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## The map hover panel said "no region" in the user's browser (2026-09-11)
+Reported after 21 with a screenshot: over most of Third Age Reforged the hover
+panel said "no region", and its ground row read `rgb(0, 65, 1)` - a colour no
+table names, one step off dense forest's `0,64,0`. Every tooltip in the in-app
+browser was right. The layer PNGs carry no colour profile, so it was not colour
+management of a tagged image; one-step noise on both channels is what canvas
+anti-fingerprinting adds to `getImageData` (Brave's default shields, Firefox's
+resist-fingerprinting, privacy extensions), and every answer on this screen is
+an exact colour match.
+
+**The fix removes the read rather than working around the noise.** The layer
+route takes `format=rgb` and sends the raw bytes with the size in two headers
+(`campmap.layer_rgb`); `cmapFetchLayer` keeps them as `L.raw`, the drawing
+canvas is written from them with `putImageData`, and all seven places that read
+pixels - the tooltip, `cmapRegionAt`, the outline, the mask pass, the height
+ramp, the query colouring and the paint write - read the bytes through
+`cmapRawOf`. Verified in the app with `getImageData` patched to add that noise:
+80 of 80 provinces named, zero canvas reads, and tile 323,81 read `0,64,0`.
+`test_maplayers.py`'s node canvas now throws on any read, and a new check holds
+the raw bytes equal to the PNG's pixels on every layer of both installed maps.
+
+**↺ Reset**, asked for in the same message: the map's toolbar puts the layer
+stack, its switches, the markers, the query panel and the zoom back to how the
+screen first opens and saves that, keeping saved views, the campaign and any
+unsaved paint. Tested in the app and the user's own `map_layers` put back after.
+
 ## 21 - the faction audit and the raw text editor (2026-09-11)
 The third phase of the same sitting, on "proceed with next phase", committed
 unreleased under the 2026-09-11 instruction. Upstream `sync` was up to date at
@@ -2216,6 +2242,16 @@ evidence reports nothing**, and **a baseline shows and stops blocking; it never
 hides**. Two more were already locked there under different wording (Pillow
 only, and the browser never parses a TGA). They are left in the list below as
 well, because a dated entry is the record of when the call was made.
+
+Moved from `STATE.md` later on 2026-09-11, when the map hover fix took the
+list past ten:
+
+- 2026-09-11: **A search box is not a filter panel, and it answers out of what
+  the screen already has.** 16g's twenty-four filters are for a question; T8 is
+  for a name you already know, so it is one box, three tiers, no fuzziness, and
+  no request per keystroke. What that cost was two short strings a region on the
+  manifest - the words the player reads - because a box that only matches
+  `Anorien_Province` is a box only somebody who has read the files can use.
 
 Moved from `STATE.md` on 2026-09-11 again, when 21 took the list past ten:
 the 2026-09-10 entries and the oldest of 2026-09-11, newest first.

@@ -235,14 +235,15 @@ function cqApply(table, borders){
                                   state.cq && state.cq.res && state.cq.res.count]);
   if(c.overlayKey === wantKey && c.overlay) { cmapCompose(); cmapPaint(); return; }
 
-  const src = L.cv || L.img;
-  const w = src.naturalWidth || src.width, h = src.naturalHeight || src.height;
+  // the layer's bytes, copied - never the picture read back, which a browser
+  // may alter (see cmapFetchLayer), and a theme is an exact-colour lookup
+  const R = cmapRawOf(L);
+  const w = R.w, h = R.h;
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
-  const x = cv.getContext('2d', {willReadFrequently: true});
+  const x = cv.getContext('2d');
   x.imageSmoothingEnabled = false;
-  x.drawImage(src, 0, 0);
-  const im = x.getImageData(0, 0, w, h), d = im.data;
+  const im = cmapImageData(new Uint8ClampedArray(R.data), w, h), d = im.data;
   // group id per pixel, so a border can be drawn between two groups rather
   // than between two colours - see the header
   const group = borders ? new Int32Array(w * h).fill(-1) : null;

@@ -312,9 +312,9 @@ function cpaintApply(changed){
 /* One layer's tiles, written through one ImageData.
 
    A bucket fill of an ocean is 70,000 tiles. Seventy thousand 1x1 fillRects is
-   a visible pause; one getImageData over the bounding box, the writes, and one
-   putImageData is a few milliseconds. The bounding box matters as much as the
-   single call - a pencil dot should not read and write the whole map. */
+   a visible pause; the writes into the layer's bytes and one putImageData of
+   the bounding box is a few milliseconds. The bounding box matters as much as
+   the single call - a pencil dot should not rewrite the whole map. */
 function cpaintWrite(code, runs){
   const cv = cmapPixels(code);
   if(!cv) return false;
@@ -329,16 +329,23 @@ function cpaintWrite(code, runs){
     }
   if(x1 < 0) return false;
   const w = x1 - x0 + 1, h = y1 - y0 + 1;
-  const ctx = state.cmap.layers[code].px;
-  const im = ctx.getImageData(x0, y0, w, h), d = im.data;
+  const L = state.cmap.layers[code], R = cmapRawOf(L);
+  // into the layer's bytes first - they are what every lookup reads - and then
+  // the bounding box out of them onto the canvas. Nothing is read back off the
+  // canvas: a browser may alter what it hands back (see cmapFetchLayer).
   for(const run of runs){
     const r = (run.rgb >> 16) & 255, g = (run.rgb >> 8) & 255, b = run.rgb & 255;
     for(let i = 0; i < run.xy.length; i += 2){
-      const p = ((run.xy[i + 1] - y0) * w + (run.xy[i] - x0)) * 4;
-      d[p] = r; d[p + 1] = g; d[p + 2] = b; d[p + 3] = 255;
+      const p = (run.xy[i + 1] * R.w + run.xy[i]) * 4;
+      R.data[p] = r; R.data[p + 1] = g; R.data[p + 2] = b; R.data[p + 3] = 255;
     }
   }
-  ctx.putImageData(im, x0, y0);
+  const box = new Uint8ClampedArray(w * h * 4);
+  for(let y = 0; y < h; y++){
+    const from = ((y0 + y) * R.w + x0) * 4;
+    box.set(R.data.subarray(from, from + w * 4), y * w * 4);
+  }
+  L.px.putImageData(cmapImageData(box, w, h), x0, y0);
   return true;
 }
 

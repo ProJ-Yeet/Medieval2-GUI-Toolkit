@@ -51,7 +51,8 @@ rather than typing it from memory. The strict step-by-step is `HANDOFF.md`.
 `docs/releases/` (`RELEASE_2_2_4.md`, `RELEASE_BETA_2026_09_11B.md`) and the
 two fixes are committed. **Fold them into the end-of-roadmap cut** - and B1 has
 to be added to both notes, since the beta note's "Not fixed" section describes
-exactly what B1 fixed. 20b, 20c, B1 and 21 are not in any note yet either.
+exactly what B1 fixed. 20b, 20c, B1, 21 and the map hover fix below are not
+in any note yet either.
 
 ## Phase status
 | Phase | Status | Note |
@@ -112,6 +113,13 @@ files triaged, none untriaged; `src/pages/TextEditor.jsx` notes it done in 21.
 the map screen and ports Demir's object dialogs, so run `sync` first.**
 
 ## Decisions
+- 2026-09-11: **The map screen never reads a canvas back.** A user's browser
+  said "no region" over most of Third Age Reforged and read dense forest,
+  0,64,0, as 0,65,1: canvas anti-fingerprinting (Brave's shields, Firefox's
+  resist-fingerprinting, privacy extensions) noises every getImageData, and our
+  in-app browser does not, which is why no test here saw it. Layers now arrive
+  as raw bytes (`layer?format=rgb`), `cmapRawOf` is the one read, and canvases
+  are only written. The node harness's canvas throws on a read.
 - 2026-09-11: **A raw save refuses only on the bytes, never on the parser.** It
   refuses a stale signature, a character the file's encoding cannot hold, and a
   file that does not survive a read and a write unchanged; what the toolkit's
@@ -157,9 +165,3 @@ the map screen and ports Demir's object dialogs, so run `sync` first.**
   `SHATTERED_ALLIANCES_*` in `campaign_descriptions.txt` and not by the path it
   is reached through. 18a could not be wrong about this in practice because
   nothing offered a nested campaign; 20b did, so it had to be corrected first.
-- 2026-09-11: **A search box is not a filter panel, and it answers out of what
-  the screen already has.** 16g's twenty-four filters are for a question; T8 is
-  for a name you already know, so it is one box, three tiers, no fuzziness, and
-  no request per keystroke. What that cost was two short strings a region on the
-  manifest - the words the player reads - because a box that only matches
-  `Anorien_Province` is a box only somebody who has read the files can use.

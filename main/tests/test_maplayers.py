@@ -115,12 +115,17 @@ HARNESS = r"""
 const fs = require('fs');
 const vm = require('vm');
 
+//: A canvas that REFUSES to be read back. Fixed after 20c: a browser with
+//: canvas anti-fingerprinting hands back noise from getImageData, and the hover
+//: panel said "no region" over most of a map because of it. Every pixel pass in
+//: campmap.js now reads the layer's own bytes, so any read of a canvas here is
+//: the bug coming back, and it fails the whole harness rather than one check.
 function canvas(){
   const cv = {width: 0, height: 0, data: null};
   cv.getContext = () => ({
     imageSmoothingEnabled: true,
     drawImage(img){ cv.data = Uint8ClampedArray.from(img.data); },
-    getImageData(){ return {data: cv.data}; },
+    getImageData(){ throw new Error('a canvas was read back - read the layer bytes instead'); },
     putImageData(im){ cv.data = im.data; },
   });
   return cv;
@@ -275,6 +280,30 @@ for(const m of job.maps){
   check(`${m.name}: and it is still monotonic, so no two heights swap places`, mono);
 }
 
+// ---- 3e) the hover panel's lookups, from the bytes alone -------------------
+{
+  // dense forest is 0,64,0 in every ground table; a province coloured the same
+  const forest = [0, 64, 0], sea = [41, 140, 233];
+  const c = screen(2, 1, 'ground_types', [sea, forest], {});
+  c.layers.regions = {def: {present: true, aligned: true}, img: null, cv: null, px: null,
+                      raw: {w: 2, h: 1, data: Uint8ClampedArray.from(
+                        [41, 140, 233, 255, 0, 64, 0, 255])},
+                      hide: new Set()};
+  c.man.markers = {settlement: [0, 0, 0], port: [255, 255, 255]};
+  c.byKey = new Map([[packed(forest), {name: 'Forest_Province'}]]);
+  // the picture is a canvas that would lie; the bytes are the truth
+  c.layers.ground_types.raw = {w: 2, h: 1, data: c.layers.ground_types.img.data};
+  c.layers.ground_types.img = canvas();
+  c.layers.regions.img = canvas();
+  check('the tooltip reads a layer\'s colour out of its bytes, exactly (0,64,0)',
+        JSON.stringify(ctx.cmapLayerRgb('ground_types', 1, 0)) === '[0,64,0]');
+  const r = ctx.cmapRegionAt(1, 0);
+  check('and names the province under the pointer from the same bytes',
+        r && r.name === 'Forest_Province');
+  check('a tile off the layer is nothing, not a read past the end',
+        ctx.cmapLayerRgb('ground_types', 2, 0) === null);
+}
+
 fs.writeFileSync(process.argv[4], JSON.stringify(out));
 """
 
@@ -327,6 +356,33 @@ else:
                 check(label, passed)
             if not maps:
                 print("  [skip] no installed map to measure a real height ramp on")
+
+
+# ---- 3f) the bytes the screen reads are the picture's pixels ----------------
+
+print("\n== the raw layer bytes are exactly the picture's pixels ==")
+from PIL import Image                                               # noqa: E402
+import io                                                           # noqa: E402
+
+for m in _realmod.installed():
+    if not (m / "data/world/maps/base/descr_terrain.txt").exists():
+        continue
+    try:
+        cmr = campmap.CampaignMap(Mod(m))
+    except Exception as exc:
+        print(f"  [skip] {m.name}: {exc}")
+        continue
+    same, tried = [], 0
+    for ly in campmap.LAYERS:
+        if not cmr.path(ly["code"]).exists():
+            continue
+        tried += 1
+        w, h, data = campmap.layer_rgb(cmr, ly["code"], "tile")
+        png = Image.open(io.BytesIO(campmap.layer_png(cmr, ly["code"], "tile"))).convert("RGB")
+        if (w, h) == png.size and data == png.tobytes():
+            same.append(ly["code"])
+    check(f"{m.name}: all {tried} layers' raw bytes equal their PNG pixel for pixel",
+          tried and len(same) == tried)
 
 
 # ---- 4) the manifest carries both of 20a's facts ----------------------------

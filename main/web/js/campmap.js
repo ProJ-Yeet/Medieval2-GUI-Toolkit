@@ -203,6 +203,54 @@ function cmapSaveLayers(){
   }, 400);
 }
 
+/* Everything about how the map is READ, back to how it first opens.
+
+   Asked for by a user after 20c: the screen remembers a dozen habits across
+   sessions (`map_layers`) and three panels hold filters of their own, and when
+   the map looks wrong there was no way back but to undo each one by hand. This
+   is the one way back. It is the defaults `cmapNew` falls to with nothing
+   saved - each layer's own `on`, `opacity` and blank colour, the server's
+   order, the rivers and heights readings off, the tooltip on and the names off
+   - plus the query panel's colouring and filters, the marker layer and the
+   zoom, and it saves the result so the next session opens the same way.
+
+   What it does NOT touch, because none of it is a habit: named view presets
+   (`map_views`, somebody's own work), the campaign being read, unsaved paint
+   strokes and the forms on the right. */
+function cmapResetView(){
+  const c = state.cmap;
+  if(!c) return;
+  if(!confirm('Put the campaign map back to how it first opens?\n\n'
+    + 'Every layer, its opacity, its order and the colours punched out of it; '
+    + 'the rivers and heights readings; settlement names and the tooltip; the '
+    + 'markers; the query panel\'s colouring and filters; and the zoom.\n\n'
+    + 'Saved views, the campaign you are reading and any unsaved painting are kept.'))
+    return;
+  for(const l of c.man.layers){
+    const L = c.layers[l.code];
+    if(!L) continue;
+    L.on = !!l.on && l.present;
+    L.opacity = l.opacity;
+    L.hide = new Set(l.blank ? [l.blank.key] : []);
+    L.masked = null; L.maskKey = ''; L.ramp = null;
+  }
+  c.order = cmapOrder(c.man, []);
+  c.rivers = false; c.riverRgb = CMAP_RIVER_RGB.slice();
+  c.heightAlpha = false; c.tip = true; c.labels = false; c.lab = null;
+  c.overlay = null; c.overlayKey = ''; c.overlayAlpha = 0.85;
+  c.comp = null; c.compKey = '';
+  // the query panel and the marker layer are panels of their own; nulling them
+  // is how cmapSetCampaign resets them too, and each rebuilds closed and empty
+  state.cq = null; state.cmk = null;
+  activity('map layer', 'reset the map to its defaults');
+  cmapSaveLayers();
+  renderCampmap();
+  for(const code of c.order) if(c.layers[code].img) cmapMask(c, code);
+  cmapLoadLayers();
+  cmapFit();
+  toast('The map is back to its defaults. Saved views are kept.');
+}
+
 /* The saved draw order, reconciled with the layers this manifest actually has.
 
    A saved order is a list of codes written by an older run of the tool, and the
@@ -453,6 +501,10 @@ Answered here, out of the map you were already sent - no request per pixel.">ⓘ
           <button id="cmLabBtn" class="${c.labels ? 'on' : ''}" onclick="clnToggle()"
             title="Settlement names beside their markers (L), placed so that none covers another.
 A name with no room at this zoom is left off and counted; zoom in for it.">Aa Labels</button>
+          <button onclick="cmapResetView()"
+            title="Put the map back to how it first opens: every layer, opacity, order and
+punched colour, the rivers and heights readings, names, the tooltip, the markers,
+the query panel's colouring and filters, and the zoom. Saved views are kept.">↺ Reset</button>
           <span class="count" id="cmZoom"></span>
         </div>
         <div class="cmpin" id="cmPin" hidden></div>
@@ -806,11 +858,10 @@ function cmapMoveTop(code){
 
 /* Fetch every layer that is ticked and not already here, then compose.
 
-   One <img> per layer, decoded by the browser, kept for the life of the
-   screen. A layer is fetched at most once: the server caches the PNG on disk
-   keyed by the file's mtime, so even a reload of the page is a read rather
-   than a re-encode, and a layer repainted underneath us is a miss rather than
-   a stale picture. */
+   One set of bytes per layer (see cmapFetchLayer for why bytes and not a
+   picture), kept for the life of the screen with a canvas written from them.
+   A layer is fetched at most once, and a layer repainted underneath us is read
+   fresh the next time the screen opens rather than served stale. */
 async function cmapLoadLayers(){
   const c = state.cmap;
   const want = c.order.filter(code => c.layers[code].on
@@ -832,44 +883,112 @@ async function cmapLoadLayers(){
 //: ERR_CONNECTION_REFUSED, and the same URL answered 200 two milliseconds later.
 const CMAP_LAYER_TRIES = 3;
 
-/* One layer picture, with the retries and - only when they are all spent - the
+/* One layer's pixels, with the retries and - only when they are all spent - the
    server's own sentence about why not.
 
-   An <img> only ever learns *that* it failed. The server answers a broken layer
-   with a reason and a status, and "map_heights.tga could not be decoded" is the
-   whole of what the person needs, so it is worth one more request to get. It is
-   read as JSON only when the status says it is an error: a 200 here means the
-   picture was fine and the browser could not decode it, which is a different
-   sentence, and parsing the PNG as JSON would print a third thing that is true
-   of neither. */
+   FETCHED AS BYTES, NOT AS A PICTURE (fixed after 20c, on a user's report). An
+   <img> drawn into a canvas and read back with getImageData is not guaranteed
+   to give the file's colours: canvas anti-fingerprinting - Brave's default
+   shields, Firefox's resist-fingerprinting, several privacy extensions - adds
+   one-step noise to every read, and colour management can shift a picture the
+   same way. Every answer this screen gives is an exact colour match, so the
+   hover panel said "no region" over most provinces and read dense forest,
+   0,64,0 in every table, as 0,65,1 - in the user's browser and never in ours.
+   So the server sends the raw RGB (`format=rgb`, unittransfer.campmap.layer_rgb),
+   `L.raw` keeps it, every read on this screen goes through `cmapRawOf`, and the
+   canvases are only ever WRITTEN, with putImageData, which nothing alters.
+
+   A status that is not 200 is read for the server's JSON sentence, the way the
+   picture route always was; a request that never reached the server is retried
+   first, for core.js's `uiFailedFiles` reason. */
 function cmapFetchLayer(c, code){
   const L = c.layers[code];
-  const url = `/api/map/layer?mod=${enc(c.mod)}&code=${enc(code)}&fit=${enc(L.def.fit)}`;
+  const url = `/api/map/layer?mod=${enc(c.mod)}&code=${enc(code)}`
+    + `&fit=${enc(L.def.fit)}&format=rgb`;
   L.loading = true;
-  return new Promise(done => {
-    const go = n => {
-      const img = new Image();
-      img.onload = () => { L.img = img; L.loading = false; L.failed = ''; done(); };
-      img.onerror = () => {
-        if(n < CMAP_LAYER_TRIES){ setTimeout(() => go(n + 1), 150 * n); return; }
-        fetch(url, {cache: 'no-store'}).then(async r => {
-          if(r.ok){ L.failed = 'the picture arrived, and the browser could not decode it'; return; }
-          let why = `the server answered ${r.status}`;
-          try{ const j = await r.json(); if(j && j.error) why = j.error; }catch(e){}
-          L.failed = why;
-        }).catch(e => { L.failed = errText(e); })
-          .finally(() => {
-            L.loading = false;
-            if(state.cmap === c) cmapRepanel();
-            done();
-          });
-      };
-      // the query is what the browser keys its own failed-request cache on, so
-      // a retry that looks identical can be answered from that failure
-      img.src = n > 1 ? `${url}&try=${n}` : url;
-    };
-    go(1);
-  });
+  const finish = why => {
+    L.loading = false;
+    L.failed = why || '';
+    if(why && state.cmap === c) cmapRepanel();
+  };
+  const go = async n => {
+    let r;
+    try{ r = await fetch(n > 1 ? `${url}&try=${n}` : url, {cache: 'no-store'}); }
+    catch(e){
+      if(n < CMAP_LAYER_TRIES){
+        await new Promise(ok => setTimeout(ok, 150 * n));
+        return go(n + 1);
+      }
+      return finish(errText(e));
+    }
+    if(!r.ok){
+      let why = `the server answered ${r.status}`;
+      try{ const j = await r.json(); if(j && j.error) why = j.error; }catch(e){}
+      return finish(why);
+    }
+    const w = parseInt(r.headers.get('X-Map-Width'), 10);
+    const h = parseInt(r.headers.get('X-Map-Height'), 10);
+    const rgb = new Uint8Array(await r.arrayBuffer());
+    if(!(w > 0 && h > 0) || rgb.length !== w * h * 3)
+      return finish(`the layer arrived the wrong size (${rgb.length} bytes for ${w}x${h})`);
+    if(state.cmap !== c) return finish('');
+    L.raw = cmapRawFromRgb(rgb, w, h);
+    L.img = cmapCanvasFrom(L.raw);
+    finish('');
+  };
+  return go(1);
+}
+
+//: `{w, h, data}` with `data` RGBA - the shape an ImageData has, so a canvas
+//: can be written straight out of it and a lookup is one index.
+function cmapRawFromRgb(rgb, w, h){
+  const data = new Uint8ClampedArray(w * h * 4);
+  for(let i = 0, j = 0, n = w * h; i < n; i++, j += 3){
+    const p = i * 4;
+    data[p] = rgb[j]; data[p + 1] = rgb[j + 1]; data[p + 2] = rgb[j + 2]; data[p + 3] = 255;
+  }
+  return {w, h, data};
+}
+
+//: An ImageData where the page has one, and the same shape where it does not
+//: (the node harness in tests/test_maplayers.py runs this file bare).
+function cmapImageData(data, w, h){
+  return (typeof ImageData === 'function') ? new ImageData(data, w, h)
+                                           : {data, width: w, height: h};
+}
+
+//: A canvas holding these pixels, written and never read.
+function cmapCanvasFrom(raw){
+  const cv = document.createElement('canvas');
+  cv.width = raw.w; cv.height = raw.h;
+  const x = cv.getContext('2d');
+  x.putImageData(cmapImageData(new Uint8ClampedArray(raw.data), raw.w, raw.h), 0, 0);
+  return cv;
+}
+
+/* A layer's pixels as `{w, h, data}`, the one thing this screen reads.
+
+   `L.raw` whenever the layer was fetched here, which is always in the page.
+   The fallback reads a picture back the old way and is for the node harness,
+   whose "images" are byte arrays already; it is cached so it runs once. */
+function cmapRawOf(L){
+  if(!L) return null;
+  if(L.raw) return L.raw;
+  const src = L.cv || L.img;
+  if(!src) return null;
+  if(src.data && !src.getContext){           // the harness's stand-in for an <img>
+    L.raw = {w: src.naturalWidth || src.width, h: src.naturalHeight || src.height,
+             data: src.data};
+    return L.raw;
+  }
+  const w = src.naturalWidth || src.width, h = src.naturalHeight || src.height;
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const x = cv.getContext('2d', {willReadFrequently: true});
+  x.imageSmoothingEnabled = false;
+  x.drawImage(src, 0, 0);
+  L.raw = {w, h, data: x.getImageData(0, 0, w, h).data};
+  return L.raw;
 }
 
 /* THE COMPOSITE. Every ticked layer, in draw order, at one pixel per tile.
@@ -1450,10 +1569,10 @@ function cmapNameColour(code, rgb){
    layer that is not aligned to the grid has no value at a tile and says so
    rather than being sampled at coordinates that mean nothing in it. */
 function cmapLayerRgb(code, tx, ty){
-  const cv = cmapPixels(code);
-  if(!cv || tx < 0 || ty < 0 || tx >= cv.width || ty >= cv.height) return null;
-  const d = state.cmap.layers[code].px.getImageData(tx, ty, 1, 1).data;
-  return [d[0], d[1], d[2]];
+  const R = cmapRawOf(state.cmap.layers[code]);
+  if(!R || tx < 0 || ty < 0 || tx >= R.w || ty >= R.h) return null;
+  const p = (ty * R.w + tx) * 4, d = R.data;
+  return [d[p], d[p + 1], d[p + 2]];
 }
 
 function cmapTipRow(ly, tx, ty){
@@ -1591,9 +1710,9 @@ function cmapTipPaint(){
 /* The region a tile belongs to, or the string 'settlement' / 'port' when the
    tile is one of the two markers.
 
-   Reads the regions layer's own pixels through a 1x1 scratch canvas rather than
-   keeping a full ImageData copy: a getImageData of one pixel is microseconds,
-   and the alternative is another megabyte held for the life of the screen. */
+   Reads the regions layer's own bytes (`cmapRawOf`), one index per lookup. It
+   used to read a 1x1 box back off a canvas, which a browser with canvas
+   anti-fingerprinting answers with noise - see cmapFetchLayer. */
 /* What to call a region on screen.
 
    A colour with no record in descr_regions.txt is either a hole in the mod or
@@ -1623,12 +1742,13 @@ function cmapPixels(code){
   const c = state.cmap, L = c && c.layers[code];
   if(!L || !L.img) return null;
   if(!L.cv){
-    L.cv = document.createElement('canvas');
-    L.cv.width = L.img.naturalWidth || L.img.width;
-    L.cv.height = L.img.naturalHeight || L.img.height;
-    L.px = L.cv.getContext('2d', {willReadFrequently: true});
+    const R = cmapRawOf(L);
+    if(!R) return null;
+    // written from the bytes, never drawn from the picture and read back: the
+    // bytes are the truth about the layer, and this canvas only shows them
+    L.cv = cmapCanvasFrom(R);
+    L.px = L.cv.getContext('2d');
     L.px.imageSmoothingEnabled = false;
-    L.px.drawImage(L.img, 0, 0);
   }
   return L.cv;
 }
@@ -1655,9 +1775,10 @@ function cmapMarkerOwner(tx, ty){
 function cmapRegionAt(tx, ty){
   const c = state.cmap;
   if(tx < 0 || ty < 0 || tx >= c.man.width || ty >= c.man.height) return null;
-  if(!cmapPixels('regions')) return null;
-  const d = c.layers.regions.px.getImageData(tx, ty, 1, 1).data;
-  const k = (d[0] << 16) | (d[1] << 8) | d[2];
+  const R = cmapRawOf(c.layers.regions);
+  if(!R) return null;
+  const p = (ty * R.w + tx) * 4, d = R.data;
+  const k = (d[p] << 16) | (d[p + 1] << 8) | d[p + 2];
   const mk = c.man.markers;
   if(k === ((mk.settlement[0] << 16) | (mk.settlement[1] << 8) | mk.settlement[2]))
     return 'settlement';
@@ -1676,8 +1797,9 @@ function cmapOutline(r){
   if(!r){ c.outline = null; c.outlineKey = -1; return; }
   if(c.outlineKey === r.key) return;
   const W = c.man.width, H = c.man.height;
-  if(!cmapPixels('regions')){ c.outline = null; return; }
-  const src = c.layers.regions.px.getImageData(0, 0, W, H).data;
+  const R = cmapRawOf(c.layers.regions);
+  if(!R){ c.outline = null; return; }
+  const src = R.data;
   const out = document.createElement('canvas');
   out.width = W; out.height = H;
   const im = out.getContext('2d').createImageData(W, H);
@@ -1821,14 +1943,10 @@ function cmapRiverKeys(){
 
    One pass to count and one to write, both inside the mask pass's own budget.
    Cached on the layer and thrown away with the mask whenever the pixels move. */
-function cmapHeightRamp(img){
-  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
-  const cv = document.createElement('canvas');
-  cv.width = w; cv.height = h;
-  const x = cv.getContext('2d', {willReadFrequently: true});
-  x.imageSmoothingEnabled = false;
-  x.drawImage(img, 0, 0);
-  const d = x.getImageData(0, 0, w, h).data;
+function cmapHeightRamp(src){
+  // the layer's bytes; a bare picture is read the way cmapRawOf reads one
+  const R = (src && src.data && src.w) ? src : cmapRawOf({img: src});
+  const w = R.w, h = R.h, d = R.data;
   const hist = new Float64Array(256);
   let land = 0;
   for(let i = 0, n = w * h; i < n; i++){
@@ -1884,19 +2002,20 @@ function cmapMask(c, code){
   const want = cmapModeKey(c, code);
   if(!L.img || !want){ L.masked = null; L.maskKey = ''; L.rivertiles = 0; return; }
   if(L.masked && L.maskKey === want) return;
-  const w = L.img.naturalWidth || L.img.width, h = L.img.naturalHeight || L.img.height;
+  // the layer's bytes as they are NOW - painting writes them - copied, because
+  // the pass below rewrites alpha and the bytes are what every lookup reads
+  const R = cmapRawOf(L);
+  if(!R){ L.masked = null; L.maskKey = ''; return; }
+  const w = R.w, h = R.h;
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
-  const x = cv.getContext('2d', {willReadFrequently: true});
+  const x = cv.getContext('2d');
   x.imageSmoothingEnabled = false;
-  // from the painted copy when there is one - a hidden colour has to be punched
-  // out of the layer as it is NOW, not as it arrived
-  x.drawImage(L.cv || L.img, 0, 0);
-  const im = x.getImageData(0, 0, w, h), d = im.data;
+  const im = cmapImageData(new Uint8ClampedArray(R.data), w, h), d = im.data;
   const riv = (code === 'features' && c.rivers) ? cmapRiverKeys() : null;
   const rgb = c.riverRgb;
   const ramp = (code === 'heights' && c.heightAlpha)
-    ? (L.ramp || (L.ramp = cmapHeightRamp(L.cv || L.img))) : null;
+    ? (L.ramp || (L.ramp = cmapHeightRamp(R))) : null;
   let drawn = 0;
   for(let i = 0, n = w * h; i < n; i++){
     const p = i * 4, r = d[p], g = d[p + 1], b = d[p + 2];
