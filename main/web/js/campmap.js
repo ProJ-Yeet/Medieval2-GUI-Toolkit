@@ -475,6 +475,7 @@ function cmapGoTile(tile, zoom, region){
   v.oy = h / 2 - (tile[1] + 0.5) * v.zoom;
   v.fitted = true;
   cmapPick(tile);
+  cmapLocate(tile);
   if(!region || c.sel) return;
   const r = c.man.regions.find(x => x.name === region);
   if(!r) return;
@@ -485,6 +486,58 @@ function cmapGoTile(tile, zoom, region){
   csOpen(r.name);
   cmapOpenPeople(r.name);
   if(typeof cftPaint === 'function') cftPaint();
+}
+
+/* 22b, G5's "Localize": where your eye should land.
+
+   Going to a tile centres it, and on a 510-tile map at zoom 10 the centre of
+   the screen is still a field of look-alike pixels. Geomod draws a circle that
+   shrinks onto the item; this is that, a ring closing from ninety pixels onto
+   the tile over a second, drawn over everything else and then gone. Every "go
+   to" on the screen - a finding in ✓ Check, a query row, a fort's ◎ - arrives
+   through cmapGoTile, so every one of them gets it. With reduced motion asked
+   for, the ring is drawn closed and still, for the same second. */
+const CMAP_LOCATE_MS = 1000;
+
+function cmapLocate(tile){
+  const c = state.cmap;
+  if(!c || !tile) return;
+  const still = !!(window.matchMedia
+                   && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const mark = c.locate = {tile: tile.slice(), t0: performance.now(), still};
+  const step = () => {
+    const now = state.cmap;
+    if(!now || now.locate !== mark) return;       // a newer one took over
+    if(performance.now() - mark.t0 >= CMAP_LOCATE_MS){
+      now.locate = null;
+      cmapPaint();
+      return;
+    }
+    if(!still) cmapPaint();
+    requestAnimationFrame(step);
+  };
+  cmapPaint();
+  requestAnimationFrame(step);
+}
+
+//: The ring, for cmapOverlay. Its radius in screen pixels, closing to just
+//: outside the tile's own edge.
+function cmapLocateDraw(x){
+  const c = state.cmap, L = c.locate, v = c.view;
+  if(!L) return;
+  const t = L.still ? 1 : Math.min(1, (performance.now() - L.t0) / CMAP_LOCATE_MS);
+  const ease = 1 - Math.pow(1 - t, 3);
+  const end = Math.max(6, v.zoom * 0.9);
+  const r = 90 + (end - 90) * ease;
+  const X = cmapX(L.tile[0]) + v.zoom / 2, Y = cmapY(L.tile[1]) + v.zoom / 2;
+  x.save();
+  x.lineWidth = 3;
+  x.strokeStyle = 'rgba(0,0,0,.55)';
+  x.beginPath(); x.arc(X, Y, r + 1.5, 0, Math.PI * 2); x.stroke();
+  x.lineWidth = 2;
+  x.strokeStyle = 'rgba(255,214,90,.98)';
+  x.beginPath(); x.arc(X, Y, r, 0, Math.PI * 2); x.stroke();
+  x.restore();
 }
 
 function renderCampmap(){
@@ -1254,6 +1307,9 @@ function cmapOverlay(x, s0, t0, s1, t1){
   // 20c's names go over the markers they are beside, and under the hover cell
   if(typeof clnDraw === 'function') clnDraw(x, s0, t0, s1, t1);
 
+  // 22b: the Localize ring is over the markers and the names it is finding
+  cmapLocateDraw(x);
+
   if(c.hover){
     const [hx, hy] = c.hover;
     if(hx >= s0 - 1 && hx <= s1 && hy >= t0 - 1 && hy <= t1){
@@ -1365,6 +1421,13 @@ function cmapPointers(cv){
       return;
     }
     if(mode === 'mark'){
+      // 22b: the travel is counted here too. It was only counted for a pan, so
+      // a marker drag always ended with `moved` at 0 and pointerup read it as
+      // a click - every drag since 17d was a pick, and nothing was ever dropped
+      if(last){
+        moved += Math.abs(e.clientX - last[0]) + Math.abs(e.clientY - last[1]);
+        last = [e.clientX, e.clientY];
+      }
       cmkDragMove(cmapEventTile(cv, e));
       cmapHover(cmapEventTile(cv, e));
       return;

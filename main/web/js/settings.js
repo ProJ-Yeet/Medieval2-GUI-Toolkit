@@ -345,6 +345,8 @@ function logItemHtml(e){
       :e.mode==='factions'&&e.action==='repair'?`🛡 repaired in ${esc(e.dest)}`
       // 22a: one fort or watchtower line placed, moved, changed or taken out
       :e.mode==='campmap'&&e.action==='fortification'?`🏰 ${esc((e.options||{}).what||'edit')} in ${esc(e.dest)}`
+      // 22b: one trade resource line, the same writer
+      :e.mode==='campmap'&&e.action==='resource'?`◆ ${esc((e.options||{}).what||'edit')} resource in ${esc(e.dest)}`
       :e.mode&&e.mode!=='transfer'?`${esc(e.mode)} edit in ${esc(e.dest)}`
       // a transfer that wrote no unit: its models only, which is what the row
       // would otherwise claim was a unit called after the source's

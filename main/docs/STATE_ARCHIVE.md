@@ -25,6 +25,42 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 22b - resources and the snap (2026-09-11)
+The second session of the Next set, on "continue next phase", committed and not
+released. Upstream `sync` was up to date at 2740b0b. It closes D9, D10, G5 and
+Phase 22.
+
+**Measured first, on all four installed campaigns.** 2,813 resource lines:
+where they sit (the header, every one), how each file groups them (Reforged's
+imperial campaign by province heading, 410 of 413 in the province named; the
+other three by name), what they name (their own mod's list, all of them), and
+what they stand on (sea, impassable, a marker, a duplicate - each counted per
+campaign). The Fellowship campaign ships its own map files; judged on them,
+108 of its 222 resources are still in the sea, so the file was written for
+another map.
+
+**One writer, one search.** Resources went through 22a's plan with a `kind`;
+the guard now keys every record on where it is filed, heading included. D10 is
+`mapsnap.nearest` over four existing predicates, with a ⌖ Move button in both
+panels. Localize is a ring from `cmapGoTile`. The view first took 1.8 s on DaC
+(a duplicate search that walked the file per resource, and a snap that asked
+methods per tile); a per-tile census and raw bytes brought it to about 100 ms.
+
+**The drag.** Dragging a resource with the pointer in the browser did nothing:
+17d's drag had never dropped, because the travel was only counted for a pan.
+22a's check had called the drop function. Fixed, and the decision above says
+what it means for the next check.
+
+**Verified in the running app without touching the user's mods or log**, with
+the scratch launcher and a scratch copy of Reforged's map and imperial
+campaign: place, drag, relist under the other heading, ⌖ back from the sea,
+Localize; four ◆ Log entries undone, and the file byte-identical to Reforged's.
+The character panel's ⌖ button was checked too. The scratch copy was deleted
+and the scratch launch entry removed.
+
+The full run afterwards was 98 suites: 94 pass, and the four that do not
+are the DaC four, each on its documented number.
+
 ## 22a - forts and watchtowers (2026-09-11)
 The first session of the Next set, on "continue next phase", committed and not
 released. Upstream `sync` was up to date at 2740b0b. It closes the first half of
@@ -2280,6 +2316,24 @@ evidence reports nothing**, and **a baseline shows and stops blocking; it never
 hides**. Two more were already locked there under different wording (Pillow
 only, and the browser never parses a TGA). They are left in the list below as
 well, because a dated entry is the record of when the call was made.
+
+Moved from `STATE.md` when 22b took the list past ten (2026-09-11):
+
+- 2026-09-11: **A list something is picked from is part of the feature, and
+  "the picker already exists" is a claim to measure.** D14 was filed as a
+  cosmetic browser over a picker two documents said was already there. There was
+  no picker - every route took a campaign and nothing ever sent one - and the
+  list it would have been built on read only the top level of
+  `world/maps/campaign`, hiding a whole second campaign in all three installs
+  here. **This is 19b's lesson twice running: a claim that is nearly true is
+  what the next session builds on.**
+- 2026-09-11: **The moment a name can come off the page it needs one choke
+  point.** `campstrat.campaign_rel` is the only conversion from a campaign name
+  to a path under `world/maps/campaign`, and `strat_path`,
+  `campfiles.campaign_dir`, `campevents.events_path`, `winconds.path_for`,
+  `mapquery.Facts` and `mapcheck.Check` all go through it. A nested campaign IS
+  a name with a separator in it, so the rule is not "no separators" - it is
+  "no step that leaves the folder".
 
 Moved from `STATE.md` when 22a took the list past ten (2026-09-11):
 

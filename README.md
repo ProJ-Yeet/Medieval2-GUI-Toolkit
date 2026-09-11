@@ -39,7 +39,7 @@ one containing `mods`).
 | Unit Editor | Change, clone or delete the units of a single mod |
 | BMDB + Sprites | Edit any `battle_models.modeldb` entry, view models in 3D, and clean out what nothing references |
 | Buildings | Browse and edit `export_descr_buildings.txt`, including recruitment |
-| Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, place, move or remove a fort or a watchtower, set which mercenary pool a province hires from, name a faction on the new-game menu, edit the historical events a campaign fires and the natural disasters its map allows, name a province and its settlement as the player reads them, rename a province or a settlement everywhere it is named, read the river network as an overlay of its own and the heights as relief, tick any of the ten layers with its own number key, find a province by the name the player reads or the one the files use, save what the map looks like under a name and come back to it, open any of the campaigns the mod ships rather than only the one the engine's menu lists, put every settlement's name on the map without one covering another, fill any coordinate by clicking the map, add a province that arrives in every campaign with a settlement and a music type, check the whole map against what the game will accept. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
+| Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, place, move or remove a fort, a watchtower or a trade resource, set which mercenary pool a province hires from, name a faction on the new-game menu, edit the historical events a campaign fires and the natural disasters its map allows, name a province and its settlement as the player reads them, rename a province or a settlement everywhere it is named, read the river network as an overlay of its own and the heights as relief, tick any of the ten layers with its own number key, find a province by the name the player reads or the one the files use, save what the map looks like under a name and come back to it, open any of the campaigns the mod ships rather than only the one the engine's menu lists, put every settlement's name on the map without one covering another, fill any coordinate by clicking the map, add a province that arrives in every campaign with a settlement and a music type, check the whole map against what the game will accept. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
 | Unit Sounds | Choose which voice bank entry each unit uses |
 | Sprites | Generate and wire up the far-LOD unit sprites |
 | Strings | Read and write the compiled `data/text/*.txt.strings.bin` files |
@@ -120,17 +120,25 @@ colours punched out of them, the rivers and heights readings, names, the
 tooltip, the markers, the query panel's colouring and filters, and the zoom.
 Saved views, the campaign you are reading and unsaved painting are kept.
 
-**🏰 Forts** places a fort or a watchtower on the tile you click: press
-**＋ Fort** or **＋ Watchtower**, click the map, and it is filed under the
-province under that tile, with a region section opened for the province if
-the campaign has none yet. Drag one on the markers layer to move it, or pick a
-province to list its own and change a fort's type or culture, move it to
-another province's section, or delete it. Each save is one line of
-`descr_strat.txt`, shown before it is written, backed up, and undone from the
-Log like any other. A culture your mod does not declare is refused; a fort
-type with no battle map, a tower on the sea, or one standing in a different
-province from the one it is filed under is said, with the numbers behind it,
-and allowed.
+**🏰 Forts and resources** places a fort, a watchtower or a trade resource
+on the tile you click: press **＋ Fort**, **＋ Watchtower** or **＋ Resource**,
+click the map, and it is filed where the campaign keeps its own - a fort under
+the province under that tile, a resource in its province's group or after the
+last of its name, whichever way the file groups them. Drag one on the markers
+layer to move it, or pick a province to list its own and change a fort's type
+or culture, a resource's name, file it under another province, or delete it.
+Each save is one line of `descr_strat.txt`, shown before it is written, backed
+up, and undone from the Log like any other. A culture or a resource name your
+mod does not declare is refused; a tower on the sea, a resource on impassable
+land, or one standing in a different province from the one it is filed under
+is said, with the numbers behind it, and allowed.
+
+When a tile is wrong for what you put on it, the message says where the
+nearest tile that would do is, and **⌖ Move it to** puts it there. The same
+answer comes with a character put on the wrong side of the shore and with a
+settlement pixel the map refuses. Going to anything on the map (a finding, a
+query row, a fort's ◎) draws a ring that closes onto the tile, so you can see
+where to look.
 
 A province made with **New region** now arrives in every campaign that reads the
 map: a settlement in each campaign's own start position (a village, held by the

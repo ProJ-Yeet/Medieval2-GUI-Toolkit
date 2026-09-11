@@ -234,9 +234,9 @@ p = plan(mod, facts, kind="watchtower", action="add", x="abc", y=5,
          region="London_Province")
 check("a coordinate that is not a whole number is fatal and named",
       not p.text and "not a whole number" in "; ".join(p.errors))
-p = plan(mod, facts, kind="resource", action="add", x=5, y=5)
-check("a resource is 22b's, and is refused here by name",
-      not p.text and "not one of fort, watchtower" in "; ".join(p.errors))
+p = plan(mod, facts, kind="keep", action="add", x=5, y=5)
+check("a kind that is not one of the three is refused by name",
+      not p.text and "not one of fort, watchtower, resource" in "; ".join(p.errors))
 
 for label, text, want in (
         ("under Third Age Reforged's regions banner", BANNERED,
@@ -350,7 +350,7 @@ for root in roots:
         same = sum(stratobj.render_line(rs.lines[n.start], stratobj.read_spec(n),
                                         stratobj.read_spec(n)) == rs.lines[n.start]
                    for n in objs)
-        check(f"{root.name}/{camp}: all {len(objs)} fort and watchtower lines "
+        check(f"{root.name}/{camp}: all {len(objs)} fort, watchtower and resource lines "
               f"render back byte for byte", same == len(objs))
         t0 = time.time()
         v = stratobj.view(rf)
@@ -367,8 +367,9 @@ for root in roots:
         def rplan(**body):
             return stratobj.plan(rmod, rf, dict(body, campaign=camp))
 
-        if v["rows"]:
-            r = v["rows"][0]
+        forts = [x for x in v["rows"] if x["kind"] in stratobj.SECTIONED]
+        if forts:
+            r = forts[0]
             p = rplan(kind=r["kind"], action="edit", line=r["line"],
                       at=[r["x"], r["y"]], x=r["x"] + 1)
             h = hunks(orig, p.text)
@@ -379,7 +380,7 @@ for root in roots:
                       at=[r["x"], r["y"]])
             check("  a delete takes out that one line",
                   hunks(orig, p.text) == [("delete", [r["text"]], [])])
-            other = next((x["region"] for x in v["rows"]
+            other = next((x["region"] for x in forts
                           if x["region"] and x["region"] != r["region"]), "")
             if other:
                 p = rplan(kind=r["kind"], action="move", line=r["line"],
@@ -448,7 +449,7 @@ else:
         d = get("/api/map/objects?mod=ObjMod")
         check(f"/api/map/objects answers: {d['counts']}, {d['sections']} sections",
               isinstance(d["rows"], list) and "vocab" in d
-              and d["counts"]["fort"] + d["counts"]["watchtower"] == len(d["rows"]))
+              and sum(d["counts"].values()) == len(d["rows"]))
         cm = campmap.CampaignMap(Mod(med2 / "mods" / "ObjMod"))
         reg = next(x for x in cm.index.regions if x.name and x.settlement)
         gx, gy = cm.game_xy(reg.settlement[0] + 1, reg.settlement[1])

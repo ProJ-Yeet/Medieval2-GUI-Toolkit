@@ -1,4 +1,4 @@
-/* campforts.js - Campaign Map: forts and watchtowers
+/* campforts.js - Campaign Map: forts, watchtowers and trade resources
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
@@ -30,10 +30,19 @@
    stratobj.py decides all of it and it arrives here as sentences. The one
    thing said here without asking is the province under the tile, read off the
    region layer the screen already holds, and it is only ever shown.
+
+   22b: A TRADE RESOURCE IS THE SAME PANEL. One more kind of line and the same
+   writer, so it is one more Place button and one more box - its name - rather
+   than a screen of its own. Where a new one goes in the file is the server's:
+   Reforged heads each province's resources with its name and a new one joins
+   its province's group, DaC keeps each name together and a new one follows the
+   last of its name. D10 is the ⌖ Move button on a finding: the server names the
+   nearest tile that would do, and the button puts it in the form.
    ===================================================================== */
 
-const CFT_ICON = {fort: '▣', watchtower: '△'};
-const CFT_NAME = {fort: 'Fort', watchtower: 'Watchtower'};
+const CFT_ICON = {fort: '▣', watchtower: '△', resource: '◆'};
+const CFT_NAME = {fort: 'Fort', watchtower: 'Watchtower', resource: 'Resource'};
+const CFT_KINDS = ['fort', 'watchtower', 'resource'];
 
 /* ---------- state ---------- */
 
@@ -83,15 +92,16 @@ function cftToggle(){
   if(k.open && !k.d) cftLoad(); else cftPaint();
 }
 
-//: A row is a kind on a tile - no two of DaC's 800 share one - with its line
-//: to tell them apart if two ever do.
-function cftKey(r){ return {kind: r.kind, line: r.line, x: r.x, y: r.y}; }
+//: A row is a kind on a tile - no two of DaC's 800 forts share one - with its
+//: line to tell them apart when two do, as 63 of DaC's resources do.
+function cftKey(r){ return {kind: r.kind, line: r.line, x: r.x, y: r.y, name: r.name || ''}; }
 
 function cftFind(key){
   const rows = (state.cft.d && state.cft.d.rows) || [];
   return rows.find(r => r.kind === key.kind && r.line === key.line
                      && r.x === key.x && r.y === key.y)
-    || rows.find(r => r.kind === key.kind && r.x === key.x && r.y === key.y)
+    || rows.find(r => r.kind === key.kind && r.x === key.x && r.y === key.y
+                   && (r.name || '') === (key.name || ''))
     || rows.find(r => r.kind === key.kind && r.line === key.line)
     || null;
 }
@@ -138,7 +148,7 @@ function cftSelect(r, keepPreview){
   const k = state.cft;
   k.sel = cftKey(r); k.adding = '';
   k.w = {kind: r.kind, x: r.x, y: r.y, type: r.type || '', culture: r.culture || '',
-         region: r.region || ''};
+         name: r.name || '', region: r.region || ''};
   k.was = JSON.stringify(k.w);
   if(!keepPreview) k.preview = null;
 }
@@ -164,7 +174,8 @@ function cftPicked(tile){
   cftPaint();
 }
 
-//: The pin's answer for `＋ Fort` and `＋ Watchtower`: a new one on that tile.
+//: The pin's answer for `＋ Fort`, `＋ Watchtower` and `＋ Resource`: a new one
+//: on that tile.
 function cftPlace(kind, game){
   const k = state.cft;
   if(!k){ return; }
@@ -172,7 +183,8 @@ function cftPlace(kind, game){
   const type = kind === 'fort' ? cftDefaultType() : null;
   k.adding = kind; k.sel = null; k.preview = null;
   k.w = {kind, x: game[0], y: game[1], type: type ? type.name : '',
-         culture: type ? type.culture : '', region: ''};
+         culture: type ? type.culture : '',
+         name: kind === 'resource' ? cftDefaultName() : '', region: ''};
   k.was = null;
   cftPaint();
   cftPlan();
@@ -184,6 +196,25 @@ function cftDefaultType(){
   const v = state.cft.d && state.cft.d.vocab;
   const t = v && (v.fort_types || []).find(x => x.uses);
   return t ? {name: t.name, culture: t.culture} : null;
+}
+
+//: The name a new resource starts as: the last one placed this session, else the
+//: one the file writes most.
+function cftDefaultName(){
+  const k = state.cft;
+  if(k.lastName) return k.lastName;
+  const v = k.d && k.d.vocab;
+  const list = ((v && v.resources) || []).slice().sort((a, b) => b.uses - a.uses);
+  return list.length ? list[0].name : '';
+}
+
+//: D10: the server's nearest tile that would do, put in the form and planned.
+function cftNear(x, y){
+  const k = state.cft;
+  if(!k || !k.w) return;
+  k.w.x = x; k.w.y = y;
+  cftPaint();
+  cftPlan();
 }
 
 //: 20c: the pin's answer for the tile of the fort on screen.
@@ -238,6 +269,7 @@ function cftBody(action){
                 action: action || (k.adding ? 'add' : 'edit'),
                 x: w.x, y: w.y};
   if(w.kind === 'fort'){ body.type = w.type; body.culture = w.culture; }
+  if(w.kind === 'resource') body.name = w.name;
   if(k.sel){ body.line = k.sel.line; body.at = [k.sel.x, k.sel.y]; }
   // an existing one keeps its section unless the box names another; a new one
   // is filed by the server under the province under its tile
@@ -275,7 +307,8 @@ async function cftSave(action){
   const p = plan.plan || {};
   k.preview = p;
   cftPaint();
-  const name = (CFT_NAME[body.kind] || body.kind).toLowerCase();
+  const name = body.kind === 'resource' ? (body.name || 'resource')
+    : (CFT_NAME[body.kind] || body.kind).toLowerCase();
   const verb = {add: 'Add', delete: 'Delete', edit: 'Save', move: 'Move'}[p.action || body.action];
   if(!confirm(`${verb} the ${name}${p.region ? ` in ${p.region}` : ''}?\n\n`
     + ((p.changes || []).join('\n') || 'no visible change')
@@ -291,8 +324,10 @@ async function cftSave(action){
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
   toast('Saved. 🕑 Log can undo it.');
   activity('fort', `${k.mod}: ${p.action || body.action} ${body.kind} at ${body.x},${body.y}`);
+  if(body.kind === 'resource' && body.name) k.lastName = body.name;
   if(body.action === 'delete'){ k.sel = null; k.w = null; }
-  else k.sel = {kind: body.kind, line: res.line, x: body.x, y: body.y};
+  else k.sel = {kind: body.kind, line: res.line, x: body.x, y: body.y,
+                name: body.name || ''};
   k.adding = ''; k.preview = null;
   await cftLoad();
   // the markers layer is drawn from this file too, so it is now a version
@@ -300,16 +335,20 @@ async function cftSave(action){
   if(state.cmk && state.cmk.d){ state.cmk.d = null; cmkLoad(); }
 }
 
-/* 17d's drag, for a fort or a watchtower. The drop lands here: the panel opens
-   on the one that was dragged, its two numbers change and the save it would
-   have made is made - one writer, one confirmation, one undo. */
+/* 17d's drag, for a fort, a watchtower or a resource. The drop lands here: the
+   panel opens on the one that was dragged, its two numbers change and the save
+   it would have made is made - one writer, one confirmation, one undo. */
 async function cftDrop(item, game){
   const k = state.cft;
   if(!k) return;
   if(!k.open){ k.open = true; }
   if(!k.d) await cftLoad();
-  if(!k.d){ toast('✗ the forts could not be read', 6000); return; }
-  const r = k.d.rows.find(x => x.kind === item.kind && x.x === item.x && x.y === item.y);
+  if(!k.d){ toast('✗ the forts and resources could not be read', 6000); return; }
+  // a marker's line is 0-based, the panel's the file's own 1-based one
+  const r = k.d.rows.find(x => x.kind === item.kind && x.line === item.line + 1
+                          && x.x === item.x && x.y === item.y)
+    || k.d.rows.find(x => x.kind === item.kind && x.x === item.x && x.y === item.y
+                       && (item.kind !== 'resource' || x.name === item.name));
   if(!r){ toast(`✗ that ${item.kind} is not in the file any more`, 6000); return; }
   k.all = false;
   cftSelect(r);
@@ -346,10 +385,11 @@ function cftHtml(){
   const d = k.d, n = d ? d.counts : null;
   const head = `<div class="cpbar">
     <button class="cptog${k.open ? ' on' : ''}" onclick="cftToggle()"
-      title="The forts and watchtowers descr_strat.txt places. Place one on a tile, drag one on the markers layer, or pick a province to edit its own.">
-      🏰 Forts${k.open ? ' ✓' : ''}</button>
+      title="The forts, watchtowers and trade resources descr_strat.txt places. Place one on a tile, drag one on the markers layer, or pick a province to edit its own.">
+      🏰 Forts and resources${k.open ? ' ✓' : ''}</button>
     ${n ? `<span class="count">${n.fort} fort${n.fort === 1 ? '' : 's'} ·
-      ${n.watchtower} watchtower${n.watchtower === 1 ? '' : 's'}</span>` : ''}
+      ${n.watchtower} watchtower${n.watchtower === 1 ? '' : 's'} ·
+      ${n.resource || 0} resource${n.resource === 1 ? '' : 's'}</span>` : ''}
     ${k.busy ? '<span class="count">working…</span>' : ''}
   </div>`;
   if(!k.open) return head;
@@ -360,7 +400,7 @@ function cftHtml(){
     ${cftFileHtml()}
     <div class="csbtns">
       <span class="count">Place:</span>
-      ${cftPlaceHtml('fort')}${cftPlaceHtml('watchtower')}
+      ${CFT_KINDS.map(cftPlaceHtml).join('')}
     </div>
     ${cftListHtml()}
     ${k.w ? cftFormHtml() : ''}
@@ -381,9 +421,12 @@ function cftFileHtml(){
   const [good, total] = d.placed_well || [0, 0];
   const bad = d.rows.filter(r => r.findings.some(f => f.fatal)).length;
   const look = d.rows.filter(r => r.findings.length).length;
+  const [hg, ht] = d.headed_well || [0, 0];
   return `<div class="count">${esc(d.file)} · ${d.sections} region section${
-      d.sections === 1 ? '' : 's'}${total ? ` · ${good} of ${total} stand in the
-      province they are filed under` : ''}</div>
+      d.sections === 1 ? '' : 's'}${total ? ` · ${good} of ${total} forts and
+      watchtowers stand in the province they are filed under` : ''}${ht
+      ? ` · ${hg} of ${ht} resources stand in the province their heading names` : ''}${
+      d.own_map ? ' · judged on this campaign\'s own map files' : ''}</div>
     ${look ? `<div class="csbtns"><button class="${state.cft.all ? 'on' : ''}"
       onclick="cftShowAll()">${bad ? `<span class="w-bad">${bad}</span> ` : ''}⚠ ${look}
       to look at</button><span class="count">across the whole campaign</span></div>` : ''}`;
@@ -394,15 +437,16 @@ function cftListHtml(){
   const rows = cftRows();
   const region = cftRegion();
   if(!k.all && !region)
-    return `<div class="count">Pick a province on the map to list its forts and
-      watchtowers, click one on the markers layer to open it, or place one.</div>`;
+    return `<div class="count">Pick a province on the map to list its forts,
+      watchtowers and resources, click one on the markers layer to open it, or
+      place one.</div>`;
   const list = rows.map((r, i) => {
     const on = k.sel && !k.adding && k.sel.kind === r.kind && k.sel.line === r.line;
     const bad = r.findings.filter(f => f.fatal).length;
     const where = r.region && r.province && r.region.toLowerCase() !== r.province.toLowerCase()
-      ? ` · filed under ${esc(r.region)}` : '';
+      ? ` · ${r.kind === 'resource' ? 'listed' : 'filed'} under ${esc(r.region)}` : '';
     return `<div class="cxrow${on ? ' on' : ''}" onclick="cftPick(${i})">
-      <b>${CFT_ICON[r.kind]} ${esc(CFT_NAME[r.kind])}</b>
+      <b>${CFT_ICON[r.kind]} ${esc(r.kind === 'resource' ? r.name : CFT_NAME[r.kind])}</b>
       <span class="count">${r.x}, ${r.y}${r.type ? ` · ${esc(r.type)}` : ''}${
         r.culture ? ` · ${esc(r.culture)}` : ''}${k.all ? ` · ${esc(r.province || r.region)}` : where}</span>
       ${bad ? `<span class="w-bad">${bad}</span>`
@@ -421,9 +465,19 @@ function cftFormHtml(){
   const cultures = v.cultures;
   const provinces = v.provinces || [];
   const row = k.sel ? cftFind(k.sel) : null;
-  const regionBox = k.adding
-    ? `<div class="count">filed under ${here ? `<b>${esc(here)}</b>, the province
-        under the tile` : 'the province under the tile'}</div>`
+  const res = w.kind === 'resource';
+  // a resource is filed under something only in a file that heads its groups
+  const headed = !res || v.grouped_by === 'province';
+  const verb = res ? 'List' : 'File';
+  const regionBox = !headed
+    ? `<div class="count">${v.grouped_by === 'name'
+        ? 'This file keeps each resource\'s lines together, so a new one goes after the last of its name.'
+        : 'A new one goes after the last resource in the file.'} It is traded by the
+        province under its tile${here ? `: <b>${esc(here)}</b>` : ', and there is none'}.</div>`
+    : k.adding
+    ? `<div class="count">${res ? 'listed' : 'filed'} under ${here ? `<b>${esc(here)}</b>, the province
+        under the tile` : 'the province under the tile'}${res
+        ? ', with a heading of its own if it has no group yet' : ''}</div>`
     : `<select onchange="cftSet('region', this.value); cftPaint(); cftPlan()">
         ${provinces.indexOf(w.region) < 0 && w.region
           ? `<option selected>${esc(w.region)}</option>` : ''}
@@ -432,7 +486,7 @@ function cftFormHtml(){
       ${here && here.toLowerCase() !== (w.region || '').toLowerCase()
         ? `<div class="csbtns"><span class="count">the tile is in ${esc(here)}</span>
            <button onclick="cftSet('region', ${esc(JSON.stringify(here))}); cftPaint(); cftPlan()"
-             >File it under ${esc(here)}</button></div>` : ''}`;
+             >${verb} it under ${esc(here)}</button></div>` : ''}`;
   return `<div class="cxform">
     <div class="cmfield"><label>${CFT_ICON[w.kind]} ${k.adding ? 'New ' + w.kind
       : CFT_NAME[w.kind]}${row ? ` <span class="count">line ${row.line}</span>` : ''}</label>
@@ -447,6 +501,7 @@ function cftFormHtml(){
       </div>
       <div class="count">y counts up from the bottom of the map, as the file writes it</div>
     </div>
+    ${res ? cftNameHtml(w, v) : ''}
     ${w.kind === 'fort' ? `<div class="csrow2">
       <div class="cmfield"><label>Type</label>
         <input list="cftTypes" value="${esc(w.type)}"
@@ -471,7 +526,8 @@ function cftFormHtml(){
           <div class="count">descr_cultures.txt is not on disk, so nothing checks this</div>`}
       </div>
     </div>` : ''}
-    <div class="cmfield"><label>Region section</label>${regionBox}</div>
+    <div class="cmfield"><label>${res ? (headed ? 'Listed under' : 'Where it goes')
+      : 'Region section'}</label>${regionBox}</div>
     ${cftFindingsHtml(row)}
     <div class="csbtns">
       ${cftDirty() ? `<button class="primary" onclick="cftSave()">${k.adding
@@ -484,16 +540,35 @@ function cftFormHtml(){
   </div>`;
 }
 
-//: What is wrong now (the row as the file has it), or what the save would say.
+//: A resource's name, out of descr_sm_resources.txt when the mod ships it.
+function cftNameHtml(w, v){
+  const names = v.resources || [];
+  return `<div class="cmfield"><label>Resource</label>
+    <select onchange="cftSet('name', this.value); cftPlan()">
+      ${names.some(x => x.name === w.name) ? '' : `<option selected>${esc(w.name)}</option>`}
+      ${names.map(x => `<option value="${esc(x.name)}"${x.name === w.name ? ' selected' : ''}>${
+        esc(x.name)}${x.uses ? ` · ${x.uses} in this campaign` : ''}</option>`).join('')}
+    </select>
+    <div class="count">${v.have_resources ? 'from this mod\'s descr_sm_resources.txt'
+      : 'descr_sm_resources.txt is not on disk, so nothing checks this'}</div>
+  </div>`;
+}
+
+//: What is wrong now (the row as the file has it), or what the save would say,
+//: and D10's button when the server found a tile that would do.
 function cftFindingsHtml(row){
   const k = state.cft, p = k.preview;
   const list = p
     ? (p.errors || []).filter(e => e !== 'nothing to change').map(e => ['w-bad', e])
       .concat((p.warnings || []).map(e => ['w-warn', e]))
     : ((row && row.findings) || []).map(f => [f.fatal ? 'w-bad' : 'w-warn', f.message]);
+  const near = p ? p.near
+    : (((row && row.findings) || []).find(f => f.near) || {}).near;
   const block = p && p.block && p.opened
     ? `<pre class="cjblock">${esc(p.block)}</pre>` : '';
   if(!list.length && !block) return '';
   return `<div class="cjplan">${list.map(([cls, m]) =>
-    `<div class="${cls}">${esc(m)}</div>`).join('')}${block}</div>`;
+    `<div class="${cls}">${esc(m)}</div>`).join('')}${near ? `<div class="csbtns">
+      <button onclick="cftNear(${+near[0]}, ${+near[1]})"
+        title="Put the nearest tile that would do in the form and ask the plan again. Nothing is written until you save.">⌖ Move it to ${+near[0]},${+near[1]}</button></div>` : ''}${block}</div>`;
 }

@@ -1019,6 +1019,14 @@ def _resource_rows(ck: Check) -> List[Tuple[campstrat.Node, int, int]]:
     return out
 
 
+def duplicate_message(name: str, x: int, gy: int, line: int) -> str:
+    """The one wording of a resource written twice on a tile, which
+    :mod:`stratobj` also says of a save that would make one."""
+    return (f"a second `{name}` at {x},{gy}; line {line} already puts one "
+            f"there. The engine takes one and the other is a line nobody will "
+            f"ever find.")
+
+
 @rule("strat.resource_duplicate", "The same resource twice on one tile", "warn",
       "Geomod's debugger action: duplicate resources")
 def _r_resource_duplicate(ck: Check) -> Iterable[Finding]:
@@ -1031,11 +1039,48 @@ def _r_resource_duplicate(ck: Check) -> Iterable[Finding]:
             continue
         yield Finding(
             "strat.resource_duplicate", "warn",
-            f"a second `{n.name}` at {x},{ck.cm.terrain.game_y(iy)}; line "
-            f"{first.start + 1} already puts one there. The engine takes one "
-            f"and the other is a line nobody will ever find.",
+            duplicate_message(n.name, x, ck.cm.terrain.game_y(iy),
+                              first.start + 1),
             file=ck.strat_rel, line=n.start + 1, tile=(x, iy),
             fix="resource_duplicate", what=f"{n.name.lower()}|{x},{iy}|dup")
+
+
+def position_faults(cm: CampaignMap, x: int, gy: int,
+                    sea: Optional[bytes] = None) -> List[dict]:
+    """What is wrong with the tile a resource, an event or a disaster is on.
+
+    **The one copy of Geomod's two position checks.** The validator asks it of
+    every resource and every 18b position in the file; :mod:`stratobj` asks it
+    of the one resource a save is about to write. Off the grid is fatal and sea
+    is a warning. Each entry is ``{code, fatal, tail, near}``: the tail is the
+    clause after "`timber` is", and ``near`` is D10's answer for a sea tile -
+    the nearest land, in game coordinates - or None when there is none within
+    :data:`mapsnap.RADIUS`.
+    """
+    from . import mapsnap
+    w, h = cm.terrain.width, cm.terrain.height
+    iy = cm.terrain.image_y(gy)
+    if not (0 <= x < w and 0 <= iy < h):
+        return [{"code": "off", "fatal": True, "near": None,
+                 "tail": f"at {x},{gy}, which is off a {w}x{h} map altogether."}]
+    try:
+        sea = cm.sea if sea is None else sea
+    except MapError:
+        return []
+    if not sea[iy * w + x]:
+        return []
+    at = mapsnap.nearest(w, h, x, iy, lambda tx, ty: not sea[ty * w + tx])
+    near = cm.game_xy(*at) if at is not None else None
+    return [{"code": "sea", "fatal": False, "near": near,
+             "tail": f"at {x},{gy}, on a tile the engine reads as sea."}]
+
+
+def _land_clause(f: dict, start: Tuple[int, int]) -> str:
+    """D10's clause for a sea finding: where the nearest land is."""
+    from . import mapsnap
+    if f["code"] != "sea":
+        return ""
+    return mapsnap.sentence(f["near"], start, noun="land")
 
 
 @rule("strat.resource_position", "A resource off the map or in the sea", "warn",
@@ -1046,25 +1091,21 @@ def _r_resource_position(ck: Check) -> Iterable[Finding]:
     Vanilla has one - a ``timber`` at game 199,57 sitting on a sea tile - which
     is exactly the sort of finding the baseline exists for: it is real, it is
     somebody else's, and refusing to save a mod until it is gone would be
-    absurd.
+    absurd. :func:`position_faults` decides; this reports.
     """
-    w, h = ck.width, ck.height
+    sea = ck.sea
     for n, x, iy in _resource_rows(ck):
         gy = ck.cm.terrain.game_y(iy)
-        if not (0 <= x < w and 0 <= iy < h):
+        for f in position_faults(ck.cm, x, gy, sea):
+            off = f["code"] == "off"
             yield Finding(
-                "strat.resource_position", "fatal",
-                f"`{n.name}` is at {x},{gy}, which is off a {w}x{h} map "
-                f"altogether.",
-                file=ck.strat_rel, line=n.start + 1, fix="resource_position",
-                what=f"{n.name.lower()}|{x},{gy}|off")
-        elif ck.is_sea(x, iy):
-            yield Finding(
-                "strat.resource_position", "warn",
-                f"`{n.name}` is at {x},{gy}, on a tile the engine reads as "
-                f"sea. Nothing on land can reach it.",
-                file=ck.strat_rel, line=n.start + 1, tile=(x, iy),
-                fix="resource_position", what=f"{n.name.lower()}|{x},{gy}|sea")
+                "strat.resource_position", "fatal" if f["fatal"] else "warn",
+                f"`{n.name}` is {f['tail']}"
+                + ("" if off else " Nothing on land can reach it.")
+                + _land_clause(f, (x, gy)),
+                file=ck.strat_rel, line=n.start + 1,
+                tile=None if off else (x, iy), fix="resource_position",
+                what=f"{n.name.lower()}|{x},{gy}|{f['code']}")
 
 
 @rule("strat.settlement_region", "A settlement in a region nobody declares",
@@ -1212,24 +1253,19 @@ def _r_event_position(ck: Check) -> Iterable[Finding]:
     is that these two files are optional and usually empty, so this yields
     nothing at all far more often than it yields anything.
     """
-    w, h = ck.width, ck.height
+    sea = ck.sea
     for rel, label, b in _event_blocks(ck):
         for p in b.positions:
-            iy = ck.cm.terrain.image_y(p.y)
-            if not (0 <= p.x < w and 0 <= iy < h):
+            for f in position_faults(ck.cm, p.x, p.y, sea):
+                off = f["code"] == "off"
                 yield Finding(
-                    "event.position", "fatal",
-                    f"`{label}` is placed at {p.x},{p.y}, which is off a {w}x{h} "
-                    f"map altogether.",
+                    "event.position", "fatal" if f["fatal"] else "warn",
+                    f"`{label}` is placed {f['tail']}"
+                    + ("" if off else " A settlement event there reaches nobody.")
+                    + _land_clause(f, (p.x, p.y)),
                     file=rel, line=p.line + 1,
-                    what=f"{label.lower()}|{p.x},{p.y}|off")
-            elif ck.is_sea(p.x, iy):
-                yield Finding(
-                    "event.position", "warn",
-                    f"`{label}` is placed at {p.x},{p.y}, on a tile the engine "
-                    f"reads as sea. A settlement event there reaches nobody.",
-                    file=rel, line=p.line + 1, tile=(p.x, iy),
-                    what=f"{label.lower()}|{p.x},{p.y}|sea")
+                    tile=None if off else (p.x, ck.cm.terrain.image_y(p.y)),
+                    what=f"{label.lower()}|{p.x},{p.y}|{f['code']}")
 
 
 # ---------------------------------------------------------------------------

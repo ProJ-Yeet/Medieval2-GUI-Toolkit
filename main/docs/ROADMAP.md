@@ -88,7 +88,7 @@ running the test suite, and running `graphify update .`.
 Every phase in this table is finished. The write-up for each one is in
 `ROADMAP_ARCHIVE.md` under the same heading; the table is here so the numbers in
 commit messages, `docs/upstream/PORT_MANIFEST.json` and `STATE.md` still resolve.
-**22b to 27 are not here** - they are unbuilt, and they live in the Backlog
+**23a to 27 are not here** - they are unbuilt, and they live in the Backlog
 below with their own index.
 
 | # | Phase | Shipped in |
@@ -116,6 +116,7 @@ below with their own index.
 | B1 | A new province reaches every campaign that reads the map - a settlement, a music type, the lookup pair, a campaign's own record file and compiled map; the creator is a picker and the shown names are required | 3.1.0 (uncut) |
 | 21 | Two screens over data we hold - is this faction complete, with each gap copied from a template, and a raw text editor for any file the toolkit reads | 3.1.0 (uncut) |
 | 22a | Forts and watchtowers - placed on a clicked tile, dragged, changed and deleted, one line each, filed under the province they stand in | 3.2.0 (uncut) |
+| 22b | Resources through the same writer, the nearest tile that would do for every placement rule, the Localize ring, and 17d's drag made to drop | 3.2.0 (uncut) |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
@@ -328,8 +329,9 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `web/js/facaudit.js` | the "Is it complete?" panel on the faction screen, the picker's gap counts, and the Copy-from repair (21) |
 | `unittransfer/rawtext.py` | D11: any text file the toolkit reads, as text - its own encoding and line endings kept (`splice`), a stale save refused, the readers' before-and-after as warnings (21) |
 | `web/js/rawtext.js` | the Raw text mode: the list, the box that is never redrawn, the plan under it (21) |
-| `unittransfer/stratobj.py` | D9's first half: a fort or a watchtower, one line, edited, added, deleted or moved between region sections; the section opened where the file says sections go; the rules measured on DaC's 800 (22a) |
-| `web/js/campforts.js` | the forts panel: place with the pin, the province's list, the form, and the drop 17d's drag hands it (22a) |
+| `unittransfer/stratobj.py` | D9: a fort, a watchtower or a resource, one line, edited, added, deleted or moved; a fort between region sections, a resource between the province headings a file groups them under; where a new one goes read off the file; the rules measured on the 800 forts and 2,813 resources installed (22a, 22b) |
+| `unittransfer/mapsnap.py` | D10: the nearest tile a caller's own rule accepts, nearest first, within 40 tiles. The rules stay where they are - `stratobj`, `stratchar` and `mapcheck.marker_faults` each hand theirs over (22b) |
+| `web/js/campforts.js` | the forts and resources panel: place with the pin, the province's list, the form, D10's ⌖ Move button, and the drop 17d's drag hands it (22a, 22b) |
 | `cmapLayerState` / `cmapCampQ` / `cmapGoTile` | the one snapshot of the layer stack, the one place a request appends a campaign, and the one way of arriving at a tile (20b) |
 
 Reuse: `keyblock.py` for the splice discipline (`flatrecord.py` does **not**
@@ -394,17 +396,16 @@ change, so no cross-reference dangles.
 
 | Phase | Sessions | Closes | Size |
 |---|---|---|---|
-| 22a-22b - Placing things on the map | 2 | D9 D10 | 1L 1M |
 | 23a-23b - A map that looks like the map | 2 | D7 T1 T12 | 2L 1M |
 | 24 - Make and unmake | 1 | G1 M15 | 2M |
 
-Four sessions left - 22b, 23a, 23b and 24. Phase 17 (2026-09-06), all of
+Three sessions left - 23a, 23b and 24. Phase 17 (2026-09-06), all of
 Phase 18 (2026-09-07), all of Phase 19 (2026-09-09), 20a (2026-09-10), and 20b,
-B1, 20c, 21 and 22a (2026-09-11) are done and their write-ups are in
+B1, 20c, 21, 22a and 22b (2026-09-11) are done and their write-ups are in
 `ROADMAP_ARCHIVE.md`; nothing in the Later table is counted, and neither are
 B2-B4 below.
 
-**Nothing is released until all four are done.** The user's instruction on
+**Nothing is released until all three are done.** The user's instruction on
 2026-09-11, which suspends the cut-as-it-lands rule of 2026-09-09: each session
 commits and stops, and the whole backlog goes out as one cut at the end - the
 held v2.2.4 and beta 2026-09-11b notes included.
@@ -571,56 +572,30 @@ layer you can edit and starts being a map you work on.
 
 ---
 
-## Phase 22 - Placing things on the map
+## Phase 22 - Placing things on the map - done
 
-**Closes D9, D10.** Two sessions. **The largest single hole in the campaign
-editor**, and the one gap all three map tools fill and we do not.
+**Both sessions are closed** (2026-09-11), and with them D9, D10 and G5; the
+write-ups are in `ROADMAP_ARCHIVE.md`. What it leaves behind for later phases:
 
-16b reads forts, watchtowers and resources - **105 forts, 295 watchtowers and
-1,131 resources on DaC**, each carrying its line span - and nothing writes any
-of them. `stratchar.py`'s `UNTOUCHED` tuple names all three as things a
-character save may not touch, which is the guard working correctly around a
-feature that does not exist.
-
-### 22a - Forts and watchtowers - done
-
-**Done 2026-09-11**; the write-up is in `ROADMAP_ARCHIVE.md`. What it leaves
-for 22b:
-
-- **`stratobj.py` is the writer 22b extends, not copies.** `KINDS` gains
-  `resource`; `plan` already does edit, add, delete and move as one request,
-  guards itself the way 16h and 16i do, and renders a line keeping everything
-  it did not change. A resource is written at the top of the file rather than
-  in a section, so where it goes is the one new thing.
-- **`Vocabulary.province_at` answers for a marker tile** with the province that
-  owns the marker, which is 16g's rule and the one 22b's resources need.
-- **The findings carry numbers counted on the file being edited** where they
-  can (`_placed_well`), and DaC's measured ones where they cannot. 22b's rules
-  are measured the same way before they are written, and the duplicate and
-  off-map rules are `mapcheck`'s, reused.
-- **17d's drag takes any kind in `CMK_DRAGGABLE`**, and a drop for a kind that
-  is not a character goes to that kind's panel. A resource joins the list and
-  the panel.
-
-### 22b - Resources, and the snap
-
-Resources are the same operation over 1,131 records, plus two rules that already
-exist and must be reused rather than rewritten: a resource is allowed to stand
-**on** a settlement or port pixel, because the index does not answer for a
-marker tile and the region that owns the marker answers instead (16g found
-that); and a duplicate resource, or one off the map or in the sea, is already a
-`mapcheck` rule with 63 duplicates found on DaC.
-
-**D10 - snap to a legal position** lands here. We have the predicate and not the
-search: `mapcheck.marker_faults` is the single copy of the four marker rules and
-`campaint` already calls it for the new-province wizard. Turning "no" into "no,
-but here" is a spiral search over that predicate, and it serves 22a, 22b, 18b's
-disasters and 17d's drag-to-move at once.
-
-Exit: every object type places, moves and deletes; the file is byte-exact
-outside the lines the plan named; Geomod's "Localize" gets its equivalent,
-because `mapcheck` and `mapquery` both centre the map on a tile already and
-neither tells you where your eye should land.
+- **`stratobj.py` writes every one-line thing that stands on a tile.** A fort,
+  a watchtower and a resource are one `plan` with a `kind`. Anything later that
+  is one line with two numbers on it is a new `KINDS` entry and a "where it
+  goes", not a new module, and its guard is the one to keep.
+- **`mapsnap.nearest` is the search, and every rule keeps its own predicate.**
+  A new placement rule gets D10 for the price of a lambda, and the finding
+  carries `near`. 24's reallocation of a deleted region's tiles and 26's
+  resize both need "the nearest tile that...", and this is it.
+- **`campmap.campaign_map` is the map a campaign reads, file by file.** Only the
+  writers that judge a tile ask it so far (`stratobj`, `stratchar`, through
+  `campmap.map_of`). The map screen and ✓ Check still draw and judge the base
+  map for a campaign that ships its own, which here is Third Age Reforged's
+  Fellowship campaign; 23a's textures are the next thing that has to ask which
+  copy to draw.
+- **17d's drag drops now.** The pointer's travel was counted only for a pan, so
+  every marker drag since 17d ended as a click. 22b found it by dragging with
+  the pointer rather than calling the drop.
+- **Localize is `cmapLocate(tile)`,** called by `cmapGoTile`, so anything that
+  goes to a tile gets the ring without asking for it.
 
 ---
 

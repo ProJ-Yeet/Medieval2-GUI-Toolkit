@@ -4091,3 +4091,90 @@ config: a watchtower placed by the pin, dragged a tile, pinned into
 Northern Harondor and filed under it with the button, and a DaC fort deleted;
 the Log showed four 🏰 entries and undoing them left the file byte-identical to
 DaC's own.
+
+## Phase 22b - Resources, and the snap - done 2026-09-11
+
+**Closes D9, D10 and G5.** The second half of placing things on the map: the
+trade resources through 22a's writer, D10's "no, but here" for every placement
+rule the toolkit has, and Geomod's Localize.
+
+**Scoped as:** resources are the same operation over 1,131 records, with the
+marker and duplicate rules reused rather than rewritten; a spiral search over
+the predicate we already have; every object type places, moves and deletes,
+byte-exact outside the lines the plan named; Localize gets its equivalent.
+
+**Built:** `stratobj.py` gains `resource` in `KINDS`, `Layout`, `layout_of`,
+`resource_home`, `filed_under`, `Census` and `Vocabulary.snap`; `mapsnap.py`
+is new; `campmap.campaign_map` and `campmap.map_of`; `mapcheck.position_faults`
+and `mapcheck.duplicate_message`, which the validator's two resource rules and
+18b's event rule now report through; `campaint._marker_near` and
+`stratchar._shore`. In the browser, `campforts.js` places, lists and edits
+resources and draws D10's button, `stratchar.js` draws it for a character,
+`campmark.js` drags a resource, and `campmap.js` has `cmapLocate`.
+
+**What the files say, measured on all four installed campaigns (2,813 lines).**
+
+* **They are written at the top, and each file groups its own.** Every one
+  sits between the campaign header and the first faction. Reforged's imperial
+  campaign heads each group with the province's name as a comment - 90
+  headings, and 410 of its 413 resources stand in the province theirs names -
+  so a new one joins its province's group, and a province with none gets a
+  heading of its own, the way a fort gets a section. DaC's two and the
+  Fellowship campaign keep each name's lines together (25 names, 25 runs), so a
+  new one follows the last of its name. That is read off the file every time,
+  never configured.
+* **What is fatal is the engine's vocabulary.** All 2,813 name a resource their
+  mod's `descr_sm_resources.txt` declares, so a name it does not declare is
+  refused, with the list; with the file packed, nothing is checked. Off the map
+  is fatal. Sea (6, 0, 108 and 0), impassable land (7, 9, 4 and 4), a tile in no
+  province and a second one of the same name on a tile (1, 63, 2 and 0) are
+  warnings, each quoting this campaign's own count.
+* **A resource may stand on a marker.** 16g's rule, and DaC does it once in
+  each campaign: the province that owns the settlement pixel owns the resource.
+  None of the 2,813 shares a tile with a fort or a watchtower, so either on the
+  other's tile is said.
+* **The Fellowship campaign's resources are in the sea on both maps.** It ships
+  its own full set of map files, the same 510x487; the toolkit now judges it
+  on those (`campaign_map`), and 108 of its 222 resources and 72 of its 150
+  characters are still on sea tiles. The file was written for another map, and
+  the panel says so line by line rather than the toolkit hiding it.
+
+**The snap.** `mapsnap.nearest` walks out from the tile nearest first and hands
+each tile to the caller's own rule, giving up at 40 tiles, because a tile
+further than that is somewhere else. Four callers: a fort, watchtower or
+resource (`Vocabulary.snap`, which looks inside the province it is filed under
+first, over raw bytes so DaC's 1,531 records check in about 100 ms), a
+character (land, or sea for an admiral), a settlement or port pixel in the
+wizard (`marker_faults` unchanged, inside the region's own colour), and the
+validator's sea findings for resources and 18b's events. Each says where, how
+far and in which province, and the two panels put a **⌖ Move it to** button
+on it that fills the form and plans again.
+
+**Localize.** A ring that closes from 90 pixels onto the tile over a second,
+drawn over the markers, from `cmapGoTile`, so ✓ Check, ⌕ Query and a fort's ◎
+all get it. With reduced motion asked for it is drawn closed and still.
+
+**17d's drag never dropped.** In drag mode the pointer's travel was never
+counted, so `pointerup` always read a marker drag as a click. 22b found it by
+dragging a resource with the pointer; 22a's browser check had driven the drop
+function, which is why it passed. One line, and every drag since 17d works.
+
+### Tests and verification
+
+`tests/test_stratres.py` (67 checks) is new: a file written in the suite with
+DaC's and Reforged's shapes (every edit, both grouping rules, a first resource
+under a banner and in front of a faction, the name rules with and without the
+list on disk), the search, the map a campaign reads, all four installed
+campaigns (the panel and the validator agree on the duplicate and sea counts,
+every D10 answer is land in a province and free, and real edits, deletes,
+adds, a heading move and a new heading each differ only where planned), the
+character and marker snaps on a real map, and the routes with two saves undone
+byte for byte. `test_stratobj.py` now covers resources in its byte-for-byte
+render of every real line.
+
+Driven in the browser against a scratch copy of Reforged's map and imperial
+campaign with a scratch config: an iron placed by the pin under the
+Talsir_Province heading, dragged by the pointer into South-Umbar_Province,
+listed under it with the button, put on a sea tile and moved back with ⌖, and
+the Localize ring shown on it. The Log showed four ◆ entries, and undoing
+them left `descr_strat.txt` byte-identical to Reforged's own.

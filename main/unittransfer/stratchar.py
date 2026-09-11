@@ -74,7 +74,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
-from . import campstrat, stratedit
+from . import campmap, campstrat, stratedit
 from .campstrat import CHARACTER_TYPES, LEADERSHIP, Node, StratFile
 from .stratedit import (assemble, comment_of, faction_of, finding, indent_of,
                         is_int, move_lines, rewrite_line, serialise,
@@ -526,6 +526,31 @@ def spec_from_body(body: dict, base: Optional[Spec] = None) -> Spec:
 # what is wrong with one character
 
 
+def _shore(cm, spec: Spec, f: dict, off: bool = False) -> None:
+    """D10 (22b): the nearest tile on the right side of the shore.
+
+    The predicate is this module's own - sea for an admiral, land for
+    everybody else - handed to :func:`mapsnap.nearest`, so the suggestion and
+    the warning cannot disagree. It lands on ``f`` as ``near``.
+    """
+    from . import mapsnap
+    w, h = cm.terrain.width, cm.terrain.height
+    gx, gy = int(str(spec.x)), int(str(spec.y))
+    ix, iy = cm.image_xy(gx, gy)
+    sea = cm.sea
+    want = spec.type == "admiral"
+    at = mapsnap.nearest(w, h, ix, iy,
+                         lambda a, b: bool(sea[b * w + a]) == want)
+    noun = "sea tile" if want else "land"
+    if at is None:
+        f["message"] += mapsnap.sentence(None, (gx, gy), noun=noun)
+        return
+    g = cm.game_xy(*at)
+    f["near"] = [g[0], g[1]]
+    f["message"] += (f" The nearest {noun} on the map is {g[0]},{g[1]}."
+                     if off else mapsnap.sentence(g, (gx, gy), noun=noun))
+
+
 def check_character(voc: Vocabulary, spec: Spec, cm=None) -> List[dict]:
     """Everything wrong with one character, fatal first.
 
@@ -563,6 +588,7 @@ def check_character(voc: Vocabulary, spec: Spec, cm=None) -> List[dict]:
                 f"{gx},{gy} is off the {cm.terrain.width}x"
                 f"{cm.terrain.height} tile grid, so there is nowhere on the "
                 f"map for this character to stand.", x=gx, y=gy))
+            _shore(cm, spec, out[-1], True)
         else:
             sea = cm.sea[iy * cm.terrain.width + ix]
             if spec.type == "admiral" and not sea:
@@ -570,11 +596,13 @@ def check_character(voc: Vocabulary, spec: Spec, cm=None) -> List[dict]:
                     "char.aground", False,
                     f"An admiral stands on his ship, and {gx},{gy} is land.",
                     x=gx, y=gy))
+                _shore(cm, spec, out[-1])
             elif spec.type and spec.type != "admiral" and sea:
                 out.append(finding(
                     "char.adrift", False,
                     f"{gx},{gy} is sea, and only an admiral starts there.",
                     x=gx, y=gy))
+                _shore(cm, spec, out[-1])
     if spec.gender not in ("male", "female"):
         out.append(finding(
             "char.gender", False,
@@ -1325,7 +1353,7 @@ def plan_character(mod, facts, body: dict) -> CharPlan:
     voc = Vocabulary(facts, done)
     p.block = now_text
     if action != "delete":
-        p.findings = check_character(voc, spec, getattr(facts, "cm", None))
+        p.findings = check_character(voc, spec, campmap.map_of(facts))
         p.findings += check_pool(voc, dest, spec.name)
     p.findings += check_faction(done, done.faction(dest), voc)
     if action == "move" or (before is not None and dest != p.faction):
@@ -1491,7 +1519,7 @@ def faction_detail(facts, faction: str) -> dict:
         raise MapError(f"no faction called {faction!r} in "
                        f"{facts.campaign}'s descr_strat.txt")
     voc = Vocabulary(facts, sf)
-    cm = getattr(facts, "cm", None)
+    cm = campmap.map_of(facts)
     people = []
     for c in characters_of(sf, node):
         spec = read_spec(sf, c)

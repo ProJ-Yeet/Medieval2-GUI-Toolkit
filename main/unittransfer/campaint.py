@@ -723,7 +723,37 @@ def _check_marker(cm: CampaignMap, sess: PaintSession, body: dict,
                        f"its own region's tiles - paint the tile first.")
     for fatal, message in _marker_problems(cm, (tx, ty), kind):
         if fatal:
-            raise MapError(message)
+            raise MapError(message + _marker_near(cm, data, home, (tx, ty), kind))
+
+
+def _marker_near(cm: CampaignMap, data: bytes, home: int,
+                 at: Tuple[int, int], kind: str) -> str:
+    """D10 (22b): "no, but here" - the nearest tile of this region's own colour
+    the same four rules would take a marker on.
+
+    :func:`mapcheck.marker_faults` is the predicate, unchanged, and
+    :func:`mapsnap.nearest` the search; image coordinates, as the rest of the
+    paint tool's sentences are.
+    """
+    from . import mapcheck, mapsnap
+    w, h = cm.terrain.width, cm.terrain.height
+    try:
+        ground = mapcheck._triples(cm.tiles("ground_types"))
+        feats = mapcheck._triples(cm.tiles("features"))
+        sea = cm.sea
+    except MapError:
+        return ""
+
+    def ok(x: int, y: int) -> bool:
+        p = (y * w + x) * 3
+        if (data[p] << 16) | (data[p + 1] << 8) | data[p + 2] != home:
+            return False
+        return not any(f["fatal"] for f in mapcheck.marker_faults(
+            cm, (x, y), kind, ground, feats, sea))
+
+    got = mapsnap.nearest(w, h, at[0], at[1], ok)
+    return mapsnap.sentence(got, at, noun=f"tile in this region that takes "
+                                         f"a {kind}")
 
 
 def _label(tool: str, codes: Iterable[str], tiles: int, body: dict) -> str:

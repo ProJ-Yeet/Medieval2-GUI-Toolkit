@@ -993,11 +993,24 @@ class CampaignMap:
     117 ms; the index is built once and rebuilt only when something paints.
     """
 
-    def __init__(self, mod):
+    def __init__(self, mod, home: Optional[Path] = None):
         self.mod = mod
         self.base = mod.data / BASE_REL
+        #: a campaign folder whose own copy of a map file wins over the base
+        #: one, file by file - :func:`campaign_map`. None is the base map.
+        self.home = home
         self.terrain = read_terrain(mod)
         self.regions = read_regions(mod)
+        if home is not None:
+            from .keyblock import read_text
+            own = home / Path(TERRAIN_REL).name
+            if own.is_file():
+                self.terrain = parse_terrain(own.read_text(encoding=ENCODING))
+                self.terrain.path = own
+            own = home / Path(REGIONS_REL).name
+            if own.is_file():
+                self.regions = parse_regions(read_text(own, ENCODING))
+                self.regions.path = own
         self._layers: Dict[str, Image.Image] = {}
         self._infos: Dict[str, TgaInfo] = {}
         self._tiles: Dict[str, Image.Image] = {}
@@ -1008,7 +1021,10 @@ class CampaignMap:
     # -- layers --------------------------------------------------------------
 
     def path(self, code: str) -> Path:
-        return self.base / LAYER_BY_CODE[code]["file"]
+        name = LAYER_BY_CODE[code]["file"]
+        if self.home is not None and (self.home / name).is_file():
+            return self.home / name
+        return self.base / name
 
     def layer(self, code: str) -> Image.Image:
         """One decoded layer, in image coordinates. Raises for a missing one."""
@@ -1067,7 +1083,7 @@ class CampaignMap:
             out.append(f"descr_terrain.txt: {self.terrain.width}x{self.terrain.height} "
                        f"is over the engine's {MAX_DIMENSION} cap")
         for ly in LAYERS:
-            p = self.base / ly["file"]
+            p = self.path(ly["code"])
             if not p.exists():
                 if ly["required"]:
                     out.append(f"{ly['file']}: missing")
@@ -1273,6 +1289,65 @@ class CampaignMap:
                     out["marker"] = "port"
             row["name"], row["code_name"] = _colour_name(self, code, rgb, climates)
         return out
+
+
+# ---------------------------------------------------------------------------
+# the map one campaign reads (22b)
+#
+# The engine takes each map file separately: a campaign folder's own copy wins
+# and a file it does not ship is read from world/maps/base (B1's decision).
+# Third Age Reforged's Fellowship_Campaign ships the lot - the same 510x487,
+# other pixels - so a tile there is judged on its own layers, not the base's.
+
+#: the files a judgement about a tile reads: whose province, sea, what ground.
+#: Every DaC and Reforged campaign ships a map_FE.tga and Reforged's imperial
+#: one a map_<faction>.tga per faction; none of those decide anything here, and
+#: a campaign whose only copies are those reads the base map's object as it is.
+MAP_FILES = ("map_regions.tga", "map_heights.tga", "map_ground_types.tga",
+             "map_features.tga", Path(TERRAIN_REL).name, Path(REGIONS_REL).name)
+
+_OWN: Dict[Tuple[str, str], Tuple[tuple, "CampaignMap"]] = {}
+
+
+def campaign_map(mod, campaign: str, base: Optional["CampaignMap"] = None
+                 ) -> "CampaignMap":
+    """The map ``campaign`` reads: ``base`` when it ships none of its own.
+
+    Kept while none of the files it was read from has changed on disk, so a
+    plan pays for decoding a campaign's own layers once rather than per save.
+    """
+    from .campstrat import CAMPAIGN_DIR_REL, DEFAULT_CAMPAIGN, campaign_rel
+    home = Path(mod.data) / CAMPAIGN_DIR_REL / campaign_rel(campaign or DEFAULT_CAMPAIGN)
+    own = [n for n in MAP_FILES if (home / n).is_file()]
+    if not own:
+        return base if base is not None else CampaignMap(mod)
+    key = (str(Path(mod.data).resolve()).lower(), str(campaign).lower())
+    stamp = tuple(sorted((n, (home / n).stat().st_mtime_ns) for n in own)) + (
+        tuple((n, (Path(mod.data) / BASE_REL / n).stat().st_mtime_ns)
+              for n in MAP_FILES if n not in own
+              and (Path(mod.data) / BASE_REL / n).is_file()),)
+    hit = _OWN.get(key)
+    if hit is not None and hit[0] == stamp:
+        return hit[1]
+    cm = CampaignMap(mod, home)
+    _OWN[key] = (stamp, cm)
+    return cm
+
+
+def map_of(facts, campaign: str = "") -> Optional["CampaignMap"]:
+    """The map a fact table's campaign reads, or None when the table has no map.
+
+    What a check about a tile should be judged on: the table's own map, or the
+    campaign's copy of any of its files (:func:`campaign_map`).
+    """
+    cm = getattr(facts, "cm", None)
+    if cm is None:
+        return None
+    try:
+        return campaign_map(facts.mod, campaign or facts.campaign, cm)
+    except (MapError, OSError):
+        return cm
+
 
 # ---------------------------------------------------------------------------
 # the browser's view of the map (16c)

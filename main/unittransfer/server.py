@@ -295,19 +295,21 @@ Characters, armies and the family tree (16i, see :mod:`unittransfer.stratchar`)
                                     lifted into another faction (one backup +
                                     undo)
 
-Forts and watchtowers (22a, see :mod:`unittransfer.stratobj`)
+Forts, watchtowers and resources (22a, 22b, see :mod:`unittransfer.stratobj`)
   GET  /api/map/objects?mod=&campaign=
-                                 -> every fort and watchtower in the campaign,
-                                    the section each is filed under, the
+                                 -> every fort, watchtower and trade resource
+                                    in the campaign, where each is filed, the
                                     province under its tile, what is wrong with
-                                    it, and the pickers the form needs
+                                    it with D10's nearest tile that would do,
+                                    and the pickers the form needs
   POST /api/map/object_plan|_apply
-                                 -> `action`: edit / add / delete / move, one
-                                    line each. A new one is filed under the
+                                 -> `kind` fort / watchtower / resource,
+                                    `action` edit / add / delete / move, one
+                                    line each. A new fort is filed under the
                                     province under its tile, opening that
                                     province's region section when it has none;
-                                    a move files it under another (one backup +
-                                    undo)
+                                    a new resource goes where the file groups
+                                    its own (one backup + undo)
 
 The campaign's own settings (16j, see :mod:`unittransfer.stratcamp`). The third
 sub-phase that writes descr_strat.txt, and the half of it that only ever
@@ -3057,13 +3059,15 @@ class Handler(BaseHTTPRequestHandler):
         self.registry.invalidate(name)              # the file changed on disk
         return out
 
-    # ---- the campaign map's forts and watchtowers, written (22a) ----
+    # ---- the campaign map's forts, watchtowers and resources, written (22a, 22b) ----
     def _object(self, action, body):
-        """Preview or write one fort or watchtower line of ``descr_strat.txt``.
+        """Preview or write one fort, watchtower or resource line of
+        ``descr_strat.txt``.
 
-        16h's and 16i's handler with 22a's plan in it: the fact table is the map
-        the tile is judged on, and the file the plan splices is read from disk
-        inside :func:`~unittransfer.stratobj.plan`.
+        16h's and 16i's handler with 22a's plan in it: the fact table's map is
+        where the tile is judged, unless the campaign ships its own map files
+        (:func:`~unittransfer.campmap.campaign_map`), and the file the plan
+        splices is read from disk inside :func:`~unittransfer.stratobj.plan`.
         """
         try:
             name = body["mod"]

@@ -413,14 +413,13 @@ function cmkLabel(it){
 
 /* ---------- the drag ----------
 
-   A character, a fort and a watchtower move this way, and the reason is worth
-   stating: each one's tile IS two numbers on its own line in descr_strat.txt,
-   so moving one is an edit this toolkit already knows how to plan - 16i's for
-   a character, 22a's for the other two. A settlement's tile is a black pixel on
-   map_regions.tga - moving it is repainting the map, which is the paint tool's
-   job and not a drag's. A resource is a line 22b writes, and a drag that
-   cannot be saved is worse than no drag. */
-const CMK_DRAGGABLE = ['character', 'fort', 'watchtower'];
+   A character, a fort, a watchtower and a trade resource move this way, and
+   the reason is worth stating: each one's tile IS two numbers on its own line
+   in descr_strat.txt, so moving one is an edit this toolkit already knows how
+   to plan - 16i's for a character, 22a's and 22b's for the other three. A
+   settlement's tile is a black pixel on map_regions.tga - moving it is
+   repainting the map, which is the paint tool's job and not a drag's. */
+const CMK_DRAGGABLE = ['character', 'fort', 'watchtower', 'resource'];
 function cmkCanDrag(it){ return !!it && CMK_DRAGGABLE.indexOf(it.kind) >= 0; }
 
 //: The character under the pointer, if the drag should start here rather than a
@@ -475,7 +474,8 @@ function cmkDragCheck(){
     return;
   }
   // 22a: a fort on the sea is a warning the plan gives, not a refusal - one of
-  // DaC's watchtowers stands on it - so the ghost only refuses the grid
+  // DaC's watchtowers stands on it, and 22b's resources are the same - so the
+  // ghost only refuses the grid
   if(k.drag.item.kind !== 'character') return;
   const sea = cmkSeaAt(tx, ty);
   if(sea === null) return;                       // the layers are not here to say
@@ -517,7 +517,7 @@ async function cmkDrop(){
     return;
   }
   const gy = c.man.height - 1 - d.tile[1];
-  if(d.item.kind === 'fort' || d.item.kind === 'watchtower'){
+  if(d.item.kind === 'fort' || d.item.kind === 'watchtower' || d.item.kind === 'resource'){
     activity('map marker', `${k.mod} drag ${d.item.kind} -> ${d.tile[0]},${gy}`);
     await cftDrop(d.item, [d.tile[0], gy]);
     return;
@@ -608,7 +608,7 @@ provinces is not a map any more.">
   const res = counts.resource || 0;
   return `<div class="cmmark">${head}
     <div class="cmkcats">${rows}</div>
-    <div class="count">Drag a character, a fort or a watchtower to move it: the
+    <div class="count">Drag a character, a fort, a watchtower or a resource to move it: the
       drop plans the same save its panel does, with the same confirmation and the
       same undo.
       ${res ? `This mod ships its own picture for ${art} of the

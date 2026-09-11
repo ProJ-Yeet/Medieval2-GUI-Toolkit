@@ -1,16 +1,16 @@
 # STATE - Medieval 2 GUI Toolkit
 _Updated: 2026-09-11 · v2.2.3 is still the latest 2.x and beta 2026-09-11 the
-latest beta · after 22a, forts and watchtowers, the first session of the Next
-set (3.2.0) · **nothing is released until the roadmap is finished**_
+latest beta · after 22b, resources and the snap, which closes Phase 22 ·
+**nothing is released until the roadmap is finished**_
 
 ## Next up
-**Phase 22b, resources and the snap** (`ROADMAP.md`): the 1,131 resources
-through 22a's writer (`stratobj.KINDS` gains `resource`; a resource is written
-at the top of the file, not in a section, so where it goes is the new part),
-`mapcheck`'s duplicate and position rules reused rather than rewritten, and D10's
-spiral search over `mapcheck.marker_faults` turning "no" into "no, but here".
-Then 23a, 23b and 24 - **four sessions left in all**, B2-B4 not counted. 22a's
-write-up is in `ROADMAP_ARCHIVE.md`.
+**Phase 23a, the texture composite** (`ROADMAP.md`): the map drawn with the
+game's own aerial-map ground textures, one per (climate, ground type) pair,
+built once and never rebuilt by a pan or a zoom, and a missing texture drawn
+pink and reported, TWMapReader's rule. It is the first thing on the map screen
+that has to ask which copy of a layer a campaign reads -
+`campmap.campaign_map`, 22b's. Then 23b and 24 - **three sessions left in
+all**, B2-B4 not counted. 22b's write-up is in `ROADMAP_ARCHIVE.md`.
 
 **Do not release anything at the end of a session.** On 2026-09-11 the user
 said: "we wont publish until we finish all the sessions of our roadmap now".
@@ -43,7 +43,7 @@ the beta was the last thing cut.
 **21 belongs to BOTH lines.** Raw text is a menu mode of its own and the faction
 audit also draws in the Factions mode, so both are in the 2.x build with the map
 hidden; the audit's two campaign-row buttons appear only on the map screen.
-**22a is map work** and belongs to the beta line only.
+**22a and 22b are map work** and belong to the beta line only.
 
 Betas are named by the **date** they were released, with a letter for a second
 in one day. The GitHub title is `M2 GUI-Kit V<X.Y.Z>` - hyphenated **GUI-Kit**,
@@ -54,21 +54,23 @@ rather than typing it from memory. The strict step-by-step is `HANDOFF.md`.
 `docs/releases/` (`RELEASE_2_2_4.md`, `RELEASE_BETA_2026_09_11B.md`) and the
 two fixes are committed. **Fold them into the end-of-roadmap cut** - and B1 has
 to be added to both notes, since the beta note's "Not fixed" section describes
-exactly what B1 fixed. 20b, 20c, B1, 21, the map hover fix and 22a are not in
-any note yet either.
+exactly what B1 fixed. 20b, 20c, B1, 21, the map hover fix, 22a and 22b are not
+in any note yet either - and 22b's drag fix is worth a line of its own, since
+17d's drag never dropped in any cut.
 
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
-| 22a - Forts and watchtowers | **done** | Closed 2026-09-11, committed, **not released**. First half of D9 (and G5). New: `unittransfer/stratobj.py` (`plan`, `apply`, `view`, `Vocabulary`, `render_line`, `new_section`), `web/js/campforts.js` (the 🏰 Forts panel), `GET /api/map/objects`, `POST /api/map/object_plan\|_apply`. 17d's drag takes forts and watchtowers (`CMK_DRAGGABLE`). `tests/test_stratobj.py` (65). |
+| 22b - Resources, and the snap | **done** | Closed 2026-09-11, committed, **not released**. Closes D9, D10, G5 and Phase 22. New: `unittransfer/mapsnap.py`, `campmap.campaign_map` / `map_of`, `mapcheck.position_faults` / `duplicate_message`; `stratobj` takes `resource` (`Layout`, `resource_home`, `Census`, `Vocabulary.snap`); `stratchar._shore`, `campaint._marker_near`; `cmapLocate` in `campmap.js`, and 17d's drag counts the pointer's travel. `tests/test_stratres.py` (67). |
+| 22a - Forts and watchtowers | done | Closed 2026-09-11, committed, **not released**. First half of D9 (and G5). New: `unittransfer/stratobj.py` (`plan`, `apply`, `view`, `Vocabulary`, `render_line`, `new_section`), `web/js/campforts.js` (the 🏰 Forts panel), `GET /api/map/objects`, `POST /api/map/object_plan\|_apply`. 17d's drag takes forts and watchtowers (`CMK_DRAGGABLE`). `tests/test_stratobj.py` (65). |
 | 21 - Two screens over data we hold | done | Closed 2026-09-11, committed, **not released**. Closes D6, D11 (= M14) and the Now set. New: `unittransfer/factionaudit.py` (`Census`, `evaluate`, `audit`, `repair_plan`), `unittransfer/rawtext.py` (`files`, `read`, `splice`, `plan`, `apply`), `web/js/facaudit.js`, `web/js/rawtext.js`, the `rawtext` mode, `GET /api/factions/audit`, `POST /api/factions/repair_plan\|repair_apply`, `GET /api/raw/files\|file`, `POST /api/raw/plan\|apply`. `factionclone.clone_file` and `ClonePlan.action` (refactor, clone suites unchanged). `tests/test_factionaudit.py` (48), `tests/test_rawtext.py` (57). |
-| 22b-24 - the rest of the Next set (3.2.0) | **scoped** | Four sessions: resources and the snap, the textured terrain render, delete-a-region and create-a-campaign. |
+| 23a-24 - the rest of the Next set (3.2.0) | **scoped** | Three sessions: the textured terrain render, winter and the tint, delete-a-region and create-a-campaign. |
 | B2-B4 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export; `Rename slot` on a packed mod. |
 | 25-27 | scoped, unscheduled | OSM backdrop, map resize, layer generators. |
 | 16-21 | done | 16-20a published on the beta line; 20b onward committed and uncut. The 3.0.0 and 3.1.0 numbers are still unassigned to a cut. |
 
 ## In-progress detail
-**Clean.** Nothing is mid-flight. All 97 suites were run after 22a: **93 pass
+**Clean.** Nothing is mid-flight. All 98 suites were run after 22b: **94 pass
 and the same four do not**, the DaC four below, each on its documented number.
 
 **Four suites fail the same way on a clean `master`** - hard-coded Divide and
@@ -95,29 +97,42 @@ the edits out from under it (21 did it once; see the archive).
 - `ROADMAP.md` - the backlog, the locked decisions, and the campaign map
   reference. Read all of it.
 - `web/js/mappin.js` - **before adding a coordinate field anywhere** (20c).
-  `cpinButton(what, fn, args)` is the whole of it; 22a's form and its two
-  Place buttons use it, and 22b's resource form is next.
+  `cpinButton(what, fn, args)` is the whole of it; 22a's and 22b's forms and
+  their three Place buttons use it.
 - `campaint.map_campaigns` - **before writing anything to the base map** (B1).
   A write to `world/maps/base` reaches only the campaigns that do not ship
   their own copy.
 - `unittransfer/factionaudit.py` - **before adding any check about a faction.**
   `Census` already counts every slot in every file; gap or note is measured on
   the installed mods, never copied from a reference.
-- `unittransfer/stratobj.py` - **before writing 22b.** One writer for every
-  one-line thing on the map; a resource is a new `KINDS` entry and a new "where
-  it goes", not a new module. Its guard is the one to keep.
+- `campmap.campaign_map` - **before 23a draws a layer.** The engine reads a
+  campaign's own copy of a map file where it ships one; the map screen still
+  draws the base copy, and the textures are where that stops being enough.
+- `unittransfer/mapsnap.py` - before writing any rule about where something may
+  stand. The search is there; hand it the rule and put `near` on the finding.
+- `unittransfer/stratobj.py` - one writer for every one-line thing on the map.
 - `unittransfer/rawtext.py` - `rtOpen(rel, line)` is how any screen offers
   "open this file as text"; a parser that meets a line it does not model points
   there rather than growing a special case.
 
 ## Upstream
 Reference tool reviewed SHA **2740b0b**. `sync` was run on 2026-09-11 at the
-start of 22a and was up to date. `docs/upstream/PORT_MANIFEST.json` is authoritative: 310
+start of 22b and was up to date. `docs/upstream/PORT_MANIFEST.json` is authoritative: 310
 files triaged, none untriaged; `src/pages/TextEditor.jsx` notes it done in 21.
-`REFERENCE_GAPS.md` marks D6, D11 and M14 done and G2 half done. 22b ports the
-rest of Demir's object dialog and Geomod's Localize; run `sync` first.
+`REFERENCE_GAPS.md` marks D6, D11 and M14 done and G2 half done. 23a takes
+TWMapReader's texture rule; run `sync` first.
 
 ## Decisions
+- 2026-09-11: **A check of an interaction drives the interaction.** 22a's
+  browser check called the drop and passed; 17d's drag had never dropped,
+  because the pointer's travel was counted only for a pan. 22b dragged with the
+  pointer and it failed at once. Calling the function a gesture ends in proves
+  the function, not the gesture.
+- 2026-09-11: **A refusal names the nearest tile that would do, and the rule
+  it came from stays the only copy.** D10 is one search over four predicates -
+  the marker rules, the shore rule, the object rules and the sea rule - each
+  still living where it did. "No" with no way forward leaves somebody clicking
+  round the coast one tile at a time.
 - 2026-09-11: **Where a new record goes is derived from the map and the file,
   never typed.** Demir's dialog has a region box; here a new fort is filed under
   the province under its tile, because 393 of DaC's 400 are, and a new section
@@ -158,18 +173,3 @@ rest of Demir's object dialog and Geomod's Localize; run `sync` first.
 - 2026-09-11: **The first line of a crash log is the one to read.** B1 was filed
   as "no settlement block", and the log's own first line - the game finding the
   new pixel colour and not the record - named the bigger half.
-- 2026-09-11: **A list something is picked from is part of the feature, and
-  "the picker already exists" is a claim to measure.** D14 was filed as a
-  cosmetic browser over a picker two documents said was already there. There was
-  no picker - every route took a campaign and nothing ever sent one - and the
-  list it would have been built on read only the top level of
-  `world/maps/campaign`, hiding a whole second campaign in all three installs
-  here. **This is 19b's lesson twice running: a claim that is nearly true is
-  what the next session builds on.**
-- 2026-09-11: **The moment a name can come off the page it needs one choke
-  point.** `campstrat.campaign_rel` is the only conversion from a campaign name
-  to a path under `world/maps/campaign`, and `strat_path`,
-  `campfiles.campaign_dir`, `campevents.events_path`, `winconds.path_for`,
-  `mapquery.Facts` and `mapcheck.Check` all go through it. A nested campaign IS
-  a name with a separator in it, so the rule is not "no separators" - it is
-  "no step that leaves the folder".

@@ -548,11 +548,28 @@ function cxFindingsHtml(){
     ${errors.filter(e => !said.includes(e))
       .map(e => `<div class="w-bad">${esc(e)}</div>`).join('')}
     ${findings.map(f => `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${
-      esc(f.message)}${cxPoolFixHtml(f)}</div>`).join('')}
+      esc(f.message)}${cxPoolFixHtml(f)}${cxNearHtml(f)}</div>`).join('')}
     ${changes.length ? `<div class="count">Would change:
       ${changes.map(esc).join(' · ')}</div>`
       : p ? '<div class="count">Nothing to save yet.</div>' : ''}
   </div>`;
+}
+
+/* 22b, D10: a character on the wrong side of the shore is told the nearest tile
+   on the right one, and this is the button that puts it there - the numbers
+   change and the plan is asked again, so nothing is written until Save. */
+function cxNearHtml(f){
+  if(!f.near || !state.cx || !state.cx.w) return '';
+  return ` <button class="cxfix" onclick="cxNear(${+f.near[0]}, ${+f.near[1]})"
+    title="Put the two numbers in the form and ask the plan again. Nothing is written until Save.">⌖ Move to ${+f.near[0]},${+f.near[1]}</button>`;
+}
+
+function cxNear(x, y){
+  const k = state.cx;
+  if(!k || !k.w) return;
+  k.w.x = x; k.w.y = y;
+  cxPlanSoon();
+  cxPaint();
 }
 
 /* ---- 19a, D5: the two findings that now have a button ----
