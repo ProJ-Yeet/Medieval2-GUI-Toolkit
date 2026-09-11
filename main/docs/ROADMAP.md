@@ -88,7 +88,7 @@ running the test suite, and running `graphify update .`.
 Every phase in this table is finished. The write-up for each one is in
 `ROADMAP_ARCHIVE.md` under the same heading; the table is here so the numbers in
 commit messages, `docs/upstream/PORT_MANIFEST.json` and `STATE.md` still resolve.
-**Phases 18 to 27 are not here** - they are unbuilt, and they live in the
+**Phases 22 to 27 are not here** - they are unbuilt, and they live in the
 Backlog below with their own index.
 
 | # | Phase | Shipped in |
@@ -114,6 +114,7 @@ Backlog below with their own index.
 | 20b | Getting to the thing you want - the campaign browser and the three campaigns nothing offered, the find box, named view presets | 3.1.0 (uncut) |
 | 20c | Labels, and picking a tile - settlement names placed so none covers another, and one pin that writes a clicked tile into any coordinate field | 3.1.0 (uncut) |
 | B1 | A new province reaches every campaign that reads the map - a settlement, a music type, the lookup pair, a campaign's own record file and compiled map; the creator is a picker and the shown names are required | 3.1.0 (uncut) |
+| 21 | Two screens over data we hold - is this faction complete, with each gap copied from a template, and a raw text editor for any file the toolkit reads | 3.1.0 (uncut) |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
@@ -322,6 +323,10 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `web/js/maplabels.js` | settlement names on the map: `clnLayout` is the pure placement - TWMapReader's candidates, biggest province first, markers as obstacles, a name with no room left off and counted - and `clnDraw` draws the cached layout for the zoom on screen (20c) |
 | `web/js/mappin.js` | the pin: `cpinButton` beside any coordinate, `cpinTake` the click that answers it, flipped once into game coordinates (20c) |
 | `mapquery.add_music_region` | the one write `descr_sounds_music_types.txt` gets: a name on the end of one `regions` line (B1) |
+| `unittransfer/factionaudit.py` | D6: every faction against every file that should name it, one pass a file for all of them (`Census`); gap or note per row, measured on the installed mods; the repair is `factionclone.clone_file` per gap (21) |
+| `web/js/facaudit.js` | the "Is it complete?" panel on the faction screen, the picker's gap counts, and the Copy-from repair (21) |
+| `unittransfer/rawtext.py` | D11: any text file the toolkit reads, as text - its own encoding and line endings kept (`splice`), a stale save refused, the readers' before-and-after as warnings (21) |
+| `web/js/rawtext.js` | the Raw text mode: the list, the box that is never redrawn, the plan under it (21) |
 | `cmapLayerState` / `cmapCampQ` / `cmapGoTile` | the one snapshot of the layer stack, the one place a request appends a campaign, and the one way of arriving at a tile (20b) |
 
 Reuse: `keyblock.py` for the splice discipline (`flatrecord.py` does **not**
@@ -386,19 +391,17 @@ change, so no cross-reference dangles.
 
 | Phase | Sessions | Closes | Size |
 |---|---|---|---|
-| 21 - Two screens over data we hold | 1 | D6 D11 | 1M 1S |
 | 22a-22b - Placing things on the map | 2 | D9 D10 | 1L 1M |
 | 23a-23b - A map that looks like the map | 2 | D7 T1 T12 | 2L 1M |
 | 24 - Make and unmake | 1 | G1 M15 | 2M |
 
-Six sessions left - 21, 22a, 22b, 23a, 23b and 24. (This line said eight
-before 20c, which was one too many: the table above never added up to it.)
-Phase 17 (2026-09-06), all of Phase 18 (2026-09-07), all
-of Phase 19 (2026-09-09), 20a (2026-09-10), and 20b, B1 and 20c (2026-09-11) are
-done and their write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later table is
-counted, and neither are B2-B4 below.
+Five sessions left - 22a, 22b, 23a, 23b and 24. Phase 17 (2026-09-06), all of
+Phase 18 (2026-09-07), all of Phase 19 (2026-09-09), 20a (2026-09-10), and 20b,
+B1, 20c and 21 (2026-09-11) are done and their write-ups are in
+`ROADMAP_ARCHIVE.md`; nothing in the Later table is counted, and neither are
+B2-B4 below.
 
-**Nothing is released until all six are done.** The user's instruction on
+**Nothing is released until all five are done.** The user's instruction on
 2026-09-11, which suspends the cut-as-it-lands rule of 2026-09-09: each session
 commits and stops, and the whole backlog goes out as one cut at the end - the
 held v2.2.4 and beta 2026-09-11b notes included.
@@ -469,16 +472,15 @@ and screens that already exist. The common shape is **we know a file well enough
 to validate it and not well enough to edit it**, and that asymmetry is what
 3.1.0 removes.
 
-**Phases 18 and 19 are done** - 18a and 18b on 2026-09-07, 19a and 19b on
-2026-09-09 - **and so is all of Phase 20**, 20a on 2026-09-10 and 20b and
-20c on 2026-09-11. Phase
+**The whole Now set is done**: 18a and 18b on 2026-09-07, 19a and 19b on
+2026-09-09, 20a on 2026-09-10, and 20b, 20c and 21 on 2026-09-11. Phase
 18's six files are the five nothing wrote and the one the building side could
 only refuse against; Phase 19 is the four names nothing could follow; 20a is the
 three layers the map screen could draw and not read; 20b is the three ways of
 getting to the thing you want, one of which turned out to be three whole
-campaigns nothing had ever offered; 20c is the names on the map and the pin.
-All seven write-ups are in `ROADMAP_ARCHIVE.md`. **What is left of the Now set
-is Phase 21.**
+campaigns nothing had ever offered; 20c is the names on the map and the pin;
+21 is the faction audit and the raw text editor. All eight write-ups are in
+`ROADMAP_ARCHIVE.md`, and 3.1.0 is feature-complete and uncut.
 
 ---
 
@@ -537,28 +539,25 @@ leaves behind for 21 and 22:
 
 ---
 
-## Phase 21 - Two screens over data we already hold
+## Phase 21 - Two screens over data we already hold - done
 
-**Closes D6, D11.** One session. Neither reads anything new.
+**Both items are closed** (2026-09-11); the write-up is in
+`ROADMAP_ARCHIVE.md`. What it leaves behind for later phases:
 
-- **D6 - the faction dependency audit.** One screen answering "is this faction
-  complete?" across every file that should mention it, with a repair offered per
-  gap. We have every piece and not the screen: `factionclone.py` knows the twelve
-  files, `mapcheck` and `factions.py` both report per-file faults, and Home
-  reports per-mod readiness. Build it on 17f's combined faction screen, which is
-  where somebody is already standing when they ask the question.
-- **D11 - a raw text editor for the campaign files.** Pick any file the toolkit
-  knows about and edit its text directly, with our own backup, log entry and
-  undo around it. Our Code View is per record and deliberately so; a whole-file
-  editor is a different thing and it is **the escape hatch for the case every
-  editor here eventually meets - the mod does something the parser does not
-  model.** Mylae ships the same feature as a page (`TextEditor.jsx`, audit item
-  M14, the same item).
-
-The one rule this session must not break: a raw save still goes through the
-backup set and the log, so the Log's Undo reverses it like every other write. An
-editor that writes straight to disk is the one thing in this toolkit that could
-lose somebody's mod.
+- **`factionaudit.Census` is the whole mod's faction census in one pass.** A
+  later check about factions - D13's horde start, M12's bulk duplicate - asks it
+  rather than re-reading the dozen files, and a new file that should name a
+  faction is one reader and one `Check` row.
+- **Gap or note is measured per file**, on every installed mod: a gap is a file
+  every real faction has, a note one that working factions go without. A row
+  added later is classified the same way, never by copying a reference's
+  opinion.
+- **`factionclone.clone_file` runs one cloner over one file.** The clone and the
+  repair share it, so a fix to a cloner fixes both.
+- **The raw editor is the escape hatch, and it is always there.** A screen that
+  meets a line its parser does not model can offer "open the file as text" with
+  `rtOpen(rel, line)` - the audit's file names already do - rather than growing
+  a special case.
 
 ---
 

@@ -517,6 +517,10 @@ class ClonePlan:
     mod: object = None
     source: str = ""
     new: str = ""
+    #: ``clone`` makes a new slot; ``repair`` (21, D6, :mod:`factionaudit`)
+    #: copies only the missing records into a slot that already exists. Same
+    #: cloners, same write, same undo - only the log line and its wording differ.
+    action: str = "clone"
     edits: List[FileEdit] = field(default_factory=list)
     assets: List[AssetCopy] = field(default_factory=list)
     changes: List[str] = field(default_factory=list)
@@ -532,14 +536,16 @@ class ClonePlan:
         return bool(self.written() or self.assets)
 
     def summary(self) -> str:
-        head = (f"clone faction {self.source} -> {self.new} in "
-                f"{getattr(self.mod, 'name', '?')} "
+        what = (f"repair faction {self.new} from {self.source}"
+                if self.action == "repair"
+                else f"clone faction {self.source} -> {self.new}")
+        head = (f"{what} in {getattr(self.mod, 'name', '?')} "
                 f"({len(self.written())} file(s), {len(self.assets)} art item(s))")
         return "\n".join([head] + [f"  {c}" for c in self.changes])
 
     def payload(self) -> Dict:
         return {
-            "action": "clone", "source": self.source, "new": self.new,
+            "action": self.action, "source": self.source, "new": self.new,
             "files": [{"rel": e.rel, "label": e.label, "count": e.count,
                        "note": e.note, "skipped": e.skipped, "written": bool(e.text)}
                       for e in self.edits],
@@ -677,6 +683,65 @@ def review_mentions(mod, src: str) -> List[Dict]:
     return out
 
 
+def clone_file(data: Path, job: Job, src: str, new: str, label: str = "") -> FileEdit:
+    """One job's cloner run over one file: the new text, or why there is none.
+
+    Shared by the clone and by 21's repair (:mod:`unittransfer.factionaudit`),
+    which runs the same cloner for a slot that already exists and is missing
+    only this file's record. Never raises; an unreadable file comes back with
+    ``skipped`` saying so.
+    """
+    path = data / job.rel
+    if not path.is_file():
+        return FileEdit(job.rel, job.label, note=job.note,
+                        skipped="this mod has no such file")
+    try:
+        original = kb.read_text(path, job.encoding)
+        # Every cloner below anchors on `$`, and in a CRLF file `$` sits
+        # AFTER the carriage return - so `[ \t]*$` never reaches the end of
+        # a line and the paragraph, braced and names cloners all match
+        # nothing, while the list and texture ones match but eat the `\r`
+        # and leave the file with mixed endings. Measured, not guessed: the
+        # real game files are CRLF and three of the cloners silently did
+        # nothing until this was put in. So the cloners see `\n` throughout
+        # and the file gets its own ending back at the end.
+        # The modeldb is exempt: its strings are length-prefixed and it is
+        # rebuilt by its own writer, so nothing here should touch its bytes.
+        flat = job.how != "modeldb"
+        newline = kb.newline_of(original)
+        before = kb.to_newline(original, "\n") if flat else original
+        if job.how == "roster":
+            after, n = clone_roster(before, src, new)
+        elif job.how == "expanded":
+            after, n = clone_expanded(before, src, new, label)
+        elif job.how == "list":
+            after, n = clone_list_lines(before, src, new, job.kw)
+        elif job.how == "braced_list":
+            after, n = clone_braced_list(before, src, new, job.kw)
+        elif job.how == "texture":
+            after, n = clone_texture_lines(before, src, new)
+        elif job.how == "names":
+            after, n = clone_names(before, src, new)
+        elif job.how == "paragraph":
+            after, n = clone_paragraph(before, src, new, job.kw)
+        elif job.how == "braced":
+            after, n = clone_braced(before, src, new)
+        elif job.how == "modeldb":
+            after, n = clone_modeldb(before, src, new)
+        else:                                     # unreachable
+            after, n = before, 0
+    except (fr.RecordError, ValueError, OSError, UnicodeError) as e:
+        return FileEdit(job.rel, job.label, note=job.note,
+                        skipped=f"could not be read: {e}")
+    edit = FileEdit(job.rel, job.label, encoding=job.encoding, note=job.note,
+                    count=n)
+    if n and after != before:
+        edit.text = kb.to_newline(after, newline) if flat else after
+    else:
+        edit.skipped = f"{src} is not named in it"
+    return edit
+
+
 def plan(mod, body: dict) -> ClonePlan:
     """Work out every file and every copy, without touching the disk."""
     src = str(body.get("source") or "").strip().lower()
@@ -696,64 +761,16 @@ def plan(mod, body: dict) -> ClonePlan:
     data = Path(mod.data)
 
     for job in JOBS:
-        path = data / job.rel
-        if not path.is_file():
-            edit = FileEdit(job.rel, job.label, note=job.note,
-                            skipped="this mod has no such file")
-            p.edits.append(edit)
-            if job.required:
-                p.errors.append(f"{getattr(mod, 'name', '?')} has no {job.rel}")
-            continue
-        try:
-            original = kb.read_text(path, job.encoding)
-            # Every cloner below anchors on `$`, and in a CRLF file `$` sits
-            # AFTER the carriage return - so `[ \t]*$` never reaches the end of
-            # a line and the paragraph, braced and names cloners all match
-            # nothing, while the list and texture ones match but eat the `\r`
-            # and leave the file with mixed endings. Measured, not guessed: the
-            # real game files are CRLF and three of the cloners silently did
-            # nothing until this was put in. So the cloners see `\n` throughout
-            # and the file gets its own ending back at the end.
-            # The modeldb is exempt: its strings are length-prefixed and it is
-            # rebuilt by its own writer, so nothing here should touch its bytes.
-            flat = job.how != "modeldb"
-            newline = kb.newline_of(original)
-            before = kb.to_newline(original, "\n") if flat else original
-            if job.how == "roster":
-                after, n = clone_roster(before, src, new)
-            elif job.how == "expanded":
-                after, n = clone_expanded(before, src, new, label)
-            elif job.how == "list":
-                after, n = clone_list_lines(before, src, new, job.kw)
-            elif job.how == "braced_list":
-                after, n = clone_braced_list(before, src, new, job.kw)
-            elif job.how == "texture":
-                after, n = clone_texture_lines(before, src, new)
-            elif job.how == "names":
-                after, n = clone_names(before, src, new)
-            elif job.how == "paragraph":
-                after, n = clone_paragraph(before, src, new, job.kw)
-            elif job.how == "braced":
-                after, n = clone_braced(before, src, new)
-            elif job.how == "modeldb":
-                after, n = clone_modeldb(before, src, new)
-            else:                                     # unreachable
-                after, n = before, 0
-        except (fr.RecordError, ValueError, OSError, UnicodeError) as e:
-            p.edits.append(FileEdit(job.rel, job.label, note=job.note,
-                                    skipped=f"could not be read: {e}"))
-            if job.required:
-                p.errors.append(f"{job.rel}: {e}")
-            continue
-        edit = FileEdit(job.rel, job.label, encoding=job.encoding, note=job.note,
-                        count=n)
-        if n and after != before:
-            edit.text = kb.to_newline(after, newline) if flat else after
-            p.changes.append(f"{job.label} ({Path(job.rel).name}) - {n} "
-                             + ("entry" if n == 1 else "entries"))
-        else:
-            edit.skipped = f"{src} is not named in it"
+        edit = clone_file(data, job, src, new, label)
         p.edits.append(edit)
+        if edit.skipped and job.required and not edit.count:
+            if not (data / job.rel).is_file():
+                p.errors.append(f"{getattr(mod, 'name', '?')} has no {job.rel}")
+            elif edit.skipped.startswith("could not be read"):
+                p.errors.append(f"{job.rel}: {edit.skipped}")
+        if edit.text:
+            p.changes.append(f"{job.label} ({Path(job.rel).name}) - {edit.count} "
+                             + ("entry" if edit.count == 1 else "entries"))
 
     if want_art:
         p.assets = _asset_hits(mod, src, new, slots)
@@ -857,18 +874,19 @@ def apply(p: ClonePlan) -> Dict:
         "id": tid,
         "when": time.strftime("%Y-%m-%d %H:%M:%S"),
         "mode": "factions",
-        "action": "clone",
+        "action": p.action,
         "source": mod.name, "source_root": str(mod.root),
         "dest": mod.name, "dest_root": str(mod.root),
         "unit_type": p.new, "resolved_type": p.new,
-        "options": {"cloned_from": p.source},
+        "options": ({"template": p.source} if p.action == "repair"
+                    else {"cloned_from": p.source}),
         "applied": True, "undone": False, "note": "",
         "summary": p.summary(), "warnings": list(p.warnings),
         "manifest": manifest, "backup_root": str(backup_root),
     }
     config.append_log(rec)
-    log.info("FACTION clone %s -> %s in %s - %d file(s), %d art file(s), id=%s",
-             p.source, p.new, mod.name, len(written), copied_files, tid)
+    log.info("FACTION %s %s -> %s in %s - %d file(s), %d art file(s), id=%s",
+             p.action, p.source, p.new, mod.name, len(written), copied_files, tid)
     return {"id": tid, "faction": p.new, "source": p.source,
             "files": written, "asset_files": copied_files,
             "notes": list(p.notes), "record": rec}

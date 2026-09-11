@@ -160,6 +160,26 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
   POST /api/factions/plan|/apply -> edit one faction and its shown name together
                                     (backups + undo). Editing only: a faction
                                     slot lives in twelve files at once
+  GET  /api/factions/audit?mod=&campaign=
+                                 -> 21, D6: every faction against every file
+                                    that should name it, gap or note per row,
+                                    and a template to repair each one from.
+                                    See :mod:`unittransfer.factionaudit`
+  POST /api/factions/repair_plan|/repair_apply
+                                 -> copy the records one faction is missing out
+                                    of a template, with the clone's own cloners
+                                    (one backup set + undo)
+
+Raw text (21, D11, see :mod:`unittransfer.rawtext`) - the escape hatch
+  GET  /api/raw/files?mod=       -> every text file the toolkit reads, grouped,
+                                    with its size, encoding and which screen
+                                    edits it properly
+  GET  /api/raw/file?mod=&rel=   -> one file as text, its line ending and a
+                                    signature the save is checked against
+  POST /api/raw/plan|/apply      -> the lines a save would change and what the
+                                    toolkit's own reader makes of the result;
+                                    then the write (backups + undo). Refused if
+                                    the file changed on disk since it was read
 
 EDU cleanup (export_descr_unit.txt as a whole, see :mod:`unittransfer.edusort`)
   GET  /api/edu/order?mod=       -> every section and the units in it, in the
@@ -432,7 +452,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campevents, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, edusort, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, renames, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campevents, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, renames, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1762,6 +1782,33 @@ class Handler(BaseHTTPRequestHandler):
                         ancillaries.detail(mod, (q.get("name") or [""])[0]))
                 except KeyError as e:
                     return self._err(404, str(e))
+            if u.path in ("/api/raw/files", "/api/raw/file"):
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                # describe, not get: a raw file is bytes on disk, and a mod whose
+                # EDU will not parse is exactly the mod that needs this screen
+                mod = self.registry.describe(name)
+                if u.path == "/api/raw/files":
+                    return self._json(rawtext.files(mod))
+                try:
+                    return self._json(rawtext.read(mod, (q.get("rel") or [""])[0]))
+                except (rawtext.RawError, OSError) as e:
+                    return self._err(404, str(e))
+            if u.path == "/api/factions/audit":
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                # warmed when it can be: the census reads the EDU and the modeldb
+                # off the Mod, and those must be parsed inside the registry's lock
+                # (see Registry.describe). A mod whose EDU will not read is still
+                # audited - that row just says so.
+                try:
+                    mod = self.registry.get(name)
+                except Exception:
+                    mod = self.registry.describe(name)
+                return self._json(factionaudit.audit(
+                    mod, (q.get("campaign") or [""])[0]))
             if u.path in ("/api/factions", "/api/faction"):
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
@@ -2113,6 +2160,11 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/factions/clone_plan", "/api/factions/clone_apply"):
                 return self._json(
                     self._faction_clone(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/factions/repair_plan", "/api/factions/repair_apply"):
+                return self._json(
+                    self._faction_repair(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/raw/plan", "/api/raw/apply"):
+                return self._json(self._raw(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/minor/plan", "/api/minor/apply"):
                 return self._json(self._minor(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/guilds/plan", "/api/guilds/apply"):
@@ -2672,6 +2724,52 @@ class Handler(BaseHTTPRequestHandler):
         out.update(factionclone.apply(plan))
         # twelve files and a folder of art changed: everything cached about this
         # mod is now stale, the faction roster most of all
+        self.registry.invalidate(body["mod"])
+        return out
+
+    # ---- repairing a faction from a template (21, D6) ----
+    def _faction_repair(self, action, body):
+        """Preview or write the records one faction is missing, copied out of
+        another - see :mod:`unittransfer.factionaudit`.
+
+        The clone's handler over the clone's plan and the clone's write, pointed
+        at a slot that already exists, so it is one backup set and one undo for
+        however many files the repair touches.
+        """
+        try:
+            mod = self.registry.get(body["mod"])
+            plan = factionaudit.repair_plan(mod, body)
+        except (KeyError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "repair_plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        out.update(factionclone.apply(plan))
+        self.registry.invalidate(body["mod"])
+        return out
+
+    # ---- the raw text editor (21, D11) ----
+    def _raw(self, action, body):
+        """Preview or write one whole text file - see :mod:`unittransfer.rawtext`.
+
+        The plan is the confirmation's content: the lines that change, and what
+        the toolkit's own reader makes of the result. The write is one backup
+        and one log entry, so the Log's Undo takes it back like any other.
+        """
+        try:
+            mod = self.registry.describe(body["mod"])
+            plan = rawtext.plan(mod, body)
+        except (KeyError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        out.update(rawtext.apply(plan))
+        # any file at all may have changed, so everything cached is suspect
         self.registry.invalidate(body["mod"])
         return out
 

@@ -37,6 +37,9 @@ MODULES: Dict[str, str] = {
     "strings": "Strings",
     "guilds": "Guilds",
     "campmap": "Campaign Map",
+    # 21, D11. Reads no file of its own - it opens whichever one it is asked
+    # for - so it has no row below and its card is always ready.
+    "rawtext": "Raw text",
 }
 
 

@@ -31,8 +31,8 @@ says "we do not", that was verified, and the verification is quoted.
 
 | Source | Items | Already scheduled | Already done, or a duplicate |
 |---|---|---|---|
-| Demir's StratMap Forge | 14 | 0 | **D4, D5 done 19a; D2, D3 done 19b; D8 done 20a; D14 done 20b** |
-| Mylae's M2TW Editor | 17 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11) · **M5, M6, M13 done 18a; M3, M4 done 18b; M8 done 20c** |
+| Demir's StratMap Forge | 14 | 0 | **D4, D5 done 19a; D2, D3 done 19b; D8 done 20a; D14 done 20b; D6, D11 done 21** |
+| Mylae's M2TW Editor | 17 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11, so done 21) · **M5, M6, M13 done 18a; M3, M4 done 18b; M8 done 20c** |
 | Bare Geomod | 8 | 1 (G6) | 3 (G7, G8 done; G5 = D9) · **G3 done 18a; G2 half done B1** |
 | TWMapReader | 12 | 1 (T5, folded into 17d) | **T2, T11 done 20a; T8, T9 done 20b; T4 done 20c** |
 | **Total** | **51** | **6** | **5** |
@@ -139,16 +139,24 @@ game. The one exception is the word `surnames`, which is `descr_names.txt`'s
 fourth section heading and which `minorfiles.NAME_SECTIONS` was reading as a
 name - corrected in the same phase, on Demir's and TWMapReader's word.
 
-### D6. Faction dependency audit · M
+### D6. Faction dependency audit · **done**
 
 `factionDependencyAudit`, `factionAuditHtml`, `factionRepairCandidates`,
 `stageDependencyText`, `showFactionAudit`. One screen answering "is this faction
 complete?" across every file that should mention it, with a repair offered per
 gap.
 
-We have the pieces and not the screen: `factionclone.py` knows the twelve files,
-`mapcheck` and `factions.py` both report per-file faults, and Home reports
-per-mod readiness. What is missing is the per-faction view.
+**Done 21** (`unittransfer/factionaudit.py`, `web/js/facaudit.js`), on 17f's
+faction screen. Fifteen rows against Demir's fourteen checks, and which of them
+is a gap was **measured rather than copied**: Demir blocks on the off-map navy
+and calls the accent optional, and on the two installed mods it is the other way
+round - every one of 61 factions has an accent, while Third Age Reforged ships
+three with no navy block and plays. So the navy, the populace, the standing
+rules, the battle skins and the bodyguard are notes, shown and not counted. The
+repair is Demir's `repairFactionDependencies` in our shape: the clone's own
+cloner per gap, with a template ranked by what it can give and then by culture,
+and one backup set for the lot. Demir's two campaign repairs are not copied -
+the strat entry and the win record are links to the tabs that make them.
 
 ### D7. Textured terrain render · L
 
@@ -202,7 +210,7 @@ copy of the four marker rules and `campaint` calls it for the new-province
 wizard. Turning "no" into "no, but here" is a spiral search over that predicate.
 Pairs naturally with D9 and with 17d's drag-to-move.
 
-### D11. A raw text editor for the campaign files · S
+### D11. A raw text editor for the campaign files · **done**
 
 `loadRawFile`, `saveRawFile`, `populateRawFileSelect`, `refreshKnownText`,
 `rawKnownText`. Pick any file the tool knows about and edit its text directly,
@@ -212,6 +220,15 @@ Our Code View is per record, not per file, and deliberately so. A whole-file
 editor is a different thing and is the escape hatch for the case every editor in
 this toolkit eventually meets: the mod does something the parser does not model.
 Mylae has the same feature as a page (`TextEditor.jsx`, M14).
+
+**Done 21** as the Raw text mode (`unittransfer/rawtext.py`,
+`web/js/rawtext.js`). Demir's version stages text for an export; ours writes
+through the backup set and the log, so the Log undoes it. Three things neither
+reference does: the file keeps its own encoding and line endings (each line its
+own - a textarea folds them all to LF), a save over a file changed on disk since
+it was opened is refused, and the plan says what the toolkit's own reader makes
+of the result. Every one of the 354 text files in the two installed mods reads
+and writes back byte for byte.
 
 ### D12. Export the project as a zip, and load one back · M
 
@@ -409,9 +426,9 @@ names an effect inside a trigger. That collision was also a live bug in
 is `triggers.DEFINITION_WORDS`. Running the check it exists to run found that
 Divide and Conquer awards guild points to two guilds it never declares.
 
-### M14. A raw text editor · S
+### M14. A raw text editor · **done**
 
-`TextEditor.jsx`. Same feature as D11; count it once.
+`TextEditor.jsx`. Same feature as D11; count it once. Done with it in 21.
 
 ### M15. Campaign manager: create a new campaign · M
 

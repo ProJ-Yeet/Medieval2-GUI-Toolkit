@@ -3849,3 +3849,150 @@ names: a province is an area, and the name of an area belongs at its centre and
 at a size the area can hold, which is a different placement problem and not the
 one T4 is. And no label for a fort, a watchtower or a resource - those are
 Phase 22's objects, and `clnLayout` takes them as more obstacles when they come.
+
+## Phase 21 - Two screens over data we already hold - done 2026-09-11
+
+**Closes D6 and D11 (and M14, which is D11), and with them the whole Now set -
+Phases 18 to 21, the twenty items that cut as 3.1.0.** Neither item reads a file
+the toolkit did not already read; both are screens over what was there.
+
+### D6 - is this faction complete?
+
+**Scoped as:** one screen answering "is this faction complete?" across every
+file that should mention it, with a repair offered per gap, built on 17f's
+combined faction screen.
+
+**Built:** `unittransfer/factionaudit.py` and `web/js/facaudit.js`, a panel on
+the campaign map's faction tab (and in the Factions mode, which is where a mod
+with no map, and the 2.x build, edits its factions). Fifteen rows: the roster,
+the shown name and its `EMT_` keys, the name pool, the character types, the
+units it owns and a bodyguard among them, the EDB's `requires factions`
+clauses, the voice accent, the strat-map textures, the battle skins, the
+settlement populace, the off-map navy, the standing rules, and in the campaign
+on screen its start block and its win record.
+
+**Every faction at once.** `Census` reads each file once and counts every slot
+it names, so auditing one faction costs what auditing thirty does - 140 to 350
+ms a campaign, and 1.2 s on the first call for Divide and Conquer while the
+modeldb parses onto the Mod, where it stays. That is what lets the faction
+picker carry a gap count on every row and the template be chosen from all of
+them.
+
+**Gap or note was measured, not copied from Demir.** His audit blocks on the
+off-map navy and calls the accent optional. On the two installed mods, all 61
+factions have an accent, a `descr_character.txt` entry, a name section,
+strat-map textures and an `{SLOT}` key, and all but a script dummy own units and
+are named in the EDB - those are gaps. Third Age Reforged ships three factions
+with no navy block, three with no populace and twenty with no standing rule,
+and loads - those are notes, shown dim and never counted. One check was dropped
+entirely after measuring it: "an owned unit whose model has no skin for the
+faction" is seven to seventeen units per faction in Third Age Reforged, which
+plays, so it would have been noise on every row. On the installed mods the whole
+audit finds four real gaps: Divide and Conquer's `scripts` dummy has no shown
+name, no units and no EDB clause, and its `papal_states` no EDB clause.
+
+**The campaign half is per campaign, and absence is ordinary.** Fellowship
+Campaign leaves fourteen of Third Age Reforged's thirty factions out, so "not in
+this campaign" is a note. The gap is the pairing: every faction with a
+`descr_strat.txt` block has a win record, in all four installed campaigns
+without exception, so a block with no record is one.
+
+**The repair is the clone, pointed at a slot that exists.** 15g's cloners
+already know how to put a faction into each of these files by copying a donor;
+`factionclone.clone_file` now runs one of them over one file, `plan` uses it,
+and `factionaudit.repair_plan` runs it per gap with the chosen template as the
+donor. `ClonePlan` gained an `action`, so the write, the backup set, the undo and
+the log entry are the clone's own, marked `repair`. Four rules keep it honest:
+
+* **nothing is written for a row the faction already has**, which is what stops
+  the paragraph and block cloners handing it a second section;
+* **"Copy N gaps" copies gaps and never notes.** The first draft copied
+  everything missing, and on Divide and Conquer's `papal_states` that was 1,614
+  skin records into the modeldb because a working faction has none. A note is
+  one click away on its own row;
+* **the shown name is not copied.** Two factions called "Gondor" is a roster
+  nobody can read, so the slot stands in until the form's name box is filled -
+  the placeholder factions.py already writes;
+* **the two campaign rows are links**, to New faction (with the slot typed in)
+  and to Winning's add, because a start position is not a copy.
+
+The template offered first is the faction that has the most of what this one
+lacks, then one of the same culture, then the fewest gaps of its own, and never
+`slave`. A slot the campaign has and the roster lacks gets the roster gap and a
+button to Add a faction with its name filled in.
+
+Found on the way: Add a faction redrew the whole page when it finished, which
+was harmless in its own mode and would have taken the map with it once the
+audit offered it from the campaign screen. It now redraws only in its own mode,
+17f's rule.
+
+### D11 - a raw text editor
+
+**Scoped as:** pick any file the toolkit knows about and edit its text, with our
+own backup, log entry and undo around it - the escape hatch for the mod that
+does something the parser does not model. The one rule: a raw save goes through
+the backup set and the log, so the Log's Undo reverses it.
+
+**Built:** `unittransfer/rawtext.py` and `web/js/rawtext.js`, a menu mode of its
+own. The list is every `.txt` and `.xml` in the mod's data folder, the map
+folder, the text folder and every campaign folder at any depth - 172 files in
+Divide and Conquer, 182 in Third Age Reforged - each marked with the screen that
+edits it properly and a link to it. `.modeldb` is left out because its strings
+are counted. A file over 4 MB is listed and not opened: `descr_skeleton.txt` is
+8 to 9 MB in both mods, and a textarea that size is a tab that stops responding.
+
+**Three things a text box gets wrong, put right on the server:**
+
+* **the encoding.** A file is read in the codec its own bytes name - UTF-16 with
+  its mark for `text/`, UTF-8 when the bytes are UTF-8, Latin-1 otherwise - and
+  is only offered for saving if decoding and encoding it gives back the same
+  bytes. Measured: every file in both mods under the size limit does, across
+  four encodings;
+* **the line endings.** A textarea folds every ending to LF, and a game file is
+  not obliged to be consistent. `splice` diffs the edit against the file's own
+  lines after peeling off the common head and tail (a one-line edit in 60,000
+  lines is about 200 ms) and gives every untouched line its own ending back. A
+  line rewritten in place keeps its ending too; only a new line takes the file's
+  norm. Checked the hard way in the running app: an accent line changed by a
+  repair and put back by hand in the Raw text box left the file byte-identical
+  to Third Age Reforged's original;
+* **somebody else's write.** `read` hands out a SHA-1 of the bytes and a save
+  whose signature no longer matches the disk is refused, with a Reload button.
+
+**What the toolkit makes of it.** Where the file has a reader here -
+`descr_strat.txt`, `descr_regions.txt`, `descr_win_conditions.txt`, the roster,
+the EDU - the plan reads it before and after and lists what the reader objects
+to now that it did not before: take a character's age out of `descr_strat.txt`
+and the plan says "character has no age" before anything is written. A warning,
+never a refusal - an escape hatch that refuses when the parser disagrees is not
+one. A `text/` save rebuilds the `.strings.bin` beside it, backed up first so
+the undo takes both back. The plan is drawn under the box rather than in a
+`confirm()`, because the change - up to forty hunks with their line numbers -
+is the thing to read before writing.
+
+**The box is never redrawn.** The search box re-renders a mode on every
+keystroke, so the list and the editor are two elements and a search repaints the
+list only; the caret, the scroll and the browser's own undo survive it. Tab types
+a tab, Ctrl+S saves, edits survive a trip to another mode, and switching file or
+mod with unsaved edits asks first. After a save every other screen's cached read
+of this mod is dropped, the way picking another mod drops it. The Log names both
+new entries (a raw save, a repair) and has a Raw text tab.
+
+### Tests and verification
+
+`tests/test_factionaudit.py` (48 checks) and `tests/test_rawtext.py` (57) are
+new. The audit's suite builds a mod with a complete faction, one with one gap
+and one with eight, checks every row's state and level, repairs, re-audits,
+repairs again to prove there is nothing left, and undoes byte for byte; on the
+installed mods it checks the one invariant the module promises - the census and
+the cloner agree about what a clause and an accent line are, for every faction.
+The raw suite runs the splice over seven line-ending shapes and sixty random
+edits to a mixed file, four encodings, the path guard, a write and its undo with
+the compiled text file, and every text file in both installed mods.
+
+Both screens were driven in the browser against a scratch copy of Third Age
+Reforged's text files, served with a scratch config so the installed mods and
+the real log were never touched: the audit found the accent gap planted in the
+copy, the Copy button planned and wrote it, the Log undid it, the Raw text box
+wrote the same line back by hand, and a save over a file changed behind the box
+was refused.

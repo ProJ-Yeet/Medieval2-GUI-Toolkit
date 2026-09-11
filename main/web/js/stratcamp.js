@@ -426,6 +426,7 @@ async function cjSave(extra){
   finally{ k.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
   toast('Saved. 🕑 Log can undo it.');
+  if(typeof fauStale === 'function') fauStale();
   activity('campaign', `${k.mod}: ${body.what}`
     + (body.faction ? ` ${body.faction}` : ''));
   const at = state.cmap && state.cmap.pick;
@@ -458,6 +459,7 @@ async function cjWinSave(extra){
   finally{ k.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
   toast('Saved. 🕑 Log can undo it.');
+  if(typeof fauStale === 'function') fauStale();
   activity('campaign', `${k.mod}: win conditions ${body.faction}`);
   k.wins = null;
   cjWinReset();
@@ -516,7 +518,8 @@ function cjHtml(){
     const slot = cjEnsureFaction();
     return head + `<div class="cxpanel">
       ${k.err ? `<div class="w-warn">${esc(k.err)}</div>` : ''}
-      ${slot ? `<div class="cxform">${cjFactionPickerHtml()}${cjSmHtml()}</div>`
+      ${slot ? `<div class="cxform">${cjFactionPickerHtml()}${
+        typeof fauHost === 'function' ? fauHost() : ''}${cjSmHtml()}</div>`
              : ''}</div>`;
   }
   const tabs = [['campaign', 'When it runs'], ['rosters', 'Who plays'],
@@ -606,7 +609,8 @@ function cjFactionPickerHtml(){
       ${cjFactionList().map(f => `<option value="${esc(f.name)}"${
         f.name === k.faction ? ' selected' : ''}>${esc(f.label)}${
         f.camp && f.sm ? '' : f.camp ? ' · not in descr_sm_factions.txt'
-                                     : ' · not in descr_strat.txt'}</option>`).join('')}
+                                     : ' · not in descr_strat.txt'}${
+        typeof fauBadge === 'function' ? fauBadge(f.name) : ''}</option>`).join('')}
     </select></div>`;
 }
 
@@ -615,6 +619,7 @@ function cjFactionHtml(){
   const f = k.d.factions.find(x => x.name === k.faction) || {};
   return `<div class="cxform">
     ${cjFactionPickerHtml()}
+    ${typeof fauHost === 'function' ? fauHost() : ''}
     ${cjCampFactionHtml(f, w, v)}
     ${cjSmHtml()}
     ${cjPresHtml()}

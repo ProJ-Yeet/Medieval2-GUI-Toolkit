@@ -269,6 +269,7 @@ const LOG_MODES=[
   {id:'factions',   label:'🛡 Factions'},
   {id:'minorfiles', label:'🗺 Minor files'},
   {id:'strings',    label:'🔤 Strings'},
+  {id:'rawtext',    label:'📝 Raw text'},
 ];
 // What the panel is showing right now: which mode, and how much of it.
 state.logView={mode:'',shown:0,entries:[],total:0,counts:{},grand:0};
@@ -339,6 +340,9 @@ function logItemHtml(e){
       :e.mode==='stratmap'?`🧹 strat map cleaned out of ${esc(e.dest)}`
       :e.mode==='cards'?`${e.action==='consolidate'?'🖼 cards consolidated in':'🧹 cards cleaned out of'} ${esc(e.dest)}`
       :e.mode==='edit'?`${e.action==='delete'?'🗑 deleted in':'✎ edited in'} ${esc(e.dest)}`
+      // 21: a whole file saved as text, and a faction's gaps copied from another
+      :e.mode==='rawtext'?`📝 raw text saved in ${esc(e.dest)}`
+      :e.mode==='factions'&&e.action==='repair'?`🛡 repaired in ${esc(e.dest)}`
       :e.mode&&e.mode!=='transfer'?`${esc(e.mode)} edit in ${esc(e.dest)}`
       // a transfer that wrote no unit: its models only, which is what the row
       // would otherwise claim was a unit called after the source's

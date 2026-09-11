@@ -2231,6 +2231,36 @@
   .trrow.on{border-color:var(--accent);background:var(--panel2)}
   .trrow .nm{font-size:13px} .trrow .sub{font-size:11px;color:var(--dim)}
   .trmain{flex:1;min-width:0}
+  /* ---- 21, D6: is this faction complete? One row per file that should name
+     it; a gap is red and counted, a note is dim and is not ---- */
+  .fau{border:1px solid var(--edge);border-radius:8px;padding:8px 10px;margin-bottom:12px}
+  .fauhead{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:12.5px}
+  .fautog{border:0;background:none;color:inherit;padding:0;font-weight:600;font-size:12.5px}
+  .fautog:hover{color:var(--ink)}
+  .fautab{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+  .fautab td{padding:4px 6px;border-top:1px solid var(--edge);vertical-align:top}
+  .fautab tr.note td{opacity:.75}
+  .fautab .faumk{width:14px;text-align:center}
+  .fautab .faurel{font-family:Consolas,monospace;font-size:11px;white-space:nowrap}
+  .fautab .faurel .ulink{color:var(--accent);cursor:pointer}
+  .fautab .faubtn{text-align:right;white-space:nowrap}
+  .faufix{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12px}
+  /* ---- 21, D11: raw text. The box is the page; the plan sits under it ---- */
+  .rtwrap .trmain{display:flex;flex-direction:column}
+  .rtgroup{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);
+    font-weight:600;padding:8px 4px 2px}
+  .rtrow.off .nm{color:var(--dim)}
+  .rtbar{flex-wrap:wrap}
+  .rtgo input{width:80px;margin-left:4px}
+  .rtbox{width:100%;box-sizing:border-box;height:calc(100vh - 240px);min-height:300px;
+    font-family:Consolas,'Cascadia Mono',monospace;font-size:12.5px;line-height:1.45;
+    tab-size:4;white-space:pre;overflow:auto;resize:vertical}
+  .rtplan{border:1px solid var(--edge);border-radius:8px;padding:10px 12px;margin-top:10px;
+    display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+  .rthunks{max-height:320px;overflow:auto;font-family:Consolas,monospace;font-size:12px}
+  .rthunk{padding:4px 0;border-top:1px solid var(--edge)}
+  .rtdel,.rtadd{white-space:pre-wrap;overflow-wrap:anywhere}
+  .rtdel{color:var(--bad)} .rtadd{color:var(--good)}
   .trbar{display:flex;gap:10px;align-items:center;padding:0 0 10px}
   .trbar .sp{flex:1}
   .trnote,.trfind{font-size:12px;padding:5px 9px;border:1px solid var(--edge);
@@ -2506,6 +2536,8 @@
 <script src="js/stratcamp.js"></script>
 <script src="js/stratview.js"></script>
 <script src="js/campevents.js"></script>
+<script src="js/facaudit.js"></script>
+<script src="js/rawtext.js"></script>
 <script src="js/viewer3d.js"></script>
 <script src="js/boot.js"></script>
 </body>

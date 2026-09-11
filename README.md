@@ -45,8 +45,9 @@ one containing `mods`).
 | Strings | Read and write the compiled `data/text/*.txt.strings.bin` files |
 | Traits / Ancillaries | Full editors for both, definitions and triggers together |
 | Guilds | `export_descr_guilds.txt`: what each guild grants, the point thresholds its tiers sit at, and every trigger that earns it points |
-| Factions | Faction definitions, with map colours edited via a colour picker, **Add a faction** - a new slot cloned from an existing one across all twelve files that name a faction - and **Rename slot**, which follows the name through about twenty files, the length-prefixed texture records in the modeldb and the art the engine finds from the slot itself, and reports every line of campaign script naming it rather than editing one |
+| Factions | Faction definitions, with map colours edited via a colour picker, **Add a faction** - a new slot cloned from an existing one across all twelve files that name a faction - and **Rename slot**, which follows the name through about twenty files, the length-prefixed texture records in the modeldb and the art the engine finds from the slot itself, and reports every line of campaign script naming it rather than editing one. **Is it complete?** checks one faction against every file that should name it, and copies what it is missing from a faction that has it |
 | Minor Files | Rebel factions, religions, cultures, resources and character names |
+| Raw text | Any text file the toolkit reads, opened as plain text and saved with the same backup and undo as every other screen - for the line no editor here models |
 
 ## The screens
 
@@ -237,6 +238,29 @@ Other transfer options:
   and reported. So is the campaign start position: two factions cannot begin in
   the same settlement, so there is nothing there to copy that would still be
   right.
+* **Is this faction complete?** On the faction screen, one row for every file
+  that should name the faction - the roster, its name and event text, names,
+  agents, units, buildings, the voice accent, strat models, battle skins,
+  populace, off-map navy, diplomacy, and in the campaign its start and its win
+  conditions - each saying what it found. A **gap** is something every faction in
+  the mods this was measured on has; a **note** is something real, working
+  factions go without, shown and not counted, so a mod that plays does not read
+  as broken. The faction picker counts each faction's gaps. **Copy from** fills a
+  gap out of another faction - the one of the same culture that has it is
+  offered first - with the same records Add a faction would have written, one
+  backup and one undo for all of them. The two campaign rows open the tab that
+  makes them instead, because a start position is not something to copy.
+* **Raw text.** Pick any text file the toolkit reads - the mod's own, the map's,
+  the text folder, or any campaign's, nested ones included - and edit it as
+  text. Every other screen here edits a file record by record and keeps what it
+  does not understand; this is for the line none of them models. A save shows
+  the lines it changes with their numbers, and what the toolkit's own reader
+  makes of the result (remove a character's age from `descr_strat.txt` and it
+  says so before anything is written). The file keeps its own encoding and its
+  own line endings, a line you did not touch is written back byte for byte, a
+  save over a file something else changed since you opened it is refused, and a
+  `text/` file's `.strings.bin` is rebuilt with it. Backed up first, undone from
+  the Log. Tab types a tab, and Ctrl+S saves.
 * **Replace any picture.** Right-click any image for Replace image and Open file
   location. Warns when resolutions differ, converts `.png` to the `.tga` the
   engine reads, and copies a unit card into every faction folder that holds one.
@@ -319,7 +343,7 @@ path, and recruitment.
   only the lines you changed. Comments, mixed indentation and line endings are
   preserved.
 * Every write is backed up first and recorded in the log. Log > Undo restores
-  byte-exact.
+  byte-exact. That includes a whole file saved from Raw text.
 * Parsers round-trip real mod files byte for byte, which is verified by the test
   suite against whatever mods are installed.
 

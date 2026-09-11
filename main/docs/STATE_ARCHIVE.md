@@ -25,6 +25,57 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 21 - the faction audit and the raw text editor (2026-09-11)
+The third phase of the same sitting, on "proceed with next phase", committed
+unreleased under the 2026-09-11 instruction. Upstream `sync` was up to date at
+2740b0b. It closes D6 and D11, and with them the Now set: 3.1.0 is
+feature-complete.
+
+**Measured before it was classified.** A scratch census of both installed mods
+came before a line of `factionaudit.py`, and it moved three of Demir's calls:
+the off-map navy, the populace and the standing rules are notes (real factions
+in a working mod go without them), the accent is a gap (all 61 factions have
+one), and "an owned unit with no skin for its faction" was dropped outright -
+seven to seventeen of them per faction in Third Age Reforged, which plays. The
+same census found that a faction missing from a campaign is ordinary (Fellowship
+leaves out fourteen) and that the rule worth checking is the pairing: a block in
+`descr_strat.txt` always has a win record, in all four campaigns installed.
+
+**One refactor, small on purpose.** The clone's per-job loop became
+`factionclone.clone_file`, and `ClonePlan` gained an `action`, so the repair is
+the clone's own cloner, write, backup and undo with a different log line. The
+two clone suites (64 and 30 checks) passed unchanged after it.
+
+**Two things the first draft got wrong, caught in the browser.** "Copy all"
+copied notes as well as gaps, which on Divide and Conquer's `papal_states` meant
+1,614 skin records into the modeldb; it copies gaps only now and a note has its
+own button. And the raw plan's preview listed eight lines either side of a
+one-line change, because the slice was not bounded by the hunk - the counts were
+right, the preview was not.
+
+**The raw editor's splice was specified by its tests.** The first version gave
+an edited line the file's commoner ending; the suite's mixed-file case said a
+line rewritten in place should keep its own, and it does now. Every text file in
+both installed mods reads and writes back byte for byte.
+
+**Verified in the running app without touching the user's mods or log.** A
+scratch launcher (patched config paths, a scratch mods folder with Third Age
+Reforged's text files copied in and The Shire taken out of the accents) served
+the real server on another port. The audit found the planted gap, the Copy
+button planned and wrote it, the Log's undo put it back, the Raw text box wrote
+the same line back by hand - leaving the file byte-identical to the original -
+and a save over a file changed behind the box was refused with a Reload button.
+Against the real Divide and Conquer only reads and plans were made. Screenshots
+timed out (the window was hidden), so every check was read off the DOM.
+
+**One process slip, recorded so it is not repeated.** A `git stash` to compare
+prose-check counts ran while the background suite was running, taking this
+session's edits to tracked files out from under it for about two seconds. Any
+suite that failed in that window was re-run alone before being believed.
+
+The full run afterwards was 96 suites: 92 pass, and the four that do not are
+the DaC four, each on its documented number, so nothing needed re-running.
+
 ## 20c - labels, and picking a tile (2026-09-11)
 The second phase of the same sitting as B1, done on the user's word after B1
 closed, and committed unreleased under the same instruction. Upstream `sync`
@@ -2165,6 +2216,34 @@ evidence reports nothing**, and **a baseline shows and stops blocking; it never
 hides**. Two more were already locked there under different wording (Pillow
 only, and the browser never parses a TGA). They are left in the list below as
 well, because a dated entry is the record of when the call was made.
+
+Moved from `STATE.md` on 2026-09-11 again, when 21 took the list past ten:
+the 2026-09-10 entries and the oldest of 2026-09-11, newest first.
+
+- 2026-09-11: **A preset is a place-free copy of the layer stack.** 16d's ruling
+  about what `map_layers` keeps applies whole: the layers, their order, their
+  opacity, the punched colours and the colouring are habits; the zoom, the pan
+  and the selection are a place. So `cmapSaveLayers` was split and
+  `cmapLayerState` is the one snapshot both the remembered stack and every
+  preset are copies of.
+- 2026-09-10: **A different way of reading a layer is not another layer.** The
+  stack is the ten files the map is made of: it is what T11's ten number keys
+  count, what the draw order orders and what `check_layers` validates. So 20a's
+  river overlay and its height transparency are controls on the row of the layer
+  they are a reading of, not entries beside it. `cmapMask` is where such a
+  reading is implemented, and `cmapModeKey` is what both it and the composite
+  cache on.
+- 2026-09-10: **"Darker means more transparent" is a rule about order, not about
+  the number.** Alpha = the grey itself draws half of both installed maps'
+  land at under 13%, because the median land tile is 32 of 255. The ramp T2
+  ships is the land's own distribution - monotonic, so darker is still more
+  transparent, but spread over the heights the map actually has. A reference's
+  rule can be right about the direction and useless about the scale, and that is
+  found by measuring rather than by implementing it.
+- 2026-09-10: **A key a screen prints has to be a key the server assigned.**
+  `campmap.HOTKEYS` travels out with each layer in the manifest and the panel
+  prints what it was given, so a layer added or reordered cannot leave the badge
+  and the handler disagreeing.
 
 Moved from `STATE.md` on 2026-09-11, when B1 took the list past ten again:
 everything dated 2026-09-09 and before, newest first. The cut-as-it-lands

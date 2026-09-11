@@ -1,17 +1,14 @@
 # STATE - Medieval 2 GUI Toolkit
 _Updated: 2026-09-11 · v2.2.3 is still the latest 2.x and beta 2026-09-11 the
-latest beta · after 20c, settlement names on the map and the pin, which closes
-Phase 20 · **nothing is released until the roadmap is finished**_
+latest beta · after 21, the faction audit and the raw text editor, which closes
+the Now set (3.1.0) · **nothing is released until the roadmap is finished**_
 
 ## Next up
-**Phase 21, two screens over data we already hold** (`ROADMAP.md`): D6, the
-faction dependency audit, built on 17f's combined faction screen; and D11, a
-raw text editor for the campaign files, whose save goes through the backup set
-and the log like every other write. B1 and 20c both closed on 2026-09-11 and
-their write-ups are in `ROADMAP_ARCHIVE.md`. After 21 come 22a-22b, 23a-23b
-and 24, which makes **six sessions left in all**, B2-B4 not counted. (The
-roadmap said eight before 20c, which was one too many; its table never added
-up to it.)
+**Phase 22a, forts and watchtowers** (`ROADMAP.md`): click the map to add one,
+drag to move one, delete one, following 16h and 16i's writer exactly, with a ⌖
+pin (`cpinButton`) beside every coordinate. Then 22b, 23a, 23b and 24 - **five
+sessions left in all**, B2-B4 not counted. 21's write-up is in
+`ROADMAP_ARCHIVE.md`.
 
 **Do not release anything at the end of a session.** On 2026-09-11 the user
 said: "we wont publish until we finish all the sessions of our roadmap now".
@@ -39,6 +36,10 @@ number, build, upload, then put it straight back off in the next commit.
 `master` carries the map ON, and `__version__` says `beta-2026-09-11` because
 the beta was the last thing cut.
 
+**21 belongs to BOTH lines.** Raw text is a menu mode of its own and the faction
+audit also draws in the Factions mode, so both are in the 2.x build with the map
+hidden; the audit's two campaign-row buttons appear only on the map screen.
+
 Betas are named by the **date** they were released, with a letter for a second
 in one day. The GitHub title is `M2 GUI-Kit V<X.Y.Z>` - hyphenated **GUI-Kit**,
 capital **V**; run `gh release list --limit 3` and copy the newest title's shape
@@ -46,26 +47,22 @@ rather than typing it from memory. The strict step-by-step is `HANDOFF.md`.
 
 **Written and held: v2.2.4 + beta 2026-09-11b.** The notes are in
 `docs/releases/` (`RELEASE_2_2_4.md`, `RELEASE_BETA_2026_09_11B.md`) and the
-two fixes are committed (`descr_regions.txt` read without an indent, and a TGA
-RLE decoder for the layers Pillow refuses). Nothing was tagged or uploaded.
-**Fold them into the end-of-roadmap cut** rather than cutting them on their
-own - and B1 has to be added to both notes, since the beta note's "Not fixed"
-section describes exactly what B1 fixed.
+two fixes are committed. **Fold them into the end-of-roadmap cut** - and B1 has
+to be added to both notes, since the beta note's "Not fixed" section describes
+exactly what B1 fixed. 20b, 20c, B1 and 21 are not in any note yet either.
 
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
-| B1 - A new province needs a settlement | **done** | Closed 2026-09-11, committed, **not released**. New: `campaint.map_campaigns`, `region_vocab`, `wizard_vocab`, `neighbours`, `creator_problems`, `_plan_region_campaigns`; `PaintPlan.texts` and `.deletes`; `stratedit.new_block` and `plan_new_settlement`; `mapquery.add_music_region`; `POST /api/map/region_vocab`; three pickers and a campaigns line on the wizard. The shown names are required. `tests/test_campaint.py` part 4b (27 checks) and two real-data checks in part 5. Half of G2. Write-up in `ROADMAP_ARCHIVE.md`. |
-| 20c - Labels, and picking a tile | **done** | Closed 2026-09-11, committed, **not released**. Closes T4 and M8 and with them Phase 20. New: `web/js/maplabels.js` (`clnLayout`, pure, and `clnDraw`), `web/js/mappin.js` (`cpinButton`, `cpinTake`), `Aa Labels` / `L` on the toolbar and `labels` in `cmapLayerState`, a pin beside every coordinate on the people and events panels. No Python changed. `tests/test_maplabels.py` (42 checks, most of them in node). Write-up in `ROADMAP_ARCHIVE.md`. |
-| 20b - Getting to the thing you want | done | T9, T8 and D14, 2026-09-11, on beta 2026-09-11. Write-up in `ROADMAP_ARCHIVE.md`. |
-| 21 - the rest of the Now set (3.1.0) | **scoped** | One session: the faction dependency audit (D6) and a raw text editor for the campaign files (D11). |
+| 21 - Two screens over data we hold | **done** | Closed 2026-09-11, committed, **not released**. Closes D6, D11 (= M14) and the Now set. New: `unittransfer/factionaudit.py` (`Census`, `evaluate`, `audit`, `repair_plan`), `unittransfer/rawtext.py` (`files`, `read`, `splice`, `plan`, `apply`), `web/js/facaudit.js`, `web/js/rawtext.js`, the `rawtext` mode, `GET /api/factions/audit`, `POST /api/factions/repair_plan\|repair_apply`, `GET /api/raw/files\|file`, `POST /api/raw/plan\|apply`. `factionclone.clone_file` and `ClonePlan.action` (refactor, clone suites unchanged). `tests/test_factionaudit.py` (48), `tests/test_rawtext.py` (57). |
 | 22-24 - the Next set (3.2.0) | **scoped** | Five sessions: placing forts, watchtowers and resources, the textured terrain render, delete-a-region and create-a-campaign. |
 | B2-B4 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export; `Rename slot` on a packed mod. |
 | 25-27 | scoped, unscheduled | OSM backdrop, map resize, layer generators. |
-| 16-20c | done | Published on the beta line; the 3.0.0 and 3.1.0 numbers are still unassigned to a cut. |
+| 16-21 | done | 16-20a published on the beta line; 20b onward committed and uncut. The 3.0.0 and 3.1.0 numbers are still unassigned to a cut. |
 
 ## In-progress detail
-**Clean.** Nothing is mid-flight. All 94 suites were run after 20c: **90 pass and the same four do not**, the DaC four below.
+**Clean.** Nothing is mid-flight. All 96 suites were run after 21: **92 pass
+and the same four do not**, the DaC four below, each on its documented number.
 
 **Four suites fail the same way on a clean `master`** - hard-coded Divide and
 Conquer numbers (77 port pixels, 13,153 newlines, 305 characters, 73,904 sea
@@ -74,8 +71,8 @@ tiles) against an installed DaC that is a different build: `test_campmap`,
 believing one of them.
 
 **Three suites need node**: `tests/test_maplayers.py` (20a),
-`tests/test_mapgo.py` (20b) and `tests/test_maplabels.py` (20c). Without node on PATH each prints a skip line and
-its Python half still runs.
+`tests/test_mapgo.py` (20b) and `tests/test_maplabels.py` (20c). Without node on
+PATH each prints a skip line and its Python half still runs.
 
 **Two suites bind a socket and can collide inside a back-to-back run**
 (`test_buildings_http`, `test_viewer3d_http`, `WinError 10013`), and **two
@@ -84,42 +81,44 @@ one-second timing bars are load-sensitive** (`test_mapcheck`'s rule-set bar,
 before believing it.
 
 The other standing trap: the suite leaks `ut_*` temp directories into `%TEMP%`.
+And **never `git stash` while a suite is running in the background** - it pulls
+the edits out from under it (21 did it once; see the archive).
 
 ## Read first
 - `ROADMAP.md` - the backlog, the locked decisions, and the campaign map
   reference. Read all of it.
-- `campaint.map_campaigns` - **before writing anything to the base map** (B1).
-  The engine reads each map file from the campaign's own folder when it is
-  there, so a write to `world/maps/base` reaches only the campaigns that do not
-  ship their own copy, and each of those may read its own copy of the files
-  around it.
-- `unittransfer/renames.py` - **before adding any "follow this name" feature.**
-  Position-aware everywhere, and the docstring says why with numbers.
-- `unittransfer/campstrat.py`'s **two campaign lists** (20b): `campaigns` is the
-  top level the engine's menu reads, `campaign_paths` is every campaign at any
-  depth and is what anything offering a campaign must use. `campaign_rel` is the
-  ONE conversion from a campaign name to a path.
-- `unittransfer/flatrecord.py` - **check here before writing any parser.**
-- **The game's own unpacked `data/` is on this machine**, at
-  `tests/_realmod.MODS.parent`. Look there before calling a format unmeasurable.
-- `web/js/campmap.js` - `cmapMask`, the one pixel pass, and `cmapLayerState`,
-  the one description of the layer stack. `cmapGoTile` is the one arrival.
 - `web/js/mappin.js` - **before adding a coordinate field anywhere** (20c).
-  `cpinButton(what, fn, args)` is the whole of it, and it hands your function
-  the tile already in game coordinates. Phase 22's dialogs are the next callers.
-- `web/js/core.js` - `MODES` in `wire()`. One global scope, no build step; a new
-  module is a file, a `<script>` tag and a `MODES` entry, all three guarded by
-  `tests/test_web_modules.py`.
+  `cpinButton(what, fn, args)` is the whole of it; 22a's dialogs are the next
+  callers.
+- `campaint.map_campaigns` - **before writing anything to the base map** (B1).
+  A write to `world/maps/base` reaches only the campaigns that do not ship
+  their own copy.
+- `stratchar.UNTOUCHED` and 16h's `stratedit.plan_settlement` - the guard 22a
+  lifts for forts and watchtowers, and the writer shape it copies.
+- `unittransfer/factionaudit.py` - **before adding any check about a faction.**
+  `Census` already counts every slot in every file; gap or note is measured on
+  the installed mods, never copied from a reference.
+- `unittransfer/rawtext.py` - `rtOpen(rel, line)` is how any screen offers
+  "open this file as text"; a parser that meets a line it does not model points
+  there rather than growing a special case.
 
 ## Upstream
-Reference tool reviewed SHA **2740b0b**. `sync` was last run on 2026-09-11,
-before 20b, and was up to date. B1 touched no screen the reference covers
-beyond the wizard it already had, so it did not re-run it; **20c touches the
-map screen, so run `sync` first.** `docs/upstream/PORT_MANIFEST.json` is
-authoritative: 310 files triaged, none untriaged. `REFERENCE_GAPS.md` marks
-G2 half done.
+Reference tool reviewed SHA **2740b0b**. `sync` was run on 2026-09-11 during
+21 and was up to date. `docs/upstream/PORT_MANIFEST.json` is authoritative: 310
+files triaged, none untriaged; `src/pages/TextEditor.jsx` notes it done in 21.
+`REFERENCE_GAPS.md` marks D6, D11 and M14 done and G2 half done. **22a touches
+the map screen and ports Demir's object dialogs, so run `sync` first.**
 
 ## Decisions
+- 2026-09-11: **A raw save refuses only on the bytes, never on the parser.** It
+  refuses a stale signature, a character the file's encoding cannot hold, and a
+  file that does not survive a read and a write unchanged; what the toolkit's
+  own reader objects to is a warning. An escape hatch that closes when the
+  parser disagrees is not one.
+- 2026-09-11: **Gap or note is measured per file on the installed mods.** A gap
+  is a record every real faction has; a note is one working factions go without,
+  shown and never counted. It moved three of Demir's calls and dropped one check
+  outright, and "copy what is missing" copies gaps only.
 - 2026-09-11: **A label with no room is left off and counted, never drawn over
   another.** TWMapReader draws it anyway; two names on top of each other are
   neither readable. It is honest because it is measured: zooming in never names
@@ -162,27 +161,3 @@ G2 half done.
   no request per keystroke. What that cost was two short strings a region on the
   manifest - the words the player reads - because a box that only matches
   `Anorien_Province` is a box only somebody who has read the files can use.
-- 2026-09-11: **A preset is a place-free copy of the layer stack.** 16d's ruling
-  about what `map_layers` keeps applies whole: the layers, their order, their
-  opacity, the punched colours and the colouring are habits; the zoom, the pan
-  and the selection are a place. So `cmapSaveLayers` was split and
-  `cmapLayerState` is the one snapshot both the remembered stack and every
-  preset are copies of.
-- 2026-09-10: **A different way of reading a layer is not another layer.** The
-  stack is the ten files the map is made of: it is what T11's ten number keys
-  count, what the draw order orders and what `check_layers` validates. So 20a's
-  river overlay and its height transparency are controls on the row of the layer
-  they are a reading of, not entries beside it. `cmapMask` is where such a
-  reading is implemented, and `cmapModeKey` is what both it and the composite
-  cache on.
-- 2026-09-10: **"Darker means more transparent" is a rule about order, not about
-  the number.** Alpha = the grey itself draws half of both installed maps'
-  land at under 13%, because the median land tile is 32 of 255. The ramp T2
-  ships is the land's own distribution - monotonic, so darker is still more
-  transparent, but spread over the heights the map actually has. A reference's
-  rule can be right about the direction and useless about the scale, and that is
-  found by measuring rather than by implementing it.
-- 2026-09-10: **A key a screen prints has to be a key the server assigned.**
-  `campmap.HOTKEYS` travels out with each layer in the manifest and the panel
-  prints what it was given, so a layer added or reordered cannot leave the badge
-  and the handler disagreeing.

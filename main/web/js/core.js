@@ -668,6 +668,7 @@ const MODES=[
   {id:'bmdb',     icon:'🗄', name:'BMDB + Sprites Editor', hint:'What battle_models.modeldb names, and the sprites it points at'},
   {id:'sounds',   icon:'🔊', name:'Unit Sounds',   hint:'Pick which voice entry each unit speaks with'},
   {id:'minor',    icon:'🗺', name:'Minor Files',   hint:'Rebels, religions, cultures, traits, factions and text'},
+  {id:'rawtext',  icon:'📝', name:'Raw text',      hint:'Any file the toolkit reads, as plain text, backed up and undoable'},
   {id:'sprites',  icon:'🖼', name:'Sprites',       sub:true, hint:'Generate and wire the far-LOD unit sprites'},
   {id:'stratmap', icon:'🗺', name:'Strat map models', sub:true, hint:'What descr_model_strat.txt names, and what the campaign map never draws'},
   {id:'cards',    icon:'🖼', name:'Unit & info cards', sub:true, hint:'The two pictures per unit, deduplicated into the merc folder'},
@@ -1230,6 +1231,10 @@ function wire(){
   // leaving a pointless A -> A: with A -> B, choosing A as the dest gives B -> A.
   srcSel.onchange=async e=>{
     const v=e.target.value;
+    // 21: the raw editor's box is the only copy of its edits - ask before the
+    // pick is taken, so saying no leaves everything where it was
+    if(v!==state.src&&state.rt&&state.rt.dirty&&!confirm(`Leave ${state.rt.rel} without `
+      +'saving? The edits are only in the Raw text box.')){srcSel.value=state.src;return;}
     if(v!==state.src)
       activity('picked mod',`${state.mode==='transfer'?'source: ':''}${v} (was ${state.src})`);
     // A ticked pile belongs to the mod it was ticked in - carrying it to another
@@ -1238,8 +1243,8 @@ function wire(){
     // Edit / bmdb mode works on a single mod, so both sides follow the picker.
     if(state.mode!=='transfer'){state.src=state.dst=v;dstSel.value=v;state.destData=null;
       state.cfg={};state.bmdb=null;state.snd=null;state.destSnd=null;state.str=null;
-      state.tr=null;state.an=null;state.mf=null;state.fac=null;
-      state.bld=null;state.bldReturn=null;
+      state.tr=null;state.an=null;state.mf=null;state.fac=null;state.fau=null;
+      state.bld=null;state.bldReturn=null;state.rt=null;
       // the mirrored destination is not the user's transfer pick - don't save it
       await api.post('/api/settings',{last_source:v,last_dest:state.xferDst||v});return loadSource();}
     if(v===state.dst){state.dst=state.xferDst=state.src;dstSel.value=state.dst;state.destData=null;}
@@ -1309,6 +1314,7 @@ function applyMode(persist){
         anc=state.mode==='ancillaries', mnr=state.mode==='minor',
         gld=state.mode==='guilds',
         fac=state.mode==='factions',
+        raw=state.mode==='rawtext',
         home=state.mode==='home';
   // Home is the one screen that is ABOUT the mods, so it does not sit under a
   // mod picker: every card carries its own.
@@ -1339,11 +1345,11 @@ function applyMode(persist){
   sndBtn.style.display=snd?'inline-block':'none';
   unusedWrap.style.display=(bm||stm)?'inline-flex':'none';
   mercOnly.parentElement.style.display=
-    (bm||snd||spr||bld||str||trt||anc||gld||mnr||fac||home||stm||crd||cmp)?'none':'inline-flex';
+    (bm||snd||spr||bld||str||trt||anc||gld||mnr||fac||raw||home||stm||crd||cmp)?'none':'inline-flex';
   // these bring their own filters - the sidebar's faction/era ones say nothing
   // about a voice entry, and nothing at all about a modeldb record or a sprite
   document.getElementById('unitFilters').style.display=
-    (bm||snd||spr||bld||str||trt||anc||gld||mnr||fac||home||stm||crd||cmp)?'none':'';
+    (bm||snd||spr||bld||str||trt||anc||gld||mnr||fac||raw||home||stm||crd||cmp)?'none':'';
   document.getElementById('bldFilters').style.display=bld?'':'none';
   // Only offered while the unit editor is what you'd be going back FROM: in
   // buildings mode the building is already on screen.
@@ -1357,7 +1363,8 @@ function applyMode(persist){
                     :anc?'Search ancillaries and types…'
                     :gld?'Search guilds…'
                     :mnr?'Search this file…'
-                    :fac?'Search factions…':'Search…';
+                    :fac?'Search factions…'
+                    :raw?'Search file names…':'Search…';
   document.title=modeDef(state.mode).name+' · Medieval 2 GUI Toolkit';
   if(one&&state.selMode)toggleSelMode();
   // A single-mod mode mirrors the destination onto the source, but the pick the
@@ -1434,6 +1441,7 @@ function render(){
   if(state.mode==='guilds')return state.gu?renderGuilds():loadGuilds();
   if(state.mode==='minor')return state.mf?renderMinor():loadMinor();
   if(state.mode==='factions')return state.fac?renderFactions():loadFactions();
+  if(state.mode==='rawtext')return renderRawtext();
   // the unit list is still loading, or its load failed - which are different
   // things and must not look the same, or a mod that cannot be read presents as
   // one that is taking a long time

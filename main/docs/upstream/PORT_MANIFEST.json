@@ -2632,12 +2632,13 @@
   "src/pages/TextEditor.jsx": {
    "disposition": "audit",
    "phases": [
-    "4"
+    "4",
+    "21"
    ],
    "reason": "raw text editing - informs Code View",
    "status": "gone",
    "first_seen": "7cab442",
-   "notes": ""
+   "notes": "M14 = D11, done in Phase 21 as the Raw text mode (unittransfer/rawtext.py): whole-file editing with our backup, log and undo, the file's own encoding and line endings kept, and a stale save refused"
   },
   "src/pages/TraitsEditor.jsx": {
    "disposition": "port-concept",

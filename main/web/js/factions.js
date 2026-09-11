@@ -92,7 +92,8 @@ function renderFactions(){
       <div class="trrows">${rows.map(facRowHtml).join('')
         || '<div class="count" style="padding:8px">No faction matches.</div>'}</div>
     </div>
-    <div class="trmain" id="facMain">${facDetailHtml()}</div>
+    <div class="trmain">${f.sel && typeof fauHost === 'function' ? fauHost() : ''}
+      <div id="facMain">${facDetailHtml()}</div></div>
   </div>`;
 }
 
@@ -574,6 +575,7 @@ async function facSave(){
   finally{ f.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 6000); return; }
   toast('Saved. 🕑 Log can undo it.');
+  if(typeof fauStale === 'function') fauStale();
   const keep = body.faction;
   // 17f: the roster is re-read either way, but only the mode may redraw the
   // page. On the campaign map this form is one div inside a panel, and
@@ -799,6 +801,10 @@ async function facCloneApply(){
   closeModal();
   toast(`Added ${keep} - ${res.files.length} file(s), ${res.asset_files} art file(s). `
         + '🕑 Log can undo it.', 5000);
-  await loadFactions();
-  facOpen(keep);
+  if(typeof fauStale === 'function') fauStale();
+  // 21: the audit offers this dialog from the campaign map's faction screen too,
+  // and there `main` is the map - only the mode may redraw the page (17f's rule)
+  if(state.mode === 'factions'){ await loadFactions(); facOpen(keep); return; }
+  try{ await facFetch(f.mod); }catch(e){}
+  if(state.mode === 'campmap' && typeof cjPickFaction === 'function') cjPickFaction(keep);
 }
