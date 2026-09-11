@@ -1,7 +1,8 @@
 # STATE - Medieval 2 GUI Toolkit
 _Updated: 2026-09-11 · **v2.2.3 still the latest 2.x, beta 2026-09-11 alongside
-it off the same tree - `master` itself keeps the map on** · after Phase 20b,
-getting to the thing you want, cut on the beta line alone_
+it off the same tree - `master` itself keeps the map on** · two fixes off beta
+reports are in the tree and **deliberately NOT released** - the user said so on
+2026-09-11, which suspends the cut-as-it-lands rule for this one_
 
 ## Next up
 **Phase 20c, labels and picking a tile** (`ROADMAP.md`) - settlement names on
@@ -9,6 +10,20 @@ the map placed to avoid overlap, and one shared pin control that writes a
 clicked tile into any coordinate field. 20b closed on 2026-09-11 and its
 write-up is in `ROADMAP_ARCHIVE.md`. What is left of the 3.1.0 Now set is 20c
 and Phase 21.
+
+**Ahead of both, and not yet a phase: the New region wizard does not write
+`descr_strat.txt`.** A province created with it gets a record and pixels and
+nothing else, so no faction starts there, the engine cannot give the region an
+owner, and the campaign crashes at the end of a turn. A beta user's log has the
+whole chain in it - `PLACEMENT_IN_SEA` on tile (0,0), then `no settlement
+owner`, then the AI analyser skipping a nameless region. Three smaller holes sit
+with it: the creator faction is a free-text box checked only for being non-empty
+(with `slave`, which is not a legal value for that field, as its placeholder),
+`descr_sounds_music_types.txt` never gets the new region, and the two shown
+names are a warning rather than a requirement. `stratedit.plan_settlement`
+already writes settlement blocks and `mapquery` already reads the music types
+file, so this is wiring rather than new format work. Nothing in Phases 20-24
+covers it: Phase 24 is *delete* a region, and region music is `G2` under Later.
 
 **Cut after every change, from 2026-09-09.** The user's standing instruction:
 every change is released as it lands, without being asked. **Which lines depends
@@ -20,6 +35,12 @@ map screen, and a 2.x carrying them would carry no visible difference. 20b did
 touch `renames.py`, which the Factions screen reaches - the deep campaign walk
 moved out of it into `campstrat.campaign_paths` - but it is the same list of the
 same folders, measured, so there is nothing to show for it outside the map.
+**The 2026-09-11b pair was both**, and for the same reason 19b was, decided the
+same way: `renames._find_regions` reads `descr_regions.txt` through
+`campmap.parse_regions`, so the parser fix changes what a faction rename does.
+Measured before assuming - on the mod that reported it, a faction rename found
+**0 creator-faction lines before the fix and 209 after**. That is a visible
+difference outside the map, so the 2.x was cut.
 
 ## WHERE THINGS ARE - the tree moved on 2026-09-06
 Only the two `.bat` files and `README.md` are at the top of the repository.
@@ -56,7 +77,19 @@ rather than typing it from memory. The strict step-by-step is `HANDOFF.md`.
 the Code View refusal that now names it. The region and settlement half of the
 same engine is reached from the map screen and went to the beta alone.
 
-**What beta 2026-09-11 carries**: 20b whole, on top of 20a. The campaign
+**Written, built once and HELD: v2.2.4 + beta 2026-09-11b.** The notes are
+already in `docs/releases/` (`RELEASE_2_2_4.md`,
+`RELEASE_BETA_2026_09_11B.md`) and the v2.2.4 zip built clean at 54.3 MB,
+but **the user said not to release it for now**, so nothing was tagged or
+uploaded and `__version__` and the `off:true` flag were both put back. Cut it
+when they say. It carries two fixes off beta reports:
+`descr_regions.txt` read without an indent to go on, which had every
+province of one mod reading as declared nowhere and a faction rename
+skipping the file; and a TGA RLE decoder of our own for the layers Pillow
+refuses because a packet crosses a scanline. The 2.x carries only the first,
+because only the first is reachable with the map hidden.
+
+**What beta 2026-09-11 carried**: 20b whole, on top of 20a. The campaign
 browser and the three campaigns nothing had ever offered, the find box over a
 province, a settlement or a region ID, and named view presets. No 2.x went with
 it - everything visible in it is on the map screen. 20a is on the beta before

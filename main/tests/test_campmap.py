@@ -20,6 +20,7 @@ where that mod is DaC it checks the numbers this phase was scoped against:
     python -m tests.test_campmap
 """
 import shutil
+import struct
 import sys
 import time
 from pathlib import Path
@@ -87,6 +88,43 @@ flush_rel = "Gamma_Province\r\n\tGamma\r\n\tspain\r\n\tRebels\r\n\t1 2 3\r\n\twi
 gf = campmap.parse_regions(flush_rel)
 check("a flush-left religions line is not a second region (Third Age 6)",
       len(gf.records) == 1 and gf.records[0].religions == {"catholic": 100})
+
+# A beta mod ships every line of the file flush left, blank lines between the
+# records and nothing else. The engine's parser ignores whitespace, so the mod
+# plays; read on the indent alone it came out as one record per line with no
+# colour on any of them, which put every province on the map in "declared
+# nowhere in descr_regions.txt" and took the region out of the hover, the click
+# and the query table at once.
+FLAT = ("".join(ln.lstrip("\t") for ln in (NINE + TEN).splitlines(keepends=True))
+        .replace("\r\n\r\n", "\r\n"))
+ff = campmap.parse_regions(FLAT)
+check("a file with no indentation at all still reads as records",
+      len(ff.records) == 2 and all(r.rgb_line >= 0 for r in ff.records))
+check("and every field of them lands where the indented form puts it",
+      [(r.name, r.settlement, r.faction, r.rebels, r.rgb, r.resources,
+        r.triumph, r.farming, r.religions) for r in ff.records]
+      == [(r.name, r.settlement, r.faction, r.rebels, r.rgb, r.resources,
+           r.triumph, r.farming, r.religions) for r in rf.records[:2]])
+check("the legion line is still not counted as the settlement",
+      ff.records[1].legion == "Beta_Legion" and ff.records[1].settlement == "Beta")
+check("nothing is reported as a problem, and the file still round trips",
+      not any(r.problems for r in ff.records) and ff.serialise() == FLAT)
+
+flat_waste = campmap.parse_regions(
+    FLAT + "\r\n" + "".join(ln.lstrip("\t")
+                            for ln in WASTE.splitlines(keepends=True)))
+check("the wasteland short form survives the same reading, with no settlement "
+      "borrowed from the record above it",
+      len(flat_waste.records) == 3 and flat_waste.records[2].wasteland
+      and flat_waste.records[2].rgb == (70, 80, 90))
+
+bom = campmap.parse_regions("﻿" + NINE)
+check("a byte-order mark is not part of the first region's name",
+      bom.records[0].name == "Alpha_Province"
+      and bom.serialise() == "﻿" + NINE)
+check("and the same when it arrives as latin-1, which is how these are read",
+      campmap.parse_regions("\xef\xbb\xbf" + NINE).records[0].name
+      == "Alpha_Province")
 
 # ---- 2) the terrain header and the coordinate systems ------------------------
 print("\n2) descr_terrain.txt and the three coordinate systems")
@@ -201,6 +239,39 @@ try:
                   f"orientation and the header comes back", same
                   and (got.image_type, got.depth, got.descriptor)
                   == (image_type, 32, descriptor))
+
+    # A run packet carrying on into the next row is legal and the engine reads
+    # it; Pillow calls it "buffer overrun when reading image file" and will not
+    # open the file at all. A beta mod's fog, features, trade routes and
+    # roughness were all packed that way.
+    head = struct.pack("<BBBHHBHHHHBB", 0, 0, maptga.TYPE_RLE, 0, 0, 0, 0, 0,
+                       8, 4, 24, 0)
+    body, left = b"", 8 * 4
+    while left:                                   # one run for the whole image
+        n = min(128, left)
+        body += bytes([0x80 | (n - 1)]) + b"\x11\x22\x33"
+        left -= n
+    tmp.write_bytes(head + body)
+    refused = False
+    try:
+        probe = Image.open(tmp)
+        probe.load()
+    except OSError:
+        refused = True
+    crossed, _ = maptga.read(tmp)
+    check("a run packet that crosses a scanline is read, where Pillow refuses it",
+          refused and crossed.size == (8, 4)
+          and set(crossed.convert("RGB").getdata()) == {(0x33, 0x22, 0x11)})
+
+    tmp.write_bytes(struct.pack("<BBBHHBHHHHBB", 0, 0, maptga.TYPE_RLE, 0, 0, 0,
+                                0, 0, 64, 64, 24, 0) + b"\x80\x11\x22\x33")
+    try:
+        maptga.read(tmp)
+        said = ""
+    except maptga.TgaError as exc:
+        said = str(exc)
+    check("and a file that really is short says so in pixels, not in buffers",
+          "4,095 pixel(s) short" in said and "4,096" in said)
 finally:
     tmp.unlink(missing_ok=True)
 

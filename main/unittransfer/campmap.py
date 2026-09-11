@@ -354,10 +354,53 @@ def parse_regions(text: str) -> RegionsFile:
     twice over: vanilla writes 5 for the first on 110 of its 112 regions while
     the second runs 1 to 6, and Geomod's manual says of them "Victory … leave it
     at 5" and "Agriculture … 4 is approximately average".
+
+    **The indent is not part of the format.** Both shapes above are drawn with
+    one because vanilla, DaC and Third Age Reforged all write one, and reading
+    the record off it alone was wrong: a beta mod ships the same records flush
+    left, which the engine plays and which came out here as one record per line
+    with a colour on none of them. Every province on that map then read as
+    painted and declared nowhere - no name in the hover, nothing to click, and a
+    query table of 1,592 rows that were single lines of the file. So the indent
+    is the **first** reading and :func:`_starts_by_shape` is the second, and
+    which one a file gets is decided by which of them finds the colours.
     """
     lines, newline, trailing = _split_lines(text)
     out = RegionsFile(lines=lines, newline=newline, trailing_newline=trailing)
 
+    starts = _starts_by_indent(lines)
+    recs = _records_at(lines, starts)
+    # A file with no indentation at all reads as one record per line, every one
+    # of them missing its colour. The indent is not part of the format - the
+    # engine's own parser ignores whitespace - so a mod that writes the records
+    # flush left is a mod this read has to answer for, not refuse.
+    if sum(1 for r in recs if r.rgb_line >= 0) < sum(1 for r in recs
+                                                     if r.rgb_line < 0):
+        by_shape = _records_at(lines, _starts_by_shape(lines))
+        if sum(1 for r in by_shape if r.rgb_line >= 0) > sum(
+                1 for r in recs if r.rgb_line >= 0):
+            recs = by_shape
+    out.records.extend(recs)
+    return out
+
+
+def _records_at(lines: List[str], starts: List[int]) -> List[RegionRecord]:
+    """One record per start, each running to the line before the next."""
+    return [_parse_record(lines, start,
+                          (starts[n + 1] - 1) if n + 1 < len(starts)
+                          else len(lines) - 1)
+            for n, start in enumerate(starts)]
+
+
+def _starts_by_indent(lines: List[str]) -> List[int]:
+    """The first line of every record, by the indent the three big mods write.
+
+    Vanilla, Third Age Reforged and DaC all indent the body of a record and
+    leave the name flush left, so the name is the whole signal and a malformed
+    record still shows up as a record with :attr:`RegionRecord.problems` on it -
+    which is what the validator reports. That is worth keeping, so this stays
+    the first reading and :func:`_starts_by_shape` is only the fallback.
+    """
     def is_header(ln: str) -> bool:
         if not ln.strip() or ln.lstrip().startswith(";"):
             return False
@@ -367,19 +410,70 @@ def parse_regions(text: str) -> RegionsFile:
         # a new region both loses the religions and invents a phantom record
         return not ln.lstrip().lower().startswith("religions")
 
-    starts = [i for i, ln in enumerate(lines) if is_header(ln)]
-    for n, start in enumerate(starts):
-        end = (starts[n + 1] - 1) if n + 1 < len(starts) else len(lines) - 1
-        out.records.append(_parse_record(lines, start, end))
-    return out
+    return [i for i, ln in enumerate(lines) if is_header(ln)]
+
+
+def _starts_by_shape(lines: List[str]) -> List[int]:
+    """The same, for a file that gives no indent to read it off.
+
+    The ``R G B`` line is already this module's anchor, so the walk is
+    backwards from each one over the three lines the grammar puts in front of
+    it - settlement, creator faction, rebel type - and then the name, with an
+    optional ``legion:`` in between. It stops early at the previous record's
+    colour, its religions line or a bare number, none of which can be any of
+    those four. That terminator is what makes the wasteland short form, which
+    has no settlement line, fall out of the same walk rather than need a case
+    of its own.
+    """
+    starts: List[int] = []
+    prev_rgb = -1
+    for j, ln in enumerate(lines):
+        if not _RGB_LINE.match(_clean_line(ln)):
+            continue
+        back: List[int] = []
+        i = j - 1
+        while i > prev_rgb and len(back) < 5:
+            s = _clean_line(lines[i])
+            if not s:
+                i -= 1
+                continue
+            if (s.lower().startswith("religions") or _NUM_LINE.match(s)
+                    or _RGB_LINE.match(s)):
+                break
+            back.append(i)
+            i -= 1
+        starts.append(back[-1] if back else j)
+        prev_rgb = j
+    return starts
+
+
+def _clean_line(line: str) -> str:
+    """One line with its comment and its surrounding whitespace gone."""
+    return line.split(";", 1)[0].strip()
+
+
+def _strip_bom(s: str) -> str:
+    """A byte-order mark in front of the first region's name, either way it comes.
+
+    These files are read as latin-1, so a UTF-8 BOM arrives as the three
+    characters ``ï»¿`` rather than as ``\\ufeff``. It is not part of the name
+    either way, and a name carrying one matches nothing in ``descr_strat.txt``,
+    the names file or the campaign script. The line itself is left alone, so
+    the BOM survives a save of every line but the one an edit rewrites.
+    """
+    for mark in ("﻿", "\xef\xbb\xbf"):
+        if s.startswith(mark):
+            return s[len(mark):]
+    return s
 
 
 def _parse_record(lines: List[str], start: int, end: int) -> RegionRecord:
-    rec = RegionRecord(name=lines[start].strip(), name_line=start, span=(start, end))
+    rec = RegionRecord(name=_strip_bom(lines[start].strip()), name_line=start,
+                       span=(start, end))
 
     body: List[Tuple[int, str]] = []
     for i in range(start + 1, end + 1):
-        s = lines[i].split(";", 1)[0].strip()
+        s = _clean_line(lines[i])
         if not s:
             continue
         if s.lower().startswith("legion:"):

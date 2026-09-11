@@ -1,7 +1,24 @@
 """The campaign map's TGA layers, read and written as the game actually ships them.
 
-Pillow decodes the pixels; **the 18-byte header is ours**. That split is the
-whole point of this module, and it exists because of one field.
+Pillow decodes the pixels, **and this module decodes them when Pillow will
+not**; the 18-byte header is ours either way. The second half is :func:`_decode`,
+and it exists because of a beta mod whose ``map_fog``, ``map_features``,
+``map_trade_routes`` and ``map_roughness`` Pillow would not open at all -
+``buffer overrun when reading image file`` - while the game read all four.
+Pillow's RLE decoder works a scanline at a time and a packet that runs past the
+end of a row can overrun it. The format allows such a packet; only TGA 2.0 asks
+writers to avoid one, and the engine reads either. So a layer packed as a single
+stream is a layer to read, not to refuse. Nothing vanilla, DaC or Third Age
+Reforged ships crosses a row, which is why nothing here caught it.
+
+Pillow stays the **first** reading rather than being replaced, for two measured
+reasons: it is C, and 37,879 real TGAs on one machine decode identically either
+way. The four that do not are 32-bit icons carrying a TGA 2.0 extension area,
+whose attribute-type byte Pillow honours and this does not - and not one map
+layer in any installed mod is both those things, so the promise below is
+untouched. Ours is what answers when Pillow raises, and nothing else changes.
+
+The header was ours before any of that, and it was ours because of one field.
 
 TWMapReader's ``Utils.writeTGA`` carries a field note that M2TW *crashed* on
 descriptor byte ``0x18`` and on ``0x20``, and that ``0x08`` is what works. Its
@@ -200,21 +217,102 @@ def probe(path: Path) -> TgaInfo:
 def read(path: Path) -> Tuple[Image.Image, TgaInfo]:
     """``(image, info)`` - the image in **image coordinates**, y down.
 
-    Pillow honours both origin bits on the way in, so the image handed back is
-    already the right way up whatever the header said; ``info`` remembers what
-    it said so :func:`write` can undo it.
+    Both origin bits are undone here, so the image handed back is the right way
+    up whatever the header said; ``info`` remembers what it said so
+    :func:`write` can put it back. The two are deliberately the same arithmetic
+    read in reverse - see :func:`encode`.
     """
     info = probe(path)
+    path = Path(path)
     try:
         with Image.open(path) as im:
             im.load()
             out = im.convert(info.mode)
-    except (OSError, ValueError) as exc:
-        raise TgaError(f"{Path(path).name}: {exc}") from exc
+    except (OSError, ValueError):
+        # Pillow will not have it. That is not the same as the file being
+        # broken, so read it here rather than repeat what Pillow said about it:
+        # either this produces the layer, or it says in tiles what is missing.
+        out = _decode(path, info)
     if out.size != (info.width, info.height):
-        raise TgaError(f"{Path(path).name}: header says {info.width}x{info.height}, "
+        raise TgaError(f"{path.name}: header says {info.width}x{info.height}, "
                        f"decoded {out.size[0]}x{out.size[1]}")
     return out, info
+
+
+def _decode(path: Path, info: TgaInfo) -> Image.Image:
+    """The pixels, ours, with the two origin bits undone - see :func:`encode`.
+
+    The arithmetic is :func:`encode` read backwards, deliberately: rows bottom
+    up unless descriptor bit 5 says otherwise, columns right to left if bit 4
+    is set, and BGR(A) on the wire.
+    """
+    stride = info.depth // 8
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        raise TgaError(f"{path.name}: {exc}") from exc
+    start = HEADER_SIZE + len(info.id_field)
+    body = raw[start:info.trailer_start] if info.trailer else raw[start:]
+
+    count = info.width * info.height
+    if info.rle:
+        pixels = _decode_rle(body, count, stride, path.name)
+    elif len(body) < count * stride:
+        raise TgaError(f"{path.name}: the pixel data is {len(body):,} bytes and "
+                       f"{info.width}x{info.height} at {info.depth}-bit needs "
+                       f"{count * stride:,}")
+    else:
+        pixels = body[:count * stride]
+
+    out = Image.frombytes(info.mode, (info.width, info.height), pixels, "raw",
+                          "BGRA" if info.depth == 32 else "BGR")
+    if not info.top_origin:
+        out = out.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+    if info.right_origin:
+        out = out.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    return out
+
+
+def _decode_rle(body: bytes, count: int, stride: int, name: str) -> bytes:
+    """The pixels of a type-10 layer, packets allowed to cross a scanline.
+
+    That last clause is the whole reason this exists beside ``Image.open``. A
+    packet is ``0x80 | n-1`` then one pixel for a run, or ``n-1`` then n pixels
+    for a literal, and nothing in either form says a packet may not carry on
+    into the next row.
+
+    A file that really is short says so in pixels, because "buffer overrun when
+    reading image file" is the least useful sentence there is about a map layer.
+    """
+    out = bytearray(count * stride)
+    at = i = 0
+    end = len(body)
+    while at < count:
+        if i >= end:
+            raise TgaError(f"{name}: the pixel data ends {count - at:,} pixel(s) "
+                           f"short of the {count:,} the header asks for")
+        packet = body[i]
+        i += 1
+        run = (packet & 0x7F) + 1
+        # a last packet carrying more than the header asked for is clamped
+        # rather than refused: every pixel wanted is already accounted for
+        n = run if run <= count - at else count - at
+        if packet & 0x80:
+            px = body[i:i + stride]
+            i += stride
+            if len(px) < stride:
+                raise TgaError(f"{name}: a run packet is cut off {count - at:,} "
+                               f"pixel(s) from the end")
+            out[at * stride:(at + n) * stride] = px * n
+        else:
+            chunk = body[i:i + n * stride]
+            i += run * stride
+            if len(chunk) < n * stride:
+                raise TgaError(f"{name}: a literal packet is cut off "
+                               f"{count - at:,} pixel(s) from the end")
+            out[at * stride:(at + n) * stride] = chunk
+        at += n
+    return bytes(out)
 
 
 def encode(image: Image.Image, info: TgaInfo) -> bytes:
