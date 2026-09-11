@@ -399,6 +399,11 @@ function cmapSetCampaign(rel){
      && !confirm('Read a different campaign?\n\n'
         + 'The events panel has an unsaved block in it, and it is a block in '
         + 'the campaign you are leaving.')) return;
+  // 22a: and the forts panel, whose form is a line nobody has saved yet
+  if(typeof cftDirty === 'function' && cftDirty()
+     && !confirm('Read a different campaign?\n\n'
+        + 'The forts panel has an unsaved fort or watchtower in it, in the '
+        + 'campaign you are leaving.')) return;
   c.campaign = want;
   // 20c: every field a pin can write into is one of the panels reset below
   state.cpin = null;
@@ -410,17 +415,20 @@ function cmapSetCampaign(rel){
   const was = {cbr: state.cbr && state.cbr.open,
                cj: state.cj && state.cj.open,
                cev: state.cev && state.cev.open,
+               cft: state.cft && state.cft.open,
                cq: state.cq && state.cq.open,
                cchk: state.cchk && state.cchk.open,
                cmk: state.cmk && state.cmk.on};
   // what was read out of the campaign that is being left
   state.cj = null; state.cx = null; state.cset = null;
   state.cmk = null; state.cev = null; state.cq = null; state.cchk = null;
+  state.cft = null;
   c.det = null; c.cv = null; c.overlay = null; c.overlayKey = '';
   activity('campaign browser', `read ${want || 'the default campaign'}`);
   renderCampmap();
   if(was.cj) cjToggle();
   if(was.cev) cevToggle();
+  if(was.cft) cftToggle();
   if(was.cq) cqToggle();
   if(was.cchk) cchkToggle();
   if(was.cmk) cmkToggleLayer();
@@ -476,6 +484,7 @@ function cmapGoTile(tile, zoom, region){
   cmapOpenRegion(r.name);
   csOpen(r.name);
   cmapOpenPeople(r.name);
+  if(typeof cftPaint === 'function') cftPaint();
 }
 
 function renderCampmap(){
@@ -532,6 +541,7 @@ the query panel's colouring and filters, and the zoom. Saved views are kept.">â†
         <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
         <div class="cmpick" id="cmPick"></div>
         <div class="cmsettle" id="cmSettle"></div>
+        <div id="cmForts"></div>
         <div class="cmchars" id="cmChars"></div>
         <div class="cmcamp" id="cmCamp"></div>
         <div class="cmmodels" id="cmModels"></div>
@@ -546,6 +556,7 @@ the query panel's colouring and filters, and the zoom. Saved views are kept.">â†
   cpaintOpen();
   cmkOpen();          // 17d, and it reads nothing until the layer is ticked
   cevOpen();          // 18b, and it reads its two files only once opened
+  cftOpen();          // 22a, and it reads nothing until somebody opens it
   cmapPickPaint();
   csPaint();          // 16h: kept out of cmapPickPaint, which owns #cmPick only
   cxPaint();          // 16i, for the same reason
@@ -2121,6 +2132,9 @@ async function cmapPick(tile){
   cmapOutline(r);
   cmapPaint();
   cmapPickPaint();
+  // 22a: the forts panel lists the picked province's, and opens the one the
+  // click landed on
+  if(typeof cftPicked === 'function') cftPicked(c.pick);
   if(!c.pick) return;
   const want = c.pick.join(',');
   cmapProbe(c, tx, ty, want);

@@ -1,14 +1,16 @@
 # STATE - Medieval 2 GUI Toolkit
 _Updated: 2026-09-11 · v2.2.3 is still the latest 2.x and beta 2026-09-11 the
-latest beta · after 21, the faction audit and the raw text editor, which closes
-the Now set (3.1.0) · **nothing is released until the roadmap is finished**_
+latest beta · after 22a, forts and watchtowers, the first session of the Next
+set (3.2.0) · **nothing is released until the roadmap is finished**_
 
 ## Next up
-**Phase 22a, forts and watchtowers** (`ROADMAP.md`): click the map to add one,
-drag to move one, delete one, following 16h and 16i's writer exactly, with a ⌖
-pin (`cpinButton`) beside every coordinate. Then 22b, 23a, 23b and 24 - **five
-sessions left in all**, B2-B4 not counted. 21's write-up is in
-`ROADMAP_ARCHIVE.md`.
+**Phase 22b, resources and the snap** (`ROADMAP.md`): the 1,131 resources
+through 22a's writer (`stratobj.KINDS` gains `resource`; a resource is written
+at the top of the file, not in a section, so where it goes is the new part),
+`mapcheck`'s duplicate and position rules reused rather than rewritten, and D10's
+spiral search over `mapcheck.marker_faults` turning "no" into "no, but here".
+Then 23a, 23b and 24 - **four sessions left in all**, B2-B4 not counted. 22a's
+write-up is in `ROADMAP_ARCHIVE.md`.
 
 **Do not release anything at the end of a session.** On 2026-09-11 the user
 said: "we wont publish until we finish all the sessions of our roadmap now".
@@ -41,6 +43,7 @@ the beta was the last thing cut.
 **21 belongs to BOTH lines.** Raw text is a menu mode of its own and the faction
 audit also draws in the Factions mode, so both are in the 2.x build with the map
 hidden; the audit's two campaign-row buttons appear only on the map screen.
+**22a is map work** and belongs to the beta line only.
 
 Betas are named by the **date** they were released, with a letter for a second
 in one day. The GitHub title is `M2 GUI-Kit V<X.Y.Z>` - hyphenated **GUI-Kit**,
@@ -51,20 +54,21 @@ rather than typing it from memory. The strict step-by-step is `HANDOFF.md`.
 `docs/releases/` (`RELEASE_2_2_4.md`, `RELEASE_BETA_2026_09_11B.md`) and the
 two fixes are committed. **Fold them into the end-of-roadmap cut** - and B1 has
 to be added to both notes, since the beta note's "Not fixed" section describes
-exactly what B1 fixed. 20b, 20c, B1, 21 and the map hover fix below are not
-in any note yet either.
+exactly what B1 fixed. 20b, 20c, B1, 21, the map hover fix and 22a are not in
+any note yet either.
 
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
-| 21 - Two screens over data we hold | **done** | Closed 2026-09-11, committed, **not released**. Closes D6, D11 (= M14) and the Now set. New: `unittransfer/factionaudit.py` (`Census`, `evaluate`, `audit`, `repair_plan`), `unittransfer/rawtext.py` (`files`, `read`, `splice`, `plan`, `apply`), `web/js/facaudit.js`, `web/js/rawtext.js`, the `rawtext` mode, `GET /api/factions/audit`, `POST /api/factions/repair_plan\|repair_apply`, `GET /api/raw/files\|file`, `POST /api/raw/plan\|apply`. `factionclone.clone_file` and `ClonePlan.action` (refactor, clone suites unchanged). `tests/test_factionaudit.py` (48), `tests/test_rawtext.py` (57). |
-| 22-24 - the Next set (3.2.0) | **scoped** | Five sessions: placing forts, watchtowers and resources, the textured terrain render, delete-a-region and create-a-campaign. |
+| 22a - Forts and watchtowers | **done** | Closed 2026-09-11, committed, **not released**. First half of D9 (and G5). New: `unittransfer/stratobj.py` (`plan`, `apply`, `view`, `Vocabulary`, `render_line`, `new_section`), `web/js/campforts.js` (the 🏰 Forts panel), `GET /api/map/objects`, `POST /api/map/object_plan\|_apply`. 17d's drag takes forts and watchtowers (`CMK_DRAGGABLE`). `tests/test_stratobj.py` (65). |
+| 21 - Two screens over data we hold | done | Closed 2026-09-11, committed, **not released**. Closes D6, D11 (= M14) and the Now set. New: `unittransfer/factionaudit.py` (`Census`, `evaluate`, `audit`, `repair_plan`), `unittransfer/rawtext.py` (`files`, `read`, `splice`, `plan`, `apply`), `web/js/facaudit.js`, `web/js/rawtext.js`, the `rawtext` mode, `GET /api/factions/audit`, `POST /api/factions/repair_plan\|repair_apply`, `GET /api/raw/files\|file`, `POST /api/raw/plan\|apply`. `factionclone.clone_file` and `ClonePlan.action` (refactor, clone suites unchanged). `tests/test_factionaudit.py` (48), `tests/test_rawtext.py` (57). |
+| 22b-24 - the rest of the Next set (3.2.0) | **scoped** | Four sessions: resources and the snap, the textured terrain render, delete-a-region and create-a-campaign. |
 | B2-B4 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export; `Rename slot` on a packed mod. |
 | 25-27 | scoped, unscheduled | OSM backdrop, map resize, layer generators. |
 | 16-21 | done | 16-20a published on the beta line; 20b onward committed and uncut. The 3.0.0 and 3.1.0 numbers are still unassigned to a cut. |
 
 ## In-progress detail
-**Clean.** Nothing is mid-flight. All 96 suites were run after 21: **92 pass
+**Clean.** Nothing is mid-flight. All 97 suites were run after 22a: **93 pass
 and the same four do not**, the DaC four below, each on its documented number.
 
 **Four suites fail the same way on a clean `master`** - hard-coded Divide and
@@ -91,28 +95,37 @@ the edits out from under it (21 did it once; see the archive).
 - `ROADMAP.md` - the backlog, the locked decisions, and the campaign map
   reference. Read all of it.
 - `web/js/mappin.js` - **before adding a coordinate field anywhere** (20c).
-  `cpinButton(what, fn, args)` is the whole of it; 22a's dialogs are the next
-  callers.
+  `cpinButton(what, fn, args)` is the whole of it; 22a's form and its two
+  Place buttons use it, and 22b's resource form is next.
 - `campaint.map_campaigns` - **before writing anything to the base map** (B1).
   A write to `world/maps/base` reaches only the campaigns that do not ship
   their own copy.
-- `stratchar.UNTOUCHED` and 16h's `stratedit.plan_settlement` - the guard 22a
-  lifts for forts and watchtowers, and the writer shape it copies.
 - `unittransfer/factionaudit.py` - **before adding any check about a faction.**
   `Census` already counts every slot in every file; gap or note is measured on
   the installed mods, never copied from a reference.
+- `unittransfer/stratobj.py` - **before writing 22b.** One writer for every
+  one-line thing on the map; a resource is a new `KINDS` entry and a new "where
+  it goes", not a new module. Its guard is the one to keep.
 - `unittransfer/rawtext.py` - `rtOpen(rel, line)` is how any screen offers
   "open this file as text"; a parser that meets a line it does not model points
   there rather than growing a special case.
 
 ## Upstream
-Reference tool reviewed SHA **2740b0b**. `sync` was run on 2026-09-11 during
-21 and was up to date. `docs/upstream/PORT_MANIFEST.json` is authoritative: 310
+Reference tool reviewed SHA **2740b0b**. `sync` was run on 2026-09-11 at the
+start of 22a and was up to date. `docs/upstream/PORT_MANIFEST.json` is authoritative: 310
 files triaged, none untriaged; `src/pages/TextEditor.jsx` notes it done in 21.
-`REFERENCE_GAPS.md` marks D6, D11 and M14 done and G2 half done. **22a touches
-the map screen and ports Demir's object dialogs, so run `sync` first.**
+`REFERENCE_GAPS.md` marks D6, D11 and M14 done and G2 half done. 22b ports the
+rest of Demir's object dialog and Geomod's Localize; run `sync` first.
 
 ## Decisions
+- 2026-09-11: **Where a new record goes is derived from the map and the file,
+  never typed.** Demir's dialog has a region box; here a new fort is filed under
+  the province under its tile, because 393 of DaC's 400 are, and a new section
+  goes where the file says sections go - under Third Age Reforged's own
+  `start of regions section` banner, in front of DaC's scripts banner. The
+  exceptions stay visible, counted on the file being edited, with one button to
+  refile. A box somebody has to fill in correctly is a box that will be filled
+  in wrong.
 - 2026-09-11: **The map screen never reads a canvas back.** A user's browser
   said "no region" over most of Third Age Reforged and read dense forest,
   0,64,0, as 0,65,1: canvas anti-fingerprinting (Brave's shields, Firefox's
@@ -160,8 +173,3 @@ the map screen and ports Demir's object dialogs, so run `sync` first.**
   `mapquery.Facts` and `mapcheck.Check` all go through it. A nested campaign IS
   a name with a separator in it, so the rule is not "no separators" - it is
   "no step that leaves the folder".
-- 2026-09-11: **A key built out of a campaign's name is built out of its leaf.**
-  Measured on Divide and Conquer, whose `custom/Shattered_Alliances` is keyed
-  `SHATTERED_ALLIANCES_*` in `campaign_descriptions.txt` and not by the path it
-  is reached through. 18a could not be wrong about this in practice because
-  nothing offered a nested campaign; 20b did, so it had to be corrected first.

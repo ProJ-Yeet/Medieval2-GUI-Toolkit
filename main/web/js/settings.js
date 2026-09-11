@@ -343,6 +343,8 @@ function logItemHtml(e){
       // 21: a whole file saved as text, and a faction's gaps copied from another
       :e.mode==='rawtext'?`📝 raw text saved in ${esc(e.dest)}`
       :e.mode==='factions'&&e.action==='repair'?`🛡 repaired in ${esc(e.dest)}`
+      // 22a: one fort or watchtower line placed, moved, changed or taken out
+      :e.mode==='campmap'&&e.action==='fortification'?`🏰 ${esc((e.options||{}).what||'edit')} in ${esc(e.dest)}`
       :e.mode&&e.mode!=='transfer'?`${esc(e.mode)} edit in ${esc(e.dest)}`
       // a transfer that wrote no unit: its models only, which is what the row
       // would otherwise claim was a unit called after the source's

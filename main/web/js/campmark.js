@@ -35,7 +35,8 @@
        and `cmapY` are that map, and they are what every glyph is drawn from.
      * CHANGED - the drag. Theirs moves a character by dragging its icon and
        writes on pointer-up. A drop here PLANS: the same `/api/map/character_plan` the
-       form beside it uses, with the same confirmation and the same undo. What
+       form beside it uses, with the same confirmation and the same undo. 22a
+       added forts and watchtowers, whose drop plans through 22a's panel. What
        the drag itself previews is only what the browser can answer exactly -
        whether the tile is on the map, and whether it is sea by the measured
        rule (map_heights, river crossings excluded), which is the same test
@@ -412,14 +413,15 @@ function cmkLabel(it){
 
 /* ---------- the drag ----------
 
-   Only a character moves this way, and the reason is worth stating: a
-   character's tile IS two numbers on its own line in descr_strat.txt, so moving
-   one is an edit this toolkit already knows how to plan. A settlement's tile is
-   a black pixel on map_regions.tga - moving it is repainting the map, which is
-   the paint tool's job and not a drag's. A fort, a watchtower and a resource
-   are lines nothing writes yet; Phase 22 is where they are written, and a drag
-   that cannot be saved is worse than no drag. */
-function cmkCanDrag(it){ return it && it.kind === 'character'; }
+   A character, a fort and a watchtower move this way, and the reason is worth
+   stating: each one's tile IS two numbers on its own line in descr_strat.txt,
+   so moving one is an edit this toolkit already knows how to plan - 16i's for
+   a character, 22a's for the other two. A settlement's tile is a black pixel on
+   map_regions.tga - moving it is repainting the map, which is the paint tool's
+   job and not a drag's. A resource is a line 22b writes, and a drag that
+   cannot be saved is worse than no drag. */
+const CMK_DRAGGABLE = ['character', 'fort', 'watchtower'];
+function cmkCanDrag(it){ return !!it && CMK_DRAGGABLE.indexOf(it.kind) >= 0; }
 
 //: The character under the pointer, if the drag should start here rather than a
 //: pan. Topmost first, which is the order they are drawn in.
@@ -472,6 +474,9 @@ function cmkDragCheck(){
     k.drag.fault = 'off the tile grid';
     return;
   }
+  // 22a: a fort on the sea is a warning the plan gives, not a refusal - one of
+  // DaC's watchtowers stands on it - so the ghost only refuses the grid
+  if(k.drag.item.kind !== 'character') return;
   const sea = cmkSeaAt(tx, ty);
   if(sea === null) return;                       // the layers are not here to say
   const admiral = k.drag.item.type === 'admiral';
@@ -512,6 +517,11 @@ async function cmkDrop(){
     return;
   }
   const gy = c.man.height - 1 - d.tile[1];
+  if(d.item.kind === 'fort' || d.item.kind === 'watchtower'){
+    activity('map marker', `${k.mod} drag ${d.item.kind} -> ${d.tile[0]},${gy}`);
+    await cftDrop(d.item, [d.tile[0], gy]);
+    return;
+  }
   await cxOpen(d.item.faction);
   const kx = state.cx;
   if(!kx || !kx.d){ toast('✗ that faction’s people could not be read', 6000); return; }
@@ -598,8 +608,9 @@ provinces is not a map any more.">
   const res = counts.resource || 0;
   return `<div class="cmmark">${head}
     <div class="cmkcats">${rows}</div>
-    <div class="count">Drag a character to move them: the drop plans the same
-      save the panel below does, with the same confirmation and the same undo.
+    <div class="count">Drag a character, a fort or a watchtower to move it: the
+      drop plans the same save its panel does, with the same confirmation and the
+      same undo.
       ${res ? `This mod ships its own picture for ${art} of the
         ${new Set((k.d.items || []).filter(i => i.kind === 'resource')
           .map(i => i.name)).size} trade resources here; the rest draw a glyph,

@@ -295,6 +295,20 @@ Characters, armies and the family tree (16i, see :mod:`unittransfer.stratchar`)
                                     lifted into another faction (one backup +
                                     undo)
 
+Forts and watchtowers (22a, see :mod:`unittransfer.stratobj`)
+  GET  /api/map/objects?mod=&campaign=
+                                 -> every fort and watchtower in the campaign,
+                                    the section each is filed under, the
+                                    province under its tile, what is wrong with
+                                    it, and the pickers the form needs
+  POST /api/map/object_plan|_apply
+                                 -> `action`: edit / add / delete / move, one
+                                    line each. A new one is filed under the
+                                    province under its tile, opening that
+                                    province's region section when it has none;
+                                    a move files it under another (one backup +
+                                    undo)
+
 The campaign's own settings (16j, see :mod:`unittransfer.stratcamp`). The third
 sub-phase that writes descr_strat.txt, and the half of it that only ever
 rewrites lines that are already there.
@@ -456,7 +470,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campevents, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, renames, sprites, stratcamp, stratchar, stratedit, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campevents, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, renames, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2193,6 +2207,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/map/character_plan", "/api/map/character_apply"):
                 return self._json(self._character(
                     u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/map/object_plan", "/api/map/object_apply"):
+                return self._json(self._object(
+                    u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/map/campaign_plan", "/api/map/campaign_apply"):
                 return self._json(self._campaign(
                     u.path.rsplit("_", 1)[-1], body))
@@ -3040,6 +3057,33 @@ class Handler(BaseHTTPRequestHandler):
         self.registry.invalidate(name)              # the file changed on disk
         return out
 
+    # ---- the campaign map's forts and watchtowers, written (22a) ----
+    def _object(self, action, body):
+        """Preview or write one fort or watchtower line of ``descr_strat.txt``.
+
+        16h's and 16i's handler with 22a's plan in it: the fact table is the map
+        the tile is judged on, and the file the plan splices is read from disk
+        inside :func:`~unittransfer.stratobj.plan`.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            facts = self.registry.map_facts(name, body.get("campaign") or "")
+            plan = stratobj.plan(mod, facts, body)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(stratobj.apply(plan))
+        except (OSError, ValueError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)              # the file changed on disk
+        return out
+
     # ---- the campaign's own settings, written (16j) ----
     def _campaign(self, action, body):
         """Preview or write the campaign header, a roster or a diplomacy row.
@@ -3844,6 +3888,14 @@ class Handler(BaseHTTPRequestHandler):
                 facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
                 return self._json(stratchar.faction_detail(
                     facts, (q.get("faction") or [""])[0]))
+            except (campmap.MapError, ModDataError, OSError) as exc:
+                return self._err(404, str(exc))
+
+        if path == "/api/map/objects":
+            # 22a. Out of the fact table's parse, like the two routes above.
+            try:
+                facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
+                return self._json(stratobj.view(facts))
             except (campmap.MapError, ModDataError, OSError) as exc:
                 return self._err(404, str(exc))
 

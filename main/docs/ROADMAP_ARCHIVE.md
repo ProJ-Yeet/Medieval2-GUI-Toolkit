@@ -3996,3 +3996,98 @@ the real log were never touched: the audit found the accent gap planted in the
 copy, the Copy button planned and wrote it, the Log undid it, the Raw text box
 wrote the same line back by hand, and a save over a file changed behind the box
 was refused.
+
+## Phase 22a - Forts and watchtowers - done 2026-09-11
+
+**Closes the first half of D9 (and of G5, which is D9).** 16b read 800 forts
+and watchtowers on Divide and Conquer and nothing wrote one; now a fort or a
+watchtower can be placed on a clicked tile, dragged, changed and deleted, and
+every one of those is the same request with a different `action`, as the scope
+said, because in the file each is one line.
+
+**Scoped as:** click the map to add one, drag to move one, delete one; both
+forms of the fort line; the writer following 16h and 16i exactly.
+
+**Built:** `unittransfer/stratobj.py` and `web/js/campforts.js`, the 🏰 Forts
+panel on the map screen, plus two routes (`GET /api/map/objects`,
+`POST /api/map/object_plan|_apply`). The plan re-reads the file, splices one
+line, parses the result back and refuses it if anything but that line moved -
+every other count, the rosters, the header, every settlement, every character,
+every section's own fields and the bag of the other forts and watchtowers. The
+save is one backup and one Log entry (`campmap` / `fortification`), undone like
+any other.
+
+**What the files say, measured before a line was written.**
+
+* **They live in the region sections, never in a faction.** All 800 of DaC's
+  sit in the `region <name>` sections after the diplomacy, and every one of the
+  241 sections also carries `farming_level 0` and `famine_threat 0`. Twelve of
+  the imperial campaign's hold nothing else, so a section stays when its last
+  fort goes. Third Age Reforged has no fort, no watchtower and no section, and
+  neither do vanilla's two campaigns - so the first one placed there opens a
+  section, in DaC's shape (which is also Demir's). Where it goes was measured
+  too: both of Reforged's campaigns end on `; >>>> start of regions section <<<<`,
+  a blank and `script`, so the section goes under that banner; DaC's
+  `;#### Scripts ####` banner is not one, so a section goes in front of it.
+* **A section names the province the object stands in, usually.** 393 of the
+  imperial campaign's 400 do, and the seven that do not are all in
+  `Erebor_Province`, a section naming a province the map never declares.
+  Shattered Alliances reads the same map and manages 352 of 400. So a new one
+  is filed under the province under its tile, a moved one stays filed where it
+  was, and a mismatch is a warning carrying the file's own count - with a
+  "File it under X" button when the tile has a province.
+* **A fort type is a battle-map folder, and not the culture's.** All 206 of
+  DaC's fort lines name a folder under some culture's
+  `settlements/*/ambient_settlements`, but `cerin_amroth_fort culture
+  middle_eastern` is drawn out of the `mesoamerican` folder. So the type is
+  checked against every culture's folders (a warning), the culture against
+  `descr_cultures.txt` (fatal, as an unknown trait is), and neither against the
+  other. The type box offers the file's own types first, each bringing the
+  culture the file pairs it with, then the folders with "fort" in the name.
+* **Nothing is on a settlement and nothing shares a tile.** None of the 800 is
+  on a settlement or port pixel and no two share one; 51 forts have a general
+  standing on them, which is a garrison. One watchtower is on the sea and four
+  on impassable land, in mods that load. All of those are warnings; what is
+  fatal is a coordinate that is not a whole number, a tile off the map and an
+  undeclared culture.
+
+**The short form is written now.** 16b noted that vanilla's `fort <x> <y>`
+was exercised only by synthetic tests, because DaC writes the long form and
+vanilla has no forts. The writer keeps a short fort short through a move,
+lengthens it when given a type, and shortens a long one given neither - each
+checked by parsing the result back.
+
+**Byte-exact is checked on every real line.** An edit keeps the line's indent,
+the gap after the keyword (DaC's `fort \t326 142` is 145 of 206), the gap
+between the numbers, a comment and trailing space, and keeps the type and
+culture's own spacing when neither changed. All 800 of DaC's lines render back
+unchanged through the writer, and a real edit, delete, add and move each differ
+from the file only where the plan names.
+
+**Three ways in, one writer.** `＋ Fort` and `＋ Watchtower` arm 20c's pin, so
+the next click is the tile and nothing is selected by it. 17d's drag now takes a
+fort or a watchtower as well as a character; its drop hands the tile to the
+panel, which plans the same save. And picking a province lists its own - filed
+under it or standing in it - and a click that lands on a fort opens that fort.
+`⚠ N to look at` lists every one in the campaign with a finding. The form's tile
+has 20c's ⌖, and `📝 As text` opens the line in 21's raw editor.
+
+**The map is the base map**, as it is for 16i's characters: a campaign that
+ships its own `map_regions.tga` is judged on the base one, and the module says
+so. Nothing installed here ships one.
+
+### Tests and verification
+
+`tests/test_stratobj.py` (65 checks) is new: a file written in the suite with
+no map (every edit shape, the short form both ways, a section opened after the
+last one, under Reforged's banner and in front of DaC's, a move, a stale record
+refused, a save and its undo), the vocabulary with and without its two files on
+disk, all four installed campaigns (every real line through the writer, the
+panel's view with no fatal finding, and four real plans diffed), and the routes
+on a copy of DaC's imperial campaign with two saves undone byte for byte.
+
+Driven in the browser against a scratch copy of DaC's data with a scratch
+config: a watchtower placed by the pin, dragged a tile, pinned into
+Northern Harondor and filed under it with the button, and a DaC fort deleted;
+the Log showed four 🏰 entries and undoing them left the file byte-identical to
+DaC's own.

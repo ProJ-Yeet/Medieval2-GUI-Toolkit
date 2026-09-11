@@ -139,4 +139,5 @@ function cpinPaint(){
   // the buttons that armed it light up, wherever they are
   if(typeof cxPaint === 'function') cxPaint();
   if(typeof cevPaint === 'function' && state.cev) cevPaint();
+  if(typeof cftPaint === 'function' && state.cft) cftPaint();
 }

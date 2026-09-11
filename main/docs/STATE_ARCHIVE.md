@@ -25,6 +25,44 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 22a - forts and watchtowers (2026-09-11)
+The first session of the Next set, on "continue next phase", committed and not
+released. Upstream `sync` was up to date at 2740b0b. It closes the first half of
+D9: a fort or a watchtower can be placed on a clicked tile, dragged, changed,
+filed under another province and deleted.
+
+**Measured before a line was written, on all four installed campaigns.** Where
+the 800 live (the region sections, never a faction block), what every section
+carries (`farming_level 0` and `famine_threat 0`, all 241), how often an object
+stands in the province its section names (393 and 352 of 400), what a fort type
+is (a folder under some culture's `ambient_settlements`, for all 206 - but not
+the culture's own folder), and what nothing does (stand on a settlement, share a
+tile). Third Age Reforged has no forts and no sections, and its two campaigns end
+on a `start of regions section` banner, which decided where the first section
+goes. Each of those became either a rule with its count or a place in the file.
+
+**One writer, byte-exact on every real line.** `stratobj.plan` does edit, add,
+delete and move as one request, the way 16h and 16i do, with their guard
+extended: every count but the one it changes, every settlement, every character,
+every section's fields and the bag of the other objects must come back as they
+were. All 800 of DaC's lines render back unchanged through it.
+
+**Three ways in.** The pin places, 17d's drag moves (the drop goes to the
+panel, which plans), and a province's list edits and deletes. A click on a fort
+opens it.
+
+**Verified in the running app without touching the user's mods or log**, with
+the scratch launcher from 21 and a scratch copy of DaC's data (the top-level
+files, the base map, the imperial campaign and the `ambient_settlements` folder
+names): a watchtower placed by the pin, dragged, pinned into another province
+and refiled with the button, and one of DaC's forts deleted. The Log showed four
+🏰 entries, and undoing them left `descr_strat.txt` byte-identical to DaC's. The
+screenshots worked this time, once the window was showing. The scratch copy was
+deleted afterwards and the scratch launch entry removed.
+
+The full run afterwards was 97 suites: 93 pass, and the four that do not
+are the DaC four, each on its documented number.
+
 ## The map hover panel said "no region" in the user's browser (2026-09-11)
 Reported after 21 with a screenshot: over most of Third Age Reforged the hover
 panel said "no region", and its ground row read `rgb(0, 65, 1)` - a colour no
@@ -2242,6 +2280,14 @@ evidence reports nothing**, and **a baseline shows and stops blocking; it never
 hides**. Two more were already locked there under different wording (Pillow
 only, and the browser never parses a TGA). They are left in the list below as
 well, because a dated entry is the record of when the call was made.
+
+Moved from `STATE.md` when 22a took the list past ten (2026-09-11):
+
+- 2026-09-11: **A key built out of a campaign's name is built out of its leaf.**
+  Measured on Divide and Conquer, whose `custom/Shattered_Alliances` is keyed
+  `SHATTERED_ALLIANCES_*` in `campaign_descriptions.txt` and not by the path it
+  is reached through. 18a could not be wrong about this in practice because
+  nothing offered a nested campaign; 20b did, so it had to be corrected first.
 
 Moved from `STATE.md` later on 2026-09-11, when the map hover fix took the
 list past ten:

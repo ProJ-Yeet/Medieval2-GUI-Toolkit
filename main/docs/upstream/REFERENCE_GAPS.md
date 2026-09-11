@@ -31,7 +31,7 @@ says "we do not", that was verified, and the verification is quoted.
 
 | Source | Items | Already scheduled | Already done, or a duplicate |
 |---|---|---|---|
-| Demir's StratMap Forge | 14 | 0 | **D4, D5 done 19a; D2, D3 done 19b; D8 done 20a; D14 done 20b; D6, D11 done 21** |
+| Demir's StratMap Forge | 14 | 0 | **D4, D5 done 19a; D2, D3 done 19b; D8 done 20a; D14 done 20b; D6, D11 done 21; D9 half done 22a** |
 | Mylae's M2TW Editor | 17 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11, so done 21) · **M5, M6, M13 done 18a; M3, M4 done 18b; M8 done 20c** |
 | Bare Geomod | 8 | 1 (G6) | 3 (G7, G8 done; G5 = D9) · **G3 done 18a; G2 half done B1** |
 | TWMapReader | 12 | 1 (T5, folded into 17d) | **T2, T11 done 20a; T8, T9 done 20b; T4 done 20c** |
@@ -184,7 +184,7 @@ black.
 overlay, and 16f already builds the four-connected river graph to find rejoins.
 This is those two facts joined into a control.
 
-### D9. Place, move and delete strat objects on the map · L
+### D9. Place, move and delete strat objects on the map · L · **forts and watchtowers done 22a; resources are 22b**
 
 `insertStratObject`, `deleteStratObject`, `openObjectDialog`,
 `saveSelectedObject`, `locateObject`, `nearestStratObject`, `populateObjectLists`,
@@ -514,7 +514,7 @@ for creating the label and its display name together.
 and 16d edits the field. What is missing is the paired display name, which is
 D4's localisation write in miniature - do them together.
 
-### G5. Place resources, forts and towers · **see D9**
+### G5. Place resources, forts and towers · **see D9** (forts and towers done 22a)
 
 Geomod's Resources and Towers-and-Forts sub tabs, including "Localize", which
 draws a shrinking circle onto the item so you can find it on a large map. Same

@@ -88,8 +88,8 @@ running the test suite, and running `graphify update .`.
 Every phase in this table is finished. The write-up for each one is in
 `ROADMAP_ARCHIVE.md` under the same heading; the table is here so the numbers in
 commit messages, `docs/upstream/PORT_MANIFEST.json` and `STATE.md` still resolve.
-**Phases 22 to 27 are not here** - they are unbuilt, and they live in the
-Backlog below with their own index.
+**22b to 27 are not here** - they are unbuilt, and they live in the Backlog
+below with their own index.
 
 | # | Phase | Shipped in |
 |---|---|---|
@@ -115,6 +115,7 @@ Backlog below with their own index.
 | 20c | Labels, and picking a tile - settlement names placed so none covers another, and one pin that writes a clicked tile into any coordinate field | 3.1.0 (uncut) |
 | B1 | A new province reaches every campaign that reads the map - a settlement, a music type, the lookup pair, a campaign's own record file and compiled map; the creator is a picker and the shown names are required | 3.1.0 (uncut) |
 | 21 | Two screens over data we hold - is this faction complete, with each gap copied from a template, and a raw text editor for any file the toolkit reads | 3.1.0 (uncut) |
+| 22a | Forts and watchtowers - placed on a clicked tile, dragged, changed and deleted, one line each, filed under the province they stand in | 3.2.0 (uncut) |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
@@ -327,6 +328,8 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `web/js/facaudit.js` | the "Is it complete?" panel on the faction screen, the picker's gap counts, and the Copy-from repair (21) |
 | `unittransfer/rawtext.py` | D11: any text file the toolkit reads, as text - its own encoding and line endings kept (`splice`), a stale save refused, the readers' before-and-after as warnings (21) |
 | `web/js/rawtext.js` | the Raw text mode: the list, the box that is never redrawn, the plan under it (21) |
+| `unittransfer/stratobj.py` | D9's first half: a fort or a watchtower, one line, edited, added, deleted or moved between region sections; the section opened where the file says sections go; the rules measured on DaC's 800 (22a) |
+| `web/js/campforts.js` | the forts panel: place with the pin, the province's list, the form, and the drop 17d's drag hands it (22a) |
 | `cmapLayerState` / `cmapCampQ` / `cmapGoTile` | the one snapshot of the layer stack, the one place a request appends a campaign, and the one way of arriving at a tile (20b) |
 
 Reuse: `keyblock.py` for the splice discipline (`flatrecord.py` does **not**
@@ -395,13 +398,13 @@ change, so no cross-reference dangles.
 | 23a-23b - A map that looks like the map | 2 | D7 T1 T12 | 2L 1M |
 | 24 - Make and unmake | 1 | G1 M15 | 2M |
 
-Five sessions left - 22a, 22b, 23a, 23b and 24. Phase 17 (2026-09-06), all of
+Four sessions left - 22b, 23a, 23b and 24. Phase 17 (2026-09-06), all of
 Phase 18 (2026-09-07), all of Phase 19 (2026-09-09), 20a (2026-09-10), and 20b,
-B1, 20c and 21 (2026-09-11) are done and their write-ups are in
+B1, 20c, 21 and 22a (2026-09-11) are done and their write-ups are in
 `ROADMAP_ARCHIVE.md`; nothing in the Later table is counted, and neither are
 B2-B4 below.
 
-**Nothing is released until all five are done.** The user's instruction on
+**Nothing is released until all four are done.** The user's instruction on
 2026-09-11, which suspends the cut-as-it-lands rule of 2026-09-09: each session
 commits and stops, and the whole backlog goes out as one cut at the end - the
 held v2.2.4 and beta 2026-09-11b notes included.
@@ -579,15 +582,25 @@ of them. `stratchar.py`'s `UNTOUCHED` tuple names all three as things a
 character save may not touch, which is the guard working correctly around a
 feature that does not exist.
 
-### 22a - Forts and watchtowers
+### 22a - Forts and watchtowers - done
 
-Click the map to add one, drag to move one, delete one. Both are one-line
-records inside a `region` section, both in two forms (16b found DaC's 105 forts
-are all the long form and neither vanilla campaign contains a single one, so the
-short form is exercised only by the synthetic half of the suite - that gap
-closes here). The writer follows 16h and 16i exactly: edit, add, delete and move
-are the same request with a different `action`, because in the file they are the
-same edit.
+**Done 2026-09-11**; the write-up is in `ROADMAP_ARCHIVE.md`. What it leaves
+for 22b:
+
+- **`stratobj.py` is the writer 22b extends, not copies.** `KINDS` gains
+  `resource`; `plan` already does edit, add, delete and move as one request,
+  guards itself the way 16h and 16i do, and renders a line keeping everything
+  it did not change. A resource is written at the top of the file rather than
+  in a section, so where it goes is the one new thing.
+- **`Vocabulary.province_at` answers for a marker tile** with the province that
+  owns the marker, which is 16g's rule and the one 22b's resources need.
+- **The findings carry numbers counted on the file being edited** where they
+  can (`_placed_well`), and DaC's measured ones where they cannot. 22b's rules
+  are measured the same way before they are written, and the duplicate and
+  off-map rules are `mapcheck`'s, reused.
+- **17d's drag takes any kind in `CMK_DRAGGABLE`**, and a drop for a kind that
+  is not a character goes to that kind's panel. A resource joins the list and
+  the panel.
 
 ### 22b - Resources, and the snap
 
