@@ -25,6 +25,39 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 20c - labels, and picking a tile (2026-09-11)
+The second phase of the same sitting as B1, done on the user's word after B1
+closed, and committed unreleased under the same instruction. Upstream `sync`
+first, as the rule asks for a phase on the map screen: up to date at 2740b0b.
+
+**Browser only.** `web/js/maplabels.js` and `web/js/mappin.js` are new, the
+map screen, the people panel, the events panel and the preset reconciler each
+gained a few lines, and no Python module changed. That is why both items are
+tested in node rather than through a route.
+
+**The label layout was measured before the screen was.** `clnLayout` is pure,
+so the suite runs the real one over every installed map's settlement table at
+1, 2, 4, 8, 16 and 32 px a tile and checks every placed box against every other
+box and every marker. It passed first time on all three; the numbers are in the
+archive write-up. What needed a second look was cost: 42 ms on Divide and
+Conquer at the smallest zoom in node, which is a wheel tick. It is only asked
+for on a zoom and never on a pan, and in the browser it came in at 31 ms fitted
+and under a millisecond from 8 px up, where the grid hash has little to do.
+
+**One bug caught before it shipped.** The pin's button went out with a
+single-quoted `onclick`, and `esc` does not escape an apostrophe, so a sentence
+like "Denethor's tile" would have cut the attribute short. Double quotes now,
+with the JSON's own quotes escaped, and a check that parses the attribute back.
+
+**Verified in the running app on Divide and Conquer.** Labels named 19 of 198 at
+the fitted zoom and all 198 at 8 px, the toolbar count said so, and a pan did
+not re-run the layout. The pin was driven with real pointer events on the
+canvas: pressing Denethor's ⌖ armed it, the banner and the corner readout said
+what it was waiting for, the click wrote 325, 217 into his form and left the
+selected province selected. That edit was only planned and then dropped, and
+`descr_strat.txt` on disk was not touched. The labels switch was put back off in
+the user's settings afterwards, as it was found.
+
 ## B1 - a new province in every campaign that reads the map (2026-09-11)
 The first session after the user's instruction that **nothing is released
 until the roadmap is finished**, so it opened by committing the two held beta

@@ -228,6 +228,18 @@ function cxHere(){
   cxPaint();
 }
 
+//: 20c, M8. The pin's answer, already in game coordinates - `cpinTake` made
+//: the flip - so this is `cxHere` without a picked tile to need first.
+function cxPinned(game){
+  const k = state.cx;
+  if(!k || !k.w){ toast('✗ the character form was closed before the tile was picked', 5000);
+    return; }
+  k.w.x = game[0];
+  k.w.y = game[1];
+  cxPlanSoon();
+  cxPaint();
+}
+
 /* ---------- what the server makes of it ---------- */
 
 function cxBody(action){
@@ -423,6 +435,7 @@ function cxFormHtml(){
           <input type="number" value="${esc(w.y)}" oninput="cxSet('y', this.value)">
           <button onclick="cxHere()" title="Put them on the tile the map is looking at"
             >Here</button>
+          ${cpinButton(`${w.name || 'the new character'}'s tile`, 'cxPinned')}
         </div></div>
     </div>
     <div class="csrow2">

@@ -20,6 +20,7 @@ Split out of `ROADMAP.md` on 2026-09-05, verbatim.
 | 16a-16k - the campaign map editor, V3.0.0 | below |
 | 17a-17i, 18a-18b, 19a-19b, 20a-20b - the correction pass and the Now set | below |
 | B1 - the first item off a beta user: a new province in every campaign | below |
+| 20c - settlement names on the map, and the pin that fills a coordinate | below |
 
 ---
 
@@ -3768,3 +3769,83 @@ undo restoring all of it. Part 5 runs the settlement writer over every faction
 block and the music writer over every music file installed. Part 6 now saves
 through HTTP into the stock game's own `descr_strat.txt` and reads the
 settlement back through the 16h panel.
+
+## Phase 20c - Labels, and picking a tile - done 2026-09-11
+
+**Closes T4 and M8, and with them the whole of Phase 20.** Both are arithmetic
+in the browser and neither needs the server: `web/js/maplabels.js` and
+`web/js/mappin.js` are new, and no Python module changed.
+
+**T4 - the names.** TWMapReader is the only one of the four references that
+places names at all, and its `MapView` is plain about how: a name starts to the
+right of its marker, is nudged down a pixel at a time and then up, and then the
+same on the left - and when every position collides it is drawn anyway, flagged
+`overlapping`. His candidates are kept, in his order, with above and below added
+as the last two places to try. Three things are changed:
+
+* **a name with no room is left off and counted, not drawn over another.** Two
+  names on top of each other are neither readable. The toolbar says "84 of 199
+  named", the tooltip still names every settlement, and the next zoom has room.
+  What makes that honest rather than lossy is measured: on all three installed
+  maps, zooming in never names fewer settlements, and from 8 px a tile every
+  one of them is named - 198 of 198 on Divide and Conquer, 199 of 199 on Third
+  Age Reforged, 112 of 112 on vanilla.
+* **the biggest provinces are placed first.** His walks the file, so a
+  zoomed-out map keeps whichever names came first in `descr_regions.txt`.
+* **markers are obstacles.** A name may cover nothing - not another name, and
+  not somebody else's settlement. His tests names against names only.
+
+The placement is worked out in the map's own pixels at one zoom, so a pan is the
+same layout drawn somewhere else and only a zoom asks again - 8 to 42 ms for the
+three maps in node, under a millisecond at the higher zooms in the browser. A
+dirty-rect frame draws the names whose boxes touch it and no others, so the
+hover cell stays the few-dozen-pixel repaint 16c made it. The font is one size
+at every zoom, and so is the dot a name sits beside when neither 16c's diamond
+nor 17d's icon is drawing the settlement.
+
+**A name is not a layer.** 20a settled that the stack is the ten files, so this
+is a switch on the toolbar - `Aa Labels`, `L` - beside 17e's tooltip, and it is
+in `cmapLayerState`, so a saved view carries it and a preset saved before 20c
+opens without names, which is what that view looked like.
+
+**M8 - the pin.** Every coordinate on this screen was typed, or taken from "the
+picked tile" - and picking a tile is a click on the map, which selects the
+province under it and replaces the panel being filled in with that province's
+own. So the order was: click the map, re-open the form, press the button. The
+pin inverts it. `⌖` beside a coordinate arms the map; the cursor changes, a
+banner says what is being picked, the corner readout gives the tile under the
+pointer in the numbers the field will get, and the next click is taken by the
+pin - nothing is selected, no panel moves - and written into the field. Esc or
+the banner's button stops it with nothing written; a click off the map is
+refused and leaves it armed, because a click that silently did nothing would
+look like a click that was ignored.
+
+**One control, any field.** `cpinButton(what, fn, args)` is the whole API: a
+sentence for the banner and the name of the caller's own function, which is
+handed the tile already flipped into the coordinates `descr_strat.txt` writes.
+The flip is made once, in `cpinTake`. The people panel has one beside its x, y;
+the events panel has one on every position row and one that adds a new position.
+Phase 22's object dialogs need nothing but the same line.
+
+**Found on the way, and fixed before it shipped.** The button's `onclick` first
+went out in single quotes, and `esc` does not escape an apostrophe - so "the
+pin for Denethor's tile" would have ended the attribute half way through the
+name. It is double-quoted now, with the JSON's own quotes escaped, and the suite
+parses the attribute back with an apostrophe in it.
+
+**`tests/test_maplabels.py` (42 checks) is new**, on 20b's node harness with
+three files in one context. The real `clnLayout` on grids worked by hand, and
+then on every installed map at six zooms with the invariant checked box by box:
+no name over another name, no name over any marker. The real `cpinTake` against
+a stubbed page: the flip, the bounds, the click it takes and the one it refuses,
+the caller handed its own arguments, and a caller that has gone away said out
+loud rather than thrown. Verified in the running app on Divide and Conquer as
+well: the pin wrote Denethor's new tile into the form through real pointer
+events on the canvas while the selected province stayed selected, and only
+planned - `descr_strat.txt` on disk was not touched.
+
+**What is deliberately not here.** Province names, as opposed to settlement
+names: a province is an area, and the name of an area belongs at its centre and
+at a size the area can hold, which is a different placement problem and not the
+one T4 is. And no label for a fort, a watchtower or a resource - those are
+Phase 22's objects, and `clnLayout` takes them as more obstacles when they come.

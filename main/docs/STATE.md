@@ -1,14 +1,17 @@
 # STATE - Medieval 2 GUI Toolkit
 _Updated: 2026-09-11 · v2.2.3 is still the latest 2.x and beta 2026-09-11 the
-latest beta · after B1, a new province reaching every campaign that reads the
-map · **nothing is released until the roadmap is finished**_
+latest beta · after 20c, settlement names on the map and the pin, which closes
+Phase 20 · **nothing is released until the roadmap is finished**_
 
 ## Next up
-**Phase 20c, labels and picking a tile** (`ROADMAP.md`): settlement names on
-the map placed to avoid overlap, and one shared pin control that writes a
-clicked tile into any coordinate field. B1 closed on 2026-09-11 and its
-write-up is in `ROADMAP_ARCHIVE.md`. After 20c: Phase 21, then 22a-22b,
-23a-23b and 24 - eight sessions, and B2-B4 are not counted in them.
+**Phase 21, two screens over data we already hold** (`ROADMAP.md`): D6, the
+faction dependency audit, built on 17f's combined faction screen; and D11, a
+raw text editor for the campaign files, whose save goes through the backup set
+and the log like every other write. B1 and 20c both closed on 2026-09-11 and
+their write-ups are in `ROADMAP_ARCHIVE.md`. After 21 come 22a-22b, 23a-23b
+and 24, which makes **six sessions left in all**, B2-B4 not counted. (The
+roadmap said eight before 20c, which was one too many; its table never added
+up to it.)
 
 **Do not release anything at the end of a session.** On 2026-09-11 the user
 said: "we wont publish until we finish all the sessions of our roadmap now".
@@ -53,15 +56,16 @@ section describes exactly what B1 fixed.
 | Phase | Status | Note |
 |---|---|---|
 | B1 - A new province needs a settlement | **done** | Closed 2026-09-11, committed, **not released**. New: `campaint.map_campaigns`, `region_vocab`, `wizard_vocab`, `neighbours`, `creator_problems`, `_plan_region_campaigns`; `PaintPlan.texts` and `.deletes`; `stratedit.new_block` and `plan_new_settlement`; `mapquery.add_music_region`; `POST /api/map/region_vocab`; three pickers and a campaigns line on the wizard. The shown names are required. `tests/test_campaint.py` part 4b (27 checks) and two real-data checks in part 5. Half of G2. Write-up in `ROADMAP_ARCHIVE.md`. |
+| 20c - Labels, and picking a tile | **done** | Closed 2026-09-11, committed, **not released**. Closes T4 and M8 and with them Phase 20. New: `web/js/maplabels.js` (`clnLayout`, pure, and `clnDraw`), `web/js/mappin.js` (`cpinButton`, `cpinTake`), `Aa Labels` / `L` on the toolbar and `labels` in `cmapLayerState`, a pin beside every coordinate on the people and events panels. No Python changed. `tests/test_maplabels.py` (42 checks, most of them in node). Write-up in `ROADMAP_ARCHIVE.md`. |
 | 20b - Getting to the thing you want | done | T9, T8 and D14, 2026-09-11, on beta 2026-09-11. Write-up in `ROADMAP_ARCHIVE.md`. |
-| 20c, 21 - the rest of the Now set (3.1.0) | **scoped** | Two sessions: labels and picking a tile (20c), and two screens over data we already hold (21). |
+| 21 - the rest of the Now set (3.1.0) | **scoped** | One session: the faction dependency audit (D6) and a raw text editor for the campaign files (D11). |
 | 22-24 - the Next set (3.2.0) | **scoped** | Five sessions: placing forts, watchtowers and resources, the textured terrain render, delete-a-region and create-a-campaign. |
 | B2-B4 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export; `Rename slot` on a packed mod. |
 | 25-27 | scoped, unscheduled | OSM backdrop, map resize, layer generators. |
-| 16-20b | done | Published on the beta line; the 3.0.0 and 3.1.0 numbers are still unassigned to a cut. |
+| 16-20c | done | Published on the beta line; the 3.0.0 and 3.1.0 numbers are still unassigned to a cut. |
 
 ## In-progress detail
-**Clean.** Nothing is mid-flight. All 93 suites were run after B1: **89 pass and the same four do not**, the DaC four below.
+**Clean.** Nothing is mid-flight. All 94 suites were run after 20c: **90 pass and the same four do not**, the DaC four below.
 
 **Four suites fail the same way on a clean `master`** - hard-coded Divide and
 Conquer numbers (77 port pixels, 13,153 newlines, 305 characters, 73,904 sea
@@ -69,8 +73,8 @@ tiles) against an installed DaC that is a different build: `test_campmap`,
 `test_campstrat`, `test_campview`, `test_stratchar`. Stash and re-run before
 believing one of them.
 
-**Two suites need node**: `tests/test_maplayers.py` (20a) and
-`tests/test_mapgo.py` (20b). Without node on PATH each prints a skip line and
+**Three suites need node**: `tests/test_maplayers.py` (20a),
+`tests/test_mapgo.py` (20b) and `tests/test_maplabels.py` (20c). Without node on PATH each prints a skip line and
 its Python half still runs.
 
 **Two suites bind a socket and can collide inside a back-to-back run**
@@ -99,8 +103,10 @@ The other standing trap: the suite leaks `ut_*` temp directories into `%TEMP%`.
 - **The game's own unpacked `data/` is on this machine**, at
   `tests/_realmod.MODS.parent`. Look there before calling a format unmeasurable.
 - `web/js/campmap.js` - `cmapMask`, the one pixel pass, and `cmapLayerState`,
-  the one description of the layer stack. `cmapGoTile` is the one arrival, and
-  20c's pick mode is the reverse of it.
+  the one description of the layer stack. `cmapGoTile` is the one arrival.
+- `web/js/mappin.js` - **before adding a coordinate field anywhere** (20c).
+  `cpinButton(what, fn, args)` is the whole of it, and it hands your function
+  the tile already in game coordinates. Phase 22's dialogs are the next callers.
 - `web/js/core.js` - `MODES` in `wire()`. One global scope, no build step; a new
   module is a file, a `<script>` tag and a `MODES` entry, all three guarded by
   `tests/test_web_modules.py`.
@@ -114,6 +120,10 @@ authoritative: 310 files triaged, none untriaged. `REFERENCE_GAPS.md` marks
 G2 half done.
 
 ## Decisions
+- 2026-09-11: **A label with no room is left off and counted, never drawn over
+  another.** TWMapReader draws it anyway; two names on top of each other are
+  neither readable. It is honest because it is measured: zooming in never names
+  fewer, and from 8 px a tile every settlement on all three maps is named.
 - 2026-09-11: **Nothing is released until the roadmap is finished.** The
   user's instruction, and it suspends the cut-as-it-lands rule of 2026-09-09:
   commit each session and stop, then one cut of the whole backlog at the end.

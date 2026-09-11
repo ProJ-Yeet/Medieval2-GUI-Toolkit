@@ -259,6 +259,19 @@ function cevPosFromPick(){
   cevListAdd('positions', at);
 }
 
+//: 20c, M8. The pin's answer: position `i` moved to the picked tile, or a new
+//: one added when `i` is -1. Already in the file's coordinates.
+function cevPinned(i, game){
+  const k = state.cev;
+  if(!k || !k.w){ toast('✗ the block was closed before the tile was picked', 5000);
+    return; }
+  if(i < 0 || !k.w.positions[i]){ cevListAdd('positions', game); return; }
+  const list = k.w.positions.map(p => p.slice());
+  list[i] = game.slice();
+  k.w.positions = list;
+  cevPaint();
+}
+
 //: Put the map on one of this block's positions, the way a finding's jump does.
 function cevGo(i){
   const k = state.cev, c = state.cmap;
@@ -471,6 +484,7 @@ function cevPositionsHtml(){
       ${off ? `<span class="w-bad">off a ${size[0]}×${size[1]} map</span>`
             : '<span class="count">x, y</span>'}
       <button onclick="cevGo(${i})" title="Put the map on this tile">◎</button>
+      ${cpinButton(`position ${i + 1}`, 'cevPinned', [i])}
       <button onclick="cevListDrop('positions', ${i})" title="Remove">✕</button>
     </div>`;
   }).join('');
@@ -481,6 +495,7 @@ function cevPositionsHtml(){
       <button onclick="cevPosFromPick()">＋ from the picked tile${
         at ? ` (${at[0]}, ${at[1]})` : ''}</button>
       <button onclick="cevListAdd('positions', [0, 0])">＋ blank</button>
+      ${cpinButton('a new position', 'cevPinned', [-1])}
     </div>
     <div class="count">The file writes y up from the bottom of the map, and so
       does this - the number here is the one in descr_strat.txt, not the image

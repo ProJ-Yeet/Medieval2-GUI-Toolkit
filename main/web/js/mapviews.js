@@ -159,6 +159,9 @@ function cvwPlan(man, preset){
                && p.river.rgb.every(v => typeof v === 'number'))
       ? p.river.rgb.slice() : CMAP_RIVER_RGB.slice(),
     heightAlpha: !!p.height_alpha,
+    // 20c, T4. A preset saved before 20c has no word on it and opens without
+    // names, which is what that view looked like when it was saved.
+    labels: !!p.labels,
     theme: p.theme || '',
     themeOpacity: typeof p.theme_opacity === 'number' ? p.theme_opacity : 0.85,
     themeBorders: p.theme_borders !== false,
@@ -191,6 +194,9 @@ function cvwLoad(i){
   c.rivers = plan.rivers;
   c.riverRgb = plan.riverRgb.slice();
   c.heightAlpha = plan.heightAlpha;
+  c.labels = plan.labels; c.lab = null; c.saidZoom = null;
+  const lb = document.getElementById('cmLabBtn');
+  if(lb) lb.classList.toggle('on', !!c.labels);
   for(const code of c.order) if(c.layers[code].img) cmapMask(c, code);
   cmapCompose(); cmapPaint(); cmapSaveLayers(); cmapRepanel();
   cmapLoadLayers();
@@ -220,8 +226,9 @@ function cvwAdd(){
   }
   const name = prompt('Save this view as:\n\n'
     + 'Which layers are drawn, in what order, at what opacity, the colours '
-    + 'punched out of each, the rivers and heights readings, and the colouring '
-    + 'over the top. Not the zoom or the selection - those are about a place.',
+    + 'punched out of each, the rivers and heights readings, the settlement '
+    + 'names, and the colouring over the top. Not the zoom or the selection - '
+    + 'those are about a place.',
     `${CVW_NAME} ${list.length + 1}`);
   if(name === null) return;
   const clean = String(name).trim();

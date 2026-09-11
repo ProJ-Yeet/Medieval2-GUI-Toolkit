@@ -112,12 +112,13 @@ Backlog below with their own index.
 | 19b | Rename, and follow it - a province, a settlement and a faction slot, position-aware over twenty-four files | 3.1.0 (uncut) |
 | 20a | Three layers read properly - the river overlay, the heights as transparency, and a number key per layer | 3.1.0 (uncut) |
 | 20b | Getting to the thing you want - the campaign browser and the three campaigns nothing offered, the find box, named view presets | 3.1.0 (uncut) |
+| 20c | Labels, and picking a tile - settlement names placed so none covers another, and one pin that writes a clicked tile into any coordinate field | 3.1.0 (uncut) |
 | B1 | A new province reaches every campaign that reads the map - a settlement, a music type, the lookup pair, a campaign's own record file and compiled map; the creator is a picker and the shown names are required | 3.1.0 (uncut) |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
 gate later work is stated where it applies: 17d's markers layer is what 18b (done),
-20c and part of 22 build on, and Phase 22 gates the orphan-handling half of 24.
+20c (done) and part of 22 build on, and Phase 22 gates the orphan-handling half of 24.
 
 `unittransfer/flatrecord.py` (extracted in Phase 11) is the shared engine for
 every file that is a run of `<head> <name>` records with `keyword value` lines -
@@ -318,6 +319,8 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `web/js/mapviews.js` | named view presets: `cvwPlan` reconciles a saved one against this manifest, and is pure (20b) |
 | `campaint.map_campaigns` | which copy of each map file every campaign reads - its own when it is in the folder, `world/maps/base` when not. **The engine takes each file separately**, so anything written to the base map has to ask this which campaigns see it (B1) |
 | `stratedit.new_block` / `plan_new_settlement` | a new settlement block in the shape its own file writes them, last in the owner's block, guarded like 16h's edits - B1's writer, and the one B2's create is to share |
+| `web/js/maplabels.js` | settlement names on the map: `clnLayout` is the pure placement - TWMapReader's candidates, biggest province first, markers as obstacles, a name with no room left off and counted - and `clnDraw` draws the cached layout for the zoom on screen (20c) |
+| `web/js/mappin.js` | the pin: `cpinButton` beside any coordinate, `cpinTake` the click that answers it, flipped once into game coordinates (20c) |
 | `mapquery.add_music_region` | the one write `descr_sounds_music_types.txt` gets: a name on the end of one `regions` line (B1) |
 | `cmapLayerState` / `cmapCampQ` / `cmapGoTile` | the one snapshot of the layer stack, the one place a request appends a campaign, and the one way of arriving at a tile (20b) |
 
@@ -338,8 +341,8 @@ to be tested there. `tests/test_maplayers.py` loads the real `campmap.js` into a
 bare V8 context with a stubbed canvas - the file has no top-level side effects,
 so `vm.runInContext` is enough and there is no DOM library - and hands it pixels
 the suite wrote and real layers projected through `campmap.tile_view`. 20a's
-mask pass is measured that way; 20c's label placement is the next thing that
-should be.
+mask pass is measured that way, and so is 20c's label placement
+(`tests/test_maplabels.py`, over every installed map at six zooms).
 
 
 ---
@@ -383,18 +386,19 @@ change, so no cross-reference dangles.
 
 | Phase | Sessions | Closes | Size |
 |---|---|---|---|
-| 20c - Labels, and picking a tile | 1 | T4 M8 | 1M 1S |
 | 21 - Two screens over data we hold | 1 | D6 D11 | 1M 1S |
 | 22a-22b - Placing things on the map | 2 | D9 D10 | 1L 1M |
 | 23a-23b - A map that looks like the map | 2 | D7 T1 T12 | 2L 1M |
 | 24 - Make and unmake | 1 | G1 M15 | 2M |
 
-Eight sessions left. Phase 17 (2026-09-06), all of Phase 18 (2026-09-07), all
-of Phase 19 (2026-09-09), 20a (2026-09-10), 20b and B1 (2026-09-11) are done and
-their write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later table is
+Six sessions left - 21, 22a, 22b, 23a, 23b and 24. (This line said eight
+before 20c, which was one too many: the table above never added up to it.)
+Phase 17 (2026-09-06), all of Phase 18 (2026-09-07), all
+of Phase 19 (2026-09-09), 20a (2026-09-10), and 20b, B1 and 20c (2026-09-11) are
+done and their write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later table is
 counted, and neither are B2-B4 below.
 
-**Nothing is released until all eight are done.** The user's instruction on
+**Nothing is released until all six are done.** The user's instruction on
 2026-09-11, which suspends the cut-as-it-lands rule of 2026-09-09: each session
 commits and stops, and the whole backlog goes out as one cut at the end - the
 held v2.2.4 and beta 2026-09-11b notes included.
@@ -466,13 +470,15 @@ to validate it and not well enough to edit it**, and that asymmetry is what
 3.1.0 removes.
 
 **Phases 18 and 19 are done** - 18a and 18b on 2026-09-07, 19a and 19b on
-2026-09-09 - **and so are 20a and 20b**, on 2026-09-10 and 2026-09-11. Phase
+2026-09-09 - **and so is all of Phase 20**, 20a on 2026-09-10 and 20b and
+20c on 2026-09-11. Phase
 18's six files are the five nothing wrote and the one the building side could
 only refuse against; Phase 19 is the four names nothing could follow; 20a is the
 three layers the map screen could draw and not read; 20b is the three ways of
 getting to the thing you want, one of which turned out to be three whole
-campaigns nothing had ever offered. All six write-ups are in
-`ROADMAP_ARCHIVE.md`. **What is left of the Now set is 20c and Phase 21.**
+campaigns nothing had ever offered; 20c is the names on the map and the pin.
+All seven write-ups are in `ROADMAP_ARCHIVE.md`. **What is left of the Now set
+is Phase 21.**
 
 ---
 
@@ -508,54 +514,26 @@ stands unless they say otherwise.
 
 ---
 
-## Phase 20 - The map screen's second pass
+## Phase 20 - The map screen's second pass - done
 
-Eight items across three sessions, all of them on a screen that already exists.
-Nothing here needs a new parser. **20a is done** (2026-09-10) and **so is 20b**
-(2026-09-11); both write-ups are in `ROADMAP_ARCHIVE.md`, and **20c is what is
-left.**
+**All eight items are closed**, across three sessions: 20a (2026-09-10), 20b
+and 20c (2026-09-11). The write-ups are in `ROADMAP_ARCHIVE.md`. What the phase
+leaves behind for 21 and 22:
 
-Five things the two finished sessions leave for 20c:
-
-- **The layer stack is the ten files and stays that way.** A reading of a layer
-  - the river overlay, the heights as transparency - lives on that layer's row.
-  The ten number keys count the stack, and an eleventh entry would break the
-  one-key-per-layer rule T11 is built on.
-- **`cmapMask` is the one pixel pass**, and everything that changes what a layer
-  looks like without changing where it is drawn belongs in it. It is keyed by
-  `cmapModeKey`, which is also what the composite's cache key reads.
-- **`tests/test_maplayers.py` and `tests/test_mapgo.py` run the browser's own
-  functions in node**, with a stubbed canvas and no DOM library. 20c's label
-  placement is the next thing with real arithmetic in the browser, and either
-  suite is where it can be measured - 20b's harness loads three files into one
-  context, which is the shape a label pass will need.
-- **`cmapGoTile(tile, zoom, region)` is the one way of arriving somewhere**, and
-  M8's pick mode is the reverse of it. Three panels call it; a fourth copy of
-  those six lines is the thing not to write.
-- **The screen reads one campaign, and `state.cmap.campaign` is which** (20b).
-  `cmapCampQ()` is the only place a request appends it and `cmapSetCampaign` is
-  the only place it changes; a panel added later gets both for free. Anything
-  20c or Phase 22 puts on the map that comes out of `descr_strat.txt` belongs to
-  a campaign, not to the mod.
-
-### 20c - Labels, and picking a tile, one session
-
-**Closes T4, M8.** Both build on 17d's markers layer (`web/js/campmark.js`),
-which shipped 2026-09-06 - so both have what they need.
-
-- **T4 - settlement names on the map, placed to avoid overlap.** Names beside
-  the markers, shifted around each other so they do not collide, with font and
-  marker size constant across zooms. 17d is the markers and this is the labels,
-  which is the harder half - kept separate deliberately so 17d does not wait on
-  it. TWMapReader's own verdict on its placement is "fairly limited but better
-  than none at all", which is the bar: better than none, and honest about it.
-  20b put the words the player reads into the manifest (`region_view`'s `shown`
-  and `shown_settlement`), so the label to draw is already in the browser.
-- **M8 - pick an X,Y off the map into any form field.** A pin button beside a
-  coordinate pair that puts the map into pick mode and writes the clicked tile
-  back. Every coordinate in `stratedit`, `stratchar`, 18b's disasters and 22's
-  object dialogs is typed by hand today. **One shared control makes all of them
-  clickable**, which is why a 49-line component is worth a named item.
+- **`cpinButton(what, fn, args)` is the one way a field takes a tile** (20c,
+  `web/js/mappin.js`). Phase 22's object dialogs add a pin with that one line,
+  and are handed the tile already flipped into the coordinates
+  `descr_strat.txt` writes. A second "use the picked tile" button is the thing
+  not to write: it selects a province on the way.
+- **`clnLayout` is pure and already measured in node** (20c,
+  `web/js/maplabels.js`). A fort or a watchtower name placed in 22 goes through
+  the same layout as another obstacle rather than a second collision pass.
+- **The layer stack is the ten files and stays that way** (20a), and a way of
+  looking at the map that is not a layer - the names - is a toolbar switch in
+  `cmapLayerState`, so a saved view keeps it.
+- **`cmapGoTile` is the one way of arriving somewhere** (20b), and the pin is
+  the one way of asking the map for a tile. Between them, no panel needs to
+  move the view or read `state.cmap.pick` itself.
 
 ---
 

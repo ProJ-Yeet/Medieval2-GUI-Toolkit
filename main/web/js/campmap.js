@@ -123,6 +123,7 @@ async function loadCampmap(){
   }
   if(stale('campmap', mod)) return;
   state.cmap = cmapNew(mod, man);
+  state.cpin = null;      // 20c: a pin was asking for a tile on the last map
   renderCampmap();
   cmapLoadLayers();
 }
@@ -184,6 +185,8 @@ function cmapLayerState(){
   m.river = {on: !!c.rivers, rgb: c.riverRgb.slice()};
   m.height_alpha = !!c.heightAlpha;
   m.tip = c.tip !== false;
+  // 20c, T4: settlement names are a way of looking at the map, not a place
+  m.labels = !!c.labels;
   return m;
 }
 
@@ -288,6 +291,10 @@ function cmapNew(mod, man){
     rivers: !!(saved.river && saved.river.on),
     riverRgb: (saved.river && saved.river.rgb) || CMAP_RIVER_RGB.slice(),
     heightAlpha: !!saved.height_alpha,
+    // 20c, T4: settlement names on the map, and the layout for the zoom on
+    // screen - see maplabels.js. Off until somebody turns it on, like 17d's
+    // markers: a map that opens under two hundred names is a different map.
+    labels: !!saved.labels, lab: null,
     view: {zoom: 1, ox: 0, oy: 0, fitted: false},
     hover: null, sel: null, outline: null, outlineKey: -1,
     // 17e's tooltip: where the pointer is in the stage, whether the panel is
@@ -345,6 +352,8 @@ function cmapSetCampaign(rel){
         + 'The events panel has an unsaved block in it, and it is a block in '
         + 'the campaign you are leaving.')) return;
   c.campaign = want;
+  // 20c: every field a pin can write into is one of the panels reset below
+  state.cpin = null;
   // Which panels were open, so that switching campaign is not also a panel
   // switch: every one of these keys its state on the mod alone, so the reset
   // below takes it back to closed. They are re-opened through their own
@@ -441,8 +450,12 @@ The bare number keys tick a layer - 1 to 0, one for each of the ten.">⤢ Fit</b
             onclick="cmapTipToggle()"
             title="Name the tile under the pointer on every layer at once (T).
 Answered here, out of the map you were already sent - no request per pixel.">ⓘ Names</button>
+          <button id="cmLabBtn" class="${c.labels ? 'on' : ''}" onclick="clnToggle()"
+            title="Settlement names beside their markers (L), placed so that none covers another.
+A name with no room at this zoom is left off and counted; zoom in for it.">Aa Labels</button>
           <span class="count" id="cmZoom"></span>
         </div>
+        <div class="cmpin" id="cmPin" hidden></div>
         <div class="cmread" id="cmRead">move the pointer over the map</div>
         <div class="cmtip" id="cmTip" hidden></div>
         <div class="cmperf" id="cmPerf"></div>
@@ -486,6 +499,7 @@ Answered here, out of the map you were already sent - no request per pixel.">ⓘ
   cxPaint();          // 16i, for the same reason
   cjOpen();           // 16j, and it reads nothing until somebody opens it
   cmodOpen();         // 16k, the strat models, and the same on both counts
+  cpinPaint();        // 20c, M8: a pin still waiting keeps its banner
   cmapResize();
   // 17f: arrived here from Minor Files' Factions tab, which is now a route to
   // the combined faction screen rather than to a mode of its own
@@ -1107,12 +1121,15 @@ function cmapOverlay(x, s0, t0, s1, t1){
   // 17d's markers sit above the layers and below the hover cell, so the cell
   // the pointer is on is never hidden by what is standing on it
   if(typeof cmkDraw === 'function') cmkDraw(x, s0, t0, s1, t1);
+  // 20c's names go over the markers they are beside, and under the hover cell
+  if(typeof clnDraw === 'function') clnDraw(x, s0, t0, s1, t1);
 
   if(c.hover){
     const [hx, hy] = c.hover;
     if(hx >= s0 - 1 && hx <= s1 && hy >= t0 - 1 && hy <= t1){
       x.lineWidth = 1;
-      x.strokeStyle = 'rgba(200,164,92,.95)';
+      // green while 20c's pin is waiting for a tile: the cell is the answer
+      x.strokeStyle = state.cpin ? 'rgba(120,220,140,.98)' : 'rgba(200,164,92,.95)';
       // +0.5 so a one-pixel stroke lands on a pixel rather than across two
       x.strokeRect(cmapX(hx) - 0.5, cmapY(hy) - 0.5, v.zoom + 1, v.zoom + 1);
     }
@@ -1153,11 +1170,14 @@ function cmapPointers(cv){
   cv.addEventListener('pointerdown', e => {
     last = [e.clientX, e.clientY]; moved = 0;
     cv.setPointerCapture(e.pointerId);
-    mode = (e.button === 0 && cpaintArmed()) ? 'paint' : 'pan';
+    // 20c: a pin waiting for a tile outranks the brush and the marker drag. It
+    // is a question somebody just asked, and the press is its answer.
+    const pin = typeof cpinArmed === 'function' && cpinArmed();
+    mode = (e.button === 0 && !pin && cpaintArmed()) ? 'paint' : 'pan';
     // 17d: with the brush down the left button paints, as 16e settled. With it
     // up, a left press that starts on a character takes the button off the pan
     // and onto that character - the same rule, one layer further out.
-    if(mode === 'pan' && e.button === 0 && typeof cmkDragStart === 'function'
+    if(mode === 'pan' && e.button === 0 && !pin && typeof cmkDragStart === 'function'
        && cmkDragStart(cmapEventTile(cv, e))) mode = 'mark';
     if(mode === 'paint') cpaintDown(cmapEventTile(cv, e));
   });
@@ -1173,7 +1193,13 @@ function cmapPointers(cv){
         cmapPick(cmapEventTile(cv, e));
       }else cmkDrop();
     }
-    else if(last && moved < CMAP_DRAG_SLOP && state.cmap) cmapPick(cmapEventTile(cv, e));
+    else if(last && moved < CMAP_DRAG_SLOP && state.cmap){
+      // 20c, M8: the pin takes the click, and nothing is selected by it. A
+      // press that travelled is still a pan while the pin waits.
+      const tile = cmapEventTile(cv, e);
+      if(!(e.button === 0 && typeof cpinTake === 'function' && cpinTake(tile)))
+        cmapPick(tile);
+    }
     last = null; mode = '';
     if(state.cmap){ state.cmap.tipHold = false; cmapTipPaint(); }
     try{ cv.releasePointerCapture(e.pointerId); }catch(err){}
@@ -1275,8 +1301,9 @@ function cmapReadout(){
   // style recalculation whether the text changed or not. Only what moved is
   // written; `said` is what is on screen already.
   const z = c.view.zoom;
+  const named = typeof clnCount === 'function' ? clnCount() : '';
   const zt = `${z >= 1 ? z.toFixed(z < 10 ? 1 : 0) : z.toFixed(2)}× · `
-           + `${c.man.width}×${c.man.height}`;
+           + `${c.man.width}×${c.man.height}${named ? ' · ' + named : ''}`;
   const ze = document.getElementById('cmZoom');
   if(ze && c.saidZoom !== zt){ ze.textContent = zt; c.saidZoom = zt; }
   const pe = document.getElementById('cmPerf');
@@ -1308,7 +1335,17 @@ function cmapReadout(){
       + (drag.fault ? ` · <span class="w-bad">${esc(drag.fault)}</span>`
                     : ' · <span class="w-good">drop to plan the move</span>');
   }
-  const hide = !drag && !!(c.hover && c.tip !== false);
+  // 20c: while a pin waits, the line says what it would write, in the numbers
+  // the field will get - which is the only coordinate somebody picking wants
+  const pin = state.cpin;
+  if(pin && !drag){
+    const g = c.hover && typeof cpinGame === 'function'
+      ? cpinGame(c.hover, c.man.width, c.man.height) : null;
+    html = `⌖ ${esc(pin.what)} ← `
+      + (g ? `<b>${g[0]}, ${g[1]}</b> game · click to take it`
+           : '<span class="count">move onto the map</span>');
+  }
+  const hide = !drag && !pin && !!(c.hover && c.tip !== false);
   if(el.hidden !== hide) el.hidden = hide;
   if(!hide && c.saidRead !== html){ el.innerHTML = html; c.saidRead = html; }
 }
@@ -2672,6 +2709,11 @@ function cmapKeys(){
     else if(e.key === '+' || e.key === '='){ cmapZoomBy(1.4); }
     else if(e.key === '-' || e.key === '_'){ cmapZoomBy(1 / 1.4); }
     else if(e.key === 't' || e.key === 'T'){ cmapTipToggle(); }
+    // 20c, T4 - `l` for labels, the letter beside the other two view switches
+    else if(e.key === 'l' || e.key === 'L'){ clnToggle(); }
+    // 20c, M8 - a pin waiting for a tile is the first thing Esc stops, before
+    // it clears a selection somebody may still want
+    else if(e.key === 'Escape' && state.cpin){ cpinCancel(); }
     // 20b, T8. A letter and not a digit, because the ten digits are the ten
     // layers; `f` for find, beside `t` for the tooltip, and the handler above
     // has already returned if the cursor is in a box - including this one.

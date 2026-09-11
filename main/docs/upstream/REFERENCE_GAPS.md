@@ -32,9 +32,9 @@ says "we do not", that was verified, and the verification is quoted.
 | Source | Items | Already scheduled | Already done, or a duplicate |
 |---|---|---|---|
 | Demir's StratMap Forge | 14 | 0 | **D4, D5 done 19a; D2, D3 done 19b; D8 done 20a; D14 done 20b** |
-| Mylae's M2TW Editor | 17 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11) · **M5, M6, M13 done 18a; M3, M4 done 18b** |
-| Bare Geomod | 8 | 1 (G6) | 3 (G7, G8 done; G5 = D9) · **G3 done 18a** |
-| TWMapReader | 12 | 1 (T5, folded into 17d) | **T2, T11 done 20a; T8, T9 done 20b** |
+| Mylae's M2TW Editor | 17 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11) · **M5, M6, M13 done 18a; M3, M4 done 18b; M8 done 20c** |
+| Bare Geomod | 8 | 1 (G6) | 3 (G7, G8 done; G5 = D9) · **G3 done 18a; G2 half done B1** |
+| TWMapReader | 12 | 1 (T5, folded into 17d) | **T2, T11 done 20a; T8, T9 done 20b; T4 done 20c** |
 | **Total** | **51** | **6** | **5** |
 
 So **40 genuinely open items**, of which 17d and 17e (M1 and M2) are the two
@@ -347,7 +347,12 @@ This is Unit Transfer's problem at campaign scale, and `transfer.py` is the
 model: a plan that names every missing faction, region, unit and building before
 anything is written. Large, but the discipline already exists.
 
-### M8. Pick an X,Y off the map into any form field · S
+### M8. Pick an X,Y off the map into any form field · **done**
+
+**Landed in 20c** (2026-09-11) as `web/js/mappin.js`: `cpinButton` beside every
+coordinate on the people and events panels, and Phase 22's dialogs need only
+the same one line. The click it takes selects nothing, which is what the old
+"use the picked tile" buttons could not avoid.
 
 `PositionPickerButton.jsx` (49 lines). A pin button beside a coordinate pair that
 puts the map into pick mode and writes the clicked tile back into the field.
@@ -556,7 +561,12 @@ which is correct and is where we stop. This turns that honest refusal into the
 one workflow the layer exists for, and it pairs with 16g's per-faction TGA
 export, which already writes one file per faction.
 
-### T4. Settlement names on the map, placed to avoid overlap · M
+### T4. Settlement names on the map, placed to avoid overlap · **done**
+
+**Landed in 20c** (2026-09-11) as `web/js/maplabels.js`. His candidate order,
+biggest province first, markers as obstacles, and a name with no room left off
+and counted rather than drawn over another - measured on all three installed
+maps at six zooms with no overlap anywhere.
 
 Names beside the markers, shifted around each other so they do not collide, with
 font size and marker size held constant across zooms. His own assessment: "its

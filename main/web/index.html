@@ -655,6 +655,16 @@
     background:rgba(8,10,14,.78);padding:2px 7px;border-radius:5px;
     pointer-events:none;white-space:nowrap}
   .cmread{left:8px} .cmperf{right:8px}
+  /* 20c, M8 - the pin. The banner says what the next click is for and how to
+     stop; the cursor changes so the map itself says it too. */
+  .cmpin{position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:6;
+    background:rgba(18,40,24,.94);border:1px solid rgba(120,220,140,.7);
+    border-radius:7px;padding:4px 8px;font-size:12px;color:var(--ink);
+    display:flex;gap:8px;align-items:center;white-space:nowrap}
+  .cmpin button{font:inherit;font-size:11.5px;padding:1px 7px}
+  .cmstage.cpinning canvas{cursor:cell}
+  .cpinbtn{padding:1px 6px;font-size:13px;line-height:1.2}
+  .cpinbtn.on{border-color:rgba(120,220,140,.9);color:rgba(150,235,165,1)}
   .cmread b{color:var(--ink);font-family:ui-monospace,Consolas,monospace}
   /* 17e - the tile under the pointer, named on every layer at once. It follows
      the cursor, so it never takes the pointer's events and never wraps: a panel
@@ -2485,6 +2495,8 @@
 <script src="js/campbrowse.js"></script>
 <script src="js/mapfind.js"></script>
 <script src="js/mapviews.js"></script>
+<script src="js/maplabels.js"></script>
+<script src="js/mappin.js"></script>
 <script src="js/campaint.js"></script>
 <script src="js/campmark.js"></script>
 <script src="js/mapcheck.js"></script>
