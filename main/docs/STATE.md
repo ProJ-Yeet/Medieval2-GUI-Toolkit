@@ -15,6 +15,8 @@ said: "we wont publish until we finish all the sessions of our roadmap now".
 Commit, update these files, and stop. When the last session closes, the whole
 backlog goes out as ONE cut, and `HANDOFF.md` rule 1 applies to that cut
 unchanged. The cut-as-it-lands rule of 2026-09-09 is suspended until then.
+**No Discord post per session either**: the user wants one all-in-one post
+with that cut, covering everything since v2.2.3 / beta 2026-09-11.
 
 ## WHERE THINGS ARE - the tree moved on 2026-09-06
 Only the two `.bat` files and `README.md` are at the top of the repository.
