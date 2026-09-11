@@ -394,9 +394,11 @@ async function cpaintSave(){
   const res = await cpaintPost('paint_apply', {});
   if(!res) return;
   if(res.error){ toast('✗ ' + res.error, 9000); cpaintPaint(); return; }
+  const camp = (q.texts || []).length;
   toast(`Saved ${(res.layers || []).length} layer`
     + `${(res.layers || []).length === 1 ? '' : 's'}`
     + (res.region ? ` and the record for ${res.region}` : '')
+    + (camp ? `, and ${camp} campaign file${camp === 1 ? '' : 's'}` : '')
     + '. map.rwm deleted. 🕑 Log can undo it.', 6000);
   p.wiz = null; p.wizOpen = false; p.prog = null;
   await loadCampmap();
@@ -422,11 +424,19 @@ function cpaintFreeColour(){
   return [1, 2, 3];
 }
 
-function cpaintWizOpen(){
-  const p = state.cpaint, c = state.cmap;
+async function cpaintWizOpen(){
+  const p = state.cpaint;
   if(p.st.new_region){ p.wizOpen = true; cpaintPaint(); return; }
+  // B1. The three pickers - who built it, who holds it, what plays over it -
+  // and which campaigns will be written, asked before the form is drawn so the
+  // creator is a list and not a free-text box with `slave` in it.
+  const r = await cpaintPost('region_vocab', {});
+  if(!r) return;
+  if(r.error){ toast('✗ ' + r.error, 8000); return; }
+  p.voc = r.vocab; p.vocCamps = r.campaigns || [];
   p.wiz = {name: '', settlement: '', shown: '', settlement_shown: '',
            rgb: cpaintFreeColour(), faction: '',
+           owner: p.voc.owner_default || '', music: '',
            rebels: '', resources: '', religions: '', port: true};
   p.wizOpen = true;
   cpaintPaint();
@@ -441,6 +451,12 @@ function cpaintWizSet(slot, value){
     return;                                 // no repaint: the caret is in the box
   }
   p.wiz[slot] = value;
+}
+
+//: "Gondor (sicily)", or the slot when the mod names it nothing.
+function cpaintFac(code){
+  const v = state.cpaint.voc || {};
+  return (v.labels && v.labels[code]) || code;
 }
 
 /* Open the record. Everything about it is decided before a pixel is painted,
@@ -459,6 +475,7 @@ async function cpaintWizStart(){
     shown: (w.shown || '').trim(),
     settlement_shown: (w.settlement_shown || '').trim(),
     faction: w.faction.trim(), rebels: w.rebels.trim(),
+    owner: (w.owner || '').trim(), music: (w.music || '').trim(),
     resources: (w.resources || '').split(',').map(s => s.trim()).filter(Boolean),
     religions: rel, port: !!w.port});
   if(!r) return;
@@ -494,6 +511,12 @@ async function cpaintProgress(){
   if(!r) return;
   p.prog = (r.plan && r.plan.region && r.plan.region.progress) || null;
   p.wizFindings = (r.plan && r.plan.findings) || [];
+  // B1. What the save would refuse over that is not about the pixels - a blank
+  // shown name, a campaign that could not take the settlement - so it is on
+  // the wizard before Save is pressed, not only in the dialog after
+  const told = new Set(p.wizFindings.map(f => f.message));
+  p.wizPlanErrors = ((r.plan && r.plan.errors) || []).filter(e => !told.has(e));
+  p.wizMusic = (r.plan && r.plan.region && r.plan.region.music_chosen) || '';
   p.err = '';                       // a plan that refuses is the wizard's state,
   cpaintPaint();                    // not an error about the last stroke
 }
@@ -716,20 +739,55 @@ function cpaintWizHtml(){
       <label>${esc(label)}${hint ? ` <span class="count">${hint}</span>` : ''}</label>
       <input value="${esc(w[slot] === undefined ? '' : String(w[slot]))}"
         placeholder="${esc(ph)}" data-wiz="${slot}"></div>`;
+    const pick = (slot, label, opts, hint) => `<div class="cpfield">
+      <label>${esc(label)}${hint ? ` <span class="count">${hint}</span>` : ''}</label>
+      <select data-wiz="${slot}">${opts.map(([v, t]) =>
+        `<option value="${esc(v)}"${(w[slot] || '') === v ? ' selected' : ''}>${
+        esc(t)}</option>`).join('')}</select></div>`;
+    const v = p.voc || {creators: [], owners: [], music: []};
+    const creators = [['', '- the faction that built it -']].concat(
+      v.creators.filter(f => f !== 'slave').map(f => [f, cpaintFac(f)]));
+    const owners = v.owners.map(o => [o.name, cpaintFac(o.name)
+      + (o.name === 'slave' ? ' - the rebels' : '')]);
+    const music = v.music.length
+      ? [['', 'the neighbour it shares the most border with']].concat(
+          v.music.map(m => [m.name, `${m.name} (${m.regions} regions)`]))
+      : [];
+    const camps = p.vocCamps || [];
+    const reach = camps.filter(c => c.reads_base).map(c => c.campaign);
+    const miss = camps.filter(c => !c.reads_base).map(c => c.campaign);
     return `<div class="cpwiz">
       <div class="k">A new province <span class="count">step 1 of 3: the record</span></div>
       ${box('name', 'Region name', 'New_Province', 'no spaces - it is a key')}
       ${box('settlement', 'Settlement name', 'Newtown', 'no spaces, same reason')}
       ${box('shown', 'Shown on the map', 'New Province',
-        'what the player reads; blank means they read the key above')}
+        'required: the game asserts on a province it cannot name')}
       ${box('settlement_shown', 'Settlement, shown', 'Newtown',
-        'the same, for the town')}
+        'required, for the same reason')}
       <div class="cpfield"><label>Colour on map_regions.tga
           <span class="count">free on this map</span></label>
         <div class="cprow"><i class="cpsw" style="background:rgb(${
           (w.rgb || [0, 0, 0]).join(',')})"></i>
         <input value="${(w.rgb || []).join(' ')}" data-wiz="rgb"></div></div>
-      ${box('faction', 'Creator faction', 'slave')}
+      ${v.creators.length
+        ? pick('faction', 'Creator faction', creators,
+            'whose architecture it is built in')
+        : box('faction', 'Creator faction', 'england',
+            'nothing on disk lists the factions, so this is not checked')}
+      ${owners.length ? pick('owner', 'Starts held by', owners,
+        'a village, last in that faction’s block, so no capital moves') : ''}
+      ${music.length ? pick('music', 'Music type', music,
+        'the game logs a province with none') : ''}
+      <div class="count">${reach.length
+        ? `Written into ${reach.map(esc).join(', ')}: a settlement, the music
+           type and, where it ships one, the name lookup - each campaign’s own
+           copy of each file.`
+        : 'No campaign reads this map, so there is no start position to give '
+          + 'the province a settlement in yet.'}${miss.length
+        ? ` <span class="w-warn">${miss.map(esc).join(', ')} ${
+            miss.length === 1 ? 'has' : 'have'} a map of ${
+            miss.length === 1 ? 'its' : 'their'} own and will not see it.</span>`
+        : ''}</div>
       ${box('rebels', 'Rebel type', 'brigands')}
       ${box('resources', 'Resources', 'gold, wine', 'comma separated')}
       ${box('religions', 'Religions', 'catholic 100', 'name percent, comma '
@@ -748,12 +806,14 @@ function cpaintWizHtml(){
     <div class="k">${esc(spec.name)}
       <span class="count">rgb(${spec.rgb.join(', ')}) · ${
       esc(spec.settlement)}</span></div>
-    ${step(1, true, 'The record is open', spec.shown || spec.settlement_shown
-      ? `<span class="count">${esc(spec.shown || spec.name)} · ${
-          esc(spec.settlement_shown || spec.settlement)}</span>`
-      : `<span class="w-warn" title="With no line in the names file the campaign
-          map shows the code name. Check reports it as loc.missing.">no shown
-          name</span>`)}
+    ${step(1, true, 'The record is open', spec.shown && spec.settlement_shown
+      ? `<span class="count">${esc(spec.shown)} · ${esc(spec.settlement_shown)
+          } · built by ${esc(cpaintFac(spec.faction))} · held by ${
+          esc(cpaintFac(spec.owner || 'slave'))}${p.wizMusic
+          ? ' · plays ' + esc(p.wizMusic) : ''}</span>`
+      : `<span class="w-bad" title="The game asserts on a province or a
+          settlement it cannot find a name for. Drop this region and open it
+          again with both names filled in.">a shown name is missing</span>`)}
     ${step(2, pr.tiles > 0, `Paint the province`,
       `<span class="count">${pr.tiles.toLocaleString()} tile${
         pr.tiles === 1 ? '' : 's'}</span>`)}
@@ -765,6 +825,7 @@ function cpaintWizHtml(){
       `<button class="cpmk${p.marker === 'port' ? ' on' : ''}"
         data-marker="port">${pr.port ? `at ${pr.port.join(', ')}` : 'place'}</button>`)}
     ${bad.map(f => `<div class="w-bad">${esc(f.message)}</div>`).join('')}
+    ${(p.wizPlanErrors || []).map(e => `<div class="w-bad">${esc(e)}</div>`).join('')}
     ${soft.map(f => `<div class="w-warn">${esc(f.message)}</div>`).join('')}
     <div class="cprow"><button onclick="cpaintWizCancel()">Drop this region</button>
       <button onclick="cpaintProgress()" title="Count the pixels again">Recheck</button>
@@ -840,8 +901,8 @@ function cpaintWire(){
   });
   box.querySelectorAll('[data-marker]').forEach(b => b.onclick = () =>
     cpaintMarker(b.dataset.marker));
-  box.querySelectorAll('[data-wiz]').forEach(inp => inp.oninput = () =>
-    cpaintWizSet(inp.dataset.wiz, inp.value));
+  box.querySelectorAll('[data-wiz]').forEach(inp => inp.oninput = inp.onchange =
+    () => cpaintWizSet(inp.dataset.wiz, inp.value));
 }
 
 /* ---------- keys ---------- */

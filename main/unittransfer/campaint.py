@@ -488,6 +488,8 @@ class PaintSession:
         self.dropped = 0
         #: the wizard's pending region, or None - see :func:`start_region`
         self.new_region: Optional[dict] = None
+        #: :func:`region_vocab`, read when a wizard first asks for it
+        self.vocab: Optional[dict] = None
         self._bufs: Dict[str, bytearray] = {}
 
     # -- pixels --------------------------------------------------------------
@@ -861,6 +863,123 @@ NEW_REGION_DEFAULTS = {
     "farming": 4,                         # Geomod: "4 is approximately average"
 }
 
+#: Who starts holding a new province when nobody is picked. The rebels, because
+#: every campaign on this machine has a ``slave`` block - 59 of vanilla's 111
+#: settlements are in it - and a province that opens under the rebels changes
+#: nobody's capital and nobody's balance.
+OWNER_DEFAULT = "slave"
+
+#: The campaign-folder files B1 has to reach, each one read by the engine from
+#: the campaign's own folder when it is there and from ``world/maps/base`` when
+#: it is not. Measured rather than assumed: vanilla's ``norman_prologue`` ships
+#: its own ``map_regions.tga`` and reads the base ``descr_regions.txt``.
+REGIONS_NAME = REGIONS_REL.rsplit("/", 1)[-1]
+REGIONS_TGA = LAYER_BY_CODE["regions"]["file"]
+MUSIC_NAME = "descr_sounds_music_types.txt"
+LOOKUP_NAME = "descr_regions_and_settlement_name_lookup.txt"
+RWM_NAME = RWM_REL.rsplit("/", 1)[-1]
+
+
+def map_campaigns(mod) -> List[dict]:
+    """Every campaign in the mod, and which of the base map's files it reads.
+
+    **This is the list a new province has to reach, and before B1 it was one
+    entry long.** The paint tool paints ``world/maps/base``; a campaign that
+    ships its own ``map_regions.tga`` never sees those pixels and is left alone.
+    Every other campaign does see them, and each one needs the record in
+    whichever ``descr_regions.txt`` IT reads, a settlement in its own
+    ``descr_strat.txt``, the province in its music types and in its name lookup
+    when it ships one, and its own compiled ``map.rwm`` gone. A beta user's log
+    is what that looks like when only the base copies are written: the game
+    found the new pixel colour and ``cannot find this pixel colour(8,8,8) in the
+    region_db``, and 8 8 8 is the first colour the wizard suggests.
+    """
+    from . import campstrat, mapquery
+    data = Path(mod.data)
+    out: List[dict] = []
+    for rel in campstrat.campaign_paths(mod):
+        home = f"{campstrat.CAMPAIGN_DIR_REL}/{rel}"
+        own = lambda name: (data / home / name).is_file()   # noqa: E731
+        out.append({
+            "campaign": rel,
+            "reads_base": not own(REGIONS_TGA),
+            "regions": f"{home}/{REGIONS_NAME}" if own(REGIONS_NAME) else REGIONS_REL,
+            "music": f"{home}/{MUSIC_NAME}" if own(MUSIC_NAME) else mapquery.MUSIC_REL,
+            "lookup": f"{home}/{LOOKUP_NAME}" if own(LOOKUP_NAME) else "",
+            "rwm": f"{home}/{RWM_NAME}" if own(RWM_NAME) else "",
+            "strat": f"{home}/{campstrat.STRAT_NAME}",
+        })
+    return out
+
+
+def region_vocab(mod) -> dict:
+    """What the wizard's three pickers offer, and where each list came from. B1.
+
+    ``creators``  every faction slot ``descr_sm_factions.txt`` defines, or - on
+                  a mod that keeps that file packed, which is what B4 is about -
+                  every faction block the campaigns declare. Either is a list of
+                  factions the engine loads, so either is evidence.
+    ``owners``    the faction blocks of the campaigns that read this map, since
+                  a settlement can only start inside a block that is there.
+    ``music``     the music types in ``descr_sounds_music_types.txt``.
+    """
+    from . import campstrat, factions, mapquery
+    from .keyblock import read_text
+
+    camps = map_campaigns(mod)
+    problems: List[str] = []
+    owners: Dict[str, List[str]] = {}
+    for c in camps:
+        if not c["reads_base"]:
+            continue
+        try:
+            sf = campstrat.read_strat(mod, c["campaign"])
+        except (OSError, ValueError) as exc:
+            problems.append(f"{c['strat']} could not be read ({exc})")
+            continue
+        for n in sf.of_kind("faction"):
+            owners.setdefault(str(n.get("name") or n.name), []).append(c["campaign"])
+    try:
+        slots = factions.faction_slots(mod)
+    except (OSError, ValueError):
+        slots = []
+    creators = slots or list(owners)
+    music: Dict[str, int] = {}
+    path = Path(mod.data) / mapquery.MUSIC_REL
+    if path.is_file():
+        for name, regions in mapquery.parse_music_types(
+                read_text(path, ENCODING)).items():
+            music[name] = len(regions)
+    # "Gondor (sicily)", the localised-names-first rule; a name that will not
+    # read is not worth losing the wizard over, so it falls back to the slot
+    labels: Dict[str, str] = {}
+    for f in list(creators) + list(owners):
+        try:
+            labels[f] = mod.faction_label(f)
+        except Exception:                                  # noqa: BLE001
+            labels[f] = f
+    return {
+        "creators": creators,
+        "labels": labels,
+        "creators_from": (factions.REL if slots else
+                          "the faction blocks in descr_strat.txt, because "
+                          f"{factions.REL} is not on disk"),
+        "owners": [{"name": k, "campaigns": v} for k, v in owners.items()],
+        "owner_default": OWNER_DEFAULT if OWNER_DEFAULT in owners else
+                         (next(iter(owners), "")),
+        "music": [{"name": k, "regions": v} for k, v in music.items()],
+        "music_file": mapquery.MUSIC_REL if path.is_file() else "",
+        "campaigns": camps,
+        "problems": problems,
+    }
+
+
+def _vocab(sess: "PaintSession") -> dict:
+    """The session's copy of :func:`region_vocab`, read once per wizard."""
+    if sess.vocab is None:
+        sess.vocab = region_vocab(sess.mod)
+    return sess.vocab
+
 
 def start_region(sess: PaintSession, body: dict) -> dict:
     """Open the wizard: the record the painting is going to be for.
@@ -918,8 +1037,42 @@ def start_region(sess: PaintSession, body: dict) -> dict:
         "farming": int(body.get("farming", NEW_REGION_DEFAULTS["farming"])),
         "religions": {str(a): int(b) for a, b in (body.get("religions") or {}).items()},
         "port": bool(body.get("port")),
+        # B1. Who starts holding it, and what plays over it. Both are decided
+        # here with everything else, and both are checked here, because the
+        # alternative is ten minutes of painting and then a refusal.
+        "owner": str(body.get("owner") or "").strip(),
+        "music": str(body.get("music") or "").strip(),
     }
+    spec = sess.new_region
+    voc = _vocab(sess)
+    refused = ([m for fatal, m in creator_problems(spec["faction"], voc) if fatal]
+               if spec["faction"] else
+               ["pick the creator faction - it is the third line of the record, "
+                "the faction whose architecture the settlement is built in"])
+    owners = {o["name"].lower() for o in voc["owners"]}
+    if not spec["owner"]:
+        spec["owner"] = voc["owner_default"]
+    elif owners and spec["owner"].lower() not in owners:
+        refused.append(f"{spec['owner']} has no faction block in any campaign that "
+                       f"reads this map, so it cannot start holding a province")
+    kinds = {m["name"] for m in voc["music"]}
+    if spec["music"] and voc["music_file"] and spec["music"] not in kinds:
+        refused.append(f"there is no music_type {spec['music']} in "
+                       f"{voc['music_file']}")
+    if refused:
+        sess.new_region = None
+        raise MapError("; ".join(refused))
     return {"ok": True, "state": sess.state()}
+
+
+def wizard_vocab(sess: "PaintSession") -> dict:
+    """The pickers, for the browser: :func:`region_vocab` minus the file list."""
+    voc = _vocab(sess)
+    return {"ok": True, "vocab": {k: v for k, v in voc.items()
+                                  if k not in ("campaigns",)},
+            "campaigns": [{"campaign": c["campaign"],
+                           "reads_base": c["reads_base"]}
+                          for c in voc["campaigns"]]}
 
 
 def cancel_region(sess: PaintSession) -> dict:
@@ -988,11 +1141,14 @@ def _marker_in(cm: CampaignMap, data: bytes, want: int, marker: int):
     return None
 
 
-def check_new_region(cm: CampaignMap, spec: dict) -> List[dict]:
+def check_new_region(cm: CampaignMap, spec: dict,
+                     vocab: Optional[dict] = None) -> List[dict]:
     """Every rule a new province has to pass, with what said so.
 
     ``fatal`` refuses the save; the rest are warnings with their source, in the
-    shape :func:`campmap.check_record` already uses.
+    shape :func:`campmap.check_record` already uses. ``vocab`` is
+    :func:`region_vocab`, and without it the creator faction is only checked
+    for being there.
     """
     out: List[dict] = []
 
@@ -1032,21 +1188,7 @@ def check_new_region(cm: CampaignMap, spec: dict) -> List[dict]:
     # Mylae's rule: a new region has to touch an existing one, or nothing can
     # ever reach it. Sea does not count - a province whose only neighbour is
     # the ocean needs a port, and the port is step three.
-    touches: Set[int] = set()
-    for i in ours:
-        x = i % w
-        for j, ok in ((i - 1, x > 0), (i + 1, x < w - 1),
-                      (i - w, i >= w), (i + w, i + w < w * h)):
-            if not ok or j in ours:
-                continue
-            p = j * 3
-            k = (data[p] << 16) | (data[p + 1] << 8) | data[p + 2]
-            if k in PROTECTED:
-                continue
-            reg = cm.index.by_key.get(k)
-            if reg is not None and reg.record is not None:
-                touches.add(k)
-    if not touches:
+    if not neighbours(cm, want):
         add(True, f"{spec['name']} does not share an edge with any declared "
                   f"region. A province nothing borders is a province no army "
                   f"can walk into, and only a port would ever reach it.")
@@ -1073,6 +1215,68 @@ def check_new_region(cm: CampaignMap, spec: dict) -> List[dict]:
     if not spec.get("faction"):
         add(True, "a region needs a creator faction - it is the third line of "
                   "the record and the engine reads it positionally")
+    else:
+        for fatal, message in creator_problems(spec["faction"], vocab):
+            add(fatal, message)
+    return out
+
+
+def neighbours(cm: CampaignMap, want: int) -> Dict[str, int]:
+    """``{region name: edges shared}`` for every declared region touching ``want``.
+
+    Four-connected, markers and sea skipped, which is Mylae's touching rule
+    counted rather than asked. The count is what B1 needs it for: a new
+    province takes the music type of the neighbour it shares the most border
+    with, which is the one it most looks like it belongs to.
+    """
+    w, h = cm.terrain.width, cm.terrain.height
+    data = cm.tiles("regions").tobytes()
+    out: Dict[str, int] = {}
+    for i in range(w * h):
+        p = i * 3
+        if ((data[p] << 16) | (data[p + 1] << 8) | data[p + 2]) != want:
+            continue
+        x = i % w
+        for j, ok in ((i - 1, x > 0), (i + 1, x < w - 1),
+                      (i - w, i >= w), (i + w, i + w < w * h)):
+            if not ok:
+                continue
+            q = j * 3
+            k = (data[q] << 16) | (data[q + 1] << 8) | data[q + 2]
+            if k == want or k in PROTECTED:
+                continue
+            reg = cm.index.by_key.get(k)
+            if reg is not None and reg.record is not None:
+                out[reg.record.name] = out.get(reg.record.name, 0) + 1
+    return out
+
+
+def creator_problems(creator: str, vocab: Optional[dict]) -> List[Tuple[bool, str]]:
+    """What is wrong with a creator faction, measured against this mod. B1.
+
+    Fatal only when there is a list to hold it to - ``descr_sm_factions.txt``,
+    or failing that the faction blocks the campaigns declare - and the name is
+    in neither: a creator nobody defines is a province whose culture the engine
+    has no answer for. With no list at all the rule reports nothing, which is
+    the locked rule about a rule with no evidence.
+
+    ``slave`` is the exception with a number beside it rather than a verdict.
+    It IS a faction, so it passes the list; but the wizard offered it as the
+    placeholder, and not one of the 509 records across the three installed maps
+    uses it. The field decides whose architecture the settlement is built in.
+    """
+    out: List[Tuple[bool, str]] = []
+    names = [n.lower() for n in (vocab or {}).get("creators", [])]
+    if names and creator.lower() not in names:
+        out.append((True, f"{creator} is not a faction this mod defines "
+                          f"({(vocab or {}).get('creators_from', '')}), so the "
+                          f"engine has no culture to build {creator}'s "
+                          f"settlement in"))
+    if creator.lower() == "slave":
+        out.append((False, "slave is the rebels, and no province on the three "
+                           "installed maps names it as its creator - this is the "
+                           "faction whose architecture the settlement is built "
+                           "in, so a real culture reads better"))
     return out
 
 
@@ -1103,16 +1307,20 @@ def _marker_problems(cm: CampaignMap, at: Sequence[int], kind: str):
     return out
 
 
-def new_record_lines(cm: CampaignMap, spec: dict) -> List[str]:
+def new_record_lines(rf: campmap.RegionsFile, spec: dict) -> List[str]:
     """The new record, in the shape the rest of the file is written in.
 
     The indent and whether a ``legion:`` line is written are read off the file
     rather than chosen: DaC writes the legion form on 197 of its 198 records and
     vanilla writes none at all, and a new record that does not match its
     neighbours is a new record somebody has to tidy up after the tool.
+
+    ``rf`` rather than the map, since B1: a campaign may read its own
+    ``descr_regions.txt`` over the base map's pixels, and the record goes into
+    that copy as well, in that copy's own shape.
     """
-    recs = cm.regions.records
-    lines = cm.regions.lines
+    recs = rf.records
+    lines = rf.lines
     indent = "\t"
     for r in recs:
         if r.settlement_line >= 0:
@@ -1144,21 +1352,20 @@ def new_record_lines(cm: CampaignMap, spec: dict) -> List[str]:
     return out
 
 
-def regions_with_record(cm: CampaignMap, spec: dict) -> str:
+def regions_with_record(rf: campmap.RegionsFile, spec: dict) -> str:
     """``descr_regions.txt`` with the new record spliced in.
 
     Appended, with one exception that is the arbiter's: a record with no
     settlement is a wasteland and **must be the last entry in the file**, so a
     new province goes in front of it rather than after it.
     """
-    rf = cm.regions
     lines = list(rf.lines)
     at = len(lines)
     waste = next((r for r in rf.records if r.wasteland), None)
     if waste is not None and waste.span[0] >= 0:
         at = waste.span[0]
     # a blank line between records, the way the file already separates them
-    body = new_record_lines(cm, spec)
+    body = new_record_lines(rf, spec)
     while at > 0 and not lines[at - 1].strip():
         at -= 1
     return rf.newline.join(lines[:at] + [""] + body + lines[at:]) + (
@@ -1190,6 +1397,14 @@ class PaintPlan:
     #: province is one act, and an undo of it has to take back the name as well
     #: as the record, or the mod keeps a key pointing at a region that is gone.
     loc_writes: Dict[str, str] = field(default_factory=dict)
+    #: B1. ``{rel under data/: whole new text}`` - every campaign-side file a
+    #: new province has to reach: the settlement in each ``descr_strat.txt``,
+    #: a campaign's own ``descr_regions.txt``, the music types and the name
+    #: lookup. In this save for the reason ``loc_writes`` is: one act, one undo.
+    texts: Dict[str, str] = field(default_factory=dict)
+    #: B1. A campaign's own compiled ``map.rwm``, stale for the reason the base
+    #: one is. ``map.rwm`` in ``world/maps/base`` is always deleted anyway.
+    deletes: List[str] = field(default_factory=list)
 
     def summary(self) -> str:
         head = (f"paint {getattr(self.mod, 'name', '?')}'s campaign map "
@@ -1204,6 +1419,7 @@ class PaintPlan:
                 "findings": list(self.findings),
                 "region": dict(self.region) if self.region else None,
                 "loc_writes": dict(self.loc_writes),
+                "texts": sorted(self.texts), "deletes": list(self.deletes),
                 "ok": not self.errors and bool(self.data or self.region_text)}
 
 
@@ -1265,19 +1481,21 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
 
     if sess.new_region:
         spec = sess.new_region
-        p.findings = check_new_region(cm, spec)
+        voc = _vocab(sess)
+        p.findings = check_new_region(cm, spec, voc)
         p.errors += [f["message"] for f in p.findings if f["fatal"]]
         p.warnings += [f["message"] for f in p.findings if not f["fatal"]]
         p.region = dict(spec)
         prog = region_progress(cm, spec)
         p.region["progress"] = prog
         if not p.errors:
-            p.region_text = regions_with_record(cm, spec)
+            p.region_text = regions_with_record(cm.regions, spec)
             p.changes.append(
                 f"descr_regions.txt: a new record for {spec['name']} "
                 f"({prog['tiles']:,} tiles, settlement at "
                 f"{prog['settlement'][0]},{prog['settlement'][1]})")
             _plan_region_names(p, spec)
+            _plan_region_campaigns(p, spec, voc)
             # A region ID is the engine's scan order over map_regions.tga, not a
             # number written in any file, so a new province quietly renumbers
             # every one the scan reaches after it. Nothing in the mod has to be
@@ -1304,39 +1522,176 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
 def _plan_region_names(p: PaintPlan, spec: dict) -> None:
     """19a, D4. The two lines that stop a new province showing its code name.
 
-    Skipped without complaint when the wizard's two boxes are empty - a province
-    whose name is deliberately its code name is legal, and 16f already reports
-    the state either way. The refusal is only for a mod with neither the ``.txt``
-    nor the archive beside it, which is the stock game and which the wizard
-    cannot write a province into in the first place.
+    **Required since B1, where 19a made them a warning.** The engine does not
+    fall back to the code name the way the map screen here does: a beta user's
+    log opens with ``Couldn't find region name … in stringtable`` once for the
+    province and once for the settlement, and then asserts. So a blank box is a
+    refusal unless the key is already in the names file - which it can be, for a
+    province somebody is re-creating - and the refusal says which box.
+
+    A mod with neither the ``.txt`` nor the archive beside it is the stock game,
+    which the wizard cannot write a province into in the first place.
     """
     from . import namekeys
+    name_file = Path(namekeys.REGION_NAMES_REL).name
+    state = namekeys.loc_state(p.mod, namekeys.REGION_NAMES_REL)
+    if not (state["txt"] or state["bin"]):
+        p.errors.append(
+            f"{getattr(p.mod, 'name', '?')} has neither "
+            f"{namekeys.REGION_NAMES_REL} nor the compiled archive beside it, so "
+            f"there is nothing to write the province's two names into - and the "
+            f"engine will not start a province that has none")
+        return
+    have = {k.lower() for k in namekeys.loc_pairs(p.mod, namekeys.REGION_NAMES_REL)}
     writes = {}
-    for key, value in ((spec["name"], spec.get("shown")),
-                       (spec["settlement"], spec.get("settlement_shown"))):
+    for key, value, box in ((spec["name"], spec.get("shown"), "Shown on the map"),
+                            (spec["settlement"], spec.get("settlement_shown"),
+                             "Settlement, shown")):
         if not str(value or "").strip():
+            if key.lower() not in have:
+                p.errors.append(
+                    f"{key} has no line in {name_file}, and the engine asserts "
+                    f"on a name it cannot find rather than showing the key - "
+                    f"fill in '{box}'")
             continue
         try:
             writes[key] = namekeys.clean_value(value, "name")
         except namekeys.NameKeyError as exc:
             p.errors.append(str(exc))
             return
-    if not writes:
-        p.warnings.append(
-            f"{spec['name']} is being created with no line in "
-            f"{Path(namekeys.REGION_NAMES_REL).name}, so the campaign map will "
-            f"show its code name. Check reports it as loc.missing until it has one")
-        return
-    state = namekeys.loc_state(p.mod, namekeys.REGION_NAMES_REL)
-    if not (state["txt"] or state["bin"]):
-        p.errors.append(
-            f"{getattr(p.mod, 'name', '?')} has neither "
-            f"{namekeys.REGION_NAMES_REL} nor the compiled archive beside it, so "
-            f"there is nothing to write these two names into")
-        return
     p.loc_writes = writes
     for key, value in writes.items():
         p.changes.append(f"{state['file']}: + {key}: {value}")
+
+
+def _plan_region_campaigns(p: PaintPlan, spec: dict, voc: dict) -> None:
+    """B1. Everything outside ``world/maps/base`` a new province has to reach.
+
+    For every campaign that reads the base ``map_regions.tga`` - which is every
+    campaign that will see the pixels just painted - four files, each the one
+    THAT campaign reads (see :func:`map_campaigns`):
+
+      * ``descr_strat.txt``      a settlement block, in the owner's faction
+      * ``descr_regions.txt``    the record, when the campaign ships its own
+      * music types              the province, under one music type
+      * the name lookup          the pair, when the campaign ships one
+
+    and its own ``map.rwm`` deleted. Each distinct file is planned once: two
+    campaigns reading the base music types get one edit to it.
+
+    **A map no campaign reads is not refused.** It is a warning, because a
+    mod being built can have its map before its campaign, and there is then
+    nothing here that could be written.
+    """
+    from . import campstrat, mapquery, stratedit
+    from .keyblock import newline_of, read_text
+
+    data = Path(p.mod.data)
+    camps = [c for c in voc["campaigns"] if c["reads_base"]]
+    skipped = [c["campaign"] for c in voc["campaigns"] if not c["reads_base"]]
+    if skipped:
+        p.warnings.append(
+            f"{', '.join(skipped)} ship{'s' if len(skipped) == 1 else ''} "
+            f"{'its' if len(skipped) == 1 else 'their'} own {REGIONS_TGA}, so "
+            f"{'it does' if len(skipped) == 1 else 'they do'} not see these "
+            f"pixels and {spec['name']} does not exist there")
+    if not camps:
+        p.warnings.append(
+            f"no campaign in {getattr(p.mod, 'name', '?')} reads this map, so no "
+            f"faction starts in {spec['name']} yet - there is no descr_strat.txt "
+            f"to give it a settlement in")
+        return
+
+    name, town = spec["name"], spec["settlement"]
+    music = spec.get("music") or ""
+    if not music:
+        # the neighbour with the longest shared border, and its music type
+        near = neighbours(p.session.cm, spec["key"]) if p.session else {}
+        path = data / mapquery.MUSIC_REL
+        if path.is_file() and near:
+            of = {r.lower(): t for t, rs in mapquery.parse_music_types(
+                read_text(path, ENCODING)).items() for r in rs}
+            for n in sorted(near, key=lambda r: (-near[r], r.lower())):
+                if n.lower() in of:
+                    music = of[n.lower()]
+                    p.warnings.append(
+                        f"{name} plays {music}, the music type of {n}, which it "
+                        f"shares the longest border with")
+                    break
+    p.region["music_chosen"] = music
+
+    def text_of(rel: str) -> str:
+        return p.texts[rel] if rel in p.texts else read_text(data / rel, ENCODING)
+
+    for c in camps:
+        # -- the settlement, in this campaign's own start position
+        try:
+            sf = campstrat.parse_strat(text_of(c["strat"]))
+        except (OSError, ValueError) as exc:
+            p.errors.append(f"{c['strat']} could not be read ({exc})")
+            continue
+        owner = spec.get("owner") or OWNER_DEFAULT
+        if sf.faction(owner) is None:
+            if sf.faction(OWNER_DEFAULT) is None:
+                p.errors.append(f"{c['campaign']} has no {owner} block and no "
+                                f"{OWNER_DEFAULT} block either, so nobody could "
+                                f"start holding {name} in it")
+                continue
+            p.warnings.append(f"{owner} is not in {c['campaign']}, so {name} "
+                              f"starts under the rebels there")
+            owner = OWNER_DEFAULT
+        text, errs = stratedit.plan_new_settlement(sf, name, owner, spec["faction"])
+        if errs:
+            p.errors += [f"{c['strat']}: {e}" for e in errs]
+            continue
+        p.texts[c["strat"]] = text
+        p.changes.append(f"{c['strat']}: a {stratedit.NEW_LEVEL} in {name}, "
+                         f"held by {owner}")
+
+        # -- the record, when this campaign reads a copy of its own
+        if c["regions"] != REGIONS_REL:
+            rf = campmap.parse_regions(text_of(c["regions"]))
+            if rf.by_name(name) is None:
+                p.texts[c["regions"]] = regions_with_record(rf, spec)
+                p.changes.append(f"{c['regions']}: the same record, because "
+                                 f"{c['campaign']} reads this copy")
+
+        # -- the music type
+        rel = c["music"]
+        if (data / rel).is_file():
+            mt = text_of(rel)
+            types = mapquery.parse_music_types(mt)
+            if any(name.lower() == r.lower() for rs in types.values() for r in rs):
+                pass
+            elif not music:
+                p.errors.append(f"{name} needs a music type in {rel} - the "
+                                f"engine logs `music_type not found` for a "
+                                f"province with none. Pick one in the wizard")
+            elif music not in types:
+                p.errors.append(f"there is no music_type {music} in {rel}")
+            else:
+                p.texts[rel] = mapquery.add_music_region(mt, music, name)
+                p.changes.append(f"{rel}: + {name} under {music}")
+        elif rel == mapquery.MUSIC_REL and not any(
+                "descr_sounds_music_types" in w for w in p.warnings):
+            p.warnings.append(f"{rel} is not on disk, so there is no music type "
+                              f"to give {name} (the stock game keeps it packed)")
+
+        # -- the name lookup, when the campaign ships one
+        if c["lookup"]:
+            lk = text_of(c["lookup"])
+            if name.lower() not in {s.strip().lower() for s in lk.splitlines()}:
+                nl = newline_of(lk) if lk else "\r\n"
+                if lk and not lk.endswith(("\n", "\r")):
+                    lk += nl
+                p.texts[c["lookup"]] = f"{lk}{name}{nl}{town}{nl}"
+                p.changes.append(f"{c['lookup']}: + {name} / {town}")
+
+        # -- a compiled map of its own is as stale as the base one
+        if c["rwm"] and c["rwm"] not in p.deletes:
+            p.deletes.append(c["rwm"])
+            p.changes.append(f"{c['rwm']}: deleted, or {c['campaign']} loads the "
+                             f"old compiled map")
 
 
 def _emptied(cm: CampaignMap) -> List[str]:
@@ -1351,7 +1706,10 @@ def apply_paint(p: PaintPlan) -> dict:
     Every layer that changed, plus ``descr_regions.txt`` when a province was
     added, plus ``map.rwm`` deleted - all of it in one backup set and one log
     entry, so the Log's Undo puts the whole save back byte-exact in one go
-    rather than leaving a mod half-painted.
+    rather than leaving a mod half-painted. Since B1 a new province also
+    writes every campaign-side file :func:`_plan_region_campaigns` planned,
+    into the same set: an undo that took back the record and left the
+    settlement would leave a campaign naming a province that is not there.
     """
     import shutil
 
@@ -1397,12 +1755,19 @@ def apply_paint(p: PaintPlan) -> dict:
         namekeys._write_loc(mod, namekeys.REGION_NAMES_REL, p.loc_writes,
                             keep, p.warnings)
 
-    rwm = Path(mod.data) / RWM_REL
-    if rwm.exists():
-        keep(RWM_REL)
-        rwm.unlink()
-        manifest["deleted"].append(RWM_REL)
-        file_op("DELETE", rwm, "stale compiled map - the game would load it instead")
+    for rel, text in sorted(p.texts.items()):
+        target = keep(rel)
+        write_text(target, text, ENCODING)
+        file_op("WRITE", target, f"{len(text)} bytes")
+
+    for rel in [RWM_REL] + list(p.deletes):
+        rwm = Path(mod.data) / rel
+        if rwm.exists():
+            keep(rel)
+            rwm.unlink()
+            manifest["deleted"].append(rel)
+            file_op("DELETE", rwm,
+                    "stale compiled map - the game would load it instead")
 
     what = p.region["name"] if p.region else ", ".join(
         LAYER_BY_CODE[c]["label"] for c in sorted(p.data))

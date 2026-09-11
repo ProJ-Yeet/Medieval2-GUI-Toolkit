@@ -468,6 +468,11 @@ skip a filter when it is absent; the region form does not offer it. One more
 field on a form that already writes seven, spliced into the line it came from,
 exactly as 16d does the rest.
 
+**Half landed in B1** (2026-09-11): a province made with the New region wizard
+is given a music type, the neighbour's with the longest border unless one is
+picked, through `mapquery.add_music_region`. An existing province's is still not
+on the region form.
+
 ### G3. Region mercenary pool · **done**
 
 Which pool from `descr_mercenaries.txt` this province draws on. The roadmap has

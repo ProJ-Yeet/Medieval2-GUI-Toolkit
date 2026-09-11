@@ -112,6 +112,7 @@ Backlog below with their own index.
 | 19b | Rename, and follow it - a province, a settlement and a faction slot, position-aware over twenty-four files | 3.1.0 (uncut) |
 | 20a | Three layers read properly - the river overlay, the heights as transparency, and a number key per layer | 3.1.0 (uncut) |
 | 20b | Getting to the thing you want - the campaign browser and the three campaigns nothing offered, the find box, named view presets | 3.1.0 (uncut) |
+| B1 | A new province reaches every campaign that reads the map - a settlement, a music type, the lookup pair, a campaign's own record file and compiled map; the creator is a picker and the shown names are required | 3.1.0 (uncut) |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
@@ -315,6 +316,9 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `web/js/campbrowse.js` | the campaign browser, and the pick (20b) |
 | `web/js/mapfind.js` | the find box: `cfdSearch` is pure and searches the manifest, not the server (20b) |
 | `web/js/mapviews.js` | named view presets: `cvwPlan` reconciles a saved one against this manifest, and is pure (20b) |
+| `campaint.map_campaigns` | which copy of each map file every campaign reads - its own when it is in the folder, `world/maps/base` when not. **The engine takes each file separately**, so anything written to the base map has to ask this which campaigns see it (B1) |
+| `stratedit.new_block` / `plan_new_settlement` | a new settlement block in the shape its own file writes them, last in the owner's block, guarded like 16h's edits - B1's writer, and the one B2's create is to share |
+| `mapquery.add_music_region` | the one write `descr_sounds_music_types.txt` gets: a name on the end of one `regions` line (B1) |
 | `cmapLayerState` / `cmapCampQ` / `cmapGoTile` | the one snapshot of the layer stack, the one place a request appends a campaign, and the one way of arriving at a tile (20b) |
 
 Reuse: `keyblock.py` for the splice discipline (`flatrecord.py` does **not**
@@ -385,60 +389,29 @@ change, so no cross-reference dangles.
 | 23a-23b - A map that looks like the map | 2 | D7 T1 T12 | 2L 1M |
 | 24 - Make and unmake | 1 | G1 M15 | 2M |
 
-Eight sessions left, plus **B1 in front of 20c** - see "Reported from the
-beta" below, which is four items that came from users rather than from the
-audit. Phase 17 (2026-09-06), all of Phase 18 (2026-09-07), all of
-Phase 19 (2026-09-09), 20a (2026-09-10) and 20b (2026-09-11) are done and their
-write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later table is counted.
+Eight sessions left. Phase 17 (2026-09-06), all of Phase 18 (2026-09-07), all
+of Phase 19 (2026-09-09), 20a (2026-09-10), 20b and B1 (2026-09-11) are done and
+their write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later table is
+counted, and neither are B2-B4 below.
+
+**Nothing is released until all eight are done.** The user's instruction on
+2026-09-11, which suspends the cut-as-it-lands rule of 2026-09-09: each session
+commits and stops, and the whole backlog goes out as one cut at the end - the
+held v2.2.4 and beta 2026-09-11b notes included.
 
 ---
-# Reported from the beta - not phased, and B1 jumps the queue
+# Reported from the beta - not phased
 
 Four items off beta users between 2026-09-09 and 2026-09-11. They are not from
 the reference audit, so they have no `D`/`T`/`M` id; they are numbered `B` and
-they are **not** scheduled into the phases above. **B1 is a crash and should go
-in front of 20c.**
+they are **not** scheduled into the phases above. **B1, the crash, is done**
+(2026-09-11) and its write-up is in `ROADMAP_ARCHIVE.md`; the other three wait.
 
 | id | Item | Size | Note |
 |---|---|---|---|
-| B1 | A new province needs a settlement in `descr_strat.txt` | M | **A crash, reported with a log.** In front of everything else here. |
-| B2 | Delete a settlement, and move one between mods | M | Half of what was asked for already exists - see below before building anything. |
-| B3 | Insert and export one file at a time, the way Mylae's tool does | M | The user's own words: "that isnt really needed tbh". Lowest of the four. |
+| B2 | Delete a settlement, and move one between mods | M | Half of what was asked for already exists - see below before building anything. B1 added the create. |
+| B3 | Insert and export one file at a time, the way Mylae's tool does | M | The user's own words: "that isnt really needed tbh". Lowest of the three. |
 | B4 | `Rename slot` is refused on a mod that keeps `descr_sm_factions.txt` packed | S | Same root as the whole Factions screen refusing. |
-
-## B1 - a new province needs a settlement in `descr_strat.txt`
-
-`campaint.apply_paint` writes the painted layers, `descr_regions.txt`, the two
-shown names when the wizard's boxes were filled in, and deletes `map.rwm`. That
-is all it writes. So a province created with the wizard has a record and pixels
-and **no settlement block**, which means no faction starts there, the engine
-cannot give the region an owner, and the campaign crashes at the end of a turn.
-
-A beta user's `system.log` has the whole chain, in this order: `Couldn't find
-region name … in stringtable` twice, then `cannot find this pixel colour(8,8,8)
-in the region_db`, then `we don't appear to have a settlement position in
-region(26)` and `invalid tile(0,0) … PLACEMENT_IN_SEA`, then `ASSERT FAILED:
-strategy_map.cpp(7234): settlement_owner`, then `AI_REGION_GROUP_ANALYSER: land
-region '' (id 26) has no owning faction - skipping. Check your descr_strat.txt`.
-The log then stops inside `between turns`.
-
-Three smaller holes travel with it and should close in the same session:
-
-* **the creator faction is not checked.** `campaint.check_new_region` tests it
-  for being non-empty and nothing else, and `web/js/campaint.js` offers it as a
-  free-text box whose placeholder is `slave` - which is not a legal value for
-  that field. The faction list is already loaded for other screens.
-* **`descr_sounds_music_types.txt` never gets the region.** The engine says so:
-  `music_type not found for regions: <name>`. This is audit item **G2**, sized S
-  and parked under Later; it belongs here instead.
-* **the two shown names are a warning, not a requirement.** The engine logs a
-  fatal assert for each missing one. `_plan_region_names` already writes them
-  when the boxes are filled in.
-
-Nothing has to be invented: `stratedit.plan_settlement` already writes settlement
-blocks and moves them between faction blocks, and `mapquery` already reads the
-music types file. **Nothing in Phases 20-24 covers this** - Phase 24 is *delete*
-a region, which is the opposite end of the same gap.
 
 ## B2 - delete a settlement, and move one between mods
 
@@ -452,8 +425,10 @@ buildings list on the same panel adds, removes and reorders. What is missing:
 * **delete a settlement block** - the panel edits and moves, and there is no
   delete. The shape is `stratcamp._delete_splice`'s, which already unmakes a
   whole faction entry.
-* **create one** - which is B1 from the other direction, and the two should
-  share a writer rather than grow two.
+* **create one** - **the writer exists since B1**: `stratedit.new_block` and
+  `plan_new_settlement` add a village last in an owner's block, guarded the way
+  16h's edits are. What is missing is a button on the settlement panel for a
+  province that has none, and that is all.
 * **move one between mods** - `transfer.py` is the model, and `pack.py` already
   does the import-and-conflict-report shape for units. Bigger than the other
   two; probably its own session.
@@ -737,7 +712,7 @@ user changes their mind; the rest are here as written.
 | D1 | Change a region's colour | M | Same cluster as 19b. Costly part is real: a recolour can renumber every region after it. |
 | D12 | Export the project as a zip, and load one back | M | `pack.py` already does this shape for units, import and conflict report included. |
 | D13 | Generate a horde start for a new faction | M | 16j-2 creates the faction with no settlement and no character, which is the shape vanilla's Mongols already are. This is the other half. |
-| G2 | Region music | S | `mapquery` reads `descr_sounds_music_types.txt` already; the region form does not offer it. **Moved into B1** - the engine reports a region with no music type, so it is part of creating one properly rather than a nicety. |
+| G2 | Region music | S | `mapquery` reads `descr_sounds_music_types.txt` already; the region form does not offer it. **Half done in B1**: a new province is given a music type, through `mapquery.add_music_region`. Changing an existing province's is what is left, and that writer is now the whole of the format work. |
 | G4 | Legion label, with its name dialog | S | **Nearly free during 19a.** Flagged there. |
 | M7 | Import a campaign from another mod | L | Unit Transfer's problem at campaign scale; `transfer.py` is the model. |
 | M12 | Bulk faction duplicate, and faction zip export | M | A loop over `factionclone.py` with one plan, plus `pack.py`. |

@@ -124,6 +124,50 @@ def parse_music_types(text: str) -> Dict[str, List[str]]:
     return out
 
 
+def add_music_region(text: str, music_type: str, region: str) -> str:
+    """``text`` with ``region`` added to one music type's ``regions`` lines. B1.
+
+    The one write this file gets, and it is the smallest one there is: the name
+    goes on the end of the block's **last** ``regions`` line, in front of any
+    comment on it, so no other line of the file changes. Geomod writes these
+    lines five names wide and nothing reads them that way, so a sixth is not a
+    format question. A block with no ``regions`` line yet gets one under its
+    ``music_type`` line.
+
+    The engine names a province with no music type out loud -
+    ``music_type not found for regions: <name>`` - which is why a new one is
+    given a type rather than left for somebody to find in the log.
+    """
+    lines = text.split("\n")
+    head = last = -1
+    for i, raw in enumerate(lines):
+        word, _, rest = _bare(raw).partition(" ")
+        low = word.lower()
+        if low == "music_type":
+            if head >= 0:
+                break                        # past the block we wanted
+            if rest.strip() == music_type:
+                head = i
+        elif low == "regions" and head >= 0:
+            last = i
+    if head < 0:
+        raise MapError(f"there is no music_type {music_type} in "
+                       f"descr_sounds_music_types.txt")
+    if last >= 0:
+        raw = lines[last]
+        cr = "\r" if raw.endswith("\r") else ""
+        body = raw[:len(raw) - len(cr)]
+        cut = body.find(";")
+        before, after = (body, "") if cut < 0 else (body[:cut], body[cut:])
+        keep = before.rstrip()
+        gap = before[len(keep):]
+        lines[last] = f"{keep} {region}{gap if after else ''}{after}{cr}"
+    else:
+        cr = "\r" if lines[head].endswith("\r") else ""
+        lines.insert(head + 1, f"regions {region}{cr}")
+    return "\n".join(lines)
+
+
 @dataclass
 class MercPool:
     """One ``pool`` block: where it applies and what it sells."""

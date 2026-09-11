@@ -19,6 +19,7 @@ Split out of `ROADMAP.md` on 2026-09-05, verbatim.
 | 15-15j - the 3D model viewer and everything on it, to v2.1.11 | below |
 | 16a-16k - the campaign map editor, V3.0.0 | below |
 | 17a-17i, 18a-18b, 19a-19b, 20a-20b - the correction pass and the Now set | below |
+| B1 - the first item off a beta user: a new province in every campaign | below |
 
 ---
 
@@ -3661,3 +3662,109 @@ you reach for when you already know the name. A preset does not carry the zoom.
 And picking a campaign does not throw away an unsaved paint session: strokes are
 pixels on the base map, and the base map is the same map whichever campaign
 reads it.
+
+## B1 - A new province needs a settlement - done 2026-09-11
+
+**Closes B1, the first item filed off a beta user rather than the audit, and
+half of G2.** A crash with a log attached: a province made with the New region
+wizard, then `ASSERT FAILED: strategy_map.cpp(7234): settlement_owner` and the
+campaign stopping inside `between turns`. Filed as "the wizard does not write
+`descr_strat.txt`", which it did not. **That was the smaller half.**
+
+**The first line of the log was the one to read.** Before the settlement
+complaints, the engine says `cannot find this pixel colour(8,8,8) in the
+region_db` - and 8 8 8 is the first colour the wizard suggests. So the game had
+the new pixels and not the new record, and a missing settlement block cannot
+cause that. What can is a campaign that reads the base `map_regions.tga` through
+a `descr_regions.txt` of its own, and the engine does take each map file
+separately, measured rather than assumed: vanilla's `norman_prologue` ships its
+own `map_regions.tga` and reads the base `descr_regions.txt`; Third Age
+Reforged's Fellowship campaign ships all ten layers, its own record file, its
+own music types, its own name lookup and its own `map.rwm`. The paint tool
+writes `world/maps/base` and nothing else, so on a mod laid out like that a new
+province is pixels in one file and a record in another file the campaign never
+opens. 20b's closing line - "the base map is the same map whichever campaign
+reads it" - is true of the pixels and not of the files around them.
+
+**So the unit is the campaign, not the map.** `campaint.map_campaigns` asks,
+per campaign, which copy of each file it reads: its own when it is in the
+folder, `world/maps/base` when it is not. A campaign with its own
+`map_regions.tga` never sees the new pixels and is left alone, by name, in a
+warning. Every other one gets, in whichever copy IT reads:
+
+* **a settlement block** in its `descr_strat.txt` - `stratedit.new_block` and
+  `plan_new_settlement`, the writer B2's "create a settlement" is meant to share
+* **the record**, when it ships its own `descr_regions.txt`
+* **the province under a music type** - `mapquery.add_music_region`, the first
+  write that file has had, one name on the end of one `regions` line
+* **the name pair** in `descr_regions_and_settlement_name_lookup.txt`, when it
+  ships one
+* **its own `map.rwm` deleted**, for the reason the base one always was
+
+All of it in the one backup set the layers are in, so the Log's Undo takes back
+the whole province: an undo that left a settlement naming a region that is not
+there would be the crash in the other direction.
+
+**The settlement is a village with nothing in it, last in its owner's block.**
+Measured: every installed campaign already starts some settlements exactly like
+that - thirteen in vanilla, four in Third Age Reforged's main campaign - and a
+village is the one rung that needs no core building, where every other level
+needs the walls its EDB line declares. Last and not first, because the first
+settlement in a faction block is that faction's capital. The block is copied
+line for line off a real one in the same file, indents and the blank line after
+`region` included; only the population is chosen, and it is the median of that
+file's own villages. The owner defaults to `slave`, which every campaign here
+has - 59 of vanilla's 111 settlements are in it - so a new province moves
+nobody's capital and nobody's balance. A picked owner missing from one campaign
+falls back to the rebels there, and says so.
+
+**It is guarded the way 16h's edits are.** The new file is parsed back before
+it is handed over: exactly one more settlement, every other block the text it
+was, every roster and header value unchanged, and the new block inside the
+faction it was given to. Run over all 133 faction blocks of all six installed
+campaigns, every one passes.
+
+**The three smaller holes, closed with it.**
+
+* **The creator faction is a picker.** It was a free-text box checked only for
+  being non-empty, with `slave` as its placeholder. It is checked now against
+  `descr_sm_factions.txt`, or - on a mod that keeps that file packed, which is
+  B4's ground - against the faction blocks the campaigns declare. Either is a
+  list of factions the engine loads. `slave` passes the list, because it is a
+  faction, and gets a warning with the number beside it: **0 of the 509
+  province records on the three installed maps use it.**
+* **The music type.** The engine logs `music_type not found for regions` for a
+  province with none. The wizard offers the mod's music types, and left blank
+  it takes the type of the neighbour the province shares the longest border
+  with, and the plan says whose.
+* **The two shown names are required.** 19a made them a warning, because the
+  map screen falls back to the code name. The engine does not: the log opens
+  with `Couldn't find region name … in stringtable` once for each. A blank box
+  now refuses the save and names the box, unless the key is already in the
+  names file.
+
+**All three are checked when the record is opened, not only at the save.** A
+creator nobody defines, an owner with no block and a music type the file does
+not have each refuse before a pixel is painted, because the alternative is ten
+minutes of painting and then a refusal.
+
+**What is deliberately not here.** An existing province's music type is not on
+the region form - that is the rest of G2, and it stays in Later. The settlement
+is not levelled up or given buildings: the settlement panel does that, and it
+opens on the new one. And the names are written into
+`imperial_campaign_regions_and_settlement_names.txt` only, which is what 19a's
+writer and the map screen read; Divide and Conquer ships a second names file
+for its nested campaign, and which campaign reads which is the header question
+20b found (`Shattered_Alliances` calls itself `imperial_campaign`), not one
+this session could settle by measuring.
+
+**`tests/test_campaint.py` grew a part 4b (27 checks) and two real-data checks
+in part 5.** A tiny mod with three campaigns - one reading everything from base,
+one reading the base pixels through its own record file with its own lookup and
+compiled map, one with a map of its own - takes a new province end to end: the
+refusals, the plan, every file after the save, the old file recovered byte for
+byte by taking the one block back out, the untouched campaign untouched, and one
+undo restoring all of it. Part 5 runs the settlement writer over every faction
+block and the music writer over every music file installed. Part 6 now saves
+through HTTP into the stock game's own `descr_strat.txt` and reads the
+settlement back through the 16h panel.

@@ -675,6 +675,164 @@ def move_lines(lines: List[str], span: Tuple[int, int], at: int) -> List[str]:
 
 
 # ---------------------------------------------------------------------------
+# a block that was not there before (B1)
+#
+# A province made with the New region wizard used to get a record and pixels and
+# nothing here, so no faction started in it, the engine could not give it an
+# owner, and a beta user's campaign crashed at the end of a turn with
+# `ASSERT FAILED: settlement_owner`. This is the writer that closes that, and it
+# is the one B2's "create a settlement" is meant to share rather than grow a
+# second of.
+
+#: What a new settlement starts as. A village with no buildings, because that is
+#: the one rung that needs no core building: every other level wants the walls
+#: its EDB line declares, and Demir refuses to create one without them. Every
+#: installed campaign already ships villages exactly like it - thirteen in
+#: vanilla, four in Third Age Reforged's main campaign - so it is a shape the
+#: engine demonstrably starts with, and the settlement panel levels it up.
+NEW_LEVEL = "village"
+#: Used only when the file has no village of its own to measure one off.
+NEW_POPULATION = 400
+
+
+def _template(sf: StratFile) -> Optional[Node]:
+    """The settlement a new block copies its shape from.
+
+    A block with no buildings when there is one, so the lines being copied are
+    the lines a bare village is written with in this file; otherwise the first
+    settlement, whose head is the same shape with buildings after it.
+    """
+    ss = sf.of_kind("settlement")
+    bare = [n for n in ss if not sf.children_of(n, "building")]
+    return (bare or ss or [None])[0]
+
+
+def _village_population(sf: StratFile) -> int:
+    """The median population the file's own villages start with."""
+    got = sorted(int(str(n.get("population")).strip())
+                 for n in sf.of_kind("settlement")
+                 if str(n.get("level") or "") == NEW_LEVEL
+                 and is_int(n.get("population")))
+    return got[len(got) // 2] if got else NEW_POPULATION
+
+
+def _commonest(sf: StratFile, key: str) -> str:
+    """The value the file gives ``key`` most often - ``default_set``, measured."""
+    counts: Dict[str, int] = {}
+    for n in sf.of_kind("settlement"):
+        v = str(n.get(key) or "")
+        if v:
+            counts[v] = counts.get(v, 0) + 1
+    return max(sorted(counts), key=lambda v: counts[v]) if counts else ""
+
+
+def new_block(sf: StratFile, region: str, creator: str,
+              kind: str = "city") -> List[str]:
+    """A new settlement block, in the shape this file already writes them.
+
+    The shape is copied line for line from a real block in the same file - its
+    indents, its brace lines, the blank line vanilla and both installed mods put
+    after ``region`` - and only the values are this settlement's. The template's
+    comments are not carried, because a comment on somebody else's block says
+    something about that block. A file with no settlement at all to copy gets
+    the shape all three installs write, which is tab-indented.
+    """
+    values = {
+        "level": NEW_LEVEL,
+        "region": region,
+        "year_founded": "0",
+        "population": str(_village_population(sf)),
+        "plan_set": _commonest(sf, "plan_set") or "default_set",
+        "faction_creator": creator,
+    }
+    header = "settlement" if kind == "city" else f"settlement {kind}"
+    tpl = _template(sf)
+    if tpl is None:
+        return [header, "{"] + [f"\t{k} {v}" for k, v in values.items()] + ["}"]
+
+    first_building = min((b.start for b in sf.children_of(tpl, "building")),
+                         default=tpl.end)
+    out: List[str] = []
+    wrote = set()
+    for i in range(tpl.start, first_building):
+        line = sf.lines[i]
+        word = _clean(line).split(" ", 1)[0].lower()
+        if i == tpl.start:
+            out.append(indent_of(line) + header)
+        elif word in values and word not in wrote:
+            out.append(f"{indent_of(line)}{word} {values[word]}")
+            wrote.add(word)
+        elif word in ("{", ""):
+            out.append(line.rstrip() if word else "")
+        # anything else on a template's head is that settlement's own business
+    inner = next((indent_of(sf.lines[at]) for at in tpl.field_lines.values()),
+                 "\t")
+    for key, value in values.items():               # a field the template lacked
+        if key not in wrote:
+            out.append(f"{inner}{key} {value}")
+    while out and not out[-1].strip():
+        out.pop()                 # DaC's blank line before its buildings, not ours
+    out.append(indent_of(sf.lines[tpl.end]) + "}")
+    return out
+
+
+def plan_new_settlement(sf: StratFile, region: str, owner: str,
+                        creator: str) -> Tuple[str, List[str]]:
+    """``(text, errors)``: the whole file with one settlement block added.
+
+    The block goes **last** in the owner's faction block, never first, because
+    the first settlement in a faction block is that faction's capital (the
+    module docstring has the nineteen that say so) and a province somebody has
+    just painted is not a capital anybody asked to move.
+
+    Read back before it is handed over, with the same guard a settlement edit
+    gets: the file must hold exactly one more settlement, every other block
+    must be the text it was, and the new one must land in the faction it was
+    given to. A writer that inserts is a writer that can land inside the wrong
+    brace, and that is found here rather than at campaign start.
+    """
+    errors: List[str] = []
+    if find_settlement(sf, region) is not None:
+        return "", [f"a settlement in {region} is already in this file"]
+    faction = sf.faction(owner)
+    if faction is None:
+        return "", [f"{owner} has no faction block in this file, so it cannot "
+                    f"start holding anything"]
+    at = insert_at(sf, faction, "last")
+    block = new_block(sf, region, creator)
+    lines = list(sf.lines)
+    # The blank line that separates it travels with it, the rhythm detach_span
+    # keeps on a move: in front of whatever it lands before.
+    lines[at:at] = block + [""]
+    text = serialise(sf, lines)
+    done = campstrat.parse_strat(text)
+
+    was, now = sf.counts(), done.counts()
+    for kind_ in sorted(set(was) | set(now)):
+        want = was.get(kind_, 0) + (1 if kind_ == "settlement" else 0)
+        if now.get(kind_, 0) != want:
+            errors.append(f"adding one settlement would leave {now.get(kind_, 0)} "
+                          f"{kind_} record(s) where there should be {want}")
+    if sf.rosters != done.rosters or sf.globals != done.globals:
+        errors.append("adding a settlement would change the campaign's header, "
+                      "which it has no business touching")
+    (a, a_odd), (b, b_odd) = blocks_by_region(sf), blocks_by_region(done)
+    low = region.strip().lower()
+    if set(b) != set(a) | {low} or a_odd != b_odd:
+        errors.append("adding a settlement would change which provinces the "
+                      "campaign holds beyond the one being added")
+    elif any(a[k] != b[k] for k in a):
+        errors.append("adding a settlement would rewrite a block it was not "
+                      "adding")
+    node = find_settlement(done, region)
+    home = faction_of(done, node) if node is not None else None
+    if home is None or str(home.get("name") or home.name).lower() != owner.lower():
+        errors.append(f"the new block would not land inside {owner}'s faction "
+                      f"block")
+    return ("" if errors else text), errors
+
+
+# ---------------------------------------------------------------------------
 # the plan
 
 

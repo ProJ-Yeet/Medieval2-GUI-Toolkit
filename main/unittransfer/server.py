@@ -209,6 +209,9 @@ show the unsaved map rather than the one on disk.
   POST /api/map/region_start|_cancel
                                  -> the new-region wizard's record, decided
                                     before a pixel of it is painted
+  POST /api/map/region_vocab     -> the wizard's pickers: the creator factions,
+                                    the owners, the music types and which
+                                    campaigns read this map (B1)
   POST /api/map/paint_plan|_apply
                                  -> write every painted layer, the new region's
                                     record, and (19a) the two names the player
@@ -2125,7 +2128,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/map/plan", "/api/map/apply"):
                 return self._json(self._map_write(u.path.rsplit("/", 1)[-1], body))
             if (u.path.startswith("/api/map/paint")
-                    or u.path in ("/api/map/region_start", "/api/map/region_cancel")):
+                    or u.path in ("/api/map/region_start", "/api/map/region_cancel",
+                                  "/api/map/region_vocab")):
                 return self._json(self._paint(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/settlement_plan", "/api/map/settlement_apply"):
                 return self._json(self._settlement(
@@ -2800,6 +2804,8 @@ class Handler(BaseHTTPRequestHandler):
                 out = campaint.start_region(sess, body)
             elif action == "region_cancel":
                 out = campaint.cancel_region(sess)
+            elif action == "region_vocab":
+                out = campaint.wizard_vocab(sess)
             elif action in ("paint_plan", "paint_apply"):
                 plan = campaint.plan_paint(sess)
                 out = {"plan": plan.payload(), "state": sess.state()}

@@ -25,6 +25,48 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## B1 - a new province in every campaign that reads the map (2026-09-11)
+The first session after the user's instruction that **nothing is released
+until the roadmap is finished**, so it opened by committing the two held beta
+fixes (flush-left `descr_regions.txt`, cross-row TGA RLE) unreleased, and
+closed with a commit and no cut.
+
+**The session's finding is that B1 was filed as the smaller half of itself.**
+"The wizard does not write `descr_strat.txt`" was true, and the log's first
+complaint was not about that: `cannot find this pixel colour(8,8,8) in the
+region_db`, with 8 8 8 the wizard's first suggested colour. The game had the
+pixels and not the record. Measured on the three installs, the engine takes
+each map file separately - vanilla's `norman_prologue` has its own
+`map_regions.tga` and no `descr_regions.txt`, Third Age Reforged's Fellowship
+has its own of everything including `map.rwm` - so a campaign can read the
+base pixels through a record file of its own, and the paint tool only ever
+wrote the base one. `campaint.map_campaigns` is that question asked per
+campaign, and every campaign-side write B1 added goes through it.
+
+**The settlement writer was measured before it was trusted.** Run over all 133
+faction blocks of the six installed campaigns it passes its own guard every
+time: one more settlement, every other block byte-identical, landed in the
+faction it was given. The first draft copied DaC's blank line before its
+buildings into a block that has none, which read as a stray gap before the
+closing brace; the template's trailing blanks are trimmed now. The population
+is the median of the file's own villages - 452 and 586 on DaC's two campaigns,
+400 and 618 on Third Age Reforged's, 800 and 1,200 on vanilla's - rather than a
+constant.
+
+**Two claims in the filed item were checked and one was softened.** "`slave` is
+not a legal value for the creator faction" could not be proved - it is a
+faction, and nothing here reads the engine's rule - so it is a warning with the
+measurement beside it: 0 of the 509 records on the three installed maps use it.
+And G2 was marked "moved into B1"; B1 gives a NEW province a music type, which
+is half of G2, and changing an existing one's is still not on the region form.
+
+**Verified in the running app**, on Divide and Conquer: the wizard's pickers
+read 31 creators out of `descr_sm_factions.txt` with their localised names, 31
+owners with the rebels preselected, 16 music types, and name both campaigns as
+the ones that will be written; a blank creator is refused with its own
+sentence. The record was opened and cancelled, and nothing was saved to the
+real mod.
+
 ## 20a - three layers, read properly (2026-09-10)
 `mapvocab.RIVER_CODES` and two helpers beside it, `campmap.HOTKEYS` out with
 every layer in the manifest, `mapcheck` reading the tuple rather than keeping
@@ -2090,6 +2132,53 @@ evidence reports nothing**, and **a baseline shows and stops blocking; it never
 hides**. Two more were already locked there under different wording (Pillow
 only, and the browser never parses a TGA). They are left in the list below as
 well, because a dated entry is the record of when the call was made.
+
+Moved from `STATE.md` on 2026-09-11, when B1 took the list past ten again:
+everything dated 2026-09-09 and before, newest first. The cut-as-it-lands
+entry among them was suspended the same day.
+
+- 2026-09-09: **A rename is position-aware; a token walk is not good enough
+  here.** `unitrefs.py`'s rule - rewrite the token wherever it stands alone -
+  works over unit types and corrupts these three namespaces. Divide and Conquer's
+  settlement `Eregion` is also a hidden resource on twenty other regions' flags
+  line **in the same file**, and settlement names matched in sixty files across
+  the two installed mods. Every file is asked which of its *lines* may hold a
+  name of this kind, through the module that owns it.
+- 2026-09-09: **A clone reports what a rename must follow, and that is not an
+  inconsistency.** `factionclone.REVIEW_FILES` are files where naming the donor
+  is a judgement - adding a clone to `and FactionType sicily` rewrites a boolean.
+  A rename adds nothing: the condition already exists and already means this
+  faction. So traits, ancillaries, prebattle speeches, missions and guilds are
+  rename sites. `descr_strat.txt` is the mirror: a clone refuses it because there
+  is nothing to copy, a rename must follow it because the block is there.
+- 2026-09-09: **Cut every change as it lands, and let the change pick the
+  lines.** The user's standing instruction: no asking, and no letting phases pile
+  up the way 18a, 18b and 19a did. Map-only work is **the beta alone**; anything
+  touching the rest of the toolkit is a subrelease, which is both lines.
+  `HANDOFF.md` rule 1 carries the steps.
+- 2026-09-09: **A round trip is not a proof that a format is understood.**
+  `minorfiles.parse_names` reproduced `descr_names.txt` byte for byte while
+  reading a `surnames` heading as a character name, because a line it misfiles
+  is still a line it writes back. 19b found the same shape in prose rather than
+  code: three places said `descr_strat.txt` points at a settlement's name, and
+  measured over both installed mods it does not. **A claim that is nearly true is
+  what the next session builds on.**
+- 2026-09-09: **One save per file, unless one act spans several.** 18a's rule
+  stands; the exceptions are a record being created and now a rename, where an
+  undo of half of it leaves a mod that will not load.
+- 2026-09-07: **A value can be the thing with no evidence, not just a file.**
+  Vanilla writes `region the sea` in two disaster blocks and there is no such
+  region in `descr_regions.txt`. `campevents.SEA_REGION` is the exemption.
+- 2026-09-07: **A repeatable key needs two descriptions of one edit** - the
+  positional splice for the disk (smallest diff) and the multiset difference for
+  the dialog. `campevents._list_changes`.
+- 2026-09-07: **A file whose definition keyword is also an effect keyword is
+  told apart by word count, not by section.** `triggers.DEFINITION_WORDS`.
+- 2026-09-05: **Future work gets a phase number; a version number is assigned
+  only when something is cut.**
+- 2026-09-05: **A finished phase leaves the roadmap** - write-ups to
+  `ROADMAP_ARCHIVE.md`, session logs to `STATE_ARCHIVE.md`, in the same commit
+  that marks the phase done.
 
 - 2026-09-04: **A rule with no evidence reports nothing.** The validator's
   rules that need a vocabulary ask for it first and, when the file is not on

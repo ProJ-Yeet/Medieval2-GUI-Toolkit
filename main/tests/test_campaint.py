@@ -26,6 +26,9 @@ Six parts, the last three of which need a game install:
     2  the brush and the bucket, on grids whose answer is workable by hand
     3  a whole small map on disk: strokes, snapping, refusals, undo
     4  the new-region wizard end to end, and every rule it enforces
+    4b B1: the province reaches every campaign that reads the map - a
+       settlement, a music type, the lookup pair, a campaign's own record
+       file and its own compiled map - and one undo takes all of it back
     5  every real map: a stroke, a re-encode and an undo
     6  the routes over real HTTP, a real save, and the Log's Undo
 
@@ -46,8 +49,8 @@ sys.path.insert(0, str(ROOT))
 from PIL import Image
 
 from tests import _realmod, _tmp
-from unittransfer import (campaint, campmap, config, mapcheck, mapvocab,
-                          stringsbin, transfer)
+from unittransfer import (campaint, campmap, campstrat, config, mapcheck,
+                          mapquery, mapvocab, stratedit, stringsbin, transfer)
 from unittransfer.maptga import TgaInfo, encode, probe, read
 from unittransfer.mod import Mod
 from unittransfer.server import Handler, Registry, _Server
@@ -393,6 +396,7 @@ print("\n4) a new province: the record, the pixels, the settlement and the port"
 sess3 = campaint.PaintSession(tiny, campmap.CampaignMap(tiny))
 cm3 = sess3.cm
 spec = {"name": "D_Province", "settlement": "Dtown", "rgb": [11, 12, 13],
+        "shown": "Dee Land", "settlement_shown": "Deetown",
         "faction": "slave", "rebels": "brigands", "religions": {"catholic": 100}}
 
 for bad, why in (
@@ -458,26 +462,31 @@ check("and the file it would write parses back to four records with the new "
       and campmap.parse_regions(p.region_text).by_name("D_Province").religions
           == {"catholic": 100})
 
-# 19a, D4. The wizard was creating provinces the validator then reported as
-# nameless, which is the one finding the toolkit produced against its own
-# output. Two claims: without the boxes it warns rather than refuses, and with
-# them the name reaches the file the GAME reads - the compiled archive, not the
-# .txt beside it.
-check("with no shown name it warns, in the words the validator will use",
-      any("loc.missing" in w for w in p.warnings) and not p.errors)
+# 19a, D4, and B1 on top of it. The wizard was creating provinces the validator
+# then reported as nameless; 19a made the two boxes a warning, and a beta log
+# showed the engine asserting on each missing one. So a blank box now refuses,
+# by the name of the box, and with them the name reaches the file the GAME
+# reads - the compiled archive, not the .txt beside it.
+sess3.new_region["shown"] = ""
+p = campaint.plan_paint(sess3)
+check("with no shown name the save is refused, naming the box to fill in",
+      any("Shown on the map" in e for e in p.errors)
+      and not any("Settlement, shown" in e for e in p.errors))
+sess3.new_region["shown"] = spec["shown"]
+check("…and the tiny map has no campaign, which is a warning and not a refusal",
+      any("no campaign" in w for w in campaint.plan_paint(sess3).warnings))
 
 sess3n = campaint.PaintSession(tiny, campmap.CampaignMap(tiny))
-campaint.start_region(sess3n, dict(spec, shown="Dee Land",
-                                   settlement_shown="Deetown"))
+campaint.start_region(sess3n, spec)
 campaint.paint(sess3n, {"tool": "brush", "target": "regions",
                         "region": "D_Province", "points": [[1, 2]], "size": 3})
 campaint.paint(sess3n, {"tool": "pencil", "target": "regions",
                         "region": "D_Province", "marker": "settlement",
                         "points": [[1, 2]]})
 pn = campaint.plan_paint(sess3n)
-check("with them it plans two text keys and no warning about the names file",
+check("with them it plans two text keys and no complaint about the names file",
       pn.loc_writes == {"D_Province": "Dee Land", "Dtown": "Deetown"}
-      and not any("loc.missing" in w for w in pn.warnings))
+      and not any("names" in e for e in pn.errors))
 names_before = (tiny_root / "data" / campmap.REGION_NAMES_REL).read_bytes()
 res = campaint.apply_paint(pn)
 check("the names file joins the one backup set the layers and the record are in",
@@ -529,6 +538,184 @@ check(f"religions totalling 90 refuse the save and say by how much: "
       f"{[e for e in errs if '100' in e][:1]}",
       any("-10" in e for e in errs))
 
+
+# ---- 4b) B1: the province reaches every campaign that reads the map ----------
+print("\n4b) B1 - a new province gets a settlement, a music type and a lookup "
+      "pair in every campaign that sees it")
+
+#: A start position in the shape vanilla writes one: England holding A with a
+#: wall, the rebels holding B and C as bare villages.
+STRAT = ("campaign\t\timperial_campaign\nplayable\n\tengland\nend\nunlockable\nend\n"
+         "nonplayable\n\tslave\nend\n\nstart_date\t1080 summer\n"
+         "end_date\t1530 winter\n\n"
+         "faction\tengland, comfortable caesar\ndenari\t1000\nsettlement\n{\n"
+         "\tlevel town\n\tregion A_Province\n\n\tyear_founded 0\n\tpopulation 1000\n"
+         "\tplan_set default_set\n\tfaction_creator england\n\tbuilding\n\t{\n"
+         "\t\ttype core_building wooden_pallisade\n\t}\n}\n\n"
+         "character\tWilliam, named character, male, leader, age 50, x 1, y 5\n"
+         "army\nunit\t\tNE Bodyguard\t\t\t\texp 1 armour 0 weapon_lvl 0\n\n"
+         "faction\tslave, comfortable caesar\ndenari\t1000\n"
+         "settlement\n{\n\tlevel village\n\tregion B_Province\n\n\tyear_founded 0\n"
+         "\tpopulation 500\n\tplan_set default_set\n\tfaction_creator england\n}\n\n"
+         "settlement\n{\n\tlevel village\n\tregion C_Province\n\n\tyear_founded 0\n"
+         "\tpopulation 700\n\tplan_set default_set\n\tfaction_creator england\n}\n\n"
+         "faction_standings\tengland, 0.0 slave\n").replace("\n", "\r\n")
+MUSIC = ("; generated by Geomod\r\n\r\nmusic_type northern_european\r\n\r\n"
+         "regions A_Province B_Province ; the north\r\n\r\nfactions england\r\n\r\n"
+         "music_type southern_european\r\n\r\nregions C_Province\r\n\r\n"
+         "factions slave\r\n")
+LOOKUP = "A_Province\r\nAtown\r\nB_Province\r\nBtown\r\nC_Province\r\nCtown\r\n"
+
+tmp_b = Path(_tmp.mkdtemp(prefix="ut_b1_"))
+b1_root = tmp_b / "mods" / "Camp"
+b1_base = tiny_map(b1_root)
+(b1_base / "descr_sounds_music_types.txt").write_bytes(MUSIC.encode("latin-1"))
+camp = b1_root / "data" / "world/maps/campaign"
+#   imperial_campaign     reads everything from base, and ships a name lookup
+#   custom/Nested         reads base's pixels through its own descr_regions.txt,
+#                         and ships its own map.rwm - the beta user's crash
+#   custom/OwnMap         ships its own map_regions.tga, so it never sees them
+for rel in ("imperial_campaign", "custom/Nested", "custom/OwnMap"):
+    (camp / rel).mkdir(parents=True)
+    (camp / rel / "descr_strat.txt").write_bytes(STRAT.encode("latin-1"))
+(camp / "imperial_campaign" / campaint.LOOKUP_NAME).write_bytes(LOOKUP.encode())
+(camp / "custom/Nested" / campaint.LOOKUP_NAME).write_bytes(LOOKUP.encode())
+(camp / "custom/Nested" / "descr_regions.txt").write_bytes(RECORDS.encode("latin-1"))
+(camp / "custom/Nested" / "map.rwm").write_bytes(b"stale too")
+shutil.copy2(b1_base / "map_regions.tga", camp / "custom/OwnMap" / "map_regions.tga")
+camp_before = {p: p.read_bytes() for p in camp.rglob("*") if p.is_file()}
+music_before = (b1_base / "descr_sounds_music_types.txt").read_bytes()
+
+b1 = Mod(b1_root)
+rows = {c["campaign"]: c for c in campaint.map_campaigns(b1)}
+check(f"three campaigns, and which of the base map's files each reads: "
+      f"{ {k: v['reads_base'] for k, v in rows.items()} }",
+      rows["imperial_campaign"]["reads_base"] and rows["custom/Nested"]["reads_base"]
+      and not rows["custom/OwnMap"]["reads_base"])
+check("a campaign with its own descr_regions.txt reads THAT, not the base one",
+      rows["custom/Nested"]["regions"].endswith("custom/Nested/descr_regions.txt")
+      and rows["imperial_campaign"]["regions"] == campmap.REGIONS_REL)
+
+sb = campaint.PaintSession(b1, campmap.CampaignMap(b1))
+voc = campaint.region_vocab(b1)
+check(f"the pickers: creators out of the strat blocks ({voc['creators']}), "
+      f"because descr_sm_factions.txt is not on disk and says so",
+      voc["creators"] == ["england", "slave"]
+      and "not on disk" in voc["creators_from"])
+check(f"music types out of the base file: {[m['name'] for m in voc['music']]}",
+      [m["name"] for m in voc["music"]] == ["northern_european",
+                                            "southern_european"]
+      and voc["owner_default"] == "slave")
+
+b1spec = dict(spec, faction="england")
+for bad, why in ((dict(b1spec, faction="atlantis"), "a creator the mod defines nowhere"),
+                 (dict(b1spec, owner="atlantis"), "an owner with no faction block"),
+                 (dict(b1spec, music="jazz"), "a music type the file does not have")):
+    try:
+        campaint.start_region(sb, bad)
+        check(f"{why} is refused before a pixel is painted", False)
+    except campmap.MapError as exc:
+        check(f"{why} is refused before a pixel is painted: {str(exc)[:44]}…",
+              sb.new_region is None)
+
+campaint.start_region(sb, b1spec)
+check("an owner left blank is the rebels, so nobody's capital moves",
+      sb.new_region["owner"] == "slave")
+campaint.paint(sb, {"tool": "brush", "target": "regions", "region": "D_Province",
+                    "points": [[1, 2]], "size": 3})
+campaint.paint(sb, {"tool": "pencil", "target": "regions", "region": "D_Province",
+                    "marker": "settlement", "points": [[1, 2]]})
+pb = campaint.plan_paint(sb)
+check(f"the save plans: {len(pb.changes)} change(s), no refusal"
+      f"{'' if not pb.errors else ': ' + pb.errors[0][:60]}", not pb.errors)
+strat_rel = "world/maps/campaign/{}/descr_strat.txt"
+check(f"a settlement in both campaigns that see the pixels, and not in the "
+      f"one that does not: {sorted(pb.texts)}",
+      strat_rel.format("imperial_campaign") in pb.texts
+      and strat_rel.format("custom/Nested") in pb.texts
+      and strat_rel.format("custom/OwnMap") not in pb.texts)
+check("…and the one that does not is named in a warning rather than skipped "
+      "silently", any("custom/OwnMap" in w and "own map_regions.tga" in w
+                      for w in pb.warnings))
+check("the record goes into the campaign's own descr_regions.txt too, because "
+      "that is the copy it reads - the beta crash",
+      "world/maps/campaign/custom/Nested/descr_regions.txt" in pb.texts)
+check(f"the music type is the neighbour's with the longest border "
+      f"({pb.region.get('music_chosen')}), and the plan says whose",
+      pb.region.get("music_chosen") == "northern_european"
+      and any("A_Province" in w and "longest border" in w for w in pb.warnings))
+check("the campaign's own compiled map is on the delete list",
+      pb.deletes == ["world/maps/campaign/custom/Nested/map.rwm"])
+
+resb = campaint.apply_paint(pb)
+imp = campstrat.read_strat(b1, "imperial_campaign")
+node = stratedit.find_settlement(imp, "D_Province")
+check("after the save the start position has D_Province, held by the rebels",
+      node is not None and str(stratedit.faction_of(imp, node).get("name")
+                               or stratedit.faction_of(imp, node).name) == "slave")
+check("…as a village with no buildings, built by the creator the wizard was given",
+      str(node.get("level")) == "village" and not imp.children_of(node, "building")
+      and str(node.get("faction_creator")) == "england")
+check("…last in the rebels' block, so their first settlement is still B",
+      stratedit.capital_of(imp, imp.faction("slave")) == "B_Province")
+new_lines = (camp / "imperial_campaign/descr_strat.txt").read_bytes().split(b"\r\n")
+old_text = camp_before[camp / "imperial_campaign/descr_strat.txt"]
+check(f"and the file grew by exactly the one block: take its "
+      f"{node.end - node.start + 1} lines and the blank after them back out, and "
+      f"what is left is the old file byte for byte",
+      b"\r\n".join(new_lines[:node.start] + new_lines[node.end + 2:]) == old_text)
+music_now = (b1_base / "descr_sounds_music_types.txt").read_bytes().decode("latin-1")
+check("the music file has D_Province under northern_european, on the end of "
+      "its last regions line and in front of the comment",
+      mapquery.parse_music_types(music_now)["northern_european"]
+      == ["A_Province", "B_Province", "D_Province"]
+      and "regions A_Province B_Province D_Province ; the north\r\n" in music_now)
+check("…and every other line of the music file is byte for byte what it was",
+      [l for l in music_now.split("\r\n") if "D_Province" not in l]
+      == [l for l in music_before.decode("latin-1").split("\r\n")
+          if "B_Province ; the north" not in l])
+check("the name lookup got the pair, in both campaigns that ship one",
+      (camp / "imperial_campaign" / campaint.LOOKUP_NAME).read_bytes().decode()
+      .endswith("Ctown\r\nD_Province\r\nDtown\r\n")
+      and (camp / "custom/Nested" / campaint.LOOKUP_NAME).read_bytes().decode()
+      .endswith("D_Province\r\nDtown\r\n"))
+nested_rf = campmap.parse_regions(
+    (camp / "custom/Nested/descr_regions.txt").read_text("latin-1"))
+check("the nested campaign's own descr_regions.txt has the record, colour and all",
+      nested_rf.by_name("D_Province") is not None
+      and nested_rf.by_name("D_Province").rgb == (11, 12, 13))
+check("its map.rwm is gone, and the base one with it",
+      not (camp / "custom/Nested/map.rwm").exists()
+      and not (b1_root / "data" / campmap.RWM_REL).exists())
+check("the campaign with a map of its own is untouched, every file of it",
+      all(p.read_bytes() == b for p, b in camp_before.items()
+          if "OwnMap" in str(p)))
+
+transfer.undo(resb["record"]["id"])
+check("the Log's Undo puts every one of those files back byte for byte - both "
+      "strats, both lookups, the nested record, the music, and the rwm",
+      all(p.exists() and p.read_bytes() == b for p, b in camp_before.items())
+      and (b1_base / "descr_sounds_music_types.txt").read_bytes() == music_before)
+
+# owned by somebody real: England takes it, and England's capital stays A
+sb2 = campaint.PaintSession(b1, campmap.CampaignMap(b1))
+campaint.start_region(sb2, dict(b1spec, owner="england", music="southern_european"))
+campaint.paint(sb2, {"tool": "brush", "target": "regions", "region": "D_Province",
+                     "points": [[1, 2]], "size": 3})
+campaint.paint(sb2, {"tool": "pencil", "target": "regions", "region": "D_Province",
+                     "marker": "settlement", "points": [[1, 2]]})
+pb2 = campaint.plan_paint(sb2)
+done = campstrat.parse_strat(pb2.texts[strat_rel.format("imperial_campaign")])
+check("given to England, it lands in England's block and England's capital is "
+      "still A_Province",
+      str(stratedit.faction_of(done, stratedit.find_settlement(done, "D_Province"))
+          .get("name")) == "england"
+      and stratedit.capital_of(done, done.faction("england")) == "A_Province")
+check("a music type picked in the wizard wins over the neighbour's",
+      "D_Province" in mapquery.parse_music_types(
+          pb2.texts[mapquery.MUSIC_REL])["southern_european"])
+
+shutil.rmtree(tmp_b, ignore_errors=True)
 shutil.rmtree(tmp, ignore_errors=True)
 
 
@@ -600,6 +787,38 @@ else:
               "colour in one is a colour some table names",
               all(c["code_name"] for L in closed for c in L["colours"]))
 
+        # B1, on the real files: a settlement added to every campaign that
+        # reads this map, for every faction block it has, passes the writer's
+        # own guard - one more settlement, every other block untouched, landed
+        # in the faction it was given to.
+        rows = campaint.map_campaigns(mod)
+        tried = bad = 0
+        for c in rows:
+            sfc = campstrat.read_strat(mod, c["campaign"])
+            for f in sfc.of_kind("faction"):
+                owner = str(f.get("name") or f.name)
+                _, errs = stratedit.plan_new_settlement(sfc, "B1_Probe", owner,
+                                                        "england")
+                tried += 1
+                bad += bool(errs)
+        check(f"a new settlement lands cleanly in all {tried} faction blocks of "
+              f"its {len(rows)} campaign(s) "
+              f"({sum(c['reads_base'] for c in rows)} read this map)",
+              tried and not bad)
+        mpath = mod.data / mapquery.MUSIC_REL
+        if mpath.is_file():
+            mt = mpath.read_bytes().decode("latin-1")
+            types = mapquery.parse_music_types(mt)
+            first = next(iter(types))
+            added = mapquery.add_music_region(mt, first, "B1_Probe")
+            after = mapquery.parse_music_types(added)
+            check(f"B1_Probe joins {first} in its music types, and only there: "
+                  f"one line of {mt.count(chr(10)) + 1} changed",
+                  after[first] == types[first] + ["B1_Probe"]
+                  and all(after[k] == v for k, v in types.items() if k != first)
+                  and sum(a != b for a, b in zip(mt.split("\n"),
+                                                 added.split("\n"))) == 1)
+
 
 # ---- 6) the routes, over real HTTP -------------------------------------------
 print("\n6) /api/map/palette, /paint, /paint_undo, /region_start, /paint_apply")
@@ -621,6 +840,18 @@ else:
         if p.is_file():
             shutil.copy2(p, data / campmap.BASE_REL / p.name)
     (data / campmap.RWM_REL).write_bytes(b"stale")
+    # B1. The save now reaches the campaign and needs the two shown names, so
+    # the copied mod gets a real campaign to write a settlement into and a names
+    # file to write into - the stock game keeps the second one packed.
+    camp_src = src / "data" / "world/maps/campaign/imperial_campaign"
+    camp_dst = data / "world/maps/campaign/imperial_campaign"
+    camp_dst.mkdir(parents=True)
+    shutil.copy2(camp_src / "descr_strat.txt", camp_dst / "descr_strat.txt")
+    (data / "text").mkdir(parents=True, exist_ok=True)
+    with open(data / campmap.REGION_NAMES_REL, "w", encoding="utf-16",
+              newline="") as fh:
+        fh.write("{Unrelated_Key}Unrelated\r\n")
+    strat_before = (camp_dst / "descr_strat.txt").read_bytes()
     config.save_settings(med2_root=str(med2), run_full_cleaner=False)
 
     Handler.registry = Registry(cfg / "icons")
@@ -700,9 +931,11 @@ else:
         rgb = next([r, g, b] for r in range(9, 250, 9) for g in range(9, 250, 11)
                    for b in range(9, 250, 13)
                    if ((r << 16) | (g << 8) | b) not in used)
+        creator = home["faction"] or "slave"
         r = post("/api/map/region_start",
                  {"name": "Test_Province", "settlement": "Testburg", "rgb": rgb,
-                  "faction": home["faction"] or "slave",
+                  "shown": "Test Province", "settlement_shown": "Testburg",
+                  "faction": creator,
                   "rebels": home["rebels"] or "brigands",
                   "religions": {"catholic": 100}})
         check(f"the wizard opens over HTTP with rgb({', '.join(map(str, rgb))})",
@@ -793,15 +1026,27 @@ else:
             check("and its record reads back through the 16d panel unchanged",
                   det["settlement"] == "Testburg" and det["religions"]
                   == {"catholic": 100} and not det["findings"])
+            sd = get("/api/map/settlement?mod=MapMod&campaign=imperial_campaign"
+                     "&region=Test_Province")
+            check(f"B1: the campaign starts somebody in it - the settlement panel "
+                  f"opens on it: a {sd.get('level')} held by {sd.get('owner')}, "
+                  f"built by {sd.get('faction_creator')}",
+                  sd.get("owner") == "slave" and sd.get("level") == "village"
+                  and sd.get("faction_creator") == creator
+                  and not sd.get("is_capital"))
+            check("…in the stock game's own descr_strat.txt, in the backup set",
+                  "world/maps/campaign/imperial_campaign/descr_strat.txt"
+                  in res["record"]["manifest"]["backed_up"])
 
             post("/api/undo", {"id": res["record"]["id"]})
             check("the Log's Undo puts the layer back byte-exact",
                   (data / campmap.BASE_REL / "map_regions.tga").read_bytes()
                   == layer_before["map_regions.tga"])
-            check("…and descr_regions.txt, and map.rwm, because all three were "
-                  "one backup set",
+            check("…and descr_regions.txt, map.rwm and the campaign, because all "
+                  "of them were one backup set",
                   (data / campmap.REGIONS_REL).read_bytes() == regions_before
-                  and (data / campmap.RWM_REL).read_bytes() == b"stale")
+                  and (data / campmap.RWM_REL).read_bytes() == b"stale"
+                  and (camp_dst / "descr_strat.txt").read_bytes() == strat_before)
 
             r = post("/api/map/paint_state", {})
             check("and the session is gone with the save, rather than left "
