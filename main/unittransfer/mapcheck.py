@@ -819,6 +819,57 @@ def _r_climate_colours(ck: Check) -> Iterable[Finding]:
                             "climate.unknown", "fatal")
 
 
+@rule("terrain.texture", "Tiles the terrain cannot be drawn on", "warn",
+      "TWMapReader draws a texture it cannot find pink and reports it, rather "
+      "than skipping the tile; 23a took the rule as it stands")
+def _r_terrain_textures(ck: Check) -> Iterable[Finding]:
+    """A tile the aerial-map terrain has no picture for.
+
+    Three ways that happens and the module names all three: the file has no
+    entry for this climate and ground type, the entry names a texture the
+    folder does not hold, or it holds one that will not read. Each comes out
+    :data:`~unittransfer.mapterrain.MISSING_RGB` on the terrain backdrop, so
+    the finding and the pink are the same measurement rather than two.
+
+    The plan is kept per map, so this is about twenty milliseconds on a screen
+    that has already drawn the terrain and about two hundred on one that has
+    not - which is why it is a plan and not a composite: the picture is a
+    second of work and no rule here needs it.
+
+    A mod with no ``descr_aerial_map_ground_types.txt`` turns the rule off by
+    name. The game's own copy is inside a ``.pack``, so a mod that changed
+    nothing about its terrain does not ship one, and reading that as "every
+    tile is undrawable" would report the stock map as 250,000 faults.
+    """
+    from . import mapterrain
+    try:
+        p = mapterrain.plan(ck.mod, ck.cm, ck.campaign)
+    except mapterrain.TerrainError as exc:
+        ck.skip(mapterrain.AERIAL_REL, str(exc))
+        return
+    except (MapError, OSError) as exc:
+        ck.skip(mapterrain.AERIAL_REL, str(exc))
+        return
+    for gap in p.gaps + mapterrain.check_textures(ck.mod, p):
+        what = gap["file"] or f"{gap['climate']}/{gap['ground']}"
+        # the file somebody would go and fix, which is not always the aerial
+        # one: a tile whose ground type is sea and whose height is land is a
+        # quarrel between two layers and the texture table is a bystander
+        if gap["file"]:
+            where = f"{mapterrain.TEXTURE_DIR_REL}/{gap['file']}"
+        elif gap["ground"] in mapterrain.SEA_GROUND:
+            where = ck.rel(LAYER_BY_CODE["ground_types"]["file"])
+        else:
+            where = mapterrain.AERIAL_REL
+        yield Finding(
+            "terrain.texture", "warn",
+            f"{gap['why']} The tiles are drawn "
+            f"rgb({', '.join(str(v) for v in mapterrain.MISSING_RGB)}) on the "
+            f"terrain backdrop rather than left out, so they can be found.",
+            file=where, tile=tuple(gap["tile"]) if gap["tile"] else None,
+            count=gap["tiles"], what=what)
+
+
 # ---------------------------------------------------------------------------
 # 5) rivers
 

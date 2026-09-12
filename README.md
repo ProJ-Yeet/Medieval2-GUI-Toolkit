@@ -39,7 +39,7 @@ one containing `mods`).
 | Unit Editor | Change, clone or delete the units of a single mod |
 | BMDB + Sprites | Edit any `battle_models.modeldb` entry, view models in 3D, and clean out what nothing references |
 | Buildings | Browse and edit `export_descr_buildings.txt`, including recruitment |
-| Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, place, move or remove a fort, a watchtower or a trade resource, set which mercenary pool a province hires from, name a faction on the new-game menu, edit the historical events a campaign fires and the natural disasters its map allows, name a province and its settlement as the player reads them, rename a province or a settlement everywhere it is named, read the river network as an overlay of its own and the heights as relief, tick any of the ten layers with its own number key, find a province by the name the player reads or the one the files use, save what the map looks like under a name and come back to it, open any of the campaigns the mod ships rather than only the one the engine's menu lists, put every settlement's name on the map without one covering another, fill any coordinate by clicking the map, add a province that arrives in every campaign with a settlement and a music type, check the whole map against what the game will accept. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
+| Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, place, move or remove a fort, a watchtower or a trade resource, set which mercenary pool a province hires from, name a faction on the new-game menu, edit the historical events a campaign fires and the natural disasters its map allows, name a province and its settlement as the player reads them, rename a province or a settlement everywhere it is named, draw the ground with the game's own aerial-map textures, read the river network as an overlay of its own and the heights as relief, tick any of the ten layers with its own number key, find a province by the name the player reads or the one the files use, save what the map looks like under a name and come back to it, open any of the campaigns the mod ships rather than only the one the engine's menu lists, put every settlement's name on the map without one covering another, fill any coordinate by clicking the map, add a province that arrives in every campaign with a settlement and a music type, check the whole map against what the game will accept. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
 | Unit Sounds | Choose which voice bank entry each unit uses |
 | Sprites | Generate and wire up the far-LOD unit sprites |
 | Strings | Read and write the compiled `data/text/*.txt.strings.bin` files |
@@ -106,6 +106,16 @@ every campaign the mod ships with what is in each one, and opens it: a mod
 routinely keeps a second campaign in a subfolder that the engine's own new-game
 menu never lists, and both mods this was measured against have one.
 
+**Terrain textures**, on the Ground types row, draws the ground the way the game
+does: the mod's own aerial-map textures out of
+`data/terrain/aerial_map/ground_types`, one per climate and ground type, tiled
+so that neighbouring tiles of one texture continue each other rather than each
+showing a copy. It is built once, so panning and zooming over it costs nothing,
+and it is drawn under the whole stack, so the provinces, the markers and the
+names still read on top of it. **A tile whose texture cannot be found is drawn
+pink and counted, never quietly skipped** - the panel says how many, and
+✓ Check names the file and a tile to go and look at for each one.
+
 **Labels** (`L`) puts every settlement's name beside it on the map, placed so
 that no name covers another name or another settlement. The font does not grow
 with the zoom, and a name with no room is left off rather than drawn over its
@@ -116,8 +126,9 @@ coordinates `descr_strat.txt` uses, without selecting anything on the way.
 
 **↺ Reset** on the map's toolbar puts everything about how the map is read
 back to how it first opens - which layers are on, their opacity and order, the
-colours punched out of them, the rivers and heights readings, names, the
-tooltip, the markers, the query panel's colouring and filters, and the zoom.
+colours punched out of them, the terrain textures, the rivers and heights
+readings, names, the tooltip, the markers, the query panel's colouring and
+filters, and the zoom.
 Saved views, the campaign you are reading and unsaved painting are kept.
 
 **🏰 Forts and resources** places a fort, a watchtower or a trade resource

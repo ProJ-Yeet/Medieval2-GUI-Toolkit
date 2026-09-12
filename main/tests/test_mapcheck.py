@@ -43,7 +43,7 @@ sys.path.insert(0, str(ROOT))
 from PIL import Image
 
 from tests import _realmod, _tmp
-from unittransfer import campmap, campstrat, config, mapcheck, mapvocab, transfer
+from unittransfer import campmap, campstrat, config, mapcheck, mapterrain, mapvocab, transfer
 from unittransfer.maptga import TgaInfo, encode, read
 from unittransfer.mod import Mod
 from unittransfer.server import Handler, Registry, _Server
@@ -247,6 +247,19 @@ def tiny_map(root: Path) -> Path:
     data = root / "data"
     (data / mapvocab.CLIMATES_REL).parent.mkdir(parents=True, exist_ok=True)
     (data / mapvocab.CLIMATES_REL).write_text(CLIMATES, encoding="latin-1")
+    # 23a: a texture for every ground type a tile of this map can be, so that
+    # `terrain.texture` runs rather than skipping - a rule that skips on the
+    # clean map is a rule none of the breaks below could be measured against.
+    # The sea types are deliberately left out, which is what every real mod's
+    # file does: the engine draws the sea from another folder entirely.
+    (data / mapterrain.AERIAL_REL).write_text(
+        "climate default\n{\n" + "".join(
+            f"\t{g['code']}\tflat.tga\tflat.tga\n" for g in mapvocab.GROUND_TYPES
+            if g["code"] not in mapvocab.SEA_GROUND) + "}\n", encoding="latin-1")
+    tex = data / mapterrain.TEXTURE_DIR_REL
+    tex.mkdir(parents=True, exist_ok=True)
+    write_tga(tex / "flat.tga", Image.new("RGB", (32, 32), (60, 110, 40)),
+              depth=24, desc=0x00)
     camp = data / campstrat.CAMPAIGN_DIR_REL / campstrat.DEFAULT_CAMPAIGN
     camp.mkdir(parents=True, exist_ok=True)
     (camp / campstrat.STRAT_NAME).write_bytes(STRAT.encode("latin-1"))

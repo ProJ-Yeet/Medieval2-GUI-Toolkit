@@ -126,6 +126,9 @@ async function loadCampmap(){
   state.cpin = null;      // 20c: a pin was asking for a tile on the last map
   renderCampmap();
   cmapLoadLayers();
+  // 23a: a habit kept between sessions, like the layer stack itself, so a map
+  // last left showing its terrain opens showing it
+  if(state.cmap.terrain.on) cmapTerrainLoad();
 }
 
 /* The screen's whole state, in one object, rebuilt whenever the mod changes.
@@ -184,6 +187,8 @@ function cmapLayerState(){
   }
   m.river = {on: !!c.rivers, rgb: c.riverRgb.slice()};
   m.height_alpha = !!c.heightAlpha;
+  // 23a: the third reading, kept beside the other two
+  m.terrain = !!(c.terrain && c.terrain.on);
   m.tip = c.tip !== false;
   // 20c, T4: settlement names are a way of looking at the map, not a place
   m.labels = !!c.labels;
@@ -210,7 +215,8 @@ function cmapSaveLayers(){
    the map looks wrong there was no way back but to undo each one by hand. This
    is the one way back. It is the defaults `cmapNew` falls to with nothing
    saved - each layer's own `on`, `opacity` and blank colour, the server's
-   order, the rivers and heights readings off, the tooltip on and the names off
+   order, the terrain textures and the rivers and heights readings off, the
+   tooltip on and the names off
    - plus the query panel's colouring and filters, the marker layer and the
    zoom, and it saves the result so the next session opens the same way.
 
@@ -222,8 +228,9 @@ function cmapResetView(){
   if(!c) return;
   if(!confirm('Put the campaign map back to how it first opens?\n\n'
     + 'Every layer, its opacity, its order and the colours punched out of it; '
-    + 'the rivers and heights readings; settlement names and the tooltip; the '
-    + 'markers; the query panel\'s colouring and filters; and the zoom.\n\n'
+    + 'the terrain textures, and the rivers and heights readings; settlement '
+    + 'names and the tooltip; the markers; the query panel\'s colouring and '
+    + 'filters; and the zoom.\n\n'
     + 'Saved views, the campaign you are reading and any unsaved painting are kept.'))
     return;
   for(const l of c.man.layers){
@@ -237,6 +244,9 @@ function cmapResetView(){
   c.order = cmapOrder(c.man, []);
   c.rivers = false; c.riverRgb = CMAP_RIVER_RGB.slice();
   c.heightAlpha = false; c.tip = true; c.labels = false; c.lab = null;
+  // the picture is kept, not thrown away: it is a megabyte the server built and
+  // nothing about it has changed, so turning the reading back on is instant
+  c.terrain.on = false;
   c.overlay = null; c.overlayKey = ''; c.overlayAlpha = 0.85;
   c.comp = null; c.compKey = '';
   // the query panel and the marker layer are panels of their own; nulling them
@@ -339,6 +349,17 @@ function cmapNew(mod, man){
     rivers: !!(saved.river && saved.river.on),
     riverRgb: (saved.river && saved.river.rgb) || CMAP_RIVER_RGB.slice(),
     heightAlpha: !!saved.height_alpha,
+    /* 23a, D7 and T1: the ground drawn with the game's own aerial textures.
+
+       A third reading of a layer, and it lives here for the reason the two
+       above do - it is `map_ground_types.tga` and `map_climates.tga` read the
+       way the engine reads them, not an eleventh file. What is different is
+       that Python draws it: it is several pixels a tile rather than one, so it
+       cannot go through the mask pass or into the composite, and it arrives as
+       one picture that is blitted under the stack. `scale` is how many of its
+       pixels a tile is, which is the whole of the arithmetic on this side. */
+    terrain: {on: !!saved.terrain, img: null, scale: 1, loading: false,
+              failed: '', facts: null, key: '', stale: false},
     // 20c, T4: settlement names on the map, and the layout for the zoom on
     // screen - see maplabels.js. Off until somebody turns it on, like 17d's
     // markers: a map that opens under two hundred names is a different map.
@@ -496,6 +517,10 @@ async function cmapRefetchMap(){
   }
   renderCampmap();
   if(changed) cmapLoadLayers(); else { cmapCompose(); cmapPaint(); }
+  // 23a: the composite is of the two layers THIS campaign reads, and its key
+  // carries the campaign, so a campaign that ships its own climates gets its
+  // own terrain. Fetched again rather than kept, for the same reason a layer is.
+  if(c.terrain.on){ c.terrain.img = null; c.terrain.key = ''; cmapTerrainLoad(); }
 }
 
 /* Where this campaign's map comes from, said under the Campaign button. Nothing
@@ -639,8 +664,9 @@ Answered here, out of the map you were already sent - no request per pixel.">ⓘ
 A name with no room at this zoom is left off and counted; zoom in for it.">Aa Labels</button>
           <button onclick="cmapResetView()"
             title="Put the map back to how it first opens: every layer, opacity, order and
-punched colour, the rivers and heights readings, names, the tooltip, the markers,
-the query panel's colouring and filters, and the zoom. Saved views are kept.">↺ Reset</button>
+punched colour, the terrain textures, the rivers and heights readings, names, the
+tooltip, the markers, the query panel's colouring and filters, and the zoom.
+Saved views are kept.">↺ Reset</button>
           <span class="count" id="cmZoom"></span>
         </div>
         <div class="cmpin" id="cmPin" hidden></div>
@@ -793,6 +819,7 @@ function cmapLayersHtml(){
    not being drawn is a control that appears to do nothing. */
 function cmapModeHtml(code){
   const c = state.cmap;
+  if(code === 'ground_types') return cmapTerrainHtml();
   if(code === 'features'){
     const n = c.layers.features.rivertiles;
     return `<div class="cmmode">
@@ -837,6 +864,153 @@ is under them shows through">Put it on top</button>` : ''}
     </div>`;
   }
   return '';
+}
+
+/* ---------- 23a: the terrain composite ---------- */
+
+/* The ground types row's own control, and what the composite is made of.
+
+   It sits on that row and not beside the stack, which is 20a's ruling applied
+   again: the stack is the ten files the map is made of, and this is two of them
+   read the way the engine reads them. The row's own opacity slider is what
+   fades it, so a control that was already there keeps meaning what it meant.
+
+   The count is the point of the sentence under it. A picture that is mostly
+   right is the hardest kind to check, so the panel says how many textures went
+   into it and how many tiles it could not draw, and the ✓ Check panel carries
+   the same figure with a tile to jump to for each one. */
+function cmapTerrainHtml(){
+  const c = state.cmap, t = c.terrain, f = t.facts;
+  // A stroke on either of the two layers it is made of makes it a picture of
+  // pixels that have moved. Said and offered, never done: the composite is a
+  // second of work and a brush that rebuilt it per stroke would be the lag 16c
+  // was written to avoid.
+  const old = (t.on && t.stale) ? `<span class="w-warn">the ground types or the
+      climates have been painted since this was drawn</span>
+      <button data-lterraindraw title="Build the composite again from the map as it is
+now, unsaved strokes included">↻ Redraw</button>` : '';
+  const note = t.loading ? `<span class="count">building the composite…</span>`
+    : old ? old
+    : t.failed ? `<span class="w-bad">${esc(t.failed)}</span>`
+    : (f && !f.have) ? `<span class="w-warn">${esc(f.problem)}</span>`
+    : (f && t.on) ? `<span class="count">${f.textures} texture${f.textures === 1 ? '' : 's'}
+        out of ${esc(f.vocabulary.folder)}, ${f.scale} pixels a tile${f.pink_tiles
+          ? '' : ' · every land tile drawn'}</span>${f.pink_tiles
+        ? ` <span class="w-warn" title="${esc(f.gaps.map(g => g.why).join('\n\n'))}">
+            ${f.pink_tiles.toLocaleString()} tile${f.pink_tiles === 1 ? '' : 's'}
+            have no texture and are drawn pink</span>` : ''}`
+    : '';
+  return `<div class="cmmode">
+    <label class="chk" title="Draw the ground the way the game does: this mod's own
+aerial-map textures, one per climate and ground type, out of
+data/terrain/aerial_map/ground_types. It is map_ground_types.tga and
+map_climates.tga read together rather than an eleventh layer, so it goes on this row -
+and it is drawn under the whole stack, because it is the ground.
+A tile whose texture cannot be found is drawn pink and counted, never skipped.">
+      <input type="checkbox" data-lterrain ${t.on ? 'checked' : ''}>
+      <span>Terrain textures</span></label>
+    ${note}
+  </div>`;
+}
+
+/* Ticked, and the rest follows. Same shape as `cmapMode`: the layer it is a
+   reading of is ticked on with it, because a reading of a layer nobody is
+   drawing is a control that appears to do nothing. */
+function cmapTerrain(on){
+  const c = state.cmap, L = c.layers.ground_types;
+  c.terrain.on = !!on;
+  activity('map layer', `${on ? 'drew' : 'stopped drawing'} the ground with the game's textures`);
+  if(on && L.def.present && !L.on) L.on = true;
+  L.maskKey = '';
+  if(L.img) cmapMask(c, 'ground_types');
+  cmapCompose(); cmapPaint(); cmapSaveLayers(); cmapRepanel();
+  if(on) cmapTerrainLoad();
+  if(!L.img && L.on) cmapLoadLayers();
+}
+
+/* The facts, then the picture. Both once per map and campaign.
+
+   FETCHED AS A PICTURE, deliberately, and it is the one thing on this screen
+   that is. 20c's rule is that a browser may alter a picture's PIXELS, so
+   anything whose colour is an answer arrives as bytes (`cmapFetchLayer`). This
+   is the opposite case: nothing reads a colour back off the terrain, because a
+   texture's colour means nothing - it is a photograph of a hillside. The rule
+   the terrain has to keep instead is that it is built once and never rebuilt by
+   a pan or a zoom, and an <img> the browser decodes once keeps it exactly. */
+async function cmapTerrainLoad(again){
+  const c = state.cmap, t = c.terrain;
+  const key = `${c.mod}|${c.campaign || ''}`;
+  if(t.loading || (!again && t.img && t.key === key)) return;
+  t.loading = true; t.failed = ''; t.stale = false;
+  const q = `?mod=${enc(c.mod)}${cmapCampQ()}`;
+  try{
+    const r = await fetch(`/api/map/terrain${q}`, {cache: 'no-store'});
+    if(!r.ok) throw new Error(`the server answered ${r.status}`);
+    const f = await r.json();
+    if(state.cmap !== c) return;
+    t.facts = f;
+    // a mod with no texture table is not a failure, it is an answer: the panel
+    // prints `f.problem` and there is no picture to ask for
+    if(!f.have) return;
+    const img = new Image();
+    await new Promise((ok, no) => {
+      img.onload = ok;
+      img.onerror = () => no(new Error('the composite would not decode'));
+      // `&drawn=` is not read by the server: it is the cache-buster for a
+      // redraw after painting, because the URL is otherwise identical and the
+      // browser would hand back the picture of the map before the stroke.
+      img.src = `/api/map/terrain${q}&format=png${again ? `&drawn=${Date.now()}` : ''}`;
+    });
+    if(state.cmap !== c) return;
+    t.img = img; t.scale = f.scale || 1; t.key = key;
+  }catch(e){
+    if(state.cmap === c) t.failed = errText(e);
+  }finally{
+    if(state.cmap === c){
+      t.loading = false;
+      // the picture arriving (or failing to) is what decides whether the flat
+      // ground types come out, so the mask and the composite are both redone
+      // here rather than when the tickbox moved
+      const L = c.layers.ground_types;
+      L.maskKey = '';
+      if(L.img) cmapMask(c, 'ground_types');
+      cmapCompose();
+      cmapPaint();
+      cmapRepanel();
+    }
+  }
+}
+
+/* Whether the backdrop is actually being drawn right now.
+
+   Three places have to agree about this and they used to be able to disagree:
+   the draw below, the composite's opaque background (which is left out only
+   when something is under it) and the composite's cache key. Ticking the
+   ground types layer off while the terrain was on took the picture away and
+   left the background out, and the map went black. One answer, read by all
+   three. */
+function cmapTerrainOn(c){
+  const t = c && c.terrain, L = c && c.layers.ground_types;
+  return !!(t && t.on && t.img && L && L.on && L.def.present);
+}
+
+/* The composite, blitted under everything, clipped to the tiles being repainted.
+
+   Its source rectangle is the dirty tile range times `scale`, so the picture is
+   addressed in tiles like every other coordinate on this screen and the pan and
+   the zoom need to know nothing about it. Smoothing while it is being shrunk
+   and not while it is being magnified, which is `cmapPaint`'s own rule: a
+   texture blurred down reads as terrain, and a texture blurred up reads as fog
+   over the tile you are trying to look at. */
+function cmapTerrainDraw(x, s0, t0, s1, t1){
+  const c = state.cmap, t = c.terrain, L = c.layers.ground_types;
+  if(!cmapTerrainOn(c)) return;
+  const v = c.view, z = t.scale;
+  x.imageSmoothingEnabled = v.zoom < z;
+  x.globalAlpha = L.opacity;
+  x.drawImage(t.img, s0 * z, t0 * z, (s1 - s0) * z, (t1 - t0) * z,
+              cmapX(s0), cmapY(t0), (s1 - s0) * v.zoom, (t1 - t0) * v.zoom);
+  x.globalAlpha = 1;
 }
 
 //: `#rrggbb` for an `<input type="color">`, and back. The screen keeps a triple
@@ -963,6 +1137,15 @@ function cmapWireLayers(){
   box.querySelectorAll('[data-lalpha]').forEach(cb => cb.onchange = () => {
     activity('map layer', `drew the heights as ${cb.checked ? 'transparency' : 'grey'}`);
     cmapMode('heights', 'heightAlpha', cb.checked);
+  });
+  // 23a's third reading. Its own toggler rather than `cmapMode`: the picture is
+  // fetched, not masked, so what follows a tick here is a request.
+  box.querySelectorAll('[data-lterrain]').forEach(cb => cb.onchange = () =>
+    cmapTerrain(cb.checked));
+  box.querySelectorAll('[data-lterraindraw]').forEach(b => b.onclick = () => {
+    activity('map layer', 'redrew the terrain composite');
+    cmapTerrainLoad(true);
+    cmapRepanel();
   });
 }
 
@@ -1146,7 +1329,8 @@ function cmapCompose(){
   // picture, and a composite that did not notice would show the old one
   const key = shown.map(code => `${code}:${c.layers[code].opacity}`
     + `:${cmapModeKey(c, code)}`).join('|')
-    + `|${c.overlayKey || ''}:${c.overlayAlpha}`;
+    + `|${c.overlayKey || ''}:${c.overlayAlpha}`
+    + `|terrain:${cmapTerrainOn(c) ? 1 : 0}`;
   if(key === c.compKey && c.comp) return;
   if(!c.comp){
     c.comp = document.createElement('canvas');
@@ -1156,9 +1340,14 @@ function cmapCompose(){
   x.setTransform(1, 0, 0, 1, 0, 0);
   x.clearRect(0, 0, m.width, m.height);
   // a map with every layer off is not a blank screen: it is the sea the tool
-  // draws around the map, so the shape of the thing is still there
-  x.fillStyle = '#0b0d11';
-  x.fillRect(0, 0, m.width, m.height);
+  // draws around the map, so the shape of the thing is still there.
+  // 23a's backdrop covers every tile of the map itself - texture, sea or pink -
+  // so while it is on this fill would be an opaque sheet over it and is left
+  // out. It is in the key above, so ticking the terrain off puts it back.
+  if(!cmapTerrainOn(c)){
+    x.fillStyle = '#0b0d11';
+    x.fillRect(0, 0, m.width, m.height);
+  }
   x.imageSmoothingEnabled = false;
   for(const code of shown){
     const L = c.layers[code];
@@ -1303,6 +1492,12 @@ function cmapPaint(dirty){
   const x1 = Math.min(m.width, Math.ceil((R[2] - v.ox) / v.zoom));
   const y1 = Math.min(m.height, Math.ceil((R[3] - v.oy) / v.zoom));
   if(x1 > x0 && y1 > y0){
+    // 23a's backdrop first, at its own several pixels a tile. It is under the
+    // whole stack rather than in it, which is the one thing about it worth
+    // stating: it is the ground, everything else on this screen is drawn on
+    // top of the ground, and it is too detailed to go into a composite that is
+    // one pixel a tile.
+    cmapTerrainDraw(x, x0, y0, x1, y1);
     // Crisp once a tile is bigger than a screen pixel: this is a tool for
     // seeing which pixel a settlement stands on, and blur is the enemy of that.
     x.imageSmoothingEnabled = v.zoom < 1;
@@ -2123,7 +2318,16 @@ function cmapModeKey(c, code){
   const bits = [...L.hide].sort().join('.');
   const riv = (code === 'features' && c.rivers) ? `riv:${c.riverRgb.join(',')}` : '';
   const alp = (code === 'heights' && c.heightAlpha) ? 'alpha' : '';
-  return [bits, riv, alp].filter(Boolean).join('|');
+  // 23a: with the terrain on, the ground types layer draws nothing INTO the
+  // composite - the composite would be one flat colour a tile over a picture
+  // that is several pixels a tile, which is the detail the whole feature is.
+  // It is in the key like the other two readings, so turning it off brings the
+  // colours back without anything else having to remember to rebuild.
+  // `cmapTerrainOn` and not `terrain.on`, so the flat colours stay on screen
+  // while the composite is being built and stay there for good if it will not
+  // build. A layer emptied for a picture that never arrived is a blank map.
+  const ter = (code === 'ground_types' && cmapTerrainOn(c)) ? 'terrain' : '';
+  return [bits, riv, alp, ter].filter(Boolean).join('|');
 }
 
 /* A layer picture with its colours punched out, lifted out, or turned into
@@ -2161,6 +2365,15 @@ function cmapMask(c, code){
   const x = cv.getContext('2d');
   x.imageSmoothingEnabled = false;
   const im = cmapImageData(new Uint8ClampedArray(R.data), w, h), d = im.data;
+  // 23a: the terrain composite IS this layer, drawn properly and underneath, so
+  // the flat colours come out entirely rather than being blended with it. The
+  // layer stays ticked on: it is what the row's opacity fades and what the
+  // legend still names, and both are about the same pixels.
+  if(code === 'ground_types' && cmapTerrainOn(c)){
+    for(let p = 3, n = w * h * 4; p < n; p += 4) d[p] = 0;
+    x.putImageData(im, 0, 0);
+    L.masked = cv; L.maskKey = want; return;
+  }
   const riv = (code === 'features' && c.rivers) ? cmapRiverKeys() : null;
   const rgb = c.riverRgb;
   const ramp = (code === 'heights' && c.heightAlpha)
@@ -2202,6 +2415,12 @@ function cmapAfterPaint(codes){
     L.maskKey = ''; L.ramp = null;
     cmapMask(c, code);
   }
+  // 23a: the terrain is built out of the ground types and the climates, so a
+  // stroke on either makes the picture on screen one of the map before it. The
+  // panel says so and offers the redraw; see `cmapTerrainHtml`.
+  const wasStale = c.terrain.stale;
+  if(c.terrain.on && codes.some(x => x === 'ground_types' || x === 'climates'))
+    c.terrain.stale = true;
   c.compKey = '';
   if(codes.indexOf('regions') >= 0){
     c.outline = null; c.outlineKey = -1;
@@ -2213,6 +2432,8 @@ function cmapAfterPaint(codes){
   }
   cmapCompose();
   cmapPaint();
+  // the one thing here that changes the panel rather than the canvas
+  if(c.terrain.stale && !wasStale) cmapRepanel();
 }
 
 function cmapHideColour(code, key, on){

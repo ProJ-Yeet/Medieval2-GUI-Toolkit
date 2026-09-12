@@ -918,12 +918,13 @@
   "src/components/map/MapCanvas.jsx": {
    "disposition": "port-concept",
    "phases": [
-    "16"
+    "16",
+    "23"
    ],
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "gone",
    "first_seen": "7cab442",
-   "notes": ""
+   "notes": "D7 = T1, done in 23a as the terrain composite (unittransfer/mapterrain.py): the mod's own aerial-map textures, one per (climate, ground type) pair, on TWMapReader's specification rather than this one - a texture that cannot be found is drawn pink and reported. The winter set is 23b"
   },
   "src/components/map/MapLayerPanel.jsx": {
    "disposition": "port-concept",

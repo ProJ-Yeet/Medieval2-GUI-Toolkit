@@ -159,6 +159,10 @@ function cvwPlan(man, preset){
                && p.river.rgb.every(v => typeof v === 'number'))
       ? p.river.rgb.slice() : CMAP_RIVER_RGB.slice(),
     heightAlpha: !!p.height_alpha,
+    // 23a: the terrain composite. A preset saved before it has no word on it
+    // and opens without it, which is what that view looked like when it was
+    // saved - the same reading 20c's names get two lines down.
+    terrain: !!p.terrain,
     // 20c, T4. A preset saved before 20c has no word on it and opens without
     // names, which is what that view looked like when it was saved.
     labels: !!p.labels,
@@ -194,12 +198,14 @@ function cvwLoad(i){
   c.rivers = plan.rivers;
   c.riverRgb = plan.riverRgb.slice();
   c.heightAlpha = plan.heightAlpha;
+  c.terrain.on = plan.terrain;
   c.labels = plan.labels; c.lab = null; c.saidZoom = null;
   const lb = document.getElementById('cmLabBtn');
   if(lb) lb.classList.toggle('on', !!c.labels);
   for(const code of c.order) if(c.layers[code].img) cmapMask(c, code);
   cmapCompose(); cmapPaint(); cmapSaveLayers(); cmapRepanel();
   cmapLoadLayers();
+  if(c.terrain.on) cmapTerrainLoad();
   // 16g's colouring, if the query panel is on this page at all. Applied last
   // because it is a request: the theme's table is the server's answer about
   // this mod, and everything above is already on screen by the time it lands.
@@ -226,7 +232,8 @@ function cvwAdd(){
   }
   const name = prompt('Save this view as:\n\n'
     + 'Which layers are drawn, in what order, at what opacity, the colours '
-    + 'punched out of each, the rivers and heights readings, the settlement '
+    + 'punched out of each, the terrain textures and the rivers and heights '
+    + 'readings, the settlement '
     + 'names, and the colouring over the top. Not the zoom or the selection - '
     + 'those are about a place.',
     `${CVW_NAME} ${list.length + 1}`);

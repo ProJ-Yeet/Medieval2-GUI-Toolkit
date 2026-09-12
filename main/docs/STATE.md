@@ -1,17 +1,18 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-11 · v2.2.3 is still the latest 2.x and beta 2026-09-11 the
-latest beta · after 22b, resources and the snap, which closes Phase 22, and
-22c, a campaign's own map ·
+_Updated: 2026-09-12 · v2.2.3 is still the latest 2.x and beta 2026-09-11 the
+latest beta · after 23a, the texture composite ·
 **nothing is released until the roadmap is finished**_
 
 ## Next up
-**Phase 23a, the texture composite** (`ROADMAP.md`): the map drawn with the
-game's own aerial-map ground textures, one per (climate, ground type) pair,
-built once and never rebuilt by a pan or a zoom, and a missing texture drawn
-pink and reported, TWMapReader's rule. Which ground and climate layer to
-composite is `campmap.layer_map`'s answer for the campaign on the screen (22c).
-Then 23b and 24 - **three sessions left in all**, B2-B4 not counted. The 22b
-and 22c write-ups are in `ROADMAP_ARCHIVE.md`.
+**Phase 23b, winter and the tint** (`ROADMAP.md`): the winter texture set, which
+23a already reads and already routes - `mapterrain` takes a `season` everywhere
+and the browser sends `summer`, so this is a switch on the panel and, unless the
+tint needs one, nothing in Python. Then **T12, the HSB tint**, which goes *over*
+the composite rather than replacing the region layer: 16g's colourings replace
+it, and on a textured backdrop replacing it is exactly wrong. Also from T12, a
+border render type with an "inside" option and borders on all regions.
+Then 24 - **two sessions left in all**, B2-B4 not counted. The 23a write-up is
+in `ROADMAP_ARCHIVE.md`.
 
 **Do not release anything at the end of a session.** On 2026-09-11 the user
 said: "we wont publish until we finish all the sessions of our roadmap now".
@@ -44,7 +45,7 @@ the beta was the last thing cut.
 **21 belongs to BOTH lines.** Raw text is a menu mode of its own and the faction
 audit also draws in the Factions mode, so both are in the 2.x build with the map
 hidden; the audit's two campaign-row buttons appear only on the map screen.
-**22a, 22b and 22c are map work** and belong to the beta line only.
+**22a, 22b, 22c and 23a are map work** and belong to the beta line only.
 
 Betas are named by the **date** they were released, with a letter for a second
 in one day. The GitHub title is `M2 GUI-Kit V<X.Y.Z>` - hyphenated **GUI-Kit**,
@@ -56,24 +57,30 @@ rather than typing it from memory. The strict step-by-step is `HANDOFF.md`.
 two fixes are committed. **Fold them into the end-of-roadmap cut** - and B1 has
 to be added to both notes, since the beta note's "Not fixed" section describes
 exactly what B1 fixed. 20b, 20c, B1, 21, the map hover fix, 22a, 22b and 22c are
-not in any note yet either - and 22b's drag fix is worth a line of its own, since
-17d's drag never dropped in any cut.
+not in any note yet either, and neither is 23a - and 22b's drag fix is worth a
+line of its own, since 17d's drag never dropped in any cut.
 
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
+| 23a - The texture composite | **done** | Closed 2026-09-12, committed, **not released**. Closes D7 and T1. The map drawn with the mod's own aerial-map textures, TWMapReader's rules taken as they stand: pink for a texture that cannot be found, the `default` block inherited, wilderness drawn as fertility_low, and the two winter fallbacks. New: `unittransfer/mapterrain.py` (`parse`, `Vocabulary`, `plan`, `composite`, `check_textures`, `signature`, `view`, `_index`), `GET /api/map/terrain[&format=png]`, `mapcheck`'s `terrain.texture` rule, and a Terrain textures mode on the ground types row (`cmapTerrainOn` / `cmapTerrainDraw`). `tests/test_mapterrain.py` (63). |
 | 22c - A campaign's own map | **done** | Closed 2026-09-11, committed, **not released**. The follow-up 22b left: the map screen, ✓ Check and its fixes read a campaign's own map files. New: `Registry.map_for`, `campmap.shipped` / `layer_map` / `rel_of` / `base_readers` / `home_view`, `mapcheck.Check.rel`, `campaint.paints_for`; `cmapRefetchMap` / `cmapHomeNote` in `campmap.js`. `tests/test_campaignmap.py` (30). |
 | 22b - Resources, and the snap | done | Closed 2026-09-11, committed, **not released**. Closes D9, D10, G5 and Phase 22. New: `unittransfer/mapsnap.py`, `campmap.campaign_map` / `map_of`, `mapcheck.position_faults` / `duplicate_message`; `stratobj` takes `resource` (`Layout`, `resource_home`, `Census`, `Vocabulary.snap`); `stratchar._shore`, `campaint._marker_near`; `cmapLocate` in `campmap.js`, and 17d's drag counts the pointer's travel. `tests/test_stratres.py` (67). |
 | 22a - Forts and watchtowers | done | Closed 2026-09-11, committed, **not released**. First half of D9 (and G5). New: `unittransfer/stratobj.py` (`plan`, `apply`, `view`, `Vocabulary`, `render_line`, `new_section`), `web/js/campforts.js` (the 🏰 Forts panel), `GET /api/map/objects`, `POST /api/map/object_plan\|_apply`. 17d's drag takes forts and watchtowers (`CMK_DRAGGABLE`). `tests/test_stratobj.py` (65). |
 | 21 - Two screens over data we hold | done | Closed 2026-09-11, committed, **not released**. Closes D6, D11 (= M14) and the Now set. New: `unittransfer/factionaudit.py` (`Census`, `evaluate`, `audit`, `repair_plan`), `unittransfer/rawtext.py` (`files`, `read`, `splice`, `plan`, `apply`), `web/js/facaudit.js`, `web/js/rawtext.js`, the `rawtext` mode, `GET /api/factions/audit`, `POST /api/factions/repair_plan\|repair_apply`, `GET /api/raw/files\|file`, `POST /api/raw/plan\|apply`. `factionclone.clone_file` and `ClonePlan.action` (refactor, clone suites unchanged). `tests/test_factionaudit.py` (48), `tests/test_rawtext.py` (57). |
-| 23a-24 - the rest of the Next set (3.2.0) | **scoped** | Three sessions: the textured terrain render, winter and the tint, delete-a-region and create-a-campaign. |
+| 23b-24 - the rest of the Next set (3.2.0) | **scoped** | Two sessions: winter and the tint, then delete-a-region and create-a-campaign. |
 | B2-B4 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export; `Rename slot` on a packed mod. |
 | 25-27 | scoped, unscheduled | OSM backdrop, map resize, layer generators. |
 | 16-21 | done | 16-20a published on the beta line; 20b onward committed and uncut. The 3.0.0 and 3.1.0 numbers are still unassigned to a cut. |
 
 ## In-progress detail
-**Clean.** Nothing is mid-flight. All 99 suites were run after 22c: **95 pass
-and the same four do not**, the DaC four below, each on its documented number.
+**Clean.** Nothing is mid-flight. There are now 100 suites. After 23a the map
+set and the suites around it were re-run - `test_mapterrain` (63, new),
+`test_mapcheck` (86), `test_campaignmap`, `test_campaint`, `test_campedit`,
+`test_maplayers`, `test_mapquery`, `test_mapgo`, `test_maplabels`,
+`test_stratobj`, `test_stratres`, `test_campevents`, `test_campfiles`,
+`test_web_modules`, `test_liveness_and_cache` - and everything passes except
+the DaC four below, each on its documented number.
 
 **Four suites fail the same way on a clean `master`** - hard-coded Divide and
 Conquer numbers (77 port pixels, 13,153 newlines, 305 characters, 73,904 sea
@@ -107,10 +114,15 @@ the edits out from under it (21 did it once; see the archive).
 - `unittransfer/factionaudit.py` - **before adding any check about a faction.**
   `Census` already counts every slot in every file; gap or note is measured on
   the installed mods, never copied from a reference.
-- `Registry.map_for` and `campmap.layer_map` - **before 23a draws a layer.**
-  The engine reads a campaign's own copy of a map file where it ships one, and
-  so does the screen now; a texture built from the base map's ground layer is
-  not Fellowship's.
+- `Registry.map_for` and `campmap.layer_map` - **before a module draws a
+  layer.** The engine reads a campaign's own copy of a map file where it ships
+  one, and so does the screen; a texture built from the base map's ground layer
+  is not Fellowship's.
+- `unittransfer/mapterrain.py` - **before 23b, and before anything else needs a
+  layer's colours as one byte a tile.** `Vocabulary.texture` is the one place
+  the engine's four texture rules are applied and it already takes a season;
+  `_index` is the exact colour-to-index pass, in Pillow's C and 16x quicker than
+  a dictionary pass, with the slow one kept beside it as the reference.
 - `unittransfer/mapsnap.py` - before writing any rule about where something may
   stand. The search is there; hand it the rule and put `near` on the finding.
 - `unittransfer/stratobj.py` - one writer for every one-line thing on the map.
@@ -119,13 +131,40 @@ the edits out from under it (21 did it once; see the archive).
   there rather than growing a special case.
 
 ## Upstream
-Reference tool reviewed SHA **2740b0b**. `sync` was run on 2026-09-11 at the
-start of 22b and was up to date. `docs/upstream/PORT_MANIFEST.json` is authoritative: 310
+Reference tool reviewed SHA **2740b0b**. `sync` was run on 2026-09-12 at the
+start of 23a and was up to date - nothing new since 2026-09-09. `docs/upstream/PORT_MANIFEST.json` is authoritative: 310
 files triaged, none untriaged; `src/pages/TextEditor.jsx` notes it done in 21.
-`REFERENCE_GAPS.md` marks D6, D11 and M14 done and G2 half done. 23a takes
-TWMapReader's texture rule; run `sync` first.
+`REFERENCE_GAPS.md` marks D6, D11 and M14 done and G2 half done; **D7 and T1
+are 23a's and are now done.** 23b takes the winter set and T12's tint; run
+`sync` first.
 
 ## Decisions
+- 2026-09-12: **A picture of the terrain says what it could not draw.**
+  TWMapReader draws a texture it cannot find pink and reports it, and 23a took
+  that rule and widened it by one case: a tile can have no texture because the
+  file names one that is missing *or* because nothing names one at all, and both
+  are pink and both are counted. The second found the fifteen DaC tiles whose
+  height says land and whose ground type says sea, which 16a had measured and
+  nothing had ever reported. A picture that is mostly right is the hardest kind
+  to check, so it has to say where it is not.
+- 2026-09-12: **The terrain is a reading of two layers, so it lives on one of
+  their rows.** 20a's ruling, applied to something four times the resolution of
+  the composite: the stack stays the ten files the map is made of. What is new
+  is that it cannot go *into* the composite - that is one pixel a tile - so it
+  is blitted under it, and one function answers "is the backdrop being drawn"
+  for the blit, the composite's opaque background and the composite's cache key.
+  Two of those three disagreeing is a black map.
+- 2026-09-12: **A composite of the map on the screen is keyed on the pixels, not
+  on the files.** There is a paint tool on this screen; a stroke changes the map
+  object and nothing about the file until somebody saves. Hashing the two layers
+  is four milliseconds against a second to rebuild, and it is the difference
+  between a picture of what will load and a picture of what did.
+- 2026-09-12: **An exact colour-to-index pass belongs in Pillow's C, and it
+  fits.** `Image.quantize` with a fixed palette is the obvious C route and 16a
+  measured what it costs: 1,320 tiles on the wrong region. Ranking each band
+  among the values that occur, packing red and green and ranking the pairs that
+  really occur, puts three ranks in a byte exactly - 160 ms of Python becomes
+  10 ms, and the suite checks the two byte for byte on every installed map.
 - 2026-09-11: **The screen draws the map the campaign reads, and the brush
   stays where it paints.** A campaign that ships its own map files is drawn and
   judged on them, and the brush, which only ever paints world/maps/base, is

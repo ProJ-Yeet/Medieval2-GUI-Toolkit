@@ -158,7 +158,7 @@ cloner per gap, with a template ranked by what it can give and then by culture,
 and one backup set for the lot. Demir's two campaign repairs are not copied -
 the strat entry and the win record are links to the tabs that make them.
 
-### D7. Textured terrain render · L
+### D7. Textured terrain render · **done**
 
 `buildTerrainCanvas`, `buildProceduralTerrainCanvas`,
 `loadGroundTexturesInBackground`, `parseAerialGroundTypes`. Draws the map with
@@ -167,11 +167,13 @@ looks like the campaign map rather than a data layer. **TWMapReader does the
 same thing and does it better** (see T1), so treat them as one feature with two
 implementations to compare.
 
-We know where the textures are - `mapvocab.py` already cites
-`descr_aerial_map_ground_types.txt` - and `cleaner.py` walks `aerial_map`. What
-is missing is the compositing: one texture per (climate, ground type) pair,
-tiled, blended at the seams. It is the most expensive item in this document and
-the most visible.
+**Done 23a** (`unittransfer/mapterrain.py`, `GET /api/map/terrain`, the Terrain
+textures mode on the ground types row), and on TWMapReader's specification
+rather than this one - see T1. One texture per (climate, ground type) pair,
+tiled in phase with the map's origin so neighbouring tiles of one texture
+continue each other, built once at four pixels a tile and blitted under the
+whole stack. It was the most expensive item in this document and it is the most
+visible.
 
 ### D8. River overlay · **done**
 
@@ -552,7 +554,7 @@ and the Strings module.
 The reverse-engineered engine behaviour, and by some distance the best *viewer*
 of the four. Twelve items; one is scheduled.
 
-### T1. Textured map view, summer and winter · L
+### T1. Textured map view, summer and winter · **summer done, winter is 23b**
 
 "The textures (summer/winter) map options display the map using the appropriate
 texture TGAs for the tiles' climates and ground types." Read from
@@ -562,6 +564,17 @@ Errors tab and drawn pink rather than skipped silently.
 Same feature as D7, and this is the better specification of the two, because the
 pink-for-missing rule is exactly the toolkit's own "a rule with no evidence
 reports nothing" applied to a picture. The winter set doubles it for free.
+
+**Done 23a for summer**, and his rules were taken as they stand: pink and
+reported for a texture that cannot be found, the `default` block inherited by
+every climate, wilderness drawn with fertility_low's texture, and a missing
+winter column falling back to the summer one. Two things were added rather than
+copied. He reports only a texture the folder does not hold; a tile can also have
+no texture because nothing names one for its (climate, ground type) pair, and
+both are pink, so both are counted and named - which is how DaC's fifteen tiles
+that are land by height and sea by ground type came to be reported at all.
+**The winter column is already parsed, already routed and already keyed
+separately; 23b is the switch.**
 
 ### T2. Heights, drawn as transparency · **done**
 

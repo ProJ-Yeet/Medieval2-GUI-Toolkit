@@ -333,6 +333,8 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `unittransfer/stratobj.py` | D9: a fort, a watchtower or a resource, one line, edited, added, deleted or moved; a fort between region sections, a resource between the province headings a file groups them under; where a new one goes read off the file; the rules measured on the 800 forts and 2,813 resources installed (22a, 22b) |
 | `unittransfer/mapsnap.py` | D10: the nearest tile a caller's own rule accepts, nearest first, within 40 tiles. The rules stay where they are - `stratobj`, `stratchar` and `mapcheck.marker_faults` each hand theirs over (22b) |
 | `web/js/campforts.js` | the forts and resources panel: place with the pin, the province's list, the form, D10's ⌖ Move button, and the drop 17d's drag hands it (22a, 22b) |
+| `unittransfer/mapterrain.py` | D7 and T1: `descr_aerial_map_ground_types.txt`, and the map drawn with the mod's own aerial-map textures. `Vocabulary.texture` is the one place the engine's four rules are applied, `plan` the cheap half the validator reads, `composite` the picture, and `_index` an exact colour-to-index pass in Pillow's C (23a) |
+| `cmapTerrainOn` / `cmapTerrainDraw` | whether the backdrop is being drawn, and the one blit of it - under the whole stack, at its own several pixels a tile, addressed in tiles like everything else on the screen (23a) |
 | `cmapLayerState` / `cmapCampQ` / `cmapGoTile` | the one snapshot of the layer stack, the one place a request appends a campaign, and the one way of arriving at a tile (20b) |
 
 Reuse: `keyblock.py` for the splice discipline (`flatrecord.py` does **not**
@@ -397,16 +399,16 @@ change, so no cross-reference dangles.
 
 | Phase | Sessions | Closes | Size |
 |---|---|---|---|
-| 23a-23b - A map that looks like the map | 2 | D7 T1 T12 | 2L 1M |
+| 23b - Winter, and the tint | 1 | T12 | 1M |
 | 24 - Make and unmake | 1 | G1 M15 | 2M |
 
-Three sessions left - 23a, 23b and 24. Phase 17 (2026-09-06), all of
-Phase 18 (2026-09-07), all of Phase 19 (2026-09-09), 20a (2026-09-10), and 20b,
-B1, 20c, 21, 22a and 22b (2026-09-11) are done and their write-ups are in
-`ROADMAP_ARCHIVE.md`; nothing in the Later table is counted, and neither are
-B2-B4 below.
+Two sessions left - 23b and 24. Phase 17 (2026-09-06), all of
+Phase 18 (2026-09-07), all of Phase 19 (2026-09-09), 20a (2026-09-10), 20b,
+B1, 20c, 21, 22a, 22b and 22c (2026-09-11) and 23a (2026-09-12) are done and
+their write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later table is
+counted, and neither are B2-B4 below.
 
-**Nothing is released until all three are done.** The user's instruction on
+**Nothing is released until both are done.** The user's instruction on
 2026-09-11, which suspends the cut-as-it-lands rule of 2026-09-09: each session
 commits and stops, and the whole backlog goes out as one cut at the end - the
 held v2.2.4 and beta 2026-09-11b notes included.
@@ -602,28 +604,37 @@ layer you can edit and starts being a map you work on.
 
 ## Phase 23 - A map that looks like the campaign map
 
-**Closes D7, T1, T12.** Two sessions. **The most expensive work in this
-document and the most visible.**
+**Closes D7, T1, T12.** Two sessions, and **23a is done** (2026-09-12), which
+closes D7 and T1. **The most expensive work in this document and the most
+visible.**
 
 D7 and T1 are the same feature with two implementations to compare, and
 TWMapReader's is the better specification of the two.
 
-### 23a - The texture composite
+### 23a - The texture composite - done
 
-Draw the map with the game's own aerial-map ground textures, one per (climate,
-ground type) pair, read from `data/terrain/aerial_map/ground_types`. `mapvocab`
-already cites `descr_aerial_map_ground_types.txt` and `cleaner.py` already walks
-the `aerial_map` folder, so the vocabulary is known; what is new is the
-compositing and the cost of it.
+**Closed 2026-09-12**, and the write-up is in `ROADMAP_ARCHIVE.md`. The map is
+drawn with the mod's own aerial-map ground textures, one per (climate, ground
+type) pair, and TWMapReader's rules were taken as they stand - the pink missing
+texture, the default-block inheritance, the wilderness substitution and the two
+winter fallbacks. What it leaves behind for 23b:
 
-**Take TWMapReader's missing-texture rule exactly.** A texture it cannot find is
-reported in the Errors tab and drawn **pink**, not skipped silently - which is
-our own "a rule with no evidence reports nothing" applied to a picture, arrived
-at independently by somebody else. That is the strongest argument in the audit
-for taking his version over Demir's.
-
-The performance rule from 16c holds: the composite is built once and pan and
-zoom never rebuild it. If that cannot be met the feature is wrong, not the rule.
+- **`unittransfer/mapterrain.py` owns the whole of it.** `Vocabulary.texture`
+  is the one place the engine's four rules are applied, and it already takes a
+  `season`; `plan`, `composite`, `png` and `view` all do. **23b is a switch on
+  the panel and nothing in Python**, unless the tint needs one.
+- **`plan` is the cheap half and `composite` the expensive one**, kept apart
+  because the ✓ Check panel's `terrain.texture` rule needs the first and not the
+  second. A plan is kept per (mod, campaign, season) under a key that hashes the
+  pixels rather than the files, so an unsaved stroke is a different picture.
+- **`mapterrain._index` is exact and in Pillow's C**, by ranking each band and
+  packing the three ranks into a byte. Anything later that needs "this layer's
+  colours as one byte a tile" should use it rather than a dictionary pass; it is
+  16x quicker and the suite checks it byte for byte against the slow one.
+- **T12's tint goes over the composite, not into it.** The composite is under
+  the whole stack and the region layer is already drawn over it at 55%, which is
+  the arrangement a tint has to keep: 16g's colourings *replace* the region
+  layer, and on a textured backdrop replacing it is exactly wrong.
 
 ### 23b - Winter, and the tint
 

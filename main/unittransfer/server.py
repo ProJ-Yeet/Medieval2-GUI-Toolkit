@@ -207,6 +207,14 @@ and a stroke sent with a campaign that does not show the base map is refused.
                                     size in X-Map-Width/-Height - what the map
                                     screen reads, because a browser may alter a
                                     picture's pixels (see campmap.layer_rgb)
+  GET  /api/map/terrain?mod=&campaign=&season=[&format=png]
+                                 -> 23a, D7/T1. The map drawn with the mod's own
+                                    aerial-map ground textures. Without `format`,
+                                    the facts: how many textures, how many tiles
+                                    have none and why each one does not. With
+                                    format=png, the composite itself, built once
+                                    and kept on disk under a key carrying every
+                                    texture the aerial file names
   GET  /api/map/legend?mod=&code=
                                  -> that layer's colours named and counted, and
                                     which of them means "nothing here"
@@ -478,7 +486,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campevents, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, renames, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campevents, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, mapterrain, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, renames, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -3845,6 +3853,38 @@ class Handler(BaseHTTPRequestHandler):
             # once when the paint panel opens, like /api/map itself. Always the
             # base map's: the brush paints world/maps/base and nothing else.
             return self._json(campaint.palettes(base))
+
+        if path == "/api/map/terrain":
+            # 23a, D7 and T1. Two answers off one plan: the facts, which the
+            # panel and the ✓ Check panel read, and the picture, which is the
+            # whole cost and is built once behind the disk cache. The key is
+            # mapterrain.signature - the four layers, the two text files and
+            # every texture the aerial file names - because a texture swapped
+            # in the folder changes the picture and nothing else here notices.
+            season = (q.get("season") or ["summer"])[0]
+            mod = self.registry.describe(name)
+            if (q.get("format") or [""])[0] != "png":
+                return self._json(mapterrain.view(mod, cm, camp, season))
+            try:
+                p = mapterrain.plan(mod, cm, camp, season)
+            except (mapterrain.TerrainError, campmap.MapError, OSError) as exc:
+                return self._err(404, str(exc))
+            # the plan's own key, so the picture served is of the pixels the
+            # facts beside it were measured on - an unsaved stroke included
+            token = f"mapterrain|{p.key}"
+            try:
+                data = self.registry.icons.cached_png(
+                    token, lambda: mapterrain.png(mod, p))
+            except Exception as exc:
+                # Said out loud, like a layer that will not decode: a blank
+                # backdrop reads as a map with no terrain on it, which is the
+                # one thing this picture exists to disprove.
+                log.debug("terrain composite failed", exc_info=True)
+                return self._err(500, f"the terrain composite could not be "
+                                      f"built: {exc}")
+            return self._send(200, data, "image/png",
+                              {"X-Map-Scale": str(mapterrain.SCALE),
+                               "X-Map-Season": season})
 
         if path == "/api/map/legend":
             code = (q.get("code") or [""])[0]

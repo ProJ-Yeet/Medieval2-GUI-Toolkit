@@ -21,6 +21,8 @@ Split out of `ROADMAP.md` on 2026-09-05, verbatim.
 | 17a-17i, 18a-18b, 19a-19b, 20a-20b - the correction pass and the Now set | below |
 | B1 - the first item off a beta user: a new province in every campaign | below |
 | 20c - settlement names on the map, and the pin that fills a coordinate | below |
+| 21, 22a-22c - the two screens over data we hold, and placing things on the map | below |
+| 23a - the map drawn with the game's own ground textures | below |
 
 ---
 
@@ -4232,3 +4234,103 @@ campaigns. Opening Fellowship swapped the region pixels, and the note and the
 Paint refusal showed. An armed brush was put down on the switch, with the
 reason. ✓ Check named Fellowship's files, and switching back restored the base
 map.
+
+---
+
+## Phase 23a - The texture composite - done 2026-09-12
+
+**The map drawn with the game's own aerial-map ground textures.** Closes half
+of D7 and T1, which are the same feature with two implementations to compare;
+TWMapReader's is the better specification and it is the one that was taken.
+
+**Its rules, as they stand.** A texture that cannot be found is drawn **pink**
+and reported, not skipped and not rounded to a neighbour - which is this
+project's "a rule with no evidence reports nothing" applied to a picture,
+arrived at independently by somebody else, and the strongest argument in the
+audit for his version over Demir's. A climate colour `descr_climates.txt` does
+not declare falls back to the `default` block. Every climate inherits that
+block for anything it does not name itself. **Wilderness is drawn as
+fertility_low**, the substitution nothing else has written down and the reason
+wilderness is not a hole in every mod. A missing winter column falls back to
+the summer one, and so does a whole climate with no `winter` line. A texture
+spans 32 tiles at its own size (`SCALING = 1f/32`), and the repeat is anchored
+to the map's origin, so two neighbouring tiles of one texture continue each
+other instead of showing two copies of the same square.
+
+**What is ours rather than his.** He reports only a texture the folder does not
+hold; a tile can also have no texture because nothing names one for its
+(climate, ground type) pair, and both come out pink, so both are counted and
+named. The live case of the second is the tile whose height says land and whose
+ground type says sea - DaC has fifteen, the 70-tile disagreement 16a measured,
+and nothing reported them before. That finding names `map_ground_types.tga` and
+`map_heights.tga` rather than the texture table, because the texture table is
+not the thing to go and fix.
+
+**Built.** `unittransfer/mapterrain.py`: `parse` and `Vocabulary` for
+`descr_aerial_map_ground_types.txt` (the file, then the file plus the four
+engine rules, kept apart so a test can say which of the two a wrong texture came
+from), `plan` for which texture every tile asks for and every reason one has
+none, `composite` for the picture, `check_textures`, `signature` and `view`.
+`GET /api/map/terrain` answers the facts, and with `format=png` the picture, out
+of `IconCache.cached_png`'s disk cache. `mapcheck`'s `terrain.texture` rule
+reports the gaps with a tile to jump to, and skips by name on a mod with no
+texture table - the game's own copy is inside a `.pack`, so most mods have none.
+In the browser it is a **mode on the ground types row**, not an eleventh layer,
+which is 20a's ruling applied again: it is `map_ground_types.tga` and
+`map_climates.tga` read the way the engine reads them. That row's own opacity
+fades it, its flat colours come out while it is on, and it is drawn under the
+whole stack because it is the ground.
+
+**The performance rule held, and it cost a measured optimisation to hold it.**
+The picture is built once and neither a pan nor a zoom rebuilds it: the browser
+fetches one PNG (DaC 2040x1948, 3.1 MB) and blits it, 0.3 ms a frame at zoom 10.
+The plan behind it is kept per map and shared by the panel, the picture and the
+validator's rule. The rule still has to fit inside the whole rule set's
+one-second bar, and the two exact colour-to-index passes were 160 ms of it. They
+are now 10 ms, in Pillow's C and still exact: each band is replaced by the
+**rank** of its value among the ones that occur, red and green packed together
+and then ranked again over the pairs that really occur, so three ranks fit in one
+byte and the lookup is two adds and four `point`s. Rank 0 means "not a value this
+layer uses" and every known colour's ranks are 1 or more, so a pixel that misses
+in any band lands on a code no known colour has. It falls back to the
+tile-at-a-time pass if a layer will not pack, and `UT_TERRAIN_SLOW` forces that
+path so the suite can compare the two.
+
+**The sea is flat, deliberately.** The aerial ground-type file has no sea entry
+because the engine draws the sea from `terrain/aerial_map/sea` and `water.tga`
+by another mechanism entirely, so a flat colour is the honest thing to put where
+we do not know. TWMapReader does the same.
+
+**The cache key is the pixels, not the files.** This screen has a paint tool on
+it: a stroke on the ground types changes the map object and nothing about the
+file until somebody saves, and a composite keyed on timestamps would go on
+showing the terrain before the stroke. So the key is a hash of the two layers'
+tile-per-pixel bytes and the sea mask, plus stats of the two text files and of
+every texture the aerial file names. A stroke marks the picture stale and the
+panel offers `↻ Redraw` rather than rebuilding per stroke, which would be
+exactly the lag 16c was written against.
+
+### Tests and verification
+
+`tests/test_mapterrain.py` (63 checks) is new. A six-by-four map is written
+here with every rule of the feature given a tile of its own, so each is read off
+the picture by coordinate rather than inferred from a total: the climate's own
+entry, an inherited one, the wilderness substitution, a one-column line, an
+undeclared climate colour, a texture named and never written, a pair nothing
+names, the sea-ground-on-land tile, and a row of sea. Then the winter column and
+its two fallbacks, the composite's phase, the validator's three findings and
+the file each names, the two routes including the disk cache, and every
+installed mod - where the packed index is checked byte for byte against the
+tile-at-a-time one (19x and 24x quicker) and the validator is checked to report
+exactly the gaps the plan measured.
+
+`tests/test_mapcheck.py`'s clean map now ships a texture table, so the new rule
+runs on it rather than skipping; all 86 of its checks pass and the rule set runs
+in 626 ms on DaC, 505 on Reforged and 122 on vanilla.
+
+Driven in the browser on both installed mods and on Reforged's two campaigns:
+the composite drew, the panel said 50 textures and 15 pink tiles on DaC and 57
+and none on Reforged, the ✓ Check panel carried the five findings with their
+tiles, one of them was jumped to and the pink was there under the region layer,
+the habit survived a reload, and ticking the ground types layer off while the
+terrain was on left the map drawn rather than black.
