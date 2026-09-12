@@ -1,7 +1,7 @@
 # STATE - Medieval 2 GUI Toolkit
 _Updated: 2026-09-12 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
-the latest beta - after Phase 29, the strat model viewer, which took B4 with it
-and cut as it landed on both lines_
+the latest beta - after Phase 29, the strat model viewer, which took B4 with
+it. **Releasing is back to on-request only**: commit to master and stop_
 
 ## Next up
 **Two blocks, set by the user on 2026-09-12 after rating 38 of 39 candidates:
@@ -33,10 +33,13 @@ the one repair that has a safe answer. Already measured: DaC names 2 mercenaries
 absent from its EDU, Third Age Reforged names 33, and `Mt-Gram_Province` is in
 two pools in one campaign, which that file's own header forbids.
 
-**The cut-as-it-lands rule of 2026-09-09 is live**, so each phase goes out as
-it lands - which 29 did. 38 and 39 touch something outside the campaign map and
-are the remaining subreleases on both lines; the other twelve are the beta
-alone.
+**The cut-as-it-lands rule of 2026-09-09 is SUSPENDED AGAIN**, from
+2026-09-12, immediately after Phase 29 went out under it. The user: *"from now
+on unless i mention it dont move to releasing it and just commit to master"*.
+So a phase now ends at **commit to master** - no build, no tag, no upload and
+no Discord post - and the user says when a cut happens. When one does, 38 and
+39 are the remaining subreleases on both lines because they touch something
+outside the campaign map; the other twelve are the beta alone.
 
 **Mylae's new work is blocked and is not a phase.** He describes an improved
 settlement-position validation and coloured overlay exports; none of it is

@@ -415,9 +415,11 @@ B2-B3 below.
 **Nothing was released until it was done**, and then it was: Phase 24 closed
 on 2026-09-12 and the whole backlog went out the same day as v2.3.0 and beta
 2026-09-12, the held v2.2.4 and beta 2026-09-11b notes folded into it. That
-discharged the instruction of 2026-09-11, so **the cut-as-it-lands rule of
-2026-09-09 is live again** and each session cuts as it lands - which Phase 29
-then did, as a subrelease on both lines.
+discharged the instruction of 2026-09-11, and the cut-as-it-lands rule came
+back for exactly one session: Phase 29 went out on 2026-09-12 as v2.3.2 and
+beta 2026-09-12c. **It is suspended again from that same day** - work is
+committed to master and the user says when it is cut. `STATE.md` carries the
+current standing.
 
 ---
 # Reported from the beta - not phased
@@ -772,8 +774,9 @@ on, then stars, then size.** That is four rules and each one earns its place.
 **Fifteen sessions, and three of them are subreleases.** 29, 38 and 39 touch
 something outside the campaign map, so each is a subrelease on both lines; the
 other twelve are the beta alone. **29 is done** (2026-09-12) and took B4 with
-it; fourteen remain. **The cut-as-it-lands rule of 2026-09-09 is
-live**, so each one goes out as it lands rather than being held for the end.
+it; fourteen remain. **They are committed, not cut** - cut-as-it-lands was
+suspended again on 2026-09-12 and a release now happens when the user asks for
+one.
 
 ---
 # Phases 28-39 - the campaign map, then the mercenaries
