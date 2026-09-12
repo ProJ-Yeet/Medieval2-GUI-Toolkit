@@ -4,6 +4,21 @@ Every review of Mylae's `main`, newest first. Written by
 `dev/reference/upstream_sync.py sync --accept`. His commit messages all say
 "File changes", so these entries are the only record of what actually moved.
 
+## 2026-09-12 - 2740b0b..187d9ed
+
+3 commits, 7 files changed.
+
+### port-concept (5)
+- `A` `src/components/map/mapFeaturesChecks.js` - phase 31  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `A` `src/components/minorfiles/MergeNamesModal.jsx` - phase 41  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/map/MapValidationPanel.jsx` - phase 16,31  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/map/mapValidator.jsx` - phase 16,31  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/minorfiles/CharacterNamesTab.jsx` - phase 10  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+
+### skip (2)
+
+Counted only.
+
 ## 2026-09-09 - 319ae56..2740b0b
 
 1 commits, 2 files changed.

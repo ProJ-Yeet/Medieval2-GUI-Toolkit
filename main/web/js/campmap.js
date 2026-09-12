@@ -116,9 +116,6 @@ async function loadCampmap(){
       the ten TGA layers. Without them the game uses its own map, and there is
       nothing here to draw.</span><br><br>
       <button class="primary" onclick="loadCampmap()">Try again</button></div>`;
-    // 17f: somebody asked for this mod's factions through the Minor Files tab
-    // and this mod has no map to put them on. The old mode is where they are.
-    if(campmapWantFactions){ campmapWantFactions = false; setAppMode('factions'); }
     return;
   }
   if(stale('campmap', mod)) return;
@@ -736,13 +733,6 @@ Saved views are kept.">↺ Reset</button>
   cmodOpen();         // 16k, the strat models, and the same on both counts
   cpinPaint();        // 20c, M8: a pin still waiting keeps its banner
   cmapResize();
-  // 17f: arrived here from Minor Files' Factions tab, which is now a route to
-  // the combined faction screen rather than to a mode of its own
-  if(campmapWantFactions){
-    campmapWantFactions = false;
-    if(!state.cj || !state.cj.open) cjToggle();
-    cjTab('faction');
-  }
   if(!c.view.fitted) cmapFit(); else cmapPaint();
   if(typeof rszApply === 'function') rszApply(main);
 }

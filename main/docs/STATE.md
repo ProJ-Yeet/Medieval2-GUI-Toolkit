@@ -7,22 +7,53 @@ it. **Releasing is back to on-request only**: commit to master and stop_
 **Two blocks, set by the user on 2026-09-12 after rating 38 of 39 candidates:
 the whole campaign map first, then the mercenaries.** Everything else is in
 `ROADMAP.md`'s *Future roadmap*, rated and unscheduled, to be started when both
-blocks are done. Fifteen sessions in all; **29 is done**, so fourteen are left
-and two of those are subreleases.
+blocks are done. Nineteen sessions in all; **29 is done**, so eighteen are left
+and five of those are subreleases.
 
-**Block one, the campaign map** - ~~29~~, 28, 33, 30, 34, 35, 36, 37a, 37b,
-31, 38.
+**Block one, the campaign map** - ~~29~~, **40, 31, 42, 41, 43**, 28, 33, 30,
+34, 35, 36, 37a, 37b, 38.
 
-**Start with Phase 28, the right menu as a tab strip.** It is second only
-because 29 was a defect, and every later panel lands on it: Phase 32's screen
-goes onto the right-hand column, and building it in the old sixteen-panel stack
-is work done twice. **Then 33**, three separate five-star S items in one
-session (T10, G2, G4), which is the cheapest five-star work on the list. The
-rest of block one is in `ROADMAP.md`'s order table, and two of its placements
-are deliberate rather than arbitrary: **30 before 34**, because declaring a
-climate without its textures is the largest field of pink anybody will ever
-produce here, and **35 before 32**, because it is the same two-way panel over a
-file that is already fully parsed.
+**Start with Phase 40, the new province the engine cannot read.** It is a
+defect in shipped work, which is the rule that put 29 first: a province created
+without any resources reaches `descr_regions.txt` as an eight-line record in a
+file of nine-line records, because `campaint.new_record_lines` writes the
+resources line only when the list is non-empty. None of the 510 records on the
+three maps here omits it. Our parser reads the short record back correctly and
+`check_record` reports nothing, so the round trip is self-consistent and only
+the engine disagrees. **The one thing this repo could not verify is the crash
+itself** - run the game against a province created with no resources before
+writing the fix.
+
+**Then 42**, the second reported defect: cloning a faction leaves it with no
+`fe_symbols_80` symbol. The copier is not at fault - `_asset_hits` was run over
+all 31 DaC slots and misses nothing, and `want_art` defaults on - the donor
+simply has nothing there to copy. Third Age Reforged has art for **0 of its 30
+slots** in that folder; its 17 files are named for vanilla slots the mod no
+longer uses. The phase is a per-location report, not a copier fix, and it is
+**not reproduced in the app** - ask which mod and which donor first.
+
+**Then 41 and 43.** 41 is Mylae's names merge. 43 is the playable / unlockable /
+nonplayable toggle the user asked for: we parse all three rosters, print their
+counts on the campaign card, and refuse the edit in four separate modules with
+the same sentence, which is one writer owed rather than four.
+
+**31 and 41 both come from Mylae's 2026-09-12 push and were asked for by the
+user on the day.** 31 shrank from four river rules to two when the diff was
+measured against our own (`river.rejoin` already catches the 2x2 block,
+`river.isolated` already catches the orphan white source) and gained a third
+that is ours rather than his, `feature.ford_in_sea`. 41 is his names merge,
+which we have no equivalent of at all.
+
+**Then 28, the right menu as a tab strip**, and it is still the enabler: every
+later panel lands on it, Phase 32's screen goes onto the right-hand column, and
+building it in the old sixteen-panel stack is work done twice. 40, 31 and 41 go
+in front of it only because none of the three lands a panel. **Then 33**, three
+separate five-star S items in one session (T10, G2, G4), the cheapest five-star
+work on the list. The rest of block one is in `ROADMAP.md`'s order table, and
+two of its placements are deliberate rather than arbitrary: **30 before 34**,
+because declaring a climate without its textures is the largest field of pink
+anybody will ever produce here, and **35 before 32**, because it is the same
+two-way panel over a file that is already fully parsed.
 
 **Block two, the mercenaries** - 32a, 32b, 32c, then 39. The big one.
 `mapquery.parse_mercenaries` keeps a pool's name, its regions and its unit names
@@ -41,11 +72,17 @@ no Discord post - and the user says when a cut happens. When one does, 38 and
 39 are the remaining subreleases on both lines because they touch something
 outside the campaign map; the other twelve are the beta alone.
 
-**Mylae's new work is blocked and is not a phase.** He describes an improved
-settlement-position validation and coloured overlay exports; none of it is
-pushed. `Machiavello-1441/m2tw-editor` is still at `2740b0b` (2026-09-08),
-`main` is the only branch and the account has no second repository. Ask for the
-files rather than scoping from the sentence.
+**Mylae pushed on 2026-09-12 and the block is lifted.**
+`2740b0b..187d9ed`, three commits, 7 files: the base44 package bump (`skip`),
+the `map_features.tga` rewrite (**Phase 31**, whose scope it halved rather than
+grew) and the names merge (**Phase 41**). The settlement-position validation and
+the coloured overlay exports he described are in neither commit, so those are
+still unseen - ask for the files rather than scoping from the sentence. Two
+things to pass back: his new orphan-white-source check is an `error` and vanilla
+trips it at image (175,14), and the `map_features_checker.py` he ported from
+cannot open either installed map because both ship RLE TGAs.
+The sync is accepted and the manifest filed: `mapFeaturesChecks.js` to Phase 31,
+`MergeNamesModal.jsx` to Phase 41.
 
 ## WHERE THINGS ARE - the tree moved on 2026-09-06
 Only the two `.bat` files and `README.md` are at the top of the repository.
@@ -190,13 +227,23 @@ the edits out from under it (21 did it once; see the archive).
   it". 1,171 of the 1,174 zero-byte files on the installed mods are that.
 
 ## Upstream
-Reference tool reviewed SHA **2740b0b**. `sync` was run on 2026-09-12 four
-times - at the start of 23a, 23b, 24 and the review - and was up to date every
-time. **Confirmed against the remote directly**: `git ls-remote` gives
-`2740b0b` for both `HEAD` and `refs/heads/main`, there is no second branch, and
-the account has no second repository, so the features Mylae describes are
-genuinely unpushed rather than missed by the tool. `docs/upstream/PORT_MANIFEST.json` is authoritative: 310
-files triaged, none untriaged; `src/pages/TextEditor.jsx` notes it done in 21.
+Reference tool reviewed SHA **187d9ed** (2026-09-12), accepted after the diff
+was read: three commits, 7 files, the base44 bump plus the two that became
+Phase 31 and Phase 41. Earlier that day `sync` had been run four times against
+`2740b0b` - at the start of 23a, 23b, 24 and the review - and was up to date
+every time; he pushed after the last of them.
+
+**`triage` was broken by the tree move and is fixed.** `git ls-tree` takes the
+working directory as an implicit path prefix, `ROOT` is `main/`, and his
+repository has no `main/`, so `upstream_files()` returned **nothing** from
+2026-09-06 onward. `triage` read that as "all 310 files deleted upstream",
+stamped every record `status: gone` and filed no new file ever again;
+`git diff --name-status` has no such prefix, which is why `sync` kept working
+and hid it for six days. `--full-tree` is the fix, and re-running `triage`
+restored all 310 and filed the 2 new ones.
+
+`docs/upstream/PORT_MANIFEST.json` is authoritative again: **312 files triaged,
+none untriaged**; `src/pages/TextEditor.jsx` notes it done in 21.
 `REFERENCE_GAPS.md` marks D6, D11 and M14 done and G2 half done; **D7, T1 and
 T12 were Phase 23's and G1 and M15 were 24's, and all five are now done.**
 Nothing in the audit is scheduled any more. Run `sync` before touching anything

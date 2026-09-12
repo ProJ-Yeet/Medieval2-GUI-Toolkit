@@ -214,7 +214,19 @@ def fetch() -> str:
 
 
 def upstream_files(ref: str = REF) -> list[str]:
-    return [p for p in git("ls-tree", "-r", "--name-only", ref).splitlines() if p]
+    """Every path in his tree.
+
+    ``--full-tree`` is load-bearing and the tree move of 2026-09-06 is why.
+    ``git ls-tree`` takes the working directory as an implicit path prefix, and
+    ``ROOT`` is ``main/`` - a directory his repository does not have - so
+    without the flag this returned **nothing** and :func:`triage` read that as
+    "he deleted all 310 files", marked every record ``gone`` and filed no new
+    ones. ``git diff --name-status`` has no such prefix, which is why ``sync``
+    kept working and hid it.
+    """
+    return [p for p in
+            git("ls-tree", "-r", "--full-tree", "--name-only", ref).splitlines()
+            if p]
 
 
 def changed(since: str, until: str = REF) -> list[tuple[str, str]]:

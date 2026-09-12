@@ -149,11 +149,21 @@ check(f"Home's module cards drop the {len(subs)} sub modes and {len(off)} off",
       "menuModes().filter(d => d.id !== 'home')" in home)
 check("the resume button only offers a mode that is on the menu",
       "!modeOffered(last)" in home)
-# 2.2.0: the Factions tab routed into the map's combined screen (17f). With the
-# map off there is nothing to route to, so it must fall back to `factions` -
-# the same place a mod with no map has always landed.
-check("the Factions tab falls back when the map is off",
-      "if(!modeOffered('campmap'))return setAppMode('factions');" in core_js)
+# 17f routed the Factions tab into the map's combined screen when the mod had a
+# map, and to `factions` when it did not. No public build ever took the first
+# road - every 2.x ships with the map off - so on master the same button went
+# somewhere else and left the tab unlit behind it. Reverted 2026-09-12: one
+# destination on both lines, and the map's own faction screen is reached from
+# inside the map. The check is that the branch is GONE, not that the fallback
+# is merely present.
+_mf = core_js.split("function minorFactions(){")[1].split("}")[0]
+check("the Factions tab goes to the factions mode",
+      "setAppMode('factions')" in _mf)
+check("no build-dependent branch is left in the Factions tab",
+      "modeOffered('campmap')" not in _mf and "setAppMode('campmap')" not in _mf)
+check("the campmap handoff flag is gone with it",
+      "campmapWantFactions" not in core_js
+      and "campmapWantFactions" not in (JS / "campmap.js").read_text(encoding="utf-8"))
 
 # The campmap rows are spelled out in modfiles rather than imported from here,
 # so that drawing a mod card does not cost a Pillow import. This is what stops

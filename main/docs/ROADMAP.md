@@ -715,7 +715,7 @@ thing that had a create or a delete but not both. The write-up is in
 2026-09-12, and the cut they were held for went out the same day as **v2.3.0
 and beta 2026-09-12**. That closed the backlog this document was written round.
 
-**Phases 28 to 39 below are what reopened it.** They come from one review on
+**Phases 28 to 43 below are what reopened it.** They come from one review on
 2026-09-12: three things a beta user reported, one tool cross-reference, a
 measurement pass over the four references and the TWCenter archive, and then a
 rating pass in which the user gave 38 of the 39 candidates one to five stars.
@@ -745,41 +745,54 @@ on, then stars, then size.** That is four rules and each one earns its place.
    readable instead of alarming. Phase 35 is before Phase 32 for the same kind
    of reason: it is the same two-way panel over a file that is already fully
    parsed, so the shape gets settled on the cheap problem first.
+5. **Three phases went in front of 28 on 2026-09-12, and rule 1 is why for one
+   of them.** Diffing Mylae's `2740b0b..187d9ed` re-scoped Phase 31 and produced
+   Phase 41, and the user asked for both immediately; reading our own
+   region-creation path beside his turned up **Phase 40**, which is a defect in
+   shipped work and therefore leads the block the way 29 did. 28 is still the
+   enabler and still comes before everything that lands a panel on it - 40, 31
+   and 41 land no panel. **42 and 43 joined them later the same day**, both from
+   the user: 42 is a second reported defect and sits behind 40, and 43 is a
+   three-way toggle over a file `stratedit` already writes.
 
 ### Block one - the campaign map
 
 | Order | Phase | Size | Line | Stars |
 |---|---|---|---|---|
 | ~~1~~ | ~~**29** Strat model viewer~~ | M | **both** | **done 2026-09-12** |
-| 2 | **28** The right menu becomes a menu | M | beta | an enabler |
-| 3 | **33** T10, G2 and G4 in one session | S x3 | beta | 5, 5, 5 |
-| 4 | **30** A missing texture without the pink | S | beta | reported |
-| 5 | **34** Add a climate zone | M | beta | 5 |
-| 6 | **35** Rebels right in place | M | beta | 5 |
-| 7 | **36** D1, change a region's colour | M | beta | 5 |
-| 8 | **37a** T7, the spawn export | M | beta | 5 |
-| 9 | **37b** T3, an FE zoom | M | beta | 5 |
-| 10 | **31** Four river rules | M | beta | cross-reference |
-| 11 | **38** `descr_campaign_db.xml` | M | **both** | 4 |
+| 2 | **40** The new province the engine cannot read | S | **both** | the defect |
+| 3 | **31** Two river rules, and a ford in the sea | S | beta | upstream sync |
+| 4 | **42** The art a clone does not get | S | **both** | reported |
+| 5 | **41** Merge one faction's name pool into another | S | **both** | upstream sync |
+| 6 | **43** Playable, unlockable, not playable | S | beta | asked for |
+| 7 | **28** The right menu becomes a menu | M | beta | an enabler |
+| 8 | **33** T10, G2 and G4 in one session | S x3 | beta | 5, 5, 5 |
+| 9 | **30** A missing texture without the pink | S | beta | reported |
+| 10 | **34** Add a climate zone | M | beta | 5 |
+| 11 | **35** Rebels right in place | M | beta | 5 |
+| 12 | **36** D1, change a region's colour | M | beta | 5 |
+| 13 | **37a** T7, the spawn export | M | beta | 5 |
+| 14 | **37b** T3, an FE zoom | M | beta | 5 |
+| 15 | **38** `descr_campaign_db.xml` | M | **both** | 4 |
 
 ### Block two - the mercenaries
 
 | Order | Phase | Size | Line | Stars |
 |---|---|---|---|---|
-| 12 | **32a** The pool as a record, and one parser for it | M | beta | the main task |
-| 13 | **32b** The two directions, and the four gates resolved | M | beta | the main task |
-| 14 | **32c** Five rules, and the repair for the one that has a safe answer | M | beta | 5 (the repairs) |
-| 15 | **39** The engine ceilings | M | **both** | 4 and 3 |
+| 16 | **32a** The pool as a record, and one parser for it | M | beta | the main task |
+| 17 | **32b** The two directions, and the four gates resolved | M | beta | the main task |
+| 18 | **32c** Five rules, and the repair for the one that has a safe answer | M | beta | 5 (the repairs) |
+| 19 | **39** The engine ceilings | M | **both** | 4 and 3 |
 
-**Fifteen sessions, and three of them are subreleases.** 29, 38 and 39 touch
-something outside the campaign map, so each is a subrelease on both lines; the
-other twelve are the beta alone. **29 is done** (2026-09-12) and took B4 with
-it; fourteen remain. **They are committed, not cut** - cut-as-it-lands was
+**Nineteen sessions, and six of them are subreleases.** 29, 40, 42, 41, 38 and
+39 touch something outside the campaign map, so each is a subrelease on both
+lines; the other thirteen are the beta alone. **29 is done** (2026-09-12) and
+took B4 with it; eighteen remain. **They are committed, not cut** - cut-as-it-lands was
 suspended again on 2026-09-12 and a release now happens when the user asks for
 one.
 
 ---
-# Phases 28-39 - the campaign map, then the mercenaries
+# Phases 28-43 - the campaign map, then the mercenaries
 
 ## Phase 28 - The right menu becomes a menu
 
@@ -856,45 +869,69 @@ served a PNG. The choice therefore has to reach `mapterrain.plan`'s key and
 whichever was asked for first. It goes in `cmapLayerState` beside the season,
 so a saved view carries it.
 
-## Phase 31 - The river rules we do not have
+## Phase 31 - Two river rules, and a ford in the sea
 
-**A cross-reference, not a report.** `map_features_checker.py`, a standalone
-validator handed over on 2026-09-12, checks six things about
-`map_features.tga` and repairs five of them. Ours has three river rules -
-`river.diagonal`, `river.isolated` and `river.rejoin` - and `feature.unknown`
-for the colours. Four of its checks have no rule here:
+**A cross-reference, re-measured on 2026-09-12 after Mylae pushed his own port
+of it.** `map_features_checker.py`, a standalone validator handed over on
+2026-09-12, checks six things about `map_features.tga` and repairs five of
+them. Mylae ported four of those checks into a new `mapFeaturesChecks.js` the
+same day (`920841a`). Ours has three river rules - `river.diagonal`,
+`river.isolated` and `river.rejoin` - and `feature.unknown` for the colours.
+
+**Two of his four are already ours, and the table that said otherwise was
+wrong.** It was written from the standalone tool's own list rather than from
+our rules, and it cost this phase half its scope.
 
 | its check | ours |
 |---|---|
-| a blue tile with more than three river neighbours (a four-way crossing) | nothing |
-| a 2x2 block of river tiles | nothing |
-| a white source pixel touching no river | nothing |
-| a river component with no white source anywhere on it | nothing |
+| a blue tile with more than three river neighbours (a four-way crossing) | **nothing - build it** |
+| a river component with no white source anywhere on it | **nothing - build it** |
+| a 2x2 block of river tiles | `river.rejoin`. A 2x2 block is the smallest cycle in the four-connected graph, and the fixture at `tests/test_mapcheck.py:421` that asserts `river.rejoin` **is** a 2x2 block |
+| a white source pixel touching no river | `river.isolated`. White is one of `RIVER_CODES`, so a source touching nothing at all trips it, and one touching a river only at a corner trips `river.diagonal` |
 
-All four are already in this document's own river rules, taken from Geomod and
-TWMapReader: *white pixel at the source*, *no rejoins*, *no diagonals*. We
-wrote the source rule down and never checked it.
+**Measured on vanilla and on all three installed maps, and it finds nothing.**
+Four-way crossings: zero everywhere. 2x2 blocks: zero everywhere. Source-free
+components: zero everywhere, over Divide and Conquer's 95 river components,
+Third Age Reforged's 86 and vanilla's own. Invalid colours: only DaC's single
+`(1,1,1)` pixel, which this document already records as a live test case. **So
+this is not a bug we ship.** It is two rules for a map being built, and they
+are worth a session because the repairs come with them and 16f's three
+auto-fixes are the shape.
 
-**Measured on both installed maps before scheduling it, and it finds
-nothing.** Divide and Conquer: 95 river components, every one with a source,
-no crossings, no 2x2 blocks, no orphan whites, no isolated tiles, and the one
-`(1,1,1)` pixel this document already records as a live test case. Third Age
-Reforged: 86 components, all clean. **So this is not a bug we ship.** It is
-four rules for a map being built, and it is worth a session because the
-repairs come with them and 16f's three auto-fixes are the shape.
+**Vanilla trips the orphan-source rule exactly once, at image (175,14)**, and
+that is the same pixel `river.isolated` already names in its own `source`
+string. It is a `warn` here for that reason. **Mylae's port makes it an
+`error`**, so his validator now calls vanilla broken, and he cannot see it
+because the tool he ported from refuses to open either installed map.
+
+**A third rule, and it is ours rather than his.** He fixed a real bug in
+`920841a`: his old check warned about rivers on sea heights, and a river
+running into the sea is legitimate, so only a **ford** there is wrong. We have
+the right model one level down - `mapvocab.is_sea_height` says a river crossing
+is never sea whatever its height says - but the sea mask in `campmap` subtracts
+**every** cyan pixel unconditionally, so a ford painted in open water is
+silently reclassified as land and no rule complains. That exclusion is correct
+on a coastline and wrong in the Atlantic, and nothing we have can tell the two
+apart. `feature.ford_in_sea` is the rule that can: a cyan tile whose four
+neighbours are all sea.
 
 **And the tool it came from cannot read either installed map.** It refuses
 anything that is not uncompressed true-colour, and both mods ship
 `map_features.tga` as image type 10, RLE: DaC at 32-bit, Third Age Reforged at
-24. `maptga.py` reads and re-encodes all ten of DaC's layers byte for byte
-with the RLE intact, which is why the four checks could be measured here at
-all. Worth passing back.
+24. `maptga.py` reads and re-encodes all ten of DaC's layers byte for byte with
+the RLE intact, which is why the four checks could be measured here at all.
+Worth passing back, together with the vanilla (175,14) finding and the severity
+it argues for.
 
-**One rule needs deciding before it is written.** Geomod also says a river
-must *extend two pixels past the coastline*. That is a rule about a river's
-mouth against `map_heights.tga` rather than about `map_features.tga` alone,
-and it is the only one of the five that needs a second layer. Scope it, and
-leave it out rather than half-check it.
+**One rule stays out.** Geomod also says a river must *extend two pixels past
+the coastline*. That is a rule about a river's mouth against `map_heights.tga`
+rather than about `map_features.tga` alone, and it is the only one of the five
+that needs a second layer. Scoped out rather than half-checked.
+
+**Three rules, three fixtures, and no web change.** The findings panel is
+data-driven off `RULES`, so a new `@rule` reaches the screen on its own; each
+one is a decorated function in `mapcheck.py` and one `broken(...)` line in
+`tests/test_mapcheck.py`.
 
 ## Phase 32 - Who can hire what, and where - the mercenary pools
 
@@ -1184,22 +1221,219 @@ replaced rather than as broken.
 
 **Subrelease, both lines**, because the EDU half is the unit editor's.
 
-## Blocked - Mylae's improved validation and his coloured overlays
+## Phase 40 - The new province the engine cannot read
 
-He reports a settlement-position validation that alerts on an invalid
-position, some bug fixes, and coloured overlay export for religion, the
-faction creator and faction owners. **None of it is on GitHub.**
-`Machiavello-1441/m2tw-editor` is still at `2740b0b` (2026-09-08, "Update
-base44 packages"), `main` is the only branch, and the account has no second
-repository. `upstream_sync.py sync` reports up to date and it is right.
+**A defect, and it leads block one for that reason.** A province created by the
+wizard can reach `descr_regions.txt` as an **eight-line record in a file of
+nine-line records**, and the engine reads that file by position.
 
-**So this cannot be diffed yet, and what we already have says it may not need
-to be.** Ours judges a settlement position on four rules - `marker.ground`,
-`marker.feature`, `marker.sea` and `marker.orphan` - and since 22b a refusal
-also names the nearest tile that would do, through `mapsnap.nearest`, which is
-more than an alert. His coloured overlays are 16g's colourings and the
-per-faction TGA export. Re-run `sync` before scoping anything; if he has not
-pushed, ask for the files rather than guessing from the sentence.
+`campaint.new_record_lines` writes the resources line only when the user picked
+a resource:
+
+```python
+if spec.get("resources"):
+    out.append(indent + ", ".join(spec["resources"]))
+```
+
+Every other line in the record is unconditional. **No real map omits it.**
+Measured over the three `descr_regions.txt` on this machine: vanilla is 112
+records at 9 lines each, Third Age Reforged 199 at 9, and Divide and Conquer 196
+at 10 (its `legion:` form) plus two at 9 and one at 20. Not one record of the
+510 leaves the resources line out, and not one uses the literal `none` either -
+they all simply have resources. Mylae's serializer writes `none` for the empty
+case and so always emits nine lines; ours writes eight.
+
+**Nothing here catches it, which is why it reaches the game.** Our own parser is
+tolerant enough to read the short record back correctly, and `check_record`
+returns *no problems* for it, so the round trip is self-consistent and
+`mapcheck` stays silent. The engine is the only reader that disagrees, and the
+only thing it reports is a crash on load with nothing in the log pointing here.
+
+**The fix is one line and it is what every real file does**: always write the
+resources line, `none` when the list is empty. What the session is actually for
+is the three things around it:
+
+* a `region.record` finding for a record whose line count does not match the
+  rest of the file, since a hand-edited file can be short the same way;
+* `check_record` gaining the *shape* of a record and not only its values, which
+  is the check that would have caught this;
+* a fixture in `tests/test_campaint.py` that creates a province with **no**
+  resources, which is the case the B1 tests never made.
+
+**Verified as far as this repo can verify it.** That the writer emits eight
+lines, that no real map does, and that nothing of ours objects, are all
+measured. That the engine crashes on the short record specifically is inference
+from the format being positional and from 510 records agreeing - it wants one
+run in the game against a province created without resources, and that is the
+first thing the session should do.
+
+**Both lines.** It is a defect in a shipped feature, so it is a 2.x subrelease
+as well as a beta when a cut happens.
+
+## Phase 41 - Merge one faction's name pool into another
+
+**From Mylae's `187d9ed`, and the one genuinely new idea in that push.** His
+`MergeNamesModal.jsx` takes any number of source factions and merges their
+`descr_names.txt` lists into the selected one, previewing per section what is
+new, what is already there and what the total becomes.
+
+**We have the reporting and none of the action.** `minorfiles.check_names`
+already finds a name repeated inside a section and names both lines, which is
+better than his bare count; `factionclone.clone_names` copies a whole donor
+block verbatim as part of cloning a faction, with no dedupe and no merge. There
+is no way to pull one faction's surnames into another's without retyping them,
+and no way to clear the duplicates `check_names` reports.
+
+**The engine is fifteen lines and it is not the modal.** `merge_section(target,
+sources, dedupe, sort)` returns the merged list plus three counts - added,
+skipped because already present, and duplicates already inside the target - and
+those three counts are the preview. It belongs in `minorfiles.py` beside
+`check_names`, behind that module's existing `plan`/`apply` pair, so a merge is
+previewed and backed up like every other write there.
+
+**Four sections, not three.** `NAME_SECTIONS` is `settlements`, `characters`,
+`surnames`, `women`. Mylae's serializer writes only the last three and
+**silently drops `settlements`**; none of the three installed mods uses that
+section, which is why he has not noticed. Ours carries it through untouched.
+
+**Two things of his not to copy.** His preview labels source duplicates as
+"skipped" even when dedupe is off and they are in fact appended, and his Merge
+button is live with no source selected. Dedupe-in-place is a real action and
+should be its own button rather than a side effect of merging nothing.
+
+**Both lines.** `descr_names.txt` is a minor file rather than the campaign map.
+
+## Phase 42 - The art a clone does not get, and is not told about
+
+**Reported by a beta user on 2026-09-12: cloning a faction leaves its symbols
+missing under `data/menu/symbols/fe_buttons_24`, `fe_buttons_48` and
+`fe_symbols_80`.** The report is real. The cause is not the one it sounds like.
+
+**The copier is not at fault, and that is measured.** `menu` is already one of
+`factionclone.ART_ROOTS`, and `_asset_hits` was run over **all 31 Divide and
+Conquer faction slots**: it finds every symbol file in all three folders for
+every slot, misses none, and correctly resolves the longest-slot rivalry (no two
+DaC slots contain each other, so nothing is being eaten). `want_art` defaults to
+`True` in `plan` and the dialog's checkbox ships checked. `apply` copies each
+file and lists it in the undo manifest.
+
+**What is actually wrong: the clone gets only what the donor has, and says
+nothing about the rest.** Measured per folder, per mod:
+
+| folder | Divide and Conquer | Third Age Reforged |
+|---|---|---|
+| `fe_buttons_24` | 29 of 31 slots | 30 of 30 |
+| `fe_buttons_48` | 29 of 31 slots | 30 of 30 |
+| `fe_symbols_80` | **17 of 31 slots** | **0 of 30 slots** |
+| `fe_faction_units` | 28 of 31 slots | 28 of 30 |
+
+**`fe_symbols_80` on Reforged is empty of anything the mod uses.** Its 17 files
+are named for vanilla slots (`egypt`, `england`, `france`, `hre`, `ireland`,
+`milan`) that Reforged no longer has. So cloning *any* Reforged faction copies
+nothing into that folder, because the donor has nothing there to copy - and the
+clone is left with no 80px symbol. That is the reported symptom exactly.
+
+**The tool's one warning cannot fire here.** `plan` warns only when the whole
+scan comes back empty:
+
+```python
+p.warnings.append(f"no art was found carrying `{src}` in its name - …")
+```
+
+Banners, captain cards and unit-card folders are always found, so the list is
+never empty and the warning never fires, however many individual locations came
+back with nothing.
+
+**The phase is the per-location report, not a copier fix.** Give
+`factionclone` the set of places a faction's art normally lives - the four
+`menu/symbols` folders, `ui/faction_symbols`, `ui/units/<slot>`,
+`ui/unit_info/<slot>`, the captain cards, the three `banners/textures` files -
+and after the scan name every location the clone did **not** get one of, with
+which of the two reasons it was: *the donor has none either* (the Reforged
+`fe_symbols_80` case, so nobody can copy it and the person has to draw one) or
+*the destination already exists* (the `dst_path.exists()` skip, which is
+currently silent). Neither is a copier bug and both are things a person needs
+told before they launch the game and find a blank button.
+
+**Two smaller things found in the same measurement**, both worth a line rather
+than a phase: DaC ships a nested `menu/symbols/fe_buttons_24/fe_buttons_24/`
+whose four files are picked up as separate items and copied into an equally
+nested destination, which is faithful but odd; and `fe_symbols_80/france.TGA`
+has an upper-case extension, which the rename handles because `swap` only
+touches the matched slot token.
+
+**Not reproduced end to end.** Everything above is measured against the two
+installed mods and the current source. What has not been done is running the
+clone in the app and watching the folders, and the report may still turn out to
+be a different mod, an older build, or a second cause on top of this one. Ask
+which mod and which donor before writing the fix.
+
+**Both lines.** The faction clone is not the campaign map.
+
+## Phase 43 - Playable, unlockable, not playable
+
+**Asked for by the user on 2026-09-12.** `descr_strat.txt` opens with three
+rosters that decide which factions the campaign offers, and the toolkit reads
+all three and will not write any of them.
+
+What is already here: `campstrat.ROSTERS` is
+`("playable", "unlockable", "nonplayable")` and the parser keeps each block's
+line span; `campbrowse.js` prints the three counts on every campaign card;
+`stratcamp.py` has a `camp.no_playable` finding for a campaign that offers
+nobody; and `renames.py` follows a faction through all three when its slot is
+renamed. So the data, the display and the rename are done.
+
+What is missing is the edit, and it is missing **four times over**, in the same
+words - `stratcamp.py`, `stratchar.py`, `stratedit.py` and `regiondel.py` each
+refuse with *"this would change the playable, unlockable or nonplayable
+lists"*. Four refusals of the same shape is the signal that one writer is owed,
+not four.
+
+**The shape.** A faction is in exactly one of the three, so this is a
+three-way toggle per faction rather than three lists to edit - the writer moves
+a name out of the block it is in and into the one asked for, keeps each block's
+existing order and indentation, and refuses the one state the engine cannot
+take: no faction playable at all, which is `camp.no_playable` already written
+down. It rides `stratedit`'s existing plan/apply and backup set like every other
+`descr_strat.txt` write, and the four refusals above become calls into it.
+
+**Per campaign, not per mod.** Each campaign has its own `descr_strat.txt`, and
+a faction playable in the imperial campaign need not be playable in another.
+
+**Mylae has this** - `repBlock('playable' | 'unlockable' | 'nonplayable', …)` in
+his `serializeDescrStrat` - and his version rewrites the whole block from an
+array. Ours should move one name and leave every other byte alone, which is the
+difference between the two tools everywhere else in `descr_strat.txt`.
+
+**Beta only.** `descr_strat.txt` is campaign-map work.
+
+## Mylae pushed on 2026-09-12, and this is what came
+
+**Superseded: the block of 2026-09-12 is lifted.** That entry said his improved
+validation and coloured overlays were not on GitHub and that
+`Machiavello-1441/m2tw-editor` was still at `2740b0b`. He pushed three commits
+the same day and `upstream_sync.py sync` has them: `2740b0b..187d9ed`, 7 files.
+
+* `11e3eb9` - base44 vite plugin 1.0.35 to 1.0.36. Cloud plumbing, `skip`.
+* `920841a` - the `map_features.tga` rewrite. **Phase 31**, and it changed that
+  phase's scope rather than adding to it.
+* `187d9ed` - the names merge. **Phase 41**.
+
+**What he described is still not here.** The settlement-position validation and
+the coloured overlay exports for religion, creator and owner are in neither
+commit. Ours already judges a settlement position on four rules -
+`marker.ground`, `marker.feature`, `marker.sea` and `marker.orphan` - and since
+22b a refusal also names the nearest tile that would do, through
+`mapsnap.nearest`, which is more than an alert. His overlays are 16g's
+colourings and the per-faction TGA export. Ask for those files rather than
+scoping from the sentence; re-run `sync` before scoping anything else.
+
+**Two things to pass back to him**, both found while diffing this push: his new
+orphan-white-source check is an `error` and vanilla trips it at image (175,14),
+and the standalone `map_features_checker.py` he ported from cannot open either
+installed map because both ship RLE TGAs.
+
+---
 
 ---
 

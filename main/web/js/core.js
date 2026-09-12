@@ -713,12 +713,11 @@ const MINOR_TABS=[
   {mode:'traits',      label:'Traits'},
   {mode:'ancillaries', label:'Ancillaries'},
   {mode:'guilds',      label:'Guilds'},
-  // 17f: a faction is two files - what it IS (descr_sm_factions.txt) and what
-  // it starts the campaign WITH (descr_strat.txt) - and they are one screen
-  // now, inside the Campaign Map. This tab still lands somewhere, and where it
-  // lands depends on whether the mod has a map at all: with one, the combined
-  // screen; without one, the old mode, which is the only place that mod's
-  // factions can be edited.
+  // A faction is two files - what it IS (descr_sm_factions.txt) and what it
+  // starts the campaign WITH (descr_strat.txt). 17f put both on one screen
+  // inside the Campaign Map and pointed this tab at it; that route was reverted
+  // on 2026-09-12 (see `minorFactions`) and the tab goes to the factions mode,
+  // so it lights up like every other tab in this strip.
   {mode:'factions', label:'Factions', go:'minorFactions()'},
   {mode:'strings',     label:'Strings'},
 ];
@@ -736,24 +735,23 @@ function minorGo(tab,mode){
   minorWantTab=tab; state.mf=null; setAppMode('minor');
 }
 
-/* Where the Factions tab goes now (17f).
+/* Where the Factions tab goes: the factions mode, always.
 
-   To the combined screen when this mod has a campaign map to put it on, and to
-   the old mode when it has not - a mod that ships units and lets the game's own
-   map stand is the ordinary case, and it still has factions to edit. The map's
-   readiness is the same one Home shows, so the two never disagree. */
+   17f made this tab a route into the campaign map's combined faction screen
+   when the mod had a map, and left it on the old mode when it did not. Nobody
+   saw that on a public build, because every 2.x ships with the map off and the
+   tab therefore always took the second road. On master, with the map on, the
+   same click left Minor Files entirely, landed on the campaign map and left the
+   Factions tab unlit behind it - two different screens behind one button
+   depending on a flag the person clicking it cannot see.
+
+   **Reverted on 2026-09-12 at the user's request: the tab goes to the factions
+   mode on both lines, which is the behaviour every public build has had.** The
+   combined screen is not lost; it is still `cjTab('faction')` from inside the
+   campaign map, which is where it lives. */
 function minorFactions(){
-  // With the map off in this build there is no combined screen to land on, so
-  // the tab goes where a mod with no map has always sent it: the factions mode,
-  // which is the only place that mod's factions can be edited either way.
-  if(!modeOffered('campmap'))return setAppMode('factions');
-  campmapWantFactions=true;
-  setAppMode('campmap');
+  setAppMode('factions');
 }
-//: Set by the tab above and read once by the campaign map: it opens the faction
-//: screen when it has drawn, and hands the mode back to `factions` when this
-//: mod has no map to draw at all.
-let campmapWantFactions=false;
 
 /* ---------- the findings banner ----------
    "14 things to look at - the marked rows below" was the whole message, so the
