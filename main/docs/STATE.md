@@ -93,9 +93,11 @@ campaign set was re-run - `test_regiondel` (62, new), `test_campnew` (52, new),
 below, each on its documented number.
 
 **The one-second bar in `test_mapcheck` has less headroom than it did.** 23a's
-rule put it at about 630 ms on DaC and 23b's second season at about 740. It is a
-load-sensitive bar and it has flaked once here under contention with another
-suite; re-run it alone and idle before believing a failure.
+rule put it at about 630 ms on DaC and 23b's second season at about 740. Idle on
+2026-09-12 it measures **659 ms on DaC and 329 on Reforged**; in the middle of a
+102-suite batch with a graph rebuild running it measured **1,484 and 1,215** and
+failed both checks. It is the load that moves it, not the rule - re-run it alone
+and idle before believing a failure, and expect it to fail inside a full run.
 
 **Four suites fail the same way on a clean `master`** - hard-coded Divide and
 Conquer numbers (77 port pixels, 13,153 newlines, 305 characters, 73,904 sea
