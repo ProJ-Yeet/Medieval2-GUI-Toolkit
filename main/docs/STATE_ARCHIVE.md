@@ -11,6 +11,98 @@ below was written at the end of the session it describes and was true then.
 
 Split out of `STATE.md` on 2026-09-05, verbatim. Two blocks follow: the session
 log, then the decisions that had built up in `STATE.md`'s append-only list.
+---
+
+# The session log
+
+## 29, with B4 - the strat model viewer, and a stub that beat the art beside it (2026-09-12)
+Taken as the next phase off block one: the only defect in either block, and the
+only new phase reaching both release lines. It took B4 with it, as the roadmap
+said it might.
+
+**The scoping was wrong about the root and it was the root that mattered.** The
+write-up blamed a `.pack` - Divide and Conquer ships 1,172 zero-byte `.tga`
+files under `data/models_strat`, so the real art must be inside an archive.
+It is not. It is **loose, in the same folder, one extension further on**: the
+mod's packer converts each `.tga` to `<name>.tga.dds` and truncates the
+original instead of deleting it. `cas.texture_path` already knew that name -
+its own docstring called it "how the packer leaves them" - but it took the
+first candidate that *existed*, and a zero-byte file exists.
+
+Measured across both installed mods: 1,172 zero-byte `.tga` in Divide and
+Conquer and two in Third Age Reforged, and **1,171 of the 1,174 have their
+real DDS beside them** under exactly that name. The three that do not are all
+called `XXXX...`, the modders' own mark for a file they have switched off.
+Nothing else in either mod is zero bytes. After the fix, a sweep over all 926
+of Divide and Conquer's `.cas` files finds **no material at all** resolving to
+something that will not decode, and `anduin_city_4.cas` - the 44-group
+settlement that was drawing as one white box - draws whole.
+
+The four faults above it were all real and all fixed, because each is wrong on
+its own and the next mod to trip one will not trip it in this order:
+`_decode_to_png` answering an unreadable file with a 1x1 transparent PNG;
+`/model_texture` therefore answering 200; the viewer believing the sheet; and
+`V3_FRAG`'s cut-out `discard` then deleting every textured group, leaving
+whichever mesh had no material - the cube. The flicker was the model drawn
+correctly for the frames before the images landed.
+
+**What was deliberately not built.** The panel was supposed to say "this mod
+keeps its strat-model textures in a `.pack`". Nothing here reads a `.pack`
+index. The format was probed far enough to know that the index offset is not a
+fixed function of the header - a formula derived from `localized.pack` held for
+that file and broke on four of the other five - and reverse-engineering it is
+not this phase. So every sentence the tool now prints is something it measured:
+a file's size, the partner file beside it, the number of archives it can list.
+
+**B4** was the same shape in another file. `renames._names` read the slot list
+off disk, got an empty list, and `_validate` refused *every* faction with
+"there is no faction slot called X" - a claim about the faction, and untrue;
+`factions.overview` refused the whole screen with a different sentence about
+the same absence. `factions.no_file_note` is now the one place that sentence is
+written and both callers use it. An **empty** `packs` folder is not an archive,
+which had to be checked because Third Age Reforged has one.
+
+**Verified in the running app**, not only in tests: the settlement drawing
+whole with its three sheets uploaded, the `.mesh` viewer still cutting out
+correctly (the orc's hair and fingers), and the facts panel printing the 415's
+own sentence for a sheet that will not decode.
+
+`tests/test_stratart.py` is new (40 checks) and covers all five levels plus B4;
+the affected set was re-run and passes. `test_campstrat`'s three failures were
+re-checked against a stashed tree and are the installed DaC build, as
+documented.
+
+## Decisions pruned from STATE.md, 2026-09-12, after Phase 29
+
+The list passed the ten its contract allows when Phase 29 added three. These
+four are the 2026-09-12 review's, kept because each is a rule about how work
+gets scoped rather than about a module.
+
+- 2026-09-12: **A rating is a signal, not an instruction, and two of them were
+  overridden on purpose.** The mercenary repairs rated five stars and are not a
+  phase: a rule and the repair for it are one piece of work, and splitting them
+  is how a validator ends up with findings nobody can act on. The EDU ceilings
+  rated three and were pulled up into Phase 39 by the model ceiling beside them,
+  because both come out of one document and neither is a session alone.
+- 2026-09-12: **One list, not two.** The Later table of 2026-09-05 and the
+  TWCenter candidate tables said different things about the same work in two
+  places, which is exactly how the old `ROADMAP.md` reached three thousand
+  lines. They are now the single *Future roadmap* section. The 2026-09-05 triage
+  board itself is gone from the artifact gallery and nothing went with it: all
+  thirteen of its Later items were copied into this repository at the time, and
+  all thirteen were on the 2026-09-12 ballot.
+- 2026-09-12: **Measure the complaint before scoping the fix.** The pink was
+  reported as jarring and the installed mods have fifteen pink tiles and none.
+  That does not make the report wrong, it makes it about the paint tool rather
+  than about a mod at rest, and the two want different work. The same pass
+  turned four proposed river rules into four rules that find nothing on either
+  installed map, which is worth knowing before a session is spent on them.
+- 2026-09-12: **A rule we wrote down is not a rule we check.** This document
+  has said since 16a that a river has a white pixel at its source. Nothing ever
+  checked it. The river cross-reference found three more of the same kind, and
+  the lesson is that the format reference and the rule set need reconciling on
+  purpose, not as a side effect of the next phase that touches them.
+
 
 **Where the rest went**
 
@@ -21,9 +113,117 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 | what a finished phase built, and its exit criteria | `ROADMAP_ARCHIVE.md` |
 | what is still unported from the four references | `docs/upstream/REFERENCE_GAPS.md` |
 
----
+## Decisions pruned from STATE.md, 2026-09-12
 
-# The session log
+- 2026-09-12: **A tint is the canvas `color` blend, and nothing else.**
+  TWMapReader greyscales a region's pixels and then applies an HSB filter set to
+  the tint's hue and saturation; the blend takes the source's hue and saturation
+  and the backdrop's luminosity, which is the same operation in one step and in
+  hardware. His brightness stretch and its two cutoffs do not port, and the
+  reason is worth keeping: they exist to stop a filter that *replaces* the
+  brightness from crushing the relief, and the blend never touches it. Reading
+  what a reference does is not the same as copying how it does it.
+- 2026-09-12: **Anything that blends against the map is drawn on the screen, not
+  into the composite.** The layer composite is one pixel a tile and 23a's
+  terrain is four, so a colouring blended into the composite would be a tint of
+  the wrong picture. The fill and the frontiers went out as two canvases at the
+  same time, because a border colour has almost no saturation and a `color`
+  blend of it is a grey wash rather than a line.
+
+The list had reached twenty-six and the contract allows about ten. These are
+the sixteen oldest, verbatim, newest first; the ten that stayed are in
+`STATE.md`.
+
+- 2026-09-12: **A colour cannot say which group a province is in, so the server
+  says.** A presence map has a real group labelled "none" painted `NO_GROUP`,
+  which is the same grey a province in *no* group is painted. Inferring the
+  group from the fill put a frontier round every ungrouped province. The payload
+  carries `bands` now, and the browser infers nothing.
+- 2026-09-12: **Two implementations of one picture get one test that runs both.**
+  The panel has said since 16g that what is on screen and what an export writes
+  are the same picture, and for borders it was not true: the browser grouped by
+  each province's own colour and the export by the group's. Running `cqGroups`
+  and `cqBorders` in node against `_draw_borders` over one map found that and a
+  second fault in an afternoon; neither had been found by reading the code in
+  three phases of looking at it.
+- 2026-09-12: **A picture of the terrain says what it could not draw.**
+  TWMapReader draws a texture it cannot find pink and reports it, and 23a took
+  that rule and widened it by one case: a tile can have no texture because the
+  file names one that is missing *or* because nothing names one at all, and both
+  are pink and both are counted. The second found the fifteen DaC tiles whose
+  height says land and whose ground type says sea, which 16a had measured and
+  nothing had ever reported. A picture that is mostly right is the hardest kind
+  to check, so it has to say where it is not.
+- 2026-09-12: **The terrain is a reading of two layers, so it lives on one of
+  their rows.** 20a's ruling, applied to something four times the resolution of
+  the composite: the stack stays the ten files the map is made of. What is new
+  is that it cannot go *into* the composite - that is one pixel a tile - so it
+  is blitted under it, and one function answers "is the backdrop being drawn"
+  for the blit, the composite's opaque background and the composite's cache key.
+  Two of those three disagreeing is a black map.
+- 2026-09-12: **A composite of the map on the screen is keyed on the pixels, not
+  on the files.** There is a paint tool on this screen; a stroke changes the map
+  object and nothing about the file until somebody saves. Hashing the two layers
+  is four milliseconds against a second to rebuild, and it is the difference
+  between a picture of what will load and a picture of what did.
+- 2026-09-12: **An exact colour-to-index pass belongs in Pillow's C, and it
+  fits.** `Image.quantize` with a fixed palette is the obvious C route and 16a
+  measured what it costs: 1,320 tiles on the wrong region. Ranking each band
+  among the values that occur, packing red and green and ranking the pairs that
+  really occur, puts three ranks in a byte exactly - 160 ms of Python becomes
+  10 ms, and the suite checks the two byte for byte on every installed map.
+- 2026-09-11: **The screen draws the map the campaign reads, and the brush
+  stays where it paints.** A campaign that ships its own map files is drawn and
+  judged on them, and the brush, which only ever paints world/maps/base, is
+  refused there with the campaigns that do show it. Painting a map nobody can
+  see would be the one stroke a paint tool must never make.
+- 2026-09-11: **A check of an interaction drives the interaction.** 22a's
+  browser check called the drop and passed; 17d's drag had never dropped,
+  because the pointer's travel was counted only for a pan. 22b dragged with the
+  pointer and it failed at once. Calling the function a gesture ends in proves
+  the function, not the gesture.
+- 2026-09-11: **A refusal names the nearest tile that would do, and the rule
+  it came from stays the only copy.** D10 is one search over four predicates -
+  the marker rules, the shore rule, the object rules and the sea rule - each
+  still living where it did. "No" with no way forward leaves somebody clicking
+  round the coast one tile at a time.
+- 2026-09-11: **Where a new record goes is derived from the map and the file,
+  never typed.** Demir's dialog has a region box; here a new fort is filed under
+  the province under its tile, because 393 of DaC's 400 are, and a new section
+  goes where the file says sections go - under Third Age Reforged's own
+  `start of regions section` banner, in front of DaC's scripts banner. The
+  exceptions stay visible, counted on the file being edited, with one button to
+  refile. A box somebody has to fill in correctly is a box that will be filled
+  in wrong.
+- 2026-09-11: **The map screen never reads a canvas back.** A user's browser
+  said "no region" over most of Third Age Reforged and read dense forest,
+  0,64,0, as 0,65,1: canvas anti-fingerprinting (Brave's shields, Firefox's
+  resist-fingerprinting, privacy extensions) noises every getImageData, and our
+  in-app browser does not, which is why no test here saw it. Layers now arrive
+  as raw bytes (`layer?format=rgb`), `cmapRawOf` is the one read, and canvases
+  are only written. The node harness's canvas throws on a read.
+- 2026-09-11: **A raw save refuses only on the bytes, never on the parser.** It
+  refuses a stale signature, a character the file's encoding cannot hold, and a
+  file that does not survive a read and a write unchanged; what the toolkit's
+  own reader objects to is a warning. An escape hatch that closes when the
+  parser disagrees is not one.
+- 2026-09-11: **Gap or note is measured per file on the installed mods.** A gap
+  is a record every real faction has; a note is one working factions go without,
+  shown and never counted. It moved three of Demir's calls and dropped one check
+  outright, and "copy what is missing" copies gaps only.
+- 2026-09-11: **A label with no room is left off and counted, never drawn over
+  another.** TWMapReader draws it anyway; two names on top of each other are
+  neither readable. It is honest because it is measured: zooming in never names
+  fewer, and from 8 px a tile every settlement on all three maps is named.
+- 2026-09-11: **Nothing is released until the roadmap is finished.** The
+  user's instruction, and it suspends the cut-as-it-lands rule of 2026-09-09:
+  commit each session and stop, then one cut of the whole backlog at the end.
+- 2026-09-11: **The engine takes each map file separately, so the unit a map
+  write reaches is the campaign.** Vanilla's `norman_prologue` ships its own
+  `map_regions.tga` and reads the base `descr_regions.txt`. Anything written to
+  `world/maps/base` asks `campaint.map_campaigns` which campaigns see it and
+  which copy of each file each one reads. B1's crash was the base record
+  written and a campaign's own copy not.
 
 ## 22c - a campaign's own map (2026-09-11)
 Taken straight after 22b, on the user's word, as the follow-up 22b flagged:

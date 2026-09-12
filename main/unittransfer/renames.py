@@ -872,8 +872,18 @@ def _validate(p: RenamePlan, known: Dict[str, List[str]]) -> None:
     kind = NOUN[p.subject]
     mine = {n.lower() for n in known[p.subject]}
     if p.old.lower() not in mine:
-        p.errors.append(f"there is no {kind} called {p.old!r} in "
-                        f"{getattr(p.mod, 'name', '?')}")
+        # B4. An empty slot list and a name that is not in it look identical
+        # here, and they are not the same thing: with no descr_sm_factions.txt
+        # loose, EVERY faction was refused with "there is no faction slot
+        # called X", which is a claim about the faction and is untrue. The
+        # file is in a .pack. factions.no_file_note is the one place that
+        # sentence is written, so the rename screen and the Factions screen
+        # cannot drift into saying different things about one absence.
+        if p.subject == "faction" and not known["faction"]:
+            p.errors.append(fac.no_file_note(p.mod))
+        else:
+            p.errors.append(f"there is no {kind} called {p.old!r} in "
+                            f"{getattr(p.mod, 'name', '?')}")
         return
     if not p.new:
         p.errors.append(f"a rename needs the new name")

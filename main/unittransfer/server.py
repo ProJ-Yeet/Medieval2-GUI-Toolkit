@@ -512,6 +512,7 @@ from . import ancillaries, campaint, campevents, campfiles, campmap, campnew, ca
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
+from . import icons
 from .icons import IconCache
 from .mod import Mod, ModDataError
 from .transfer import (TransferOptions, plan_transfer, apply_transfer, undo, revert_to,
@@ -3838,8 +3839,21 @@ class Handler(BaseHTTPRequestHandler):
             # under data/ - the same rule /icon's `rel` routes follow.
             src = factions.picture_path(mod, (q.get("rel") or [""])[0])
             hd = (q.get("hd") or ["0"])[0] == "1"
-            data = self.registry.icons.png_bytes(
-                src, 0 if hd else self.MODEL_TEXTURE_MAX)
+            # `strict`, which is Phase 29. A sheet that is there and will not
+            # decode used to come back 200 with a 1x1 transparent PNG in it,
+            # the viewer's `Image` loaded it happily, and the cut-out shader
+            # then discarded every group that named a texture - a settlement
+            # drawn as the one box that had no material. The viewer already
+            # has a path for "no sheet"; this is what makes it run, and 415
+            # carries the measured sentence so the panel can say which file
+            # and why rather than showing a grey model and no explanation.
+            # A sheet the mod simply does not ship is still a blank 200: that
+            # is ordinary, and every other `png_bytes` caller is unchanged.
+            try:
+                data = self.registry.icons.png_bytes(
+                    src, 0 if hd else self.MODEL_TEXTURE_MAX, strict=True)
+            except icons.ArtUnreadable as exc:
+                return self._err(415, str(exc))
             # the viewer puts the served size on the facts panel, so "HD" can be
             # seen to have done something rather than taken on trust
             return self._send(200, data, "image/png",

@@ -695,6 +695,22 @@ def texture_path(model: Path, texture: str) -> Optional[Path]:
       A named ``.tga`` that is not there is tried as ``.dds`` and as
       ``.tga.dds``, which is how the packer leaves them.
     * **nothing at all**, which is not an error: 31 objects have no material.
+
+    And one thing has to be *preferred*, which is Phase 29's root. A mod's
+    packer converts each ``.tga`` to a DDS named ``<name>.tga.dds`` and leaves
+    the original truncated to nothing rather than deleting it, so the named
+    file is there, is first in the candidate list, and is zero bytes. Measured
+    on both installed mods: Divide and Conquer has 1,172 of them under
+    ``data/models_strat`` and Third Age Reforged two, and 1,171 of the 1,174
+    have their real DDS beside them under exactly that name. The three that do
+    not are all named ``XXXX...``, the modders' own mark for a file they have
+    switched off.
+
+    So an empty candidate never wins over a later one that has bytes in it -
+    taking the stub is how the strat viewer ended up drawing a bare cube. An
+    empty file is still returned when it is the ONLY thing there, because
+    "present and unreadable" is a fault the layers above now report and
+    "absent" is not, and collapsing the two is the mistake this phase undid.
     """
     if not texture:
         return None
@@ -706,11 +722,30 @@ def texture_path(model: Path, texture: str) -> Optional[Path]:
     if not here.is_dir():
         return None
     have = {p.name.lower(): p for p in here.iterdir() if p.is_file()}
+    empty = None
     for name in wanted:
         hit = have.get(name.lower())
-        if hit is not None:
+        if hit is None:
+            continue
+        if _has_bytes(hit):
             return hit
-    return None
+        if empty is None:
+            empty = hit
+    return empty
+
+
+def _has_bytes(path: Path) -> bool:
+    """Is there anything in this file at all?
+
+    One stat, and it is the whole of the stub test. Nothing tries to decode
+    here: this module's errand is to say which file a material means, and
+    whether the bytes in it are a picture is :mod:`unittransfer.icons`'s
+    question, asked once and cached.
+    """
+    try:
+        return path.stat().st_size > 0
+    except OSError:
+        return False
 
 
 def scene_view(scene: CasScene) -> dict:

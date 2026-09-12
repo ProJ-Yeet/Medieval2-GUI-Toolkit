@@ -1,48 +1,48 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-12 · **v2.3.1** is the latest 2.x and **beta 2026-09-12b** the
-latest beta · after the launcher fix that had a new build opening an old one ·
-**released**_
+_Updated: 2026-09-12 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
+the latest beta - after Phase 29, the strat model viewer, which took B4 with it
+and cut as it landed on both lines_
 
 ## Next up
-**Nothing is scheduled.** The roadmap closed with Phase 24 on 2026-09-12 and the
-cut that went with it; what remains in `ROADMAP.md` is the Later table, the
-three unscheduled phases and B2-B4 off the beta, none of which was ever counted
-as a session.
+**Two blocks, set by the user on 2026-09-12 after rating 38 of 39 candidates:
+the whole campaign map first, then the mercenaries.** Everything else is in
+`ROADMAP.md`'s *Future roadmap*, rated and unscheduled, to be started when both
+blocks are done. Fifteen sessions in all; **29 is done**, so fourteen are left
+and two of those are subreleases.
 
-**The launcher fix is released: v2.3.1 and beta 2026-09-12b**, both uploaded
-2026-09-12, the first cut under the restored cut-as-it-lands rule. It came off a
-report that the campaign map was missing from the beta on somebody else's PC.
-It was: the toolkit's server is detached and outlives its console, so a 2.x
-build left running on 8756 answered the beta's launcher, which reopened that
-window rather than start a second server - correct for a second double-click of
-one launcher, wrong for two different builds, and invisible because the two are
-identical apart from the mode 2.x hides. `/api/ping` now reports the build and
-the folder it was started from, `_is_this_build` in `app.py` is what the reuse
-path asks, and the version is in the page header so a screenshot answers "which
-build is this" without anybody opening Credits. Both lines carry it: the fix is
-not map work, and the build it was hiding is the map one.
+**Block one, the campaign map** - ~~29~~, 28, 33, 30, 34, 35, 36, 37a, 37b,
+31, 38.
 
-**The end-of-roadmap cut is released: v2.3.0 and beta 2026-09-12**, both
-uploaded 2026-09-12, covering everything since v2.2.3 and beta 2026-09-11 -
-20a, 20b, the two held beta fixes, B1, 20c, 21, the map hover fix, 22a, 22b,
-22c, 23a, 23b, 24 and the promise fix. The held notes `RELEASE_2_2_4.md` and
-`RELEASE_BETA_2026_09_11B.md` were folded into the two new ones and the versions
-they named were never cut, so **there is no v2.2.4 and no beta 2026-09-11b** -
-their content is in `RELEASE_2_3_0.md` and `RELEASE_BETA_2026_09_12.md`.
-**The one all-in-one Discord post goes with this cut** and is the last thing the
-suspension of 2026-09-11 was waiting on.
+**Start with Phase 28, the right menu as a tab strip.** It is second only
+because 29 was a defect, and every later panel lands on it: Phase 32's screen
+goes onto the right-hand column, and building it in the old sixteen-panel stack
+is work done twice. **Then 33**, three separate five-star S items in one
+session (T10, G2, G4), which is the cheapest five-star work on the list. The
+rest of block one is in `ROADMAP.md`'s order table, and two of its placements
+are deliberate rather than arbitrary: **30 before 34**, because declaring a
+climate without its textures is the largest field of pink anybody will ever
+produce here, and **35 before 32**, because it is the same two-way panel over a
+file that is already fully parsed.
 
-What is left, in the order it is worth taking: B2 (delete a settlement, and move
-one between mods - 24's delete is the shape for the first half and B1 already
-wrote the create), B3, B4, the Later table, and Phases 25-27. None of it is
-promised to anybody.
+**Block two, the mercenaries** - 32a, 32b, 32c, then 39. The big one.
+`mapquery.parse_mercenaries` keeps a pool's name, its regions and its unit names
+and throws away every gate on the line, so 32a is a real record in a new
+`mercpools.py` that becomes the one parser; 32b is the two directions and the
+four joins, all against modules we already own; 32c is five `mapcheck` rules and
+the one repair that has a safe answer. Already measured: DaC names 2 mercenaries
+absent from its EDU, Third Age Reforged names 33, and `Mt-Gram_Province` is in
+two pools in one campaign, which that file's own header forbids.
 
-**The cut-as-it-lands rule of 2026-09-09 is live again**, because the condition
-that suspended it - "we wont publish until we finish all the sessions of our
-roadmap now" - is met. A change that touches nothing outside the campaign map is
-the beta alone; anything else is a subrelease, which is both lines.
+**The cut-as-it-lands rule of 2026-09-09 is live**, so each phase goes out as
+it lands - which 29 did. 38 and 39 touch something outside the campaign map and
+are the remaining subreleases on both lines; the other twelve are the beta
+alone.
 
-The 24 write-up is in `ROADMAP_ARCHIVE.md`.
+**Mylae's new work is blocked and is not a phase.** He describes an improved
+settlement-position validation and coloured overlay exports; none of it is
+pushed. `Machiavello-1441/m2tw-editor` is still at `2740b0b` (2026-09-08),
+`main` is the only branch and the account has no second repository. Ask for the
+files rather than scoping from the sentence.
 
 ## WHERE THINGS ARE - the tree moved on 2026-09-06
 Only the two `.bat` files and `README.md` are at the top of the repository.
@@ -50,68 +50,58 @@ Only the two `.bat` files and `README.md` are at the top of the repository.
 `config.PROJECT_ROOT` resolves to, what a test's `parents[1]` is, and what every
 path in this file and in the source is relative to. `main/dev/` never ships.
 
-## THE TWO RELEASE LINES - for the one cut at the end
+## THE TWO RELEASE LINES
 Two lines off this one `master`, chosen by whether a change touches the campaign
 map. **Not campaign-map** -> a **2.x subrelease with the map hidden**, uploaded
-`--latest` (latest **v2.3.1**, 2026-09-12). **Campaign-map** -> the **beta line**,
-uploaded as a **pre-release** (latest **beta 2026-09-12b**). A **subrelease means
-both**: one job, both zips, same tree. The end-of-roadmap cut was both, and so
-was the launcher fix after it.
+`--latest` (latest **v2.3.2**, 2026-09-12). **Campaign-map** -> the **beta
+line**, uploaded as a **pre-release** (latest **beta 2026-09-12c**). A
+**subrelease means both**: one job, both zips, same tree.
 
 The switch is **one flag**: `off:true` on the `campmap` entry in `MODES` in
 `web/js/core.js`, which `menuModes()` and `modeOffered()` are the only readers
-of. It is a **release-time edit, not a state of `master`** - set it, bump the 2.x
+of. It is a **release-time edit, not a state of `master`**: set it, bump the 2.x
 number, build, upload, then put it straight back off in the next commit.
-`master` carries the map ON, and `__version__` says `beta-2026-09-12b` because
-the beta was the last thing cut.
+`master` carries the map ON, and `__version__` says `beta-2026-09-12c`
+because the beta was the last thing cut.
 
-**A launcher only reuses its own build now.** The flag above is what makes two
-builds look identical, and until 2026-09-12 a launch would hand you whichever
-one happened to be serving port 8756 - see **Next up**. `/api/ping` carries
-`version` and `root`; `app.py`'s `_is_this_build` compares both, and anything
-else is reported rather than reopened (`EXIT_OTHER_BUILD`, 4, which both `.bat`
-launchers have a branch for). `tests/test_startup.py` covers it.
-
-**21 belongs to BOTH lines.** Raw text is a menu mode of its own and the faction
-audit also draws in the Factions mode, so both are in the 2.x build with the map
-hidden; the audit's two campaign-row buttons appear only on the map screen.
-**22a, 22b, 22c, 23a, 23b and 24 are map work** and belong to the beta line
-only - 24's two panels are both on the map screen.
+Of the finished work, **21 and 29 belong to BOTH lines** (raw text is a menu
+mode of its own, the faction audit also draws in the Factions mode, and 29's
+`icons.png_bytes` is the unit editor's and the BMDB browser's route as well as
+the viewer's) and **22a, 22b, 22c, 23a, 23b and 24 are map work**, beta only.
+Of the fourteen sessions left, **two are subreleases**: 38, because
+`descr_campaign_db.xml` is a data file and gets a mode of its own; and 39,
+because the EDU half of the ceilings is the unit editor's. The other twelve are
+the beta alone.
 
 Betas are named by the **date** they were released, with a letter for a second
-in one day. The GitHub title is `M2 GUI-Kit V<X.Y.Z>` - hyphenated **GUI-Kit**,
+in one day. The GitHub title is `M2 GUI-Kit V<X.Y.Z>`: hyphenated **GUI-Kit**,
 capital **V**; run `gh release list --limit 3` and copy the newest title's shape
 rather than typing it from memory. The strict step-by-step is `HANDOFF.md`.
 
 **Nothing is written and held any more.** `RELEASE_2_2_4.md` and
-`RELEASE_BETA_2026_09_11B.md` are kept where they are as the record of what was
-drafted, and neither version was ever cut: both were folded into
-`RELEASE_2_3_0.md` and `RELEASE_BETA_2026_09_12.md` on 2026-09-12, with B1's fix
-replacing the "Not fixed" section the beta draft ended on. Everything committed
-since v2.2.3 is now in a released note.
+`RELEASE_BETA_2026_09_11B.md` are kept as the record of what was drafted;
+neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
+`RELEASE_BETA_2026_09_12.md` on 2026-09-12.
 
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
-| 24 - Make and unmake | **done** | Closed 2026-09-12, committed, **released 2026-09-12**. Closes G1, M15 and the roadmap. Deleting a province, with its land going whole to a neighbour it borders and its name coming out of every file 19b measured - and the campaign script listed, never written, for the reason a rename gives. Making a campaign, as a copy of one that works minus the compiled map, with its own header and its own menu keys. New: `unittransfer/regiondel.py` (`heirs`, `campaigns_reading`, `standing_on`, `plan`, `apply`, `view`), `unittransfer/campnew.py` (`sources`, `plan`, `apply`, `view`), `mapquery.drop_music_region`, `renames.mentions`, `campfiles.write_descriptions`, `GET /api/map/region_delete`, `POST /api/map/region_delete_plan\|_apply`, `GET /api/campnew`, `POST /api/campnew/plan\|apply`, `web/js/regiondel.js`, `web/js/campnew.js`. `tests/test_regiondel.py` (62), `tests/test_campnew.py` (52). |
-| 23b - Winter, and the tint | **done** | Closed 2026-09-12, committed, **released 2026-09-12**. Closes T12 and the winter half of T1, and with it Phase 23. The season switch on the ground types row, one picture kept per season, and the validator judging **both** seasons (`mapterrain.season_gaps`) because a missing winter texture is missing whichever season is drawn. T12's tint is the canvas `color` blend, which is his grayscale-then-HSB chain in one step; the colouring moved out of the layer composite to `cmapThemeDraw` so it can blend against the terrain. Border position (edge/inside) and scope (groups/every province), on the screen and in the export both. New: `Colouring.payload`'s `bands`, `mapquery._every_region`, `BORDER_POSITIONS`; `cmapThemeDraw`, `cmapTerrainSeason`, `cqFill`, `cqGroups`, `cqBorders`, `cqDraw`. `tests/test_mapquery.py` section 3b (10, node against Python). |
-| 23a - The texture composite | **done** | Closed 2026-09-12, committed, **released 2026-09-12**. Closes D7 and T1. The map drawn with the mod's own aerial-map textures, TWMapReader's rules taken as they stand: pink for a texture that cannot be found, the `default` block inherited, wilderness drawn as fertility_low, and the two winter fallbacks. New: `unittransfer/mapterrain.py` (`parse`, `Vocabulary`, `plan`, `composite`, `check_textures`, `signature`, `view`, `_index`), `GET /api/map/terrain[&format=png]`, `mapcheck`'s `terrain.texture` rule, and a Terrain textures mode on the ground types row (`cmapTerrainOn` / `cmapTerrainDraw`). `tests/test_mapterrain.py` (63). |
-| 22c - A campaign's own map | **done** | Closed 2026-09-11, committed, **released 2026-09-12**. The follow-up 22b left: the map screen, ✓ Check and its fixes read a campaign's own map files. New: `Registry.map_for`, `campmap.shipped` / `layer_map` / `rel_of` / `base_readers` / `home_view`, `mapcheck.Check.rel`, `campaint.paints_for`; `cmapRefetchMap` / `cmapHomeNote` in `campmap.js`. `tests/test_campaignmap.py` (30). |
-| 22b - Resources, and the snap | done | Closed 2026-09-11, committed, **released 2026-09-12**. Closes D9, D10, G5 and Phase 22. New: `unittransfer/mapsnap.py`, `campmap.campaign_map` / `map_of`, `mapcheck.position_faults` / `duplicate_message`; `stratobj` takes `resource` (`Layout`, `resource_home`, `Census`, `Vocabulary.snap`); `stratchar._shore`, `campaint._marker_near`; `cmapLocate` in `campmap.js`, and 17d's drag counts the pointer's travel. `tests/test_stratres.py` (67). |
-| 22a - Forts and watchtowers | done | Closed 2026-09-11, committed, **released 2026-09-12**. First half of D9 (and G5). New: `unittransfer/stratobj.py` (`plan`, `apply`, `view`, `Vocabulary`, `render_line`, `new_section`), `web/js/campforts.js` (the 🏰 Forts panel), `GET /api/map/objects`, `POST /api/map/object_plan\|_apply`. 17d's drag takes forts and watchtowers (`CMK_DRAGGABLE`). `tests/test_stratobj.py` (65). |
-| 21 - Two screens over data we hold | done | Closed 2026-09-11, committed, **released 2026-09-12**. Closes D6, D11 (= M14) and the Now set. New: `unittransfer/factionaudit.py` (`Census`, `evaluate`, `audit`, `repair_plan`), `unittransfer/rawtext.py` (`files`, `read`, `splice`, `plan`, `apply`), `web/js/facaudit.js`, `web/js/rawtext.js`, the `rawtext` mode, `GET /api/factions/audit`, `POST /api/factions/repair_plan\|repair_apply`, `GET /api/raw/files\|file`, `POST /api/raw/plan\|apply`. `factionclone.clone_file` and `ClonePlan.action` (refactor, clone suites unchanged). `tests/test_factionaudit.py` (48), `tests/test_rawtext.py` (57). |
-| B2-B4 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export; `Rename slot` on a packed mod. |
+| 29 + B4 - the strat model viewer | **done** | Closed 2026-09-12, committed, **released 2026-09-12** as v2.3.2 and beta 2026-09-12c. The scoping was wrong about the root and right about everything above it: the art is not in a `.pack`, it is loose beside the stub as `<name>.tga.dds`, and `cas.texture_path` took the zero-byte `.tga` because it existed. Fixed at all five levels. New: `cas._has_bytes`, `icons.ArtUnreadable`, `icons.fault`, `png_bytes(strict=)`, `/model_texture` 415, `factions.packs_beside`, `factions.no_file_note`, and in `viewer3d.js` `uCutout`, `v3Degenerate`, `v3AskWhy`, `v3TexFault`, `v3FaultRows`. `tests/test_stratart.py` (40). |
+| 28, 30-39 - the rest of the 2026-09-12 review | **scoped** | Fourteen sessions in two blocks. **Block one, the campaign map:** 28 the right menu as a tab strip, 33 T10 + G2 + G4 in one session, 30 the pink as a choice, 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 31 four river rules, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
+| 24 - Make and unmake | done | Closed 2026-09-12, committed, **released 2026-09-12**. Closes G1, M15 and the roadmap. Deleting a province, with its land going whole to a neighbour it borders and its name coming out of every file 19b measured - and the campaign script listed, never written, for the reason a rename gives. Making a campaign, as a copy of one that works minus the compiled map, with its own header and its own menu keys. New: `unittransfer/regiondel.py` (`heirs`, `campaigns_reading`, `standing_on`, `plan`, `apply`, `view`), `unittransfer/campnew.py` (`sources`, `plan`, `apply`, `view`), `mapquery.drop_music_region`, `renames.mentions`, `campfiles.write_descriptions`, `GET /api/map/region_delete`, `POST /api/map/region_delete_plan\|_apply`, `GET /api/campnew`, `POST /api/campnew/plan\|apply`, `web/js/regiondel.js`, `web/js/campnew.js`. `tests/test_regiondel.py` (62), `tests/test_campnew.py` (52). |
+| B2-B3 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export. B4 went out inside 29. |
 | 25-27 | scoped, unscheduled | OSM backdrop, map resize, layer generators. |
 | 16-21 | done | 16-20a published on the beta line; 20b onward committed and uncut. The 3.0.0 and 3.1.0 numbers are still unassigned to a cut. |
-
+| 16-23 | done | Every write-up is in `ROADMAP_ARCHIVE.md`. 16-20a published on the beta line; everything from 20b to 24 went out in the 2026-09-12 cut. |
 ## In-progress detail
-**Clean.** Nothing is mid-flight. There are 102 suites. After 24 the map and
-campaign set was re-run - `test_regiondel` (62, new), `test_campnew` (52, new),
-`test_renames` (56), `test_campfiles` (83), `test_web_modules` (20),
-`test_mapquery` (109), `test_mapcheck` (86), `test_mapterrain` (63),
-`test_campstrat`, `test_campaignmap`, `test_campaint`, `test_campedit`,
-`test_stratobj`, `test_winconds` - and everything passes except the DaC four
-below, each on its documented number.
+**Clean.** Nothing is mid-flight. **All 103 suites were run one at a time
+after 29 and 98 passed.** The five that did not are the four documented DaC
+suites below, each on its documented number, plus `test_mapcheck`'s timing bar,
+which failed at 1,505 and 1,491 ms inside the batch and passes idle at 821, 666
+and 165 - exactly the behaviour that section describes. `test_campstrat` was
+also re-run against a stashed tree to confirm its three failures are the mod
+and not this phase; they are. `tests/test_stratart.py` is new (40) and covers
+all five levels of 29 plus B4.
 
 **The one-second bar in `test_mapcheck` has less headroom than it did.** 23a's
 rule put it at about 630 ms on DaC and 23b's second season at about 740. Idle on
@@ -186,11 +176,23 @@ the edits out from under it (21 did it once; see the archive).
 - `unittransfer/rawtext.py` - `rtOpen(rel, line)` is how any screen offers
   "open this file as text"; a parser that meets a line it does not model points
   there rather than growing a special case.
+- `unittransfer/icons.py`'s `fault` and `png_bytes(strict=)` - **before any
+  screen shows a picture that might not be there.** Absent and unreadable are
+  two answers now and collapsing them is what Phase 29 undid; absent stays
+  blank and stays quiet, unreadable is a fault and only a caller that can say
+  so asks for it.
+- `cas.texture_path` - **before resolving any art path by name.** A mod's
+  packer leaves the named `.tga` at zero bytes and the real DDS beside it as
+  `<name>.tga.dds`, so "the file exists" is not "the file has a picture in
+  it". 1,171 of the 1,174 zero-byte files on the installed mods are that.
 
 ## Upstream
-Reference tool reviewed SHA **2740b0b**. `sync` was run on 2026-09-12 at the
-start of 23a, 23b and 24, and was up to date all three times - nothing new since
-2026-09-09. `docs/upstream/PORT_MANIFEST.json` is authoritative: 310
+Reference tool reviewed SHA **2740b0b**. `sync` was run on 2026-09-12 four
+times - at the start of 23a, 23b, 24 and the review - and was up to date every
+time. **Confirmed against the remote directly**: `git ls-remote` gives
+`2740b0b` for both `HEAD` and `refs/heads/main`, there is no second branch, and
+the account has no second repository, so the features Mylae describes are
+genuinely unpushed rather than missed by the tool. `docs/upstream/PORT_MANIFEST.json` is authoritative: 310
 files triaged, none untriaged; `src/pages/TextEditor.jsx` notes it done in 21.
 `REFERENCE_GAPS.md` marks D6, D11 and M14 done and G2 half done; **D7, T1 and
 T12 were Phase 23's and G1 and M15 were 24's, and all five are now done.**
@@ -198,6 +200,33 @@ Nothing in the audit is scheduled any more. Run `sync` before touching anything
 that ports from a directory he has been working in.
 
 ## Decisions
+- 2026-09-12: **A file that will not decode is not a file that is missing** -
+  now true rather than scoped. `png_bytes` answered both with a 1x1
+  transparent PNG, and that conflation is what let the strat model bug through
+  four layers. Absent stays blank and stays quiet; present and unreadable is a
+  fault, `strict=True` is how a caller asks to be told, and the blank served
+  for one is no longer cached so replacing the file is enough to fix it.
+- 2026-09-12: **The scoping said the art was packed and it is loose beside the
+  stub.** Phase 29's own write-up blamed a `.pack`; the measurement says a
+  mod's packer converts each `.tga` to `<name>.tga.dds` and truncates the
+  original, and 1,171 of the 1,174 zero-byte files on the two installed mods
+  are exactly that pair. `cas.texture_path` took the stub because it *existed*.
+  A candidate list ordered by name alone cannot tell a file from a placeholder
+  - it has to prefer one with bytes in it. **Reproduce before scoping**: four
+  correct diagnoses above a wrong one still leave the bug in place.
+- 2026-09-12: **Say what was measured, not what it is blamed on.** The
+  temptation was to have the panel announce "this mod keeps its strat textures
+  in a `.pack`", which is the sentence the scoping asked for and is not true.
+  Nothing here reads a `.pack` index, so nothing here may claim what is inside
+  one: `icons.fault` reports the size and the partner file it can see, and
+  `factions.no_file_note` counts the archives it can list and says the file is
+  not loose. An empty `packs` folder is not an archive - Third Age Reforged
+  has one.
+- 2026-09-12: **A cut-out rule belongs to the format it was measured on.**
+  `if(base.a < 0.35) discard;` is what makes a plume a plume on a unit's
+  `.mesh`. Applied to a `.cas` whose sheet came back degenerate it deletes the
+  model, and the survivor is whichever mesh had no material at all. A shader
+  constant shared between two decoders is a decision about both.
 - 2026-09-12: **A delete is a rename to nothing.** 19b measured where a province
   is named - fifteen files in Divide and Conquer, twelve in Third Age Reforged -
   and G1 walks that list rather than one of its own, removing the name where a
@@ -227,107 +256,6 @@ that ports from a directory he has been working in.
   things, all of them in `campnew.py`: the compiled `map.rwm` must not travel,
   the `campaign <name>` header must name the copy, and 18a's menu keys are built
   from the folder name so a copy inherits none of them.
-- 2026-09-12: **A tint is the canvas `color` blend, and nothing else.**
-  TWMapReader greyscales a region's pixels and then applies an HSB filter set to
-  the tint's hue and saturation; the blend takes the source's hue and saturation
-  and the backdrop's luminosity, which is the same operation in one step and in
-  hardware. His brightness stretch and its two cutoffs do not port, and the
-  reason is worth keeping: they exist to stop a filter that *replaces* the
-  brightness from crushing the relief, and the blend never touches it. Reading
-  what a reference does is not the same as copying how it does it.
-- 2026-09-12: **Anything that blends against the map is drawn on the screen, not
-  into the composite.** The layer composite is one pixel a tile and 23a's
-  terrain is four, so a colouring blended into the composite would be a tint of
-  the wrong picture. The fill and the frontiers went out as two canvases at the
-  same time, because a border colour has almost no saturation and a `color`
-  blend of it is a grey wash rather than a line.
-- 2026-09-12: **A colour cannot say which group a province is in, so the server
-  says.** A presence map has a real group labelled "none" painted `NO_GROUP`,
-  which is the same grey a province in *no* group is painted. Inferring the
-  group from the fill put a frontier round every ungrouped province. The payload
-  carries `bands` now, and the browser infers nothing.
-- 2026-09-12: **Two implementations of one picture get one test that runs both.**
-  The panel has said since 16g that what is on screen and what an export writes
-  are the same picture, and for borders it was not true: the browser grouped by
-  each province's own colour and the export by the group's. Running `cqGroups`
-  and `cqBorders` in node against `_draw_borders` over one map found that and a
-  second fault in an afternoon; neither had been found by reading the code in
-  three phases of looking at it.
-- 2026-09-12: **A picture of the terrain says what it could not draw.**
-  TWMapReader draws a texture it cannot find pink and reports it, and 23a took
-  that rule and widened it by one case: a tile can have no texture because the
-  file names one that is missing *or* because nothing names one at all, and both
-  are pink and both are counted. The second found the fifteen DaC tiles whose
-  height says land and whose ground type says sea, which 16a had measured and
-  nothing had ever reported. A picture that is mostly right is the hardest kind
-  to check, so it has to say where it is not.
-- 2026-09-12: **The terrain is a reading of two layers, so it lives on one of
-  their rows.** 20a's ruling, applied to something four times the resolution of
-  the composite: the stack stays the ten files the map is made of. What is new
-  is that it cannot go *into* the composite - that is one pixel a tile - so it
-  is blitted under it, and one function answers "is the backdrop being drawn"
-  for the blit, the composite's opaque background and the composite's cache key.
-  Two of those three disagreeing is a black map.
-- 2026-09-12: **A composite of the map on the screen is keyed on the pixels, not
-  on the files.** There is a paint tool on this screen; a stroke changes the map
-  object and nothing about the file until somebody saves. Hashing the two layers
-  is four milliseconds against a second to rebuild, and it is the difference
-  between a picture of what will load and a picture of what did.
-- 2026-09-12: **An exact colour-to-index pass belongs in Pillow's C, and it
-  fits.** `Image.quantize` with a fixed palette is the obvious C route and 16a
-  measured what it costs: 1,320 tiles on the wrong region. Ranking each band
-  among the values that occur, packing red and green and ranking the pairs that
-  really occur, puts three ranks in a byte exactly - 160 ms of Python becomes
-  10 ms, and the suite checks the two byte for byte on every installed map.
-- 2026-09-11: **The screen draws the map the campaign reads, and the brush
-  stays where it paints.** A campaign that ships its own map files is drawn and
-  judged on them, and the brush, which only ever paints world/maps/base, is
-  refused there with the campaigns that do show it. Painting a map nobody can
-  see would be the one stroke a paint tool must never make.
-- 2026-09-11: **A check of an interaction drives the interaction.** 22a's
-  browser check called the drop and passed; 17d's drag had never dropped,
-  because the pointer's travel was counted only for a pan. 22b dragged with the
-  pointer and it failed at once. Calling the function a gesture ends in proves
-  the function, not the gesture.
-- 2026-09-11: **A refusal names the nearest tile that would do, and the rule
-  it came from stays the only copy.** D10 is one search over four predicates -
-  the marker rules, the shore rule, the object rules and the sea rule - each
-  still living where it did. "No" with no way forward leaves somebody clicking
-  round the coast one tile at a time.
-- 2026-09-11: **Where a new record goes is derived from the map and the file,
-  never typed.** Demir's dialog has a region box; here a new fort is filed under
-  the province under its tile, because 393 of DaC's 400 are, and a new section
-  goes where the file says sections go - under Third Age Reforged's own
-  `start of regions section` banner, in front of DaC's scripts banner. The
-  exceptions stay visible, counted on the file being edited, with one button to
-  refile. A box somebody has to fill in correctly is a box that will be filled
-  in wrong.
-- 2026-09-11: **The map screen never reads a canvas back.** A user's browser
-  said "no region" over most of Third Age Reforged and read dense forest,
-  0,64,0, as 0,65,1: canvas anti-fingerprinting (Brave's shields, Firefox's
-  resist-fingerprinting, privacy extensions) noises every getImageData, and our
-  in-app browser does not, which is why no test here saw it. Layers now arrive
-  as raw bytes (`layer?format=rgb`), `cmapRawOf` is the one read, and canvases
-  are only written. The node harness's canvas throws on a read.
-- 2026-09-11: **A raw save refuses only on the bytes, never on the parser.** It
-  refuses a stale signature, a character the file's encoding cannot hold, and a
-  file that does not survive a read and a write unchanged; what the toolkit's
-  own reader objects to is a warning. An escape hatch that closes when the
-  parser disagrees is not one.
-- 2026-09-11: **Gap or note is measured per file on the installed mods.** A gap
-  is a record every real faction has; a note is one working factions go without,
-  shown and never counted. It moved three of Demir's calls and dropped one check
-  outright, and "copy what is missing" copies gaps only.
-- 2026-09-11: **A label with no room is left off and counted, never drawn over
-  another.** TWMapReader draws it anyway; two names on top of each other are
-  neither readable. It is honest because it is measured: zooming in never names
-  fewer, and from 8 px a tile every settlement on all three maps is named.
-- 2026-09-11: **Nothing is released until the roadmap is finished.** The
-  user's instruction, and it suspends the cut-as-it-lands rule of 2026-09-09:
-  commit each session and stop, then one cut of the whole backlog at the end.
-- 2026-09-11: **The engine takes each map file separately, so the unit a map
-  write reaches is the campaign.** Vanilla's `norman_prologue` ships its own
-  `map_regions.tga` and reads the base `descr_regions.txt`. Anything written to
-  `world/maps/base` asks `campaint.map_campaigns` which campaigns see it and
-  which copy of each file each one reads. B1's crash was the base record
-  written and a campaign's own copy not.
+
+Older decisions are pruned into `STATE_ARCHIVE.md` at the ten this file's
+contract allows.

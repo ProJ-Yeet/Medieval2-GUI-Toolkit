@@ -24,6 +24,7 @@ Split out of `ROADMAP.md` on 2026-09-05, verbatim.
 | 21, 22a-22c - the two screens over data we hold, and placing things on the map | below |
 | 23a-23b - the map drawn with the game's own ground textures, winter, and the tint | below |
 | 24 - deleting a province, and making a campaign: the last of the roadmap | below |
+| 29, with B4 - the strat model viewer, and a stub that beat the art beside it | below |
 
 ---
 
@@ -4573,3 +4574,114 @@ campaigns, a fort and two resources standing on it), the seven files its plan
 would write, and the new campaign form planning a 118-file copy - with both
 saves driven through a stubbed `api.post` so that the installed mod was checked
 afterwards and had not been written to.
+
+---
+
+## Phase 29 - The strat model viewer, and the art that is there but unreadable - done 2026-09-12
+
+**Reported from the beta: the strat models viewer flickers and then turns into
+a normal cube, or nothing.** Reproduced on 2026-09-12 and traced the whole way
+down. The scoping called it four faults in a row and it was five - and the
+first one, the one the scoping got wrong, is the whole bug. Every level was
+fixed anyway, because each is wrong on its own and the next mod to trip one
+will not trip it in this order.
+
+### The root, and the scoping had it backwards
+
+The scoping said the art was inside a `.pack`. It is not. **It is loose, in the
+same folder, under a different extension.** A mod's packer converts each
+`.tga` to a DDS named `<name>.tga.dds` and **truncates the original to zero
+bytes rather than deleting it**. `cas.texture_path` already knew about that
+name - its own docstring called it "how the packer leaves them" - but it tried
+the candidates in the order the material writes them, took the first that
+*existed*, and a zero-byte file exists. So the stub won every time and the real
+art, sitting beside it, was never opened.
+
+Measured over both installed mods: Divide and Conquer has **1,172** zero-byte
+`.tga` under `data/models_strat` and Third Age Reforged **two**, and **1,171 of
+the 1,174 have their real DDS beside them** under exactly that name. The three
+that do not are all called `XXXX...`, which is the modders' own mark for a file
+they have switched off. Nothing else in either mod is zero bytes: the whole
+1,173-file set of empty art in Divide and Conquer is inside `models_strat`.
+
+The fix is one rule: **an empty candidate never wins over a later one that has
+bytes in it.** One `stat`, no decode - whether the bytes are a picture is
+`icons`'s question, asked once and cached. An empty file is still returned when
+it is the *only* thing there, because that is a fault the layers above now
+report and collapsing it back into "absent" is the mistake this phase undid.
+
+After it, a sweep over all **926** of Divide and Conquer's `.cas` files finds
+**no material at all** that resolves to a file which will not decode.
+
+### The four levels above it, each wrong on its own
+
+1. **`icons._decode_to_png` answered a file it could not read with
+   `_BLANK_PNG`**, a 1x1 fully transparent PNG, because it caught every
+   exception. `png_bytes` already separated a file that is *not there* - mods
+   ship the art they changed and leave the rest to the game, so a missing file
+   really is blank - but a file that is there and will not decode came out the
+   same. It now returns `None`, and `png_bytes` decides what that means.
+2. **`/model_texture` therefore answered 200 with 67 bytes**, the browser's
+   `Image` loaded it, and `v3Fetch`'s `onerror` path never ran. It now passes
+   `strict=True` and answers **415** carrying the measured sentence.
+3. **The viewer believed the sheet**, uploaded it and set `uHasTex = 1`. It now
+   refuses a degenerate sheet even on a 200 - 1x1, or transparent everywhere,
+   the second sampled through a 32x32 canvas so a 2048 sheet costs a thousand
+   pixels to check instead of four million. Our own server no longer serves
+   one; the next server to do it will not be ours.
+4. **`V3_FRAG` then discarded the model.** `if(base.a < 0.35) discard;` is the
+   cut-out rule, and it is right for a unit's `.mesh` - it is what makes a
+   plume a plume - but against a 1x1 transparent sheet it discards every
+   fragment of every group that names a texture. It is now gated on a
+   `uCutout` uniform, set from which format is loaded.
+
+**The cube was the one group with no material at all.** `anduin_city_4.cas`
+has 44 groups; 43 name a texture and vanished, and `symbol` names none, so it
+drew flat: 36 indices, twelve triangles, a box. **The flicker was the model
+drawn correctly** for the frames before the images landed.
+
+### What the person looking at the screen gets
+
+A grey model with no explanation was the fault that was reported, so the panel
+says **why**, measured: the failing sheet is named on the facts panel with the
+server's own sentence, and the mesh row that uses it says *will not load*
+rather than *not in this mod*. Those two were the same label and are not the
+same thing. The sentence is fetched once, on the failure path only - an
+`Image` cannot read a 415 body, so `v3AskWhy` re-requests the URL and reads it.
+
+### B4, taken in the same session as planned
+
+`Rename slot` refused on a mod with `descr_sm_factions.txt` packed, and the two
+really did share a root even though Phase 29's turned out to be a different
+one: a file the tool cannot read, and nothing saying so. `renames._names` read
+the slot list off disk, got an empty list, and `_validate` refused **every**
+faction with *there is no faction slot called X in <mod>* - a claim about the
+faction, and untrue. `factions.overview` refused the whole screen with a
+different sentence about the same absence, which is how the two came to
+disagree.
+
+`factions.no_file_note` is now the one place that sentence is written and both
+callers use it. It is measured: `packs_beside` looks in the mod's own `packs/`
+and, when the mod sits under a folder called `mods`, in the install's - and an
+**empty** `packs` folder is not an archive, which matters because Third Age
+Reforged has one. With no archives anywhere the sentence claims nothing about
+packs. Verified on this machine: vanilla has no loose copy, Divide and Conquer
+and Third Age Reforged both do, and the install ships six archives.
+
+A slot that genuinely is not in a file that *is* there still gets the old
+sentence, which is the half that was right.
+
+### Both lines
+
+`png_bytes` is the disk-cached PNG route for unit cards, faction symbols and
+model textures, so this reaches the unit editor and the BMDB browser too - and
+deliberately does **not** make either noisier: absent stays blank and stays
+quiet, `strict` is opt-in, and the only grids that change are the ones that
+were lying. The blank served for an unreadable file is no longer cached either,
+so replacing the file is enough to fix it.
+
+**Shipped:** `cas.texture_path` + `cas._has_bytes`; `icons.ArtUnreadable`,
+`icons.fault`, `png_bytes(strict=)`, `_decode_to_png -> Optional[bytes]`;
+`/model_texture` 415; `factions.packs_beside` + `factions.no_file_note`;
+`renames._validate`; `web/js/viewer3d.js` - `uCutout`, `v3Degenerate`,
+`v3AskWhy`, `v3TexFault`, `v3FaultRows`. `tests/test_stratart.py` (40).

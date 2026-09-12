@@ -88,8 +88,9 @@ running the test suite, and running `graphify update .`.
 Every phase in this table is finished. The write-up for each one is in
 `ROADMAP_ARCHIVE.md` under the same heading; the table is here so the numbers in
 commit messages, `docs/upstream/PORT_MANIFEST.json` and `STATE.md` still resolve.
-**23a to 27 are not here** - they are unbuilt, and they live in the Backlog
-below with their own index.
+**23a to 39 are not here** - 23a, 23b, 24 and 29 are finished and archived
+with the rest, and everything else in that range is unbuilt and lives in the
+Backlog below with its own index.
 
 | # | Phase | Shipped in |
 |---|---|---|
@@ -397,35 +398,44 @@ change, so no cross-reference dangles.
 | **3.0.0** | 16a-16k, plus 17 | The campaign map editor, and the correction pass over it. Feature-complete and uncut. |
 | **3.1.0** | 18-21 | The twenty Now items: the campaign files that had no editor, the names nothing could follow, and the map screen's second pass. |
 | **3.2.0** | 22-24 | The seven Next items: placing things on the map, a map that looks like the campaign map, and making or unmaking a region or a campaign. |
+| next, block one | ~~29~~, 28, 33, 30, 34, 35, 36, 37a, 37b, 31, 38 | **The campaign map.** Ten sessions left, in that order. All beta except 38, which is a subrelease on both lines. 29 landed on 2026-09-12. |
+| next, block two | 32a, 32b, 32c, 39 | **The mercenaries.** Four sessions. Beta except 39, which is both lines. |
+| after that | the Future roadmap list | Rated and unscheduled. Three five-star items lead it: M17, M12 and M16. |
 | later | 25-27, and the Later table | Not scheduled. |
 
 ### The whole plan on one screen
 
-**No sessions left.** Phase 17 (2026-09-06), all of
+**Fourteen sessions left of the fifteen.** Phase 17 (2026-09-06), all of
 Phase 18 (2026-09-07), all of Phase 19 (2026-09-09), 20a (2026-09-10), 20b,
-B1, 20c, 21, 22a, 22b and 22c (2026-09-11) and 23a, 23b and 24 (2026-09-12) are
-done and their write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later table
-is counted, and neither are B2-B4 below.
+B1, 20c, 21, 22a, 22b and 22c (2026-09-11), 23a, 23b and 24 (2026-09-12) and
+**29 with B4 inside it (2026-09-12)** are done and their write-ups are in
+`ROADMAP_ARCHIVE.md`; nothing in the Later table is counted, and neither are
+B2-B3 below.
 
-**Nothing was released until it was done**, and now it is. The user's
-instruction on 2026-09-11 suspended the cut-as-it-lands rule of 2026-09-09: each
-session commits and stops, and the whole backlog goes out as one cut at the end,
-the held v2.2.4 and beta 2026-09-11b notes included. **Phase 24 closed on
-2026-09-12 and that cut is now the next thing to do.**
+**Nothing was released until it was done**, and then it was: Phase 24 closed
+on 2026-09-12 and the whole backlog went out the same day as v2.3.0 and beta
+2026-09-12, the held v2.2.4 and beta 2026-09-11b notes folded into it. That
+discharged the instruction of 2026-09-11, so **the cut-as-it-lands rule of
+2026-09-09 is live again** and each session cuts as it lands - which Phase 29
+then did, as a subrelease on both lines.
 
 ---
 # Reported from the beta - not phased
 
 Four items off beta users between 2026-09-09 and 2026-09-11. They are not from
 the reference audit, so they have no `D`/`T`/`M` id; they are numbered `B` and
-they are **not** scheduled into the phases above. **B1, the crash, is done**
-(2026-09-11) and its write-up is in `ROADMAP_ARCHIVE.md`; the other three wait.
+they are **not** scheduled into the phases above. All three open ones were
+rated on 2026-09-12 at four stars each and live in *Future roadmap* with the
+rest of that rating; the detail stays here because it is longer than a table
+row. **B1, the crash, is done** (2026-09-11) and **B4 is done** (2026-09-12,
+taken inside Phase 29 as planned); both write-ups are in `ROADMAP_ARCHIVE.md`.
+B2 and B3 wait.
 
 | id | Item | Size | Note |
 |---|---|---|---|
 | B2 | Delete a settlement, and move one between mods | M | Half of what was asked for already exists - see below before building anything. B1 added the create. |
 | B3 | Insert and export one file at a time, the way Mylae's tool does | M | The user's own words: "that isnt really needed tbh". Lowest of the three. |
-| B4 | `Rename slot` is refused on a mod that keeps `descr_sm_factions.txt` packed | S | Same root as the whole Factions screen refusing. |
+| ~~B4~~ | ~~`Rename slot` is refused on a mod that keeps `descr_sm_factions.txt` packed~~ | S | **Done 2026-09-12**, inside Phase 29. `factions.no_file_note` is the one sentence, and the rename screen and the Factions screen both use it. |
 
 ## B2 - delete a settlement, and move one between mods
 
@@ -458,17 +468,6 @@ Some of this exists in pieces - `POST /api/map/export` writes Geomod's batch and
 a query as a TGA, 16g exports a per-faction TGA, and `pack.py` imports a unit -
 and none of it is a general "take this file out" or "put this file in". The user
 asked for it and then said it is not needed, so it sits at the bottom.
-
-## B4 - `Rename slot` on a mod with its factions packed
-
-`renames._names` reads the slot list from `descr_sm_factions.txt` on disk and
-returns an empty list when the file is not there, so `_validate` refuses every
-faction with "there is no faction slot called X in <mod>". The stock game keeps
-that file inside a `.pack`, and so does any mod that has not unpacked it -
-verified on this machine: vanilla has no loose copy, DaC and Third Age Reforged
-do. `factions.overview` refuses the whole screen the same way and for the same
-reason, so the fix belongs in one place rather than two, and the honest message
-names the pack rather than claiming the faction does not exist.
 
 ---
 # 3.1.0 - the Now set (Phases 18-21)
@@ -708,49 +707,589 @@ thing that had a create or a delete but not both. The write-up is in
 
 ---
 
-# The roadmap is finished
+# The Now and Next sets are finished, and a new set opens
 
 **Every phase in the Now and Next sets is done**, the last of them on
-2026-09-12. What is left in this document is the Later table, the three
-unscheduled phases below it, and B2-B4 off the beta - none of which was ever
-counted as a session.
+2026-09-12, and the cut they were held for went out the same day as **v2.3.0
+and beta 2026-09-12**. That closed the backlog this document was written round.
 
-**So the release rule of 2026-09-11 comes due.** Nothing has been cut since
-v2.2.3 and beta 2026-09-11; the whole backlog goes out as ONE cut on both lines,
-with the held v2.2.4 and beta 2026-09-11b notes folded into it, and one
-all-in-one Discord post with it. `HANDOFF.md` rule 1 applies to that cut
-unchanged. See `STATE.md` for exactly what has to be in the notes.
+**Phases 28 to 39 below are what reopened it.** They come from one review on
+2026-09-12: three things a beta user reported, one tool cross-reference, a
+measurement pass over the four references and the TWCenter archive, and then a
+rating pass in which the user gave 38 of the 39 candidates one to five stars.
+
+## The order, and the rule that produced it
+
+**Two blocks, and the user set them: the campaign map first, then the
+mercenaries. Everything else waits.** What is not in one of those two blocks
+lives in *Future roadmap* below, rated and unscheduled, to be started when the
+two main tasks are finished.
+
+**Inside each block the order is: a defect, then the thing later work stands
+on, then stars, then size.** That is four rules and each one earns its place.
+
+1. **Phase 29 led because it was the only defect.** Somebody was hitting it
+   and it was the only new phase reaching both release lines. Done 2026-09-12;
+   **28 is now first**.
+2. **Phase 28 is second because every later panel lands on it.** Phase 32's
+   screen goes onto the right-hand column, and building it in the old
+   sixteen-panel stack is work done twice.
+3. **Then five stars before four, and inside a rating, small before large.**
+   Phase 33 is three separate five-star **S** items in one session, which is
+   why it is third: it is the cheapest five-star work on the list.
+4. **A phase that makes another one legible comes first.** Phase 30 is before
+   Phase 34 because declaring a climate without its textures produces the
+   largest field of pink anybody will ever see here, and 30 is what makes that
+   readable instead of alarming. Phase 35 is before Phase 32 for the same kind
+   of reason: it is the same two-way panel over a file that is already fully
+   parsed, so the shape gets settled on the cheap problem first.
+
+### Block one - the campaign map
+
+| Order | Phase | Size | Line | Stars |
+|---|---|---|---|---|
+| ~~1~~ | ~~**29** Strat model viewer~~ | M | **both** | **done 2026-09-12** |
+| 2 | **28** The right menu becomes a menu | M | beta | an enabler |
+| 3 | **33** T10, G2 and G4 in one session | S x3 | beta | 5, 5, 5 |
+| 4 | **30** A missing texture without the pink | S | beta | reported |
+| 5 | **34** Add a climate zone | M | beta | 5 |
+| 6 | **35** Rebels right in place | M | beta | 5 |
+| 7 | **36** D1, change a region's colour | M | beta | 5 |
+| 8 | **37a** T7, the spawn export | M | beta | 5 |
+| 9 | **37b** T3, an FE zoom | M | beta | 5 |
+| 10 | **31** Four river rules | M | beta | cross-reference |
+| 11 | **38** `descr_campaign_db.xml` | M | **both** | 4 |
+
+### Block two - the mercenaries
+
+| Order | Phase | Size | Line | Stars |
+|---|---|---|---|---|
+| 12 | **32a** The pool as a record, and one parser for it | M | beta | the main task |
+| 13 | **32b** The two directions, and the four gates resolved | M | beta | the main task |
+| 14 | **32c** Five rules, and the repair for the one that has a safe answer | M | beta | 5 (the repairs) |
+| 15 | **39** The engine ceilings | M | **both** | 4 and 3 |
+
+**Fifteen sessions, and three of them are subreleases.** 29, 38 and 39 touch
+something outside the campaign map, so each is a subrelease on both lines; the
+other twelve are the beta alone. **29 is done** (2026-09-12) and took B4 with
+it; fourteen remain. **The cut-as-it-lands rule of 2026-09-09 is
+live**, so each one goes out as it lands rather than being held for the end.
+
+---
+# Phases 28-39 - the campaign map, then the mercenaries
+
+## Phase 28 - The right menu becomes a menu
+
+`#cmSide` is a flat stack of sixteen panels: the mod header, the findings
+banner, and then Campaign, Find, Views, Check, Query, Paint, Markers, Events,
+Layers, the picked tile, Delete, Settlement, Forts, Characters, Campaign
+settings and Strat models. Every one of them was added where the last one
+ended, and the result is a column you scroll rather than a menu you use. On a
+1600 px window the Strat models panel is four screens below the fold.
+
+**It becomes a tab strip over a switchable body, and the strip goes on top.**
+The shape already exists and is not to be written twice: `MINOR_TABS` and
+`minorTabsHtml` in `core.js` are the Minor Files strip, and the campaign map's
+strip is the same widget with a different table. A tab is a **group** of
+panels, not one panel, because sixteen tabs is the column again laid on its
+side.
+
+**Three things have to be right or the strip is worse than the stack.**
+
+- **A panel that fills on a click has to surface.** Clicking a province fills
+  `#cmPick`, `#cmSettle` and `#cmChars`; clicking a fort fills `#cmForts`. If
+  the strip is on another tab that click does nothing visible, which is a
+  worse screen than the one being replaced. The tab holding a panel that has
+  just gained content is switched to, once, and the strip marks it.
+- **The layers are not a tab.** 20a's ruling stands: the stack is the ten
+  files the map is made of, and it is what the number keys tick. It stays
+  visible whichever tab is up, because ticking a layer while reading a finding
+  is the ordinary errand on this screen.
+- **What a tab is, is saved.** `cmapLayerState` is the one snapshot of a map
+  habit and named views copy it rather than re-deriving it, so the open tab,
+  the column width and whether the column is collapsed go in there, and are
+  then carried by every preset and put back by `cmapResetView` for nothing.
+
+**The border drags, and the column collapses.** `splitInstall` / `splitWidth`
+in `core.js` is already a left-edge drag on a right-hand panel with a saved
+width, a minimum on both sides and a double-click back to the default; the
+unit editor and the BMDB browser both use it. This is a third caller, not a
+second implementation. Collapse is a separate control from the drag and has to
+be reversible from the collapsed state, so the handle survives the collapse as
+a rail with the tab icons on it.
+
+Exit: the strip on top, the panels grouped behind it, a click that fills a
+panel switching to it, the drag, the collapse, and all three habits in
+`cmapLayerState` and therefore in a saved view. `tests/test_web_modules.py`
+takes the grouping table the way it takes `MODES`.
+
+## Phase 30 - A missing texture without the pink
+
+**Reported from the beta: the pink is too jarring on the campaign map.**
+TWMapReader draws a texture it cannot find magenta and 23a took that rule as
+it stands, widened by one case. It is the right default and it is not always
+the right picture to work against.
+
+**Measured first, because the number changes what this is.** Divide and
+Conquer has **15 pink tiles** and Third Age Reforged **none**, in both
+seasons. So this is not the installed mods at rest. It is the paint tool: a
+stroke that lays down a ground type the aerial file does not declare turns
+those tiles pink the moment the composite is rebuilt, and a map being built is
+exactly where somebody is when this screen is open.
+
+**A choice of how a gap is drawn, and never a choice to hide it.** The locked
+rule is that a baseline shows and stops blocking but never hides, and 23a's
+own decision is that a picture of the terrain says what it could not draw. So
+the count stays on the panel and the `terrain.texture` rule stays in the
+Check panel whatever is chosen; what changes is only the colour under the gap.
+Magenta as now, a neutral that reads as "nothing here", or the sea colour,
+which is the honest answer for the fifteen tiles DaC has, because all fifteen
+are tiles `map_ground_types.tga` calls sea and `map_heights.tga` calls land.
+
+**The colour is baked in Python, so it is a parameter and not a CSS rule.**
+`composite` fills with `MISSING_RGB` and pastes over it, and the browser is
+served a PNG. The choice therefore has to reach `mapterrain.plan`'s key and
+`signature`, or two colours share one cached picture and the one you get is
+whichever was asked for first. It goes in `cmapLayerState` beside the season,
+so a saved view carries it.
+
+## Phase 31 - The river rules we do not have
+
+**A cross-reference, not a report.** `map_features_checker.py`, a standalone
+validator handed over on 2026-09-12, checks six things about
+`map_features.tga` and repairs five of them. Ours has three river rules -
+`river.diagonal`, `river.isolated` and `river.rejoin` - and `feature.unknown`
+for the colours. Four of its checks have no rule here:
+
+| its check | ours |
+|---|---|
+| a blue tile with more than three river neighbours (a four-way crossing) | nothing |
+| a 2x2 block of river tiles | nothing |
+| a white source pixel touching no river | nothing |
+| a river component with no white source anywhere on it | nothing |
+
+All four are already in this document's own river rules, taken from Geomod and
+TWMapReader: *white pixel at the source*, *no rejoins*, *no diagonals*. We
+wrote the source rule down and never checked it.
+
+**Measured on both installed maps before scheduling it, and it finds
+nothing.** Divide and Conquer: 95 river components, every one with a source,
+no crossings, no 2x2 blocks, no orphan whites, no isolated tiles, and the one
+`(1,1,1)` pixel this document already records as a live test case. Third Age
+Reforged: 86 components, all clean. **So this is not a bug we ship.** It is
+four rules for a map being built, and it is worth a session because the
+repairs come with them and 16f's three auto-fixes are the shape.
+
+**And the tool it came from cannot read either installed map.** It refuses
+anything that is not uncompressed true-colour, and both mods ship
+`map_features.tga` as image type 10, RLE: DaC at 32-bit, Third Age Reforged at
+24. `maptga.py` reads and re-encodes all ten of DaC's layers byte for byte
+with the RLE intact, which is why the four checks could be measured here at
+all. Worth passing back.
+
+**One rule needs deciding before it is written.** Geomod also says a river
+must *extend two pixels past the coastline*. That is a rule about a river's
+mouth against `map_heights.tga` rather than about `map_features.tga` alone,
+and it is the only one of the five that needs a second layer. Scope it, and
+leave it out rather than half-check it.
+
+## Phase 32 - Who can hire what, and where - the mercenary pools
+
+**The next big feature, asked for on 2026-09-12, and the campaign map is where
+it lives.** Click a province and see the mercenaries it can raise, filtered by
+faction, by event, by year and by religion; and the other way round, take a
+mercenary and see every province it comes from. Three sessions.
+
+### What exists, and it is less than it looks
+
+`descr_mercenaries.txt` is already read, and by exactly one parser, which is
+the rule to keep. What that parser keeps is the problem:
+
+- **`mapquery.parse_mercenaries` returns a pool's name, its regions and its
+  unit NAMES and nothing else.** Every gate on a unit line is thrown away:
+  `exp`, `cost`, `replenish A - B`, `max`, `initial`, `start_year`,
+  `end_year`, `religions { }`, `crusading` and `events { }`.
+- `RegionFacts.merc_pools` says which pools a province is in, there is a
+  `mercenary_pool` filter, and `info_mercenaries` is Geomod's pool map.
+- 18a's G3 can **move a province between pools** and warns when a province is
+  in no pool at all. That is the whole of the writing.
+
+So today the toolkit can say *which pool* a province belongs to and cannot say
+*which mercenaries* that gets you, which is the question actually being asked.
+
+### Measured first, on both installed mods
+
+| | DaC `imperial_campaign` | TAR `imperial_campaign` | TAR `Fellowship_Campaign` |
+|---|---|---|---|
+| pools | 57 | 27 | 28 |
+| province slots | 193 | 148 | 81, **80 distinct** |
+| distinct units | 113 | 25 | 29 |
+| **unit names with no EDU type** | **2** | **5** | **28 of 29** |
+
+**Three findings fall out of the counts alone, and none of them is reachable
+today.**
+
+- **Dead mercenary references.** DaC names `Clan Axemen` and `Framsguard
+  Dismounted Axemen`, neither of which is a `type` in its 924-unit EDU. Third
+  Age Reforged's Fellowship campaign names 29 units and **28 of them do not
+  exist**: `Beorning Mercs` and its siblings appear nowhere in the mod but
+  that one file, and the mod ships exactly one `export_descr_unit.txt`, so
+  there is no second roster they could be coming from.
+- **A province in two pools.** `Mt-Gram_Province` is in two of Fellowship's
+  pools. The file's own header says a region "can only be present once in the
+  whole file", so this is the file breaking its own documented rule.
+- **Most provinces have no pool.** DaC declares 193 of about 400. That is
+  probably deliberate and it is worth being able to see on a map.
+
+### 32a - The pool as a record, and one parser for it
+
+**`unittransfer/mercpools.py`** takes over the format, and
+`mapquery.parse_mercenaries` becomes a thin call into it rather than a second
+reader. That is the one-engine rule and it is not negotiable here: two readers
+of a unit line is how the gates get dropped a second time.
+
+The record is the whole line. A name is everything in front of `exp`, which is
+how the existing parser already does it and the reason is worth keeping: a
+mercenary's name is one to four words and real files write a trailing comma
+after it, so a word count is wrong on both installed mods. Then `exp`, `cost`,
+`replenish` as its two bounds, `max`, `initial`, and the five optionals.
+
+Writing is `keyblock`'s splice discipline, the same as everywhere else:
+comments, tabs and the RATE_H style notes DaC keeps at the top of the file
+survive an edit untouched. Add a unit to a pool, remove one, change any field,
+move a province between pools (G3's existing operation, now going through
+this), and add or delete a pool.
+
+**The file is per campaign.** Third Age Reforged ships a different
+`descr_mercenaries.txt` for Fellowship than for `imperial_campaign`, with a
+different unit list and a different set of faults, so 22c's ruling applies
+unchanged: `Registry.map_for` picks the campaign, and a pool read for one
+campaign is not another's.
+
+### 32b - The two directions, and the four gates resolved
+
+This is the session the feature is actually about, and it is a join, not a
+parser.
+
+**From a province:** its pool, and every mercenary in it, each with its cost,
+its replenish rate, its pool size, and **why it is or is not available**. That
+last part is the whole value, and it needs four lookups we already own:
+
+| gate on the line | resolved against | we already have it in |
+|---|---|---|
+| `religions { a b c }` | each faction's religion | `factions.py` / `factionaudit.Census` |
+| `events { A B }` | the mod's real event list | `campevents.py` |
+| `start_year` / `end_year` | the campaign's start and end | `stratcamp.py` |
+| the unit name | the EDU roster | `edu.py` |
+
+So "filter by faction" is not a field on the line. **A faction hires a
+mercenary if the faction's religion is in the unit's `religions` list, or the
+list is absent**, which the file header states outright, and `crusading`
+narrows it further to a crusade or jihad army. Picking a faction in the panel
+therefore resolves through its religion, and the panel says so rather than
+implying the file names factions.
+
+**From a mercenary:** every pool that offers it, every province in those
+pools, its cost in each (mods really do price the same unit differently in two
+pools), and a button that lights those provinces on the map. `cmapGoTile` is
+the one way of arriving at a tile and `cmapLocate` gives the ring for free.
+
+**On the map:** the pool map already exists as `info_mercenaries`. What it
+gains is three more colourings off the same facts, which is `_by_value` and
+`_by_band` and no new machinery: how many mercenaries a province can raise,
+whether it can raise any at all, and which provinces a chosen unit is
+available in. Every one of them is a colouring, so the TGA export and 23b's
+tint come with them.
+
+**Where it sits is Phase 28's first real test.** This is one more panel on a
+column that is already sixteen deep, and it belongs on the same tab as the
+picked province. Take 28 first.
+
+### 32c - The rules, and the repairs
+
+Five new `mapcheck` rules, each one measurable on the installed mods today:
+
+| code | what | found now |
+|---|---|---|
+| `merc.unit_unknown` | a unit line naming no EDU type | 2 in DaC, 33 in TAR |
+| `merc.region_twice` | a province in more than one pool | 1 in TAR Fellowship |
+| `merc.region_unknown` | a regions line naming no province | to be measured |
+| `merc.religion_unknown` | a `religions { }` entry nothing declares | to be measured |
+| `merc.event_unknown` | an `events { }` entry `descr_events.txt` does not have | to be measured |
+
+**The baseline rule applies and matters more than usual here.** 33 dead
+references in Third Age Reforged is somebody else's mod with somebody else's
+bugs in it, so all of it shows, is counted, and refuses nothing. A tool that
+blocks on 33 inherited faults is one nobody opens twice.
+
+**`merc.region_twice` gets a repair and the others do not.** Which of two
+pools a province should be in is a choice, so the fix offers both and the user
+picks; there is no safe automatic answer to "which mercenary did you mean" or
+"which unit did you mean to name". 16f's three auto-fixes are the shape for
+the one, and `rtOpen(rel, line)` is the escape hatch for the rest.
+
+### What this is not
+
+**Not a mercenary unit editor.** The unit itself is EDU's and the unit editor
+already owns it; this edits the *pool entry*, which is a different record with
+different fields, and a dead reference is fixed by naming a unit that exists,
+not by inventing one. The two screens link to each other and neither grows the
+other's fields.
+
+## Phase 33 - Three small map wins in one session
+
+Three items that were separately rated five stars, are separately marked **S**,
+and share a session because none of them is big enough to hold one on its own.
+All three are on the map screen and all three are beta line.
+
+- **T10 - copy the view, or what is under the cursor.** The detail is already
+  under the pointer; this puts it on the clipboard as `x 23, y 284`, which is
+  the exact form `descr_strat.txt` wants. The shift-X detail is the model.
+- **G2 - change an existing province's music type.** B1 already gives a *new*
+  province one, through `mapquery.add_music_region`, and `drop_music_region`
+  came with 24. Changing an existing province's is the third call against a
+  writer that is otherwise finished, plus a picker on the region form.
+- **G4 - the legion label, with its name dialog.** D4 in miniature. The write
+  it needs is the one 19a added to `namekeys.py`; what is missing is the paired
+  display name, which is why 19b flagged it as nearly free and did not take it.
+
+**Take it early and the reason is scheduling, not importance.** Three S items
+banked in one sitting is the cheapest five-star work on the whole list, and it
+clears three rows out of the future list for good.
+
+## Phase 34 - Add a climate zone
+
+Every file is already parsed and the brush already paints the layer:
+`map_climates.tga`, `descr_climates.txt` and
+`descr_aerial_map_ground_types.txt`. **What is missing is the operation**, and
+the archive has a tutorial for it that names exactly those files plus
+`map_ground_types.tga`.
+
+Declaring a climate is three writes that have to agree or the map is wrong in a
+way nothing reports: a name and its parameters in `descr_climates.txt`, a
+colour in `map_climates.tga` that `mapvocab` can then name, and a texture for
+every ground type it pairs with, **in both seasons**, in
+`descr_aerial_map_ground_types.txt`. 23b's `season_gaps` already judges both
+seasons, so the check exists; what does not exist is anything that creates the
+three together.
+
+**This is where Phase 30 pays for itself.** A climate declared without its
+textures is pink across every tile that uses it, which is the largest pink
+anyone will ever produce here, and it is produced by the one operation this
+phase adds. Do 30 first so the gap is legible rather than alarming.
+
+## Phase 35 - Rebels right in place: province and rebel faction, both ways
+
+**Phase 32's shape applied to the other per-province pool, and simpler.** A
+province names one rebel faction in its `descr_regions.txt` record and
+`info_rebels` already colours the map by it. What is missing is everything in
+the other direction: take a rebel faction and see its provinces, see what it
+can actually field, and change the assignment from either end.
+
+`descr_rebel_factions.txt` is already `flatrecord`'s - Phase 11 needed no
+parser for it at all - and the region record is already spliced by 16d. So this
+is a join and a screen rather than a format, which is exactly why it is worth
+doing **before** Phase 32 rather than after: it is the same two-way pattern over
+a file that is already fully read, so the panel shape gets settled on the cheap
+problem and 32b inherits it.
+
+The archive has a whole tutorial on getting this wrong (Errabundi's *Rebels
+Right in Place*), whose complaint is Bulgarian rebels spawning in Serbia. That
+is a fact about which faction a province names, and it is invisible today
+unless you colour the whole map and look.
+
+## Phase 36 - D1: change a region's colour
+
+**The one item in 19b's cluster that the rename work did not make cheaper**, and
+the cost is real rather than assumed: region IDs are the order of first
+appearance in a row-major scan over `map_regions.tga`, so changing one colour
+can **renumber every region after it**. A rename does not, which is why 19b
+could be done first and this could not.
+
+So the operation is not a recolour, it is a recolour plus the renumbering it
+causes, and what the panel has to show before it writes is which regions move
+and what reads an ID. 16f already refuses to leave a region with no tiles and
+already warns that a change here renumbers; `regiondel` learned the same lesson
+from the other side in 24. Both of those are the guard this needs.
+
+`campaint`'s stroke engine writes the pixels and `mapquery.assign_colours`
+already knows which colours clash with the reserved ones and with each other,
+so the picker is the existing one.
+
+## Phase 37 - The two exports the map screen cannot do
+
+Both five stars, both **M**, both a reader over facts we hold. Two sessions.
+
+### 37a - T7, the spawn export
+
+A read-only scan for spawn coordinates across `descr_strat.txt` and the
+campaign script. **Far smaller than a script parser**, and that distinction is
+the whole point: 19b had to refuse to write the campaign script because it is a
+grammar nothing here models, and 24 kept that refusal. Reading coordinates out
+of it is not writing it, so the refusal stands and this still works. It is the
+one thing the script holds that the map screen cannot see.
+
+### 37b - T3, an FE zoom for authoring map_FE.tga
+
+The front-end map is the one picture on this screen nothing here helps anyone
+author. It pairs with 16g's per-faction TGA export, which already produces a
+per-faction picture at map resolution; what is missing is the frame, the scale
+and the export at the size `map_FE.tga` actually wants.
+
+## Phase 38 - descr_campaign_db.xml
+
+304 lines, **281 distinct tags**, six documents in the archive, and nothing in
+`unittransfer/` has ever named it. It holds every campaign-wide constant the
+engine reads: piety mode, prisoner treatment, ageing, the settlement upgrade
+thresholds, and **fort and watchtower cost and permanence**, which is the half
+of permanent stone forts that 22a could not reach - `stratobj.py` places a fort
+and cannot make it permanent.
+
+**A generated form over the tree, not 281 hand-written fields.** The file is
+small enough to hold whole and regular enough to render from its own shape, and
+a hand-written form over a file this wide would be wrong for the first mod that
+ships a tag we did not type. What it needs from us is the vocabulary: which
+tags are numbers, which are booleans, which are enumerations, and what each one
+does, and that is what the six archive documents are for.
+
+**Subrelease, both lines.** This is a data file rather than a map file, so it is
+a mode of its own and goes out on the 2.x line as well.
+
+## Phase 39 - The engine ceilings, on the screens that write them
+
+TWCenter's *List of Hardcoded Limits* is **already harvested in five places**
+and cited in the source each time: the 32-unit recruit limit and nine levels per
+tree in `buildings.py`, three excluded ancillaries and eight effects in
+`ancillaries.py`, 31 factions in `factions.py`, the trait thresholds in
+`traits.py`, 200 regions in `mapcheck.py`. Two sets were never taken.
+
+- **Every EDU ceiling, and `edu.py` has no value check of any kind.** 500 units
+  in a mod, 100 per faction, 6 to 60 men and 31 for a general, HP 15, attack,
+  charge, armour and defence 63, shield 31, three officers, three mount
+  effects, two formations, 244 turns to build. The unit editor writes all of
+  them and checks none, which makes this the largest unguarded surface left in
+  the toolkit.
+- **20,000 faces on a campaign-map model.** `cas.as_mesh` already counts the
+  triangles, so this is a line on the Strat models panel, which Phase 29 got
+  drawing again on 2026-09-12 - the dependency is discharged.
+
+**A ceiling shows and never blocks**, the same rule the map baseline follows. A
+mod already over one of these is somebody else's mod with somebody else's bug in
+it, and several of these limits are ones M2TWEOP raises - `modflags.py` already
+knows which mods are marked for it, and a limit that EOP replaces is reported as
+replaced rather than as broken.
+
+**Subrelease, both lines**, because the EDU half is the unit editor's.
+
+## Blocked - Mylae's improved validation and his coloured overlays
+
+He reports a settlement-position validation that alerts on an invalid
+position, some bug fixes, and coloured overlay export for religion, the
+faction creator and faction owners. **None of it is on GitHub.**
+`Machiavello-1441/m2tw-editor` is still at `2740b0b` (2026-09-08, "Update
+base44 packages"), `main` is the only branch, and the account has no second
+repository. `upstream_sync.py sync` reports up to date and it is right.
+
+**So this cannot be diffed yet, and what we already have says it may not need
+to be.** Ours judges a settlement position on four rules - `marker.ground`,
+`marker.feature`, `marker.sea` and `marker.orphan` - and since 22b a refusal
+also names the nearest tile that would do, through `mapsnap.nearest`, which is
+more than an alert. His coloured overlays are 16g's colourings and the
+per-faction TGA export. Re-run `sync` before scoping anything; if he has not
+pushed, ask for the files rather than guessing from the sentence.
 
 ---
 
-# Later - classified, not scheduled
+# Future roadmap - rated, and waiting on the two main tasks
 
-Thirteen items the user marked Later on 2026-09-05. They are not phases and
-nothing depends on them. Two are flagged above as cheap to take early if the
-user changes their mind; the rest are here as written.
+**This is one list and it replaces two.** The Later table of 2026-09-05 and the
+TWCenter candidate tables of 2026-09-12 said different things about the same
+work in two places, which is how the old `ROADMAP.md` reached three thousand
+lines. They are merged here.
 
-| id | Item | Size | Note |
-|---|---|---|---|
-| D1 | Change a region's colour | M | Same cluster as 19b. Costly part is real: a recolour can renumber every region after it. |
-| D12 | Export the project as a zip, and load one back | M | `pack.py` already does this shape for units, import and conflict report included. |
-| D13 | Generate a horde start for a new faction | M | 16j-2 creates the faction with no settlement and no character, which is the shape vanilla's Mongols already are. This is the other half. |
-| G2 | Region music | S | `mapquery` reads `descr_sounds_music_types.txt` already; the region form does not offer it. **Half done in B1**: a new province is given a music type, through `mapquery.add_music_region`. Changing an existing province's is what is left, and that writer is now the whole of the format work. |
-| G4 | Legion label, with its name dialog | S | **Nearly free during 19a.** Flagged there. |
-| M7 | Import a campaign from another mod | L | Unit Transfer's problem at campaign scale; `transfer.py` is the model. |
-| M12 | Bulk faction duplicate, and faction zip export | M | A loop over `factionclone.py` with one plan, plus `pack.py`. |
-| M16 | Animation editor and asset converter | L | Was excluded because we could not read `.mesh` or `.cas`. **15a and 16k both now can, so the reason has changed.** |
-| M17 | Export and validation dashboard | M | We have more validators than the reference and no single door to them. |
-| T3 | An FE zoom, for authoring `map_FE.tga` | M | Pairs with 16g's per-faction TGA export. |
-| T6 | Export every tile as text | M | We export pictures and never numbers; `mapquery`'s fact table is the join it needs. |
-| T7 | Spawn export, including from the campaign script | M | A read-only scan for spawn coordinates is far smaller than the script parser 19b has to refuse. |
-| T10 | Copy the view, or what is under the cursor | S | Take the shift-X detail: `x 23, y 284`, the form `descr_strat.txt` wants. |
+**Where the ratings came from.** The user rated 38 of 39 candidates one to five
+stars on 2026-09-12. Everything rated **four or five stars that is campaign-map
+or mercenary work became a phase** above; everything else is below, ordered by
+stars and then by size. The one unrated row is at the foot.
+
+**The 2026-09-05 triage board is gone and nothing was lost with it.** It was
+published as an artifact and is no longer in the gallery, but its output was
+copied into this file at the time as the Later table, all thirteen items: D1,
+D12, D13, G2, G4, M7, M12, M16, M17, T3, T6, T7 and T10. Every one of those
+thirteen was on the 2026-09-12 ballot and every one now carries a rating, so the
+two selections are already reconciled. Six of them were promoted - **D1, G2, G4,
+T3, T7 and T10 all rated five stars** and are Phases 33, 36 and 37 - and the
+other seven are below.
+
+**Two items were promoted out of their own rating**, and both deserve saying:
+
+- **The mercenary repairs (five stars, S)** are not a phase of their own. They
+  are 32c, because a rule and the repair for it are one piece of work and
+  splitting them is how a validator ends up with findings nobody can act on.
+- **The EDU ceilings (three stars, M)** were pulled up into Phase 39 by the
+  20,000-face model ceiling beside them, which rated four. Both come out of one
+  document and neither is a session on its own.
+
+## Five stars, and first in the queue when the two main tasks land
+
+| Item | Size | What it is |
+|---|---|---|
+| **M17 - a crash and validation dashboard** | M | We have more validators than any of the four reference tools and no single door to them: 32 map rules, the faction audit, the EDB checks, the BMDB audit, the sounds audit, and after Phase 32 five mercenary rules as well. The archive's two crash guides, *GUIDE - Crashes and how to fix them* and *Crash to Desktop*, are the checklist that would give them one front page. |
+| **M12 - bulk faction duplicate, and faction zip export** | M | One plan over `factionclone.py` repeated, plus `pack.py`. Mylae shipped his version in September 2026 and it is in the mirror at `DuplicateFactionModal.jsx`, `FactionZipExport.jsx` and `factionBulkDuplicate.js`, all three triaged port-concept. |
+| **M16 - animation editor and asset converter** | L | Excluded originally because we could not read `.mesh` or `.cas`. **15a and 16k both now can**, so the exclusion no longer holds on its own terms and the item is live again on the merits. |
+
+## Four stars
+
+| Item | Size | What it is |
+|---|---|---|
+| **Will this mod even launch** | S | A readiness row on the Home card, not an editor. Home already says what each mod is ready for and cannot say whether `configuration.cfg`, `mymod.cfg` and the registry entry will actually start it. Eleven archive documents including the Steam install and registry tutorials. |
+| **B2 - delete a settlement, and move one between mods** | M | Assigning a settlement to a faction already works and B1 added the create. Missing: the delete, whose shape is `stratcamp._delete_splice`; a button on the panel for a province that has none; and the between-mods move, which is probably its own session. Phase 24's warning applies - a settlement that goes has characters, armies and a capital flag hanging off it. |
+| **B3 - insert and export one file at a time** | M | Mylae's tool pushes a file into, or pulls one out of, a mod on its own. Pieces exist - `POST /api/map/export`, 16g's per-faction TGA, `pack.py`'s unit import - and none of it is a general take-this-file-out. The user's own earlier words were "that isnt really needed tbh"; the four-star rating supersedes that. |
+| **Add a religion** | M | We edit the religion list in Minor Files, the EDB conditions and the religion columns on the region form. Missing: `descr_religions_lookup.txt`, and the must-sum-to-100 rule as a guard at **creation** rather than only as a validation afterwards. |
+| **Mines and hidden resources** | M | `descr_sm_resources.txt` is in Minor Files and the EDB conditions are ours. Missing: `descr_settlement_mechanics.xml`, and the hidden-resource ceiling of 63, which is a crash when crossed and belongs with Phase 39's other ceilings if that session has room. |
+
+## Three stars
+
+Ordered small to large, because at this rating size is what decides whether one
+is worth picking up.
+
+| Item | Size | Note |
+|---|---|---|
+| `descr_settlement_mechanics.xml` | S | 187 lines, 10 tags. Named by the Mines tutorial, so it may arrive with that item instead. |
+| `descr_lbc_db.txt` | S | 122 lines. Read by three modules as a faction site and never parsed. |
+| `descr_offmap_models.txt` | S | 619 lines. Same shape: a faction site the audit counts mentions in. Cheap as a `flatrecord` if the audit ever wants the contents. |
+| `descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt` | S | 41, 23 and 6 lines. Third Age Reforged ships no `descr_standards.txt` at all and DaC's advice file is six lines, so this is one small session for all three or none. |
+| `descr_banners_new.xml` | M | 405 lines, 25 tags. Every *add a faction* tutorial names it and the faction audit has a row-shaped hole where it should be. |
+| `descr_hero_abilities.xml` | M | 1,187 lines, 26 tags. Hangs off the people panel, which already edits the character. |
+| `descr_area_effects.xml` | M | 555 lines, 34 tags. Interdict, excommunication and the rest. |
+| `descr_walls.txt` | M | 514 lines. Wall definitions per culture and level; pairs with the settlement panel. |
+| `descr_character.txt` | M | 1,708 lines, twelve archive documents, **read by six modules and written by none**. It is the missing join: `stratmap.py`'s audit names a `.cas`, the Strat models panel draws one, and nothing connects either to the character that uses it. The lowest-rated item on this page that the measurement argues hardest for. |
+| **T6 - export every tile as text** | M | Campaign-map work that did not rate high enough to schedule. We export pictures and never numbers; `mapquery`'s fact table is the join it needs. |
+| **D12 - export the project as a zip, and load one back** | M | `pack.py` already does this shape for a unit, import and conflict report included. |
+| **D13 - generate a horde start for a new faction** | M | 16j-2 already creates a faction with no settlement and no character, which is the shape vanilla's Mongols already are. This is the other half. |
+| The three voice files | L | `export_descr_sounds_soldier_voice.txt` (16,145 lines), `..._stratmap_voice.txt` (16,156) and `..._units_battle_events.txt` (7,329). `sounds.py` is the shape; the cost is the size. The accent tutorial names all three together, so they are one job or none. |
+| **M7 - import a campaign from another mod** | L | Unit Transfer's problem at campaign scale; `transfer.py` is the model. |
+| **Phase 25 - OSM backdrop and coastline tracer** | L | Campaign-map work at three stars. The write-up below stands; it is the first thing in the toolkit that touches the network, so it is opt-in and off by default. |
+| **Phase 26 - map resize, and create from scratch** | L | Campaign-map work at three stars. Phases 22 and 24 removed most of the original objection, so it is cheaper than when it was deferred. |
+| **Phase 27 - overlay and layer generators** | L | Campaign-map work at three stars. Same opt-in rule as 25. |
+
+## Unrated, and the rating is not the reason
+
+**`battle.sd`, `strategy.sd`, `shared.sd`** - the interface skins, 23 archive
+documents between them and a dedicated editor already in the archive
+(`m2_sd_editor`). It was left unrated and it is the one row on the ballot that
+argued against itself: this is GUI skinning rather than mod data. It stays here
+so the decision is recorded rather than rediscovered.
 
 ---
 
 # Not scheduled, and previously mis-numbered
 
 These three were called `V3.1`, `V3.2` and `V3.3`. They are phases now, with no
-version attached, and none of them is in the Now or Next set.
+version attached, and none of them is in either block above. **All three were
+rated three stars on 2026-09-12** and are listed in *Future roadmap* with
+everything else at that rating; the write-ups stay here because they are longer
+than a table row.
 
 ## Phase 25 - OSM backdrop and coastline tracer
 

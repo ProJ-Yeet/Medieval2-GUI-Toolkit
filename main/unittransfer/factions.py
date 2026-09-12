@@ -222,6 +222,59 @@ def path_for(mod) -> Path:
     return Path(mod.data) / REL
 
 
+def packs_beside(mod) -> List[Path]:
+    """The game's ``.pack`` archives this mod would be read alongside.
+
+    Measured, not assumed. A mod folder sits at ``<install>/mods/<name>`` and
+    the archives it falls back to sit at ``<install>/packs``; a mod may also
+    ship a ``packs`` folder of its own. Both are looked in, and an empty answer
+    is a real answer - Third Age Reforged has a ``packs`` folder with nothing
+    in it, so "it has a packs directory" would have been the wrong test.
+    """
+    root = Path(mod.root) if getattr(mod, "root", None) else Path(mod.data).parent
+    here = [root / "packs"]
+    # <install>/mods/<name> -> <install>/packs. Only one level up, and only
+    # when the folder really is called `mods`, so this cannot wander off into
+    # somebody's Downloads folder looking for archives.
+    if root.parent.name.lower() == "mods":
+        here.append(root.parent.parent / "packs")
+    out: List[Path] = []
+    for d in here:
+        try:
+            out.extend(sorted(q for q in d.glob("*.pack") if q.is_file()))
+        except OSError:
+            pass
+    return out
+
+
+def no_file_note(mod) -> str:
+    """Why there are no faction slots to work with - B4, and it is one sentence.
+
+    ``descr_sm_factions.txt`` is the slot list, and two things used to refuse
+    on the same empty answer while claiming different causes: ``overview``
+    said the mod "has no descr_sm_factions.txt", and ``renames._validate``
+    said *there is no faction slot called X in <mod>*, which is a claim about
+    the faction and is simply untrue. The stock game keeps that file inside its
+    ``.pack`` archives and any mod that has not unpacked it does too - verified
+    on this machine: vanilla has no loose copy, Divide and Conquer and Third
+    Age Reforged both do.
+
+    So the sentence names the file and, when there are archives to name, says
+    where it is instead. Both callers use this one, because two sentences about
+    one absence is how they came to disagree.
+    """
+    name = getattr(mod, "name", "?")
+    packs = packs_beside(mod)
+    if not packs:
+        return (f"{name} has no {REL}, so there are no faction slots to read. "
+                f"It is the file every faction in the mod is defined in.")
+    where = packs[0].parent
+    return (f"{name} has no loose {REL} - it is still inside the "
+            f"{len(packs)} .pack archive{'' if len(packs) == 1 else 's'} in "
+            f"{where.name}/, which nothing here can read. Unpack it into "
+            f"data/ and every faction in the mod becomes editable.")
+
+
 def faction_cultures(mod) -> Dict[str, str]:
     """slot -> culture, lower-cased. The single source of truth for that question.
 
@@ -485,7 +538,8 @@ def overview(mod) -> Dict:
                  "limit": 0 if getattr(mod, "m2ex", False) else FACTION_LIMIT,
                  "m2ex": bool(getattr(mod, "m2ex", False))}
     if not path.is_file():
-        out["error"] = f"{getattr(mod, 'name', '?')} has no {REL}"
+        # B4: the honest sentence names the pack rather than the file's absence
+        out["error"] = no_file_note(mod)
         return out
     rf = parse_file(path)
     names = loc(mod)

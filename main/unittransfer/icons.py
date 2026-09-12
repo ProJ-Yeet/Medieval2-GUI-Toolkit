@@ -1,8 +1,22 @@
 """Decode M2TW unit icons (.tga / .dds) to PNG bytes for the web UI.
 
 Uses Pillow. Results are cached on disk under a scratch dir keyed by the source
-path + mtime, so repeated requests are cheap. Falls back to a 1x1 transparent
-PNG if a file can't be decoded (never raises into the request handler).
+path + mtime, so repeated requests are cheap.
+
+**A file that will not decode is not a file that is missing** (Phase 29). Both
+used to come back as the same 1x1 transparent PNG, and that one conflation was
+the whole strat-model bug: a 200 with a valid picture in it is indistinguishable
+from art, so every layer above believed it and the viewer's cut-out shader then
+deleted the model. They are separate answers now:
+
+* **absent** stays blank and stays quiet. Mods ship the art they changed and
+  leave the rest to the game's own files, so a missing file is the ordinary
+  case and nothing above here should get noisier about it.
+* **present and will not decode** is a fault. :meth:`IconCache.png_bytes` still
+  answers blank by default, so every caller that only wants a picture is
+  unchanged, but it logs a warning, and a caller that can express a fault
+  passes ``strict=True`` and gets :class:`ArtUnreadable` with a measured
+  sentence in it.
 """
 from __future__ import annotations
 
@@ -27,6 +41,61 @@ _BLANK_PNG = (
     b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00"
     b"\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
 )
+
+
+class ArtUnreadable(Exception):
+    """This picture file is there and could not be decoded.
+
+    Carries the path and the measured reason rather than a traceback, because
+    the reason is the useful part and it goes straight onto a panel. Never
+    raised unless a caller asked for it with ``strict=True``.
+    """
+
+    def __init__(self, src: Path, reason: str):
+        super().__init__(f"{Path(src).name} {reason}")
+        self.src = Path(src)
+        self.reason = reason
+
+
+def fault(src: Optional[Path]) -> Optional[str]:
+    """Why this picture cannot be drawn, measured, or ``None`` when it can.
+
+    Says what was found, not what it is blamed on. A zero-byte file is a stub
+    the mod's packer left behind - it converts each ``.tga`` to a DDS named
+    ``<name>.tga.dds`` and truncates the original instead of deleting it - so
+    when that partner is there the sentence names it, because that is the file
+    somebody has to point the material at. When it is not, all that is honestly
+    known is that the file is empty, and the sentence says only that.
+
+    An absent file is not a fault and comes back ``None``: that is the case
+    :meth:`IconCache.png_bytes` has always answered blank and must keep
+    answering blank.
+    """
+    if src is None:
+        return None
+    src = Path(src)
+    try:
+        if not src.is_file():
+            return None
+        size = src.stat().st_size
+    except OSError as e:
+        return f"could not be opened - {e}"
+    if size == 0:
+        partner = src.with_name(src.name + ".dds")
+        try:
+            paired = partner.is_file() and partner.stat().st_size > 0
+        except OSError:
+            paired = False
+        if paired:
+            return (f"is 0 bytes - the art is beside it as {partner.name}, "
+                    f"which is where the mod's packer left it")
+        return "is 0 bytes - there is no picture in it"
+    try:
+        with Image.open(_openable(src)) as im:
+            im.load()
+    except Exception as e:                       # noqa: BLE001 - any decoder
+        return f"will not decode - {type(e).__name__}: {e}"
+    return None
 
 
 class IconCache:
@@ -87,12 +156,21 @@ class IconCache:
             pass
         return data
 
-    def png_bytes(self, src: Optional[Path], max_side: int = 0) -> bytes:
+    def png_bytes(self, src: Optional[Path], max_side: int = 0,
+                  strict: bool = False) -> bytes:
         """This file as PNG bytes, cached on disk.
 
         ``max_side`` shrinks anything bigger than it, keeping the aspect ratio.
         Unit art is small and passes 0; a model's texture is up to 2048 square
         and the viewer draws it a few hundred pixels tall, so it asks for less.
+
+        ``strict`` says the caller can express a fault. Without it a file that
+        is there and will not decode still comes back blank, which is what the
+        unit cards and the faction symbols want - they are grids of pictures
+        and a route that starts refusing mid-grid is worse than a gap. With it,
+        that same file raises :class:`ArtUnreadable`. **Absent is not a fault
+        either way**, so neither kind of caller gets noisier about art a mod
+        legitimately does not ship.
         """
         if src is None or not Path(src).exists():
             # Not a fault: mods ship the art they changed and leave the rest to
@@ -109,6 +187,18 @@ class IconCache:
             return hit
         started = time.perf_counter()
         data = _decode_to_png(src, max_side)
+        if data is None:
+            # Present and undecodable. The measurement costs a stat and, at
+            # worst, a second failed open on a file that has just proved it
+            # fails fast - and it is the sentence that goes on the panel.
+            why = fault(src) or "will not decode"
+            log.warning("ICON   %s %s", src, why)
+            if strict:
+                raise ArtUnreadable(src, why)
+            # Deliberately NOT cached. The blank is a stand-in for a file that
+            # could not be read, and a cached stand-in would outlive the day
+            # somebody replaces the file with a real one.
+            return _BLANK_PNG
         log.debug("ICON   converted %s -> %d bytes of PNG in %.0f ms", src, len(data),
                   (time.perf_counter() - started) * 1000)
         _write_cached(cached, data)
@@ -226,7 +316,15 @@ def _openable(src: Path):
     return io.BytesIO(sprites.texture_to_dds(src.read_bytes()))
 
 
-def _decode_to_png(src: Path, max_side: int = 0) -> bytes:
+def _decode_to_png(src: Path, max_side: int = 0) -> Optional[bytes]:
+    """The PNG bytes of this file, or ``None`` when it will not decode.
+
+    ``None`` rather than ``_BLANK_PNG``, which is the Phase 29 change: a 1x1
+    transparent PNG is a valid picture, and handing one back for a failure made
+    the failure unobservable to every layer above. Deciding what a failure
+    *means* is :meth:`IconCache.png_bytes`'s job, because only it knows whether
+    the caller can say so.
+    """
     try:
         with Image.open(_openable(src)) as im:
             im.load()
@@ -239,5 +337,5 @@ def _decode_to_png(src: Path, max_side: int = 0) -> bytes:
             buf = io.BytesIO()
             im.save(buf, "PNG")
             return buf.getvalue()
-    except Exception:
-        return _BLANK_PNG
+    except Exception:                            # noqa: BLE001 - any decoder
+        return None

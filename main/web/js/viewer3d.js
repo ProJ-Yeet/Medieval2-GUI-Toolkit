@@ -187,7 +187,7 @@ const V3_FRAG = `
 precision mediump float;
 varying vec3 vNormal; varying vec2 vUv;
 uniform sampler2D uTex;
-uniform float uHasTex, uFlat, uUScale, uUv, uPair;
+uniform float uHasTex, uFlat, uUScale, uUv, uPair, uCutout;
 uniform vec3 uKey, uEye;
 ${V3_ENV}
 ${V3_UV}
@@ -195,7 +195,15 @@ void main(){
   vec4 base = uHasTex > 0.5
     ? texture2D(uTex, vec2(vUv.x * uUScale, vUv.y))
     : vec4(0.72, 0.66, 0.56, 1.0);
-  if(base.a < 0.35) discard;          // the alpha channel is a cut-out mask
+  // The alpha channel is a cut-out mask - on a .mesh. It is what makes a
+  // plume a plume, and it is measured on that format and belongs to it. A .cas
+  // is a strat-map scene exported by a different tool and its sheets are
+  // opaque, so the same line applied there is a way of deleting the model:
+  // hand it one degenerate sheet and every textured group vanishes, leaving
+  // whichever mesh had no material at all. That is the bare cube Phase 29 was
+  // reported as. So the rule travels with the format rather than with the
+  // shader - a constant shared between two decoders is a decision about both.
+  if(uCutout > 0.5 && base.a < 0.35) discard;
   if(uFlat > 0.5){ gl_FragColor = vec4(0.92, 0.94, 0.98, 1.0); return; }
   // the coordinate stands in for the art, and is then lit like the art, so the
   // form still reads and you can see which way a shell is wrapped over it
@@ -734,6 +742,29 @@ function v3Randomize(){
   v3UvEdDraw();
 }
 
+/* The sheets that are there and would not load, each with the sentence the
+   server measured. A grey model with no explanation is the fault that was
+   reported in the first place, so this is the part of Phase 29 that the person
+   looking at the screen actually gets: which file, and what is wrong with it.
+
+   Only faults appear here. A texture the mod does not ship is ordinary - mods
+   ship the art they changed - and `v3CasFacts` already counts those separately
+   as "not in this mod". */
+function v3FaultRows(){
+  const f = v3 && v3.texFault;
+  if(!f || !f.size) return '';
+  return [...f].map(([rel, why]) => {
+    // The server's sentence leads with the file's own name, because it is
+    // also read on its own in a log and in a 415 body. The row puts that name
+    // in a <code> of its own, so the copy at the front of the sentence comes
+    // back off rather than being printed twice.
+    const leaf = rel.split('/').pop();
+    const rest = why.startsWith(leaf + ' ') ? why.slice(leaf.length + 1) : why;
+    return `<div class="w-bad" style="margin-top:6px"><code>${esc(leaf)}</code> `
+         + `${esc(rest)}</div>`;
+  }).join('');
+}
+
 function v3Facts(){
   const host = document.getElementById('v3facts');
   if(!host || !v3) return;
@@ -777,7 +808,8 @@ function v3Facts(){
       ? `every one of its ${v3.info.skins[0].factions.length} factions uses that same skin`
       : `${v3.info.skins.length} distinct skin${v3.info.skins.length===1?'':'s'} across its factions`,
     g.lod_name ? `the file calls itself <code>${esc(g.lod_name)}</code>` : ''
-  ]) + (g.notes||[]).map(n => `<div class="w-warn" style="margin-top:6px">${esc(n)}</div>`).join('');
+  ]) + v3FaultRows()
+     + (g.notes||[]).map(n => `<div class="w-warn" style="margin-top:6px">${esc(n)}</div>`).join('');
 }
 
 /* --- loading -------------------------------------------------------------- */
@@ -844,14 +876,76 @@ function v3ToggleHd(){
 const v3TexUrl = rel =>
   `/model_texture?mod=${enc(v3.mod)}&rel=${enc(rel)}${v3HdOn()?'&hd=1':''}`;
 
+/* Is this image a picture, or is it the shape of one?
+
+   Our own server answers 415 for a sheet it could not decode, so the case that
+   caused Phase 29 no longer reaches here at all - and that is exactly why this
+   stayed. Believing a 1x1 transparent PNG is how the strat viewer came to draw
+   a bare cube; the belief was cheap to hold and expensive to find, and the
+   next server to serve one will not be ours. It does still fire on its own
+   account, for a sheet that decodes perfectly well and has nothing in it.
+   Two tests, both cheap:
+
+   * 1x1, which is the shape every "here is a picture, sorry" placeholder takes.
+   * wholly transparent, sampled rather than scanned. The sheet is drawn into a
+     32x32 canvas, which averages alpha on the way down, so any opaque pixel
+     anywhere leaves a non-zero alpha behind and a sheet that is transparent
+     everywhere stays at zero. A 2048 sheet costs 1,024 pixels to check instead
+     of four million. A tainted canvas throws; same-origin here, and if that
+     ever changes the sheet is given the benefit of the doubt. */
+function v3Degenerate(img){
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  if(!w || !h) return 'empty';
+  if(w <= 1 && h <= 1) return `${w}x${h} - a placeholder, not a sheet`;
+  try{
+    const n = 32, c = document.createElement('canvas');
+    c.width = c.height = n;
+    const cx = c.getContext('2d', {willReadFrequently:true});
+    if(!cx) return '';
+    cx.clearRect(0, 0, n, n);
+    cx.drawImage(img, 0, 0, n, n);
+    const px = cx.getImageData(0, 0, n, n).data;
+    for(let i = 3; i < px.length; i += 4) if(px[i] !== 0) return '';
+  }catch(e){ return ''; }
+  return 'transparent everywhere - there is nothing in it to draw';
+}
+
+/* Why a sheet did not load, kept per texture path so the facts panel can say
+   it. `/model_texture` answers 415 with the measured sentence in it, and an
+   `Image` cannot read a body, so the sentence is fetched once on the failure
+   path only. A sheet a mod simply does not ship never gets here: that is a
+   blank 200 and an ordinary thing for a mod to do. */
+function v3TexFault(rel, msg){
+  if(!v3) return;
+  v3.texFault = v3.texFault || new Map();
+  v3.texFault.set(rel, msg);
+  v3Facts(); v3Parts();
+}
+
+function v3AskWhy(rel, want){
+  fetch(v3TexUrl(rel)).then(r => r.ok ? null : r.json().catch(() => null))
+    .then(body => {
+      if(want !== v3Gen || !v3) return;
+      if(body && body.error) v3TexFault(rel, body.error);
+    }).catch(() => {});
+}
+
 /* One image per sheet. They land independently and either may be missing - a
    mod that references vanilla art ships neither - so each one applies as it
    arrives rather than waiting for the pair. */
 function v3Fetch(rel, want, into){
   if(!rel){ v3[into] = null; v3Apply(); return; }
   const img = new Image();
-  img.onload = () => { if(want===v3Gen && v3){ v3[into] = img; v3Apply(); v3Facts(); } };
-  img.onerror = () => { if(want===v3Gen && v3){ v3[into] = null; v3Apply(); } };
+  img.onload = () => {
+    if(want!==v3Gen || !v3) return;
+    const bad = v3Degenerate(img);
+    if(bad){ v3[into] = null; v3Apply(); v3TexFault(rel, `was served ${bad}`); return; }
+    v3[into] = img; v3Apply(); v3Facts();
+  };
+  img.onerror = () => {
+    if(want!==v3Gen || !v3) return;
+    v3[into] = null; v3Apply(); v3AskWhy(rel, want);
+  };
   img.src = v3TexUrl(rel);
 }
 
@@ -860,6 +954,7 @@ async function v3LoadSkin(want){
   if(v3.cas) return v3LoadCasSkins(want);
   const skin = v3Skin();
   v3.tex = null; v3.texAtt = null; v3.uScale = 1.0;
+  v3.texFault = new Map();
   v3Fetch(skin && skin.exists ? skin.rel : '', want, 'tex');
   // An attachment sheet that IS the main sheet is not a second sheet. Mods write
   // the main file into the attach slot all the time (it is what the Blender
@@ -1404,7 +1499,8 @@ function v3Start(canvas){
     uFlat: gl.getUniformLocation(prog,'uFlat'),
     uUScale: gl.getUniformLocation(prog,'uUScale'),
     uPair: gl.getUniformLocation(prog,'uPair'),
-    uUv: gl.getUniformLocation(prog,'uUv')
+    uUv: gl.getUniformLocation(prog,'uUv'),
+    uCutout: gl.getUniformLocation(prog,'uCutout')
   };
   // the backdrop: its own tiny program over one full-screen quad
   v3.bg = v3Program(gl, V3_BG_VERT, V3_BG_FRAG);
@@ -1664,6 +1760,8 @@ function v3Draw(){
   gl.uniform1f(v3.loc.uPair, v3.texAtt ? 1 : 0);
   // UV mode needs the coordinate, not the art, so it survives a missing texture
   gl.uniform1f(v3.loc.uUv, (v3.uv && g.has_uvs) ? 1 : 0);
+  // the alpha cut-out is a .mesh rule and only a .mesh rule - see V3_FRAG
+  gl.uniform1f(v3.loc.uCutout, v3.cas ? 0 : 1);
 
   const visible = v3Visible();
   gl.uniform1f(v3.loc.uFlat, 0);
@@ -1747,6 +1845,7 @@ function v3Wire(canvas){
 function v3LoadCasSkins(want){
   v3.tex = null; v3.texAtt = null; v3.uScale = 1.0;
   v3.casTex = new Map();
+  v3.texFault = new Map();
   const rels = new Map();
   (v3.geo ? v3.geo.groups : []).forEach(grp => {
     const tex = grp.texture || '';
@@ -1755,8 +1854,16 @@ function v3LoadCasSkins(want){
   if(!rels.size){ v3Apply(); return; }
   rels.forEach((rel, tex) => {
     const img = new Image();
-    img.onload = () => { if(want===v3Gen && v3){ v3.casTex.set(tex, img); v3Apply(); } };
-    img.onerror = () => { if(want===v3Gen && v3){ v3.casTex.delete(tex); v3Apply(); } };
+    img.onload = () => {
+      if(want!==v3Gen || !v3) return;
+      const bad = v3Degenerate(img);
+      if(bad){ v3.casTex.delete(tex); v3Apply(); v3TexFault(rel, `was served ${bad}`); return; }
+      v3.casTex.set(tex, img); v3Apply();
+    };
+    img.onerror = () => {
+      if(want!==v3Gen || !v3) return;
+      v3.casTex.delete(tex); v3Apply(); v3AskWhy(rel, want);
+    };
     img.src = v3TexUrl(rel);
   });
 }
@@ -1801,9 +1908,15 @@ function v3CasParts(host){
     + groups.map((grp, n) => {
     const key = 'm' + n;
     const rel = grp.texture ? (v3.casRel && v3.casRel.get(grp.texture)) : '';
+    // "not in this mod" and "in this mod and unreadable" are different things
+    // and used to look the same on this row - the second one is a fault and
+    // says so, which is the whole of Phase 29 in one label.
+    const bad = rel && v3.texFault && v3.texFault.get(rel);
+    const leaf = grp.texture ? esc(grp.texture.split(/[\\/]/).pop()) : '';
     const paint = !grp.texture ? '<span class="v3tag">no material</span>'
-      : rel ? `<span class="count">${esc(grp.texture.split(/[\\/]/).pop())}</span>`
-            : `<span class="v3tag">${esc(grp.texture.split(/[\\/]/).pop())} not in this mod</span>`;
+      : bad ? `<span class="w-bad">${leaf} will not load</span>`
+      : rel ? `<span class="count">${leaf}</span>`
+            : `<span class="v3tag">${leaf} not in this mod</span>`;
     return `<label class="v3part">
       <input type="checkbox" ${v3.hidden[key]?'':'checked'}
         onchange="v3TogglePart('${q1(esc(key))}')">
@@ -1835,5 +1948,6 @@ function v3CasFacts(host, g){
       ? `<b>${missing.length}</b> of those texture${missing.length===1?' is':'s are'} `
         + 'not in this mod, so what uses them draws bare'
       : ''
-  ]) + (g.notes||[]).map(n => `<div class="w-warn" style="margin-top:6px">${esc(n)}</div>`).join('');
+  ]) + v3FaultRows()
+     + (g.notes||[]).map(n => `<div class="w-warn" style="margin-top:6px">${esc(n)}</div>`).join('');
 }
