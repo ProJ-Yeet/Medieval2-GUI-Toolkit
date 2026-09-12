@@ -1634,11 +1634,18 @@ class Handler(BaseHTTPRequestHandler):
             if u.path.startswith("/js/"):
                 return self._web_asset(u.path)
             if u.path == "/api/ping":
-                # identifies an already-running instance to a second launch
+                # Identifies an already-running instance to a second launch -
+                # and identifies WHICH build it is. "A toolkit is answering on
+                # this port" and "it is the copy that was just double-clicked"
+                # are different questions, and answering only the first is how
+                # launching the beta reopens the window of a 2.x build that was
+                # left running: same port, same app, a menu without the map.
+                # `root` is the folder that instance was started from, `version`
+                # the build in it; app.py compares both before it reuses this.
                 import os as _os
                 from . import __version__ as _ver
                 return self._json({"app": "unit-transfer", "pid": _os.getpid(),
-                                   "version": _ver})
+                                   "version": _ver, "root": str(WEB_DIR.parent)})
             if u.path == "/api/settings":
                 s = config.load_settings()
                 # unsaved yet -> offer the registry-detected install as a prefill

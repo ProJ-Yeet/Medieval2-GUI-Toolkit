@@ -75,7 +75,13 @@ def _port_state(port: int, host: str = "127.0.0.1") -> Tuple[bool, str]:
         with urllib.request.urlopen(f"http://{host}:{port}/api/ping", timeout=2) as r:
             info = json.loads(r.read().decode("utf-8"))
         if info.get("app") == "unit-transfer":
-            return False, f"already running (pid {info.get('pid')}) - its window will be reopened"
+            # Name the build and the folder it came from, not just "a toolkit".
+            # This line is the first place a second install shows up, and "its
+            # window will be reopened" is only true when it is the same build -
+            # app.py stops rather than reopen somebody else's (_is_this_build).
+            return False, (f"already running: {info.get('version') or 'unknown build'}"
+                           f" from {info.get('root') or 'unknown folder'}"
+                           f" (pid {info.get('pid')})")
     except Exception:
         pass
     return False, "in use by another program - relaunch with --port 8757"

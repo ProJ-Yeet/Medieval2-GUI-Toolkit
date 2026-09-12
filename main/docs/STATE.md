@@ -1,13 +1,26 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-12 · **v2.3.0** is the latest 2.x and **beta 2026-09-12** the
-latest beta · after 24, make and unmake, which closed the roadmap, and the
-end-of-roadmap cut that went out with it · **released**_
+_Updated: 2026-09-12 · **v2.3.1** is the latest 2.x and **beta 2026-09-12b** the
+latest beta · after the launcher fix that had a new build opening an old one ·
+**released**_
 
 ## Next up
-**The roadmap is finished and the cut has gone out.** Phase 24 closed on
-2026-09-12; the Now set and the Next set are both done, and what remains in
-`ROADMAP.md` is the Later table, the three unscheduled phases and B2-B4 off the
-beta, none of which was ever counted as a session.
+**Nothing is scheduled.** The roadmap closed with Phase 24 on 2026-09-12 and the
+cut that went with it; what remains in `ROADMAP.md` is the Later table, the
+three unscheduled phases and B2-B4 off the beta, none of which was ever counted
+as a session.
+
+**The launcher fix is released: v2.3.1 and beta 2026-09-12b**, both uploaded
+2026-09-12, the first cut under the restored cut-as-it-lands rule. It came off a
+report that the campaign map was missing from the beta on somebody else's PC.
+It was: the toolkit's server is detached and outlives its console, so a 2.x
+build left running on 8756 answered the beta's launcher, which reopened that
+window rather than start a second server - correct for a second double-click of
+one launcher, wrong for two different builds, and invisible because the two are
+identical apart from the mode 2.x hides. `/api/ping` now reports the build and
+the folder it was started from, `_is_this_build` in `app.py` is what the reuse
+path asks, and the version is in the page header so a screenshot answers "which
+build is this" without anybody opening Credits. Both lines carry it: the fix is
+not map work, and the build it was hiding is the map one.
 
 **The end-of-roadmap cut is released: v2.3.0 and beta 2026-09-12**, both
 uploaded 2026-09-12, covering everything since v2.2.3 and beta 2026-09-11 -
@@ -19,10 +32,10 @@ their content is in `RELEASE_2_3_0.md` and `RELEASE_BETA_2026_09_12.md`.
 **The one all-in-one Discord post goes with this cut** and is the last thing the
 suspension of 2026-09-11 was waiting on.
 
-**Nothing is scheduled.** What is left, in the order it is worth taking: B2
-(delete a settlement, and move one between mods - 24's delete is the shape for
-the first half and B1 already wrote the create), B3, B4, the Later table, and
-Phases 25-27. None of it is promised to anybody.
+What is left, in the order it is worth taking: B2 (delete a settlement, and move
+one between mods - 24's delete is the shape for the first half and B1 already
+wrote the create), B3, B4, the Later table, and Phases 25-27. None of it is
+promised to anybody.
 
 **The cut-as-it-lands rule of 2026-09-09 is live again**, because the condition
 that suspended it - "we wont publish until we finish all the sessions of our
@@ -40,16 +53,24 @@ path in this file and in the source is relative to. `main/dev/` never ships.
 ## THE TWO RELEASE LINES - for the one cut at the end
 Two lines off this one `master`, chosen by whether a change touches the campaign
 map. **Not campaign-map** -> a **2.x subrelease with the map hidden**, uploaded
-`--latest` (latest **v2.3.0**, 2026-09-12). **Campaign-map** -> the **beta line**,
-uploaded as a **pre-release** (latest **beta 2026-09-12**). A **subrelease means
-both**: one job, both zips, same tree. The end-of-roadmap cut was both.
+`--latest` (latest **v2.3.1**, 2026-09-12). **Campaign-map** -> the **beta line**,
+uploaded as a **pre-release** (latest **beta 2026-09-12b**). A **subrelease means
+both**: one job, both zips, same tree. The end-of-roadmap cut was both, and so
+was the launcher fix after it.
 
 The switch is **one flag**: `off:true` on the `campmap` entry in `MODES` in
 `web/js/core.js`, which `menuModes()` and `modeOffered()` are the only readers
 of. It is a **release-time edit, not a state of `master`** - set it, bump the 2.x
 number, build, upload, then put it straight back off in the next commit.
-`master` carries the map ON, and `__version__` says `beta-2026-09-12` because
+`master` carries the map ON, and `__version__` says `beta-2026-09-12b` because
 the beta was the last thing cut.
+
+**A launcher only reuses its own build now.** The flag above is what makes two
+builds look identical, and until 2026-09-12 a launch would hand you whichever
+one happened to be serving port 8756 - see **Next up**. `/api/ping` carries
+`version` and `root`; `app.py`'s `_is_this_build` compares both, and anything
+else is reported rather than reopened (`EXIT_OTHER_BUILD`, 4, which both `.bat`
+launchers have a branch for). `tests/test_startup.py` covers it.
 
 **21 belongs to BOTH lines.** Raw text is a menu mode of its own and the faction
 audit also draws in the Factions mode, so both are in the 2.x build with the map

@@ -305,6 +305,8 @@ rem
 rem It stays open, with the reason, whenever anything is off:
 rem   exit 3 = the server started but no browser opened, so this window is the
 rem            only place the address is visible.
+rem   exit 4 = a DIFFERENT build of the toolkit already holds the port, so this
+rem            one was not started and no window was opened.
 rem   other  = a real failure.
 rem Either way the full detail is in config\server.log.
 
@@ -338,6 +340,29 @@ if "%RC%"=="3" (
     echo.
     echo  Keep this window open while you use the tool, or use the Quit
     echo  button in the tool's settings to stop it.
+) else if "%RC%"=="4" (
+    rem Code 4 = a DIFFERENT build of the toolkit is already on the port. The
+    rem message box and the lines above name both builds and their folders; this
+    rem window must not suggest the port is merely "taken", because the thing
+    rem holding it is the tool itself and reopening it would have handed over the
+    rem wrong build - a 2.x release has the Campaign Map off the menu, a beta has
+    rem it on, and both look perfectly healthy.
+    echo ============================================================
+    echo  Another BUILD of the Medieval 2 GUI Toolkit is already running.
+    echo ============================================================
+    echo.
+    echo  Nothing was started, and no window was opened - the one already
+    echo  running is a different copy, and showing it would have given you a
+    echo  build you did not launch.
+    echo.
+    echo  The lines above name both: what is running, and what you launched.
+    echo.
+    echo  To use the one you just launched, stop the other first: open
+    echo  http://127.0.0.1:8756/ and press Quit in its Settings ^(gear icon^),
+    echo  then run this again.
+    echo.
+    echo  To run both at once, give this one its own port:
+    echo     "Launch-Medieval 2 GUI Toolkit.bat" --port 8757
 ) else (
     echo ============================================================
     echo  Medieval 2 GUI Toolkit exited with an error ^(code %RC%^).

@@ -34,7 +34,7 @@ import traceback
 import webbrowser
 from pathlib import Path
 
-from unittransfer import config, startup
+from unittransfer import __version__, config, startup
 from unittransfer.logutil import setup as setup_logging
 from unittransfer.server import WEB_DIR, Handler, serve
 
@@ -46,6 +46,10 @@ EXIT_PREFLIGHT = 2
 #: The server IS running, but no browser opened by itself - so the launcher keeps
 #: its window, because the address in it is the user's only way in.
 EXIT_NO_BROWSER = 3
+#: The port is held by a DIFFERENT build of the toolkit, so nothing was started
+#: and no window was opened: reusing it would have shown a build nobody asked
+#: for. :func:`_is_this_build` says why that is worth stopping for.
+EXIT_OTHER_BUILD = 4
 #: Decoded icons. Not next to the app - see :func:`config.cache_dir` for why a
 #: cache must not sit in a folder OneDrive or Dropbox is syncing.
 CACHE_DIR = config.cache_dir("icons")
@@ -123,15 +127,30 @@ def main(argv):
         log.info("Startup checks passed (--check: not starting the server).")
         return 0
 
-    # Already running on this port? Just show that window - don't start a second
-    # server only to have it fail to bind.
-    if mode != "serve" and _already_ours(port):
+    # Already running on this port? Show that window rather than start a second
+    # server only to have it fail to bind - but only when it is THIS build.
+    # Another install's server answers here just the same, and reopening it
+    # silently swaps the build under the person who launched this one.
+    running = _running_instance(port) if mode != "serve" else None
+    if running and _is_this_build(running):
         log.info("The Medieval 2 GUI Toolkit is already running on port %d - %s", port,
                  "leaving it alone (--no-browser)." if no_browser
                  else "opening that window instead of starting a second one.")
         if not no_browser:
             _open_browser(log, port)
         return 0
+    if running:
+        # Printed, not a message box: this path always has a console - the
+        # launcher's own, which the .bat holds open on code 4 - and a modal on
+        # top of it would only be one more thing to dismiss. The detached child
+        # has no console, so the same refusal in _run_server does use one.
+        log.error("Port %d is held by a DIFFERENT build: %s from %s (pid %s). "
+                  "This launcher is %s from %s. Nothing was started and no "
+                  "window was opened.",
+                  port, running.get("version"), running.get("root"),
+                  running.get("pid"), __version__, APP_PATH.parent)
+        print("\n" + _other_build_message(running, port) + "\n")
+        return EXIT_OTHER_BUILD
 
     keep_console = bool(config.load_settings().get("show_console", False))
     if mode == "launch" and not keep_console:
@@ -223,12 +242,22 @@ def _run_server(log, port: int, verbose: bool, keep_console: bool,
         # Almost always "address already in use" (the preflight usually catches it
         # first, but a race is possible). If the port is OUR server, just show it.
         log.error("Could not start on port %d: %s", port, e)
-        if _already_ours(port):
+        running = _running_instance(port)
+        if running and _is_this_build(running):
             log.info("The Medieval 2 GUI Toolkit is already running on port %d - "
                      "opening that window instead.", port)
             open_browser()
             log.info("%s - reused the running instance.", startup.READY_MARKER)
             return 0
+        if running:
+            # Same reasoning as the launch path above, reached the other way: the
+            # preflight said the port was free and it was taken by the time we
+            # bound it. A different build's window is still not this one's.
+            log.error("Port %d is held by a DIFFERENT build: %s from %s (pid %s).",
+                      port, running.get("version"), running.get("root"),
+                      running.get("pid"))
+            _alert(_other_build_message(running, port))
+            return EXIT_OTHER_BUILD
         _alert(f"Medieval 2 GUI Toolkit could not start on port {port}.\n\n{e}\n\n"
                f"Something else is using that port. Launch with --port 8757 "
                f"to pick another one.\n\nDetails: {startup.server_log_path()}")
@@ -282,16 +311,92 @@ def _open_browser(log, port: int) -> None:
         log.debug("webbrowser.open raised", exc_info=True)
 
 
-def _already_ours(port: int) -> bool:
-    """True if an existing toolkit server is answering on ``port``."""
+def _running_instance(port: int):
+    """The toolkit already answering on ``port``, as its ``/api/ping``, or None.
+
+    What comes back names the build: ``version`` and ``root``, the folder it was
+    started from. Both matter - see :func:`_is_this_build`.
+    """
     import json
     import urllib.request
     try:
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/ping",
                                     timeout=2) as r:
-            return json.loads(r.read().decode("utf-8")).get("app") == "unit-transfer"
+            info = json.loads(r.read().decode("utf-8"))
     except Exception:
+        return None
+    return info if isinstance(info, dict) and info.get("app") == "unit-transfer" else None
+
+
+def _is_this_build(info: dict) -> bool:
+    """Is the instance holding the port the copy THIS launcher sits next to?
+
+    The reuse path exists for one thing: double-clicking the launcher twice
+    should raise the window that is already up rather than start a second server
+    that cannot bind. It was written as "is anything of ours on this port", and
+    that answers a different question - two installs on one PC are both "ours".
+
+    What that cost, and why this check is here: the server is detached, so its
+    console closes and it keeps running unseen. Download the beta beside a 2.x
+    build left running from yesterday, launch it, and the launcher hands you the
+    2.x window - same address, same app, and a menu with no Campaign Map in it,
+    because 2.x ships with that mode off. Nothing looks broken, so the build you
+    opened is never the build you are looking at.
+
+    Same folder AND same version: a plain second double-click, reuse it. A
+    different folder is a different install; the same folder at a different
+    version is this folder's own files replaced under a server still serving the
+    old ones. Neither is the window that was asked for.
+    """
+    import os as _os
+    root = info.get("root") or ""
+    # No `root` at all means a server older than this check, and one that cannot
+    # say which folder it came from cannot be identified as this one. Saying so
+    # is right either way: it IS a different build from the one being launched.
+    # (Path("").resolve() is the working directory, so this guard is also what
+    # keeps an empty root from matching by accident.)
+    if not root:
         return False
+    try:
+        same_root = (_os.path.normcase(str(Path(root).resolve()))
+                     == _os.path.normcase(str(APP_PATH.parent)))
+    except OSError:
+        same_root = False
+    return same_root and (info.get("version") or "") == __version__
+
+
+def _other_build_message(info: dict, port: int) -> str:
+    """Why this launch stopped, and the two ways out of it.
+
+    Long, and deliberately so: this is a message box with one OK button, and the
+    thing it has to overturn is the reasonable belief that the tool on screen is
+    the tool that was just launched.
+    """
+    lines = [
+        f"A different build of the Medieval 2 GUI Toolkit is already running on "
+        f"port {port}, so this one was not started.",
+        "",
+        f"Running now:  {info.get('version') or 'unknown build'}",
+        f"    from:  {info.get('root') or 'unknown folder'}",
+        f"    (pid {info.get('pid')}, at http://127.0.0.1:{port}/)",
+        "",
+        f"You launched:  {__version__}",
+        f"    from:  {APP_PATH.parent}",
+        "",
+        "The two are not the same tool - a 2.x release keeps the Campaign Map "
+        "editor off the menu and a beta has it on - so opening the address above "
+        "would have shown you a build you did not ask for, looking perfectly "
+        "healthy with a module missing.",
+        "",
+        "To use the build you just launched, stop the running one first: open "
+        f"http://127.0.0.1:{port}/ and press Quit in its Settings, then launch "
+        "this one again.",
+        "",
+        "To run both at once, give this one its own port: launch it with "
+        f"--port {port + 1}. Two toolkits editing one mod at the same time keep "
+        "separate backups and undo history, so prefer stopping the other one.",
+    ]
+    return "\n".join(lines)
 
 
 def _alert(msg: str) -> None:

@@ -11,7 +11,9 @@ Covers:
     apart in its progress, and stops when asked
   * a real detached launch: the launcher exits, the server outlives it, the log
     is mirrored, and STARTUP-COMPLETE is reached
-  * a second launch reuses the running server instead of starting another
+  * a second launch reuses the running server instead of starting another - but
+    only when it is the SAME build: another install's server on the port is
+    reported, not reopened
   * the log falls back out of an unwritable config/ instead of vanishing
   * "did a browser really load?" is answered by the page heartbeat, not by
     webbrowser.open()'s unreliable Windows return value
@@ -228,6 +230,12 @@ check("console saw STARTUP-COMPLETE", startup.READY_MARKER in out1)
 info = ping(lport)
 check(f"server outlived the launcher (pid {info and info.get('pid')})",
       info is not None and info.get("app") == "unit-transfer")
+# The reuse path turns on this: "a toolkit is on the port" is not "the build
+# that was just double-clicked is on the port", and only the second one makes
+# reopening that window the right answer.
+check("ping names the build and the folder it was started from",
+      bool(info) and bool(info.get("version"))
+      and Path(info.get("root") or "").resolve() == ROOT)
 
 r2 = run_launcher()
 out2 = r2.stdout + r2.stderr
@@ -356,6 +364,40 @@ check("it steps into main/ when that is where app.py is",
       'if exist "main\\app.py" cd /d "%~dp0main"' in bat)
 check("…and still runs app.py from beside itself when it is not (the zip)",
       bat.count('cd /d "%~dp0"') >= 1 and "%PY% app.py %*" in bat)
+
+# ---- a DIFFERENT build on the port is not a window to reopen ---------------
+# The bug this closes: the server is detached, so it outlives its console and
+# keeps running unseen. Launch a beta beside a 2.x build left running from
+# yesterday and the launcher used to hand over the 2.x window - same port, same
+# app, same everything except a Campaign Map that 2.x hides on purpose. The
+# build you opened was never the build you were looking at.
+print("\n== which build is on the port ==")
+mine = {"app": "unit-transfer", "pid": 1, "version": app_mod.__version__,
+        "root": str(ROOT)}
+check("the same folder at the same version is the window to reopen",
+      app_mod._is_this_build(mine))
+check("a different folder is not, even at the same version",
+      not app_mod._is_this_build({**mine, "root": str(ROOT.parent)}))
+check("the same folder at another version is not either (files swapped under it)",
+      not app_mod._is_this_build({**mine, "version": "0.0.0-other"}))
+check("a server too old to say where it came from is not assumed to be this one",
+      not app_mod._is_this_build({k: v for k, v in mine.items() if k != "root"})
+      and not app_mod._is_this_build({**mine, "root": ""}))
+msg = app_mod._other_build_message({**mine, "version": "2.3.0",
+                                    "root": r"C:\Downloads\old"}, 8756)
+check("the refusal names both builds and both folders",
+      "2.3.0" in msg and app_mod.__version__ in msg
+      and r"C:\Downloads\old" in msg and str(ROOT) in msg)
+check("…and says how to get out of it, both ways",
+      "Quit" in msg and "--port 8757" in msg)
+check("its exit code is its own, not the preflight's",
+      app_mod.EXIT_OTHER_BUILD == 4
+      and len({app_mod.EXIT_PREFLIGHT, app_mod.EXIT_NO_BROWSER,
+               app_mod.EXIT_OTHER_BUILD}) == 3)
+check("the launcher has a branch for code 4", '"%RC%"=="4"' in bat)
+check("…and the portable launcher the zip ships has one too",
+      '"%RC%"=="4"' in (ROOT / "dev" / "release" / "build_release.py").read_text(
+          encoding="utf-8", errors="replace"))
 
 if saved is not None:
     config.save_settings(show_console=saved)

@@ -405,6 +405,7 @@ function startHeartbeat(){
 async function init(){
   try{
     startHeartbeat();
+    paintBuildTag();                       // not awaited: a tag, not a dependency
     const s=await api.get('/api/settings');state.settings=s;
     facSort.value=facBy();                 // remembered across runs like the rest
     restoreFilters();                      // …and so are the filters themselves
@@ -1549,10 +1550,37 @@ function openDrawer(type){
 }
 const row=(k,v)=>`<div class="row"><div class="k">${k}</div><div class="v">${v}</div></div>`;
 
+/* ---------- which build this is ----------
+   The server knows; nothing on screen used to say it except the credits dialog,
+   three clicks in. That is one click too many for the question it answers: two
+   builds of this tool ship at once - a 2.x release with the Campaign Map hidden
+   and a beta with it on - and they are identical to look at otherwise. Somebody
+   reporting "the map is gone" and somebody running the 2.x line on purpose
+   produce the same screen and the same screenshot, so the version goes in the
+   header, where a screenshot catches it without anybody being asked to go and
+   find it. */
+let appBuild='';
+//: `2.3.0` is a version and reads better with the v; `beta-2026-09-12` is a name
+//: and "vbeta-2026-09-12" is just wrong, which is what the credits used to show.
+const verLabel=v=>/^\d/.test(v||'')?'v'+v:(v||'');
+async function paintBuildTag(){
+  try{const p=await api.get('/api/ping');appBuild=p.version||'';}catch(e){return;}
+  const el=document.getElementById('buildTag');
+  if(!el||!appBuild)return;
+  el.textContent=verLabel(appBuild);
+  el.title=`This is the ${appBuild} build of the toolkit.`
+    +(/^\d/.test(appBuild)
+      ? '\nThe 2.x line keeps the Campaign Map editor off the menu; the beta has it.'
+      : '\nThe beta line carries the Campaign Map editor.')
+    +'\nClick for the credits.';
+  el.onclick=()=>openCredits();
+  el.hidden=false;
+}
+
 /* ---------- credits ---------- */
 async function openCredits(){
-  let ver='';
-  try{const p=await api.get('/api/ping');if(p.version)ver='v'+p.version;}catch(e){}
+  let ver=verLabel(appBuild);
+  if(!ver){try{const p=await api.get('/api/ping');ver=verLabel(p.version);}catch(e){}}
   const m=document.getElementById('modal');
   m.className='modal';
   m.innerHTML=`

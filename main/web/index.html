@@ -27,6 +27,14 @@
   button:disabled{opacity:.4;cursor:not-allowed}
   label.chk{display:inline-flex;gap:5px;align-items:center;color:var(--dim);font-size:12px;cursor:pointer}
   .count{color:var(--dim);font-size:12px}
+  /* Which build this is, in the one place every screenshot already includes.
+     It is here because of the support question that has no answer without it:
+     "the campaign map is missing" from someone running the 2.x line, which
+     hides that mode on purpose, is indistinguishable from a beta that is
+     genuinely broken until somebody can say which of the two is on screen. */
+  .buildtag{color:var(--dim);font-size:11px;letter-spacing:.3px;padding:2px 7px;
+    background:transparent;border-color:var(--edge)}
+  .buildtag:hover{color:var(--ink)}
   .layout{display:flex;height:calc(100vh - 50px)}
   .filters{width:210px;flex:0 0 210px;padding:12px;overflow:auto;border-right:1px solid var(--edge);background:var(--panel)}
   .filters h3{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:16px 0 6px}
@@ -2423,6 +2431,7 @@
   <label class="chk" id="unusedWrap" style="display:none"><input type="checkbox" id="unusedOnly"> unused only</label>
   <button id="settingsBtn" title="Settings: Medieval II root folder, launcher, defaults">⚙ Settings</button>
   <button id="logBtn" title="Log + undo">🕑 Log</button>
+  <button class="buildtag" id="buildTag" hidden></button>
   <span class="count" id="count"></span>
 </header>
 
