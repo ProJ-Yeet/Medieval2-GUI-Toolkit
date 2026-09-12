@@ -117,6 +117,11 @@ function cvwSnapshot(name){
     theme: (q && q.theme) || '',
     theme_opacity: q ? q.opacity : 0.85,
     theme_borders: q ? !!q.borders : true,
+    // 23b, T12: how the colouring is drawn is as much "what the map looks
+    // like" as which theme it is
+    theme_fill: (q && q.fill) || 'solid',
+    theme_border_pos: (q && q.borderPos) || 'edge',
+    theme_border_every: !!(q && q.borderEvery),
   });
 }
 
@@ -163,12 +168,19 @@ function cvwPlan(man, preset){
     // and opens without it, which is what that view looked like when it was
     // saved - the same reading 20c's names get two lines down.
     terrain: !!p.terrain,
+    // 23b: and which season it is drawn in
+    terrainSeason: p.terrain_season === 'winter' ? 'winter' : 'summer',
     // 20c, T4. A preset saved before 20c has no word on it and opens without
     // names, which is what that view looked like when it was saved.
     labels: !!p.labels,
     theme: p.theme || '',
     themeOpacity: typeof p.theme_opacity === 'number' ? p.theme_opacity : 0.85,
     themeBorders: p.theme_borders !== false,
+    // 23b, T12. A preset saved before this opens solid, on the edge, between
+    // groups - which is what every view saved until now looked like.
+    themeFill: p.theme_fill === 'tint' ? 'tint' : 'solid',
+    themeBorderPos: p.theme_border_pos === 'inside' ? 'inside' : 'edge',
+    themeBorderEvery: !!p.theme_border_every,
     //: layers the preset named that this map has not got, and the reverse
     dropped: [...new Set(named)].filter(code => !real.includes(code)).sort(),
     added: real.filter(code => !named.includes(code)),
@@ -198,7 +210,7 @@ function cvwLoad(i){
   c.rivers = plan.rivers;
   c.riverRgb = plan.riverRgb.slice();
   c.heightAlpha = plan.heightAlpha;
-  c.terrain.on = plan.terrain;
+  c.terrain.on = plan.terrain; c.terrain.season = plan.terrainSeason;
   c.labels = plan.labels; c.lab = null; c.saidZoom = null;
   const lb = document.getElementById('cmLabBtn');
   if(lb) lb.classList.toggle('on', !!c.labels);
@@ -210,10 +222,19 @@ function cvwLoad(i){
   // because it is a request: the theme's table is the server's answer about
   // this mod, and everything above is already on screen by the time it lands.
   const q = state.cq;
-  if(q && typeof cqTheme === 'function' && (q.theme || '') !== plan.theme){
+  if(q && typeof cqTheme === 'function'){
     q.opacity = plan.themeOpacity;
     q.borders = plan.themeBorders;
-    cqTheme(plan.theme);
+    q.fill = plan.themeFill;
+    q.borderPos = plan.themeBorderPos;
+    q.borderEvery = plan.themeBorderEvery;
+    c.overlayAlpha = plan.themeOpacity;
+    c.overlayFill = plan.themeFill;
+    // the theme itself only when it changed - it is a request - but how it is
+    // drawn is applied either way, because a preset that changes the tint and
+    // nothing else is a preset somebody saved for exactly that
+    if((q.theme || '') !== plan.theme) cqTheme(plan.theme);
+    else if(q.col) cqApply(q.col.colours, q.borders && q.col.borders);
   }
   activity('map views', `loaded the view ${v.name}`);
   toast(`${v.name}${plan.dropped.length
@@ -232,8 +253,8 @@ function cvwAdd(){
   }
   const name = prompt('Save this view as:\n\n'
     + 'Which layers are drawn, in what order, at what opacity, the colours '
-    + 'punched out of each, the terrain textures and the rivers and heights '
-    + 'readings, the settlement '
+    + 'punched out of each, the terrain textures and their season, the rivers '
+    + 'and heights readings, the settlement '
     + 'names, and the colouring over the top. Not the zoom or the selection - '
     + 'those are about a place.',
     `${CVW_NAME} ${list.length + 1}`);

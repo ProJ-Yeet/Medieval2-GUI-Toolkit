@@ -1152,6 +1152,11 @@ class QueryResult:
             "colours": {str(r.rgb_key): list(HIGHLIGHT if hit else NO_GROUP)
                         for r, hit in ((r, r.name in matched) for r in facts.regions)
                         if r.region_id >= 0},
+            # 23b: and which group each is in, for the border pass - the one
+            # matched group or none. Same shape and same meaning as
+            # Colouring.payload's, so the browser has one thing to read.
+            "bands": {str(r.rgb_key): (0 if r.name in matched else -1)
+                      for r in facts.regions if r.region_id >= 0},
         }
 
 
@@ -1280,12 +1285,31 @@ class Colouring:
         return self.groups[at].rgb if at is not None else None
 
     def payload(self, facts: "Facts") -> dict:
+        """The table the browser paints, and the one it draws borders from.
+
+        Two tables and not one, because a colour cannot answer both questions
+        (23b). ``colours`` is the fill. ``bands`` is which group each province
+        is in, ``-1`` for one the colouring has nothing to say about - and the
+        two are not the same thing even though they look it: a presence map has
+        a real group whose label is "none" and whose colour is
+        :data:`NO_GROUP`, which is the same grey a province in no group is
+        painted. Reading the group off the colour put a frontier round every
+        ungrouped province on screen and none in the exported file, for as long
+        as both have existed.
+
+        A province that is not in ``bands`` at all is not a province: the sea
+        and the two marker colours are absent, which is what keeps a coastline
+        from being a frontier. :func:`_every_region` makes the same test on
+        this side.
+        """
         table: Dict[str, List[int]] = {}
+        bands: Dict[str, int] = {}
         for rf in facts.regions:
             if rf.region_id < 0:
                 continue
             rgb = self.rgb_of(rf)
             table[str(rf.rgb_key)] = list(rgb if rgb else NO_GROUP)
+            bands[str(rf.rgb_key)] = self.of_region.get(rf.name.lower(), -1)
         return {"code": self.code, "label": self.label, "group": self.group,
                 "kind": self.kind, "source": self.source, "note": self.note,
                 "borders": self.borders, "off": self.off,
@@ -1293,7 +1317,7 @@ class Colouring:
                 "groups": [g.payload() for g in self.groups],
                 "ungrouped": sum(1 for rf in facts.regions
                                  if rf.region_id >= 0 and not self.rgb_of(rf)),
-                "colours": table}
+                "colours": table, "bands": bands}
 
 
 # -- palettes ----------------------------------------------------------------
@@ -1766,8 +1790,50 @@ def _label_colours(facts: "Facts", of_region: Callable[[RegionFacts],
     return colours, groups
 
 
-def render(facts: "Facts", col: Colouring, borders: Optional[bool] = None
-           ) -> Image.Image:
+#: Where a border line is drawn, and the reason there are two (T12, 23b).
+#:
+#: ``edge``    one tile on the upper-left side of each pair that differs: a
+#:             hairline that sits on the frontier and belongs to neither side.
+#: ``inside``  every tile of a group that touches a different one, so both
+#:             sides of a frontier carry it. TWMapReader's ``borderPosInside``,
+#:             and what he fills a region's own border tiles with. It reads at
+#:             a zoom where a hairline has disappeared, and over a textured
+#:             backdrop it is the one that still shows.
+#:
+#: His third control, ``StrokeRenderType`` (``PURE``/``NORMALIZE``), is a Java2D
+#: stroke-control hint for the vector outline his "over edge" mode strokes, at a
+#: width and a repeat count. There is nothing to port: this draws tiles, not
+#: strokes, and a tile is either the frontier or it is not.
+BORDER_POSITIONS = ("edge", "inside")
+
+
+def _every_region(facts: "Facts", index) -> List[int]:
+    """A group id per label that puts **every province in its own group**.
+
+    T12's ``showBordersAllRegions``: the frontiers of a colouring answer "where
+    do the blocs meet", and sometimes the question is "where do the provinces
+    meet" - which is the same pass with a different grouping rather than a
+    second border rule. A province the colouring says nothing about is in it,
+    because it still has a boundary; the sea and the two marker colours are
+    not, so the coastline is still never a frontier.
+
+    The test is the one :meth:`Colouring.payload` puts in ``bands`` - a mapped
+    province of this fact table - so the browser's pass over the same map marks
+    the same tiles.
+    """
+    by_name = {rf.name.lower(): rf for rf in facts.regions}
+    out: List[int] = []
+    for i, c in enumerate(index.colours):
+        k = key(c)
+        reg = index.by_key.get(k)
+        rf = by_name.get(reg.record.name.lower()) if reg and reg.record else None
+        out.append(i if (k not in _MARKERS and rf is not None
+                         and rf.region_id >= 0) else -1)
+    return out
+
+
+def render(facts: "Facts", col: Colouring, borders: Optional[bool] = None,
+           position: str = "edge", every: bool = False) -> Image.Image:
     """One colouring as an image the size of ``map_regions.tga``.
 
     The label image is already one byte per tile, so this is a palette swap
@@ -1785,22 +1851,34 @@ def render(facts: "Facts", col: Colouring, borders: Optional[bool] = None
     img.putpalette(flat[:768])
     out = img.convert("RGB")
     if borders if borders is not None else col.borders:
-        _draw_borders(out, index, groups)
+        _draw_borders(out, index,
+                      _every_region(facts, index) if every else groups,
+                      position)
     return out
 
 
-def _draw_borders(img: Image.Image, index, groups: List[int]) -> None:
+def _draw_borders(img: Image.Image, index, groups: List[int],
+                  position: str = "edge") -> None:
     """A line where two different groups meet.
 
-    Four-connected and drawn on the left-hand tile of each pair, the same rule
-    and the same direction as :func:`unittransfer.campmap._adjacency`, so a
-    border on this picture is a border that index would report. A tile in no
-    group takes no line: an uncoloured province is not a political frontier, it
-    is a province the mod says nothing about.
+    Four-connected, and in ``edge`` drawn on the left-hand tile of each pair -
+    the same rule and the same direction as
+    :func:`unittransfer.campmap._adjacency`, so a border on this picture is a
+    border that index would report. ``inside`` marks both sides instead, which
+    is TWMapReader's own border-tile set for a region.
+
+    A tile in no group takes no line, and neither does one whose only different
+    neighbour is a marker, the sea or anything with no region record: an
+    uncoloured province is not a political frontier, it is a province the mod
+    says nothing about, and a coastline is not a frontier at all.
     """
+    if position not in BORDER_POSITIONS:
+        raise MapError(f"no such border position {position!r} - it is one of "
+                       f"{', '.join(BORDER_POSITIONS)}")
     w, h, labels = index.width, index.height, index.labels
     px = img.load()
     edge: List[Tuple[int, int]] = []
+    inside = position == "inside"
     for y in range(h):
         row = y * w
         for x in range(w):
@@ -1812,17 +1890,33 @@ def _draw_borders(img: Image.Image, index, groups: List[int]) -> None:
                 continue
             if y + 1 < h and groups[labels[row + w + x]] not in (g, -1):
                 edge.append((x, y))
+                continue
+            if not inside:
+                continue
+            # the other two neighbours, which `edge` leaves to the tile on the
+            # far side of them and `inside` has to look at itself
+            if x and groups[labels[row + x - 1]] not in (g, -1):
+                edge.append((x, y))
+                continue
+            if y and groups[labels[row - w + x]] not in (g, -1):
+                edge.append((x, y))
     for x, y in edge:
         px[x, y] = BORDER
 
 
-def render_query(facts: "Facts", result: QueryResult) -> Image.Image:
-    """The matched provinces in one colour, the rest of the map behind them."""
+def render_query(facts: "Facts", result: QueryResult, borders: bool = False,
+                 position: str = "edge", every: bool = False) -> Image.Image:
+    """The matched provinces in one colour, the rest of the map behind them.
+
+    Borders off unless asked (23b): the answer to a query is a set, and the
+    interesting line round it is the edge of the set, which is what ``borders``
+    with ``every`` off draws.
+    """
     hit = {rf.name.lower() for rf in result.matched}
     col = Colouring(code="query", label="Query", group="Query")
     col.groups = [Group(key="match", label="matches", rgb=HIGHLIGHT)]
     col.of_region = {name: 0 for name in hit}
-    return render(facts, col, borders=False)
+    return render(facts, col, borders, position, every)
 
 
 # ---------------------------------------------------------------------------
@@ -1878,8 +1972,19 @@ class Export:
                 "bytes": sum(f["bytes"] for f in self.files), "ms": self.ms}
 
 
-def export_colouring(facts: "Facts", code: str) -> Export:
-    """One theme or information map, as one TGA."""
+def export_colouring(facts: "Facts", code: str, borders: Optional[bool] = None,
+                     position: str = "edge", every: bool = False) -> Export:
+    """One theme or information map, as one TGA.
+
+    The border options are the screen's, passed through, because a border is
+    part of the picture: what the panel draws and what this writes have to be
+    the same frontiers. The **tint** is not passed through and is not a
+    contradiction of that - it is how a colouring is laid over the map, in the
+    same category as the opacity slider, which this export has always ignored.
+    A colouring is which provinces are in which group and what colour each
+    group is; a tinted picture of the terrain is a different thing to export
+    and this is not it.
+    """
     t0 = time.perf_counter()
     col = colouring(facts, code)
     out = Export()
@@ -1889,7 +1994,7 @@ def export_colouring(facts: "Facts", code: str) -> Export:
         return out
     folder = export_dir(facts.mod)
     path = folder / f"map_{_slug(code)}.tga"
-    n = _write_tga(facts, render(facts, col), path)
+    n = _write_tga(facts, render(facts, col, borders, position, every), path)
     out.folder = str(folder)
     out.files.append({"name": path.name, "bytes": n, "label": col.label,
                       "groups": len(col.groups),
@@ -1898,8 +2003,9 @@ def export_colouring(facts: "Facts", code: str) -> Export:
     return out
 
 
-def export_query(facts: "Facts", result: QueryResult) -> Export:
-    """The matched set, as one TGA."""
+def export_query(facts: "Facts", result: QueryResult, borders: bool = False,
+                 position: str = "edge", every: bool = False) -> Export:
+    """The matched set, as one TGA, with the panel's own border options."""
     t0 = time.perf_counter()
     out = Export()
     if not result.matched:
@@ -1908,7 +2014,8 @@ def export_query(facts: "Facts", result: QueryResult) -> Export:
         return out
     folder = export_dir(facts.mod)
     path = folder / "map_query.tga"
-    n = _write_tga(facts, render_query(facts, result), path)
+    n = _write_tga(facts, render_query(facts, result, borders, position, every),
+                   path)
     out.folder = str(folder)
     out.files.append({"name": path.name, "bytes": n, "label": "Query",
                       "groups": 1, "regions": len(result.matched)})

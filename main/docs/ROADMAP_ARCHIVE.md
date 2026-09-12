@@ -22,7 +22,7 @@ Split out of `ROADMAP.md` on 2026-09-05, verbatim.
 | B1 - the first item off a beta user: a new province in every campaign | below |
 | 20c - settlement names on the map, and the pin that fills a coordinate | below |
 | 21, 22a-22c - the two screens over data we hold, and placing things on the map | below |
-| 23a - the map drawn with the game's own ground textures | below |
+| 23a-23b - the map drawn with the game's own ground textures, winter, and the tint | below |
 
 ---
 
@@ -4334,3 +4334,110 @@ and none on Reforged, the ✓ Check panel carried the five findings with their
 tiles, one of them was jumped to and the pink was there under the region layer,
 the habit survived a reload, and ticking the ground types layer off while the
 terrain was on left the map drawn rather than black.
+
+---
+
+## Phase 23b - Winter, and the tint - done 2026-09-12
+
+**Closes T12, and the winter half of T1.** Phase 23 is finished, and with it D7
+and T1 entire.
+
+### Winter
+
+23a built the season in and drew one of them. `descr_aerial_map_ground_types.txt`
+writes two texture columns a line, `Vocabulary.texture` has taken a season since
+the day it was written, and `plan`, `composite` and `view` all carry it, so the
+whole of this half is a switch on the ground types row, one picture kept per
+season and one line of cache key. Measured: **99,000 of DaC's tiles and 166,898
+of Reforged's are drawn with a different texture in winter**, and the north of
+both maps goes under snow.
+
+**The validator judges both seasons, which is TWMapReader's rule and not an
+extra.** He collects a tile's summer texture and its winter one before loading
+any of them, and his error line says which of the two the example tile came
+from. A winter texture that is not on disk is missing whether or not winter is
+what is on the screen, and a rule that only judged what happened to be drawn
+would pass a map in July and fail it in January. `mapterrain.season_gaps` runs
+the plan twice and merges, because most gaps are in both and two identical
+findings a season apart is one fault reported twice; the fingerprint is
+unchanged, so a baseline stamped before this still covers them. The second
+season costs the index pass again and a probe of the textures the first did not
+use, which is why `check_textures` now takes a `seen` and reads each file once
+across both. The whole rule set: **739 ms on DaC, 534 on Reforged, 122 on
+vanilla**, against the one-second bar.
+
+### The tint
+
+**T12's HSB fill, and it is the canvas `color` blend.** His is a grayscale
+filter followed by an `HSBAdjustFilter` set to the tint's hue and saturation;
+the blend takes the hue and saturation of the source and the luminosity of the
+backdrop, which is the same operation in one step and in hardware. His
+brightness stretch and its two cutoffs have nothing to port: they exist because
+his filter *replaces* the brightness and has to be stopped from crushing the
+relief, and the blend never touches it.
+
+**The colouring had to move to do it.** It was drawn last into the layer
+composite, which is one pixel a tile; the terrain is four, so it is blitted
+straight to the screen. A colouring blended against the composite alone would
+have been a tint of the wrong picture. So `cmapThemeDraw` draws it onto the
+screen canvas after both, and the composite's cache key lost the two overlay
+terms it no longer decides. One thing fell out for free: the opacity slider is
+now a repaint rather than a rebuild of a megapixel canvas per pixel of travel.
+
+**Two canvases, not one.** The fill blends; the frontiers never do. A border
+colour is a near-black with almost no saturation, and a `color` blend of that is
+a grey wash rather than a line - it would delete the borders exactly when the
+tint made them most necessary.
+
+### The borders, and the two faults the port found
+
+`edge` is the hairline on the frontier that belongs to neither side, which is
+what both ends already drew. `inside` marks every tile of a group that touches a
+different one, so both sides carry it: TWMapReader's `borderPosInside`, and the
+one that still reads once a hairline has disappeared into the zoom or into a
+texture. His third control, `StrokeRenderType` (`PURE`/`NORMALIZE`), is a Java2D
+stroke-control hint for the vector outline his "over edge" mode strokes at a
+width and a repeat count; there is nothing to port, because this draws tiles and
+a tile is either the frontier or it is not. `showBordersAllRegions` is the
+`Every province` choice, which is the same pass with each province its own group.
+On DaC's faction map: 4,919 border tiles on the edge between groups, 8,480
+inside, 10,477 and 17,822 for every province.
+
+**The screen and the export were drawing different frontiers, and had been since
+16g.** The panel says they are the same picture. The browser keyed its group ids
+on each province's own colour, so it drew a line round every province; the
+export keyed on the group's colour, so it drew frontiers between blocs. The
+comment above the browser's loop described the export's behaviour. Both are
+right now and a suite runs both over one map to keep them that way.
+
+**And a colour cannot say which group a province is in.** Fixing the first fault
+uncovered a second: a presence map has a real group whose label is "none" and
+whose colour is `NO_GROUP`, which is the same grey a province in *no* group is
+painted. Reading the group off the colour puts a frontier round every ungrouped
+province. So `Colouring.payload` now sends `bands` beside `colours` - the group
+index per province, `-1` for one the colouring says nothing about, absent for
+anything that is not a province - and `_every_region` makes the same test.
+`cqGroups` reads that and infers nothing.
+
+**The borders tickbox now means what it says.** Each colouring carried its own
+yes-or-no and only the three themes said yes, so ticking "political borders" on
+an information map did nothing at all. The tickbox is the switch; the
+colouring's own flag is the export's default when the panel does not send one.
+
+### Tests and verification
+
+`tests/test_mapquery.py` gains section 3b, 10 checks, and the last four are the
+point: **the browser's own border pass, run in node against the server's, over
+one map, in all four combinations.** `campmap.js` and `mapquery.js` load into a
+bare V8 context as they ship - no DOM, no second copy of the maths - and
+`cqGroups` and `cqBorders` are pure so they can be called directly. Both faults
+above were found by writing that check, not by reading the code. The suite is
+109 checks and passes.
+
+`tests/test_mapterrain.py` (63) and `tests/test_mapcheck.py` (86) both pass with
+the two-season rule. Driven in the browser on DaC: the season switch, both
+pictures kept, the tint over the textures with the rivers and mountains still
+reading through, both border positions, both scopes, the export honouring them
+(71 KB inside-and-every against 44 KB edge-and-groups), and a saved view
+carrying all of it while one saved before 23b opens solid, on the edge, between
+groups.

@@ -823,7 +823,7 @@ def _r_climate_colours(ck: Check) -> Iterable[Finding]:
       "TWMapReader draws a texture it cannot find pink and reports it, rather "
       "than skipping the tile; 23a took the rule as it stands")
 def _r_terrain_textures(ck: Check) -> Iterable[Finding]:
-    """A tile the aerial-map terrain has no picture for.
+    """A tile the aerial-map terrain has no picture for, in either season.
 
     Three ways that happens and the module names all three: the file has no
     entry for this climate and ground type, the entry names a texture the
@@ -831,10 +831,16 @@ def _r_terrain_textures(ck: Check) -> Iterable[Finding]:
     :data:`~unittransfer.mapterrain.MISSING_RGB` on the terrain backdrop, so
     the finding and the pink are the same measurement rather than two.
 
-    The plan is kept per map, so this is about twenty milliseconds on a screen
-    that has already drawn the terrain and about two hundred on one that has
+    **Both seasons, merged** (23b), which is TWMapReader's rule: he gathers a
+    tile's summer texture and its winter one before loading any of them, and a
+    winter texture that is not on disk is missing whether or not winter is what
+    is on the screen. The second season costs the index pass again and nothing
+    else, because the layers are decoded once and kept.
+
+    The plan is kept per map, so this is about forty milliseconds on a screen
+    that has already drawn the terrain and about three hundred on one that has
     not - which is why it is a plan and not a composite: the picture is a
-    second of work and no rule here needs it.
+    second of work a season and no rule here needs it.
 
     A mod with no ``descr_aerial_map_ground_types.txt`` turns the rule off by
     name. The game's own copy is inside a ``.pack``, so a mod that changed
@@ -843,15 +849,19 @@ def _r_terrain_textures(ck: Check) -> Iterable[Finding]:
     """
     from . import mapterrain
     try:
-        p = mapterrain.plan(ck.mod, ck.cm, ck.campaign)
+        gaps = mapterrain.season_gaps(ck.mod, ck.cm, ck.campaign)
     except mapterrain.TerrainError as exc:
         ck.skip(mapterrain.AERIAL_REL, str(exc))
         return
     except (MapError, OSError) as exc:
         ck.skip(mapterrain.AERIAL_REL, str(exc))
         return
-    for gap in p.gaps + mapterrain.check_textures(ck.mod, p):
+    for gap in gaps:
         what = gap["file"] or f"{gap['climate']}/{gap['ground']}"
+        # which season, said only when it is not both - "in winter" is worth a
+        # reader's attention and "in summer and winter" is noise on every row
+        when = ("" if len(gap["seasons"]) == len(mapterrain.SEASONS)
+                else f" This is the {gap['seasons'][0]} set only.")
         # the file somebody would go and fix, which is not always the aerial
         # one: a tile whose ground type is sea and whose height is land is a
         # quarrel between two layers and the texture table is a bystander
@@ -865,7 +875,8 @@ def _r_terrain_textures(ck: Check) -> Iterable[Finding]:
             "terrain.texture", "warn",
             f"{gap['why']} The tiles are drawn "
             f"rgb({', '.join(str(v) for v in mapterrain.MISSING_RGB)}) on the "
-            f"terrain backdrop rather than left out, so they can be found.",
+            f"terrain backdrop rather than left out, so they can be found."
+            f"{when}",
             file=where, tile=tuple(gap["tile"]) if gap["tile"] else None,
             count=gap["tiles"], what=what)
 

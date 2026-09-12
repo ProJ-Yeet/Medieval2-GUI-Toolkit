@@ -746,6 +746,18 @@
   .cmmode input[type=color]{width:26px;height:18px;padding:0;border-radius:4px;
     border:1px solid var(--edge);background:none;cursor:pointer}
   .cmmode input[type=color]:disabled{opacity:.4;cursor:default}
+  /* 23b: a segmented control - two or three buttons that read as one choice.
+     A pair of radios would say the same thing in twice the width, and the rows
+     these sit on already carry a tickbox, a sentence and sometimes a warning.
+     Used by the terrain row's season and by the query panel's fill and border
+     options, which are the same shape of question. */
+  .cmseg{display:inline-flex;border:1px solid var(--edge);border-radius:5px;
+    overflow:hidden}
+  .cmseg button{border:0;border-radius:0;padding:2px 8px;font-size:11px;
+    background:var(--panel2);color:var(--dim);white-space:nowrap}
+  .cmseg button + button{border-left:1px solid var(--edge)}
+  .cmseg button.on{background:var(--accent);color:#10131a;font-weight:600}
+  .cmseg button:disabled{opacity:.4;cursor:default}
   .cmpick .cmcard{border:1px solid var(--edge);border-radius:7px;padding:9px 10px;
     background:var(--panel2);margin-top:5px}
   .cmcard .nm{display:flex;align-items:center;gap:7px;font-weight:600;

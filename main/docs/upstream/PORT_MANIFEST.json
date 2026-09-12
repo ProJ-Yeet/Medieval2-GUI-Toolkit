@@ -924,7 +924,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "gone",
    "first_seen": "7cab442",
-   "notes": "D7 = T1, done in 23a as the terrain composite (unittransfer/mapterrain.py): the mod's own aerial-map textures, one per (climate, ground type) pair, on TWMapReader's specification rather than this one - a texture that cannot be found is drawn pink and reported. The winter set is 23b"
+   "notes": "D7 = T1, done in 23a and 23b as the terrain composite (unittransfer/mapterrain.py): the mod's own aerial-map textures, one per (climate, ground type) pair, summer and winter, on TWMapReader's specification rather than this one - a texture that cannot be found is drawn pink and reported. T12's tint and border options landed with the winter set"
   },
   "src/components/map/MapLayerPanel.jsx": {
    "disposition": "port-concept",

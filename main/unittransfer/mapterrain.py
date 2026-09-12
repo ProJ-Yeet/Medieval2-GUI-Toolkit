@@ -677,7 +677,7 @@ def composite(mod, p: Plan, scale: int = SCALE) -> Image.Image:
     return out
 
 
-def check_textures(mod, p: Plan) -> List[dict]:
+def check_textures(mod, p: Plan, seen: Optional[Dict[str, str]] = None) -> List[dict]:
     """The textures a tile asks for whose header will not read. Gap rows.
 
     Headers only, through :func:`~unittransfer.maptga.probe`, which is the
@@ -688,6 +688,12 @@ def check_textures(mod, p: Plan) -> List[dict]:
     file - and a texture that passes the header and then fails on its pixels is
     still left pink by :func:`composite`, which is the same answer arrived at
     one step later.
+
+    ``seen`` is a ``{filename: reason or ""}`` the caller may pass to have each
+    file read once across several plans. :func:`season_gaps` does: the two
+    seasons of DaC share most of their textures, and a probe of a folder that
+    is not in the operating system's cache is the slowest thing here by an
+    order of magnitude.
     """
     out: List[dict] = []
     folder = texture_dir(mod)
@@ -695,18 +701,27 @@ def check_textures(mod, p: Plan) -> List[dict]:
     for k, name in enumerate(p.names, start=1):
         if not p.counts[k - 1]:
             continue
-        path = folder / name
-        if not path.is_file():
-            continue                        # plan already said so
-        try:
-            probe(path)
-        except (TgaError, OSError, ValueError) as exc:
-            at = _first_tile(raw, p.width, k)
-            out.append({"climate": "", "ground": "", "file": name,
-                        "tiles": p.counts[k - 1],
-                        "tile": list(at) if at else None,
-                        "why": f"{name} is in {TEXTURE_DIR_REL} and will not "
-                               f"read: {exc}"})
+        if seen is not None and name in seen:
+            why = seen[name]
+        else:
+            path = folder / name
+            if not path.is_file():
+                why = ""                    # plan already said so
+            else:
+                try:
+                    probe(path)
+                    why = ""
+                except (TgaError, OSError, ValueError) as exc:
+                    why = (f"{name} is in {TEXTURE_DIR_REL} and will not "
+                           f"read: {exc}")
+            if seen is not None:
+                seen[name] = why
+        if not why:
+            continue
+        at = _first_tile(raw, p.width, k)
+        out.append({"climate": "", "ground": "", "file": name,
+                    "tiles": p.counts[k - 1],
+                    "tile": list(at) if at else None, "why": why})
     return out
 
 
@@ -761,6 +776,40 @@ def _sig(path: Path) -> str:
         return f"{st.st_size}:{st.st_mtime_ns}"
     except OSError:
         return "-"
+
+
+def season_gaps(mod, cm: CampaignMap, campaign: str = "") -> List[dict]:
+    """Every gap in **both** seasons, merged, with the seasons each is in (23b).
+
+    TWMapReader collects the textures for a tile's summer *and* its winter
+    before it loads any of them, and his error line says which of the two the
+    example tile is from. That is the rule: a winter texture that is not on
+    disk is missing whether or not the season on the screen is winter, and a
+    validator that only judged what happened to be drawn would pass a map in
+    July and fail it in January.
+
+    Merged rather than doubled, because most gaps are in both: a pair nothing
+    names a texture for has no summer entry and no winter entry either, and two
+    identical findings a season apart is one fault reported twice. The
+    fingerprint is the pair or the filename, which is what it was before this,
+    so a baseline stamped on a summer-only run still covers these.
+    """
+    merged: Dict[Tuple[str, str, str], dict] = {}
+    seen: Dict[str, str] = {}
+    for season in SEASONS:
+        p = plan(mod, cm, campaign, season)
+        for gap in p.gaps + check_textures(mod, p, seen):
+            at = (gap["climate"], gap["ground"], gap["file"])
+            hit = merged.get(at)
+            if hit is None:
+                merged[at] = dict(gap, seasons=[season])
+            elif season not in hit["seasons"]:
+                hit["seasons"].append(season)
+                # a pair with no entry is the same count in both; a texture
+                # that is missing can be on a different number of tiles in
+                # each, and the larger is the honest figure to report
+                hit["tiles"] = max(hit["tiles"], gap["tiles"])
+    return sorted(merged.values(), key=lambda g: -g["tiles"])
 
 
 def view(mod, cm: CampaignMap, campaign: str = "", season: str = "summer",

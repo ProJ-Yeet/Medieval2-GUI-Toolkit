@@ -280,7 +280,11 @@ Query, themes and information maps (16g, see :mod:`unittransfer.mapquery`)
                                     each one does, and the colour table for them
   POST /api/map/export           -> the same as a TGA in the cache: one picture
                                     (`what`: colouring / query) or Geomod's batch
-                                    (`what`: factions, one file per faction)
+                                    (`what`: factions, one file per faction).
+                                    23b: `borders`, `border_position`
+                                    (edge/inside) and `border_every` are the
+                                    panel's, so the file draws the frontiers the
+                                    screen does
 
 Settlements and buildings (16h, see :mod:`unittransfer.stratedit`). The first of
 the three sub-phases that write descr_strat.txt itself.
@@ -3013,9 +3017,20 @@ class Handler(BaseHTTPRequestHandler):
                 out = mapquery.export_factions(facts)
             elif what == "query":
                 out = mapquery.export_query(
-                    facts, mapquery.run_query(facts, rules, match))
+                    facts, mapquery.run_query(facts, rules, match),
+                    bool(body.get("borders")),
+                    str(body.get("border_position") or "edge"),
+                    bool(body.get("border_every")))
             else:
-                out = mapquery.export_colouring(facts, str(body.get("code") or ""))
+                # 23b, T12: the frontiers the panel is drawing, so the file and
+                # the screen are the same picture. `borders` omitted means the
+                # colouring's own default, which is what every caller before
+                # this one got.
+                out = mapquery.export_colouring(
+                    facts, str(body.get("code") or ""),
+                    None if body.get("borders") is None else bool(body["borders"]),
+                    str(body.get("border_position") or "edge"),
+                    bool(body.get("border_every")))
         except (campmap.MapError, OSError, ValueError) as e:
             return {"error": str(e)}
         got = out.payload()

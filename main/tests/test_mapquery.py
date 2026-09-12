@@ -31,6 +31,7 @@ Five parts, the last two of which need a game install:
 """
 import json
 import shutil
+import subprocess
 import sys
 import threading
 import urllib.request
@@ -533,6 +534,125 @@ try:
 except campmap.MapError:
     refused = True
 check("a theme code nothing declares is refused by name", refused)
+
+
+# ---- 3b) T12's borders, and the two sides drawing the same ones --------------
+print("\n3b) 23b, T12: where the frontier goes, between which, and the two "
+      "implementations of it")
+
+# a colouring with two provinces in ONE group and a third in none, which is what
+# makes "groups", "every province" and the no-group grey three different answers
+rel = mapquery.colouring(facts, "hidden:timber")
+shared = [g for g in rel.groups if len(g.regions) > 1]
+check(f"the timber map puts two of the three provinces in one group: "
+      f"{[(g.key or 'none', len(g.regions)) for g in rel.groups]}",
+      len(shared) == 1 and len(shared[0].regions) == 2)
+
+
+def border_set(colouring, position, every):
+    img = mapquery.render(facts, colouring, True, position, every)
+    data = list(img.get_flattened_data())
+    return {i for i, rgb in enumerate(data) if rgb == mapquery.BORDER}
+
+
+sets = {(pos, ev): border_set(rel, pos, ev)
+        for pos in mapquery.BORDER_POSITIONS for ev in (False, True)}
+check(f"'inside' marks both sides of a frontier and 'on the edge' one of them, "
+      f"so inside is a superset and a bigger one: "
+      f"{len(sets[('edge', False)])} -> {len(sets[('inside', False)])} tiles",
+      sets[("edge", False)] < sets[("inside", False)])
+check(f"'every province' draws boundaries 'groups' does not, because two "
+      f"provinces of one group have one between them: "
+      f"{len(sets[('edge', False)])} -> {len(sets[('edge', True)])} tiles",
+      sets[("edge", False)] < sets[("edge", True)])
+flat = mapquery.render(facts, rel, borders=False)
+check("and with borders off there is still not one border pixel",
+      mapquery.BORDER not in set(flat.get_flattened_data()))
+check("a coastline is never a frontier: no border pixel is on the sea row, "
+      "whichever way the borders are drawn",
+      all(all(i // W != H - 1 for i in st) for st in sets.values()))
+try:
+    mapquery.render(facts, rel, True, "sideways", False)
+    check("a border position nothing has is refused by name", False)
+except campmap.MapError as exc:
+    check(f"a border position nothing has is refused by name: {exc}",
+          "sideways" in str(exc))
+
+# the browser's own pass over the same map, in node, against the same answer.
+# `campmap.js` and `mapquery.js` are loaded as they ship - no DOM, no second
+# copy of the maths - and the claim under test is the one the panel makes: what
+# is on screen and what an export writes are the same frontiers.
+QHARNESS = r"""
+const fs = require('fs');
+const vm = require('vm');
+function canvas(){
+  const cv = {width: 0, height: 0, data: null};
+  cv.getContext = () => ({
+    imageSmoothingEnabled: true,
+    drawImage(){}, putImageData(im){ cv.data = im.data; },
+    getImageData(){ throw new Error('a canvas was read back'); },
+  });
+  return cv;
+}
+const ctx = {console, document: {createElement: () => canvas()}};
+vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(process.argv[2], 'utf8'), ctx);
+vm.runInContext(fs.readFileSync(process.argv[3], 'utf8'), ctx);
+const job = JSON.parse(fs.readFileSync(process.argv[4], 'utf8'));
+ctx.state = {cq: {voc: {border: job.border}}};
+
+const w = job.w, h = job.h;
+const raw = new Uint8ClampedArray(w * h * 4);
+for(let i = 0; i < w * h; i++){
+  raw[i * 4] = job.px[i][0]; raw[i * 4 + 1] = job.px[i][1];
+  raw[i * 4 + 2] = job.px[i][2]; raw[i * 4 + 3] = 255;
+}
+const out = {};
+for(const pos of ['edge', 'inside']){
+  for(const every of [false, true]){
+    const g = ctx.cqGroups(raw, w, h, job.bands, every);
+    const im = ctx.cqBorders(g, w, h, pos);
+    const hit = [];
+    for(let i = 0; i < w * h; i++) if(im.data[i * 4 + 3]) hit.push(i);
+    out[pos + '|' + every] = hit;
+  }
+}
+fs.writeFileSync(process.argv[5], JSON.stringify(out));
+"""
+
+node = shutil.which("node")
+if not node:
+    print("  [skip] node is not on PATH, and the browser's border pass runs in it")
+else:
+    td = Path(_tmp.mkdtemp(prefix="ut_qborder_"))
+    if True:
+        run = td / "harness.js"
+        run.write_text(QHARNESS, encoding="utf-8")
+        layer = facts.cm.tiles("regions").convert("RGB")
+        job = td / "job.json"
+        job.write_text(json.dumps({
+            "w": layer.width, "h": layer.height,
+            "px": [list(p) for p in layer.get_flattened_data()],
+            "bands": rel.payload(facts)["bands"],
+            "border": list(mapquery.BORDER),
+        }), encoding="utf-8")
+        res = td / "out.json"
+        pr = subprocess.run(
+            [node, str(run), str(ROOT / "web/js/campmap.js"),
+             str(ROOT / "web/js/mapquery.js"), str(job), str(res)],
+            capture_output=True, text=True)
+        if pr.returncode != 0:
+            check("the browser's border pass runs", False)
+            print((pr.stderr or pr.stdout).strip()[:2000])
+        else:
+            got = json.loads(res.read_text(encoding="utf-8"))
+            for pos in mapquery.BORDER_POSITIONS:
+                for ev in (False, True):
+                    mine = set(got[f"{pos}|{str(ev).lower()}"])
+                    check(f"the screen and the export draw the same frontiers - "
+                          f"{pos}, {'every province' if ev else 'groups'}: "
+                          f"{len(mine)} tiles",
+                          mine == sets[(pos, ev)])
 
 
 # ---- 4) every real map -------------------------------------------------------

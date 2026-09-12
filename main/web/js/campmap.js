@@ -187,8 +187,9 @@ function cmapLayerState(){
   }
   m.river = {on: !!c.rivers, rgb: c.riverRgb.slice()};
   m.height_alpha = !!c.heightAlpha;
-  // 23a: the third reading, kept beside the other two
+  // 23a: the third reading, kept beside the other two, and 23b's season
   m.terrain = !!(c.terrain && c.terrain.on);
+  m.terrain_season = (c.terrain && c.terrain.season) || 'summer';
   m.tip = c.tip !== false;
   // 20c, T4: settlement names are a way of looking at the map, not a place
   m.labels = !!c.labels;
@@ -244,10 +245,12 @@ function cmapResetView(){
   c.order = cmapOrder(c.man, []);
   c.rivers = false; c.riverRgb = CMAP_RIVER_RGB.slice();
   c.heightAlpha = false; c.tip = true; c.labels = false; c.lab = null;
-  // the picture is kept, not thrown away: it is a megabyte the server built and
-  // nothing about it has changed, so turning the reading back on is instant
-  c.terrain.on = false;
-  c.overlay = null; c.overlayKey = ''; c.overlayAlpha = 0.85;
+  // the pictures are kept, not thrown away: they are a megabyte each that the
+  // server built and nothing about them has changed, so turning the reading
+  // back on is instant
+  c.terrain.on = false; c.terrain.season = 'summer';
+  c.overlay = null; c.overlayEdge = null; c.overlayKey = '';
+  c.overlayAlpha = 0.85; c.overlayFill = 'solid';
   c.comp = null; c.compKey = '';
   // the query panel and the marker layer are panels of their own; nulling them
   // is how cmapSetCampaign resets them too, and each rebuilds closed and empty
@@ -340,7 +343,10 @@ function cmapNew(mod, man){
     comp: null, compKey: '',
     // 16g's colouring: the region layer recoloured through a table the server
     // built, drawn over the whole stack. Null when nothing is themed.
-    overlay: null, overlayKey: '', overlayAlpha: 0.85,
+    overlay: null, overlayEdge: null, overlayKey: '', overlayAlpha: 0.85,
+    // 23b, T12: `solid` lays the colouring over the map, `tint` colours what is
+    // already there and keeps its light. See `cmapThemeDraw`.
+    overlayFill: 'solid',
     // 20a's two readings. `rivers` lifts the three river colours out of the
     // features layer and draws them in `riverRgb` alone; `heightAlpha` draws
     // the heights layer as transparency instead of as grey. Both live on the
@@ -359,7 +365,11 @@ function cmapNew(mod, man){
        one picture that is blitted under the stack. `scale` is how many of its
        pixels a tile is, which is the whole of the arithmetic on this side. */
     terrain: {on: !!saved.terrain, img: null, scale: 1, loading: false,
-              failed: '', facts: null, key: '', stale: false},
+              failed: '', facts: null, key: '', stale: false,
+              // 23b: which texture column is drawn. The pictures are kept per
+              // season once fetched, so flipping between them is a blit.
+              season: saved.terrain_season === 'winter' ? 'winter' : 'summer',
+              shot: {}},
     // 20c, T4: settlement names on the map, and the layout for the zoom on
     // screen - see maplabels.js. Off until somebody turns it on, like 17d's
     // markers: a map that opens under two hundred names is a different map.
@@ -444,7 +454,8 @@ function cmapSetCampaign(rel){
   state.cj = null; state.cx = null; state.cset = null;
   state.cmk = null; state.cev = null; state.cq = null; state.cchk = null;
   state.cft = null;
-  c.det = null; c.cv = null; c.overlay = null; c.overlayKey = '';
+  c.det = null; c.cv = null; c.overlay = null; c.overlayEdge = null;
+  c.overlayKey = '';
   activity('campaign browser', `read ${want || 'the default campaign'}`);
   renderCampmap();
   if(was.cj) cjToggle();
@@ -520,7 +531,10 @@ async function cmapRefetchMap(){
   // 23a: the composite is of the two layers THIS campaign reads, and its key
   // carries the campaign, so a campaign that ships its own climates gets its
   // own terrain. Fetched again rather than kept, for the same reason a layer is.
-  if(c.terrain.on){ c.terrain.img = null; c.terrain.key = ''; cmapTerrainLoad(); }
+  if(c.terrain.on){
+    c.terrain.img = null; c.terrain.key = ''; c.terrain.shot = {};
+    cmapTerrainLoad();
+  }
 }
 
 /* Where this campaign's map comes from, said under the Campaign button. Nothing
@@ -909,6 +923,11 @@ and it is drawn under the whole stack, because it is the ground.
 A tile whose texture cannot be found is drawn pink and counted, never skipped.">
       <input type="checkbox" data-lterrain ${t.on ? 'checked' : ''}>
       <span>Terrain textures</span></label>
+    <span class="cmseg">${[['summer', 'Summer'], ['winter', 'Winter']].map(([sn, lab]) =>
+      `<button data-lseason="${sn}" class="${t.season === sn ? 'on' : ''}"
+        ${t.on ? '' : 'disabled'} title="Draw the ${sn} texture of every climate that
+has one. A climate with no winter in descr_climates.txt is drawn in its summer
+textures all year, which is the engine's own rule.">${lab}</button>`).join('')}</span>
     ${note}
   </div>`;
 }
@@ -928,6 +947,30 @@ function cmapTerrain(on){
   if(!L.img && L.on) cmapLoadLayers();
 }
 
+/* Summer or winter (23b). The switch, and nothing else moves.
+
+   The winter set doubles 23a for nothing because the file already carries it:
+   `descr_aerial_map_ground_types.txt` writes two texture columns a line, and
+   `mapterrain.Vocabulary.texture` has taken a season since the day it was
+   written. What is on this side is which one to ask for and keeping both once
+   they have arrived. Measured on the installed maps: 99,000 of DaC's tiles and
+   166,898 of Reforged's are drawn with a different texture in winter. */
+function cmapTerrainSeason(season){
+  const c = state.cmap, t = c.terrain;
+  const want = season === 'winter' ? 'winter' : 'summer';
+  if(t.season === want) return;
+  t.season = want;
+  activity('map layer', `drew the terrain in ${want}`);
+  cmapSaveLayers();
+  if(!t.on) return cmapRepanel();
+  cmapTerrainLoad().then(() => {
+    if(state.cmap !== c) return;
+    cmapPaint();
+    cmapRepanel();
+  });
+  cmapRepanel();
+}
+
 /* The facts, then the picture. Both once per map and campaign.
 
    FETCHED AS A PICTURE, deliberately, and it is the one thing on this screen
@@ -939,10 +982,22 @@ function cmapTerrain(on){
    a pan or a zoom, and an <img> the browser decodes once keeps it exactly. */
 async function cmapTerrainLoad(again){
   const c = state.cmap, t = c.terrain;
-  const key = `${c.mod}|${c.campaign || ''}`;
-  if(t.loading || (!again && t.img && t.key === key)) return;
+  const season = t.season || 'summer';
+  const key = `${c.mod}|${c.campaign || ''}|${season}`;
+  // 23b: a season already fetched is a blit, not a request. `shot` holds one
+  // picture per season and `key` says which one `img` is, so flipping back to
+  // a season looked at a minute ago costs nothing.
+  if(!again && t.shot[key]){
+    t.img = t.shot[key].img; t.facts = t.shot[key].facts;
+    t.scale = t.facts.scale || 1; t.key = key;
+    return;
+  }
+  if(t.loading) return;
+  // a redraw is a redraw of both seasons: a stroke on the ground types moved
+  // tiles that the winter set draws as well
+  if(again) t.shot = {};
   t.loading = true; t.failed = ''; t.stale = false;
-  const q = `?mod=${enc(c.mod)}${cmapCampQ()}`;
+  const q = `?mod=${enc(c.mod)}${cmapCampQ()}&season=${enc(season)}`;
   try{
     const r = await fetch(`/api/map/terrain${q}`, {cache: 'no-store'});
     if(!r.ok) throw new Error(`the server answered ${r.status}`);
@@ -963,6 +1018,7 @@ async function cmapTerrainLoad(again){
     });
     if(state.cmap !== c) return;
     t.img = img; t.scale = f.scale || 1; t.key = key;
+    t.shot[key] = {img, facts: f};
   }catch(e){
     if(state.cmap === c) t.failed = errText(e);
   }finally{
@@ -1142,6 +1198,8 @@ function cmapWireLayers(){
   // fetched, not masked, so what follows a tick here is a request.
   box.querySelectorAll('[data-lterrain]').forEach(cb => cb.onchange = () =>
     cmapTerrain(cb.checked));
+  box.querySelectorAll('[data-lseason]').forEach(b => b.onclick = () =>
+    cmapTerrainSeason(b.dataset.lseason));
   box.querySelectorAll('[data-lterraindraw]').forEach(b => b.onclick = () => {
     activity('map layer', 'redrew the terrain composite');
     cmapTerrainLoad(true);
@@ -1329,7 +1387,6 @@ function cmapCompose(){
   // picture, and a composite that did not notice would show the old one
   const key = shown.map(code => `${code}:${c.layers[code].opacity}`
     + `:${cmapModeKey(c, code)}`).join('|')
-    + `|${c.overlayKey || ''}:${c.overlayAlpha}`
     + `|terrain:${cmapTerrainOn(c) ? 1 : 0}`;
   if(key === c.compKey && c.comp) return;
   if(!c.comp){
@@ -1357,14 +1414,12 @@ function cmapCompose(){
     // is a guess and the panel says so; leaving it out would be a different lie.
     x.drawImage(L.masked || L.cv || L.img, 0, 0, m.width, m.height);
   }
-  // 16g's colouring, drawn over everything. It is a recolour of the region
-  // layer rather than another layer, so it belongs on top of the stack and not
-  // in it: the stack stays the ten files the map is made of, and ticking one
-  // off while a theme is on still does what it says.
-  if(c.overlay){
-    x.globalAlpha = c.overlayAlpha == null ? 0.85 : c.overlayAlpha;
-    x.drawImage(c.overlay, 0, 0, m.width, m.height);
-  }
+  // 16g's colouring used to be drawn here, last. 23b moved it out to
+  // `cmapThemeDraw`, and the reason is T12's tint: a tint takes the luminosity
+  // of what is under it, and what is under it is the terrain composite, which
+  // is not in this canvas and cannot be - it is four pixels a tile and this is
+  // one. A colouring blended against the layer stack alone would be a tint of
+  // the wrong picture.
   x.globalAlpha = 1;
   c.compKey = key;
 }
@@ -1503,6 +1558,9 @@ function cmapPaint(dirty){
     x.imageSmoothingEnabled = v.zoom < 1;
     x.drawImage(c.comp, x0, y0, x1 - x0, y1 - y0,
                 cmapX(x0), cmapY(y0), (x1 - x0) * v.zoom, (y1 - y0) * v.zoom);
+    // 16g's colouring, over the terrain and the stack both, because in tint
+    // mode it is a reading of them rather than a sheet over them
+    cmapThemeDraw(x, x0, y0, x1, y1);
     cmapOverlay(x, x0, y0, x1, y1);
   }
   x.restore();
@@ -1511,6 +1569,47 @@ function cmapPaint(dirty){
   // exit criterion is a frame rate, and a number nobody can see is a claim.
   c.ms = performance.now() - t0;
   cmapReadout();
+}
+
+/* 16g's colouring, and T12's tint (23b).
+
+   Two canvases rather than one, and the split is the whole of the tint:
+
+     `overlay`      the fill - each province in its group's colour, or nothing
+                    where it is in no group.
+     `overlayEdge`  the frontiers, which are a line and are drawn as one.
+
+   `solid` lays the fill over the map at the panel's opacity, which is what 16g
+   always did. `tint` draws it with the canvas `color` blend, which takes the
+   HUE AND SATURATION of the fill and the LUMINOSITY of what is already on the
+   canvas - so the terrain's relief, its forests and its snow all still read and
+   only the colour is the theme's. That is exactly TWMapReader's HSB fill: he
+   runs the region's own pixels through a grayscale filter and then an
+   HSBAdjustFilter set to the tint's hue and saturation, which is the same
+   operation in two steps. His brightness stretch and its two cutoffs have
+   nothing to port - they exist because his filter REPLACES the brightness and
+   has to be stopped from crushing the relief, and the blend keeps it untouched.
+
+   The frontiers are always laid on rather than blended. A border colour is a
+   near-black with almost no saturation, and a `color` blend of that is a grey
+   wash, not a line - it would delete the borders exactly when the tint made
+   them most necessary. They take the same opacity as the fill, as they did when
+   they were pixels inside it. */
+function cmapThemeDraw(x, s0, t0, s1, t1){
+  const c = state.cmap, v = c.view;
+  if(!c.overlay && !c.overlayEdge) return;
+  const dx = cmapX(s0), dy = cmapY(t0);
+  const dw = (s1 - s0) * v.zoom, dh = (t1 - t0) * v.zoom;
+  x.imageSmoothingEnabled = v.zoom < 1;
+  x.globalAlpha = c.overlayAlpha == null ? 0.85 : c.overlayAlpha;
+  if(c.overlay){
+    x.globalCompositeOperation = c.overlayFill === 'tint' ? 'color' : 'source-over';
+    x.drawImage(c.overlay, s0, t0, s1 - s0, t1 - t0, dx, dy, dw, dh);
+    x.globalCompositeOperation = 'source-over';
+  }
+  if(c.overlayEdge)
+    x.drawImage(c.overlayEdge, s0, t0, s1 - s0, t1 - t0, dx, dy, dw, dh);
+  x.globalAlpha = 1;
 }
 
 /* Everything that is not a layer: the map's edge, the markers, the selected
@@ -2428,7 +2527,7 @@ function cmapAfterPaint(codes){
     // on screen a picture of pixels that have moved. It is dropped rather than
     // rebuilt: rebuilding would need the table for a province the server has
     // not been told about yet, and a stale theme is worse than none.
-    if(c.overlay){ c.overlay = null; c.overlayKey = ''; }
+    if(c.overlay){ c.overlay = null; c.overlayEdge = null; c.overlayKey = ''; }
   }
   cmapCompose();
   cmapPaint();

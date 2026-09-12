@@ -53,6 +53,12 @@ function cqNew(mod){
   return {mod, open: false, tab: 'query', busy: false, err: '',
           voc: null, rules: [], match: 'all', res: null,
           theme: '', col: null, opacity: 0.85, borders: true,
+          // 23b, T12. `fill` is how the colouring meets the map: `solid` lays
+          // it over, `tint` colours what is there and keeps its light, which is
+          // the one to use over 23a's textures. `borderPos` and `borderEvery`
+          // are his other two: where the line goes, and whether it is drawn
+          // between blocs or round every province.
+          fill: 'solid', borderPos: 'edge', borderEvery: false,
           exporting: false, exported: null};
 }
 
@@ -61,7 +67,7 @@ function cqOpen(){
   if(!c) return;
   if(!state.cq || state.cq.mod !== c.mod){
     state.cq = cqNew(c.mod);
-    if(c) { c.overlay = null; c.overlayKey = ''; }
+    if(c){ c.overlay = null; c.overlayEdge = null; c.overlayKey = ''; }
   }
   cqPaint();
 }
@@ -114,7 +120,7 @@ async function cqRun(){
     // colourings of one layer and showing both at once would be a picture
     // neither of them means.
     k.theme = ''; k.col = null;
-    cqApply(k.res.colours, false);
+    cqApply(k.res, k.borders);
   }
   cqPaint();
 }
@@ -136,7 +142,7 @@ async function cqTheme(code){
     k.theme = code;
     k.res = null;
     activity('map query', `showed the ${k.col.label} map`);
-    cqApply(k.col.colours, k.borders && k.col.borders);
+    cqApply(k.col, k.borders);
   }catch(e){ k.err = errText(e); k.theme = ''; k.col = null; }
   finally{ k.busy = false; }
   if(state.cq === k) cqPaint();
@@ -148,7 +154,15 @@ async function cqExport(what){
   k.exporting = true; k.err = ''; k.exported = null;
   cqPaint();
   const body = {mod: k.mod, what, reveal: true};
-  if(what === 'colouring') body.code = k.theme;
+  if(what === 'colouring'){
+    body.code = k.theme;
+    // 23b: the frontiers on the screen are the frontiers in the file. The tint
+    // is deliberately not sent - it is how the colouring is laid over the map,
+    // like the opacity slider beside it, and this writes the colouring.
+    body.borders = k.borders;
+    body.border_position = k.borderPos;
+    body.border_every = k.borderEvery;
+  }
   if(what === 'query'){ body.rules = k.rules; body.match = k.match; }
   let r;
   try{ r = await api.post('/api/map/export', body); }
@@ -206,18 +220,27 @@ function cqMatch(mode){
 /* Recolour the regions layer through a table, and hand it to the renderer.
 
    `table` is {packed region colour: [r,g,b]} exactly as the server built it,
-   or null to take the colouring off. The result goes in `c.overlay`, which
-   `cmapCompose` draws last - so the layer stack underneath is untouched and
-   ticking layers on and off still works while a theme is on.
+   or null to take the colouring off. `borders` says whether frontiers are worth
+   drawing for this colouring at all; how they are drawn is `state.cq`'s, and so
+   is whether the fill is laid over the map or tinted into it.
 
-   One pass over the layer, on the change that causes it, cached by the table
-   it was built from. Rule 4 of 16c holds: nothing here is on the interaction
-   path. */
-function cqApply(table, borders){
-  const c = state.cmap;
+   TWO canvases out, not one (23b, T12). `c.overlay` is the fill and `c.overlayEdge`
+   the frontiers, because in tint mode they are drawn differently: the fill takes
+   the colour of the theme and the light of the map, and a line has to stay a
+   line. `cmapThemeDraw` is where that happens; this only decides which pixels.
+
+   One pass over the layer, on the change that causes it, cached by everything
+   the pass reads. Rule 4 of 16c holds: nothing here is on the interaction path. */
+function cqApply(col, borders){
+  const c = state.cmap, k = state.cq;
   if(!c) return;
+  const table = col && col.colours, bands = col && col.bands;
+  // the one place the screen is told how to draw what this builds, so a theme
+  // applied from a saved view cannot arrive with last view's fill still set
+  c.overlayFill = (k && k.fill) || 'solid';
+  c.overlayAlpha = k ? k.opacity : 0.85;
   if(!table){
-    c.overlay = null; c.overlayKey = ''; c.compKey = '';
+    c.overlay = null; c.overlayEdge = null; c.overlayKey = '';
     cmapCompose(); cmapPaint();
     return;
   }
@@ -226,85 +249,156 @@ function cqApply(table, borders){
     // The regions layer has not arrived yet. Ask for it and come back: a theme
     // is a recolour of that picture and there is nothing to recolour without it.
     cmapFetchLayer(c, 'regions').then(() => {
-      if(state.cmap === c) cqApply(table, borders);
+      if(state.cmap === c) cqApply(col, borders);
     });
     return;
   }
-  const wantKey = JSON.stringify([Object.keys(table).length, borders,
-                                  state.cq && state.cq.theme,
-                                  state.cq && state.cq.res && state.cq.res.count]);
-  if(c.overlayKey === wantKey && c.overlay) { cmapCompose(); cmapPaint(); return; }
+  const pos = (k && k.borderPos) || 'edge';
+  const every = !!(k && k.borderEvery);
+  const wantKey = JSON.stringify([Object.keys(table).length, borders, pos, every,
+                                  k && k.theme, k && k.res && k.res.count]);
+  if(c.overlayKey === wantKey && c.overlay){ cmapCompose(); cmapPaint(); return; }
 
   // the layer's bytes, copied - never the picture read back, which a browser
   // may alter (see cmapFetchLayer), and a theme is an exact-colour lookup
   const R = cmapRawOf(L);
   const w = R.w, h = R.h;
+  c.overlay = cqCanvas(cqFill(R.data, w, h, table), w, h);
+  c.overlayEdge = (borders && bands)
+    ? cqCanvas(cqBorders(cqGroups(R.data, w, h, bands, every), w, h, pos), w, h)
+    : null;
+  c.overlayKey = wantKey;
+  cmapCompose(); cmapPaint();
+}
+
+/* The region layer recoloured through the table: the fill, and only the fill.
+
+   A province in no group comes out transparent rather than in some "none"
+   colour, so what is under it is what shows - which is the whole of how a
+   colouring and the layer stack get along. */
+function cqFill(raw, w, h, table){
+  const im = cmapImageData(new Uint8ClampedArray(raw), w, h), d = im.data;
+  for(let i = 0, n = w * h; i < n; i++){
+    const p = i * 4;
+    const to = table[(d[p] << 16) | (d[p + 1] << 8) | d[p + 2]];
+    if(!to){ d[p + 3] = 0; continue; }
+    d[p] = to[0]; d[p + 1] = to[1]; d[p + 2] = to[2]; d[p + 3] = 255;
+  }
+  return im;
+}
+
+/* A group id per tile, which is what a border is worked out from. Pure.
+
+   `bands` is the server's, straight out of `Colouring.payload`: which group
+   each province is in, -1 for one the colouring has nothing to say about, and
+   absent for anything that is not a province. It is NOT `colours`, and that is
+   the point - a presence map has a real group labelled "none" painted the same
+   grey a province in no group is painted, so the colour cannot tell the two
+   apart. Reading the group off the colour drew a frontier round every
+   ungrouped province here and none in the exported file.
+
+   `every` is T12's "all regions": each province its own group, so every
+   boundary is a frontier, an uncoloured province included - it has a boundary
+   whether or not the theme has anything to say about it.
+
+   Three states out, and the third is the one worth writing down. -1 is "not a
+   province", and a neighbour that is -1 never makes a frontier: that is what
+   keeps the coastline out of it. -2 is a province in no group, and it is not
+   the same thing - it draws no line of its own, and a coloured province beside
+   it does, because the edge of what a theme covers is a real edge.
+   `unittransfer.mapquery._label_colours` uses the same two negatives for the
+   same two reasons, and the suite runs both passes over one map to check they
+   mark the same tiles. */
+function cqGroups(raw, w, h, bands, every){
+  const group = new Int32Array(w * h).fill(-1);
+  for(let i = 0, n = w * h; i < n; i++){
+    const p = i * 4;
+    const rgb = (raw[p] << 16) | (raw[p + 1] << 8) | raw[p + 2];
+    const band = bands[rgb];
+    if(band === undefined) continue;             // not a province
+    group[i] = every ? rgb : (band < 0 ? -2 : band);
+  }
+  return group;
+}
+
+//: A canvas holding these pixels, written and never read - campmap's rule.
+function cqCanvas(im, w, h){
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
   const x = cv.getContext('2d');
   x.imageSmoothingEnabled = false;
-  const im = cmapImageData(new Uint8ClampedArray(R.data), w, h), d = im.data;
-  // group id per pixel, so a border can be drawn between two groups rather
-  // than between two colours - see the header
-  const group = borders ? new Int32Array(w * h).fill(-1) : null;
-  const seen = new Map();
-  for(let i = 0, n = w * h; i < n; i++){
-    const p = i * 4;
-    const rgb = (d[p] << 16) | (d[p + 1] << 8) | d[p + 2];
-    const to = table[rgb];
-    if(!to){ d[p + 3] = 0; continue; }
-    d[p] = to[0]; d[p + 1] = to[1]; d[p + 2] = to[2]; d[p + 3] = 255;
-    if(group){
-      let g = seen.get(rgb);
-      if(g === undefined){ g = seen.size; seen.set(rgb, g); }
-      group[i] = g;
-    }
-  }
-  if(group) cqBorders(d, group, w, h);
   x.putImageData(im, 0, 0);
-  c.overlay = cv; c.overlayKey = wantKey; c.compKey = '';
-  cmapCompose(); cmapPaint();
+  return cv;
 }
 
-/* The line where two groups meet.
+/* The line where two groups meet, as its own transparent picture.
 
-   Four-connected, drawn on the left-hand and upper tile of each pair, which is
-   the direction campmap's own adjacency pass compares in and the direction the
-   server's export draws in. A tile in no group takes no line: an uncoloured
-   province is not a frontier, it is a province the mod says nothing about. */
-function cqBorders(d, group, w, h){
-  const edge = [];
+   Four-connected. `edge` marks the left-hand and upper tile of each pair, which
+   is the direction campmap's own adjacency pass compares in and the direction
+   the server's export draws in: a hairline that sits on the frontier and
+   belongs to neither side. `inside` marks both sides instead - TWMapReader's
+   `borderPosInside`, which is the set of a region's own border tiles - and it
+   is the one that still reads at a zoom where a hairline has vanished, or over
+   a texture.
+
+   A tile in no group takes no line, and neither does one whose only different
+   neighbour is the sea or a marker: an uncoloured province is not a frontier,
+   and a coastline is not one at all. */
+function cqBorders(group, w, h, position){
+  const im = cmapImageData(new Uint8ClampedArray(w * h * 4), w, h), d = im.data;
+  const b = (state.cq && state.cq.voc && state.cq.voc.border) || [18, 18, 22];
+  const inside = position === 'inside';
+  //: a neighbour is a different side iff it is a province and not this group.
+  //: -2, a province in no group, counts as different and is why this is not a
+  //: plain `>= 0` test.
+  const other = (n, g) => n !== -1 && n !== g;
   for(let y = 0; y < h; y++){
     const row = y * w;
     for(let x = 0; x < w; x++){
-      const g = group[row + x];
+      const i = row + x, g = group[i];
       if(g < 0) continue;
-      const right = x + 1 < w ? group[row + x + 1] : g;
-      const down = y + 1 < h ? group[row + w + x] : g;
-      if((right >= 0 && right !== g) || (down >= 0 && down !== g)) edge.push(row + x);
+      const right = x + 1 < w ? group[i + 1] : -1;
+      const down = y + 1 < h ? group[i + w] : -1;
+      let hit = other(right, g) || other(down, g);
+      if(!hit && inside){
+        const left = x ? group[i - 1] : -1;
+        const up = y ? group[i - w] : -1;
+        hit = other(left, g) || other(up, g);
+      }
+      if(!hit) continue;
+      const p = i * 4;
+      d[p] = b[0]; d[p + 1] = b[1]; d[p + 2] = b[2]; d[p + 3] = 255;
     }
   }
-  const b = (state.cq && state.cq.voc && state.cq.voc.border) || [18, 18, 22];
-  for(const i of edge){
-    const p = i * 4;
-    d[p] = b[0]; d[p + 1] = b[1]; d[p + 2] = b[2]; d[p + 3] = 255;
-  }
+  return im;
 }
 
+/* The opacity slider. Since 23b it is a repaint and not a recompose: the
+   colouring is drawn onto the screen rather than into the layer composite, so
+   dragging this no longer rebuilds a megapixel canvas per pixel of travel. */
 function cqOpacity(v){
   const k = state.cq;
   k.opacity = v / 100;
   const c = state.cmap;
-  if(c){ c.overlayAlpha = k.opacity; c.compKey = ''; cmapCompose(); cmapPaint(); }
+  if(c){ c.overlayAlpha = k.opacity; cmapPaint(); }
   cqPaint();
 }
 
-function cqBordersToggle(on){
+//: Everything about how the colouring is drawn, in one setter: the three T12
+//: controls and the borders tickbox all end in the same rebuild.
+function cqDraw(field, value){
   const k = state.cq;
-  k.borders = on;
-  if(k.col) cqApply(k.col.colours, on && k.col.borders);
+  if(!k) return;
+  k[field] = value;
+  const c = state.cmap;
+  if(field === 'fill' && c) c.overlayFill = value;
+  activity('map query', `${field} ${value}`);
+  if(k.col) cqApply(k.col, k.borders);
+  else if(k.res) cqApply(k.res, k.borders);
   cqPaint();
 }
+
+function cqBordersToggle(on){ cqDraw('borders', on); }
 
 /* Centre the map on a province and pick it.
 
@@ -506,11 +600,36 @@ function cqMapsHtml(){
             ${c.off ? 'disabled' : ''}>${esc(c.label)}${c.off ? ' - off' : ''}</option>`
           ).join('')}</optgroup>`).join('')}
       </select>
-      <label class="chk"><input type="checkbox" ${k.borders ? 'checked' : ''}
-        onchange="cqBordersToggle(this.checked)"> political borders</label>
+      <span class="cmseg" title="How the colouring meets the map.
+Solid lays it over. Tint takes the colour of the theme and the light of what is already
+drawn, so 23a's terrain textures still read underneath - which is TWMapReader's HSB fill,
+and the reason it exists: a colouring that paints over a textured map hides the map."
+        >${[['solid', 'Solid'], ['tint', 'Tint']].map(([v, t]) =>
+          `<button class="${k.fill === v ? 'on' : ''}"
+            onclick="cqDraw('fill', '${v}')">${t}</button>`).join('')}</span>
       <input type="range" min="20" max="100" value="${Math.round(k.opacity * 100)}"
         oninput="cqOpacity(+this.value)" title="How much of the layers below shows through">
       <span class="cmpct">${Math.round(k.opacity * 100)}%</span>
+    </div>
+    <div class="cqhead">
+      <label class="chk" title="Frontiers, on any colouring. Until 23b this tickbox
+did nothing on an information map, because each colouring carried its own yes-or-no and
+only the three themes said yes - so 'borders' on a fertility map was a control that
+appeared to be broken. It is the switch now, and it means what it says."
+        ><input type="checkbox" ${k.borders ? 'checked' : ''}
+        onchange="cqBordersToggle(this.checked)"> borders</label>
+      <span class="cmseg" title="Where the line goes. On the edge it sits between the
+two provinces and belongs to neither. Inside draws it on both sides instead, which is what
+still reads once a hairline has disappeared into the zoom or into a texture."
+        >${[['edge', 'On the edge'], ['inside', 'Inside']].map(([v, t]) =>
+          `<button class="${k.borderPos === v ? 'on' : ''}" ${k.borders ? '' : 'disabled'}
+            onclick="cqDraw('borderPos', '${v}')">${t}</button>`).join('')}</span>
+      <span class="cmseg" title="Between which. Groups draws the frontiers of the
+colouring - two provinces of one faction have no line between them. Every province draws
+every boundary, coloured or not. A coastline is never a frontier either way."
+        >${[[false, 'Groups'], [true, 'Every province']].map(([v, t]) =>
+          `<button class="${k.borderEvery === v ? 'on' : ''}" ${k.borders ? '' : 'disabled'}
+            onclick="cqDraw('borderEvery', ${v})">${t}</button>`).join('')}</span>
     </div>
     ${col ? cqLegendHtml(col) : `<div class="count">Pick a theme to colour every
       province by who holds it, or an information map to colour it by what is in

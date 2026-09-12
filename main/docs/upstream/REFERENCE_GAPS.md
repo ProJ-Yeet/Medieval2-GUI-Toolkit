@@ -554,7 +554,7 @@ and the Strings module.
 The reverse-engineered engine behaviour, and by some distance the best *viewer*
 of the four. Twelve items; one is scheduled.
 
-### T1. Textured map view, summer and winter · **summer done, winter is 23b**
+### T1. Textured map view, summer and winter · **done**
 
 "The textures (summer/winter) map options display the map using the appropriate
 texture TGAs for the tiles' climates and ground types." Read from
@@ -565,7 +565,8 @@ Same feature as D7, and this is the better specification of the two, because the
 pink-for-missing rule is exactly the toolkit's own "a rule with no evidence
 reports nothing" applied to a picture. The winter set doubles it for free.
 
-**Done 23a for summer**, and his rules were taken as they stand: pink and
+**Done 23a (summer) and 23b (winter)**, and his rules were taken as they
+stand: pink and
 reported for a texture that cannot be found, the `default` block inherited by
 every climate, wilderness drawn with fertility_low's texture, and a missing
 winter column falling back to the summer one. Two things were added rather than
@@ -573,8 +574,11 @@ copied. He reports only a texture the folder does not hold; a tile can also have
 no texture because nothing names one for its (climate, ground type) pair, and
 both are pink, so both are counted and named - which is how DaC's fifteen tiles
 that are land by height and sea by ground type came to be reported at all.
-**The winter column is already parsed, already routed and already keyed
-separately; 23b is the switch.**
+**The winter set was a switch**, because the column was already parsed, routed
+and keyed separately - 99,000 of DaC's tiles and 166,898 of Reforged's change
+texture in it. The validator judges both seasons, which is his rule too: he
+gathers a tile's summer and winter textures before loading either, so a missing
+winter texture is a finding whichever season is on the screen.
 
 ### T2. Heights, drawn as transparency · **done**
 
@@ -688,7 +692,7 @@ and the info being displayed for that tile."
 The reason is the feature. `campmap.js` has one `keydown` handler already, and
 ten layers is exactly ten keys.
 
-### T12. Region highlight: tint, and border styles · M
+### T12. Region highlight: tint, and border styles · **done**
 
 Three things his highlight does that 16g's themes do not: an **HSB tint** that
 colours a region without painting over it, so the layer underneath still reads;
@@ -699,6 +703,25 @@ rather than only the highlighted ones.
 the right rule and gives clean frontiers. The tint is the one to take: our
 colourings replace the region layer, and his does not, and on a textured
 backdrop (T1) replacing it is exactly wrong.
+
+**Done 23b**, all three. The tint is the canvas `color` blend - the source's hue
+and saturation over the backdrop's luminosity - which is his grayscale filter
+followed by an `HSBAdjustFilter` in one step; his brightness stretch and its two
+cutoffs exist only to stop a filter that replaces the brightness from crushing
+the relief, and do not port. The border position is `edge` or `inside`, and
+`inside` is his own border-tile set for a region. `showBordersAllRegions` is the
+`Every province` scope. His `StrokeRenderType` (`PURE`/`NORMALIZE`) is a Java2D
+stroke-control hint for a vector outline we do not draw: this marks tiles, and a
+tile is either the frontier or it is not.
+
+Two faults of ours came out of porting it, both there since 16g. The browser
+grouped tiles by each province's own colour and the export by the group's, so
+the screen drew a line round every province and the file drew frontiers between
+blocs - and the panel says they are the same picture. And the group cannot be
+read off the fill at all, because a presence map's group labelled "none" is
+painted the same `NO_GROUP` grey a province in no group is; the payload carries
+`bands` now. Both were found by running the browser's pass and the server's over
+one map in node, which `tests/test_mapquery.py` does in all four combinations.
 
 ---
 

@@ -335,6 +335,8 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `web/js/campforts.js` | the forts and resources panel: place with the pin, the province's list, the form, D10's ⌖ Move button, and the drop 17d's drag hands it (22a, 22b) |
 | `unittransfer/mapterrain.py` | D7 and T1: `descr_aerial_map_ground_types.txt`, and the map drawn with the mod's own aerial-map textures. `Vocabulary.texture` is the one place the engine's four rules are applied, `plan` the cheap half the validator reads, `composite` the picture, and `_index` an exact colour-to-index pass in Pillow's C (23a) |
 | `cmapTerrainOn` / `cmapTerrainDraw` | whether the backdrop is being drawn, and the one blit of it - under the whole stack, at its own several pixels a tile, addressed in tiles like everything else on the screen (23a) |
+| `cmapThemeDraw` | 16g's colouring over the terrain and the stack both: the fill, blended for T12's tint or laid on for a solid, and the frontiers, which are never blended. It is on the screen canvas rather than in the composite because that is one pixel a tile and the terrain is not (23b) |
+| `Colouring.payload`'s `bands` / `cqGroups` | which group each province is in, `-1` for none, absent for anything that is not a province. What a border is worked out from on both sides; the colour cannot answer it, because a "none" group and no group are painted the same grey (23b) |
 | `cmapLayerState` / `cmapCampQ` / `cmapGoTile` | the one snapshot of the layer stack, the one place a request appends a campaign, and the one way of arriving at a tile (20b) |
 
 Reuse: `keyblock.py` for the splice discipline (`flatrecord.py` does **not**
@@ -399,19 +401,18 @@ change, so no cross-reference dangles.
 
 | Phase | Sessions | Closes | Size |
 |---|---|---|---|
-| 23b - Winter, and the tint | 1 | T12 | 1M |
 | 24 - Make and unmake | 1 | G1 M15 | 2M |
 
-Two sessions left - 23b and 24. Phase 17 (2026-09-06), all of
+**One session left - 24.** Phase 17 (2026-09-06), all of
 Phase 18 (2026-09-07), all of Phase 19 (2026-09-09), 20a (2026-09-10), 20b,
-B1, 20c, 21, 22a, 22b and 22c (2026-09-11) and 23a (2026-09-12) are done and
-their write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later table is
-counted, and neither are B2-B4 below.
+B1, 20c, 21, 22a, 22b and 22c (2026-09-11) and 23a and 23b (2026-09-12) are
+done and their write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later table
+is counted, and neither are B2-B4 below.
 
-**Nothing is released until both are done.** The user's instruction on
+**Nothing is released until it is done.** The user's instruction on
 2026-09-11, which suspends the cut-as-it-lands rule of 2026-09-09: each session
 commits and stops, and the whole backlog goes out as one cut at the end - the
-held v2.2.4 and beta 2026-09-11b notes included.
+held v2.2.4 and beta 2026-09-11b notes included. Phase 24 is the last one.
 
 ---
 # Reported from the beta - not phased
@@ -602,16 +603,16 @@ layer you can edit and starts being a map you work on.
 
 ---
 
-## Phase 23 - A map that looks like the campaign map
+## Phase 23 - A map that looks like the campaign map - done
 
-**Closes D7, T1, T12.** Two sessions, and **23a is done** (2026-09-12), which
-closes D7 and T1. **The most expensive work in this document and the most
-visible.**
+**Closed 2026-09-12, both sessions, and with them D7, T1 and T12.** It was the
+most expensive work in this document and the most visible. The write-ups are in
+`ROADMAP_ARCHIVE.md`; what it leaves behind is below.
 
 D7 and T1 are the same feature with two implementations to compare, and
 TWMapReader's is the better specification of the two.
 
-### 23a - The texture composite - done
+### 23a - The texture composite
 
 **Closed 2026-09-12**, and the write-up is in `ROADMAP_ARCHIVE.md`. The map is
 drawn with the mod's own aerial-map ground textures, one per (climate, ground
@@ -638,14 +639,26 @@ winter fallbacks. What it leaves behind for 23b:
 
 ### 23b - Winter, and the tint
 
-The winter texture set doubles 23a for free. **T12 - the HSB tint** lands here
-and lands here for a reason: 16g's colourings *replace* the region layer, and on
-a textured backdrop replacing it is exactly wrong. A tint colours a region
-without painting over it, so the ground underneath still reads. Also from T12: a
-border render type with an "inside" option, and borders on all regions rather
-than only the highlighted ones. 16g's rule that a border compares the *group*
-each region is in, not its colour, stays - it is what gives clean frontiers and
-it is right.
+**Closed 2026-09-12.** The winter set did double 23a for nothing: the season was
+already parsed, routed and keyed, so it was a switch. T12's tint is the canvas
+`color` blend, which is his grayscale-then-HSB filter chain in one step. What it
+leaves behind:
+
+- **The colouring is drawn on the screen, not into the layer composite.** A tint
+  takes the luminosity of what is under it and the terrain is four pixels a tile,
+  so anything that wants to blend against the map goes in `cmapThemeDraw`
+  alongside it. The fill and the frontiers are two canvases, because a line must
+  never blend.
+- **`Colouring.payload` sends `bands` as well as `colours`.** The group index per
+  province, `-1` for one the colouring says nothing about. A colour cannot answer
+  that question - a presence map's "none" group is painted the same grey a
+  province in no group is - and anything later that needs to know which group a
+  tile is in reads this, never the colour.
+- **The screen's pixel passes and the server's are checked against each other.**
+  `cqGroups` and `cqBorders` are pure and `tests/test_mapquery.py` runs them in
+  node against `_draw_borders` over one map. Two real faults came out of writing
+  that, both of them years old. Any later pair of "the browser draws it and
+  Python exports it" should be tested the same way.
 
 ---
 
