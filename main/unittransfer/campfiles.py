@@ -982,7 +982,7 @@ def apply(p: CampFilePlan) -> Dict:
     import shutil
     import time
 
-    from . import cleaner, config
+    from . import config
     from .logutil import file_op, log
 
     if p.errors:
@@ -1014,7 +1014,8 @@ def apply(p: CampFilePlan) -> Dict:
         kb.write_text(target, p.text, ENCODING)
         file_op("WRITE", target, f"{len(p.text)} bytes")
     if p.loc_writes:
-        out["loc"] = _write_descriptions(p, keep, cleaner, file_op)
+        out["loc"] = write_descriptions(p.mod, p.loc_writes, p.loc_new, keep,
+                                        file_op)
 
     rec = {
         "id": tid,
@@ -1037,14 +1038,21 @@ def apply(p: CampFilePlan) -> Dict:
     return out
 
 
-def _write_descriptions(p: CampFilePlan, keep, cleaner, file_op) -> Dict:
+def write_descriptions(mod, writes: Dict[str, str], new: List[str], keep,
+                       file_op) -> Dict:
     """The keys, into the ``.txt`` if there is one and the ``.bin`` if not.
 
     The same two roads :func:`unittransfer.traits._write_loc` takes, and for the
     same reason: a mod that ships only the compiled archive is not a broken mod,
     it is most released ones.
+
+    ``mod`` and a plain dict rather than a plan since 24, because M15 writes the
+    same keys for a whole new campaign and there is no reason for two copies of
+    the two roads.
     """
-    txt = descr_path(p.mod)
+    from . import cleaner
+
+    txt = descr_path(mod)
     if txt.exists():
         target = keep(DESCR_REL)
         # the compiled cache is rewritten below, so back it up too - an undo
@@ -1053,18 +1061,18 @@ def _write_descriptions(p: CampFilePlan, keep, cleaner, file_op) -> Dict:
         keep(DESCR_REL + ".strings.bin")
         kb.write_text(target,
                       stringsbin.upsert_txt(kb.read_text(target, LOC_ENCODING),
-                                            p.loc_writes),
+                                            writes),
                       LOC_ENCODING)
-        file_op("WRITE", target, f"{len(p.loc_writes)} text key(s)")
-        res = cleaner.refresh_strings_bin(p.mod.root, DESCR_BIN_REL)
-        return {"file": DESCR_REL, "written": len(p.loc_writes),
-                "new": len(p.loc_new), "strings_bin": res}
+        file_op("WRITE", target, f"{len(writes)} text key(s)")
+        res = cleaner.refresh_strings_bin(mod.root, DESCR_BIN_REL)
+        return {"file": DESCR_REL, "written": len(writes),
+                "new": len(new), "strings_bin": res}
     rel = DESCR_REL + ".strings.bin"
     target = keep(rel)
     sb = stringsbin.read(target)
-    for tag, value in p.loc_writes.items():
+    for tag, value in writes.items():
         sb.set(tag, value)
     stringsbin.write(target, sb)
-    file_op("WRITE", target, f"{len(p.loc_writes)} text key(s)")
-    return {"file": rel, "written": len(p.loc_writes), "new": len(p.loc_new),
+    file_op("WRITE", target, f"{len(writes)} text key(s)")
+    return {"file": rel, "written": len(writes), "new": len(new),
             "compiled": True}

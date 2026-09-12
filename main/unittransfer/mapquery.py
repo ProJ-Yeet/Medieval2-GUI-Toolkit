@@ -168,6 +168,46 @@ def add_music_region(text: str, music_type: str, region: str) -> str:
     return "\n".join(lines)
 
 
+def drop_music_region(text: str, region: str) -> str:
+    """``text`` with ``region`` taken off whichever ``regions`` line holds it. 24.
+
+    The mirror of :func:`add_music_region` and the same one-line promise: the
+    name comes off the line it is on, in front of any comment, and no other line
+    of the file changes. A line left naming no province at all is dropped rather
+    than written empty - no installed file has one, and a bare ``regions``
+    keyword is a line the engine reads and learns nothing from - unless it
+    carries a comment, in which case the comment is somebody's and stays.
+
+    The province is taken out of **every** ``regions`` line, not only the first.
+    Nothing in the format stops a province being listed under two music types
+    and the engine plays one of them; a delete that took it out of one would
+    leave the other naming a province that is gone.
+    """
+    low = region.strip().lower()
+    out: List[str] = []
+    for raw in text.split("\n"):
+        word, _, rest = _bare(raw).partition(" ")
+        if word.lower() != "regions" or low not in [r.lower() for r in rest.split()]:
+            out.append(raw)
+            continue
+        keep = [r for r in rest.split() if r.lower() != low]
+        cr = "\r" if raw.endswith("\r") else ""
+        body = raw[:len(raw) - len(cr)]
+        cut = body.find(";")
+        before, after = (body, "") if cut < 0 else (body[:cut], body[cut:])
+        if not keep and not after.strip():
+            continue
+        indent = before[:len(before) - len(before.lstrip())]
+        tail = before[len(indent) + len("regions"):]
+        gap = tail[:len(tail) - len(tail.lstrip())] or " "
+        if keep:
+            line = indent + "regions" + gap + " ".join(keep)
+        else:                       # the keyword and whatever stood before the ;
+            line = indent + "regions" + (before[len(before.rstrip()):] or " ")
+        out.append(line + after + cr)
+    return "\n".join(out)
+
+
 @dataclass
 class MercPool:
     """One ``pool`` block: where it applies and what it sells."""

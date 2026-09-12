@@ -2487,7 +2487,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "gone",
    "first_seen": "7cab442",
-   "notes": ""
+   "notes": "M15, done in 24 as unittransfer/campnew.py and the New campaign form inside 20b's campaign browser: a new campaign is a copy of one that works, minus the compiled map, with its own `campaign <name>` header and every one of 18a's menu keys written again under the new folder's token"
   },
   "src/pages/CampaignMap.jsx": {
    "disposition": "port-concept",

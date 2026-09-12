@@ -23,6 +23,7 @@ Split out of `ROADMAP.md` on 2026-09-05, verbatim.
 | 20c - settlement names on the map, and the pin that fills a coordinate | below |
 | 21, 22a-22c - the two screens over data we hold, and placing things on the map | below |
 | 23a-23b - the map drawn with the game's own ground textures, winter, and the tint | below |
+| 24 - deleting a province, and making a campaign: the last of the roadmap | below |
 
 ---
 
@@ -4441,3 +4442,134 @@ reading through, both border positions, both scopes, the export honouring them
 (71 KB inside-and-every against 44 KB edge-and-groups), and a saved view
 carrying all of it while one saved before 23b opens solid, on the edge, between
 groups.
+
+## Phase 24 - Make and unmake - done 2026-09-12
+
+**Closes G1 and M15, and with them the roadmap.** Two operations on a thing that
+had a create or a delete but not both: we could make a province and not unmake
+one, and we could edit every file in a campaign folder and not make the folder.
+
+### G1 - deleting a province
+
+`unittransfer/regiondel.py`. Geomod's manual describes this in two sentences and
+admits the bug in a third: "resources, forts and characters will remain". That
+admission is why this is not a port.
+
+**A delete is a rename to nothing**, so it walks 19b's site list rather than a
+new one. `renames.REGION_SITES` is the measured set of every file a province is
+named in - fifteen in Divide and Conquer, twelve in Third Age Reforged - and
+each site here is the same file found the same way, edited by removal instead of
+by substitution: the record out of `descr_regions.txt`, the settlement block out
+of each `descr_strat.txt`, the name off both `hold_regions` lists, out of its
+mercenary pool, off its music type's `regions` line, out of the lookup pair and
+out of the custom battle tiles. The one site a rename refuses to follow is
+refused here for the same reason and in the same words: the campaign script is a
+grammar nothing parses, so every line of it naming the province is listed with
+its number and none of it is written. `renames._scan_mentions` became the public
+`renames.mentions` so that both use one scan.
+
+**The land goes whole to one neighbour it touches.** The manual says "usually an
+adjacent one" and does not say which; the panel offers every neighbour ordered
+by how much border it shares and defaults to the longest, which is the rule B1
+already uses to pick a music type. Splitting the area between several neighbours
+is what a tile-by-tile nearest search would do and it cannot be made safe: 16e's
+own rule is that a province in two pieces is two provinces as far as an army is
+concerned, and a piece handed to the nearest neighbour is not provably joined to
+it. One adjacent heir is, because the two areas are each contiguous and share an
+edge. The plan still counts the tiles of the deleted province that no path of
+its own reaches the heir by, and warns in 16e's words when there are any.
+
+**The settlement goes with the land and the port is a question.** A province has
+one seat, so the black pixel becomes the heir's ground the moment the tiles do -
+a second settlement pixel is not a second city, it is `marker.extra`, where one
+of the two is ignored. The white port pixel is the same rule with a different
+answer: the heir inherits the coastline, so a port it does not otherwise have is
+**kept** and a second one is **removed**, and the default follows the heir and
+changes when the heir does.
+
+**Nothing else is orphaned, and saying that is the finding.** The resources,
+forts, watchtowers and characters the manual leaves dangling are placed by tile
+and not by province: their coordinates do not move, so what changes is whose
+province they stand in. The panel counts them per campaign and names the heir.
+The single exception is `descr_strat.txt`'s depth-0 `region <name>` section,
+which files forts and watchtowers under a province name - that one really is a
+dangling reference, and it is moved into the heir's section or, when the heir
+has none, renamed to it, which keeps every line of it.
+
+**`mapsnap.nearest` was not needed, and that is a result rather than an
+omission.** The brief expected the search; there is nothing to search for. A
+delete moves no coordinate, so no rule about where a thing may stand can be
+broken by one.
+
+**A delete renumbers and a rename does not.** Region IDs are first-appearance
+order in a row-major scan of `map_regions.tga`, so the warning 16e gives when a
+province is created is given here read backwards, off the same number.
+
+The refusals: an heir that shares no edge (naming the ones that do), a province
+nothing borders at all, the last region in the file, and a name no record
+declares. A record with no pixels at all is the opposite case and is allowed
+without an heir, because deleting it is the fix for it.
+
+### M15 - making a campaign
+
+`unittransfer/campnew.py`. Every file inside a campaign folder already had a
+writer - 16h, 16i, 16j-1, 16j-2, `winconds`, 18a, 18b - and there was no way to
+make the folder. It is a copy of a campaign that works, because the engine reads
+more than a dozen files out of that folder and a missing one is a load failure
+with nothing on screen to explain it. Three things a plain folder copy gets
+wrong, and they are the whole feature:
+
+* **`map.rwm` does not travel.** It is the engine's binary cache of the map, and
+  a copied one is the source campaign's map, loaded in preference to the new
+  campaign's own files. Left behind, and the change line says why.
+* **The header is set to the new folder's name.** `descr_strat.txt` opens on
+  `campaign <name>`, and a copy that keeps the source's opens claiming to be the
+  source. The two are allowed to disagree - DaC's `custom/Shattered_Alliances`
+  says `campaign imperial_campaign` and runs - so this is a choice, and it is
+  the one that leaves the copy self-consistent. It is the only line of any
+  copied file that changes.
+* **The new-game menu has to be told.** 18a's keys are built from the folder
+  name, so a copy inherits none of them and the menu would show raw keys. Every
+  `SOURCE_*` key is written again under the new token - the faction titles and
+  blurbs as they stand, because they are the same factions - with the campaign's
+  own title and blurb overridable, and an inherited title warned about.
+
+**Where the folder goes is the thing this screen knows and the engine does not
+say.** `campstrat.campaigns`' own measured rule is that the new-game menu reads
+the folders directly under `world/maps/campaign`; both installed mods keep a
+whole second campaign one level down, which this toolkit opens and the menu does
+not. So a nested name is offered and warned about rather than refused.
+
+`campfiles._write_descriptions` became the public `write_descriptions(mod,
+writes, new, keep, file_op)` so that both the descriptions panel and this write
+the two roads - the `.txt` when there is one, the compiled archive when there is
+not - from one copy.
+
+### What it costs, measured
+
+A delete's panel opens in 231 ms on DaC and the plan takes 7 s cold and 760 ms
+warm, nearly all of it the whole-mod mention scan a rename also pays for; the
+panel is two steps for that reason, and the second button says it is going to
+think. A campaign copy is planned in 30 to 50 ms and the plan says the size:
+DaC's grand campaign is 118 files and 172 MB, its nested one 92 files and 4.9
+MB, Reforged's Fellowship campaign 36 files and 59 MB.
+
+### Tests and verification
+
+`tests/test_regiondel.py` (62) builds a six-by-seven map with four provinces
+laid out so that every rule has something to be right about - a default heir, a
+short border, a neighbour that touches nothing, a settlement pixel, two ports
+where one heir has one and the other does not, and the eight files naming one
+province - deletes one, and reads the result back off disk. Its water is painted
+`41 140 233` and declared by nothing, which is what a real map does: all 73,902
+of DaC's sea tiles are that colour and no record claims it.
+`tests/test_campnew.py` (52) does the same for a campaign folder with a
+subfolder and a stale `map.rwm`. Both suites end on every installed mod,
+planning a real delete and a real copy and applying neither.
+
+Driven in the browser on Divide and Conquer: the delete panel over
+Pukel_Province (517 tiles, seven possible heirs ordered by shared border, two
+campaigns, a fort and two resources standing on it), the seven files its plan
+would write, and the new campaign form planning a 118-file copy - with both
+saves driven through a stubbed `api.post` so that the installed mod was checked
+afterwards and had not been written to.

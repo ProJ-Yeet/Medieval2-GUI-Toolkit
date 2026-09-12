@@ -337,6 +337,8 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `cmapTerrainOn` / `cmapTerrainDraw` | whether the backdrop is being drawn, and the one blit of it - under the whole stack, at its own several pixels a tile, addressed in tiles like everything else on the screen (23a) |
 | `cmapThemeDraw` | 16g's colouring over the terrain and the stack both: the fill, blended for T12's tint or laid on for a solid, and the frontiers, which are never blended. It is on the screen canvas rather than in the composite because that is one pixel a tile and the terrain is not (23b) |
 | `Colouring.payload`'s `bands` / `cqGroups` | which group each province is in, `-1` for none, absent for anything that is not a province. What a border is worked out from on both sides; the colour cannot answer it, because a "none" group and no group are painted the same grey (23b) |
+| `regiondel.heirs` / `regiondel.campaigns_reading` | who can inherit a province's land, ordered by shared border, and which campaigns a change to this map reaches. The first is `campaint.neighbours` with the record joined on; the second is 22c's ruling as a list (24) |
+| `renames.mentions` | every line in the mod naming a thing, split into the scripts (listed, never written) and everything else (counted per file). A rename's scan, shared with the delete (24) |
 | `cmapLayerState` / `cmapCampQ` / `cmapGoTile` | the one snapshot of the layer stack, the one place a request appends a campaign, and the one way of arriving at a tile (20b) |
 
 Reuse: `keyblock.py` for the splice discipline (`flatrecord.py` does **not**
@@ -399,20 +401,17 @@ change, so no cross-reference dangles.
 
 ### The whole plan on one screen
 
-| Phase | Sessions | Closes | Size |
-|---|---|---|---|
-| 24 - Make and unmake | 1 | G1 M15 | 2M |
-
-**One session left - 24.** Phase 17 (2026-09-06), all of
+**No sessions left.** Phase 17 (2026-09-06), all of
 Phase 18 (2026-09-07), all of Phase 19 (2026-09-09), 20a (2026-09-10), 20b,
-B1, 20c, 21, 22a, 22b and 22c (2026-09-11) and 23a and 23b (2026-09-12) are
+B1, 20c, 21, 22a, 22b and 22c (2026-09-11) and 23a, 23b and 24 (2026-09-12) are
 done and their write-ups are in `ROADMAP_ARCHIVE.md`; nothing in the Later table
 is counted, and neither are B2-B4 below.
 
-**Nothing is released until it is done.** The user's instruction on
-2026-09-11, which suspends the cut-as-it-lands rule of 2026-09-09: each session
-commits and stops, and the whole backlog goes out as one cut at the end - the
-held v2.2.4 and beta 2026-09-11b notes included. Phase 24 is the last one.
+**Nothing was released until it was done**, and now it is. The user's
+instruction on 2026-09-11 suspended the cut-as-it-lands rule of 2026-09-09: each
+session commits and stops, and the whole backlog goes out as one cut at the end,
+the held v2.2.4 and beta 2026-09-11b notes included. **Phase 24 closed on
+2026-09-12 and that cut is now the next thing to do.**
 
 ---
 # Reported from the beta - not phased
@@ -662,10 +661,28 @@ leaves behind:
 
 ---
 
-## Phase 24 - Make and unmake
+## Phase 24 - Make and unmake - done
 
-**Closes G1, M15.** One session. Two operations on a thing that already has a
-create or a delete but not both.
+**Closed 2026-09-12, and with it G1, M15 and the roadmap.** Two operations on a
+thing that had a create or a delete but not both. The write-up is in
+`ROADMAP_ARCHIVE.md`; what it leaves behind is below.
+
+- **`unittransfer/regiondel.py` - before anything else has to follow a province
+  name.** A delete is a rename to nothing, so it walks 19b's
+  `renames.REGION_SITES` rather than a list of its own, and it refuses to edit
+  the campaign script for the reason a rename does. `renames.mentions` is that
+  scan, public now because two callers share it.
+- **`unittransfer/campnew.py` - before anything makes a folder the engine
+  reads.** The three things a plain copy gets wrong: the compiled map must not
+  travel, the `campaign <name>` header names the copy, and 18a's menu keys are
+  built from the folder name so a copy inherits none of them.
+- **What a delete does not have to move.** Resources, forts, watchtowers and
+  characters are placed by tile, so their coordinates survive a province going:
+  what changes is whose province they stand in. `mapsnap.nearest` was expected
+  here and was not needed, and that is worth knowing before the next feature
+  reaches for it.
+
+### What it was, as scoped
 
 - **G1 - delete a region.** Geomod's manual: "click the name of the region, then
   click Delete, and all work on that region including itself will be gone. The
@@ -688,6 +705,21 @@ create or a delete but not both.
   and `winconds.py`, plus 18a's campaign descriptions - so what is missing is
   the folder-level operation and the plan that says what a new campaign
   inherits and what it must be given.
+
+---
+
+# The roadmap is finished
+
+**Every phase in the Now and Next sets is done**, the last of them on
+2026-09-12. What is left in this document is the Later table, the three
+unscheduled phases below it, and B2-B4 off the beta - none of which was ever
+counted as a session.
+
+**So the release rule of 2026-09-11 comes due.** Nothing has been cut since
+v2.2.3 and beta 2026-09-11; the whole backlog goes out as ONE cut on both lines,
+with the held v2.2.4 and beta 2026-09-11b notes folded into it, and one
+all-in-one Discord post with it. `HANDOFF.md` rule 1 applies to that cut
+unchanged. See `STATE.md` for exactly what has to be in the notes.
 
 ---
 

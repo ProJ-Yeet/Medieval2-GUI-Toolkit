@@ -244,6 +244,24 @@ show the unsaved map rather than the one on disk.
   POST /api/map/paint_undo|_redo -> one step of the unlimited stack
   POST /api/map/paint_state      -> what is unsaved, without changing anything
   POST /api/map/paint_discard    -> throw the session away and re-read the disk
+  GET  /api/map/region_delete?mod=&name=&campaign=
+                                 -> 24, G1. What deleting this province would
+                                    have to reach: the neighbours that could
+                                    inherit its land, ordered by how much border
+                                    each shares, and what stands on its tiles
+  POST /api/map/region_delete_plan|_apply
+                                 -> the whole delete, worked out and then
+                                    written: the tiles repainted to the heir,
+                                    the record out of every descr_regions.txt,
+                                    the settlement block, the win conditions,
+                                    the pool, the music type, the lookup pair
+                                    and the battle tiles. The campaign script is
+                                    listed and never written
+  GET  /api/campnew?mod=         -> 24, M15. The campaigns a new one could be
+                                    copied from, and what copying each costs
+  POST /api/campnew/plan|apply   -> make a new campaign folder from one that
+                                    works, minus the compiled map, with its own
+                                    header and its own new-game menu keys
   POST /api/map/region_start|_cancel
                                  -> the new-region wizard's record, decided
                                     before a pixel of it is painted
@@ -490,7 +508,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campevents, campfiles, campmap, campstrat, cas, guilds, mapcheck, mapquery, mapterrain, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, renames, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campevents, campfiles, campmap, campnew, campstrat, cas, guilds, mapcheck, mapquery, mapterrain, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, renames, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2020,6 +2038,14 @@ class Handler(BaseHTTPRequestHandler):
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
                 return self._strat_model_route(u.path, name, q)
+            if u.path == "/api/campnew":
+                # 24, M15. A folder question, so it is ahead of _map_route and
+                # outside it: making a campaign needs no map read at all, and a
+                # mod whose layers will not decode can still be given one.
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._json(campnew.view(self.registry.describe(name)))
             if u.path.startswith("/api/map"):
                 return self._map_route(u.path, q)
             if u.path == "/api/log":
@@ -2251,6 +2277,13 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/map/wins_plan", "/api/map/wins_apply"):
                 return self._json(self._wins(
                     u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/map/region_delete_plan",
+                          "/api/map/region_delete_apply"):
+                return self._json(self._region_delete(
+                    u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/campnew/plan", "/api/campnew/apply"):
+                return self._json(self._campnew(
+                    u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/query", "/api/map/export"):
                 return self._json(self._mapquery(
                     u.path.rsplit("/", 1)[-1], body))
@@ -2914,6 +2947,65 @@ class Handler(BaseHTTPRequestHandler):
             return out
         out.update(campmap.apply_region(plan))
         self.registry.invalidate(body["mod"])       # the file changed on disk
+        return out
+
+    # ---- a province, deleted (24, G1) ----
+    def _region_delete(self, action, body):
+        """Preview or write the delete of one province.
+
+        The map is :meth:`Registry.map_for`'s, which is 22c's rule: a campaign
+        that ships its own ``map_regions.tga`` is judged on that one and a
+        delete off it reaches that campaign alone.
+        :func:`unittransfer.regiondel.campaigns_reading` is what works out which
+        those are, from the same object.
+
+        An apply invalidates the mod, because the layer, the record and up to a
+        dozen campaign files have all just changed under it.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            camp = body.get("campaign") or ""
+            cm = self.registry.map_for(name, camp)
+            plan = regiondel.plan(mod, cm, camp, body)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(regiondel.apply(plan))
+        except (ValueError, OSError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        campaint.drop(name)                  # its map object is now the old one
+        self.registry.invalidate(name)       # the files changed on disk
+        return out
+
+    # ---- a whole new campaign (24, M15) ----
+    def _campnew(self, action, body):
+        """Preview or write a new campaign folder copied from an existing one.
+
+        No map object and no fact table: this is a folder operation, and the
+        campaign it copies is read off disk by name. An apply invalidates the
+        mod so that every campaign list on every screen picks the new one up.
+        """
+        try:
+            mod = self.registry.describe(body["mod"])
+            plan = campnew.plan(mod, body)
+        except (KeyError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(campnew.apply(plan))
+        except (ValueError, OSError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(body["mod"])
         return out
 
     # ---- the campaign map, painted ----
@@ -3949,6 +4041,16 @@ class Handler(BaseHTTPRequestHandler):
             except namekeys.NameKeyError as exc:
                 out["names"] = {"have": False, "problem": str(exc), "rows": []}
             return self._json(out)
+
+        if path == "/api/map/region_delete":
+            # 24, G1. What the delete panel asks before anything is chosen: who
+            # can inherit the land, what stands on it, and which campaigns this
+            # map belongs to. The plan is what says exactly what would be
+            # written, and it costs a whole-mod scan; this is the question that
+            # has to be askable in a click.
+            return self._json(regiondel.view(
+                self.registry.describe(name), cm, camp,
+                (q.get("name") or [""])[0]))
 
         if path in ("/api/map/query/vocab", "/api/map/colouring"):
             # 16g. Both go through the fact table, which is where every filter,

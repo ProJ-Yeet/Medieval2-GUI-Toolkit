@@ -128,6 +128,26 @@ painted out. Frontiers can sit **on the edge** between two provinces or
 zoom, and they can be drawn between the colouring's **groups** or round **every
 province**. All of it goes into an exported TGA exactly as it is on screen.
 
+A province can be **deleted**, which is the other half of the wizard that makes
+one. Its land goes whole to a neighbour it shares a border with - every one is
+offered, longest border first - and everything that named it goes with it: the
+record, the settlement block in each campaign, the win conditions, the mercenary
+pool, the music type, the lookup pair, the custom battle tiles. Its seat becomes
+ground, because a province has one, and you are asked what happens to its port,
+because the heir may already have one. **What the panel says before you commit
+is the point**: the whole list of files, what stands on the land and whose
+province it becomes, and every line of the campaign script that names the
+province, which is listed and never edited. One backup set, and 🕑 Log undoes
+all of it.
+
+**+ New campaign**, under the campaign list, makes a whole new campaign out of
+one that already works: the folder copied, the compiled `map.rwm` deliberately
+left behind so the game rebuilds it, the `campaign` line set to the new name,
+and every menu title and blurb - the campaign's own and each faction's - written
+again under the new campaign's key so the new-game menu has something to show.
+It tells you the size before it starts, and whether the name you have chosen is
+one the engine's own menu will list.
+
 **Labels** (`L`) puts every settlement's name beside it on the map, placed so
 that no name covers another name or another settlement. The font does not grow
 with the zoom, and a name with no room is left off rather than drawn over its

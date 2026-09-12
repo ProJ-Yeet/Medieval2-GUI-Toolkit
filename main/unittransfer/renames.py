@@ -988,24 +988,38 @@ def _scan_mentions(p: RenamePlan) -> None:
     every campaign file and every Lua script, which is the set this project
     already decided could name a thing.
     """
+    p.script, p.review = mentions(p.mod, p.old, {e.rel for e in p.edits})
+
+
+def mentions(mod, name: str, written: Optional[set] = None
+             ) -> Tuple[List[Mention], List[dict]]:
+    """``(script lines, other files)`` naming ``name`` and not being written.
+
+    Split out of :func:`_scan_mentions` in 24 so that G1's delete reports the
+    same thing the same way. A delete is a rename to nothing and it refuses to
+    follow the script for exactly the reason a rename does, so the two share the
+    scan rather than each having one that can drift.
+    """
     from . import unitrefs
 
-    written = {e.rel for e in p.edits}
-    pat = re.compile(r"(?<![A-Za-z0-9_])" + re.escape(p.old) + r"(?![A-Za-z0-9_])")
+    written = set(written or ())
+    pat = re.compile(r"(?<![A-Za-z0-9_])" + re.escape(name) + r"(?![A-Za-z0-9_])")
+    script: List[Mention] = []
+    review: List[dict] = []
     scripts = set()
-    for path in script_files(p.mod):
-        rel = _rel(p.mod, path)
+    for path in script_files(mod):
+        rel = _rel(mod, path)
         scripts.add(rel)
         for i, line in enumerate(_read(path, ENCODING).split("\n")):
             if pat.search(line):
-                p.script.append(Mention(rel=rel, line=i + 1, text=line.strip()[:200]))
+                script.append(Mention(rel=rel, line=i + 1, text=line.strip()[:200]))
     # A whole-mod walk reads tens of megabytes - Divide and Conquer's
     # export_descr_buildings.txt alone is six - so the substring is looked for in
     # the raw bytes first and the great majority of files never get decoded. That
     # is the difference between a preview that appears and one that is waited for.
-    needle = p.old.encode(ENCODING, "replace")
-    for path in unitrefs.scan_paths(p.mod):
-        rel = _rel(p.mod, path)
+    needle = name.encode(ENCODING, "replace")
+    for path in unitrefs.scan_paths(mod):
+        rel = _rel(mod, path)
         if rel in written or rel in scripts:
             continue
         try:
@@ -1017,8 +1031,9 @@ def _scan_mentions(p: RenamePlan) -> None:
                  if pat.search(line)]
         if not lines:
             continue
-        p.review.append({"rel": rel, "hits": len(lines),
-                         "lines": lines[:MENTION_LIMIT]})
+        review.append({"rel": rel, "hits": len(lines),
+                       "lines": lines[:MENTION_LIMIT]})
+    return script, review
 
 
 def plan(mod, body: dict) -> RenamePlan:

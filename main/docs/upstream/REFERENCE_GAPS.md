@@ -438,7 +438,7 @@ Divide and Conquer awards guild points to two guilds it never declares.
 
 `TextEditor.jsx`. Same feature as D11; count it once. Done with it in 21.
 
-### M15. Campaign manager: create a new campaign · M
+### M15. Campaign manager: create a new campaign · **done**
 
 `CampaignManager.jsx`, `CampaignForm.jsx`, `CampaignCard.jsx`. Make a new
 campaign folder from an existing one.
@@ -446,6 +446,18 @@ campaign folder from an existing one.
 Every file in that folder now has a writer here (16h, 16i, 16j-1, 16j-2 and
 `winconds.py`), so what is missing is the folder-level operation and the plan
 that says what a new campaign inherits.
+
+**Done 24** (`unittransfer/campnew.py`), as a copy of a campaign that works
+rather than a template: the engine reads more than a dozen files out of that
+folder and a missing one is a load failure with nothing on screen to explain it.
+Three things a plain copy gets wrong and this does not - `map.rwm` is the
+engine's own cache of the map and does not travel, the `campaign <name>` header
+is set to the new folder so the copy does not claim to be the source, and 18a's
+menu keys are built from the folder name so every one of them is written again
+under the new token. Where the folder goes is the one thing the panel knows and
+the engine does not say out loud: the new-game menu reads the folders directly
+under `world/maps/campaign`, so a nested campaign is offered, opened here, and
+warned about.
 
 ### M16. Animation editor and asset converter · L, unscoped
 
@@ -476,7 +488,7 @@ the nearest thing.
 The format arbiter, and the tool most of Phase 16's rules were checked against.
 Eight items; two are already scheduled.
 
-### G1. Delete a region · M
+### G1. Delete a region · **done**
 
 The manual: "click the name of the region, then click Delete, and all work on
 that region including itself will be gone. The area of the former region will
@@ -489,6 +501,24 @@ refuses to leave any region with no tiles. Note the manual's own caveat, which
 is a validation opportunity rather than a limitation to copy: "resources, forts
 and characters will remain" - ours should say what is about to be orphaned, and
 16f already has every rule needed to find them.
+
+**Done 24** (`unittransfer/regiondel.py`), and the caveat is the part that was
+answered rather than copied. **A delete is a rename to nothing**, so it walks
+19b's own `REGION_SITES` - the measured set of every file a province is named
+in - and removes the name from each, refusing the campaign script in the same
+words a rename refuses it. The land goes **whole to one neighbour it touches**,
+ordered by shared border and defaulting to the longest, because a tile-by-tile
+share-out cannot be proved to leave either province in one piece and one
+adjacent heir can. The settlement pixel goes with it (a province has one seat)
+and the port is a question with a measured default (the heir inherits the
+coastline, and only one port in a province is ever used).
+
+And the caveat itself turned out to be half wrong about the danger: resources,
+forts, watchtowers and characters are placed **by tile**, so nothing about them
+dangles when a province goes - their coordinates do not move and what changes is
+whose province they stand in, which the panel counts and names. The one thing
+that really is filed under a province name is `descr_strat.txt`'s depth-0
+`region <name>` section, and that is moved into the heir's or renamed to it.
 
 ### G2. Region music · S
 

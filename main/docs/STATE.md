@@ -1,35 +1,31 @@
 # STATE - Medieval 2 GUI Toolkit
 _Updated: 2026-09-12 · v2.2.3 is still the latest 2.x and beta 2026-09-11 the
-latest beta · after 23b, winter and the tint, which closes Phase 23 ·
-**nothing is released until the roadmap is finished**_
+latest beta · after 24, make and unmake, **which closes the roadmap** ·
+the release hold is over and the one cut is the next thing to do_
 
 ## Next up
-**Phase 24, make and unmake** (`ROADMAP.md`), and it is the **last session of
-the roadmap**; B2-B4 are not counted. Two operations on a thing that has a
-create or a delete but not both:
+**The roadmap is finished.** Phase 24 closed on 2026-09-12 and there is no
+session left in it: the Now set and the Next set are both done, and what remains
+in `ROADMAP.md` is the Later table, the three unscheduled phases and B2-B4 off
+the beta, none of which was ever counted.
 
-- **G1, delete a region.** We create regions and cannot delete one - verified,
-  nothing in `campaint.py` or `campmap.py` deletes a record or reallocates its
-  tiles. 16e's wizard is the other half and its rules apply unchanged, including
-  the refusal to leave any region with no tiles and the warning that a change
-  here renumbers every region the engine scans after it. **Improve on the
-  arbiter rather than copying it**: Geomod's own manual admits "resources, forts
-  and characters will remain", which is a dangling-reference bug it ships. 16f
-  has every rule needed to find them and Phase 22 made every one of them
-  movable, so ours names what is about to be orphaned and offers to move it -
-  `mapsnap.nearest` is the search and it takes the caller's own predicate.
-- **M15, create a campaign.** See the roadmap.
+**So the next thing to do is the one cut, and it needs the user to ask for it.**
+On 2026-09-11 the user said "we wont publish until we finish all the sessions of
+our roadmap now", which suspended the cut-as-it-lands rule of 2026-09-09. That
+condition is now met. The cut is **both lines in one job** - a 2.x subrelease
+with the map hidden and a dated beta pre-release - and `HANDOFF.md` rule 1
+applies to it unchanged. **One all-in-one Discord post goes with it**, in the
+user's own template, covering everything since v2.2.3 and beta 2026-09-11: that
+is 20b, 20c, B1, 21, the map hover fix, 22a, 22b, 22c, 23a, 23b, 24 and the
+promise fix in f54aa5e. The held notes in `docs/releases/` (`RELEASE_2_2_4.md`,
+`RELEASE_BETA_2026_09_11B.md`) fold into it, and **B1 has to be added to both**,
+since the beta note's "Not fixed" section describes exactly what B1 fixed.
 
-The 23a and 23b write-ups are in `ROADMAP_ARCHIVE.md`. **When 24 closes, the
-whole backlog goes out as one cut** - see below, and `HANDOFF.md`.
+After the cut, the unscheduled work is B2 (delete a settlement, move one between
+mods - Phase 24's delete is the shape for the first half), B3, B4, the Later
+table, and Phases 25-27. None of it is scheduled and none of it is promised.
 
-**Do not release anything at the end of a session.** On 2026-09-11 the user
-said: "we wont publish until we finish all the sessions of our roadmap now".
-Commit, update these files, and stop. When the last session closes, the whole
-backlog goes out as ONE cut, and `HANDOFF.md` rule 1 applies to that cut
-unchanged. The cut-as-it-lands rule of 2026-09-09 is suspended until then.
-**No Discord post per session either**: the user wants one all-in-one post
-with that cut, covering everything since v2.2.3 / beta 2026-09-11.
+The 24 write-up is in `ROADMAP_ARCHIVE.md`.
 
 ## WHERE THINGS ARE - the tree moved on 2026-09-06
 Only the two `.bat` files and `README.md` are at the top of the repository.
@@ -54,7 +50,8 @@ the beta was the last thing cut.
 **21 belongs to BOTH lines.** Raw text is a menu mode of its own and the faction
 audit also draws in the Factions mode, so both are in the 2.x build with the map
 hidden; the audit's two campaign-row buttons appear only on the map screen.
-**22a, 22b, 22c, 23a and 23b are map work** and belong to the beta line only.
+**22a, 22b, 22c, 23a, 23b and 24 are map work** and belong to the beta line
+only - 24's two panels are both on the map screen.
 
 Betas are named by the **date** they were released, with a letter for a second
 in one day. The GitHub title is `M2 GUI-Kit V<X.Y.Z>` - hyphenated **GUI-Kit**,
@@ -66,30 +63,31 @@ rather than typing it from memory. The strict step-by-step is `HANDOFF.md`.
 two fixes are committed. **Fold them into the end-of-roadmap cut** - and B1 has
 to be added to both notes, since the beta note's "Not fixed" section describes
 exactly what B1 fixed. 20b, 20c, B1, 21, the map hover fix, 22a, 22b and 22c are
-not in any note yet either, and neither are 23a and 23b - and 22b's drag fix is
-worth a line of its own, since 17d's drag never dropped in any cut.
+not in any note yet either, and neither are 23a, 23b and 24 - and 22b's drag
+fix is worth a line of its own, since 17d's drag never dropped in any cut.
 
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
+| 24 - Make and unmake | **done** | Closed 2026-09-12, committed, **not released**. Closes G1, M15 and the roadmap. Deleting a province, with its land going whole to a neighbour it borders and its name coming out of every file 19b measured - and the campaign script listed, never written, for the reason a rename gives. Making a campaign, as a copy of one that works minus the compiled map, with its own header and its own menu keys. New: `unittransfer/regiondel.py` (`heirs`, `campaigns_reading`, `standing_on`, `plan`, `apply`, `view`), `unittransfer/campnew.py` (`sources`, `plan`, `apply`, `view`), `mapquery.drop_music_region`, `renames.mentions`, `campfiles.write_descriptions`, `GET /api/map/region_delete`, `POST /api/map/region_delete_plan\|_apply`, `GET /api/campnew`, `POST /api/campnew/plan\|apply`, `web/js/regiondel.js`, `web/js/campnew.js`. `tests/test_regiondel.py` (62), `tests/test_campnew.py` (52). |
 | 23b - Winter, and the tint | **done** | Closed 2026-09-12, committed, **not released**. Closes T12 and the winter half of T1, and with it Phase 23. The season switch on the ground types row, one picture kept per season, and the validator judging **both** seasons (`mapterrain.season_gaps`) because a missing winter texture is missing whichever season is drawn. T12's tint is the canvas `color` blend, which is his grayscale-then-HSB chain in one step; the colouring moved out of the layer composite to `cmapThemeDraw` so it can blend against the terrain. Border position (edge/inside) and scope (groups/every province), on the screen and in the export both. New: `Colouring.payload`'s `bands`, `mapquery._every_region`, `BORDER_POSITIONS`; `cmapThemeDraw`, `cmapTerrainSeason`, `cqFill`, `cqGroups`, `cqBorders`, `cqDraw`. `tests/test_mapquery.py` section 3b (10, node against Python). |
 | 23a - The texture composite | **done** | Closed 2026-09-12, committed, **not released**. Closes D7 and T1. The map drawn with the mod's own aerial-map textures, TWMapReader's rules taken as they stand: pink for a texture that cannot be found, the `default` block inherited, wilderness drawn as fertility_low, and the two winter fallbacks. New: `unittransfer/mapterrain.py` (`parse`, `Vocabulary`, `plan`, `composite`, `check_textures`, `signature`, `view`, `_index`), `GET /api/map/terrain[&format=png]`, `mapcheck`'s `terrain.texture` rule, and a Terrain textures mode on the ground types row (`cmapTerrainOn` / `cmapTerrainDraw`). `tests/test_mapterrain.py` (63). |
 | 22c - A campaign's own map | **done** | Closed 2026-09-11, committed, **not released**. The follow-up 22b left: the map screen, ✓ Check and its fixes read a campaign's own map files. New: `Registry.map_for`, `campmap.shipped` / `layer_map` / `rel_of` / `base_readers` / `home_view`, `mapcheck.Check.rel`, `campaint.paints_for`; `cmapRefetchMap` / `cmapHomeNote` in `campmap.js`. `tests/test_campaignmap.py` (30). |
 | 22b - Resources, and the snap | done | Closed 2026-09-11, committed, **not released**. Closes D9, D10, G5 and Phase 22. New: `unittransfer/mapsnap.py`, `campmap.campaign_map` / `map_of`, `mapcheck.position_faults` / `duplicate_message`; `stratobj` takes `resource` (`Layout`, `resource_home`, `Census`, `Vocabulary.snap`); `stratchar._shore`, `campaint._marker_near`; `cmapLocate` in `campmap.js`, and 17d's drag counts the pointer's travel. `tests/test_stratres.py` (67). |
 | 22a - Forts and watchtowers | done | Closed 2026-09-11, committed, **not released**. First half of D9 (and G5). New: `unittransfer/stratobj.py` (`plan`, `apply`, `view`, `Vocabulary`, `render_line`, `new_section`), `web/js/campforts.js` (the 🏰 Forts panel), `GET /api/map/objects`, `POST /api/map/object_plan\|_apply`. 17d's drag takes forts and watchtowers (`CMK_DRAGGABLE`). `tests/test_stratobj.py` (65). |
 | 21 - Two screens over data we hold | done | Closed 2026-09-11, committed, **not released**. Closes D6, D11 (= M14) and the Now set. New: `unittransfer/factionaudit.py` (`Census`, `evaluate`, `audit`, `repair_plan`), `unittransfer/rawtext.py` (`files`, `read`, `splice`, `plan`, `apply`), `web/js/facaudit.js`, `web/js/rawtext.js`, the `rawtext` mode, `GET /api/factions/audit`, `POST /api/factions/repair_plan\|repair_apply`, `GET /api/raw/files\|file`, `POST /api/raw/plan\|apply`. `factionclone.clone_file` and `ClonePlan.action` (refactor, clone suites unchanged). `tests/test_factionaudit.py` (48), `tests/test_rawtext.py` (57). |
-| 24 - the last of the Next set (3.2.0) | **scoped** | One session: delete a region and create a campaign. The last of the roadmap. |
 | B2-B4 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export; `Rename slot` on a packed mod. |
 | 25-27 | scoped, unscheduled | OSM backdrop, map resize, layer generators. |
 | 16-21 | done | 16-20a published on the beta line; 20b onward committed and uncut. The 3.0.0 and 3.1.0 numbers are still unassigned to a cut. |
 
 ## In-progress detail
-**Clean.** Nothing is mid-flight. There are 100 suites. After 23b the map set
-was re-run - `test_mapquery` (109), `test_mapcheck` (86), `test_mapterrain`
-(63), `test_maplayers`, `test_web_modules`, `test_campmap`, `test_campaignmap`,
-`test_campedit`, `test_campaint`, `test_campview`, `test_stratobj`,
-`test_mapgo` - and everything passes except the DaC four below, each on its
-documented number.
+**Clean.** Nothing is mid-flight. There are 102 suites. After 24 the map and
+campaign set was re-run - `test_regiondel` (62, new), `test_campnew` (52, new),
+`test_renames` (56), `test_campfiles` (83), `test_web_modules` (20),
+`test_mapquery` (109), `test_mapcheck` (86), `test_mapterrain` (63),
+`test_campstrat`, `test_campaignmap`, `test_campaint`, `test_campedit`,
+`test_stratobj`, `test_winconds` - and everything passes except the DaC four
+below, each on its documented number.
 
 **The one-second bar in `test_mapcheck` has less headroom than it did.** 23a's
 rule put it at about 630 ms on DaC and 23b's second season at about 740. It is a
@@ -146,6 +144,16 @@ the edits out from under it (21 did it once; see the archive).
   draws and Python exports.** Both passes, over one map, in node. It found two
   faults that had been in the tree since 16g, neither of which reading the code
   had found.
+- `unittransfer/renames.py`'s `REGION_SITES` and `mentions` - **before anything
+  has to follow a province name anywhere.** The site list is the measured set of
+  files a province is named in and `regiondel` walks it rather than keeping a
+  second one; `mentions` is the whole-mod scan that separates the scripts (which
+  are listed and never written) from everything else. Both are the reason a
+  delete and a rename cannot disagree about where a name lives.
+- `unittransfer/campnew.py` - **before anything writes a folder the engine
+  reads.** What a copy of a campaign gets wrong on its own is three things and
+  they are all in one place: the compiled `map.rwm`, the `campaign <name>`
+  header, and 18a's menu keys being built from the folder name.
 - `unittransfer/mapsnap.py` - before writing any rule about where something may
   stand. The search is there; hand it the rule and put `near` on the finding.
 - `unittransfer/stratobj.py` - one writer for every one-line thing on the map.
@@ -155,13 +163,44 @@ the edits out from under it (21 did it once; see the archive).
 
 ## Upstream
 Reference tool reviewed SHA **2740b0b**. `sync` was run on 2026-09-12 at the
-start of 23a and again at the start of 23b, and was up to date both times -
-nothing new since 2026-09-09. `docs/upstream/PORT_MANIFEST.json` is authoritative: 310
+start of 23a, 23b and 24, and was up to date all three times - nothing new since
+2026-09-09. `docs/upstream/PORT_MANIFEST.json` is authoritative: 310
 files triaged, none untriaged; `src/pages/TextEditor.jsx` notes it done in 21.
 `REFERENCE_GAPS.md` marks D6, D11 and M14 done and G2 half done; **D7, T1 and
-T12 are Phase 23's and are now done.** 24 takes G1 and M15; run `sync` first.
+T12 were Phase 23's and G1 and M15 were 24's, and all five are now done.**
+Nothing in the audit is scheduled any more. Run `sync` before touching anything
+that ports from a directory he has been working in.
 
 ## Decisions
+- 2026-09-12: **A delete is a rename to nothing.** 19b measured where a province
+  is named - fifteen files in Divide and Conquer, twelve in Third Age Reforged -
+  and G1 walks that list rather than one of its own, removing the name where a
+  rename would substitute it. The two agree about the campaign script for the
+  same reason: it is a grammar nothing here parses, so it is listed line by line
+  and never written. A second list of "where a province is named" would have
+  been a second list to keep right.
+- 2026-09-12: **Land goes whole to one neighbour it touches, and the reason is
+  16e's own rule.** Geomod says "usually an adjacent one" and does not say
+  which. A tile-by-tile share-out between several neighbours is the obvious
+  generalisation and cannot be proved to leave anybody in one piece; one
+  adjacent heir can, because two contiguous areas that share an edge make one.
+  Offering every neighbour ordered by shared border is the part that is better
+  than the arbiter, not the splitting.
+- 2026-09-12: **Placed by tile means not orphaned.** Geomod's manual warns that
+  "resources, forts and characters will remain" when a region goes, and that
+  warning is half wrong: all three carry coordinates, the coordinates do not
+  move, and what changes is whose province they stand in. The panel counts them
+  and names the heir. The one thing genuinely filed under a province NAME is
+  `descr_strat.txt`'s `region <name>` section, and that is the one thing moved.
+  `mapsnap.nearest` was expected here by the brief and was not needed - a delete
+  moves no coordinate, so no placement rule can be broken by one.
+- 2026-09-12: **A new campaign is a copy of one that runs.** The engine reads
+  more than a dozen files out of a campaign folder and a missing one is a load
+  failure with nothing on screen to explain it, so a template or a skeleton
+  would be a way of shipping that failure. What a copy alone gets wrong is three
+  things, all of them in `campnew.py`: the compiled `map.rwm` must not travel,
+  the `campaign <name>` header must name the copy, and 18a's menu keys are built
+  from the folder name so a copy inherits none of them.
 - 2026-09-12: **A tint is the canvas `color` blend, and nothing else.**
   TWMapReader greyscales a region's pixels and then applies an HSB filter set to
   the tint's hue and saturation; the blend takes the source's hue and saturation

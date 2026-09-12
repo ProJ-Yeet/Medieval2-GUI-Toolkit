@@ -710,6 +710,7 @@ Saved views are kept.">↺ Reset</button>
         <div id="cmEvents"></div>
         <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
         <div class="cmpick" id="cmPick"></div>
+        <div id="cmDel"></div>
         <div class="cmsettle" id="cmSettle"></div>
         <div id="cmForts"></div>
         <div class="cmchars" id="cmChars"></div>
@@ -728,6 +729,7 @@ Saved views are kept.">↺ Reset</button>
   cevOpen();          // 18b, and it reads its two files only once opened
   cftOpen();          // 22a, and it reads nothing until somebody opens it
   cmapPickPaint();
+  rdlPaint();         // 24, G1: only ever open on a click of its own button
   csPaint();          // 16h: kept out of cmapPickPaint, which owns #cmPick only
   cxPaint();          // 16i, for the same reason
   cjOpen();           // 16j, and it reads nothing until somebody opens it
@@ -2756,6 +2758,9 @@ function cmapRegionHtml(){
       <button class="${d.cv ? 'on' : ''}" onclick="cmapCvToggle()"
         title="Show this region exactly as descr_regions.txt stores it, beside the form."
         >&lt;/&gt; Code view</button>
+      <button class="danger" onclick="rdlOpen()"
+        title="Delete this province and give its land to a neighbour. Nothing is written until the whole list of files is in front of you."
+        >Delete</button>
       <button class="primary" onclick="cmapSave()">Save</button>
     </div>
     <div id="cmGui">${cmapFormHtml()}</div>

@@ -63,7 +63,8 @@ function cbrOpen(){
   const c = state.cmap;
   if(!c) return;
   if(!state.cbr || state.cbr.mod !== c.mod) state.cbr = cbrNew(c.mod);
-  cbrPaint();
+  cnwOpen();          // 24, M15: a block in this panel, and it reads nothing
+  cbrPaint();         //          until somebody opens it
 }
 
 function cbrToggle(){
@@ -150,6 +151,7 @@ function cbrHtml(){
   return head + `<div class="cbrpanel">
     ${cbrDescrHtml(d)}
     ${rows.map(r => cbrRowHtml(r, r.campaign === here)).join('')}
+    ${typeof cnwHtml === 'function' ? cnwHtml() : ''}
     <div class="count">${rows.length} campaign${rows.length === 1 ? '' : 's'}
       read in ${d.ms} ms. The ten map layers and the region list are in
       <code>${esc(d.base)}</code> for every campaign that ships no copy of
