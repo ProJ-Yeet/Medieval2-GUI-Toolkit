@@ -292,9 +292,12 @@ function flushActivity(){
   clearTimeout(_actT); _actT=null;
   if(!_acts.length)return;
   const events=_acts; _acts=[];
-  // fire and forget: the log is a record, never something the UI waits on
-  try{fetch('/api/activity',{method:'POST',keepalive:true,
-    headers:{'Content-Type':'application/json'},body:JSON.stringify({events})});}catch(e){}
+  // Fire and forget: the log is a record, never something the UI waits on. The
+  // `.catch` is what makes "forget" true - see `startHeartbeat` for why a
+  // try/catch round a promise catches nothing at all.
+  fetch('/api/activity',{method:'POST',keepalive:true,
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({events})}).catch(()=>{});
 }
 // A field's OLD value is only knowable before it changes, so it is remembered on
 // the way in. `change` rather than `input`: one line per value the user settled
@@ -385,7 +388,15 @@ function iconRetry(img){
 let _hbStarted=false;
 function startHeartbeat(){
   if(_hbStarted)return; _hbStarted=true;
-  const beat=()=>{try{fetch('/api/heartbeat',{method:'POST',keepalive:true});}catch(e){}};
+  // `.catch` and not try/catch. `fetch` reports a dead server by REJECTING the
+  // promise it already returned, so a synchronous catch never sees it and the
+  // browser logs an unhandled rejection instead - once every four seconds, for
+  // as long as the server is away. Measured in 23b: 500 buffered console
+  // messages, every one of them this, with every real error pushed out of the
+  // buffer behind them. Swallowed on purpose, which is what the try/catch here
+  // was for: a heartbeat that does not arrive is a server that has gone, and
+  // the page finds that out from every other request it makes.
+  const beat=()=>{fetch('/api/heartbeat',{method:'POST',keepalive:true}).catch(()=>{});};
   beat(); setInterval(beat,4000);
   const bye=()=>{try{navigator.sendBeacon('/api/bye');}catch(e){}};
   window.addEventListener('pagehide',bye);
@@ -956,7 +967,7 @@ function rszSave(){
   const map=rszSizes();
   clearTimeout(rszSaveTimer);
   rszSaveTimer=setTimeout(()=>{
-    try{ api.post('/api/settings',{pane_sizes:map}); }catch(e){}
+    api.post('/api/settings',{pane_sizes:map}).catch(()=>{});
   },400);
 }
 

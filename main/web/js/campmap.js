@@ -205,7 +205,10 @@ function cmapSaveLayers(){
   Object.assign(m, cmapLayerState());
   clearTimeout(cmapSaveTimer);
   cmapSaveTimer = setTimeout(() => {
-    try{ api.post('/api/settings', {map_layers:m}); }catch(e){}
+    // `.catch` and not try/catch: `api.post` is async, so it rejects rather
+    // than throwing and a synchronous catch never runs. See core.js's
+    // `startHeartbeat`.
+    api.post('/api/settings', {map_layers:m}).catch(() => {});
   }, 400);
 }
 

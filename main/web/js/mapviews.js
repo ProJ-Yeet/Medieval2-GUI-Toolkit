@@ -94,7 +94,8 @@ function cvwStore(){
   const list = cvwList();
   clearTimeout(cvwSaveTimer);
   cvwSaveTimer = setTimeout(() => {
-    try{ api.post('/api/settings', {map_views: list}); }catch(e){}
+    // `.catch`, not try/catch - `api.post` rejects, it does not throw
+    api.post('/api/settings', {map_views: list}).catch(() => {});
   }, 300);
 }
 
