@@ -293,7 +293,7 @@ draft of this phase pointed 16a at it by mistake, and 16a corrects the line.
 | `unittransfer/mapvocab.py` | ground/climate/feature/height colour tables with localised names, in `edbvocab.py`'s shape - **and `RIVER_CODES`**, which `mapcheck`'s river rules and the map screen's river overlay both read (20a) |
 | `unittransfer/campstrat.py` | `descr_strat.txt` as a line-preserving block model with an interval index |
 | `unittransfer/campaint.py` | strokes, the undo stack, the palettes and the paint save (16e) |
-| `unittransfer/mapcheck.py` | the 30 rules, the baseline and the three auto-fixes (16f) |
+| `unittransfer/mapcheck.py` | the 35 rules, the baseline and the four auto-fixes (16f, 31) |
 | `web/js/mapcheck.js` | the validator panel, its filters and jump-to-pixel (16f) |
 | `unittransfer/mapquery.py` | the fact table, the 24 filters, the themes, Geomod's information maps and the TGA export (16g) |
 | `web/js/mapquery.js` | the query panel, the legends and the recolour of the region layer (16g) |
@@ -762,7 +762,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 |---|---|---|---|---|
 | ~~1~~ | ~~**29** Strat model viewer~~ | M | **both** | **done 2026-09-12** |
 | ~~2~~ | ~~**40** The new province the engine cannot read~~ | S | **both** | **done 2026-09-13** |
-| 3 | **31** Two river rules, and a ford in the sea | S | beta | upstream sync |
+| ~~3~~ | ~~**31** Two river rules, and a ford in the sea~~ | S | beta | **done 2026-09-13** |
 | 4 | **42** The art a clone does not get | S | **both** | reported |
 | 5 | **41** Merge one faction's name pool into another | S | **both** | upstream sync |
 | 6 | **43** Playable, unlockable, not playable | S | beta | asked for |
@@ -789,8 +789,8 @@ on, then stars, then size.** That is four rules and each one earns its place.
 **Twenty sessions, and six of them are subreleases.** 29, 40, 42, 41, 38 and
 39 touch something outside the campaign map, so each is a subrelease on both
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
-took B4 with it, and **40 is done** (2026-09-13); eighteen remain, four of them
-subreleases. **They are committed, not cut** - cut-as-it-lands was
+took B4 with it, and **40 and 31 are done** (2026-09-13); seventeen remain,
+four of them subreleases. **They are committed, not cut** - cut-as-it-lands was
 suspended again on 2026-09-12 and a release now happens when the user asks for
 one.
 
@@ -949,69 +949,91 @@ served a PNG. The choice therefore has to reach `mapterrain.plan`'s key and
 whichever was asked for first. It goes in `cmapLayerState` beside the season,
 so a saved view carries it.
 
-## Phase 31 - Two river rules, and a ford in the sea
+## Phase 31 - Two river rules, and a ford in the sea - DONE 2026-09-13
 
-**A cross-reference, re-measured on 2026-09-12 after Mylae pushed his own port
-of it.** `map_features_checker.py`, a standalone validator handed over on
-2026-09-12, checks six things about `map_features.tga` and repairs five of
-them. Mylae ported four of those checks into a new `mapFeaturesChecks.js` the
-same day (`920841a`). Ours has three river rules - `river.diagonal`,
-`river.isolated` and `river.rejoin` - and `feature.unknown` for the colours.
+**Closed 2026-09-13, beta line, committed and not cut. Three rules, one repair,
+and no web change - which is what the scoping said, and this time the scoping
+held.** Everything the write-up measured was re-measured and every number came
+back: Divide and Conquer's 95 river components and Third Age Reforged's 86 are
+exactly right, and the three new rules find **nothing on any installed map**.
 
-**Two of his four are already ours, and the table that said otherwise was
-wrong.** It was written from the standalone tool's own list rather than from
-our rules, and it cost this phase half its scope.
+| rule | what it catches | on the five maps here |
+|---|---|---|
+| `river.fourway` | a river tile with river on all four sides | **0** |
+| `river.no_source` | a four-connected component with no white source on it | **0** |
+| `feature.ford_in_sea` | a crossing whose own altitude is sea and whose four neighbours are | **0** |
 
-| its check | ours |
-|---|---|
-| a blue tile with more than three river neighbours (a four-way crossing) | **nothing - build it** |
-| a river component with no white source anywhere on it | **nothing - build it** |
-| a 2x2 block of river tiles | `river.rejoin`. A 2x2 block is the smallest cycle in the four-connected graph, and the fixture at `tests/test_mapcheck.py:421` that asserts `river.rejoin` **is** a 2x2 block |
-| a white source pixel touching no river | `river.isolated`. White is one of `RIVER_CODES`, so a source touching nothing at all trips it, and one touching a river only at a corner trips `river.diagonal` |
+The write-up measured three maps; this measured five, adding
+`vanilla_kingdoms_uncompromised` (73 components) and `Vanilla_Redux` (46, the
+same as vanilla's own). Zero everywhere, which is the point: **these are rules
+for a map being drawn, not faults anything ships.** The whole rule set still
+runs on DaC in about 650 ms against the 659 measured before it, so the
+one-second bar has lost nothing.
 
-**Measured on vanilla and on all three installed maps, and it finds nothing.**
-Four-way crossings: zero everywhere. 2x2 blocks: zero everywhere. Source-free
-components: zero everywhere, over Divide and Conquer's 95 river components,
-Third Age Reforged's 86 and vanilla's own. Invalid colours: only DaC's single
-`(1,1,1)` pixel, which this document already records as a live test case. **So
-this is not a bug we ship.** It is two rules for a map being built, and they
-are worth a session because the repairs come with them and 16f's three
-auto-fixes are the shape.
+### `feature.ford_in_sea` needed both halves, and the write-up only had one
 
-**Vanilla trips the orphan-source rule exactly once, at image (175,14)**, and
-that is the same pixel `river.isolated` already names in its own `source`
-string. It is a `warn` here for that reason. **Mylae's port makes it an
-`error`**, so his validator now calls vanilla broken, and he cannot see it
-because the tool he ported from refuses to open either installed map.
+The scoping said "a cyan tile whose four neighbours are all sea". That is the
+half that separates a ford in the ocean from a legitimate coastal crossing, and
+on its own it is not the defect. The defect is that
+:func:`campmap.sea_mask` subtracts **every** cyan pixel unconditionally, so the
+hole in the ocean only exists where the tile's **own** altitude reads sea. A
+ford on a land tile with water round it is odd and is not a hole.
 
-**A third rule, and it is ours rather than his.** He fixed a real bug in
-`920841a`: his old check warned about rivers on sea heights, and a river
-running into the sea is legitimate, so only a **ford** there is wrong. We have
-the right model one level down - `mapvocab.is_sea_height` says a river crossing
-is never sea whatever its height says - but the sea mask in `campmap` subtracts
-**every** cyan pixel unconditionally, so a ford painted in open water is
-silently reclassified as land and no rule complains. That exclusion is correct
-on a coastline and wrong in the Atlantic, and nothing we have can tell the two
-apart. `feature.ford_in_sea` is the rule that can: a cyan tile whose four
-neighbours are all sea.
+So the rule asks both, and the message and the repair are true because it does:
+the tile's own height reads sea by `mapvocab.is_sea_height`, **and** all four
+cardinal neighbours are sea, **and** all four are on the grid - a ford against
+the edge of the map is a different question and this one does not answer it.
 
-**And the tool it came from cannot read either installed map.** It refuses
-anything that is not uncompressed true-colour, and both mods ship
-`map_features.tga` as image type 10, RLE: DaC at 32-bit, Third Age Reforged at
-24. `maptga.py` reads and re-encodes all ten of DaC's layers byte for byte with
-the RLE intact, which is why the four checks could be measured here at all.
-Worth passing back, together with the vanilla (175,14) finding and the severity
-it argues for.
+### One repair, and the other two are worth saying no to
 
-**One rule stays out.** Geomod also says a river must *extend two pixels past
-the coastline*. That is a rule about a river's mouth against `map_heights.tga`
+`ford_none` clears the crossing to no feature at all. That is the one safe
+answer of the three, and the reasoning is in `FIXES` beside it:
+
+* **`river.fourway`** is repaired by removing one arm, and which arm is the map
+  author's intent rather than ours.
+* **`river.no_source`** is repaired by painting a source at the head of the
+  course, and which end is the head needs `map_heights.tga` - the same second
+  layer that put Geomod's "two pixels past the coastline" rule out of scope.
+* **`feature.ford_in_sea`** has one thing the tile can be, because the heights
+  already say so and only the crossing colour was overriding them. Clearing it
+  closes the hole, and the suite asserts exactly that: the sea mask reads that
+  tile as sea again afterwards.
+
+`map_features.tga` is a `W x H` layer - one pixel **is** one tile - so
+`_plan_fords` has no block to fill and no corner to keep consistent, which is
+the one way it is simpler than `_plan_heights`.
+
+### The new rule found a flaw in the old fixtures
+
+All three existing river fixtures - `river.diagonal`, `river.isolated` and
+`river.rejoin` - painted courses with **no source pixel anywhere on them**, so
+each started reporting two findings and tripped `broken(...)`'s "did breaking
+one thing report only that thing" check. Each now paints its source, which
+makes it a river the engine could build, broken in exactly the one way its rule
+is about. White is one of `RIVER_CODES`, so every rule under test sees what it
+saw before. `river.isolated` is better for it: it is now a lone **source**
+pixel, which is literally Mylae's check 4 and the vanilla `(175,14)` case the
+rule was measured against in the first place.
+
+### Still to pass back to Mylae
+
+Both from the original scoping and both still true:
+
+* **vanilla trips his orphan-source check at image (175,14)**, and his port
+  makes it an `error`, so his validator calls vanilla broken. Ours is a `warn`
+  for that reason.
+* **the tool he ported from cannot open either installed map.** It refuses
+  anything that is not uncompressed true-colour, and both mods ship
+  `map_features.tga` as image type 10, RLE - DaC at 32-bit, Third Age Reforged
+  at 24. `maptga.py` reads and re-encodes all ten of DaC's layers byte for byte
+  with the RLE intact, which is why any of this could be measured here at all.
+
+**One rule stayed out**, as scoped: Geomod's "a river must extend two pixels
+past the coastline" is a rule about a river's mouth against `map_heights.tga`
 rather than about `map_features.tga` alone, and it is the only one of the five
 that needs a second layer. Scoped out rather than half-checked.
 
-**Three rules, three fixtures, and no web change.** The findings panel is
-data-driven off `RULES`, so a new `@rule` reaches the screen on its own; each
-one is a decorated function in `mapcheck.py` and one `broken(...)` line in
-`tests/test_mapcheck.py`.
+**Beta only.** `map_features.tga` is the campaign map.
 
 ## Phase 32 - Who can hire what, and where - the mercenary pools
 

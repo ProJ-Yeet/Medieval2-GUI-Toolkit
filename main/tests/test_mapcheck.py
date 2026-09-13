@@ -408,19 +408,70 @@ broken(lambda d: repaint(d, "map_regions.tga",
        "port.inland", "a port with no sea on any of its four sides",
        others=False)   # A_Province then has a port as well, which is not wrong
 
+# Both tiles are sources, so each of the two one-tile components has one and
+# river.no_source (31) stays quiet; white is a river colour, so the rule under
+# test sees exactly what it saw before.
 broken(lambda d: repaint(d, "map_features.tga",
-                         lambda x, y, c: (0, 0, 255)
+                         lambda x, y, c: (255, 255, 255)
                          if (x, y) in ((0, 0), (1, 1)) else None),
        "river.diagonal", "two river tiles joined only at a corner")
 
+# The source itself, standing alone - which is Mylae's check 4 and the vanilla
+# pixel at (175,14) this rule was measured against in the first place.
 broken(lambda d: repaint(d, "map_features.tga",
-                         lambda x, y, c: (0, 0, 255) if (x, y) == (0, 0) else None),
-       "river.isolated", "one river tile with no course through it")
+                         lambda x, y, c: (255, 255, 255) if (x, y) == (0, 0) else None),
+       "river.isolated", "a river source with no course leading out of it")
 
+# One corner of the block is the source, so the loop is a loop and nothing
+# else. No tile of a 2x2 has four cardinal neighbours, so river.fourway (31)
+# has nothing to say about it either - the two rules really are independent.
+broken(lambda d: repaint(d, "map_features.tga",
+                         lambda x, y, c: (255, 255, 255) if (x, y) == (0, 0)
+                         else (0, 0, 255)
+                         if (x, y) in ((1, 0), (0, 1), (1, 1)) else None),
+       "river.rejoin", "a river that closes a loop")
+
+# Phase 31. A plus of five tiles, with one arm the white source so the course
+# is not also sourceless - the two rules are independent and the fixture has to
+# say so. Centred at (5,3), which is clear of all four markers on the grid: a
+# river tile under a settlement is a crash of its own and would be the finding
+# reported instead.
+broken(lambda d: repaint(d, "map_features.tga",
+                         lambda x, y, c: (255, 255, 255) if (x, y) == (5, 2)
+                         else (0, 0, 255)
+                         if (x, y) in ((5, 3), (5, 4), (4, 3), (6, 3)) else None),
+       "river.fourway", "a river tile with river on all four sides")
+
+# Two tiles of course and no white pixel anywhere on them. Cardinally joined,
+# so neither river.diagonal nor river.isolated has anything to say, and two
+# tiles cannot close a loop.
 broken(lambda d: repaint(d, "map_features.tga",
                          lambda x, y, c: (0, 0, 255)
-                         if (x, y) in ((0, 0), (1, 0), (0, 1), (1, 1)) else None),
-       "river.rejoin", "a river that closes a loop")
+                         if (x, y) in ((3, 3), (4, 3)) else None),
+       "river.no_source", "a river with no source pixel anywhere along it")
+
+
+def _ford_in_sea(d):
+    """A ford at (1,3) with the four tiles around it dropped into the sea.
+
+    The heights layer is 2W+1 a side and a tile's centre is the pixel the sea
+    mask reads, so making a tile sea means painting (2x+1, 2y+1). Four tiles
+    of a province become open water here, which is a real second consequence
+    and is why this call turns `others` off.
+    """
+    repaint(d, "map_features.tga",
+            lambda x, y, c: (0, 255, 255) if (x, y) == (1, 3) else None)
+    # the ford's own centre as well as its four neighbours: the rule needs the
+    # tile to read sea itself, or there is no hole for the crossing to punch
+    wet = {(2 * x + 1, 2 * y + 1)
+           for x, y in ((1, 3), (1, 2), (1, 4), (0, 3), (2, 3))}
+    repaint(d, "map_heights.tga",
+            lambda x, y, c: (0, 0, 200) if (x, y) in wet else None)
+
+
+broken(_ford_in_sea, "feature.ford_in_sea",
+       "a river crossing with sea on all four sides",
+       others=False)   # four land tiles became ocean, which is its own finding
 
 broken(lambda d: repaint(d, "map_heights.tga",
                          lambda x, y, c: (0, 0, 0) if (x, y) == (5, 5) else None),
@@ -713,6 +764,46 @@ try:
           bad.get("error"))
 finally:
     httpd.shutdown()
+
+# ---- Phase 31: the one repair of the three that has a safe answer -----------
+print("\n31) a ford standing in open water, cleared")
+
+fordroot = tmp / "mods" / "FordFix"
+shutil.copytree(clean_root, fordroot)
+_ford_in_sea(fordroot / "data")
+fordmod = Mod(fordroot)
+before_feat = (fordroot / "data" / campmap.BASE_REL / "map_features.tga").read_bytes()
+
+fp = mapcheck.plan_fix(fordmod, ["ford_none"])
+check(f"the plan finds the one ford and says what it would write: "
+      f"{(fp.changes or ['-'])[0][:60]}",
+      fp.payload()["ok"] and len(fp.cleared) == 1
+      and fp.cleared[0].code == "feature.ford_in_sea")
+check("and it writes map_features.tga and nothing else",
+      len(fp.data) == 1 and list(fp.data)[0].endswith("map_features.tga")
+      and not fp.text)
+check("nothing has touched the disk yet",
+      (fordroot / "data" / campmap.BASE_REL / "map_features.tga").read_bytes()
+      == before_feat)
+
+mapcheck.apply_fix(fp)
+after_img, _ = read(fordroot / "data" / campmap.BASE_REL / "map_features.tga")
+after_px = after_img.convert("RGB").load()
+check("the ford tile is no feature at all now",
+      after_px[1, 3] == (0, 0, 0))
+check("and every other tile of the layer is what it was",
+      all(after_px[x, y] == (0, 0, 0)
+          for y in range(H) for x in range(W)))
+
+again = mapcheck.run(fordmod, use_baseline=False)
+check("the finding is gone on a re-run, which is what a repair has to mean",
+      "feature.ford_in_sea" not in {f.code for f in again.findings})
+check("a second pass has nothing left to do and says so rather than writing",
+      "nothing left to fix" in " ".join(
+          mapcheck.plan_fix(fordmod, ["ford_none"]).errors))
+check("the sea mask closes over it: the tile the heights called sea is sea "
+      "again, which is the hole the rule was about",
+      campmap.CampaignMap(fordmod).sea[3 * W + 1] == 1)
 
 shutil.rmtree(tmp, ignore_errors=True)
 shutil.rmtree(med2, ignore_errors=True)

@@ -993,6 +993,150 @@ def _r_river_rejoin(ck: Check) -> Iterable[Finding]:
                 what=f"{p[0]},{p[1]}|{q[0]},{q[1]}")
 
 
+@rule("river.fourway", "A river crossing four ways", "warn",
+      "Mylae's check 3; the engine steps a river mesh north, south, east, west")
+def _r_river_fourway(ck: Check) -> Iterable[Finding]:
+    """A river tile with river on all four sides.
+
+    Not the same question as :func:`_r_river_rejoin`, and neither one implies
+    the other: a plus of five tiles is a four-way crossing with no cycle in it,
+    and a 2x2 block is a cycle with no tile that has four neighbours. The
+    engine builds one course through a tile, so a tile the water arrives at
+    from four directions has no course it can build.
+
+    Zero on all five maps installed here, vanilla included. This is a rule for
+    a map being drawn, not a fault anything ships.
+    """
+    riv = ck.rivers
+    if not riv:
+        return
+    card = ((0, -1), (0, 1), (-1, 0), (1, 0))
+    n = 0
+    for x, y in sorted(riv):
+        if sum(1 for dx, dy in card if (x + dx, y + dy) in riv) < 4:
+            continue
+        n += 1
+        if n > ROW_MAX:
+            continue
+        yield Finding(
+            "river.fourway", "warn",
+            f"The river tile at {x},{y} has river on all four sides. The "
+            f"engine steps one course through a tile, so water arriving from "
+            f"north, south, east and west at once has no course to take.",
+            file=ck.rel("map_features.tga"), tile=(x, y), what=f"{x},{y}")
+
+
+@rule("river.no_source", "A river that starts nowhere", "warn",
+      "Mylae's check 5; a course the engine can build begins at a white source")
+def _r_river_no_source(ck: Check) -> Iterable[Finding]:
+    """A four-connected river component with no source pixel anywhere on it.
+
+    The component and not the tile, which is the whole of the rule: a course
+    of forty tiles needs **one** white pixel somewhere along it, and asking the
+    question per tile would report all forty. :func:`_r_river_isolated` is the
+    other half and a different question - it is a source, or any river tile,
+    touching nothing at all.
+
+    Measured over Divide and Conquer's 95 components, Third Age Reforged's 86,
+    vanilla_kingdoms_uncompromised's 73 and vanilla's own 46: every one of them
+    has a source. Another rule for a map being drawn.
+    """
+    riv = ck.rivers
+    data = ck.px("features")
+    if not riv or not data:
+        return
+    f = mapvocab.feature("river_source")
+    src = set(_find(data, ck.width, f["rgb"])) if f else set()
+    card = ((0, -1), (0, 1), (-1, 0), (1, 0))
+
+    seen: Set[Tuple[int, int]] = set()
+    n = 0
+    for start in sorted(riv):
+        if start in seen:
+            continue
+        stack, comp = [start], []
+        seen.add(start)
+        while stack:                       # iterative: a trunk can be long
+            p = stack.pop()
+            comp.append(p)
+            for dx, dy in card:
+                q = (p[0] + dx, p[1] + dy)
+                if q in riv and q not in seen:
+                    seen.add(q)
+                    stack.append(q)
+        if any(p in src for p in comp):
+            continue
+        n += 1
+        if n > ROW_MAX:
+            continue
+        yield Finding(
+            "river.no_source", "warn",
+            f"The river running through {start[0]},{start[1]} has no source "
+            f"pixel anywhere along its {len(comp):,} tile(s). A course the "
+            f"engine can build starts at one white tile and runs to its mouth.",
+            file=ck.rel("map_features.tga"), tile=start,
+            count=len(comp), what=f"{start[0]},{start[1]}")
+
+
+@rule("feature.ford_in_sea", "A ford standing in open water", "warn",
+      "920841a, corrected: a river may run into the sea, a ford may not sit in it")
+def _r_ford_in_sea(ck: Check) -> Iterable[Finding]:
+    """A river crossing whose own altitude is sea and whose four neighbours are.
+
+    **This one is ours rather than upstream's, and the difference is the bug he
+    fixed.** His old check called any river on a sea height wrong, which a
+    river running into the sea is not; ``920841a`` narrowed it to the ford. We
+    already have the right model a level down - :func:`mapvocab.is_sea_height`
+    says a tile whose feature is a river crossing is never sea, whatever its
+    height says - but :func:`campmap.sea_mask` applies that exclusion to
+    **every** cyan pixel unconditionally. That is correct at a coastline, where
+    the ford is the crossing point, and wrong in open water, where it turns a
+    tile of ocean into land and nothing anywhere reports it.
+
+    **Both halves are needed and neither is enough.** The tile's own height has
+    to read sea, or there is no hole: a ford on a land tile is a ford, however
+    much water is around it. And the four neighbours have to be sea, or this
+    fires on every legitimate coastal crossing on the map - which is the whole
+    reason the rule exists rather than reusing ``is_sea_height`` directly. They
+    also have to be on the grid: a ford against the edge of the map is a
+    different question and this one does not answer it.
+
+    Zero on all five maps installed here, vanilla included.
+    """
+    data = ck.px("features")
+    high = ck.px("heights")
+    f = mapvocab.feature("river_crossing")
+    if not data or not high or not f or ck.sea is None:
+        return
+    card = ((0, -1), (0, 1), (-1, 0), (1, 0))
+
+    def height_says_sea(x: int, y: int) -> bool:
+        i = (y * ck.width + x) * 3
+        return mapvocab.is_sea_height((high[i], high[i + 1], high[i + 2]))
+
+    n = 0
+    for x, y in _find(data, ck.width, f["rgb"]):
+        around = [(x + dx, y + dy) for dx, dy in card]
+        if not all(ck.in_grid(*q) for q in around):
+            continue
+        if not height_says_sea(x, y):
+            continue                       # a ford on land is simply a ford
+        if not all(ck.is_sea(*q) for q in around):
+            continue                       # a coastline crossing, which is right
+        n += 1
+        if n > ROW_MAX:
+            continue
+        yield Finding(
+            "feature.ford_in_sea", "warn",
+            f"The river crossing at {x},{y} has sea on all four sides and an "
+            f"altitude that reads sea itself. A ford is where a course is "
+            f"crossed on foot, so one in open water crosses nothing - and "
+            f"because a crossing is never sea whatever its height says, this "
+            f"tile is a hole of land in the ocean that nothing else reports.",
+            file=ck.rel("map_features.tga"), tile=(x, y), fix="ford_none",
+            what=f"{x},{y}")
+
+
 # ---------------------------------------------------------------------------
 # 6) heights - the ambiguous altitude, and Geomod's fix for it
 
@@ -1510,6 +1654,23 @@ FIXES: Dict[str, dict] = {
                 "calls land becomes (1,1,1). That is one step off black, land "
                 "beyond argument, and no visible change to the map.",
     },
+    # Of Phase 31's three rules this is the only one with a safe answer, and
+    # the other two are worth saying why. A four-way crossing is repaired by
+    # removing one arm, and which arm is the map author's intent rather than
+    # ours. A river with no source is repaired by painting one at the head of
+    # the course, and which end is the head needs map_heights.tga - the same
+    # second layer that put Geomod's "two pixels past the coastline" rule out
+    # of this phase's scope. A ford with sea on all four sides has one thing it
+    # can be, because the heights already say so and only the crossing colour
+    # was overriding them.
+    "ford_none": {
+        "label": "Clear fords that stand in open water",
+        "rule": "feature.ford_in_sea",
+        "file": "map_features.tga",
+        "what": "A river crossing with sea on all four sides becomes no "
+                "feature at all. The tile goes back to being the sea its "
+                "altitude already says it is; nothing else on the layer moves.",
+    },
     "resource_duplicate": {
         "label": "Delete duplicate resource lines",
         "rule": "strat.resource_duplicate",
@@ -1600,6 +1761,8 @@ def plan_fix(mod, codes: Sequence[str], cm: Optional[CampaignMap] = None,
 
     if "heights_black" in found and found["heights_black"]:
         _plan_heights(ck, p)
+    if found.get("ford_none"):
+        _plan_fords(ck, p, [f.tile for f in found["ford_none"] if f.tile])
     drop = sorted({f.line - 1 for code in ("resource_duplicate",
                                            "resource_position")
                    for f in found.get(code, ()) if f.line > 0})
@@ -1649,6 +1812,42 @@ def _plan_heights(ck: Check, p: FixPlan) -> None:
         return
     p.changes.append(f"map_heights.tga: {moved:,} pixel(s) over {len(tiles):,} "
                      f"tile(s) from (0,0,0) to (1,1,1)")
+
+
+def _plan_fords(ck: Check, p: FixPlan, tiles: Sequence[Tuple[int, int]]) -> None:
+    """Clear a ford that stands in open water, one pixel per tile.
+
+    ``map_features.tga`` is a ``W x H`` layer - one pixel *is* one tile - so
+    unlike :func:`_plan_heights` there is no block to fill and no corner to
+    keep consistent with its neighbours. The tile becomes ``none``, which is
+    what every other water tile on the layer already is, and the sea mask stops
+    subtracting it: the hole of land in the ocean closes.
+    """
+    if not tiles:
+        return
+    cm = ck.cm
+    try:
+        img = cm.layer("features").convert("RGB")
+        info = cm.info("features")
+    except MapError as exc:
+        p.errors.append(f"map_features.tga could not be read: {exc}")
+        return
+    none_rgb = mapvocab.feature("none")["rgb"]
+    px = img.load()
+    moved = 0
+    for tx, ty in tiles:
+        if 0 <= tx < img.width and 0 <= ty < img.height:
+            px[tx, ty] = none_rgb
+            moved += 1
+    if not moved:
+        return
+    try:
+        p.data[ck.rel("map_features.tga")] = encode(img, info)
+    except Exception as exc:                           # noqa: BLE001
+        p.errors.append(f"map_features.tga could not be re-encoded: {exc}")
+        return
+    p.changes.append(f"map_features.tga: {moved:,} river crossing(s) standing "
+                     f"in open water cleared to no feature")
 
 
 def _plan_strat(ck: Check, p: FixPlan, drop: Sequence[int]) -> None:

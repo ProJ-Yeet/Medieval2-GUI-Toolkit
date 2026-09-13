@@ -1,11 +1,59 @@
 # STATE - Medieval 2 GUI Toolkit
 _Updated: 2026-09-13 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
 the latest beta - after the M2EX map-ceiling fix, the `replace_record` blank
-line it turned up, the two bugs a second report brought in, and **Phase 40**,
-all committed and **not cut**. **Releasing is on-request only**: commit to
+line it turned up, the two bugs a second report brought in, and **Phases 40 and
+31**, all committed and **not cut**. **Releasing is on-request only**: commit to
 master and stop_
 
 ## Next up
+**Phase 31 is done - three rules, one repair, no web change, fixed 2026-09-13,
+beta line, committed and uncut.** `river.fourway` is a river tile with river on
+all four sides; `river.no_source` is a four-connected component with no white
+source anywhere along it; `feature.ford_in_sea` is a crossing whose own
+altitude reads sea and whose four neighbours do too. **All three find nothing
+on any of the five maps installed here**, which is the point of them - they are
+rules for a map being drawn, not faults anything ships. The whole set still
+runs on DaC in about 650 ms against the 659 measured before, so the one-second
+bar has lost nothing.
+
+**The scoping's numbers held this time.** DaC's 95 river components and Third
+Age Reforged's 86 came back exactly; two more maps were added to the
+measurement, `vanilla_kingdoms_uncompromised` at 73 and `Vanilla_Redux` at 46.
+
+**`feature.ford_in_sea` needed a half the write-up did not have.** "A cyan tile
+whose four neighbours are all sea" is what separates a ford in the ocean from a
+legitimate coastal crossing, and on its own it is not the defect: `sea_mask`
+subtracts **every** cyan pixel unconditionally, so the hole in the ocean only
+exists where the tile's **own** altitude reads sea. The rule asks both, and the
+message and the repair are true because it does.
+
+**One repair of the three, and the other two are refused on the record.** A
+four-way crossing is repaired by removing one arm, and which arm is the map
+author's intent; a sourceless river is repaired by painting a source at the
+head of the course, and which end is the head needs `map_heights.tga`, the same
+second layer that put Geomod's coastline rule out of scope. `ford_none` clears
+the crossing to no feature, the heights already say sea, and the suite asserts
+the sea mask closes over the tile afterwards. `map_features.tga` is one pixel a
+tile, so `_plan_fords` has no block to fill.
+
+**And the new rule found a flaw in the old fixtures.** All three existing river
+fixtures painted courses with no source pixel on them, so each began reporting
+two findings and tripped `broken(...)`'s "did breaking one thing report only
+that thing" check. Each now paints its source. `river.isolated` is better for
+it: it is a lone **source** pixel now, which is Mylae's check 4 and the vanilla
+`(175,14)` case the rule was measured against.
+
+`tests/test_mapcheck.py` is **104/105** against 93/94 before, the one failure
+being the documented `every finding carries a place to go and look`. Eighteen
+suites were run against a clean checkout of the previous commit as well as
+against this tree and every failing check name is identical in both.
+
+**Two things still to pass back to Mylae**, both from the scoping and both
+still true: vanilla trips his orphan-source check at image (175,14) and his
+port makes it an `error`, so his validator calls vanilla broken; and the tool
+he ported from cannot open either installed map, because both ship
+`map_features.tga` as RLE.
+
 **Phase 40 is done, and it was four defects rather than one - fixed 2026-09-13,
 both lines, committed and uncut.** The scoped fix is one line and it is the
 smallest of the four: `campaint.new_record_lines` wrote the resources line only
@@ -186,25 +234,25 @@ this turned up and did not fix.
 **Two blocks, set by the user on 2026-09-12 after rating 38 of 39 candidates:
 the whole campaign map first, then the mercenaries.** Everything else is in
 `ROADMAP.md`'s *Future roadmap*, rated and unscheduled, to be started when both
-blocks are done. Twenty sessions in all; **29 and 40 are done**, so eighteen
-are left and four of those are subreleases.
+blocks are done. Twenty sessions in all; **29, 40 and 31 are done**, so
+seventeen are left and four of those are subreleases.
 
-**Block one, the campaign map** - ~~29~~, ~~40~~, **31, 42, 41, 43**, 28a, 28b,
-33, 30, 34, 35, 36, 37a, 37b, 38.
+**Block one, the campaign map** - ~~29~~, ~~40~~, ~~31~~, **42, 41, 43**, 28a,
+28b, 33, 30, 34, 35, 36, 37a, 37b, 38.
 
 **And six sessions that are in neither block, added 2026-09-13** after the user
 asked for a pass over Mylae's non-map screens: Phases **44-48**, all six
 subreleases on both lines, sitting after block two until the user moves them.
 Write-ups and their own order table in `ROADMAP.md`.
 
-**Start with Phase 31, two river rules and a ford in the sea.** 40 led block
-one because it was the defect, and it is closed; 31 is next because it and 41
-both came out of Mylae's 2026-09-12 push and the user asked for both on the
-day. It shrank from four river rules to two when the diff was measured against
-our own - `river.rejoin` already catches the 2x2 block and `river.isolated`
-already catches the orphan white source - and gained a third that is ours
-rather than his, `feature.ford_in_sea`. Two things of his to pass back are in
-the sync note below.
+**Start with Phase 42, the art a clone does not get.** It is the second
+reported defect, which is what puts it in front of 41 and 43, and it is **not
+reproduced in the app** - ask which mod and which donor first. The copier is
+not at fault and that is measured: `_asset_hits` was run over all 31 DaC slots
+and misses nothing, and `want_art` defaults on. The donor simply has nothing to
+copy - Third Age Reforged has art for **0 of its 30 slots** under
+`fe_symbols_80`, and its 17 files there are named for vanilla slots the mod no
+longer uses. The phase is a per-location report, not a copier fix.
 
 **Then 42**, the second reported defect: cloning a faction leaves it with no
 `fe_symbols_80` symbol. The copier is not at fault - `_asset_hits` was run over
@@ -309,8 +357,9 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | Phase | Status | Note |
 |---|---|---|
 | 29 + B4 - the strat model viewer | **done** | Closed 2026-09-12, committed, **released 2026-09-12** as v2.3.2 and beta 2026-09-12c. The scoping was wrong about the root and right about everything above it: the art is not in a `.pack`, it is loose beside the stub as `<name>.tga.dds`, and `cas.texture_path` took the zero-byte `.tga` because it existed. Fixed at all five levels. New: `cas._has_bytes`, `icons.ArtUnreadable`, `icons.fault`, `png_bytes(strict=)`, `/model_texture` 415, `factions.packs_beside`, `factions.no_file_note`, and in `viewer3d.js` `uCutout`, `v3Degenerate`, `v3AskWhy`, `v3TexFault`, `v3FaultRows`. `tests/test_stratart.py` (40). |
+| 31 - two river rules and a ford in the sea | **done** | Closed 2026-09-13, committed, **not cut** (beta only). Three rules and one repair: `river.fourway` (river on all four sides), `river.no_source` (a four-connected component with no white source), `feature.ford_in_sea` (own altitude sea **and** four neighbours sea - the second half the scoping did not have, and without it the message and the repair are not true). All three find **nothing on any of the five installed maps**, which is what they are for. `ford_none` is the one repair with a safe answer; the other two need the map author's intent or `map_heights.tga`, and both refusals are written into `FIXES`. New: `_r_river_fourway`, `_r_river_no_source`, `_r_ford_in_sea`, `_plan_fords`, `FIXES["ford_none"]`. The three existing river fixtures painted sourceless courses and now paint their source. No web change - the panel is data-driven off `RULES` and `rep.fixes`. `tests/test_mapcheck.py` 104/105. |
 | 40 - the new province the engine cannot read | **done** | Closed 2026-09-13, committed, **not cut** (both lines when a cut happens). Four defects, one of them the scoped one. `campaint.new_record_lines` and `campmap.render_block` both produced the eight-line record, the second by dropping the line when the last resource was cleared; both write `none` now, which is what vanilla writes on 18 of 112, Vanilla Redux on 78 of 252 and `vanilla_kingdoms_uncompromised` on all 853. `none` read as a resource name was 931 false findings across two mods. And the indent reading lost DaC's ` Erebor_Province` to a stray leading space - **200 regions read as 199**, 517 painted tiles declared nowhere, and its settlement marker written into the source and a test as DaC's one orphan. New: `campmap.file_shape`, `campmap._resplit_runs`, `check_record(rec, vocab, shape)`, a `parse_block` retry for an indented name line. The inferred engine crash is **withdrawn**: DaC ships a short record and plays. `tests/test_campaint.py` 4c and 4d (185), `tests/test_campmap.py` 1 (+7), `tests/test_campedit.py` (139). |
-| 28-43 - the rest of the 2026-09-12 review | **scoped** | Eighteen sessions in two blocks, 40 having closed. **Block one, the campaign map:** 31 two river rules and a ford in the sea, 42 the art a clone does not get, 41 merge one faction's name pool, 43 playable/unlockable/nonplayable, 28a the right menu as a tab strip with Validate one of them, 28b the paint controls over the canvas and a tooltip that holds still, 33 T10 + G2 + G4 in one session, 30 the pink as a choice, 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
+| 28-43 - the rest of the 2026-09-12 review | **scoped** | Seventeen sessions in two blocks, 40 and 31 having closed. **Block one, the campaign map:** 42 the art a clone does not get, 41 merge one faction's name pool, 43 playable/unlockable/nonplayable, 28a the right menu as a tab strip with Validate one of them, 28b the paint controls over the canvas and a tooltip that holds still, 33 T10 + G2 + G4 in one session, 30 the pink as a choice, 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
 | 44-48 - the pass over Mylae's non-map screens | **scoped** | Six sessions, added 2026-09-13 at the user's request, in neither block and every one a subrelease on both lines. 44 the EDB's tree checked (his is the one validator he has and we do not), 45 the `hidden_resources` line, 46 cultures on a mode of its own with a four-tab form and the faction form on the same strip, 47a the six `export_descr_sounds_*` files on `sounds.py`'s own parser, 47b the 32 `descr_sounds_*` scripts on a grammar nothing here reads, 48 add and remove on the strings screen. Two of the seven things asked for produced no phase and a measurement instead: his traits and ancillaries have not moved since 2026-03-27, and his `.strings.bin` codec is wrong where ours is right. |
 | 24 - Make and unmake | done | Closed 2026-09-12, committed, **released 2026-09-12**. Closes G1, M15 and the roadmap. Deleting a province, with its land going whole to a neighbour it borders and its name coming out of every file 19b measured - and the campaign script listed, never written, for the reason a rename gives. Making a campaign, as a copy of one that works minus the compiled map, with its own header and its own menu keys. New: `unittransfer/regiondel.py` (`heirs`, `campaigns_reading`, `standing_on`, `plan`, `apply`, `view`), `unittransfer/campnew.py` (`sources`, `plan`, `apply`, `view`), `mapquery.drop_music_region`, `renames.mentions`, `campfiles.write_descriptions`, `GET /api/map/region_delete`, `POST /api/map/region_delete_plan\|_apply`, `GET /api/campnew`, `POST /api/campnew/plan\|apply`, `web/js/regiondel.js`, `web/js/campnew.js`. `tests/test_regiondel.py` (62), `tests/test_campnew.py` (52). |
 | B2-B3 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export. B4 went out inside 29. |
