@@ -398,8 +398,9 @@ change, so no cross-reference dangles.
 | **3.0.0** | 16a-16k, plus 17 | The campaign map editor, and the correction pass over it. Feature-complete and uncut. |
 | **3.1.0** | 18-21 | The twenty Now items: the campaign files that had no editor, the names nothing could follow, and the map screen's second pass. |
 | **3.2.0** | 22-24 | The seven Next items: placing things on the map, a map that looks like the campaign map, and making or unmaking a region or a campaign. |
-| next, block one | ~~29~~, 28, 33, 30, 34, 35, 36, 37a, 37b, 31, 38 | **The campaign map.** Ten sessions left, in that order. All beta except 38, which is a subrelease on both lines. 29 landed on 2026-09-12. |
+| next, block one | ~~29~~, 40, 31, 42, 41, 43, 28a, 28b, 33, 30, 34, 35, 36, 37a, 37b, 38 | **The campaign map.** Fifteen sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12. |
 | next, block two | 32a, 32b, 32c, 39 | **The mercenaries.** Four sessions. Beta except 39, which is both lines. |
+| after block two | 44, 45, 46, 47a, 47b, 48 | **The reference-tool pass of 2026-09-13.** Six sessions, every one a subrelease on both lines. Outside both blocks, and scheduled only because the user named the work. |
 | after that | the Future roadmap list | Rated and unscheduled. Three five-star items lead it: M17, M12 and M16. |
 | later | 25-27, and the Later table | Not scheduled. |
 
@@ -765,36 +766,52 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | 4 | **42** The art a clone does not get | S | **both** | reported |
 | 5 | **41** Merge one faction's name pool into another | S | **both** | upstream sync |
 | 6 | **43** Playable, unlockable, not playable | S | beta | asked for |
-| 7 | **28** The right menu becomes a menu | M | beta | an enabler |
-| 8 | **33** T10, G2 and G4 in one session | S x3 | beta | 5, 5, 5 |
-| 9 | **30** A missing texture without the pink | S | beta | reported |
-| 10 | **34** Add a climate zone | M | beta | 5 |
-| 11 | **35** Rebels right in place | M | beta | 5 |
-| 12 | **36** D1, change a region's colour | M | beta | 5 |
-| 13 | **37a** T7, the spawn export | M | beta | 5 |
-| 14 | **37b** T3, an FE zoom | M | beta | 5 |
-| 15 | **38** `descr_campaign_db.xml` | M | **both** | 4 |
+| 7 | **28a** The strip, and the groups behind it | M | beta | an enabler |
+| 8 | **28b** The toolbar over the canvas, and a steady tooltip | M | beta | asked for |
+| 9 | **33** T10, G2 and G4 in one session | S x3 | beta | 5, 5, 5 |
+| 10 | **30** A missing texture without the pink | S | beta | reported |
+| 11 | **34** Add a climate zone | M | beta | 5 |
+| 12 | **35** Rebels right in place | M | beta | 5 |
+| 13 | **36** D1, change a region's colour | M | beta | 5 |
+| 14 | **37a** T7, the spawn export | M | beta | 5 |
+| 15 | **37b** T3, an FE zoom | M | beta | 5 |
+| 16 | **38** `descr_campaign_db.xml` | M | **both** | 4 |
 
 ### Block two - the mercenaries
 
 | Order | Phase | Size | Line | Stars |
 |---|---|---|---|---|
-| 16 | **32a** The pool as a record, and one parser for it | M | beta | the main task |
-| 17 | **32b** The two directions, and the four gates resolved | M | beta | the main task |
-| 18 | **32c** Five rules, and the repair for the one that has a safe answer | M | beta | 5 (the repairs) |
-| 19 | **39** The engine ceilings | M | **both** | 4 and 3 |
+| 17 | **32a** The pool as a record, and one parser for it | M | beta | the main task |
+| 18 | **32b** The two directions, and the four gates resolved | M | beta | the main task |
+| 19 | **32c** Five rules, and the repair for the one that has a safe answer | M | beta | 5 (the repairs) |
+| 20 | **39** The engine ceilings | M | **both** | 4 and 3 |
 
-**Nineteen sessions, and six of them are subreleases.** 29, 40, 42, 41, 38 and
+**Twenty sessions, and six of them are subreleases.** 29, 40, 42, 41, 38 and
 39 touch something outside the campaign map, so each is a subrelease on both
-lines; the other thirteen are the beta alone. **29 is done** (2026-09-12) and
-took B4 with it; eighteen remain. **They are committed, not cut** - cut-as-it-lands was
+lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
+took B4 with it; nineteen remain. **They are committed, not cut** - cut-as-it-lands was
 suspended again on 2026-09-12 and a release now happens when the user asks for
 one.
+
+**Six more sessions were added on 2026-09-13 and none of them is in either
+block.** Phases 44 to 48 come from the user's pass over Mylae's non-map
+screens; all six are subreleases on both lines and all six sit after block two
+until the user moves them. They have their own order table in *Phases 44-48*
+below.
 
 ---
 # Phases 28-43 - the campaign map, then the mercenaries
 
 ## Phase 28 - The right menu becomes a menu
+
+**Split into 28a and 28b on 2026-09-13.** A second read of Mylae's map screen,
+asked for by the user, added two things to what this phase was already going to
+touch: the brush belongs over the canvas rather than beside it, and the tooltip
+moves. Neither is the strip, both are the same screen, and together they are a
+second session. 28a is the strip and the groups exactly as scoped; 28b is the
+two things that live over the canvas.
+
+### 28a - The strip, and the groups behind it
 
 `#cmSide` is a flat stack of sixteen panels: the mod header, the findings
 banner, and then Campaign, Find, Views, Check, Query, Paint, Markers, Events,
@@ -809,6 +826,20 @@ The shape already exists and is not to be written twice: `MINOR_TABS` and
 strip is the same widget with a different table. A tab is a **group** of
 panels, not one panel, because sixteen tabs is the column again laid on its
 side.
+
+**Validate is one of those tabs, and the user asked for it by name.** Mylae's
+map screen is `Strat`, `Validate` and `3D` across the top of the right column
+with the whole of his validation behind the middle one, and that placement is
+plainly better than ours: `#cmCheck` is a section in a stack of sixteen. So the
+grouping table gives the validator a tab of its own rather than a slot in a
+group, and the findings, the baseline stamp and the four filters go behind it
+together.
+
+**What goes behind that tab is already the larger half.** `mapcheck.py` has 32
+rules with a severity, a baseline and an auto-fix on some; his `mapValidator.jsx`
+and `mapFeaturesChecks.js` have eight checks between them, of which Phase 31 has
+measured the two we lack and taken them. So the thing worth copying here is
+where his validator sits on the screen, and not what is in it.
 
 **Three things have to be right or the strip is worse than the stack.**
 
@@ -834,10 +865,58 @@ second implementation. Collapse is a separate control from the drag and has to
 be reversible from the collapsed state, so the handle survives the collapse as
 a rail with the tab icons on it.
 
-Exit: the strip on top, the panels grouped behind it, a click that fills a
-panel switching to it, the drag, the collapse, and all three habits in
-`cmapLayerState` and therefore in a saved view. `tests/test_web_modules.py`
-takes the grouping table the way it takes `MODES`.
+Exit: the strip on top with Validate one of its tabs, the panels grouped behind
+it, a click that fills a panel switching to it, the drag, the collapse, and all
+three habits in `cmapLayerState` and therefore in a saved view.
+`tests/test_web_modules.py` takes the grouping table the way it takes `MODES`.
+
+### 28b - The toolbar over the canvas, and a tooltip that holds still
+
+**The brush belongs over the map.** `cpaintHtml` builds the whole paint panel
+into `#cmPaint`, a section of the side stack: the arm button, the five tools,
+the size and the shape, the target-layer `<select>`, the palette and the
+new-region wizard. Mylae's `MapPaintToolbar` is the same controls as a strip
+across the top of his canvas, and the reason that reads better survives the
+difference in stack: **a stroke is made with the eyes on the map**, and a
+control you look away from to reach is a control you lose the stroke to.
+
+**`.cmbar` is already that strip**, and it already carries Fit, 1:1, the two
+zooms, Names, Labels and Reset over `#cmStage`. So this is a second row on an
+existing toolbar rather than a new piece of furniture. What moves up is the arm
+button, the tool row, the size and shape, and the target layer. What stays in
+the panel is the palette, the wizard and the unsaved-stroke count, because a
+palette is a list you read and 28a is giving it a tab.
+
+**Two of our five tools have no counterpart in his row** and neither is worth
+losing to a copy of it: the water brush, which writes regions, heights and
+ground types together in the sea colours measured off this map, and a pipette
+that selects the region on the region layer instead of only taking a colour.
+His row is pencil, bucket and pipette, plus a heights mode that is our palette
+one level down.
+
+**The tooltip's rows already hold still; the box round them does not.** 17e's
+`.cmtiprow` is `grid-template-columns:11px 88px 1fr`, so the label column never
+shifts. Four other things do. `cmapTipHtml` writes a head of none, one or two
+lines depending on whether the tile is a marker, a province or the sea; `cmkAt`
+adds up to seven more lines for what stands on it; `cmapTipRow` returns nothing
+at all for a layer with no value at that tile, so the row count changes as the
+pointer crosses a layer's edge; and the box is `max-width:290px` with the value
+column on `1fr`, so a long province name widens it. The box then follows the
+cursor, so every one of those changes is a jump.
+
+**Every one of them is information his tooltip does not carry**, which is why
+the answer is a fixed frame and not a shorter readout. His is one header line
+and one row per loaded layer at `min-w-[180px]`, and it is steady because it
+says less. Ours keeps what it says and stops it moving: a head slot that
+reserves its height whether or not it has a line, a row written for every layer
+the manifest names (a layer with no value at this tile saying so, the way an
+unaligned one already does), the markers block capped at a fixed number of
+lines, and a fixed width in place of the maximum.
+
+Exit: the paint controls on `.cmbar` with the palette still in the panel, and a
+tooltip whose rows sit on the same pixel across two adjacent tiles that differ
+in what they carry. Whether the paint row is open goes in `cmapLayerState` with
+the rest, so a saved view puts it back.
 
 ## Phase 30 - A missing texture without the pink
 
@@ -1435,6 +1514,320 @@ installed map because both ship RLE TGAs.
 
 ---
 
+# Phases 44-48 - the pass over his non-map screens, 2026-09-13
+
+**Asked for by the user on 2026-09-13**, in seven parts: his validation and
+where it sits, his hidden-resource editor, whether our traits and ancillaries
+are still level with his, his map side panel and paint mode and tooltip, his
+cultures and factions panels, his strings editor, and his sound files.
+
+**Two of the seven produced no phase, and both for a reason worth keeping.**
+Traits and ancillaries have not moved on his side since March; the strings
+codec is wrong in his tool and right in ours. Both are written up under *The
+2026-09-13 pass, and the two parts of it that produced a measurement* below.
+The map side panel is **28a and 28b**, because that is the phase already going
+to touch the screen. The remaining four are here.
+
+**These four are outside both blocks.** The locked order is the campaign map,
+then the mercenaries, and nothing here is either: 44, 45 and 48 are the
+Buildings and Strings modules, 46 is Minor Files and Factions, 47 is a file
+family nothing in the toolkit opens. They are written up rather than rated
+because the user named them, and they sit after block two until the user says
+otherwise. All of them are **subreleases on both lines** - none touches the
+campaign map, so none is beta-only.
+
+| Order | Phase | Size | Line | Why |
+|---|---|---|---|---|
+| 21 | **44** The EDB's tree, checked | M | **both** | asked for |
+| 22 | **45** The hidden resources line | S | **both** | asked for |
+| 23 | **46** Cultures gets a screen, and two forms get a strip | M | **both** | asked for |
+| 24 | **47a** The six export sound files | M | **both** | asked for, and 3 stars |
+| 25 | **47b** The thirty-two sound scripts | L | **both** | asked for |
+| 26 | **48** The two rows the strings screen cannot add | S | **both** | asked for |
+
+## Phase 44 - The EDB's tree, checked
+
+**Our EDB checks are about recruitment and nothing else.**
+`buildings.line_checks` finds three things per building line: a unit that stops
+being recruitable further up the chain, the same unit twice in one level, and a
+divergence between a line and its city/castle twin. That is the half of the
+file the unit editor cares about. Nothing checks the **tree**: that a building
+name is unique, that a line has levels at all, that each level is reachable
+from the one below it, that an `upgrades` entry names a level that exists, that
+`convert_to` names a building that exists, that a
+`requires building_present_min_level` names a level that exists.
+
+**He has both halves of that and we have neither.** `edb/EDBValidator.jsx` is
+fifteen messages over the parsed tree and `export/ModValidator.jsx` is ten more
+of the same shape; together they are the one place in his tool that does
+something ours does not, which is the opposite of the finding every other audit
+of his has produced.
+
+**Six rules go in as stated, because each one is a reference that either
+resolves or does not.** Duplicate building name, a line with no levels, a level
+no `upgrades` entry reaches, an `upgrades` entry naming nothing, a `convert_to`
+naming nothing, a `building_present_min_level` naming nothing. Phase 12 already
+measured the ground under three of them: **all 601 current upgrade entries
+point forward at a level on their own line**, none backwards, none at itself,
+and `test_edb_tree` asserts `upgrade_name()` against every one. So the data a
+finding needs is computed already, and what is missing is the finding.
+
+**Four of his rules are measured first and probably do not ship as errors.**
+A level with `cost 0`, a level with `construction 0`, a level with no
+`factions` clause, and his three level-count ceilings. The rule this file keeps
+making is that a count from a wiki is not a fact about a mod: Phase 12 kept
+`guild_` at three levels as a hint because **19 of 19 real guild lines have
+exactly three**, and refused "the engine refuses a fourth" because that is a
+different claim. His "vanilla limit is 9" and "approaching the M2TWEOP limit at
+50" are the same shape. Measure all four across the four installed mods first;
+a rule that fires on a quarter of a shipped file is noise, and this validator
+has a baseline for the findings that are somebody else's.
+
+**It goes where the other checks go, not into a second engine.** `mapcheck.py`
+is the model down to the decorator: a `@rule` with a code, a label, a severity
+and a sentence, and a panel that lists what came back and offers a jump. The
+Buildings module already has the Code View to jump into. No rule is written
+twice in the browser.
+
+**And it is the first half of M17.** The five-star *crash and validation
+dashboard* is the complaint that we have more validators than any of the four
+reference tools and no single door to them. This adds one more validator; it
+also makes the EDB's entry in that door a real one rather than a recruitment
+rollup.
+
+Exit: six rules over the tree, four measured and then decided, in
+`buildings.py` on the `@rule` shape, on the Buildings screen with a jump into
+Code View, and a fixture per rule in `tests/test_buildings.py`.
+
+## Phase 45 - The hidden resources line
+
+**We read the line and nothing writes it.** `buildings.py` holds
+`hidden_resources` and `hidden_resources_line`, and `hidden_resources_line` has
+exactly one reference in the whole tree: the assignment that sets it. The list
+is already read four ways round - the `requires hidden_resource` clause
+picker's vocabulary, `edbvocab.regions`, the province panel's resource chips on
+the campaign map, and a `mapquery` fact - and a name can be added to none of
+them.
+
+**Phase 12 refused his editor and said what would make it worth having.**
+`HiddenResourceEditor.jsx` is add and remove with no check either way, and a
+hidden resource is named in two other places: `descr_regions.txt` says which
+province carries it, and `requires hidden_resource X` clauses throughout the
+EDB say what it gates. Removing one breaks both in silence, which is the
+hardest kind of EDB bug to see, because the building simply never becomes
+available.
+
+**The check that refusal asked for is already computed.** `edbvocab` builds the
+region rows per hidden resource, and the clause picker already has a *where
+does this bite* panel over them. So a removal can name every province that
+carries the resource and every clause that gates on it before it happens, which
+is the whole difference between his feature and one worth shipping.
+
+**The ceiling is reported with both numbers, and neither as a refusal.**
+TWCenter's *List of Hardcoded Limits* puts it at 63 or 64 and says extras
+crash; **Divide and Conquer ships 74**. Phase 12 deferred the feature partly on
+that, because warning about a limit three of three mods disprove is worse than
+saying nothing. The panel says the count, says what the note claims, and says
+that the installed mods pass it. It does not stop a save.
+
+**The write is one line.** A splice at `hidden_resources_line`, the way every
+other write in this module is a splice, so the 7,203 comment lines in the three
+EDBs stay where they are.
+
+Exit: add and remove on the `hidden_resources` line; a removal naming every
+province and every clause it would darken, and refused until that is
+acknowledged; the count and the two ceiling claims stated; backup and undo like
+every other write; `tests/test_buildings.py` asserting that everything outside
+the line round-trips byte for byte. This closes the hidden-resource half of the
+four-star *Mines and hidden resources* row, which keeps
+`descr_settlement_mechanics.xml`.
+
+## Phase 46 - Cultures gets a screen, and two record forms get a strip
+
+**The parser is not the gap.** `minorfiles.parse_cultures` already reads
+everything his `culturesParser.jsx` reads and two things it does not: the
+settlement plan beside the model and the card on every level, and the port
+ladder in the file's own order rather than as three fixed slots. Phase 10a took
+his `SETTLEMENT_TYPES` and `AGENT_TYPES` and his reading of the agent line as
+seven columns, all three measured correct, and refused his record split (he
+splits the file on `;;;;` banner lines, which merges two cultures on a file
+that has none) and his `offmapSettlement` / `offmapPort` defaults, which are
+invented vanilla paths never parsed from the file and written on every save.
+
+**The gap is the screen, and it is three things.**
+
+**One: cultures leaves the strip for a mode of its own.** Traits, Ancillaries,
+Guilds, Factions and Strings each have a `sub:true` entry in `MODES` and a
+`{mode:...}` row in `MINOR_TABS`, so their tab in the Minor Files strip
+switches mode rather than tab. Cultures is the one `{id:'cultures'}` row left
+that does not. Phase 10a made it a tab on the ground that `descr_cultures.txt`
+is "the same size of job" as rebels and religions; that stops being true the
+moment the form has four sections, which is what the rest of this phase does.
+Two lines in `core.js`, and a `loadCultures` that is `mfCultureForm` moved.
+
+**Two: the form gets the strip every other record form here has.** General,
+Settlements, Infrastructure, Agents. Ours is one scrolling form of three
+sections, and the ports are pushed into Code View with a note saying why:
+`port_land` and `port_sea` are a pair of lines per level, which is a section
+rather than a field, and a section is exactly what a tab is for. Infrastructure
+is where the fort, `fort_cost`, `fort_wall`, the fishing village, the three
+port levels and the watchtower go, and it is the tab that makes the port ladder
+editable at last.
+
+**Three: add a culture, by duplicating the one on screen.** His
+`handleAddCulture` deep-copies, renames and stops. Ours writes the record and
+then says what else a culture needs, because we can name it: the `{CULTURE}`
+key and the three `EMT_<CULTURE>_PRIEST` keys in the compiled text archive,
+which Phase 6 already writes; the factions in `descr_sm_factions.txt` that have
+to be moved onto it; and the settlement and agent art, which the form already
+shows and already says when it is missing. `factionclone.py` is the shape of a
+record that arrives in more than one file.
+
+**The faction form gets the same strip, and that is the whole of its half.**
+`facFormHtml` is one long form too, with its sections already separated: the
+record, the pictures, the movies, the horde, the findings. His `FactionsEditor`
+is five tabs over the same ground. Same widget, same argument, no parser work,
+so it belongs in this session rather than a fifth of its own. **Factions is
+already its own mode** and has been since Phase 11, reached from the strip the
+way Traits and Guilds are; what it is not is an entry in the burger menu, and
+neither are Traits, Ancillaries, Guilds or Strings. Promoting any of them is
+one decision about all five and it is the user's, not this phase's.
+
+**Two things are not taken.** His Extras tab generates
+`descr_offmap_models.txt` blocks out of the invented defaults above, and **no
+installed mod has an `offmap` line at all**; that file is a three-star row of
+its own and it will be parsed before it is written. And his note that the
+engine allows one new culture beyond vanilla's seven is an engine claim with no
+measurement here, so it goes to Phase 39 with the other ceilings or it is not
+said.
+
+Exit: cultures as a mode with a four-tab form, the port ladder editable,
+duplicate-a-culture writing the record and naming the four keys and the faction
+moves that go with it, the faction form on the same strip, and
+`tests/test_minorfiles.py` holding the byte-exact round trip it already holds.
+
+## Phase 47 - The sound scripts, which nothing here opens
+
+**Measured on the four installed mods, 2026-09-13.** Divide and Conquer ships
+**40 sound script files and 120,981 lines**; Third Age Reforged 40 and 117,194;
+Vanilla Redux 39 and 92,473; `vanilla_kingdoms_uncompromised` 40 and 131,200.
+They split three ways: **32** `descr_sounds_*.txt`, one `descr_sounds_db.xml`,
+and **seven** `export_descr_sounds_*.txt`. Every one of them is in `data/`, and
+all of them are plain text with CRLF. Nothing here opens any of them except
+`export_descr_sounds_units_voice.txt`, which is `sounds.py`.
+
+**His editor is not a port, and Phase 13 measured why.** His
+`KNOWN_SOUND_FILES` names fourteen files in `data/sounds/`; **four of the
+fourteen exist** (`_music`, `_units`, `_units_voice`, `_weapons`) and they are
+in `data/`, while the other ten are RTW-era or invented. Run over Divide and
+Conquer's 32 his parser round-trips **0 of 32** and loses 2,975 lines, because
+it takes any column-0 line without a space in it as a block label; in
+`descr_sounds_weapons.txt`, 3,855 lines, the only block it finds is the word
+`end`. The one thing worth carrying from that screen is its empty state, which
+says where the base sound files are, because M2TW ships them packed.
+
+**Two grammars, so two sessions.**
+
+### 47a - The six export files, on a parser we already have
+
+`export_descr_sounds_*.txt` is the indented `BANK:` / `accent` / `class` or
+`type` / `vocal` / `event` … `end` / `folder` tree that `sounds.py` already
+reads verbatim and splices. Six more files take it:
+`export_descr_sounds_soldier_voice.txt` (16,144 lines in DaC),
+`_stratmap_voice.txt` (16,155), `_units_battle_events.txt` (7,328),
+`_prebattle.txt` (8,400), `_advice.txt` (3,980) and `_narration.txt` (3). Two
+differences from the voice bank have to be read before anything is written:
+`_stratmap_voice` keys on `type Admiral` where the voice bank keys on
+`class General`, and an `event` line there can carry attributes
+(`mindist 0.75 priority 120 volume -20 probability .4`) that the voice bank's
+never does.
+
+**This is the three-star *three voice files* row, and it is cheaper than it was
+rated.** That row was an L on the size of the files alone. The parser exists,
+the splice exists, and `export_descr_sounds_prebattle.txt` is already written
+by `factionclone.py` as a per-faction block, so this is a session and a bit
+rather than more than one.
+
+### 47b - The thirty-two scripts, on a grammar nothing here has read
+
+`descr_sounds_*.txt` is a different shape: `DEFAULT:` directives with key and
+value attributes, named `event` blocks, `BANK:` sections, `unit <name>:<type>`
+selectors, `hit <type>` conditionals, and `folder` lines with samples under
+them. It is a grammar of its own and it deserves what Phase 7 gave triggers,
+which is a vocabulary and typed arguments, not a raw-line box. Phase 13
+recorded that and did not schedule it; this is the schedule.
+
+**Four of the thirty-two already have writers and keep them.**
+`descr_sounds_accents.txt` and `descr_sounds_music.txt` are faction-clone
+sites, `export_descr_sounds_prebattle.txt` is another, and
+`world/maps/base/descr_sounds_music_types.txt` is the campaign map's music type
+and one of 19b's rename sites. Those writers stay where they are; this phase
+reads the family and adds an editor beside them, it does not take them over.
+
+Exit for both: every file read and re-rendered byte for byte on all four
+installed mods, an editor over the blocks rather than the lines, backup and
+undo as everywhere else, and `tests/test_sounds.py` extended with the round
+trip per file.
+
+## Phase 48 - The two rows the strings screen cannot add
+
+**The backend already does it and the screen does not ask.** `strings.plan`
+takes `{edits, adds, removes}` and has since Phase 6, with both refusals
+already written: an untagged archive cannot take an add ("this archive's
+entries have no tags - nothing to add") and cannot take a remove ("removing one
+would renumber every entry after it"). `web/js/strings.js` posts `edits` and
+nothing else. So a key can be changed and never created or deleted, from a
+screen whose whole subject is the keys.
+
+**That is the one thing his `StringsBinEditor` does that ours does not**, and
+it is an afternoon: a new-row form on the list, a remove on a row, and the
+plan's own warning about the trailing tag index being carried through unchanged
+shown where the count changes.
+
+**His reorder is not taken.** `move up` and `move down` on an entry: a tagged
+`.strings.bin` stores its entries sorted and the game addresses them by tag, so
+there is no order to edit; an untagged one addresses by position, where a move
+renumbers every row after it, which is the reason our backend already refuses
+the remove on those four archives.
+
+**And the codec is not a port in either direction.** `stringsbin.py` records
+two faults in his that cost real files, both confirmed byte for byte against
+all 81 archives the test mods ship: he reads `count` as a `u16` plus a padding
+word where it is a `u32`, which reads half of any file past 65,536 entries and
+Third Age's `names.txt` already carries 20,757; and he writes a single zero
+word where the trailing tag index goes, which truncates a file that has one,
+and Third Age's `export_buildings` has 480 entries and 13,482 index strings.
+Worth passing back with the Phase 31 findings.
+
+Exit: add and remove on the strings screen over the plan that already accepts
+them, the two refusals surfaced as the sentences the backend already writes,
+and `tests/test_strings.py` covering both through the HTTP layer.
+
+## The 2026-09-13 pass, and the two parts of it that produced a measurement
+
+**Traits and ancillaries are still level, and the way to know is the date.**
+`src/components/traits/` and `src/components/ancillaries/` were last touched
+upstream at `4323ef9` on **2026-03-27**, and `src/components/shared/` - the
+trigger and condition half both of his editors use - at `ef523e3` on
+**2026-03-25**. `docs/upstream/audit-traits.md` and `audit-ancillaries.md` were
+both written against code newer than that, and both verdicts stand as written:
+every field he exposes we expose, his serialiser rewrites the whole file and is
+refused, his `Type` and `ExcludeCultures` dropdowns are hardcoded lists that
+337 of the installed mods' 350 real `Type` values fall outside, and his trigger
+half keeps each condition as a raw string so it has no vocabulary and no
+never-fires check. Nothing new to compare against. Re-check with
+`dev/reference/upstream_sync.py sync` before believing this a second time.
+
+**The strings codec goes the other way, and so does the map validator.** Three
+things are now worth passing back to him in one message rather than three: the
+`u16` count and the missing tag index in `stringsBinCodec.jsx` (Phase 48), the
+orphan-white-source severity that makes his own validator call vanilla broken
+at image (175,14), and that the standalone `map_features_checker.py` he ported
+from cannot open either installed map because both ship RLE TGAs (both
+Phase 31).
+
+---
+
 ---
 
 # Future roadmap - rated, and waiting on the two main tasks
@@ -1483,7 +1876,7 @@ other seven are below.
 | **B2 - delete a settlement, and move one between mods** | M | Assigning a settlement to a faction already works and B1 added the create. Missing: the delete, whose shape is `stratcamp._delete_splice`; a button on the panel for a province that has none; and the between-mods move, which is probably its own session. Phase 24's warning applies - a settlement that goes has characters, armies and a capital flag hanging off it. |
 | **B3 - insert and export one file at a time** | M | Mylae's tool pushes a file into, or pulls one out of, a mod on its own. Pieces exist - `POST /api/map/export`, 16g's per-faction TGA, `pack.py`'s unit import - and none of it is a general take-this-file-out. The user's own earlier words were "that isnt really needed tbh"; the four-star rating supersedes that. |
 | **Add a religion** | M | We edit the religion list in Minor Files, the EDB conditions and the religion columns on the region form. Missing: `descr_religions_lookup.txt`, and the must-sum-to-100 rule as a guard at **creation** rather than only as a validation afterwards. |
-| **Mines and hidden resources** | M | `descr_sm_resources.txt` is in Minor Files and the EDB conditions are ours. Missing: `descr_settlement_mechanics.xml`, and the hidden-resource ceiling of 63, which is a crash when crossed and belongs with Phase 39's other ceilings if that session has room. |
+| **Mines and hidden resources** | S | **Halved on 2026-09-13: the hidden-resources half is Phase 45**, which adds and removes on the EDB's own line with the two joins that make a removal safe. What is left here is `descr_settlement_mechanics.xml` and the ceiling of 63, which Divide and Conquer's 74 disproves as written and which belongs with Phase 39's other ceilings if that session has room. |
 
 ## Three stars
 
@@ -1504,7 +1897,7 @@ is worth picking up.
 | **T6 - export every tile as text** | M | Campaign-map work that did not rate high enough to schedule. We export pictures and never numbers; `mapquery`'s fact table is the join it needs. |
 | **D12 - export the project as a zip, and load one back** | M | `pack.py` already does this shape for a unit, import and conflict report included. |
 | **D13 - generate a horde start for a new faction** | M | 16j-2 already creates a faction with no settlement and no character, which is the shape vanilla's Mongols already are. This is the other half. |
-| The three voice files | L | `export_descr_sounds_soldier_voice.txt` (16,145 lines), `..._stratmap_voice.txt` (16,156) and `..._units_battle_events.txt` (7,329). `sounds.py` is the shape; the cost is the size. The accent tutorial names all three together, so they are one job or none. |
+| ~~The three voice files~~ | M | **Became Phase 47a on 2026-09-13**, with three more export files beside them and at M rather than L: `sounds.py` already reads that grammar, so the cost was the size and the size is not the parser. |
 | **M7 - import a campaign from another mod** | L | Unit Transfer's problem at campaign scale; `transfer.py` is the model. |
 | **Phase 25 - OSM backdrop and coastline tracer** | L | Campaign-map work at three stars. The write-up below stands; it is the first thing in the toolkit that touches the network, so it is opt-in and off by default. |
 | **Phase 26 - map resize, and create from scratch** | L | Campaign-map work at three stars. Phases 22 and 24 removed most of the original objection, so it is cheaper than when it was deferred. |

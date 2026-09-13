@@ -48,11 +48,16 @@ this turned up and did not fix.
 **Two blocks, set by the user on 2026-09-12 after rating 38 of 39 candidates:
 the whole campaign map first, then the mercenaries.** Everything else is in
 `ROADMAP.md`'s *Future roadmap*, rated and unscheduled, to be started when both
-blocks are done. Nineteen sessions in all; **29 is done**, so eighteen are left
-and five of those are subreleases.
+blocks are done. Twenty sessions in all; **29 is done**, so nineteen are left
+and six of those are subreleases.
 
-**Block one, the campaign map** - ~~29~~, **40, 31, 42, 41, 43**, 28, 33, 30,
-34, 35, 36, 37a, 37b, 38.
+**Block one, the campaign map** - ~~29~~, **40, 31, 42, 41, 43**, 28a, 28b, 33,
+30, 34, 35, 36, 37a, 37b, 38.
+
+**And six sessions that are in neither block, added 2026-09-13** after the user
+asked for a pass over Mylae's non-map screens: Phases **44-48**, all six
+subreleases on both lines, sitting after block two until the user moves them.
+Write-ups and their own order table in `ROADMAP.md`.
 
 **Start with Phase 40, the new province the engine cannot read.** It is a
 defect in shipped work, which is the rule that put 29 first: a province created
@@ -168,7 +173,8 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | Phase | Status | Note |
 |---|---|---|
 | 29 + B4 - the strat model viewer | **done** | Closed 2026-09-12, committed, **released 2026-09-12** as v2.3.2 and beta 2026-09-12c. The scoping was wrong about the root and right about everything above it: the art is not in a `.pack`, it is loose beside the stub as `<name>.tga.dds`, and `cas.texture_path` took the zero-byte `.tga` because it existed. Fixed at all five levels. New: `cas._has_bytes`, `icons.ArtUnreadable`, `icons.fault`, `png_bytes(strict=)`, `/model_texture` 415, `factions.packs_beside`, `factions.no_file_note`, and in `viewer3d.js` `uCutout`, `v3Degenerate`, `v3AskWhy`, `v3TexFault`, `v3FaultRows`. `tests/test_stratart.py` (40). |
-| 28, 30-39 - the rest of the 2026-09-12 review | **scoped** | Fourteen sessions in two blocks. **Block one, the campaign map:** 28 the right menu as a tab strip, 33 T10 + G2 + G4 in one session, 30 the pink as a choice, 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 31 four river rules, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
+| 28-43 - the rest of the 2026-09-12 review | **scoped** | Nineteen sessions in two blocks. **Block one, the campaign map:** 40 the province the engine cannot read, 31 two river rules and a ford in the sea, 42 the art a clone does not get, 41 merge one faction's name pool, 43 playable/unlockable/nonplayable, 28a the right menu as a tab strip with Validate one of them, 28b the paint controls over the canvas and a tooltip that holds still, 33 T10 + G2 + G4 in one session, 30 the pink as a choice, 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
+| 44-48 - the pass over Mylae's non-map screens | **scoped** | Six sessions, added 2026-09-13 at the user's request, in neither block and every one a subrelease on both lines. 44 the EDB's tree checked (his is the one validator he has and we do not), 45 the `hidden_resources` line, 46 cultures on a mode of its own with a four-tab form and the faction form on the same strip, 47a the six `export_descr_sounds_*` files on `sounds.py`'s own parser, 47b the 32 `descr_sounds_*` scripts on a grammar nothing here reads, 48 add and remove on the strings screen. Two of the seven things asked for produced no phase and a measurement instead: his traits and ancillaries have not moved since 2026-03-27, and his `.strings.bin` codec is wrong where ours is right. |
 | 24 - Make and unmake | done | Closed 2026-09-12, committed, **released 2026-09-12**. Closes G1, M15 and the roadmap. Deleting a province, with its land going whole to a neighbour it borders and its name coming out of every file 19b measured - and the campaign script listed, never written, for the reason a rename gives. Making a campaign, as a copy of one that works minus the compiled map, with its own header and its own menu keys. New: `unittransfer/regiondel.py` (`heirs`, `campaigns_reading`, `standing_on`, `plan`, `apply`, `view`), `unittransfer/campnew.py` (`sources`, `plan`, `apply`, `view`), `mapquery.drop_music_region`, `renames.mentions`, `campfiles.write_descriptions`, `GET /api/map/region_delete`, `POST /api/map/region_delete_plan\|_apply`, `GET /api/campnew`, `POST /api/campnew/plan\|apply`, `web/js/regiondel.js`, `web/js/campnew.js`. `tests/test_regiondel.py` (62), `tests/test_campnew.py` (52). |
 | B2-B3 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export. B4 went out inside 29. |
 | 25-27 | scoped, unscheduled | OSM backdrop, map resize, layer generators. |
