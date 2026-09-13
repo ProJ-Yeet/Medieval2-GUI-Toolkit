@@ -352,6 +352,12 @@ def _r_colour_cap(ck: Check) -> Iterable[Finding]:
     idx = ck.index
     if idx is None:
         return
+    # An engine ceiling, and M2EX replaces the table it is baked into, so on a
+    # mod marked for it this is not a finding. Dropped here rather than through
+    # `modflags.uncapped`, which filters by finding kind over a list of the
+    # record caps; this one is a map rule and has the mod in hand already.
+    if ck.cm.uncapped:
+        return
     used = len(idx.by_key)
     if used > mapvocab.MAX_REGION_COLOURS:
         yield Finding(

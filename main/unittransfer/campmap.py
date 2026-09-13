@@ -14,7 +14,9 @@ Four things live here, in the order the editor needs them:
 ``descr_terrain.txt``
     Five small blocks, and one of them is load-bearing: ``dimensions`` is the
     tile grid every other file is measured against, and the engine caps both
-    sides at 510.
+    sides at 510 - a cap in the vanilla executable, so a mod marked as running
+    on M2EX is not measured against it. Same for the 200 colours
+    ``map_regions.tga`` may carry. See :attr:`CampaignMap.uncapped`.
 
 The ten TGA layers
     Three different sizes off one grid, and getting the relationship wrong is
@@ -68,6 +70,7 @@ from __future__ import annotations
 
 import io
 import re
+from array import array
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -88,7 +91,23 @@ REGIONS_REL = f"{BASE_REL}/descr_regions.txt"
 RWM_REL = f"{BASE_REL}/map.rwm"
 
 #: The engine's ceiling on either side of the tile grid, per the arbiter.
+#:
+#: A ceiling in the vanilla executable, which is to say one M2EX replaces: a mod
+#: marked as running on it (:mod:`unittransfer.modflags`) is measured against
+#: nothing here. vanilla_kingdoms_uncompromised is 823x337 and plays.
 MAX_DIMENSION = 510
+
+#: How many distinct colours a label image can hold, which is a different number
+#: from :data:`mapvocab.MAX_REGION_COLOURS` and worth keeping apart from it. That
+#: one is the engine's ceiling on regions; this is how wide the index this module
+#: builds can be, and it is the width of the label rather than a rule about maps.
+#:
+#: 256 fits a byte, and while every map was inside the engine's 200 that is all
+#: the label ever needed to be. An M2EX map is not: the one that found this has
+#: 856 colours, so past 256 the labels are 16-bit and every reader of them goes
+#: through indexing, which does not care which. Nothing here walks 65,536
+#: regions - the cap is the label's width, not a claim about the engine.
+MAX_LABELS = 1 << 16
 
 #: ``size`` says how the layer's pixels relate to the tile grid.
 #:   ``tile``      W x H, one pixel per tile
@@ -591,9 +610,16 @@ class RegionIndex:
 
     width: int
     height: int
-    #: one byte per tile, the index into :attr:`colours`. The label image every
+    #: one label per tile, the index into :attr:`colours`. The label image every
     #: border, mask, recolour and hit test reads instead of RGB triples.
-    labels: bytes
+    #:
+    #: ``bytes`` at or under 256 colours and a 16-bit :class:`array.array` over
+    #: it (:data:`MAX_LABELS`). Every reader here subscripts it and gets an int
+    #: either way; the two that hand it to Pillow as a buffer - this module's
+    #: :func:`~unittransfer.mapquery.render` and
+    #: :func:`~unittransfer.regiondel._mask` - map it through a table first and
+    #: so do not care either.
+    labels: Sequence[int]
     colours: List[Rgb]
     regions: List[Region]
     by_key: Dict[int, Region] = field(default_factory=dict)
@@ -623,26 +649,38 @@ class RegionIndex:
         return self.labels[y * self.width + x]
 
 
-def _label_image(rgb: Image.Image) -> Tuple[bytes, List[Rgb], List[int]]:
-    """``(labels, colours, counts)`` - one byte per pixel, exactly.
+def _label_image(rgb: Image.Image, limit: int = 256
+                 ) -> Tuple[Sequence[int], List[Rgb], List[int]]:
+    """``(labels, colours, counts)`` - one label per pixel, exactly.
 
     Exact is the requirement, not fast. See the note in the module docstring
     about ``Image.quantize``; this pass is 61 ms on DaC and it is right.
+
+    ``limit`` is how many distinct colours the caller will accept, and it is the
+    caller's because the answer depends on the mod: 256 on the vanilla engine,
+    where the whole question is academic under its own 200-colour cap, and
+    :data:`MAX_LABELS` on a mod marked as running on M2EX. Past 256 the labels
+    are a 16-bit array instead of ``bytes`` - see :attr:`RegionIndex.labels`.
     """
     census = rgb.getcolors(maxcolors=1 << 20)
-    if census is None:                       # more colours than a byte can index
+    if census is None:                       # more than a label can index
         raise MapError("map_regions.tga has more than a million colours")
-    if len(census) > 256:
-        raise MapError(f"map_regions.tga has {len(census)} distinct colours; the "
-                       f"engine's ceiling is {mapvocab.MAX_REGION_COLOURS}")
+    if len(census) > limit:
+        raise MapError(
+            f"map_regions.tga has {len(census)} distinct colours and this map is "
+            f"read at {limit}"
+            + (f", the engine's own ceiling being {mapvocab.MAX_REGION_COLOURS}. "
+               f"M2EX replaces that ceiling: if this mod runs on it, mark it as "
+               f"M2EX on its Home card and the map will be read in full."
+               if limit <= 256 else "."))
     # most-used first, so the biggest regions get the low label numbers
     census.sort(key=lambda t: -t[0])
     colours = [c for _, c in census]
     counts = [n for n, _ in census]
     lut = {bytes(c): i for i, c in enumerate(colours)}
     raw = rgb.tobytes()
-    labels = bytes(map(lut.__getitem__,
-                       (raw[o:o + 3] for o in range(0, len(raw), 3))))
+    found = map(lut.__getitem__, (raw[o:o + 3] for o in range(0, len(raw), 3)))
+    labels = bytes(found) if len(colours) <= 256 else array("H", found)
     return labels, colours, counts
 
 
@@ -678,7 +716,7 @@ def sea_mask(heights_centres: Image.Image, features: Image.Image) -> bytes:
     return ImageChops.subtract(sea, crossing).tobytes()
 
 
-def _stats(labels: bytes, width: int, height: int, n: int):
+def _stats(labels: Sequence[int], width: int, height: int, n: int):
     """Bounding box, centroid and pixel count for every label, in one pass.
 
     One loop rather than four, because the loop is the cost: 180 ms over DaC's
@@ -710,7 +748,7 @@ def _stats(labels: bytes, width: int, height: int, n: int):
     return minx, miny, maxx, maxy, sumx, sumy, count
 
 
-def _anchor(labels: bytes, width: int, height: int, k: int,
+def _anchor(labels: Sequence[int], width: int, height: int, k: int,
             cx: int, cy: int, bbox) -> Tuple[int, int]:
     """A pixel of label ``k`` near ``(cx, cy)``, for hanging a name on.
 
@@ -741,8 +779,8 @@ def _anchor(labels: bytes, width: int, height: int, k: int,
 _CARDINALS = ((0, -1, "N"), (-1, 0, "W"), (1, 0, "E"), (0, 1, "S"))
 
 
-def _owner_of_marker(labels: bytes, colours: List[Rgb], width: int, height: int,
-                     x: int, y: int, region_keys) -> Optional[Rgb]:
+def _owner_of_marker(labels: Sequence[int], colours: List[Rgb], width: int,
+                     height: int, x: int, y: int, region_keys) -> Optional[Rgb]:
     """Which region a settlement pixel belongs to: any cardinal neighbour.
 
     Gigantus established that the engine looks only at N, W, E and S. Two
@@ -759,8 +797,9 @@ def _owner_of_marker(labels: bytes, colours: List[Rgb], width: int, height: int,
     return None
 
 
-def _owner_of_port(labels: bytes, colours: List[Rgb], width: int, height: int,
-                   x: int, y: int, sea: bytes) -> Optional[Tuple[Rgb, Tuple[int, int]]]:
+def _owner_of_port(labels: Sequence[int], colours: List[Rgb], width: int,
+                   height: int, x: int, y: int, sea: bytes
+                   ) -> Optional[Tuple[Rgb, Tuple[int, int]]]:
     """Which region a port pixel belongs to, by TWMapReader's dock rule.
 
     A cardinal direction is a *dock* if that neighbour is sea and the neighbour
@@ -808,16 +847,16 @@ def _owner_of_port(labels: bytes, colours: List[Rgb], width: int, height: int,
 
 
 def build_index(regions_img: Image.Image, sea: bytes,
-                records: Sequence[RegionRecord]) -> RegionIndex:
+                records: Sequence[RegionRecord], limit: int = 256) -> RegionIndex:
     """The whole region index off the regions layer and the sea mask.
 
     ``sea`` is one byte per tile from :func:`sea_mask`; it is needed here and
     not only in the validator because the engine's own region numbering depends
-    on it.
+    on it. ``limit`` is :func:`_label_image`'s.
     """
     rgb = regions_img.convert("RGB")
     width, height = rgb.size
-    labels, colours, counts = _label_image(rgb)
+    labels, colours, counts = _label_image(rgb, limit)
 
     marker_keys = {key(SETTLEMENT_RGB), key(PORT_RGB)}
     by_record = {r.rgb_key: r for r in records if r.rgb_line >= 0}
@@ -1079,9 +1118,12 @@ class CampaignMap:
         with a size mismatch nobody can place.
         """
         out: List[str] = []
-        if self.terrain.width > MAX_DIMENSION or self.terrain.height > MAX_DIMENSION:
+        if (not self.uncapped
+                and (self.terrain.width > MAX_DIMENSION
+                     or self.terrain.height > MAX_DIMENSION)):
             out.append(f"descr_terrain.txt: {self.terrain.width}x{self.terrain.height} "
-                       f"is over the engine's {MAX_DIMENSION} cap")
+                       f"is over the engine's {MAX_DIMENSION} cap. M2EX lifts it: "
+                       f"if this mod runs on M2EX, mark it so on its Home card")
         for ly in LAYERS:
             p = self.path(ly["code"])
             if not p.exists():
@@ -1135,11 +1177,28 @@ class CampaignMap:
         return self._sea
 
     @property
+    def uncapped(self) -> bool:
+        """Is this mod marked as running on M2EX, so the engine's caps are not?
+
+        Read through here rather than off the mod at each site, so the map half
+        of the toolkit asks the question in one voice. Two caps hang off it: how
+        wide the map may be (:data:`MAX_DIMENSION`) and how many colours its
+        region layer may carry - both numbers in the vanilla executable, which is
+        exactly what M2EX replaces. See :mod:`unittransfer.modflags`.
+        """
+        return bool(getattr(self.mod, "m2ex", False))
+
+    @property
+    def label_limit(self) -> int:
+        """How many distinct region colours this map's index will accept."""
+        return MAX_LABELS if self.uncapped else 256
+
+    @property
     def index(self) -> RegionIndex:
         if self._index is None:
             self.require_grid("regions")
             self._index = build_index(self.layer("regions"), self.sea,
-                                      self.regions.records)
+                                      self.regions.records, self.label_limit)
         return self._index
 
     @property
@@ -1770,7 +1829,12 @@ def layer_legend(cm: "CampaignMap", code: str) -> dict:
     out["total"] = sum(n for n, _ in census)
     climates = mapvocab.climate_index(cm.mod) if code == "climates" else {}
     blank_key = key(b["rgb"]) if b else None
-    cap = LEGEND_MAX_REGIONS if code == "regions" else LEGEND_MAX
+    # An M2EX map's region list is as long as it is: the reason the region layer
+    # has a ceiling of its own up there is that its colours ARE the vocabulary,
+    # and that argument does not stop holding at 256.
+    cap = LEGEND_MAX
+    if code == "regions":
+        cap = MAX_LABELS if cm.uncapped else LEGEND_MAX_REGIONS
     for n, rgb in census[:cap]:
         name, cname = _colour_name(cm, code, rgb, climates)
         out["colours"].append({"rgb": list(rgb), "key": key(rgb), "count": n,
@@ -1921,7 +1985,11 @@ def view(cm: "CampaignMap", name: str = "") -> dict:
                 "vocab": _vocab_view(cm),
                 "markers": {"settlement": list(SETTLEMENT_RGB),
                             "port": list(PORT_RGB)},
-                "findings": {"layers": cm.check_layers() or [str(exc)],
+                # `or` here, and the reason the index would not build was lost
+                # whenever check_layers had anything to say of its own - which
+                # on the map that found this it did. The reason picking is off
+                # is the one line on the manifest nobody can do without.
+                "findings": {"layers": [str(exc)] + cm.check_layers(),
                              "unclaimed": [], "undeclared_land": [],
                              "sea_colours": 0, "empty_records": [],
                              "orphan_settlements": [], "extra_settlements": [],

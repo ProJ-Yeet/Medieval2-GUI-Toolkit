@@ -1540,7 +1540,7 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
                 + ", ".join(gone[:6]) + ("…" if len(gone) > 6 else "")
                 + ". That is legal to write and fatal to play.")
         colours = len(cm.index.by_key)
-        if colours > mapvocab.MAX_REGION_COLOURS:
+        if colours > mapvocab.MAX_REGION_COLOURS and not cm.uncapped:
             p.warnings.append(
                 f"map_regions.tga now has {colours} colours and the engine's "
                 f"cap is {mapvocab.MAX_REGION_COLOURS}, markers included")

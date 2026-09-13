@@ -736,6 +736,17 @@ else:
         mod = Mod(root)
         print(f"\n  -- {mod.name}")
         cm = campmap.CampaignMap(mod)
+        # Every check below paints a named region onto another one, so all of
+        # this needs the region index - and the index is the one thing a map
+        # refuses. A map past a vanilla ceiling on a mod nobody has marked as
+        # M2EX does, and it refuses at `.index` rather than at the constructor
+        # above, so the guard has to be a read and not a try round the line
+        # before it.
+        try:
+            cm.index                      # noqa: B018 - the read that can refuse
+        except campmap.MapError as exc:
+            print(f"     [skip] there is nothing to paint on: {exc}")
+            continue
         s = campaint.PaintSession(mod, cm)
         base = mod.data / campmap.BASE_REL
 

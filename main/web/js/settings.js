@@ -134,6 +134,10 @@ async function openSettings(){
           ${VANILLA_FACTION_LIMIT} factions, ${VANILLA_UNIT_LIMIT} units, 9 levels on a trait, 8 effects on an
           ancillary, 32 recruitment slots in a building level. Ticked, those findings stop being reported for
           that mod - <b>and nothing else changes</b>: every other check still runs.</div>
+        <div class="count" style="margin-bottom:8px">Two of the engine's ceilings are about the map rather than
+          about a record, and the tick lifts those too: <b>510 tiles a side</b> and <b>200 colours in
+          map_regions.tga</b>. A map past either one is refused on an unmarked mod - the map screen would have
+          no region table and every tile would read <i>no region</i> - and read in full on a marked one.</div>
         <div class="count" style="margin-bottom:8px">This is <b>not</b> the M2TWEOP setting below. That one is
           about where a mod keeps extra unit files; this one is about the engine it runs on. A mod can be both,
           either or neither.</div>

@@ -16,7 +16,13 @@ Settings, and from then on:
 
   * the cap findings are dropped rather than shown (:func:`uncapped`), and
   * the 500-unit transfer warning is suppressed, the same way ticking it off on
-    the warning itself already did.
+    the warning itself already did, and
+  * the map is **read** past the engine's two map ceilings - 510 tiles a side
+    and 200 colours in ``map_regions.tga``. Those two are not findings that can
+    be dropped after the fact: over either of them the index does not build, and
+    a map screen with no region table says "no region" on every tile of a map
+    that plays. :attr:`unittransfer.campmap.CampaignMap.uncapped` is where the
+    map half of the toolkit asks this question, and it is the same flag.
 
 Nothing else changes. A cap finding is *only* the "you are over the engine's
 number" one - every other check on the same record (a missing text key, a

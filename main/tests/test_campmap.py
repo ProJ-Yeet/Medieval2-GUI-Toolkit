@@ -24,6 +24,7 @@ import struct
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -31,7 +32,7 @@ sys.path.insert(0, str(ROOT))
 from PIL import Image
 
 from tests import _realmod, _tmp
-from unittransfer import campmap, maptga, mapvocab
+from unittransfer import campmap, mapquery, maptga, mapvocab, regiondel
 from unittransfer.mod import Mod
 
 ok = []
@@ -275,8 +276,76 @@ try:
 finally:
     tmp.unlink(missing_ok=True)
 
-# ---- 6) real mods -------------------------------------------------------------
-print("\n6) every installed mod with a campaign map")
+# ---- 6) a map past the byte, on a grid written here ---------------------------
+print("\n6) more region colours than a byte can index (M2EX)")
+
+# 800 provinces, one tile each, none of them a marker colour. The engine's own
+# ceiling is 200 and the label image used to stop at 256 whatever the mod was;
+# vanilla_kingdoms_uncompromised is 823x337 with 856 colours and plays, so past
+# 256 the labels are 16-bit and everything that reads them has to not care.
+WIDE_W, WIDE_H = 40, 20
+WIDE = [(1 + i % 250, 1 + i // 250, 7) for i in range(WIDE_W * WIDE_H)]
+assert len(set(WIDE)) == WIDE_W * WIDE_H
+assert (0, 0, 0) not in WIDE and (255, 255, 255) not in WIDE
+
+wide_img = Image.new("RGB", (WIDE_W, WIDE_H))
+wide_img.putdata(WIDE)
+wide_recs = campmap.parse_regions("".join(
+    f"P{i}_Province\n\tSet{i}\n\tfac\n\treb\n\t{c[0]} {c[1]} {c[2]}\n\tres\n"
+    f"\t5\n\t1\n\treligions {{ catholic 100 }}\n"
+    for i, c in enumerate(WIDE))).records
+wide_sea = bytes(WIDE_W * WIDE_H)
+
+said = ""
+try:
+    campmap.build_index(wide_img, wide_sea, wide_recs, 256)
+except campmap.MapError as exc:
+    said = str(exc)
+check(f"unmarked, the index is refused and the refusal says what lifts it "
+      f"({said[:52]}...)",
+      "800 distinct colours" in said and "M2EX" in said and "Home card" in said)
+
+widx = campmap.build_index(wide_img, wide_sea, wide_recs, campmap.MAX_LABELS)
+check(f"marked, it builds all {len(widx.regions)} of them on 16-bit labels",
+      len(widx.regions) == WIDE_W * WIDE_H
+      and not isinstance(widx.labels, bytes)
+      and len(widx.labels) == WIDE_W * WIDE_H
+      and max(widx.labels) > 255)
+check("every tile answers with the region painted on it",
+      all(widx.at(x, y) is widx.by_key[campmap.key(WIDE[y * WIDE_W + x])]
+          for y in range(WIDE_H) for x in range(WIDE_W)))
+check("no colour is unclaimed and no record is left empty",
+      not widx.unclaimed and not widx.empty_records)
+wids = sorted(r.region_id for r in widx.regions if r.region_id >= 0)
+check(f"region ids are contiguous from zero ({len(wids)} numbered)",
+      wids == list(range(WIDE_W * WIDE_H)))
+check("and every label anchor is inside its own region",
+      all(widx.at(*r.anchor) is r for r in widx.regions))
+
+# The one thing 16-bit labels cannot be handed to Pillow for is the palette swap
+# a colouring is drawn with, so that path has a second form. Both must paint the
+# same picture; here the colour a label is given is the colour it already is.
+painted = mapquery._paint(widx, list(widx.colours))
+check("a colouring paints off wide labels, with no palette to swap",
+      painted.mode == "RGB" and painted.size == (WIDE_W, WIDE_H)
+      and all(painted.getpixel((x, y)) == WIDE[y * WIDE_W + x]
+              for y in range(WIDE_H) for x in range(WIDE_W)))
+
+nidx = campmap.build_index(wide_img.crop((0, 0, 8, 8)), bytes(64), wide_recs, 256)
+check("and a map inside the byte still takes the palette path it always did",
+      isinstance(nidx.labels, bytes)
+      and mapquery._paint(nidx, list(nidx.colours)).getpixel((3, 2))
+      == WIDE[2 * WIDE_W + 3])
+
+# a repaint reads its own tiles off the label image, whichever width it is
+wide_mask = regiondel._mask(SimpleNamespace(index=widx), campmap.key(WIDE[5]))
+check("and a delete's mask finds exactly the one tile that region owns",
+      wide_mask.size == (WIDE_W, WIDE_H)
+      and [i for i, v in enumerate(wide_mask.getdata()) if v] == [5])
+
+
+# ---- 7) real mods -------------------------------------------------------------
+print("\n7) every installed mod with a campaign map")
 
 mods = [m for m in _realmod.installed()
         if (m / "data" / campmap.REGIONS_REL).exists()]
@@ -293,13 +362,28 @@ else:
         check(f"descr_terrain.txt reads ({cm.terrain.width}x{cm.terrain.height}) "
               f"in {opened:.0f} ms",
               cm.terrain.width > 0 and cm.terrain.height > 0)
-        check("no side is over the engine's 510 cap",
-              cm.terrain.width <= campmap.MAX_DIMENSION
-              and cm.terrain.height <= campmap.MAX_DIMENSION)
-
+        # The 510 cap and the region-colour cap are both ceilings in the vanilla
+        # executable, and a mod marked as running on M2EX is not measured
+        # against either - see campmap.CampaignMap.uncapped.
+        over = (cm.terrain.width > campmap.MAX_DIMENSION
+                or cm.terrain.height > campmap.MAX_DIMENSION)
         complaints = cm.check_layers()
-        check(f"every layer matches its size rule{'' if not complaints else ': ' + '; '.join(complaints)}",
-              not complaints)
+        if over and not cm.uncapped:
+            # Not a fault in the map and not one in the toolkit: a map past a
+            # vanilla ceiling on a mod nobody has marked as running on M2EX.
+            # What is worth asserting is that the complaint names the thing
+            # that lifts it rather than stopping at the number.
+            check(f"{cm.terrain.width}x{cm.terrain.height} is over the engine's "
+                  f"{campmap.MAX_DIMENSION} cap and the complaint says what "
+                  f"lifts it: {'; '.join(complaints)}",
+                  any("M2EX" in c for c in complaints))
+        else:
+            check(f"no side is over the engine's 510 cap"
+                  f"{' (M2EX, so uncapped)' if cm.uncapped else ''}",
+                  cm.uncapped or not over)
+            check(f"every layer matches its size rule"
+                  f"{'' if not complaints else ': ' + '; '.join(complaints)}",
+                  not complaints)
 
         from unittransfer.keyblock import read_text
         raw = read_text(cm.regions.path, campmap.ENCODING)
@@ -314,7 +398,14 @@ else:
               all(r.rgb_line >= 0 for r in cm.regions.records))
 
         t0 = time.time()
-        idx = cm.index
+        try:
+            idx = cm.index
+        except campmap.MapError as exc:
+            check(f"the index is refused, and the refusal says what would lift "
+                  f"it: {exc}", "M2EX" in str(exc) and not cm.uncapped)
+            print("    (over a vanilla ceiling and not marked as running on "
+                  "M2EX, so nothing below is read for this mod)")
+            continue
         built = (time.time() - t0) * 1000
         colours = len(idx.colours)
         check(f"the region index builds in {built:.0f} ms "
@@ -322,8 +413,13 @@ else:
               f"{len(idx.settlements)} settlement px, {len(idx.ports)} port px)",
               colours > 1 and idx.regions)
         check(f"region colours are within the engine's {mapvocab.MAX_REGION_COLOURS} "
-              f"ceiling ({len(idx.regions)})",
-              len(idx.regions) <= mapvocab.MAX_REGION_COLOURS)
+              f"ceiling ({len(idx.regions)})"
+              f"{' (M2EX, so uncapped)' if cm.uncapped else ''}",
+              cm.uncapped or len(idx.regions) <= mapvocab.MAX_REGION_COLOURS)
+        check(f"the label image is {'16-bit' if colours > 256 else 'one byte'} "
+              f"a tile for {colours} colours",
+              len(idx.labels) == cm.terrain.width * cm.terrain.height
+              and isinstance(idx.labels, bytes) == (colours <= 256))
         ids = sorted(r.region_id for r in idx.regions if r.region_id >= 0)
         check(f"region ids are contiguous from zero ({len(ids)} numbered)",
               ids == list(range(len(ids))))

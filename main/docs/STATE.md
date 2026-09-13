@@ -1,9 +1,49 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-12 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
-the latest beta - after Phase 29, the strat model viewer, which took B4 with
-it. **Releasing is back to on-request only**: commit to master and stop_
+_Updated: 2026-09-13 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
+the latest beta - after the M2EX map-ceiling fix, which is committed and
+**not cut**. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**The map ceilings are the mod's engine's, not ours - fixed 2026-09-13, beta
+line, committed and uncut.** Reported from use: `vanilla_kingdoms_uncompromised`
+read *no region* on every tile. It is 823x337 with 856 colours in
+`map_regions.tga`, and the label image `campmap._label_image` builds was one
+byte a tile with a hard refusal over 256. The refusal raised out of `cm.index`,
+`campmap.view` fell to its degraded branch, the manifest carried
+`"regions": []`, and the browser's `byKey` was empty - so every tile honestly
+reported what the manifest said, which was nothing. The 510-a-side cap said the
+same thing about the same map in the layer findings.
+
+Both numbers are in the **vanilla executable**, which is what M2EX replaces, so
+both now hang off the mark a person already ticks on the Home card:
+`CampaignMap.uncapped` is the one place the map half asks, `label_limit` is what
+`build_index` is given, and past 256 the labels are a 16-bit `array("H")`.
+Everything that reads them subscripts and does not care; the two that handed the
+buffer to Pillow do - `mapquery.render`'s palette swap, now `mapquery._paint`
+with a second form, and `regiondel._mask`, now one `map` through a table as long
+as the label range. `mapcheck`'s `layer.colour_cap` and `campaint`'s paint
+warning are dropped for a marked mod the way the record caps already were.
+
+**Unmarked, the refusal now says what lifts it** and the manifest leads with it:
+`view`'s degraded branch used to write `cm.check_layers() or [str(exc)]`, so on
+this map - which had a layer complaint of its own - the reason the index would
+not build was thrown away. That one `or` is why the screen said "no region"
+with nothing anywhere saying why.
+
+Measured on the mod: index 472 ms, manifest 600 ms, adjacency 119 ms, legend
+856 rows in 23 ms, `_paint` 28 ms against 1 ms for DaC's palette path, `_mask`
+9 ms against 6. Driven through the running server end to end: 854 regions, 853
+settlements, 333 ports, and a click names `Kaiwa_Bikeyand_province` on every
+layer at once. `tests/test_campmap.py` has a new section 6, 800 one-tile
+provinces written here, and its real-mod loop no longer assumes a map is inside
+the vanilla ceilings.
+
+**The mod on this machine is still unmarked**, so the map screen still says no
+region on it - with the reason at the top of the side panel now. One tick on
+its Home card is the whole of it. Six suites that tracebacked on it were fixed
+on the way past; see **In-progress detail**, which also has the one real bug
+this turned up and did not fix.
+
 **Two blocks, set by the user on 2026-09-12 after rating 38 of 39 candidates:
 the whole campaign map first, then the mercenaries.** Everything else is in
 `ROADMAP.md`'s *Future roadmap*, rated and unscheduled, to be started when both
@@ -134,14 +174,64 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | 16-21 | done | 16-20a published on the beta line; 20b onward committed and uncut. The 3.0.0 and 3.1.0 numbers are still unassigned to a cut. |
 | 16-23 | done | Every write-up is in `ROADMAP_ARCHIVE.md`. 16-20a published on the beta line; everything from 20b to 24 went out in the 2026-09-12 cut. |
 ## In-progress detail
-**Clean.** Nothing is mid-flight. **All 103 suites were run one at a time
-after 29 and 98 passed.** The five that did not are the four documented DaC
-suites below, each on its documented number, plus `test_mapcheck`'s timing bar,
-which failed at 1,505 and 1,491 ms inside the batch and passes idle at 821, 666
-and 165 - exactly the behaviour that section describes. `test_campstrat` was
-also re-run against a stashed tree to confirm its three failures are the mod
-and not this phase; they are. `tests/test_stratart.py` is new (40) and covers
-all five levels of 29 plus B4.
+**Clean.** Nothing is mid-flight.
+
+**The 2026-09-12 line below - "98 of 103 passed" - was already stale before the
+M2EX fix, and the reason is worth keeping.** `vanilla_kingdoms_uncompromised`
+is installed, and **six suites tracebacked the moment they reached it**:
+`test_campedit`, `test_campaint`, `test_campview`, `test_mapquery`,
+`test_regiondel`, `test_stratobj`. All six were confirmed against a stashed
+tree, so none of it was the fix - the same `MapError` out of the same line, in
+the old wording. The cause underneath was one mistake made six times: **the
+skip guard was on `CampaignMap(mod)`, which is lazy and has never refused
+anything.** Every refusal those guards were written for comes out of `.index`,
+which is read much further down. The guard is now the read in all six, each
+one placed where the section actually needs the index - `test_campedit` keeps
+its text half running, because (a) and (b) need no index and are the checks
+such a file is most worth running.
+
+`test_campview` is the one that is not a guard: `campmap.view` **degrades
+rather than raising**, so a map it cannot index comes back as a manifest with
+an empty region table. The suite asserted that never happens. It now asserts
+what the degraded manifest is for - that its findings say why - and skips the
+rest of that mod.
+
+**Three of those six also redirect `config.SETTINGS_PATH` to a temp config
+partway through the file** (`test_mapquery`, `test_regiondel`,
+`test_stratobj`), which means every mod reads as **unmarked** on that side of
+the file whatever `settings.json` says. Each now says so in a comment beside
+its guard. It is why marking a mod as M2EX does not make those three read its
+map, and it is not a defect - the save test wants a clean config.
+
+**The twelve map suites, run one at a time on 2026-09-13 after the fix, with
+no mod marked beyond the one that already was:** no tracebacks anywhere.
+`test_campaint` 152/152, `test_campaignmap` 31/31, `test_mapquery` 109/109,
+`test_regiondel` 62/62, `test_maplayers` 46/46, `test_campnew` 55/55,
+`test_stratobj` 65/65, `test_campfiles` 86/86 all pass. `test_campmap` 102/106
+and `test_campview` 58/61 are the documented DaC numbers below. `test_mapcheck`
+89/90 is `every finding carries a place to go and look`, which fails the same
+way on a stashed tree and has nothing to do with this.
+
+**`test_campedit` 102/104 is a real bug, found by getting that far and left
+un-fixed on purpose.** `campmap.replace_record` pops trailing blank lines off
+the replacement block while still replacing the record's **whole span** - and a
+span runs to the line before the next record, so it includes the blank
+separator. That mod's `descr_regions.txt` is written with a blank line after
+every record, so **all 853 of 853 lose a line when edited**;
+`Glasteneugh_province` takes the file from 8,533 lines to 8,531. DaC and
+Reforged write theirs back to back, which is why the pop has never had anything
+to do. It is the region editor's write path and it breaks the byte-exact
+contract, so it wants its own session rather than a rider on a commit about map
+ceilings. The two failing checks are the acceptance test.
+
+**All 103 suites were run one at a time after 29 and 98 passed** (2026-09-12).
+The five that did not are the four documented DaC suites below, each on its
+documented number, plus `test_mapcheck`'s timing bar, which failed at 1,505 and
+1,491 ms inside the batch and passes idle at 821, 666 and 165 - exactly the
+behaviour that section describes. `test_campstrat` was also re-run against a
+stashed tree to confirm its three failures are the mod and not this phase; they
+are. `tests/test_stratart.py` is new (40) and covers all five levels of 29 plus
+B4.
 
 **The one-second bar in `test_mapcheck` has less headroom than it did.** 23a's
 rule put it at about 630 ms on DaC and 23b's second season at about 740. Idle on
@@ -155,6 +245,14 @@ Conquer numbers (77 port pixels, 13,153 newlines, 305 characters, 73,904 sea
 tiles) against an installed DaC that is a different build: `test_campmap`,
 `test_campstrat`, `test_campview`, `test_stratchar`. Stash and re-run before
 believing one of them.
+
+**And a suite that walks the installed mods meets a third map now**, which is
+neither DaC nor Reforged and is inside neither's assumptions: 823x337, 856
+region colours, blank lines between the records of its `descr_regions.txt`, 7
+port pixels the dock rule cannot decide, and religion totals of 95 and 99. A
+check written as "every installed mod does X" is a claim about the installed
+set, so read a new failure as the mod before reading it as the tool - and a map
+this one cannot read is a **skip with its reason printed**, never a traceback.
 
 **Three suites need node**: `tests/test_maplayers.py` (20a),
 `tests/test_mapgo.py` (20b) and `tests/test_maplabels.py` (20c). Without node on
@@ -186,6 +284,15 @@ the edits out from under it (21 did it once; see the archive).
   layer.** The engine reads a campaign's own copy of a map file where it ships
   one, and so does the screen; a texture built from the base map's ground layer
   is not Fellowship's.
+- `campmap.RegionIndex.labels` and `CampaignMap.uncapped` - **before touching
+  the label image, and before writing any check against an engine number on a
+  map.** The labels are `bytes` at or under 256 colours and a 16-bit
+  `array("H")` over it, so subscript them and never hand the buffer to Pillow -
+  `mapquery._paint` and `regiondel._mask` are the two that map through a table
+  instead, and they are the pattern. The 510-a-side cap and the 200-colour cap
+  are both in the vanilla executable, so both are off on a mod marked M2EX;
+  `uncapped` is the one place to ask, and `modflags.CAP_FINDINGS` is the record
+  half of the same rule.
 - `unittransfer/mapterrain.py` - **before anything needs a layer's colours as
   one byte a tile.** `Vocabulary.texture` is the one place the engine's four
   texture rules are applied; `_index` is the exact colour-to-index pass, in

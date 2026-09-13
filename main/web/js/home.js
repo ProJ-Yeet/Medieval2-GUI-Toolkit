@@ -203,6 +203,9 @@ function homeM2exHtml(m){
 It stops the toolkit reporting the engine's hardcoded ceilings for this mod -
 31 factions, ${VANILLA_UNIT_LIMIT} units, 9 trait levels, 8 ancillary effects,
 32 recruitment slots - because M2EX replaces the tables those numbers come from.
+It is also what lets the map screen READ a map past the engine's own two map
+ceilings: 510 tiles a side, and 200 colours in map_regions.tga. An unmarked mod
+over either of those is refused rather than half-read.
 Every other check is unaffected. This is NOT the M2TWEOP unit-folder setting.">
     <input type="checkbox" ${m.m2ex?'checked':''}
       onchange="homeSetM2ex('${q1(esc(m.name))}',this.checked)">

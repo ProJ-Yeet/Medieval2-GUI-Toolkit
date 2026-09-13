@@ -1872,24 +1872,49 @@ def _every_region(facts: "Facts", index) -> List[int]:
     return out
 
 
+def _paint(index, colours: List[Rgb]) -> Image.Image:
+    """One colour per label, laid over the label image. No per-pixel Python.
+
+    Under 257 labels the label image is already one byte per tile, so this is a
+    palette swap: the labels go in as a P-mode image, the colours go in as its
+    palette, and Pillow does the conversion.
+
+    An M2EX map's labels are 16-bit (see :attr:`campmap.RegionIndex.labels`) and
+    there is no 16-bit palette mode to swap, so each band is mapped through a
+    table of its own - one entry per label, not per byte value - and the three
+    are merged. Still no Python per tile; three passes instead of one, and a
+    ``map`` in the interpreter's C rather than a palette in Pillow's. Measured:
+    28 ms on vanilla_kingdoms_uncompromised (823x337, 856 colours) against 1 ms
+    for the palette path on DaC (510x487, 204).
+    """
+    size = (index.width, index.height)
+    if isinstance(index.labels, bytes):
+        img = Image.frombytes("P", size, index.labels)
+        flat: List[int] = []
+        for c in colours:
+            flat.extend(c)
+        flat.extend([0, 0, 0] * (256 - len(colours)))
+        img.putpalette(flat[:768])
+        return img.convert("RGB")
+    bands = []
+    for ch in range(3):
+        table = [c[ch] for c in colours]
+        bands.append(Image.frombytes(
+            "L", size, bytes(map(table.__getitem__, index.labels))))
+    return Image.merge("RGB", bands)
+
+
 def render(facts: "Facts", col: Colouring, borders: Optional[bool] = None,
            position: str = "edge", every: bool = False) -> Image.Image:
     """One colouring as an image the size of ``map_regions.tga``.
 
-    The label image is already one byte per tile, so this is a palette swap
-    rather than a pass over pixels: the labels go in as a P-mode image, the
-    group colours go in as its palette, and Pillow does the conversion. The
-    only per-tile loop is the border pass, and it only runs for a theme.
+    A table lookup per label rather than a pass over pixels - :func:`_paint` has
+    the two ways that is done. The only per-tile loop is the border pass, and it
+    only runs for a theme.
     """
     index = facts.cm.index
     colours, groups = _label_colours(facts, col.rgb_of)
-    img = Image.frombytes("P", (index.width, index.height), index.labels)
-    flat: List[int] = []
-    for c in colours:
-        flat.extend(c)
-    flat.extend([0, 0, 0] * (256 - len(colours)))
-    img.putpalette(flat[:768])
-    out = img.convert("RGB")
+    out = _paint(index, colours)
     if borders if borders is not None else col.borders:
         _draw_borders(out, index,
                       _every_region(facts, index) if every else groups,

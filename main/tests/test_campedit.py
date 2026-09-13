@@ -311,6 +311,19 @@ else:
                   len(a) == len(b) and len(diff) == 1
                   and diff[0] == target.farming_line)
 
+        # (c) onward reads the region index, and the index is the one thing a
+        # map refuses - a map past a vanilla ceiling on a mod nobody has marked
+        # as M2EX does. It refuses at `.index` and not at the constructor, so a
+        # guard at the top of the loop would be a guard on a call that never
+        # raises. This sits here rather than up there for a second reason: (a)
+        # and (b) are the text half, they need no index at all, and they are
+        # exactly the checks such a mod's hand-written file is worth running.
+        try:
+            cm.index                      # noqa: B018 - the read that can refuse
+        except campmap.MapError as exc:
+            print(f"     [skip] the rest of this mod needs the region index: {exc}")
+            continue
+
         # (c) the legend, on every layer the mod ships
         legends = {}
         for ly in campmap.LAYERS:

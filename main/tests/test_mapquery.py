@@ -671,6 +671,17 @@ else:
     for root in roots:
         mod = Mod(root)
         print(f"\n  -- {mod.name}")
+        # The map is read lazily and refuses at `.index`, not at the
+        # constructor, so a map this section cannot read has to be found here
+        # rather than tracebacked out of the first colouring that draws. A map
+        # past a vanilla ceiling on a mod nobody has marked as M2EX is one of
+        # them, and the config was redirected above, so on this side of the file
+        # EVERY mod reads as unmarked.
+        try:
+            campmap.CampaignMap(mod).index
+        except campmap.MapError as exc:
+            print(f"     [skip] the map will not read: {exc}")
+            continue
         f = mapquery.Facts(mod, campmap.CampaignMap(mod))
         v = mapquery.vocab(f)
         warm = mapquery.Facts(mod, campmap.CampaignMap(mod))

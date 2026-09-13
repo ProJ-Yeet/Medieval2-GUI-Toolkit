@@ -338,7 +338,14 @@ for root in roots:
     rmod = Mod(root)
     try:
         cm = campmap.CampaignMap(rmod)
+        cm.index                          # noqa: B018 - the read that can refuse
     except campmap.MapError as exc:
+        # The constructor is lazy and has never refused anything; every refusal
+        # this guard was written for comes out of `.index`, so it has to be the
+        # thing inside the try. A map past a vanilla ceiling on a mod nobody has
+        # marked as M2EX is one of them, and this section used to traceback on it
+        # rather than skip. Note that the config was redirected above, so on this
+        # side of the file EVERY mod reads as unmarked.
         print(f"  [skip] {root.name}: {exc}")
         continue
     for camp in campstrat.campaign_paths(rmod):

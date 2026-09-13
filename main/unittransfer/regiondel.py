@@ -131,18 +131,20 @@ def _mask(cm: CampaignMap, rgb_key: int) -> Optional[Image.Image]:
     """A one-byte-per-tile mask of the province's own colour, or None.
 
     Off the index's label image rather than off the pixels: the labels are
-    already built, already exact and already one byte a tile, so the repaint
-    below is two calls into Pillow's C instead of a walk over a quarter of a
-    million tiles in Python.
+    already built and already exact, so the repaint below is one ``map`` through
+    a table in the interpreter's C instead of a walk over a quarter of a million
+    tiles in Python. 6 ms on DaC, 9 ms on a 277,351-tile M2EX map.
+
+    Mapped rather than handed to Pillow whole, because an M2EX map's labels are
+    16-bit and ``L`` is a byte a pixel - see :attr:`campmap.RegionIndex.labels`.
+    The table is one entry per label either way.
     """
-    labels = [i for i, c in enumerate(cm.index.colours) if key(c) == rgb_key]
-    if not labels:
+    mine = {i for i, c in enumerate(cm.index.colours) if key(c) == rgb_key}
+    if not mine:
         return None
-    table = [0] * 256
-    for i in labels:
-        table[i] = 255
-    img = Image.frombytes("L", (cm.index.width, cm.index.height), cm.index.labels)
-    return img.point(table, "L")
+    table = [255 if i in mine else 0 for i in range(len(cm.index.colours))]
+    return Image.frombytes("L", (cm.index.width, cm.index.height),
+                           bytes(map(table.__getitem__, cm.index.labels)))
 
 
 def campaigns_reading(mod, cm: CampaignMap) -> List[dict]:

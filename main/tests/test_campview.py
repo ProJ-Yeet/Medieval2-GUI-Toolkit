@@ -166,6 +166,19 @@ else:
         man = campmap.view(cm, mod.name)
         built = (time.perf_counter() - t0) * 1000
         size = len(json.dumps(man))
+        # A manifest with no region table is a real outcome and not a failure:
+        # `campmap.view` degrades rather than raising, because the layer list is
+        # the only thing that can say WHICH file is wrong. A map past a vanilla
+        # ceiling on a mod nobody has marked as M2EX ends up here. What has to
+        # be true of it is that the findings say why - that is the whole point
+        # of degrading - and everything below this needs regions to check.
+        if man["width"] > 0 and not man["regions"]:
+            check(f"a manifest with no region table leads with the reason: "
+                  f"{(man['findings']['layers'] or ['NOTHING SAID'])[0]}",
+                  bool(man["findings"]["layers"]))
+            print(f"     [skip] no region table, so the rest of this mod is "
+                  f"not read")
+            continue
         check(f"the manifest builds in {built:.0f} ms and is {size / 1024:.0f} KB "
               f"({man['width']}x{man['height']}, {len(man['regions'])} regions)",
               man["width"] > 0 and man["regions"] and size < 400_000)

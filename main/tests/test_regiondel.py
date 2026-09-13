@@ -575,6 +575,12 @@ for root in _realmod.installed():
         rcm = campmap.CampaignMap(rmod)
         if not rcm.regions.records:
             continue
+        # `.index` is where a map refuses, not the constructor - so a map this
+        # section cannot read is found here rather than tracebacked out of
+        # `heirs` below. A map past a vanilla ceiling on a mod nobody has marked
+        # as M2EX is one of them, and the config was redirected above, so on
+        # this side of the file EVERY mod reads as unmarked.
+        rcm.index                         # noqa: B018 - the read that can refuse
     except Exception:                                          # noqa: BLE001
         continue
     # a province with a neighbour and a settlement: the ordinary case
