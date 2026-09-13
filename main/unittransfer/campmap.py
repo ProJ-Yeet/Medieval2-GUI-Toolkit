@@ -2262,11 +2262,33 @@ def record_text(rf: RegionsFile, rec: RegionRecord) -> str:
 
 
 def replace_record(rf: RegionsFile, rec: RegionRecord, block: str) -> str:
-    """The whole file with one record's lines swapped for ``block``."""
+    """The whole file with one record's lines swapped for ``block``.
+
+    ``block`` goes in as it is, and that is the whole of the contract. The span
+    this replaces runs to the line before the next record's header, so it
+    carries the record's trailing comments and its blank separator, and
+    :func:`record_text` hands those back out again. Putting a record back
+    unchanged has to return the file's own bytes: it is what :func:`plan_region`
+    tests to decide there is nothing to change, and what "one field edited
+    changes exactly one line" stands on.
+
+    It did not. This used to pop every blank line off the end of ``block``,
+    which against the three maps it was written for was a no-op - vanilla, DaC
+    and Third Age Reforged all write their records back to back - and on a file
+    with a blank line after each record took one out per save. Every one of
+    vanilla_kingdoms_uncompromised's 853 records has one, so an edit there
+    shortened the file by a line and a no-op save reported a change.
+
+    What the pop was really carrying is the delete: :mod:`unittransfer.regiondel`
+    removes a record by handing in ``""``, and ``_split_lines("\\n")`` is one
+    empty line rather than no lines. So that is the test now - a block with
+    nothing but blank space in it takes the whole span out, and anything else is
+    spliced verbatim, blank separator included.
+    """
     first, last = rec.span
     body, _, _ = _split_lines(block if block.endswith("\n") else block + "\n")
-    while body and not body[-1].strip():
-        body.pop()
+    if not any(ln.strip() for ln in body):
+        body = []
     lines = rf.lines[:first] + body + rf.lines[last + 1:]
     return rf.newline.join(lines) + (rf.newline if rf.trailing_newline else "")
 

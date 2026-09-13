@@ -264,6 +264,44 @@ check("and each field's span is the one line it came from",
       spans["name"] == [[1, 1]] and spans["religions"] == [[10, 10]]
       and all(len(v) == 1 and v[0][0] == v[0][1] for v in spans.values()))
 
+# A file that separates its records with a blank line. None of the three maps
+# this was written against does; vanilla_kingdoms_uncompromised does, on all 853
+# of its records. A record's span runs to the line before the next record's
+# header, so the separator is INSIDE it - `record_text` hands it out and
+# `replace_record` has to put it back. It used to pop it off instead, which took
+# a line out of the file on every save and made a no-op save look like a change.
+SPACED = (RECORD + "\r\n"
+          + RECORD.replace("Dunland", "Enedwaith") + "\r\n"
+          + RECORD.replace("Dunland", "Rohan") + "\r\n")
+sf = campmap.parse_regions(SPACED)
+check("three records read out of a file that separates them with a blank line",
+      [r.name for r in sf.records] == ["Dunland_Province", "Enedwaith_Province",
+                                       "Rohan_Province"]
+      and sf.serialise() == SPACED)
+check("and every record's span carries the blank line after it",
+      all(not sf.lines[r.span[1]].strip() for r in sf.records))
+off = [r.name for r in sf.records
+       if campmap.replace_record(sf, r, campmap.record_text(sf, r)) != SPACED]
+check(f"each of them put back unchanged returns the whole file's bytes"
+      f"{'' if not off else ': ' + str(off)}", not off)
+
+mid = sf.records[1]
+edited = campmap.replace_record(
+    sf, mid, campmap.render_block(campmap.record_text(sf, mid), {"farming": 4}))
+a, b = SPACED.split("\r\n"), edited.split("\r\n")
+check(f"one field edited on the middle one changes one line of {len(a)} and does "
+      f"not shorten the file",
+      len(a) == len(b)
+      and [i for i, (x, y) in enumerate(zip(a, b)) if x != y] == [mid.farming_line])
+# the case the pop was really carrying: regiondel deletes by handing in "", and
+# _split_lines("\n") is one empty line rather than none
+check("and a delete takes the whole span, blank separator included, rather than "
+      "leaving an empty line where the record was",
+      campmap.replace_record(sf, mid, "").split("\r\n")
+      == a[:mid.span[0]] + a[mid.span[1] + 1:]
+      and campmap.replace_record(sf, mid, "   \r\n\r\n")
+      == campmap.replace_record(sf, mid, ""))
+
 
 # ---- 4) every real map -------------------------------------------------------
 print("\n4) every installed map: legends, probes, and every record re-rendered")

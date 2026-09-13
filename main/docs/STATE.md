@@ -1,7 +1,8 @@
 # STATE - Medieval 2 GUI Toolkit
 _Updated: 2026-09-13 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
-the latest beta - after the M2EX map-ceiling fix, which is committed and
-**not cut**. **Releasing is on-request only**: commit to master and stop_
+the latest beta - after the M2EX map-ceiling fix and the `replace_record` blank
+line it turned up, both committed and **not cut**. **Releasing is on-request
+only**: commit to master and stop_
 
 ## Next up
 **The map ceilings are the mod's engine's, not ours - fixed 2026-09-13, beta
@@ -212,17 +213,34 @@ and `test_campview` 58/61 are the documented DaC numbers below. `test_mapcheck`
 89/90 is `every finding carries a place to go and look`, which fails the same
 way on a stashed tree and has nothing to do with this.
 
-**`test_campedit` 102/104 is a real bug, found by getting that far and left
-un-fixed on purpose.** `campmap.replace_record` pops trailing blank lines off
-the replacement block while still replacing the record's **whole span** - and a
-span runs to the line before the next record, so it includes the blank
-separator. That mod's `descr_regions.txt` is written with a blank line after
-every record, so **all 853 of 853 lose a line when edited**;
-`Glasteneugh_province` takes the file from 8,533 lines to 8,531. DaC and
-Reforged write theirs back to back, which is why the pop has never had anything
-to do. It is the region editor's write path and it breaks the byte-exact
-contract, so it wants its own session rather than a rider on a commit about map
-ceilings. The two failing checks are the acceptance test.
+**`replace_record` was eating a blank line per save, and that is fixed**
+(2026-09-13, the session after the one that found it). It popped every trailing
+blank line off the replacement block while still replacing the record's **whole
+span** - and a span runs to the line before the next record's header, so it
+includes the blank separator. `vanilla_kingdoms_uncompromised`'s
+`descr_regions.txt` puts a blank line after every record, so **all 853 of 853
+lost a line when edited**, and a **no-op save reported a change and wrote a
+shortened file**, because `plan_region` decides there is nothing to do by
+comparing `replace_record`'s output against the file. DaC and Reforged write
+their records back to back, which is why the pop never had anything to do.
+
+**What the pop was really carrying is the delete.**
+`regiondel` removes a record by handing in `""`, and `_split_lines("\n")` is one
+empty line rather than none - so without the pop a delete left a blank line
+where the record had been. That is the case, so that is the test now: a block
+with nothing but blank space in it takes the whole span out, and anything else
+is spliced verbatim. The span itself is untouched; `record_text` is documented
+to hand out the comments and blank lines a record carries and that is still
+true.
+
+Checked over every record of all three installed maps, not just the two the
+suite samples: 1,251 records re-render byte-exact, put back unchanged return the
+file's own bytes, and change exactly one line when one field is edited; a delete
+still drops the whole span. On the mod itself a no-op save on
+`Riba_Raudones_province` now answers **"nothing to change"** and writes nothing.
+`tests/test_campedit.py` section 3 has the regression, on a three-record file
+written there rather than on an installed mod - it fails on the old code with no
+mod present at all.
 
 **All 103 suites were run one at a time after 29 and 98 passed** (2026-09-12).
 The five that did not are the four documented DaC suites below, each on its
@@ -284,6 +302,12 @@ the edits out from under it (21 did it once; see the archive).
   layer.** The engine reads a campaign's own copy of a map file where it ships
   one, and so does the screen; a texture built from the base map's ground layer
   is not Fellowship's.
+- `campmap.record_text` and `campmap.replace_record` - **before splicing a
+  record back into a file.** A record's span runs to the line before the next
+  record's header, so it owns the comments and the blank separator after it;
+  hand those back or the file loses a line every save, and `plan_region`'s
+  "nothing to change" - which is `replace_record`'s output against the file -
+  starts lying. An all-blank block is the delete and takes the span with it.
 - `campmap.RegionIndex.labels` and `CampaignMap.uncapped` - **before touching
   the label image, and before writing any check against an engine number on a
   map.** The labels are `bytes` at or under 256 colours and a 16-bit
