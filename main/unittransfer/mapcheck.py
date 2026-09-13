@@ -474,8 +474,9 @@ def _r_record_fields(ck: Check) -> Iterable[Finding]:
     enforces them as somebody types, and running a second copy of them here is
     how the two would come to disagree. This is the same call the panel makes.
     """
+    shape = campmap.file_shape(ck.cm.regions)
     for rec in ck.cm.regions.records:
-        for f in campmap.check_record(rec, ck.vocab):
+        for f in campmap.check_record(rec, ck.vocab, shape):
             yield Finding("region.record", "fatal" if f["fatal"] else "warn",
                           f"{rec.name}: {f['message']}",
                           file=ck.rel("descr_regions.txt"), line=f["line"],

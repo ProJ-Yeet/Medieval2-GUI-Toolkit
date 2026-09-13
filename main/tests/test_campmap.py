@@ -119,6 +119,43 @@ check("the wasteland short form survives the same reading, with no settlement "
       len(flat_waste.records) == 3 and flat_waste.records[2].wasteland
       and flat_waste.records[2].rgb == (70, 80, 90))
 
+# Phase 40. A name line with a stray space in front of it is body to the indent
+# reading, so the record before it runs on and swallows it whole. Measured on
+# the installed Divide and Conquer, which writes ` Erebor_Province` with one
+# space: the file read as 199 records where the mod has 200, the swallowed
+# record's twenty lines parsed clean and reported no problems, and Erebor's 517
+# painted tiles came out of here as land declared nowhere - no name in the
+# hover, nothing to click, and a fatal region.undeclared about a province that
+# plays. Two colour lines in one record is the signal, and no other line of the
+# record is three numbers.
+RUNON = NINE + " " + TEN.lstrip()
+ro = campmap.parse_regions(RUNON)
+check("a record whose name line carries a stray space is still its own record",
+      len(ro.records) == 2 and [r.name for r in ro.records]
+      == ["Alpha_Province", "Beta_Province"])
+check("...with every field its own, not the previous record's",
+      (ro.records[1].legion, ro.records[1].settlement, ro.records[1].rgb,
+       ro.records[1].triumph, ro.records[1].farming, ro.records[1].resources)
+      == ("Beta_Legion", "Beta", (40, 50, 60), 5, 1, ["iron"]))
+check("...and the record in front of it keeps its own nine lines and its colour",
+      ro.records[0].rgb == (10, 20, 30)
+      and ro.records[0].span == (0, 8) and not ro.records[0].problems)
+check("the run-on file still round trips byte for byte",
+      ro.serialise() == RUNON)
+check("a wasteland swallowed the same way comes back too, still the last entry "
+      "and still short of a settlement",
+      [(r.name, r.wasteland) for r in campmap.parse_regions(
+          NINE + " " + WASTE.lstrip()).records]
+      == [("Alpha_Province", False), ("Wasteland_Province", True)])
+check("three records run together are three records, not one",
+      len(campmap.parse_regions(
+          NINE + " " + TEN.lstrip() + "  " + NINE.lstrip()
+          .replace("Alpha", "Gamma").replace("10 20 30", "11 21 31")).records) == 3)
+check("and a file the indent already reads correctly is not re-split: the "
+      "three forms above are untouched",
+      len(campmap.parse_regions(NINE + TEN + WASTE).records) == 3)
+
+
 bom = campmap.parse_regions("﻿" + NINE)
 check("a byte-order mark is not part of the first region's name",
       bom.records[0].name == "Alpha_Province"
@@ -567,9 +604,15 @@ else:
             check("198 records, 197 of them in the legion form",
                   len(cm.regions.records) == 198
                   and sum(1 for r in cm.regions.records if r.legion_line >= 0) == 197)
-            check("the one settlement pixel standing in an undeclared region is "
-                  "reported, not silently attached",
-                  idx.orphan_settlements == [(339, 65)])
+            # Phase 40. This read as one orphan, at image (339,65), and was
+            # written down here as a fact about DaC. It was a fact about this
+            # module: the marker is Erebor's, and ` Erebor_Province` has a
+            # stray space in front of its name, so the record before it
+            # swallowed it and the colour under the marker was declared
+            # nowhere. Every marker on this map has an owner.
+            check(f"every settlement pixel stands in a region the file "
+                  f"declares ({len(idx.orphan_settlements)} orphaned)",
+                  idx.orphan_settlements == [])
             feat = cm.layer("features").convert("RGB")
             strays = [c for n, c in feat.getcolors(maxcolors=1 << 20)
                       if mapvocab.feature_at(c) is None]

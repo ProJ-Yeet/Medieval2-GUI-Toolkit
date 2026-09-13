@@ -719,6 +719,120 @@ shutil.rmtree(tmp_b, ignore_errors=True)
 shutil.rmtree(tmp, ignore_errors=True)
 
 
+# ---- 4c) Phase 40: the province with no resources ---------------------------
+print("\n4c) a province created with no resources is still a whole record")
+
+# The record is positional, and `new_record_lines` used to write the resources
+# line only when the list was non-empty - so a province created without one
+# reached descr_regions.txt a line short of every neighbour and the triumph
+# value sat where the engine reads resources. Nothing here objected: the parser
+# is anchored on the R G B line rather than on offsets, so it read the short
+# record back correctly and the round trip agreed with itself.
+#
+# `none` is not a stand-in for the empty case, it IS the empty case: vanilla
+# writes it on 18 of its 112 records, Vanilla Redux on 78 of 252 and
+# vanilla_kingdoms_uncompromised on all 853 of its own.
+_R40 = ("A_Province\r\n\tAtown\r\n\tengland\r\n\tbrigands\r\n\t10 20 30\r\n"
+        "\tgold, iron\r\n\t5\r\n\t4\r\n\treligions { catholic 100 }\r\n"
+        "B_Province\r\n\tBtown\r\n\tfrance\r\n\tbrigands\r\n\t40 50 60\r\n"
+        "\tsilver\r\n\t5\r\n\t3\r\n\treligions { catholic 100 }\r\n")
+rf40 = campmap.parse_regions(_R40)
+spec40 = {"name": "C_Province", "settlement": "Ctown", "rgb": [11, 12, 13],
+          "faction": "slave", "rebels": "brigands", "triumph": 5, "farming": 4,
+          "religions": {"catholic": 100}}
+
+body40 = campaint.new_record_lines(rf40, dict(spec40, resources=[]))
+check(f"a province with no resources is nine lines, not eight ({len(body40)})",
+      len(body40) == 9)
+check("...and the sixth of them is the resources line, reading `none`",
+      body40[5].strip() == "none")
+check("a province WITH resources writes them and is the same nine lines",
+      campaint.new_record_lines(rf40, dict(spec40, resources=["gold", "iron"]))
+      == body40[:5] + ["\tgold, iron"] + body40[6:])
+
+back40 = campmap.parse_regions(campaint.regions_with_record(
+    rf40, dict(spec40, resources=[]))).by_name("C_Province")
+check("the file it lands in parses it back with no resources and every other "
+      "field in its own place",
+      back40 is not None and back40.resources == [] and back40.triumph == 5
+      and back40.farming == 4 and back40.religion_total == 100
+      and back40.settlement == "Ctown" and back40.rgb == (11, 12, 13))
+check("...and its span is the same nine lines its neighbours run to",
+      back40.span[1] - back40.span[0] + 1 == 9)
+
+# `none` is the empty list in both directions, and neither direction existed.
+# Reading it as a resource named `none` put a warning saying the EDB never
+# declares it on 853 of vanilla_kingdoms_uncompromised's 853 records and on 78
+# of Vanilla Redux's 252, and listed it among a province's hidden resources in
+# the query table. Writing it was the other half: clearing the last resource
+# off a record DROPPED its line, which is the same eight-line record the wizard
+# used to create, reached from the panel instead.
+none_rec = campmap.parse_block(
+    "N_Province\r\n\tNtown\r\n\tengland\r\n\tbrigands\r\n\t1 2 3\r\n\tnone\r\n"
+    "\t5\r\n\t4\r\n\treligions { catholic 100 }\r\n")
+check("a resources line reading `none` is no resources, not a resource called "
+      "`none`",
+      none_rec.resources == [] and none_rec.resources_line >= 0)
+check("...so it draws no warning that the EDB never declares it",
+      not [f for f in campmap.check_record(
+          none_rec, {"trade_resources": ["gold"], "hidden_resources": ["hre_x"]})
+          if f["field"] == "resources"])
+check("...and no shape warning either, because the line is there",
+      not [f for f in campmap.check_record(none_rec, None,
+                                           {"records": 9, "resources": 9})
+           if f.get("code", "").startswith("record.short")])
+check("a resource genuinely named `none` alongside others is still a resource",
+      campmap.parse_block(
+          "N_Province\r\n\tNtown\r\n\tengland\r\n\tbrigands\r\n\t1 2 3\r\n"
+          "\tnone, gold\r\n\t5\r\n\t4\r\n\treligions { catholic 100 }\r\n"
+      ).resources == ["none", "gold"])
+
+cleared = campmap.render_block(
+    "N_Province\r\n\tNtown\r\n\tengland\r\n\tbrigands\r\n\t1 2 3\r\n\tgold, iron\r\n"
+    "\t5\r\n\t4\r\n\treligions { catholic 100 }\r\n", {"resources": []})
+check("clearing every resource off a record keeps its line and writes `none` "
+      "there, rather than taking the line out",
+      len([l for l in cleared.splitlines() if l.strip()]) == 9
+      and cleared.splitlines()[5].strip() == "none")
+check("...and it reads straight back as a record with no resources and "
+      "everything else in its own place",
+      (lambda r: r.resources == [] and r.triumph == 5 and r.farming == 4
+       and r.religion_total == 100)(campmap.parse_block(cleared)))
+check("putting a resource back rewrites that same line, still nine of them",
+      (lambda t: len([l for l in t.splitlines() if l.strip()]) == 9
+       and campmap.parse_block(t).resources == ["silk"])(
+          campmap.render_block(cleared, {"resources": ["silk"]})))
+check("and a record left alone is not rewritten at all",
+      campmap.render_block(cleared, {}) == cleared)
+
+# The shape check that would have caught the old writer. It is a warning and
+# not a refusal, and that is measured rather than chosen: the installed Divide
+# and Conquer ships a short record of its own - `lol`, 662 painted tiles, no
+# resources line - and the mod plays. Refusing the save would also trap the one
+# person who could fix it, because the save is what rewrites the record.
+short40 = campmap.parse_regions(
+    _R40 + "C_Province\r\n\tCtown\r\n\tslave\r\n\tbrigands\r\n\t11 12 13\r\n"
+           "\t5\r\n\t4\r\n\treligions { catholic 100 }\r\n")
+sh40 = campmap.file_shape(short40)
+check(f"the file's shape is counted off its records rather than off their "
+      f"line counts ({sh40})",
+      sh40 == {"records": 3, "resources": 2})
+bad40 = [f for f in campmap.check_record(short40.by_name("C_Province"), None, sh40)
+         if f.get("code") == "record.short.resources"]
+check("a record short the resources line its neighbours write is reported, "
+      "against the field, with the count that says so",
+      len(bad40) == 1 and not bad40[0]["fatal"]
+      and bad40[0]["field"] == "resources" and "2 of the 3" in bad40[0]["message"])
+check("the two records that are the right shape are not reported",
+      not any(f.get("code", "").startswith("record.short")
+              for r in short40.records if r.name != "C_Province"
+              for f in campmap.check_record(r, None, sh40)))
+check("and with no shape to compare against - the text pane, where a block is "
+      "edited with no file behind it - the check is skipped, not guessed",
+      not any(f.get("code", "").startswith("record.short") for f in
+              campmap.check_record(short40.by_name("C_Province"), None, None)))
+
+
 # ---- 5) every real map -------------------------------------------------------
 print("\n5) every installed map: a stroke, a re-encode and an undo")
 

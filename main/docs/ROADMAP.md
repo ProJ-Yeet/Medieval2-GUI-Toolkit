@@ -14,7 +14,7 @@ map-format reference the map modules are built on, and the backlog.
 | what shipped and why a rule is a rule | `ROADMAP_ARCHIVE.md` |
 | what the last few sessions did | `STATE_ARCHIVE.md` |
 | the reasoning behind a backlog item | `docs/upstream/REFERENCE_GAPS.md` |
-| the strict release rules | `HANDOFF.md` |
+| the strict release rules | `RELEASE.md` |
 
 **Reference tool:** [Mylae's M2TW Editor](https://github.com/Machiavello-1441/m2tw-editor)
 (React/Base44, ~59.6k LOC, works directly on `main`, no releases - used with the
@@ -747,7 +747,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
    of reason: it is the same two-way panel over a file that is already fully
    parsed, so the shape gets settled on the cheap problem first.
 5. **Three phases went in front of 28 on 2026-09-12, and rule 1 is why for one
-   of them.** Diffing Mylae's `2740b0b..187d9ed` re-scoped Phase 31 and produced
+   of them.** (**40 is done as of 2026-09-13, so 31 now leads the block.**) Diffing Mylae's `2740b0b..187d9ed` re-scoped Phase 31 and produced
    Phase 41, and the user asked for both immediately; reading our own
    region-creation path beside his turned up **Phase 40**, which is a defect in
    shipped work and therefore leads the block the way 29 did. 28 is still the
@@ -761,7 +761,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | Order | Phase | Size | Line | Stars |
 |---|---|---|---|---|
 | ~~1~~ | ~~**29** Strat model viewer~~ | M | **both** | **done 2026-09-12** |
-| 2 | **40** The new province the engine cannot read | S | **both** | the defect |
+| ~~2~~ | ~~**40** The new province the engine cannot read~~ | S | **both** | **done 2026-09-13** |
 | 3 | **31** Two river rules, and a ford in the sea | S | beta | upstream sync |
 | 4 | **42** The art a clone does not get | S | **both** | reported |
 | 5 | **41** Merge one faction's name pool into another | S | **both** | upstream sync |
@@ -789,7 +789,8 @@ on, then stars, then size.** That is four rules and each one earns its place.
 **Twenty sessions, and six of them are subreleases.** 29, 40, 42, 41, 38 and
 39 touch something outside the campaign map, so each is a subrelease on both
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
-took B4 with it; nineteen remain. **They are committed, not cut** - cut-as-it-lands was
+took B4 with it, and **40 is done** (2026-09-13); eighteen remain, four of them
+subreleases. **They are committed, not cut** - cut-as-it-lands was
 suspended again on 2026-09-12 and a release now happens when the user asks for
 one.
 
@@ -1300,51 +1301,115 @@ replaced rather than as broken.
 
 **Subrelease, both lines**, because the EDU half is the unit editor's.
 
-## Phase 40 - The new province the engine cannot read
+## Phase 40 - The new province the engine cannot read - DONE 2026-09-13
 
-**A defect, and it leads block one for that reason.** A province created by the
-wizard can reach `descr_regions.txt` as an **eight-line record in a file of
-nine-line records**, and the engine reads that file by position.
+**Closed 2026-09-13, both lines, committed and not cut. It was four defects,
+and the scoped one was the smallest of them.** The write-up below is kept with
+its three wrong premises corrected in place, because what it got wrong is the
+useful part of the record: every one of the three was an inference the repo
+could not check, and the mod on this machine could.
 
-`campaint.new_record_lines` writes the resources line only when the user picked
-a resource:
+**The scoped fix, and it is one line.** `campaint.new_record_lines` wrote the
+resources line only when the user picked a resource, so a province created
+without any reached `descr_regions.txt` as an eight-line record in a file of
+nine-line records, and the engine reads that file by position. It always writes
+the line now, `none` when the list is empty.
 
-```python
-if spec.get("resources"):
-    out.append(indent + ", ".join(spec["resources"]))
-```
+**Wrong premise 1: "not one of the 510 records uses the literal `none`".**
+Measured over the five `descr_regions.txt` installed here, `none` is the
+ordinary way to write the empty case: **vanilla 18 of 112, Vanilla Redux 78 of
+252, `vanilla_kingdoms_uncompromised` 853 of 853**. So `none` was never a
+choice this repo had to make - it is what the files this writes beside already
+do, and the fix is smaller than the write-up thought.
 
-Every other line in the record is unconditional. **No real map omits it.**
-Measured over the three `descr_regions.txt` on this machine: vanilla is 112
-records at 9 lines each, Third Age Reforged 199 at 9, and Divide and Conquer 196
-at 10 (its `legion:` form) plus two at 9 and one at 20. Not one record of the
-510 leaves the resources line out, and not one uses the literal `none` either -
-they all simply have resources. Mylae's serializer writes `none` for the empty
-case and so always emits nine lines; ours writes eight.
+**Wrong premise 2: "not one of the 510 records leaves the resources line
+out".** Divide and Conquer's last record, `lol`, has **662 painted tiles** and
+no resources line. It is a real short record in the wild, in the mod the user
+plays.
 
-**Nothing here catches it, which is why it reaches the game.** Our own parser is
-tolerant enough to read the short record back correctly, and `check_record`
-returns *no problems* for it, so the round trip is self-consistent and
-`mapcheck` stays silent. The engine is the only reader that disagrees, and the
-only thing it reports is a crash on load with nothing in the log pointing here.
+**Wrong premise 3, and the important one: the engine crash.** It was inferred
+from the format being positional and from the records agreeing, and the write-
+up asked for a run in the game before the fix. **That run is not owed: DaC
+ships the short record and the mod plays.** The claim is withdrawn. This does
+not weaken the fix - writing the record in the shape the rest of the file is
+written in is the same rule `new_record_lines` already followed for the indent
+and the `legion:` line - but nothing here says it is a crash any more.
 
-**The fix is one line and it is what every real file does**: always write the
-resources line, `none` when the list is empty. What the session is actually for
-is the three things around it:
+**Which settles the severity of the new check.** `campmap.check_record` takes a
+third argument now, `campmap.file_shape(rf)`, and reports a record missing a
+positional line its neighbours write. It is a **warning**, for two measured
+reasons: DaC ships such a record and plays, and `plan_region` turns a fatal
+finding into a refusal, so fatal would have trapped the one person able to fix
+it - **the save is what rewrites the record**. It fires once across the 1,616
+records installed here.
 
-* a `region.record` finding for a record whose line count does not match the
-  rest of the file, since a hand-edited file can be short the same way;
-* `check_record` gaining the *shape* of a record and not only its values, which
-  is the check that would have caught this;
-* a fixture in `tests/test_campaint.py` that creates a province with **no**
-  resources, which is the case the B1 tests never made.
+**The shape of a record is not its line count**, and that is the distinction
+the phase turns on. `legion:` is keyed rather than positional and half the mods
+write one; comments and blank lines sit inside a record's span; DaC's records
+run to ten lines where vanilla's run to nine. `file_shape` counts which of the
+unkeyed lines each record has, because that is what the engine reads off
+position. `SHAPE_FIELDS` has one member and that is measured rather than an
+oversight: the parser already puts a `problems` entry on a record missing its
+religions line or its two bare numbers, a record with no settlement is the
+wasteland form and has its own rule, and `legion:` shifts nothing. The
+resources line is the only one that goes missing in silence.
 
-**Verified as far as this repo can verify it.** That the writer emits eight
-lines, that no real map does, and that nothing of ours objects, are all
-measured. That the engine crashes on the short record specifically is inference
-from the format being positional and from 510 records agreeing - it wants one
-run in the game against a province created without resources, and that is the
-first thing the session should do.
+### The three the write-up did not have
+
+**The same eight-line record was reachable from the panel.**
+`campmap.render_block` **dropped** the resources line when the last resource was
+cleared off a record. Same defect, other direction, and `tests/test_campedit.py`
+had a check asserting it as correct behaviour. It writes `none` now.
+
+**`none` was read as a resource named `none`.** That is "neither a hidden
+resource the EDB declares nor a trade resource descr_sm_resources.txt names" on
+**931 records** - all 853 of `vanilla_kingdoms_uncompromised` and 78 of Vanilla
+Redux - and `none` listed among a province's hidden resources in the query
+table. A lone `none` is the empty list now; `none, gold` is still two
+resources. The line on disk is untouched, so every installed file still
+round-trips byte for byte, and `web/js/campmap.js` already drew the word "none"
+under an empty chip list.
+
+**And the largest: Divide and Conquer has 200 regions and this read 199.** DaC
+writes one name line with a stray leading space, ` Erebor_Province`. The indent
+is the whole of the first reading, so that line was body, `Withered_Province`
+swallowed Erebor whole as a twenty-line record, and **it reported no
+problems**. Erebor's **517 painted tiles** came out of here as land declared
+nowhere: no name in the hover, nothing to click, a fatal `region.undeclared`,
+and its settlement marker counted as an orphan. That orphan had been **written
+down as a fact about DaC** in `RegionIndex.orphan_settlements` ("a province
+painted on the map and never written down") and asserted in
+`tests/test_campmap.py` as `== [(339, 65)]`. It was a fact about this module's
+reader, and it had been sitting in the source as evidence for the opposite
+conclusion.
+
+`campmap._resplit_runs` re-splits any record holding **two colour lines**,
+which is a signal no well-formed record can give - a record's other lines are
+words, single numbers or braces, and only `R G B` is three numbers - so the
+re-split is per record and a file the indent reads correctly passes through
+untouched. `parse_block` gained a second reading for the one record whose own
+name line is indented, since `record_text` hands out the file's own bytes; a
+block that has genuinely lost its name line is still refused, because its
+settlement would be the line read as the name and the retry is rejected unless
+the result is a whole record.
+
+### Verified
+
+All **1,504** records of the four installed mods go `record_text` ->
+`parse_block` -> `render_block` unchanged, and all five files round-trip byte
+for byte. `tests/test_campaint.py` has sections 4c and 4d (**185/185**, was
+168), `tests/test_campmap.py` section 1 has the run-on record (**143/148**
+against 136/141 stashed - the same five DaC-build failures), and
+`tests/test_campedit.py` is **139/139** against 138. **Eighteen suites were run
+against a clean checkout of the last commit as well as against this tree and
+every failing check name is identical in both.**
+
+**One check left as it is, deliberately.** `test_campview` asserts "the other
+undeclared colour is the 517-tile province - the hole 16a found, now measured".
+That is Erebor, and it is declared now, so the sentence describes a bug that is
+gone. The check fails on this DaC build either way, for the hard-coded numbers
+beside it, so rewriting it would not turn it green: it belongs with the other
+DaC-number checks and wants the build sorted out, not a new assertion.
 
 **Both lines.** It is a defect in a shipped feature, so it is a 2.x subrelease
 as well as a beta when a cut happens.

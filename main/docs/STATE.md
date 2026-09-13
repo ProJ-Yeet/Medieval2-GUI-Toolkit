@@ -1,10 +1,93 @@
 # STATE - Medieval 2 GUI Toolkit
 _Updated: 2026-09-13 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
 the latest beta - after the M2EX map-ceiling fix, the `replace_record` blank
-line it turned up, and the two bugs a second report brought in, all committed
-and **not cut**. **Releasing is on-request only**: commit to master and stop_
+line it turned up, the two bugs a second report brought in, and **Phase 40**,
+all committed and **not cut**. **Releasing is on-request only**: commit to
+master and stop_
 
 ## Next up
+**Phase 40 is done, and it was four defects rather than one - fixed 2026-09-13,
+both lines, committed and uncut.** The scoped fix is one line and it is the
+smallest of the four: `campaint.new_record_lines` wrote the resources line only
+when the list was non-empty, so a province created without resources reached
+`descr_regions.txt` as an eight-line record in a file of nine-line records, and
+the record is read by position. It always writes the line now, `none` when
+there is nothing to put on it.
+
+**Three of the write-up's premises were wrong, and measuring them is most of
+what the session was.** It said no real record uses the literal `none`: vanilla
+writes it on **18 of its 112** records, Vanilla Redux on **78 of 252** and
+`vanilla_kingdoms_uncompromised` on **all 853** of its own. So `none` is not a
+stand-in chosen here, it is what the empty case already looks like in the files
+this writes beside. It said not one of the 510 records omits the resources
+line: DaC's last record, `lol`, has 662 painted tiles and no resources line.
+And the crash was inferred from the format being positional - **which the
+installed DaC contradicts, because it ships exactly that record and the mod
+plays.** The crash claim is withdrawn. A game run was named as the first thing
+this session should do and it is not owed any more: the mod on this machine is
+the experiment, and it already answered.
+
+**Which is why the new check is a warning and not a refusal.** `check_record`
+now takes a third argument, `campmap.file_shape(rf)`, and reports a record
+short a line its neighbours all write - the check that would have caught the
+writer. Fatal was wrong twice over: DaC ships a short record that plays, and
+`plan_region` turns a fatal finding into a refusal, so it would have trapped
+the one person who could fix it, because **the save is what rewrites the
+record**. The shape is counted off the records rather than off their line
+counts, which is the distinction the phase turns on: `legion:` is keyed rather
+than positional, comments and blank lines sit inside a span, and DaC's records
+run to ten lines where vanilla's run to nine. It fires **once** across the
+1,616 records installed here, on `lol`, which is right.
+
+**The same defect was in the edit path, and the write-up never looked there.**
+`render_block` *dropped* the resources line when the last resource was cleared
+off a record - the identical eight-line record, reached from the region panel
+rather than from the wizard. It writes `none` there now, and
+`tests/test_campedit.py` had a check asserting the old behaviour, which is the
+defect written down as an expectation.
+
+**`none` was being read as a resource named `none`.** That put "neither a
+hidden resource the EDB declares nor a trade resource descr_sm_resources.txt
+names" on **931 records** of the two installed mods that write it - every one
+of `vanilla_kingdoms_uncompromised`'s 853, and 78 of Vanilla Redux's - and
+listed it among a province's hidden resources in the query table. A lone `none`
+is the empty list now; `none, gold` is still two resources. The line on disk is
+untouched, so all five installed files still round-trip byte for byte, and the
+region panel already drew the word "none" under an empty chip list.
+
+**And the largest of the four was ours rather than the format's: DaC has 200
+regions and this read 199.** DaC writes one name line with a stray leading
+space, ` Erebor_Province`, and the indent is the whole of the first reading -
+so it was body to the record above it and `Withered_Province` swallowed
+Erebor whole, twenty lines, **reporting no problems**. Erebor's **517 painted
+tiles** came out of here as land declared nowhere: no name in the hover,
+nothing to click, a fatal `region.undeclared`, and its settlement marker
+reported as an orphan. That orphan was **written into the source as a fact
+about DaC** - `RegionIndex.orphan_settlements` said "a province painted on the
+map and never written down", and `tests/test_campmap.py` asserted
+`== [(339, 65)]`. It was a fact about this module's reader. `_resplit_runs`
+splits any record holding two colour lines, which is a signal no well-formed
+record can give, so every other file passes through untouched; `parse_block`
+reads a record back whose own name line is indented, since `record_text` hands
+out the file's own bytes. All **1,504** records of the four installed mods go
+`record_text` -> `parse_block` -> `render_block` unchanged, and a block that
+has genuinely lost its name line is still refused.
+
+`tests/test_campaint.py` has sections 4c and 4d (**185/185**, was 168),
+`tests/test_campmap.py` section 1 has the run-on record (**143/148** against
+136/141 stashed, the same five DaC-build failures), `tests/test_campedit.py` is
+**139/139** against 138. **Eighteen suites were run against a clean checkout of
+the last commit as well as against this tree, and every failing check name is
+identical in both.** Nothing regressed.
+
+**One thing left as it is, deliberately.** `test_campview` asserts "the other
+undeclared colour is the 517-tile province - the hole 16a found, now measured".
+That province is Erebor and it is declared now, so the sentence describes a bug
+that is gone - but the check fails on this DaC build either way, for the
+hard-coded numbers beside it, so rewriting it would not turn it green. It is
+one of the documented DaC-number checks and it needs the build sorted out, not
+a new assertion.
+
 **A colour in `map_regions.tga` is not a province - fixed 2026-09-13, beta
 line, committed and uncut.** A second report of *no region*, this time on
 `Vanilla_Redux`, and the ceiling fix below did not cover it. That map is
@@ -103,27 +186,25 @@ this turned up and did not fix.
 **Two blocks, set by the user on 2026-09-12 after rating 38 of 39 candidates:
 the whole campaign map first, then the mercenaries.** Everything else is in
 `ROADMAP.md`'s *Future roadmap*, rated and unscheduled, to be started when both
-blocks are done. Twenty sessions in all; **29 is done**, so nineteen are left
-and six of those are subreleases.
+blocks are done. Twenty sessions in all; **29 and 40 are done**, so eighteen
+are left and four of those are subreleases.
 
-**Block one, the campaign map** - ~~29~~, **40, 31, 42, 41, 43**, 28a, 28b, 33,
-30, 34, 35, 36, 37a, 37b, 38.
+**Block one, the campaign map** - ~~29~~, ~~40~~, **31, 42, 41, 43**, 28a, 28b,
+33, 30, 34, 35, 36, 37a, 37b, 38.
 
 **And six sessions that are in neither block, added 2026-09-13** after the user
 asked for a pass over Mylae's non-map screens: Phases **44-48**, all six
 subreleases on both lines, sitting after block two until the user moves them.
 Write-ups and their own order table in `ROADMAP.md`.
 
-**Start with Phase 40, the new province the engine cannot read.** It is a
-defect in shipped work, which is the rule that put 29 first: a province created
-without any resources reaches `descr_regions.txt` as an eight-line record in a
-file of nine-line records, because `campaint.new_record_lines` writes the
-resources line only when the list is non-empty. None of the 510 records on the
-three maps here omits it. Our parser reads the short record back correctly and
-`check_record` reports nothing, so the round trip is self-consistent and only
-the engine disagrees. **The one thing this repo could not verify is the crash
-itself** - run the game against a province created with no resources before
-writing the fix.
+**Start with Phase 31, two river rules and a ford in the sea.** 40 led block
+one because it was the defect, and it is closed; 31 is next because it and 41
+both came out of Mylae's 2026-09-12 push and the user asked for both on the
+day. It shrank from four river rules to two when the diff was measured against
+our own - `river.rejoin` already catches the 2x2 block and `river.isolated`
+already catches the orphan white source - and gained a third that is ours
+rather than his, `feature.ford_in_sea`. Two things of his to pass back are in
+the sync note below.
 
 **Then 42**, the second reported defect: cloning a faction leaves it with no
 `fe_symbols_80` symbol. The copier is not at fault - `_asset_hits` was run over
@@ -217,7 +298,7 @@ the beta alone.
 Betas are named by the **date** they were released, with a letter for a second
 in one day. The GitHub title is `M2 GUI-Kit V<X.Y.Z>`: hyphenated **GUI-Kit**,
 capital **V**; run `gh release list --limit 3` and copy the newest title's shape
-rather than typing it from memory. The strict step-by-step is `HANDOFF.md`.
+rather than typing it from memory. The strict step-by-step is `RELEASE.md`.
 
 **Nothing is written and held any more.** `RELEASE_2_2_4.md` and
 `RELEASE_BETA_2026_09_11B.md` are kept as the record of what was drafted;
@@ -228,7 +309,8 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | Phase | Status | Note |
 |---|---|---|
 | 29 + B4 - the strat model viewer | **done** | Closed 2026-09-12, committed, **released 2026-09-12** as v2.3.2 and beta 2026-09-12c. The scoping was wrong about the root and right about everything above it: the art is not in a `.pack`, it is loose beside the stub as `<name>.tga.dds`, and `cas.texture_path` took the zero-byte `.tga` because it existed. Fixed at all five levels. New: `cas._has_bytes`, `icons.ArtUnreadable`, `icons.fault`, `png_bytes(strict=)`, `/model_texture` 415, `factions.packs_beside`, `factions.no_file_note`, and in `viewer3d.js` `uCutout`, `v3Degenerate`, `v3AskWhy`, `v3TexFault`, `v3FaultRows`. `tests/test_stratart.py` (40). |
-| 28-43 - the rest of the 2026-09-12 review | **scoped** | Nineteen sessions in two blocks. **Block one, the campaign map:** 40 the province the engine cannot read, 31 two river rules and a ford in the sea, 42 the art a clone does not get, 41 merge one faction's name pool, 43 playable/unlockable/nonplayable, 28a the right menu as a tab strip with Validate one of them, 28b the paint controls over the canvas and a tooltip that holds still, 33 T10 + G2 + G4 in one session, 30 the pink as a choice, 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
+| 40 - the new province the engine cannot read | **done** | Closed 2026-09-13, committed, **not cut** (both lines when a cut happens). Four defects, one of them the scoped one. `campaint.new_record_lines` and `campmap.render_block` both produced the eight-line record, the second by dropping the line when the last resource was cleared; both write `none` now, which is what vanilla writes on 18 of 112, Vanilla Redux on 78 of 252 and `vanilla_kingdoms_uncompromised` on all 853. `none` read as a resource name was 931 false findings across two mods. And the indent reading lost DaC's ` Erebor_Province` to a stray leading space - **200 regions read as 199**, 517 painted tiles declared nowhere, and its settlement marker written into the source and a test as DaC's one orphan. New: `campmap.file_shape`, `campmap._resplit_runs`, `check_record(rec, vocab, shape)`, a `parse_block` retry for an indented name line. The inferred engine crash is **withdrawn**: DaC ships a short record and plays. `tests/test_campaint.py` 4c and 4d (185), `tests/test_campmap.py` 1 (+7), `tests/test_campedit.py` (139). |
+| 28-43 - the rest of the 2026-09-12 review | **scoped** | Eighteen sessions in two blocks, 40 having closed. **Block one, the campaign map:** 31 two river rules and a ford in the sea, 42 the art a clone does not get, 41 merge one faction's name pool, 43 playable/unlockable/nonplayable, 28a the right menu as a tab strip with Validate one of them, 28b the paint controls over the canvas and a tooltip that holds still, 33 T10 + G2 + G4 in one session, 30 the pink as a choice, 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
 | 44-48 - the pass over Mylae's non-map screens | **scoped** | Six sessions, added 2026-09-13 at the user's request, in neither block and every one a subrelease on both lines. 44 the EDB's tree checked (his is the one validator he has and we do not), 45 the `hidden_resources` line, 46 cultures on a mode of its own with a four-tab form and the faction form on the same strip, 47a the six `export_descr_sounds_*` files on `sounds.py`'s own parser, 47b the 32 `descr_sounds_*` scripts on a grammar nothing here reads, 48 add and remove on the strings screen. Two of the seven things asked for produced no phase and a measurement instead: his traits and ancillaries have not moved since 2026-03-27, and his `.strings.bin` codec is wrong where ours is right. |
 | 24 - Make and unmake | done | Closed 2026-09-12, committed, **released 2026-09-12**. Closes G1, M15 and the roadmap. Deleting a province, with its land going whole to a neighbour it borders and its name coming out of every file 19b measured - and the campaign script listed, never written, for the reason a rename gives. Making a campaign, as a copy of one that works minus the compiled map, with its own header and its own menu keys. New: `unittransfer/regiondel.py` (`heirs`, `campaigns_reading`, `standing_on`, `plan`, `apply`, `view`), `unittransfer/campnew.py` (`sources`, `plan`, `apply`, `view`), `mapquery.drop_music_region`, `renames.mentions`, `campfiles.write_descriptions`, `GET /api/map/region_delete`, `POST /api/map/region_delete_plan\|_apply`, `GET /api/campnew`, `POST /api/campnew/plan\|apply`, `web/js/regiondel.js`, `web/js/campnew.js`. `tests/test_regiondel.py` (62), `tests/test_campnew.py` (52). |
 | B2-B3 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export. B4 went out inside 29. |

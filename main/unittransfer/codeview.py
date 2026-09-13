@@ -813,7 +813,8 @@ def _regions_parse(text: str, ctx: dict) -> Doc:
             "orphan every descr_strat.txt settlement, win condition, mercenary "
             "pool, campaign script line and `legion:` entry that names it. The "
             "Rename button on the region panel follows all of them (19b)", 1)
-    findings = campmap.check_record(rec, ctx.get("vocab") or {})
+    findings = campmap.check_record(rec, ctx.get("vocab") or {},
+                                    ctx.get("shape"))
     return Doc(kind="regions", text=text,
                fields=campmap.block_fields(text),
                spans=campmap.block_spans(text), ident=rec.name,
@@ -1160,5 +1161,12 @@ def context(kind: str, mod, ident: str, culture: str = "") -> dict:
         return {"faction": ident}
     if kind == "regions":
         from . import campmap
-        return {"region": ident, "vocab": campmap.region_vocab(mod)}
+        # the shape as well as the vocabulary: a record can be wrong about
+        # which lines it has, and a block on its own can never show that
+        out = {"region": ident, "vocab": campmap.region_vocab(mod)}
+        try:
+            out["shape"] = campmap.file_shape(campmap.read_regions(mod))
+        except campmap.MapError:
+            pass                    # no file to compare with; the rest still runs
+        return out
     return {}

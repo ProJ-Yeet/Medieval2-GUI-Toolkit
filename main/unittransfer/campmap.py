@@ -388,7 +388,7 @@ def parse_regions(text: str) -> RegionsFile:
     out = RegionsFile(lines=lines, newline=newline, trailing_newline=trailing)
 
     starts = _starts_by_indent(lines)
-    recs = _records_at(lines, starts)
+    recs = _resplit_runs(lines, _records_at(lines, starts))
     # A file with no indentation at all reads as one record per line, every one
     # of them missing its colour. The indent is not part of the format - the
     # engine's own parser ignores whitespace - so a mod that writes the records
@@ -400,6 +400,45 @@ def parse_regions(text: str) -> RegionsFile:
                 1 for r in recs if r.rgb_line >= 0):
             recs = by_shape
     out.records.extend(recs)
+    return out
+
+
+def _resplit_runs(lines: List[str],
+                  recs: List[RegionRecord]) -> List[RegionRecord]:
+    """Split any record that swallowed the one after it.
+
+    The indent is the whole of the first reading, so a name line carrying a
+    stray leading space is body to it and the record runs on into its
+    neighbour. Measured on the installed Divide and Conquer, which writes
+    ``` Erebor_Province``` with one space in front of it: the record came out
+    twenty lines long, Erebor was not in the file at all as far as everything
+    here was concerned, and its 517 painted tiles read as land declared
+    nowhere - no name in the hover, nothing to click, and a fatal
+    ``region.undeclared`` about a province the mod plays perfectly well.
+
+    **Two colour lines in one record is the signal**, and it is one that cannot
+    happen in a file the indent reads correctly: a record's other lines are
+    words, single numbers or braces, and only the ``R G B`` line is three
+    numbers. So this is a re-split of the one record rather than a second
+    reading of the file, and a well-formed file passes through it untouched.
+    """
+    out: List[RegionRecord] = []
+    for rec in recs:
+        lo, hi = rec.span
+        colours = sum(1 for i in range(lo, hi + 1)
+                      if _RGB_LINE.match(_clean_line(lines[i]))) if lo >= 0 else 0
+        if colours < 2:
+            out.append(rec)
+            continue
+        inner = [lo + n for n in _starts_by_shape(lines[lo:hi + 1])]
+        if len(inner) < 2:
+            out.append(rec)
+            continue
+        inner[0] = lo                      # the head lines belong to the first
+        out.extend(
+            _parse_record(lines, at,
+                          (inner[n + 1] - 1) if n + 1 < len(inner) else hi)
+            for n, at in enumerate(inner))
     return out
 
 
@@ -556,7 +595,16 @@ def _parse_record(lines: List[str], start: int, end: int) -> RegionRecord:
     if rest:
         ln, s = rest[0]
         rec.resources_line = ln
-        rec.resources = [t.strip() for t in s.split(",") if t.strip()]
+        got = [t.strip() for t in s.split(",") if t.strip()]
+        # `none` on the line is the file's way of writing an empty list, not a
+        # resource with that name: vanilla writes it on 18 of its 112 records,
+        # Vanilla Redux on 78 of 252 and vanilla_kingdoms_uncompromised on all
+        # 853. Read as a name it was a resource the EDB never declares, so
+        # every one of those records carried a warning saying so, and the query
+        # table listed `none` among a province's hidden resources. The line
+        # itself is untouched, so the file still round trips byte for byte and
+        # only an edit rewrites it.
+        rec.resources = [] if [t.lower() for t in got] == ["none"] else got
         if len(rest) > 1:
             rec.problems.append(f"{len(rest) - 1} unrecognised line(s) in the record")
     return rec
@@ -627,9 +675,12 @@ class RegionIndex:
     ports: List[Tuple[int, int]] = field(default_factory=list)
     #: ports whose owning region the cardinal rule cannot decide
     undecided_ports: List[Tuple[int, int]] = field(default_factory=list)
-    #: settlement pixels with no region on any cardinal side. DaC has one, at
-    #: image (339,65), sitting inside a colour ``descr_regions.txt`` never
-    #: declares - a province painted on the map and never written down.
+    #: settlement pixels with no region on any cardinal side - a marker standing
+    #: on a province painted on the map and never written down. DaC was read
+    #: here as having one, at image (339,65), and it never did: that marker is
+    #: Erebor's, and Erebor was a record this module's own reader lost to a
+    #: stray leading space (see :func:`_resplit_runs`). None of the installed
+    #: mods has a real one.
     orphan_settlements: List[Tuple[int, int]] = field(default_factory=list)
     #: markers past the first for a region that already had one
     extra_settlements: List[Tuple[int, int]] = field(default_factory=list)
@@ -2129,10 +2180,27 @@ def parse_block(text: str) -> RegionRecord:
     The header line is the one that is not indented, so a block that has lost
     its first line - or that carries two records - is caught here rather than
     quietly writing one region's values into another's lines.
+
+    **One record really can have an indented name**, since :func:`_resplit_runs`
+    hands back the record DaC writes as ``` Erebor_Province``` with its own
+    bytes and :func:`record_text` gives those bytes to the panel and the text
+    pane. So a block the indent reading finds nothing in is read a second time
+    with its first line taken as the header, and the result is accepted only if
+    it is a whole record - a colour of its own, and a settlement line, which a
+    block that has genuinely lost its name line cannot have because its
+    settlement is the line being read as the name.
     """
-    rf = parse_regions(text if text.endswith("\n") else text + "\n")
+    body = text if text.endswith("\n") else text + "\n"
+    rf = parse_regions(body)
     real = [r for r in rf.records if r.name]
     if not real:
+        lines = _split_lines(body)[0]
+        first = next((i for i, ln in enumerate(lines)
+                      if ln.strip() and not ln.lstrip().startswith(";")), -1)
+        if first >= 0:
+            retry = _parse_record(lines, first, len(lines) - 1)
+            if retry.name and retry.rgb_line >= 0 and not retry.wasteland:
+                return retry
         raise MapError("this is not a region record - no unindented region name "
                        "line to start it")
     if len(real) > 1:
@@ -2191,10 +2259,12 @@ def render_block(base: str, edits: dict) -> str:
         res = [str(r).strip() for r in (edits["resources"] or []) if str(r).strip()]
         line = ", ".join(res)
         if rec.resources_line >= 0:
-            if res:
-                _set_line(lines, rec.resources_line, line)
-            else:
-                drop.append(rec.resources_line)
+            # `none` rather than dropping the line. Removing the last resource
+            # from a record used to take its line out with it, which is the
+            # same eight-line record the wizard used to create - reached from
+            # the panel instead. The record is positional, so the line stays
+            # and says it is empty.
+            _set_line(lines, rec.resources_line, line or "none")
         elif res:
             at = rec.triumph_line if rec.triumph_line >= 0 else rec.rgb_line + 1
             insert.append((at, indent + line))
@@ -2245,7 +2315,8 @@ def block_fields(text: str) -> List[Tuple[str, str]]:
     if rec.rgb_line >= 0:
         rows.append((rec.rgb_line, "rgb", " ".join(str(v) for v in rec.rgb)))
     if rec.resources_line >= 0:
-        rows.append((rec.resources_line, "resources", ", ".join(rec.resources)))
+        rows.append((rec.resources_line, "resources",
+                     ", ".join(rec.resources) or "none"))
     for slot in ("triumph", "farming"):
         at = getattr(rec, f"{slot}_line")
         if at >= 0:
@@ -2317,7 +2388,37 @@ def replace_record(rf: RegionsFile, rec: RegionRecord, block: str) -> str:
     return rf.newline.join(lines) + (rf.newline if rf.trailing_newline else "")
 
 
-def check_record(rec: RegionRecord, vocab: Optional[dict] = None) -> List[dict]:
+#: The positional lines a record can lose without anything here noticing.
+#: It has one member, and that is measured rather than an oversight: the parser
+#: already puts a :attr:`RegionRecord.problems` entry on a record missing its
+#: religions line or its two bare numbers, a record with no settlement is the
+#: wasteland form and has :func:`mapcheck`'s own rule, and ``legion:`` is keyed
+#: so dropping it shifts nothing. The resources line is the only one that goes
+#: missing in silence.
+SHAPE_FIELDS = ("resources",)
+
+
+def file_shape(rf: "RegionsFile") -> Dict[str, int]:
+    """How many of a file's records write each positional line, and how many
+    records there are.
+
+    The shape of a record is not its line count. A ``legion:`` line is keyed
+    rather than positional and half the mods here write one; comments and blank
+    lines sit inside a record's span; and Divide and Conquer's records run to
+    ten lines where vanilla's run to nine. What the engine actually reads off
+    position is which of the unkeyed lines are present, so that is what this
+    counts and what :func:`check_record` compares one record against.
+    """
+    out = {"records": len(rf.records)}
+    for slot in SHAPE_FIELDS:
+        out[slot] = sum(1 for r in rf.records
+                        if getattr(r, f"{slot}_line", -1) >= 0)
+    return out
+
+
+
+def check_record(rec: RegionRecord, vocab: Optional[dict] = None,
+                 shape: Optional[Dict[str, int]] = None) -> List[dict]:
     """What is wrong with one record. ``fatal`` is what stops a save.
 
     Two of these are crashes with a source behind them and the rest are
@@ -2326,17 +2427,36 @@ def check_record(rec: RegionRecord, vocab: Optional[dict] = None) -> List[dict]:
     says the percentages must sum to 100 or the game crashes on load, and
     nothing in the file or the game says which of ten numbers is wrong, so it
     is refused at the point where the person can still see what they typed.
+
+    ``shape`` is :func:`file_shape` of the file the record came from, and it is
+    what lets this check the record's **shape** and not only its values - the
+    one thing a record can be wrong about that reading it on its own can never
+    show. Without it the shape check is simply skipped, which is right for the
+    text pane, where a block is edited with no file behind it.
     """
     v = vocab or {}
     out: List[dict] = []
 
-    def add(fatal: bool, field_name: str, message: str) -> None:
+    def add(fatal: bool, field_name: str, message: str,
+            code: str = "") -> None:
         at = getattr(rec, f"{field_name}_line", -1)
         out.append({"fatal": fatal, "field": field_name, "message": message,
-                    "line": at + 1})
+                    "line": at + 1, "code": code})
 
     for problem in rec.problems:
         add(False, "name", problem)
+
+    for slot in (SHAPE_FIELDS if shape else ()):
+        have, total = shape.get(slot, 0), shape.get("records", 0)
+        if getattr(rec, f"{slot}_line", -1) >= 0 or have <= total - have:
+            continue
+        add(False, slot,
+            f"no {slot} line, and {have} of the {total} records in this file "
+            f"write one. The record is read by position, so every line below "
+            f"it is one place out of step with its neighbours. A province with "
+            f"nothing writes `none` there, which is what vanilla does on 18 of "
+            f"its 112 regions",
+            code=f"record.short.{slot}")
 
     if rec.religions_line >= 0:
         total = rec.religion_total
@@ -2490,7 +2610,7 @@ def region_detail(cm: "CampaignMap", name: str) -> dict:
                              "resources", "triumph", "farming", "religions")},
         "lines": [rec.span[0] + 1, rec.span[1] + 1],
         "text": record_text(cm.regions, rec),
-        "findings": check_record(rec, vocab),
+        "findings": check_record(rec, vocab, file_shape(cm.regions)),
         "vocab": vocab,
         "file": REGIONS_REL,
         "pixels": None,
@@ -2650,7 +2770,7 @@ def plan_region(mod, body: dict) -> RegionPlan:
         return p
 
     vocab = region_vocab(mod)
-    p.findings = check_record(after, vocab)
+    p.findings = check_record(after, vocab, file_shape(rf))
     p.errors += [f["message"] for f in p.findings if f["fatal"]]
     p.warnings += [f["message"] for f in p.findings if not f["fatal"]]
     p.block = block

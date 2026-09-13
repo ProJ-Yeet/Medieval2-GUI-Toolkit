@@ -1407,8 +1407,15 @@ def new_record_lines(rf: campmap.RegionsFile, spec: dict) -> List[str]:
     out.append(f"{indent}{spec['faction']}")
     out.append(f"{indent}{spec['rebels'] or 'brigands'}")
     out.append(f"{indent}{spec['rgb'][0]} {spec['rgb'][1]} {spec['rgb'][2]}")
-    if spec.get("resources"):
-        out.append(indent + ", ".join(spec["resources"]))
+    # Always a line, `none` when there is nothing to put on it. The record is
+    # positional, so a province created without resources used to reach the
+    # file one line short of its neighbours and every field below it read as
+    # the wrong one. `none` is not a stand-in either: vanilla writes it on 18
+    # of its 112 records, Vanilla Redux on 78 of 252 and
+    # vanilla_kingdoms_uncompromised on all 853, so it is what the empty case
+    # already looks like in the files this writes beside.
+    out.append(indent + (", ".join(spec["resources"])
+                         if spec.get("resources") else "none"))
     out.append(f"{indent}{spec['triumph']}")
     out.append(f"{indent}{spec['farming']}")
     rel = spec.get("religions") or {}

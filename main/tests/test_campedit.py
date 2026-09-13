@@ -202,11 +202,24 @@ check("an inserted line takes the indent its neighbours use",
 
 nores = campmap.render_block(RECORD, {"resources": []})
 withres = campmap.render_block(nores, {"resources": ["grassland", "boats"]})
-check("a resource line can be emptied away and written back above the triumph "
-      "value, which is where the format puts it",
-      campmap.parse_block(nores).resources_line < 0
-      and campmap.parse_block(withres).resources == ["grassland", "boats"]
-      and campmap.parse_block(withres).triumph == 5)
+# Phase 40 changed what emptying this line does, and the old answer is the
+# defect. Dropping the line left an eight-line record in a file of nine-line
+# ones, and the record is positional - the same record the new-province wizard
+# used to write, reached from the panel instead. `none` is what the empty case
+# already looks like in the real files: vanilla writes it on 18 of its 112
+# records and vanilla_kingdoms_uncompromised on all 853 of its own.
+check("emptying the resource line keeps it and writes `none` there, because "
+      "the record is read by position and a line short moves every field below "
+      "it",
+      campmap.parse_block(nores).resources_line >= 0
+      and campmap.parse_block(nores).resources == []
+      and nores.count("\r\n") == RECORD.count("\r\n")
+      and "\tnone\r\n" in nores)
+check("and writing resources back onto it puts them above the triumph value, "
+      "which is where the format puts them",
+      campmap.parse_block(withres).resources == ["grassland", "boats"]
+      and campmap.parse_block(withres).triumph == 5
+      and withres.count("\r\n") == RECORD.count("\r\n"))
 
 rel = campmap.render_block(RECORD, {"religions": {"catholic": 50, "wildmen": 50}})
 check("religions are rewritten whole, in the order the panel sends them",
