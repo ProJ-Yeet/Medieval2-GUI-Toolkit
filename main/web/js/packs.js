@@ -709,3 +709,27 @@ async function uuDelete(){
   document.getElementById('uuNote').textContent=`Deleted ${r.deleted.length} unit(s). The list remains available; scan again to refresh it.`;
   state.destData=null; await loadSource();
 }
+
+/* ---- EDU units absent from recruit pools -------------------------------- */
+function urResultHtml(s){
+  const rows=items=>items.map(x=>`<div class="srow"><span class="sicon">!</span><span class="stext"><code>${esc(x.type)}</code></span></div>`).join('');
+  const unrecruitable=rows(s.r.units), mercenaries=rows(s.r.mercenary_units);
+  return `<h2>Unrecruitable units <span class="pill">${esc(s.mod)}</span></h2><div class="mbody">
+    <div class="count" style="margin:8px 0">Checked ${s.r.unit_count} EDU unit(s) against ${s.r.pools_scanned} building pool(s) and ${s.r.mercenary_files_scanned} mercenary file(s).</div>
+    <h3>Unrecruitable <span class="pill">${s.r.units.length}</span></h3>
+    <div class="warnbox">${s.r.units.length ? `${s.r.units.length} unit(s) have no <code>recruit_pool</code> and are not listed as mercenaries.` : 'No completely unrecruitable units found.'}</div>
+    <div class="sum" style="margin-top:10px">${unrecruitable||'<div class="count">Nothing to show.</div>'}</div>
+    <h3 style="margin-top:16px">Recruitable only as mercenaries <span class="pill">${s.r.mercenary_units.length}</span></h3>
+    <div class="count">These have no building <code>recruit_pool</code>, but are listed in <code>descr_mercenaries.txt</code>.</div>
+    <div class="sum" style="margin-top:10px">${mercenaries||'<div class="count">Nothing to show.</div>'}</div></div>
+    <div class="foot"><button onclick="closeModal()">Close</button><button onclick="openUnrecruitableUnits()">Scan again</button></div>`;
+}
+async function openUnrecruitableUnits(){
+  const s=state.ur={mod:state.src,r:null};
+  overlay.classList.add('open');
+  document.getElementById('modal').innerHTML='<h2>Finding unrecruitable units…</h2><div class="mbody"><div class="count">Checking building recruit pools and descr_mercenaries.txt files.</div></div>';
+  const r=await api.get(`/api/units/unrecruitable?mod=${enc(s.mod)}`);
+  if(r.error){toast('Scan failed: '+r.error);closeModal();return;}
+  if(state.ur!==s)return;
+  s.r=r; document.getElementById('modal').innerHTML=urResultHtml(s);
+}
