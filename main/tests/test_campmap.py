@@ -303,7 +303,7 @@ except campmap.MapError as exc:
     said = str(exc)
 check(f"unmarked, the index is refused and the refusal says what lifts it "
       f"({said[:52]}...)",
-      "800 distinct colours" in said and "M2EX" in said and "Home card" in said)
+      "declares 800 regions" in said and "M2EX" in said and "Home card" in said)
 
 widx = campmap.build_index(wide_img, wide_sea, wide_recs, campmap.MAX_LABELS)
 check(f"marked, it builds all {len(widx.regions)} of them on 16-bit labels",
@@ -331,7 +331,9 @@ check("a colouring paints off wide labels, with no palette to swap",
       and all(painted.getpixel((x, y)) == WIDE[y * WIDE_W + x]
               for y in range(WIDE_H) for x in range(WIDE_W)))
 
-nidx = campmap.build_index(wide_img.crop((0, 0, 8, 8)), bytes(64), wide_recs, 256)
+crop_keys = {campmap.key(WIDE[y * WIDE_W + x]) for y in range(8) for x in range(8)}
+crop_recs = [r for r in wide_recs if r.rgb_key in crop_keys]
+nidx = campmap.build_index(wide_img.crop((0, 0, 8, 8)), bytes(64), crop_recs, 256)
 check("and a map inside the byte still takes the palette path it always did",
       isinstance(nidx.labels, bytes)
       and mapquery._paint(nidx, list(nidx.colours)).getpixel((3, 2))
@@ -342,6 +344,58 @@ wide_mask = regiondel._mask(SimpleNamespace(index=widx), campmap.key(WIDE[5]))
 check("and a delete's mask finds exactly the one tile that region owns",
       wide_mask.size == (WIDE_W, WIDE_H)
       and [i for i, v in enumerate(wide_mask.getdata()) if v] == [5])
+
+# ---- 6b) a colour in the file is not a province -------------------------------
+print("\n6b) more COLOURS than the ceiling, and far fewer regions")
+
+# The ceiling used to be measured against map_regions.tga's colour census, and a
+# census counts the markers, the sea, and every shade a paint program left
+# behind. Vanilla Redux is 252 records in a file carrying 258 colours - the sea
+# and three shades of it within ten of it on one channel, 591 pixels between
+# them - and an unmarked mod was refused outright, so the map screen said "no
+# region" on every tile of a map that is comfortably inside the cap.
+NAR_W, NAR_H = 30, 10                              # 300 tiles
+NAR_PROV = [(1 + i, 60, 9) for i in range(250)]    # 250 declared provinces
+NAR_SEA = [(41, 140 + k, 233) for k in range(8)]   # one sea, seven shades of it
+NAR_PIX = NAR_PROV + [NAR_SEA[i % len(NAR_SEA)] for i in range(50)]
+assert len(NAR_PIX) == NAR_W * NAR_H
+assert len(set(NAR_PIX)) == 258 and not set(NAR_PROV) & set(NAR_SEA)
+
+nar_img = Image.new("RGB", (NAR_W, NAR_H))
+nar_img.putdata(NAR_PIX)
+nar_recs = campmap.parse_regions("".join(
+    f"N{i}_Province\n\tSet{i}\n\tfac\n\treb\n"
+    f"\t{c[0]} {c[1]} {c[2]}\n\tres\n\t5\n\t1\n"
+    f"\treligions {{ catholic 100 }}\n"
+    for i, c in enumerate(NAR_PROV))).records
+nar_sea = bytes([0] * 250 + [1] * 50)
+
+nidx2 = campmap.build_index(nar_img, nar_sea, nar_recs, 256)
+check(f"unmarked, {len(set(NAR_PIX))} colours and {len(nar_recs)} records builds, "
+      f"because {len(nar_recs)} is the number the ceiling is about",
+      len(nidx2.regions) == len(set(NAR_PIX)))
+check("the labels went 16-bit on their own, with no mod marked anything",
+      not isinstance(nidx2.labels, bytes) and max(nidx2.labels) > 255)
+check(f"every record is claimed and the {len(NAR_SEA)} sea shades are the "
+      f"undeclared ones",
+      not nidx2.empty_records
+      and sorted(tuple(c) for c in nidx2.unclaimed) == sorted(NAR_SEA))
+check("and every declared tile answers with its own province",
+      all(nidx2.at(i % NAR_W, i // NAR_W) is nidx2.by_key[campmap.key(NAR_PIX[i])]
+          for i in range(250)))
+
+# The other side of the same line: the records are what is counted, so a file
+# that declares more than the ceiling is still refused however few colours the
+# image happens to carry.
+nar_said = ""
+try:
+    campmap.build_index(nar_img, nar_sea, wide_recs, 256)
+except campmap.MapError as exc:
+    nar_said = str(exc)
+check(f"and 800 records on a 258-colour image is still refused "
+      f"({nar_said[:44]}...)",
+      "declares 800 regions" in nar_said)
+
 
 
 # ---- 7) real mods -------------------------------------------------------------
@@ -412,10 +466,21 @@ else:
               f"({colours} colours, {len(idx.regions)} regions, "
               f"{len(idx.settlements)} settlement px, {len(idx.ports)} port px)",
               colours > 1 and idx.regions)
-        check(f"region colours are within the engine's {mapvocab.MAX_REGION_COLOURS} "
-              f"ceiling ({len(idx.regions)})"
-              f"{' (M2EX, so uncapped)' if cm.uncapped else ''}",
-              cm.uncapped or len(idx.regions) <= mapvocab.MAX_REGION_COLOURS)
+        # Not "no map is over the engine's 200": Vanilla Redux is, at 252
+        # records, and it indexes fine. Past a vanilla ceiling is a state a real
+        # mod is in, and the answer to it is mapcheck's `layer.colour_cap`
+        # finding rather than a refusal here - see build_index. What is worth
+        # asserting is that the index adds up: every colour in the file is
+        # either a province somebody wrote down or one nobody did.
+        declared = sum(1 for r in idx.regions if r.record is not None)
+        over = declared > mapvocab.MAX_REGION_COLOURS
+        check(f"{declared} declared regions and {len(idx.unclaimed)} undeclared "
+              f"colours account for all {len(idx.regions)} of them"
+              + (f" ({declared} is over the engine's "
+                 f"{mapvocab.MAX_REGION_COLOURS}, which is a finding, not a "
+                 f"refusal)" if over and not cm.uncapped else ""),
+              declared + len(idx.unclaimed) == len(idx.regions)
+              and declared == len(cm.regions.records) - len(idx.empty_records))
         check(f"the label image is {'16-bit' if colours > 256 else 'one byte'} "
               f"a tile for {colours} colours",
               len(idx.labels) == cm.terrain.width * cm.terrain.height

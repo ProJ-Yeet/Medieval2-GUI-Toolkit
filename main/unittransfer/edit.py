@@ -278,6 +278,11 @@ class EditPlan:
     eop_texts: Dict[str, str] = field(default_factory=dict)
     eop_removes: List[str] = field(default_factory=list)   # files whose last unit went
     loc_text: str = ""                           # whole file after editing ("" = unchanged)
+    #: what ``text/export_units.txt`` was READ as, so the save writes it back
+    #: the same way. UTF-16 is what the game wants and all but one mod in
+    #: twenty has; converting the odd one out in passing is not this edit's job.
+    #: See :func:`localization.read_file`.
+    loc_encoding: str = localization.ENCODING
     # Files outside the EDU that name this unit's `type` and follow a rename:
     # export_descr_buildings.txt, the campaigns' descr_strat.txt /
     # campaign_script.txt, descr_mercenaries.txt, the voice bank, the mod's .lua
@@ -312,6 +317,20 @@ class EditPlan:
         lines += ["  " + c for c in self.changes]
         lines += ["  ! " + w for w in self.warnings]
         return "\n".join(lines)
+
+
+def _settle_loc_encoding(plan: "EditPlan", path: Path, text: str,
+                         read_as: str) -> None:
+    """Decide what ``text/export_units.txt`` is saved as, and say so if odd.
+
+    Called where the new text is final rather than where the old text was read,
+    because what can be written depends on what is being written - see
+    :func:`localization.save_encoding`.
+    """
+    plan.loc_encoding = localization.save_encoding(text, read_as)
+    note = localization.encoding_warning(path, read_as, plan.loc_encoding)
+    if note:
+        plan.warnings.append(note)
 
 
 def _rel_under_data(mod: Mod, raw: str) -> Optional[str]:
@@ -698,7 +717,7 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
         descr = (loc or {}).get("descr", (old_entry.descr if old_entry else "") or "")
         short = (loc or {}).get("descr_short",
                                 (old_entry.descr_short if old_entry else "") or "")
-        text = mod.export_units_path.read_text(encoding=localization.ENCODING)
+        text, loc_read_as = localization.read_file(mod.export_units_path)
         text = localization.upsert_record(text, plan.resolved_dict, name, descr, short)
         if dict_changed:
             others = [u.type for u in mod.edu.units
@@ -714,6 +733,7 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
         elif loc is not None:
             plan.changes.append("name / description updated")
         plan.loc_text = text
+        _settle_loc_encoding(plan, mod.export_units_path, text, loc_read_as)
 
     # ---- 7) icons follow a dictionary rename ----
     if dict_changed:
@@ -1351,8 +1371,10 @@ def _plan_delete(plan: EditPlan, unit) -> EditPlan:
                 f"text entry '{unit.dictionary}' kept - still used by "
                 f"{', '.join(others_same_dict[:3])}")
         else:
-            text = mod.export_units_path.read_text(encoding=localization.ENCODING)
+            text, loc_read_as = localization.read_file(mod.export_units_path)
             plan.loc_text = localization.remove_record(text, unit.dictionary)
+            _settle_loc_encoding(plan, mod.export_units_path, plan.loc_text,
+                                 loc_read_as)
             plan.changes.append(f"text entry '{unit.dictionary}' removed")
 
     users = _model_users(mod, skip_unit=unit.type)
@@ -1520,7 +1542,7 @@ def apply_edit(plan: EditPlan) -> Dict:
     if plan.eop_texts or plan.eop_removes:
         eop.write_split(mod, plan.eop_texts, plan.eop_removes, backup_root, manifest)
     if plan.loc_text:
-        write_text("text/export_units.txt", plan.loc_text, localization.ENCODING)
+        write_text("text/export_units.txt", plan.loc_text, plan.loc_encoding)
     if plan.ref_texts:
         # buildings / campaigns / voice bank / Lua - some live outside data/, so
         # they go in the manifest by absolute path (same shape as the EOP files)

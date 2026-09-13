@@ -270,9 +270,21 @@ class Mod:
         The game reads ``export_units.txt.strings.bin``, not the ``.txt``, and a
         released mod can ship only the compiled one. Falling back to it means a
         mod like that shows real unit names here instead of bare dictionary keys.
+
+        Guarded the way :attr:`building_loc` twenty lines down has always been
+        guarded, and it is worth more here: this one is warmed inside the
+        registry lock on every ``/api/units``, so anything it raises is a 500 on
+        the first thing the transfer composer asks for, and the screen says the
+        destination mod could not be read. :func:`localization.read_file` now
+        takes the encoding a file actually has, so there is little left to
+        raise - but names are a nicety and the unit list is not, and this is not
+        the place to find that out.
         """
         if self.export_units_path.exists():
-            return localization.parse_file(self.export_units_path)
+            try:
+                return localization.parse_file(self.export_units_path)
+            except (OSError, UnicodeError):
+                pass
         return self.loc_from_bin(self.export_units_path)
 
     @staticmethod
@@ -393,12 +405,12 @@ class Mod:
         """Building names/descriptions - same format as export_units.txt, but
         keyed with ``_desc`` / ``_desc_short`` instead of ``_descr``."""
         p = self.building_loc_path
-        if not p.exists():
-            return self.loc_from_bin(p, descr_suffix="_desc")
-        try:
-            return localization.parse_file(p, descr_suffix="_desc")
-        except (OSError, UnicodeError):
-            return localization.Localization()
+        if p.exists():
+            try:
+                return localization.parse_file(p, descr_suffix="_desc")
+            except (OSError, UnicodeError):
+                pass
+        return self.loc_from_bin(p, descr_suffix="_desc")
 
     @cached_property
     def edb_vocab(self) -> Dict[str, object]:

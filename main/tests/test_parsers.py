@@ -131,9 +131,72 @@ def test_byte_order_mark():
     return ok
 
 
+def test_loc_encoding():
+    """``text/export_units.txt`` saved as anything but UTF-16.
+
+    The game reads only UTF-16 with a BOM here, but a person who opens the file
+    in Notepad and saves it gets UTF-8, and mods ship like that. `Mod.loc` is
+    warmed inside the registry lock on the way into `/api/units`, so the codec
+    raising took the whole unit list down and the transfer composer said the
+    destination mod could not be read - one mis-saved names file against a
+    perfectly good roster.
+
+    Read what is there; write back what was read. The one exception is an edit
+    that puts a character in an 8-bit file that 8 bits cannot hold, where
+    writing it back as found is not "as found", it is a crash on save.
+    """
+    print(NL_ + "localisation files that are not UTF-16")
+    ok = True
+    tmp = Path(_tmp.mkdtemp(prefix="ut_loc_"))
+    body = ("{peasant}Peasants" + NL_ + "{peasant_descr}A mob with sticks."
+            + NL_ + "{peasant_descr_short}A mob." + NL_)
+    # the 8-bit case needs a byte over 127 somewhere, and it goes in the long
+    # description so the other two fields stay comparable across all four
+    eight = body.replace("sticks", "st" + chr(0xF6) + "cks")
+    cases = [("UTF-16 with a BOM", body.encode("utf-16"), "utf-16"),
+             ("UTF-8 with no BOM", body.encode("utf-8"), "utf-8"),
+             ("UTF-8 with a BOM", body.encode("utf-8-sig"), "utf-8-sig"),
+             ("8-bit", eight.encode("latin-1"), "latin-1")]
+    for label, raw, want in cases:
+        f = tmp / (want + ".txt")
+        f.write_bytes(raw)
+        text, got = localization.read_file(f)
+        ok &= check(f"{label}: read as {got}", got == want)
+        entry = localization.parse_file(f).get("peasant")
+        ok &= check(f"{label}: the entry is there, name and both descriptions",
+                    entry is not None and entry.name == "Peasants"
+                    and entry.descr_short == "A mob."
+                    and entry.descr.startswith("A mob with st"))
+        # what apply() does with it: the encoding it was read as, same bytes out
+        save = localization.save_encoding(text, got)
+        f.write_text(text, encoding=save)
+        ok &= check(f"{label}: saved as {save}, and the file is byte-identical",
+                    save == want and f.read_bytes() == raw)
+        note = localization.encoding_warning(f, got, save)
+        ok &= check(f"{label}: {'nothing said' if want == 'utf-16' else 'warned'}"
+                    f" on the save", bool(note) == (want != "utf-16"))
+
+    # The exception: 8-bit in, and an edit that puts a character in it latin-1
+    # cannot hold. Writing it back "as found" is not as found, it is a crash on
+    # save, so it goes out as UTF-16 - which is what the game wanted from that
+    # file in the first place - and the warning says so.
+    f = tmp / "latin-1.txt"
+    text, got = localization.read_file(f)
+    curly = text.replace("Peasants", "Peasant" + chr(0x2019) + "s")
+    save = localization.save_encoding(curly, got)
+    ok &= check(f"8-bit, and an edit adds a character it cannot hold: saved as "
+                f"{save} rather than crashing", save == localization.ENCODING)
+    ok &= check("and the warning says that is what happened, not that the file "
+                "went back as it came",
+                "cannot hold" in localization.encoding_warning(f, got, save))
+    shutil.rmtree(tmp, ignore_errors=True)
+    return ok
+
+
 if __name__ == "__main__":
     all_ok = True
     all_ok &= test_byte_order_mark()
+    all_ok &= test_loc_encoding()
     for name in MODS:
         try:
             all_ok &= test_mod(name)

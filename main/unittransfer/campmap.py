@@ -649,30 +649,28 @@ class RegionIndex:
         return self.labels[y * self.width + x]
 
 
-def _label_image(rgb: Image.Image, limit: int = 256
-                 ) -> Tuple[Sequence[int], List[Rgb], List[int]]:
+def _label_image(rgb: Image.Image) -> Tuple[Sequence[int], List[Rgb], List[int]]:
     """``(labels, colours, counts)`` - one label per pixel, exactly.
 
     Exact is the requirement, not fast. See the note in the module docstring
     about ``Image.quantize``; this pass is 61 ms on DaC and it is right.
 
-    ``limit`` is how many distinct colours the caller will accept, and it is the
-    caller's because the answer depends on the mod: 256 on the vanilla engine,
-    where the whole question is academic under its own 200-colour cap, and
-    :data:`MAX_LABELS` on a mod marked as running on M2EX. Past 256 the labels
-    are a 16-bit array instead of ``bytes`` - see :attr:`RegionIndex.labels`.
+    Every distinct colour in the file gets a label - the two markers, the sea,
+    and whatever a paint program left behind - because every pixel needs one.
+    That is a labelling job rather than a rule about maps, so the only ceiling
+    here is the label's own width, :data:`MAX_LABELS`. Whether the map declares
+    too many REGIONS is a different question with a different number, and
+    :func:`build_index` asks it off ``descr_regions.txt``. Past 256 colours the
+    labels are a 16-bit array instead of ``bytes`` - see
+    :attr:`RegionIndex.labels`.
     """
     census = rgb.getcolors(maxcolors=1 << 20)
     if census is None:                       # more than a label can index
         raise MapError("map_regions.tga has more than a million colours")
-    if len(census) > limit:
+    if len(census) > MAX_LABELS:
         raise MapError(
-            f"map_regions.tga has {len(census)} distinct colours and this map is "
-            f"read at {limit}"
-            + (f", the engine's own ceiling being {mapvocab.MAX_REGION_COLOURS}. "
-               f"M2EX replaces that ceiling: if this mod runs on it, mark it as "
-               f"M2EX on its Home card and the map will be read in full."
-               if limit <= 256 else "."))
+            f"map_regions.tga has {len(census)} distinct colours and a label is "
+            f"16 bits, so {MAX_LABELS} is the most that can be indexed")
     # most-used first, so the biggest regions get the low label numbers
     census.sort(key=lambda t: -t[0])
     colours = [c for _, c in census]
@@ -852,15 +850,37 @@ def build_index(regions_img: Image.Image, sea: bytes,
 
     ``sea`` is one byte per tile from :func:`sea_mask`; it is needed here and
     not only in the validator because the engine's own region numbering depends
-    on it. ``limit`` is :func:`_label_image`'s.
+    on it.
+
+    ``limit`` is how many regions ``descr_regions.txt`` may declare: 256 on the
+    vanilla engine, where the question is academic under its own 200-colour cap,
+    and :data:`MAX_LABELS` on a mod marked as running on M2EX.
+
+    It is counted off the RECORDS, and that is the point of it. A colour in
+    ``map_regions.tga`` is not a province: the two markers are colours, the sea
+    is a colour, and so is every shade a paint program left behind. Measuring
+    the ceiling against the image is what refused Vanilla Redux, which declares
+    252 regions in a file carrying 258 colours - black, white, the sea, and
+    three shades of the sea within ten of it on one channel, 591 pixels between
+    them. Those four are already the manifest's ``sea_colours``, a finding that
+    has always known what to make of them; the refusal never let it look.
     """
     rgb = regions_img.convert("RGB")
     width, height = rgb.size
-    labels, colours, counts = _label_image(rgb, limit)
 
     marker_keys = {key(SETTLEMENT_RGB), key(PORT_RGB)}
     by_record = {r.rgb_key: r for r in records if r.rgb_line >= 0}
     region_keys = {k for k in by_record if k not in marker_keys}
+    if len(region_keys) > limit:
+        raise MapError(
+            f"descr_regions.txt declares {len(region_keys)} regions and this map "
+            f"is read at {limit}"
+            + (f", the engine's own ceiling being {mapvocab.MAX_REGION_COLOURS}. "
+               f"M2EX replaces that ceiling: if this mod runs on it, mark it as "
+               f"M2EX on its Home card and the map will be read in full."
+               if limit <= 256 else "."))
+
+    labels, colours, counts = _label_image(rgb)
 
     minx, miny, maxx, maxy, sumx, sumy, count = _stats(labels, width, height, len(colours))
 
@@ -1190,7 +1210,11 @@ class CampaignMap:
 
     @property
     def label_limit(self) -> int:
-        """How many distinct region colours this map's index will accept."""
+        """How many regions this map's ``descr_regions.txt`` may declare.
+
+        Not how many colours ``map_regions.tga`` may carry: see
+        :func:`build_index`, which is where the two got confused.
+        """
         return MAX_LABELS if self.uncapped else 256
 
     @property

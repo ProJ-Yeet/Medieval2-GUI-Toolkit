@@ -2360,7 +2360,7 @@ def apply_transfer(plan: TransferPlan) -> Dict:
     loc_entry = (None if (plan.replace_type or plan.models_mode)
                  else source.loc.get(unit.dictionary))
     if loc_entry is not None:
-        loc_text = dest.export_units_path.read_text(encoding=localization.ENCODING)
+        loc_text, loc_read_as = localization.read_file(dest.export_units_path)
         # `new_name` is what the player will see. Without it the record is a copy
         # of the source's, which is right when the same unit crosses mods and
         # wrong when the point was to make a unit of your own out of one.
@@ -2368,7 +2368,12 @@ def apply_transfer(plan: TransferPlan) -> Dict:
         loc_text = localization.upsert_record(
             loc_text, plan.resolved_dict,
             shown, loc_entry.descr or "", loc_entry.descr_short or "")
-        write_text("text/export_units.txt", loc_text, localization.ENCODING)
+        loc_encoding = localization.save_encoding(loc_text, loc_read_as)
+        note = localization.encoding_warning(dest.export_units_path,
+                                             loc_read_as, loc_encoding)
+        if note:
+            plan.warnings.append(note)
+        write_text("text/export_units.txt", loc_text, loc_encoding)
     elif not (plan.replace_type or plan.models_mode):
         plan.warnings.append("source localisation missing; none written")
 

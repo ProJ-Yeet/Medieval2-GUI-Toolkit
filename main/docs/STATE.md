@@ -1,10 +1,65 @@
 # STATE - Medieval 2 GUI Toolkit
 _Updated: 2026-09-13 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
-the latest beta - after the M2EX map-ceiling fix and the `replace_record` blank
-line it turned up, both committed and **not cut**. **Releasing is on-request
-only**: commit to master and stop_
+the latest beta - after the M2EX map-ceiling fix, the `replace_record` blank
+line it turned up, and the two bugs a second report brought in, all committed
+and **not cut**. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**A colour in `map_regions.tga` is not a province - fixed 2026-09-13, beta
+line, committed and uncut.** A second report of *no region*, this time on
+`Vanilla_Redux`, and the ceiling fix below did not cover it. That map is
+295x189 with **252 records and 258 colours**: the 252, black for the 252
+settlement markers, white for 146 port pixels, the sea, and **three more shades
+of the sea** - `(41,141,243)`, `(41,140,235)`, `(41,141,237)`, within ten of it
+on one channel, 591 pixels between the three. The ceiling was measured against
+`rgb.getcolors()`, so 591 pixels of paint-program noise refused a map that is
+comfortably inside it, and the screen said no region on every tile.
+
+**The two questions had been one number.** How wide a label has to be is ours
+and is about the file: every distinct colour needs one, markers and sea and
+noise included. How many regions a map may have is the engine's and is about
+`descr_regions.txt`. `_label_image` now takes no limit at all - it picks `bytes`
+or `array("H")` off the census and refuses only past `MAX_LABELS`, which is the
+width of the label - and the ceiling moved into `build_index`, counted off the
+records it already had in hand. `mapcheck`'s `layer.colour_cap` had the same
+conflation and the same fix: it counted `by_key`, which is 202 on DaC against
+199 records, and 202 is over the engine's 200 - a false fatal on a map that
+plays. Both now count declared regions.
+
+Vanilla Redux indexes unmarked in **84 ms**: 252 regions, 252 settlements, 146
+ports, 16-bit labels with nothing ticked anywhere, and the four sea shades land
+in the manifest's `sea_colours`, which has always known what to make of them -
+the refusal never let it look. `vanilla_kingdoms_uncompromised` is still refused
+unmarked and the refusal now says *declares 853 regions* rather than *856
+distinct colours*. DaC and Reforged are byte for byte what they were.
+
+**mapcheck could not see that map at all, and now can.** Eleven rules that read
+`not checked - map_regions.tga: ...` on Vanilla Redux now run, and they have
+things to say: five second settlement pixels, five provinces with no settlement
+pixel anywhere on them, four ports on tiles the engine reads as sea, one
+settlement standing on Impassable, and the region cap at 252 against 200.
+Sixteen fatal findings about a real map that were invisible while the index
+refused to build.
+
+**`text/export_units.txt` saved as anything but UTF-16 took the whole unit list
+down - fixed 2026-09-13.** From the same report: `Couldn't open the transfer`,
+`UnicodeDecodeError: 'utf-16' codec can't decode bytes in position 0-1: Stream
+does not start with BOM`. `Mod.loc` called `localization.parse_file` with no
+guard while `Mod.building_loc` twenty lines below it had one, and `loc` is
+warmed inside the registry lock on every `/api/units` - which is the first thing
+`openComposer` awaits. One names file saved out of Notepad as UTF-8 and the
+destination mod could not be read at all.
+
+`localization.read_file` now reads the file off its byte-order mark and returns
+what it found with it; `save_encoding` writes it back that way, because
+`utf-8-sig` reads a BOM-less file perfectly well and then adds a byte on the way
+out. The one exception is an 8-bit file and an edit that puts a character in it
+8 bits cannot hold, where "as found" is a crash on save: that goes out as UTF-16
+and the warning says so. The three write sites - `transfer.py` and `edit.py`
+twice - carry the encoding through `plan.loc_encoding` rather than the module
+constant. All four shapes round-trip byte-identical;
+`tests/test_parsers.py` has the section, 18 checks.
+
 **The map ceilings are the mod's engine's, not ours - fixed 2026-09-13, beta
 line, committed and uncut.** Reported from use: `vanilla_kingdoms_uncompromised`
 read *no region* on every tile. It is 823x337 with 856 colours in
@@ -182,6 +237,23 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | 16-23 | done | Every write-up is in `ROADMAP_ARCHIVE.md`. 16-20a published on the beta line; everything from 20b to 24 went out in the 2026-09-12 cut. |
 ## In-progress detail
 **Clean.** Nothing is mid-flight.
+
+**All 103 suites run one at a time on 2026-09-13 after the Vanilla Redux fixes:
+85 fully green, 18 failing.** Every one of those 18 was captured against a
+stashed tree in the same session and the failing check **names are identical**
+before and after - the one textual difference anywhere is a millisecond count
+inside `test_mapterrain`'s failure line. Nothing regressed.
+`test_campmap` is 136/141 against 131/136 stashed: the same five DaC-number
+failures, plus the five checks of the new section 6b.
+`test_parsers` gained 18 and stays green.
+
+**Two things worth knowing about that run.** `Vanilla_Redux` and
+`vanilla_kingdoms_uncompromised` are both **marked M2EX** in `config/settings.json`
+as of 12:15 on 2026-09-13, which changes how many checks run - a refused mod
+skips its section - so the scores are not comparable with the 2026-09-12
+numbers further down. And `test_images`, `test_startup` and `test_mapcheck`
+each threw `PermissionError: [WinError 10013]` once, on binding a socket; all
+three are green on a re-run. It is the machine, not the suite.
 
 **The 2026-09-12 line below - "98 of 103 passed" - was already stale before the
 M2EX fix, and the reason is worth keeping.** `vanilla_kingdoms_uncompromised`

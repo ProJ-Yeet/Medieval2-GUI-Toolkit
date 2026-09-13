@@ -346,8 +346,8 @@ def _r_layer_size(ck: Check) -> Iterable[Finding]:
                       what=line)
 
 
-@rule("layer.colour_cap", "Region colour cap", "fatal",
-      "The arbiter: 200 colours in map_regions.tga, markers included")
+@rule("layer.colour_cap", "Region cap", "fatal",
+      "The arbiter: 200 regions, and the engine numbers no more than that")
 def _r_colour_cap(ck: Check) -> Iterable[Finding]:
     idx = ck.index
     if idx is None:
@@ -358,14 +358,21 @@ def _r_colour_cap(ck: Check) -> Iterable[Finding]:
     # record caps; this one is a map rule and has the mod in hand already.
     if ck.cm.uncapped:
         return
-    used = len(idx.by_key)
+    # Declared regions, not colours in the file. The arbiter words the cap as
+    # "200 colours in map_regions.tga, markers included", and counting it that
+    # way calls Divide and Conquer over at 202 on a map that plays - it declares
+    # 199. `by_key` is no better: it drops the two markers and then carries
+    # every UNdeclared colour, which is 3 on DaC, 1 on Reforged and 4 shades of
+    # sea on Vanilla Redux. The three installed maps read 199 / 199 / 252
+    # records against 202 / 200 / 256 in `by_key`, and it is the first set that
+    # matches which of them the engine actually runs.
+    used = sum(1 for r in idx.regions if r.record is not None)
     if used > mapvocab.MAX_REGION_COLOURS:
         yield Finding(
             "layer.colour_cap", "fatal",
-            f"map_regions.tga has {used} distinct colours and the engine's cap "
-            f"is {mapvocab.MAX_REGION_COLOURS}, the two marker colours "
-            f"included. Everything past the cap is a province the game never "
-            f"sees.",
+            f"descr_regions.txt declares {used} regions and the engine's cap is "
+            f"{mapvocab.MAX_REGION_COLOURS}. Everything past the cap is a "
+            f"province the game never sees.",
             file=ck.rel("map_regions.tga"), what="cap")
 
 

@@ -24,7 +24,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 ENCODING = "utf-16"          # Python picks LE/BE from the BOM on read
 SEPARATOR = "¬-----"    # ¬-----
@@ -105,8 +105,78 @@ def parse_text(text: str, descr_suffix: str = "_descr") -> Localization:
     return Localization(entries=entries, _lines=lines, _newline=newline)
 
 
+def read_file(path: str | Path) -> Tuple[str, str]:
+    """``(text, encoding)`` - the file, and what it turned out to be.
+
+    The game reads these as UTF-16 with a BOM and nothing else, but a person who
+    opens one in Notepad and saves it gets UTF-8, and a mod ships like that. The
+    file is then unreadable to the game AND, until this, to us: ``ENCODING`` on
+    a file with no BOM raises out of the codec, and :attr:`Mod.loc` is warmed
+    inside the registry lock on the way into ``/api/units``, so one mis-saved
+    file took the whole unit list down and the transfer composer with it.
+
+    The encoding comes back because a save has to write the file the way it was
+    found. Rewriting a mis-saved file as UTF-16 would be a repair nobody asked
+    for, made in passing, on a file the caller is editing one line of.
+    """
+    p = Path(path)
+    with p.open("rb") as fh:
+        head = fh.read(3)
+    # Off the mark rather than by trying codecs in turn, because the mark is
+    # what decides how it is written BACK: `utf-8-sig` reads a file with no BOM
+    # perfectly well and then puts one in on the way out, which is a byte the
+    # mod author did not have.
+    if head[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        order = ("utf-16",)
+    elif head == b"\xef\xbb\xbf":
+        order = ("utf-8-sig",)
+    else:
+        order = ("utf-8",)
+    for enc in order:
+        try:
+            return p.read_text(encoding=enc), enc
+        except UnicodeError:
+            break
+    return p.read_text(encoding="latin-1"), "latin-1"   # decodes any byte
+
+
+def save_encoding(text: str, read_as: str) -> str:
+    """What to actually write with, given what the file was read as.
+
+    Almost always what it was read as - see :func:`read_file`. The exception is
+    a file that was 8-bit and an edit that puts a character in it 8 bits cannot
+    hold, where writing it back as found is not "as found", it is a crash on
+    save. UTF-16 is what the game wanted from that file anyway.
+    """
+    if read_as == ENCODING:
+        return ENCODING
+    try:
+        text.encode(read_as)
+    except UnicodeEncodeError:
+        return ENCODING
+    return read_as
+
+
+def encoding_warning(path: str | Path, read_as: str, save_as: str) -> str:
+    """What to tell a person whose loc file is not UTF-16. ``""`` if it is.
+
+    Said on a SAVE rather than on the read, because the read happens on every
+    page load and this is only news when the file is about to be written.
+    """
+    if read_as == ENCODING:
+        return ""
+    name = Path(path).name
+    said = (f"{name} is {read_as}, not UTF-16 with a BOM, and the game reads "
+            f"only UTF-16 here - so none of this file's text reaches it. ")
+    return said + (
+        "Written back as it was found rather than converted in passing."
+        if save_as == read_as else
+        f"The new text has characters {read_as} cannot hold, so it is saved as "
+        f"UTF-16, which is what the game wanted from it anyway.")
+
+
 def parse_file(path: str | Path, descr_suffix: str = "_descr") -> Localization:
-    return parse_text(Path(path).read_text(encoding=ENCODING), descr_suffix)
+    return parse_text(read_file(path)[0], descr_suffix)
 
 
 def upsert_record(text: str, key: str, name: str, descr: str = "",
