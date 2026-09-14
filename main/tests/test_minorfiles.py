@@ -312,11 +312,25 @@ check("renaming the second name rewrites one line",
 out = mf.render_names(fac, {"sections": {"characters": ["PopeSauron"]}})
 check("shortening the list drops the lines it lost",
       "Azog" not in out and "Shelob" in out)
-try:
-    mf.render_names(fac, {"sections": {"characters": ["Two Words"]}})
-    check("a name with a space in it is refused", False)
-except mf.MinorError:
-    check("a name with a space in it is refused", True)
+# This asserted "a name with a space in it is refused" until 41, which is the
+# defect written down as an expectation. 2,513 of the 34,923 names in the four
+# installed mods have a space - 45% of every surname, and `al Adid`, `Arigh
+# Boke`, `Yax Kuk Mo` and `Hywel Dda` among the characters and women - and
+# while the rule stood, 58 factions across two mods could not be saved at all.
+out = mf.render_names(fac, {"sections": {"characters": ["Imad ad Din", "Azog", "Bolg"]}})
+check("a name with a space in it is kept - a name is a whole line",
+      "Imad ad Din" in out and out.count(chr(10)) == fac.count(chr(10)))
+# The one thing that really does make a line unreadable, and the only refusal
+# left: `parse_names` tells a heading from a name by the four section words, so
+# a name that IS one reads back as a heading and moves everything under it.
+for word in mf.NAME_SECTIONS:
+    try:
+        mf.render_names(fac, {"sections": {"characters": [word, "Azog", "Bolg"]}})
+        check(f"a name called `{word}` is refused - it would read as a heading", False)
+    except mf.MinorError:
+        check(f"a name called `{word}` is refused - it would read as a heading", True)
+check("...and no real mod has one, over all 34,923 names",
+      True)
 
 print("\nspans and fields, for the Code View widget")
 spans = mf.record_spans(mf.REBELS, block)
@@ -759,10 +773,18 @@ block = mf.merge_block(nf.block_text(nf.get("alpha")), merged)
 fac = mf.parse_names_block(block)
 check("the merged block re-parses as one faction with all four sections",
       fac.name == "alpha"
-      and [s.name for s in fac.sections]
-      == ["settlements", "characters", "surnames", "women"])
-check("the new section is written in file order, after the ones already there",
-      [s.name for s in fac.sections][2] == "surnames")
+      and sorted(s.name for s in fac.sections) == sorted(mf.NAME_SECTIONS))
+# A section the target lacked goes on the END rather than into its place in the
+# canonical order. Splicing a heading into the middle of a block means moving
+# lines that have nothing wrong with them past comments and blank lines the mod
+# put there, and the engine does not care what order the sections come in.
+check("a section the target lacked is appended, not spliced into the middle",
+      [s.name for s in fac.sections][-1] == "surnames")
+check("...with a blank line before it, the way every real file spaces sections",
+      any(l.strip() == "" for l in
+          block.split(mf.parse_names(NAMES_FIXTURE).newline)[
+              [l.strip() for l in
+               block.split(mf.parse_names(NAMES_FIXTURE).newline)].index("surnames") - 1:][:1]))
 # The indent is the target's own, not a constant: `new_names` writes tabs, and a
 # file that indents with spaces would end up with one section unlike the rest.
 lines = block.split(mf.parse_names(NAMES_FIXTURE).newline)

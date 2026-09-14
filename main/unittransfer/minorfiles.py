@@ -1032,6 +1032,58 @@ NAMES_REL = "descr_names.txt"
 #: is a correction here rather than a special case in the writer that found it.
 NAME_SECTIONS = ("settlements", "characters", "surnames", "women")
 
+#: A name is a whole LINE, not a whole word, and this is the one thing that can
+#: still make a line unreadable: a name that IS a section keyword.
+#:
+#: `parse_names` tells a heading from a name the way the engine does, by the
+#: four words a heading can be - so a `women` section holding the name `women`
+#: reads back as a second heading and everything under it changes section. No
+#: installed mod has one (measured over all 34,923 entries), and a person typing
+#: it into the form is the only way one could arrive.
+#:
+#: **What was here before was "a name is one word", and it was simply wrong.**
+#: Measured over the four installed mods:
+#:
+#: ============ ========= ============ =======
+#: section      entries   multi-word   share
+#: ============ ========= ============ =======
+#: characters   18,794    90           0.5%
+#: surnames     5,363     **2,413**    45.0%
+#: women        10,766    10           0.1%
+#: **total**    **34,923** **2,513**
+#: ============ ========= ============ =======
+#:
+#: `surnames` is where it is normal - `de Avena`, `of Anglesey` - because the
+#: engine joins a forename to one of these and `de Medici` is a surname rather
+#: than two names. But `characters` and `women` have them too and they are not
+#: mistakes: `al Adid`, `Imad ad Din`, `Arigh Boke`, `Yax Kuk Mo`, `Hywel Dda`,
+#: `Sorghaghtani Beki` - Arabic, Mongol, Mayan and Welsh names that are two
+#: words in the histories they come from.
+#:
+#: What the rule cost while it stood: :func:`render_names` refused the very list
+#: the form had just handed it, unchanged, so **58 factions across two installed
+#: mods could not be saved at all** - and :func:`parse_names` raised 2,513
+#: warnings about files that are perfectly correct.
+#:
+#: The first draft of this fix relaxed the rule for `surnames` alone, on a
+#: sample that happened to be all surnames. That was the same mistake one size
+#: smaller, and the per-section count above is what caught it.
+
+
+def name_fault(section: str, value: str) -> str:
+    """Why this entry cannot go in this section, or ``""`` when it can.
+
+    One place, so the parser's warning, the form's save and a new record's
+    writer cannot drift apart - which is exactly how one wrong rule came to be
+    enforced in three of them at once.
+    """
+    if not value:
+        return "a name cannot be blank"
+    if value.lower() in NAME_SECTIONS:
+        return (f"`{value}` is the name of a section, so the engine would read "
+                "it back as a heading rather than as a name")
+    return ""
+
 
 @dataclass
 class NameSection:
@@ -1113,9 +1165,9 @@ def parse_names(text: str) -> NameFile:
                 f"{kb.and_list(NAME_SECTIONS)} heading")
             fac.end = i + 1
             continue
-        if len(code.split()) > 1:
-            fac.warnings.append(f"line {i + 1}: `{code}` has a space in it - a name "
-                                "is one word")
+        fault = name_fault(sec.name, code)
+        if fault:
+            fac.warnings.append(f"line {i + 1}: {fault}")
         sec.entries.append(Repeat(value=code, line=i))
         sec.end = fac.end = i + 1
 
@@ -1159,9 +1211,9 @@ def render_names(base: str, edits: Optional[Dict] = None) -> str:
             raise MinorError(f"this faction has no `{which}` section", fac.start + 1)
         rows = [str(v).strip() for v in (wanted or [])]
         for value in rows:
-            if len(value.split()) > 1:
-                raise MinorError(f"`{value}` has a space in it - a name is one word",
-                                 sec.start + 1)
+            fault = name_fault(sec.name, value)
+            if fault:
+                raise MinorError(fault, sec.start + 1)
         _edit_entries(sp, lines, sec, rows)
     return newline.join(sp.result())
 
@@ -1205,8 +1257,9 @@ def new_names(edits: Dict) -> str:
         if which != "characters" and not rows:
             continue
         for value in rows:
-            if len(value.split()) > 1:
-                raise MinorError(f"`{value}` has a space in it - a name is one word")
+            fault = name_fault(which, value)
+            if fault:
+                raise MinorError(fault)
         out += ["\t" + which] + ["\t\t" + v for v in rows] + [""]
     while out and not out[-1]:
         out.pop()
@@ -1431,10 +1484,17 @@ def merge_block(base: str, merged: Dict[str, List[str]]) -> str:
         sec = fac.section(which)
         if sec is None:
             if rows:
-                extra += [pad_head + which] + [pad_name + v for v in rows]
+                # a blank line between sections, the way every real file spaces
+                # them - without it the new heading butts onto the last name of
+                # the section above and reads as part of it
+                extra += [""] + [pad_head + which] + [pad_name + v for v in rows]
             continue
         _edit_entries(sp, lines, sec, rows)
-    return newline.join(sp.result() + extra)
+    out = sp.result()
+    while extra and out and not out[-1].strip():
+        extra.pop(0)                           # the block already ends blank
+        break
+    return newline.join(out + extra)
 
 
 # ---------------------------------------------------------------------------
