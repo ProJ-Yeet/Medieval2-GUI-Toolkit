@@ -626,6 +626,12 @@
      files above it that really will change */
   .fcrev{opacity:.75;border-top:1px dashed var(--edge)}
   .fcrev .fcc{color:var(--dim);font-weight:400}
+  /* 42: a place the clone gets no art. Not a failure - the copy did everything
+     it could - so the zero is drawn in the warning colour rather than the error
+     one, and it sits in the same column as every other count. */
+  .fcgap{border-top:1px dashed var(--edge)}
+  .fcgap .fcc{color:var(--warn);font-weight:600}
+  .fcgap .fcgw{display:block;margin-top:2px;font-size:11px;color:var(--dim)}
   .fcmsg{margin-top:10px;font-size:12px;line-height:1.5}
   @media (max-width:720px){
     .fcgrid{grid-template-columns:1fr}

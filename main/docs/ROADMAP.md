@@ -747,7 +747,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
    of reason: it is the same two-way panel over a file that is already fully
    parsed, so the shape gets settled on the cheap problem first.
 5. **Three phases went in front of 28 on 2026-09-12, and rule 1 is why for one
-   of them.** (**40 is done as of 2026-09-13, so 31 now leads the block.**) Diffing Mylae's `2740b0b..187d9ed` re-scoped Phase 31 and produced
+   of them.** (**40, 31 and 42 are done, so 41 now leads the block.**) Diffing Mylae's `2740b0b..187d9ed` re-scoped Phase 31 and produced
    Phase 41, and the user asked for both immediately; reading our own
    region-creation path beside his turned up **Phase 40**, which is a defect in
    shipped work and therefore leads the block the way 29 did. 28 is still the
@@ -763,7 +763,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~1~~ | ~~**29** Strat model viewer~~ | M | **both** | **done 2026-09-12** |
 | ~~2~~ | ~~**40** The new province the engine cannot read~~ | S | **both** | **done 2026-09-13** |
 | ~~3~~ | ~~**31** Two river rules, and a ford in the sea~~ | S | beta | **done 2026-09-13** |
-| 4 | **42** The art a clone does not get | S | **both** | reported |
+| ~~4~~ | ~~**42** The art a clone does not get~~ | S | **both** | **done 2026-09-14** |
 | 5 | **41** Merge one faction's name pool into another | S | **both** | upstream sync |
 | 6 | **43** Playable, unlockable, not playable | S | beta | asked for |
 | 7 | **28a** The strip, and the groups behind it | M | beta | an enabler |
@@ -789,8 +789,8 @@ on, then stars, then size.** That is four rules and each one earns its place.
 **Twenty sessions, and six of them are subreleases.** 29, 40, 42, 41, 38 and
 39 touch something outside the campaign map, so each is a subrelease on both
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
-took B4 with it, and **40 and 31 are done** (2026-09-13); seventeen remain,
-four of them subreleases. **They are committed, not cut** - cut-as-it-lands was
+took B4 with it, **40 and 31 are done** (2026-09-13) and **42 is done**
+(2026-09-14); sixteen remain, three of them subreleases. **They are committed, not cut** - cut-as-it-lands was
 suspended again on 2026-09-12 and a release now happens when the user asks for
 one.
 
@@ -1469,7 +1469,7 @@ should be its own button rather than a side effect of merging nothing.
 
 **Both lines.** `descr_names.txt` is a minor file rather than the campaign map.
 
-## Phase 42 - The art a clone does not get, and is not told about
+## Phase 42 - The art a clone does not get, and is not told about - DONE 2026-09-14
 
 **Reported by a beta user on 2026-09-12: cloning a faction leaves its symbols
 missing under `data/menu/symbols/fe_buttons_24`, `fe_buttons_48` and
@@ -1481,10 +1481,11 @@ Conquer faction slots**: it finds every symbol file in all three folders for
 every slot, misses none, and correctly resolves the longest-slot rivalry (no two
 DaC slots contain each other, so nothing is being eaten). `want_art` defaults to
 `True` in `plan` and the dialog's checkbox ships checked. `apply` copies each
-file and lists it in the undo manifest.
+file and lists it in the undo manifest. **Re-measured on 2026-09-14 and all of
+that held.**
 
 **What is actually wrong: the clone gets only what the donor has, and says
-nothing about the rest.** Measured per folder, per mod:
+nothing about the rest.** The scoping's four-folder table came back exactly:
 
 | folder | Divide and Conquer | Third Age Reforged |
 |---|---|---|
@@ -1493,46 +1494,124 @@ nothing about the rest.** Measured per folder, per mod:
 | `fe_symbols_80` | **17 of 31 slots** | **0 of 30 slots** |
 | `fe_faction_units` | 28 of 31 slots | 28 of 30 |
 
-**`fe_symbols_80` on Reforged is empty of anything the mod uses.** Its 17 files
-are named for vanilla slots (`egypt`, `england`, `france`, `hre`, `ireland`,
-`milan`) that Reforged no longer has. So cloning *any* Reforged faction copies
-nothing into that folder, because the donor has nothing there to copy - and the
-clone is left with no 80px symbol. That is the reported symptom exactly.
+**One fact under it was wrong, and the conclusion survives it.** The scoping
+said Reforged's `fe_symbols_80` holds 17 files named for vanilla slots it no
+longer uses. It does not: **Reforged's copy of that folder is empty.** The 17
+vanilla-named files - `egypt`, `england`, `france.TGA`, `hre`, `ireland`,
+`milan` - are **Divide and Conquer's**, and they are 17 of DaC's own 31 because
+DaC keeps the vanilla slot names and puts LOTR factions in them. Same
+conclusion either way: cloning any Reforged faction copies nothing into
+`fe_symbols_80`, because the donor has nothing there to copy.
 
 **The tool's one warning cannot fire here.** `plan` warns only when the whole
 scan comes back empty:
 
 ```python
-p.warnings.append(f"no art was found carrying `{src}` in its name - …")
+p.warnings.append(f"no art was found carrying `{src}` in its name - ...")
 ```
 
 Banners, captain cards and unit-card folders are always found, so the list is
 never empty and the warning never fires, however many individual locations came
 back with nothing.
 
-**The phase is the per-location report, not a copier fix.** Give
-`factionclone` the set of places a faction's art normally lives - the four
-`menu/symbols` folders, `ui/faction_symbols`, `ui/units/<slot>`,
-`ui/unit_info/<slot>`, the captain cards, the three `banners/textures` files -
-and after the scan name every location the clone did **not** get one of, with
-which of the two reasons it was: *the donor has none either* (the Reforged
-`fe_symbols_80` case, so nobody can copy it and the person has to draw one) or
-*the destination already exists* (the `dst_path.exists()` skip, which is
-currently silent). Neither is a copier bug and both are things a person needs
-told before they launch the game and find a blank button.
+### What was built: the per-location report
 
-**Two smaller things found in the same measurement**, both worth a line rather
-than a phase: DaC ships a nested `menu/symbols/fe_buttons_24/fe_buttons_24/`
-whose four files are picked up as separate items and copied into an equally
-nested destination, which is faithful but odd; and `fe_symbols_80/france.TGA`
-has an upper-case extension, which the rename handles because `swap` only
-touches the matched slot token.
+`ART_PLACES` is the nine places a faction's art lives, each with a label, a
+sentence saying where it shows up in the game, and whether the slot is in the
+file's own name (`symbol24_sicily_roll.tga`) or is itself the folder
+(`ui/units/sicily/`). `art_gaps` names every one of them the clone came away
+from empty-handed, with **which of four reasons** it was:
 
-**Not reproduced end to end.** Everything above is measured against the two
-installed mods and the current source. What has not been done is running the
-clone in the app and watching the folders, and the report may still turn out to
-be a different mod, an older build, or a second cause on top of this one. Ask
-which mod and which donor before writing the fix.
+* `donor` - the donor has nothing here either. Nobody can copy it and the art
+  has to be drawn. **This is the reported case.**
+* `exists` - the mod already ships a file of the new name here, so it was left
+  alone. Never overwriting is the right call; saying nothing about it was not.
+* `rival` - the only files here carrying the donor's name belong to a
+  longer-named faction, so none of them is the donor's.
+* `absent` - the mod has no such folder at all.
+
+None of the four is a copier bug, which is why this is a report. `_asset_hits`
+grew an optional `skips` list so the two decisions it used to make silently -
+the rivalry skip and the `dst_path.exists()` skip - can be read back.
+
+### Nine places, four mods, and the report is far wider than the report was
+
+The scoping measured four folders on two mods. Measured across nine places on
+all four installed mods, sweeping **every one of the 121 faction slots** as a
+donor: **253 places come back empty**, and only **50 of the 121 donors** get
+art everywhere.
+
+| mod | slots | donors with every place filled | empty places |
+|---|---|---|---|
+| Divide and Conquer | 31 | 16 | 33 |
+| Third Age Reforged | 30 | **0** | 63 |
+| Vanilla Redux | 25 | 21 | 11 |
+| vanilla_kingdoms_uncompromised | 35 | 13 | **146** |
+
+**Not one of Reforged's thirty factions is a donor that fills every place.**
+All 30 miss the 80px symbol, 16 miss the captain card, 9 miss the battle
+banners, 5 the unit information cards. And `vanilla_kingdoms_uncompromised` is
+worse than any of them: 22 of its 35 donors miss the 24px button, the 80px
+symbol, the in-game faction symbol and the battle banners, each.
+
+**Every one of the 253 is the `donor` reason.** Not one real mod produces
+`exists`, `rival` or `absent` from a clone - which is worth knowing rather than
+worth hiding, so all three get a fixture instead of a claim. `exists` is the
+leftover-art case: a mod that still ships a file named for a faction it no
+longer has, cloned into under that same name.
+
+**And one thing measured on the way past that is worth writing down: the repair
+path copies no art at all.** `factionaudit.repair_plan` (21's D6) builds its
+`ClonePlan` by hand and never calls `_asset_hits`, so a repaired faction gets
+the records it was missing and none of its symbols - and therefore has no gaps
+to report either. That is correct rather than a defect, because repair is about
+the records a faction is missing and not its pictures, but it is not what the
+module's shape suggests at a glance.
+
+### Verified
+
+* `tests/test_factionclone.py` **74/74** against 64 before. The report has to be
+  *exact*, so both directions are checked against the real mod: no place is
+  reported empty that the clone got art in, and no place the clone got nothing
+  in is left unreported. Each reason is then checked against the disk rather
+  than taken on trust - a place reported `absent` really is not in the mod, a
+  place reported `donor` really has no file carrying the donor's name.
+* `tests/test_factionclone_apply.py` **39/39** against 30. A second synthetic
+  mod produces all four reasons at once, and proves the `exists` skip does what
+  the new sentence says: the file that was already there is byte for byte
+  untouched after the write, and it is **not** in the undo manifest, so undoing
+  the clone cannot delete a file the mod owned before it.
+* One thing the fixture taught: a new name that **carries the donor's token**
+  (`sicily` -> `sicily_two`) is picked up by the scan as if it were the donor's
+  own art. It is unreachable through the app - `_validate` refuses a name
+  already in the roster, and the repair path has the name in the roster where it
+  wins the longest-slot rivalry and is skipped - so it is a note, not a fix. The
+  fixture clones to `norman` for exactly that reason.
+* Driven end to end through the running server on Third Age Reforged: cloning
+  `aztecs` names four places with their reasons in the dialog, the header reads
+  `11 file(s), 54 art file(s), 5.4 MB - 4 art place(s) empty`, and no console
+  error anywhere.
+
+### Two smaller things found in the same measurement
+
+Both were in the scoping and both are still true, and both are left alone
+deliberately. DaC ships a nested
+`menu/symbols/fe_buttons_24/fe_buttons_24/` whose four files are picked up as
+separate items and copied into an equally nested destination - faithful to the
+mod, and a place still counts as filled when its hits came from inside the
+nest, so inventing a rule to flatten it would be this module guessing at a
+mod's own layout. And `fe_symbols_80/france.TGA` has an upper-case extension,
+which the rename handles because `swap` only touches the matched slot token.
+
+### Still open: the reporter's own mod
+
+**The end-to-end reproduction against the mod in the report was not done, and
+the user does not have the detail.** Everything above is measured against the
+four mods installed here and driven through the running app on one of them.
+The report may still turn out to be a different mod, an older build, or a
+second cause on top of this one - and if a second cause exists, this report is
+what will show it, because a clone that comes back with **no** empty places and
+still has a blank button is a different bug from the one closed here.
 
 **Both lines.** The faction clone is not the campaign map.
 

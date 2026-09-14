@@ -25,6 +25,7 @@ The four things worth proving, because each one was a real bug first:
   available here and it catches any cloner that edits a line it should only
   have read.
 """
+import re
 import sys
 from pathlib import Path
 
@@ -266,6 +267,72 @@ if plan.review:
           any("decision rather than a list" in n for n in plan.notes))
     check("...without re-listing what `review` already carries",
           not any(r["rel"] in n for n in plan.notes for r in plan.review))
+
+# ---------------------------------------------------------------------------
+# 42 - the art the clone does NOT get, and whether the report is honest
+#
+# A beta user reported a clone coming out with no faction symbols. The copier is
+# not at fault and that was measured: `_asset_hits` finds every symbol file in
+# every folder for all 31 Divide and Conquer slots. The clone simply gets what
+# the donor has, and the donor does not always have one - so what was missing
+# was not a copy, it was a sentence.
+#
+# The strongest thing this suite can say about that sentence is that it is
+# EXACT: a place is reported empty if and only if nothing landed in it. Both
+# directions are checked, because either one failing on its own is worse than
+# no report at all - a false gap sends a person off to draw art they already
+# have, and a missed gap is the bug the report exists to end.
+
+gaps = plan.art
+places = {pl.rel: pl for pl in fc.ART_PLACES}
+check(f"every gap names a place the module knows ({len(gaps)} of {len(places)})",
+      all(g["rel"] in places for g in gaps))
+check("every gap carries one of the four reasons, and a sentence saying it",
+      all(g["reason"] in ("donor", "exists", "rival", "absent") and g["what"]
+          for g in gaps))
+
+# the two directions
+landed = {pl.rel for pl in fc.ART_PLACES
+          for a in plan.assets if a.dst == pl.rel or a.dst.startswith(pl.rel + "/")}
+check("no place is reported empty that the clone actually got art in",
+      not ({g["rel"] for g in gaps} & landed))
+check("no place the clone got nothing in is left unreported",
+      not ({pl.rel for pl in fc.ART_PLACES} - landed - {g["rel"] for g in gaps}))
+
+# the reason has to be a fact about the mod, not a guess
+for g in gaps:
+    base = Path(mod.data) / g["rel"]
+    if g["reason"] == "absent":
+        check(f"{g['rel']}: reported absent, and really is not in this mod",
+              not base.is_dir())
+    elif g["reason"] == "donor":
+        hits = [x for x in (base.iterdir() if base.is_dir() else [])
+                if re.search(fc._key_tok(DONOR), x.name, re.I)]
+        check(f"{g['rel']}: reported as the donor having none, and `{DONOR}` "
+              f"really has none there", base.is_dir() and not hits)
+
+if gaps:
+    # Same division of labour as `review` above: the rows carry the places and
+    # the reasons, the warning is the headline. It must NOT re-list the labels.
+    warn = [w for w in plan.warnings if "places a faction's art" in w]
+    check("one warning is the headline for all of them", len(warn) == 1)
+    check("...without re-listing what the rows already carry",
+          not any(g["label"] in warn[0] for g in gaps))
+    check("the warning names the new faction, since that is what will be blank",
+          NEW in warn[0])
+else:
+    print(f"  [--] {DONOR} has art in all {len(places)} places in this mod")
+
+# The old whole-scan warning is not the answer and this says why: it fires only
+# when the scan comes back completely empty, which on a real mod it never does.
+check("the whole-scan warning did not fire, because banners and unit cards "
+      "are always found - which is the hole 42 filled",
+      bool(plan.assets))
+
+# the plan's payload is what the dialog draws, so the rows have to reach it
+check("the gaps reach the dialog's payload under `art_gaps`",
+      plan.payload().get("art_gaps") == gaps)
+
 
 # the review scan is cached, so the dialog re-planning on every keystroke does
 # not re-read a dozen multi-megabyte files each time

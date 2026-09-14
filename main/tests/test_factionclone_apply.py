@@ -412,5 +412,80 @@ check("the roster is the donor's again",
 config.update_log(tid, note="test_factionclone_apply - synthetic mod, discarded")
 shutil.rmtree(tmp, ignore_errors=True)
 
+
+# ---------------------------------------------------------------------------
+# 42 - the four reasons a place comes back empty
+#
+# Sweeping all 121 faction slots of the four mods installed here produced 253
+# empty places and EVERY ONE of them was the same reason: the donor had none
+# either. The other three are real and reachable and a real mod simply does not
+# happen to show them, so they get a fixture rather than a claim.
+#
+# `exists` is the one worth the trouble. It is the leftover-art case: a mod that
+# still ships a file named for a faction it no longer has, cloned into under
+# that same name. Before this it was the silent branch - the copier skipped the
+# file, said nothing, and the plan looked exactly like one that had copied it.
+# (It is NOT the repair path. `factionaudit.repair_plan` builds its ClonePlan by
+# hand and never calls `_asset_hits`, so a repair copies no art at all and has
+# no gaps to report - measured 2026-09-14, and correct: repair is about the
+# records a faction is missing, not its pictures.)
+
+tmp2 = Path(_tmp.mkdtemp(prefix="m2gui_clone_gaps_"))
+root2 = tmp2 / "GapMod"
+build(root2)
+d2 = root2 / "data"
+print(f"\n=== the four reasons, on a second fixture at {root2} ===")
+
+# `exists`: both of fe_buttons_24's destinations are already on disk
+# `norman` and not `sicily_two`, and the difference matters: a new name that
+# CARRIES the donor's token is picked up by the scan as if it were the donor's
+# own art. Unreachable through the dialog, because `_validate` refuses a name
+# already in the roster - but it would make this fixture measure itself rather
+# than the thing it is here for.
+KEPT = b"TGA-already-here-and-not-to-be-touched"
+for rel in ("menu/symbols/fe_buttons_24/symbol24_norman.tga",
+            "menu/symbols/fe_buttons_24/symbol24_norman_grey.tga"):
+    (d2 / rel).write_bytes(KEPT)
+# `rival`: the only file carrying `sicily` here belongs to `sicily_clone`
+(d2 / "menu/symbols/fe_symbols_80").mkdir(parents=True, exist_ok=True)
+(d2 / "menu/symbols/fe_symbols_80/sicily_clone.tga").write_bytes(b"TGA-rivals")
+# `donor`: the folder is there, and the donor has nothing in it
+(d2 / "menu/symbols/fe_faction_units").mkdir(parents=True, exist_ok=True)
+(d2 / "menu/symbols/fe_faction_units/milan.tga").write_bytes(b"TGA-milan")
+# `absent`: fe_buttons_48 is never created at all
+
+mod2 = Mod(root2)
+plan2 = fc.plan(mod2, {"source": "sicily", "new": "norman", "art": True})
+why = {g["rel"]: g["reason"] for g in plan2.art}
+for rel, want in (("menu/symbols/fe_buttons_24", "exists"),
+                  ("menu/symbols/fe_symbols_80", "rival"),
+                  ("menu/symbols/fe_faction_units", "donor"),
+                  ("menu/symbols/fe_buttons_48", "absent")):
+    check(f"{Path(rel).name} comes back empty, and the reason is `{want}`",
+          why.get(rel) == want)
+
+check("the five places the donor really filled are not reported",
+      not ({"ui/units", "ui/unit_info", "ui/faction_symbols", "ui/captain banners",
+            "banners/textures"} & set(why)))
+check("a rival's file is not copied on the way past",
+      not any("sicily_clone" in a.src for a in plan2.assets))
+
+# The whole point of the `exists` skip is that it never overwrites. The report
+# now says so out loud, and this is what proves the saying and the doing agree.
+res2 = fc.apply(plan2)
+check("applying leaves the file that was already there byte for byte",
+      all((d2 / rel).read_bytes() == KEPT for rel in
+          ("menu/symbols/fe_buttons_24/symbol24_norman.tga",
+           "menu/symbols/fe_buttons_24/symbol24_norman_grey.tga")))
+check("and it is not in the undo manifest, so undo will not delete a file "
+      "the mod owned before the clone",
+      not any("symbol24_norman" in c
+              for c in res2["record"]["manifest"]["created"]))
+check("the result of a write carries the gaps too, not just the plan",
+      res2.get("art_gaps") == plan2.art)
+
+config.update_log(res2["id"], note="test_factionclone_apply - gap fixture, discarded")
+shutil.rmtree(tmp2, ignore_errors=True)
+
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)

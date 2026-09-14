@@ -1,9 +1,9 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-13 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
+_Updated: 2026-09-14 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
 the latest beta - after the M2EX map-ceiling fix, the `replace_record` blank
-line it turned up, the two bugs a second report brought in, and **Phases 40 and
-31**, all committed and **not cut**. **Releasing is on-request only**: commit to
-master and stop_
+line it turned up, the two bugs a second report brought in, and **Phases 40, 31
+and 42**, all committed and **not cut**. **Releasing is on-request only**:
+commit to master and stop_
 
 ## Next up
 **Phase 31 is done - three rules, one repair, no web change, fixed 2026-09-13,
@@ -234,35 +234,66 @@ this turned up and did not fix.
 **Two blocks, set by the user on 2026-09-12 after rating 38 of 39 candidates:
 the whole campaign map first, then the mercenaries.** Everything else is in
 `ROADMAP.md`'s *Future roadmap*, rated and unscheduled, to be started when both
-blocks are done. Twenty sessions in all; **29, 40 and 31 are done**, so
-seventeen are left and four of those are subreleases.
+blocks are done. Twenty sessions in all; **29, 40, 31 and 42 are done**, so
+sixteen are left and three of those are subreleases.
 
-**Block one, the campaign map** - ~~29~~, ~~40~~, ~~31~~, **42, 41, 43**, 28a,
-28b, 33, 30, 34, 35, 36, 37a, 37b, 38.
+**Block one, the campaign map** - ~~29~~, ~~40~~, ~~31~~, ~~42~~, **41, 43**,
+28a, 28b, 33, 30, 34, 35, 36, 37a, 37b, 38.
 
 **And six sessions that are in neither block, added 2026-09-13** after the user
 asked for a pass over Mylae's non-map screens: Phases **44-48**, all six
 subreleases on both lines, sitting after block two until the user moves them.
 Write-ups and their own order table in `ROADMAP.md`.
 
-**Start with Phase 42, the art a clone does not get.** It is the second
-reported defect, which is what puts it in front of 41 and 43, and it is **not
-reproduced in the app** - ask which mod and which donor first. The copier is
-not at fault and that is measured: `_asset_hits` was run over all 31 DaC slots
-and misses nothing, and `want_art` defaults on. The donor simply has nothing to
-copy - Third Age Reforged has art for **0 of its 30 slots** under
-`fe_symbols_80`, and its 17 files there are named for vanilla slots the mod no
-longer uses. The phase is a per-location report, not a copier fix.
+**Phase 42 is done - the per-location art report, fixed 2026-09-14, both
+lines when a cut happens, committed and uncut.** The copier was never at fault
+and the re-measurement held: `_asset_hits` finds every symbol file for all 31
+DaC slots, `want_art` defaults on, `apply` copies each hit and logs it for undo.
+A clone simply gets what the donor has, and **the one warning this module had
+fires only when the whole scan comes back empty** - banners and unit-card
+folders are almost always found, so it never fired however many individual
+places came back with nothing. `ART_PLACES` is the nine places a faction's art
+lives and `art_gaps` names every one the clone came away from empty-handed,
+with which of four reasons: the donor has none either, the destination already
+exists, a longer-named faction owns the name, or the mod has no such folder.
 
-**Then 42**, the second reported defect: cloning a faction leaves it with no
-`fe_symbols_80` symbol. The copier is not at fault - `_asset_hits` was run over
-all 31 DaC slots and misses nothing, and `want_art` defaults on - the donor
-simply has nothing there to copy. Third Age Reforged has art for **0 of its 30
-slots** in that folder; its 17 files are named for vanilla slots the mod no
-longer uses. The phase is a per-location report, not a copier fix, and it is
-**not reproduced in the app** - ask which mod and which donor first.
+**The scoping's four-folder table came back exactly, and one fact under it was
+wrong.** It said Reforged's `fe_symbols_80` holds 17 files named for vanilla
+slots. It does not - **Reforged's copy of that folder is empty**, and the 17
+vanilla-named files are **DaC's**, which is why DaC scores 17 of its own 31:
+DaC keeps the vanilla slot names and puts LOTR factions in them. Same
+conclusion, different fact underneath.
 
-**Then 41 and 43.** 41 is Mylae's names merge. 43 is the playable / unlockable /
+**And the report is far wider than the report was.** Nine places, four mods,
+**every one of the 121 faction slots swept as a donor: 253 empty places, and
+only 50 of the 121 donors get art everywhere.** Not one of Reforged's thirty
+factions fills every place - all 30 miss the 80px symbol, 16 the captain card -
+and `vanilla_kingdoms_uncompromised` is worse than any of them at 146, with 22
+of its 35 donors missing the 24px button, the 80px symbol, the in-game symbol
+and the banners each. **All 253 are the same reason**, the donor having none;
+`exists`, `rival` and `absent` are real, reachable and produced by no installed
+mod, so all three get a fixture rather than a claim. `exists` is the
+leftover-art case - a mod still shipping a file named for a faction it no
+longer has - and was the silent branch before this. Measured on the way past
+and worth knowing: **the repair path copies no art at all**, because
+`factionaudit.repair_plan` builds its plan by hand and never scans.
+
+`tests/test_factionclone.py` is **74/74** against 64, checking the report both
+ways - no place reported empty that got art, no empty place left unreported -
+and each reason against the disk rather than on trust.
+`tests/test_factionclone_apply.py` is **39/39** against 30, a second synthetic
+mod producing all four reasons at once and proving the `exists` skip leaves the
+file that was already there byte for byte and out of the undo manifest. Driven
+end to end on Reforged through the running server: cloning `aztecs` names four
+places with their reasons and the header reads *4 art place(s) empty*.
+
+**Still open on 42: the reporter's own mod.** The user does not have which mod
+or which donor, so the end-to-end reproduction against the report itself was
+not done. If a second cause exists, this report is what will show it - a clone
+that comes back with **no** empty places and still has a blank button is a
+different bug from the one closed here.
+
+**Start with 41, then 43.** 41 is Mylae's names merge. 43 is the playable / unlockable /
 nonplayable toggle the user asked for: we parse all three rosters, print their
 counts on the campaign card, and refuse the edit in four separate modules with
 the same sentence, which is one writer owed rather than four.
@@ -357,9 +388,10 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | Phase | Status | Note |
 |---|---|---|
 | 29 + B4 - the strat model viewer | **done** | Closed 2026-09-12, committed, **released 2026-09-12** as v2.3.2 and beta 2026-09-12c. The scoping was wrong about the root and right about everything above it: the art is not in a `.pack`, it is loose beside the stub as `<name>.tga.dds`, and `cas.texture_path` took the zero-byte `.tga` because it existed. Fixed at all five levels. New: `cas._has_bytes`, `icons.ArtUnreadable`, `icons.fault`, `png_bytes(strict=)`, `/model_texture` 415, `factions.packs_beside`, `factions.no_file_note`, and in `viewer3d.js` `uCutout`, `v3Degenerate`, `v3AskWhy`, `v3TexFault`, `v3FaultRows`. `tests/test_stratart.py` (40). |
+| 42 - the art a clone does not get | **done** | Closed 2026-09-14, committed, **not cut** (both lines when a cut happens). The copier was never at fault and the re-measurement held; what was missing was a sentence. `ART_PLACES` is the nine places a faction's art lives, `art_gaps` names every one the clone came away from empty-handed with one of four reasons - the donor has none either, the destination already exists, a longer-named faction owns the name, the mod has no such folder. The old whole-scan warning fires only when the scan is completely empty, which on a real mod it never is. **121 donor slots swept over four mods: 253 empty places, 50 clean donors, and all 253 the same reason.** Not one of Reforged's 30 factions fills every place; `vanilla_kingdoms_uncompromised` is worst at 146. The scoping was wrong about one fact: Reforged's `fe_symbols_80` is **empty**, and the 17 vanilla-named files in it are DaC's. New: `ArtPlace`, `ART_PLACES`, `art_gaps`, `_asset_hits(skips=)`, `ClonePlan.art`, `payload()["art_gaps"]`, the `.fcgap` rows in `factions.js` and the places named in the apply confirm. `tests/test_factionclone.py` 74/74 (was 64), `tests/test_factionclone_apply.py` 39/39 (was 30). **Open:** the reporter's own mod is still unknown, so the end-to-end reproduction against the report itself was not done. |
 | 31 - two river rules and a ford in the sea | **done** | Closed 2026-09-13, committed, **not cut** (beta only). Three rules and one repair: `river.fourway` (river on all four sides), `river.no_source` (a four-connected component with no white source), `feature.ford_in_sea` (own altitude sea **and** four neighbours sea - the second half the scoping did not have, and without it the message and the repair are not true). All three find **nothing on any of the five installed maps**, which is what they are for. `ford_none` is the one repair with a safe answer; the other two need the map author's intent or `map_heights.tga`, and both refusals are written into `FIXES`. New: `_r_river_fourway`, `_r_river_no_source`, `_r_ford_in_sea`, `_plan_fords`, `FIXES["ford_none"]`. The three existing river fixtures painted sourceless courses and now paint their source. No web change - the panel is data-driven off `RULES` and `rep.fixes`. `tests/test_mapcheck.py` 104/105. |
 | 40 - the new province the engine cannot read | **done** | Closed 2026-09-13, committed, **not cut** (both lines when a cut happens). Four defects, one of them the scoped one. `campaint.new_record_lines` and `campmap.render_block` both produced the eight-line record, the second by dropping the line when the last resource was cleared; both write `none` now, which is what vanilla writes on 18 of 112, Vanilla Redux on 78 of 252 and `vanilla_kingdoms_uncompromised` on all 853. `none` read as a resource name was 931 false findings across two mods. And the indent reading lost DaC's ` Erebor_Province` to a stray leading space - **200 regions read as 199**, 517 painted tiles declared nowhere, and its settlement marker written into the source and a test as DaC's one orphan. New: `campmap.file_shape`, `campmap._resplit_runs`, `check_record(rec, vocab, shape)`, a `parse_block` retry for an indented name line. The inferred engine crash is **withdrawn**: DaC ships a short record and plays. `tests/test_campaint.py` 4c and 4d (185), `tests/test_campmap.py` 1 (+7), `tests/test_campedit.py` (139). |
-| 28-43 - the rest of the 2026-09-12 review | **scoped** | Seventeen sessions in two blocks, 40 and 31 having closed. **Block one, the campaign map:** 42 the art a clone does not get, 41 merge one faction's name pool, 43 playable/unlockable/nonplayable, 28a the right menu as a tab strip with Validate one of them, 28b the paint controls over the canvas and a tooltip that holds still, 33 T10 + G2 + G4 in one session, 30 the pink as a choice, 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
+| 28-43 - the rest of the 2026-09-12 review | **scoped** | Sixteen sessions in two blocks, 40, 31 and 42 having closed. **Block one, the campaign map:** 41 merge one faction's name pool, 43 playable/unlockable/nonplayable, 28a the right menu as a tab strip with Validate one of them, 28b the paint controls over the canvas and a tooltip that holds still, 33 T10 + G2 + G4 in one session, 30 the pink as a choice, 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
 | 44-48 - the pass over Mylae's non-map screens | **scoped** | Six sessions, added 2026-09-13 at the user's request, in neither block and every one a subrelease on both lines. 44 the EDB's tree checked (his is the one validator he has and we do not), 45 the `hidden_resources` line, 46 cultures on a mode of its own with a four-tab form and the faction form on the same strip, 47a the six `export_descr_sounds_*` files on `sounds.py`'s own parser, 47b the 32 `descr_sounds_*` scripts on a grammar nothing here reads, 48 add and remove on the strings screen. Two of the seven things asked for produced no phase and a measurement instead: his traits and ancillaries have not moved since 2026-03-27, and his `.strings.bin` codec is wrong where ours is right. |
 | 24 - Make and unmake | done | Closed 2026-09-12, committed, **released 2026-09-12**. Closes G1, M15 and the roadmap. Deleting a province, with its land going whole to a neighbour it borders and its name coming out of every file 19b measured - and the campaign script listed, never written, for the reason a rename gives. Making a campaign, as a copy of one that works minus the compiled map, with its own header and its own menu keys. New: `unittransfer/regiondel.py` (`heirs`, `campaigns_reading`, `standing_on`, `plan`, `apply`, `view`), `unittransfer/campnew.py` (`sources`, `plan`, `apply`, `view`), `mapquery.drop_music_region`, `renames.mentions`, `campfiles.write_descriptions`, `GET /api/map/region_delete`, `POST /api/map/region_delete_plan\|_apply`, `GET /api/campnew`, `POST /api/campnew/plan\|apply`, `web/js/regiondel.js`, `web/js/campnew.js`. `tests/test_regiondel.py` (62), `tests/test_campnew.py` (52). |
 | B2-B3 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export. B4 went out inside 29. |
@@ -368,6 +400,14 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | 16-23 | done | Every write-up is in `ROADMAP_ARCHIVE.md`. 16-20a published on the beta line; everything from 20b to 24 went out in the 2026-09-12 cut. |
 ## In-progress detail
 **Clean.** Nothing is mid-flight.
+
+**Phase 42's own two suites are green and were measured both ways**:
+`test_factionclone` 74/74 against 64 on the stashed tree,
+`test_factionclone_apply` 39/39 against 30. The **full 103-suite sweep was
+still running when 42 was committed** - if it turns up a regression it is in
+the art-gap work and nowhere else, since nothing outside `factionclone.py`,
+`factions.js` and `index.html` was touched, and `_asset_hits` gained only an
+optional parameter that every existing caller omits.
 
 **All 103 suites run one at a time on 2026-09-13 after the Vanilla Redux fixes:
 85 fully green, 18 failing.** Every one of those 18 was captured against a

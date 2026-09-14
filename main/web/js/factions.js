@@ -720,7 +720,9 @@ function facClonePlanHtml(){
     <div class="k">What would be written
       <span class="count">${files.filter(x => x.written).length} file(s)${
         p.asset_files ? ` · ${p.asset_files} art file(s), ${
-          (p.asset_bytes / 1048576).toFixed(1)} MB` : ''}</span></div>
+          (p.asset_bytes / 1048576).toFixed(1)} MB` : ''}${
+        (p.art_gaps || []).length
+          ? ` · ${p.art_gaps.length} art place(s) empty` : ''}</span></div>
     ${files.map(x => `<div class="fcrow${x.written ? '' : ' off'}">
       <span class="fcc">${x.written ? '+' + x.count : '-'}</span>
       <span class="fcn">${esc(x.label)}
@@ -734,6 +736,13 @@ function facClonePlanHtml(){
       <span class="fcw count">the donor is named here in ways that are a
         judgement, not a list - a trait named after it, an ancillary's condition,
         a prebattle speech</span></div>` : ''}
+    ${(p.art_gaps || []).map(g => `<div class="fcrow fcgap" data-why="${esc(g.reason)}">
+      <span class="fcc">0</span>
+      <span class="fcn">${esc(g.label)}
+        <span class="fcf">${esc(g.rel)}</span></span>
+      <span class="fcw count">${esc(g.what)}${
+        g.note ? `<span class="fcgw">${esc(g.note)}</span>` : ''}</span>
+    </div>`).join('')}
     ${(p.warnings || []).map(w => `<div class="w-warn fcmsg">${esc(w)}</div>`).join('')}
     ${(p.notes || []).map(n => `<div class="fcmsg count">${esc(n)}</div>`).join('')}
   </div>`;
@@ -787,6 +796,13 @@ async function facCloneApply(){
     // them itself - it has no row to draw them in the way the plan pane does
     + ((p.review || []).length ? '\n\nLeft for you to decide:\n'
         + p.review.map(r => `  ${r.rel}  (${r.hits} mention(s))`).join('\n') : '')
+    // 42: the art the clone will NOT get, said here rather than found in the
+    // game. A donor with nothing in a folder cannot fill it, so this is the
+    // last point at which picking a different donor is still a choice.
+    + ((p.art_gaps || []).length
+        ? `\n\n${p.art_gaps.length} place(s) get no art:\n`
+          + p.art_gaps.map(g => `  ${g.label}  (${g.rel})\n    ${g.what}`).join('\n')
+        : '')
     + '\n\nEvery file is backed up first, and 🕑 Log undoes the whole faction '
     + 'in one go.\n\n' + (p.notes || []).join('\n\n'))) return;
   c.busy = true;

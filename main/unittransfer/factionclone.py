@@ -455,6 +455,77 @@ JOBS: Tuple[Job, ...] = (
 #: duplicate that nothing in the mod refers to.
 ART_ROOTS: Tuple[str, ...] = ("ui", "menu", "banners")
 
+#: Where a faction's art is *expected* to end up, one entry per place the engine
+#: looks. :data:`ART_ROOTS` is what the copier scans; this is what a person goes
+#: looking for afterwards, and the gap between the two is the whole of Phase 42.
+#: The copier takes everything the donor has and says nothing about the places
+#: the donor had nothing in, so a clone can come out of a clean, error-free run
+#: with a blank button and no line anywhere saying why.
+#:
+#: ``kind`` is how the place names a faction: ``named`` puts the slot in the
+#: file's own name (``symbol24_sicily_roll.tga``), ``folder`` makes the slot a
+#: sub-folder (``ui/units/sicily/``). The copier finds both the same way and the
+#: distinction is only used to word the message.
+#:
+#: **No two installed mods agree on which of these they fill**, which is why it
+#: is a list of places to check rather than a list of files to require. Measured
+#: 2026-09-14 over the four mods here, as slots covered of slots declared:
+#:
+#: =========================== ======= ========= ======= ==========
+#: place                       DaC 31  Reforged  Redux   Kingdoms
+#:                                     30        25      35
+#: =========================== ======= ========= ======= ==========
+#: ``fe_buttons_24``           29      30        25      13
+#: ``fe_buttons_48``           29      30        25      14
+#: ``fe_symbols_80``           17      **0**     22      13
+#: ``fe_faction_units``        28      28        22      19
+#: ``ui/faction_symbols``      31      30        22      13
+#: ``ui/captain banners``      26      14        25      14
+#: ``ui/units``                29      29        25      35
+#: ``ui/unit_info``            29      25        25      35
+#: ``banners/textures``        28      21        23      13
+#: =========================== ======= ========= ======= ==========
+#:
+#: Reforged's ``fe_symbols_80`` is an **empty folder**, so cloning any one of
+#: its thirty factions leaves the 80px symbol missing however the copy goes.
+#: That is the reported defect exactly, and it is the donor's gap rather than
+#: the copier's fault.
+#:
+#: One oddity seen while measuring and deliberately left alone: Divide and
+#: Conquer ships a nested ``menu/symbols/fe_buttons_24/fe_buttons_24/`` whose
+#: four files are picked up as items of their own and copied to an equally
+#: nested destination. That is faithful to the mod, a place still counts as
+#: filled when its hits came from inside the nest, and inventing a rule to
+#: flatten it would be this module guessing at the mod's own layout.
+@dataclass(frozen=True)
+class ArtPlace:
+    rel: str                       # relative to data/
+    label: str                     # what a person would call it
+    kind: str = "named"            # "named" | "folder"
+    note: str = ""                 # where it shows up in the game
+
+
+ART_PLACES: Tuple[ArtPlace, ...] = (
+    ArtPlace("menu/symbols/fe_buttons_24", "24px faction button", "named",
+             "the small flag on the front-end campaign and faction pickers"),
+    ArtPlace("menu/symbols/fe_buttons_48", "48px faction button", "named",
+             "the larger flag beside it, and the one custom battle uses"),
+    ArtPlace("menu/symbols/fe_symbols_80", "80px faction symbol", "named",
+             "the big symbol on the faction selection screen"),
+    ArtPlace("menu/symbols/fe_faction_units", "faction unit backdrop", "named",
+             "the plate the unit roster is drawn on in the front end"),
+    ArtPlace("ui/faction_symbols", "in-game faction symbol", "named",
+             "the symbol on the campaign scroll and the diplomacy screen"),
+    ArtPlace("ui/captain banners", "captain card", "named",
+             "the card shown for an army with no named general"),
+    ArtPlace("ui/units", "unit cards", "folder",
+             "one card per unit, in the recruitment and army panels"),
+    ArtPlace("ui/unit_info", "unit information cards", "folder",
+             "the larger picture on a unit's own scroll"),
+    ArtPlace("banners/textures", "battle banners", "named",
+             "the banners the faction's soldiers carry on the battle map"),
+)
+
 #: Files whose faction mentions are NOT a list to join, so they are reported
 #: rather than cloned. Each names the donor in a way that needs a decision:
 #:
@@ -528,6 +599,8 @@ class ClonePlan:
     errors: List[str] = field(default_factory=list)
     notes: List[str] = field(default_factory=list)
     review: List[Dict] = field(default_factory=list)
+    #: 42: the places the clone got no art, with the reason - see :func:`art_gaps`
+    art: List[Dict] = field(default_factory=list)
 
     def written(self) -> List[FileEdit]:
         return [e for e in self.edits if e.text]
@@ -556,6 +629,7 @@ class ClonePlan:
             "changes": list(self.changes), "warnings": list(self.warnings),
             "errors": list(self.errors), "notes": list(self.notes),
             "review": list(self.review),
+            "art_gaps": list(self.art),
             "ok": not self.errors and self.touched(),
         }
 
@@ -594,7 +668,8 @@ def _validate(mod, src: str, new: str, p: ClonePlan) -> Optional[fr.RecordFile]:
     return rf
 
 
-def _asset_hits(mod, src: str, new: str, slots=()) -> List[AssetCopy]:
+def _asset_hits(mod, src: str, new: str, slots=(),
+                skips: Optional[List[Tuple[str, str]]] = None) -> List[AssetCopy]:
     """Every file and folder under the art roots whose name carries the donor's
     slot, paired with where its copy goes.
 
@@ -610,6 +685,13 @@ def _asset_hits(mod, src: str, new: str, slots=()) -> List[AssetCopy]:
     in the roster that the name carries, and the file is only taken when that
     winner is the donor. Without it, cloning `sicily` in a mod that also has
     `sicily_clone` quietly copies the other faction's banners too.
+
+    ``skips``, when a list is passed in, collects ``(source rel, reason)`` for
+    every hit that was found and then NOT taken - ``"rival"`` for a longer slot
+    owning the name, ``"exists"`` for a destination the mod already ships. Both
+    were silent before Phase 42, and the second one is half of why a clone can
+    finish clean and still be missing a symbol. :func:`art_gaps` turns them into
+    something to read.
     """
     data = Path(mod.data)
     tok = re.compile(_key_tok(src), re.I)
@@ -625,10 +707,12 @@ def _asset_hits(mod, src: str, new: str, slots=()) -> List[AssetCopy]:
             name = path.name
             if not tok.search(name):
                 continue
+            rel = path.relative_to(data).as_posix()
             # a longer slot matching the same name owns this file, not the donor
             if any(len(s) > len(src) and rx.search(name) for s, rx in rival_res):
+                if skips is not None:
+                    skips.append((rel, "rival"))
                 continue
-            rel = path.relative_to(data).as_posix()
             # inside a folder already being copied whole - it comes along
             if any(rel.startswith(a.src + "/") for a in out):
                 continue
@@ -640,6 +724,8 @@ def _asset_hits(mod, src: str, new: str, slots=()) -> List[AssetCopy]:
                 return _new.upper() if hit.isupper() else _new
             dst = (path.parent.relative_to(data) / tok.sub(swap, name)).as_posix()
             if (data / dst).exists():
+                if skips is not None:
+                    skips.append((rel, "exists"))
                 continue                   # the mod already ships it; never overwrite
             if path.is_dir():
                 files = [f for f in path.rglob("*") if f.is_file()]
@@ -647,6 +733,68 @@ def _asset_hits(mod, src: str, new: str, slots=()) -> List[AssetCopy]:
                                      sum(f.stat().st_size for f in files)))
             elif path.is_file():
                 out.append(AssetCopy(rel, dst, False, 1, path.stat().st_size))
+    return out
+
+
+def art_gaps(mod, src: str, assets: List[AssetCopy],
+             skips: List[Tuple[str, str]]) -> List[Dict]:
+    """Every place in :data:`ART_PLACES` the clone came away from empty-handed,
+    and which of the four reasons it was.
+
+    **The copier is not at fault in any of them**, which is why this is a report
+    and not a fix. `_asset_hits` was run over all 31 Divide and Conquer slots
+    and misses nothing; ``want_art`` defaults on; ``apply`` copies every hit and
+    logs it for undo. A clone simply gets what the donor has, and the donor does
+    not always have one - Third Age Reforged keeps an empty ``fe_symbols_80``,
+    so cloning any of its thirty factions leaves the 80px symbol blank however
+    the copy goes.
+
+    The four reasons, and none of them is a bug:
+
+    * ``donor`` - the donor has nothing here either. Nobody can copy it and the
+      art has to be drawn. This is the reported case.
+    * ``exists`` - the mod already ships a file of the new name here, so it was
+      left alone. Never overwriting is the right call, and saying nothing about
+      it was not.
+    * ``rival`` - the only files here carrying the donor's name belong to a
+      longer-named faction, so none of them is the donor's.
+    * ``absent`` - the mod has no such folder at all.
+
+    The one warning this module had before fires only when the WHOLE scan comes
+    back empty, and banners and unit-card folders are almost always found - so
+    it never fired on any of the four installed mods, however many individual
+    places came back with nothing.
+    """
+    data = Path(mod.data)
+    name = getattr(mod, "name", "this mod")
+    out: List[Dict] = []
+    for place in ART_PLACES:
+        pre = place.rel + "/"
+        if any(a.dst == place.rel or a.dst.startswith(pre) for a in assets):
+            continue                       # the clone got at least one here
+        why = {r for rel, r in skips if rel == place.rel or rel.startswith(pre)}
+        # In the order they matter: a destination that already exists is a
+        # fact about the clone, a rival owning the name is a fact about the
+        # roster, a missing folder is a fact about the mod, and only what is
+        # left over is a fact about the donor.
+        if "exists" in why:
+            reason, what = "exists", (
+                f"{name} already ships one under the new name, so it was left "
+                "exactly as it is and nothing here was overwritten")
+        elif "rival" in why:
+            reason, what = "rival", (
+                f"the only files here carrying `{src}` belong to a "
+                f"longer-named faction, so none of them is {src}'s to copy")
+        elif not (data / place.rel).is_dir():
+            reason, what = "absent", (
+                f"{name} has no {place.rel} at all, so neither `{src}` nor the "
+                "clone has one")
+        else:
+            reason, what = "donor", (
+                f"`{src}` has nothing here either, so there is nothing to copy "
+                "and this one has to be drawn")
+        out.append({"rel": place.rel, "label": place.label, "kind": place.kind,
+                    "reason": reason, "note": place.note, "what": what})
     return out
 
 
@@ -773,7 +921,8 @@ def plan(mod, body: dict) -> ClonePlan:
                              + ("entry" if edit.count == 1 else "entries"))
 
     if want_art:
-        p.assets = _asset_hits(mod, src, new, slots)
+        skips: List[Tuple[str, str]] = []
+        p.assets = _asset_hits(mod, src, new, slots, skips)
         if p.assets:
             n = sum(a.files for a in p.assets)
             p.changes.append(f"{len(p.assets)} art item(s), {n} file(s), copied "
@@ -783,6 +932,22 @@ def plan(mod, body: dict) -> ClonePlan:
                 f"no art was found carrying `{src}` in its name - the clone will "
                 "fall back to whatever the engine shows for a faction with no "
                 "symbol, banner or unit cards of its own")
+        # 42: the whole-scan warning above almost never fires, because banners
+        # and unit-card folders are almost always found. This is the per-place
+        # answer, and it is what a person needs before they launch the game and
+        # find a blank button. The rows carry the reason; the warning is the
+        # headline, so the dialog does not have to read nine sentences to know
+        # whether anything is wrong.
+        p.art = art_gaps(mod, src, p.assets, skips)
+        if p.art:
+            # The rows carry the labels and the reasons, so this does not
+            # re-list them - the same ruling the review note is written under.
+            p.warnings.append(
+                f"{len(p.art)} of the {len(ART_PLACES)} places a faction's art "
+                f"lives got nothing, and `{new}` will show whatever the engine "
+                "falls back to there until you draw one. Each is named with its "
+                "reason, and none of them is something the copy could have done "
+                "differently - a clone gets what the donor has.")
 
     # The files themselves are in `review`, so the note explains rather than
     # re-lists them: the dialog draws both, and saying it twice reads as noise.
@@ -889,4 +1054,4 @@ def apply(p: ClonePlan) -> Dict:
              p.action, p.source, p.new, mod.name, len(written), copied_files, tid)
     return {"id": tid, "faction": p.new, "source": p.source,
             "files": written, "asset_files": copied_files,
-            "notes": list(p.notes), "record": rec}
+            "notes": list(p.notes), "art_gaps": list(p.art), "record": rec}
