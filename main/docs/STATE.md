@@ -409,8 +409,10 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 unpacked*, which is a fact about the installed mods: `loading_screen` is one of
 the three roots `ART_ROOTS` deliberately excludes, so 42 cannot have touched it.
 
-**The 103-suite sweep of 2026-09-14 got through 85 and is not to be trusted as
-it stands.** It was run in the background while Phase 41 was being written, so
+**The 103-suite sweep of 2026-09-14 got through 87 - 73 green, 14 failing - and
+is not to be trusted as it stands.** The shape is at least not alarming: the
+2026-09-13 baseline was 85 green and 18 failing of 103, and the fourteen here
+are the same families, so nothing cascaded. It was run in the background while Phase 41 was being written, so
 every suite it reached after that started - `test_minorfiles` above all - was
 measured against a tree that was moving underneath it. It also *speculated*
 that `test_edbvocab`, `test_mapquery`, `test_minorfiles` and `test_namekeys`
