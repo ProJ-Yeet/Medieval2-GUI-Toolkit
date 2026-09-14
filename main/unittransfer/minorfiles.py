@@ -1277,6 +1277,167 @@ def check_names(nf: NameFile, mod=None) -> List[Dict]:
 
 
 # ---------------------------------------------------------------------------
+# 41 - merging one faction's name pool into another
+#
+# From Mylae's `MergeNamesModal.jsx` (187d9ed), and the one genuinely new idea
+# in that push. We had the reporting and none of the action: `check_names`
+# already finds a name repeated inside a section and names both lines, and
+# `factionclone.clone_names` copies a whole donor block verbatim while cloning a
+# faction - but there was no way to pull one faction's surnames into another's
+# without retyping them, and no way to clear the duplicates `check_names`
+# reports.
+#
+# Three things of his are deliberately not copied:
+#
+# * **his serializer writes only `characters`, `surnames` and `women`, and
+#   silently drops `settlements`.** None of the installed mods uses that section,
+#   which is why it has not bitten him. :data:`NAME_SECTIONS` has all four and
+#   this carries the fourth through untouched.
+# * **his preview labels a source name "skipped" even when dedupe is off**, and
+#   with dedupe off it is in fact appended. `present` here is zero whenever
+#   nothing was skipped, because a count that is not true of the write is worse
+#   than no count.
+# * **his Merge button is live with no source selected**, where the only thing
+#   it can do is dedupe in place. That is a real action and it gets its own
+#   name here (``action="dedupe"``) rather than being a side effect of merging
+#   nothing.
+
+
+@dataclass
+class MergeCounts:
+    """What one section's merge would do, in the three numbers that are the preview."""
+    added: int = 0            # source names that end up in the list
+    present: int = 0          # source names not added - already there. 0 with dedupe off
+    duplicates: int = 0       # repeated lines already INSIDE the target
+    removed: int = 0          # how many of those this write would actually take out
+    before: int = 0
+    after: int = 0
+
+    def touched(self) -> bool:
+        return bool(self.added or self.removed)
+
+    def as_dict(self) -> Dict:
+        return {"added": self.added, "present": self.present,
+                "duplicates": self.duplicates, "removed": self.removed,
+                "before": self.before, "after": self.after}
+
+
+def merge_section(target: Sequence[str], sources: Sequence[str],
+                  dedupe: bool = True, sort: bool = False
+                  ) -> Tuple[List[str], MergeCounts]:
+    """One section's merged list, and the three counts that are its preview.
+
+    ``sources`` is every incoming name already flattened in faction order, so a
+    name two donors share is one name arriving twice and is counted as such.
+
+    **Names are compared exactly**, which is the same comparison
+    :func:`check_names` makes when it calls one a duplicate. The engine reads
+    ``Ruggiero`` and ``ruggiero`` as two names and so does this; one definition
+    of "already there" for the whole module beats two that nearly agree.
+
+    With ``dedupe`` on, the target's own repeated lines go too - that is the
+    thing `check_names` has been reporting with nothing able to act on it. With
+    it off the target is left exactly as it is and every incoming name is
+    appended, duplicates and all, because that is what the write will do.
+    """
+    olds = [str(v).strip() for v in target if str(v).strip()]
+    incoming = [str(v).strip() for v in sources if str(v).strip()]
+
+    seen_once: List[str] = []
+    seen = set()
+    for v in olds:
+        if v not in seen:
+            seen.add(v)
+            seen_once.append(v)
+    counts = MergeCounts(duplicates=len(olds) - len(seen_once), before=len(olds))
+
+    if dedupe:
+        out = list(seen_once)
+        counts.removed = counts.duplicates
+        have = set(out)
+        for v in incoming:
+            if v in have:
+                counts.present += 1
+            else:
+                have.add(v)
+                out.append(v)
+                counts.added += 1
+    else:
+        # nothing is skipped, so nothing is reported as skipped
+        out = list(olds) + incoming
+        counts.added = len(incoming)
+
+    if sort:
+        out.sort(key=lambda v: (v.lower(), v))
+    counts.after = len(out)
+    return out, counts
+
+
+def merge_names(nf: NameFile, target: str, sources: Sequence[str],
+                dedupe: bool = True, sort: bool = False,
+                sections: Sequence[str] = ()
+                ) -> Tuple[Dict[str, List[str]], Dict[str, MergeCounts]]:
+    """Every section of ``target`` merged with the same section of each source.
+
+    Returns ``({section: merged list}, {section: counts})`` for every section
+    either side has. A section only the SOURCE has is in the result with the
+    target's side empty, which is how a target with no ``women`` list ends up
+    with one - :func:`merge_block` writes the heading.
+    """
+    want = tuple(s for s in (sections or NAME_SECTIONS) if s in NAME_SECTIONS)
+    tgt = nf.get(target)
+    donors = [nf.get(s) for s in sources]
+    merged: Dict[str, List[str]] = {}
+    counts: Dict[str, MergeCounts] = {}
+    for which in want:
+        here = tgt.section(which) if tgt else None
+        mine = [e.value for e in here.entries] if here else []
+        theirs: List[str] = []
+        for d in donors:
+            sec = d.section(which) if d else None
+            if sec is not None:
+                theirs.extend(e.value for e in sec.entries)
+        if here is None and not theirs:
+            continue                   # neither side has it; nothing to say
+        rows, c = merge_section(mine, theirs, dedupe, sort)
+        counts[which] = c
+        if rows != mine:
+            merged[which] = rows
+    return merged, counts
+
+
+def merge_block(base: str, merged: Dict[str, List[str]]) -> str:
+    """One faction's block with each named section replaced by its merged list.
+
+    :func:`render_names` refuses a section the faction has not got, which is
+    right for an edit - the form cannot show a box that is not there - and wrong
+    for a merge, where the whole point can be that the donor keeps a ``women``
+    list and the target keeps none. A section the target lacks is written at the
+    end of the block, heading and names together, indented to match the sections
+    the target already has rather than to a constant.
+    """
+    fac = parse_names_block(base)
+    lines, newline, _ = split_lines(base)
+    sp = kb.Splice(lines)
+    first = fac.sections[0] if fac.sections else None
+    pad_head = kb.indent_of(lines[first.start]) if first else "\t"
+    pad_name = (kb.indent_of(lines[first.entries[0].line])
+                if first and first.entries else pad_head + "\t")
+    extra: List[str] = []
+    for which in NAME_SECTIONS:                # file order, not dict order
+        if which not in merged:
+            continue
+        rows = [str(v).strip() for v in merged[which] if str(v).strip()]
+        sec = fac.section(which)
+        if sec is None:
+            if rows:
+                extra += [pad_head + which] + [pad_name + v for v in rows]
+            continue
+        _edit_entries(sp, lines, sec, rows)
+    return newline.join(sp.result() + extra)
+
+
+# ---------------------------------------------------------------------------
 # localisation, shared by the files that have any
 
 
@@ -1368,7 +1529,7 @@ ACTIONS: Dict[str, Tuple[str, ...]] = {
     "resources": ("edit",),
     "religions": ("edit", "add", "delete"),
     "cultures": ("edit",),
-    "names": ("edit", "add", "delete"),
+    "names": ("edit", "add", "delete", "merge", "dedupe"),
 }
 
 #: why an edit-only tab is edit-only, shown where its buttons would be
@@ -1696,11 +1857,23 @@ class MinorPlan:
     loc_writes: Dict[str, str] = field(default_factory=dict)
     loc_new: List[str] = field(default_factory=list)
     loc_rel: str = ""
+    #: 41: ``{section: MergeCounts.as_dict()}`` - the preview for a merge or a dedupe
+    merge: Dict[str, Dict] = field(default_factory=dict)
+    merge_sources: List[str] = field(default_factory=list)
 
     def summary(self) -> str:
-        head = (f"{self.action} {tab(self.tab).noun} {self.name} in "
-                f"{getattr(self.mod, 'name', '?')} ({len(self.changes)} change(s))")
-        return "\n".join([head] + [f"  {c}" for c in self.changes])
+        where = getattr(self.mod, "name", "?")
+        # 41's two bulk actions say what they did rather than name their verb:
+        # "merge faction england" reads as though england is being merged away.
+        if self.action == "merge":
+            head = (f"merge the names of {kb.and_list(self.merge_sources)} into "
+                    f"{self.name} in {where}")
+        elif self.action == "dedupe":
+            head = f"remove {self.name}'s repeated names in {where}"
+        else:
+            head = f"{self.action} {tab(self.tab).noun} {self.name} in {where}"
+        return "\n".join([f"{head} ({len(self.changes)} change(s))"]
+                         + [f"  {c}" for c in self.changes])
 
     def touched(self) -> bool:
         return bool(self.text or self.extra or self.loc_writes)
@@ -1712,6 +1885,7 @@ class MinorPlan:
                 "block": self.block, "files": sorted(self.extra),
                 "loc_writes": dict(self.loc_writes), "loc_new": list(self.loc_new),
                 "loc_file": self.loc_rel,
+                "merge": dict(self.merge), "merge_sources": list(self.merge_sources),
                 "ok": not self.errors and self.touched()}
 
 
@@ -1785,6 +1959,8 @@ def _drop_settled(p: MinorPlan) -> None:
 
 def _plan_record(p: MinorPlan, text: str, body: dict) -> str:
     """The tab's own file with this one record added, edited or removed."""
+    if p.action in ("merge", "dedupe"):
+        return _plan_merge(p, text, body)
     parsed = parse_any(p.tab, text)
     noun = tab(p.tab).noun
 
@@ -1836,6 +2012,79 @@ def _plan_record(p: MinorPlan, text: str, body: dict) -> str:
         return text
     p.changes.extend(kb.diff(base, block))
     return parsed.replace(rec.start, rec.end, block)
+
+
+def _plan_merge(p: MinorPlan, text: str, body: dict) -> str:
+    """``action="merge"`` and ``action="dedupe"``: the names tab's two bulk writes.
+
+    Dedupe is merge with no sources and the flag forced on, which is why it is
+    one function - but it is its OWN action rather than a button that merges
+    nothing, so the plan's change lines and the log say what was actually done.
+    """
+    parsed = parse_names(text)
+    tgt = parsed.get(p.name)
+    if tgt is None:
+        p.errors.append(f"{p.name} is not a faction in this file")
+        return text
+
+    if p.action == "dedupe":
+        sources: List[str] = []
+        dedupe, sort = True, bool(body.get("sort"))
+    else:
+        sources = [str(s).strip() for s in (body.get("sources") or []) if str(s).strip()]
+        dedupe, sort = bool(body.get("dedupe", True)), bool(body.get("sort"))
+        if not sources:
+            p.errors.append("pick at least one faction to merge in - to clear the "
+                            "duplicates inside this one without adding anything, "
+                            "use Remove duplicates")
+            return text
+        for s in sources:
+            if s == p.name:
+                p.errors.append(f"{p.name} cannot be merged into itself")
+            elif parsed.get(s) is None:
+                p.errors.append(f"{s} is not a faction in this file")
+        if p.errors:
+            return text
+
+    want = [str(s).lower() for s in (body.get("sections") or []) if str(s).strip()]
+    merged, counts = merge_names(parsed, p.name, sources, dedupe, sort, want)
+    p.merge = {k: c.as_dict() for k, c in counts.items()}
+    p.merge_sources = list(sources)
+
+    for which in NAME_SECTIONS:
+        c = counts.get(which)
+        if c is None or not c.touched():
+            continue
+        bits = []
+        if c.added:
+            bits.append(f"+{c.added} name(s)")
+        if c.removed:
+            bits.append(f"-{c.removed} duplicate(s)")
+        p.changes.append(f"{which}: " + ", ".join(bits)
+                         + f" ({c.before} -> {c.after})")
+    # A section that gained nothing is still worth a line when the reason is
+    # that the target already had every name in it - that is the answer to
+    # "did the merge work", and silence is not.
+    for which in NAME_SECTIONS:
+        c = counts.get(which)
+        if c is not None and not c.touched() and c.present:
+            p.changes.append(f"{which}: nothing to add - all {c.present} name(s) "
+                             "offered are already there")
+
+    if not dedupe and any(c.duplicates for c in counts.values()):
+        n = sum(c.duplicates for c in counts.values())
+        p.warnings.append(
+            f"{n} repeated name(s) already inside {p.name} are left as they are, "
+            "because Remove duplicates is off - and any name a source shares with "
+            "it is appended a second time")
+
+    if not merged:
+        return text
+    base = parsed.block_text(tgt)
+    block = merge_block(base, merged)
+    if block == base:
+        return text
+    return parsed.replace(tgt.start, tgt.end, block)
 
 
 def _plan_lookup(p: MinorPlan, mod) -> None:

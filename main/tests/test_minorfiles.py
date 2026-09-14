@@ -30,6 +30,7 @@ sweeps every real file, which is the check that actually matters.
 
     python -m tests.test_minorfiles
 """
+import shutil
 import sys
 from pathlib import Path
 
@@ -653,6 +654,198 @@ else:
                 for u in r.repeats if "," in u.value)
     check("no real rebel `unit` line has a comma in it - the name is the whole line",
           commas == 0)
+
+# ---------------------------------------------------------------------------
+# 41 - merging one faction's name pool into another
+#
+# The engine is fifteen lines and the three counts ARE the preview, so they are
+# what this measures. The rule underneath: a count that is not true of the write
+# is worse than no count, which is what puts the dedupe-off case below in front
+# of the dedupe-on one.
+
+print("\n--- 41: merge_section, the three counts ---")
+
+rows, c = mf.merge_section(["Anna", "Bela"], ["Cyril", "Anna"], dedupe=True)
+check("dedupe on: a name the target has is not added twice",
+      rows == ["Anna", "Bela", "Cyril"])
+check("...and it is counted as already present, not as added",
+      (c.added, c.present, c.duplicates, c.removed) == (1, 1, 0, 0))
+check("...with before and after measured off the lists themselves",
+      (c.before, c.after) == (2, 3))
+
+rows, c = mf.merge_section(["Anna", "Bela"], ["Cyril", "Anna"], dedupe=False)
+check("dedupe OFF: every incoming name is appended, duplicates and all",
+      rows == ["Anna", "Bela", "Cyril", "Anna"])
+# Mylae's preview calls a source duplicate "skipped" here, and it is not skipped
+# - it is on the end of the list. A number that contradicts the file is the one
+# thing a preview may not do.
+check("...and NOTHING is reported as skipped, because nothing was",
+      (c.added, c.present) == (2, 0))
+
+rows, c = mf.merge_section(["Anna", "Bela", "Anna"], [], dedupe=True)
+check("dedupe with no sources is dedupe in place", rows == ["Anna", "Bela"])
+check("...and the target's own repeat is counted and removed",
+      (c.duplicates, c.removed, c.added) == (1, 1, 0))
+
+rows, c = mf.merge_section(["Anna", "Bela", "Anna"], [], dedupe=False)
+check("dedupe off leaves the target exactly as it is",
+      rows == ["Anna", "Bela", "Anna"])
+check("...but still reports the repeat it did not remove",
+      (c.duplicates, c.removed) == (1, 0))
+
+rows, _ = mf.merge_section(["Bela"], ["anna", "Anna"], dedupe=True)
+check("a name is compared exactly, the way check_names compares one",
+      rows == ["Bela", "anna", "Anna"])
+
+rows, _ = mf.merge_section(["Bela", "Anna"], ["Cyril"], dedupe=True, sort=True)
+check("sort orders the whole list, not just what arrived",
+      rows == ["Anna", "Bela", "Cyril"])
+
+rows, c = mf.merge_section(["Anna"], ["Bela", "Bela"], dedupe=True)
+check("two sources offering the same name add it once",
+      rows == ["Anna", "Bela"] and (c.added, c.present) == (1, 1))
+
+
+# ---- the file half, on a fixture with all four sections
+
+NAMES_FIXTURE = """faction: alpha
+
+\tsettlements
+\t\tAlphaton
+
+\tcharacters
+\t\tAnna
+\t\tBela
+\t\tAnna
+
+\twomen
+\t\tClara
+
+faction: beta
+
+\tsettlements
+\t\tBetaville
+
+\tcharacters
+\t\tBela
+\t\tCyril
+
+\tsurnames
+\t\tOfBeta
+
+\twomen
+\t\tClara
+\t\tDora
+"""
+
+print("\n--- 41: merge_names and merge_block, over a whole file ---")
+nf = mf.parse_names(NAMES_FIXTURE)
+check("the fixture parses as two factions with four sections between them",
+      [f.name for f in nf.factions] == ["alpha", "beta"]
+      and {s.name for s in nf.get("beta").sections}
+      == {"settlements", "characters", "surnames", "women"})
+
+merged, counts = mf.merge_names(nf, "alpha", ["beta"], dedupe=True)
+check("`settlements` is carried through like any other section - his serialiser "
+      "drops it, and none of the installed mods uses it, which is why",
+      "settlements" in counts and counts["settlements"].added == 1)
+check("a section only the SOURCE has comes back to be written",
+      merged.get("surnames") == ["OfBeta"])
+check("the target's own repeated name goes with dedupe on",
+      merged["characters"] == ["Anna", "Bela", "Cyril"]
+      and counts["characters"].removed == 1)
+
+block = mf.merge_block(nf.block_text(nf.get("alpha")), merged)
+fac = mf.parse_names_block(block)
+check("the merged block re-parses as one faction with all four sections",
+      fac.name == "alpha"
+      and [s.name for s in fac.sections]
+      == ["settlements", "characters", "surnames", "women"])
+check("the new section is written in file order, after the ones already there",
+      [s.name for s in fac.sections][2] == "surnames")
+# The indent is the target's own, not a constant: `new_names` writes tabs, and a
+# file that indents with spaces would end up with one section unlike the rest.
+lines = block.split(mf.parse_names(NAMES_FIXTURE).newline)
+head = next(l for l in lines if l.strip() == "surnames")
+name = next(l for l in lines if l.strip() == "OfBeta")
+old_head = next(l for l in lines if l.strip() == "characters")
+check("a new section is indented to match the sections the target already has",
+      kb.indent_of(head) == kb.indent_of(old_head)
+      and kb.indent_of(name) == kb.indent_of(old_head) + "\t")
+
+
+# ---- the plan, and the two refusals
+
+print("\n--- 41: the plan, and what it refuses ---")
+tmp41 = Path(_tmp.mkdtemp(prefix="m2gui_names41_"))
+(tmp41 / "data").mkdir(parents=True, exist_ok=True)
+kb.write_text(tmp41 / "data" / mf.NAMES_REL, NAMES_FIXTURE, mf.ENCODING)
+
+
+class _Mod41:
+    name = "Fixture41"
+    root = tmp41
+    data = tmp41 / "data"
+    faction_cultures: dict = {}
+
+
+m41 = _Mod41()
+p = mf.plan(m41, {"tab": "names", "action": "merge", "name": "alpha",
+                  "sources": ["beta"], "dedupe": True})
+check("the merge plans cleanly and would write", not p.errors and p.touched())
+check("every section that changed has a change line",
+      len(p.changes) == 4 and all(":" in c for c in p.changes))
+check("the counts reach the payload for the dialog to draw",
+      set(p.payload()["merge"]) == {"settlements", "characters", "surnames", "women"})
+check("the log line says what was done rather than naming the verb",
+      p.summary().startswith("merge the names of `beta` into alpha in Fixture41"))
+
+after = mf.parse_names(p.text)
+check("the OTHER faction is byte for byte what it was",
+      after.block_text(after.get("beta")) == nf.block_text(nf.get("beta")))
+check("alpha's duplicate finding is gone after the merge",
+      not [f for f in mf.check_names(after)
+           if f["kind"] == "duplicate-name" and f["name"] == "alpha"])
+
+p2 = mf.plan(m41, {"tab": "names", "action": "merge", "name": "alpha",
+                   "sources": ["beta"], "dedupe": False})
+check("dedupe off appends the shared name a second time",
+      [e.value for e in mf.parse_names(p2.text).get("alpha").section("characters").entries]
+      == ["Anna", "Bela", "Anna", "Bela", "Cyril"])
+check("...and says so, rather than leaving it to be found",
+      any("left as they are" in w for w in p2.warnings))
+
+p3 = mf.plan(m41, {"tab": "names", "action": "dedupe", "name": "alpha"})
+check("dedupe in place is its own action and needs no source",
+      not p3.errors and p3.touched())
+check("...and it removes the repeat and adds nothing",
+      p3.payload()["merge"]["characters"]["removed"] == 1
+      and p3.payload()["merge"]["characters"]["added"] == 0)
+
+# His Merge button is live with no source selected, where the only thing it can
+# do is dedupe. Refusing it and naming the button that does do it is the fix.
+p4 = mf.plan(m41, {"tab": "names", "action": "merge", "name": "alpha", "sources": []})
+check("merging nothing is refused, and the refusal names the button that does it",
+      p4.errors and "Remove duplicates" in p4.errors[0])
+p5 = mf.plan(m41, {"tab": "names", "action": "merge", "name": "alpha",
+                   "sources": ["alpha"]})
+check("a faction cannot be merged into itself", bool(p5.errors))
+p6 = mf.plan(m41, {"tab": "names", "action": "merge", "name": "alpha",
+                   "sources": ["nobody"]})
+check("a source that is not in the file is refused", bool(p6.errors))
+p7 = mf.plan(m41, {"tab": "names", "action": "merge", "name": "alpha",
+                   "sources": ["beta"], "sections": ["women"]})
+check("a merge can be narrowed to one section",
+      set(p7.payload()["merge"]) == {"women"}
+      and len([e for e in mf.parse_names(p7.text).get("alpha")
+               .section("characters").entries]) == 3)
+
+# the merge action only exists where the file has sections to merge
+check("merge and dedupe are offered on the names tab and nowhere else",
+      all(("merge" in acts) == (t == "names") for t, acts in mf.ACTIONS.items()))
+
+shutil.rmtree(tmp41, ignore_errors=True)
+
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)
