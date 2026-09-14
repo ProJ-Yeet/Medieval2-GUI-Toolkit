@@ -401,13 +401,22 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 ## In-progress detail
 **Clean.** Nothing is mid-flight.
 
-**Phase 42's own two suites are green and were measured both ways**:
+**Phase 42's own suites are green and were measured both ways**:
 `test_factionclone` 74/74 against 64 on the stashed tree,
-`test_factionclone_apply` 39/39 against 30. The **full 103-suite sweep was
-still running when 42 was committed** - if it turns up a regression it is in
-the art-gap work and nowhere else, since nothing outside `factionclone.py`,
-`factions.js` and `index.html` was touched, and `_asset_hits` gained only an
-optional parameter that every existing caller omits.
+`test_factionclone_apply` 39/39 against 30, `test_factionaudit` 56/56,
+`test_renames`, `test_startup` and `test_parsers` all green. `test_factions` is
+87/88 and its one failure is *not one of the 121 loading_logo files is
+unpacked*, which is a fact about the installed mods: `loading_screen` is one of
+the three roots `ART_ROOTS` deliberately excludes, so 42 cannot have touched it.
+
+**The 103-suite sweep of 2026-09-14 got through 85 and is not to be trusted as
+it stands.** It was run in the background while Phase 41 was being written, so
+every suite it reached after that started - `test_minorfiles` above all - was
+measured against a tree that was moving underneath it. It also *speculated*
+that `test_edbvocab`, `test_mapquery`, `test_minorfiles` and `test_namekeys`
+might be Phase 42's doing; none of the four so much as imports `factionclone`,
+and 42 touched nothing outside `factionclone.py`, `factions.js` and
+`index.html`. **Re-run the full set clean before believing any of it.**
 
 **All 103 suites run one at a time on 2026-09-13 after the Vanilla Redux fixes:
 85 fully green, 18 failing.** Every one of those 18 was captured against a
