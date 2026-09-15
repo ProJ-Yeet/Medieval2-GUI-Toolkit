@@ -15,6 +15,59 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 43 - playable, unlockable, not playable, and a phase that was already built (2026-09-15)
+Taken as the next phase off block one. The write-up said the toolkit reads the
+three rosters and will not write any of them. It writes all three, and has since
+16j.
+
+**What was already there.** `stratcamp.plan_campaign` takes `what="rosters"`;
+`_roster_splice` replaces each list where it stands; `roster_block` keeps the
+indent the block's own entries use, falling back to the one tab all 56 real
+entries are written with; the campaign is a query parameter, so it is per
+campaign and not per mod; and the Who plays tab in `web/js/stratcamp.js` is
+already the three-way radio per faction the phase asked for, `cjRoster`, with
+its own comment saying why it is radios rather than three text lists. Part 4 of
+`tests/test_stratcamp.py` moves a faction between lists and checks the indent
+survived; part 5 saves one on a real mod and undoes it byte-exact.
+
+**The "missing four times over" was four guards read as four refusals.** The
+sentence *"this would change the playable, unlockable or nonplayable lists"* is
+in `stratcamp.py`, `stratchar.py`, `stratedit.py` and `regiondel.py` because a
+settlement edit, a character edit and a delete each refuse to touch a roster
+nobody asked them about. That is those writers being correct.
+`stratcamp._guard` already exempts the three saves that may move a name -
+`rosters`, `create`, `delete`.
+
+**One sentence of the phase was true, and it is the refusal.**
+`camp.no_playable` was a warning, so moving every faction into `nonplayable`
+saved with a note attached. It is fatal now, and only when the save is what
+empties the list: `check_rosters` takes the lists the save started from as an
+optional third argument. Called with nothing - which is what `campaign_detail`
+does, and it is the whole read path - an empty `playable` list is still only
+reported.
+
+**That split is 40's ruling used again.** A flat fatal would refuse the save of
+a campaign that already had no playable faction, which is the one file where
+this screen is the repair, so it would trap the only person who could fix it.
+
+**Measured.** Six campaigns on this machine, every one with at least one
+playable faction: the four mods' imperial campaigns at 26, 27, 31 and 18,
+vanilla's at 5, the Norman prologue at exactly one. The prologue also writes an
+`unlockable` block with nothing inside it, which is why an empty list stays a
+shape the writer keeps. The refusal was checked against all four installed mods
+and an ordinary one-faction move was checked to still go through on each.
+
+**One failure found and not fixed, because it is not this phase.** Vanilla
+Redux writes `random_persona_weights 15 42 25 18` on its campaign header;
+`stratcamp` does not know the word, so the header-words check in part 2 has been
+red on that mod since before today. The line round-trips - `serialise` hands
+back the file's own bytes - so it is a reporting gap of the same shape as
+`marian_reforms_activated`, not a round-trip one.
+
+`tests/test_stratcamp.py` **114/115**, against 112/113 before, three checks
+added for the three severities.
+
+
 ## 29, with B4 - the strat model viewer, and a stub that beat the art beside it (2026-09-12)
 Taken as the next phase off block one: the only defect in either block, and the
 only new phase reaching both release lines. It took B4 with it, as the roadmap

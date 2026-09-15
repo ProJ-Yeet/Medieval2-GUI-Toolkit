@@ -285,9 +285,18 @@ check("a faction with a block and no place in any list is fatal",
 check("a faction in two lists at once warns, because the engine takes the first",
       "camp.roster_twice" in codes(stratcamp.check_rosters(
           voc, {**full, "unlockable": ["france", "england"]})))
-check("no playable faction at all warns",
+check("no playable faction at all warns when the file is only being read",
       "camp.no_playable" in codes(stratcamp.check_rosters(
+          voc, {**full, "playable": []}))
+      and "camp.no_playable" not in fatal(stratcamp.check_rosters(
           voc, {**full, "playable": []})))
+check("and it is fatal when the save is what empties the list",
+      "camp.no_playable" in fatal(stratcamp.check_rosters(
+          voc, {**full, "playable": []}, full)))
+check("but a campaign that already had none is only warned, because this "
+      "screen is where it gets fixed",
+      "camp.no_playable" not in fatal(stratcamp.check_rosters(
+          voc, {**full, "playable": []}, {**full, "playable": []})))
 
 all_three = stratcamp.Vocabulary(
     _Facts(mod, {"england": "northern_european", "france": "northern_european",

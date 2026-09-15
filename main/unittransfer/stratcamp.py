@@ -376,11 +376,28 @@ def check_globals(values: Dict[str, object], flags: Sequence[str]) -> List[dict]
 
 
 def check_rosters(voc: Vocabulary,
-                  rosters: Dict[str, Sequence[str]]) -> List[dict]:
+                  rosters: Dict[str, Sequence[str]],
+                  before: Optional[Dict[str, Sequence[str]]] = None
+                  ) -> List[dict]:
     """Everything wrong with the three lists.
 
     The check against ``descr_sm_factions.txt`` does not run when that file is
     not on disk, which on the stock game it never is.
+
+    ``before`` is the three lists as the file already writes them, and it is
+    what decides the severity of :data:`camp.no_playable`. Read on its own -
+    the campaign panel, which passes nothing - an empty ``playable`` list is
+    reported and nothing more, because reporting is all a read can do. Passed
+    the lists a save started from, the same state is **fatal when the save is
+    what creates it**: all six campaigns installed here write at least one
+    playable faction, the prologue with exactly one, and a campaign with none
+    cannot be picked from the menu at all.
+
+    The split is 40's ruling applied a second time. A flat fatal would refuse
+    the save of a campaign that already had no playable faction, which is the
+    one file where this screen is the repair - moving a faction back into
+    ``playable`` is the same radio button - so it would trap the only person
+    who could fix it.
     """
     out: List[dict] = []
     seen: Dict[str, str] = {}
@@ -408,9 +425,12 @@ def check_rosters(voc: Vocabulary,
                                f"the three lists, so nothing tells the engine "
                                f"it exists"))
     if not rosters.get("playable"):
-        out.append(finding("camp.no_playable", False,
+        made_here = before is not None and bool(before.get("playable"))
+        out.append(finding("camp.no_playable", made_here,
                            "no faction is playable, so the campaign cannot be "
-                           "started from the menu"))
+                           "started from the menu"
+                           + (", and this save is what empties the list"
+                              if made_here else "")))
     return out
 
 
@@ -1501,7 +1521,7 @@ def plan_campaign(mod, facts, body: dict) -> CampPlan:
         after = {k: [str(w).strip() for w in want.get(k, before[k])
                      if str(w).strip()] for k in ROSTERS}
         lines = _roster_splice(sf, p, {"rosters": after})
-        p.findings = check_rosters(voc, after)
+        p.findings = check_rosters(voc, after, before)
     elif what == "standings":
         cells = _cells(body.get("standings") or {})
         before = {"standings": _cells_text(standings_of(sf, p.faction))}

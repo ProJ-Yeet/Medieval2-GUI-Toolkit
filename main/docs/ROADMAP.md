@@ -398,7 +398,7 @@ change, so no cross-reference dangles.
 | **3.0.0** | 16a-16k, plus 17 | The campaign map editor, and the correction pass over it. Feature-complete and uncut. |
 | **3.1.0** | 18-21 | The twenty Now items: the campaign files that had no editor, the names nothing could follow, and the map screen's second pass. |
 | **3.2.0** | 22-24 | The seven Next items: placing things on the map, a map that looks like the campaign map, and making or unmaking a region or a campaign. |
-| next, block one | ~~29~~, 40, 31, 42, 41, 43, 28a, 28b, 33, 30, 34, 35, 36, 37a, 37b, 38 | **The campaign map.** Fifteen sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12. |
+| next, block one | ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~, ~~43~~, 28a, 28b, 33, 30, 34, 35, 36, 37a, 37b, 38 | **The campaign map.** Ten sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12 and 43 on 2026-09-15. |
 | next, block two | 32a, 32b, 32c, 39 | **The mercenaries.** Four sessions. Beta except 39, which is both lines. |
 | after block two | 44, 45, 46, 47a, 47b, 48 | **The reference-tool pass of 2026-09-13.** Six sessions, every one a subrelease on both lines. Outside both blocks, and scheduled only because the user named the work. |
 | after that | the Future roadmap list | Rated and unscheduled. Three five-star items lead it: M17, M12 and M16. |
@@ -765,7 +765,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~3~~ | ~~**31** Two river rules, and a ford in the sea~~ | S | beta | **done 2026-09-13** |
 | ~~4~~ | ~~**42** The art a clone does not get~~ | S | **both** | **done 2026-09-14** |
 | ~~5~~ | ~~**41** Merge one faction's name pool into another~~ | S | **both** | **done 2026-09-15** |
-| 6 | **43** Playable, unlockable, not playable | S | beta | asked for |
+| ~~6~~ | ~~**43** Playable, unlockable, not playable~~ | S | beta | **done 2026-09-15** |
 | 7 | **28a** The strip, and the groups behind it | M | beta | an enabler |
 | 8 | **28b** The toolbar over the canvas, and a steady tooltip | M | beta | asked for |
 | 9 | **33** T10, G2 and G4 in one session | S x3 | beta | 5, 5, 5 |
@@ -790,8 +790,10 @@ on, then stars, then size.** That is four rules and each one earns its place.
 39 touch something outside the campaign map, so each is a subrelease on both
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
-(2026-09-14) and **41 is done** (2026-09-15); fifteen remain, two of them
-subreleases. **They are committed, not cut** - cut-as-it-lands was
+(2026-09-14), and **41 and 43 are done** (2026-09-15); fourteen remain, two of
+them subreleases. **43 was nearly all built already** - 16j shipped the roster
+writer and the write-up had not checked - so what landed was the one sentence
+of it that was true, the refusal. **They are committed, not cut** - cut-as-it-lands was
 suspended again on 2026-09-12 and a release now happens when the user asks for
 one.
 
@@ -1742,7 +1744,55 @@ still has a blank button is a different bug from the one closed here.
 
 **Both lines.** The faction clone is not the campaign map.
 
-## Phase 43 - Playable, unlockable, not playable
+## Phase 43 - Playable, unlockable, not playable - DONE 2026-09-15
+
+**Almost all of this was already built, and the write-up did not check.** 16j
+shipped the roster writer: `stratcamp.plan_campaign` has taken `what="rosters"`
+since it landed, `_roster_splice` replaces each of the three lists where it
+stands, `roster_block` keeps the indent the block's own entries use, and the
+Who plays tab in `web/js/stratcamp.js` has been a three-way radio per faction -
+`cjRoster` - not three editable text lists. Order, indentation, the per-campaign
+rule and the backup-and-undo ride were all done and all under test: part 4 of
+`tests/test_stratcamp.py` moves a faction between two lists and part 5 saves
+and undoes one on a real mod byte-exact.
+
+**"Missing four times over" misread four guards as four refusals.** The line
+*"this would change the playable, unlockable or nonplayable lists"* in
+`stratcamp.py`, `stratchar.py`, `stratedit.py` and `regiondel.py` is each
+writer refusing to touch a roster it was not asked about - a settlement edit,
+a character edit, a delete - and every one of them is correct as it stands.
+`stratcamp._guard` already exempts the three saves that may move a name:
+`rosters`, `create` and `delete`. There was no writer owed.
+
+**One thing was genuinely missing, and it is the sentence about the refusal.**
+`camp.no_playable` was a warning, so a save that moved every faction into
+`nonplayable` went through with a note. It is fatal now - but only when the
+save is what empties the list. `check_rosters` takes the lists the save started
+from as a third argument and reads nothing else from them: passed nothing, which
+is what the campaign panel does, an empty `playable` list is still reported and
+no more, because reporting is all a read can do.
+
+**That split is 40's ruling applied a second time.** A flat fatal would refuse
+the save of a campaign that already had no playable faction, and that is the one
+file where this screen *is* the repair - moving a faction back is the same radio
+button - so it would have trapped the only person who could fix it.
+
+**Measured, not assumed.** All six campaigns on this machine write at least one
+playable faction: the four installed mods' imperial campaigns at 26, 27, 31 and
+18, vanilla's at 5, and the Norman prologue at exactly one. The prologue also
+writes an `unlockable` block with nothing in it at all, which is why an empty
+list is a shape the writer keeps rather than a state it refuses.
+
+`tests/test_stratcamp.py` is **114/115** against 112/113 before, three checks
+added for the three severities. The one failure is not this: Vanilla Redux
+writes `random_persona_weights 15 42 25 18` on its campaign header, `stratcamp`
+does not know the word, and the header-words check has been red on that mod
+before this phase. The line survives a round trip - `serialise` hands back the
+file's own bytes - so it is a gap in what is *reported*, the same shape as
+`marian_reforms_activated`, and it is not scoped here.
+
+The original scoping follows.
+
 
 **Asked for by the user on 2026-09-12.** `descr_strat.txt` opens with three
 rosters that decide which factions the campaign offers, and the toolkit reads
