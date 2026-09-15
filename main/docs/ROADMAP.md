@@ -747,7 +747,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
    of reason: it is the same two-way panel over a file that is already fully
    parsed, so the shape gets settled on the cheap problem first.
 5. **Three phases went in front of 28 on 2026-09-12, and rule 1 is why for one
-   of them.** (**40, 31 and 42 are done, so 41 now leads the block.**) Diffing Mylae's `2740b0b..187d9ed` re-scoped Phase 31 and produced
+   of them.** (**40, 31, 42 and 41 are done, so 43 now leads the block.**) Diffing Mylae's `2740b0b..187d9ed` re-scoped Phase 31 and produced
    Phase 41, and the user asked for both immediately; reading our own
    region-creation path beside his turned up **Phase 40**, which is a defect in
    shipped work and therefore leads the block the way 29 did. 28 is still the
@@ -764,7 +764,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~2~~ | ~~**40** The new province the engine cannot read~~ | S | **both** | **done 2026-09-13** |
 | ~~3~~ | ~~**31** Two river rules, and a ford in the sea~~ | S | beta | **done 2026-09-13** |
 | ~~4~~ | ~~**42** The art a clone does not get~~ | S | **both** | **done 2026-09-14** |
-| 5 | **41** Merge one faction's name pool into another | S | **both** | upstream sync |
+| ~~5~~ | ~~**41** Merge one faction's name pool into another~~ | S | **both** | **done 2026-09-15** |
 | 6 | **43** Playable, unlockable, not playable | S | beta | asked for |
 | 7 | **28a** The strip, and the groups behind it | M | beta | an enabler |
 | 8 | **28b** The toolbar over the canvas, and a steady tooltip | M | beta | asked for |
@@ -789,8 +789,9 @@ on, then stars, then size.** That is four rules and each one earns its place.
 **Twenty sessions, and six of them are subreleases.** 29, 40, 42, 41, 38 and
 39 touch something outside the campaign map, so each is a subrelease on both
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
-took B4 with it, **40 and 31 are done** (2026-09-13) and **42 is done**
-(2026-09-14); sixteen remain, three of them subreleases. **They are committed, not cut** - cut-as-it-lands was
+took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
+(2026-09-14) and **41 is done** (2026-09-15); fifteen remain, two of them
+subreleases. **They are committed, not cut** - cut-as-it-lands was
 suspended again on 2026-09-12 and a release now happens when the user asks for
 one.
 
@@ -1436,36 +1437,137 @@ DaC-number checks and wants the build sorted out, not a new assertion.
 **Both lines.** It is a defect in a shipped feature, so it is a 2.x subrelease
 as well as a beta when a cut happens.
 
-## Phase 41 - Merge one faction's name pool into another
+## Phase 41 - Merge one faction's name pool into another - DONE 2026-09-15
 
 **From Mylae's `187d9ed`, and the one genuinely new idea in that push.** His
 `MergeNamesModal.jsx` takes any number of source factions and merges their
 `descr_names.txt` lists into the selected one, previewing per section what is
 new, what is already there and what the total becomes.
 
-**We have the reporting and none of the action.** `minorfiles.check_names`
+**We had the reporting and none of the action.** `minorfiles.check_names`
 already finds a name repeated inside a section and names both lines, which is
 better than his bare count; `factionclone.clone_names` copies a whole donor
 block verbatim as part of cloning a faction, with no dedupe and no merge. There
-is no way to pull one faction's surnames into another's without retyping them,
-and no way to clear the duplicates `check_names` reports.
+was no way to pull one faction's surnames into another's without retyping them,
+and no way to clear the **153 duplicate-name findings** the four installed mods
+produce.
 
-**The engine is fifteen lines and it is not the modal.** `merge_section(target,
-sources, dedupe, sort)` returns the merged list plus three counts - added,
-skipped because already present, and duplicates already inside the target - and
-those three counts are the preview. It belongs in `minorfiles.py` beside
-`check_names`, behind that module's existing `plan`/`apply` pair, so a merge is
-previewed and backed up like every other write there.
+### The engine, and it is the size the scoping said
+
+`merge_section(target, sources, dedupe, sort)` returns the merged list plus the
+counts that **are** the preview, and it sits in `minorfiles.py` beside
+`check_names`, behind that module's existing `plan`/`apply` pair - so a merge is
+previewed, backed up and undone like every other write there. Above it,
+`merge_names` does all four sections against any number of donors, and
+`merge_block` writes the faction's block back.
 
 **Four sections, not three.** `NAME_SECTIONS` is `settlements`, `characters`,
-`surnames`, `women`. Mylae's serializer writes only the last three and
-**silently drops `settlements`**; none of the three installed mods uses that
-section, which is why he has not noticed. Ours carries it through untouched.
+`surnames`, `women`. Mylae's serializer writes only the last three and silently
+drops `settlements`; none of the installed mods uses that section, which is why
+he has not noticed. Ours carries it through untouched.
 
-**Two things of his not to copy.** His preview labels source duplicates as
-"skipped" even when dedupe is off and they are in fact appended, and his Merge
-button is live with no source selected. Dedupe-in-place is a real action and
-should be its own button rather than a side effect of merging nothing.
+**Three things of his deliberately not copied**, and each is a check in the
+suite:
+
+* his preview labels source duplicates "skipped" even when dedupe is off, and
+  with dedupe off they are in fact **appended**. `present` here is zero whenever
+  nothing was skipped, because a count that is not true of the write is worse
+  than no count at all.
+* his Merge button is live with no source selected, where the only thing it can
+  do is dedupe in place. That is a real action, so it is its own button and its
+  own `action="dedupe"`; merging nothing is refused and the refusal names the
+  button that does do it.
+* his serializer drops `settlements`, as above.
+
+**A section only the donor has is created rather than dropped.** `render_names`
+refuses a section the faction has not got, which is right for an edit - the form
+cannot show a box that is not there - and wrong for a merge, where the whole
+point can be that the donor keeps a `surnames` list and the target keeps none.
+`merge_block` writes the heading at the end of the block, indented to match the
+sections the target already has and with the blank line every real file puts
+between sections. It is appended rather than spliced into canonical order,
+because moving lines past comments and blank lines a mod put there buys nothing:
+the engine does not care what order the sections come in.
+
+### The defect this turned up, which is bigger than the phase
+
+**Phase 41's own suite could not run.** `test_minorfiles` died in the real-mod
+sweep on `Owaib Cyfeiliog`, and had been dying there since the two vanilla mods
+were installed. Nobody had seen it because **stderr and buffered stdout
+interleave**: the traceback landed in the middle of the output and the suite
+merely looked like it had one failing check. That is also why the 2026-09-14
+sweep listed `test_minorfiles` as failing with no check count.
+
+`render_names` refused any name with a space in it. Measured over the four
+installed mods:
+
+| section | entries | multi-word | share |
+|---|---|---|---|
+| `characters` | 18,794 | 90 | 0.5% |
+| `surnames` | 5,363 | **2,413** | **45.0%** |
+| `women` | 10,766 | 10 | 0.1% |
+| **total** | **34,923** | **2,513** | |
+
+`surnames` is where it is normal - `de Avena`, `of Anglesey` - because the
+engine joins a forename to one of these and `de Medici` is a surname rather than
+two names. But `characters` and `women` have them too and they are not mistakes:
+`al Adid`, `Imad ad Din`, `Arigh Boke`, `Yax Kuk Mo`, `Hywel Dda`,
+`Sorghaghtani Beki` - Arabic, Mongol, Mayan and Welsh names that are two words
+in the histories they come from.
+
+**What it cost while it stood: 58 factions across Vanilla Redux and
+`vanilla_kingdoms_uncompromised` could not be saved at all.** `render_names`
+refused the very list the form had just handed it, unchanged. And `parse_names`
+raised 2,513 warnings about files that are perfectly correct. All 121 factions
+of all four mods save now.
+
+**The rule is replaced by the one real constraint.** A name may not BE a section
+keyword, because `parse_names` tells a heading from a name by those four words
+and would read it back as a heading, moving everything under it into the wrong
+section. No installed mod has one, over all 34,923 entries. It lives in one
+function, `name_fault`, because the old rule was enforced in three places and
+was wrong in all three.
+
+**The first draft of this fix relaxed the rule for `surnames` alone**, on a
+sample that happened to be all surnames. That was the same mistake one size
+smaller, and the per-section count above is what caught it. The comment in the
+source says so, because the next person to read that table should know it was
+read wrong once already.
+
+`test_minorfiles` had `a name with a space in it is refused` asserted as an
+expectation - the defect written down, the same shape as the `test_campedit`
+check Phase 40 found.
+
+### Verified
+
+* `tests/test_minorfiles.py` **221/224** against 153 green with a crash before.
+  The three counts are measured in both dedupe modes; the dedupe-off case is
+  checked **first**, because it is the one his preview gets wrong. The plan's
+  four refusals are checked. A merge is applied to the fixture mod and undone,
+  with every faction it did not name byte for byte on both sides.
+* Measured on the real mods, written nowhere: dedupe of DaC's `russia` is 78 ->
+  72 characters and its 6 duplicate findings become 0, with the other 30
+  factions untouched. Merging Vanilla Redux's `papal_states` into `slave`, which
+  has no `surnames` section, writes the heading and 116 names. Merging the same
+  source twice reports every name present and writes nothing.
+* Driven end to end through the running server on Vanilla Redux: `egypt` merging
+  `turks` and `moors` previews `characters 80 -> 207 (127 new, 3 already
+  there)`, `surnames 55 -> 246`, `women 36 -> 116`; turning Remove duplicates
+  off reports 130 added and **0** already there, which is the correction to his
+  preview shown in the app; unticking every source disables Merge and says what
+  to do.
+
+### Three findings handed on, all in `descr_sm_resources.txt`
+
+The crash was hiding the end of the sweep, and behind it are three failures that
+have nothing to do with names and are **not** Phase 41's to re-scope:
+
+* **`vanilla_kingdoms_uncompromised` ships 31 resources** - the vanilla 28 plus
+  `glass`, `honey` and `salt` - which disproves the premise written into the
+  resources tab's edit-only refusal, that *all three mods measured ship the same
+  28 names*. Three of four, now.
+* **`is_slave` and `localised_name` are real lines `parse_resources` does not
+  know**, 4 of them in Vanilla Redux and 3 in `vanilla_kingdoms_uncompromised`.
 
 **Both lines.** `descr_names.txt` is a minor file rather than the campaign map.
 

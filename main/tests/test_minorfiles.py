@@ -573,6 +573,34 @@ check("and the log puts a whole job back",
       mf.parse_names(kb.read_text(work / "data" / mf.NAMES_REL,
                                   mf.ENCODING)).get("milan") is None)
 
+# 41: the merge and the dedupe go out through the same writer, so what this adds
+# is that they really reach the disk and really come back - a preview nobody can
+# undo is worse than no preview.
+names_path = work / "data" / mf.NAMES_REL
+nf0 = mf.parse_names(kb.read_text(names_path, mf.ENCODING))
+pair = [f.name for f in nf0.factions if f.section("characters")][:2]
+if len(pair) == 2:
+    tgt, src = pair
+    was = {f.name: nf0.block_text(f) for f in nf0.factions}
+    p = mf.plan(mod, {"tab": "names", "action": "merge", "name": tgt,
+                      "sources": [src], "dedupe": True})
+    want = p.payload()["merge"]
+    mf.apply(p)
+    nf1 = mf.parse_names(kb.read_text(names_path, mf.ENCODING))
+    got = {s.name: len(s.entries) for s in nf1.get(tgt).sections}
+    check(f"a merge reaches the disk with the count it previewed ({tgt} <- {src})",
+          all(got.get(k) == v["after"] for k, v in want.items() if k in got))
+    check("and every faction it did not name is byte for byte what it was",
+          all(nf1.block_text(nf1.get(n)) == b
+              for n, b in was.items() if n != tgt))
+    check("the whole file still round-trips after a merge",
+          mf.parse_names(kb.read_text(names_path, mf.ENCODING)).text()
+          == kb.read_text(names_path, mf.ENCODING))
+    transfer.undo(config.load_log()[-1]["id"])
+    nf2 = mf.parse_names(kb.read_text(names_path, mf.ENCODING))
+    check("and the log puts a merge back, every faction byte for byte",
+          all(nf2.block_text(nf2.get(n)) == b for n, b in was.items()))
+
 print("\nthe real files")
 root = config.get_med2_root()
 mods = sorted((Path(root) / "mods").glob("*/data")) if root else []

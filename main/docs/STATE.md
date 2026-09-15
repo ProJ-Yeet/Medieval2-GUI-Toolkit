@@ -1,8 +1,8 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-14 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
+_Updated: 2026-09-15 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
 the latest beta - after the M2EX map-ceiling fix, the `replace_record` blank
-line it turned up, the two bugs a second report brought in, and **Phases 40, 31
-and 42**, all committed and **not cut**. **Releasing is on-request only**:
+line it turned up, the two bugs a second report brought in, and **Phases 40, 31,
+42 and 41**, all committed and **not cut**. **Releasing is on-request only**:
 commit to master and stop_
 
 ## Next up
@@ -234,11 +234,11 @@ this turned up and did not fix.
 **Two blocks, set by the user on 2026-09-12 after rating 38 of 39 candidates:
 the whole campaign map first, then the mercenaries.** Everything else is in
 `ROADMAP.md`'s *Future roadmap*, rated and unscheduled, to be started when both
-blocks are done. Twenty sessions in all; **29, 40, 31 and 42 are done**, so
-sixteen are left and three of those are subreleases.
+blocks are done. Twenty sessions in all; **29, 40, 31, 42 and 41 are done**,
+so fifteen are left and two of those are subreleases.
 
-**Block one, the campaign map** - ~~29~~, ~~40~~, ~~31~~, ~~42~~, **41, 43**,
-28a, 28b, 33, 30, 34, 35, 36, 37a, 37b, 38.
+**Block one, the campaign map** - ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~,
+**43**, 28a, 28b, 33, 30, 34, 35, 36, 37a, 37b, 38.
 
 **And six sessions that are in neither block, added 2026-09-13** after the user
 asked for a pass over Mylae's non-map screens: Phases **44-48**, all six
@@ -293,7 +293,53 @@ not done. If a second cause exists, this report is what will show it - a clone
 that comes back with **no** empty places and still has a blank button is a
 different bug from the one closed here.
 
-**Start with 41, then 43.** 41 is Mylae's names merge. 43 is the playable / unlockable /
+**Phase 41 is done - the names merge, and the rule that made 58 factions
+unsaveable - fixed 2026-09-15, both lines when a cut happens, committed and
+uncut.** `merge_section` / `merge_names` / `merge_block` sit in `minorfiles.py`
+beside `check_names`, behind that module's own plan/apply pair, with `merge` and
+`dedupe` as real actions on the names tab. Three of Mylae's are deliberately not
+copied and each is a check: his preview calls a source name *skipped* when
+dedupe is off and it is in fact appended (`present` is 0 whenever nothing was
+skipped); his Merge button is live with no source, where the only thing it can
+do is dedupe, so that is its own button and merging nothing is refused; and his
+serializer drops `settlements`, which ours carries. A section only the donor has
+is created rather than dropped, indented to match the target's own and with the
+blank line real files put between sections.
+
+**The phase could not run its own suite, and that is the bigger half.**
+`test_minorfiles` had been dying in the real-mod sweep on `Owaib Cyfeiliog`
+since the two vanilla mods were installed, and nobody saw it because **stderr
+and buffered stdout interleave** - the traceback landed mid-output and the suite
+merely looked like it had one failing check. That is also why the 2026-09-14
+sweep listed it as failing with no count.
+
+**`render_names` refused any name with a space, and 2,513 of the four mods'
+34,923 names have one**: 45% of every surname (`de Avena`, `of Anglesey`), and
+90 characters and 10 women that are not mistakes either - `al Adid`, `Imad ad
+Din`, `Arigh Boke`, `Yax Kuk Mo`, `Hywel Dda`. **58 factions across Vanilla
+Redux and `vanilla_kingdoms_uncompromised` could not be saved at all**, because
+the save refused the very list the form had just handed it; all 121 of all four
+mods save now. The rule is replaced by the one real constraint - a name may not
+BE a section keyword, since `parse_names` would read it back as a heading - in
+one place, `name_fault`, because the old rule was enforced in three and wrong in
+all three. **The first draft of the fix relaxed it for `surnames` alone**, on a
+sample that happened to be all surnames; the per-section count caught it and the
+source says so.
+
+`tests/test_minorfiles.py` is **221/224** against 153 green with a crash before,
+including a merge applied to the fixture and undone with every other faction
+byte for byte on both sides. Driven end to end on Vanilla Redux: `egypt` taking
+`turks` and `moors` previews characters 80 -> 207, surnames 55 -> 246, women
+36 -> 116.
+
+**The three that are left are `descr_sm_resources.txt` and are not 41's**, and
+the crash was hiding them: `vanilla_kingdoms_uncompromised` ships **31**
+resources (the 28 plus `glass`, `honey`, `salt`), which disproves the *all three
+mods measured ship the same 28* premise behind the resources tab's edit-only
+refusal; and `is_slave` and `localised_name` are real lines `parse_resources`
+does not know, 4 in Redux and 3 in Kingdoms.
+
+**Start with 43.** 41 is Mylae's names merge. 43 is the playable / unlockable /
 nonplayable toggle the user asked for: we parse all three rosters, print their
 counts on the campaign card, and refuse the edit in four separate modules with
 the same sentence, which is one writer owed rather than four.
@@ -388,10 +434,11 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | Phase | Status | Note |
 |---|---|---|
 | 29 + B4 - the strat model viewer | **done** | Closed 2026-09-12, committed, **released 2026-09-12** as v2.3.2 and beta 2026-09-12c. The scoping was wrong about the root and right about everything above it: the art is not in a `.pack`, it is loose beside the stub as `<name>.tga.dds`, and `cas.texture_path` took the zero-byte `.tga` because it existed. Fixed at all five levels. New: `cas._has_bytes`, `icons.ArtUnreadable`, `icons.fault`, `png_bytes(strict=)`, `/model_texture` 415, `factions.packs_beside`, `factions.no_file_note`, and in `viewer3d.js` `uCutout`, `v3Degenerate`, `v3AskWhy`, `v3TexFault`, `v3FaultRows`. `tests/test_stratart.py` (40). |
+| 41 - merge one faction's name pool | **done** | Closed 2026-09-15, committed, **not cut** (both lines when a cut happens). `merge_section` / `merge_names` / `merge_block` in `minorfiles.py`, with `merge` and `dedupe` as actions behind the module's own plan/apply. Three of Mylae's corrected, each a check: `present` is 0 whenever dedupe is off because nothing was skipped; merging nothing is refused and names the dedupe button; `settlements` is carried rather than dropped. **And the phase could not run its own suite**: `test_minorfiles` had been dying in the sweep on `Owaib Cyfeiliog`, invisible because stderr and buffered stdout interleave. `render_names` refused any name with a space and **2,513 of 34,923 names have one** (45% of all surnames, plus 90 characters and 10 women - `al Adid`, `Arigh Boke`, `Yax Kuk Mo`, `Hywel Dda`), so **58 factions across two mods could not be saved at all**. Replaced by the one real constraint in `name_fault`: a name may not BE a section keyword. The first draft relaxed it for `surnames` alone and was wrong the same way one size smaller. New: `name_fault`, `merge_section`, `merge_names`, `merge_block`, `_plan_merge`, `MinorPlan.merge`, `mfMergeOpen` and the two buttons in `minorfiles.js`, `.modal.mgwide`. `tests/test_minorfiles.py` 221/224 (was 153 green with a crash). **Handed on:** the three left are `descr_sm_resources.txt` - Kingdoms ships 31 resources against the documented 28, and `is_slave` / `localised_name` are lines the parser does not know. |
 | 42 - the art a clone does not get | **done** | Closed 2026-09-14, committed, **not cut** (both lines when a cut happens). The copier was never at fault and the re-measurement held; what was missing was a sentence. `ART_PLACES` is the nine places a faction's art lives, `art_gaps` names every one the clone came away from empty-handed with one of four reasons - the donor has none either, the destination already exists, a longer-named faction owns the name, the mod has no such folder. The old whole-scan warning fires only when the scan is completely empty, which on a real mod it never is. **121 donor slots swept over four mods: 253 empty places, 50 clean donors, and all 253 the same reason.** Not one of Reforged's 30 factions fills every place; `vanilla_kingdoms_uncompromised` is worst at 146. The scoping was wrong about one fact: Reforged's `fe_symbols_80` is **empty**, and the 17 vanilla-named files in it are DaC's. New: `ArtPlace`, `ART_PLACES`, `art_gaps`, `_asset_hits(skips=)`, `ClonePlan.art`, `payload()["art_gaps"]`, the `.fcgap` rows in `factions.js` and the places named in the apply confirm. `tests/test_factionclone.py` 74/74 (was 64), `tests/test_factionclone_apply.py` 39/39 (was 30). **Open:** the reporter's own mod is still unknown, so the end-to-end reproduction against the report itself was not done. |
 | 31 - two river rules and a ford in the sea | **done** | Closed 2026-09-13, committed, **not cut** (beta only). Three rules and one repair: `river.fourway` (river on all four sides), `river.no_source` (a four-connected component with no white source), `feature.ford_in_sea` (own altitude sea **and** four neighbours sea - the second half the scoping did not have, and without it the message and the repair are not true). All three find **nothing on any of the five installed maps**, which is what they are for. `ford_none` is the one repair with a safe answer; the other two need the map author's intent or `map_heights.tga`, and both refusals are written into `FIXES`. New: `_r_river_fourway`, `_r_river_no_source`, `_r_ford_in_sea`, `_plan_fords`, `FIXES["ford_none"]`. The three existing river fixtures painted sourceless courses and now paint their source. No web change - the panel is data-driven off `RULES` and `rep.fixes`. `tests/test_mapcheck.py` 104/105. |
 | 40 - the new province the engine cannot read | **done** | Closed 2026-09-13, committed, **not cut** (both lines when a cut happens). Four defects, one of them the scoped one. `campaint.new_record_lines` and `campmap.render_block` both produced the eight-line record, the second by dropping the line when the last resource was cleared; both write `none` now, which is what vanilla writes on 18 of 112, Vanilla Redux on 78 of 252 and `vanilla_kingdoms_uncompromised` on all 853. `none` read as a resource name was 931 false findings across two mods. And the indent reading lost DaC's ` Erebor_Province` to a stray leading space - **200 regions read as 199**, 517 painted tiles declared nowhere, and its settlement marker written into the source and a test as DaC's one orphan. New: `campmap.file_shape`, `campmap._resplit_runs`, `check_record(rec, vocab, shape)`, a `parse_block` retry for an indented name line. The inferred engine crash is **withdrawn**: DaC ships a short record and plays. `tests/test_campaint.py` 4c and 4d (185), `tests/test_campmap.py` 1 (+7), `tests/test_campedit.py` (139). |
-| 28-43 - the rest of the 2026-09-12 review | **scoped** | Sixteen sessions in two blocks, 40, 31 and 42 having closed. **Block one, the campaign map:** 41 merge one faction's name pool, 43 playable/unlockable/nonplayable, 28a the right menu as a tab strip with Validate one of them, 28b the paint controls over the canvas and a tooltip that holds still, 33 T10 + G2 + G4 in one session, 30 the pink as a choice, 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
+| 28-43 - the rest of the 2026-09-12 review | **scoped** | Fifteen sessions in two blocks, 40, 31, 42 and 41 having closed. **Block one, the campaign map:** 43 playable/unlockable/nonplayable, 28a the right menu as a tab strip with Validate one of them, 28b the paint controls over the canvas and a tooltip that holds still, 33 T10 + G2 + G4 in one session, 30 the pink as a choice, 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
 | 44-48 - the pass over Mylae's non-map screens | **scoped** | Six sessions, added 2026-09-13 at the user's request, in neither block and every one a subrelease on both lines. 44 the EDB's tree checked (his is the one validator he has and we do not), 45 the `hidden_resources` line, 46 cultures on a mode of its own with a four-tab form and the faction form on the same strip, 47a the six `export_descr_sounds_*` files on `sounds.py`'s own parser, 47b the 32 `descr_sounds_*` scripts on a grammar nothing here reads, 48 add and remove on the strings screen. Two of the seven things asked for produced no phase and a measurement instead: his traits and ancillaries have not moved since 2026-03-27, and his `.strings.bin` codec is wrong where ours is right. |
 | 24 - Make and unmake | done | Closed 2026-09-12, committed, **released 2026-09-12**. Closes G1, M15 and the roadmap. Deleting a province, with its land going whole to a neighbour it borders and its name coming out of every file 19b measured - and the campaign script listed, never written, for the reason a rename gives. Making a campaign, as a copy of one that works minus the compiled map, with its own header and its own menu keys. New: `unittransfer/regiondel.py` (`heirs`, `campaigns_reading`, `standing_on`, `plan`, `apply`, `view`), `unittransfer/campnew.py` (`sources`, `plan`, `apply`, `view`), `mapquery.drop_music_region`, `renames.mentions`, `campfiles.write_descriptions`, `GET /api/map/region_delete`, `POST /api/map/region_delete_plan\|_apply`, `GET /api/campnew`, `POST /api/campnew/plan\|apply`, `web/js/regiondel.js`, `web/js/campnew.js`. `tests/test_regiondel.py` (62), `tests/test_campnew.py` (52). |
 | B2-B3 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export. B4 went out inside 29. |
@@ -400,6 +447,14 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | 16-23 | done | Every write-up is in `ROADMAP_ARCHIVE.md`. 16-20a published on the beta line; everything from 20b to 24 went out in the 2026-09-12 cut. |
 ## In-progress detail
 **Clean.** Nothing is mid-flight.
+
+**Phase 41's suite is 221/224 and the three left are the resources tab's, not
+41's** - see its row below. It is worth knowing WHY they were invisible until
+now: `test_minorfiles` crashed partway through the real-mod sweep, and because
+stderr is unbuffered while stdout is not, the traceback landed in the middle of
+the output instead of at the end. A suite that dies mid-sweep looks exactly like
+a suite with one failing check. **When a suite's pass count is missing from its
+last line, it did not finish** - that line is the only reliable sign.
 
 **Phase 42's own suites are green and were measured both ways**:
 `test_factionclone` 74/74 against 64 on the stashed tree,

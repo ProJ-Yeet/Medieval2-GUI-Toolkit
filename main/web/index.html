@@ -633,6 +633,14 @@
   .fcgap .fcc{color:var(--warn);font-weight:600}
   .fcgap .fcgw{display:block;margin-top:2px;font-size:11px;color:var(--dim)}
   .fcmsg{margin-top:10px;font-size:12px;line-height:1.5}
+  /* 41: the merge dialog's faction and section pickers - 30-odd factions, so a
+     wrapping grid rather than a column the dialog has to scroll */
+  /* wide enough for two dozen faction checkboxes and the preview under them,
+     and narrower than `.wide`, which is the unit editor's 1500px */
+  .modal.mgwide{width:880px;max-width:96vw}
+  .mgsrc{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:2px 10px;margin-top:4px}
+  .mgsrc .fcart{margin-bottom:0}
   @media (max-width:720px){
     .fcgrid{grid-template-columns:1fr}
     .fcrow{grid-template-columns:44px 1fr}

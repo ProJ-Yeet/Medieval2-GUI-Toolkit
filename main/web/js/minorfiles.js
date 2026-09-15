@@ -244,6 +244,11 @@ exactly as ${esc(f.file)} stores it, beside the form."
         ? `<button onclick="mfClone()" title="Start a new ${esc(f.noun)} holding
 everything this one holds, under a new name. Nothing is written until you press
 Create.">⧉ Clone</button>` : ''}
+      ${(d.actions||[]).includes('merge')
+        ? `<button onclick="mfMergeOpen()" title="Add every name another faction
+keeps to this one's lists. The other faction is read, not changed.">⧉ Merge names…</button>
+      <button onclick="mfDedupe()" title="Clear the names this faction lists twice.
+Nothing is added.">Remove duplicates</button>` : ''}
       ${(d.actions||[]).includes('delete')
         ? '<button class="danger" onclick="mfDelete()">Delete</button>' : ''}`}
       <button class="primary" onclick="mfSave()">${f.adding?'Create':'Save'}</button>
@@ -529,6 +534,223 @@ function mfNamesForm(d){
           code view.</div>` : ''}
   </section>`;
 }
+
+/* ---- 41: merging one faction's name pool into another ----
+
+   `check_names` has always been able to say a name is repeated inside a section
+   and name both lines, and nothing could act on it; and there was no way to pull
+   one faction's surnames into another's short of retyping them. Two buttons and
+   one dialog, both behind the same plan/apply preview every other save here uses.
+
+   Three things Mylae's modal does that this deliberately does not:
+
+   * his Merge button is live with no source selected, where the only thing it
+     can do is dedupe in place. That is a real action, so it is its own button;
+     merging nothing is refused and the refusal names the button that does it.
+   * his preview labels a source name "skipped" when dedupe is off, and with
+     dedupe off it is appended rather than skipped. The counts here come from the
+     server's own merge, so they cannot disagree with the write.
+   * his serialiser drops the `settlements` section. Ours carries all four. */
+function mfMergeOpen(){
+  const f = state.mf, d = f.d;
+  if(!d || f.tab !== 'names') return;
+  f.merge = {sources: [], dedupe: true, sort: false, sections: [],
+             plan: null, busy: false, err: ''};
+  mfMergeRender();
+  overlay.classList.add('open');
+  mfMergePreview();
+}
+
+function mfMergeClose(){ if(state.mf) state.mf.merge = null; closeModal(); }
+
+function mfMergeSet(key, value){
+  const m = state.mf && state.mf.merge;
+  if(!m) return;
+  m[key] = value;
+  mfMergeRender();
+  clearTimeout(state.mf._mgT);
+  state.mf._mgT = setTimeout(mfMergePreview, 200);
+}
+
+function mfMergeSource(name, on){
+  const m = state.mf && state.mf.merge;
+  if(!m) return;
+  m.sources = on ? [...new Set([...m.sources, name])]
+                 : m.sources.filter(s => s !== name);
+  mfMergeSet('sources', m.sources);
+}
+
+function mfMergeSection(name, on){
+  const m = state.mf && state.mf.merge;
+  if(!m) return;
+  m.sections = on ? m.sections.filter(s => s !== name)
+                  : [...new Set([...m.sections, name])];
+  mfMergeSet('sections', m.sections);
+}
+
+function mfMergeBody(action){
+  const f = state.mf, m = f.merge || {};
+  const all = mfMergeAllSections();
+  const want = all.filter(s => !(m.sections || []).includes(s));
+  return {mod: f.mod, tab: 'names', action, name: f.d.name,
+          sources: action === 'dedupe' ? [] : (m.sources || []),
+          dedupe: action === 'dedupe' ? true : !!m.dedupe,
+          sort: !!m.sort,
+          // an empty list means every section, so only send one when it narrows
+          sections: want.length === all.length ? [] : want};
+}
+
+// every section either the target or any offered source has, in file order
+function mfMergeAllSections(){
+  const f = state.mf;
+  const seen = new Set(((f.d && f.d.w && f.d.w.sections) || []).map(s => s.name));
+  (f.records || []).forEach(r => Object.keys(r.sections || {})
+    .forEach(k => seen.add(k)));
+  return (f.vocabSections || ['settlements', 'characters', 'surnames', 'women'])
+    .filter(s => seen.has(s));
+}
+
+async function mfMergePreview(){
+  const f = state.mf, m = f && f.merge;
+  if(!m) return;
+  if(!(m.sources || []).length){ m.plan = null; m.err = ''; mfMergePaint(); return; }
+  m.busy = true; m.err = '';
+  let r;
+  try{ r = await api.post('/api/minor/plan', mfMergeBody('merge')); }
+  catch(e){ r = {error: String((e && e.message) || e)}; }
+  finally{ m.busy = false; }
+  if(!state.mf || state.mf.merge !== m) return;      // the dialog moved on
+  m.plan = r.plan || null;
+  m.err = (r.error && !(r.plan && (r.plan.errors || []).length)) ? r.error : '';
+  mfMergePaint();
+}
+
+function mfMergePaint(){
+  const m = state.mf && state.mf.merge;
+  if(!m) return;
+  const host = document.getElementById('mgPlan');
+  if(!host) return mfMergeRender();
+  host.innerHTML = mfMergePlanHtml();
+  const go = document.querySelector('.foot .primary');
+  if(go) go.disabled = !(m.plan && m.plan.ok && !m.busy);
+}
+
+/* The three counts, per section, and they come from the server's own merge -
+   so "added" is the number of lines the write will really add. A section that
+   gained nothing is still drawn, because "did it work" is answered by seeing
+   that every name offered was already there, not by seeing no row at all. */
+function mfMergePlanHtml(){
+  const m = state.mf.merge;
+  if(m.err) return `<div class="w-warn fcmsg">${esc(m.err)}</div>`;
+  if(!(m.sources || []).length) return `<div class="count fcintro">Tick a faction
+    above to see exactly what each section would gain.</div>`;
+  if(!m.plan) return `<div class="count fcintro">Working out what would change…</div>`;
+  if((m.plan.errors || []).length)
+    return `<div class="w-warn fcmsg">${m.plan.errors.map(esc).join('<br>')}</div>`;
+  const rows = Object.entries(m.plan.merge || {});
+  if(!rows.length) return `<div class="count fcintro">Nothing to merge.</div>`;
+  return `<div class="fcplan">
+    <div class="k">What each section would gain
+      <span class="count">${esc((m.plan.merge_sources || []).join(', '))}</span></div>
+    ${rows.map(([sec, c]) => `<div class="fcrow${c.added || c.removed ? '' : ' off'}">
+      <span class="fcc">${c.added ? '+' + c.added : '0'}</span>
+      <span class="fcn">${esc(sec)}
+        <span class="fcf">${c.before} → ${c.after} name(s)</span></span>
+      <span class="fcw count">${
+        c.added ? `${c.added} new` : 'nothing new'}${
+        c.present ? `, ${c.present} already there` : ''}${
+        c.removed ? `, ${c.removed} repeat(s) of its own removed`
+                  : (c.duplicates ? `, ${c.duplicates} repeat(s) of its own kept`
+                                  : '')}</span>
+    </div>`).join('')}
+    ${(m.plan.warnings || []).map(w =>
+      `<div class="w-warn fcmsg">${esc(w)}</div>`).join('')}
+  </div>`;
+}
+
+function mfMergeRender(){
+  const f = state.mf, m = f.merge, d = f.d;
+  if(!m) return;
+  const others = (f.records || []).map(r => r.name).filter(n => n !== d.name);
+  const secs = mfMergeAllSections();
+  const modal = document.getElementById('modal');
+  // Its own class, so it gets its own remembered size rather than opening at
+  // whatever the last plain dialog was left at. Two dozen faction checkboxes and
+  // a preview table do not fit the 640px a confirm box wants, and `closeModal`
+  // puts the bare class back for whatever opens next.
+  modal.className = 'modal mgwide';
+  modal.innerHTML = `
+    <h2>Merge names into ${esc(d.name)} <span class="pill">${esc(f.mod || state.src)}</span></h2>
+    <div class="mbody" style="padding:14px 16px">
+      <div class="count fcintro">
+        Every name the factions you tick keep, added to <b>${esc(d.name)}</b>'s own
+        lists. Nothing is taken from them - they are read, not changed.
+      </div>
+      <div class="trsechead" style="margin-top:12px">Take names from
+        <span class="count">${m.sources.length} of ${others.length} selected</span></div>
+      <div class="mgsrc">
+        ${others.map(n => `<label class="fcart"><input type="checkbox"
+          ${m.sources.includes(n) ? 'checked' : ''}
+          onchange="mfMergeSource('${esc(n)}', this.checked)">${esc(n)}</label>`).join('')}
+      </div>
+      <div class="trsechead" style="margin-top:12px">Which sections</div>
+      <div class="mgsrc">
+        ${secs.map(s => `<label class="fcart"><input type="checkbox"
+          ${m.sections.includes(s) ? '' : 'checked'}
+          onchange="mfMergeSection('${esc(s)}', this.checked)">${esc(s)}</label>`).join('')}
+      </div>
+      <div style="margin-top:12px">
+        <label class="fcart"><input type="checkbox" ${m.dedupe ? 'checked' : ''}
+          onchange="mfMergeSet('dedupe', this.checked)">
+          <span><b>Remove duplicates</b> - a name ${esc(d.name)} already has is not
+          added again, and its own repeated lines are cleared out at the same time.
+          With this off every name is appended as it comes, repeats and all.</span></label>
+        <label class="fcart"><input type="checkbox" ${m.sort ? 'checked' : ''}
+          onchange="mfMergeSet('sort', this.checked)">
+          <span><b>Sort alphabetically</b> - reorders the whole of each section it
+          touches, not just the names arriving.</span></label>
+      </div>
+      <div id="mgPlan">${mfMergePlanHtml()}</div>
+    </div>
+    <div class="foot">
+      <button onclick="mfMergeClose()">Cancel</button>
+      <span class="sp"></span>
+      <button class="primary" ${m.plan && m.plan.ok && !m.busy ? '' : 'disabled'}
+        onclick="mfMergeApply()">Merge</button>
+    </div>`;
+}
+
+async function mfMergeApply(){
+  const f = state.mf, m = f && f.merge;
+  if(!m || !m.plan || !m.plan.ok || m.busy) return;
+  const rows = Object.entries(m.plan.merge || {})
+    .filter(([, c]) => c.added || c.removed);
+  if(!confirm(`Merge ${(m.plan.merge_sources || []).join(', ')} into ${f.d.name}?\n\n`
+    + (rows.map(([s, c]) => `  ${s}: ${c.before} → ${c.after}`).join('\n')
+       || 'no visible change')
+    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+  m.busy = true;
+  let res;
+  try{ res = await api.post('/api/minor/apply', mfMergeBody('merge')); }
+  finally{ m.busy = false; }
+  if(res.error){ toast('✗ ' + res.error, 6000); return; }
+  const keep = f.d.name;
+  f.merge = null;
+  closeModal();
+  toast('Merged. 🕑 Log can undo it.');
+  await loadMinor();
+  mfOpen(keep);
+}
+
+/* Dedupe in place, with no dialog: it has no options to set, and the confirm
+   `mfApply` already draws lists every section it would change. */
+async function mfDedupe(){
+  const d = state.mf && state.mf.d;
+  if(!d) return;
+  await mfApply({mod: state.mf.mod, tab: 'names', action: 'dedupe', name: d.name},
+                `remove ${d.name}'s repeated names`);
+}
+
 
 /* ---- edits ----
    Every one of these ends at `mfTouched`, which is the GUI→pane half of the
