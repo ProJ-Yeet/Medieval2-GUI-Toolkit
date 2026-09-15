@@ -116,7 +116,7 @@ print("\n== every menu module is on the Home readiness matrix ==")
 # `report.modules[id]`; a module with no entry there renders '' and vanishes
 # with no error, which is how Campaign Map was missing from every mod card for a
 # whole phase. This asserts the class of bug rather than the one instance.
-from unittransfer import campmap, modfiles                      # noqa: E402
+from unittransfer import campfiles, campmap, modfiles           # noqa: E402
 
 core = (JS / "core.js").read_text(encoding="utf-8")
 block = re.search(r"^const MODES=\[(.*?)^\];", core, re.S | re.M)
@@ -295,6 +295,53 @@ check("and nothing in it wraps, so no row can change the box's height",
       "text-overflow:ellipsis;white-space:nowrap" in index_html
       and ".cmtiprow{" in index_html
       and "height:1.5em" in index_html.split(".cmtiprow{")[1].split("}")[0])
+
+
+print("\n== 33: the copy key, the music picker and the legion row ==")
+from unittransfer import mapquery, namekeys                      # noqa: E402
+
+# T10. The form is measured off vanilla's own descr_strat.txt - every one of its
+# `character` lines ends `x 109, y 147` - and the y is the GAME one, which
+# counts from the bottom. A copy that handed over the image y would put a
+# general on the wrong side of the map, so the arithmetic is asserted here
+# rather than left to be noticed in a save game.
+check("the copy is built in campmap.js", "function cmapCopyText()" in campmap_js)
+_copy = campmap_js.split("function cmapCopyText(){")[1].split("\n}")[0]
+check("and it copies the game y, not the image one",
+      "c.man.height - 1 - ty" in _copy)
+check("`c` copies what is under the pointer",
+      "cmapCopyTile();" in campmap_js
+      and "e.key === 'c'" in campmap_js)
+check("and the picked tile has a button of its own",
+      'class="cmcopy" onclick="cmapCopyTile()"' in campmap_js)
+
+# G2. The third and last call against descr_sounds_music_types.txt, beside the
+# parser and the other two - one module owns that file.
+check("mapquery owns all three calls against the music file",
+      all(hasattr(mapquery, n) for n in
+          ("parse_music_types", "add_music_region", "drop_music_region",
+           "set_music_region", "music_view")))
+check("a music save is one of campfiles' four",
+      "music" in campfiles.WHAT and hasattr(campfiles, "_plan_music"))
+check("the region route hands the panel its music",
+      'out["music"] = mapquery.music_view(' in
+      (ROOT / "unittransfer" / "server.py").read_text(encoding="utf-8"))
+check("and the panel saves it on its own, like the pool and the names",
+      "function cmapMusicSave()" in campmap_js
+      and "'/api/campfiles/plan'" in campmap_js.split("function cmapMusicSave()")[1]
+      .split("\n}")[0])
+# It is a fact about the MAP, so no campaign is sent - that is the one way this
+# picker differs from the mercenary pool's beside it.
+_save = campmap_js.split("function cmapMusicSave()")[1].split("\n}")[0]
+check("without a campaign, because the file is beside the map layers",
+      "campaign" not in _save)
+
+# G4. The legion is the third key one province is read through.
+check("namekeys reads the legion key too", "legion" in namekeys.ROW_WHAT)
+_rows = namekeys.region_names.__doc__ or ""
+check("and the panel has a label for it", "legion: 'Legion'" in campmap_js)
+check("a legion key that is another record's says so",
+      "another record" in campmap_js)
 
 print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

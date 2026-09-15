@@ -208,6 +208,73 @@ def drop_music_region(text: str, region: str) -> str:
     return "\n".join(out)
 
 
+def set_music_region(text: str, region: str, music_type: str) -> str:
+    """``text`` with ``region`` moved to ``music_type``'s block. 33, G2.
+
+    The third and last call against this file, and it is the other two in order:
+    :func:`drop_music_region` takes the name off every ``regions`` line that
+    holds it, then :func:`add_music_region` puts it on the end of the wanted
+    block's last one. Written as the pair rather than as a third splice because
+    a move is exactly a remove and an add, and one of the two rules here belongs
+    to each - "out of **every** line, because nothing in the format stops a
+    province being listed twice" is the drop's, and "onto the end of the last
+    line, in front of any comment" is the add's.
+
+    An empty ``music_type`` is the drop alone, and it is a real answer: the
+    engine names a province with no type out loud
+    (``music_type not found for regions: <name>``), so it is a warning where the
+    panel makes it rather than a refusal here.
+
+    The block is checked before anything is removed. Otherwise a name asked into
+    a type this file has not got would come off its own line and land nowhere,
+    which is the one way this could lose a province's music.
+    """
+    want = music_type.strip()
+    if want and want not in parse_music_types(text):
+        raise MapError(f"there is no music_type {want} in "
+                       f"descr_sounds_music_types.txt")
+    out = drop_music_region(text, region)
+    return add_music_region(out, want, region) if want else out
+
+
+def music_view(mod, region: str = "") -> Dict[str, object]:
+    """What the region panel's music picker needs. The shape ``mercs_view`` has.
+
+    A mod with no ``descr_sounds_music_types.txt`` comes back ``have: False``
+    with the reason, which is what the picker shows instead of itself - the
+    stock game ships the file inside the packed data, so that is the ordinary
+    case rather than a fault.
+
+    Two states of the same shape are reported rather than tidied away, and both
+    are real on this machine. A province under **two music types** - 58 of
+    ``vanilla_kingdoms_uncompromised``'s - comes back with the rest in ``also``;
+    a province named **twice inside one type** - 2 of Vanilla Redux's - comes
+    back with ``twice``. The format allows both, the engine plays one of them,
+    and which one is not this tool's to decide, so the picker shows the first,
+    which is what the engine reads. Saving is what cleans either up, and it says
+    so in the plan.
+    """
+    path = Path(mod.data) / MUSIC_REL
+    text = _text(path)
+    if not text:
+        return {"file": MUSIC_REL, "have": False, "types": [], "type": "",
+                "also": [], "problem": f"{getattr(mod, 'name', '?')} has no "
+                                       f"{MUSIC_REL}, so no province on this "
+                                       f"map has a music type"}
+    music = parse_music_types(text)
+    low = region.strip().lower()
+    holding = [name for name, regions in music.items()
+               if any(r.lower() == low for r in regions)]
+    here = holding[0] if holding else ""
+    return {"file": MUSIC_REL, "have": True, "problem": "",
+            "types": [{"name": name, "regions": len(regions)}
+                      for name, regions in music.items()],
+            "type": here,
+            "also": holding[1:],
+            "twice": sum(1 for r in music.get(here, []) if r.lower() == low) - 1
+                     if here else 0}
+
+
 @dataclass
 class MercPool:
     """One ``pool`` block: where it applies and what it sells."""

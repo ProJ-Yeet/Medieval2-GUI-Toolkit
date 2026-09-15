@@ -52,7 +52,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from . import campstrat, keyblock as kb, mapquery, stringsbin
+from . import campmap, campstrat, keyblock as kb, mapquery, stringsbin
 from .triggers import split_lines
 
 #: the campaign files are plain 8-bit text; the localisation file is UTF-16
@@ -822,7 +822,7 @@ def check_mercs(mf: MercFile, regions: Optional[List[str]] = None) -> List[Dict]
 
 
 #: what a save can be about
-WHAT = ("descriptions", "movies", "mercenaries")
+WHAT = ("descriptions", "movies", "mercenaries", "music")
 
 
 @dataclass
@@ -874,6 +874,8 @@ def plan(mod, body: dict) -> CampFilePlan:
             _plan_descriptions(p, dict(body.get("edits") or {}))
         elif p.what == "movies":
             _plan_movies(p, dict(body.get("edits") or {}))
+        elif p.what == "music":
+            _plan_music(p, dict(body.get("edits") or {}))
         else:
             _plan_mercenaries(p, dict(body.get("edits") or {}))
     except CampFileError as e:
@@ -975,6 +977,62 @@ def _plan_mercenaries(p: CampFilePlan, edits: Dict) -> None:
         p.warnings.append(
             f"{p.name} is now in no pool, so no mercenary is recruitable there")
     p.findings = check_mercs(parse_mercs(text))
+
+
+def _plan_music(p: CampFilePlan, edits: Dict) -> None:
+    """Move one province between music types. ``name`` is the region. 33, G2.
+
+    The odd one of the four: ``descr_sounds_music_types.txt`` lives beside the
+    map layers rather than in the campaign folder, because which music a
+    province plays is a fact about the map and not about one campaign on it. It
+    is here anyway for the reason the mercenary pool is - this is one more
+    picker on the region panel, saving one more file on its own - and
+    :func:`~unittransfer.mapquery.set_music_region` is what does the writing,
+    beside the parser and the other two calls against that file.
+
+    Measured on a move: **two lines change and the line count does not** - the
+    one the name leaves and the one it joins. Moving it back does not restore
+    the file byte for byte, and that is honest rather than a gap: a name goes on
+    the end of the block's last ``regions`` line, and where it sat inside that
+    line is not something the format says.
+    """
+    path = Path(p.mod.data) / mapquery.MUSIC_REL
+    original = kb.read_text(path, ENCODING) if path.is_file() else ""
+    if not original:
+        raise CampFileError(
+            f"{getattr(p.mod, 'name', '?')} has no {mapquery.MUSIC_REL}, so "
+            f"there is no music type to put a province in")
+    if not p.name:
+        raise CampFileError("moving a music type needs a region")
+    want = str(edits.get("music_type") or "").strip()
+    was = mapquery.music_view(p.mod, p.name)
+    if want == was["type"] and not was["also"] and not was["twice"]:
+        return
+    try:
+        text = mapquery.set_music_region(original, p.name, want)
+    except campmap.MapError as e:
+        raise CampFileError(str(e))
+    p.path = path
+    p.text = "" if text == original else text
+    if want != was["type"]:
+        p.changes.append(f"{p.name}: music type {was['type'] or '(none)'} -> "
+                         f"{want or '(none)'}")
+    # the format lets a province sit under two types and the engine plays one of
+    # them - 58 provinces of vanilla_kingdoms_uncompromised and 2 of Vanilla
+    # Redux are in that state. The save takes it out of both, which is a change
+    # worth naming rather than a tidy-up to do quietly.
+    if was["also"]:
+        p.changes.append(f"{p.name} was also under "
+                         + kb.and_list(list(was["also"]))
+                         + ", and is taken out of "
+                         + ("both" if len(was["also"]) == 1 else "all of them"))
+    if was["twice"]:
+        p.changes.append(f"{p.name} was named {was['twice'] + 1} times inside "
+                         f"{was['type']} and is named once now")
+    if not want:
+        p.warnings.append(
+            f"{p.name} now has no music type, and the engine says so out loud "
+            f"at load: \"music_type not found for regions: {p.name}\"")
 
 
 def apply(p: CampFilePlan) -> Dict:

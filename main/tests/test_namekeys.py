@@ -150,10 +150,28 @@ for root in mods:
                   not missing)
             one = next(iter(rf.records))
             got = namekeys.region_names(mod, one.name)
-            check(f"the panel's view of `{one.name}` names both keys and says "
-                  f"whether each is set",
-                  got["have"] and [r["slot"] for r in got["rows"]]
-                  == (["region", "settlement"] if one.settlement else ["region"]))
+            # 33, G4: the legion is the third key, and it is there only when the
+            # record writes a `legion:` line - which of the mods installed here
+            # only Divide and Conquer does, on 199 of its 200 records.
+            want_slots = ["region"]
+            if one.settlement:
+                want_slots.append("settlement")
+            if one.legion:
+                want_slots.append("legion")
+            check(f"the panel's view of `{one.name}` names its "
+                  f"{len(want_slots)} key(s) and says whether each is set",
+                  got["have"]
+                  and [r["slot"] for r in got["rows"]] == want_slots)
+            # and a legion key need not be this province's own - 116 distinct
+            # values over DaC's 199 lines, only 80 of them the record's own name
+            legions = {r.legion for r in rf.records if r.legion}
+            if legions:
+                own = sum(1 for r in rf.records if r.legion and r.legion == r.name)
+                keyed = sum(1 for l in legions if l in pairs)
+                check(f"{len(legions)} distinct legion keys over "
+                      f"{sum(1 for r in rf.records if r.legion)} lines, {own} of "
+                      f"them the record's own name and {keyed} with a line in "
+                      f"this file", keyed <= len(legions) and own <= len(legions))
 
     pool_path = Path(mod.data) / namekeys.POOL_REL
     if not pool_path.is_file():

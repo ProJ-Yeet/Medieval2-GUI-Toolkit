@@ -15,6 +15,71 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 33 - three small map wins, and three facts about the installed mods (2026-09-15)
+The fourth phase of the day. Three items banked in one sitting, as the scoping
+intended; what it did not intend is that each of the three would turn up
+something measured that it had not known.
+
+**T10 - the tile on the clipboard.** `c` copies what is under the pointer, or
+the centre of the view when the pointer is off the map, and there is a button on
+the picked tile's own heading. The form is `x 109, y 147`, **measured off
+vanilla's `descr_strat.txt`** rather than chosen - every `character` line in it
+ends that way - and it is the **game** y, which counts from the bottom. A copy
+that handed over the image y would put a general on the wrong side of the map,
+so the arithmetic is asserted in the suite rather than left to be found in a
+save game. *The write-up's "the shift-X detail is the model" has no referent
+anywhere in the tool or its history;* taken as `c`, beside `t` and `f`.
+
+**G2 - the province's music type.** `mapquery.set_music_region` is the third and
+last call against that file, and it is the drop and the add in order, because a
+move is exactly that and one of the two rules belongs to each - "out of every
+line" is the drop's, "onto the end of the last line" is the add's. The wanted
+block is checked before anything is removed, so a name asked into a type the
+file has not got cannot come off its own line and land nowhere.
+
+`campfiles` has a fourth `what`. It is the odd one: the file lives beside the map
+layers rather than in the campaign folder, so **no campaign is sent** and every
+campaign on a map hears the same thing. `map.rwm` is not deleted - this file is
+read at load rather than compiled into the map.
+
+*Measured: a move changes exactly two lines and the line count does not* - the
+one the name leaves and the one it joins. Moving back is not byte-exact and is
+not asserted to be, for the mercenary pool's reason one file over.
+
+*And two states of the same shape, both real here.* **58 provinces of
+`vanilla_kingdoms_uncompromised` sit under two music types**; **2 of Vanilla
+Redux are named twice inside one type**. Neither DaC nor Reforged has either.
+The engine plays one of them regardless. The panel says which, saving resolves
+it, and the plan names that as a change rather than tidying quietly.
+
+**G4 - the legion's display name.** The row was nearly free, as 19b said: 19a's
+writer already took any key in that file, so `region_names` returning a third
+row and the panel drawing it was the whole job.
+
+*What was not free was noticing that the legion need not name this province.*
+DaC is the only installed mod that writes the line - **199 of its 200 records** -
+and only **80** point at the record's own name. The rest point at another
+province's key (`Rhudaur_Province` reads `legion: Eregion_Province`) or at a
+settlement's (`Imladris`, `East_Moria`). So the row follows the line rather than
+assuming the region, and the label says when the key is somebody else's.
+
+*It found a defect on the first province it was pointed at.* **115 of DaC's 116
+distinct legion values already have a line in the names file**; the one that does
+not is `Thorenhad_Province`, on `Suduri_Province`. The panel says "no line in
+this file yet" against it.
+
+**Verified in the running app against DaC**: the panel draws all three, `c`
+copies `x 300, y 344` for the tile hovered at image 300,142 and the view centre
+otherwise, the legion row reads `{Eregion_Province} - another record's key`, and
+the music picker lists all 16 of DaC's types with `angmar` selected. The
+clipboard API is blocked inside the preview pane, and the fallback puts the text
+in the toast, which is what `sprites.js` already does for the same reason.
+
+`tests/test_web_modules.py` **66/66** (was 54), `tests/test_campfiles.py`
+**101/101** (was 92) with the music save and its undo against a throwaway copy of
+a real mod, `tests/test_namekeys.py` 64/68 against a clean tree's 63/67 - two
+checks added and the four failures unchanged - `tests/test_mapquery.py` 118/118.
+
 ## 28b - the brush over the map, and a tooltip that stops moving (2026-09-15)
 The third phase of the day and the second half of 28. Both halves landed as
 scoped; what the scoping did not have was a fifth reason the tooltip moved and

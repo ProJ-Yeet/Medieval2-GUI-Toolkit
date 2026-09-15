@@ -181,12 +181,34 @@ def _write_loc(mod, rel: str, writes: Dict[str, str], keep,
 # D4 - what the campaign map calls a province and its settlement
 
 
+#: What each row of :func:`region_names` is called when it will not take a
+#: value. One table rather than a chain of conditionals, because 33 made it
+#: three and the next file with a keyed line will make it four.
+ROW_WHAT = {"region": "region name", "settlement": "settlement name",
+            "legion": "legion name"}
+
+
 def region_names(mod, region: str) -> Dict:
-    """The two keys one province is read through, and what each says today.
+    """The keys one province is read through, and what each says today.
 
     The settlement half is absent on the short wasteland form, which has no
     settlement at all - the panel asks one question fewer rather than offering a
     box for a key nothing would ever look up.
+
+    **The third is the legion, and 33/G4 is what added it.** A record's
+    ``legion:`` line carries a key like the other two, and it is the only one of
+    the three that need not name this province: measured on the one installed
+    mod that writes the line at all, Divide and Conquer writes it on **199 of
+    its 200 records** and only **80** of those name the record's own province -
+    the rest point at another province's key (``Rhudaur_Province`` reads
+    ``legion: Eregion_Province``) or at a settlement's (``Imladris``,
+    ``East_Moria``). So the row follows whatever the line says rather than
+    assuming the region, and **115 of its 116 distinct legion values already
+    have a line in this file**; the one that does not is ``Thorenhad_Province``,
+    on ``Suduri_Province``, which is the fault this row exists to show.
+
+    The other three installed mods write no ``legion:`` line at all, so the row
+    is simply absent there - the same rule as the settlement half.
     """
     rf = campmap.read_regions(mod)
     rec = rf.by_name(region)
@@ -196,7 +218,8 @@ def region_names(mod, region: str) -> Dict:
     state = loc_state(mod, REGION_NAMES_REL)
     out = {**state, "region": rec.name, "have": state["txt"] or state["bin"],
            "keys": len(pairs), "rows": []}
-    for slot, value in (("region", rec.name), ("settlement", rec.settlement)):
+    for slot, value in (("region", rec.name), ("settlement", rec.settlement),
+                        ("legion", rec.legion)):
         if not value:
             continue
         out["rows"].append({"slot": slot, "key": value,
@@ -225,9 +248,7 @@ def region_writes(mod, region: str, edits: Dict) -> Tuple[Dict[str, str], List[s
     for row in got["rows"]:
         if row["slot"] not in edits:
             continue
-        want = clean_value(edits[row["slot"]],
-                           "region name" if row["slot"] == "region"
-                           else "settlement name")
+        want = clean_value(edits[row["slot"]], ROW_WHAT[row["slot"]])
         if want == row["value"]:
             continue
         writes[row["key"]] = want

@@ -38,6 +38,7 @@ sys.path.insert(0, str(ROOT))
 
 from tests import _realmod, _tmp
 from unittransfer import campfiles as cf
+from unittransfer import campmap, mapquery
 from unittransfer import stringsbin
 from unittransfer.mod import Mod
 
@@ -398,6 +399,67 @@ if (dest / "data" / xrel).exists():
           v["have"] and v["pool"] == pool.name
           and len(v["pools"]) == len(x.pools))
 
+
+
+# --- G2, 33: descr_sounds_music_types.txt, which is the odd one of the four.
+# It lives beside the map layers rather than in the campaign folder, so the
+# throwaway mod above has to be given it separately.
+mrel2 = mapquery.MUSIC_REL
+if (src / "data" / mrel2).exists():
+    (dest / "data" / campmap.BASE_REL).mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src / "data" / mrel2, dest / "data" / mrel2)
+    before = (dest / "data" / mrel2).read_bytes()
+    view = mapquery.music_view(mod)
+    types = [t["name"] for t in view["types"]]
+    text = before.decode("latin-1")
+    music = mapquery.parse_music_types(text)
+    region = next(r for t in types for r in music[t])
+    was = mapquery.music_view(mod, region)
+    other = next(t for t in types if t != was["type"])
+
+    check(f"the picker knows all {len(types)} music types and which one a "
+          f"province is in", view["have"] and was["type"] in types)
+    p = cf.plan(mod, {"what": "music", "name": region,
+                      "edits": {"music_type": other}})
+    check("a music move plans one change", p.payload()["ok"]
+          and len(p.changes) == 1)
+    check("nothing is written by a plan",
+          (dest / "data" / mrel2).read_bytes() == before)
+    cf.apply(p)
+    check("…and after it the province is in the type that was asked for",
+          mapquery.music_view(mod, region)["type"] == other)
+    now = (dest / "data" / mrel2).read_bytes().decode("latin-1")
+    # TWO lines, not one: the line it leaves and the line it joins. That is the
+    # whole promise of this writer and it is the only place it can be checked.
+    check("…changing exactly the two lines it moved between",
+          len(now.splitlines()) == len(text.splitlines())
+          and sum(1 for a, b in zip(text.splitlines(), now.splitlines())
+                  if a != b) == 2)
+    back = cf.plan(mod, {"what": "music", "name": region,
+                         "edits": {"music_type": was["type"]}})
+    cf.apply(back)
+    # As a set and not as a list, for the mercenary pool's reason one file over:
+    # a `regions` line is a set, the format records no position for a province
+    # within it, and a province that leaves a type and returns comes back on the
+    # end of the block's last line. Membership is the claim worth making.
+    check("moving it back puts every province in the type it started in",
+          {t: sorted(r) for t, r in mapquery.parse_music_types(
+              (dest / "data" / mrel2).read_text(encoding="latin-1")).items()}
+          == {t: sorted(r) for t, r in music.items()})
+    p2 = cf.plan(mod, {"what": "music", "name": region,
+                       "edits": {"music_type": ""}})
+    check("taking the type away is a change, and it warns what the engine says",
+          p2.payload()["ok"] and p2.warnings
+          and "music_type not found for regions" in p2.warnings[0])
+    p3 = cf.plan(mod, {"what": "music", "name": region,
+                       "edits": {"music_type": "no_such_music"}})
+    check("a type this file has not got is refused before anything is removed",
+          not p3.payload()["ok"]
+          and "no music_type" in " ".join(p3.errors))
+    p4 = cf.plan(mod, {"what": "music", "name": "",
+                       "edits": {"music_type": other}})
+    check("and a move with no region named is refused",
+          not p4.payload()["ok"])
 
 print(f"\n{sum(ok)}/{len(ok)} checks"
       + (" - ALL PASSED" if all(ok) else f" - {ok.count(False)} FAILED"))

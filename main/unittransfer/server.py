@@ -4061,6 +4061,11 @@ class Handler(BaseHTTPRequestHandler):
                 out["names"] = namekeys.region_names(cm.mod, out["name"])
             except namekeys.NameKeyError as exc:
                 out["names"] = {"have": False, "problem": str(exc), "rows": []}
+            # 33, G2. Which music this province plays. It rides along for the
+            # third time and for the third time saves on its own - and unlike
+            # the two above it is a fact about the MAP rather than about one
+            # campaign, so no campaign is passed.
+            out["music"] = mapquery.music_view(cm.mod, out["name"])
             return self._json(out)
 
         if path == "/api/map/region_delete":

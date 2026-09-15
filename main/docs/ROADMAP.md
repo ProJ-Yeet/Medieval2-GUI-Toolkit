@@ -398,7 +398,7 @@ change, so no cross-reference dangles.
 | **3.0.0** | 16a-16k, plus 17 | The campaign map editor, and the correction pass over it. Feature-complete and uncut. |
 | **3.1.0** | 18-21 | The twenty Now items: the campaign files that had no editor, the names nothing could follow, and the map screen's second pass. |
 | **3.2.0** | 22-24 | The seven Next items: placing things on the map, a map that looks like the campaign map, and making or unmaking a region or a campaign. |
-| next, block one | ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~, ~~43~~, ~~28a~~, ~~28b~~, 33, 30, 34, 35, 36, 37a, 37b, 38 | **The campaign map.** Eight sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12; 43, 28a and 28b on 2026-09-15. |
+| next, block one | ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~, ~~43~~, ~~28a~~, ~~28b~~, ~~33~~, 30, 34, 35, 36, 37a, 37b, 38 | **The campaign map.** Seven sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12; 43, 28a, 28b and 33 on 2026-09-15. |
 | next, block two | 32a, 32b, 32c, 39 | **The mercenaries.** Four sessions. Beta except 39, which is both lines. |
 | after block two | 44, 45, 46, 47a, 47b, 48 | **The reference-tool pass of 2026-09-13.** Six sessions, every one a subrelease on both lines. Outside both blocks, and scheduled only because the user named the work. |
 | after that | the Future roadmap list | Rated and unscheduled. Three five-star items lead it: M17, M12 and M16. |
@@ -768,7 +768,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~6~~ | ~~**43** Playable, unlockable, not playable~~ | S | beta | **done 2026-09-15** |
 | ~~7~~ | ~~**28a** The strip, and the groups behind it~~ | M | beta | **done 2026-09-15** |
 | ~~8~~ | ~~**28b** The toolbar over the canvas, and a steady tooltip~~ | M | beta | **done 2026-09-15** |
-| 9 | **33** T10, G2 and G4 in one session | S x3 | beta | 5, 5, 5 |
+| ~~9~~ | ~~**33** T10, G2 and G4 in one session~~ | S x3 | beta | **done 2026-09-15** |
 | 10 | **30** A missing texture without the pink | S | beta | reported |
 | 11 | **34** Add a climate zone | M | beta | 5 |
 | 12 | **35** Rebels right in place | M | beta | 5 |
@@ -790,8 +790,8 @@ on, then stars, then size.** That is four rules and each one earns its place.
 39 touch something outside the campaign map, so each is a subrelease on both
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
-(2026-09-14), and **41, 43, 28a and 28b are done** (2026-09-15); twelve remain,
-two of them subreleases. **43 was nearly all built already** - 16j shipped the
+(2026-09-14), and **41, 43, 28a, 28b and 33 are done** (2026-09-15); eleven
+remain, two of them subreleases. **43 was nearly all built already** - 16j shipped the
 roster writer and the write-up had not checked - so what landed was the one
 sentence of it that was true, the refusal. **28a's scoping held in full**, and
 what it did not say was that the layer stack has to be capped or it takes the
@@ -1313,7 +1313,81 @@ different fields, and a dead reference is fixed by naming a unit that exists,
 not by inventing one. The two screens link to each other and neither grows the
 other's fields.
 
-## Phase 33 - Three small map wins in one session
+## Phase 33 - Three small map wins in one session - DONE 2026-09-15
+
+**Done 2026-09-15, beta line, committed and uncut. All three, and each of the
+three turned up a fact about the installed mods that the write-up did not have.**
+
+**T10 - the tile on the clipboard.** `c` copies what is under the pointer, or
+the tile at the centre of the view when the pointer is off the map, which is the
+"copy the view, or what is under the cursor" of the scoping said as one key.
+There is a button on the picked tile's own heading as well. The form is
+`x 109, y 147`, **measured off vanilla's own `descr_strat.txt`** rather than
+chosen: every `character` line in it ends that way. It copies the **game** y and
+not the image one, and that is the whole of the arithmetic - the two differ by
+counting from the bottom, and a copy that handed over the image y would put a
+general on the wrong side of the map.
+
+*The write-up's "the shift-X detail is the model" has no referent.* There is no
+shift-X in this tool or anywhere in its history. Taken as `c` for copy, beside
+`t` for the tooltip and `f` for find, which is the pattern this screen's letters
+already follow.
+
+**G2 - the province's music type.** `mapquery.set_music_region` is the third and
+last call against `descr_sounds_music_types.txt`, and it is the other two in
+order: the drop takes the name off **every** `regions` line that holds it, the
+add puts it on the end of the wanted block's last one. Written as the pair
+because a move is exactly that, and because one of the two rules belongs to
+each. The block is checked before anything is removed, so a name asked into a
+type the file has not got cannot come off its own line and land nowhere.
+
+`campfiles` has a fourth `what` and `_plan_music` is it, which makes this the
+third picker on the region panel that saves its own file with its own undo -
+17f's ruling, after the mercenary pool and the names boxes. It is the odd one of
+the four in `campfiles`: the file lives beside the map layers rather than in the
+campaign folder, so **no campaign is sent and switching campaign does not change
+the answer**. `map.rwm` is not deleted either - this file is read at load rather
+than compiled into the map - and the confirm says so.
+
+*Measured: a move changes exactly two lines and the line count does not.* The
+one the name leaves and the one it joins. Moving it back does not restore the
+file byte for byte and that is honest rather than a gap, for the mercenary
+pool's reason one file over: a `regions` line is a set and the format records no
+position for a province within it.
+
+*Two states of the same shape, both real on this machine, and both reported
+rather than tidied away quietly.* **58 provinces of
+`vanilla_kingdoms_uncompromised` are under two music types**, and **2 of Vanilla
+Redux are named twice inside one type**. The engine plays one of them either
+way. The panel says which it is, saving resolves it, and the plan names that as
+a change before it does.
+
+**G4 - the legion's display name.** `namekeys.region_names` returns a third row
+and the panel draws it, which is all that was owed: 19a's writer already handled
+any key in that file.
+
+*And the legion is the only one of the three keys that need not name this
+province.* Divide and Conquer is the one installed mod that writes the line at
+all - **199 of its 200 records** - and only **80** of those point at the
+record's own name. The rest point at another province's key
+(`Rhudaur_Province` reads `legion: Eregion_Province`) or at a settlement's
+(`Imladris`, `East_Moria`). So the row follows whatever the line says and the
+label tells you when the key is somebody else's, rather than letting it read as
+this province's third name. The other three mods write no `legion:` line and the
+row is simply absent, the same rule the settlement half already follows.
+
+*It found a real defect on the first province it was pointed at.* **115 of DaC's
+116 distinct legion values already have a line in the names file.** The one that
+does not is `Thorenhad_Province`, on `Suduri_Province`, and the panel now says
+"no line in this file yet" against it.
+
+`tests/test_web_modules.py` **66/66** against 54, `tests/test_campfiles.py`
+**101/101** against 92 with the music save and its undo run against a throwaway
+copy of a real mod, `tests/test_namekeys.py` 64/68 against a clean tree's 63/67 -
+two checks added, the four failures unchanged and none of them this - and
+`tests/test_mapquery.py` 118/118.
+
+The original scoping follows.
 
 Three items that were separately rated five stars, are separately marked **S**,
 and share a session because none of them is big enough to hold one on its own.

@@ -2984,7 +2984,12 @@ function cmapProbeHtml(){
     <div class="count">Click the map to name a tile on every layer at once.</div>`;
   const [tx, ty] = c.pick;
   const head = `<div class="k">This tile
-    <span class="count">${tx}, ${ty} image · ${tx}, ${c.man.height - 1 - ty} game</span></div>`;
+    <span class="count">${tx}, ${ty} image · ${tx}, ${c.man.height - 1 - ty} game</span>
+    <button class="cmcopy" onclick="cmapCopyTile()"
+      title="Copy this tile as &quot;x ${tx}, y ${c.man.height - 1 - ty}&quot; - the
+form descr_strat.txt writes a position in. The c key copies whatever is under
+the pointer instead, or the middle of the view when the pointer is off the
+map.">⧉</button></div>`;
   if(c.probeErr) return head + `<div class="w-bad">${esc(c.probeErr)}</div>`;
   if(!c.probe) return head + `<div class="count">reading the ten layers…</div>`;
   const p = c.probe;
@@ -3142,6 +3147,7 @@ function cmapFormHtml(){
     </div>
     ${cmapNamesHtml()}
     ${cmapMercHtml()}
+    ${cmapMusicHtml()}
     ${d.has.religions ? `<div class="k">Religions
       <span class="${total === 100 ? 'count' : 'w-bad'}">total ${total}${
         total === 100 ? '' : ` - the game crashes on load unless this is 100 (${
@@ -3160,6 +3166,11 @@ function cmapFormHtml(){
    Its own save, for 17f's reason and the mercenary pool's: a third file, a
    third undo entry, each naming what it put back. The region record is not
    touched by this button and this button does not touch the region record. */
+//: What each row of the names panel is called. 33 made it three; the slots
+//: are `namekeys.ROW_WHAT`'s and the two tables are meant to stay in step.
+const CMAP_NAME_ROWS = {region: 'Province', settlement: 'Settlement',
+                        legion: 'Legion'};
+
 function cmapNamesHtml(){
   const d = state.cmap.det, n = d.names;
   if(!n) return '';
@@ -3168,9 +3179,16 @@ function cmapNamesHtml(){
   const pick = d.namePick || {};
   const rows = (n.rows || []).map(r => {
     const now = pick[r.slot] === undefined ? r.value : pick[r.slot];
+    /* 33, G4. The legion is the third key and the only one that need not name
+       this province: DaC writes the line on 199 of its 200 records and only 80
+       of those point at the record's own name, the rest at another province's
+       key or at a settlement's. So the label says whose key it is rather than
+       letting it read as this province's third name. */
+    const mine = r.key === d.name || r.key === d.settlement;
     return `<div class="cmfield">
-      <label>${r.slot === 'region' ? 'Province' : 'Settlement'}
-        <span class="count">{${esc(r.key)}}</span></label>
+      <label>${CMAP_NAME_ROWS[r.slot] || r.slot}
+        <span class="count">{${esc(r.key)}}${
+          r.slot === 'legion' && !mine ? ' - another record’s key' : ''}</span></label>
       <input value="${esc(now)}" placeholder="${esc(r.key)}"
         oninput="cmapNameSet('${esc(r.slot)}', this.value)">
       ${r.set ? '' : '<div class="w-warn">no line in this file yet</div>'}</div>`;
@@ -3300,6 +3318,96 @@ async function cmapMercSave(){
   finally{ c.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 7000); return; }
   toast('Mercenary pool saved. 🕑 Log can undo it.');
+  const name = d.name;
+  c.det = null;
+  await cmapOpenRegion(name);
+}
+
+/* ---- 33, G2: which music this province plays ----
+
+   `descr_sounds_music_types.txt` groups provinces into music types. B1 could
+   give a NEW province one through `mapquery.add_music_region` and 24 could take
+   one away with `drop_music_region`; changing an existing province's is the
+   third and last call against that writer.
+
+   It saves on its own, which is the third time this panel makes that ruling -
+   17f's, and the mercenary pool and the names boxes before it. The difference
+   here is that the file is a fact about the MAP rather than about one campaign:
+   it sits beside the ten layers in `world/maps/base`, so no campaign is named
+   in the request and switching campaign does not change the answer.
+
+   Two states this panel reports rather than tidies away, because both are real
+   on the mods installed here: a province under two music types (58 of
+   `vanilla_kingdoms_uncompromised`'s) and one named twice inside a single type
+   (2 of Vanilla Redux's). The engine plays one of them either way. Saving is
+   what resolves it, and the plan says so before it does. */
+function cmapMusicHtml(){
+  const d = state.cmap.det, mu = d.music;
+  if(!mu) return '';
+  if(!mu.have) return `<div class="k">Music
+    <span class="count">${esc(mu.problem || 'no music file')}</span></div>`;
+  const now = d.musicPick === undefined ? mu.type : d.musicPick;
+  const dirty = now !== mu.type;
+  const odd = (mu.also || []).length
+    ? `<span class="w-warn">also under ${(mu.also || []).map(esc).join(', ')} -
+       the engine plays the first it meets, and saving takes it out of the
+       others</span>`
+    : mu.twice
+      ? `<span class="w-warn">named ${mu.twice + 1} times inside ${esc(mu.type)};
+         saving leaves it named once</span>`
+      : '';
+  return `<div class="k">Music
+      <span class="count">which music type this province plays</span></div>
+    <div class="cmform">
+      <div class="cmfield">
+        <label>Music type</label>
+        <select onchange="cmapMusicSet(this.value)">
+          <option value="" ${now ? '' : 'selected'}>(none - the engine says so at load)</option>
+          ${(mu.types || []).map(t => `<option value="${esc(t.name)}"
+            ${t.name === now ? 'selected' : ''}>${esc(t.name)} · ${t.regions} province${
+              t.regions === 1 ? '' : 's'}</option>`).join('')}
+        </select>
+        <div class="count">${dirty
+          ? 'Not saved yet - ' + esc(mu.file) + ' is another file, so it is '
+            + 'another save and another undo'
+          : odd || 'Beside the map layers, not in the campaign folder: every '
+            + 'campaign on this map hears the same thing.'}</div>
+        ${dirty && odd ? `<div class="count">${odd}</div>` : ''}
+        ${dirty ? `<button class="primary" style="margin-top:6px"
+          onclick="cmapMusicSave()">Save music type</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function cmapMusicSet(value){
+  const d = state.cmap.det;
+  if(!d) return;
+  d.musicPick = value;
+  cmapRegionPaint();
+}
+
+async function cmapMusicSave(){
+  const c = state.cmap, d = c.det;
+  if(!d || c.busy || d.musicPick === undefined) return;
+  const body = {mod: c.mod, what: 'music', name: d.name,
+                edits: {music_type: d.musicPick}};
+  c.busy = true;
+  let plan;
+  try{ plan = await api.post('/api/campfiles/plan', body); }
+  finally{ c.busy = false; }
+  if(plan.error){ toast('✗ ' + plan.error, 7000); return; }
+  const p = plan.plan || {};
+  if(!confirm(`Write: ${(p.changes || []).join('\n') || 'no visible change'}?\n\n`
+    + ((p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '')
+    + `${d.music.file} only - the region record is not touched, and map.rwm is `
+    + `not deleted: this file is read at load rather than compiled into the map.\n\n`
+    + 'Backed up first, and 🕑 Log can undo it.')) return;
+  c.busy = true;
+  let res;
+  try{ res = await api.post('/api/campfiles/apply', body); }
+  finally{ c.busy = false; }
+  if(res.error){ toast('✗ ' + res.error, 7000); return; }
+  toast('Music type saved. 🕑 Log can undo it.');
   const name = d.name;
   c.det = null;
   await cmapOpenRegion(name);
@@ -3573,6 +3681,61 @@ function cmapLayerForKey(digit){
    tile on all ten layers stay exactly where they were. `cmapMode`'s repanel
    rebuilds the side panel and nothing else; the canvas, the hover and the
    readout are untouched. */
+/* ---- 33, T10: the tile on the clipboard, in the form the file wants ----
+
+   The detail is already under the pointer and has been since 17e; what was
+   missing was any way to get it out of the screen and into a text editor. This
+   puts it on the clipboard as `x 109, y 147`, which is measured off vanilla's
+   own `descr_strat.txt` rather than chosen: every one of its `character` lines
+   ends `..., x 109, y 147`, and that is the form the engine reads.
+
+   **Game coordinates, not image ones.** The two differ by `y` counting from the
+   bottom, and the whole file counts from the bottom - a copy that handed over
+   the image `y` would be a copy that puts a general on the wrong side of the
+   map. The readout and the tooltip have shown both since 16c; this copies the
+   one that can be pasted.
+
+   **The tile under the cursor, or the middle of the view.** "Copy the view, or
+   what is under the cursor" is one key: with the pointer on the map it is the
+   tile under it, and with the pointer anywhere else it is the tile at the
+   centre of what is on screen, which is the view. A picked tile wins over
+   neither - it is the pointer that is being pointed with.
+
+   The write-up says "the shift-X detail is the model" and there is no shift-X
+   anywhere in this tool or in its history. Taken as `c` for copy, beside `t`
+   for the tooltip and `f` for find, which is the pattern this screen's letters
+   already follow. */
+function cmapCopyText(){
+  const c = state.cmap;
+  if(!c) return '';
+  let tile = c.hover || c.pick;
+  if(!tile){
+    // the middle of what is on screen, in tiles - the same two lines as
+    // `cmapTileAt`, which is the only arithmetic this file allows itself
+    const [w, h] = cmapCanvasSize();
+    const v = c.view;
+    tile = [Math.floor((w / 2 - v.ox) / v.zoom),
+            Math.floor((h / 2 - v.oy) / v.zoom)];
+  }
+  const [tx, ty] = tile;
+  if(tx < 0 || ty < 0 || tx >= c.man.width || ty >= c.man.height) return '';
+  return `x ${tx}, y ${c.man.height - 1 - ty}`;
+}
+
+async function cmapCopyTile(){
+  const text = cmapCopyText();
+  if(!text){ toast('Nothing to copy - that is off the map.'); return; }
+  try{
+    await navigator.clipboard.writeText(text);
+    toast(`Copied ${text}`);
+    activity('map copy', text);
+  }catch(e){
+    // the same fallback sprites.js takes, and the same reason: a browser that
+    // refuses the clipboard is not a browser that has to lose the answer
+    toast(`Could not reach the clipboard. The tile is ${text}`, 7000);
+  }
+}
+
 function cmapKeys(){
   if(state.cmapKeys) return;
   state.cmapKeys = true;
@@ -3595,6 +3758,9 @@ function cmapKeys(){
     else if(e.key === '+' || e.key === '='){ cmapZoomBy(1.4); }
     else if(e.key === '-' || e.key === '_'){ cmapZoomBy(1 / 1.4); }
     else if(e.key === 't' || e.key === 'T'){ cmapTipToggle(); }
+    // 33, T10 - `c` for copy. The tile under the pointer as `x 109, y 147`,
+    // which is the form every `character` line of descr_strat.txt is written in
+    else if(e.key === 'c' || e.key === 'C'){ cmapCopyTile(); }
     // 20c, T4 - `l` for labels, the letter beside the other two view switches
     else if(e.key === 'l' || e.key === 'L'){ clnToggle(); }
     // 20c, M8 - a pin waiting for a tile is the first thing Esc stops, before
