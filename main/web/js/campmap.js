@@ -81,6 +81,26 @@ const CMAP_GLYPH_ZOOM = 3;
    ground layer's greens and the region layer's darker provinces. */
 const CMAP_RIVER_RGB = [86, 180, 255];
 
+/* 30: what may go under a tile the terrain could not draw.
+
+   Reported from the beta as "the pink is too jarring on the campaign map".
+   TWMapReader draws a texture it cannot find magenta and 23a took that rule as
+   it stands; it is the right default and it is not always the right picture to
+   work against.
+
+   **A choice of how a gap is drawn and never a choice to hide one.** The count
+   stays on the layer row and `terrain.texture` stays in the Check panel
+   whichever of these is picked - the locked rule is that a baseline shows and
+   stops blocking but never hides, and 23a's own is that a picture of the
+   terrain says what it could not draw.
+
+   The order is the server's `gap_fills` and this is only the fallback for a
+   build that answers an older shape; `mapterrain.GAP_FILLS` is the authority
+   on what the drawing will take. */
+const CMAP_GAPS = ['magenta', 'neutral', 'sea'];
+const CMAP_GAP_LABELS = {magenta: 'Pink', neutral: 'Neutral', sea: 'Sea'};
+
+
 /* ---------- 28a: the side column is a tab strip, not a stack ----------
 
    `#cmSide` was sixteen panels appended one under the last - the mod header,
@@ -371,6 +391,7 @@ function cmapLayerState(){
   // 23a: the third reading, kept beside the other two, and 23b's season
   m.terrain = !!(c.terrain && c.terrain.on);
   m.terrain_season = (c.terrain && c.terrain.season) || 'summer';
+  m.terrain_gap = (c.terrain && c.terrain.gap) || CMAP_GAPS[0];   // 30
   m.tip = c.tip !== false;
   // 20c, T4: settlement names are a way of looking at the map, not a place
   m.labels = !!c.labels;
@@ -456,6 +477,7 @@ function cmapResetView(){
   // server built and nothing about them has changed, so turning the reading
   // back on is instant
   c.terrain.on = false; c.terrain.season = 'summer';
+  c.terrain.gap = CMAP_GAPS[0]; c.terrain.shot = {};   // 30
   c.overlay = null; c.overlayEdge = null; c.overlayKey = '';
   c.overlayAlpha = 0.85; c.overlayFill = 'solid';
   c.comp = null; c.compKey = '';
@@ -573,6 +595,12 @@ function cmapNew(mod, man){
        pixels a tile is, which is the whole of the arithmetic on this side. */
     terrain: {on: !!saved.terrain, img: null, scale: 1, loading: false,
               failed: '', facts: null, key: '', stale: false,
+              // 30: what goes under a tile with no texture. A habit like the
+              // season, so it rides in `cmapLayerState` and a saved view puts
+              // it back - and it is baked into the PNG, which is why it is in
+              // the request and in the cache key rather than a CSS rule.
+              gap: CMAP_GAPS.indexOf(saved.terrain_gap) >= 0
+                   ? saved.terrain_gap : CMAP_GAPS[0],
               // 23b: which texture column is drawn. The pictures are kept per
               // season once fetched, so flipping between them is a blit.
               season: saved.terrain_season === 'winter' ? 'winter' : 'summer',
@@ -1126,7 +1154,8 @@ now, unsaved strokes included">↻ Redraw</button>` : '';
           ? '' : ' · every land tile drawn'}</span>${f.pink_tiles
         ? ` <span class="w-warn" title="${esc(f.gaps.map(g => g.why).join('\n\n'))}">
             ${f.pink_tiles.toLocaleString()} tile${f.pink_tiles === 1 ? '' : 's'}
-            have no texture and are drawn pink</span>` : ''}`
+            have no texture and are drawn ${esc((CMAP_GAP_LABELS[t.gap]
+              || 'pink').toLowerCase())}</span>` : ''}`
     : '';
   return `<div class="cmmode">
     <label class="chk" title="Draw the ground the way the game does: this mod's own
@@ -1134,7 +1163,8 @@ aerial-map textures, one per climate and ground type, out of
 data/terrain/aerial_map/ground_types. It is map_ground_types.tga and
 map_climates.tga read together rather than an eleventh layer, so it goes on this row -
 and it is drawn under the whole stack, because it is the ground.
-A tile whose texture cannot be found is drawn pink and counted, never skipped.">
+A tile whose texture cannot be found is counted and drawn in the colour picked
+beside this, never skipped.">
       <input type="checkbox" data-lterrain ${t.on ? 'checked' : ''}>
       <span>Terrain textures</span></label>
     <span class="cmseg">${[['summer', 'Summer'], ['winter', 'Winter']].map(([sn, lab]) =>
@@ -1142,6 +1172,14 @@ A tile whose texture cannot be found is drawn pink and counted, never skipped.">
         ${t.on ? '' : 'disabled'} title="Draw the ${sn} texture of every climate that
 has one. A climate with no winter in descr_climates.txt is drawn in its summer
 textures all year, which is the engine's own rule.">${lab}</button>`).join('')}</span>
+    <span class="cmseg" title="What goes under a tile the terrain could not draw.
+Pink is TWMapReader's and is the loudest; Neutral reads as nothing-here; Sea is the
+honest answer for the usual gap, a tile the ground types call sea and the heights
+call land. The count beside this and the Check panel's rule do not move whichever
+is picked - this chooses how a gap is DRAWN, never whether it shows."
+      >${((f && f.gap_fills) || CMAP_GAPS).map(g =>
+      `<button data-lgap="${g}" class="${(t.gap || CMAP_GAPS[0]) === g ? 'on' : ''}"
+        ${t.on ? '' : 'disabled'}>${esc(CMAP_GAP_LABELS[g] || g)}</button>`).join('')}</span>
     ${note}
   </div>`;
 }
@@ -1169,6 +1207,28 @@ function cmapTerrain(on){
    written. What is on this side is which one to ask for and keeping both once
    they have arrived. Measured on the installed maps: 99,000 of DaC's tiles and
    166,898 of Reforged's are drawn with a different texture in winter. */
+/* 30: which colour goes under a gap. The switch, and nothing else moves.
+
+   The same shape as the season above it and for the same reason - it is a
+   different picture of the same plan, so the facts, the count and the Check
+   panel's rule are untouched and only the request changes. A colour already
+   fetched is a blit out of `shot`, like a season. */
+function cmapTerrainGap(gap){
+  const c = state.cmap, t = c.terrain;
+  const want = CMAP_GAPS.indexOf(gap) >= 0 ? gap : CMAP_GAPS[0];
+  if((t.gap || CMAP_GAPS[0]) === want) return;
+  t.gap = want;
+  activity('map layer', `drew a tile with no texture as ${want}`);
+  cmapSaveLayers();
+  if(!t.on) return cmapRepanel();
+  cmapTerrainLoad().then(() => {
+    if(state.cmap !== c) return;
+    cmapPaint();
+    cmapRepanel();
+  });
+  cmapRepanel();
+}
+
 function cmapTerrainSeason(season){
   const c = state.cmap, t = c.terrain;
   const want = season === 'winter' ? 'winter' : 'summer';
@@ -1197,7 +1257,11 @@ function cmapTerrainSeason(season){
 async function cmapTerrainLoad(again){
   const c = state.cmap, t = c.terrain;
   const season = t.season || 'summer';
-  const key = `${c.mod}|${c.campaign || ''}|${season}`;
+  const gap = t.gap || CMAP_GAPS[0];
+  // 30: the colour is baked into the PNG, so it is part of what `shot` is
+  // holding. Keyed without it, flipping to Neutral and back would hand over
+  // the pink picture out of the cache.
+  const key = `${c.mod}|${c.campaign || ''}|${season}|${gap}`;
   // 23b: a season already fetched is a blit, not a request. `shot` holds one
   // picture per season and `key` says which one `img` is, so flipping back to
   // a season looked at a minute ago costs nothing.
@@ -1211,7 +1275,7 @@ async function cmapTerrainLoad(again){
   // tiles that the winter set draws as well
   if(again) t.shot = {};
   t.loading = true; t.failed = ''; t.stale = false;
-  const q = `?mod=${enc(c.mod)}${cmapCampQ()}&season=${enc(season)}`;
+  const q = `?mod=${enc(c.mod)}${cmapCampQ()}&season=${enc(season)}&gap=${enc(gap)}`;
   try{
     const r = await fetch(`/api/map/terrain${q}`, {cache: 'no-store'});
     if(!r.ok) throw new Error(`the server answered ${r.status}`);
@@ -1443,6 +1507,8 @@ function cmapWireLayers(){
     cmapTerrain(cb.checked));
   box.querySelectorAll('[data-lseason]').forEach(b => b.onclick = () =>
     cmapTerrainSeason(b.dataset.lseason));
+  box.querySelectorAll('[data-lgap]').forEach(b => b.onclick = () =>
+    cmapTerrainGap(b.dataset.lgap));
   box.querySelectorAll('[data-lterraindraw]').forEach(b => b.onclick = () => {
     activity('map layer', 'redrew the terrain composite');
     cmapTerrainLoad(true);

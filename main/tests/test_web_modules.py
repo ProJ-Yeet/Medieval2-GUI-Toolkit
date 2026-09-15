@@ -343,5 +343,38 @@ check("and the panel has a label for it", "legion: 'Legion'" in campmap_js)
 check("a legion key that is another record's says so",
       "another record" in campmap_js)
 
+
+print("\n== 30: a missing texture without the pink ==")
+from unittransfer import mapterrain                               # noqa: E402
+
+# The colour is baked in Python and served as a PNG, so the browser's list and
+# the drawing's have to be the same list. The control is built from the
+# server's `gap_fills`; this is the fallback, and a drift between them is a
+# button that asks for a colour the drawing will not give.
+_gaps = re.search(r"^const CMAP_GAPS = \[(.*?)\];", campmap_js, re.M)
+check("campmap.js declares CMAP_GAPS", bool(_gaps))
+check("and it is mapterrain.GAP_FILLS, in the same order",
+      re.findall(r"'([a-z]+)'", _gaps.group(1) if _gaps else "")
+      == list(mapterrain.GAP_FILLS))
+check("every fill has a label", all(f"{g}:" in campmap_js.split(
+      "const CMAP_GAP_LABELS = {")[1].split("}")[0] for g in mapterrain.GAP_FILLS))
+check("the control is built from what the server sent",
+      "f.gap_fills" in campmap_js and "data-lgap" in campmap_js)
+check("and it is wired", "cmapTerrainGap(b.dataset.lgap)" in campmap_js)
+
+# The colour is in the picture, so it is in what the browser caches and in what
+# the server caches. Either one missing it hands back the wrong colour.
+check("the fetch asks for it and the browser keys its copy on it",
+      "&gap=${enc(gap)}" in campmap_js
+      and "|${season}|${gap}" in campmap_js)
+_srv = (ROOT / "unittransfer" / "server.py").read_text(encoding="utf-8")
+check("and the server's disk cache keys on it too",
+      'token = f"mapterrain|{p.key}|gap|{gap}"' in _srv)
+
+# A habit, so it rides with the season and a saved view puts it back.
+check("cmapLayerState carries terrain_gap", "m.terrain_gap" in state_fn)
+check("and a named view carries it",
+      "terrainGap" in (JS / "mapviews.js").read_text(encoding="utf-8"))
+
 print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

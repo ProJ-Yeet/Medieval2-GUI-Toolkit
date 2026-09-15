@@ -120,6 +120,24 @@ MISSING_RGB: Rgb = (255, 0, 255)
 #: up as terrain.
 SEA_RGB: Rgb = (26, 51, 92)
 
+#: 30: what may go under a gap, and nothing else may. Reported from the beta as
+#: "the pink is too jarring on the campaign map", and it is a choice of how a
+#: gap is DRAWN and never a choice to hide one - the count stays on the panel
+#: and `terrain.texture` stays in the Check panel whichever of these is picked.
+#:
+#: ``magenta`` is TWMapReader's and stays the default. ``neutral`` is a dark
+#: grey that reads as "nothing here" and is no texture's colour either, for
+#: somebody working against the picture rather than auditing it. ``sea`` is the
+#: honest answer for the case every gap on Divide and Conquer is: fifteen tiles
+#: that ``map_ground_types.tga`` calls ocean or sea_deep and ``map_heights.tga``
+#: calls land, so the sea is what the engine draws there.
+GAP_FILLS: Dict[str, Rgb] = {
+    "magenta": MISSING_RGB,
+    "neutral": (52, 54, 58),
+    "sea": SEA_RGB,
+}
+GAP_DEFAULT = "magenta"
+
 #: The two texture columns, in the order the file writes them.
 SEASONS = ("summer", "winter")
 
@@ -583,12 +601,38 @@ def plan(mod, cm: CampaignMap, campaign: str = "", season: str = "summer") -> Pl
                           f"names none either")
         p.gaps.append(gap)
 
-    # and the ones the file does name and the folder does not hold
+    # and the ones the file does name and the folder does not hold.
+    #
+    # 30: the folder can also not be there AT ALL, and that is a different
+    # sentence rather than one per texture. `vanilla_kingdoms_uncompromised`
+    # ships no `terrain/aerial_map/ground_types` - its textures are inside the
+    # packed data, the way the stock game's are - so every one of its **159,855
+    # land tiles**, 57.6% of its map, has no texture, and the old reading said
+    # so thirty times over, once per filename, blaming the aerial file for a
+    # folder that is simply absent. One row says it once and names the folder.
     raw_slots = p.slots.tobytes()
+    folder = texture_dir(mod)
+    if not folder.is_dir():
+        want = sum(n for n in p.counts if n)
+        at = next((_first_tile(raw_slots, p.width, k)
+                   for k, n in enumerate(p.counts, start=1) if n), None)
+        if want:
+            p.gaps.append({"climate": "", "ground": "", "file": "",
+                           "tiles": want, "tile": list(at) if at else None,
+                           "why": f"this mod has no {TEXTURE_DIR_REL} at all, so "
+                                  f"not one of the {p.used} textures "
+                                  f"{AERIAL_REL} names can be read and all "
+                                  f"{want:,} land tiles are drawn as a gap. A "
+                                  f"mod that keeps its aerial textures inside "
+                                  f"the packed data looks exactly like this; "
+                                  f"nothing here reads a .pack."})
+            p.gaps.sort(key=lambda g: -g["tiles"])
+            _PLANS[memo] = (sig, p)
+            return p
     for k, name in enumerate(p.names, start=1):
         if not p.counts[k - 1]:
             continue
-        path = texture_dir(mod) / name
+        path = folder / name
         if path.is_file():
             continue
         at = _first_tile(raw_slots, p.width, k)
@@ -636,12 +680,18 @@ def _tiled(texture: Image.Image, box: Tuple[int, int, int, int]) -> Image.Image:
     return big.crop((ox, oy, ox + pw, oy + ph))
 
 
-def composite(mod, p: Plan, scale: int = SCALE) -> Image.Image:
+def composite(mod, p: Plan, scale: int = SCALE,
+              gap: str = GAP_DEFAULT) -> Image.Image:
     """The whole map as one picture, ``scale`` pixels a tile.
 
-    Pink underneath, so anything not drawn is pink without a second pass;
-    then one paste per distinct texture, masked to the tiles that asked for it
-    and cropped to their bounding box; then the sea over the top.
+    ``gap`` underneath, so anything not drawn is that colour without a second
+    pass; then one paste per distinct texture, masked to the tiles that asked
+    for it and cropped to their bounding box; then the sea over the top.
+
+    30: ``gap`` is one of :data:`GAP_FILLS` and is a colour rather than a
+    behaviour - nothing about what is counted or reported moves with it. An
+    unknown name falls to the default rather than raising, because this is the
+    drawing and a query string is not worth a 500.
 
     One paste a texture and not one a tile: fifty pastes on DaC rather than a
     hundred and seventy thousand, and every one of them in Pillow's C. The
@@ -650,7 +700,7 @@ def composite(mod, p: Plan, scale: int = SCALE) -> Image.Image:
     the drawing time.
     """
     cw, ch = p.width * scale, p.height * scale
-    out = Image.new("RGB", (cw, ch), MISSING_RGB)
+    out = Image.new("RGB", (cw, ch), GAP_FILLS.get(gap, MISSING_RGB))
     if p.slots is None:
         return out
     folder = texture_dir(mod)
@@ -725,9 +775,9 @@ def check_textures(mod, p: Plan, seen: Optional[Dict[str, str]] = None) -> List[
     return out
 
 
-def png(mod, p: Plan, scale: int = SCALE) -> bytes:
+def png(mod, p: Plan, scale: int = SCALE, gap: str = GAP_DEFAULT) -> bytes:
     buf = io.BytesIO()
-    composite(mod, p, scale).save(buf, "PNG", optimize=False)
+    composite(mod, p, scale, gap).save(buf, "PNG", optimize=False)
     return buf.getvalue()
 
 
@@ -825,6 +875,10 @@ def view(mod, cm: CampaignMap, campaign: str = "", season: str = "summer",
     out = {"have": False, "problem": "", "scale": scale, "season": season,
            "width": 0, "height": 0, "textures": 0, "pink_tiles": 0,
            "sea_tiles": 0, "gaps": [],
+           # 30: what may go under a gap. Sent rather than spelled out in the
+           # browser so that the control offers exactly what the drawing takes,
+           # the way the layer list is built from the manifest.
+           "gap_fills": list(GAP_FILLS), "gap_default": GAP_DEFAULT,
            "vocabulary": read_vocabulary(mod).payload()}
     try:
         p = plan(mod, cm, campaign, season)

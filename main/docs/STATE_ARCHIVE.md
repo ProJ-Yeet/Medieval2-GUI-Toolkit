@@ -15,6 +15,55 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 30 - a missing texture without the pink, and the mod the report was about (2026-09-15)
+The fifth phase of the day. The feature landed as scoped; measuring it first
+turned the premise underneath it over.
+
+**"This is not the installed mods at rest. It is the paint tool."** True when the
+write-up was written, against DaC's 15 pink tiles and Reforged's none. The
+installed set has changed since. **`vanilla_kingdoms_uncompromised` has 159,855
+pink tiles - every land tile it has, 57.6% of its map** - because it ships **no
+`terrain/aerial_map/ground_types` folder at all**; its aerial textures are inside
+the packed data the way the stock game's are, and nothing here reads a `.pack`.
+Tick the terrain on and the whole land mass is magenta. That is the report, and
+it is a mod at rest rather than the brush.
+
+**One sentence instead of thirty.** The old reading wrote a gap row per texture
+filename - thirty of them on that mod, each blaming `descr_aerial_map_ground_types.txt`
+for a folder that is simply not there. `plan` checks the folder first now and
+says it once, naming the folder, the count and why a packed mod looks like this.
+Ten rows against thirty-nine, and the pink total is unchanged at 159,855, which
+is the invariant that matters.
+
+**The colour.** `GAP_FILLS`: magenta (TWMapReader's, the default), a neutral
+dark grey, and the sea - the honest answer for the case every gap on DaC is,
+fifteen tiles the ground types call ocean or sea_deep and the heights call land.
+An unknown name falls to the default rather than raising: this is the drawing,
+and a query string is not worth a 500.
+
+**Never a choice to hide a gap.** The count moved with the wording only - "drawn
+neutral", "drawn sea" - and `terrain.texture` stays in the Check panel whichever
+is picked. The suite checks both: that the three kinds of gap change colour
+together, and that the count, every gap row and every tile that *did* draw are
+byte-identical whichever fill is asked for.
+
+**In both caches or in neither.** The colour is baked into the PNG, so
+`/api/map/terrain` takes `&gap=`, the disk-cache token gained `|gap|<name>`, and
+the browser's `shot` is keyed `mod|campaign|season|gap`. Verified over HTTP: the
+three fills are three different PNGs (29,501 / 29,309 / 16,218 bytes on that mod
+- `sea` compresses hardest because land and sea become one colour), each with
+its own `X-Map-Gap`, and `&gap=chartreuse` answers 200 in magenta.
+
+**One pre-existing red was this all along.** `test_mapterrain`'s "every texture
+it draws with is really in `terrain/aerial_map/ground_types`" has been failing on
+that mod, asserting a fact about the mod rather than the tool. With no folder
+there is nothing for it to be true of, so it says what it measures instead.
+**84/84 against 72/73.**
+
+**Verified in the running app**, which is where the point of the phase is
+visible: the same map, same layers, magenta and then neutral, and the second one
+is a map you can read. `tests/test_web_modules.py` 75/75 against 66.
+
 ## 33 - three small map wins, and three facts about the installed mods (2026-09-15)
 The fourth phase of the day. Three items banked in one sitting, as the scoping
 intended; what it did not intend is that each of the three would turn up

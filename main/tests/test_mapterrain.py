@@ -379,6 +379,47 @@ check(f"a mod with no {mapterrain.AERIAL_REL} is told so by name, rather than "
 
 
 # ---- 4) the validator --------------------------------------------------------
+
+print("\n30) a missing texture without the pink")
+# Reported from the beta: the pink is too jarring. It is a choice of how a gap
+# is DRAWN and never a choice to hide one, so what is checked is both halves -
+# that the colour moves, and that nothing else does.
+check(f"there are {len(mapterrain.GAP_FILLS)} fills and magenta is the default",
+      mapterrain.GAP_DEFAULT in mapterrain.GAP_FILLS
+      and mapterrain.GAP_FILLS[mapterrain.GAP_DEFAULT] == mapterrain.MISSING_RGB
+      and set(mapterrain.GAP_FILLS) == {"magenta", "neutral", "sea"})
+check("no fill is a colour a texture could be mistaken for",
+      len(set(mapterrain.GAP_FILLS.values())) == len(mapterrain.GAP_FILLS))
+
+for _gap, _rgb in mapterrain.GAP_FILLS.items():
+    _img = mapterrain.composite(mod, p, S, _gap)
+    check(f"drawn `{_gap}`, the three kinds of gap are all rgb{_rgb}",
+          all(_img.getpixel((x * S + 1, y * S + 1)) == _rgb
+              for x, y in ((4, 0), (3, 1), (4, 1))))
+    # and the tiles that DID draw are the same picture whichever fill is asked
+    # for: this is one colour underneath, not a second pass over the map
+    check(f"…and every tile that has a texture is untouched by the choice",
+          _img.getpixel((3 * S + 1, 0 * S + 1)) == PAINT["a_low.tga"]
+          and _img.getpixel((2 * S + 1, 1 * S + 1)) == PAINT["d_dense.tga"])
+
+# The count and the reporting do not move with the colour - the locked rule is
+# that a baseline shows and stops blocking but never hides.
+_before = (p.pink, len(p.gaps), [g["why"] for g in p.gaps])
+mapterrain.composite(mod, p, S, "sea")
+check("the count and every gap row are what they were before the colour changed",
+      (p.pink, len(p.gaps), [g["why"] for g in p.gaps]) == _before)
+
+# An unknown name is the default rather than a raise: this is the drawing, and
+# a query string is not worth a 500.
+check("an unknown fill falls to magenta",
+      mapterrain.composite(mod, p, S, "chartreuse").getpixel((4 * S + 1, 1))
+      == mapterrain.MISSING_RGB)
+
+# The choice is baked into the PNG, so it has to be in the cache key or two
+# colours share one picture and you get whichever was asked for first.
+check("the three fills are three different pictures",
+      len({mapterrain.png(mod, p, S, g) for g in mapterrain.GAP_FILLS}) == 3)
+
 print("\n4) the validator's rule, which is what the Check panel shows")
 
 rep = mapcheck.run(mod, cm, use_baseline=False)
@@ -484,11 +525,23 @@ for root in _realmod.installed():
     check(f"     {rp.pink:,} of {tiles:,} tiles have no texture, and the "
           f"picture has {drawn // (S * S):,} pink tiles' worth of pixels",
           drawn == rp.pink * S * S)
-    check(f"     every texture it draws with is really in "
-          f"{mapterrain.TEXTURE_DIR_REL}",
-          all((mapterrain.texture_dir(rmod) / n).is_file()
-              for n, c in zip(rp.names, rp.counts)
-              if c and not any(g["file"] == n for g in rp.gaps)))
+    # 30: a mod can have no texture folder AT ALL, and then this check is
+    # asserting a fact about the mod rather than about the tool.
+    # `vanilla_kingdoms_uncompromised` keeps its aerial textures inside the
+    # packed data the way the stock game does, so not one of the 30 its aerial
+    # file names is on disk and all 159,855 of its land tiles are a gap. The
+    # plan says so in one row; what is checked here is that it said so.
+    if not mapterrain.texture_dir(rmod).is_dir():
+        check(f"     no {mapterrain.TEXTURE_DIR_REL} at all, so every one of "
+              f"{rp.used} textures is a gap and the plan says it once",
+              rp.pink == tiles - sum(rp.sea)
+              and sum(1 for g in rp.gaps if not g["file"] and not g["ground"]) == 1)
+    else:
+        check(f"     every texture it draws with is really in "
+              f"{mapterrain.TEXTURE_DIR_REL}",
+              all((mapterrain.texture_dir(rmod) / n).is_file()
+                  for n, c in zip(rp.names, rp.counts)
+                  if c and not any(g["file"] == n for g in rp.gaps)))
     # the C index against the tile-at-a-time one, on a real map with a real
     # vocabulary. Exactness is the whole claim of the fast path, and a map with
     # twelve climates and twelve ground colours is where it would fail.

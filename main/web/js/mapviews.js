@@ -171,6 +171,11 @@ function cvwPlan(man, preset){
     terrain: !!p.terrain,
     // 23b: and which season it is drawn in
     terrainSeason: p.terrain_season === 'winter' ? 'winter' : 'summer',
+    //: 30: and what goes under a tile it could not draw. A preset saved before
+    //: it opens pink, which is what that view looked like when it was saved.
+    terrainGap: (typeof CMAP_GAPS !== 'undefined'
+                 && CMAP_GAPS.indexOf(p.terrain_gap) >= 0)
+                ? p.terrain_gap : 'magenta',
     // 20c, T4. A preset saved before 20c has no word on it and opens without
     // names, which is what that view looked like when it was saved.
     labels: !!p.labels,
@@ -224,6 +229,7 @@ function cvwLoad(i){
   c.riverRgb = plan.riverRgb.slice();
   c.heightAlpha = plan.heightAlpha;
   c.terrain.on = plan.terrain; c.terrain.season = plan.terrainSeason;
+  c.terrain.gap = plan.terrainGap;                                   // 30
   c.labels = plan.labels; c.lab = null; c.saidZoom = null;
   const lb = document.getElementById('cmLabBtn');
   if(lb) lb.classList.toggle('on', !!c.labels);

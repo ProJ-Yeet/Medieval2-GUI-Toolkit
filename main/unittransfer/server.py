@@ -207,7 +207,7 @@ and a stroke sent with a campaign that does not show the base map is refused.
                                     size in X-Map-Width/-Height - what the map
                                     screen reads, because a browser may alter a
                                     picture's pixels (see campmap.layer_rgb)
-  GET  /api/map/terrain?mod=&campaign=&season=[&format=png]
+  GET  /api/map/terrain?mod=&campaign=&season=[&gap=][&format=png]
                                  -> 23a, D7/T1. The map drawn with the mod's own
                                     aerial-map ground textures. Without `format`,
                                     the facts: how many textures, how many tiles
@@ -3997,12 +3997,19 @@ class Handler(BaseHTTPRequestHandler):
                 p = mapterrain.plan(mod, cm, camp, season)
             except (mapterrain.TerrainError, campmap.MapError, OSError) as exc:
                 return self._err(404, str(exc))
+            # 30: which colour goes under a gap. It has to be in the token or
+            # two colours share one cached picture and you get whichever was
+            # asked for first - the whole reason the choice is baked in Python
+            # rather than being a CSS rule over the <img>.
+            gap = (q.get("gap") or [mapterrain.GAP_DEFAULT])[0]
+            if gap not in mapterrain.GAP_FILLS:
+                gap = mapterrain.GAP_DEFAULT
             # the plan's own key, so the picture served is of the pixels the
             # facts beside it were measured on - an unsaved stroke included
-            token = f"mapterrain|{p.key}"
+            token = f"mapterrain|{p.key}|gap|{gap}"
             try:
                 data = self.registry.icons.cached_png(
-                    token, lambda: mapterrain.png(mod, p))
+                    token, lambda: mapterrain.png(mod, p, mapterrain.SCALE, gap))
             except Exception as exc:
                 # Said out loud, like a layer that will not decode: a blank
                 # backdrop reads as a map with no terrain on it, which is the
@@ -4012,7 +4019,8 @@ class Handler(BaseHTTPRequestHandler):
                                       f"built: {exc}")
             return self._send(200, data, "image/png",
                               {"X-Map-Scale": str(mapterrain.SCALE),
-                               "X-Map-Season": season})
+                               "X-Map-Season": season,
+                               "X-Map-Gap": gap})
 
         if path == "/api/map/legend":
             code = (q.get("code") or [""])[0]

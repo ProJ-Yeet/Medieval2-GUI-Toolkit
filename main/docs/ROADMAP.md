@@ -398,7 +398,7 @@ change, so no cross-reference dangles.
 | **3.0.0** | 16a-16k, plus 17 | The campaign map editor, and the correction pass over it. Feature-complete and uncut. |
 | **3.1.0** | 18-21 | The twenty Now items: the campaign files that had no editor, the names nothing could follow, and the map screen's second pass. |
 | **3.2.0** | 22-24 | The seven Next items: placing things on the map, a map that looks like the campaign map, and making or unmaking a region or a campaign. |
-| next, block one | ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~, ~~43~~, ~~28a~~, ~~28b~~, ~~33~~, 30, 34, 35, 36, 37a, 37b, 38 | **The campaign map.** Seven sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12; 43, 28a, 28b and 33 on 2026-09-15. |
+| next, block one | ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~, ~~43~~, ~~28a~~, ~~28b~~, ~~33~~, ~~30~~, 34, 35, 36, 37a, 37b, 38 | **The campaign map.** Six sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12; 43, 28a, 28b, 33 and 30 on 2026-09-15. |
 | next, block two | 32a, 32b, 32c, 39 | **The mercenaries.** Four sessions. Beta except 39, which is both lines. |
 | after block two | 44, 45, 46, 47a, 47b, 48 | **The reference-tool pass of 2026-09-13.** Six sessions, every one a subrelease on both lines. Outside both blocks, and scheduled only because the user named the work. |
 | after that | the Future roadmap list | Rated and unscheduled. Three five-star items lead it: M17, M12 and M16. |
@@ -769,7 +769,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~7~~ | ~~**28a** The strip, and the groups behind it~~ | M | beta | **done 2026-09-15** |
 | ~~8~~ | ~~**28b** The toolbar over the canvas, and a steady tooltip~~ | M | beta | **done 2026-09-15** |
 | ~~9~~ | ~~**33** T10, G2 and G4 in one session~~ | S x3 | beta | **done 2026-09-15** |
-| 10 | **30** A missing texture without the pink | S | beta | reported |
+| ~~10~~ | ~~**30** A missing texture without the pink~~ | S | beta | **done 2026-09-15** |
 | 11 | **34** Add a climate zone | M | beta | 5 |
 | 12 | **35** Rebels right in place | M | beta | 5 |
 | 13 | **36** D1, change a region's colour | M | beta | 5 |
@@ -790,7 +790,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 39 touch something outside the campaign map, so each is a subrelease on both
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
-(2026-09-14), and **41, 43, 28a, 28b and 33 are done** (2026-09-15); eleven
+(2026-09-14), and **41, 43, 28a, 28b, 33 and 30 are done** (2026-09-15); ten
 remain, two of them subreleases. **43 was nearly all built already** - 16j shipped the
 roster writer and the write-up had not checked - so what landed was the one
 sentence of it that was true, the refusal. **28a's scoping held in full**, and
@@ -1054,7 +1054,70 @@ tooltip whose rows sit on the same pixel across two adjacent tiles that differ
 in what they carry. Whether the paint row is open goes in `cmapLayerState` with
 the rest, so a saved view puts it back.
 
-## Phase 30 - A missing texture without the pink
+## Phase 30 - A missing texture without the pink - DONE 2026-09-15
+
+**Done 2026-09-15, beta line, committed and uncut. The feature is as scoped; the
+premise underneath it is now wrong, and the mod that makes it wrong is almost
+certainly what the report was looking at.**
+
+**"This is not the installed mods at rest. It is the paint tool." That was true
+when it was written and it is not true now.** The write-up measured DaC at 15
+pink tiles and Third Age Reforged at none, and the installed set has changed
+since. **`vanilla_kingdoms_uncompromised` has 159,855 pink tiles - every land
+tile it has, 57.6% of its whole map** - because it ships **no
+`terrain/aerial_map/ground_types` folder at all**. Its aerial textures are
+inside the packed data, the way the stock game's are, and nothing here reads a
+`.pack`. Turn the terrain on and the entire land mass is magenta. That is what
+"the pink is too jarring on the campaign map" is, and it is a mod at rest.
+
+**One sentence instead of thirty.** The old reading emitted a gap row per
+texture filename - thirty rows on that mod, each one saying
+`descr_aerial_map_ground_types.txt draws N tiles with X.tga, and it is not in
+terrain/aerial_map/ground_types`, which blames the aerial file for a folder that
+is simply absent. `plan` now checks the folder first and says it once, naming
+the folder and the count and the reason a packed mod looks like this. Ten rows
+on that mod against thirty-nine, and **the pink total is unchanged at 159,855**,
+which is the invariant.
+
+**The colour, as scoped.** `GAP_FILLS` is magenta (TWMapReader's, and the
+default), a neutral dark grey that reads as "nothing here", and the sea, which
+is the honest answer for the case every gap on DaC is - fifteen tiles that
+`map_ground_types.tga` calls ocean or sea_deep and `map_heights.tga` calls land,
+where the sea is what the engine draws. `composite` takes it, `png` passes it
+through, and an unknown name falls to the default rather than raising, because
+this is the drawing and a query string is not worth a 500.
+
+**A choice of how a gap is drawn and never a choice to hide one.** The count
+stays on the layer row - it says "drawn neutral" or "drawn sea" now rather than
+always "drawn pink" - and the `terrain.texture` rule stays in the Check panel
+whichever is picked. The suite checks both halves: that the three kinds of gap
+change colour together, and that the count, the gap rows and every tile that
+*did* draw are identical whichever fill is asked for.
+
+**It is in both caches or it is in neither.** The colour is baked into the PNG,
+so `/api/map/terrain` takes `&gap=`, the server's disk-cache token is
+`mapterrain|<plan key>|gap|<name>`, and the browser's own `shot` is keyed
+`mod|campaign|season|gap`. Without either, two colours share one picture and you
+get whichever was asked for first. Verified over HTTP: the three fills are three
+different PNGs (29,501, 29,309 and 16,218 bytes on that mod - `sea` compresses
+hardest because land and sea become one colour), each with its own
+`X-Map-Gap` header, and `&gap=chartreuse` answers 200 in magenta.
+
+**A habit, so it rides with the season.** `terrain_gap` is in
+`cmapLayerState`, therefore in every named view, and `cmapResetView` puts it
+back to magenta. A preset saved before 30 names no fill and opens pink, which is
+what that view looked like when it was saved.
+
+**And one pre-existing red turned out to be this.** `test_mapterrain`'s "every
+texture it draws with is really in `terrain/aerial_map/ground_types`" has been
+failing on `vanilla_kingdoms_uncompromised` - it was asserting a fact about the
+mod rather than about the tool. With no folder there is nothing for it to be
+true of, so the check now says what it is measuring instead. **84/84 against
+72/73.**
+
+`tests/test_web_modules.py` **75/75** against 66.
+
+The original scoping follows.
 
 **Reported from the beta: the pink is too jarring on the campaign map.**
 TWMapReader draws a texture it cannot find magenta and 23a took that rule as
