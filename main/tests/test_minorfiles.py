@@ -44,6 +44,20 @@ from unittransfer.mod import Mod
 ok = []
 
 
+def _names_word(path: Path, word: str) -> bool:
+    """Does this file name `word` as a whole word? Used to ask whether a resource
+    a mod defines is ever actually placed or referred to."""
+    import re
+    try:
+        text = path.read_text(encoding=mf.ENCODING, errors="ignore")
+    except OSError:
+        return False
+    return re.search(r"(?<![A-Za-z0-9_])" + re.escape(word) + r"(?![A-Za-z0-9_])",
+                     text) is not None
+
+
+
+
 def check(label, cond):
     ok.append(bool(cond))
     print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
@@ -678,15 +692,39 @@ else:
     print(f"  swept {swept} real file(s) across {len(mods)} mod(s)")
 
     # the two facts the whole module rests on, measured rather than assumed
-    seen = set()
+    #
+    # This asserted "every real resource name is one of the 28" until a fourth
+    # mod was installed and shipped 31. The premise it was guarding - the
+    # engine's list is closed, so the tab may change a resource and not create
+    # one - survived that, because the three extra names are DEAD: named in one
+    # file in the whole mod, their own definition, and nowhere else. So the
+    # thing worth asserting is not that nobody adds one, it is that adding one
+    # achieves nothing, which is the refusal's actual reasoning.
+    seen, extra_used = set(), {}
     for data in mods:
         path = data / mf.RESOURCES.rel
-        if path.exists():
-            seen |= {r.name for r in
-                     mf.parse_resources(kb.read_text(path, mf.ENCODING)).records}
+        if not path.exists():
+            continue
+        here = {r.name for r in
+                mf.parse_resources(kb.read_text(path, mf.ENCODING)).records}
+        seen |= here
+        for name in sorted(here - set(mf.KNOWN_RESOURCES)):
+            # every .txt in the mod that names it, its own definition aside
+            hits = [f for f in data.rglob("*.txt")
+                    if f != path and _names_word(f, name)]
+            extra_used[f"{data.parent.name}/{name}"] = [f.name for f in hits]
     if seen:
-        check("every real resource name is one of the 28 the engine knows",
-              seen <= set(mf.KNOWN_RESOURCES))
+        missing = sorted(set(mf.KNOWN_RESOURCES) - seen)
+        check(f"all 28 the engine knows are defined by the installed mods"
+              + (f" - missing {missing}" if missing else ""), not missing)
+        check(f"every one of the {len(extra_used)} name(s) beyond the 28 is DEAD - "
+              "defined and then used in no other file in its mod, which is the "
+              "whole of why this tab may change a resource and not create one",
+              all(not v for v in extra_used.values()))
+        if extra_used:
+            print("    extra resource names: "
+                  + ", ".join(f"{k} ({len(v)} other file(s))"
+                              for k, v in sorted(extra_used.items())))
     commas = 0
     for data in mods:
         path = data / mf.REBELS.rel

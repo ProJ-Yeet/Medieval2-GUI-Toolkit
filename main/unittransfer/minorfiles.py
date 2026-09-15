@@ -50,8 +50,14 @@ And two things the files themselves say:
   disagrees with itself on all three counts: ``heretic`` has two blocks, the list
   is missing one name, and the lookup carries three religions that no longer
   exist. :func:`check_religions` is mostly there to say so.
-* **the engine's resource list is closed.** All three installed mods ship the
-  same 28 resource names in three different orders, and none has ever added one.
+* **the engine's resource list is closed**, and the fourth mod installed here is
+  the proof rather than the exception. Three of the four ship the same 28 names
+  in three different orders; ``vanilla_kingdoms_uncompromised`` ships **31** -
+  the 28 plus ``glass``, ``honey`` and ``salt`` - and those three are named in
+  **exactly one file in the whole mod, their own definition**. Nothing places
+  them on the map, nothing else in ``data/`` mentions them and ``strat.txt``
+  gives them no name. A ``type`` the engine does not know is read and ignored,
+  and a mod has now demonstrated it.
 
 And one thing the checks here deliberately do **not** do: complain about a
 ``.tga`` the mod does not ship. Every pip and every settlement card in these
@@ -160,9 +166,9 @@ REBEL_CATEGORIES = ("gladiator_revolt", "brigands", "pirates", "peasant_revolt")
 #: flag that opts into it.
 RESOURCES = Shape(
     rel="descr_sm_resources.txt", label="Resources", kw="type", noun="resource",
-    order=("trade_value", "item", "icon", "has_mine"),
+    order=("trade_value", "item", "icon", "localised_name", "has_mine", "is_slave"),
     required=("trade_value", "item", "icon"),
-    flags=("has_mine",),
+    flags=("has_mine", "is_slave"),
     preamble_keys=("mine",))
 
 #: the 28 resource names all three installed mods ship - in three different
@@ -255,9 +261,42 @@ def resource_loc(mod) -> Dict[str, str]:
     return _loc(mod, RESOURCES_LOC_REL)
 
 
+#: the three resources whose ``strat.txt`` tag is SINGULAR where their `type` is
+#: plural, so ``SMT_RESOURCE_<NAME>`` does not find them.
+#:
+#: Measured over the three installed mods whose ``strat.txt`` can be read: in
+#: every one of them ``SMT_RESOURCE_CAMEL``, ``_ELEPHANT`` and ``_DOG`` are
+#: present and their plurals are absent, while every other resource - ``slaves``
+#: -> ``SMT_RESOURCE_SLAVES`` included - matches its own name. Two of the four
+#: mods say the same thing a second way by writing :data:`localised_name` out
+#: explicitly, and what they write is exactly these three singulars.
+#:
+#: Without this the Resources tab showed no name at all for camels, elephants
+#: and dogs **in every installed mod** - "The Carrock", "Mumakils" and "Horses"
+#: in the two LOTR mods, plain "Camels" / "Elephants" / "Dogs" in the vanilla
+#: one - while reporting nothing wrong.
+SINGULAR_RESOURCE_TAGS = {"camels": "CAMEL", "elephants": "ELEPHANT", "dogs": "DOG"}
+
+
 def resource_tag(name: str) -> str:
-    """``timber`` -> ``SMT_RESOURCE_TIMBER``, the tag ``strat.txt`` writes."""
-    return "SMT_RESOURCE_" + (name or "").strip().upper()
+    """``timber`` -> ``SMT_RESOURCE_TIMBER``, the tag ``strat.txt`` writes.
+
+    The derivation only. Where a record is in hand, :func:`resource_tag_of` is
+    the one to call: a mod may name its own tag and two installed ones do.
+    """
+    key = (name or "").strip()
+    return "SMT_RESOURCE_" + SINGULAR_RESOURCE_TAGS.get(key.lower(), key.upper())
+
+
+def resource_tag_of(rec) -> str:
+    """One resource's tag, the file's own answer first.
+
+    ``localised_name`` is the engine's escape hatch from the derivation above and
+    it is not decoration: the two mods that write it use it for exactly the three
+    resources the derivation gets wrong. A mod that states its tag is telling us
+    something we would otherwise have to infer, so it wins.
+    """
+    return (rec.get("localised_name") or "").strip() or resource_tag(rec.name)
 
 
 # ---------------------------------------------------------------------------
@@ -1574,7 +1613,7 @@ def path_for(mod, tab_id: str) -> Path:
 #: tab -> the actions it offers. Two of the five are edit-only, and both
 #: refusals are the format talking rather than the session running out:
 #:
-#: * **resources** - the engine's list is closed. All three installed mods ship
+#: * **resources** - the engine's list is closed. Three of the four installed mods ship
 #:   the same 28 names in three different orders and none has ever added one; a
 #:   ``type`` the engine does not know is read and then ignored, so "create a
 #:   resource" is a button that writes a line nothing reads. Deleting one is
@@ -1594,10 +1633,14 @@ ACTIONS: Dict[str, Tuple[str, ...]] = {
 
 #: why an edit-only tab is edit-only, shown where its buttons would be
 REFUSED: Dict[str, str] = {
-    "resources": "The engine's resource list is closed - all three mods measured "
-                 "ship the same 28 names and a `type` it does not know is read and "
-                 "ignored, so a resource can be changed but not created. Deleting "
-                 "one leaves descr_regions.txt placing a resource nothing defines.",
+    "resources": "The engine's resource list is closed - a `type` it does not know "
+                 "is read and ignored, so a resource can be changed but not created. "
+                 "One of the four mods measured ships three extra names and not one "
+                 "of them is used anywhere: they appear in no region, no other file "
+                 "and no text entry, which is what being ignored looks like. "
+                 "Deleting one is worse than adding one, because descr_regions.txt "
+                 "places resources by name and the map would keep placing a "
+                 "resource this file no longer defines.",
     "cultures": "A culture is eleven settlement models and cards, a fort, a port "
                 "ladder, a watchtower and six agents - nothing a text editor can "
                 "create from nothing. Deleting one orphans every faction whose "
@@ -1729,7 +1772,7 @@ def loc_tag(tab_id: str, rec) -> str:
     if tab_id == "rebels":
         return rec.get("description") or rec.name
     if tab_id == "resources":
-        return resource_tag(rec.name)
+        return resource_tag_of(rec)
     if tab_id == "religions":
         return rec.name
     return ""

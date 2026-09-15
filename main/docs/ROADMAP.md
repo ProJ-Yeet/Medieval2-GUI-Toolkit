@@ -1557,17 +1557,42 @@ check Phase 40 found.
   preview shown in the app; unticking every source disables Merge and says what
   to do.
 
-### Three findings handed on, all in `descr_sm_resources.txt`
+### Three findings handed on, all in `descr_sm_resources.txt` - CLOSED 2026-09-15
 
-The crash was hiding the end of the sweep, and behind it are three failures that
-have nothing to do with names and are **not** Phase 41's to re-scope:
+The crash was hiding the end of the sweep, and behind it were three failures
+with nothing to do with names. They were handed on as their own job and done the
+same day; **`test_minorfiles` is 225/225**, green for the first time.
 
-* **`vanilla_kingdoms_uncompromised` ships 31 resources** - the vanilla 28 plus
-  `glass`, `honey` and `salt` - which disproves the premise written into the
-  resources tab's edit-only refusal, that *all three mods measured ship the same
-  28 names*. Three of four, now.
-* **`is_slave` and `localised_name` are real lines `parse_resources` does not
-  know**, 4 of them in Vanilla Redux and 3 in `vanilla_kingdoms_uncompromised`.
+**`localised_name` turned out to be the answer to a bug rather than a keyword to
+tolerate.** Neither it nor `is_slave` appears anywhere in `Reference/`, so both
+were measured off the mods instead. `is_slave` is a bare flag on the `slaves`
+record, the same shape as `has_mine`. `localised_name` takes a text tag, and the
+two mods that write it use it for **exactly the three resources whose tag
+`resource_tag` was deriving wrongly**: `camels`, `elephants` and `dogs` are
+keyed `SMT_RESOURCE_CAMEL`, `_ELEPHANT`, `_DOG` - **singular**, where every other
+resource including `slaves` matches its own plural name.
+
+So the Resources tab had been showing **no name at all for those three in every
+installed mod**, while reporting nothing wrong: "The Carrock", "Beacon of
+Gondor" and "Horses" in Divide and Conquer, "Mumakils" in Reforged, plain
+"Camels" / "Elephants" / "Dogs" in the vanilla one. `resource_tag_of(rec)` takes
+the file's own answer first and falls back to the derivation, which now knows
+its three exceptions; `SINGULAR_RESOURCE_TAGS` carries the measurement.
+
+**And the 31-resource mod strengthens the edit-only refusal rather than
+disproving it.** `vanilla_kingdoms_uncompromised` ships the 28 plus `glass`,
+`honey` and `salt`, and the premise the refusal was written on - *all three mods
+measured ship the same 28* - is indeed now three of four. But the reasoning
+under it held: those three names appear in **exactly one file in the whole mod,
+their own definition**. Nothing places them on the map, no other file in `data/`
+mentions them, and `strat.txt` gives them no name. A `type` the engine does not
+know is read and ignored, and a mod has now demonstrated it. The behaviour
+stands; the sentence was what needed fixing.
+
+The suite's `every real resource name is one of the 28` asserted that no mod
+would ever add one, which is not the fact worth guarding. It now asserts the two
+that are: all 28 are defined by the installed mods, and every name beyond them
+is dead.
 
 **Both lines.** `descr_names.txt` is a minor file rather than the campaign map.
 
