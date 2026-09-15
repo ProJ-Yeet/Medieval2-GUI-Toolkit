@@ -174,6 +174,15 @@ function cvwPlan(man, preset){
     // 20c, T4. A preset saved before 20c has no word on it and opens without
     // names, which is what that view looked like when it was saved.
     labels: !!p.labels,
+    /* 28a: the strip is part of the reading. A preset saved before it names no
+       tab and opens on the one that is up, which is the least surprising thing
+       a view with nothing to say about the strip can do - unlike the layers,
+       where "said nothing" has a right answer in the manifest. The width is 0
+       when the preset never carried one, and 0 means "leave it". */
+    tab: (typeof CMAP_TABS !== 'undefined'
+          && CMAP_TABS.some(t => t.id === p.tab)) ? p.tab : '',
+    sideHid: !!p.side_hid,
+    sidePx: +p.side_px > 0 ? +p.side_px : 0,
     theme: p.theme || '',
     themeOpacity: typeof p.theme_opacity === 'number' ? p.theme_opacity : 0.85,
     themeBorders: p.theme_borders !== false,
@@ -215,6 +224,13 @@ function cvwLoad(i){
   c.labels = plan.labels; c.lab = null; c.saidZoom = null;
   const lb = document.getElementById('cmLabBtn');
   if(lb) lb.classList.toggle('on', !!c.labels);
+  // 28a: the tab, the collapse and the width. The width goes back through the
+  // settings key `splitInstall` owns rather than onto the element, so the next
+  // drag starts from it and the next screen opens at it.
+  if(plan.tab) c.tab = plan.tab;
+  c.hid = plan.sideHid;
+  if(plan.sidePx) state.settings[CMAP_SIDE_KEY] = plan.sidePx;
+  cmapSidePaint();
   for(const code of c.order) if(c.layers[code].img) cmapMask(c, code);
   cmapCompose(); cmapPaint(); cmapSaveLayers(); cmapRepanel();
   cmapLoadLayers();

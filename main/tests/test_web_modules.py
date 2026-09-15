@@ -178,5 +178,68 @@ wrong = [f for f, ly in layers.items()
 check("each layer's `required` matches campmap.LAYERS"
       + (": " + ", ".join(wrong) if wrong else ""), not wrong)
 
+
+print("\n== 28a: the campaign map's side column is a grouping table ==")
+# The same class of bug as MODES above, one screen down. `#cmSide` used to be
+# sixteen panel divs written out by hand in `renderCampmap`; they are now built
+# from `CMAP_TABS`, so a panel that is in no group is a panel that is never in
+# the DOM at all and whose module writes into nothing - silently, because
+# `getElementById` returning null is what every one of those modules already
+# guards against. These read the table the way the block above reads MODES.
+campmap_js = (JS / "campmap.js").read_text(encoding="utf-8")
+tabs_block = re.search(r"^const CMAP_TABS = \[(.*?)^\];", campmap_js, re.S | re.M)
+check("campmap.js declares CMAP_TABS", bool(tabs_block))
+tabs_src = tabs_block.group(1) if tabs_block else ""
+tabs = re.findall(r"\{id: '([a-z]+)'.*?panels: \[(.*?)\]", tabs_src, re.S)
+grouped = {tid: re.findall(r"'([A-Za-z_][\w]*)'", panels) for tid, panels in tabs}
+flat = [p for ids in grouped.values() for p in ids]
+check(f"CMAP_TABS parsed: {len(grouped)} tabs over {len(flat)} panels",
+      len(grouped) >= 4 and len(flat) >= 12)
+
+# A panel in two groups is not a syntax error and not a visible one either:
+# `cmapTabOf` takes the first match, so the second tab would hold a div that
+# the first tab keeps hidden.
+twice = sorted({p for p in flat if flat.count(p) > 1})
+check("no panel is in two tabs" + (": " + ", ".join(twice) if twice else ""),
+      not twice)
+
+# Every id in the table has to be one a module actually writes into, or the
+# table is describing a panel that does not exist.
+js_all = "\n".join(f.read_text(encoding="utf-8") for f in sorted(JS.glob("*.js")))
+orphan = [p for p in flat
+          if p != "cmFindings" and f"'{p}'" not in js_all.replace(tabs_src, "")]
+check("every panel in the table is one some module writes into"
+      + (": " + ", ".join(orphan) if orphan else ""), not orphan)
+
+# The user asked for Validate by name, and it is a tab rather than a section in
+# a stack of sixteen - see the phase note in campmap.js.
+check("Validate is a tab of its own and holds the check panel",
+      "cmCheck" in grouped.get("check", []))
+
+# 20a's ruling, asserted rather than remembered: the layer stack is the ten
+# files the map is made of and is what the number keys tick, so it is not
+# behind a tab and stays visible whichever one is up.
+check("the layer stack is in no tab", "cmLayers" not in flat)
+check("and it is rendered outside the tab body",
+      '<div class="cmlayers" id="cmLayers">' in campmap_js
+      and 'id="cmBody"' in campmap_js)
+
+# `cmapSurface` is the one thing that keeps the strip from being worse than the
+# stack it replaced, and it is addressed by panel id - a name that is not in
+# the table surfaces nothing, quietly.
+surfaced = sorted(set(re.findall(r"cmapSurface\('([\w]+)'\)", js_all)))
+missed = [p for p in surfaced if p not in flat]
+check(f"all {len(surfaced)} cmapSurface() calls name a panel in the table"
+      + (": " + ", ".join(missed) if missed else ""), surfaced and not missed)
+
+# The three habits 28a added ride in `cmapLayerState`, which is the one
+# description of the reading - so a named view carries them for nothing. Same
+# check the phase's exit criteria ask for.
+state_fn = campmap_js.split("function cmapLayerState(){")[1].split("\nfunction ")[0]
+for key in ("m.tab", "m.side_hid", "m.side_px"):
+    check(f"cmapLayerState carries {key.split('.')[1]}", key in state_fn)
+check("and the column's width is splitInstall's, not a second implementation",
+      "splitInstall(split, side, CMAP_SIDE_KEY" in campmap_js)
+
 print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

@@ -398,7 +398,7 @@ change, so no cross-reference dangles.
 | **3.0.0** | 16a-16k, plus 17 | The campaign map editor, and the correction pass over it. Feature-complete and uncut. |
 | **3.1.0** | 18-21 | The twenty Now items: the campaign files that had no editor, the names nothing could follow, and the map screen's second pass. |
 | **3.2.0** | 22-24 | The seven Next items: placing things on the map, a map that looks like the campaign map, and making or unmaking a region or a campaign. |
-| next, block one | ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~, ~~43~~, 28a, 28b, 33, 30, 34, 35, 36, 37a, 37b, 38 | **The campaign map.** Ten sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12 and 43 on 2026-09-15. |
+| next, block one | ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~, ~~43~~, ~~28a~~, 28b, 33, 30, 34, 35, 36, 37a, 37b, 38 | **The campaign map.** Nine sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12; 43 and 28a on 2026-09-15. |
 | next, block two | 32a, 32b, 32c, 39 | **The mercenaries.** Four sessions. Beta except 39, which is both lines. |
 | after block two | 44, 45, 46, 47a, 47b, 48 | **The reference-tool pass of 2026-09-13.** Six sessions, every one a subrelease on both lines. Outside both blocks, and scheduled only because the user named the work. |
 | after that | the Future roadmap list | Rated and unscheduled. Three five-star items lead it: M17, M12 and M16. |
@@ -766,7 +766,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~4~~ | ~~**42** The art a clone does not get~~ | S | **both** | **done 2026-09-14** |
 | ~~5~~ | ~~**41** Merge one faction's name pool into another~~ | S | **both** | **done 2026-09-15** |
 | ~~6~~ | ~~**43** Playable, unlockable, not playable~~ | S | beta | **done 2026-09-15** |
-| 7 | **28a** The strip, and the groups behind it | M | beta | an enabler |
+| ~~7~~ | ~~**28a** The strip, and the groups behind it~~ | M | beta | **done 2026-09-15** |
 | 8 | **28b** The toolbar over the canvas, and a steady tooltip | M | beta | asked for |
 | 9 | **33** T10, G2 and G4 in one session | S x3 | beta | 5, 5, 5 |
 | 10 | **30** A missing texture without the pink | S | beta | reported |
@@ -790,10 +790,12 @@ on, then stars, then size.** That is four rules and each one earns its place.
 39 touch something outside the campaign map, so each is a subrelease on both
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
-(2026-09-14), and **41 and 43 are done** (2026-09-15); fourteen remain, two of
-them subreleases. **43 was nearly all built already** - 16j shipped the roster
-writer and the write-up had not checked - so what landed was the one sentence
-of it that was true, the refusal. **They are committed, not cut** - cut-as-it-lands was
+(2026-09-14), and **41, 43 and 28a are done** (2026-09-15); thirteen remain, two
+of them subreleases. **43 was nearly all built already** - 16j shipped the
+roster writer and the write-up had not checked - so what landed was the one
+sentence of it that was true, the refusal. **28a's scoping held in full**, and
+what it did not say was that the layer stack has to be capped or it takes the
+whole column. **They are committed, not cut** - cut-as-it-lands was
 suspended again on 2026-09-12 and a release now happens when the user asks for
 one.
 
@@ -815,7 +817,81 @@ moves. Neither is the strip, both are the same screen, and together they are a
 second session. 28a is the strip and the groups exactly as scoped; 28b is the
 two things that live over the canvas.
 
-### 28a - The strip, and the groups behind it
+### 28a - The strip, and the groups behind it - DONE 2026-09-15
+
+**Done 2026-09-15, beta line, committed and uncut. The scoping held - every
+line of it - and three things it did not say were found by building it.**
+
+**The six groups, and the layers outside them.** `CMAP_TABS` in `campmap.js` is
+the grouping table: Map (Campaigns, Find, Views), Validate (the read's own
+findings, then Check), Query, Paint (Paint, Markers, Events), Province (the
+picked tile, Settlement, Characters, Forts, Delete) and Campaign (Campaign
+settings, Strat models). Sixteen panels behind six tabs, which is the point -
+sixteen tabs would have been the column laid on its side. `#cmLayers` is in no
+tab and is asserted to be in none, because 20a's ruling is that the stack is the
+ten files the map is made of and it is what the number keys tick.
+
+**Grouping cost the fifteen panel modules nothing.** Each group is a `<div>`
+that is hidden or not, and every panel div stays in the DOM with the id its own
+module already writes into - so `campbrowse.js`, `mapcheck.js`, `stratedit.js`
+and the rest were not touched at all. Only `campforts.js` changed, by one line,
+and that is the fort click surfacing its own tab.
+
+**The findings banner is behind Validate now, with a count on the tab.** It was
+a block pinned above everything; putting it behind a tab would have made the
+screen quieter rather than tidier, so `cmapTabBadge` puts the number of read
+findings on the tab itself. DaC shows `Validate 1`.
+
+**"Switched to, once" is once per map, not once per manual pick.** The first
+draft re-armed the automatic switch every time a tab was picked by hand, which
+reads as the obvious meaning and is the wrong behaviour: somebody who goes to
+Paint and then clicks province after province is painting, and being dragged to
+Province on every click is the annoyance rather than the help. So `cmapSurface`
+switches once and marks the tab with a dot every time after. The dot is real
+work rather than decoration - under the first draft it was almost unreachable.
+
+**A collapsed column is never opened by a click on the map.** Collapsing is a
+decision and a map click is not a reason to overrule it, so the rail carries the
+mark and nothing moves.
+
+**The layer stack had to be capped, which the write-up did not foresee.** Pinned
+at its natural height it is **794px on DaC** - ten layers with their legends and
+20a's two readings - in an 842px column, so the tab body got nothing and the
+strip was the old stack with extra steps. `.cmside > .cmlayers` is
+`flex:0 1 auto` with `max-height:45%` and its own scroller; `.cmbody` scrolls
+between the strip and it. Two scroll regions in one column is the honest cost of
+"the layers stay visible whichever tab is up".
+
+**`.cmside.wide` and the drag cannot both size the column**, and that is
+`edPrevMin`'s problem in `editor.js` a second time: an inline flex beats a
+class. `cmapWireSplit` takes the inline width off while 16d's Code View is up
+or the rail is showing, and puts it back - with the saved width - when either
+ends. The drag itself is `splitInstall`'s, a third caller beside the 3D dock and
+the BMDB browser.
+
+**Two CSS faults found by looking at it rather than by reasoning about it.**
+`.cmgroup{display:flex}` beats the UA sheet's `[hidden]`, so all six groups
+showed at once until `.cmgroup[hidden]{display:none}` was added. And six tabs
+wrap to two rows at 336px, which is fine, but the collapse control was on the
+end of the strip and landed wherever the wrap left it - it is on the header line
+now.
+
+**Verified in the browser against DaC**, not only in the suite: the first click
+surfaces Province and the second marks it, the collapse leaves a 40px rail of
+six icons that opens again from itself, a pointer drag on the bar moves 336 to
+426 and saves it, a reload opens collapsed-and-426 when that is what was left,
+`cmapResetView` puts back the first tab at 336 with the column open, and a named
+view carries the tab and the width through `cvwSnapshot` / `cvwPlan` / `cvwLoad`
+while a preset saved before 28a names neither and leaves both alone.
+
+`tests/test_web_modules.py` is **34/34** against 22/22: the grouping table is
+read the way `MODES` is, and the checks are the ones that catch the class of bug
+rather than an instance - no panel in two tabs, every panel in the table one a
+module writes into, Validate holding Check, the layer stack in no tab, every
+`cmapSurface()` call naming a panel the table knows, and the three habits in
+`cmapLayerState`.
+
+The original scoping follows.
 
 `#cmSide` is a flat stack of sixteen panels: the mod header, the findings
 banner, and then Campaign, Find, Views, Check, Query, Paint, Markers, Events,

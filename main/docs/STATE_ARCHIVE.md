@@ -15,6 +15,72 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 28a - the side column becomes a tab strip (2026-09-15)
+Taken as the next phase off block one, after 43 the same day. The scoping held
+in full, which is the first time in four phases; what it did not say was found
+by looking at the screen rather than by reasoning about it.
+
+**The grouping table.** `CMAP_TABS` in `campmap.js` - Map (Campaigns, Find,
+Views), Validate (the read's findings, then Check), Query, Paint (Paint,
+Markers, Events), Province (the picked tile, Settlement, Characters, Forts,
+Delete), Campaign (Campaign settings, Strat models). Sixteen panels, six tabs.
+`#cmLayers` is in none of them and the suite asserts it: 20a's ruling is that
+the stack is the ten files the map is made of and it is what the number keys
+tick, so it stays under the strip whichever tab is up.
+
+**Nothing but the shell had to change.** Each group is a `<div>` that is hidden
+or not and every panel keeps the id its own module writes into, so the fifteen
+panel modules were not touched. `campforts.js` changed by one line, for the
+fort click.
+
+**"Switched to, once" is once per map.** The first draft re-armed the automatic
+switch on every manual tab pick, which is the obvious reading and the wrong
+behaviour - somebody on the Paint tab clicking province after province is
+painting, and being dragged to Province each time is the annoyance, not the
+help. `cmapSurface` switches once and puts a dot on the tab every time after.
+That also gives the dot real work: under the first draft it was almost
+unreachable. A collapsed column is never opened by a map click at all.
+
+**The layer stack had to be capped.** Pinned at its natural height it is
+**794px on DaC** in an 842px column - ten layers with their legends and 20a's
+two readings - so the tab body got nothing and the strip was the old stack with
+extra steps. `.cmside > .cmlayers` is `flex:0 1 auto`, `max-height:45%`, with
+its own scroller; `.cmbody` scrolls between the strip and it. Two scroll regions
+in one column is what "the layers stay visible" actually costs.
+
+**`.cmside.wide` and the drag cannot both size the column.** `editor.js`'s
+`edPrevMin` has the same problem and the same fix - an inline flex beats a
+class - so `cmapWireSplit` takes the inline width off while 16d's Code View is
+up or the rail is showing and puts it back, at the saved width, when either
+ends. The drag is `splitInstall`'s, a third caller beside the 3D dock and the
+BMDB browser.
+
+**Two faults only the browser found.** `.cmgroup{display:flex}` beats the UA
+sheet's `[hidden]`, so all six groups showed at once until
+`.cmgroup[hidden]{display:none}` went in - the checks were all green while that
+was true, because they read the table and not the layout. And six tabs wrap to
+two rows at 336px, which is fine, except that the collapse control was on the
+end of the strip and landed wherever the wrap left it; it is on the header line
+now.
+
+**Verified against DaC in the running app**, every exit criterion: the first
+click surfaces Province and the second marks it, the collapse leaves a 40px rail
+of six icons that opens from itself, a pointer drag on the bar moves 336 to 426
+and saves it, a reload opens collapsed-and-426 when that is what was left,
+`cmapResetView` puts back the first tab at 336 with the column open, a named
+view carries the tab and the width while a preset saved before 28a names neither
+and leaves both alone, and the stacked layout under 1000px drops both scrollers
+and the bar.
+
+**One repair that was not the phase.** Two CSS blocks in `web/index.html` had
+been written one character per line by a bad edit earlier in the same session -
+valid CSS, since CSS ignores newlines, which is why every check stayed green.
+Both are rebuilt and the whole file is scanned for the shape.
+
+`tests/test_web_modules.py` **34/34** against 22/22, twelve checks added.
+`tests/test_maplayers.py` 51/51. `test_campview` 77/80 and `test_campmap`
+143/148 are identical on a stashed clean tree, so neither is this.
+
 ## 43 - playable, unlockable, not playable, and a phase that was already built (2026-09-15)
 Taken as the next phase off block one. The write-up said the toolkit reads the
 three rosters and will not write any of them. It writes all three, and has since

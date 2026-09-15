@@ -728,9 +728,63 @@
   .cjsm{margin-top:10px;padding-top:9px;border-top:1px solid var(--edge)}
   .cjsm .trbar{position:static;padding:0 0 6px}
   .cjsm .trsec{padding:0}
+  /* 28a: the column no longer scrolls as one piece - `.cmbody` between the
+     strip and the layer stack is what scrolls, so the tabs and the layers stay
+     where they are put. The width is `splitInstall`'s from here on, and this
+     basis is only what it opens at with nothing saved. */
   .cmside{flex:0 0 336px;min-width:280px;display:flex;flex-direction:column;gap:9px;
-    overflow:auto}
+    overflow:hidden}
   .cmhead{display:flex;flex-direction:column;gap:2px}
+  /* ---- 28a: the side column's tab strip, its body and its collapsed rail ----
+     The strip and the layer stack are pinned; only the body between them
+     scrolls, which is the whole point - before this the column was one scroll
+     and the strat models were four screens down it. */
+  .cmside{position:relative}
+  .cmtabs{display:flex;gap:4px;align-items:stretch;flex:0 0 auto;flex-wrap:wrap}
+  .cmtab{padding:5px 9px;font-size:12px;border-radius:6px;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:5px}
+  .cmtab.on{border-color:var(--accent);background:var(--panel2);color:var(--fg);
+    font-weight:600}
+  /* a tab that gained content while another one was up. The dot says where the
+     click went without moving the strip - see `cmapSurface`. */
+  .cmtab.fresh::after,.cmrailb.fresh::after{content:'';width:6px;height:6px;
+    border-radius:50%;background:var(--accent)}
+  .cmtab.fresh::after{margin-left:1px}
+  .cmrailb.fresh::after{position:absolute;top:3px;right:3px}
+  .cmtabn{font-style:normal;font-size:10.5px;padding:1px 5px;border-radius:9px;
+    background:var(--panel);border:1px solid var(--edge);color:var(--dim);
+    font-variant-numeric:tabular-nums}
+  .cmtab.on .cmtabn{color:var(--ink);border-color:var(--accent)}
+  .cmtabx{padding:3px 8px;font-size:12px;border-radius:6px;color:var(--dim)}
+  /* the collapse control sits on the header line rather than on the end of the
+     strip: six tabs wrap to two rows at this column’s width, and a button
+     that lands wherever the wrap leaves it is a button nobody can find twice */
+  .cmhead{flex-direction:row;align-items:flex-start;justify-content:space-between;
+    gap:8px}
+  .cmhead>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .cmbody{flex:1 1 auto;min-height:140px;overflow:auto;display:flex;
+    flex-direction:column;gap:9px}
+  .cmgroup{display:flex;flex-direction:column;gap:9px}
+  /* `display:flex` on the line above beats the UA sheet's `[hidden]`, which is
+     how all six groups showed at once the first time this ran */
+  .cmgroup[hidden]{display:none}
+  /* The layer stack is not a tab - 20a's ruling - so it sits under the body and
+     stays put whichever tab is up. It is CAPPED and scrolls inside that cap,
+     because ten layers with their legends and 20a's two readings open come to
+     794px on DaC, which is the whole column: pinned at its natural height it
+     would leave the tab body nothing and be the old stack with extra steps. */
+  .cmside>.cmlayers{flex:0 1 auto;max-height:45%;overflow:auto;padding-top:8px;
+    border-top:1px solid var(--edge)}
+  /* collapsed: the column is the rail and nothing else, and the rail carries
+     the same six tabs, so it is reversible from the collapsed state */
+  .cmrail{display:none;flex-direction:column;gap:4px;align-items:center}
+  .cmrail .cmtabx{margin:0}
+  .cmrailb{position:relative;width:30px;padding:5px 0;font-size:14px;
+    line-height:1;border-radius:6px}
+  .cmrailb.on{border-color:var(--accent);background:var(--panel2)}
+  .cmside.hid{flex:0 0 40px !important;min-width:40px;overflow:visible}
+  .cmside.hid>:not(.cmrail){display:none}
+  .cmside.hid>.cmrail{display:flex}
   .cmside .k{font-size:11px;color:var(--dim);text-transform:uppercase;
     letter-spacing:.04em;font-weight:600}
   .cmside .k .count{text-transform:none;letter-spacing:0;margin-left:6px;
@@ -793,6 +847,9 @@
   /* ---- 16d: the legend, the probe and the region form ----
      All of it lives in the side column, which grows when the Code View opens
      because a file's own text needs width and a form does not. */
+  /* 16d: the Code View needs width and a form does not. It sizes itself, and
+     `cmapWireSplit` takes the inline width off while it is up for the same
+     reason `edPrevMin` does - an inline flex beats a class every time. */
   .cmside.wide{flex:0 0 620px}
   .cmhid{color:var(--accent)}
   /* one layer's colours, under its row */
@@ -1153,7 +1210,17 @@
   @media (max-width:1000px){
     .cmwrap{flex-direction:column;height:auto}
     .cmstage{min-height:60vh}
-    .cmside,.cmside.wide{flex:0 0 auto}
+    /* !important for the same reason `.bmprev` carries it: `splitInstall`
+       writes the width as an inline style, and stacked under the map the
+       column belongs at full width whatever it was dragged to when there were
+       two columns beside each other. The grab bar is already gone at 1100px. */
+    .cmside,.cmside.wide{flex:0 0 auto!important}
+    /* 28a: stacked, the page itself scrolls, so neither the tab body nor the
+       layer stack needs a scroller of its own - two of them inside a column
+       that is already scrolling is three scrollbars for one list. */
+    .cmside{overflow:visible}
+    .cmbody{overflow:visible;min-height:0}
+    .cmside>.cmlayers{max-height:none;overflow:visible}
   }
   /* every DISTINCT card on disk, and who shares each one */
   .cardvars{margin-top:12px}

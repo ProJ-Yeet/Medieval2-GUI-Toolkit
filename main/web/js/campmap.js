@@ -81,6 +81,190 @@ const CMAP_GLYPH_ZOOM = 3;
    ground layer's greens and the region layer's darker provinces. */
 const CMAP_RIVER_RGB = [86, 180, 255];
 
+/* ---------- 28a: the side column is a tab strip, not a stack ----------
+
+   `#cmSide` was sixteen panels appended one under the last - the mod header,
+   the read's own findings, and then Campaigns, Find, Views, Check, Query,
+   Paint, Markers, Events, Layers, the picked tile, Delete, Settlement, Forts,
+   Characters, Campaign settings and Strat models. On a 1600px window the strat
+   models sat four screens below the fold, which is a column you scroll rather
+   than a menu you use.
+
+   **A tab is a GROUP of panels, not one panel.** Sixteen tabs would be the same
+   column laid on its side. These six are the six errands the screen is for:
+   choosing what is read, checking it, asking it questions, painting it, looking
+   at one province, and the campaign that runs on it.
+
+   **Validate is a tab of its own, and the user asked for it by name.** Mylae's
+   map screen is `Strat` / `Validate` / `3D` across the top with the whole of his
+   validation behind the middle one, and that placement is better than a section
+   in a stack of sixteen. What goes behind ours is the larger half anyway: 32
+   rules with a severity, a baseline and auto-fixes, against his eight checks.
+
+   **The layers are not in here**, and that is 20a's ruling standing: the stack
+   is the ten files the map is made of and it is what the number keys tick, so
+   it stays under the strip whichever tab is up. Ticking a layer while reading a
+   finding is the ordinary errand on this screen.
+
+   The ids are the ones every panel module already writes into
+   (`document.getElementById('cmPick')` and its fifteen siblings), so grouping
+   them cost those files nothing: each group is a `<div>` that is hidden or not,
+   and every panel stays in the DOM and keeps its own state. */
+const CMAP_TABS = [
+  {id: 'map', label: 'Map', icon: '\u{1F5FA}', panels: ['cmCamps', 'cmFind', 'cmViews'],
+   title: 'Which campaign is being read, finding a province by name, and saved views'},
+  {id: 'check', label: 'Validate', icon: '✓', panels: ['cmFindings', 'cmCheck'],
+   title: 'Everything wrong with this map: what the read itself found, then the '
+        + 'rules, the baseline and the filters'},
+  {id: 'query', label: 'Query', icon: '⌕', panels: ['cmQuery'],
+   title: 'Ask the map a question and colour the provinces by the answer'},
+  {id: 'paint', label: 'Paint', icon: '✎', panels: ['cmPaint', 'cmMarks', 'cmEvents'],
+   title: 'The brush and its palette, the markers layer, and the campaign events'},
+  {id: 'place', label: 'Province', icon: '◉',
+   panels: ['cmPick', 'cmSettle', 'cmChars', 'cmForts', 'cmDel'],
+   title: 'What is on the tile you clicked: its record, its settlement, its '
+        + 'people and its forts'},
+  {id: 'camp', label: 'Campaign', icon: '⚑', panels: ['cmCamp', 'cmModels'],
+   title: 'The campaign’s own settings, and the strat models its factions use'},
+];
+
+//: The class a panel div carried in the flat stack, for the four that had one.
+//: Kept as a table rather than in `CMAP_TABS` so that the grouping stays a list
+//: of ids and nothing else - which is what the suite reads it as.
+const CMAP_SIDE_CLASS = {cmPick: 'cmpick', cmSettle: 'cmsettle',
+                         cmChars: 'cmchars', cmCamp: 'cmcamp',
+                         cmModels: 'cmmodels'};
+
+//: Which tab holds a panel, by the id the panel's own module writes into.
+//: Empty for `cmLayers` and the mod header, which are not in the strip at all.
+const cmapTabOf = panel =>
+  (CMAP_TABS.find(t => t.panels.includes(panel)) || {}).id || '';
+
+//: What the drag on the column's left edge is saved under. `splitInstall` owns
+//: the live value in `state.settings`; `cmapLayerState` mirrors it so that a
+//: named view carries the width with the rest of the reading.
+const CMAP_SIDE_KEY = 'map_side_px';
+const CMAP_SIDE_DEF = 336;    // the flex-basis .cmside opened at before 28a
+
+function cmapTabsHtml(){
+  const c = state.cmap;
+  if(!c) return '';
+  return `<div class="cmtabs" id="cmTabs">${CMAP_TABS.map(t => {
+    const n = cmapTabBadge(t);
+    return `<button class="cmtab${c.tab === t.id ? ' on' : ''}${
+      c.fresh[t.id] ? ' fresh' : ''}" title="${esc(t.title)}"
+      onclick="cmapTab('${t.id}')">${esc(t.label)}${
+      n ? ` <i class="cmtabn">${esc(String(n))}</i>` : ''}</button>`;
+  }).join('')}</div>`;
+}
+
+/* The number on a tab: only where there is a real count to put there.
+
+   Validate carries the read's own findings, which used to be a banner pinned
+   above everything and is now behind a tab - so the count is what stops that
+   being a quieter screen rather than a tidier one. Nothing else has a number
+   worth the ink. */
+function cmapTabBadge(t){
+  const c = state.cmap;
+  if(t.id !== 'check' || !c || !c.man) return '';
+  const f = c.man.findings || {};
+  const n = (f.layers || []).length + (f.undeclared_land || []).length
+          + (f.empty_records || []).length;
+  return n || '';
+}
+
+//: The collapsed column: the same six tabs as icons, plus the way back out.
+//: A control that collapses has to be reversible from the collapsed state,
+//: which is why the rail exists at all.
+function cmapRailHtml(){
+  const c = state.cmap;
+  if(!c) return '';
+  return `<div class="cmrail" id="cmRail">
+    <button class="cmtabx" onclick="cmapSideCollapse()"
+      title="Open the column again">‹</button>
+    ${CMAP_TABS.map(t => `<button class="cmrailb${c.tab === t.id ? ' on' : ''}${
+      c.fresh[t.id] ? ' fresh' : ''}" title="${esc(t.label)}"
+      onclick="cmapTab('${t.id}')">${t.icon}</button>`).join('')}
+  </div>`;
+}
+
+//: Show one tab. Also the way out of the collapsed rail, which is the one
+//: control a collapse has to leave working.
+function cmapTab(id){
+  const c = state.cmap;
+  if(!c || !CMAP_TABS.some(t => t.id === id)) return;
+  c.hid = false;
+  c.tab = id;
+  delete c.fresh[id];
+  cmapSidePaint();
+  cmapSaveLayers();
+}
+
+/* A panel that has just gained content, surfaced.
+
+   The one thing that would make a strip worse than the stack it replaces:
+   clicking a province fills `#cmPick`, `#cmSettle` and `#cmChars`, and if the
+   strip is on another tab that click does nothing visible.
+
+   So the tab holding the panel is switched to - **once per map**, and after
+   that marked with a dot instead. Once, because the switch is only ever
+   teaching you where a click lands, and it has taught you the first time it
+   happens: from then on somebody on the Paint tab clicking province after
+   province is somebody painting, and a screen that drags them to Province on
+   every click is the annoyance rather than the help. The dot says the same
+   thing and moves nothing.
+
+   A collapsed column is never opened by this either. Collapsing is a decision
+   and a click on the map is not a reason to overrule it, so the rail carries
+   the mark. */
+function cmapSurface(panel){
+  const c = state.cmap, id = cmapTabOf(panel);
+  if(!c || !id) return;
+  if(c.tab === id && !c.hid) return;
+  if(c.hid || c.autoSwitched){
+    c.fresh[id] = 1;
+    cmapSidePaint();
+    return;
+  }
+  c.autoSwitched = true;
+  c.tab = id;
+  delete c.fresh[id];
+  cmapSidePaint();
+  cmapSaveLayers();
+}
+
+//: The strip, the rail and which group is showing - repainted in place rather
+//: than through `renderCampmap`, because every panel in those groups holds its
+//: own scroll position and its own half-typed form.
+function cmapSidePaint(){
+  const c = state.cmap, side = document.getElementById('cmSide');
+  if(!c || !side) return;
+  side.classList.toggle('hid', !!c.hid);
+  for(const t of CMAP_TABS){
+    const g = document.getElementById('cmg_' + t.id);
+    if(g) g.hidden = !!c.hid || c.tab !== t.id;
+  }
+  const strip = document.getElementById('cmTabs');
+  if(strip) strip.outerHTML = cmapTabsHtml();
+  const rail = document.getElementById('cmRail');
+  if(rail) rail.outerHTML = cmapRailHtml();
+  // collapsing takes the grab bar away with the column, and opening puts it
+  // back at the width that was saved
+  cmapWireSplit();
+}
+
+//: Collapse or open the column. Saved with the rest of the reading, so a map
+//: last left with the column shut opens that way.
+function cmapSideCollapse(){
+  const c = state.cmap;
+  if(!c) return;
+  c.hid = !c.hid;
+  cmapSidePaint();
+  cmapSaveLayers();
+  // the stage just got wider or narrower; its ResizeObserver resizes the
+  // canvas and repaints, which is why neither happens here
+}
+
 /* ---------- opening the screen ---------- */
 
 async function loadCampmap(){
@@ -190,6 +374,18 @@ function cmapLayerState(){
   m.tip = c.tip !== false;
   // 20c, T4: settlement names are a way of looking at the map, not a place
   m.labels = !!c.labels;
+  /* 28a: the strip's three habits. "The Validate tab, the column this wide"
+     is as much a way of reading a map as which layers are ticked, so they ride
+     here and are therefore in every named view for nothing.
+
+     The width is a MIRROR: `splitInstall` owns the live value under
+     `CMAP_SIDE_KEY` in settings, the same as the 3D dock and the BMDB browser,
+     and this copies it so a preset can carry it. A preset saved before 28a has
+     none of the three and falls to the defaults below, which is what that view
+     looked like when it was saved. */
+  m.tab = c.tab;
+  m.side_hid = !!c.hid;
+  m.side_px = +(state.settings && state.settings[CMAP_SIDE_KEY]) || 0;
   return m;
 }
 
@@ -218,8 +414,9 @@ function cmapSaveLayers(){
    saved - each layer's own `on`, `opacity` and blank colour, the server's
    order, the terrain textures and the rivers and heights readings off, the
    tooltip on and the names off
-   - plus the query panel's colouring and filters, the marker layer and the
-   zoom, and it saves the result so the next session opens the same way.
+   - plus the query panel's colouring and filters, the marker layer, 28a's tab
+   strip and column width, and the zoom, and it saves the result so the next
+   session opens the same way.
 
    What it does NOT touch, because none of it is a habit: named view presets
    (`map_views`, somebody's own work), the campaign being read, unsaved paint
@@ -231,7 +428,8 @@ function cmapResetView(){
     + 'Every layer, its opacity, its order and the colours punched out of it; '
     + 'the terrain textures, and the rivers and heights readings; settlement '
     + 'names and the tooltip; the markers; the query panel\'s colouring and '
-    + 'filters; and the zoom.\n\n'
+    + 'filters; the tab strip and the width of this column; '
+    + 'and the zoom.\n\n'
     + 'Saved views, the campaign you are reading and any unsaved painting are kept.'))
     return;
   for(const l of c.man.layers){
@@ -245,6 +443,11 @@ function cmapResetView(){
   c.order = cmapOrder(c.man, []);
   c.rivers = false; c.riverRgb = CMAP_RIVER_RGB.slice();
   c.heightAlpha = false; c.tip = true; c.labels = false; c.lab = null;
+  // 28a: the strip's three habits are habits like the rest, so the one way
+  // back puts them back - first tab, column open, default width
+  c.tab = CMAP_TABS[0].id; c.hid = false; c.fresh = {}; c.autoSwitched = false;
+  state.settings[CMAP_SIDE_KEY] = 0;
+  api.post('/api/settings', {[CMAP_SIDE_KEY]: 0}).catch(() => {});
   // the pictures are kept, not thrown away: they are a megabyte each that the
   // server built and nothing about them has changed, so turning the reading
   // back on is instant
@@ -380,6 +583,12 @@ function cmapNew(mod, man){
     // wanted at all, and whether a drag is holding it down
     ptr: null, tip: saved.tip !== false, tipHold: false, saidTip: '', tipKey: '',
     stageW: 0, stageH: 0,
+    /* 28a: which tab of the strip is up, whether the column is collapsed to
+       its rail, and which tabs have gained content since they were last
+       looked at. `autoSwitched` is the once in "switched to, once": one
+       automatic switch per map, and a dot on the tab for every one after. */
+    tab: CMAP_TABS.some(t => t.id === saved.tab) ? saved.tab : CMAP_TABS[0].id,
+    hid: !!saved.side_hid, fresh: {}, autoSwitched: false,
     // the picked tile, what all ten layers say about it, and the region record
     // it belongs to with the working copy the form edits
     pick: null, probe: null, probeErr: '', det: null, busy: false,
@@ -679,7 +888,8 @@ A name with no room at this zoom is left off and counted; zoom in for it.">Aa La
           <button onclick="cmapResetView()"
             title="Put the map back to how it first opens: every layer, opacity, order and
 punched colour, the terrain textures, the rivers and heights readings, names, the
-tooltip, the markers, the query panel's colouring and filters, and the zoom.
+tooltip, the markers, the query panel's colouring and filters, the tab strip and
+this column's width, and the zoom.
 Saved views are kept.">↺ Reset</button>
           <span class="count" id="cmZoom"></span>
         </div>
@@ -688,31 +898,30 @@ Saved views are kept.">↺ Reset</button>
         <div class="cmtip" id="cmTip" hidden></div>
         <div class="cmperf" id="cmPerf"></div>
       </div>
-      <div class="cmside" id="cmSide">
+      <div class="cmside${c.hid ? ' hid' : ''}" id="cmSide">
+        ${cmapRailHtml()}
         <div class="cmhead">
-          <b>${esc(c.mod)}</b>
-          <span class="count">${m.width}×${m.height} tiles ·
-            ${m.regions.filter(r => r.id >= 0).length} regions ·
-            ${m.regions.filter(r => r.settlement).length} settlements ·
-            ${m.regions.filter(r => r.port).length} ports</span>
+          <div>
+            <b>${esc(c.mod)}</b>
+            <span class="count">${m.width}×${m.height} tiles ·
+              ${m.regions.filter(r => r.id >= 0).length} regions ·
+              ${m.regions.filter(r => r.settlement).length} settlements ·
+              ${m.regions.filter(r => r.port).length} ports</span>
+          </div>
+          <button class="cmtabx" onclick="cmapSideCollapse()"
+            title="Collapse the column. The tabs stay on the rail, so it comes
+back from the collapsed state.">›</button>
         </div>
-        ${cmapFindingsHtml(m.findings)}
-        <div id="cmCamps"></div>
-        <div id="cmFind"></div>
-        <div id="cmViews"></div>
-        <div id="cmCheck"></div>
-        <div id="cmQuery"></div>
-        <div id="cmPaint"></div>
-        <div id="cmMarks"></div>
-        <div id="cmEvents"></div>
+        ${cmapTabsHtml()}
+        <div class="cmbody" id="cmBody">
+          ${CMAP_TABS.map(t => `<div class="cmgroup" id="cmg_${t.id}"${
+            c.tab === t.id && !c.hid ? '' : ' hidden'}>${
+            t.panels.map(id => id === 'cmFindings'
+              ? `<div id="cmFindings">${cmapFindingsHtml(m.findings)}</div>`
+              : `<div class="${CMAP_SIDE_CLASS[id] || ''}" id="${id}"></div>`
+            ).join('')}</div>`).join('')}
+        </div>
         <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
-        <div class="cmpick" id="cmPick"></div>
-        <div id="cmDel"></div>
-        <div class="cmsettle" id="cmSettle"></div>
-        <div id="cmForts"></div>
-        <div class="cmchars" id="cmChars"></div>
-        <div class="cmcamp" id="cmCamp"></div>
-        <div class="cmmodels" id="cmModels"></div>
       </div>
     </div>`;
   cmapWire();
@@ -1143,6 +1352,35 @@ function cmapWireCanvas(){
 function cmapWire(){
   cmapWireCanvas();
   cmapWireLayers();
+  cmapWireSplit();
+}
+
+/* 28a: the column's left edge drags, and the width is remembered.
+
+   `splitInstall` is already a left-edge drag on a right-hand panel with a saved
+   width, a floor on both sides and a double-click back to the default - the 3D
+   dock and the BMDB browser are the other two callers. This is a third caller
+   and not a second implementation, which is why the drag behaves the same on
+   all three screens.
+
+   Re-installed on every render because the markup is rebuilt wholesale and the
+   bar is a fresh element each time; `splitInstall` is written for exactly that.
+   Skipped while the column is collapsed, since a rail has nothing to drag. */
+function cmapWireSplit(){
+  const c = state.cmap;
+  const split = document.querySelector('.cmwrap');
+  const side = document.getElementById('cmSide');
+  if(!split || !side) return;
+  const bar = split.querySelector(':scope > .splitbar');
+  // Two states size themselves and an inline flex would beat the class that
+  // does it: the rail, and 16d's Code View at `.cmside.wide`. Same fix and the
+  // same reason as `edPrevMin` in editor.js.
+  if(c && (c.hid || side.classList.contains('wide'))){
+    if(bar) bar.remove();
+    side.style.flex = '';
+    return;
+  }
+  splitInstall(split, side, CMAP_SIDE_KEY, CMAP_SIDE_DEF);
 }
 
 //: The layer list's own handlers. Re-run every time that markup is rebuilt,
@@ -2585,6 +2823,10 @@ async function cmapPick(tile){
   cmapOutline(r);
   cmapPaint();
   cmapPickPaint();
+  // 28a: this click has just filled #cmPick, and #cmSettle, #cmChars and
+  // #cmForts below - all four are the Province tab, and a click that fills a
+  // panel nobody can see is the one way the strip is worse than the stack
+  cmapSurface('cmPick');
   // 22a: the forts panel lists the picked province's, and opens the one the
   // click landed on
   if(typeof cftPicked === 'function') cftPicked(c.pick);
@@ -2666,7 +2908,10 @@ function cmapPickPaint(){
   el.innerHTML = cmapProbeHtml() + cmapRegionHtml();
   const c = state.cmap;
   const side = document.getElementById('cmSide');
-  if(side) side.classList.toggle('wide', !!(c.det && c.det.cv));
+  if(side){
+    side.classList.toggle('wide', !!(c.det && c.det.cv));
+    cmapWireSplit();     // 28a: `.wide` and the dragged width cannot both size it
+  }
   if(c.det && c.det.cv){
     cvWire(c.det.cv);
     cvBindHover(c.det.cv, document.getElementById('cmGui'));

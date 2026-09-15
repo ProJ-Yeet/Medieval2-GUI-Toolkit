@@ -169,7 +169,9 @@ function cftPicked(tile){
   if(!k || !c || !k.open || !k.d || !tile || cftDirty()){ cftPaint(); return; }
   const gx = tile[0], gy = c.man.height - 1 - tile[1];
   const r = k.d.rows.find(x => x.x === gx && x.y === gy);
-  if(r){ k.all = false; cftSelect(r); }
+  // 28a: a click that landed on a fort has filled #cmForts, so its tab
+  // surfaces the same way a province's does
+  if(r){ k.all = false; cftSelect(r); if(typeof cmapSurface === 'function') cmapSurface('cmForts'); }
   else if(k.w && !k.adding){ k.sel = null; k.w = null; k.preview = null; }
   cftPaint();
 }
