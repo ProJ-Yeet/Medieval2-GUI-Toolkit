@@ -253,7 +253,17 @@ def climates(mod) -> List[dict]:
                 order.append(name)
 
     blocks: Dict[str, dict] = {}
-    for bm in re.finditer(r"^\s*climate\s+(\S+)\s*\{(.*?)^\s*\}", text, re.S | re.M):
+    # 34: the comment a modder may put after the header is skipped rather than
+    # taken as the start of the block's body, which is what it was before. No
+    # installed mod annotates this file - but every one of Divide and Conquer's
+    # thirteen blocks in descr_aerial_map_ground_types.txt is annotated exactly
+    # that way, so the habit is real and the two files are edited together. The
+    # cost of not skipping it is not a missing name in a list: the block is
+    # dropped whole, so a declared climate reads as undeclared, and
+    # :mod:`unittransfer.climatenew` would offer to add one that is already
+    # there and then overwrite it.
+    for bm in re.finditer(r"^[ \t]*climate[ \t]+(\S+)[ \t]*(?:;[^\n]*)?\s*"
+                          r"\{(.*?)^[ \t]*\}", text, re.S | re.M):
         name, body = bm.group(1), bm.group(2)
         cm = re.search(r"^\s*colour\s+(\d+)\s+(\d+)\s+(\d+)", body, re.M)
         hm = re.search(r"^\s*heat\s+(\d+)", body, re.M)

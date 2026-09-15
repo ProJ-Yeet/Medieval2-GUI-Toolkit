@@ -398,7 +398,7 @@ change, so no cross-reference dangles.
 | **3.0.0** | 16a-16k, plus 17 | The campaign map editor, and the correction pass over it. Feature-complete and uncut. |
 | **3.1.0** | 18-21 | The twenty Now items: the campaign files that had no editor, the names nothing could follow, and the map screen's second pass. |
 | **3.2.0** | 22-24 | The seven Next items: placing things on the map, a map that looks like the campaign map, and making or unmaking a region or a campaign. |
-| next, block one | ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~, ~~43~~, ~~28a~~, ~~28b~~, ~~33~~, ~~30~~, 34, 35, 36, 37a, 37b, 38 | **The campaign map.** Six sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12; 43, 28a, 28b, 33 and 30 on 2026-09-15. |
+| next, block one | ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~, ~~43~~, ~~28a~~, ~~28b~~, ~~33~~, ~~30~~, ~~34~~, 35, 36, 37a, 37b, 38 | **The campaign map.** Five sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12; 43, 28a, 28b, 33, 30 and 34 on 2026-09-15. |
 | next, block two | 32a, 32b, 32c, 39 | **The mercenaries.** Four sessions. Beta except 39, which is both lines. |
 | after block two | 44, 45, 46, 47a, 47b, 48 | **The reference-tool pass of 2026-09-13.** Six sessions, every one a subrelease on both lines. Outside both blocks, and scheduled only because the user named the work. |
 | after that | the Future roadmap list | Rated and unscheduled. Three five-star items lead it: M17, M12 and M16. |
@@ -770,7 +770,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~8~~ | ~~**28b** The toolbar over the canvas, and a steady tooltip~~ | M | beta | **done 2026-09-15** |
 | ~~9~~ | ~~**33** T10, G2 and G4 in one session~~ | S x3 | beta | **done 2026-09-15** |
 | ~~10~~ | ~~**30** A missing texture without the pink~~ | S | beta | **done 2026-09-15** |
-| 11 | **34** Add a climate zone | M | beta | 5 |
+| ~~11~~ | ~~**34** Add a climate zone~~ | M | beta | **done 2026-09-15** |
 | 12 | **35** Rebels right in place | M | beta | 5 |
 | 13 | **36** D1, change a region's colour | M | beta | 5 |
 | 14 | **37a** T7, the spawn export | M | beta | 5 |
@@ -1471,26 +1471,112 @@ All three are on the map screen and all three are beta line.
 banked in one sitting is the cheapest five-star work on the whole list, and it
 clears three rows out of the future list for good.
 
-## Phase 34 - Add a climate zone
+## Phase 34 - Add a climate zone - **done 2026-09-15**
 
-Every file is already parsed and the brush already paints the layer:
-`map_climates.tga`, `descr_climates.txt` and
-`descr_aerial_map_ground_types.txt`. **What is missing is the operation**, and
-the archive has a tutorial for it that names exactly those files plus
-`map_ground_types.tga`.
+**The scoping was right about the files and wrong about the operation.** Every
+file was already parsed and the brush already painted the layer, and what was
+missing was indeed the operation; the archive tutorial it names -
+Bella's *How-To: Add a New Climate Zone*, 2007 - does name exactly
+`map_climates.tga`, `descr_climates.txt`, `descr_aerial_map_ground_types.txt`
+and `map_ground_types.tga`. What the write-up did not have is that **the
+tutorial's own thread withdraws its central claim**, and that the installed mods
+agree with the thread rather than with the how-to.
 
-Declaring a climate is three writes that have to agree or the map is wrong in a
-way nothing reports: a name and its parameters in `descr_climates.txt`, a
-colour in `map_climates.tga` that `mapvocab` can then name, and a texture for
-every ground type it pairs with, **in both seasons**, in
-`descr_aerial_map_ground_types.txt`. 23b's `season_gaps` already judges both
-seasons, so the check exists; what does not exist is anything that creates the
-three together.
+**A climate is a slot, not a thirteenth name.** Eighteen posts and two years
+after the tutorial, wilddog writes that a climate the engine does not already
+know by name is not read by `descr_geography_new.txt`, that the exe looks to be
+hard coded to those names, and that the answer is to amend an existing one
+"including the unused1 and unused2 names". Measured here, that is not one
+modder's opinion:
 
-**This is where Phase 30 pays for itself.** A climate declared without its
-textures is pink across every tile that uses it, which is the largest pink
-anyone will ever produce here, and it is produced by the one operation this
-phase adds. Do 30 first so the gap is legible rather than alarming.
+* **All four installed mods declare exactly twelve climates, and they are the
+  same twelve in the same order** - `mediterranean`, `sandy_desert`,
+  `rocky_desert`, `unused1`, `steppe`, `temperate_deciduous_forest`,
+  `temperate_coniferous_forest`, `unused2`, `highland`, `alpine`, `tropical`,
+  `semi_arid`. Not one added a thirteenth.
+* **Divide and Conquer took a slot over rather than adding a name.** It has a
+  wholly custom 248,370-tile map, and it paints `unused1` on **18,970 tiles**
+  and `unused2` on **192**, calling them Harondor and Lorien in
+  `text/climates.txt`. Reforged did the same: 5,466 and 182. So the operation
+  this phase adds is the one both big mods performed by hand.
+* **`descr_geography_new.txt` gives a block to the twelve and to nothing else.**
+  Vanilla Redux is the one mod here that ships the text file rather than only
+  the compiled `.db`, and it has fifteen top-level blocks: three settings
+  sections and the twelve climates, four as a bare name and eight as
+  `<name> modifies <base>`. That file is the ceiling, and it is why the battle
+  map is where a new name stops.
+
+So **taking a slot over is the offered operation and adding a name is offered
+second**, with the geography file named as the reason it is second. Both are
+real - the strat map draws a new name perfectly well, which is why the tutorial
+worked for its author - and the refusal is a warning rather than an error,
+because this cannot see inside a `.pack` and three of the four mods ship only
+the compiled geography.
+
+**Four writes that have to agree, and `map_climates.tga` is not one of them.**
+`descr_climates.txt` (the list fixes the index, the block carries colour, heat
+and winter), `descr_aerial_map_ground_types.txt` (a texture for every ground
+type in **both** seasons), `text/climates.txt` (UTF-16, or the `.strings.bin`
+when a mod ships only the compiled copy - two of the four do), and
+`descr_climates_lookup.txt` when the mod has one. **Painting is the brush's**:
+28b's ruling is that a control which is not the brush does not start a paint
+session, so this writes the colour and the brush writes the pixels.
+
+**A take-over keeps its place in the list and an add goes on the end of both.**
+The list is the index the engine reads, so moving a name in it renumbers every
+climate after the move - 36's lesson about region colours, arriving a file
+early. A take-over therefore rewrites its block where it stands and touches the
+list not at all.
+
+**Three things the scoping did not have.**
+
+**One: the lookup file is already wrong in the wild, and it is the tutorial's
+fault.** Its step 4 prints a lookup list containing `volcanic` while its step 3
+prints a `climates { }` block that does not, and **Third Age Reforged and
+Vanilla Redux both ship exactly that** - thirteen names in the lookup, twelve
+declared, the extra one `volcanic`. Divide and Conquer's twelve match;
+`vanilla_kingdoms_uncompromised` has no lookup file at all. All four states are
+reported and none is repaired, because a name the engine may be indexing by is
+not something to tidy silently.
+
+**Two: a take-over strands the tiles its old colour is on, and the number is
+worth saying.** Change `unused2`'s colour on Divide and Conquer and 192 tiles
+are still painted the old one, which nothing declares any more, so they fall
+through to the `default` block until they are repainted. `claimed_tiles` and
+`orphan_tiles` are two counts because they answer two questions, and the plan
+says both.
+
+**Three: the ground types in a new block are the mod's own, not a constant.**
+Every installed mod is internally consistent - one key set across all of its
+blocks - and the set is **not the same everywhere**: three mods name sixteen
+ground types and Vanilla Redux names seventeen, the extra one
+`impassable_shrouded`. A block written to a table here would be a line short on
+one mod in four.
+
+**And one defect found on the way, in `mapvocab` rather than in this.** Its
+climate-block regex was `climate <name>` followed by whitespace and a brace, so
+**a comment after the header dropped the whole block** and a declared climate
+read as undeclared. No installed mod annotates `descr_climates.txt` - but every
+one of Divide and Conquer's thirteen blocks in
+`descr_aerial_map_ground_types.txt` is annotated exactly that way, so the habit
+is real and the two files are edited together. It mattered here and not before
+because `climatenew`'s own block finder *does* skip the comment: the panel would
+have offered to add a climate that was already there and then overwritten it.
+Fixed in `mapvocab.climates`; all four mods read identically before and after.
+
+**New:** `unittransfer/climatenew.py` (`lookup_names`, `lookup_state`,
+`geography`, `climate_tiles`, `slots`, `ground_keys`, `donors`,
+`climate_block`, `write_climates`, `aerial_block`, `write_aerial`,
+`write_lookup`, `ClimatePlan`, `plan`, `apply`, `view`, `VANILLA_ORDER`,
+`SPARE`, `GEOG_SETTINGS`), `GET /api/map/climates`,
+`POST /api/map/climate_plan|_apply`, `web/js/climates.js`, `#cmClim` in the
+Paint tab, the `.cclslots` grid. `tests/test_climatenew.py` (110).
+
+**The route is ahead of the map read**, beside `/api/map/campaigns` and for the
+same reason: a climate is declared in four text files under `data/` and not one
+of them is a map layer. The layer is read for the tile counts alone, so it is
+asked for and never required - which is also the only reason the suite's little
+mod, which has no layers at all, can exercise the route end to end.
 
 ## Phase 35 - Rebels right in place: province and rebel faction, both ways
 

@@ -138,8 +138,10 @@ const CMAP_TABS = [
         + 'rules, the baseline and the filters'},
   {id: 'query', label: 'Query', icon: '⌕', panels: ['cmQuery'],
    title: 'Ask the map a question and colour the provinces by the answer'},
-  {id: 'paint', label: 'Paint', icon: '✎', panels: ['cmPaint', 'cmMarks', 'cmEvents'],
-   title: 'The brush and its palette, the markers layer, and the campaign events'},
+  {id: 'paint', label: 'Paint', icon: '✎',
+   panels: ['cmPaint', 'cmClim', 'cmMarks', 'cmEvents'],
+   title: 'The brush and its palette, the climates it paints with, the markers '
+        + 'layer, and the campaign events'},
   {id: 'place', label: 'Province', icon: '◉',
    panels: ['cmPick', 'cmSettle', 'cmChars', 'cmForts', 'cmDel'],
    title: 'What is on the tile you clicked: its record, its settlement, its '
@@ -969,6 +971,7 @@ back from the collapsed state.">›</button>
   cchkOpen();
   cqOpen();
   cpaintOpen();
+  cclOpen();          // 34, and it reads nothing until somebody opens it
   cmkOpen();          // 17d, and it reads nothing until the layer is ticked
   cevOpen();          // 18b, and it reads its two files only once opened
   cftOpen();          // 22a, and it reads nothing until somebody opens it

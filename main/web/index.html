@@ -897,6 +897,28 @@
   .cmseg button + button{border-left:1px solid var(--edge)}
   .cmseg button.on{background:var(--accent);color:#10131a;font-weight:600}
   .cmseg button:disabled{opacity:.4;cursor:default}
+  /* 34: the twelve slots. A grid of two rather than a list of twelve, because
+     the panel's first question is WHICH ONE and a column of twelve rows is a
+     scroll before it is a choice. The swatch is the whole point of the row -
+     a climate is a colour - so it leads, and the tile count follows the name
+     because that is what says whether a slot is really free. */
+  .cclslots{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:6px 0}
+  .cclslot{display:flex;align-items:center;gap:6px;text-align:left;
+    padding:5px 7px;border:1px solid var(--edge);border-radius:6px;
+    background:var(--panel2);min-width:0}
+  .cclslot:hover{border-color:var(--accent2)}
+  .cclslot.on{border-color:var(--accent);background:rgba(200,164,92,.13)}
+  .cclslot.spare .cclnm{color:var(--accent)}
+  .cclsw{width:15px;height:15px;flex:0 0 15px;border-radius:3px;
+    border:1px solid rgba(0,0,0,.55)}
+  .cclnm{font-weight:600;font-size:12px;overflow-wrap:anywhere;min-width:0}
+  .cclfree{font-weight:400;font-size:10px;color:var(--dim);margin-left:5px;
+    padding:0 4px;border:1px solid var(--edge);border-radius:3px}
+  .cclslot .count{margin-left:auto;white-space:nowrap;font-size:10px}
+  .cclform{border-top:1px solid var(--edge);margin-top:8px;padding-top:7px}
+  .cclform input[type=color]{width:30px;height:20px;padding:0;border-radius:4px;
+    border:1px solid var(--edge);background:none;cursor:pointer}
+  @media (max-width:520px){.cclslots{grid-template-columns:1fr}}
   .cmpick .cmcard{border:1px solid var(--edge);border-radius:7px;padding:9px 10px;
     background:var(--panel2);margin-top:5px}
   .cmcard .nm{display:flex;align-items:center;gap:7px;font-weight:600;
@@ -2702,6 +2724,7 @@
 <script src="js/stratview.js"></script>
 <script src="js/campevents.js"></script>
 <script src="js/campforts.js"></script>
+<script src="js/climates.js"></script>
 <script src="js/regiondel.js"></script>
 <script src="js/campnew.js"></script>
 <script src="js/facaudit.js"></script>

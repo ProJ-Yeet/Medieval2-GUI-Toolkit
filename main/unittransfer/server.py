@@ -244,6 +244,19 @@ show the unsaved map rather than the one on disk.
   POST /api/map/paint_undo|_redo -> one step of the unlimited stack
   POST /api/map/paint_state      -> what is unsaved, without changing anything
   POST /api/map/paint_discard    -> throw the session away and re-read the disk
+  GET  /api/map/climates?mod=&campaign=
+                                 -> 34. Every climate this mod declares as a
+                                    slot - its colour, its tiles, whether it
+                                    has a texture block and whether the battle
+                                    map knows its name - plus the donors, the
+                                    two spare names and the state of the lookup
+  POST /api/map/climate_plan|_apply
+                                 -> declare one climate across the four files
+                                    that have to agree: descr_climates.txt,
+                                    descr_aerial_map_ground_types.txt,
+                                    text/climates.txt and the lookup list.
+                                    map_climates.tga is the brush's and is not
+                                    written here
   GET  /api/map/region_delete?mod=&name=&campaign=
                                  -> 24, G1. What deleting this province would
                                     have to reach: the neighbours that could
@@ -508,7 +521,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campevents, campfiles, campmap, campnew, campstrat, cas, guilds, mapcheck, mapquery, mapterrain, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, renames, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campevents, campfiles, campmap, campnew, campstrat, cas, climatenew, guilds, mapcheck, mapquery, mapterrain, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, renames, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2289,6 +2302,9 @@ class Handler(BaseHTTPRequestHandler):
                           "/api/map/region_delete_apply"):
                 return self._json(self._region_delete(
                     u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/map/climate_plan", "/api/map/climate_apply"):
+                return self._json(self._climate(
+                    u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/campnew/plan", "/api/campnew/apply"):
                 return self._json(self._campnew(
                     u.path.rsplit("/", 1)[-1], body))
@@ -2989,6 +3005,45 @@ class Handler(BaseHTTPRequestHandler):
             return {"error": str(e), "plan": plan.payload()}
         campaint.drop(name)                  # its map object is now the old one
         self.registry.invalidate(name)       # the files changed on disk
+        return out
+
+    # ---- a climate declared (34) ----
+    def _climate(self, action, body):
+        """Preview or write one climate across the four files that declare it.
+
+        The map object is only ever read here - the tile counts in the plan are
+        a census of ``map_climates.tga`` - and nothing writes a pixel, so unlike
+        the delete above there is no :func:`unittransfer.campaint.drop`. What
+        does change under the registry is the vocabulary every layer legend and
+        every probe names a climate colour out of, which is what the invalidate
+        is for.
+
+        A map that will not read is not a refusal: the plan is worked out
+        without it and the two tile counts stay at zero. That is 30's ruling -
+        a mod whose layers this cannot decode is still a mod whose text files
+        can be edited - and it is why ``cm`` is passed rather than required.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            camp = body.get("campaign") or ""
+            try:
+                cm = self.registry.map_for(name, camp)
+            except (campmap.MapError, ModDataError, OSError):
+                cm = None
+            plan = climatenew.plan(mod, cm, body)
+        except (KeyError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(climatenew.apply(plan))
+        except (ValueError, OSError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)       # the climate vocabulary moved
         return out
 
     # ---- a whole new campaign (24, M15) ----
@@ -3950,6 +4005,21 @@ class Handler(BaseHTTPRequestHandler):
             # answers for a mod whose layers will not decode, which is exactly
             # when knowing the mod has two campaigns is worth something.
             return self._json(campfiles.browse(self.registry.describe(name)))
+
+        if path == "/api/map/climates":
+            # 34. Ahead of the map read for the same reason the campaign list
+            # is: a climate is declared in four TEXT files under data/ and not
+            # one of them is a map layer. The layer is read for the tile counts
+            # alone, so it is asked for and never required - a mod whose layers
+            # will not decode still gets its twelve slots, its donors and the
+            # state of its lookup, which is the whole panel bar two numbers.
+            try:
+                ccm = self.registry.map_for(
+                    name, (q.get("campaign") or [""])[0])
+            except (campmap.MapError, ModDataError, OSError):
+                ccm = None
+            return self._json(climatenew.view(
+                self.registry.describe(name), ccm))
 
         # The campaign whose map is on the screen (22b's follow-up). A campaign
         # that ships its own map files is drawn, probed and checked on those; the

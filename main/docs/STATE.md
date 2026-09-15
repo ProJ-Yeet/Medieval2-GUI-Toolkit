@@ -2,10 +2,64 @@
 _Updated: 2026-09-15 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
 the latest beta - after the M2EX map-ceiling fix, the `replace_record` blank
 line it turned up, the two bugs a second report brought in, and **Phases 40, 31,
-42, 41, 43, 28a, 28b, 33 and 30**, all committed and **not cut**. **Releasing is on-request only**:
+42, 41, 43, 28a, 28b, 33, 30 and 34**, all committed and **not cut**. **Releasing is on-request only**:
 commit to master and stop_
 
 ## Next up
+**Phase 34 is done - a climate is a slot, not a thirteenth name, closed
+2026-09-15, beta line, committed and uncut.** The scoping was right about the
+files and wrong about the operation.
+
+**The tutorial it names withdraws its own central claim, eighteen posts later,
+and the installed mods agree with the thread rather than with the how-to.**
+wilddog: a climate the engine does not already know by name is not read by
+`descr_geography_new.txt`, the exe looks to be hard coded to those names, and
+the answer is to amend an existing one "including the unused1 and unused2
+names". Measured here that is not an opinion: **all four installed mods declare
+exactly twelve climates, the same twelve in the same order**, and not one added
+a thirteenth. **Divide and Conquer has a wholly custom 248,370-tile map and took
+a slot over** - `unused1` on 18,970 tiles and `unused2` on 192, called Harondor
+and Lorien in `text/climates.txt`. Reforged did the same at 5,466 and 182. So
+the operation this adds is the one both big mods performed by hand.
+
+**`descr_geography_new.txt` is the ceiling and it can be read on one mod.**
+Vanilla Redux is the only one here shipping the text file rather than just the
+compiled `.db`: fifteen top-level blocks, three of them settings sections and
+**twelve of them the twelve climates**, four as a bare name and eight as
+`<name> modifies <base>`. Taking a slot over is therefore offered first and a
+new name second, with that file named as the reason - as a warning, not a
+refusal, because three mods in four ship only the `.db` and the strat map draws
+a new name perfectly well.
+
+**Four writes, and `map_climates.tga` is not one of them.** The two text files,
+the UTF-16 display name (or the `.strings.bin` - two of the four have no `.txt`
+at all), and the lookup list when the mod has one. **Painting stays the
+brush's**, which is 28b's ruling: what this writes is the colour the brush can
+then use.
+
+**Three facts the write-up did not have.** The lookup file is **already wrong in
+the wild and it is the tutorial's fault** - its step 4 prints `volcanic` in the
+lookup while its step 3 leaves it out of the declared list, and Reforged and
+Vanilla Redux ship exactly that; reported, never repaired. A take-over
+**strands** the tiles its old colour is on and the count is said out loud, which
+is why `claimed_tiles` and `orphan_tiles` are two numbers. And the ground types
+in a new block are **the mod's own**: three mods name sixteen and Vanilla Redux
+names seventeen, the extra one `impassable_shrouded`, so a constant would be a
+line short on one mod in four.
+
+**One defect found on the way, and it is in `mapvocab` rather than in this.**
+The climate-block regex took `climate <name>` followed by whitespace and a
+brace, so **a comment after the header dropped the whole block** and a declared
+climate read as undeclared. No mod annotates `descr_climates.txt` - but all
+thirteen of Divide and Conquer's blocks in
+`descr_aerial_map_ground_types.txt` are annotated that way, and the two files
+are edited together. It mattered now because `climatenew`'s own block finder
+skips the comment: the panel would have offered to add a climate that was there
+and then overwritten it. All four mods read identically before and after.
+
+`tests/test_climatenew.py` **110/110**, new. Six suites re-run clean after the `mapvocab` fix and all green - `test_mapterrain` 84/84, `test_campaint` 185/185, `test_mapquery` 118/118, `test_campevents` 86/86, `test_web_modules` 75/75. `test_campmap` is 143/148 and `test_mapcheck` 104/105, both **the pre-existing failures and no others**: campmap's five are the DaC-number checks this file already records, and mapcheck's one is `every finding carries a place to go and look`, which a stashed tree produces identically. **One of those two was nearly believed wrongly** - the first sweep had `test_mapcheck` at 103/105 with the rule set taking 1085 ms against a one-second bar, and it was the dev server and a browser running beside it: 804 and 817 ms with them stopped.
+
+
 **Phase 30 is done - a missing texture without the pink, closed 2026-09-15,
 beta line, committed and uncut.** The feature is as scoped and the premise
 underneath it is now wrong.
@@ -618,6 +672,7 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | 29 + B4 - the strat model viewer | **done** | Closed 2026-09-12, committed, **released 2026-09-12** as v2.3.2 and beta 2026-09-12c. The scoping was wrong about the root and right about everything above it: the art is not in a `.pack`, it is loose beside the stub as `<name>.tga.dds`, and `cas.texture_path` took the zero-byte `.tga` because it existed. Fixed at all five levels. New: `cas._has_bytes`, `icons.ArtUnreadable`, `icons.fault`, `png_bytes(strict=)`, `/model_texture` 415, `factions.packs_beside`, `factions.no_file_note`, and in `viewer3d.js` `uCutout`, `v3Degenerate`, `v3AskWhy`, `v3TexFault`, `v3FaultRows`. `tests/test_stratart.py` (40). |
 | 41 - merge one faction's name pool | **done** | Closed 2026-09-15, committed, **not cut** (both lines when a cut happens). `merge_section` / `merge_names` / `merge_block` in `minorfiles.py`, with `merge` and `dedupe` as actions behind the module's own plan/apply. Three of Mylae's corrected, each a check: `present` is 0 whenever dedupe is off because nothing was skipped; merging nothing is refused and names the dedupe button; `settlements` is carried rather than dropped. **And the phase could not run its own suite**: `test_minorfiles` had been dying in the sweep on `Owaib Cyfeiliog`, invisible because stderr and buffered stdout interleave. `render_names` refused any name with a space and **2,513 of 34,923 names have one** (45% of all surnames, plus 90 characters and 10 women - `al Adid`, `Arigh Boke`, `Yax Kuk Mo`, `Hywel Dda`), so **58 factions across two mods could not be saved at all**. Replaced by the one real constraint in `name_fault`: a name may not BE a section keyword. The first draft relaxed it for `surnames` alone and was wrong the same way one size smaller. New: `name_fault`, `merge_section`, `merge_names`, `merge_block`, `_plan_merge`, `MinorPlan.merge`, `mfMergeOpen` and the two buttons in `minorfiles.js`, `.modal.mgwide`. `tests/test_minorfiles.py` 221/224 (was 153 green with a crash). **The three left were handed on and are done** (2026-09-15): `localised_name` is what fixes `resource_tag` for `camels`, `elephants` and `dogs`, which are keyed singular and had been showing no name at all in every mod; Kingdoms' three extra resources are dead in their own mod, which strengthens the edit-only refusal rather than disproving it. 225/225. |
 | 30 - a missing texture without the pink | **done** | Closed 2026-09-15, committed, **not cut** (beta only). New: `mapterrain.GAP_FILLS`/`GAP_DEFAULT`, a `gap` argument on `composite` and `png`, `gap_fills`/`gap_default` on `view`, `&gap=` and `|gap|<name>` in the disk-cache token on `/api/map/terrain` plus an `X-Map-Gap` header, `CMAP_GAPS`/`CMAP_GAP_LABELS` and `cmapTerrainGap` in `campmap.js`, `terrain_gap` in `cmapLayerState` and in every named view. **The write-up's premise is withdrawn**: `vanilla_kingdoms_uncompromised` ships no texture folder at all, so 159,855 tiles - all its land, 57.6% of the map - are a gap, which is the report. The thirty rows that blamed the aerial file are one row that names the folder. `test_mapterrain` 84/84 (was 72/73, and the one red was that mod), `test_web_modules` 75/75 (was 66). |
+| 34 - a climate is a slot, not a thirteenth name | **done** | Closed 2026-09-15, committed, **not cut** (beta only). New: `unittransfer/climatenew.py` (`lookup_names`, `lookup_state`, `geography`, `climate_tiles`, `slots`, `ground_keys`, `donors`, `climate_block`, `write_climates`, `aerial_block`, `write_aerial`, `write_lookup`, `ClimatePlan`, `plan`, `apply`, `view`, `VANILLA_ORDER`, `SPARE`, `GEOG_SETTINGS`), `GET /api/map/climates`, `POST /api/map/climate_plan|_apply`, `web/js/climates.js`, `#cmClim` in the Paint tab, the `.cclslots` grid. **The scoping was right about the files and wrong about the operation**: its tutorial's own thread withdraws the how-to eighteen posts later, and **all four installed mods declare exactly the twelve climates the engine ships, in the engine's order, and not one added a thirteenth**. Divide and Conquer has a custom 248,370-tile map and took `unused1` (18,970 tiles, "Harondor") and `unused2` (192, "Lorien") over instead; Reforged did the same at 5,466 and 182. `descr_geography_new.txt` is the ceiling and Vanilla Redux is the one mod shipping the readable copy: fifteen top-level blocks, three settings and **twelve climates**. So a take-over is offered first and a new name second, as a warning rather than a refusal. Four writes and **`map_climates.tga` is not one of them** - painting stays the brush's (28b). Three facts the write-up lacked: the lookup file is **already wrong in the wild and it is the tutorial's fault** (its step 4 prints `volcanic`, its step 3 does not; Reforged and Vanilla Redux ship exactly that), a take-over **strands** the tiles its old colour is on, and the ground types in a new block are the mod's own (16 on three mods, 17 on Vanilla Redux with `impassable_shrouded`). **One defect found on the way, in `mapvocab`**: its climate-block regex dropped any block whose header carried a trailing comment, so a declared climate read as undeclared - harmless until now because `climatenew`'s own finder skips the comment, which would have made the panel offer to add a climate that was already there and then overwrite it. All four mods read identically before and after. `tests/test_climatenew.py` 110/110, new. Every other suite touched is green and the two that are not - `test_campmap` 143/148, `test_mapcheck` 104/105 - carry their pre-existing failures and no others, confirmed against a stashed tree. |
 | 33 - T10, G2 and G4 in one session | **done** | Closed 2026-09-15, committed, **not cut** (beta only). New: `cmapCopyText`/`cmapCopyTile` and the `c` key, `mapquery.set_music_region`/`music_view`, `campfiles._plan_music` and a fourth `what`, `namekeys.ROW_WHAT` and a legion row in `region_names`, `cmapMusicHtml`/`Set`/`Save` and `CMAP_NAME_ROWS` in `campmap.js`, `out["music"]` on the region route. Measured: the copy form is vanilla's own `x 109, y 147` and it is the game y; a music move changes exactly two lines; 58 provinces of `vanilla_kingdoms_uncompromised` are under two music types and 2 of Vanilla Redux are named twice inside one; DaC writes 199 legion lines of which only 80 name their own record, and 115 of its 116 distinct legion keys have a names line - the one that does not is `Thorenhad_Province` on `Suduri_Province`. `test_web_modules` 66/66, `test_campfiles` 101/101, `test_mapquery` 118/118. |
 | 28b - the toolbar over the canvas, and a steady tooltip | **done** | Closed 2026-09-15, committed, **not cut** (beta only). `.cmbar` is two rows; `#cmPaintBar` carries the arm button, the five tools, the size and shape and the target layer, and the panel keeps the palette, the wizard, undo/redo and the save. New: `cpaintBarHtml`, `cpaintBarPaint`, `cpaintSizeHtml`, `cpaintWaterHtml`, `cpaintToolName`, `cpaintRowOpen`, `cpaintRowToggle`, `cpaintWireIn` (was `cpaintWire`), `CMAP_TIP_MARKS`, `paint_row` in `cmapLayerState`. The tooltip's frame is fixed on all five counts - the fifth, `.count` at 11px under `align-items:baseline`, was not in the write-up and was the last pixel. Six probes: same 320px width, same 246px height, same ten row positions. `tests/test_web_modules.py` 54/54 (was 34). |
 | 28a - the strip, and the groups behind it | **done** | Closed 2026-09-15, committed, **not cut** (beta only). `CMAP_TABS` groups sixteen panels behind six tabs with Validate one of them; `#cmLayers` is in none and the suite says so. New in `campmap.js`: `CMAP_TABS`, `CMAP_SIDE_CLASS`, `CMAP_SIDE_KEY`, `cmapTabOf`, `cmapTabsHtml`, `cmapTabBadge`, `cmapRailHtml`, `cmapTab`, `cmapSurface`, `cmapSidePaint`, `cmapSideCollapse`, `cmapWireSplit`; `tab`, `side_hid` and `side_px` in `cmapLayerState`, so a named view carries them and `cmapResetView` puts them back. The drag is `splitInstall`'s, a third caller. **Three things the scoping did not have:** the layer stack has to be capped (794px on DaC would take the whole column), `.cmside.wide` and an inline drag width cannot both size it (`edPrevMin`'s problem again), and "switched to, once" means once per map rather than once per manual pick. `tests/test_web_modules.py` 34/34 (was 22). |
@@ -625,7 +680,7 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | 42 - the art a clone does not get | **done** | Closed 2026-09-14, committed, **not cut** (both lines when a cut happens). The copier was never at fault and the re-measurement held; what was missing was a sentence. `ART_PLACES` is the nine places a faction's art lives, `art_gaps` names every one the clone came away from empty-handed with one of four reasons - the donor has none either, the destination already exists, a longer-named faction owns the name, the mod has no such folder. The old whole-scan warning fires only when the scan is completely empty, which on a real mod it never is. **121 donor slots swept over four mods: 253 empty places, 50 clean donors, and all 253 the same reason.** Not one of Reforged's 30 factions fills every place; `vanilla_kingdoms_uncompromised` is worst at 146. The scoping was wrong about one fact: Reforged's `fe_symbols_80` is **empty**, and the 17 vanilla-named files in it are DaC's. New: `ArtPlace`, `ART_PLACES`, `art_gaps`, `_asset_hits(skips=)`, `ClonePlan.art`, `payload()["art_gaps"]`, the `.fcgap` rows in `factions.js` and the places named in the apply confirm. `tests/test_factionclone.py` 74/74 (was 64), `tests/test_factionclone_apply.py` 39/39 (was 30). **Open:** the reporter's own mod is still unknown, so the end-to-end reproduction against the report itself was not done. |
 | 31 - two river rules and a ford in the sea | **done** | Closed 2026-09-13, committed, **not cut** (beta only). Three rules and one repair: `river.fourway` (river on all four sides), `river.no_source` (a four-connected component with no white source), `feature.ford_in_sea` (own altitude sea **and** four neighbours sea - the second half the scoping did not have, and without it the message and the repair are not true). All three find **nothing on any of the five installed maps**, which is what they are for. `ford_none` is the one repair with a safe answer; the other two need the map author's intent or `map_heights.tga`, and both refusals are written into `FIXES`. New: `_r_river_fourway`, `_r_river_no_source`, `_r_ford_in_sea`, `_plan_fords`, `FIXES["ford_none"]`. The three existing river fixtures painted sourceless courses and now paint their source. No web change - the panel is data-driven off `RULES` and `rep.fixes`. `tests/test_mapcheck.py` 104/105. |
 | 40 - the new province the engine cannot read | **done** | Closed 2026-09-13, committed, **not cut** (both lines when a cut happens). Four defects, one of them the scoped one. `campaint.new_record_lines` and `campmap.render_block` both produced the eight-line record, the second by dropping the line when the last resource was cleared; both write `none` now, which is what vanilla writes on 18 of 112, Vanilla Redux on 78 of 252 and `vanilla_kingdoms_uncompromised` on all 853. `none` read as a resource name was 931 false findings across two mods. And the indent reading lost DaC's ` Erebor_Province` to a stray leading space - **200 regions read as 199**, 517 painted tiles declared nowhere, and its settlement marker written into the source and a test as DaC's one orphan. New: `campmap.file_shape`, `campmap._resplit_runs`, `check_record(rec, vocab, shape)`, a `parse_block` retry for an indented name line. The inferred engine crash is **withdrawn**: DaC ships a short record and plays. `tests/test_campaint.py` 4c and 4d (185), `tests/test_campmap.py` 1 (+7), `tests/test_campedit.py` (139). |
-| 28-43 - the rest of the 2026-09-12 review | **scoped** | Ten sessions in two blocks, 40, 31, 42, 41, 43, 28a, 28b, 33 and 30 having closed. **Block one, the campaign map:** 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
+| 28-43 - the rest of the 2026-09-12 review | **scoped** | Ten sessions in two blocks, 40, 31, 42, 41, 43, 28a, 28b, 33, 30 and 34 having closed. **Block one, the campaign map:** 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
 | 44-48 - the pass over Mylae's non-map screens | **scoped** | Six sessions, added 2026-09-13 at the user's request, in neither block and every one a subrelease on both lines. 44 the EDB's tree checked (his is the one validator he has and we do not), 45 the `hidden_resources` line, 46 cultures on a mode of its own with a four-tab form and the faction form on the same strip, 47a the six `export_descr_sounds_*` files on `sounds.py`'s own parser, 47b the 32 `descr_sounds_*` scripts on a grammar nothing here reads, 48 add and remove on the strings screen. Two of the seven things asked for produced no phase and a measurement instead: his traits and ancillaries have not moved since 2026-03-27, and his `.strings.bin` codec is wrong where ours is right. |
 | 24 - Make and unmake | done | Closed 2026-09-12, committed, **released 2026-09-12**. Closes G1, M15 and the roadmap. Deleting a province, with its land going whole to a neighbour it borders and its name coming out of every file 19b measured - and the campaign script listed, never written, for the reason a rename gives. Making a campaign, as a copy of one that works minus the compiled map, with its own header and its own menu keys. New: `unittransfer/regiondel.py` (`heirs`, `campaigns_reading`, `standing_on`, `plan`, `apply`, `view`), `unittransfer/campnew.py` (`sources`, `plan`, `apply`, `view`), `mapquery.drop_music_region`, `renames.mentions`, `campfiles.write_descriptions`, `GET /api/map/region_delete`, `POST /api/map/region_delete_plan\|_apply`, `GET /api/campnew`, `POST /api/campnew/plan\|apply`, `web/js/regiondel.js`, `web/js/campnew.js`. `tests/test_regiondel.py` (62), `tests/test_campnew.py` (52). |
 | B2-B3 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export. B4 went out inside 29. |
@@ -634,6 +689,17 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | 16-23 | done | Every write-up is in `ROADMAP_ARCHIVE.md`. 16-20a published on the beta line; everything from 20b to 24 went out in the 2026-09-12 cut. |
 ## In-progress detail
 **Clean.** Nothing is mid-flight.
+
+**34's own re-run is worth keeping as a method note.** The first sweep put
+`test_mapcheck` at 103/105 and the extra red was *the whole rule set runs in
+1085 ms, under the one-second bar* - a timing check, failed because the dev
+server and a browser were running beside the suite while the phase was being
+verified in the preview. Stopped, it is 804 and 817 ms over two runs and the
+suite is 104/105, which is the number this file already had. **A stashed tree
+gave the same 104/105 and the same single failure by name**, so nothing
+regressed. The lesson is the one 41 left about buffered output, one layer up:
+a red that is a *measurement* has to be re-measured on a quiet machine before it
+is read as a change.
 
 **Phase 41's suite is 221/224 and the three left are the resources tab's, not
 41's** - see its row below. It is worth knowing WHY they were invisible until
@@ -843,6 +909,13 @@ the edits out from under it (21 did it once; see the archive).
   reads.** What a copy of a campaign gets wrong on its own is three things and
   they are all in one place: the compiled `map.rwm`, the `campaign <name>`
   header, and 18a's menu keys being built from the folder name.
+- `unittransfer/climatenew.py` - **before adding anything to a file the engine
+  indexes by position, and before believing a modding tutorial.** The twelve
+  climates are a ceiling `descr_geography_new.txt` enforces by name, so a
+  climate is a slot taken over and not a thirteenth entry; `VANILLA_ORDER` and
+  `SPARE` are the measured list, and `GEOG_SETTINGS` is the three blocks in that
+  file which are not climates. It is also where the rule lives that a declared
+  list is never reordered, because the order IS the index.
 - `unittransfer/mapsnap.py` - before writing any rule about where something may
   stand. The search is there; hand it the rule and put `near` on the finding.
 - `unittransfer/stratobj.py` - one writer for every one-line thing on the map.
