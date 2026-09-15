@@ -183,6 +183,9 @@ function cvwPlan(man, preset){
           && CMAP_TABS.some(t => t.id === p.tab)) ? p.tab : '',
     sideHid: !!p.side_hid,
     sidePx: +p.side_px > 0 ? +p.side_px : 0,
+    //: 28b. A preset saved before it opens with the row showing, which is what
+    //: that view looked like when it was saved.
+    paintRow: p.paint_row !== false,
     theme: p.theme || '',
     themeOpacity: typeof p.theme_opacity === 'number' ? p.theme_opacity : 0.85,
     themeBorders: p.theme_borders !== false,
@@ -230,7 +233,9 @@ function cvwLoad(i){
   if(plan.tab) c.tab = plan.tab;
   c.hid = plan.sideHid;
   if(plan.sidePx) state.settings[CMAP_SIDE_KEY] = plan.sidePx;
+  cmapSettings().paint_row = plan.paintRow;          // 28b
   cmapSidePaint();
+  if(typeof cpaintBarPaint === 'function') cpaintBarPaint();
   for(const code of c.order) if(c.layers[code].img) cmapMask(c, code);
   cmapCompose(); cmapPaint(); cmapSaveLayers(); cmapRepanel();
   cmapLoadLayers();

@@ -385,6 +385,9 @@ function cmapLayerState(){
      looked like when it was saved. */
   m.tab = c.tab;
   m.side_hid = !!c.hid;
+  // 28b: whether the toolbar's paint row is showing. A habit like the rest -
+  // arming the brush is not, so `p.on` stays out of here and out of every view.
+  m.paint_row = typeof cpaintRowOpen === 'function' ? cpaintRowOpen() : true;
   m.side_px = +(state.settings && state.settings[CMAP_SIDE_KEY]) || 0;
   return m;
 }
@@ -446,6 +449,7 @@ function cmapResetView(){
   // 28a: the strip's three habits are habits like the rest, so the one way
   // back puts them back - first tab, column open, default width
   c.tab = CMAP_TABS[0].id; c.hid = false; c.fresh = {}; c.autoSwitched = false;
+  cmapSettings().paint_row = true;            // 28b
   state.settings[CMAP_SIDE_KEY] = 0;
   api.post('/api/settings', {[CMAP_SIDE_KEY]: 0}).catch(() => {});
   // the pictures are kept, not thrown away: they are a megabyte each that the
@@ -872,6 +876,7 @@ function renderCampmap(){
       <div class="cmstage" id="cmStage">
         <canvas id="cmCanvas"></canvas>
         <div class="cmbar" id="cmBar">
+          <div class="cmbarrow">
           <button onclick="cmapFit()" title="Fit the whole map (Shift+0).
 The bare number keys tick a layer - 1 to 0, one for each of the ten.">⤢ Fit</button>
           <button onclick="cmapZoomTo(1)"
@@ -891,7 +896,12 @@ punched colour, the terrain textures, the rivers and heights readings, names, th
 tooltip, the markers, the query panel's colouring and filters, the tab strip and
 this column's width, and the zoom.
 Saved views are kept.">↺ Reset</button>
-          <span class="count" id="cmZoom"></span>
+            <span class="count" id="cmZoom"></span>
+          </div>
+          <!-- 28b: the brush, over the map it paints. A stroke is made
+               with the eyes on the map, so the controls that make one are
+               here rather than in a panel beside it. -->
+          <div class="cmbarrow cmpaint" id="cmPaintBar"></div>
         </div>
         <div class="cmpin" id="cmPin" hidden></div>
         <div class="cmread" id="cmRead">move the pointer over the map</div>
@@ -2250,18 +2260,30 @@ function cmapLayerRgb(code, tx, ty){
   return [d[p], d[p + 1], d[p + 2]];
 }
 
+/* One layer's row, and there is always exactly one.
+
+   28b: this used to return `''` three ways - a layer the map has not got, a
+   layer whose picture has not arrived, and a tile the layer has no pixel for -
+   so the row COUNT changed as the pointer crossed a layer's edge and the panel
+   under the cursor jumped. The frame is fixed now: the manifest names ten
+   layers and the tooltip writes ten rows, each one saying what it has to say,
+   which is what the unaligned row has done since 17e.
+
+   A row with nothing to report is dim rather than absent, because "this layer
+   has no value on this tile" is an answer and a missing line is not. */
 function cmapTipRow(ly, tx, ty){
-  if(!ly.present || !ly.aligned){
-    // A layer that is missing is the side panel's news, not the pointer's; a
-    // layer that is present and the wrong shape is the classic map crash, and
-    // it is worth saying where somebody is looking.
-    if(!ly.present || !ly.problem) return '';
-    return `<div class="cmtiprow"><i class="none"></i>
-      <span class="cmtipk">${esc(ly.label)}</span>
-      <span class="w-bad">${esc(ly.problem)}</span></div>`;
-  }
+  const none = why => `<div class="cmtiprow"><i class="none"></i>
+    <span class="cmtipk">${esc(ly.label)}</span>
+    <span class="cmtipv count">${why}</span></div>`;
+  if(!ly.present) return none('not in this map');
+  if(!ly.aligned) return `<div class="cmtiprow"><i class="none"></i>
+    <span class="cmtipk">${esc(ly.label)}</span>
+    <span class="cmtipv w-bad">${esc(ly.problem || 'the wrong size for this map')
+      }</span></div>`;
+  const L = state.cmap.layers[ly.code];
+  if(L && !L.img) return none(L.failed ? 'could not be read' : 'still reading…');
   const rgb = cmapLayerRgb(ly.code, tx, ty);
-  if(!rgb) return '';
+  if(!rgb) return none('no value here');
   const n = cmapNameColour(ly.code, rgb);
   const val = n.code
     ? `${esc(n.name)}${n.code !== n.name ? ` <span class="count">(${esc(n.code)})</span>` : ''}`
@@ -2272,46 +2294,75 @@ function cmapTipRow(ly, tx, ty){
     <span class="cmtipv">${val}</span></div>`;
 }
 
-/* The panel's contents. Region first, because it is what the map is about. */
+//: 28b: how many lines the markers block holds, always, while that layer is
+//: ticked. Three rather than six: the block is reserved whether or not this
+//: tile carries anything, so every line of it is empty space on most tiles,
+//: and the panel below it is what people are reading.
+const CMAP_TIP_MARKS = 3;
+
+/* The panel's contents. Region first, because it is what the map is about.
+
+   **The frame does not move, and 28b is the whole of why.** 17e's `.cmtiprow`
+   grid already held the label column still; four other things did not. The head
+   was none, one or two lines depending on whether the tile was a marker, a
+   province or the sea; `cmkAt` added up to seven more; a layer with no value
+   wrote no row at all; and the box was a `max-width` over a `1fr` value column,
+   so a long province name widened it. The box follows the cursor, so every one
+   of those was a jump under the hand that was moving.
+
+   Every one of them is information Mylae's tooltip does not carry - his is one
+   header line and one row per loaded layer, and it is steady because it says
+   less. So the answer is a fixed frame rather than a shorter readout: two head
+   lines whether or not there is anything to put on them, one row per layer the
+   manifest names, a markers block of a fixed height while that layer is on, and
+   a width rather than a maximum. What does not fit is clipped, because a name
+   that wraps is a box that changed height. */
 function cmapTipHtml(tx, ty){
   const c = state.cmap, m = c.man;
   const gy = m.height - 1 - ty;
   const rgb = cmapLayerRgb('regions', tx, ty);
   const n = rgb ? cmapNameColour('regions', rgb) : null;
-  let head = '';
+  let name = '<span class="count">reading the region layer…</span>', sub = '';
   if(n && (n.code === 'settlement' || n.code === 'port')){
     // 17c again: the marker belongs to the region around it, and saying which
     // is the whole difference between a readout and an answer
     const own = cmapMarkerOwner(tx, ty);
-    head = `<div class="cmtipn w-good">${esc(n.name)}</div>`
-      + (own ? `<div class="count">${esc(own.region.settlement_name
-                                        || own.region.name)} · ${esc(own.region.name)}</div>`
-             : `<div class="w-warn">no region claims this marker</div>`);
+    name = `<span class="w-good">${esc(n.name)}</span>`;
+    sub = own
+      ? `${esc(own.region.settlement_name || own.region.name)} · ${esc(own.region.name)}`
+      : '<span class="w-warn">no region claims this marker</span>';
   }else if(n && n.region && n.region.name){
     const r = n.region;
-    head = `<div class="cmtipn">${esc(r.name)}
-        ${r.id >= 0 ? `<span class="count">#${r.id}</span>` : ''}</div>`
-      + (r.settlement_name ? `<div class="count">${esc(r.settlement_name)}${
-          r.faction ? ` · ${esc(r.faction)}` : ''}</div>` : '');
+    name = `${esc(r.name)}${r.id >= 0 ? ` <span class="count">#${r.id}</span>` : ''}`;
+    sub = r.settlement_name
+      ? `${esc(r.settlement_name)}${r.faction ? ` · ${esc(r.faction)}` : ''}` : '';
   }else if(n){
     // the sea, or a colour descr_regions.txt never declares - which is a real
     // state both real maps are in, and the sentence cmapRegionName already owns
-    head = `<div class="cmtipn count">${n.region ? cmapRegionName(n.region)
-                                                 : 'no region'}</div>`;
+    name = `<span class="count">${n.region ? esc(cmapRegionName(n.region))
+                                           : 'no region'}</span>`;
   }
-  const rows = m.layers.map(ly => cmapTipRow(ly, tx, ty)).join('');
   // 17d: what descr_strat.txt stands on this tile, when that layer is on. It is
   // above the layer rows because a general is what somebody is pointing AT and
-  // the ground under him is context.
-  const on = (typeof cmkAt === 'function') ? cmkAt(tx, ty) : [];
-  const marks = on.length
-    ? `<div class="cmtipmk">${on.slice(0, 6).map(it =>
-        `<div>${esc(cmkLabel(it))}</div>`).join('')}${
-        on.length > 6 ? `<div class="count">…and ${on.length - 6} more</div>` : ''}</div>`
-    : '';
-  return `${head}
+  // the ground under him is context - and it holds CMAP_TIP_MARKS lines from
+  // the moment the layer is ticked, so walking onto a general moves nothing.
+  const lit = !!(state.cmk && state.cmk.on);
+  const on = lit && typeof cmkAt === 'function' ? cmkAt(tx, ty) : [];
+  let marks = '';
+  if(lit){
+    const room = on.length > CMAP_TIP_MARKS ? CMAP_TIP_MARKS - 1 : CMAP_TIP_MARKS;
+    const lines = on.slice(0, room).map(it => `<div>${esc(cmkLabel(it))}</div>`);
+    if(on.length > room)
+      lines.push(`<div class="count">…and ${on.length - room} more</div>`);
+    while(lines.length < CMAP_TIP_MARKS) lines.push('<div class="cmtipgap"></div>');
+    marks = `<div class="cmtipmk">${lines.join('')}</div>`;
+  }
+  return `<div class="cmtiphead">
+      <div class="cmtipn">${name}</div>
+      <div class="cmtipsub count">${sub || '&nbsp;'}</div>
+    </div>
     <div class="cmtipxy"><b>${tx}, ${ty}</b> image · <b>${tx}, ${gy}</b> game</div>
-    ${marks}${rows}`;
+    ${marks}${m.layers.map(ly => cmapTipRow(ly, tx, ty)).join('')}`;
 }
 
 /* The layers the panel needs, which are not the layers on screen.

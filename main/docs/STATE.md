@@ -2,10 +2,46 @@
 _Updated: 2026-09-15 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
 the latest beta - after the M2EX map-ceiling fix, the `replace_record` blank
 line it turned up, the two bugs a second report brought in, and **Phases 40, 31,
-42, 41, 43 and 28a**, all committed and **not cut**. **Releasing is on-request only**:
+42, 41, 43, 28a and 28b**, all committed and **not cut**. **Releasing is on-request only**:
 commit to master and stop_
 
 ## Next up
+**Phase 28b is done - the brush is over the map and the tooltip stops moving,
+closed 2026-09-15, beta line, committed and uncut.** `.cmbar` is two rows: the
+view controls it has carried since 16c, and the arm button, the five tools, the
+size and shape and the target layer. A stroke is made with the eyes on the map,
+and a control you look away from to reach is a control you lose the stroke to.
+The panel keeps what is read rather than reached for - the palette, the wizard,
+undo and redo, the save, the unsaved count. `cpaintWire()` became
+`cpaintWireIn(box)` so both places wire the same controls.
+
+**`paint_row` is a habit and rides in `cmapLayerState`; `p.on` does not.** A
+named view that armed the brush would be a view that starts editing a map, and
+the suite checks the snapshot reads the settings and never the paint session.
+
+**The tooltip's frame is exact, not nearly right.** Four causes removed as
+scoped - a head of two lines whether or not it has them, a row per layer the
+manifest names, a markers block of `CMAP_TIP_MARKS` lines while that layer is
+ticked, and a width rather than a maximum with everything clipped on its line.
+**The fifth was not in the write-up and it was the last pixel**: `.count` is
+11px against 11.5 under `align-items:baseline`, so any row carrying a code moved
+every row below it by one. Six probes now give the same 320px width, the same
+246px height and the same ten row positions **to the pixel**.
+
+**Three layout rules the scoping did not have**, all about what a toolbar does
+to controls built for a 336px column: the tools are a five-column glyph-over-word
+grid and on a strip that was 107px of covered map; `.cptg` is `flex:1 1 100%`,
+which is what gives the layer picker its own row in the panel and what pushed it
+onto a second line here; and an absolutely positioned flex column with wrapping
+rows picks a narrower width and wraps inside it, so the bar needs
+`width:max-content`. Two rows, 73px, 844 of 1202px on DaC.
+
+**The same lesson as this morning, twice in one day.** Both halves passed every
+check while the bar was three rows tall and the tooltip still drifted. The
+checks read the source and the source was right; the browser said otherwise.
+`tests/test_web_modules.py` **54/54** against 34/34.
+
+
 **Phase 28a is done - the campaign map's side column is a tab strip, closed
 2026-09-15, beta line, committed and uncut.** `#cmSide` was sixteen panels
 appended one under the last, and on a 1600px window the strat models sat four
@@ -515,12 +551,13 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 |---|---|---|
 | 29 + B4 - the strat model viewer | **done** | Closed 2026-09-12, committed, **released 2026-09-12** as v2.3.2 and beta 2026-09-12c. The scoping was wrong about the root and right about everything above it: the art is not in a `.pack`, it is loose beside the stub as `<name>.tga.dds`, and `cas.texture_path` took the zero-byte `.tga` because it existed. Fixed at all five levels. New: `cas._has_bytes`, `icons.ArtUnreadable`, `icons.fault`, `png_bytes(strict=)`, `/model_texture` 415, `factions.packs_beside`, `factions.no_file_note`, and in `viewer3d.js` `uCutout`, `v3Degenerate`, `v3AskWhy`, `v3TexFault`, `v3FaultRows`. `tests/test_stratart.py` (40). |
 | 41 - merge one faction's name pool | **done** | Closed 2026-09-15, committed, **not cut** (both lines when a cut happens). `merge_section` / `merge_names` / `merge_block` in `minorfiles.py`, with `merge` and `dedupe` as actions behind the module's own plan/apply. Three of Mylae's corrected, each a check: `present` is 0 whenever dedupe is off because nothing was skipped; merging nothing is refused and names the dedupe button; `settlements` is carried rather than dropped. **And the phase could not run its own suite**: `test_minorfiles` had been dying in the sweep on `Owaib Cyfeiliog`, invisible because stderr and buffered stdout interleave. `render_names` refused any name with a space and **2,513 of 34,923 names have one** (45% of all surnames, plus 90 characters and 10 women - `al Adid`, `Arigh Boke`, `Yax Kuk Mo`, `Hywel Dda`), so **58 factions across two mods could not be saved at all**. Replaced by the one real constraint in `name_fault`: a name may not BE a section keyword. The first draft relaxed it for `surnames` alone and was wrong the same way one size smaller. New: `name_fault`, `merge_section`, `merge_names`, `merge_block`, `_plan_merge`, `MinorPlan.merge`, `mfMergeOpen` and the two buttons in `minorfiles.js`, `.modal.mgwide`. `tests/test_minorfiles.py` 221/224 (was 153 green with a crash). **The three left were handed on and are done** (2026-09-15): `localised_name` is what fixes `resource_tag` for `camels`, `elephants` and `dogs`, which are keyed singular and had been showing no name at all in every mod; Kingdoms' three extra resources are dead in their own mod, which strengthens the edit-only refusal rather than disproving it. 225/225. |
+| 28b - the toolbar over the canvas, and a steady tooltip | **done** | Closed 2026-09-15, committed, **not cut** (beta only). `.cmbar` is two rows; `#cmPaintBar` carries the arm button, the five tools, the size and shape and the target layer, and the panel keeps the palette, the wizard, undo/redo and the save. New: `cpaintBarHtml`, `cpaintBarPaint`, `cpaintSizeHtml`, `cpaintWaterHtml`, `cpaintToolName`, `cpaintRowOpen`, `cpaintRowToggle`, `cpaintWireIn` (was `cpaintWire`), `CMAP_TIP_MARKS`, `paint_row` in `cmapLayerState`. The tooltip's frame is fixed on all five counts - the fifth, `.count` at 11px under `align-items:baseline`, was not in the write-up and was the last pixel. Six probes: same 320px width, same 246px height, same ten row positions. `tests/test_web_modules.py` 54/54 (was 34). |
 | 28a - the strip, and the groups behind it | **done** | Closed 2026-09-15, committed, **not cut** (beta only). `CMAP_TABS` groups sixteen panels behind six tabs with Validate one of them; `#cmLayers` is in none and the suite says so. New in `campmap.js`: `CMAP_TABS`, `CMAP_SIDE_CLASS`, `CMAP_SIDE_KEY`, `cmapTabOf`, `cmapTabsHtml`, `cmapTabBadge`, `cmapRailHtml`, `cmapTab`, `cmapSurface`, `cmapSidePaint`, `cmapSideCollapse`, `cmapWireSplit`; `tab`, `side_hid` and `side_px` in `cmapLayerState`, so a named view carries them and `cmapResetView` puts them back. The drag is `splitInstall`'s, a third caller. **Three things the scoping did not have:** the layer stack has to be capped (794px on DaC would take the whole column), `.cmside.wide` and an inline drag width cannot both size it (`edPrevMin`'s problem again), and "switched to, once" means once per map rather than once per manual pick. `tests/test_web_modules.py` 34/34 (was 22). |
 | 43 - playable, unlockable, not playable | **done** | Closed 2026-09-15, committed, **not cut** (beta only). **Nearly all of it was already built** - 16j shipped the roster writer (`what="rosters"`, `_roster_splice`, `roster_block`) and `cjRoster` has been the three-way radio per faction all along; the write-up's "missing four times over" was four correct guards in `stratcamp`, `stratchar`, `stratedit` and `regiondel`, and `_guard` already exempts `rosters`, `create` and `delete`. What landed is the refusal: `camp.no_playable` is fatal **when the save is what empties the list**, via a third `before` argument to `check_rosters`; passed nothing, which is the read path, it stays a warning, because a flat fatal would trap a campaign that already had no playable faction on the one screen that repairs it. Six campaigns measured, all with at least one playable. `tests/test_stratcamp.py` 114/115, the one failure being Vanilla Redux's unread `random_persona_weights` header word, red before this phase. |
 | 42 - the art a clone does not get | **done** | Closed 2026-09-14, committed, **not cut** (both lines when a cut happens). The copier was never at fault and the re-measurement held; what was missing was a sentence. `ART_PLACES` is the nine places a faction's art lives, `art_gaps` names every one the clone came away from empty-handed with one of four reasons - the donor has none either, the destination already exists, a longer-named faction owns the name, the mod has no such folder. The old whole-scan warning fires only when the scan is completely empty, which on a real mod it never is. **121 donor slots swept over four mods: 253 empty places, 50 clean donors, and all 253 the same reason.** Not one of Reforged's 30 factions fills every place; `vanilla_kingdoms_uncompromised` is worst at 146. The scoping was wrong about one fact: Reforged's `fe_symbols_80` is **empty**, and the 17 vanilla-named files in it are DaC's. New: `ArtPlace`, `ART_PLACES`, `art_gaps`, `_asset_hits(skips=)`, `ClonePlan.art`, `payload()["art_gaps"]`, the `.fcgap` rows in `factions.js` and the places named in the apply confirm. `tests/test_factionclone.py` 74/74 (was 64), `tests/test_factionclone_apply.py` 39/39 (was 30). **Open:** the reporter's own mod is still unknown, so the end-to-end reproduction against the report itself was not done. |
 | 31 - two river rules and a ford in the sea | **done** | Closed 2026-09-13, committed, **not cut** (beta only). Three rules and one repair: `river.fourway` (river on all four sides), `river.no_source` (a four-connected component with no white source), `feature.ford_in_sea` (own altitude sea **and** four neighbours sea - the second half the scoping did not have, and without it the message and the repair are not true). All three find **nothing on any of the five installed maps**, which is what they are for. `ford_none` is the one repair with a safe answer; the other two need the map author's intent or `map_heights.tga`, and both refusals are written into `FIXES`. New: `_r_river_fourway`, `_r_river_no_source`, `_r_ford_in_sea`, `_plan_fords`, `FIXES["ford_none"]`. The three existing river fixtures painted sourceless courses and now paint their source. No web change - the panel is data-driven off `RULES` and `rep.fixes`. `tests/test_mapcheck.py` 104/105. |
 | 40 - the new province the engine cannot read | **done** | Closed 2026-09-13, committed, **not cut** (both lines when a cut happens). Four defects, one of them the scoped one. `campaint.new_record_lines` and `campmap.render_block` both produced the eight-line record, the second by dropping the line when the last resource was cleared; both write `none` now, which is what vanilla writes on 18 of 112, Vanilla Redux on 78 of 252 and `vanilla_kingdoms_uncompromised` on all 853. `none` read as a resource name was 931 false findings across two mods. And the indent reading lost DaC's ` Erebor_Province` to a stray leading space - **200 regions read as 199**, 517 painted tiles declared nowhere, and its settlement marker written into the source and a test as DaC's one orphan. New: `campmap.file_shape`, `campmap._resplit_runs`, `check_record(rec, vocab, shape)`, a `parse_block` retry for an indented name line. The inferred engine crash is **withdrawn**: DaC ships a short record and plays. `tests/test_campaint.py` 4c and 4d (185), `tests/test_campmap.py` 1 (+7), `tests/test_campedit.py` (139). |
-| 28-43 - the rest of the 2026-09-12 review | **scoped** | Thirteen sessions in two blocks, 40, 31, 42, 41, 43 and 28a having closed. **Block one, the campaign map:** 28b the paint controls over the canvas and a tooltip that holds still, 33 T10 + G2 + G4 in one session, 30 the pink as a choice, 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
+| 28-43 - the rest of the 2026-09-12 review | **scoped** | Twelve sessions in two blocks, 40, 31, 42, 41, 43, 28a and 28b having closed. **Block one, the campaign map:** 33 T10 + G2 + G4 in one session, 30 the pink as a choice, 34 add a climate zone, 35 rebels right in place, 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
 | 44-48 - the pass over Mylae's non-map screens | **scoped** | Six sessions, added 2026-09-13 at the user's request, in neither block and every one a subrelease on both lines. 44 the EDB's tree checked (his is the one validator he has and we do not), 45 the `hidden_resources` line, 46 cultures on a mode of its own with a four-tab form and the faction form on the same strip, 47a the six `export_descr_sounds_*` files on `sounds.py`'s own parser, 47b the 32 `descr_sounds_*` scripts on a grammar nothing here reads, 48 add and remove on the strings screen. Two of the seven things asked for produced no phase and a measurement instead: his traits and ancillaries have not moved since 2026-03-27, and his `.strings.bin` codec is wrong where ours is right. |
 | 24 - Make and unmake | done | Closed 2026-09-12, committed, **released 2026-09-12**. Closes G1, M15 and the roadmap. Deleting a province, with its land going whole to a neighbour it borders and its name coming out of every file 19b measured - and the campaign script listed, never written, for the reason a rename gives. Making a campaign, as a copy of one that works minus the compiled map, with its own header and its own menu keys. New: `unittransfer/regiondel.py` (`heirs`, `campaigns_reading`, `standing_on`, `plan`, `apply`, `view`), `unittransfer/campnew.py` (`sources`, `plan`, `apply`, `view`), `mapquery.drop_music_region`, `renames.mentions`, `campfiles.write_descriptions`, `GET /api/map/region_delete`, `POST /api/map/region_delete_plan\|_apply`, `GET /api/campnew`, `POST /api/campnew/plan\|apply`, `web/js/regiondel.js`, `web/js/campnew.js`. `tests/test_regiondel.py` (62), `tests/test_campnew.py` (52). |
 | B2-B3 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export. B4 went out inside 29. |
@@ -778,6 +815,17 @@ Nothing in the audit is scheduled any more. Run `sync` before touching anything
 that ports from a directory he has been working in.
 
 ## Decisions
+- 2026-09-15: **A control built for a 336px column does not move to a strip
+  unchanged.** The five tools were a grid with the glyph over the word and the
+  layer picker was `flex:1 1 100%`, both of them right in a panel and both of
+  them wrong on a toolbar - the first cost 107px of covered map, the second a
+  whole second line. Moving a control means re-deciding its shape, not just its
+  parent.
+- 2026-09-15: **A habit rides in `cmapLayerState`; a thing somebody is doing
+  right now does not.** `paint_row` is in every named view and `p.on` is in
+  none, because a preset that arms the brush is a preset that starts editing a
+  map. The line is worth stating: the next switch added to this screen has to be
+  put on one side of it.
 - 2026-09-15: **A control that sizes itself and a width somebody dragged cannot
   both own the same element.** `.cmside.wide` is a class and `splitInstall`
   writes an inline flex, so the inline one wins and the Code View stopped

@@ -398,7 +398,7 @@ change, so no cross-reference dangles.
 | **3.0.0** | 16a-16k, plus 17 | The campaign map editor, and the correction pass over it. Feature-complete and uncut. |
 | **3.1.0** | 18-21 | The twenty Now items: the campaign files that had no editor, the names nothing could follow, and the map screen's second pass. |
 | **3.2.0** | 22-24 | The seven Next items: placing things on the map, a map that looks like the campaign map, and making or unmaking a region or a campaign. |
-| next, block one | ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~, ~~43~~, ~~28a~~, 28b, 33, 30, 34, 35, 36, 37a, 37b, 38 | **The campaign map.** Nine sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12; 43 and 28a on 2026-09-15. |
+| next, block one | ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~, ~~43~~, ~~28a~~, ~~28b~~, 33, 30, 34, 35, 36, 37a, 37b, 38 | **The campaign map.** Eight sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12; 43, 28a and 28b on 2026-09-15. |
 | next, block two | 32a, 32b, 32c, 39 | **The mercenaries.** Four sessions. Beta except 39, which is both lines. |
 | after block two | 44, 45, 46, 47a, 47b, 48 | **The reference-tool pass of 2026-09-13.** Six sessions, every one a subrelease on both lines. Outside both blocks, and scheduled only because the user named the work. |
 | after that | the Future roadmap list | Rated and unscheduled. Three five-star items lead it: M17, M12 and M16. |
@@ -767,7 +767,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~5~~ | ~~**41** Merge one faction's name pool into another~~ | S | **both** | **done 2026-09-15** |
 | ~~6~~ | ~~**43** Playable, unlockable, not playable~~ | S | beta | **done 2026-09-15** |
 | ~~7~~ | ~~**28a** The strip, and the groups behind it~~ | M | beta | **done 2026-09-15** |
-| 8 | **28b** The toolbar over the canvas, and a steady tooltip | M | beta | asked for |
+| ~~8~~ | ~~**28b** The toolbar over the canvas, and a steady tooltip~~ | M | beta | **done 2026-09-15** |
 | 9 | **33** T10, G2 and G4 in one session | S x3 | beta | 5, 5, 5 |
 | 10 | **30** A missing texture without the pink | S | beta | reported |
 | 11 | **34** Add a climate zone | M | beta | 5 |
@@ -790,8 +790,8 @@ on, then stars, then size.** That is four rules and each one earns its place.
 39 touch something outside the campaign map, so each is a subrelease on both
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
-(2026-09-14), and **41, 43 and 28a are done** (2026-09-15); thirteen remain, two
-of them subreleases. **43 was nearly all built already** - 16j shipped the
+(2026-09-14), and **41, 43, 28a and 28b are done** (2026-09-15); twelve remain,
+two of them subreleases. **43 was nearly all built already** - 16j shipped the
 roster writer and the write-up had not checked - so what landed was the one
 sentence of it that was true, the refusal. **28a's scoping held in full**, and
 what it did not say was that the layer stack has to be capped or it takes the
@@ -950,7 +950,63 @@ it, a click that fills a panel switching to it, the drag, the collapse, and all
 three habits in `cmapLayerState` and therefore in a saved view.
 `tests/test_web_modules.py` takes the grouping table the way it takes `MODES`.
 
-### 28b - The toolbar over the canvas, and a tooltip that holds still
+### 28b - The toolbar over the canvas, and a tooltip that holds still - DONE 2026-09-15
+
+**Done 2026-09-15, beta line, committed and uncut. Both halves as scoped, and
+the frame is exact rather than nearly right - measured on the running screen.**
+
+**The brush is over the map.** `.cmbar` is two rows now: the view controls it has
+carried since 16c, and `#cmPaintBar`, which `cpaintBarHtml` fills with the arm
+button, the five tools, the size and shape and the target layer. The panel keeps
+what is read rather than reached for - the palette, the wizard, undo and redo,
+the save and the count of what is unsaved - and 28a has just given all of it a
+tab. `cpaintToolsHtml` was split into three (`cpaintToolsHtml`, `cpaintSizeHtml`,
+`cpaintWaterHtml`) so the bar can take the buttons and the panel keeps the four
+sentences about the water brush's measured sea colours.
+
+**One wiring function, handed a box.** `cpaintWire()` became `cpaintWireIn(box)`
+and both places call it, so the same five controls behave the same in both and
+neither knows where the other put them. `cpaintPaint()` paints both. The size
+slider is still the one control that does not repaint on input - it has the
+pointer - and it now writes both copies of its number.
+
+**Whether the row is open is a habit; arming the brush is not.**
+`cmapLayerState` carries `paint_row` and a named view puts it back; `p.on` stays
+out of both, and the suite checks that the snapshot reads the settings and never
+the paint session. A view that armed the brush would be a view that starts
+editing a map.
+
+**Three layout faults, each a real rule about this toolbar.** The panel's tools
+are a five-column grid with the glyph over the word, which is how they fit a
+336px column - on a strip that made the bar 107px of covered map, so the word
+goes beside the glyph. `.cptg` is `flex:1 1 100%`, which is what makes the layer
+picker its own row in the panel and what pushed it onto a second line here with
+350px of stage to spare. And an absolutely positioned flex column with wrapping
+rows picks a narrower width and wraps inside it, so the bar needed
+`width:max-content` for `max-width` to be the only thing that ever wraps it. The
+bar is **two rows, 73px, 844 of 1202px** on DaC at 1600 wide.
+
+**The tooltip's frame does not move, and all four causes were removed.** A head
+of two lines whether or not there is anything to put on them; one row per layer
+the manifest names, a layer with no value saying so rather than writing nothing;
+a markers block of `CMAP_TIP_MARKS` lines from the moment that layer is ticked,
+empty ones included; and a width rather than a maximum, with everything clipped
+on its own line because a name that wraps is a box that changed height.
+
+**A fifth cause the write-up did not have, and it was the last pixel.**
+`.count` is 11px against the panel's 11.5 and the rows are `align-items:baseline`,
+so a row carrying a code in `.count` moved every row below it by one pixel. With
+`.cmtip .count{font-size:inherit}` and a fixed `height:1.5em` on the row, six
+probes - a settlement marker, the tile beside it, a far province, the sea, the
+map's last tile and a mid-map tile - give **the same 320px width, the same 246px
+height and the same ten row positions to the pixel**. With the markers layer on
+it is 306px and identical across a tile carrying three things, its neighbour and
+the open sea; a tile carrying six shows two and "…and 4 more" in the same box.
+
+`tests/test_web_modules.py` is **54/54** against 34/34, twenty checks added for
+the two halves. `tests/test_maplayers.py` 51/51.
+
+The original scoping follows.
 
 **The brush belongs over the map.** `cpaintHtml` builds the whole paint panel
 into `#cmPaint`, a section of the side stack: the arm button, the five tools,

@@ -241,5 +241,60 @@ for key in ("m.tab", "m.side_hid", "m.side_px"):
 check("and the column's width is splitInstall's, not a second implementation",
       "splitInstall(split, side, CMAP_SIDE_KEY" in campmap_js)
 
+
+print("\n== 28b: the brush over the map, and a tooltip that holds still ==")
+# The controls that make a stroke are on `.cmbar` over the canvas; the palette,
+# the wizard and the save stay in the panel. These are the two halves stated as
+# checks, because both are the kind of thing a later edit puts back by accident.
+campaint_js = (JS / "campaint.js").read_text(encoding="utf-8")
+index_html = (WEB / "index.html").read_text(encoding="utf-8")
+
+check("the toolbar has a row for the paint controls",
+      'id="cmPaintBar"' in campmap_js and 'class="cmbarrow cmpaint"' in campmap_js)
+_bar = campaint_js.split("function cpaintBarHtml(){")[1].split("\nfunction ")[0]
+for want in ("cpaintToolsHtml()", "cpaintSizeHtml()", "cpaintTargetHtml()",
+             "cpaintToggle()"):
+    check(f"the bar builds {want}", want in _bar)
+# and the panel is what is READ rather than reached for
+_panel = campaint_js.split("function cpaintHtml(){")[1].split("\nfunction ")[0]
+for gone in ("cpaintToolsHtml()", "cpaintSizeHtml()", "cpaintTargetHtml()"):
+    check(f"the panel no longer builds {gone}", gone not in _panel)
+for kept in ("cpaintPaletteHtml()", "cpaintWizHtml()", "cpaintFootHtml()"):
+    check(f"the panel still builds {kept}", kept in _panel)
+check("both places are painted from one entry point",
+      "cpaintBarPaint();" in campaint_js.split("function cpaintPaint(){")[1]
+      .split("\n}")[0])
+check("and both are wired by the same function, handed the box",
+      "function cpaintWireIn(box)" in campaint_js
+      and campaint_js.count("cpaintWireIn(") >= 3)
+
+# Whether the row is open is a habit and rides with the rest; arming the brush
+# is not, and must stay out of a saved view.
+check("cmapLayerState carries paint_row", "m.paint_row" in state_fn)
+# `p.on` is a thing somebody is doing right now, not a habit, so a named view
+# must not be able to arm the brush. The snapshot reads the settings and never
+# the paint session, which is what this says.
+check("and arming the brush does not ride with it",
+      "state.cpaint" not in state_fn and "cpaintArmed" not in state_fn)
+
+# The tooltip's frame. Every one of these was a way the box moved under a
+# pointer that was itself moving - see the note above `cmapTipHtml`.
+_row = campmap_js.split("function cmapTipRow(ly, tx, ty){")[1].split("\n}")[0]
+check("cmapTipRow never returns nothing - a row per layer the manifest names",
+      "return '';" not in _row and _row.count("none(") >= 3)
+check("the markers block is a fixed number of lines",
+      "const CMAP_TIP_MARKS" in campmap_js
+      and "lines.length < CMAP_TIP_MARKS" in campmap_js)
+check("the head reserves its two lines whether or not it has them",
+      'class="cmtiphead"' in campmap_js and 'class="cmtipsub' in campmap_js)
+check("the tooltip has a width rather than a maximum",
+      ".cmtip{" in index_html
+      and "width:320px" in index_html.split(".cmtip{")[1].split("}")[0]
+      and "max-width:290px" not in index_html)
+check("and nothing in it wraps, so no row can change the box's height",
+      "text-overflow:ellipsis;white-space:nowrap" in index_html
+      and ".cmtiprow{" in index_html
+      and "height:1.5em" in index_html.split(".cmtiprow{")[1].split("}")[0])
+
 print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

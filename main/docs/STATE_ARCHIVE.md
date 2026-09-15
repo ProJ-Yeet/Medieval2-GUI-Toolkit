@@ -15,6 +15,59 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 28b - the brush over the map, and a tooltip that stops moving (2026-09-15)
+The third phase of the day and the second half of 28. Both halves landed as
+scoped; what the scoping did not have was a fifth reason the tooltip moved and
+three rules about what a toolbar does to controls built for a 336px column.
+
+**The brush is over the map it paints.** `.cmbar` is two rows - the view
+controls since 16c, and `#cmPaintBar` holding the arm button, the five tools,
+the size and shape and the target layer. The panel keeps the palette, the
+wizard, undo and redo, the save and the unsaved count: what is read rather than
+reached for. `cpaintToolsHtml` split into three so the bar could take the
+buttons while the panel kept the four sentences about the water brush's measured
+sea colours, and `cpaintWire()` became `cpaintWireIn(box)` so both places wire
+the same five controls without either knowing where the other put them.
+
+**A habit, not a session.** `cmapLayerState` carries `paint_row`, so a named
+view puts the row back; `p.on` stays out, because a view that armed the brush
+would be a view that starts editing a map. The suite checks the snapshot reads
+the settings and never the paint session.
+
+**Three layout rules, each learned by looking.** The panel's tools are a
+five-column grid with the glyph over the word - that is how five tools fit a
+336px column, and on a strip it made the bar 107px of covered map. `.cptg` is
+`flex:1 1 100%`, which is what makes the layer picker its own row in the panel
+and what pushed it onto a second line here with 350px of stage to spare. And an
+absolutely positioned flex column with wrapping rows picks a narrower width and
+wraps inside it, so the bar needs `width:max-content` for `max-width` to be the
+only thing that ever wraps it. Two rows, 73px, 844 of 1202px on DaC at 1600.
+
+**Four causes of the tooltip moving, removed as scoped.** A head of two lines
+whether or not it has them; a row per layer the manifest names, a layer with no
+value saying so instead of writing nothing; a markers block of `CMAP_TIP_MARKS`
+lines from the moment that layer is ticked; and a width rather than a maximum,
+everything clipped on its own line, because a name that wraps is a box that
+changed height.
+
+**The fifth was the last pixel and nobody had noticed it.** `.count` is 11px
+against 11.5 and the rows are `align-items:baseline`, so any row carrying a code
+in `.count` moved every row below it by one. `.cmtip .count{font-size:inherit}`
+and `height:1.5em` on the row fixed it. Six probes - a settlement marker, the
+tile beside it, a far province, the sea, the map's last tile, a mid-map tile -
+then gave **the same 320px width, the same 246px height and the same ten row
+positions to the pixel**. With the markers layer on it is 306px and identical
+across a tile carrying three things, its neighbour and open sea, and a tile
+carrying six shows two lines and "…and 4 more" in the same box.
+
+**Measured rather than reasoned about, twice over.** The first draft of both
+halves passed every check while the bar was three rows tall and the tooltip
+still drifted a pixel; the checks read the source, and the source was right. The
+browser is what said otherwise - the same lesson 28a wrote down this morning.
+
+`tests/test_web_modules.py` **54/54** against 34/34, twenty checks added.
+`tests/test_maplayers.py` 51/51.
+
 ## 28a - the side column becomes a tab strip (2026-09-15)
 Taken as the next phase off block one, after 43 the same day. The scoping held
 in full, which is the first time in four phases; what it did not say was found

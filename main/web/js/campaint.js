@@ -555,11 +555,18 @@ function cpaintMarker(kind){
 
 /* ---------- the panel ---------- */
 
+//: 28b: two places now - the panel in the Paint tab and the row on the map's
+//: own toolbar. Both are rebuilt whole, which is what every other repaint on
+//: this screen does; the one control that must not be is the size slider, and
+//: `cpaintWireIn` writes its number without a repaint because the slider has
+//: the pointer.
 function cpaintPaint(){
   const el = document.getElementById('cmPaint');
-  if(!el) return;
-  el.innerHTML = cpaintHtml();
-  cpaintWire();
+  if(el){
+    el.innerHTML = cpaintHtml();
+    cpaintWireIn(el);
+  }
+  cpaintBarPaint();
 }
 
 function cpaintHtml(){
@@ -568,24 +575,22 @@ function cpaintHtml(){
   const st = p.st;
   const unsaved = st.undo || st.dirty.length || st.new_region;
   const head = `<div class="cpbar">
-    <button class="cptog${p.on ? ' on' : ''}" onclick="cpaintToggle()"
-      title="Arm the brush. The left button paints; the right and middle still pan."
-      >\u{1F58C} Paint${p.on ? ' ✓' : ''}</button>
+    <span class="k">Paint</span>
     ${unsaved ? `<span class="cpun" title="${esc(st.files.join(', '))}">${
       st.undo} stroke${st.undo === 1 ? '' : 's'}${st.dirty.length
         ? ` · ${st.dirty.length} layer${st.dirty.length === 1 ? '' : 's'}` : ''
       } unsaved</span>` : ''}
   </div>`;
-  // a brush that would not arm says why, under the button that was pressed
-  if(!p.on) return head + (p.err ? `<div class="cppanel"><div class="w-warn">${
-    esc(p.err)}</div></div>` : '');
+  if(!p.on) return head + `<div class="cppanel">${p.err
+    ? `<div class="w-warn">${esc(p.err)}</div>`
+    : `<span class="count">The brush is put down. Paint is on the toolbar over
+       the map, with the tools beside it.</span>`}</div>`;
   if(p.palErr) return head + `<div class="cppanel"><div class="w-bad">${
     esc(p.palErr)}</div></div>`;
   if(!p.pal) return head + `<div class="cppanel"><span class="count">reading the
     palettes…</span></div>`;
   return head + `<div class="cppanel">
-    ${cpaintToolsHtml()}
-    ${cpaintTargetHtml()}
+    ${cpaintWaterHtml()}
     ${cpaintPaletteHtml()}
     ${cpaintWizHtml()}
     ${cpaintFootHtml()}
@@ -603,26 +608,42 @@ const CPAINT_TOOLS = [
     + 'ground types together, in this map’s own sea colours'],
 ];
 
+//: 28b: the five tool buttons and nothing else - the size and the water note
+//: were in here and are now their own, because the bar wants one and the panel
+//: wants the other.
 function cpaintToolsHtml(){
   const p = state.cpaint;
-  const w = p.pal.water || {};
-  const rows = CPAINT_TOOLS.map(([code, glyph, label, why]) =>
+  return `<div class="cptools">${CPAINT_TOOLS.map(([code, glyph, label, why]) =>
     `<button class="cptool${p.tool === code && !p.marker ? ' on' : ''}"
       data-tool="${code}" title="${esc(label)}: ${esc(why)}"
-      >${glyph}<span>${esc(label)}</span></button>`).join('');
-  const sized = CPAINT_SIZED.indexOf(p.tool) >= 0 && !p.marker;
-  return `<div class="cptools">${rows}</div>
-    ${sized ? `<div class="cprow">
-      <label class="cpsz">Size
-        <input type="range" min="1" max="${p.pal.brush_max}" step="2"
-          value="${p.size}" data-size></label>
-      <b class="cpszn">${p.size} across</b>
-      <button class="cpshape${p.shape === 'round' ? ' on' : ''}" data-shape="round"
-        title="A disc">●</button>
-      <button class="cpshape${p.shape === 'square' ? ' on' : ''}" data-shape="square"
-        title="A square">■</button>
-    </div>` : ''}
-    ${p.tool === 'water' ? `<div class="cpnote">${w.ok
+      >${glyph}<span>${esc(label)}</span></button>`).join('')}</div>`;
+}
+
+//: The size slider and the brush shape, for the two tools that have a size.
+//: The bucket and the pipette are a click, so the row is not drawn for them
+//: rather than drawn disabled: on the toolbar it would be width taken from the
+//: map to say nothing.
+function cpaintSizeHtml(){
+  const p = state.cpaint;
+  if(CPAINT_SIZED.indexOf(p.tool) < 0 || p.marker) return '';
+  return `<span class="cpsized">
+    <label class="cpsz">Size
+      <input type="range" min="1" max="${p.pal.brush_max}" step="2"
+        value="${p.size}" data-size></label>
+    <b class="cpszn">${p.size} across</b>
+    <button class="cpshape${p.shape === 'round' ? ' on' : ''}" data-shape="round"
+      title="A disc">●</button>
+    <button class="cpshape${p.shape === 'square' ? ' on' : ''}" data-shape="square"
+      title="A square">■</button></span>`;
+}
+
+//: What the water brush is about to write, in this map's own sea colours. It
+//: stays in the panel: it is four sentences and a swatch list, which is reading
+//: rather than reaching.
+function cpaintWaterHtml(){
+  const p = state.cpaint;
+  const w = p.pal.water || {};
+  return `${p.tool === 'water' ? `<div class="cpnote">${w.ok
       ? `Writes ${Object.keys(w.layers).length} layers at once, in the colours
          <b>measured off this map</b>: ${Object.keys(w.layers).map(c =>
          `<i style="background:rgb(${w.layers[c].rgb.join(',')})"></i>${esc(c)}`
@@ -640,8 +661,8 @@ function cpaintTargetHtml(){
     `<option value="${L.code}"${L.code === p.target ? ' selected' : ''}${
       L.problem ? ' disabled' : ''}>${esc(L.label)}${
       L.problem ? ' · ' + esc(L.problem) : ''}</option>`).join('');
-  return `<div class="cprow"><label class="cptg">Layer
-    <select data-target>${opts}</select></label></div>`;
+  return `<label class="cptg">Layer
+    <select data-target>${opts}</select></label>`;
 }
 
 function cpaintLayer(){
@@ -886,8 +907,10 @@ function cpaintFootHtml(){
       every save, or the game loads the old compiled map.</div>`}`;
 }
 
-function cpaintWire(){
-  const box = document.getElementById('cmPaint');
+//: 28b: wires whichever box it is handed - the panel or the toolbar row - so
+//: the same five controls behave the same in both places and neither file
+//: knows where the other one put them.
+function cpaintWireIn(box){
   if(!box) return;
   const p = state.cpaint;
   box.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => {
@@ -898,8 +921,9 @@ function cpaintWire(){
   const sz = box.querySelector('[data-size]');
   if(sz) sz.oninput = () => {
     p.size = +sz.value;
-    const n = box.querySelector('.cpszn');
-    if(n) n.textContent = sz.value + ' across'; // no repaint: the slider has focus
+    // no repaint: the slider has the pointer, and rebuilding the row under it
+    // drops the drag. Both copies of the number are written instead.
+    document.querySelectorAll('.cpszn').forEach(n => n.textContent = sz.value + ' across');
   };
   box.querySelectorAll('[data-shape]').forEach(b => b.onclick = () => {
     p.shape = b.dataset.shape; cpaintPaint();
@@ -930,6 +954,79 @@ function cpaintWire(){
     cpaintMarker(b.dataset.marker));
   box.querySelectorAll('[data-wiz]').forEach(inp => inp.oninput = inp.onchange =
     () => cpaintWizSet(inp.dataset.wiz, inp.value));
+}
+
+/* ---------- 28b: the controls that make a stroke, over the map ----------
+
+   **A stroke is made with the eyes on the map**, and a control you look away
+   from to reach is a control you lose the stroke to. Mylae's `MapPaintToolbar`
+   is his brush controls as a strip across the top of his canvas and that is
+   plainly the right place for them, so the arm button, the five tools, the size
+   and shape and the target layer moved out of `#cmPaint` and onto `.cmbar`,
+   which has carried Fit, 1:1, the zooms, Names, Labels and Reset over the stage
+   since 16c. A second row on a toolbar that exists, not a new piece of
+   furniture.
+
+   **What stayed in the panel is what you read rather than reach for**: the
+   palette, the new-region wizard, undo and redo, the save, and the count of
+   what is unsaved. 28a has just given all of it a tab.
+
+   **Two of the five tools have no counterpart in his row and neither is worth
+   losing to a copy of it**: the water brush, which writes regions, heights and
+   ground types together in the sea colours measured off this map, and a pipette
+   that selects the region on the region layer rather than only taking a colour.
+   His row is pencil, bucket and pipette plus a heights mode, which is our
+   palette one level down. */
+
+//: Whether the second row is showing. A habit, so it rides in
+//: `cmapLayerState` with the rest and a named view puts it back - unlike
+//: `p.on`, which arms the brush and is a thing somebody is doing right now.
+function cpaintRowOpen(){
+  const m = state.settings && state.settings.map_layers;
+  return !m || m.paint_row !== false;
+}
+
+function cpaintRowToggle(){
+  const m = cmapSettings();
+  m.paint_row = !cpaintRowOpen();
+  cpaintBarPaint();
+  cmapSaveLayers();
+}
+
+//: The toolbar's paint controls, repainted on their own so that a stroke does
+//: not redraw the side panel and a palette click does not redraw the bar.
+function cpaintBarPaint(){
+  const el = document.getElementById('cmPaintBar');
+  if(!el) return;
+  el.innerHTML = cpaintBarHtml();
+  cpaintWireIn(el);
+}
+
+function cpaintBarHtml(){
+  const p = state.cpaint;
+  if(!p) return '';
+  const open = cpaintRowOpen();
+  const arm = `<button class="cptog${p.on ? ' on' : ''}" onclick="cpaintToggle()"
+      title="Arm the brush. The left button paints; the right and middle still pan."
+      >\u{1F58C} Paint${p.on ? ' ✓' : ''}</button>`;
+  if(!p.on) return arm;
+  if(p.palErr) return arm + `<span class="w-bad">${esc(p.palErr)}</span>`;
+  if(!p.pal) return arm + '<span class="count">reading the palettes…</span>';
+  const fold = `<button class="cpfold" onclick="cpaintRowToggle()"
+      title="${open ? 'Fold the tools away and keep the brush armed'
+                    : 'Show the tools again'}">${open ? '▴' : '▾'}</button>`;
+  if(!open) return arm + fold + `<span class="count">${esc(cpaintToolName())}</span>`;
+  return arm + fold + cpaintToolsHtml() + cpaintSizeHtml() + cpaintTargetHtml();
+}
+
+//: What the folded row says instead of showing itself: which tool is up, and
+//: what it is about to write. The bar is the only place either is said now.
+function cpaintToolName(){
+  const p = state.cpaint;
+  const t = CPAINT_TOOLS.find(x => x[0] === p.tool);
+  const L = p.tool === 'water' ? null : cpaintLayer();
+  return (p.marker ? p.marker : t ? t[2] : p.tool)
+    + (L ? ` · ${L.label}` : '');
 }
 
 /* ---------- keys ---------- */
