@@ -39,13 +39,13 @@ one containing `mods`).
 | Unit Editor | Change, clone or delete the units of a single mod |
 | Models Editor | Every model a mod ships: edit any `battle_models.modeldb` entry, its sprites and its unit cards, list what `descr_model_strat.txt` declares, view any battle or campaign-map model in 3D, and clean out what nothing references |
 | Buildings | Browse and edit `export_descr_buildings.txt`, including recruitment |
-| Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, move a character, place a settlement, place, move or remove a fort, a watchtower or a trade resource, set which mercenary pool a province hires from, name a faction on the new-game menu, edit the historical events a campaign fires and the natural disasters its map allows, name a province and its settlement as the player reads them, rename a province or a settlement everywhere it is named, draw the ground with the game's own aerial-map textures in summer or in winter, tint a colouring into the map instead of over it, read the river network as an overlay of its own and the heights as relief, tick any of the ten layers with its own number key, find a province by the name the player reads or the one the files use, save what the map looks like under a name and come back to it, open any of the campaigns the mod ships rather than only the one the engine's menu lists, put every settlement's name on the map without one covering another, fill any coordinate by clicking the map, add a province that arrives in every campaign with a settlement and a music type, check the whole map against what the game will accept. The panel beside the map is two strips - six sections across the top and that section's own screens under it, one at a time - and while the brush is armed the layer being painted and every colour it can be painted in are in a column on the other side of the map. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
+| Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, place and move what stands on the map, add or delete a province across every campaign, edit the people, events, disasters and menu text a campaign carries, draw the ground with the game's own aerial-map textures in either season, find anything by the name the player reads or the one the files use, and check the whole map against what the game will accept. Set out under [the screen](#campaign-map) below. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
 | Unit Sounds | Choose which voice bank entry each unit uses |
 | Sprites | Generate and wire up the far-LOD unit sprites |
 | Strings | Read and write the compiled `data/text/*.txt.strings.bin` files |
 | Traits / Ancillaries | Full editors for both, definitions and triggers together |
 | Guilds | `export_descr_guilds.txt`: what each guild grants, the point thresholds its tiers sit at, and every trigger that earns it points |
-| Factions | Faction definitions, with map colours edited via a colour picker, **Add a faction** - a new slot cloned from an existing one across all twelve files that name a faction - and **Rename slot**, which follows the name through about twenty files, the length-prefixed texture records in the modeldb and the art the engine finds from the slot itself, and reports every line of campaign script naming it rather than editing one. **Is it complete?** checks one faction against every file that should name it, and copies what it is missing from a faction that has it |
+| Factions | Faction definitions, with map colours edited via a colour picker. **Add a faction** clones a new slot out of one that already works, across all twelve files that name a faction; **Rename slot** follows the name through about twenty files, the length-prefixed texture records in the modeldb and the art the engine finds from the slot itself, and reports every line of campaign script naming it rather than editing one; **Is it complete?** checks one faction against every file that should name it, and copies what it is missing from a faction that has it |
 | Minor Files | Rebel factions, religions, cultures, resources and character names |
 | Raw text | Any text file the toolkit reads, opened as plain text and saved with the same backup and undo as every other screen - for the line no editor here models |
 
@@ -107,105 +107,51 @@ Hen and Minas Tirith are on the campaign map and in no entry at all.
 The ten map layers, the regions painted on them, and what `descr_strat.txt` puts
 on top. Ships on the dated beta pre-release; see the module table above.
 
-Three ways of arriving somewhere: **Find** takes a province, a settlement or a
-region ID and goes to it, matching the words the player reads as well as the
-code name the files use, out of the map already on screen and with nothing
-fetched per keystroke. **Views** saves what the map looks like - which layers, in
-what order, at what opacity, the colours punched out of each and the colouring
-over the top - under a name you can come back to, on any mod. **Campaign** lists
-every campaign the mod ships with what is in each one, and opens it: a mod
-routinely keeps a second campaign in a subfolder that the engine's own new-game
-menu never lists, and both mods this was measured against have one.
-
-**Terrain textures**, on the Ground types row, draws the ground the way the game
-does: the mod's own aerial-map textures out of
-`data/terrain/aerial_map/ground_types`, one per climate and ground type, tiled
-so that neighbouring tiles of one texture continue each other rather than each
-showing a copy. **Summer or winter**, from the two buttons beside it - two
-fifths of Divide and Conquer's map and two thirds of Third Age Reforged's are
-drawn with a different texture under snow. It is built once a season, so panning
-and zooming over it costs nothing, and it is drawn under the whole stack, so the
-provinces, the
-markers and the names still read on top of it. **A tile whose texture cannot be
-found is drawn pink and counted, never quietly skipped** - the panel says how
-many, and ✓ Check names the file and a tile to go and look at for each one, in
-either season.
-
-A colouring can be laid **over** the map or **tinted into** it. A tint takes the
-colour of the theme and the light of what is already drawn, so the terrain's
-hills, forests and rivers all still read under a faction map instead of being
-painted out. Frontiers can sit **on the edge** between two provinces or
-**inside** them, where they still read once a hairline has vanished into the
-zoom, and they can be drawn between the colouring's **groups** or round **every
-province**. All of it goes into an exported TGA exactly as it is on screen.
-
-A province can be **deleted**, which is the other half of the wizard that makes
-one. Its land goes whole to a neighbour it shares a border with - every one is
-offered, longest border first - and everything that named it goes with it: the
-record, the settlement block in each campaign, the win conditions, the mercenary
-pool, the music type, the lookup pair, the custom battle tiles. Its seat becomes
-ground, because a province has one, and you are asked what happens to its port,
-because the heir may already have one. **What the panel says before you commit
-is the point**: the whole list of files, what stands on the land and whose
-province it becomes, and every line of the campaign script that names the
-province, which is listed and never edited. One backup set, and 🕑 Log undoes
-all of it.
-
-**+ New campaign**, under the campaign list, makes a whole new campaign out of
-one that already works: the folder copied, the compiled `map.rwm` deliberately
-left behind so the game rebuilds it, the `campaign` line set to the new name,
-and every menu title and blurb - the campaign's own and each faction's - written
-again under the new campaign's key so the new-game menu has something to show.
-It tells you the size before it starts, and whether the name you have chosen is
-one the engine's own menu will list.
-
-**Labels** (`L`) puts every settlement's name beside it on the map, placed so
-that no name covers another name or another settlement. The font does not grow
-with the zoom, and a name with no room is left off rather than drawn over its
-neighbour - the toolbar says how many are named, and zooming in finds room for
-the rest. Every x, y on the people and events panels has a **⌖** beside it:
-press it, click the map, and that tile is written into the field in the
-coordinates `descr_strat.txt` uses, without selecting anything on the way.
-
-**↺ Reset** on the map's toolbar puts everything about how the map is read
-back to how it first opens - which layers are on, their opacity and order, the
-colours punched out of them, the terrain textures and their season, the rivers
-and heights readings, names, the tooltip, the markers, the query panel's
-colouring and filters, and the zoom.
-Saved views, the campaign you are reading and unsaved painting are kept.
-
-**🏰 Forts and resources** places a fort, a watchtower or a trade resource
-on the tile you click: press **＋ Fort**, **＋ Watchtower** or **＋ Resource**,
-click the map, and it is filed where the campaign keeps its own - a fort under
-the province under that tile, a resource in its province's group or after the
-last of its name, whichever way the file groups them. Drag one on the markers
-layer to move it, or pick a province to list its own and change a fort's type
-or culture, a resource's name, file it under another province, or delete it.
-Each save is one line of `descr_strat.txt`, shown before it is written, backed
-up, and undone from the Log like any other. A culture or a resource name your
-mod does not declare is refused; a tower on the sea, a resource on impassable
-land, or one standing in a different province from the one it is filed under
-is said, with the numbers behind it, and allowed.
-
-A campaign that ships its own map files, such as Third Age Reforged's
-Fellowship campaign, is drawn and checked from those files when you open it with
-**🏰 Campaign**, and the screen lists which files they are. The brush stays off
-there, because it paints `world/maps/base`, which that campaign never shows.
-
-When a tile is wrong for what you put on it, the message says where the
-nearest tile that would do is, and **⌖ Move it to** puts it there. The same
-answer comes with a character put on the wrong side of the shore and with a
-settlement pixel the map refuses. Going to anything on the map (a finding, a
-query row, a fort's ◎) draws a ring that closes onto the tile, so you can see
-where to look.
-
-A province made with **New region** now arrives in every campaign that reads the
-map: a settlement in each campaign's own start position (a village, held by the
-rebels unless you pick someone), the record in any campaign that keeps its own
-copy of `descr_regions.txt`, a music type, and its name in the lookup file. The
-creator faction is picked from the factions your mod actually has, and the two
-names the player reads are required, because the game will not start a province
-without them.
+* **Arriving somewhere.** **Find** takes a province, a settlement or a region ID,
+  matching the words the player reads as well as the code name the files use, out
+  of the map already on screen. **Views** saves what the map looks like - which
+  layers, in what order, at what opacity, the colours punched out of each and the
+  colouring over the top - under a name, on any mod. **Campaign** lists every
+  campaign the mod ships, the ones in subfolders that the engine's own new-game
+  menu never offers included, and opens it; a campaign with its own map files is
+  drawn and checked from those, and the brush stays off there.
+* **How it is drawn.** **Terrain textures** paints the ground with the mod's own
+  aerial-map art, **summer or winter**, built once a season and laid under the
+  whole stack so the provinces, markers and names still read over it. A tile
+  whose texture cannot be found is drawn pink and counted, never quietly skipped,
+  and ✓ Check names the file and a tile to go and look at. A colouring goes
+  **over** the map or **tints into** it, so the terrain's hills, forests and
+  rivers still read under a faction map, and frontiers sit on the edge between
+  two provinces or inside them, between the colouring's groups or round every
+  province. **Labels** (`L`) puts every settlement's name beside it without one
+  name covering another. All of it exports to a TGA exactly as it is on screen,
+  and **↺ Reset** puts every one of these readings back to how the map first
+  opens, keeping saved views, the campaign you are reading and unsaved painting.
+* **Putting things on it.** **🏰 Forts and resources** places a fort, a
+  watchtower or a trade resource on the tile you click and files it where the
+  campaign keeps its own; drag one to move it, or pick a province to list its own
+  and change a fort's type or culture, a resource's name, or which province it is
+  filed under. Every x, y on the people and events panels has a **⌖** that
+  fills it from a click on the map. Each save is one line of `descr_strat.txt`,
+  shown before it is written, backed up, and undone from the Log.
+* **Provinces.** **New region** adds one that arrives in every campaign reading
+  the map: a start settlement in each, the record, a music type and both of the
+  names the player reads, which are required because the game will not start a
+  province without them. **Delete** is the other half of it: the land goes whole
+  to a neighbour it shares a border with, longest border first, and everything
+  that named the province goes with it. What the panel says before you commit is
+  the point - the whole list of files, what stands on the land and whose province
+  it becomes, and every line of campaign script naming it, which is reported and
+  never edited.
+* **+ New campaign** makes a whole new campaign out of one that already works:
+  the folder copied, the `campaign` line set to the new name, every menu title
+  and blurb written again under the new key, and the compiled `map.rwm`
+  deliberately left behind so the game rebuilds it.
+* **A refusal says what would work instead.** A culture or a resource name the
+  mod does not declare is refused outright; a tile that is wrong for what you put
+  on it is told where the nearest tile that would do is, and **⌖ Move it to**
+  puts it there. Going to anything on the map draws a ring that closes onto the
+  tile.
 
 ![Campaign Map](main/docs/images/campaign-map.png)
 
@@ -309,32 +255,26 @@ Other transfer options:
   when it carries `armour_ug_models` the engine draws those, one per armour
   level, and never the model on its `soldier` line, so that one is not offered.
 * **Add a faction.** Copies one that already works into all twelve files that
-  name a faction slot - the roster, `expanded.txt`, unit ownership, the
-  modeldb's faction skins, every `requires factions { … }` clause in the EDB
-  (which is what lets it build and recruit), the voice accent, diplomatic
-  standing, agents, strat models, names, populace and off-map navies - and
-  copies its symbols, banners, captain cards and unit card folders under the new
-  name. Shows exactly what each file would gain before writing, backs every one
-  up, and undoes the whole faction in one go.
-
-  It also names what it will **not** touch, rather than letting you find out
-  later. Traits named after the faction, an ancillary's `FactionType` condition
-  and prebattle speeches are judgements rather than lists, so they are counted
-  and reported. So is the campaign start position: two factions cannot begin in
-  the same settlement, so there is nothing there to copy that would still be
-  right.
-* **Is this faction complete?** On the faction screen, one row for every file
-  that should name the faction - the roster, its name and event text, names,
-  agents, units, buildings, the voice accent, strat models, battle skins,
-  populace, off-map navy, diplomacy, and in the campaign its start and its win
-  conditions - each saying what it found. A **gap** is something every faction in
-  the mods this was measured on has; a **note** is something real, working
-  factions go without, shown and not counted, so a mod that plays does not read
-  as broken. The faction picker counts each faction's gaps. **Copy from** fills a
-  gap out of another faction - the one of the same culture that has it is
-  offered first - with the same records Add a faction would have written, one
-  backup and one undo for all of them. The two campaign rows open the tab that
-  makes them instead, because a start position is not something to copy.
+  name a faction slot - the roster, `expanded.txt`, unit ownership, the modeldb's
+  faction skins, every `requires factions { … }` clause in the EDB, the voice
+  accent, diplomatic standing, agents, strat models, names, populace and off-map
+  navies - along with its symbols, banners, captain cards and unit card folders.
+  Shows what each file would gain before writing, backs every one up, and undoes
+  the whole faction in one go. What it will **not** touch is named rather than
+  left to be found later: traits called after the faction, an ancillary's
+  `FactionType` condition, prebattle speeches and the campaign start position are
+  judgements rather than lists, so they are counted and reported.
+* **Is this faction complete?** One row for every file that should name the
+  faction - the roster and its text, names, agents, units, buildings, the voice
+  accent, strat models, battle skins, populace, off-map navy, diplomacy, and in
+  the campaign its start and its win conditions - each saying what it found. A
+  **gap** is something every faction in the mods this was measured on has; a
+  **note** is something real, working factions go without, shown and not counted,
+  so a mod that plays does not read as broken. The faction picker counts each
+  faction's gaps. **Copy from** fills one out of another faction, the one of the
+  same culture that has it offered first, with one backup and one undo for the
+  lot. The two campaign rows open the tab that makes them instead, because a
+  start position is not something to copy.
 * **Raw text.** Pick any text file the toolkit reads - the mod's own, the map's,
   the text folder, or any campaign's, nested ones included - and edit it as
   text. Every other screen here edits a file record by record and keeps what it
