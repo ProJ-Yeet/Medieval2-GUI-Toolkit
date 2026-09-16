@@ -919,6 +919,38 @@
   .cclform input[type=color]{width:30px;height:20px;padding:0;border-radius:4px;
     border:1px solid var(--edge);background:none;cursor:pointer}
   @media (max-width:520px){.cclslots{grid-template-columns:1fr}}
+
+  /* 35: the rebel factions, one row each. A LIST and not a grid, because
+     unlike a climate the thing being chosen has no colour and the two numbers
+     that decide the choice - how many provinces it has and what its chance is -
+     are text that wants the width. `chance 0` is called out on the row rather
+     than only in the detail, because it is the whole finding of the phase: on
+     Reforged every province names a faction that will never spawn. */
+  .reblist{display:flex;flex-direction:column;gap:3px;margin:6px 0;
+    max-height:280px;overflow:auto}
+  .rebrow{display:flex;align-items:center;gap:7px;text-align:left;
+    padding:5px 7px;border:1px solid var(--edge);border-radius:6px;
+    background:var(--panel2);min-width:0}
+  .rebrow:hover{border-color:var(--accent2)}
+  .rebrow.on{border-color:var(--accent);background:rgba(200,164,92,.13)}
+  .rebrow.orphan .rebnm{color:var(--warn,#c9a227)}
+  .rebnm{font-weight:600;font-size:12px;overflow-wrap:anywhere;min-width:0}
+  .rebcat,.reborph{font-weight:400;font-size:10px;color:var(--dim);
+    margin-left:5px;padding:0 4px;border:1px solid var(--edge);border-radius:3px}
+  .rebrow .count{margin-left:auto;text-align:right;font-size:10px}
+  .rebdet{border-top:1px solid var(--edge);margin-top:8px;padding-top:7px}
+  .rebunits{margin:6px 0;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+  .rebunits .count{flex:1 0 100%}
+  .rebunit{font-size:11px;padding:1px 6px;border:1px solid var(--edge);
+    border-radius:10px;background:var(--panel2)}
+  .rebunit.bad{border-color:var(--bad,#b4442e);color:var(--bad,#b4442e)}
+  .rebprovs{margin:6px 0;max-height:210px;overflow:auto}
+  .rebprov{display:inline-flex;align-items:center;gap:3px;margin:2px 5px 2px 0;
+    font-size:11px;white-space:nowrap}
+  .rebprov label{cursor:pointer}
+  .rebgo{padding:0 4px;font-size:10px;line-height:1.6;border-radius:4px}
+  .rebmove{border-top:1px solid var(--edge);margin-top:7px;padding-top:7px}
+  .rebmove select{max-width:180px}
   .cmpick .cmcard{border:1px solid var(--edge);border-radius:7px;padding:9px 10px;
     background:var(--panel2);margin-top:5px}
   .cmcard .nm{display:flex;align-items:center;gap:7px;font-weight:600;
@@ -2725,6 +2757,7 @@
 <script src="js/campevents.js"></script>
 <script src="js/campforts.js"></script>
 <script src="js/climates.js"></script>
+<script src="js/rebels.js"></script>
 <script src="js/regiondel.js"></script>
 <script src="js/campnew.js"></script>
 <script src="js/facaudit.js"></script>

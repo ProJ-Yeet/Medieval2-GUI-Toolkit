@@ -244,6 +244,16 @@ show the unsaved map rather than the one on disk.
   POST /api/map/paint_undo|_redo -> one step of the unlimited stack
   POST /api/map/paint_state      -> what is unsaved, without changing anything
   POST /api/map/paint_discard    -> throw the session away and re-read the disk
+  GET  /api/map/rebels?mod=&campaign=
+                                 -> 35. Both directions at once: every rebel
+                                    faction this mod declares with its category,
+                                    its chance, its units and the provinces that
+                                    name it, plus the values no block declares
+                                    and the provinces that name none
+  POST /api/map/rebel_plan|_apply
+                                 -> move a set of provinces onto one rebel
+                                    faction, in the descr_regions.txt that
+                                    campaign actually reads
   GET  /api/map/climates?mod=&campaign=
                                  -> 34. Every climate this mod declares as a
                                     slot - its colour, its tiles, whether it
@@ -521,7 +531,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campevents, campfiles, campmap, campnew, campstrat, cas, climatenew, guilds, mapcheck, mapquery, mapterrain, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, renames, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campevents, campfiles, campmap, campnew, campstrat, cas, climatenew, guilds, mapcheck, mapquery, mapterrain, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2302,6 +2312,9 @@ class Handler(BaseHTTPRequestHandler):
                           "/api/map/region_delete_apply"):
                 return self._json(self._region_delete(
                     u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/map/rebel_plan", "/api/map/rebel_apply"):
+                return self._json(self._rebels(
+                    u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/map/climate_plan", "/api/map/climate_apply"):
                 return self._json(self._climate(
                     u.path.rsplit("_", 1)[-1], body))
@@ -2958,10 +2971,19 @@ class Handler(BaseHTTPRequestHandler):
         reads the compiled binary in preference to the text files, and a mod
         whose regions changed under a stale one loads the old map and shows
         none of the edit.
+
+        The map is :meth:`Registry.map_for`'s, which is 22c's rule and the same
+        object :meth:`_region_delete` has always used. This handler did not ask
+        for it: it edited the base ``descr_regions.txt`` whatever campaign was
+        on the screen, so on Reforged's Fellowship - the one installed campaign
+        shipping its own copy, and one that differs from the base in eleven
+        records - a save wrote a file that campaign does not read and the
+        screen went on showing the old value.
         """
         try:
             mod = self.registry.describe(body["mod"])
-            plan = campmap.plan_region(mod, body)
+            cm = self.registry.map_for(body["mod"], body.get("campaign") or "")
+            plan = campmap.plan_region(mod, body, cm)
         except (KeyError, campmap.MapError, ModDataError, OSError) as e:
             return {"error": str(e)}
         out = {"plan": plan.payload()}
@@ -3008,6 +3030,40 @@ class Handler(BaseHTTPRequestHandler):
         return out
 
     # ---- a climate declared (34) ----
+    def _rebels(self, action, body):
+        """Preview or write a bulk rebel-faction assignment (35).
+
+        The map is :meth:`Registry.map_for`'s, which decides WHICH
+        ``descr_regions.txt`` this edits - the campaign's own copy where it
+        ships one. That is 22c's rule, and this phase is where the region save
+        beside it was corrected to follow the same one.
+
+        A map that will not read is not a refusal, the same ruling the climate
+        handler makes: the plan is a join over two text files and the layers
+        decide nothing in it.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            try:
+                cm = self.registry.map_for(name, body.get("campaign") or "")
+            except (campmap.MapError, ModDataError, OSError):
+                cm = None
+            plan = rebelpools.plan(mod, cm, body)
+        except (KeyError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(rebelpools.apply(plan))
+        except (ValueError, OSError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)       # descr_regions.txt changed on disk
+        return out
+
     def _climate(self, action, body):
         """Preview or write one climate across the four files that declare it.
 
@@ -4005,6 +4061,20 @@ class Handler(BaseHTTPRequestHandler):
             # answers for a mod whose layers will not decode, which is exactly
             # when knowing the mod has two campaigns is worth something.
             return self._json(campfiles.browse(self.registry.describe(name)))
+
+        if path == "/api/map/rebels":
+            # 35. Ahead of the map read for the same reason the climates are:
+            # this is a join over two TEXT files and the layer is not one of
+            # them. A mod whose layers will not decode still gets its reverse
+            # list - the map is asked for so the campaign's own copy of
+            # descr_regions.txt wins, and never required.
+            try:
+                rcm = self.registry.map_for(
+                    name, (q.get("campaign") or [""])[0])
+            except (campmap.MapError, ModDataError, OSError):
+                rcm = None
+            return self._json(rebelpools.view(
+                self.registry.describe(name), rcm))
 
         if path == "/api/map/climates":
             # 34. Ahead of the map read for the same reason the campaign list

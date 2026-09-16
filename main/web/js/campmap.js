@@ -143,9 +143,9 @@ const CMAP_TABS = [
    title: 'The brush and its palette, the climates it paints with, the markers '
         + 'layer, and the campaign events'},
   {id: 'place', label: 'Province', icon: '◉',
-   panels: ['cmPick', 'cmSettle', 'cmChars', 'cmForts', 'cmDel'],
-   title: 'What is on the tile you clicked: its record, its settlement, its '
-        + 'people and its forts'},
+   panels: ['cmPick', 'cmRebels', 'cmSettle', 'cmChars', 'cmForts', 'cmDel'],
+   title: 'What is on the tile you clicked: its record, its rebels, its '
+        + 'settlement, its people and its forts'},
   {id: 'camp', label: 'Campaign', icon: '⚑', panels: ['cmCamp', 'cmModels'],
    title: 'The campaign’s own settings, and the strat models its factions use'},
 ];
@@ -972,6 +972,7 @@ back from the collapsed state.">›</button>
   cqOpen();
   cpaintOpen();
   cclOpen();          // 34, and it reads nothing until somebody opens it
+  rebOpen();          // 35, and it reads nothing until somebody opens it
   cmkOpen();          // 17d, and it reads nothing until the layer is ticked
   cevOpen();          // 18b, and it reads its two files only once opened
   cftOpen();          // 22a, and it reads nothing until somebody opens it
@@ -3682,7 +3683,12 @@ async function cmapSave(){
       + `${Math.abs(total - 100)} ${total > 100 ? 'off' : 'on'} before saving.`, 7000);
     return;
   }
-  const body = {mod:c.mod, region:d.name, edits:cmapEdits()};
+  /* The campaign decides WHICH `descr_regions.txt` this edits. A campaign that
+     ships its own copy is drawn and judged on that copy, and until 35 this body
+     carried no campaign at all, so every save went to the base file - on
+     Reforged's Fellowship, a file that campaign does not read. */
+  const body = {mod:c.mod, campaign:c.campaign || '', region:d.name,
+                edits:cmapEdits()};
   if(d.raw) body.raw_block = d.raw;
   c.busy = true;
   let plan;

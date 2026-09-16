@@ -771,7 +771,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~9~~ | ~~**33** T10, G2 and G4 in one session~~ | S x3 | beta | **done 2026-09-15** |
 | ~~10~~ | ~~**30** A missing texture without the pink~~ | S | beta | **done 2026-09-15** |
 | ~~11~~ | ~~**34** Add a climate zone~~ | M | beta | **done 2026-09-15** |
-| 12 | **35** Rebels right in place | M | beta | 5 |
+| ~~12~~ | ~~**35** Rebels right in place~~ | M | beta | **done 2026-09-16** |
 | 13 | **36** D1, change a region's colour | M | beta | 5 |
 | 14 | **37a** T7, the spawn export | M | beta | 5 |
 | 15 | **37b** T3, an FE zoom | M | beta | 5 |
@@ -790,8 +790,8 @@ on, then stars, then size.** That is four rules and each one earns its place.
 39 touch something outside the campaign map, so each is a subrelease on both
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
-(2026-09-14), and **41, 43, 28a, 28b, 33 and 30 are done** (2026-09-15); ten
-remain, two of them subreleases. **43 was nearly all built already** - 16j shipped the
+(2026-09-14), **41, 43, 28a, 28b, 33, 30 and 34 are done** (2026-09-15) and
+**35 is done** (2026-09-16); nine remain, two of them subreleases. **43 was nearly all built already** - 16j shipped the
 roster writer and the write-up had not checked - so what landed was the one
 sentence of it that was true, the refusal. **28a's scoping held in full**, and
 what it did not say was that the layer stack has to be capped or it takes the
@@ -1578,25 +1578,101 @@ of them is a map layer. The layer is read for the tile counts alone, so it is
 asked for and never required - which is also the only reason the suite's little
 mod, which has no layers at all, can exercise the route end to end.
 
-## Phase 35 - Rebels right in place: province and rebel faction, both ways
+## Phase 35 - Rebels right in place: province and rebel faction, both ways - DONE 2026-09-16
 
-**Phase 32's shape applied to the other per-province pool, and simpler.** A
-province names one rebel faction in its `descr_regions.txt` record and
-`info_rebels` already colours the map by it. What is missing is everything in
-the other direction: take a rebel faction and see its provinces, see what it
-can actually field, and change the assignment from either end.
+**The scoping was right that this is a join and a screen, and wrong about how
+much of it was missing.** Three of the four things it names already existed, and
+finding that out is most of the phase.
 
-`descr_rebel_factions.txt` is already `flatrecord`'s - Phase 11 needed no
-parser for it at all - and the region record is already spliced by 16d. So this
-is a join and a screen rather than a format, which is exactly why it is worth
-doing **before** Phase 32 rather than after: it is the same two-way pattern over
-a file that is already fully read, so the panel shape gets settled on the cheap
-problem and 32b inherits it.
+| the write-up's "missing" | what was really there |
+|---|---|
+| see what a rebel faction can field | the Minor Files rebel form, `mfRebelForm`, which lists the `unit` lines and resolves each against the EDU already |
+| change the assignment from the province end | the `rebels` box on `cmPick`, editable since 16d and validated against the declared list since then |
+| light its provinces on the map | `info_rebels` runs through `_by_value`, which builds one group per rebel faction; the group filter is the highlight. Measured: 38 groups on DaC, one per named faction |
+| **take a rebel faction and see its provinces** | **nothing, anywhere** |
 
-The archive has a whole tutorial on getting this wrong (Errabundi's *Rebels
-Right in Place*), whose complaint is Bulgarian rebels spawning in Serbia. That
-is a fact about which faction a province names, and it is invisible today
-unless you colour the whole map and look.
+So what was built is the reverse list and the one operation the rebel end has
+that the province end does not: **assigning many provinces at once**. And the
+phase gets its "what this is not" from the same measurement, in 32c's shape:
+**not a rebel faction editor**. That record is Minor Files' and works there.
+
+### There is no rule here, and the measurement is why
+
+The archive tutorial this was scoped from is Errabundi's *Rebels Right in
+Place*, whose complaint is Bulgarian rebels spawning in Serbia. Measured on both
+installed mods:
+
+* **not one province names a rebel faction that is not declared.** DaC's 200
+  records name 38 of its 42 blocks; Reforged's 199 name 27 of its 30.
+* **not one of the 248 `unit` lines across the two mods names a unit the EDU
+  does not have**, in any case.
+
+There is nothing for a validator to find. A wrong assignment is a *valid*
+assignment somebody did not mean, and no rule separates the two, which is what
+the write-up itself says: it is invisible unless you colour the map and look.
+**So this ships no `mapcheck` rule and no repair**, and saying so is better than
+inventing a rule that fires on a correct file.
+
+### What the measurement did turn up is `chance`, and it is in the other file
+
+* **Third Age Reforged sets `chance 0` on every one of the 27 blocks its
+  provinces name.** All 199 of its provinces point at a rebel faction that will
+  never spawn: province-driven rebels are switched off across the whole mod,
+  uniformly. Only `brigands`, `pirates` and `gladiator_uprising` are non-zero,
+  and no province names those.
+* **DaC spreads it**: 2 on 29 blocks, 4 on 7, 6 on one, 10 on one, and
+  `No_Rebels` at 0 on the 9 provinces meant to have none.
+
+So `chance 0` is an idiom and a rule flagging it would be wrong 208 times. What
+it earns is a **note**: the chance is on every row, because picking a block
+without it is the one way to make this edit and have it do nothing.
+
+### Three blocks that no province names are not orphans
+
+Each mod declares exactly one block per non-`peasant_revolt` category, named
+after the category itself, and the engine spawns those by category rather than
+off a region record. `BY_CATEGORY` is that exemption; without it the reverse
+list calls three correct blocks dead on every mod there is. What survives the
+exemption is a real orphan: **two on DaC**, `Ent_Rebels` and `Saralainn_Rebels`,
+declared with units and named by nothing, and **none on Reforged**.
+
+### The defect it led with, which is in shipped work and not in this
+
+Rule 1 of the order, applied on the way in. **The region record editor wrote the
+base `descr_regions.txt` whatever campaign was on the screen.** A campaign that
+ships its own copy is drawn and judged on that copy - `CampaignMap` reads it and
+sets `regions.path` to it, which is 22c's rule, and `_region_delete` beside it
+has always honoured it - but `plan_region` read `read_regions(mod)` and
+`apply_region` wrote the `REGIONS_REL` constant. **Reforged's Fellowship
+campaign ships its own and the two files differ in eleven records**, so this was
+not latent: a save made on Fellowship wrote a file that campaign does not read,
+and the screen went on showing the old value.
+
+**The stale compiled map was the same defect's other half.** `apply_region`
+deleted `base/map.rwm` alone, and Reforged ships a `map.rwm` in its Fellowship
+folder too - a different file, 14 KB apart - so an edit there left the stale one
+exactly where the engine looks first.
+
+Fixed at four levels: `plan_region` takes the map, `apply_region` writes the
+path the plan carries, `stale_rwm` names the compiled maps a write really makes
+stale, and `campmap.js` sends the campaign it was never sending. New:
+`campmap.RWM_NAME`, `campmap.regions_rel`, `campmap.stale_rwm`, a third argument
+on `plan_region`.
+
+### Verified
+
+`tests/test_rebelpools.py` **68/68**, new. Eleven suites re-run and all green -
+`test_web_modules` 75/75, `test_campedit` 107/107, `test_campaint` 169/169,
+`test_regiondel` 62/62, `test_codeview` 141/141, `test_namekeys` 56/56,
+`test_campnew` 52/52, `test_minorfiles` 185/185, `test_mapquery` 109/109,
+`test_climatenew` 98/98. `test_campmap` is 108/112 and **a stashed tree gives
+the same 108/112 with the same four failures by name**, all of them DaC-number
+checks against a mod build that has moved.
+
+Driven in the real app against both mods: the panel lists 42 factions on DaC
+with the localised names resolved, the orphan warning fires on `Ent_Rebels`, a
+chip jumps to the province on the map, and `GET /api/map/rebels` with
+`campaign=custom/Fellowship_Campaign` answers with that campaign's own file.
 
 ## Phase 36 - D1: change a region's colour
 

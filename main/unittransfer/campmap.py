@@ -89,6 +89,8 @@ TERRAIN_REL = f"{BASE_REL}/descr_terrain.txt"
 REGIONS_REL = f"{BASE_REL}/descr_regions.txt"
 #: deleted whenever the map changes, or the game loads the stale binary instead
 RWM_REL = f"{BASE_REL}/map.rwm"
+#: just the filename, for the copy a campaign folder compiles of its own
+RWM_NAME = "map.rwm"
 
 #: The engine's ceiling on either side of the tile grid, per the arbiter.
 #:
@@ -2685,6 +2687,66 @@ class RegionPlan:
                 "ok": not self.errors and bool(self.text)}
 
 
+def regions_rel(p: RegionPlan) -> str:
+    """The data-relative ``descr_regions.txt`` this plan edits.
+
+    The plan carries the path it read from, which is the campaign's own copy
+    whenever the map it was planned against had one, so the write goes back to
+    the file the numbers came out of. Falls back to the base map's constant for
+    a plan built before a path was set, which is what a hand-made plan in a test
+    looks like.
+    """
+    if p.path is None:
+        return REGIONS_REL
+    try:
+        return Path(p.path).resolve().relative_to(
+            Path(p.mod.data).resolve()).as_posix()
+    except (ValueError, AttributeError, OSError):
+        return REGIONS_REL
+
+
+def stale_rwm(mod, rel: str) -> List[str]:
+    """Every compiled ``map.rwm`` a write to ``rel`` has just made stale.
+
+    The game reads the compiled binary in preference to the text files, so the
+    one beside a changed ``descr_regions.txt`` has to go or the edit does not
+    show. **Which ones** is the half this got wrong: it deleted the base map's
+    and nothing else, and Reforged ships a ``map.rwm`` in its Fellowship folder
+    as well as in ``base`` - two different files, 14 KB apart - so an edit made
+    on Fellowship left the stale one exactly where the engine looks first.
+
+    **The compiled map beside the file that changed is always one of them**, and
+    it is listed first because it is the only answer that needs nothing else to
+    be true. The campaign list is built from the folders that carry a
+    ``descr_strat.txt``, so a campaign folder holding a ``descr_regions.txt``
+    and a ``map.rwm`` and nothing else is not in it - and that folder's compiled
+    map is exactly the one a write there makes stale.
+
+    On top of that, a campaign is stale when the file this wrote is the
+    ``descr_regions.txt`` THAT campaign reads, which is
+    :func:`unittransfer.campaint.map_campaigns`' own answer and the same rule
+    :mod:`unittransfer.regiondel` follows. The base map's own copy goes too when
+    the base file is what changed.
+    """
+    data = Path(mod.data)
+    out: List[str] = []
+    # the one beside the file that changed, which is true whatever the campaign
+    # list says and is the only answer for a folder nothing has enumerated yet
+    beside = f"{rel.rsplit('/', 1)[0]}/{RWM_NAME}" if "/" in rel else RWM_NAME
+    out.append(beside)
+    # …and every campaign that reads the file this wrote but compiles its own
+    try:
+        from .campaint import map_campaigns
+        for c in map_campaigns(mod):
+            if c["regions"] == rel and c["rwm"] and c["rwm"] not in out:
+                out.append(c["rwm"])
+    except (OSError, ValueError, AttributeError, ImportError):
+        pass                    # a mod with no campaign list still has `beside`
+    if rel == REGIONS_REL and RWM_REL not in out:
+        out.append(RWM_REL)
+    return [r for r in out if (data / r).is_file()]
+
+
 def _describe(before: RegionRecord, after: RegionRecord) -> List[str]:
     """What changed, said the way somebody would say it out loud."""
     out: List[str] = []
@@ -2715,7 +2777,8 @@ def _describe(before: RegionRecord, after: RegionRecord) -> List[str]:
     return out
 
 
-def plan_region(mod, body: dict) -> RegionPlan:
+def plan_region(mod, body: dict, cm: Optional["CampaignMap"] = None
+                ) -> RegionPlan:
     """Work out the whole new ``descr_regions.txt`` for one save.
 
     ``body`` is ``{mod, region, edits, raw_block}``. ``raw_block`` is text the
@@ -2724,10 +2787,22 @@ def plan_region(mod, body: dict) -> RegionPlan:
 
     Nothing is written. What comes back is the whole file as it would be, the
     record as it would read, and the reasons it would be refused.
+
+    ``cm`` is the map the screen is reading, and it decides WHICH
+    ``descr_regions.txt`` this edits - 22c's rule, which the delete beside this
+    one has always honoured and this had not. A campaign that ships its own copy
+    is drawn and judged on that copy (:class:`CampaignMap` reads it and sets
+    ``regions.path`` to it), so an edit that went to the base file changed a
+    file that campaign never reads and left the screen showing the old value.
+    Measured: Reforged's Fellowship campaign ships its own, and the two differ
+    in eleven records - so this was not a latent fault, it was a save that did
+    nothing on the one installed campaign that has a copy of its own. Passed
+    nothing, this is the base map and every caller that had no campaign to give
+    is unchanged.
     """
     p = RegionPlan(mod=mod, name=str(body.get("region") or "").strip())
     try:
-        rf = read_regions(mod)
+        rf = cm.regions if cm is not None else read_regions(mod)
     except MapError as exc:
         p.errors.append(str(exc))
         return p
@@ -2824,15 +2899,16 @@ def apply_region(p: RegionPlan) -> dict:
         target.parent.mkdir(parents=True, exist_ok=True)
         return target
 
-    target = keep(REGIONS_REL)
+    rel = regions_rel(p)
+    target = keep(rel)
     write_text(target, p.text, ENCODING)
     file_op("WRITE", target, f"{len(p.text)} bytes")
 
-    rwm = Path(mod.data) / RWM_REL
-    if rwm.exists():
-        keep(RWM_REL)
+    for srel in stale_rwm(mod, rel):
+        rwm = Path(mod.data) / srel
+        keep(srel)
         rwm.unlink()
-        manifest["deleted"].append(RWM_REL)
+        manifest["deleted"].append(srel)
         file_op("DELETE", rwm, "stale compiled map - the game would load it instead")
 
     rec = {
