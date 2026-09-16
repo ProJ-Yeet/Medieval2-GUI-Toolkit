@@ -2913,6 +2913,96 @@ Exit: add and remove on the strings screen over the plan that already accepts
 them, the two refusals surfaced as the sentences the backend already writes,
 and `tests/test_strings.py` covering both through the HTTP layer.
 
+## Phase 49 - Two strips, the colours on the left, and one place for models - DONE 2026-09-16
+
+Asked for directly, with a screenshot of Mylae's map screen attached: `Strat` /
+`Validate` / `3D` across the top, `Overview` / `Settlements` / `Factions` /
+`Characters` under whichever of those is up, and a third row under that. *"This
+looks way cleaner. Where each section when clicked shows the subsections below
+and they can also be switched as needed."* Three more things came with it: a
+toggle for the layer the brush is writing, the colours it can write on the left
+of the map, and the Models Editor.
+
+### The strip 28a built was half the shape
+
+28a is what put the six tabs there, and its own note says why: sixteen panels in
+one column meant the strat models sat four screens below the fold. It grouped
+them - **six tabs over sixteen panels** - and then **stacked every panel of a
+group down one scroll**, which is the same column laid on its side once a group
+has seven of them. Province was `cmPick`, `cmRebels`, `cmSettle`, `cmChars`,
+`cmForts`, `cmDel` and `cmRecolour`, one under the other.
+
+So a tab is a **group of sub-tabs** and a sub-tab is what is shown, one at a
+time. `CMAP_TABS` is two levels deep now and every reader goes through
+`cmapTabPanels` (a group's panels, its subs' put end to end) or `cmapSubs`.
+Nothing else changed about the DOM: **every panel of every group is still in the
+DOM and still keeps its own state**, which is the property 28a's grouping was
+built on and the reason moving to two levels cost the sixteen panel modules
+nothing.
+
+**Choosing a sub-tab presses the panel's own toggle.** Nine of these read
+nothing until somebody clicks their own button, which was right when they were
+stacked - a column of sixteen panels that each fetched on sight is a screen that
+fetches sixteen times on load - and is wrong behind a tab: clicking `Forts` and
+getting a button that says `Forts` is one click the screen owes you. `open: {fn,
+at}` on the sub names the toggle and the key its module keeps `open` on, so it
+is pressed **once and only when the panel is not already open**. Nothing is read
+until the tab is *chosen*, which is the half of the old rule worth keeping - a
+restored tab on load still opens closed, and the validator still does not run
+itself.
+
+The sub each group is on rides in `cmapLayerState` beside the tab 28a put there,
+so it is in every named view for nothing and `cmapResetView` puts it back.
+`cmapSurface` - the one thing that keeps the strip from being worse than the
+stack - now names a group **and a sub**, because a click on a province that
+fills `#cmPick` has to reach a panel that is hidden twice over.
+
+### The colours are beside the tiles they go on
+
+The palette was in the right-hand column behind the Paint tab. A palette is a
+thing you reach for on **every stroke**, and that put it two clicks from the map
+and took the column away from whatever else it was showing - the region record,
+the validator - every time.
+
+It is a column on the **other side of the stage** now, present only while the
+brush is armed, holding the three things a stroke needs and nothing else: which
+layer, which colour, and what is about to be written. It is wired by
+`cpaintWireIn`, the same function that wires the panel and 28b's toolbar row, so
+the same controls behave the same in all three and none of them knows where the
+others put them.
+
+**The layer is a toggle rather than a dropdown**, which is the user's second
+request and is also the one control on this screen you could not read without
+opening it: the thing a stroke was about to change was a word behind a click.
+Eight buttons, one per paintable layer, and a layer the server could not read is
+disabled with its reason on the title rather than left out.
+
+### One editor for a mod's models
+
+"BMDB + Sprites Editor" was already the wrong name for what its strip held -
+model entries, sprites, **strat map** and unit cards - and it is **Models
+Editor** now. Two things moved to make the name true.
+
+**The strat map's entries get a 3D panel**, the BMDB browser's own: the same
+split, the same saved width, the same detach-and-reattach so a keystroke in the
+search box does not rebuild the canvas and refetch the mesh. A row's 🧊 draws the
+`.CAS` that entry names - `entries` now carries `meshes`, the meshes the mod
+**actually ships**, so a row with all of its files in a `.pack` gets no button
+rather than a button that opens a 404. **206 of Divide and Conquer's 237 entries
+have one.**
+
+**And 16k's model browser came here from the campaign map.** It was a panel in
+that screen's side column, where it edited nothing and sat beside nothing else
+about models; the same list is now inside this panel, above the canvas. It is
+the half that matters most, because **most of what the campaign map draws is in
+no entry at all**: the game picks a settlement by level and culture out of
+`data/models_strat` with nothing naming the file, which is why Amon Hen and
+Minas Tirith are on the map and in `descr_model_strat.txt` nowhere. DaC declares
+237 entries and ships **926 model files**.
+
+Still one viewer on the page - `v3MountCas` drops whatever was showing - so this
+panel and the BMDB one cannot both be drawing.
+
 ## The 2026-09-13 pass, and the two parts of it that produced a measurement
 
 **Traits and ancillaries are still level, and the way to know is the date.**

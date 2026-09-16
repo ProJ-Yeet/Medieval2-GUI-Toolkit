@@ -291,6 +291,21 @@ async function v3Mount(hostId, mod, entry){
   await v3Begin(mod, entry, hostId);
 }
 
+/* 49: let go of a docked viewer whose host has left the page.
+
+   `v3Unmount` is the deliberate close and empties the host it is still holding.
+   This is the other case: the mode switched, the new screen wrote over `#main`,
+   and the element the viewer draws to is simply gone. Nothing to empty, and
+   everything to stop - a WebGL context and a `requestAnimationFrame` loop for a
+   view nobody can see. Called once from `applyMode`, after the render that
+   re-attaches every dock that IS still real. */
+function v3DropOrphan(){
+  if(!v3 || !v3.host) return;
+  if(document.getElementById(v3.host)) return;
+  v3Stop();
+  v3 = null;
+}
+
 /* Let go of a docked viewer without touching the modal. */
 function v3Unmount(){
   if(!v3 || !v3.host) return;

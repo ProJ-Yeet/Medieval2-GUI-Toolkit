@@ -190,11 +190,36 @@ campmap_js = (JS / "campmap.js").read_text(encoding="utf-8")
 tabs_block = re.search(r"^const CMAP_TABS = \[(.*?)^\];", campmap_js, re.S | re.M)
 check("campmap.js declares CMAP_TABS", bool(tabs_block))
 tabs_src = tabs_block.group(1) if tabs_block else ""
-tabs = re.findall(r"\{id: '([a-z]+)'.*?panels: \[(.*?)\]", tabs_src, re.S)
-grouped = {tid: re.findall(r"'([A-Za-z_][\w]*)'", panels) for tid, panels in tabs}
+# 49: a tab is a GROUP of SUB-TABS and a sub-tab is the panels shown together,
+# so the table is two levels deep. Split on the top-level `{id: 'x', label:` -
+# every sub carries `panels: [...]`, and a group's panels are its subs' put end
+# to end, which is exactly what `cmapTabPanels` does in the file.
+_tops = re.split(r"\n  \{id: '", tabs_src)[1:]
+grouped, subbed = {}, {}
+for block in _tops:
+    tid = block.split("'", 1)[0]
+    grouped[tid] = re.findall(r"'([A-Za-z_][\w]*)'",
+                              " ".join(re.findall(r"panels: \[(.*?)\]", block, re.S)))
+    subbed[tid] = re.findall(r"\{id: '([a-z]+)', label:", block)
 flat = [p for ids in grouped.values() for p in ids]
-check(f"CMAP_TABS parsed: {len(grouped)} tabs over {len(flat)} panels",
+check(f"CMAP_TABS parsed: {len(grouped)} tabs over "
+      f"{sum(len(v) for v in subbed.values())} sub-tabs over {len(flat)} panels",
       len(grouped) >= 4 and len(flat) >= 12)
+check("every tab has at least one sub-tab",
+      all(subbed.get(t) for t in grouped))
+check("no sub-tab id repeats inside its own tab",
+      all(len(v) == len(set(v)) for v in subbed.values()))
+# The second strip, and the one thing that makes it worth having: choosing a
+# sub-tab presses that panel's own toggle, so `Forts` is forts rather than a
+# button that says Forts.
+check("campmap.js draws the second strip",
+      "function cmapSubsHtml(" in campmap_js and 'class="cmsubs"' in campmap_js)
+check("and choosing one opens the panel behind it",
+      "function cmapSubOpen(" in campmap_js
+      and "cmapSubOpen(sb);" in campmap_js)
+# Every `open:` names a toggle that exists and a key on `state` some module
+# writes - a wrong name here is a sub-tab that silently opens nothing.
+_opens = re.findall(r"open: \{fn: '(\w+)', at: '(\w+)'\}", tabs_src)
 
 # A panel in two groups is not a syntax error and not a visible one either:
 # `cmapTabOf` takes the first match, so the second tab would hold a div that
@@ -210,6 +235,16 @@ orphan = [p for p in flat
           if p != "cmFindings" and f"'{p}'" not in js_all.replace(tabs_src, "")]
 check("every panel in the table is one some module writes into"
       + (": " + ", ".join(orphan) if orphan else ""), not orphan)
+
+# 49: and every `open:` names a toggle some module declares and a key on
+# `state` some module writes. A wrong name here is a sub-tab that silently
+# opens nothing, which is exactly the bug the sub-tabs exist to remove.
+_nofn = [fn for fn, _at in _opens if f"function {fn}(" not in js_all]
+check(f"all {len(_opens)} sub-tab toggles are declared"
+      + (": " + ", ".join(_nofn) if _nofn else ""), _opens and not _nofn)
+_noat = [at for _fn, at in _opens if f"state.{at} =" not in js_all]
+check("and each names the key its module keeps `open` on"
+      + (": " + ", ".join(_noat) if _noat else ""), not _noat)
 
 # The user asked for Validate by name, and it is a tab rather than a section in
 # a stack of sixteen - see the phase note in campmap.js.
@@ -252,21 +287,58 @@ index_html = (WEB / "index.html").read_text(encoding="utf-8")
 check("the toolbar has a row for the paint controls",
       'id="cmPaintBar"' in campmap_js and 'class="cmbarrow cmpaint"' in campmap_js)
 _bar = campaint_js.split("function cpaintBarHtml(){")[1].split("\nfunction ")[0]
-for want in ("cpaintToolsHtml()", "cpaintSizeHtml()", "cpaintTargetHtml()",
-             "cpaintToggle()"):
+for want in ("cpaintToolsHtml()", "cpaintSizeHtml()", "cpaintToggle()"):
     check(f"the bar builds {want}", want in _bar)
 # and the panel is what is READ rather than reached for
 _panel = campaint_js.split("function cpaintHtml(){")[1].split("\nfunction ")[0]
-for gone in ("cpaintToolsHtml()", "cpaintSizeHtml()", "cpaintTargetHtml()"):
+for gone in ("cpaintToolsHtml()", "cpaintSizeHtml()", "cpaintPaletteHtml()"):
     check(f"the panel no longer builds {gone}", gone not in _panel)
-for kept in ("cpaintPaletteHtml()", "cpaintWizHtml()", "cpaintFootHtml()"):
+for kept in ("cpaintWizHtml()", "cpaintFootHtml()", "cpaintChosenHtml()"):
     check(f"the panel still builds {kept}", kept in _panel)
+
+# 49: the colours are in a column on the left of the map, and the layer they
+# belong to is a toggle above them rather than a <select> on the toolbar.
+check("the map screen has the left palette column",
+      'id="cmPalCol"' in campmap_js and ".cmpalcol{" in
+      (WEB / "index.html").read_text(encoding="utf-8"))
+_dock = campaint_js.split("function cpaintDockHtml(){")[1].split("\nfunction ")[0]
+for want in ("cpaintLayerTogHtml()", "cpaintChosenHtml()", "cpaintPaletteHtml()"):
+    check(f"the dock builds {want}", want in _dock)
+check("the toolbar's layer <select> is gone",
+      "cpaintTargetHtml" not in campaint_js and "[data-target]" not in campaint_js)
+check("and the layer toggle is buttons the same wiring reads",
+      "data-target-btn" in campaint_js and "[data-target-btn]" in campaint_js)
+# 49: the Models Editor is what the BMDB mode is called, and the strat map tab
+# has the BMDB browser's own 3D panel - a second docked viewer, which is why the
+# orphan drop below exists at all.
+_core = (JS / "core.js").read_text(encoding="utf-8")
+_stm = (JS / "stratmap.js").read_text(encoding="utf-8")
+check("the bmdb mode is the Models Editor",
+      "'Models Editor'" in _core and "BMDB + Sprites Editor" not in _core)
+check("the strat map tab has a 3D panel beside the list",
+      'id="stmSplit"' in _stm and "function stmPrevMount(" in _stm
+      and "v3MountCas(STM_PREV_HOST" in _stm)
+check("and its rows offer only meshes the mod actually ships",
+      "e.meshes" in _stm
+      and '"meshes"' in (ROOT / "unittransfer" / "stratmap.py").read_text(encoding="utf-8"))
+check("16k's model browser writes into the panel, not the map screen",
+      "cmodBrowse" in _stm and "cmodBrowse" in (JS / "stratview.js").read_text(encoding="utf-8")
+      and "cmModels" not in (JS / "campmap.js").read_text(encoding="utf-8"))
+# Two docked viewers and one WebGL context: leaving a mode has to stop the one
+# whose host the next screen wrote over, or it goes on drawing to nothing.
+check("a mode switch drops a docked viewer whose host is gone",
+      "function v3DropOrphan(" in (JS / "viewer3d.js").read_text(encoding="utf-8")
+      and "v3DropOrphan();" in _core)
+
+check("the dock is painted from the same entry point as the other two",
+      "cpaintDockPaint();" in campaint_js.split("function cpaintPaint(){")[1]
+      .split("\n}")[0])
 check("both places are painted from one entry point",
       "cpaintBarPaint();" in campaint_js.split("function cpaintPaint(){")[1]
       .split("\n}")[0])
-check("and both are wired by the same function, handed the box",
+check("and all three are wired by the same function, handed the box",
       "function cpaintWireIn(box)" in campaint_js
-      and campaint_js.count("cpaintWireIn(") >= 3)
+      and campaint_js.count("cpaintWireIn(") >= 4)
 
 # Whether the row is open is a habit and rides with the rest; arming the brush
 # is not, and must stay out of a saved view.

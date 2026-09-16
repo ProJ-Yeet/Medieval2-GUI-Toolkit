@@ -677,12 +677,12 @@ const MODES=[
   {id:'transfer', icon:'⚔', name:'Unit Transfer', hint:'Copy a unit from one mod into another'},
   {id:'buildings',icon:'🏰', name:'Buildings',     hint:'Browse and edit export_descr_buildings'},
   {id:'campmap',  icon:'🌍', name:'Campaign Map',  hint:'The ten map layers, the regions painted on them and what the game reads'},
-  {id:'bmdb',     icon:'🗄', name:'BMDB + Sprites Editor', hint:'What battle_models.modeldb names, and the sprites it points at'},
+  {id:'bmdb',     icon:'🗄', name:'Models Editor',  hint:'Every model a mod ships: the battle entries, their sprites, the strat map’s, and the cards'},
   {id:'sounds',   icon:'🔊', name:'Unit Sounds',   hint:'Pick which voice entry each unit speaks with'},
   {id:'minor',    icon:'🗺', name:'Minor Files',   hint:'Rebels, religions, cultures, traits, factions and text'},
   {id:'rawtext',  icon:'📝', name:'Raw text',      hint:'Any file the toolkit reads, as plain text, backed up and undoable'},
   {id:'sprites',  icon:'🖼', name:'Sprites',       sub:true, hint:'Generate and wire the far-LOD unit sprites'},
-  {id:'stratmap', icon:'🗺', name:'Strat map models', sub:true, hint:'What descr_model_strat.txt names, and what the campaign map never draws'},
+  {id:'stratmap', icon:'🗺', name:'Strat map models', sub:true, hint:'What descr_model_strat.txt names, what the campaign map never draws, and either of them in 3D'},
   {id:'cards',    icon:'🖼', name:'Unit & info cards', sub:true, hint:'The two pictures per unit, deduplicated into the merc folder'},
   {id:'traits',   icon:'🎖', name:'Traits',        sub:true, hint:'Character traits, their levels and the triggers that give them'},
   {id:'ancillaries',icon:'🏅', name:'Ancillaries',  sub:true, hint:'The items and followers a character picks up'},
@@ -1182,9 +1182,13 @@ function rszInit(){
 const cleanupFor=mode=>({bmdb:openCleanup, stratmap:openStratCleanup}[mode]
   || (()=>toast('Nothing to clean up on this tab.')));
 
-/* ---------- the BMDB tab strip ----------
-   Sprites are the far-LOD half of a modeldb entry, so they are a tab of the
-   BMDB editor rather than a module of their own. */
+/* ---------- the Models Editor's tab strip ----------
+   Sprites are the far-LOD half of a modeldb entry, so they are a tab of this
+   editor rather than a module of their own - and 49 renamed the mode after what
+   the strip already held: every model a mod ships, battle and campaign map
+   alike, rather than the modeldb and its sprites. The strat map's own 3D
+   browser moved here from the campaign map screen in the same phase, because
+   this is where a mod's models are looked at. */
 const BMDB_TABS=[{mode:'bmdb',label:'Model entries'},{mode:'sprites',label:'Sprites'},
   {mode:'stratmap',label:'Strat map'},{mode:'cards',label:'Unit cards'}];
 const bmdbTabsHtml=note=>`<div class="mftabs">${BMDB_TABS.map(t=>
@@ -1395,6 +1399,13 @@ function applyMode(persist){
   if(persist)api.post('/api/settings',
     {mode:state.mode,last_dest:one?(state.xferDst||state.dst):state.dst});
   render();
+  // 49: a docked 3D viewer whose host the new screen wrote over. There are two
+  // of them now - the BMDB browser's and the Strat map's - and leaving either
+  // mode left a WebGL context and an animation loop drawing to an element that
+  // is no longer on the page. Here rather than in each mode's own teardown
+  // because it is the mode SWITCH that orphans it, and `render()` has just put
+  // back every host that is still real.
+  if(typeof v3DropOrphan === 'function') v3DropOrphan();
 }
 
 // Leaving select mode keeps WHAT was ticked - you step out to look at a unit in

@@ -186,6 +186,9 @@ function cvwPlan(man, preset){
        when the preset never carried one, and 0 means "leave it". */
     tab: (typeof CMAP_TABS !== 'undefined'
           && CMAP_TABS.some(t => t.id === p.tab)) ? p.tab : '',
+    //: 49: and which sub-tab each group is on. A preset saved before it says
+    //: nothing and leaves every group where it is, the same as `tab` does.
+    sub: (p.sub && typeof p.sub === 'object') ? Object.assign({}, p.sub) : null,
     sideHid: !!p.side_hid,
     sidePx: +p.side_px > 0 ? +p.side_px : 0,
     //: 28b. A preset saved before it opens with the row showing, which is what
@@ -237,6 +240,7 @@ function cvwLoad(i){
   // settings key `splitInstall` owns rather than onto the element, so the next
   // drag starts from it and the next screen opens at it.
   if(plan.tab) c.tab = plan.tab;
+  if(plan.sub) c.sub = Object.assign(c.sub || {}, plan.sub);   // 49
   c.hid = plan.sideHid;
   if(plan.sidePx) state.settings[CMAP_SIDE_KEY] = plan.sidePx;
   cmapSettings().paint_row = plan.paintRow;          // 28b

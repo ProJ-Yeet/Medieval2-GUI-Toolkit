@@ -254,6 +254,19 @@ class StratEntry:
         """Every file this entry names, deduplicated, in the order written."""
         return list(dict.fromkeys(p for _k, p in self.files))
 
+    def viewable(self, data: Path) -> List[str]:
+        """The meshes this entry names that are really on disk - 49.
+
+        What the Strat map tab's 3D button is pointed at, first one first. A
+        shadow model is sorted to the end rather than dropped: it decodes and is
+        worth a look, and it is never the answer to "show me this entry".
+        """
+        out = [p for k, p in self.files
+               if k not in ("texture", "texture_no_move") and (data / p).is_file()]
+        out = list(dict.fromkeys(out))
+        shadow = {p for k, p in self.files if k == "shadow_model_flexi"}
+        return sorted(out, key=lambda p: p in shadow)
+
 
 @dataclass
 class StratFile:
@@ -712,6 +725,14 @@ def overview(mod: Mod, progress: Progress = None) -> dict:
             "mentioned_in_lua": bool(row and row["lua"]),
             "files": e.paths(),
             "missing": [f for f in e.paths() if not (mod.data / f).is_file()],
+            # 49: the meshes this entry names that the mod actually ships, so a
+            # row can offer "view in 3D" the way a BMDB row does. Only the .CAS
+            # side - a texture is not something the viewer can be pointed at -
+            # and only what is on disk, because a row that offers a file the mod
+            # does not have is a row that offers a 404. A `shadow_model_flexi`
+            # goes last rather than being left out: it is a real model and worth
+            # looking at, but it is nobody's answer to "show me this one".
+            "meshes": e.viewable(mod.data),
         })
     say(100, "done")
     return {"mod": mod.name, "file": REL, "has_file": (mod.data / REL).is_file(),

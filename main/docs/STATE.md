@@ -1,11 +1,67 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-16 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
-the latest beta - after the M2EX map-ceiling fix, the `replace_record` blank
-line it turned up, the two bugs a second report brought in, and **Phases 40, 31,
-42, 41, 43, 28a, 28b, 33, 30, 34, 35, 36, 37a and 37b**, all committed and **not cut**. **Releasing is on-request only**:
-commit to master and stop_
+_Updated: 2026-09-16 - **v2.3.3** is the latest 2.x and **beta 2026-09-16**
+the latest beta, both cut on request after **Phase 49** and carrying everything
+uncut since v2.3.2: the M2EX map-ceiling fix, the `replace_record` blank line it
+turned up, the two bugs a second report brought in, and **Phases 40, 31, 42, 41,
+43, 28a, 28b, 33, 30, 34, 35, 36, 37a, 37b and 49**. **Releasing is on-request
+only**: commit to master and stop_
 
 ## Next up
+**Phase 49 is done - two strips, the colours on the left, and one place for
+models, closed 2026-09-16, BOTH lines, committed and CUT as v2.3.3 and beta
+2026-09-16.** Asked for directly, with a screenshot of Mylae's map screen
+attached and three more requests beside it.
+
+**28a built half the shape and this is the other half.** It grouped sixteen
+panels behind six tabs and then stacked every panel of a group down one scroll,
+which is the column again the moment a group has seven of them - Province did.
+A tab is a group of **sub-tabs** now and one of them is showing: `CMAP_TABS` is
+two levels deep, `cmapTabPanels` flattens it, and **every panel of every group
+is still in the DOM with its own state**, which is the property 28a's grouping
+rests on and the reason the sixteen panel modules cost nothing to move.
+
+**Choosing a sub-tab presses that panel's own toggle.** Nine of them read
+nothing until their own button is pressed, which was right stacked and wrong
+behind a tab - clicking `Forts` and getting a button that says `Forts` is a
+click the screen owes you. `open: {fn, at}` names the toggle and the key its
+module keeps `open` on, so it is pressed once and only when the panel is shut.
+**Nothing is read until the tab is chosen**, so a restored tab still opens
+closed and the validator still does not run itself.
+
+**The palette is a column on the other side of the map.** It was behind the
+Paint tab, which is two clicks from the map on every stroke and took the right
+column away from the region record or the validator each time. It holds the
+three things a stroke needs and nothing else, it is there only while the brush
+is armed, and it is wired by `cpaintWireIn` - the same function that wires the
+panel and 28b's toolbar - so all three behave the same. **The layer is a toggle
+rather than a `<select>`**: the one control on the screen you could not read
+without opening it, and it sits on top of the colours that change with it.
+
+**BMDB + Sprites is the Models Editor, and two things moved to make the name
+true.** The Strat map tab gained the BMDB browser's own 3D panel - same split,
+same saved width, same detach-and-reattach - and **206 of DaC's 237 entries**
+carry a mesh the mod really ships, which is what the 🧊 is offered on; an entry
+whose `.CAS` files are all in a `.pack` gets no button rather than a 404. And
+**16k's model browser came here from the campaign map**, where it edited nothing
+and sat beside nothing else about models. That half matters most: a settlement
+is picked by level and culture out of the folder tree with nothing naming the
+file, so **DaC declares 237 entries and ships 926 model files** and Amon Hen and
+Minas Tirith are in none of them.
+
+**One defect found on the way, and it was already shipped.** A docked viewer
+whose host the next screen wrote over was never stopped - a WebGL context and an
+animation loop drawing to an element no longer on the page. True of the BMDB
+panel since it was built; a second dock is what made it worth fixing rather than
+noticing. `v3DropOrphan` runs once from `applyMode`, after the render that puts
+back every dock that is still real.
+
+`tests/test_web_modules.py` **92/92** (was 86 before this phase, and 34 when
+28a wrote it). **108 suites run, 96 green, and the twelve reds all fail
+identically on a stashed tree**, same suites and same checks - they are the
+three installed mods, not this work. `test_mapcheck` is 100/101 either way; its
+other two reds in the full sweep are the one-second timing bar under load and
+are not there when it runs on its own.
+
 **Phase 37b is done - the front-end picture, framed, closed 2026-09-16, beta
 line, committed and uncut.** The scoping named the frame first and was right to;
 what it did not know is that there is no size `map_FE.tga` wants.
@@ -824,15 +880,15 @@ path in this file and in the source is relative to. `main/dev/` never ships.
 ## THE TWO RELEASE LINES
 Two lines off this one `master`, chosen by whether a change touches the campaign
 map. **Not campaign-map** -> a **2.x subrelease with the map hidden**, uploaded
-`--latest` (latest **v2.3.2**, 2026-09-12). **Campaign-map** -> the **beta
-line**, uploaded as a **pre-release** (latest **beta 2026-09-12c**). A
+`--latest` (latest **v2.3.3**, 2026-09-16). **Campaign-map** -> the **beta
+line**, uploaded as a **pre-release** (latest **beta 2026-09-16**). A
 **subrelease means both**: one job, both zips, same tree.
 
 The switch is **one flag**: `off:true` on the `campmap` entry in `MODES` in
 `web/js/core.js`, which `menuModes()` and `modeOffered()` are the only readers
 of. It is a **release-time edit, not a state of `master`**: set it, bump the 2.x
 number, build, upload, then put it straight back off in the next commit.
-`master` carries the map ON, and `__version__` says `beta-2026-09-12c`
+`master` carries the map ON, and `__version__` says `beta-2026-09-16`
 because the beta was the last thing cut.
 
 Of the finished work, **21 and 29 belong to BOTH lines** (raw text is a menu
@@ -858,6 +914,7 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | Phase | Status | Note |
 |---|---|---|
 | 29 + B4 - the strat model viewer | **done** | Closed 2026-09-12, committed, **released 2026-09-12** as v2.3.2 and beta 2026-09-12c. The scoping was wrong about the root and right about everything above it: the art is not in a `.pack`, it is loose beside the stub as `<name>.tga.dds`, and `cas.texture_path` took the zero-byte `.tga` because it existed. Fixed at all five levels. New: `cas._has_bytes`, `icons.ArtUnreadable`, `icons.fault`, `png_bytes(strict=)`, `/model_texture` 415, `factions.packs_beside`, `factions.no_file_note`, and in `viewer3d.js` `uCutout`, `v3Degenerate`, `v3AskWhy`, `v3TexFault`, `v3FaultRows`. `tests/test_stratart.py` (40). |
+| 49 - two strips, the colours left, one place for models | **done** | Closed 2026-09-16, committed, **released 2026-09-16** as v2.3.3 and beta 2026-09-16 (both lines: the Models Editor half is outside the map). Asked for directly off a screenshot of Mylae's screen. **28a's strip was half the shape** - it grouped sixteen panels behind six tabs and then stacked each group down one scroll, and Province was seven panels deep. `CMAP_TABS` is two levels now and every panel is still in the DOM with its own state. **Choosing a sub-tab presses that panel's own toggle** (`open: {fn, at}`), once and only when it is shut; nothing is read until the tab is chosen, so load is unchanged and the validator does not run itself. The palette left the right column for **a dock on the left of the stage**, present only while the brush is armed, and the target layer left 28b's toolbar `<select>` for **eight buttons on top of the colours they change**. BMDB + Sprites is the **Models Editor**: the Strat map tab gained the BMDB browser's own 3D panel (**206 of DaC's 237 entries ship a mesh to point it at**) and 16k's model browser moved here off the map screen, which is the half that matters - a settlement is in no entry at all, and **DaC declares 237 entries and ships 926 model files**. **One shipped defect found on the way**: a docked viewer whose host the next screen wrote over was never stopped, true of the BMDB panel since it was built - `v3DropOrphan`, once from `applyMode`. New: `cmapSubs`, `cmapTabPanels`, `cmapSubId`, `cmapSubOf`, `cmapSubsHtml`, `cmapSub`, `cmapSubOpen` and `m.sub` in `cmapLayerState`; `cpaintChosenHtml`, `cpaintLayerTogHtml`, `cpaintDockHtml`, `cpaintDockPaint` and `#cmPalCol` (`cpaintTargetHtml` is gone); `stmPrev*` and `StratEntry.viewable` with `meshes` on every entry row; `v3DropOrphan`; `stratview.js` rewritten around `#cmodBrowse`. `tests/test_web_modules.py` 92/92 (was 86). |
 | 37a - T7, the spawn export | **done** | Closed 2026-09-16, committed, **not cut** (beta only). A read-only scan of the campaign script, which 19b refuses to WRITE and this does not: the refusal is untouched. **DaC's imperial campaign scripts 1,324 spawns - 1,317 armies, 3,822 units - against the 305 characters `descr_strat.txt` places**, so four fifths of what it puts on the map was invisible here; Shattered Alliances is another 1,131, Reforged's Fellowship 98. The markers layer gains `spawn` as its eighth category and it is **the only one that opens OFF**, because it quadruples what is drawn. **Every one of the 2,510 `spawn_army` blocks carries a coordinate.** The reading is validated through `province_at`: 1,322 of 1,324 in a named province with both misses admirals, 1,127 of 1,131 on the other campaign, and **all 3,822 DaC unit names in its EDU**. That join found the parse bug: a `character` line is comma-separated and a `unit` line is not (4,253 lines, no commas), and six DaC lines carry `soldiers` as an attribute, so stopping at `exp` alone produced exactly the six dead references the join reported. Three unresolved states are modelled - at sea, on an undeclared colour (2 on Shattered Alliances), off the map - and **a spawn with no coordinate is not resolved at all**, which a test caught being counted as a spawn at sea at (0,0). Reforged's Fellowship is counted and not judged: 45 of 98 spawns on sea tiles with a land character, 247 of 431 unit names not in its own EDU. New: `unittransfer/spawns.py`, the `spawn` category in `marker_view`, `GET /api/map/spawns`, `POST /api/map/spawn_export` (a CSV to the cache folder, because 16g's TGA export is right for a picture and useless for 1,324 rows), and in `campmark.js` the category, the hollow ring and the tooltip that ends in the file line. `tests/test_spawns.py` 41/41, new. Seven suites green; `test_campmap` 108/112 and `test_campstrat` 96/100 are DaC-build numbers, identical on a stashed tree. |
 | 36 - D1, change a region's colour | **done** | Closed 2026-09-16, committed, **not cut** (beta only). **The write-up's premise is withdrawn: a recolour does not renumber.** A region ID is the order a colour is first met in a row-major scan, so it is a fact about where the pixels are, and a recolour moves none - measured at **0 IDs moved** on both mods, recolouring the first region in the scan and a middle one, and 0 again off disk after a real save. The panel therefore says nothing renumbers rather than showing what does, because 16e and 24 both warn that they DO and a reader will assume this one does. **The merge is the case that renumbers and it is refused**: another province's colour moves 51 IDs on DaC and takes `Celebrant_Province` off the map. **Every tile of the colour, not a bucket** - 8 of DaC's 200 and 10 of Reforged's 199 regions are not one blob, and a bucket from Forodwaith's anchor would leave 13,912 of its 40,995 tiles behind in a colour no record declares. **One defect, found by the guard refusing its own save**: `_emptied` reads declared colours against painted ones, and mid-recolour those disagree by design; it now reads the pending record change for that one province and judges every other as before. **141 live numeric region references measured on DaC** (76 ancillaries, 62 traits, 3 campaign_script) and 3 on Reforged, which is what the create and delete warnings are about and had never been counted. New: `campaint.region_tiles`, `recolour_faults`, `recolour`, `cancel_recolour`, `_plan_recolour`, `_emptied(recolour=)`, `sess.recolour`, `_stroke_over` (lifted whole out of `paint`); the `rgb` slot on `campmap.render_block` (`plan_region` goes on refusing that edit); `POST /api/map/recolour|_cancel`; `web/js/recolour.js`, `#cmRecolour`, the Change colour button on the Colour row. `tests/test_recolour.py` 47/47, new. Eight suites green; `test_campmap` 108/112 pre-existing; `test_mapcheck`'s only red is the timing bar and a stashed tree fails it harder. |
 | 35 - rebels right in place | **done** | Closed 2026-09-16, committed, **not cut** (beta only). New: `unittransfer/rebelpools.py` (`read_rebels`, `assignments`, `view`, `plan`, `apply`, `RebelPlan`, `REBELS_REL`, `BY_REGION`, `BY_CATEGORY`), `GET /api/map/rebels`, `POST /api/map/rebel_plan|_apply`, `web/js/rebels.js`, `#cmRebels` in the Province tab, the `.reblist` styles. **Three of the four things the scoping called missing already existed** - the unit list is the Minor Files rebel form's and is already joined to the EDU, the province end is `cmPick`'s `rebels` box, and the highlight is `info_rebels`' own group filter (38 groups on DaC). What landed is the reverse join and bulk assignment. **No `mapcheck` rule and no repair, deliberately**: nothing dangles on either mod and not one of the 248 `unit` lines names a unit the EDU lacks, so there is nothing for a validator to find and a wrong assignment is a valid one somebody did not mean. **The finding is `chance`** - Reforged sets `chance 0` on all 27 blocks its provinces name, so all 199 of its provinces point at a faction that never spawns, while DaC uses it for `No_Rebels` alone (9 provinces); a rule would be wrong 208 times, so the number goes on every row instead. **Three blocks no province names are not orphans** - one per non-`peasant_revolt` category, spawned by category - and after that exemption DaC has two real ones, `Ent_Rebels` and `Saralainn_Rebels`. **One defect in shipped work, led with**: `plan_region`/`apply_region` read and wrote the BASE `descr_regions.txt` whatever campaign was on screen, though `CampaignMap` reads the campaign's own copy and the delete beside it honours 22c; Reforged's Fellowship ships its own and **the two differ in eleven records**. Its other half: only `base/map.rwm` was deleted and Fellowship ships its own, 14 KB apart. New for that: `campmap.RWM_NAME`, `campmap.regions_rel`, `campmap.stale_rwm`, a `cm` argument on `plan_region`, and the campaign in `cmapSave`'s body. `tests/test_rebelpools.py` 68/68, new. Ten other suites green; `test_campmap` 108/112 with the same four DaC-number failures a stashed tree gives. |

@@ -54,7 +54,13 @@ async function loadStratmap(){
 function renderStratmap(){
   if(!state.stm||state.stm.mod!==state.src)return loadStratmap();
   const s=state.stm;
+  // 49: the panel comes off before anything rewrites `#main` under it, in both
+  // branches - it is a live canvas and its parent is about to be replaced
+  stmPrevDetach();
   if(!s.has_file){
+    // nothing to draw and nothing to list: let the viewer go rather than leave
+    // it running against an element this branch never puts back
+    if(typeof v3!=='undefined'&&v3&&v3.host===STM_PREV_HOST)v3Unmount();
     count.textContent='';
     main.innerHTML=bmdbTabsHtml('data/descr_model_strat.txt')+`<div class="empty">
       <b>${esc(state.src)}</b> has no <code>data/descr_model_strat.txt</code>.<br>
@@ -72,28 +78,160 @@ function renderStratmap(){
   const nUnused=s.entries.filter(e=>e.unused).length;
   const dupes=s.count-s.names;
   count.textContent=`${rows.length}/${s.names}`;
-  main.innerHTML=bmdbTabsHtml('data/descr_model_strat.txt')+`
+  // 49: the 3D panel is a live canvas - detached above, not rewritten, the same
+  // trick and the same reason as the BMDB browser's
+  if(!stmPrevNode&&stmPrevOn())stmPrevMake('','');
+  main.innerHTML=bmdbTabsHtml('data/descr_model_strat.txt')+`<div class="bmsplit" id="stmSplit">
+    <div class="bmmain">
     <div class="dbhead">
       <h2>${esc(state.src)} · ${s.names} strat-map model${s.names===1?'':'s'}</h2>
       <span class="count">${nUnused} referenced by nothing${
         nUnused?'. <b class="w-warn">🧹 Clean up strat map…</b> moves them out.':''}${
         dupes?` · ${dupes} duplicate block${dupes===1?'':'s'} share a name with another`:''}</span>
+      <span class="sp" style="flex:1"></span>
+      <button class="${stmPrevNode?'on':''}" onclick="stmPrevToggle()"
+        title="Draw a campaign-map model beside the list, without leaving it. Every entry
+that ships a .CAS gets its own 🧊 button once this is open, and the panel also browses
+every model file under data/models_strat - including the settlements, which no entry names.">🧊 View in 3D</button>
     </div>
     ${rows.length?`<div class="dblist">${rows.map(stmRow).join('')}</div>`
-                 :'<div class="empty">No strat models match.</div>'}`;
+                 :'<div class="empty">No strat models match.</div>'}
+    </div>
+  </div>`;
   main.querySelectorAll('.dbrow').forEach(r=>r.onclick=()=>openStratEntry(r.dataset.name));
+  stmPrevAttach();
 }
 function stmRow(e){
   const use=e.unused?'<span class="w-warn">nothing references it</span>'
     :e.mentioned_in?`<span class="count">No character uses it. ${e.mentioned_in_lua
         ?'named by a <b class="w-good">Lua script</b>':'only named in'} <code>${esc(e.mentioned_in)}</code></span>`
     :`${esc(e.used_by.slice(0,4).join(', '))}${e.use_count>4?` +${e.use_count-4} more`:''}`;
-  return `<div class="dbrow ${e.unused?'unused':''}" data-name="${esc(e.name)}">
+  // 49: the entry's first mesh that the mod actually ships. An entry whose
+  // .CAS files are all in a .pack, or missing, gets no button rather than a
+  // button that opens a 404 - the same rule the BMDB row follows.
+  const cas=(e.meshes||[])[0]||'';
+  return `<div class="dbrow ${e.unused?'unused':''}${
+      stmPrevRel&&cas===stmPrevRel?' showing':''}" data-name="${esc(e.name)}">
     <span class="en">${esc(e.name)}</span>
     <span class="use">${use}</span>
     <span class="nums">${e.models} model${e.models===1?'':'s'} · ${e.skins} texture${
       e.skins===1?'':'s'}${e.missing.length?` · <span class="w-warn">${e.missing.length} not shipped</span>`:''}</span>
+    ${cas?`<button class="db3d" title="Draw ${esc(cas.split('/').pop())} in the panel beside the list"
+      onclick="event.stopPropagation();stmPrevOpen('${q1(esc(cas))}','${q1(esc(e.name))}')">🧊</button>`
+      :'<span class="db3d" style="visibility:hidden">🧊</span>'}
   </div>`;
+}
+
+/* ======================= THE 3D PANEL BESIDE THE LIST - 49 =================
+   The BMDB browser's panel, on the other tree, and deliberately the same one:
+   the same split, the same saved width, the same detach-and-reattach so that a
+   keystroke in the search box does not rebuild the canvas and refetch the mesh.
+
+   What is different is what it can be pointed at, and it is two things rather
+   than one. A row's 🧊 draws the `.CAS` that entry names. The browser inside the
+   panel draws any file under `data/models_strat` - which is where the
+   settlements are, and a settlement is in no entry at all: the game picks it by
+   level and culture out of the folder tree with nothing naming the file. That
+   browser is `stratview.js`, and it was in the campaign map's side column until
+   this phase, where it edited nothing and sat beside nothing else about models.
+
+   Still ONE viewer on the page - `v3MountCas` drops whatever was showing - so
+   this panel and the BMDB one cannot both be drawing. */
+let stmPrevNode = null;         // the panel, or null when it is closed
+let stmPrevRel = '';            // the .cas it is drawing, relative to data/
+let stmPrevWhat = '';           // what to call it in the bar
+const STM_PREV_HOST = 'stmV3Host';
+//: On unless it has been turned off, like the BMDB panel: this tab's errand is
+//: looking at a mod's campaign-map art, and a panel you have to ask for every
+//: time you open a tab is one that mostly does not get opened.
+const stmPrevOn = () => state.settings.stratmap_preview !== false;
+
+function stmPrevDetach(){
+  if(stmPrevNode && stmPrevNode.parentNode)
+    stmPrevNode.parentNode.removeChild(stmPrevNode);
+}
+function stmPrevAttach(){
+  const split = document.getElementById('stmSplit');
+  if(!split || !stmPrevNode) return;
+  split.appendChild(stmPrevNode);
+  splitInstall(split, stmPrevNode, 'stratmap_prev_px', avail => Math.round(avail / 2));
+  stmPrevBar();
+  cmodLoad();              // the file browser, walked once per mod
+  stmPrevMount();
+}
+//: Build the panel without painting - `renderStratmap` opens it too, and
+//: calling something that re-renders from inside the render is how you get a
+//: loop. Same split as `bmPrevMake`, for the same reason.
+function stmPrevMake(rel, what){
+  if(!stmPrevNode){
+    stmPrevNode = document.createElement('aside');
+    stmPrevNode.className = 'bmprev';
+    stmPrevNode.id = 'stmPrevCol';
+    stmPrevNode.innerHTML = `<div class="edprevbar" id="stmPrevBar"></div>
+      <div class="stmbrowse" id="cmodBrowse"></div>
+      <div class="edprevbody" id="${STM_PREV_HOST}"></div>`;
+  }
+  if(rel){ stmPrevRel = rel; stmPrevWhat = what || rel.split('/').pop(); }
+}
+function stmPrevOpen(rel, what){
+  stmPrevMake(rel, what);
+  renderStratmap();          // re-marks the row that is showing, then re-attaches
+}
+//: The browser's own click. The page is not re-rendered around it: the list
+//: this came from is inside the panel, and rebuilding the page under a click
+//: would throw that list's scroll position away on every model.
+function stmPrevShowFile(rel){
+  stmPrevMake(rel, rel.split('/').pop());
+  cmodPaint();
+  stmPrevBar();
+  stmPrevMount();
+  // the row that matched the old file is no longer the one showing
+  main.querySelectorAll('.dbrow.showing').forEach(r => r.classList.remove('showing'));
+}
+function stmPrevClose(){
+  if(typeof v3 !== 'undefined' && v3 && v3.host === STM_PREV_HOST) v3Unmount();
+  stmPrevDetach();
+  stmPrevNode = null; stmPrevRel = ''; stmPrevWhat = '';
+  state.settings.stratmap_preview = false;
+  api.post('/api/settings', {stratmap_preview: false});
+  renderStratmap();
+}
+function stmPrevToggle(){
+  if(stmPrevNode) return stmPrevClose();
+  state.settings.stratmap_preview = true;
+  api.post('/api/settings', {stratmap_preview: true});
+  stmPrevMake('', '');
+  renderStratmap();
+}
+function stmPrevBar(){
+  const el = document.getElementById('stmPrevBar');
+  if(!el) return;
+  el.innerHTML = `<b>3D</b>
+    <span class="count" title="${esc(stmPrevRel)}">${
+      esc(stmPrevWhat || 'pick a model')}</span>
+    <span class="sp"></span>
+    ${stmPrevRel?`<button onclick="stmPrevFull()"
+      title="Full screen - Esc comes back">⤢</button>`:''}
+    <button onclick="stmPrevClose()" title="Close the panel">✕</button>`;
+}
+async function stmPrevMount(){
+  const host = document.getElementById(STM_PREV_HOST);
+  if(!host) return;
+  if(!stmPrevRel){
+    host.innerHTML = `<div class="empty">Press 🧊 on any entry, or pick a file
+      from the list above.</div>`;
+    return;
+  }
+  await v3MountCas(STM_PREV_HOST, state.src, stmPrevRel);
+}
+function stmPrevFull(){
+  const el = stmPrevNode;
+  if(!el) return;
+  if(document.fullscreenElement) return document.exitFullscreen();
+  const go = el.requestFullscreen || el.webkitRequestFullscreen;
+  if(!go){ toast('This browser will not go full screen here.', 3000); return; }
+  Promise.resolve(go.call(el)).catch(e =>
+    toast('Full screen was refused: ' + ((e && e.message) || e), 4000));
 }
 
 /* One entry, read-only: the block exactly as the file stores it, and what each
@@ -123,7 +261,13 @@ async function openStratEntry(name){
       <fieldset class="assetconf"><legend>The files it names</legend>
         <div class="flist">${r.files.map(f=>`<div class="frow">
           <span class="fp">${esc(f.rel)}</span>
-          <span class="fs">${esc(f.kind)}${f.exists?'':' · <b class="w-warn">not in this mod</b>'}</span>
+          <span class="fs">${esc(f.kind)}${f.exists?'':' · <b class="w-warn">not in this mod</b>'}${
+            // 49: a mesh the mod ships opens in the viewer from here too. The
+            // card is read to decide whether a block can go, and what it draws
+            // is the part of that decision nothing else could show.
+            f.exists&&f.kind.indexOf('texture')<0
+              ?` <button class="db3d" title="Draw this model"
+                 onclick="v3OpenCas('${q1(esc(state.src))}','${q1(esc(f.rel))}')">🧊</button>`:''}</span>
         </div>`).join('')||'<div class="count">none</div>'}</div>
         ${r.factions.length?`<div class="count" style="margin-top:6px">Texture factions:
           ${r.factions.map(f=>`<code>${esc(f)}</code>`).join(' ')}</div>`:''}

@@ -102,6 +102,7 @@ const CMAP_GAP_LABELS = {magenta: 'Pink', neutral: 'Neutral', sea: 'Sea'};
 
 
 /* ---------- 28a: the side column is a tab strip, not a stack ----------
+   ---------- 49: and the strip is two of them ----------
 
    `#cmSide` was sixteen panels appended one under the last - the mod header,
    the read's own findings, and then Campaigns, Find, Views, Check, Query,
@@ -114,6 +115,12 @@ const CMAP_GAP_LABELS = {magenta: 'Pink', neutral: 'Neutral', sea: 'Sea'};
    column laid on its side. These six are the six errands the screen is for:
    choosing what is read, checking it, asking it questions, painting it, looking
    at one province, and the campaign that runs on it.
+
+   **49: and a group's panels are a strip of their own rather than a stack.**
+   28a grouped them and then put every panel of a group one under the next,
+   which is the column again as soon as a group has seven of them - Province
+   did. Each group now carries a list of SUB-TABS and one of them is showing,
+   so `CMAP_TABS` is two levels deep and `cmapTabPanels` is what flattens it.
 
    **Validate is a tab of its own, and the user asked for it by name.** Mylae's
    map screen is `Strat` / `Validate` / `3D` across the top with the whole of his
@@ -129,41 +136,130 @@ const CMAP_GAP_LABELS = {magenta: 'Pink', neutral: 'Neutral', sea: 'Sea'};
    The ids are the ones every panel module already writes into
    (`document.getElementById('cmPick')` and its fifteen siblings), so grouping
    them cost those files nothing: each group is a `<div>` that is hidden or not,
-   and every panel stays in the DOM and keeps its own state. */
+   each sub-tab is a `<div>` inside it that is hidden or not, and every panel
+   stays in the DOM and keeps its own state. Strat models is not in the list any
+   more - 49 moved it to the Models Editor, where a mod's models are. */
 const CMAP_TABS = [
   {id: 'map', label: 'Map', icon: '\u{1F5FA}',
-   panels: ['cmCamps', 'cmFind', 'cmViews', 'cmFE'],
    title: 'Which campaign is being read, finding a province by name, saved views '
-        + 'and the front-end picture'},
-  {id: 'check', label: 'Validate', icon: '✓', panels: ['cmFindings', 'cmCheck'],
+        + 'and the front-end picture',
+   subs: [
+     {id: 'camps', label: 'Campaigns', panels: ['cmCamps'],
+      open: {fn: 'cbrToggle', at: 'cbr'},
+      title: 'Which campaign of this mod the screen is reading'},
+     {id: 'find', label: 'Find', panels: ['cmFind'],
+      open: {fn: 'cfdToggle', at: 'cfd'},
+      title: 'Go to a province by name'},
+     {id: 'views', label: 'Views', panels: ['cmViews'],
+      open: {fn: 'cvwToggle', at: 'cvw'},
+      title: 'Saved ways of reading this map'},
+     {id: 'fe', label: 'Front end', panels: ['cmFE'],
+      open: {fn: 'cfeToggle', at: 'cfe'},
+      title: 'The picture the campaign-selection screen draws'},
+   ]},
+  {id: 'check', label: 'Validate', icon: '\u2713',
    title: 'Everything wrong with this map: what the read itself found, then the '
-        + 'rules, the baseline and the filters'},
-  {id: 'query', label: 'Query', icon: '⌕', panels: ['cmQuery'],
-   title: 'Ask the map a question and colour the provinces by the answer'},
-  {id: 'paint', label: 'Paint', icon: '✎',
-   panels: ['cmPaint', 'cmClim', 'cmMarks', 'cmEvents'],
+        + 'rules, the baseline and the filters',
+   subs: [
+     {id: 'findings', label: 'Findings', panels: ['cmFindings'],
+      title: 'What reading the map already found wrong with it'},
+     {id: 'rules', label: 'Rules', panels: ['cmCheck'],
+      open: {fn: 'cchkToggle', at: 'cchk'},
+      title: 'The 32 rules, their severity, the baseline and the auto-fixes'},
+   ]},
+  {id: 'query', label: 'Query', icon: '\u2315',
+   title: 'Ask the map a question and colour the provinces by the answer',
+   subs: [
+     {id: 'query', label: 'Query', panels: ['cmQuery'],
+      open: {fn: 'cqToggle', at: 'cq'},
+      title: 'Ask the map a question and colour the provinces by the answer'},
+   ]},
+  {id: 'paint', label: 'Paint', icon: '\u270E',
    title: 'The brush and its palette, the climates it paints with, the markers '
-        + 'layer, and the campaign events'},
-  {id: 'place', label: 'Province', icon: '◉',
-   panels: ['cmPick', 'cmRebels', 'cmSettle', 'cmChars', 'cmForts', 'cmDel',
-            'cmRecolour'],
+        + 'layer, and the campaign events',
+   subs: [
+     {id: 'brush', label: 'Brush', panels: ['cmPaint'],
+      title: 'The stroke, the wizard, undo and the save. The colours are in the '
+           + 'column on the left.'},
+     {id: 'clim', label: 'Climates', panels: ['cmClim'],
+      title: 'The climates this mod declares, and the colour each one is painted in'},
+     {id: 'marks', label: 'Markers', panels: ['cmMarks'],
+      title: 'Settlements, characters, forts, watchtowers, resources and spawns'},
+     {id: 'events', label: 'Events', panels: ['cmEvents'],
+      open: {fn: 'cevToggle', at: 'cev'},
+      title: 'The campaign\u2019s scripted events and its win conditions'},
+   ]},
+  {id: 'place', label: 'Province', icon: '\u25C9',
    title: 'What is on the tile you clicked: its record, its rebels, its '
-        + 'settlement, its people and its forts'},
-  {id: 'camp', label: 'Campaign', icon: '⚑', panels: ['cmCamp', 'cmModels'],
-   title: 'The campaign’s own settings, and the strat models its factions use'},
+        + 'settlement, its people and its forts',
+   subs: [
+     // `cmDel` and `cmRecolour` are not sub-tabs of their own: neither is ever
+     // open except on a click of its own button on the record, so they sit in
+     // the DOM beside the record that opens them.
+     {id: 'record', label: 'Region', panels: ['cmPick', 'cmDel', 'cmRecolour'],
+      title: 'The record of the province under the tile you clicked'},
+     {id: 'rebels', label: 'Rebels', panels: ['cmRebels'],
+      title: 'Which rebel pool this province spawns from'},
+     {id: 'settle', label: 'Settlement', panels: ['cmSettle'],
+      title: 'The settlement standing on this province, and what it is made of'},
+     {id: 'chars', label: 'Characters', panels: ['cmChars'],
+      title: 'The people this campaign starts on this province'},
+     {id: 'forts', label: 'Forts', panels: ['cmForts'],
+      open: {fn: 'cftToggle', at: 'cft'},
+      title: 'The forts and watchtowers this campaign starts with'},
+   ]},
+  {id: 'camp', label: 'Campaign', icon: '\u2691',
+   title: 'The campaign\u2019s own settings',
+   subs: [
+     {id: 'settings', label: 'Settings', panels: ['cmCamp'],
+      open: {fn: 'cjToggle', at: 'cj'},
+      title: 'What descr_strat.txt says about the campaign as a whole'},
+   ]},
 ];
+
+/* The two strips, read off one table - 49.
+
+   **A tab is a GROUP and a sub-tab is one panel**, which is the shape the user
+   asked for by pointing at Mylae's screen: `Strat / Validate / 3D` across the
+   top and, under whichever of those is up, a row of its own. 28a put six groups
+   over sixteen panels and then stacked every panel of a group down one scroll;
+   this shows one at a time, so the column is a screen rather than a column you
+   scroll.
+
+   Everything below reads `CMAP_TABS` and nothing else, so a panel that moves
+   moves in one place. `cmapTabPanels` is the flat list a group owns and it is
+   what `renderCampmap` writes into the DOM - every panel of every group is
+   still in the DOM and still keeps its own state, exactly as 28a had it. */
+const cmapSubs = t => t.subs || [];
+const cmapTabPanels = t => cmapSubs(t).reduce((a, s) => a.concat(s.panels), []);
+
+//: Which sub-tab is up in a group, defaulting to its first. A group whose saved
+//: sub-tab this build no longer has falls to the first rather than to nothing.
+function cmapSubId(tab){
+  const c = state.cmap, t = CMAP_TABS.find(x => x.id === tab);
+  if(!t || !cmapSubs(t).length) return '';
+  const want = c && c.sub ? c.sub[tab] : '';
+  return cmapSubs(t).some(s => s.id === want) ? want : cmapSubs(t)[0].id;
+}
 
 //: The class a panel div carried in the flat stack, for the four that had one.
 //: Kept as a table rather than in `CMAP_TABS` so that the grouping stays a list
 //: of ids and nothing else - which is what the suite reads it as.
 const CMAP_SIDE_CLASS = {cmPick: 'cmpick', cmSettle: 'cmsettle',
-                         cmChars: 'cmchars', cmCamp: 'cmcamp',
-                         cmModels: 'cmmodels'};
+                         cmChars: 'cmchars', cmCamp: 'cmcamp'};
 
 //: Which tab holds a panel, by the id the panel's own module writes into.
 //: Empty for `cmLayers` and the mod header, which are not in the strip at all.
 const cmapTabOf = panel =>
-  (CMAP_TABS.find(t => t.panels.includes(panel)) || {}).id || '';
+  (CMAP_TABS.find(t => cmapTabPanels(t).includes(panel)) || {}).id || '';
+
+//: And which sub-tab of that group holds it. Null when the panel is in neither.
+const cmapSubOf = panel => {
+  for(const t of CMAP_TABS)
+    for(const sb of cmapSubs(t))
+      if(sb.panels.includes(panel)) return {tab: t.id, sub: sb.id};
+  return null;
+};
 
 //: What the drag on the column's left edge is saved under. `splitInstall` owns
 //: the live value in `state.settings`; `cmapLayerState` mirrors it so that a
@@ -181,6 +277,60 @@ function cmapTabsHtml(){
       onclick="cmapTab('${t.id}')">${esc(t.label)}${
       n ? ` <i class="cmtabn">${esc(String(n))}</i>` : ''}</button>`;
   }).join('')}</div>`;
+}
+
+/* The second strip: the sub-tabs of whichever group is up.
+
+   Drawn even when a group has only one - Query and Campaign both do - because a
+   row that appears and disappears as you move along the top strip is a row that
+   moves everything under it. One sub-tab draws as one button, already on, and
+   the column below it stays where it was put. */
+function cmapSubsHtml(){
+  const c = state.cmap;
+  if(!c) return '';
+  const t = CMAP_TABS.find(x => x.id === c.tab);
+  if(!t) return '<div class="cmsubs" id="cmSubs"></div>';
+  const up = cmapSubId(t.id);
+  return `<div class="cmsubs" id="cmSubs">${cmapSubs(t).map(sb =>
+    `<button class="cmsub${up === sb.id ? ' on' : ''}" title="${esc(sb.title || sb.label)}"
+      onclick="cmapSub('${t.id}','${sb.id}')">${esc(sb.label)}</button>`).join('')}</div>`;
+}
+
+/* Show one sub-tab, and OPEN the panel behind it.
+
+   The opening is the point. Nine of these panels read nothing until somebody
+   presses their own toggle, which was right when they were stacked - a column
+   of sixteen panels that each fetched on sight is a screen that fetches
+   sixteen times on load. Behind a sub-tab it is wrong: clicking `Forts` and
+   getting a button that says `Forts` is one click the screen owes you. So
+   choosing the sub-tab presses it, once, and only when it is not already open;
+   nothing is read until the tab is chosen, which is the half of the old rule
+   that was worth keeping. */
+function cmapSub(tab, sub){
+  const c = state.cmap, t = CMAP_TABS.find(x => x.id === tab);
+  if(!c || !t) return;
+  const sb = cmapSubs(t).find(x => x.id === sub);
+  if(!sb) return;
+  if(!c.sub) c.sub = {};
+  c.sub[tab] = sub;
+  c.tab = tab;
+  c.hid = false;
+  delete c.fresh[tab];
+  cmapSidePaint();
+  cmapSubOpen(sb);
+  cmapSaveLayers();
+}
+
+//: Press a panel's own toggle, unless it is already open. `at` is where the
+//: module keeps its state on `state`; a module that has not been opened at all
+//: yet has nothing there, and that counts as closed.
+function cmapSubOpen(sb){
+  const o = sb && sb.open;
+  if(!o) return;
+  const k = state[o.at];
+  if(k && k.open) return;
+  const fn = window[o.fn];
+  if(typeof fn === 'function') fn();
 }
 
 /* The number on a tab: only where there is a real count to put there.
@@ -216,12 +366,15 @@ function cmapRailHtml(){
 //: Show one tab. Also the way out of the collapsed rail, which is the one
 //: control a collapse has to leave working.
 function cmapTab(id){
-  const c = state.cmap;
-  if(!c || !CMAP_TABS.some(t => t.id === id)) return;
+  const c = state.cmap, t = CMAP_TABS.find(x => x.id === id);
+  if(!c || !t) return;
   c.hid = false;
   c.tab = id;
   delete c.fresh[id];
+  if(!c.sub) c.sub = {};
+  c.sub[id] = cmapSubId(id);
   cmapSidePaint();
+  cmapSubOpen(cmapSubs(t).find(x => x.id === c.sub[id]));
   cmapSaveLayers();
 }
 
@@ -243,9 +396,10 @@ function cmapTab(id){
    and a click on the map is not a reason to overrule it, so the rail carries
    the mark. */
 function cmapSurface(panel){
-  const c = state.cmap, id = cmapTabOf(panel);
-  if(!c || !id) return;
-  if(c.tab === id && !c.hid) return;
+  const c = state.cmap, where = cmapSubOf(panel);
+  if(!c || !where) return;
+  const id = where.tab;
+  if(c.tab === id && !c.hid && cmapSubId(id) === where.sub) return;
   if(c.hid || c.autoSwitched){
     c.fresh[id] = 1;
     cmapSidePaint();
@@ -253,6 +407,8 @@ function cmapSurface(panel){
   }
   c.autoSwitched = true;
   c.tab = id;
+  if(!c.sub) c.sub = {};
+  c.sub[id] = where.sub;
   delete c.fresh[id];
   cmapSidePaint();
   cmapSaveLayers();
@@ -268,9 +424,16 @@ function cmapSidePaint(){
   for(const t of CMAP_TABS){
     const g = document.getElementById('cmg_' + t.id);
     if(g) g.hidden = !!c.hid || c.tab !== t.id;
+    const up = cmapSubId(t.id);
+    for(const sb of cmapSubs(t)){
+      const b = document.getElementById('cms_' + t.id + '_' + sb.id);
+      if(b) b.hidden = sb.id !== up;
+    }
   }
   const strip = document.getElementById('cmTabs');
   if(strip) strip.outerHTML = cmapTabsHtml();
+  const subs = document.getElementById('cmSubs');
+  if(subs) subs.outerHTML = cmapSubsHtml();
   const rail = document.getElementById('cmRail');
   if(rail) rail.outerHTML = cmapRailHtml();
   // collapsing takes the grab bar away with the column, and opening puts it
@@ -410,6 +573,10 @@ function cmapLayerState(){
      none of the three and falls to the defaults below, which is what that view
      looked like when it was saved. */
   m.tab = c.tab;
+  // 49: the sub-tab each group is on. Normalised through `cmapSubId` so what
+  // is written is always a sub-tab this build has, never a stale id.
+  m.sub = {};
+  for(const t of CMAP_TABS) m.sub[t.id] = cmapSubId(t.id);
   m.side_hid = !!c.hid;
   // 28b: whether the toolbar's paint row is showing. A habit like the rest -
   // arming the brush is not, so `p.on` stays out of here and out of every view.
@@ -474,7 +641,8 @@ function cmapResetView(){
   c.heightAlpha = false; c.tip = true; c.labels = false; c.lab = null;
   // 28a: the strip's three habits are habits like the rest, so the one way
   // back puts them back - first tab, column open, default width
-  c.tab = CMAP_TABS[0].id; c.hid = false; c.fresh = {}; c.autoSwitched = false;
+  c.tab = CMAP_TABS[0].id; c.sub = {};
+  c.hid = false; c.fresh = {}; c.autoSwitched = false;
   cmapSettings().paint_row = true;            // 28b
   state.settings[CMAP_SIDE_KEY] = 0;
   api.post('/api/settings', {[CMAP_SIDE_KEY]: 0}).catch(() => {});
@@ -625,6 +793,10 @@ function cmapNew(mod, man){
        looked at. `autoSwitched` is the once in "switched to, once": one
        automatic switch per map, and a dot on the tab for every one after. */
     tab: CMAP_TABS.some(t => t.id === saved.tab) ? saved.tab : CMAP_TABS[0].id,
+    // 49: and which sub-tab is up inside each group, one entry per group so
+    // that walking away from Province and back comes back to the panel you
+    // left rather than to the first one
+    sub: (saved.sub && typeof saved.sub === 'object') ? Object.assign({}, saved.sub) : {},
     hid: !!saved.side_hid, fresh: {}, autoSwitched: false,
     // the picked tile, what all ten layers say about it, and the region record
     // it belongs to with the working copy the form edits
@@ -906,6 +1078,9 @@ function renderCampmap(){
   count.textContent = `${m.width}×${m.height}`;
   main.innerHTML = `
     <div class="cmwrap">
+      <!-- 49: the colours, on the left, where the user asked for them. Empty
+           and hidden until the brush is armed - see cpaintDockPaint. -->
+      <aside class="cmpalcol" id="cmPalCol" hidden></aside>
       <div class="cmstage" id="cmStage">
         <canvas id="cmCanvas"></canvas>
         <div class="cmbar" id="cmBar">
@@ -956,13 +1131,16 @@ Saved views are kept.">↺ Reset</button>
 back from the collapsed state.">›</button>
         </div>
         ${cmapTabsHtml()}
+        ${cmapSubsHtml()}
         <div class="cmbody" id="cmBody">
           ${CMAP_TABS.map(t => `<div class="cmgroup" id="cmg_${t.id}"${
             c.tab === t.id && !c.hid ? '' : ' hidden'}>${
-            t.panels.map(id => id === 'cmFindings'
-              ? `<div id="cmFindings">${cmapFindingsHtml(m.findings)}</div>`
-              : `<div class="${CMAP_SIDE_CLASS[id] || ''}" id="${id}"></div>`
-            ).join('')}</div>`).join('')}
+            cmapSubs(t).map(sb => `<div class="cmsec" id="cms_${t.id}_${sb.id}"${
+              cmapSubId(t.id) === sb.id ? '' : ' hidden'}>${
+              sb.panels.map(id => id === 'cmFindings'
+                ? `<div id="cmFindings">${cmapFindingsHtml(m.findings)}</div>`
+                : `<div class="${CMAP_SIDE_CLASS[id] || ''}" id="${id}"></div>`
+              ).join('')}</div>`).join('')}</div>`).join('')}
         </div>
         <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
       </div>
@@ -986,7 +1164,9 @@ back from the collapsed state.">›</button>
   csPaint();          // 16h: kept out of cmapPickPaint, which owns #cmPick only
   cxPaint();          // 16i, for the same reason
   cjOpen();           // 16j, and it reads nothing until somebody opens it
-  cmodOpen();         // 16k, the strat models, and the same on both counts
+  // 49: the strat models' 3D browser was here (16k) and is now a panel of the
+  // Models Editor, beside the descr_model_strat.txt entries it draws - see
+  // stratview.js. Nothing on this screen edited it, and nothing here draws it.
   cpinPaint();        // 20c, M8: a pin still waiting keeps its banner
   cmapResize();
   if(!c.view.fitted) cmapFit(); else cmapPaint();

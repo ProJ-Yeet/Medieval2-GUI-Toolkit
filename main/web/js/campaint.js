@@ -567,6 +567,7 @@ function cpaintPaint(){
     cpaintWireIn(el);
   }
   cpaintBarPaint();
+  cpaintDockPaint();       // 49: the colours, in the column on the left
 }
 
 function cpaintHtml(){
@@ -591,7 +592,9 @@ function cpaintHtml(){
     palettes…</span></div>`;
   return head + `<div class="cppanel">
     ${cpaintWaterHtml()}
-    ${cpaintPaletteHtml()}
+    ${cpaintChosenHtml()}
+    <div class="count">The layer and its colours are in the column on the left of
+      the map, beside the tiles they go on.</div>
     ${cpaintWizHtml()}
     ${cpaintFootHtml()}
   </div>`;
@@ -654,17 +657,6 @@ function cpaintWaterHtml(){
          }</span>`}</div>` : ''}`;
 }
 
-function cpaintTargetHtml(){
-  const p = state.cpaint;
-  if(p.tool === 'water') return '';
-  const opts = p.pal.layers.map(L =>
-    `<option value="${L.code}"${L.code === p.target ? ' selected' : ''}${
-      L.problem ? ' disabled' : ''}>${esc(L.label)}${
-      L.problem ? ' · ' + esc(L.problem) : ''}</option>`).join('');
-  return `<label class="cptg">Layer
-    <select data-target>${opts}</select></label>`;
-}
-
 function cpaintLayer(){
   const p = state.cpaint;
   return p.pal.layers.find(L => L.code === p.target) || null;
@@ -695,17 +687,53 @@ function cpaintColour(){
   return p.rgb;
 }
 
+/* What is going to be written, said before it is. Shown in both places that
+   matter now - the dock that picks it and the panel that saves it - because it
+   is one line and the alternative is a panel that cannot tell you what the
+   brush is holding. */
+function cpaintChosenHtml(){
+  const p = state.cpaint;
+  if(!p.pal) return '';
+  const L = p.tool === 'water' ? null : cpaintLayer();
+  if(L && L.problem) return `<div class="cpnote w-bad">${esc(L.problem)}</div>`;
+  const rgb = cpaintColour();
+  return `<div class="cppick">
+    <i style="background:${rgb ? `rgb(${rgb.join(',')})` : 'transparent'}"></i>
+    <span>${rgb ? cpaintColourName() : '<span class="w-warn">nothing picked - a '
+      + 'stroke would be refused, and say so</span>'}</span></div>`;
+}
+
+/* 49: the layer being painted, as a toggle rather than a dropdown.
+
+   It was a `<select>` on the toolbar, which is the one control on this screen
+   you cannot read without opening: the thing a stroke is about to change was a
+   word behind a click. Eight buttons, one per paintable layer, with the one
+   that is up lit - and they sit on top of the colours, because the colours ARE
+   the layer's and change with it.
+
+   A layer the server could not read is disabled with its reason on the title,
+   not left out: "heights is not in this mod" is worth saying once. */
+function cpaintLayerTogHtml(){
+  const p = state.cpaint;
+  if(!p.pal) return '';
+  if(p.tool === 'water') return `<div class="cpnote">The water brush writes
+    regions, heights and ground types together, so it picks its own layers.</div>`;
+  return `<div class="k">Layer</div>
+    <div class="cmpallay">${p.pal.layers.map(L =>
+      `<button class="${L.code === p.target ? 'on' : ''}" data-target-btn="${L.code}"
+        ${L.problem ? 'disabled' : ''} title="${esc(L.label)}${
+        L.problem ? ' - ' + esc(L.problem) : ' · ' + esc(L.file || '')}"
+        >${esc(L.label)}</button>`).join('')}</div>`;
+}
+
+/* The colours of the layer that is up. The list only - what is CHOSEN is
+   `cpaintChosenHtml`, which the panel wants as well. */
 function cpaintPaletteHtml(){
   const p = state.cpaint;
   if(p.tool === 'water') return '';
   const L = cpaintLayer();
-  if(!L) return '';
-  if(L.problem) return `<div class="cpnote w-bad">${esc(L.problem)}</div>`;
+  if(!L || L.problem) return '';
   const rgb = cpaintColour();
-  const chosen = `<div class="cppick">
-    <i style="background:${rgb ? `rgb(${rgb.join(',')})` : 'transparent'}"></i>
-    <span>${rgb ? cpaintColourName() : '<span class="w-warn">nothing picked - a '
-      + 'stroke would be refused, and say so</span>'}</span></div>`;
 
   if(p.target === 'regions'){
     const spec = p.st.new_region;
@@ -718,7 +746,7 @@ function cpaintPaletteHtml(){
         k.rgb.join(', ')}"><i style="background:rgb(${k.rgb.join(',')})"></i>${
         esc(k.name)}</button>`).join('');
     const w = p.pal.water;
-    return chosen + `<div class="cprow">
+    return `<div class="cprow">
         <input class="cpsearch" placeholder="find a region…"
           value="${esc(p.filter)}" data-filter>
         <button class="cprg${p.sea ? ' on' : ''}" data-sea
@@ -749,10 +777,41 @@ function cpaintPaletteHtml(){
       k.count ? ' · ' + k.count.toLocaleString() + ' tiles' : ''}"
       ><i style="background:rgb(${k.rgb.join(',')})"></i><span>${
       esc(k.name || k.rgb.join(', '))}</span></button>`).join('');
-  return chosen + `<div class="cppal">${list}</div>
+  return `<div class="cppal">${list}</div>
     <div class="cpnote">${esc(L.note)}${L.closed ? ''
       : ' A colour outside this list can still be written, because the layer has '
       + 'no table to hold it to.'}</div>`;
+}
+
+/* ---------- 49: the dock on the left of the map ----------
+
+   **The colours belong beside the tiles they go on.** They were in the right
+   column behind the Paint tab, which is where you read about a stroke; picking
+   one meant leaving whatever else that column was showing - the region record,
+   the validator - and coming back. This column is on the other side of the
+   stage, it is only there while the brush is armed, and it holds the three
+   things a stroke needs and nothing else: which layer, which colour, and what
+   is about to be written.
+
+   It is wired by `cpaintWireIn` like the panel and the toolbar are, so the same
+   five controls behave the same in all three and none of the three knows where
+   the others put them. */
+function cpaintDockPaint(){
+  const el = document.getElementById('cmPalCol');
+  if(!el) return;
+  const p = state.cpaint;
+  const show = !!(p && p.on && p.pal && !p.palErr);
+  el.hidden = !show;
+  el.innerHTML = show ? cpaintDockHtml() : '';
+  if(show) cpaintWireIn(el);
+}
+
+function cpaintDockHtml(){
+  return `${cpaintLayerTogHtml()}
+    <div class="cmpalbox">
+      ${cpaintChosenHtml()}
+      ${cpaintPaletteHtml()}
+    </div>`;
 }
 
 function cpaintColourName(){
@@ -928,10 +987,10 @@ function cpaintWireIn(box){
   box.querySelectorAll('[data-shape]').forEach(b => b.onclick = () => {
     p.shape = b.dataset.shape; cpaintPaint();
   });
-  const tg = box.querySelector('[data-target]');
-  if(tg) tg.onchange = () => {
-    p.target = tg.value; p.marker = ''; p.rgb = null; cpaintPaint();
-  };
+  // 49: one button per layer, in the dock, in place of the toolbar's <select>
+  box.querySelectorAll('[data-target-btn]').forEach(b => b.onclick = () => {
+    p.target = b.dataset.targetBtn; p.marker = ''; p.rgb = null; cpaintPaint();
+  });
   const fl = box.querySelector('[data-filter]');
   if(fl) fl.oninput = () => {
     p.filter = fl.value;
@@ -1016,7 +1075,9 @@ function cpaintBarHtml(){
       title="${open ? 'Fold the tools away and keep the brush armed'
                     : 'Show the tools again'}">${open ? '▴' : '▾'}</button>`;
   if(!open) return arm + fold + `<span class="count">${esc(cpaintToolName())}</span>`;
-  return arm + fold + cpaintToolsHtml() + cpaintSizeHtml() + cpaintTargetHtml();
+  // 49: the target layer left this row for the dock on the left, where the
+  // colours it decides are. The folded summary below still names it.
+  return arm + fold + cpaintToolsHtml() + cpaintSizeHtml();
 }
 
 //: What the folded row says instead of showing itself: which tool is up, and
