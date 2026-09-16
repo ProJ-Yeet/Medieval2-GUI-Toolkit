@@ -773,7 +773,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~11~~ | ~~**34** Add a climate zone~~ | M | beta | **done 2026-09-15** |
 | ~~12~~ | ~~**35** Rebels right in place~~ | M | beta | **done 2026-09-16** |
 | ~~13~~ | ~~**36** D1, change a region's colour~~ | M | beta | **done 2026-09-16** |
-| 14 | **37a** T7, the spawn export | M | beta | 5 |
+| ~~14~~ | ~~**37a** T7, the spawn export~~ | M | beta | **done 2026-09-16** |
 | 15 | **37b** T3, an FE zoom | M | beta | 5 |
 | 16 | **38** `descr_campaign_db.xml` | M | **both** | 4 |
 
@@ -791,7 +791,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
 (2026-09-14), **41, 43, 28a, 28b, 33, 30 and 34 are done** (2026-09-15) and
-**35 and 36 are done** (2026-09-16); eight remain, two of them subreleases. **43 was nearly all built already** - 16j shipped the
+**35, 36 and 37a are done** (2026-09-16); seven remain, two of them subreleases. **43 was nearly all built already** - 16j shipped the
 roster writer and the write-up had not checked - so what landed was the one
 sentence of it that was true, the refusal. **28a's scoping held in full**, and
 what it did not say was that the layer stack has to be capped or it takes the
@@ -1799,14 +1799,119 @@ is untouched.
 
 Both five stars, both **M**, both a reader over facts we hold. Two sessions.
 
-### 37a - T7, the spawn export
+### 37a - T7, the spawn export - DONE 2026-09-16
 
-A read-only scan for spawn coordinates across `descr_strat.txt` and the
-campaign script. **Far smaller than a script parser**, and that distinction is
-the whole point: 19b had to refuse to write the campaign script because it is a
-grammar nothing here models, and 24 kept that refusal. Reading coordinates out
-of it is not writing it, so the refusal stands and this still works. It is the
-one thing the script holds that the map screen cannot see.
+The scoping held in full, and the distinction it rests on is the reason the
+phase works: 19b refused to WRITE the campaign script because its grammar is
+nothing this toolkit models, 24 kept the refusal, and reading coordinates out of
+one is not writing it. The refusal is untouched.
+
+**What was invisible, measured.** The markers layer has shown seven kinds since
+18b, every one of them out of `descr_strat.txt` and the two event files:
+
+| campaign | script spawns | against descr_strat |
+|---|---|---|
+| DaC, imperial_campaign | **1,324** (1,317 armies, 3,822 units) | 305 characters |
+| DaC, Shattered_Alliances | **1,131** (1,129 armies, 3,340 units) | - |
+| Reforged, Fellowship | 98 (64 armies, 431 units) | 150 characters |
+
+**Four fifths of what DaC's imperial campaign puts on the map was not on this
+screen.** The layer's counts now read settlement 200, character 305, fort 105,
+watchtower 295, resource 1,131 and **spawn 1,324**, which is why the category is
+the only one that opens OFF: switching it on quadruples what is drawn, and a
+layer that opens unreadable is one nobody opens twice.
+
+**Every spawn carries a coordinate.** 2,510 `spawn_army` blocks over the three
+campaigns and not one without an `x`/`y` on its `character` line, so the reading
+is complete rather than a sample, and there is no silent remainder behind the
+export.
+
+### The reading is validated, and that matters more than the feature
+
+A report nobody believes is worth nothing, so the resolution was checked against
+the one thing that can check it - `stratobj.Vocabulary.province_at`, the same
+call every other reader of a game coordinate uses:
+
+* **DaC imperial: 1,322 of 1,324 land in a named province, and both misses are
+  admirals**, which is correct because an admiral is a fleet.
+* **Shattered Alliances: 1,127 of 1,131**, the four being two admirals at sea
+  and two standing on the ocean's own colour while `map_heights.tga` calls the
+  tile land.
+* **DaC's 3,822 unit names are every one in its EDU.** That is what finally
+  proved the parse (see below).
+
+A reading that agreed with the map 99.8% of the time by accident is not a thing
+that happens.
+
+### The parse trap the real files set
+
+A `character` line inside a spawn is comma-separated and **the `unit` line
+beside it is not**. Measured: 4,253 unit lines across both mods, not one with a
+comma, every one carrying `exp`, `armour` and `weapon_lvl`. Splitting both the
+same way gives units called `Clan Heralds exp 3 armour 0 weapon_lvl 0`.
+
+`soldiers` is in the attribute list because **six of DaC's 3,822 lines carry
+it** - `unit Moria Balrog soldiers 1 exp 9 armour 3 weapon_lvl 2` - and stopping
+only at `exp` made those six "Moria Balrog soldiers 1", which were exactly the
+six dead EDU references the join then reported. With it, DaC is clean on all
+3,822. **The six false findings were what found the bug.**
+
+### Three states a coordinate can be in, not one
+
+Resolution has to account for every spawn or the misses look like a hole in the
+reader. There are exactly three ways not to be in a province and all three are
+real on the installed mods: **at sea** (by `map_heights.tga`), **on a colour no
+record declares** (two of Shattered Alliances'), and **off the map** (none
+found). The suite checks that the unresolved count never exceeds the three
+together, on every installed campaign.
+
+**And a spawn with no coordinate is not resolved at all**, which a test caught:
+resolving one resolved the `(0,0)` its fields default to, which on a real map is
+the bottom-left corner and usually ocean, so a missing field was being counted
+as a spawn at sea. It is `no_coordinate` now and nothing else.
+
+### What Reforged's Fellowship campaign says, reported and not judged
+
+That campaign puts **45 of its 98 spawns on sea tiles carrying a land
+character** - 20 named characters, 16 witches, 9 generals - and names **247 of
+its 431 units** in a form its own EDU does not have, the commonest being "Mordor
+Orcs Super" 40 times against a roster that has "Mordor Orcs". Its
+`descr_strat.txt` does the same with 72 of its 150 characters. All of it is
+counted and none of it is a verdict: it is somebody else's campaign, the reason
+is not established here, and 32c's baseline rule says a tool that blocks on
+another mod's state is one nobody opens twice.
+
+### Built
+
+`unittransfer/spawns.py` (`Spawn`, `script_paths`, `scan_text`, `scan`,
+`resolve`, `positions`, `view`, `dead_units`, `export_text`, `export`,
+`region_tiles`'s opposite number `_unit_name`, `XY`, `AFLOAT`, `COLUMNS`), a
+`spawn` category in `marker_view`, `GET /api/map/spawns`, `POST
+/api/map/spawn_export`, and in `campmark.js` the category, the hollow ring that
+says "not there at turn one", and the tooltip line that ends in the file line -
+because the script is read and never written, so the answer to "this one is
+wrong" is the file and an editor.
+
+**The export is a CSV, and that is the point of calling it one.** The map
+screen's only export until now is 16g's per-faction TGA, which is right for a
+picture and useless for 1,324 rows. It goes to the cache folder beside the query
+exports; the mod is not touched.
+
+### Verified
+
+`tests/test_spawns.py` **41/41**, new, on a little script carrying every shape
+the real ones have. Eight suites re-run green - `test_mapquery` 109/109,
+`test_web_modules` 75/75, `test_campaint` 169/169, `test_recolour` 47/47,
+`test_rebelpools` 68/68, `test_stratobj` 65/65, `test_campevents` 82/82.
+`test_campmap` 108/112 and `test_campstrat` 96/100 are the DaC-build numbers,
+**both identical on a stashed tree**.
+
+Driven in the real app: the route answers for both mods, the markers layer
+reports `spawn: 1324` beside its six other categories, the browser's own y flip
+is checked correct against the index, the tooltip reads *"random_name · named
+character · 6 units · Dol Guldur (poland) · line 4051"*, an admiral at sea reads
+*"at sea (a fleet)"*, and the export wrote 1,324 rows and 176 KB of CSV into the
+cache folder.
 
 ### 37b - T3, an FE zoom for authoring map_FE.tga
 

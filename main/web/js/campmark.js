@@ -67,6 +67,12 @@ const CMK_CATS = [
   {id: 'resource', label: 'Trade resources', on: false},
   {id: 'event', label: 'Event positions', on: true},
   {id: 'disaster', label: 'Disaster positions', on: true},
+  // 37a. The campaign script's spawns, and OFF by default - the only category
+  // here that is. On DaC's imperial campaign there are 1,324 of them against
+  // 305 characters, so switching them on quadruples what is drawn, and a layer
+  // that opens unreadable is one nobody opens twice. It is the biggest thing on
+  // this screen, which is exactly why it is a tick rather than a default.
+  {id: 'spawn', label: 'Script spawns', on: false},
 ];
 
 /* One letter per character type, because eleven kinds of person will not fit
@@ -311,6 +317,27 @@ function cmkGlyph(x, it, px, py, size){
     x.fill(); x.stroke();
     return;
   }
+  /* 37a - a scripted spawn. Drawn as a hollow ring with a tick of its own,
+     because it is the one thing on this layer that is NOT on the map at turn
+     one: it arrives when the script fires. A solid shape would say a stack is
+     standing there now, which is exactly the wrong thing to tell somebody
+     reading a start position. A spawn on a sea tile that is not an admiral is
+     rung in red, because that is the one state worth seeing without opening the
+     tooltip - measured, 45 of Reforged's Fellowship spawns are in it. */
+  if(it.kind === 'spawn'){
+    const bad = it.at_sea && (it.type || '').toLowerCase() !== 'admiral';
+    x.beginPath();
+    x.arc(px, py, r * 0.78, 0, Math.PI * 2);
+    x.strokeStyle = bad ? 'rgba(233,105,105,.95)' : 'rgba(120,200,255,.95)';
+    x.lineWidth = Math.max(1.2, r * 0.28);
+    x.stroke();
+    if(size >= 14){
+      x.fillStyle = x.strokeStyle;
+      x.font = `${Math.round(size * 0.5)}px ui-monospace,Consolas,monospace`;
+      x.fillText(it.units ? String(Math.min(9, it.units)) : '\u00b7', px, py + 0.5);
+    }
+    return;
+  }
   if(it.kind === 'fort' || it.kind === 'watchtower'){
     const s = r * 0.7;
     x.beginPath();
@@ -404,6 +431,20 @@ function cmkLabel(it){
       + (it.date ? ` · turn ${it.date}` : '');
   if(it.kind === 'disaster')
     return `${it.name}${it.frequency ? ` · every ${it.frequency} years` : ''}`;
+  /* 37a. A spawn says its faction, what it brings and the line it is written
+     on, because the line is the only way to act on it: the script is read here
+     and never written, so the answer to "this one is wrong" is the file and an
+     editor. The sea note is said out loud for the same reason it is rung in
+     red - an admiral there is a fleet and anything else there is a stack in
+     the water. */
+  if(it.kind === 'spawn'){
+    const afloat = (it.type || '').toLowerCase() === 'admiral';
+    return `${it.name || '(unnamed)'}${it.type ? ` · ${it.type}` : ''}`
+      + (it.units ? ` · ${it.units} unit${it.units === 1 ? '' : 's'}` : '')
+      + (who ? ` · ${who}` : '')
+      + (it.at_sea ? (afloat ? ' · at sea (a fleet)' : ' · AT SEA') : '')
+      + ` · line ${it.line}`;
+  }
   // A fort and a watchtower name a province rather than an owner: DaC writes
   // all 105 and all 295 of them inside the `region` blocks at the end of the
   // file, where nobody owns them, so that is what is worth saying about one.

@@ -250,7 +250,7 @@ show the unsaved map rather than the one on disk.
   POST /api/map/paint_undo|_redo -> one step of the unlimited stack
   POST /api/map/paint_state      -> what is unsaved, without changing anything
   POST /api/map/paint_discard    -> throw the session away and re-read the disk
-  GET  /api/map/rebels?mod=&campaign=
+  GET  /api/map/spawns?mod=&campaign=\n                                 -> 37a. Everything the campaign script\n                                    spawns and where: the armies, their\n                                    units, the province each lands in and\n                                    which are at sea. Read-only\n  POST /api/map/spawn_export     -> the same list as a CSV in the cache\n                                    folder. The script is never written\n  GET  /api/map/rebels?mod=&campaign=
                                  -> 35. Both directions at once: every rebel
                                     faction this mod declares with its category,
                                     its chance, its units and the provinces that
@@ -537,7 +537,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campevents, campfiles, campmap, campnew, campstrat, cas, climatenew, guilds, mapcheck, mapquery, mapterrain, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campevents, campfiles, campmap, campnew, campstrat, cas, climatenew, guilds, mapcheck, mapquery, mapterrain, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2319,6 +2319,8 @@ class Handler(BaseHTTPRequestHandler):
                           "/api/map/region_delete_apply"):
                 return self._json(self._region_delete(
                     u.path.rsplit("_", 1)[-1], body))
+            if u.path == "/api/map/spawn_export":
+                return self._json(self._spawn_export(body))
             if u.path in ("/api/map/rebel_plan", "/api/map/rebel_apply"):
                 return self._json(self._rebels(
                     u.path.rsplit("_", 1)[-1], body))
@@ -3037,6 +3039,26 @@ class Handler(BaseHTTPRequestHandler):
         return out
 
     # ---- a climate declared (34) ----
+    def _spawn_export(self, body):
+        """Write the spawn list as CSV and say where it went (37a).
+
+        **The one write this phase makes, and it is not to the mod.** The file
+        goes into the cache folder beside the query exports; the campaign script
+        is read and never touched, which is 19b's refusal kept exactly as it
+        was.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            camp = body.get("campaign") or ""
+            try:
+                cm = self.registry.map_for(name, camp)
+            except (campmap.MapError, ModDataError, OSError):
+                cm = None
+            return spawns.export(mod, cm, camp)
+        except (KeyError, ModDataError, OSError, ValueError) as e:
+            return {"error": str(e)}
+
     def _rebels(self, action, body):
         """Preview or write a bulk rebel-faction assignment (35).
 
@@ -4072,6 +4094,20 @@ class Handler(BaseHTTPRequestHandler):
             # answers for a mod whose layers will not decode, which is exactly
             # when knowing the mod has two campaigns is worth something.
             return self._json(campfiles.browse(self.registry.describe(name)))
+
+        if path == "/api/map/spawns":
+            # 37a. Ahead of the map read, like the two beside it: the scan is a
+            # text file and the map is only what resolves a coordinate to a
+            # province, so a mod whose layers will not decode still gets its
+            # list - with the province column empty, which is the honest answer.
+            try:
+                scm = self.registry.map_for(
+                    name, (q.get("campaign") or [""])[0])
+            except (campmap.MapError, ModDataError, OSError):
+                scm = None
+            return self._json(spawns.view(
+                self.registry.describe(name), scm,
+                (q.get("campaign") or [""])[0]))
 
         if path == "/api/map/rebels":
             # 35. Ahead of the map read for the same reason the climates are:

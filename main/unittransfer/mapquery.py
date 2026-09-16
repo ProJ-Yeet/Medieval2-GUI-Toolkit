@@ -2272,8 +2272,16 @@ def marker_view(facts: "Facts") -> dict:
     # 18b, and outside the `facts.strat` guard on purpose: a mod whose
     # descr_strat.txt will not read still has a map, and its disasters are still
     # painted on it.
-    from . import campevents
+    from . import campevents, spawns
     items = campevents.positions(facts.mod, facts.campaign)
+    # 37a. The campaign script's own spawns, which are a category of this layer
+    # for 18b's reason and not a second overlay. Read-only: the script is a
+    # grammar nothing here writes, and reading coordinates out of one is not
+    # writing it, so 19b's refusal is untouched. Measured on DaC's imperial
+    # campaign, this is 1,324 more points against the 305 characters
+    # descr_strat.txt places, which is four fifths of what that campaign puts on
+    # the map and all of it invisible here until now.
+    items = items + spawns.positions(facts.mod, facts.campaign, facts.cm)
     if facts.strat is not None:
         items = campstrat.markers(facts.strat) + items
     out["items"] = items
