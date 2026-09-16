@@ -3,10 +3,55 @@ _Updated: 2026-09-16 - **v2.3.3** is the latest 2.x and **beta 2026-09-16**
 the latest beta, both cut on request after **Phase 49** and carrying everything
 uncut since v2.3.2: the M2EX map-ceiling fix, the `replace_record` blank line it
 turned up, the two bugs a second report brought in, and **Phases 40, 31, 42, 41,
-43, 28a, 28b, 33, 30, 34, 35, 36, 37a, 37b and 49**. **Releasing is on-request
-only**: commit to master and stop_
+43, 28a, 28b, 33, 30, 34, 35, 36, 37a, 37b and 49**. **Phase 50 is closed and
+uncut** on top of them. **Releasing is on-request only**: commit to master and
+stop_
 
 ## Next up
+**Phase 50 is done - the map opens the way it is used, and the stack comes off
+the column, closed 2026-09-16, beta line, committed and uncut.** Asked for as
+two requests, both of them about what the screen is like before you have touched
+it.
+
+**Four switches were defaults from the first day nobody had changed since.**
+The settlement names and the terrain textures both opened OFF, which is right
+for a reading that costs something and wrong for the two that are how this map
+is read - the first thing done on opening was turning both on, every session, on
+every mod. They open ON now, in summer, with a gap drawn **neutral** rather than
+pink; the tooltip already did. Each one is `saved.x === undefined` and not
+`!!saved.x`, so **turning one off is still a habit that sticks** - the new
+default is what a mod with nothing saved gets, not a switch that flips back
+every session.
+
+**A named view is untouched by all four**, because `mapviews.js` carries its own
+fallbacks (`!!p.terrain`, `'magenta'`) and a preset saved before 23a still looks
+like it did when it was saved. That separation was already there and this is the
+first thing that needed it.
+
+**The server's `GAP_DEFAULT` stays pink**, and that is the interesting half: the
+browser's opening habit and "what a request that names no gap is drawn with" are
+two different questions, and six checks in `test_mapterrain` are about the
+second one. The browser sends `&gap=` on every fetch, so nothing but an API
+caller sees the difference.
+
+**20a's ruling finally cost more than it was worth in the column.** The layer
+stack is not a tab and still is not one, but it was pinned under the tab body at
+45% of the column's height on every errand and it **vanished with the column**
+when that was collapsed. It is a button at the foot of the map now - `▤ Layers
+2/10`, the count so a shut panel is not a hidden one - and a panel over the art
+it is about. Same markup, same `#cmLayers`, so `cmapRepanel` and
+`cmapWireLayers` did not move with it; `s` opens it, Escape closes it last
+(after the pin and the selection), and **the ten number keys tick a layer with
+it shut**, which is the ruling standing rather than being repealed. `layer_panel`
+is a habit in `cmapLayerState` like the tab strip above it.
+
+New: `cmapLayPop`, `cmapLayerCount`, `CMAP_GAP_DEF`, `#cmLayPop`, `#cmLayBtn`,
+`#cmLayN` and `.cmfoot`/`.cmlaypop`/`.cmlaybtn`; `.cmside>.cmlayers` is gone.
+`tests/test_web_modules.py` **105/105** (was 92). Checked live against DaC with
+`map_layers` cleared: the map opens with the terrain drawn, 100 of 200
+settlements named at fit, **15 tiles with no texture drawn neutral**, and the
+foot reading `2/10`.
+
 **Phase 49 is done - two strips, the colours on the left, and one place for
 models, closed 2026-09-16, BOTH lines, committed and CUT as v2.3.3 and beta
 2026-09-16.** Asked for directly, with a screenshot of Mylae's map screen
@@ -913,6 +958,7 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
+| 50 - the defaults, and the stack off the column | **done** | Closed 2026-09-16, committed, **not cut** (beta only). Two requests about the state the screen opens in. The settlement names and the terrain textures now open ON (summer, gap **neutral**), each on `saved.x === undefined` so turning one off still sticks; the tooltip already did; a named view is untouched, because `mapviews.js` has its own fallbacks. `mapterrain.GAP_DEFAULT` deliberately stays `magenta` - the browser's opening habit and what an unasked request draws are two questions, and the browser sends `&gap=` on every fetch. The layer stack left the right column for **a button at the foot of the map and a panel over it** (`cmapLayPop`, `#cmLayPop`, count on the button): 20a's ruling standing, not repealed - the ten number keys still tick a layer with it shut, `s` opens it, Escape closes it after the pin and the selection, and it no longer costs the tab body 45% of the column or disappears when the column is collapsed. `tests/test_web_modules.py` 105/105 (was 92). |
 | 29 + B4 - the strat model viewer | **done** | Closed 2026-09-12, committed, **released 2026-09-12** as v2.3.2 and beta 2026-09-12c. The scoping was wrong about the root and right about everything above it: the art is not in a `.pack`, it is loose beside the stub as `<name>.tga.dds`, and `cas.texture_path` took the zero-byte `.tga` because it existed. Fixed at all five levels. New: `cas._has_bytes`, `icons.ArtUnreadable`, `icons.fault`, `png_bytes(strict=)`, `/model_texture` 415, `factions.packs_beside`, `factions.no_file_note`, and in `viewer3d.js` `uCutout`, `v3Degenerate`, `v3AskWhy`, `v3TexFault`, `v3FaultRows`. `tests/test_stratart.py` (40). |
 | 49 - two strips, the colours left, one place for models | **done** | Closed 2026-09-16, committed, **released 2026-09-16** as v2.3.3 and beta 2026-09-16 (both lines: the Models Editor half is outside the map). Asked for directly off a screenshot of Mylae's screen. **28a's strip was half the shape** - it grouped sixteen panels behind six tabs and then stacked each group down one scroll, and Province was seven panels deep. `CMAP_TABS` is two levels now and every panel is still in the DOM with its own state. **Choosing a sub-tab presses that panel's own toggle** (`open: {fn, at}`), once and only when it is shut; nothing is read until the tab is chosen, so load is unchanged and the validator does not run itself. The palette left the right column for **a dock on the left of the stage**, present only while the brush is armed, and the target layer left 28b's toolbar `<select>` for **eight buttons on top of the colours they change**. BMDB + Sprites is the **Models Editor**: the Strat map tab gained the BMDB browser's own 3D panel (**206 of DaC's 237 entries ship a mesh to point it at**) and 16k's model browser moved here off the map screen, which is the half that matters - a settlement is in no entry at all, and **DaC declares 237 entries and ships 926 model files**. **One shipped defect found on the way**: a docked viewer whose host the next screen wrote over was never stopped, true of the BMDB panel since it was built - `v3DropOrphan`, once from `applyMode`. New: `cmapSubs`, `cmapTabPanels`, `cmapSubId`, `cmapSubOf`, `cmapSubsHtml`, `cmapSub`, `cmapSubOpen` and `m.sub` in `cmapLayerState`; `cpaintChosenHtml`, `cpaintLayerTogHtml`, `cpaintDockHtml`, `cpaintDockPaint` and `#cmPalCol` (`cpaintTargetHtml` is gone); `stmPrev*` and `StratEntry.viewable` with `meshes` on every entry row; `v3DropOrphan`; `stratview.js` rewritten around `#cmodBrowse`. `tests/test_web_modules.py` 92/92 (was 86). |
 | 37a - T7, the spawn export | **done** | Closed 2026-09-16, committed, **not cut** (beta only). A read-only scan of the campaign script, which 19b refuses to WRITE and this does not: the refusal is untouched. **DaC's imperial campaign scripts 1,324 spawns - 1,317 armies, 3,822 units - against the 305 characters `descr_strat.txt` places**, so four fifths of what it puts on the map was invisible here; Shattered Alliances is another 1,131, Reforged's Fellowship 98. The markers layer gains `spawn` as its eighth category and it is **the only one that opens OFF**, because it quadruples what is drawn. **Every one of the 2,510 `spawn_army` blocks carries a coordinate.** The reading is validated through `province_at`: 1,322 of 1,324 in a named province with both misses admirals, 1,127 of 1,131 on the other campaign, and **all 3,822 DaC unit names in its EDU**. That join found the parse bug: a `character` line is comma-separated and a `unit` line is not (4,253 lines, no commas), and six DaC lines carry `soldiers` as an attribute, so stopping at `exp` alone produced exactly the six dead references the join reported. Three unresolved states are modelled - at sea, on an undeclared colour (2 on Shattered Alliances), off the map - and **a spawn with no coordinate is not resolved at all**, which a test caught being counted as a spawn at sea at (0,0). Reforged's Fellowship is counted and not judged: 45 of 98 spawns on sea tiles with a land character, 247 of 431 unit names not in its own EDU. New: `unittransfer/spawns.py`, the `spawn` category in `marker_view`, `GET /api/map/spawns`, `POST /api/map/spawn_export` (a CSV to the cache folder, because 16g's TGA export is right for a picture and useless for 1,324 rows), and in `campmark.js` the category, the hollow ring and the tooltip that ends in the file line. `tests/test_spawns.py` 41/41, new. Seven suites green; `test_campmap` 108/112 and `test_campstrat` 96/100 are DaC-build numbers, identical on a stashed tree. |
@@ -1245,6 +1291,20 @@ Nothing in the audit is scheduled any more. Run `sync` before touching anything
 that ports from a directory he has been working in.
 
 ## Decisions
+- 2026-09-16: **A default is what somebody does first, every time, before they
+  can start.** The settlement names and the terrain textures opened off and were
+  turned on at the start of every session on every mod. A switch in that state
+  is not a default, it is a chore. The test of one is the first thirty seconds
+  of a screen, not what is cheapest to draw.
+- 2026-09-16: **What the browser opens on and what an unasked request draws are
+  two questions.** Moving `GAP_DEFAULT` with the screen's habit broke six checks
+  that are about the drawing rather than the UI, and rightly. The browser sends
+  `&gap=` every time, so the two can differ and one of them can stay loud.
+- 2026-09-16: **A panel that is always up is a panel paid for on every errand.**
+  20a's ruling put the layer stack outside the tabs, which was right, and under
+  the tab body, which cost 45% of the column whatever you were doing and lost the
+  stack entirely when the column was collapsed. Outside the tabs does not have to
+  mean inside the column - the map has a foot.
 - 2026-09-15: **Measure the premise, not only the feature.** Phase 30 was
   scoped around "15 pink tiles on DaC, so this is the paint tool"; the installed
   set has changed and one mod now draws 159,855 of them because it has no

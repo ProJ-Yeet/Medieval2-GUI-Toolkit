@@ -99,6 +99,17 @@ const CMAP_RIVER_RGB = [86, 180, 255];
    on what the drawing will take. */
 const CMAP_GAPS = ['magenta', 'neutral', 'sea'];
 const CMAP_GAP_LABELS = {magenta: 'Pink', neutral: 'Neutral', sea: 'Sea'};
+/* Which one a map with no habit saved opens on.
+
+   Pink is the loudest on purpose and that is what a gap wants while the terrain
+   is the thing being worked on, not what it wants on every map that opens.
+   A name rather than `CMAP_GAPS[0]`: the order of that list is the server's own
+   `gap_fills` and stays it.
+
+   Deliberately not `mapterrain.GAP_DEFAULT`, which is still pink. That one
+   answers the other question - what a request naming no gap is drawn with -
+   and this screen names one on every fetch. */
+const CMAP_GAP_DEF = 'neutral';
 
 
 /* ---------- 28a: the side column is a tab strip, not a stack ----------
@@ -130,8 +141,11 @@ const CMAP_GAP_LABELS = {magenta: 'Pink', neutral: 'Neutral', sea: 'Sea'};
 
    **The layers are not in here**, and that is 20a's ruling standing: the stack
    is the ten files the map is made of and it is what the number keys tick, so
-   it stays under the strip whichever tab is up. Ticking a layer while reading a
-   finding is the ordinary errand on this screen.
+   it is not behind a tab. 50 moved it off this column altogether - it is a
+   button at the foot of the map and a panel over it, `cmapLayPop` - which is
+   the same ruling and the rest of it: ticking a layer while reading a finding
+   is the ordinary errand on this screen, and now it does not cost the tab body
+   45% of its height or vanish when the column is collapsed.
 
    The ids are the ones every panel module already writes into
    (`document.getElementById('cmPick')` and its fifteen siblings), so grouping
@@ -249,7 +263,8 @@ const CMAP_SIDE_CLASS = {cmPick: 'cmpick', cmSettle: 'cmsettle',
                          cmChars: 'cmchars', cmCamp: 'cmcamp'};
 
 //: Which tab holds a panel, by the id the panel's own module writes into.
-//: Empty for `cmLayers` and the mod header, which are not in the strip at all.
+//: Empty for the mod header, which is not in the strip at all - and for
+//: `cmLayers`, which is not even in this column any more (50).
 const cmapTabOf = panel =>
   (CMAP_TABS.find(t => cmapTabPanels(t).includes(panel)) || {}).id || '';
 
@@ -578,6 +593,9 @@ function cmapLayerState(){
   m.sub = {};
   for(const t of CMAP_TABS) m.sub[t.id] = cmapSubId(t.id);
   m.side_hid = !!c.hid;
+  // 50: whether the layer stack is open over the map. A habit like the paint
+  // row below it and the tab above it.
+  m.layer_panel = !!c.layPop;
   // 28b: whether the toolbar's paint row is showing. A habit like the rest -
   // arming the brush is not, so `p.on` stays out of here and out of every view.
   m.paint_row = typeof cpaintRowOpen === 'function' ? cpaintRowOpen() : true;
@@ -608,8 +626,8 @@ function cmapSaveLayers(){
    the map looks wrong there was no way back but to undo each one by hand. This
    is the one way back. It is the defaults `cmapNew` falls to with nothing
    saved - each layer's own `on`, `opacity` and blank colour, the server's
-   order, the terrain textures and the rivers and heights readings off, the
-   tooltip on and the names off
+   order, the terrain textures on in summer with a neutral gap, the rivers and
+   heights readings off, and the tooltip and the settlement names on
    - plus the query panel's colouring and filters, the marker layer, 28a's tab
    strip and column width, and the zoom, and it saves the result so the next
    session opens the same way.
@@ -624,7 +642,7 @@ function cmapResetView(){
     + 'Every layer, its opacity, its order and the colours punched out of it; '
     + 'the terrain textures, and the rivers and heights readings; settlement '
     + 'names and the tooltip; the markers; the query panel\'s colouring and '
-    + 'filters; the tab strip and the width of this column; '
+    + 'filters; the tab strip, the layer stack and the width of this column; '
     + 'and the zoom.\n\n'
     + 'Saved views, the campaign you are reading and any unsaved painting are kept.'))
     return;
@@ -638,10 +656,11 @@ function cmapResetView(){
   }
   c.order = cmapOrder(c.man, []);
   c.rivers = false; c.riverRgb = CMAP_RIVER_RGB.slice();
-  c.heightAlpha = false; c.tip = true; c.labels = false; c.lab = null;
+  c.heightAlpha = false; c.tip = true; c.labels = true; c.lab = null;
   // 28a: the strip's three habits are habits like the rest, so the one way
   // back puts them back - first tab, column open, default width
   c.tab = CMAP_TABS[0].id; c.sub = {};
+  c.layPop = false;                           // 50: the stack, shut again
   c.hid = false; c.fresh = {}; c.autoSwitched = false;
   cmapSettings().paint_row = true;            // 28b
   state.settings[CMAP_SIDE_KEY] = 0;
@@ -649,8 +668,8 @@ function cmapResetView(){
   // the pictures are kept, not thrown away: they are a megabyte each that the
   // server built and nothing about them has changed, so turning the reading
   // back on is instant
-  c.terrain.on = false; c.terrain.season = 'summer';
-  c.terrain.gap = CMAP_GAPS[0]; c.terrain.shot = {};   // 30
+  c.terrain.on = true; c.terrain.season = 'summer';
+  c.terrain.gap = CMAP_GAP_DEF; c.terrain.shot = {};   // 30
   c.overlay = null; c.overlayEdge = null; c.overlayKey = '';
   c.overlayAlpha = 0.85; c.overlayFill = 'solid';
   c.comp = null; c.compKey = '';
@@ -662,6 +681,9 @@ function cmapResetView(){
   renderCampmap();
   for(const code of c.order) if(c.layers[code].img) cmapMask(c, code);
   cmapLoadLayers();
+  // the season's picture was thrown away with `shot` above, and the terrain is
+  // one of the defaults now, so the reset fetches it the way opening does
+  if(c.terrain.on) cmapTerrainLoad();
   cmapFit();
   toast('The map is back to its defaults. Saved views are kept.');
 }
@@ -766,22 +788,26 @@ function cmapNew(mod, man){
        cannot go through the mask pass or into the composite, and it arrives as
        one picture that is blitted under the stack. `scale` is how many of its
        pixels a tile is, which is the whole of the arithmetic on this side. */
-    terrain: {on: !!saved.terrain, img: null, scale: 1, loading: false,
+    terrain: {on: saved.terrain === undefined ? true : !!saved.terrain,
+              img: null, scale: 1, loading: false,
               failed: '', facts: null, key: '', stale: false,
               // 30: what goes under a tile with no texture. A habit like the
               // season, so it rides in `cmapLayerState` and a saved view puts
               // it back - and it is baked into the PNG, which is why it is in
               // the request and in the cache key rather than a CSS rule.
               gap: CMAP_GAPS.indexOf(saved.terrain_gap) >= 0
-                   ? saved.terrain_gap : CMAP_GAPS[0],
+                   ? saved.terrain_gap : CMAP_GAP_DEF,
               // 23b: which texture column is drawn. The pictures are kept per
               // season once fetched, so flipping between them is a blit.
               season: saved.terrain_season === 'winter' ? 'winter' : 'summer',
               shot: {}},
     // 20c, T4: settlement names on the map, and the layout for the zoom on
-    // screen - see maplabels.js. Off until somebody turns it on, like 17d's
-    // markers: a map that opens under two hundred names is a different map.
-    labels: !!saved.labels, lab: null,
+    // screen - see maplabels.js. On with nothing saved: a map of unnamed
+    // markers is the one that has to be read twice, and the layout leaves a
+    // name off rather than letting two of them collide, so the count is the
+    // zoom's and not two hundred at once. `undefined` and not falsy - somebody
+    // who turned them off saved that, and it is a habit like the rest.
+    labels: saved.labels === undefined ? true : !!saved.labels, lab: null,
     view: {zoom: 1, ox: 0, oy: 0, fitted: false},
     hover: null, sel: null, outline: null, outlineKey: -1,
     // 17e's tooltip: where the pointer is in the stage, whether the panel is
@@ -798,6 +824,9 @@ function cmapNew(mod, man){
     // left rather than to the first one
     sub: (saved.sub && typeof saved.sub === 'object') ? Object.assign({}, saved.sub) : {},
     hid: !!saved.side_hid, fresh: {}, autoSwitched: false,
+    // 50: the layer stack over the map, shut until somebody opens it - see
+    // `cmapLayPop`. The ten number keys tick a layer either way.
+    layPop: !!saved.layer_panel,
     // the picked tile, what all ten layers say about it, and the region record
     // it belongs to with the working copy the form edits
     pick: null, probe: null, probeErr: '', det: null, busy: false,
@@ -1112,7 +1141,22 @@ Saved views are kept.">↺ Reset</button>
           <div class="cmbarrow cmpaint" id="cmPaintBar"></div>
         </div>
         <div class="cmpin" id="cmPin" hidden></div>
-        <div class="cmread" id="cmRead">move the pointer over the map</div>
+        <!-- 50: the layer stack, over the map instead of under the column.
+             Hidden until the foot's button opens it, and the same markup under
+             the same id, so cmapRepanel and cmapWireLayers did not move with
+             it. (No backticks in here: this is inside a template literal.) -->
+        <div class="cmlaypop" id="cmLayPop"${c.layPop ? '' : ' hidden'}>
+          <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
+        </div>
+        <div class="cmfoot">
+          <button id="cmLayBtn" class="cmlaybtn${c.layPop ? ' on' : ''}"
+            onclick="cmapLayPop()"
+            title="The ten map layers: what is drawn, in what order, at what opacity,
+and what each colour on one means (S).
+The bare number keys 1 to 0 tick a layer whether this is open or not.">▤ Layers
+            <span class="count" id="cmLayN">${cmapLayerCount()}</span></button>
+          <div class="cmread" id="cmRead">move the pointer over the map</div>
+        </div>
         <div class="cmtip" id="cmTip" hidden></div>
         <div class="cmperf" id="cmPerf"></div>
       </div>
@@ -1142,7 +1186,6 @@ back from the collapsed state.">›</button>
                 : `<div class="${CMAP_SIDE_CLASS[id] || ''}" id="${id}"></div>`
               ).join('')}</div>`).join('')}</div>`).join('')}
         </div>
-        <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
       </div>
     </div>`;
   cmapWire();
@@ -1206,6 +1249,39 @@ function cmapFindingsHtml(f){
   const cls = {bad: 'w-bad', warn: 'w-warn', note: 'count'};
   return `<div class="cmfind">${rows.map(([k, t]) =>
     `<div class="${cls[k]}">${t}</div>`).join('')}</div>`;
+}
+
+/* 50: the stack is a button on the map, not a block in the column.
+
+   20a's ruling stands and this is it standing: the stack is the ten files the
+   map is made of, it is what the ten number keys tick, and it is not a tab. It
+   was under the tab strip whichever tab was up, which cost the column 45% of
+   its height on every errand and vanished with the column when that was
+   collapsed. On the map it is neither - the keys still tick a layer with the
+   panel shut, the button says how many are on, and the panel is over the art it
+   is about rather than beside it.
+
+   Closed until asked for, and remembered like every other habit on this screen
+   (`layer_panel` in `cmapLayerState`), so a session that works with it open
+   opens with it open. */
+function cmapLayPop(open){
+  const c = state.cmap;
+  if(!c) return;
+  c.layPop = open === undefined ? !c.layPop : !!open;
+  const pop = document.getElementById('cmLayPop');
+  const btn = document.getElementById('cmLayBtn');
+  if(pop) pop.hidden = !c.layPop;
+  if(btn) btn.classList.toggle('on', c.layPop);
+  cmapSaveLayers();
+}
+
+//: How many of the ten are being drawn, on the button that opens them. The
+//: whole reason a shut panel is not a hidden one: a map that looks wrong is
+//: usually a layer that is off, and the count says so without opening anything.
+function cmapLayerCount(){
+  const c = state.cmap;
+  if(!c) return '';
+  return `${c.order.filter(code => c.layers[code].on).length}/${c.order.length}`;
 }
 
 function cmapLayersHtml(){
@@ -1712,6 +1788,10 @@ function cmapRepanel(){
   if(!box) return;
   box.innerHTML = cmapLayersHtml();
   cmapWireLayers();
+  // 50: the button is outside the list, so the count on it is updated here
+  // rather than being rebuilt with the rows
+  const n = document.getElementById('cmLayN');
+  if(n) n.textContent = cmapLayerCount();
 }
 
 function cmapMove(code, dir){
@@ -4075,12 +4155,18 @@ function cmapKeys(){
       if(!k) return;
       if(!k.open) cfdToggle(); else cfdFocus();
     }
+    // 50 - `s` for the stack, beside `t`, `l` and `f`. The ten digits tick a
+    // layer; this is the panel that says what they tick.
+    else if(e.key === 's' || e.key === 'S'){ cmapLayPop(); }
     else if(e.key === 'Escape' && (state.cmap.sel || state.cmap.pick)){
       const c = state.cmap;
       c.sel = null; c.pick = null; c.probe = null; c.det = null;
       state.cset = null; state.cx = null;
       cmapOutline(null); cmapPaint(); cmapPickPaint(); csPaint(); cxPaint();
     }
+    // 50: last, so Escape stops a pin and clears a selection before it closes
+    // a panel somebody is reading
+    else if(e.key === 'Escape' && state.cmap.layPop){ cmapLayPop(false); }
     else return;
     e.preventDefault();
   });

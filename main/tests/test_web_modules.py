@@ -253,11 +253,32 @@ check("Validate is a tab of its own and holds the check panel",
 
 # 20a's ruling, asserted rather than remembered: the layer stack is the ten
 # files the map is made of and is what the number keys tick, so it is not
-# behind a tab and stays visible whichever one is up.
+# behind a tab. 50: and not in this column at all - it is a button at the foot
+# of the map and a panel over it, so it outlives the column being collapsed.
 check("the layer stack is in no tab", "cmLayers" not in flat)
 check("and it is rendered outside the tab body",
       '<div class="cmlayers" id="cmLayers">' in campmap_js
       and 'id="cmBody"' in campmap_js)
+_stage = campmap_js.split('<div class="cmstage"')[1].split('<div class="cmside')[0]
+check("50: the stack is on the map, not in the column",
+      'id="cmLayPop"' in _stage and 'id="cmLayers"' in _stage
+      and 'id="cmLayBtn"' in _stage)
+check("and the button that opens it is at the foot of the map, with the readout",
+      '<div class="cmfoot">' in _stage
+      and _stage.index('id="cmLayBtn"') < _stage.index('id="cmRead"'))
+check("the panel is shut until it is opened, and the button says so",
+      "${c.layPop ? '' : ' hidden'}" in _stage
+      and "${c.layPop ? ' on' : ''}" in _stage)
+check("the count of what is drawn is on the button",
+      'id="cmLayN"' in _stage and "function cmapLayerCount(){" in campmap_js
+      and "cmapLayerCount()" in campmap_js.split("function cmapRepanel(){")[1][:600])
+check("a key opens it, beside the other three", "cmapLayPop(); }" in campmap_js)
+check("and Escape closes it, after the pin and the selection",
+      campmap_js.index("state.cmap.layPop){ cmapLayPop(false); }")
+      > campmap_js.index("e.key === 'Escape' && (state.cmap.sel"))
+check("it is a habit, like the tab strip it left",
+      "m.layer_panel = !!c.layPop;" in campmap_js
+      and "layPop: !!saved.layer_panel," in campmap_js)
 
 # `cmapSurface` is the one thing that keeps the strip from being worse than the
 # stack it replaced, and it is addressed by panel id - a name that is not in
@@ -442,6 +463,29 @@ check("the fetch asks for it and the browser keys its copy on it",
 _srv = (ROOT / "unittransfer" / "server.py").read_text(encoding="utf-8")
 check("and the server's disk cache keys on it too",
       'token = f"mapterrain|{p.key}|gap|{gap}"' in _srv)
+
+check("the browser opens on a fill the drawing actually takes",
+      "const CMAP_GAP_DEF = 'neutral';" in campmap_js
+      and "neutral" in mapterrain.GAP_FILLS
+      and "CMAP_GAP_DEF," in campmap_js)
+
+# What the screen opens as with nothing saved. Each one is `undefined` and not
+# falsy on purpose: a person who turned the reading off saved that, and a
+# default that ignored it would turn it back on every session.
+check("the terrain textures are on with nothing saved, and stay off once "
+      "somebody has turned them off",
+      "on: saved.terrain === undefined ? true : !!saved.terrain," in campmap_js)
+check("and so are the settlement names",
+      "labels: saved.labels === undefined ? true : !!saved.labels," in campmap_js)
+check("and the tooltip, which already was", "tip: saved.tip !== false," in campmap_js)
+_reset = campmap_js.split("function cmapResetView(){")[1]
+_reset = _reset[:_reset.index(chr(10) + "}" + chr(10))]
+check("the one way back goes back to the same four",
+      "c.tip = true; c.labels = true;" in _reset
+      and "c.terrain.on = true; c.terrain.season = 'summer';" in _reset
+      and "c.terrain.gap = CMAP_GAP_DEF;" in _reset)
+check("and it fetches the picture it just turned on",
+      "if(c.terrain.on) cmapTerrainLoad();" in _reset)
 
 # A habit, so it rides with the season and a saved view puts it back.
 check("cmapLayerState carries terrain_gap", "m.terrain_gap" in state_fn)

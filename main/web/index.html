@@ -753,10 +753,35 @@
   .cpfold{font:inherit;font-size:11px;padding:2px 6px;border-radius:5px;
     color:var(--dim)}
   /* the two readouts sit on the art, so they carry their own backing */
-  .cmread,.cmperf{position:absolute;bottom:8px;font-size:11.5px;color:var(--dim);
+  .cmread,.cmperf{font-size:11.5px;color:var(--dim);
     background:rgba(8,10,14,.78);padding:2px 7px;border-radius:5px;
     pointer-events:none;white-space:nowrap}
-  .cmread{left:8px} .cmperf{right:8px}
+  .cmperf{position:absolute;bottom:8px;right:8px}
+  /* 50: the foot of the map - the button that opens the layer stack, with the
+     pointer readout beside it. The readout used to be the only thing down here
+     and positioned itself; it is a flex child now, and it truncates rather than
+     pushing the button off the map on a narrow stage. */
+  .cmfoot{position:absolute;left:8px;bottom:8px;z-index:5;display:flex;gap:6px;
+    align-items:center;max-width:calc(100% - 16px)}
+  .cmfoot .cmread{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .cmlaybtn{font:inherit;font-size:12px;padding:3px 9px;border-radius:6px;
+    background:rgba(10,12,16,.86);border:1px solid var(--edge);
+    white-space:nowrap;flex:0 0 auto}
+  .cmlaybtn.on{border-color:var(--accent);background:var(--panel2)}
+  .cmlaybtn .count{padding-left:2px}
+  /* The stack itself, over the map it is about. Capped and scrolling inside
+     the cap for 28a's reason - ten layers with their legends and 20a's two
+     readings come to 794px on DaC - and it stops short of the toolbar at the
+     top of the stage rather than running under it. */
+  /* 380 and not the column's 336: a row is a tickbox, a name, two arrows, a
+     92px slider and its number, and inside 336 of PANEL that came to a
+     horizontal scrollbar under the list. This is that width plus the padding
+     and the scrollbar it now carries itself. */
+  .cmlaypop{position:absolute;left:8px;bottom:42px;z-index:6;width:380px;
+    max-width:calc(100% - 16px);max-height:calc(100% - 120px);overflow:auto;
+    background:rgba(10,12,16,.94);border:1px solid var(--edge);border-radius:8px;
+    padding:8px 9px;box-shadow:0 8px 26px rgba(0,0,0,.45)}
+  .cmlaypop[hidden]{display:none}
   /* 20c, M8 - the pin. The banner says what the next click is for and how to
      stop; the cursor changes so the map itself says it too. */
   .cmpin{position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:6;
@@ -884,13 +909,9 @@
   /* `display:flex` on the line above beats the UA sheet's `[hidden]`, which is
      how all six groups showed at once the first time this ran */
   .cmgroup[hidden]{display:none}
-  /* The layer stack is not a tab - 20a's ruling - so it sits under the body and
-     stays put whichever tab is up. It is CAPPED and scrolls inside that cap,
-     because ten layers with their legends and 20a's two readings open come to
-     794px on DaC, which is the whole column: pinned at its natural height it
-     would leave the tab body nothing and be the old stack with extra steps. */
-  .cmside>.cmlayers{flex:0 1 auto;max-height:45%;overflow:auto;padding-top:8px;
-    border-top:1px solid var(--edge)}
+  /* 50: the layer stack was here, under the tab body and above the foot of the
+     column, capped at 45% of it. It is a panel over the map now - `.cmlaypop`
+     up with the rest of the stage - so the body has the whole column. */
   /* collapsed: the column is the rail and nothing else, and the rail carries
      the same six tabs, so it is reversible from the collapsed state */
   .cmrail{display:none;flex-direction:column;gap:4px;align-items:center}
@@ -901,15 +922,15 @@
   .cmside.hid{flex:0 0 40px !important;min-width:40px;overflow:visible}
   .cmside.hid>:not(.cmrail){display:none}
   .cmside.hid>.cmrail{display:flex}
-  .cmside .k{font-size:11px;color:var(--dim);text-transform:uppercase;
+  .cmside .k,.cmlaypop .k{font-size:11px;color:var(--dim);text-transform:uppercase;
     letter-spacing:.04em;font-weight:600}
   /* 33, T10: the copy button sits on the "This tile" heading, at its end */
   .cmcopy{font:inherit;font-size:11px;line-height:1;padding:2px 6px;
     border-radius:5px;color:var(--dim);margin-left:6px;vertical-align:middle}
   .cmcopy:hover{color:var(--ink);border-color:var(--accent)}
 
-  .cmside .k .count{text-transform:none;letter-spacing:0;margin-left:6px;
-    font-weight:400}
+  .cmside .k .count,.cmlaypop .k .count{text-transform:none;letter-spacing:0;
+    margin-left:6px;font-weight:400}
   .cmfind{display:flex;flex-direction:column;gap:4px;font-size:11.5px;
     border:1px solid var(--edge);border-radius:7px;padding:7px 9px;
     background:var(--panel2)}
@@ -1403,12 +1424,12 @@
        column belongs at full width whatever it was dragged to when there were
        two columns beside each other. The grab bar is already gone at 1100px. */
     .cmside,.cmside.wide{flex:0 0 auto!important}
-    /* 28a: stacked, the page itself scrolls, so neither the tab body nor the
-       layer stack needs a scroller of its own - two of them inside a column
-       that is already scrolling is three scrollbars for one list. */
+    /* 28a: stacked, the page itself scrolls, so the tab body does not need a
+       scroller of its own - one inside a column that is already scrolling is
+       two scrollbars for one list. The layer stack is over the map now (50)
+       and keeps its own cap, because the stage does not scroll with the page. */
     .cmside{overflow:visible}
     .cmbody{overflow:visible;min-height:0}
-    .cmside>.cmlayers{max-height:none;overflow:visible}
   }
   /* every DISTINCT card on disk, and who shares each one */
   .cardvars{margin-top:12px}

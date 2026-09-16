@@ -124,7 +124,10 @@ on top. Ships on the dated beta pre-release; see the module table above.
   rivers still read under a faction map, and frontiers sit on the edge between
   two provinces or inside them, between the colouring's groups or round every
   province. **Labels** (`L`) puts every settlement's name beside it without one
-  name covering another. All of it exports to a TGA exactly as it is on screen,
+  name covering another, and the names and the textures are both on when the map
+  opens. The ten layers are a button at the foot of the map (`S`) and a panel
+  over it, and the bare number keys tick one whether that is open or not. All of
+  it exports to a TGA exactly as it is on screen,
   and **↺ Reset** puts every one of these readings back to how the map first
   opens, keeping saved views, the campaign you are reading and unsaved painting.
 * **Putting things on it.** **🏰 Forts and resources** places a fort, a
