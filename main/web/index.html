@@ -951,6 +951,19 @@
   .rebgo{padding:0 4px;font-size:10px;line-height:1.6;border-radius:4px}
   .rebmove{border-top:1px solid var(--edge);margin-top:7px;padding-top:7px}
   .rebmove select{max-width:180px}
+
+  /* 36: the recolour dialog. The two swatches with an arrow between them are
+     the whole of what is being decided, so they lead and the numbers follow;
+     the picker is there because three numbers are a colour nobody can see. */
+  .rclbox{max-width:560px}
+  .rclrow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:9px 0}
+  .rclsw{width:26px;height:26px;flex:0 0 26px;border-radius:5px;
+    border:1px solid rgba(0,0,0,.55)}
+  .rclarrow{color:var(--dim);font-size:15px;padding:0 2px}
+  .rclrow input[type=color]{width:34px;height:24px;padding:0;border-radius:4px;
+    border:1px solid var(--edge);background:none;cursor:pointer}
+  .rclrow input[type=number]{width:62px}
+  .rclnote{margin:7px 0}
   .cmpick .cmcard{border:1px solid var(--edge);border-radius:7px;padding:9px 10px;
     background:var(--panel2);margin-top:5px}
   .cmcard .nm{display:flex;align-items:center;gap:7px;font-weight:600;
@@ -2758,6 +2771,7 @@
 <script src="js/campforts.js"></script>
 <script src="js/climates.js"></script>
 <script src="js/rebels.js"></script>
+<script src="js/recolour.js"></script>
 <script src="js/regiondel.js"></script>
 <script src="js/campnew.js"></script>
 <script src="js/facaudit.js"></script>

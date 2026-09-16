@@ -241,6 +241,12 @@ show the unsaved map rather than the one on disk.
                                     and the sea colours measured off this map
   POST /api/map/paint            -> one stroke: pointer samples in, the tiles
                                     that changed out
+  POST /api/map/recolour        -> 36. Repaint every tile of one province in a
+                                    new colour, as one undoable stroke. The
+                                    record's colour line is written by the
+                                    same save, and nothing is renumbered
+  POST /api/map/recolour_cancel -> forget the pending recolour; the pixels
+                                    stay on the undo stack
   POST /api/map/paint_undo|_redo -> one step of the unlimited stack
   POST /api/map/paint_state      -> what is unsaved, without changing anything
   POST /api/map/paint_discard    -> throw the session away and re-read the disk
@@ -2291,7 +2297,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._map_write(u.path.rsplit("/", 1)[-1], body))
             if (u.path.startswith("/api/map/paint")
                     or u.path in ("/api/map/region_start", "/api/map/region_cancel",
-                                  "/api/map/region_vocab")):
+                                  "/api/map/region_vocab", "/api/map/recolour",
+                                  "/api/map/recolour_cancel")):
                 return self._json(self._paint(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/settlement_plan", "/api/map/settlement_apply"):
                 return self._json(self._settlement(
@@ -3174,6 +3181,10 @@ class Handler(BaseHTTPRequestHandler):
                 out = campaint.cancel_region(sess)
             elif action == "region_vocab":
                 out = campaint.wizard_vocab(sess)
+            elif action == "recolour":
+                out = campaint.recolour(sess, body)
+            elif action == "recolour_cancel":
+                out = campaint.cancel_recolour(sess)
             elif action in ("paint_plan", "paint_apply"):
                 plan = campaint.plan_paint(sess)
                 out = {"plan": plan.payload(), "state": sess.state()}

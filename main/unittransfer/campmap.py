@@ -2257,6 +2257,24 @@ def render_block(base: str, edits: dict) -> str:
             raise MapError(f"a region's {slot} cannot be blank")
         _set_line(lines, at, want)
 
+    # 36. The colour, which is the one slot that is meaningless on its own: the
+    # record says which colour this province IS and map_regions.tga says which
+    # tiles carry it, so a change here that is not matched by a repaint leaves a
+    # province with no tiles at all. `plan_region` therefore refuses this edit
+    # outright and goes on refusing it - the hand-edited form has no way to move
+    # the pixels. The recolour in `campaint` writes both in one save, and it is
+    # the only caller that passes this.
+    if "rgb" in edits:
+        try:
+            trio = tuple(int(v) for v in edits["rgb"])
+        except (TypeError, ValueError):
+            raise MapError("a region colour is three numbers 0-255") from None
+        if len(trio) != 3 or any(v < 0 or v > 255 for v in trio):
+            raise MapError("a region colour is three numbers 0-255")
+        if rec.rgb_line < 0:
+            raise MapError("this record has no colour line to write to")
+        _set_line(lines, rec.rgb_line, " ".join(str(v) for v in trio))
+
     if "resources" in edits:
         res = [str(r).strip() for r in (edits["resources"] or []) if str(r).strip()]
         line = ", ".join(res)

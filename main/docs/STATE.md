@@ -2,10 +2,59 @@
 _Updated: 2026-09-16 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
 the latest beta - after the M2EX map-ceiling fix, the `replace_record` blank
 line it turned up, the two bugs a second report brought in, and **Phases 40, 31,
-42, 41, 43, 28a, 28b, 33, 30, 34 and 35**, all committed and **not cut**. **Releasing is on-request only**:
+42, 41, 43, 28a, 28b, 33, 30, 34, 35 and 36**, all committed and **not cut**. **Releasing is on-request only**:
 commit to master and stop_
 
 ## Next up
+**Phase 36 is done - a region's colour, changed, closed 2026-09-16, beta line,
+committed and uncut.** The write-up's premise is withdrawn.
+
+**A recolour does not renumber, and that is the whole finding.** It was scoped
+on "changing one colour can renumber every region after it", which is the one
+thing a recolour cannot do: a region ID is the order a colour is **first met**
+in a row-major scan, so it is a fact about where a province's pixels ARE, and a
+recolour moves no pixel. Measured by renumbering both installed maps with one
+province recoloured, the first in the scan and one in the middle: **not one ID
+moved in any of the four cases**, and zero again off disk after a real save. So
+the panel does not show which regions move, **it says that none do** - which is
+the reason to press the button, because the create wizard and the delete both
+warn that they renumber and anyone who has read those will assume this does too.
+
+**The one case that renumbers is a merge, and it is refused.** Painting a
+province in another province's colour makes two colours one and takes a province
+off the map: measured on DaC, **51 IDs move and `Celebrant_Province` is gone**.
+The other three refusals are the ones `start_region` already makes, because a
+colour is a key and the ways a key can be wrong do not depend on the record
+being new.
+
+**Every tile of the colour, not a bucket.** 8 of DaC's 200 regions and 10 of
+Reforged's 199 are not one connected blob; a bucket from `Forodwaith_Province`'s
+anchor reaches 27,083 of its 40,995 tiles and would leave **13,912 behind in the
+old colour**, which is Phase 40's undeclared province made on purpose.
+
+**One real defect, and the existing guard found it by refusing its own save.**
+`_emptied` compares declared colours against painted ones, and mid-recolour the
+pixels are the new colour while the record still names the old - exactly the
+fault it looks for. It now reads the pending record change for that one
+province and judges every other one as before, so a recolour that painted over a
+neighbour still empties it and still refuses. The mirror case, undoing the
+stroke and then saving, is caught by name rather than half-written.
+
+**And the thing that makes IDs matter was counted for the first time.** The
+create and delete warnings both end "a script that names a region by number now
+names a different one". That script exists: **141 live numeric region references
+on DaC** - 76 in `export_descr_ancillaries.txt`, 62 in
+`export_descr_character_traits.txt`, 3 in `campaign_script.txt` - and 3 on
+Reforged. Whether DaC's 141 are still *correct* is not claimed: the comments
+beside them are informal and a string match against the scan order produced
+disagreements that were the matcher's fault.
+
+`tests/test_recolour.py` **47/47**, new. Eight suites green; `test_campmap`
+108/112 with its four pre-existing failures, and `test_mapcheck`'s only red is
+the one-second timing bar, which **a stashed tree fails harder on the same
+machine** (1,522 and 1,840 ms against 1,214 and 1,227).
+
+
 **Phase 35 is done - rebels right in place, closed 2026-09-16, beta line,
 committed and uncut.** The scoping was right that this is a join and a screen
 rather than a format, and wrong about how much of it was missing.
@@ -722,6 +771,7 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | Phase | Status | Note |
 |---|---|---|
 | 29 + B4 - the strat model viewer | **done** | Closed 2026-09-12, committed, **released 2026-09-12** as v2.3.2 and beta 2026-09-12c. The scoping was wrong about the root and right about everything above it: the art is not in a `.pack`, it is loose beside the stub as `<name>.tga.dds`, and `cas.texture_path` took the zero-byte `.tga` because it existed. Fixed at all five levels. New: `cas._has_bytes`, `icons.ArtUnreadable`, `icons.fault`, `png_bytes(strict=)`, `/model_texture` 415, `factions.packs_beside`, `factions.no_file_note`, and in `viewer3d.js` `uCutout`, `v3Degenerate`, `v3AskWhy`, `v3TexFault`, `v3FaultRows`. `tests/test_stratart.py` (40). |
+| 36 - D1, change a region's colour | **done** | Closed 2026-09-16, committed, **not cut** (beta only). **The write-up's premise is withdrawn: a recolour does not renumber.** A region ID is the order a colour is first met in a row-major scan, so it is a fact about where the pixels are, and a recolour moves none - measured at **0 IDs moved** on both mods, recolouring the first region in the scan and a middle one, and 0 again off disk after a real save. The panel therefore says nothing renumbers rather than showing what does, because 16e and 24 both warn that they DO and a reader will assume this one does. **The merge is the case that renumbers and it is refused**: another province's colour moves 51 IDs on DaC and takes `Celebrant_Province` off the map. **Every tile of the colour, not a bucket** - 8 of DaC's 200 and 10 of Reforged's 199 regions are not one blob, and a bucket from Forodwaith's anchor would leave 13,912 of its 40,995 tiles behind in a colour no record declares. **One defect, found by the guard refusing its own save**: `_emptied` reads declared colours against painted ones, and mid-recolour those disagree by design; it now reads the pending record change for that one province and judges every other as before. **141 live numeric region references measured on DaC** (76 ancillaries, 62 traits, 3 campaign_script) and 3 on Reforged, which is what the create and delete warnings are about and had never been counted. New: `campaint.region_tiles`, `recolour_faults`, `recolour`, `cancel_recolour`, `_plan_recolour`, `_emptied(recolour=)`, `sess.recolour`, `_stroke_over` (lifted whole out of `paint`); the `rgb` slot on `campmap.render_block` (`plan_region` goes on refusing that edit); `POST /api/map/recolour|_cancel`; `web/js/recolour.js`, `#cmRecolour`, the Change colour button on the Colour row. `tests/test_recolour.py` 47/47, new. Eight suites green; `test_campmap` 108/112 pre-existing; `test_mapcheck`'s only red is the timing bar and a stashed tree fails it harder. |
 | 35 - rebels right in place | **done** | Closed 2026-09-16, committed, **not cut** (beta only). New: `unittransfer/rebelpools.py` (`read_rebels`, `assignments`, `view`, `plan`, `apply`, `RebelPlan`, `REBELS_REL`, `BY_REGION`, `BY_CATEGORY`), `GET /api/map/rebels`, `POST /api/map/rebel_plan|_apply`, `web/js/rebels.js`, `#cmRebels` in the Province tab, the `.reblist` styles. **Three of the four things the scoping called missing already existed** - the unit list is the Minor Files rebel form's and is already joined to the EDU, the province end is `cmPick`'s `rebels` box, and the highlight is `info_rebels`' own group filter (38 groups on DaC). What landed is the reverse join and bulk assignment. **No `mapcheck` rule and no repair, deliberately**: nothing dangles on either mod and not one of the 248 `unit` lines names a unit the EDU lacks, so there is nothing for a validator to find and a wrong assignment is a valid one somebody did not mean. **The finding is `chance`** - Reforged sets `chance 0` on all 27 blocks its provinces name, so all 199 of its provinces point at a faction that never spawns, while DaC uses it for `No_Rebels` alone (9 provinces); a rule would be wrong 208 times, so the number goes on every row instead. **Three blocks no province names are not orphans** - one per non-`peasant_revolt` category, spawned by category - and after that exemption DaC has two real ones, `Ent_Rebels` and `Saralainn_Rebels`. **One defect in shipped work, led with**: `plan_region`/`apply_region` read and wrote the BASE `descr_regions.txt` whatever campaign was on screen, though `CampaignMap` reads the campaign's own copy and the delete beside it honours 22c; Reforged's Fellowship ships its own and **the two differ in eleven records**. Its other half: only `base/map.rwm` was deleted and Fellowship ships its own, 14 KB apart. New for that: `campmap.RWM_NAME`, `campmap.regions_rel`, `campmap.stale_rwm`, a `cm` argument on `plan_region`, and the campaign in `cmapSave`'s body. `tests/test_rebelpools.py` 68/68, new. Ten other suites green; `test_campmap` 108/112 with the same four DaC-number failures a stashed tree gives. |
 | 41 - merge one faction's name pool | **done** | Closed 2026-09-15, committed, **not cut** (both lines when a cut happens). `merge_section` / `merge_names` / `merge_block` in `minorfiles.py`, with `merge` and `dedupe` as actions behind the module's own plan/apply. Three of Mylae's corrected, each a check: `present` is 0 whenever dedupe is off because nothing was skipped; merging nothing is refused and names the dedupe button; `settlements` is carried rather than dropped. **And the phase could not run its own suite**: `test_minorfiles` had been dying in the sweep on `Owaib Cyfeiliog`, invisible because stderr and buffered stdout interleave. `render_names` refused any name with a space and **2,513 of 34,923 names have one** (45% of all surnames, plus 90 characters and 10 women - `al Adid`, `Arigh Boke`, `Yax Kuk Mo`, `Hywel Dda`), so **58 factions across two mods could not be saved at all**. Replaced by the one real constraint in `name_fault`: a name may not BE a section keyword. The first draft relaxed it for `surnames` alone and was wrong the same way one size smaller. New: `name_fault`, `merge_section`, `merge_names`, `merge_block`, `_plan_merge`, `MinorPlan.merge`, `mfMergeOpen` and the two buttons in `minorfiles.js`, `.modal.mgwide`. `tests/test_minorfiles.py` 221/224 (was 153 green with a crash). **The three left were handed on and are done** (2026-09-15): `localised_name` is what fixes `resource_tag` for `camels`, `elephants` and `dogs`, which are keyed singular and had been showing no name at all in every mod; Kingdoms' three extra resources are dead in their own mod, which strengthens the edit-only refusal rather than disproving it. 225/225. |
 | 30 - a missing texture without the pink | **done** | Closed 2026-09-15, committed, **not cut** (beta only). New: `mapterrain.GAP_FILLS`/`GAP_DEFAULT`, a `gap` argument on `composite` and `png`, `gap_fills`/`gap_default` on `view`, `&gap=` and `|gap|<name>` in the disk-cache token on `/api/map/terrain` plus an `X-Map-Gap` header, `CMAP_GAPS`/`CMAP_GAP_LABELS` and `cmapTerrainGap` in `campmap.js`, `terrain_gap` in `cmapLayerState` and in every named view. **The write-up's premise is withdrawn**: `vanilla_kingdoms_uncompromised` ships no texture folder at all, so 159,855 tiles - all its land, 57.6% of the map - are a gap, which is the report. The thirty rows that blamed the aerial file are one row that names the folder. `test_mapterrain` 84/84 (was 72/73, and the one red was that mod), `test_web_modules` 75/75 (was 66). |
@@ -733,7 +783,7 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 | 42 - the art a clone does not get | **done** | Closed 2026-09-14, committed, **not cut** (both lines when a cut happens). The copier was never at fault and the re-measurement held; what was missing was a sentence. `ART_PLACES` is the nine places a faction's art lives, `art_gaps` names every one the clone came away from empty-handed with one of four reasons - the donor has none either, the destination already exists, a longer-named faction owns the name, the mod has no such folder. The old whole-scan warning fires only when the scan is completely empty, which on a real mod it never is. **121 donor slots swept over four mods: 253 empty places, 50 clean donors, and all 253 the same reason.** Not one of Reforged's 30 factions fills every place; `vanilla_kingdoms_uncompromised` is worst at 146. The scoping was wrong about one fact: Reforged's `fe_symbols_80` is **empty**, and the 17 vanilla-named files in it are DaC's. New: `ArtPlace`, `ART_PLACES`, `art_gaps`, `_asset_hits(skips=)`, `ClonePlan.art`, `payload()["art_gaps"]`, the `.fcgap` rows in `factions.js` and the places named in the apply confirm. `tests/test_factionclone.py` 74/74 (was 64), `tests/test_factionclone_apply.py` 39/39 (was 30). **Open:** the reporter's own mod is still unknown, so the end-to-end reproduction against the report itself was not done. |
 | 31 - two river rules and a ford in the sea | **done** | Closed 2026-09-13, committed, **not cut** (beta only). Three rules and one repair: `river.fourway` (river on all four sides), `river.no_source` (a four-connected component with no white source), `feature.ford_in_sea` (own altitude sea **and** four neighbours sea - the second half the scoping did not have, and without it the message and the repair are not true). All three find **nothing on any of the five installed maps**, which is what they are for. `ford_none` is the one repair with a safe answer; the other two need the map author's intent or `map_heights.tga`, and both refusals are written into `FIXES`. New: `_r_river_fourway`, `_r_river_no_source`, `_r_ford_in_sea`, `_plan_fords`, `FIXES["ford_none"]`. The three existing river fixtures painted sourceless courses and now paint their source. No web change - the panel is data-driven off `RULES` and `rep.fixes`. `tests/test_mapcheck.py` 104/105. |
 | 40 - the new province the engine cannot read | **done** | Closed 2026-09-13, committed, **not cut** (both lines when a cut happens). Four defects, one of them the scoped one. `campaint.new_record_lines` and `campmap.render_block` both produced the eight-line record, the second by dropping the line when the last resource was cleared; both write `none` now, which is what vanilla writes on 18 of 112, Vanilla Redux on 78 of 252 and `vanilla_kingdoms_uncompromised` on all 853. `none` read as a resource name was 931 false findings across two mods. And the indent reading lost DaC's ` Erebor_Province` to a stray leading space - **200 regions read as 199**, 517 painted tiles declared nowhere, and its settlement marker written into the source and a test as DaC's one orphan. New: `campmap.file_shape`, `campmap._resplit_runs`, `check_record(rec, vocab, shape)`, a `parse_block` retry for an indented name line. The inferred engine crash is **withdrawn**: DaC ships a short record and plays. `tests/test_campaint.py` 4c and 4d (185), `tests/test_campmap.py` 1 (+7), `tests/test_campedit.py` (139). |
-| 28-43 - the rest of the 2026-09-12 review | **scoped** | Eleven sessions in two blocks, 40, 31, 42, 41, 43, 28a, 28b, 33, 30, 34 and 35 having closed. **Block one, the campaign map:** 36 D1 region colour, 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
+| 28-43 - the rest of the 2026-09-12 review | **scoped** | Twelve sessions in two blocks, 40, 31, 42, 41, 43, 28a, 28b, 33, 30, 34, 35 and 36 having closed. **Block one, the campaign map:** 37a T7 spawn export, 37b T3 FE zoom, 38 `descr_campaign_db.xml`. **Block two, the mercenaries:** 32a `mercpools.py` takes the format over from `mapquery.parse_mercenaries`, 32b the two directions with the four gates resolved, 32c five rules and one repair, 39 the engine ceilings. Write-ups and the order table in `ROADMAP.md`. |
 | 44-48 - the pass over Mylae's non-map screens | **scoped** | Six sessions, added 2026-09-13 at the user's request, in neither block and every one a subrelease on both lines. 44 the EDB's tree checked (his is the one validator he has and we do not), 45 the `hidden_resources` line, 46 cultures on a mode of its own with a four-tab form and the faction form on the same strip, 47a the six `export_descr_sounds_*` files on `sounds.py`'s own parser, 47b the 32 `descr_sounds_*` scripts on a grammar nothing here reads, 48 add and remove on the strings screen. Two of the seven things asked for produced no phase and a measurement instead: his traits and ancillaries have not moved since 2026-03-27, and his `.strings.bin` codec is wrong where ours is right. |
 | 24 - Make and unmake | done | Closed 2026-09-12, committed, **released 2026-09-12**. Closes G1, M15 and the roadmap. Deleting a province, with its land going whole to a neighbour it borders and its name coming out of every file 19b measured - and the campaign script listed, never written, for the reason a rename gives. Making a campaign, as a copy of one that works minus the compiled map, with its own header and its own menu keys. New: `unittransfer/regiondel.py` (`heirs`, `campaigns_reading`, `standing_on`, `plan`, `apply`, `view`), `unittransfer/campnew.py` (`sources`, `plan`, `apply`, `view`), `mapquery.drop_music_region`, `renames.mentions`, `campfiles.write_descriptions`, `GET /api/map/region_delete`, `POST /api/map/region_delete_plan\|_apply`, `GET /api/campnew`, `POST /api/campnew/plan\|apply`, `web/js/regiondel.js`, `web/js/campnew.js`. `tests/test_regiondel.py` (62), `tests/test_campnew.py` (52). |
 | B2-B3 - from the beta | scoped, unscheduled | Delete a settlement and move one between mods; one-file insert and export. B4 went out inside 29. |
@@ -923,6 +973,17 @@ the edits out from under it (21 did it once; see the archive).
   layer.** The engine reads a campaign's own copy of a map file where it ships
   one, and so does the screen; a texture built from the base map's ground layer
   is not Fellowship's.
+- `campaint.recolour` and `campaint.region_tiles` - **before assuming a change
+  to the map renumbers anything.** A region ID is the order a colour is FIRST
+  MET in a row-major scan, so it says where a province's pixels are and not what
+  colour they carry: creating and deleting a province move pixels between
+  colours and do renumber, and a recolour does not, measured at zero on both
+  mods. The one recolour that renumbers is a merge into a colour already in use,
+  and it is refused rather than warned about. A province is not always one
+  connected blob - 8 of DaC's 200 and 10 of Reforged's 199 are not - so the
+  whole colour is replaced and never bucket-filled. `_emptied` reads the pending
+  record change because the two halves of this save disagree by design until
+  both are written.
 - `campmap.regions_rel` and `campmap.stale_rwm` - **before writing a region
   record, and before deleting a compiled map.** Which `descr_regions.txt` an
   edit belongs in is the CAMPAIGN's question, not the mod's: a campaign that

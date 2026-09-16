@@ -772,7 +772,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~10~~ | ~~**30** A missing texture without the pink~~ | S | beta | **done 2026-09-15** |
 | ~~11~~ | ~~**34** Add a climate zone~~ | M | beta | **done 2026-09-15** |
 | ~~12~~ | ~~**35** Rebels right in place~~ | M | beta | **done 2026-09-16** |
-| 13 | **36** D1, change a region's colour | M | beta | 5 |
+| ~~13~~ | ~~**36** D1, change a region's colour~~ | M | beta | **done 2026-09-16** |
 | 14 | **37a** T7, the spawn export | M | beta | 5 |
 | 15 | **37b** T3, an FE zoom | M | beta | 5 |
 | 16 | **38** `descr_campaign_db.xml` | M | **both** | 4 |
@@ -791,7 +791,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
 (2026-09-14), **41, 43, 28a, 28b, 33, 30 and 34 are done** (2026-09-15) and
-**35 is done** (2026-09-16); nine remain, two of them subreleases. **43 was nearly all built already** - 16j shipped the
+**35 and 36 are done** (2026-09-16); eight remain, two of them subreleases. **43 was nearly all built already** - 16j shipped the
 roster writer and the write-up had not checked - so what landed was the one
 sentence of it that was true, the refusal. **28a's scoping held in full**, and
 what it did not say was that the layer stack has to be capped or it takes the
@@ -1674,23 +1674,126 @@ with the localised names resolved, the orphan warning fires on `Ent_Rebels`, a
 chip jumps to the province on the map, and `GET /api/map/rebels` with
 `campaign=custom/Fellowship_Campaign` answers with that campaign's own file.
 
-## Phase 36 - D1: change a region's colour
+## Phase 36 - D1: change a region's colour - DONE 2026-09-16
 
-**The one item in 19b's cluster that the rename work did not make cheaper**, and
-the cost is real rather than assumed: region IDs are the order of first
-appearance in a row-major scan over `map_regions.tga`, so changing one colour
-can **renumber every region after it**. A rename does not, which is why 19b
-could be done first and this could not.
+**The write-up's premise is withdrawn: a recolour does not renumber.** It was
+scoped on "changing one colour can renumber every region after it", and that is
+the one thing a recolour cannot do.
 
-So the operation is not a recolour, it is a recolour plus the renumbering it
-causes, and what the panel has to show before it writes is which regions move
-and what reads an ID. 16f already refuses to leave a region with no tiles and
-already warns that a change here renumbers; `regiondel` learned the same lesson
-from the other side in 24. Both of those are the guard this needs.
+A region ID is the order a colour is **first met** in a row-major scan of
+`map_regions.tga`. That is a fact about **where a province's pixels are**, and a
+recolour moves no pixel: it changes what colour they carry, and the scan meets
+the same province at the same tile as before. Measured by renumbering both
+installed maps with one province recoloured, the first in the scan order and one
+in the middle: **not one ID moved, in any of the four cases.** Then measured
+again off disk after a real save, with a freshly read map: still zero.
 
-`campaint`'s stroke engine writes the pixels and `mapquery.assign_colours`
-already knows which colours clash with the reserved ones and with each other,
-so the picker is the existing one.
+So the panel's job turned out to be the opposite of the one scoped for it. It
+does not show which regions move; **it says that none of them do**, and that is
+the reason to press the button. The create wizard warns that a new province
+renumbers and the delete warns that removing one does, both correctly, because
+both of those really do move pixels between colours. Somebody who has read those
+two will assume this one does too.
+
+### The one case that does renumber is refused, not warned about
+
+Painting a province in a colour another province already uses is not a recolour,
+it is a **merge**: two colours become one and a province leaves the map.
+Measured on DaC, that moves **51 region IDs** and takes `Celebrant_Province` off
+the map entirely. So it is a refusal, and the refusal says why.
+
+The other three refusals are the ones `start_region` already makes for a new
+province, because a colour is a key and the ways a key can be wrong do not
+depend on whether the record holding it is new: a marker colour (black is a
+settlement, white is a port), the colour it already has, and a colour that is
+painted on the map but declared by no record.
+
+### It is every tile of the colour, not a bucket fill
+
+`campaint` had a bucket and no whole-colour replace, and the bucket will not do:
+**8 of DaC's 200 declared regions and 10 of Reforged's 199 are not one connected
+blob.** A bucket from `Forodwaith_Province`'s anchor reaches 27,083 of its
+40,995 tiles and would leave **13,912 behind in the old colour**, which is then
+a colour no record declares - Phase 40's undeclared-province fault, manufactured
+on purpose. `region_tiles` is the whole colour wherever it is.
+
+**The marker guard cannot fire here**, which is worth knowing rather than
+assuming: the tiles are chosen *by* carrying the region's colour, and a
+settlement pixel is black. The settlement inside a province survives because it
+was never in the list.
+
+### The two halves are one save, and the existing guard refused its own
+
+The pixels and the record's `rgb` line have to move together: a record naming a
+colour nothing carries is a province with no tiles, which is legal to write and
+fatal to play. The stroke goes onto the paint session's undo stack and
+`plan_paint` writes both in one backup set.
+
+**That is where the one real defect of the session turned up.** `_emptied`
+compares every declared colour against what is painted, and during a recolour
+the pixels are already the new colour while `descr_regions.txt` still names the
+old one - which is exactly the shape of the fault it looks for. So the save
+refused itself, correctly and uselessly. It now reads the pending record change
+for that one province and judges every other one exactly as before, so a
+recolour that painted over a neighbour still empties the neighbour and still
+refuses.
+
+The mirror case is refused too: undoing the stroke and then saving would write
+the record alone, and that is caught by name rather than half-written.
+
+### What actually reads a region ID, measured
+
+The renumbering warning that 16e and 24 both ship ends "no file needs editing -
+but a script that names a region by number now names a different one". **That
+script exists and nobody had counted it.** Measured across every `.txt` under
+`data/`, uncommented lines only:
+
+| mod | live numeric region references | where |
+|---|---|---|
+| Divide and Conquer | **141** | 76 in `export_descr_ancillaries.txt`, 62 in `export_descr_character_traits.txt`, 3 in `campaign_script.txt` |
+| Third Age Reforged | 3 | `custom_script.txt` (a further 9 are commented out) |
+
+`IsRegionOneOf` and `IsTargetRegionOneOf` take regions "by label or number", and
+DaC uses the number 141 times, each with a comment naming the province. So the
+create and delete warnings matter more than their wording suggests, and this
+phase's "nothing moves" is a measured reassurance rather than a politeness.
+
+*(Whether DaC's 141 numbers are still correct was not established: the comments
+are informal - some name a settlement, some a list of provinces - and a
+string-match against the scan order produced disagreements that were the
+matcher's fault, not the mod's. Counting them is honest; auditing them is a
+different job and is not claimed here.)*
+
+### Built
+
+`campaint.region_tiles`, `recolour_faults`, `recolour`, `cancel_recolour`,
+`_plan_recolour`, `_emptied(recolour=)`, `sess.recolour`, and `_stroke_over`
+lifted whole out of `paint` so the recolour is the same stroke the brush makes
+rather than a second writer with its own opinion about markers and its own undo.
+`campmap.render_block` gains the `rgb` slot - `plan_region` goes on refusing that
+edit, because the hand-edited form still has no way to move the pixels, and the
+recolour is the only caller that passes it. `POST /api/map/recolour` and
+`/api/map/recolour_cancel`, `web/js/recolour.js`, `#cmRecolour`, and a **Change
+colour…** button on the record's Colour row.
+
+### Verified
+
+`tests/test_recolour.py` **47/47**, new, on a 12x8 map written for it with a
+province in two disconnected pieces and a settlement pixel inside another.
+Eight suites re-run green - `test_campaint` 169/169, `test_campedit` 107/107,
+`test_codeview` 141/141, `test_web_modules` 75/75, `test_regiondel` 62/62,
+`test_rebelpools` 68/68, `test_campnew` 52/52, `test_mapquery` 109/109.
+`test_campmap` is 108/112 with its four pre-existing DaC-number failures.
+`test_mapcheck` fails only *the whole rule set runs under one second*, which
+a stashed tree fails harder on the same machine (1,522 and 1,840 ms against
+1,214 and 1,227), so it is the load and not the change.
+
+Driven in the real app against DaC: the dialog opens off the Colour row,
+Repaint stays disabled until the colour changes, another province's colour is
+refused with the merge reason, and a free colour repaints 221 tiles of
+`Celebrant_Province` with a clean plan naming both files. The session was
+discarded afterwards and the mod's own `descr_regions.txt` re-read to confirm it
+is untouched.
 
 ## Phase 37 - The two exports the map screen cannot do
 

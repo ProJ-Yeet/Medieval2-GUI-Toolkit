@@ -488,6 +488,9 @@ class PaintSession:
         self.dropped = 0
         #: the wizard's pending region, or None - see :func:`start_region`
         self.new_region: Optional[dict] = None
+        #: 36. The province whose colour this session has repainted,
+        #: and the colour it is now - the record half, saved with it.
+        self.recolour: Optional[dict] = None
         #: :func:`region_vocab`, read when a wizard first asks for it
         self.vocab: Optional[dict] = None
         self._bufs: Dict[str, bytearray] = {}
@@ -574,6 +577,7 @@ class PaintSession:
             "last": self.undo[-1].label if self.undo else "",
             "next": self.redo[-1].label if self.redo else "",
             "new_region": dict(self.new_region) if self.new_region else None,
+            "recolour": dict(self.recolour) if self.recolour else None,
         }
 
 
@@ -798,6 +802,20 @@ def paint(sess: PaintSession, body: dict) -> dict:
     if marker:
         _check_marker(cm, sess, body, tiles)
 
+    return _stroke_over(sess, tiles, colours, tool, body)
+
+
+def _stroke_over(sess: PaintSession, tiles, colours: Dict[str, int],
+                 tool: str, body: dict, label: str = "") -> dict:
+    """Write one uniform colour over ``tiles`` as a single undoable stroke.
+
+    Lifted out of :func:`paint` whole in 36, with no change to what it does, so
+    that the recolour is the same stroke the brush makes rather than a second
+    writer with its own opinion about markers and its own undo. What a tool
+    decides is WHICH tiles; everything after that is this.
+    """
+    cm = sess.cm
+    w = cm.terrain.width
     # Markers are protected on every stroke that is not itself placing one: a
     # brush that ran over a settlement pixel would delete a city, and a bucket
     # that flooded a sea would delete every port on its coast.
@@ -847,7 +865,7 @@ def paint(sess: PaintSession, body: dict) -> dict:
                          f"other tile was already this colour"),
                 "state": sess.state()}
     stroke.rgb = {c: colours[c] for c in stroke.px}
-    stroke.label = _label(tool, stroke.px, stroke.tile_count, body)
+    stroke.label = label or _label(tool, stroke.px, stroke.tile_count, body)
     sess.apply_px(stroke, True)
     sess.push(stroke)
     return {"ok": True, "changed": _painted(stroke), "tiles": stroke.tile_count,
@@ -1143,6 +1161,138 @@ def wizard_vocab(sess: "PaintSession") -> dict:
 
 def cancel_region(sess: PaintSession) -> dict:
     sess.new_region = None
+    return {"ok": True, "state": sess.state()}
+
+
+# ---------------------------------------------------------------------------
+# 36, D1 - a province's colour, changed
+#
+# **A recolour does not renumber, and the write-up that scoped this said it
+# would.** A region ID is the order a colour is FIRST MET in a row-major scan of
+# map_regions.tga, so it is a fact about where a region's pixels are, not about
+# what colour they carry. A recolour moves no pixel. Measured by renumbering
+# both installed maps with one region recoloured, the first in the scan and one
+# in the middle: **not one ID moved, on either mod, in either case.**
+#
+# The renumbering warning that 16e gives on a create and 24 gives on a delete is
+# right for those two, because both of them do move pixels between colours. It
+# does not apply here and the plan says so out loud, because "will this break my
+# scripts" is the only question anybody asks before changing a colour.
+#
+# **The one case that does renumber is a collision**, and it renumbers because it
+# is a merge: painting one province in another's colour destroys a province.
+# Measured on DaC, that moves 51 IDs and takes Celebrant_Province off the map
+# entirely. So a colour already in use is refused rather than warned about.
+#
+# **And it is every pixel of the colour, not a bucket fill.** 8 of DaC's 200
+# regions and 10 of Reforged's 199 are not one connected blob: a bucket from
+# Forodwaith's anchor reaches 27,083 of its 40,995 tiles and would leave 13,912
+# behind in the old colour, which is then a colour no record declares - Phase
+# 40's fault, manufactured on purpose.
+
+
+def region_tiles(cm: CampaignMap, want: int) -> List[Tuple[int, int]]:
+    """Every tile of the regions layer carrying the packed colour ``want``.
+
+    The whole colour, wherever it is, which is what separates this from
+    :func:`flood`: a province is not always one connected blob and recolouring
+    only the piece under the pointer would leave the rest declared by nothing.
+    """
+    w, h = cm.terrain.width, cm.terrain.height
+    data = cm.tiles("regions").tobytes()
+    out: List[Tuple[int, int]] = []
+    for i in range(w * h):
+        p = i * 3
+        if ((data[p] << 16) | (data[p + 1] << 8) | data[p + 2]) == want:
+            out.append((i % w, i // w))
+    return out
+
+
+def recolour_faults(cm: CampaignMap, name: str, rgb: Tuple[int, int, int]
+                    ) -> List[str]:
+    """Why this province may not become this colour, or an empty list.
+
+    Every one of them is a refusal rather than a warning, and each is the same
+    check :func:`start_region` already makes for a new province - a colour is a
+    key, and the ways a key can be wrong do not depend on whether the record
+    holding it is new.
+    """
+    out: List[str] = []
+    rec = cm.regions.by_name(name)
+    if rec is None:
+        return ["no region called " + repr(name) + " in descr_regions.txt"]
+    if rec.rgb_line < 0:
+        return [name + " has no colour line to change"]
+    k = key(rgb)
+    if k == rec.rgb_key:
+        return [f"{name} is already {rgb[0]} {rgb[1]} {rgb[2]}"]
+    if k in PROTECTED:
+        out.append(f"{rgb[0]} {rgb[1]} {rgb[2]} is a marker colour - black is "
+                   f"where a settlement stands and white is where a port does, "
+                   f"so neither can be a province")
+    taken = cm.regions.by_rgb(rgb)
+    if taken is not None:
+        out.append(f"{rgb[0]} {rgb[1]} {rgb[2]} is already {taken.name}'s "
+                   f"colour. Painting this province in it would merge the two "
+                   f"and take one off the map, which IS a renumber - measured "
+                   f"on DaC, 51 region IDs move. Pick a colour nothing uses")
+    elif k in cm.index.by_key:
+        out.append(f"{rgb[0]} {rgb[1]} {rgb[2]} is already painted on "
+                   f"map_regions.tga, on {cm.index.by_key[k].pixels} tile(s), "
+                   f"and no record declares it - fix that hole before painting "
+                   f"into it")
+    return out
+
+
+def recolour(sess: PaintSession, body: dict) -> dict:
+    """Repaint every tile of one province in a new colour, as one stroke.
+
+    The pixels go down here and the record's colour line is written by the save
+    (:func:`plan_paint`), which is the same two-halves-one-save shape a new
+    province has. They cannot be allowed to disagree: a record naming a colour
+    nothing carries is a province with no tiles, which is legal to write and
+    fatal to play.
+    """
+    cm = sess.cm
+    name = str(body.get("region") or "").strip()
+    try:
+        rgb = (int(body["rgb"][0]), int(body["rgb"][1]), int(body["rgb"][2]))
+    except (TypeError, ValueError, IndexError, KeyError):
+        raise MapError("a region colour is three numbers 0-255") from None
+    if any(v < 0 or v > 255 for v in rgb):
+        raise MapError("a region colour is three numbers 0-255")
+    faults = recolour_faults(cm, name, rgb)
+    if faults:
+        raise MapError("; ".join(faults))
+
+    rec = cm.regions.by_name(name)
+    tiles = region_tiles(cm, rec.rgb_key)
+    if not tiles:
+        raise MapError(
+            f"{name} is declared {rec.rgb[0]} {rec.rgb[1]} {rec.rgb[2]} and not "
+            f"one tile of map_regions.tga carries that colour, so there is "
+            f"nothing to repaint. That is a province with no tiles and the "
+            f"Check panel already reports it")
+    out = _stroke_over(
+        sess, tiles, {"regions": key(rgb)}, "recolour", body,
+        label=f"{name} recoloured to {rgb[0]} {rgb[1]} {rgb[2]}")
+    sess.recolour = {"name": name, "rgb": list(rgb), "key": key(rgb),
+                     "was": list(rec.rgb), "was_key": rec.rgb_key,
+                     "tiles": len(tiles),
+                     "protected": out.get("protected", 0)}
+    out["state"] = sess.state()
+    return out
+
+
+def cancel_recolour(sess: PaintSession) -> dict:
+    """Forget the pending recolour. The pixels are the undo stack's business.
+
+    Deliberately not an undo: the stroke is on the stack like any other and the
+    Undo button is what takes it back. Clearing the spec without touching the
+    pixels is what lets somebody undo the stroke by hand and have the record
+    left alone, which is the state a save must refuse rather than guess at.
+    """
+    sess.recolour = None
     return {"ok": True, "state": sess.state()}
 
 
@@ -1506,7 +1656,7 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
     """
     cm = sess.cm
     p = PaintPlan(mod=sess.mod, session=sess)
-    if not sess.unsaved and not sess.new_region:
+    if not sess.unsaved and not sess.new_region and not sess.recolour:
         p.errors.append("nothing has been painted")
         return p
 
@@ -1540,7 +1690,7 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
     # is the one thing painting the region layer can do by accident, so it is
     # counted rather than trusted to the validator that comes after this phase.
     if "regions" in p.data:
-        gone = _emptied(cm)
+        gone = _emptied(cm, sess.recolour)
         if gone:
             p.errors.append(
                 f"{len(gone)} region(s) would be left with no tiles at all: "
@@ -1552,6 +1702,8 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
                 f"map_regions.tga now has {colours} colours and the engine's "
                 f"cap is {mapvocab.MAX_REGION_COLOURS}, markers included")
 
+    if sess.recolour:
+        _plan_recolour(p, sess)
     if sess.new_region:
         spec = sess.new_region
         voc = _vocab(sess)
@@ -1590,6 +1742,69 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
     if not p.data and not p.region_text and not p.errors:
         p.errors.append("nothing has been painted")
     return p
+
+
+def _plan_recolour(p: "PaintPlan", sess: PaintSession) -> None:
+    """36. The record half of a recolour, and the three things it has to say.
+
+    **The pixels and the colour line are one save or they are a broken mod.**
+    A record naming a colour nothing carries is a province with no tiles, which
+    the engine will not play; tiles carrying a colour no record names is Phase
+    40's undeclared province. So the stroke having been undone is a refusal
+    rather than a silent half-write.
+
+    **And it says that nothing renumbers**, which is the question anybody
+    changing a colour is really asking. It is not a reassurance made up to be
+    kind: a region ID is the first-appearance order of pixels in a row-major
+    scan and a recolour moves no pixel, measured at zero IDs moved on both
+    installed maps.
+    """
+    spec = sess.recolour
+    cm = sess.cm
+    rec = cm.regions.by_name(spec["name"])
+    if rec is None:
+        p.errors.append(f"{spec['name']} is no longer in descr_regions.txt")
+        return
+    # the pixels have to still be down. An Undo that took the stroke back leaves
+    # the record half pending over a map that no longer agrees with it.
+    still = len(region_tiles(cm, spec["key"]))
+    if not still:
+        p.errors.append(
+            f"the repaint of {spec['name']} has been undone, so nothing on "
+            f"map_regions.tga is {spec['rgb'][0]} {spec['rgb'][1]} "
+            f"{spec['rgb'][2]} any more. Writing the record alone would leave "
+            f"the province with no tiles at all - recolour it again, or use "
+            f"Cancel to forget it")
+        return
+    base = campmap.record_text(cm.regions, rec)
+    try:
+        block = campmap.render_block(base, {"rgb": list(spec["rgb"])})
+    except MapError as exc:
+        p.errors.append(str(exc))
+        return
+    text = campmap.replace_record(cm.regions, rec, block)
+    if text == cm.regions.serialise():
+        p.errors.append(f"{spec['name']} already reads "
+                        f"{spec['rgb'][0]} {spec['rgb'][1]} {spec['rgb'][2]}")
+        return
+    p.region_text = text
+    p.changes.append(
+        f"descr_regions.txt: {spec['name']} is "
+        f"{spec['rgb'][0]} {spec['rgb'][1]} {spec['rgb'][2]}, was "
+        f"{spec['was'][0]} {spec['was'][1]} {spec['was'][2]}")
+    # No marker count here, and that is not an omission. Every stroke carries a
+    # guard that steps over settlement and port pixels, but it cannot fire on a
+    # recolour: the tiles are chosen BY carrying the region's colour, and a
+    # marker pixel is black or white. The settlement inside a province survives
+    # because it was never in the list.
+    p.changes.append(f"{REGIONS_TGA}: {still:,} tile(s) repainted")
+    # 36's finding, said where it is asked. The create and the delete both warn
+    # that they renumber; this one has to say that it does not, or somebody who
+    # has read those two will assume it does.
+    p.changes.append(
+        "no region ID moves: an ID is the scan order of map_regions.tga and a "
+        "recolour moves no tile, so every script that names a region by number "
+        "still names the same one")
 
 
 def _plan_region_names(p: PaintPlan, spec: dict) -> None:
@@ -1767,10 +1982,25 @@ def _plan_region_campaigns(p: PaintPlan, spec: dict, voc: dict) -> None:
                              f"old compiled map")
 
 
-def _emptied(cm: CampaignMap) -> List[str]:
-    """Declared regions whose colour is no longer on the map at all."""
+def _emptied(cm: CampaignMap, recolour: Optional[dict] = None) -> List[str]:
+    """Declared regions whose colour is no longer on the map at all.
+
+    ``recolour`` is 36's pending record change, and it has to be read here or
+    the check fires on its own save: the pixels are already the new colour while
+    ``descr_regions.txt`` on disk still names the old one, which is exactly the
+    shape of the fault this looks for and exactly what the same save is about to
+    put right. So that one region is judged against the colour it is BECOMING.
+    Every other region is judged as before, which is the point - a recolour that
+    painted over a neighbour still empties the neighbour, and still refuses.
+    """
     present = {k for k in cm.index.by_key}
-    return [r.name for r in cm.regions.records if r.rgb_key not in present]
+    want = ((recolour or {}).get("name") or "").lower()
+    out: List[str] = []
+    for r in cm.regions.records:
+        k = recolour["key"] if (want and r.name.lower() == want) else r.rgb_key
+        if k not in present:
+            out.append(r.name)
+    return out
 
 
 def apply_paint(p: PaintPlan) -> dict:

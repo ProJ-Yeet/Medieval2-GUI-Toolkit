@@ -143,7 +143,8 @@ const CMAP_TABS = [
    title: 'The brush and its palette, the climates it paints with, the markers '
         + 'layer, and the campaign events'},
   {id: 'place', label: 'Province', icon: '◉',
-   panels: ['cmPick', 'cmRebels', 'cmSettle', 'cmChars', 'cmForts', 'cmDel'],
+   panels: ['cmPick', 'cmRebels', 'cmSettle', 'cmChars', 'cmForts', 'cmDel',
+            'cmRecolour'],
    title: 'What is on the tile you clicked: its record, its rebels, its '
         + 'settlement, its people and its forts'},
   {id: 'camp', label: 'Campaign', icon: '⚑', panels: ['cmCamp', 'cmModels'],
@@ -978,6 +979,7 @@ back from the collapsed state.">›</button>
   cftOpen();          // 22a, and it reads nothing until somebody opens it
   cmapPickPaint();
   rdlPaint();         // 24, G1: only ever open on a click of its own button
+  rclPaint();         // 36: the same, from the Colour row of the record
   csPaint();          // 16h: kept out of cmapPickPaint, which owns #cmPick only
   cxPaint();          // 16i, for the same reason
   cjOpen();           // 16j, and it reads nothing until somebody opens it
@@ -3145,7 +3147,8 @@ const CMAP_LOCKED = {
       + 'follows the three files and reports the script',
   rgb: 'This is the colour the region is painted on map_regions.tga. Changing '
      + 'the number without repainting the pixels would leave the region with no '
-     + 'tiles at all. Arm the brush above and repaint them instead',
+     + 'tiles at all, so the box is read-only and Change colour… does both at '
+     + 'once (36). It does not renumber anything.',
 };
 
 /* ---- renaming the province or its settlement (19b, D2) ----
@@ -3200,7 +3203,10 @@ function cmapFormHtml(){
            last entry in the file.</div>`}
       ${lock('Colour', d.rgb.join(' '), CMAP_LOCKED.rgb,
              `<i class="cmsw" style="background:rgb(${d.rgb.join(',')})"></i>
-              region ID ${px && px.region_id >= 0 ? px.region_id : '-'}`)}
+              region ID ${px && px.region_id >= 0 ? px.region_id : '-'}
+              <button class="cmrename" title="Repaint every tile of this province
+in a new colour, and write the record's colour line in the same save. No region
+ID moves." onclick="rclOpen('${esc(d.name)}')">Change colour…</button>`)}
       ${pick('Legion', 'legion', [d.name])}
       ${d.has.faction ? pick('Creator faction', 'faction', v.factions, v.faction_labels) : ''}
       ${d.has.rebels ? pick('Rebel type', 'rebels', v.rebels) : ''}
