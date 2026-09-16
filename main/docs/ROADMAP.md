@@ -774,7 +774,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~12~~ | ~~**35** Rebels right in place~~ | M | beta | **done 2026-09-16** |
 | ~~13~~ | ~~**36** D1, change a region's colour~~ | M | beta | **done 2026-09-16** |
 | ~~14~~ | ~~**37a** T7, the spawn export~~ | M | beta | **done 2026-09-16** |
-| 15 | **37b** T3, an FE zoom | M | beta | 5 |
+| ~~15~~ | ~~**37b** T3, an FE zoom~~ | M | beta | **done 2026-09-16** |
 | 16 | **38** `descr_campaign_db.xml` | M | **both** | 4 |
 
 ### Block two - the mercenaries
@@ -791,7 +791,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
 (2026-09-14), **41, 43, 28a, 28b, 33, 30 and 34 are done** (2026-09-15) and
-**35, 36 and 37a are done** (2026-09-16); seven remain, two of them subreleases. **43 was nearly all built already** - 16j shipped the
+**35, 36, 37a and 37b are done** (2026-09-16); six remain, two of them subreleases. **43 was nearly all built already** - 16j shipped the
 roster writer and the write-up had not checked - so what landed was the one
 sentence of it that was true, the refusal. **28a's scoping held in full**, and
 what it did not say was that the layer stack has to be capped or it takes the
@@ -1913,12 +1913,140 @@ character · 6 units · Dol Guldur (poland) · line 4051"*, an admiral at sea re
 *"at sea (a fleet)"*, and the export wrote 1,324 rows and 176 KB of CSV into the
 cache folder.
 
-### 37b - T3, an FE zoom for authoring map_FE.tga
+### 37b - T3, an FE zoom for authoring map_FE.tga - DONE 2026-09-16
 
-The front-end map is the one picture on this screen nothing here helps anyone
-author. It pairs with 16g's per-faction TGA export, which already produces a
-per-faction picture at map resolution; what is missing is the frame, the scale
-and the export at the size `map_FE.tga` actually wants.
+**Closed 2026-09-16, beta line, committed and not cut.** The scoping named the
+three things it needed - "the frame, the scale and the export at the size
+`map_FE.tga` actually wants" - and was right that the frame comes first. What it
+did not know is that there is no such thing as *the* size, and that the screen
+had a defect in it that this phase turns out to be the fix for.
+
+### There is no size map_FE.tga wants, and that is the measurement
+
+**Eight files, six of them distinct, four distinct sizes, three mods, and not
+one of them is its own map's shape.**
+
+| file | pixels | aspect | its grid's aspect |
+|---|---|---|---|
+| DaC `imperial_campaign` | 768x768 | 1.000 | 1.047 (510x487) |
+| Third Age Reforged, all three | 320x275 | 1.164 | 1.047 |
+| DaC base, and Shattered Alliances | 245x170 | 1.441 | 1.047 |
+| BCBuff, both | 384x275 | 1.396 | 1.448 (420x290) |
+
+The closest, BCBuff's, is still 3.6% out. Reforged ships one file in three
+places byte for byte; DaC's two 245x170 files are a different picture each; and
+BCBuff's prologue spells it `map_fe.tga` in lower case.
+
+**Two of the eight are not maps at all.** DaC's base picture is the "DAC EUR"
+logo, mountains and lettering, and its Shattered Alliances one is four faction
+emblems over the word "DaC". Neither has any geography in it. **And one of the
+six that are maps does not fill its own frame**: BCBuff's is a map inside a
+painted ornamental border, so the geography stops short of the edge on all four
+sides. Nothing here detects any of that and nothing here should - 32c's
+baseline rule again, and "is this a map" is not a question pixels answer.
+
+### So the frame is the whole phase, and it is what makes one zoom enough
+
+A front-end picture is a picture of **some rectangle of the map at some
+scale**, and until that rectangle is named "native size" names nothing. The
+frame is that rectangle, and it carries the **picture's** aspect rather than
+the map's. That is not a detail: `cmapX(tx) = ox + tx * zoom` is a single
+scalar, it stays a single scalar, and a frame shaped like the picture is
+exactly what lets one number draw the picture at one image pixel per screen
+pixel and leave the map under it undistorted. An anisotropic stretch would have
+needed two.
+
+**The default frame is not a guess - it is what the artists used.** Registering
+each real picture against its own `map_regions.tga` by the moments of the two
+land masks gives the scale that mod's author actually drew at. Against the
+proposed frame: DaC `imperial_campaign` **1.506 px per tile proposed against
+1.524 measured, 1.2% apart**; Reforged **0.565 against 0.566, 0.2% apart**.
+
+One axis of each is quoted and that is deliberate. The land mask is taken from
+colour; DaC's picture has a pale blue-green sea against tan land and separates
+cleanly, Reforged's is a sepia painting whose sea and land are the same
+parchment and the mask there reads 98.2% land. **A picture cannot be registered
+from its own pixels in general**, which is the reason the frame is proposed and
+then dragged rather than derived. The corner drag holds the aspect and holds
+the opposite corner still, because a frame that stopped being the picture's
+shape would quietly start lying about "native size".
+
+### The defect it was really about, found by building it
+
+T3's words are "no loss of quality due to scaling up and then scaling down
+again", and that loss was **in this toolkit, every frame**. `cmapCompose` draws
+every ticked layer into one canvas that is width-by-height *tiles* - 510x487 on
+both big mods - and the view then scales that canvas onto the stage.
+`map_FE.tga` has no relationship to the tile grid, so DaC's 768x768 was being
+squeezed into 510x487 and scaled back up, and Reforged's 320x275 stretched up
+and scaled back down.
+
+The picture is out of the composite now and drawn on the canvas itself, one
+`drawImage` onto the frame's rectangle. **Measured on the real screen: 100 of
+100 sampled pixels of DaC's front-end map reach the canvas byte for byte
+identical to the file, zero difference.**
+
+### The second defect, which the browser found and the suite now holds
+
+Lifting the picture out of the composite exposed one. The composite fills
+itself with an opaque backdrop when no terrain layer is on - "a map with every
+layer off is not a blank screen" - and that fill is drawn *over* the picture,
+which is now underneath it rather than in it. With every other layer off the
+front-end picture did not appear at all. The guard is two halves and the suite
+checks both, because the skip without the cache key is a composite that never
+rebuilds when the layer is ticked and the bug comes straight back.
+
+### The export is the mod's own header
+
+`mapquery._write_tga`'s rule, followed: the depth, the origin, the run-length
+flag and the trailer are the file's own, so what comes out drops straight over
+what went in - measured, DaC's writes RLE 32-bit and Shattered Alliances' raw
+32-bit, each matching its source. A mod that ships no `map_FE.tga` has no
+header to borrow, so a plain 24-bit one is made and the export says so, rather
+than refusing an author their first one. It lands in the export cache, never in
+the mod.
+
+### Built
+
+- `unittransfer/mapfe.py`, new: `Frame`, `frame` (the proposal), `check_frame`,
+  `render` (composes at the picture's own size, cropping before it scales so
+  the intermediate is bounded by the result and not by the zoom), `compare`,
+  `view`, `header_for` and `export`.
+- `web/js/mapfe.js`, new: the `cmFE` panel, the FE zoom, the frame's outline
+  and grips, the drag that holds the aspect, and the export.
+- `unittransfer/server.py`: `/api/map/fe_view` and `/api/map/fe_export`.
+- `web/js/campmap.js`: the picture out of the composite, the backdrop guard and
+  its cache key, `cfeDraw` under the stack, `cfeDrawFrame` over it, and four
+  pointer hooks so a press on the frame takes the button off the pan - behind
+  the brush, the pin and a character, which are all things somebody armed.
+
+### Verified
+
+`tests/test_mapfe.py` **75/75**, new. Six suites re-run green - `test_mapquery`
+118/118, `test_web_modules` 75/75, `test_campaint` 177/177, `test_recolour`
+50/50, `test_campaignmap` 32/32.
+
+**Twelve suites fail on this tree and all twelve fail identically on a stashed
+one**, with the same counts: `test_campmap` 125/130, `test_campstrat` 115/119,
+`test_campview` 67/70, `test_mapterrain` 78/79, `test_rebelpools` 74/75,
+`test_stratchar` 117/118, `test_stratobj` 73/75, plus `test_edbvocab`,
+`test_guided_fields`, `test_mapcheck`, `test_renames` and `test_spawns`.
+**A third mod is installed now** - BCBuff - and its `map_regions.tga` is 295x189
+against a `descr_terrain.txt` that says 420x290, which is what raises
+`test_spawns`' `MapError`. The numbers moved from the figures 37a recorded
+because the mod set changed, not because anything here did.
+
+Driven in the real app on DaC: the panel reads *768x768, 32-bit*, names the
+file, says *"768x768 squeezed into 510x487 and scaled again"* about what the
+screen used to do, proposes *510.0x510.0 tiles at 0.0,-11.5, 1.506 px per
+tile*, and the FE zoom puts that frame on screen at **767.99982 px** - 1:1 to
+two ten-thousandths of a pixel. Hit testing answers `move` inside, `se` on the
+corner and nothing outside; a 50-pixel drag moves the frame 33.20 tiles at that
+zoom; a corner drag grows both axes by 66.41, holds the aspect at exactly
+1.000000 and holds the opposite corner at 0.000. The picture sits under the
+stack and shows through in the overhang above the grid. The export wrote
+`map_FE_imperial_campaign.tga`, 768x768, 32-bit, 545,779 bytes, through the
+mod's own header.
 
 ## Phase 38 - descr_campaign_db.xml
 

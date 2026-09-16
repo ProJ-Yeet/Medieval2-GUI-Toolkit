@@ -2,10 +2,49 @@
 _Updated: 2026-09-16 - **v2.3.2** is the latest 2.x and **beta 2026-09-12c**
 the latest beta - after the M2EX map-ceiling fix, the `replace_record` blank
 line it turned up, the two bugs a second report brought in, and **Phases 40, 31,
-42, 41, 43, 28a, 28b, 33, 30, 34, 35, 36 and 37a**, all committed and **not cut**. **Releasing is on-request only**:
+42, 41, 43, 28a, 28b, 33, 30, 34, 35, 36, 37a and 37b**, all committed and **not cut**. **Releasing is on-request only**:
 commit to master and stop_
 
 ## Next up
+**Phase 37b is done - the front-end picture, framed, closed 2026-09-16, beta
+line, committed and uncut.** The scoping named the frame first and was right to;
+what it did not know is that there is no size `map_FE.tga` wants.
+
+**Eight files, six distinct, four distinct sizes, three mods, and not one of
+them is its own map's shape** - the closest, BCBuff's, is 3.6% out. **Two of the
+eight are not maps at all** (DaC's base picture is its logo, its Shattered
+Alliances one is four faction emblems) and **one of the six that are does not
+fill its own frame**, because BCBuff's is a map inside a painted border.
+
+**So the frame carries the picture's aspect, not the map's, and that is what
+makes one zoom enough.** The view transform is a single scalar and stays one; a
+frame shaped like the picture is exactly what lets one number draw the picture
+at one image pixel per screen pixel with the map undistorted under it. **The
+proposed frame is what the artists used**: registering each real picture against
+its own `map_regions.tga` by the moments of the two land masks gives 1.524 px
+per tile for DaC against the 1.506 proposed (**1.2% apart**) and 0.566 for
+Reforged against 0.565 (**0.2%**). Only one axis of each is quotable - Reforged's
+sepia painting has the same parchment for sea and land and its mask reads 98.2%
+land - and **that a picture cannot be registered from its own pixels in general
+is the reason the frame is proposed and then dragged**.
+
+**The phase turned out to be a fix for a defect that was already on the
+screen.** `cmapCompose` draws every layer into a canvas that is one pixel per
+*tile* and the view scales that onto the stage, so DaC's 768x768 front-end
+picture was being squeezed into 510x487 and scaled back up - the exact "scaling
+up and then scaling down again" T3 exists to avoid, happening every frame. The
+picture is out of the composite now: **100 of 100 sampled pixels reach the
+canvas byte for byte identical to the file**. Lifting it out exposed a second
+one, the composite's opaque backdrop painting over it, and the suite holds both
+halves of that guard.
+
+`tests/test_mapfe.py` **75/75**, new. Five suites re-run green. **Twelve suites
+fail and all twelve fail identically on a stashed tree** - **a third mod is
+installed now**, BCBuff, whose `map_regions.tga` is 295x189 against a
+`descr_terrain.txt` saying 420x290, and the numbers moved from 37a's figures
+because the mod set changed rather than because anything here did.
+
+
 **Phase 37a is done - the spawn export, closed 2026-09-16, beta line, committed
 and uncut.** The scoping held in full, and the distinction it rests on is why
 the phase works at all: 19b refused to WRITE the campaign script because its

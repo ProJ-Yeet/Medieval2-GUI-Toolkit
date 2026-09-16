@@ -332,6 +332,12 @@ Query, themes and information maps (16g, see :mod:`unittransfer.mapquery`)
                                     (edge/inside) and `border_every` are the
                                     panel's, so the file draws the frontiers the
                                     screen does
+  POST /api/map/fe_view          -> 37b: the front-end picture's own size, the
+                                    frame that matches its shape and the zoom
+                                    that draws it at 1:1
+  POST /api/map/fe_export        -> the frame composed at that size and written
+                                    as a TGA through the mod's own map_FE.tga
+                                    header
 
 Settlements and buildings (16h, see :mod:`unittransfer.stratedit`). The first of
 the three sub-phases that write descr_strat.txt itself.
@@ -537,7 +543,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campevents, campfiles, campmap, campnew, campstrat, cas, climatenew, guilds, mapcheck, mapquery, mapterrain, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campevents, campfiles, campmap, campnew, campstrat, cas, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2333,6 +2339,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/map/query", "/api/map/export"):
                 return self._json(self._mapquery(
                     u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/map/fe_view", "/api/map/fe_export"):
+                return self._json(self._mapfe(
+                    u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/map/baseline", "/api/map/fix_plan",
                           "/api/map/fix_apply"):
                 return self._json(self._mapcheck(u.path.rsplit("/", 1)[-1], body))
@@ -3281,6 +3290,60 @@ class Handler(BaseHTTPRequestHandler):
         if not got["count"]:
             got["error"] = "; ".join(f"{s['what']}: {s['why']}"
                                      for s in out.skipped) or "nothing to write"
+        elif body.get("reveal") and out.folder:
+            from .folder_dialog import reveal
+            got["revealed"] = bool(reveal(str(Path(out.folder)
+                                              / out.files[0]["name"])))
+        return got
+
+    # ---- the front-end picture, framed (37b) ----
+
+    def _mapfe(self, action, body):
+        """What ``map_FE.tga`` is, or the frame composed at its size.
+
+        The frame arrives from the browser because it is the author's - see
+        :mod:`unittransfer.mapfe` for why it cannot be derived from the picture
+        - and is checked here before anything is composed. ``view`` is sent no
+        frame at all and answers with the default.
+
+        The map is :meth:`Registry.map_for`'s, so a picture traced off this
+        screen is traced off the paint the screen is showing, unsaved strokes
+        and all - the same rule the query and the validator follow.
+        """
+        try:
+            name = body["mod"]
+            campaign = body.get("campaign") or ""
+            cm = self.registry.map_for(name, campaign)
+            mod = self.registry.describe(name)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+
+        if action == "view":
+            try:
+                return mapfe.view(mod, campaign, cm)
+            except (mapfe.FeError, campmap.MapError, OSError) as e:
+                return {"error": str(e)}
+
+        f = body.get("frame") or {}
+        try:
+            fr = mapfe.Frame(x=float(f.get("x", 0)), y=float(f.get("y", 0)),
+                             w=float(f.get("w", 0)), h=float(f.get("h", 0)))
+        except (TypeError, ValueError):
+            return {"error": "the frame is not four numbers"}
+        size = body.get("size")
+        try:
+            wanted = (int(size[0]), int(size[1])) if size else None
+        except (TypeError, ValueError, IndexError):
+            return {"error": "the size is not two numbers"}
+        try:
+            out = mapfe.export(mod, campaign, cm, fr,
+                               body.get("layers") or [], wanted,
+                               str(body.get("name") or ""))
+        except (mapfe.FeError, campmap.MapError, OSError, ValueError) as e:
+            return {"error": str(e)}
+        got = out.payload()
+        if not got["count"]:
+            got["error"] = "nothing to write"
         elif body.get("reveal") and out.folder:
             from .folder_dialog import reveal
             got["revealed"] = bool(reveal(str(Path(out.folder)

@@ -131,8 +131,10 @@ const CMAP_GAP_LABELS = {magenta: 'Pink', neutral: 'Neutral', sea: 'Sea'};
    them cost those files nothing: each group is a `<div>` that is hidden or not,
    and every panel stays in the DOM and keeps its own state. */
 const CMAP_TABS = [
-  {id: 'map', label: 'Map', icon: '\u{1F5FA}', panels: ['cmCamps', 'cmFind', 'cmViews'],
-   title: 'Which campaign is being read, finding a province by name, and saved views'},
+  {id: 'map', label: 'Map', icon: '\u{1F5FA}',
+   panels: ['cmCamps', 'cmFind', 'cmViews', 'cmFE'],
+   title: 'Which campaign is being read, finding a province by name, saved views '
+        + 'and the front-end picture'},
   {id: 'check', label: 'Validate', icon: '✓', panels: ['cmFindings', 'cmCheck'],
    title: 'Everything wrong with this map: what the read itself found, then the '
         + 'rules, the baseline and the filters'},
@@ -969,6 +971,7 @@ back from the collapsed state.">›</button>
   cbrOpen();          // 20b, D14, and it reads nothing until somebody opens it
   cfdOpen();          // 20b, T8, and it never reads anything at all
   cvwOpen();          // 20b, T9, out of the settings the page already has
+  cfeOpen();          // 37b, and it reads nothing until somebody opens it
   cchkOpen();
   cqOpen();
   cpaintOpen();
@@ -1696,13 +1699,21 @@ function cmapCompose(){
   const c = state.cmap;
   if(!c) return;
   const m = c.man;
-  const shown = c.order.filter(code => c.layers[code].on && c.layers[code].img);
+  /* 37b: the front-end picture is NOT in here any more. This canvas is one
+     pixel per tile, map_FE.tga has no relationship to the tile grid, and
+     putting it in meant DaC's 768x768 was squeezed to 510x487 and then scaled
+     back up by the view - the double resampling T3 exists to avoid. It is
+     drawn on the canvas itself now, at its own resolution, on the frame the FE
+     panel holds. See `cfeDraw` in mapfe.js. */
+  const shown = c.order.filter(code => code !== 'fe'
+    && c.layers[code].on && c.layers[code].img);
   // what the mask pass did is in the key: punching a colour through, lifting
   // the rivers out or drawing the heights as transparency all change the
   // picture, and a composite that did not notice would show the old one
   const key = shown.map(code => `${code}:${c.layers[code].opacity}`
     + `:${cmapModeKey(c, code)}`).join('|')
-    + `|terrain:${cmapTerrainOn(c) ? 1 : 0}`;
+    + `|terrain:${cmapTerrainOn(c) ? 1 : 0}`
+    + `|fe:${c.layers.fe && c.layers.fe.on ? 1 : 0}`;
   if(key === c.compKey && c.comp) return;
   if(!c.comp){
     c.comp = document.createElement('canvas');
@@ -1716,7 +1727,11 @@ function cmapCompose(){
   // 23a's backdrop covers every tile of the map itself - texture, sea or pink -
   // so while it is on this fill would be an opaque sheet over it and is left
   // out. It is in the key above, so ticking the terrain off puts it back.
-  if(!cmapTerrainOn(c)){
+  // 37b: and not while the front-end picture is on either, for the same reason
+  // one step further out. That picture is now drawn UNDER this canvas rather
+  // than in it, so an opaque backdrop here is a sheet over it - which is what
+  // it was, and the picture never appeared with every other layer off.
+  if(!cmapTerrainOn(c) && !(c.layers.fe && c.layers.fe.on)){
     x.fillStyle = '#0b0d11';
     x.fillRect(0, 0, m.width, m.height);
   }
@@ -1868,6 +1883,11 @@ function cmapPaint(dirty){
     // top of the ground, and it is too detailed to go into a composite that is
     // one pixel a tile.
     cmapTerrainDraw(x, x0, y0, x1, y1);
+    // 37b, and it is before the composite because the picture's draw order is
+    // 0 - it is the bottom of the stack. Unclipped: the frame runs past the
+    // grid on every installed mod and a picture cut off at the coast would be
+    // a lie about what is being authored.
+    if(typeof cfeDraw === 'function') cfeDraw(x);
     // Crisp once a tile is bigger than a screen pixel: this is a tool for
     // seeing which pixel a settlement stands on, and blur is the enemy of that.
     x.imageSmoothingEnabled = v.zoom < 1;
@@ -1879,6 +1899,11 @@ function cmapPaint(dirty){
     cmapOverlay(x, x0, y0, x1, y1);
   }
   x.restore();
+
+  // 37b's frame, over everything and outside the dirty-rect clip, because it
+  // is a control rather than a layer and it only exists while its panel is
+  // open.
+  if(typeof cfeDrawFrame === 'function') cfeDrawFrame(x);
 
   // What the last frame cost, on screen. It is here because this sub-phase's
   // exit criterion is a frame rate, and a number nobody can see is a claim.
@@ -2048,10 +2073,19 @@ function cmapPointers(cv){
     // and onto that character - the same rule, one layer further out.
     if(mode === 'pan' && e.button === 0 && !pin && typeof cmkDragStart === 'function'
        && cmkDragStart(cmapEventTile(cv, e))) mode = 'mark';
+    // 37b: and with the FE panel open, a press on its frame or a corner of it
+    // takes the button off the pan. Behind the brush, the pin and a character,
+    // because those are all things somebody armed on purpose and this is a
+    // rectangle that happens to be lying over the map.
+    if(mode === 'pan' && e.button === 0 && !pin && typeof cfeDragStart === 'function'){
+      const r = cv.getBoundingClientRect();
+      if(cfeDragStart(e.clientX - r.left, e.clientY - r.top)) mode = 'fe';
+    }
     if(mode === 'paint') cpaintDown(cmapEventTile(cv, e));
   });
   cv.addEventListener('pointerup', e => {
-    if(mode === 'paint') cpaintUp();
+    if(mode === 'fe') cfeDragEnd();
+    else if(mode === 'paint') cpaintUp();
     else if(mode === 'mark'){
       // a press on a character that never travelled is still a pick, exactly as
       // it is anywhere else on the map - taking the click away from the tile
@@ -2075,6 +2109,7 @@ function cmapPointers(cv){
   });
   cv.addEventListener('pointercancel', () => {
     if(mode === 'paint') cpaintCancel();
+    if(mode === 'fe') cfeDragEnd();
     if(mode === 'mark' && state.cmk){ state.cmk.drag = null; cmapPaint(); }
     last = null; mode = '';
   });
@@ -2101,6 +2136,11 @@ function cmapPointers(cv){
     if(mode === 'paint'){
       cpaintMove(cmapEventTile(cv, e));
       cmapHover(cmapEventTile(cv, e));
+      return;
+    }
+    if(mode === 'fe'){
+      const r = cv.getBoundingClientRect();
+      cfeDragMove(e.clientX - r.left, e.clientY - r.top);
       return;
     }
     if(mode === 'mark'){
