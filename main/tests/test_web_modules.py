@@ -512,6 +512,13 @@ check("a save goes through the 32a plan, then apply",
       and mercs_js.index("'/api/mercpools/plan'") < mercs_js.index("'/api/mercpools/apply'"))
 check("and it reopens the region record, whose pool box reads the same file",
       "cmapOpenRegion(name)" in mercs_js)
+check("a mercenary line and a list row show the unit's card off /icon",
+      "iconUrl(k.mod, name)" in mercs_js and mercs_js.count("mcpCardHtml(") >= 3)
+check("picking a mercenary lights it unless the toggle says not, on by default",
+      "autoLight: true" in mercs_js and "if(k.unit) mcpLight(k.unit, true);" in mercs_js
+      and 'onchange="mcpAutoLight(this.checked)"' in mercs_js)
+check("…and unpicking takes off only a light the panel put there",
+      "(q.theme || '').startsWith('merc:')" in mercs_js)
 check("32c: a province in two pools is offered both, through region_move",
       "mcpKeepIn(" in mercs_js and "action: 'region_move', region, pool" in mercs_js)
 from unittransfer import mapcheck                                    # noqa: E402

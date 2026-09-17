@@ -35,8 +35,11 @@
 /* ---------- state ---------- */
 
 function mcpNew(mod, campaign){
+  // `autoLight`: picking a mercenary colours the provinces that sell it, with
+  // no second click - on unless the toggle beside the manual button says not
   return {mod, campaign, open: false, loading: false, d: null, faction: '',
-          view: 'province', unit: '', q: '', edit: null, adding: '', busy: false};
+          view: 'province', unit: '', q: '', edit: null, adding: '', busy: false,
+          autoLight: true};
 }
 
 function mcpOpen(){
@@ -45,7 +48,7 @@ function mcpOpen(){
   const was = state.mcp, camp = c.campaign || '';
   if(was && was.mod === c.mod && was.campaign === camp){ mcpPaint(); return; }
   const k = state.mcp = mcpNew(c.mod, camp);
-  if(was){ k.open = was.open; k.view = was.view; }
+  if(was){ k.open = was.open; k.view = was.view; k.autoLight = was.autoLight; }
   if(k.open) mcpLoad(); else mcpPaint();
 }
 
@@ -89,10 +92,29 @@ function mcpView(v){
   mcpPaint();
 }
 
-function mcpPickUnit(name){
+function mcpPickUnit(name, keep){
   const k = state.mcp;
   if(!k) return;
-  k.unit = k.unit === name ? '' : name;
+  k.unit = (k.unit === name && !keep) ? '' : name;
+  mcpPaint();
+  if(!k.autoLight) return;
+  if(k.unit) mcpLight(k.unit, true);
+  else mcpUnlight();
+}
+
+//: Take the map's colouring off, but only one this panel put there - a theme
+//: somebody chose on the Query tab is theirs.
+async function mcpUnlight(){
+  const q = state.cq;
+  if(q && (q.theme || '').startsWith('merc:')) await cqTheme('');
+}
+
+function mcpAutoLight(on){
+  const k = state.mcp;
+  if(!k) return;
+  k.autoLight = !!on;
+  if(on && k.unit) mcpLight(k.unit, true);
+  else if(!on) mcpUnlight();
   mcpPaint();
 }
 
@@ -120,11 +142,20 @@ function mcpGo(name){
 }
 
 //: Colour the provinces selling this unit, through the query panel's own map.
-async function mcpLight(name){
+async function mcpLight(name, quiet){
   if(!state.cq) cqOpen();
   if(!state.cq) return;
   await cqTheme('merc:' + name);
-  toast(`The map shows where ${name} is sold - the Query tab holds the legend`, 5000);
+  if(!quiet) toast(`The map shows where ${name} is sold - the Query tab holds the legend`, 5000);
+}
+
+//: The unit's own card, off the same /icon route the unit grid uses. A name the
+//: EDU does not have gets no picture rather than a blank frame.
+function mcpCardHtml(name, known){
+  if(known === false) return '<span class="mcpcard none" title="not a unit in the EDU">?</span>';
+  const k = state.mcp;
+  return `<img class="mcpcard" loading="lazy" onerror="iconRetry(this)"
+    src="${iconUrl(k.mod, name)}" alt="">`;
 }
 
 /* ---------- drawing ---------- */
@@ -228,12 +259,13 @@ function mcpLineHtml(pool, u){
   const editing = k.edit && k.edit.pool === pool && k.edit.index === u.index;
   return `<div class="mcpline${u.hire === 'no' ? ' dead' : ''}">
     <div class="mcphead">
+      ${mcpCardHtml(u.name, (u.gates || []).some(g => g.gate === 'unit' && g.state === 'no') ? false : null)}
       <span class="mcpnm">${esc(u.name)}</span>${mcpBadge(u.hire)}
       <span class="count">${u.cost} · exp ${u.exp} · pool ${u.initial}/${u.max} ·
         +${r[0]}-${r[1]} a turn</span>
       <span class="sp"></span>
       <button class="rebgo" title="Where else ${esc(u.name)} is sold"
-        onclick="mcpView('unit');mcpPickUnit('${q1(esc(u.name))}')">⇄</button>
+        onclick="mcpView('unit');mcpPickUnit('${q1(esc(u.name))}', true)">⇄</button>
       <button class="rebgo" title="Edit this pool entry"
         onclick="mcpEdit('${q1(esc(pool))}', ${u.index})">✎</button>
     </div>
@@ -283,6 +315,7 @@ function mcpUnitRowsHtml(){
       ? `${u.prices[0]}-${u.prices[u.prices.length - 1]}` : `${u.prices[0]}`) : '?';
     return `<button class="rebrow${k.unit === u.name ? ' on' : ''}${u.known === false ? ' orphan' : ''}"
       onclick="mcpPickUnit('${q1(esc(u.name))}')">
+      ${mcpCardHtml(u.name, u.known)}
       <span class="rebnm">${esc(u.name)}${u.known === false
         ? '<span class="reborph">not in the EDU</span>' : ''}</span>
       <span class="count">${u.offers.length} pool${u.offers.length === 1 ? '' : 's'} ·
@@ -302,7 +335,10 @@ function mcpUnitHtml(d){
         pool${u.offers.length === 1 ? '' : 's'}${u.prices.length > 1
         ? ` at ${u.prices.length} different prices` : ''}</span></div>
       <div class="cmbar2"><button onclick="mcpLight('${q1(esc(u.name))}')"
-        title="Colour every province whose pool sells it">◉ Light on the map</button></div>
+        title="Colour every province whose pool sells it">◉ Light on the map</button>
+        <label class="mcpauto" title="Colour the provinces as soon as a mercenary is picked">
+          <input type="checkbox" ${k.autoLight ? 'checked' : ''}
+            onchange="mcpAutoLight(this.checked)"> light it when picked</label></div>
       ${u.offers.map(o => {
         const pool = (d.pools || []).find(p => p.name === o.pool);
         const line = pool && pool.units[o.index];
