@@ -260,6 +260,12 @@ show the unsaved map rather than the one on disk.
                                  -> move a set of provinces onto one rebel
                                     faction, in the descr_regions.txt that
                                     campaign actually reads
+  GET  /api/map/mercs?mod=&campaign=&faction=
+                                 -> 32b. Every pool and unit line with its gates
+                                    resolved for that faction (or for nobody):
+                                    the EDU, religions, factions, crusading,
+                                    events and years, and the reverse index
+                                    from a unit to the pools selling it
   GET  /api/map/climates?mod=&campaign=
                                  -> 34. Every climate this mod declares as a
                                     slot - its colour, its tiles, whether it
@@ -4259,6 +4265,18 @@ class Handler(BaseHTTPRequestHandler):
                 rcm = None
             return self._json(rebelpools.view(
                 self.registry.describe(name), rcm))
+        if path == "/api/map/mercs":
+            # 32b. Both directions of descr_mercenaries.txt with every gate
+            # resolved, for one faction or for nobody. Text files only, so like
+            # the rebels it needs no map read.
+            try:
+                return self._json(mercpools.hire_view(
+                    self.registry.describe(name), (q.get("campaign") or [""])[0],
+                    (q.get("faction") or [""])[0]))
+            except mercpools.MercError as e:
+                return self._json({"error": e.message, "pools": [], "units": []})
+            except ValueError as e:
+                return self._err(404, str(e))
 
         if path == "/api/map/climates":
             # 34. Ahead of the map read for the same reason the campaign list

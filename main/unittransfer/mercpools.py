@@ -819,3 +819,253 @@ def apply(p: MercPlan) -> Dict:
     log.info("MERCS %s in %s/%s - %d change(s), id=%s", p.action, mod.name,
              p.campaign, len(p.changes), tid)
     return {"id": tid, "record": rec}
+
+
+# ---------------------------------------------------------------------------
+# 32b - the join: who can hire what, and where
+#
+# A unit line carries up to five gates and none of them names a province: the
+# province side is only ever "which pool". So the question a person asks - can
+# this faction hire this unit here, and if not, why - is a join over five other
+# files, and every one of them is read here and nowhere in the page.
+#
+#   gate on the line          resolved against
+#   the unit's name           the mod's EDU
+#   religions { }             the faction's religion in descr_sm_factions.txt
+#   factions { }              the faction itself (undocumented; Fellowship)
+#   crusading                 nothing on disk - it is a state of an army
+#   events { }                descr_events.txt, and what the campaign's scripts set
+#   start_year / end_year     the campaign's own start_date and end_date
+
+
+#: a gate's verdict. `no` is never, `later` is not from turn one, `unknown` is
+#: a name nothing we can read sets, `info` is a gate that depends on a faction
+#: when none is picked
+GATE_STATES = ("ok", "no", "later", "unknown", "info")
+
+_SET_EVENT = re.compile(
+    r"^[ \t]*(?:set_event_counter|inc_event_counter|historic_event|declare_counter)"
+    r"[ \t]+(\S+)", re.M | re.I)
+
+
+def _year(value) -> Optional[int]:
+    m = re.match(r"\s*(-?\d+)", str(value or ""))
+    return int(m.group(1)) if m else None
+
+
+def campaign_years(mod, campaign: str) -> Dict:
+    """``{start, end, timescale}`` off the campaign's descr_strat.txt, or Nones."""
+    from . import campstrat
+    try:
+        s = campstrat.read_strat(mod, campaign)
+    except (OSError, ValueError):
+        return {"start": None, "end": None, "timescale": None}
+    g = s.globals or {}
+    try:
+        ts = float(str(g.get("timescale") or "").split()[0])
+    except (ValueError, IndexError):
+        ts = None
+    return {"start": _year(g.get("start_date")), "end": _year(g.get("end_date")),
+            "timescale": ts}
+
+
+def event_sources(mod, campaign: str) -> Dict[str, Dict]:
+    """``{event lower: {name, how, where}}`` - what can ever fire a named event.
+
+    Two sources, both in the campaign's own folder: an ``event`` block in
+    descr_events.txt (``how: "events"``), and a ``set_event_counter`` /
+    ``historic_event`` line in a script there (``how: "script"``, with the file
+    and line). DaC's ``ND_BOH`` is the second kind - its descr_events.txt never
+    mentions it and its campaign script sets it four times.
+    """
+    from . import campevents, campstrat
+    out: Dict[str, Dict] = {}
+    try:
+        bf, _ = campevents.read_events(mod, campaign)
+        for b in bf.blocks:
+            if b.name:
+                out.setdefault(b.name.lower(), {
+                    "name": b.name, "how": "events",
+                    "where": f"{campevents.EVENTS_NAME} line {b.head_line + 1}"})
+    except (campevents.CampEventError, OSError, ValueError, AttributeError):
+        pass
+    folder = (Path(mod.data) / campstrat.CAMPAIGN_DIR_REL
+              / campstrat.campaign_rel(campaign))
+    try:
+        scripts = sorted(p for p in folder.glob("*.txt")
+                         if "script" in p.name.lower() and p.is_file())
+    except OSError:
+        scripts = []
+    for path in scripts:
+        try:
+            text = kb.read_text(path, ENCODING)
+        except OSError:
+            continue
+        # a running count: DaC's script is 10 MB and recounting from the top
+        # for every match was four seconds
+        line, at = 1, 0
+        for m in _SET_EVENT.finditer(text):
+            line += text.count(chr(10), at, m.start())
+            at = m.start()
+            name = m.group(1)
+            out.setdefault(name.lower(), {
+                "name": name, "how": "script", "where": f"{path.name} line {line}"})
+    return out
+
+
+def faction_rows(mod, campaign: str) -> List[Dict]:
+    """Every faction the campaign places, with its religion and shown name."""
+    from . import campstrat, factions as facfile
+    try:
+        rosters = campstrat.read_strat(mod, campaign).rosters
+    except (OSError, ValueError):
+        rosters = {}
+    religion: Dict[str, str] = {}
+    try:
+        rf = facfile.parse_file(facfile.path_for(mod))
+        # `faction egypt, spawned_on_event` - the name is the word before the comma
+        religion = {r.name.split(",")[0].strip(): r.get("religion").strip(",")
+                    for r in rf.records}
+    except (OSError, ValueError, AttributeError):
+        pass
+    try:
+        names = facfile.loc(mod)
+    except (OSError, ValueError):
+        names = {}
+    out = []
+    for status in ("playable", "unlockable", "nonplayable"):
+        for name in rosters.get(status, []):
+            out.append({"name": name, "status": status,
+                        "religion": religion.get(name, ""),
+                        "label": facfile.label(name, names)})
+    if not out:
+        out = [{"name": n, "status": "", "religion": r,
+                "label": facfile.label(n, names)} for n, r in religion.items()]
+    return out
+
+
+def gates(u: MercUnit, faction: Optional[Dict], years: Dict,
+          events: Dict[str, Dict], edu_types: Optional[set]) -> Tuple[str, List[Dict]]:
+    """``(verdict, [gate])`` for one unit line and, optionally, one faction.
+
+    The verdict is ``no`` if any gate is ``no``; else ``later`` if any gate
+    waits on something; else ``unknown`` if an event cannot be traced; else
+    ``yes``. With no faction picked the two faction gates are ``info`` and do
+    not decide it, so the verdict is what is true for everybody.
+    """
+    out: List[Dict] = []
+
+    def add(gate: str, state: str, say: str) -> None:
+        out.append({"gate": gate, "state": state, "say": say})
+
+    if edu_types is not None:
+        if u.name in edu_types:
+            add("unit", "ok", "a unit type in this mod's EDU")
+        else:
+            add("unit", "no", f"no unit called `{u.name}` in this mod's EDU, so "
+                              "the engine has nothing to raise")
+    rel = faction.get("religion") if faction else ""
+    if u.religions is not None:
+        if not u.religions:
+            add("religions", "ok", "an empty list - every religion")
+        elif faction is None:
+            add("religions", "info", "only to a faction of " + ", ".join(u.religions))
+        elif rel in u.religions:
+            add("religions", "ok", f"{faction['name']} is {rel}")
+        else:
+            add("religions", "no", f"{faction['name']} is {rel or 'of no religion'}, "
+                                   "and the line sells to " + ", ".join(u.religions))
+    if u.factions is not None:
+        named = [f.lower() for f in u.factions]
+        if faction is None:
+            add("factions", "info", "only to " + ", ".join(u.factions))
+        elif "all" in named or faction["name"].lower() in named:
+            add("factions", "ok", f"names {faction['name']}")
+        else:
+            add("factions", "no", "names only " + ", ".join(u.factions))
+    if u.crusading:
+        add("crusading", "later", "only to an army on a crusade or a jihad")
+    for ev in u.events or []:
+        src = events.get(ev.lower())
+        if src is None:
+            add("events", "unknown", f"after `{ev}`, which nothing in this campaign's "
+                                     "descr_events.txt or scripts sets - a script "
+                                     "elsewhere may")
+        else:
+            add("events", "later", f"after `{ev}` ({src['where']})")
+    start, end = years.get("start"), years.get("end")
+    if u.start_year:
+        if end is not None and u.start_year > end:
+            add("start_year", "no", f"from {u.start_year}, after the campaign ends "
+                                    f"in {end}")
+        elif start is not None and u.start_year > start:
+            add("start_year", "later", f"from {u.start_year}; the campaign starts "
+                                       f"in {start}")
+        else:
+            add("start_year", "ok", f"from {u.start_year}")
+    if u.end_year:
+        if start is not None and u.end_year < start:
+            add("end_year", "no", f"until {u.end_year}, before the campaign starts "
+                                  f"in {start}")
+        elif end is not None and u.end_year < end:
+            add("end_year", "later", f"only until {u.end_year}")
+        else:
+            add("end_year", "ok", f"until {u.end_year}")
+    states = {g["state"] for g in out}
+    verdict = ("no" if "no" in states else "later" if "later" in states
+               else "unknown" if "unknown" in states else "yes")
+    return verdict, out
+
+
+def hire_view(mod, campaign: str, faction: str = "") -> Dict:
+    """Both directions at once, for one campaign and, optionally, one faction.
+
+    ``pools`` is the province direction - the page knows which pool a province
+    is in from ``regions`` - and ``units`` the mercenary direction: every pool
+    that sells a unit, its price and pool size there, and the provinces.
+    """
+    mf, _ = read(mod, campaign)
+    years = campaign_years(mod, campaign)
+    events = event_sources(mod, campaign)
+    facs = faction_rows(mod, campaign)
+    picked = next((f for f in facs if f["name"] == faction), None) if faction else None
+    try:
+        edu_types: Optional[set] = {x.type for x in mod.edu.units}
+    except (OSError, AttributeError, ValueError):
+        edu_types = None
+    pools, index = [], {}
+    for p in mf.pools:
+        rows = []
+        for i, u in enumerate(p.units):
+            verdict, gs = gates(u, picked, years, events, edu_types)
+            rows.append(dict(u.payload(), index=i, hire=verdict, gates=gs))
+            entry = index.setdefault(u.name, {
+                "name": u.name,
+                "known": None if edu_types is None else u.name in edu_types,
+                "offers": [], "provinces": 0})
+            entry["offers"].append({"pool": p.name, "index": i, "cost": u.cost,
+                                    "max": u.max, "initial": u.initial,
+                                    "replenish": list(u.replenish or ()),
+                                    "hire": verdict, "regions": list(p.regions)})
+            entry["provinces"] += len(p.regions)
+        pools.append({"name": p.name, "line": p.line + 1,
+                      "regions": list(p.regions), "units": rows})
+    units = sorted(index.values(), key=lambda e: e["name"].lower())
+    for e in units:
+        e["prices"] = sorted({o["cost"] for o in e["offers"] if o["cost"] is not None})
+    where: Dict[str, List[str]] = {}
+    for p in mf.pools:
+        for r in p.regions:
+            where.setdefault(r.lower(), []).append(p.name)
+    return {
+        "campaign": campaign, "file": MERCS_NAME, "faction": picked,
+        "factions": facs, "years": years, "pools": pools, "units": units,
+        "in_two": {k: v for k, v in where.items() if len(v) > 1},
+        "unknown_units": [e["name"] for e in units if e["known"] is False],
+        # what the add box offers: the names the unit gate will accept
+        "edu_types": sorted(edu_types, key=str.lower) if edu_types else [],
+        "counts": {"pools": len(mf.pools), "units": len(units),
+                   "lines": sum(len(p.units) for p in mf.pools),
+                   "regions": len(where)},
+        "warnings": list(mf.warnings),
+    }

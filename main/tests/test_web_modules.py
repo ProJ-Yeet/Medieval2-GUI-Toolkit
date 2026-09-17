@@ -492,5 +492,26 @@ check("cmapLayerState carries terrain_gap", "m.terrain_gap" in state_fn)
 check("and a named view carries it",
       "terrainGap" in (JS / "mapviews.js").read_text(encoding="utf-8"))
 
+
+print("\n== 32b: the mercenary pools, both directions ==")
+mercs_js = (JS / "mercs.js").read_text(encoding="utf-8")
+_place = campmap_js.split("{id: 'place'")[1].split("]}")[0]
+check("Mercenaries is a sub-tab of Province, and choosing it opens the panel",
+      "{id: 'mercs', label: 'Mercenaries', panels: ['cmMercs']," in _place
+      and "open: {fn: 'mcpToggle', at: 'mcp'}" in _place)
+check("the panel is opened with the rest on a map read", "mcpOpen();" in campmap_js)
+check("and it follows the province the map picks",
+      "state.mcp.view === 'province') mcpPaint();" in campmap_js)
+check("it never decides a verdict itself - every one comes off the server",
+      "/api/map/mercs?" in mercs_js and "u.hire" in mercs_js
+      and "religion ===" not in mercs_js and "includes(rel" not in mercs_js)
+check("the map it lights is the query panel's own merc: colouring",
+      "cqTheme('merc:' + name)" in mercs_js)
+check("a save goes through the 32a plan, then apply",
+      "'/api/mercpools/plan'" in mercs_js and "'/api/mercpools/apply'" in mercs_js
+      and mercs_js.index("'/api/mercpools/plan'") < mercs_js.index("'/api/mercpools/apply'"))
+check("and it reopens the region record, whose pool box reads the same file",
+      "cmapOpenRegion(name)" in mercs_js)
+
 print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

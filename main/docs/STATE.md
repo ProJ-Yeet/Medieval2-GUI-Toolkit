@@ -8,9 +8,21 @@ uncut** on top of them. **Releasing is on-request only**: commit to master and
 stop_
 
 _2026-09-17: **Phase 50**, the **`187d9ed..439aa9b` upstream review** and
-**Phases 38 and 32a** are on top of that, all committed and uncut._
+**Phases 38, 32a and 32b** are on top of that, all committed and uncut._
 
 ## Next up
+**Phase 32b is done - who can hire what, and where, closed 2026-09-17, beta
+line, committed and uncut.** The user asked for the whole mercenary block, so
+32c and 39 follow straight on.
+
+`mercpools.hire_view` resolves five gates per unit line for a faction or for
+nobody, with `unknown` for an event nothing in the campaign sets. The Province
+tab's **Mercenaries** sub-tab shows both directions and edits a pool entry
+through 32a's writer; three new colourings (`merc_count`, `merc_any`,
+`merc:<unit>`). **Reforged's imperial campaign has two lines no faction ever
+hires** (`start_year 2986`, campaign ends 2984); DaC's two "dead" units are in
+its EDU now. Write-up under *32b done* in `ROADMAP.md`.
+
 **Phase 32a is done - `descr_mercenaries.txt` has one reader and it keeps the
 whole line, closed 2026-09-17, beta line, committed and uncut.** 32b leads.
 
@@ -1012,6 +1024,7 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
+| 32b - both directions, five gates | **done** | Closed 2026-09-17, committed, **not cut** (beta only). `mercpools.hire_view`/`gates`/`event_sources`/`faction_rows`/`campaign_years`; `GET /api/map/mercs`; `mapquery.info_merc_count`, `info_merc_any`, `merc:<unit>`; `web/js/mercs.js` as the Province tab's Mercenaries sub-tab, with edit/add/remove through 32a. Events traced to the script line that sets them (DaC `ND_BOH`, `campaign_script.txt` 10765). Fixed on the way: `faction egypt, spawned_on_event` lost its religion. `test_mercpools` 102/102, `test_web_modules` 112/112. |
 | 32a - the pool as a record, one parser | **done** | Closed 2026-09-17, committed, **not cut** (beta only). `unittransfer/mercpools.py` owns `descr_mercenaries.txt`: `parse_unit` keeps all five fixed fields and six optionals with their character spans, `set_field` splices one value (a value set to itself is untouched, `0.10` included), six plan actions with a gate that refuses a save touching a record it did not name. `mapquery.parse_mercenaries` and `campfiles.parse_mercs`/`MercFile`/`set_regions`/`move_region` are calls into it. Found: `factions { }`, undocumented, on 41 of Fellowship's 51 lines - 32b has five gates. `GET /api/mercpools`, `POST /api/mercpools/plan\|apply`. `tests/test_mercpools.py` 73/73, new. |
 | 38 - `descr_campaign_db.xml` | **done** | Closed 2026-09-17, committed, **not cut** (both lines when a cut happens). A Minor Files tab and a mode of its own, like Guilds. The form is typed off each tag's own attribute; `campdb.VOCAB` holds the fourteen tags the archive explains and nothing guessed, and the seven it prints whole are the only addable ones. Line scan and a splice between quotes, ElementTree as the gate on save. DaC 262 tags, Reforged 217, both round-trip with no findings; Reforged lacks the four piety tags; no vanilla copy on disk. `state.gu` now cleared on a mod switch. New: `unittransfer/campdb.py`, `GET /api/campdb`, `POST /api/campdb/plan\|apply`, `web/js/campdb.js`, `campdb` in `modfiles`. `tests/test_campdb.py` 50/50, new; `tests/test_web_modules.py` 105/105. |
 | 50 - the defaults, and the stack off the column | **done** | Closed 2026-09-16, committed, **not cut** (beta only). Two requests about the state the screen opens in. The settlement names and the terrain textures now open ON (summer, gap **neutral**), each on `saved.x === undefined` so turning one off still sticks; the tooltip already did; a named view is untouched, because `mapviews.js` has its own fallbacks. `mapterrain.GAP_DEFAULT` deliberately stays `magenta` - the browser's opening habit and what an unasked request draws are two questions, and the browser sends `&gap=` on every fetch. The layer stack left the right column for **a button at the foot of the map and a panel over it** (`cmapLayPop`, `#cmLayPop`, count on the button): 20a's ruling standing, not repealed - the ten number keys still tick a layer with it shut, `s` opens it, Escape closes it after the pin and the selection, and it no longer costs the tab body 45% of the column or disappears when the column is collapsed. `tests/test_web_modules.py` 105/105 (was 92). |

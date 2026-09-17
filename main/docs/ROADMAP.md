@@ -782,7 +782,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | Order | Phase | Size | Line | Stars |
 |---|---|---|---|---|
 | ~~17~~ | ~~**32a** The pool as a record, and one parser for it~~ | M | beta | **done 2026-09-17** |
-| 18 | **32b** The two directions, and the four gates resolved | M | beta | the main task |
+| ~~18~~ | ~~**32b** The two directions, and the four gates resolved~~ | M | beta | **done 2026-09-17** |
 | 19 | **32c** Five rules, and the repair for the one that has a safe answer | M | beta | 5 (the repairs) |
 | 20 | **39** The engine ceilings | M | **both** | 4 and 3 |
 
@@ -791,7 +791,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
 (2026-09-14), **41, 43, 28a, 28b, 33, 30 and 34 are done** (2026-09-15) and
-**35, 36, 37a and 37b are done** (2026-09-16) and **38 is done** (2026-09-17); block one is finished; **32a is done** (2026-09-17) and three of block two remain, one of them a subrelease. **43 was nearly all built already** - 16j shipped the
+**35, 36, 37a and 37b are done** (2026-09-16) and **38 is done** (2026-09-17); block one is finished; **32a and 32b are done** (2026-09-17) and two of block two remain, one of them a subrelease. **43 was nearly all built already** - 16j shipped the
 roster writer and the write-up had not checked - so what landed was the one
 sentence of it that was true, the refusal. **28a's scoping held in full**, and
 what it did not say was that the layer stack has to be capped or it takes the
@@ -1387,6 +1387,65 @@ tint come with them.
 **Where it sits is Phase 28's first real test.** This is one more panel on a
 column that is already sixteen deep, and it belongs on the same tab as the
 picked province. Take 28 first.
+
+### 32b done 2026-09-17 - five gates, a verdict with its reason, and the map
+
+**The join is `mercpools.hire_view`, one call per campaign and faction**, and
+the page decides nothing: every unit line comes back with `hire` (`yes`,
+`later`, `no` or `unknown`) and the gates behind it in words. **Five gates,
+not four** - 32a found `factions { }` - and two kinds of result the table above
+did not have: **`unknown`**, for an event nothing in the campaign's own
+descr_events.txt or scripts sets (a script elsewhere, EOP's say, may), and
+**`info`**, for a faction gate when no faction is picked, which says what the
+line needs and decides nothing.
+
+**Events are traced, not only listed.** DaC's `ND_BOH` is in no
+descr_events.txt; it is `set_event_counter ND_BOH 1` at `campaign_script.txt`
+line 10765, and the gate says so. 1,146 names are set across that script. Three
+of DaC's events are set by nothing in its campaign folder - `lanc_cleared`,
+`turn_25`, `turn_50` - on four lines. The first draft of the scan took four
+seconds on that 10 MB script by recounting lines from the top for every match;
+it is 0.06 s.
+
+**Measured, the whole picture:**
+
+- **DaC**, no faction picked: 190 lines hireable from turn one, 74 waiting (57
+  on an event, 17 on a crusade), 4 on an untraced event. **Both units the
+  scoping called dead - `Clan Axemen` and `Framsguard Dismounted Axemen` - are
+  in DaC's EDU as installed now**, so there are none. A catholic faction can
+  hire 89 of the 268 lines at once, an elven one 98.
+- **Reforged's imperial campaign has two lines no faction will ever hire**:
+  `Anduin Bodyguard` and `Angmar Rhudaur Axemen` both carry `start_year 2986`
+  in a campaign that ends in 2984.
+- **Fellowship** is 28 of 29 names not in the EDU, as scoped, so 49 of its 51
+  lines are `no` for everybody; `Mt-Gram_Province` in two pools is confirmed.
+
+**One defect of the join's own, caught by the numbers**: DaC's `egypt` came
+back with no religion and could hire nothing, because its record is written
+`faction egypt, spawned_on_event` and the name kept the suffix. Every faction
+on every campaign now has its religion, and a test says so.
+
+**The map gains three colourings** off the same facts, as scoped:
+`merc_count` (bands of lines on sale), `merc_any` (sells anything or not) and
+`merc:<unit>` (every province selling one unit), the last listed in the
+catalogue per unit like the per-resource maps. The panel's ◉ lights one
+through the query panel, so the legend, the tint and the TGA export all come
+with it.
+
+**The panel** is the Province tab's sixth sub-tab, `Mercenaries`: a faction
+picker; *This province* (following the map's pick), *A mercenary* (every pool
+selling it, its price and pool size there, its provinces as chips) and
+*Pools*. **32a's writer has its screen here** - edit a line's fields, remove
+it, or sell another unit in the pool with the EDU's names offered - and a save
+reopens the region record, whose pool box reads the same file.
+
+New: `mercpools.hire_view`, `gates`, `event_sources`, `faction_rows`,
+`campaign_years`; `mapquery.info_merc_count`, `info_merc_any`, `merc_units`,
+`MERC_BANDS` and the `merc:` code; `GET /api/map/mercs`; `web/js/mercs.js`
+(`mcp*`), `#cmMercs`, the `.mcp*` styles. `tests/test_mercpools.py` 102/102
+(was 73), `tests/test_web_modules.py` 112/112 (was 105), `test_mapquery`
+109/109. Checked live on DaC: the panel on Nan_Curunir for France, the
+Raider Warband map lighting 27 provinces, an edit planned and not written.
 
 ### 32c - The rules, and the repairs
 

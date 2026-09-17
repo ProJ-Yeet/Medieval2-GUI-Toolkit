@@ -1708,6 +1708,48 @@ def info_mercenaries(facts: "Facts") -> Colouring:
              "map has one colour per tile and has to pick.")
 
 
+#: 32b: how many unit lines a province's pool sells. Bands rather than values,
+#: because DaC's pools run from one line to fourteen and a colour a count is a
+#: legend nobody can read.
+MERC_BANDS: Tuple[Tuple[str, int, int], ...] = (
+    ("none", 0, 0), ("1 or 2", 1, 2), ("3 or 4", 3, 4), ("5 to 8", 5, 8),
+    ("9 and over", 9, 1 << 30))
+
+
+def merc_units(facts: "Facts", rf: RegionFacts) -> List[str]:
+    """Every unit line on sale in this province, across every pool naming it."""
+    want = set(rf.merc_pools)
+    return [u for p in facts.pools if p.name in want for u in p.units]
+
+
+def info_merc_count(facts: "Facts") -> Colouring:
+    return _by_band(
+        facts, "merc_count", "Mercenaries on sale", "Information maps",
+        "32b; how many unit lines the pools naming the province sell, from "
+        "descr_mercenaries.txt. What a faction may actually hire is narrower - "
+        "the Mercenaries panel resolves the gates",
+        lambda r: len(merc_units(facts, r)) if facts.pools else None, MERC_BANDS,
+        needs=MERCS_NAME)
+
+
+def info_merc_any(facts: "Facts") -> Colouring:
+    col = Colouring(code="merc_any", label="Hires any mercenary", group="Information maps",
+                    kind="category",
+                    source="32b; whether any pool naming the province sells anything")
+    yes = Group(key="yes", label="sells mercenaries", rgb=(232, 196, 88))
+    no = Group(key="", label="sells none", rgb=NO_GROUP)
+    col.groups = [yes, no]
+    if not facts.pools:
+        col.off = _no_evidence(facts, MERCS_NAME, col.label)
+        return col
+    for rf in facts.regions:
+        at = 0 if merc_units(facts, rf) else 1
+        col.of_region[rf.name.lower()] = at
+        col.groups[at].regions.append(rf.name)
+        col.groups[at].pixels += rf.pixels
+    return col
+
+
 def info_rebels(facts: "Facts") -> Colouring:
     return _by_value(
         facts, "rebels", "Rebel pools", "Information maps",
@@ -1725,6 +1767,8 @@ COLOURINGS: Tuple[Tuple[str, Callable[["Facts"], Colouring]], ...] = (
     ("creators", info_creators),
     ("factions", info_factions),
     ("mercenaries", info_mercenaries),
+    ("merc_count", info_merc_count),
+    ("merc_any", info_merc_any),
     ("rebels", info_rebels),
     ("population", info_population),
 )
@@ -1797,6 +1841,12 @@ def colouring(facts: "Facts", code: str) -> Colouring:
                 lambda r: r.trade_resources)
         if head == "religion":
             return _one_religion(facts, value)
+        if head == "merc":
+            return _one_resource(
+                facts, code, value, f"Mercenary: {value}",
+                "32b; the provinces whose pool sells this unit line, whoever "
+                "may hire it",
+                lambda r: merc_units(facts, r))
     raise MapError(f"no theme or information map called {code!r}")
 
 
@@ -1818,7 +1868,8 @@ def catalogue(facts: "Facts") -> List[dict]:
     for kind, label, get in (
             ("hidden", "Hidden resource", lambda r: r.hidden_resources),
             ("trade", "Trade resource", lambda r: r.trade_resources),
-            ("religion", "Religion", lambda r: list(r.religions))):
+            ("religion", "Religion", lambda r: list(r.religions)),
+            ("merc", "Mercenary", lambda r: sorted(set(merc_units(facts, r))))):
         for value, n in facts.values_of(get):
             out.append({"code": f"{kind}:{value}", "label": f"{label}: {value}",
                         "group": "Information maps", "kind": "category",

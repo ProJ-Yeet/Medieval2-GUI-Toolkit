@@ -1028,6 +1028,28 @@
     font-size:11px;white-space:nowrap}
   .rebprov label{cursor:pointer}
   .rebgo{padding:0 4px;font-size:10px;line-height:1.6;border-radius:4px}
+  /* 32b: the mercenary pools. A line is a card with its verdict on it, and the
+     gates that are not a plain yes under it in their own words, because the
+     reason a unit cannot be hired is the whole value of the panel */
+  .mcptabs{margin:4px 0 6px}
+  .mcpline{border:1px solid var(--edge);border-radius:6px;padding:5px 7px;margin:4px 0;
+    background:var(--panel2)}
+  .mcpline.dead{opacity:.8}
+  .mcphead{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px}
+  .mcphead .sp{flex:1}
+  .mcpnm{font-weight:600}
+  .mcpv{font-size:10px;padding:0 5px;border-radius:8px;border:1px solid var(--edge)}
+  .mcpv.ok{color:var(--good,#5fae5f);border-color:var(--good,#5fae5f)}
+  .mcpv.later{color:var(--warn,#c9a227);border-color:var(--warn,#c9a227)}
+  .mcpv.no{color:var(--bad,#b4442e);border-color:var(--bad,#b4442e)}
+  .mcpv.unk{color:var(--dim)}
+  .mcpgates{font-size:11px;margin-top:3px}
+  .mcpg{color:var(--dim)} .mcpg b{font-weight:600;margin-right:4px}
+  .mcpg.no{color:var(--bad,#b4442e)} .mcpg.later{color:var(--warn,#c9a227)}
+  .mcpoffer{border-top:1px solid var(--edge);padding-top:5px;margin-top:6px}
+  .mcpform{display:grid;grid-template-columns:90px 1fr;gap:4px 8px;align-items:center;
+    font-size:12px;margin:4px 0}
+  .mcpform input[type=text]{width:100%}
   .rebmove{border-top:1px solid var(--edge);margin-top:7px;padding-top:7px}
   .rebmove select{max-width:180px}
 
@@ -2874,6 +2896,7 @@
 <script src="js/campforts.js"></script>
 <script src="js/climates.js"></script>
 <script src="js/rebels.js"></script>
+<script src="js/mercs.js"></script>
 <script src="js/recolour.js"></script>
 <script src="js/regiondel.js"></script>
 <script src="js/campnew.js"></script>

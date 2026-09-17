@@ -300,6 +300,106 @@ else:
           (Path(res["record"]["backup_root"]) / "data" / rel).read_bytes() == before)
     check("…and logs under its own mode", res["record"]["mode"] == "mercpools")
 
+print("\n6  32b: the gates, resolved")
+G = mp.parse_unit
+years = {"start": 2980, "end": 3080, "timescale": 0.25}
+evs = {"nd_boh": {"name": "ND_BOH", "how": "script", "where": "campaign_script.txt line 9"}}
+cath = {"name": "france", "religion": "catholic"}
+isl = {"name": "sicily", "religion": "islam"}
+types = {"Raider Warband", "Clan Axemen"}
+
+
+def verdict(line, fac=None, t=types, y=years):
+    return mp.gates(G(line), fac, y, evs, t)
+
+
+v, gs = verdict(LINE, cath)
+check("a crusading line a catholic faction may hire waits on a crusade",
+      v == "later" and [g["gate"] for g in gs] == ["unit", "religions", "crusading"]
+      and gs[1]["state"] == "ok")
+check("…and is never hired by a faction of another religion",
+      verdict(LINE, isl)[0] == "no")
+v, gs = verdict(LINE)
+check("with no faction the religion gate says what it needs and decides nothing",
+      [g["state"] for g in gs if g["gate"] == "religions"] == ["info"] and v == "later")
+check("a unit the EDU does not have is never hired",
+      verdict(LINE.replace("Raider Warband", "Ghost"), cath)[0] == "no")
+check("…and with no EDU to read, the name is not judged",
+      verdict(LINE.replace("Raider Warband", "Ghost"), cath, t=None)[0] == "later")
+ax = "unit Clan Axemen, exp 0 cost 500 replenish 0.08 - 0.125 max 3 initial 1 religions { islam } events { ND_BOH }"
+v, gs = verdict(ax, isl)
+check("an event a script sets is a wait, and says where it is set",
+      v == "later" and "campaign_script.txt line 9" in gs[-1]["say"])
+check("an event nothing sets is unknown, not never",
+      verdict(ax.replace("ND_BOH", "turn_25"), isl)[0] == "unknown")
+fel = "unit Clan Axemen, exp 0 cost 1 replenish 0 - 0 max 1 initial 1 factions { sicily }"
+check("`factions { }` names the faction outright",
+      verdict(fel, isl)[0] == "yes" and verdict(fel, cath)[0] == "no"
+      and verdict(fel.replace("sicily", "all"), cath)[0] == "yes")
+yr = "unit Clan Axemen, exp 0 cost 1 replenish 0 - 0 max 1 initial 1 start_year {}"
+check("a start year after the campaign ends is never - Reforged's 2986 in a "
+      "campaign ending 2984", verdict(yr.format(3090))[0] == "no")
+check("a start year inside it is a wait, and one before it is no gate",
+      verdict(yr.format(3000))[0] == "later" and verdict(yr.format(2900))[0] == "yes")
+check("an end year before the campaign starts is never",
+      verdict(yr.replace("start_year", "end_year").format(2900))[0] == "no")
+check("an empty religions list is every religion",
+      verdict(fel.replace("factions { sicily }", "religions { }"), cath)[0] == "yes")
+
+print("\n7  32b: the join on this machine, and the map colourings")
+for root in _realmod.installed():
+    mod = Mod(root)
+    for c in campfiles.campaigns(mod):
+        if not mp.path_for(mod, c).is_file():
+            continue
+        v = mp.hire_view(mod, c)
+        head = f"{root.name}/{c}"
+        n = sum(len(p["units"]) for p in v["pools"])
+        check(f"{head}: every line has a verdict, and the reverse index covers "
+              "every line", n == v["counts"]["lines"]
+              and sum(len(u["offers"]) for u in v["units"]) == n
+              and all(u["hire"] in ("yes", "later", "no", "unknown")
+                      for p in v["pools"] for u in p["units"]))
+        f = next((x for x in v["factions"] if x["religion"]), None)
+        if f:
+            vf = mp.hire_view(mod, c, f["name"])
+            check(f"{head}: picking {f['name']} decides the faction gates",
+                  vf["faction"]["name"] == f["name"]
+                  and not any(g["state"] == "info" for p in vf["pools"]
+                              for u in p["units"] for g in u["gates"]))
+        check(f"{head}: every faction has a religion, `spawned_on_event` or not",
+              all(x["religion"] for x in v["factions"]))
+        if root.name.startswith("Divide_and_Conquer") and c == "imperial_campaign":
+            ev = mp.event_sources(mod, c).get("nd_boh")
+            check("DaC: ND_BOH is traced to the campaign script that sets it",
+                  ev and ev["how"] == "script" and ev["where"].startswith("campaign_script.txt"))
+        if root.name == "Third_Age_Reforged" and c == "imperial_campaign":
+            never = [u["name"] for p in v["pools"] for u in p["units"]
+                     if any(g["gate"] == "start_year" and g["state"] == "no" for g in u["gates"])]
+            check(f"Reforged: {len(never)} lines start after the campaign ends", len(never) == 2)
+        if c.endswith("Fellowship_Campaign"):
+            check("Fellowship: 28 of its 29 unit names are not in the EDU",
+                  len(v["unknown_units"]) == 28 and v["counts"]["units"] == 29)
+            check("…and Mt-Gram_Province is in two pools", "mt-gram_province" in v["in_two"])
+
+from types import SimpleNamespace as NS          # noqa: E402
+facts = NS(pools=[mapquery.MercPool(name="A", regions=["P1"], units=["X", "Y", "X"]),
+                  mapquery.MercPool(name="B", regions=["P2"], units=[])],
+           regions=[NS(name="P1", merc_pools=["A"], pixels=4, region_id=0),
+                    NS(name="P2", merc_pools=["B"], pixels=2, region_id=1),
+                    NS(name="P3", merc_pools=[], pixels=1, region_id=2)])
+cnt = mapquery.info_merc_count(facts)
+check("merc_count bands a province by the lines its pools sell",
+      cnt.of_region == {"p1": 2, "p2": 0, "p3": 0})
+anyc = mapquery.info_merc_any(facts)
+check("merc_any is yes only where something is sold",
+      anyc.groups[0].regions == ["P1"] and sorted(anyc.groups[1].regions) == ["P2", "P3"])
+one = mapquery.colouring(facts, "merc:Y")
+check("merc:<unit> lights the provinces selling that unit",
+      one.groups[0].regions == ["P1"] and not one.off)
+check("…and says so when nothing sells it",
+      bool(mapquery.colouring(facts, "merc:Nobody").off))
+
 print(f"\n{sum(ok)}/{len(ok)} checks"
       + (" - ALL PASSED" if all(ok) else f" - {ok.count(False)} FAILED"))
 sys.exit(0 if all(ok) else 1)

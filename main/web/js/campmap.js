@@ -214,6 +214,10 @@ const CMAP_TABS = [
       title: 'The record of the province under the tile you clicked'},
      {id: 'rebels', label: 'Rebels', panels: ['cmRebels'],
       title: 'Which rebel pool this province spawns from'},
+     {id: 'mercs', label: 'Mercenaries', panels: ['cmMercs'],
+      open: {fn: 'mcpToggle', at: 'mcp'},
+      title: 'What this province sells, who may hire it and why not, and where a '
+           + 'mercenary is sold'},
      {id: 'settle', label: 'Settlement', panels: ['cmSettle'],
       title: 'The settlement standing on this province, and what it is made of'},
      {id: 'chars', label: 'Characters', panels: ['cmChars'],
@@ -1198,6 +1202,7 @@ back from the collapsed state.">›</button>
   cpaintOpen();
   cclOpen();          // 34, and it reads nothing until somebody opens it
   rebOpen();          // 35, and it reads nothing until somebody opens it
+  mcpOpen();          // 32b, and it reads nothing until somebody opens it
   cmkOpen();          // 17d, and it reads nothing until the layer is ticked
   cevOpen();          // 18b, and it reads its two files only once opened
   cftOpen();          // 22a, and it reads nothing until somebody opens it
@@ -3329,6 +3334,8 @@ function cmapPickPaint(){
   const el = document.getElementById('cmPick');
   if(!el) return;
   el.innerHTML = cmapProbeHtml() + cmapRegionHtml();
+  // 32b: the mercenary panel follows the province the map has picked
+  if(state.mcp && state.mcp.open && state.mcp.view === 'province') mcpPaint();
   const c = state.cmap;
   const side = document.getElementById('cmSide');
   if(side){
