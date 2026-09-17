@@ -285,32 +285,15 @@ class MercPool:
 
 
 def parse_mercenaries(text: str) -> List[MercPool]:
-    """``descr_mercenaries.txt`` as pools.
+    """``descr_mercenaries.txt`` as pools of unit names.
 
-    A unit line is ``unit <name> exp N cost N ...`` and the name is everything
-    in front of ``exp``. It is taken that way rather than by word count because
-    a mercenary's name is one to four words and real files write a trailing
-    comma after it: Third Age Reforged ships ``unit dhow,`` and ``unit Gondor
-    Osgiliath Archers,`` in the same file.
+    32a: a thin call into :mod:`unittransfer.mercpools`, which owns the format
+    and keeps every gate on a unit line. The name is still everything in front of
+    ``exp`` - one to four words, with the comma real files write after it gone.
     """
-    out: List[MercPool] = []
-    for raw in text.splitlines():
-        s = _bare(raw)
-        if not s:
-            continue
-        word, _, rest = s.partition(" ")
-        low = word.lower()
-        if low == "pool":
-            out.append(MercPool(name=rest.strip()))
-        elif not out:
-            continue
-        elif low == "regions":
-            out[-1].regions.extend(rest.split())
-        elif low == "unit":
-            name = re.split(r"\bexp\b", rest, 1)[0].strip().rstrip(",").strip()
-            if name:
-                out[-1].units.append(name)
-    return out
+    from . import mercpools
+    return [MercPool(name=p.name, regions=list(p.regions), units=p.unit_names)
+            for p in mercpools.parse_text(text).pools]
 
 
 @dataclass

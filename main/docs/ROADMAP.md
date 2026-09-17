@@ -781,7 +781,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 
 | Order | Phase | Size | Line | Stars |
 |---|---|---|---|---|
-| 17 | **32a** The pool as a record, and one parser for it | M | beta | the main task |
+| ~~17~~ | ~~**32a** The pool as a record, and one parser for it~~ | M | beta | **done 2026-09-17** |
 | 18 | **32b** The two directions, and the four gates resolved | M | beta | the main task |
 | 19 | **32c** Five rules, and the repair for the one that has a safe answer | M | beta | 5 (the repairs) |
 | 20 | **39** The engine ceilings | M | **both** | 4 and 3 |
@@ -791,7 +791,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
 (2026-09-14), **41, 43, 28a, 28b, 33, 30 and 34 are done** (2026-09-15) and
-**35, 36, 37a and 37b are done** (2026-09-16) and **38 is done** (2026-09-17); block one is finished and the four of block two remain, one of them a subrelease. **43 was nearly all built already** - 16j shipped the
+**35, 36, 37a and 37b are done** (2026-09-16) and **38 is done** (2026-09-17); block one is finished; **32a is done** (2026-09-17) and three of block two remain, one of them a subrelease. **43 was nearly all built already** - 16j shipped the
 roster writer and the write-up had not checked - so what landed was the one
 sentence of it that was true, the refusal. **28a's scoping held in full**, and
 what it did not say was that the layer stack has to be capped or it takes the
@@ -1305,6 +1305,49 @@ this), and add or delete a pool.
 different unit list and a different set of faults, so 22c's ruling applies
 unchanged: `Registry.map_for` picks the campaign, and a pool read for one
 campaign is not another's.
+
+### 32a done 2026-09-17 - the whole line, and the old reader is a call into it
+
+**`unittransfer/mercpools.py` owns the file.** `mapquery.parse_mercenaries` is
+five lines that call it and keep their old shape, and `campfiles.parse_mercs`,
+`MercFile`, `set_regions` and `move_region` are its names now, so G3, the
+province delete and the rename sweep go through it without changing a caller.
+Every campaign on this machine reads the same pools, name for name, as the old
+reader did.
+
+**The counts above held exactly**: 57 pools over 193 slots and 113 distinct
+units on DaC, 27/148/25 and 28/81/29 on Reforged's two. 363 unit lines in all,
+**every one with the five fixed fields in the documented order and not one
+fault**.
+
+**One thing the write-up did not have, and 32b needs it.** There is a sixth
+optional the file's own header does not document: **`factions { }`, on 41 of
+Fellowship's 51 lines**, always after an `events { }`. So "a faction hires a
+mercenary through its religion" is not the whole gate on that campaign - a line
+can name the factions outright, and 32b's table of four gates is five.
+Otherwise seen: `religions` 317, `events` 105, `crusading` 28, `start_year` 2
+(Reforged's imperial campaign), `end_year` none.
+
+**Writing is a splice at character positions**, not a re-render: a value is
+replaced between its own offsets, an added option goes on the end of the code
+part, a removed one takes its leading space. **A value set to itself is not an
+edit even when it is spelled differently** - the first sweep found DaC's
+`0.10` coming back as `0.1` - and every field of every real line set to itself
+leaves the line alone. A new unit copies the pool's last line's indent and the
+gap after its name. Six actions behind one plan: `unit_edit`, `unit_add`,
+`unit_delete`, `pool_add`, `pool_delete`, `region_move`. **The plan re-reads
+its own output and refuses any save in which a record it did not name
+changed**, or in which the set of pools is not exactly the one asked for.
+
+**No screen yet, by the write-up's split**: the reading is 32b's. New:
+`unittransfer/mercpools.py` (`parse_unit`, `parse_text`, `set_field`,
+`unit_line`, `edit_unit`, `add_unit`, `delete_unit`, `add_pool`,
+`delete_pool`, `move_region`, `overview`, `plan`, `apply`, `MercUnit`,
+`MercPool`, `MercFile`, `MercPlan`), `GET /api/mercpools`,
+`POST /api/mercpools/plan|apply`. `tests/test_mercpools.py` 73/73, new;
+`test_campfiles` 92/92, `test_mapquery` 109/109, `test_regiondel`,
+`test_campnew` and `test_renames` green. `test_campfiles` was 101 and is 92 on
+the old code too - the mod set, not this.
 
 ### 32b - The two directions, and the four gates resolved
 

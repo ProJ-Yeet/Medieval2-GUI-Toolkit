@@ -52,7 +52,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from . import campmap, campstrat, keyblock as kb, mapquery, stringsbin
+from . import campmap, campstrat, keyblock as kb, mapquery, mercpools, stringsbin
 from .triggers import split_lines
 
 #: the campaign files are plain 8-bit text; the localisation file is UTF-16
@@ -628,129 +628,26 @@ def mercs_path(mod, campaign: str = DEFAULT_CAMPAIGN) -> Path:
     return campaign_dir(mod, campaign) / MERCS_NAME
 
 
-def set_regions(line: str, names: List[str]) -> str:
-    """Rewrite a ``regions`` line's list, keeping its indent, gap and comment.
-
-    Not :func:`unittransfer.keyblock.sub_tokens`, which walks the tokens already
-    on the line and substitutes into them: that is right for the fixed-width
-    columns it was written for and wrong here, because a shorter list would
-    leave every province past its end still on the line. This one owns the whole
-    tail of the line, which is what a variable-length list needs.
-    """
-    code = line.partition(";")[0]
-    indent = kb.indent_of(code)
-    rest = code[len(indent) + len("regions"):]
-    gap = rest[:len(rest) - len(rest.lstrip())] or " "
-    return kb.keep_comment(line, indent + "regions" + gap + " ".join(names))
-
-
-@dataclass
-class MercFile:
-    """``descr_mercenaries.txt`` held as lines, with each pool's regions line."""
-
-    lines: List[str] = field(default_factory=list)
-    newline: str = "\r\n"
-    trailing_newline: bool = True
-    pools: List[mapquery.MercPool] = field(default_factory=list)
-    #: pool name -> 0-based line of its `regions` line, or -1 when it has none
-    regions_line: Dict[str, int] = field(default_factory=dict)
-    #: pool name -> 0-based line of its `pool` line
-    pool_line: Dict[str, int] = field(default_factory=dict)
-    warnings: List[str] = field(default_factory=list)
-
-    def text(self) -> str:
-        out = self.newline.join(self.lines)
-        return out + self.newline if self.trailing_newline and self.lines else out
-
-    def pool_of(self, region: str) -> str:
-        low = region.lower()
-        for p in self.pools:
-            if any(r.lower() == low for r in p.regions):
-                return p.name
-        return ""
-
-
-def parse_mercs(text: str) -> MercFile:
-    """The pools, and where each one's ``regions`` line is.
-
-    The pools themselves come from :func:`unittransfer.mapquery.parse_mercenaries`
-    - one parser for this file, as the locked decision says - and what is added
-    here is the line index a write needs.
-    """
-    lines, newline, trailing = split_lines(text)
-    mf = MercFile(lines=lines, newline=newline, trailing_newline=trailing,
-                  pools=mapquery.parse_mercenaries(text))
-    cur = ""
-    for i, raw in enumerate(lines):
-        code = kb.code_of(raw)
-        if not code:
-            continue
-        word, _, _ = code.partition(" ")
-        low = word.lower()
-        if low == "pool":
-            cur = code[len(word):].strip()
-            mf.pool_line.setdefault(cur, i)
-            mf.regions_line.setdefault(cur, -1)
-        elif low == "regions" and cur:
-            if mf.regions_line.get(cur, -1) >= 0:
-                mf.warnings.append(f"line {i + 1}: a second `regions` line for "
-                                   f"pool {cur}; the first one is edited")
-            else:
-                mf.regions_line[cur] = i
-    return mf
+#: 32a: the file is :mod:`unittransfer.mercpools`' now, parser and writer both,
+#: and these are its names for the callers G3 already had.
+MercFile = mercpools.MercFile
+set_regions = mercpools.set_regions
+parse_mercs = mercpools.parse_text
 
 
 def read_mercs(mod, campaign: str = DEFAULT_CAMPAIGN) -> Tuple[MercFile, str]:
-    path = mercs_path(mod, campaign)
-    if not path.exists():
-        raise CampFileError(f"{campaign} has no {MERCS_NAME}, so no province in "
-                            "it has a mercenary pool")
-    text = kb.read_text(path, ENCODING)
-    return parse_mercs(text), text
+    try:
+        return mercpools.read(mod, campaign)
+    except mercpools.MercError as e:
+        raise CampFileError(e.message)
 
 
 def move_region(mf: MercFile, region: str, pool: str) -> str:
-    """The whole file with ``region`` taken out of every pool and put in ``pool``.
-
-    An empty ``pool`` takes the province out of all of them, which is a real
-    state: 45 of Divide and Conquer's provinces are in no pool and sell nothing.
-    The word is spliced into the existing ``regions`` line rather than the line
-    being rewritten, so the tab columns the file is laid out in survive.
-    """
-    low = region.lower()
-    if pool and pool not in mf.regions_line:
-        raise CampFileError(f"there is no pool called {pool!r} in {MERCS_NAME}")
-    sp = kb.Splice(list(mf.lines))
-    touched = False
-    for p in mf.pools:
-        at = mf.regions_line.get(p.name, -1)
-        if at < 0:
-            continue
-        here = [r for r in p.regions if r.lower() == low]
-        want = p.name == pool
-        if bool(here) == want:
-            continue
-        kept = [r for r in p.regions if r.lower() != low]
-        if want:
-            kept.append(region)
-        if kept:
-            sp.replace(at, set_regions(mf.lines[at], kept))
-        else:
-            # `regions` with nothing after it is not a line any real file
-            # writes, so the pool loses the line rather than keeping an empty one
-            sp.drop(at)
-        touched = True
-    if pool and mf.regions_line.get(pool, -1) < 0:
-        # a pool with no regions line at all: give it one, under its `pool` line
-        at = mf.pool_line[pool]
-        indent = kb.indent_of(mf.lines[at + 1]) if at + 1 < len(mf.lines) else "\t"
-        sp.after(at, [f"{indent or chr(9)}regions {region}"])
-        touched = True
-    if not touched:
-        return mf.text()
-    out = sp.result()
-    text = mf.newline.join(out)
-    return text + mf.newline if mf.trailing_newline and out else text
+    """:func:`unittransfer.mercpools.move_region`, refusing in this module's terms."""
+    try:
+        return mercpools.move_region(mf, region, pool)
+    except mercpools.MercError as e:
+        raise CampFileError(e.message)
 
 
 def mercs_view(mod, campaign: str = DEFAULT_CAMPAIGN,
@@ -761,10 +658,10 @@ def mercs_view(mod, campaign: str = DEFAULT_CAMPAIGN,
     except CampFileError as e:
         return {"campaign": campaign, "file": MERCS_NAME, "have": False,
                 "problem": e.message, "pools": [], "pool": "", "units": []}
-    pools = [{"name": p.name, "regions": len(p.regions), "units": list(p.units)}
+    pools = [{"name": p.name, "regions": len(p.regions), "units": p.unit_names}
              for p in mf.pools]
     here = mf.pool_of(region) if region else ""
-    units = next((list(p.units) for p in mf.pools if p.name == here), [])
+    units = next((p.unit_names for p in mf.pools if p.name == here), [])
     return {"campaign": campaign, "file": MERCS_NAME, "have": True, "problem": "",
             "pools": pools, "pool": here, "units": units,
             "warnings": list(mf.warnings)}
