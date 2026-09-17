@@ -775,7 +775,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~13~~ | ~~**36** D1, change a region's colour~~ | M | beta | **done 2026-09-16** |
 | ~~14~~ | ~~**37a** T7, the spawn export~~ | M | beta | **done 2026-09-16** |
 | ~~15~~ | ~~**37b** T3, an FE zoom~~ | M | beta | **done 2026-09-16** |
-| 16 | **38** `descr_campaign_db.xml` | M | **both** | 4 |
+| ~~16~~ | ~~**38** `descr_campaign_db.xml`~~ | M | **both** | **done 2026-09-17** |
 
 ### Block two - the mercenaries
 
@@ -791,7 +791,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
 (2026-09-14), **41, 43, 28a, 28b, 33, 30 and 34 are done** (2026-09-15) and
-**35, 36, 37a and 37b are done** (2026-09-16); six remain, two of them subreleases. **43 was nearly all built already** - 16j shipped the
+**35, 36, 37a and 37b are done** (2026-09-16) and **38 is done** (2026-09-17); block one is finished and the four of block two remain, one of them a subrelease. **43 was nearly all built already** - 16j shipped the
 roster writer and the write-up had not checked - so what landed was the one
 sentence of it that was true, the refusal. **28a's scoping held in full**, and
 what it did not say was that the layer stack has to be capped or it takes the
@@ -2066,6 +2066,64 @@ does, and that is what the six archive documents are for.
 
 **Subrelease, both lines.** This is a data file rather than a map file, so it is
 a mode of its own and goes out on the 2.x line as well.
+
+### Done 2026-09-17 - a tab of Minor Files, typed by the file
+
+**The generated form held, and the file made it easier than the write-up
+thought.** Every value is one attribute and the attribute's name is the type:
+`uint`, `int`, `float`, `bool` and `string`, and nothing else on either
+installed mod. So there is no vocabulary to supply for the *boxes* at all - a
+tick for a bool, a checked text box for the rest - and a tag nobody here has
+seen gets the right one. The vocabulary the write-up asked for is only needed
+for what a tag *does*, and that is the part the archive can answer for a
+handful and no more.
+
+**Measured on the two mods now installed**, which are not the set the scoping
+counted: Divide and Conquer is 303 lines and 262 tags, Reforged 256 lines and
+217. The same 18 sections in the same order, no tag written twice, no element
+text, no tag with two attributes. **25 tags are in DaC and not in Reforged**,
+and one tag changes type between them (`crusade_called_start_turn`, `int` in
+DaC and `float` in Reforged). DaC writes `float = "1.0"` with spaces round the
+`=` on 19 lines; Reforged ends in CRLF. **There is no vanilla copy on this
+machine**, loose or packed, so nothing can say "back to the game's value".
+
+**ElementTree is the gate and not the parser.** It reads both files and would
+write back neither: comments, the spaces round `=`, a tab before a comment and
+the line endings would all be its own. The scan is line by line, a save
+replaces the characters between two quotes, and **a save whose text
+ElementTree cannot parse is refused**. Both real files round-trip byte for
+byte with no findings.
+
+**What the archive explains is fourteen tags, and those are the only ones with
+words under them.** The forts tutorial gives `can_build_forts`,
+`destroy_empty_forts` and `fort_fortification_level` - the permanence switch
+22a could not reach is `destroy_empty_forts false`, and **both installed mods
+already have it and have `can_build_forts false`**. The piety tutorial gives
+the Britannia mode, `alternative_religious_unrest` and its three `alt_rel_`
+values, printed whole; the ransom tutorial gives the captor and captive
+chances, printed in a quote box too mangled to trust for a default. **A
+documented tag the file does not write is offered as an add** only where a
+document prints its line whole, which is seven of the fourteen: **Reforged
+lacks all four piety tags**, DaC has them on. Nothing else is addable, because
+a default nobody documented is a guess written into somebody's mod.
+
+**Where it went.** A tab on the Minor Files strip, after Guilds, as a mode of
+its own the way Guilds is, rather than a Campaign Map panel: it is not a map
+file and it ships on the 2.x line. A section list on the left with changed
+counts, the search box across every tag and note, the mod's own comment beside
+its tag, and one Save that previews every change before it writes. Raw text
+picks the file up with no change, because it reads `modfiles.KNOWN`.
+
+**One shipped defect found beside it, by reading and not reproduced**: switching
+mod inside Guilds cleared every other mode's state and not `state.gu`, so the
+previous mod's guilds could still be on screen under the new mod's name. It is
+cleared with the rest now.
+
+New: `unittransfer/campdb.py` (`parse_text`, `check_value`, `check_file`,
+`overview`, `plan`, `apply`, `VOCAB`, `CampDbPlan`), `GET /api/campdb`,
+`POST /api/campdb/plan|apply`, the `campdb` entry in `modfiles.MODULES` and
+`KNOWN`, `web/js/campdb.js`, the `campdb` mode and tab in `core.js`, the `.cdb*`
+styles. `tests/test_campdb.py` 50/50, new; `tests/test_web_modules.py` 105/105.
 
 ## Phase 39 - The engine ceilings, on the screens that write them
 

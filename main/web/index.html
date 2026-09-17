@@ -2592,6 +2592,28 @@
   .trgrid{display:grid;grid-template-columns:170px 1fr;gap:6px 10px;align-items:center}
   .trgrid input,.trgrid select{width:100%}
   .trhint{font-size:11px;margin-top:3px}
+  /* 38: campaign constants. One row a tag - name, the type the file declares,
+     the box, then whatever the mod's comment or the archive says about it */
+  .cdbhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+    position:sticky;top:0;z-index:2;background:var(--bg);padding:4px 0 8px}
+  .cdbsec h3{font-family:Consolas,monospace;font-size:13px;margin:10px 0 4px;color:var(--dim)}
+  .cdbrow{display:grid;grid-template-columns:minmax(180px,300px) 48px 150px 1fr;gap:4px 10px;
+    align-items:center;padding:3px 6px;border-top:1px solid var(--edge);font-size:12px}
+  .cdbrow.on{background:var(--panel2);box-shadow:inset 3px 0 0 var(--accent)}
+  .cdbrow.flash{outline:2px solid var(--accent);outline-offset:-2px}
+  .cdbname{overflow-wrap:anywhere}
+  .cdbtype{font-size:10.5px;color:var(--dim);font-family:Consolas,monospace}
+  .cdbbox{display:flex;gap:6px;align-items:center}
+  .cdbbox input[type=text]{width:90px;font-family:Consolas,monospace}
+  .cdbbox input.bad{border-color:var(--bad,#b4442e)}
+  .cdbwhy{color:var(--dim);font-size:11.5px}
+  .cdbdoc{color:var(--ink)}
+  .cdbnote{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);
+    padding:8px 6px 2px}
+  .cdbmiss{margin:4px 0 8px}
+  .cdbadd{padding:4px 0;font-size:12px}
+  .cdbadd button.on{border-color:var(--accent);background:var(--panel2)}
+  @media (max-width:760px){.cdbrow{grid-template-columns:1fr auto}.cdbwhy{grid-column:1/-1}}
   /* 18a: the guild point table, and the faction-fact rows on the campaign
      screen. Both are read-mostly grids of short values, so they share one rule
      rather than each inventing a layout. */
@@ -2827,6 +2849,7 @@
 <script src="js/traits.js"></script>
 <script src="js/ancillaries.js"></script>
 <script src="js/guilds.js"></script>
+<script src="js/campdb.js"></script>
 <script src="js/portui.js"></script>
 <script src="js/minorfiles.js"></script>
 <script src="js/factions.js"></script>

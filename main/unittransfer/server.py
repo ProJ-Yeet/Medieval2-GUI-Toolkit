@@ -419,6 +419,12 @@ file the building side has refused against since Phase 12 and could not open.
   POST /api/guilds/plan|/apply   -> add, edit or delete a guild and its triggers
                                     (one backup set + undo)
 
+Campaign constants (38, see :mod:`unittransfer.campdb`). ``descr_campaign_db.xml``.
+  GET  /api/campdb?mod=          -> every section and tag, typed off its own
+                                    attribute, with what the archive says of it
+  POST /api/campdb/plan|/apply   -> set values, or add a documented tag
+                                    (one backup + undo)
+
 The campaign folder's small files (18a, see :mod:`unittransfer.campfiles`)
   GET  /api/campfiles/descriptions?mod=&campaign=
                                  -> the campaign's menu title and one row a
@@ -543,7 +549,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campevents, campfiles, campmap, campnew, campstrat, cas, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1979,6 +1985,16 @@ class Handler(BaseHTTPRequestHandler):
                         mod, (q.get("name") or [""])[0]))
                 except guilds.GuildError as e:
                     return self._err(404, e.message)
+            if u.path == "/api/campdb":
+                # 38. One small file, read whole: the page builds its form off
+                # the types the file itself declares.
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                try:
+                    return self._json(campdb.overview(self.registry.get(name)))
+                except campdb.CampDbError as e:
+                    return self._err(404, e.message)
             if u.path in ("/api/campfiles/descriptions",
                           "/api/campfiles/movies",
                           "/api/campfiles/mercenaries"):
@@ -2291,6 +2307,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._minor(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/guilds/plan", "/api/guilds/apply"):
                 return self._json(self._guilds(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/campdb/plan", "/api/campdb/apply"):
+                return self._json(self._campdb(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/campfiles/plan", "/api/campfiles/apply"):
                 return self._json(self._campfiles(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/campevents/plan", "/api/campevents/apply"):
@@ -2637,6 +2655,23 @@ class Handler(BaseHTTPRequestHandler):
             out["error"] = "nothing to change"
             return out
         out.update(guilds.apply(plan))
+        self.registry.invalidate(body["mod"])       # the file changed on disk
+        return out
+
+    # ---- campaign constants (38) ----
+    def _campdb(self, action, body):
+        """Preview or write descr_campaign_db.xml - the guilds handler's shape."""
+        try:
+            mod = self.registry.get(body["mod"])
+            plan = campdb.plan(mod, body)
+        except (KeyError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        out.update(campdb.apply(plan))
         self.registry.invalidate(body["mod"])       # the file changed on disk
         return out
 

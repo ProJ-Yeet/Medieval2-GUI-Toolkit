@@ -687,6 +687,7 @@ const MODES=[
   {id:'traits',   icon:'🎖', name:'Traits',        sub:true, hint:'Character traits, their levels and the triggers that give them'},
   {id:'ancillaries',icon:'🏅', name:'Ancillaries',  sub:true, hint:'The items and followers a character picks up'},
   {id:'guilds',   icon:'⚖', name:'Guilds',       sub:true, hint:'What each guild grants, and the triggers that earn its points'},
+  {id:'campdb',   icon:'⚙', name:'Campaign constants', sub:true, hint:'descr_campaign_db.xml: the campaign-wide numbers, forts, piety and ransom'},
   {id:'factions', icon:'🛡', name:'Factions',      sub:true, hint:'Each faction’s culture, religion, colours and horde'},
   {id:'strings',  icon:'🔤', name:'Strings',       sub:true, hint:'The compiled text files the game actually reads'},
 ];
@@ -713,6 +714,7 @@ const MINOR_TABS=[
   {mode:'traits',      label:'Traits'},
   {mode:'ancillaries', label:'Ancillaries'},
   {mode:'guilds',      label:'Guilds'},
+  {mode:'campdb',      label:'Campaign constants'},
   // A faction is two files - what it IS (descr_sm_factions.txt) and what it
   // starts the campaign WITH (descr_strat.txt). 17f put both on one screen
   // inside the Campaign Map and pointed this tab at it; that route was reverted
@@ -1258,6 +1260,7 @@ function wire(){
     if(state.mode!=='transfer'){state.src=state.dst=v;dstSel.value=v;state.destData=null;
       state.cfg={};state.bmdb=null;state.snd=null;state.destSnd=null;state.str=null;
       state.tr=null;state.an=null;state.mf=null;state.fac=null;state.fau=null;
+      state.gu=null;state.cdb=null;
       state.bld=null;state.bldReturn=null;state.rt=null;
       // the mirrored destination is not the user's transfer pick - don't save it
       await api.post('/api/settings',{last_source:v,last_dest:state.xferDst||v});return loadSource();}
@@ -1326,7 +1329,7 @@ function applyMode(persist){
         snd=state.mode==='sounds', spr=state.mode==='sprites', bld=state.mode==='buildings',
         str=state.mode==='strings', trt=state.mode==='traits',
         anc=state.mode==='ancillaries', mnr=state.mode==='minor',
-        gld=state.mode==='guilds',
+        gld=state.mode==='guilds', cdb=state.mode==='campdb',
         fac=state.mode==='factions',
         raw=state.mode==='rawtext',
         home=state.mode==='home';
@@ -1359,11 +1362,11 @@ function applyMode(persist){
   sndBtn.style.display=snd?'inline-block':'none';
   unusedWrap.style.display=(bm||stm)?'inline-flex':'none';
   mercOnly.parentElement.style.display=
-    (bm||snd||spr||bld||str||trt||anc||gld||mnr||fac||raw||home||stm||crd||cmp)?'none':'inline-flex';
+    (bm||snd||spr||bld||str||trt||anc||gld||cdb||mnr||fac||raw||home||stm||crd||cmp)?'none':'inline-flex';
   // these bring their own filters - the sidebar's faction/era ones say nothing
   // about a voice entry, and nothing at all about a modeldb record or a sprite
   document.getElementById('unitFilters').style.display=
-    (bm||snd||spr||bld||str||trt||anc||gld||mnr||fac||raw||home||stm||crd||cmp)?'none':'';
+    (bm||snd||spr||bld||str||trt||anc||gld||cdb||mnr||fac||raw||home||stm||crd||cmp)?'none':'';
   document.getElementById('bldFilters').style.display=bld?'':'none';
   // Only offered while the unit editor is what you'd be going back FROM: in
   // buildings mode the building is already on screen.
@@ -1376,6 +1379,7 @@ function applyMode(persist){
                     :trt?'Search traits…'
                     :anc?'Search ancillaries and types…'
                     :gld?'Search guilds…'
+                    :cdb?'Search tags and notes…'
                     :mnr?'Search this file…'
                     :fac?'Search factions…'
                     :raw?'Search file names…':'Search…';
@@ -1460,6 +1464,7 @@ function render(){
   if(state.mode==='traits')return state.tr?renderTraits():loadTraits();
   if(state.mode==='ancillaries')return state.an?renderAncillaries():loadAncillaries();
   if(state.mode==='guilds')return state.gu?renderGuilds():loadGuilds();
+  if(state.mode==='campdb')return state.cdb?renderCampDb():loadCampDb();
   if(state.mode==='minor')return state.mf?renderMinor():loadMinor();
   if(state.mode==='factions')return state.fac?renderFactions():loadFactions();
   if(state.mode==='rawtext')return renderRawtext();
