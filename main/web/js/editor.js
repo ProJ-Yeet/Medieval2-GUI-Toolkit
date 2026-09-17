@@ -981,6 +981,7 @@ const LIST_FIELDS=new Set(['ownership','era 0','era 1','era 2']);
 function edFields(){
   const cv=state.ed.cv;
   return `<fieldset><legend>EDU fields, edited in place</legend>
+    ${edCeilHtml()}
     <div class="fieldbar">
       <input id="fieldFilter" placeholder="Filter fields…" oninput="filterFields()">
       ${gfToggleHtml()}${edCvToggleHtml()}
@@ -990,6 +991,18 @@ function edFields(){
       <div class="cvgui" id="edFieldsCol">${edFieldsCol()}</div>
       ${cv?`<div id="edCodeCol">${cvHtml(cv)}</div>`:''}
     </div></fieldset>`;
+}
+/* 39: the engine's ceilings this unit is past, as the file on disk has it. A
+   line, never a refusal - an HP of 30 is read as 15 and the game still loads -
+   and each one names the Medieval II document it comes from, because the list
+   the phase was scoped from turned out to be Rome's. An edit that goes past one
+   says so again in the save preview. */
+function edCeilHtml(){
+  const d=state.ed.d||{}, rows=(d.ceilings||[]).concat(d.roster_ceilings||[]);
+  if(!rows.length)return '';
+  return `<div class="trnote w-warn edceil"><b>Past the engine's ceiling</b>
+    ${rows.map(f=>`<div>${esc(f.message)} <span class="count">(${esc(f.source)})</span></div>`).join('')}
+  </div>`;
 }
 // Just the boxes - redrawn on its own when the text pane re-reads the block,
 // because redrawing the whole tab would take the caret out of the text.

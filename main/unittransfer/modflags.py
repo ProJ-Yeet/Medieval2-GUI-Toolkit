@@ -52,6 +52,7 @@ CAP_FINDINGS = frozenset({
     "too-many-effects",         # one ancillary: 8 Effect lines
     "recruit-limit",            # one building: 32 recruitment slots
     "recruit-limit-always",
+    "too-many-units",           # export_descr_unit.txt: 500 units (39)
 })
 
 #: settings.json key for the table below

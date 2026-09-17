@@ -784,14 +784,14 @@ on, then stars, then size.** That is four rules and each one earns its place.
 | ~~17~~ | ~~**32a** The pool as a record, and one parser for it~~ | M | beta | **done 2026-09-17** |
 | ~~18~~ | ~~**32b** The two directions, and the four gates resolved~~ | M | beta | **done 2026-09-17** |
 | ~~19~~ | ~~**32c** Five rules, and the repair for the one that has a safe answer~~ | M | beta | **done 2026-09-17** |
-| 20 | **39** The engine ceilings | M | **both** | 4 and 3 |
+| ~~20~~ | ~~**39** The engine ceilings~~ | M | **both** | **done 2026-09-17** |
 
 **Twenty sessions, and six of them are subreleases.** 29, 40, 42, 41, 38 and
 39 touch something outside the campaign map, so each is a subrelease on both
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
 (2026-09-14), **41, 43, 28a, 28b, 33, 30 and 34 are done** (2026-09-15) and
-**35, 36, 37a and 37b are done** (2026-09-16) and **38 is done** (2026-09-17); block one is finished; **32a, 32b and 32c are done** (2026-09-17) and 39 is the last of block two, a subrelease. **43 was nearly all built already** - 16j shipped the
+**35, 36, 37a and 37b are done** (2026-09-16) and **38 is done** (2026-09-17); block one is finished, and **block two is finished too: 32a, 32b, 32c and 39 all closed 2026-09-17**. Both blocks the user set are done; Phases 44 to 48 are next by their own table. **43 was nearly all built already** - 16j shipped the
 roster writer and the write-up had not checked - so what landed was the one
 sentence of it that was true, the refusal. **28a's scoping held in full**, and
 what it did not say was that the layer stack has to be capped or it takes the
@@ -2293,6 +2293,52 @@ knows which mods are marked for it, and a limit that EOP replaces is reported as
 replaced rather than as broken.
 
 **Subrelease, both lines**, because the EDU half is the unit editor's.
+
+### Done 2026-09-17 - the list was Rome's, and Medieval II's is shorter
+
+**The document this phase was scoped from is the Rome: Total War thread.** Its
+title is *[Modding] RTW: List of Hardcoded Limits*, its faction limit is 21 and
+its hidden resources mention Rome and the Marian reforms. Built as scoped, its
+"men per unit, max 60" flagged **300 of DaC's units and 113 of Reforged's**,
+on two mods that play. The five places that harvested it before had adapted
+their numbers (31 factions, not 21); the EDU half never was.
+
+**So every number now has a Medieval II source in the archive, and the rest are
+not checked.**
+
+| ceiling | source |
+|---|---|
+| 500 units in the file (M2EX lifts it) | *A Beginner's Guide to the Export_Descr_Unit* |
+| 4 to 100 men | the same guide ("the smallest possible is 4, the largest 100") |
+| attack capped at 63, either weapon | the same guide |
+| up to three officers, three mount effects | the same guide |
+| two formations, one square or horde and one shield_wall, phalanx, schiltrom or wedge | the same guide |
+| stat_health 0 to 15, both values | *M2TW Ultimate Docudemons 5.3*, Character Attributes |
+
+**Not checked, because only Rome's list says so:** charge, armour and defence
+63, shield 31, 244 turns to build, 100 units a faction, 31 men in a bodyguard.
+
+**Measured with the Medieval II set:** DaC 29 of 924 units (20 over 100 men,
+8 secondary attacks over 63, 2 HP), and its 924-unit file is lifted because it
+is marked M2EX; Reforged 6 of 427 - the Mumakil at 30 and 25 HP, Stone Giants
+at attack 100 and 20 HP, a ballista at attack 100, and two units whose
+formations are `square, horde`.
+
+**The 20,000-face campaign model limit is dropped too.** It is the same RTW
+list, and DaC ships three strat models at 30,252 faces - its evil Minas Tirith
+among them. The count itself was already there: the 3D viewer prints vertices
+and triangles for every model it opens, strat ones included, so that half
+needed no code.
+
+**Where it shows.** The unit editor's EDU fields tab carries a *Past the
+engine's ceiling* note naming each document, and a save's preview warns about
+a ceiling **the edit crosses** and not one the unit was already past. Nothing
+is refused. `too-many-units` joined `modflags.CAP_FINDINGS`.
+
+New: `unittransfer/educeil.py` (`unit_findings`, `mod_findings`, `report`),
+`ceilings` and `roster_ceilings` on `edit.unit_detail`, the warning in
+`edit.plan_edit`, `edCeilHtml` in `editor.js`. `tests/test_educeil.py` 24/24,
+new; `test_edit` 60/60, `test_modflags` 22/22, `test_codeview` 141/141.
 
 ## Phase 40 - The new province the engine cannot read - DONE 2026-09-13
 

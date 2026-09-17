@@ -40,7 +40,7 @@ from typing import Dict, List, Optional, Tuple
 
 from . import config
 from . import edu as edu_mod
-from . import eop, localization, modeldb, unitrefs
+from . import educeil, eop, localization, modeldb, modflags, unitrefs
 from .logutil import counted, file_op, fingerprint, log, stamp_written
 from .mod import Mod
 # where a unit falls back to when card_pic_dir / info_pic_dir isn't pinned; shared
@@ -690,6 +690,14 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
         plan.changes.append(f"dictionary '{unit.dictionary}' -> '{req.new_dictionary}'")
 
     plan.edu_block = block
+    # 39: the engine's ceilings, as warnings and only the ones this save
+    # introduces - a unit already past one is somebody else's decision, and
+    # saying so on every save of an unrelated field would bury the ones that
+    # are new
+    before = {f["message"] for f in educeil.unit_findings(unit.raw, unit.type)}
+    for f in educeil.unit_findings(block, req.new_type or unit.type):
+        if f["message"] not in before:
+            plan.warnings.append(f"engine ceiling: {f['message']} ({f['source']})")
     # A renamed entry has to be chased through the WHOLE file: any other unit
     # still naming the old entry would point at nothing once it's gone.
     if plan.entry_renames:
@@ -1668,6 +1676,10 @@ def unit_detail(mod: Mod, unit_type: str) -> dict:
         "icon_variants": icon_variants(mod, unit.dictionary),
         "known_fields": edu_mod.CANONICAL_ORDER,
         "unit_count": len(mod.edu.units),
+        # 39: what this unit is past, and the file's own ceiling unless M2EX
+        # lifts it. Shown, never enforced.
+        "ceilings": educeil.unit_findings(unit.raw, unit.type),
+        "roster_ceilings": modflags.uncapped(educeil.mod_findings(mod.edu.units), mod),
         # the faction checklists (EDU ownership/eras, and a model's skins) offer
         # every faction the mod knows about, not just the ones this unit has
         "all_factions": all_factions,
