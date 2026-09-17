@@ -783,7 +783,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 |---|---|---|---|---|
 | ~~17~~ | ~~**32a** The pool as a record, and one parser for it~~ | M | beta | **done 2026-09-17** |
 | ~~18~~ | ~~**32b** The two directions, and the four gates resolved~~ | M | beta | **done 2026-09-17** |
-| 19 | **32c** Five rules, and the repair for the one that has a safe answer | M | beta | 5 (the repairs) |
+| ~~19~~ | ~~**32c** Five rules, and the repair for the one that has a safe answer~~ | M | beta | **done 2026-09-17** |
 | 20 | **39** The engine ceilings | M | **both** | 4 and 3 |
 
 **Twenty sessions, and six of them are subreleases.** 29, 40, 42, 41, 38 and
@@ -791,7 +791,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
 (2026-09-14), **41, 43, 28a, 28b, 33, 30 and 34 are done** (2026-09-15) and
-**35, 36, 37a and 37b are done** (2026-09-16) and **38 is done** (2026-09-17); block one is finished; **32a and 32b are done** (2026-09-17) and two of block two remain, one of them a subrelease. **43 was nearly all built already** - 16j shipped the
+**35, 36, 37a and 37b are done** (2026-09-16) and **38 is done** (2026-09-17); block one is finished; **32a, 32b and 32c are done** (2026-09-17) and 39 is the last of block two, a subrelease. **43 was nearly all built already** - 16j shipped the
 roster writer and the write-up had not checked - so what landed was the one
 sentence of it that was true, the refusal. **28a's scoping held in full**, and
 what it did not say was that the layer stack has to be capped or it takes the
@@ -1469,6 +1469,47 @@ pools a province should be in is a choice, so the fix offers both and the user
 picks; there is no safe automatic answer to "which mercenary did you mean" or
 "which unit did you mean to name". 16f's three auto-fixes are the shape for
 the one, and `rtOpen(rel, line)` is the escape hatch for the rest.
+
+### 32c done 2026-09-17 - six rules, and the repair is a choice
+
+**Six rules, not five**, every one a warning. The sixth is
+`merc.year_outside`, because 32b's join found the fault and it had no rule:
+a line whose `start_year` is after the campaign ends, or `end_year` before it
+starts. `merc.religion_unknown` covers `factions { }` names too.
+
+**Measured on every campaign here, and the table above did not hold:**
+
+| code | DaC | Reforged imperial | Fellowship |
+|---|---|---|---|
+| `merc.unit_unknown` | 0 | 0 | **49 lines** (28 names) |
+| `merc.region_twice` | 0 | 0 | 1 (`Mt-Gram_Province`) |
+| `merc.region_unknown` | 0 | 0 | 0 |
+| `merc.religion_unknown` | 0 | 0 | 0 |
+| `merc.event_unknown` | **4** | 0 | 0 |
+| `merc.year_outside` | 0 | **2** | 0 |
+
+"2 in DaC, 33 in TAR" was names measured against an older install; DaC's two
+are in its EDU now, and Reforged's imperial campaign has none. **The event rule
+reads 32b's `event_sources`, not descr_events.txt alone** - read the way the
+scoping wrote it, every one of DaC's 61 event gates would be a finding, because
+its events are set by `set_event_counter` in the script.
+
+**The repair is not an auto-fix.** `FIXES` acts on a rule's findings without
+asking anything, and which pool a province stays in has no safe answer. So the
+Mercenaries panel lists each province in two pools with a **Keep in X** button
+per pool, and that is 32a's `region_move`, backed up and undoable like every
+other move. The finding's message says where to go.
+
+**A rule with nothing to read is silent.** The first draft reported a skip for
+the EDU and the religions on `test_mapcheck`'s fixture mod, which has neither
+and no mercenary file either; the four rules that need them now look for a
+line to check first. `test_mapcheck`'s timing bar was already red on the old
+code (1,144 ms) and reads 1,048 and 1,888 ms with the six rules added; the EDU
+read is most of what they cost.
+
+New: `mapcheck._r_merc_*` and `_merc_file`/`_merc_lines`, `mcpKeepIn` and
+`mcpRegionName`; the Rules sub-tab's title counts 41 rules. `test_mercpools`
+109/109, `test_web_modules` 114/114, `test_mapcheck` 95/97 (the timing bar).
 
 ### What this is not
 

@@ -512,6 +512,11 @@ check("a save goes through the 32a plan, then apply",
       and mercs_js.index("'/api/mercpools/plan'") < mercs_js.index("'/api/mercpools/apply'"))
 check("and it reopens the region record, whose pool box reads the same file",
       "cmapOpenRegion(name)" in mercs_js)
+check("32c: a province in two pools is offered both, through region_move",
+      "mcpKeepIn(" in mercs_js and "action: 'region_move', region, pool" in mercs_js)
+from unittransfer import mapcheck                                    # noqa: E402
+check("the Rules sub-tab's title counts the rules there really are",
+      f"'The {len(mapcheck.RULES)} rules, their severity" in campmap_js)
 
 print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

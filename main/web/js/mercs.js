@@ -199,11 +199,18 @@ function mcpNotesHtml(d){
     unit in the EDU, so no faction can hire ${dead.length === 1 ? 'it' : 'them'}:
     ${dead.slice(0, 6).map(x => `<code>${esc(x)}</code>`).join(', ')}${
     dead.length > 6 ? ` and ${dead.length - 6} more` : ''}.</div>`);
+  // 32c's one repair. Which pool a province stays in is a choice, so it is
+  // offered both ways and goes through 32a's region_move like any other move
   const two = Object.entries(d.in_two || {});
   if(two.length) out.push(`<div class="w-warn">${two.length} province${
     two.length === 1 ? ' is' : 's are'} in more than one pool, which the file's
-    own header forbids: ${two.map(([r, p]) => `${esc(r)} (${p.map(esc).join(', ')})`).join('; ')}.
-    The Validate tab offers the repair.</div>`);
+    own header forbids. Keep each in one:
+    ${two.map(([low, pools]) => {
+      const name = mcpRegionName(d, low);
+      return `<div class="cmbar2"><code>${esc(name)}</code><span class="sp"></span>${
+        pools.map(p => `<button onclick="mcpKeepIn('${q1(esc(name))}', '${q1(esc(p))}')"
+          title="Take ${esc(name)} out of every other pool">Keep in ${esc(p)}</button>`).join('')}</div>`;
+    }).join('')}</div>`);
   return out.join('');
 }
 
@@ -463,6 +470,20 @@ async function mcpWrite(body, what){
   // the Region tab's pool box reads the same file
   const c = state.cmap;
   if(c && c.det){ const name = c.det.name; c.det = null; cmapOpenRegion(name); }
+}
+
+//: `in_two` is keyed lower case; the file's own spelling is what gets written
+function mcpRegionName(d, low){
+  for(const p of d.pools || []){
+    const hit = p.regions.find(r => r.toLowerCase() === low);
+    if(hit) return hit;
+  }
+  return low;
+}
+
+async function mcpKeepIn(region, pool){
+  await mcpWrite({action: 'region_move', region, pool},
+                 `keep ${region} in ${pool} alone`);
 }
 
 async function mcpSave(){

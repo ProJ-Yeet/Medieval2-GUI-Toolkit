@@ -8,9 +8,18 @@ uncut** on top of them. **Releasing is on-request only**: commit to master and
 stop_
 
 _2026-09-17: **Phase 50**, the **`187d9ed..439aa9b` upstream review** and
-**Phases 38, 32a and 32b** are on top of that, all committed and uncut._
+**Phases 38, 32a, 32b and 32c** are on top of that, all committed and uncut._
 
 ## Next up
+**Phase 32c is done - six mercenary rules and the two-pools repair, closed
+2026-09-17, beta line, committed and uncut.** 39 is next and last in the block.
+
+All six are warnings: Fellowship 49 unit lines not in the EDU and
+`Mt-Gram_Province` in two pools, Reforged imperial 2 years outside the
+campaign, DaC 4 events nothing in its campaign folder sets. The repair is a
+**Keep in X** button per pool on the Mercenaries panel, through `region_move`,
+because which pool is a choice. Write-up under *32c done* in `ROADMAP.md`.
+
 **Phase 32b is done - who can hire what, and where, closed 2026-09-17, beta
 line, committed and uncut.** The user asked for the whole mercenary block, so
 32c and 39 follow straight on.
@@ -1024,6 +1033,7 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
+| 32c - six rules, one repair | **done** | Closed 2026-09-17, committed, **not cut** (beta only). `merc.unit_unknown`, `region_twice`, `region_unknown`, `religion_unknown` (factions too), `event_unknown` (through `event_sources`, or DaC's 61 script-set events would all be findings), `year_outside`; all warnings. Repair: `mcpKeepIn`, per pool, through `region_move`. Scoped counts did not hold (DaC 0 unknown units, not 2). `test_mercpools` 109/109, `test_mapcheck` 95/97 (timing bar, red before). |
 | 32b - both directions, five gates | **done** | Closed 2026-09-17, committed, **not cut** (beta only). `mercpools.hire_view`/`gates`/`event_sources`/`faction_rows`/`campaign_years`; `GET /api/map/mercs`; `mapquery.info_merc_count`, `info_merc_any`, `merc:<unit>`; `web/js/mercs.js` as the Province tab's Mercenaries sub-tab, with edit/add/remove through 32a. Events traced to the script line that sets them (DaC `ND_BOH`, `campaign_script.txt` 10765). Fixed on the way: `faction egypt, spawned_on_event` lost its religion. `test_mercpools` 102/102, `test_web_modules` 112/112. |
 | 32a - the pool as a record, one parser | **done** | Closed 2026-09-17, committed, **not cut** (beta only). `unittransfer/mercpools.py` owns `descr_mercenaries.txt`: `parse_unit` keeps all five fixed fields and six optionals with their character spans, `set_field` splices one value (a value set to itself is untouched, `0.10` included), six plan actions with a gate that refuses a save touching a record it did not name. `mapquery.parse_mercenaries` and `campfiles.parse_mercs`/`MercFile`/`set_regions`/`move_region` are calls into it. Found: `factions { }`, undocumented, on 41 of Fellowship's 51 lines - 32b has five gates. `GET /api/mercpools`, `POST /api/mercpools/plan\|apply`. `tests/test_mercpools.py` 73/73, new. |
 | 38 - `descr_campaign_db.xml` | **done** | Closed 2026-09-17, committed, **not cut** (both lines when a cut happens). A Minor Files tab and a mode of its own, like Guilds. The form is typed off each tag's own attribute; `campdb.VOCAB` holds the fourteen tags the archive explains and nothing guessed, and the seven it prints whole are the only addable ones. Line scan and a splice between quotes, ElementTree as the gate on save. DaC 262 tags, Reforged 217, both round-trip with no findings; Reforged lacks the four piety tags; no vanilla copy on disk. `state.gu` now cleared on a mod switch. New: `unittransfer/campdb.py`, `GET /api/campdb`, `POST /api/campdb/plan\|apply`, `web/js/campdb.js`, `campdb` in `modfiles`. `tests/test_campdb.py` 50/50, new; `tests/test_web_modules.py` 105/105. |

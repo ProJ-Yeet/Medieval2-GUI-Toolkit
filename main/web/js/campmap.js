@@ -179,7 +179,7 @@ const CMAP_TABS = [
       title: 'What reading the map already found wrong with it'},
      {id: 'rules', label: 'Rules', panels: ['cmCheck'],
       open: {fn: 'cchkToggle', at: 'cchk'},
-      title: 'The 32 rules, their severity, the baseline and the auto-fixes'},
+      title: 'The 41 rules, their severity, the baseline and the auto-fixes'},
    ]},
   {id: 'query', label: 'Query', icon: '\u2315',
    title: 'Ask the map a question and colour the provinces by the answer',

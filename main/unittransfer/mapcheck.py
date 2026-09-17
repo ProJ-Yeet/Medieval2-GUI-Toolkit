@@ -1499,6 +1499,198 @@ def _r_event_position(ck: Check) -> Iterable[Finding]:
 
 
 # ---------------------------------------------------------------------------
+# 32c) the mercenary pools
+#
+# Six rules over descr_mercenaries.txt, every one of them a warning: the file
+# is somebody else's mod with somebody else's faults in it, Fellowship alone
+# names 28 units its EDU does not have, and a validator that blocks on
+# inherited faults is one nobody opens twice. The baseline is what quietens
+# them, the same as every other rule here.
+#
+# Only one has a repair, and it is not an auto-fix: which of two pools a
+# province should stay in is a choice, so the Mercenaries panel offers both
+# and the move goes through mercpools' own `region_move`. The rest name the
+# line, and the line is what the Raw text screen opens.
+
+
+def _merc_file(ck: Check):
+    """``(file, rel)`` for this campaign's pools, or ``(None, rel)``."""
+    from . import mercpools
+    rel = f"{campstrat.CAMPAIGN_DIR_REL}/{ck.campaign}/{mercpools.MERCS_NAME}"
+    if not hasattr(ck, "_mercs"):
+        try:
+            ck._mercs = mercpools.read(ck.mod, ck.campaign)[0]
+        except (mercpools.MercError, OSError, ValueError):
+            ck._mercs = None
+    return ck._mercs, rel
+
+
+def _merc_lines(ck: Check):
+    mf, rel = _merc_file(ck)
+    if mf is None:
+        return
+    for p in mf.pools:
+        for u in p.units:
+            yield rel, p, u
+
+
+@rule("merc.unit_unknown", "A mercenary naming no unit in the EDU", "warn",
+      "Phase 32 measurement: the engine looks the name up in "
+      "export_descr_unit.txt and a line whose unit is not there sells nothing")
+def _r_merc_unit_unknown(ck: Check) -> Iterable[Finding]:
+    lines = list(_merc_lines(ck))
+    if not lines:
+        return
+    try:
+        types = {u.type for u in ck.mod.edu.units}
+    except (OSError, AttributeError, ValueError) as exc:
+        ck.skip("export_descr_unit.txt", f"the EDU could not be read ({exc}), so "
+                                         "no mercenary's unit is checked")
+        return
+    for rel, p, u in lines:
+        if u.name and u.name not in types:
+            yield Finding(
+                "merc.unit_unknown", "warn",
+                f"pool `{p.name}` sells `{u.name}`, which is not a unit in this "
+                "mod's EDU, so nobody can ever hire it",
+                file=rel, line=u.line + 1, what=f"{p.name}|{u.name}")
+
+
+@rule("merc.region_twice", "A province in more than one mercenary pool", "warn",
+      "descr_mercenaries.txt's own header: each region can only be present once "
+      "in the whole file")
+def _r_merc_region_twice(ck: Check) -> Iterable[Finding]:
+    mf, rel = _merc_file(ck)
+    if mf is None:
+        return
+    where: Dict[str, List] = {}
+    for p in mf.pools:
+        for r in p.regions:
+            where.setdefault(r.lower(), []).append((r, p))
+    for low, hits in where.items():
+        if len({p.name for _, p in hits}) < 2:
+            continue
+        name = hits[0][0]
+        pools = [p.name for _, p in hits]
+        yield Finding(
+            "merc.region_twice", "warn",
+            f"`{name}` is in {len(pools)} pools ({', '.join(pools)}). The file says a "
+            "province may be in one; the Mercenaries panel keeps it in the pool "
+            "you pick",
+            file=rel, line=(hits[1][1].regions_lines[0] + 1
+                            if hits[1][1].regions_lines else 0),
+            what=f"{low}")
+
+
+@rule("merc.region_unknown", "A mercenary pool naming no province", "warn",
+      "Phase 32: a regions line is matched against descr_regions.txt by name")
+def _r_merc_region_unknown(ck: Check) -> Iterable[Finding]:
+    mf, rel = _merc_file(ck)
+    if mf is None or not mf.pools:
+        return
+    try:
+        known = {r.name.lower() for r in ck.cm.regions.records}
+    except (MapError, OSError, AttributeError) as exc:
+        ck.skip("descr_regions.txt", f"{exc}, so no pool's provinces are checked")
+        return
+    for p in mf.pools:
+        for r in p.regions:
+            if r.lower() not in known:
+                yield Finding(
+                    "merc.region_unknown", "warn",
+                    f"pool `{p.name}` names `{r}`, which is not a province in "
+                    "descr_regions.txt, so nothing is sold there",
+                    file=rel, line=(p.regions_lines[0] + 1 if p.regions_lines else 0),
+                    what=f"{p.name}|{r.lower()}")
+
+
+@rule("merc.religion_unknown",
+      "A mercenary gated on a religion or faction nothing declares", "warn",
+      "descr_mercenaries.txt's header: religions are faction religions; "
+      "descr_religions.txt and descr_sm_factions.txt declare them")
+def _r_merc_religion_unknown(ck: Check) -> Iterable[Finding]:
+    from . import factions as facfile, minorfiles
+    lines = list(_merc_lines(ck))
+    if not any(u.religions or u.factions for _, _, u in lines):
+        return
+    try:
+        religions = set(minorfiles.religion_names(ck.mod))
+    except (OSError, ValueError):
+        religions = set()
+    try:
+        rf = facfile.parse_file(facfile.path_for(ck.mod))
+        factions = {r.name.split(",")[0].strip().lower() for r in rf.records}
+    except (OSError, ValueError):
+        factions = set()
+    if not religions and not factions:
+        ck.skip("descr_religions.txt", "neither the religions nor the factions "
+                                       "could be read, so no mercenary gate is checked")
+        return
+    for rel, p, u in lines:
+        for r in (u.religions or []) if religions else []:
+            if r not in religions:
+                yield Finding(
+                    "merc.religion_unknown", "warn",
+                    f"`{u.name}` in pool `{p.name}` sells to the religion `{r}`, "
+                    "which descr_religions.txt does not declare, so that half of "
+                    "its list reaches nobody",
+                    file=rel, line=u.line + 1, what=f"{p.name}|{u.name}|religion|{r}")
+        for f in (u.factions or []) if factions else []:
+            if f.lower() != "all" and f.lower() not in factions:
+                yield Finding(
+                    "merc.religion_unknown", "warn",
+                    f"`{u.name}` in pool `{p.name}` sells to the faction `{f}`, "
+                    "which descr_sm_factions.txt does not declare",
+                    file=rel, line=u.line + 1, what=f"{p.name}|{u.name}|faction|{f}")
+
+
+@rule("merc.event_unknown", "A mercenary waiting on an event nothing sets", "warn",
+      "descr_mercenaries.txt's header: an event is a string from "
+      "descr_events.txt; scripts set the rest with set_event_counter")
+def _r_merc_event_unknown(ck: Check) -> Iterable[Finding]:
+    from . import mercpools
+    lines = list(_merc_lines(ck))
+    if not any(u.events for _, _, u in lines):
+        return
+    sources = mercpools.event_sources(ck.mod, ck.campaign)
+    for rel, p, u in lines:
+        for ev in u.events or []:
+            if ev.lower() not in sources:
+                yield Finding(
+                    "merc.event_unknown", "warn",
+                    f"`{u.name}` in pool `{p.name}` waits on `{ev}`, which neither "
+                    "this campaign's descr_events.txt nor its scripts set. A script "
+                    "outside the campaign folder may; if nothing does, the unit is "
+                    "never sold",
+                    file=rel, line=u.line + 1, what=f"{p.name}|{u.name}|{ev.lower()}")
+
+
+@rule("merc.year_outside", "A mercenary whose years fall outside the campaign",
+      "warn", "Phase 32 measurement: two of Reforged's lines start in 2986 in a "
+              "campaign that ends in 2984")
+def _r_merc_year_outside(ck: Check) -> Iterable[Finding]:
+    from . import mercpools
+    lines = list(_merc_lines(ck))
+    if not any(u.start_year or u.end_year for _, _, u in lines):
+        return
+    years = mercpools.campaign_years(ck.mod, ck.campaign)
+    start, end = years["start"], years["end"]
+    for rel, p, u in lines:
+        if u.start_year and end is not None and u.start_year > end:
+            yield Finding(
+                "merc.year_outside", "warn",
+                f"`{u.name}` in pool `{p.name}` is sold from {u.start_year}, and the "
+                f"campaign ends in {end}, so it never is",
+                file=rel, line=u.line + 1, what=f"{p.name}|{u.name}|start")
+        if u.end_year and start is not None and u.end_year < start:
+            yield Finding(
+                "merc.year_outside", "warn",
+                f"`{u.name}` in pool `{p.name}` is sold until {u.end_year}, and the "
+                f"campaign starts in {start}, so it never is",
+                file=rel, line=u.line + 1, what=f"{p.name}|{u.name}|end")
+
+
+# ---------------------------------------------------------------------------
 # running the lot
 
 

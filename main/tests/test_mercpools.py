@@ -400,6 +400,52 @@ check("merc:<unit> lights the provinces selling that unit",
 check("…and says so when nothing sells it",
       bool(mapquery.colouring(facts, "merc:Nobody").off))
 
+print("\n8  32c: the six rules, and the one repair")
+from unittransfer import campmap, mapcheck         # noqa: E402
+
+MERC_RULES = ("merc.unit_unknown", "merc.region_twice", "merc.region_unknown",
+              "merc.religion_unknown", "merc.event_unknown", "merc.year_outside")
+check("all six are registered, every one a warning",
+      all(mapcheck.RULE_BY_CODE[c].severity == "warn" for c in MERC_RULES))
+expect = {
+    ("Divide_and_Conquer_EUR", "imperial_campaign"):
+        {"merc.event_unknown": 4},
+    ("Third_Age_Reforged", "custom/Fellowship_Campaign"):
+        {"merc.unit_unknown": 49, "merc.region_twice": 1},
+    ("Third_Age_Reforged", "imperial_campaign"):
+        {"merc.year_outside": 2},
+}
+for (name, c), want in expect.items():
+    root = _realmod.MODS / name
+    if not (root / "data").is_dir():
+        continue
+    mod = Mod(root)
+    try:
+        cm = campmap.campaign_map(mod, c)
+    except Exception as exc:                          # noqa: BLE001
+        check(f"{name}/{c}: the map reads ({exc})", False)
+        continue
+    ck = mapcheck.Check(mod, cm, c)
+    got = {code: len(list(mapcheck.RULE_BY_CODE[code].fn(ck) or ())) for code in MERC_RULES}
+    check(f"{name}/{c}: {', '.join(f'{k} {v}' for k, v in want.items())}, nothing else",
+          got == {code: want.get(code, 0) for code in MERC_RULES})
+    if c.endswith("Fellowship_Campaign"):
+        two = list(mapcheck.RULE_BY_CODE["merc.region_twice"].fn(ck))[0]
+        check("…a finding's identity carries no line number",
+              "|" not in two.what and str(two.line) not in two.what)
+        # the repair: keep it in one pool, through region_move, on a copy
+        rel = mp.path_for(mod, c).relative_to(mod.data)
+        dest = tmp / "fellowship_repair"
+        (dest / "data" / rel).parent.mkdir(parents=True)
+        shutil.copy2(mod.data / rel, dest / "data" / rel)
+        pl = mp.plan(Mod(dest), {"campaign": c, "action": "region_move",
+                                 "region": "Mt-Gram_Province", "pool": "Gram"})
+        check("keeping Mt-Gram_Province in Gram alone plans", pl.payload()["ok"])
+        after = mp.parse_text(pl.text)
+        check("…and leaves it in exactly one pool, the one picked",
+              [q.name for q in after.pools
+               if any(r.lower() == "mt-gram_province" for r in q.regions)] == ["Gram"])
+
 print(f"\n{sum(ok)}/{len(ok)} checks"
       + (" - ALL PASSED" if all(ok) else f" - {ok.count(False)} FAILED"))
 sys.exit(0 if all(ok) else 1)
