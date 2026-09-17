@@ -46,7 +46,7 @@ one containing `mods`).
 | Traits / Ancillaries | Full editors for both, definitions and triggers together |
 | Guilds | `export_descr_guilds.txt`: what each guild grants, the point thresholds its tiers sit at, and every trigger that earns it points |
 | Factions | Faction definitions, with map colours edited via a colour picker. **Add a faction** clones a new slot out of one that already works, across all twelve files that name a faction; **Rename slot** follows the name through about twenty files, the length-prefixed texture records in the modeldb and the art the engine finds from the slot itself, and reports every line of campaign script naming it rather than editing one; **Is it complete?** checks one faction against every file that should name it, and copies what it is missing from a faction that has it |
-| Minor Files | Rebel factions, religions, cultures, resources and character names |
+| Minor Files | Rebel factions, religions, cultures, resources and character names, and **Campaign constants**: `descr_campaign_db.xml` as a form typed off the file itself, with what the archive's tutorials say about the forts, piety and ransom settings |
 | Raw text | Any text file the toolkit reads, opened as plain text and saved with the same backup and undo as every other screen - for the line no editor here models |
 
 ## The screens
@@ -214,6 +214,11 @@ Other transfer options:
   available on a toggle. Validation reports what the engine will actually do:
   attack above the cap of 63, a missile weapon with no ammunition, a secondary
   missile weapon (never fired), a model nothing defines, and similar.
+* **The engine's ceilings.** A unit past what Medieval II accepts - 4 to 100
+  men, attack 63, hit points 15, three officers, three mount effects, two
+  formations, 500 units in the file - carries a note on its fields tab naming
+  the document the number comes from, and a save that crosses one says so.
+  Nothing is refused, and a mod marked for M2EX is not held to the 500.
 * **Recruitment, from the unit.** A tab in the unit editor listing every
   building line in the mod that trains it, with all four pool numbers and the
   `requires` clause editable in place - the same `recruit_pool` lines the
@@ -308,6 +313,14 @@ Other transfer options:
   so, so the form is offered whether the text exists or not, and saving creates
   it. The four faction movies are on the same screen, and so is the mercenary
   pool a province hires from, over on the region panel.
+* **Who can hire which mercenary, and where.** Province → Mercenaries lists what
+  a province's pool sells with each unit's card, price and pool size and a
+  verdict for the faction you pick - can hire, not yet, never, or depends on a
+  script - with the reason: the unit missing from the EDU, the faction's
+  religion, a `factions { }` list, `crusading`, an event traced to the line that
+  sets it, or years outside the campaign. The other direction picks a mercenary
+  and lights every province selling it. A pool entry is edited in place, and six
+  Validate rules report dead unit names, provinces in two pools and the rest.
 * **The words the player actually reads.** A province, a settlement and a
   character are each named twice in a mod: a code name the files point at, and a
   line in a text file the game shows. Miss the second and the campaign map reads

@@ -1,16 +1,19 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-16 - **v2.3.3** is the latest 2.x and **beta 2026-09-16**
-the latest beta, both cut on request after **Phase 49** and carrying everything
-uncut since v2.3.2: the M2EX map-ceiling fix, the `replace_record` blank line it
-turned up, the two bugs a second report brought in, and **Phases 40, 31, 42, 41,
-43, 28a, 28b, 33, 30, 34, 35, 36, 37a, 37b and 49**. **Phase 50 is closed and
-uncut** on top of them. **Releasing is on-request only**: commit to master and
+_Updated: 2026-09-17 - **v2.3.4** is the latest 2.x and **beta 2026-09-17**
+the latest beta, both cut on request after **Phase 39** and carrying everything
+uncut since v2.3.3: **Phases 50, 38, 32a, 32b, 32c and 39**, the mercenary
+panel's unit cards and pick-to-light, and the Guilds screen keeping the last
+mod's guilds on a mod switch. v2.3.4 carries 38, 39 and that fix; the beta
+carries all of it. **Releasing is on-request only**: commit to master and
 stop_
 
-_2026-09-17: **Phase 50**, the **`187d9ed..439aa9b` upstream review** and
-**Phases 38, 32a, 32b, 32c and 39** are on top of that, all committed and uncut._
-
 ## Next up
+**Cut 2026-09-17 on request: v2.3.4 and beta 2026-09-17.** Nothing is uncut.
+The user asked mid-session for two more things on the mercenary panel, both in
+these builds: each unit's card on every line and list row, and picking a
+mercenary lights every province selling it at once, with a toggle beside the ◉
+button, on by default.
+
 **Both blocks the user set are finished.** Phase 39 closed the mercenary block
 on 2026-09-17, after 32a, 32b and 32c the same day and 38 before them. Next by
 the order is Phases 44 to 48, which have their own table in `ROADMAP.md`. 38
@@ -1017,15 +1020,15 @@ path in this file and in the source is relative to. `main/dev/` never ships.
 ## THE TWO RELEASE LINES
 Two lines off this one `master`, chosen by whether a change touches the campaign
 map. **Not campaign-map** -> a **2.x subrelease with the map hidden**, uploaded
-`--latest` (latest **v2.3.3**, 2026-09-16). **Campaign-map** -> the **beta
-line**, uploaded as a **pre-release** (latest **beta 2026-09-16**). A
+`--latest` (latest **v2.3.4**, 2026-09-17). **Campaign-map** -> the **beta
+line**, uploaded as a **pre-release** (latest **beta 2026-09-17**). A
 **subrelease means both**: one job, both zips, same tree.
 
 The switch is **one flag**: `off:true` on the `campmap` entry in `MODES` in
 `web/js/core.js`, which `menuModes()` and `modeOffered()` are the only readers
 of. It is a **release-time edit, not a state of `master`**: set it, bump the 2.x
 number, build, upload, then put it straight back off in the next commit.
-`master` carries the map ON, and `__version__` says `beta-2026-09-16`
+`master` carries the map ON, and `__version__` says `beta-2026-09-17`
 because the beta was the last thing cut.
 
 Of the finished work, **21 and 29 belong to BOTH lines** (raw text is a menu
