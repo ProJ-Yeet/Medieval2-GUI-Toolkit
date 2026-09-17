@@ -7,7 +7,25 @@ turned up, the two bugs a second report brought in, and **Phases 40, 31, 42, 41,
 uncut** on top of them. **Releasing is on-request only**: commit to master and
 stop_
 
+_2026-09-17: **Phase 50** and the **`187d9ed..439aa9b` upstream review** are on
+top of that, both committed and uncut._
+
 ## Next up
+**The upstream review of 2026-09-17 is done and nothing is scheduled off it.**
+`187d9ed..439aa9b`, 34 commits, 49 files, the largest sync since the mirror was
+set up; the manifest is at 342 files with none untriaged. **Four candidates are
+filed as M18 to M21 in `REFERENCE_GAPS.md` and none of them is rated** - the
+next action on this is the user's stars, not code. The write-up is in
+`ROADMAP.md` under *The 2026-09-17 pass*.
+
+**His `.cas` and `.mesh` readers are ours.** `m2CasCodec.js` and
+`m2MeshCodec.js` carry our constant names, our values and one of our comments
+verbatim, dated two days after Phase 29; the header of the reader he deleted to
+make room says his own spec was invented. Those four files are `skip` now and
+the asset half of the port-concept set is closed. Nothing to do about it - the
+traffic has gone the other way all year - but do not audit his model code for
+format knowledge again.
+
 **Phase 50 is done - the map opens the way it is used, and the stack comes off
 the column, closed 2026-09-16, beta line, committed and uncut.** Asked for as
 two requests, both of them about what the screen is like before you have touched
@@ -1268,29 +1286,35 @@ the edits out from under it (21 did it once; see the archive).
   it". 1,171 of the 1,174 zero-byte files on the installed mods are that.
 
 ## Upstream
-Reference tool reviewed SHA **187d9ed** (2026-09-12), accepted after the diff
-was read: three commits, 7 files, the base44 bump plus the two that became
-Phase 31 and Phase 41. Earlier that day `sync` had been run four times against
-`2740b0b` - at the start of 23a, 23b, 24 and the review - and was up to date
-every time; he pushed after the last of them.
+Reference tool reviewed SHA **439aa9b** (2026-09-17), accepted after the diff
+was read: **34 commits, 49 files**, against three at the last review. The
+manifest is **342 files, none untriaged** - 30 new records were classified by
+hand in this pass, including five he pushed while it was being written.
 
-**`triage` was broken by the tree move and is fixed.** `git ls-tree` takes the
-working directory as an implicit path prefix, `ROOT` is `main/`, and his
-repository has no `main/`, so `upstream_files()` returned **nothing** from
-2026-09-06 onward. `triage` read that as "all 310 files deleted upstream",
-stamped every record `status: gone` and filed no new file ever again;
-`git diff --name-status` has no such prefix, which is why `sync` kept working
-and hid it for six days. `--full-tree` is the fix, and re-running `triage`
-restored all 310 and filed the 2 new ones.
+**Two halves, opposite directions.** The asset half is our own `cas.py` and
+`mesh.py` transliterated into `m2CasCodec.js` and `m2MeshCodec.js` - same
+constant names, same values, `# over the two RGB triples` on the same line -
+so those four files are `skip` and there is nothing left to take from his model
+code. The map half is his: a spray brush, custom climates he calls M2EX,
+a Koppen seeder, and a 3D preview he has just fixed and textured.
 
-`docs/upstream/PORT_MANIFEST.json` is authoritative again: **312 files triaged,
-none untriaged**; `src/pages/TextEditor.jsx` notes it done in 21.
-`REFERENCE_GAPS.md` marks D6, D11 and M14 done and G2 half done; **D7, T1 and
-T12 were Phase 23's and G1 and M15 were 24's, and all five are now done.**
-Nothing in the audit is scheduled any more. Run `sync` before touching anything
-that ports from a directory he has been working in.
+**Four gaps filed, none rated**: M18 the map in 3D, M19 climates past the
+twelfth, M20 the scatter brush, M21 `texture_density`, plus M16 split so its
+playback half can be taken without its editor half. `ROADMAP.md`'s
+*2026-09-17 pass* holds the evidence and the three things to send back to him.
+
+**M21 is the one that may be a defect rather than a feature.** `mapterrain.parse`
+drops a root-level `texture_density` line, and if any installed mod declares one
+the terrain picture has been tiling at a rate the game does not since 23a.
+Measure before building.
 
 ## Decisions
+- 2026-09-17: **The reference tool is a mirror in both directions now.** His new
+  `.cas` and `.mesh` readers are our two modules transliterated, comments
+  included, two days after ours were published. Nothing is owed either way and
+  the credit in the README stands, but the manifest has to say so: reading his
+  model code for format knowledge is reading our own back, and a `port-concept`
+  that has become `skip` is a real change to what the mirror is for.
 - 2026-09-16: **A default is what somebody does first, every time, before they
   can start.** The settlement names and the terrain textures opened off and were
   turned on at the start of every session on every mod. A switch in that state

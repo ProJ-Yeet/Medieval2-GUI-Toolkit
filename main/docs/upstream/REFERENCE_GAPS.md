@@ -32,7 +32,7 @@ says "we do not", that was verified, and the verification is quoted.
 | Source | Items | Already scheduled | Already done, or a duplicate |
 |---|---|---|---|
 | Demir's StratMap Forge | 14 | 0 | **D4, D5 done 19a; D2, D3 done 19b; D8 done 20a; D14 done 20b; D6, D11 done 21; D9 half done 22a; D9, D10 done 22b** |
-| Mylae's M2TW Editor | 17 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11, so done 21) · **M5, M6, M13 done 18a; M3, M4 done 18b; M8 done 20c** |
+| Mylae's M2TW Editor | 21 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11, so done 21) · **M5, M6, M13 done 18a; M3, M4 done 18b; M8 done 20c** |
 | Bare Geomod | 8 | 1 (G6) | 3 (G7, G8 done; G5 = D9) · **G3 done 18a; G2 half done B1; G5 done 22b** |
 | TWMapReader | 12 | 1 (T5, folded into 17d) | **T2, T11 done 20a; T8, T9 done 20b; T4 done 20c** |
 | **Total** | **51** | **6** | **5** |
@@ -285,7 +285,9 @@ and the write-up is in `ROADMAP_ARCHIVE.md` under Phase 20b.
 
 # 2. Mylae's M2TW Editor
 
-The tracked upstream. Seventeen items; five are already scheduled.
+The tracked upstream. Twenty-one items; five are already scheduled. **M18 to
+M21 were added on 2026-09-17** from the `187d9ed..439aa9b` review, which is the
+first sync since his tool started moving in the same direction as ours.
 
 ### M1. Strat overlay: markers for everything with a coordinate · **scheduled**
 
@@ -471,6 +473,20 @@ including its skeleton, its parent table and its five chunk kinds. The two
 formats these pages need are both read here now. This is not a recommendation to
 build it, only a note that the reason it was excluded has changed.
 
+**2026-09-17: the playback half now has a shape, and it is the half worth
+having.** `casAnimPlayer.js` and `AnimPlaybackPanel.jsx` sample an animation
+`.cas` onto a rigged model - joints matched by lower-cased name, the pose taken
+as a delta from the bind quaternion (`inverse(bind) * anim`), slerped between
+key times, 25 fps when the file carries no ticks, with play, scrub, a speed
+select and a reset to bind. His `casAnimCodec.js` is reverse-engineered from
+KnightErrant's `animationlibrary.py` and reads a v3.21 file as a 42-byte header,
+`int32 bodySize` + `int32 0`, `uint16 nBones`, an `int16` hierarchy table,
+44-byte bone records (a 20-byte padded name and six int fields), `float32` time
+ticks, four floats a frame of quaternion, three of translation, three per active
+bone of pose, and a 192-byte footer. `cas.py` already reads the same container
+and already names `data/animations`' 305 files as future expansion. **Splitting
+M16 is the recommendation**: the player is a session, the editor is not.
+
 ### M17. Export and validation dashboard · M, unscoped
 
 `ModValidator.jsx`, `ValidationDashboard.jsx`, `TriggerValidationPanel.jsx`,
@@ -480,6 +496,61 @@ the whole mod at once.
 Out of scope in the manifest. We have more validators than he does and they are
 scattered across eight modules with no single door. Home's readiness report is
 the nearest thing.
+
+### M18. A 3D preview of the whole campaign map · L, unscoped
+
+`Map3DPreview.jsx`, `terrainTexture.js`, `GroundTextureLoader.jsx`. The
+heightmap as a mesh with the ground textures on it, orbited. **We have no 3D
+view of the map at all**: 20a draws the heights as relief and 37b draws the
+front-end picture, and both are the map from directly above. His was a tab
+overlaid on the live 2D map until 2026-09-17 and is now a toggle that replaces
+the body, with the mesh at up to 2048 steps instead of 512 (which was dropping
+one-pixel islands), a tile-size slider, a matched-tile count, and the four sea
+ground types told apart.
+
+**Two things we would not have to solve.** The textures come out pixelated in
+his because the tile is sampled in the browser at a size somebody picks;
+`mapterrain.composite` already draws the ground several pixels to a tile,
+supersampled, once a season, and 37b already lifted a picture out of the
+per-tile composite for exactly this reason. And his four water types are
+`mapvocab`'s already, RGB for RGB.
+
+### M19. Climates past the twelfth, on a mod that runs on M2EX · M, unscoped
+
+`climateStore.js`, `climateFilesGen.js`, `CustomClimatesPanel.jsx`. He generates
+`descr_climates.txt`, `descr_climates_lookup.txt`, `text/climates.txt` as
+UTF-16LE with a BOM, and a duplicated `descr_aerial_map_ground_types.txt` block
+- **the same four files Phase 34 writes**, and Phase 34 writes them with the
+lookup-file discrepancy reported and the tile count for a slot take-over.
+
+What is new is the claim under it: he calls these **M2EX** climates, and M2EX
+lifting the twelve-name wall is exactly the sort of ceiling it does lift.
+Phase 34 made "append a thirteenth name" the second option because
+`descr_geography_new.txt` looks hard-coded to the twelve, on wilddog's word and
+on all four installed mods declaring exactly those twelve. **Verify the claim
+first**: if M2EX removes it, appending becomes the first option on a mod marked
+M2EX, `too-many-climates` joins `modflags.CAP_FINDINGS`, and Phase 34's own
+warning has to say which engine it is talking about.
+
+### M20. A scatter brush · S
+
+`MapPaintToolbar.jsx`, `MapCanvas.jsx`. A sixth tool beside the pencil and the
+bucket: it scatters `round(pi * r^2 * 0.12)` random pixels inside the brush
+radius, with a dashed-circle preview, and commits them as one pencil patch. His
+stated use is `forest_sparse`, which is the ground type that is *supposed* to be
+speckled and which a pencil cannot make look right. 28b's toolbar and 49's
+palette column already hold the tools and the colours.
+
+### M21. `texture_density` · S
+
+`aerialGroundTypes.js`. A root-level `texture_density N` directive in
+`descr_aerial_map_ground_types.txt`, 0.25 to 8, default 1, where the span of one
+texture is `max(1, 8 / density)` ground pixels. **`mapterrain.parse` skips the
+line**: a directive outside a climate block is not an entry, so it is dropped
+with the comments. If a mod declares one, our terrain picture tiles at a rate
+the game does not. Measure the installed set before building anything - this is
+a one-line read and a scale factor if nobody declares it, and a real defect in
+23a if somebody does.
 
 ---
 

@@ -3028,6 +3028,80 @@ Phase 31).
 
 ---
 
+## The 2026-09-17 pass: his model reader is ours, and four things are ours to build
+
+`187d9ed..439aa9b`, **34 commits and 49 files**, the largest sync since the
+mirror was set up, and the manifest is at **342 files with none untriaged**. Two
+halves, and they point in opposite directions.
+
+### The asset half is our own code, come back as JavaScript
+
+`src/lib/m2CasCodec.js` and `src/lib/m2MeshCodec.js` are **`unittransfer/cas.py`
+and `unittransfer/mesh.py` transliterated**. Not the same knowledge arrived at
+twice - the same names, the same numbers and the same comments:
+
+| ours | his | value |
+|---|---|---|
+| `NODE_COUNT_AT` | `NODE_COUNT_AT` | `0x32` |
+| `NODE_TRAILER` | `NODE_TRAILER` | `25` |
+| `OBJECT_HEADER` | `OBJECT_HEADER` | `{1: 37, 2: 28}` |
+| `CHUNK_TRAILER` / `_OLD` | `CHUNK_TRAILER` / `_OLD` | `{1:6, 2:4}` / `{1:3, 2:4}` |
+| `TRAILER_VERSION` | `TRAILER_VERSION` | `3.17` |
+| `NO_MATERIAL` | `NO_MATERIAL` | `0xFFFFFFFF` |
+| `MATERIAL_TAIL` | `MATERIAL_TAIL` | `29` |
+| `BOOST_SIGNATURE`, `STREAM_STRIDE`, `STREAM_GAP`, `MAX_TRAILER` | the same four | `serialization::archive`, the same stride table, `96`, `64 * 1024` |
+
+`cas.py:378` carries the comment `# over the two RGB triples` on the line that
+seeks to `NODE_COUNT_AT`; `m2CasCodec.js:166` carries `// over the two RGB
+triples` on the same line. **The dates line up with the direction**: `cas.py`
+has been public here since 2026-09-06 and Phase 29 landed on 2026-09-12, his
+file first appears on 2026-09-14, and the header of the `casCodec.js` he deleted
+to make room says in his own words that the spec it had was invented and
+"matches no real game file".
+
+**Nothing to do about it and nothing to take from it.** The README credits his
+tool as a reference and this is the same traffic in the other direction. What it
+changes is the manifest: `m2CasCodec.js`, `m2MeshCodec.js`, `boostArchive.js`
+and `m2ModelGeometry.js` are **`skip` - something we own outright**, and the
+asset half of the port-concept set is closed. Reading his `.cas` work for format
+knowledge from here on is reading our own back.
+
+### Four candidates, filed as M18 to M21, and none of them rated yet
+
+Full write-ups in `docs/upstream/REFERENCE_GAPS.md`. They are unrated on purpose:
+the user rates, and a rating is what turns one of these into a phase.
+
+| Item | Size | What it is | Why it is worth a star |
+|---|---|---|---|
+| **M16, the playback half** | M | Sample an animation file onto the skeleton the viewer already draws. Joints are matched by name, the pose is a delta from the bind quaternion, slerped between key times, 25 fps when the file carries no ticks. | `cas.py` already reads the container and already names `data/animations`' 305 files as future expansion. The editor half of M16 stays out of scope; this is the half that is a session. |
+| **M18 - the map in 3D** | L | The heightmap as a mesh with the ground textures on it, orbited. | The one thing on his map screen we have nothing of. His is pixelated because the browser samples a tile at a size somebody picks, and `mapterrain.composite` already solves that server-side. |
+| **M19 - climates past the twelfth** | M | His four generated files are Phase 34's four. What is new is the claim that **M2EX** lifts the twelve-name wall Phase 34 stopped at. | Verify first. If it holds, appending a name becomes the first option on an M2EX mod and `too-many-climates` joins `modflags.CAP_FINDINGS`. |
+| **M20 - a scatter brush** | S | A sixth tool that scatters `round(pi * r^2 * 0.12)` pixels in the brush radius. | His own use for it is `forest_sparse`, the ground type a pencil cannot make look right. The toolbar and the palette column are already there. |
+| **M21 - `texture_density`** | S | A root-level directive in `descr_aerial_map_ground_types.txt`, `span = max(1, 8 / density)`. | **`mapterrain.parse` drops the line today.** Measure the installed mods: nobody declares it and this is one read and a scale, somebody declares it and 23a has been tiling at the wrong rate. |
+
+**The Koppen tool is not a new item.** One climate per Koppen-Geiger zone in one
+press, seeded from a static table of 30 codes and their legend colours with no
+network call in it, which is `koppenZones.js` and the bulk-add in
+`CustomClimateForm.jsx`. That is Phase 27's bucket since the 2026-09-03
+reclassification, and it is already rated three stars there. The table itself is
+portable as it stands.
+
+### Three things to send back to him, in one message
+
+1. **The pixelated textures.** Draw the ground at several pixels a tile and
+   supersample the tiling, once per season, rather than sampling one texel per
+   tile at draw time - 23a's `SCALE`, and 37b's finding that a picture scaled
+   into a per-tile composite and back out is the artefact.
+2. **`texture_density` cuts both ways.** If we are dropping the line, he should
+   check that `spanForDensity` is reading it from the root and not from a
+   climate block.
+3. The three from 2026-09-13 that have not been sent yet: the `u16` count and
+   the missing tag index in `stringsBinCodec.jsx`, the orphan-white severity
+   that makes his validator call vanilla broken at image (175,14), and the RLE
+   TGAs that stop `map_features_checker.py` opening either installed map.
+
+---
+
 ---
 
 # Future roadmap - rated, and waiting on the two main tasks

@@ -3,8 +3,8 @@
   "remote": "upstream-editor",
   "ref": "refs/upstream/editor/main",
   "clone_url": "https://github.com/Machiavello-1441/m2tw-editor.git",
-  "reviewed_sha": "187d9ed8184b36bd9bd7aceddd1647b1a245229e",
-  "reviewed_date": "2026-09-12"
+  "reviewed_sha": "439aa9b6183b71b7178bef4b842dace68b7d2ff7",
+  "reviewed_date": "2026-09-17"
  },
  "dispositions": {
   "port-concept": "rebuild the idea in our stack; a change here may mean the format knowledge changed",
@@ -2823,6 +2823,283 @@
    "status": "triaged",
    "first_seen": "187d9ed",
    "notes": "New on 2026-09-12 and Phase 41. Take mergeSection's three counts and leave the modal. His serializer writes only characters / surnames / women and silently drops the settlements section, which our NAME_SECTIONS carries."
+  },
+  "base44/mcp/config.json": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "Base44 builder config",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/components/assets/AnimPlaybackPanel.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "15"
+   ],
+   "reason": "M16: play, scrub, speed and reset-to-bind over that player",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/components/assets/MeshVisibilityChecklist.jsx": {
+   "disposition": "audit",
+   "phases": [
+    "15"
+   ],
+   "reason": "per-group visibility - viewer3d.js has the part toggles",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/components/assets/ModFolderPicker.jsx": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "same picker, smaller",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/components/assets/ModelBrowserBar.jsx": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "webkitdirectory picker - we read the mod's tree on the server",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/components/assets/ModeldbSkinPanel.jsx": {
+   "disposition": "audit",
+   "phases": [
+    "15"
+   ],
+   "reason": "modeldb entry to LOD files and faction skins - the BMDB browser's own job",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/components/map/GroundTextureLoader.jsx": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "asks the user for the ground_types folder - we read it from the mod",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/components/map/terrainTexture.js": {
+   "disposition": "audit",
+   "phases": [
+    "23",
+    "30"
+   ],
+   "reason": "climate x ground to a tile - mapterrain.py does it server-side; texture_density is the win",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/components/newmap/CustomClimateForm.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "27",
+    "34"
+   ],
+   "reason": "one climate per Koppen zone in one press, seeded from that table",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/components/newmap/CustomClimateList.jsx": {
+   "disposition": "audit",
+   "phases": [
+    "34"
+   ],
+   "reason": "lists customs and flags a colour clash - our slot list counts tiles too",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/components/newmap/CustomClimatesPanel.jsx": {
+   "disposition": "audit",
+   "phases": [
+    "34"
+   ],
+   "reason": "the panel over those generators",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/components/unitcards/UnitCardPreview.jsx": {
+   "disposition": "audit",
+   "phases": [
+    "15"
+   ],
+   "reason": "the model beside the card - compare with the composer's dock",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/lib/aerialGroundTypes.js": {
+   "disposition": "audit",
+   "phases": [
+    "23",
+    "30"
+   ],
+   "reason": "descr_aerial_map_ground_types.txt with texture_density and a colour alias table",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/lib/boostArchive.js": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "our mesh.py's archive reader, split out - nothing here we do not own",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/lib/casAnimPlayer.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "15"
+   ],
+   "reason": "M16: a .cas animation sampled onto our skeleton - the half we do not have",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/lib/climateFilesGen.js": {
+   "disposition": "audit",
+   "phases": [
+    "34"
+   ],
+   "reason": "generates the same four files Phase 34 writes - compare the lookup and the UTF-16 text",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/lib/climateStore.js": {
+   "disposition": "audit",
+   "phases": [
+    "34"
+   ],
+   "reason": "custom climates kept in localStorage; ours are the mod's own file",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/lib/koppenZones.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "27"
+   ],
+   "reason": "30 Koppen codes to climate ids and legend RGB - a static table, not a fetch",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/lib/m2CasCodec.js": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "our cas.py transliterated - same constant names, same values, same comments",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/lib/m2MeshCodec.js": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "our mesh.py transliterated - BOOST_SIGNATURE, STREAM_STRIDE, STREAM_GAP, MAX_TRAILER",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/lib/m2ModelGeometry.js": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "glue over the two decoders above",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/lib/modClimates.js": {
+   "disposition": "audit",
+   "phases": [
+    "34"
+   ],
+   "reason": "climate colours out of the mod's descr_climates.txt for the palette - 16c does this",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/lib/modFolderStore.js": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "in-browser index of a picked folder - mod.py owns this here",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/lib/skinAtlas.js": {
+   "disposition": "audit",
+   "phases": [
+    "15"
+   ],
+   "reason": "the two sheets glued for the 0..2 UV range - viewer3d.js does this already",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/lib/vanillaDescrClimates.js": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "an embedded copy of vanilla's descr_climates.txt and text/climates.txt",
+   "status": "triaged",
+   "first_seen": "6523dc1",
+   "notes": ""
+  },
+  "src/components/map/CampaignSelector.jsx": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "a <select> over that index - our campaign browser is Phase 24",
+   "status": "triaged",
+   "first_seen": "439aa9b",
+   "notes": ""
+  },
+  "src/components/map/campaignLibrary.js": {
+   "disposition": "audit",
+   "phases": [
+    "24"
+   ],
+   "reason": "indexes maps/campaign/<name>/ incl. custom/, campaign files over base - campfiles.py's resolution",
+   "status": "triaged",
+   "first_seen": "439aa9b",
+   "notes": ""
+  },
+  "src/components/map/campaignSession.js": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "clears and restores his sessionStorage keys on a campaign switch",
+   "status": "triaged",
+   "first_seen": "439aa9b",
+   "notes": ""
+  },
+  "src/components/map/settlementNamesIO.js": {
+   "disposition": "audit",
+   "phases": [
+    "20c"
+   ],
+   "reason": "reads the names file as UTF-16 LE/BE/UTF-8 or as .strings.bin - localization.py does both",
+   "status": "triaged",
+   "first_seen": "439aa9b",
+   "notes": ""
+  },
+  "src/components/map/useCampaignSelection.js": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "React hook holding a snapshot per campaign - browser plumbing",
+   "status": "triaged",
+   "first_seen": "439aa9b",
+   "notes": ""
   }
  }
 }

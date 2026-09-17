@@ -4,6 +4,67 @@ Every review of Mylae's `main`, newest first. Written by
 `dev/reference/upstream_sync.py sync --accept`. His commit messages all say
 "File changes", so these entries are the only record of what actually moved.
 
+## 2026-09-17 - 187d9ed..439aa9b
+
+34 commits, 49 files changed.
+
+### port-concept (15)
+- `A` `src/components/assets/AnimPlaybackPanel.jsx` - phase 15  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `A` `src/components/newmap/CustomClimateForm.jsx` - phase 27,34  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `A` `src/lib/casAnimPlayer.js` - phase 15  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `A` `src/lib/koppenZones.js` - phase 27  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/assets/ModelPanel.jsx` - phase 15  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/assets/ModelViewer.jsx` - phase 15  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/assets/ModelViewerSidebar.jsx` - phase 15  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/home/DataFolderPicker.jsx` - phase 5  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/map/Map3DPreview.jsx` - phase 16  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/map/MapCanvas.jsx` - phase 16,23  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/map/MapPaintToolbar.jsx` - phase 16  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/components/map/StratPanel.jsx` - phase 16  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/lib/casCodec.js` - phase 15  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/pages/CampaignMap.jsx` - phase 16  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+- `M` `src/pages/Home.jsx` - phase 5  <-- FORMAT KNOWLEDGE MAY HAVE CHANGED
+
+### audit (11)
+- `A` `src/components/assets/MeshVisibilityChecklist.jsx` - phase 15
+- `A` `src/components/assets/ModeldbSkinPanel.jsx` - phase 15
+- `A` `src/components/map/terrainTexture.js` - phase 23,30
+- `A` `src/components/newmap/CustomClimateList.jsx` - phase 34
+- `A` `src/components/newmap/CustomClimatesPanel.jsx` - phase 34
+- `A` `src/components/unitcards/UnitCardPreview.jsx` - phase 15
+- `A` `src/lib/aerialGroundTypes.js` - phase 23,30
+- `A` `src/lib/climateFilesGen.js` - phase 34
+- `A` `src/lib/climateStore.js` - phase 34
+- `A` `src/lib/modClimates.js` - phase 34
+- `A` `src/lib/skinAtlas.js` - phase 15
+
+### untriaged (5) - all five classified in this same pass
+
+He pushed these while the review was being written, which is why they are
+untriaged above and are not untriaged in the manifest. Campaign switching, and
+it is Phase 24 and Phase 20c arriving in his tool.
+
+- `A` `src/components/map/campaignLibrary.js` - **audit**, phase 24 - indexes
+  `maps/campaign/<name>/`, `custom/` included, and resolves a campaign's own
+  files over the shared and base ones. Our `campfiles.py` rule, his wording.
+- `A` `src/components/map/settlementNamesIO.js` - **audit**, phase 20c - reads
+  the names file as UTF-16 LE or BE or UTF-8 off the BOM, or as a
+  `.strings.bin`. `localization.py` reads both and writes both.
+- `A` `src/components/map/CampaignSelector.jsx` - **skip** - a `<select>` over
+  that index.
+- `A` `src/components/map/campaignSession.js` - **skip** - clears and restores
+  sixteen `sessionStorage` keys on a switch.
+- `A` `src/components/map/useCampaignSelection.js` - **skip** - a React hook
+  holding one snapshot per campaign.
+
+### out-of-scope (5)
+
+Counted only.
+
+### skip (13)
+
+Counted only.
+
 ## 2026-09-12 - 2740b0b..187d9ed
 
 3 commits, 7 files changed.
