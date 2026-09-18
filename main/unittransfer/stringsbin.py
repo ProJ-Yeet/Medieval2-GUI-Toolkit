@@ -16,7 +16,7 @@ three test mods (see ``tests/test_stringsbin.py``)::
     u32  count
     count × record      tagged:   <str tag> <str value>
                         untagged: <str value>
-    u32  index_count    tagged files only
+    u32  index_count    tagged files only (see below for two short forms)
     index_count × <str>
 
     <str> = u16 length in UTF-16 code units, then that many LE code units
@@ -37,6 +37,12 @@ The index is bookkeeping we cannot regenerate faithfully, and the game plainly
 does not need it: many shipped files have an empty one. So it is carried through
 an edit **verbatim** and left empty when we compile a ``.bin`` from scratch -
 never invented.
+
+Some game-written archives end an empty index differently: with a lone ``u16``
+zero, or with nothing at all after the last record (Wrath of the Norsemen ships
+several). Both mean "no index", and :attr:`StringsBin.index_width` remembers
+which ending a file had so that saving it changes nothing else. An index that is
+not empty is always written with the full ``u32`` count.
 
 Untagged files (``battle``, ``shared``, ``strat``, ``tooltips``) are the ones
 alpaca's converter refused: their strings are addressed by position, so there is
@@ -91,6 +97,9 @@ class StringsBin:
     values: List[str] = field(default_factory=list)
     #: the trailing tag index, kept exactly as read - see the module docstring
     index: List[str] = field(default_factory=list)
+    #: bytes the file spent on an *empty* index's count: 4 as normal, 2 for a
+    #: lone u16 zero, 0 for no count at all. Only a tagged file uses it.
+    index_width: int = 4
 
     @property
     def tagged(self) -> bool:
@@ -218,7 +227,12 @@ def decode(data: bytes) -> StringsBin:
             sb.tags.append(tag)
         value, pos = _read_str(data, pos)
         sb.values.append(value)
-    if style == TAGGED:
+    if style == TAGGED and pos == len(data):
+        sb.index_width = 0                  # no index section at all
+    elif style == TAGGED and data[pos:] == b"\0\0":
+        sb.index_width = 2                  # a 16-bit zero for an empty index
+        pos += 2
+    elif style == TAGGED:
         if pos + 4 > len(data):
             raise StringsBinError("file ends before its tag index", pos)
         (index_count,) = struct.unpack_from("<I", data, pos)
@@ -242,7 +256,9 @@ def encode(sb: StringsBin) -> bytes:
         if sb.tagged:
             _write_str(out, sb.tags[i])
         _write_str(out, value)
-    if sb.tagged:
+    if sb.tagged and not sb.index and sb.index_width in (0, 2):
+        out += b"\0" * sb.index_width      # the short empty ending it was read with
+    elif sb.tagged:
         out += struct.pack("<I", len(sb.index))
         for s in sb.index:
             _write_str(out, s)
@@ -419,7 +435,8 @@ def upsert_txt(body: str, writes: Dict[str, str]) -> str:
 def compile_txt(text: str, template: Optional[StringsBin] = None) -> StringsBin:
     """Build an archive from a ``.txt``, in the order the game searches.
 
-    ``template`` lends its header words and its tag index - used when a ``.bin``
+    ``template`` lends its header words and its tag index (with the way that
+    index ended) - used when a ``.bin``
     already exists beside the ``.txt``, so recompiling changes only what the text
     changed. With no template the index is left empty, which is a state plenty of
     shipped files are already in.
@@ -432,7 +449,8 @@ def compile_txt(text: str, template: Optional[StringsBin] = None) -> StringsBin:
     sb = StringsBin(style=TAGGED,
                     flavour=template.flavour if template else FLAVOUR,
                     tags=tags, values=[seen[t] for t in tags],
-                    index=list(template.index) if template else [])
+                    index=list(template.index) if template else [],
+                    index_width=template.index_width if template else 4)
     return sb
 
 

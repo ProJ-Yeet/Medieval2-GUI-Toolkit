@@ -70,6 +70,28 @@ check("a value keeps its embedded newline", back.get("with_break") == "first lin
 check("a value that is one space stays one space", back.get("with_space") == " ")
 check("peek reads the count without decoding", stringsbin.peek.__name__ == "peek")
 
+# Some game-written archives end an empty index early: a lone u16 zero, or
+# nothing at all. Both must open, and must save back exactly as they were read.
+full = stringsbin.encode(build(rows=ROWS))
+for width, label in ((0, "no index count at all"), (2, "a 16-bit zero index count")):
+    short = full[:len(full) - 4 + width]
+    got = stringsbin.decode(short)
+    check(f"a tagged file with {label} opens with an empty index",
+          got.index == [] and got.index_width == width and len(got) == len(ROWS))
+    check(f"... and saves back byte for byte", stringsbin.encode(got) == short)
+    check(f"... and a recompile keeps that ending",
+          stringsbin.encode(stringsbin.compile_txt(stringsbin.to_txt(got), got)) == short)
+    got.index.append("alpine")
+    check(f"... but a non-empty index is never dropped (full u32 count)",
+          stringsbin.decode(stringsbin.encode(got)).index == ["alpine"])
+for junk in (b"\0", b"\1\0", b"\0\0\0"):
+    try:
+        stringsbin.decode(full[:-4] + junk)
+        refused = False
+    except stringsbin.StringsBinError:
+        refused = True
+    check(f"{len(junk)} stray trailing byte(s) {junk!r} are still refused", refused)
+
 # The count is 32 bits. Reading it as a u16 + padding word, as the reference
 # tool's codec does, happens to agree below 65 536 and silently halves the file
 # above it - so prove the wide field is really there.
