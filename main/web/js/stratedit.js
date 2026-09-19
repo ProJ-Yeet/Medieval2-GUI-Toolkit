@@ -54,12 +54,12 @@ function csNew(mod, region){
 
 //: Called from the map's own pick, so opening a province opens its settlement.
 //: A province nobody starts holding has no block to edit and says so.
-async function csOpen(region){
+async function csOpen(region, refresh){
   const c = state.cmap;
   if(!c) return;
   const was = state.cset;
   if(!region){ state.cset = null; csPaint(); return; }
-  if(was && was.mod === c.mod && was.region === region && was.d) return;
+  if(!refresh && was && was.mod === c.mod && was.region === region && was.d) return;
   const k = state.cset = csNew(c.mod, region);
   k.open = was ? was.open : true;
   k.loading = true;
@@ -103,10 +103,10 @@ function csSet(slot, value){
   const k = state.cset;
   if(!k || !k.w) return;
   k.w[slot] = value;
-  // the castle tier beside the level changes with both boxes, and the level
-  // list itself does not, so this is a repaint rather than a rebuild
+  // The tier beside Kind/Level changes with those controls. Text inputs do not:
+  // rebuilding their parent on every keypress removes the input and its focus.
   csPlanSoon();
-  csPaint();
+  if(slot === 'settlement_type' || slot === 'level') csPaint();
 }
 
 function csBld(i, slot, value){
@@ -205,7 +205,7 @@ async function csPlanNow(k){
   catch(e){ res = {plan: {errors: [errText(e)], findings: [], changes: []}}; }
   if(state.cset !== k) return;
   k.preview = res.plan || null;
-  csPaint();
+  csFindingsPaint();
 }
 
 async function csSave(){
@@ -237,9 +237,10 @@ async function csSave(){
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
   toast(tt('common.saved_log_can_undo_it'));
   activity('settlement', `${k.mod} ${k.region} saved`);
-  const at = state.cmap && state.cmap.pick;
-  await loadCampmap();
-  if(at && state.cmap) cmapPick(at);
+  // The map canvas, layer choices and open tabs do not depend on this one
+  // settlement block. Re-read that block only; loading the whole map destroys
+  // the workspace the user is still using.
+  await csOpen(k.region, true);
 }
 
 function csRevert(){
@@ -287,7 +288,7 @@ function csHtml(){
     ${csFormHtml()}
     ${csBuildingsHtml()}
     ${csOwnerHtml()}
-    ${csFindingsHtml()}
+    <div id="csFindings">${csFindingsHtml()}</div>
     <div class="csbtns">
       <button class="primary" onclick="csSave()">${tt('stratedit.save_settlement')}</button>
       <button onclick="csRevert()">${tt('common.revert')}</button>
@@ -538,4 +539,9 @@ function csFindingsHtml(){
     ${changes.length ? `<div class="count">${tt('stratedit.would_change',{changes:changes.map(esc).join(' · ')})}</div>`
       : p ? `<div class="count">${tt('stratedit.nothing_to_save_yet')}</div>` : ''}
   </div>`;
+}
+
+function csFindingsPaint(){
+  const el = document.getElementById('csFindings');
+  if(el) el.innerHTML = csFindingsHtml();
 }

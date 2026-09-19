@@ -116,6 +116,32 @@ else:
         input=joined, capture_output=True, text=True, encoding="utf-8")
     check("concatenated in load order, they parse as one program", r.returncode == 0)
 
+print("\n== settlement editor updates in place ==")
+stratedit_js = (JS / "stratedit.js").read_text(encoding="utf-8")
+check("typing in settlement text fields does not rebuild their panel",
+      "if(slot === 'settlement_type' || slot === 'level') csPaint();" in stratedit_js
+      and "csFindingsPaint();" in stratedit_js)
+check("saving a settlement refreshes that settlement instead of the map workspace",
+      "await csOpen(k.region, true);" in stratedit_js
+      and "await loadCampmap();" not in stratedit_js)
+
+campmap_js = (JS / "campmap.js").read_text(encoding="utf-8")
+undo_js = (JS / "undo.js").read_text(encoding="utf-8")
+check("map writes preserve the active workspace while refreshing data",
+      "async function loadCampmap(keepWorkspace)" in campmap_js
+       and "if(!prior) main.innerHTML" in campmap_js
+       and "await cmapLoadLayers();" in campmap_js)
+check("saving a region refreshes only that region and keeps its settlement selected",
+      "async function cmapOpenRegion(name, refresh)" in campmap_js
+       and "await cmapOpenRegion(d.name, true);" in campmap_js
+       and "await cmapLoadLayers();" in campmap_js)
+check("campaign-map redraws preserve the active editor control",
+      "'cbrPaint','cclPaint','cftPaint','cevPaint','csPaint','cxPaint','cjPaint'" in undo_js
+       and "'cmapRegionPaint','rclPaint'" in undo_js)
+check("all text controls survive a redraw triggered by their own edit",
+      "function keepTypedControl(e)" in undo_js
+       and "document.addEventListener('input',keepTypedControl,true);" in undo_js)
+
 print("\n== every menu module is on the Home readiness matrix ==")
 # 17a: Home filters MODES down to the non-`sub` modes and reads
 # `report.modules[id]`; a module with no entry there renders '' and vanishes

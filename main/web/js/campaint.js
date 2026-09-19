@@ -401,6 +401,7 @@ async function cpaintDiscard(){
   await cpaintPost('paint_discard', {});
   toast(tt('campaint.the_map_was_re_read_from'));
   await loadCampmap();
+  await loadCampmap(true);
 }
 
 async function cpaintSave(){
@@ -423,7 +424,7 @@ async function cpaintSave(){
       : ttN('campaint.saved_layer_count',(res.layers || []).length),
     camp:camp ? ttN('campaint.and_campaign_file_count',camp) : ''}), 6000);
   p.wiz = null; p.wizOpen = false; p.prog = null;
-  await loadCampmap();
+  await loadCampmap(true);
 }
 
 /* ---------- the new-region wizard ---------- */

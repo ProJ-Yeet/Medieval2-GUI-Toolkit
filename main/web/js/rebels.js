@@ -166,7 +166,7 @@ async function rebAssign(){
   activity('rebels', tt('rebels.province_s',{mod:k.mod,names_n:names.length,target:k.target}));
   k.sel = new Set();
   k.plan = null;
-  await loadCampmap();
+  await loadCampmap(true);
   if(state.reb) rebLoad();
 }
 

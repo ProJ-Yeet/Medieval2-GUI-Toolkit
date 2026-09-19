@@ -379,6 +379,26 @@ function undoStep(redo){
 }
 document.addEventListener('input',e=>undoTick(undoKeyOf(e.target)));
 document.addEventListener('change',e=>undoTick(undoKeyOf(e.target)));
+/* Editors are allowed to repaint in response to a value change, but replacing
+   their markup must not turn a text box into a one-character field.  Keep this
+   at capture phase: inline handlers run at the target, so by bubble phase the
+   old input may already be disconnected.  The named painter wrappers above
+   preserve focus for known redraws; this is the safety net for every current
+   and future text field. */
+function keepTypedControl(e){
+  const el=e.target;
+  if(!el||!(/^(INPUT|TEXTAREA)$/.test(el.tagName||''))
+     ||/^(checkbox|radio|button|submit|reset|file)$/i.test(el.type||''))return;
+  const where=undoFocus(), scrolled=scrollSnapshot();
+  setTimeout(()=>{
+    if(document.contains(el))return;
+    scrollRestore(scrolled);
+    undoRefocus(where);
+    requestAnimationFrame(()=>scrollRestore(scrolled));
+  },0);
+}
+document.addEventListener('input',keepTypedControl,true);
+document.addEventListener('change',keepTypedControl,true);
 document.addEventListener('click',e=>{
   if(e.target.closest&&e.target.closest('button,a,label,.opt,.facrow,.badge,.chk'))undoTick('');
 });

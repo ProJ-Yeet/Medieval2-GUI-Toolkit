@@ -487,11 +487,12 @@ function cmapSideCollapse(){
 
 /* ---------- opening the screen ---------- */
 
-async function loadCampmap(){
+async function loadCampmap(keepWorkspace){
   const mod = state.src;
   const previous = state.cmap && state.cmap.mod === mod ? state.cmap : null;
   const campaign = previous ? previous.campaign || '' : '';
   const camera = previous ? {...previous.view} : null;
+  const prior = keepWorkspace && state.cmap && state.cmap.mod === mod ? state.cmap : null;
   // The mode is restored from settings before the mod list has arrived, and a
   // dropped startup request can leave it never arriving (see uiFailedFiles in
   // core.js). Asking for the map of no mod answers "unknown mod", which is true
@@ -500,7 +501,7 @@ async function loadCampmap(){
     main.innerHTML = `<div class="empty">${tt('campmap.no_mod_is_picked_yet_the')}</div>`;
     return;
   }
-  main.innerHTML = `<div class="empty">${tt('campmap.reading_s_campaign_map_ten_layers',{mod:esc(mod)})}</div>`;
+  if(!prior) main.innerHTML = `<div class="empty">${tt('campmap.reading_s_campaign_map_ten_layers',{mod:esc(mod)})}</div>`;
   let man;
   try{ man = await api.get(`/api/map?mod=${enc(mod)}`
     + (campaign ? `&campaign=${enc(campaign)}` : '')); }
@@ -520,16 +521,36 @@ async function loadCampmap(){
   if(stale('campmap', mod)) return;
   state.cmap = cmapNew(mod, man);
   state.cmap.campaign = campaign;
+  if(prior){
+    const c = state.cmap;
+    c.campaign = prior.campaign;
+    c.tab = prior.tab;
+    c.sub = Object.assign({}, prior.sub);
+    c.hid = prior.hid;
+    c.layPop = prior.layPop;
+    c.view = Object.assign({}, prior.view);
+    c.pick = prior.pick && prior.pick.slice();
+    // These panels hold parsed campaign data. Their layout is retained through
+    // the tab state above, but their records must be fetched again after a
+    // write rather than painted from the old file.
+    state.cset = null;
+    state.cx = null;
+    state.cj = null;
+  }else state.cpin = null;
   // Saves re-read the same map. Fit belongs to opening a different map or
   // explicitly pressing Fit, not to saving a character, settlement or stroke.
   if(previous && camera && camera.fitted && previous.man.width === man.width
      && previous.man.height === man.height) state.cmap.view = camera;
-  state.cpin = null;      // 20c: a pin was asking for a tile on the last map
   renderCampmap();
-  cmapLoadLayers();
+  // A restored pick has to wait for the region layer.  Picking first sees an
+  // empty image, concludes that there is no province here, and clears the
+  // settlement/region panels.  This used to make any map save appear to
+  // unselect the province that was being edited.
+  await cmapLoadLayers();
   // 23a: a habit kept between sessions, like the layer stack itself, so a map
   // last left showing its terrain opens showing it
   if(state.cmap.terrain.on) cmapTerrainLoad();
+  if(prior && state.cmap.pick) cmapPick(state.cmap.pick);
 }
 
 /* The screen's whole state, in one object, rebuilt whenever the mod changes.
@@ -3287,9 +3308,9 @@ async function cmapOpenPeople(region){
    the shape Ctrl+Z snapshots (see UNDO_SCOPES). The values beside it are what
    came off disk, so whether anything has changed is a comparison rather than a
    flag somebody has to remember to set. */
-async function cmapOpenRegion(name){
+async function cmapOpenRegion(name, refresh){
   const c = state.cmap;
-  if(c.det && c.det.name === name && !c.det.error) return;
+  if(!refresh && c.det && c.det.name === name && !c.det.error) return;
   c.det = {name, loading: true};
   c.cv = null;
   cmapPickPaint();
@@ -3957,9 +3978,10 @@ async function cmapSave(){
   finally{ c.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 7000); return; }
   toast(tt('campmap.saved_map_rwm_deleted_log_can'));
-  const at = c.pick;
-  await loadCampmap();
-  if(at && state.cmap) cmapPick(at);
+  // The region record is the only data this save changes.  Re-reading the
+  // complete map recreated the workspace and could race its restored pick
+  // against the region layer, clearing the settlement selected beside it.
+  await cmapOpenRegion(d.name, true);
 }
 
 /* ---------- keys ---------- */
