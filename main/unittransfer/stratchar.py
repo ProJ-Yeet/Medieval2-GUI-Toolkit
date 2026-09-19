@@ -227,6 +227,10 @@ class Vocabulary:
         self.ancillaries: set = set()
         self.have_eda = False
         self.pool: Dict[str, List[str]] = {}
+        #: Character names split by the sections that declare them.  The form
+        #: uses this for its random-name button, so a female character draws
+        #: from ``women`` rather than from the male ``characters`` list.
+        self.pool_by_gender: Dict[str, Dict[str, List[str]]] = {}
         #: the fourth section 19a taught the parser about - see
         #: :data:`unittransfer.minorfiles.NAME_SECTIONS`. Kept apart from
         #: :attr:`pool` because a surname is the *second* half of a name and
@@ -274,6 +278,7 @@ class Vocabulary:
             attrs = getattr(u, "attributes", None) or []
             self.units[u.type] = {"name": u.type, "category": u.category,
                                   "class": u.class_type,
+                                  "ownership": list(getattr(u, "ownership", None) or []),
                                   "general": "general_unit" in attrs}
             if "general_unit" in attrs:
                 self.bodyguards.add(u.type)
@@ -336,11 +341,15 @@ class Vocabulary:
             return
         self.have_pool = True
         for f in nf.factions:
-            got: List[str] = []
-            for s in f.sections:
-                if s.name in ("characters", "women"):
-                    got += [e.value for e in s.entries]
+            male = f.section("characters")
+            female = f.section("women")
+            by_gender = {
+                "male": [e.value for e in male.entries] if male else [],
+                "female": [e.value for e in female.entries] if female else [],
+            }
+            got = by_gender["male"] + by_gender["female"]
             self.pool[f.name] = got
+            self.pool_by_gender[f.name] = by_gender
             sec = f.section("surnames")
             self.surnames[f.name] = [e.value for e in sec.entries] if sec else []
 
@@ -402,7 +411,8 @@ class Vocabulary:
         """Every unit that may be put in an army, the roster first."""
         return sorted(self.units, key=str.lower) or list(self.file_units)
 
-    def payload(self) -> dict:
+    def payload(self, faction: str = "") -> dict:
+        wanted = faction.lower()
         return {
             "types": list(CHARACTER_TYPES),
             "ranks": list(RANKS),
@@ -412,7 +422,9 @@ class Vocabulary:
             "have_edct": self.have_edct,
             "have_eda": self.have_eda,
             "have_pool": self.have_pool,
-            "units": [{"name": n, "general": n in self.bodyguards}
+            "units": [{"name": n, "general": n in self.bodyguards,
+                       "owned": (not self.have_edu or wanted in {
+                           x.lower() for x in self.units[n]["ownership"]})}
                       for n in self.unit_names()],
             "bodyguards": sorted(self.bodyguards, key=str.lower),
             "traits": [{"name": n, "levels": v}
@@ -426,6 +438,8 @@ class Vocabulary:
             "labels": list(self.labels),
             "factions": list(self.factions),
             "pool": {k: len(v) for k, v in self.pool.items()},
+            "names": self.pool_by_gender.get(faction,
+                                               {"male": [], "female": []}),
             "surnames": {k: len(v) for k, v in self.surnames.items() if v},
             "have_name_keys": self.have_name_keys,
             "skipped": list(self.skipped),
@@ -1528,5 +1542,5 @@ def faction_detail(facts, faction: str) -> dict:
                        "line": r.start + 1}
                       for r in relatives_of(sf, node)],
         "findings": check_faction(sf, node, voc),
-        "vocab": voc.payload(),
+        "vocab": voc.payload(faction),
     }

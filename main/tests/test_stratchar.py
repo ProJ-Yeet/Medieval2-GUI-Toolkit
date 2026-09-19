@@ -265,11 +265,12 @@ class _Units:
 
 
 class _Unit:
-    def __init__(self, name, general=False):
+    def __init__(self, name, general=False, ownership=None):
         self.type = name
         self.category = "infantry"
         self.class_type = "heavy"
         self.attributes = ["general_unit"] if general else []
+        self.ownership = ownership or []
 
 
 class _Facts:
@@ -280,9 +281,11 @@ class _Facts:
 tmp = Path(_tmp.mkdtemp(prefix="ut_char_"))
 EDCT = "Trait GoodCommander\n Level Good\n  Threshold 1\n Level Better\n  Threshold 2\n"
 EDA = "Ancillary mentor\n Image mentor.tga\n"
-NAMES = "faction: england\n\tcharacters\n\t\tWilliam\n\t\tAldred\n"
-full = _Fake(tmp, edu=_Units([_Unit("NE Bodyguard", True), _Unit("Spear Militia"),
-                             _Unit("Peasants")]),
+NAMES = ("faction: england\n\tcharacters\n\t\tWilliam\n\t\tAldred\n"
+         "\twomen\n\t\tCecilia\n")
+full = _Fake(tmp, edu=_Units([_Unit("NE Bodyguard", True, ["england"]),
+                             _Unit("Spear Militia", ownership=["england"]),
+                             _Unit("Peasants", ownership=["france"])]),
              edct=EDCT, eda=EDA, names=NAMES)
 voc = stratchar.Vocabulary(_Facts(full), sf)
 check("the vocabulary reads the four files when they are on disk",
@@ -292,6 +295,14 @@ check("the vocabulary reads the four files when they are on disk",
 check("and the hero abilities come off the campaign file, which is the only "
       "place any of them is written down",
       isinstance(voc.abilities, list))
+check("the random-name data keeps male and female faction sections separate",
+      voc.payload("england")["names"] == {"male": ["William", "Aldred"],
+                                           "female": ["Cecilia"]})
+check("the regiment picker marks only units directly owned by its faction",
+      [(u["name"], u["owned"]) for u in voc.payload("england")["units"]]
+      == [("NE Bodyguard", True), ("Peasants", False), ("Spear Militia", True)]
+      and [(u["name"], u["owned"]) for u in voc.payload("france")["units"]]
+      == [("NE Bodyguard", False), ("Peasants", True), ("Spear Militia", False)])
 
 fatal = lambda f: [x["code"] for x in f if x["fatal"]]
 warn = lambda f: [x["code"] for x in f if not x["fatal"]]
