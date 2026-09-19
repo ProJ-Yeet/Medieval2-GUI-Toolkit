@@ -113,6 +113,27 @@ check("port held by another program is FATAL",
       c.blocking and "another program" in c.detail)
 squatter.close()
 
+# Bound but NOT listening: a connect is refused just as on a free port, so the
+# preflight used to call this "free" and the server then died on its own bind.
+squatter = socket.socket()
+squatter.bind(("127.0.0.1", 0))
+sq_port = squatter.getsockname()[1]
+c = by_name(startup.preflight(sq_port, ROOT / "web"), f"port {sq_port}")
+check("port bound without a listener is FATAL, not 'free'", c.blocking)
+squatter.close()
+
+if sys.platform == "win32":
+    # The WinError 10013 case from a player's log: another program holds the
+    # port exclusively on 0.0.0.0, and binding 127.0.0.1 is refused, not "in use".
+    squatter = socket.socket()
+    squatter.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+    squatter.bind(("0.0.0.0", 0))
+    sq_port = squatter.getsockname()[1]
+    c = by_name(startup.preflight(sq_port, ROOT / "web"), f"port {sq_port}")
+    check("exclusively held port is FATAL and named as 10013",
+          c.blocking and "10013" in c.detail and "--port" in c.detail)
+    squatter.close()
+
 # ---- icon prewarm -------------------------------------------------------
 print("\n== icon prewarm ==")
 icon_cache = Path(_tmp.mkdtemp(prefix="ut_icons_"))

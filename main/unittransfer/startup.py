@@ -62,12 +62,50 @@ class Check:
         return f"  [{mark}] {self.name}" + (f" - {self.detail}" if self.detail else "")
 
 
+#: WSAEACCES. Windows answers a bind with it, rather than "address in use", when
+#: another program holds the port exclusively (``SO_EXCLUSIVEADDRUSE``, often on
+#: 0.0.0.0 and not even listening), when the port sits in a range Hyper-V/WinNAT
+#: reserved, or when a firewall or antivirus refuses the program the socket.
+WSAEACCES = 10013
+
+
+def bind_error_hint(port: int, e: OSError) -> str:
+    """One line saying why binding ``port`` failed, in words a player can act on."""
+    if getattr(e, "winerror", None) == WSAEACCES:
+        return (f"Windows refused access to port {port} (WinError 10013). Another "
+                f"program has it locked, the port is reserved by Windows, or a "
+                f"firewall/antivirus is blocking this program - relaunch with "
+                f"--port 18756, or allow {sys.executable} in the firewall")
+    return f"in use by another program - relaunch with --port {port + 1}"
+
+
+def _bind_error(port: int, host: str) -> Optional[OSError]:
+    """What binding ``port`` the way the server does would fail with, if anything.
+
+    Connecting only finds a LISTENER. A port that is bound but not listening,
+    held exclusively, reserved, or firewalled refuses the connection just the
+    same, and then the server dies on its own bind after a preflight that said
+    "free". So the preflight binds as well, with the server's own reuse setting
+    (off on Windows, on elsewhere, see ``server._Server``) so the two agree.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if os.name != "nt":
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            s.bind((host, port))
+        except OSError as e:
+            return e
+    return None
+
+
 def _port_state(port: int, host: str = "127.0.0.1") -> Tuple[bool, str]:
     """(free, detail). A port held by OUR server is reported as such."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(0.5)
-        if s.connect_ex((host, port)) != 0:
-            return True, "free"
+        refused = s.connect_ex((host, port)) != 0
+    if refused:
+        err = _bind_error(port, host)
+        return (True, "free") if err is None else (False, bind_error_hint(port, err))
     # something is listening - is it us?
     import json
     import urllib.request

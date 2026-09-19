@@ -258,9 +258,10 @@ def _run_server(log, port: int, verbose: bool, keep_console: bool,
                       running.get("pid"))
             _alert(_other_build_message(running, port))
             return EXIT_OTHER_BUILD
+        hint = startup.bind_error_hint(port, e)
+        log.error("Port %d: %s", port, hint)
         _alert(f"Medieval 2 GUI Toolkit could not start on port {port}.\n\n{e}\n\n"
-               f"Something else is using that port. Launch with --port 8757 "
-               f"to pick another one.\n\nDetails: {startup.server_log_path()}")
+               f"{hint[0].upper()}{hint[1:]}.\n\nDetails: {startup.server_log_path()}")
         return 1
     except Exception:
         log.error("Medieval 2 GUI Toolkit crashed:\n%s", traceback.format_exc())
