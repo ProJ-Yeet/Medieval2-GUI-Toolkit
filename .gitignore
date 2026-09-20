@@ -1,11 +1,12 @@
 # Personal / machine-specific - never commit (mod paths, transfer log, undo backups)
 config/
 HANDOFF.md
-# Split out of HANDOFF.md on 2026-09-13. Ignored to keep the posture that
-# file has had since it was removed from the repo: internal notes, local only.
-# Track RELEASE.md instead if the rules should travel with the repo.
+# Split out of HANDOFF.md on 2026-09-13. The stage-by-stage history is internal
+# notes and stays local. RELEASE.md came OUT of this list on 2026-09-20, for
+# the reason the old comment here anticipated: there is a second person on the
+# repo now, CLAUDE.md points every session at RELEASE.md as the only prose copy
+# of the release rules, and a clone did not contain it.
 HANDOFF_ARCHIVE.md
-RELEASE.md
 med2_mod_installer.iss
 
 # Generated / regenerable
@@ -31,9 +32,12 @@ main/test_results.txt
 # command that wrote it (use the scratchpad directory), not this file.
 main/C?temp*
 
-# Local tool config, not part of the project
+# Local tool config, not part of the project. CLAUDE.md came OUT of this list
+# on 2026-09-20: it is the project's own instructions - which documents to read,
+# how the two release lines work, which agent to hand what - and with a second
+# contributor on the repo it has to travel with a clone. `.claude/` stays local
+# because the agents and settings in it are this machine's.
 .claude/
-CLAUDE.md
 graphify-out/
 .gitattributes
 
