@@ -111,6 +111,14 @@ const CMAP_GAP_LABELS = {magenta: 'Pink', neutral: 'Neutral', sea: 'Sea'};
    and this screen names one on every fetch. */
 const CMAP_GAP_DEF = 'neutral';
 
+/* M18: whether the 3D mode is up, asked in the way this file asks anything of
+   a file loaded after it.
+
+   `typeof` and not a bare call, the same as `rszApply` and `cpaintRowOpen`
+   further down: the node harnesses in `tests/test_maplayers.py` and
+   `tests/test_mapquery.py` load THIS file on its own to run its pixel passes,
+   and a bare reference to a name map3d.js declares would fail them. */
+const cmap3d = () => typeof cm3On === 'function' && cm3On();
 
 /* ---------- 28a: the side column is a tab strip, not a stack ----------
    ---------- 49: and the strip is two of them ----------
@@ -590,6 +598,12 @@ function cmapLayerState(){
   m.terrain = !!(c.terrain && c.terrain.on);
   m.terrain_season = (c.terrain && c.terrain.season) || 'summer';
   m.terrain_gap = (c.terrain && c.terrain.gap) || CMAP_GAPS[0];   // 30
+  /* M18: the height scale and the water plane, which are habits about how the
+     3D looks. `on` is deliberately NOT here - see `cm3Toggle`: every other
+     switch on this screen is a way of reading a flat map and costs nothing to
+     open into, and this one opens a WebGL context. */
+  if(c.d3) m.d3 = {height: c.d3.height, water: !!c.d3.water};
+  else delete m.d3;   // nothing saved is what `cm3State` falls to its own defaults on
   m.tip = c.tip !== false;
   // 20c, T4: settlement names are a way of looking at the map, not a place
   m.labels = !!c.labels;
@@ -658,7 +672,7 @@ function cmapResetView(){
     + 'the terrain textures, and the rivers and heights readings; settlement '
     + 'names and the tooltip; the markers; the query panel\'s colouring and '
     + 'filters; the tab strip, the layer stack and the width of this column; '
-    + 'and the zoom.\n\n'
+    + 'the 3D view, its height scale and its water; and the zoom.\n\n'
     + 'Saved views, the campaign you are reading and any unsaved painting are kept.'))
     return;
   for(const l of c.man.layers){
@@ -688,6 +702,12 @@ function cmapResetView(){
   c.overlay = null; c.overlayEdge = null; c.overlayKey = '';
   c.overlayAlpha = 0.85; c.overlayFill = 'solid';
   c.comp = null; c.compKey = '';
+  // M18: the mode off, the height scale and the water back to what a map with
+  // nothing saved opens with. The context goes with it rather than being left
+  // holding a canvas `renderCampmap` is about to replace.
+  if(typeof cm3Stop === 'function') cm3Stop();
+  c.d3 = null;
+  delete cmapSettings().d3;
   // the query panel and the marker layer are panels of their own; nulling them
   // is how cmapSetCampaign resets them too, and each rebuilds closed and empty
   state.cq = null; state.cmk = null;
@@ -1127,7 +1147,15 @@ function renderCampmap(){
            and hidden until the brush is armed - see cpaintDockPaint. -->
       <aside class="cmpalcol" id="cmPalCol" hidden></aside>
       <div class="cmstage" id="cmStage">
-        <canvas id="cmCanvas" aria-label="Campaign map. Drag to pan, scroll to zoom, click a province to inspect."></canvas>
+        <canvas id="cmCanvas" aria-label="Campaign map. Drag to pan, scroll to zoom, click a province to inspect."${
+          cmap3d() ? ' hidden' : ''}></canvas>
+        <!-- M18: the mesh, over the same stage and under the same bar. Hidden
+             until the mode is on; the flat canvas keeps its pixels while it is,
+             so coming back is a repaint and not a reload. -->
+        <canvas id="cm3Canvas" aria-label="The campaign map as a surface. Drag to turn, right-drag to pan, scroll to zoom."${
+          cmap3d() ? '' : ' hidden'}></canvas>
+        <div class="cm3msg" id="cm3Msg" hidden></div>
+        <div class="cm3card" id="cm3Card"${cmap3d() ? '' : ' hidden'}></div>
         <div class="cmbar" id="cmBar">
           <div class="cmbarrow">
           <button onclick="cmapFit()" title="Fit the whole map (Shift+0).
@@ -1143,6 +1171,14 @@ Answered here, out of the map you were already sent - no request per pixel.">ⓘ
           <button id="cmLabBtn" class="${c.labels ? 'on' : ''}" onclick="clnToggle()"
             title="Settlement, character and port names beside their markers (L), placed so that none covers another.
 A name with no room at this zoom is left off and counted; zoom in for it.">Aa Labels</button>
+          <!-- M18: the same map, as a mesh. A MODE and not a screen - the
+               layers, the opacities, the season and the colouring are the ones
+               already set here. See map3d.js. -->
+          <button id="cm3Btn" class="${cmap3d() ? 'on' : ''}" aria-pressed="${cmap3d()}"
+            onclick="cm3Toggle()"
+            title="The heights as a surface, with this map's own ground on it, orbited (D).
+Drag to turn, right-drag to pan, wheel to zoom.
+Markers, labels and the tooltip stay on the flat map.">⛰ 3D</button>
           <button onclick="cmapResetView()"
             title="Put the map back to how it first opens: every layer, opacity, order and
 punched colour, the terrain textures, the rivers and heights readings, names, the
@@ -1249,6 +1285,11 @@ back from the collapsed state.">›</button>
   cpinPaint();        // 20c, M8: a pin still waiting keeps its banner
   cmapResize();
   if(!c.view.fitted) cmapFit(); else cmapPaint();
+  // M18: the markup was rebuilt wholesale, so the scene's canvas is a fresh
+  // element and the context that was drawing to the old one is gone. Mount
+  // again rather than trying to keep it - the mesh is one pass over the
+  // heights the screen is already holding.
+  if(cmap3d()){ cm3Show(); cm3Mount(); }
   if(typeof rszApply === 'function') rszApply(main);
 }
 
@@ -2141,6 +2182,16 @@ function cmapPaint(dirty){
   const c = state.cmap;
   const cv = document.getElementById('cmCanvas');
   if(!c || !cv || !c.comp) return;
+  /* M18: the mesh is painted with this stack, so anything that changes the
+     stack changes the picture on it.
+
+     ONE hook, here, rather than one per caller. Everything that moves a layer,
+     an opacity, the order, a punched colour, the season, the gap, a colouring
+     or a stroke ends in a `cmapPaint`, and a list of those callers kept in
+     map3d.js would be a list to forget to add to. `cm3Retexture` keys off what
+     it last drew and returns on a match, so the pans and the hovers that also
+     land here cost a string compare. */
+  if(typeof cm3Retexture === 'function') cm3Retexture();
   const t0 = performance.now();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const w = cv.width / dpr, h = cv.height / dpr;
@@ -3190,6 +3241,10 @@ function cmapAfterPaint(codes){
   }
   cmapCompose();
   cmapPaint();
+  // M18: `cmapPaint` above has already put the stroke on the mesh's texture.
+  // A stroke on the HEIGHTS is the one that moves the surface itself, and
+  // nothing in the texture's key would have noticed it.
+  if(codes.indexOf('heights') >= 0 && typeof cm3Remesh === 'function') cm3Remesh();
   // the one thing here that changes the panel rather than the canvas
   if(c.terrain.stale && !wasStale) cmapRepanel();
 }
@@ -4168,6 +4223,9 @@ function cmapKeys(){
     // 50 - `s` for the stack, beside `t`, `l` and `f`. The ten digits tick a
     // layer; this is the panel that says what they tick.
     else if(e.key === 's' || e.key === 'S'){ cmapLayPop(); }
+    // M18 - `d` for the third dimension, beside the other view switches. A
+    // letter for the same reason they are: the ten digits are the ten layers.
+    else if(e.key === 'd' || e.key === 'D'){ cm3Toggle(); }
     else if(e.key === 'Escape' && (state.cmap.sel || state.cmap.pick)){
       const c = state.cmap;
       c.sel = null; c.pick = null; c.probe = null; c.det = null;

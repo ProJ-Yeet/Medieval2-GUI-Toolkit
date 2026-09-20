@@ -3250,6 +3250,131 @@ Minas Tirith are on the map and in `descr_model_strat.txt` nowhere. DaC declares
 Still one viewer on the page - `v3MountCas` drops whatever was showing - so this
 panel and the BMDB one cannot both be drawing.
 
+## M18 - The map in 3D - DONE 2026-09-20
+
+Asked for directly, the day the contributor's campaign-map commit landed:
+*"fully import the 3d map from mylaes tool and add it as a mode in the campaign
+map view."* M18 was filed unrated on 2026-09-17 out of the `187d9ed..439aa9b`
+review and was the largest of the four; the ask is what turned it into work,
+and the "as a mode" in it is the whole of the design decision below.
+
+### A mode, not a screen, and that is what made it small
+
+His 3D is a second map. It carries its own ground-texture loader, its own
+feature overlay with its own opacity, its own region overlay with its own two
+display modes, a tile-size slider and a matched-pair count - and every one of
+those is a second copy of a control the 2D map already has. The two pictures
+drift apart the moment either is touched.
+
+**Ours is the same picture, lit and tilted.** `cm3Texture` composes the mesh's
+colour map in `cmapPaint`'s own order - 23a's ground, then the one-pixel-a-tile
+composite of every ticked layer at its own opacity, then 16g's colouring last
+because a tint has to be read against what is under it. So the 3D has **no
+layer controls at all**: ticking a layer, dragging an opacity, flipping the
+season, changing the gap colour or applying a query colouring all change the
+surface, because they change the thing the surface is painted with. The card
+over the map carries two switches, a Fit, and two sentences saying so.
+
+That leaves **one hook**, at the top of `cmapPaint`, which is the funnel every
+one of those ends in. Keyed on what was last uploaded, so the pans, the hovers
+and the resizes that also land there cost a string compare. A list of callers
+kept in `map3d.js` would have been a list to forget to add to.
+
+### Three things we did not have to solve, and one we had to correct
+
+| his | ours |
+|---|---|
+| the ground is sampled one texel to a tile in the browser, which is what the tile-size slider and the "none matched" warning manage | `mapterrain.composite` has drawn it at `SCALE` pixels a tile, supersampled, once a season, since 23a. `c.terrain.img` is that picture already decoded, so the mesh is textured with a blit. No tile cache, no per-pixel loop, no folder to pick |
+| the mesh caps at 2048 steps, and the 512 it capped at before dropped one-pixel islands and thin isthmuses | `descr_terrain.txt` caps a map at 510x510 and the heights layer arrives at `fit=tile`. **One vertex per tile, no cap, no resampling** - 248,370 vertices on DaC, 260,100 at the engine's ceiling |
+| sea is "the heights pixel is blue **or** the ground type is one of the four water colours" - two rules, because the first alone left sea at land elevation | `mapvocab.is_sea_height`: not greyscale, or black. **One rule**, and `tests/test_map3d.py` runs it against Python's on the installed maps and agrees tile for tile - 74,365 on DaC and 71,968 on ROCSS |
+
+The fourth is not a correction but it is worth writing down: **the vertex
+normals are a central difference over the height field**, not an accumulation
+over the faces. One pass rather than two, no per-vertex face list, and on a
+regular grid it is the same answer. The test checks every normal is a unit
+vector, which is the one thing a bad difference would silently not be.
+
+His numbers we did take, because they are right and measured: the sea floor at
+`-0.12` of the height scale and the water surface at `-0.04`, so the two cannot
+z-fight and a coastline is still a coastline; near and far off the map's own
+diagonal, because a `0.1..100000` range on a map this size spends the depth
+buffer on distances nothing occupies and gives back z-fighting in bands; and a
+fog density tied to that diagonal, because a fixed one swallows a large map
+whole.
+
+### Two faults found by testing it, both now guarded by the suite
+
+1. **A bare `requestAnimationFrame` hangs the build.** The mount yields one
+   frame so the "Building the mesh" line is on screen before a quarter of a
+   million vertices are built on the thread. A browser stops servicing rAF for
+   a tab that is not being rendered, so switching tab between the press and the
+   build left the promise unresolved **forever**, with the message up, no scene
+   and no error. Found exactly that way. `cm3Yield` races the frame against a
+   120 ms timer; a hidden tab takes the timer and paints nothing, which is the
+   right answer because there was nothing to see.
+2. **`loseContext()` does not free a canvas to be drawn on again.** The element
+   keeps that context for good and hands the same LOST one to the next
+   `getContext`, so turning the mode off and straight back on built a scene
+   that never drew - the shader "failed to compile" with a null info log, which
+   is what a lost context reports. `cm3Stop` gives the context up properly and
+   then swaps the element for a clean `cloneNode(false)` of itself. Three
+   off/on cycles and two with no wait between them now come back live and
+   unlost.
+
+### What is deliberately not in it
+
+Markers, labels, the selected outline and the hover tooltip. All four are
+screen-space drawing over a flat canvas (`cmapOverlay`, `maplabels.js`) and
+none of them has a position in a scene. They stay on the 2D map, the card says
+so, and `D` puts you back. His does not put them in 3D either.
+
+The mode is **not remembered between sessions**, alone among this screen's
+switches. The rest are ways of reading a flat map and cost nothing to open
+into; this one opens a WebGL context and builds a mesh, and somebody who looked
+at one map in 3D should not find the next mod opening that way. The height
+scale and the water plane **are** remembered, and ride in `cmapLayerState`, so
+a named view carries them - which is the contract that comment states for any
+switch added to this screen.
+
+Exit: `web/js/map3d.js`, a `⛰ 3D` button on the map toolbar and a `D` key, the
+card, `cm3DropOrphan` beside `v3DropOrphan` in `applyMode`, and
+`tests/test_map3d.py` - 34 checks, the mesh run for real in node against both
+installed maps.
+
+---
+
+## The contributor's campaign map editor, 2026-09-20, and what it did not close
+
+`865c22f`, one commit, 18 files and 870 insertions, on the campaign map
+workspace only. Merged; our two port commits rebased on top of it with no
+conflict, and nothing of ours was overwritten - it never touches `app.py`,
+`startup.py` or `build_release.py`.
+
+**It closes no open item on this roadmap, and that is the finding rather than a
+complaint.** What it does is extend seven that are already done: 17d's markers
+(character-type symbols, faction colours, port anchors, a highlight ring, a
+chooser for a tile holding several), 17e's hover (the terrain list off the
+ordinary card, the detail kept in the clicked-tile inspector), 20b's find box
+(an alphabetical browse list when the query is empty, and the rows are buttons
+with an `aria-pressed` now), 20c's labels and pin (character names, army unit
+counts, port names in the same collision-avoiding layout), 22a/22b's placement
+(a `+ Create` panel over the existing guided workflow), and 28a/28b/49/50's
+workspace (the bar at the bottom, a compact toolbar, a help panel, focus
+indicators).
+
+**Two things to be clear about.** The searchable region browser is **not**
+M10's region search arriving: M10 is an OSM backdrop and a region search
+together, three stars, and it is `Phase 25` in the Future list, off by default
+because it is the first thing in the toolkit that touches the network. Our own
+find box has existed since 20b, and what landed is a browse list on it. And
+**character editing on the map is genuinely new and was never tracked** - the
+character form, traits, ancillaries, army composition and upgrade controls
+brought into the map workflow, with roster data in the marker response so a
+hover needs no second request. It is not on this roadmap because nobody put it
+there.
+
+---
+
 ## The 2026-09-13 pass, and the two parts of it that produced a measurement
 
 **Traits and ancillaries are still level, and the way to know is the date.**
@@ -3318,10 +3443,15 @@ knowledge from here on is reading our own back.
 Full write-ups in `docs/upstream/REFERENCE_GAPS.md`. They are unrated on purpose:
 the user rates, and a rating is what turns one of these into a phase.
 
+**M18 is done, and it was asked for rather than rated** - on 2026-09-20, three
+days after being filed. That is the other way one of these becomes work, and
+the row below is struck through rather than removed so the ballot still reads
+as it stood. M19, M20 and M21 are still unrated.
+
 | Item | Size | What it is | Why it is worth a star |
 |---|---|---|---|
 | **M16, the playback half** | M | Sample an animation file onto the skeleton the viewer already draws. Joints are matched by name, the pose is a delta from the bind quaternion, slerped between key times, 25 fps when the file carries no ticks. | `cas.py` already reads the container and already names `data/animations`' 305 files as future expansion. The editor half of M16 stays out of scope; this is the half that is a session. |
-| **M18 - the map in 3D** | L | The heightmap as a mesh with the ground textures on it, orbited. | The one thing on his map screen we have nothing of. His is pixelated because the browser samples a tile at a size somebody picks, and `mapterrain.composite` already solves that server-side. |
+| ~~**M18 - the map in 3D**~~ | L | The heightmap as a mesh with the ground textures on it, orbited. | **DONE 2026-09-20**, asked for directly rather than rated, and it came in well under L for the reason the last column predicted: `mapterrain.composite` already solved the textures, so it is a mode over the stack the screen was holding and not a second map. Write-up above under *M18 - The map in 3D*. |
 | **M19 - climates past the twelfth** | M | His four generated files are Phase 34's four. What is new is the claim that **M2EX** lifts the twelve-name wall Phase 34 stopped at. | Verify first. If it holds, appending a name becomes the first option on an M2EX mod and `too-many-climates` joins `modflags.CAP_FINDINGS`. |
 | **M20 - a scatter brush** | S | A sixth tool that scatters `round(pi * r^2 * 0.12)` pixels in the brush radius. | His own use for it is `forest_sparse`, the ground type a pencil cannot make look right. The toolbar and the palette column are already there. |
 | **M21 - `texture_density`** | S | A root-level directive in `descr_aerial_map_ground_types.txt`, `span = max(1, 8 / density)`. | **`mapterrain.parse` drops the line today.** Measure the installed mods: nobody declares it and this is one read and a scale, somebody declares it and 23a has been tiling at the wrong rate. |

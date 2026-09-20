@@ -1410,6 +1410,9 @@ function applyMode(persist){
   // because it is the mode SWITCH that orphans it, and `render()` has just put
   // back every host that is still real.
   if(typeof v3DropOrphan === 'function') v3DropOrphan();
+  // M18: and the campaign map's own scene, for exactly the same reason. It is
+  // a third context on the same page with the same way of being orphaned.
+  if(typeof cm3DropOrphan === 'function') cm3DropOrphan();
 }
 
 // Leaving select mode keeps WHAT was ticked - you step out to look at a unit in

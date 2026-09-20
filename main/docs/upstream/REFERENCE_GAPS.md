@@ -288,6 +288,8 @@ and the write-up is in `ROADMAP_ARCHIVE.md` under Phase 20b.
 The tracked upstream. Twenty-one items; five are already scheduled. **M18 to
 M21 were added on 2026-09-17** from the `187d9ed..439aa9b` review, which is the
 first sync since his tool started moving in the same direction as ours.
+**M18 was built on 2026-09-20**, asked for outright rather than rated; M19,
+M20 and M21 are still unrated and still the user's call.
 
 ### M1. Strat overlay: markers for everything with a coordinate · **scheduled**
 
@@ -497,7 +499,7 @@ Out of scope in the manifest. We have more validators than he does and they are
 scattered across eight modules with no single door. Home's readiness report is
 the nearest thing.
 
-### M18. A 3D preview of the whole campaign map · L, unscoped
+### M18. A 3D preview of the whole campaign map · **done**
 
 `Map3DPreview.jsx`, `terrainTexture.js`, `GroundTextureLoader.jsx`. The
 heightmap as a mesh with the ground textures on it, orbited. **We have no 3D
@@ -514,6 +516,23 @@ his because the tile is sampled in the browser at a size somebody picks;
 supersampled, once a season, and 37b already lifted a picture out of the
 per-tile composite for exactly this reason. And his four water types are
 `mapvocab`'s already, RGB for RGB.
+
+**Landed 2026-09-20** as `web/js/map3d.js`, asked for directly rather than
+rated. Both of those held, and the second one better than expected: sea is
+`mapvocab.is_sea_height` alone, which is ONE rule where his is two, and
+`tests/test_map3d.py` runs the JavaScript against the Python on both installed
+maps and they agree tile for tile.
+
+Three corrections to the entry above, from building it. **It is a mode, not a
+tab or a second map**: the mesh is textured with `cmapPaint`'s own stack, so it
+has no layer, opacity, season or overlay controls of its own and cannot drift
+from the flat map. **There was nothing to decimate** - his 2048-step cap exists
+because his heights are the raw `2W+1` TGA; ours arrive at `fit=tile` and a map
+is capped at 510x510, so it is one vertex per tile with no cap at all. And **it
+was not an L**: the two things the entry said we would not have to solve are
+most of what makes his file 612 lines.
+
+Full write-up in `ROADMAP.md` under *M18 - The map in 3D*.
 
 ### M19. Climates past the twelfth, on a mod that runs on M2EX · M, unscoped
 

@@ -1,14 +1,46 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-17 - **v2.3.4** is the latest 2.x and **beta 2026-09-17**
-the latest beta, both cut on request after **Phase 39** and carrying everything
-uncut since v2.3.3: **Phases 50, 38, 32a, 32b, 32c and 39**, the mercenary
-panel's unit cards and pick-to-light, and the Guilds screen keeping the last
-mod's guilds on a mod switch. v2.3.4 carries 38, 39 and that fix; the beta
-carries all of it. **Releasing is on-request only**: commit to master and
-stop_
+_Updated: 2026-09-20 - **v2.3.4** is the latest 2.x and **beta 2026-09-17**
+the latest beta. Uncut since then: **the contributor's campaign map editor**,
+the two startup/port commits, and **M18, the map in 3D**. **Releasing is
+on-request only**: commit to master and stop_
 
 ## Next up
-**Cut 2026-09-17 on request: v2.3.4 and beta 2026-09-17.** Nothing is uncut.
+**There is a second person on this repo now.** Demircan pushed `865c22f`,
+"campaign map editor v0.1", on 2026-09-20. **Check `origin` for his commits
+and pull before starting any work** - the two port commits were sitting
+unpushed on top of his and had to be rebased.
+
+**Nothing of ours was overwritten by it.** His commit branched from `4ca984e`,
+before both port commits, and touches `unittransfer/server.py` only inside the
+campaign-paint handler. It never goes near `app.py`, `unittransfer/startup.py`
+or `dev/release/build_release.py`, which is where the port work is. The rebase
+was clean and `WSAEACCES = 10013` and the move-rather-than-refuse preflight are
+both still in the tree.
+
+**His commit closes no open roadmap item.** It extends seven that are already
+done - 17d's markers, 17e's hover, 20b's find box, 20c's labels and pin,
+22a/22b's placement, and 28a/28b/49/50's workspace - and adds one thing that
+was never tracked at all, **character editing on the campaign map**. The
+searchable region browser is **not** M10 arriving: M10 is an OSM backdrop and
+a region search together, three stars, and it is `Phase 25` in the Future list.
+Write-up in `ROADMAP.md` under *The contributor's campaign map editor*.
+
+**M18 is done - the map in 3D, closed 2026-09-20, asked for outright.** A
+**mode** on the campaign map, not a second screen: `⛰ 3D` on the toolbar or
+`D`, and the mesh is textured with `cmapPaint`'s own stack, so it has no layer,
+opacity, season or colouring controls of its own and cannot drift from the flat
+map. One vertex per tile with no decimation (248,370 on DaC), sea by
+`mapvocab.is_sea_height` alone where his rule is two, and the ground is 23a's
+composite blitted rather than sampled per tile in the browser. Two faults found
+while testing it and both now in the suite: a bare `requestAnimationFrame`
+hangs the build in a hidden tab, and `loseContext()` does not free a canvas to
+be drawn on again. `tests/test_map3d.py`, 34 checks, the mesh run for real in
+node against both installed maps. Write-up under *M18* in `ROADMAP.md`.
+
+**Phases 44 to 48 are still what is next by the order**, and none of them is
+campaign-map work, so neither the contributor's commit nor M18 moved the queue.
+
+**Cut 2026-09-17 on request: v2.3.4 and beta 2026-09-17.**
 The user asked mid-session for two more things on the mercenary panel, both in
 these builds: each unit's card on every line and list row, and picking a
 mercenary lights every province selling it at once, with a toggle beside the ◉
@@ -17,7 +49,8 @@ button, on by default.
 **Both blocks the user set are finished.** Phase 39 closed the mercenary block
 on 2026-09-17, after 32a, 32b and 32c the same day and 38 before them. Next by
 the order is Phases 44 to 48, which have their own table in `ROADMAP.md`. 38
-and 39 are subreleases (both lines); 32a to 32c are beta only. All uncut.
+and 39 are subreleases (both lines); 32a to 32c are beta only. All of that is
+cut - it is in v2.3.4 and beta 2026-09-17.
 
 **Phase 39 is done - the engine ceilings, closed 2026-09-17, BOTH lines,
 committed and uncut.** **The scoped list was Rome: Total War's**: its "max 60
@@ -1053,6 +1086,8 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
+| M18 - the map in 3D | **done** | Closed 2026-09-20, committed, **not cut** (beta only - it is map work). Asked for outright, not rated. A **mode** on the campaign map (`⛰ 3D`, or `D`), not a second screen: `cm3Texture` composes the mesh's colour map in `cmapPaint`'s own order, so the 3D has no layer, opacity, season, gap or colouring controls of its own and cannot drift from the flat map. **One vertex per tile, no decimation** - his caps at 2048 steps because his heights are the raw `2W+1` TGA, ours arrive at `fit=tile` and `descr_terrain.txt` caps a map at 510x510 (248,370 vertices on DaC, 260,100 at the ceiling). **Sea is `mapvocab.is_sea_height` alone** where his rule is two, and the suite runs the JS against the Python on both installed maps: 74,365 tiles on DaC and 71,968 on ROCSS, agreeing tile for tile. Normals are a central difference over the height field, not accumulated over faces. **Two faults found by testing and both now guarded**: a bare `requestAnimationFrame` never resolves in a tab that is not being rendered, so the build hung forever with the message up (`cm3Yield` races it against a 120 ms timer); and `loseContext()` does not free a canvas to be drawn on again, so off-and-straight-back-on built a scene that never drew with a null-info-log shader failure (`cm3Stop` swaps the element for a `cloneNode(false)`). The mode is **not remembered between sessions** - it opens a WebGL context - but the height scale and the water plane are, and ride in `cmapLayerState`. Markers, labels and the tooltip stay on the flat map; all four are screen-space and have no place in a scene. New: `web/js/map3d.js`, the button and the `D` key, `cm3DropOrphan` beside `v3DropOrphan` in `applyMode`, the `.cm3card`/`.cm3msg` styles. `tests/test_map3d.py` 34/34, new; `tests/test_web_modules.py` 117/117. |
+| the contributor's map editor | **merged** | `865c22f`, Demircan, 2026-09-20, 18 files and 870 insertions on the campaign map workspace. **Closes no open roadmap item** - it extends 17d, 17e, 20b, 20c, 22a/22b and 28a/28b/49/50, and adds character editing on the map, which was never tracked. Its region browser is **not** M10: that is an OSM backdrop and a region search together, three stars, and it is `Phase 25`. Branched from `4ca984e`, before both port commits, so those were rebased on top - clean, and nothing of ours was overwritten (it never touches `app.py`, `startup.py` or `build_release.py`). |
 | 39 - the engine ceilings | **done** | Closed 2026-09-17, committed, **not cut** (both lines when a cut happens). `unittransfer/educeil.py`; `ceilings`/`roster_ceilings` on `edit.unit_detail`, a warning in `plan_edit` for a ceiling the edit crosses, `edCeilHtml`. **The scoped list was RTW's**; every checked number has an M2TW source, the RTW-only ones and the 20,000-face limit are not checked (DaC ships 30,252-face strat models). `too-many-units` in `modflags.CAP_FINDINGS`. `tests/test_educeil.py` 24/24. |
 | 32c - six rules, one repair | **done** | Closed 2026-09-17, committed, **not cut** (beta only). `merc.unit_unknown`, `region_twice`, `region_unknown`, `religion_unknown` (factions too), `event_unknown` (through `event_sources`, or DaC's 61 script-set events would all be findings), `year_outside`; all warnings. Repair: `mcpKeepIn`, per pool, through `region_move`. Scoped counts did not hold (DaC 0 unknown units, not 2). `test_mercpools` 109/109, `test_mapcheck` 95/97 (timing bar, red before). |
 | 32b - both directions, five gates | **done** | Closed 2026-09-17, committed, **not cut** (beta only). `mercpools.hire_view`/`gates`/`event_sources`/`faction_rows`/`campaign_years`; `GET /api/map/mercs`; `mapquery.info_merc_count`, `info_merc_any`, `merc:<unit>`; `web/js/mercs.js` as the Province tab's Mercenaries sub-tab, with edit/add/remove through 32a. Events traced to the script line that sets them (DaC `ND_BOH`, `campaign_script.txt` 10765). Fixed on the way: `faction egypt, spawned_on_event` lost its religion. `test_mercpools` 102/102, `test_web_modules` 112/112. |
@@ -1251,6 +1286,18 @@ the edits out from under it (21 did it once; see the archive).
 ## Read first
 - `ROADMAP.md` - the backlog, the locked decisions, and the campaign map
   reference. Read all of it.
+- **`git fetch origin` before anything else.** There is a second person on this
+  repo since 2026-09-20 and his work arrives on `origin/master` without notice.
+  Check what is new, pull it, and rebase local commits onto it rather than
+  merging over them.
+- `web/js/map3d.js` - **before drawing anything in 3D on this page, and before
+  giving a WebGL context up anywhere.** Two things in it are not obvious and
+  both cost a bug: a bare `requestAnimationFrame` never resolves in a tab the
+  browser is not rendering, so anything that awaits one can hang forever; and
+  `WEBGL_lose_context.loseContext()` does not free a canvas to be drawn on
+  again - the element keeps that context and hands the same LOST one to the
+  next `getContext`, so a canvas that is reused has to be replaced. The model
+  viewer never hit either because it tears its host down with it.
 - `web/js/mappin.js` - **before adding a coordinate field anywhere** (20c).
   `cpinButton(what, fn, args)` is the whole of it; 22a's and 22b's forms and
   their three Place buttons use it.
@@ -1384,6 +1431,17 @@ a Koppen seeder, and a 3D preview he has just fixed and textured.
 twelfth, M20 the scatter brush, M21 `texture_density`, plus M16 split so its
 playback half can be taken without its editor half. `ROADMAP.md`'s
 *2026-09-17 pass* holds the evidence and the three things to send back to him.
+
+**M18 is built (2026-09-20), asked for rather than rated, and the entry
+under-read it in one direction and over-read it in the other.** It was filed
+as an L; it came in well under, because the two things the entry itself said we
+would not have to solve - the textures and the water types - are most of what
+makes his file 612 lines. And his sea rule is not one rule but two, where
+`mapvocab.is_sea_height` is one and is the measured one. **A fourth thing to
+send back to him**, beside the three above: the 2048-step cap he needs because
+his heights are the raw `2W+1` TGA is unnecessary on the `fit=tile` view, which
+is one pixel a tile at the block centre the engine samples. M19, M20 and M21
+are still unrated and still the user's call.
 
 **M21 is the one that may be a defect rather than a feature.** `mapterrain.parse`
 drops a root-level `texture_density` line, and if any installed mod declares one

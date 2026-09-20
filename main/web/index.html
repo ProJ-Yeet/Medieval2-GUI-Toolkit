@@ -838,6 +838,33 @@
     background:rgba(10,12,16,.94);border:1px solid var(--edge);border-radius:8px;
     padding:8px 9px;box-shadow:0 8px 26px rgba(0,0,0,.45)}
   .cmlaypop[hidden]{display:none}
+  /* M18 - the 3D mode. The mesh's canvas is a sibling of the flat one and the
+     rule above (`.cmstage canvas`) already puts both at inset:0, so the two
+     occupy the same stage and `hidden` decides which is up. The cursor says
+     the gesture is a turn rather than a pan. */
+  #cm3Canvas{cursor:grab;touch-action:none}
+  #cm3Canvas:active{cursor:grabbing}
+  /* On the right, because the layer stack and the readout own the left and the
+     toolbar owns the top. Capped and scrolling for the same reason the stack
+     is: a short stage must not lose the Fit button off the bottom. */
+  .cm3card{position:absolute;right:8px;top:8px;z-index:6;width:238px;
+    max-width:calc(100% - 16px);max-height:calc(100% - 60px);overflow:auto;
+    background:rgba(10,12,16,.94);border:1px solid var(--edge);border-radius:8px;
+    padding:8px 9px;box-shadow:0 8px 26px rgba(0,0,0,.45);font-size:12px}
+  .cm3card[hidden]{display:none}
+  .cm3row{display:flex;gap:7px;align-items:center;margin-bottom:6px}
+  .cm3row label{white-space:nowrap;display:flex;gap:5px;align-items:center}
+  .cm3row input[type=range]{flex:1 1 auto;min-width:0}
+  .cm3row .count{min-width:22px;text-align:right}
+  .cm3row button{font:inherit;font-size:11.5px;padding:1px 7px;margin-left:auto}
+  .cm3note{margin:6px 0 0;font-size:11px;color:var(--dim);line-height:1.35}
+  /* The one message this mode has: reading, building, or why it cannot. Middle
+     of the stage, because at that moment there is nothing else on it. */
+  .cm3msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    z-index:7;background:rgba(10,12,16,.92);border:1px solid var(--edge);
+    border-radius:8px;padding:8px 12px;font-size:12.5px;max-width:60%;
+    text-align:center;line-height:1.4}
+  .cm3msg[hidden]{display:none}
   /* 20c, M8 - the pin. The banner says what the next click is for and how to
      stop; the cursor changes so the map itself says it too. */
   .cmpin{position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:6;
@@ -3007,6 +3034,8 @@
 <script src="js/facaudit.js"></script>
 <script src="js/rawtext.js"></script>
 <script src="js/viewer3d.js"></script>
+<!-- M18: after viewer3d.js, which owns the matrix helpers it shares. -->
+<script src="js/map3d.js"></script>
 <script src="js/boot.js"></script>
 </body>
 </html>
