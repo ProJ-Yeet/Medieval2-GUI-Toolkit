@@ -1,6 +1,11 @@
 # Personal / machine-specific - never commit (mod paths, transfer log, undo backups)
 config/
 HANDOFF.md
+# Split out of HANDOFF.md on 2026-09-13. Ignored to keep the posture that
+# file has had since it was removed from the repo: internal notes, local only.
+# Track RELEASE.md instead if the rules should travel with the repo.
+HANDOFF_ARCHIVE.md
+RELEASE.md
 med2_mod_installer.iss
 
 # Generated / regenerable
@@ -10,6 +15,21 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+
+# Captured suite output. A full run redirected to a file, kept while somebody
+# reads it and regenerable by running the suite again - never a source of truth
+# about what passes. The suite prints its own tally; that is the answer.
+main/results.txt
+main/test_results.txt
+
+# A path that was meant to be a path and became a filename. Writing to
+# `C:\temp\foo.txt` from the POSIX shell here does not resolve as a Windows
+# path, so the whole string lands as ONE file in main/ - with the colon stored
+# as U+F03A, because Windows will not take a real one. Four of these sat in
+# main/ from 2026-09-14 to 2026-09-20.
+# THIS LINE IS A NET, NOT THE FIX: if one appears, the thing to correct is the
+# command that wrote it (use the scratchpad directory), not this file.
+main/C?temp*
 
 # Local tool config, not part of the project
 .claude/
