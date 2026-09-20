@@ -134,6 +134,42 @@ if sys.platform == "win32":
           c.blocking and "10013" in c.detail and "--port" in c.detail)
     squatter.close()
 
+# ---- a blocked port moves the tool, it does not stop it ------------------
+print("\n== falling back to another port ==")
+check("fallbacks are nearest-first and never repeat the port asked for",
+      startup.fallback_ports(8756)[:3] == [8757, 8758, 8759]
+      and 8756 not in startup.fallback_ports(8756))
+
+squatter = socket.socket()
+squatter.bind(("127.0.0.1", 0))
+squatter.listen(1)
+sq_port = squatter.getsockname()[1]
+alt = startup.first_bindable(startup.fallback_ports(sq_port))
+check("first_bindable skips the held port and finds a free one",
+      alt is not None and alt != sq_port)
+
+# End to end: --check on a port somebody else holds still passes, on another port.
+r = subprocess.run([sys.executable, str(ROOT / "app.py"), "--check",
+                    "--port", str(sq_port)], capture_output=True, text=True)
+out = r.stdout + r.stderr
+check("a held port does not stop startup any more", r.returncode == 0)
+check("…it says which port it moved to instead",
+      f"Using port {alt}" in out and f"[ok  ] port {alt}" in out)
+check("…and it stops telling the player to relaunch with --port",
+      "relaunch with --port" not in out)
+squatter.close()
+
+# The detached child must be told the port, or it starts its own search.
+import importlib.util as _ilu
+_spec = _ilu.spec_from_file_location("ut_app", ROOT / "app.py")
+_app = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_app)
+check("the child is handed the port that was settled on",
+      _app._with_port(["--port", "8756", "--no-browser"], 18756)
+      == ["--port", "18756", "--no-browser"])
+check("…even when nobody passed --port at all",
+      _app._with_port(["--no-browser"], 18756) == ["--port", "18756", "--no-browser"])
+
 # ---- icon prewarm -------------------------------------------------------
 print("\n== icon prewarm ==")
 icon_cache = Path(_tmp.mkdtemp(prefix="ut_icons_"))

@@ -25,7 +25,7 @@ Then, in this order:
    already inside the folder, so it will usually just say there is nothing to
    do - run it anyway, because that is the answer you want to have seen before
    the next step rather than after it.
-2. **Run `Launch-Medieval 2 GUI Toolkit.bat`.** This is the one you use from then on.
+2. **Run `Launch-Medieval2-GUI-Toolkit.bat`.** This is the one you use from then on.
 
 On first run, open Settings and point it at your Medieval II install folder (the
 one containing `mods`).

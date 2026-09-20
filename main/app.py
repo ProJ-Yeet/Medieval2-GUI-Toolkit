@@ -109,6 +109,11 @@ def main(argv):
                   "holding it. Nothing was started.", port)
         return EXIT_PREFLIGHT
 
+    # ---- the wanted port may not be available: move rather than refuse ----
+    port, moved_from = _resolve_port(log, port)
+    if moved_from is not None:
+        passthrough = _with_port(passthrough, port)
+
     # ---- preflight: say WHY a launch fails instead of dying silently ----
     checks = startup.preflight(port, WEB_DIR)
     if not startup.report(checks):
@@ -156,6 +161,48 @@ def main(argv):
     if mode == "launch" and not keep_console:
         return _launch_detached(log, port, passthrough)
     return _run_server(log, port, verbose, keep_console, no_browser)
+
+
+def _with_port(passthrough, port: int):
+    """``passthrough`` with its --port set to ``port`` (added if it had none).
+
+    The detached child re-runs every check for itself, so it has to be told the
+    port this process settled on - otherwise it starts from 8756 again, walks to
+    a fallback of its own, and the launcher waits for a window that opened
+    somewhere else.
+    """
+    out, it = [], iter(passthrough)
+    for a in it:
+        if a in ("--port", "-p"):
+            next(it, None)          # drop the old value with its flag
+            continue
+        out.append(a)
+    return ["--port", str(port)] + out
+
+
+def _resolve_port(log, port: int):
+    """(port to use, port we moved off). Falls back only when nothing answers.
+
+    A blocked port is the common case on Windows - a reserved range, a security
+    suite, or a program holding it exclusively - and none of that is the
+    player's doing, so the tool moves instead of stopping with an error they
+    cannot act on. It does NOT move when something on the port *answers* as a
+    toolkit: that is either our own window to reopen or another build to refuse,
+    and both are decided further down with the whole story in hand.
+    """
+    err = startup.bind_error(port)
+    if err is None:
+        return port, None
+    if _running_instance(port):
+        return port, None           # a toolkit is there - let the caller handle it
+    alt = startup.first_bindable(startup.fallback_ports(port))
+    if alt is None:
+        return port, None           # nothing worked; fail on the port asked for
+    log.warning("Port %d is not available: %s", port,
+                startup.bind_error_hint(port, err, suggest_port=False))
+    log.warning("Using port %d instead. The window will open on "
+                "http://127.0.0.1:%d/ - bookmark that, not %d.", alt, alt, port)
+    return alt, port
 
 
 def _launch_detached(log, port: int, passthrough) -> int:

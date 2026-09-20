@@ -30,7 +30,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Sequence, Tuple
 
 from . import config
 from .logutil import log
@@ -69,17 +69,48 @@ class Check:
 WSAEACCES = 10013
 
 
-def bind_error_hint(port: int, e: OSError) -> str:
-    """One line saying why binding ``port`` failed, in words a player can act on."""
+def bind_error_hint(port: int, e: OSError, suggest_port: bool = True) -> str:
+    """One line saying why binding ``port`` failed, in words a player can act on.
+
+    ``suggest_port`` is off when the caller is about to move to another port by
+    itself: telling someone to relaunch with --port, in the same breath as doing
+    it for them, reads as an instruction they still have to follow.
+    """
     if getattr(e, "winerror", None) == WSAEACCES:
+        advice = (f" - relaunch with --port 18756, or allow {sys.executable} in "
+                  f"the firewall" if suggest_port else "")
         return (f"Windows refused access to port {port} (WinError 10013). Another "
                 f"program has it locked, the port is reserved by Windows, or a "
-                f"firewall/antivirus is blocking this program - relaunch with "
-                f"--port 18756, or allow {sys.executable} in the firewall")
-    return f"in use by another program - relaunch with --port {port + 1}"
+                f"firewall/antivirus is blocking this program{advice}")
+    return ("in use by another program"
+            + (f" - relaunch with --port {port + 1}" if suggest_port else ""))
 
 
-def _bind_error(port: int, host: str) -> Optional[OSError]:
+#: Where to go when the wanted port cannot be bound, in order. The neighbours
+#: come first so a person who was told "8756" still lands somewhere they can
+#: guess, then the far-apart ones, which is what helps when the whole 8000s
+#: block is spoken for (Hyper-V reservations come in runs, and so do the ports a
+#: security suite claims).
+FALLBACK_OFFSETS = (1, 2, 3)
+FALLBACK_PORTS = (18756, 28756, 38756, 48756)
+
+
+def fallback_ports(preferred: int) -> List[int]:
+    """Ports to try after ``preferred``, nearest first, without repeats."""
+    out = [preferred + n for n in FALLBACK_OFFSETS]
+    out += [p for p in FALLBACK_PORTS if p != preferred and p not in out]
+    return [p for p in out if 1024 < p < 65536]
+
+
+def first_bindable(ports: Sequence[int], host: str = "127.0.0.1") -> Optional[int]:
+    """The first of ``ports`` this process could actually bind, or None."""
+    for p in ports:
+        if bind_error(p, host) is None:
+            return p
+    return None
+
+
+def bind_error(port: int, host: str = "127.0.0.1") -> Optional[OSError]:
     """What binding ``port`` the way the server does would fail with, if anything.
 
     Connecting only finds a LISTENER. A port that is bound but not listening,
@@ -104,7 +135,7 @@ def _port_state(port: int, host: str = "127.0.0.1") -> Tuple[bool, str]:
         s.settimeout(0.5)
         refused = s.connect_ex((host, port)) != 0
     if refused:
-        err = _bind_error(port, host)
+        err = bind_error(port, host)
         return (True, "free") if err is None else (False, bind_error_hint(port, err))
     # something is listening - is it us?
     import json
