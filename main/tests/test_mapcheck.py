@@ -31,6 +31,7 @@ Five parts, the last two of which need a game install:
     python -m tests.test_mapcheck
 """
 import json
+import re
 import shutil
 import sys
 import threading
@@ -72,9 +73,12 @@ check("and the wording of the message is not part of it either",
 check("every rule has a source, a label and one of the three severities",
       all(r.source and r.label and r.severity in mapcheck.SEVERITIES
           for r in mapcheck.RULES))
-check("every fix names a rule that exists, and no rule owns two fixes",
+check("every fix names a rule that exists, and only the resource rule owns two",
       all(f["rule"] in mapcheck.RULE_BY_CODE for f in mapcheck.FIXES.values())
-      and len({f["rule"] for f in mapcheck.FIXES.values()}) == len(mapcheck.FIXES))
+      and mapcheck.FIXES["resource_move"]["rule"]
+      == mapcheck.FIXES["resource_position"]["rule"]
+      and len({f["rule"] for f in mapcheck.FIXES.values()})
+      == len(mapcheck.FIXES) - 1)
 
 
 # ---- 2) a clean map ----------------------------------------------------------
@@ -572,7 +576,7 @@ check("clearing the stamp puts it back to blocking",
 
 
 # ---- the three fixes ---------------------------------------------------------
-print("\n   Geomod's three debugger actions, and the Undo that reverses each")
+print("\n   Campaign-map repair actions, and the Undo that reverses each")
 
 
 def fixture(breaker) -> Path:
@@ -638,6 +642,138 @@ check(f"heights_black moves {len(moved)} pixel(s), every one of them (0,0,0) to 
       moved and all(a[x, y] == (0, 0, 0) and b[x, y] == (1, 1, 1) for x, y in moved))
 check("and map.rwm is deleted with it, because a layer changed",
       not (root / "data" / campmap.RWM_REL).exists())
+
+# A sea resource has two deliberate choices: deletion keeps the old repair,
+# while move uses the land coordinate the finding itself calculated.  Plan it
+# by key as the row button does, so no neighbouring finding can move with it.
+root = fixture(lambda d: edit(d, STRAT_REL, "resource silver, 5, 4",
+                              "resource silver, 5, 0"))
+mod = Mod(root)
+was = files_of(root)
+sea_finding = next(f for f in mapcheck.run(mod, use_baseline=False).findings
+                   if f.code == "strat.resource_position")
+move_plan = mapcheck.plan_fix(mod, ["resource_move"], keys=[sea_finding.key])
+check("a sea resource offers its calculated nearest land as a move target",
+      sea_finding.move == (5, 1) and move_plan.payload()["ok"]
+      and len(move_plan.cleared) == 1
+      and "resource silver, 5, 1" in move_plan.text[STRAT_REL])
+move_out = mapcheck.apply_fix(move_plan)
+moved_text = (root / "data" / STRAT_REL).read_text(encoding="latin-1")
+check("moving rewrites only its coordinates and clears the sea finding",
+      "resource silver, 5, 1" in moved_text
+      and not any(f.code == "strat.resource_position"
+                  for f in mapcheck.run(Mod(root), use_baseline=False).findings))
+transfer.undo(move_out["id"])
+check("Undo restores the moved resource byte-exact", files_of(root) == was)
+
+# Row selections are sent by action, not as one shared key list: otherwise
+# selecting gold to move and silver to delete would delete both resources.
+root = fixture(lambda d: (edit(d, STRAT_REL, "resource gold, 1, 5",
+                               "resource gold, 1, 0"),
+                          edit(d, STRAT_REL, "resource silver, 5, 4",
+                               "resource silver, 500, 4")))
+mod = Mod(root)
+positions = [f for f in mapcheck.run(mod, use_baseline=False).findings
+             if f.code == "strat.resource_position"]
+gold = next(f for f in positions if f.what.startswith("gold|"))
+silver = next(f for f in positions if f.what.startswith("silver|"))
+batch_plan = mapcheck.plan_fix(
+    mod, ["resource_move", "resource_position"],
+    keys={"resource_move": [gold.key], "resource_position": [silver.key]})
+batch_text = batch_plan.text[STRAT_REL]
+check("one plan can move selected resources and delete different selected resources",
+      batch_plan.payload()["ok"] and len(batch_plan.cleared) == 2
+      and "resource gold, 1, 1" in batch_text
+      and "resource silver, 500, 4" not in batch_text)
+batch_out = mapcheck.apply_fix(batch_plan, batch_plan.digest())
+check("the Log says how many each fix acted on, not just which fixes ran: "
+      f"{batch_out['record']['unit_type'][:60]}",
+      batch_out["record"]["options"]["counts"]
+      == {"resource_move": 1, "resource_position": 1}
+      and "(1)" in batch_out["record"]["unit_type"])
+
+# One resource chosen for both is refused, however it is asked for: a flat
+# key list with both fixes, the same key under both, or no keys at all.
+root = fixture(lambda d: edit(d, STRAT_REL, "resource silver, 5, 4",
+                              "resource silver, 5, 0"))
+mod = Mod(root)
+sea_finding = next(f for f in mapcheck.run(mod, use_baseline=False).findings
+                   if f.code == "strat.resource_position")
+for label, keys in (("a flat key list", [sea_finding.key]),
+                    ("the same key under both",
+                     {"resource_move": [sea_finding.key],
+                      "resource_position": [sea_finding.key]}),
+                    ("no keys", None)):
+    both = mapcheck.plan_fix(mod, ["resource_move", "resource_position"],
+                             keys=keys)
+    check(f"moving and deleting one resource is refused ({label})",
+          "both moved and deleted" in " ".join(both.errors)
+          and not both.text)
+
+# Keys that are not keys are refused, not read as characters or as "all".
+for label, keys in (("null", {"resource_move": None}),
+                    ("a bare string", {"resource_move": sea_finding.key}),
+                    ("a number", 7)):
+    try:
+        mapcheck.plan_fix(mod, ["resource_move"], keys=keys)
+        refused = False
+    except ValueError:
+        refused = True
+    check(f"malformed keys ({label}) raise ValueError", refused)
+check("an empty mapping chooses nothing rather than everything",
+      "nothing left to fix" in " ".join(
+          mapcheck.plan_fix(mod, ["resource_move"], keys={}).errors))
+
+# The target is a tile the resource can be traded from, not merely "not sea":
+# with the land straight north of it impassable, it goes somewhere else.
+IMPASSABLE = tuple(mapvocab.ground("impassable_land")["rgb"])
+root = fixture(lambda d: (
+    edit(d, STRAT_REL, "resource silver, 5, 4", "resource silver, 5, 0"),
+    repaint(d, "map_ground_types.tga",
+            lambda x, y, c: IMPASSABLE if 10 <= x <= 12 and 10 <= y <= 11
+            else None)))
+mod = Mod(root)
+cliff = mapcheck.plan_fix(mod, ["resource_move"])
+cliff_text = cliff.text.get(STRAT_REL, "")
+check(f"the move skips impassable land: {cliff.changes[:1]}",
+      cliff.payload()["ok"] and "resource silver, 5, 0" not in cliff_text
+      and "resource silver, 5, 1" not in cliff_text)
+
+# A batch never stacks two of one name on a tile: two silvers in the same sea
+# tile share a nearest coast, and get two different tiles.
+root = fixture(lambda d: edit(d, STRAT_REL, "resource silver, 5, 4",
+                              "resource silver, 5, 0\r\nresource silver, 5, 0"))
+mod = Mod(root)
+pair = mapcheck.plan_fix(mod, ["resource_move"])
+spots = re.findall(r"resource silver, (\d+), (\d+)", pair.text.get(STRAT_REL, ""))
+check(f"two silvers moved in one batch land on two tiles: {spots}",
+      pair.payload()["ok"] and len(spots) == 2 and spots[0] != spots[1]
+      and ("5", "0") not in spots)
+
+# What the user saw is what is written: a plan whose target moved since it
+# was shown is refused at Write, and nothing is touched.
+root = fixture(lambda d: edit(d, STRAT_REL, "resource silver, 5, 4",
+                              "resource silver, 5, 0"))
+mod = Mod(root)
+shown = mapcheck.plan_fix(mod, ["resource_move"])
+repaint(root / "data", "map_ground_types.tga",
+        lambda x, y, c: IMPASSABLE if 10 <= x <= 12 and 10 <= y <= 11 else None)
+was = files_of(root)
+now_plan = mapcheck.plan_fix(Mod(root), ["resource_move"])
+try:
+    mapcheck.apply_fix(now_plan, shown.digest())
+    stale_refused = False
+except ValueError as exc:
+    stale_refused = "plan it again" in str(exc)
+check("a plan that would now write another tile than the one shown is refused",
+      shown.digest() != now_plan.digest() and stale_refused
+      and files_of(root) == was)
+
+root = fixture(lambda d: edit(d, STRAT_REL, "resource silver, 5, 4",
+                              "resource silver, 500, 4"))
+off_plan = mapcheck.plan_fix(Mod(root), ["resource_move"])
+check("a resource off the map stays delete-only",
+      "nothing left to fix" in " ".join(off_plan.errors))
 
 clean_plan = mapcheck.plan_fix(clean, ["heights_black", "resource_position"])
 check(f"a fix on a clean map refuses and says so: {clean_plan.errors[:1]}",
@@ -770,6 +906,40 @@ try:
     bad = post("/api/map/fix_plan", {"fixes": ["not_a_fix"]})
     check(f"an unknown fix is refused by name: {bad.get('error', '')[:50]}",
           bad.get("error"))
+
+    edit(http_root / "data", STRAT_REL, "resource silver, 5, 4",
+         "resource silver, 5, 0")
+    move_was = files_of(http_root)
+    sea = next(f for f in get("/api/map/check?mod=CheckMod")["findings"]
+               if f["code"] == "strat.resource_position")
+    r = post("/api/map/fix_plan",
+             {"fixes": ["resource_move"], "keys": [sea["key"]]})
+    check("the move plan over HTTP targets just the selected sea resource",
+          r["plan"]["ok"] and r["plan"]["cleared"] == 1
+          and "5,0 -> 5,1" in " ".join(r["plan"]["changes"]))
+    digest = r["plan"]["digest"]
+    stale = post("/api/map/fix_apply", {"fixes": ["resource_move"],
+                                        "keys": [sea["key"]],
+                                        "expect": "0" * 16})
+    check(f"a Write whose digest is not the plan's is refused over HTTP: "
+          f"{stale.get('error', '')[:50]}",
+          stale.get("error") and files_of(http_root) == move_was)
+    empty = post("/api/map/fix_plan", {"fixes": ["resource_move"], "keys": {}})
+    check("an empty key mapping over HTTP chooses nothing",
+          empty.get("error") and not empty["plan"]["ok"])
+    junk = post("/api/map/fix_plan", {"fixes": ["resource_move"],
+                                      "keys": {"resource_move": None}})
+    check(f"malformed keys over HTTP answer with an error: "
+          f"{junk.get('error', '')[:50]}", junk.get("error"))
+    r = post("/api/map/fix_apply",
+             {"fixes": ["resource_move"], "keys": [sea["key"]],
+              "expect": digest})
+    check("the move apply over HTTP writes the calculated land coordinates",
+          not r.get("error") and "resource silver, 5, 1" in
+          (http_root / "data" / STRAT_REL).read_text(encoding="latin-1"))
+    post("/api/undo", {"id": r["id"]})
+    check("the HTTP move can also be undone byte-exact",
+          files_of(http_root) == move_was)
 finally:
     httpd.shutdown()
 

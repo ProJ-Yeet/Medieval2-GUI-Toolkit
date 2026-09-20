@@ -5637,7 +5637,9 @@ class Handler(BaseHTTPRequestHandler):
         The plan re-runs the rules rather than trusting the finding list the
         browser is holding, so a fix acts on the map as it is now. What the
         browser sends is which fixes to run and, optionally, which findings of
-        them - never what to change.
+        them - never what to change. With Write it also sends the digest of
+        the plan it showed, and a plan that would now write something else is
+        refused.
 
         A fix that writes a layer invalidates the mod, which drops the map,
         which is what makes the next request read the file this one wrote. A
@@ -5664,14 +5666,16 @@ class Handler(BaseHTTPRequestHandler):
                 return {"ok": True, "baseline": {"taken": stamp.get("taken", ""),
                                                  "keys": len(stamp.get("keys") or ())},
                         "report": rep.payload(cm)}
+            # keys as sent: an empty list or mapping chooses nothing, which
+            # is not the same as leaving keys out and choosing everything
             plan = mapcheck.plan_fix(mod, body.get("fixes") or [], cm, campaign,
-                                     body.get("keys") or None)
+                                     body.get("keys"))
             out = {"plan": plan.payload()}
             if action == "fix_plan" or plan.errors:
                 if plan.errors:
                     out["error"] = "; ".join(plan.errors)
                 return out
-            out.update(mapcheck.apply_fix(plan))
+            out.update(mapcheck.apply_fix(plan, body.get("expect")))
             campaint.drop(name)
             self.registry.invalidate(name)          # the files changed on disk
             fresh = self.registry.map_for(name, campaign)
