@@ -425,7 +425,7 @@ than "does what is on disk load?".
   POST /api/map/baseline         -> stamp what is already wrong as inherited, or
                                     clear the stamp (`action`: take / clear)
   POST /api/map/fix_plan|fix_apply
-                                 -> Geomod's three debugger actions, in one
+                                 -> campaign-map repair actions, in one
                                     backup set + undo
   GET  /api/mapgen?mod=          -> 27: what the layer generators offer
   POST /api/map/gen_plan|gen_apply
@@ -5280,7 +5280,7 @@ class Handler(BaseHTTPRequestHandler):
 
     # ---- the campaign map, checked (16f) ----
     def _mapcheck(self, action, body):
-        """The baseline stamp, and Geomod's three auto-fixes.
+        """The baseline stamp and the campaign-map repair actions.
 
         The plan re-runs the rules rather than trusting the finding list the
         browser is holding, so a fix acts on the map as it is now. What the

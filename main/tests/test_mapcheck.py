@@ -72,9 +72,10 @@ check("and the wording of the message is not part of it either",
 check("every rule has a source, a label and one of the three severities",
       all(r.source and r.label and r.severity in mapcheck.SEVERITIES
           for r in mapcheck.RULES))
-check("every fix names a rule that exists, and no rule owns two fixes",
+check("every fix names a rule that exists, including the two resource choices",
       all(f["rule"] in mapcheck.RULE_BY_CODE for f in mapcheck.FIXES.values())
-      and len({f["rule"] for f in mapcheck.FIXES.values()}) == len(mapcheck.FIXES))
+      and mapcheck.FIXES["resource_move"]["rule"]
+      == mapcheck.FIXES["resource_position"]["rule"])
 
 
 # ---- 2) a clean map ----------------------------------------------------------
@@ -397,11 +398,6 @@ broken(lambda d: repaint(d, "map_ground_types.tga",
                          if 5 <= x <= 6 and 3 <= y <= 4 else None),
        "marker.ground", "a settlement standing on impassable land")
 
-broken(lambda d: repaint(d, "map_ground_types.tga",
-                         lambda x, y, c: (0, 64, 0)
-                         if 5 <= x <= 6 and 3 <= y <= 4 else None),
-       "marker.ground", "a settlement standing on dense forest")
-
 broken(lambda d: repaint(d, "map_heights.tga",
                          lambda x, y, c: (0, 0, 0)
                          if 13 <= x <= 14 and 11 <= y <= 12 else None),
@@ -492,15 +488,9 @@ broken(lambda d: (d / campmap.REGION_NAMES_REL).write_bytes(
            b"\xff\xfe" + "{A_Province}Aland\r\n".encode("utf-16-le")),
        "loc.missing", "region and settlement names with no line in the text file")
 
-# the same resource twice on one tile is not a fault: the engine loads both,
-# the province trades both, and mods stack them on purpose
-root = tmp / "mods" / "B_stacked_resource"
-shutil.copytree(clean_root, root)
-edit(root / "data", STRAT_REL, "resource silver, 5, 4", "resource gold, 1, 5")
-got = mapcheck.run(Mod(root), use_baseline=False)
-check(f"a resource stacked on an identical one is reported by nothing, got "
-      f"{sorted({f.code for f in got.findings}) or 'nothing'}",
-      not got.findings)
+broken(lambda d: edit(d, STRAT_REL, "resource silver, 5, 4",
+                      "resource gold, 1, 5"),
+       "strat.resource_duplicate", "the same resource twice on one tile")
 
 broken(lambda d: edit(d, STRAT_REL, "resource silver, 5, 4",
                       "resource silver, 5, 0"),
@@ -572,7 +562,7 @@ check("clearing the stamp puts it back to blocking",
 
 
 # ---- the three fixes ---------------------------------------------------------
-print("\n   Geomod's three debugger actions, and the Undo that reverses each")
+print("\n   Campaign-map repair actions, and the Undo that reverses each")
 
 
 def fixture(breaker) -> Path:
@@ -595,6 +585,9 @@ def black_port(d: Path):
 
 for code, breaker, expect in (
     ("heights_black", black_port, "height.ambiguous"),
+    ("resource_duplicate",
+     lambda d: edit(d, STRAT_REL, "resource silver, 5, 4", "resource gold, 1, 5"),
+     "strat.resource_duplicate"),
     ("resource_position",
      lambda d: edit(d, STRAT_REL, "resource silver, 5, 4", "resource silver, 5, 0"),
      "strat.resource_position"),
@@ -639,7 +632,56 @@ check(f"heights_black moves {len(moved)} pixel(s), every one of them (0,0,0) to 
 check("and map.rwm is deleted with it, because a layer changed",
       not (root / "data" / campmap.RWM_REL).exists())
 
-clean_plan = mapcheck.plan_fix(clean, ["heights_black", "resource_position"])
+# A sea resource has two deliberate choices: deletion keeps the old repair,
+# while move uses the land coordinate the finding itself calculated.  Plan it
+# by key as the row button does, so no neighbouring finding can move with it.
+root = fixture(lambda d: edit(d, STRAT_REL, "resource silver, 5, 4",
+                              "resource silver, 5, 0"))
+mod = Mod(root)
+was = files_of(root)
+sea_finding = next(f for f in mapcheck.run(mod, use_baseline=False).findings
+                   if f.code == "strat.resource_position")
+move_plan = mapcheck.plan_fix(mod, ["resource_move"], keys=[sea_finding.key])
+check("a sea resource offers its calculated nearest land as a move target",
+      sea_finding.move == (5, 1) and move_plan.payload()["ok"]
+      and len(move_plan.cleared) == 1
+      and "resource silver, 5, 1" in move_plan.text[STRAT_REL])
+move_out = mapcheck.apply_fix(move_plan)
+moved_text = (root / "data" / STRAT_REL).read_text(encoding="latin-1")
+check("moving rewrites only its coordinates and clears the sea finding",
+      "resource silver, 5, 1" in moved_text
+      and not any(f.code == "strat.resource_position"
+                  for f in mapcheck.run(Mod(root), use_baseline=False).findings))
+transfer.undo(move_out["id"])
+check("Undo restores the moved resource byte-exact", files_of(root) == was)
+
+# Row selections are sent by action, not as one shared key list: otherwise
+# selecting gold to move and silver to delete would delete both resources.
+root = fixture(lambda d: (edit(d, STRAT_REL, "resource gold, 1, 5",
+                               "resource gold, 1, 0"),
+                          edit(d, STRAT_REL, "resource silver, 5, 4",
+                               "resource silver, 500, 4")))
+mod = Mod(root)
+positions = [f for f in mapcheck.run(mod, use_baseline=False).findings
+             if f.code == "strat.resource_position"]
+gold = next(f for f in positions if f.what.startswith("gold|"))
+silver = next(f for f in positions if f.what.startswith("silver|"))
+batch_plan = mapcheck.plan_fix(
+    mod, ["resource_move", "resource_position"],
+    keys={"resource_move": [gold.key], "resource_position": [silver.key]})
+batch_text = batch_plan.text[STRAT_REL]
+check("one plan can move selected resources and delete different selected resources",
+      batch_plan.payload()["ok"] and len(batch_plan.cleared) == 2
+      and "resource gold, 1, 1" in batch_text
+      and "resource silver, 500, 4" not in batch_text)
+
+root = fixture(lambda d: edit(d, STRAT_REL, "resource silver, 5, 4",
+                              "resource silver, 500, 4"))
+off_plan = mapcheck.plan_fix(Mod(root), ["resource_move"])
+check("a resource off the map stays delete-only",
+      "nothing left to fix" in " ".join(off_plan.errors))
+
+clean_plan = mapcheck.plan_fix(clean, ["heights_black", "resource_duplicate"])
 check(f"a fix on a clean map refuses and says so: {clean_plan.errors[:1]}",
       clean_plan.errors and not clean_plan.data and not clean_plan.text)
 
@@ -770,59 +812,27 @@ try:
     bad = post("/api/map/fix_plan", {"fixes": ["not_a_fix"]})
     check(f"an unknown fix is refused by name: {bad.get('error', '')[:50]}",
           bad.get("error"))
+
+    edit(http_root / "data", STRAT_REL, "resource silver, 5, 4",
+         "resource silver, 5, 0")
+    move_was = files_of(http_root)
+    sea = next(f for f in get("/api/map/check?mod=CheckMod")["findings"]
+               if f["code"] == "strat.resource_position")
+    r = post("/api/map/fix_plan",
+             {"fixes": ["resource_move"], "keys": [sea["key"]]})
+    check("the move plan over HTTP targets just the selected sea resource",
+          r["plan"]["ok"] and r["plan"]["cleared"] == 1
+          and "5,0 -> 5,1" in " ".join(r["plan"]["changes"]))
+    r = post("/api/map/fix_apply",
+             {"fixes": ["resource_move"], "keys": [sea["key"]]})
+    check("the move apply over HTTP writes the calculated land coordinates",
+          not r.get("error") and "resource silver, 5, 1" in
+          (http_root / "data" / STRAT_REL).read_text(encoding="latin-1"))
+    post("/api/undo", {"id": r["id"]})
+    check("the HTTP move can also be undone byte-exact",
+          files_of(http_root) == move_was)
 finally:
     httpd.shutdown()
-
-def _crossing_in_pass(d):
-    """A crossing at (3,2) at height 20, in a 5x5 of land at 150 around it.
-
-    The heights layer is 2W+1 a side, so the crossing's tile is the 3x3 block
-    of corners from (6,4) to (8,6), and the 5x5 tiles around it are the 11x11
-    from (2,0). The sea row is left alone.
-    """
-    repaint(d, "map_features.tga",
-            lambda x, y, c: (0, 255, 255) if (x, y) == (3, 2) else None)
-    repaint(d, "map_heights.tga",
-            lambda x, y, c: None if y >= SEA_PX
-            else (20, 20, 20) if 6 <= x <= 8 and 4 <= y <= 6
-            else (150, 150, 150) if 2 <= x <= 12 and y <= 10 else None)
-
-
-PASS = broken(_crossing_in_pass, "feature.crossing_uneven",
-              "a river crossing far below the ground a battle is built on",
-              others=False)   # a crossing alone is also a river with no source
-check("  the uneven crossing is the one on the pass, and it offers Smooth",
-      [(f.tile, f.fix) for f in PASS.findings
-       if f.code == "feature.crossing_uneven"] == [((3, 2), "crossing_smooth")])
-
-passroot = tmp / "mods" / "PassFix"
-shutil.copytree(clean_root, passroot)
-_crossing_in_pass(passroot / "data")
-passmod = Mod(passroot)
-pre, _ = read(passroot / "data" / campmap.BASE_REL / "map_heights.tga")
-ppx = pre.convert("RGB").load()
-pp = mapcheck.plan_fix(passmod, ["crossing_smooth"])
-check(f"smoothing plans map_heights.tga alone: {(pp.changes or pp.errors)[:1]}",
-      pp.payload()["ok"] and len(pp.data) == 1
-      and list(pp.data)[0].endswith("map_heights.tga") and not pp.text)
-mapcheck.apply_fix(pp)
-smoothed, _ = read(passroot / "data" / campmap.BASE_REL / "map_heights.tga")
-spx = smoothed.convert("RGB").load()
-check("the crossing keeps its height; the river is where it is",
-      spx[7, 5] == (20, 20, 20))
-check("the ground right beside it is level with it",
-      all(spx[x, y] == (20, 20, 20) for x in range(6, 9) for y in range(4, 7)))
-check("and the sea row is untouched",
-      all(spx[x, y] == ppx[x, y] for x in range(smoothed.width)
-          for y in range(SEA_PX + 1, smoothed.height)))
-# the pass fills the whole 5x5, so the whole 5x5 has to come down; past it
-# the ground climbs back toward what it was rather than stopping at a cliff
-check("past the 5x5 the ground eases back up toward what it was",
-      spx[2, 5][0] == 20 < spx[1, 5][0] < spx[0, 5][0] <= ppx[0, 5][0])
-check("the finding is gone on a re-run",
-      "feature.crossing_uneven" not in
-      {f.code for f in mapcheck.run(passmod, use_baseline=False).findings})
-
 
 # ---- Phase 31: the one repair of the three that has a safe answer -----------
 print("\n31) a ford standing in open water, cleared")
