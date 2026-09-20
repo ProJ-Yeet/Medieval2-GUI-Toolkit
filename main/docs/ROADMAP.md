@@ -398,9 +398,9 @@ change, so no cross-reference dangles.
 | **3.0.0** | 16a-16k, plus 17 | The campaign map editor, and the correction pass over it. Feature-complete and uncut. |
 | **3.1.0** | 18-21 | The twenty Now items: the campaign files that had no editor, the names nothing could follow, and the map screen's second pass. |
 | **3.2.0** | 22-24 | The seven Next items: placing things on the map, a map that looks like the campaign map, and making or unmaking a region or a campaign. |
-| next, block one | ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~, ~~43~~, ~~28a~~, ~~28b~~, ~~33~~, ~~30~~, ~~34~~, 35, 36, 37a, 37b, 38 | **The campaign map.** Five sessions left, in that order. Beta except 40, 42, 41 and 38, which are subreleases on both lines. 29 landed on 2026-09-12; 43, 28a, 28b, 33, 30 and 34 on 2026-09-15. |
-| next, block two | 32a, 32b, 32c, 39 | **The mercenaries.** Four sessions. Beta except 39, which is both lines. |
-| after block two | 44, 45, 46, 47a, 47b, 48 | **The reference-tool pass of 2026-09-13.** Six sessions, every one a subrelease on both lines. Outside both blocks, and scheduled only because the user named the work. |
+| next, block one | ~~29~~, ~~40~~, ~~31~~, ~~42~~, ~~41~~, ~~43~~, ~~28a~~, ~~28b~~, ~~33~~, ~~30~~, ~~34~~, ~~35~~, ~~36~~, ~~37a~~, ~~37b~~, ~~38~~ | **The campaign map. Finished.** 29 landed on 2026-09-12; 43, 28a, 28b, 33, 30 and 34 on 2026-09-15; 35, 36, 37a and 37b on 2026-09-16; 38 on 2026-09-17. Beta except 40, 42, 41 and 38, which were subreleases on both lines. |
+| next, block two | ~~32a~~, ~~32b~~, ~~32c~~, ~~39~~ | **The mercenaries. Finished**, all four on 2026-09-17. Beta except 39, which was both lines. |
+| after block two | ~~44~~, 45, 46, 47a, 47b, 48 | **The reference-tool pass of 2026-09-13.** Five sessions left, every one a subrelease on both lines. Outside both blocks, and scheduled only because the user named the work. **44 landed on 2026-09-20**; 45 leads. |
 | after that | the Future roadmap list | Rated and unscheduled. Three five-star items lead it: M17, M12 and M16. |
 | later | 25-27, and the Later table | Not scheduled. |
 
@@ -2902,7 +2902,114 @@ campaign map, so none is beta-only.
 | 25 | **47b** The thirty-two sound scripts | L | **both** | asked for |
 | 26 | **48** The two rows the strings screen cannot add | S | **both** | asked for |
 
-## Phase 44 - The EDB's tree, checked
+## Phase 44 - The EDB's tree, checked - DONE 2026-09-20
+
+**Nine rules ship, three are refused, and the refusals are the phase.** The
+scoping said six go in as stated and four get measured first. What measuring
+found is that **one of the six could not go in as stated either**, and that is
+the result worth having: his validator, run over the two installed mods as
+written, would report 42 lines as broken that are working exactly as their
+authors meant.
+
+### What the measurement said
+
+Run over Divide and Conquer (136 lines, 499 levels) and ROCSS (107 lines, 290
+levels), 789 levels in all:
+
+| his rule | measured | shipped as |
+|---|---|---|
+| duplicate building name | 0 | `tree.name_twice`, fatal |
+| a line with no levels | 0 | `tree.no_levels`, fatal |
+| an `upgrades` entry naming nothing | 0 | `tree.upgrade_unknown`, fatal |
+| a `convert_to` naming nothing | 0 | `tree.convert_unknown`, fatal |
+| a `building_present_min_level` naming nothing | 0 of **336** references | `tree.min_level_unknown`, fatal |
+| **a level no `upgrades` entry reaches** | **42 lines** | **reshaped** - see below |
+| a level with `cost 0` | 4 (1.4%) | `tree.free_level`, warn |
+| a level with `construction 0` | 1 (0.3%) | `tree.instant_level`, warn |
+| a level with no `factions` clause | 0 | `tree.no_factions`, warn |
+| a line with more than 9 levels | **2, on a mod that plays** | **refused** |
+| a line approaching 50 levels | nothing to measure | **refused** |
+
+**The five reference rules find nothing on either installed mod, and that is
+what they are for.** Phase 31's river rules set the precedent: a rule that
+finds nothing on five real maps is not a wasted rule, it is a rule that has
+been checked against reality and passed. The 336 `building_present_min_level`
+references all resolving - both the line they name and the level on it - is the
+single most reassuring number in this phase, because that is the one condition
+in the EDB that can dangle twice.
+
+### The rule that could not be stated his way
+
+"A level no `upgrades` entry reaches is unreachable" assumes every building
+line is a chain. **Forty-two are not.** Eighteen lines on DaC and twenty-four
+on ROCSS have no `upgrades` entries anywhere in them: their levels are
+**alternatives**, picked by `hidden_resource`, and "reachable" means nothing on
+such a line. `hinterland_enedwaith_clan_halls` is nine mutually exclusive clan
+halls; `mumakil`, `mithril_mines` and `trade_centre` are the same shape.
+
+Excluding those leaves **three real chains on Divide and Conquer with a second
+entry point** - `hinterland_unique2` (`hornburg` climbs to `wulf_hall_edoras`,
+and `gilraen` starts a second chain to `teeth`), `hinterland_tharbad_bridge`
+and `hinterland_palantir`. DaC ships and plays. So it is not an error either.
+
+It ships as **`tree.second_entry`, at `note`**, excluding alternative-lines
+entirely: worth saying, because a second way into a chain is usually not what
+somebody drawing one meant, and not worth calling wrong.
+
+### The two ceilings, refused, on Phase 12's own ruling
+
+His "the vanilla limit is 9 levels" would fire on `hinterland_unique1` (13
+levels) and `hinterland_unique2` (12) - **on a mod that runs**. A ceiling a
+shipping mod is over is not a ceiling. His "approaching the M2TWEOP limit of
+50" has nothing to check itself against: the largest line on either installed
+mod is 13, so the rule has never seen its own subject.
+
+This is Phase 12's ruling applied again, and it is worth writing down twice
+because it keeps coming up: **a count from a wiki is not a fact about a mod.**
+12 kept `guild_` at three levels as a hint because 19 of 19 real guild lines
+have exactly three, and refused "the engine refuses a fourth" because that is a
+different claim with no measurement behind it. Both refusals are in
+`buildings.RULES_REFUSED`, in the module rather than only here, because the
+next person to read his validator will find them in it and wonder why we do
+not have them. They travel out to the panel too, under *The 9 rules, and the
+three that are deliberately not here*.
+
+### The shape, and why it is `mapcheck.py`'s
+
+A code, a label, a severity, a **source** naming who says it is a rule, and a
+function yielding findings. Copied down to the decorator, because M17 - the
+five-star dashboard that is the complaint that we have more validators than any
+reference tool and no single door to them - is only cheap if the validators
+already agree about what a finding is. `EdbFinding.what` never carries a line
+number, for `mapcheck.Finding`'s reason: adding a building at the top of the
+file must not make every finding below it a different finding.
+
+**One request, not two.** The tree findings ride in the answer
+`/api/buildings/checks` already gives, because the screen asks that question
+once per mod and once per line; a route of its own would have been a second
+request on both paths and the two halves of "what is wrong with this EDB" would
+have arrived at different times. On the mod's screen it is a shut button that
+fetches on first open - most visits are to look at a building, not to audit
+one - and every finding row opens the building it is about.
+
+### Two defects found while building it, both mine
+
+`TREE_REFUSED` already existed in `buildings.py` - the new-tree form's
+"what this module will not do to a whole line" - and the new constant shadowed
+it, which took `overview()` down with a `ValueError` on every buildings screen.
+Renamed to `RULES_REFUSED`. And `bldTreeToggle` already existed in
+`buildings.js`, folding a row open in the tree browser; the new one silently
+replaced it. **`test_web_modules` caught the second one and the first suite run
+caught the first**, which is the whole argument for both of those tests
+existing in a project with one global JS scope and a 3,000-line module.
+
+Exit: nine rules in `buildings.py` on the `@rule` shape with a source each,
+`tree_check(edb, line="")`, `RULES_REFUSED`, the findings on both the mod's
+screen and each building's, and `tests/test_buildings.py` section 12 - a
+fixture per rule, plus 12b running all nine over every installed EDB and
+asserting a shipping mod has no fatal.
+
+## Phase 44 - the scoping it was built from
 
 **Our EDB checks are about recruitment and nothing else.**
 `buildings.line_checks` finds three things per building line: a unit that stops

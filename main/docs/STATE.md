@@ -1,14 +1,44 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-20 - **v2.3.4** is the latest 2.x and **beta 2026-09-17**
-the latest beta. Uncut since then: **the contributor's campaign map editor**,
-the two startup/port commits, and **M18, the map in 3D**. **Releasing is
-on-request only**: commit to master and stop_
+_Updated: 2026-09-20 - **v2.3.5** is the latest 2.x and **beta 2026-09-20**
+the latest beta, both cut on request after **Phase 44**. They carry everything
+uncut since v2.3.4: the two startup/port commits, the contributor's campaign
+map editor, **M18** and **Phase 44**. v2.3.5 carries 44 and the port work; the
+beta carries all of it. **Releasing is on-request only**: commit to master and
+stop_
 
 ## Next up
-**There is a second person on this repo now.** Demircan pushed `865c22f`,
-"campaign map editor v0.1", on 2026-09-20. **Check `origin` for his commits
-and pull before starting any work** - the two port commits were sitting
-unpushed on top of his and had to be rebased.
+**Phase 44 is done - the EDB's tree, checked, closed 2026-09-20, BOTH lines.**
+Nine rules ship, **three are refused, and the refusals are the phase.** The
+scoping said six go in as stated; measuring found that **one of the six could
+not either**. His "a level nothing upgrades into is unreachable" assumes every
+line is a chain, and **42 lines across the two installed mods are not** - their
+levels are alternatives picked by a hidden resource, so "reachable" means
+nothing on them. Reshaped to `tree.second_entry` at `note`, excluding those,
+which leaves three real multi-entry chains on DaC, and DaC ships.
+
+The two level-count ceilings are refused on Phase 12's ruling, **a count from a
+wiki is not a fact about a mod**: his "vanilla limit is 9" fires on two DaC
+lines at 13 and 12 levels and that mod plays, and his "approaching 50" has
+nothing to measure against. Both are in `buildings.RULES_REFUSED` and travel
+out to the panel, because the next person to read his validator will find them
+in it.
+
+**The five reference rules find nothing on either mod, which is what they are
+for** (Phase 31's precedent). The reassuring number is **336
+`building_present_min_level` references, all resolving both the line and the
+level** - the one condition in the EDB that can dangle twice and had nothing
+checking it. Write-up under *Phase 44* in `ROADMAP.md`. **45 leads.**
+
+**Phase 45 is next by the order** - the hidden resources line - and 46, 47a,
+47b and 48 follow it. Every one is a subrelease on both lines.
+**This repo takes outside contributions now, in two shapes.** **Demircan
+pushes directly to `origin/master`** - `865c22f`, "campaign map editor v0.1",
+2026-09-20. **Check `origin` and pull before starting any work**: the two port
+commits were sitting unpushed on top of his and had to be rebased.
+**WalhallaZ contributes by pull request** - `4ca984e` is
+`Medieval2-GUI-Toolkit#1`, ported rather than merged, and he is credited by
+name in v2.3.5's notes. Two different habits, and only the first one can
+surprise a session mid-edit.
 
 **Nothing of ours was overwritten by it.** His commit branched from `4ca984e`,
 before both port commits, and touches `unittransfer/server.py` only inside the
@@ -1053,25 +1083,23 @@ path in this file and in the source is relative to. `main/dev/` never ships.
 ## THE TWO RELEASE LINES
 Two lines off this one `master`, chosen by whether a change touches the campaign
 map. **Not campaign-map** -> a **2.x subrelease with the map hidden**, uploaded
-`--latest` (latest **v2.3.4**, 2026-09-17). **Campaign-map** -> the **beta
-line**, uploaded as a **pre-release** (latest **beta 2026-09-17**). A
+`--latest` (latest **v2.3.5**, 2026-09-20). **Campaign-map** -> the **beta
+line**, uploaded as a **pre-release** (latest **beta 2026-09-20**). A
 **subrelease means both**: one job, both zips, same tree.
 
 The switch is **one flag**: `off:true` on the `campmap` entry in `MODES` in
 `web/js/core.js`, which `menuModes()` and `modeOffered()` are the only readers
 of. It is a **release-time edit, not a state of `master`**: set it, bump the 2.x
 number, build, upload, then put it straight back off in the next commit.
-`master` carries the map ON, and `__version__` says `beta-2026-09-17`
+`master` carries the map ON, and `__version__` says `beta-2026-09-20`
 because the beta was the last thing cut.
 
 Of the finished work, **21 and 29 belong to BOTH lines** (raw text is a menu
 mode of its own, the faction audit also draws in the Factions mode, and 29's
 `icons.png_bytes` is the unit editor's and the BMDB browser's route as well as
 the viewer's) and **22a, 22b, 22c, 23a, 23b and 24 are map work**, beta only.
-Of the fourteen sessions left, **two are subreleases**: 38, because
-`descr_campaign_db.xml` is a data file and gets a mode of its own; and 39,
-because the EDU half of the ceilings is the unit editor's. The other twelve are
-the beta alone.
+Both blocks are finished. Of what is left, **45, 46, 47a, 47b and 48 are all
+subreleases** - none of them is map work - and M18 was the beta alone.
 
 Betas are named by the **date** they were released, with a letter for a second
 in one day. The GitHub title is `M2 GUI-Kit V<X.Y.Z>`: hyphenated **GUI-Kit**,
@@ -1086,6 +1114,7 @@ neither version was ever cut and both were folded into `RELEASE_2_3_0.md` and
 ## Phase status
 | Phase | Status | Note |
 |---|---|---|
+| 44 - the EDB's tree, checked | **done** | Closed 2026-09-20, committed, **cut** as v2.3.5 and beta 2026-09-20 (both lines - the EDB is not map work). Nine `@rule`-shaped rules in `buildings.py`, `mapcheck.py`'s shape down to the decorator and the `source` field, so M17 gets the EDB behind the same door without a translation layer. Five references that resolve or not (`tree.name_twice`, `no_levels`, `upgrade_unknown`, `convert_unknown`, `min_level_unknown`) all fatal and all finding **nothing** on either mod; three measured warnings (`free_level` 4, `instant_level` 1, `no_factions` 0 of 789 levels); one reshaped note (`second_entry`). **336 `building_present_min_level` references resolve both halves.** `tree_check(edb, line="")` rides in `/api/buildings/checks` rather than a route of its own. **Three refusals in `RULES_REFUSED`, and they are the phase**: two level-count ceilings a shipping mod is over, and his unreachable-level rule, which fires on 42 alternative-lines. Two collisions of my own found by the suite: `TREE_REFUSED` already existed (took `overview()` down) and `bldTreeToggle` already existed in `buildings.js`. `tests/test_buildings.py` +24 checks (12, 12b), `test_web_modules` 117/117. |
 | M18 - the map in 3D | **done** | Closed 2026-09-20, committed, **not cut** (beta only - it is map work). Asked for outright, not rated. A **mode** on the campaign map (`⛰ 3D`, or `D`), not a second screen: `cm3Texture` composes the mesh's colour map in `cmapPaint`'s own order, so the 3D has no layer, opacity, season, gap or colouring controls of its own and cannot drift from the flat map. **One vertex per tile, no decimation** - his caps at 2048 steps because his heights are the raw `2W+1` TGA, ours arrive at `fit=tile` and `descr_terrain.txt` caps a map at 510x510 (248,370 vertices on DaC, 260,100 at the ceiling). **Sea is `mapvocab.is_sea_height` alone** where his rule is two, and the suite runs the JS against the Python on both installed maps: 74,365 tiles on DaC and 71,968 on ROCSS, agreeing tile for tile. Normals are a central difference over the height field, not accumulated over faces. **Two faults found by testing and both now guarded**: a bare `requestAnimationFrame` never resolves in a tab that is not being rendered, so the build hung forever with the message up (`cm3Yield` races it against a 120 ms timer); and `loseContext()` does not free a canvas to be drawn on again, so off-and-straight-back-on built a scene that never drew with a null-info-log shader failure (`cm3Stop` swaps the element for a `cloneNode(false)`). The mode is **not remembered between sessions** - it opens a WebGL context - but the height scale and the water plane are, and ride in `cmapLayerState`. Markers, labels and the tooltip stay on the flat map; all four are screen-space and have no place in a scene. New: `web/js/map3d.js`, the button and the `D` key, `cm3DropOrphan` beside `v3DropOrphan` in `applyMode`, the `.cm3card`/`.cm3msg` styles. `tests/test_map3d.py` 34/34, new; `tests/test_web_modules.py` 117/117. |
 | the contributor's map editor | **merged** | `865c22f`, Demircan, 2026-09-20, 18 files and 870 insertions on the campaign map workspace. **Closes no open roadmap item** - it extends 17d, 17e, 20b, 20c, 22a/22b and 28a/28b/49/50, and adds character editing on the map, which was never tracked. Its region browser is **not** M10: that is an OSM backdrop and a region search together, three stars, and it is `Phase 25`. Branched from `4ca984e`, before both port commits, so those were rebased on top - clean, and nothing of ours was overwritten (it never touches `app.py`, `startup.py` or `build_release.py`). |
 | 39 - the engine ceilings | **done** | Closed 2026-09-17, committed, **not cut** (both lines when a cut happens). `unittransfer/educeil.py`; `ceilings`/`roster_ceilings` on `edit.unit_detail`, a warning in `plan_edit` for a ceiling the edit crosses, `edCeilHtml`. **The scoped list was RTW's**; every checked number has an M2TW source, the RTW-only ones and the 20,000-face limit are not checked (DaC ships 30,252-face strat models). `too-many-units` in `modflags.CAP_FINDINGS`. `tests/test_educeil.py` 24/24. |

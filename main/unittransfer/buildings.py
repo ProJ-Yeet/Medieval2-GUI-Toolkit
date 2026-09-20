@@ -2669,6 +2669,353 @@ def _pool_side(r: Optional[dict]) -> Optional[dict]:
     return dict(_pool_brief(r), cap_line=r["cap_line"], faction=r["faction"])
 
 
+# ---------------------------------------------------------------------------
+# Phase 44 - the TREE, checked
+#
+# Everything above this line is about recruitment: `line_checks` finds a unit
+# that stops being recruitable up the chain, the same unit twice in one level,
+# and a divergence between a line and its city/castle twin. That is the half of
+# the EDB the unit editor cares about, and until now it was the only half
+# anything here looked at.
+#
+# This is the other half: the SHAPE of the file. A building name that is used
+# twice, a line with no levels in it, an `upgrades` entry naming a level that is
+# not there, a `convert_to` naming a building that does not exist, a
+# `building_present_min_level` naming a line or a level that does not exist.
+# Every one of those is a reference that either resolves or does not, which is
+# why they can be rules at all.
+#
+# THE SHAPE IS `mapcheck.py`'s, DELIBERATELY, down to the decorator: a code, a
+# label, a severity, a SOURCE saying who says it is a rule, and a function that
+# yields findings. Copying that shape rather than inventing a second one is what
+# lets M17 - the five-star dashboard that is the complaint that we have more
+# validators than any reference tool and no single door to them - put the EDB
+# behind the same door as the map without a translation layer in between.
+#
+# WHAT IS NOT HERE, AND WHY, is as much of this phase as what is. See
+# `RULES_REFUSED` at the bottom.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class EdbFinding:
+    """One thing wrong with the tree, and enough to go and look at it.
+
+    ``what`` is the identity, and like :class:`mapcheck.Finding` it never
+    carries a line number: adding a building at the top of the file must not
+    make every finding below it a different finding.
+    """
+
+    code: str
+    severity: str
+    message: str
+    #: 1-based index into the EDB, or 0 when the finding is about the file
+    line: int = 0
+    #: the building line this is about, for the panel's jump
+    building: str = ""
+    what: str = ""
+    count: int = 1
+
+
+@dataclass
+class EdbRule:
+    """One rule, and who says it is one.
+
+    ``source`` is not decoration - it is `mapcheck.Rule`'s reason, kept: every
+    rule here came from his validator, from the file's own grammar or from a
+    measurement, and a validator whose rules have no provenance is a list of
+    somebody's opinions that nobody can argue with later.
+    """
+
+    code: str
+    label: str
+    severity: str
+    source: str
+    fn: object = None
+
+
+EDB_RULES: List[EdbRule] = []
+
+
+def edb_rule(code: str, label: str, severity: str, source: str):
+    def wrap(fn):
+        EDB_RULES.append(EdbRule(code, label, severity, source, fn))
+        return fn
+    return wrap
+
+
+class TreeCheck:
+    """What every rule below reads: the parsed file and three indexes over it.
+
+    Built once and handed to each rule, so a nine-rule run walks the buildings
+    once for the indexes and then works out of dictionaries. The whole run is
+    well under a tenth of a second on the largest installed EDB.
+    """
+
+    def __init__(self, edb: EdbFile):
+        self.edb = edb
+        self.lines = edb.buildings
+        #: name -> the FIRST line with that name. A duplicate is a rule of its
+        #: own; everything else resolves against the first, which is what the
+        #: engine does with the file as written.
+        self.by_name: Dict[str, BuildingLine] = {}
+        for bl in self.lines:
+            self.by_name.setdefault(bl.name, bl)
+        #: line name -> the level names on it
+        self.levels_of: Dict[str, set] = {
+            bl.name: {b.name for b in bl.blocks} for bl in self.by_name.values()}
+
+    def upgrades_of(self, b: LevelBlock) -> List[str]:
+        """The level names a block upgrades into, clauses stripped.
+
+        Through :func:`upgrade_name` and never off the raw entry: an
+        ``upgrades`` entry may carry a clause (``ce_wooden_wall requires
+        event_counter cex_avail 1``), and a rule that compared the raw string
+        against the level names would report every one of those as a level that
+        does not exist. `tests/test_edb_tree.py` has asserted `upgrade_name`
+        against every real entry since Phase 12; this is the caller that would
+        have needed it most.
+        """
+        out = []
+        for entry in b.upgrades:
+            nm = upgrade_name(entry)
+            if nm:
+                out.append(nm)
+        return out
+
+
+@edb_rule("tree.name_twice", "A building name used twice", "fatal",
+          "His EDBValidator: a duplicate name, and the engine reads the first")
+def _t_name_twice(tc: TreeCheck):
+    seen: Dict[str, BuildingLine] = {}
+    for bl in tc.lines:
+        first = seen.get(bl.name)
+        if first is None:
+            seen[bl.name] = bl
+            continue
+        yield EdbFinding(
+            "tree.name_twice", "fatal",
+            f"{bl.name} is declared twice - at line {first.start + 1} and again "
+            f"here. Everything that names it reaches the first one, so this "
+            f"block's levels, costs and recruitment are unreachable.",
+            line=bl.start + 1, building=bl.name, what=bl.name)
+
+
+@edb_rule("tree.no_levels", "A building line with no levels", "fatal",
+          "His EDBValidator: a line is its levels; an empty one builds nothing")
+def _t_no_levels(tc: TreeCheck):
+    for bl in tc.lines:
+        if bl.blocks:
+            continue
+        yield EdbFinding(
+            "tree.no_levels", "fatal",
+            f"{bl.name} has no levels in it, so there is nothing for a "
+            f"settlement to build and nothing for anything else to upgrade "
+            f"into.",
+            line=bl.start + 1, building=bl.name, what=bl.name)
+
+
+@edb_rule("tree.upgrade_unknown", "An upgrades entry naming nothing", "fatal",
+          "His EDBValidator: the reference either resolves on its own line or not")
+def _t_upgrade_unknown(tc: TreeCheck):
+    for bl in tc.lines:
+        have = {b.name for b in bl.blocks}
+        for b in bl.blocks:
+            for nm in tc.upgrades_of(b):
+                if nm in have:
+                    continue
+                yield EdbFinding(
+                    "tree.upgrade_unknown", "fatal",
+                    f"{bl.name}/{b.name} upgrades into {nm}, and there is no "
+                    f"level called that on this line.",
+                    line=(b.upgrades_span[0] or b.header) + 1,
+                    building=bl.name, what=f"{bl.name}|{b.name}|{nm}")
+
+
+@edb_rule("tree.convert_unknown", "A convert_to naming nothing", "fatal",
+          "His EDBValidator: convert_to names another building line by name")
+def _t_convert_unknown(tc: TreeCheck):
+    for bl in tc.lines:
+        target = (bl.convert_to or "").strip()
+        if not target or target in tc.by_name:
+            continue
+        yield EdbFinding(
+            "tree.convert_unknown", "fatal",
+            f"{bl.name} converts to {target}, and no building line is called "
+            f"that.",
+            line=bl.start + 1, building=bl.name, what=f"{bl.name}|{target}")
+
+
+#: ``building_present_min_level <line> <level>`` - the one condition in the EDB
+#: that names a level of another line, so it is the one that can dangle twice.
+_MIN_LEVEL = re.compile(r"building_present_min_level\s+(\S+)\s+(\S+)")
+
+
+@edb_rule("tree.min_level_unknown", "A building_present_min_level naming nothing",
+          "fatal",
+          "The file's own grammar: the condition names a line and a level on it")
+def _t_min_level_unknown(tc: TreeCheck):
+    for bl in tc.lines:
+        for b in bl.blocks:
+            blob = (b.requires or "") + " " + " ".join(
+                c.text() for c in b.capabilities + b.faction_capabilities)
+            for m in _MIN_LEVEL.finditer(blob):
+                chain, lvl = m.group(1), m.group(2)
+                if chain not in tc.by_name:
+                    yield EdbFinding(
+                        "tree.min_level_unknown", "fatal",
+                        f"{bl.name}/{b.name} requires {chain} at {lvl}, and no "
+                        f"building line is called {chain}.",
+                        line=b.header + 1, building=bl.name,
+                        what=f"{bl.name}|{b.name}|{chain}")
+                elif lvl not in tc.levels_of.get(chain, set()):
+                    yield EdbFinding(
+                        "tree.min_level_unknown", "fatal",
+                        f"{bl.name}/{b.name} requires {chain} at {lvl}, and "
+                        f"{chain} has no level called {lvl}.",
+                        line=b.header + 1, building=bl.name,
+                        what=f"{bl.name}|{b.name}|{chain}|{lvl}")
+
+
+@edb_rule("tree.second_entry", "A chain with more than one way in", "note",
+          "Reshaped from his 'unreachable level' - see RULES_REFUSED")
+def _t_second_entry(tc: TreeCheck):
+    """A level on a CHAIN that nothing upgrades into.
+
+    **A note, and only on a line that is a chain**, and both halves of that were
+    forced by measuring his rule as written. See `RULES_REFUSED` below: stated as
+    "a level no upgrades entry reaches", it fires 42 times across the two
+    installed mods on lines that are working exactly as their author meant.
+
+    What is left after the alternatives are excluded is a line that upgrades
+    somewhere and still has a second level nothing points at - three of them on
+    Divide and Conquer, which ships and plays. So it is worth SAYING, because a
+    second entry point is usually not what somebody drawing a chain meant, and
+    it is not worth calling wrong.
+    """
+    for bl in tc.lines:
+        if not any(b.upgrades for b in bl.blocks):
+            continue                      # alternatives, not a chain
+        reached = {nm for b in bl.blocks for nm in tc.upgrades_of(b)}
+        heads = [b for b in bl.blocks if b.name not in reached]
+        if len(heads) < 2:
+            continue
+        for b in heads[1:]:
+            yield EdbFinding(
+                "tree.second_entry", "note",
+                f"{bl.name} is an upgrade chain starting at {heads[0].name}, "
+                f"and nothing upgrades into {b.name} - it is a second way into "
+                f"the same line. Deliberate on some lines; worth a look if it "
+                f"was not.",
+                line=b.header + 1, building=bl.name,
+                what=f"{bl.name}|{b.name}")
+
+
+@edb_rule("tree.free_level", "A level that costs nothing", "warn",
+          "His EDBValidator, and measured: 4 of 789 real levels")
+def _t_free_level(tc: TreeCheck):
+    for bl in tc.lines:
+        for b in bl.blocks:
+            if b.scalars.get("cost", "").strip() != "0":
+                continue
+            yield EdbFinding(
+                "tree.free_level", "warn",
+                f"{bl.name}/{b.name} costs 0, so any settlement that can build "
+                f"it can have it for nothing.",
+                line=b.scalar_lines.get("cost", b.header) + 1,
+                building=bl.name, what=f"{bl.name}|{b.name}")
+
+
+@edb_rule("tree.instant_level", "A level that takes no turns", "warn",
+          "His EDBValidator, and measured: 1 of 789 real levels")
+def _t_instant_level(tc: TreeCheck):
+    for bl in tc.lines:
+        for b in bl.blocks:
+            if b.scalars.get("construction", "").strip() != "0":
+                continue
+            yield EdbFinding(
+                "tree.instant_level", "warn",
+                f"{bl.name}/{b.name} has construction 0, so it finishes the "
+                f"turn it is started.",
+                line=b.scalar_lines.get("construction", b.header) + 1,
+                building=bl.name, what=f"{bl.name}|{b.name}")
+
+
+@edb_rule("tree.no_factions", "A level no faction can build", "warn",
+          "His EDBValidator, and measured: 0 of 789 real levels lack the clause")
+def _t_no_factions(tc: TreeCheck):
+    for bl in tc.lines:
+        for b in bl.blocks:
+            if "factions" in (b.requires or ""):
+                continue
+            yield EdbFinding(
+                "tree.no_factions", "warn",
+                f"{bl.name}/{b.name} has no factions clause on its requires, "
+                f"so no faction is named as able to build it.",
+                line=b.header + 1, building=bl.name, what=f"{bl.name}|{b.name}")
+
+
+#: The rules that were on the table and are NOT here, with what decided it.
+#:
+#: Kept in the module rather than in the write-up because the next person to
+#: read his validator will find these in it and wonder why we do not have them.
+#: The answer is a measurement each, and it is the same answer Phase 12 gave
+#: when it kept ``guild_`` at three levels as a hint and refused "the engine
+#: refuses a fourth": **a count from a wiki is not a fact about a mod.**
+RULES_REFUSED: Tuple[dict, ...] = (
+    {"rule": "a line may not have more than 9 levels",
+     "his source": "stated as the vanilla limit",
+     "measured": "Divide and Conquer ships two lines over it - hinterland_unique1 "
+                 "at 13 levels and hinterland_unique2 at 12 - and the mod plays. "
+                 "A ceiling a shipping mod is over is not a ceiling.",
+     "verdict": "refused"},
+    {"rule": "warn when a line approaches 50 levels, the M2TWEOP limit",
+     "his source": "stated as the M2TWEOP limit",
+     "measured": "the largest line on either installed mod is 13. There is "
+                 "nothing here to check the claim against, and a rule that has "
+                 "never seen its own subject is not a measurement.",
+     "verdict": "refused"},
+    {"rule": "a level no `upgrades` entry reaches is unreachable",
+     "his source": "EDBValidator, as an error",
+     "measured": "42 lines across the two installed mods have no upgrades "
+                 "entries at all - their levels are ALTERNATIVES chosen by "
+                 "hidden_resource, not a chain, so 'reachable' means nothing on "
+                 "them. Excluding those leaves three real chains on Divide and "
+                 "Conquer with a second entry point, and it ships.",
+     "verdict": "reshaped into tree.second_entry, at note"},
+)
+
+
+def tree_check(edb: EdbFile, line: str = "") -> dict:
+    """Every tree rule over one parsed EDB, or over one line of it.
+
+    Returns the findings and the rule table together, because the panel needs
+    both: a rule that found nothing still has to be listable, or a validator
+    that is silent is indistinguishable from one that did not run.
+    """
+    tc = TreeCheck(edb)
+    out: List[EdbFinding] = []
+    for r in EDB_RULES:
+        for f in r.fn(tc):
+            if line and f.building != line:
+                continue
+            out.append(f)
+    order = {"fatal": 0, "warn": 1, "note": 2}
+    out.sort(key=lambda f: (order.get(f.severity, 9), f.code, f.line))
+    counts = {s: sum(1 for f in out if f.severity == s)
+              for s in ("fatal", "warn", "note")}
+    return {
+        "findings": [{"code": f.code, "severity": f.severity,
+                      "message": f.message, "line": f.line,
+                      "building": f.building, "what": f.what,
+                      "count": f.count} for f in out],
+        "counts": counts,
+        "rules": [{"code": r.code, "label": r.label, "severity": r.severity,
+                   "source": r.source} for r in EDB_RULES],
+        "refused": [dict(x) for x in RULES_REFUSED],
+    }
+
+
 def line_checks(edb: EdbFile, bl: BuildingLine,
                 pairs: Optional[Dict[str, str]] = None) -> dict:
     """Continuity, mirror and duplicate findings for one building line."""
@@ -2763,21 +3110,31 @@ def line_checks(edb: EdbFile, bl: BuildingLine,
 
 
 def checks(mod, line: str = "") -> dict:
-    """Recruitment checks for one line, or a per-line rollup for the whole mod."""
+    """Recruitment checks for one line, or a per-line rollup for the whole mod.
+
+    44: the tree findings ride in the SAME answer rather than behind a route of
+    their own. The screen asks this question once when it opens a mod and once
+    per line; a second route would be a second request on both paths, and the
+    two halves of "what is wrong with this EDB" would arrive at different times
+    and be rendered by different code.
+    """
     edb = mod.edb
     pairs = variant_pairs(edb)
     if line:
         bl = edb.get(line)
         if bl is None:
             raise KeyError(line)
-        return {"mod": mod.name, "pairs": pairs, "lines": [line_checks(edb, bl, pairs)]}
+        return {"mod": mod.name, "pairs": pairs,
+                "lines": [line_checks(edb, bl, pairs)],
+                "tree": tree_check(edb, line)}
     rollup = []
     for bl in edb.buildings:
         res = line_checks(edb, bl, pairs)
         if res["gaps"] or res["dupes"] or res["mirror"]:
             rollup.append({k: res[k] for k in
                            ("line", "settlement", "twin", "gaps", "dupes", "mirror")})
-    return {"mod": mod.name, "pairs": pairs, "lines": rollup}
+    return {"mod": mod.name, "pairs": pairs, "lines": rollup,
+            "tree": tree_check(edb)}
 
 
 def unit_instances(mod, unit: str, culture: str = "") -> dict:

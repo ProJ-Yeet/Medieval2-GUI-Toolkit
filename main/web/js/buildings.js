@@ -191,7 +191,8 @@ offer the base game's five. If it defines its own, add that file.">using vanilla
         ${(ov.actions||{}).create?`<button class="primary" onclick="bldNewTree()"
           title="Add a whole new building line to this mod">＋ New building tree</button>`:''}
       </span>
-    </div>`;
+    </div>
+    ${bldTreeChkHtml()}`;
   if(!lines.length){
     main.innerHTML=`<section class="faction-group">${head}
       <div class="empty">No buildings match.</div></section>`;
@@ -2503,6 +2504,9 @@ async function bldLoadChecks(force){
     const r=await api.get(`/api/buildings/checks?mod=${enc(b.mod)}&line=${enc(line)}`);
     if(state.bld!==b||b.line!==line)return;          // moved on while in flight
     b.checks=(r.lines||[])[0]||{line,gaps:[],dupes:[],mirror:[],level_pairs:{}};
+    // 44: the tree findings for THIS line ride in the same answer, so the two
+    // halves of "what is wrong with this building" land together
+    b.lineTree=r.tree||null;
   }catch(e){ if(state.bld!==b||b.line!==line)return; b.checks={line,error:''+e}; }
   // The whole body, not just the panel: knowing the twin is what puts the ⇄
   // button on every pool row, and the answer only lands after the first draw.
@@ -2520,7 +2524,136 @@ function bldTwinLevel(i){
   return lv?((ck.level_pairs||{})[lv.name]||''):'';
 }
 function bldChecksHtml(){
-  return `<div class="bsec" id="bldChecks">${bldChecksInner()}</div>`;
+  return `<div class="bsec" id="bldChecks">${bldChecksInner()}${bldTreeFindHtml()}</div>`;
+}
+
+/* =========================================================================
+   44 - THE TREE'S FINDINGS.
+
+   `bldChecksInner` above is about RECRUITMENT and this is about SHAPE, and
+   they are two panels rather than one because they answer different questions:
+   that one is read while editing a level's pools, this one while looking at
+   whether the line hangs together at all.
+
+   Both come out of the same request. Nothing here decides anything - the rules,
+   their severities and their sentences are all `buildings.tree_check`'s, for
+   20a's reason one screen further out: a rule written twice is two rules that
+   will disagree.
+   ========================================================================= */
+const BLD_SEV={fatal:{cls:'w-bad', word:'must fix'},
+               warn:{cls:'w-warn', word:'worth a look'},
+               note:{cls:'', word:'worth knowing'}};
+
+function bldFindRowsHtml(finds,withLine){
+  return finds.map(f=>`<div class="ckrow">
+    <div class="ckwho">
+      <div class="un">${esc(f.message)}</div>
+      <div class="ut"><code>${esc(f.code)}</code>${
+        f.line?` · EDB line ${f.line}`:''}${
+        withLine&&f.building?` · <code>${esc(f.building)}</code>`:''}</div>
+    </div>${withLine&&f.building
+      ? `<button onclick="openBuilding('${q1(esc(f.building))}')"
+           title="Open this building line, and the Code View pane with it">Open</button>`
+      : ''}</div>`).join('');
+}
+
+function bldTreeFindHtml(){
+  const t=(state.bld||{}).lineTree;
+  if(!t)return '';
+  const f=t.findings||[];
+  if(!f.length)return `<div class="bsec"><h4>The tree
+      <span class="badge good">clean</span></h4>
+    <div class="bnote">This line's name is its own, its levels are there, and
+      every <code>upgrades</code>, <code>convert_to</code> and
+      <code>building_present_min_level</code> on it names something that
+      exists. ${t.rules.length} rules ran.</div></div>`;
+  return `<div class="bsec"><h4>The tree
+      <span class="n">${f.length} finding${f.length===1?'':'s'}</span></h4>
+    ${['fatal','warn','note'].filter(s=>f.some(x=>x.severity===s)).map(s=>`
+      <div class="ckgroup"><div class="ckhead ${BLD_SEV[s].cls}">
+        ${BLD_SEV[s].word} <span class="count">${
+          f.filter(x=>x.severity===s).length}</span></div>
+      <div class="cklist">${bldFindRowsHtml(f.filter(x=>x.severity===s),false)}</div>
+      </div>`).join('')}</div>`;
+}
+
+/* ---- the same rules over the WHOLE file, on the mod's own screen ----
+
+   The first half of M17: one door to a validator rather than a finding you only
+   meet if you happen to open the building it is about. Fetched once per mod and
+   only when the banner is opened, because it is a second request and most
+   visits to this screen are to look at a building rather than to audit one. */
+async function bldTreeChkLoad(force){
+  const b=state.bld;
+  if(!b)return;
+  if(b.treeChk&&b.treeChkMod===b.mod&&!force)return;
+  b.treeChkBusy=true; bldTreeChkPaint();
+  try{
+    const r=await api.get(`/api/buildings/checks?mod=${enc(b.mod)}`);
+    if(state.bld!==b)return;
+    b.treeChk=r.tree||{findings:[],counts:{},rules:[],refused:[]}; b.treeChkMod=b.mod;
+  }catch(e){ if(state.bld===b)b.treeChk={error:errText(e),findings:[],rules:[],refused:[]}; }
+  finally{ if(state.bld===b){ b.treeChkBusy=false; bldTreeChkPaint(); } }
+}
+function bldTreeChkToggle(){
+  const b=state.bld; if(!b)return;
+  b.treeChkOpen=!b.treeChkOpen;
+  activity('buildings',b.treeChkOpen?'opened the EDB tree check':'closed it');
+  if(b.treeChkOpen)bldTreeChkLoad(); else bldTreeChkPaint();
+}
+function bldTreeChkPaint(){
+  const el=document.getElementById('bldTreeChk');
+  if(el)el.innerHTML=bldTreeChkInner();
+}
+function bldTreeChkHtml(){
+  return `<div id="bldTreeChk">${bldTreeChkInner()}</div>`;
+}
+//: "3 worth knowing", "2 must fix · 5 worth a look", or "clean". Joined rather
+//: than concatenated with a separator per part, which left a trailing "·" on
+//: any mod that had exactly one kind of finding - which is both of the ones
+//: installed here.
+function bldChkTally(c){
+  const parts=[];
+  if(c.fatal)parts.push(`${c.fatal} must fix`);
+  if(c.warn)parts.push(`${c.warn} worth a look`);
+  if(c.note)parts.push(`${c.note} worth knowing`);
+  return parts.length?parts.join(' · '):'clean';
+}
+function bldTreeChkInner(){
+  const b=state.bld||{},t=b.treeChk;
+  const head=`<button class="ckopen${b.treeChkOpen?' on':''}" onclick="bldTreeChkToggle()"
+      title="Every rule over the shape of this EDB: duplicate names, empty lines, and
+every upgrades / convert_to / building_present_min_level that names something.
+Recruitment checks are on each building's own page.">✓ Check the tree${
+    t&&t.counts?` <span class="count">${esc(bldChkTally(t.counts))}</span>`:''}</button>`;
+  if(!b.treeChkOpen)return head;
+  if(b.treeChkBusy)return `${head}<div class="bnote">Reading the whole file…</div>`;
+  if(!t)return head;
+  if(t.error)return `${head}<div class="bnote w-bad">${esc(t.error)}</div>`;
+  const f=t.findings||[];
+  const body=!f.length
+    ? `<div class="bnote">Nothing to report. ${t.rules.length} rules ran over
+        every building line in this mod.</div>`
+    : ['fatal','warn','note'].filter(s=>f.some(x=>x.severity===s)).map(s=>`
+        <div class="ckgroup"><div class="ckhead ${BLD_SEV[s].cls}">
+          ${BLD_SEV[s].word} <span class="count">${
+            f.filter(x=>x.severity===s).length}</span></div>
+        <div class="cklist">${bldFindRowsHtml(f.filter(x=>x.severity===s),true)}</div>
+        </div>`).join('');
+  return `${head}<div class="bsec">${body}
+    <details class="bnote"><summary>The ${t.rules.length} rules, and the three
+      that are deliberately not here</summary>
+      <div class="cklist">${(t.rules||[]).map(r=>`<div class="ckrow">
+        <div class="ckwho"><div class="un">${esc(r.label)}
+          <span class="count">${esc(r.severity)}</span></div>
+        <div class="ut"><code>${esc(r.code)}</code> · ${esc(r.source)}</div></div>
+        </div>`).join('')}</div>
+      <p><b>Refused, each for a measurement:</b></p>
+      <div class="cklist">${(t.refused||[]).map(x=>`<div class="ckrow">
+        <div class="ckwho"><div class="un">${esc(x.rule)}</div>
+        <div class="ut">${esc(x.measured)} <b>${esc(x.verdict)}</b></div></div>
+        </div>`).join('')}</div>
+    </details></div>`;
 }
 /* Edits staged against other building lines are invisible in this form - they
    belong to buildings that are not on screen - so they get a panel of their own.

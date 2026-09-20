@@ -579,17 +579,35 @@ _BAT_MENTION = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]*\.bat")
 #: Install-Dependencies.bat pointing at a launcher the zip did not contain.
 _RETIRED_NAMES = ("Launch-Medieval 2 GUI Toolkit.bat",)
 
+#: Files that SHIP but are not instructions, and are therefore not scanned.
+#:
+#: `Full Cleaner.bat` is a payload, not documentation: a 2023 cleaning script
+#: whose every line is `if exist <path> del <path>`, run inside a mod folder to
+#: strip hundreds of leftovers. The names in it are files to DELETE IF PRESENT,
+#: which is the opposite of a name that has to exist - line 119 removes a
+#: stray `dac.bat` from a Divide and Conquer install, and the check read that
+#: as the build promising somebody a `dac.bat` to run. It blocked v2.3.5, the
+#: first build cut after the check landed.
+#:
+#: The distinction the check is really making is **prose that tells a person to
+#: run something**, so the thing to exclude is a script, not a sentence.
+_NOT_INSTRUCTIONS = ("full cleaner.bat",)
+
 
 def assert_docs_name_real_files(stage: Path) -> None:
     """Every .bat the shipped text tells someone to run has to BE in the zip.
 
-    A name in a README is a instruction, and an instruction that names a file
+    A name in a README is an instruction, and an instruction that names a file
     nobody has is worse than no instruction: the person tries it, it fails, and
     the failure looks like the tool is broken rather than the sentence.
+
+    Scripts we merely carry are skipped - see :data:`_NOT_INSTRUCTIONS`.
     """
     have = {p.name.lower() for p in stage.iterdir() if p.is_file()}
     bad: list[str] = []
-    for doc in sorted(stage.glob("*.bat")) + sorted(stage.glob("*.txt")):
+    docs = [d for d in sorted(stage.glob("*.bat")) + sorted(stage.glob("*.txt"))
+            if d.name.lower() not in _NOT_INSTRUCTIONS]
+    for doc in docs:
         text = doc.read_text(encoding="utf-8", errors="replace")
         mentions = set(_BAT_MENTION.findall(text))
         mentions |= {name for name in _RETIRED_NAMES if name in text}

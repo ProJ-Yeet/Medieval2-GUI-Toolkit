@@ -38,7 +38,7 @@ one containing `mods`).
 | Unit Transfer | Copy a unit from one mod into another, with everything it depends on |
 | Unit Editor | Change, clone or delete the units of a single mod |
 | Models Editor | Every model a mod ships: edit any `battle_models.modeldb` entry, its sprites and its unit cards, list what `descr_model_strat.txt` declares, view any battle or campaign-map model in 3D, and clean out what nothing references |
-| Buildings | Browse and edit `export_descr_buildings.txt`, including recruitment |
+| Buildings | Browse and edit `export_descr_buildings.txt`, including recruitment, and check the shape of the tree |
 | Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, place and move what stands on the map, add or delete a province across every campaign, edit the people, events, disasters and menu text a campaign carries, draw the ground with the game's own aerial-map textures in either season, find anything by the name the player reads or the one the files use, and check the whole map against what the game will accept. Set out under [the screen](#campaign-map) below. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
 | Unit Sounds | Choose which voice bank entry each unit uses |
 | Sprites | Generate and wire up the far-LOD unit sprites |
@@ -100,6 +100,17 @@ Hen and Minas Tirith are on the campaign map and in no entry at all.
 
 `export_descr_buildings.txt` as a tree, with the recruitment each level unlocks.
 
+**✓ Check the tree** runs nine rules over the file's shape rather than its
+recruitment: a building name used twice, a line with no levels, and every
+`upgrades`, `convert_to` and `building_present_min_level` that names a line or
+a level which does not exist. Three more are worth knowing rather than wrong -
+a level that costs nothing, one that finishes the turn it is started, one no
+faction can build. Each finding names its rule and its line and opens the
+building it is about. Three rules the reference tool has are deliberately not
+here, and the panel says which and why: two are level-count ceilings a shipping
+mod is already over, and the third assumes every line is an upgrade chain when
+42 of the ones measured are sets of alternatives.
+
 ![Buildings](main/docs/images/buildings.png)
 
 ### Campaign Map
@@ -130,6 +141,14 @@ on top. Ships on the dated beta pre-release; see the module table above.
   it exports to a TGA exactly as it is on screen,
   and **↺ Reset** puts every one of these readings back to how the map first
   opens, keeping saved views, the campaign you are reading and unsaved painting.
+* **The same map in 3D** (`⛰ 3D`, or `D`): the heights as a surface with the
+  ground drawn on it, dragged to orbit, right-dragged to pan and zoomed with the
+  wheel. It is a **mode over the map you already have**, not a second one - the
+  layers, their opacities, the season and any colouring are the flat map's, so
+  changing one there changes the surface here. One vertex per tile with nothing
+  thinned out, and the sea read from `map_heights.tga` rather than guessed from
+  the ground types. A slider for how tall the land stands and a switch for the
+  water surface; markers, names and the tooltip stay on the flat map.
 * **Putting things on it.** **🏰 Forts and resources** places a fort, a
   watchtower or a trade resource on the tile you click and files it where the
   campaign keeps its own; drag one to move it, or pick a province to list its own

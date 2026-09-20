@@ -2232,6 +2232,12 @@
   .ucell .un{font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ucell .ut{font-size:9.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* ---- recruitment checks + the cross-tree compare ---- */
+  /* 44: the one door to the EDB's tree rules, on the buildings list. Shut by
+     default and a button rather than a panel, because most visits to this
+     screen are to open a building rather than to audit the file. */
+  .ckopen{font:inherit;font-size:12px;padding:4px 10px;border-radius:6px;
+    margin:0 14px 8px;display:inline-flex;gap:7px;align-items:center}
+  .ckopen.on{border-color:var(--accent);background:var(--panel2)}
   .ckgroup{border:1px solid var(--edge);border-radius:7px;margin-top:7px;overflow:hidden}
   .ckhead{display:flex;gap:8px;align-items:center;padding:6px 9px;background:var(--panel2);
     font-size:12px;border-bottom:1px solid var(--edge)}

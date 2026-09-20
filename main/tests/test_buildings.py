@@ -25,7 +25,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from tests import _tmp
+from tests import _realmod, _tmp
 from unittransfer import buildings, config, localization
 from unittransfer.mod import Mod
 from unittransfer.transfer import undo
@@ -537,6 +537,136 @@ hit, src = buildings.find_icon(am, "mesoamerican", "no_such_level", "small", Non
 check("a level no culture draws is still a placeholder", hit is None and src == "")
 
 shutil.rmtree(art, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+print("\n12) Phase 44: the tree's rules, one fixture each")
+
+# Written out by hand rather than through `new_tree_text`, which always chains
+# every level into the next - it cannot produce the faults these rules are for.
+TREE_HEAD = "building %s\n{\n%s    levels %s\n"
+
+
+def edb_of(*blocks: str) -> "buildings.EdbFile":
+    return buildings.parse_text("".join(blocks))
+
+
+def block(name, levels, convert_to="", requires="factions { greek, }",
+          upgrades=None, cost="600", construction="2", extra_req=""):
+    """One `building … { … }` block, with exactly the shape a rule wants.
+
+    The nesting is the file's own and is not optional: the level blocks live
+    inside a brace of their OWN after the `levels` line, not at the top level of
+    the building. A fixture that got that wrong parsed as a line with no levels
+    at all, which is how this helper was first written and what four of the
+    rules below appeared to fail on.
+    """
+    up = upgrades if upgrades is not None else {
+        levels[i]: [levels[i + 1]] for i in range(len(levels) - 1)}
+    out = [f"building {name}\n{{\n"]
+    if convert_to:
+        out.append(f"    convert_to {convert_to}\n")
+    out.append(f"    levels {' '.join(levels)}\n    {{\n")
+    for lv in levels:
+        req = requires + (" " + extra_req if extra_req else "")
+        out.append(f"        {lv} city requires {req}\n        {{\n")
+        out.append("            capability\n            {\n            }\n")
+        out.append(f"            construction {construction}\n")
+        out.append(f"            cost {cost}\n")
+        out.append("            upgrades\n            {\n")
+        for u in up.get(lv, []):
+            out.append(f"                {u}\n")
+        out.append("            }\n        }\n")
+    out.append("    }\n}\n")
+    return "".join(out)
+
+
+def codes(edb, line=""):
+    return [f["code"] for f in buildings.tree_check(edb, line)["findings"]]
+
+
+# -- the five that resolve or do not -----------------------------------------
+e = edb_of(block("forge", ["a", "b"]), block("forge", ["c", "d"]))
+check("a building name used twice is fatal", codes(e).count("tree.name_twice") == 1)
+check("  and it is the SECOND block that is reported, not the first",
+      buildings.tree_check(e)["findings"][0]["line"] > 1)
+
+e = edb_of("building empty\n{\n    levels\n}\n")
+check("a line with no levels is fatal", "tree.no_levels" in codes(e))
+
+e = edb_of(block("forge", ["a", "b"], upgrades={"a": ["ghost"]}))
+check("an upgrades entry naming nothing is fatal", "tree.upgrade_unknown" in codes(e))
+
+e = edb_of(block("forge", ["a", "b"], upgrades={"a": ["b requires event_counter x 1"]}))
+check("  and a clause on that entry is NOT a finding (upgrade_name is used)",
+      "tree.upgrade_unknown" not in codes(e))
+
+e = edb_of(block("forge", ["a", "b"], convert_to="nowhere"))
+check("a convert_to naming nothing is fatal", "tree.convert_unknown" in codes(e))
+e = edb_of(block("forge", ["a", "b"], convert_to="other"), block("other", ["c"]))
+check("  and one that resolves is not", "tree.convert_unknown" not in codes(e))
+
+e = edb_of(block("forge", ["a", "b"], extra_req="and building_present_min_level nope a"))
+check("a building_present_min_level naming no LINE is fatal",
+      "tree.min_level_unknown" in codes(e))
+e = edb_of(block("forge", ["a", "b"], extra_req="and building_present_min_level other zz"),
+           block("other", ["c"]))
+check("  …and one naming no LEVEL on a real line is too",
+      "tree.min_level_unknown" in codes(e))
+e = edb_of(block("forge", ["a", "b"], extra_req="and building_present_min_level other c"),
+           block("other", ["c"]))
+check("  …and one that resolves both halves is not",
+      "tree.min_level_unknown" not in codes(e))
+
+# -- the reshaped one --------------------------------------------------------
+e = edb_of(block("alts", ["a", "b", "c"], upgrades={}))
+check("a line of ALTERNATIVES reports nothing - 'reachable' means nothing on it",
+      "tree.second_entry" not in codes(e))
+e = edb_of(block("chain", ["a", "b", "c"], upgrades={"a": ["b"]}))
+check("a chain with a second way in is a note, not an error",
+      codes(e) == ["tree.second_entry"]
+      and buildings.tree_check(e)["findings"][0]["severity"] == "note")
+
+# -- the three measured ones -------------------------------------------------
+e = edb_of(block("forge", ["a"], cost="0"))
+check("cost 0 is a warning", "tree.free_level" in codes(e))
+e = edb_of(block("forge", ["a"], construction="0"))
+check("construction 0 is a warning", "tree.instant_level" in codes(e))
+e = edb_of(block("forge", ["a"], requires="hidden_resource gold"))
+check("a level with no factions clause is a warning", "tree.no_factions" in codes(e))
+
+# -- the shape of the answer -------------------------------------------------
+t = buildings.tree_check(edb_of(block("forge", ["a", "b"])))
+check("a clean file reports nothing", not t["findings"])
+check("  and still lists its rules, so a silent validator is not a missing one",
+      len(t["rules"]) == len(buildings.EDB_RULES) == 9)
+check("  and the three refusals travel with it", len(t["refused"]) == 3)
+check("every rule has a source", all(r["source"] for r in t["rules"]))
+check("every severity is one mapcheck knows",
+      {r["severity"] for r in t["rules"]} <= {"fatal", "warn", "note"})
+
+e = edb_of(block("forge", ["a"], cost="0", construction="0"),
+           block("other", ["c"], convert_to="nope"))
+check("`line` narrows the findings to one building",
+      {f["building"] for f in buildings.tree_check(e, "forge")["findings"]} == {"forge"})
+check("findings are ordered fatal, then warn, then note",
+      [f["severity"] for f in buildings.tree_check(e)["findings"]]
+      == sorted([f["severity"] for f in buildings.tree_check(e)["findings"]],
+                key=lambda s: {"fatal": 0, "warn": 1, "note": 2}[s]))
+
+# -- against the real files, which is what decided three of the rules ---------
+print("\n12b) the same rules over every installed EDB")
+for _root in _realmod.installed():
+    _p = Path(_root) / "data" / "export_descr_buildings.txt"
+    if not _p.exists():
+        print(f"  -- {_root.name}: no EDB")
+        continue
+    _t = buildings.tree_check(buildings.parse_file(_p))
+    _c = _t["counts"]
+    print(f"  -- {_root.name}: {_c['fatal']} fatal, {_c['warn']} warn, "
+          f"{_c['note']} note")
+    check(f"    {_root.name}: a shipping mod has no FATAL tree finding",
+          _c["fatal"] == 0)
 
 shutil.rmtree(work.parent, ignore_errors=True)
 shutil.rmtree(cfg, ignore_errors=True)

@@ -456,6 +456,55 @@ check("…and the portable launcher the zip ships has one too",
       '"%RC%"=="4"' in (ROOT / "dev" / "release" / "build_release.py").read_text(
           encoding="utf-8", errors="replace"))
 
+
+# ---------------------------------------------------------------------------
+print("\nthe release's own check that the instructions name real files")
+
+# The guard that stops a build naming a .bat the zip does not contain. It
+# caught the real fault it was written for (v2.3.4 shipped an
+# Install-Dependencies.bat pointing at a launcher under its old spaced name)
+# and then blocked v2.3.5 on a false one, which is what these cover.
+sys.path.insert(0, str(ROOT / "dev" / "release"))
+import build_release as br  # noqa: E402
+
+_stage = Path(_tmp.mkdtemp(prefix="ut_relchk_"))
+(_stage / "Launch-Medieval2-GUI-Toolkit.bat").write_text("echo hi\n", encoding="utf-8")
+
+
+def _docs_ok(**files) -> bool:
+    """Write these files into the stage and say whether the guard passes."""
+    made = []
+    for name, text in files.items():
+        p = _stage / name.replace("__", " ").replace("_bat", ".bat").replace("_txt", ".txt")
+        p.write_text(text, encoding="utf-8")
+        made.append(p)
+    try:
+        br.assert_docs_name_real_files(_stage)
+        return True
+    except SystemExit:
+        return False
+    finally:
+        for p in made:
+            p.unlink(missing_ok=True)
+
+
+check("a README naming the launcher that IS there passes",
+      _docs_ok(README_txt="Double-click Launch-Medieval2-GUI-Toolkit.bat to start."))
+check("a README naming a .bat that is NOT there is refused",
+      not _docs_ok(README_txt="Run Setup-Everything.bat first."))
+check("the retired spaced launcher name is caught too, though the pattern cannot see it",
+      not _docs_ok(README_txt="Double-click 'Launch-Medieval 2 GUI Toolkit.bat'."))
+
+# The false positive that blocked v2.3.5: `Full Cleaner.bat` is a payload, not
+# prose. Every line of it deletes a file IF PRESENT, so the names in it are the
+# opposite of names that have to exist.
+check("Full Cleaner.bat is not read as instructions",
+      _docs_ok(**{"Full__Cleaner_bat": "if exist dac.bat del /F /S /Q dac.bat\n"}))
+check("…and a real doc naming that same missing file still is refused",
+      not _docs_ok(README_txt="Now run dac.bat.\n"))
+
+shutil.rmtree(_stage, ignore_errors=True)
+
 if saved is not None:
     config.save_settings(show_console=saved)
 shutil.rmtree(cfg, ignore_errors=True)
