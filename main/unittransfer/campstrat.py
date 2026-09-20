@@ -1092,6 +1092,20 @@ def markers(sf: StratFile) -> List[dict]:
             row["gender"] = node.get("gender", "")
             row["rank"] = node.get("rank", "")
             row["army"] = _army_size(sf, node)
+            # Include the small roster with the marker snapshot: hover never
+            # needs a request or a second parser for the character block.
+            units = []
+            for ci in node.children:
+                child = sf.nodes[ci]
+                if child.kind == "army":
+                    units.extend(sf.nodes[gi] for gi in child.children
+                                 if sf.nodes[gi].kind == "unit")
+                elif child.kind == "unit":
+                    units.append(child)
+            row["roster"] = [{"unit": u.name, "exp": u.get("exp") or 0,
+                              "armour": u.get("armour") or 0,
+                              "weapon_lvl": u.get("weapon_lvl") or 0} for u in units]
+            row["age"] = node.get("age")
         elif kind == "fort":
             row["type"] = node.get("type", "")
             row["culture"] = node.get("culture", "")

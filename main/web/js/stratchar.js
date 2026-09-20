@@ -278,6 +278,7 @@ async function cxPlanNow(k){
 async function cxSave(action){
   const k = state.cx;
   if(!k || !k.d || k.busy) return;
+  const map = state.cmap, campaign = map && map.campaign;
   clearTimeout(k.timer);
   const what = action || (k.adding ? 'add' : 'edit');
   const body = cxBody(what);
@@ -315,9 +316,24 @@ async function cxSave(action){
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
   toast('Saved. 🕑 Log can undo it.');
   activity('character', `${k.mod} ${k.faction}: ${what} ${res.name || ''}`);
-  const at = state.cmap && state.cmap.pick;
-  await loadCampmap();
-  if(at && state.cmap) cmapPick(at);
+  if(state.cmap !== map || !map || map.campaign !== campaign || state.cx !== k) return;
+  // Only this faction and the object overlay changed. Keep the canvas,
+  // camera, layers and active inspector intact.
+  const open = k.open, tab = k.tab;
+  k.d = null;
+  await cxOpen(body.owner || k.faction);
+  if(state.cmap !== map || map.campaign !== campaign) return;
+  const fresh = state.cx;
+  if(fresh && fresh.d){
+    fresh.open = open; fresh.tab = tab;
+    const name = res.name || (body.edits && body.edits.name) || body.character;
+    const i = what === 'delete' ? -1 : fresh.d.characters.findIndex(ch => ch.name === name);
+    cxPick(i);
+  }
+  if(state.cmk){
+    state.cmk.d = null;
+    await cmkLoad();
+  }
 }
 
 /* ---------- drawing ---------- */
@@ -380,13 +396,14 @@ function cxPeopleHtml(){
       ${warn ? `<span class="w-warn">${warn}</span>` : ''}
     </div>`;
   }).join('');
-  return `<div class="cxlist">${rows || '<div class="count">Nobody.</div>'}</div>
+  return `${k.w ? cxFormHtml() : ''}
+    <details class="cxcharacters"${k.w ? '' : ' open'}><summary>${k.w ? 'Switch character' : 'Characters'} · ${d.characters.length}</summary>
+    <div class="cxlist">${rows || '<div class="count">Nobody.</div>'}</div></details>
     ${(d.findings || []).map(f =>
       `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${esc(f.message)}</div>`).join('')}
     <div class="csbtns">
       <button onclick="cxAdd()">+ Add a character</button>
-    </div>
-    ${k.w ? cxFormHtml() : ''}`;
+    </div>`;
 }
 
 function cxFormHtml(){
@@ -394,7 +411,12 @@ function cxFormHtml(){
   const list = (slot, values) => `<datalist id="cxl-${slot}">${
     (values || []).map(x => `<option value="${esc(x)}">`).join('')}</datalist>`;
   return `<div class="cxform">
-    <div class="cshead"><b>${k.adding ? 'A new character'
+    <div class="csbtns cxsectionnav">
+      <button onclick="cxSection('cxCharacterFields')">Character</button>
+      <button onclick="cxSection('cxTraitsEditor')">Traits &amp; items</button>
+      <button onclick="cxSection('cxArmyEditor')">Army (${w.army.length})</button>
+    </div>
+    <div class="cshead" id="cxCharacterFields"><b>${k.adding ? 'A new character'
       : esc(k.d.characters[k.pick].name)}</b>
       ${k.adding ? '' : `<span class="count">lines
         ${k.d.characters[k.pick].lines[0]}-${k.d.characters[k.pick].lines[1]}</span>`}
@@ -467,6 +489,11 @@ function cxFormHtml(){
    The level box is a number and the picker knows how many levels the trait
    has, because the server sent that with the trait. Whether the number is too
    high is still the server's to say - it says so in the findings below. */
+function cxSection(id){
+  const el = document.getElementById(id);
+  if(el) el.scrollIntoView({block:'start',behavior:'smooth'});
+}
+
 function cxTraitsHtml(){
   const k = state.cx, w = k.w, v = k.d.vocab;
   const known = {};
@@ -481,7 +508,7 @@ function cxTraitsHtml(){
   </div>`).join('');
   const ancs = w.ancillaries.map((a, i) => `<span class="cxtag">${esc(a)}
     <button onclick="cxAncDrop(${i})">✕</button></span>`).join('');
-  return `<div class="k">Traits <span class="count">${w.traits.length}${
+  return `<div class="k" id="cxTraitsEditor">Traits <span class="count">${w.traits.length}${
       v.have_edct ? '' : ' · no export_descr_character_traits.txt on disk'}</span></div>
     <div class="cxbits">${rows || '<div class="count">None.</div>'}</div>
     <datalist id="cxl-trait">${v.traits.map(t =>
@@ -526,7 +553,7 @@ function cxArmyHtml(){
     ${i === 0 && guard.size ? `<span class="count csnote">${
       guard.has(a.unit) ? 'the bodyguard, in front' : 'leads this army'}</span>` : ''}
   </div>`).join('');
-  return `<div class="k">Army <span class="count">${w.army.length} regiment${
+  return `<div class="k" id="cxArmyEditor">Army <span class="count">${w.army.length} regiment${
       w.army.length === 1 ? '' : 's'}${v.have_edu ? ' · ★ is a bodyguard'
       : ' · no export_descr_unit.txt on disk, so these are the names this'
         + ' campaign itself writes'}</span></div>

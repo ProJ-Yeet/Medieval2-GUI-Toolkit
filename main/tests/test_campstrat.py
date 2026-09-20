@@ -132,6 +132,13 @@ SAMPLE = joined(
 )
 
 sf = campstrat.parse_strat(SAMPLE)
+hover_markers = campstrat.markers(sf)
+william_hover = next(m for m in hover_markers if m["kind"] == "character" and m["name"] == "William")
+check("character hover includes the parsed army and upgrade values",
+      william_hover["roster"] == [
+          {"unit":"Knights", "exp":2, "armour":1, "weapon_lvl":1},
+          {"unit":"Spearmen", "exp":0, "armour":0, "weapon_lvl":0}]
+      and william_hover["army"] == 2 and william_hover["age"] == 40)
 check("byte-exact round trip", sf.serialise() == SAMPLE)
 check("the campaign names itself", sf.campaign == "imperial_campaign")
 check("all three rosters read, in their own lists",

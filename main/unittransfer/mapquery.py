@@ -2324,6 +2324,9 @@ def marker_view(facts: "Facts") -> dict:
         counts[it["kind"]] = counts.get(it["kind"], 0) + 1
     out["counts"] = counts
     seen = {it["faction"] for it in items if it["faction"]}
+    # Empty campaign factions must remain available when adding their first character.
+    if facts.strat is not None:
+        seen.update(str(n.get("name") or n.name) for n in facts.strat.of_kind("faction"))
     for code in sorted(seen):
         rgb = facts.faction_colours.get(code)
         out["factions"][code] = {

@@ -159,8 +159,9 @@ function cfdSet(text){
    panel and the validator both jump the same way, and 20b made a third caller
    the point at which three copies became one. */
 function cfdGo(i){
-  const k = state.cfd, hit = k && k.hits[i];
+  const k = state.cfd, hit = k && (k.q.trim() ? k.hits : cfdBrowseHits())[i];
   if(!hit || !hit.tile) return;
+  cpaintSelectRegion();
   cmapGoTile(hit.tile, CFD_ZOOM, hit.name);
   activity('map find', `went to ${hit.shown || hit.name} (${k.q})`);
 }
@@ -210,7 +211,7 @@ Answered out of the map you were already sent - nothing is fetched per keystroke
   const n = (c.man.regions || []).filter(r => r.name).length;
   return head + `<div class="cfdpanel">
     <input type="search" id="cfdBox" value="${esc(k.q)}" autocomplete="off"
-      spellcheck="false" placeholder="province, settlement or region ID">
+      spellcheck="false" aria-label="Search regions and settlements" placeholder="Search regions / settlements…">
     <div id="cfdRes">${cfdResHtml()}</div>
     <div class="count">${n} province${n === 1 ? '' : 's'} on this map, each
       searchable by the words the player reads and by the code name the files
@@ -218,20 +219,31 @@ Answered out of the map you were already sent - nothing is fetched per keystroke
   </div>`;
 }
 
+function cfdBrowseHits(){
+  const c = state.cmap;
+  return ((c && c.man.regions) || []).filter(r => r.name && r.anchor)
+    .map(r => ({name:r.name, shown:r.shown, settlement:r.settlement_name,
+      shown_settlement:r.shown_settlement, id:r.id, declared:r.declared,
+      tile:r.anchor, what:'Province'}))
+    .sort((a,b) => String(a.shown || a.name).localeCompare(String(b.shown || b.name)));
+}
+
 function cfdResHtml(){
   const k = state.cfd;
-  if(!k || !k.q.trim()) return '';
-  if(!k.of) return `<div class="count">Nothing on this map is called that.
+  if(!k) return '';
+  const hits = k.q.trim() ? k.hits : cfdBrowseHits();
+  if(!hits.length) return `<div class="count">Nothing on this map is called that.
     A province the file declares and never paints has no tile to go to, so it is
     not here - the read's own findings at the top of this panel list those.</div>`;
-  return `<div class="cfdres">${k.hits.map((h, i) => `
-    <div class="cfdrow" onclick="cfdGo(${i})" title="Go to ${esc(h.name)}">
+  return `<div class="cfdres">${hits.map((h, i) => `
+    <button class="cfdrow" onclick="cfdGo(${i})" title="Select ${esc(h.name)}"
+      aria-pressed="${!!(state.cmap.sel && state.cmap.sel.name === h.name)}">
       <b>${esc(h.shown || h.name)}</b>
       <span class="count">${esc(h.what)}${h.id >= 0 ? ` · #${h.id}` : ''}</span>
       <div class="count">${esc(h.name)}${h.settlement
         ? ` · ${esc(h.shown_settlement || h.settlement)}` : ''}${h.declared
         ? '' : ' · painted and declared nowhere'}</div>
-    </div>`).join('')}
+    </button>`).join('')}
     ${k.of > k.hits.length ? `<div class="count">and ${k.of - k.hits.length}
       more - a longer word narrows it</div>` : ''}</div>`;
 }

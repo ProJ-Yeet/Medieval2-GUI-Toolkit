@@ -703,6 +703,62 @@
   .cmpalbox{display:flex;flex-direction:column;gap:6px;border:1px solid var(--edge);
     border-radius:7px;padding:7px;background:var(--panel2);flex:1 1 auto;
     min-height:0}
+  /* Campaign workspace: these rules only affect the map editor. */
+  .cmworkspace{display:flex;flex-direction:column;gap:6px;height:calc(100vh - 108px);min-height:420px}
+  .cmworkspacehead{display:flex;align-items:center;justify-content:flex-start;gap:8px 14px;flex-wrap:wrap;
+    padding:6px 8px;border:1px solid var(--edge);border-radius:7px;background:var(--panel);flex-shrink:0}
+  .cmworkspacehead>div{display:flex;align-items:center;gap:12px;min-width:0}
+  .cmworkspacehead strong{font-size:13px;overflow-wrap:anywhere}
+  .cmeyebrow{font-size:10px;letter-spacing:.12em;color:var(--dim);font-weight:700}
+  .cmquick{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .cmworkspace button,.cmhelp summary{min-height:30px}
+  .cmquick button{padding:4px 8px;border-radius:5px}
+  .cmquick kbd{margin-left:10px;font-size:10px;color:var(--dim)}
+  .cmhelp{position:relative}
+  .cmhelp summary{cursor:pointer;padding:6px 10px;box-sizing:border-box}
+  .cmhelp>div{position:absolute;right:0;bottom:38px;width:300px;max-width:75vw;padding:14px;z-index:20;
+    border:1px solid var(--edge);border-radius:10px;background:var(--panel);box-shadow:0 12px 35px #0006;font-size:12px;line-height:1.6}
+  .cmhelp p{margin:4px 0 14px;color:var(--dim)}
+  .cmhelp p:last-child{margin-bottom:0}
+  .cmworkspacehead>.cmworkstate{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;
+    font-size:11px;border-left:1px solid var(--edge);padding-left:12px}
+  .cmworkmode,.cmworksave{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .cmworkmode>span:not(.cmstatedot),.cmworksave>span{color:var(--dim)}
+  .cmstatedot{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+  .is-painting .cmstatedot{background:var(--accent)}
+  .cmworkspace .cmwrap{height:auto;min-height:0;flex:1;margin-top:0;gap:8px}
+  .cmworkspace .cmside{background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:8px;gap:6px;box-sizing:border-box}
+  .cmworkspace .cmtabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  .cmworkspace .cmtab{justify-content:center;padding:5px 4px;font-size:12px}
+  .cmworkspace .cmsubs{gap:3px;padding:0 0 4px}
+  .cmworkspace .cmsub{padding:4px 7px}
+  .cmworkspace .cmbody{padding:0 2px 6px;scrollbar-gutter:stable}
+  .cmworkspace .cmhead{padding-bottom:5px;border-bottom:1px solid var(--edge)}
+  .cmworkspace .cmhead .count{font-size:11px;line-height:1.6}
+  .cmworkspace button:focus-visible,.cmworkspace summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .cmworkspace .cmbar{max-width:calc(100% - 16px);box-sizing:border-box;flex-direction:row;flex-wrap:wrap;gap:4px 6px;
+    background:rgba(10,12,16,.94);align-items:center}
+  .cmworkspace .cmbar button{min-height:28px;padding:3px 7px}
+  .cmworkspace .cmbar .cmpaint{border-top:0;padding-top:0;margin-top:0}
+  .cmworkspace .cmbar.painting .cmpaint{flex-basis:100%;border-top:1px solid var(--edge);padding-top:4px}
+  .cmworkspace .cmbarrow{min-width:0}
+  .cmworkspace .cmbar #cmZoom{white-space:normal;font-size:10px}
+  .cmworkmode>span:not(.cmstatedot){display:none}
+  .cmworkspace .cmlaypop{max-width:calc(100% - 32px);box-sizing:border-box}
+  @media(max-width:1050px){
+    .cmworkmode>span:not(.cmstatedot){display:none}
+    .cmworkspace .cmpalcol{flex-basis:150px;min-width:120px}
+    .cmworkspace .cmstage{min-width:180px}
+  }
+  @media(max-width:760px){
+    .cmworkspace{height:auto;min-height:0}
+    .cmworkspace .cmwrap{flex-wrap:wrap}
+    .cmworkspace .cmstage{height:55vh;min-height:300px}
+    .cmworkspace .cmside{flex:1 1 100% !important;max-height:65vh}
+    .cmworkspace .cmside.hid{flex:0 0 40px !important}
+    .cmworkspacehead>.cmworkstate{border-left:0;padding-left:0}
+    .cmhelp>div{position:fixed;left:12px;right:12px;bottom:65px;width:auto;max-width:none;max-height:65vh;overflow:auto}
+  }
   .cmwrap{display:flex;gap:12px;align-items:stretch;height:calc(100vh - 108px);
     margin-top:10px}
   .cmstage{position:relative;flex:1 1 0;min-width:320px;background:#0e1013;
@@ -934,19 +990,29 @@
   .cmfind{display:flex;flex-direction:column;gap:4px;font-size:11.5px;
     border:1px solid var(--edge);border-radius:7px;padding:7px 9px;
     background:var(--panel2)}
-  .cmlayers{display:flex;flex-direction:column;gap:2px}
+  .cmlayers{display:flex;flex-direction:column;gap:6px}
+  .cmlayerhead{position:sticky;top:-8px;z-index:2;display:flex;align-items:center;justify-content:space-between;
+    gap:8px;background:#141820;padding:8px 0;border-bottom:1px solid var(--edge)}
+  .cmlayerhead>div{display:flex;flex-direction:column;gap:3px}
+  .cmlayerhead b{font-size:13px;color:var(--ink)}
+  .cmlayerhead span{font-size:11px;color:var(--dim)}
+  .cmlayerhead button{width:28px;font-size:18px;padding:0}
   /* a layer row: tickbox and name, the two order arrows, then the slider and
      its number, with whatever is wrong with the file underneath */
-  .cmlayer{display:grid;grid-template-columns:1fr auto 92px 34px;gap:4px 7px;
-    align-items:center;padding:4px 6px;border:1px solid transparent;border-radius:6px}
+  .cmlayer{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;
+    align-items:center;padding:8px;border:1px solid var(--edge);border-radius:6px}
+  .cmlayer>.chk{min-width:0;gap:5px;margin:0}
+  .cmlayer .cmnm{overflow-wrap:anywhere}
+  .cmlayeropacity{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim)}
+  .cmlayeropacity .cmpct{min-width:32px;font-variant-numeric:tabular-nums}
   .cmlayer.on{background:var(--panel2);border-color:var(--edge)}
   .cmlayer.off{opacity:.55}
   .cmlayer .cmnm{color:var(--ink);font-size:12.5px}
   .cmlayer.on .cmnm{font-weight:600}
   .cmmove{display:flex;gap:2px}
-  .cmmove button{font:inherit;font-size:9px;line-height:1;padding:3px 4px;
+  .cmmove button{font:inherit;font-size:11px;line-height:1;padding:4px 6px;
     border-radius:4px;color:var(--dim)}
-  .cmlayer input[type=range]{width:92px;accent-color:var(--accent);margin:0}
+  .cmlayer input[type=range]{width:auto;min-width:0;flex:1;accent-color:var(--accent);margin:0}
   .cmpct{font-size:11px;color:var(--dim);text-align:right}
   .cmnote{grid-column:1/-1;font-size:11px;color:var(--dim);overflow-wrap:anywhere}
   /* 20a: the number key that ticks this layer, on the row it ticks */
@@ -1328,6 +1394,37 @@
   .cfdrow{padding:4px 0;border-top:1px solid var(--edge);cursor:pointer;
     line-height:1.45;display:grid;grid-template-columns:1fr auto;gap:0 8px}
   .cfdrow:hover{background:var(--panel)}
+  .cmworkspace .cfdrow{width:100%;text-align:left;border-radius:5px;padding:7px;font:inherit;min-width:0}
+  .cmworkspace .cfdrow[aria-pressed=true]{border-color:var(--accent);background:var(--panel2)}
+  .cmworkspace .cfdrow b,.cmworkspace .cfdrow>div{overflow-wrap:anywhere;white-space:normal}
+  .cmworkspace .cfdres{max-height:50vh;overflow:auto}
+  .cmselectionname{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmcreate{display:flex;flex-direction:column;gap:12px;font-size:12px}
+  .cmcreateintro{display:flex;flex-direction:column;gap:5px}
+  .cmcreateintro>span,.cmcreate p{color:var(--dim);line-height:1.5;margin:6px 0 0}
+  .cmcreate section{border-top:1px solid var(--edge);padding-top:10px}
+  .cmcreate h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px;color:var(--dim)}
+  .cmcreategrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .cmcreategrid button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:5px;padding:9px;font-size:12px}
+  .cmcreategrid small{font-size:10px;line-height:1.4;opacity:.8}
+  .cmcreate label{display:flex;flex-direction:column;gap:5px;margin-bottom:8px;color:var(--dim)}
+  .cmcreate select{width:100%;min-width:0;padding:7px;font:inherit}
+  .cmiconkey{font-size:11px;line-height:1.7;color:var(--dim);padding:8px;border:1px solid var(--edge);border-radius:6px}
+  .cmcharhover{display:flex;flex-direction:column;gap:4px;max-height:360px;overflow:hidden}
+  .cmcharhover>b{color:var(--ink);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmcharhover .count{font-size:11px;line-height:1.4}
+  .cmrosterhead{border-top:1px solid var(--edge);padding-top:6px;color:var(--ink);font-weight:600}
+  .cmhoverunit{display:flex;flex-direction:column;gap:1px}
+  .cmhoverunit>span{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmhoverunit small{font-size:10px;color:var(--dim)}
+  .cmhoverhint{font-size:10px;border-top:1px solid var(--edge);padding-top:5px;color:var(--accent)}
+  .cmobjectlist{display:flex;flex-direction:column;gap:5px;margin:5px 0 10px}
+  .cmobjectlist button{display:flex;flex-direction:column;gap:3px;text-align:left;padding:7px}
+  .cmobjectlist small{color:var(--dim);font-size:11px}
+  .cmworkspace .cxcharacters{border-top:1px solid var(--edge);margin-top:10px;padding-top:8px}
+  .cmworkspace .cxcharacters summary{cursor:pointer;color:var(--dim);font-size:12px;padding:5px 0}
+  .cmworkspace .cxsectionnav{position:sticky;top:0;z-index:2;background:var(--panel);padding:5px 0}
+  #cxCharacterFields,#cxTraitsEditor,#cxArmyEditor{scroll-margin-top:45px}
   .cfdrow b{color:var(--ink)}
   .cfdrow>.count{text-align:right;white-space:nowrap}
   .cfdrow>div{grid-column:1/-1}
@@ -2900,6 +2997,7 @@
 <script src="js/stratview.js"></script>
 <script src="js/campevents.js"></script>
 <script src="js/campforts.js"></script>
+<script src="js/campcreate.js"></script>
 <script src="js/climates.js"></script>
 <script src="js/rebels.js"></script>
 <script src="js/mercs.js"></script>

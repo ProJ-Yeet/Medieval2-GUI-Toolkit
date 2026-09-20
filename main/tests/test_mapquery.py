@@ -831,6 +831,25 @@ try:
     check(f"a query that matched nothing is refused with a reason rather than "
           f"a blank file: {r.get('error', '')[:60]}",
           r["count"] == 0 and r.get("error"))
+    # Pending paint responses use the same authoritative marker ownership as
+    # the map, so icons can follow edits and undo before anything is saved.
+    before = get("/api/map?mod=QueryMod")
+    painted = post("/api/map/paint", {"mod":"QueryMod", "tool":"pencil",
+        "target":"regions", "region":"B_Province", "points":[[0,0]], "size":1})
+    check("paint response carries authoritative settlement and port positions",
+          not painted.get("error") and "C_Province" in painted.get("map_markers", {}))
+    undone = post("/api/map/paint_undo", {"mod":"QueryMod"})
+    expected = {r["name"]:{"settlement":r["settlement"],"port":r["port"]}
+                for r in before["regions"] if r["name"]}
+    check("undo returns the original marker positions with the restored pixels",
+          undone.get("map_markers") == expected)
+    strat_path = http_root / "data" / campstrat.CAMPAIGN_DIR_REL / campstrat.DEFAULT_CAMPAIGN / campstrat.STRAT_NAME
+    with strat_path.open("a", encoding="latin-1") as f:
+        f.write("\nfaction empty_test_faction, balanced smith\ndenari 1000\n")
+    Handler.registry.invalidate("QueryMod")
+    markers = get("/api/map/markers?mod=QueryMod")
+    check("a faction with no map objects is available for its first character",
+          "empty_test_faction" in markers["factions"])
 finally:
     srv.shutdown()
     srv.server_close()

@@ -53,7 +53,7 @@ const CMK_FAN_ZOOM = 14;
 //: Icon size in CSS pixels, and the zoom band it grows through. Constant on
 //: screen rather than in tiles: a marker is a label, and a label that shrinks
 //: with the map cannot be read at the zoom somebody is looking for it at.
-const CMK_ICON_MIN = 9, CMK_ICON_MAX = 22;
+const CMK_ICON_MIN = 14, CMK_ICON_MAX = 24;
 
 //: The categories, in the order the panel lists them, with the toggle default.
 //: Resources are off for the reason at the top of this file; the two 18b ones
@@ -61,6 +61,7 @@ const CMK_ICON_MIN = 9, CMK_ICON_MAX = 22;
 //: because a coordinate being edited on the panel below has to be visible.
 const CMK_CATS = [
   {id: 'settlement', label: 'Settlements', on: true},
+  {id: 'port', label: 'Ports', on: true},
   {id: 'character', label: 'Characters', on: true},
   {id: 'fort', label: 'Forts', on: true},
   {id: 'watchtower', label: 'Watchtowers', on: true},
@@ -80,9 +81,9 @@ const CMK_CATS = [
    (`campstrat.CHARACTER_TYPES`); anything else is a defect in the file, not a
    kind, and gets the question mark rather than a guess. */
 const CMK_CHAR = {
-  'named character': 'N', general: 'G', admiral: 'A', spy: 'S', merchant: 'M',
-  diplomat: 'D', priest: 'P', assassin: 'X', princess: 'R', heretic: 'H',
-  witch: 'W', inquisitor: 'I',
+  'named character': '♚', general: '⚔', admiral: '⚓', spy: '◈', merchant: '¤',
+  diplomat: '⚑', priest: '✝', assassin: '†', princess: '♛', heretic: '✦',
+  witch: '☾', inquisitor: '✠',
 };
 
 //: Settlement levels, smallest to largest, so a village is a smaller mark than
@@ -97,7 +98,7 @@ const CMK_LEVELS = ['village', 'town', 'large_town', 'city', 'large_city', 'huge
 function cmkNew(mod){
   const cats = {};
   for(const c of CMK_CATS) cats[c.id] = c.on;
-  return {mod, on: false, cats, loading: false, err: '', d: null,
+  return {mod, on: true, cats, loading: false, err: '', d: null,
           groups: [], byTile: new Map(), art: {}, drag: null, open: true};
 }
 
@@ -167,7 +168,17 @@ function cmkIndex(){
     g.items.push(it);
   }
   k.byTile = tiles;
+  // Ports are map pixels rather than descr_strat records. Join them locally
+  // so they have the same visibility controls and overlap badges as objects.
+  for(const r of c.man.regions){
+    if(!r.port) continue;
+    const [tx,ty] = r.port, key = `${tx},${ty}`;
+    let g = tiles.get(key);
+    if(!g){ g = {tx,ty,items:[]}; tiles.set(key,g); }
+    g.items.push({kind:'port',region:r.name,name:r.shown || r.name});
+  }
   k.groups = [...tiles.values()];
+  c.lab = null;
 }
 
 /* The mod's own resource pictures, one <img> each, decoded once.
@@ -176,6 +187,20 @@ function cmkIndex(){
    the TGA is decoded to PNG on the server and cached on disk by mtime. A
    resource the mod ships no art for is simply absent from `art` and draws its
    glyph instead - see the note at the top of this file. */
+// The server owns marker placement rules (ports use coastline/dock rules).
+// Apply its current positions after painting, undo and redo.
+function cmkSyncMapMarkers(positions){
+  const c = state.cmap;
+  if(!c || !positions) return;
+  for(const r of c.man.regions){
+    const at = positions[r.name];
+    if(!at) continue;
+    r.settlement = at.settlement; r.port = at.port;
+  }
+  c.markerAt=null; c.lab=null;
+  cmkIndex(); cmkPaint();
+}
+
 function cmkArt(){
   const k = state.cmk;
   if(!k || !k.d) return;
@@ -224,6 +249,10 @@ function cmkDraw(x, s0, t0, s1, t1){
     const shown = cmkShown(g);
     if(!shown.length) continue;
     const cx = cmapX(g.tx) + z / 2, cy = cmapY(g.ty) + z / 2;
+    if(c.objectSel && shown.some(it => it.kind === c.objectSel.kind && it.line === c.objectSel.line)){
+      x.save(); x.strokeStyle='#ffe864'; x.lineWidth=2;
+      x.beginPath(); x.arc(cx,cy,size*.72,0,Math.PI*2); x.stroke(); x.restore();
+    }
     if(fan && shown.length > 1){
       // fanned sideways, centred on the tile, so the tile they are all on is
       // still the middle of the row
@@ -271,6 +300,14 @@ function cmkGlyph(x, it, px, py, size){
   const fill = cmkColour(it);
   x.strokeStyle = 'rgba(255,255,255,.92)';
   x.fillStyle = fill;
+  if(it.kind === 'port'){
+    x.beginPath(); x.arc(px,py,r * .85,0,Math.PI * 2);
+    x.fillStyle = '#173c54'; x.fill(); x.stroke();
+    x.fillStyle = '#c9efff';
+    x.font = `${Math.round(size * .8)}px "Segoe UI Symbol",sans-serif`;
+    x.fillText('⚓',px,py + .5);
+    return;
+  }
   if(it.kind === 'settlement'){
     // a square that grows with the settlement's level, castles turned 45°
     const lv = Math.max(0, CMK_LEVELS.indexOf(it.level || 'village'));
@@ -291,7 +328,7 @@ function cmkGlyph(x, it, px, py, size){
     x.fill(); x.stroke();
     if(size >= 12){
       x.fillStyle = cmkInk(fill);
-      x.font = `${Math.round(size * 0.55)}px ui-monospace,Consolas,monospace`;
+      x.font = `${Math.round(size * 0.65)}px "Segoe UI Symbol",sans-serif`;
       x.fillText(CMK_CHAR[it.type] || '?', px, py + 0.5);
     }
     return;
@@ -406,11 +443,50 @@ function cmkAt(tx, ty){
   return g ? cmkShown(g) : [];
 }
 
+// Object-only hover cards. Terrain values remain in the clicked-tile inspector.
+function cmkHoverHtml(tx,ty){
+  const items = cmkAt(tx,ty), chars = items.filter(it => it.kind === 'character');
+  if(!chars.length) return '';
+  const it = chars.find(ch => state.cmap.objectSel && ch.line === state.cmap.objectSel.line)
+    || chars[chars.length - 1];
+  const faction = state.cmk.d && state.cmk.d.factions[it.faction];
+  const groups = new Map();
+  for(const u of it.roster || []){
+    const key = JSON.stringify([u.unit,u.exp,u.armour,u.weapon_lvl]);
+    if(!groups.has(key)) groups.set(key,{...u,count:0});
+    groups.get(key).count++;
+  }
+  const rows = [...groups.values()];
+  return `<div class="cmcharhover">
+    <b>${esc(it.name)}</b>
+    <div class="count">${esc(it.type || 'Character')} · ${esc(faction ? faction.label : it.faction || 'No faction')}${it.age != null ? ` · age ${esc(it.age)}` : ''}</div>
+    <div class="count">${it.x}, ${it.y} game${it.rank ? ` · ${esc(it.rank)}` : ''}</div>
+    <div class="cmrosterhead">${it.army || 0} army units</div>
+    ${rows.length ? rows.slice(0,6).map(u=>`<div class="cmhoverunit">
+      <span>${u.count > 1 ? `${u.count} × ` : ''}${esc(u.unit)}</span>
+      <small>Exp ${esc(u.exp)} · Armour ${esc(u.armour)} · Weapon ${esc(u.weapon_lvl)}</small>
+    </div>`).join('') : `<div class="count">${it.army ? 'Open the editor to view the roster.' : 'No army attached.'}</div>`}
+    ${rows.length > 6 ? `<div class="count">+ ${rows.length-6} more unit types in the editor</div>` : ''}
+    ${chars.length > 1 ? `<div class="count cmhovermore">Also here: ${chars.filter(ch=>ch!==it).slice(0,2).map(ch=>esc(ch.name)).join(', ')}${chars.length>3?'…':''}</div>` : ''}
+    <div class="cmhoverhint">${state.cmap.selectMode ? 'Use Select / move objects to edit.' : chars.length > 1 ? 'Click to choose a character and edit.' : 'Click to edit character, traits and army.'}</div>
+  </div>`;
+}
+
+function cmkObjectRows(){
+  const c = state.cmap;
+  if(!c || !c.pick) return '';
+  const items = cmkAt(...c.pick).filter(it => ['character','fort','watchtower','resource'].includes(it.kind));
+  if(!items.length) return '';
+  return `<div class="cmobjectlist"><b>Objects on this tile</b>${items.map((it,i)=>
+    `<button onclick="cmapObjectChoose(${i})"><b>${esc(it.name || it.kind)}</b><small>${esc(cmkLabel(it))}</small></button>`).join('')}</div>`;
+}
+
 //: One marker said in a line, for 17e's tooltip.
 function cmkLabel(it){
   const k = state.cmk;
   const f = it.faction && k.d && k.d.factions[it.faction];
   const who = f ? f.label : it.faction;
+  if(it.kind === 'port') return `Port · ${it.name || it.region}`;
   if(it.kind === 'settlement'){
     // the two ladders are one ladder - a castle's `level` is written with the
     // same six city words - so the kind is said and the level is qualified,
@@ -585,7 +661,7 @@ async function cmkDrop(){
 //: tile - so a layer that has just appeared or gone has to say the cache is out
 //: of date, or the panel keeps naming markers that are no longer drawn.
 function cmkStale(){
-  if(state.cmap){ state.cmap.tipKey = ''; state.cmap.saidTip = ''; }
+  if(state.cmap){ state.cmap.tipKey = ''; state.cmap.saidTip = ''; state.cmap.lab = null; }
 }
 
 function cmkToggleLayer(){
@@ -617,6 +693,7 @@ function cmkFold(){
 }
 
 function cmkPaint(){
+  if(typeof cmapCreatePaint === 'function') cmapCreatePaint();
   const el = document.getElementById('cmMarks');
   if(!el) return;
   el.innerHTML = cmkHtml();
@@ -627,9 +704,7 @@ function cmkHtml(){
   if(!k) return '';
   const counts = (k.d && k.d.counts) || {};
   const head = `<div class="cmkhead">
-    <label class="chk" title="Draw everything descr_strat.txt puts on a tile.
-Off by default: a map carrying hundreds of trade resources drawn over the
-provinces is not a map any more.">
+    <label class="chk" title="Show settlements, ports and campaign objects. Choose which categories appear below.">
       <input type="checkbox" ${k.on ? 'checked' : ''} onchange="cmkToggleLayer()">
       <b>Markers</b></label>
     <span class="sp"></span>
@@ -639,7 +714,7 @@ provinces is not a map any more.">
   if(k.err) return `<div class="cmmark">${head}<div class="w-bad">${esc(k.err)}</div></div>`;
   if(!k.on || !k.d || !k.open) return `<div class="cmmark">${head}</div>`;
   const rows = CMK_CATS.map(cat => {
-    const n = counts[cat.id] || 0;
+    const n = cat.id === 'port' ? state.cmap.man.regions.filter(r => r.port).length : counts[cat.id] || 0;
     return `<label class="chk cmkcat${n ? '' : ' none'}">
       <input type="checkbox" ${k.cats[cat.id] ? 'checked' : ''}
         ${n ? '' : 'disabled'} onchange="cmkToggleCat('${cat.id}')">
@@ -648,7 +723,10 @@ provinces is not a map any more.">
   const art = Object.keys(k.d.art || {}).length;
   const res = counts.resource || 0;
   return `<div class="cmmark">${head}
+    ${cmkObjectRows()}
     <div class="cmkcats">${rows}</div>
+    <div class="cmiconkey">♚ Named character · ⚔ General · ⚓ Admiral / port<br>
+      ◈ Spy · ¤ Merchant · ⚑ Diplomat · ✝ Priest · † Assassin</div>
     <div class="count">Drag a character, a fort, a watchtower or a resource to move it: the
       drop plans the same save its panel does, with the same confirmation and the
       same undo.

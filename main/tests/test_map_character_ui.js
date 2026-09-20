@@ -1,0 +1,30 @@
+// node main/tests/test_map_character_ui.js
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
+const ctx={state:{},document:{getElementById:()=>null},window:{},esc:s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')};
+vm.createContext(ctx);
+for(const file of ['campmark.js','maplabels.js','campcreate.js'])
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../web/js',file),'utf8'),ctx);
+const unit={unit:'Knights <test>',exp:2,armour:1,weapon_lvl:0};
+const character={kind:'character',line:10,name:'Arthur',faction:'england',type:'general',age:40,army:2,roster:[unit,unit],x:1,y:2};
+const group={tx:1,ty:2,items:[character]};
+ctx.state.cmap={man:{regions:[]},view:{zoom:6},pick:[1,2],selectMode:false};
+ctx.state.cmk={on:true,cats:{character:true},groups:[group],byTile:new Map([['1,2',group]]),d:{factions:{england:{label:'England'}}}};
+const card=ctx.cmkHoverHtml(1,2);
+assert(card.includes('Arthur') && card.includes('England'));
+assert(card.includes('2 × Knights &lt;test&gt;'),'hover groups identical units and escapes names');
+assert(card.includes('Exp 2') && card.includes('Armour 1'),'hover carries upgrades');
+assert.equal(ctx.cmkHoverHtml(0,0),'','ordinary terrain has no army hover');
+assert.equal(ctx.clnObjectItems()[0].text,'Arthur · 2 units');
+ctx.state.cmk.cats.character=false;
+assert.equal(ctx.clnObjectItems().length,0,'hidden characters do not leave labels');
+ctx.state.cmk.cats.character=true;
+const other={...character,name:'Admiral',line:20};group.items.push(other);
+let pane,chosen;
+ctx.cmkPaint=()=>{};ctx.cmapPaint=()=>{};ctx.cmapSub=(a,b)=>{pane=[a,b];};ctx.cmapObjectOpen=it=>{chosen=it;};
+assert(ctx.cmapObjectPick([1,2]));
+assert.deepEqual(pane,['paint','marks'],'a stack opens the object chooser');
+assert.equal(chosen,undefined,'stack selection does not silently choose a character');
+ctx.cmapObjectChoose(1);
+assert.equal(chosen,other,'chooser opens the requested character');
+assert(ctx.cmkObjectRows().includes('cmapObjectChoose(1)'));
+console.log('PASS: character labels, army hover, escaping, category filtering and stacked-object editing');

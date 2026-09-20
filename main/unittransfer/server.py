@@ -3313,6 +3313,15 @@ class Handler(BaseHTTPRequestHandler):
                     out["state"] = campaint.PaintSession(mod, cm).state()
             else:
                 return {"error": f"no such paint action {action!r}"}
+            # Marker icons must follow pending pixels as well as saved files.
+            # Reuse the map's index, including its port/dock ownership rules.
+            changed_layers = set(out.get("changed", {})) | set(out.get("restored", {}))
+            if changed_layers & {"regions", "heights", "features"}:
+                out["map_markers"] = {
+                    r.name: {"settlement": list(r.settlement) if r.settlement else None,
+                             "port": list(r.port) if r.port else None}
+                    for r in sess.cm.index.regions if r.name
+                }
         except (campmap.MapError, ValueError, OSError) as e:
             return {"error": str(e), "state": sess.state()}
         if reset:

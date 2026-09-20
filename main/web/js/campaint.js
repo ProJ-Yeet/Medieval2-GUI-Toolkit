@@ -102,6 +102,7 @@ function cpaintToggle(){
     return;
   }
   p.on = !p.on;
+  if(p.on && state.cmap) state.cmap.selectMode = false;
   p.err = ''; p.note = '';
   activity('map paint', p.on ? 'armed the brush' : 'put the brush down');
   if(p.on && !p.pal) cpaintLoadPalette();
@@ -140,6 +141,7 @@ async function cpaintSync(){
 async function cpaintPost(action, body){
   const p = state.cpaint;
   p.busy = true;
+  cpaintWorkspacePaint();
   let r;
   // the campaign on the screen, so the server can refuse a stroke that
   // campaign would never show (campaint.paints_for)
@@ -156,6 +158,8 @@ async function cpaintPost(action, body){
   p.err = r.error || '';
   p.note = r.note || '';
   if(r.state) p.st = r.state;
+  if(r.map_markers && typeof cmkSyncMapMarkers === 'function') cmkSyncMapMarkers(r.map_markers);
+  cpaintWorkspacePaint();
   return r;
 }
 
@@ -1055,10 +1059,53 @@ function cpaintRowToggle(){
 //: The toolbar's paint controls, repainted on their own so that a stroke does
 //: not redraw the side panel and a palette click does not redraw the bar.
 function cpaintBarPaint(){
+  cpaintWorkspacePaint();
+  const bar = document.getElementById('cmBar');
+  if(bar) bar.classList.toggle('painting', !!(state.cpaint && state.cpaint.on));
   const el = document.getElementById('cmPaintBar');
   if(!el) return;
   el.innerHTML = cpaintBarHtml();
   cpaintWireIn(el);
+}
+
+// Paint state and recovery actions stay reachable from every inspector tab.
+function cpaintWorkspacePaint(){
+  const el = document.getElementById('cmWorkState'), p = state.cpaint;
+  if(!el || !p) return;
+  const st = p.st, dirty = !!(st.dirty.length || st.new_region);
+  const locked = p.busy || p.painting;
+  el.classList.toggle('is-painting', !!p.on);
+  el.innerHTML = `<div class="cmworkmode"><span class="cmstatedot"></span>
+    <b class="cmselectionname">${p.on ? 'Painting' : state.cmap && state.cmap.sel
+      ? esc(state.cmap.sel.shown || state.cmap.sel.name || 'Selected region') : 'Select a region'}</b>
+    <span>${p.on ? (p.pal ? esc(cpaintToolName()) : 'Loading palette…') + ' · Right drag to pan' : 'Click a province to inspect · Drag to pan'}</span>
+    ${p.on ? '<button onclick="cpaintToggle()">Stop painting</button>' : ''}</div>
+    <div class="cmworksave">
+      <span role="status">${p.busy ? 'Working…' : dirty ? 'Unsaved map changes' : 'Paint changes saved'}</span>
+      <button onclick="cpaintUndo()" ${locked || !st.undo ? 'disabled' : ''} title="${esc(st.last || 'Nothing to undo')}">↶ Undo</button>
+      <button onclick="cpaintRedo()" ${locked || !st.redo ? 'disabled' : ''} title="${esc(st.next || 'Nothing to redo')}">↷ Redo</button>
+      <button class="primary" onclick="cpaintSave()" ${locked || !dirty ? 'disabled' : ''}>Review &amp; save</button>
+    </div>`;
+}
+
+// A right-click samples the province for the next stroke without arming paint.
+function cpaintPickRegion(region){
+  const p = state.cpaint;
+  if(!p || !region || !region.name) return;
+  p.region = region.name;
+  p.target = 'regions';
+  p.sea = false; p.marker = ''; p.rgb = null; p.filter = '';
+  if(p.tool === 'water' || p.tool === 'pipette') p.tool = 'brush';
+  cpaintPaint();
+}
+
+function cpaintSelectRegion(){
+  if(!state.cmap || !state.cpaint) return;
+  if(state.cpin && typeof cpinCancel === 'function') cpinCancel();
+  if(state.cpaint.on) cpaintToggle();
+  state.cmap.selectMode = true;
+  cmapSub('place', 'record');
+  cpaintBarPaint();
 }
 
 function cpaintBarHtml(){
@@ -1068,7 +1115,9 @@ function cpaintBarHtml(){
   const arm = `<button class="cptog${p.on ? ' on' : ''}" onclick="cpaintToggle()"
       title="Arm the brush. The left button paints; the right and middle still pan."
       >\u{1F58C} Paint${p.on ? ' ✓' : ''}</button>`;
-  if(!p.on) return arm;
+  if(!p.on) return `<button class="${state.cmap && state.cmap.selectMode ? 'on' : ''}"
+    aria-pressed="${!!(state.cmap && state.cmap.selectMode)}" onclick="cpaintSelectRegion()"
+    title="Select a province without moving map objects. Click to select; drag to pan.">⌖ Select region</button>` + arm;
   if(p.palErr) return arm + `<span class="w-bad">${esc(p.palErr)}</span>`;
   if(!p.pal) return arm + '<span class="count">reading the palettes…</span>';
   const fold = `<button class="cpfold" onclick="cpaintRowToggle()"

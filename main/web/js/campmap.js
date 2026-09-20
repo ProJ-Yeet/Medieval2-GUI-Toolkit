@@ -192,6 +192,8 @@ const CMAP_TABS = [
    title: 'The brush and its palette, the climates it paints with, the markers '
         + 'layer, and the campaign events',
    subs: [
+     {id: 'create', label: 'Create', panels: ['cmCreate'],
+      title: 'Add regions, settlements, ports, characters and campaign objects'},
      {id: 'brush', label: 'Brush', panels: ['cmPaint'],
       title: 'The stroke, the wizard, undo and the save. The colours are in the '
            + 'column on the left.'},
@@ -293,7 +295,7 @@ function cmapTabsHtml(){
     const n = cmapTabBadge(t);
     return `<button class="cmtab${c.tab === t.id ? ' on' : ''}${
       c.fresh[t.id] ? ' fresh' : ''}" title="${esc(t.title)}"
-      onclick="cmapTab('${t.id}')">${esc(t.label)}${
+      aria-pressed="${c.tab === t.id}" onclick="cmapTab('${t.id}')">${esc(t.label)}${
       n ? ` <i class="cmtabn">${esc(String(n))}</i>` : ''}</button>`;
   }).join('')}</div>`;
 }
@@ -312,7 +314,7 @@ function cmapSubsHtml(){
   const up = cmapSubId(t.id);
   return `<div class="cmsubs" id="cmSubs">${cmapSubs(t).map(sb =>
     `<button class="cmsub${up === sb.id ? ' on' : ''}" title="${esc(sb.title || sb.label)}"
-      onclick="cmapSub('${t.id}','${sb.id}')">${esc(sb.label)}</button>`).join('')}</div>`;
+      aria-pressed="${up === sb.id}" onclick="cmapSub('${t.id}','${sb.id}')">${esc(sb.label)}</button>`).join('')}</div>`;
 }
 
 /* Show one sub-tab, and OPEN the panel behind it.
@@ -476,6 +478,9 @@ function cmapSideCollapse(){
 
 async function loadCampmap(){
   const mod = state.src;
+  const previous = state.cmap && state.cmap.mod === mod ? state.cmap : null;
+  const campaign = previous ? previous.campaign || '' : '';
+  const camera = previous ? {...previous.view} : null;
   // The mode is restored from settings before the mod list has arrived, and a
   // dropped startup request can leave it never arriving (see uiFailedFiles in
   // core.js). Asking for the map of no mod answers "unknown mod", which is true
@@ -490,7 +495,8 @@ async function loadCampmap(){
   main.innerHTML = `<div class="empty">Reading ${esc(mod)}’s campaign map…<br>
     <span class="count">ten layers, the region index and descr_regions.txt</span></div>`;
   let man;
-  try{ man = await api.get(`/api/map?mod=${enc(mod)}`); }
+  try{ man = await api.get(`/api/map?mod=${enc(mod)}`
+    + (campaign ? `&campaign=${enc(campaign)}` : '')); }
   catch(e){
     if(stale('campmap', mod)) return;
     state.cmap = null;
@@ -511,6 +517,11 @@ async function loadCampmap(){
   }
   if(stale('campmap', mod)) return;
   state.cmap = cmapNew(mod, man);
+  state.cmap.campaign = campaign;
+  // Saves re-read the same map. Fit belongs to opening a different map or
+  // explicitly pressing Fit, not to saving a character, settlement or stroke.
+  if(previous && camera && camera.fitted && previous.man.width === man.width
+     && previous.man.height === man.height) state.cmap.view = camera;
   state.cpin = null;      // 20c: a pin was asking for a tile on the last map
   renderCampmap();
   cmapLoadLayers();
@@ -914,7 +925,7 @@ function cmapSetCampaign(rel){
   if(was.cft) cftToggle();
   if(was.cq) cqToggle();
   if(was.cchk) cchkToggle();
-  if(was.cmk) cmkToggleLayer();
+  if(state.cmk && state.cmk.on !== !!was.cmk) cmkToggleLayer();
   if(was.cbr && state.cbr && !state.cbr.open) cbrToggle();
   // the region that was open, re-read out of the campaign now being read: who
   // holds it and what is standing in it are the campaign's answers, not the
@@ -1110,12 +1121,13 @@ function renderCampmap(){
   const m = c.man;
   count.textContent = `${m.width}×${m.height}`;
   main.innerHTML = `
+    <div class="cmworkspace">
     <div class="cmwrap">
       <!-- 49: the colours, on the left, where the user asked for them. Empty
            and hidden until the brush is armed - see cpaintDockPaint. -->
       <aside class="cmpalcol" id="cmPalCol" hidden></aside>
       <div class="cmstage" id="cmStage">
-        <canvas id="cmCanvas"></canvas>
+        <canvas id="cmCanvas" aria-label="Campaign map. Drag to pan, scroll to zoom, click a province to inspect."></canvas>
         <div class="cmbar" id="cmBar">
           <div class="cmbarrow">
           <button onclick="cmapFit()" title="Fit the whole map (Shift+0).
@@ -1126,10 +1138,10 @@ The bare number keys tick a layer - 1 to 0, one for each of the ten.">⤢ Fit</b
           <button onclick="cmapZoomBy(1.4)" title="Zoom in (+)">+</button>
           <button id="cmTipBtn" class="${c.tip === false ? '' : 'on'}"
             onclick="cmapTipToggle()"
-            title="Name the tile under the pointer on every layer at once (T).
+            title="Show region names and coordinates under the pointer (T).
 Answered here, out of the map you were already sent - no request per pixel.">ⓘ Names</button>
           <button id="cmLabBtn" class="${c.labels ? 'on' : ''}" onclick="clnToggle()"
-            title="Settlement names beside their markers (L), placed so that none covers another.
+            title="Settlement, character and port names beside their markers (L), placed so that none covers another.
 A name with no room at this zoom is left off and counted; zoom in for it.">Aa Labels</button>
           <button onclick="cmapResetView()"
             title="Put the map back to how it first opens: every layer, opacity, order and
@@ -1191,6 +1203,24 @@ back from the collapsed state.">›</button>
               ).join('')}</div>`).join('')}</div>`).join('')}
         </div>
       </div>
+    </div>
+      <footer class="cmworkspacehead">
+        <div><span class="cmeyebrow">CAMPAIGN MAP</span><strong>${esc(c.mod)}</strong></div>
+        <nav class="cmquick" aria-label="Campaign map actions">
+          <button onclick="cmapSub('map','find');cfdFocus()" title="Find a province or settlement (F)">⌕ Regions <kbd>F</kbd></button>
+          <button onclick="cmapSub('paint','brush')">Paint &amp; terrain</button>
+          <button class="primary" onclick="cmapSub('paint','create')">＋ Create</button>
+          <button onclick="cmapSub('paint','marks')">Map icons</button>
+          <button onclick="cmapSub('check','rules')">✓ Validate map</button>
+          <details class="cmhelp"><summary>Help</summary><div>
+            <b>Move around</b><p>Drag to pan. Scroll to zoom. Use Fit to see the whole map.</p>
+            <b>Edit the map</b><p>Click a province to inspect it. Turn on Paint to edit tiles; right or middle drag still pans. Choose a layer and colour on the left.</p>
+            <b>Keyboard shortcuts</b><p>F · Find a place<br>L · Settlement labels<br>S · Layers<br>T · Tile information<br>Shift + 0 · Fit map<br>Ctrl + Z / Y · Undo / redo while painting</p>
+            <b>Save your work</b><p>Paint changes stay pending until you save. Review &amp; save shows the changes before writing them.</p>
+          </div></details>
+        </nav>
+        <div class="cmworkstate" id="cmWorkState"></div>
+      </footer>
     </div>`;
   cmapWire();
   cbrOpen();          // 20b, D14, and it reads nothing until somebody opens it
@@ -1204,6 +1234,7 @@ back from the collapsed state.">›</button>
   rebOpen();          // 35, and it reads nothing until somebody opens it
   mcpOpen();          // 32b, and it reads nothing until somebody opens it
   cmkOpen();          // 17d, and it reads nothing until the layer is ticked
+  cmapCreatePaint();
   cevOpen();          // 18b, and it reads its two files only once opened
   cftOpen();          // 22a, and it reads nothing until somebody opens it
   cmapPickPaint();
@@ -1291,7 +1322,9 @@ function cmapLayerCount(){
 
 function cmapLayersHtml(){
   const c = state.cmap;
-  return `<div class="k">Layers <span class="count">top of the list draws last</span></div>`
+  return `<div class="cmlayerhead"><div><b>Map layers</b>
+    <span>Top layers appear above those below.</span></div>
+    <button onclick="cmapLayPop(false)" aria-label="Close layers" title="Close layers (S)">×</button></div>`
     + c.order.map((code, i) => {
     const L = c.layers[code], d = L.def;
     // the panel reads top-down as "what you see first", so it is the draw order
@@ -1319,16 +1352,17 @@ function cmapLayersHtml(){
         ${key}<span class="cmnm">${esc(d.label)}</span></label>
       <span class="cmmove">
         <button data-lleg="${code}" ${d.present ? '' : 'disabled'} class="${L.open ? 'on' : ''}"
-          title="What every colour on this layer means, and how much of the map it covers"
-          >${L.open ? '▾' : '▸'}</button>
-        <button data-lup="${code}" ${i === 0 ? 'disabled' : ''} title="Draw later (up)">▲</button>
-        <button data-ldn="${code}" ${i === c.order.length - 1 ? 'disabled' : ''}
-          title="Draw earlier (down)">▼</button></span>
-      <input type="range" min="0" max="100" value="${Math.round(L.opacity * 100)}"
+          aria-expanded="${!!L.open}" title="Layer options and colour legend"
+          >Options ${L.open ? '▴' : '▾'}</button>
+        <button data-lup="${code}" ${i === c.order.length - 1 ? 'disabled' : ''} aria-label="Move ${esc(d.label)} up" title="Draw later (up)">↑</button>
+        <button data-ldn="${code}" ${i === 0 ? 'disabled' : ''} aria-label="Move ${esc(d.label)} down"
+          title="Draw earlier (down)">↓</button></span>
+      <div class="cmlayeropacity"><span>Opacity</span>
+      <input type="range" min="0" max="100" value="${Math.round(L.opacity * 100)}" aria-label="${esc(d.label)} opacity"
         data-lop="${code}" ${d.present && L.on ? '' : 'disabled'}>
-      <span class="cmpct">${Math.round(L.opacity * 100)}%</span>
-      <div class="cmnote">${note}${hid}</div>
-      ${d.present ? cmapModeHtml(code) : ''}
+      <span class="cmpct">${Math.round(L.opacity * 100)}%</span></div>
+      ${L.open || !d.present || L.failed || d.problem || !d.aligned || hid ? `<div class="cmnote">${note}${hid}</div>` : ''}
+      ${d.present && L.open ? cmapModeHtml(code) : ''}
       ${L.open ? cmapLegendHtml(code) : ''}
     </div>`;
   }).reverse().join('');
@@ -1826,7 +1860,7 @@ function cmapMoveTop(code){
    fresh the next time the screen opens rather than served stale. */
 async function cmapLoadLayers(){
   const c = state.cmap;
-  const want = c.order.filter(code => c.layers[code].on
+  const want = c.order.filter(code => (c.layers[code].on || code === 'regions')
     && c.layers[code].def.present && !c.layers[code].img && !c.layers[code].loading);
   if(!want.length){ cmapCompose(); cmapPaint(); return; }
   await Promise.all(want.map(code => cmapFetchLayer(c, code)));
@@ -2222,11 +2256,17 @@ function cmapThemeDraw(x, s0, t0, s1, t1){
    caller is repainting, so a dirty-rect frame does not walk 200 markers. */
 function cmapOverlay(x, s0, t0, s1, t1){
   const c = state.cmap, v = c.view;
+  // Rebuild only when edits or reloads invalidated the selected outline.
+  cmapOutline(c.sel);
 
   if(c.outline && c.outline.width){
+    x.save();
+    x.shadowColor = '#000';
+    x.shadowBlur = 3;
     x.imageSmoothingEnabled = false;
     x.drawImage(c.outline, s0, t0, s1 - s0, t1 - t0,
                 cmapX(s0), cmapY(t0), (s1 - s0) * v.zoom, (t1 - t0) * v.zoom);
+    x.restore();
   }
 
   /* The stroke being drawn right now, before the server has answered.
@@ -2267,6 +2307,7 @@ function cmapOverlay(x, s0, t0, s1, t1){
           x.lineTo(X + z / 2, Y + z * 1.35); x.lineTo(X - z * .35, Y + z / 2);
           x.closePath();
         }else{
+          if(state.cmk && state.cmk.on && state.cmk.cats.port) continue;
           x.arc(X + z / 2, Y + z / 2, z * .8, 0, Math.PI * 2);
         }
         x.stroke();
@@ -2336,13 +2377,13 @@ function cmapPointers(cv){
     // 17d: with the brush down the left button paints, as 16e settled. With it
     // up, a left press that starts on a character takes the button off the pan
     // and onto that character - the same rule, one layer further out.
-    if(mode === 'pan' && e.button === 0 && !pin && typeof cmkDragStart === 'function'
+    if(mode === 'pan' && !state.cmap.selectMode && e.button === 0 && !pin && typeof cmkDragStart === 'function'
        && cmkDragStart(cmapEventTile(cv, e))) mode = 'mark';
     // 37b: and with the FE panel open, a press on its frame or a corner of it
     // takes the button off the pan. Behind the brush, the pin and a character,
     // because those are all things somebody armed on purpose and this is a
     // rectangle that happens to be lying over the map.
-    if(mode === 'pan' && e.button === 0 && !pin && typeof cfeDragStart === 'function'){
+    if(mode === 'pan' && !state.cmap.selectMode && e.button === 0 && !pin && typeof cfeDragStart === 'function'){
       const r = cv.getBoundingClientRect();
       if(cfeDragStart(e.clientX - r.left, e.clientY - r.top)) mode = 'fe';
     }
@@ -2358,15 +2399,18 @@ function cmapPointers(cv){
       if(last && moved < CMAP_DRAG_SLOP){
         if(state.cmk) state.cmk.drag = null;
         cmapPaint();
-        cmapPick(cmapEventTile(cv, e));
+        const tile = cmapEventTile(cv, e);
+        if(!cmapObjectPick(tile)) cmapPick(tile);
       }else cmkDrop();
     }
     else if(last && moved < CMAP_DRAG_SLOP && state.cmap){
       // 20c, M8: the pin takes the click, and nothing is selected by it. A
       // press that travelled is still a pan while the pin waits.
       const tile = cmapEventTile(cv, e);
-      if(!(e.button === 0 && typeof cpinTake === 'function' && cpinTake(tile)))
-        cmapPick(tile);
+      if(!(e.button === 0 && typeof cpinTake === 'function' && cpinTake(tile))){
+        if(e.button !== 0 || !cmapObjectPick(tile)) cmapPick(tile);
+        if(e.button === 2) cpaintPickRegion(state.cmap.sel);
+      }
     }
     last = null; mode = '';
     if(state.cmap){ state.cmap.tipHold = false; cmapTipPaint(); }
@@ -2671,31 +2715,11 @@ function cmapTipRow(ly, tx, ty){
     <span class="cmtipv">${val}</span></div>`;
 }
 
-//: 28b: how many lines the markers block holds, always, while that layer is
-//: ticked. Three rather than six: the block is reserved whether or not this
-//: tile carries anything, so every line of it is empty space on most tiles,
-//: and the panel below it is what people are reading.
-const CMAP_TIP_MARKS = 3;
-
-/* The panel's contents. Region first, because it is what the map is about.
-
-   **The frame does not move, and 28b is the whole of why.** 17e's `.cmtiprow`
-   grid already held the label column still; four other things did not. The head
-   was none, one or two lines depending on whether the tile was a marker, a
-   province or the sea; `cmkAt` added up to seven more; a layer with no value
-   wrote no row at all; and the box was a `max-width` over a `1fr` value column,
-   so a long province name widened it. The box follows the cursor, so every one
-   of those was a jump under the hand that was moving.
-
-   Every one of them is information Mylae's tooltip does not carry - his is one
-   header line and one row per loaded layer, and it is steady because it says
-   less. So the answer is a fixed frame rather than a shorter readout: two head
-   lines whether or not there is anything to put on them, one row per layer the
-   manifest names, a markers block of a fixed height while that layer is on, and
-   a width rather than a maximum. What does not fit is clipped, because a name
-   that wraps is a box that changed height. */
+// Keep hover compact; detailed layer values belong in the clicked-tile inspector.
 function cmapTipHtml(tx, ty){
   const c = state.cmap, m = c.man;
+  const objects = typeof cmkHoverHtml === 'function' ? cmkHoverHtml(tx,ty) : '';
+  if(objects) return objects;
   const gy = m.height - 1 - ty;
   const rgb = cmapLayerRgb('regions', tx, ty);
   const n = rgb ? cmapNameColour('regions', rgb) : null;
@@ -2719,46 +2743,20 @@ function cmapTipHtml(tx, ty){
     name = `<span class="count">${n.region ? esc(cmapRegionName(n.region))
                                            : 'no region'}</span>`;
   }
-  // 17d: what descr_strat.txt stands on this tile, when that layer is on. It is
-  // above the layer rows because a general is what somebody is pointing AT and
-  // the ground under him is context - and it holds CMAP_TIP_MARKS lines from
-  // the moment the layer is ticked, so walking onto a general moves nothing.
-  const lit = !!(state.cmk && state.cmk.on);
-  const on = lit && typeof cmkAt === 'function' ? cmkAt(tx, ty) : [];
-  let marks = '';
-  if(lit){
-    const room = on.length > CMAP_TIP_MARKS ? CMAP_TIP_MARKS - 1 : CMAP_TIP_MARKS;
-    const lines = on.slice(0, room).map(it => `<div>${esc(cmkLabel(it))}</div>`);
-    if(on.length > room)
-      lines.push(`<div class="count">…and ${on.length - room} more</div>`);
-    while(lines.length < CMAP_TIP_MARKS) lines.push('<div class="cmtipgap"></div>');
-    marks = `<div class="cmtipmk">${lines.join('')}</div>`;
-  }
   return `<div class="cmtiphead">
       <div class="cmtipn">${name}</div>
       <div class="cmtipsub count">${sub || '&nbsp;'}</div>
     </div>
-    <div class="cmtipxy"><b>${tx}, ${ty}</b> image · <b>${tx}, ${gy}</b> game</div>
-    ${marks}${m.layers.map(ly => cmapTipRow(ly, tx, ty)).join('')}`;
+    <div class="cmtipxy"><b>${tx}, ${ty}</b> image · <b>${tx}, ${gy}</b> game</div>`;
 }
 
-/* The layers the panel needs, which are not the layers on screen.
-
-   Naming every layer means holding every layer, and only the ticked ones are
-   fetched - so the first hover asks for the rest, once, and never again. They
-   are not ticked by asking: `cmapCompose` draws what `on` says, and these
-   arrive with it false, so the picture does not change. Each is one PNG the
-   server already has on disk, keyed by the file's mtime.
-
-   A layer that will not load is not retried here and not complained about
-   twice: `cmapFetchLayer` has already put the server's own sentence on the
-   layer row in the side panel, and the tooltip just has one row fewer. */
+// Hover only needs region identity, not the ten terrain layers.
 function cmapTipLoad(){
   const c = state.cmap;
   if(!c || c.tipLoad) return;
   const want = Object.keys(c.layers).filter(code => {
     const L = c.layers[code];
-    return L.def.present && L.def.aligned && !L.img && !L.loading && !L.failed;
+    return code === 'regions' && L.def.present && L.def.aligned && !L.img && !L.loading && !L.failed;
   });
   if(!want.length){ c.tipLoad = !Object.values(c.layers).some(L => L.loading); return; }
   c.tipLoad = true;
@@ -2925,7 +2923,7 @@ function cmapOutline(r){
                 || y === H - 1  || keys[j + W] !== want;
       if(!edge) continue;
       const i = j * 4;
-      dst[i] = 200; dst[i + 1] = 164; dst[i + 2] = 92; dst[i + 3] = 255;
+      dst[i] = 255; dst[i + 1] = 232; dst[i + 2] = 100; dst[i + 3] = 255;
     }
   }
   out.getContext('2d').putImageData(im, 0, 0);
@@ -3220,6 +3218,8 @@ function cmapHideColour(code, key, on){
    thing this phase's rules exist to prevent. */
 async function cmapPick(tile){
   const c = state.cmap;
+  c.objectRequest = (c.objectRequest || 0) + 1;
+  c.objectSel = null;
   const [tx, ty] = tile;
   const hit = cmapRegionAt(tx, ty);
   let r = (hit && typeof hit === 'object') ? hit : null;
@@ -3245,6 +3245,7 @@ async function cmapPick(tile){
   }
   c.sel = r;
   c.pick = (tx >= 0 && ty >= 0 && tx < c.man.width && ty < c.man.height) ? [tx, ty] : null;
+  cpaintWorkspacePaint();
   c.probe = null; c.probeErr = '';
   activity('map pick', `${c.mod} ${tx},${ty} -> ${r ? r.name || 'undeclared' : hit || 'nothing'}`
     + (c.marker ? ` (on the ${c.marker} marker)` : ''));
@@ -3254,7 +3255,8 @@ async function cmapPick(tile){
   // 28a: this click has just filled #cmPick, and #cmSettle, #cmChars and
   // #cmForts below - all four are the Province tab, and a click that fills a
   // panel nobody can see is the one way the strip is worse than the stack
-  cmapSurface('cmPick');
+  if(r && !cpaintArmed()) cmapSub('place', 'record');
+  else cmapSurface('cmPick');
   // 22a: the forts panel lists the picked province's, and opens the one the
   // click landed on
   if(typeof cftPicked === 'function') cftPicked(c.pick);
@@ -3289,13 +3291,14 @@ async function cmapProbe(c, tx, ty, want){
    than emptying it, because that is a click on the sea, not a decision. */
 async function cmapOpenPeople(region){
   const c = state.cmap;
+  const request = c.objectRequest, campaign = c.campaign;
   let owner = '';
   try{
     const d = await api.get(`/api/map/settlement?mod=${enc(c.mod)}`
       + `&region=${enc(region)}${cmapCampQ()}`);
     owner = d.owner || '';
   }catch(e){ return; }
-  if(state.cmap !== c || !owner) return;
+  if(state.cmap !== c || c.objectRequest !== request || c.campaign !== campaign || !owner) return;
   cxOpen(owner);
 }
 
@@ -4168,6 +4171,8 @@ function cmapKeys(){
     else if(e.key === 'Escape' && (state.cmap.sel || state.cmap.pick)){
       const c = state.cmap;
       c.sel = null; c.pick = null; c.probe = null; c.det = null;
+      c.objectSel = null; c.objectRequest = (c.objectRequest || 0) + 1;
+      cpaintWorkspacePaint();
       state.cset = null; state.cx = null;
       cmapOutline(null); cmapPaint(); cmapPickPaint(); csPaint(); cxPaint();
     }

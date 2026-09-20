@@ -375,9 +375,8 @@ check("and arming the brush does not ride with it",
 _row = campmap_js.split("function cmapTipRow(ly, tx, ty){")[1].split("\n}")[0]
 check("cmapTipRow never returns nothing - a row per layer the manifest names",
       "return '';" not in _row and _row.count("none(") >= 3)
-check("the markers block is a fixed number of lines",
-      "const CMAP_TIP_MARKS" in campmap_js
-      and "lines.length < CMAP_TIP_MARKS" in campmap_js)
+_tip = campmap_js.split("function cmapTipHtml(tx, ty){")[1].split("\n}")[0]
+check("hover omits terrain rows and marker lists", "cmapTipRow(" not in _tip and "cmtipmk" not in _tip)
 check("the head reserves its two lines whether or not it has them",
       'class="cmtiphead"' in campmap_js and 'class="cmtipsub' in campmap_js)
 check("the tooltip has a width rather than a maximum",
