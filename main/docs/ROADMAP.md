@@ -3232,7 +3232,7 @@ campaign map, so none is beta-only.
 | ~~25~~ | ~~**45** The hidden resources line~~ | S | **both** | **done 2026-09-21** |
 | ~~26~~ | ~~**46** Cultures gets a screen, and two forms get a strip~~ | M | **both** | **done 2026-09-21** |
 | ~~27~~ | ~~**47a** The six export sound files~~ | M | **both** | **done 2026-09-21** |
-| 28 | **47b** The thirty-two sound scripts | L | **both** | asked for |
+| ~~28~~ | ~~**47b** The thirty-two sound scripts~~ | L | **both** | **done 2026-09-21** |
 | 29 | **48** The two rows the strings screen cannot add | S | **both** | asked for |
 
 **Renumbered 2026-09-21:** Phases 51, 52 and 53 took orders 22 to 24 ahead of
@@ -3678,7 +3678,58 @@ the splice exists, and `export_descr_sounds_prebattle.txt` is already written
 by `factionclone.py` as a per-faction block, so this is a session and a bit
 rather than more than one.
 
-### 47b - The thirty-two scripts, on a grammar nothing here has read
+### 47b - The thirty-two scripts, on a grammar nothing here has read - DONE 2026-09-21
+
+**Done 2026-09-21, both lines, committed and uncut.** A third tab on the sound
+strip, **Sound scripts**, over a new `unittransfer/soundscripts.py`, drawn by
+the same list and pane as 47a's banks.
+
+**Measured before it was written** (both installed mods, 52,091 lines): 31
+scripts in `data/` on each and `descr_sounds_music_types.txt` beside them;
+4,239 events, 980 of them named. A script is five kinds of line, and the
+parser tells them apart by their first word and nothing else: `DEFAULT:`,
+`BANK:`, `source`, a **setting** (a key and only numbers: `grid_cell_size 40`,
+`river_max_dist_apart 250 ; comment`), and a **selector** (about forty
+keywords: `unit`, `hit`, `season`, `terrain`, `climates`, `type`, `state`,
+`looped`, `arrived` ...), with `event [NAME] attrs` … `end` blocks under them.
+An event's first word is its name unless it is a number or an attribute.
+**All 64 files (32 on each mod) come back byte for byte, every event is in a
+block, and not one warning is raised.**
+
+**The arguments are typed, and the types are measured rather than guessed.**
+An attribute is a number key (twenty of them: `volume`, `mindist`, `lod`,
+`priority` ...), a flag (`1d`, `2d`, `3d`, `streamed`, `looped`, `ducking`) or
+`pref` and a word, and those lists are every one the two mods write. A number
+key with no number after it is refused; an attribute no script writes, a
+`pref` the mod does not use, and a selector value no script in the mod names
+are warnings. The pane lists each number key with the range this mod's
+scripts already use (volume -80 to 0 on both), said to be usage and not a
+limit. `factions` in `descr_sounds_accents.txt` is checked against the mod's
+factions, and a faction put under a second accent is named.
+
+**What shipped:** every event's attributes and samples; every `DEFAULT:` line
+and setting, a trailing comment kept (`_with_value` in 47a's module keeps
+comments now, for both); a selector's values changed in place; a named event
+copied under a new name, renamed or removed, each saying that the engine or a
+script plays it by name. One backup and 🕑 Log undo per save, mode
+`soundscripts`.
+
+**Not taken, and why.** **A selector's block is never copied or removed.**
+Selectors nest by indentation and these files keep to it only as a habit:
+`looped` sits a tab shallower than the event it wraps, and a setting can sit
+level with the selector above it. The tree drawn from indentation is right
+for showing where an event is and not certain enough to cut by, so the edits
+are all to lines whose extent is certain (one line, or `event` to `end`) and
+the screen says so beside the button that is not there. **A bank is not
+renamed**: the engine asks for it by name. **`descr_sounds_music_types.txt` is
+shown, not edited**: it is written from the campaign map a province at a time,
+and 19b renames through it. The four faction-clone sites keep their writers.
+
+The exit named `tests/test_sounds.py`; the round trip is in a suite of its own,
+`tests/test_soundscripts.py`, because `test_sounds` is pinned to Third Age
+Reforged and fails without it.
+
+#### The scoping, as written before it was built
 
 `descr_sounds_*.txt` is a different shape: `DEFAULT:` directives with key and
 value attributes, named `event` blocks, `BANK:` sections, `unit <name>:<type>`

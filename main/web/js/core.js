@@ -693,6 +693,7 @@ const MODES=[
   {id:'cultures', icon:'🏛', name:'Cultures',      sub:true, hint:'descr_cultures.txt: each culture’s settlements, fort, ports, watchtower and agents'},
   {id:'strings',  icon:'🔤', name:'Strings',       sub:true, hint:'The compiled text files the game actually reads'},
   {id:'soundbanks',icon:'🔊', name:'Sound banks',   sub:true, hint:'Soldier and strat map voices, battle events, pre-battle speech, advice and narration'},
+  {id:'soundscripts',icon:'🔊', name:'Sound scripts', sub:true, hint:'descr_sounds_*.txt: how every sound is played, when, and at what volume'},
 ];
 const modeDef=id=>MODES.find(m=>m.id===id)||MODES[0];
 //: The modes anything OFFERS: the burger menu, the Home readiness cards and the
@@ -1236,7 +1237,7 @@ function setAppMode(id,returning){
 // A sub-mode has no row of its own in the menu, so its HOST row lights up.
 const MODE_HOST={sprites:'bmdb',stratmap:'bmdb',cards:'bmdb',traits:'minor',
   ancillaries:'minor',factions:'minor',strings:'minor',cultures:'minor',
-  soundbanks:'sounds'};
+  soundbanks:'sounds',soundscripts:'sounds'};
 function syncNav(){
   const d=modeDef(state.mode), host=MODE_HOST[state.mode]||state.mode;
   navCur.textContent=d.icon+' '+d.name;
@@ -1295,7 +1296,7 @@ function wire(){
   search.oninput=()=>{
     if(state.mode==='strings')return strSearch();
     // 47a: the list is what a search narrows; the pane holds unsaved typing
-    if(state.mode==='soundbanks'&&state.sbk&&document.getElementById('sbkList'))
+    if((state.mode==='soundbanks'||state.mode==='soundscripts')&&state.sbk&&document.getElementById('sbkList'))
       return void(document.getElementById('sbkList').innerHTML=sbkListHtml());
     render();};
   mercOnly.onchange=filtersChanged; groupBy.onchange=filtersChanged;
@@ -1343,7 +1344,7 @@ function wire(){
 function applyMode(persist){
   syncNav();
   const one=state.mode!=='transfer', edit=state.mode==='edit', bm=state.mode==='bmdb',
-        snd=state.mode==='sounds', sbk=state.mode==='soundbanks', spr=state.mode==='sprites', bld=state.mode==='buildings',
+        snd=state.mode==='sounds', sbk=state.mode==='soundbanks'||state.mode==='soundscripts', spr=state.mode==='sprites', bld=state.mode==='buildings',
         str=state.mode==='strings', trt=state.mode==='traits',
         anc=state.mode==='ancillaries', mnr=state.mode==='minor'||state.mode==='cultures',
         gld=state.mode==='guilds', cdb=state.mode==='campdb',
@@ -1475,7 +1476,7 @@ function render(){
   if(state.mode==='home')return renderHome();
   if(state.mode==='bmdb')return renderBmdb();
   if(state.mode==='sounds')return renderSounds();
-  if(state.mode==='soundbanks')return renderSoundBanks();
+  if(state.mode==='soundbanks'||state.mode==='soundscripts')return renderSoundBanks();
   if(state.mode==='sprites')return renderSprites();
   if(state.mode==='stratmap')return state.stm?renderStratmap():loadStratmap();
   if(state.mode==='cards')return state.cards?renderCards():loadCards();

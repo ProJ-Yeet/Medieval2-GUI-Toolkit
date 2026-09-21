@@ -2826,6 +2826,12 @@
     white-space:pre;overflow-x:auto}
   .sbkkids{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
   .sbkkid{display:inline-flex;gap:6px;align-items:baseline}
+  .sbkitem{display:grid;grid-template-columns:minmax(120px,max-content) 1fr;gap:4px 10px;
+    align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:6px;margin:6px 0}
+  .sbkitem.on{border-color:var(--accent)}
+  .sbkitem input{font-family:var(--mono,monospace);min-width:0}
+  .sbkitem .count{grid-column:2}
+  .sbkvocab{margin-top:6px}
   .cdbhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;
     position:sticky;top:0;z-index:2;background:var(--bg);padding:4px 0 8px}
   .cdbsec h3{font-family:Consolas,monospace;font-size:13px;margin:10px 0 4px;color:var(--dim)}

@@ -44,8 +44,8 @@ const UNDO_SCOPES=[
   {id:()=>(!modalOpen()&&state.mode==='sounds'&&state.snd)?'snd:'+state.src:'',
    get:()=>state.snd.ops, set:v=>{state.snd.ops=v;}, draw:()=>renderSounds()},
   // 47a: the six sound banks stage event edits the same way, one file at a time
-  {id:()=>(!modalOpen()&&state.mode==='soundbanks'&&state.sbk)
-      ?'sbk:'+state.src+':'+state.sbk.file:'',
+  {id:()=>(!modalOpen()&&(state.mode==='soundbanks'||state.mode==='soundscripts')&&state.sbk)
+      ?'sbk:'+state.mode+':'+state.src+':'+state.sbk.file:'',
    get:()=>state.sbk.w, set:v=>{state.sbk.w=v;}, draw:()=>renderSoundBanks()},
 
   /* The editors built after this file. Every one of them was undoable in

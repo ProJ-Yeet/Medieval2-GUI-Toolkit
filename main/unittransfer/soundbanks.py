@@ -311,11 +311,21 @@ def _indent(line: str) -> str:
     return line[:len(line) - len(line.lstrip())]
 
 
+_REST = re.compile(r"^(\s*\S+)(\s*)([^;]*?)(\s*)(;.*)?$")
+
+
 def _with_value(line: str, value: str) -> str:
-    """The keyword line with its value replaced; indent, keyword and EOL kept."""
-    ind, eol = _indent(line), _eol(line)
-    kw = line.strip().split(None, 1)[0]
-    return f"{ind}{kw} {value}{eol}" if value else f"{ind}{kw}{eol}"
+    """The keyword line with its value replaced; indent, keyword and EOL kept.
+
+    47b: and a trailing ``; comment`` kept, with the space before it -
+    ``river_max_dist_apart 250	; maximum distance ...`` in the sound scripts.
+    """
+    eol = _eol(line)
+    m = _REST.match(line[:len(line) - len(eol)])
+    head, gap, _old, pad, comment = m.groups()
+    if not value:
+        return f"{head}{pad if comment else ''}{comment or ''}{eol}"
+    return f"{head}{gap or ' '}{value}{pad or (' ' if comment else '')}{comment or ''}{eol}"
 
 
 def edit_event(b: Bank, at: int, attrs: str, body: List[str]) -> str:

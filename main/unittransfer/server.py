@@ -461,6 +461,12 @@ The six export sound banks (47a, see :mod:`unittransfer.soundbanks`)
   POST /api/soundbanks/plan|/apply -> edit an event, or duplicate, rename or remove
                                     a block (one backup + undo)
 
+The sound scripts (47b, see :mod:`unittransfer.soundscripts`)
+  GET  /api/soundscripts?mod=&file= -> one descr_sounds_* script, blocks and lines
+  POST /api/soundscripts/plan|/apply -> edit an event, a DEFAULT: or a setting, a
+                                    selector's values, or copy/rename/remove a
+                                    named event (one backup + undo)
+
 The campaign folder's small files (18a, see :mod:`unittransfer.campfiles`)
   GET  /api/campfiles/descriptions?mod=&campaign=
                                  -> the campaign's menu title and one row a
@@ -596,7 +602,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, changesets, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, changesets, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2057,6 +2063,15 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(mercpools.overview(self.registry.get(name), camp))
                 except (mercpools.MercError, ValueError) as e:
                     return self._err(404, getattr(e, "message", str(e)))
+            if u.path == "/api/soundscripts":
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                try:
+                    return self._json(soundscripts.overview(
+                        self.registry.get(name), (q.get("file") or ["units"])[0]))
+                except soundscripts.ScriptError as e:
+                    return self._err(404, str(e))
             if u.path == "/api/soundbanks":
                 # 47a. One bank at a time: the biggest is 20,000 lines, and
                 # the screen shows one of the six.
@@ -2395,6 +2410,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._guilds(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/mercpools/plan", "/api/mercpools/apply"):
                 return self._json(self._mercpools(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/soundscripts/plan", "/api/soundscripts/apply"):
+                return self._json(self._soundbanks(u.path.rsplit("/", 1)[-1], body,
+                                                   soundscripts))
             if u.path in ("/api/soundbanks/plan", "/api/soundbanks/apply"):
                 return self._json(self._soundbanks(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/campdb/plan", "/api/campdb/apply"):
@@ -2791,11 +2809,13 @@ class Handler(BaseHTTPRequestHandler):
         return out
 
     # ---- campaign constants (38) ----
-    def _soundbanks(self, action, body):
-        """Preview or write one of the six export sound banks."""
+    def _soundbanks(self, action, body, module=None):
+        """Preview or write one of the six export sound banks, or (47b) one of
+        the sound scripts: the two modules share a plan's shape."""
+        module = module or soundbanks
         try:
             mod = self.registry.get(body["mod"])
-            plan = soundbanks.plan(mod, body)
+            plan = module.plan(mod, body)
         except (KeyError, OSError, ValueError) as e:
             return {"error": str(e)}
         out = {"plan": plan.payload()}
@@ -2806,7 +2826,7 @@ class Handler(BaseHTTPRequestHandler):
         if not plan.text:
             out["error"] = "nothing to change"
             return out
-        out["record"] = soundbanks.apply(plan)
+        out["record"] = module.apply(plan)
         self.registry.invalidate(body["mod"])
         return out
 
