@@ -3233,7 +3233,7 @@ campaign map, so none is beta-only.
 | ~~26~~ | ~~**46** Cultures gets a screen, and two forms get a strip~~ | M | **both** | **done 2026-09-21** |
 | ~~27~~ | ~~**47a** The six export sound files~~ | M | **both** | **done 2026-09-21** |
 | ~~28~~ | ~~**47b** The thirty-two sound scripts~~ | L | **both** | **done 2026-09-21** |
-| 29 | **48** The two rows the strings screen cannot add | S | **both** | asked for |
+| ~~29~~ | ~~**48** The two rows the strings screen cannot add~~ | S | **both** | **done 2026-09-21** |
 
 **Renumbered 2026-09-21:** Phases 51, 52 and 53 took orders 22 to 24 ahead of
 these, on the user's word. Their table is under *Phases 51-53*.
@@ -3750,7 +3750,36 @@ installed mods, an editor over the blocks rather than the lines, backup and
 undo as everywhere else, and `tests/test_sounds.py` extended with the round
 trip per file.
 
-## Phase 48 - The two rows the strings screen cannot add
+## Phase 48 - The two rows the strings screen cannot add - DONE 2026-09-21
+
+**Done 2026-09-21, both lines, committed and uncut.** The last of the
+2026-09-13 pass. As scoped, and one refusal added after measuring.
+
+- **＋ New entry** on a tagged archive puts a tag box and a text box at the top
+  of the table; several can be staged at once. **✕** on a row stages its
+  removal, struck through and undoable with ↺. Both go in the one save with
+  the edits, through the `adds` and `removes` the plan has taken since Phase 6,
+  and Ctrl+Z covers all three.
+- **Where the count changes, the page says so:** "10 entries now, 11 after
+  saving", with the trailing tag index named beside it when there is one, and
+  the plan's own warning repeated in the confirmation.
+- **An archive addressed by position** (battle, shared, strat, tooltips) says
+  why it takes neither, in the backend's two sentences. They are constants in
+  `strings.py` now, `NO_ADD` and `NO_REMOVE`, sent on the entries payload as
+  `refused` so the page shows what the plan would say without a copy of it.
+- **Added: a new tag with a space or a brace is refused.** Measured over all
+  36,219 tags in the installed mods' archives: not one has either, and a brace
+  would break the `{tag}text` line of the `.txt` beside the archive. The page
+  paints the box red early; the plan is what refuses.
+- After a save the screen reopens the archive that was saved rather than the
+  list.
+
+`tests/test_strings.py` drives the page's calls through the HTTP layer: the
+refusals as served, an add and a remove planned, applied, served back and
+undone byte for byte, each bad tag refused, and both refusals on an archive
+addressed by position with nothing written.
+
+### The scoping, as written before it was built
 
 **The backend already does it and the screen does not ask.** `strings.plan`
 takes `{edits, adds, removes}` and has since Phase 6, with both refusals

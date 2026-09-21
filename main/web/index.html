@@ -2951,6 +2951,10 @@
   .strtab td.k code{font-size:12px}
   .strtab textarea{width:100%;resize:vertical;font-size:13px}
   .strtab tr.edited td.k code{color:var(--accent)}
+  .strtab tr.removed td.k code{text-decoration:line-through;color:var(--dim)}
+  .strtab tr.removed textarea{opacity:.5;text-decoration:line-through}
+  .strtab tr.added td.k input{width:100%;box-sizing:border-box;font-family:var(--mono,monospace);font-size:12px}
+  .strtab tr.added td.k input.bad{border-color:var(--bad,#c55)}
   .strtab tr.edited textarea{border-color:var(--accent)}
   .strmore{padding:10px 0;display:flex;gap:10px;align-items:center}
 </style>

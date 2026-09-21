@@ -86,7 +86,9 @@ const UNDO_SCOPES=[
   // keyed by row id, not a cloned record.
   {id:()=>(!modalOpen()&&state.mode==='strings'&&state.str&&state.str.rows)
       ?'str:'+state.src+':'+(state.str.file||''):'',
-   get:()=>state.str.edits, set:v=>{state.str.edits=v;},
+   // 48: new and removed rows are part of the same staging
+   get:()=>({e:state.str.edits,a:state.str.adds,r:state.str.removes}),
+   set:v=>{state.str.edits=v.e||{};state.str.adds=v.a||[];state.str.removes=v.r||{};},
    draw:()=>{const el=document.getElementById('strMain');
      if(el)el.innerHTML=strRowsHtml(); strPaintBar();}},
 ];
