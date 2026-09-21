@@ -2694,6 +2694,10 @@ def undo(transfer_id: str) -> Dict:
     # the mod), so they carry their own backup location rather than being resolved
     # against `data` like everything above.
     eop.restore_split(manifest)
+    # the files just put back went round the write helpers, so the mod's
+    # change set is told directly (Phase 52)
+    from . import changesets
+    changesets.undone(rec)
 
     config.update_log(transfer_id, undone=True)
     rec["undone"] = True

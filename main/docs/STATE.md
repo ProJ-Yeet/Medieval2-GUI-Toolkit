@@ -1,5 +1,5 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-21 - **Phase 51 done** and cut on request as **v2.3.6** and **beta 2026-09-21**; 52 next. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
+_Updated: 2026-09-21 - **Phase 52 done**, committed and uncut; 53 next. Phase 51 was cut as **v2.3.6** and **beta 2026-09-21**. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
 the latest beta, both cut on request after **Phase 44**. They carry everything
 uncut since v2.3.4: the two startup/port commits, the contributor's campaign
 map editor, **M18** and **Phase 44**. v2.3.5 carries 44 and the port work; the
@@ -40,10 +40,16 @@ They are placed by `descr_strat.txt`, and `edbvocab` now joins them in. With
 that fixed, three real DaC pools can be met nowhere, and now say so.
 Write-up under *Phase 51* in `ROADMAP.md`.
 
-**Phase 52 is next** - change sets: the edits to a mod recorded against a
-baseline of only the files touched, exported as one file and ported onto the
-mod's next version by a three-way merge per record. **Then 53**, switching a
-set off and on in place. After those, 45, 46, 47a, 47b and 48 in their old
+**Phase 52 is done - change sets, closed 2026-09-21, both lines, committed and
+uncut.** A **My changes** screen: every save to a mod is recorded as it happens
+(the original on first touch, yours on every write, both outside the mod), the
+change list is worked out record by record, and a port onto the mod after an
+update, or onto another folder, is a three-way merge per record with a
+checklist, a side-by-side and one Undo. Export and import as one file. The hook
+is `logutil.file_op`, the one function every writer passes. Undoing a port puts
+the set back as well as the files. Write-up under *Phase 52* in `ROADMAP.md`.
+
+**Phase 53 is next** - switching a set off and on in place. After those, 45, 46, 47a, 47b and 48 in their old
 order. Every one is a subrelease on both lines. Write-ups under *Phases 51-53*
 in `ROADMAP.md`.
 **This repo takes outside contributions now, in two shapes.** **Demircan

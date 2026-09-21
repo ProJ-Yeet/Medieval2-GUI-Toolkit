@@ -681,6 +681,7 @@ const MODES=[
   {id:'sounds',   icon:'🔊', name:'Unit Sounds',   hint:'Pick which voice entry each unit speaks with'},
   {id:'minor',    icon:'🗺', name:'Minor Files',   hint:'Rebels, religions, cultures, traits, factions and text'},
   {id:'rawtext',  icon:'📝', name:'Raw text',      hint:'Any file the toolkit reads, as plain text, backed up and undoable'},
+  {id:'changes',  icon:'🔀', name:'My changes',    hint:'Everything you changed in a mod, recorded as you go: export it, and port it onto the mod’s next version'},
   {id:'sprites',  icon:'🖼', name:'Sprites',       sub:true, hint:'Generate and wire the far-LOD unit sprites'},
   {id:'stratmap', icon:'🗺', name:'Strat map models', sub:true, hint:'What descr_model_strat.txt names, what the campaign map never draws, and either of them in 3D'},
   {id:'cards',    icon:'🖼', name:'Unit & info cards', sub:true, hint:'The two pictures per unit, deduplicated into the merc folder'},
@@ -1341,7 +1342,7 @@ function applyMode(persist){
   document.getElementById('dstWrap').style.display=(one||home)?'none':'';
   // The map has nothing to search until 16g brings the query engine, and an
   // input that does nothing is worse than no input.
-  search.style.display=(home||state.mode==='campmap')?'none':'';
+  search.style.display=(home||state.mode==='campmap'||state.mode==='changes')?'none':'';
   selBtn.style.display=one?'none':'';
   batchBtn.style.display=(!one&&state.selMode)?'inline-block':'none';
   clearSelBtn.style.display=(!one&&state.selMode&&state.selected.size)?'inline-block':'none';
@@ -1471,6 +1472,7 @@ function render(){
   if(state.mode==='minor')return state.mf?renderMinor():loadMinor();
   if(state.mode==='factions')return state.fac?renderFactions():loadFactions();
   if(state.mode==='rawtext')return renderRawtext();
+  if(state.mode==='changes')return renderChanges();
   // the unit list is still loading, or its load failed - which are different
   // things and must not look the same, or a mod that cannot be read presents as
   // one that is taking a long time

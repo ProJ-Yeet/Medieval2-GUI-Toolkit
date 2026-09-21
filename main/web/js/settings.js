@@ -274,6 +274,7 @@ const LOG_MODES=[
   {id:'minorfiles', label:'🗺 Minor files'},
   {id:'strings',    label:'🔤 Strings'},
   {id:'rawtext',    label:'📝 Raw text'},
+  {id:'changeset',  label:'🔀 My changes'},
 ];
 // What the panel is showing right now: which mode, and how much of it.
 state.logView={mode:'',shown:0,entries:[],total:0,counts:{},grand:0};
@@ -346,6 +347,8 @@ function logItemHtml(e){
       :e.mode==='edit'?`${e.action==='delete'?'🗑 deleted in':'✎ edited in'} ${esc(e.dest)}`
       // 21: a whole file saved as text, and a faction's gaps copied from another
       :e.mode==='rawtext'?`📝 raw text saved in ${esc(e.dest)}`
+      // 52: a change set's records ported onto a version of the mod
+      :e.mode==='changeset'?`🔀 changes ported into ${esc(e.dest)}`
       :e.mode==='factions'&&e.action==='repair'?`🛡 repaired in ${esc(e.dest)}`
       // 22a: one fort or watchtower line placed, moved, changed or taken out
       :e.mode==='campmap'&&e.action==='fortification'?`🏰 ${esc((e.options||{}).what||'edit')} in ${esc(e.dest)}`

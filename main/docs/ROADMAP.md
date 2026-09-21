@@ -2884,7 +2884,7 @@ the user before this was written, and the answers are in the write-ups below.
 | Order | Phase | Size | Line | Why |
 |---|---|---|---|---|
 | ~~22~~ | ~~**51** Order, insert below, a still codeview, and every gate at once~~ | M | **both** | **done 2026-09-21** |
-| 23 | **52** Change sets: record your edits, port them to the next version | L | **both** | asked for, after 51 |
+| ~~23~~ | ~~**52** Change sets: record your edits, port them to the next version~~ | L | **both** | **done 2026-09-21** |
 | 24 | **53** Change sets, switched in place | M | **both** | the half of 52 the user moved out |
 
 45, 46, 47a, 47b and 48 keep their order behind these three.
@@ -3022,7 +3022,77 @@ every other line byte for byte, and that the gate evaluation follows the
 engine's left-to-right order on a clause where precedence would give a
 different answer.
 
-## Phase 52 - Change sets: record your edits, port them to the next version
+## Phase 52 - Change sets: record your edits, port them to the next version - DONE 2026-09-21
+
+**Done 2026-09-21, both lines, committed and uncut.** A **My changes** screen,
+`unittransfer/changesets.py`, and `tests/test_changesets.py` (45 checks). The
+scoping below held in its shape; four things were decided or found by building
+it, and they are the part worth reading.
+
+### What building it decided
+
+**The hook is `logutil.file_op`, not the forty `backup_and`s.** The scoping
+named the `backup_and` copies as the capture point, and there are forty modules
+with their own. All of them log `BACKUP` before a write and `WRITE` (or `COPY`,
+`MOVE`, `RESTORE`) after it through `file_op`, whose docstring already promised
+that nothing reaches the disk without passing it. So `changesets.capture` hangs
+off that one function: the first `BACKUP` of a file keeps its original as the
+baseline, every later write refreshes *mine*. It never raises, it records only
+files under `<Medieval II>/mods/<mod>/data/`, and a file over 64 MB is skipped.
+Undo restores files without a write helper, so `transfer.undo` tells the set
+directly.
+
+**Mine is kept too, not only the baseline.** The scoping had the change list as
+baseline against the current file. That is wrong in exactly the case the
+feature is for: once an update has overwritten the mod, the current file is
+*theirs*, and your version exists nowhere. So the set keeps both copies, and
+the screen says when the disk has moved under them ("changed on disk since your
+last save here"), which is how an update announces itself.
+
+**Records touching counts as a conflict.** The first merge let an insert
+directly under a line the other side rewrote merge cleanly, which in an EDB is
+a pool added under a pool upstream re-tuned: related edits, silently combined.
+Neighbouring lines now conflict, git's rule for the same reason, and the test
+fixture was moved so its "merges" case has a line between the two edits.
+
+**Undoing a port must put the set back.** A port onto the same mod moves the
+set's baseline to the version ported onto, which is what the next update must
+be compared against. Undoing it first re-read the files, which left baseline
+and mine both saying the new version: every edit forgotten. The port now copies
+the set beside its backups and `changesets.undone` restores it, so an undone
+port can be ported again.
+
+### What shipped
+
+- **Recording, with nothing to switch on.** Every save to a mod from any
+  screen, baseline and mine under `config/changesets/<mod>/`, outside the mod.
+- **The change list**, record by record: an EDU unit by `type`, an EDB building
+  by name, a region by name, a text key by key; any other file as one record,
+  line by line; a binary file whole. Each file says whether the disk still
+  matches your last save.
+- **Port**, onto the same mod as it is now or onto another installed folder,
+  from this mod's set or an imported one: each record `clean`, `already`,
+  `merged` (both sides, lines apart), `conflict` or `gone`, with the original,
+  yours and the new version side by side, and a `dangling` warning on a
+  recruit pool naming a unit the resulting EDU does not have. Clean and merged
+  start ticked, conflicts and removals start unticked. A new record goes where
+  it sits in yours. One backup, one log entry (`🔀 My changes` in the Log),
+  one Undo.
+- **Export and import** as one `.m2changes` file (a zip of the set). An
+  imported set is never trusted to stay inside `data/`: every path is checked.
+- **Take the files on disk as mine** for hand edits made outside the toolkit,
+  and **Forget this record**, both behind a confirmation that says when not to.
+
+### What is not in it
+
+`descr_strat.txt`, the modeldb and the EOP files have no record shape here yet,
+so each is one record: a port of them is clean, already, merged by lines or a
+conflict, never per character or per entry. The dangling check covers recruit
+pools against the EDU and nothing else. Neither was measured against a real
+AGO or EUR update, because only one version of each installed mod is on this
+machine; the fixture is a synthetic update in both tests and the demo.
+
+### The scoping, as written before it was built
 
 **The problem, as the feedback put it:** edits made to AGO are lost when the
 next AGO release overwrites the files, and big mods like AGO or EUR cannot

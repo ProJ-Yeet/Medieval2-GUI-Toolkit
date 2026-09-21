@@ -41,6 +41,9 @@ MODULES: Dict[str, str] = {
     # 21, D11. Reads no file of its own - it opens whichever one it is asked
     # for - so it has no row below and its card is always ready.
     "rawtext": "Raw text",
+    # 52. Reads the toolkit's own record of what it wrote, not a mod file, so
+    # like Raw text it has no row below and its card is always ready.
+    "changes": "My changes",
 }
 
 

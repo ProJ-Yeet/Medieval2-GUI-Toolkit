@@ -322,6 +322,11 @@ def file_op(verb: str, path, note: str = "", size: Optional[int] = None) -> None
             size = None
     tail = f"  ({_fmt_size(size)})" if size is not None else ""
     log.debug("  %-6s %s%s%s", verb, p, tail, f"  - {note}" if note else "")
+    # Phase 52: this is the one place every write passes, so it is where a
+    # mod's change set records a file's original (BACKUP, before the write)
+    # and your version of it (WRITE and friends, after). It never raises.
+    from . import changesets
+    changesets.capture(verb, p)
 
 
 def counted(manifest: dict, extra: Sequence[str] = ()) -> None:

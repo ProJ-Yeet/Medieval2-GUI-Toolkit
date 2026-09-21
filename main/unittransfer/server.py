@@ -170,6 +170,18 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
                                     of a template, with the clone's own cloners
                                     (one backup set + undo)
 
+Change sets (52, see :mod:`unittransfer.changesets`) - your edits, ported
+  GET  /api/changes?mod=         -> the mod's set: every file it tracks, what
+                                    changed in it record by record, and whether
+                                    the disk still says what you last wrote
+  GET  /api/changes/export?set=  -> the set as one file (a zip)
+  POST /api/changes/plan         -> {set, target} -> every record the set changed,
+                                    three-way against the target's files
+  POST /api/changes/apply        -> {set, target, picks:[{rel,key}]} -> write the
+                                    picked records (one backup set + undo)
+  POST /api/changes/import       -> {name, data (base64)} -> a set from a file
+  POST /api/changes/adopt|forget -> take the disk as yours / drop the set
+
 Raw text (21, D11, see :mod:`unittransfer.rawtext`) - the escape hatch
   GET  /api/raw/files?mod=       -> every text file the toolkit reads, grouped,
                                     with its size, encoding and which screen
@@ -551,6 +563,7 @@ Buildings mode (export_descr_buildings.txt, see :mod:`unittransfer.buildings`)
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -565,7 +578,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, changesets, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1918,6 +1931,20 @@ class Handler(BaseHTTPRequestHandler):
                         ancillaries.detail(mod, (q.get("name") or [""])[0]))
                 except KeyError as e:
                     return self._err(404, str(e))
+            if u.path == "/api/changes":
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._json(changesets.summary(self.registry.describe(name)))
+            if u.path == "/api/changes/export":
+                sname = (q.get("set") or [""])[0]
+                try:
+                    blob = changesets.export_bytes(sname)
+                except changesets.ChangeSetError as e:
+                    return self._err(404, str(e))
+                fname = re.sub(r"[^A-Za-z0-9_.\-]+", "_", sname) + ".m2changes"
+                return self._send(200, blob, "application/zip",
+                                  {"Content-Disposition": f'attachment; filename="{fname}"'})
             if u.path in ("/api/raw/files", "/api/raw/file"):
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
@@ -2327,6 +2354,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/factions/repair_plan", "/api/factions/repair_apply"):
                 return self._json(
                     self._faction_repair(u.path.rsplit("/", 1)[-1], body))
+            if u.path.startswith("/api/changes/"):
+                return self._json(self._changes(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/raw/plan", "/api/raw/apply"):
                 return self._json(self._raw(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/minor/plan", "/api/minor/apply"):
@@ -2973,6 +3002,38 @@ class Handler(BaseHTTPRequestHandler):
         out.update(factionclone.apply(plan))
         self.registry.invalidate(body["mod"])
         return out
+
+    # ---- change sets (52) ----
+    def _changes(self, action, body):
+        """Plan, apply, import, adopt or forget - see :mod:`unittransfer.changesets`.
+
+        The apply re-plans rather than trusting ids from the page: the picks
+        name records by file and key, so a file that moved between the preview
+        and the click is compared again instead of written from a stale list.
+        """
+        try:
+            if action == "import":
+                raw = base64.b64decode(str(body.get("data") or ""))
+                return {"set": changesets.import_bytes(raw, str(body.get("name") or ""))}
+            if action == "forget":
+                changesets.forget(str(body.get("set") or ""))
+                return {"ok": True}
+            if action == "adopt":
+                mod = self.registry.describe(body["mod"])
+                return {"files": changesets.adopt(str(body.get("set") or ""), mod)}
+            if action not in ("plan", "apply"):
+                return {"error": f"unknown action {action}"}
+            target = self.registry.describe(body["target"])
+            port = changesets.plan_port(str(body.get("set") or ""), target)
+            if action == "plan":
+                return {"plan": port.payload()}
+            want = {(str(p.get("rel")), str(p.get("key"))) for p in body.get("picks") or []}
+            picks = {i.id: "mine" for i in port.items if (i.rel, i.key) in want}
+            out = changesets.apply_port(port, picks)
+            self.registry.invalidate(body["target"])
+            return out
+        except (changesets.ChangeSetError, KeyError, OSError, ValueError) as e:
+            return {"error": str(e)}
 
     # ---- the raw text editor (21, D11) ----
     def _raw(self, action, body):
