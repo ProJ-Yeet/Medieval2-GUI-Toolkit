@@ -791,7 +791,7 @@ on, then stars, then size.** That is four rules and each one earns its place.
 lines; the other fourteen are the beta alone. **29 is done** (2026-09-12) and
 took B4 with it, **40 and 31 are done** (2026-09-13), **42 is done**
 (2026-09-14), **41, 43, 28a, 28b, 33, 30 and 34 are done** (2026-09-15) and
-**35, 36, 37a and 37b are done** (2026-09-16) and **38 is done** (2026-09-17); block one is finished, and **block two is finished too: 32a, 32b, 32c and 39 all closed 2026-09-17**. Both blocks the user set are done; Phases 44 to 48 are next by their own table. **43 was nearly all built already** - 16j shipped the
+**35, 36, 37a and 37b are done** (2026-09-16) and **38 is done** (2026-09-17); block one is finished, and **block two is finished too: 32a, 32b, 32c and 39 all closed 2026-09-17**. Both blocks the user set are done; **Phases 51, 52 and 53 come next (added 2026-09-21), then 45 to 48**, each by its own table. **43 was nearly all built already** - 16j shipped the
 roster writer and the write-up had not checked - so what landed was the one
 sentence of it that was true, the refusal. **28a's scoping held in full**, and
 what it did not say was that the layer stack has to be capped or it takes the
@@ -2871,6 +2871,161 @@ installed map because both ship RLE TGAs.
 
 ---
 
+# Phases 51-53 - a user's feedback on the EDB editor, 2026-09-21
+
+**Asked for by the user on 2026-09-21**, passing on feedback from someone
+editing AGO's EDB with the toolkit, with a screenshot of a recruit pool list
+marked *insert below me*. Five complaints about the Buildings screen and the
+codeview, and one idea that is a feature of its own. The user set the order:
+**the five are the immediate next phase, ahead of 45**, and the idea comes
+straight after, because it is the tricky one. Three questions were settled with
+the user before this was written, and the answers are in the write-ups below.
+
+| Order | Phase | Size | Line | Why |
+|---|---|---|---|---|
+| 22 | **51** Order, insert below, a still codeview, and every gate at once | M | **both** | asked for, next |
+| 23 | **52** Change sets: record your edits, port them to the next version | L | **both** | asked for, after 51 |
+| 24 | **53** Change sets, switched in place | M | **both** | the half of 52 the user moved out |
+
+45, 46, 47a, 47b and 48 keep their order behind these three.
+
+## Phase 51 - Order, insert below, a still codeview, and every gate at once
+
+**Measured against the code on 2026-09-21. All five are real, and none of them
+is half-built.**
+
+**1. Recruit pools cannot be reordered.** `bldAddCap` pushes onto the end of
+`lv.caps`, and nothing in `buildings.js` moves a row: no drag, no up or down.
+The order matters in game, because the recruitment panel lists units in the
+order the EDB gives them. The writer is why this is a phase and not a button:
+`_plan_capabilities` in `buildings.py` edits existing lines *in place* so the
+trailing comments DaC's EDB is full of stay byte-exact, and it appends new
+lines just above the block's closing brace. A move has to become a splice that
+lifts a line **with its trailing comment** and drops it at the new position,
+and a new row has to carry an anchor ("after line N") instead of always going
+to the bottom.
+
+**2. Insert below.** A `＋ below` on every capability and recruit row, in both
+`capability` and `faction_capability`, that opens the new row directly under
+the one it was pressed on. The feedback asked for this so a long list does not
+have to be scrolled to drag a line into place, which assumes (1) is dragging.
+It is: drag by a handle on the row, plus move up and move down for keyboard
+use and for the list that does not fit the screen. Bulk edit holds its
+selection by object, not index (see the comment over `bldBulk`), so a move does
+not slide it onto the neighbours.
+
+**3. The codeview moves under the pointer.** `cvBindHover` in `codeview.js`
+paints the hovered row's line on every `mouseover`, and `cvPaintSpans` calls
+`cvReveal`, which scrolls. So running the mouse down the GUI drags the file
+around, and hovering the space between rows resolves to the whole record and
+throws the pane back to the top of the snippet. **Settled with the user: a
+setting, defaulting to click-only.** `code_view_follow` beside
+`code_view_tidy` and `code_view_comments`, saved through `cvSetSetting`. In
+click-only mode a hover still lights the line and never scrolls; a click on a
+row scrolls to it, the way a click on a row's name already does. `hover` keeps
+today's behaviour for whoever likes it. It is one change in the shared
+component, so every editor that uses the codeview gets it, not only Buildings.
+
+**4. Every gate at once.** Each `hidden_resource` and `resource` term already
+has its "📍 N settlements" marker (`condWhereHtml`, fed by `edbvocab.regions`),
+but nothing combines them, so a recruit gated on
+`hidden: GondorEast AND hidden: ResF` means working the intersection out by
+hand. The summary evaluates the clause over every region, left to right with
+and/or and `not`, the way the engine reads it (no precedence), and shows the
+regions that pass. **Settled with the user: factions are shown, not
+filtered.** Who owns a region changes during play, so a `factions` term does
+not narrow the list; each region carries its starting owner, and the ones a
+named faction starts with are marked. Terms that cannot be decided per region
+from the files (`event_counter`, `region_religion`, `building_present`) are
+listed under the summary as *not narrowed by*, so the number is never read as
+more certain than it is. It shows in two places: the clause dialog, and the
+`REQUIRES` strip on each recruit row, where `∅ no region passes every gate` is
+the finding worth having, because a pool nobody can recruit from is the same
+silent failure as a missing hidden resource.
+
+**Exit:** drag, move up and move down on recruit pools and on every other
+capability, written as moves that keep trailing comments; `＋ below` on every
+row; the new rows land where they were inserted; `code_view_follow` with
+click-only as the default and hover-scroll as the option; the all-gates summary
+in the dialog and on the row, with the owner marks and the *not narrowed by*
+list; `tests/test_buildings.py` asserting that a move and an insert round-trip
+every other line byte for byte, and that the gate evaluation follows the
+engine's left-to-right order on a clause where precedence would give a
+different answer.
+
+## Phase 52 - Change sets: record your edits, port them to the next version
+
+**The problem, as the feedback put it:** edits made to AGO are lost when the
+next AGO release overwrites the files, and big mods like AGO or EUR cannot
+simply be copied into a new mod folder to keep them. Old edits also collide
+with how a new release is organised, for example units the new version adds to
+EOP recruitment from the EDU. He asked whether it could be done without a
+duplicate, and suggested a file listing every change that can be exported and
+**ported** onto another version of the same mod, with a checklist of what to
+port and warnings where a unit was removed, a record was edited upstream too,
+or a building or region no longer exists.
+
+**Settled with the user: this phase records and ports, switching in place is
+Phase 53.**
+
+**No duplicate: the baseline is only the files the toolkit touched.** Every
+write already goes through a `backup_and(rel)` that copies a file before its
+first change (`edit.py`, `transfer.py`, `bmdb.py`, `stratmap.py`, `cards.py`).
+A change set keeps the **first** of those copies, per mod, outside the mod
+folder, so an update that overwrites the mod cannot overwrite the baseline.
+That is a few files out of thousands, not a copy of the mod.
+
+**The change list is derived, not logged.** Diffing the baseline against the
+current file, record by record, with the parsers the toolkit already has (EDU
+by `type`, EDB by building, level and capability, `descr_regions` by region,
+`descr_strat` by faction, settlement and character, EOP recruitment, strings by
+key, modeldb by entry), means an edit made by hand outside the toolkit is in
+the set too, and nothing depends on a log that could miss a write. A file with
+no record parser falls back to a line diff and says so.
+
+**Export is one file**: the list, plus each changed record's before and after,
+so it can be ported from another machine.
+
+**Port is a three-way merge by record**: the baseline (old version, untouched),
+mine (old version, edited) and theirs (the new version). Each change comes out
+as one of:
+
+- **clean**: theirs still equals the baseline, so mine applies as it is
+- **already there**: theirs already equals mine
+- **changed upstream too**: both sides changed the same record; show all three
+  and let the user pick, never merge fields silently
+- **gone upstream**: the unit, building, level or region no longer exists
+- **dangling**: mine applies, but names something the new version dropped (a
+  recruit pool for a unit no longer in the EDU, a region's hidden resource
+  nobody declares)
+
+The user ticks what to port, the writes go through backup and undo like every
+other write, the existing validators (`mapcheck`, `tree_check`, the unit
+reference checks) run on the result, and the new version's files become the
+set's new baseline.
+
+**What to measure first.** Only one version of each installed mod is on this
+machine, so the session builds its test fixture from an installed mod plus a
+synthetic upstream (records removed, reordered, edited on both sides, EOP
+recruitment added) before any UI. If AGO or EUR can be installed in two
+versions, that is the real test and it goes in `tests/`.
+
+**Exit:** a change set per mod with a baseline of touched files only; the
+derived record-level change list; export and import of one file; port with the
+five outcomes, a checklist, and backup and undo; the validators run after a
+port; tests over the synthetic upstream for every outcome.
+
+## Phase 53 - Change sets, switched in place
+
+The other half of the feedback: *instantly revert back to the vanilla mod* and
+keep several versions of the same mod to test. Once 52 has a baseline and a
+derived change list, turning a set **off** is writing the baseline records
+back, and turning it **on** is 52's port onto the mod's own current files.
+Several named sets per mod, one active at a time, and the switch refused while
+the toolkit has unsaved edits open. Written up now so 52 is built with it in
+mind; scoped properly when 52 is done.
+
+---
 # Phases 44-48 - the pass over his non-map screens, 2026-09-13
 
 **Asked for by the user on 2026-09-13**, in seven parts: his validation and
@@ -2895,12 +3050,15 @@ campaign map, so none is beta-only.
 
 | Order | Phase | Size | Line | Why |
 |---|---|---|---|---|
-| 21 | **44** The EDB's tree, checked | M | **both** | asked for |
-| 22 | **45** The hidden resources line | S | **both** | asked for |
-| 23 | **46** Cultures gets a screen, and two forms get a strip | M | **both** | asked for |
-| 24 | **47a** The six export sound files | M | **both** | asked for, and 3 stars |
-| 25 | **47b** The thirty-two sound scripts | L | **both** | asked for |
-| 26 | **48** The two rows the strings screen cannot add | S | **both** | asked for |
+| ~~21~~ | ~~**44** The EDB's tree, checked~~ | M | **both** | **done 2026-09-20** |
+| 25 | **45** The hidden resources line | S | **both** | asked for |
+| 26 | **46** Cultures gets a screen, and two forms get a strip | M | **both** | asked for |
+| 27 | **47a** The six export sound files | M | **both** | asked for, and 3 stars |
+| 28 | **47b** The thirty-two sound scripts | L | **both** | asked for |
+| 29 | **48** The two rows the strings screen cannot add | S | **both** | asked for |
+
+**Renumbered 2026-09-21:** Phases 51, 52 and 53 took orders 22 to 24 ahead of
+these, on the user's word. Their table is under *Phases 51-53*.
 
 ## Phase 44 - The EDB's tree, checked - DONE 2026-09-20
 
