@@ -766,6 +766,10 @@
   .cmstage canvas{position:absolute;inset:0;width:100%;height:100%;
     touch-action:none;cursor:crosshair;display:block}
   .cmstage canvas:active{cursor:grabbing}
+  /* `display:block` above beats the UA sheet's `[hidden]`, and M18's canvas is
+     the later sibling: left in the layout, transparent, it sat over the flat
+     map and took every drag and wheel while the 3D mode was off. */
+  .cmstage canvas[hidden]{display:none}
   /* 28b: the toolbar is two rows now - the view controls it has carried since
      16c, and the brush. It still hugs the top-left of the stage and still sits
      on the art, so it carries its own backing and never grows past the canvas:
