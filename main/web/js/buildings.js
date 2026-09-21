@@ -192,7 +192,8 @@ offer the base game's five. If it defines its own, add that file.">using vanilla
           title="Add a whole new building line to this mod">＋ New building tree</button>`:''}
       </span>
     </div>
-    ${bldTreeChkHtml()}`;
+    ${bldTreeChkHtml()}
+    ${bldHidHtml()}`;
   if(!lines.length){
     main.innerHTML=`<section class="faction-group">${head}
       <div class="empty">No buildings match.</div></section>`;
@@ -2877,6 +2878,119 @@ Recruitment checks are on each building's own page.">✓ Check the tree${
         </div>`).join('')}</div>
     </details></div>`;
 }
+/* ---- the hidden_resources line (Phase 45) ----
+   The list at the top of the EDB that every `requires hidden_resource X` names.
+   It was read four ways and writable none: this adds a name and takes one off.
+   Taking one off is the dangerous half - the provinces that carry the name and
+   the clauses that gate on it all go dark in silence - so a removal first shows
+   every one of them, and the server refuses it until the box saying so is
+   ticked. The count sits beside the ceiling a wiki claims and the two mods here
+   exceed, as information and never as a refusal. */
+function bldHidToggle(){
+  const b=state.bld; if(!b)return;
+  b.hidOpen=!b.hidOpen;
+  if(b.hidOpen&&(!b.hid||b.hid.mod!==b.mod))bldHidLoad(); else bldHidPaint();
+}
+async function bldHidLoad(){
+  const b=state.bld;
+  b.hid={mod:b.mod,busy:true,plan:null,pend:null,ack:false,add:''};
+  bldHidPaint();
+  let r;
+  try{ r=await api.post('/api/buildings/hidden/plan',{mod:b.mod}); }
+  catch(e){ r={error:errText(e)}; }
+  if(state.bld!==b)return;
+  b.hid.busy=false;
+  b.hid.base=r.plan?r.plan.impact:null;
+  b.hid.err=r.plan?'':(r.error||'');
+  bldHidPaint();
+}
+function bldHidPaint(){
+  const el=document.getElementById('bldHid');
+  if(el)el.innerHTML=bldHidInner();
+}
+function bldHidHtml(){ return `<div id="bldHid">${bldHidInner()}</div>`; }
+function bldHidInner(){
+  const b=state.bld||{},h=b.hid;
+  const n=((b.ov||{}).hidden_resources||[]).length;
+  const head=`<button class="ckopen${b.hidOpen?' on':''}" onclick="bldHidToggle()"
+      title="The hidden_resources line at the top of the EDB: every name a requires
+hidden_resource clause can use. Add one, or take one off after seeing what it gates.">◈ Hidden resources
+      <span class="count">${n}</span></button>`;
+  if(!b.hidOpen)return head;
+  if(!h||h.busy)return `${head}<div class="bnote">Reading the line and what uses it…</div>`;
+  if(h.err)return `${head}<div class="bnote w-bad">${esc(h.err)}</div>`;
+  const base=h.base||{names:[]};
+  const rows=base.names.map(x=>`<div class="hidrow${x.provinces||x.clauses?'':' unused'}">
+      <b>${esc(x.name)}</b>
+      <span class="count">${x.provinces} province${x.provinces===1?'':'s'} · ${
+        x.clauses} clause${x.clauses===1?'':'s'}</span>
+      <button class="x danger" onclick="bldHidAsk('remove','${q1(esc(x.name))}')"
+        title="Take ${esc(x.name)} off the line - shows what it gates first">🗑</button>
+    </div>`).join('');
+  return `${head}<div class="bsec hidbox">
+    <div class="bnote"><b>${base.count_before}</b> on the line. ${esc(base.ceiling_note||'')}</div>
+    <div class="brow" style="margin:6px 0">
+      <input id="bldHidAdd" placeholder="new_resource_name" value="${esc(h.add||'')}"
+        oninput="state.bld.hid.add=this.value" style="flex:0 0 220px">
+      <button onclick="bldHidAsk('add',document.getElementById('bldHidAdd').value)">＋ Add to the line</button>
+      <span class="count">Then give it to provinces in descr_regions.txt, and gate on it from any requires clause.</span>
+    </div>
+    ${h.pend?bldHidPendHtml(h):''}
+    <div class="hidlist">${rows}</div></div>`;
+}
+function bldHidPendHtml(h){
+  const p=h.plan;
+  if(!p)return '<div class="bnote">Working out what that touches…</div>';
+  const rem=(p.impact||{}).removals||[];
+  const dark=rem.filter(x=>x.clauses.length||x.provinces.length);
+  const list=dark.map(x=>`<div class="hidimpact">
+      <div><b>${esc(x.name)}</b>: ${x.provinces.length} province(s) carry it, ${x.clauses.length} clause(s) gate on it</div>
+      ${x.provinces.length?`<div class="count">Provinces: ${x.provinces.map(v=>esc(v.settlement+' ('+v.region+')')).join(', ')}</div>`:''}
+      ${x.clauses.length?`<div class="hidclauses">${x.clauses.slice(0,200).map(c=>`<div><code>line ${c.line}</code> ${
+        esc([c.building,c.level].filter(Boolean).join(' / '))} <span class="count">${esc(c.text)}</span></div>`).join('')}${
+        x.clauses.length>200?`<div class="count">+${x.clauses.length-200} more</div>`:''}</div>`:''}
+    </div>`).join('');
+  const errs=(p.errors||[]).filter(e=>!/acknowledge that first/.test(e));
+  return `<div class="hidpend">
+    <div><b>${p.changes.map(esc).join(', ')}</b> · ${p.impact.count_before} → ${p.impact.count_after}</div>
+    ${errs.length?`<div class="w-bad">${errs.map(esc).join('<br>')}</div>`:''}
+    ${list}
+    ${dark.length?`<label class="chk w-warn"><input type="checkbox" ${h.ack?'checked':''}
+        onchange="state.bld.hid.ack=this.checked;bldHidPaint()"> I understand that every province and
+        clause above goes dark: nothing gated on it can be built or recruited again.</label>`:''}
+    <div class="brow" style="margin-top:6px">
+      <button class="primary" ${errs.length||(dark.length&&!h.ack)?'disabled':''} onclick="bldHidApply()">Save the line</button>
+      <button onclick="state.bld.hid.pend=null;state.bld.hid.plan=null;bldHidPaint()">Cancel</button>
+      <span class="count">Backed up first; 🕑 Log undoes it.</span>
+    </div></div>`;
+}
+async function bldHidAsk(kind,name){
+  const b=state.bld,h=b.hid;
+  name=String(name||'').trim(); if(!name)return;
+  h.pend={[kind]:[name]}; h.plan=null; h.ack=false;
+  bldHidPaint();
+  let r;
+  try{ r=await api.post('/api/buildings/hidden/plan',Object.assign({mod:b.mod},h.pend)); }
+  catch(e){ r={error:errText(e)}; }
+  if(state.bld!==b)return;
+  h.plan=r.plan||{changes:[],errors:[r.error||'failed'],impact:{removals:[]}};
+  bldHidPaint();
+}
+async function bldHidApply(){
+  const b=state.bld,h=b.hid;
+  const body=Object.assign({mod:b.mod,clear_strings_bin:false},h.pend);
+  if(h.ack)body.acknowledged=(h.pend.remove||[]);
+  let r;
+  try{ r=await api.post('/api/buildings/hidden/apply',body); }
+  catch(e){ r={error:errText(e)}; }
+  if(r.error){ toast(r.error,6000); return; }
+  toast(`Saved: ${(r.plan.changes||[]).join(', ')}. Undo is in 🕑 Log.`,4200);
+  b.ov=await api.get('/api/buildings?mod='+enc(b.mod));
+  b.hidOpen=true;
+  await bldHidLoad();
+  render();
+}
+
 /* Edits staged against other building lines are invisible in this form - they
    belong to buildings that are not on screen - so they get a panel of their own.
    Without it, Save would write changes the page never showed. */

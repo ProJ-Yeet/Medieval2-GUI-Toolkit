@@ -1640,6 +1640,9 @@ class BuildingPlan:
     #: For a create: the building-card files the new levels will want. Reported,
     #: never written - see :func:`icon_slots`.
     slots: List[dict] = field(default_factory=list)
+    #: For an edit of the hidden_resources line: what each removal would
+    #: darken, and the count against the ceiling - see :func:`plan_hidden`.
+    impact: Dict = field(default_factory=dict)
 
     def summary(self) -> str:
         if self.created:
@@ -2435,6 +2438,171 @@ def _plan_localisation(mod, body: dict, plan: BuildingPlan) -> str:
             plan.changes.append(f"{key}: name -> {new_name!r}")
             changed = True
     return text if changed else ""
+
+
+# ---------------------------------------------------------------------------
+# the hidden_resources line (Phase 45)
+
+#: The name shape the line holds: one whitespace-free word. Every name on the
+#: two installed mods' lines (149 of them) is letters, digits and underscores.
+HIDDEN_NAME = re.compile(r"^[A-Za-z0-9_]+$")
+#: What TWCenter's *List of Hardcoded Limits* says, and what the mods here say
+#: back. Stated beside the count, never enforced: a ceiling two shipping mods
+#: are over is not a ceiling (Phase 12's ruling).
+HIDDEN_CEILING_NOTE = ("TWCenter's List of Hardcoded Limits puts the ceiling at 63 or "
+                       "64 and says more crash the game. Divide and Conquer ships 75 "
+                       "and ROCSS 74, and both play, so it is not enforced here.")
+
+
+def hidden_impact(mod, name: str) -> dict:
+    """Everything a hidden resource gates, found before it is removed.
+
+    A hidden resource is named in three places: the EDB's ``hidden_resources``
+    line declares it, ``descr_regions.txt`` says which provinces carry it, and
+    ``requires hidden_resource X`` clauses say what it unlocks. Take it off the
+    line and both of the others go dark in silence - the building or the pool
+    simply never becomes available - so this is the list a removal shows.
+
+    The clauses come from the parse (a level's own requires, every capability
+    and faction_capability), and then from a scan of every other line, so a
+    clause somewhere the parser does not model - an ``upgrades`` entry, a
+    plugin - is still named.
+    """
+    edb = mod.edb
+    rx = re.compile(r"\bhidden_resource\s+" + re.escape(name) + r"\b", re.I)
+    clauses: List[dict] = []
+    seen = set()
+    for bl in edb.buildings:
+        for blk in bl.blocks:
+            if blk.requires and rx.search(blk.requires):
+                clauses.append({"line": blk.header + 1, "building": bl.name,
+                                "level": blk.name, "what": "level",
+                                "text": blk.requires})
+                seen.add(blk.header)
+            for c in blk.capabilities + blk.faction_capabilities:
+                if c.requires and rx.search(c.requires):
+                    clauses.append({"line": c.line + 1, "building": bl.name,
+                                    "level": blk.name, "what": c.keyword,
+                                    "text": f"{c.keyword} {c.args}".strip()})
+                    seen.add(c.line)
+    for i, line in enumerate(edb.lines):
+        if i in seen or i == edb.hidden_resources_line:
+            continue
+        code = _code(line)
+        if code and rx.search(code):
+            clauses.append({"line": i + 1, "building": "", "level": "",
+                            "what": "other", "text": code})
+    provinces = [{"region": r["name"], "settlement": r["settlement_name"],
+                  "faction": r["faction"]}
+                 for r in edbvocab.regions(mod, edb.hidden_resources)
+                 if name.lower() in (h.lower() for h in r["hidden_resources"])]
+    return {"name": name, "clauses": clauses, "provinces": provinces}
+
+
+def hidden_usage(mod) -> List[dict]:
+    """Every declared name with how many provinces carry it and how many clauses
+    gate on it - one pass over each file, for the list the panel opens on."""
+    edb = mod.edb
+    clauses: Dict[str, int] = {}
+    rx = re.compile(r"\bhidden_resource\s+([A-Za-z0-9_]+)", re.I)
+    for i, line in enumerate(edb.lines):
+        if i == edb.hidden_resources_line:
+            continue
+        # a clause is a LINE: one naming the resource twice is still one gate
+        for k in {m.group(1).lower() for m in rx.finditer(_code(line))}:
+            clauses[k] = clauses.get(k, 0) + 1
+    provinces: Dict[str, int] = {}
+    for r in edbvocab.regions(mod, edb.hidden_resources):
+        for h in r["hidden_resources"]:
+            provinces[h.lower()] = provinces.get(h.lower(), 0) + 1
+    return [{"name": h, "provinces": provinces.get(h.lower(), 0),
+             "clauses": clauses.get(h.lower(), 0)} for h in edb.hidden_resources]
+
+
+def _hidden_line(old: str, names: List[str]) -> str:
+    """The line rewritten with ``names``, keeping how it was written.
+
+    The keyword's own indent and the gap after it (DaC writes two spaces),
+    the gap between names, and a trailing comment all survive: only the list
+    changes.
+    """
+    body_ = old.rstrip("\r\n")
+    eol = old[len(body_):]
+    code, comment = _strip_comment(body_)
+    m = re.match(r"^(\s*hidden_resources)(\s*)(.*?)(\s*)$", code)
+    head, gap, body, tail = (m.groups() if m else ("hidden_resources", " ", "", ""))
+    seps = re.findall(r"\s+", body.strip())
+    sep = max(set(seps), key=seps.count) if seps else " "
+    return head + (gap or " ") + sep.join(names) + tail + comment + (eol or "\n")
+
+
+def plan_hidden(mod, body: dict) -> BuildingPlan:
+    """Add names to, and take names off, the EDB's ``hidden_resources`` line.
+
+    ``body``: ``{"add": [...], "remove": [...], "acknowledged": [...]}``. A
+    removal of a name that anything still uses is refused until that name is in
+    ``acknowledged`` - the page shows :func:`hidden_impact` first and the person
+    says they have read it. The write is one splice of the one line, so every
+    other line of the file, comments included, is untouched.
+    """
+    edb = mod.edb
+    plan = BuildingPlan(mod=mod, line="(hidden_resources)")
+    have = list(edb.hidden_resources)
+    lower = {h.lower(): h for h in have}
+    add = [str(x).strip() for x in body.get("add") or [] if str(x).strip()]
+    remove = [str(x).strip() for x in body.get("remove") or [] if str(x).strip()]
+    acked = {str(x).strip().lower() for x in body.get("acknowledged") or []}
+
+    want = list(have)
+    impact = []
+    for name in remove:
+        real = lower.get(name.lower())
+        if real is None:
+            plan.errors.append(f"{name} is not on the hidden_resources line")
+            continue
+        hit = hidden_impact(mod, real)
+        used = bool(hit["clauses"] or hit["provinces"])
+        hit["acknowledged"] = real.lower() in acked
+        impact.append(hit)
+        if used and not hit["acknowledged"]:
+            plan.errors.append(
+                f"{real} is still used: {len(hit['provinces'])} province(s) carry it "
+                f"and {len(hit['clauses'])} requires clause(s) gate on it. Removing it "
+                "makes every one of them silently unbuildable - acknowledge that first")
+        want = [w for w in want if w.lower() != real.lower()]
+        plan.changes.append(f"- {real}" + (f" ({len(hit['provinces'])} province(s), "
+                                          f"{len(hit['clauses'])} clause(s) go dark)"
+                                          if used else " (nothing uses it)"))
+    for name in add:
+        if not HIDDEN_NAME.match(name):
+            plan.errors.append(f"{name!r} is not a name the line can hold: one word of "
+                               "letters, digits and underscores")
+            continue
+        if name.lower() in {w.lower() for w in want}:
+            plan.errors.append(f"{name} is already on the hidden_resources line")
+            continue
+        want.append(name)
+        plan.changes.append(f"+ {name}")
+
+    plan.impact = {"removals": impact, "count_before": len(have),
+                   "count_after": len(want), "ceiling_note": HIDDEN_CEILING_NOTE,
+                   "names": hidden_usage(mod)}
+    if len(want) > 64:
+        plan.warnings.append(f"{len(want)} hidden resources. " + HIDDEN_CEILING_NOTE)
+    if plan.errors or want == have:
+        return plan
+    lines = list(edb.lines)
+    if edb.hidden_resources_line >= 0:
+        i = edb.hidden_resources_line
+        lines[i] = _hidden_line(lines[i], want)
+    else:
+        # no line yet: it goes above the first building, where every mod puts it
+        at = next((i for i, l in enumerate(lines) if _code(l).startswith("building ")),
+                  len(lines))
+        nl = "\r\n" if lines and lines[0].endswith("\r\n") else "\n"
+        lines.insert(at, "hidden_resources " + " ".join(want) + nl + nl)
+    plan.edb_text = "".join(lines)
+    return plan
 
 
 def apply_edit(plan: BuildingPlan) -> Dict:

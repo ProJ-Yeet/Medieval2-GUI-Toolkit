@@ -187,6 +187,14 @@ Change sets (52, see :mod:`unittransfer.changesets`) - your edits, ported
                                     records it would conflict on (53)
   POST /api/changes/rename       -> {set, name}
 
+Hidden resources (45)
+  POST /api/buildings/hidden/plan|apply
+                                 -> {mod, add, remove, acknowledged} -> the
+                                    hidden_resources line with names added or
+                                    taken off; a removal lists every province
+                                    and clause it would darken and is refused
+                                    until acknowledged (one backup + undo)
+
 Raw text (21, D11, see :mod:`unittransfer.rawtext`) - the escape hatch
   GET  /api/raw/files?mod=       -> every text file the toolkit reads, grouped,
                                     with its size, encoding and which screen
@@ -2441,6 +2449,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(_building_payload(buildings.plan_edit(mod, body)))
             if u.path == "/api/buildings/apply":
                 return self._json(self._buildings_apply(body))
+            if u.path in ("/api/buildings/hidden/plan", "/api/buildings/hidden/apply"):
+                return self._json(self._buildings_hidden(u.path.rsplit("/", 1)[-1], body))
             if u.path == "/api/buildings/ownership":
                 # asked on demand rather than baked into /api/building: it needs
                 # the heavy modeldb parse, and only the clause editor wants it
@@ -2642,6 +2652,29 @@ class Handler(BaseHTTPRequestHandler):
         if plan.loc_text and _strings_bin_wanted(body):
             _clear_cache(mod.root, out, rec, mod.name,
                          cleaner.BUILDINGS_STRINGS_BIN_REL)
+        return out
+
+    def _buildings_hidden(self, action, body):
+        """Add to or take from the EDB's hidden_resources line (45).
+
+        The plan carries what every removal would darken - the provinces that
+        carry the name and the clauses that gate on it - and refuses a removal
+        of a name still in use until the page sends it back acknowledged.
+        """
+        mod = self.registry.get(body["mod"])
+        plan = buildings.plan_hidden(mod, body)
+        out = {"plan": {**_building_payload(plan), "impact": plan.impact}}
+        if plan.errors:
+            out["error"] = "; ".join(plan.errors)
+            return out
+        if action == "plan":
+            return out
+        if not plan.edb_text:
+            out["error"] = "nothing to change"
+            return out
+        rec = buildings.apply_edit(plan)
+        self.registry.invalidate(body["mod"])
+        out["record"] = rec
         return out
 
     # ---- strings archives ----

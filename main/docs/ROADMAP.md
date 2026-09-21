@@ -3229,7 +3229,7 @@ campaign map, so none is beta-only.
 | Order | Phase | Size | Line | Why |
 |---|---|---|---|---|
 | ~~21~~ | ~~**44** The EDB's tree, checked~~ | M | **both** | **done 2026-09-20** |
-| 25 | **45** The hidden resources line | S | **both** | asked for |
+| ~~25~~ | ~~**45** The hidden resources line~~ | S | **both** | **done 2026-09-21** |
 | 26 | **46** Cultures gets a screen, and two forms get a strip | M | **both** | asked for |
 | 27 | **47a** The six export sound files | M | **both** | asked for, and 3 stars |
 | 28 | **47b** The thirty-two sound scripts | L | **both** | asked for |
@@ -3399,7 +3399,36 @@ Exit: six rules over the tree, four measured and then decided, in
 `buildings.py` on the `@rule` shape, on the Buildings screen with a jump into
 Code View, and a fixture per rule in `tests/test_buildings.py`.
 
-## Phase 45 - The hidden resources line
+## Phase 45 - The hidden resources line - DONE 2026-09-21
+
+**Done 2026-09-21, both lines, committed and uncut. The scoping held.** A
+**◈ Hidden resources** panel beside *Check the tree* on the Buildings screen,
+`buildings.plan_hidden` / `hidden_impact` / `hidden_usage`, a route pair
+`/api/buildings/hidden/plan|apply`, and section 14 of `tests/test_buildings.py`.
+
+**What a removal shows is measured, not estimated.** On Divide and Conquer,
+taking `Rhudaur` off names its 4 provinces and 162 clause lines; the busiest
+name, `Eregion`, is carried by 10 provinces and gated on by **636 lines**. The
+test asserts the impact list, the per-name count and a raw scan of the file
+agree. A clause is counted by line, because a line naming the resource twice is
+still one gate. The clauses come from the parse (a level's own `requires`,
+every capability and faction_capability) and then a scan of every other line,
+so a clause somewhere the parser does not model is still named.
+
+**The ceiling, with the corrected number.** The scoping said Divide and
+Conquer ships 74; it ships **75**, all unique, and ROCSS 74. The panel states
+the count, TWCenter's 63-or-64, and that both mods pass it, and a line over 64
+carries a warning on the plan. Nothing is refused for it.
+
+**The write is the one line.** The keyword's own indent and gap (DaC writes
+two spaces), the separator between names and a trailing comment all survive;
+the test checks that every other line of the file is byte-identical and that
+Undo restores it exactly. A name must be one word of letters, digits and
+underscores, as all 149 on the two installed lines are, and a duplicate is
+refused whatever its case. An EDB with no line gets one above the first
+building.
+
+### The scoping, as written before it was built
 
 **We read the line and nothing writes it.** `buildings.py` holds
 `hidden_resources` and `hidden_resources_line`, and `hidden_resources_line` has
@@ -3970,7 +3999,7 @@ other seven are below.
 | **B2 - delete a settlement, and move one between mods** | M | Assigning a settlement to a faction already works and B1 added the create. Missing: the delete, whose shape is `stratcamp._delete_splice`; a button on the panel for a province that has none; and the between-mods move, which is probably its own session. Phase 24's warning applies - a settlement that goes has characters, armies and a capital flag hanging off it. |
 | **B3 - insert and export one file at a time** | M | Mylae's tool pushes a file into, or pulls one out of, a mod on its own. Pieces exist - `POST /api/map/export`, 16g's per-faction TGA, `pack.py`'s unit import - and none of it is a general take-this-file-out. The user's own earlier words were "that isnt really needed tbh"; the four-star rating supersedes that. |
 | **Add a religion** | M | We edit the religion list in Minor Files, the EDB conditions and the religion columns on the region form. Missing: `descr_religions_lookup.txt`, and the must-sum-to-100 rule as a guard at **creation** rather than only as a validation afterwards. |
-| **Mines and hidden resources** | S | **Halved on 2026-09-13: the hidden-resources half is Phase 45**, which adds and removes on the EDB's own line with the two joins that make a removal safe. What is left here is `descr_settlement_mechanics.xml` and the ceiling of 63, which Divide and Conquer's 74 disproves as written and which belongs with Phase 39's other ceilings if that session has room. |
+| **Mines and hidden resources** | S | **Halved on 2026-09-13: the hidden-resources half is Phase 45, done 2026-09-21**, which adds and removes on the EDB's own line with the two joins that make a removal safe. What is left here is `descr_settlement_mechanics.xml` and the ceiling of 63, which Divide and Conquer's 75 disproves as written and which belongs with Phase 39's other ceilings if that session has room. |
 
 ## Three stars
 

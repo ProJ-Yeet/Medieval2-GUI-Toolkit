@@ -112,6 +112,11 @@ here, and the panel says which and why: two are level-count ceilings a shipping
 mod is already over, and the third assumes every line is an upgrade chain when
 42 of the ones measured are sets of alternatives.
 
+**◈ Hidden resources** edits the `hidden_resources` line itself: add a name,
+or take one off. Taking one off first lists every province that carries it and
+every clause that gates on it, because all of them stop working the moment it
+is gone, and it waits until you say you have read that.
+
 Recruit pools and capabilities keep the order you give them: drag a row by its
 grip or step it with ▲ ▼, and the file is written in that order, which is the
 order the game lists units in. `＋` on a row adds units or a capability directly

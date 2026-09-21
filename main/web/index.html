@@ -2490,6 +2490,17 @@
   .where:hover .wpop{display:block}
   /* Phase 51 - every gate at once */
   .where.gate{margin-left:4px}
+  /* Phase 45 - the hidden_resources line */
+  .hidbox .hidlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px;
+    max-height:320px;overflow:auto}
+  .hidrow{display:flex;gap:6px;align-items:center;padding:3px 6px;border:1px solid var(--edge);
+    border-radius:5px;font-size:12px}
+  .hidrow .count{flex:1}
+  .hidrow.unused{opacity:.7}
+  .hidrow .x{padding:1px 6px;font-size:11px}
+  .hidpend{border:1px solid var(--warn);border-radius:6px;padding:8px 10px;margin:6px 0;font-size:12.5px}
+  .hidimpact{margin-top:6px}
+  .hidclauses{max-height:180px;overflow:auto;font-size:11.5px;margin-top:3px}
   .wrow.own i{color:var(--accent)}
   .gatebox .gaterows{max-height:220px;overflow:auto;border:1px solid var(--edge);
     border-radius:6px;padding:4px 6px;margin-bottom:6px}

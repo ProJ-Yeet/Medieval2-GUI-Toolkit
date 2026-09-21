@@ -1,5 +1,5 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-21 - **Phases 52 and 53 done**, committed and uncut; 45 next. Phase 51 was cut as **v2.3.6** and **beta 2026-09-21**. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
+_Updated: 2026-09-21 - **Phases 52, 53 and 45 done**, committed and uncut; 46 next. Phase 51 was cut as **v2.3.6** and **beta 2026-09-21**. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
 the latest beta, both cut on request after **Phase 44**. They carry everything
 uncut since v2.3.4: the two startup/port commits, the contributor's campaign
 map editor, **M18** and **Phase 44**. v2.3.5 carries 44 and the port work; the
@@ -57,8 +57,15 @@ the disk, not the baseline written back, so an update is never thrown away with
 your edits; a switch that would conflict is refused and names the records. With
 every set off, the next save starts a new version. Write-up under *Phase 53*.
 
-**Phases 51, 52 and 53 are done; 45 is next**, then 46, 47a, 47b and 48 in their
-old order. Every one is a subrelease on both lines. Write-ups under *Phases 51-53*
+**Phase 45 is done - the hidden resources line, closed 2026-09-21, both lines,
+committed and uncut.** A panel on the Buildings screen adds names to the EDB's
+`hidden_resources` line and takes them off; a removal first lists every
+province that carries the name and every clause line that gates on it (on DaC,
+`Eregion` is 10 provinces and 636 lines) and is refused until that is
+acknowledged. The count is stated beside TWCenter's 63-or-64 ceiling, which DaC
+(75) and ROCSS (74) both pass. Write-up under *Phase 45*.
+
+**46 is next**, then 47a, 47b and 48. Every one is a subrelease on both lines. Write-ups under *Phases 51-53*
 in `ROADMAP.md`.
 **This repo takes outside contributions now, in two shapes.** **Demircan
 pushes directly to `origin/master`** - `865c22f`, "campaign map editor v0.1",

@@ -871,6 +871,80 @@ else:
     print(f"  -- {len(real)} real clauses with resource gates, {empty} that no region passes")
     check("every real and-only resource clause matches a plain intersection", real and not bad)
 
+# ---------------------------------------------------------------------------
+print("\n14) Phase 45: the hidden_resources line")
+from unittransfer import edbvocab                                     # noqa: E402
+
+_reg = src_root / "data" / edbvocab.REGIONS_REL
+(work / "data" / edbvocab.REGIONS_REL).parent.mkdir(parents=True, exist_ok=True)
+shutil.copy2(_reg, work / "data" / edbvocab.REGIONS_REL)
+mod = Mod(work)
+before = mod.edb_path.read_text(encoding=buildings.ENCODING)
+blines = before.splitlines(keepends=True)
+hl = mod.edb.hidden_resources_line
+names0 = list(mod.edb.hidden_resources)
+
+plan = buildings.plan_hidden(mod, {"add": ["tk_probe_resource"]})
+after = plan.edb_text.splitlines(keepends=True)
+check("adding a name rewrites the one line and nothing else",
+      not plan.errors and len(after) == len(blines)
+      and [i for i, (a, b) in enumerate(zip(blines, after)) if a != b] == [hl])
+check("  the name goes on the end, the rest in their order",
+      after[hl].split(";")[0].split()[1:] == names0 + ["tk_probe_resource"])
+check("  and the line keeps its own gap after the keyword",
+      after[hl].startswith(blines[hl][:len(blines[hl]) - len(blines[hl].lstrip())]
+                           + "hidden_resources" + re.match(r"hidden_resources(\s+)",
+                                                            blines[hl].lstrip()).group(1)))
+check("  the count is stated against the ceiling, and not enforced",
+      plan.impact["count_after"] == len(names0) + 1 and "63 or 64" in plan.impact["ceiling_note"])
+rec = buildings.apply_edit(plan)
+mod = Mod(work)
+check("apply writes it", "tk_probe_resource" in mod.edb.hidden_resources)
+undo(rec["id"])
+check("and Undo puts the file back byte for byte",
+      mod.edb_path.read_text(encoding=buildings.ENCODING) == before)
+
+mod = Mod(work)
+used = max(buildings.hidden_usage(mod), key=lambda x: x["clauses"])
+imp = buildings.hidden_impact(mod, used["name"])
+raw = sum(1 for i, l in enumerate(blines) if i != hl and re.search(
+    r"\bhidden_resource\s+" + re.escape(used["name"]) + r"\b", buildings._code(l), re.I))
+check(f"a removal names every clause that gates on it ({used['name']}: {len(imp['clauses'])})",
+      len(imp["clauses"]) == raw == used["clauses"])
+check(f"  and every province that carries it ({len(imp['provinces'])})",
+      len(imp["provinces"]) == used["provinces"] > 0)
+plan = buildings.plan_hidden(mod, {"remove": [used["name"]]})
+check("removing a name still in use is refused until acknowledged",
+      plan.errors and not plan.edb_text and "acknowledge" in plan.errors[0])
+plan = buildings.plan_hidden(mod, {"remove": [used["name"]],
+                                   "acknowledged": [used["name"].upper()]})
+after = plan.edb_text.splitlines(keepends=True)
+check("  and once acknowledged, it comes off the line and nothing else changes",
+      not plan.errors and used["name"] not in after[hl].split()
+      and [i for i, (a, b) in enumerate(zip(blines, after)) if a != b] == [hl])
+
+p2 = buildings.plan_hidden(mod, {"add": [names0[0].lower()]})
+check("a name already on the line is refused, whatever its case", bool(p2.errors))
+p2 = buildings.plan_hidden(mod, {"add": ["two words"]})
+check("a name the line cannot hold is refused", bool(p2.errors))
+p2 = buildings.plan_hidden(mod, {"remove": ["not_a_resource_here"]})
+check("removing a name that is not there is refused", bool(p2.errors))
+
+check("the line's comment and its own separators survive a rewrite",
+      buildings._hidden_line("\thidden_resources a\tb ; keep\n", ["a", "b", "c"])
+      == "\thidden_resources a\tb\tc ; keep\n")
+fx = buildings.parse_text("; header\r\nbuilding forge\r\n{\r\n    levels a\r\n    {\r\n    }\r\n}\r\n")
+
+
+class _M:
+    edb = fx
+    data = work / "data"
+
+
+p3 = buildings.plan_hidden(_M(), {"add": ["iron_hills"]})
+check("an EDB with no line gets one, above the first building",
+      p3.edb_text.startswith("; header\r\nhidden_resources iron_hills\r\n\r\nbuilding forge"))
+
 shutil.rmtree(work.parent, ignore_errors=True)
 shutil.rmtree(cfg, ignore_errors=True)
 print("\n" + ("ALL PASSED" if all(ok) else "SOME FAILED"))
