@@ -1,5 +1,5 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-21 - **Phases 52, 53 and 45 done**, committed and uncut; 46 next. Phase 51 was cut as **v2.3.6** and **beta 2026-09-21**. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
+_Updated: 2026-09-21 - **Phases 52, 53, 45 and 46 done**, committed and uncut; 47a next. Phase 51 was cut as **v2.3.6** and **beta 2026-09-21**. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
 the latest beta, both cut on request after **Phase 44**. They carry everything
 uncut since v2.3.4: the two startup/port commits, the contributor's campaign
 map editor, **M18** and **Phase 44**. v2.3.5 carries 44 and the port work; the
@@ -65,7 +65,15 @@ province that carries the name and every clause line that gates on it (on DaC,
 acknowledged. The count is stated beside TWCenter's 63-or-64 ceiling, which DaC
 (75) and ROCSS (74) both pass. Write-up under *Phase 45*.
 
-**46 is next**, then 47a, 47b and 48. Every one is a subrelease on both lines. Write-ups under *Phases 51-53*
+**Phase 46 is done - Cultures gets a screen, closed 2026-09-21, both lines,
+committed and uncut.** Cultures is its own mode with a four-tab form, the port
+ladder is editable at last, **Duplicate** writes a new culture from one that
+works and names the text keys, factions and art it still needs, and the Factions
+form is on five tabs. The scoping's "three EMT_<CULTURE>_PRIEST keys" was wrong:
+a culture has one to five, and the common ones are per faction. Write-up under
+*Phase 46*.
+
+**47a is next** (the six export sound files), then 47b and 48. Every one is a subrelease on both lines. Write-ups under *Phases 51-53*
 in `ROADMAP.md`.
 **This repo takes outside contributions now, in two shapes.** **Demircan
 pushes directly to `origin/master`** - `865c22f`, "campaign map editor v0.1",

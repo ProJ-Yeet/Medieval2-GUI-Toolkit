@@ -317,6 +317,22 @@ try:
 except mf.MinorError as e:
     check("editing a level this culture has not got is refused", "citadel" in str(e))
 
+# 46: the port ladder is editable, value by value, in the file's order
+_ports = [v for _, v, _ in mf.parse_culture_block(cul).ports]
+out = mf.render_culture(cul, {"ports": [_ports[0].replace("SE_port_02_wall", "SE_port_03_wall")]
+                                       + _ports[1:]})
+check("a port line's value is editable, and only that line changes",
+      "SE_port_03_wall.CAS,\tport_roman_level_2" in out and out.count("\n") == cul.count("\n")
+      and sum(a != b for a, b in zip(cul.split("\n"), out.split("\n"))) == 1)
+check("sending the ladder back unchanged rewrites nothing",
+      mf.render_culture(cul, {"ports": _ports}) == cul)
+try:
+    mf.render_culture(cul, {"ports": _ports + ["extra.CAS,"]})
+    check("adding a port level through the form is refused, with where to do it", False)
+except mf.MinorError as e:
+    check("adding a port level through the form is refused, with where to do it",
+          "code view" in str(e))
+
 fac = names.block_text(papal)
 out = mf.render_names(fac, {"sections": {"characters": ["PopeSauron", "Azog", "Bolg"]}})
 check("names: a full-form save changes nothing", out == fac)
@@ -459,7 +475,7 @@ check("and the tab strip comes with it, so the module needs one call",
 check("an edit-only tab says so instead of offering dead buttons",
       mf.overview(mod, "resources")["actions"] == ["edit"]
       and "closed" in mf.overview(mod, "resources")["refused"]
-      and mf.overview(mod, "cultures")["actions"] == ["edit"])
+      and mf.overview(mod, "cultures")["actions"] == ["edit", "duplicate"])
 
 d = mf.detail(mod, "rebels", "Evil_Rebels")
 check("detail carries the record, its spans and its text key",
@@ -559,6 +575,38 @@ cul = mf.parse_cultures(kb.read_text(work / "data" / mf.CULTURES_REL,
 check("a culture's tail line and one settlement card save together",
       cul.get("fort_cost") == "750"
       and cul.level("village").values["card"] == "data/ui/x.tga")
+
+# 46: a new culture is a duplicate of one that works
+_before = kb.read_text(work / "data" / mf.CULTURES_REL, mf.ENCODING)
+p = mf.plan(mod, {"tab": "cultures", "action": "duplicate", "name": "iron_hills",
+                  "source": "southern_european"})
+check("duplicating a culture plans the whole record under the new name",
+      p.payload()["ok"] and any("a copy of southern_european" in c for c in p.changes))
+check("  and names what else it needs: its text keys, the factions, the art",
+      {n["what"] for n in p.needs} == {"text key", "factions", "art"})
+mf.apply(p)
+_after = kb.read_text(work / "data" / mf.CULTURES_REL, mf.ENCODING)
+_new = mf.parse_cultures(_after)
+_src, _cp = _new.get("southern_european"), _new.get("iron_hills")
+check("  the copy has every level, port line and agent the source has",
+      _cp is not None and [l.as_dict()["model"] for l in _cp.levels]
+      == [l.as_dict()["model"] for l in _src.levels]
+      and [v for _, v, _ in _cp.ports] == [v for _, v, _ in _src.ports]
+      and set(_cp.agents) == set(_src.agents))
+_a, _b = _before.split("\n"), _after.split("\n")
+import difflib                                                        # noqa: E402
+check("  and the rest of the file is untouched: the write is one insertion",
+      [t for t, *_ in difflib.SequenceMatcher(a=_a, b=_b, autojunk=False).get_opcodes()
+       if t != "equal"] == ["insert"])
+p = mf.plan(mod, {"tab": "cultures", "action": "duplicate", "name": "iron_hills",
+                  "source": "southern_european"})
+check("a duplicate onto a name already taken is refused", not p.payload()["ok"])
+p = mf.plan(mod, {"tab": "cultures", "action": "duplicate", "name": "Iron Hills",
+                  "source": "southern_european"})
+check("so is a name that cannot be a text key and a folder", not p.payload()["ok"])
+p = mf.plan(mod, {"tab": "cultures", "action": "duplicate", "name": "iron_hills2",
+                  "source": "no_such_culture"})
+check("and a source that is not there", not p.payload()["ok"])
 
 p = mf.plan(mod, {"tab": "names", "name": "papal_states", "action": "edit",
                   "edits": {"sections": {"characters": ["PopeSauron", "Grond"]}}})

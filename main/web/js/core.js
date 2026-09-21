@@ -690,6 +690,7 @@ const MODES=[
   {id:'guilds',   icon:'⚖', name:'Guilds',       sub:true, hint:'What each guild grants, and the triggers that earn its points'},
   {id:'campdb',   icon:'⚙', name:'Campaign constants', sub:true, hint:'descr_campaign_db.xml: the campaign-wide numbers, forts, piety and ransom'},
   {id:'factions', icon:'🛡', name:'Factions',      sub:true, hint:'Each faction’s culture, religion, colours and horde'},
+  {id:'cultures', icon:'🏛', name:'Cultures',      sub:true, hint:'descr_cultures.txt: each culture’s settlements, fort, ports, watchtower and agents'},
   {id:'strings',  icon:'🔤', name:'Strings',       sub:true, hint:'The compiled text files the game actually reads'},
 ];
 const modeDef=id=>MODES.find(m=>m.id===id)||MODES[0];
@@ -710,8 +711,10 @@ const MINOR_TABS=[
   {id:'rebels',      label:'Rebel factions'},
   {id:'religions',   label:'Religions'},
   {id:'resources',   label:'Resources'},
-  {id:'cultures',    label:'Cultures'},
   {id:'names',       label:'Character names'},
+  // 46: a culture is four sections - its settlements, its infrastructure and its
+  // agents on top of the record - so it has its own mode like the four below
+  {mode:'cultures',    label:'Cultures'},
   {mode:'traits',      label:'Traits'},
   {mode:'ancillaries', label:'Ancillaries'},
   {mode:'guilds',      label:'Guilds'},
@@ -725,6 +728,14 @@ const MINOR_TABS=[
   {mode:'strings',     label:'Strings'},
 ];
 let minorWantTab=null;
+/* A record form's own tab strip (Phase 46): the Cultures and Factions forms
+   use it, the way the traits and unit editors have always had theirs. `list`
+   is [[id,label],...]; `fn` is the name of the function a click calls. */
+function recTabsHtml(list,cur,fn){
+  return `<div class="mftabs rectabs">${list.map(([id,label])=>
+    `<button class="mftab${id===cur?' on':''}" onclick="${fn}('${id}')">${esc(label)}</button>`
+  ).join('')}</div>`;
+}
 function minorTabsHtml(active,note){
   return `<div class="mftabs">${MINOR_TABS.map(t=>{
     const on=t.mode?state.mode===t.mode:(state.mode==='minor'&&active===t.id);
@@ -1223,7 +1234,7 @@ function setAppMode(id,returning){
 // applyMode so every way of switching (menu, pack mount, building hop) lands here
 // A sub-mode has no row of its own in the menu, so its HOST row lights up.
 const MODE_HOST={sprites:'bmdb',stratmap:'bmdb',cards:'bmdb',traits:'minor',
-  ancillaries:'minor',factions:'minor',strings:'minor'};
+  ancillaries:'minor',factions:'minor',strings:'minor',cultures:'minor'};
 function syncNav(){
   const d=modeDef(state.mode), host=MODE_HOST[state.mode]||state.mode;
   navCur.textContent=d.icon+' '+d.name;
@@ -1329,7 +1340,7 @@ function applyMode(persist){
   const one=state.mode!=='transfer', edit=state.mode==='edit', bm=state.mode==='bmdb',
         snd=state.mode==='sounds', spr=state.mode==='sprites', bld=state.mode==='buildings',
         str=state.mode==='strings', trt=state.mode==='traits',
-        anc=state.mode==='ancillaries', mnr=state.mode==='minor',
+        anc=state.mode==='ancillaries', mnr=state.mode==='minor'||state.mode==='cultures',
         gld=state.mode==='guilds', cdb=state.mode==='campdb',
         fac=state.mode==='factions',
         raw=state.mode==='rawtext',
@@ -1470,6 +1481,7 @@ function render(){
   if(state.mode==='guilds')return state.gu?renderGuilds():loadGuilds();
   if(state.mode==='campdb')return state.cdb?renderCampDb():loadCampDb();
   if(state.mode==='minor')return state.mf?renderMinor():loadMinor();
+  if(state.mode==='cultures')return renderCultures();
   if(state.mode==='factions')return state.fac?renderFactions():loadFactions();
   if(state.mode==='rawtext')return renderRawtext();
   if(state.mode==='changes')return renderChanges();

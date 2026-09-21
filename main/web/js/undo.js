@@ -65,7 +65,7 @@ const UNDO_SCOPES=[
   {id:()=>(!modalOpen()&&state.mode==='factions'&&state.fac&&state.fac.d&&state.fac.d.w)
       ?'fac:'+state.src+':'+(state.fac.sel||''):'',
    get:()=>state.fac.d.w, set:v=>{state.fac.d.w=v;}, draw:()=>facPaint()},
-  {id:()=>(!modalOpen()&&state.mode==='minor'&&state.mf&&state.mf.d&&state.mf.d.w)
+  {id:()=>(!modalOpen()&&mfMode()&&state.mf&&state.mf.d&&state.mf.d.w)
       ?'mf:'+state.src+':'+(state.mf.tab||'')+':'+(state.mf.sel||'(new)'):'',
    get:()=>state.mf.d.w, set:v=>{state.mf.d.w=v;}, draw:()=>mfPaint()},
   // The campaign map's region panel (16d). It is a page editor like the four

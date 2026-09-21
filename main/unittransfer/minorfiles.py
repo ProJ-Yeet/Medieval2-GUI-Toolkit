@@ -70,6 +70,7 @@ a fault.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -842,9 +843,13 @@ def render_culture(base: str, edits: Optional[Dict] = None) -> str:
     """Apply GUI edits to one culture record.
 
     ``edits`` is ``{name, portrait_mapping, rebel_standard_index, fort, …,
-    levels: {village: {model, plan, card}, …}, agents: {spy: {cost}, …}}`` and
-    every key is optional. A level's ``normal`` line is rewritten from its model
-    and plan together, because that is one line in the file.
+    levels: {village: {model, plan, card}, …}, agents: {spy: {cost}, …},
+    ports: [value, …]}`` and every key is optional. A level's ``normal`` line is
+    rewritten from its model and plan together, because that is one line in the
+    file. ``ports`` is the ladder's values in file order, one per ``port_land`` /
+    ``port_sea`` line (Phase 46): the ladder's shape - how many levels, which
+    key each line is - is the file's and stays in the code view, but what each
+    line points at is a field like any other.
     """
     edits = edits or {}
     cul = parse_culture_block(base)
@@ -878,6 +883,20 @@ def render_culture(base: str, edits: Optional[Dict] = None) -> str:
             raise MinorError(f"this culture has no `{name}` settlement level",
                              cul.start + 1)
         _edit_level(sp, lines, lvl, dict(want or {}))
+
+    ports = edits.get("ports")
+    if ports is not None:
+        values = [str((x.get("value") if isinstance(x, dict) else x) or "").strip()
+                  for x in ports]
+        if len(values) != len(cul.ports):
+            raise MinorError(f"this culture's port ladder has {len(cul.ports)} lines "
+                             f"and the edit sent {len(values)} - adding or removing a "
+                             "port level is done in the code view", cul.start + 1)
+        for (key, old, line), value in zip(cul.ports, values):
+            if not value:
+                raise MinorError(f"a `{key}` line cannot be empty", line + 1)
+            if value != old:
+                sp.replace(line, kb.sub_value(lines[line], key, value))
 
     for agent, want in (edits.get("agents") or {}).items():
         held = cul.agents.get(agent)
@@ -1627,7 +1646,9 @@ ACTIONS: Dict[str, Tuple[str, ...]] = {
     "rebels": ("edit", "add", "delete"),
     "resources": ("edit",),
     "religions": ("edit", "add", "delete"),
-    "cultures": ("edit",),
+    # 46: a culture cannot be written from nothing, but it can be COPIED from
+    # one that works, which is how every real mod made its extra cultures
+    "cultures": ("edit", "duplicate"),
     "names": ("edit", "add", "delete", "merge", "dedupe"),
 }
 
@@ -1643,8 +1664,9 @@ REFUSED: Dict[str, str] = {
                  "resource this file no longer defines.",
     "cultures": "A culture is eleven settlement models and cards, a fort, a port "
                 "ladder, a watchtower and six agents - nothing a text editor can "
-                "create from nothing. Deleting one orphans every faction whose "
-                "`culture` line names it.",
+                "create from nothing, so a new one is a duplicate of one that "
+                "works. Deleting one orphans every faction whose `culture` line "
+                "names it.",
 }
 
 #: tab -> (the ``data/text`` file its names live in, whether a save may write it).
@@ -1963,6 +1985,9 @@ class MinorPlan:
     #: 41: ``{section: MergeCounts.as_dict()}`` - the preview for a merge or a dedupe
     merge: Dict[str, Dict] = field(default_factory=dict)
     merge_sources: List[str] = field(default_factory=list)
+    #: 46: what a duplicated culture still needs outside this file, each a
+    #: ``{what, detail}`` - named, never written
+    needs: List[Dict] = field(default_factory=list)
 
     def summary(self) -> str:
         where = getattr(self.mod, "name", "?")
@@ -1989,6 +2014,7 @@ class MinorPlan:
                 "loc_writes": dict(self.loc_writes), "loc_new": list(self.loc_new),
                 "loc_file": self.loc_rel,
                 "merge": dict(self.merge), "merge_sources": list(self.merge_sources),
+                "needs": list(self.needs),
                 "ok": not self.errors and self.touched()}
 
 
@@ -2026,6 +2052,8 @@ def plan(mod, body: dict) -> MinorPlan:
 
     if p.tab == "religions" and p.action in ("add", "delete"):
         _plan_lookup(p, mod)
+    if p.tab == "cultures" and p.action == "duplicate":
+        _plan_culture_needs(p, mod, str(body.get("source") or "").strip())
 
     parsed = parse_any(p.tab, text)
     rec = parsed.get(p.name)
@@ -2066,6 +2094,9 @@ def _plan_record(p: MinorPlan, text: str, body: dict) -> str:
         return _plan_merge(p, text, body)
     parsed = parse_any(p.tab, text)
     noun = tab(p.tab).noun
+
+    if p.action == "duplicate":
+        return _plan_duplicate(p, parsed, str(body.get("source") or "").strip())
 
     if p.action == "add":
         if not p.name:
@@ -2115,6 +2146,79 @@ def _plan_record(p: MinorPlan, text: str, body: dict) -> str:
         return text
     p.changes.extend(kb.diff(base, block))
     return parsed.replace(rec.start, rec.end, block)
+
+
+#: A culture's name is written into keys (`{GONDOR}`, `EMT_GONDOR_PRIEST`) and
+#: folder names (`ui/gondor/`), so it is held to what those can carry.
+CULTURE_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+def _plan_duplicate(p: MinorPlan, parsed: CultureFile, source: str) -> str:
+    """A new culture: the source's whole record - brace, tail and agents - under
+    a new name, appended after the last culture. Everything it points at (the
+    models, the cards, the agent art) is the source's until it is changed."""
+    src = parsed.get(source)
+    if src is None:
+        raise MinorError(f"{source or '(nothing)'} is not a culture in this file")
+    if not CULTURE_NAME.match(p.name or ""):
+        raise MinorError("a culture name is lower case letters, digits and "
+                         "underscores, starting with a letter - it becomes a text key "
+                         "and a folder name")
+    if parsed.get(p.name) is not None:
+        p.errors.append(f"{p.name} is already a culture in this file")
+        return parsed._rebuilt(list(parsed.lines))
+    lines = list(parsed.lines)
+    block = lines[src.start:src.end]
+    block[0] = kb.sub_value(block[0], "culture", p.name)
+    at = parsed.cultures[-1].end
+    lines[at:at] = [""] + block
+    p.changes.append(f"+ culture {p.name}, a copy of {source} "
+                     f"({len(src.levels)} settlement levels, {len(src.agents)} agents, "
+                     f"{len(src.ports)} port lines)")
+    return parsed._rebuilt(lines)
+
+
+def _plan_culture_needs(p: MinorPlan, mod, source: str) -> None:
+    """What else a culture needs, named from this mod's own files.
+
+    Measured on the installed mods: every culture has a ``{CULTURE}`` key and
+    ``EMT_<CULTURE>_PRIEST`` keys (one to five, the suffixed ones being the
+    priest's ranks) in ``text/expanded.txt``; a faction's own
+    ``EMT_<FACTION>_PRIEST`` overrides them where one exists. A culture no
+    faction names is used by nobody, so the factions on the source are listed
+    as the ones that could move. The art is the source's until the paths are
+    changed, which the form already shows.
+    """
+    if p.errors or not source:
+        return
+    new, src = p.name.upper(), source.upper()
+    loc = _loc(mod, "text/expanded.txt")
+    keys = sorted((k for k in loc if k == src or re.fullmatch(
+        rf"EMT_{re.escape(src)}_PRIEST(_\d+)?", k)), key=lambda k: (len(k), k))
+    for k in keys:
+        want = new + k[len(src):] if k == src else k.replace(f"EMT_{src}_", f"EMT_{new}_", 1)
+        have = want in loc
+        p.needs.append({"what": "text key",
+                        "detail": f"{{{want}}} in text/expanded.txt"
+                                  + (" - already there" if have
+                                     else f" - {source} has {{{k}}} \"{loc[k]}\"")})
+    if not keys:
+        p.needs.append({"what": "text key",
+                        "detail": f"{{{new}}} and EMT_{new}_PRIEST in text/expanded.txt "
+                                  f"({source} has none here, so the game's own are used)"})
+    facs = sorted(f for f, c in (getattr(mod, "faction_cultures", None) or {}).items()
+                  if c == source)
+    p.needs.append({"what": "factions",
+                    "detail": (f"no faction names {p.name} yet, so nobody uses it. On "
+                               f"{source} now: {', '.join(facs)}. Move one by changing "
+                               "its culture line on the Factions screen."
+                               if facs else f"no faction names {p.name} yet, and none "
+                               f"names {source} either")})
+    p.needs.append({"what": "art",
+                    "detail": f"every settlement model, card and agent picture still "
+                              f"points at {source}'s files; change the paths on the "
+                              "new culture's Settlements and Agents tabs to give it "
+                              "its own"})
 
 
 def _plan_merge(p: MinorPlan, text: str, body: dict) -> str:

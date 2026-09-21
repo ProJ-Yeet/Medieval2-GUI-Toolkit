@@ -3230,7 +3230,7 @@ campaign map, so none is beta-only.
 |---|---|---|---|---|
 | ~~21~~ | ~~**44** The EDB's tree, checked~~ | M | **both** | **done 2026-09-20** |
 | ~~25~~ | ~~**45** The hidden resources line~~ | S | **both** | **done 2026-09-21** |
-| 26 | **46** Cultures gets a screen, and two forms get a strip | M | **both** | asked for |
+| ~~26~~ | ~~**46** Cultures gets a screen, and two forms get a strip~~ | M | **both** | **done 2026-09-21** |
 | 27 | **47a** The six export sound files | M | **both** | asked for, and 3 stars |
 | 28 | **47b** The thirty-two sound scripts | L | **both** | asked for |
 | 29 | **48** The two rows the strings screen cannot add | S | **both** | asked for |
@@ -3471,7 +3471,51 @@ the line round-trips byte for byte. This closes the hidden-resource half of the
 four-star *Mines and hidden resources* row, which keeps
 `descr_settlement_mechanics.xml`.
 
-## Phase 46 - Cultures gets a screen, and two record forms get a strip
+## Phase 46 - Cultures gets a screen, and two record forms get a strip - DONE 2026-09-21
+
+**Done 2026-09-21, both lines, committed and uncut.** All four parts shipped as
+scoped, and one sentence of the scoping was wrong about the files.
+
+**The culture's text keys are not "the {CULTURE} key and three
+EMT_<CULTURE>_PRIEST keys".** Measured in the two installed mods'
+`text/expanded.txt`: every culture has its `{CULTURE}` key and **between one
+and five** `EMT_<CULTURE>_PRIEST` keys, the suffixed ones being the priest's
+ranks (ROCSS's eastern European has `_1` to `_4`: Bishop, Cardinal, Patriarch,
+High Priest). And the `EMT_*_PRIEST` keys that are most common are named after
+**factions** (`EMT_VENICE_PRIEST`), which override the culture's where they
+exist. So a duplicate lists the keys the SOURCE culture actually has, each with
+the new name and the source's text beside it, rather than a fixed four.
+
+**What shipped:**
+
+- **Cultures is a mode.** A `sub:true` entry in `MODES` and a `{mode:...}` row
+  in `MINOR_TABS`, like Traits and Guilds. It is still the Minor Files screen
+  underneath, locked to the cultures tab - `renderCultures` and a `mfMode()`
+  that every "is this screen still up" check asks - so the list, the pane, the
+  code view and the save are the ones that were already tested.
+- **Four tabs**: General, Settlements, Infrastructure, Agents, drawn by one
+  shared `recTabsHtml`. **The port ladder is editable** on Infrastructure,
+  value by value in the file's order, which `render_culture` now writes one
+  splice per line; the ladder's shape (how many levels) stays in the code view
+  and the form says so, because a level is a pair of lines placed in the file's
+  order.
+- **Duplicate a culture**: action `duplicate`, the source's whole record -
+  brace, tail and agents - under a new name, inserted after the last culture
+  (one insertion; a trailing banner stays last). The preview names what it
+  still needs and does not write: the text keys above, the factions on the
+  source that could move onto it (a culture no faction names is used by
+  nobody), and that every model, card and agent picture still points at the
+  source's files. A name must be lower case letters, digits and underscores,
+  because it becomes a text key and a folder name.
+- **The faction form on five tabs**: General, Art and banners, What it can do,
+  Movies, Horde - the sections it already had, no parser work.
+
+Neither of the two things the scoping refused was taken: no `descr_offmap_models`
+generation (no installed mod has an `offmap` line), and no claim about how many
+cultures the engine allows. Promoting Factions and the other sub modes to the
+burger menu is still the user's call.
+
+### The scoping, as written before it was built
 
 **The parser is not the gap.** `minorfiles.parse_cultures` already reads
 everything his `culturesParser.jsx` reads and two things it does not: the

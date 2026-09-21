@@ -230,7 +230,22 @@ function facFindingsHtml(d){
 }
 
 /* ---- the form ---- */
+/* ---- five tabs over one record (Phase 46) ----
+   The form was one long scroll of five sections that were already separate:
+   the record, the pictures, what it can do, the movies and the horde. The same
+   strip as the Cultures form, no parser work: a tab is only which section is
+   drawn. The chosen tab is remembered across factions. */
+const FAC_TABS = [['general','General'], ['art','Art and banners'], ['abilities','What it can do'],
+                  ['movies','Movies'], ['horde','Horde']];
+function facTab(id){ state.facTab = id; facPaintForm(); }
 function facFormHtml(d){
+  const cur = state.facTab || 'general';
+  const strip = recTabsHtml(FAC_TABS, cur, 'facTab');
+  const body = cur === 'art' ? facArtSection(d) : cur === 'abilities' ? facAbilitySection(d)
+    : cur === 'movies' ? facMovies(d) : cur === 'horde' ? facHorde(d) : facGeneralSection(d);
+  return strip + (body || '<div class="empty" style="padding:18px">Nothing on this tab for this faction.</div>');
+}
+function facGeneralSection(d){
   const w = d.w, v = d.vocab || {};
   const shownName = d.locEdits[d.loc_tag] !== undefined
     ? d.locEdits[d.loc_tag] : ((d.loc||{})[d.loc_tag] || '');
@@ -260,8 +275,11 @@ every 'requires factions' clause point at it, so it is not renamed here.">
       ${facColour(d, 'secondary_colour', 'Secondary colour')}
       ${facPick(d, 'special_faction_type', 'Special type', v.special_types, true)}
     </div>
-  </section>
-  <section class="trsec">
+  </section>`;
+}
+function facArtSection(d){
+  const v = d.vocab || {};
+  return `<section class="trsec">
     <div class="trsechead">Art and banners
       <span class="count">Symbol lines name .CAS strat MODELS, not textures. A
         loading logo normally lives inside the game's .pack archives, so "not
@@ -274,8 +292,11 @@ every 'requires factions' clause point at it, so it is not renamed here.">
       ${facBox(d, 'small_logo_index', 'Small logo index', v.small_logo_indexes)}
       ${facBox(d, 'triumph_value', 'Triumph value')}
     </div>
-  </section>
-  <section class="trsec">
+  </section>`;
+}
+function facAbilitySection(d){
+  const v = d.vocab || {};
+  return `<section class="trsec">
     <div class="trsechead">What it can do</div>
     <div class="trgrid">
       ${(v.yes_no||[]).map(k => facYesNo(d, k)).join('')}
@@ -284,9 +305,7 @@ every 'requires factions' clause point at it, so it is not renamed here.">
     <div class="trhint count">has_family_tree is not a yes/no: 24 of the 90 real
       factions measured say <code>teutonic</code>, and a checkbox would have
       written <code>no</code> over every one of them.</div>
-  </section>
-  ${facMovies(d)}
-  ${facHorde(d)}`;
+  </section>`;
 }
 
 const facHas = (d, k) => (d.w[k] || '') !== '';

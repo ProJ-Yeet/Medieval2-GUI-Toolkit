@@ -30,20 +30,36 @@
 
    THE PAGE NEVER PARSES A GAME FILE: /api/minor, /api/minor/record and
    /api/minor/plan|apply do all of it, and a save posts back the shape the
-   server's own render_any takes. */
+   server's own render_any takes.
+
+   CULTURES IS ITS OWN MODE (Phase 46) and still this screen: the `cultures`
+   mode is the same list, pane and save locked to the cultures tab, which is
+   why every "is this screen still up" check asks `mfMode()` rather than for
+   the one mode id. */
+const mfMode = () => state.mode === 'minor' || state.mode === 'cultures';
+
+function renderCultures(){
+  if(!state.mf || state.mf.tab !== 'cultures'){
+    minorWantTab = 'cultures'; state.mf = null; loadMinor(); return;
+  }
+  renderMinor();
+}
 
 async function loadMinor(){
-  const mod = state.src;
-  const tab = minorWantTab || (state.mf && state.mf.tab) || 'rebels';
+  const mod = state.src, mode = state.mode;
+  let tab = minorWantTab || (state.mf && state.mf.tab) || 'rebels';
+  // the cultures tab is the cultures mode now; the minor mode never shows it
+  if(mode === 'cultures') tab = 'cultures';
+  else if(tab === 'cultures') tab = 'rebels';
   minorWantTab = null;
   main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s campaign files…</div>';
   let r;
   try{ r = await api.get(`/api/minor?mod=${enc(mod)}&tab=${enc(tab)}`); }
-  catch(e){ if(stale('minor', mod)) return;
+  catch(e){ if(stale(mode, mod)) return;
     main.innerHTML = `<div class="empty">Couldn't read the campaign files.<br>
       <span class="count">${esc(errText(e))}</span><br><br>
       <button class="primary" onclick="loadMinor()">Retry</button></div>`; return; }
-  if(stale('minor', mod)) return;
+  if(stale(mode, mod)) return;
   state.mf = Object.assign({tab, sel:'', d:null, busy:false, adding:false}, r);
   undoReset();
   renderMinor();
@@ -115,7 +131,7 @@ async function mfOpen(name){
   try{ d = await api.get(
     `/api/minor/record?mod=${enc(f.mod)}&tab=${enc(f.tab)}&name=${enc(name)}`); }
   catch(e){ d = {error:''+e}; }
-  if(state.mode !== 'minor' || state.mf !== f || f.sel !== name) return;
+  if(!mfMode() || state.mf !== f || f.sel !== name) return;
   f.d = d.error ? d : mfWorking(d);
   undoReset();          // the working copy exists now: this is Ctrl+Z's baseline
   mfPaint();
@@ -203,7 +219,7 @@ async function mfLoadVocab(){
   try{ d = await api.get(`/api/minor/record?mod=${enc(f.mod)}&tab=${enc(f.tab)}`
     + `&name=${enc(f.records[0].name)}`); }
   catch(e){ return; }
-  if(state.mode !== 'minor' || state.mf !== f || !f.adding) return;
+  if(!mfMode() || state.mf !== f || !f.adding) return;
   f.d.vocab = d.vocab || {};
   mfPaintForm();
 }
@@ -244,6 +260,9 @@ exactly as ${esc(f.file)} stores it, beside the form."
         ? `<button onclick="mfClone()" title="Start a new ${esc(f.noun)} holding
 everything this one holds, under a new name. Nothing is written until you press
 Create.">⧉ Clone</button>` : ''}
+      ${(d.actions||[]).includes('duplicate')
+        ? `<button onclick="mfDuplicate()" title="A new culture: this one's whole record
+under a new name. The preview names the text keys, factions and art it still needs.">⧉ Duplicate…</button>` : ''}
       ${(d.actions||[]).includes('merge')
         ? `<button onclick="mfMergeOpen()" title="Add every name another faction
 keeps to this one's lists. The other faction is read, not changed.">⧉ Merge names…</button>
@@ -444,22 +463,72 @@ function mfReligionForm(d){
   </section>`;
 }
 
+/* ---- the culture form, on four tabs (Phase 46) ----
+   General, Settlements, Infrastructure, Agents: the strip every other record
+   form here has. Infrastructure is the tab the phase was for - the fort, the
+   fishing village, the watchtower and the PORT LADDER, which used to be pushed
+   into the code view because a port level is a pair of lines. The ladder's
+   shape (how many levels) is still the file's; what each line points at is a
+   box. The chosen tab is remembered across records. */
+const MF_CUL_TABS = [['general','General'], ['settlements','Settlements'],
+                     ['infra','Infrastructure'], ['agents','Agents']];
+function mfCulTab(id){ state.mfCulTab = id; mfPaintForm(); }
 function mfCultureForm(d){
-  const w = d.w, v = d.vocab || {};
-  const box = (k, label) => w[k] === undefined || w[k] === '' ? '' :
+  const cur = state.mfCulTab || 'general';
+  const strip = recTabsHtml(MF_CUL_TABS, cur, 'mfCulTab');
+  const body = cur === 'settlements' ? mfCulSettlements(d)
+    : cur === 'infra' ? mfCulInfra(d) : cur === 'agents' ? mfCulAgents(d)
+    : mfCulGeneral(d);
+  return strip + body;
+}
+function mfCulBox(w, k, label){
+  return w[k] === undefined || w[k] === '' ? '' :
     `<label class="lbl" data-label="${k}">${esc(label||k)}</label>
      <input data-label="${k}" value="${esc(w[k])}" oninput="mfSet('${k}',this.value.trim())">`;
+}
+function mfCulGeneral(d){
+  const w = d.w, v = d.vocab || {};
   return `<section class="trsec">
     <div class="trsechead">The culture
       <span class="count">The record does not end at its closing brace. The fort,
-        the ports, the watchtower and the six agents below belong to it too</span></div>
+        the ports, the watchtower and the six agents on the other tabs belong to it too</span></div>
     <div class="trgrid">
       ${mfNameRow(d, 'southern_european')}
-      ${(v.head||[]).map(k => box(k)).join('')}
-      ${(v.tail||[]).map(k => box(k)).join('')}
+      ${(v.head||[]).map(k => mfCulBox(w, k)).join('')}
+    </div>
+  </section>`;
+}
+const MF_CUL_INFRA_LABEL = {fort:'Fort model', fort_cost:'Fort cost', fort_wall:'Fort wall',
+  fishing_village:'Fishing village', watchtower:'Watchtower model', watchtower_cost:'Watchtower cost'};
+function mfCulInfra(d){
+  const w = d.w, v = d.vocab || {};
+  const ports = w.ports || [];
+  const nth = {};
+  return `<section class="trsec">
+    <div class="trsechead">Fort, fishing village and watchtower</div>
+    <div class="trgrid">
+      ${(v.tail||[]).map(k => mfCulBox(w, k, MF_CUL_INFRA_LABEL[k])).join('')}
     </div>
   </section>
   <section class="trsec">
+    <div class="trsechead">Port ladder
+      <span class="count">${ports.length} line(s), in the file's own order: each port
+        level is a <code>port_land</code> and a <code>port_sea</code> model. Adding or
+        removing a level is a pair of lines placed in that order, so it is done in the
+        code view; what each line points at is here.</span></div>
+    ${ports.length ? `<div class="trgrid">${ports.map((p, k) => {
+      nth[p.key] = (nth[p.key] || 0) + 1;
+      const lab = `${p.key}#${nth[p.key]}`;
+      return `<label class="lbl" data-label="${esc(lab)}">${esc(p.key)} ${nth[p.key]}</label>
+        <input data-label="${esc(lab)}" value="${esc(p.value)}"
+          oninput="mfSetPort(${k},this.value.trim())">`;
+    }).join('')}</div>`
+      : '<div class="count">This culture has no port lines.</div>'}
+  </section>`;
+}
+function mfCulSettlements(d){
+  const w = d.w, v = d.vocab || {};
+  return `<section class="trsec">
     <div class="trsechead">Settlement ladder
       <span class="count">${(w.levels||[]).length} level(s), each one a strat
         model, the settlement plan that goes with it, and the card</span></div>
@@ -476,8 +545,11 @@ function mfCultureForm(d){
       </div>
     </div>`).join('')}
     ${mfMissingLevels(w, v)}
-  </section>
-  <section class="trsec">
+  </section>`;
+}
+function mfCulAgents(d){
+  const w = d.w, v = d.vocab || {};
+  return `<section class="trsec">
     <div class="trsechead">Agents
       <span class="count">Card, info card, pip and cost. The two numbers after
         them are the same <code>1 1</code> in all 234 real agent lines, so they
@@ -496,9 +568,6 @@ function mfCultureForm(d){
           recruit one. Adding an agent line means saying where it goes, which
           this file's own order decides, so it is written in the code view.</div>`
       : ''}
-    ${(w.ports||[]).length ? `<div class="trhint count" style="margin-top:8px">Ports:
-      ${(w.ports||[]).map(p => esc(p.key)).join(', ')}, edited in the code view,
-      because a port ladder is a pair of lines per level rather than a field.</div>` : ''}
   </section>`;
 }
 
@@ -818,6 +887,11 @@ function mfSetLevel(k, key, value){
   l[key] = value;
   mfTouched(false);
 }
+function mfSetPort(k, value){
+  const p = (state.mf.d.w.ports||[])[k]; if(!p) return;
+  p.value = value;
+  mfTouched(false);
+}
 function mfSetAgent(name, i, value){
   const g = (state.mf.d.w.agents||{})[name]; if(!g) return;
   g.tokens[i] = value;
@@ -875,7 +949,38 @@ function mfEdits(){
   for(const [a,g] of Object.entries(w.agents||{}))
     out.agents[a] = {card:g.tokens[0], info_card:g.tokens[1], pip:g.tokens[2],
       cost:g.tokens[3]};
+  out.ports = (w.ports||[]).map(p => (p.value||'').trim());
   return out;
+}
+
+/* ---- duplicate a culture (Phase 46) ----
+   A culture cannot be written from nothing, but it can be copied from one that
+   works. The server writes the whole record under the new name and NAMES what a
+   culture needs outside this file, from the mod's own files: its text keys in
+   text/expanded.txt, the factions that could move onto it, and the art it still
+   borrows. Named, not written - those are other screens' saves. */
+async function mfDuplicate(){
+  const f = state.mf, d = f.d;
+  if(!d) return;
+  const name = (prompt(`A name for the copy of ${d.name} (lower case, digits, underscores):`,
+                       d.name + '_2') || '').trim();
+  if(!name) return;
+  const body = {mod: f.mod, tab: 'cultures', action: 'duplicate', name, source: d.name};
+  let r;
+  try{ r = await api.post('/api/minor/plan', body); }
+  catch(e){ r = {error: errText(e)}; }
+  if(r.error){ toast('✗ ' + r.error, 6000); return; }
+  const p = r.plan || {};
+  const needs = (p.needs || []).map(n => `  • ${n.what}: ${n.detail}`).join('\n');
+  if(!confirm(`Write: ${(p.changes||[]).join('; ')}?\n\nWhat else ${name} needs, and`
+      + ` is NOT written here:\n${needs}\n\nBacked up first, and 🕑 Log can undo it.`)) return;
+  let res;
+  try{ res = await api.post('/api/minor/apply', body); }
+  catch(e){ res = {error: errText(e)}; }
+  if(res.error){ toast('✗ ' + res.error, 6000); return; }
+  toast(`${name} written. The list of what it still needs is in the preview you just read.`, 5000);
+  await loadMinor();
+  mfOpen(name);
 }
 
 function mfBody(action){
