@@ -1777,6 +1777,7 @@ async function doApply(){
     }
     const r=await api.post('/api/plan',{source:state.src,dest:state.dst,unit:t,options:optsPayload(t)});
     if(r.error){toast(`${t}: ${r.error}`);state.editing=t;renderComposer();await doPreview();return;}
+    if((r.errors||[]).length){toast(`${t}: ${r.errors[0]}`);state.editing=t;renderComposer();return;}
     if(r.base_error){toast(`${t}: ${r.base_error}`);state.editing=t;renderComposer();return;}
     if(r.option_error){toast(`${t}: ${r.option_error}`);state.editing=t;renderComposer();return;}
     if(r.unit_conflict && !cfgFor(t)._resolved){ state.editing=t;renderComposer();await doPreview();

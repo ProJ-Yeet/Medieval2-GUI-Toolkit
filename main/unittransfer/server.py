@@ -1680,6 +1680,7 @@ def _plan_payload(plan) -> dict:
         "base_field_groups": list(dict.fromkeys(plan.base_field_groups)),
         "base_error": plan.base_error,
         "option_error": plan.option_error,
+        "errors": list(plan.errors),
         "model_actions": [asdict(a) for a in plan.model_actions],
         "add_count": len(plan.add_entries),
         "asset_count": len(plan.asset_files),
