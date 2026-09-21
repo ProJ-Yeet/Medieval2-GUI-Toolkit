@@ -310,7 +310,7 @@ function renderSounds(){
   if(!state.snd||state.snd.mod!==state.src)return loadSounds();
   const s=state.snd;
   if(!s.has_file){
-    main.innerHTML=`<div class="empty">“${esc(state.src)}” has no
+    main.innerHTML=soundTabsHtml()+`<div class="empty">“${esc(state.src)}” has no
       <code>data/export_descr_sounds_units_voice.txt</code>.<br>
       <span class="count">Without that file there is no voice bank to edit, so units fall back
       to the game's own.</span></div>`;
@@ -334,7 +334,7 @@ function renderSounds(){
   const nConf=s.existing.filter(u=>u.accent_conflict||u.class_conflict).length;
   const tab=(k,label,n)=>`<button class="${s.tab===k?'on':''}" onclick="sndTab('${k}')">${label} <span class="badge">${n}</span></button>`;
   const opt=(v,cur)=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}</option>`;
-  main.innerHTML=`<div class="sndhead">
+  main.innerHTML=soundTabsHtml('data/export_descr_sounds_units_voice.txt')+`<div class="sndhead">
       <h2>${esc(state.src)} · unit voices</h2>
       <div class="count">${docPoints(`${s.donors.length} units have their own selection barks
         across ${s.pairs.length} accent/class blocks.`,[

@@ -3231,7 +3231,7 @@ campaign map, so none is beta-only.
 | ~~21~~ | ~~**44** The EDB's tree, checked~~ | M | **both** | **done 2026-09-20** |
 | ~~25~~ | ~~**45** The hidden resources line~~ | S | **both** | **done 2026-09-21** |
 | ~~26~~ | ~~**46** Cultures gets a screen, and two forms get a strip~~ | M | **both** | **done 2026-09-21** |
-| 27 | **47a** The six export sound files | M | **both** | asked for, and 3 stars |
+| ~~27~~ | ~~**47a** The six export sound files~~ | M | **both** | **done 2026-09-21** |
 | 28 | **47b** The thirty-two sound scripts | L | **both** | asked for |
 | 29 | **48** The two rows the strings screen cannot add | S | **both** | asked for |
 
@@ -3601,7 +3601,64 @@ says where the base sound files are, because M2TW ships them packed.
 
 **Two grammars, so two sessions.**
 
-### 47a - The six export files, on a parser we already have
+### 47a - The six export files, on a parser we already have - DONE 2026-09-21
+
+**Done 2026-09-21, both lines, committed and uncut.** A screen of its own,
+**Sound banks**, beside Unit Sounds on one strip, over a new
+`unittransfer/soundbanks.py`. Measured again before a line was written, and
+the scoping was wrong about the parser.
+
+**`sounds.py` does not already read these, and cannot be taught to.** Three
+things in the six files break its grammar, all measured on both installed
+mods:
+
+- **Indentation says nothing.** `_prebattle` mixes tabs and runs of spaces in
+  one block, and a `pri 9` sits deeper than the `VnV` it belongs to. So a
+  header's depth comes from its keyword, per file, from a table:
+  `accent > class > vocal` (soldier voices), `accent > type > vocal` (strat
+  map), `accent > notification` (battle events), `accent > element > relationship
+  | trait | condition | situation | pri` (pre-battle), `text` (advice), and none
+  at all for narration, whose `event <NAME>` lines stand at the top.
+- **`VnV` is not a level.** It is a line of its own that qualifies the `trait`
+  or `pri` under it, so it is carried as the first line of that block, and a
+  copy takes it along.
+- **Attributes are on more than the event line.** `_soldier_voice`'s events
+  carry `mindist 0.75 priority 120 volume -10 probability .4` and
+  `_stratmap_voice`'s `delay 0 pref SFX`, and a sample line can carry its own
+  (`willhelm.wav probability .001`). So a body line is text, never split into
+  a path.
+
+It is still a splice over verbatim lines, `sounds.py`'s own rule. **All twelve
+files (six banks on two mods) come back byte for byte, every event lands in a
+block, and not one warning is raised**; DaC's `_narration` is three comment
+lines and ROCSS's `_advice` one entry, and both read.
+
+**What shipped:**
+
+- The six banks on tabs, each a tree of its blocks on the left, folded by
+  default (DaC's strat map voices are 2,570 blocks). Search reaches block
+  names and sample lines.
+- A block's events on the right: the attributes on a line, the folder and
+  sample lines in a box. A line that did not change keeps its bytes; a new one
+  takes the indent of its kind's first line in that event, so a block keeps
+  whatever mix of tabs and spaces it had.
+- **Duplicate as…**, **Rename…** and **Remove** on any block, an accent
+  included: duplicating DaC's `accent Arabic` in the strat map bank is one
+  insertion of 1,619 lines and nothing else changed. A new accent is said to be
+  used by nothing until something names it.
+- Refused: a copy under its own name or one already beside it, an event whose
+  first line is not a folder, an `end` or `event` line inside an event, a
+  narration name that is not letters, digits and underscores, and any op whose
+  line no longer says what it said when read. An attribute no event in any of
+  the mod's six banks uses is a warning, not a refusal.
+- One backup and 🕑 Log undo per save, mode `soundbanks`. The `units_voice`
+  bank stays in Unit Sounds and `factionclone.py` keeps writing `_prebattle`.
+
+**Not taken:** checking that a sample exists. The base game's sounds are packed
+(`data/sounds/*.idx` and `*.dat`), so the screen says where they are and does
+not pretend to know.
+
+#### The scoping, as written before it was built
 
 `export_descr_sounds_*.txt` is the indented `BANK:` / `accent` / `class` or
 `type` / `vocal` / `event` … `end` / `folder` tree that `sounds.py` already

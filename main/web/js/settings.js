@@ -267,6 +267,7 @@ const LOG_MODES=[
   {id:'stratmap',   label:'🗺 Strat map'},
   {id:'cards',      label:'🖼 Unit cards'},
   {id:'sounds',     label:'🔊 Sounds'},
+  {id:'soundbanks', label:'🔊 Sound banks'},
   {id:'buildings',  label:'🏰 Buildings'},
   {id:'traits',     label:'🎖 Traits'},
   {id:'ancillaries',label:'🏅 Ancillaries'},
@@ -341,6 +342,7 @@ function logItemHtml(e){
   return `<div class="log-item ${e.undone?'undone':''}">
     <div class="top"><div><b>${esc(e.resolved_type||e.unit_type||'')}</b> <span class="pill">${
       e.mode==='sounds'?`🔊 voice edits in ${esc(e.dest)}`
+      :e.mode==='soundbanks'?`🔊 sound bank edited in ${esc(e.dest)}`
       :e.mode==='bmdb'?`${e.action==='cleanup'?'🧹 cleaned out of':'🗄 bmdb edit in'} ${esc(e.dest)}`
       :e.mode==='stratmap'?`🧹 strat map cleaned out of ${esc(e.dest)}`
       :e.mode==='cards'?`${e.action==='consolidate'?'🖼 cards consolidated in':'🧹 cards cleaned out of'} ${esc(e.dest)}`

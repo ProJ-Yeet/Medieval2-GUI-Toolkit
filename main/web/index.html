@@ -2811,6 +2811,21 @@
   .trhint{font-size:11px;margin-top:3px}
   /* 38: campaign constants. One row a tag - name, the type the file declares,
      the box, then whatever the mod's comment or the archive says about it */
+  /* 47a: the six sound banks */
+  .sbkrow .nm{display:flex;gap:4px;align-items:baseline}
+  .sbktw{display:inline-block;width:14px;color:var(--dim);cursor:pointer}
+  .sbkpath{font-size:12px;color:var(--dim);margin:10px 0 4px}
+  .sbkacts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .sbkev{border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:8px 0;
+    display:flex;flex-direction:column;gap:6px}
+  .sbkev.on{border-color:var(--accent)}
+  .sbkevhead{display:flex;gap:10px;align-items:baseline}
+  .sbkattr{display:flex;flex-direction:column;gap:2px}
+  .sbkattr input{font-family:var(--mono,monospace)}
+  .sbklines{width:100%;box-sizing:border-box;font-family:var(--mono,monospace);font-size:12px;
+    white-space:pre;overflow-x:auto}
+  .sbkkids{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+  .sbkkid{display:inline-flex;gap:6px;align-items:baseline}
   .cdbhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;
     position:sticky;top:0;z-index:2;background:var(--bg);padding:4px 0 8px}
   .cdbsec h3{font-family:Consolas,monospace;font-size:13px;margin:10px 0 4px;color:var(--dim)}
@@ -3067,6 +3082,7 @@
 <script src="js/ancillaries.js"></script>
 <script src="js/guilds.js"></script>
 <script src="js/campdb.js"></script>
+<script src="js/soundbanks.js"></script>
 <script src="js/portui.js"></script>
 <script src="js/minorfiles.js"></script>
 <script src="js/factions.js"></script>

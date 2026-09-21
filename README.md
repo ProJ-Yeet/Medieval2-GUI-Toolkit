@@ -40,7 +40,7 @@ one containing `mods`).
 | Models Editor | Every model a mod ships: edit any `battle_models.modeldb` entry, its sprites and its unit cards, list what `descr_model_strat.txt` declares, view any battle or campaign-map model in 3D, and clean out what nothing references |
 | Buildings | Browse and edit `export_descr_buildings.txt`, including recruitment, and check the shape of the tree |
 | Campaign Map _(beta only)_ | The ten map layers under `world/maps/base`, the regions painted on them, and `descr_strat.txt`: paint a province, place and move what stands on the map, add or delete a province across every campaign, edit the people, events, disasters and menu text a campaign carries, draw the ground with the game's own aerial-map textures in either season, find anything by the name the player reads or the one the files use, and check the whole map against what the game will accept. Set out under [the screen](#campaign-map) below. **Not on the menu in a 2.x release** - it is the first thing this toolkit does that writes to a campaign, so it ships on the dated **beta** pre-release instead (betas are named for the day they were cut, e.g. `beta 2026-09-06`). Running from a clone of the repo, it is on the menu |
-| Unit Sounds | Choose which voice bank entry each unit uses |
+| Unit Sounds | Choose which voice bank entry each unit uses; and **Sound banks** beside it: soldier and strat map voices, battle events, pre-battle speech, advice and narration, each block's events editable and any block duplicated, renamed or removed |
 | Sprites | Generate and wire up the far-LOD unit sprites |
 | Strings | Read and write the compiled `data/text/*.txt.strings.bin` files |
 | Traits / Ancillaries | Full editors for both, definitions and triggers together |

@@ -692,6 +692,7 @@ const MODES=[
   {id:'factions', icon:'🛡', name:'Factions',      sub:true, hint:'Each faction’s culture, religion, colours and horde'},
   {id:'cultures', icon:'🏛', name:'Cultures',      sub:true, hint:'descr_cultures.txt: each culture’s settlements, fort, ports, watchtower and agents'},
   {id:'strings',  icon:'🔤', name:'Strings',       sub:true, hint:'The compiled text files the game actually reads'},
+  {id:'soundbanks',icon:'🔊', name:'Sound banks',   sub:true, hint:'Soldier and strat map voices, battle events, pre-battle speech, advice and narration'},
 ];
 const modeDef=id=>MODES.find(m=>m.id===id)||MODES[0];
 //: The modes anything OFFERS: the burger menu, the Home readiness cards and the
@@ -1234,7 +1235,8 @@ function setAppMode(id,returning){
 // applyMode so every way of switching (menu, pack mount, building hop) lands here
 // A sub-mode has no row of its own in the menu, so its HOST row lights up.
 const MODE_HOST={sprites:'bmdb',stratmap:'bmdb',cards:'bmdb',traits:'minor',
-  ancillaries:'minor',factions:'minor',strings:'minor',cultures:'minor'};
+  ancillaries:'minor',factions:'minor',strings:'minor',cultures:'minor',
+  soundbanks:'sounds'};
 function syncNav(){
   const d=modeDef(state.mode), host=MODE_HOST[state.mode]||state.mode;
   navCur.textContent=d.icon+' '+d.name;
@@ -1272,7 +1274,7 @@ function wire(){
     if(state.mode!=='transfer'){state.src=state.dst=v;dstSel.value=v;state.destData=null;
       state.cfg={};state.bmdb=null;state.snd=null;state.destSnd=null;state.str=null;
       state.tr=null;state.an=null;state.mf=null;state.fac=null;state.fau=null;
-      state.gu=null;state.cdb=null;
+      state.gu=null;state.cdb=null;state.sbk=null;
       state.bld=null;state.bldReturn=null;state.rt=null;
       // the mirrored destination is not the user's transfer pick - don't save it
       await api.post('/api/settings',{last_source:v,last_dest:state.xferDst||v});return loadSource();}
@@ -1292,6 +1294,9 @@ function wire(){
   // search is a debounced fetch rather than a repaint of what is already here.
   search.oninput=()=>{
     if(state.mode==='strings')return strSearch();
+    // 47a: the list is what a search narrows; the pane holds unsaved typing
+    if(state.mode==='soundbanks'&&state.sbk&&document.getElementById('sbkList'))
+      return void(document.getElementById('sbkList').innerHTML=sbkListHtml());
     render();};
   mercOnly.onchange=filtersChanged; groupBy.onchange=filtersChanged;
   // rebuilds the faction list (its A→Z changes) but keeps whatever is ticked
@@ -1338,7 +1343,7 @@ function wire(){
 function applyMode(persist){
   syncNav();
   const one=state.mode!=='transfer', edit=state.mode==='edit', bm=state.mode==='bmdb',
-        snd=state.mode==='sounds', spr=state.mode==='sprites', bld=state.mode==='buildings',
+        snd=state.mode==='sounds', sbk=state.mode==='soundbanks', spr=state.mode==='sprites', bld=state.mode==='buildings',
         str=state.mode==='strings', trt=state.mode==='traits',
         anc=state.mode==='ancillaries', mnr=state.mode==='minor'||state.mode==='cultures',
         gld=state.mode==='guilds', cdb=state.mode==='campdb',
@@ -1374,11 +1379,11 @@ function applyMode(persist){
   sndBtn.style.display=snd?'inline-block':'none';
   unusedWrap.style.display=(bm||stm)?'inline-flex':'none';
   mercOnly.parentElement.style.display=
-    (bm||snd||spr||bld||str||trt||anc||gld||cdb||mnr||fac||raw||home||stm||crd||cmp)?'none':'inline-flex';
+    (bm||snd||sbk||spr||bld||str||trt||anc||gld||cdb||mnr||fac||raw||home||stm||crd||cmp)?'none':'inline-flex';
   // these bring their own filters - the sidebar's faction/era ones say nothing
   // about a voice entry, and nothing at all about a modeldb record or a sprite
   document.getElementById('unitFilters').style.display=
-    (bm||snd||spr||bld||str||trt||anc||gld||cdb||mnr||fac||raw||home||stm||crd||cmp)?'none':'';
+    (bm||snd||sbk||spr||bld||str||trt||anc||gld||cdb||mnr||fac||raw||home||stm||crd||cmp)?'none':'';
   document.getElementById('bldFilters').style.display=bld?'':'none';
   // Only offered while the unit editor is what you'd be going back FROM: in
   // buildings mode the building is already on screen.
@@ -1386,7 +1391,7 @@ function applyMode(persist){
   if(state.bldReturn)backBldBtn.textContent=`← Back to ${state.bldReturn.label}`;
   search.placeholder=bm?'Search entries…':stm?'Search strat models…'
                     :crd?'Search units and cards…'
-                    :snd?'Search units…':spr?'Search models…'
+                    :snd?'Search units…':sbk?'Search blocks and samples…':spr?'Search models…'
                     :bld?'Search buildings…':str?'Search tags and text…'
                     :trt?'Search traits…'
                     :anc?'Search ancillaries and types…'
@@ -1470,6 +1475,7 @@ function render(){
   if(state.mode==='home')return renderHome();
   if(state.mode==='bmdb')return renderBmdb();
   if(state.mode==='sounds')return renderSounds();
+  if(state.mode==='soundbanks')return renderSoundBanks();
   if(state.mode==='sprites')return renderSprites();
   if(state.mode==='stratmap')return state.stm?renderStratmap():loadStratmap();
   if(state.mode==='cards')return state.cards?renderCards():loadCards();

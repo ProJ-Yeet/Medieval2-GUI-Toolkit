@@ -1,5 +1,5 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-21 - **Phases 52, 53, 45 and 46 done**, committed and uncut; 47a next. Phase 51 was cut as **v2.3.6** and **beta 2026-09-21**. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
+_Updated: 2026-09-21 - **Phases 52, 53, 45, 46 and 47a done**, committed and uncut; 47b next. Phase 51 was cut as **v2.3.6** and **beta 2026-09-21**. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
 the latest beta, both cut on request after **Phase 44**. They carry everything
 uncut since v2.3.4: the two startup/port commits, the contributor's campaign
 map editor, **M18** and **Phase 44**. v2.3.5 carries 44 and the port work; the
@@ -73,7 +73,16 @@ form is on five tabs. The scoping's "three EMT_<CULTURE>_PRIEST keys" was wrong:
 a culture has one to five, and the common ones are per faction. Write-up under
 *Phase 46*.
 
-**47a is next** (the six export sound files), then 47b and 48. Every one is a subrelease on both lines. Write-ups under *Phases 51-53*
+**Phase 47a is done - the six export sound banks, closed 2026-09-21, both
+lines, committed and uncut.** A **Sound banks** screen beside Unit Sounds opens
+soldier voices, strat map voices, battle events, pre-battle speech, advice and
+narration: each a tree of blocks, each block's events editable, and any block
+duplicated, renamed or removed. It is a new parser, not `sounds.py`: those files
+set depth by keyword rather than indent, carry `VnV` as a line of its own, and
+put attributes on sample lines. All twelve files on both mods round-trip byte
+for byte. Write-up under *47a*.
+
+**47b is next** (the 32 sound scripts), then 48. Every one is a subrelease on both lines. Write-ups under *Phases 51-53*
 in `ROADMAP.md`.
 **This repo takes outside contributions now, in two shapes.** **Demircan
 pushes directly to `origin/master`** - `865c22f`, "campaign map editor v0.1",
@@ -1142,7 +1151,7 @@ Of the finished work, **21 and 29 belong to BOTH lines** (raw text is a menu
 mode of its own, the faction audit also draws in the Factions mode, and 29's
 `icons.png_bytes` is the unit editor's and the BMDB browser's route as well as
 the viewer's) and **22a, 22b, 22c, 23a, 23b and 24 are map work**, beta only.
-Both blocks are finished. Of what is left, **45, 46, 47a, 47b and 48 are all
+Both blocks are finished. Of what is left, **47b and 48 are both
 subreleases** - none of them is map work - and M18 was the beta alone.
 
 Betas are named by the **date** they were released, with a letter for a second

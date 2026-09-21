@@ -456,6 +456,11 @@ Campaign constants (38, see :mod:`unittransfer.campdb`). ``descr_campaign_db.xml
   POST /api/campdb/plan|/apply   -> set values, or add a documented tag
                                     (one backup + undo)
 
+The six export sound banks (47a, see :mod:`unittransfer.soundbanks`)
+  GET  /api/soundbanks?mod=&file= -> one bank's blocks in file order, events inline
+  POST /api/soundbanks/plan|/apply -> edit an event, or duplicate, rename or remove
+                                    a block (one backup + undo)
+
 The campaign folder's small files (18a, see :mod:`unittransfer.campfiles`)
   GET  /api/campfiles/descriptions?mod=&campaign=
                                  -> the campaign's menu title and one row a
@@ -591,7 +596,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, changesets, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, changesets, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2052,6 +2057,18 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(mercpools.overview(self.registry.get(name), camp))
                 except (mercpools.MercError, ValueError) as e:
                     return self._err(404, getattr(e, "message", str(e)))
+            if u.path == "/api/soundbanks":
+                # 47a. One bank at a time: the biggest is 20,000 lines, and
+                # the screen shows one of the six.
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                try:
+                    return self._json(soundbanks.overview(
+                        self.registry.get(name),
+                        (q.get("file") or ["soldier_voice"])[0]))
+                except soundbanks.SoundBankError as e:
+                    return self._err(404, str(e))
             if u.path == "/api/campdb":
                 # 38. One small file, read whole: the page builds its form off
                 # the types the file itself declares.
@@ -2378,6 +2395,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._guilds(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/mercpools/plan", "/api/mercpools/apply"):
                 return self._json(self._mercpools(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/soundbanks/plan", "/api/soundbanks/apply"):
+                return self._json(self._soundbanks(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/campdb/plan", "/api/campdb/apply"):
                 return self._json(self._campdb(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/campfiles/plan", "/api/campfiles/apply"):
@@ -2772,6 +2791,25 @@ class Handler(BaseHTTPRequestHandler):
         return out
 
     # ---- campaign constants (38) ----
+    def _soundbanks(self, action, body):
+        """Preview or write one of the six export sound banks."""
+        try:
+            mod = self.registry.get(body["mod"])
+            plan = soundbanks.plan(mod, body)
+        except (KeyError, OSError, ValueError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        if not plan.text:
+            out["error"] = "nothing to change"
+            return out
+        out["record"] = soundbanks.apply(plan)
+        self.registry.invalidate(body["mod"])
+        return out
+
     def _campdb(self, action, body):
         """Preview or write descr_campaign_db.xml - the guilds handler's shape."""
         try:
