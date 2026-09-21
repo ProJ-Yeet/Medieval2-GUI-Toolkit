@@ -724,6 +724,18 @@ def set_field(block: str, key: str, value: str) -> str:
     return "".join(out)
 
 
+def remove_field(block: str, key: str) -> str:
+    """Remove every occurrence of ``key`` from an EDU block.
+
+    Empty era lines are not harmless placeholders in EDU: the game attempts to
+    parse them as an ownership list and can crash.  Transfer uses this helper
+    when an era override has been cleared instead of writing ``era N`` with no
+    value.
+    """
+    return "".join(line for line in block.splitlines(keepends=True)
+                   if line_key(line) != key)
+
+
 def strip_trailing_filler(block: str) -> str:
     """Drop trailing blank lines and comment-only lines from a unit block.
 
