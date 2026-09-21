@@ -13,7 +13,7 @@ its first change and logs ``BACKUP`` through :func:`unittransfer.logutil.file_op
 without passing it. So :func:`capture` hangs off it: the first time a file of a
 mod under ``<Medieval II>/mods`` is backed up, its original goes into this mod's
 set as the **baseline**; every time one is written, the result goes in as
-**mine**. Both live under ``config/changesets/<mod>/``, outside the mod folder,
+**mine**. Both live under ``config/changesets/<set>/``, outside the mod folder,
 so an update that overwrites the mod cannot overwrite either. That is a handful
 of files out of thousands, not a copy.
 
@@ -40,7 +40,16 @@ Nothing is merged without being listed, and nothing is written without a tick.
 The write is one backup and one log entry like every other job, so the Log's
 Undo takes a port back.
 
-Phase 53 (switching a set off and on in place) builds on this and is not here.
+**Switching in place (Phase 53).** A mod can carry several sets - versions of
+it, in effect - and one is ON at a time: its records are what the mod's files
+say. :func:`plan_switch` takes the active set's records back OUT (the same
+three-way merge, run the other way: yours as the base, the original as the
+change, the disk as theirs) and puts another set's records IN, as one job with
+one Undo. A switch is mechanical or it does not happen: any record that would
+conflict, or that the disk no longer has, refuses it and names the record, and
+a port is how to settle that. While every set of a mod is off, the next save
+starts a new one, so "the original, plus a fresh set of edits" is simply what
+turning the last one off leaves.
 """
 from __future__ import annotations
 
@@ -71,6 +80,10 @@ SHOW_CHARS = 20000
 LIST_MAX = 200
 
 _lock = threading.RLock()
+#: Set while a switch writes: its writes put a set's records in or take them
+#: out, which is not an edit of yours, and recording them would overwrite the
+#: very copy being switched to.
+_quiet = threading.local()
 
 
 class ChangeSetError(Exception):
@@ -123,14 +136,51 @@ def _save(meta: dict) -> None:
 
 def _new(name: str, mod: str, mod_root: str = "") -> dict:
     return {"name": _safe_name(name), "mod": mod, "mod_root": mod_root,
-            "created": time.strftime("%Y-%m-%d %H:%M:%S"), "files": {}}
+            "created": time.strftime("%Y-%m-%d %H:%M:%S"), "files": {},
+            "active": True}
 
 
-def _open_or_new(name: str, mod: str, mod_root: str) -> dict:
-    try:
+def is_active(meta: dict) -> bool:
+    # a set from before Phase 53 has no flag and was the mod's only one; an
+    # imported set is somebody else's until it is switched on here
+    return bool(meta.get("active", not meta.get("imported")))
+
+
+def sets_of(mod: str) -> List[dict]:
+    """Every set belonging to ``mod``, as loaded ``set.json`` dicts."""
+    out = []
+    base = root_dir()
+    if not base.is_dir():
+        return out
+    for d in sorted(base.iterdir()):
+        try:
+            meta = json.loads((d / "set.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if str(meta.get("mod", "")).lower() == str(mod).lower():
+            out.append(meta)
+    return out
+
+
+def active_of(mod: str) -> Optional[str]:
+    return next((m["name"] for m in sets_of(mod) if is_active(m)), None)
+
+
+def _free_name(mod: str) -> str:
+    n, name = 1, _safe_name(mod)
+    while set_dir(name).exists():
+        n += 1
+        name = _safe_name(f"{mod} ({n})")
+    return name
+
+
+def _recording_set(mod: str, mod_root: str) -> dict:
+    """The set a write to ``mod`` is recorded in: the active one, or a new one
+    when every set of the mod is off (or there is none yet)."""
+    name = active_of(mod)
+    if name:
         return load(name)
-    except ChangeSetError:
-        return _new(name, mod, mod_root)
+    return _new(_free_name(mod), mod, mod_root)
 
 
 def sets() -> List[dict]:
@@ -146,7 +196,8 @@ def sets() -> List[dict]:
         out.append({"name": meta.get("name", d.name), "mod": meta.get("mod", ""),
                     "files": len(meta.get("files") or {}),
                     "created": meta.get("created", ""),
-                    "imported": bool(meta.get("imported"))})
+                    "imported": bool(meta.get("imported")),
+                    "active": is_active(meta)})
     return out
 
 
@@ -196,15 +247,18 @@ def capture(verb: str, path) -> None:
 
 
 def _capture(verb: str, path) -> None:
+    if getattr(_quiet, "on", False):
+        return
     if verb not in _AFTER and verb not in ("BACKUP", "DELETE"):
         return
     hit = _mod_of(path)
     if hit is None:
         return
-    mod, mod_root, rel = hit
+    mod, rel = hit[0], hit[2]
     p = Path(path)
     with _lock:
-        meta = _open_or_new(mod, mod, str(mod_root))
+        meta = _recording_set(mod, str(hit[1]))
+        mod = meta["name"]                 # the blobs go under the SET's folder
         files = meta["files"]
         entry = files.get(rel)
         changed = False
@@ -249,14 +303,17 @@ def undone(rec: dict) -> None:
     and that is what comes back - baseline and mine together. Any other job
     only changed files, so the set re-reads the ones it put back.
     """
-    snap = (rec.get("changeset_snapshot") or {})
-    path = Path(snap.get("path") or "")
-    if snap.get("name") and path.is_dir():
+    snaps = list(rec.get("changeset_snapshots") or [])
+    if rec.get("changeset_snapshot"):
+        snaps.append(rec["changeset_snapshot"])
+    snaps = [x for x in snaps if x and x.get("name") and Path(x.get("path") or "").is_dir()]
+    if snaps:
         with _lock:
-            d = set_dir(snap["name"])
-            if d.exists():
-                shutil.rmtree(d)
-            shutil.copytree(path, d)
+            for x in snaps:
+                d = set_dir(x["name"])
+                if d.exists():
+                    shutil.rmtree(d)
+                shutil.copytree(x["path"], d)
         return
     manifest = rec.get("manifest") or {}
     refresh(rec.get("dest_root", ""), list(manifest.get("backed_up", []))
@@ -426,15 +483,36 @@ def _record_diff(rel: str, base: Optional[bytes], mine: Optional[bytes]) -> List
     return out
 
 
-def summary(mod) -> dict:
-    """The set for this mod: every file it tracks, what changed in it record by
-    record, and whether the disk still says what you last wrote."""
-    name = getattr(mod, "name", str(mod))
+def _versions(mod: str) -> List[dict]:
+    out = []
+    for m in sets_of(mod):
+        n = 0
+        for rel, entry in (m.get("files") or {}).items():
+            if entry.get("mine") == "unset":
+                continue
+            if _read_side(m, "base", rel) != _read_side(m, "mine", rel):
+                n += 1
+        out.append({"name": m["name"], "active": is_active(m), "files": n,
+                    "created": m.get("created", ""), "imported": bool(m.get("imported"))})
+    return out
+
+
+def summary(mod, name: str = "") -> dict:
+    """One set of this mod - the active one unless another is named: every file
+    it tracks, what changed in it record by record, and whether the disk still
+    says what you last wrote. With the mod's other sets, for switching."""
+    modname = getattr(mod, "name", str(mod))
     data = Path(getattr(mod, "data", ""))
+    versions = _versions(modname)
+    name = name or active_of(modname) or ""
     try:
-        meta = load(name)
+        meta = load(name) if name else None
     except ChangeSetError:
-        return {"set": None, "mod": name, "files": [], "sets": sets()}
+        meta = None
+    if meta is None:
+        return {"set": None, "mod": modname, "files": [], "sets": sets(),
+                "versions": versions, "active": None}
+    name = modname
     rows = []
     for rel in sorted(meta["files"]):
         base, mine = _read_side(meta, "base", rel), _read_side(meta, "mine", rel)
@@ -456,7 +534,9 @@ def summary(mod) -> dict:
                      else "missing" if disk is None else "changed"),
         })
     return {"set": meta["name"], "mod": name, "created": meta.get("created", ""),
-            "imported": bool(meta.get("imported")), "files": rows, "sets": sets()}
+            "imported": bool(meta.get("imported")), "files": rows, "sets": sets(),
+            "versions": versions, "active": active_of(name),
+            "on": is_active(meta)}
 
 
 # ---------------------------------------------------------------------------
@@ -533,41 +613,49 @@ def _outcome(b, m, t, text: bool) -> Tuple[str, Optional[str]]:
     return "conflict", None
 
 
+def _file_items(port: Port, rel: str, base, mine, theirs) -> None:
+    """Every record of one file that ``mine`` changed from ``base``, against
+    ``theirs``, appended to the port."""
+    port.files[rel] = {"base": base, "mine": mine, "theirs": theirs}
+    n = len(port.items)
+    if not _is_text(base, mine, theirs):
+        o, _ = _outcome(base, mine, theirs, False)
+        kind = "added" if base is None else "removed" if mine is None else "edited"
+        port.items.append(Item(n, rel, FILE_KEY, o, kind, binary=True))
+        return
+    bt, mt, tt = (_decode(x)[0] for x in (base, mine, theirs))
+    b = split(rel, bt) if bt is not None else OrderedDict()
+    m = split(rel, mt) if mt is not None else OrderedDict()
+    t = split(rel, tt) if tt is not None else OrderedDict()
+    for k in list(m.keys()) + [k for k in b if k not in m]:
+        bv, mv, tv = b.get(k), m.get(k), t.get(k)
+        if bv == mv:
+            continue
+        o, merged = _outcome(bv, mv, tv, True)
+        kind = "added" if bv is None else "removed" if mv is None else "edited"
+        port.items.append(Item(n, rel, k, o, kind, bv, mv, tv, merged))
+        n += 1
+
+
+def _changed(meta: dict):
+    """``(rel, base, mine)`` for every file the set really changed."""
+    for rel in sorted(meta["files"]):
+        rel = _safe_rel(rel)
+        if meta["files"][rel].get("mine") == "unset":
+            continue
+        base, mine = _read_side(meta, "base", rel), _read_side(meta, "mine", rel)
+        if base != mine:
+            yield rel, base, mine
+
+
 def plan_port(set_name: str, target) -> Port:
     """Every record the set changed, against the target's files as they are."""
     meta = load(set_name)
     port = Port(set_name, target)
     data = Path(target.data)
-    n = 0
-    for rel in sorted(meta["files"]):
-        rel = _safe_rel(rel)
-        entry = meta["files"][rel]
-        if entry.get("mine") == "unset":
-            continue
-        base, mine = _read_side(meta, "base", rel), _read_side(meta, "mine", rel)
-        if base == mine:
-            continue
+    for rel, base, mine in _changed(meta):
         tp = data / rel
-        theirs = tp.read_bytes() if tp.is_file() else None
-        port.files[rel] = {"base": base, "mine": mine, "theirs": theirs}
-        if not _is_text(base, mine, theirs):
-            o, _ = _outcome(base, mine, theirs, False)
-            kind = "added" if base is None else "removed" if mine is None else "edited"
-            port.items.append(Item(n, rel, FILE_KEY, o, kind, binary=True))
-            n += 1
-            continue
-        bt, mt, tt = (_decode(x)[0] for x in (base, mine, theirs))
-        b = split(rel, bt) if bt is not None else OrderedDict()
-        m = split(rel, mt) if mt is not None else OrderedDict()
-        t = split(rel, tt) if tt is not None else OrderedDict()
-        for k in list(m.keys()) + [k for k in b if k not in m]:
-            bv, mv, tv = b.get(k), m.get(k), t.get(k)
-            if bv == mv:
-                continue
-            o, merged = _outcome(bv, mv, tv, True)
-            kind = "added" if bv is None else "removed" if mv is None else "edited"
-            port.items.append(Item(n, rel, k, o, kind, bv, mv, tv, merged))
-            n += 1
+        _file_items(port, rel, base, mine, tp.read_bytes() if tp.is_file() else None)
     _mark_dangling(port)
     return port
 
@@ -749,6 +837,186 @@ def _rebase(name: str, rel: str, theirs: Optional[bytes]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# switching in place (Phase 53)
+
+
+@dataclass
+class Switch:
+    mod: object
+    off: Optional[str]                 # the set taken out, if one is on
+    on: Optional[str]                  # the set put in, if one is asked for
+    files: Dict[str, dict] = field(default_factory=dict)  # rel -> before, middle, after
+    blocked: List[dict] = field(default_factory=list)
+    steps: List[dict] = field(default_factory=list)
+
+    def payload(self) -> dict:
+        return {"mod": getattr(self.mod, "name", ""), "off": self.off, "on": self.on,
+                "files": sorted(self.files), "blocked": self.blocked, "steps": self.steps}
+
+
+def plan_switch(mod, to: Optional[str]) -> Switch:
+    """Take the mod's active set out and put ``to`` in (``to=None``: just out).
+
+    Out is the port run backwards - base and mine swapped, so every record you
+    changed goes back to the original - against the disk. In is an ordinary
+    port of ``to`` onto what that leaves. Every record must come out ``clean``,
+    ``merged`` or ``already``; anything else is listed in ``blocked`` and the
+    switch does not happen.
+    """
+    name = getattr(mod, "name", str(mod))
+    data = Path(mod.data)
+    off = active_of(name)
+    if to is not None:
+        meta_to = load(to)
+        if str(meta_to.get("mod", "")).lower() != name.lower():
+            raise ChangeSetError(f"{to} is a set of {meta_to.get('mod')}, not of {name}")
+        if to == off:
+            raise ChangeSetError(f"{to} is already on")
+    sw = Switch(mod, off, to)
+    current: Dict[str, Optional[bytes]] = {}
+
+    def disk(rel):
+        if rel not in current:
+            p = data / rel
+            current[rel] = p.read_bytes() if p.is_file() else None
+        return current[rel]
+
+    for step, name_, reverse in ((1, off, True), (2, to, False)):
+        if not name_:
+            continue
+        meta = load(name_)
+        port = Port(name_, mod)
+        for rel, base, mine in _changed(meta):
+            a, b = (mine, base) if reverse else (base, mine)
+            _file_items(port, rel, a, b, disk(rel))
+        bad = [i for i in port.items if i.outcome not in ("clean", "merged", "already")]
+        for i in bad:
+            sw.blocked.append({"set": name_, "rel": i.rel, "key": i.key,
+                               "outcome": i.outcome, "step": "out" if reverse else "in"})
+        sw.steps.append({"set": name_, "step": "out" if reverse else "in",
+                         "records": len(port.items), "counts": port.counts()})
+        if bad:
+            continue
+        picks = {i.id: "mine" for i in port.items}
+        for rel in port.files:
+            before = sw.files.get(rel, {}).get("before", disk(rel))
+            after = _assemble(port, rel, picks)
+            sw.files.setdefault(rel, {"before": before})
+            if reverse:
+                sw.files[rel]["middle"] = after
+            current[rel] = after
+            sw.files[rel]["after"] = after
+    return sw
+
+
+def apply_switch(sw: Switch) -> dict:
+    """Write a planned switch: one backup, one log entry, one Undo.
+
+    The writes are not recorded as edits (``_quiet``). The set switched on is
+    rebased onto what it was put into, exactly as a port rebases, so the next
+    update is compared against the right thing; the set switched off keeps its
+    two copies untouched, ready to go back in.
+    """
+    from .logutil import file_op, log
+
+    if sw.blocked:
+        raise ChangeSetError("the switch would conflict: port instead")
+    mod = sw.mod
+    data = Path(mod.data)
+    tid = config.new_transfer_id()
+    backup_root = config.backup_root_for(tid)
+    manifest: Dict[str, List[str]] = {"backed_up": [], "created": []}
+    snaps = []
+    for name in {n for n in (sw.off, sw.on) if n}:
+        snap = backup_root / "changeset_sets" / _safe_name(name)
+        shutil.copytree(set_dir(name), snap)
+        snaps.append({"name": name, "path": str(snap)})
+    written = []
+    _quiet.on = True
+    try:
+        for rel in sorted(sw.files):
+            rel = _safe_rel(rel)
+            f = sw.files[rel]
+            if f["after"] == f["before"]:
+                continue
+            path = data / rel
+            if path.exists():
+                bpath = backup_root / "data" / rel
+                bpath.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, bpath)
+                manifest["backed_up"].append(rel)
+                file_op("BACKUP", path, f"-> {bpath}")
+            else:
+                manifest["created"].append(rel)
+            if f["after"] is None:
+                path.unlink()
+                file_op("DELETE", path, "change set switched (Undo puts it back)")
+            else:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(f["after"])
+                file_op("WRITE", path, f"{len(f['after'])} bytes (change set switched)")
+            written.append(rel)
+    finally:
+        _quiet.on = False
+    with _lock:
+        if sw.off:
+            meta = load(sw.off)
+            meta["active"] = False
+            _save(meta)
+        if sw.on:
+            meta = load(sw.on)
+            for rel, base, mine in list(_changed(meta)):
+                f = sw.files.get(rel)
+                if not f:
+                    continue
+                middle = f.get("middle", f["before"])
+                for side, raw in (("base", middle), ("mine", f["after"])):
+                    p = _blob(sw.on, side, rel)
+                    if raw is None:
+                        meta["files"][rel][side] = "absent"
+                        if p.exists():
+                            p.unlink()
+                    else:
+                        p.parent.mkdir(parents=True, exist_ok=True)
+                        p.write_bytes(raw)
+                        meta["files"][rel][side] = "present"
+            meta["active"] = True
+            meta["imported"] = False
+            _save(meta)
+    what = (f"switched {sw.off} off and {sw.on} on" if sw.off and sw.on
+            else f"switched {sw.off} off" if sw.off else f"switched {sw.on} on")
+    rec = {
+        "id": tid, "when": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "mode": "changeset", "action": "switch",
+        "source": sw.on or sw.off or "", "source_root": "",
+        "dest": getattr(mod, "name", ""), "dest_root": str(mod.root),
+        "unit_type": sw.on or sw.off or "", "resolved_type": sw.on or sw.off or "",
+        "options": {"off": sw.off, "on": sw.on}, "applied": True, "undone": False,
+        "note": "", "summary": what, "warnings": [], "manifest": manifest,
+        "backup_root": str(backup_root), "changeset_snapshots": snaps,
+    }
+    config.append_log(rec)
+    log.info("SWITCH %s: %s, %d file(s), id=%s", getattr(mod, "name", ""), what,
+             len(written), tid)
+    return {"id": tid, "written": written, "record": rec}
+
+
+def rename(name: str, new: str) -> str:
+    """A set under a name you will recognise - "AGO with my Rohan", say."""
+    new = _safe_name(new)
+    if new == _safe_name(name):
+        return new
+    with _lock:
+        meta = load(name)
+        if set_dir(new).exists():
+            raise ChangeSetError(f"there is already a change set called {new}")
+        set_dir(name).rename(set_dir(new))
+        meta["name"] = new
+        _save(meta)
+    return new
+
+
+# ---------------------------------------------------------------------------
 # the set as one file, both ways; and starting over
 
 
@@ -790,7 +1058,8 @@ def import_bytes(raw: bytes, name: str = "") -> str:
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_bytes(z.read(info))
     _save({"name": want, "mod": meta.get("mod", ""), "mod_root": "",
-           "created": meta.get("created", ""), "imported": True, "files": files})
+           "created": meta.get("created", ""), "imported": True, "active": False,
+           "files": files})
     return want
 
 

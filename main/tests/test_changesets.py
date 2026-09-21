@@ -17,6 +17,10 @@
    log entry Undo reverses, and the baseline moved to the version ported onto.
 6. Export and import as one file, and a port from the imported set onto a
    second folder.
+7. Phase 53, switching in place: a set off puts the originals back, a new save
+   with every set off starts another, a switch between two is one job and one
+   Undo, it is refused rather than guessed when the disk has moved, and a
+   switch's own writes are never recorded as an edit.
 """
 import json
 import shutil
@@ -279,6 +283,92 @@ try:
     check("a path out of data/ in an imported set is refused", False)
 except changesets.ChangeSetError:
     check("a path out of data/ in an imported set is refused", True)
+
+# ---------------------------------------------------------------------------
+print("\n7) Phase 53: sets switched in place")
+eur = make_mod("EUR")
+eur_edu0 = (eur.data / "export_descr_unit.txt").read_bytes()
+eur_edb0 = (eur.data / "export_descr_buildings.txt").read_bytes()
+save(eur, "export_descr_unit.txt",
+     EDU.replace("stat_pri         7, 4, no, 0, 0", "stat_pri         9, 4, no, 0, 0").replace(CR, "\n"))
+save(eur, "export_descr_buildings.txt",
+     EDB.replace("            cost 300", "            cost 250").replace(CR, "\n"))
+mine_a = (eur.data / "export_descr_unit.txt").read_bytes()
+check("the first save starts the mod's first set, and it is on",
+      changesets.active_of("EUR") == "EUR")
+
+sw = changesets.plan_switch(eur, None)
+check("switching it off is clean: every record goes back to the original",
+      not sw.blocked and sw.off == "EUR" and sw.on is None)
+r_off = changesets.apply_switch(sw)
+check("  and the mod's files are the originals again, byte for byte",
+      (eur.data / "export_descr_unit.txt").read_bytes() == eur_edu0
+      and (eur.data / "export_descr_buildings.txt").read_bytes() == eur_edb0)
+check("  the set is off, and still holds both its copies",
+      changesets.active_of("EUR") is None
+      and (changesets.set_dir("EUR") / "mine" / "export_descr_unit.txt").read_bytes() == mine_a)
+check("  the switch's own writes were not recorded as an edit",
+      not changesets.set_dir("EUR (2)").exists())
+
+save(eur, "export_descr_unit.txt",
+     EDU.replace("stat_pri         8, 5, no, 0, 0", "stat_pri         8, 7, no, 0, 0").replace(CR, "\n"))
+mine_b = (eur.data / "export_descr_unit.txt").read_bytes()
+check("with every set off, the next save starts a new one",
+      changesets.active_of("EUR") == "EUR (2)")
+check("  whose original is the mod as it shipped",
+      (changesets.set_dir("EUR (2)") / "base" / "export_descr_unit.txt").read_bytes() == eur_edu0)
+s7 = changesets.summary(eur)
+check("the summary lists both versions and says which is on",
+      {(v["name"], v["active"]) for v in s7["versions"]} == {("EUR", False), ("EUR (2)", True)})
+
+sw = changesets.plan_switch(eur, "EUR")
+check("switching to the first set takes the second out and puts the first in",
+      not sw.blocked and sw.off == "EUR (2)" and sw.on == "EUR")
+r_sw = changesets.apply_switch(sw)
+check("  the files are the first set's version",
+      (eur.data / "export_descr_unit.txt").read_bytes() == mine_a
+      and b"cost 250" in (eur.data / "export_descr_buildings.txt").read_bytes())
+check("  one set on at a time",
+      changesets.active_of("EUR") == "EUR"
+      and not changesets.load("EUR (2)")["active"])
+check("  and the second set kept its version to come back to",
+      (changesets.set_dir("EUR (2)") / "mine" / "export_descr_unit.txt").read_bytes() == mine_b)
+check("the switch is one log entry",
+      any(e.get("id") == r_sw["id"] and e.get("action") == "switch" for e in config.load_log()))
+
+undo(r_sw["id"])
+check("Undo takes the switch back: the second set's version is on disk again",
+      (eur.data / "export_descr_unit.txt").read_bytes() == mine_b)
+check("  and the sets are as they were: the second on, the first off",
+      changesets.active_of("EUR") == "EUR (2)" and not changesets.load("EUR")["active"])
+
+# the disk moves under the active set (an update touching the same line):
+# a switch must refuse rather than guess
+drift = (eur.data / "export_descr_unit.txt").read_bytes().replace(b"8, 7, no", b"8, 9, no")
+(eur.data / "export_descr_unit.txt").write_bytes(drift)
+sw = changesets.plan_switch(eur, "EUR")
+check("a switch that would conflict is refused, and names the record",
+      any(b["key"] == "Rohan Riders" and b["step"] == "out" for b in sw.blocked))
+try:
+    changesets.apply_switch(sw)
+    check("  and cannot be applied anyway", False)
+except changesets.ChangeSetError:
+    check("  and cannot be applied anyway", True)
+(eur.data / "export_descr_unit.txt").write_bytes(mine_b)
+
+try:
+    changesets.plan_switch(eur, "AGO")
+    check("a set of another mod cannot be switched on here", False)
+except changesets.ChangeSetError:
+    check("a set of another mod cannot be switched on here", True)
+
+new_name = changesets.rename("EUR (2)", "EUR with slower Rohan")
+check("a set can be renamed, and stays on",
+      changesets.active_of("EUR") == new_name == "EUR with slower Rohan")
+save(eur, "export_descr_buildings.txt",
+     text_of(eur, "export_descr_buildings.txt").replace("cost 400", "cost 450").replace(CR, "\n"))
+check("  and records into its new name",
+      (changesets.set_dir(new_name) / "mine" / "export_descr_buildings.txt").is_file())
 
 shutil.rmtree(tmp, ignore_errors=True)
 print("\n" + ("ALL PASSED" if all(ok) else "SOME FAILED"))

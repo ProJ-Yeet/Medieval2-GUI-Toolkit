@@ -2885,7 +2885,7 @@ the user before this was written, and the answers are in the write-ups below.
 |---|---|---|---|---|
 | ~~22~~ | ~~**51** Order, insert below, a still codeview, and every gate at once~~ | M | **both** | **done 2026-09-21** |
 | ~~23~~ | ~~**52** Change sets: record your edits, port them to the next version~~ | L | **both** | **done 2026-09-21** |
-| 24 | **53** Change sets, switched in place | M | **both** | the half of 52 the user moved out |
+| ~~24~~ | ~~**53** Change sets, switched in place~~ | M | **both** | **done 2026-09-21** |
 
 45, 46, 47a, 47b and 48 keep their order behind these three.
 
@@ -3154,7 +3154,46 @@ derived record-level change list; export and import of one file; port with the
 five outcomes, a checklist, and backup and undo; the validators run after a
 port; tests over the synthetic upstream for every outcome.
 
-## Phase 53 - Change sets, switched in place
+## Phase 53 - Change sets, switched in place - DONE 2026-09-21
+
+**Done 2026-09-21, both lines, committed and uncut.** *Versions of this mod* on
+the My changes screen, `plan_switch` / `apply_switch` in `changesets.py`, and
+20 more checks in `tests/test_changesets.py` (section 7).
+
+**Turning a set off is not "write the baseline back".** That was the scoping's
+sentence, and it is right only while the disk still says exactly what the set
+last wrote. After any other change - an update, a hand edit - writing the
+baseline back would throw that change away with yours. So off is the port run
+backwards: yours as the base, the original as the change, the disk as theirs,
+record by record. On is an ordinary port of the set onto what that leaves. A
+switch between two sets is both, as one job.
+
+**A switch is mechanical or it does not happen.** A port can stop and ask; a
+switch is a button, so any record that comes out `conflict` or `gone` in
+either half refuses the whole switch, and the refusal names the set, the file,
+the record and the outcome. The way through is a port, which is the screen that
+asks. On a mod an update has overwritten, that is exactly what should happen.
+
+**What a set is, now.** A mod carries any number of sets; one is on (its
+records are what the files say), and the rest hold both their copies, ready to
+go back in. The recording hook writes into the ON set. With every set off, the
+next save starts a new one, whose original is the mod as it shipped, so "the
+vanilla mod plus a second set of edits" is just what turning the first off and
+saving leaves. A set predating this phase counts as on; an imported set is off
+until switched on here. Sets can be renamed.
+
+**A switch's own writes are not recorded.** They go through the same helpers
+as every write and would otherwise land in the set as fresh edits,
+overwriting the copy being switched to. `_quiet` holds the hook off while a
+switch writes; the set switched on is then rebased onto what it was put into,
+as a port rebases. Undo restores every set the switch touched as well as the
+files.
+
+**The unsaved-edits refusal is the page's**, because only the page knows about
+them: `chgUnsaved` asks Buildings, the unit editor and its tabs, the two
+campaign panels, and every screen that keeps a `dirty` flag.
+
+### The scoping, as written before it was built
 
 The other half of the feedback: *instantly revert back to the vanilla mod* and
 keep several versions of the same mod to test. Once 52 has a baseline and a

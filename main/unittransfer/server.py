@@ -181,6 +181,11 @@ Change sets (52, see :mod:`unittransfer.changesets`) - your edits, ported
                                     picked records (one backup set + undo)
   POST /api/changes/import       -> {name, data (base64)} -> a set from a file
   POST /api/changes/adopt|forget -> take the disk as yours / drop the set
+  POST /api/changes/switchplan|switch
+                                 -> {mod, to} -> take the mod's active set out and
+                                    put `to` in (null: just out), refused with the
+                                    records it would conflict on (53)
+  POST /api/changes/rename       -> {set, name}
 
 Raw text (21, D11, see :mod:`unittransfer.rawtext`) - the escape hatch
   GET  /api/raw/files?mod=       -> every text file the toolkit reads, grouped,
@@ -1935,7 +1940,8 @@ class Handler(BaseHTTPRequestHandler):
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
-                return self._json(changesets.summary(self.registry.describe(name)))
+                return self._json(changesets.summary(self.registry.describe(name),
+                                                     (q.get("set") or [""])[0]))
             if u.path == "/api/changes/export":
                 sname = (q.get("set") or [""])[0]
                 try:
@@ -3021,6 +3027,21 @@ class Handler(BaseHTTPRequestHandler):
             if action == "adopt":
                 mod = self.registry.describe(body["mod"])
                 return {"files": changesets.adopt(str(body.get("set") or ""), mod)}
+            if action == "rename":
+                return {"set": changesets.rename(str(body.get("set") or ""),
+                                                 str(body.get("name") or ""))}
+            if action in ("switchplan", "switch"):
+                mod = self.registry.describe(body["mod"])
+                sw = changesets.plan_switch(mod, body.get("to") or None)
+                if action == "switchplan" or sw.blocked:
+                    out = {"switch": sw.payload()}
+                    if sw.blocked:
+                        out["error"] = (f"{len(sw.blocked)} record(s) would conflict, "
+                                        "so the switch is refused - port instead")
+                    return out
+                out = changesets.apply_switch(sw)
+                self.registry.invalidate(body["mod"])
+                return out
             if action not in ("plan", "apply"):
                 return {"error": f"unknown action {action}"}
             target = self.registry.describe(body["target"])

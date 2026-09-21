@@ -44,6 +44,12 @@
   .chgitem:first-of-type{border-top:none}
   .chgitem .x{padding:2px 7px;font-size:11.5px}
   .chgcmp{flex:1 0 100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px}
+  .chgver{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:6px 8px;
+    border:1px solid var(--edge);border-radius:6px;margin-bottom:6px;font-size:12.5px}
+  .chgver.on{border-color:var(--accent)}
+  .chgver .sp{flex:1}
+  .chgver .x{padding:2px 8px;font-size:11.5px}
+  .chgdot{color:var(--accent)}
   .chgcol pre{margin:2px 0 0;max-height:260px;overflow:auto;font-size:11px;padding:6px;
     background:var(--bg);border:1px solid var(--edge);border-radius:5px;white-space:pre}
   button:disabled{opacity:.4;cursor:not-allowed}
