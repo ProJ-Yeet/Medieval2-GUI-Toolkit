@@ -668,6 +668,209 @@ for _root in _realmod.installed():
     check(f"    {_root.name}: a shipping mod has no FATAL tree finding",
           _c["fatal"] == 0)
 
+# ---------------------------------------------------------------------------
+print("\n13) Phase 51: the list's order is the file's order")
+
+
+def cap_ops(blk, order=None):
+    caps = blk.capabilities
+    order = order if order is not None else range(len(caps))
+    return [{"line": caps[k].line, "keyword": caps[k].keyword,
+             "args": " ".join(caps[k].args.split()), "requires": caps[k].requires,
+             "delete": False} for k in order]
+
+
+# a level with at least three capability lines, on the real mod
+_lvl = next((bl, b) for bl in edb.buildings for b in bl.blocks if len(b.capabilities) >= 3)
+_line, _blk = _lvl
+o, c = _blk.cap_span
+before = original.splitlines(keepends=True)
+n = len(_blk.capabilities)
+swapped = [1, 0] + list(range(2, n))
+plan = buildings.plan_edit(mod, {"line": _line.name,
+                                 "levels": [level_payload(_blk, capabilities=cap_ops(_blk, swapped))]})
+after = plan.edb_text.splitlines(keepends=True)
+check("swapping the first two capabilities is a change", bool(plan.edb_text))
+check("  the file keeps its length", len(after) == len(before))
+check("  nothing outside the capability block moved",
+      after[:o + 1] == before[:o + 1] and after[c:] == before[c:])
+check("  the block's inside is the same lines, byte for byte, reordered",
+      sorted(after[o + 1:c]) == sorted(before[o + 1:c]))
+_a, _b = _blk.capabilities[0].line, _blk.capabilities[1].line
+check("  the second line now comes first",
+      after.index(before[_b], o) < after.index(before[_a], o))
+check("  and the plan says the order changed",
+      any("order changed" in x for x in plan.changes))
+
+# the file's own order with a new row at the END keeps the old append path
+ops = cap_ops(_blk) + [{"line": None, "keyword": "law_bonus", "args": "bonus 1",
+                        "requires": "", "delete": False}]
+plan = buildings.plan_edit(mod, {"line": _line.name,
+                                 "levels": [level_payload(_blk, capabilities=ops)]})
+after = plan.edb_text.splitlines(keepends=True)
+check("a new row at the end goes in above the closing brace, as before",
+      after[c].strip() == "law_bonus bonus 1" and after[c + 1] == before[c])
+check("  and every existing line is untouched", after[o + 1:c] == before[o + 1:c])
+check("  and it is not reported as a reorder",
+      not any("order changed" in x for x in plan.changes))
+
+# a new row inserted after the first line lands there
+ops = cap_ops(_blk)
+ops.insert(1, {"line": None, "keyword": "law_bonus", "args": "bonus 1",
+               "requires": "", "delete": False})
+plan = buildings.plan_edit(mod, {"line": _line.name,
+                                 "levels": [level_payload(_blk, capabilities=ops)]})
+after = plan.edb_text.splitlines(keepends=True)
+_first = after.index(before[_blk.capabilities[0].line], o)
+check("a row inserted below the first lands directly under it",
+      after[_first + 1].strip() == "law_bonus bonus 1")
+check("  and the rest follow in the file's order, byte for byte",
+      after[_first + 2:c + 1] == before[_first + 1:c])
+
+# comments ride with the line under them; the closing remark stays at the bottom
+fx = ("building forge\n{\n    levels a\n    {\n        a city requires factions { greek, }\n"
+      "        {\n            capability\n            {\n"
+      "                ;; the Gondor pools\n"
+      "                recruit_pool \"Gondor Spearmen\"  1  0.1  2  0  ; kept\n"
+      "                law_bonus bonus 1\n"
+      "                ;; end of list\n"
+      "            }\n            cost 1\n            construction 1\n        }\n    }\n}\n")
+fe = buildings.parse_text(fx)
+fb = fe.buildings[0].blocks[0]
+notes, warn = [], []
+ed = buildings._plan_capabilities(fe, fb, [
+    {"line": fb.capabilities[1].line, "keyword": "law_bonus", "args": "bonus 1",
+     "requires": "", "delete": False},
+    {"line": fb.capabilities[0].line, "keyword": "recruit_pool",
+     "args": fb.capabilities[0].args, "requires": "", "delete": False}],
+    notes, warn, faction=False)
+out = buildings.splice(fe.lines, ed).splitlines()
+_i = out.index("                ;; the Gondor pools")
+check("a comment above a moved line moves with it",
+      out[_i + 1].startswith("                recruit_pool") and out[_i - 1].strip() == "law_bonus bonus 1")
+check("  the moved line keeps its trailing comment byte for byte",
+      out[_i + 1] == "                recruit_pool \"Gondor Spearmen\"  1  0.1  2  0  ; kept")
+check("  the closing remark stays at the bottom",
+      out[out.index("                ;; end of list") + 1].strip() == "}")
+check("  and nothing was warned about", not warn)
+
+# ---------------------------------------------------------------------------
+print("\n13b) Phase 51: every gate at once, run in node against the page's own code")
+
+import subprocess
+import tempfile
+
+GATE_HARNESS = r"""
+const fs = require('fs'), vm = require('vm');
+const ctx = {console, state: {}, document: {}, window: {}};
+vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(process.argv[2], 'utf8'), ctx);
+const job = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+const out = job.cases.map(k => {
+  const g = ctx.bldGateEval(k.conds, job.regions[k.set]);
+  return g ? {pass: g.pass.map(r => r.region), assumed: g.assumed.length} : null;
+});
+fs.writeFileSync(process.argv[4], JSON.stringify(out));
+"""
+
+_node = shutil.which("node")
+if not _node:
+    print("  -- node is not on PATH, so the gate evaluation is not run")
+else:
+    from unittransfer import edbvocab
+
+    def reg(name, hidden=(), res=(), fac="f1"):
+        return {"region": name, "name": name, "settlement": name, "faction": fac,
+                "hidden_resources": list(hidden), "resources": list(res)}
+
+    synth = [reg("A", hidden=["x", "z"]), reg("B", hidden=["y"]), reg("C", hidden=["x"])]
+    cases, want = [], []
+
+    def case(clause, expect, set_="synth"):
+        cases.append({"set": set_, "conds": buildings.clause_payload(clause)})
+        want.append(expect)
+
+    case("hidden_resource x and hidden_resource y", [])
+    case("hidden_resource x and hidden_resource z", ["A"])
+    case("hidden_resource x or hidden_resource y", ["A", "B", "C"])
+    case("not hidden_resource x", ["B"])
+    # (x or y) and z, left to right; precedence would give x or (y and z) = A, C
+    case("hidden_resource x or hidden_resource y and hidden_resource z", ["A"])
+    case("factions { f9, } and hidden_resource x", ["A", "C"])
+    case("factions { f9, }", None)
+
+    # the real mods: every clause that is only `and`s and positive resource
+    # terms has an answer a plain set intersection gives, so check the page's
+    # evaluator against that on every such clause in each installed EDB
+    real_regions = {}
+    for _root in _realmod.installed():
+        _m = Mod(_root)
+        if not _m.edb_path.exists():
+            continue
+        _v = edbvocab.build(_m)
+        real_regions[_root.name] = _v["regions"]
+        if _root.name == "Divide_and_Conquer_EUR":
+            # trade resources are placed by descr_strat.txt, not descr_regions:
+            # DaC puts chocolate in two provinces and the regions file in none.
+            # (ROCSS needs M2EX to read its 449 regions, which this throwaway
+            # config does not mark, so its map - and this join - is skipped here.)
+            _choc = [r["region"] for r in _v["regions"]
+                     if "chocolate" in [x.lower() for x in r["resources"]]]
+            check("a trade resource placed by descr_strat.txt is in its province's row "
+                  f"(chocolate: {len(_choc)})", len(_choc) >= 1)
+        _edb = buildings.parse_file(_m.edb_path)
+        seen = set()
+        for _bl in _edb.buildings:
+            for _b in _bl.blocks:
+                for _c in _b.capabilities + _b.faction_capabilities:
+                    if not _c.requires or _c.requires in seen:
+                        continue
+                    conds = buildings.clause_payload(_c.requires)
+                    rterms = [k for k in conds if k["kind"] in ("hidden_resource", "resource")]
+                    if not rterms or any(k["join"] == "or" or k["negate"] for k in rterms) \
+                            or any(k["join"] == "or" for k in conds):
+                        continue
+                    seen.add(_c.requires)
+                    ok_regions = []
+                    for r in _v["regions"]:
+                        have = {x.lower() for x in r["hidden_resources"] + r["resources"]}
+                        if all(k["values"][0].lower() in have for k in rterms):
+                            ok_regions.append(r["region"])
+                    cases.append({"set": _root.name, "conds": conds})
+                    want.append(ok_regions)
+
+    job = {"regions": dict(synth=synth, **real_regions), "cases": cases}
+    with tempfile.TemporaryDirectory(prefix="ut_gate_") as tmp:
+        t = Path(tmp)
+        (t / "h.js").write_text(GATE_HARNESS, encoding="utf-8")
+        (t / "job.json").write_text(json.dumps(job), encoding="utf-8")
+        r = subprocess.run([_node, str(t / "h.js"), str(ROOT / "web" / "js" / "buildings.js"),
+                            str(t / "job.json"), str(t / "out.json")],
+                           capture_output=True, text=True)
+        check("the harness runs", r.returncode == 0)
+        got = json.loads((t / "out.json").read_text(encoding="utf-8")) if not r.returncode else []
+        if r.returncode:
+            print(r.stderr[-600:])
+
+    labels = ["x and y overlap nowhere, and says so",
+              "x and z is the one region carrying both",
+              "x or y is any region with either",
+              "not x is the regions without it",
+              "left to right: (x or y) and z, not x or (y and z)",
+              "a factions term does not narrow, it is assumed",
+              "a clause with no resource term has no summary"]
+    for i, lab in enumerate(labels):
+        g = got[i] if i < len(got) else "missing"
+        exp = want[i]
+        check(lab, (g is None) if exp is None else (g is not None and sorted(g["pass"]) == sorted(exp)))
+    check("  and the factions term is reported as assumed",
+          len(got) > 5 and got[5] and got[5]["assumed"] == 1)
+    real = list(zip(got[len(labels):], want[len(labels):]))
+    bad = [w for g, w in real if not g or sorted(g["pass"]) != sorted(w)]
+    empty = sum(1 for g, w in real if g and not g["pass"])
+    print(f"  -- {len(real)} real clauses with resource gates, {empty} that no region passes")
+    check("every real and-only resource clause matches a plain intersection", real and not bad)
+
 shutil.rmtree(work.parent, ignore_errors=True)
 shutil.rmtree(cfg, ignore_errors=True)
 print("\n" + ("ALL PASSED" if all(ok) else "SOME FAILED"))

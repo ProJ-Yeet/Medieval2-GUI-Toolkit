@@ -2197,6 +2197,17 @@
   .poolrow .prbot .clausebar{flex:1;min-width:0}
   .poolrow:last-child{border-bottom:none}
   .poolrow.gone{opacity:.4}
+  /* Phase 51 - order. The grip is the drag handle; the arrows are one step. */
+  .ordgrip{flex:0 0 auto;cursor:grab;color:var(--dim);font-size:14px;line-height:1;
+    padding:2px 1px;user-select:none}
+  .ordgrip:active{cursor:grabbing}
+  .ordbtns{display:inline-flex;flex-direction:column;flex:0 0 auto}
+  .ordbtns button{padding:0 4px;font-size:8px;line-height:11px;min-height:0;border-radius:3px}
+  .poolrow.dragging,.caprow.dragging{opacity:.45}
+  .poolrow.dropb,.caprow.dropb{box-shadow:inset 0 2px 0 var(--accent)}
+  .poolrow.dropa,.caprow.dropa{box-shadow:inset 0 -2px 0 var(--accent)}
+  .poolrow.justadded,.caprow.justadded{animation:bldJustAdded 1.6s ease-out}
+  @keyframes bldJustAdded{from{background:rgba(212,175,55,.28)}to{background:transparent}}
   .poolrow img{width:34px;height:45px;object-fit:contain;background:#0d0f13;border-radius:4px;flex:0 0 34px}
   .poolrow .who{flex:0 0 175px;min-width:0}
   .poolrow .who .un{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2449,6 +2460,11 @@
     background:var(--panel);border:1px solid var(--accent2);border-radius:7px;
     padding:7px 9px;box-shadow:0 8px 26px #000b;white-space:normal;cursor:auto}
   .where:hover .wpop{display:block}
+  /* Phase 51 - every gate at once */
+  .where.gate{margin-left:4px}
+  .wrow.own i{color:var(--accent)}
+  .gatebox .gaterows{max-height:220px;overflow:auto;border:1px solid var(--edge);
+    border-radius:6px;padding:4px 6px;margin-bottom:6px}
   .where .whead{font-size:10.5px;color:var(--dim);margin-bottom:5px;
     border-bottom:1px solid var(--edge);padding-bottom:4px}
   .where .wrow{display:flex;gap:7px;align-items:baseline;padding:2px 0;font-size:11.5px}

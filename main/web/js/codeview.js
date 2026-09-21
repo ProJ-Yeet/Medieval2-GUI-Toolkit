@@ -14,7 +14,8 @@
    the whole problem. So each editor can show the record's real text beside its
    boxes, with the two kept in step:
 
-     * hover a box, its line lights up (and the other way round);
+     * hover a box, its line lights up (and the other way round); click it
+       and the text scrolls to that line (Phase 51 - see cvFollowOn);
      * edit a box, the text is re-serialised by the server and redrawn;
      * edit the text, the server re-reads it and the boxes follow;
      * text the parser rejects shows the reason on the offending line and
@@ -105,6 +106,14 @@ function cvCreate(o){
    cvAutoTidy for what "the tool lined it up" does and does not count as. */
 const cvTidyOn=()=>((state.settings||{}).code_view_tidy!==false);
 const cvHideOn=()=>((state.settings||{}).code_view_comments!=='show');
+/* Whether hovering a box SCROLLS the text, or only lights its line (Phase 51).
+   Scrolling on hover was the original behaviour and it moved the pane under
+   anyone running the mouse down the boxes: every row passed over dragged the
+   file along, and the gap between two rows resolves to the whole record, which
+   threw the pane back to its top. So the default is click-only - a hover
+   lights, a click scrolls - and `hover` keeps the old way for whoever wants it.
+   One setting for every editor, because this is one widget. */
+const cvFollowOn=()=>((state.settings||{}).code_view_follow==='hover');
 
 async function cvLoad(cv){
   cv.loaded=false; cv.err=null; cv.auto=null;
@@ -182,6 +191,10 @@ lines that are nothing but a comment out of the box. Display only: every one of
 them is still written back, byte for byte, where it sat."
         onclick="cvCommentsToggle(cvOf('${cv.uid}'))">; ${cv.comments} comment line${
           cv.comments===1?'':'s'}</button>`:''}
+      <button class="${cvFollowOn()?'on':''}" data-cvfollow title="Scroll the text to a box's line
+as soon as the pointer is over it. Off, a hover only lights the line and the
+text stays where you left it until you click a box."
+        onclick="cvFollowToggle()">⇕ Follow hover</button>
       <span class="count">${n} line${n===1?'':'s'}</span>
     </div>
     <div class="cvwrap">
@@ -412,6 +425,11 @@ async function cvCommentsToggle(cv){
   cvUndoInit(cv);                 // a different CUT of the same bytes, not an edit
   cvRepaintAll(cv);
 }
+function cvFollowToggle(){
+  cvSetSetting('code_view_follow',cvFollowOn()?'click':'hover');
+  document.querySelectorAll('[data-cvfollow]')
+    .forEach(b=>b.classList.toggle('on',cvFollowOn()));
+}
 function cvSetSetting(k,v){
   state.settings[k]=v;
   const body={}; body[k]=v; api.post('/api/settings',body);
@@ -573,7 +591,7 @@ function cvLineAtY(cv,ta,clientY){
    column ranges come from the server (`part_spans`, tabs already expanded), so
    the page still never reads the text itself; a monospace `ch` is the unit both
    sides agree in. */
-function cvPaintSpans(cv,labels,part){
+function cvPaintSpans(cv,labels,part,reveal=true){
   const hl=document.getElementById('cvhl-'+cv.uid); if(!hl)return;
   hl.querySelectorAll('.cvl.on').forEach(d=>d.classList.remove('on'));
   hl.querySelectorAll('.cvtok').forEach(d=>d.remove());
@@ -600,7 +618,7 @@ function cvPaintSpans(cv,labels,part){
   }
   // …and bring it into view. A 60-line record does not fit the pane, so a
   // highlight the user has to go and find is a highlight they never see.
-  if(first)cvReveal(cv,tok?tok[0]:first,tok?tok[2]:0);
+  if(first&&reveal)cvReveal(cv,tok?tok[0]:first,tok?tok[2]:0);
   return first;
 }
 // Scroll the text pane so line `n` (and, when given, column `col`) is visible.
@@ -670,14 +688,18 @@ function cvBindHover(cv,hostEl){
     const ls=(ev.target&&label(ev.target))||[];
     const part=ev.target?cvPartOf(ev.target):null;
     const key=ls.join('|')+'@'+part;
-    if(key!==cv.hovLabel){cv.hovLabel=key; cvPaintSpans(cv,ls,part);}
+    if(key!==cv.hovLabel){cv.hovLabel=key; cvPaintSpans(cv,ls,part,cvFollowOn());}
   };
   el.onmouseleave=()=>{cv.hovLabel=''; cvPaintSpans(cv,[]);};
-  // clicking a row's name scrolls the file to it - a 60-line record does not fit
+  // clicking a row's name scrolls the file to it - a 60-line record does not fit.
+  // In click-only mode a click ANYWHERE on a box does, since that is now the
+  // only thing that moves the text.
   el.onclick=ev=>{
     const lab=ev.target.closest&&ev.target.closest('label,.gfhead .k,.k,h4');
-    if(!lab)return;
-    const ls=label(lab); if(ls.length)cvScrollTo(cv,ls[0]);
+    if(lab){ const ls=label(lab); if(ls.length)cvScrollTo(cv,ls[0]); return; }
+    if(cvFollowOn()||!ev.target)return;
+    const ls=label(ev.target)||[];
+    if(ls.length)cvPaintSpans(cv,ls,cvPartOf(ev.target),true);
   };
 }
 const cvScrollTo=(cv,label)=>cvPaintSpans(cv,[label]);   // paint reveals it

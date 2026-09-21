@@ -111,6 +111,13 @@ here, and the panel says which and why: two are level-count ceilings a shipping
 mod is already over, and the third assumes every line is an upgrade chain when
 42 of the ones measured are sets of alternatives.
 
+Recruit pools and capabilities keep the order you give them: drag a row by its
+grip or step it with ▲ ▼, and the file is written in that order, which is the
+order the game lists units in. `＋` on a row adds units or a capability directly
+under it. Beside each `requires` clause, **📍 N regions pass** names the regions
+that carry every resource the clause asks for, each with its starting owner,
+and `∅ no region passes every gate` marks a pool nobody can ever recruit from.
+
 ![Buildings](main/docs/images/buildings.png)
 
 ### Campaign Map
@@ -255,7 +262,9 @@ Other transfer options:
   those factions build.
 * **Code View.** The raw game file beside the form in every editor, with
   hover-to-highlight both ways and live two-way editing. Can hide comment-only
-  lines and restore them exactly.
+  lines and restore them exactly. The text only scrolls when you click a box,
+  so it stays put while the mouse crosses the form; `⇕ Follow hover` brings
+  back scrolling on hover.
 * **3D model viewer.** Draws the `.mesh` an entry names with its faction skin
   applied, in the browser, with nothing installed. Orbit it, toggle parts off,
   and step through the head, helmet and shield variants the engine picks between

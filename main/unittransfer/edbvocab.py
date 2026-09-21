@@ -163,6 +163,33 @@ def regions(mod, hidden_names=()) -> List[dict]:
     return out
 
 
+def placed_trade(mod) -> Dict[str, List[str]]:
+    """Trade resources as the map places them, per region (lowercased name).
+
+    ``descr_regions.txt``'s resource line carries the hidden resources, but a
+    TRADE resource is put on the map by ``descr_strat.txt`` - ``resource sulfur,
+    344, 333`` - and belongs to whichever province that tile is in. Reading only
+    the regions file said "nowhere" for every one of them: measured 2026-09-21,
+    ROCSS places sulfur three times and DaC places chocolate twice, and the
+    `requires resource` picker called both unplaced (Phase 51 found it, because
+    the all-gates summary made the empty answers visible).
+
+    The join is :class:`unittransfer.mapquery.Facts`'s, which already puts every
+    placed resource in its province, so there is one reader of that file and
+    not two. It needs the map, about 0.7 s on either installed mod, and the
+    vocabulary is cached on the mod. A map that will not load answers nothing
+    rather than failing the vocabulary: the regions file's own line still stands.
+    """
+    try:
+        from . import campmap, mapquery
+        cm = campmap.CampaignMap(mod)
+        facts = mapquery.Facts(mod, cm, "")
+    except Exception:                                   # noqa: BLE001
+        return {}
+    return {rf.name.lower(): list(rf.trade_resources)
+            for rf in facts.regions if rf.name and rf.trade_resources}
+
+
 def _script_files(mod) -> List[Path]:
     out: List[Path] = []
     for rel in SCRIPT_DIRS:
@@ -266,6 +293,11 @@ def build(mod) -> dict:
     # picker shows those rather than a bare code name. Declared at the top of the
     # EDB, handed out per region in descr_regions.txt.
     region_rows = regions(mod, edb.hidden_resources)
+    placed = placed_trade(mod)
+    for r in region_rows:
+        extra = [x for x in placed.get(r["region"].lower(), [])
+                 if x.lower() not in {y.lower() for y in r["resources"]}]
+        r["resources"] = r["resources"] + list(dict.fromkeys(extra))
     carriers: Dict[str, List[str]] = {}
     trade: Dict[str, List[str]] = {}
     # "which regions" is the answer you can act on, but the SETTLEMENT is what you

@@ -2883,13 +2883,82 @@ the user before this was written, and the answers are in the write-ups below.
 
 | Order | Phase | Size | Line | Why |
 |---|---|---|---|---|
-| 22 | **51** Order, insert below, a still codeview, and every gate at once | M | **both** | asked for, next |
+| ~~22~~ | ~~**51** Order, insert below, a still codeview, and every gate at once~~ | M | **both** | **done 2026-09-21** |
 | 23 | **52** Change sets: record your edits, port them to the next version | L | **both** | asked for, after 51 |
 | 24 | **53** Change sets, switched in place | M | **both** | the half of 52 the user moved out |
 
 45, 46, 47a, 47b and 48 keep their order behind these three.
 
-## Phase 51 - Order, insert below, a still codeview, and every gate at once
+## Phase 51 - Order, insert below, a still codeview, and every gate at once - DONE 2026-09-21
+
+**Done 2026-09-21, both lines, cut on request as v2.3.6 and beta 2026-09-21. All four parts shipped as
+scoped, and building them found two things the scoping did not: a defect in
+shipped work, and a second one the first was hiding.**
+
+### What building it found
+
+**Trade resources were never in any region.** The all-gates summary's first
+run over the two installed mods said 24 real clauses could be met nowhere, and
+most of them were `requires resource gold` or `sulfur` or `ivory`. A trade
+resource is placed on the map by `descr_strat.txt` (`resource sulfur, 344,
+333`) and belongs to the province that tile is in; `edbvocab.regions` read only
+`descr_regions.txt`, whose resource line carries the hidden ones. So the
+per-term "📍 N settlements" marker the clause picker has shipped since Phase 12
+said **∅ nowhere for every trade resource in every mod**. ROCSS places sulfur
+three times, DaC places chocolate twice. `edbvocab.placed_trade` now joins them
+in through `mapquery.Facts`, which already put every placed resource in its
+province, so there is still one reader of that file. It costs about 0.7 s per
+mod on a vocabulary that is cached on the mod, and a map that will not load
+leaves the regions file's line standing rather than failing the vocabulary.
+
+**What is left is real.** With the join, 674 clauses across the two mods have a
+resource gate and three can be met nowhere, all on DaC: two Snow Troll pools
+gated on `Rhudaur` (4 regions) and `ResD` (13), and one pool on `Cardolan` and
+`ResF`, with no region carrying both. Those are the finding the feedback asked
+for, and the row now says `∅ no region passes every gate`.
+
+**The code view lit the wrong line after a move.** Rows named their span by
+the file line they came from (`capline#N`), which was safe while a row could
+never move. A moved row sits on a different line of the re-rendered text, so
+hovering it lit its old neighbour. The rows now name their span by written
+position, `level:X:cap#N`, which the server already emitted and which is right
+either way. Checking that turned up the second defect: **adding units through
+the picker never re-rendered the code view**, so the pane went on showing the
+level without them until the next keystroke. `bldAddPicked` now follows the
+edit like every other path.
+
+### What shipped
+
+- **Order.** A grip to drag and ▲ ▼ for one step, on every recruit pool and
+  every other capability, inside its own block (`capability` and
+  `faction_capability` do not trade rows). `_plan_capabilities` writes the
+  list's order: a save that moves nothing, or only adds at the end, takes the
+  old one-splice-per-line path byte for byte; a moved row or a row inserted
+  mid-list re-lays the block's inside in one splice, copying every untouched
+  line as the file has it, with the comment and blank lines above each line
+  travelling with it and a closing remark staying at the bottom. A deleted
+  line's place in the list is not an order change.
+- **New units land where they are written.** They used to be shown at the top
+  and written at the bottom, which is the complaint as the feedback put it.
+  They now go at the end, the picker scrolls to them and flashes the first,
+  and `＋` on any row opens the picker to put them directly under it. `＋` on a
+  plain capability adds a row under it.
+- **`code_view_follow`**, click-only by default: a hover lights the line and
+  never scrolls, a click anywhere on a box scrolls to it, and `⇕ Follow hover`
+  on the pane's bar brings back the old way. One widget, so every editor.
+- **Every gate at once**, on each row and in the clause dialog: the regions
+  that pass the clause's `hidden_resource` and `resource` terms, left to right
+  as the engine reads them, each with its starting owner and a ★ on the ones a
+  named faction starts with, and the terms that do not narrow it listed as
+  assumptions.
+
+`tests/test_buildings.py` section 13 is the writer (a swap, the append path
+unchanged, an insert under the first line, comments travelling), and 13b runs
+the page's own evaluator in node: seven synthetic clauses including one where
+precedence would answer differently, and every one of the 674 real and-only
+resource clauses against a plain set intersection.
+
+### The scoping, as written before it was built
 
 **Measured against the code on 2026-09-21. All five are real, and none of them
 is half-built.**

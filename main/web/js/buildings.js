@@ -588,7 +588,7 @@ function bldCvLabel(el){
   const cap=el.closest('[data-cap]');
   if(cap){
     const row=bldCapList()[+cap.dataset.cap];
-    return (row&&row.line!=null)?'capline#'+row.line:key;
+    return (row&&bldCapPosLabel(lv,row))||key;
   }
   let f=el.closest('[data-scalar],[data-settlement]');
   // hovering the words beside a box counts as hovering the box
@@ -602,16 +602,34 @@ function bldCvLabel(el){
   // anywhere else in the form: light the level this form IS
   return el.closest('#bldBody')?key:'';
 }
+/* A row's span, by the POSITION it is written at: `level:X:cap#N`, which the
+   server puts on the Nth capability line of the text the pane shows. It used
+   to be `capline#<file line>`, and that was right while a row could never
+   move - since Phase 51 the list's order is the written order, so a moved row
+   sits on a different line of the re-rendered text than the one it came from,
+   and the line number lit its old neighbour. The position is right either
+   way, and it gives a freshly added row a span too. A deleted row is not
+   written, so it has none. */
+function bldCapPosLabel(lv,row){
+  if(!row||row.del)return '';
+  const n=(row.faction?lv.fcaps:lv.caps).filter(c=>!c.del).indexOf(row)+1;
+  return n?`level:${lv.name}:${row.faction?'fcap':'cap'}#${n}`:'';
+}
 function bldCvFind(label){
   const b=state.bld;
   if(!b||!b.work)return [];
   const lv=b.work.levels[b.lvl]; if(!lv)return [];
-  const m=/^capline#(\d+)$/.exec(label);
+  const m=/^level:(.+):(f?cap)#(\d+)$/.exec(label);
   if(m){
-    const i=bldCapList().findIndex(c=>String(c.line)===m[1]);
+    if(m[1]!==lv.name)return [];
+    const row=(m[2]==='fcap'?lv.fcaps:lv.caps).filter(c=>!c.del)[+m[3]-1];
+    const i=row?bldCapList().indexOf(row):-1;
     const el=i<0?null:document.querySelector(`#bldBody [data-cap="${i}"]`);
     return el?[el]:[];
   }
+  // the same line under its file-line name: the position above already says
+  // it, and survives a move where this does not
+  if(/^capline#/.test(label))return [];
   const pre='level:'+lv.name;
   if(label===pre+':header')
     return [...document.querySelectorAll('#bldBody [data-settlement],#bldBody .clausebar')];
@@ -1077,6 +1095,7 @@ function bldPoolRow(c){
   return `<div class="poolrow ${c.del?'gone':''} ${missing?'missing':''} ${
       bldBulkHas(c)?'picked':''}" data-cap="${i}">
     <div class="prtop">
+      ${bldOrderHtml(i)}
       ${bldPickBox(c,i)}
       <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.src,c.pool.unit)}" alt="">
       <div class="who"><div class="un" title="${esc(c.pool.unit)}">${esc(info&&!missing?info.name:c.pool.unit)}</div>
@@ -1093,6 +1112,7 @@ function bldPoolRow(c){
           numBox('data-pool="experience"',c.pool.experience,'1')}</label>
       </div>
       <div class="acts">
+        <button title="Add units directly under this one" onclick="bldInsertBelow(${i})">＋</button>
         ${bldPoolActs(c,i)}
         ${missing?'':`<button title="Open this unit in the Unit Editor"
           onclick="openUnitFromBuilding('${q1(esc(c.pool.unit))}')">✎ Edit</button>`}
@@ -1106,6 +1126,7 @@ function bldPoolRow(c){
       <div class="clausebar">
         <div class="sum">${bldClauseSummary(c.conds)}</div>
         ${bldPoolOwnFlag(c)}
+        ${bldGateChip(c.conds)}
         <button class="reqbtn" onclick="bldEditClause('cap',${i})">✎</button>
         ${bldCopyBtn(i)}
       </div>
@@ -1500,6 +1521,7 @@ function bldCapRow(c){
   const meta=b.ov.capabilities.find(x=>x.keyword===c.keyword)||{};
   const help=(meta.help||'')+(meta.range?`  (${meta.range})`:'');
   return `<div class="caprow ${c.del?'gone':''}" data-cap="${i}">
+    ${bldOrderHtml(i)}
     ${qm(help.trim()||'A capability this level gives the settlement. Pick the keyword to see what it does.',c.keyword)}
     <select class="kw" data-kw>${bldCapOptions(c.keyword)}</select>
     ${qm('Write the value as "bonus N" rather than a bare number. Most modifiers are declared that way, and the engine ignores the ones that are not.','bonus')}
@@ -1507,11 +1529,103 @@ function bldCapRow(c){
     ${numBox('class="val" data-val',c.value,'1')}
     <div class="clausebar" style="flex:1;min-width:110px">
       <div class="sum">${bldClauseSummary(c.conds)}</div>
+      ${bldGateChip(c.conds)}
       <button class="reqbtn" onclick="bldEditClause('cap',${i})">✎</button>
     </div>
     ${c.faction?'<span class="badge">faction</span>':''}
+    <button class="x" title="Add a capability directly under this one" onclick="bldInsertBelow(${i})">＋</button>
     <button class="x ${c.del?'':'danger'}" onclick="bldToggleDel(${i})">${c.del?'↺':'🗑'}</button>
     </div>`;
+}
+
+/* ---- order (Phase 51) ----
+   The list's order is the file's order: `_plan_capabilities` writes the rows
+   in the order they are sent, and the recruitment panel in game lists units in
+   the order the EDB gives them. So a row moves two ways - drag by the grip, or
+   one step with the arrows - and a new one can go straight under the row it
+   belongs beside instead of at the bottom of a list of eighty.
+
+   A row only moves inside its own block. `capability` and `faction_capability`
+   are two blocks in the file, and the combined list here shows them end to
+   end; dragging one into the other would be a different edit (a change of
+   scope) dressed up as a move. */
+function bldOrderHtml(i){
+  return `<span class="ordgrip" draggable="true" data-grip="${i}"
+      title="Drag to move this line. This order is the order the file gets, and the order the game lists them in.">⠿</span>
+    <span class="ordbtns"><button title="Move up one" onclick="bldMoveStep(${i},-1)">▲</button><button
+      title="Move down one" onclick="bldMoveStep(${i},1)">▼</button></span>`;
+}
+function bldArrOf(c){
+  const lv=state.bld.work.levels[state.bld.lvl];
+  return c.faction?lv.fcaps:lv.caps;
+}
+function bldMoveCap(c,t,after){
+  if(!c||!t||c===t)return false;
+  const arr=bldArrOf(c);
+  if(arr!==bldArrOf(t)){
+    toast('One of these is in the faction_capability block and the other is not, so they cannot trade places.',4200);
+    return false;
+  }
+  arr.splice(arr.indexOf(c),1);
+  arr.splice(arr.indexOf(t)+(after?1:0),0,c);
+  bldTouched();
+  return true;
+}
+// One step, past the neighbour the user can SEE: the faction filter hides rows,
+// and an arrow that swapped with an invisible one would look like it did nothing.
+function bldMoveStep(i,dir){
+  const list=bldCapList(),row=document.querySelector(`#bldBody [data-cap="${i}"]`);
+  if(!row)return;
+  const sib=dir<0?row.previousElementSibling:row.nextElementSibling;
+  if(!sib||sib.dataset.cap==null)return;
+  bldMoveCap(list[i],list[+sib.dataset.cap],dir>0);
+}
+function bldInsertBelow(i){
+  const c=bldCapList()[i]; if(!c)return;
+  if(c.pool){ state.bld.insertAfter=c; bldAddPoolDialog(); return; }
+  const arr=bldArrOf(c);
+  arr.splice(arr.indexOf(c)+1,0,{line:null,keyword:'law_bonus',args:'',requires:'',
+    bonus:true,value:'1',pool:null,comment:'',faction:c.faction,del:false});
+  bldTouched();
+}
+// Drag, bound by delegation on the two lists: they are rebuilt on every edit.
+function bldWireOrder(){
+  const b=state.bld;
+  const clear=box=>box.querySelectorAll('.dragging,.dropb,.dropa')
+    .forEach(x=>x.classList.remove('dragging','dropb','dropa'));
+  ['bldPools','bldCaps'].forEach(id=>{
+    const box=document.getElementById(id); if(!box)return;
+    const target=ev=>{
+      if(b.drag==null||b.drag.box!==id)return null;
+      const row=ev.target.closest&&ev.target.closest('[data-cap]');
+      if(!row||!box.contains(row))return null;
+      const r=row.getBoundingClientRect();
+      return {row,after:ev.clientY>r.top+r.height/2};
+    };
+    box.ondragstart=ev=>{
+      const g=ev.target.closest&&ev.target.closest('[data-grip]');
+      if(!g)return;
+      b.drag={box:id,i:+g.dataset.grip};
+      ev.dataTransfer.effectAllowed='move';
+      ev.dataTransfer.setData('text/plain','');
+      const row=g.closest('[data-cap]');
+      if(row){ row.classList.add('dragging'); ev.dataTransfer.setDragImage(row,14,14); }
+    };
+    box.ondragover=ev=>{
+      const t=target(ev); if(!t)return;
+      ev.preventDefault();
+      box.querySelectorAll('.dropb,.dropa').forEach(x=>x.classList.remove('dropb','dropa'));
+      t.row.classList.add(t.after?'dropa':'dropb');
+    };
+    box.ondrop=ev=>{
+      const t=target(ev),from=b.drag; b.drag=null; clear(box);
+      if(!t)return;
+      ev.preventDefault();
+      const list=bldCapList();
+      bldMoveCap(list[from.i],list[+t.row.dataset.cap],t.after);
+    };
+    box.ondragend=()=>{ b.drag=null; clear(box); };
+  });
 }
 function bldToggleDel(i){
   const c=bldCapList()[i]; c.del=!c.del;
@@ -1608,6 +1722,7 @@ function bldWire(){
     rowMark();
   });
   wireNumBoxes(body);
+  bldWireOrder();
 }
 function bldDirtyNote(){
   paintDirty();
@@ -1820,6 +1935,7 @@ function renderClauseDialog(){
         <span class="count">Terms are evaluated left to right. M2TW has no brackets.</span>
       </div>
       <div id="condOwn"></div>
+      <div id="condGates"></div>
       <div class="bsec" style="margin-top:12px"><h4>Written as</h4>
         <div class="preview" id="condText"></div></div>
     </div>
@@ -1879,6 +1995,7 @@ function renderCondList(){
   document.getElementById('condText').textContent=bldClauseText(c.conds)||'(no requires clause)';
   wireCondRows();
   bldClauseOwnership();
+  bldGatePaint();
 }
 function condRowHtml(cond,i){
   const v=cond.values||[];
@@ -1995,6 +2112,97 @@ function condWhereHtml(kind,code){
     <span class="wpop"><div class="whead">${esc(code)}, from
       <code>world/maps/base/descr_regions.txt</code></div>${rows}</span></span>`;
 }
+/* ---- every gate at once (Phase 51) ----
+   Each resource term has its own "📍 N settlements", and nothing combined them:
+   a pool gated on `hidden_resource GondorEast and hidden_resource ResF` meant
+   working the overlap out by hand, and an overlap of nothing is a pool nobody
+   can ever recruit from - the same silent failure as a missing resource.
+
+   Only two kinds of term are a fact about a REGION that the files settle:
+   `hidden_resource` and `resource`, off descr_regions.txt. Everything else -
+   who owns it, an event, the religion it has drifted to, what is built there -
+   is decided during play, so it does not narrow the list. It is evaluated as
+   holding, and named under the result as an assumption, so the number is read
+   as "the regions these gates allow" and never as more than that. Factions are
+   SHOWN instead: each region carries its starting owner, and the ones a
+   faction in the clause starts with are marked.
+
+   Left to right, with no precedence, the way the engine reads a clause (the
+   dialog already says so): `a or b and c` is `(a or b) and c`. */
+const BLD_GATE_KINDS=new Set(['hidden_resource','resource']);
+// true/false for a term the region's own lines decide, null for any other
+function bldGateTerm(c,r){
+  if(!c||!BLD_GATE_KINDS.has(c.kind))return null;
+  const code=String((c.values||[])[0]||'').trim().toLowerCase();
+  if(!code)return null;
+  const list=(c.kind==='hidden_resource'?r.hidden_resources:r.resources)||[];
+  const has=list.some(x=>String(x).toLowerCase()===code);
+  return c.negate?!has:has;
+}
+function bldGateEval(conds,regions){
+  conds=conds||[];
+  const decides=c=>BLD_GATE_KINDS.has(c.kind)&&String((c.values||[])[0]||'').trim();
+  if(!conds.some(decides))return null;          // nothing here is about a region
+  const pass=(regions||[]).filter(r=>{
+    let acc=true;
+    conds.forEach((c,i)=>{
+      const t=bldGateTerm(c,r);
+      const v=t===null?true:t;
+      acc=i===0?v:((c.join||'and')==='or'?(acc||v):(acc&&v));
+    });
+    return acc;
+  });
+  return {pass,total:(regions||[]).length,assumed:conds.filter(c=>!decides(c))};
+}
+// The factions a clause names, cultures and `all` expanded to real factions.
+function bldGateFactions(conds){
+  const v=bldVocab(),rows=v.factions||[],all=v.all_keyword||'all';
+  const out=new Set();
+  (conds||[]).filter(c=>c.kind==='factions'&&!c.negate).forEach(c=>
+    (c.values||[]).forEach(x=>{
+      if(x===all)return;                        // everyone: nothing to mark
+      const members=rows.filter(f=>f.culture===x).map(f=>f.code);
+      (members.length?members:[x]).forEach(m=>out.add(m));
+    }));
+  return out;
+}
+function bldGateRowsHtml(g,conds){
+  const mine=bldGateFactions(conds);
+  return g.pass.map(r=>`<div class="wrow${mine.has(r.faction)?' own':''}"><b>${esc(r.settlement_name||r.settlement)}</b>
+      <span>${esc(r.name||r.region)}</span>
+      ${r.faction?`<i>${esc(condOwnerName(r.faction))}${mine.has(r.faction)?' ★':''}</i>`:''}</div>`).join('');
+}
+function bldGateAssumedText(g){
+  return g.assumed.map(bldCondSummary).join(', ');
+}
+// The chip on a row: nothing when no term is about a region.
+function bldGateChip(conds){
+  const g=bldGateEval(conds,bldVocab().regions);
+  if(!g)return '';
+  if(!g.pass.length)return `<span class="where none gate" title="No region in descr_regions.txt
+carries every resource this clause asks for, so nothing can ever satisfy it">∅ no region passes every gate</span>`;
+  return `<span class="where gate">📍 ${g.pass.length} region${g.pass.length===1?'':'s'} pass
+    <span class="wpop"><div class="whead">Every resource gate at once, from
+      <code>world/maps/base/descr_regions.txt</code>${g.assumed.length
+        ?`<br>assuming: ${esc(bldGateAssumedText(g))}`:''}</div>${bldGateRowsHtml(g,conds)}</span></span>`;
+}
+// The dialog's box, redrawn as the terms change.
+function bldGatePaint(){
+  const box=document.getElementById('condGates'),c=state.bld&&state.bld.clause;
+  if(!box||!c)return;
+  const g=bldGateEval(c.conds,bldVocab().regions);
+  if(!g){ box.innerHTML=''; return; }
+  const mine=bldGateFactions(c.conds);
+  const owned=g.pass.filter(r=>mine.has(r.faction)).length;
+  box.innerHTML=`<div class="bsec gatebox" style="margin-top:12px"><h4>Every gate at once
+      <span class="n">${g.pass.length}</span><span class="count">of ${g.total} regions</span></h4>
+    ${g.pass.length
+      ?`<div class="gaterows">${bldGateRowsHtml(g,c.conds)}</div>`
+      :'<div class="w-bad">No region carries every resource this asks for, so it can never be met.</div>'}
+    ${mine.size&&g.pass.length?`<div class="count">★ ${owned} of them start owned by a faction this clause names.</div>`:''}
+    ${g.assumed.length?`<div class="count">Not narrowed by, because the files cannot settle them per region:
+      ${esc(bldGateAssumedText(g))}.</div>`:''}</div>`;
+}
 function condFactionsHtml(cond,i){
   const chosen=cond.values||[];
   const label=chosen.length?chosen.map(bldFacName).join(', '):'nobody, so this can never be built';
@@ -2034,6 +2242,7 @@ function condChanged(){
   const c=state.bld.clause;
   document.getElementById('condText').textContent=bldClauseText(c.conds)||'(no requires clause)';
   bldClauseOwnership();
+  bldGatePaint();
 }
 function bldCondRemove(i){
   const c=state.bld.clause;
@@ -2233,7 +2442,10 @@ function bldAddPoolDialog(){
   // they carry over to the tiers above with a per-tier step.
   b.pick={q:'',faction:'',already,picked:new Set(),
           nums:{initial:'1',per_turn:'0.5',maximum:'2',experience:'0'},
-          tiers:false,bump:Object.assign({},BLD_TIER_BUMP),mirror:false};
+          tiers:false,bump:Object.assign({},BLD_TIER_BUMP),mirror:false,
+          // the row whose `＋` opened this, if one did: the new rows go under it
+          after:b.insertAfter||null};
+  b.insertAfter=null;
   const modal=document.getElementById('modal');
   b.stashScroll=stashPlace();
   b.stash=modal.innerHTML;                     // put the editor back on cancel
@@ -2401,23 +2613,14 @@ function bldAddPoolRow(type,lvIndex,nums,conds){
                              maximum:nums.maximum,experience:nums.experience}:{},
                        {unit:type}),
     comment:'',faction:false,del:false};
-  /* At the TOP of the list, not the bottom. A level in a big mod holds dozens of
-     pools, and a unit added at the end is a unit you then have to go and find:
-     the picker closes, the editor redraws at the top, and the row you came for
-     is off the bottom of the pane.
-
-     This is display order only. The server never writes a new capability where
-     the list happens to put it - every added line is appended just above the
-     block's closing brace, and existing lines are edited in place by the EDB
-     line they came from (see buildings._plan_capabilities). So the file comes
-     out byte-for-byte the same as it did when this pushed.
-
-     A batch keeps the order it was ticked in: each new row goes after the ones
-     already added rather than in front of them, so twelve units added at once
-     read down the list the way they read in the picker. */
-  let at=0;
-  while(at<lv.caps.length&&lv.caps[at].line==null)at++;
-  lv.caps.splice(at,0,row);
+  /* At the END, because since Phase 51 the list's order is what gets written
+     (buildings._plan_capabilities), and the end is where a new line has always
+     gone in the file. These rows used to be shown at the TOP and written at the
+     bottom, which is the "added units end up at the end with no way to move
+     them" the 51 feedback was about. `bldAddPicked` scrolls to them, which is
+     what showing them at the top was for, and `＋` on a row puts them under it.
+     A batch keeps the order it was ticked in. */
+  lv.caps.push(row);
   return row;
 }
 function bldAddPool(type){ bldAddPicked([type]); }
@@ -2432,6 +2635,18 @@ function bldAddPicked(types){
   const p=b.pick||{};
   const nums=p.nums||{initial:'1',per_turn:'0.5',maximum:'2',experience:'0'};
   const rows=list.map(t=>bldAddPoolRow(t,b.lvl,nums));
+  // opened from a row's `＋`: the batch goes directly under that row, in the
+  // order it was ticked. Only inside the same block (see bldMoveCap).
+  if(p.after&&!p.after.faction){
+    const arr=b.work.levels[b.lvl].caps;
+    let prev=p.after;
+    rows.forEach(r=>{
+      if(!arr.includes(prev))return;
+      arr.splice(arr.indexOf(r),1);
+      arr.splice(arr.indexOf(prev)+1,0,r);
+      prev=r;
+    });
+  }
   // …and the same units into the tiers above and the twin building, on the same
   // clause each row just got, so one trip through the picker fills the chain
   let up=0,mirrored=0;
@@ -2466,6 +2681,13 @@ function bldAddPicked(types){
   if(b.stash){ modal.innerHTML=b.stash; b.stash=null; }
   usePlace(b.stashScroll); b.stashScroll=null;
   renderBuildingEditor();
+  // the code view is re-rendered from the edits the way any other edit does
+  // it; before Phase 51 this path skipped it and the pane went on showing the
+  // level without the new rows until the next keystroke
+  bldCvFollow();
+  // …and bring the first one into view: the list can be eighty rows long
+  const first=document.querySelector(`#bldBody [data-cap="${bldCapList().indexOf(rows[0])}"]`);
+  if(first){ first.scrollIntoView({block:'center'}); first.classList.add('justadded'); }
   const label=b.d.levels[b.lvl].label;
   const gated=rows.filter(r=>r.conds.length).length;
   const extra=(up?` +${up} on the tier(s) above`:'')

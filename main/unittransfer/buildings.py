@@ -1344,11 +1344,19 @@ def plan_level_edit(edb: EdbFile, bl: BuildingLine, blk: LevelBlock,
 def _plan_capabilities(edb: EdbFile, blk: LevelBlock, ops: List[dict],
                        notes: List[str], warn: List[str],
                        faction: bool) -> List[LineEdit]:
-    """Rewrite / delete / append capability lines, one splice each.
+    """Rewrite / delete / append / reorder capability lines.
 
     Existing lines are edited *in place* so their neighbours - including the
-    hand-written trailing comments DaC's EDB is full of - stay byte-exact. New
-    lines are appended just above the block's closing brace.
+    hand-written trailing comments DaC's EDB is full of - stay byte-exact.
+
+    The ops arrive in the order the editor lists them, and that order is what
+    gets written (Phase 51). When it is the file's own order with any new rows
+    at the end - every save before 51, and every save that moves nothing - the
+    edits are one splice per line and new lines go just above the closing
+    brace, exactly as before. When a row was moved, or a new one was put
+    anywhere but the end, the block's inside is re-laid in the list's order by
+    ``_relay_capabilities``, which still copies every untouched line byte for
+    byte and carries each line's comments with it.
     """
     lines = edb.lines
     span = blk.fcap_span if faction else blk.cap_span
@@ -1357,6 +1365,11 @@ def _plan_capabilities(edb: EdbFile, blk: LevelBlock, ops: List[dict],
     label = "faction_capability" if faction else "capability"
     edits: List[LineEdit] = []
     additions: List[str] = []
+    # the list's order: ("old", line) for a line already in the file, ("new",
+    # text) for one being added. What each old line becomes is in `becomes`
+    # (absent = unchanged, "" = deleted).
+    seq: List[Tuple[str, object]] = []
+    becomes: Dict[int, str] = {}
 
     if span == (0, 0):
         if any(not o.get("delete") for o in ops):
@@ -1378,21 +1391,23 @@ def _plan_capabilities(edb: EdbFile, blk: LevelBlock, ops: List[dict],
             cap = Capability(keyword=keyword, args=args, requires=requires,
                              indent=_cap_indent(blk, lines, span))
             additions.append(cap.text())
+            seq.append(("new", cap.text()))
             notes.append(f"{blk.name}: + {keyword} {args}".rstrip())
             continue
         cap = existing.get(int(idx))
         if cap is None:
             warn.append(f"{blk.name}: capability line {idx} is no longer there - skipped")
             continue
+        seq.append(("old", cap.line))
         if op.get("delete"):
-            edits.append(LineEdit(cap.line, cap.line + 1, ""))
+            becomes[cap.line] = ""
             notes.append(f"{blk.name}: - {cap.keyword} {cap.args}".rstrip())
             continue
         new = Capability(keyword=keyword or cap.keyword, args=args,
                          requires=requires, indent=cap.indent, comment=cap.comment)
         if _same_capability(cap, new):
             continue
-        edits.append(LineEdit(cap.line, cap.line + 1, new.text()))
+        becomes[cap.line] = new.text()
         # Report whichever half actually moved: rewriting only a pool's `requires`
         # is the commonest edit here, and a note that repeated the unchanged
         # numbers on both sides read as "nothing happened".
@@ -1405,9 +1420,80 @@ def _plan_capabilities(edb: EdbFile, blk: LevelBlock, ops: List[dict],
                 what += f" (requires -> {new.requires or 'none'})"
             notes.append(f"{blk.name}: {what}")
 
+    if _order_moved(seq, becomes):
+        return _relay_capabilities(lines, span, existing, seq, becomes,
+                                   blk.name, label, notes, warn)
+    edits += [LineEdit(i, i + 1, text) for i, text in becomes.items()]
     if additions:
         edits.append(_insert_before(lines, span[1], "".join(additions)))
     return edits
+
+
+def _order_moved(seq: List[Tuple[str, object]], becomes: Dict[int, str]) -> bool:
+    """True when the list's order is not the file's with new rows at the end.
+
+    Either an existing line comes after one that followed it in the file, or a
+    new row stands in front of an existing one. Anything else is what the
+    append-at-the-brace path already writes, so it keeps that path and its
+    one-splice-per-line edits. A line being deleted is not written anywhere, so
+    where the list happens to hold it says nothing about order.
+    """
+    last, seen_new = -1, False
+    for kind, v in seq:
+        if kind == "new":
+            seen_new = True
+            continue
+        if becomes.get(v) == "":
+            continue
+        if seen_new or v < last:
+            return True
+        last = v
+    return False
+
+
+def _relay_capabilities(lines: List[str], span: Tuple[int, int],
+                        existing: Dict[int, Capability],
+                        seq: List[Tuple[str, object]], becomes: Dict[int, str],
+                        name: str, label: str, notes: List[str],
+                        warn: List[str]) -> List[LineEdit]:
+    """Re-lay a capability block's inside in the editor's order, as one splice.
+
+    Nothing is re-emitted that was not edited. Each existing line is copied as
+    the file has it, and it takes along the comment and blank lines directly
+    above it - a `;; Gondor` header over a run of pools belongs to the pool
+    under it, and moving that pool without it would leave the header labelling
+    the wrong unit. Lines after the last capability stay at the bottom, where a
+    closing remark would be. A deleted line drops only itself; the comments
+    above it stay where the list now puts its slot.
+    """
+    o, c = span
+    lead: Dict[int, List[str]] = {}
+    pending: List[str] = []
+    for j in range(o + 1, c):
+        if j in existing:
+            lead[j] = pending
+            pending = []
+        else:
+            pending.append(lines[j])
+    tail = pending
+
+    body: List[str] = []
+    placed = set()
+    for kind, v in seq:
+        if kind == "new":
+            body.append(v)
+            continue
+        placed.add(v)
+        body += lead.get(v, [])
+        text = becomes.get(v)
+        body.append(lines[v] if text is None else text)
+    # a line the editor did not send is kept, never lost - after the rest
+    for j in sorted(set(existing) - placed):
+        warn.append(f"{name}: {label} line {j} was not in the edit - kept at the end")
+        body += lead.get(j, []) + [lines[j]]
+    body += tail
+    notes.append(f"{name}: {label} order changed")
+    return [LineEdit(o + 1, c, "".join(body))]
 
 
 # ---------------------------------------------------------------------------

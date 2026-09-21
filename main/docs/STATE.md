@@ -1,5 +1,5 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-21 - Phases 51-53 added ahead of 45 from outside feedback. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
+_Updated: 2026-09-21 - **Phase 51 done** and cut on request as **v2.3.6** and **beta 2026-09-21**; 52 next. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
 the latest beta, both cut on request after **Phase 44**. They carry everything
 uncut since v2.3.4: the two startup/port commits, the contributor's campaign
 map editor, **M18** and **Phase 44**. v2.3.5 carries 44 and the port work; the
@@ -29,11 +29,18 @@ for** (Phase 31's precedent). The reassuring number is **336
 level** - the one condition in the EDB that can dangle twice and had nothing
 checking it. Write-up under *Phase 44* in `ROADMAP.md`. **45 leads.**
 
-**Phase 51 is next, set by the user on 2026-09-21** - outside feedback on the
-EDB editor: reorder recruit pools and capabilities (drag, up, down), `＋ below`
-on every row, a codeview that only scrolls on click (a setting, click-only by
-default, every editor), and a summary of the regions that pass every gate of a
-clause. **Then 52**, change sets: the edits to a mod recorded against a
+**Phase 51 is done - order, insert below, a still code view and every gate at
+once, closed 2026-09-21, both lines, cut as v2.3.6 and beta 2026-09-21.** Recruit pools and
+capabilities drag and step, and the file gets the list's order; `＋` puts rows
+under the one it was pressed on; the code view scrolls on click only (a
+setting); and each clause says which regions pass all its resource gates.
+**It found a shipped defect: trade resources were never in any region**, so the
+clause picker has said "nowhere" for every `requires resource` since Phase 12.
+They are placed by `descr_strat.txt`, and `edbvocab` now joins them in. With
+that fixed, three real DaC pools can be met nowhere, and now say so.
+Write-up under *Phase 51* in `ROADMAP.md`.
+
+**Phase 52 is next** - change sets: the edits to a mod recorded against a
 baseline of only the files touched, exported as one file and ported onto the
 mod's next version by a three-way merge per record. **Then 53**, switching a
 set off and on in place. After those, 45, 46, 47a, 47b and 48 in their old
@@ -1091,15 +1098,15 @@ path in this file and in the source is relative to. `main/dev/` never ships.
 ## THE TWO RELEASE LINES
 Two lines off this one `master`, chosen by whether a change touches the campaign
 map. **Not campaign-map** -> a **2.x subrelease with the map hidden**, uploaded
-`--latest` (latest **v2.3.5**, 2026-09-20). **Campaign-map** -> the **beta
-line**, uploaded as a **pre-release** (latest **beta 2026-09-20**). A
+`--latest` (latest **v2.3.6**, 2026-09-21). **Campaign-map** -> the **beta
+line**, uploaded as a **pre-release** (latest **beta 2026-09-21**). A
 **subrelease means both**: one job, both zips, same tree.
 
 The switch is **one flag**: `off:true` on the `campmap` entry in `MODES` in
 `web/js/core.js`, which `menuModes()` and `modeOffered()` are the only readers
 of. It is a **release-time edit, not a state of `master`**: set it, bump the 2.x
 number, build, upload, then put it straight back off in the next commit.
-`master` carries the map ON, and `__version__` says `beta-2026-09-20`
+`master` carries the map ON, and `__version__` says `beta-2026-09-21`
 because the beta was the last thing cut.
 
 Of the finished work, **21 and 29 belong to BOTH lines** (raw text is a menu
