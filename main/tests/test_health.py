@@ -123,6 +123,68 @@ for name in installed:
           all(f["open"].get("key") for f in rm["findings"] if f["source"] == "map"
               and not f["code"].startswith("failed")))
 
+# ---- 6) 54b: the crash guides' rules, a fixture each ---------------------------
+print("\n6) the crash guides' rules")
+from tests import _tmp  # noqa: E402
+from unittransfer import crashrules  # noqa: E402
+
+fx = Path(_tmp.mkdtemp(prefix="ut_crash_")) / "Fixture"
+data = fx / "data"
+camp = data / "world/maps/campaign/imperial_campaign"
+camp.mkdir(parents=True)
+(data / "text").mkdir()
+(data / "unit_models").mkdir()
+(camp / "descr_strat.txt").write_text(
+    "faction england, balanced smith\nai_label catholic\n"
+    "faction france, balanced smith\nai_label nobody_declared_me\n"
+    "faction papal_states, balanced smith\nai_label papal_faction\n", encoding="latin-1")
+(data / "descr_campaign_ai_db.xml").write_text(
+    '<root>\n<faction_ai_label name="catholic">\n</faction_ai_label>\n</root>\n',
+    encoding="latin-1")
+(camp / "campaign_script.txt").write_text(
+    "script\n    historic_event Keyed_In_Lower_Case\n    historic_event no_text_at_all\n"
+    "    ; historic_event only_in_a_comment\nend_script\n", encoding="latin-1")
+(data / "text/historic_events.txt").write_bytes(
+    b"\xff\xfe" + "{KEYED_IN_LOWER_CASE_TITLE}Title\r\n".encode("utf-16-le"))
+(data / "export_descr_character_traits.txt").write_text(
+    "Trait Brave\n    Characters family\n    ExcludeCultures eastern_european\n"
+    "    AntiTraits Coward\n\n    Level Brave_1\n        Description Brave_1_desc\n"
+    "        EffectsDescription Brave_1_effects_desc\n        Threshold 1\n\n"
+    "Trait Coward\n    Characters family\n    AntiTraits Brave\n\n    Level Coward_1\n"
+    "        Description Coward_1_desc\n        EffectsDescription Coward_1_effects_desc\n"
+    "        Threshold 1\n", encoding="latin-1")
+(data / "descr_banners_new.xml").write_text(
+    '<banner texture="C:\\Games\\M2TW\\mods\\x\\data\\banners\\a.tga"/>\n', encoding="latin-1")
+(data / "unit_models/battle_models.modeldb").write_bytes(
+    b"22 serialization::archive 3 0 0 0 0 1 0 0\n1 a   b\n")
+found, failed = crashrules.run(Mod(fx))
+codes = [f.code for _, f in found]
+check("no rule failed on the fixture", not failed)
+check("ai.label_unknown: the undeclared label, and not the engine's own papal_faction",
+      [f.message.split(" has ")[0] for _, f in found if f.code == "ai.label_unknown"]
+      == ["imperial_campaign: france"])
+ev = [f.what for _, f in found if f.code == "event.no_text"]
+check("event.no_text: case-blind, so only the event with no key at all, not the comment",
+      ev == ["imperial_campaign|no_text_at_all"])
+check("trait.antitrait_cultures: the pair once, not twice",
+      codes.count("trait.antitrait_cultures") == 1)
+check("path.absolute: the drive path in the banner file", codes.count("path.absolute") == 1)
+check("modeldb.spaces: the line with three spaces", codes.count("modeldb.spaces") == 1)
+check("every rule has a source and a severity Health knows",
+      all(r.source and r.severity in health.SEVERITIES for r in crashrules.RULES))
+check("the refused claims say what was measured",
+      all(x["measured"] and x["source"] for x in crashrules.REFUSED))
+no_ai = Path(_tmp.mkdtemp(prefix="ut_crash_")) / "NoAi"
+(no_ai / "data/world/maps/campaign/imperial_campaign").mkdir(parents=True)
+(no_ai / "data/world/maps/campaign/imperial_campaign/descr_strat.txt").write_text(
+    "faction england\nai_label anything\n", encoding="latin-1")
+check("a mod with no AI file of its own uses the game's, and is not flagged",
+      not [f for _, f in crashrules.run(Mod(no_ai))[0] if f.code == "ai.label_unknown"])
+for name in installed:
+    fs, fl = crashrules.run(Mod(MODS / name))
+    check(f"{name}: no crash rule fails, and none reports a fatal on a shipping mod",
+          not fl and not [f for _, f in fs if f.severity == "fatal"])
+
 print("\n" + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 print(f"{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)

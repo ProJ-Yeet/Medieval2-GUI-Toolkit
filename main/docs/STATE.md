@@ -1,5 +1,5 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-22 - **Phases 52, 53, 45, 46, 47a, 47b and 48 done**, plus a **tester's pass on the building editor**, all committed and uncut. **Phase 54 (M17, one door to every check) is in progress**: **54a done** (a Health screen over ten validators, committed and uncut); **54b next**, the crash guides' checks nothing runs yet, measured on both mods first. Phase 51 was cut as **v2.3.6** and **beta 2026-09-21**. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
+_Updated: 2026-09-22 - **Phases 52, 53, 45, 46, 47a, 47b and 48 done**, plus a **tester's pass on the building editor**, all committed and uncut. **Phase 54 (M17, one door to every check) is done**, committed and uncut: a Health screen over eleven sources, five new crash-guide rules and two of the guides' claims refused. My changes also exports just the changed files now. Phase 51 was cut as **v2.3.6** and **beta 2026-09-21**. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
 the latest beta, both cut on request after **Phase 44**. They carry everything
 uncut since v2.3.4: the two startup/port commits, the contributor's campaign
 map editor, **M18** and **Phase 44**. v2.3.5 carries 44 and the port work; the

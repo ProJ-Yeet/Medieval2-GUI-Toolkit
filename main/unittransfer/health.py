@@ -315,6 +315,29 @@ def _minor(mod, ctx) -> List[Finding]:
     return out
 
 
+@source("crash", "What the crash guides name", "rawtext", "five files", "play")
+def _crash(mod, ctx) -> List[Finding]:
+    """Phase 54b's rules: the guides' causes that belonged to no module."""
+    from . import crashrules
+    found, failed = crashrules.run(mod)
+    out = []
+    for r, f in found:
+        open_ = {"mode": r.mode}
+        if r.mode == "rawtext":
+            open_.update(rel=f.file, line=str(f.line))
+        elif f.name:
+            open_["name"] = f.name
+        out.append(Finding(
+            source="crash", code=f.code, severity=f.severity, message=f.message,
+            file=f.file, line=f.line, what=f.what, when=f.when, open=open_))
+    for x in failed:
+        out.append(Finding(
+            source="crash", code=x["code"], severity="warn",
+            message=f"this rule could not run: {x['error']}",
+            what=f"failed|{x['code']}", when="play", open={"mode": "rawtext"}))
+    return out
+
+
 #: The cleanup audits: listed, never run here (see the module docstring).
 SLOW = (
     {"id": "bmdb", "label": "Battle models no unit uses, and files nothing names",
@@ -326,6 +349,11 @@ SLOW = (
     {"id": "cards", "label": "Unit cards for units that are gone, and copies",
      "mode": "cards", "cost": "25 to 95 seconds"},
 )
+
+
+def _refused() -> List[dict]:
+    from . import crashrules
+    return [dict(x) for x in crashrules.REFUSED]
 
 
 # ---------------------------------------------------------------------------
@@ -377,5 +405,7 @@ def run(mod, map_for: Optional[Callable] = None, campaign: str = "",
         "counts": {k: sum(1 for f in findings if f.severity == k) for k in SEVERITIES},
         "sources": sources,
         "slow": [dict(x) for x in SLOW],
+        # what the crash guides claim and measuring refused, so it is findable
+        "refused": _refused(),
         "when": [{"id": w[0], "label": w[1], "help": w[2]} for w in WHEN],
     }

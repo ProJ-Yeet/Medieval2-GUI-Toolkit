@@ -2871,7 +2871,7 @@ installed map because both ship RLE TGAs.
 
 ---
 
-# Phase 54 - M17, one door to every check - IN PROGRESS 2026-09-22
+# Phase 54 - M17, one door to every check - DONE 2026-09-22
 
 First in the five-star queue. The complaint is ours and it is still true: we
 have more validators than any of the four reference tools and no single place
@@ -2965,6 +2965,37 @@ or the EDB fires that `historic_events.txt` does not declare; an `ai_label` in
 excluded while its antitrait is not; absolute paths in `descr_banners_new.xml`
 and the projectile and standard files; runs of spaces in the modeldb; a
 faction a building's early level omits and a later level names.
+
+### 54b done 2026-09-22 - five rules, and two of the guides' claims refused
+
+All six measured on DaC and ROCSS first. Five ship in `unittransfer/crashrules.py`
+on `mapcheck`'s `@rule` shape, as an eleventh Health source; the finding rows
+open the file at the line in Raw text, or the trait.
+
+- **`ai.label_unknown`, fatal.** DaC's only undeclared label is `papal_faction`,
+  in both campaigns, and DaC plays: it is the engine's own and is exempt.
+  ROCSS ships no `descr_campaign_ai_db.xml`, so the game's is used and the rule
+  does not run.
+- **`event.no_text`, a warning, matched case-blind.** The guide says the match
+  is case-sensitive; **631 of DaC's 633 script events differ from their key only
+  by case, and DaC plays.** Read through `campevents.event_text_pairs`, which
+  takes the `.bin` too, four are left, all on Shattered Alliances, one of them
+  called `crash_game`. DaC ships them, so not the guide's CTD.
+- **`trait.antitrait_cultures`, fatal.** None in 6 pairs on DaC or 323 on
+  ROCSS: a crash rule that finds nothing on a shipping mod, as it should.
+- **`path.absolute` and `modeldb.spaces`, warnings.** None on either mod.
+
+**Refused: a faction a later building level names and an earlier one omits.**
+DaC has 24 such levels in 14 lines and ROCSS 6 in 4, and both play. It and the
+case-sensitivity claim are `crashrules.REFUSED`, and Health shows them in a
+folded section so they are looked up, not rediscovered.
+
+One defect of the building: counting newlines up to every script match made the
+event rule 10.7s on ROCSS's eight campaigns. It counts only for a finding now
+(1.6s). Exit: `tests/test_health.py` section 6, a fixture per rule and both
+mods held to no crash-rule fatal (51 checks).
+
+**Phase 54 is done.**
 
 ---
 

@@ -84,6 +84,7 @@ function hlPaint(){
       ? 'Nothing matches what is shown. Tick <b>Notes</b> or clear the source above to see the rest.'
       : 'Every check came back clean.'}</div></div>`}
     ${hlSlowHtml(r)}
+    ${hlRefusedHtml(r)}
   </div>`;
 }
 
@@ -169,6 +170,19 @@ function hlSlowHtml(r){
       <button class="mini" onclick="setAppMode('${s.mode}')">Open →</button></div>`).join('')}</div></div>`;
 }
 
+// What the crash guides claim that measuring the installed mods refused. Folded,
+// because it is an answer to look up rather than something to act on.
+function hlRefusedHtml(r){
+  if(!(r.refused || []).length) return '';
+  return `<div class="bsec ${foldCls('hl.refused')}" data-fold="hl.refused"><h4>What the guides say
+      that is not checked <span class="n">${r.refused.length}</span></h4>
+    <div class="trnote">Claims from the two crash guides that the mods themselves disprove. Each is
+      measured, and kept here so it is not rediscovered.</div>
+    <div class="hlslow">${r.refused.map(x => `<div class="hlslowrow" style="display:block">
+      <div>${esc(x.claim)}</div>
+      <div class="count">${esc(x.source)} · measured: ${esc(x.measured)}</div></div>`).join('')}</div></div>`;
+}
+
 /* ---- going to the screen that owns a finding ----
    Each screen loads its own list when it is shown, so the record is opened
    once that list has arrived for THIS mod. `hlWhen` waits for it rather than
@@ -190,6 +204,8 @@ function hlOpen(i){
   if(o.mode === 'minor') return minorGo(o.tab || 'rebels'), name &&
     hlWhen(() => state.mf && state.mf.mod === state.src && state.mf.tab === o.tab, () => mfOpen(name));
   if(o.mode === 'edit'){ if(name) return openEditor(name); return setAppMode('edit'); }
+  // a file with no editor of its own opens as text, at the line
+  if(o.mode === 'rawtext' && o.rel) return rtOpen(o.rel, +o.line || 0);
   setAppMode(o.mode);
   if(o.mode === 'buildings' && name)
     return hlWhen(() => state.bld && state.bld.mod === state.src && state.bld.ov, () => openBuilding(name));
