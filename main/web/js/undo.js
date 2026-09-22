@@ -332,7 +332,14 @@ const PLACE_KEPT=['renderComposer','renderAllFields','renderEditor','edRenderTab
   'renderTraits','trPaint','trPaintForm','renderAncillaries','anPaint','anPaintForm',
   'renderMinor','mfPaint','mfPaintForm','renderFactions','facPaint','facPaintForm',
   'renderStrings','strPaintBar','renderHome','packExportRender','packImportRender',
-  'trgRepaint','mpRender','cmpRepaint'];
+  'trgRepaint','mpRender','cmpRepaint',
+  // the campaign map's side panels. Each rebuilds its markup on every keystroke,
+  // so without this the box you were typing in was gone after one character.
+  // cmapPaint and the tip paints are left out: they draw the canvas per frame.
+  'cmapSidePaint','cmapPickPaint','cmapRegionPaint','cmapCreatePaint','cbrPaint',
+  'cevPaint','cftPaint','cjPaint','cxPaint','csPaint','cmodPaint','cmkPaint',
+  'cchkPaint','cfePaint','cfdPaint','cpinPaint','cqPaint','cvwPaint','mcpPaint',
+  'cclPaint','rebPaint','rdlPaint','rclPaint'];
 function wireKeepPlace(){
   for(const n of PLACE_KEPT){
     const f=window[n];
