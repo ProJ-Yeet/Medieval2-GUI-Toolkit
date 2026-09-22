@@ -2999,7 +2999,7 @@ mods held to no crash-rule fatal (51 checks).
 
 ---
 
-# Phase 55 - M16's playback half: a battle model that moves - SCOPED 2026-09-22, NOT STARTED
+# Phase 55 - M16's playback half: a battle model that moves - 55a DONE 2026-09-22
 
 Asked for by a tester ("the bmdb editor does not show the animation for the
 model"). It is the backlog row *M16, the playback half*, rated M on the belief
@@ -3029,6 +3029,47 @@ it, with a picker for the action.
 **Size: L, with a research step first.** 55a is the reader alone, held to
 every loose file on DaC; nothing on screen moves until it reads all 1 753.
 55b is the chain and the playback.
+
+### 55a done 2026-09-22 - the animation reader, 1 751 of 1 763 files
+
+`unittransfer/casanim.py`. The header is the model header; what an animation
+adds is each node record's five integers - rotation and position key counts,
+their byte offsets into one key block after the pivots, a zero - and a
+properties string. **That string is why cas.py saw "25 bytes"**: empty in a
+soldier's file (length 1 and its NUL), 3ds Max's physics notes in a siege
+engine's, and read as a fixed 25 it sank every node after the first one that
+had any. Rotations are 16 bytes a key, positions 12, then the model's chunk
+list, which must land on the last byte; the offsets are checked as a running
+sequence, so a misread fails instead of playing something plausible.
+
+**Four node-table layouts, not one.** Soldiers (3.16 on) are cas.py's; the
+3.02 engines write one pad byte after the node count and no properties string,
+and 3.05 to 3.12 the other two combinations. The version number does not pick
+one reliably, so each is tried in turn and the first that passes every check
+wins.
+
+**Read: all 10 of ROCSS's, 1 741 of DaC's 1 753.** The twelve are one siege
+engine, the Isengard ballista, six files and a `convertedfiles` copy of the
+same six, **every one cut short** - the node table ends 12 to 48 bytes before
+its own pivots. Two are played by `descr_engine_skeleton.txt`. Every file
+`descr_skeleton.txt` names that the mod ships loose reads (1 625 on DaC).
+
+**Three things 55b inherits, measured here:**
+
+- **Most animations a mod plays are not loose.** DaC's `descr_skeleton.txt`
+  names 14 715 distinct files and ships 1 625 of them; ROCSS names 3 111 and
+  ships none. The rest are in `animations/pack.dat`, which nothing reads. 55b
+  plays what is loose and says so for the rest; a `pack.dat` reader is its own
+  question.
+- **The exporter does not normalise.** 99.52% of DaC's 1.23 M soldier
+  rotations are within 0.5 to 1.5 of unit length; they are normalised when
+  sampled.
+- **Which component is w is not settled by counting**: `(1,0,0,0)` and
+  `(0,0,0,1)` are both common exact still keys. Drawing the skeleton settles
+  it; 55b's first job.
+
+Exit: `tests/test_casanim.py`, 27 checks - fixtures in both main layouts, a
+short track, three kinds of refusal, sampling, `resolve()`, and both mods.
 
 ---
 
