@@ -2999,6 +2999,39 @@ mods held to no crash-rule fatal (51 checks).
 
 ---
 
+# Phase 55 - M16's playback half: a battle model that moves - SCOPED 2026-09-22, NOT STARTED
+
+Asked for by a tester ("the bmdb editor does not show the animation for the
+model"). It is the backlog row *M16, the playback half*, rated M on the belief
+that `cas.py` already reads the container. **Measuring said otherwise, twice:**
+
+- **`cas.py` does not read an animation file.** It reads model `.cas` files;
+  the first of DaC's animation files it was given
+  (`animations/engine/ballista/ballista_stand_to_crank.cas`) fails at byte 680,
+  a zero-length chunk, because an animation is a different layout. No document
+  in `Reference/` describes it, so the reader is reverse-engineered from the
+  files: per-bone keys, the time base and whatever quantisation it uses.
+- **Where the files are depends on the mod.** DaC ships 1 753 unpacked
+  animation `.cas` files; ROCSS ships 10; the base game none - vanilla's live
+  in `animations/pack.dat` and `skeletons.dat`, a packed format nothing here
+  reads. So a model plays only when its mod ships the animations loose.
+- **DaC's `descr_skeleton.txt` names another mod's folder** for every file
+  (`mods/Third_Age_3/data/animations/...`, 410 skeleton types). The game plays
+  because the same relative path exists under DaC's own `data/`, so a path
+  resolves by dropping `mods/<any>/data/` and reading it in this mod.
+
+The chain it needs: a modeldb entry names its skeleton(s); `descr_skeleton.txt`
+names that skeleton's files per action (`stand_a_idle`, `walk`, `run`...); the
+animation file gives each bone's rotation over time; the viewer skins the mesh
+it already draws (it already knows the bones, "rigged to N bones") and plays
+it, with a picker for the action.
+
+**Size: L, with a research step first.** 55a is the reader alone, held to
+every loose file on DaC; nothing on screen moves until it reads all 1 753.
+55b is the chain and the playback.
+
+---
+
 # Phases 51-53 - a user's feedback on the EDB editor, 2026-09-21
 
 **Asked for by the user on 2026-09-21**, passing on feedback from someone
