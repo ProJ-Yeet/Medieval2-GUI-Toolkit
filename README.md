@@ -580,7 +580,7 @@ their code**
 **Special thanks** Gigantus and the TWCenter community, for the guides that
 taught everyone, this tool included, how these files actually work.
 
-**Testing** Jayzinski, TheHolyPilgrim, Espartan, Anhlego and Lupinemaverick
+**Testing** Jayzinski, TheHolyPilgrim, Espartan, Anhlego, Lupinemaverick and empire3376
 
 ## Changelog
 

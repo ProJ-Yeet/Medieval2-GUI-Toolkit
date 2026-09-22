@@ -1102,9 +1102,12 @@ def _plan_folder_move(plan: EditPlan, mod: Mod, entry: "modeldb.ModelEntry",
             "copied, not moved.")
 
     raw = modeldb.rewrite_entry_paths(raw, moves, pad=entry.first_entry_pad)
+    pending = {rel.lower() for _src, rel in plan.copies}
     for old, new in sorted(moves.items()):
         src = mod.data / old
         if not src.is_file():
+            if old.lower() in pending:
+                continue                      # imported this save: _follow_imports moves it
             plan.warnings.append(
                 f"data/{old} is not on disk - '{entry.name}' now points at "
                 f"data/{new}, put the file there yourself.")
@@ -1133,6 +1136,34 @@ def _plan_folder_move(plan: EditPlan, mod: Mod, entry: "modeldb.ModelEntry",
             f"at data/{target}: {', '.join(users[:4])}{'…' if len(users) > 4 else ''}")
     plan.changes.append(f"{entry.name}: mesh + textures standardised under data/{target}")
     return raw
+
+
+def _follow_imports(plan: EditPlan, mod: Mod, raw: str, pad: bool,
+                    imported: List[str]) -> None:
+    """Land each imported file where the entry points at it after a folder move.
+
+    An import is queued for the folder it was picked in, and the move then
+    repoints the entry at the new folder. The move cannot carry the file across
+    (it is not on disk yet), so without this the copy lands in the old folder
+    while the modeldb names the new one: the game finds no texture. Reported as
+    "imported a texture, the mod does not contain it".
+    """
+    values = {s["value"] for s in modeldb.path_slots_raw(raw, pad=pad) if s["value"]}
+    lowered = {v.lower() for v in values}
+    for rel in imported:
+        if rel.lower() in lowered:
+            continue                          # still pointed at where it lands
+        name = _basename(rel).lower()
+        dest = sorted({v for v in values if _basename(v).lower() == name
+                       and not (mod.data / v).exists()})
+        if len(dest) != 1:
+            continue
+        for k, (src, r) in enumerate(plan.copies):
+            if r == rel:
+                plan.copies[k] = (src, dest[0])
+        plan.changes = [c.replace(f"-> data/{rel}", f"-> data/{dest[0]}")
+                        if c == f"copy {_basename(rel)} -> data/{rel}" else c
+                        for c in plan.changes]
 
 
 def _texture_index_map(raw: str, pad: bool, defaults: Dict[str, str],
@@ -1214,9 +1245,12 @@ def _plan_model_edit(plan: EditPlan, mod: Mod, me: ModelEdit,
             plan.changes.append(f"{entry.name}: path #{i} -> {v}")
     # files brought in for the default / per-faction texture boxes: copied here,
     # pointed at by the path values below
+    imported: List[str] = []
     for imp in me.imports:
-        _plan_file_copy(plan, mod, Path(str(imp.get("src") or "")),
-                        str(imp.get("dest_dir") or ""))
+        rel = _plan_file_copy(plan, mod, Path(str(imp.get("src") or "")),
+                              str(imp.get("dest_dir") or ""))
+        if rel:
+            imported.append(rel)
 
     # ---- faction (ownership) texture records ----
     if me.factions is not None:
@@ -1269,6 +1303,7 @@ def _plan_model_edit(plan: EditPlan, mod: Mod, me: ModelEdit,
     # ---- one folder for the mesh + textures (last: it owns every path) ----
     if me.move_dir:
         raw = _plan_folder_move(plan, mod, entry, raw, me)
+        _follow_imports(plan, mod, raw, pad, imported)
 
     # ---- rename (EDU refs follow, mod-wide) ----
     new_name = me.new_name.strip().lower()
