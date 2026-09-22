@@ -53,6 +53,13 @@
   .hlmsg{flex:1;min-width:0;font-size:12.5px;overflow-wrap:anywhere}
   .hlmsg .count{margin-top:2px}
   .hlrow button{flex:0 0 auto}
+  /* Open → is an ANCHOR, not a button: that is the whole of "middle-click opens
+     it in a new tab", and it costs one rule to keep it looking like the button
+     it used to be. */
+  .hlrow a.mini,.hlslowrow a.mini{flex:0 0 auto;text-decoration:none;white-space:nowrap;
+    background:var(--panel2);color:var(--ink);border:1px solid var(--edge);
+    border-radius:6px;padding:4px 9px;font-size:13px;line-height:1.2}
+  .hlrow a.mini:hover,.hlslowrow a.mini:hover{border-color:var(--accent);color:var(--accent)}
   .hlgroup h4 .count{font-weight:400;text-transform:none;letter-spacing:0;margin-left:6px}
   .hlslow{display:flex;flex-direction:column;gap:4px}
   .hlslowrow{display:flex;gap:10px;align-items:center;justify-content:space-between;
@@ -90,7 +97,29 @@
   .buildtag{color:var(--dim);font-size:11px;letter-spacing:.3px;padding:2px 7px;
     background:transparent;border-color:var(--edge)}
   .buildtag:hover{color:var(--ink)}
-  .layout{display:flex;height:calc(calc(100vh / var(--uiz)) - 50px)}
+  /* 50px of header, then 30px of crumb bar. Both are above the scrollport and
+     neither scrolls, so both come off the height the layout gets. */
+  .layout{display:flex;height:calc(calc(100vh / var(--uiz)) - 80px)}
+  .crumbs{display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;
+    background:var(--panel);border-bottom:1px solid var(--edge);font-size:12px;
+    position:sticky;top:50px;z-index:9}
+  .crumbs .crbtn{padding:1px 7px;font-size:12px;line-height:18px;border-radius:5px;
+    background:var(--panel2);flex:0 0 auto}
+  .crumbs .crbtn:disabled{opacity:.35;cursor:default;border-color:var(--edge)}
+  /* Narrow enough and the trail is wider than the bar. It scrolls rather than
+     clipping, and navCrumbs pins it to the END - the crumb you are ON is the
+     last one, and it is the one that must never be the one cut off. */
+  .crlist{display:flex;align-items:center;gap:6px;min-width:0;overflow-x:auto;
+    white-space:nowrap;scrollbar-width:none}
+  .crlist::-webkit-scrollbar{display:none}
+  .crsep{color:var(--dim);flex:0 0 auto}
+  .crumb{color:var(--dim);text-decoration:none;overflow:hidden;text-overflow:ellipsis;
+    max-width:260px;flex:0 1 auto}
+  .crumb:hover{color:var(--accent2);text-decoration:underline}
+  .crumb.on{color:var(--ink);font-weight:600}
+  /* the ones ahead of the finger: still on show, so it is clear that → has
+     somewhere to go, but plainly not where you are */
+  .crumb.ahead{opacity:.45;font-style:italic}
   .filters{width:210px;flex:0 0 210px;padding:12px;overflow:auto;border-right:1px solid var(--edge);background:var(--panel)}
   .filters h3{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:16px 0 6px}
   .filters h3:first-child{margin-top:0}
@@ -3066,6 +3095,11 @@
       <span><span class="nm">Credits</span><span class="hint">Who made this possible</span></span></button>
   </div>
 </nav>
+
+<!-- The trail: where you have been, and the way back along it. Drawn by
+     navCrumbs() in core.js; every crumb is a real <a href>, so a middle click
+     on one opens that screen in a new tab. -->
+<div class="crumbs" id="crumbs"></div>
 
 <div class="layout">
   <aside class="filters" id="unitFilters">

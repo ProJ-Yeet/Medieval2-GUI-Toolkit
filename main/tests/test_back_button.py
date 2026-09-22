@@ -79,7 +79,11 @@ const say=(what,got,want)=>out.say.push({what,got,want,ok:JSON.stringify(got)===
 // Every layer's way back is a call this editor already shipped; which of them a
 // press REACHES is what the list decides, so each is swapped for a recorder.
 let fired=[];
-navOpen=open=>{fired.push('menu');navMenu.classList.toggle('open',open);};
+// only when it actually SHUTS an open menu: setAppMode calls navOpen(false) on
+// every switch, and a recorder that counted those would read as a menu closing
+// on screens where none was ever open
+navOpen=open=>{if(!open&&navMenu.classList.contains('open'))fired.push('menu');
+               navMenu.classList.toggle('open',open);};
 mpCancel=()=>{fired.push('model picker');mpBack=null;};
 imgCancel=()=>{fired.push('image picker');imgBack=null;};
 bldClauseCancel=()=>{fired.push('clause');state.bld.clause=null;};
@@ -87,13 +91,17 @@ bldPickCancel=()=>{fired.push('sub-panel');state.bld.cmp=state.bld.vc=state.bld.
 closeModal=()=>{fired.push('dialog');overlay.classList.remove('open');};
 backToBuilding=()=>{fired.push('building');state.bldReturn=null;state.mode='buildings';};
 applyMode=noop; activity=noop; render=noop; syncNav=noop; toast=noop;
+// A route with a record in it waits for that screen's list to arrive before it
+// picks the record. There is no screen and no list here, so the wait would be
+// eighty timers deep and prove nothing; what is under test is the trail.
+navWhen=noop;
 
 function press(){fired=[];const did=uiBack();return {did,fired:fired.slice()};}
 function shut(){
   navMenu.classList.remove('open'); drawer.classList.remove('open');
   overlay.classList.remove('open');
   mpBack=null; imgBack=null;
-  state.bld=null; state.bldReturn=null; state.modeTrail=[]; state.mode='home';
+  state.bld=null; state.bldReturn=null; state.trail={list:[],i:-1}; state.mode='home';
 }
 
 // ---- the order: innermost first ---------------------------------------------
@@ -155,29 +163,99 @@ function shut(){
   say('…and the press still worked',p.did,true);
 }
 
-// ---- the trail of modules ------------------------------------------------------
+// ---- the trail: a list with a finger, not a stack ------------------------------
+const modes=()=>state.trail.list.map(e=>e.route.mode);
 {
   shut();
+  navPush({mode:'home'});
   setAppMode('buildings'); setAppMode('traits');
-  say('the trail records where each switch came from',
-      state.modeTrail.slice(),['home','buildings']);
+  say('the trail records every place, not the places left behind',
+      [modes(),state.trail.i],[['home','buildings','traits'],2]);
   press();
-  say('a press walks back one step',[state.mode,state.modeTrail.slice()],
-      ['buildings',['home']]);
-  say('…and does not record the step it just took',state.modeTrail.length,1);
-  press();
-  say('and out to where it started',[state.mode,state.modeTrail.slice()],['home',[]]);
+  say('a press walks the finger back one',[state.mode,state.trail.i],['buildings',1]);
+  say('…and keeps what is ahead of it, which is what Forward walks',
+      [modes(),navCan(1)],[['home','buildings','traits'],true]);
+  navStep(1);
+  say('forward goes back up it',[state.mode,state.trail.i],['traits',2]);
+  press(); press();
+  say('and out to where it started',[state.mode,state.trail.i],['home',0]);
+  say('…where there is nothing behind and everything ahead',
+      [navCan(-1),navCan(1)],[false,true]);
+}
+{
+  // a browser drops the forward half when you set off somewhere new, and so
+  // does this: the way you did not go is not a place you have been
+  shut();
+  navPush({mode:'home'});
+  setAppMode('buildings'); setAppMode('traits');
+  press(); press();
+  setAppMode('bmdb');
+  say('a new move from part way back drops what was ahead',
+      [modes(),navCan(1)],[['home','bmdb'],false]);
 }
 {
   shut();
-  say('at Home with nothing open, nothing answers',press().did,false);
+  navPush({mode:'home'});
+  navGo({mode:'buildings',name:'hinterland_castles'});
+  const e=state.trail.list[state.trail.i];
+  say('a route carries its record into the trail, and into the crumb',
+      [e.route.mode,e.route.name,e.label],
+      ['buildings','hinterland_castles','Buildings · hinterland_castles']);
+  say('…and the setAppMode inside it did not file a second, thinner crumb',
+      state.trail.list.length,2);
+}
+{
+  // a dialog over the screen you are leaving does not come with you: it is shut
+  // the same way its own ✕ shuts it, before the screen underneath changes
+  shut();
+  navPush({mode:'buildings'});
+  overlay.classList.add('open');
+  fired=[];
+  setAppMode('health');
+  say('a mode switch shuts what was stacked on the screen it left',
+      [fired,overlay.classList.contains('open')],[['dialog'],false]);
+  shut();
+  navPush({mode:'buildings'});
+  overlay.classList.add('open');
+  state.bld={clause:{},cmp:null,vc:null,stash:null};
+  fired=[];
+  navGo({mode:'health'});
+  say('…innermost first, exactly as a Back press would',fired,['clause','dialog']);
 }
 {
   shut();
+  say('at Home with nothing open and nowhere behind, nothing answers',press().did,false);
+}
+{
+  shut();
+  navPush({mode:'home'});
   const many=['buildings','traits','bmdb','sounds','strings','factions'];
   for(let i=0;i<40;i++)setAppMode(many[i%many.length]);
   say('the trail is capped rather than grown for a whole session',
-      state.modeTrail.length<=24,true);
+      state.trail.list.length<=24,true);
+  say('…and the finger is still on the end of it',
+      state.trail.i,state.trail.list.length-1);
+}
+
+// ---- the address of a place ----------------------------------------------------
+{
+  // the whole of "middle-click opens it in a new tab" rests on this being a real
+  // URL that a fresh tab can be opened on and read back
+  state.src='ROCSS';
+  const r={mode:'campdb',name:'agents/assassinate_chance_max'};
+  const url=navUrl(r);
+  say('a route has an address, with the mod on it',
+      url,'/?mod=ROCSS&go=campdb&name=agents%2Fassassinate_chance_max');
+  const back=navFromQs(new URLSearchParams(url.slice(2)));
+  say('…and the address reads back as the route',back,r);
+  say('an empty route is Home, not a broken address',
+      navFromQs(new URLSearchParams('mod=ROCSS')),{mode:'home'});
+  // the `&` is written `&amp;` because it is inside an attribute; a browser
+  // reads it back as `&`, which is the address the new tab actually opens
+  const a=navLinkHtml({mode:'health'},'Open →','mini','go');
+  say('a link is an anchor with a real href - nothing else makes middle click work',
+      [a.startsWith('<a href="/?mod=ROCSS&amp;go=health"'),a.includes('data-nav=')],
+      [true,true]);
 }
 
 // ---- the spare history entry ---------------------------------------------------

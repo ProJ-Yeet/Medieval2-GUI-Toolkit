@@ -115,9 +115,11 @@ const state={mods:[],src:null,dst:null,xferDst:null,data:null,destData:null,fact
   tr:null, an:null, mf:null, fac:null,
   // bld survives a hop into the unit editor and back - see openUnitFromBuilding
   bld:null, bldReturn:null,
-  // the modules opened before this one, oldest first - what the Back button
-  // walks out through once every dialog above it is shut (see NAV_LAYERS)
-  modeTrail:[],
+  // Every place visited, oldest first, and a finger pointing at the one you are
+  // on: what the crumb bar draws, what its arrows walk, and what the Back button
+  // steps through once every dialog above it is shut. See "a route, the address
+  // of one, and the trail of them", and NAV_LAYERS.
+  trail:{list:[],i:-1},
   // bumped by imgBust() whenever this tool writes a picture; see iconBust()
   iconV:0};
 
@@ -414,6 +416,11 @@ async function init(){
     // and opens the editor for this tab only; the remembered mod is not changed.
     const qs=new URLSearchParams(location.search);
     const qMod=qs.get('mod'),qEdit=qs.get('edit');
+    /* ?go=<mode>&name=… - the same idea for every OTHER screen, one address
+       instead of a key per screen. It is a route (see navUrl), so anything that
+       can name a place can be a real link to it, and the two above are simply
+       the two that were hand-rolled before there was a word for it. */
+    const qGo=qs.get('go');
     /* ?building=&lvl=&unit= - how the unit editor's Recruitment tab says "go and
        look at that building". The line opens at the tier the pool sits on and
        the unit's rows are flashed there, which is the whole point of the trip:
@@ -424,9 +431,18 @@ async function init(){
     // A launch lands on Home, whatever module you were in last time - that is
     // the point of having one. The remembered mode is not forgotten: Home offers
     // it as "last time you were in …", so it is a click rather than an ambush.
-    state.mode=qEdit?'edit':qBld?'buildings':'home';
+    // a `?go=` naming a mode this build does not offer is not a mode: land Home
+    const go=qGo&&MODES.some(m=>m.id===qGo&&!m.off)?qGo:'';
+    state.mode=qEdit?'edit':qBld?'buildings':go||'home';
     await refreshMods(qMod||s.last_source,qMod||s.last_dest);
     wire(); applyMode(false);
+    /* The trail starts where this tab opened, so the bar has a first crumb and
+       Back has a floor. A tab opened on a link starts its OWN trail: the tab it
+       came from keeps its, which is most of the point of a new tab. navGo files
+       its own first crumb, so only the other two roads in need one. */
+    if(go)navGo(navFromQs(qs));
+    else navPush(qEdit?{mode:'edit',name:qEdit}
+                 :qBld?{mode:'buildings',name:qBld}:{mode:state.mode});
     if(qEdit){
       if(state.data&&state.data.units.some(u=>u.type===qEdit))openEditor(qEdit);
       else toast(`“${qEdit}” is not a unit in ${state.src}`,4000);
@@ -504,6 +520,11 @@ const unitListFailedHtml=(mod,why)=>`<div class="empty">Couldn't load “${esc(m
 const unitListMode=()=>state.mode==='transfer'||state.mode==='edit';
 async function loadSource(){
   const mod=state.src;
+  // A crumb's href carries the mod it points into, so the bar is redrawn when
+  // the mod changes under it - otherwise middle-clicking a crumb would open a
+  // new tab on the mod you had left, while clicking it goes to the one you are
+  // in, and the same crumb would mean two places.
+  navCrumbs();
   // Every load ABANDONS the one before it. Without this, picking a second mod
   // while the first was still being read left both requests running: the older
   // one held one of the browser's handful of connections to the end, and if it
@@ -1220,17 +1241,23 @@ function navOpen(open){
 }
 // NB: not "setMode" - the composer already owns that name (its new/base/replace
 // switch), and function declarations hoist, so the later one would silently win.
-// `returning` is the Back button coming the other way: the trail is being
-// walked out of, so nothing new goes onto it.
-function setAppMode(id,returning){
+// The second parameter this used to take - "the Back button coming the other
+// way, so nothing new goes onto the trail" - is `navGoing` now, because walking
+// the trail is no longer the only thing that must not record a step: navGo's
+// own setAppMode must not either.
+function setAppMode(id){
   navOpen(false);
   if(id===state.mode)return;
-  if(!returning){
-    state.modeTrail.push(state.mode);
-    // A session wanders - twenty-four steps back is already further than anyone
-    // presses, and the oldest of them are not worth carrying.
-    if(state.modeTrail.length>24)state.modeTrail.shift();
-  }
+  /* Shut what was stacked on the screen being left. A dialog used to survive a
+     mode switch made from the menu and sit over whatever came next; nobody had
+     to look at that for long, because the dialog filled the window and the ✕
+     was where it always is. The crumb bar is under it, so it is worth the one
+     line: this is the same call the Back button has always made. */
+  navShut();
+  // A switch that navGo is already driving is that move, not a second one: it
+  // recorded the route WITH its record ("Buildings · hinterland_castles"), and
+  // this would file a thinner copy of it right behind.
+  if(!navGoing)navPush({mode:id});
   activity('opened',`${modeDef(id).name} (mod: ${state.src||'none'})`);
   state.mode=id;applyMode(true);
 }
@@ -1246,8 +1273,223 @@ function syncNav(){
   document.querySelectorAll('#navModes .navitem').forEach(b=>
     b.classList.toggle('on',b.dataset.mode===host));
 }
+
+/* ---------- a route, the address of one, and the trail of them ----------
+
+   A ROUTE is `{mode, name?, tab?, rel?, line?, key?}`: one object naming a
+   screen and, where that screen has records, the record inside it. Nothing here
+   invented the shape - it is exactly what `health.py` already hangs on every
+   finding as `open`, because a Health row was the first thing in this tool that
+   had to name a place it was not at. Three things read it now, and they are
+   deliberately one piece of knowledge rather than three:
+
+     navGo(r)     go there, in this tab
+     navUrl(r)    the ADDRESS of there, so a link to it can be a real <a href>
+     init()       reads one back out of `?go=` when a tab opens straight on it
+
+   **Middle click is handled nowhere below, and that is the point.** A middle
+   click on an anchor with a real href opens a new tab without asking any
+   JavaScript - it is not even a `click` event. So the whole of "open this in a
+   new tab" is: make the link an anchor, give it an href, and intercept only the
+   plain left button. Ctrl-click, shift-click and the context menu's "Open link
+   in new tab" all come free with it. `?mod=&edit=` and `?building=` were the
+   first two of these addresses, hand-rolled one screen at a time; `?go=` is the
+   same idea with the screen named rather than guessed from which key is there.
+
+   The TRAIL is where those routes have taken you. It is a list with a finger in
+   it rather than a stack, which is the difference between Back and Back AND
+   FORWARD: stepping back moves the finger instead of throwing the entry away,
+   so the way you came is still in front of you to walk along again. Each entry
+   also remembers WHERE IN the screen you were, taken as you leave it. A
+   screen's own filters already survive the trip - every module caches its state
+   per mod and repaints from that, so Health comes back with its Notes tick and
+   its source filter where they were - and what does not survive is the scroll,
+   because the repaint replaces the markup. That is what `place` carries. Open a
+   health finding, fix the file, come back: the row you left from is under the
+   cursor rather than a thousand rows above it.
+
+   The browser's own Back button walks this trail (see NAV_LAYERS). Its Forward
+   button cannot, and the two arrows in the bar are the only forward there is: a
+   Back press reaches us at all by spending a spare history entry pushed AHEAD
+   of the page, so there is deliberately nothing ahead for Forward to land on. */
+
+const NAV_KEYS = ['name', 'tab', 'rel', 'line', 'key'];
+//: The same ceiling the old mode-only trail carried: a session wanders, and
+//: twenty-four steps back is already further than anybody presses.
+const NAV_MAX = 24;
+//: How many of the trail the bar shows at once. Older ones fold behind a `…`.
+const NAV_CRUMBS = 5;
+
+function navUrl(r, mod){
+  const q=new URLSearchParams(), m=mod||state.src;
+  if(m)q.set('mod',m);
+  q.set('go',(r&&r.mode)||'home');
+  NAV_KEYS.forEach(k=>{const v=r&&r[k]; if(v!=null&&v!=='')q.set(k,String(v));});
+  return '/?'+q.toString();
+}
+function navFromQs(qs){
+  const r={mode:qs.get('go')||'home'};
+  NAV_KEYS.forEach(k=>{const v=qs.get(k); if(v)r[k]=v;});
+  return r;
+}
+//: What a crumb, a tooltip and a title call a route.
+function navLabel(r){
+  const what=(r&&(r.name||r.key||r.rel))||'';
+  return modeDef((r&&r.mode)||'home').name+(what?' · '+what:'');
+}
+
+/* One link, drawn one way. `label` is markup and is NOT escaped (a row puts an
+   arrow in it); everything else here is. */
+function navLinkHtml(r, label, cls, title){
+  return `<a href="${esc(navUrl(r))}" data-nav="${esc(JSON.stringify(r))}"`
+    +`${cls?` class="${esc(cls)}"`:''}${title?` title="${esc(title)}"`:''}>${label}</a>`;
+}
+/* Wired once, delegated, so a repaint never has to re-attach anything. A plain
+   left click is ours and is cancelled; every other button and every modifier is
+   handed straight back to the browser, which is what makes ctrl-click and "open
+   link in new tab" behave here the way they do everywhere else. */
+function navLinkWire(){
+  document.addEventListener('click',ev=>{
+    if(ev.defaultPrevented||ev.button!==0||ev.metaKey||ev.ctrlKey||ev.shiftKey||ev.altKey)return;
+    const a=ev.target&&ev.target.closest&&ev.target.closest('a[data-nav],a[data-crumb]');
+    if(!a)return;
+    ev.preventDefault();
+    if(a.dataset.crumb!=null)return void navSeat(+a.dataset.crumb);
+    try{ navGo(JSON.parse(a.dataset.nav)); }catch(e){}
+  });
+}
+
+/* A screen loads its own list when it is shown, so a record is opened once that
+   list has arrived FOR THIS MOD. This waits for it rather than guessing a
+   delay, and gives up quietly after a while: landing on the right screen with
+   the record unpicked is still most of the way there. (It was `hlWhen` in
+   health.js until routes stopped being a Health-only idea.) */
+function navWhen(ready, then, tries=80){
+  let ok=false;
+  try{ ok=!!ready(); }catch(e){ ok=false; }
+  if(ok){ try{ then(); }catch(e){} return; }
+  if(tries>0)setTimeout(()=>navWhen(ready,then,tries-1),150);
+}
+const navLoaded=key=>()=>state[key]&&state[key].mod===state.src;
+
+//: >0 while navGo or navSeat is driving, so the setAppMode inside them does not
+//: record a second, thinner entry for the move they are already recording.
+let navGoing=0;
+
+/* Go where a route points, in this tab. This was the second half of `hlOpen`
+   and moved here whole, so a Health row, a `?go=` address, a crumb and the ←
+   button all arrive by one road. A mode with no record to pick is a setAppMode
+   and nothing else. */
+function navGo(r){
+  const o=r||{}, name=o.name||'';
+  if(!navGoing)navShut();
+  if(!navGoing)navPush(o);
+  navGoing++;
+  try{
+    if(o.mode==='minor'){
+      minorGo(o.tab||'rebels');
+      if(name)navWhen(()=>state.mf&&state.mf.mod===state.src&&state.mf.tab===o.tab,
+                      ()=>mfOpen(name));
+      return;
+    }
+    if(o.mode==='edit')return void(name?openEditor(name):setAppMode('edit'));
+    // a file with no editor of its own opens as text, at the line
+    if(o.mode==='rawtext'&&o.rel)return void rtOpen(o.rel,+o.line||0);
+    setAppMode(o.mode);
+    if(o.mode==='buildings'&&name)
+      return void navWhen(()=>state.bld&&state.bld.mod===state.src&&state.bld.ov,
+                          ()=>openBuilding(name));
+    if(o.mode==='campmap')
+      return void navWhen(()=>state.cmap&&state.cmap.mod===state.src,()=>{
+        cchkOpen();
+        if(!state.cchk.open)cchkToggle();
+        if(o.key)navWhen(()=>state.cchk&&state.cchk.rep,()=>cchkGoKey(o.key));
+      });
+    if(!name)return;
+    // built here and not at the top of the file: every one of these lives in a
+    // module loaded AFTER this one, and a top-level const would read the names
+    // before they exist.
+    const open={traits:['tr',trOpen], ancillaries:['an',anOpen], guilds:['gu',guOpen],
+                factions:['fac',facOpen], cultures:['mf',mfOpen],
+                campdb:['cdb',cdbOpen]}[o.mode];
+    if(open)navWhen(navLoaded(open[0]),()=>open[1](name));
+  }finally{ navGoing--; }
+}
+
+/* ---- the trail itself ----
+   `list` is every place visited, oldest first; `i` is the finger. */
+const navAt=()=>state.trail.list[state.trail.i]||null;
+const navCan=d=>{const t=state.trail, j=t.i+d; return j>=0&&j<t.list.length;};
+
+//: Where you are IN the screen you are leaving. Its own filters look after
+//: themselves; the scroll is what a repaint throws away.
+const navPlace=()=>({scroll:(typeof main!=='undefined'&&main&&main.scrollTop)||0});
+
+/* Put a place back, once there is a screen tall enough to hold it. The repaint
+   can be a fetch away, so this keeps trying for a few seconds and then lets go:
+   landing at the top of the right screen is not a failure worth a message. */
+function navSeatPlace(p, tries=40){
+  if(!p||!p.scroll||typeof main==='undefined'||!main)return;
+  main.scrollTop=p.scroll;
+  if(Math.abs(main.scrollTop-p.scroll)<2||tries<=0)return;
+  setTimeout(()=>navSeatPlace(p,tries-1),80);
+}
+
+/* A move FORWARDS: remember where the screen being left was, drop whatever was
+   ahead of the finger (a new move is a new branch, the way a browser's is), and
+   add this one. */
+function navPush(route){
+  const t=state.trail, cur=navAt();
+  if(cur)cur.place=navPlace();
+  t.list.length=t.i+1;
+  t.list.push({route:Object.assign({},route), label:navLabel(route), place:null});
+  if(t.list.length>NAV_MAX)t.list.shift();
+  t.i=t.list.length-1;
+  navCrumbs();
+}
+//: Back or forward by `d`. Nothing is added: the finger moves along what is there.
+const navStep=d=>navSeat(state.trail.i+d);
+function navSeat(j){
+  const t=state.trail;
+  if(j<0||j>=t.list.length||j===t.i)return false;
+  const cur=navAt();
+  if(cur)cur.place=navPlace();
+  t.i=j;
+  const e=t.list[j];
+  navGoing++;
+  try{ navGo(e.route); }finally{ navGoing--; }
+  navSeatPlace(e.place);
+  navCrumbs();
+  return true;
+}
+
+/* The bar under the header: ← →, then the trail as links. Each crumb is an
+   anchor with a real href, so middle-clicking one opens that screen in a new
+   tab; left-clicking it walks the trail already here instead of starting a new
+   one. The ones ahead of the finger stay on show, greyed: that is what tells
+   you Forward has somewhere to go. */
+function navCrumbs(){
+  const bar=document.getElementById('crumbs');
+  if(!bar)return;
+  const t=state.trail, from=Math.max(0,t.i-NAV_CRUMBS+1);
+  const arrow=(d,ch,what)=>`<button class="crbtn" data-step="${d}" ${navCan(d)?'':'disabled'}
+    title="${esc(navCan(d)?what+' to '+t.list[t.i+d].label
+                 :'Nothing '+what.toLowerCase()+' of here')}">${ch}</button>`;
+  const links=t.list.slice(from).map((e,n)=>{
+    const j=from+n;
+    return `<a class="crumb${j===t.i?' on':j>t.i?' ahead':''}" href="${esc(navUrl(e.route))}"
+      data-crumb="${j}" title="${esc(e.label)}${j>t.i?' (ahead of here)':''}">${esc(e.label)}</a>`;
+  }).join('<span class="crsep">›</span>');
+  bar.innerHTML=arrow(-1,'←','Back')+arrow(1,'→','Forward')
+    +`<div class="crlist">${from?'<span class="crsep">…</span>':''}${links}</div>`;
+  bar.querySelectorAll('.crbtn').forEach(b=>b.onclick=()=>navStep(+b.dataset.step));
+  const l=bar.querySelector('.crlist');
+  if(l)l.scrollLeft=l.scrollWidth;       // where you ARE is the end of the trail
+}
+
 function wire(){
   wireFilterFolds();
+  navLinkWire();
   navModes.innerHTML=menuModes().map(m=>`<button class="navitem" data-mode="${m.id}">
       <span class="ic">${m.icon}</span>
       <span><span class="nm">${esc(m.name)}</span><span class="hint">${esc(m.hint)}</span></span>
@@ -1731,7 +1973,12 @@ function uiBackArm(){
    Each keeps its OWN snapshot of the markup it covered up - that is what tells
    the layer it is the one on top, and it is the same field its Back button
    hands back. */
-const NAV_LAYERS=[
+/* The menu, the drawer and the dialogs: everything that can be stacked ON a
+   screen rather than being one. Split out from the list below because going
+   somewhere else has to shut them first - a dialog left open over the screen
+   you walked away from covers the screen you arrive at, and the crumb bar with
+   it. See navShut, which is the one caller. */
+const NAV_OVER=[
   {on:()=>navMenu.classList.contains('open'), back:()=>navOpen(false)},
   {on:()=>drawer.classList.contains('open'), back:()=>drawer.classList.remove('open')},
   {on:()=>modalOpen()&&!!mpBack, back:()=>mpCancel()},
@@ -1740,11 +1987,16 @@ const NAV_LAYERS=[
   {on:()=>modalOpen()&&!!(state.bld&&(state.bld.cmp||state.bld.vc||state.bld.stash)),
    back:()=>bldPickCancel()},
   {on:()=>modalOpen(), back:()=>closeModal()},
+];
+const NAV_LAYERS=[
+  ...NAV_OVER,
   // Out of the dialogs: a unit editor reached FROM a building goes back to the
   // building, which is the trip the header's own ← button makes.
   {on:()=>state.mode==='edit'&&!!state.bldReturn, back:()=>backToBuilding()},
-  // …and then the modules, in the order they were opened.
-  {on:()=>state.modeTrail.length>0, back:()=>setAppMode(state.modeTrail.pop(),true)},
+  // …and then the trail, one place at a time, back the way it was walked in.
+  // navSeat puts the screen's scroll back with it, so a press lands where the
+  // eye was and not at the top of a thousand rows.
+  {on:()=>navCan(-1), back:()=>navStep(-1)},
 ];
 /* Step back one screen. Returns whether anything did.
 
@@ -1757,6 +2009,18 @@ function uiBack(){
   if(!layer)return false;
   layer.back();
   return true;
+}
+/* Shut whatever is stacked on this screen before leaving it, innermost first,
+   each by the call its OWN Back or Cancel makes - so a route taken from inside
+   a dialog asks the same questions the dialog's ✕ would, rather than sliding a
+   new screen under one that is still open. Only the layers above a screen: the
+   trail is what is doing the asking. */
+function navShut(){
+  for(let n=0;n<NAV_OVER.length+2;n++){
+    const l=NAV_OVER.find(x=>{try{return x.on();}catch(e){return false;}});
+    if(!l)return;
+    l.back();
+  }
 }
 function uiBackWire(){
   uiBackArm();

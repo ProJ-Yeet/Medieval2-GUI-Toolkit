@@ -2,6 +2,37 @@
 _Updated: 2026-09-22 - **Cut on request as v2.3.7 and beta 2026-09-22**, the latest 2.x and the latest beta. They carry everything since v2.3.6: Phases 52, 53, 45, 46, 47a, 47b and 48, a tester's pass on the building editor, **Phase 54** (Health, one door to every check, with five crash-guide rules and two of the guides' claims refused), the changed-files export, the building editor's faction checklist and name switch, traits and ancillaries given from Lua, and **Phase 55a** (the animation `.cas` reader, nothing on screen yet). The beta adds Health's map rules. **55b is next**: which quaternion component is w, then the skeleton chain and playback, over loose files only. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Routes, tabs and a breadcrumb trail, 2026-09-23, committed and uncut.**
+Asked for after a Health run: open the file behind a finding in a NEW tab, and
+get back to the list where you left it. A screen and the record in it are now
+one object, a **route** - `{mode, name, tab, rel, line, key}`, which is the
+shape `health.py` already hung on every finding as `open`. It has an address
+(`?go=<mode>&name=…`, the general case of the hand-rolled `?edit=` and
+`?building=`), so a link to one is a real `<a href>` and **middle click opens
+it in a new tab without a line of JavaScript** - only the plain left button is
+intercepted, so ctrl-click and the context menu come free. Under the header,
+the **trail**: where you have been, as links, with ← →. It is a list with a
+finger rather than a stack, which is what makes Forward exist, and each entry
+keeps the screen's scroll, so fixing a finding and coming back puts the row you
+opened it from under the cursor. `hlOpen`'s walk moved into `navGo` in core.js,
+`state.modeTrail` became `state.trail`, and the browser's Back button walks the
+new one. Two things it found: **Health crashed when a repaint reached it before
+its report did**, which is what a tab opened straight on `?go=health` does, and
+**a dialog survived a mode switch** and sat over the screen that came next -
+the crumb bar is under it, so both are fixed. `test_back_button` covers the
+trail, the address and the shutting.
+
+**Campaign constants: two findings that were not what they said, 2026-09-23.**
+Reported off a Health run. `bool="true "` was called "not true or false", which
+is no help in front of a box that reads true: blank space inside the quotes is
+now named as blank space, as a warning, with the trimmed value in the sentence.
+And `int="100.0"` was called "not a whole number" when it is a hundred: a whole
+number spelled as a decimal is taken, as a **note**, so it is out of Health's
+default list; `100.5` in the same box is still an error. `cdbBad` in the UI was
+taught the same two, so the box no longer paints red for what the server takes.
+A campdb finding also carries its `key` now, so Health's Open → lands on the
+tag instead of the top of the screen.
+
 **A tester's pass on the building editor, 2026-09-22, committed and uncut.**
 Eight reports, two of them real defects. **Hiding the code view dropped its
 text** while the rows still counted lines from it, so Probe and Save planned

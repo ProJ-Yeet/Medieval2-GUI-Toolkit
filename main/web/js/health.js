@@ -34,6 +34,9 @@ function hlNew(mod){
           src: '', shown: {}};
 }
 
+const hlBusyHtml = mod => `<div class="empty">Running every check over ${esc(mod)}…<br>
+  <span class="count">A few seconds: the map rules are the slow part.</span></div>`;
+
 function renderHealth(){
   const h = state.hl;
   if(!h || h.mod !== state.src){ loadHealth(); return; }
@@ -46,8 +49,7 @@ async function loadHealth(){
   const h = state.hl = hlNew(mod);
   if(keep){ h.notes = keep.notes; h.base = keep.base; h.src = keep.src; }
   h.busy = true;
-  main.innerHTML = `<div class="empty">Running every check over ${esc(mod)}…<br>
-    <span class="count">A few seconds: the map rules are the slow part.</span></div>`;
+  main.innerHTML = hlBusyHtml(mod);
   let r;
   // the map rules only where the build offers the map screen (2.x ships it off)
   try{ r = await api.get('/api/health?mod=' + enc(mod) + (modeOffered('campmap') ? '&map=1' : '')); }
@@ -68,6 +70,14 @@ function hlVisible(f){
 
 function hlPaint(){
   const h = state.hl;
+  /* The report may not be here yet, and something else may well repaint this
+     screen while it is still on its way: the mod list finishing its own load
+     repaints whatever mode is showing, and a tab opened straight on
+     `?go=health` gets exactly that repaint in the gap between the request
+     going out and coming back. Say what is happening rather than read a report
+     that is null - which is what this screen did until a link could land on it
+     before it had one. */
+  if(!h.rep && !h.err){ main.innerHTML = hlBusyHtml(h.mod); return; }
   if(h.err){
     main.innerHTML = `<div class="empty">Couldn't run the checks.<br>
       <span class="count">${esc(h.err)}</span><br><br>
@@ -156,7 +166,9 @@ function hlRowHtml(f, labelOf){
     <div class="hlmsg">${esc(f.message)}${f.count > 1 ? ` <span class="count">(×${f.count})</span>` : ''}
       <div class="count">${esc(labelOf[f.source] || f.source)}${at ? ` · <code>${esc(at)}</code>` : ''}${
         f.baseline ? ' · already there when the map was stamped' : ''}</div></div>
-    <button class="mini" onclick="hlOpen(${i})" title="Open this where it is fixed">Open →</button>
+    <a class="mini" href="${esc(navUrl(f.open || {}))}" onclick="return hlOpen(${i}, event)"
+      title="Open this where it is fixed. Middle-click to open it in a new tab and keep this list."
+      >Open →</a>
   </div>`;
 }
 
@@ -167,7 +179,8 @@ function hlSlowHtml(r){
       minute on a big mod, so each runs on its own screen when you ask.</div>
     <div class="hlslow">${r.slow.map(s => `<div class="hlslowrow">
       <div>${esc(s.label)} <span class="count">${esc(s.cost)}</span></div>
-      <button class="mini" onclick="setAppMode('${s.mode}')">Open →</button></div>`).join('')}</div></div>`;
+      ${navLinkHtml({mode: s.mode}, 'Open →', 'mini',
+        'Open this audit. Middle-click to open it in a new tab.')}</div>`).join('')}</div></div>`;
 }
 
 // What the crash guides claim that measuring the installed mods refused. Folded,
@@ -184,38 +197,22 @@ function hlRefusedHtml(r){
 }
 
 /* ---- going to the screen that owns a finding ----
-   Each screen loads its own list when it is shown, so the record is opened
-   once that list has arrived for THIS mod. `hlWhen` waits for it rather than
-   guessing a delay, and gives up quietly after a while: landing on the right
-   screen without the record picked is still most of the way there. */
-function hlWhen(ready, then, tries = 80){
-  let ok = false;
-  try{ ok = !!ready(); }catch(e){ ok = false; }
-  if(ok){ try{ then(); }catch(e){} return; }
-  if(tries > 0) setTimeout(() => hlWhen(ready, then, tries - 1), 150);
-}
-const hlLoaded = key => () => state[key] && state[key].mod === state.src;
+   A finding's `open` is a ROUTE, and the walk from one to a screen with the
+   record picked is `navGo` in core.js. It was written here first, because a
+   Health row was the first thing in the tool that had to name a place it was
+   not at; it moved out when the crumb bar and `?go=` needed the same walk, and
+   what is left here is the one part of it that is Health's: the log line.
 
-function hlOpen(i){
+   The row's Open is an ANCHOR now rather than a button, and that alone is what
+   makes a middle click open the finding in a new tab - the browser does it off
+   the href without a line of JavaScript. So only the plain left button is taken
+   here; ctrl-click, shift-click and the context menu are left alone on purpose. */
+function hlOpen(i, ev){
+  if(ev && (ev.button || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey)) return true;
+  if(ev) ev.preventDefault();
   const f = state.hl.rep.findings[i];
-  if(!f) return;
-  const o = f.open || {}, name = o.name || '';
+  if(!f) return false;
   activity('health', `opened ${f.source} ${f.code}`);
-  if(o.mode === 'minor') return minorGo(o.tab || 'rebels'), name &&
-    hlWhen(() => state.mf && state.mf.mod === state.src && state.mf.tab === o.tab, () => mfOpen(name));
-  if(o.mode === 'edit'){ if(name) return openEditor(name); return setAppMode('edit'); }
-  // a file with no editor of its own opens as text, at the line
-  if(o.mode === 'rawtext' && o.rel) return rtOpen(o.rel, +o.line || 0);
-  setAppMode(o.mode);
-  if(o.mode === 'buildings' && name)
-    return hlWhen(() => state.bld && state.bld.mod === state.src && state.bld.ov, () => openBuilding(name));
-  if(o.mode === 'campmap') return hlWhen(() => state.cmap && state.cmap.mod === state.src, () => {
-    cchkOpen();
-    if(!state.cchk.open) cchkToggle();
-    if(o.key) hlWhen(() => state.cchk && state.cchk.rep, () => cchkGoKey(o.key));
-  });
-  if(!name) return;
-  const open = {traits: ['tr', trOpen], ancillaries: ['an', anOpen], guilds: ['gu', guOpen],
-                factions: ['fac', facOpen], cultures: ['mf', mfOpen]}[o.mode];
-  if(open) hlWhen(hlLoaded(open[0]), () => open[1](name));
+  navGo(f.open || {});
+  return false;
 }
