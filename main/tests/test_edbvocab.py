@@ -177,5 +177,28 @@ if Image is not None:
     shutil.rmtree(raw, ignore_errors=True)
     shutil.rmtree(packed, ignore_errors=True)
 
+# ---- a resource spelled two ways -------------------------------------------
+# The engine matches these names case-blind and a tester's mod leaned on it: the
+# EDB declares `Resl`, the region carries `ResL`. Keyed by either spelling, the
+# picker said no region carries it.
+print("\n3) case-blind resources")
+case_mod = Path(_tmp.mkdtemp(prefix="ut_vcase_"))
+(case_mod / "data" / "world" / "maps" / "base").mkdir(parents=True)
+(case_mod / "data" / buildings.EDB_REL).write_text(
+    "hidden_resources Resl Harad\n", encoding="utf-8")
+(case_mod / "data" / "world" / "maps" / "base" / "descr_regions.txt").write_text(
+    "Tirdhuin_Province\n\tlegion: Tirdhuin\n\tTirdhuin\n\tturks\n\tEriador_Looters\n"
+    "\t34 115 236\n\tgrassland, harad, ResL, Wine\n\t5\n\t1\n"
+    "\treligions { catholic 100 }\n", encoding="utf-8")
+cv = edbvocab.build(Mod(case_mod))
+hid = {h["code"]: h for h in cv["hidden_resources"]}
+check("`Resl` declared finds the region carrying `ResL`",
+      hid.get("Resl", {}).get("count") == 1)
+check("`Harad` declared finds the region carrying `harad`",
+      hid.get("Harad", {}).get("count") == 1 and bool(hid["Harad"]["places"]))
+check("the region still lists it as hidden, not trade",
+      bool(cv["regions"]) and "ResL" in cv["regions"][0]["hidden_resources"])
+shutil.rmtree(case_mod, ignore_errors=True)
+
 print("\n" + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

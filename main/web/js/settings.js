@@ -85,6 +85,13 @@ async function openSettings(){
     : '<div class="count">None. The 500-unit-limit warning is active for every mod.</div>';
   document.getElementById('modal').innerHTML=`<h2>Settings</h2>
     <div class="mbody">
+      <fieldset><legend>Display</legend>
+        <label>Interface size
+          <select onchange="uiScaleSet(this.value)" style="margin-left:6px">${UI_SCALES.map(p=>
+            `<option value="${p}" ${p===(+s.ui_scale||100)?'selected':''}>${p}%</option>`).join('')}</select></label>
+        <div class="count" style="margin-top:6px">Draws the whole tool smaller or larger. Below 100% fits the
+          building editor and its code view side by side on a 1080p screen. Remembered next time.</div>
+      </fieldset>
       <fieldset><legend>Medieval II root folder</legend>
         <div class="count" style="margin-bottom:8px">Point to your Medieval II install (contains <b>mods</b>) or a mods folder directly. Remembered next time.</div>
         <div style="display:flex;gap:6px">

@@ -307,20 +307,29 @@ def build(mod) -> dict:
     for r in region_rows:
         spot = {"region": r["name"], "settlement": r["settlement_name"],
                 "faction": r["faction"]}
+        # Keyed lowercased: the engine matches these names case-blind, and mods
+        # lean on it - a region can carry `ResL` while the EDB declares `Resl`,
+        # and keying by either spelling read that as "no region carries it".
         for hr in r["hidden_resources"]:
-            carriers.setdefault(hr, []).append(r["name"])
-            where.setdefault(hr, []).append(spot)
+            carriers.setdefault(hr.lower(), []).append(r["name"])
+            where.setdefault(hr.lower(), []).append(spot)
         for res in r["resources"]:
-            trade.setdefault(res, []).append(r["name"])
-            where_trade.setdefault(res, []).append(spot)
-    hidden = [{"code": hr, "regions": carriers.get(hr, []),
-               "count": len(carriers.get(hr, [])),
-               "places": where.get(hr, [])}
+            trade.setdefault(res.lower(), []).append(r["name"])
+            where_trade.setdefault(res.lower(), []).append(spot)
+    hidden = [{"code": hr, "regions": carriers.get(hr.lower(), []),
+               "count": len(carriers.get(hr.lower(), [])),
+               "places": where.get(hr.lower(), [])}
               for hr in edb.hidden_resources]
     # a `resource` condition is the same shape of question, so answer it too
-    res_rows = [{"code": r, "regions": trade.get(r, []), "count": len(trade.get(r, [])),
-                 "places": where_trade.get(r, [])}
-                for r in sorted(set(resources(mod)) | set(trade))]
+    res_names: Dict[str, str] = {}
+    for r in resources(mod):
+        res_names.setdefault(r.lower(), r)
+    for r in region_rows:
+        for res in r["resources"]:
+            res_names.setdefault(res.lower(), res)
+    res_rows = [{"code": r, "regions": trade.get(k, []), "count": len(trade.get(k, [])),
+                 "places": where_trade.get(k, [])}
+                for k, r in sorted(res_names.items(), key=lambda kv: kv[1])]
     # how many regions already meet a `region_religion X n` clause, per religion
     rel_names = religions(mod)
     rel_rows = []

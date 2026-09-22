@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Medieval 2 GUI Toolkit</title>
 <style>
+  /* --uiz is the interface size from Settings (core.js uiScaleApply). The root is
+     drawn with `zoom`, which shrinks viewport units along with everything else,
+     so every vh and vw below is divided by it to keep meaning "of the window". */
+  :root{--uiz:1}
   :root{--bg:#14171c;--panel:#1c2128;--panel2:#232a33;--edge:#333c47;--ink:#e6e9ee;--dim:#98a3b3;
     --accent:#c8a45c;--accent2:#5b8def;--good:#5cc98a;--warn:#e0b341;--bad:#e06c6c;
     /* the label column every path row in a model card shares - one value so
@@ -63,7 +67,7 @@
   .buildtag{color:var(--dim);font-size:11px;letter-spacing:.3px;padding:2px 7px;
     background:transparent;border-color:var(--edge)}
   .buildtag:hover{color:var(--ink)}
-  .layout{display:flex;height:calc(100vh - 50px)}
+  .layout{display:flex;height:calc(calc(100vh / var(--uiz)) - 50px)}
   .filters{width:210px;flex:0 0 210px;padding:12px;overflow:auto;border-right:1px solid var(--edge);background:var(--panel)}
   .filters h3{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:16px 0 6px}
   .filters h3:first-child{margin-top:0}
@@ -125,7 +129,7 @@
   .warnbox{background:#3a2a10;border:1px solid var(--warn);color:#f4d9a0;border-radius:8px;
     padding:9px 11px;margin:0 0 12px;font-size:12.5px;line-height:1.5}
   .warnbox code{background:#00000030;padding:0 4px;border-radius:3px}
-  .drawer{position:fixed;top:0;right:0;width:380px;max-width:92vw;height:100vh;background:var(--panel);
+  .drawer{position:fixed;top:0;right:0;width:380px;max-width:calc(92vw / var(--uiz));height:calc(100vh / var(--uiz));background:var(--panel);
     border-left:1px solid var(--edge);box-shadow:-8px 0 24px #0008;transform:translateX(100%);
     transition:transform .16s ease;overflow:auto;z-index:20}
   .drawer.open{transform:translateX(0)}
@@ -143,8 +147,8 @@
   .drawer .close{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer}
   .overlay{position:fixed;inset:0;background:#000a;z-index:30;display:none;align-items:center;justify-content:center}
   .overlay.open{display:flex}
-  .modal{background:var(--panel);border:1px solid var(--edge);border-radius:10px;width:640px;max-width:95vw;
-    max-height:92vh;overflow:auto;box-shadow:0 12px 40px #000b}
+  .modal{background:var(--panel);border:1px solid var(--edge);border-radius:10px;width:640px;max-width:calc(95vw / var(--uiz));
+    max-height:calc(92vh / var(--uiz));overflow:auto;box-shadow:0 12px 40px #000b}
   .modal h2{margin:0;padding:14px 16px;border-bottom:1px solid var(--edge);font-size:16px}
   .modal .mbody{padding:16px}
   .modal .foot{padding:12px 16px;border-top:1px solid var(--edge);display:flex;gap:8px;justify-content:flex-end;
@@ -360,7 +364,7 @@
      recruit pool is four numbers plus a clause, and a comparison is two of
      everything. 1020px squeezed all three on a screen with room to spare, so the
      wide modal now takes what the viewport will give it. */
-  .modal.wide{width:1500px;max-width:96vw}
+  .modal.wide{width:1500px;max-width:calc(96vw / var(--uiz))}
   .tabs{display:flex;gap:4px;padding:0 16px;border-bottom:1px solid var(--edge);background:var(--panel2)}
   .tabs button{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;
     padding:9px 12px;color:var(--dim);font-size:13px}
@@ -415,7 +419,7 @@
   /* the 3D model viewer: canvas on the left, everything you can change on the
      right, and the canvas gets whatever height is going - a soldier is tall */
   .v3wrap{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
-  .v3stage{position:relative;display:flex;flex:1 1 520px;min-width:320px;min-height:62vh;
+  .v3stage{position:relative;display:flex;flex:1 1 520px;min-width:320px;min-height:calc(62vh / var(--uiz));
     background:#0e1013;border:1px solid var(--edge);border-radius:8px;overflow:hidden}
   .v3gl{position:relative;flex:1 1 0;min-width:0}
   .v3stage canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
@@ -448,11 +452,11 @@
     border:1px solid rgba(0,0,0,.5)}
   .v3part.sel{background:var(--panel2)}
   .v3side{flex:0 1 330px;min-width:260px;display:flex;flex-direction:column;gap:10px;
-    max-height:62vh;overflow:auto}
+    max-height:calc(62vh / var(--uiz));overflow:auto}
   /* docked in a side panel: one narrow column, canvas on top of its controls */
   .v3wrap.dock{flex-direction:column;gap:8px;height:100%}
   .v3wrap.dock .v3stage{flex:1 1 auto;min-width:0;min-height:240px}
-  .v3wrap.dock .v3side{flex:0 0 auto;min-width:0;max-height:34vh}
+  .v3wrap.dock .v3side{flex:0 0 auto;min-width:0;max-height:calc(34vh / var(--uiz))}
   .v3wrap.dock .v3hint{font-size:10px}
   /* The grab bar between the canvas and its controls, the horizontal twin of
      `.splitbar`. Docked only - in the dialog the two sit side by side with the
@@ -477,7 +481,7 @@
      soon as you reached the field you came to change would be worth nothing */
   .edprev{flex:0 0 340px;min-width:0;display:flex;flex-direction:column;gap:6px;
     margin:0 14px 0 0;padding:8px;border:1px solid var(--edge);border-radius:8px;
-    background:var(--panel);max-height:78vh;position:sticky;top:8px;align-self:flex-start}
+    background:var(--panel);max-height:calc(78vh / var(--uiz));position:sticky;top:8px;align-self:flex-start}
   .edprev.min{flex:0 0 auto}
   .edprev.min .edprevbody{display:none}
   .edprevbar{display:flex;gap:6px;align-items:center;font-size:12px}
@@ -491,7 +495,7 @@
      own background or the page shows through as black */
   .edprev:fullscreen{background:var(--bg);padding:10px;max-height:none;border-radius:0}
   .edprev:fullscreen .edprevbody{max-height:none}
-  .edprev:fullscreen .v3wrap.dock .v3side{max-height:22vh}
+  .edprev:fullscreen .v3wrap.dock .v3side{max-height:calc(22vh / var(--uiz))}
   /* the port picker: one row per record, ticked, with what it brings beside it */
   .portlist{max-height:300px;overflow:auto;border:1px solid var(--edge);border-radius:8px;
     background:var(--panel);margin-top:6px}
@@ -527,10 +531,10 @@
       var(--dim) 66% 74%,transparent 74%)}
   /* The drawer is pinned to the right edge, so the browser's bottom-right grip
      would drag it off the screen. It gets a bar down its LEFT edge instead, the
-     same 6px-of-hit-area-with-a-2px-line as `.splitbar`. Sticky and 100vh tall
+     same 6px-of-hit-area-with-a-2px-line as `.splitbar`. Sticky and calc(100vh / var(--uiz)) tall
      so a drawer scrolled to the bottom still has one; floated with the width
      given straight back as a negative margin so it costs the content nothing. */
-  .drawergrip{position:sticky;top:0;float:left;width:7px;height:100vh;
+  .drawergrip{position:sticky;top:0;float:left;width:7px;height:calc(100vh / var(--uiz));
     margin-right:-7px;cursor:col-resize;z-index:5}
   .drawergrip::after{content:'';position:absolute;top:0;bottom:0;left:2px;width:2px;
     border-radius:2px;background:var(--edge)}
@@ -540,7 +544,7 @@
   .bmmain{flex:1 1 auto;min-width:0}
   .bmprev{flex:0 0 360px;min-width:0;display:flex;flex-direction:column;gap:6px;
     padding:8px;border:1px solid var(--edge);border-radius:8px;background:var(--panel);
-    position:sticky;top:8px;max-height:82vh}
+    position:sticky;top:8px;max-height:calc(82vh / var(--uiz))}
   .bmprev:fullscreen{background:var(--bg);padding:10px;max-height:none;border-radius:0}
   .bmprev:fullscreen .edprevbody{max-height:none}
   /* ---- 38: the strat-map panel's file browser, between its bar and its canvas.
@@ -600,7 +604,7 @@
     /* !important because splitInstall writes the width as an inline style, and
        on a window this narrow the panel belongs under the list at full width
        whatever it was dragged to when there was room for two columns */
-    .bmprev{flex:1 1 100%!important;position:static;max-height:60vh}
+    .bmprev{flex:1 1 100%!important;position:static;max-height:calc(60vh / var(--uiz))}
     .splitbar{display:none}
   }
   /* the way back when the preview has been hidden: a quiet button in the title */
@@ -608,7 +612,7 @@
   /* narrow windows: the preview goes under the fields rather than squeezing them */
   @media (max-width:1100px){
     .edsplit{flex-wrap:wrap}
-    .edprev{flex:1 1 100%!important;margin:0 14px;max-height:60vh}
+    .edprev{flex:1 1 100%!important;margin:0 14px;max-height:calc(60vh / var(--uiz))}
   }
   .v3f{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--dim)}
   .v3f select{font:inherit;font-size:13px;background:var(--panel2);color:var(--ink);
@@ -680,7 +684,7 @@
      wrapping grid rather than a column the dialog has to scroll */
   /* wide enough for two dozen faction checkboxes and the preview under them,
      and narrower than `.wide`, which is the unit editor's 1500px */
-  .modal.mgwide{width:880px;max-width:96vw}
+  .modal.mgwide{width:880px;max-width:calc(96vw / var(--uiz))}
   .mgsrc{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
     gap:2px 10px;margin-top:4px}
   .mgsrc .fcart{margin-bottom:0}
@@ -732,7 +736,7 @@
     border-radius:7px;padding:7px;background:var(--panel2);flex:1 1 auto;
     min-height:0}
   /* Campaign workspace: these rules only affect the map editor. */
-  .cmworkspace{display:flex;flex-direction:column;gap:6px;height:calc(100vh - 108px);min-height:420px}
+  .cmworkspace{display:flex;flex-direction:column;gap:6px;height:calc(calc(100vh / var(--uiz)) - 108px);min-height:420px}
   .cmworkspacehead{display:flex;align-items:center;justify-content:flex-start;gap:8px 14px;flex-wrap:wrap;
     padding:6px 8px;border:1px solid var(--edge);border-radius:7px;background:var(--panel);flex-shrink:0}
   .cmworkspacehead>div{display:flex;align-items:center;gap:12px;min-width:0}
@@ -744,7 +748,7 @@
   .cmquick kbd{margin-left:10px;font-size:10px;color:var(--dim)}
   .cmhelp{position:relative}
   .cmhelp summary{cursor:pointer;padding:6px 10px;box-sizing:border-box}
-  .cmhelp>div{position:absolute;right:0;bottom:38px;width:300px;max-width:75vw;padding:14px;z-index:20;
+  .cmhelp>div{position:absolute;right:0;bottom:38px;width:300px;max-width:calc(75vw / var(--uiz));padding:14px;z-index:20;
     border:1px solid var(--edge);border-radius:10px;background:var(--panel);box-shadow:0 12px 35px #0006;font-size:12px;line-height:1.6}
   .cmhelp p{margin:4px 0 14px;color:var(--dim)}
   .cmhelp p:last-child{margin-bottom:0}
@@ -781,13 +785,13 @@
   @media(max-width:760px){
     .cmworkspace{height:auto;min-height:0}
     .cmworkspace .cmwrap{flex-wrap:wrap}
-    .cmworkspace .cmstage{height:55vh;min-height:300px}
-    .cmworkspace .cmside{flex:1 1 100% !important;max-height:65vh}
+    .cmworkspace .cmstage{height:calc(55vh / var(--uiz));min-height:300px}
+    .cmworkspace .cmside{flex:1 1 100% !important;max-height:calc(65vh / var(--uiz))}
     .cmworkspace .cmside.hid{flex:0 0 40px !important}
     .cmworkspacehead>.cmworkstate{border-left:0;padding-left:0}
-    .cmhelp>div{position:fixed;left:12px;right:12px;bottom:65px;width:auto;max-width:none;max-height:65vh;overflow:auto}
+    .cmhelp>div{position:fixed;left:12px;right:12px;bottom:65px;width:auto;max-width:none;max-height:calc(65vh / var(--uiz));overflow:auto}
   }
-  .cmwrap{display:flex;gap:12px;align-items:stretch;height:calc(100vh - 108px);
+  .cmwrap{display:flex;gap:12px;align-items:stretch;height:calc(calc(100vh / var(--uiz)) - 108px);
     margin-top:10px}
   .cmstage{position:relative;flex:1 1 0;min-width:320px;background:#0e1013;
     border:1px solid var(--edge);border-radius:8px;overflow:hidden}
@@ -917,7 +921,7 @@
      Everything that does not fit is clipped on the line it is on, because a
      name that wraps is a box that changed height. */
   .cmtip{position:absolute;z-index:5;pointer-events:none;width:320px;
-    max-width:calc(100vw - 24px);
+    max-width:calc(calc(100vw / var(--uiz)) - 24px);
     background:rgba(8,10,14,.93);border:1px solid var(--edge);border-radius:7px;
     padding:6px 8px;font-size:11.5px;color:var(--dim);
     box-shadow:0 6px 20px rgba(0,0,0,.45)}
@@ -1456,7 +1460,7 @@
   .cmworkspace .cfdrow{width:100%;text-align:left;border-radius:5px;padding:7px;font:inherit;min-width:0}
   .cmworkspace .cfdrow[aria-pressed=true]{border-color:var(--accent);background:var(--panel2)}
   .cmworkspace .cfdrow b,.cmworkspace .cfdrow>div{overflow-wrap:anywhere;white-space:normal}
-  .cmworkspace .cfdres{max-height:50vh;overflow:auto}
+  .cmworkspace .cfdres{max-height:calc(50vh / var(--uiz));overflow:auto}
   .cmselectionname{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cmcreate{display:flex;flex-direction:column;gap:12px;font-size:12px}
   .cmcreateintro{display:flex;flex-direction:column;gap:5px}
@@ -1602,7 +1606,7 @@
     border:1px solid var(--edge)}
   @media (max-width:1000px){
     .cmwrap{flex-direction:column;height:auto}
-    .cmstage{min-height:60vh}
+    .cmstage{min-height:calc(60vh / var(--uiz))}
     /* !important for the same reason `.bmprev` carries it: `splitInstall`
        writes the width as an inline style, and stacked under the map the
        column belongs at full width whatever it was dragged to when there were
@@ -1905,7 +1909,7 @@
   .cvbar .sp{flex:1}
   /* Tall enough that a whole unit block is usually on screen at once - the pane
      stays sticky, so it cannot simply grow with the page. */
-  .cvwrap{display:flex;height:min(78vh,900px);border:1px solid var(--edge);border-radius:6px;
+  .cvwrap{display:flex;height:min(calc(78vh / var(--uiz)),900px);border:1px solid var(--edge);border-radius:6px;
     background:var(--panel2);overflow:hidden}
   .cvgutter{flex:0 0 44px;overflow:hidden;background:var(--bg);border-right:1px solid var(--edge);
     position:relative}
@@ -2570,8 +2574,27 @@
     text-transform:uppercase;letter-spacing:.3px;min-width:0}
   .ucard .stats input{width:100%;padding:2px 4px;font-size:11.5px;text-align:center}
   .ucard .stats .numwrap{margin-top:2px}
-  .ucard .acts{display:flex;gap:4px}
-  .ucard .acts button{padding:2px 6px;font-size:11px;flex:1}
+  /* the suggestion list under a text box (core.js acAttach) */
+  .acwrap{position:relative;display:flex;min-width:0}
+  .acwrap>input{flex:1;min-width:0}
+  .acpop{position:absolute;top:calc(100% + 2px);left:0;right:0;min-width:240px;z-index:60;
+    max-height:260px;overflow:auto;background:var(--panel);border:1px solid var(--edge);
+    border-radius:7px;box-shadow:0 8px 24px #000a;padding:3px 0}
+  .acrow{display:flex;gap:8px;align-items:baseline;padding:4px 9px;cursor:pointer;font-size:12px}
+  .acrow b{font-weight:600;white-space:nowrap}
+  .acrow span{color:var(--dim);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .acrow:hover,.acrow.hi{background:var(--panel2)}
+  .acrow.hi b{color:var(--accent)}
+  /* a section that folds to its heading (core.js foldSet) */
+  .fold>h4{cursor:pointer;user-select:none}
+  .fold>h4::before{content:'▸';display:inline-block;flex:0 0 auto;width:12px;margin-right:2px;
+    color:var(--dim);transition:transform .12s}
+  .fold.open>h4::before{transform:rotate(90deg)}
+  .fold>h4:hover::before{color:var(--accent)}
+  .fold:not(.open)>:not(h4){display:none!important}
+  .fold:not(.open)>h4{margin-bottom:0}
+  .ucard .acts{display:flex;gap:4px;flex-wrap:wrap}
+  .ucard .acts button{padding:2px 6px;font-size:11px;flex:1 1 auto;min-width:0}
   .viewtoggle{display:inline-flex;border:1px solid var(--edge);border-radius:6px;overflow:hidden}
   .viewtoggle button{border:none;border-radius:0;padding:3px 9px;font-size:11.5px;background:var(--panel2)}
   .viewtoggle button+button{border-left:1px solid var(--edge)}
@@ -2751,7 +2774,7 @@
   /* ---- Traits: the trait list, then that trait's header, levels and triggers ---- */
   .trwrap{display:flex;gap:14px;align-items:flex-start;padding-top:12px}
   .trlist{flex:0 0 280px;display:flex;flex-direction:column;gap:6px;
-    position:sticky;top:12px;max-height:calc(100vh - 90px)}
+    position:sticky;top:12px;max-height:calc(calc(100vh / var(--uiz)) - 90px)}
   .trnew{flex:0 0 auto}
   .trrows{display:flex;flex-direction:column;gap:3px;overflow:auto;min-height:0}
   .trrow{text-align:left;padding:6px 9px;line-height:1.3}
@@ -2779,7 +2802,7 @@
   .rtrow.off .nm{color:var(--dim)}
   .rtbar{flex-wrap:wrap}
   .rtgo input{width:80px;margin-left:4px}
-  .rtbox{width:100%;box-sizing:border-box;height:calc(100vh - 240px);min-height:300px;
+  .rtbox{width:100%;box-sizing:border-box;height:calc(calc(100vh / var(--uiz)) - 240px);min-height:300px;
     font-family:Consolas,'Cascadia Mono',monospace;font-size:12.5px;line-height:1.45;
     tab-size:4;white-space:pre;overflow:auto;resize:vertical}
   .rtplan{border:1px solid var(--edge);border-radius:8px;padding:10px 12px;margin-top:10px;
@@ -2934,7 +2957,7 @@
   /* ---- Strings: the file list, then that file's entries ---- */
   .strwrap{display:flex;gap:14px;align-items:flex-start;padding-top:12px}
   .strlist{flex:0 0 250px;display:flex;flex-direction:column;gap:4px;
-    position:sticky;top:12px;max-height:calc(100vh - 90px);overflow:auto}
+    position:sticky;top:12px;max-height:calc(calc(100vh / var(--uiz)) - 90px);overflow:auto}
   .strfile{text-align:left;padding:7px 9px;line-height:1.3}
   .strfile.on{border-color:var(--accent);background:var(--panel2)}
   .strfile .nm{font-size:13px} .strfile .sub{font-size:11px;color:var(--dim)}

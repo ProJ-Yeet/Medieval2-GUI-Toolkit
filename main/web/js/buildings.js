@@ -356,15 +356,19 @@ function bldBuildFilters(){
     ||'<option value="">(no culture folders)</option>';
   bldCulture.onchange=()=>{bldSetCulture(bldCulture.value);};
   const religions=[...new Set(ov.lines.map(l=>l.religion||'(none)'))].sort();
+  // rebuilt on a culture switch too, so the ticks come from the selection, not
+  // from whatever the old boxes said
   bldReligionFilter.innerHTML=religions.map(r=>
-    `<label class="opt"><input type="checkbox" value="${esc(r)}">${esc(r)}</label>`).join('');
+    `<label class="opt"><input type="checkbox" value="${esc(r)}" ${b.sel.religion.has(r)?'checked':''}>${esc(r)}</label>`).join('');
   const factions=[...new Set(ov.lines.flatMap(l=>l.factions))]
     .sort((a,b2)=>bldFacLabel(a).localeCompare(bldFacLabel(b2)));
   bldFactionFilter.innerHTML=factions.map(f=>
-    `<label class="opt"><input type="checkbox" value="${esc(f)}">${esc(bldFacLabel(f))}</label>`).join('')
+    `<label class="opt"><input type="checkbox" value="${esc(f)}" ${b.sel.faction.has(f)?'checked':''}>${esc(bldFacLabel(f))}</label>`).join('')
     ||'<span class="count">None</span>';
   const wire=(box,key2)=>box.querySelectorAll('input').forEach(cb=>cb.onchange=()=>{
-    cb.checked?b.sel[key2].add(cb.value):b.sel[key2].delete(cb.value); render();});
+    cb.checked?b.sel[key2].add(cb.value):b.sel[key2].delete(cb.value);
+    if(key2==='faction'&&cb.checked&&bldFollowCulture(cb.value))return;
+    render();});
   wire(bldReligionFilter,'religion'); wire(bldFactionFilter,'faction');
   document.querySelectorAll('.bldset').forEach(cb=>cb.onchange=()=>{
     const b2=state.bld; if(!b2)return;
@@ -403,7 +407,7 @@ async function openBuilding(name,keepLevel,atLevel){
   if(typeof atLevel==='number')b.lvl=Math.max(0,Math.min(atLevel,d.levels.length-1));
   else if(!keepLevel)b.lvl=0;
   // a different line (or a re-read after saving) means a different block of text
-  cvDrop(b.cv); b.cv=null;
+  cvDrop(b.cv); b.cv=null; cvDrop(b.cvKept); b.cvKept=null;
   // The working copy the form edits. Everything is sent on save and the server
   // skips whatever still matches the file, so the page never has to diff.
   // `locAll` is every culture's name/description keyed by culture ('' = the
@@ -506,9 +510,11 @@ function bldDirty(){
    EDB would edit the wrong lines. */
 const bldCvEdited=()=>{const cv=state.bld&&state.bld.cv;
   return !!(cv&&cv.loaded&&cv.base!==cv.pristine);};
-const bldCvOwns=()=>{const cv=state.bld&&state.bld.cv; return !!(cv&&cv.owns);};
+// The pane that owns the text, whether it is on screen or not (see bldCvToggle).
+const bldCvOf=()=>state.bld&&(state.bld.cv||state.bld.cvKept)||null;
+const bldCvOwns=()=>{const cv=bldCvOf(); return !!(cv&&cv.owns);};
 function bldCvBlocked(){
-  const cv=state.bld&&state.bld.cv;
+  const cv=bldCvOf();
   if(!cv||!cv.err)return '';
   return 'The code view can’t be read: '+cv.err+
     ' Fix it, or undo your typing, before saving.';
@@ -519,11 +525,24 @@ export_descr_buildings.txt stores it, beside the form. Hover a box to light up i
 line; edit either side and the other follows."
     onclick="bldCvToggle()">&lt;/&gt; Code view</button>`;
 }
+/* Hiding the pane must not forget its text. Once it owns the record the rows
+   count their lines from that text, and a save without it planned those small
+   numbers against the whole EDB: every row came back "capability line 8 is no
+   longer there - skipped" and the edits to them were dropped. So a pane that
+   owns the text is only put away (`cvKept`), saves keep going through it, and
+   showing the pane again brings the same one back, redrawn from the boxes. */
 async function bldCvToggle(){
   const b=state.bld;
-  if(b.cv){cvDrop(b.cv); b.cv=null; state.settings.code_view=false;
+  if(b.cv){
+    if(b.cv.owns)b.cvKept=b.cv; else cvDrop(b.cv);
+    b.cv=null; state.settings.code_view=false;
     api.post('/api/settings',{code_view:false}); renderBuildingEditor(); return;}
   state.settings.code_view=true; api.post('/api/settings',{code_view:true});
+  if(b.cvKept){
+    b.cv=b.cvKept; b.cvKept=null;
+    renderBuildingEditor(); cvRender(b.cv);
+    return;
+  }
   b.cv=cvCreate(bldCvHost());
   renderBuildingEditor();
   await cvLoad(b.cv);
@@ -719,7 +738,7 @@ function bldPickLevel(i){
 }
 function bldClose(){
   if(bldDirty()&&!confirm('Close without saving your building changes?'))return;
-  cvDrop(state.bld.cv); state.bld.cv=null;
+  cvDrop(state.bld.cv); state.bld.cv=null; cvDrop(state.bld.cvKept); state.bld.cvKept=null;
   state.bld.line=null; state.bld.d=null; state.bld.work=null;
   closeModal();
 }
@@ -794,7 +813,7 @@ function bldRenderBody(lv,orig){
 
     ${bldUpgradesSection(lv,orig)}
 
-    <div class="bsec"><h4>Recruitment <span class="n">${shown.length}</span>
+    <div class="bsec ${foldCls('bld.recruit')}" data-fold="bld.recruit"><h4>Recruitment <span class="n">${shown.length}</span>
         <span class="count">of ${pools.filter(p=>!p.del).length}</span>
         ${bldPoolFilterHtml(pools)}
         <div class="viewtoggle" style="margin-left:auto">
@@ -815,7 +834,7 @@ function bldRenderBody(lv,orig){
              +(pools.length?'Nothing matches this filter.':'This level trains nothing.')
              +'</span></div>'}</div>`}</div>
 
-    <div class="bsec"><h4>Other capabilities <span class="n">${plain.filter(c=>!c.del).length}</span>
+    <div class="bsec ${foldCls('bld.caps')}" data-fold="bld.caps"><h4>Other capabilities <span class="n">${plain.filter(c=>!c.del).length}</span>
         <button onclick="bldAddCap()">＋ Add capability</button></h4>
       <div class="caplist" id="bldCaps">${plain.length?plain.map(bldCapRow).join('')
         :'<div class="caprow"><span class="count">None.</span></div>'}</div>
@@ -958,6 +977,20 @@ function bldRequiresHelp(){
     ? `Written into the EDB as <code>requires ${esc(txt)}</code>`
     : 'No conditions. Anyone can build this, at any time.'}</div>`;
 }
+/* Picking a faction brings its culture with it. Names and art are per culture,
+   so filtering to Gondor while the grid still showed another culture's art read
+   as Gondor owning that culture's buildings. Only a culture with a folder here is
+   picked (the culture list is the folders, and anything else would show nothing),
+   and only when it is not already the one on show. Returns whether it switched;
+   bldSetCulture redraws, so the caller need not. */
+function bldFollowCulture(faction){
+  const b=state.bld; if(!b||!b.ov)return false;
+  const f=(bldVocab().factions||[]).find(x=>x.code===faction);
+  const c=f&&f.culture;
+  if(!c||c===b.culture||!(b.ov.cultures||[]).includes(c))return false;
+  bldSetCulture(c);
+  return true;
+}
 // Switching culture changes both the art and the NAMES, and the names come from
 // the server - so the grid is re-fetched. The open editor is not: it already
 // holds every culture's text (`loc_all`), and re-fetching would throw away
@@ -1049,7 +1082,8 @@ function bldPoolFacPick(v){
   b.poolFac=b.poolFac||new Set();
   if(!v)return;
   if(v==='(clear)')b.poolFac.clear();
-  else if(b.poolFac.has(v))b.poolFac.delete(v); else b.poolFac.add(v);
+  else if(b.poolFac.has(v))b.poolFac.delete(v);
+  else{ b.poolFac.add(v); bldFollowCulture(v); }
   bldRedrawLevel();
 }
 function bldSetView(v){
@@ -1754,6 +1788,7 @@ function bldAddCap(){
   const lv=state.bld.work.levels[state.bld.lvl];
   lv.caps.push({line:null,keyword:'law_bonus',args:'',requires:'',bonus:true,value:'1',
                 pool:null,comment:'',faction:false,del:false});
+  if(!foldIsOpen('bld.caps'))foldSet('bld.caps',true);
   bldTouched();
 }
 
@@ -2044,16 +2079,14 @@ function bldCondKindHelp(kind){
   const k=((state.bld.ov.condition_kinds)||[]).find(x=>x.kind===kind);
   return k&&k.help?k.help:'';
 }
-// A single-select over one of the mod's own lists. Rendered as a datalist-backed
-// input rather than a <select> because some of these lists run to two thousand
+// A single-select over one of the mod's own lists. A text box with a suggestion
+// list rather than a <select> because some of these lists run to two thousand
 // entries (DaC declares 1 700 event counters) and a plain dropdown is unusable
-// at that size.
+// at that size. It was a <datalist> until a tester typed "Harad": see acAttach.
 function condPick(i,slot,list,value,dep){
-  const id=`cl${i}_${slot}`;
-  return `<input data-cv="${i}:${slot}" list="${id}" value="${esc(value||'')}"
-      style="flex:1;min-width:110px" placeholder="${esc(list.replace('_',' '))}…">
-    <datalist id="${id}">${condOptions(list,dep).map(o=>
-      `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('')}</datalist>`;
+  return `<span class="acwrap" style="flex:1;min-width:110px"><input data-cv="${i}:${slot}"
+      data-ac="${esc(list)}" data-acdep="${esc(dep||'')}" value="${esc(value||'')}"
+      placeholder="${esc(list.replace('_',' '))}…"></span>`;
 }
 function condOptions(list,dep){
   const v=bldVocab();
@@ -2091,7 +2124,9 @@ function condOptions(list,dep){
 function condPlaces(kind,code){
   const v=bldVocab();
   const rows=(kind==='hidden_resource'?v.hidden_resources:v.resources)||[];
-  const r=rows.find(x=>(x.code||x)===code);
+  // case-blind, as the engine is: `Resl` in a clause is the `ResL` a region carries
+  const key=String(code||'').toLowerCase();
+  const r=rows.find(x=>String(x.code||x).toLowerCase()===key);
   return (r&&r.places)||[];
 }
 // The owner's in-game name if the mod gave it one, else its code.
@@ -2195,7 +2230,7 @@ function bldGatePaint(){
   if(!g){ box.innerHTML=''; return; }
   const mine=bldGateFactions(c.conds);
   const owned=g.pass.filter(r=>mine.has(r.faction)).length;
-  box.innerHTML=`<div class="bsec gatebox" style="margin-top:12px"><h4>Every gate at once
+  box.innerHTML=`<div class="bsec gatebox ${foldCls('bld.gates')}" data-fold="bld.gates" style="margin-top:12px"><h4>Every gate at once
       <span class="n">${g.pass.length}</span><span class="count">of ${g.total} regions</span></h4>
     ${g.pass.length
       ?`<div class="gaterows">${bldGateRowsHtml(g,c.conds)}</div>`
@@ -2221,6 +2256,7 @@ function wireCondRows(){
     c.conds[+el.dataset.craw].raw=el.value; condChanged();});
   document.querySelectorAll('[data-cv]').forEach(el=>{
     const [i,slot]=el.dataset.cv.split(':').map(Number);
+    if(el.dataset.ac)acAttach(el,()=>condOptions(el.dataset.ac,el.dataset.acdep));
     const set=()=>{const cond=c.conds[i];
       while(cond.values.length<=slot)cond.values.push('');
       cond.values[slot]=el.value.trim();
@@ -2234,7 +2270,7 @@ function wireCondRows(){
       if(slot===0&&(cond.kind==='hidden_resource'||cond.kind==='resource')){
         const row=el.closest('.condrow'),old=row&&row.querySelector('[data-where]');
         const html=condWhereHtml(cond.kind,cond.values[0]);
-        if(old)old.outerHTML=html; else if(row&&html)el.insertAdjacentHTML('afterend',html);
+        if(old)old.outerHTML=html; else if(row&&html)(el.closest('.acwrap')||el).insertAdjacentHTML('afterend',html);
       }
       condChanged();};
   });
@@ -2630,6 +2666,7 @@ function bldAddPool(type){ bldAddPicked([type]); }
    same requires clause - and hunting them back down in a list of three hundred
    is exactly the work this is meant to save. */
 function bldAddPicked(types){
+  if(!foldIsOpen('bld.recruit'))foldSet('bld.recruit',true);
   const b=state.bld;
   const list=types||[...((b.pick&&b.pick.picked)||[])];
   if(!list.length)return;
@@ -2747,7 +2784,8 @@ function bldTwinLevel(i){
   return lv?((ck.level_pairs||{})[lv.name]||''):'';
 }
 function bldChecksHtml(){
-  return `<div class="bsec" id="bldChecks">${bldChecksInner()}${bldTreeFindHtml()}</div>`;
+  return `<div class="bsec ${foldCls('bld.checks')}" data-fold="bld.checks" id="bldChecks">${
+    bldChecksInner()}${bldTreeFindHtml()}</div>`;
 }
 
 /* =========================================================================
@@ -2999,7 +3037,7 @@ function bldAlsoHtml(){
   const lines=Object.keys(also).filter(l=>
     Object.values(also[l]).some(rows=>rows.length));
   if(!lines.length)return '';
-  return `<div class="bsec"><h4>Also changing <span class="n">${bldAlsoCount()}</span>
+  return `<div class="bsec ${foldCls('bld.also')}" data-fold="bld.also"><h4>Also changing <span class="n">${bldAlsoCount()}</span>
       <span class="count">in ${lines.length} other building line(s)</span>
       <button style="margin-left:auto" onclick="bldAlsoClear()">Drop these</button></h4>
     ${lines.map(l=>`<div class="ckgroup"><div class="ckhead"><code>${esc(l)}</code></div>
@@ -3085,6 +3123,7 @@ function bldJumpPool(unit){
   const idx=bldCapList().map((c,i)=>[c,i])
     .filter(([c])=>c.pool&&c.pool.unit.toLowerCase()===key).map(([,i])=>i);
   if(!idx.length)return toast('Those rows are hidden by the faction filter.');
+  if(!foldIsOpen('bld.recruit'))foldSet('bld.recruit',true);
   const host=document.getElementById('bldPools'); if(!host)return;
   let first=null;
   idx.forEach(i=>{
@@ -3945,7 +3984,7 @@ function bldPayload(){
     // apply on top of it. Sent from the first hand edit onwards even if the text
     // has since been typed back to what the file says: the capability rows now
     // count lines from the pane's text, and only the raw path plans against it.
-    raw_block:bldCvOwns()?b.cv.base:'',
+    raw_block:bldCvOwns()?bldCvOf().base:'',
     levels:b.work.levels.map((lv,i)=>{
     const o=origLevels[i],out={name:lv.name,settlement:lv.settlement,requires:lv.requires,
       scalars:lv.scalars,upgrades:lv.upgrades,
@@ -4015,7 +4054,11 @@ function bldPlanHtml(p,stale){
                p.loc_rewritten?'text/export_buildings.txt':'',
                p.edu_rewritten?'export_descr_unit.txt':'',
                p.modeldb_rewritten?'unit_models/battle_models.modeldb':''].filter(Boolean);
-  return `<div class="bsec" style="margin-top:14px"><h4>Probe${
+  // folded like the lists above it, with what it found counted on the heading
+  const tally=[[(p.changes||[]).length,'change'],[(p.warnings||[]).length,'warning'],
+    [(p.errors||[]).length,'error']].filter(([n])=>n).map(([n,w])=>`${n} ${w}${n===1?'':'s'}`);
+  return `<div class="bsec ${foldCls('bld.probe')}" data-fold="bld.probe" style="margin-top:14px"><h4>Probe${
+      tally.length?` <span class="count">${tally.join(' · ')}</span>`:''}${
       stale?' <span class="w-warn">(out of date: edited since)</span>':''}</h4>
     <div class="sum">${rows.join('')}
       ${files.length?`<div class="srow shead" style="margin-top:6px"><span class="sicon">→</span>

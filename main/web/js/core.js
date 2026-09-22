@@ -407,6 +407,7 @@ async function init(){
     startHeartbeat();
     paintBuildTag();                       // not awaited: a tag, not a dependency
     const s=await api.get('/api/settings');state.settings=s;
+    uiScaleApply();
     facSort.value=facBy();                 // remembered across runs like the rest
     restoreFilters();                      // …and so are the filters themselves
     // ?mod=&edit= - how "open this unit in a new tab" arrives. It picks the mod
@@ -1764,4 +1765,111 @@ function uiBackWire(){
   // Capture, so a handler that stops the event still arms the way out of what
   // it just opened.
   document.addEventListener('click',()=>uiBackArm(),true);
+}
+
+/* ---- a suggestion list under a text box ----
+   What a <datalist> was doing, minus two things Chrome does to it. It matches
+   what was typed against the LABEL as well as the value, so "Harad" listed every
+   resource whose label happened to name the Haradrim Wastes. And it drops the
+   option that equals the text exactly, so the one resource actually called Harad
+   was the one that never showed. Here the code is matched first, the label only
+   after, and an exact match leads the list instead of vanishing from it.
+
+   `opts` is a function, so a list that depends on another box (a building's
+   levels) is read when the list opens rather than when the row was drawn. A pick
+   sets the value and fires `input` and `change`, so whatever the box was wired
+   to behaves as though it had been typed. */
+const AC_MAX=60;
+function acAttach(input,opts){
+  if(!input||input._ac)return;
+  const pop=document.createElement('div');
+  pop.className='acpop'; pop.hidden=true;
+  input.insertAdjacentElement('afterend',pop);
+  input.setAttribute('autocomplete','off');
+  const ac=input._ac={pop,rows:[],hi:-1};
+  const rank=(o,q)=>{
+    const v=String(o.value).toLowerCase(),l=String(o.label||'').toLowerCase();
+    if(!q)return 3;
+    if(v===q)return 0;
+    if(v.startsWith(q))return 1;
+    if(v.includes(q))return 2;
+    return l.includes(q)?4:-1;
+  };
+  const paint=()=>{
+    const q=input.value.trim().toLowerCase();
+    ac.rows=(opts()||[]).map((o,i)=>[rank(o,q),i,o]).filter(r=>r[0]>=0)
+      .sort((a,b)=>a[0]-b[0]||a[1]-b[1]).slice(0,AC_MAX).map(r=>r[2]);
+    ac.hi=ac.rows.length&&q&&String(ac.rows[0].value).toLowerCase()===q?0:-1;
+    if(!ac.rows.length){pop.hidden=true;return;}
+    pop.innerHTML=ac.rows.map((o,i)=>`<div class="acrow${i===ac.hi?' hi':''}" data-i="${i}">
+      <b>${esc(o.value)}</b>${o.label&&o.label!==o.value?`<span>${esc(o.label)}</span>`:''}</div>`).join('');
+    pop.hidden=false;
+  };
+  const pick=o=>{
+    input.value=o.value; pop.hidden=true;
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+  };
+  const mark=()=>pop.querySelectorAll('.acrow').forEach((el,i)=>{
+    el.classList.toggle('hi',i===ac.hi);
+    if(i===ac.hi)el.scrollIntoView({block:'nearest'});});
+  input.addEventListener('focus',paint);
+  input.addEventListener('input',paint);
+  input.addEventListener('blur',()=>{pop.hidden=true;});
+  input.addEventListener('keydown',e=>{
+    if(pop.hidden){ if(e.key==='ArrowDown'){paint(); e.preventDefault();} return; }
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+      const n=ac.rows.length; if(!n)return;
+      ac.hi=e.key==='ArrowDown'?(ac.hi+1)%n:(ac.hi<=0?n-1:ac.hi-1);
+      mark(); e.preventDefault();
+    }else if(e.key==='Enter'&&ac.hi>=0){ pick(ac.rows[ac.hi]); e.preventDefault(); }
+    else if(e.key==='Escape'){ pop.hidden=true; e.preventDefault(); e.stopPropagation(); }
+  });
+  // mousedown, not click: a click lands after the blur has already hidden the list
+  pop.addEventListener('mousedown',e=>{
+    const row=e.target.closest('.acrow'); if(!row)return;
+    e.preventDefault(); pick(ac.rows[+row.dataset.i]);
+  });
+}
+
+/* ---- sections that fold ----
+   A dialog made of lists that each scroll on their own is a dialog you cannot
+   scroll to the bottom of: the wheel gets caught by the first list under the
+   pointer. So a section holding one can be folded down to its heading, and
+   starts that way; whichever ones you open stay open, remembered like every
+   other "where I was looking" setting.
+
+   A section opts in with `class="fold"` plus a `data-fold` key (foldCls gives
+   the class). The heading is the toggle, except for the buttons, pickers and
+   links it also carries, which keep doing their own thing. */
+const foldIsOpen=k=>((state.settings&&state.settings.open_folds)||[]).includes(k);
+const foldCls=k=>'fold'+(foldIsOpen(k)?' open':'');
+function foldSet(k,on){
+  const was=(state.settings.open_folds||[]).filter(x=>x!==k);
+  state.settings.open_folds=on?[...was,k]:was;
+  api.post('/api/settings',{open_folds:state.settings.open_folds});
+  document.querySelectorAll('.fold[data-fold]').forEach(el=>{
+    if(el.dataset.fold===k)el.classList.toggle('open',on);});
+}
+document.addEventListener('click',e=>{
+  const h=e.target.closest('.fold>h4'); if(!h)return;
+  const ctl=e.target.closest('button,select,input,label,a,textarea,[onclick],.qm');
+  if(ctl&&h.contains(ctl)&&ctl!==h)return;
+  foldSet(h.parentElement.dataset.fold,!h.parentElement.classList.contains('open'));
+});
+
+/* ---- how big the whole interface is drawn ----
+   The building editor with the code view beside it wants more than a 1080p
+   screen gives it at 100%. The browser's own Ctrl+minus does this too, but it is
+   remembered per address, and the tool's address changes with its port. */
+const UI_SCALES=[60,70,75,80,85,90,95,100,110,125];
+function uiScaleApply(){
+  const pct=+((state.settings||{}).ui_scale)||100;
+  document.documentElement.style.zoom=pct===100?'':String(pct/100);
+  document.documentElement.style.setProperty('--uiz',String(pct/100));
+}
+function uiScaleSet(pct){
+  state.settings.ui_scale=+pct;
+  api.post('/api/settings',{ui_scale:+pct});
+  uiScaleApply();
 }

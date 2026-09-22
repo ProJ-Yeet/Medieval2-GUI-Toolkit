@@ -1,5 +1,5 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-21 - **Phases 52, 53, 45, 46, 47a, 47b and 48 done**, committed and uncut; nothing scheduled next. Phase 51 was cut as **v2.3.6** and **beta 2026-09-21**. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
+_Updated: 2026-09-22 - **Phases 52, 53, 45, 46, 47a, 47b and 48 done**, plus a **tester's pass on the building editor**, all committed and uncut; nothing scheduled next. Phase 51 was cut as **v2.3.6** and **beta 2026-09-21**. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
 the latest beta, both cut on request after **Phase 44**. They carry everything
 uncut since v2.3.4: the two startup/port commits, the contributor's campaign
 map editor, **M18** and **Phase 44**. v2.3.5 carries 44 and the port work; the
@@ -7,6 +7,19 @@ beta carries all of it. **Releasing is on-request only**: commit to master and
 stop_
 
 ## Next up
+**A tester's pass on the building editor, 2026-09-22, committed and uncut.**
+Eight reports, two of them real defects. **Hiding the code view dropped its
+text** while the rows still counted lines from it, so Probe and Save planned
+those numbers against the whole EDB: "capability line 8 is no longer there -
+skipped" for every row, and the edits to them were lost (the pane is now kept,
+only hidden). **Resource names were matched by spelling**: the vocab keyed each
+hidden resource as the region file wrote it, so an EDB declaring `Resl` found no
+region carrying `ResL`. The rest: a faction picked brings its culture, the grid
+card's buttons wrap, the resource picker is a suggestion list instead of a
+`<datalist>` (Chrome hid the exact match and matched region names), an
+**Interface size** setting (CSS `zoom`, every vh/vw divided back by it), and the
+editor's scrolling lists and Probe fold to their headings, closed by default.
+
 **Phase 44 is done - the EDB's tree, checked, closed 2026-09-20, BOTH lines.**
 Nine rules ship, **three are refused, and the refusals are the phase.** The
 scoping said six go in as stated; measuring found that **one of the six could
