@@ -365,6 +365,13 @@ function bldBuildFilters(){
   bldFactionFilter.innerHTML=factions.map(f=>
     `<label class="opt"><input type="checkbox" value="${esc(f)}" ${b.sel.faction.has(f)?'checked':''}>${esc(bldFacLabel(f))}</label>`).join('')
     ||'<span class="count">None</span>';
+  // Which name leads: the Unit Editor's own setting, so the two screens agree.
+  bldFacNames.value=facBy();
+  bldFacNames.onchange=()=>{
+    state.settings.faction_sort=bldFacNames.value;
+    api.post('/api/settings',{faction_sort:bldFacNames.value});
+    if(typeof facSort!=='undefined')facSort.value=bldFacNames.value;
+    _bldFiltersFor=''; render();};
   const wire=(box,key2)=>box.querySelectorAll('input').forEach(cb=>cb.onchange=()=>{
     cb.checked?b.sel[key2].add(cb.value):b.sel[key2].delete(cb.value);
     if(key2==='faction'&&cb.checked&&bldFollowCulture(cb.value))return;
@@ -415,6 +422,10 @@ async function openBuilding(name,keepLevel,atLevel){
   b.work=bldWorkFrom(d);
   b.orig=JSON.stringify(b.work);
   b.checks=null;
+  // A different building starts filtered to the factions ticked in the browser,
+  // because those are the ones you were looking for. A re-read after Save keeps
+  // whatever the editor's own list says now.
+  if(!keepLevel)b.poolFac=new Set(b.sel.faction);
   bldLoadChecks();
   b.own=b.own||{};                        // unit type -> ownership check result
   undoReset();
@@ -1057,13 +1068,18 @@ function bldPoolFilterHtml(pools){
   return qm('Narrow the list below to the units one faction can actually train here. '
       +'A big level trains hundreds, almost all of them gated to one faction, so '
       +'"who can train what" is usually the question you arrive with.','Faction filter')
-    +`<select class="mini" onchange="bldPoolFacPick(this.value);this.value=''"
-      style="flex:0 0 auto;max-width:230px">
-      <option value="">Faction: ${esc(picked)}…</option>
-      ${sel.size?'<option value="(clear)">Show everything</option>':''}
-      ${open?`<option value="(any)">No faction clause (${open})</option>`:''}
-      ${rows.map(([f,n])=>`<option value="${esc(f)}">${esc(bldFacName(f))} (${n})</option>`).join('')}
-    </select>
+    // A checklist, not a drop-down: a drop-down closes on every pick, so ticking
+    // three factions was three trips. It stays open until a click lands outside.
+    +`<details class="facpick" ${state.bld.poolFacOpen?'open':''}
+      ontoggle="state.bld.poolFacOpen=this.open">
+      <summary title="${esc(picked)}">Faction: ${esc(picked)}…</summary>
+      <div class="facpickpop">
+        <div class="fphead"><span class="count">${sel.size?`${sel.size} ticked`:'Showing every unit'}</span>
+          ${sel.size?`<button class="mini" style="margin-left:auto"
+            onclick="bldPoolFacPick('(clear)')">Show everything</button>`:''}</div>
+        ${open?bldPoolFacRow('(any)','No faction clause',open,sel):''}
+        ${rows.map(([f,n])=>bldPoolFacRow(f,bldFacName(f),n,sel)).join('')}
+      </div></details>
     <span class="viewtoggle" title="Which order the faction list above is in.">
       <button class="${az?'on':''}" ${az?'disabled':''}
         onclick="bldFacSortToggle()">A to Z</button>
@@ -1071,6 +1087,17 @@ function bldPoolFilterHtml(pools){
         onclick="bldFacSortToggle()">Unit count</button>
     </span>`;
 }
+function bldPoolFacRow(code,label,n,sel){
+  return `<label><input type="checkbox" ${sel.has(code)?'checked':''}
+      onchange="bldPoolFacPick('${q1(esc(code))}')">${esc(label)}<span class="count">${n}</span></label>`;
+}
+// A click outside the checklist closes it, the way a drop-down would.
+document.addEventListener('mousedown',e=>{
+  const open=document.querySelector('details.facpick[open]');
+  if(!open||open.contains(e.target))return;
+  open.open=false;
+  if(state.bld)state.bld.poolFacOpen=false;
+});
 const bldFacSort=()=>((state.settings||{}).bld_facsort==='az'?'az':'count');
 function bldFacSortToggle(){
   const v=bldFacSort()==='az'?'count':'az';
@@ -1820,7 +1847,7 @@ function bldFacName(code){
   const v=bldVocab();
   if(code===(v.all_keyword||'all'))return 'All factions';
   const f=(v.factions||[]).find(x=>x.code===code);
-  if(f)return f.name?`${f.name} (${f.code})`:f.code;
+  if(f)return facTwoNames(f.code,f.name);
   const c=(v.cultures||[]).find(x=>x.code===code);
   if(c)return `${c.name?c.name+' ':''}(${c.code}) · culture`;
   return code;

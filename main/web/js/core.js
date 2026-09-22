@@ -1857,7 +1857,7 @@ function foldSet(k,on){
 }
 document.addEventListener('click',e=>{
   const h=e.target.closest('.fold>h4'); if(!h)return;
-  const ctl=e.target.closest('button,select,input,label,a,textarea,[onclick],.qm');
+  const ctl=e.target.closest('button,select,input,label,a,textarea,details,[onclick],.qm');
   if(ctl&&h.contains(ctl)&&ctl!==h)return;
   foldSet(h.parentElement.dataset.fold,!h.parentElement.classList.contains('open'));
 });
