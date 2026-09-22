@@ -67,6 +67,13 @@ _VALID = {
     "float": re.compile(r"^-?(\d+(\.\d*)?|\.\d+)$"),
 }
 
+#: A whole number written the way a float is - ``100.0``, ``-5.000``. The digits
+#: are all that is there; the fraction is zero, so the number is the whole
+#: number and nothing is lost by the way it is spelled. Only a fraction of zero
+#: matches: ``100.5`` in an ``int`` field is a value somebody got wrong and
+#: stays an error.
+_WHOLE_AS_FLOAT = re.compile(r"^(?P<digits>-?\d+)\.0*$")
+
 #: The settlement ladders the ``*_city_level`` and ``*_castle_level`` strings
 #: name. ``moot_and_bailey`` is how both installed mods and the archive's copy
 #: of the Britannia file spell it; the EDB spells the building
@@ -265,23 +272,63 @@ def read(mod) -> Tuple[DbFile, str]:
 # checks
 
 
-def check_value(type_: str, value: str, name: str = "") -> Tuple[Optional[str], Optional[str]]:
-    """``(error, warning)`` for one value of one type."""
+#: What a value of each type has to read like, said the way the box says it.
+_WANT = {"bool": "true or false", "uint": "a whole number, 0 or more",
+         "int": "a whole number", "float": "a number"}
+
+
+def _blank_side(value: str) -> str:
+    """Which side of a value the blank space is on, for the sentence."""
+    lead, trail = len(value) - len(value.lstrip()), len(value) - len(value.rstrip())
+    if lead and trail:
+        return "blank space on both sides of it"
+    return "blank space in front of it" if lead else "blank space after it"
+
+
+def check_value(type_: str, value: str,
+                name: str = "") -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """``(error, warning, note)`` for one value of one type.
+
+    Two things a value can be that are *not* the wrong kind, and were both
+    reported as one until a tester met them on a real file:
+
+    **Blank space inside the quotes.** ``bool="true "`` is the word with a
+    space stuck to it. Read as the characters between the quotes it is not
+    `true`, which is why it was called "not true or false" - a sentence that
+    is no help at all in front of a box that looks like it says true. What the
+    engine does with the space is not something either installed mod can be
+    made to show, so this is a warning naming the space, not a verdict.
+
+    **A whole number written as a decimal.** ``int="100.0"`` is a hundred. The
+    fraction is zero, so nothing is lost and nothing is ambiguous; it is only
+    spelled the way a `float` is spelled. That is a note. ``100.5`` in the same
+    box is still an error, because there the fraction is a thing somebody meant
+    and the field cannot hold it.
+    """
     if type_ not in TYPES:
-        return None, f"`{type_}` is not one of the five value types this file uses"
+        return None, f"`{type_}` is not one of the five value types this file uses", None
     if type_ == "string":
         if any(c in value for c in '"<>&'):
-            return "a string value cannot hold \" < > or &", None
+            return "a string value cannot hold \" < > or &", None, None
         if name.endswith("_city_level") and value not in CITY_LEVELS:
-            return None, f"`{value}` is not a city level ({', '.join(CITY_LEVELS)})"
+            return None, f"`{value}` is not a city level ({', '.join(CITY_LEVELS)})", None
         if name.endswith("_castle_level") and value not in CASTLE_LEVELS:
-            return None, f"`{value}` is not a castle level ({', '.join(CASTLE_LEVELS)})"
-        return None, None
-    if not _VALID[type_].match(value):
-        want = {"bool": "true or false", "uint": "a whole number, 0 or more",
-                "int": "a whole number", "float": "a number"}[type_]
-        return f"`{value}` is not {want}", None
-    return None, None
+            return None, f"`{value}` is not a castle level ({', '.join(CASTLE_LEVELS)})", None
+        return None, None, None
+    bare = value.strip()
+    note = None
+    if not _VALID[type_].match(bare):
+        m = _WHOLE_AS_FLOAT.match(bare) if type_ in ("int", "uint") else None
+        if not (m and _VALID[type_].match(m["digits"])):
+            return f"`{value}` is not {_WANT[type_]}", None, None
+        note = (f"`{bare}` is {m['digits']} written as a decimal. The fraction is zero, "
+                f"so the number is a whole one and the field holds it; everything else "
+                f"in the file writes that as `{m['digits']}`.")
+    if bare != value:
+        return None, (f"`{value}` has {_blank_side(value)}. The value is the "
+                      f"characters between the quotes, so this one is not `{bare}` - "
+                      f"trim it and it is."), note
+    return None, None, note
 
 
 def finding(code: str, fatal: bool, message: str, **extra) -> Dict:
@@ -309,10 +356,14 @@ def check_file(db: DbFile) -> List[Dict]:
                                    f"and {t.line + 1}) - one of them is ignored",
                                    key=t.key))
             seen.setdefault(t.name, t.line)
-            err, warn = check_value(t.type, t.value, t.name)
+            err, warn, note = check_value(t.type, t.value, t.name)
             if err or warn:
                 out.append(finding("value", bool(err), f"{t.key}: {err or warn}",
                                    key=t.key))
+            # a note is not a fault, and Health hides it until the box is ticked
+            if note:
+                out.append(finding("value", False, f"{t.key}: {note}", key=t.key,
+                                   severity="note"))
     alt = db.get("settlement/alternative_religious_unrest")
     tuned = [t.name for t in db.tags() if t.name.startswith("alt_rel_")]
     if tuned and (alt is None or alt.value != "true"):
@@ -412,12 +463,13 @@ def plan(mod, body: dict) -> CampDbPlan:
             continue                       # an add, or checked just below
         if value == t.value:
             continue
-        err, warn = check_value(t.type, value, t.name)
+        err, warn, note = check_value(t.type, value, t.name)
         if err:
             p.errors.append(f"{key}: {err}")
             continue
-        if warn:
-            p.warnings.append(f"{key}: {warn}")
+        for line in (warn, note):
+            if line:
+                p.warnings.append(f"{key}: {line}")
         set_value(db, t, value)
         p.changes.append(f"{key}: {t.value} -> {value}")
 
@@ -431,12 +483,13 @@ def plan(mod, body: dict) -> CampDbPlan:
             p.errors.append(f"{key} is already in the file")
             continue
         value = values.get(key, v["default"])
-        err, warn = check_value(v["type"], value, name)
+        err, warn, note = check_value(v["type"], value, name)
         if err:
             p.errors.append(f"{key}: {err}")
             continue
-        if warn:
-            p.warnings.append(f"{key}: {warn}")
+        for line in (warn, note):
+            if line:
+                p.warnings.append(f"{key}: {line}")
         try:
             add_tag(db, v["section"], name, v["type"], value)
         except CampDbError as e:

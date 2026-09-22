@@ -293,8 +293,11 @@ def _campdb(mod, ctx) -> List[Finding]:
     if not campdb.path_for(mod).exists():
         return []
     db, _ = campdb.read(mod)
+    # "key" is what a campdb finding calls its tag ("agents/assassinate_chance_max"),
+    # and it is what the screen's cdbOpen takes - `name` would come back empty and
+    # the row would land on the screen with nothing picked.
     return _plain(campdb.check_file(db), "campdb", campdb.REL, "campaign", "campdb",
-                  "name", "campdb")
+                  "key", "campdb")
 
 
 @source("minor", "Rebels, religions, resources, cultures, names", "minor",

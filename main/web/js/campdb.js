@@ -63,13 +63,19 @@ function cdbChanged(){
   return cdbTags().filter(t => cdbVal(t) !== t.value).length + c.add.length;
 }
 
-/* The server is the one that refuses; this only paints a box red early. */
+/* The server is the one that refuses; this only paints a box red early, which
+   means it has to agree with the server about what red is. Two values look
+   wrong and are not, and campdb.check_value takes both: blank space round an
+   otherwise right value (a warning naming the space) and a whole number
+   written as a decimal, `100.0` (a note - the fraction is zero). A fraction
+   that is not zero, `100.5`, is still red in an int box. */
 function cdbBad(type, v){
-  if(type === 'bool') return !/^(true|false)$/.test(v);
-  if(type === 'uint') return !/^\d+$/.test(v);
-  if(type === 'int') return !/^-?\d+$/.test(v);
-  if(type === 'float') return !/^-?(\d+(\.\d*)?|\.\d+)$/.test(v);
   if(type === 'string') return /["<>&]/.test(v);
+  const s = String(v).trim();
+  if(type === 'bool') return !/^(true|false)$/.test(s);
+  if(type === 'uint') return !/^\d+(\.0*)?$/.test(s);
+  if(type === 'int') return !/^-?\d+(\.0*)?$/.test(s);
+  if(type === 'float') return !/^-?(\d+(\.\d*)?|\.\d+)$/.test(s);
   return false;
 }
 

@@ -103,11 +103,39 @@ check("alt_rel_ values with the mode off are reported",
       [f["code"] for f in campdb.check_file(alt)] == ["alt_piety"])
 
 for t, v, good in [("bool", "true", True), ("bool", "True", False), ("uint", "0", True),
-                   ("uint", "-3", False), ("int", "-3", True), ("int", "1.0", False),
+                   ("uint", "-3", False), ("int", "-3", True), ("int", "1.0", True),
                    ("float", "-0.25", True), ("float", "2", True), ("float", "1e3", False),
                    ("string", "a<b", False)]:
-    err, _ = campdb.check_value(t, v)
+    err, _, _ = campdb.check_value(t, v)
     check(f"{t} {v!r} is {'taken' if good else 'refused'}", (err is None) == good)
+
+# Blank space inside the quotes is not the wrong KIND of value, and saying it
+# was ("`true ` is not true or false") is no help in front of a box that reads
+# true. Named, as a warning, with the trimmed value in the sentence.
+for v, side in [("true ", "after it"), (" true", "in front of it"),
+                (" true ", "on both sides of it")]:
+    err, warn, _ = campdb.check_value("bool", v)
+    check(f"bool {v!r} is blank space, not the wrong kind",
+          err is None and warn and f"blank space {side}" in warn and "`true`" in warn)
+check("…and a value that is wrong once trimmed is still refused, spaces and all",
+      campdb.check_value("bool", "yes ")[0] == "`yes ` is not true or false")
+
+# A whole number spelled as a decimal is that whole number. A note, so Health
+# leaves it out of the default list; a fraction that is not zero is still wrong.
+for t, v, n in [("int", "100.0", "100"), ("uint", "100.0", "100"), ("int", "-5.000", "-5")]:
+    err, warn, note = campdb.check_value(t, v)
+    check(f"{t} {v!r} is {n}, as a note and not a fault",
+          err is None and warn is None and note and f"is {n} written as a decimal" in note)
+check("…but a fraction that is not zero is still refused",
+      campdb.check_value("int", "100.5")[0] and campdb.check_value("uint", "-3.0")[0])
+check("…and a float is unchanged by any of it", campdb.check_value("float", "1.0") == (None, None, None))
+
+spaced = campdb.parse_text(SAMPLE.replace('bool="false"', 'bool="false "')
+                           .replace('int="45"', 'int="45.0"'))
+sf = campdb.check_file(spaced)
+check("both reach check_file, one a warning and one a note",
+      [(f["code"], f["fatal"], f.get("severity")) for f in sf]
+      == [("value", False, None), ("value", False, "note")])
 
 
 print("\n2  plan")
