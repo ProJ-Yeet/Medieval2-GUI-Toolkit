@@ -91,7 +91,8 @@ function anRowHtml(r){
       <span class="sub">${esc(r.type||'no type')}${r.unique?' · unique':''}${
         r.effects?` · ${r.effects} effect${r.effects===1?'':'s'}`:''}${
         r.triggers?` · ${r.triggers} trigger${r.triggers===1?'':'s'}`
-                  :' · <b>nothing grants it</b>'}${
+                  :r.lua_gives?' · given by a script'
+                  :` · <b>nothing grants it</b>${r.lua_names?' (a script names it)':''}`}${
         r.findings?` <span class="w-warn">· ${r.findings}⚠</span>`:''}</span>
     </span>
   </button>`;
@@ -322,7 +323,10 @@ function anTriggersHtml(d){
       cannot grant one the file has not defined yet.</div></section>`;
   return `<section class="trsec">
     <div class="trsechead">Triggers <span class="count">${d.trigs.length
-      ? 'what grants this ancillary' : 'nothing grants this ancillary'}</span></div>
+      ? 'what grants this ancillary'
+      : luaGives(d.lua) ? 'no trigger: a script grants it, below'
+      : 'nothing grants this ancillary'}</span></div>
+    ${luaHitsHtml(d.lua, 'ancillary')}
     ${d.trigs.map((t,i)=>`<div class="trtrig">
       <div class="trtrighead"><b>${esc(t.name)}</b><span class="sp"></span>
         <button class="trgdel" title="Remove this trigger"

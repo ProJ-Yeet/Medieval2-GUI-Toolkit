@@ -577,9 +577,16 @@ def overview(mod) -> Dict:
         for eff in trig.effects:
             if eff.keyword == "Affects" and eff.args:
                 gives[eff.args[0]] = gives.get(eff.args[0], 0) + 1
+    # an EOP mod can give a trait from Lua and never from a trigger (AGO's
+    # OldAge is addTraitPoints in world.lua) - see luascan.record_mentions
+    from . import luascan
+    lua = luascan.record_mentions(mod, "trait", [t.name for t in tf.traits])
     for t in tf.traits:
+        hits = lua.get(t.name, [])
         out["traits"].append({
             "name": t.name, "label": label(t, names),
+            "lua_gives": sum(1 for h in hits if h["how"] == "gives"),
+            "lua_names": len(hits),
             "characters": t.characters, "hidden": t.hidden,
             "levels": len(t.levels),
             "thresholds": [lv.threshold for lv in t.levels],
@@ -592,6 +599,11 @@ def overview(mod) -> Dict:
     out["findings"] = sum(counted.values())
     out["triggers"] = len(tg.triggers)
     return out
+
+
+def _lua_hits(mod, kind: str, name: str) -> list:
+    from . import luascan
+    return luascan.record_mentions(mod, kind, [name]).get(name, [])[:40]
 
 
 def detail(mod, name: str) -> Dict:
@@ -620,6 +632,7 @@ def detail(mod, name: str) -> Dict:
         "has_vnv": bool(names),
         "findings": modflags.uncapped(check(trait, set(tf.by_name())), mod),
         "triggers": [dict(t.as_dict(), text=tg.block_text(t)) for t in mine],
+        "lua": _lua_hits(mod, "trait", trait.name),
         "known": sorted(tf.by_name()),
         "attributes": sorted(triggers.vocab().get("attributes", [])),
         "character_types": list(CHARACTER_TYPES),

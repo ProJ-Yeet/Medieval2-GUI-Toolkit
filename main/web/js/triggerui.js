@@ -285,3 +285,23 @@ function trgPaintWarnings(tr){
            w.textContent = warn || ((tr.byTerm[c.term]||{}).hint || ''); }
   });
 }
+
+/* ---- what a Lua script does with a trait or an ancillary ----
+   An M2TWEOP mod can give either one from Lua and never from a trigger (AGO's
+   OldAge is `addTraitPoints("OldAge", 1)` in eopData/.../world.lua). The server
+   reads the scripts (luascan.record_mentions); this lists what it found, beside
+   the triggers, so "nothing gives it" is only said when nothing does. Shared by
+   the traits and ancillaries screens, which is why it lives with the builder. */
+const LUA_HOW = {gives: 'gives it', reads: 'checks or removes it', names: 'names it'};
+const luaGives = hits => (hits || []).some(h => h.how === 'gives');
+function luaHitsHtml(hits, noun){
+  if(!(hits || []).length) return '';
+  const order = {gives: 0, reads: 1, names: 2};
+  const rows = hits.slice().sort((a, b) => order[a.how] - order[b.how]);
+  return `<div class="trlua"><div class="count">From the mod's Lua scripts: what they do with this
+      ${esc(noun)}. Not edited here: open the file to change it.</div>
+    ${rows.map(h => `<div class="trluarow"><span class="${h.how === 'gives' ? 'w-good' : 'count'}">${
+      esc(LUA_HOW[h.how] || h.how)}</span>
+      <code>${esc(h.file)}:${h.line}</code>${h.call ? ` <span class="count">${esc(h.call)}()</span>` : ''}</div>`
+    ).join('')}</div>`;
+}

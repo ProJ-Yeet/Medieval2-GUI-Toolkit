@@ -503,9 +503,14 @@ def overview(mod) -> Dict:
         for eff in trig.effects:
             if eff.keyword == "AcquireAncillary" and eff.args:
                 grants[eff.args[0]] = grants.get(eff.args[0], 0) + 1
+    from . import luascan              # given from Lua, on an EOP mod
+    lua = luascan.record_mentions(mod, "ancillary", [a.name for a in af.ancillaries])
     for a in af.ancillaries:
+        hits = lua.get(a.name, [])
         out["ancillaries"].append({
             "name": a.name, "label": label(a, names), "type": a.get("Type"),
+            "lua_gives": sum(1 for h in hits if h["how"] == "gives"),
+            "lua_names": len(hits),
             "image": a.get("Image"), "unique": a.unique,
             "transferable": a.transferable,
             "excluded_ancillaries": a.excluded_ancillaries,
@@ -522,6 +527,7 @@ def overview(mod) -> Dict:
 
 def detail(mod, name: str) -> Dict:
     """One ancillary, everything the editor's pane draws."""
+    from . import luascan
     af = parse_file(mod.eda_path)
     anc = af.get(name)
     if anc is None:
@@ -545,6 +551,7 @@ def detail(mod, name: str) -> Dict:
             [] if art is not None or not anc.get("Image") else
             [_image_finding(anc, anc.get("Image"), vanilla_images() is not None)]),
         "triggers": [dict(t.as_dict(), text=tg.block_text(t)) for t in mine],
+        "lua": luascan.record_mentions(mod, "ancillary", [anc.name]).get(anc.name, [])[:40],
         "known": sorted(af.by_name()),
         "types": sorted({a.get("Type") for a in af.ancillaries if a.get("Type")}),
         "attributes": sorted(triggers.vocab().get("attributes", [])),

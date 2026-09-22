@@ -288,3 +288,119 @@ def protected(tokens: Dict[str, LuaHit], names: Iterable[str]) -> Dict[str, LuaH
         if hit is not None:
             out[n] = hit
     return out
+
+
+# ---------------------------------------------------------------------------
+# a trait or an ancillary that a script gives
+#
+# Reported on 2026-09-22 about AGO: a mod on M2TWEOP can hand a trait out from
+# Lua and never from a trigger. AGO's OldAge, the trait that ages a character
+# to death, is `namedChar:addTraitPoints("OldAge", 1)` in
+# eopData/eopScripts/Campaign/world.lua, and the traits screen called it "no
+# trigger gives it" in bold. So the scripts are read for the calls that give,
+# the calls that only look, and any bare string that is the record's name - a
+# table of race traits the script loops over names every one of them and calls
+# none by name.
+
+#: EOP's character methods, per record kind: (gives, only reads or takes away)
+RECORD_CALLS = {
+    "trait": ({"addtrait", "addtraitpoints", "givetrait"},
+              {"gettraitlevel", "hastrait", "removetrait", "removetraitpoints"}),
+    "ancillary": ({"addancillary", "giveancillary"},
+                  {"hasancillary", "removeancillary"}),
+}
+_CALL_RE = re.compile(r"\b([A-Za-z_]\w*)\s*\(\s*(['\"])([^'\"\n]{1,80})\2")
+_STR_RE = re.compile(r"(['\"])([A-Za-z_][\w.\-]{0,79})\1")
+# the console command, which scripts also send: give_trait <char> <trait> <n>
+_CONSOLE_RE = re.compile(r"\bgive_(trait|ancillary)\b[^\n]*", re.I)
+
+
+#: Where M2TWEOP looks for a mod's scripts: it loads
+#: eopData/eopScripts/luaPluginScript.lua and what that requires.
+EOP_SCRIPT_DIRS = ("eopdata", "youneuoy_data")
+
+
+def eop_scripts(mod) -> List[Path]:
+    """The ``.lua`` files M2TWEOP can run for this mod.
+
+    Not :func:`lua_files`: that walks the whole mod, which the modeldb cleanup
+    needs (a model named anywhere must be kept) and which costs 9 s on DaC and
+    15 s on ROCSS. A trait is given by a script EOP runs, and EOP runs scripts
+    from ``eopData``. A mod whose full list is already built reuses it.
+    """
+    cached = getattr(mod, "__dict__", {}).get("lua_files")
+    if isinstance(cached, list):
+        return list(cached)
+    root = Path(getattr(mod, "root", mod))
+    out: List[Path] = []
+    try:
+        tops = [p for p in root.iterdir() if p.is_dir() and p.name.lower() in EOP_SCRIPT_DIRS]
+    except OSError:
+        return out
+    for top in tops:
+        out += sorted(p for p in top.rglob("*.lua") if p.is_file())
+    return out
+
+
+def record_mentions(mod, kind: str, names: Iterable[str]) -> Dict[str, List[dict]]:
+    """``name -> [{file, line, call, how}]`` for every trait (or ancillary) a
+    script names, ``how`` being ``gives``, ``reads`` or ``names``.
+
+    Comments are blanked first: a call behind ``--`` gives nothing. Matching is
+    case-blind, as the engine's lookup is. Cached on a Mod per kind, because the
+    list and every record's detail ask the same question of the same scripts.
+    """
+    cache = getattr(mod, "_lua_record_cache", None)
+    if cache is None:
+        cache = {}
+        try:
+            mod._lua_record_cache = cache
+        except AttributeError:
+            pass
+    want = {n.lower(): n for n in names if n}
+    key = (kind, frozenset(want))
+    if key in cache:
+        return cache[key]
+    gives, reads = RECORD_CALLS[kind]
+    root = Path(getattr(mod, "root", mod))
+    out: Dict[str, List[dict]] = {}
+    for path in eop_scripts(mod):
+        text = _read(path)
+        if not text:
+            continue
+        # No "does this file name any of them" pre-check: that is every name
+        # tested against every script, 1 457 x 112 on DaC, and it cost 13 s.
+        # The three passes below are one linear scan each.
+        live = strip_comments(text)
+        rel = path.relative_to(root).as_posix() if path.is_relative_to(root) else path.name
+        starts = _line_starts(live)
+        taken = set()
+
+        def add(name, pos, call, how):
+            out.setdefault(want[name], []).append(
+                {"file": rel, "line": bisect.bisect_right(starts, pos), "call": call, "how": how})
+
+        for m in _CALL_RE.finditer(live):
+            name = m.group(3).lower()
+            if name not in want:
+                continue
+            fn = m.group(1).lower()
+            taken.add(m.start(3))
+            add(name, m.start(3), m.group(1),
+                "gives" if fn in gives else "reads" if fn in reads else "names")
+        for m in _CONSOLE_RE.finditer(live):
+            if m.group(1).lower() != kind:
+                continue
+            for tok in re.findall(r"[A-Za-z_][\w]*", m.group(0)):
+                if tok.lower() in want:
+                    add(tok.lower(), m.start(), f"give_{kind}", "gives")
+        for m in _STR_RE.finditer(live):
+            name = m.group(2).lower()
+            if name in want and m.start(2) not in taken:
+                add(name, m.start(2), "", "names")
+    cache[key] = out
+    return out
+
+
+def gives(hits: List[dict]) -> bool:
+    return any(h["how"] == "gives" for h in hits or ())

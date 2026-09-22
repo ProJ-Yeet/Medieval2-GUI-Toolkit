@@ -90,7 +90,9 @@ function trRowHtml(r){
     <div class="nm">${esc(r.label)}</div>
     <div class="sub">${r.levels} level${r.levels===1?'':'s'}${
       r.hidden?' · hidden':''}${
-      r.triggers?` · ${r.triggers} trigger${r.triggers===1?'':'s'}`:' · <b>no trigger gives it</b>'}${
+      r.triggers?` · ${r.triggers} trigger${r.triggers===1?'':'s'}`
+        :r.lua_gives?' · given by a script':` · <b>no trigger gives it</b>${
+          r.lua_names?' (a script names it)':''}`}${
       r.findings?` <span class="w-warn">· ${r.findings}⚠</span>`:''}</div>
   </button>`;
 }
@@ -334,7 +336,10 @@ function trTriggersHtml(d){
       defined yet.</div></section>`;
   return `<section class="trsec">
     <div class="trsechead">Triggers <span class="count">${d.trigs.length
-      ? 'what gives this trait its points' : 'nothing gives this trait any points'}</span></div>
+      ? 'what gives this trait its points'
+      : luaGives(d.lua) ? 'no trigger: a script gives it, below'
+      : 'nothing gives this trait any points'}</span></div>
+    ${luaHitsHtml(d.lua, 'trait')}
     ${d.trigs.map((t,i)=>`<div class="trtrig">
       <div class="trtrighead">
         <b>${esc(t.name)}</b>

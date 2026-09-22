@@ -530,5 +530,53 @@ else:
               len(found) < len(parsed.traits) / 20)
     print(f"  swept {len(mods)} file(s), {total_traits} traits, {total_levels} levels")
 
+# ---------------------------------------------------------------------------
+# A trait given from Lua. Reported about AGO on 2026-09-22: OldAge is
+# namedChar:addTraitPoints("OldAge", 1) in eopData/eopScripts/Campaign/world.lua
+# and no trigger names it, and the list said "no trigger gives it" in bold.
+print("\nLua: a trait an M2TWEOP script gives")
+from unittransfer import ancillaries, luascan  # noqa: E402
+
+eopmod = Path(_tmp.mkdtemp(prefix="tk-traits-lua-")) / "AGO_like"
+(eopmod / "data").mkdir(parents=True)
+(eopmod / "data" / "export_descr_character_traits.txt").write_text(
+    "".join(f"Trait {n}\n    Characters family\n\n    Level {n}_1\n"
+            f"        Description {n}_1_desc\n        EffectsDescription {n}_1_effects_desc\n"
+            f"        Threshold 1\n\n" for n in ("OldAge", "ElvenRace", "Forgotten", "Commented")),
+    encoding="latin-1")
+(eopmod / "data" / "export_descr_ancillaries.txt").write_text(
+    "Ancillary ring_bearer\n    Type Item\n    Transferable 0\n    Image ring.tga\n"
+    "    Description ring_desc\n    EffectsDescription ring_effects_desc\n\n", encoding="latin-1")
+scripts = eopmod / "eopData" / "eopScripts" / "Campaign"
+scripts.mkdir(parents=True)
+(scripts / "world.lua").write_text(
+    "WORLD.immortalRaceTraits = { 'ElvenRace' }\n"
+    "function WORLD:characterHealth(namedChar)\n"
+    "    local lvl = namedChar:getTraitLevel(\"OldAge\")\n"
+    "    if lvl < 3 then\n"
+    "        namedChar:addTraitPoints(\"OldAge\", 1)\n"
+    "    end\n"
+    "    -- namedChar:addTraitPoints(\"Commented\", 1)\n"
+    "    namedChar:addAncillary(\"ring_bearer\")\n"
+    "end\n", encoding="latin-1")
+em = Mod(eopmod)
+ov = {t["name"]: t for t in traits.overview(em)["traits"]}
+check("OldAge: a script gives it", ov["OldAge"]["lua_gives"] == 1)
+check("ElvenRace: named in a table the script loops over, so named but not given",
+      ov["ElvenRace"]["lua_gives"] == 0 and ov["ElvenRace"]["lua_names"] == 1)
+check("a call behind a Lua comment gives nothing",
+      ov["Commented"]["lua_gives"] == 0 and ov["Commented"]["lua_names"] == 0)
+check("a trait no script names is still one nothing gives",
+      ov["Forgotten"]["lua_names"] == 0)
+hits = traits.detail(em, "OldAge")["lua"]
+check("the detail says where, from the mod root, with the line",
+      {(h["file"], h["line"], h["how"]) for h in hits}
+      == {("eopData/eopScripts/Campaign/world.lua", 3, "reads"),
+          ("eopData/eopScripts/Campaign/world.lua", 5, "gives")})
+check("matching is case-blind, as the engine's is",
+      luascan.gives(luascan.record_mentions(Mod(eopmod), "trait", ["oldage"]).get("oldage")))
+aov = {a["name"]: a for a in ancillaries.overview(em)["ancillaries"]}
+check("an ancillary a script adds is given too", aov["ring_bearer"]["lua_gives"] == 1)
+
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)
