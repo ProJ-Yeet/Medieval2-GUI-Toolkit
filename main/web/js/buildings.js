@@ -1091,8 +1091,9 @@ function bldPoolFacRow(code,label,n,sel){
   return `<label><input type="checkbox" ${sel.has(code)?'checked':''}
       onchange="bldPoolFacPick('${q1(esc(code))}')">${esc(label)}<span class="count">${n}</span></label>`;
 }
-// A click outside the checklist closes it, the way a drop-down would.
-document.addEventListener('mousedown',e=>{
+// A click outside the checklist closes it, the way a drop-down would. Guarded:
+// test_buildings runs this file in node, where there is no document.
+if(typeof document!=='undefined'&&document.addEventListener)document.addEventListener('mousedown',e=>{
   const open=document.querySelector('details.facpick[open]');
   if(!open||open.contains(e.target))return;
   open.open=false;

@@ -1,10 +1,5 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-22 - **Phases 52, 53, 45, 46, 47a, 47b and 48 done**, plus a **tester's pass on the building editor**, all committed and uncut. **Phase 54 (M17, one door to every check) is done**, committed and uncut: a Health screen over eleven sources, five new crash-guide rules and two of the guides' claims refused. My changes also exports just the changed files now. Since then, also committed: the building editor's faction checklist seeded from the browser, the browser's code/in-game name switch, and traits and ancillaries given from Lua (EOP). **Phase 55 (battle model animation): 55a done**, the animation `.cas` reader (1 751 of 1 763 loose files read; the twelve refused are one siege engine's cut-short files). **55b next**: which quaternion component is w, then the skeleton chain and playback, over loose files only. Phase 51 was cut as **v2.3.6** and **beta 2026-09-21**. **v2.3.5** is the latest 2.x and **beta 2026-09-20**
-the latest beta, both cut on request after **Phase 44**. They carry everything
-uncut since v2.3.4: the two startup/port commits, the contributor's campaign
-map editor, **M18** and **Phase 44**. v2.3.5 carries 44 and the port work; the
-beta carries all of it. **Releasing is on-request only**: commit to master and
-stop_
+_Updated: 2026-09-22 - **Cut on request as v2.3.7 and beta 2026-09-22**, the latest 2.x and the latest beta. They carry everything since v2.3.6: Phases 52, 53, 45, 46, 47a, 47b and 48, a tester's pass on the building editor, **Phase 54** (Health, one door to every check, with five crash-guide rules and two of the guides' claims refused), the changed-files export, the building editor's faction checklist and name switch, traits and ancillaries given from Lua, and **Phase 55a** (the animation `.cas` reader, nothing on screen yet). The beta adds Health's map rules. **55b is next**: which quaternion component is w, then the skeleton chain and playback, over loose files only. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
 **A tester's pass on the building editor, 2026-09-22, committed and uncut.**
@@ -1166,15 +1161,15 @@ path in this file and in the source is relative to. `main/dev/` never ships.
 ## THE TWO RELEASE LINES
 Two lines off this one `master`, chosen by whether a change touches the campaign
 map. **Not campaign-map** -> a **2.x subrelease with the map hidden**, uploaded
-`--latest` (latest **v2.3.6**, 2026-09-21). **Campaign-map** -> the **beta
-line**, uploaded as a **pre-release** (latest **beta 2026-09-21**). A
+`--latest` (latest **v2.3.7**, 2026-09-22). **Campaign-map** -> the **beta
+line**, uploaded as a **pre-release** (latest **beta 2026-09-22**). A
 **subrelease means both**: one job, both zips, same tree.
 
 The switch is **one flag**: `off:true` on the `campmap` entry in `MODES` in
 `web/js/core.js`, which `menuModes()` and `modeOffered()` are the only readers
 of. It is a **release-time edit, not a state of `master`**: set it, bump the 2.x
 number, build, upload, then put it straight back off in the next commit.
-`master` carries the map ON, and `__version__` says `beta-2026-09-21`
+`master` carries the map ON, and `__version__` says `beta-2026-09-22`
 because the beta was the last thing cut.
 
 Of the finished work, **21 and 29 belong to BOTH lines** (raw text is a menu
