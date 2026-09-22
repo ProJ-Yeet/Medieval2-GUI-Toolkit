@@ -44,6 +44,9 @@ MODULES: Dict[str, str] = {
     # 52. Reads the toolkit's own record of what it wrote, not a mod file, so
     # like Raw text it has no row below and its card is always ready.
     "changes": "My changes",
+    # 54. Runs the other modules' checks over whatever files the mod has; a
+    # missing file is that check's own finding, so it has no row below either.
+    "health": "Health",
 }
 
 

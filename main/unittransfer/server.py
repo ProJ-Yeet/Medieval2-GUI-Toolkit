@@ -170,8 +170,13 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
                                     of a template, with the clone's own cloners
                                     (one backup set + undo)
 
+Health (54, see :mod:`unittransfer.health`) - one door to every check
+  GET  /api/health?mod=&campaign=&map=1 -> every fast validator's findings in one
+                                    shape, fatal first, each naming the screen
+                                    that owns it; `map=1` adds the map rules
+
 Change sets (52, see :mod:`unittransfer.changesets`) - your edits, ported
-  GET  /api/changes?mod=         -> the mod's set: every file it tracks, what
+  GET  /api/changes?mod=       -> the mod's set: every file it tracks, what
                                     changed in it record by record, and whether
                                     the disk still says what you last wrote
   GET  /api/changes/export?set=  -> the set as one file (a zip)
@@ -602,7 +607,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, changesets, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -1955,6 +1960,20 @@ class Handler(BaseHTTPRequestHandler):
                         ancillaries.detail(mod, (q.get("name") or [""])[0]))
                 except KeyError as e:
                     return self._err(404, str(e))
+            if u.path == "/api/health":
+                # Phase 54: every fast validator, one list. `map=1` only when the
+                # build offers the map screen, so a 2.x build never pays for it.
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                try:
+                    mod = self.registry.get(name)
+                except Exception:
+                    mod = self.registry.describe(name)
+                use_map = (q.get("map") or [""])[0] == "1"
+                return self._json(health.run(
+                    mod, (lambda c: self.registry.map_for(name, c)) if use_map else None,
+                    (q.get("campaign") or [""])[0]))
             if u.path == "/api/changes":
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():

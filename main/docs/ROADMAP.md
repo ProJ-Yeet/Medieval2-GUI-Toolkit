@@ -2871,6 +2871,103 @@ installed map because both ship RLE TGAs.
 
 ---
 
+# Phase 54 - M17, one door to every check - IN PROGRESS 2026-09-22
+
+First in the five-star queue. The complaint is ours and it is still true: we
+have more validators than any of the four reference tools and no single place
+that runs them. Somebody whose mod crashes has to know that the map screen,
+the faction audit, the buildings screen, the battle-models screen and three
+file editors each hold part of the answer.
+
+### What exists, measured
+
+Eighteen validators, in three shapes:
+
+- **The rule shape.** `mapcheck.Finding` (86 `@rule`s, the six `merc.` rules
+  among them) and `buildings.EdbFinding` (nine `@edb_rule`s, Phase 44): a code,
+  `fatal`/`warn`/`note`, a message, and a `what` that never holds a line number.
+- **The file checkers.** `check_file` in traits, ancillaries, guilds, campdb,
+  factions and winconds, `minorfiles.check_any` and `educeil.mod_findings`.
+  Close to the rule shape but not on it: some say `fatal: bool` through a
+  local `finding()` helper, some say `kind` and nothing about severity.
+- **The cleanup audits.** bmdb, dupes, stratmap and cards. These return buckets
+  (unused, orphans, twins, strays), not findings. They are about a tidy mod,
+  not a mod that starts.
+
+**Cost, cold, on the two installed mods** (DaC, ROCSS): mapcheck 0.9s / 2.8s,
+the faction audit 1.3s / 1.2s, the EDB checks 0.2s / 0.2s. Then bmdb 10.5s /
+27s, dupes 7s / 19s, stratmap 7s / 16s, and **cards 24s / 95s**. That split
+decides the screen: the first group runs when it opens, the second is a tile
+that says what it would look for and starts on a click.
+
+### The two crash guides are the checklist
+
+`Reference/TWCenter/GUIDE - Crashes and how to fix them.pdf` and `Crash to
+Desktop - TWC Wiki.pdf` list about forty causes between them, and almost every
+one names a file and can be read off it. What they add that no validator here
+has is **when** it bites: at launch, at campaign load, at the first turn, in
+battle, when a panel is opened. That is how somebody arrives with a crash, so
+it is how the screen is grouped.
+
+### 54a - the door
+
+- `unittransfer/health.py`: a registry of **sources**, each an adapter from one
+  validator's own answer to one finding shape: `source`, `code`, `severity`
+  (`fatal`/`warn`/`note`), `message`, `file`, `line`, `what`, `when`, and where
+  to open it. A source that throws is reported as a source that failed, never
+  as an empty one and never as the whole screen failing.
+- `GET /api/health?mod=&campaign=` runs the fast sources. The slow ones are
+  listed as doors into their own screens.
+- A **Health** screen: fatal first, grouped by when it crashes, every row
+  opening the screen that owns the finding. The existing screens keep their
+  panels; this is a door, not a second copy of any rule.
+- A test that runs every source over both installed mods and holds each
+  adapter to the shape.
+
+### 54a done 2026-09-22 - ten sources, one list, and a door into each screen
+
+Built as scoped except one line: the cleanup audits keep no session result to
+show. They are listed with what they cost and open their own screens, which
+already show progress; a cached answer from twenty minutes ago would be the
+one number on the page nobody could trust.
+
+**Ten sources**: the map rules (off where the map screen is), the faction
+audit, the EDB tree and recruitment checks, the EDU ceilings, traits,
+ancillaries, `descr_sm_factions.txt`, guilds, campaign constants and the five
+Minor Files tabs. DaC reads 5 fatal, 158 warnings and 95 notes in about 3s;
+ROCSS 2 fatal, 120 warnings in about 5.5s, nearly all of it the map rules.
+
+**Severity from the checker's own sentence.** Traits, ancillaries and factions
+give a `kind` and no severity. A table here would be a second list to forget;
+their messages already say "crashes the game", "the game stops loading the
+file", "will not load this ancillary", and `health.severity_of` reads that.
+`tests/test_health.py` holds it to sentences the checkers really write.
+
+**One measurement changed the shape.** DaC's recruitment checks are 2 151
+notes unit by unit, which buried the five fatals under them. They fold to one
+note per building line with a count (95), and notes start hidden.
+
+**Two defects found by building it.** My changes (52) never hid the unit
+editor's filter sidebar, and neither did Health until it was added to the same
+list. And a Health row for a guild that exists only in triggers lands on the
+Guilds screen without a record picked - which is right, there is none, and the
+row says so.
+
+Exit: `unittransfer/health.py`, `GET /api/health`, `web/js/health.js`, a
+Health entry in the menu, `tests/test_health.py` (40 checks).
+
+### 54b - what the guides name and nothing checks
+
+Measured on both mods before any of it is written, on Phase 12's rule that a
+count from a wiki is not a fact about a mod. The candidates: an event a script
+or the EDB fires that `historic_events.txt` does not declare; an `ai_label` in
+`descr_strat.txt` missing from `descr_campaign_ai_db.xml`; a trait culture-
+excluded while its antitrait is not; absolute paths in `descr_banners_new.xml`
+and the projectile and standard files; runs of spaces in the modeldb; a
+faction a building's early level omits and a later level names.
+
+---
+
 # Phases 51-53 - a user's feedback on the EDB editor, 2026-09-21
 
 **Asked for by the user on 2026-09-21**, passing on feedback from someone

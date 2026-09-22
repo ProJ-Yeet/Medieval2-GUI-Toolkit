@@ -682,6 +682,7 @@ const MODES=[
   {id:'sounds',   icon:'🔊', name:'Unit Sounds',   hint:'Pick which voice entry each unit speaks with'},
   {id:'minor',    icon:'🗺', name:'Minor Files',   hint:'Rebels, religions, cultures, traits, factions and text'},
   {id:'rawtext',  icon:'📝', name:'Raw text',      hint:'Any file the toolkit reads, as plain text, backed up and undoable'},
+  {id:'health',   icon:'🩺', name:'Health',        hint:'Every check the toolkit has, over one mod, in one list: what would crash it, and where to fix it'},
   {id:'changes',  icon:'🔀', name:'My changes',    hint:'Everything you changed in a mod, recorded as you go: export it, and port it onto the mod’s next version'},
   {id:'sprites',  icon:'🖼', name:'Sprites',       sub:true, hint:'Generate and wire the far-LOD unit sprites'},
   {id:'stratmap', icon:'🗺', name:'Strat map models', sub:true, hint:'What descr_model_strat.txt names, what the campaign map never draws, and either of them in 3D'},
@@ -1351,6 +1352,8 @@ function applyMode(persist){
         gld=state.mode==='guilds', cdb=state.mode==='campdb',
         fac=state.mode==='factions',
         raw=state.mode==='rawtext',
+        // whole-mod screens with no unit list: My changes (52) and Health (54)
+        own=state.mode==='changes'||state.mode==='health',
         home=state.mode==='home';
   // Home is the one screen that is ABOUT the mods, so it does not sit under a
   // mod picker: every card carries its own.
@@ -1360,7 +1363,7 @@ function applyMode(persist){
   document.getElementById('dstWrap').style.display=(one||home)?'none':'';
   // The map has nothing to search until 16g brings the query engine, and an
   // input that does nothing is worse than no input.
-  search.style.display=(home||state.mode==='campmap'||state.mode==='changes')?'none':'';
+  search.style.display=(home||state.mode==='campmap'||state.mode==='changes'||state.mode==='health')?'none':'';
   selBtn.style.display=one?'none':'';
   batchBtn.style.display=(!one&&state.selMode)?'inline-block':'none';
   clearSelBtn.style.display=(!one&&state.selMode&&state.selected.size)?'inline-block':'none';
@@ -1381,11 +1384,11 @@ function applyMode(persist){
   sndBtn.style.display=snd?'inline-block':'none';
   unusedWrap.style.display=(bm||stm)?'inline-flex':'none';
   mercOnly.parentElement.style.display=
-    (bm||snd||sbk||spr||bld||str||trt||anc||gld||cdb||mnr||fac||raw||home||stm||crd||cmp)?'none':'inline-flex';
+    (bm||snd||sbk||spr||bld||str||trt||anc||gld||cdb||mnr||fac||raw||home||stm||crd||cmp||own)?'none':'inline-flex';
   // these bring their own filters - the sidebar's faction/era ones say nothing
   // about a voice entry, and nothing at all about a modeldb record or a sprite
   document.getElementById('unitFilters').style.display=
-    (bm||snd||sbk||spr||bld||str||trt||anc||gld||cdb||mnr||fac||raw||home||stm||crd||cmp)?'none':'';
+    (bm||snd||sbk||spr||bld||str||trt||anc||gld||cdb||mnr||fac||raw||home||stm||crd||cmp||own)?'none':'';
   document.getElementById('bldFilters').style.display=bld?'':'none';
   // Only offered while the unit editor is what you'd be going back FROM: in
   // buildings mode the building is already on screen.
@@ -1493,6 +1496,7 @@ function render(){
   if(state.mode==='factions')return state.fac?renderFactions():loadFactions();
   if(state.mode==='rawtext')return renderRawtext();
   if(state.mode==='changes')return renderChanges();
+  if(state.mode==='health')return renderHealth();
   // the unit list is still loading, or its load failed - which are different
   // things and must not look the same, or a mod that cannot be read presents as
   // one that is taking a long time
