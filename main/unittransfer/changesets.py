@@ -1032,6 +1032,50 @@ def export_bytes(name: str) -> bytes:
     return buf.getvalue()
 
 
+#: The note at the top of a files export, beside `data/`.
+FILES_NOTE = "CHANGED_FILES.txt"
+
+
+def export_files_bytes(name: str) -> Tuple[bytes, dict]:
+    """Every file the set changed, as you last wrote it, at its own path.
+
+    Asked for on 2026-09-22, and different from :func:`export_bytes`: that one
+    is the set (both copies and ``set.json``) for porting with this tool, this
+    one is plain files for anybody. The zip holds ``data/<rel>`` so it unzips
+    onto a mod folder as it stands, plus :data:`FILES_NOTE` listing what is in
+    it and what is not.
+
+    It is YOUR copy of each file (the set's ``mine``), not the disk's: the disk
+    may have been overwritten by an update since, which is the case this module
+    exists for. A file the set deleted cannot be exported and is named in the
+    note instead. Returns ``(zip bytes, {"files", "created", "deleted"})``.
+    """
+    meta = load(name)
+    files, created, deleted = [], [], []
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for rel, base, mine in _changed(meta):
+            if mine is None:
+                deleted.append(rel)
+                continue
+            z.writestr("data/" + rel, mine)
+            files.append(rel)
+            if base is None:
+                created.append(rel)
+        lines = [f"Changed files from {meta.get('mod', '?')} (change set {meta['name']}),",
+                 f"exported {time.strftime('%Y-%m-%d %H:%M')} by the Medieval 2 GUI Toolkit.",
+                 "",
+                 "Unzip into the mod's own folder (the one holding data/) to put them in place.",
+                 "Each file is the version you last saved with the toolkit.", ""]
+        lines += [f"{len(files)} file(s):"] + [
+            f"  data/{r}{'  (new)' if r in created else ''}" for r in files]
+        if deleted:
+            lines += ["", f"{len(deleted)} file(s) your edits deleted, so not in this zip:"]
+            lines += [f"  data/{r}" for r in deleted]
+        z.writestr(FILES_NOTE, "\r\n".join(lines) + "\r\n")
+    return buf.getvalue(), {"files": files, "created": created, "deleted": deleted}
+
+
 def import_bytes(raw: bytes, name: str = "") -> str:
     """A set exported somewhere else, under a name of its own."""
     try:

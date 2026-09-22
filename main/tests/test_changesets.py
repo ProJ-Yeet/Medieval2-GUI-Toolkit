@@ -16,15 +16,18 @@
 5. Applying it: the picked records and only those, byte for byte elsewhere, a
    log entry Undo reverses, and the baseline moved to the version ported onto.
 6. Export and import as one file, and a port from the imported set onto a
-   second folder.
+   second folder. 6b: the changed files alone, at their data/ paths, as you
+   last saved them rather than as an update left them.
 7. Phase 53, switching in place: a set off puts the originals back, a new save
    with every set off starts another, a switch between two is one job and one
    Undo, it is refused rather than guessed when the disk has moved, and a
    switch's own writes are never recorded as an edit.
 """
+import io
 import json
 import shutil
 import sys
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -283,6 +286,25 @@ try:
     check("a path out of data/ in an imported set is refused", False)
 except changesets.ChangeSetError:
     check("a path out of data/ in an imported set is refused", True)
+
+# ---------------------------------------------------------------------------
+print("\n6b) the changed files themselves, at their data/ paths")
+raw_zip, info = changesets.export_files_bytes("AGO")
+with zipfile.ZipFile(io.BytesIO(raw_zip)) as z:
+    names = set(z.namelist())
+    mine_dir = changesets.set_dir("AGO") / "mine"
+    check("every changed file is in it, under data/ with its folders",
+          {"data/export_descr_unit.txt", "data/export_descr_buildings.txt",
+           "data/text/export_units.txt"} <= names)
+    check("and nothing but the changed files and the note",
+          names == {"data/" + r for r in info["files"]} | {changesets.FILES_NOTE})
+    check("each is YOUR last save, not whatever the disk holds after an update",
+          all(z.read("data/" + r) == (mine_dir / r).read_bytes() for r in info["files"]))
+    check("a subfolder keeps its bytes (the UTF-16 text file)",
+          z.read("data/text/export_units.txt").startswith(b"\xff\xfe"))
+    note = z.read(changesets.FILES_NOTE).decode("utf-8")
+    check("the note names every file in it",
+          all(("data/" + r) in note for r in info["files"]))
 
 # ---------------------------------------------------------------------------
 print("\n7) Phase 53: sets switched in place")

@@ -180,6 +180,8 @@ Change sets (52, see :mod:`unittransfer.changesets`) - your edits, ported
                                     changed in it record by record, and whether
                                     the disk still says what you last wrote
   GET  /api/changes/export?set=  -> the set as one file (a zip)
+  GET  /api/changes/files?set=   -> every file the set changed, as you last wrote
+                                    it, at data/<path>, plus CHANGED_FILES.txt
   POST /api/changes/plan         -> {set, target} -> every record the set changed,
                                     three-way against the target's files
   POST /api/changes/apply        -> {set, target, picks:[{rel,key}]} -> write the
@@ -1987,6 +1989,16 @@ class Handler(BaseHTTPRequestHandler):
                 except changesets.ChangeSetError as e:
                     return self._err(404, str(e))
                 fname = re.sub(r"[^A-Za-z0-9_.\-]+", "_", sname) + ".m2changes"
+                return self._send(200, blob, "application/zip",
+                                  {"Content-Disposition": f'attachment; filename="{fname}"'})
+            if u.path == "/api/changes/files":
+                # the changed files themselves, at their data/ paths, for anyone
+                sname = (q.get("set") or [""])[0]
+                try:
+                    blob, _ = changesets.export_files_bytes(sname)
+                except changesets.ChangeSetError as e:
+                    return self._err(404, str(e))
+                fname = re.sub(r"[^A-Za-z0-9_.\-]+", "_", sname) + "_changed_files.zip"
                 return self._send(200, blob, "application/zip",
                                   {"Content-Disposition": f'attachment; filename="{fname}"'})
             if u.path in ("/api/raw/files", "/api/raw/file"):

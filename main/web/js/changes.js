@@ -104,7 +104,11 @@ function chgHeadHtml(s){
       <b>Port your changes onto it</b> below to put them back, change by change.</div>` : ''}
     <div class="chgacts">
       ${s.set ? `<a class="btn" href="/api/changes/export?set=${enc(s.set)}"
-          title="The whole record as one file: take it to another machine, or keep it">⤓ Export</a>` : ''}
+          title="The whole record as one file: take it to another machine, or keep it">⤓ Export</a>
+        <a class="btn" href="/api/changes/files?set=${enc(s.set)}"
+          title="Just the files you changed, as you last saved them, in their data/ folders.
+Unzip into a mod's folder to put them in place, or send them to somebody without this tool."
+          >⤓ Export changed files</a>` : ''}
       <label class="btn" title="A change set exported somewhere else">⤒ Import
         <input type="file" accept=".m2changes,.zip" style="display:none" onchange="chgImport(this)"></label>
       ${s.set ? `<button onclick="chgAdopt()" title="For edits you made by hand outside the toolkit.
