@@ -528,7 +528,7 @@ for a soldier on screen a few hundred pixels tall.">HD textures</button>
           <button onclick="v3Frame()">Recentre</button>
         </div>
         <div id="v3uvkey"></div>
-        ${v3.cas ? '' : '<div class="v3anim" id="v3anim"></div>'}
+        ${v3.cas ? '' : '<div class="v3anim" id="v3anim"></div><div class="v3anim" id="v3export"></div>'}
         <div class="v3parts" id="v3parts"></div>
         <div class="v3facts" id="v3facts"></div>
       </aside>
@@ -537,6 +537,7 @@ for a soldier on screen a few hundred pixels tall.">HD textures</button>
   v3Facts();
   v3UvKey();
   if(typeof v3AnimPanel === 'function') v3AnimPanel();
+  if(typeof v3ExportPanel === 'function') v3ExportPanel();
   const c = document.getElementById('v3canvas');
   if(c && v3.geo) v3Start(c);
   // The pane is in the markup whether or not it is showing - CSS hides it - so

@@ -240,6 +240,7 @@ async function v3AnimInit(){
   if(v3 !== mine) return;
   v3.anim.list = list;
   v3AnimPanel();
+  v3ExportPanel();
 }
 
 function v3AnimPanel(){
@@ -282,7 +283,8 @@ function v3AnimPanel(){
           <select onchange="v3AnimSpeed(this.value)" title="Playback speed">${
             [0.25, 0.5, 1, 2].map(s => `<option value="${s}" ${s===a.speed?'selected':''}>${s}×</option>`).join('')
           }</select></div>
-          <div class="count" id="v3aclock">${v3AnimClock()}</div>` : '')
+          <div class="count" id="v3aclock">${v3AnimClock()}</div>
+          ${v3AnimEditHtml()}` : '')
       + `<div class="count">${sk.loose
           ? `${sk.loose} of ${sk.actions.length} actions are loose files in this mod; the rest are `
             + `packed in <code>animations/pack.dat</code>, which this viewer does not read.`
@@ -328,6 +330,9 @@ async function v3AnimPick(action){
   if(v3 !== mine || a.action !== action) return;
   if(data.error){ a.data = null; a.err = data.error; v3AnimRest(); return v3AnimPanel(); }
   a.data = data;
+  a.orig = data;              // what the editor's Reset goes back to
+  a.rel = row.rel;
+  a.edit = v3AnimEditNew(data, row);
   a.bind = v3aBind(data);
   a.travel = v3aTravel(data);
   a.geo = null;               // the bone map is built against the model on the next frame
@@ -436,4 +441,256 @@ function v3AnimRest(){
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, g.normals);
   }
   if(v3.anim) v3.anim.geo = null;
+}
+
+
+/* --- the editor (57a) ------------------------------------------------------
+   M16's editor half. Every edit is sent to the server, which applies it to the
+   file's own keys (animedit.apply_edits) and hands back keys to play - so what
+   plays here is what Save writes, and there is one implementation of each edit.
+   The bind stays the unedited file's: the model was built on that skeleton. */
+
+function v3AnimEditNew(data, row){
+  const keys = (data.times || []).length;
+  const name = (row.rel || '').replace(/\.cas$/i, '');
+  return {open: false, speed: 1, trim: [0, Math.max(0, keys - 1)], in_place: false,
+          scale: [1, 1, 1], offsets: {}, keys: [], bone: '', turn: [0, 0, 0],
+          saveAs: name + '_edited.cas', assign: false, busy: false, msg: '', bad: false};
+}
+
+/* The edits as animedit takes them, leaving out whatever is at its default. */
+function v3AnimEdits(){
+  const e = v3.anim.edit, keys = (v3.anim.orig.times || []).length, out = {};
+  if(e.trim[0] > 0 || e.trim[1] < keys - 1) out.trim = e.trim.slice();
+  if(+e.speed !== 1) out.speed = +e.speed;
+  if(e.in_place) out.in_place = true;
+  if(e.scale.some(v => +v !== 1)) out.scale = e.scale.map(Number);
+  const offs = Object.entries(e.offsets).filter(([, d]) => d.some(v => +v));
+  if(offs.length) out.offsets = offs.map(([bone, euler]) => ({bone, euler: euler.map(Number)}));
+  if(e.keys.length) out.keys = e.keys.slice();
+  return out;
+}
+
+function v3AnimEditCount(){
+  const o = v3AnimEdits();
+  return Object.values(o).reduce((n, v) => n + (Array.isArray(v) && typeof v[0] === 'object' ? v.length : 1), 0);
+}
+
+/* The key under the scrubber, in the file's own numbering. */
+function v3AnimKeyNow(){
+  const a = v3.anim, t = a.data.times, len = v3AnimLength();
+  if(!t || t.length < 2 || len <= 0) return 0;
+  const now = ((a.t % len) + len) % len;
+  let k = 0;
+  for(let i = 0; i < t.length; i++) if(Math.abs(t[i] - now) < Math.abs(t[k] - now)) k = i;
+  return k;
+}
+
+function v3AnimEditHtml(){
+  const a = v3.anim, e = a.edit;
+  if(!e) return '';
+  const n = v3AnimEditCount(), keys = (a.orig.times || []).length;
+  const head = `<button class="v3aedbtn ${e.open ? 'on' : ''}" onclick="v3AnimEditFold()">✎ Edit this action${
+    n ? ` · ${n} edit${n === 1 ? '' : 's'}` : ''}</button>`;
+  if(!e.open) return `<div class="v3btns">${head}</div>`;
+  const bones = a.orig.bones.map(b => b.name).filter(x => !/^scene root$/i.test(x));
+  const bone = e.bone || bones[0] || '';
+  const bi = a.data.bones.findIndex(b => b.name === bone);
+  const k = v3AnimKeyNow();
+  const eul = bi >= 0 ? ((a.data.bones[bi].euler || [])[Math.min(k, (a.data.bones[bi].euler || []).length - 1)]
+                         || [0, 0, 0]) : [0, 0, 0];
+  const num = (val, on, step, w) => `<input type="number" step="${step}" value="${val}"
+    style="width:${w || 58}px" onchange="${on}">`;
+  const turn = e.offsets[bone] || [0, 0, 0];
+  return `<div class="v3btns">${head}</div>
+  <div class="v3aed">
+    <div class="v3aedrow"><span>Keep keys</span>${num(e.trim[0], "v3AnimEditSet('trim0', this.value)", 1)}
+      to ${num(e.trim[1], "v3AnimEditSet('trim1', this.value)", 1)}
+      <span class="count">of 0 to ${keys - 1}</span></div>
+    <div class="v3aedrow"><span>Speed</span>${num(e.speed, "v3AnimEditSet('speed', this.value)", 0.05)}
+      <label><input type="checkbox" ${e.in_place ? 'checked' : ''} onchange="v3AnimEditSet('in_place', this.checked)">
+        in place</label></div>
+    <div class="v3aedrow" title="Every pivot and position key, per axis - for a skeleton taller or shorter than the one the action was made on"><span>Scale</span>
+      ${[0, 1, 2].map(i => num(e.scale[i], `v3AnimEditSet('scale${i}', this.value)`, 0.01, 52)).join('')}</div>
+    <div class="v3aedrow"><span>Bone</span><select onchange="v3AnimEditSet('bone', this.value)">${
+      bones.map(b => `<option ${b === bone ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select></div>
+    <div class="v3aedrow" title="Degrees about the bone's own X, Y and Z, added at every key"><span>Turn, every key</span>
+      ${[0, 1, 2].map(i => num(turn[i], `v3AnimEditTurn(${i}, this.value)`, 1, 52)).join('')}°</div>
+    <div class="v3aedrow" title="Scrub to a key, then set this bone's rotation there outright"><span>At key ${k}</span>
+      ${[0, 1, 2].map(i => `<input type="number" step="1" id="v3aek${i}" value="${(+eul[i]).toFixed(1)}" style="width:52px">`).join('')}°
+      <button onclick="v3AnimEditKey()">Set</button></div>
+    <div class="v3aedrow"><span>Save as</span><input type="text" value="${esc(e.saveAs)}" style="flex:1;min-width:0"
+      onchange="v3AnimEditSet('saveAs', this.value)" spellcheck="false"></div>
+    <label class="count"><input type="checkbox" ${e.assign ? 'checked' : ''} onchange="v3AnimEditSet('assign', this.checked)">
+      Make it this skeleton's <b>${esc(a.action)}</b> in descr_skeleton.txt</label>
+    <div class="v3btns"><button onclick="v3AnimEditReset()" ${n || a.data !== a.orig ? '' : 'disabled'}>Reset</button>
+      <button class="primary" onclick="v3AnimEditSave()" ${e.busy ? 'disabled' : ''}>Save…</button></div>
+    ${e.msg ? `<div class="${e.bad ? 'w-bad' : 'count'}">${esc(e.msg)}</div>` : ''}
+    <div class="count">The game plays this mod's animations from <code>animations/pack.dat</code>; a saved
+      file reaches it once the pack is rebuilt (xidx, in the TWCenter archive).</div>
+  </div>`;
+}
+
+function v3AnimEditFold(){
+  const e = v3 && v3.anim && v3.anim.edit;
+  if(!e) return;
+  e.open = !e.open;
+  if(e.open) v3.anim.playing = false;       // editing is done on a still frame
+  v3AnimPanel();
+}
+
+function v3AnimEditSet(key, value){
+  const e = v3.anim.edit;
+  const keys = (v3.anim.orig.times || []).length;
+  if(key === 'trim0') e.trim[0] = Math.max(0, Math.min(+value | 0, e.trim[1] - 1));
+  else if(key === 'trim1') e.trim[1] = Math.max(e.trim[0] + 1, Math.min(+value | 0, keys - 1));
+  else if(key.startsWith('scale')) e.scale[+key.slice(5)] = +value || 1;
+  else if(key === 'speed') e.speed = Math.max(0.05, Math.min(20, +value || 1));
+  else e[key] = value;
+  if(key === 'bone' || key === 'saveAs' || key === 'assign') return v3AnimPanel();
+  v3AnimEditPreview();
+}
+
+function v3AnimEditTurn(i, value){
+  const e = v3.anim.edit;
+  const bone = e.bone || v3.anim.orig.bones.map(b => b.name).find(x => !/^scene root$/i.test(x));
+  const d = (e.offsets[bone] || [0, 0, 0]).slice();
+  d[i] = +value || 0;
+  e.offsets[bone] = d;
+  v3AnimEditPreview();
+}
+
+/* Set the chosen bone's rotation at the key under the scrubber. The key is the
+   EDITED animation's key once a trim has run, so a key set is always stated in
+   the numbering the file had when it was opened, which is what the server
+   applies it to - trims come first there. */
+function v3AnimEditKey(){
+  const a = v3.anim, e = a.edit;
+  const bone = e.bone || a.orig.bones.map(b => b.name).find(x => !/^scene root$/i.test(x));
+  const k = v3AnimKeyNow() + (e.trim[0] || 0);
+  const euler = [0, 1, 2].map(i => +(document.getElementById('v3aek' + i) || {}).value || 0);
+  e.keys = e.keys.filter(x => !(x.bone === bone && x.key === k)).concat([{bone, key: k, euler}]);
+  v3AnimEditPreview();
+}
+
+async function v3AnimEditPreview(){
+  const a = v3.anim, e = a.edit, mine = v3;
+  e.busy = true; e.msg = ''; e.bad = false;
+  let data;
+  try{ data = await api.post('/api/model/anim/preview', {mod: v3.mod, rel: a.rel, edits: v3AnimEdits()}); }
+  catch(err){ data = {error: '' + err}; }
+  if(v3 !== mine || v3.anim !== a) return;
+  e.busy = false;
+  if(data.error){ e.msg = data.error; e.bad = true; return v3AnimPanel(); }
+  a.data = data;
+  a.travel = v3aTravel(data);
+  a.dirty = true;
+  v3AnimPanel();
+}
+
+function v3AnimEditReset(){
+  const a = v3.anim;
+  const open = a.edit.open;
+  a.edit = v3AnimEditNew(a.orig, {rel: a.rel});
+  a.edit.open = open;
+  a.data = a.orig;
+  a.travel = v3aTravel(a.orig);
+  a.dirty = true;
+  v3AnimPanel();
+}
+
+async function v3AnimEditSave(){
+  const a = v3.anim, e = a.edit;
+  const sk = (a.list.skeletons || [])[a.skel];
+  const body = {mod: v3.mod, rel: a.rel, edits: v3AnimEdits(), save_as: e.saveAs,
+                assign: e.assign && sk ? {skeleton: sk.skeleton, action: a.action} : null};
+  let r;
+  try{ r = await api.post('/api/model/anim/save_plan', body); }
+  catch(err){ r = {error: '' + err}; }
+  const p = r.plan;
+  if(r.error || !p || !p.ok){ e.msg = r.error || 'nothing to save'; e.bad = true; return v3AnimPanel(); }
+  if(!confirm(`Save ${p.target}?\n\n`
+    + (p.overwrites ? '  It replaces the file of that name; the old one is backed up.\n' : '  A new file.\n')
+    + (p.notes || []).map(n => '  ' + n).join('\n\n')
+    + '\n\n🕑 Log undoes it.')) return;
+  e.busy = true; v3AnimPanel();
+  let w;
+  try{ w = await api.post('/api/model/anim/save_apply', body); }
+  catch(err){ w = {error: '' + err}; }
+  e.busy = false;
+  if(w.error){ e.msg = w.error; e.bad = true; return v3AnimPanel(); }
+  e.msg = `Saved ${w.target}. 🕑 Log can undo it.`;
+  if(typeof activity === 'function') activity('saved animation', `${w.target} in ${v3.mod}`);
+  // the saved file is loose now, and it may be this action's: ask again
+  a.list = null;
+  const keep = a;
+  await v3AnimInit();
+  if(v3 && v3.anim === keep) v3AnimPanel();
+}
+
+
+/* --- export and convert (57b) ----------------------------------------------
+   The model out of the game's formats: a .glb that Blender opens with its
+   skeleton, skin, texture and actions, or an .obj zipped with its texture -
+   both of exactly what is on screen, the parts shown and the skin chosen. And
+   a converter for a .texture or .dds file from disk, which touches no mod. */
+
+function v3ExportPanel(){
+  const host = document.getElementById('v3export');
+  if(!host) return;
+  if(!v3 || v3.cas || !v3.geo){ host.innerHTML = ''; return; }
+  const a = v3.anim, sk = a && a.list && (a.list.skeletons || [])[a.skel];
+  const loose = sk && sk.found ? sk.loose : 0;
+  const all = v3.exportAll !== false;
+  host.innerHTML = `<div class="k">Export</div>
+    <div class="v3btns">
+      <button onclick="v3Export('glb')" title="glTF binary: Blender imports it with nothing installed - the parts shown, this skin, the skeleton and ${
+        loose ? 'the actions' : 'no actions (none are loose)'}">⇩ .glb for Blender</button>
+      <button onclick="v3Export('obj')" title="Geometry, UVs and the texture, zipped. OBJ has no skeleton">⇩ .obj + texture</button>
+      <button onclick="v3ConvertPick()" title="A .texture from disk to .dds, or a .dds to .texture. Nothing in the mod is touched">Convert a file…</button>
+    </div>
+    ${v3.geo.skinned ? `<label class="count"><input type="checkbox" ${all ? 'checked' : ''}
+      onchange="v3.exportAll = this.checked; v3ExportPanel()"> ${loose
+        ? `with all ${loose} loose action${loose === 1 ? '' : 's'} of ${esc(sk.skeleton)}`
+        : 'with its actions - none are loose in this mod, so the .glb carries the skeleton alone'}</label>` : ''}
+    <input type="file" id="v3conv" accept=".texture,.dds" style="display:none" onchange="v3Convert(this)">`;
+}
+
+function v3Export(fmt){
+  if(!v3 || !v3.geo) return;
+  const q = new URLSearchParams({mod: v3.mod, entry: v3.entry, lod: v3.lod, skin: v3.skin, fmt,
+                                 groups: v3Visible().join(','), hd: v3HdOn() ? '1' : '0'});
+  const a = v3.anim;
+  if(fmt === 'glb' && a){
+    q.set('skel', a.skel || 0);
+    q.set('actions', v3.exportAll !== false ? '*' : (a.action || ''));
+  }
+  const link = document.createElement('a');
+  link.href = '/api/model/export?' + q.toString();
+  link.download = '';
+  document.body.appendChild(link); link.click(); link.remove();
+  toast(fmt === 'glb' ? 'Building the .glb…' : 'Building the .obj zip…', 2500);
+}
+
+function v3ConvertPick(){ const i = document.getElementById('v3conv'); if(i){ i.value = ''; i.click(); } }
+
+async function v3Convert(input){
+  const f = input.files && input.files[0];
+  if(!f) return;
+  const to = /\.dds$/i.test(f.name) ? 'texture' : 'dds';
+  const buf = new Uint8Array(await f.arrayBuffer());
+  let bin = '';
+  for(let i = 0; i < buf.length; i += 32768) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 32768));
+  let r;
+  try{ r = await api.post('/api/convert/texture', {to, data: btoa(bin)}); }
+  catch(e){ r = {error: '' + e}; }
+  if(r.error){ toast('✗ ' + r.error, 6000); return; }
+  const raw = atob(r.data), out = new Uint8Array(raw.length);
+  for(let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([out]));
+  link.download = f.name.replace(/\.(texture|dds)$/i, '') + '.' + to;
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+  toast(`${f.name} → ${link.download} (${(r.bytes / 1048576).toFixed(1)} MB)`, 4000);
 }

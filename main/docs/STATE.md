@@ -1,7 +1,17 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 25-27, table under *Phases 56-73* in `ROADMAP.md`. **56 is done** (several factions at once, and the faction files as a zip); **57 is next** (M16's editor half). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is still **v2.3.7 and beta 2026-09-22**; everything since is committed and uncut. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 25-27, table under *Phases 56-73* in `ROADMAP.md`. **56 and 57 are done** (several factions at once and the faction zip; the animation editor and the model converter); **58 is next** (will this mod launch). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is still **v2.3.7 and beta 2026-09-22**; everything since is committed and uncut. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 57 is done - edit an animation, and get a model out, 2026-09-23,
+committed and uncut.** The Models viewer's Animation section has an *Edit*
+fold (trim, speed, in place, scale, turn a bone, set a bone at a key) over a
+writer that puts all 1 751 loose files back byte for byte, and saves beside
+the original with an optional `descr_skeleton.txt` repoint and one Undo; every
+save says a loose file reaches the game only once `pack.dat` is rebuilt
+(`xidx`). *Export* gives a `.glb` (skeleton, skin, texture, actions; stock
+Blender imports it and its posed man matches the viewer's within 0.4 mm), an
+`.obj` zip, and `.texture`/`.dds` conversion. **58 is next.**
+
 **Phase 56 is done - several factions at once, and the faction files as a zip,
 2026-09-23, committed and uncut.** The first of the phases scheduled when the
 user asked for the rest of the roadmap (56-73, then 25-27). *Add a faction*

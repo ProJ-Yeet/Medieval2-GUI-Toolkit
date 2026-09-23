@@ -609,7 +609,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2260,7 +2260,7 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/icon":
                 return self._icon(q)
             if u.path in ("/api/model", "/api/model/geometry", "/model_texture",
-                          "/api/model/anims", "/api/model/anim"):
+                          "/api/model/anims", "/api/model/anim", "/api/model/export"):
                 return self._model_route(u.path, q)
             return self._err(404, "not found")
         except ModDataError as e:
@@ -2442,6 +2442,20 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/factions/clone_plan", "/api/factions/clone_apply"):
                 return self._json(
                     self._faction_clone(u.path.rsplit("/", 1)[-1], body))
+            if u.path == "/api/convert/texture":
+                # 57b: a local file in, the other format out - nothing touches a mod
+                import base64
+                try:
+                    raw = base64.b64decode(str(body.get("data") or ""), validate=True)
+                    out = (modelexport.texture_to_dds(raw) if body.get("to") == "dds"
+                           else modelexport.dds_to_texture(raw))
+                except (ValueError, modelexport.ExportError, sprites.SpriteError) as e:
+                    return self._json({"error": str(e)})
+                return self._json({"data": base64.b64encode(out).decode("ascii"),
+                                   "bytes": len(out)})
+            if u.path in ("/api/model/anim/preview", "/api/model/anim/save_plan",
+                          "/api/model/anim/save_apply"):
+                return self._json(self._anim_edit(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/factions/repair_plan", "/api/factions/repair_apply"):
                 return self._json(
                     self._faction_repair(u.path.rsplit("/", 1)[-1], body))
@@ -3130,6 +3144,37 @@ class Handler(BaseHTTPRequestHandler):
         out.update(factionclone.apply(plan))
         # twelve files and a folder of art changed: everything cached about this
         # mod is now stale, the faction roster most of all
+        self.registry.invalidate(body["mod"])
+        return out
+
+    # ---- editing an animation (57a) ----
+    def _anim_edit(self, action, body):
+        """Preview, plan or write an edited animation - see
+        :mod:`unittransfer.animedit`. The preview is the edited keys, played by
+        the viewer exactly as a file's would be; nothing is written until
+        ``save_apply``, which backs up and records like every other write."""
+        try:
+            mod = self.registry.get(body["mod"])
+        except (KeyError, OSError) as e:
+            return {"error": str(e)}
+        rel = str(body.get("rel") or "")
+        edits = body.get("edits") if isinstance(body.get("edits"), dict) else {}
+        if action == "preview":
+            src = factions.picture_path(mod, rel)
+            if src is None or not src.is_file():
+                return {"error": f"{rel!r} is not a file in {mod.name}"}
+            try:
+                return animedit.view(animedit.apply_edits(casanim.read_anim(src), edits))
+            except (casanim.AnimError, animedit.EditError, ValueError, TypeError) as e:
+                return {"error": str(e)}
+        plan = animedit.plan_save(mod, rel, edits, str(body.get("save_as") or ""),
+                                  body.get("assign") if isinstance(body.get("assign"), dict) else None)
+        out = {"plan": plan.payload()}
+        if action == "save_plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        out.update(animedit.apply_save(plan))
         self.registry.invalidate(body["mod"])
         return out
 
@@ -4397,7 +4442,8 @@ class Handler(BaseHTTPRequestHandler):
                 anim = casanim.read_anim(src)
             except casanim.AnimError as exc:
                 return self._err(400, str(exc))
-            return self._json(dict(anim.view(), notes=anim.notes))
+            # with each key's rotation as Euler degrees too, for the editor (57a)
+            return self._json(animedit.view(anim))
 
         entry = mod.modeldb.by_name().get((q.get("entry") or [""])[0].lower())
         if entry is None:
@@ -4405,6 +4451,33 @@ class Handler(BaseHTTPRequestHandler):
                                   f" in {name}")
         if path == "/api/model":
             return self._json(mesh.entry_view(entry, mod.data))
+        if path == "/api/model/export":
+            # 57b: the entry as a .glb (skeleton, skin, texture, its loose
+            # actions) or an .obj zip, drawn from the same sheet the viewer drew
+            hd = (q.get("hd") or ["0"])[0] == "1"
+            def png_of(rel):
+                src = factions.picture_path(mod, rel)
+                if src is None or not src.is_file():
+                    return None
+                try:
+                    return self.registry.icons.png_bytes(
+                        src, 0 if hd else self.MODEL_TEXTURE_MAX, strict=True)
+                except icons.ArtUnreadable:
+                    return None
+            ints = lambda k: [int(x) for x in (q.get(k) or [""])[0].split(",") if x.strip().isdigit()]
+            try:
+                blob, fname, mime = modelexport.entry_export(
+                    mod, entry, fmt=(q.get("fmt") or ["glb"])[0],
+                    lod=int((q.get("lod") or ["0"])[0] or 0),
+                    skin=int((q.get("skin") or ["0"])[0] or 0),
+                    groups=ints("groups") or None,
+                    skel=int((q.get("skel") or ["0"])[0] or 0),
+                    actions=[x for x in (q.get("actions") or [""])[0].split(",") if x],
+                    png_of=png_of)
+            except (modelexport.ExportError, mesh.MeshError, casanim.AnimError) as e:
+                return self._err(400, str(e))
+            return self._send(200, blob, mime,
+                              {"Content-Disposition": f'attachment; filename="{fname}"'})
         if path == "/api/model/anims":
             # the entry's skeletons and every action each one names, with the
             # ones this mod ships loose marked playable

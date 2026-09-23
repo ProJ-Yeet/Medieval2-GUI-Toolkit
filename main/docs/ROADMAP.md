@@ -3020,7 +3020,7 @@ It stays recorded rather than rediscovered.
 | # | Phase | Stars | Size | Line |
 |---|---|---|---|---|
 | ~~56~~ | ~~M12 - several factions at once, and the faction files as a zip~~ | 5 | M | both - **done 2026-09-23** |
-| 57 | M16's editor half - the animation editor and asset converter | 5 | L | both |
+| ~~57~~ | ~~M16's editor half - the animation editor and asset converter~~ | 5 | L | both - **done 2026-09-23** |
 | 58 | Will this mod even launch - a readiness row on Home | 4 | S | both |
 | 59 | The rest of *Mines and hidden resources*: `descr_settlement_mechanics.xml` and its ceiling | 4 | S | both |
 | 60 | Add a religion | 4 | M | both |
@@ -3080,6 +3080,70 @@ Exit: `tests/test_factionbulk.py`, 25 checks. It builds its mod by unpacking
 the zip of ROCSS's real faction files into a temp folder, so the zip is tested
 by being used: three factions in one batch, the ceiling, a doubled slot, one
 record, and one Undo restoring every byte and removing every copied picture.
+
+---
+
+## Phase 57 - M16's editor half: edit an animation, and get a model out - DONE 2026-09-23
+
+The reference's *AnimationEditor* and *Asset Converter*, over Phase 55's
+reader and viewer. Two halves, both in the Models viewer.
+
+### 57a - the animation editor
+
+**A writer first, and it is exact**: `casanim.write_anim` puts every one of
+the 1 751 readable loose animation files on both mods back byte for byte. The
+parts no edit touches - the header's other bytes, each name and property
+string, the chunk list - are kept as read; everything the reader checks
+(counts, offsets, the length) is written from the object, so an edit comes out
+consistent. It found a fact the reader had let pass: **230 animated files have
+no chunk list at all** (220 of DaC's siege engines, all 10 of ROCSS's) and end
+at their pivots.
+
+**The edits** (`animedit.py`), each previewed live in the viewer by the
+server - one implementation, so what plays is what Save writes: keep a range
+of keys; speed; play in place (a cycle's travel taken out of the pelvis keys);
+scale every pivot and position key per axis (the reference's "fit a dwarf");
+turn one bone by X/Y/Z degrees at every key; and set a bone's rotation
+outright at the key under the scrubber. A key set is numbered as the file has
+it even when a trim runs with it. Angles are Euler X then Y then Z, and 500
+random ones round-trip to 5e-5 degrees.
+
+**Saving** writes a new file beside the old (or over the one opened, never
+over a different one), optionally points the skeleton's action at it in
+`descr_skeleton.txt` - only the path changes; the flags, the spacing and the
+other-mod prefix DaC writes on every line stay - and is one backup and one
+Undo. **Every save says the game will not see it yet**: a mod's animations
+play from `data/animations/pack.dat`, which DaC, ROCSS and the base game all
+ship, and a loose file reaches the game once the pack is rebuilt with the
+TWCenter archive's `xidx` (`xidx.exe -caf pack.idx < anim_list.txt`).
+
+### 57b - the converter
+
+**A model to `.glb`**, which Blender imports with nothing installed: the parts
+shown, the skin chosen (glued as the viewer glues it), the skeleton, the skin
+weights and the skeleton's loose actions. **Stock Blender 5.1 imports it and,
+posed in the idle, its man is the viewer's man mirrored, the bounding box
+within 0.4 mm.** The mirror is the whole trick: M2TW is left-handed, so x is
+negated on every position, normal, pivot and key, every triangle's winding is
+reversed, and every rotation becomes `(x, -y, -z, w)`. The DaC soldier with
+all 150 of his skeleton's loose files is 8.7 MB and 2.8 s.
+
+**A model to `.obj`**, zipped with its `.mtl` and texture, geometry and UVs
+only. **`.texture` to and from `.dds`** for any file from disk, touching no
+mod: measured on 45 342 `.texture` files, 45 340 are a 48-byte header and a
+DDS (the reference says "typically 4"), and two are bare DDS under that name,
+which come back as they are.
+
+**Not done, on purpose**: MilkShape `.ms3d` (a 2008 program; Blender is where
+the community's pipeline lives now), and **writing a `.mesh`** - the
+reference's encoder writes a layout no real file has, and a real one is a
+boost archive with IWTE's class bookkeeping. Models go out; nothing comes
+back in.
+
+Exit: `tests/test_animedit.py` 29 (the byte-exact writer on both mods, every
+edit, a save and its Undo on a temp mod), `tests/test_modelexport.py` 21 (the
+conversions, the `.glb`'s structure, the `.obj`, and the Blender import against
+`tests/_skinref.py`'s reference skin).
 
 ---
 
@@ -4529,7 +4593,7 @@ other seven are below.
 |---|---|---|
 | ~~**M17 - a crash and validation dashboard**~~ | M | **Done as Phase 54, Health, 2026-09-22.** We have more validators than any of the four reference tools and no single door to them: 32 map rules, the faction audit, the EDB checks, the BMDB audit, the sounds audit, and after Phase 32 five mercenary rules as well. The archive's two crash guides, *GUIDE - Crashes and how to fix them* and *Crash to Desktop*, are the checklist that would give them one front page. |
 | ~~**M12 - bulk faction duplicate, and faction zip export**~~ | M | **Done as Phase 56, 2026-09-23.** One plan over `factionclone.py` repeated, plus `pack.py`. Mylae shipped his version in September 2026 and it is in the mirror at `DuplicateFactionModal.jsx`, `FactionZipExport.jsx` and `factionBulkDuplicate.js`, all three triaged port-concept. |
-| **M16 - animation editor and asset converter** | L | Excluded originally because we could not read `.mesh` or `.cas`. **15a and 16k both now can**, so the exclusion no longer holds on its own terms and the item is live again on the merits. |
+| ~~**M16 - animation editor and asset converter**~~ | L | **Done as Phases 55 and 57, 2026-09-23.** Excluded originally because we could not read `.mesh` or `.cas`. **15a and 16k both now can**, so the exclusion no longer holds on its own terms and the item is live again on the merits. |
 
 ## Four stars
 

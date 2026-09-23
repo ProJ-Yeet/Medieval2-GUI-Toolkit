@@ -33,7 +33,9 @@ animated node's positions, 12 bytes a key. A node with no keys of a kind still
 carries the running offset, so the offsets are checkable as a sequence and not
 only as numbers. **Then the pivots**, three floats a node, and then the same
 chunk list a model ends with, all of it empty, whose sizes must land exactly on
-the last byte.
+the last byte - or nothing at all: 220 of DaC's siege engine files and all 10
+of ROCSS's end at their pivots (measured by Phase 57a's writer, which puts
+every file back byte for byte).
 
 **The pivots are AFTER the keys, and 55a had them before.** Both orders account
 for every byte of every file, so every check above passed either way, and a
@@ -94,6 +96,12 @@ class Track:
     pos: array = field(default_factory=lambda: array("f"))
     #: 3ds Max's physics notes for the bone, which only siege engines carry
     properties: str = ""
+    #: the bytes the file spells the name and the properties with, length and
+    #: NUL included - :func:`write_anim` puts them back as they were (57a)
+    name_raw: bytes = b""
+    props_raw: bytes = b""
+    #: the fifth integer of the node record, zero in every file measured
+    extra: int = 0
 
     @property
     def rot_keys(self) -> int:
@@ -113,6 +121,13 @@ class Animation:
     key_times: array = field(default_factory=lambda: array("f"))
     tracks: List[Track] = field(default_factory=list)
     notes: List[str] = field(default_factory=list)
+    #: what :func:`write_anim` needs to write the file back byte for byte: the
+    #: layout it was read in, the header's first 0x32 bytes, and the chunk list
+    layout: tuple = (2, True)
+    head: bytes = b""
+    #: None for an animation made from nothing; b"" for a file that has no
+    #: chunk list at all, as 230 of DaC's siege engine files do not
+    tail: Optional[bytes] = None
 
     @property
     def animated(self) -> List[Track]:
@@ -193,9 +208,13 @@ def _header(data: bytes, source: str, pad: int, props: bool):
         raise r.fail("its key times do not start at 0 and rise")
     recs = []
     for _ in range(n):
+        at = r.p
         s.nodes.append(r.text())
+        name_raw = data[at:r.p]
         five = struct.unpack_from("<5I", r.skip(20), 0)
-        recs.append((five, r.text() if props else ""))
+        at = r.p
+        pr = r.text() if props else ""
+        recs.append((five, pr, name_raw, data[at:r.p]))
     return r, s, recs
 
 
@@ -215,9 +234,10 @@ def read_anim_bytes(data: bytes, source: str) -> Animation:
 def _decode(data: bytes, source: str, pad: int, props: bool) -> Animation:
     r, scene, recs = _header(data, source, pad, props)
     out = Animation(source=source, version=scene.version, length=scene.length,
-                    key_times=scene.key_times)
+                    key_times=scene.key_times, layout=(pad, props),
+                    head=data[:cas.NODE_COUNT_AT])
     keys = len(scene.key_times)
-    counts = [(a, b, c, d, pr) for (a, b, c, d, _zero), pr in recs]
+    counts = [(a, b, c, d, pr) for (a, b, c, d, _zero), pr, _n, _p in recs]
     base = r.p                           # the key block follows the node table
 
     rot_run = 0
@@ -237,7 +257,8 @@ def _decode(data: bytes, source: str, pad: int, props: bool) -> Animation:
                          f"nodes before it end at {rot_run:,}")
         rot_run += nrot * ROT_BYTES
         out.tracks.append(Track(name=name, parent=scene.parents[i], pivot=(),
-                                properties=pr))
+                                properties=pr, name_raw=recs[i][2],
+                                props_raw=recs[i][3], extra=recs[i][0][4]))
 
     pos_run = rot_run
     for t, (nrot, npos, roff, poff, _) in zip(out.tracks, counts):
@@ -252,8 +273,62 @@ def _decode(data: bytes, source: str, pad: int, props: bool) -> Animation:
     pivots = r.floats(len(out.tracks) * 3)
     for i, t in enumerate(out.tracks):
         t.pivot = tuple(pivots[i * 3:i * 3 + 3])
+    at = r.p
     _check_chunks(r, out)
+    out.tail = data[at:]
     return out
+
+
+def _text_bytes(value: str) -> bytes:
+    raw = value.encode("latin-1") + b"\x00"
+    return struct.pack("<I", len(raw)) + raw
+
+
+def write_anim(a: Animation) -> bytes:
+    """An animation as the bytes of a ``.cas``, in the layout it was read in.
+
+    Phase 57a. Everything the reader checks is written from the object, so an
+    edit that changes the key count, a track's keys or the times comes out with
+    its offsets, counts and length consistent; the parts no edit touches - the
+    header's other bytes, each name and property string, the chunk list - are
+    the file's own bytes. So an unedited file comes back byte for byte, which is
+    what ``tests/test_animedit.py`` holds on every loose file of both mods."""
+    pad, props = a.layout
+    keys = len(a.key_times)
+    head = bytearray(a.head or bytes(cas.NODE_COUNT_AT))
+    if len(head) < cas.NODE_COUNT_AT:
+        head += bytes(cas.NODE_COUNT_AT - len(head))
+    struct.pack_into("<f", head, 0, a.version or 3.2)
+    struct.pack_into("<f", head, 16, a.length)
+    out = [bytes(head[:cas.NODE_COUNT_AT]), struct.pack("<I", len(a.tracks)), b"\x00" * pad]
+    out += [struct.pack("<I", t.parent) for t in a.tracks[1:]]
+    out.append(struct.pack("<I", keys))
+    out.append(array("f", a.key_times).tobytes())
+    roffs, run = [], 0
+    for t in a.tracks:
+        if t.rot_keys > keys or t.pos_keys > keys:
+            raise AnimError(f"{t.name!r} has more keys than the file's {keys}")
+        roffs.append(run)
+        run += t.rot_keys * ROT_BYTES
+    poffs = []
+    for t in a.tracks:
+        poffs.append(run)
+        run += t.pos_keys * POS_BYTES
+    for t, ro, po in zip(a.tracks, roffs, poffs):
+        out.append(t.name_raw or _text_bytes(t.name))
+        out.append(struct.pack("<5I", t.rot_keys, t.pos_keys, ro, po, t.extra))
+        if props:
+            out.append(t.props_raw or _text_bytes(t.properties))
+    out += [array("f", t.rot).tobytes() for t in a.tracks]
+    out += [array("f", t.pos).tobytes() for t in a.tracks]
+    out.append(array("f", [v for t in a.tracks for v in t.pivot]).tobytes())
+    out.append(a.tail if a.tail is not None else _EMPTY_CHUNKS)
+    return b"".join(out)
+
+
+#: A chunk list for a file made from nothing, the shape every soldier's ends
+#: with: two empty chunks. Only used when there is no file's own tail to keep.
+_EMPTY_CHUNKS = struct.pack("<II", 18, 1) + b"\x00" * 10 + struct.pack("<II", 12, 5) + b"\x00" * 4
 
 
 def _floats(r: "cas._Reader", at: int, n: int) -> array:
