@@ -609,7 +609,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2246,7 +2246,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._diag()
             if u.path == "/icon":
                 return self._icon(q)
-            if u.path in ("/api/model", "/api/model/geometry", "/model_texture"):
+            if u.path in ("/api/model", "/api/model/geometry", "/model_texture",
+                          "/api/model/anims", "/api/model/anim"):
                 return self._model_route(u.path, q)
             return self._err(404, "not found")
         except ModDataError as e:
@@ -4317,12 +4318,14 @@ class Handler(BaseHTTPRequestHandler):
     MODEL_TEXTURE_MAX = 1024
 
     def _model_route(self, path: str, q):
-        """The three things the 3D viewer asks for.
+        """The things the 3D viewer asks for.
 
         ``/api/model`` is the picker: which LODs and skins the entry has and
         which of them are actually in this mod. ``/api/model/geometry`` is one
         decoded LOD as the binary payload :func:`mesh.geometry_payload` builds.
-        ``/model_texture`` is a skin as a PNG.
+        ``/model_texture`` is a skin as a PNG. ``/api/model/anims`` lists the
+        actions the entry's skeletons name and which of them are loose, and
+        ``/api/model/anim`` is one of those as keys (Phase 55b).
 
         A model that will not decode answers 400 with the decoder's own
         sentence, because that sentence is the useful part - the viewer puts it
@@ -4359,12 +4362,33 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, data, "image/png",
                               {"X-Texture-Full-Size": "1" if hd else "0"})
 
+        if path == "/api/model/anim":
+            # one animation's keys, Phase 55b. `rel` came out of the action list
+            # below, and is resolved and held under data/ like every `rel`
+            src = factions.picture_path(mod, (q.get("rel") or [""])[0])
+            if src is None or not src.is_file():
+                return self._err(404, f"{(q.get('rel') or [''])[0]!r} is not a "
+                                      f"file in {name}")
+            try:
+                anim = casanim.read_anim(src)
+            except casanim.AnimError as exc:
+                return self._err(400, str(exc))
+            return self._json(dict(anim.view(), notes=anim.notes))
+
         entry = mod.modeldb.by_name().get((q.get("entry") or [""])[0].lower())
         if entry is None:
             return self._err(404, f"no model entry {(q.get('entry') or [''])[0]!r}"
                                   f" in {name}")
         if path == "/api/model":
             return self._json(mesh.entry_view(entry, mod.data))
+        if path == "/api/model/anims":
+            # the entry's skeletons and every action each one names, with the
+            # ones this mod ships loose marked playable
+            skels = []
+            for s_ in entry.skeletons():
+                if s_ and s_ not in skels:
+                    skels.append(s_)
+            return self._json(casanim.actions_view(mod.data, skels))
 
         lod = int((q.get("lod") or ["0"])[0] or 0)
         rels = entry.mesh_files()

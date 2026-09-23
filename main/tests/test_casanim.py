@@ -1,4 +1,4 @@
-"""Phase 55a: the animation .cas reader.
+"""Phase 55a: the animation .cas reader (the layout corrected in 55b).
 
     python -m tests.test_casanim
 
@@ -59,9 +59,10 @@ def make_anim(names, parents, times, rot, pos, pad=2, props=True, version=3.2):
                                       roff[i], poff[i], 0)
         if props:
             head += text("")
-    head += b"".join(struct.pack("<3f", i * 1.0, 0.5, 0.0) for i in range(len(names)))
     block = b"".join(struct.pack("<4f", *q) for i in range(len(names)) for q in rot.get(i, []))
     block += b"".join(struct.pack("<3f", *v) for i in range(len(names)) for v in pos.get(i, []))
+    # the pivots come AFTER the keys (55b; 55a had them before, see casanim)
+    block += b"".join(struct.pack("<3f", i * 1.0, 0.5, 0.0) for i in range(len(names)))
     chunks = struct.pack("<II", 18, 1) + b"\x00" * 10 + struct.pack("<II", 12, 5) + b"\x00" * 4
     return head + block + chunks
 
@@ -114,7 +115,8 @@ mid = casanim.sample(a, 0.25)
 qm = mid[1]["rot"]
 check("halfway between identity and 90 degrees is 45 degrees",
       abs(qm[2] - math.sin(math.pi / 8)) < 1e-4 and abs(qm[3] - math.cos(math.pi / 8)) < 1e-4)
-check("positions are interpolated", abs(mid[1]["pos"][1] - 1.5) < 1e-6)
+check("positions are interpolated, as an offset from the pivot (1, 0.5, 0)",
+      abs(mid[1]["pos"][1] - 2.0) < 1e-6 and abs(mid[1]["pos"][0] - 1.0) < 1e-6)
 check("a node with no position keys sits at its pivot", mid[2]["pos"] == (2.0, 0.5, 0.0))
 check("a node with no rotation keys is identity", mid[0]["rot"] == (0.0, 0.0, 0.0, 1.0))
 check("it loops", casanim.sample(a, 1.25)[1]["rot"] == mid[1]["rot"])
@@ -149,10 +151,10 @@ for name in installed:
             read.append(casanim.read_anim(f))
         except casanim.AnimError:
             refused.append(f.relative_to(data).as_posix().lower())
-    # Measured 2026-09-22: the only files refused are DaC's Isengard ballista,
+    # Measured 2026-09-23: the only files refused are DaC's Isengard ballista,
     # six in its folder and the same six in a `convertedfiles` copy beside it,
-    # and every one is cut short - its node table ends before its own pivots
-    # (12 to 48 bytes missing, no chunk list). Two of the six are played by
+    # and every one is cut short - twelve bytes, the last node's pivot, and no
+    # chunk list after it. Two of the six are played by
     # descr_engine_skeleton.txt. Refusing them is the right answer, and the
     # check is that nothing ELSE is refused.
     check(f"{len(read)} read; the {len(refused)} refused are all one siege engine's "
@@ -170,9 +172,27 @@ for name in installed:
     norms = [math.sqrt(sum(x * x for x in t.rot[i:i + 4]))
              for t in soldier for i in range(0, len(t.rot), 4)]
     if norms:
-        share = sum(1 for n in norms if 0.5 < n < 1.5) / len(norms)
-        check(f"{share:.2%} of {len(norms):,} soldier rotations are near unit length "
-              f"(DaC measured 99.52%: the exporter does not normalise)", share > 0.99)
+        worst = max(abs(n - 1) for n in norms)
+        # 55a read these 252 bytes late and found 99.52% near unit length; read
+        # where they are, every one is unit length (DaC: within 2e-7)
+        check(f"all {len(norms):,} soldier rotations are unit length, x y z w "
+              f"(worst {worst:.1e})", worst < 1e-4)
+    base, idle = (data / "animations" / "MTW2_Mace" / f for f in
+                  ("MTW2_Mace_basepose.cas", "MTW2_Mace_stand_A_idle.cas"))
+    if base.is_file() and idle.is_file():
+        # 55b: the pivots come AFTER the key block. 55a read them before it,
+        # which fits every file's byte count just as well - and put the pelvis
+        # quaternion into the "pivots" and every key 252 bytes late
+        b, i = casanim.read_anim(base), casanim.read_anim(idle)
+        gap = max(abs(x - y) for tb, ti in zip(b.tracks, i.tracks)
+                  for x, y in zip(tb.pivot, ti.pivot))
+        check(f"MTW2_Mace's idle has its base pose's pivots (worst {gap:.1e})",
+              len(b.tracks) == len(i.tracks) and gap < 1e-4)
+        q = tuple(i.tracks[1].rot[:4])
+        check(f"and its pelvis's first key is x y z w, w last: "
+              f"{tuple(round(x, 3) for x in q)}", q[3] > 0.99 and abs(q[0] - 0.052) < 0.005)
+        check("its pelvis keys its height as an offset from a pivot of zero",
+              i.tracks[1].pivot == (0.0, 0.0, 0.0) and 0.9 < i.tracks[1].pos[1] < 1.0)
     sk = data / "descr_skeleton.txt"
     if sk.is_file():
         paths = sorted(set(re.findall(r"^\s*anim\s+\S+\s+(\S+\.cas)",

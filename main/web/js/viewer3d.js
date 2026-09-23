@@ -528,6 +528,7 @@ for a soldier on screen a few hundred pixels tall.">HD textures</button>
           <button onclick="v3Frame()">Recentre</button>
         </div>
         <div id="v3uvkey"></div>
+        ${v3.cas ? '' : '<div class="v3anim" id="v3anim"></div>'}
         <div class="v3parts" id="v3parts"></div>
         <div class="v3facts" id="v3facts"></div>
       </aside>
@@ -535,6 +536,7 @@ for a soldier on screen a few hundred pixels tall.">HD textures</button>
   v3Parts();
   v3Facts();
   v3UvKey();
+  if(typeof v3AnimPanel === 'function') v3AnimPanel();
   const c = document.getElementById('v3canvas');
   if(c && v3.geo) v3Start(c);
   // The pane is in the markup whether or not it is showing - CSS hides it - so
@@ -859,6 +861,8 @@ async function v3Load(){
   v3PartMap().forEach(p => { if(v3SlotHidden(p.key)) v3.hidden[p.key] = true; });
   v3Note('');
   v3Render();
+  // a skinned model asks which actions its skeletons have (v3anim.js)
+  if(typeof v3AnimInit === 'function') v3AnimInit();
   await v3LoadSkin(want);
 }
 
@@ -998,8 +1002,12 @@ function v3Parse(buf){
   head.positions = new Float32Array(buf, at, n*3); at += n*12;
   if(head.has_normals){ head.normals = new Float32Array(buf, at, n*3); at += n*12; }
   if(head.has_uvs){ head.uvs = new Float32Array(buf, at, n*2); at += n*8; }
+  // the skin, Phase 55b: two weights a vertex, and after the indices the two
+  // model-bone indices they belong to (mesh.geometry_payload unpacks them)
+  if(head.skinned){ head.weights = new Float32Array(buf, at, n*2); at += n*8; }
   const total = head.groups.reduce((s,g) => s + g.count, 0);
   head.indices = new Uint16Array(buf, at, total); at += total*2;
+  if(head.skinned){ head.joints = new Uint8Array(buf, at, n*2); at += n*2; }
   if(at !== buf.byteLength)
     throw new Error(`the geometry is ${buf.byteLength-at} bytes longer than its header describes`);
   return head;
@@ -1541,6 +1549,8 @@ function v3Start(canvas){
     // and a canvas nobody can see costs no frames in the meantime.
     if(!v3.paused){
       if(v3.spin && !v3.drag) v3.yaw += 0.006;
+      // an animation poses the model into the buffers v3Draw reads
+      if(typeof v3AnimStep === 'function') v3AnimStep();
       v3Draw();
       if(v3.uved) v3UvEdTick();
     }

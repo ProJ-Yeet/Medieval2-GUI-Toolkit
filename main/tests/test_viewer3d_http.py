@@ -199,6 +199,8 @@ try:
     n = head["vertices"]
     want = (8 + hlen + n * 12 + (n * 12 if head["has_normals"] else 0)
             + (n * 8 if head["has_uvs"] else 0)
+            # Phase 55b's skin: two weights a vertex, and two bone bytes
+            + (n * 8 + n * 2 if head.get("skinned") else 0)
             + sum(g["count"] for g in head["groups"]) * 2)
     check(f"the payload is exactly as long as its header describes ({len(blob):,} bytes)",
           want == len(blob))
@@ -278,6 +280,16 @@ try:
     png = raw("/model_texture?mod=ViewerMod&rel=../../../../windows/win.ini")
     check("a skin path pointing outside the mod gets a blank, never the file",
           png[:8] == b"\x89PNG\r\n\x1a\n" and len(png) < 200)
+
+    # Phase 55b: the entry's actions, and one animation. The planted mod ships
+    # no descr_skeleton.txt, which is its own answer rather than an error
+    acts = get(f"/api/model/anims?mod=ViewerMod&entry={enc(entry.name)}")
+    check(f"the action list answers, and says the mod has no descr_skeleton.txt "
+          f"({len(acts.get('skeletons', []))} skeletons named)",
+          acts.get("file") is False and all(not s_["found"] for s_ in acts["skeletons"]))
+    code, why = status("/api/model/anim?mod=ViewerMod&rel=../../../../windows/win.ini")
+    check(f"an animation path pointing outside the mod is a 404, never the file ({code})",
+          code == 404)
 
 finally:
     httpd.shutdown()

@@ -2999,7 +2999,7 @@ mods held to no crash-rule fatal (51 checks).
 
 ---
 
-# Phase 55 - M16's playback half: a battle model that moves - 55a DONE 2026-09-22
+# Phase 55 - M16's playback half: a battle model that moves - DONE 2026-09-23
 
 Asked for by a tester ("the bmdb editor does not show the animation for the
 model"). It is the backlog row *M16, the playback half*, rated M on the belief
@@ -3054,7 +3054,8 @@ same six, **every one cut short** - the node table ends 12 to 48 bytes before
 its own pivots. Two are played by `descr_engine_skeleton.txt`. Every file
 `descr_skeleton.txt` names that the mod ships loose reads (1 625 on DaC).
 
-**Three things 55b inherits, measured here:**
+**Three things 55b inherits, measured here** (the last two were a misread,
+found and put right in 55b - see below):
 
 - **Most animations a mod plays are not loose.** DaC's `descr_skeleton.txt`
   names 14 715 distinct files and ships 1 625 of them; ROCSS names 3 111 and
@@ -3070,6 +3071,78 @@ its own pivots. Two are played by `descr_engine_skeleton.txt`. Every file
 
 Exit: `tests/test_casanim.py`, 27 checks - fixtures in both main layouts, a
 short track, three kinds of refusal, sampling, `resolve()`, and both mods.
+
+### 55b done 2026-09-23 - the chain, the skin and the playback, and 55a's misread
+
+**The Models screen's viewer plays a model's animations.** An *Animation*
+section under the pickers lists every action the entry's skeletons name in
+`descr_skeleton.txt`, the ones the mod ships loose playable and the rest marked
+*packed*; picking one plays it, with Play/Pause, a scrubber and a speed. On
+DaC's `lamedon_clansmen` (MTW2_Mace) that is 156 of 195 actions; on ROCSS
+every action is packed and the section says nothing here can play.
+
+**The first job found that 55a read every animated file wrong.** The pivots
+come **after** the key block, not before it. Both orders account for every
+byte of every file, so all of 55a's checks passed - the offsets as a sequence,
+the chunk list landing on the last byte - and a base pose (no keys) cannot tell
+the two apart. Drawing gave it away: read before the keys, MTW2_Mace's idle
+has the pelvis quaternion repeating through its "pivots", and every key was
+read `nodes x 12` bytes late, twelve bytes into a quaternion. That one misread
+is both of 55a's open questions:
+
+- **Which component is w**: (1,0,0,0) and (0,0,0,1) were "both common exact
+  still keys" because a still key read from its fourth float is `(1,0,0,0)`.
+  Read where it is, **w is last**: the idle's first pelvis key is
+  `(0.052, 0.002, -0.000, 0.999)`.
+- **The exporter normalises.** "99.52% within 0.5 to 1.5" was misaligned
+  floats. All 1 231 346 soldier rotations on DaC are unit length to 2e-7.
+
+The pivots read after the keys are the base pose's to the last digit, which
+`test_casanim` now holds. The twelve refused Isengard ballista files are
+explained exactly: each ends twelve bytes short, the last node's pivot, with
+no chunk list.
+
+**A position key is an offset from the pivot.** A soldier's pelvis has pivot 0
+and keys its height (0.966 in the idle); every other soldier bone keys zero. A
+siege engine's destruction flings its wood chunks a few centimetres from
+pivots a metre out, which only reads as an offset.
+
+**The skin, measured on a DaC soldier.** `mesh.py` kept only the bone names;
+it now keeps the two weights a vertex and the bone-index stream, whose four
+bytes are packed like the normals - the first weight's bone is the THIRD byte,
+the second's the second. The model's bind pose is the skeleton's base pose
+with the pelvis at the origin: vertices sit around their bones' pivots chained
+from zero, arms out in a T. The model's bones meet the skeleton's by name; the
+six a soldier has that the skeleton lacks are weapon and shield bones no
+vertex is weighted to (weapons are skinned to the hand, the shield to the
+forearm).
+
+**How it is drawn.** Skinned on the CPU into the buffers the still model
+draws from: 1.7 ms a frame for 30 349 vertices, and the shaders, wireframe and
+UV tools untouched. The pose is lowered by the model's own lowest point, so
+the man stands where the still model stood. **A cycle travels**: the walk
+carries the pelvis 1.62 forward per loop and the charge 2.58, so looped as
+written he strides out of frame and snaps back. A cycle is known by closing
+(every bone's last rotation key is its first) and is played in place with its
+travel taken out evenly; a death or a turn does not close and keeps its
+motion. The two routes: `/api/model/anims` (the chain, loose or packed) and
+`/api/model/anim` (one file's keys). `descr_skeleton.txt` is 9.5 MB on DaC, so
+its parse is kept until it changes, and the loose-file index until one of its
+folders does: 0.5 s cold, 19 ms after.
+
+**Not done, and each is its own question:** `animations/pack.dat` (most of
+most mods' actions); the skeleton's `scale` line (54 types on DaC), which the
+game applies and this does not; a rider on his mount together; and the
+`.evt` sound and event files beside the animations.
+
+Exit: `tests/test_v3anim.py`, 28 checks - the payload's skin on a fixture and
+a real soldier, the `descr_skeleton.txt` chain and its cache, the page's
+`v3aSample` run in node against `casanim.sample` on real files, cycles, and the
+whole soldier skinned in node against a reference skin written in Python (every
+vertex within 1.3e-6). `test_casanim` 30 (the layout held on a real file),
+`test_viewer3d_http` 29 (both routes, the skin in the payload's length).
+
+**Phase 55 is done.**
 
 ---
 
@@ -4305,7 +4378,7 @@ as it stood. M19, M20 and M21 are still unrated.
 
 | Item | Size | What it is | Why it is worth a star |
 |---|---|---|---|
-| **M16, the playback half** | M | Sample an animation file onto the skeleton the viewer already draws. Joints are matched by name, the pose is a delta from the bind quaternion, slerped between key times, 25 fps when the file carries no ticks. | `cas.py` already reads the container and already names `data/animations`' 305 files as future expansion. The editor half of M16 stays out of scope; this is the half that is a session. |
+| ~~**M16, the playback half**~~ | M | **DONE 2026-09-23 as Phase 55**, asked for by a tester. Two things the row had wrong: `cas.py` could not read an animation file, and the pose is not a delta from a bind quaternion - the bind rotation is identity, the keys are the rotation, and a position key is an offset from the pivot. Sample an animation file onto the skeleton the viewer already draws. Joints are matched by name, the pose is a delta from the bind quaternion, slerped between key times, 25 fps when the file carries no ticks. | `cas.py` already reads the container and already names `data/animations`' 305 files as future expansion. The editor half of M16 stays out of scope; this is the half that is a session. |
 | ~~**M18 - the map in 3D**~~ | L | The heightmap as a mesh with the ground textures on it, orbited. | **DONE 2026-09-20**, asked for directly rather than rated, and it came in well under L for the reason the last column predicted: `mapterrain.composite` already solved the textures, so it is a mode over the stack the screen was holding and not a second map. Write-up above under *M18 - The map in 3D*. |
 | **M19 - climates past the twelfth** | M | His four generated files are Phase 34's four. What is new is the claim that **M2EX** lifts the twelve-name wall Phase 34 stopped at. | Verify first. If it holds, appending a name becomes the first option on an M2EX mod and `too-many-climates` joins `modflags.CAP_FINDINGS`. |
 | **M20 - a scatter brush** | S | A sixth tool that scatters `round(pi * r^2 * 0.12)` pixels in the brush radius. | His own use for it is `forest_sparse`, the ground type a pencil cannot make look right. The toolbar and the palette column are already there. |

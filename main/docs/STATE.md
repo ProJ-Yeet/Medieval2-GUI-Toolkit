@@ -1,7 +1,20 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-22 - **Cut on request as v2.3.7 and beta 2026-09-22**, the latest 2.x and the latest beta. They carry everything since v2.3.6: Phases 52, 53, 45, 46, 47a, 47b and 48, a tester's pass on the building editor, **Phase 54** (Health, one door to every check, with five crash-guide rules and two of the guides' claims refused), the changed-files export, the building editor's faction checklist and name switch, traits and ancillaries given from Lua, and **Phase 55a** (the animation `.cas` reader, nothing on screen yet). The beta adds Health's map rules. **55b is next**: which quaternion component is w, then the skeleton chain and playback, over loose files only. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-23 - **Phase 55 is done: the Models viewer plays a model's animations**, from the loose files a mod ships, with the rest listed as packed. Its first job found that 55a read every animated file 12 bytes a node late (the pivots come after the keys), which was the whole of the "which component is w" question: w is last. Latest cut is still **v2.3.7 and beta 2026-09-22**; since then, a texture import landing where its entry points, side-panel typing on the campaign map, the campaign-constants findings, routes and the trail, and Phase 55b are committed and uncut. **Nothing is queued behind 55**; a `pack.dat` reader is the natural follow-up and its own question. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 55b is done - a battle model that moves, 2026-09-23, committed and
+uncut.** The viewer's new *Animation* section lists every action the entry's
+skeletons name, plays the ones the mod ships loose (DaC's MTW2_Mace: 156 of
+195) and marks the rest packed (ROCSS: all of them, and it says so). Play,
+pause, scrub, speed; a cycle is played in place. **It found a defect in 55a**:
+an animated file's pivots come after its key block, not before, and both
+orders fit every byte count, so 55a's checks passed while every key was read
+`nodes x 12` bytes late. Read right, w is last and every rotation is unit
+length; 55a's "the exporter does not normalise" was the misread too. The skin
+is two bones a vertex, packed like the normals (first bone in the third
+byte), done on the CPU at 1.7 ms a frame. Not done: `pack.dat`, the
+skeleton's `scale`, a rider on his mount. Write-up under *Phase 55*.
+
 **Routes, tabs and a breadcrumb trail, 2026-09-23, committed and uncut.**
 Asked for after a Health run: open the file behind a finding in a NEW tab, and
 get back to the list where you left it. A screen and the record in it are now

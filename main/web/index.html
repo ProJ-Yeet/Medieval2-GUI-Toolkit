@@ -670,6 +670,16 @@
   .v3f select{font:inherit;font-size:13px;background:var(--panel2);color:var(--ink);
     border:1px solid var(--edge);border-radius:6px;padding:5px 7px}
   .v3btns{display:flex;gap:6px;flex-wrap:wrap}
+  .v3anim{display:flex;flex-direction:column;gap:6px}
+  .v3anim:empty{display:none}
+  .v3anim .k{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
+  .v3anim .k .count{text-transform:none;letter-spacing:0;margin-left:6px}
+  .v3anim .count{font-size:11px;color:var(--dim);line-height:1.45}
+  .v3anim code{color:var(--accent);overflow-wrap:anywhere}
+  .v3play{align-items:center;flex-wrap:nowrap}
+  .v3play input[type=range]{flex:1;min-width:60px}
+  .v3play select{font:inherit;font-size:12px;background:var(--panel2);color:var(--ink);
+    border:1px solid var(--edge);border-radius:5px;padding:3px 4px}
   /* the dice sits above the pickers: it is the thing you press over and over */
   .v3roll{font:inherit;font-size:13px;font-weight:600;padding:7px 10px;cursor:pointer;
     background:var(--panel2);color:var(--ink);border:1px solid var(--edge);border-radius:7px}
@@ -3232,6 +3242,8 @@
 <script src="js/changes.js"></script>
 <script src="js/health.js"></script>
 <script src="js/viewer3d.js"></script>
+<!-- 55b: after viewer3d.js, whose v3 state and tick it hooks into. -->
+<script src="js/v3anim.js"></script>
 <!-- M18: after viewer3d.js, which owns the matrix helpers it shares. -->
 <script src="js/map3d.js"></script>
 <script src="js/boot.js"></script>

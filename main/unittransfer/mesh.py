@@ -103,9 +103,12 @@ one the rest of the file can be read from. The same split shows up in the
 archive header, which is four words long for a skinned model and three for a
 static one (:func:`_read_header`).
 
-Skinning is out of scope for V2 - a static pose is enough for the viewer - so
-the weight and bone-index streams are read for the byte count and then dropped.
-Bone NAMES are kept: they cost nothing and they say what a model is rigged to.
+The weight and bone-index streams were read for the byte count and dropped
+until Phase 55b, which plays a model's animations and so skins it: they are
+kept on :attr:`MeshFile.weights` and :attr:`MeshFile.bone_ids`, and bone NAMES
+are what tie the model to its skeleton. **A model's bind pose is the
+skeleton's base pose with the pelvis at the origin**: a soldier's vertices sit
+around their bones' pivots chained from zero, arms out in a T.
 A settlement mesh under ``blockset`` is the same format with no bones at all; a
 siege engine has a handful (``bone_Lwheel``, ``bone_Rwheel``).
 
@@ -198,6 +201,8 @@ STREAM_STRIDE: Dict[int, Tuple[int, ...]] = {
 }
 
 POSITION_STREAM = 0
+WEIGHT_STREAM = 1
+BONE_STREAM = 2
 NORMAL_STREAM = 3
 UV_STREAM = 4
 
@@ -286,6 +291,10 @@ class MeshFile:
     #: every texture the file itself names, in the order it names them. Empty
     #: for a ``.mesh``, which leaves that to its modeldb entry.
     textures: List[str] = field(default_factory=list)
+    #: two skin weights a vertex, and the four bytes of bone index beside them
+    #: (Phase 55b). Empty on a model with no skeleton.
+    weights: array = field(default_factory=lambda: array("f"))
+    bone_ids: bytes = b""
 
     @property
     def vertices(self) -> int:
@@ -600,6 +609,10 @@ def _read_streams(a: _Archive, out: MeshFile) -> None:
         # module docstring. v is per sheet already and stays as written.
         for i in range(0, len(out.uvs), 2):
             out.uvs[i] *= 2.0
+    if WEIGHT_STREAM in packed and BONE_STREAM in packed:
+        out.weights = array("f")
+        out.weights.frombytes(packed[WEIGHT_STREAM])
+        out.bone_ids = packed[BONE_STREAM]
     if NORMAL_STREAM in packed:
         out.normals = _unpack_normals(packed[NORMAL_STREAM], verts)
     elif packed:
@@ -930,8 +943,19 @@ def geometry_payload(m: MeshFile) -> bytes:
         float32 positions, 3 per vertex
         float32 normals,   3 per vertex   (omitted if the model has none)
         float32 uvs,       2 per vertex   (omitted if the model has none)
+        float32 weights,   2 per vertex   (only when ``skinned``)
         uint16  indices, every group's in the order the header lists them
+        uint8   bones,     2 per vertex   (only when ``skinned``): the index
+                into ``bones`` each weight belongs to, first weight first
+
+    The bone bytes go last so nothing after them needs aligning. In the file
+    they are four bytes a vertex packed like the normals, BGRA-fashion: the
+    first weight's bone is the THIRD byte and the second's the second (Phase
+    55b, measured on a DaC soldier: read that way, every vertex's bones are
+    the ones its position sits beside). They are unpacked into that order here
+    so the page never has to know.
     """
+    skinned = bool(m.weights) and len(m.bone_ids) == m.vertices * 4 and bool(m.bones)
     offset, groups = 0, []
     for g in m.groups:
         groups.append({"name": g.name, "texture_group": g.texture_group,
@@ -950,6 +974,7 @@ def geometry_payload(m: MeshFile) -> bytes:
         "lod_name": m.lod_name,
         "has_normals": bool(m.normals),
         "has_uvs": bool(m.uvs),
+        "skinned": skinned,
         "min": list(lo),
         "max": list(hi),
         "notes": m.notes,
@@ -963,6 +988,14 @@ def geometry_payload(m: MeshFile) -> bytes:
         out.append(m.normals.tobytes())
     if m.uvs:
         out.append(m.uvs.tobytes())
+    if skinned:
+        out.append(m.weights.tobytes())
     for g in m.groups:
         out.append(g.indices.tobytes())
+    if skinned:
+        ids = m.bone_ids
+        pairs = bytearray(m.vertices * 2)
+        pairs[0::2] = ids[2::4]
+        pairs[1::2] = ids[1::4]
+        out.append(bytes(pairs))
     return b"".join(out)

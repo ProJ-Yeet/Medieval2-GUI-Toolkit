@@ -12,8 +12,8 @@ held to it (``tests/test_casanim.py``).
 What an animation file is
 -------------------------
 **The header is the model header**: version, length, node count, the parent
-table, the key times, then a record per node, then the pivots. What an
-animation adds is what each node's record carries after its name::
+table, the key times, then a record per node. What an animation adds is what
+each node's record carries after its name::
 
     uint32  rotation key count      0, or the file's key count
     uint32  position key count      0, or the file's key count
@@ -27,43 +27,48 @@ the string is empty - a length of 1 and its NUL. DaC's siege engines fill it
 with 3ds Max's physics notes ("Mass = 50.000000 ... Simulation_Geometry = 2"),
 and read as a fixed 25 bytes that sent every node after it into the text.
 
-**The offsets are into one block that follows the pivots**: every animated
-node's rotations first, 16 bytes a key (a quaternion, four floats, stored as
-written - which of the four is w is settled below),
-then every animated node's positions, 12 bytes a key. A node with no keys of a
-kind still carries the running offset, so the offsets are checkable as a
-sequence and not only as numbers - which is what keeps this reader from
-reading plausibly rather than correctly. After the block comes the same chunk
-list a model ends with, all of it empty, and the chunk sizes must land exactly
-on the last byte.
+**The offsets are into one block that follows the node table**: every animated
+node's rotations first, 16 bytes a key (a quaternion, x y z w), then every
+animated node's positions, 12 bytes a key. A node with no keys of a kind still
+carries the running offset, so the offsets are checkable as a sequence and not
+only as numbers. **Then the pivots**, three floats a node, and then the same
+chunk list a model ends with, all of it empty, whose sizes must land exactly on
+the last byte.
 
-The two checks that settled it, on the first two files measured: a horse
-archer's idle has 24 bones x 31 keys of rotation (11 904 bytes) then of
-position (8 928), then a 62-byte chunk list, which is the file's 20 894 bytes
-to the byte; the ballista's crank has three bones x 37 rotation keys (1 776)
-and a 94-byte chunk list, which is the rest of its file.
+**The pivots are AFTER the keys, and 55a had them before.** Both orders account
+for every byte of every file, so every check above passed either way, and a
+base pose (no keys) cannot tell them apart. What gave it away was drawing:
+read before the keys, a soldier's idle has the pelvis quaternion repeated
+through its "pivots" and every rotation read 252 bytes late, twelve bytes into
+a key - which is why 55a found (1,0,0,0) and (0,0,0,1) both common as still
+keys and could not say which component was w. Read after, the pivots are the
+base pose's to three decimals and the first key of MTW2_Mace's idle is
+``(0.052, 0.002, -0.000, 0.999)``: **w is last**, and every one of DaC's 1.23 M
+soldier rotations is unit length to within 2e-7. The exporter does normalise.
 
-**Measured, 2026-09-22**: all 10 of ROCSS's loose files read, and 1 741 of
+**A position key is an offset from the pivot, not a position.** A soldier's
+pelvis has pivot 0 and keys at its height (0.966 in MTW2_Mace's idle); every
+other soldier bone keys zero and sits at its pivot. A siege engine's
+destruction flings its wood chunks by keying a few centimetres from pivots a
+metre out.
+
+**Measured, 2026-09-23**: all 10 of ROCSS's loose files read, and 1 741 of
 DaC's 1 753. The twelve refused are one siege engine, the Isengard ballista -
-six files and a `convertedfiles` copy of the same six - and each is cut short,
-its node table ending 12 to 48 bytes before its own pivots with no chunk list.
-Two of them are played by descr_engine_skeleton.txt. The rotations are not
-normalised by the exporter (DaC's soldiers: 99.52% within 0.5 to 1.5 of unit
-length), so they are normalised when sampled. Which component is w is left to
-Phase 55b, which draws the skeleton: both (1,0,0,0) and (0,0,0,1) appear as
-exact still keys, and a picture settles it where a count cannot.
+six files and a `convertedfiles` copy of the same six - and each ends twelve
+bytes short: the keys are whole, the last node's pivot is missing and there is
+no chunk list. Two of them are played by descr_engine_skeleton.txt.
 
 **A base pose has no keys at all** - every count zero, the block empty - and is
-the skeleton: node names, parents and pivots. The pivot of a node with no
-position keys is its position.
+the skeleton: node names, parents and pivots.
 """
 from __future__ import annotations
 
+import os
 import struct
 from array import array
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from . import cas
 
@@ -80,11 +85,12 @@ class Track:
     """One node of the skeleton and what the animation does to it."""
     name: str
     parent: int
-    #: its bind position relative to its parent, from the header
+    #: its bind position relative to its parent, from after the key block
     pivot: tuple
     #: per key, x y z w - empty when the node does not turn
     rot: array = field(default_factory=lambda: array("f"))
-    #: per key, x y z - empty when the node does not move
+    #: per key, x y z, an offset from :attr:`pivot` - empty when the node
+    #: does not move
     pos: array = field(default_factory=lambda: array("f"))
     #: 3ds Max's physics notes for the bone, which only siege engines carry
     properties: str = ""
@@ -161,7 +167,10 @@ LAYOUTS = ((2, True), (1, False), (2, False), (1, True))
 
 
 def _header(data: bytes, source: str, pad: int, props: bool):
-    """The header and node table in one layout: ``(reader, scene, records)``."""
+    """The header and node table in one layout: ``(reader, scene, records)``.
+
+    The reader is left on the byte after the last node record, which is where
+    the key block starts; the pivots come after the keys, see :func:`_decode`."""
     r = cas._Reader(data, source)
     s = cas.CasScene(source)
     s.version = r.f32()
@@ -187,7 +196,6 @@ def _header(data: bytes, source: str, pad: int, props: bool):
         s.nodes.append(r.text())
         five = struct.unpack_from("<5I", r.skip(20), 0)
         recs.append((five, r.text() if props else ""))
-    s.pivots = r.floats(n * 3)
     return r, s, recs
 
 
@@ -210,7 +218,7 @@ def _decode(data: bytes, source: str, pad: int, props: bool) -> Animation:
                     key_times=scene.key_times)
     keys = len(scene.key_times)
     counts = [(a, b, c, d, pr) for (a, b, c, d, _zero), pr in recs]
-    base = r.p                                  # the block starts after the pivots
+    base = r.p                           # the key block follows the node table
 
     rot_run = 0
     for i, (name, (nrot, npos, roff, poff, pr)) in enumerate(zip(scene.nodes, counts)):
@@ -228,8 +236,7 @@ def _decode(data: bytes, source: str, pad: int, props: bool) -> Animation:
             raise r.fail(f"node {name!r}'s rotations start at {roff:,}, and the "
                          f"nodes before it end at {rot_run:,}")
         rot_run += nrot * ROT_BYTES
-        out.tracks.append(Track(name=name, parent=scene.parents[i],
-                                pivot=tuple(scene.pivots[i * 3:i * 3 + 3]),
+        out.tracks.append(Track(name=name, parent=scene.parents[i], pivot=(),
                                 properties=pr))
 
     pos_run = rot_run
@@ -242,6 +249,9 @@ def _decode(data: bytes, source: str, pad: int, props: bool) -> Animation:
         t.pos = _floats(r, base + poff, npos * 3)
 
     r.p = base + pos_run
+    pivots = r.floats(len(out.tracks) * 3)
+    for i, t in enumerate(out.tracks):
+        t.pivot = tuple(pivots[i * 3:i * 3 + 3])
     _check_chunks(r, out)
     return out
 
@@ -275,8 +285,9 @@ def sample(anim: Animation, t: float) -> List[dict]:
     """Each node's local rotation and position at ``t`` seconds (looping).
 
     Rotations are slerped between the two keys around ``t``; a node with no
-    rotation keys is identity, with no position keys its pivot. The viewer does
-    the same in the page; this is the reference it is tested against."""
+    rotation keys is identity. The position is the pivot plus the key, which is
+    an offset (see the module docstring). The viewer does the same in the page;
+    this is the reference it is tested against."""
     times = anim.key_times
     if len(times) > 1 and anim.length > 0:
         t = t % max(times[-1], 1e-6)
@@ -287,9 +298,10 @@ def sample(anim: Animation, t: float) -> List[dict]:
             else (_quat(tr.rot, 0) if tr.rot_keys else (0.0, 0.0, 0.0, 1.0))
         if tr.pos_keys > 1:
             a, b = _vec(tr.pos, i), _vec(tr.pos, i + 1)
-            pos = tuple(a[k] + (b[k] - a[k]) * f for k in range(3))
+            off = tuple(a[k] + (b[k] - a[k]) * f for k in range(3))
         else:
-            pos = _vec(tr.pos, 0) if tr.pos_keys else tuple(tr.pivot)
+            off = _vec(tr.pos, 0) if tr.pos_keys else (0.0, 0.0, 0.0)
+        pos = tuple(p + o for p, o in zip(tr.pivot, off))
         out.append({"name": tr.name, "rot": rot, "pos": pos})
     return out
 
@@ -355,3 +367,131 @@ def resolve(data_dir, path: str) -> Optional[Path]:
             return None
         cur = hit
     return cur if cur.is_file() else None
+
+
+# ---------------------------------------------------------------------------
+# the chain: a model's skeleton, its actions, and which of them are loose (55b)
+
+
+@dataclass
+class SkeletonType:
+    """One ``type`` block of ``descr_skeleton.txt``: its actions, in file order."""
+    name: str
+    scale: float = 1.0
+    #: (action, path as the file writes it)
+    anims: List[Tuple[str, str]] = field(default_factory=list)
+
+
+_SKEL_CACHE: Dict[str, tuple] = {}
+
+
+def skeleton_types(data_dir) -> Dict[str, SkeletonType]:
+    """``descr_skeleton.txt`` as ``{lower-case type: SkeletonType}``.
+
+    DaC's is 9.5 MB and 49 083 ``anim`` lines, and the viewer asks for one
+    skeleton at a time, so the parse is kept until the file changes. Only the
+    three keywords playback needs are read: ``type``, ``anim`` and ``scale``;
+    ``strike_distances``, the ``in_*`` refpoints and the rest are battle AI."""
+    path = Path(data_dir) / "descr_skeleton.txt"
+    try:
+        st = path.stat()
+    except OSError:
+        return {}
+    key = str(path)
+    hit = _SKEL_CACHE.get(key)
+    if hit and hit[0] == (st.st_mtime_ns, st.st_size):
+        return hit[1]
+    out: Dict[str, SkeletonType] = {}
+    cur = None
+    with open(path, encoding="latin-1") as fh:
+        for line in fh:
+            w = line.split(";", 1)[0].split()
+            if not w:
+                continue
+            kw = w[0].lower()
+            if kw == "type" and len(w) > 1:
+                cur = out.setdefault(w[1].lower(), SkeletonType(w[1]))
+            elif cur is None:
+                continue
+            elif kw == "anim" and len(w) > 2:
+                cur.anims.append((w[1], w[2]))
+            elif kw == "scale" and len(w) > 1:
+                try:
+                    cur.scale = float(w[1])
+                except ValueError:
+                    pass
+    _SKEL_CACHE[key] = ((st.st_mtime_ns, st.st_size), out)
+    return out
+
+
+def loose_index(data_dir) -> Dict[str, Path]:
+    """Every file under ``data/animations``, keyed by its lower-case path from
+    ``data/``. One walk answers a whole skeleton's worth of :func:`resolve`,
+    which looks each path up a folder at a time and takes seconds over the
+    two hundred actions a soldier's skeleton names.
+
+    Kept until one of the folders it walked changes: a file added or removed
+    moves its folder's mtime, and a folder added moves its parent's, so
+    stat-ing the folders from the last walk (16 on DaC) is enough to know."""
+    root = Path(data_dir)
+    hit = _LOOSE_CACHE.get(str(root))
+    if hit is not None:
+        try:
+            if all(os.stat(d).st_mtime_ns == m for d, m in hit[0]):
+                return hit[1]
+        except OSError:
+            pass
+    out: Dict[str, Path] = {}
+    seen = []
+    for dirpath, _dirs, files in os.walk(root / "animations"):
+        try:
+            seen.append((dirpath, os.stat(dirpath).st_mtime_ns))
+        except OSError:
+            continue
+        for f in files:
+            full = Path(dirpath) / f
+            out[full.relative_to(root).as_posix().lower()] = full
+    try:
+        # a mod with no animations folder at all is remembered by its data/
+        seen.append((str(root), os.stat(root).st_mtime_ns))
+    except OSError:
+        pass
+    _LOOSE_CACHE[str(root)] = (seen, out)
+    return out
+
+
+_LOOSE_CACHE: Dict[str, tuple] = {}
+
+
+def _data_rel(path: str) -> str:
+    rel = str(path).replace("\\", "/").strip()
+    at = rel.lower().find("data/")
+    return (rel[at + 5:] if at >= 0 else rel).lstrip("/")
+
+
+def actions_view(data_dir, skeletons: List[str]) -> dict:
+    """What the viewer's animation picker offers for a model's skeletons.
+
+    Per skeleton, every action ``descr_skeleton.txt`` names, and where it is:
+    ``rel`` (a path under ``data/``) when the mod ships the file loose, empty
+    when it does not - which, for most mods, is most of them, because the
+    rest are packed in ``animations/pack.dat`` and nothing here reads that."""
+    types = skeleton_types(data_dir)
+    index = loose_index(data_dir) if types else {}
+    root = Path(data_dir)
+    out = []
+    for name in skeletons:
+        t = types.get((name or "").lower())
+        if t is None:
+            out.append({"skeleton": name, "found": False, "scale": 1.0,
+                        "actions": [], "loose": 0})
+            continue
+        acts = []
+        for action, path in t.anims:
+            hit = index.get(_data_rel(path).lower())
+            acts.append({"action": action, "file": Path(_data_rel(path)).name,
+                         "rel": hit.relative_to(root).as_posix() if hit else ""})
+        out.append({"skeleton": t.name, "found": True, "scale": t.scale,
+                    "actions": acts, "loose": sum(1 for a in acts if a["rel"])})
+    return {"skeletons": out,
+            "file": (root / "descr_skeleton.txt").is_file()}
