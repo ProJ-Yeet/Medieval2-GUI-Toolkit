@@ -3037,11 +3037,37 @@ It stays recorded rather than rediscovered.
 | 71 | D12 - the project as a zip, and loaded back | 3 | M | both |
 | 72 | D13 - a horde start for a new faction | 3 | M | beta |
 | 73 | M7 - import a campaign from another mod | 3 | L | beta |
+| 74 | Import a settlement `.cas` from another mod or disk, and assign it to a culture's level | - | M | both |
+| 75 | Fix the Strat models 3D view | - | S | both |
+| 76 | Import a building tree from another mod | - | L | both |
 | 25 | OSM backdrop and coastline tracer | 3 | L | beta |
 | 26 | Map resize, and create from scratch | 3 | L | beta |
 | 27 | Overlay and layer generators | 3 | L | beta |
 
 Releasing stays on request: each phase is committed to master as it lands.
+
+**74 to 76 were added on the user's word on 2026-09-23**, after the table
+was set, and checked against the code first so none of them repeats work
+already done. They are unrated; they go after 73 and before 25-27 until the
+user orders them otherwise.
+
+* **74 - a settlement model, imported and assigned.** What exists: the map
+  screen lists and draws every strat `.cas` (`/api/map/models`), the Cultures
+  screen edits a level's model path as text (`minorfiles.py`), and B3 puts any
+  file under `data/` (`fileswap.py`). Missing is the one step joining them:
+  pick a model in another mod (or on disk), copy it with the textures it names,
+  and write it onto a culture and level in one plan and one Undo.
+* **75 - the Strat models 3D view.** Phase 29's viewer (`viewer3d.js`,
+  `/api/map/model/geometry`, `tests/test_stratart.py`) has no open defect on
+  record; the one fixed on 2026-09-12 was the zero-byte `.tga` taken over its
+  DDS. So the first step is reproducing what the user sees, on both mods,
+  with the pane visible (a hidden tab never draws WebGL).
+* **76 - a building tree from another mod.** Missing entirely: `transfer.py`
+  moves units only and the buildings screen edits in place. The shape is
+  Unit Transfer's own at EDB scale - the building and its levels, their
+  `text/export_buildings.txt` strings, the pictures, and a report of what the
+  destination lacks (units a level recruits, resources, factions and cultures
+  it names), with one Undo.
 
 ## Phase 56 - M12: several factions at once, and the faction files as a zip - DONE 2026-09-23
 
