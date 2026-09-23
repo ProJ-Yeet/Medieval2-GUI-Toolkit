@@ -9136,3 +9136,53 @@ is worth picking up.
 | **Phase 26 - map resize, and create from scratch** | L | Campaign-map work at three stars. Phases 22 and 24 removed most of the original objection, so it is cheaper than when it was deferred. |
 | **Phase 27 - overlay and layer generators** | L | Campaign-map work at three stars. Same opt-in rule as 25. |
 
+---
+
+# Finished after the 2026-09-23 split
+
+From here on a phase's write-up lands in this file the day it finishes, and
+its row in `ROADMAP.md`'s schedule is struck through in the same commit.
+
+## Phase 65 - `descr_banners_new.xml` - DONE 2026-09-23
+
+A **Battle banners** tab (`banners.py`), a row on the faction audit, and a
+thirteenth file in the faction clone. Every *add a faction* tutorial names
+this file, three modules read it and none wrote it.
+
+**Read as text, not by an XML library**, because **DaC's copy is not
+well-formed**: its `</Banners>` is on line 391 and thirteen lines of an older,
+longer royal banner follow it, saved over and never cut off. The game plays it,
+so it stops at the root's close, and so does the reader - tags tokenised by
+hand, every offset kept, edits spliced into attribute values and whole lines.
+The lines after the root are a warning with a *cut them off on save* button.
+
+**The rule that matters, measured**: a faction that owns a unit carrying banner
+X has a row in X. True on both mods without one exception for the faction and
+unit banners (`all` in an ownership line is not a faction), so a miss is a
+warning; the same rule for the holy banners fails 15 times on DaC, which plays
+because a faction that never crusades never raises one, so those are a note per
+banner. DaC's royal banner missing three factions is a note. Rows for
+`Ally0-5`, `Enemy0-6` and `Rebels` are multiplayer placeholders both mods carry
+and are never reported. A missing path is not a finding (DaC names 62 files the
+base game packs), but two kinds are, and they found **ROCSS's two broken
+textures**: `faction_banner_antioch_trans.texture.texture` (the extension
+twice) and `Faction_banner_thospitaller_trans.texture` beside the
+`faction_banner_hospitaller_trans.texture` it meant (a missing file within two
+letters of one in the same folder).
+
+**The screen** edits every attribute (meshes, offsets, the settings' numbers,
+each row's faction and paths), adds a row by copying one and removes one, with a
+signature, one backup and one Undo. **The clone** copies every row naming the
+donor under it for the new faction; a path swaps the donor's slot for the
+clone's only where that file exists or the art copier is about to make it, and
+otherwise keeps the donor's, which loads. **The audit's Battle banners row** is
+a gap: every faction in both mods has a texture in its faction banners. The
+wording "twelve files" became thirteen everywhere it meant the clone's list.
+
+**Not done, and why**: a faction *rename* still does not follow this file. The
+rows name art by paths that carry the slot, and a rename that rewrote them would
+point at files the rename does not move.
+
+Exit: `tests/test_banners.py`, 25 checks. `test_factionclone`'s one failing
+check (an EDB clause join) fails the same way on master and is not this phase's.
+

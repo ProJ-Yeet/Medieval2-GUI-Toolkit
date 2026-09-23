@@ -154,12 +154,12 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
                                     boxes need, and its expanded.txt name
   POST /api/factions/clone_plan|/clone_apply
                                  -> ADD a faction, by cloning one that already
-                                    works into all twelve files that name a slot
+                                    works into all thirteen files that name a slot
                                     plus its art (backups + undo, one id for the
                                     lot). See :mod:`unittransfer.factionclone`.
   POST /api/factions/plan|/apply -> edit one faction and its shown name together
                                     (backups + undo). Editing only: a faction
-                                    slot lives in twelve files at once
+                                    slot lives in thirteen files at once
   GET  /api/factions/audit?mod=&campaign=
                                  -> 21, D6: every faction against every file
                                     that should name it, gap or note per row,
@@ -617,7 +617,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -854,7 +854,7 @@ class Registry:
         # thread-safe, so serialise mod resolution + first-parse behind a lock.
         self._lock = threading.RLock()
         # name -> when this mod was last checked against the disk. Every request
-        # used to re-scan the mods folder and stat twelve files before it could
+        # used to re-scan the mods folder and stat thirteen files before it could
         # be answered, all of it inside the lock above: a screen of unit cards is
         # hundreds of requests, so they queued behind each other for no reason.
         # An on-disk edit still shows up without a restart, just up to a second
@@ -1099,7 +1099,7 @@ class Registry:
         :meth:`campaign_map` - the base map, the object the paint tool paints -
         unless the campaign ships its own copy of a file a judgement reads, when
         it is :func:`campmap.campaign_map`'s object reading that folder first.
-        Third Age Reforged's Fellowship campaign ships all twelve; nothing else
+        Third Age Reforged's Fellowship campaign ships all thirteen; nothing else
         installed ships one that decides anything, so everywhere else this is
         :meth:`campaign_map` itself and an unsaved stroke is seen as it was.
         """
@@ -2159,6 +2159,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(campdb.overview(self.registry.get(name)))
                 except campdb.CampDbError as e:
                     return self._err(404, e.message)
+            if u.path == "/api/banners":
+                # 65. descr_banners_new.xml, read whole
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._json(banners.overview(self.registry.get(name)))
             if u.path == "/api/sidefiles":
                 # 64. descr_animals, descr_standards, export_descr_advice, read whole
                 name = (q.get("mod") or [None])[0]
@@ -2541,6 +2547,20 @@ class Handler(BaseHTTPRequestHandler):
                                                    soundscripts))
             if u.path in ("/api/soundbanks/plan", "/api/soundbanks/apply"):
                 return self._json(self._soundbanks(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/banners/plan", "/api/banners/apply"):
+                try:
+                    mod = self.registry.get(body["mod"])
+                except (KeyError, OSError) as e:
+                    return self._json({"error": str(e)})
+                plan = banners.plan(mod, body)
+                out = {"plan": plan.payload()}
+                if u.path.endswith("/plan") or plan.errors:
+                    if plan.errors:
+                        out["error"] = "; ".join(plan.errors)
+                    return self._json(out)
+                out.update(banners.apply(plan))
+                self.registry.invalidate(body["mod"])
+                return self._json(out)
             if u.path in ("/api/sidefiles/plan", "/api/sidefiles/apply"):
                 try:
                     mod = self.registry.get(body["mod"])
@@ -3198,7 +3218,7 @@ class Handler(BaseHTTPRequestHandler):
         """Preview or write one faction and its shown name together.
 
         Editing only, and the refusal is the format's: a faction slot lives in
-        twelve files at once, so one that exists only in this file is a
+        thirteen files at once, so one that exists only in this file is a
         mod that will not load - see :data:`factions.REFUSED`.
         """
         try:
@@ -3223,8 +3243,8 @@ class Handler(BaseHTTPRequestHandler):
         """Preview or write a whole new faction slot copied from an existing one.
 
         The other half of :meth:`_factions`' refusal. That one will not create a
-        slot because a slot lives in twelve files; this one creates it *in* all
-        twelve - see :mod:`unittransfer.factionclone`, which also says why
+        slot because a slot lives in thirteen files; this one creates it *in* all
+        thirteen - see :mod:`unittransfer.factionclone`, which also says why
         ``descr_strat.txt`` is reported rather than written.
 
         One transfer id covers every file and every copied picture, so undo puts
@@ -3255,7 +3275,7 @@ class Handler(BaseHTTPRequestHandler):
             out["error"] = "nothing to change"
             return out
         out.update(factionclone.apply(plan))
-        # twelve files and a folder of art changed: everything cached about this
+        # thirteen files and a folder of art changed: everything cached about this
         # mod is now stale, the faction roster most of all
         self.registry.invalidate(body["mod"])
         return out

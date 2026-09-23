@@ -21,9 +21,9 @@
        every `requires factions { … }` clause, descr_names and its own
        expanded.txt entry all point at it. The head line's modifier after the
        comma (`faction egypt, spawned_on_event`) is shown but not edited here.
-     * ADD BY CLONING, NEVER DELETE. A faction lives in twelve files at once,
+     * ADD BY CLONING, NEVER DELETE. A faction lives in thirteen files at once,
        so one that exists only in this file is a mod that will not load - which
-       is an argument for writing all twelve, not for refusing. ＋ Add a faction
+       is an argument for writing all thirteen, not for refusing. ＋ Add a faction
        copies a working faction into every one of them (factionclone.py).
        Deleting stays out: a clone copies the donor's answer, and a delete would
        have to invent one for every line that names the slot.
@@ -38,7 +38,7 @@
 
    THE PAGE NEVER PARSES A GAME FILE: /api/factions, /api/faction,
    /api/factions/plan|apply and /api/factions/clone_plan|clone_apply do all of
-   it - including working out which twelve files a new faction would change. */
+   it - including working out which thirteen files a new faction would change. */
 
 /* The roster, into `state.fac`, without drawing anything.
 
@@ -87,7 +87,7 @@ function renderFactions(){
         ${f.can_clone ? `<button class="fcadd" onclick="facCloneOpen()"
           ${facFull() ? 'disabled' : ''} title="${facFull()
             ? 'Every faction slot the engine has is already used'
-            : 'Add a faction by copying one that already works, into all twelve files that name a slot'}"
+            : 'Add a faction by copying one that already works, into all thirteen files that name a slot'}"
           >＋ Add a faction</button>` : ''}
         <a class="fcadd" href="/api/factions/export_zip?mod=${enc(state.src)}${
           f.sel ? '&art=' + enc(fcSlotOf(f.sel)) : ''}" download
@@ -612,9 +612,9 @@ async function facSave(){
 /* ---- adding a faction, by cloning one that already works ------------------
 
    The roster tab spent its whole life explaining why it would NOT do this: a
-   faction slot lives in twelve files, and one that exists only in
+   faction slot lives in thirteen files, and one that exists only in
    descr_sm_factions.txt is a mod that will not load. That is still true - the
-   answer is to write all twelve, which is what /api/factions/clone_plan does
+   answer is to write all thirteen, which is what /api/factions/clone_plan does
    (see unittransfer/factionclone.py).
 
    The page's job here is narrow and it matters: this is the one action in the
@@ -695,7 +695,7 @@ function facCloneRender(){
     <div class="mbody" style="padding:14px 16px">
       <div class="count fcintro">
         A faction is added by <b>copying one that already works</b> - into all
-        twelve files that name a faction slot, plus its symbols, banners and unit
+        thirteen files that name a faction slot, plus its symbols, banners and unit
         cards. The clone starts identical to the faction it copies; change what
         you want afterwards in this tab and the editors beside it.
       </div>

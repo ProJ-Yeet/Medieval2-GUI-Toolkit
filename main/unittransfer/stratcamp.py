@@ -19,7 +19,7 @@ it. Eleven helpers come from :mod:`unittransfer.stratedit` and none of them is
 copied here.
 
 **A new faction is the donor's, everywhere except its campaign.**
-:mod:`unittransfer.factionclone` does the twelve files a faction slot lives in
+:mod:`unittransfer.factionclone` does the thirteen files a faction slot lives in
 and says in as many words why ``descr_strat.txt`` is not one of them: a
 campaign entry is a settlement, an army and a family tree, and two factions
 cannot start in the same city. That ruling stands. What is cloned here is the
@@ -906,7 +906,7 @@ def check_new_name(voc: Vocabulary, name: str) -> List[dict]:
                            f"descr_sm_factions.txt does not declare {name}. A "
                            f"faction that exists only in descr_strat.txt is a "
                            f"mod that will not load - the Factions screen "
-                           f"clones the other twelve files first"))
+                           f"clones the other thirteen files first"))
     return out
 
 

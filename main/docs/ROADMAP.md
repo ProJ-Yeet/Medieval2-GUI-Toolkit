@@ -91,8 +91,8 @@ running the test suite, and running `graphify update .`.
 Every phase in this table is finished. The write-up for each one is in
 `ROADMAP_ARCHIVE.md` under the same heading; the table is here so the numbers in
 commit messages, `docs/upstream/PORT_MANIFEST.json` and `STATE.md` still resolve.
-Phases 56 to 64 are in the schedule table further down, struck through, beside
-the ones still to build.
+Phases 56 onward are in the schedule table further down, struck through as
+they finish, beside the ones still to build.
 
 | # | Phase | Shipped in |
 |---|---|---|
@@ -406,7 +406,7 @@ It stays recorded rather than rediscovered.
 | ~~62~~ | ~~B3 - insert and export one file at a time~~ | 4 | M | both - **done 2026-09-23** |
 | ~~63~~ | ~~`descr_lbc_db.txt` and `descr_offmap_models.txt`~~ | 3 | S | both - **done 2026-09-23** |
 | ~~64~~ | ~~`descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt`~~ | 3 | S | both - **done 2026-09-23** |
-| 65 | `descr_banners_new.xml` | 3 | M | both |
+| ~~65~~ | ~~`descr_banners_new.xml`~~ | 3 | M | both - **done 2026-09-23** |
 | 66 | `descr_hero_abilities.xml` | 3 | M | both |
 | 67 | `descr_area_effects.xml` | 3 | M | both |
 | 68 | `descr_walls.txt` | 3 | M | both |
@@ -464,7 +464,6 @@ is worth picking up.
 
 | # | Item | Size | Note |
 |---|---|---|---|
-| 65 | `descr_banners_new.xml` | M | 405 lines, 25 tags. Every *add a faction* tutorial names it and the faction audit has a row-shaped hole where it should be. |
 | 66 | `descr_hero_abilities.xml` | M | 1,187 lines, 26 tags. Hangs off the people panel, which already edits the character. |
 | 67 | `descr_area_effects.xml` | M | 555 lines, 34 tags. Interdict, excommunication and the rest. |
 | 68 | `descr_walls.txt` | M | 514 lines. Wall definitions per culture and level; pairs with the settlement panel. |

@@ -190,7 +190,7 @@ function fauRowHtml(f, r, tpl){
     fix = `<button onclick="fauGoWins('${esc(f.slot)}')">Add a record</button>`;
   }else if(miss && r.fix === 'addfaction' && typeof facCloneOpen === 'function'){
     fix = `<button onclick="fauGoAdd('${esc(f.slot)}')"
-      title="Writes the slot into all twelve files at once, copied from a donor">＋ Add a faction</button>`;
+      title="Writes the slot into all thirteen files at once, copied from a donor">＋ Add a faction</button>`;
   }
   return `<tr class="${miss ? (r.level === 'gap' ? 'gap' : 'note') : ''}">
     <td class="faumk">${mark}</td>

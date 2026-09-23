@@ -542,7 +542,7 @@ def _find_keyword(*words: str) -> Callable[[str, str], Dict[int, str]]:
     """A finder for any file whose names sit on lines a fixed keyword opens.
 
     ``ownership england, france``, ``requires factions { sicily, }``,
-    ``texture sicily, models_strat/…``, ``faction: sicily`` - eight of the twelve
+    ``texture sicily, models_strat/…``, ``faction: sicily`` - eight of the thirteen
     files :mod:`unittransfer.factionclone` clones into are this shape, and what
     tells a name from a path or a number is which keyword opened the line.
     """
@@ -614,7 +614,7 @@ SETTLEMENT_SITES: Tuple[Site, ...] = (
          note="the {key} the campaign map reads the settlement through"),
 )
 
-#: Where a **faction slot** is named: the twelve files
+#: Where a **faction slot** is named: the thirteen files
 #: :mod:`unittransfer.factionclone` clones into, plus the five a clone had no
 #: reason to touch and a rename cannot skip - the campaign start position (which
 #: a clone deliberately leaves alone because there is nothing to copy, and which

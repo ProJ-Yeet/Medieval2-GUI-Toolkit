@@ -34,10 +34,10 @@ Measured over those 90 factions, and each one shaped something here:
 And two things this module deliberately does **not** do:
 
 **It does not delete a faction, and it adds one only by cloning.** A faction
-slot lives in twelve files - ``descr_strat.txt``, ``expanded.txt``, the banners,
+slot lives in thirteen files - ``descr_strat.txt``, ``expanded.txt``, the banners,
 ``descr_names.txt``, the UI folders, the EDU's ownership lines, every
 ``requires factions { … }`` clause - and TWCenter has a step-by-step tutorial
-for it precisely because one file is never the job. Doing all twelve is
+for it precisely because one file is never the job. Doing all thirteen is
 :mod:`unittransfer.factionclone`, which copies a working faction's answer into
 each; this module keeps the editing. Deleting is refused outright, because
 there is no donor to copy from - see :data:`REFUSED`.
@@ -515,12 +515,12 @@ ACTIONS: Tuple[str, ...] = ("edit",)
 #: clause, every texture record and every campaign reference that names it and
 #: deciding what each should say INSTEAD - and there is no donor to copy that
 #: answer from, which is exactly what makes cloning safe and deleting not.
-REFUSED = ("A faction slot lives in twelve files at once - descr_strat, "
+REFUSED = ("A faction slot lives in thirteen files at once - descr_strat, "
            "expanded.txt, the banners, descr_names, the UI folders, every unit's "
            "ownership line and every `requires factions { … }` clause. Deleting "
            "one means deciding what all of those should say instead, and nothing "
            "can work that out for you, so this module will not remove a faction. "
-           "Adding one it can do: `Add a faction` writes all twelve files at "
+           "Adding one it can do: `Add a faction` writes all thirteen files at "
            "once, copying the donor's answer into each.")
 
 

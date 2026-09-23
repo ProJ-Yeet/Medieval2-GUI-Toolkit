@@ -312,6 +312,13 @@ def _factionsites(mod, ctx) -> List[Finding]:
     return out
 
 
+@source("banners", "Battle banners", "banners", "descr_banners_new.xml", "battle")
+def _banners(mod, ctx) -> List[Finding]:
+    from . import banners
+    return _plain(banners.overview(mod)["findings"], "banners", banners.REL, "battle",
+                  "banners", "key", "banner")
+
+
 @source("sidefiles", "Animals, standards and advice", "sidefiles",
         "descr_animals.txt, descr_standards.txt, export_descr_advice.txt", "campaign")
 def _sidefiles(mod, ctx) -> List[Finding]:

@@ -4,7 +4,7 @@
 not create a slot: a faction lives in nine files at once and one that exists
 only in ``descr_sm_factions.txt`` is a mod that will not load. That refusal was
 right about the *problem* and wrong about the *conclusion* - the answer is not
-to refuse, it is to do all the files. This module does twelve of them, and
+to refuse, it is to do all the files. This module does thirteen of them, and
 names the three it will not touch rather than leaving them to be discovered.
 
 **It clones rather than invents,** which is the whole reason it can be safe.
@@ -446,6 +446,32 @@ def clone_modeldb(text: str, src: str, new: str) -> Tuple[str, int]:
     return (db.to_text() if done else text), done
 
 
+def clone_banners(text: str, src: str, new: str, data: Optional[Path] = None,
+                  art: bool = False) -> Tuple[str, int]:
+    """``descr_banners_new.xml`` (Phase 65): every ``<Texture>`` and
+    ``<MeshAndTexture>`` row naming the donor copied under it for the clone.
+
+    A row names its art by path, so which picture the copy points at is a
+    choice. The donor's own is always there; the renamed copy the art copier
+    makes of ``faction_banner_<donor>`` is only there if the art is copied. So
+    a path swaps the donor's slot for the clone's when that file already exists
+    or is about to - ``art`` and the donor's file on disk - and otherwise keeps
+    the donor's, which loads."""
+    from . import banners as bn
+    tok = re.compile(_key_tok(src), re.I)
+
+    def swap(value: str) -> Optional[str]:
+        name = value.replace("\\", "/").rsplit("/", 1)[-1]
+        if data is None or not tok.search(name):
+            return None
+        head = value[:len(value) - len(name)]
+        renamed = head + tok.sub(lambda m: new.upper() if m.group(0).isupper() else new, name)
+        if bn._path_file(data, renamed).is_file() or (art and bn._path_file(data, value).is_file()):
+            return renamed
+        return None
+    return bn.clone_rows(text, src, new, swap)
+
+
 # ---------------------------------------------------------------------------
 # what gets cloned, in the order the plan reports it
 
@@ -491,6 +517,8 @@ JOBS: Tuple[Job, ...] = (
         note="the civilian models that walk its streets"),
     Job("descr_offmap_models.txt", "Off-map navy models", "braced",
         note="the ships shown at the edge of the map"),
+    Job("descr_banners_new.xml", "Battle banners", "banners",
+        note="a texture row in every banner the donor has one in"),
 )
 
 #: Where a mod keeps art the engine finds BY CONVENTION - from the faction's own
@@ -919,12 +947,14 @@ def clone_file(data: Path, job: Job, src: str, new: str, label: str = "",
         # The modeldb is exempt: its strings are length-prefixed and it is
         # rebuilt by its own writer, so nothing here should touch its bytes.
         flat = job.how != "modeldb"
+        opts = dict(text_opts or {})
+        art = bool(opts.pop("art", False))
         newline = kb.newline_of(original)
         before = kb.to_newline(original, "\n") if flat else original
         if job.how == "roster":
             after, n = clone_roster(before, src, new)
         elif job.how == "expanded":
-            after, n = clone_expanded(before, src, new, label, **(text_opts or {}))
+            after, n = clone_expanded(before, src, new, label, **opts)
         elif job.how == "list":
             after, n = clone_list_lines(before, src, new, job.kw)
         elif job.how == "braced_list":
@@ -939,6 +969,8 @@ def clone_file(data: Path, job: Job, src: str, new: str, label: str = "",
             after, n = clone_braced(before, src, new)
         elif job.how == "modeldb":
             after, n = clone_modeldb(before, src, new)
+        elif job.how == "banners":
+            after, n = clone_banners(before, src, new, data, art)
         else:                                     # unreachable
             after, n = before, 0
     except (fr.RecordError, ValueError, OSError, UnicodeError) as e:
@@ -967,14 +999,15 @@ def plan(mod, body: dict, overlay: Optional[Dict[str, str]] = None) -> ClonePlan
 
     label = str(body.get("label") or "").strip()
     # Art is the one part a modder may genuinely not want copied - they may be
-    # drawing their own. The twelve FILES are all or nothing: a roster naming a
+    # drawing their own. The thirteen FILES are all or nothing: a roster naming a
     # slot the EDU and the modeldb have never heard of is not a faction, it is a
     # crash, so there is no per-file opt-out here to get wrong.
     want_art = bool(body.get("art", True))
     data = Path(mod.data)
 
     text_opts = {"rename": bool(body.get("rename")),
-                 "titles": body.get("titles") if isinstance(body.get("titles"), dict) else None}
+                 "titles": body.get("titles") if isinstance(body.get("titles"), dict) else None,
+                 "art": want_art}
     for job in JOBS:
         edit = clone_file(data, job, src, new, label, overlay, text_opts)
         p.edits.append(edit)
@@ -1209,11 +1242,11 @@ def apply_many(bp: BatchPlan) -> Dict:
 # the faction files as one zip (Phase 56, M12)
 
 
-#: What a faction lives in besides the twelve files the clone writes: the two
-#: lists a faction's culture and religion come from, the banner definitions,
+#: What a faction lives in besides the thirteen files the clone writes: the
+#: two lists a faction's culture and religion come from, the old banner file,
 #: and the compiled text the game actually reads.
 EXPORT_EXTRA: Tuple[str, ...] = (
-    "descr_cultures.txt", "descr_religions.txt", "descr_banners_new.xml",
+    "descr_cultures.txt", "descr_religions.txt",
     "descr_banners.txt", "text/expanded.txt.strings.bin",
 )
 
@@ -1221,7 +1254,7 @@ EXPORT_EXTRA: Tuple[str, ...] = (
 def export_files(mod, art_for: Sequence[str] = ()) -> List[str]:
     """Every file, relative to ``data/``, that :func:`export_zip` would pack.
 
-    The twelve files :data:`JOBS` clones into, the lists in
+    The thirteen files :data:`JOBS` clones into, the lists in
     :data:`EXPORT_EXTRA`, and - for each slot in ``art_for`` - the art that
     carries its name, found the way the clone finds it (the longest slot a
     filename carries owns it). Only files the mod ships; a packed file is not

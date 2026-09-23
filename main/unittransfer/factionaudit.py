@@ -109,6 +109,11 @@ CHECKS: Tuple[Check, ...] = (
           "the civilians that walk its streets"),
     Check("navy", "Off-map navy models", "descr_offmap_models.txt", "note", "clone",
           "the ships shown at the edge of the map"),
+    # 65. Every faction in both installed mods has a texture in every one of
+    # its faction banners, so a slot with none is a gap - its soldiers carry
+    # no banner of theirs.
+    Check("banners", "Battle banners", "descr_banners_new.xml", "gap", "clone",
+          "a texture row in the faction banners its units carry"),
     Check("standing", "Diplomatic standing", "descr_faction_standing.txt", "note",
           "clone", "the standing rules that name it, on either side"),
     Check("campaign", "Campaign start", STRAT_NAME, "note", "strat",
@@ -192,6 +197,7 @@ class Census:
         self._skins()
         self.populace = self._heads(_read(data, "descr_lbc_db.txt"), "faction")
         self.navy = self._heads(_read(data, "descr_offmap_models.txt"), "faction")
+        self._banners(data)
         self.standing = self._braced(_read(data, "descr_faction_standing.txt"),
                                      ("factions", "exclude_factions"))
         self._campaigns()
@@ -344,6 +350,12 @@ class Census:
         for e in db.entries:
             for slot in {t.faction.lower() for t in e.main_textures}:
                 self.skins[slot] = self.skins.get(slot, 0) + 1
+
+    def _banners(self, data: Path) -> None:
+        """slot -> how many ``<FactionBanners>`` banners give it a texture."""
+        from . import banners as bn
+        text = _read(data, bn.REL, bn.ENCODING)
+        self.banners: Optional[Dict[str, int]] = None if text is None else bn.coverage(text)
 
     @staticmethod
     def _heads(text: Optional[str], kw: str) -> Optional[Set[str]]:
@@ -531,6 +543,15 @@ def evaluate(c: Census, slot: str) -> List[Dict]:
             out.append(_row(chk, "ok" if slot in heads else "missing",
                             "a block of its own" if slot in heads else "no block",
                             int(slot in heads)))
+
+    chk = BY_ID["banners"]
+    if c.banners is None:
+        out.append(nofile(chk))
+    else:
+        n = c.banners.get(slot, 0)
+        out.append(_row(chk, "ok" if n else "missing",
+                        f"a texture in {_plural(n, 'faction banner')}" if n
+                        else "no texture in any faction banner", n))
 
     # -- the campaign half ---------------------------------------------------
     camp = c.campaign

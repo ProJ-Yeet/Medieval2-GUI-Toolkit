@@ -243,7 +243,7 @@ check("the campaign gap is reported rather than guessed at",
 
 # The EDB clauses are what let a faction build and recruit, so a clone that
 # misses them is a faction that can do neither - worth its own check rather than
-# being one row among twelve.
+# being one row among thirteen.
 edb = written.get("export_descr_buildings.txt")
 if edb:
     check(f"the clone joined the donor's `requires factions` clauses "
