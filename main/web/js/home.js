@@ -180,7 +180,7 @@ function homeCardHtml(m){
     </div>
     ${homeM2exHtml(m)}
     <div class="hcmods">${homeModulesHtml(m, r)}</div>
-    <div class="hcfiles">${homeFilesHtml(m, r)}</div>
+    <div class="hcfiles">${homeLaunchHtml(m, r)}${homeFilesHtml(m, r)}</div>
   </section>`;
 }
 // ids have to survive a mod folder called anything at all
@@ -243,6 +243,37 @@ function homeModulesHtml(m, r){
               :'<span class="dot bad">●</span>'}</button>`;
   }).join('');
 }
+
+/* ---- will the game start it (58) ----
+   Every way the mod folder offers to start the game - a .bat, the M2TWEOP
+   launcher, a bare .cfg - and what is wrong with each, from the files the game
+   and the launchers read (launchcheck.py). One line shut; the routes open. */
+function homeLaunchHtml(m, r){
+  const L = r && r.launch;
+  if(!L) return '';
+  const key = '_launch_' + m.name, open = !!HOME_REPORTS[key];
+  const head = {ready: '<span class="w-good">✓</span> will start',
+                warn: '<span class="w-warn">●</span> will start, with warnings',
+                broken: '<span class="w-bad">✗</span> no way to start it works',
+                none: '<span class="w-warn">●</span> no .bat, launcher or .cfg to start it with',
+                unknown: '<span class="count">?</span> could not be read'}[L.verdict] || '';
+  const rows = (L.routes || []).map(x => `<tr>
+      <td class="s">${x.ok ? (x.warnings.length ? '<span class="w-warn">●</span>' : '<span class="w-good">✓</span>')
+                           : '<span class="w-bad">✗</span>'}</td>
+      <td>${esc(x.how)}<div class="count">${esc(x.cfg || 'no .cfg')} · ${esc(x.exe || '?')}${
+        x.laa === true ? ' · Large Address Aware' : x.laa === false ? ' · <b>not</b> Large Address Aware' : ''}</div>
+        ${[...x.faults.map(t => `<div class="w-bad">${esc(t)}</div>`),
+           ...x.warnings.map(t => `<div class="w-warn">${esc(t)}</div>`),
+           ...x.notes.map(t => `<div class="count">${esc(t)}</div>`)].join('')}</td></tr>`).join('');
+  const reg = L.registry && L.registry.read
+    ? `<div class="count">${L.registry.entry
+        ? `The disk launcher knows it (registry entry <code>${esc(L.registry.entry)}</code>).`
+        : "No launcher registry entry - only the disk version's launcher reads one, and Steam does not use it."}</div>` : '';
+  return `<button class="hctoggle" onclick="homeToggle('${q1(esc(key))}')">
+      ${open ? '▾' : '▸'} Launch: ${head}</button>
+    ${open ? `<table class="hctab">${rows}</table>${reg}` : ''}`;
+}
+function homeToggle(key){ HOME_REPORTS[key] = !HOME_REPORTS[key]; renderHome(); }
 
 function homeFilesHtml(m, r){
   if(!r || r.error) return '';

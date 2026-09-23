@@ -3021,7 +3021,7 @@ It stays recorded rather than rediscovered.
 |---|---|---|---|---|
 | ~~56~~ | ~~M12 - several factions at once, and the faction files as a zip~~ | 5 | M | both - **done 2026-09-23** |
 | ~~57~~ | ~~M16's editor half - the animation editor and asset converter~~ | 5 | L | both - **done 2026-09-23** |
-| 58 | Will this mod even launch - a readiness row on Home | 4 | S | both |
+| ~~58~~ | ~~Will this mod even launch - a readiness row on Home~~ | 4 | S | both - **done 2026-09-23** |
 | 59 | The rest of *Mines and hidden resources*: `descr_settlement_mechanics.xml` and its ceiling | 4 | S | both |
 | 60 | Add a religion | 4 | M | both |
 | 61 | B2 - delete a settlement, create one where none is, move one between mods | 4 | M | beta |
@@ -3080,6 +3080,37 @@ Exit: `tests/test_factionbulk.py`, 25 checks. It builds its mod by unpacking
 the zip of ROCSS's real faction files into a temp folder, so the zip is tested
 by being used: three factions in one batch, the ceiling, a doubled slot, one
 record, and one Undo restoring every byte and removing every copied picture.
+
+---
+
+## Phase 58 - Will this mod even launch - DONE 2026-09-23
+
+A *Launch* row on each Home card: whether the GAME will start the mod, beside
+what the toolkit can do with it. Nothing is written; every rule is one a real
+mod or the TWCenter archive states, and each finding names its file
+(`launchcheck.py`).
+
+**The ways a mod is started, measured on the two installed ones.** A `.bat`
+in the mod folder that goes up to the game folder and starts an executable
+with `@<its .cfg>` - ROCSS's tries `M2EX.exe` and falls back to
+`medieval2.exe`, which is one route whose note says so, not a failure - and
+the M2TWEOP launcher, whose `eopData/config/uiCfg.json` names the `.cfg` in
+`modCfgFile` (DaC: `TATW.cfg`; ROCSS: `configuration own.cfg`). A mod with
+neither is looked at through any `.cfg` carrying `[features] mod =`.
+
+**Per route**: the `.cfg` is there and its `mod =` is this folder (DaC's own
+README: "make sure ... the config file has the right folder name"), case-blind
+as Windows opens it; `[io] file_first` is set, as a warning (ROCSS's cfg says
+what it does: "look up sequence of files: mod, main game, packs"); the
+executable is in the game folder; and it is **Large Address Aware**, read from
+one bit of its PE header - DaC ships `LAA.txt` and a patcher and ROCSS ships
+`4gb_patch.exe` because a big mod outgrows 2 GB. **The launcher's registry
+entry is told and never judged**: the archive's *Registry Entries for the
+Launcher* says they serve the disk version's launcher and no longer work with
+Steam. Both installed mods come out *will start*.
+
+Exit: `tests/test_launchcheck.py`, 18 checks - the PE bit on a header built
+byte by byte, a game folder built one fault at a time, and both mods.
 
 ---
 
@@ -4599,7 +4630,7 @@ other seven are below.
 
 | Item | Size | What it is |
 |---|---|---|
-| **Will this mod even launch** | S | A readiness row on the Home card, not an editor. Home already says what each mod is ready for and cannot say whether `configuration.cfg`, `mymod.cfg` and the registry entry will actually start it. Eleven archive documents including the Steam install and registry tutorials. |
+| ~~**Will this mod even launch**~~ | S | **Done as Phase 58, 2026-09-23.** A readiness row on the Home card, not an editor. Home already says what each mod is ready for and cannot say whether `configuration.cfg`, `mymod.cfg` and the registry entry will actually start it. Eleven archive documents including the Steam install and registry tutorials. |
 | **B2 - delete a settlement, and move one between mods** | M | Assigning a settlement to a faction already works and B1 added the create. Missing: the delete, whose shape is `stratcamp._delete_splice`; a button on the panel for a province that has none; and the between-mods move, which is probably its own session. Phase 24's warning applies - a settlement that goes has characters, armies and a capital flag hanging off it. |
 | **B3 - insert and export one file at a time** | M | Mylae's tool pushes a file into, or pulls one out of, a mod on its own. Pieces exist - `POST /api/map/export`, 16g's per-faction TGA, `pack.py`'s unit import - and none of it is a general take-this-file-out. The user's own earlier words were "that isnt really needed tbh"; the four-star rating supersedes that. |
 | **Add a religion** | M | We edit the religion list in Minor Files, the EDB conditions and the religion columns on the region form. Missing: `descr_religions_lookup.txt`, and the must-sum-to-100 rule as a guard at **creation** rather than only as a validation afterwards. |

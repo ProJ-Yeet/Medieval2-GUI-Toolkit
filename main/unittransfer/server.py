@@ -609,7 +609,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2189,7 +2189,14 @@ class Handler(BaseHTTPRequestHandler):
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
-                return self._json(modfiles.report(self.registry.describe(name)))
+                desc = self.registry.describe(name)
+                rep = modfiles.report(desc)
+                # 58: whether the GAME will start it, beside what the toolkit can do
+                try:
+                    rep["launch"] = launchcheck.check(desc)
+                except OSError as e:
+                    rep["launch"] = {"verdict": "unknown", "routes": [], "error": str(e)}
+                return self._json(rep)
             if u.path in ("/api/buildings", "/api/building",
                           "/api/buildings/checks", "/api/buildings/unit",
                           "/api/buildings/variants"):
