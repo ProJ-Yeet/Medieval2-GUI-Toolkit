@@ -519,6 +519,10 @@ python main/app.py --port 9000    # different port
 python main/app.py --no-browser   # serve without opening a browser tab
 ```
 
+To make that the normal launcher behaviour, open **Settings**, turn off
+**Open the browser automatically**, then launch again. The launcher keeps its
+window open and prints the local URL for you to copy.
+
 ## Building a release
 
 ```bash

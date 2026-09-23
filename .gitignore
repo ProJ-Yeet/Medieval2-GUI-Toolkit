@@ -86,3 +86,5 @@ main/dev/checks/suite_report.*
 
 # the problem reports' Discord address: ships in the zip, never in git (report.py)
 main/unittransfer/report_webhook.txt
+
+.venv

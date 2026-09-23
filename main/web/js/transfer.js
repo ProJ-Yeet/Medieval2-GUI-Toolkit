@@ -1227,6 +1227,11 @@ async function saveConsole(){
   const on=document.getElementById('consoleChk').checked;
   state.settings=await api.post('/api/settings',{show_console:on});
   toast(on?tt('transfer.console_will_show_on_the_next'):tt('transfer.console_hidden_from_the_next_launch'));}
+  toast(on?tt('transfer.console_will_show_on_the_next'):tt('transfer.console_hidden_from_the_next_launch'));}
+async function saveBrowserLaunch(){
+  const on=document.getElementById('browserChk').checked;
+  state.settings=await api.post('/api/settings',{open_browser:on});
+  toast(on?'Browser will open automatically on the next launch.':'The launcher will print the address on the next launch.');}
 async function quitServer(){
   if(!confirm(tt('transfer.stop_the_medieval_2_gui_toolkit')))return;
   try{await api.post('/api/quit',{});}catch(e){}

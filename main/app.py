@@ -8,6 +8,10 @@ Usage:
   python app.py --serve         # run the server in THIS process (no launcher wrapper)
   python app.py --no-browser    # start the server but open no tab (scripts, tests, agents)
 
+In Settings, "Open browser automatically" controls the same behaviour for
+ordinary launcher runs.  When it is off, the launcher leaves its window open
+with the local URL so it can be copied.
+
 Startup, as the launcher does it:
 
   1. A console always opens, so a failed start is readable instead of a window
@@ -47,6 +51,9 @@ EXIT_PREFLIGHT = 2
 #: The server IS running, but no browser opened by itself - so the launcher keeps
 #: its window, because the address in it is the user's only way in.
 EXIT_NO_BROWSER = 3
+#: Browser opening was deliberately disabled, so the launcher keeps its window
+#: up with the URL available to copy.
+EXIT_BROWSER_DISABLED = 5
 #: The port is held by a DIFFERENT build of the toolkit, so nothing was started
 #: and no window was opened: reusing it would have shown a build nobody asked
 #: for. :func:`_is_this_build` says why that is worth stopping for.
@@ -133,6 +140,15 @@ def main(argv):
         log.info("Startup checks passed (--check: not starting the server).")
         return 0
 
+    # The command-line switch is an immediate override; the remembered setting
+    # makes the normal .bat launcher behave the same way on future runs.
+    settings = config.load_settings()
+    no_browser = no_browser or settings.get("open_browser", True) is False
+    if no_browser and "--no-browser" not in passthrough:
+        # The detached child parses its own arguments, so carry the remembered
+        # preference over instead of reopening a tab there.
+        passthrough.append("--no-browser")
+
     # Already running on this port? Show that window rather than start a second
     # server only to have it fail to bind - but only when it is THIS build.
     # Another install's server answers here just the same, and reopening it
@@ -158,7 +174,7 @@ def main(argv):
         print("\n" + _other_build_message(running, port) + "\n")
         return EXIT_OTHER_BUILD
 
-    keep_console = bool(config.load_settings().get("show_console", False))
+    keep_console = bool(settings.get("show_console", False))
     if mode == "launch" and not keep_console:
         return _launch_detached(log, port, passthrough)
     return _run_server(log, port, verbose, keep_console, no_browser)
@@ -228,6 +244,9 @@ def _launch_detached(log, port: int, passthrough) -> int:
         return 1
     log.info("Server is up: http://127.0.0.1:%d/", port)
     log.info("Stop the tool with Quit in the UI. Log: %s", startup.server_log_path())
+    if "--no-browser" in passthrough:
+        log.info("Browser opening is disabled - copy this address: http://127.0.0.1:%d/", port)
+        return EXIT_BROWSER_DISABLED
     if not browser_ok:
         log.error("No browser opened - leaving this window up so the address "
                   "above stays readable.")
@@ -243,7 +262,7 @@ def _run_server(log, port: int, verbose: bool, keep_console: bool,
 
     def open_browser():
         if no_browser:
-            log.info("--no-browser: serving on http://127.0.0.1:%d/ - opening no tab.",
+            log.info("Browser opening is disabled - copy this address: http://127.0.0.1:%d/",
                      port)
             return
         _open_browser(log, port)
