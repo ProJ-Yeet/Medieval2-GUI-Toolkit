@@ -361,10 +361,12 @@ class Vocabulary:
     def _from_file(self, sf: StratFile) -> None:
         """What the campaign file itself writes, for the fields nothing declares.
 
-        ``hero_ability`` has no list anywhere on disk - Third Age Reforged's 45
-        of them are named in ``descr_strat.txt`` and nowhere else - so the
-        picker offers what is already in use. The same goes for portraits and
-        labels, and for units when there is no EDU.
+        ``hero_ability`` is declared in ``descr_hero_abilities.xml`` (Phase
+        66), and the picker offers that list first; what the campaign already
+        uses is added to it, so a name the file lacks is still offered, and
+        :func:`check_character` says so. Portraits and labels have no list
+        anywhere on disk, so for them, and for units when there is no EDU, the
+        picker offers what is already in use.
         """
         self.abilities: List[str] = []
         self.portraits: List[str] = []
@@ -380,6 +382,17 @@ class Vocabulary:
         for u in sf.of_kind("unit"):
             if u.name and u.name not in self.units:
                 self.file_units.append(u.name)
+        from . import heroabilities
+        #: lower-case names descr_hero_abilities.xml declares; empty when the
+        #: mod has no such file, and then no ability is called undeclared
+        mod = getattr(self.facts, "mod", None)
+        names = heroabilities.declared(mod) if mod is not None else []
+        self.declared_abilities = {a.lower() for a in names}
+        have = {a.lower() for a in self.abilities}
+        for a in names:
+            if a.lower() not in have:
+                self.abilities.append(a)
+                have.add(a.lower())
         for lst in (self.abilities, self.portraits, self.labels):
             lst.sort(key=str.lower)
         self.file_units = sorted(set(self.file_units), key=str.lower)
@@ -406,6 +419,8 @@ class Vocabulary:
                                           key=lambda kv: kv[0].lower())],
             "ancillaries": sorted(self.ancillaries, key=str.lower),
             "abilities": list(self.abilities),
+            "have_abilities": bool(self.declared_abilities),
+            "declared_abilities": sorted(self.declared_abilities),
             "portraits": list(self.portraits),
             "labels": list(self.labels),
             "factions": list(self.factions),
@@ -642,6 +657,13 @@ def check_character(voc: Vocabulary, spec: Spec, cm=None) -> List[dict]:
                 "char.anc_unknown", True,
                 f"{anc} is not an ancillary export_descr_ancillaries.txt "
                 f"declares.", ancillary=anc))
+
+    ability = str(spec.tail.get("hero_ability") or "")
+    if ability and getattr(voc, "declared_abilities", None)             and ability.lower() not in voc.declared_abilities:
+        out.append(finding(
+            "char.ability", False,
+            f"hero_ability {ability} is not an ability descr_hero_abilities.xml "
+            f"declares."))
 
     out += _check_army(voc, spec)
     out.sort(key=lambda f: not f["fatal"])

@@ -617,7 +617,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, heroabilities, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2159,6 +2159,13 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(campdb.overview(self.registry.get(name)))
                 except campdb.CampDbError as e:
                     return self._err(404, e.message)
+            if u.path in ("/api/heroabilities", "/api/areaeffects"):
+                # 66 and 67. descr_hero_abilities.xml and descr_area_effects.xml
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                m = heroabilities if u.path == "/api/heroabilities" else areaeffects
+                return self._json(m.overview(self.registry.get(name)))
             if u.path == "/api/banners":
                 # 65. descr_banners_new.xml, read whole
                 name = (q.get("mod") or [None])[0]
@@ -2547,6 +2554,22 @@ class Handler(BaseHTTPRequestHandler):
                                                    soundscripts))
             if u.path in ("/api/soundbanks/plan", "/api/soundbanks/apply"):
                 return self._json(self._soundbanks(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/heroabilities/plan", "/api/heroabilities/apply",
+                          "/api/areaeffects/plan", "/api/areaeffects/apply"):
+                try:
+                    mod = self.registry.get(body["mod"])
+                except (KeyError, OSError) as e:
+                    return self._json({"error": str(e)})
+                m = heroabilities if u.path.startswith("/api/hero") else areaeffects
+                plan = m.plan(mod, body)
+                out = {"plan": plan.payload()}
+                if u.path.endswith("/plan") or plan.errors:
+                    if plan.errors:
+                        out["error"] = "; ".join(plan.errors)
+                    return self._json(out)
+                out.update(m.apply(plan))
+                self.registry.invalidate(body["mod"])
+                return self._json(out)
             if u.path in ("/api/banners/plan", "/api/banners/apply"):
                 try:
                     mod = self.registry.get(body["mod"])

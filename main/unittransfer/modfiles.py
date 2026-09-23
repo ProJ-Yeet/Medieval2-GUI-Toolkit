@@ -41,6 +41,8 @@ MODULES: Dict[str, str] = {
     "factionsites": "Populace and off-map models",
     "sidefiles": "Animals, standards and advice",
     "banners": "Battle banners",
+    "heroabilities": "Hero abilities",
+    "areaeffects": "Area effects",
     "campmap": "Campaign Map",
     # 21, D11. Reads no file of its own - it opens whichever one it is asked
     # for - so it has no row below and its card is always ready.
@@ -117,6 +119,10 @@ KNOWN: List[Known] = [
     Known("export_descr_advice.txt", "Advisor threads", ("sidefiles",), required=False),
     # 65. The banners a unit carries in battle, one texture per faction.
     Known("descr_banners_new.xml", "Battle banners", ("banners",)),
+    # 66. A named character's battle ability, which descr_strat.txt names.
+    Known("descr_hero_abilities.xml", "Hero abilities", ("heroabilities",)),
+    # 67. What a projectile does where it lands: nausea, fire, explosions, sets.
+    Known("descr_area_effects.xml", "Area effects", ("areaeffects",)),
     # The five small campaign files behind one module. All five are required
     # because each one IS a tab: a mod without descr_cultures.txt has no
     # settlements to draw, and saying so on the card is the point of the card.

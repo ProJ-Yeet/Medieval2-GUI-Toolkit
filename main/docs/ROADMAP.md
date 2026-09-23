@@ -407,8 +407,8 @@ It stays recorded rather than rediscovered.
 | ~~63~~ | ~~`descr_lbc_db.txt` and `descr_offmap_models.txt`~~ | 3 | S | both - **done 2026-09-23** |
 | ~~64~~ | ~~`descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt`~~ | 3 | S | both - **done 2026-09-23** |
 | ~~65~~ | ~~`descr_banners_new.xml`~~ | 3 | M | both - **done 2026-09-23** |
-| 66 | `descr_hero_abilities.xml` | 3 | M | both |
-| 67 | `descr_area_effects.xml` | 3 | M | both |
+| ~~66~~ | ~~`descr_hero_abilities.xml`~~ | 3 | M | both - **done 2026-09-23** |
+| ~~67~~ | ~~`descr_area_effects.xml`~~ | 3 | M | both - **done 2026-09-23** |
 | 68 | `descr_walls.txt` | 3 | M | both |
 | 69 | `descr_character.txt` | 3 | M | both |
 | 70 | T6 - every tile as text | 3 | M | beta |
@@ -769,8 +769,6 @@ is worth picking up.
 
 | # | Item | Size | Note |
 |---|---|---|---|
-| 66 | `descr_hero_abilities.xml` | M | 1,187 lines, 26 tags. Hangs off the people panel, which already edits the character. |
-| 67 | `descr_area_effects.xml` | M | 555 lines, 34 tags. Interdict, excommunication and the rest. |
 | 68 | `descr_walls.txt` | M | 514 lines. Wall definitions per culture and level; pairs with the settlement panel. |
 | 69 | `descr_character.txt` | M | 1,708 lines, twelve archive documents, **read by six modules and written by none**. It is the missing join: `stratmap.py`'s audit names a `.cas`, the Strat models panel draws one, and nothing connects either to the character that uses it. The lowest-rated item on this page that the measurement argues hardest for. |
 | 70 | **T6 - export every tile as text** | M | Campaign-map work that did not rate high enough to schedule. We export pictures and never numbers; `mapquery`'s fact table is the join it needs. |

@@ -9186,3 +9186,116 @@ point at files the rename does not move.
 Exit: `tests/test_banners.py`, 25 checks. `test_factionclone`'s one failing
 check (an EDB clause join) fails the same way on master and is not this phase's.
 
+
+## Phase 66 - `descr_hero_abilities.xml` - DONE 2026-09-23
+
+A **Hero abilities** tab (`heroabilities.py`, over a new shared reader,
+`leafxml.py`), a Health source, and the people panel joined to it. A
+`descr_strat.txt` character line ends `hero_ability IRON_FIST` and this file
+says what that is: duration, activations, cooldown, three tooltip labels, three
+button sprites, a sound, and the effects on the armies.
+
+**The people panel had no list.** Its own comment said the ability names were
+"in `descr_strat.txt` and nowhere else", so the picker offered what the
+campaign already wrote. It now offers what this file declares (and what the
+campaign uses, so nothing it offered before is gone), a character naming an
+ability the file lacks is a warning in its findings, and under the field a
+*What it does →* link opens the ability in the new tab (a real link, so middle
+click is a new tab).
+
+**One reader for two files.** This file and Phase 67's are the same shape: a
+root, one list, records whose values are element text, some grouped. Phase
+65's banner file keeps its values in attributes, so its reader stayed its own.
+`leafxml.py` tokenises tags by hand like the banner reader (DaC's area effects
+carry a `;;;` comment after a closing tag, and both files are thick with
+comments), keeps every offset, and takes one edit body for both: `values`,
+`attrs`, `copy` (a record under a new name, or a group member into another
+group), `remove`, `add_field` (after the record's last value, so a field lands
+among its own and not after an ability's effects block).
+
+**Measured before any rule was written** (ROCSS 7 abilities, DaC 32; DaC's
+1,187 lines and 26 tags are the roadmap's row):
+
+* Every `hero_ability` any character names, in every campaign and battle of
+  both mods, is declared. That is the warning that matters, and it fires on
+  neither.
+* ROCSS's `The_Heart_of_the_Lion` has `<selected_sprite>` twice: a warning,
+  the only one on either mod.
+* Both give `army_morale` a `permanent`, which the file's own sample
+  documents only for `army_fatigue`; ROCSS has a `kill_chance_modifier` of
+  -0.5, below the sample's "0 = no chance to kill". Notes: both mods play.
+* A seventh effect the sample does not document, `projectile` with only a
+  `projectile_name`, is ROCSS's `Super_Banana_Bomb`, and its projectile exists.
+* ROCSS's two unused abilities name `EMT_HERO_SPECIAL_ABILITY_DEFAULT_*`
+  labels its `expanded.txt` lacks. A missing label, sprite or sound is a
+  warning on an ability a character carries and a note on one nobody does.
+* DaC ships `ui/battle.sd`, and all 84 sprite names are in it (a
+  length-prefixed name, found as bytes); ROCSS ships none, so the sprite rule
+  only runs where the mod has the file. Every `sound_effect` in both is an
+  `event` in the mod's `descr_sounds_generic.txt`.
+
+**The screen** lists the abilities with how many character lines give each,
+and edits every value (target, morale level and `permanent` as pickers), shows
+each label's tooltip text, adds and removes fields and effects, copies an
+effect from any ability into this one, copies an ability under a new name and
+removes one (warned when characters name it). A signature, one backup, one
+Undo.
+
+Exit: `tests/test_heroabilities.py`, 38 checks.
+
+## Phase 67 - `descr_area_effects.xml` - DONE 2026-09-23
+
+An **Area effects** tab (`areaeffects.py`, on `leafxml.py`) and a Health
+source.
+
+**The roadmap's row was wrong about what this file is.** It said "interdict,
+excommunication and the rest", which are campaign mechanics. An area effect
+is a **battle** thing: what a projectile's `area_effect` line (and a holy
+cart's in `descr_engines.txt`) does where it lands. Six types, the same 34
+tags on both mods (ROCSS 55 effects, DaC 41): `nausea` (the cow carcass),
+`holy` (the aura), `fire`, `explosion`, `projectile` (a shot that splits into
+more) and `area_effect_set`, whose `<effect delay="0.2">` rows are other area
+effects fired one after another. **An `<effect>` in a set names an area
+effect; anywhere else it names an effect set**, and the rules keep the two
+apart.
+
+**`descr_effects.txt` is a manifest of 18 effect files, and the toolkit read
+four.** `effects.FILES` and `projectiles.effect_sets` scan the four a
+projectile's own effects live in; area effects name sets from the others
+(DaC's `nahptha_fire_set` is in `descr_burning_building.txt`), so this phase
+reads the manifest. **The four-file index under-reports for projectiles too**:
+11 of ROCSS's projectile effect sets and 21 of DaC's live in files it never
+reads (`arrows_fire_new_set`, `greek_fire_set`, ...), and a unit transfer
+blanks an effect it thinks the destination lacks. Measured here and left as
+its own fix, not widened inside this phase.
+
+**Measured, and what became a rule:**
+
+* Each mod has one projectile whose `area_effect` is declared nowhere:
+  ROCSS's `quality_fearcommand_arrow` (`ae_fearcommand_arrow`) and DaC's
+  `poison_javelin` (`ae_poison_javelin`). The warning that matters, and the
+  only warning on either mod.
+* Both mods' `ae_nahptha_shot` names the area effect `ae_medium_fire` where an
+  effect set goes. CA's own line, on both: a note.
+* An effect set the manifest's files lack is a note while the mod leaves one
+  of those files to the base game (ROCSS lacks eight of 18, among them the
+  file that declares `nahptha_fire_set`), and a warning, with a near miss
+  named, once the mod ships them all.
+* The file's comment gives four directions (forward, backward, up, down);
+  `horizontal` is written 11 times across the two mods on shots they fire, so
+  it is a fifth. Anything else is a note.
+* No duplicate, no unknown type, no colour past 255, no projectile type that
+  is not a projectile. Many effects are named by nothing a mod ships (20 in
+  ROCSS, 15 in DaC); the list shows each one's users and sets, and that is not
+  a finding.
+
+**The screen** lists the effects under their six types, with who names each
+(projectiles, engines, sets); edits every value (type, direction and
+`preserve_momentum` as pickers, the banner colour's three parts), adds a field
+the type takes and removes one, copies an effect under a new name (declaring
+DaC's `ae_poison_javelin` that way clears its one warning), and edits a set's
+members: each one a picker over the file's own effects with its delay, removed
+or added with its own delay in the same save. A signature, one backup, one
+Undo.
+
+Exit: `tests/test_areaeffects.py`, 37 checks.

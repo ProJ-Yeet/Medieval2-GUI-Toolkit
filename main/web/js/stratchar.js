@@ -467,8 +467,12 @@ function cxFormHtml(){
       <div class="cmfield"><label>Hero ability</label>
         <input list="cxl-ability" value="${esc(w.tail.hero_ability || '')}"
           oninput="cxTail('hero_ability', this.value)">${list('ability', v.abilities)}
-        <div class="count">No file on disk declares these; the list is what this
-        campaign already uses.</div></div>
+        <div class="count">${v.have_abilities
+          ? (w.tail.hero_ability && (v.declared_abilities || []).includes(String(w.tail.hero_ability).toLowerCase())
+            ? navLinkHtml({mode: 'heroabilities', name: 'name/' + w.tail.hero_ability}, 'What it does →', 'ulink',
+                'Open it in Hero abilities (middle click: a new tab)')
+            : 'The list is what descr_hero_abilities.xml declares.')
+          : 'This mod has no descr_hero_abilities.xml; the list is what this campaign already uses.'}</div></div>
     </div>
     ${cxTraitsHtml()}
     ${cxArmyHtml()}

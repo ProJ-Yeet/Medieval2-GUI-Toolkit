@@ -319,6 +319,20 @@ def _banners(mod, ctx) -> List[Finding]:
                   "banners", "key", "banner")
 
 
+@source("heroabilities", "Hero abilities", "heroabilities", "descr_hero_abilities.xml", "battle")
+def _heroabilities(mod, ctx) -> List[Finding]:
+    from . import heroabilities
+    return _plain(heroabilities.overview(mod)["findings"], "heroabilities", heroabilities.REL,
+                  "battle", "heroabilities", "key", "hero")
+
+
+@source("areaeffects", "Area effects", "areaeffects", "descr_area_effects.xml", "battle")
+def _areaeffects(mod, ctx) -> List[Finding]:
+    from . import areaeffects
+    return _plain(areaeffects.overview(mod)["findings"], "areaeffects", areaeffects.REL,
+                  "battle", "areaeffects", "key", "areaeffect")
+
+
 @source("sidefiles", "Animals, standards and advice", "sidefiles",
         "descr_animals.txt, descr_standards.txt, export_descr_advice.txt", "campaign")
 def _sidefiles(mod, ctx) -> List[Finding]:

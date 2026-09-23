@@ -1,10 +1,26 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 65 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners); **66 is next** (`descr_hero_abilities.xml`). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is still **v2.3.7 and beta 2026-09-22**; everything since is committed and uncut. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 67 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects); **68 is next** (`descr_walls.txt`). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is still **v2.3.7 and beta 2026-09-22**; everything since is committed and uncut. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
 **Phases 77-86 added 2026-09-23, after 25-27**: animations that travel with a
 unit, appended to the destination's packs with no unpack or repack. Plan,
 measurements and the Discord facts are under *Phases 77-86* in `ROADMAP.md`.
+
+**Phase 67 is done - area effects, 2026-09-23, committed and uncut.** A tab
+edits `descr_area_effects.xml`, which is battle effects (sickness, fire,
+explosions, split shots, holy auras, sets of them), not the interdict the
+roadmap row said. The one warning on each mod is a projectile naming an area
+effect never declared: ROCSS's `ae_fearcommand_arrow`, DaC's
+`ae_poison_javelin`. Found that the effect-set index reads 4 of the 18 files
+`descr_effects.txt` lists, which blanks real projectile effects on transfer;
+flagged as its own fix. **68 is next.**
+
+**Phase 66 is done - hero abilities, 2026-09-23, committed and uncut.** A tab
+edits `descr_hero_abilities.xml` over a new shared reader (`leafxml.py`, also
+67's), and the people panel's Hero ability picker now offers what the file
+declares, warns on a name it lacks, and links to the ability. Every ability a
+character names in either mod is declared; ROCSS's Heart of the Lion has its
+selected sprite twice. **67 is next.**
 
 **Phase 65 is done - battle banners, 2026-09-23, committed and uncut.** A tab
 edits `descr_banners_new.xml`, the faction audit has its Battle banners row,
