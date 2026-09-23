@@ -617,7 +617,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2022,6 +2022,19 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(rawtext.read(mod, (q.get("rel") or [""])[0]))
                 except (rawtext.RawError, OSError) as e:
                     return self._err(404, str(e))
+            if u.path == "/api/file":
+                # 62, B3: any one file under data/, as it is on disk
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                rel = (q.get("rel") or [""])[0]
+                try:
+                    blob = fileswap.export(self.registry.describe(name), rel)
+                except fileswap.SwapError as e:
+                    return self._err(404, str(e))
+                fname = rel.replace("\\", "/").rsplit("/", 1)[-1] or "file"
+                return self._send(200, blob, "application/octet-stream",
+                                  {"Content-Disposition": f'attachment; filename="{fname}"'})
             if u.path == "/api/factions/export_zip":
                 # 56, M12: every faction file, and the art of the slots asked for
                 name = (q.get("mod") or [None])[0]
@@ -2466,6 +2479,24 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/factions/clone_plan", "/api/factions/clone_apply"):
                 return self._json(
                     self._faction_clone(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/file/put_plan", "/api/file/put_apply"):
+                # 62, B3: one file into the mod, replacing or adding, one Undo
+                import base64
+                try:
+                    mod = self.registry.describe(body["mod"])
+                    raw = base64.b64decode(str(body.get("data") or ""), validate=True)
+                except (KeyError, ValueError) as e:
+                    return self._json({"error": str(e)})
+                plan = fileswap.plan_put(mod, str(body.get("rel") or ""), raw,
+                                         bool(body.get("replace")))
+                out = {"plan": plan.payload()}
+                if u.path.endswith("_plan") or plan.errors:
+                    if plan.errors:
+                        out["error"] = "; ".join(plan.errors)
+                    return self._json(out)
+                out.update(fileswap.apply_put(plan))
+                self.registry.invalidate(body["mod"])
+                return self._json(out)
             if u.path == "/api/convert/texture":
                 # 57b: a local file in, the other format out - nothing touches a mod
                 import base64

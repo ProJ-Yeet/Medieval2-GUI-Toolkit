@@ -72,7 +72,9 @@ function rtBuild(){
   main.innerHTML = `<div class="trwrap rtwrap">
     <div class="trlist">
       <div class="trnote">Every text file the toolkit reads, as the file holds it.
-        A save is backed up and 🕑 Log undoes it, like any other.</div>
+        A save is backed up and 🕑 Log undoes it, like any other.
+        <button class="rtput" onclick="rtPutAny()" title="Put any file from disk into this mod's data folder - a new one, or over one that is there">⇧ Put a file into the mod…</button>
+        <input type="file" id="rtPutFile" style="display:none" onchange="rtPutChosen(this)"></div>
       <div class="trrows" id="rtList"></div>
     </div>
     <div class="trmain" id="rtMain">${rtMainHtml()}</div>
@@ -175,6 +177,10 @@ function rtMainHtml(){
         onkeydown="if(event.key==='Enter')rtGoLine(this.value)"></label>
       <span class="count" id="rtCaret"></span>
       <button onclick="rtReload()" title="Read the file from disk again">Reload</button>
+      <a class="btnlike" href="/api/file?mod=${enc(state.src)}&rel=${enc(d.rel)}" download
+        title="The file exactly as it is on disk">⇩ Download</a>
+      <button onclick="rtPutOver('${q1(esc(d.rel))}')"
+        title="Replace this file with one from disk. The old one is backed up and 🕑 Log undoes it">⇧ Replace…</button>
       <button class="primary" id="rtSaveBtn" onclick="rtSave()"
         ${ro || !k.dirty || k.busy ? 'disabled' : ''}>Save…</button>
     </div>
@@ -366,4 +372,58 @@ function rtForget(rel){
     fau: null, stm: null, cards: null});
   if(/(^|\/)export_descr_unit\.txt$|^text\/export_units\.txt$/i.test(rel)
      && typeof loadSource === 'function') loadSource();
+}
+
+
+/* ---- one file in or out (Phase 62, B3) ----
+   Download is a plain link to /api/file. Putting a file in is a plan and then a
+   write, like every save here: the plan names an encoding change, what the
+   file's own reader now reports, and the .strings.bin a text/ file recompiles,
+   and nothing is written until that has been read. */
+let rtPutTarget = null;
+
+function rtPutAny(){
+  const rel = (prompt('Where in the mod should it go? A path under data/, e.g.\n'
+                      + 'ui/units/england/#english_archers.tga', '') || '').trim();
+  if(!rel) return;
+  rtPutTarget = {rel: rel.replace(/^data\//i, ''), replace: false};
+  const i = document.getElementById('rtPutFile');
+  if(i){ i.value = ''; i.click(); }
+}
+
+function rtPutOver(rel){
+  rtPutTarget = {rel, replace: true};
+  const i = document.getElementById('rtPutFile');
+  if(i){ i.value = ''; i.click(); }
+}
+
+async function rtPutChosen(input){
+  const f = input.files && input.files[0], t = rtPutTarget;
+  if(!f || !t) return;
+  const buf = new Uint8Array(await f.arrayBuffer());
+  let bin = '';
+  for(let i = 0; i < buf.length; i += 32768) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 32768));
+  const body = {mod: state.src, rel: t.rel, data: btoa(bin), replace: t.replace};
+  let r;
+  try{ r = await api.post('/api/file/put_plan', body); }
+  catch(e){ r = {error: errText(e)}; }
+  if(r.error && /already in the mod/.test(r.error)){
+    if(!confirm(`data/${t.rel} is already in the mod. Replace it with ${f.name}?`)) return;
+    body.replace = true;
+    try{ r = await api.post('/api/file/put_plan', body); }
+    catch(e){ r = {error: errText(e)}; }
+  }
+  if(r.error){ toast('✗ ' + r.error, 8000); return; }
+  const p = r.plan || {};
+  if(!confirm(`Put ${f.name} at data/${p.rel}?\n\n${(p.changes || []).join('\n')}`
+    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.join('\n⚠ ') : '')
+    + '\n\nBacked up first, and 🕑 Log undoes it.')) return;
+  let w;
+  try{ w = await api.post('/api/file/put_apply', body); }
+  catch(e){ w = {error: errText(e)}; }
+  if(w.error){ toast('✗ ' + w.error, 8000); return; }
+  toast(`data/${p.rel} written. 🕑 Log can undo it.`, 5000);
+  activity('put a file', `data/${p.rel} in ${state.src}`);
+  if(state.rt && state.rt.rel === p.rel) rtReload();
+  else if(state.rt) loadRawtext();
 }

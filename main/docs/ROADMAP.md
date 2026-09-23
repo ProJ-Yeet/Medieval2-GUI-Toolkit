@@ -3025,7 +3025,7 @@ It stays recorded rather than rediscovered.
 | ~~59~~ | ~~The rest of *Mines and hidden resources*: `descr_settlement_mechanics.xml` and its ceiling~~ | 4 | S | both - **done 2026-09-23** |
 | ~~60~~ | ~~Add a religion~~ | 4 | M | both - **done 2026-09-23** |
 | ~~61~~ | ~~B2 - delete a settlement, create one where none is, move one between mods~~ | 4 | M | beta - **done 2026-09-23** |
-| 62 | B3 - insert and export one file at a time | 4 | M | both |
+| ~~62~~ | ~~B3 - insert and export one file at a time~~ | 4 | M | both - **done 2026-09-23** |
 | 63 | `descr_lbc_db.txt` and `descr_offmap_models.txt` | 3 | S | both |
 | 64 | `descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt` | 3 | S | both |
 | 65 | `descr_banners_new.xml` | 3 | M | both |
@@ -3080,6 +3080,31 @@ Exit: `tests/test_factionbulk.py`, 25 checks. It builds its mod by unpacking
 the zip of ROCSS's real faction files into a temp folder, so the zip is tested
 by being used: three factions in one batch, the ceiling, a doubled slot, one
 record, and one Undo restoring every byte and removing every copied picture.
+
+---
+
+## Phase 62 - B3: one file out of a mod, or one file into it - DONE 2026-09-23
+
+Mylae's single-file push and pull, general where the pieces here were each
+shaped for one job. On the Raw text screen: **⇩ Download** gives the open
+file exactly as it is on disk (any file under `data/` through `/api/file`),
+**⇧ Replace…** puts a file from disk over it, and **⇧ Put a file into the
+mod…** puts one at any path under `data/`, new or over one that is there.
+Every put is a plan first and one backup and Undo after (`fileswap.py`).
+
+A put never overwrites by accident (it has to be told to replace), refuses the
+same bytes, and refuses any path that leaves `data/` however it is spelled.
+What the plan says before writing is what the files prove: **an encoding
+change is named** (the old file's own bytes against the new one's, the way a
+UTF-16 `text/` file saved back as UTF-8 stops a mod's text loading), a new
+`text/` file that is not UTF-16 is named, the five files Raw text already reads
+back (`descr_strat`, `descr_regions`, the win conditions, the roster, the EDU)
+are **read by their own readers** and anything new they report is listed, a
+`text/*.txt` recompiles its `.strings.bin`, and **a DDS put onto a `.texture` is
+wrapped** in the game's 48-byte header - or refused with the reason when it is
+not the DXT1 or DXT5 the header can hold.
+
+Exit: `tests/test_fileswap.py`, 23 checks.
 
 ---
 
@@ -4728,7 +4753,7 @@ other seven are below.
 |---|---|---|
 | ~~**Will this mod even launch**~~ | S | **Done as Phase 58, 2026-09-23.** A readiness row on the Home card, not an editor. Home already says what each mod is ready for and cannot say whether `configuration.cfg`, `mymod.cfg` and the registry entry will actually start it. Eleven archive documents including the Steam install and registry tutorials. |
 | ~~**B2 - delete a settlement, and move one between mods**~~ | M | **Done as Phase 61, 2026-09-23.** Assigning a settlement to a faction already works and B1 added the create. Missing: the delete, whose shape is `stratcamp._delete_splice`; a button on the panel for a province that has none; and the between-mods move, which is probably its own session. Phase 24's warning applies - a settlement that goes has characters, armies and a capital flag hanging off it. |
-| **B3 - insert and export one file at a time** | M | Mylae's tool pushes a file into, or pulls one out of, a mod on its own. Pieces exist - `POST /api/map/export`, 16g's per-faction TGA, `pack.py`'s unit import - and none of it is a general take-this-file-out. The user's own earlier words were "that isnt really needed tbh"; the four-star rating supersedes that. |
+| ~~**B3 - insert and export one file at a time**~~ | M | **Done as Phase 62, 2026-09-23.** Mylae's tool pushes a file into, or pulls one out of, a mod on its own. Pieces exist - `POST /api/map/export`, 16g's per-faction TGA, `pack.py`'s unit import - and none of it is a general take-this-file-out. The user's own earlier words were "that isnt really needed tbh"; the four-star rating supersedes that. |
 | ~~**Add a religion**~~ | M | **Done as Phase 60, 2026-09-23.** We edit the religion list in Minor Files, the EDB conditions and the religion columns on the region form. Missing: `descr_religions_lookup.txt`, and the must-sum-to-100 rule as a guard at **creation** rather than only as a validation afterwards. |
 | ~~**Mines and hidden resources**~~ | S | **Finished as Phase 59, 2026-09-23.** **Halved on 2026-09-13: the hidden-resources half is Phase 45, done 2026-09-21**, which adds and removes on the EDB's own line with the two joins that make a removal safe. What is left here is `descr_settlement_mechanics.xml` and the ceiling of 63, which Divide and Conquer's 75 disproves as written and which belongs with Phase 39's other ceilings if that session has room. |
 

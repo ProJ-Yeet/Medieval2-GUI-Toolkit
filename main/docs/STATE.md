@@ -1,7 +1,13 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 25-27, table under *Phases 56-73* in `ROADMAP.md`. **56 to 61 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement); **62 is next** (B3, one file in or out). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is still **v2.3.7 and beta 2026-09-22**; everything since is committed and uncut. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 25-27, table under *Phases 56-73* in `ROADMAP.md`. **56 to 62 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out); **63 is next** (`descr_lbc_db.txt` and `descr_offmap_models.txt`). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is still **v2.3.7 and beta 2026-09-22**; everything since is committed and uncut. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 62 is done - B3, one file in or out, 2026-09-23, committed and
+uncut.** Raw text downloads the open file, replaces it from disk, or puts any
+file at any path under `data/`, each a plan (encoding changes, the file's own
+reader, `.strings.bin`, a DDS wrapped onto a `.texture`) and one Undo. **63
+is next.**
+
 **Phase 61 is done - B2, settlements deleted, created and copied, 2026-09-23,
 committed and uncut.** The settlement panel deletes a settlement (the
 province stays, as vanilla's Durazzo does; a moving capital and a faction left
