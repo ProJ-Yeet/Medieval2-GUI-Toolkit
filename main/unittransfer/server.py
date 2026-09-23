@@ -388,7 +388,10 @@ the three sub-phases that write descr_strat.txt itself.
                                  -> edit the fields, the building list and the
                                     owner. A move is one slice of lines lifted
                                     from between two faction blocks and put back
-                                    between two others (one backup + undo)
+                                    between two others (one backup + undo).
+                                    B2 (61): `action` delete | create (for a
+                                    province with none, `owner`) | copy (into
+                                    `to_mod`'s `to_campaign`, the write is there)
 
 Characters, armies and the family tree (16i, see :mod:`unittransfer.stratchar`)
   GET  /api/map/faction?mod=&campaign=&faction=
@@ -3771,7 +3774,22 @@ class Handler(BaseHTTPRequestHandler):
             name = body["mod"]
             mod = self.registry.describe(name)
             facts = self.registry.map_facts(name, body.get("campaign") or "")
-            plan = stratedit.plan_settlement(mod, facts, body)
+            what = str(body.get("action") or "edit")
+            if what == "delete":                  # B2, Phase 61
+                plan = stratedit.plan_delete_settlement(mod, facts, body)
+            elif what == "create":
+                plan = stratedit.plan_create_settlement(mod, facts, body)
+            elif what == "copy":
+                # from this mod's campaign into another mod's: the write is there
+                dest = str(body.get("to_mod") or "")
+                if dest not in self.registry.names() or dest == name:
+                    return {"error": f"{dest or 'no mod'} is not another installed mod"}
+                dmod = self.registry.describe(dest)
+                dfacts = self.registry.map_facts(dest, body.get("to_campaign") or "")
+                plan = stratedit.plan_copy_settlement(mod, facts, dmod, dfacts, body)
+                name = dest
+            else:
+                plan = stratedit.plan_settlement(mod, facts, body)
         except (KeyError, campmap.MapError, ModDataError, OSError) as e:
             return {"error": str(e)}
         out = {"plan": plan.payload()}

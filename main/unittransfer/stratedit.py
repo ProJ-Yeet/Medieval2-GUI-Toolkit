@@ -449,6 +449,14 @@ def settlement_detail(facts, region: str) -> dict:
                        f"no campaign to edit")
     node = find_settlement(sf, region)
     rf = facts.by_name.get(region.strip().lower())
+    if node is None and rf is not None:
+        # B2 (61): a declared province nobody holds is legal, and the panel can
+        # give it a settlement - so it gets what that form needs, not an error
+        return {"missing": True, "region": region, "campaign": facts.campaign,
+                "file": facts.strat_rel, "shown": rf.shown,
+                "message": (f"Nobody starts holding {region}: it opens as unclaimed "
+                            f"wilderness, which is legal. Give it a settlement:"),
+                "factions": _faction_rows(sf, facts)}
     if node is None:
         raise MapError(
             f"no settlement in {facts.campaign}'s descr_strat.txt stands in "
@@ -1271,3 +1279,218 @@ def apply_settlement(p: StratPlan) -> dict:
              p.region, mod.name, p.campaign, len(p.changes), tid)
     return {"id": tid, "region": p.region, "campaign": p.campaign,
             "record": rec}
+
+
+# ---------------------------------------------------------------------------
+# B2 (Phase 61): take a settlement out, put one in, bring one from another mod
+
+
+def _read_back(before: StratFile, text: str, gone: str = "", added: str = "") -> List[str]:
+    """The guard a create has, for any change of which provinces are held:
+    exactly one settlement fewer or more, every other block the text it was,
+    the header and rosters untouched."""
+    errors: List[str] = []
+    done = campstrat.parse_strat(text)
+    was, now = before.counts(), done.counts()
+    delta = (1 if added else 0) - (1 if gone else 0)
+    for kind_ in sorted(set(was) | set(now)):
+        if kind_ == "building":
+            continue                    # a settlement's buildings come and go with it
+        want = was.get(kind_, 0) + (delta if kind_ == "settlement" else 0)
+        if now.get(kind_, 0) != want:
+            errors.append(f"this would leave {now.get(kind_, 0)} {kind_} record(s) "
+                          f"where there should be {want}")
+    if before.rosters != done.rosters or before.globals != done.globals:
+        errors.append("this would change the campaign's header, which it has no "
+                      "business touching")
+    (a, a_odd), (b, b_odd) = blocks_by_region(before), blocks_by_region(done)
+    keep = set(a) - ({gone.lower()} if gone else set())
+    want_keys = keep | ({added.lower()} if added else set())
+    if set(b) != want_keys or a_odd != b_odd:
+        errors.append("this would change which provinces the campaign holds beyond "
+                      "the one asked about")
+    elif any(a[k] != b[k] for k in keep):
+        errors.append("this would rewrite a settlement block it was not asked to")
+    return errors
+
+
+def plan_delete_settlement(mod, facts, body: dict) -> StratPlan:
+    """The settlement in ``body["region"]`` taken out of ``descr_strat.txt``.
+
+    The province stays on the map with nobody's settlement in it. Vanilla ships
+    one like that - Durazzo, which no settlement block claims - and the map
+    checker reports such a province as a note (``strat.region_unowned``), so this
+    is allowed and said. What it does to its owner is said too: the capital
+    moving to the next settlement in the block, or the faction left holding
+    nothing, which opens the campaign already destroyed unless a script gives it
+    one (the move's own warning, :func:`_owner_warnings`)."""
+    from .campmap import MapError
+    campaign = str(body.get("campaign") or "") or facts.campaign
+    p = StratPlan(mod=mod, campaign=campaign, region=str(body.get("region") or "").strip())
+    try:
+        sf = campstrat.read_strat(mod, campaign)
+    except (OSError, ValueError, MapError) as exc:
+        p.errors.append(str(exc))
+        return p
+    p.path = sf.path
+    node = find_settlement(sf, p.region)
+    if node is None:
+        p.errors.append(f"no settlement in {campaign}'s descr_strat.txt stands in {p.region!r}")
+        return p
+    faction = faction_of(sf, node)
+    owner = str(faction.get("name") or faction.name) if faction is not None else ""
+    span = detach_span(sf, node, faction) if faction is not None else (node.start, node.end)
+    lines = sf.lines[:span[0]] + sf.lines[span[1] + 1:]
+    text = serialise(sf, lines)
+    p.errors += _read_back(sf, text, gone=p.region)
+    if p.errors:
+        return p
+    done = campstrat.parse_strat(text)
+    snap = _snapshot(sf, node)
+    p.changes.append(f"- the {snap['level'] or 'settlement'} in {p.region}"
+                     + (f", held by {owner}" if owner else "")
+                     + (f", with {len(snap['buildings'])} building(s)" if snap["buildings"] else ""))
+    p.block = "\n".join(sf.lines[node.start:node.end + 1])
+    if owner:
+        new = done.faction(owner)
+        if new is not None and not settlements_of(done, new):
+            p.warnings.append(f"{owner} is left holding no settlement at all, so the "
+                              f"campaign opens with it already destroyed unless a "
+                              f"script gives it one.")
+        p.capitals = _capital_notes(sf, done, p, owner)
+    p.warnings.append(f"{p.region} stays on the map with no settlement in it. Vanilla "
+                      f"ships one like that (Durazzo); Health lists such a province "
+                      f"as a note.")
+    p.text = text
+    return p
+
+
+def _declared(facts) -> set:
+    """The provinces the map declares, from the fact table's map; empty (no
+    check) when there is none to ask."""
+    try:
+        return {r.name.lower() for r in facts.cm.regions.records}
+    except AttributeError:
+        return set()
+
+
+def plan_create_settlement(mod, facts, body: dict) -> StratPlan:
+    """A village for a province that has none, held by ``body["owner"]`` - B1's
+    writer (:func:`plan_new_settlement`) behind the settlement panel."""
+    from .campmap import MapError
+    campaign = str(body.get("campaign") or "") or facts.campaign
+    p = StratPlan(mod=mod, campaign=campaign, region=str(body.get("region") or "").strip())
+    owner = str(body.get("owner") or "").strip()
+    try:
+        sf = campstrat.read_strat(mod, campaign)
+    except (OSError, ValueError, MapError) as exc:
+        p.errors.append(str(exc))
+        return p
+    p.path = sf.path
+    if not owner:
+        p.errors.append("a new settlement needs a faction to hold it")
+        return p
+    declared = _declared(facts)
+    if declared and p.region.lower() not in declared:
+        p.errors.append(f"{p.region} is not a province in this map's descr_regions.txt")
+        return p
+    text, errs = plan_new_settlement(sf, p.region, owner,
+                                     str(body.get("creator") or owner).strip())
+    p.errors += errs
+    if p.errors:
+        return p
+    done = campstrat.parse_strat(text)
+    node = find_settlement(done, p.region)
+    p.block = "\n".join(done.lines[node.start:node.end + 1]) if node is not None else ""
+    p.changes.append(f"+ a {NEW_LEVEL} in {p.region}, held by {owner}")
+    p.capitals = _capital_notes(sf, done, p, owner)
+    p.text = text
+    return p
+
+
+def plan_copy_settlement(src_mod, src_facts, dst_mod, dst_facts, body: dict) -> StratPlan:
+    """A settlement brought from one mod's campaign into another's.
+
+    ``body``: ``{region, campaign, to_campaign, owner}``. The province has to be
+    one the destination map declares, under the same name. If the destination
+    already has a settlement there, that block is filled with the source's
+    level, population, founding year, kind and buildings, and keeps its own
+    owner and place; if it has none, one is created for ``owner`` first (B1's
+    writer) and filled the same way. Either way the block is written in the
+    destination file's own shape by :func:`render_block`.
+
+    **A building the destination's EDB does not declare is left out and
+    named**, because a ``type`` line naming a building the mod lacks is a
+    campaign that does not start, and nothing the copy could do would make the
+    other mod have it."""
+    from .campmap import MapError
+    campaign = str(body.get("to_campaign") or "") or dst_facts.campaign
+    p = StratPlan(mod=dst_mod, campaign=campaign, region=str(body.get("region") or "").strip())
+    try:
+        src_sf = campstrat.read_strat(src_mod, str(body.get("campaign") or "") or src_facts.campaign)
+        sf = campstrat.read_strat(dst_mod, campaign)
+    except (OSError, ValueError, MapError) as exc:
+        p.errors.append(str(exc))
+        return p
+    p.path = sf.path
+    src_node = find_settlement(src_sf, p.region)
+    if src_node is None:
+        p.errors.append(f"{getattr(src_mod, 'name', '?')} has no settlement in {p.region}")
+        return p
+    declared = _declared(dst_facts)
+    if declared and p.region.lower() not in declared:
+        p.errors.append(f"{getattr(dst_mod, 'name', '?')}'s map has no province called "
+                        f"{p.region}, so there is nowhere for it to go")
+        return p
+    snap = _snapshot(src_sf, src_node)
+    voc = Vocabulary(dst_facts, sf)
+    kept, dropped = [], []
+    for line, level in snap["buildings"]:
+        info = voc.levels.get(level)
+        ok = info is not None and info.line == line and (info.declared or not voc.have_edb)
+        (kept if ok else dropped).append((line, level))
+    working, added = sf, ""
+    node = find_settlement(sf, p.region)
+    if node is None:
+        owner = str(body.get("owner") or "").strip()
+        if not owner:
+            p.errors.append(f"{getattr(dst_mod, 'name', '?')} holds nothing in {p.region}; "
+                            f"name the faction that should")
+            return p
+        creator = snap["faction_creator"] if snap["faction_creator"] in voc.factions else owner
+        text, errs = plan_new_settlement(sf, p.region, owner, creator)
+        p.errors += errs
+        if p.errors:
+            return p
+        working, added = campstrat.parse_strat(text), p.region
+        node = find_settlement(working, p.region)
+    edits = {"level": snap["level"], "population": snap["population"],
+             "year_founded": snap["year_founded"], "settlement_type": snap["kind"]}
+    edits = {k: v for k, v in edits.items() if v not in (None, "")}
+    block = render_block(working, node, edits, kept)
+    lines = working.lines[:node.start] + block + working.lines[node.end + 1:]
+    text = serialise(working, lines)
+    if added:
+        p.errors += _read_back(sf, text, added=p.region)
+    else:
+        p.errors += _guard(sf, campstrat.parse_strat(text), p.region)
+    if p.errors:
+        return p
+    done = campstrat.parse_strat(text)
+    node3 = find_settlement(done, p.region)
+    after = _snapshot(done, node3)
+    p.block = "\n".join(done.lines[node3.start:node3.end + 1])
+    p.findings = check_settlement(Vocabulary(dst_facts, done), after["kind"], after["level"],
+                                  after["population"], after["year_founded"], after["buildings"])
+    p.errors += [f["message"] for f in p.findings if f["fatal"]]
+    p.warnings += [f["message"] for f in p.findings if not f["fatal"]]
+    p.changes.append(("+ " if added else "") + f"{p.region}: the {snap['level']} from "
+                     f"{getattr(src_mod, 'name', '?')}, {len(kept)} building(s)")
+    if dropped:
+        p.warnings.append(f"{len(dropped)} building(s) left out, because "
+                          f"{getattr(dst_mod, 'name', '?')}'s buildings do not declare them: "
+                          + ", ".join(f"{a} {b}" for a, b in dropped[:8]))
+    p.text = "" if text == sf.serialise() else text
+    if not p.text and not p.errors:
+        p.errors.append("nothing to change")
+    return p

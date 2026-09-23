@@ -3024,7 +3024,7 @@ It stays recorded rather than rediscovered.
 | ~~58~~ | ~~Will this mod even launch - a readiness row on Home~~ | 4 | S | both - **done 2026-09-23** |
 | ~~59~~ | ~~The rest of *Mines and hidden resources*: `descr_settlement_mechanics.xml` and its ceiling~~ | 4 | S | both - **done 2026-09-23** |
 | ~~60~~ | ~~Add a religion~~ | 4 | M | both - **done 2026-09-23** |
-| 61 | B2 - delete a settlement, create one where none is, move one between mods | 4 | M | beta |
+| ~~61~~ | ~~B2 - delete a settlement, create one where none is, move one between mods~~ | 4 | M | beta - **done 2026-09-23** |
 | 62 | B3 - insert and export one file at a time | 4 | M | both |
 | 63 | `descr_lbc_db.txt` and `descr_offmap_models.txt` | 3 | S | both |
 | 64 | `descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt` | 3 | S | both |
@@ -3080,6 +3080,42 @@ Exit: `tests/test_factionbulk.py`, 25 checks. It builds its mod by unpacking
 the zip of ROCSS's real faction files into a temp folder, so the zip is tested
 by being used: three factions in one batch, the ceiling, a doubled slot, one
 record, and one Undo restoring every byte and removing every copied picture.
+
+---
+
+## Phase 61 - B2: delete a settlement, create one where none is, copy one between mods - DONE 2026-09-23
+
+The three halves the B2 write-up named, all on the settlement panel, all one
+backup and one Undo, and all under the read-back guard B1's create already had:
+exactly one settlement fewer or more, every other block the text it was, the
+header and rosters untouched.
+
+**Delete.** Measured first: in both installed mods every province starts with
+a settlement (DaC 200 of 200, ROCSS 449 of 449), so a delete makes something no
+working mod here has. It is still allowed, on the project's own record: vanilla
+ships Durazzo with no settlement block and plays, and the map checker already
+calls an unclaimed province a note (`strat.region_unowned`). The plan names
+the capital that moves (ROCSS's Venice: *Venice_Province -> Padua_Province*)
+and warns when a faction is left holding nothing, in the words the owner move
+already used ("opens with it already destroyed unless a script gives it one").
+
+**Create.** A province the map declares and nobody holds used to open the
+panel on an error; it now opens on the factions and a *Create a village here*
+button, over B1's writer (last in the owner's block, never the capital).
+
+**Copy into another mod**, which the write-up expected to be the big one and
+is not, because the pieces were there: the destination province (same name,
+declared on the destination's map) gets the source's level, population,
+founding year, kind and buildings, written in the destination file's own
+shape by `render_block`; it keeps its own owner and place, or, if it has no
+settlement, one is created for a named faction first. **A building the
+destination's EDB does not declare is left out and named**, since a `type`
+line for a building the mod lacks is a campaign that does not start. The two
+installed mods share no province name (Middle-earth and Europe), so this is
+for mods on one map - a submod and its parent.
+
+Exit: `tests/test_settlement_b2.py`, 20 checks, on two temp copies of ROCSS's
+map and campaign.
 
 ---
 
@@ -4691,7 +4727,7 @@ other seven are below.
 | Item | Size | What it is |
 |---|---|---|
 | ~~**Will this mod even launch**~~ | S | **Done as Phase 58, 2026-09-23.** A readiness row on the Home card, not an editor. Home already says what each mod is ready for and cannot say whether `configuration.cfg`, `mymod.cfg` and the registry entry will actually start it. Eleven archive documents including the Steam install and registry tutorials. |
-| **B2 - delete a settlement, and move one between mods** | M | Assigning a settlement to a faction already works and B1 added the create. Missing: the delete, whose shape is `stratcamp._delete_splice`; a button on the panel for a province that has none; and the between-mods move, which is probably its own session. Phase 24's warning applies - a settlement that goes has characters, armies and a capital flag hanging off it. |
+| ~~**B2 - delete a settlement, and move one between mods**~~ | M | **Done as Phase 61, 2026-09-23.** Assigning a settlement to a faction already works and B1 added the create. Missing: the delete, whose shape is `stratcamp._delete_splice`; a button on the panel for a province that has none; and the between-mods move, which is probably its own session. Phase 24's warning applies - a settlement that goes has characters, armies and a capital flag hanging off it. |
 | **B3 - insert and export one file at a time** | M | Mylae's tool pushes a file into, or pulls one out of, a mod on its own. Pieces exist - `POST /api/map/export`, 16g's per-faction TGA, `pack.py`'s unit import - and none of it is a general take-this-file-out. The user's own earlier words were "that isnt really needed tbh"; the four-star rating supersedes that. |
 | ~~**Add a religion**~~ | M | **Done as Phase 60, 2026-09-23.** We edit the religion list in Minor Files, the EDB conditions and the religion columns on the region form. Missing: `descr_religions_lookup.txt`, and the must-sum-to-100 rule as a guard at **creation** rather than only as a validation afterwards. |
 | ~~**Mines and hidden resources**~~ | S | **Finished as Phase 59, 2026-09-23.** **Halved on 2026-09-13: the hidden-resources half is Phase 45, done 2026-09-21**, which adds and removes on the EDB's own line with the two joins that make a removal safe. What is left here is `descr_settlement_mechanics.xml` and the ceiling of 63, which Divide and Conquer's 75 disproves as written and which belongs with Phase 39's other ceilings if that session has room. |

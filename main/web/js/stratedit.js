@@ -276,6 +276,13 @@ function csHtml(){
     ${esc(k.region)}…</div>`;
   if(k.err) return head + `<div class="cspanel w-warn">${esc(k.err)}</div>`;
   if(!d) return head;
+  if(d.missing) return head + `<div class="cspanel">
+    <div class="count">${esc(d.message)}</div>
+    <div class="csown">
+      <select id="csNewOwner">${(d.factions || []).map(f => `<option value="${esc(f.name)}">${
+        esc(f.label || f.name)} · ${f.settlements} held</option>`).join('')}</select>
+      <button class="primary" onclick="csCreate()">Create a village here</button>
+    </div></div>`;
   return head + `<div class="cspanel">
     <div class="cshead">
       <b>${esc(d.shown_settlement || d.settlement || d.region)}</b>
@@ -288,8 +295,96 @@ function csHtml(){
     <div class="csbtns">
       <button class="primary" onclick="csSave()">Save settlement</button>
       <button onclick="csRevert()">Revert</button>
+      <button onclick="csDelete()" title="Take this settlement out of descr_strat.txt; the province stays on the map, held by nobody">Delete…</button>
     </div>
+    ${csCopyHtml()}
   </div>`;
+}
+
+/* ---------- B2 (Phase 61): delete, create, and copy into another mod ----------
+   Three more writes over the same file, each a whole plan from the server with
+   the read-back guard the create already had: exactly one settlement fewer or
+   more, and every other block the text it was. */
+
+async function csAction(body, verb, what){
+  const k = state.cset;
+  k.busy = true; csPaint();
+  let plan;
+  try{ plan = await api.post('/api/map/settlement_plan', body); }
+  catch(e){ plan = {error: errText(e)}; }
+  finally{ k.busy = false; }
+  if(plan.error){ toast('✗ ' + plan.error, 9000); csPaint(); return false; }
+  const p = plan.plan || {};
+  const notes = (p.capitals || []).concat(p.warnings || []).map(x => '⚠ ' + x);
+  if(!confirm(`${verb}?\n\n${(p.changes || []).join('\n')}`
+    + (notes.length ? '\n\n' + notes.join('\n') : '')
+    + '\n\nBacked up first, and 🕑 Log can undo it.')){ csPaint(); return false; }
+  k.busy = true; csPaint();
+  let res;
+  try{ res = await api.post('/api/map/settlement_apply', body); }
+  catch(e){ res = {error: errText(e)}; }
+  finally{ k.busy = false; }
+  if(res.error){ toast('✗ ' + res.error, 9000); csPaint(); return false; }
+  toast(`${what}. 🕑 Log can undo it.`, 5000);
+  activity('settlement', `${body.to_mod || k.mod} ${k.region}: ${what}`);
+  return true;
+}
+
+async function csReload(){
+  const at = state.cmap && state.cmap.pick;
+  state.cset = null;
+  await loadCampmap();
+  if(at && state.cmap) cmapPick(at);
+}
+
+async function csDelete(){
+  const k = state.cset;
+  if(!k || !k.d || k.busy) return;
+  if(await csAction({mod: k.mod, region: k.region, campaign: k.d.campaign, action: 'delete'},
+                    `Delete the settlement in ${k.region}`, `${k.region}'s settlement deleted`))
+    await csReload();
+}
+
+async function csCreate(){
+  const k = state.cset;
+  if(!k || !k.d || k.busy) return;
+  const owner = (document.getElementById('csNewOwner') || {}).value || '';
+  if(await csAction({mod: k.mod, region: k.region, campaign: k.d.campaign, action: 'create', owner},
+                    `Give ${k.region} a village held by ${owner}`, `a village in ${k.region}`))
+    await csReload();
+}
+
+/* Into another installed mod's campaign, under the same province name - a
+   submod on the same map is what this is for. The other mod's own buildings
+   decide what comes across; the rest is named and left out. */
+function csCopyHtml(){
+  const k = state.cset;
+  const others = (state.mods || []).map(m => m.name).filter(n => n !== k.mod);
+  if(!others.length) return '';
+  return `<details class="cscopy"><summary class="count">Copy to another mod…</summary>
+    <div class="csown">
+      <select id="csCopyTo">${others.map(n => `<option>${esc(n)}</option>`).join('')}</select>
+      <button onclick="csCopy()">Copy ${esc(k.region)} there</button>
+      <div class="count">The same province in that mod's own campaign gets this
+        settlement's level, population, founding year and buildings, keeping its
+        own owner. A building that mod does not declare is left out and named.</div>
+    </div></details>`;
+}
+
+async function csCopy(){
+  const k = state.cset;
+  if(!k || !k.d || k.busy) return;
+  const to = (document.getElementById('csCopyTo') || {}).value || '';
+  const body = {mod: k.mod, region: k.region, campaign: k.d.campaign, action: 'copy', to_mod: to};
+  let probe;
+  try{ probe = await api.post('/api/map/settlement_plan', body); }
+  catch(e){ probe = {error: errText(e)}; }
+  if(probe.error && /name the faction/.test(probe.error)){
+    const owner = (prompt(`${to} holds nothing in ${k.region}. Which of its factions should?`) || '').trim();
+    if(!owner) return;
+    body.owner = owner;
+  }
+  await csAction(body, `Copy ${k.region} into ${to}`, `${k.region} copied into ${to}`);
 }
 
 function csFormHtml(){
