@@ -712,6 +712,7 @@ const MODES=[
   {id:'ancillaries',icon:'🏅', name:'Ancillaries',  sub:true, hint:'The items and followers a character picks up'},
   {id:'guilds',   icon:'⚖', name:'Guilds',       sub:true, hint:'What each guild grants, and the triggers that earn its points'},
   {id:'campdb',   icon:'⚙', name:'Campaign constants', sub:true, hint:'descr_campaign_db.xml: the campaign-wide numbers, forts, piety and ransom'},
+  {id:'factionsites', icon:'⛵', name:'Populace and off-map', sub:true, hint:'descr_lbc_db.txt and descr_offmap_models.txt: who walks a faction\'s streets, and its fleets and towns off the map'},
   {id:'settlemech', icon:'⚒', name:'Settlement mechanics', sub:true, hint:'descr_settlement_mechanics.xml: growth, public order, income and mines, and the population ladders'},
   {id:'factions', icon:'🛡', name:'Factions',      sub:true, hint:'Each faction’s culture, religion, colours and horde'},
   {id:'cultures', icon:'🏛', name:'Cultures',      sub:true, hint:'descr_cultures.txt: each culture’s settlements, fort, ports, watchtower and agents'},
@@ -746,6 +747,7 @@ const MINOR_TABS=[
   {mode:'guilds',      label:'Guilds'},
   {mode:'campdb',      label:'Campaign constants'},
   {mode:'settlemech',  label:'Settlement mechanics'},
+  {mode:'factionsites', label:'Populace and off-map'},
   // A faction is two files - what it IS (descr_sm_factions.txt) and what it
   // starts the campaign WITH (descr_strat.txt). 17f put both on one screen
   // inside the Campaign Map and pointed this tab at it; that route was reverted
@@ -1413,7 +1415,8 @@ function navGo(r){
     // before they exist.
     const open={traits:['tr',trOpen], ancillaries:['an',anOpen], guilds:['gu',guOpen],
                 factions:['fac',facOpen], cultures:['mf',mfOpen],
-                campdb:['cdb',cdbOpen], settlemech:['smx',smxOpen]}[o.mode];
+                campdb:['cdb',cdbOpen], settlemech:['smx',smxOpen],
+                factionsites:['fsx',fsxOpen]}[o.mode];
     if(open)navWhen(navLoaded(open[0]),()=>open[1](name));
   }finally{ navGoing--; }
 }
@@ -1521,7 +1524,7 @@ function wire(){
     if(state.mode!=='transfer'){state.src=state.dst=v;dstSel.value=v;state.destData=null;
       state.cfg={};state.bmdb=null;state.snd=null;state.destSnd=null;state.str=null;
       state.tr=null;state.an=null;state.mf=null;state.fac=null;state.fau=null;
-      state.gu=null;state.cdb=null;state.smx=null;state.sbk=null;
+      state.gu=null;state.cdb=null;state.smx=null;state.fsx=null;state.sbk=null;
       state.bld=null;state.bldReturn=null;state.rt=null;
       // the mirrored destination is not the user's transfer pick - don't save it
       await api.post('/api/settings',{last_source:v,last_dest:state.xferDst||v});return loadSource();}
@@ -1593,7 +1596,7 @@ function applyMode(persist){
         snd=state.mode==='sounds', sbk=state.mode==='soundbanks'||state.mode==='soundscripts', spr=state.mode==='sprites', bld=state.mode==='buildings',
         str=state.mode==='strings', trt=state.mode==='traits',
         anc=state.mode==='ancillaries', mnr=state.mode==='minor'||state.mode==='cultures',
-        gld=state.mode==='guilds', cdb=state.mode==='campdb'||state.mode==='settlemech',
+        gld=state.mode==='guilds', cdb=state.mode==='campdb'||state.mode==='settlemech'||state.mode==='factionsites',
         fac=state.mode==='factions',
         raw=state.mode==='rawtext',
         // whole-mod screens with no unit list: My changes (52) and Health (54)
@@ -1736,6 +1739,7 @@ function render(){
   if(state.mode==='guilds')return state.gu?renderGuilds():loadGuilds();
   if(state.mode==='campdb')return state.cdb?renderCampDb():loadCampDb();
   if(state.mode==='settlemech')return state.smx?renderSettleMech():loadSettleMech();
+  if(state.mode==='factionsites')return state.fsx?renderFactionSites():loadFactionSites();
   if(state.mode==='minor')return state.mf?renderMinor():loadMinor();
   if(state.mode==='cultures')return renderCultures();
   if(state.mode==='factions')return state.fac?renderFactions():loadFactions();

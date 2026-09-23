@@ -3026,7 +3026,7 @@ It stays recorded rather than rediscovered.
 | ~~60~~ | ~~Add a religion~~ | 4 | M | both - **done 2026-09-23** |
 | ~~61~~ | ~~B2 - delete a settlement, create one where none is, move one between mods~~ | 4 | M | beta - **done 2026-09-23** |
 | ~~62~~ | ~~B3 - insert and export one file at a time~~ | 4 | M | both - **done 2026-09-23** |
-| 63 | `descr_lbc_db.txt` and `descr_offmap_models.txt` | 3 | S | both |
+| ~~63~~ | ~~`descr_lbc_db.txt` and `descr_offmap_models.txt`~~ | 3 | S | both - **done 2026-09-23** |
 | 64 | `descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt` | 3 | S | both |
 | 65 | `descr_banners_new.xml` | 3 | M | both |
 | 66 | `descr_hero_abilities.xml` | 3 | M | both |
@@ -3080,6 +3080,35 @@ Exit: `tests/test_factionbulk.py`, 25 checks. It builds its mod by unpacking
 the zip of ROCSS's real faction files into a temp folder, so the zip is tested
 by being used: three factions in one batch, the ceiling, a doubled slot, one
 record, and one Undo restoring every byte and removing every copied picture.
+
+---
+
+## Phase 63 - `descr_lbc_db.txt` and `descr_offmap_models.txt` - DONE 2026-09-23
+
+A **Populace and off-map** tab beside Settlement mechanics, for the two files
+a faction is written into that three modules found and none parsed
+(`factionsites.py`).
+
+**The populace** is each faction's townsfolk and their shares. Measured: 30
+blocks in each mod, and every one adds up to exactly 100, so the total is
+shown as it is typed and anything else is a warning. The nine model names are
+the base game's peasants from its packed modeldb, so they are not checked.
+
+**The off-map models** are three sections that nest differently - `navy` by
+faction with a `large`, `medium` and `small` row, `settlement` and `port` by
+culture then level around one row - so the reader is a tree of braced blocks
+rather than a shape per section. The paths point at art the base game packs,
+so a missing one is not a finding.
+
+**It found a defect in DaC's own file**: `faction egypt` (line 115) has no
+opening brace - 117 `{` to 118 `}` - so its `}` closes the navy section and
+the fourteen factions after it are read outside it. A warning naming the line,
+not a fatal: DaC plays. Roster mismatches are notes (DaC's populace has no
+`gundabad` or `scripts` and still has an `ents`). Edits are line splices, an
+off-map edit carries the signature of the copy it was made against, and Health
+reads both files.
+
+Exit: `tests/test_factionsites.py`, 18 checks.
 
 ---
 
@@ -4765,8 +4794,8 @@ is worth picking up.
 | Item | Size | Note |
 |---|---|---|
 | ~~`descr_settlement_mechanics.xml`~~ | S | **Done as Phase 59, 2026-09-23.** |
-| `descr_lbc_db.txt` | S | 122 lines. Read by three modules as a faction site and never parsed. |
-| `descr_offmap_models.txt` | S | 619 lines. Same shape: a faction site the audit counts mentions in. Cheap as a `flatrecord` if the audit ever wants the contents. |
+| ~~`descr_lbc_db.txt`~~ | S | **Done as Phase 63, 2026-09-23.** |
+| ~~`descr_offmap_models.txt`~~ | S | **Done as Phase 63, 2026-09-23.** |
 | `descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt` | S | 41, 23 and 6 lines. Third Age Reforged ships no `descr_standards.txt` at all and DaC's advice file is six lines, so this is one small session for all three or none. |
 | `descr_banners_new.xml` | M | 405 lines, 25 tags. Every *add a faction* tutorial names it and the faction audit has a row-shaped hole where it should be. |
 | `descr_hero_abilities.xml` | M | 1,187 lines, 26 tags. Hangs off the people panel, which already edits the character. |

@@ -617,7 +617,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2159,6 +2159,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(campdb.overview(self.registry.get(name)))
                 except campdb.CampDbError as e:
                     return self._err(404, e.message)
+            if u.path == "/api/factionsites":
+                # 63. descr_lbc_db.txt and descr_offmap_models.txt, read whole
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._json(factionsites.overview(self.registry.get(name)))
             if u.path == "/api/settlemech":
                 # 59. descr_settlement_mechanics.xml, read whole
                 name = (q.get("mod") or [None])[0]
@@ -2529,6 +2535,20 @@ class Handler(BaseHTTPRequestHandler):
                                                    soundscripts))
             if u.path in ("/api/soundbanks/plan", "/api/soundbanks/apply"):
                 return self._json(self._soundbanks(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/factionsites/plan", "/api/factionsites/apply"):
+                try:
+                    mod = self.registry.get(body["mod"])
+                except (KeyError, OSError) as e:
+                    return self._json({"error": str(e)})
+                plan = factionsites.plan(mod, body)
+                out = {"plan": plan.payload()}
+                if u.path.endswith("/plan") or plan.errors:
+                    if plan.errors:
+                        out["error"] = "; ".join(plan.errors)
+                    return self._json(out)
+                out.update(factionsites.apply(plan))
+                self.registry.invalidate(body["mod"])
+                return self._json(out)
             if u.path in ("/api/settlemech/plan", "/api/settlemech/apply"):
                 return self._json(self._settlemech(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/campdb/plan", "/api/campdb/apply"):

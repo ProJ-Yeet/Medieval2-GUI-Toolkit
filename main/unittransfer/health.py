@@ -300,6 +300,18 @@ def _campdb(mod, ctx) -> List[Finding]:
                   "key", "campdb")
 
 
+@source("factionsites", "Populace and off-map models", "factionsites",
+        "descr_lbc_db.txt, descr_offmap_models.txt", "campaign")
+def _factionsites(mod, ctx) -> List[Finding]:
+    from . import factionsites
+    rows = factionsites.overview(mod)["findings"]
+    out = []
+    for r in rows:
+        rel = factionsites.LBC_REL if r["key"].startswith("lbc/") else factionsites.OFFMAP_REL
+        out += _plain([r], "factionsites", rel, "campaign", "factionsites", "key", "sites")
+    return out
+
+
 @source("settlemech", "Settlement mechanics", "settlemech",
         "descr_settlement_mechanics.xml", "campaign")
 def _settlemech(mod, ctx) -> List[Finding]:
