@@ -39,6 +39,7 @@ MODULES: Dict[str, str] = {
     "campdb": "Campaign constants",
     "settlemech": "Settlement mechanics",
     "factionsites": "Populace and off-map models",
+    "sidefiles": "Animals, standards and advice",
     "campmap": "Campaign Map",
     # 21, D11. Reads no file of its own - it opens whichever one it is asked
     # for - so it has no row below and its card is always ready.
@@ -109,6 +110,10 @@ KNOWN: List[Known] = [
     # 63. Who walks a faction's streets, and its fleets and towns off the map.
     Known("descr_lbc_db.txt", "Settlement populace", ("factionsites",)),
     Known("descr_offmap_models.txt", "Off-map models", ("factionsites",)),
+    # 64. Three small files: war animals, the strat-map standard, the advisor.
+    Known("descr_animals.txt", "War animals", ("sidefiles",), required=False),
+    Known("descr_standards.txt", "Campaign map standards", ("sidefiles",), required=False),
+    Known("export_descr_advice.txt", "Advisor threads", ("sidefiles",), required=False),
     # The five small campaign files behind one module. All five are required
     # because each one IS a tab: a mod without descr_cultures.txt has no
     # settlements to draw, and saying so on the card is the point of the card.

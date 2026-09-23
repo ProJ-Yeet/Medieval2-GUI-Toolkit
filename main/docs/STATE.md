@@ -1,7 +1,14 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 25-27, table under *Phases 56-73* in `ROADMAP.md`. **56 to 63 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models); **64 is next** (animals, standards, advice). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is still **v2.3.7 and beta 2026-09-22**; everything since is committed and uncut. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 25-27, table under *Phases 56-73* in `ROADMAP.md`. **56 to 64 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice); **65 is next** (`descr_banners_new.xml`). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is still **v2.3.7 and beta 2026-09-22**; everything since is committed and uncut. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 64 is done - animals, standards and advice, 2026-09-23, committed and
+uncut.** One tab, three files: `descr_animals.txt` (checked against the EDU's
+`animal` lines and the battle modeldb), `descr_standards.txt` (the flag models,
+six rectangles, the symbol sheets) and `export_descr_advice.txt` (threads,
+items, and the triggers that fire them). Found ROCSS's Princess carrying
+`animal wardogs` where the file declares `wardog`. **65 is next.**
+
 **Phase 63 is done - populace and off-map models, 2026-09-23, committed and
 uncut.** A tab edits `descr_lbc_db.txt` (each faction's townsfolk, shares
 totalled to 100) and `descr_offmap_models.txt` (navy, settlement and port, read

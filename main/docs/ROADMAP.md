@@ -3027,7 +3027,7 @@ It stays recorded rather than rediscovered.
 | ~~61~~ | ~~B2 - delete a settlement, create one where none is, move one between mods~~ | 4 | M | beta - **done 2026-09-23** |
 | ~~62~~ | ~~B3 - insert and export one file at a time~~ | 4 | M | both - **done 2026-09-23** |
 | ~~63~~ | ~~`descr_lbc_db.txt` and `descr_offmap_models.txt`~~ | 3 | S | both - **done 2026-09-23** |
-| 64 | `descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt` | 3 | S | both |
+| ~~64~~ | ~~`descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt`~~ | 3 | S | both - **done 2026-09-23** |
 | 65 | `descr_banners_new.xml` | 3 | M | both |
 | 66 | `descr_hero_abilities.xml` | 3 | M | both |
 | 67 | `descr_area_effects.xml` | 3 | M | both |
@@ -3080,6 +3080,42 @@ Exit: `tests/test_factionbulk.py`, 25 checks. It builds its mod by unpacking
 the zip of ROCSS's real faction files into a temp folder, so the zip is tested
 by being used: three factions in one batch, the ceiling, a doubled slot, one
 record, and one Undo restoring every byte and removing every copied picture.
+
+---
+
+## Phase 64 - `descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt` - DONE 2026-09-23
+
+An **Animals, standards, advice** tab beside Populace and off-map, one sub-tab
+per file (`sidefiles.py`). The three were one session because they are small,
+and they are all or none because a mod can lack any of them: Reforged ships no
+standards file, so none of the three is required on the mod card.
+
+**Animals** are records a unit's `animal` line names, each with a battle
+model. Checked against the EDU and the modeldb, which is what found **ROCSS's
+Princess carrying `animal wardogs` where the file declares `wardog`** - a
+warning, since ROCSS plays and a princess seldom fights. DaC's `pig` and
+`wardog` point at models its modeldb lacks, and no DaC unit has an `animal`
+line, so those are notes; the same gap on an animal a unit uses is a warning.
+A class other than the header's `wardog` and `pig`, a number that is not one,
+a missing key: the rest of the rules.
+
+**Standards** are the flag models and their scales, six rectangles on the
+standard's texture (four numbers from 0 to 1, checked for range and for
+covering something) and the symbol sheets under `factions` and
+`rebels_factions`, added and removed. **One rule the guides give was refused**:
+four symbols a sheet would make DaC's `standard_index` 30 over seven faction
+sheets a defect, and DaC plays, so the sheets are shown beside the roster's
+highest index and never counted against it.
+
+**Advice** is threads of items and the triggers that fire them, read in the
+trait-file grammar they share so Phase 8's event and condition checks apply.
+ROCSS's one thread is its background-script launcher and is clean; DaC's file
+is its header. An item's fields and a trigger's score are edited, and a thread
+is removed with any trigger that fires only it.
+
+Line splices with a signature per file, DaC's missing final newline kept, one
+backup and Undo, and Health reads all three. Exit: `tests/test_sidefiles.py`,
+28 checks.
 
 ---
 
@@ -4796,7 +4832,7 @@ is worth picking up.
 | ~~`descr_settlement_mechanics.xml`~~ | S | **Done as Phase 59, 2026-09-23.** |
 | ~~`descr_lbc_db.txt`~~ | S | **Done as Phase 63, 2026-09-23.** |
 | ~~`descr_offmap_models.txt`~~ | S | **Done as Phase 63, 2026-09-23.** |
-| `descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt` | S | 41, 23 and 6 lines. Third Age Reforged ships no `descr_standards.txt` at all and DaC's advice file is six lines, so this is one small session for all three or none. |
+| ~~`descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt`~~ | S | **Done as Phase 64, 2026-09-23.** 41, 23 and 6 lines. Third Age Reforged ships no `descr_standards.txt` at all and DaC's advice file is six lines, so this is one small session for all three or none. |
 | `descr_banners_new.xml` | M | 405 lines, 25 tags. Every *add a faction* tutorial names it and the faction audit has a row-shaped hole where it should be. |
 | `descr_hero_abilities.xml` | M | 1,187 lines, 26 tags. Hangs off the people panel, which already edits the character. |
 | `descr_area_effects.xml` | M | 555 lines, 34 tags. Interdict, excommunication and the rest. |

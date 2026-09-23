@@ -312,6 +312,20 @@ def _factionsites(mod, ctx) -> List[Finding]:
     return out
 
 
+@source("sidefiles", "Animals, standards and advice", "sidefiles",
+        "descr_animals.txt, descr_standards.txt, export_descr_advice.txt", "campaign")
+def _sidefiles(mod, ctx) -> List[Finding]:
+    from . import sidefiles
+    rels = {"animals": (sidefiles.ANIMALS_REL, "battle"),
+            "standards": (sidefiles.STANDARDS_REL, "campaign"),
+            "advice": (sidefiles.ADVICE_REL, "play")}
+    out = []
+    for r in sidefiles.overview(mod)["findings"]:
+        rel, when = rels[r["key"].split("/", 1)[0]]
+        out += _plain([r], "sidefiles", rel, when, "sidefiles", "key", "side")
+    return out
+
+
 @source("settlemech", "Settlement mechanics", "settlemech",
         "descr_settlement_mechanics.xml", "campaign")
 def _settlemech(mod, ctx) -> List[Finding]:
