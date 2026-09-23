@@ -16,7 +16,8 @@ Rules:
 | You want | Read |
 |---|---|
 | where the work stands, what is next | `main/docs/STATE.md` |
-| the backlog, a phase write-up, the locked decisions | `main/docs/ROADMAP.md` |
+| what is left to build, the locked decisions | `main/docs/ROADMAP.md` |
+| a finished phase's write-up, and why a rule is a rule | `main/docs/ROADMAP_ARCHIVE.md` |
 | how a release is cut | `main/docs/RELEASE.md` |
 | a stage from before 2026-08-08, or a file format | `main/docs/HANDOFF_ARCHIVE.md` |
 
