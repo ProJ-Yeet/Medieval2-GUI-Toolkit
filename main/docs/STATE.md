@@ -1,7 +1,14 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 25-27, table under *Phases 56-73* in `ROADMAP.md`. **56, 57 and 58 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch); **59 is next** (`descr_settlement_mechanics.xml`). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is still **v2.3.7 and beta 2026-09-22**; everything since is committed and uncut. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 25-27, table under *Phases 56-73* in `ROADMAP.md`. **56 to 59 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics); **60 is next** (add a religion). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is still **v2.3.7 and beta 2026-09-22**; everything since is committed and uncut. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 59 is done - settlement mechanics, 2026-09-23, committed and
+uncut.** A tab beside Campaign constants edits
+`descr_settlement_mechanics.xml`: the growth, order and income factors
+(`SIF_MINING` is the mines) and the two population ladders. DaC's
+`large_city` upgrading below its own base is why "upgrade above base" is not
+a rule; an upgrade above `max` is. Both mods clean. **60 is next.**
+
 **Phase 58 is done - will this mod even launch, 2026-09-23, committed and
 uncut.** Each Home card has a *Launch* row: every way the mod folder offers to
 start the game (a `.bat`, the M2TWEOP launcher's `uiCfg.json`, a bare `.cfg`)

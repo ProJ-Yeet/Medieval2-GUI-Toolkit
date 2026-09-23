@@ -2956,6 +2956,13 @@
   .sbkitem input{font-family:var(--mono,monospace);min-width:0}
   .sbkitem .count{grid-column:2}
   .sbkvocab{margin-top:6px}
+  .smxtab{border-collapse:collapse;font-size:12.5px;margin:4px 0 8px}
+  .smxtab th{font-size:11px;color:var(--dim);font-weight:500;text-align:left;padding:2px 6px}
+  .smxtab td{padding:2px 6px;border-top:1px solid var(--edge)}
+  .smxtab td.on{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+  .smxtab input{width:70px;font:inherit;font-size:12.5px;background:var(--panel2);color:var(--ink);
+    border:1px solid var(--edge);border-radius:5px;padding:3px 5px}
+  .smxtab input.bad{border-color:var(--bad,#e55)}
   .cdbhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;
     position:sticky;top:0;z-index:2;background:var(--bg);padding:4px 0 8px}
   .cdbsec h3{font-family:Consolas,monospace;font-size:13px;margin:10px 0 4px;color:var(--dim)}
@@ -3227,6 +3234,7 @@
 <script src="js/ancillaries.js"></script>
 <script src="js/guilds.js"></script>
 <script src="js/campdb.js"></script>
+<script src="js/settlemech.js"></script>
 <script src="js/soundbanks.js"></script>
 <script src="js/portui.js"></script>
 <script src="js/minorfiles.js"></script>

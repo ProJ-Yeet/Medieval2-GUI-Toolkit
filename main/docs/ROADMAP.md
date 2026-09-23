@@ -3022,7 +3022,7 @@ It stays recorded rather than rediscovered.
 | ~~56~~ | ~~M12 - several factions at once, and the faction files as a zip~~ | 5 | M | both - **done 2026-09-23** |
 | ~~57~~ | ~~M16's editor half - the animation editor and asset converter~~ | 5 | L | both - **done 2026-09-23** |
 | ~~58~~ | ~~Will this mod even launch - a readiness row on Home~~ | 4 | S | both - **done 2026-09-23** |
-| 59 | The rest of *Mines and hidden resources*: `descr_settlement_mechanics.xml` and its ceiling | 4 | S | both |
+| ~~59~~ | ~~The rest of *Mines and hidden resources*: `descr_settlement_mechanics.xml` and its ceiling~~ | 4 | S | both - **done 2026-09-23** |
 | 60 | Add a religion | 4 | M | both |
 | 61 | B2 - delete a settlement, create one where none is, move one between mods | 4 | M | beta |
 | 62 | B3 - insert and export one file at a time | 4 | M | both |
@@ -3080,6 +3080,35 @@ Exit: `tests/test_factionbulk.py`, 25 checks. It builds its mod by unpacking
 the zip of ROCSS's real faction files into a temp folder, so the zip is tested
 by being used: three factions in one batch, the ceiling, a doubled slot, one
 record, and one Undo restoring every byte and removing every copied picture.
+
+---
+
+## Phase 59 - `descr_settlement_mechanics.xml`, the rest of Mines and hidden resources - DONE 2026-09-23
+
+A **Settlement mechanics** tab beside Campaign constants: the 42 factor
+modifiers in their three families - population growth (`SPF_`), public order
+(`SOF_`) and income (`SIF_`, where `SIF_MINING` is the mines) - each with its
+pip, city and castle modifiers and its min/max clamp, and the city and castle
+population ladders. An empty box adds a modifier the factor lacks; clearing
+one takes its line out. The half the row named as "the ceiling of 63" was
+Phase 45's and is done there: the hidden-resource count is stated beside
+TWCenter's 63-or-64, which DaC's 75 passes.
+
+**Measured on both mods**: 42 live factors each, none twice, and DaC keeps a
+43rd commented out - so comments are skipped, and anything in one is the mod's
+note. Every level's `upgrade` is at most its `max` and equals the next level's
+`base`. **DaC shows what is not a rule**: its `large_city` has `upgrade` 4000
+below its `base` 16000, and the mod plays - so there is no "upgrade above base"
+check. The checks are the ones that follow from the numbers: a value that is
+not a number (fatal), `pip_min` over `pip_max`, `min` over `max`, an `upgrade`
+over `max` (a threshold the capped population never reaches, so the level is
+never outgrown), and, as a **note**, an `upgrade` that is not the next level's
+`base`. Both mods have no findings. Health reads the file too.
+
+The file is scanned as text and saved as a splice between quotes, like
+`descr_campaign_db.xml`, so its comments, indentation and CRLF are its own.
+
+Exit: `tests/test_settlemech.py`, 21 checks.
 
 ---
 
@@ -4634,7 +4663,7 @@ other seven are below.
 | **B2 - delete a settlement, and move one between mods** | M | Assigning a settlement to a faction already works and B1 added the create. Missing: the delete, whose shape is `stratcamp._delete_splice`; a button on the panel for a province that has none; and the between-mods move, which is probably its own session. Phase 24's warning applies - a settlement that goes has characters, armies and a capital flag hanging off it. |
 | **B3 - insert and export one file at a time** | M | Mylae's tool pushes a file into, or pulls one out of, a mod on its own. Pieces exist - `POST /api/map/export`, 16g's per-faction TGA, `pack.py`'s unit import - and none of it is a general take-this-file-out. The user's own earlier words were "that isnt really needed tbh"; the four-star rating supersedes that. |
 | **Add a religion** | M | We edit the religion list in Minor Files, the EDB conditions and the religion columns on the region form. Missing: `descr_religions_lookup.txt`, and the must-sum-to-100 rule as a guard at **creation** rather than only as a validation afterwards. |
-| **Mines and hidden resources** | S | **Halved on 2026-09-13: the hidden-resources half is Phase 45, done 2026-09-21**, which adds and removes on the EDB's own line with the two joins that make a removal safe. What is left here is `descr_settlement_mechanics.xml` and the ceiling of 63, which Divide and Conquer's 75 disproves as written and which belongs with Phase 39's other ceilings if that session has room. |
+| ~~**Mines and hidden resources**~~ | S | **Finished as Phase 59, 2026-09-23.** **Halved on 2026-09-13: the hidden-resources half is Phase 45, done 2026-09-21**, which adds and removes on the EDB's own line with the two joins that make a removal safe. What is left here is `descr_settlement_mechanics.xml` and the ceiling of 63, which Divide and Conquer's 75 disproves as written and which belongs with Phase 39's other ceilings if that session has room. |
 
 ## Three stars
 
@@ -4643,7 +4672,7 @@ is worth picking up.
 
 | Item | Size | Note |
 |---|---|---|
-| `descr_settlement_mechanics.xml` | S | 187 lines, 10 tags. Named by the Mines tutorial, so it may arrive with that item instead. |
+| ~~`descr_settlement_mechanics.xml`~~ | S | **Done as Phase 59, 2026-09-23.** |
 | `descr_lbc_db.txt` | S | 122 lines. Read by three modules as a faction site and never parsed. |
 | `descr_offmap_models.txt` | S | 619 lines. Same shape: a faction site the audit counts mentions in. Cheap as a `flatrecord` if the audit ever wants the contents. |
 | `descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt` | S | 41, 23 and 6 lines. Third Age Reforged ships no `descr_standards.txt` at all and DaC's advice file is six lines, so this is one small session for all three or none. |

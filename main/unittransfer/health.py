@@ -300,6 +300,17 @@ def _campdb(mod, ctx) -> List[Finding]:
                   "key", "campdb")
 
 
+@source("settlemech", "Settlement mechanics", "settlemech",
+        "descr_settlement_mechanics.xml", "campaign")
+def _settlemech(mod, ctx) -> List[Finding]:
+    from . import settlemech
+    if not settlemech.path_for(mod).exists():
+        return []
+    mf, _ = settlemech.read(mod)
+    return _plain(settlemech.check_file(mf), "settlemech", settlemech.REL, "campaign",
+                  "settlemech", "key", "settlemech")
+
+
 @source("minor", "Rebels, religions, resources, cultures, names", "minor",
         "five campaign files", "campaign")
 def _minor(mod, ctx) -> List[Finding]:

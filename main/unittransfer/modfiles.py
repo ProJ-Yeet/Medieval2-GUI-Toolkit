@@ -37,6 +37,7 @@ MODULES: Dict[str, str] = {
     "strings": "Strings",
     "guilds": "Guilds",
     "campdb": "Campaign constants",
+    "settlemech": "Settlement mechanics",
     "campmap": "Campaign Map",
     # 21, D11. Reads no file of its own - it opens whichever one it is asked
     # for - so it has no row below and its card is always ready.
@@ -102,6 +103,8 @@ KNOWN: List[Known] = [
     Known("export_descr_guilds.txt", "Guilds", ("guilds",)),
     # 38. Every campaign-wide constant, one small XML file.
     Known("descr_campaign_db.xml", "Campaign constants", ("campdb",)),
+    # 59. How a settlement grows, keeps order and pays - and the mines.
+    Known("descr_settlement_mechanics.xml", "Settlement mechanics", ("settlemech",)),
     # The five small campaign files behind one module. All five are required
     # because each one IS a tab: a mod without descr_cultures.txt has no
     # settlements to draw, and saying so on the card is the point of the card.
