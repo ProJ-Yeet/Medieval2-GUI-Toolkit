@@ -9269,6 +9269,31 @@ reads (`arrows_fire_new_set`, `greek_fire_set`, ...), and a unit transfer
 blanks an effect it thinks the destination lacks. Measured here and left as
 its own fix, not widened inside this phase.
 
+**Fixed the same day, as its own commit.** The executables name exactly two
+effect files in their bytes, `descr_effects.txt` and `descr_oil_effect.txt`,
+so the manifest is the list the engine loads (a file it does not list is never
+read) and the oil file is always loaded. `effects.effect_files` is now the one
+list both `effects.index` and `projectiles.effect_sets` read: the mod's
+manifest, else the base game's, else the old four. A listed file the mod does
+not ship is the base game's, read from the install's `data` folder when it is
+on disk and otherwise reported *unread*. ROCSS goes from 112 sets to 344 and
+DaC from 118 to 218; a ROCSS unit into DaC keeps sets like `bullet_model_set`
+that the transfer used to blank (165 projectile lines).
+
+Two decisions came with it. **A name nothing can check is still blanked.**
+When a listed file is the base game's and packed, a set named by neither mod's
+readable files may be in it or may not exist; keeping the name risks the
+dangling reference the placeholder rule exists to prevent, so the blank stays
+and the plan warns `UNCHECKED EFFECTS` with the names and the unread files.
+**An M2EX import never creates an effect file.** A block is appended to the
+destination's file of the same name, and appending to a file the destination
+does not ship created it; a mod's copy of an effect file replaces the base
+game's whole file, so every set the base game declared there would have gone.
+A set that needs a file the destination does not both list and ship stays the
+placeholder, with the reason. `tests/test_effects.py` gains 30 checks, run on
+ROCSS and DaC since Third_Age_Reforged, which its transfer half copies from,
+is no longer installed.
+
 **Measured, and what became a rule:**
 
 * Each mod has one projectile whose `area_effect` is declared nowhere:

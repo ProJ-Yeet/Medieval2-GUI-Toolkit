@@ -451,7 +451,8 @@ class Mod:
         :attr:`effect_sets` answers "does this mod define that set?", which is all
         the placeholder rule needs. Importing a set instead of blanking it needs
         the text, the effects it lists and the files those name - see
-        :mod:`unittransfer.effects`. Cached because reading it is four files.
+        :mod:`unittransfer.effects`. Cached because reading it is every file
+        ``descr_effects.txt`` lists, 12 of them on DaC.
         """
         from . import effects as effects_mod
         return effects_mod.index(self.data)

@@ -227,22 +227,20 @@ def rewrite_projectile_raw(raw: str, *, name_new: Optional[str] = None,
 # line blanked to the placeholder anyway.
 _EFFECT_SET_RE = re.compile(r"^\s*effect_set\s+(?:<[^>]*>\s*)?(\S+)",
                             re.IGNORECASE)
-# files that declare `effect_set <name>` entries a projectile may reference
-_EFFECT_FILES = (
-    "descr_effect_impacts.txt",
-    "descr_arrow_trail_effects.txt",
-    "descr_arrow_trail_custom_effects.txt",
-    "descr_artillery_effects.txt",
-)
 
 
 def effect_sets(data_dir: Path) -> set:
-    """Every ``effect_set`` name defined across a mod's effect files (lowercased)."""
+    """Every ``effect_set`` name the engine loads for a mod (lowercased).
+
+    The files are :func:`unittransfer.effects.effect_files`' list - the
+    manifest ``descr_effects.txt`` names them, and a file the mod does not ship
+    is read from the base game's ``data`` folder when it is on disk. This used
+    to be four fixed files, and a set in any of the other fourteen was blanked
+    as missing.
+    """
+    from . import effects
     names: set = set()
-    for fn in _EFFECT_FILES:
-        p = data_dir / fn
-        if not p.exists():
-            continue
+    for _fn, p in effects.effect_files(data_dir).paths:
         try:
             for line in p.read_text(encoding=ENCODING).splitlines():
                 m = _EFFECT_SET_RE.match(line)

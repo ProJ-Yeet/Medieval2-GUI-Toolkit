@@ -566,7 +566,8 @@ class TransferPlan:
                      "'invisible_placeholder_set' (effects not ported - re-add by hand)")
         for name, action, detail in self.effect_actions:
             verb = {"add": "ADDED to", "reuse": "already in",
-                    "missing": "NOT in the source's"}.get(action, action)
+                    "missing": "NOT in the source's",
+                    "blocked": "left as the placeholder:"}.get(action, action)
             L.append(f"      effect set '{name}' -> {verb} {detail}")
         if self.effect_assets:
             L.append(f"      effect files copied: {len(self.effect_assets)} "
@@ -1005,11 +1006,30 @@ def _resolve_projectiles(plan: "TransferPlan", source: Mod, dest: Mod,
         plan.warnings.append(
             "PROJECTILE IMPORT: special effects are NOT imported - the projectile's "
             "effect/impact lines were pointed at 'invisible_placeholder_set' where the "
-            "destination lacks them. Re-add the real effects manually in "
-            "descr_effect_impacts.txt / the arrow-trail files."
+            "destination lacks them. Re-add the real effects manually in the "
+            "effect files descr_effects.txt lists."
             + ("" if dest.m2ex else
                "  (Mark the destination as M2EX on its Home card and the sets the "
                "source defines are carried across instead.)"))
+        # A name neither mod's readable files declare may still be the base
+        # game's, in a file the destination leaves to it that is packed and so
+        # cannot be read. Not proof it is missing, and not proof it is there:
+        # blanked, as an unknown set always has been, but said apart.
+        unread = dest.effect_index.files.unread
+        src_sets = {e.lower() for e in source.effect_sets}
+        unchecked = sorted({v for sp in to_emit for v in sp.effects.values()
+                            if v and v.lower() not in valid_lower
+                            and v.lower() not in src_sets}, key=str.lower)
+        if unread and unchecked:
+            plan.warnings.append(
+                f"UNCHECKED EFFECTS: {len(unchecked)} effect set(s) "
+                f"({', '.join(unchecked[:4])}{', ...' if len(unchecked) > 4 else ''}) "
+                "are in neither mod's own effect files. They may be the base game's, "
+                f"in one of the {len(unread)} effect file(s) the destination leaves to it "
+                f"({', '.join(unread[:3])}{', ...' if len(unread) > 3 else ''}), which "
+                "are packed and cannot be read here, so they were blanked to be safe. "
+                "If the unit showed them in the source mod, point those lines back at "
+                "the real names by hand.")
         if any(source.projectile_def(a[0]) and source.projectile_def(a[0]).models
                for a in added):
             plan.warnings.append(
@@ -1021,7 +1041,7 @@ def _resolve_projectiles(plan: "TransferPlan", source: Mod, dest: Mod,
 def _plan_effects(plan: "TransferPlan", source: Mod, dest: Mod, to_emit) -> set:
     """Carry the projectiles' effect-sets across, for an M2EX destination only.
 
-    A projectile names effect-SETS, and the sets live in four files this transfer
+    A projectile names effect-SETS, and the sets live in effect files this transfer
     has never touched. Porting one has always meant pointing its effect lines at
     ``invisible_placeholder_set`` and telling the user to re-add the real thing by
     hand, because the alternative is writing into files shared by every projectile
@@ -1050,10 +1070,40 @@ def _plan_effects(plan: "TransferPlan", source: Mod, dest: Mod, to_emit) -> set:
 
     have_sets = {e.lower() for e in dest.effect_sets}
     have_effects = set(dest.effect_index.effects)
-    blocks, missing = effects_mod.resolve(source.effect_index, wanted,
-                                          have_sets, have_effects)
+    src_idx = source.effect_index
+    dest_files = dest.effect_index.files
 
-    for name in dict.fromkeys(w.lower() for w in wanted):
+    # A block goes into the destination's file of the same name, so that file
+    # has to be one the destination both LOADS (its descr_effects.txt lists it)
+    # and SHIPS. Appending to a file it does not ship creates it, and a mod's
+    # copy of an effect file replaces the base game's whole file - every set the
+    # base game declared there would go. A set that needs such a file stays the
+    # placeholder, and says why.
+    def why_not(rel: str) -> str:
+        if not dest_files.loads(rel):
+            return f"the destination's descr_effects.txt does not load {rel}"
+        if not dest_files.ships(rel):
+            return (f"the destination leaves {rel} to the base game, and writing "
+                    "it would replace the base game's whole file")
+        return ""
+
+    placeable: List[str] = []
+    for name in dict.fromkeys(wanted):
+        low = name.lower()
+        bodies = [] if low in have_sets else src_idx.set_of(low)
+        rels = {b.rel for b in bodies}
+        for m in (m for b in bodies for m in b.members()):
+            eb = src_idx.effect_of(m) if m.lower() not in have_effects else None
+            if eb is not None:
+                rels.add(eb.rel)
+        why = next((w for w in (why_not(r) for r in sorted(rels)) if w), "")
+        if why:
+            plan.effect_actions.append((name, "blocked", why))
+        else:
+            placeable.append(name)
+    blocks, missing = effects_mod.resolve(src_idx, placeable, have_sets, have_effects)
+
+    for name in dict.fromkeys(w.lower() for w in placeable):
         if name in have_sets:
             plan.effect_actions.append((name, "reuse", "the destination's own files"))
     for name in missing:
@@ -2436,7 +2486,7 @@ def apply_transfer(plan: TransferPlan) -> Dict:
 
     # ---- 3c2) effect sets the projectiles reference (M2EX destinations) ----
     # Appended to the destination's own file of the same name, because which of
-    # the four files a set lives in is what the set MEANS to the engine (see
+    # the effect files a set lives in is what the set MEANS to the engine (see
     # unittransfer.effects). Grouped so a file is read, appended to and written
     # once however many blocks landed in it.
     if plan.effect_blocks:

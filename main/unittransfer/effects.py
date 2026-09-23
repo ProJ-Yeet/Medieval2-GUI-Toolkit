@@ -7,8 +7,9 @@ effect-SETS::
         effect          small_arrow_trail_set
         end_effect      arrow_impact_ground_set
 
-and each set is declared in one of the four effect files, where it is a list of
-effect names and nothing else::
+and each set is declared in one of the effect files ``descr_effects.txt``
+lists (see :data:`MANIFEST`), where it is a list of effect names and nothing
+else::
 
     effect_set small_arrow_trail_set
     {
@@ -31,8 +32,8 @@ the ``.CAS`` models and textures that actually draw. Carrying one across means
 carrying the set block, every effect block it lists, and the files those name -
 which is what this module finds and :mod:`unittransfer.transfer` emits.
 
-**Which file a block goes back into matters.** The engine loads the four files
-for different jobs: a trail set read out of ``descr_arrow_trail_effects.txt`` is
+**Which file a block goes back into matters.** The engine loads the files for
+different jobs: a trail set read out of ``descr_arrow_trail_effects.txt`` is
 a trail, and the same text in ``descr_effect_impacts.txt`` is not. So every block
 here remembers the data-relative file it was read from, and a transfer writes it
 back into the file of the same name in the destination.
@@ -69,15 +70,26 @@ from . import keyblock as kb
 
 ENCODING = "latin-1"
 
-#: The files that declare ``effect_set`` / ``effect`` blocks. The same four
-#: :func:`unittransfer.projectiles.effect_sets` scans for names, and in the same
-#: order, so the two never disagree about whether a mod defines a set.
+#: The four files this module read before it read the manifest. Now only the
+#: fallback, for a mod with no ``descr_effects.txt`` whose install has none
+#: either on disk.
 FILES = (
     "descr_effect_impacts.txt",
     "descr_arrow_trail_effects.txt",
     "descr_arrow_trail_custom_effects.txt",
     "descr_artillery_effects.txt",
 )
+
+#: **The list the engine actually loads.** ``medieval2.exe`` and ``kingdoms.exe``
+#: name exactly two effect files in their own bytes: this manifest, and
+#: :data:`ALWAYS`. Every other effect file is loaded because the manifest lists
+#: it, so a file it does not list is never read, whatever it declares. Both
+#: installed mods list the same 18, of which the four above were all this
+#: module used to read: 11 of ROCSS's projectile effect sets and 21 of DaC's
+#: live in the other fourteen, and a transfer blanked them as missing.
+MANIFEST = "descr_effects.txt"
+#: loaded by the executable by name, outside the manifest (two sets in both mods)
+ALWAYS = ("descr_oil_effect.txt",)
 
 #: The two block kinds. A set lists effects; an effect draws something.
 SET, EFFECT = "effect_set", "effect"
@@ -208,9 +220,91 @@ def parse_file(path, rel: str = "") -> List[Block]:
     return parse_text(kb.read_text(p, ENCODING), rel or p.name)
 
 
+def base_data(data_dir) -> Optional[Path]:
+    """The base game's ``data`` folder for a mod at ``<install>/mods/<mod>/data``,
+    or ``None`` when the mod is not under an install's ``mods`` folder."""
+    data = Path(data_dir)
+    mods = data.parent.parent
+    if mods.name.lower() != "mods":
+        return None
+    base = mods.parent / "data"
+    try:
+        return base if base.is_dir() and base.resolve() != data.resolve() else None
+    except OSError:
+        return None
+
+
+def _listed(path: Path) -> List[str]:
+    out: List[str] = []
+    try:
+        text = kb.read_text(path, ENCODING)
+    except (OSError, UnicodeError):
+        return out
+    for line in text.splitlines():
+        name = _code(line).strip().replace("\\", "/")
+        if name and name.lower() not in {o.lower() for o in out}:
+            out.append(name)
+    return out
+
+
+@dataclass
+class EffectFiles:
+    """Which effect files the engine loads for a mod, and where each is read.
+
+    ``listed`` comes from the mod's manifest, else the base game's, else the
+    four :data:`FILES`, and always has :data:`ALWAYS`. A listed file the mod
+    does not ship is the base game's: read from the install's ``data`` folder
+    when it is on disk (``from_base``), and otherwise ``unread`` - its sets
+    exist in the game and nothing here can name them, so a name not found is
+    not proof the mod lacks it.
+    """
+    listed: List[str] = field(default_factory=list)
+    source: str = ""                  # "mod", "base" or "default"
+    shipped: List[str] = field(default_factory=list)
+    from_base: List[str] = field(default_factory=list)
+    unread: List[str] = field(default_factory=list)
+    paths: List[Tuple[str, Path]] = field(default_factory=list)
+
+    def loads(self, rel: str) -> bool:
+        return rel.lower() in {x.lower() for x in self.listed}
+
+    def ships(self, rel: str) -> bool:
+        return rel.lower() in {x.lower() for x in self.shipped}
+
+
+def effect_files(data_dir) -> EffectFiles:
+    """The files the engine loads for this mod, each with the path it is read
+    from - the one list :func:`index` and
+    :func:`unittransfer.projectiles.effect_sets` both read, so the two never
+    disagree about whether a mod defines a set."""
+    data = Path(data_dir)
+    base = base_data(data)
+    out = EffectFiles()
+    if (data / MANIFEST).is_file():
+        out.listed, out.source = _listed(data / MANIFEST), "mod"
+    elif base is not None and (base / MANIFEST).is_file():
+        out.listed, out.source = _listed(base / MANIFEST), "base"
+    if not out.listed:
+        out.listed, out.source = list(FILES), "default"
+    for rel in ALWAYS:
+        if not out.loads(rel):
+            out.listed.append(rel)
+    for rel in out.listed:
+        own = data / rel
+        if own.is_file():
+            out.shipped.append(rel)
+            out.paths.append((rel, own))
+        elif base is not None and (base / rel).is_file():
+            out.from_base.append(rel)
+            out.paths.append((rel, base / rel))
+        elif out.source != "default":
+            out.unread.append(rel)
+    return out
+
+
 @dataclass
 class EffectIndex:
-    """Every block a mod's four effect files declare, by name.
+    """Every block the effect files the engine loads for a mod declare, by name.
 
     Names are matched case-insensitively - the engine does, and a mod that writes
     ``Default_Arrow_Trail_Set`` in one file and the lower-case spelling in another
@@ -223,6 +317,8 @@ class EffectIndex:
     """
     sets: Dict[str, List[Block]] = field(default_factory=dict)
     effects: Dict[str, Block] = field(default_factory=dict)
+    #: which files were read, and which the engine loads that could not be
+    files: EffectFiles = field(default_factory=EffectFiles)
 
     def set_of(self, name: str) -> List[Block]:
         """Every body declared for this set name (empty if the mod has none)."""
@@ -233,13 +329,16 @@ class EffectIndex:
 
 
 def index(data_dir) -> EffectIndex:
-    """Read a mod's four effect files into one index.
+    """Read every effect file the engine loads for a mod into one index (see
+    :func:`effect_files`).
 
     Set bodies accumulate in file order; for an effect the first declaration wins.
+    A block read from the base game's copy of a file carries that file's name,
+    like the mod's own.
     """
-    idx = EffectIndex()
-    for fn in FILES:
-        for b in parse_file(Path(data_dir) / fn, fn):
+    idx = EffectIndex(files=effect_files(data_dir))
+    for fn, path in idx.files.paths:
+        for b in parse_file(path, fn):
             if b.kind == SET:
                 idx.sets.setdefault(b.name.lower(), []).append(b)
             else:

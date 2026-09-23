@@ -179,7 +179,7 @@ function aexEffectHtml(){
     <table class="smxtab">${rows}${pending}${add}</table>
     <div class="count">${e.type === 'area_effect_set' ? 'A set fires its members.'
       : 'An <code>effect</code>, <code>ground_effect</code> or <code>floating_effect</code> is an <code>effect_set</code> in one of the files <code>descr_effects.txt</code> lists.'}
-      ${(c.absent_effect_files || []).length ? ` ${c.absent_effect_files.length} of those files are not in this mod; the base game's are read for them.` : ''}</div>
+      ${(c.absent_effect_files || []).length ? ` ${c.absent_effect_files.length} of those files are the base game's and packed, so their sets cannot be checked here.` : ''}</div>
     <div class="trnote">Copy it as <input id="aexCopyName" style="width:200px" placeholder="ae_new_name">
       <button onclick="aexCopy(${e.id})">＋ Copy</button>
       ${w.copy.filter(x => x.like === e.id).map(x => `<span class="count">+ ${esc(x.name)} on save</span>`).join(' ')}</div>

@@ -6,6 +6,19 @@ _Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, o
 unit, appended to the destination's packs with no unpack or repack. Plan,
 measurements and the Discord facts are under *Phases 77-86* in `ROADMAP.md`.
 
+**Effect sets read from every file the engine loads, 2026-09-23, committed and
+uncut.** The follow-up Phase 67 found. The effect index and the placeholder
+rule read the files `descr_effects.txt` lists (18 on both mods, plus
+`descr_oil_effect.txt`, which the executable loads by name) instead of four
+fixed ones: ROCSS goes from 112 sets to 344, DaC from 118 to 218, and a
+transfer stops blanking the 165 ROCSS projectile lines that point at sets DaC
+has outside the four. A listed file the mod does not ship is read from the
+install's `data` folder when it is there; when it is packed (this install),
+a name nothing can check is still blanked, and the plan says so apart. An M2EX
+import never creates an effect file the destination leaves to the base game,
+since a mod's copy replaces the base game's whole file. Write-up under Phase
+67 in `ROADMAP_ARCHIVE.md`.
+
 **Phase 67 is done - area effects, 2026-09-23, committed and uncut.** A tab
 edits `descr_area_effects.xml`, which is battle effects (sickness, fire,
 explosions, split shots, holy auras, sets of them), not the interdict the
@@ -13,7 +26,7 @@ roadmap row said. The one warning on each mod is a projectile naming an area
 effect never declared: ROCSS's `ae_fearcommand_arrow`, DaC's
 `ae_poison_javelin`. Found that the effect-set index reads 4 of the 18 files
 `descr_effects.txt` lists, which blanks real projectile effects on transfer;
-flagged as its own fix. **68 is next.**
+fixed the same day (below). **68 is next.**
 
 **Phase 66 is done - hero abilities, 2026-09-23, committed and uncut.** A tab
 edits `descr_hero_abilities.xml` over a new shared reader (`leafxml.py`, also

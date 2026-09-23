@@ -35,10 +35,11 @@ What the measurement found, and what became a rule:
   effect set, and that is an area effect, not a set: CA's own line, carried by
   both, so a note. DaC's ``ae_naphtha_fire`` names ``nahptha_fire_set``, which
   DaC declares in ``descr_burning_building.txt`` - one of the 14 files the
-  manifest lists that the toolkit's four-file effect index never read. ROCSS
-  does not ship that file, so the base game's is read: a set not found is a
-  note while the manifest names a file the mod does not ship, and a warning
-  once the mod ships every one.
+  manifest lists that the toolkit's effect index read none of until it was
+  taught the manifest (:mod:`effects`). ROCSS does not ship that file, so the
+  base game's is read, and on this install the base game's files are packed:
+  a set not found is a note while a listed file cannot be read, and a warning
+  once every one can.
 * The file's own comment gives four directions (forward, backward, up,
   down); ``horizontal`` is written 11 times across the two mods, grapeshot
   and multishot among them, so it is a fifth and not a finding. Anything
@@ -156,44 +157,21 @@ def _projectiles(data: Path) -> Optional[Set[str]]:
     return {m.lower() for m in re.findall(r"^[ \t]*projectile[ \t]+(\S+)", text, re.M)}
 
 
-_SET_RE = re.compile(r"^[ \t]*effect_set[ \t]+(?:<[^>]*>[ \t]*)?(\S+)", re.M | re.I)
-
-
 def effect_sets(data: Path) -> Tuple[Set[str], List[str]]:
-    """Every ``effect_set`` in the files ``descr_effects.txt`` lists, and the
-    listed files the mod does not ship (the base game's are read for those).
-    With no manifest, the four files :mod:`effects` knows."""
+    """Every ``effect_set`` the engine loads for the mod, and the listed files
+    nothing here can read (the mod does not ship them and the base game's copy
+    is packed). The one file list :mod:`effects` keeps for every reader."""
     from . import effects as fx
-    man = data / "descr_effects.txt"
-    files: List[str] = []
-    if man.is_file():
-        try:
-            for ln in man.read_text(encoding="latin-1").splitlines():
-                name = ln.split(";", 1)[0].strip()
-                if name and name not in files:
-                    files.append(name)
-        except OSError:
-            files = []
-    if not files:
-        files = list(fx.FILES)
-    names: Set[str] = set()
-    absent: List[str] = []
-    for f in files:
-        p = data / f
-        if not p.is_file():
-            absent.append(f)
-            continue
-        try:
-            names |= {m.lower() for m in _SET_RE.findall(p.read_text(encoding="latin-1"))}
-        except OSError:
-            absent.append(f)
-    return names, absent
+    from . import projectiles
+    return projectiles.effect_sets(data), fx.effect_files(data).unread
 
 
 class Refs:
     """What the checks hold an effect against; ``None`` skips that rule."""
 
     def __init__(self, uses=None, projectiles=None, sets=None, absent=None):
+        #: `absent` is the listed effect files nothing here can read: not in
+        #: the mod, and the base game's copy packed
         self.uses: Dict[str, List[Dict]] = uses or {}
         self.projectiles: Optional[Set[str]] = projectiles
         self.sets: Optional[Set[str]] = sets
@@ -297,9 +275,9 @@ def check(doc: lx.Doc, refs: Optional[Refs] = None) -> List[Dict]:
                                "where an effect set from the effect files goes", key, line))
         elif refs.absent:
             out.append(finding("set_absent", "note", f"{who}: effect set {v} is in none of the "
-                               f"mod's effect files; {len(refs.absent)} of the files "
-                               "descr_effects.txt lists are not in the mod, and the base game's "
-                               "may have it", key, line))
+                               f"effect files that can be read; {len(refs.absent)} of the "
+                               "files descr_effects.txt lists are the base game's and packed, "
+                               "and one of those may have it", key, line))
         else:
             near = sorted(s for s in refs.sets if lx.lev(s, v.lower()) <= 2)
             out.append(finding("set_missing", "warn", f"{who}: effect set {v} is in none of the "
