@@ -714,6 +714,20 @@
   .fcart{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;
     color:var(--dim);line-height:1.45;margin-bottom:4px}
   .fcart input{margin-top:2px;flex:0 0 auto}
+  /* 56: several factions at once */
+  .fcrowin{align-items:end}
+  .fcrowbtns{display:flex;gap:6px;align-items:end}
+  .fcrowbtns button,.fcmore{font:inherit;font-size:12px;padding:5px 9px;cursor:pointer;
+    background:var(--panel2);color:var(--ink);border:1px solid var(--edge);border-radius:6px}
+  .fcrowbtns button.on{border-color:var(--accent);color:var(--accent)}
+  .fcmore{margin:0 0 10px}
+  .fctitles{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px;
+    padding:8px;border:1px dashed var(--edge);border-radius:7px}
+  .fctitles code{font-size:10px;color:var(--dim)}
+  .fcbatch{border-top:1px solid var(--edge);padding:5px 0}
+  .fcbatch summary{cursor:pointer;font-size:12.5px}
+  .fcbatch summary .ok{color:var(--good,#5c5)} .fcbatch summary .bad{color:var(--bad,#e55)}
+  a.fcadd{text-decoration:none;margin-left:6px}
   .fcplan{margin-top:14px;border:1px solid var(--edge);border-radius:8px;
     padding:10px 12px;background:var(--panel2)}
   .fcplan .k{font-size:11px;color:var(--dim);text-transform:uppercase;

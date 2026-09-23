@@ -2999,6 +2999,90 @@ mods held to no crash-rule fatal (51 checks).
 
 ---
 
+# Phases 56-73, then 25-27 - the rest of the roadmap, scheduled 2026-09-23
+
+**Asked for by the user on 2026-09-23: "finish all phases remaining in
+roadmap".** With 55 done nothing was scheduled, so everything still open in
+this file became a phase, in the order the file already gave it: the *Future
+roadmap* list by stars, then by size within a rating (small first, as the
+three-star table says), with the two beta items where their four stars put
+them. The three numbered campaign-map phases, 25-27, keep their numbers and go
+last: they are the largest, and 25 and 27 are the only work here that touches
+the network (opt-in, off by default, under the 2026-09-03 amendment).
+
+**Two rows are not phases, and why.** *M17, the crash and validation
+dashboard*, is done: it is Phase 54's Health screen, one door to every check.
+*The `.sd` interface skins* were left unrated on the ballot because the row
+argued against itself - GUI skinning rather than mod data, with a dedicated
+editor already in the archive - and "finish the roadmap" does not rate it.
+It stays recorded rather than rediscovered.
+
+| # | Phase | Stars | Size | Line |
+|---|---|---|---|---|
+| ~~56~~ | ~~M12 - several factions at once, and the faction files as a zip~~ | 5 | M | both - **done 2026-09-23** |
+| 57 | M16's editor half - the animation editor and asset converter | 5 | L | both |
+| 58 | Will this mod even launch - a readiness row on Home | 4 | S | both |
+| 59 | The rest of *Mines and hidden resources*: `descr_settlement_mechanics.xml` and its ceiling | 4 | S | both |
+| 60 | Add a religion | 4 | M | both |
+| 61 | B2 - delete a settlement, create one where none is, move one between mods | 4 | M | beta |
+| 62 | B3 - insert and export one file at a time | 4 | M | both |
+| 63 | `descr_lbc_db.txt` and `descr_offmap_models.txt` | 3 | S | both |
+| 64 | `descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt` | 3 | S | both |
+| 65 | `descr_banners_new.xml` | 3 | M | both |
+| 66 | `descr_hero_abilities.xml` | 3 | M | both |
+| 67 | `descr_area_effects.xml` | 3 | M | both |
+| 68 | `descr_walls.txt` | 3 | M | both |
+| 69 | `descr_character.txt` | 3 | M | both |
+| 70 | T6 - every tile as text | 3 | M | beta |
+| 71 | D12 - the project as a zip, and loaded back | 3 | M | both |
+| 72 | D13 - a horde start for a new faction | 3 | M | beta |
+| 73 | M7 - import a campaign from another mod | 3 | L | beta |
+| 25 | OSM backdrop and coastline tracer | 3 | L | beta |
+| 26 | Map resize, and create from scratch | 3 | L | beta |
+| 27 | Overlay and layer generators | 3 | L | beta |
+
+Releasing stays on request: each phase is committed to master as it lands.
+
+## Phase 56 - M12: several factions at once, and the faction files as a zip - DONE 2026-09-23
+
+The reference tool's `factionBulkDuplicate.js` and `FactionZipExport.jsx`,
+over our own clone (Phase 15g) rather than beside it.
+
+**Several at once.** The *Add a faction* dialog takes more than one row: each
+a slot and a shown name, all copied from one donor. A batch is the clones done
+one after another - each row is planned against the files as the rows before
+it leave them, through an `overlay` threaded into the clone's validation and
+every cloner - and it is written as **one job with one backup set and one
+Undo**. Because each row validates against the roster the earlier rows leave,
+a slot asked for twice is refused naming the row, and so is the row that
+passes the engine's 31 slots: ROCSS uses 30, so a batch of three there stops
+at row 2 unless the mod is marked M2EX.
+
+**Titles, and the shown name in the text.** Each row folds open onto the five
+per-faction keys worth asking for at creation - leader, heir and former leader
+titles, strengths, weaknesses (28 and 27 factions carry the titles on DaC and
+ROCSS, 31 and 30 the strengths). Blank keeps the donor's. The reference's
+*adjective* field is not offered: neither installed mod has an `ADJECTIVE` key
+anywhere in its text, so there is nothing for it to write. **A new checkbox
+puts the new shown name where the donor's stands in its copied text**: DaC's
+Mordor has "Mordor Scout", "Mordor Diplomat" and twenty more, and turning them
+into "Rhûn Scout" is a rename, not invented text - the line 15g drew. Whole
+word only, in any script, so "Mordorim" stays "Mordorim".
+
+**The zip.** *⇩ Faction files* beside the Add button downloads every file a
+faction lives in - the twelve the clone writes, the culture and religion
+lists, the banner definitions and the compiled `expanded.txt.strings.bin` -
+laid out under `data/` so unpacking it over a mod folder puts each one back,
+plus the art of the faction that is open (found the way the clone finds it).
+ROCSS: 16 files, about 0.8 MB; with Venice's art, 380.
+
+Exit: `tests/test_factionbulk.py`, 25 checks. It builds its mod by unpacking
+the zip of ROCSS's real faction files into a temp folder, so the zip is tested
+by being used: three factions in one batch, the ceiling, a doubled slot, one
+record, and one Undo restoring every byte and removing every copied picture.
+
+---
+
 # Phase 55 - M16's playback half: a battle model that moves - DONE 2026-09-23
 
 Asked for by a tester ("the bmdb editor does not show the animation for the
@@ -4443,8 +4527,8 @@ other seven are below.
 
 | Item | Size | What it is |
 |---|---|---|
-| **M17 - a crash and validation dashboard** | M | We have more validators than any of the four reference tools and no single door to them: 32 map rules, the faction audit, the EDB checks, the BMDB audit, the sounds audit, and after Phase 32 five mercenary rules as well. The archive's two crash guides, *GUIDE - Crashes and how to fix them* and *Crash to Desktop*, are the checklist that would give them one front page. |
-| **M12 - bulk faction duplicate, and faction zip export** | M | One plan over `factionclone.py` repeated, plus `pack.py`. Mylae shipped his version in September 2026 and it is in the mirror at `DuplicateFactionModal.jsx`, `FactionZipExport.jsx` and `factionBulkDuplicate.js`, all three triaged port-concept. |
+| ~~**M17 - a crash and validation dashboard**~~ | M | **Done as Phase 54, Health, 2026-09-22.** We have more validators than any of the four reference tools and no single door to them: 32 map rules, the faction audit, the EDB checks, the BMDB audit, the sounds audit, and after Phase 32 five mercenary rules as well. The archive's two crash guides, *GUIDE - Crashes and how to fix them* and *Crash to Desktop*, are the checklist that would give them one front page. |
+| ~~**M12 - bulk faction duplicate, and faction zip export**~~ | M | **Done as Phase 56, 2026-09-23.** One plan over `factionclone.py` repeated, plus `pack.py`. Mylae shipped his version in September 2026 and it is in the mirror at `DuplicateFactionModal.jsx`, `FactionZipExport.jsx` and `factionBulkDuplicate.js`, all three triaged port-concept. |
 | **M16 - animation editor and asset converter** | L | Excluded originally because we could not read `.mesh` or `.cas`. **15a and 16k both now can**, so the exclusion no longer holds on its own terms and the item is live again on the merits. |
 
 ## Four stars

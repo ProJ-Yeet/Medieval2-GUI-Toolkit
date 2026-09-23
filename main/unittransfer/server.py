@@ -2014,6 +2014,19 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(rawtext.read(mod, (q.get("rel") or [""])[0]))
                 except (rawtext.RawError, OSError) as e:
                     return self._err(404, str(e))
+            if u.path == "/api/factions/export_zip":
+                # 56, M12: every faction file, and the art of the slots asked for
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                art = [x for x in (q.get("art") or [""])[0].split(",") if x.strip()]
+                if (q.get("list") or ["0"])[0] == "1":
+                    return self._json({"files": factionclone.export_files(mod, art)})
+                blob, _rels = factionclone.export_zip(mod, art)
+                fname = f"{name}_factions.zip"
+                return self._send(200, blob, "application/zip",
+                                  {"Content-Disposition": f'attachment; filename="{fname}"'})
             if u.path == "/api/factions/audit":
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
@@ -3092,6 +3105,17 @@ class Handler(BaseHTTPRequestHandler):
         """
         try:
             mod = self.registry.get(body["mod"])
+            if isinstance(body.get("rows"), list):
+                # several at once (56, M12): one plan per row, one write, one undo
+                bp = factionclone.plan_many(mod, body)
+                out = {"batch": bp.payload()}
+                if action == "clone_plan" or not out["batch"]["ok"]:
+                    if bp.errors:
+                        out["error"] = "; ".join(bp.errors)
+                    return out
+                out.update(factionclone.apply_many(bp))
+                self.registry.invalidate(body["mod"])
+                return out
             plan = factionclone.plan(mod, body)
         except (KeyError, OSError) as e:
             return {"error": str(e)}

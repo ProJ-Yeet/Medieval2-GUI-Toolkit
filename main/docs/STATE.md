@@ -1,7 +1,16 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-23 - **Phase 55 is done: the Models viewer plays a model's animations**, from the loose files a mod ships, with the rest listed as packed. Its first job found that 55a read every animated file 12 bytes a node late (the pivots come after the keys), which was the whole of the "which component is w" question: w is last. Latest cut is still **v2.3.7 and beta 2026-09-22**; since then, a texture import landing where its entry points, side-panel typing on the campaign map, the campaign-constants findings, routes and the trail, and Phase 55b are committed and uncut. **Nothing is queued behind 55**; a `pack.dat` reader is the natural follow-up and its own question. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 25-27, table under *Phases 56-73* in `ROADMAP.md`. **56 is done** (several factions at once, and the faction files as a zip); **57 is next** (M16's editor half). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is still **v2.3.7 and beta 2026-09-22**; everything since is committed and uncut. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 56 is done - several factions at once, and the faction files as a zip,
+2026-09-23, committed and uncut.** The first of the phases scheduled when the
+user asked for the rest of the roadmap (56-73, then 25-27). *Add a faction*
+takes several rows from one donor, planned one on top of the other and written
+as one job with one Undo; each row can set its titles and strengths, and a
+checkbox turns the donor's name in its copied text into the new one ("Mordor
+Scout" to "Rhûn Scout"). *⇩ Faction files* downloads every faction file, and
+the open faction's art, as a zip laid out under `data/`. **57 is next.**
+
 **Phase 55b is done - a battle model that moves, 2026-09-23, committed and
 uncut.** The viewer's new *Animation* section lists every action the entry's
 skeletons name, plays the ones the mod ships loose (DaC's MTW2_Mace: 156 of

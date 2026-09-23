@@ -88,7 +88,11 @@ function renderFactions(){
           ${facFull() ? 'disabled' : ''} title="${facFull()
             ? 'Every faction slot the engine has is already used'
             : 'Add a faction by copying one that already works, into all twelve files that name a slot'}"
-          >＋ Add a faction</button>` : ''}</div>
+          >＋ Add a faction</button>` : ''}
+        <a class="fcadd" href="/api/factions/export_zip?mod=${enc(state.src)}${
+          f.sel ? '&art=' + enc(fcSlotOf(f.sel)) : ''}" download
+          title="Every file a faction lives in, as one zip laid out under data/${
+            f.sel ? ', with the art of the faction you have open' : ''}">⇩ Faction files</a></div>
       <div class="trrows">${rows.map(facRowHtml).join('')
         || '<div class="count" style="padding:8px">No faction matches.</div>'}</div>
     </div>
@@ -633,11 +637,25 @@ function facCloneOpen(source){
   if(!f || !f.factions || !f.factions.length) return;
   const rows = f.factions.filter(r => r.slot !== 'slave');
   const donor = source || f.sel || (rows[0] && rows[0].name) || '';
-  f.clone = {source: fcSlotOf(donor), name: '', label: '', art: true,
-             plan: null, busy: false, err: ''};
+  // 56 (M12): one row is the dialog as it always was; more rows are a batch,
+  // planned one on top of the other and written as one job with one Undo
+  f.clone = {source: fcSlotOf(donor), rows: [fcRowNew()], art: true, rename: true,
+             plan: null, batch: null, busy: false, err: ''};
   facCloneRender();
   overlay.classList.add('open');
 }
+
+function fcRowNew(){ return {name: '', label: '', titles: {}, open: false}; }
+
+/* The five text keys worth asking for at creation - factionclone.TITLE_KEYS.
+   Blank leaves the donor's value, which is what a clone does everywhere else. */
+const FC_TITLES = [
+  ['leader', 'Leader title', 'EMT_X_FACTION_LEADER_TITLE'],
+  ['heir', 'Heir title', 'EMT_X_FACTION_HEIR_TITLE'],
+  ['former', 'Former leader title', 'EMT_X_FORMER_FACTION_LEADER_TITLE'],
+  ['strength', 'Strengths', 'X_STRENGTH'],
+  ['weakness', 'Weaknesses', 'X_WEAKNESS'],
+];
 
 /* The head line may carry a modifier after a comma (`egypt, spawned_on_event`)
    and everything else in a mod points at the part before it - the same rule as
@@ -657,7 +675,7 @@ function facClonePaint(){
   if(!host) return facCloneRender();          // dialog not up: draw it whole
   host.innerHTML = facClonePlanHtml();
   const go = document.querySelector('.foot .primary');
-  if(go) go.disabled = !(c.plan && c.plan.ok && !c.busy);
+  if(go) go.disabled = !(facCloneReady() && !c.busy);
   const note = document.getElementById('fcNote');
   if(note) note.textContent = c.busy ? 'Working out what would change…' : '';
 }
@@ -667,7 +685,7 @@ function facCloneRender(){
   if(!c) return;
   // whatever was focused has to come back after innerHTML replaces it
   const live = document.activeElement || {};
-  const keep = (live.id === 'fcName' || live.id === 'fcLabel') ? live.id : '';
+  const keep = (live.id && /^fc(Name|Label|T)/.test(live.id)) ? live.id : '';
   const at = keep ? live.selectionStart : 0;
   const rows = f.factions.filter(r => r.slot !== 'slave');
   const p = c.plan || null;
@@ -690,33 +708,54 @@ function facCloneRender(){
               r.slot === c.source ? ' selected' : ''
             }>${esc(r.label)}</option>`).join('')}
           </select></label>
-        <label class="v3f"><span>New faction slot</span>
-          <input type="text" id="fcName" value="${q1(esc(c.name))}"
-            placeholder="e.g. gondor_south" spellcheck="false"
-            oninput="facCloneSet('name', this.value)"></label>
-        <label class="v3f"><span>Shown name <span class="count">(optional)</span></span>
-          <input type="text" id="fcLabel" value="${q1(esc(c.label))}"
-            placeholder="what the game calls it"
-            oninput="facCloneSet('label', this.value)"></label>
+        <span></span><span></span>
       </div>
+      ${c.rows.map((r, i) => `<div class="fcgrid fcrowin">
+        <label class="v3f"><span>${c.rows.length > 1 ? `New faction ${i + 1}` : 'New faction slot'}</span>
+          <input type="text" id="fcName${i}" value="${q1(esc(r.name))}"
+            placeholder="e.g. gondor_south" spellcheck="false"
+            oninput="facCloneSet('name', this.value, ${i})"></label>
+        <label class="v3f"><span>Shown name <span class="count">(optional)</span></span>
+          <input type="text" id="fcLabel${i}" value="${q1(esc(r.label))}"
+            placeholder="what the game calls it"
+            oninput="facCloneSet('label', this.value, ${i})"></label>
+        <span class="fcrowbtns">
+          <button onclick="facCloneFold(${i})" class="${r.open ? 'on' : ''}"
+            title="Leader and heir titles, strengths and weaknesses">Titles${
+              Object.values(r.titles).some(v => v) ? ' ●' : ''}</button>
+          ${c.rows.length > 1 ? `<button onclick="facCloneDrop(${i})" title="Take this one out">✕</button>` : ''}
+        </span>
+        ${r.open ? `<div class="fctitles">${FC_TITLES.map(([k, lab, key]) =>
+          `<label class="v3f"><span>${lab} <code>${esc(key.replace('X', (r.name || 'slot').toUpperCase()))}</code></span>
+            <input type="text" id="fcT${i}_${k}" value="${q1(esc(r.titles[k] || ''))}"
+              placeholder="blank keeps the donor's" oninput="facCloneTitle(${i}, '${k}', this.value)"></label>`
+        ).join('')}</div>` : ''}
+      </div>`).join('')}
+      <button class="fcmore" onclick="facCloneRow()" title="Add several factions from the same donor in one go - one plan, one write, one Undo">＋ Another faction</button>
       <div class="count fcintro">
         The slot is what every other file points at, so it has to be one bare
         word: lower case, digits and underscores. It cannot be renamed later
-        without orphaning every line that names it. The shown name is the only
-        text filled in for you - the faction's other thirty text entries stay
-        the donor's until you edit them.
+        without orphaning every line that names it. The shown name and any
+        titles you give are filled in for you, and with the second box below
+        ticked the donor's name in its text becomes the new one; every other
+        text entry stays the donor's until you edit it.
       </div>
       <label class="fcart"><input type="checkbox"${c.art ? ' checked' : ''}
         onchange="facCloneSet('art', this.checked)">
         <span>Copy the art too - symbols, banners, captain cards and the unit
         card folders, each renamed for the new slot</span></label>
+      <label class="fcart"><input type="checkbox"${c.rename ? ' checked' : ''}
+        onchange="facCloneSet('rename', this.checked)">
+        <span>Where the donor's shown name stands in its text, put the new one -
+        "Mordor Scout" becomes "Rhûn Scout". Only with a shown name, and only the
+        whole word.</span></label>
       <div id="fcPlan">${facClonePlanHtml()}</div>
     </div>
     <div class="foot">
       <span class="count" id="fcNote">${c.busy ? 'Working out what would change…' : ''}</span>
       <button onclick="facCloneClose()">Cancel</button>
-      <button class="primary"${(p && p.ok && !c.busy) ? '' : ' disabled'}
-        onclick="facCloneApply()">Create faction</button>
+      <button class="primary"${(facCloneReady() && !c.busy) ? '' : ' disabled'}
+        onclick="facCloneApply()">${c.rows.length > 1 ? `Create ${c.rows.length} factions` : 'Create faction'}</button>
     </div>`;
   if(keep){
     const box = document.getElementById(keep);
@@ -724,12 +763,76 @@ function facCloneRender(){
   }
 }
 
+function facCloneReady(){
+  const c = state.fac && state.fac.clone;
+  if(!c) return false;
+  return c.rows.length > 1 ? !!(c.batch && c.batch.ok) : !!(c.plan && c.plan.ok);
+}
+function facCloneRow(){
+  const c = state.fac.clone;
+  if(!c) return;
+  c.rows.push(fcRowNew());
+  facCloneRender();
+  const box = document.getElementById('fcName' + (c.rows.length - 1));
+  if(box) box.focus();
+  facCloneSoon(0);
+}
+function facCloneDrop(i){
+  const c = state.fac.clone;
+  if(!c || c.rows.length < 2) return;
+  c.rows.splice(i, 1);
+  facCloneRender();
+  facCloneSoon(0);
+}
+function facCloneFold(i){
+  const c = state.fac.clone;
+  if(!c) return;
+  c.rows[i].open = !c.rows[i].open;
+  facCloneRender();
+}
+function facCloneTitle(i, k, v){
+  const c = state.fac.clone;
+  if(!c) return;
+  c.rows[i].titles[k] = v;
+  facCloneSoon(280);
+}
+function facCloneSoon(ms){
+  clearTimeout(state.fac._fcT);
+  state.fac._fcT = setTimeout(facClonePreview, ms);
+}
+
 /* The plan, file by file. A file that would gain nothing is shown greyed with
    the reason rather than hidden: "descr_character.txt - sicily is not named in
    it" is a fact about the mod worth reading before you write, not noise. */
 function facClonePlanHtml(){
-  const c = state.fac.clone, p = c.plan;
+  const c = state.fac.clone;
   if(c.err) return `<div class="w-warn fcmsg">${esc(c.err)}</div>`;
+  if(c.rows.length > 1) return facCloneBatchHtml(c.batch);
+  return facClonePlanBody(c.plan);
+}
+
+/* A batch: one line per new faction, each opening onto its own plan, and the
+   files the whole job writes - each once, as the last row leaves it. */
+function facCloneBatchHtml(b){
+  if(!b) return `<div class="count fcintro">Name the new factions to see exactly
+    which files would change, and by how much.</div>`;
+  const rows = b.rows || [];
+  return `<div class="fcplan">
+    <div class="k">What would be written <span class="count">${rows.length} factions ·
+      ${(b.files || []).length} file(s)${b.asset_files ? ` · ${b.asset_files} art file(s)` : ''}
+      · one backup, one Undo</span></div>
+    ${(b.errors || []).length ? `<div class="w-warn fcmsg">${b.errors.map(esc).join('<br>')}</div>` : ''}
+    ${rows.map(r => `<details class="fcbatch"><summary>
+        <span class="${r.ok ? 'ok' : 'bad'}">${r.ok ? '✓' : '✗'}</span>
+        <b>${esc(r.new || 'unnamed')}</b> <span class="count">from ${esc(r.source)} ·
+        ${(r.files || []).filter(x => x.written).length} file(s)${
+          r.asset_files ? ` · ${r.asset_files} art file(s)` : ''}${
+          (r.art_gaps || []).length ? ` · ${r.art_gaps.length} art place(s) empty` : ''}</span>
+      </summary>${facClonePlanBody(r)}</details>`).join('')}
+  </div>`;
+}
+
+function facClonePlanBody(p){
   if(!p) return `<div class="count fcintro">Name the new faction to see exactly
     which files would change, and by how much.</div>`;
   if((p.errors || []).length)
@@ -769,21 +872,21 @@ function facClonePlanHtml(){
 
 function facCloneClose(){ if(state.fac) state.fac.clone = null; closeModal(); }
 
-function facCloneSet(key, value){
+function facCloneSet(key, value, i){
   const c = state.fac.clone;
   if(!c) return;
   // the slot is typed as it will be written: one lower-case word
-  c[key] = (key === 'name')
-    ? String(value).toLowerCase().replace(/[^a-z0-9_]+/g, '_') : value;
+  if(key === 'name') value = String(value).toLowerCase().replace(/[^a-z0-9_]+/g, '_');
+  if(key === 'name' || key === 'label') c.rows[i || 0][key] = value;
+  else c[key] = value;
   facCloneRender();
-  clearTimeout(state.fac._fcT);
-  state.fac._fcT = setTimeout(facClonePreview, key === 'art' ? 0 : 280);
+  facCloneSoon((key === 'art' || key === 'rename' || key === 'source') ? 0 : 280);
 }
 
 async function facClonePreview(){
   const c = state.fac && state.fac.clone;
   if(!c) return;
-  if(!c.name){ c.plan = null; c.err = ''; facClonePaint(); return; }
+  if(!c.rows.some(r => r.name)){ c.plan = null; c.batch = null; c.err = ''; facClonePaint(); return; }
   c.busy = true; c.err = '';
   const note = document.getElementById('fcNote');
   if(note) note.textContent = 'Working out what would change…';
@@ -793,22 +896,31 @@ async function facClonePreview(){
   finally{ c.busy = false; }
   if(!state.fac || state.fac.clone !== c) return;   // the dialog moved on
   c.plan = r.plan || null;
+  c.batch = r.batch || null;
   // an error the plan already carries is drawn in place; anything else is ours
-  c.err = (r.error && !(r.plan && (r.plan.errors || []).length)) ? r.error : '';
+  const drawn = (r.plan && (r.plan.errors || []).length) || (r.batch && (r.batch.errors || []).length);
+  c.err = (r.error && !drawn) ? r.error : '';
   facClonePaint();
 }
 
 function facCloneBody(){
   const c = state.fac.clone;
-  return {mod: state.src, source: c.source, new: c.name,
-          label: c.label, art: !!c.art};
+  const titles = r => Object.fromEntries(Object.entries(r.titles).filter(([, v]) => v && v.trim()));
+  if(c.rows.length > 1)
+    return {mod: state.src, source: c.source, art: !!c.art, rename: !!c.rename,
+            rows: c.rows.map(r => ({new: r.name, label: r.label, titles: titles(r)}))};
+  const r = c.rows[0];
+  return {mod: state.src, source: c.source, new: r.name, label: r.label,
+          titles: titles(r), art: !!c.art, rename: !!c.rename};
 }
 
 async function facCloneApply(){
-  const f = state.fac, c = f.clone, p = c && c.plan;
-  if(!p || !p.ok || c.busy) return;
+  const f = state.fac, c = f.clone;
+  if(!c || c.busy || !facCloneReady()) return;
+  if(c.rows.length > 1) return facCloneApplyMany();
+  const p = c.plan, name = c.rows[0].name;
   const files = (p.files || []).filter(x => x.written);
-  if(!confirm(`Add faction ${c.name}, copied from ${c.source}?\n\n`
+  if(!confirm(`Add faction ${name}, copied from ${c.source}?\n\n`
     + files.map(x => `  ${x.rel}  +${x.count}`).join('\n')
     + (p.asset_files ? `\n  ${p.asset_files} art file(s), copied and renamed` : '')
     // the review files live in `review`, not in the note, so this dialog names
@@ -830,8 +942,8 @@ async function facCloneApply(){
   try{ res = await api.post('/api/factions/clone_apply', facCloneBody()); }
   finally{ c.busy = false; }
   if(res.error){ c.err = res.error; facCloneRender(); toast('✗ ' + res.error, 6000); return; }
-  activity('added faction', `${c.name}, cloned from ${c.source} in ${state.src}`);
-  const keep = c.name;
+  activity('added faction', `${name}, cloned from ${c.source} in ${state.src}`);
+  const keep = name;
   f.clone = null;
   closeModal();
   toast(`Added ${keep} - ${res.files.length} file(s), ${res.asset_files} art file(s). `
@@ -842,4 +954,27 @@ async function facCloneApply(){
   if(state.mode === 'factions'){ await loadFactions(); facOpen(keep); return; }
   try{ await facFetch(f.mod); }catch(e){}
   if(state.mode === 'campmap' && typeof cjPickFaction === 'function') cjPickFaction(keep);
+}
+
+async function facCloneApplyMany(){
+  const f = state.fac, c = f.clone, b = c.batch;
+  const names = c.rows.map(r => r.name);
+  if(!confirm(`Add ${names.length} factions, each copied from ${c.source}?\n\n  `
+    + names.join('\n  ') + `\n\n${(b.files || []).length} file(s) are written, each once`
+    + (b.asset_files ? `, and ${b.asset_files} art file(s) copied and renamed` : '')
+    + '.\n\nEvery file is backed up first, and 🕑 Log undoes all of them in one go.')) return;
+  c.busy = true;
+  facCloneRender();
+  let res;
+  try{ res = await api.post('/api/factions/clone_apply', facCloneBody()); }
+  finally{ c.busy = false; }
+  if(res.error){ c.err = res.error; facCloneRender(); toast('✗ ' + res.error, 6000); return; }
+  activity('added factions', `${names.join(', ')}, cloned from ${c.source} in ${state.src}`);
+  f.clone = null;
+  closeModal();
+  toast(`Added ${names.length} factions - ${res.files.length} file(s), ${res.asset_files} art file(s). `
+        + '🕑 Log can undo all of them.', 6000);
+  if(typeof fauStale === 'function') fauStale();
+  if(state.mode === 'factions'){ await loadFactions(); facOpen(names[0]); return; }
+  try{ await facFetch(f.mod); }catch(e){}
 }

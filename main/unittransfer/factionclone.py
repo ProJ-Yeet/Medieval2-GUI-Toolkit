@@ -76,7 +76,7 @@ import re
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from . import factions as fac
 from . import flatrecord as fr
@@ -318,7 +318,38 @@ def clone_names(text: str, src: str, new: str) -> Tuple[str, int]:
     return clone_paragraph(text, src, new, kw="faction:")
 
 
-def clone_expanded(text: str, src: str, new: str, label: str = "") -> Tuple[str, int]:
+#: The five per-faction text keys worth being asked for at creation (Phase 56,
+#: M12), as ``body["titles"]`` names them -> the key, with ``{N}`` the slot in
+#: upper case. Measured on DaC and ROCSS: 28 and 27 factions carry the three
+#: titles, 31 and 30 the strengths and weaknesses. No ``ADJECTIVE`` key exists
+#: in either mod's text, so the reference tool's adjective field has nothing
+#: to write here and is not offered.
+TITLE_KEYS: Dict[str, str] = {
+    "leader": "EMT_{N}_FACTION_LEADER_TITLE",
+    "heir": "EMT_{N}_FACTION_HEIR_TITLE",
+    "former": "EMT_{N}_FORMER_FACTION_LEADER_TITLE",
+    "strength": "{N}_STRENGTH",
+    "weakness": "{N}_WEAKNESS",
+}
+
+
+def _shown_name(text: str, up: str) -> str:
+    """The value of the bare ``{SLOT}`` key - what the game calls the faction."""
+    m = re.search(r"^[ \t]*\{" + re.escape(up) + r"\}[ \t]*([^\n]*)$", text, re.M)
+    return m.group(1).strip() if m else ""
+
+
+def _swap_name(value: str, old: str, new: str) -> Tuple[str, int]:
+    """``old`` as a whole word in ``value`` -> ``new``. Whole word, because a
+    donor called "Rohan" must not turn "Rohanrim" into something else; and a
+    word is letters in any script, since DaC's names carry accents."""
+    rx = re.compile(r"(?<![^\W\d_])" + re.escape(old) + r"(?![^\W\d_])")
+    return rx.subn(new, value)
+
+
+def clone_expanded(text: str, src: str, new: str, label: str = "",
+                   rename: bool = False, titles: Optional[Dict[str, str]] = None
+                   ) -> Tuple[str, int]:
     """``text/expanded.txt``: the shown name and every ``EMT_*`` key.
 
     A faction's text keys are its slot in UPPER CASE inside a brace - ``{SICILY}``,
@@ -332,9 +363,19 @@ def clone_expanded(text: str, src: str, new: str, label: str = "") -> Tuple[str,
     thirty keys stay the donor's until they are edited - ``{EMT_X_SPY}`` is a
     sentence, not a name, and guessing at thirty of them from one word would put
     text in the game nobody wrote.
+
+    Two things are added for Phase 56 (M12), both only when asked. ``rename``
+    puts the new shown name wherever the donor's shown name stands as a word
+    in the copied values - DaC's Mordor has "Mordor Scout", "Mordor Diplomat"
+    and twenty more, which is a rename and not a guess. ``titles`` sets the
+    keys in :data:`TITLE_KEYS` outright, adding any the donor lacks.
     """
     up_s, up_n = src.upper(), new.upper()
     shown = str(label or "").strip()
+    donor_shown = _shown_name(text, up_s) if (rename and shown) else ""
+    forced = {TITLE_KEYS[k].replace("{N}", up_n): str(v).strip()
+              for k, v in (titles or {}).items()
+              if k in TITLE_KEYS and str(v or "").strip()}
     key = re.compile(r"^([ \t]*\{)([A-Z0-9_]*" + re.escape(up_s) + r"[A-Z0-9_]*)(\}[^\n]*)$",
                      re.M)
     tok = re.compile(_key_tok(up_s))
@@ -348,12 +389,22 @@ def clone_expanded(text: str, src: str, new: str, label: str = "") -> Tuple[str,
             continue
         seen.add(made)
         tail = m.group(3)
+        gap = re.match(r"\}([ \t]*)", tail)
+        sep = gap.group(1) if gap else "\t"
         if shown and made == up_n:
             # the shown name, and only it: keep the file's own separator between
             # the key and its value so the column still lines up
-            gap = re.match(r"\}([ \t]*)", tail)
-            tail = "}" + (gap.group(1) if gap else "\t") + shown
+            tail = "}" + sep + shown
+        elif made in forced:
+            tail = "}" + sep + forced[made]
+        elif donor_shown and donor_shown != shown:
+            tail = "}" + _swap_name(tail[1:], donor_shown, shown)[0]
         adds.append(m.group(1) + made + tail)
+    # a title the donor never had is still the one asked for
+    for key, value in forced.items():
+        if key not in seen:
+            seen.add(key)
+            adds.append("{" + key + "}\t" + value)
     if not adds:
         return text, 0
     # anything already there is the file's, not ours to duplicate
@@ -634,13 +685,17 @@ class ClonePlan:
         }
 
 
-def _validate(mod, src: str, new: str, p: ClonePlan) -> Optional[fr.RecordFile]:
-    """Everything that can be wrong before a byte is planned."""
+def _validate(mod, src: str, new: str, p: ClonePlan,
+              overlay: Optional[Dict[str, str]] = None) -> Optional[fr.RecordFile]:
+    """Everything that can be wrong before a byte is planned. In a batch the
+    roster is the one the rows before this one leave, so a slot two rows both
+    ask for is caught, and so is the row that takes the last free slot."""
     path = fac.path_for(mod)
-    if not path.is_file():
+    ahead = (overlay or {}).get(fac.REL)
+    if ahead is None and not path.is_file():
         p.errors.append(f"{getattr(mod, 'name', '?')} has no {fac.REL}")
         return None
-    rf = fac.parse_file(path)
+    rf = fac.parse_text(ahead) if ahead is not None else fac.parse_file(path)
     slots = {fac.slot_of(r.name) for r in rf.records}
     if src not in slots:
         p.errors.append(f"{src} is not a faction in this mod")
@@ -831,20 +886,28 @@ def review_mentions(mod, src: str) -> List[Dict]:
     return out
 
 
-def clone_file(data: Path, job: Job, src: str, new: str, label: str = "") -> FileEdit:
+def clone_file(data: Path, job: Job, src: str, new: str, label: str = "",
+               overlay: Optional[Dict[str, str]] = None,
+               text_opts: Optional[Dict] = None) -> FileEdit:
     """One job's cloner run over one file: the new text, or why there is none.
 
     Shared by the clone and by 21's repair (:mod:`unittransfer.factionaudit`),
     which runs the same cloner for a slot that already exists and is missing
     only this file's record. Never raises; an unreadable file comes back with
     ``skipped`` saying so.
+
+    ``overlay`` is the text a batch (:func:`plan_many`) has already written to
+    this file for an earlier row, read instead of the disk so each clone lands
+    on top of the one before it. ``text_opts`` is ``rename`` and ``titles`` for
+    :func:`clone_expanded`.
     """
     path = data / job.rel
-    if not path.is_file():
+    ahead = (overlay or {}).get(job.rel)
+    if ahead is None and not path.is_file():
         return FileEdit(job.rel, job.label, note=job.note,
                         skipped="this mod has no such file")
     try:
-        original = kb.read_text(path, job.encoding)
+        original = ahead if ahead is not None else kb.read_text(path, job.encoding)
         # Every cloner below anchors on `$`, and in a CRLF file `$` sits
         # AFTER the carriage return - so `[ \t]*$` never reaches the end of
         # a line and the paragraph, braced and names cloners all match
@@ -861,7 +924,7 @@ def clone_file(data: Path, job: Job, src: str, new: str, label: str = "") -> Fil
         if job.how == "roster":
             after, n = clone_roster(before, src, new)
         elif job.how == "expanded":
-            after, n = clone_expanded(before, src, new, label)
+            after, n = clone_expanded(before, src, new, label, **(text_opts or {}))
         elif job.how == "list":
             after, n = clone_list_lines(before, src, new, job.kw)
         elif job.how == "braced_list":
@@ -890,12 +953,14 @@ def clone_file(data: Path, job: Job, src: str, new: str, label: str = "") -> Fil
     return edit
 
 
-def plan(mod, body: dict) -> ClonePlan:
-    """Work out every file and every copy, without touching the disk."""
+def plan(mod, body: dict, overlay: Optional[Dict[str, str]] = None) -> ClonePlan:
+    """Work out every file and every copy, without touching the disk.
+
+    ``overlay`` is for :func:`plan_many` - see :func:`clone_file`."""
     src = str(body.get("source") or "").strip().lower()
     new = str(body.get("new") or body.get("faction") or "").strip().lower()
     p = ClonePlan(mod=mod, source=src, new=new)
-    rf = _validate(mod, src, new, p)
+    rf = _validate(mod, src, new, p, overlay)
     if rf is None or p.errors:
         return p
     slots = sorted({fac.slot_of(r.name) for r in rf.records})
@@ -908,11 +973,13 @@ def plan(mod, body: dict) -> ClonePlan:
     want_art = bool(body.get("art", True))
     data = Path(mod.data)
 
+    text_opts = {"rename": bool(body.get("rename")),
+                 "titles": body.get("titles") if isinstance(body.get("titles"), dict) else None}
     for job in JOBS:
-        edit = clone_file(data, job, src, new, label)
+        edit = clone_file(data, job, src, new, label, overlay, text_opts)
         p.edits.append(edit)
         if edit.skipped and job.required and not edit.count:
-            if not (data / job.rel).is_file():
+            if not (data / job.rel).is_file() and job.rel not in (overlay or {}):
                 p.errors.append(f"{getattr(mod, 'name', '?')} has no {job.rel}")
             elif edit.skipped.startswith("could not be read"):
                 p.errors.append(f"{job.rel}: {edit.skipped}")
@@ -1055,3 +1122,143 @@ def apply(p: ClonePlan) -> Dict:
     return {"id": tid, "faction": p.new, "source": p.source,
             "files": written, "asset_files": copied_files,
             "notes": list(p.notes), "art_gaps": list(p.art), "record": rec}
+
+
+# ---------------------------------------------------------------------------
+# several at once (Phase 56, M12)
+
+
+@dataclass
+class BatchPlan:
+    """Several clones planned one on top of the other, written as one job.
+
+    Each row is an ordinary :class:`ClonePlan`, planned against the files as
+    the rows before it leave them (:func:`clone_file`'s ``overlay``), so the
+    batch is exactly the clones done one after another - with one backup set
+    and one Undo instead of one per faction."""
+    mod: object = None
+    rows: List[ClonePlan] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
+    #: rel -> (final text, encoding, label): each file once, as the last row left it
+    final: Dict[str, Tuple[str, str, str]] = field(default_factory=dict)
+
+    def payload(self) -> Dict:
+        rows = [r.payload() for r in self.rows]
+        return {"rows": rows, "errors": list(self.errors),
+                "files": sorted(self.final),
+                "asset_files": sum(r["asset_files"] for r in rows),
+                "ok": bool(self.rows) and not self.errors
+                and all(r["ok"] for r in rows)}
+
+
+#: More than this in one batch is a typo in a pasted list, not a plan.
+BATCH_LIMIT = 40
+
+
+def plan_many(mod, body: dict) -> BatchPlan:
+    """``body["rows"]``: each ``{new, label, source?, titles?}``, the source
+    defaulting to ``body["source"]``; ``art`` and ``rename`` apply to all."""
+    bp = BatchPlan(mod=mod)
+    rows = body.get("rows") if isinstance(body.get("rows"), list) else []
+    if not rows:
+        bp.errors.append("name at least one new faction")
+        return bp
+    if len(rows) > BATCH_LIMIT:
+        bp.errors.append(f"{len(rows)} factions in one go is more than the "
+                         f"{BATCH_LIMIT} this will plan at once")
+        return bp
+    overlay: Dict[str, str] = {}
+    for i, row in enumerate(rows):
+        one = {"source": row.get("source") or body.get("source"),
+               "new": row.get("new"), "label": row.get("label"),
+               "titles": row.get("titles"),
+               "art": body.get("art", True), "rename": body.get("rename")}
+        p = plan(mod, one, overlay)
+        bp.rows.append(p)
+        if p.errors:
+            bp.errors.extend(f"row {i + 1} ({p.new or 'unnamed'}): {e}" for e in p.errors)
+            continue
+        for e in p.written():
+            overlay[e.rel] = e.text
+            bp.final[e.rel] = (e.text, e.encoding, e.label)
+    # two rows can plan the same art destination only by sharing a slot, which
+    # the roster check already refused; the copies are otherwise independent
+    return bp
+
+
+def apply_many(bp: BatchPlan) -> Dict:
+    """Write a batch: each file once, every row's art, one record to undo."""
+    if bp.errors or not bp.rows:
+        raise ValueError("cannot apply: " + ("; ".join(bp.errors) or "nothing planned"))
+    merged = ClonePlan(mod=bp.mod, source=",".join(sorted({r.source for r in bp.rows})),
+                       new=",".join(r.new for r in bp.rows), action="clone")
+    for rel, (text, enc, label) in bp.final.items():
+        merged.edits.append(FileEdit(rel, label, text=text, encoding=enc, count=1))
+    for r in bp.rows:
+        merged.assets.extend(r.assets)
+        merged.changes.append(f"{r.source} -> {r.new}")
+        merged.warnings.extend(r.warnings)
+        merged.notes.extend(n for n in r.notes if n not in merged.notes)
+        merged.art.extend(r.art)
+    out = apply(merged)
+    out["factions"] = [r.new for r in bp.rows]
+    return out
+
+
+# ---------------------------------------------------------------------------
+# the faction files as one zip (Phase 56, M12)
+
+
+#: What a faction lives in besides the twelve files the clone writes: the two
+#: lists a faction's culture and religion come from, the banner definitions,
+#: and the compiled text the game actually reads.
+EXPORT_EXTRA: Tuple[str, ...] = (
+    "descr_cultures.txt", "descr_religions.txt", "descr_banners_new.xml",
+    "descr_banners.txt", "text/expanded.txt.strings.bin",
+)
+
+
+def export_files(mod, art_for: Sequence[str] = ()) -> List[str]:
+    """Every file, relative to ``data/``, that :func:`export_zip` would pack.
+
+    The twelve files :data:`JOBS` clones into, the lists in
+    :data:`EXPORT_EXTRA`, and - for each slot in ``art_for`` - the art that
+    carries its name, found the way the clone finds it (the longest slot a
+    filename carries owns it). Only files the mod ships; a packed file is not
+    here to take."""
+    data = Path(mod.data)
+    out: List[str] = []
+    for rel in [j.rel for j in JOBS] + list(EXPORT_EXTRA):
+        if rel not in out and (data / rel).is_file():
+            out.append(rel)
+    if art_for:
+        path = fac.path_for(mod)
+        slots = sorted({fac.slot_of(r.name) for r in fac.parse_file(path).records}) \
+            if path.is_file() else []
+        for slot in art_for:
+            slot = str(slot).strip().lower()
+            if slot not in slots:
+                continue
+            # a destination nobody ships, so every hit is reported as a copy
+            for a in _asset_hits(mod, slot, "zz_export_" + slot, slots):
+                src = data / a.src
+                files = sorted(f for f in src.rglob("*") if f.is_file()) if a.is_dir else [src]
+                for f in files:
+                    rel = f.relative_to(data).as_posix()
+                    if rel not in out:
+                        out.append(rel)
+    return out
+
+
+def export_zip(mod, art_for: Sequence[str] = ()) -> Tuple[bytes, List[str]]:
+    """The faction files as a zip, each under ``data/`` as the game lays them
+    out, so unpacking it over a mod folder puts every one back where it was."""
+    import io
+    import zipfile
+    rels = export_files(mod, art_for)
+    buf = io.BytesIO()
+    data = Path(mod.data)
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for rel in rels:
+            z.write(data / rel, "data/" + rel)
+    return buf.getvalue(), rels
