@@ -1,7 +1,14 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 25-27, table under *Phases 56-73* in `ROADMAP.md`. **56 to 59 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics); **60 is next** (add a religion). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is still **v2.3.7 and beta 2026-09-22**; everything since is committed and uncut. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 25-27, table under *Phases 56-73* in `ROADMAP.md`. **56 to 60 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion); **61 is next** (B2, settlements). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is still **v2.3.7 and beta 2026-09-22**; everything since is committed and uncut. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 60 is done - add a religion, 2026-09-23, committed and uncut.**
+Adding a religion now also gives every region's `religions` line `name 0`
+in every `descr_regions.txt`, can start it with a share in chosen regions
+(taken from the others in proportion so each line stays exactly 100), gives
+the share back on a delete, and can copy another religion's pip. **61 is
+next.**
+
 **Phase 59 is done - settlement mechanics, 2026-09-23, committed and
 uncut.** A tab beside Campaign constants edits
 `descr_settlement_mechanics.xml`: the growth, order and income factors

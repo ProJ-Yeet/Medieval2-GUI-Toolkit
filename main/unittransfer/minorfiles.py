@@ -1898,6 +1898,15 @@ def vocab(mod, tab_id: str, parsed: LineFile) -> Dict:
         out["known"] = list(KNOWN_RESOURCES)
     elif tab_id == "religions":
         out["listed"] = list(getattr(parsed, "listed", []))
+        # 60: the regions a new religion can be started in
+        try:
+            from . import campmap
+            files = region_files(mod)
+            rf = campmap.parse_regions(kb.read_text(Path(mod.data) / files[0], ENCODING)) \
+                if files else None
+            out["regions"] = [r.name for r in rf.records] if rf else []
+        except (OSError, IndexError, ValueError):
+            out["regions"] = []
     elif tab_id == "cultures":
         out["levels"] = list(CULTURE_LEVELS)
         out["agents"] = list(CULTURE_AGENTS)
@@ -1988,6 +1997,8 @@ class MinorPlan:
     #: 46: what a duplicated culture still needs outside this file, each a
     #: ``{what, detail}`` - named, never written
     needs: List[Dict] = field(default_factory=list)
+    #: 60: pictures copied, ``(from, to)`` relative to data/ - a new religion's pip
+    copies: List[Tuple[str, str]] = field(default_factory=list)
 
     def summary(self) -> str:
         where = getattr(self.mod, "name", "?")
@@ -2004,7 +2015,7 @@ class MinorPlan:
                          + [f"  {c}" for c in self.changes])
 
     def touched(self) -> bool:
-        return bool(self.text or self.extra or self.loc_writes)
+        return bool(self.text or self.extra or self.loc_writes or self.copies)
 
     def payload(self) -> Dict:
         return {"tab": self.tab, "action": self.action, "name": self.name,
@@ -2052,6 +2063,13 @@ def plan(mod, body: dict) -> MinorPlan:
 
     if p.tab == "religions" and p.action in ("add", "delete"):
         _plan_lookup(p, mod)
+        # 60: the fourth and fifth places a religion is written down - every
+        # region's religions line, and its pip picture
+        if body.get("regions", True):
+            _plan_religion_regions(p, mod, body.get("seeds") or [])
+        if p.action == "add" and body.get("pip_from"):
+            _plan_pip_copy(p, mod, str(body["pip_from"]).strip(),
+                           str((body.get("edits") or {}).get("pip_path") or "").strip())
     if p.tab == "cultures" and p.action == "duplicate":
         _plan_culture_needs(p, mod, str(body.get("source") or "").strip())
 
@@ -2317,6 +2335,178 @@ def _plan_lookup(p: MinorPlan, mod) -> None:
                      + f"`{p.name}` in {RELIGIONS_LOOKUP_REL}")
 
 
+# ---------------------------------------------------------------------------
+# 60: a religion in every region, and its pip
+
+
+#: Every descr_regions.txt a religion has to reach: the base map's, and a
+#: campaign's own copy where one ships (Phase 22c's campaigns with their own map).
+REGIONS_RELS = ("world/maps/base/descr_regions.txt",)
+REGIONS_CAMPAIGN_GLOB = "world/maps/campaign/*/descr_regions.txt"
+
+
+def region_files(mod) -> List[str]:
+    data = Path(getattr(mod, "data", ""))
+    out = [r for r in REGIONS_RELS if (data / r).is_file()]
+    out += sorted(q.relative_to(data).as_posix() for q in data.glob(REGIONS_CAMPAIGN_GLOB))
+    return out
+
+
+def largest_remainder(weights: List[int], total: int) -> List[int]:
+    """``total`` split in proportion to ``weights``, in whole numbers that add
+    up to exactly ``total``: each gets the floor of its share and the units
+    left over go to the largest fractions, the first-listed winning a tie. All
+    weights zero shares it out evenly."""
+    n = len(weights)
+    if n == 0 or total <= 0:
+        return [0] * n
+    s = sum(weights)
+    exact = ([w * total / s for w in weights] if s > 0 else [total / n] * n)
+    out = [int(x) for x in exact]
+    left = total - sum(out)
+    order = sorted(range(n), key=lambda i: (-(exact[i] - out[i]), i))
+    for i in order[:left]:
+        out[i] += 1
+    return out
+
+
+_REL_LINE = re.compile(r"(religions\s*\{)([^}]*)(\})")
+
+
+def edit_region_religions(text: str, add: str = "", remove: str = "",
+                          seeds: Optional[Dict[str, int]] = None) -> Tuple[str, Dict]:
+    """``descr_regions.txt`` with a religion joined to, or taken out of, every
+    region's ``religions { … }`` line - geeko's step 4 ("replace all } with your
+    religion, a space, a 0, and a }"), done so the sums still hold.
+
+    **The guard is the point.** Both installed mods list every religion on
+    every line and every line sums to exactly 100 (ROCSS: 449 lines, DaC: 199),
+    so an add appends ``name 0``; a region in ``seeds`` gives the new religion
+    that share and takes it from the others in proportion, rounded by
+    :func:`largest_remainder` so the line is 100 again. A remove gives the
+    leaving religion's share back the same way. A line that did not sum to 100
+    before is the mod's own and is left summing to what it did - counted in
+    ``baseline``, never blocked, never "fixed" by a guess."""
+    from . import campmap
+    rf = campmap.parse_regions(text)
+    seeds = {k.lower(): int(v) for k, v in (seeds or {}).items()}
+    stats = {"lines": 0, "seeded": [], "baseline": 0, "unseedable": []}
+    lines = list(rf.lines)
+    for rec in rf.records:
+        if rec.religions_line < 0:
+            continue
+        line = lines[rec.religions_line]
+        m = _REL_LINE.search(line)
+        if not m:
+            continue
+        toks = m.group(2).split()
+        pairs = [(toks[i], int(toks[i + 1])) for i in range(0, len(toks) - 1, 2)
+                 if re.fullmatch(r"-?\d+", toks[i + 1])]
+        if not pairs and toks:
+            continue
+        total = sum(v for _k, v in pairs)
+        if total != 100:
+            stats["baseline"] += 1
+        names = [k for k, _v in pairs]
+        if add and add not in names:
+            share = seeds.get(rec.name.lower(), 0)
+            if share and total != 100:
+                stats["unseedable"].append(rec.name)
+                share = 0
+            if share:
+                rest = largest_remainder([v for _k, v in pairs], 100 - share)
+                pairs = [(k, r) for (k, _v), r in zip(pairs, rest)] + [(add, share)]
+                stats["seeded"].append(rec.name)
+            else:
+                pairs = pairs + [(add, 0)]
+        elif remove and remove in names:
+            gone = dict(pairs)[remove]
+            pairs = [(k, v) for k, v in pairs if k != remove]
+            if gone and total == 100 and pairs:
+                back = largest_remainder([v for _k, v in pairs], gone)
+                pairs = [(k, v + b) for (k, v), b in zip(pairs, back)]
+        else:
+            continue
+        lead = re.match(r"\s*", m.group(2)).group(0) or " "
+        tail = re.search(r"\s*$", m.group(2)).group(0) or " "
+        # an empty list is written back the way DaC's one empty line is: `{ }`
+        inner = (lead + " ".join(f"{k} {v}" for k, v in pairs) + tail) if pairs else lead
+        lines[rec.religions_line] = line[:m.start(2)] + inner + line[m.end(2):]
+        stats["lines"] += 1
+    out = rf.newline.join(lines) + (rf.newline if rf.trailing_newline else "")
+    return out, stats
+
+
+def _plan_religion_regions(p: MinorPlan, mod, seeds) -> None:
+    data = Path(getattr(mod, "data", ""))
+    wanted: Dict[str, int] = {}
+    for row in seeds if isinstance(seeds, list) else []:
+        try:
+            share = int(str(row.get("share", "")).strip())
+        except (TypeError, ValueError):
+            p.errors.append(f"{row.get('region')!r}: a share is a whole percent")
+            continue
+        if not 0 < share <= 100:
+            p.errors.append(f"{row.get('region')}: a share is 1 to 100, not {share}")
+            continue
+        wanted[str(row.get("region") or "").strip()] = share
+    files = region_files(mod)
+    if not files:
+        p.warnings.append("this mod has no descr_regions.txt, so no region was given "
+                          "the religion")
+        return
+    seeded = set()
+    for rel in files:
+        before = kb.read_text(data / rel, ENCODING)
+        after, st = edit_region_religions(
+            before, add=p.name if p.action == "add" else "",
+            remove=p.name if p.action == "delete" else "", seeds=wanted)
+        seeded.update(r.lower() for r in st["seeded"])
+        for r in st["unseedable"]:
+            p.errors.append(f"{rel}: {r}'s religions do not add up to 100, so a share "
+                            f"cannot be taken from them - set that region right first")
+        if after != before:
+            p.extra[rel] = after
+            verb = "given" if p.action == "add" else "taken out of"
+            p.changes.append(f"{p.name} {verb} {st['lines']} region line(s) in {rel}"
+                             + (f", starting in {len(st['seeded'])}" if st["seeded"] else ""))
+        if st["baseline"]:
+            p.warnings.append(f"{rel}: {st['baseline']} region line(s) did not add up to "
+                              f"100 before this and are left adding up to what they did")
+    missing = [r for r in wanted if r.lower() not in seeded]
+    if missing and p.action == "add":
+        p.errors.append(f"no region called {', '.join(missing[:5])} in {files[0]}")
+
+
+def _plan_pip_copy(p: MinorPlan, mod, donor: str, pip_path: str) -> None:
+    """The donor religion's pip, copied to where the new block points - geeko's
+    step 2 is "make a 16x16 tga"; a copy is a pip that exists until one is drawn."""
+    data = Path(getattr(mod, "data", ""))
+    try:
+        rf = parse_religions(kb.read_text(data / RELIGIONS_REL, ENCODING))
+    except OSError:
+        return
+    rec = rf.get(donor)
+    if rec is None:
+        p.errors.append(f"there is no religion `{donor}` to copy a pip from")
+        return
+    src = (rec.pip_path or "").replace("\\", "/").strip()
+    dst = (pip_path or f"ui/pips/pip_{p.name}.tga").replace("\\", "/").strip()
+    if src.lower().startswith("data/"):
+        src = src[5:]
+    if dst.lower().startswith("data/"):
+        dst = dst[5:]
+    if not src or not (data / src).is_file():
+        p.warnings.append(f"{donor}'s pip ({src or 'none'}) is not in this mod, so there "
+                          f"is nothing to copy")
+        return
+    if (data / dst).exists():
+        p.warnings.append(f"{dst} is already there, and is kept")
+        return
+    p.copies.append((src, dst))
+    p.changes.append(f"+ {dst}, copied from {donor}'s pip")
+
+
 def _plan_loc(p: MinorPlan, mod, rec, wanted: Dict) -> None:
     """What this save would write into the tab's ``data/text`` file.
 
@@ -2391,6 +2581,10 @@ def apply(p: MinorPlan) -> Dict:
         target = keep(rel)
         kb.write_text(target, text, ENCODING)
         file_op("WRITE", target, f"{len(text)} bytes")
+    for src, dst in p.copies:
+        target = keep(dst)
+        shutil.copy2(Path(mod.data) / src, target)
+        file_op("COPY", target, f"<- {src}")
     if p.loc_writes and p.loc_rel:
         txt = Path(mod.data) / p.loc_rel
         if txt.exists():

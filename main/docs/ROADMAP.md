@@ -3023,7 +3023,7 @@ It stays recorded rather than rediscovered.
 | ~~57~~ | ~~M16's editor half - the animation editor and asset converter~~ | 5 | L | both - **done 2026-09-23** |
 | ~~58~~ | ~~Will this mod even launch - a readiness row on Home~~ | 4 | S | both - **done 2026-09-23** |
 | ~~59~~ | ~~The rest of *Mines and hidden resources*: `descr_settlement_mechanics.xml` and its ceiling~~ | 4 | S | both - **done 2026-09-23** |
-| 60 | Add a religion | 4 | M | both |
+| ~~60~~ | ~~Add a religion~~ | 4 | M | both - **done 2026-09-23** |
 | 61 | B2 - delete a settlement, create one where none is, move one between mods | 4 | M | beta |
 | 62 | B3 - insert and export one file at a time | 4 | M | both |
 | 63 | `descr_lbc_db.txt` and `descr_offmap_models.txt` | 3 | S | both |
@@ -3080,6 +3080,37 @@ Exit: `tests/test_factionbulk.py`, 25 checks. It builds its mod by unpacking
 the zip of ROCSS's real faction files into a temp folder, so the zip is tested
 by being used: three factions in one batch, the ceiling, a doubled slot, one
 record, and one Undo restoring every byte and removing every copied picture.
+
+---
+
+## Phase 60 - Add a religion - DONE 2026-09-23
+
+**The row was half stale.** It said `descr_religions_lookup.txt` was missing;
+the Religions tab's add already wrote the block, the `religions` list, the
+lookup and the shown name in one save. What it did not do was the rest of
+geeko's *How to add a religion* (the archive's tutorial): **step 4, every
+region**, and **step 2, the pip**.
+
+**Every region's `religions { … }` line**, in every `descr_regions.txt` the
+mod ships (the base map's and any campaign's own copy). Measured first: both
+installed mods list every religion on every line and every line sums to
+exactly 100 (ROCSS 449 lines with all 6, DaC 199 with all 10). So an add
+appends `name 0` and moves no sum. **The guard the row asked for is a
+starting share**: a region given one takes it from its other religions in
+proportion, rounded by largest remainder so the line is exactly 100 again,
+and a delete gives a religion's share back the same way. A line that did not
+add up to 100 before is the mod's own, counted and left alone; it cannot be
+given a share, and is named. DaC has one: a stray region block called `lol`
+whose line is `religions { }`.
+
+**The pip**: optionally copied from an existing religion's to where the new
+block points, until one is drawn. Steps 3 and 5 (a faction taking the
+religion, its temples) stay on the Factions and Buildings screens, and the
+form says so.
+
+Exit: `tests/test_religion_add.py`, 21 checks - the rounding, both mods'
+real regions (every line, a share, the unseedable line, add-then-remove byte
+for byte), and the whole add on a temp mod with one Undo.
 
 ---
 
@@ -4662,7 +4693,7 @@ other seven are below.
 | ~~**Will this mod even launch**~~ | S | **Done as Phase 58, 2026-09-23.** A readiness row on the Home card, not an editor. Home already says what each mod is ready for and cannot say whether `configuration.cfg`, `mymod.cfg` and the registry entry will actually start it. Eleven archive documents including the Steam install and registry tutorials. |
 | **B2 - delete a settlement, and move one between mods** | M | Assigning a settlement to a faction already works and B1 added the create. Missing: the delete, whose shape is `stratcamp._delete_splice`; a button on the panel for a province that has none; and the between-mods move, which is probably its own session. Phase 24's warning applies - a settlement that goes has characters, armies and a capital flag hanging off it. |
 | **B3 - insert and export one file at a time** | M | Mylae's tool pushes a file into, or pulls one out of, a mod on its own. Pieces exist - `POST /api/map/export`, 16g's per-faction TGA, `pack.py`'s unit import - and none of it is a general take-this-file-out. The user's own earlier words were "that isnt really needed tbh"; the four-star rating supersedes that. |
-| **Add a religion** | M | We edit the religion list in Minor Files, the EDB conditions and the religion columns on the region form. Missing: `descr_religions_lookup.txt`, and the must-sum-to-100 rule as a guard at **creation** rather than only as a validation afterwards. |
+| ~~**Add a religion**~~ | M | **Done as Phase 60, 2026-09-23.** We edit the religion list in Minor Files, the EDB conditions and the religion columns on the region form. Missing: `descr_religions_lookup.txt`, and the must-sum-to-100 rule as a guard at **creation** rather than only as a validation afterwards. |
 | ~~**Mines and hidden resources**~~ | S | **Finished as Phase 59, 2026-09-23.** **Halved on 2026-09-13: the hidden-resources half is Phase 45, done 2026-09-21**, which adds and removes on the EDB's own line with the two joins that make a removal safe. What is left here is `descr_settlement_mechanics.xml` and the ceiling of 63, which Divide and Conquer's 75 disproves as written and which belongs with Phase 39's other ceilings if that session has room. |
 
 ## Three stars

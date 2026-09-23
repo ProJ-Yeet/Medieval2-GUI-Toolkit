@@ -460,7 +460,58 @@ function mfReligionForm(d){
     ${d.listed === false ? `<div class="trfind w-bad">This religion has a block but
       is not in the <code>religions { … }</code> list, and the engine reads the
       list, so as far as the game is concerned it does not exist.</div>` : ''}
+  </section>${state.mf.adding ? mfReligionStartHtml(d) : ''}`;
+}
+
+/* ---- where a new religion starts (60) ----
+   geeko's *How to add a religion* has five steps; the list, the block, the
+   lookup and the name were already one save. This is steps 2 and 4: the pip
+   (copied from a religion that has one, until you draw your own) and every
+   region's religions line. Every line gets `name 0`; a region given a share
+   takes it from its other religions in proportion, so it still adds up to 100 -
+   the server does the arithmetic and refuses a region that did not add up to
+   100 to begin with. */
+function mfReligionStartHtml(d){
+  const w = d.w, v = d.vocab || {};
+  const rels = (state.mf.records || []).map(r => r.name);
+  const regions = v.regions || [];
+  const seeds = w.seeds || (w.seeds = []);
+  return `<section class="trsec">
+    <div class="trsechead">Where it starts
+      <span class="count">Every region's <code>religions { … }</code> line gets
+        <code>${esc((w.name||'').trim() || 'name')} 0</code>, in every descr_regions.txt
+        this mod ships. A share given here comes out of the region's other
+        religions in proportion, so each line still adds up to 100.</span></div>
+    <div class="trgrid">
+      <label class="lbl mfstartlbl">Pip from</label>
+      <div><select onchange="mfSet('pip_from', this.value)">
+        <option value="">no copy - draw ui/pips/pip_${esc((w.name||'').trim() || 'name')}.tga yourself</option>
+        ${rels.map(r => `<option value="${esc(r)}" ${w.pip_from === r ? 'selected' : ''}>copy ${esc(r)}'s pip</option>`).join('')}
+      </select></div>
+      <label class="lbl mfstartlbl">Starting in</label>
+      <div>
+        ${seeds.map((row, i) => `<div class="mfseed">
+          <input list="mfRegions" value="${esc(row.region || '')}" placeholder="a region"
+            onchange="mfSeed(${i}, 'region', this.value)">
+          <input type="number" min="1" max="100" value="${esc(row.share || '')}" style="width:64px"
+            onchange="mfSeed(${i}, 'share', this.value)"> %
+          <button onclick="mfSeed(${i}, 'drop')">✕</button></div>`).join('')}
+        <button onclick="mfSeed(-1, 'add')">＋ a region</button>
+        <datalist id="mfRegions">${regions.map(r => `<option value="${esc(r)}">`).join('')}</datalist>
+        <div class="trhint count">Left empty, it starts nowhere: 0 in every region.
+          A faction takes it on the Factions screen, and its temples are
+          buildings (geeko's steps 3 and 5).</div>
+      </div>
+    </div>
   </section>`;
+}
+
+function mfSeed(i, what, value){
+  const w = state.mf.d.w, seeds = w.seeds || (w.seeds = []);
+  if(what === 'add') seeds.push({region: '', share: 10});
+  else if(what === 'drop') seeds.splice(i, 1);
+  else seeds[i][what] = what === 'share' ? (+value || '') : value.trim();
+  renderMinor();
 }
 
 /* ---- the culture form, on four tabs (Phase 46) ----
@@ -991,6 +1042,10 @@ function mfBody(action){
     body.edits = mfEdits();
     body.loc = mfLocBody();
     if(d.raw) body.raw_block = d.raw;
+  }
+  if(f.tab === 'religions' && action === 'add'){
+    body.pip_from = d.w.pip_from || '';
+    body.seeds = (d.w.seeds || []).filter(r => r.region && r.share);
   }
   return body;
 }
