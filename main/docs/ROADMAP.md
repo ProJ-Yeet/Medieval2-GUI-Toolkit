@@ -377,7 +377,7 @@ mask pass is measured that way, and so is 20c's label placement
 
 ---
 
-# Phases 56-76, then 25-27 - the rest of the roadmap, scheduled 2026-09-23
+# Phases 56-76, then 25-27, then 77-86 - the rest of the roadmap, scheduled 2026-09-23
 
 **Asked for by the user on 2026-09-23: "finish all phases remaining in
 roadmap".** With 55 done nothing was scheduled, so everything still open in
@@ -416,11 +416,21 @@ It stays recorded rather than rediscovered.
 | 72 | D13 - a horde start for a new faction | 3 | M | beta |
 | 73 | M7 - import a campaign from another mod | 3 | L | beta |
 | 74 | Import a settlement `.cas` from another mod or disk, and assign it to a culture's level | - | M | both |
-| 75 | Fix the Strat models 3D view | - | S | both |
+| 75 | Fix the `.cas` model view: place each piece by its skeleton (the squashed unit models) | - | M | both |
 | 76 | Import a building tree from another mod | - | L | both |
 | 25 | OSM backdrop and coastline tracer | 3 | L | beta |
 | 26 | Map resize, and create from scratch | 3 | L | beta |
 | 27 | Overlay and layer generators | 3 | L | beta |
+| 77 | The packs, read: `pack.idx`/`.dat` and `skeletons.idx`/`.dat` in the engine | - | M | both |
+| 78 | The 687 slots named, and `descr_skeleton.txt` held against the packs | - | M | both |
+| 79 | Transfer knows what the destination really has: skeletons from the pack, weapon skeletons counted | - | S | both |
+| 80 | Every animation a unit has, in the Models viewer: packed ones, named, with its weapons, shield and mount | - | L | both |
+| 81 | Append to a pack, and take it back | - | L | both |
+| 82 | In-game proof: what the engine accepts, rebuilds and prefers | - | S | both |
+| 83 | Port the animations with a unit | - | L | both |
+| 84 | Keep a ported mod rebuildable: loose `.cas` and `descr_skeleton.txt` for what was ported | - | M | both |
+| 85 | Pack housekeeping: duplicates, orphans, and a compacted pack | - | M | both |
+| 86 | Animations on their own: a skeleton or one animation from another mod, and an edit saved into the pack | - | M | both |
 
 Releasing stays on request: each phase is committed to master as it lands.
 
@@ -435,17 +445,312 @@ user orders them otherwise.
   file under `data/` (`fileswap.py`). Missing is the one step joining them:
   pick a model in another mod (or on disk), copy it with the textures it names,
   and write it onto a culture and level in one plan and one Undo.
-* **75 - the Strat models 3D view.** Phase 29's viewer (`viewer3d.js`,
-  `/api/map/model/geometry`, `tests/test_stratart.py`) has no open defect on
-  record; the one fixed on 2026-09-12 was the zero-byte `.tga` taken over its
-  DDS. So the first step is reproducing what the user sees, on both mods,
-  with the pane visible (a hidden tab never draws WebGL).
+* **75 - the `.cas` model view, placed by its skeleton.** Phase 29's viewer
+  (`viewer3d.js`, `/api/map/model/geometry`, `tests/test_stratart.py`) had no
+  defect on record (the one fixed on 2026-09-12 was the zero-byte `.tga` taken
+  over its DDS), so this was scheduled as "reproduce first". **The context
+  arrived on 2026-09-23**, from the user's Discord thread with Wilddog (IWTE):
+  - **The symptom.** The user's `.mesh` units and settlement `.cas` models
+    draw correctly, but a *unit's* `.cas` model comes out squashed, its pieces
+    piled on top of each other (the screenshot's top-right view).
+  - **Wilddog's diagnosis.** "`.mesh` files are a series of submeshes already
+    pre-positioned around a skeleton/pose. `.cas` mesh files are centred
+    around 0,0,0 and moved to position by the skeleton." The squashed view
+    is "the mesh part of the cas, correct, but not moved to position as per
+    the skeleton". A unit's pieces must be parented to its skeleton to be
+    placed; **buildings have no skeleton, which is why they already work**. A
+    standard `.cas` always carries a skeleton, or at least the hierarchy, but
+    for units the actual skeleton and animation are often in **another**
+    `.cas`.
+  - **The code agrees.** `cas.py` reads every node's parent and pivot
+    (`out.pivots`, `cas.py:400`) and **nothing ever applies them to
+    geometry**: `scene_view` hands the objects over as stored. The animation
+    panel also skips a `.cas` outright (`v3anim.js:232`, `if(v3.cas ...)`), so
+    a `.cas` model is never posed by anything.
+  - **The fix.** Chain each node's pivot from the Scene Root (the bind pose
+    `v3anim.js` already builds for `.mesh` units, `mesh.py`'s "pivots chained
+    from zero") and move each object, or each skinned vertex by its bone
+    weights, by its node's position. When the model's own hierarchy has no
+    pivots worth the name, take them from the skeleton `.cas` beside it or,
+    for a battle model, from the packed skeleton (Phase 77; the format notes' bone
+    positions are parent-relative, the pelvis at 0). Settlement and resource
+    models (no skeleton) must draw exactly as they do now.
+  - **Done when:** a strat character (general, diplomat, assassin) and a
+    battle-unit `.cas` from each installed mod stand as figures, not piles;
+    every settlement `.cas` draws unchanged; checked with the pane visible (a
+    hidden tab never draws WebGL). This is also Phase 80's prerequisite for
+    animating a `.cas` model.
 * **76 - a building tree from another mod.** Missing entirely: `transfer.py`
   moves units only and the buildings screen edits in place. The shape is
   Unit Transfer's own at EDB scale - the building and its levels, their
   `text/export_buildings.txt` strings, the pictures, and a report of what the
   destination lacks (units a level recruits, resources, factions and cultures
   it names), with one Undo.
+
+# Phases 77-86 - animations that travel with a unit, scheduled 2026-09-23
+
+**Asked for by the user on 2026-09-23**: "the main thing I want to do now is to
+be able to port animations when transferring units ... without complete
+unpacking or repacking if that's possible; if not, packing and unpacking is
+fine too. Plan it out and turn it into phases, to do after all the remaining
+phases are done". So these go **after 25-27**, unrated, in this order.
+
+**The answer to "without unpacking": yes.** Nothing has to be unpacked or
+repacked. A pack is a plain concatenation (verified on 21 195 animations and
+730 skeletons), so porting a unit's animations is: read the few entries it
+needs straight out of the source's `.dat` by offset, **append** them to the
+end of the destination's `.dat`, and rewrite the destination's small `.idx`.
+DaC's `pack.dat` is 352 MB and is never rewritten; the append for one soldier
+skeleton is a median **1.6 MB** once animations the destination already has
+(byte for byte, under any path) are reused. Undo is a truncate back to the
+recorded length plus the old `.idx`, so the 352 MB file is never backed up
+whole. The engine-rebuild route IWTE uses (loose `.cas` + `descr_skeleton.txt`,
+the game regenerates the packs) is kept as Phase 84, a second safety net, not
+the main path.
+
+## Where the knowledge comes from
+
+- **The pack format notes**, `Reference/PackFormats/` (untracked, on this
+  machine): the container, a packed animation and a packed skeleton, byte by
+  byte, with `tools/m2tw_packs.py verify` re-measuring every claim on vanilla
+  DE, ROCSS and DaC in 5 s. Called "the format notes" below.
+- **Discord with Wilddog and Makanyane** (IWTE's author and tester, June to
+  September 2026). The facts that shape this design:
+  1. IWTE gets a unit's skeleton **without unpacking**: it reads the modeldb
+     for the skeleton name, then reads the skeleton pack and indexes it by
+     name. (27/08)
+  2. The packs are "a continuous list of unpacked skeletons or animations",
+     no compression. (27/08; confirmed byte for byte.)
+  3. IWTE writes loose `.cas` files and `descr_skeleton.txt` and **lets the
+     engine regenerate** both packs, because of the tables at the end of a
+     skeleton that nobody knows how to build. Older tools instead copied an
+     existing packed skeleton and replaced its bones and animation list,
+     keeping those tables. (27/08, 23/09) Phase 81 does the second thing:
+     it moves whole skeletons, tables included, and never builds a table.
+  4. **Many mods appended to their packs, so `descr_skeleton.txt` is often out
+     of sync with them. The packs are the truth**, not the text file. (09/06,
+     23/09)
+  5. Duplicates in a pack come from that appending and "are often not
+     actually exact duplicates". (23/09; DaC has 916 paths twice, vanilla 3,
+     and vanilla lists the `MTW2_Halberd_primary` skeleton twice with
+     different data.)
+  6. A skeleton's animation list is a fixed sequence, "either a zero or an
+     animation reference". (07/06, 23/09; measured: 687 slots, the last is
+     `default`.)
+  7. Each model has one skeleton, named in the modeldb (which holds one set
+     per mount type), **plus weapon skeletons** for the primary and secondary
+     weapon. They matter to the
+     animation only when the mesh has vertices weighted to the weapon bones,
+     but modders copy modeldb entries wholesale, so most entries carry them.
+     (07/06, Makanyane; TWCenter thread "Understanding M2TW weapon skeletons
+     and animations")
+  8. Siege engines are different: a standard `.cas`, a mesh and an XML that
+     aligns bones. Not in the packs. (23/09) Transfer already handles them
+     (`descr_engine_skeleton.txt`); these phases do not touch them.
+  9. A unit's `.cas` mesh has to be parented to its skeleton to be placed;
+     buildings have no skeleton. (23/09) Relevant to Phase 80.
+  10. Robust modeldb reading: IWTE reads every value into one list first and
+      checks afterwards, so missing or extra CR/LF does not matter; a wrong
+      count or an extra 0 still throws it. (23/09) An aside for `bmdb.py`, not
+      part of these phases.
+
+## Measured before a line is written (2026-09-23)
+
+| fact | number | why it matters |
+|---|---|---|
+| every modeldb primary/secondary skeleton is in `skeletons.idx` | ROCSS 3 303/3 303, DaC 2 761/2 761 | the pack is the list to check a transfer against |
+| **the modeldb weapon lists are skeleton names too** | ROCSS 5 372/5 375 found in `skeletons.idx`, DaC 3 780/3 780 | transfer's missing-skeleton check ignores them today (`ModelEntry.skeletons()` returns only primary/secondary) |
+| ROCSS modeldb weapon skeletons not in its own pack | 3 (`MTW2_axe_Primary` ×2, `MTW2_HR_mace_Primary`) | a Health finding waiting to be reported |
+| DaC and ROCSS share no animation path string | 0 of 45 784 | paths carry the mod they were built in (`mods/Third_Age_3/...`, `mods/americas/...`), so matching by path finds nothing |
+| DaC animations already in ROCSS **byte for byte** under another path | 9 736 of 45 784 slot references; 166 of the 215 of DaC's `MTW2_2HSwordsman` | content dedup halves the append |
+| DaC skeleton names ROCSS already has, with different data | **134 of 410** | renaming a ported skeleton is the common case, not an edge case |
+| animations per soldier skeleton | median 145, max 219 | the unit of work |
+| bytes appended per skeleton | median 3.3 MB, 1.6 MB after content dedup; max 5.1 MB | small against 70-352 MB packs |
+
+## The design, in one place
+
+- **One engine module, `unittransfer/animpack.py`**, owns every read and write
+  of the four pack files (locked decision: one parser per format). `casanim.py`
+  keeps loose `.cas`; `animpack` hands it arrays.
+- **The packs are the truth.** `descr_skeleton.txt` is read, reported against
+  the packs and kept in step for what we add, but never trusted over them.
+- **Whole entries move, byte for byte**, with two exceptions that are
+  rewrites of names, not of data: a skeleton's slot paths (when an animation
+  path is renamed or deduplicated onto the destination's path) and nothing
+  else. The combat tables at the end of a skeleton are carried as opaque
+  bytes; the serializer is proven by round-tripping all 730 installed
+  skeletons byte for byte before it writes anything.
+- **Dedup order for an animation**: same path and same bytes in the
+  destination, reuse; same bytes under another path, point the skeleton's
+  slot at that path and append nothing; otherwise append, under the source's
+  path, or under a namespaced path (`mods/<dest>/data/animations/ported/<source>/...`)
+  when the destination has that path with different bytes.
+- **Dedup order for a skeleton**: same name and same bytes, reuse; same bytes
+  under another name, point the modeldb at that name; otherwise add, renamed
+  `<name>_<source tag>` when the name is taken (the modeldb entry's skeleton
+  and weapon names follow, through the `model_renames` machinery transfer
+  already has).
+- **Write order, for a crash midway**: append to `.dat`, write the new `.idx`
+  to a temp file and swap it in, then update the `.dat` header's count. A
+  crash leaves at worst unindexed bytes at the end of the `.dat`, which undo
+  truncates.
+- **Undo** records `(file, length before, sha of the header and last 64 KB
+  before)` for each `.dat` and a normal backup of each `.idx`. It refuses,
+  and says why, if the `.dat` is no longer the file it appended to (the game
+  rebuilt it, or another tool wrote it). A new manifest kind next to
+  `backed_up`/`created`, so `revert_to` still undoes newest first.
+- **Never while the game runs** (the `.dat` is open), and never without the
+  free space checked first (`D:` has been full before).
+
+## The phases
+
+**77 - The packs, read (M).** `animpack.py`: `PackIndex` for both `.idx`
+kinds, `PackedAnimation` (the arrays in the format notes), `PackedSkeleton` (bones and
+the 687 slots parsed, tail kept as bytes) with a serializer, and a per-mod
+cache keyed on the files' mtime and size (DaC's index is 15 661 records). No
+UI. Done when: the serializer round-trips all 730 skeletons on vanilla, ROCSS
+and DaC byte for byte; `verify`'s structural checks pass through the new
+module; tests build **small synthetic packs from a handful of real entries**
+rather than copying 70-352 MB packs into temp (the suites' `ut_*` temp dirs
+already leak, 37 GB by September 2026).
+
+**78 - The 687 slots named, and `descr_skeleton.txt` held against the packs
+(M).** Name each slot by aligning `descr_skeleton.txt`'s `anim` lines with a
+packed skeleton's filled slots wherever the two agree (vanilla first). Bank the table as data
+(`unittransfer/data/`). Then report per mod: types in the text but not the
+pack, skeletons in the pack but not the text, slots that disagree. Measure how
+out of step DaC and ROCSS are (Wilddog's point 4, never measured here). Done
+when: every slot a vanilla skeleton fills has a name, and the per-mod report
+runs on all three.
+
+**79 - Transfer knows what the destination really has (S).** The
+missing-skeleton check reads `skeletons.idx` (the modeldb only as the fallback
+for a mod with no pack), and counts the **weapon skeletons** too
+(`pri_weapons`/`sec_weapons`), which it ignores today. A weapon skeleton
+missing is reported apart from a body skeleton, with Makanyane's rule attached:
+it only bites if the mesh has weight on the weapon bones. The same check
+becomes a Health rule: a modeldb skeleton or weapon skeleton the mod's own
+pack does not have (ROCSS's three). Done when: ROCSS reports exactly those
+three, DaC none, and every existing transfer test still passes.
+
+**80 - Every animation a unit has, in the Models viewer (L).** Asked for by
+the user on 2026-09-23 ("I also want to be able to view the different
+animations in our model viewer"), and the user's Discord goal from June: pick
+a unit, its skeleton comes from the modeldb (or is chosen by hand), pick one
+animation or several, and watch it. **What exists (Phase 55)**: the viewer
+plays a `.mesh` unit's actions from `descr_skeleton.txt`, but **only the ones
+shipped as loose files** (`casanim.actions_view`), which for DaC is 1 753 of
+15 661 and for most mods almost none; and never a `.cas` model. What 80 adds:
+
+1. **Every animation, loose or packed.** The picker lists every filled slot
+   of the model's skeleton **from `skeletons.dat`** (Phase 77), named by 78's
+   slot table, not from `descr_skeleton.txt`, which is often out of step
+   (Wilddog). A packed animation becomes the model casanim already draws by
+   the format notes' mapping: bone-major tracks, pivots from the packed skeleton,
+   position keys as offsets from the pivot, and the control bone as the
+   pelvis track so the root motion plays. A loose file at the same path is
+   still preferred, as the game may prefer it too (82's question 6).
+2. **Grouped so 200 actions can be found**: by the slot families (stand,
+   walk, run, charge, attack, die, idle, formation, mounted...), with a find
+   box, and the duration, frame count, distance and speed from each
+   animation's summary floats beside its name.
+3. **The unit as the game assembles it** (Makanyane: "body, weapon, shield,
+   mount" at most). Switch between the modeldb's skeleton sets (per mount
+   type, primary and secondary weapon); the **weapon skeletons** animate the
+   weapon and shield bones, which only shows when the mesh has weight on
+   them (a bowman's string, a flag, a javelin); a rider can be shown **on his
+   mount**, both playing the matching slot, the rider's pelvis following the
+   mount (the `HR_*` rider animations store their pelvis as the control bone,
+   the format notes).
+4. **Playback**: play, pause, scrub, speed, loop, in place (Phase 55's
+   controls), and **a sequence** of several animations back to back, with
+   Makanyane's "overlap" (blend the end of one into the start of the next)
+   on for smooth playback and off for inspecting each exactly.
+5. **What the skeleton says about the animation**: the slot's impact frame,
+   turn limits and sound events (the format notes) marked on the timeline.
+6. **`.cas` models too**, once 75 places them by their skeleton: a strat
+   character's or a battle unit's `.cas`, posed and animated.
+7. **Before and after a transfer**: the same animation from the source mod
+   and from the destination side by side, which is how Phase 83's port is
+   previewed and checked.
+
+Done when: every filled slot of a soldier, a horse, a rider on his horse and
+a bowman with his weapon skeleton plays on vanilla, ROCSS and DaC; a packed
+animation that also exists loose draws identically both ways; a three-step
+sequence plays with and without overlap; the slot's events show at their
+frames.
+
+**81 - Append to a pack, and take it back (L).** `animpack.plan_port(source,
+dest, skeletons)` returns what would happen: skeletons reused, renamed or
+added; animations reused by path, reused by content, appended, renamed; bytes
+appended; slot paths rewritten. `apply` and `undo` as in *The design*. A dry
+run over every DaC skeleton into ROCSS is the measurement. Done when: append
+then undo leaves both files byte-identical to before; `verify` passes on the
+result; a ported skeleton reads back identical except for its rewritten slot
+paths; the dry run's totals match the table above.
+
+**82 - In-game proof (S, needs the user to run the game).** 81 builds the test
+kits into a copy of ROCSS; the user plays a custom battle and reports. The
+questions, each with its kit:
+1. Does the game load a pack with appended entries and the counts updated?
+2. Does the `.dat` header's count matter, or only the `.idx`'s?
+3. Does a renamed skeleton (`<name>_<tag>`) and a namespaced animation path
+   (no such file on disk) work?
+4. When does the engine regenerate the packs from `descr_skeleton.txt`
+   (packs deleted? the text file newer?), and does a regeneration drop entries
+   that have no loose `.cas`? This decides whether 84 is needed by default.
+5. Which of two duplicate entries wins, the first or the last?
+6. Does a loose `.cas` at an entry's path override the packed one?
+
+The answers are written into the format notes, and into this phase's archive entry. Done when all six are answered.
+
+**83 - Port the animations with a unit (L).** Unit Transfer gains a fourth
+answer beside "port as is", "port with the base's animations" and "use the
+base's": **"bring its animations"**, per model group (soldier, officer, mount,
+crew, armour upgrades), the default when the destination lacks a skeleton the
+unit needs. The plan screen shows, per skeleton: added, reused, renamed; the
+animation counts; the MB appended after dedup; weapon skeletons listed
+separately. The modeldb entry is written with any renamed skeleton or weapon
+names. A batch shares its skeletons (two units on `MTW2_2HSwordsman` move it
+once), the way `dest_by_content` already shares models. `descr_skeleton.txt`
+gains a `type` block for each added skeleton, from 78's slot names, so the
+text file stays in step for what we added. One Undo covers the transfer, the
+pack appends included. Done when: a DaC unit on a skeleton ROCSS lacks
+transfers into ROCSS, plays in the viewer, passes `verify`, and plays in game
+(82's kit, repeated through the real transfer); undo restores ROCSS byte for
+byte.
+
+**84 - Keep a ported mod rebuildable (M).** If 82 shows the engine
+regenerates the packs and drops what has no loose file, or as an option
+otherwise: write each ported animation as a loose `.cas` (packed to `.cas` by
+the format notes, through `casanim.write_anim`) at its path, beside the
+`descr_skeleton.txt` block 83 already writes, so a regeneration rebuilds what
+we ported too. This is the route Wilddog described, done only for what we
+added. Done when: a
+ported unit survives a pack regeneration in game (82's question 4).
+
+**85 - Pack housekeeping (M).** The "cleanup" asked about on Discord. A report
+first: duplicate paths (same bytes or not), entries no skeleton slot uses,
+skeletons no modeldb entry names, skeleton names listed twice. Then, as its own
+plan and Undo, a compacted pack: only what is referenced, one copy of each
+duplicate (the one 82 says the engine plays). Compaction does rewrite the
+whole `.dat`, written beside the old one and swapped, so it needs the free
+space of the pack and is never automatic. Done when: the report runs on all
+three installs, and a compacted ROCSS plays every unit (viewer and `verify`)
+and undoes.
+
+**86 - Animations on their own (M).** The same engine without a unit: bring a
+named skeleton (with its animations) or one animation into a chosen slot from
+another mod; and **the animation editor saves straight into the pack**,
+replacing `animedit.REPACK_NOTE`'s "rebuild with xidx" step. A saved edit is
+appended under its path, which makes the old entry an orphan (85's report
+finds it), so no 352 MB rewrite. Done when: an edit made in 57's editor plays
+in game without any outside tool.
+
+**Not in these phases**: exporting a unit with an animation for Blender (the
+user's other Discord goal; 80 builds exactly the posed, animated unit an
+exporter would need, and `modelexport.py` would carry it), and Rome/RR packs (a
+half-frame layout; nothing here is measured on it).
 
 # What each open phase is
 
