@@ -347,6 +347,15 @@ show the unsaved map rather than the one on disk.
                                     copied with the textures it names into a
                                     folder where nothing is written over, and
                                     put on one culture's level or fort line
+  GET  /api/edbimport/lines?mod=&from=
+                                 -> 76. Every building line of ``from``, and
+                                    whether ``mod`` has one by that name, with
+                                    ``mod``'s factions and cultures to map onto
+  POST /api/edbimport/plan|apply
+                                 -> building lines from another mod: the blocks
+                                    with every faction mapped, what ``mod`` lacks
+                                    left out and named, their text keys and
+                                    cards. One backup, one Undo
   POST /api/map/region_start|_cancel
                                  -> the new-region wizard's record, decided
                                     before a pixel of it is painted
@@ -649,7 +658,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, areaeffects, campimport, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, campimport, edbimport, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2367,6 +2376,17 @@ class Handler(BaseHTTPRequestHandler):
                 if u.path.endswith("/models"):
                     return self._json({"mod": name, "models": settlemodel.sources(mod)})
                 return self._json(settlemodel.view(mod))
+            if u.path == "/api/edbimport/lines":
+                # 76. Two EDBs and the destination's names; nothing written
+                name = (q.get("mod") or [None])[0]
+                src = (q.get("from") or [None])[0]
+                names = self.registry.names()
+                if not name or name not in names or not src or src not in names:
+                    return self._err(404, "unknown mod")
+                dst, frm = self.registry.describe(name), self.registry.describe(src)
+                return self._json({"mod": name, "from": src,
+                                   "lines": edbimport.sources(frm, dst),
+                                   "targets": edbimport.targets(dst)})
             if u.path == "/api/campimport":
                 # 73, M7. A folder question like /api/campnew, between two mods
                 name = (q.get("mod") or [None])[0]
@@ -2770,6 +2790,8 @@ class Handler(BaseHTTPRequestHandler):
                     u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/settlemodel/plan", "/api/settlemodel/apply"):
                 return self._json(self._settlemodel(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/edbimport/plan", "/api/edbimport/apply"):
+                return self._json(self._edbimport(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/campimport/plan", "/api/campimport/apply"):
                 return self._json(self._campimport(
                     u.path.rsplit("/", 1)[-1], body))
@@ -3793,6 +3815,34 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, OSError) as e:
             return {"error": str(e), "plan": plan.payload()}
         self.registry.invalidate(name)
+        return out
+
+    # ---- building lines from another mod (76) ----
+    def _edbimport(self, action, body):
+        """Preview or write building lines of ``from`` into ``mod``. Only ``mod``
+        is written, and its compiled building text is brought back in step."""
+        try:
+            names = self.registry.names()
+            name, src = str(body.get("mod") or ""), str(body.get("from") or "")
+            if name not in names or src not in names or src == name:
+                return {"error": "pick another installed mod to bring the lines from"}
+            plan = edbimport.plan(self.registry.describe(name),
+                                  self.registry.describe(src), body)
+        except (KeyError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(edbimport.apply(plan))
+        except (ValueError, OSError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)
+        if plan.loc_text and _strings_bin_wanted(body):
+            _clear_cache(plan.dst.root, out, out["record"], name,
+                         cleaner.BUILDINGS_STRINGS_BIN_REL)
         return out
 
     # ---- a campaign imported from another mod (73, M7) ----

@@ -188,7 +188,9 @@ offer the base game's five. If it defines its own, add that file.">using vanilla
           <button class="${bldBrowse()==='tree'?'on':''}" onclick="bldSetBrowse('tree')"
             title="One row per line, its levels folded underneath">▤ Tree</button>
         </span>
-        ${(ov.actions||{}).create?`<button class="primary" onclick="bldNewTree()"
+        ${(ov.actions||{}).create?`<button onclick="bimOpen()"
+          title="Bring building lines in from another installed mod, with their text and cards">⇩ From another mod…</button>
+        <button class="primary" onclick="bldNewTree()"
           title="Add a whole new building line to this mod">＋ New building tree</button>`:''}
       </span>
     </div>
@@ -4066,7 +4068,7 @@ async function bldPreview(){
     box.innerHTML=bldPlanHtml(b.plan,false);
   }catch(e){ box.innerHTML=`<div class="mbody w-bad">${esc(errText(e))}</div>`; }
 }
-function bldPlanHtml(p,stale){
+function bldPlanHtml(p,stale,fold='bld.probe'){
   if(p.error)return `<div class="sum"><div class="srow bad"><span class="sicon">✕</span>
     <span class="stext">${esc(p.error)}</span></div></div>`;
   const rows=[];
@@ -4085,7 +4087,7 @@ function bldPlanHtml(p,stale){
   // folded like the lists above it, with what it found counted on the heading
   const tally=[[(p.changes||[]).length,'change'],[(p.warnings||[]).length,'warning'],
     [(p.errors||[]).length,'error']].filter(([n])=>n).map(([n,w])=>`${n} ${w}${n===1?'':'s'}`);
-  return `<div class="bsec ${foldCls('bld.probe')}" data-fold="bld.probe" style="margin-top:14px"><h4>Probe${
+  return `<div class="bsec ${foldCls(fold)}" data-fold="${fold}" style="margin-top:14px"><h4>Probe${
       tally.length?` <span class="count">${tally.join(' · ')}</span>`:''}${
       stale?' <span class="w-warn">(out of date: edited since)</span>':''}</h4>
     <div class="sum">${rows.join('')}

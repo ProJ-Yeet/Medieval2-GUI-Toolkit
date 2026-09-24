@@ -9642,3 +9642,72 @@ an assassin from each mod standing with feet below the pelvis and head above,
 every static model unchanged and every skinned one standing, the borrowed
 skeleton, and the routes. Checked in the viewer with the pane visible: ROCSS's
 diplomat and DaC's Amroth general stand, and a dwarf city draws as before.
+
+## Phase 76 - a building tree from another mod - DONE 2026-09-24
+
+*From another mod…* in the Buildings screen's header picks another installed
+mod, shows a filterable list of its lines, and brings the ticked ones across in
+one plan (`unittransfer/edbimport.py`, `/api/edbimport/lines|plan|apply`,
+`web/js/edbimport.js`). A line comes whole: the verbatim block with only its
+clauses rewritten, its text keys in `text/export_buildings.txt`, and its
+building cards. One backup, one Undo, and the compiled `.strings.bin` is
+rebuilt as every building edit does.
+
+**A building block is full of names, and each kind got its own answer**, set
+by what the game does with a name it does not know:
+
+* **A faction or culture in a `factions { }` list is mapped.** A name both mods
+  have stays. Any other goes onto one of the destination's factions or
+  cultures, or is left out. The default is the source faction's own culture
+  when the destination has it (DaC's `aragon` onto `southern_european`), and
+  every name can be re-pointed in the dialog. After the splice every imported
+  clause is checked again, and a name the destination lacks refuses the plan.
+* **A recruit pool for a unit the destination lacks is left out** and the unit
+  is listed. The game stops loading on one, and bringing units is Unit
+  Transfer's job: transfer them and plan again.
+* **A hidden resource the destination lacks is added** to its
+  `hidden_resources` line, which keeps the clause meaning what it meant.
+* **A capability that needs a trade resource, a building or a religion the
+  destination lacks is left out**; a level that needs one cannot be, so the
+  plan refuses and names the line to add, with a button that adds it and plans
+  again. A `convert_to` to a missing line is dropped with a warning.
+* **A capability left for nobody** (its only factions left out) is dropped. A
+  whole line left for nobody refuses, naming the names to map.
+* **A line whose name the destination has** refuses unless *Replace* is
+  ticked, and is then swapped in place. A level name another line owns always
+  refuses: it is the level's text key and card.
+
+**Text**: `{L}`, `{L_desc}` and `{L_desc_short}` for every level (a missing
+one is written blank, with a warning, because the game stops on it), the
+line's `{line_name}`, and each `{L_<faction or culture>…}` wording carried
+under the mapped name. Only real faction and culture names count as a variant,
+so `town_guard_house` is never read as `town_guard` worded for `house`.
+
+**Cards**: the three pictures a level has per culture (the card, the
+`_constructed` card and the `construction/` picture) and the line's own card,
+each with its `.tga.dds` twin. A culture both mods have takes the source's own
+art. A culture only the destination has borrows the art of the source culture
+mapped onto it, and only where it has none of its own. Listing each art folder
+once per plan took a two-line plan from 7.5 s to 0.3 s.
+
+**Measured, every line alone with Replace**: DaC into ROCSS, 91 of 136 plan;
+29 need another line brought, 7 have a level name ROCSS uses elsewhere, 6 are
+temples of a religion ROCSS lacks, 3 are left for nobody. ROCSS into DaC, 91 of
+107; 10 temples of a religion DaC lacks, 3 level clashes, 2 left for nobody, 1
+needing another line.
+
+**Not checked, on purpose: a faction whose levels have a hole.** The game logs
+a faction that may build level 3 of a line but not level 2, and loads anyway.
+DaC ships 118 of them, so mapping is not held to it.
+
+**Phase 75's leftover is closed**: the Amroth general's grey came from the
+texture lookup, which now follows the game's order (`x.tga.dds`, then `x.tga`,
+never `x.dds`); see the two texture commits of the same day.
+
+Exit: `tests/test_edbimport.py`, 53 checks: the list, the default and chosen
+mappings, pools and capabilities left out, the hidden resource added, the text
+keys and cards, every refusal, applied and undone byte for byte, every real
+DaC line planned into ROCSS with no stray faction, and the routes. Checked in
+the app: ROCSS's barracks with Replace and its mercenary barracks into DaC, the
+mapping table, a refusal and its *add wonders4*, and a changed mapping marking
+the plan out of date. Nothing was written to the installed mods.

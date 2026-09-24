@@ -417,7 +417,7 @@ It stays recorded rather than rediscovered.
 | ~~73~~ | ~~M7 - import a campaign from another mod~~ | 3 | L | beta - **done 2026-09-24** |
 | ~~74~~ | ~~Import a settlement `.cas` from another mod or disk, and assign it to a culture's level~~ | - | M | both - **done 2026-09-24** |
 | ~~75~~ | ~~Fix the `.cas` model view: place each piece by its skeleton (the squashed unit models)~~ | - | M | both - **done 2026-09-24** |
-| 76 | Import a building tree from another mod | - | L | both |
+| ~~76~~ | ~~Import a building tree from another mod~~ | - | L | both - **done 2026-09-24** |
 | 25 | OSM backdrop and coastline tracer | 3 | L | beta |
 | 26 | Map resize, and create from scratch | 3 | L | beta |
 | 27 | Overlay and layer generators | 3 | L | beta |

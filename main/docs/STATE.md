@@ -1,7 +1,25 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-24 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 75 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton); **76 is next** (a building tree from another mod). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-24 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 76 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton; a building tree from another mod); **25 is next** (the OSM backdrop and coastline tracer, the first of the three campaign-map phases). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 76 is done - a building tree from another mod, 2026-09-24,
+committed and uncut.** *From another mod…* on the Buildings screen brings one
+or more building lines of another installed mod across whole: the block, its
+text keys (per-faction and per-culture wording carried to the mapped name) and
+its building cards. Every faction and culture the destination lacks is mapped
+(default: the source faction's own culture if the destination has it) or left
+out; a recruit pool for a unit it lacks is left out and listed; a hidden
+resource it lacks is added; a level that needs a line, resource or religion it
+lacks refuses with a one-click *add that line*. A same-named line is swapped in
+place under *Replace*. One backup, one Undo. Every line alone: DaC into ROCSS
+91 of 136 plan, ROCSS into DaC 91 of 107. **25 is next.**
+
+**Strat textures follow the game's order, 2026-09-24, committed and uncut.**
+A `.cas` material named `x.tga` is looked for as `x.tga.dds`, then `x.tga`,
+and never as `x.dds`. DaC's Amroth general (grey since Phase 75) paints, and
+864 materials in the two mods that have both a real `.tga` and a `.tga.dds`
+now show the `.tga.dds`, as the game does.
+
 **Phase 75 is done - the `.cas` model view placed by its skeleton,
 2026-09-24, committed and uncut.** A skinned strat model is now drawn in its
 bind pose (each node's pivot chained from the root, each vertex moved by its

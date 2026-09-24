@@ -2252,6 +2252,11 @@
   .ntlv{display:grid;grid-template-columns:22px 1fr 1fr 30px;gap:6px;align-items:center;
     padding:3px 0}
   .ntlv .i{color:var(--dim);font-size:11px;text-align:right}
+  /* 76: building lines from another mod (edbimport.js) */
+  .bimlist{max-height:260px;overflow:auto;border:1px solid var(--edge);border-radius:6px;padding:4px 8px}
+  .bimrow{display:flex;gap:8px;align-items:center;padding:2px 0;cursor:pointer}
+  .bimmap>div{display:flex;gap:8px;align-items:center;padding:2px 0}
+  .bimmap select{margin-left:auto;min-width:200px}
   .ntslots{max-height:180px;overflow:auto;border:1px solid var(--edge);border-radius:6px;
     padding:6px 8px;font-size:11px;color:var(--dim)}
   /* level strip in the editor: one chip per building in the line, in upgrade order */
@@ -3304,6 +3309,7 @@
 <script src="js/campnew.js"></script>
 <script src="js/campimport.js"></script>
 <script src="js/settlemodel.js"></script>
+<script src="js/edbimport.js"></script>
 <script src="js/facaudit.js"></script>
 <script src="js/rawtext.js"></script>
 <script src="js/changes.js"></script>
