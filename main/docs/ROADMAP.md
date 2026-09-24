@@ -418,7 +418,7 @@ It stays recorded rather than rediscovered.
 | ~~74~~ | ~~Import a settlement `.cas` from another mod or disk, and assign it to a culture's level~~ | - | M | both - **done 2026-09-24** |
 | ~~75~~ | ~~Fix the `.cas` model view: place each piece by its skeleton (the squashed unit models)~~ | - | M | both - **done 2026-09-24** |
 | ~~76~~ | ~~Import a building tree from another mod~~ | - | L | both - **done 2026-09-24** |
-| 25 | OSM backdrop and coastline tracer | 3 | L | beta |
+| ~~25~~ | ~~OSM backdrop and coastline tracer~~ | 3 | L | beta - **done 2026-09-24** |
 | 26 | Map resize, and create from scratch | 3 | L | beta |
 | 27 | Overlay and layer generators | 3 | L | beta |
 | 77 | The packs, read: `pack.idx`/`.dat` and `skeletons.idx`/`.dat` in the engine | - | M | both |
@@ -774,7 +774,7 @@ is worth picking up.
 
 | # | Item | Size | Note |
 |---|---|---|---|
-| 25 | **Phase 25 - OSM backdrop and coastline tracer** | L | Campaign-map work at three stars. The write-up below stands; it is the first thing in the toolkit that touches the network, so it is opt-in and off by default. |
+| ~~25~~ | ~~**Phase 25 - OSM backdrop and coastline tracer**~~ | L | **Done 2026-09-24**; write-up in `ROADMAP_ARCHIVE.md`. |
 | 26 | **Phase 26 - map resize, and create from scratch** | L | Campaign-map work at three stars. Phases 22 and 24 removed most of the original objection, so it is cheaper than when it was deferred. |
 | 27 | **Phase 27 - overlay and layer generators** | L | Campaign-map work at three stars. Same opt-in rule as 25. |
 

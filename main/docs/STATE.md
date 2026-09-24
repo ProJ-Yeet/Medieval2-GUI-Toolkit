@@ -1,7 +1,20 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-24 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 76 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton; a building tree from another mod); **25 is next** (the OSM backdrop and coastline tracer, the first of the three campaign-map phases). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-24 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 76, and 25, are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton; a building tree from another mod); then 25, the OSM backdrop and coastline tracer; **26 is next** (map resize, and a map from scratch). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 25 is done - the real world behind the map, 2026-09-24, committed and
+uncut.** The Campaign Map's *Real world* tab (under Map) aligns a map to a
+north/south/west/east box (typed, or a `bbox_coords.txt` from Mylae's New Map
+Editor), draws OpenStreetMap over it, fetches the real coastline and shows in
+red every land tile on its water side, makes those sea as one paint stroke, and
+finds places by name: go there, start a new region from one, or paint its
+boundary onto a region. **Off until Settings, Real-world map, turns it on**;
+nothing has been sent to OpenStreetMap from here. **26 is next.**
+
+**Suites no longer open browser tabs, 2026-09-24.** `UT_NO_BROWSER=1` stops
+`app.py` opening one; `main/dev/checks/run_suites.bat` runs every suite hidden
+and writes `suite_report.txt`.
+
 **Phase 76 is done - a building tree from another mod, 2026-09-24,
 committed and uncut.** *From another mod…* on the Buildings screen brings one
 or more building lines of another installed mod across whole: the block, its
@@ -1785,7 +1798,7 @@ the edits out from under it (21 did it once; see the archive).
   it". 1,171 of the 1,174 zero-byte files on the installed mods are that.
 
 ## Upstream
-Reference tool reviewed SHA **439aa9b** (2026-09-17), accepted after the diff
+Reference tool reviewed SHA **6f975d2** (2026-09-24, two `skip` files since 439aa9b; the three OSM files are ported in Phase 25). Before that, **439aa9b** (2026-09-17), accepted after the diff
 was read: **34 commits, 49 files**, against three at the last review. The
 manifest is **342 files, none untriaged** - 30 new records were classified by
 hand in this pass, including five he pushed while it was being written.

@@ -351,6 +351,17 @@ show the unsaved map rather than the one on disk.
                                  -> 76. Every building line of ``from``, and
                                     whether ``mod`` has one by that name, with
                                     ``mod``'s factions and cultures to map onto
+  GET  /api/osm?mod=              -> 25. The real-world map: whether it is on,
+                                    the servers it would use, and this map's box
+  GET  /api/osm/tile/Z/X/Y       -> one OpenStreetMap tile, cached on disk
+  GET  /api/osm/search?mod=&q=   -> places inside the box, each with its tile
+  POST /api/osm/box              -> keep, import (bbox_coords.txt) or clear the box
+  POST /api/osm/coast            -> the real coastline over the map, and what it
+                                    says about the map's sea; nothing written
+  POST /api/map/osm_coast|osm_boundary
+                                 -> the water side made sea, or a place's
+                                    boundary painted onto a region: one stroke
+                                    of the paint tool each, undone like any other
   POST /api/edbimport/plan|apply
                                  -> building lines from another mod: the blocks
                                     with every faction mapped, what ``mod`` lacks
@@ -658,7 +669,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, areaeffects, campimport, edbimport, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, campimport, edbimport, osmmap, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2376,6 +2387,10 @@ class Handler(BaseHTTPRequestHandler):
                 if u.path.endswith("/models"):
                     return self._json({"mod": name, "models": settlemodel.sources(mod)})
                 return self._json(settlemodel.view(mod))
+            if u.path == "/api/osm" or u.path == "/api/osm/search":
+                return self._json(self._osm_get(u.path, q))
+            if u.path.startswith("/api/osm/tile/"):
+                return self._osm_tile(u.path)
             if u.path == "/api/edbimport/lines":
                 # 76. Two EDBs and the destination's names; nothing written
                 name = (q.get("mod") or [None])[0]
@@ -2756,7 +2771,8 @@ class Handler(BaseHTTPRequestHandler):
             if (u.path.startswith("/api/map/paint")
                     or u.path in ("/api/map/region_start", "/api/map/region_cancel",
                                   "/api/map/region_vocab", "/api/map/recolour",
-                                  "/api/map/recolour_cancel")):
+                                  "/api/map/recolour_cancel", "/api/map/osm_coast",
+                                  "/api/map/osm_boundary")):
                 return self._json(self._paint(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/settlement_plan", "/api/map/settlement_apply"):
                 return self._json(self._settlement(
@@ -2790,6 +2806,8 @@ class Handler(BaseHTTPRequestHandler):
                     u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/settlemodel/plan", "/api/settlemodel/apply"):
                 return self._json(self._settlemodel(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/osm/box", "/api/osm/coast"):
+                return self._json(self._osm_post(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/edbimport/plan", "/api/edbimport/apply"):
                 return self._json(self._edbimport(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/campimport/plan", "/api/campimport/apply"):
@@ -3817,6 +3835,70 @@ class Handler(BaseHTTPRequestHandler):
         self.registry.invalidate(name)
         return out
 
+    # ---- the real world behind the map (25) ----
+    def _osm_map(self, name):
+        if name not in self.registry.names():
+            raise KeyError("unknown mod")
+        return self.registry.campaign_map(name)
+
+    def _osm_get(self, path, q):
+        """The panel's state, or a place search. Only the search sends anything,
+        and only when the switch is on."""
+        name = (q.get("mod") or [""])[0]
+        try:
+            cm = self._osm_map(name)
+            box, where = osmmap.box_for(cm)
+            if path == "/api/osm/search":
+                if box is None:
+                    return {"error": "give the map its real-world box first"}
+                proj = osmmap.Projection(box, cm.terrain.width, cm.terrain.height)
+                return {"results": osmmap.search(box, proj, (q.get("q") or [""])[0])}
+        except (KeyError, campmap.MapError, ModDataError, OSError, ValueError) as e:
+            return {"error": str(e)}
+        s = osmmap.settings()
+        w, h = cm.terrain.width, cm.terrain.height
+        return {"mod": name, "settings": s, "width": w, "height": h,
+                "box": box.payload() if box else None, "box_from": where,
+                "key": osmmap.map_key(cm),
+                "file": osmmap.bbox_text(box, w, h) if box else ""}
+
+    def _osm_tile(self, path):
+        try:
+            z, x, y = (int(v) for v in path.rsplit("/", 3)[1:])
+            raw = osmmap.tile(z, x, y)
+        except osmmap.OsmOff as e:
+            return self._err(403, str(e))
+        except (ValueError, OSError) as e:
+            return self._err(404, str(e))
+        return self._send(200, raw, "image/png")
+
+    def _osm_post(self, action, body):
+        name = str(body.get("mod") or "")
+        try:
+            cm = self._osm_map(name)
+            if action == "box":
+                if body.get("clear"):
+                    osmmap.keep_box(cm, None)
+                else:
+                    src = body.get("text") if body.get("text") else body.get("box")
+                    osmmap.keep_box(cm, osmmap.parse_bbox(src or {}))
+                box, where = osmmap.box_for(cm)
+                return {"box": box.payload() if box else None, "box_from": where,
+                        "file": osmmap.bbox_text(box, cm.terrain.width,
+                                                 cm.terrain.height) if box else ""}
+            box, _ = osmmap.box_for(cm)
+            if box is None:
+                return {"error": "give the map its real-world box first"}
+            report = _progress_sink(str(body.get("job") or ""))
+            ways = osmmap.coastline(box, report)
+            proj = osmmap.Projection(box, cm.terrain.width, cm.terrain.height)
+            # the painted state: an unsaved stroke is part of the map being judged
+            held = campaint.peek(name)
+            sea = (held.cm if held is not None and held.cm is cm else cm).sea
+            return {"coast": osmmap.analyse(ways, proj, sea).payload()}
+        except (KeyError, campmap.MapError, ModDataError, OSError, ValueError) as e:
+            return {"error": str(e)}
+
     # ---- building lines from another mod (76) ----
     def _edbimport(self, action, body):
         """Preview or write building lines of ``from`` into ``mod``. Only ``mod``
@@ -3948,6 +4030,10 @@ class Handler(BaseHTTPRequestHandler):
                 out = campaint.recolour(sess, body)
             elif action == "recolour_cancel":
                 out = campaint.cancel_recolour(sess)
+            elif action == "osm_coast":
+                out = osmmap.paint_coast(sess)
+            elif action == "osm_boundary":
+                out = osmmap.paint_boundary(sess, body)
             elif action in ("paint_plan", "paint_apply"):
                 plan = campaint.plan_paint(sess)
                 out = {"plan": plan.payload(), "state": sess.state()}
@@ -3975,6 +4061,8 @@ class Handler(BaseHTTPRequestHandler):
                     for r in sess.cm.index.regions if r.name
                 }
         except (campmap.MapError, ValueError, OSError) as e:
+            # osmmap.OsmError is a ValueError, so a refusal from the network
+            # half lands here too, with the session state beside it
             return {"error": str(e), "state": sess.state()}
         if reset:
             out["reset"] = ("the map was re-read from disk, so the strokes that "

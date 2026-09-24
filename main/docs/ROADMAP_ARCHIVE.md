@@ -9711,3 +9711,67 @@ DaC line planned into ROCSS with no stray faction, and the routes. Checked in
 the app: ROCSS's barracks with Replace and its mercenary barracks into DaC, the
 mapping table, a refusal and its *add wonders4*, and a changed mapping marking
 the plan out of date. Nothing was written to the installed mods.
+
+## Phase 25 - the OSM backdrop and coastline tracer - DONE 2026-09-24
+
+Mylae's `OsmBackground`, `OsmRegionSearch` and `CoastlineTracer`, rebuilt as
+`unittransfer/osmmap.py`, the `/api/osm` routes, two new paint-tool actions and
+the Campaign Map's **Real world** sub-tab under Map (`web/js/osmmap.js`).
+
+**Off until it is turned on.** It is the first thing in the toolkit that uses
+the network, so Settings has a *Real-world map* section with the switch (off
+by default) and the three server lists, tile server, Overpass mirrors and
+Nominatim, each editable. Until it is on, every route that would send anything
+refuses and says so, and the panel says what it would send and where: the
+map's box, the numbers of the tiles it draws, and the words searched, never
+anything from a mod. Every request carries the toolkit's name, tiles are kept
+on disk for 30 days, and Nominatim is asked at most once a second, as the OSM
+usage policies ask.
+
+**The box.** North, south, west and east, kept per mod and campaign map in the
+toolkit's own config (`osm_boxes.json`), never in the mod. A `bbox_coords.txt`
+from his New Map Editor is imported, read from beside the map when nothing is
+kept, and exported in the same shape. The projection is his `latLngToPixel`
+exactly (tile 0 on the west edge, tile W-1 on the east, Mercator down the rows),
+so a box made for his editor lines up the same here.
+
+**The backdrop** is drawn over the map, not under it, at its own opacity: the
+map's layers are opaque, and a picture beneath them would not be seen. It asks
+for no more than 48 tiles a frame and stops at the map's edge.
+
+**The coastline, and two things his tracer gets wrong.** OSM draws every
+`natural=coastline` way with the land on the left and the water on the right;
+his tracer joins ways end to end in either direction, which loses that, and
+paints the line itself as sea. The engine reads a height pixel as sea when red
+and green are 0 and blue is above 0, the blue setting the depth, so his "line
+only (0,0,200)" is sea as well, not a border. Here each way keeps its direction.
+The tile right of every segment seeds a four-connected fill bounded by the line,
+and the tile left of it seeds a check: if the fill reaches those land tiles,
+the coastline has a gap and the plan refuses rather than flooding land. The
+panel draws the line in cyan and every tile that would become sea in red.
+*Make the red tiles sea* is one stroke of the paint tool, the water brush's:
+regions, heights and ground types together, in the sea colours measured off
+the mod's own map, onto land tiles only (a sea tile keeps its depth),
+settlements and ports spared. The Paint tab's Undo and Save are its own. The
+coastline is fetched in 6-degree chunks, a chunk that fails split in four, ways
+deduplicated by id, and the result cached by box.
+
+**Places.** A search bounded by the box lists each place with its tile. *Go*
+centres the map on it; *New region here* opens the existing new-region wizard
+filled in from the name (`Name_Province`, settlement `Name`); *Paint its
+boundary* fetches the administrative outline (the relation Nominatim named, or
+the smallest one Overpass says the point is in) and paints it onto a region as
+one stroke, land tiles only, holes left out, markers spared.
+
+Exit: `tests/test_osmmap.py`, 63 checks, with a local fake tile server,
+Overpass and Nominatim so nothing leaves the machine: off by default with
+nothing sent, the box and the file, the projection both ways, the line and the
+water side on a 60 x 40 map, a reversed way, a gap caught, the stroke with its
+markers spared and its undo byte for byte, the search, the boundary with its
+hole, the tile cache, and the routes. Checked in the app: the tab off on ROCSS,
+the Settings section, and on a scratch server with the fake OSM, the backdrop,
+the coastline overlay, the stroke and its undo, a search, a boundary and a
+prefilled new region.
+
+Not in this phase: turning it on against the real servers. That is the user's
+switch to throw; nothing here has sent a request to OpenStreetMap.

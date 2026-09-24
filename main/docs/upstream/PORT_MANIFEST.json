@@ -3,8 +3,8 @@
   "remote": "upstream-editor",
   "ref": "refs/upstream/editor/main",
   "clone_url": "https://github.com/Machiavello-1441/m2tw-editor.git",
-  "reviewed_sha": "439aa9b6183b71b7178bef4b842dace68b7d2ff7",
-  "reviewed_date": "2026-09-17"
+  "reviewed_sha": "6f975d268427a85f7294b87d996602f43f5d5638",
+  "reviewed_date": "2026-09-24"
  },
  "dispositions": {
   "port-concept": "rebuild the idea in our stack; a change here may mean the format knowledge changed",
@@ -868,12 +868,12 @@
   "src/components/map/CoastlineTracer.jsx": {
    "disposition": "port-concept",
    "phases": [
-    "16"
+    "25"
    ],
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to Phase 25 (decided 2026-09-03; renumbered from V3.1 on 2026-09-05, ROADMAP.md) - the DECISION NEEDED above is answered: ported, not dropped. An OSM backdrop and coastline tracer for the map editor, opt-in and OFF by default, with the Overpass mirror list visible in settings; it is the first thing in the toolkit that touches the network. NOT part of V3.0.0 (phase 16)."
+   "notes": "Ported in Phase 25 (2026-09-24), changed: his tracer joins ways in either direction and paints the LINE as sea (0,0,200 is sea in the engine too, a little deeper, not a border). Ours keeps each way's direction (OSM: land left, water right), fills the water side, refuses when the fill leaks through a gap, and writes it as a water-brush stroke in the map's own sea colours, only onto tiles that are land now. Fetched in 6-degree chunks, split on failure, cached by box."
   },
   "src/components/map/DisastersTab.jsx": {
    "disposition": "port-concept",
@@ -990,22 +990,22 @@
   "src/components/map/OsmBackground.jsx": {
    "disposition": "port-concept",
    "phases": [
-    "16"
+    "25"
    ],
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to Phase 25 (decided 2026-09-03; renumbered from V3.1 on 2026-09-05, ROADMAP.md) - the DECISION NEEDED above is answered: ported, not dropped. An OSM backdrop and coastline tracer for the map editor, opt-in and OFF by default, with the Overpass mirror list visible in settings; it is the first thing in the toolkit that touches the network. NOT part of V3.0.0 (phase 16)."
+   "notes": "Ported in Phase 25 (2026-09-24) as unittransfer/osmmap.py + web/js/osmmap.js: the tiles come through /api/osm/tile, cached on disk 30 days with the toolkit's User-Agent, and are drawn OVER the map at their own opacity (our layers are opaque). Same box convention as his latLngToPixel, so a bbox_coords.txt lines up the same. Off until Settings turns it on."
   },
   "src/components/map/OsmRegionSearch.jsx": {
    "disposition": "port-concept",
    "phases": [
-    "16"
+    "25"
    ],
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "7cab442",
-   "notes": "Deferred to Phase 25 (decided 2026-09-03; renumbered from V3.1 on 2026-09-05, ROADMAP.md) - the DECISION NEEDED above is answered: ported, not dropped. An OSM backdrop and coastline tracer for the map editor, opt-in and OFF by default, with the Overpass mirror list visible in settings; it is the first thing in the toolkit that touches the network. NOT part of V3.0.0 (phase 16)."
+   "notes": "Ported in Phase 25 (2026-09-24): Nominatim search bounded by the box, once a second at most; each result goes to its tile, opens our new-region wizard filled in from the name, or has its boundary painted onto a region as a paint-tool stroke (land only, markers spared). Not ported: his random colour and auto-created region; the wizard does that with its own checks."
   },
   "src/components/map/OverlayMapGenerator.jsx": {
    "disposition": "out-of-scope",

@@ -129,6 +129,21 @@ async function openSettings(){
           Use the base unit's <b>soldier</b> line by default</label>
         <div class="count" style="margin-top:6px">Start the <b>Soldier</b> row on <b>Base</b>, so the destination unit's model and projectile are used instead of the transferred unit's. Applies to both modes that have a base unit: building a new unit on one, and replacing one (there the base <i>is</i> the unit being replaced, so its own model and animations stay). Still switchable per unit.</div>
       </fieldset>
+      <fieldset><legend>Real-world map (OpenStreetMap)</legend>
+        <label class="chk"><input type="checkbox" id="osmChk" ${s.osm_enabled?'checked':''} onchange="saveOsm()">
+          Let the campaign map's <b>Real world</b> tab use OpenStreetMap</label>
+        <div class="count" style="margin-top:6px">${docPoints(
+          'The one part of the toolkit that uses the internet, and it is off until this is ticked.',
+          ['Sent: the map’s real-world box, the numbers of the map tiles it draws, and the words you search for. Nothing about any mod.',
+           'Map tiles are kept on disk for 30 days, and searches go at most once a second, as the OpenStreetMap usage policies ask.',
+           'The servers are below, one a line, tried in order. Change them to use a mirror of your own.'])}</div>
+        <label style="display:block;margin-top:6px">Map tiles <span class="count">({z}, {x} and {y} are filled in)</span>
+          <textarea id="osmTiles" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_tiles||['https://tile.openstreetmap.org/{z}/{x}/{y}.png']).join('\n'))}</textarea></label>
+        <label style="display:block">Overpass (the coastline)
+          <textarea id="osmOverpass" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_overpass||['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']).join('\n'))}</textarea></label>
+        <label style="display:block">Nominatim (the place search)
+          <input id="osmNominatim" style="width:100%" value="${esc(s.osm_nominatim||'https://nominatim.openstreetmap.org')}" onchange="saveOsm()"></label>
+      </fieldset>
       <fieldset><legend>Unit-text cache</legend>
         <label class="chk"><input type="checkbox" id="clearBinChk" ${s.clear_strings_bin===false?'':'checked'} onchange="saveClearBin()">
           Clear <code>export_units.txt.strings.bin</code> after every transfer / edit / cleanup</label>
@@ -390,3 +405,17 @@ async function doRevert(id){
   if(r.error){toast('Revert error: '+r.error);return;}
   toast(`Reverted to this stage. ${r.count} transfer(s) undone ✓`);
   state.destData=null; openLog(); if(state.data)loadSource();}
+
+/* ---------- the real-world map (Phase 25) ----------
+   The switch and the three server lists, saved as they are changed. The map's
+   own panel reads them fresh each time it opens, so it follows at once. */
+async function saveOsm(){
+  const val = id => (document.getElementById(id) || {}).value || '';
+  const lines = id => val(id).split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+  const on = !!(document.getElementById('osmChk') || {}).checked;
+  const body = {osm_enabled: on, osm_tiles: lines('osmTiles'),
+                osm_overpass: lines('osmOverpass'), osm_nominatim: val('osmNominatim').trim()};
+  state.settings = await api.post('/api/settings', body);
+  if(state.osm){ state.osm.st = null; if(state.osm.open) osmLoad(); }
+  toast(on ? 'OpenStreetMap is on for the Real world tab.' : 'OpenStreetMap is off.');
+}

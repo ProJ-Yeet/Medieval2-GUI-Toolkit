@@ -178,6 +178,10 @@ const CMAP_TABS = [
      {id: 'fe', label: 'Front end', panels: ['cmFE'],
       open: {fn: 'cfeToggle', at: 'cfe'},
       title: 'The picture the campaign-selection screen draws'},
+     {id: 'osm', label: 'Real world', panels: ['cmOsm'],
+      open: {fn: 'osmToggle', at: 'osm'},
+      title: 'OpenStreetMap behind the map: the backdrop, the real coastline and '
+           + 'places by name. Off until it is turned on in Settings'},
    ]},
   {id: 'check', label: 'Validate', icon: '\u2713',
    title: 'Everything wrong with this map: what the read itself found, then the '
@@ -1263,6 +1267,7 @@ back from the collapsed state.">›</button>
   cfdOpen();          // 20b, T8, and it never reads anything at all
   cvwOpen();          // 20b, T9, out of the settings the page already has
   cfeOpen();          // 37b, and it reads nothing until somebody opens it
+  osmOpen();          // 25, and it sends nothing until it is switched on
   cchkOpen();
   cqOpen();
   cpaintOpen();
@@ -2246,6 +2251,9 @@ function cmapPaint(dirty){
     // 16g's colouring, over the terrain and the stack both, because in tint
     // mode it is a reading of them rather than a sheet over them
     cmapThemeDraw(x, x0, y0, x1, y1);
+    // 25: OpenStreetMap and the real coastline, over the stack at their own
+    // opacity - the layers are opaque, so a backdrop under them is not seen
+    if(typeof osmDraw === 'function') osmDraw(x, x0, y0, x1, y1);
     cmapOverlay(x, x0, y0, x1, y1);
   }
   x.restore();
