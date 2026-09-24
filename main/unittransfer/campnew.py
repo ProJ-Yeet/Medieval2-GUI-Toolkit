@@ -291,7 +291,8 @@ def _plan_header(p: CampaignPlan, src: Path) -> None:
         code = kb.code_of(raw)
         if not code:
             continue
-        word, _, rest = code.partition(" ")
+        # split on any white space: ROCSS writes `campaign<TAB>imperial_campaign`
+        word, rest = (code.split(None, 1) + [""])[:2]
         if word.lower() != HEADER:
             p.warnings.append(
                 f"{p.source}'s {campstrat.STRAT_NAME} does not open on "

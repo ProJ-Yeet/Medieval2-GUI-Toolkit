@@ -178,6 +178,10 @@ const CMAP_TABS = [
      {id: 'fe', label: 'Front end', panels: ['cmFE'],
       open: {fn: 'cfeToggle', at: 'cfe'},
       title: 'The picture the campaign-selection screen draws'},
+     {id: 'size', label: 'Size', panels: ['cmSize'],
+      open: {fn: 'mszToggle', at: 'msz'},
+      title: 'Grow or shrink the map, with every coordinate in the mod moved to '
+           + 'match, or start a new campaign on a blank map'},
      {id: 'osm', label: 'Real world', panels: ['cmOsm'],
       open: {fn: 'osmToggle', at: 'osm'},
       title: 'OpenStreetMap behind the map: the backdrop, the real coastline and '
@@ -1268,6 +1272,7 @@ back from the collapsed state.">›</button>
   cvwOpen();          // 20b, T9, out of the settings the page already has
   cfeOpen();          // 37b, and it reads nothing until somebody opens it
   osmOpen();          // 25, and it sends nothing until it is switched on
+  mszOpen();          // 26, and it reads nothing until a plan is asked for
   cchkOpen();
   cqOpen();
   cpaintOpen();

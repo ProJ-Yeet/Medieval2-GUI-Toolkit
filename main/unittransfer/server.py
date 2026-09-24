@@ -326,6 +326,9 @@ show the unsaved map rather than the one on disk.
                                     listed and never written
   GET  /api/campnew?mod=         -> 24, M15. The campaigns a new one could be
                                     copied from, and what copying each costs
+  GET  /api/mapnew?mod=          -> 26b: what a new map can be made of - the
+                                    campaigns to copy, factions, climates
+  POST /api/mapnew/plan|apply    -> a new campaign on a map made from nothing
   POST /api/campnew/plan|apply   -> make a new campaign folder from one that
                                     works, minus the compiled map, with its own
                                     header and its own new-game menu keys
@@ -389,6 +392,9 @@ than "does what is on disk load?".
   POST /api/map/fix_plan|fix_apply
                                  -> Geomod's three debugger actions, in one
                                     backup set + undo
+  POST /api/map/resize_plan|resize_apply
+                                 -> 26a: grow or shrink the map by four margins,
+                                    every coordinate in the mod moved with it
 
 Query, themes and information maps (16g, see :mod:`unittransfer.mapquery`)
   GET  /api/map/query/vocab?mod=&campaign=
@@ -669,6 +675,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
+from . import mapnew, mapresize
 from . import ancillaries, areaeffects, campimport, edbimport, osmmap, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
@@ -2419,6 +2426,12 @@ class Handler(BaseHTTPRequestHandler):
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
                 return self._json(campnew.view(self.registry.describe(name)))
+            if u.path == "/api/mapnew":
+                # 26b. Ahead of the /api/map prefix, which it also starts with
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._json(mapnew.view(self.registry.describe(name)))
             if u.path.startswith("/api/map"):
                 return self._map_route(u.path, q)
             if u.path == "/api/log":
@@ -2816,6 +2829,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/campnew/plan", "/api/campnew/apply"):
                 return self._json(self._campnew(
                     u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/mapnew/plan", "/api/mapnew/apply"):
+                return self._json(self._mapnew(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/query", "/api/map/export"):
                 return self._json(self._mapquery(
                     u.path.rsplit("/", 1)[-1], body))
@@ -2825,6 +2840,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/map/baseline", "/api/map/fix_plan",
                           "/api/map/fix_apply"):
                 return self._json(self._mapcheck(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/map/resize_plan", "/api/map/resize_apply"):
+                return self._json(self._mapresize(u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/edu/sort/plan", "/api/edu/sort/apply"):
                 return self._json(self._edu_sort(u.path.rsplit("/", 1)[-1], body))
             if u.path == "/api/sounds/plan":
@@ -3979,6 +3996,27 @@ class Handler(BaseHTTPRequestHandler):
         self.registry.invalidate(body["mod"])
         return out
 
+    def _mapnew(self, action, body):
+        """26b: a new campaign on a map made from nothing. A folder operation
+        like :meth:`_campnew`, with the map written into the folder."""
+        try:
+            mod = self.registry.describe(body["mod"])
+            plan = mapnew.plan(mod, body)
+        except (KeyError, ModDataError, OSError, ValueError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(mapnew.apply(plan))
+        except (ValueError, OSError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        out.pop("record", None)
+        self.registry.invalidate(body["mod"])
+        return out
+
     # ---- the campaign map, painted ----
     def _paint(self, action, body):
         """Every stroke, undo and save of the paint tool (16e).
@@ -4422,6 +4460,36 @@ class Handler(BaseHTTPRequestHandler):
             self.registry.invalidate(name)          # the files changed on disk
             fresh = self.registry.map_for(name, campaign)
             out["report"] = mapcheck.run(mod, fresh, campaign).payload(fresh)
+            return out
+        except (campmap.MapError, ValueError, OSError) as e:
+            return {"error": str(e)}
+
+    # ---- the campaign map, resized (26a) ----
+    def _mapresize(self, action, body):
+        """Plan or write a resize. Refused over unsaved paint strokes: they are
+        pixels of the old size, and neither keeping nor dropping them quietly
+        is right."""
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+        except (KeyError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        held = campaint.peek(name)
+        if held is not None and held.unsaved:
+            return {"error": "the paint tool has unsaved strokes on "
+                             + ", ".join(held.state()["files"])
+                             + " - save or discard them on the Paint tab first"}
+        try:
+            plan = mapresize.plan(mod, body)
+            out = {"plan": plan.payload()}
+            if action == "plan" or plan.errors:
+                if plan.errors:
+                    out["error"] = "; ".join(plan.errors)
+                return out
+            out.update(mapresize.apply(plan))
+            out.pop("record", None)
+            campaint.drop(name)
+            self.registry.invalidate(name)          # every layer changed size
             return out
         except (campmap.MapError, ValueError, OSError) as e:
             return {"error": str(e)}

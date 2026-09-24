@@ -9775,3 +9775,117 @@ prefilled new region.
 
 Not in this phase: turning it on against the real servers. That is the user's
 switch to throw; nothing here has sent a request to OpenStreetMap.
+
+## Phase 26 - map resize, and a map from scratch - DONE 2026-09-24
+
+Geomod's resize (audit item **G6**) and the TWCenter tutorial "Creating a World
+- Basic mapping from scratch", rebuilt as `unittransfer/mapresize.py`,
+`unittransfer/mapnew.py`, the `/api/map/resize_*` and `/api/mapnew` routes and
+the Campaign Map's **Size** sub-tab under Map (`web/js/mapsize.js`).
+
+### 26a - resize
+
+**Four margins, in tiles.** North, south, west and east, positive to add and
+negative to take away. Each layer is padded or cropped by its own scale, one
+pixel a tile on `map_regions.tga`, two on the `2W+1` and `2W` layers, so the
+corner lines stay with their tiles. `water_surface.tga` goes with them when it
+is the heights' size (DaC) and is left when it is not (ROCSS, 256x256).
+`map_FE.tga`, the radar maps and `disasters.tga` are pictures, listed and left.
+`descr_terrain.txt` gets its two numbers and nothing else.
+
+**New ground is the map's own sea**, per layer: the colour each layer most often
+has on the tiles the engine reads as sea. On DaC that is the sea region
+(41,140,233), depth (0,0,255), `ocean` ground and its climate; on ROCSS it is
+`sea_deep` and a different depth. The tutorial's table is only the fallback for
+a map with no sea at all.
+
+**What moves.** The game counts x from the west edge and y from the south, so
+only those two margins move a coordinate, and the panel says so beside the
+boxes. What moves: resources, forts, watchtowers and characters in every
+`descr_strat.txt` reading the map; `position` lines in `descr_events.txt` and
+`descr_disasters.txt`; the tile columns of `custom_tiles_db.txt`; every custom
+and historic battle's `battle x, y` and its characters; and the campaign
+scripts. The scripts are the part nobody else does. They are a grammar nothing
+here parses, and a map that moves while its script does not is a script wrong
+everywhere, so the rule is narrow and measured instead: every `x N, y N` pair
+(`spawn_army`, `spawn_character`), and the tile of the fifteen commands and one
+condition the engine's own command documentation says take a strategy-map
+position - `reveal_tile`, the four camera commands, `move`,
+`reposition_character`, `console_command move_character`, `point_at_*`,
+`settlement_flash_*`, `position`, `reveal_area` (both corners),
+`reveal_radius` (not its radius) and `I_CharacterTypeNearTile` (not its
+distance). Only whole integers are touched, and a comment keeps its numbers. DaC
+moves 7,149 coordinates in 9 files; ROCSS 15,953 in 21.
+
+**Which campaigns.** The base map and every campaign without a
+`descr_terrain.txt` of its own, including any layer one of them ships its own
+copy of. A campaign with its own (ROCSS's `world_a`) is a separate map and is
+resized alone, from the Size tab while it is open.
+
+**A shrink that would lose something is refused**, naming the file and line of
+every settlement pixel, port, resource, fort, character, event, battle and
+custom tile the smaller map would leave standing nowhere. Script lines in the
+same place are warned about, not refused. A province that only loses edge land
+is named with how much.
+
+It also says when region numbers change (a scan from the top-left meets a sea
+band first), that radar maps keep the old outline, and when a side goes past the
+stock engine's 510 without M2EX. It refuses over unsaved paint strokes. One
+backup set, `map.rwm` deleted beside every home it touched, one Undo.
+
+**The TGA writer got ten times faster** on the way. Run-length encoding was a
+Python loop over every pixel, about a second a layer, and a resize re-encodes
+nine layers in its plan. `maptga.rle_rows` does the same greedy packing for the
+whole image in numpy. It is byte-identical to the old encoder on all 27 layers
+of both installed mods and 3,000 random rows, and every compressed layer on disk
+re-encodes to its own bytes. The paint tool's saves are quicker for it too. A DaC
+resize plan is about 3 seconds; ROCSS, seven campaigns with 1.7 MB scripts,
+about 15.
+
+### 26b - a new campaign on a map made from nothing
+
+The tutorial's recipe, done so the result **loads**. It is a new campaign whose
+map lives in its own folder, with its own `descr_terrain.txt` and
+`descr_regions.txt` (Phase 73's shape, ROCSS's `world_a`), so `world/maps/base`
+and every campaign reading it are untouched. `campnew` copies an existing
+campaign for what a map does not decide (menu pictures, movies, description
+keys); the strat, script, events, mercenaries and win conditions are written
+fresh, and the lookup and custom-tiles files are left behind.
+
+**The map** is one island in open sea over the share asked for, cut into
+provinces around seeds spread by k-means. A fragment of a province goes to the
+neighbour it touches most, so every province is one piece, and each has a city
+with its own province on all four sides. Heights rise from the coast (1 to 80
+grey, never black). The ground is fertile with hills on the high middle,
+shallow sea along the coast and deep sea beyond. There is one climate of the
+mod's own, white fog, and the tutorial's black leftovers. Province colours stay
+clear of the markers and the sea.
+
+**Who holds what.** Each faction picked holds one province, the first nearest
+the middle, with a leader in its settlement: a name from its own pool in
+`names.txt` and the bodyguard its EDU gives it. Every other province is the
+rebels'. The records take the rebel type and religions of the mod's own first
+province, the hidden-resource line is the tutorial's `none`, and the start and
+end dates, timescale and spawn values come from the campaign copied. The names
+go into the shared region-names file under the campaign's own token
+(`Newland_3_Province`, `Newland_3`), refused if taken.
+
+Validated on copies of both installed mods: all 41 rules run on the new
+campaign's own map and find nothing but the terrain textures the copy left out.
+One Undo takes the whole campaign away again.
+
+A fix found on the way: `campnew` did not recognise a `descr_strat.txt` header
+written with a tab (`campaign<TAB>imperial_campaign`, ROCSS's), and warned that
+the copy kept its old name.
+
+The same session also changed the validator, from a modder's feedback: ports are
+drawn on their dock (`campmap.dock_tile`, the engine's own count); a stacked
+resource is no longer a finding (the engine loads every copy); a settlement on
+dense forest is fatal; and `feature.crossing_uneven`, with a per-crossing
+**Smooth** fix, flags a river crossing far from the average of the 5x5 tiles a
+battle there is built on.
+
+Tests: `test_mapresize` (35) and `test_mapnew` (23).
+
+Not in this phase: growing the land itself. New ground is sea, and land is
+painted with the brush, the Real world tab or Phase 27's generators.

@@ -2252,6 +2252,15 @@
   .ntlv{display:grid;grid-template-columns:22px 1fr 1fr 30px;gap:6px;align-items:center;
     padding:3px 0}
   .ntlv .i{color:var(--dim);font-size:11px;text-align:right}
+  /* 26: the map's size (mapsize.js) */
+  .mszgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:center;margin:6px 0}
+  .mszbox{display:flex;flex-direction:column;font-size:11px;color:var(--dim)}
+  .mszbox input{width:100%}
+  .mszmid{text-align:center;font-size:12px}
+  .mszplan{margin-top:6px;display:flex;flex-direction:column;gap:3px}
+  .mszoff{max-height:220px;overflow:auto;border:1px solid var(--edge);border-radius:6px;padding:4px 8px}
+  .mnwfac{display:flex;flex-wrap:wrap;gap:2px 12px;max-height:140px;overflow:auto;
+    border:1px solid var(--edge);border-radius:6px;padding:4px 8px;margin:4px 0}
   /* 25: the real world behind the map (osmmap.js) */
   .osmres{border-top:1px solid var(--edge);padding:6px 0}
   /* 76: building lines from another mod (edbimport.js) */
@@ -3304,6 +3313,7 @@
 <script src="js/campforts.js"></script>
 <script src="js/campcreate.js"></script>
 <script src="js/osmmap.js"></script>
+<script src="js/mapsize.js"></script>
 <script src="js/climates.js"></script>
 <script src="js/rebels.js"></script>
 <script src="js/mercs.js"></script>

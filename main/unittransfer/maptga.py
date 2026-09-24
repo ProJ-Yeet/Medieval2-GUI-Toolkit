@@ -74,6 +74,11 @@ from typing import Optional, Tuple
 
 from PIL import Image
 
+try:                                  # only the RLE writer's speed depends on it
+    import numpy as np
+except ImportError:                   # pragma: no cover
+    np = None
+
 #: id, colour-map type, image type, cmap first/len/depth, x/y origin, w, h, depth, descriptor
 _HEADER = struct.Struct("<BBBHHBHHHHBB")
 HEADER_SIZE = _HEADER.size          # 18
@@ -340,7 +345,11 @@ def encode(image: Image.Image, info: TgaInfo) -> bytes:
     if not info.top_origin:
         rows.reverse()
 
-    body = b"".join(_rle_row(r, stride) for r in rows) if info.rle else b"".join(rows)
+    if info.rle:
+        body = (rle_rows(b"".join(rows), info.width, stride) if np is not None
+                else b"".join(_rle_row_py(r, stride) for r in rows))
+    else:
+        body = b"".join(rows)
 
     head = _HEADER.pack(len(info.id_field), info.colour_map_type, info.image_type,
                         info.colour_map_first, info.colour_map_length,
@@ -385,6 +394,76 @@ def write(path: Path, image: Image.Image, info: TgaInfo) -> int:
 
 
 def _rle_row(row: bytes, stride: int) -> bytes:
+    """One scanline, run-length encoded: :func:`rle_rows` on a single row."""
+    if np is None or len(row) < 2 * stride:
+        return _rle_row_py(row, stride)
+    return rle_rows(row, len(row) // stride, stride)
+
+
+def rle_rows(pixels: bytes, width: int, stride: int) -> bytes:
+    """Rows of ``width`` pixels, run-length encoded, byte for byte what
+    :func:`_rle_row_py` writes for each row in turn.
+
+    The same greedy packing done on the whole image at once. A row is a string
+    of runs of equal pixels; a run is written as packets of 128 and then what
+    is left, and what is left is a run packet when it is two or more and one
+    literal pixel when it is one. Literal pixels next to each other in a row
+    are gathered into literal packets of up to 128. Nothing crosses a row.
+
+    Pure Python took about a second a layer, because a campaign map's heights
+    are long gradients - runs of two and three - and it looked at every pixel;
+    a resize re-encodes nine layers in its plan, which made it a minute.
+    """
+    n = len(pixels) // stride
+    if n == 0:
+        return b""
+    px = np.frombuffer(pixels, dtype=np.uint8)[:n * stride].reshape(n, stride)
+    ids = np.zeros(n, dtype=np.uint64)
+    for c in range(stride):
+        ids |= px[:, c].astype(np.uint64) << np.uint64(8 * c)
+    # a run starts where the pixel differs from the one before, or a row starts
+    brk = np.ones(n, dtype=bool)
+    brk[1:] = ids[1:] != ids[:-1]
+    brk[::width] = True
+    run_start = np.flatnonzero(brk)
+    run_len = np.diff(np.append(run_start, n))
+    full, rem = run_len // 128, run_len % 128
+    per = full + (rem > 0)
+    item_run = np.repeat(np.arange(len(run_start)), per)
+    k = np.arange(len(item_run)) - np.repeat(np.cumsum(per) - per, per)
+    item_len = np.where(k < full[item_run], 128, rem[item_run])
+    item_start = run_start[item_run] + k * 128
+    single = item_len == 1
+    # a literal packet opens on a single whose item before it is not a single,
+    # or that starts a row, and again every 128 singles after that
+    opens = single.copy()
+    opens[1:] &= ~single[:-1] | (item_start[1:] % width == 0)
+    grp = np.cumsum(opens)
+    first_of_grp = np.flatnonzero(opens)
+    rank = (np.arange(len(single)) - first_of_grp[np.maximum(grp - 1, 0)]
+            if len(first_of_grp) else np.zeros(len(single), dtype=np.int64))
+    new_packet = ~single | (single & (opens | (rank % 128 == 0)))
+    starts = np.flatnonzero(new_packet)
+    count = np.add.reduceat(item_len, starts)
+    is_run = ~single[starts]
+    p_start = item_start[starts]
+    head = np.where(is_run, 0x80 | (count - 1), count - 1).astype(np.uint8)
+    emit = np.where(is_run, 1, count)
+    # the pixels each packet carries, in order
+    off = np.cumsum(emit) - emit
+    idx = np.repeat(p_start, emit) + (np.arange(int(emit.sum())) - np.repeat(off, emit))
+    body = px[idx]
+    size = len(starts) + int(emit.sum()) * stride
+    out = np.empty(size, dtype=np.uint8)
+    at = np.arange(len(starts)) + off * stride          # where each header goes
+    mask = np.zeros(size, dtype=bool)
+    mask[at] = True
+    out[mask] = head
+    out[~mask] = body.ravel()
+    return out.tobytes()
+
+
+def _rle_row_py(row: bytes, stride: int) -> bytes:
     """One scanline, run-length encoded. Runs never cross a row, per the spec.
 
     A packet is at most 128 pixels: ``0x80 | n-1`` then one pixel for a run,

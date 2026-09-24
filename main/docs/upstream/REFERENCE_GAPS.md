@@ -33,7 +33,7 @@ says "we do not", that was verified, and the verification is quoted.
 |---|---|---|---|
 | Demir's StratMap Forge | 14 | 0 | **D4, D5 done 19a; D2, D3 done 19b; D8 done 20a; D14 done 20b; D6, D11 done 21; D9 half done 22a; D9, D10 done 22b** |
 | Mylae's M2TW Editor | 21 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11, so done 21) · **M5, M6, M13 done 18a; M3, M4 done 18b; M8 done 20c** |
-| Bare Geomod | 8 | 1 (G6) | 3 (G7, G8 done; G5 = D9) · **G3 done 18a; G2 half done B1; G5 done 22b** |
+| Bare Geomod | 8 | 1 (G6, done 26a) | 3 (G7, G8 done; G5 = D9) · **G3 done 18a; G2 half done B1; G5 done 22b** |
 | TWMapReader | 12 | 1 (T5, folded into 17d) | **T2, T11 done 20a; T8, T9 done 20b; T4 done 20c** |
 | **Total** | **51** | **6** | **5** |
 
@@ -650,7 +650,7 @@ feature as D9; the Localize animation is worth taking on its own, because
 `mapcheck` and `mapquery` both already centre the map on a tile and neither
 tells you where your eye should land.
 
-### G6. Map resize · **scheduled**
+### G6. Map resize · **done 26a**
 
 "Add surface area and automatically write the new coordinates into
 `descr_strat.txt`." **V3.2**, with the manual's own warning that shrinking needs

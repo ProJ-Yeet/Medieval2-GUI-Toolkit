@@ -775,7 +775,7 @@ is worth picking up.
 | # | Item | Size | Note |
 |---|---|---|---|
 | ~~25~~ | ~~**Phase 25 - OSM backdrop and coastline tracer**~~ | L | **Done 2026-09-24**; write-up in `ROADMAP_ARCHIVE.md`. |
-| 26 | **Phase 26 - map resize, and create from scratch** | L | Campaign-map work at three stars. Phases 22 and 24 removed most of the original objection, so it is cheaper than when it was deferred. |
+| ~~26~~ | ~~**Phase 26 - map resize, and create from scratch**~~ | L | **Done 2026-09-24**; write-up in `ROADMAP_ARCHIVE.md`. |
 | 27 | **Phase 27 - overlay and layer generators** | L | Campaign-map work at three stars. Same opt-in rule as 25. |
 
 ## Unrated, and the rating is not the reason
@@ -811,6 +811,7 @@ the TWCenter tutorial's recipe. Deferred because it touches every coordinate in
 the mod, and because shrinking requires the affected regions to be emptied by
 hand first, which Geomod's own manual calls unfinished. Phase 22 and Phase 24
 between them remove most of that objection, so re-read this after 3.2.0.
+**Done 2026-09-24**; the write-up is in `ROADMAP_ARCHIVE.md`.
 
 ## Phase 27 - Overlay and layer generators
 
