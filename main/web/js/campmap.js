@@ -3954,6 +3954,9 @@ function cmapPixelHtml(){
       <span>Port at</span><b>${px.port_game ? `${g(px.port_game)}
         <span class="count">game</span> · ${g(px.port)}
         <span class="count">image</span>` : 'none'}</b>
+      ${px.dock_game ? `<span title="The sea tile beside the port pixel where the game puts the dock and the port's model">Dock at</span><b>${g(px.dock_game)}
+        <span class="count">game</span> · ${g(px.dock)}
+        <span class="count">image</span></b>` : ''}
       <span>Bounding box</span><b>${px.bbox.join(', ')}</b>
     </div>
     <div class="k">Neighbours <span class="count">${px.neighbours.length} sharing an

@@ -33,11 +33,15 @@ not create is a tool nobody uses twice.
 the game runs) and ``note`` (worth knowing, not wrong). Only ``fatal`` blocks,
 and only when it is not in the baseline.
 
-Three auto-fixes, and they are Geomod's debugger's three::
+Two of Geomod's debugger's three auto-fixes::
 
     heights_black       ambiguous (0,0,0) altitudes on land -> (1,1,1)
-    resource_duplicate  the second of two identical resource lines, deleted
     resource_position   a resource that is off the grid or in the sea, deleted
+
+The third, deleting a second identical resource line on one tile, is not here.
+The engine loads every copy onto the tile and into its province's resources,
+so a stacked resource is one the province trades, and mods stack them on
+purpose. There is nothing to report and nothing to delete.
 
 Vanilla is the measurement for the first one, and it is a better example than
 the one this phase was scoped with. ``map_heights.tga`` has 55 tiles painted
@@ -1249,32 +1253,6 @@ def _resource_rows(ck: Check) -> List[Tuple[campstrat.Node, int, int]]:
     return out
 
 
-def duplicate_message(name: str, x: int, gy: int, line: int) -> str:
-    """The one wording of a resource written twice on a tile, which
-    :mod:`stratobj` also says of a save that would make one."""
-    return (f"a second `{name}` at {x},{gy}; line {line} already puts one "
-            f"there. The engine takes one and the other is a line nobody will "
-            f"ever find.")
-
-
-@rule("strat.resource_duplicate", "The same resource twice on one tile", "warn",
-      "Geomod's debugger action: duplicate resources")
-def _r_resource_duplicate(ck: Check) -> Iterable[Finding]:
-    seen: Dict[Tuple[str, int, int], campstrat.Node] = {}
-    for n, x, iy in _resource_rows(ck):
-        k = (n.name.lower(), x, iy)
-        first = seen.get(k)
-        if first is None:
-            seen[k] = n
-            continue
-        yield Finding(
-            "strat.resource_duplicate", "warn",
-            duplicate_message(n.name, x, ck.cm.terrain.game_y(iy),
-                              first.start + 1),
-            file=ck.strat_rel, line=n.start + 1, tile=(x, iy),
-            fix="resource_duplicate", what=f"{n.name.lower()}|{x},{iy}|dup")
-
-
 def position_faults(cm: CampaignMap, x: int, gy: int,
                     sea: Optional[bytes] = None) -> List[dict]:
     """What is wrong with the tile a resource, an event or a disaster is on.
@@ -1863,14 +1841,6 @@ FIXES: Dict[str, dict] = {
                 "feature at all. The tile goes back to being the sea its "
                 "altitude already says it is; nothing else on the layer moves.",
     },
-    "resource_duplicate": {
-        "label": "Delete duplicate resource lines",
-        "rule": "strat.resource_duplicate",
-        "file": "",
-        "what": "The second and later of two identical `resource` lines are "
-                "removed. The first one, which is the one the engine uses, "
-                "stays exactly where it is.",
-    },
     "resource_position": {
         "label": "Delete resources that are off the map or in the sea",
         "rule": "strat.resource_position",
@@ -1955,9 +1925,8 @@ def plan_fix(mod, codes: Sequence[str], cm: Optional[CampaignMap] = None,
         _plan_heights(ck, p)
     if found.get("ford_none"):
         _plan_fords(ck, p, [f.tile for f in found["ford_none"] if f.tile])
-    drop = sorted({f.line - 1 for code in ("resource_duplicate",
-                                           "resource_position")
-                   for f in found.get(code, ()) if f.line > 0})
+    drop = sorted({f.line - 1 for f in found.get("resource_position", ())
+                   if f.line > 0})
     if drop:
         _plan_strat(ck, p, drop)
     if not p.data and not p.text and not p.errors:

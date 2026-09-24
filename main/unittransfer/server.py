@@ -4057,7 +4057,8 @@ class Handler(BaseHTTPRequestHandler):
             if changed_layers & {"regions", "heights", "features"}:
                 out["map_markers"] = {
                     r.name: {"settlement": list(r.settlement) if r.settlement else None,
-                             "port": list(r.port) if r.port else None}
+                             "port": list(r.port) if r.port else None,
+                             "dock": list(r.dock) if r.dock else None}
                     for r in sess.cm.index.regions if r.name
                 }
         except (campmap.MapError, ValueError, OSError) as e:

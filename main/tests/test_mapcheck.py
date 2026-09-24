@@ -487,9 +487,15 @@ broken(lambda d: (d / campmap.REGION_NAMES_REL).write_bytes(
            b"\xff\xfe" + "{A_Province}Aland\r\n".encode("utf-16-le")),
        "loc.missing", "region and settlement names with no line in the text file")
 
-broken(lambda d: edit(d, STRAT_REL, "resource silver, 5, 4",
-                      "resource gold, 1, 5"),
-       "strat.resource_duplicate", "the same resource twice on one tile")
+# the same resource twice on one tile is not a fault: the engine loads both,
+# the province trades both, and mods stack them on purpose
+root = tmp / "mods" / "B_stacked_resource"
+shutil.copytree(clean_root, root)
+edit(root / "data", STRAT_REL, "resource silver, 5, 4", "resource gold, 1, 5")
+got = mapcheck.run(Mod(root), use_baseline=False)
+check(f"a resource stacked on an identical one is reported by nothing, got "
+      f"{sorted({f.code for f in got.findings}) or 'nothing'}",
+      not got.findings)
 
 broken(lambda d: edit(d, STRAT_REL, "resource silver, 5, 4",
                       "resource silver, 5, 0"),
@@ -584,9 +590,6 @@ def black_port(d: Path):
 
 for code, breaker, expect in (
     ("heights_black", black_port, "height.ambiguous"),
-    ("resource_duplicate",
-     lambda d: edit(d, STRAT_REL, "resource silver, 5, 4", "resource gold, 1, 5"),
-     "strat.resource_duplicate"),
     ("resource_position",
      lambda d: edit(d, STRAT_REL, "resource silver, 5, 4", "resource silver, 5, 0"),
      "strat.resource_position"),
@@ -631,7 +634,7 @@ check(f"heights_black moves {len(moved)} pixel(s), every one of them (0,0,0) to 
 check("and map.rwm is deleted with it, because a layer changed",
       not (root / "data" / campmap.RWM_REL).exists())
 
-clean_plan = mapcheck.plan_fix(clean, ["heights_black", "resource_duplicate"])
+clean_plan = mapcheck.plan_fix(clean, ["heights_black", "resource_position"])
 check(f"a fix on a clean map refuses and says so: {clean_plan.errors[:1]}",
       clean_plan.errors and not clean_plan.data and not clean_plan.text)
 

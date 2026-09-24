@@ -766,7 +766,7 @@ def census(sf: StratFile, voc: Vocabulary) -> Census:
 
 #: the findings about the tile itself, which the snap answers
 SNAPPED = ("obj.sea", "obj.ground", "obj.marker", "obj.shared", "obj.mixed",
-           "res.sea", "res.ground", "res.province", "res.duplicate")
+           "res.sea", "res.ground", "res.province")
 
 
 def _others(total: int, n: int, what: str, me: Optional[Node],
@@ -781,13 +781,8 @@ def _others(total: int, n: int, what: str, me: Optional[Node],
 
 def check_object(voc: Vocabulary, spec: Spec, sf: StratFile,
                  section: str = "", me: Optional[Node] = None,
-                 cen: Optional[Census] = None, saving: bool = False) -> List[dict]:
+                 cen: Optional[Census] = None) -> List[dict]:
     """Everything wrong with one fort, watchtower or resource, fatal first.
-
-    ``saving`` is a plan's check of the record it is writing. A duplicate
-    resource is then said whichever of the two comes first in the file; read
-    off the file, only the second of a pair is, as the validator says it, so
-    DaC's 63 are 63 findings and not 126.
 
     ``section`` is where it is filed: a fort's region section, a resource's
     province heading. ``cen`` may be passed in already counted. A finding
@@ -819,8 +814,7 @@ def check_object(voc: Vocabulary, spec: Spec, sf: StratFile,
                 f"this {what} to stand.", x=gx, y=gy))
             _snap(voc, spec, sf, me, cen, "", out[-1])
         else:
-            tile = (_resource_tile(voc, spec, sf, section, me, gx, gy, cen,
-                                   saving)
+            tile = (_resource_tile(voc, spec, sf, section, me, gx, gy, cen)
                     if spec.kind == "resource" else
                     _tile_findings(voc, spec, sf, section, me, gx, gy, cen))
             first = next((f for f in tile if f["code"] in SNAPPED), None)
@@ -880,7 +874,7 @@ def _name_findings(voc: Vocabulary, spec: Spec) -> List[dict]:
 
 def _resource_tile(voc: Vocabulary, spec: Spec, sf: StratFile, heading: str,
                    me: Optional[Node], gx: int, gy: int,
-                   cen: Census, saving: bool = False) -> List[dict]:
+                   cen: Census) -> List[dict]:
     from . import mapcheck
     out: List[dict] = []
     name = spec.name or "resource"
@@ -920,14 +914,6 @@ def _resource_tile(voc: Vocabulary, spec: Spec, sf: StratFile, heading: str,
                 f"this {name} and nobody trades it."
                 + _others(total, len(cen.lost), "resources", me, cen.lost),
                 x=gx, y=gy))
-    twin = next((n for n in cen.at.get((gx, gy), []) if n is not me
-                 and n.kind == "resource" and n.name.lower() == name.lower()
-                 and (saving or me is None or n.start < me.start)), None)
-    if twin is not None:
-        out.append(finding(
-            "res.duplicate", False,
-            mapcheck.duplicate_message(twin.name, gx, gy, twin.start + 1),
-            x=gx, y=gy, line=twin.start + 1))
     out += _mixed(sf, me, gx, gy, cen, SECTIONED)
     return out
 
@@ -1296,8 +1282,7 @@ def plan(mod, facts, body: dict) -> ObjPlan:
             p.block = "\n".join(done.lines[sec.start:content_end(done, sec) + 1])
         elif p.opened:
             p.block = "\n".join(done.lines[now_node.start - 1:now_node.start + 1])
-        p.findings = check_object(voc, spec, done, p.region, now_node,
-                                  saving=True)
+        p.findings = check_object(voc, spec, done, p.region, now_node)
         p.near = next((f["near"] for f in p.findings if f.get("near")), None)
     p.errors += [f["message"] for f in p.findings if f["fatal"]]
     p.warnings += [f["message"] for f in p.findings if not f["fatal"]]

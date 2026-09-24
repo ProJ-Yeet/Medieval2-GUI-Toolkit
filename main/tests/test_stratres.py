@@ -313,12 +313,11 @@ for root in roots:
         res = [r for r in v["rows"] if r["kind"] == "resource"]
         codes = [f["code"] for r in res for f in r["findings"]]
         rep = mapcheck.run(rmod, campmap.map_of(rf), camp)
-        dup = sum(1 for f in rep.findings if f.code == "strat.resource_duplicate")
         sea = sum(1 for f in rep.findings if f.code == "strat.resource_position"
                   and f.severity == "warn")
         check(f"{root.name}/{camp}: the panel and the validator agree - "
-              f"{dup} duplicates, {sea} on sea",
-              codes.count("res.duplicate") == dup and codes.count("res.sea") == sea)
+              f"{sea} on sea",
+              codes.count("res.sea") == sea)
         check("  no resource line has a fatal finding on a mod that loads",
               not [f for r in res for f in r["findings"] if f["fatal"]])
         voc = stratobj.Vocabulary(rmod, rs, campmap.map_of(rf))

@@ -645,6 +645,9 @@ class Region:
     anchor: Tuple[int, int] = (0, 0)
     settlement: Optional[Tuple[int, int]] = None        # image coords
     port: Optional[Tuple[int, int]] = None              # image coords
+    #: the sea tile beside the port pixel where the game puts the dock and its
+    #: model - see :func:`dock_tile`. Image coords.
+    dock: Optional[Tuple[int, int]] = None
     #: the order the engine numbers regions in, or -1 for a colour it skips
     region_id: int = -1
     record: Optional[RegionRecord] = None
@@ -897,6 +900,43 @@ def _owner_of_port(labels: Sequence[int], colours: List[Rgb], width: int,
     return colours[labels[oy * width + ox]], (ox, oy)
 
 
+#: The order the game tries a port's four sides in, as image offsets: north,
+#: east, south, west. The order matters, because of the count below.
+_DOCK_SIDES = ((0, -1), (1, 0), (0, 1), (-1, 0))
+
+
+def dock_tile(sea: bytes, width: int, height: int, x: int, y: int
+              ) -> Optional[Tuple[int, int]]:
+    """The sea tile the game docks a port on, or None when no side is sea.
+
+    The port pixel is the land half of a port. The game puts the dock, and the
+    model a player sees, on one of its four sea neighbours: the one with the most
+    sea around it, first found winning a tie. Drawn on the land pixel, every port
+    looks one tile inland of where the game shows it.
+
+    This is the game's count as it runs, not as it reads. The tally is only
+    cleared when a side wins, so a side that loses carries its sea tiles into
+    the next side's count: sides of 2, 2 and 1 give the dock to the third. On
+    most coasts that changes nothing, and where it does the game is the one to
+    agree with.
+    """
+    def is_sea(nx: int, ny: int) -> bool:
+        return 0 <= nx < width and 0 <= ny < height and bool(sea[ny * width + nx])
+
+    best: Optional[Tuple[int, int]] = None
+    most = count = 0
+    for dx, dy in _DOCK_SIDES:
+        nx, ny = x + dx, y + dy
+        if not is_sea(nx, ny):
+            continue
+        if most == 0:
+            best = (nx, ny)
+        count += sum(is_sea(nx + ex, ny + ey) for ex, ey in _DOCK_SIDES)
+        if count > most:
+            best, most, count = (nx, ny), count, 0
+    return best
+
+
 def build_index(regions_img: Image.Image, sea: bytes,
                 records: Sequence[RegionRecord], limit: int = 256) -> RegionIndex:
     """The whole region index off the regions layer and the sea mask.
@@ -1017,6 +1057,7 @@ def _place_markers(index: RegionIndex, sea: bytes, region_keys) -> None:
             index.undecided_ports.append((x, y))
         elif reg.port is None:
             reg.port = (x, y)
+            reg.dock = dock_tile(sea, width, height, x, y)
         else:
             index.extra_ports.append((x, y))
 
@@ -1990,6 +2031,7 @@ def region_view(r: Region, sea: int = 0, loc: Optional[Dict[str, str]] = None) -
         "centroid": [round(r.centroid[0], 1), round(r.centroid[1], 1)],
         "settlement": list(r.settlement) if r.settlement else None,
         "port": list(r.port) if r.port else None,
+        "dock": list(r.dock) if r.dock else None,
         "settlement_name": settlement_name,
         "shown": loc.get(r.name, ""),
         "shown_settlement": loc.get(settlement_name, ""),
@@ -2667,6 +2709,8 @@ def region_detail(cm: "CampaignMap", name: str) -> dict:
                             if reg.settlement else None),
         "port": list(reg.port) if reg.port else None,
         "port_game": list(cm.game_xy(*reg.port)) if reg.port else None,
+        "dock": list(reg.dock) if reg.dock else None,
+        "dock_game": list(cm.game_xy(*reg.dock)) if reg.dock else None,
         "sea": sea_pixels(cm).get(rec.rgb_key, 0),
         "neighbours": [{"key": k, "rgb": list(names[k].rgb),
                         "name": names[k].name,

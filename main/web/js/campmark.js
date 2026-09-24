@@ -170,9 +170,11 @@ function cmkIndex(){
   k.byTile = tiles;
   // Ports are map pixels rather than descr_strat records. Join them locally
   // so they have the same visibility controls and overlap badges as objects.
+  // The anchor goes on the dock, the sea tile the game shows the port on; the
+  // white pixel is the land half and would put every port a tile inland.
   for(const r of c.man.regions){
     if(!r.port) continue;
-    const [tx,ty] = r.port, key = `${tx},${ty}`;
+    const [tx,ty] = r.dock || r.port, key = `${tx},${ty}`;
     let g = tiles.get(key);
     if(!g){ g = {tx,ty,items:[]}; tiles.set(key,g); }
     g.items.push({kind:'port',region:r.name,name:r.shown || r.name});
@@ -195,7 +197,7 @@ function cmkSyncMapMarkers(positions){
   for(const r of c.man.regions){
     const at = positions[r.name];
     if(!at) continue;
-    r.settlement = at.settlement; r.port = at.port;
+    r.settlement = at.settlement; r.port = at.port; r.dock = at.dock;
   }
   c.markerAt=null; c.lab=null;
   cmkIndex(); cmkPaint();

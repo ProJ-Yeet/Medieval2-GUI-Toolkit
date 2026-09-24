@@ -242,6 +242,31 @@ seagrid[1 * W + 3] = 1
 check("water on both sides is not a dock, so ownership is undecidable",
       campmap._owner_of_port(bytes(labels), colours, W, 3, 2, 1, bytes(seagrid)) is None)
 
+# The dock: the sea neighbour the game puts the port's model on. A 5x5 grid,
+# the port pixel in the middle at (2,2).
+def dock_on(sea_tiles):
+    g = bytearray(25)
+    for x, y in sea_tiles:
+        g[y * 5 + x] = 1
+    return campmap.dock_tile(bytes(g), 5, 5, 2, 2)
+
+
+check("the dock is on the sea, not on the port pixel",
+      dock_on([(1, 2)]) == (1, 2))
+check("no sea beside the port: no dock",
+      dock_on([(0, 0), (4, 4)]) is None)
+check("the side with more sea around it wins",
+      dock_on([(2, 1), (3, 2), (4, 2), (3, 1), (3, 3)]) == (3, 2))
+check("a tie goes to the first side the game tries, north",
+      dock_on([(2, 1), (2, 0), (3, 2), (4, 2)]) == (2, 1))
+check("sea sides with no sea around them: the game keeps the last one",
+      dock_on([(2, 1), (3, 2)]) == (3, 2))
+# north has 2 sea around it and wins; east's 2 do not beat it, but the game
+# does not clear its tally for a side that lost, so south's 1 makes 3 and wins
+check("the game's own tally, carried past a side that lost",
+      dock_on([(2, 1), (2, 0), (3, 1), (3, 2), (4, 2), (2, 3), (1, 3)])
+      == (2, 3))
+
 # ---- 4) the vocabularies -----------------------------------------------------
 print("\n4) what a pixel means")
 
