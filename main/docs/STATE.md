@@ -2,6 +2,22 @@
 _Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 67 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects); **68 is next** (`descr_walls.txt`). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Animations from an unpacked pack play, 2026-09-24, committed and uncut.**
+Asked for by the user: DaC's `pack.dat` had been unpacked in place, which
+keeps each file under the path it was packed from, so its 10 427 files sit
+under `data/animations/mods/<nine mods>/data/animations/` and the viewer
+found none of DaC's 14 735 `descr_skeleton.txt` paths. `casanim.find` now
+looks where the game reads (`data/animations/...`), then at the whole path
+nested under `data/animations`, then by what follows the last `data/` when
+only one file matches, and never by file name alone: 10 396 + 226 found.
+**The unpacked files are not `.cas`**: they are pack entries with a `.cas`
+name, so `casanim.read_packed_bytes` reads them with the bones of the
+unpacked skeleton (`animations/skeleton/<name>`), 40 460 of 41 501 on DaC
+(the rest name a skeleton the unpack lacks). MTW2_Mace's walk out of the pack
+measures what the loose file did (0.9 s, 1.62 of travel), and the .glb export
+still matches Blender. An edit saves as a loose `.cas` beside the entry,
+never over it. **68 is next.**
+
 **Cut v2.3.8 and beta 2026-09-23, 2026-09-23, on the user's word
 ("subrelease it").** Everything since v2.3.7: 55b, 56 to 67, the routes and
 trail, the campaign-constants wording, the texture-import fix and the

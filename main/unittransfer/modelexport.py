@@ -448,15 +448,19 @@ def entry_export(mod, entry, *, fmt: str, lod: int = 0, skin: int = 0,
         rows = [r for r in (av["skeletons"][0]["actions"] if av["skeletons"] else []) if r["rel"]]
         data = Path(mod.data)
         base = next((r for r in rows if r["action"].lower() == "default"), rows[0] if rows else None)
+        sk_name = av["skeletons"][0]["skeleton"] if av["skeletons"] else ""
         if base:
-            skeleton = casanim.read_anim(data / base["rel"])
+            try:
+                skeleton = casanim.read_anim(data / base["rel"], sk_name, data)
+            except casanim.AnimError:
+                skeleton = None
         want = {a.lower() for a in actions}
         seen = set()
         for r in rows:
             if ("*" in want or r["action"].lower() in want) and r["rel"] not in seen:
                 seen.add(r["rel"])
                 try:
-                    anims.append((r["action"], casanim.read_anim(data / r["rel"])))
+                    anims.append((r["action"], casanim.read_anim(data / r["rel"], sk_name, data)))
                 except casanim.AnimError:
                     pass
     return (export_glb(m, name=name, groups=groups, skeleton=skeleton, animations=anims,

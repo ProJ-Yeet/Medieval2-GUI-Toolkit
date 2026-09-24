@@ -13,7 +13,10 @@
    file plays only when the mod ships it loose. Most mods ship most of theirs
    in animations/pack.dat, which nothing here reads, so the picker lists every
    action and greys out the packed ones rather than pretending they are not
-   there.
+   there. A mod whose pack was unpacked in place (the files nested under
+   animations/mods/<mod>/data/animations, still in the pack's own format) plays
+   too: the server finds them and reads them with the unpacked skeleton's
+   bones, which is why every request for keys carries the skeleton's name.
 
    The skin is done HERE, on the CPU, into the same position and normal buffers
    the static model draws from. A soldier is 30 000 vertices over two bones
@@ -286,8 +289,11 @@ function v3AnimPanel(){
           <div class="count" id="v3aclock">${v3AnimClock()}</div>
           ${v3AnimEditHtml()}` : '')
       + `<div class="count">${sk.loose
-          ? `${sk.loose} of ${sk.actions.length} actions are loose files in this mod; the rest are `
-            + `packed in <code>animations/pack.dat</code>, which this viewer does not read.`
+          ? `${sk.loose} of ${sk.actions.length} actions are loose files in this mod`
+            + (sk.unpacked ? ` (${sk.unpacked === sk.loose ? 'all' : sk.unpacked} of them in an unpacked copy of the pack, `
+              + `under <code>animations/mods/…</code>)` : '')
+            + (sk.loose < sk.actions.length ? `; the rest are packed in <code>animations/pack.dat</code>, `
+              + `which this viewer does not read.` : '.')
           : `All ${sk.actions.length} of its actions are packed in <code>animations/pack.dat</code>, `
             + `which this viewer does not read, so nothing here can play.`}</div>`;
   }
@@ -325,7 +331,7 @@ async function v3AnimPick(action){
   if(!row || !row.rel){ a.data = null; v3AnimRest(); return v3AnimPanel(); }
   const mine = v3;
   let data;
-  try{ data = await api.get(`/api/model/anim?mod=${enc(v3.mod)}&rel=${enc(row.rel)}`); }
+  try{ data = await api.get(`/api/model/anim?mod=${enc(v3.mod)}&rel=${enc(row.rel)}&skel=${enc(sk.skeleton)}`); }
   catch(e){ data = {error: ''+e}; }
   if(v3 !== mine || a.action !== action) return;
   if(data.error){ a.data = null; a.err = data.error; v3AnimRest(); return v3AnimPanel(); }
@@ -577,7 +583,9 @@ async function v3AnimEditPreview(){
   const a = v3.anim, e = a.edit, mine = v3;
   e.busy = true; e.msg = ''; e.bad = false;
   let data;
-  try{ data = await api.post('/api/model/anim/preview', {mod: v3.mod, rel: a.rel, edits: v3AnimEdits()}); }
+  const psk = (a.list.skeletons || [])[a.skel];
+  try{ data = await api.post('/api/model/anim/preview', {mod: v3.mod, rel: a.rel, edits: v3AnimEdits(),
+                                                        skeleton: psk ? psk.skeleton : ''}); }
   catch(err){ data = {error: '' + err}; }
   if(v3 !== mine || v3.anim !== a) return;
   e.busy = false;
@@ -603,6 +611,7 @@ async function v3AnimEditSave(){
   const a = v3.anim, e = a.edit;
   const sk = (a.list.skeletons || [])[a.skel];
   const body = {mod: v3.mod, rel: a.rel, edits: v3AnimEdits(), save_as: e.saveAs,
+                skeleton: sk ? sk.skeleton : '',
                 assign: e.assign && sk ? {skeleton: sk.skeleton, action: a.action} : null};
   let r;
   try{ r = await api.post('/api/model/anim/save_plan', body); }

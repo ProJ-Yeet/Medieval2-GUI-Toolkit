@@ -650,6 +650,11 @@ shipped as loose files** (`casanim.actions_view`), which for DaC is 1 753 of
    position keys as offsets from the pivot, and the control bone as the
    pelvis track so the root motion plays. A loose file at the same path is
    still preferred, as the game may prefer it too (82's question 6).
+   **The mapping is built** (2026-09-24, `casanim.read_packed_bytes`), for a
+   mod whose pack was unpacked in place: the entries sit under
+   `animations/mods/<mod>/data/animations` still in the pack's own format,
+   and the skeletons under `animations/skeleton/`. What 80 still adds is the
+   reading straight out of `pack.dat` (77), so no unpack is needed.
 2. **Grouped so 200 actions can be found**: by the slot families (stand,
    walk, run, charge, attack, die, idle, formation, mounted...), with a find
    box, and the duration, frame count, distance and speed from each

@@ -160,13 +160,176 @@ class Animation:
         }
 
 
-def read_anim(path) -> Animation:
+def read_anim(path, skeleton: str = "", data_dir=None) -> Animation:
+    """A loose ``.cas``, or a ``pack.dat`` entry written out under a ``.cas``
+    name. The second is what an unpack of the pack leaves (see
+    :func:`read_packed_bytes`), and reading one needs its ``skeleton``'s
+    bones, from the unpacked skeleton under ``data_dir`` (the mod's ``data``
+    folder, found from the path when not given)."""
     p = Path(path)
     try:
         data = p.read_bytes()
     except OSError as e:
         raise AnimError(f"{p.name}: {e}") from None
+    if packed_counts(data) is not None:
+        if not skeleton:
+            raise AnimError(f"{p.name} is an animation from the pack, not a loose .cas, "
+                            "and reading one needs to know its skeleton")
+        root = Path(data_dir) if data_dir is not None else _data_of(p)
+        bones = skeleton_bones(root, skeleton) if root is not None else None
+        if bones is None:
+            raise AnimError(f"{p.name} is an animation from the pack, and this mod has no "
+                            f"unpacked skeleton {skeleton!r} (animations/skeleton/"
+                            f"{skeleton}) to give it its bones")
+        return read_packed_bytes(data, str(p), bones, skeleton)
     return read_anim_bytes(data, str(p))
+
+
+def _data_of(p: Path) -> Optional[Path]:
+    """The ``data`` folder a file under ``data/animations`` is in: the
+    OUTERMOST one, since an unpacked pack nests ``mods/<mod>/data`` inside."""
+    for parent in reversed(p.parents):
+        if parent.name.lower() == "data" and (parent / "animations").is_dir():
+            return parent
+    return None
+
+
+# ---------------------------------------------------------------------------
+# an animation from the pack (the unpacked pack.dat entries)
+#
+# An unpack of ``animations/pack.dat`` writes each entry out under the path it
+# was packed from, with a ``.cas`` name, but the bytes are the pack's own
+# format, not a loose .cas: three counts, then plain float32 arrays, frame by
+# frame. Measured on Divide and Conquer's 10 396 unpacked files, every one of
+# which is this size to the byte:
+#
+#   uint16 frames, uint16 rotation bones nq, uint8 position bones np
+#   float32 x y z w         frames * nq   every bone's turn, frame by frame
+#   float32 x y z           frames * np   the moving bones' LOCAL positions
+#                                         (the pivot plus the offset)
+#   float32 dx dz           frames        per-frame step of the root motion
+#   float32                 frames        distance left to travel
+#   float32 x y z           frames        the root motion itself
+#   float32                 8             length, distance, speed, derived
+#   uint64                                which bones move, one bit a bone
+#
+# The bones' names, parents and pivots are not in it: they are the skeleton's,
+# from the unpacked ``skeletons.dat`` entry of the same name. The frames run at
+# 20 a second. Turned into the loose shape this module already plays: a Scene
+# Root, then a node per bone (parent + 1), positions as offsets from each
+# bone's pivot, and the pelvis given the root motion rather than its in-place
+# track, which is what a loose .cas of a walk carries.
+
+PACKED_FPS = 20.0
+
+
+def packed_counts(data: bytes) -> Optional[Tuple[int, int, int]]:
+    """``(frames, nq, np)`` when ``data`` is a pack entry to the byte, else
+    None. A loose .cas opens with a float version and never fits."""
+    if len(data) < 45:
+        return None
+    nf, nq, npb = struct.unpack_from("<HHB", data, 0)
+    if not nf or not nq or npb > nq or npb > 64:
+        return None
+    if len(data) != 5 + nf * (16 * nq + 12 * npb + 24) + 40:
+        return None
+    mask = int.from_bytes(data[-8:], "little")
+    return (nf, nq, npb) if bin(mask).count("1") == npb else None
+
+
+def packed_skeleton_bones(data: bytes, source: str = "") -> List[Tuple[str, int, tuple]]:
+    """``[(name, parent, pivot)]`` from an unpacked ``skeletons.dat`` entry:
+    a float scale, a uint16 bone count, a float, then per bone an int type,
+    the position relative to its parent, the parent (-1 for the pelvis), 56
+    bytes this does not need, and the name."""
+    try:
+        _scale, n, _ik = struct.unpack_from("<fHf", data, 0)
+        o, out = 10, []
+        for _ in range(n):
+            x, y, z, parent = struct.unpack_from("<3fi", data, o + 4)
+            end = data.index(b"\0", o + 76)
+            out.append((data[o + 76:end].decode("latin-1"), parent, (x, y, z)))
+            o = end + 1
+    except (struct.error, ValueError):
+        raise AnimError(f"{Path(source).name or 'skeleton'}: not a skeleton from the pack") from None
+    if not out or any(not name for name, _p, _v in out):
+        raise AnimError(f"{Path(source).name or 'skeleton'}: not a skeleton from the pack")
+    return out
+
+
+def skeleton_bones(data_dir, name: str) -> Optional[List[Tuple[str, int, tuple]]]:
+    """The bones of skeleton ``name`` from the mod's unpacked skeletons:
+    ``animations/skeleton/<name>``, or the same wherever an unpack nested it."""
+    where = (str(data_dir), name.lower())
+    hit = _SKEL_PATHS.get(where)
+    try:
+        st = hit.stat() if hit is not None else None
+    except OSError:
+        st = None
+    if st is None:
+        # looked up through the whole tree only when the file is not where it
+        # was last time: the index checks every folder it walked, ~600 on DaC
+        index = loose_index(data_dir)
+        want = f"skeleton/{name.lower()}"
+        hit = index.get(f"animations/{want}") or next(
+            (f for k, f in index.items() if k.endswith("/" + want)), None)
+        if hit is None:
+            return None
+        try:
+            st = hit.stat()
+        except OSError:
+            return None
+        _SKEL_PATHS[where] = hit
+    key = (str(hit), st.st_mtime_ns, st.st_size)
+    if key not in _BONES_CACHE:
+        if len(_BONES_CACHE) > 512:
+            _BONES_CACHE.clear()
+        _BONES_CACHE[key] = packed_skeleton_bones(hit.read_bytes(), str(hit))
+    return _BONES_CACHE[key]
+
+
+_BONES_CACHE: Dict[tuple, List[Tuple[str, int, tuple]]] = {}
+_SKEL_PATHS: Dict[tuple, Path] = {}
+
+
+def read_packed_bytes(data: bytes, source: str, bones: List[Tuple[str, int, tuple]],
+                      skeleton: str = "") -> Animation:
+    """A pack entry as an :class:`Animation`, with ``bones`` from its skeleton."""
+    counts = packed_counts(data)
+    name = Path(source).name
+    if counts is None:
+        raise AnimError(f"{name}: not an animation from the pack")
+    nf, nq, npb = counts
+    if len(bones) < nq:
+        raise AnimError(f"{name} turns {nq} bones and the skeleton {skeleton or ''} has "
+                        f"{len(bones)}: it is another skeleton's animation")
+    o = 5
+    rot = array("f", data[o:o + nf * nq * 16]); o += nf * nq * 16
+    pos = array("f", data[o:o + nf * npb * 12]); o += nf * npb * 12
+    o += nf * 8 + nf * 4                      # the steps and distances, derived
+    ctrl = array("f", data[o:o + nf * 12])
+    mask = int.from_bytes(data[-8:], "little")
+    moving = [b for b in range(64) if mask >> b & 1]
+    out = Animation(source=source, version=3.2, length=(nf - 1) / PACKED_FPS,
+                    key_times=array("f", [i / PACKED_FPS for i in range(nf)]),
+                    layout=(2, True), head=b"", tail=None)
+    out.tracks.append(Track("Scene Root", -1, (0.0, 0.0, 0.0)))
+    for b, (bname, parent, pivot) in enumerate(bones):
+        par = parent + 1 if 0 <= parent < b else 0
+        t = Track(bname, par, tuple(float(v) for v in pivot))
+        if b < nq:
+            for f in range(nf):
+                at = (f * nq + b) * 4
+                t.rot.extend(rot[at:at + 4])
+        if b in moving:
+            src, stride, at = (ctrl, 3, 0) if b == 0 else (pos, npb * 3, moving.index(b) * 3)
+            px, py, pz = t.pivot
+            for f in range(nf):
+                x, y, z = src[f * stride + at:f * stride + at + 3]
+                t.pos.extend((x - px, y - py, z - pz))
+        out.tracks.append(t)
+    out.notes.append(f"from the pack's own format, with {skeleton or 'its skeleton'}'s bones")
+    return out
 
 
 #: The layouts a node table comes in, as (pad bytes after the node count,
@@ -425,23 +588,10 @@ def resolve(data_dir, path: str) -> Optional[Path]:
     DaC's names another mod's folder for every one of its files
     (``mods/Third_Age_3/data/animations/...``) and still plays, because the same
     relative path is under its own ``data/``. So whatever precedes ``data/`` is
-    dropped, and the rest is looked up case-blind, the way Windows does."""
-    rel = str(path).replace("\\", "/").strip()
-    low = rel.lower()
-    at = low.find("data/")
-    rel = rel[at + 5:] if at >= 0 else rel
-    cur = Path(data_dir)
-    for part in [x for x in rel.split("/") if x]:
-        # the directory's own spelling, not the one typed: Windows answers
-        # `exists()` for either, and the name is shown to people
-        try:
-            hit = next((c for c in cur.iterdir() if c.name.lower() == part.lower()), None)
-        except OSError:
-            hit = None
-        if hit is None:
-            return None
-        cur = hit
-    return cur if cur.is_file() else None
+    dropped, and the rest is looked up case-blind, the way Windows does. An
+    unpacked ``pack.dat`` keeps that whole path under ``data/animations``, and
+    is found as well: see :func:`find`."""
+    return find(data_dir, path)[0]
 
 
 # ---------------------------------------------------------------------------
@@ -544,13 +694,85 @@ def _data_rel(path: str) -> str:
     return (rel[at + 5:] if at >= 0 else rel).lstrip("/")
 
 
+def _tail(rel: str) -> str:
+    """What follows the LAST ``data/`` in a path, lower-case: the part the game
+    keeps, however deep an unpacked tree puts the file."""
+    low = rel.replace("\\", "/").strip().lower()
+    at = low.rfind("data/")
+    return (low[at + 5:] if at >= 0 else low).lstrip("/")
+
+
+#: the last index :func:`_tails` was built from, and what it built
+_TAILS_CACHE: List[tuple] = []
+
+
+def _tails(index: Dict[str, Path]) -> Dict[str, Optional[Path]]:
+    """``tail -> file`` over one :func:`loose_index`, or ``None`` for a tail two
+    files share: a guess between them could play the wrong animation."""
+    if _TAILS_CACHE and _TAILS_CACHE[0][0] is index:
+        return _TAILS_CACHE[0][1]
+    out: Dict[str, Optional[Path]] = {}
+    for key, full in index.items():
+        t = _tail(key)
+        out[t] = full if t not in out else None
+    _TAILS_CACHE[:] = [(index, out)]
+    return out
+
+
+#: how :func:`find` found a file
+FLAT, NESTED, TAIL = "flat", "nested", "tail"
+
+
+def find(data_dir, path: str, index: Optional[Dict[str, Path]] = None
+         ) -> Tuple[Optional[Path], str]:
+    """``(file, how)`` for a ``descr_skeleton.txt`` path, or ``(None, "")``.
+
+    Three places, in order, all case-blind:
+
+    * ``flat`` - the path with whatever precedes ``data/`` dropped, the way the
+      game reads it: ``mods/Third_Age_3/data/animations/X/a.cas`` is
+      ``data/animations/X/a.cas``;
+    * ``nested`` - the whole path under ``data/animations``, which is where an
+      unpacked ``pack.dat`` puts it, because the pack stores each file under the
+      path it was packed from: ``data/animations/mods/Third_Age_3/data/
+      animations/X/a.cas``. DaC's own pack stores its files under nine mods'
+      folders;
+    * ``tail`` - a file anywhere under ``data/animations`` whose path ends in
+      the same ``animations/X/a.cas`` after its last ``data/``, when exactly
+      one does: an unpack into a folder of its own, or a pack that stored the
+      file under another mod's name than ``descr_skeleton.txt`` writes.
+
+    A file of the same NAME in another folder is never taken: DaC has
+    ``MTW2_Crew_carry_stand_idle.cas`` in a crew folder and in a crossbow
+    folder, and they are not the same animation."""
+    if index is None:
+        index = loose_index(data_dir)
+    rel = _data_rel(path).lower()
+    hit = index.get(rel)
+    if hit is not None:
+        return hit, FLAT
+    written = str(path).replace("\\", "/").strip().lstrip("/").lower()
+    if not written.startswith(("data/", "animations/")):
+        hit = index.get("animations/" + written)
+        if hit is not None:
+            return hit, NESTED
+    hit = _tails(index).get(_tail(written))
+    if hit is not None:
+        return hit, TAIL
+    return None, ""
+
+
 def actions_view(data_dir, skeletons: List[str]) -> dict:
     """What the viewer's animation picker offers for a model's skeletons.
 
     Per skeleton, every action ``descr_skeleton.txt`` names, and where it is:
     ``rel`` (a path under ``data/``) when the mod ships the file loose, empty
     when it does not - which, for most mods, is most of them, because the
-    rest are packed in ``animations/pack.dat`` and nothing here reads that."""
+    rest are packed in ``animations/pack.dat`` and nothing here reads that.
+
+    A mod whose pack was unpacked in place has its files nested under
+    ``data/animations/mods/<mod>/data/animations``; :func:`find` looks there
+    too, and ``unpacked`` counts the actions found that way."""
     types = skeleton_types(data_dir)
     index = loose_index(data_dir) if types else {}
     root = Path(data_dir)
@@ -562,11 +784,14 @@ def actions_view(data_dir, skeletons: List[str]) -> dict:
                         "actions": [], "loose": 0})
             continue
         acts = []
+        unpacked = 0
         for action, path in t.anims:
-            hit = index.get(_data_rel(path).lower())
+            hit, how = find(root, path, index)
+            unpacked += how in (NESTED, TAIL)
             acts.append({"action": action, "file": Path(_data_rel(path)).name,
                          "rel": hit.relative_to(root).as_posix() if hit else ""})
         out.append({"skeleton": t.name, "found": True, "scale": t.scale,
-                    "actions": acts, "loose": sum(1 for a in acts if a["rel"])})
+                    "actions": acts, "loose": sum(1 for a in acts if a["rel"]),
+                    "unpacked": unpacked})
     return {"skeletons": out,
             "file": (root / "descr_skeleton.txt").is_file()}

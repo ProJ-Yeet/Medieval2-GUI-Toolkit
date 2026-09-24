@@ -58,6 +58,10 @@ for name in ("Divide_and_Conquer_EUR", "ROCSS"):
             same += 1
         else:
             diff.append(f.name)
+    if not same and not diff:
+        # an unpacked pack's files are the pack's own format, not loose .cas
+        print(f"  -- {name} has no loose .cas files to write back; SKIPPED")
+        continue
     check(f"{name}: all {same} readable files written back byte for byte"
           + (f" ({bare} of them with no chunk list)" if bare else ""), not diff and same)
 
@@ -185,6 +189,39 @@ else:
     after = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
     check("one undo puts descr_skeleton.txt back and takes the new file away",
           after == before)
+
+# ---- 5) an animation from the pack --------------------------------------------------
+rows = (casanim.actions_view(DAC, ["MTW2_Mace"])["skeletons"][0]["actions"]
+        if (DAC / "descr_skeleton.txt").is_file() else [])
+row = next((r for r in rows if r["action"].lower() == "walk" and r["rel"]), None)
+packed_walk = DAC / row["rel"] if row else None
+if packed_walk is None or casanim.packed_counts(packed_walk.read_bytes()) is None:
+    print("\nno unpacked pack.dat installed - the packed save is SKIPPED")
+else:
+    print("\n5) saving an edit of an animation from the pack, on a temp mod")
+    root = Path(_tmp.mkdtemp(prefix="ut_animpack_")) / "PackMod"
+    rel = row["rel"]
+    (root / "data" / rel).parent.mkdir(parents=True)
+    shutil.copy2(packed_walk, root / "data" / rel)
+    (root / "data" / "animations" / "skeleton").mkdir(parents=True)
+    skel = next(p for p in (DAC / "animations" / "skeleton").iterdir() if p.name.lower() == "mtw2_mace")
+    shutil.copy2(skel, root / "data" / "animations" / "skeleton" / skel.name)
+    mod = Mod(root)
+    over = ae.plan_save(mod, rel, {"speed": 2}, rel, skeleton="MTW2_Mace")
+    check("saving over the pack's own file is refused, since the save is a loose .cas",
+          over.errors and "from the pack" in over.errors[0])
+    beside = rel[:-4] + "_edited.cas"
+    p = ae.plan_save(mod, rel, {"speed": 2}, beside, skeleton="MTW2_Mace")
+    check("saving beside it, under a name of its own, is clean", not p.errors)
+    res = ae.apply_save(p)
+    new = casanim.read_anim(root / "data" / beside)
+    was = casanim.read_anim(root / "data" / rel, "MTW2_Mace", root / "data")
+    check("and it is a loose .cas at twice the speed, with the skeleton's bones",
+          casanim.packed_counts((root / "data" / beside).read_bytes()) is None
+          and abs(new.length - was.length / 2) < 1e-6
+          and [t.name for t in new.tracks] == [t.name for t in was.tracks])
+    transfer.undo(res["id"])
+    check("one undo takes it away again", not (root / "data" / beside).exists())
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)

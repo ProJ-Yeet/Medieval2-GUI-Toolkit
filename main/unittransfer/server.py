@@ -3320,11 +3320,13 @@ class Handler(BaseHTTPRequestHandler):
             if src is None or not src.is_file():
                 return {"error": f"{rel!r} is not a file in {mod.name}"}
             try:
-                return animedit.view(animedit.apply_edits(casanim.read_anim(src), edits))
+                return animedit.view(animedit.apply_edits(
+                    casanim.read_anim(src, str(body.get("skeleton") or ""), mod.data), edits))
             except (casanim.AnimError, animedit.EditError, ValueError, TypeError) as e:
                 return {"error": str(e)}
         plan = animedit.plan_save(mod, rel, edits, str(body.get("save_as") or ""),
-                                  body.get("assign") if isinstance(body.get("assign"), dict) else None)
+                                  body.get("assign") if isinstance(body.get("assign"), dict) else None,
+                                  skeleton=str(body.get("skeleton") or ""))
         out = {"plan": plan.payload()}
         if action == "save_plan" or plan.errors:
             if plan.errors:
@@ -4610,7 +4612,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._err(404, f"{(q.get('rel') or [''])[0]!r} is not a "
                                       f"file in {name}")
             try:
-                anim = casanim.read_anim(src)
+                # `skel` is what an animation from the pack needs for its bones
+                anim = casanim.read_anim(src, (q.get("skel") or [""])[0], mod.data)
             except casanim.AnimError as exc:
                 return self._err(400, str(exc))
             # with each key's rotation as Euler degrees too, for the editor (57a)

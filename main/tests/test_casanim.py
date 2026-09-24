@@ -8,10 +8,14 @@
 2. sample(): slerped, normalised, looping, and a node with no keys at its bind.
 3. resolve(): a descr_skeleton.txt path naming another mod's folder is found in
    this one, case-blind.
-4. Every loose animation on the installed mods. DaC: all of them but twelve,
-   and those twelve are an `isengard_ballista/convertedfiles` folder of
-   leftovers nothing names, beside originals that read. Every file
-   descr_skeleton.txt names that the mod ships loose reads.
+3b. An unpacked pack.dat: its files found where the unpack nested them
+   (animations/mods/<mod>/data/animations) or by what follows their last
+   data/, never by name alone; an entry in the pack's own format read with its
+   skeleton's bones into the loose shape, and saved back out as a loose .cas.
+4. The installed mods. Every loose animation reads but one siege engine's
+   cut-short files. Where a mod's pack was unpacked in place (DaC, 2026-09-23),
+   MTW2_Mace's every action reads out of it, its walk measures what the loose
+   file did, and a sample of every other skeleton reads.
 """
 import math
 import re
@@ -137,6 +141,90 @@ check("a plain data/ path resolves", casanim.resolve(tmp, "data/animations/AGO_T
 check("a file that is not there is None, not a guess",
       casanim.resolve(tmp, "data/animations/AGO_Troll/nope.cas") is None)
 
+# ---- 3b) an unpacked pack: found where it nests, and read in its own format -------
+print("\n3b) an unpacked pack.dat")
+tmp = Path(_tmp.mkdtemp(prefix="ut_animpk_")) / "data"
+nest = tmp / "animations" / "mods" / "Third_Age_3" / "data" / "animations"
+(nest / "AGO_Troll").mkdir(parents=True)
+(nest / "AGO_Troll" / "MTW2_Mace_walk.cas").write_bytes(good)
+hit, how = casanim.find(tmp, "mods/Third_Age_3/data/animations/ago_troll/mtw2_mace_walk.CAS")
+check("a file an unpack nested under animations/mods/<mod>/data is found", hit is not None
+      and how == casanim.NESTED)
+hit, how = casanim.find(tmp, "mods/Another_Mod/data/animations/AGO_Troll/MTW2_Mace_walk.cas")
+check("...and by what follows its last data/, when the path names another mod", hit is not None
+      and how == casanim.TAIL)
+(tmp / "animations" / "mods" / "Other" / "data" / "animations" / "AGO_Troll").mkdir(parents=True)
+(tmp / "animations" / "mods" / "Other" / "data" / "animations" / "AGO_Troll" / "MTW2_Mace_walk.cas").write_bytes(good)
+check("two files with that tail are not guessed between",
+      casanim.find(tmp, "mods/Another_Mod/data/animations/AGO_Troll/MTW2_Mace_walk.cas")[0] is None)
+check("a file of the same name in another folder is never taken",
+      casanim.find(tmp, "data/animations/Somewhere_Else/MTW2_Mace_walk.cas")[0] is None)
+
+
+def packed(nf, bones_rot, moving, pos, ctrl):
+    """A pack entry: counts, rotations frame-major, the moving bones' local
+    positions, steps and distances (zero here), the root motion, the summary
+    (zero), the mask."""
+    nq, npb = len(bones_rot[0]), len(moving)
+    out = struct.pack("<HHB", nf, nq, npb)
+    out += b"".join(struct.pack("<4f", *bones_rot[f][b]) for f in range(nf) for b in range(nq))
+    out += b"".join(struct.pack("<3f", *pos[f][k]) for f in range(nf) for k in range(npb))
+    out += bytes(nf * 12)
+    out += b"".join(struct.pack("<3f", *ctrl[f]) for f in range(nf))
+    out += bytes(32) + sum(1 << b for b in moving).to_bytes(8, "little")
+    return out
+
+
+def skel_entry(bones):
+    out = struct.pack("<fHf", 1.0, len(bones), 0.5)
+    for name, parent, pivot in bones:
+        out += struct.pack("<i3fi", 0, *pivot, parent) + bytes(56) + name.encode() + b"\0"
+    return out + bytes(40)
+
+
+BONES = [("bone_pelvis", -1, (0.0, 0.0, 0.0)), ("bone_spine", 0, (0.0, 0.2, 0.0)),
+         ("bone_head", 1, (0.0, 0.5, 0.1))]
+qa, qb = (0.0, 0.0, 0.0, 1.0), (0.0, 0.7071068, 0.0, 0.7071068)
+rotf = [[qa, qb, qa], [qb, qa, qb], [qa, qa, qa]]
+blob = packed(3, rotf, [0, 2], [[(0, .9, 0), (0, .5, .1)], [(0, .9, 0), (0, .6, .1)],
+                                [(0, .9, 0), (0, .5, .1)]],
+              [(0, .95, 0), (0, .95, .5), (0, .95, 1.0)])
+check("a pack entry is known by its size to the byte, and a loose .cas is not",
+      casanim.packed_counts(blob) == (3, 3, 2) and casanim.packed_counts(good) is None
+      and casanim.packed_counts(blob + b"\0") is None)
+(tmp / "animations" / "skeleton").mkdir(parents=True)
+(tmp / "animations" / "skeleton" / "Test_Skel").write_bytes(skel_entry(BONES))
+(nest / "AGO_Troll" / "packed_walk.cas").write_bytes(blob)
+try:
+    casanim.read_anim(nest / "AGO_Troll" / "packed_walk.cas")
+    check("reading one without its skeleton is refused, and says why", False)
+except casanim.AnimError as e:
+    check("reading one without its skeleton is refused, and says why", "skeleton" in str(e))
+a = casanim.read_anim(nest / "AGO_Troll" / "packed_walk.cas", "test_skel")
+check("the skeleton is found under animations/skeleton, case-blind, from the path alone",
+      [t.name for t in a.tracks] == ["Scene Root", "bone_pelvis", "bone_spine", "bone_head"])
+check("a Scene Root, then each bone with its parent moved up one, and the skeleton's pivots",
+      [t.parent for t in a.tracks] == [-1, 0, 1, 2]
+      and tuple(round(v, 6) for v in a.tracks[3].pivot) == (0.0, 0.5, 0.1))
+check("20 frames a second: three frames are 0.1 s long", abs(a.length - 0.1) < 1e-6
+      and [round(t, 3) for t in a.key_times] == [0.0, 0.05, 0.1])
+spine = [tuple(round(v, 4) for v in a.tracks[2].rot[i:i + 4]) for i in (0, 4, 8)]
+check("each bone's own rotations, transposed out of the frame-by-frame block",
+      spine == [tuple(round(v, 4) for v in q) for q in (qb, qa, qa)])
+check("the pelvis carries the root motion, as an offset from its pivot",
+      [round(a.tracks[1].pos[i], 4) for i in (1, 2, 5, 8)] == [0.95, 0.0, 0.5, 1.0])
+check("a moving bone's local position becomes an offset from its pivot; a still one has none",
+      [round(v, 4) for v in a.tracks[3].pos[3:6]] == [0.0, 0.1, 0.0] and not a.tracks[2].pos)
+back = casanim.read_anim_bytes(casanim.write_anim(a), "back.cas")
+check("and it saves as a loose .cas that reads back the same",
+      [t.name for t in back.tracks] == [t.name for t in a.tracks]
+      and list(back.tracks[2].rot) == list(a.tracks[2].rot))
+try:
+    casanim.read_anim(nest / "AGO_Troll" / "packed_walk.cas", "No_Such_Skeleton")
+    check("a skeleton the mod has not unpacked is named in the refusal", False)
+except casanim.AnimError as e:
+    check("a skeleton the mod has not unpacked is named in the refusal", "No_Such_Skeleton" in str(e))
+
 # ---- 4) the installed mods --------------------------------------------------------
 installed = [m for m in ("Divide_and_Conquer_EUR", "ROCSS") if (MODS / m / "data" / "animations").is_dir()]
 if not installed:
@@ -144,68 +232,79 @@ if not installed:
 for name in installed:
     data = MODS / name / "data"
     files = sorted((data / "animations").rglob("*.cas"))
-    print(f"\n4) {name}: {len(files)} loose animation files")
-    read, refused = [], []
+    loose_files, packed_files = [], []
     for f in files:
+        (packed_files if casanim.packed_counts(f.read_bytes()) else loose_files).append(f)
+    print(f"\n4) {name}: {len(loose_files)} loose animation files, {len(packed_files)} "
+          f"from an unpacked pack")
+    read, refused = [], []
+    for f in loose_files:
         try:
             read.append(casanim.read_anim(f))
         except casanim.AnimError:
             refused.append(f.relative_to(data).as_posix().lower())
-    # Measured 2026-09-23: the only files refused are DaC's Isengard ballista,
-    # six in its folder and the same six in a `convertedfiles` copy beside it,
-    # and every one is cut short - twelve bytes, the last node's pivot, and no
-    # chunk list after it. Two of the six are played by
-    # descr_engine_skeleton.txt. Refusing them is the right answer, and the
-    # check is that nothing ELSE is refused.
-    check(f"{len(read)} read; the {len(refused)} refused are all one siege engine's "
-          f"cut-short files", all("/engine/isengard_ballista/" in r for r in refused))
-    reasons = set()
-    for r in refused:
-        try:
-            casanim.read_anim(data / r)
-        except casanim.AnimError as e:
-            reasons.add("ran off the end" in str(e))
-    check("and each is refused for ending early, not for a layout this reader lacks",
-          reasons <= {True})
+    # Measured 2026-09-23: the only loose files refused were DaC's Isengard
+    # ballista, six in its folder and the same six in a `convertedfiles` copy
+    # beside it, every one cut short - twelve bytes, the last node's pivot, and
+    # no chunk list after it. Refusing them is the right answer, and the check
+    # is that nothing ELSE is refused.
+    check(f"{len(read)} loose files read; the {len(refused)} refused are all one siege "
+          f"engine's cut-short files", all("/engine/isengard_ballista/" in r for r in refused))
     soldier = [t for a in read if "/engine/" not in a.source.replace("\\", "/").lower()
                for t in a.tracks]
     norms = [math.sqrt(sum(x * x for x in t.rot[i:i + 4]))
              for t in soldier for i in range(0, len(t.rot), 4)]
     if norms:
         worst = max(abs(n - 1) for n in norms)
-        # 55a read these 252 bytes late and found 99.52% near unit length; read
-        # where they are, every one is unit length (DaC: within 2e-7)
-        check(f"all {len(norms):,} soldier rotations are unit length, x y z w "
+        check(f"all {len(norms):,} loose soldier rotations are unit length, x y z w "
               f"(worst {worst:.1e})", worst < 1e-4)
-    base, idle = (data / "animations" / "MTW2_Mace" / f for f in
-                  ("MTW2_Mace_basepose.cas", "MTW2_Mace_stand_A_idle.cas"))
-    if base.is_file() and idle.is_file():
-        # 55b: the pivots come AFTER the key block. 55a read them before it,
-        # which fits every file's byte count just as well - and put the pelvis
-        # quaternion into the "pivots" and every key 252 bytes late
-        b, i = casanim.read_anim(base), casanim.read_anim(idle)
-        gap = max(abs(x - y) for tb, ti in zip(b.tracks, i.tracks)
-                  for x, y in zip(tb.pivot, ti.pivot))
-        check(f"MTW2_Mace's idle has its base pose's pivots (worst {gap:.1e})",
-              len(b.tracks) == len(i.tracks) and gap < 1e-4)
-        q = tuple(i.tracks[1].rot[:4])
-        check(f"and its pelvis's first key is x y z w, w last: "
-              f"{tuple(round(x, 3) for x in q)}", q[3] > 0.99 and abs(q[0] - 0.052) < 0.005)
-        check("its pelvis keys its height as an offset from a pivot of zero",
-              i.tracks[1].pivot == (0.0, 0.0, 0.0) and 0.9 < i.tracks[1].pos[1] < 1.0)
-    sk = data / "descr_skeleton.txt"
-    if sk.is_file():
-        paths = sorted(set(re.findall(r"^\s*anim\s+\S+\s+(\S+\.cas)",
-                                      sk.read_text(encoding="latin-1"), re.M | re.I)))
-        loose = [f for f in (casanim.resolve(data, p) for p in paths) if f]
-        fails = 0
-        for f in loose:
+    types = casanim.skeleton_types(data)
+    index = casanim.loose_index(data)
+    paths = sorted({p for t in types.values() for _a, p in t.anims})
+    found = {p: casanim.find(data, p, index) for p in paths}
+    hows = {h: sum(1 for _f, x in found.values() if x == h)
+            for h in (casanim.FLAT, casanim.NESTED, casanim.TAIL)}
+    print(f"   descr_skeleton.txt names {len(paths):,} files: {hows[casanim.FLAT]:,} loose "
+          f"where the game reads them, {hows[casanim.NESTED]:,} nested by an unpack, "
+          f"{hows[casanim.TAIL]:,} by their tail")
+    mace = types.get("mtw2_mace")
+    if packed_files and mace:
+        # Divide and Conquer's pack, unpacked in place. MTW2_Mace's walk as a
+        # loose file measured 1.62 of travel over 0.9 s, the pelvis at ~0.97
+        # (v3anim.js's header); read out of the pack it must say the same.
+        rows = [(act, casanim.find(data, p, index)) for act, p in mace.anims]
+        got = [(act, f) for act, (f, _h) in rows if f]
+        anims, bad = [], 0
+        for act, f in got:
             try:
-                casanim.read_anim(f)
+                anims.append((act, casanim.read_anim(f, mace.name, data)))
             except casanim.AnimError:
-                fails += 1
-        check(f"descr_skeleton.txt names {len(paths):,} files; the {len(loose):,} this mod "
-              f"ships loose all read", fails == 0)
+                bad += 1
+        check(f"MTW2_Mace: {len(got)} of {len(rows)} actions found, and all read with its "
+              f"unpacked skeleton's bones", got and not bad)
+        walk = next(a for act, a in anims if act.lower() == "walk")
+        pel = walk.tracks[1]
+        travel = pel.pos[-1] - pel.pos[2]
+        check(f"its walk: {walk.length:g} s, pelvis at {pel.pos[1]:.3f}, {travel:.3f} of travel "
+              f"- what the loose file measured", abs(walk.length - 0.9) < 1e-6
+              and 0.9 < pel.pos[1] < 1.0 and abs(travel - 1.62) < 0.01)
+        qn = [math.sqrt(sum(x * x for x in t.rot[i:i + 4]))
+              for _act, a in anims for t in a.tracks for i in range(0, len(t.rot), 4)]
+        check(f"all {len(qn):,} of its rotations are unit length", max(abs(n - 1) for n in qn) < 1e-3)
+        # a sample of every other skeleton, three actions each, to keep the run short
+        sample = [(t, f) for t in types.values()
+                  for f in [x for x in (found[p][0] for _a, p in t.anims[:3]) if x]]
+        missing_skel, wrong = 0, 0
+        for t, f in sample:
+            try:
+                casanim.read_anim(f, t.name, data)
+            except casanim.AnimError as e:
+                if "no unpacked skeleton" in str(e):
+                    missing_skel += 1
+                elif "loose" not in str(e):
+                    wrong += 1
+        check(f"{len(sample):,} actions sampled across {len(types)} skeletons read, bar "
+              f"{missing_skel} whose skeleton the unpack does not have", wrong == 0)
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)

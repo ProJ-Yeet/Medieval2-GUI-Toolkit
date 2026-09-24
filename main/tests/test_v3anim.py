@@ -140,8 +140,15 @@ check("a file added since the last look is found (the index notices its folder c
 
 if DAC.is_dir():
     sk = casanim.actions_view(DAC, ["MTW2_Mace"])["skeletons"][0]
-    check(f"DaC's MTW2_Mace: {sk['loose']} of {len(sk['actions'])} actions loose "
-          f"(measured 156 of 195)", sk["loose"] == 156 and len(sk["actions"]) == 195)
+    if sk.get("unpacked"):
+        # 2026-09-23: DaC's pack unpacked in place, every file nested under
+        # animations/mods/<mod>/data/animations, replacing the loose tree
+        check(f"DaC's MTW2_Mace: {sk['loose']} of {len(sk['actions'])} actions found, "
+              f"{sk['unpacked']} of them in the unpacked pack (measured 195 of 195)",
+              sk["loose"] == sk["unpacked"] == 195 and len(sk["actions"]) == 195)
+    else:
+        check(f"DaC's MTW2_Mace: {sk['loose']} of {len(sk['actions'])} actions loose "
+              f"(measured 156 of 195)", sk["loose"] == 156 and len(sk["actions"]) == 195)
 if ROCSS.is_dir():
     sk = casanim.actions_view(ROCSS, ["MTW2_Fast_Bowman"])["skeletons"][0]
     check(f"ROCSS's MTW2_Fast_Bowman: all {len(sk['actions'])} packed, none loose",
@@ -191,14 +198,26 @@ def fixture_anim():
     return a
 
 
+def mace(fname):
+    """One of DaC's MTW2_Mace files: loose where the mod ships it loose, else out
+    of the pack DaC had unpacked in place on 2026-09-23, read with the
+    skeleton's bones. None when the mod has neither."""
+    loose = DAC / "animations" / "MTW2_Mace" / fname
+    if loose.is_file() and casanim.packed_counts(loose.read_bytes()) is None:
+        return casanim.read_anim(loose)
+    if not DAC.is_dir():
+        return None
+    rows = casanim.actions_view(DAC, ["MTW2_Mace"])["skeletons"][0]["actions"]
+    row = next((r for r in rows if r["rel"].lower().endswith("/" + fname.lower())), None)
+    return casanim.read_anim(DAC / row["rel"], "MTW2_Mace", DAC) if row else None
+
+
 samples = [("fixture", fixture_anim(), [0.0, 0.1, 0.25, 0.5, 0.8, 1.0, 1.3, 2.75])]
-for rel in ("animations/MTW2_Mace/MTW2_Mace_stand_A_idle.cas",
-            "animations/MTW2_Mace/MTW2_Mace_walk.cas",
-            "animations/MTW2_Mace/MTW2_Mace_die_forward_1.cas"):
-    if (DAC / rel).is_file():
-        a = casanim.read_anim(DAC / rel)
+for fname in ("MTW2_Mace_stand_A_idle.cas", "MTW2_Mace_walk.cas", "MTW2_Mace_die_forward_1.cas"):
+    a = mace(fname)
+    if a is not None:
         end = a.key_times[-1]
-        samples.append((Path(rel).name, a, [end * f for f in (0, 0.013, 0.31, 0.5, 0.77, 0.999, 1.4)]))
+        samples.append((fname, a, [end * f for f in (0, 0.013, 0.31, 0.5, 0.77, 0.999, 1.4)]))
 
 
 from tests._skinref import reference_skin  # noqa: E402
@@ -206,15 +225,14 @@ from tests._skinref import reference_skin  # noqa: E402
 
 # a cycle closes and travels; a death does not close (measured on MTW2_Mace:
 # the walk carries the pelvis 1.62 forward, the charge 2.58)
-travel = [(f, casanim.read_anim(DAC / "animations" / "MTW2_Mace" / f))
-          for f in ("MTW2_Mace_walk.cas", "MTW2_Mace_charge.cas",
-                    "MTW2_Mace_stand_A_idle.cas", "MTW2_Mace_die_forward_1.cas")
-          if (DAC / "animations" / "MTW2_Mace" / f).is_file()]
+travel = [(f, a) for f, a in ((f, mace(f)) for f in ("MTW2_Mace_walk.cas", "MTW2_Mace_charge.cas",
+                                                      "MTW2_Mace_stand_A_idle.cas",
+                                                      "MTW2_Mace_die_forward_1.cas"))
+          if a is not None]
 
-IDLE = DAC / "animations" / "MTW2_Mace" / "MTW2_Mace_stand_A_idle.cas"
+idle = mace("MTW2_Mace_stand_A_idle.cas")
 skin_job = None
-if soldier is not None and IDLE.is_file():
-    idle = casanim.read_anim(IDLE)
+if soldier is not None and idle is not None:
     head = json.loads(mesh.geometry_payload(soldier)[8:8 + struct.unpack_from(
         "<I", mesh.geometry_payload(soldier), 4)[0]])
     ids = soldier.bone_ids

@@ -72,9 +72,23 @@ if not SOLDIER.is_file():
 # ---- 2) the .glb -----------------------------------------------------------------
 print("\n2) a DaC soldier and two actions, as a .glb")
 m = mesh.read_mesh(SOLDIER)
-base = casanim.read_anim(ANIMS / "MTW2_Mace_basepose.cas")
-idle = casanim.read_anim(ANIMS / "MTW2_Mace_stand_A_idle.cas")
-walk = casanim.read_anim(ANIMS / "MTW2_Mace_walk.cas")
+
+
+def mace(action, fname):
+    """One of MTW2_Mace's actions, loose where the mod ships it loose, else out
+    of the pack DaC had unpacked in place on 2026-09-23 (read with the
+    skeleton's bones)."""
+    loose = ANIMS / fname
+    if loose.is_file() and casanim.packed_counts(loose.read_bytes()) is None:
+        return casanim.read_anim(loose)
+    rows = casanim.actions_view(DAC, ["MTW2_Mace"])["skeletons"][0]["actions"]
+    row = next(r for r in rows if r["action"].lower() == action and r["rel"])
+    return casanim.read_anim(DAC / row["rel"], "MTW2_Mace", DAC)
+
+
+base = mace("default", "MTW2_Mace_basepose.cas")
+idle = mace("stand_a_idle", "MTW2_Mace_stand_A_idle.cas")
+walk = mace("walk", "MTW2_Mace_walk.cas")
 parts = [0, 1, 2, 3, 5, 8]
 glb = mx.export_glb(m, name="lamedon", groups=parts, skeleton=base,
                     animations=[("stand_a_idle", idle), ("walk", walk)])

@@ -240,10 +240,15 @@ _SAFE = re.compile(r"^[A-Za-z0-9_.\- /]+$")
 
 
 def plan_save(mod, rel: str, edits: Optional[Dict], save_as: str = "",
-              assign: Optional[Dict] = None) -> SavePlan:
+              assign: Optional[Dict] = None, skeleton: str = "") -> SavePlan:
     """Work out one save: the edited file's bytes and, when ``assign`` names a
     skeleton and an action, that action's line in ``descr_skeleton.txt``
-    pointed at it."""
+    pointed at it.
+
+    ``skeleton`` is for an animation from the pack (an unpacked ``pack.dat``
+    entry), which is read with that skeleton's bones. What is written is
+    always a loose ``.cas``, so such a file is never saved over: the tree it is
+    in is the pack's own format, and a packer reading it back expects that."""
     from . import factions
     p = SavePlan(mod=mod, rel=rel)
     src = factions.picture_path(mod, rel)
@@ -251,7 +256,7 @@ def plan_save(mod, rel: str, edits: Optional[Dict], save_as: str = "",
         p.errors.append(f"{rel!r} is not a file in this mod")
         return p
     try:
-        anim = casanim.read_anim(src)
+        anim = casanim.read_anim(src, skeleton, mod.data)
         p.data = casanim.write_anim(apply_edits(anim, edits))
     except (casanim.AnimError, EditError, ValueError, TypeError) as exc:
         p.errors.append(str(exc))
@@ -259,6 +264,11 @@ def plan_save(mod, rel: str, edits: Optional[Dict], save_as: str = "",
     target = (save_as or rel).strip().replace("\\", "/").lstrip("/")
     if not target.lower().endswith(".cas"):
         target += ".cas"
+    if casanim.packed_counts(src.read_bytes()) is not None \
+            and target.lower() == rel.strip().replace("\\", "/").lstrip("/").lower():
+        p.errors.append(f"{src.name} is an animation from the pack: the save is a loose .cas, "
+                        "so it goes beside it under a name of its own, not over it")
+        return p
     if (not target.lower().startswith("animations/") or ".." in target
             or not _SAFE.match(target)):
         p.errors.append(f"{target!r}: an animation is saved under animations/, "
