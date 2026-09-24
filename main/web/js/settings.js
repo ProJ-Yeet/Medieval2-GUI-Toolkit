@@ -134,13 +134,15 @@ async function openSettings(){
           Let the campaign map's <b>Real world</b> tab use OpenStreetMap</label>
         <div class="count" style="margin-top:6px">${docPoints(
           'The one part of the toolkit that uses the internet, and it is off until this is ticked.',
-          ['Sent: the map’s real-world box, the numbers of the map tiles it draws, and the words you search for. Nothing about any mod.',
+          ['Sent: the map’s real-world box, the numbers of the map and elevation tiles it draws, and the words you search for. Nothing about any mod.',
            'Map tiles are kept on disk for 30 days, and searches go at most once a second, as the OpenStreetMap usage policies ask.',
            'The servers are below, one a line, tried in order. Change them to use a mirror of your own.'])}</div>
         <label style="display:block;margin-top:6px">Map tiles <span class="count">({z}, {x} and {y} are filled in)</span>
           <textarea id="osmTiles" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_tiles||['https://tile.openstreetmap.org/{z}/{x}/{y}.png']).join('\n'))}</textarea></label>
         <label style="display:block">Overpass (the coastline)
           <textarea id="osmOverpass" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_overpass||['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']).join('\n'))}</textarea></label>
+        <label style="display:block">Elevation tiles (the heights generator, Terrarium format)
+          <textarea id="osmElevation" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_elevation||['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png']).join('\n'))}</textarea></label>
         <label style="display:block">Nominatim (the place search)
           <input id="osmNominatim" style="width:100%" value="${esc(s.osm_nominatim||'https://nominatim.openstreetmap.org')}" onchange="saveOsm()"></label>
       </fieldset>
@@ -414,7 +416,8 @@ async function saveOsm(){
   const lines = id => val(id).split(/\r?\n/).map(x => x.trim()).filter(Boolean);
   const on = !!(document.getElementById('osmChk') || {}).checked;
   const body = {osm_enabled: on, osm_tiles: lines('osmTiles'),
-                osm_overpass: lines('osmOverpass'), osm_nominatim: val('osmNominatim').trim()};
+                osm_overpass: lines('osmOverpass'), osm_elevation: lines('osmElevation'),
+                osm_nominatim: val('osmNominatim').trim()};
   state.settings = await api.post('/api/settings', body);
   if(state.osm){ state.osm.st = null; if(state.osm.open) osmLoad(); }
   toast(on ? 'OpenStreetMap is on for the Real world tab.' : 'OpenStreetMap is off.');

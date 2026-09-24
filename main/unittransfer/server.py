@@ -392,6 +392,11 @@ than "does what is on disk load?".
   POST /api/map/fix_plan|fix_apply
                                  -> Geomod's three debugger actions, in one
                                     backup set + undo
+  GET  /api/mapgen?mod=          -> 27: what the layer generators offer
+  POST /api/map/gen_plan|gen_apply
+                                 -> 27: heights, ground types, climates or
+                                    rivers made for the map, previewed, then
+                                    written with one Undo
   POST /api/map/resize_plan|resize_apply
                                  -> 26a: grow or shrink the map by four margins,
                                     every coordinate in the mod moved with it
@@ -675,7 +680,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import mapnew, mapresize
+from . import mapgen, mapnew, mapresize
 from . import ancillaries, areaeffects, campimport, edbimport, osmmap, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
@@ -2426,6 +2431,12 @@ class Handler(BaseHTTPRequestHandler):
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
                 return self._json(campnew.view(self.registry.describe(name)))
+            if u.path == "/api/mapgen":
+                # 27. Ahead of the /api/map prefix, like /api/mapnew
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._json(mapgen.view(self.registry.describe(name)))
             if u.path == "/api/mapnew":
                 # 26b. Ahead of the /api/map prefix, which it also starts with
                 name = (q.get("mod") or [None])[0]
@@ -2842,6 +2853,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._mapcheck(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/resize_plan", "/api/map/resize_apply"):
                 return self._json(self._mapresize(u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/map/gen_plan", "/api/map/gen_apply"):
+                return self._json(self._mapgen(u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/edu/sort/plan", "/api/edu/sort/apply"):
                 return self._json(self._edu_sort(u.path.rsplit("/", 1)[-1], body))
             if u.path == "/api/sounds/plan":
@@ -4490,6 +4503,39 @@ class Handler(BaseHTTPRequestHandler):
             out.pop("record", None)
             campaint.drop(name)
             self.registry.invalidate(name)          # every layer changed size
+            return out
+        except (campmap.MapError, ValueError, OSError) as e:
+            return {"error": str(e)}
+
+    # ---- the campaign map, generated (27) ----
+    def _mapgen(self, action, body):
+        """Plan or write one generated layer onto the map this campaign reads.
+
+        Refused over unsaved paint strokes for the reason a resize is: a layer
+        written under them would be overwritten by them on the next save."""
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            campaign = body.get("campaign") or ""
+            cm = self.registry.map_for(name, campaign)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        held = campaint.peek(name)
+        if held is not None and held.unsaved:
+            return {"error": "the paint tool has unsaved strokes on "
+                             + ", ".join(held.state()["files"])
+                             + " - save or discard them on the Paint tab first"}
+        try:
+            plan = mapgen.plan(mod, cm, body)
+            out = {"plan": plan.payload()}
+            if action == "plan" or plan.errors:
+                if plan.errors:
+                    out["error"] = "; ".join(plan.errors)
+                return out
+            out.update(mapgen.apply(plan))
+            out.pop("record", None)
+            campaint.drop(name)
+            self.registry.invalidate(name)
             return out
         except (campmap.MapError, ValueError, OSError) as e:
             return {"error": str(e)}

@@ -9889,3 +9889,84 @@ Tests: `test_mapresize` (35) and `test_mapnew` (23).
 
 Not in this phase: growing the land itself. New ground is sea, and land is
 painted with the brush, the Real world tab or Phase 27's generators.
+
+## Phase 27 - the layer generators - DONE 2026-09-24
+
+Mylae's `BboxLayerGenerator`, `FeaturesLayerGenerator` and `autoGroundTypes`
+(audit item **M11**), rebuilt as `unittransfer/mapgen.py`, the
+`/api/mapgen` and `/api/map/gen_*` routes and the Campaign Map's **Generate**
+sub-tab under Map (`web/js/mapgen.js`). Four generators. Each is a plan that
+shows the layer as it would be, as a preview picture, and then one write with
+one backup set and one Undo in the Log, `map.rwm` dropped beside it. Unsaved
+paint strokes refuse it, because the next paint save would write over it.
+
+**Heights from the real world.** Terrarium elevation tiles (AWS Open Data, the
+set Mylae reads) under the Real world tab's box, stitched and sampled
+bilinearly at every corner of `map_heights.tga`, with Mylae's zoom rule and a
+budget of 400 tiles. **True to scale by default**: the engine reads a land
+pixel as `max_land_height * grey / 255` metres and a sea pixel's blue as a depth
+down to `min_sea_height` (`world_map.cpp`, and the radar draws it back the same
+way), so a mountain is written at the grey its height is against this map's own
+`descr_terrain.txt`. Mylae stretches the highest peak in the box to white,
+which is still offered. It says so when the real ground is higher than
+`max_land_height` and would be cut off. **Land only by default**: it writes the
+land the map already has and leaves the sea as it is, because heights over the
+whole box move the coastline and the regions and ground types do not follow.
+*The whole map* is a choice; it writes the real sea floor into the blue, and the
+plan says how many corners change between land and sea and what does not
+follow them.
+
+**Ground types from the heights.** Mylae's bands (beach to 5, fertility low to
+40, medium to 80, high to 120, hills to 160, mountains low to 200 and high to
+255), editable. Land corners only; the sea is left alone.
+
+**Climates from the ground types.** Mylae's table, by the vanilla climate
+names, each one changeable to any climate the mod declares or left as it is. A
+climate the mod does not have is said, not invented. DaC renames most of its
+climates, and the table still lands the ones it shares.
+
+**Rivers, cliffs and volcanoes from OpenStreetMap**, onto `map_features.tga`.
+This is where it departs from the reference, and the departure is the engine's
+rule. Mylae draws eight-connected Bresenham lines with a source at the start of
+every chain. The tutorial and our own validator say a diagonal step is a gap, a
+loop has no mouth, a four-way tile has no course and a river under a city is a
+crash. So here:
+- waterways are chained end to start in OSM's downstream direction, and a fork
+  is two rivers, not one;
+- each course is walked in cardinal steps;
+- a settlement or port on the line cuts it in two, each half its own river;
+- a tributary ends where it meets its trunk, and a step that would close a loop,
+  run alongside itself or make a four-way ends the course;
+- a river runs two tiles out to sea for its mouth, as the tutorial asks;
+- each course gets one source at its upstream end, and a course under four
+  tiles is left out and counted.
+
+The old rivers, cliffs and volcanoes are cleared first, or kept and joined.
+Overpass is asked a chunk at a time, like the coastline, and the answer is kept
+on disk by the box.
+
+The two network generators are under Phase 25's switch, with the elevation
+server listed and editable beside the others in Settings. Until the switch is
+on they refuse, and nothing is sent.
+
+**What was not built, and why.**
+- **The overlay generator** is 16g's colouring export: every information map,
+  one per hidden resource, religion and owner, already exports.
+- **The Köppen climate fetcher** calls a map service with a private API key
+  written into the reference's source. That key is not the toolkit's to use,
+  and there is no keyless Köppen service to put in its place.
+- **The ESA WorldCover land-cover fetcher** reads LERC-compressed tiles, which
+  need a decoder the toolkit does not ship. The ground-types generator and the
+  brush cover the same ground.
+
+Tested with the network replaced (`test_mapgen`, 32): synthetic elevation and
+a synthetic Overpass answer over a 60x40 map written there. The heights come out
+at scale with the sea untouched, and the whole map writes the right depth. The
+rivers draw six courses and six sources, a city cuts two of them, the mouth
+stops two tiles out, a U-turn does not close, a scrap is left out, and the
+validator has nothing to say. The stitching was checked with a tile whose
+pixels are their own column numbers. On both installed mods the ground and
+climate generators plan from the mods' own maps.
+
+Not in this phase: turning the switch on against the real servers. That is
+still the user's to do; nothing here has sent a request.

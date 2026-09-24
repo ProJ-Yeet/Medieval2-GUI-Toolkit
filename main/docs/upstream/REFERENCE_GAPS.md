@@ -32,7 +32,7 @@ says "we do not", that was verified, and the verification is quoted.
 | Source | Items | Already scheduled | Already done, or a duplicate |
 |---|---|---|---|
 | Demir's StratMap Forge | 14 | 0 | **D4, D5 done 19a; D2, D3 done 19b; D8 done 20a; D14 done 20b; D6, D11 done 21; D9 half done 22a; D9, D10 done 22b** |
-| Mylae's M2TW Editor | 21 | 4 (M1, M2, M10, M11) | 2 (M9 we do better, M14 = D11, so done 21) · **M5, M6, M13 done 18a; M3, M4 done 18b; M8 done 20c** |
+| Mylae's M2TW Editor | 21 | 4 (M1, M2, M10, M11; M10 done 25, M11 done 27) | 2 (M9 we do better, M14 = D11, so done 21) · **M5, M6, M13 done 18a; M3, M4 done 18b; M8 done 20c** |
 | Bare Geomod | 8 | 1 (G6, done 26a) | 3 (G7, G8 done; G5 = D9) · **G3 done 18a; G2 half done B1; G5 done 22b** |
 | TWMapReader | 12 | 1 (T5, folded into 17d) | **T2, T11 done 20a; T8, T9 done 20b; T4 done 20c** |
 | **Total** | **51** | **6** | **5** |
@@ -406,7 +406,7 @@ close it.
 `OsmBackground.jsx`, `OsmRegionSearch.jsx`, `CoastlineTracer.jsx`. **V3.1**,
 opt-in and off by default.
 
-### M11. Overlay and layer generators · **scheduled**
+### M11. Overlay and layer generators · **done 27** (not the Köppen or land-cover fetchers; see ROADMAP_ARCHIVE)
 
 `OverlayMapGenerator.jsx`, `BboxLayerGenerator.jsx`, `FeaturesLayerGenerator.jsx`,
 `autoGroundTypes.js`, the Köppen and land-cover fetchers. **V3.3.**

@@ -776,7 +776,7 @@ is worth picking up.
 |---|---|---|---|
 | ~~25~~ | ~~**Phase 25 - OSM backdrop and coastline tracer**~~ | L | **Done 2026-09-24**; write-up in `ROADMAP_ARCHIVE.md`. |
 | ~~26~~ | ~~**Phase 26 - map resize, and create from scratch**~~ | L | **Done 2026-09-24**; write-up in `ROADMAP_ARCHIVE.md`. |
-| 27 | **Phase 27 - overlay and layer generators** | L | Campaign-map work at three stars. Same opt-in rule as 25. |
+| ~~27~~ | ~~**Phase 27 - overlay and layer generators**~~ | L | **Done 2026-09-24**; write-up in `ROADMAP_ARCHIVE.md`. |
 
 ## Unrated, and the rating is not the reason
 
@@ -818,6 +818,8 @@ between them remove most of that objection, so re-read this after 3.2.0.
 Mylae's `OverlayMapGenerator`, `BboxLayerGenerator`, `FeaturesLayerGenerator`,
 `autoGroundTypes` and the Köppen / land-cover fetchers. Same amendment and the
 same opt-in rule as Phase 25.
+**Done 2026-09-24**; the write-up is in `ROADMAP_ARCHIVE.md`, with why the two
+fetchers were not built.
 
 ---
 

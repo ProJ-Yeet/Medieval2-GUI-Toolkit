@@ -182,6 +182,10 @@ const CMAP_TABS = [
       open: {fn: 'mszToggle', at: 'msz'},
       title: 'Grow or shrink the map, with every coordinate in the mod moved to '
            + 'match, or start a new campaign on a blank map'},
+     {id: 'gen', label: 'Generate', panels: ['cmGen'],
+      open: {fn: 'mgnToggle', at: 'mgn'},
+      title: 'Heights and rivers from the real world, ground types from the '
+           + 'heights, climates from the ground types'},
      {id: 'osm', label: 'Real world', panels: ['cmOsm'],
       open: {fn: 'osmToggle', at: 'osm'},
       title: 'OpenStreetMap behind the map: the backdrop, the real coastline and '
@@ -1273,6 +1277,7 @@ back from the collapsed state.">›</button>
   cfeOpen();          // 37b, and it reads nothing until somebody opens it
   osmOpen();          // 25, and it sends nothing until it is switched on
   mszOpen();          // 26, and it reads nothing until a plan is asked for
+  mgnOpen();          // 27, and it sends nothing until the switch is on
   cchkOpen();
   cqOpen();
   cpaintOpen();
