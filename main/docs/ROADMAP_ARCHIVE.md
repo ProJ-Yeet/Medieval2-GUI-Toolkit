@@ -9450,3 +9450,66 @@ files. One backup, one Undo, which puts back the deleted `map.rwm` too.
 
 Exit: `tests/test_projectzip.py`, 18 checks.
 
+
+## Phase 72 - D13, a horde start for a faction that holds nothing - DONE 2026-09-24
+
+16j-2 creates a faction's campaign entry with the donor's AI, label, purse and
+diplomacy and nothing else, and says it will not appear on the map. Upstream's
+`hordeStartPositions`, `hordeCharacterNames`, `factionHordeConfig` and
+`buildStartingFactionStrat` were the other half; `hordestart.py` is ours, a
+*Horde start* tab on the Campaign panel beside *New faction*
+(`web/js/hordestart.js`), `GET /api/map/horde` and `POST
+/api/map/horde_plan|_apply`.
+
+**Two starts, because a faction with no settlement comes in two ways.**
+*On the map*: a general per start tile, each with an army, written into the
+faction's `descr_strat.txt` block by 16i's `new_character` in the shape of
+the lines around it and checked by 16i's own rules (off the map is fatal,
+sea is a warning with the nearest land, a name outside the pool is a
+warning); the first is the leader when the faction has none, a stack over 20
+and a general with no army are refused, and a `dead_until_resurrected` line
+is taken off. *On a date*: the faction is flagged `dead_until_resurrected`
+where vanilla's Mongols and Timurids write it (under `ai_label`, through
+16j-1's own flag splice), and an `event emergent_faction <slot>` block goes
+into the campaign's `descr_events.txt` with its dates and the positions
+picked on the map (18b's `new_event_lines`, or its `render_event` when the
+faction already has one; a campaign with no events file gets one). A faction
+that already has people in its block is refused an emergence: its people are
+the ones the event makes.
+
+**18b's rules about an event apply to the emergence**, so the plan meets them
+rather than leaving them as findings: `{SLOT_TITLE}` and `{SLOT_BODY}` are
+written to `text/historic_events.txt` (whichever of the `.txt` and the
+`.strings.bin` the mod has, through `namekeys._write_loc`), and a
+`<slot>.tga` is copied into every `ui/<culture>/eventspic` folder that lacks
+one, from an event every folder has a picture for, since a missing one is a
+campaign CTD. With no text file at all that is said, not written.
+
+**Both write the horde itself**: the seven `horde_*` numbers and the
+`horde_unit` list in `descr_sm_factions.txt`, all seven or none (Phase 11's
+`part-horde` rule met by construction). The numbers are copied from a horde
+the mod already has, so nothing is invented that the mod does not say; only
+a mod with none gets the tool's starting values, shown as such. The units
+offered first are the ones the EDU's `ownership` gives the faction. A unit
+the EDU lacks, a blank or negative number, fewer most units than least and a
+share over 100 are refused. First `horde_unit` lines go under the last horde
+number, before `can_sap`, in the record's own value column.
+
+**What is refused**: a faction that holds a settlement (a horde start is the
+start of a faction with no home; the settlement panel is where a home is
+given or taken), a faction with no block (New faction writes one), a faction
+`descr_sm_factions.txt` does not declare. A start on the map for a faction
+that still has an emergence is allowed and the event is named as a warning,
+not deleted. The guard: every other faction's block in `descr_strat.txt`
+comes out byte for byte. One backup set and one Undo across every file.
+
+**Built in a cloud session with no game and no mod on disk**, so, unlike the
+phases before it, nothing here is measured on ROCSS or DaC: the suite runs on
+a throwaway mod and a stand-in map. The engine facts are the game's own
+header for `descr_events.txt`, what 11, 16i, 16j and 18b measured, and
+vanilla's Mongols' shape. Where an emerging horde really lands - the event's
+`position` lines - is the first thing to check in game.
+
+Exit: `tests/test_hordestart.py`, 66 checks (the view, both starts, nineteen
+refusals and warnings, apply and undo to the byte, the three routes);
+`tests/test_horde_ui.js`.

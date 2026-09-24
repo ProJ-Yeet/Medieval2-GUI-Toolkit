@@ -45,6 +45,11 @@
    server will not clone the donor's - two factions cannot start in the same
    city - so the form does not pretend otherwise: it says what the new faction
    is missing and points at the two panels that fix it.
+
+   72 ADDED A SEVENTH, Horde start, whose body is drawn by hordestart.js: the
+   other half of New faction, for a faction that is to have no settlement at
+   all. It has its own request (`/api/map/horde`) and its own state
+   (`state.hs`); this file only draws its button and hands it the tab.
    ===================================================================== */
 
 //: How long after the last keystroke the panel asks the server what it thinks.
@@ -108,6 +113,8 @@ function cjTab(name){
   // 18a made it four; the other two are read the same way, and once for the
   // whole campaign rather than once a faction.
   if(name === 'faction'){ cjSmOpen(cjEnsureFaction()); cjPresOpen(); }
+  // 72: its own file and its own request (hordestart.js)
+  if(name === 'horde') hsOpen();
 }
 
 /* The working copy every box edits and every save is built from - the same
@@ -524,7 +531,8 @@ function cjHtml(){
   }
   const tabs = [['campaign', 'When it runs'], ['rosters', 'Who plays'],
                 ['faction', 'Each faction'], ['diplomacy', 'Diplomacy'],
-                ['create', 'New faction'], ['wins', 'Winning']];
+                ['create', 'New faction'], ['horde', 'Horde start'],
+                ['wins', 'Winning']];
   return head + `<div class="cxpanel">
     <div class="cqtabs">
       ${tabs.map(([id, label]) => `<button class="${k.tab === id ? 'on' : ''}"
@@ -537,6 +545,7 @@ function cjHtml(){
       : k.tab === 'rosters' ? cjRostersHtml()
       : k.tab === 'faction' ? cjFactionHtml()
       : k.tab === 'create' ? cjCreateHtml()
+      : k.tab === 'horde' ? hsHtml()
       : k.tab === 'wins' ? cjWinsHtml() : cjDiplomacyHtml()}
     ${cjFindingsHtml()}
   </div>`;
@@ -949,8 +958,9 @@ function cjCreateHtml(){
       both ways</label>
     <div class="count">No settlement and nobody: two factions cannot start in
       the same city, so there is nothing to clone. Give it one with the
-      settlement panel and a general with the people panel, and until then it
-      is the shape vanilla's Mongols and Timurids are.</div>
+      settlement panel and a general with the people panel, or give it a horde
+      on the Horde start tab; until then it is the shape vanilla's Mongols and
+      Timurids are.</div>
     <div class="csbtns">
       <button class="primary" onclick="cjSave()">Create the faction</button>
       <button onclick="cjDelete()">Delete ${esc(k.faction)}…</button>

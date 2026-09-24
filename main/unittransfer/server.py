@@ -444,6 +444,22 @@ rewrites lines that are already there.
   POST /api/map/wins_plan|_apply -> `action`: edit / add / delete, one faction's
                                     win conditions (one backup + undo)
 
+A horde start for a faction that holds nothing (72, D13, see
+:mod:`unittransfer.hordestart`)
+  GET  /api/map/horde?mod=&campaign=&faction=
+                                 -> every faction and what it holds; for the
+                                    one asked (or the first with no settlement)
+                                    its horde, the mod's own hordes to copy,
+                                    the units it owns, free pool names, its
+                                    emergent_faction event, text and picture
+  POST /api/map/horde_plan|_apply
+                                 -> `mode` map (generals written into its
+                                    descr_strat block) or emerge (flagged
+                                    dead_until_resurrected, an emergent_faction
+                                    event, its text and picture); both write the
+                                    seven horde numbers and the horde_unit list
+                                    (every file under one backup + undo)
+
 Minor Files mode (the five small campaign files, see :mod:`unittransfer.minorfiles`)
   GET  /api/minor?mod=&tab=      -> one tab's whole list (rebels / religions /
                                     resources / cultures / names), with the
@@ -617,7 +633,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, areaeffects, heroabilities, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, heroabilities, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, hordestart, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2703,6 +2719,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/map/wins_plan", "/api/map/wins_apply"):
                 return self._json(self._wins(
                     u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/map/horde_plan", "/api/map/horde_apply"):
+                return self._json(self._horde(
+                    u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/map/region_delete_plan",
                           "/api/map/region_delete_apply"):
                 return self._json(self._region_delete(
@@ -4069,6 +4088,33 @@ class Handler(BaseHTTPRequestHandler):
         self.registry.invalidate(name)              # the file changed on disk
         return out
 
+    # ---- a horde start for a faction that holds nothing (72) ----
+    def _horde(self, action, body):
+        """Preview or write one horde start, across every file it touches.
+
+        16j's handler with 72's plan in it: the fact table is the vocabulary
+        and the map a tile is judged on, and every file the plan writes is read
+        from disk inside :func:`~unittransfer.hordestart.plan`.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            facts = self.registry.map_facts(name, body.get("campaign") or "")
+            plan = hordestart.plan(mod, facts, body)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(hordestart.apply(plan))
+        except (OSError, ValueError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)              # the files changed on disk
+        return out
+
     # ---- what a faction has to do to win (16j-2) ----
     def _wins(self, action, body):
         """Preview or write one faction's ``descr_win_conditions.txt`` record.
@@ -5064,6 +5110,17 @@ class Handler(BaseHTTPRequestHandler):
                 facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
                 return self._json(stratcamp.campaign_detail(facts))
             except (campmap.MapError, ModDataError, OSError) as exc:
+                return self._err(404, str(exc))
+
+        if path == "/api/map/horde":
+            # 72. The faction list out of the fact table's vocabulary, and the
+            # campaign file itself off the disk, because the tab is about to
+            # plan a write over it.
+            try:
+                facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
+                return self._json(hordestart.view(
+                    facts.mod, facts, (q.get("faction") or [""])[0]))
+            except (campmap.MapError, ModDataError, OSError, ValueError) as exc:
                 return self._err(404, str(exc))
 
         if path == "/api/map/wins":
