@@ -55,12 +55,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
-import numpy as np
-from PIL import Image
+from array import array
+
+from PIL import Image, ImageChops, ImageMath
 
 from . import campmap, config, mapvocab, osmmap
 from .campmap import RWM_REL, MapError
 from .maptga import encode
+from .mapnew import corner_view
 
 KINDS = ("heights", "ground", "climates", "features")
 
@@ -157,13 +159,23 @@ def _put(p: GenPlan, cm, code: str, img: Image.Image, info, rel: str) -> None:
     p.preview = _png(img)
 
 
-def _sea_corners(cm) -> np.ndarray:
-    """True on every corner of the 2W+1 grid whose tile the engine reads as sea."""
+def _sea_corners(cm) -> Image.Image:
+    """255 on every corner of the 2W+1 grid whose tile the engine reads as sea."""
     w, h = cm.terrain.width, cm.terrain.height
-    sea = np.frombuffer(cm.sea, dtype=np.uint8).reshape(h, w).astype(bool)
-    tx = np.clip((np.arange(2 * w + 1) - 1) // 2, 0, w - 1)
-    ty = np.clip((np.arange(2 * h + 1) - 1) // 2, 0, h - 1)
-    return sea[ty[:, None], tx[None, :]]
+    tiles = Image.frombytes("L", (w, h), bytes(255 if v else 0 for v in cm.sea))
+    return corner_view(tiles)
+
+
+def _count(mask: Image.Image) -> int:
+    """How many pixels of an 'L' mask are set."""
+    return mask.histogram()[255]
+
+
+def _math(expr: str, **images) -> Image.Image:
+    """``ImageMath`` under whichever name this Pillow gives it."""
+    if hasattr(ImageMath, "unsafe_eval"):
+        return ImageMath.unsafe_eval(expr, **images)
+    return ImageMath.eval(expr, **images)                 # Pillow before 10.3
 
 
 def plan(mod, cm, body: dict) -> GenPlan:
@@ -193,8 +205,9 @@ def elevation_servers() -> List[str]:
     return v or list(DEFAULT_ELEVATION)
 
 
-def elevation_tile(z: int, x: int, y: int) -> np.ndarray:
-    """One Terrarium tile as metres, kept on disk like the backdrop's tiles."""
+def elevation_tile(z: int, x: int, y: int) -> Image.Image:
+    """One Terrarium tile as metres (an 'F' picture), kept on disk like the
+    backdrop's tiles."""
     path = config.cache_dir("elevation") / str(z) / str(x) / f"{y}.png"
     raw = None
     try:
@@ -219,8 +232,9 @@ def elevation_tile(z: int, x: int, y: int) -> np.ndarray:
             path.write_bytes(raw)
         except OSError:
             pass
-    a = np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"), dtype=np.float64)
-    return a[..., 0] * 256 + a[..., 1] + a[..., 2] / 256 - 32768
+    r, g, b = Image.open(io.BytesIO(raw)).convert("RGB").split()
+    return _math("float(r) * 256.0 + float(g) + float(b) / 256.0 - 32768.0",
+                 r=r, g=g, b=b)
 
 
 def _lon2x(lon: float, z: int) -> float:
@@ -233,7 +247,7 @@ def _lat2y(lat: float, z: int) -> float:
     return (1 - math.log(math.tan(r) + 1 / math.cos(r)) / math.pi) / 2 * (2 ** z) * 256
 
 
-def elevation(box, cols: int, rows: int) -> np.ndarray:
+def elevation(box, cols: int, rows: int) -> Image.Image:
     """Metres at every corner of a ``cols x rows`` grid spread over ``box``.
 
     Corner ``(i, j)`` stands where tile coordinate ``((i-1)/2, (j-1)/2)`` does
@@ -241,6 +255,10 @@ def elevation(box, cols: int, rows: int) -> np.ndarray:
     backdrop and the coastline. The zoom is Mylae's rule - the first at which
     the tiles cover the grid one and a half times over - and the samples are
     bilinear between the tile pixels.
+
+    Longitude is linear across both the tiles and the map, and so is the
+    Mercator of the latitude, so the whole resampling is one affine transform
+    of the stitched picture: Pillow does it, in C.
     """
     w, h = (cols - 1) // 2, (rows - 1) // 2
     proj = osmmap.Projection(box, w, h)
@@ -251,37 +269,38 @@ def elevation(box, cols: int, rows: int) -> np.ndarray:
         if wide >= 1.5 * cols and tall >= 1.5 * rows:
             z = zz
             break
-    x0, x1 = int(_lon2x(box.west, z) // 256), int(_lon2x(box.east, z) // 256)
-    y0, y1 = int(_lat2y(box.north, z) // 256), int(_lat2y(box.south, z) // 256)
-    n = (x1 - x0 + 1) * (y1 - y0 + 1)
-    while n > ELEVATION_BUDGET and z > 3:
+
+    def span(zz):
+        return (int(_lon2x(box.west, zz) // 256), int(_lon2x(box.east, zz) // 256),
+                int(_lat2y(box.north, zz) // 256), int(_lat2y(box.south, zz) // 256))
+
+    x0, x1, y0, y1 = span(z)
+    while (x1 - x0 + 1) * (y1 - y0 + 1) > ELEVATION_BUDGET and z > 3:
         z -= 1
-        x0, x1 = int(_lon2x(box.west, z) // 256), int(_lon2x(box.east, z) // 256)
-        y0, y1 = int(_lat2y(box.north, z) // 256), int(_lat2y(box.south, z) // 256)
-        n = (x1 - x0 + 1) * (y1 - y0 + 1)
-    big = np.zeros(((y1 - y0 + 1) * 256, (x1 - x0 + 1) * 256))
+        x0, x1, y0, y1 = span(z)
+    big = Image.new("F", ((x1 - x0 + 1) * 256, (y1 - y0 + 1) * 256))
     for ty in range(y0, y1 + 1):
         for tx in range(x0, x1 + 1):
-            big[(ty - y0) * 256:(ty - y0 + 1) * 256,
-                (tx - x0) * 256:(tx - x0 + 1) * 256] = elevation_tile(z, tx % (2 ** z), ty)
-    # every corner's position in the stitched picture
-    fx = (np.arange(cols) - 1) / 2.0
-    fy = (np.arange(rows) - 1) / 2.0
-    lon = np.array([proj.to_geo(f, 0)[1] for f in fx])
-    lat = np.array([proj.to_geo(0, f)[0] for f in fy])
-    px = np.array([_lon2x(v, z) for v in lon]) - x0 * 256
-    py = np.array([_lat2y(v, z) for v in lat]) - y0 * 256
-    px = np.clip(px, 0, big.shape[1] - 1.001)
-    py = np.clip(py, 0, big.shape[0] - 1.001)
-    ix, iy = px.astype(int), py.astype(int)
-    fxr, fyr = px - ix, py - iy
-    a = big[iy[:, None], ix[None, :]]
-    b = big[iy[:, None], ix[None, :] + 1]
-    c = big[iy[:, None] + 1, ix[None, :]]
-    d = big[iy[:, None] + 1, ix[None, :] + 1]
-    top = a + (b - a) * fxr[None, :]
-    bot = c + (d - c) * fxr[None, :]
-    return top + (bot - top) * fyr[:, None]
+            big.paste(elevation_tile(z, tx % (2 ** z), ty),
+                      ((tx - x0) * 256, (ty - y0) * 256))
+    # corner i -> the stitched picture's column: linear in i, and the same for
+    # rows. Pillow samples output pixel x at a * (x + .5) + c - .5, so c takes
+    # the half-pixel back.
+    lon_a, lon_b = proj.to_geo(1, 0)[1], proj.to_geo(3, 0)[1]      # corners 3 and 7
+    px_a, px_b = _lon2x(lon_a, z) - x0 * 256, _lon2x(lon_b, z) - x0 * 256
+    ax = (px_b - px_a) / 4
+    bx = px_a - 3 * ax
+    lat_a, lat_b = proj.to_geo(0, 1)[0], proj.to_geo(0, 3)[0]
+    py_a, py_b = _lat2y(lat_a, z) - y0 * 256, _lat2y(lat_b, z) - y0 * 256
+    ay = (py_b - py_a) / 4
+    by = py_a - 3 * ay
+    return big.transform((cols, rows), Image.AFFINE,
+                         (ax, 0, bx + 0.5 - 0.5 * ax, 0, ay, by + 0.5 - 0.5 * ay),
+                         Image.BILINEAR)
+
+
+def _floats(img: Image.Image) -> array:
+    return array("f", img.tobytes())
 
 
 def _plan_heights(p: GenPlan, cm, body: dict) -> None:
@@ -295,15 +314,18 @@ def _plan_heights(p: GenPlan, cm, body: dict) -> None:
     t = cm.terrain
     whole = str(body.get("area") or "land") == "whole"
     stretch = str(body.get("scale") or "true") == "stretch"
-    sea_now = _sea_corners(cm)
-    land_now = ~sea_now
-    new_land = metres > 0 if whole else land_now
-    top = float(metres[new_land].max()) if new_land.any() else 1.0
+    land_now = ImageChops.invert(_sea_corners(cm))
+    if whole:
+        new_land = _math("convert((m > 0) * 255, 'L')", m=metres)
+    else:
+        new_land = land_now
+    m, mask = _floats(metres), new_land.tobytes()
+    top = max((v for v, k in zip(m, mask) if k), default=1.0)
     if stretch:
-        grey = np.clip(np.round(metres / max(top, 1.0) * 255), 1, 255)
+        scale = 255.0 / max(top, 1.0)
         what = f"stretched so the highest ground, {top:,.0f} m, is white"
     else:
-        grey = np.clip(np.round(metres * 255 / max(t.max_land_height, 1.0)), 1, 255)
+        scale = 255.0 / max(t.max_land_height, 1.0)
         what = (f"true to scale against descr_terrain.txt's max_land_height of "
                 f"{t.max_land_height:,.0f} m (the highest ground here is "
                 f"{top:,.0f} m)")
@@ -312,23 +334,25 @@ def _plan_heights(p: GenPlan, cm, body: dict) -> None:
                 f"the highest ground in the box, {top:,.0f} m, is above "
                 f"max_land_height ({t.max_land_height:,.0f} m), so it is cut off "
                 f"at white. Raise max_land_height, or stretch instead.")
-    arr = np.array(img, dtype=np.uint8)
-    g = grey.astype(np.uint8)
-    for c in range(3):
-        arr[..., c] = np.where(new_land, g, arr[..., c])
+    # grey = metres * scale, rounded, never under 1: black reads as sea
+    grey = ImageChops.lighter(metres.point(lambda v: v * scale + 0.5).convert("L"),
+                              Image.new("L", img.size, 1))
+    out = img.copy()
+    out.paste(Image.merge("RGB", (grey, grey, grey)), mask=new_land)
     if whole:
-        depth = np.clip(np.round(255 * (1 - metres / min(t.min_sea_height, -1.0))), 1, 255)
-        sea = ~new_land
-        arr[..., 0] = np.where(sea, 0, arr[..., 0])
-        arr[..., 1] = np.where(sea, 0, arr[..., 1])
-        arr[..., 2] = np.where(sea, depth.astype(np.uint8), arr[..., 2])
-        moved = int((new_land != land_now).sum())
+        depth = ImageChops.lighter(
+            metres.point(lambda v: 255.0 - 255.0 * v / min(t.min_sea_height, -1.0) + 0.5)
+            .convert("L"), Image.new("L", img.size, 1))
+        zero = Image.new("L", img.size, 0)
+        out.paste(Image.merge("RGB", (zero, zero, depth)),
+                  mask=ImageChops.invert(new_land))
+        moved = _count(ImageChops.difference(new_land, land_now).point(
+            lambda v: 255 if v else 0))
         p.warnings.append(
             f"the whole map is written, so {moved:,} corner(s) change between "
             f"land and sea. map_regions.tga and map_ground_types.tga do not "
             f"follow; the validator will list where they disagree, and the Real "
             f"world tab's coastline can repaint the regions.")
-    out = Image.fromarray(arr, "RGB")
     _put(p, cm, "heights", out, info, rel)
     p.changes.append(f"{rel}: {'every corner' if whole else 'the land'} from the "
                      f"real ground under the box ({where}), {what}")
@@ -354,42 +378,60 @@ def _bands(body: dict) -> List[Tuple[str, int]]:
     return out
 
 
+def _land_corners(heights: Image.Image) -> Image.Image:
+    """255 where a ``map_heights.tga`` pixel is land: grey and not black."""
+    r, g, b = heights.convert("RGB").split()
+    spread = ImageChops.lighter(ImageChops.difference(r, g), ImageChops.difference(g, b))
+    grey = spread.point(lambda v: 255 if v == 0 else 0)
+    lit = r.point(lambda v: 255 if v else 0)
+    return ImageChops.multiply(grey, lit)
+
+
 def _plan_ground(p: GenPlan, cm, body: dict) -> None:
     bands = _bands(body)
-    heights = np.array(cm.layer("heights").convert("RGB"), dtype=np.int32)
+    heights = cm.layer("heights").convert("RGB")
     img, info, rel = _layer(cm, "ground_types")
-    arr = np.array(img, dtype=np.uint8)
-    r, g, b = heights[..., 0], heights[..., 1], heights[..., 2]
-    land = (r == g) & (g == b) & (r > 0)
-    table = np.zeros((256, 3), dtype=np.uint8)
+    land = _land_corners(heights)
+    table = [(0, 0, 0)] * 256
     lo = 0
     for code, top in bands:
-        table[lo:top + 1] = mapvocab.ground(code)["rgb"]
+        for v in range(lo, top + 1):
+            table[v] = mapvocab.ground(code)["rgb"]
         lo = top + 1
-    arr[land] = table[r[land]]
-    counts = {code: 0 for code, _ in bands}
-    lo = 0
+    r = heights.split()[0]
+    typed = Image.merge("RGB", tuple(r.point([table[v][c] for v in range(256)])
+                                     for c in range(3)))
+    out = img.copy()
+    out.paste(typed, mask=land)
+    hist = r.histogram(mask=land)
+    counts, lo = {}, 0
     for code, top in bands:
-        counts[code] = int(((r >= lo) & (r <= top) & land).sum())
+        counts[code] = counts.get(code, 0) + sum(hist[lo:top + 1])
         lo = top + 1
-    _put(p, cm, "ground_types", Image.fromarray(arr, "RGB"), info, rel)
-    p.changes.append(f"{rel}: {int(land.sum()):,} land corner(s) typed by height - "
+    _put(p, cm, "ground_types", out, info, rel)
+    p.changes.append(f"{rel}: {_count(land):,} land corner(s) typed by height - "
                      + ", ".join(f"{c} {n:,}" for c, n in counts.items() if n))
     p.changes.append("the sea is left as it is; on land every corner is "
                      "replaced, forests and swamps too")
+
+
+def _equal(img: Image.Image, rgb) -> Image.Image:
+    """255 where ``img`` is exactly ``rgb``."""
+    parts = [band.point(lambda v, want=want: 255 if v == want else 0)
+             for band, want in zip(img.split(), rgb)]
+    return ImageChops.multiply(ImageChops.multiply(parts[0], parts[1]), parts[2])
 
 
 def _plan_climates(p: GenPlan, cm, body: dict) -> None:
     have = {c["code"]: c for c in mapvocab.climates(p.mod) if c.get("rgb")}
     mapping = dict(CLIMATE_OF)
     mapping.update({str(k): str(v) for k, v in (body.get("mapping") or {}).items()})
-    ground = np.array(cm.layer("ground_types").convert("RGB"), dtype=np.int32)
+    ground = cm.layer("ground_types").convert("RGB")
     img, info, rel = _layer(cm, "climates")
-    if img.size != (ground.shape[1], ground.shape[0]):
+    if img.size != ground.size:
         raise GenError("map_climates.tga and map_ground_types.tga are not the "
                        "same size")
-    arr = np.array(img, dtype=np.uint8)
-    packed = (ground[..., 0] << 16) | (ground[..., 1] << 8) | ground[..., 2]
+    out = img.copy()
     done, missing = {}, []
     for gcode, ccode in mapping.items():
         gt = mapvocab.ground(gcode)
@@ -399,14 +441,13 @@ def _plan_climates(p: GenPlan, cm, body: dict) -> None:
         if clim is None:
             missing.append(f"{gcode} -> {ccode}")
             continue
-        k = (gt["rgb"][0] << 16) | (gt["rgb"][1] << 8) | gt["rgb"][2]
-        mask = packed == k
-        arr[mask] = clim["rgb"]
-        done[gcode] = int(mask.sum())
+        mask = _equal(ground, gt["rgb"])
+        out.paste(tuple(clim["rgb"]), mask=mask)
+        done[gcode] = _count(mask)
     if not done:
         raise GenError("this mod declares none of the climates the table names; "
                        "choose a climate for each ground type first")
-    _put(p, cm, "climates", Image.fromarray(arr, "RGB"), info, rel)
+    _put(p, cm, "climates", out, info, rel)
     p.changes.append(f"{rel}: " + ", ".join(
         f"{g} {n:,} -> {mapping[g]}" for g, n in done.items() if n))
     if missing:
@@ -526,7 +567,7 @@ def cardinal(points: Sequence[Tuple[float, float]]) -> List[Tuple[int, int]]:
 class Rivers:
     """The river network as it is drawn, kept a tree by union-find."""
 
-    def __init__(self, w: int, h: int, sea: np.ndarray, blocked: set):
+    def __init__(self, w: int, h: int, sea: bytes, blocked: set):
         self.w, self.h, self.sea, self.blocked = w, h, sea, blocked
         self.parent: Dict[Tuple[int, int], Tuple[int, int]] = {}
         self.sources: List[Tuple[int, int]] = []
@@ -555,7 +596,7 @@ class Rivers:
                 if started:
                     break
                 continue
-            wet = bool(self.sea[y, x])
+            wet = bool(self.sea[y * self.w + x])
             if not started:
                 if wet:
                     continue                           # a river starts on land
@@ -610,29 +651,32 @@ def _plan_features(p: GenPlan, cm, body: dict) -> None:
     w, h = cm.terrain.width, cm.terrain.height
     proj = osmmap.Projection(box, w, h)
     img, info, rel = _layer(cm, "features")
-    arr = np.array(img, dtype=np.uint8)
+    out = img.copy()
+    px = out.load()
     f = mapvocab.feature
     replace = str(body.get("mode") or "replace") == "replace"
-    packed = (arr[..., 0].astype(np.int32) << 16) | (arr[..., 1].astype(np.int32) << 8) | arr[..., 2]
-
-    def pk(code):
-        c = f(code)["rgb"]
-        return (c[0] << 16) | (c[1] << 8) | c[2]
-    river_codes = [pk(c) for c in mapvocab.RIVER_CODES]
-    drop = river_codes + ([pk("cliff"), pk("volcano")] if replace else [])
-    if replace:
-        arr[np.isin(packed, drop)] = f("none")["rgb"]
-    sea = np.frombuffer(cm.sea, dtype=np.uint8).reshape(h, w).astype(bool)
+    rivers = {tuple(f(c)["rgb"]) for c in mapvocab.RIVER_CODES}
+    drop = rivers | ({tuple(f("cliff")["rgb"]), tuple(f("volcano")["rgb"])}
+                     if replace else set())
+    none = tuple(f("none")["rgb"])
+    old: List[Tuple[int, int]] = []
+    for y in range(h):
+        for x in range(w):
+            c = px[x, y]
+            if c in drop:
+                if replace:
+                    px[x, y] = none
+                elif c in rivers:
+                    old.append((x, y))
+    sea = cm.sea
     idx = cm.index
     blocked = set(idx.settlements) | set(idx.ports)
     net = Rivers(w, h, sea, blocked)
-    if not replace:
-        old = np.argwhere(np.isin(packed, river_codes))
-        for y, x in old.tolist():
-            net.parent[(x, y)] = (x, y)
-        for (x, y) in list(net.parent):
-            for n in net._around((x, y)):
-                net.parent[net._find(n)] = net._find((x, y))
+    for t in old:
+        net.parent[t] = t
+    for t in old:
+        for n in net._around(t):
+            net.parent[net._find(n)] = net._find(t)
     # a settlement or a port on a river's line cuts it in two: the water above
     # the city is one river, the water below it another with its own source
     courses = []
@@ -654,27 +698,30 @@ def _plan_features(p: GenPlan, cm, body: dict) -> None:
         if n:
             drawn += 1
             tiles += n
-    river = f("river")["rgb"]
+    river = tuple(f("river")["rgb"])
     for (x, y) in net.parent:
-        arr[y, x] = river
+        px[x, y] = river
     for (x, y) in net.sources:
-        arr[y, x] = f("river_source")["rgb"]
+        px[x, y] = tuple(f("river_source")["rgb"])
+
+    def free(x: int, y: int) -> bool:
+        return (0 <= x < w and 0 <= y < h and not sea[y * w + x]
+                and (x, y) not in net.parent and (x, y) not in blocked)
+
     cliffs = 0
     for line in got["cliffs"].values():
         for x, y in cardinal([proj.to_tile(lat, lon) for lat, lon in line]):
-            if 0 <= x < w and 0 <= y < h and not sea[y, x] and (x, y) not in net.parent \
-                    and (x, y) not in blocked:
-                arr[y, x] = f("cliff")["rgb"]
+            if free(x, y):
+                px[x, y] = tuple(f("cliff")["rgb"])
                 cliffs += 1
     volc = 0
     for lat, lon in got["volcanoes"]:
         fx, fy = proj.to_tile(lat, lon)
         x, y = int(round(fx)), int(round(fy))
-        if 0 <= x < w and 0 <= y < h and not sea[y, x] and (x, y) not in net.parent \
-                and (x, y) not in blocked:
-            arr[y, x] = f("volcano")["rgb"]
+        if free(x, y):
+            px[x, y] = tuple(f("volcano")["rgb"])
             volc += 1
-    _put(p, cm, "features", Image.fromarray(arr, "RGB"), info, rel)
+    _put(p, cm, "features", out, info, rel)
     p.changes.append(
         f"{rel}: {drawn} river course(s), {tiles:,} tiles, one source each, from "
         f"OSM's {RIVER_DETAIL[detail].replace('|', ', ')} ({len(got['rivers'])} "

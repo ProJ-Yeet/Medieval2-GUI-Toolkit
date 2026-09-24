@@ -37,12 +37,12 @@ from __future__ import annotations
 import colorsys
 import math
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
-import numpy as np
-from PIL import Image
+from PIL import Image, ImageChops, ImageFilter
 
 from . import campfiles, campmap, campnew, campstrat, factions, hordestart, mapvocab
 from . import namekeys
@@ -66,6 +66,9 @@ REWRITTEN = ("descr_strat.txt", "campaign_script.txt", "descr_events.txt",
              "descr_mercenaries.txt", "descr_win_conditions.txt")
 NOT_COPIED = ("custom_tiles_db.txt", "descr_regions_and_settlement_name_lookup.txt")
 
+#: The four sides a tile touches.
+_CARD = ((0, -1), (0, 1), (-1, 0), (1, 0))
+
 
 class NewMapError(ValueError):
     """The form will not do."""
@@ -73,117 +76,182 @@ class NewMapError(ValueError):
 
 # ---------------------------------------------------------------------------
 # the map itself
+#
+# Plain Python and Pillow, like the rest of the toolkit: the release carries an
+# embedded Python with Pillow in it and nothing else. Provinces are grown out
+# of their seeds a tile at a time, all at once, which is linear in the land and
+# gives every province in one piece by construction.
 
 
 @dataclass
 class Island:
-    """The map as tiles: which are land, who owns them, where the cities are."""
+    """The map as tiles: which are land, who owns them, where the cities are.
+
+    Every grid is a flat list, row after row: ``land[y * width + x]``.
+    """
 
     width: int
     height: int
-    land: np.ndarray                  # bool, (H, W)
-    owner: np.ndarray                 # int, (H, W), -1 for sea
+    land: bytearray                   # 1 on land
+    owner: List[int]                  # the province, -1 for sea
     seats: List[Tuple[int, int]]      # image (x, y) of each province's city
-    rise: np.ndarray                  # float 0..1 on the corner grid, 0 at the coast
+    rise: List[float]                 # 0..1 a tile, 0 at the coast
+
+    def share(self) -> float:
+        return sum(self.land) / float(self.width * self.height)
 
 
-def _ellipse(w: int, h: int, share: float) -> np.ndarray:
-    ys, xs = np.mgrid[0:h, 0:w]
+def _ellipse(w: int, h: int, share: float) -> bytearray:
     rx0, ry0 = w / 2 - 3, h / 2 - 3
     s = min(1.0, math.sqrt(share * w * h / (math.pi * rx0 * ry0)))
     rx, ry = rx0 * s, ry0 * s
     cx, cy = (w - 1) / 2, (h - 1) / 2
-    return ((xs - cx) / rx) ** 2 + ((ys - cy) / ry) ** 2 <= 1.0
+    out = bytearray(w * h)
+    for y in range(h):
+        dy = ((y - cy) / ry) ** 2
+        if dy > 1:
+            continue
+        half = rx * math.sqrt(1 - dy)
+        lo, hi = max(0, math.ceil(cx - half)), min(w, math.floor(cx + half) + 1)
+        out[y * w + lo:y * w + hi] = b"\x01" * (hi - lo)
+    return out
 
 
-def _kmeans(points: np.ndarray, k: int, rounds: int = 12) -> np.ndarray:
-    """Seeds spread over ``points``: farthest-point start, then k-means."""
-    centre = points.mean(axis=0)
-    seeds = [points[np.argmin(((points - centre) ** 2).sum(1))]]
-    far = ((points - seeds[0]) ** 2).sum(1)
-    for _ in range(1, k):
-        seeds.append(points[int(np.argmax(far))])
-        far = np.minimum(far, ((points - seeds[-1]) ** 2).sum(1))
-    seeds = np.array(seeds, dtype=float)
-    from scipy.spatial import cKDTree
-    for _ in range(rounds):
-        lab = cKDTree(seeds).query(points)[1]
-        for i in range(k):
-            mine = points[lab == i]
-            if len(mine):
-                seeds[i] = mine.mean(axis=0)
+def _grow(land: bytearray, w: int, h: int, seeds: Sequence[int]) -> List[int]:
+    """Every land tile given to the seed that reaches it first, stepping one
+    tile at a time from all the seeds at once. -1 for sea."""
+    owner = [-1] * (w * h)
+    q: deque = deque()
+    for k, s in enumerate(seeds):
+        if owner[s] < 0:
+            owner[s] = k
+            q.append(s)
+    while q:
+        i = q.popleft()
+        lab = owner[i]
+        x = i % w
+        for j, ok in ((i - w, i >= w), (i + w, i < w * (h - 1)),
+                      (i - 1, x > 0), (i + 1, x < w - 1)):
+            if ok and land[j] and owner[j] < 0:
+                owner[j] = lab
+                q.append(j)
+    return owner
+
+
+def _seed_tiles(land: bytearray, w: int, h: int, k: int) -> List[int]:
+    """``k`` land tiles on an even staggered grid, the spacing found by halving,
+    then moved a few times to the middle of what they grow into."""
+    total = sum(land)
+    cx, cy = (w - 1) / 2, (h - 1) / 2
+
+    def grid(step: float) -> List[int]:
+        out, row = [], 0
+        y = step / 2
+        while y < h:
+            x = step / 2 + (step / 2 if row % 2 else 0)
+            while x < w:
+                i = int(y) * w + int(x)
+                if land[i]:
+                    out.append(i)
+                x += step
+            y += step * 0.866
+            row += 1
+        return out
+
+    lo, hi = 1.0, float(max(w, h))
+    best = grid(lo)
+    for _ in range(30):
+        mid = (lo + hi) / 2
+        got = grid(mid)
+        if len(got) >= k:
+            lo, best = mid, got
+        else:
+            hi = mid
+    best.sort(key=lambda i: (i % w - cx) ** 2 + (i // w - cy) ** 2)
+    seeds = best[:k]
+    if len(seeds) < k:                                    # a tiny island
+        spare = [i for i, v in enumerate(land) if v and i not in set(seeds)]
+        seeds += spare[:k - len(seeds)]
+    for _ in range(3 if total < 400000 else 1):
+        owner = _grow(land, w, h, seeds)
+        sx, sy, n = [0.0] * k, [0.0] * k, [0] * k
+        for i, o in enumerate(owner):
+            if o >= 0:
+                sx[o] += i % w
+                sy[o] += i // w
+                n[o] += 1
+        moved = []
+        taken = set()
+        for o in range(k):
+            if not n[o]:
+                moved.append(seeds[o])
+                continue
+            t = int(round(sy[o] / n[o])) * w + int(round(sx[o] / n[o]))
+            if not land[t] or owner[t] != o or t in taken:
+                t = seeds[o]
+            taken.add(t)
+            moved.append(t)
+        seeds = moved
     return seeds
 
 
-def _tidy(owner: np.ndarray, k: int) -> np.ndarray:
-    """Every province one piece: a stray fragment goes to the neighbour it
-    touches most, which is 16e's rule that a province in two pieces is two."""
-    from scipy import ndimage
-    four = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
-    for _ in range(4):
-        moved = False
-        for i in range(k):
-            parts, n = ndimage.label(owner == i, structure=four)
-            if n <= 1:
-                continue
-            sizes = ndimage.sum(np.ones_like(parts), parts, range(1, n + 1))
-            keep = int(np.argmax(sizes)) + 1
-            for j in range(1, n + 1):
-                if j == keep:
-                    continue
-                frag = parts == j
-                ring = ndimage.binary_dilation(frag, structure=four) & ~frag
-                around = owner[ring]
-                around = around[(around >= 0) & (around != i)]
-                if len(around):
-                    owner[frag] = np.bincount(around).argmax()
-                    moved = True
-        if not moved:
-            break
-    return owner
+def _steps(land: bytearray, w: int, h: int) -> List[int]:
+    """How many tiles each land tile is from the sea (four-connected)."""
+    out = [0 if v else -1 for v in land]
+    q: deque = deque(i for i, v in enumerate(land) if not v)
+    far = [0] * (w * h)
+    seen = bytearray(0 if v else 1 for v in land)
+    while q:
+        i = q.popleft()
+        x = i % w
+        for j, ok in ((i - w, i >= w), (i + w, i < w * (h - 1)),
+                      (i - 1, x > 0), (i + 1, x < w - 1)):
+            if ok and not seen[j]:
+                seen[j] = 1
+                far[j] = far[i] + 1
+                q.append(j)
+    for i, v in enumerate(land):
+        if v:
+            out[i] = far[i]
+    return out
 
 
 def island(w: int, h: int, provinces: int, share: float) -> Island:
     """The shape: land, provinces, a city each, and how high the land climbs."""
-    from scipy import ndimage
     land = _ellipse(w, h, share)
-    pts = np.argwhere(land)[:, ::-1].astype(float)        # (x, y)
-    if len(pts) < provinces * MIN_TILES:
+    total = sum(land)
+    if total < provinces * MIN_TILES:
         raise NewMapError(
-            f"{len(pts)} tiles of land is not room for {provinces} province(s) "
+            f"{total} tiles of land is not room for {provinces} province(s) "
             f"of {MIN_TILES} tiles each - make the map or the land share bigger, "
             f"or ask for fewer provinces")
-    from scipy.spatial import cKDTree
-    seeds = _kmeans(pts, provinces)
-    owner = np.full((h, w), -1, dtype=int)
-    ix = pts.astype(int)
-    owner[ix[:, 1], ix[:, 0]] = cKDTree(seeds).query(pts)[1]
-    owner = _tidy(owner, provinces)
+    owner = _grow(land, w, h, _seed_tiles(land, w, h, provinces))
+    cells: Dict[int, List[int]] = {}
+    for j, o in enumerate(owner):
+        if o >= 0:
+            cells.setdefault(o, []).append(j)
     seats = []
     for i in range(provinces):
-        cells = np.argwhere(owner == i)                    # (y, x)
-        if not len(cells):
-            raise NewMapError("a province came out with no land at all; ask "
-                              "for fewer provinces")
-        cy, cx = cells.mean(axis=0)
+        mine = cells.get(i)
+        if not mine or len(mine) < 5:
+            raise NewMapError("a province came out too small for a city; ask "
+                              "for fewer provinces or more land")
+        cx = sum(j % w for j in mine) / len(mine)
+        cy = sum(j // w for j in mine) / len(mine)
         best = None
-        for y, x in sorted(cells.tolist(),
-                           key=lambda t: (t[0] - cy) ** 2 + (t[1] - cx) ** 2):
-            if all(0 <= y + dy < h and 0 <= x + dx < w and owner[y + dy, x + dx] == i
-                   for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0))):
+        for j in sorted(mine, key=lambda t: (t % w - cx) ** 2 + (t // w - cy) ** 2):
+            x, y = j % w, j // w
+            if all(0 <= x + dx < w and 0 <= y + dy < h
+                   and owner[(y + dy) * w + x + dx] == i for dx, dy in _CARD):
                 best = (x, y)
                 break
         if best is None:
             raise NewMapError("a province is too thin for a city to stand in; "
                               "ask for fewer provinces")
         seats.append(best)
-    # how far each corner of the 2W+1 grid is from the sea, 0..1
-    corners = np.zeros((2 * h + 1, 2 * w + 1), dtype=bool)
-    tx = np.clip((np.arange(2 * w + 1) - 1) // 2, 0, w - 1)
-    ty = np.clip((np.arange(2 * h + 1) - 1) // 2, 0, h - 1)
-    corners[:, :] = land[ty[:, None], tx[None, :]]
-    dist = ndimage.distance_transform_edt(corners)
-    rise = dist / max(float(dist.max()), 1.0)
+    steps = _steps(land, w, h)
+    top = max(steps) or 1
+    rise = [s / top if s > 0 else 0.0 for s in steps]
     return Island(w, h, land, owner, seats, rise)
 
 
@@ -204,54 +272,59 @@ def region_colours(n: int) -> List[Tuple[int, int, int]]:
     return out
 
 
-def _corner_view(tiles: np.ndarray) -> np.ndarray:
-    """A tile array spread onto the 2W+1 grid by the brush's own partition."""
-    h, w = tiles.shape[:2]
-    tx = np.clip((np.arange(2 * w + 1) - 1) // 2, 0, w - 1)
-    ty = np.clip((np.arange(2 * h + 1) - 1) // 2, 0, h - 1)
-    return tiles[ty[:, None], tx[None, :]]
+def corner_view(tiles: Image.Image) -> Image.Image:
+    """A tile-sized picture spread onto the 2W+1 grid by the brush's own
+    partition: corner ``c`` is tile ``(c - 1) // 2``, and corner 0 goes with
+    tile 0."""
+    w, h = tiles.size
+    big = tiles.resize((2 * w, 2 * h), Image.NEAREST)
+    out = Image.new(tiles.mode, (2 * w + 1, 2 * h + 1))
+    out.paste(big, (1, 1))
+    out.paste(big.crop((0, 0, 1, 2 * h)), (0, 1))
+    out.paste(out.crop((0, 1, 2 * w + 1, 2)), (0, 0))
+    return out
 
 
 def layers(isl: Island, colours: Sequence[Tuple[int, int, int]],
            climate: Tuple[int, int, int]) -> Dict[str, Image.Image]:
     """Every layer, as RGB images, by layer code."""
-    from scipy import ndimage
     w, h = isl.width, isl.height
-    reg = np.zeros((h, w, 3), dtype=np.uint8)
-    reg[:, :] = SEA_REGION
-    for i, rgb in enumerate(colours):
-        reg[isl.owner == i] = rgb
+    reg = bytearray(bytes(SEA_REGION) * (w * h))
+    for i, o in enumerate(isl.owner):
+        if o >= 0:
+            reg[3 * i:3 * i + 3] = bytes(colours[o])
     for x, y in isl.seats:
-        reg[y, x] = mapvocab.SETTLEMENT_RGB
-    out = {"regions": Image.fromarray(reg, "RGB")}
+        i = y * w + x
+        reg[3 * i:3 * i + 3] = bytes(mapvocab.SETTLEMENT_RGB)
+    out = {"regions": Image.frombytes("RGB", (w, h), bytes(reg))}
 
-    land_c = _corner_view(isl.land)
-    hv = np.zeros((2 * h + 1, 2 * w + 1, 3), dtype=np.uint8)
-    hv[:, :] = SEA_HEIGHT
-    grey = np.clip(np.round(8 + 72 * isl.rise), 1, 255).astype(np.uint8)
-    for c in range(3):
-        hv[..., c] = np.where(land_c, grey, hv[..., c])
-    out["heights"] = Image.fromarray(hv, "RGB")
+    cw, ch = 2 * w + 1, 2 * h + 1
+    land = corner_view(Image.frombytes("L", (w, h), bytes(255 if v else 0 for v in isl.land)))
+    grey = corner_view(Image.frombytes("L", (w, h), bytes(
+        min(255, max(1, int(round(8 + 72 * r)))) for r in isl.rise)))
+    heights = Image.new("RGB", (cw, ch), SEA_HEIGHT)
+    heights.paste(Image.merge("RGB", (grey, grey, grey)), mask=land)
+    out["heights"] = heights
 
     g = mapvocab.ground
-    gt = np.zeros_like(hv)
-    near = ndimage.binary_dilation(land_c, iterations=4)
-    gt[:, :] = g("sea_deep")["rgb"]
-    gt[near & ~land_c] = g("sea_shallow")["rgb"]
-    gt[land_c] = g("fertility_medium")["rgb"]
-    gt[land_c & (isl.rise > 0.6)] = g("hills")["rgb"]
-    out["ground_types"] = Image.fromarray(gt, "RGB")
+    ground = Image.new("RGB", (cw, ch), g("sea_deep")["rgb"])
+    coast = land.filter(ImageFilter.MaxFilter(9))          # four corners out
+    ground.paste(g("sea_shallow")["rgb"], mask=coast)
+    ground.paste(g("fertility_medium")["rgb"], mask=land)
+    high = grey.point(lambda v: 255 if v > 8 + 72 * 0.6 else 0)
+    ground.paste(g("hills")["rgb"], mask=ImageChops.multiply(high, land))
+    out["ground_types"] = ground
 
-    out["climates"] = Image.new("RGB", (2 * w + 1, 2 * h + 1), climate)
-    out["fog"] = Image.new("RGB", (2 * w + 1, 2 * h + 1), (255, 255, 255))
+    out["climates"] = Image.new("RGB", (cw, ch), climate)
+    out["fog"] = Image.new("RGB", (cw, ch), (255, 255, 255))
     out["features"] = Image.new("RGB", (w, h), (0, 0, 0))
     out["trade_routes"] = Image.new("RGB", (w, h), (0, 0, 0))
     out["roughness"] = Image.new("RGB", (2 * w, 2 * h), (0, 0, 0))
-    ws = Image.fromarray(np.where(isl.land, 0, 255).astype(np.uint8), "L") \
+    sea = Image.frombytes("L", (w, h), bytes(0 if v else 255 for v in isl.land)) \
         .resize((256, 256), Image.NEAREST)
-    water = np.zeros((256, 256, 3), dtype=np.uint8)
-    water[np.array(ws) > 0] = (40, 90, 170)
-    out["water_surface"] = Image.fromarray(water, "RGB")
+    water = Image.new("RGB", (256, 256), (0, 0, 0))
+    water.paste((40, 90, 170), mask=sea)
+    out["water_surface"] = water
     return out
 
 

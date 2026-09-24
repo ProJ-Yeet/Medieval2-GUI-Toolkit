@@ -24,8 +24,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import numpy as np
-
 from tests import _realmod, _tmp
 from unittransfer import (campmap, campstrat, config, mapcheck, mapnew, mapvocab,
                           namekeys, transfer)
@@ -49,23 +47,56 @@ config._cache_dir = cfg / "cache"
 
 # ---- 1) the shape ------------------------------------------------------------
 print("\n1) the island, on no mod at all")
-isl = mapnew.island(120, 90, 10, 0.5)
-share = isl.land.mean()
+W1, H1, K1 = 120, 90, 10
+isl = mapnew.island(W1, H1, K1, 0.5)
+share = isl.share()
 check(f"the land is about the share asked for: {share:.2f} of 0.50",
       0.42 < share < 0.58)
-check("the edge of the map is sea all the way round",
-      not isl.land[0].any() and not isl.land[-1].any()
-      and not isl.land[:, 0].any() and not isl.land[:, -1].any())
-from scipy import ndimage
-four = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
-pieces = [ndimage.label(isl.owner == i, structure=four)[1] for i in range(10)]
-check(f"every province is one piece: {pieces}", pieces == [1] * 10)
-seats_ok = all(isl.owner[y + dy, x + dx] == i
+edge = ([isl.land[x] for x in range(W1)] + [isl.land[(H1 - 1) * W1 + x] for x in range(W1)]
+        + [isl.land[y * W1] for y in range(H1)] + [isl.land[y * W1 + W1 - 1] for y in range(H1)])
+check("the edge of the map is sea all the way round", not any(edge))
+
+
+def pieces_of(owner, w, h, lab):
+    """How many four-connected pieces province ``lab`` is in."""
+    seen, n = set(), 0
+    for start, o in enumerate(owner):
+        if o != lab or start in seen:
+            continue
+        n += 1
+        todo = [start]
+        seen.add(start)
+        while todo:
+            i = todo.pop()
+            x, y = i % w, i // w
+            for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
+                nx, ny = x + dx, y + dy
+                j = ny * w + nx
+                if 0 <= nx < w and 0 <= ny < h and j not in seen and owner[j] == lab:
+                    seen.add(j)
+                    todo.append(j)
+    return n
+
+
+pieces = [pieces_of(isl.owner, W1, H1, i) for i in range(K1)]
+check(f"every province is one piece: {pieces}", pieces == [1] * K1)
+seats_ok = all(isl.owner[(y + dy) * W1 + x + dx] == i
                for i, (x, y) in enumerate(isl.seats)
                for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)))
 check("every city has its own province on all four sides", seats_ok)
-check("every province has at least the minimum of land",
-      min(int((isl.owner == i).sum()) for i in range(10)) >= mapnew.MIN_TILES)
+sizes = [isl.owner.count(i) for i in range(K1)]
+check(f"every province has at least the minimum of land, and none dwarfs "
+      f"another: {min(sizes)} to {max(sizes)}",
+      min(sizes) >= mapnew.MIN_TILES and max(sizes) < 3 * min(sizes))
+lay = mapnew.layers(isl, mapnew.region_colours(K1), (236, 0, 140))
+hp, rp = lay["heights"].load(), lay["regions"].load()
+check("the heights layer is 2W+1, and its land and sea agree with the regions",
+      lay["heights"].size == (2 * W1 + 1, 2 * H1 + 1)
+      and all((hp[2 * x + 1, 2 * y + 1] == mapnew.SEA_HEIGHT)
+              == (rp[x, y] == mapnew.SEA_REGION)
+              for y in range(H1) for x in range(W1)))
+check("no land corner is pure black, which the engine reads as sea",
+      all(hp[x, y] != (0, 0, 0) for y in range(2 * H1 + 1) for x in range(2 * W1 + 1)))
 cols = mapnew.region_colours(199)
 check("199 province colours, all different, none a marker's or the sea's",
       len(set(cols)) == 199 and mapnew.SEA_REGION not in cols

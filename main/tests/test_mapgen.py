@@ -23,7 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import numpy as np
+import math
 from PIL import Image
 
 import io
@@ -159,10 +159,15 @@ check("so do the rivers", not p.payload()["ok"] and "off" in " ".join(p.errors).
 
 # the network, replaced: a hill 3,000 m high in the middle, sea floor at -500
 def fake_elevation(box, cols, rows):
-    ys, xs = np.mgrid[0:rows, 0:cols]
     cx, cy = (cols - 1) / 2, (rows - 1) / 2
-    r = np.hypot((xs - cx) / cols, (ys - cy) / rows)
-    return np.where(r < 0.35, 3000 * (1 - r / 0.35), -500.0)
+    out = Image.new("F", (cols, rows))
+    vals = []
+    for y in range(rows):
+        for x in range(cols):
+            r = math.hypot((x - cx) / cols, (y - cy) / rows)
+            vals.append(3000 * (1 - r / 0.35) if r < 0.35 else -500.0)
+    out.putdata(vals)
+    return out
 
 
 REAL_ELEVATION = mapgen.elevation
@@ -267,27 +272,34 @@ bad = [(f.code, f.message[:60]) for f in rep.findings
        if f.code.startswith("river.") or f.code == "marker.feature"]
 check(f"the validator has nothing to say about the rivers: {bad}", not bad)
 ft, _ = read(root / "data" / campmap.BASE_REL / "map_features.tga")
-fa = np.array(ft.convert("RGB"))
-src = np.all(fa == mapvocab.feature("river_source")["rgb"], axis=2)
-riv = np.all(fa == mapvocab.feature("river")["rgb"], axis=2) | src
+fp = ft.convert("RGB").load()
+SRC, RIV = mapvocab.feature("river_source")["rgb"], mapvocab.feature("river")["rgb"]
+sources = [(x, y) for y in range(H) for x in range(W) if fp[x, y] == SRC]
+
+
+def riv(x, y):
+    return fp[x, y] in (SRC, RIV)
+
+
 import re
 drawn = int(re.search(r"(\d+) river course", d["changes"][0]).group(1))
-check(f"{int(src.sum())} source(s) for {drawn} course(s): one each, and the city "
-      f"cut two rivers into four", int(src.sum()) == drawn == 6)
+check(f"{len(sources)} source(s) for {drawn} course(s): one each, and the city "
+      f"cut two rivers into four", len(sources) == drawn == 6)
 check("no river under either settlement",
-      not any(riv[y, x] for x, y in SEATS))
+      not any(riv(x, y) for x, y in SEATS))
 check("the trunk reaches the sea, two tiles past the coast and no further",
-      riv[32, 47] and riv[33, 47] and not riv[34, 47])
+      riv(47, 32) and riv(47, 33) and not riv(47, 34))
+cliff = mapvocab.feature("cliff")["rgb"]
 check("the cliff is drawn and the volcano stands where OSM puts it",
-      np.all(fa == mapvocab.feature("cliff")["rgb"], axis=2).sum() >= 5
-      and tuple(fa[8, 52]) == mapvocab.feature("volcano")["rgb"])
+      sum(fp[x, y] == cliff for y in range(H) for x in range(W)) >= 5
+      and fp[52, 8] == mapvocab.feature("volcano")["rgb"])
 check("the scrap too short to be a river is left out and said",
-      not riv[28, 50:52].any() and any("too short" in w for w in d["warnings"]))
+      not riv(50, 28) and not riv(51, 28) and any("too short" in w for w in d["warnings"]))
 now = files_of(root)
 transfer.undo(out["id"])
 check("and one Undo takes the rivers away again",
-      not np.array(read(root / "data" / campmap.BASE_REL / "map_features.tga")[0]
-                   .convert("RGB")).any())
+      read(root / "data" / campmap.BASE_REL / "map_features.tga")[0]
+      .convert("RGB").getbbox() is None)
 
 # ---- 5) the pieces on their own ------------------------------------------------
 print("\n5) the pieces")
@@ -302,14 +314,22 @@ forked = mapgen.chain([[(0, 0), (1, 1)], [(1, 1), (2, 2)], [(1, 1), (3, 0)]])
 check("a fork is two rivers, not one", len(forked) == 3)
 
 # the stitching: a tile whose every pixel is its own global column number
-mapgen.elevation_tile = lambda z, x, y: np.tile(np.arange(256, dtype=float) + 256 * x,
-                                                (256, 1))
+def column_tile(z, x, y):
+    t = Image.new("F", (256, 256))
+    t.putdata([float(c + 256 * x) for _ in range(256) for c in range(256)])
+    return t
+
+
+mapgen.elevation_tile = column_tile
 m = REAL_ELEVATION(BOX, 2 * W + 1, 2 * H + 1)
+row = [m.getpixel((c, 5)) for c in range(2 * W + 1)]
 zs = [z for z in range(3, 13)
-      if abs(m[5, 1] - mapgen._lon2x(BOX.west, z)) < 1.5
-      and abs(m[5, 2 * W - 1] - mapgen._lon2x(BOX.east, z)) < 1.5]
+      if abs(row[1] - mapgen._lon2x(BOX.west, z)) < 1.5
+      and abs(row[2 * W - 1] - mapgen._lon2x(BOX.east, z)) < 1.5]
+column = [m.getpixel((7, r)) for r in range(2 * H + 1)]
 check(f"tiles are stitched and sampled where the box puts each corner (zoom {zs})",
-      bool(zs) and np.all(np.diff(m[5]) >= 0) and np.allclose(m[:, 7], m[0, 7]))
+      bool(zs) and all(b >= a for a, b in zip(row, row[1:]))
+      and max(column) - min(column) < 1e-3)
 
 # the real mods: the two local generators, planned and not written
 print("\n6) the installed mods: ground and climates from their own maps")

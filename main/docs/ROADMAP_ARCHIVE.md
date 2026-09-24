@@ -9836,7 +9836,9 @@ backup set, `map.rwm` deleted beside every home it touched, one Undo.
 **The TGA writer got ten times faster** on the way. Run-length encoding was a
 Python loop over every pixel, about a second a layer, and a resize re-encodes
 nine layers in its plan. `maptga.rle_rows` does the same greedy packing for the
-whole image in numpy. It is byte-identical to the old encoder on all 27 layers
+whole image in numpy when numpy is there, and falls back to the Python loop
+when it is not, which is the release: its runtime is Python and Pillow and
+nothing else. It is byte-identical to the old encoder on all 27 layers
 of both installed mods and 3,000 random rows, and every compressed layer on disk
 re-encodes to its own bytes. The paint tool's saves are quicker for it too. A DaC
 resize plan is about 3 seconds; ROCSS, seven campaigns with 1.7 MB scripts,
@@ -9853,9 +9855,10 @@ keys); the strat, script, events, mercenaries and win conditions are written
 fresh, and the lookup and custom-tiles files are left behind.
 
 **The map** is one island in open sea over the share asked for, cut into
-provinces around seeds spread by k-means. A fragment of a province goes to the
-neighbour it touches most, so every province is one piece, and each has a city
-with its own province on all four sides. Heights rise from the coast (1 to 80
+provinces grown out of seeds a tile at a time, all at once. The seeds start on
+an even staggered grid and are moved three times to the middle of what they
+grow into. Growing gives every province in one piece by construction, and each
+has a city with its own province on all four sides. Heights rise from the coast (1 to 80
 grey, never black). The ground is fertile with hills on the high middle,
 shallow sea along the coast and deep sea beyond. There is one climate of the
 mod's own, white fog, and the tutorial's black leftovers. Province colours stay
@@ -9885,7 +9888,11 @@ dense forest is fatal; and `feature.crossing_uneven`, with a per-crossing
 **Smooth** fix, flags a river crossing far from the average of the 5x5 tiles a
 battle there is built on.
 
-Tests: `test_mapresize` (35) and `test_mapnew` (23).
+Both run on Python and Pillow alone, like the rest of the toolkit: the
+release carries nothing else, and a first draft that used numpy and scipy would
+not have started there. A 510x510 island of 199 provinces takes about seven
+seconds that way. Tests: `test_mapresize` (35) and `test_mapnew` (25), both
+also run with numpy blocked.
 
 Not in this phase: growing the land itself. New ground is sea, and land is
 painted with the brush, the Real world tab or Phase 27's generators.
@@ -9959,7 +9966,10 @@ on they refuse, and nothing is sent.
   need a decoder the toolkit does not ship. The ground-types generator and the
   brush cover the same ground.
 
-Tested with the network replaced (`test_mapgen`, 32): synthetic elevation and
+Pillow does the work - the elevation resampling is one affine transform,
+since longitude and the Mercator of the latitude are linear across both the
+tiles and the map - so it runs on the release's runtime as it does here.
+Tested with the network replaced (`test_mapgen`, 32, also with numpy blocked): synthetic elevation and
 a synthetic Overpass answer over a 60x40 map written there. The heights come out
 at scale with the sea untouched, and the whole map writes the right depth. The
 rivers draw six courses and six sources, a city cuts two of them, the mouth
