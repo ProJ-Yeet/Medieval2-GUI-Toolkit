@@ -152,6 +152,7 @@ function cbrHtml(){
     ${cbrDescrHtml(d)}
     ${rows.map(r => cbrRowHtml(r, r.campaign === here)).join('')}
     ${typeof cnwHtml === 'function' ? cnwHtml() : ''}
+    ${typeof cimHtml === 'function' ? cimHtml() : ''}
     <div class="count">${rows.length} campaign${rows.length === 1 ? '' : 's'}
       read in ${d.ms} ms. The ten map layers and the region list are in
       <code>${esc(d.base)}</code> for every campaign that ships no copy of

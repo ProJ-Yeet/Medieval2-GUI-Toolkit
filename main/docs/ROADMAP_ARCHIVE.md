@@ -9497,3 +9497,97 @@ Exit: `tests/test_hordestart.py`, 66 checks, on copies of ROCSS and DaC with a
 new faction declared off a donor: both modes, the tiles, the pool, the family
 line, every other faction's block byte for byte, the refusals, the routes,
 and one Undo restoring every file.
+
+
+## Phase 73 - M7, import a campaign from another mod - DONE 2026-09-24
+
+The reference tool's `campaignImporter.jsx`: a whole campaign out of one mod,
+made a campaign of another. `campimport.py` is Unit Transfer's discipline at
+campaign scale: a plan that names every faction, unit, building, trait,
+resource, religion and rebel type the destination lacks and says what happens
+to each, before anything is written; then one backup and one Undo. It is the
+*From another mod* button under *New campaign* in the campaign browser.
+
+**It arrives as a new campaign carrying its own map.** The engine reads a
+campaign's map from its own folder first (`campmap.ALL_FILES`), so the
+source's base map goes into the new folder beside the campaign's own files,
+and the destination's `world/maps/base` and every campaign reading it are not
+touched. `map.rwm` and Phase 71's side copies are left behind and listed.
+The header is set to the new folder's name, as 24's copy sets it.
+
+**A campaign is played by the destination's factions.** A slot is a
+`descr_sm_factions.txt` record and the files a clone writes, so each faction
+the campaign names is mapped onto a slot the destination declares: the same
+slot, else a free one of the same culture, else any free one; every mapping
+can be changed and two factions never share a slot. The mapping is applied
+structurally in `descr_strat.txt` (headers, rosters, diplomacy, creators),
+`descr_regions.txt`, `descr_win_conditions.txt` and
+`descr_faction_movies.xml`, and as whole words in `descr_events.txt` and
+`campaign_script.txt`, except a word that is also a province, settlement or
+character there. The `vc_`, `vcs_` and `leader_pic_` pictures are renamed.
+
+**What the destination lacks, and what happens to it.** A regiment the EDU
+lacks is substituted by a unit picked per type or left out, and a general
+whose regiments all went gets the bodyguard his slot starts with in the
+destination's own campaign. A building level, a trade resource, a fort
+culture, a trait, an ancillary, a hero ability or a battle model the
+destination lacks is left out and counted, and a trait above its top level is
+capped. An `ai_label` the AI file lacks becomes the slot's own. A religion or
+rebel type is mapped (religion shares added, so each line still totals 100,
+and the destination's other religions written at 0 as Phase 60 writes them).
+A hidden resource nothing declares leaves its province. Character names go
+into their slot's pool with their `names.txt` keys, missing custom portraits
+are copied, and the region names, the historic events' text and the menu's
+keys are copied where the destination has none; a key it has keeps its words.
+A map over 200 provinces going into a mod not marked M2EX is warned about.
+
+**Measured: ROCSS's imperial campaign into DaC**, the hardest pair installed,
+plans in about 4 seconds: 30 factions (7 on free slots), 202 unit types and
+1569 regiments DaC lacks, 807 buildings, 770 traits, 20 ancillaries left out,
+191 generals given a bodyguard (6 left with no regiment, named, because DaC's
+`scripts` slot owns none), 837 names added to pools, 1344 region and
+settlement keys and 716 event texts copied. DaC's campaign into ROCSS is
+refused: 31 factions and 30 slots, and the plan says to add one first.
+
+**Found on the way**: an Undo takes away every file a campaign copy made and
+leaves the empty folders, and 24's name check then refused that name as
+already there. A folder with no file in it now counts as free, for both.
+
+Exit: `tests/test_campimport.py`, 44 checks, on copies of what the import
+reads from ROCSS and what it writes in DaC: every name in the written files
+is one the destination has, the choices are honoured and the refusals made,
+the result reads back with its own map and every name in its pool, the base
+map is untouched, the routes, and one Undo restoring every file byte for byte.
+
+
+## Phase 74 - a settlement model imported and assigned - DONE 2026-09-24
+
+The step joining three things already here (the map's list of every strat
+`.cas`, the Cultures screen's model path, B3's put): pick a settlement model in
+another mod or on disk, copy it with the textures it names, and write it onto a
+culture's level, in one plan and one Undo. `settlemodel.py`; an *Import…* beside
+each level's Model box on the Cultures screen, and one per model line (fort,
+fort wall, fishing village, watchtower) under Infrastructure.
+
+**A model is never one file.** A `.cas` names its textures relative to its own
+folder, so they land at the same place relative to wherever the model lands,
+found by the viewer's own rule (`cas.texture_path`: case forgiven, `.tga`
+also sought as `.dds` and `.tga.dds`, the packer's empty stub never taken over
+the real file). The stub travels beside its `.tga.dds`, since that is what the
+source ships. A model from disk comes as the `.cas` and its textures picked
+together, matched by name; a texture neither side has is warned about.
+
+**Nothing is written over.** A file already at its path with the same bytes is
+used as it is; with other bytes the whole set goes to
+`models_strat/residences/<mod>/`. Both installed mods share one `textures`
+folder and vanilla's file names (ROCSS's `southern_european_village.cas` is
+also in DaC with other bytes), so this is the common case.
+
+**The line keeps its settlement plan**: only the model half of a `normal` line
+changes, through `minorfiles.render_culture`, and a fort line keeps what
+follows its comma. The plan reads the file back and checks one line moved.
+
+Exit: `tests/test_settlemodel.py`, 31 checks: DaC's dwarf village and fort
+onto a copy of ROCSS's northern European culture, textures and stubs, the
+folder rule both ways, a model from disk with and without its textures, the
+refusals, the routes, and Undo byte for byte.

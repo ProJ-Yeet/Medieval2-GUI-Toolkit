@@ -414,8 +414,8 @@ It stays recorded rather than rediscovered.
 | ~~70~~ | ~~T6 - every tile as text~~ | 3 | M | beta - **done 2026-09-24** |
 | ~~71~~ | ~~D12 - the project as a zip, and loaded back~~ | 3 | M | both - **done 2026-09-24** |
 | ~~72~~ | ~~D13 - a horde start for a new faction~~ | 3 | M | beta - **done 2026-09-24** |
-| 73 | M7 - import a campaign from another mod | 3 | L | beta |
-| 74 | Import a settlement `.cas` from another mod or disk, and assign it to a culture's level | - | M | both |
+| ~~73~~ | ~~M7 - import a campaign from another mod~~ | 3 | L | beta - **done 2026-09-24** |
+| ~~74~~ | ~~Import a settlement `.cas` from another mod or disk, and assign it to a culture's level~~ | - | M | both - **done 2026-09-24** |
 | 75 | Fix the `.cas` model view: place each piece by its skeleton (the squashed unit models) | - | M | both |
 | 76 | Import a building tree from another mod | - | L | both |
 | 25 | OSM backdrop and coastline tracer | 3 | L | beta |
@@ -774,7 +774,6 @@ is worth picking up.
 
 | # | Item | Size | Note |
 |---|---|---|---|
-| 73 | **M7 - import a campaign from another mod** | L | Unit Transfer's problem at campaign scale; `transfer.py` is the model. |
 | 25 | **Phase 25 - OSM backdrop and coastline tracer** | L | Campaign-map work at three stars. The write-up below stands; it is the first thing in the toolkit that touches the network, so it is opt-in and off by default. |
 | 26 | **Phase 26 - map resize, and create from scratch** | L | Campaign-map work at three stars. Phases 22 and 24 removed most of the original objection, so it is cheaper than when it was deferred. |
 | 27 | **Phase 27 - overlay and layer generators** | L | Campaign-map work at three stars. Same opt-in rule as 25. |

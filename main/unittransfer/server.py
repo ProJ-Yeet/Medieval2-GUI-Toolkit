@@ -329,6 +329,24 @@ show the unsaved map rather than the one on disk.
   POST /api/campnew/plan|apply   -> make a new campaign folder from one that
                                     works, minus the compiled map, with its own
                                     header and its own new-game menu keys
+  GET  /api/campimport?mod=&from= -> 73, M7. The campaigns another mod has
+                                    that this one could import
+  POST /api/campimport/plan|apply -> a campaign of another mod made a new
+                                    campaign of this one, its map with it:
+                                    each faction mapped onto a slot here, and
+                                    every unit, building, trait, resource,
+                                    religion and rebel type this mod lacks
+                                    substituted, mapped or left out and named.
+                                    One backup, one Undo
+  GET  /api/settlemodel?mod=     -> 74. Every culture's model lines, each with
+                                    whether its model is on disk
+  GET  /api/settlemodel/models?mod=
+                                 -> the settlement models a mod ships
+  POST /api/settlemodel/plan|apply
+                                 -> a model from another mod or from disk,
+                                    copied with the textures it names into a
+                                    folder where nothing is written over, and
+                                    put on one culture's level or fort line
   POST /api/map/region_start|_cancel
                                  -> the new-region wizard's record, decided
                                     before a pixel of it is painted
@@ -631,7 +649,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, areaeffects, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, campimport, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2340,6 +2358,24 @@ class Handler(BaseHTTPRequestHandler):
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
                 return self._strat_model_route(u.path, name, q)
+            if u.path in ("/api/settlemodel", "/api/settlemodel/models"):
+                # 74. Files and one text file; no map read
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.describe(name)
+                if u.path.endswith("/models"):
+                    return self._json({"mod": name, "models": settlemodel.sources(mod)})
+                return self._json(settlemodel.view(mod))
+            if u.path == "/api/campimport":
+                # 73, M7. A folder question like /api/campnew, between two mods
+                name = (q.get("mod") or [None])[0]
+                src = (q.get("from") or [None])[0]
+                names = self.registry.names()
+                if not name or name not in names or not src or src not in names:
+                    return self._err(404, "unknown mod")
+                return self._json(campimport.view(self.registry.describe(src),
+                                                  self.registry.describe(name)))
             if u.path == "/api/campnew":
                 # 24, M15. A folder question, so it is ahead of _map_route and
                 # outside it: making a campaign needs no map read at all, and a
@@ -2732,6 +2768,11 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/map/climate_plan", "/api/map/climate_apply"):
                 return self._json(self._climate(
                     u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/settlemodel/plan", "/api/settlemodel/apply"):
+                return self._json(self._settlemodel(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/campimport/plan", "/api/campimport/apply"):
+                return self._json(self._campimport(
+                    u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/campnew/plan", "/api/campnew/apply"):
                 return self._json(self._campnew(
                     u.path.rsplit("/", 1)[-1], body))
@@ -3724,6 +3765,61 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, OSError) as e:
             return {"error": str(e), "plan": plan.payload()}
         self.registry.invalidate(name)       # the climate vocabulary moved
+        return out
+
+    # ---- a settlement model put on a culture's level (74) ----
+    def _settlemodel(self, action, body):
+        """Preview or write one model onto one culture line. ``from`` is another
+        installed mod, or ``disk`` with the files in the body."""
+        try:
+            names = self.registry.names()
+            name, src = str(body.get("mod") or ""), str(body.get("from") or "")
+            if name not in names:
+                return {"error": "unknown mod"}
+            if src != "disk" and (src not in names or src == name):
+                return {"error": "pick another installed mod, or a model on disk"}
+            plan = settlemodel.plan(self.registry.describe(name),
+                                    None if src == "disk" else self.registry.describe(src),
+                                    body)
+        except (KeyError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(settlemodel.apply(plan))
+        except (ValueError, OSError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)
+        return out
+
+    # ---- a campaign imported from another mod (73, M7) ----
+    def _campimport(self, action, body):
+        """Preview or write a campaign of ``from`` as a new campaign of ``mod``.
+
+        Only ``mod`` is written, so only it is invalidated after an apply.
+        """
+        try:
+            names = self.registry.names()
+            name, src = str(body.get("mod") or ""), str(body.get("from") or "")
+            if name not in names or src not in names:
+                return {"error": "pick two installed mods"}
+            plan = campimport.plan(self.registry.describe(src),
+                                   self.registry.describe(name), body)
+        except (KeyError, ModDataError, OSError, campmap.MapError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(campimport.apply(plan))
+        except (ValueError, OSError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)
         return out
 
     # ---- a whole new campaign (24, M15) ----

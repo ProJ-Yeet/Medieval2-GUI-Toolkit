@@ -560,6 +560,10 @@ function mfCulInfra(d){
     <div class="trgrid">
       ${(v.tail||[]).map(k => mfCulBox(w, k, MF_CUL_INFRA_LABEL[k])).join('')}
     </div>
+    ${typeof smiButton === 'function' ? `<div class="count">Import a model for:
+      ${['fort', 'fort_wall', 'fishing_village', 'watchtower'].filter(k => w[k])
+        .map(k => smiButton(w.name, k).replace('>Import…<', `>${esc(k)}<`)).join(' ')}</div>
+      ${smiHtml(w.name, true)}` : ''}
   </section>
   <section class="trsec">
     <div class="trsechead">Port ladder
@@ -587,7 +591,8 @@ function mfCulSettlements(d){
       <div class="mflvlname">${esc(l.name)}</div>
       ${mfArt(l.card)}
       <div class="trgrid" style="flex:1">
-        <label class="lbl" data-label="level.${esc(l.name)}.normal">Model</label>
+        <label class="lbl" data-label="level.${esc(l.name)}.normal">Model
+          ${typeof smiButton === 'function' ? smiButton(w.name, l.name) : ''}</label>
         <input value="${esc(l.model)}" oninput="mfSetLevel(${k},'model',this.value.trim())">
         <label class="lbl">Settlement plan</label>
         <input value="${esc(l.plan)}" oninput="mfSetLevel(${k},'plan',this.value.trim())">
@@ -595,6 +600,7 @@ function mfCulSettlements(d){
         <input value="${esc(l.card)}" oninput="mfSetLevel(${k},'card',this.value.trim())">
       </div>
     </div>`).join('')}
+    ${typeof smiHtml === 'function' ? smiHtml(w.name, false) : ''}
     ${mfMissingLevels(w, v)}
   </section>`;
 }

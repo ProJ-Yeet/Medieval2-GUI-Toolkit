@@ -126,7 +126,10 @@ def _resolve(mod, name: str) -> Tuple[str, Path]:
     except ValueError as exc:
         raise CampaignError(str(exc)) from None
     home = Path(mod.data) / campstrat.CAMPAIGN_DIR_REL / rel
-    if home.exists():
+    # an Undo takes every file it made away and leaves their empty folders,
+    # and a folder with nothing in it is not a campaign to write over
+    if home.exists() and (not home.is_dir()
+                          or any(f.is_file() for f in home.rglob("*"))):
         raise CampaignError(
             f"{campstrat.CAMPAIGN_DIR_REL}/{rel} is already there, and this "
             f"makes a campaign rather than writing over one")
