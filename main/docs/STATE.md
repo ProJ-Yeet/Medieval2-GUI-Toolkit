@@ -1,7 +1,17 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 71 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back); **72 is next** (D13, a horde start for a new faction). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-24 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 72 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start); **73 is next** (M7, import a campaign from another mod). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 72 is done - D13, a horde start, 2026-09-24, committed and uncut.**
+The Campaign panel's *Horde start* tab gives a faction that holds nothing the
+armies it arrives with on a chosen turn: one marked monitor in the campaign
+script (the first writer of that file; no line outside the markers ever
+changes, so 19b's refusal to rewrite it stands) and `dead_until_resurrected`
+in `descr_strat.txt`, one Undo. Read back, rewritten in place, or removed byte
+for byte. **Built without the mods or the game**: the suite's real-mod section
+skipped and the monitor has not been seen to fire in game, so both are the
+first thing to check on the user's machine. **73 is next.**
+
 **Phase 71 is done - D12, a campaign as a zip and any `data/` zip loaded back,
 2026-09-24, committed and uncut.** The map's Export tab downloads one
 campaign (the base map, the campaign folder, the region names) at its `data/`

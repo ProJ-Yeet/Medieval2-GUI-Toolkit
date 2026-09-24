@@ -443,6 +443,16 @@ rewrites lines that are already there.
                                     checked against the map
   POST /api/map/wins_plan|_apply -> `action`: edit / add / delete, one faction's
                                     win conditions (one backup + undo)
+  GET  /api/map/horde?mod=&campaign=
+                                 -> 72, D13. Every faction, which hold nothing,
+                                    and the horde starts the Horde start tab
+                                    has written into the campaign script
+  POST /api/map/horde_plan|_apply
+                                 -> `action`: write / remove. One marked monitor
+                                    in the script, spawning the armies on a turn,
+                                    plus dead_until_resurrected in descr_strat.txt;
+                                    no script line outside the block is touched
+                                    (one backup + undo, both files)
 
 Minor Files mode (the five small campaign files, see :mod:`unittransfer.minorfiles`)
   GET  /api/minor?mod=&tab=      -> one tab's whole list (rebels / religions /
@@ -617,7 +627,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, areaeffects, heroabilities, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, hordestart, heroabilities, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2703,6 +2713,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/map/wins_plan", "/api/map/wins_apply"):
                 return self._json(self._wins(
                     u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/map/horde_plan", "/api/map/horde_apply"):
+                return self._json(self._horde(
+                    u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/map/region_delete_plan",
                           "/api/map/region_delete_apply"):
                 return self._json(self._region_delete(
@@ -4069,6 +4082,33 @@ class Handler(BaseHTTPRequestHandler):
         self.registry.invalidate(name)              # the file changed on disk
         return out
 
+    # ---- a horde start, in the campaign script (72) ----
+    def _horde(self, action, body):
+        """Preview or write one faction's horde start.
+
+        16j's handler with :func:`unittransfer.hordestart.plan` in it: the fact
+        table is the map and the vocabulary, and both files the plan splices
+        are read from disk inside it.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            facts = self.registry.map_facts(name, body.get("campaign") or "")
+            plan = hordestart.plan(mod, facts, body)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(hordestart.apply(plan))
+        except (OSError, ValueError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)              # the files changed on disk
+        return out
+
     # ---- what a faction has to do to win (16j-2) ----
     def _wins(self, action, body):
         """Preview or write one faction's ``descr_win_conditions.txt`` record.
@@ -5063,6 +5103,15 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
                 return self._json(stratcamp.campaign_detail(facts))
+            except (campmap.MapError, ModDataError, OSError) as exc:
+                return self._err(404, str(exc))
+
+        if path == "/api/map/horde":
+            # 72. The script off the disk, like the win conditions: the fact
+            # table does not hold its lines, and this tab writes lines.
+            try:
+                facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
+                return self._json(hordestart.detail(facts))
             except (campmap.MapError, ModDataError, OSError) as exc:
                 return self._err(404, str(exc))
 

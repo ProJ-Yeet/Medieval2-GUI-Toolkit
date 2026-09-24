@@ -413,7 +413,7 @@ It stays recorded rather than rediscovered.
 | ~~69~~ | ~~`descr_character.txt`~~ | 3 | M | both - **done 2026-09-24** |
 | ~~70~~ | ~~T6 - every tile as text~~ | 3 | M | beta - **done 2026-09-24** |
 | ~~71~~ | ~~D12 - the project as a zip, and loaded back~~ | 3 | M | both - **done 2026-09-24** |
-| 72 | D13 - a horde start for a new faction | 3 | M | beta |
+| ~~72~~ | ~~D13 - a horde start for a new faction~~ | 3 | M | beta - **done 2026-09-24** |
 | 73 | M7 - import a campaign from another mod | 3 | L | beta |
 | 74 | Import a settlement `.cas` from another mod or disk, and assign it to a culture's level | - | M | both |
 | 75 | Fix the `.cas` model view: place each piece by its skeleton (the squashed unit models) | - | M | both |
@@ -774,7 +774,6 @@ is worth picking up.
 
 | # | Item | Size | Note |
 |---|---|---|---|
-| 72 | **D13 - generate a horde start for a new faction** | M | 16j-2 already creates a faction with no settlement and no character, which is the shape vanilla's Mongols already are. This is the other half. |
 | 73 | **M7 - import a campaign from another mod** | L | Unit Transfer's problem at campaign scale; `transfer.py` is the model. |
 | 25 | **Phase 25 - OSM backdrop and coastline tracer** | L | Campaign-map work at three stars. The write-up below stands; it is the first thing in the toolkit that touches the network, so it is opt-in and off by default. |
 | 26 | **Phase 26 - map resize, and create from scratch** | L | Campaign-map work at three stars. Phases 22 and 24 removed most of the original objection, so it is cheaper than when it was deferred. |

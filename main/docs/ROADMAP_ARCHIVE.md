@@ -9450,3 +9450,54 @@ files. One backup, one Undo, which puts back the deleted `map.rwm` too.
 
 Exit: `tests/test_projectzip.py`, 18 checks.
 
+## Phase 72 - D13, a horde start for a faction that holds nothing - DONE 2026-09-24
+
+16j-2 makes a faction with no settlement and nobody in it, and says it is the
+shape vanilla's Mongols and Timurids are: a `dead_until_resurrected` block that
+appears by script. This is the other half. The Campaign panel has a seventh
+tab, **Horde start**: pick a faction, a turn, and one or more armies (who leads
+each, his age and tile, up to twenty regiments with their three numbers), and
+one save writes two files with one Undo.
+
+* **`descr_strat.txt`**: the faction gets `dead_until_resurrected` when it holds
+  nothing and lacks it, through 16j's own faction save, so it passes the same
+  guard every other flag edit does. A faction that still holds a settlement or
+  a person is not given the flag: what the script spawns is then
+  reinforcements, and the plan says so.
+* **The campaign script**: one monitor, `monitor_event FactionTurnStart
+  FactionType slave` with `and I_TurnNumber = N`, a `spawn_army` per army and
+  `terminate_monitor`. A named character is written `family`, so he joins the
+  tree the leader comes from. A campaign with no script gets one (`script`,
+  the block, `wait_monitors`, `end_script`).
+
+**This is the first writer of the campaign script, and 19b's refusal stands.**
+19b refused to *rewrite* the script: a rename has to find every line naming a
+thing in a grammar nothing here parses. Adding a block needs none of that.
+The block is written whole between two marker comments (`;;; horde start:
+<faction>` and `;;; end horde start: <faction>`) in front of the script's last
+`wait_monitors`, and the guard compares the head and the tail line for line:
+no line outside the markers ever changes. The markers are also how the tab
+reads a start back, rewrites it where it stands, or removes it (remove gives
+the script back byte for byte, and leaves the flag, which Each faction takes
+off). A script with no `script` first, no `wait_monitors` before its
+`end_script`, or a marker left open is refused with the reason.
+
+**The checks are the ones `descr_strat.txt` already has**, run on each army:
+16i's `check_character` (type, age, off the map, at sea, a unit the EDU lacks,
+the bodyguard habit) and `check_pool` (the name in the faction's pool), 22a's
+vocabulary for impassable ground and a settlement pixel, plus what is the
+script's own: a turn from 0, twenty regiments to a stack, no comma in a name,
+experience 0 to 9, two armies on one tile, a tile a `descr_strat.txt`
+character starts on, a regiment whose ownership leaves the faction out, and no
+named character at all. Every block written reads back through 37a's spawn
+reader before it is allowed out, so the markers layer draws it at once.
+
+**Not measured on the installed mods, and not proven in game.** This was built
+in a session without either mod or the game, so the suite's real-mod section
+(every installed campaign's script has a place for a block) skipped, and the
+monitor's wording is the grammar 37a measured on 2 510 real `spawn_army`
+blocks rather than a start seen to fire. Both are the first thing to run on
+the user's machine: `python -m tests.test_hordestart`, then one start written
+into a copy of a mod and played to its turn.
+
+Exit: `tests/test_hordestart.py`, 52 checks here (section 6 skipped: no mod).

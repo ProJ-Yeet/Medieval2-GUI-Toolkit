@@ -27,12 +27,15 @@
    save would produce rather than a browser's guess at them. On the largest
    campaign installed that is around 220 ms.
 
-   SIX TABS, SEVEN SAVES, ONE REQUEST. When it runs, Who plays, Each faction
+   SIX TABS OF ITS OWN, SEVEN SAVES, ONE REQUEST. When it runs, Who plays, Each faction
    and Diplomacy are one form and one endpoint with a different `what`, because
    in the file they are one file. The diplomacy grid is the one that would have
    been tempting to make clever: it is drawn as it is read - one row per
    faction, both directions shown - because the two directions really are two
    separate lines and nothing in the engine makes one follow from the other.
+
+   HORDE START (72) is its own file, hordestart.js: the armies a faction that
+   holds nothing arrives with, written into the campaign script.
 
    THE LAST TWO TABS ARE 16j-2 AND THEY ARE NOT THE SAME SHAPE. New faction
    makes and unmakes a whole campaign entry, and Winning edits a different file
@@ -108,6 +111,8 @@ function cjTab(name){
   // 18a made it four; the other two are read the same way, and once for the
   // whole campaign rather than once a faction.
   if(name === 'faction'){ cjSmOpen(cjEnsureFaction()); cjPresOpen(); }
+  // 72: the campaign script, read when the tab is first opened
+  if(name === 'horde') hsOpen();
 }
 
 /* The working copy every box edits and every save is built from - the same
@@ -367,6 +372,7 @@ function cjPlanSoon(){
 
 async function cjPlanNow(k){
   if(state.cj !== k || !k.d || !k.w) return;
+  if(k.tab === 'horde') return hsPlanNow(k);
   if(k.tab === 'wins'){
     if(!k.ww) return;
     let got;
@@ -524,7 +530,8 @@ function cjHtml(){
   }
   const tabs = [['campaign', 'When it runs'], ['rosters', 'Who plays'],
                 ['faction', 'Each faction'], ['diplomacy', 'Diplomacy'],
-                ['create', 'New faction'], ['wins', 'Winning']];
+                ['create', 'New faction'], ['horde', 'Horde start'],
+                ['wins', 'Winning']];
   return head + `<div class="cxpanel">
     <div class="cqtabs">
       ${tabs.map(([id, label]) => `<button class="${k.tab === id ? 'on' : ''}"
@@ -537,6 +544,7 @@ function cjHtml(){
       : k.tab === 'rosters' ? cjRostersHtml()
       : k.tab === 'faction' ? cjFactionHtml()
       : k.tab === 'create' ? cjCreateHtml()
+      : k.tab === 'horde' ? hsHtml()
       : k.tab === 'wins' ? cjWinsHtml() : cjDiplomacyHtml()}
     ${cjFindingsHtml()}
   </div>`;
@@ -1056,7 +1064,9 @@ function cjFindingsHtml(){
   const rows = (p.findings || []).map(f =>
     `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${esc(f.message)}</div>`)
     .join('');
-  const errs = (p.errors || []).filter(e => e !== 'nothing to change');
+  // a fatal finding is also in `errors`; it is drawn once, as the finding
+  const said = new Set((p.findings || []).map(f => f.message));
+  const errs = (p.errors || []).filter(e => e !== 'nothing to change' && !said.has(e));
   return `<div class="cjplan">
     ${errs.map(e => `<div class="w-bad">${esc(e)}</div>`).join('')}
     ${rows}
