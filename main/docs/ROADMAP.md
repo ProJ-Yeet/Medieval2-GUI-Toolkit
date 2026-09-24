@@ -416,7 +416,7 @@ It stays recorded rather than rediscovered.
 | ~~72~~ | ~~D13 - a horde start for a new faction~~ | 3 | M | beta - **done 2026-09-24** |
 | ~~73~~ | ~~M7 - import a campaign from another mod~~ | 3 | L | beta - **done 2026-09-24** |
 | ~~74~~ | ~~Import a settlement `.cas` from another mod or disk, and assign it to a culture's level~~ | - | M | both - **done 2026-09-24** |
-| 75 | Fix the `.cas` model view: place each piece by its skeleton (the squashed unit models) | - | M | both |
+| ~~75~~ | ~~Fix the `.cas` model view: place each piece by its skeleton (the squashed unit models)~~ | - | M | both - **done 2026-09-24** |
 | 76 | Import a building tree from another mod | - | L | both |
 | 25 | OSM backdrop and coastline tracer | 3 | L | beta |
 | 26 | Map resize, and create from scratch | 3 | L | beta |

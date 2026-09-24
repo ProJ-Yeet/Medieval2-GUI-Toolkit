@@ -31,8 +31,11 @@ The file, in order::
     uint32   node count, uint16 pad
     uint32   parent index, one per node after the root
     uint32   key count, then that many float32 key times, starting at 0.0
-    per node: uint32 length, name with its NUL, then 25 bytes
-    per node: 3 float32 - the node's pivot
+    per node: uint32 length, name with its NUL, then 5 uint32 (rotation and
+              position key counts, their offsets into the key block, 0) and
+              the bone's properties string - 25 bytes when it is empty
+    the key block, when a node has keys: 16 bytes a rotation, 12 a position
+    per node: 3 float32 - the node's pivot, relative to its parent
     then chunks to the end of the file:
         uint32 size (the whole chunk, header included), uint32 kind, payload
 
@@ -111,10 +114,15 @@ is lost - but the file still says so, in one sentence, with its three materials
 and its node read. **This is the one place a note means geometry is missing**,
 and it is why :func:`as_mesh` hands the notes on to the page.
 
-The animation tracks are a separate job:
-``data/animations`` holds 305 more ``.cas`` files in this same container with
-real per-key data where a model has 12 zero bytes, and the port manifest files
-``casAnimCodec.js`` as future expansion.
+The animation tracks are a separate job (:mod:`unittransfer.casanim`), but a
+model can carry one: **Phase 75 found 53 of ROCSS's models, its diplomat among
+them, with a baked animation's key block between the node records and the
+pivots.** Read as a fixed 25 bytes a node, their pivots came out of the keys
+and the chunk list read as a size in the billions; they now decode, and every
+file that read before reads exactly as it did.
+
+The pivots place a skinned model's vertices (:func:`bind_world`): drawn as
+stored, a character is its pieces piled on the origin.
 """
 from __future__ import annotations
 
@@ -134,10 +142,6 @@ NODE_COUNT_AT = 0x32
 #: refused by number rather than parsed into nonsense.
 MIN_VERSION, MAX_VERSION = 2.0, 4.0
 
-#: Bytes after a node's name before the next one. Zero in every file measured
-#: except for a single 0x01 twenty bytes in.
-NODE_TRAILER = 25
-
 #: Bytes between an object's user-properties string and its vertex counts, by
 #: the chunk it is in. The static form carries nine floats - the object's
 #: quaternion is four of them - and the skinned form nine bytes fewer.
@@ -154,6 +158,10 @@ STATIC_MESHES, SKINNED_MESHES, MATERIALS = 1, 2, 5
 #: Chunk kinds that are empty in every file measured. Named so that a file that
 #: puts something in one says so instead of being walked past.
 ALWAYS_EMPTY = (3, 8, 10)
+
+#: Bytes a key takes in the key block: a rotation is a quaternion, a position
+#: three floats (the layout :mod:`unittransfer.casanim` reads).
+ROT_BYTES, POS_BYTES = 16, 12
 
 #: A material with this index is no material at all - 31 objects write it.
 NO_MATERIAL = 0xFFFFFFFF
@@ -238,6 +246,9 @@ class CasScene:
     pivots: array = field(default_factory=lambda: array("f"))
     #: the animation's key times in seconds, starting at 0.0
     key_times: array = field(default_factory=lambda: array("f"))
+    #: bytes of baked animation keys between the node records and the pivots;
+    #: 0 for the plain model every settlement is (Phase 75)
+    baked_keys: int = 0
     objects: List[CasObject] = field(default_factory=list)
     materials: List[CasMaterial] = field(default_factory=list)
     #: anything read but not understood, said out loud rather than swallowed
@@ -382,6 +393,14 @@ def _read_header(r: _Reader, out: CasScene) -> None:
     keys = r.count("the key count")
     out.key_times = r.floats(keys)
 
+    # Phase 75. A node's record after its name is what casanim reads in an
+    # animation: rotation and position key counts, their offsets into one key
+    # block, a zero, and the bone's properties string (the "25 bytes" when that
+    # string is empty). A model with a baked animation - ROCSS's diplomat and
+    # 79 more - fills them in, and the key block then sits between the node
+    # records and the pivots. Read as a fixed 25 bytes, the pivots came out of
+    # the keys and the chunk list after them read as a size in the billions.
+    block = 0
     for _ in range(nodes):
         try:
             out.nodes.append(r.text())
@@ -392,11 +411,15 @@ def _read_header(r: _Reader, out: CasScene) -> None:
             raise r.fail(f"its header is version {out.version:g}, and the layout "
                          f"this reader knows starts at 3.02 - the node names are "
                          f"not where {out.version:g} puts them") from None
-        rest = r.skip(NODE_TRAILER)
-        if rest.strip(b"\x00") not in (b"", b"\x01"):
-            out.notes.append(f"node {out.nodes[-1]!r} carries "
-                             f"{rest.hex()} after its name, which is not the "
-                             f"25 bytes every other node writes")
+        nrot, npos, roff, poff, zero = struct.unpack_from("<5I", r.skip(20), 0)
+        r.text()                                # the bone's properties
+        if nrot > len(out.key_times) or npos > len(out.key_times) or zero:
+            raise r.fail(f"node {out.nodes[-1]!r} has {nrot} rotation and {npos} "
+                         f"position keys of the file's {len(out.key_times)}")
+        block += nrot * ROT_BYTES + npos * POS_BYTES
+    if block:
+        r.skip(block)
+        out.baked_keys = block
     out.pivots = r.floats(nodes * 3)
 
     bad = [p for p in out.parents[1:] if not 0 <= p < nodes]
@@ -604,8 +627,108 @@ def read_cas_bytes(data: bytes, source: str) -> CasScene:
 # what the viewer asks for
 
 
-def as_mesh(scene: CasScene) -> mesh.MeshFile:
+# ---------------------------------------------------------------------------
+# the bind pose (Phase 75)
+#
+# A skinned mesh's vertices are stored around 0,0,0, each one relative to the
+# bone it is weighted to, and "moved to position by the skeleton" (Wilddog,
+# IWTE's author, 2026-09-23). Drawn as stored, a character is its pieces piled
+# on the origin. Every node's pivot is its position relative to its parent, so
+# the bone's place is its pivots chained from the Scene Root, and a vertex's is
+# that plus its own. Measured on every character model installed: ROCSS's
+# assassin goes from 0.66 x 0.69 of pile to a figure 1.85 tall with a 1.81 arm
+# span, the T-pose the animations start from; all 66 skinned models in ROCSS
+# and 195 in DaC carry pivots of their own. Every static model - the
+# settlements, the resources, the banners - has all its pivots at zero and
+# no bone per vertex, so nothing here moves one of them.
+
+
+def bind_world(scene: CasScene, skeleton: Optional[CasScene] = None
+               ) -> List[Tuple[float, float, float]]:
+    """Each node's position, its pivots chained from the root.
+
+    ``skeleton`` is another scene to take the pivots from, by node name, for a
+    model whose own hierarchy carries none (a unit's skeleton is often in a
+    ``.cas`` of its own); a node it does not name keeps the model's own.
+    A parent table that loops is cut where it loops rather than followed.
+    """
+    n = len(scene.nodes)
+    piv = [tuple(scene.pivots[3 * i:3 * i + 3]) if 3 * i + 2 < len(scene.pivots)
+           else (0.0, 0.0, 0.0) for i in range(n)]
+    if skeleton is not None:
+        theirs = {name.lower(): i for i, name in enumerate(skeleton.nodes)}
+        for i, name in enumerate(scene.nodes):
+            j = theirs.get(name.lower())
+            if j is not None and 3 * j + 2 < len(skeleton.pivots):
+                piv[i] = tuple(skeleton.pivots[3 * j:3 * j + 3])
+    world: List[Optional[Tuple[float, float, float]]] = [None] * n
+    for start in range(n):
+        chain, i = [], start
+        while i >= 0 and world[i] is None and i not in chain:
+            chain.append(i)
+            i = scene.parents[i] if i < len(scene.parents) else -1
+        base = world[i] if i >= 0 and world[i] is not None else (0.0, 0.0, 0.0)
+        for j in reversed(chain):
+            p = piv[j]
+            base = (base[0] + p[0], base[1] + p[1], base[2] + p[2])
+            world[j] = base
+    return [w or (0.0, 0.0, 0.0) for w in world]
+
+
+def has_pivots(scene: CasScene) -> bool:
+    """Whether any node sits anywhere but the origin."""
+    return any(abs(v) > 1e-6 for v in scene.pivots)
+
+
+def is_skinned(scene: CasScene) -> bool:
+    return any(o.skinned and o.bones for o in scene.objects)
+
+
+def find_skeleton(path: Path, scene: CasScene) -> Optional[Tuple[Path, CasScene]]:
+    """A ``.cas`` beside a skinned model with no pivots of its own that has the
+    same bones and does carry them: the "actual skeleton in another .cas".
+
+    Looked for in the model's own folder only, and taken only when it names
+    every bone the model's vertices are weighted to."""
+    used = {scene.nodes[b].lower() for o in scene.objects for b in set(o.bones)
+            if b < len(scene.nodes)}
+    folder = Path(path).parent
+    try:
+        others = sorted(p for p in folder.iterdir()
+                        if p.suffix.lower() == ".cas" and p != Path(path))
+    except OSError:
+        return None
+    for p in others:
+        try:
+            s = read_cas(p)
+        except CasError:
+            continue
+        if has_pivots(s) and used <= {n.lower() for n in s.nodes}:
+            return p, s
+    return None
+
+
+def posed_positions(obj: CasObject, world: Sequence[Tuple[float, float, float]]) -> array:
+    """A skinned object's vertices moved to their bones; a static one as it is."""
+    if not obj.skinned or not obj.bones:
+        return obj.positions
+    out = array("f", obj.positions)
+    for i, b in enumerate(obj.bones):
+        if b < len(world):
+            x, y, z = world[b]
+            out[3 * i] += x
+            out[3 * i + 1] += y
+            out[3 * i + 2] += z
+    return out
+
+
+def as_mesh(scene: CasScene, skeleton: Optional[CasScene] = None,
+            pose: bool = True) -> mesh.MeshFile:
     """The scene as a :class:`~unittransfer.mesh.MeshFile`, so one viewer draws both.
+
+    With ``pose`` (the default) a skinned object's vertices are placed by their
+    bones (:func:`bind_world`, Phase 75), from ``skeleton`` when given; a
+    static object is handed over as stored, which is every settlement.
 
     A ``.cas`` gives every mesh its own vertices and a ``.mesh`` gives all its
     groups one pool, so the objects are laid end to end and each one's indices
@@ -622,9 +745,14 @@ def as_mesh(scene: CasScene) -> mesh.MeshFile:
     out.bones = list(scene.nodes)
     out.textures = scene.textures()
     any_uvs = any(o.uvs for o in scene.objects)
+    world = bind_world(scene, skeleton) if pose and is_skinned(scene) else []
+    if world and not has_pivots(scene) and skeleton is None:
+        out.notes.append("its bones all sit at the origin and no skeleton was "
+                         "found beside it, so it is drawn as stored, its pieces "
+                         "on top of one another")
     base = 0
     for obj in scene.objects:
-        out.positions.extend(obj.positions)
+        out.positions.extend(posed_positions(obj, world) if world else obj.positions)
         out.normals.extend(obj.normals)
         if any_uvs:
             out.uvs.extend(obj.uvs if obj.uvs else array("f", [0.0]) * (obj.vertices * 2))
@@ -783,5 +911,25 @@ def scene_view(scene: CasScene) -> dict:
                        "diffuse": list(m.diffuse), "specular": list(m.specular)}
                       for m in scene.materials],
         "skinned": any(o.skinned for o in scene.objects),
+        #: Phase 75: how the viewer places it - "bones" (its own pivots),
+        #: "skeleton" (another .cas's, see pose_of), "stored" (no bones to place
+        #: it by, or none worth the name), or "static" (a settlement)
+        "pose": "stored" if is_skinned(scene) and not has_pivots(scene)
+                else "bones" if is_skinned(scene) else "static",
         "notes": scene.notes,
     }
+
+
+def pose_of(path: Path, scene: CasScene) -> Tuple[Optional[CasScene], str]:
+    """``(skeleton or None, the sentence saying which)`` for the viewer.
+
+    A skinned model with pivots of its own is placed by them; one without is
+    placed by a skeleton ``.cas`` beside it when one names its bones
+    (:func:`find_skeleton`), and drawn as stored otherwise."""
+    if not is_skinned(scene) or has_pivots(scene):
+        return None, ""
+    got = find_skeleton(path, scene)
+    if got is None:
+        return None, ""
+    return got[1], (f"placed by the skeleton in {got[0].name}, since its own bones "
+                    f"all sit at the origin")

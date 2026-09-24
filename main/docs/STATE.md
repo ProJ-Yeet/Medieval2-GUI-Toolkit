@@ -1,13 +1,22 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-24 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 74 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level); **75 is next** (the `.cas` model view placed by its skeleton). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-24 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 75 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton); **76 is next** (a building tree from another mod). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 75 is done - the `.cas` model view placed by its skeleton,
+2026-09-24, committed and uncut.** A skinned strat model is now drawn in its
+bind pose (each node's pivot chained from the root, each vertex moved by its
+bone) instead of piled on the origin; all 296 characters in both mods stand,
+and all 1,190 settlements and other static models are served byte for byte as
+before. A model with no pivots of its own borrows a skeleton `.cas` beside it.
+53 ROCSS models with a baked animation, its diplomat among them, now decode
+at all. **76 is next.**
+
 **Phase 74 is done - a settlement model imported and assigned, 2026-09-24,
 committed and uncut.** *Import…* beside each level's model on the Cultures
 screen (and the fort, fort wall, fishing village and watchtower lines) copies
 a settlement `.cas` from another mod or from disk with the textures it names,
 into a folder where nothing is written over, and puts it on that line keeping
-its settlement plan. One backup, one Undo. **75 is next.**
+its settlement plan. One backup, one Undo.
 
 **Phase 73 is done - M7, a campaign imported from another mod, 2026-09-24,
 committed and uncut.** *From another mod* under *New campaign* in the

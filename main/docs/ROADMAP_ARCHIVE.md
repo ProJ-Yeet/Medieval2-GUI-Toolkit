@@ -9591,3 +9591,54 @@ Exit: `tests/test_settlemodel.py`, 31 checks: DaC's dwarf village and fort
 onto a copy of ROCSS's northern European culture, textures and stubs, the
 folder rule both ways, a model from disk with and without its textures, the
 refusals, the routes, and Undo byte for byte.
+
+
+## Phase 75 - the `.cas` model view, placed by its skeleton - DONE 2026-09-24
+
+The symptom, from the user's Discord thread with Wilddog (IWTE): a unit's
+`.cas` came out squashed, its pieces piled on each other, while `.mesh` units
+and settlement `.cas` drew correctly. Wilddog's diagnosis held: a skinned
+`.cas` stores each vertex around 0,0,0, relative to the bone it is weighted to,
+and the skeleton moves it into place. `cas.py` read every node's parent and
+pivot and applied neither.
+
+**The fix is the bind pose.** A node's pivot is its position relative to its
+parent, so `cas.bind_world` chains them from the Scene Root (cutting a parent
+table that loops), and `as_mesh` moves each skinned vertex by its bone's
+place. Static objects are handed over as stored. Measured: ROCSS's assassin
+goes from a 0.66 x 0.69 pile to a figure 1.85 tall with a 1.81 arm span, the
+T-pose the animations start from. Every one of the 296 skinned strat models
+in both mods (101 ROCSS, 195 DaC) now stands at least 1.2 tall, and every one
+of the 1,190 static models (472 and 718: settlements, resources, banners) is
+served byte for byte as before, since all of them have their pivots at zero.
+
+**A skinned model whose bones carry no pivots** (Wilddog: "the actual skeleton
+and animation are often in another `.cas`") borrows them, by bone name, from a
+`.cas` in its own folder that names every bone it uses; with none there it is
+drawn as stored and says so. `/api/map/model` reports the pose (`bones`,
+`skeleton`, `stored` or `static`). No installed model needs the borrowing; it
+is tested on a copy with its pivots zeroed.
+
+**Found on the way: 53 of ROCSS's models could not be read at all**, its
+diplomat among them, which is why the roadmap's diplomat could not stand. They
+carry a baked animation: each node's record holds key counts and offsets (the
+layout `casanim.py` documents for animation files) and the key block sits
+between the node records and the pivots. `cas.py` read the records as a fixed
+25 bytes and the pivots straight after, so the chunk list read as a size in the
+billions. The records are now read as `casanim` reads them and the block is
+skipped; every one of the 2,458 files that read before reads identically, and
+none is lost.
+
+**No battle-unit `.cas` with geometry is installed**: DaC has none under
+`unit_models`, and ROCSS's 22 are skeleton and animation test files. The
+strat characters are the skinned `.cas` models there are to check.
+
+**Not in this phase**: DaC's `amroth_general.cas` stands but draws grey. Its
+texture resolves to an uncompressed `amroth_general.dds` ahead of the
+`.tga.dds` beside it; that is the texture path, filed as its own task.
+
+Exit: `tests/test_caspose.py`, 30 checks: the chain, a general, a diplomat and
+an assassin from each mod standing with feet below the pelvis and head above,
+every static model unchanged and every skinned one standing, the borrowed
+skeleton, and the routes. Checked in the viewer with the pane visible: ROCSS's
+diplomat and DaC's Amroth general stand, and a dwarf city draws as before.

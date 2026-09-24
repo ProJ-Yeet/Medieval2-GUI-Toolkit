@@ -4906,15 +4906,20 @@ class Handler(BaseHTTPRequestHandler):
             scene = cas.read_cas(src)
         except cas.CasError as exc:
             return self._err(400, str(exc))
+        # 75: a skinned model is placed by its bones, or by a skeleton beside it
+        skeleton, how = cas.pose_of(src, scene)
         if path == "/api/map/model":
             view = cas.scene_view(scene)
+            if skeleton is not None:
+                view["pose"] = "skeleton"
+                view["notes"] = list(view["notes"]) + [how]
             for row, mat in zip(view["materials"], scene.materials):
                 found = cas.texture_path(src, mat.texture)
                 row["rel"] = (found.relative_to(mod.data).as_posix()
                               if found else "")
             return self._json(view)
         try:
-            geometry = cas.as_mesh(scene)
+            geometry = cas.as_mesh(scene, skeleton)
         except cas.CasError as exc:
             return self._err(400, str(exc))
         return self._send(200, mesh.geometry_payload(geometry),
