@@ -198,8 +198,7 @@ def _from_disk(files: List[dict]) -> Tuple[bytes, str, Dict[str, Tuple[bytes, st
     for tex in _textures(scene):
         rel = tex.replace("\\", "/").lstrip("/")
         folder, _, leaf = rel.rpartition("/")
-        stem = leaf.rsplit(".", 1)[0]
-        for want in (leaf, leaf + ".dds", stem + ".dds"):   # cas.texture_path's order
+        for want in (leaf + ".dds", leaf):   # cas.texture_path's order
             hit = lower.get(want.lower())
             if hit and got[hit]:
                 found[tex] = (got[hit], (folder + "/" if folder else "") + hit)

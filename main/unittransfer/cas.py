@@ -820,8 +820,9 @@ def texture_path(model: Path, texture: str) -> Optional[Path]:
       would, so the lookup is case-insensitive by hand.
     * **the extension.** The game reads ``.tga`` or ``.dds`` and mods ship
       whichever; the vanilla strat folder holds both for nearly every texture.
-      A named ``.tga`` that is not there is tried as ``.tga.dds``, which is
-      how the packer leaves them, and then as ``.dds``.
+      The game's own order is ``<name>.dds`` first, so ``walls.tga.dds``,
+      and then the name as written. It never swaps the extension, so a bare
+      ``walls.dds`` is not the texture and is not taken.
     * **nothing at all**, which is not an error: 31 objects have no material.
 
     And one thing has to be *preferred*, which is Phase 29's root. A mod's
@@ -852,13 +853,23 @@ def texture_path(model: Path, texture: str) -> Optional[Path]:
     ``.tga``, the name with ``.dds`` after it, and it is what
     :func:`unittransfer.icons` already calls a file's partner. Every one of
     the 7,927 materials that resolve to a file in the two mods paints.
+
+    **And then the whole order became the game's**, the same day. A named
+    ``.tga`` that is a real picture used to be taken ahead of the
+    ``.tga.dds`` beside it, and the game takes the ``.tga.dds``: 864
+    materials installed here have both with bytes in each (696 in Divide
+    and Conquer, 168 in ROCSS, the francisca among them), and the viewer drew
+    the one the game does not. The bare ``<stem>.dds`` is gone from the list
+    too, because the game never looks there; one DaC material leaned on it,
+    a Tauriel strat model in a stray ``models_missile/models_strat`` folder,
+    and it now shows unpainted, as it does in the game.
     """
     if not texture:
         return None
     rel = texture.replace("\\", "/").lstrip("/")
     folder = model.parent
     target = folder / rel
-    wanted = [target.name, target.name + ".dds", target.stem + ".dds"]
+    wanted = [target.name + ".dds", target.name]
     here = target.parent
     if not here.is_dir():
         return None

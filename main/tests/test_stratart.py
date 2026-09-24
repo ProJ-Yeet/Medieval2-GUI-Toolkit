@@ -155,8 +155,17 @@ check("a stub's own .tga.dds wins over a bare .dds of the same stem",
 (tex / "plain.tga").write_bytes(b"")
 (tex / "plain.dds").write_bytes(_dds_bytes())
 hit = cas.texture_path(model, r"textures\plain.tga")
-check("...and a bare .dds with no .tga.dds beside it is still found",
-      hit is not None and hit.name == "plain.dds")
+check("...and a bare .dds with no .tga.dds beside it is NOT the texture - the "
+      "game never swaps the extension, so the stub is what is there",
+      hit is not None and hit.name == "plain.tga")
+
+# and the game's order all the way: <name>.dds before the name, even when
+# the named .tga is a real picture (the francisca in both mods)
+(tex / "axe.tga").write_bytes(_dds_bytes(rgba=(128, 128, 128, 255)))
+(tex / "axe.tga.dds").write_bytes(_dds_bytes(rgba=(20, 60, 200, 255)))
+hit = cas.texture_path(model, r"textures\axe.tga")
+check("a real .tga with a .tga.dds beside it gives way to the .tga.dds, as in the game",
+      hit is not None and hit.name == "axe.tga.dds")
 
 
 # =====================================================================
