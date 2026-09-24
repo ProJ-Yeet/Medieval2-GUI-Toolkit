@@ -9324,3 +9324,75 @@ or added with its own delay in the same save. A signature, one backup, one
 Undo.
 
 Exit: `tests/test_areaeffects.py`, 37 checks.
+
+## Phase 68 - `descr_walls.txt` - DONE 2026-09-24
+
+A **Walls, gates and towers** tab (`walls.py`) and a Health source.
+
+**The roadmap's row said "per culture and level". It is per level only**:
+one `wall` block for each `wall_level` an EDB building gives (0 to 4 on both
+mods), holding the wall, the `gateway` with the gate types it may carry, the
+`tower` with one firing level per `tower_level`, and from level 1 or 2 up a
+`gatehouse`. Above them, the seven `gates`. No culture appears in it.
+
+**Read as the brace tree it is**, the way Phase 63 reads the off-map models;
+values edited by keyword keeping their column and comment, a gateway's gate
+types added and removed, a firing level copied or removed whole. Lines keep
+their own endings. A signature, one backup, one Undo.
+
+**Measured, and what became a rule** (ROCSS 501 lines, DaC 513, both
+TATW-derived):
+
+* Every gate a gateway names is declared, every `stat` has its eleven fields
+  and a projectile that exists, every `shot_sfx` is an event in
+  `descr_sounds_generic.txt`, every firing level has its four `fire_rate`
+  sizes. Warnings when they fail.
+* **The EDB against the file.** A capability block that gives `wall_level W`
+  and `tower_level T` together must find wall W's tower with at least T
+  firing levels. Clean on both (DaC pairs walls 1 to 4 with `tower_level 2`,
+  ROCSS every wall with 1). Reading it found that a lazy `{...}` match stops
+  at the `requires factions { jerusalem, }` inside ROCSS's capability blocks
+  and missed three of its five wall levels; the blocks are brace-counted.
+* The file's comment lists the tower sounds as `arrow_tower` and
+  `ballista_tower`; both mods fire `cannon_tower` from walls 3 and 4 and play,
+  so it is a third.
+* ROCSS's three gatehouse `shot_gfx` lines have no value: notes.
+
+Exit: `tests/test_walls.py`, 32 checks.
+
+## Phase 69 - `descr_character.txt` - DONE 2026-09-24
+
+An **Agents and generals** tab (`characters.py`), a Health source, and the
+join the roadmap asked for.
+
+**The join.** Six modules read this file and none wrote it, and the Strat
+models audit recorded a character user as `character:spy`, with no faction
+and no link. A strat model's card now lists every block that draws it (type,
+faction, and the slot's label, `1 (Heir)`), each a link that opens the block
+in the new tab; the tab links each strat model to its card and each battle
+model to its Models editor entry. `navGo` learned to open those two, so
+`?go=stratmap&name=` and `?go=bmdb&name=` land on the record.
+
+**The file** is twelve `type` sections, each with `actions`, `wage_base` and
+`starting_action_points`, then a block per faction: `dictionary`, the
+`strat_model` lines (a named character has default, heir and leader, and
+DaC up to eleven), and for named characters and generals a `battle_model` and
+`battle_equip`. Read as lines; values edited in place keeping their comment
+labels, strat models added (after the block's last, labelled Custom) and
+removed, a block copied for another faction or removed. A grid shows which
+faction has which type.
+
+**Measured, and what became a rule** (ROCSS 1 524 lines, DaC 1 707):
+
+* Every strat model, battle model and faction resolves on both: warnings when
+  one does not.
+* DaC has two `england` blocks under `inquisitor`: a warning.
+* A named character block has at least three strat models, a named character
+  or general block a battle model, every block a strat model: true on both,
+  warnings when not.
+* Which types a faction has is not a rule: the rebels lack a diplomat in
+  ROCSS, heretics and witches are the rebels' alone, ROCSS gives inquisitors
+  to 16 factions of 30. The grid shows it instead.
+
+Exit: `tests/test_characters.py`, 29 checks.
+

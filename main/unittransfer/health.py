@@ -319,6 +319,20 @@ def _banners(mod, ctx) -> List[Finding]:
                   "banners", "key", "banner")
 
 
+@source("walls", "Walls, gates and towers", "walls", "descr_walls.txt", "battle")
+def _walls(mod, ctx) -> List[Finding]:
+    from . import walls
+    return _plain(walls.overview(mod)["findings"], "walls", walls.REL, "battle",
+                  "walls", "key", "walls")
+
+
+@source("characters", "Agents and generals", "characters", "descr_character.txt", "campaign")
+def _characters(mod, ctx) -> List[Finding]:
+    from . import characters
+    return _plain(characters.overview(mod)["findings"], "characters", characters.REL,
+                  "campaign", "characters", "key", "character")
+
+
 @source("heroabilities", "Hero abilities", "heroabilities", "descr_hero_abilities.xml", "battle")
 def _heroabilities(mod, ctx) -> List[Finding]:
     from . import heroabilities

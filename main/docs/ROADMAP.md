@@ -409,8 +409,8 @@ It stays recorded rather than rediscovered.
 | ~~65~~ | ~~`descr_banners_new.xml`~~ | 3 | M | both - **done 2026-09-23** |
 | ~~66~~ | ~~`descr_hero_abilities.xml`~~ | 3 | M | both - **done 2026-09-23** |
 | ~~67~~ | ~~`descr_area_effects.xml`~~ | 3 | M | both - **done 2026-09-23** |
-| 68 | `descr_walls.txt` | 3 | M | both |
-| 69 | `descr_character.txt` | 3 | M | both |
+| ~~68~~ | ~~`descr_walls.txt`~~ | 3 | M | both - **done 2026-09-24** |
+| ~~69~~ | ~~`descr_character.txt`~~ | 3 | M | both - **done 2026-09-24** |
 | 70 | T6 - every tile as text | 3 | M | beta |
 | 71 | D12 - the project as a zip, and loaded back | 3 | M | both |
 | 72 | D13 - a horde start for a new faction | 3 | M | beta |
@@ -774,8 +774,6 @@ is worth picking up.
 
 | # | Item | Size | Note |
 |---|---|---|---|
-| 68 | `descr_walls.txt` | M | 514 lines. Wall definitions per culture and level; pairs with the settlement panel. |
-| 69 | `descr_character.txt` | M | 1,708 lines, twelve archive documents, **read by six modules and written by none**. It is the missing join: `stratmap.py`'s audit names a `.cas`, the Strat models panel draws one, and nothing connects either to the character that uses it. The lowest-rated item on this page that the measurement argues hardest for. |
 | 70 | **T6 - export every tile as text** | M | Campaign-map work that did not rate high enough to schedule. We export pictures and never numbers; `mapquery`'s fact table is the join it needs. |
 | 71 | **D12 - export the project as a zip, and load one back** | M | `pack.py` already does this shape for a unit, import and conflict report included. |
 | 72 | **D13 - generate a horde start for a new faction** | M | 16j-2 already creates a faction with no settlement and no character, which is the shape vanilla's Mongols already are. This is the other half. |

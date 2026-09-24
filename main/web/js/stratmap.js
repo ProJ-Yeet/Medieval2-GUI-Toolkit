@@ -258,6 +258,10 @@ async function openStratEntry(name){
                             :'<span class="w-warn">referenced by nothing</span>'}</div></div>
     </div>
     <div class="mbody">
+      ${(r.characters||[]).length?`<fieldset><legend>The characters it stands in for</legend>
+        <div class="count">${r.characters.map(c=>navLinkHtml({mode:'characters', name:c.key},
+          `${esc(c.type)} · ${esc(c.faction)}${c.label?` <span class="count">(${esc(c.label)})</span>`:''}`,
+          'ulink','Open this block in Agents and generals (middle click: a new tab)')).join(' · ')}</div></fieldset>`:''}
       <fieldset class="assetconf"><legend>The files it names</legend>
         <div class="flist">${r.files.map(f=>`<div class="frow">
           <span class="fp">${esc(f.rel)}</span>

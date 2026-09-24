@@ -713,6 +713,8 @@ const MODES=[
   {id:'guilds',   icon:'⚖', name:'Guilds',       sub:true, hint:'What each guild grants, and the triggers that earn its points'},
   {id:'campdb',   icon:'⚙', name:'Campaign constants', sub:true, hint:'descr_campaign_db.xml: the campaign-wide numbers, forts, piety and ransom'},
   {id:'banners', icon:'🚩', name:'Battle banners', sub:true, hint:'descr_banners_new.xml: the banner each unit carries in battle, a texture per faction'},
+  {id:'walls', icon:'🧱', name:'Walls, gates and towers', sub:true, hint:'descr_walls.txt: each wall level’s wall, gateway, towers and gatehouse in a siege, and the gates they carry'},
+  {id:'characters', icon:'🧙', name:'Agents and generals', sub:true, hint:'descr_character.txt: what each agent can do and costs, and the models each faction’s stand and fight with'},
   {id:'heroabilities', icon:'✨', name:'Hero abilities', sub:true, hint:'descr_hero_abilities.xml: a named character’s battle ability, its button and its effects on the armies'},
   {id:'areaeffects', icon:'💥', name:'Area effects', sub:true, hint:'descr_area_effects.xml: what a shot does where it lands - sickness, fire, explosions, split shots, holy auras'},
   {id:'sidefiles', icon:'🐕', name:'Animals, standards, advice', sub:true, hint:'descr_animals.txt, descr_standards.txt and export_descr_advice.txt: war animals, the strat-map flag and its symbol sheets, and the advisor’s threads'},
@@ -755,6 +757,8 @@ const MINOR_TABS=[
   {mode:'sidefiles',   label:'Animals, standards, advice'},
   {mode:'banners',     label:'Battle banners'},
   {mode:'heroabilities', label:'Hero abilities'},
+  {mode:'walls',       label:'Walls and towers'},
+  {mode:'characters',  label:'Agents and generals'},
   {mode:'areaeffects', label:'Area effects'},
   // A faction is two files - what it IS (descr_sm_factions.txt) and what it
   // starts the campaign WITH (descr_strat.txt). 17f put both on one screen
@@ -1425,7 +1429,10 @@ function navGo(r){
                 factions:['fac',facOpen], cultures:['mf',mfOpen],
                 campdb:['cdb',cdbOpen], settlemech:['smx',smxOpen],
                 factionsites:['fsx',fsxOpen], sidefiles:['sdx',sdxOpen], banners:['bnx',bnxOpen],
-                heroabilities:['hax',haxOpen], areaeffects:['aex',aexOpen]}[o.mode];
+                heroabilities:['hax',haxOpen], areaeffects:['aex',aexOpen],
+                walls:['wlx',wlxOpen], characters:['chx',chxOpen],
+                // 69: a character's models open on their own screens
+                stratmap:['stm',openStratEntry], bmdb:['bmdb',openBmdbEntry]}[o.mode];
     if(open)navWhen(navLoaded(open[0]),()=>open[1](name));
   }finally{ navGoing--; }
 }
@@ -1533,7 +1540,7 @@ function wire(){
     if(state.mode!=='transfer'){state.src=state.dst=v;dstSel.value=v;state.destData=null;
       state.cfg={};state.bmdb=null;state.snd=null;state.destSnd=null;state.str=null;
       state.tr=null;state.an=null;state.mf=null;state.fac=null;state.fau=null;
-      state.gu=null;state.cdb=null;state.smx=null;state.fsx=null;state.sdx=null;state.bnx=null;state.hax=null;state.aex=null;state.sbk=null;
+      state.gu=null;state.cdb=null;state.smx=null;state.fsx=null;state.sdx=null;state.bnx=null;state.hax=null;state.aex=null;state.wlx=null;state.chx=null;state.sbk=null;
       state.bld=null;state.bldReturn=null;state.rt=null;
       // the mirrored destination is not the user's transfer pick - don't save it
       await api.post('/api/settings',{last_source:v,last_dest:state.xferDst||v});return loadSource();}
@@ -1605,7 +1612,7 @@ function applyMode(persist){
         snd=state.mode==='sounds', sbk=state.mode==='soundbanks'||state.mode==='soundscripts', spr=state.mode==='sprites', bld=state.mode==='buildings',
         str=state.mode==='strings', trt=state.mode==='traits',
         anc=state.mode==='ancillaries', mnr=state.mode==='minor'||state.mode==='cultures',
-        gld=state.mode==='guilds', cdb=state.mode==='campdb'||state.mode==='settlemech'||state.mode==='factionsites'||state.mode==='sidefiles'||state.mode==='banners'||state.mode==='heroabilities'||state.mode==='areaeffects',
+        gld=state.mode==='guilds', cdb=state.mode==='campdb'||state.mode==='settlemech'||state.mode==='factionsites'||state.mode==='sidefiles'||state.mode==='banners'||state.mode==='heroabilities'||state.mode==='areaeffects'||state.mode==='walls'||state.mode==='characters',
         fac=state.mode==='factions',
         raw=state.mode==='rawtext',
         // whole-mod screens with no unit list: My changes (52) and Health (54)
@@ -1753,6 +1760,8 @@ function render(){
   if(state.mode==='banners')return state.bnx?renderBanners():loadBanners();
   if(state.mode==='heroabilities')return state.hax?renderHeroAbilities():loadHeroAbilities();
   if(state.mode==='areaeffects')return state.aex?renderAreaEffects():loadAreaEffects();
+  if(state.mode==='walls')return state.wlx?renderWalls():loadWalls();
+  if(state.mode==='characters')return state.chx?renderCharacters():loadCharacters();
   if(state.mode==='minor')return state.mf?renderMinor():loadMinor();
   if(state.mode==='cultures')return renderCultures();
   if(state.mode==='factions')return state.fac?renderFactions():loadFactions();

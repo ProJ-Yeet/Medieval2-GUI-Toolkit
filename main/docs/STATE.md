@@ -1,7 +1,24 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 67 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects); **68 is next** (`descr_walls.txt`). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 69 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals); **70 is next** (T6, every tile as text). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 69 is done - agents and generals, 2026-09-24, committed and uncut.** A
+tab edits `descr_character.txt` (each type's actions, wage and action points;
+each faction's strat models, battle model and kit), with a grid of which
+faction has which type. **The join**: a strat model's card lists every
+character block it stands in for, as links, and each model in the tab links
+to its own card; routes can now open a Strat models card or a Models editor
+entry. Both mods' models and factions all resolve; DaC has two `england`
+inquisitor blocks. **70 is next.**
+
+**Phase 68 is done - walls, gates and towers, 2026-09-24, committed and
+uncut.** A tab edits `descr_walls.txt`, which is per wall level (0 to 4), not
+per culture as the roadmap row said: the wall, the gateway and its gate types,
+the tower's firing levels, the gatehouse. Held against the EDB: every
+`wall_level` has a block, and every building's `tower_level` has enough firing
+levels on its wall. Both mods clean but ROCSS's three empty `shot_gfx` lines
+(notes). **69 is next.**
+
 **Animations from an unpacked pack play, 2026-09-24, committed and uncut.**
 Asked for by the user: DaC's `pack.dat` had been unpacked in place, which
 keeps each file under the path it was packed from, so its 10 427 files sit

@@ -42,6 +42,8 @@ MODULES: Dict[str, str] = {
     "sidefiles": "Animals, standards and advice",
     "banners": "Battle banners",
     "heroabilities": "Hero abilities",
+    "walls": "Walls, gates and towers",
+    "characters": "Agents and generals",
     "areaeffects": "Area effects",
     "campmap": "Campaign Map",
     # 21, D11. Reads no file of its own - it opens whichever one it is asked
@@ -119,6 +121,10 @@ KNOWN: List[Known] = [
     Known("export_descr_advice.txt", "Advisor threads", ("sidefiles",), required=False),
     # 65. The banners a unit carries in battle, one texture per faction.
     Known("descr_banners_new.xml", "Battle banners", ("banners",)),
+    # 68. A settlement's walls, gates and towers in battle, by wall level.
+    Known("descr_walls.txt", "Walls, gates and towers", ("walls",)),
+    # 69. What each agent is, and the models it stands and fights with.
+    Known("descr_character.txt", "Agents and generals", ("characters",)),
     # 66. A named character's battle ability, which descr_strat.txt names.
     Known("descr_hero_abilities.xml", "Hero abilities", ("heroabilities",)),
     # 67. What a projectile does where it lands: nausea, fire, explosions, sets.
