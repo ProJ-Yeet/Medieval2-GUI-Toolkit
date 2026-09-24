@@ -2227,6 +2227,135 @@ def export_factions(facts: "Facts") -> Export:
 
 
 # ---------------------------------------------------------------------------
+# every tile as text (Phase 70, T6)
+#
+# The map exported pictures and never numbers. This is the numbers: a row per
+# tile, tab-delimited, with the tile in both coordinate systems, the province
+# it is in and what the fact table knows about that province, and what each
+# per-tile layer says there, named the way the probe names it. The fact table
+# is the join, so nothing here reads descr_strat.txt again.
+
+#: the per-tile layers a row names, with the column each fills
+TILE_LAYERS = (("ground_types", "ground"), ("features", "feature"),
+               ("climates", "climate"), ("heights", "height"))
+TILE_COLUMNS = ("x", "y", "image_x", "image_y", "region", "settlement", "owner",
+                "marker", "ground", "feature", "climate", "height", "sea")
+#: what a spreadsheet holds in one sheet, header included
+SHEET_ROWS = 1_048_576
+
+
+def export_tiles(facts: "Facts", result: Optional[QueryResult] = None,
+                 extended: bool = False, land_only: bool = False) -> Export:
+    """Every tile of the map, or of the provinces ``result`` matched, as one
+    tab-delimited file in the export folder.
+
+    ``x, y`` are the game's (what descr_strat.txt writes, 0 at the bottom);
+    ``image_x, image_y`` the picture's (0 at the top). A feature overrides the
+    ground type where there is one, which is why both are given. ``height``
+    is the heights layer's grey for land and blank at sea. ``extended`` adds
+    each layer's colour as ``r,g,b`` and nothing else; ``land_only`` leaves
+    the sea out, which on a 510x487 map is most of the rows.
+    """
+    t0 = time.perf_counter()
+    out = Export()
+    cm = facts.cm
+    w, h = cm.terrain.width, cm.terrain.height
+    try:
+        index = cm.index
+        sea = cm.sea
+    except MapError as exc:
+        out.skipped.append({"what": "map_regions.tga", "why": str(exc)})
+        return out
+    from . import mapvocab
+    climates = mapvocab.climate_index(facts.mod)
+    layers = []
+    for code, col in (("regions", "regions"),) + TILE_LAYERS:
+        try:
+            img = cm.tiles(code)
+        except (MapError, OSError, ValueError) as exc:
+            out.skipped.append({"what": LAYER_FILE.get(code, code), "why": str(exc)})
+            layers.append((code, col, None))
+            continue
+        if img.size != (w, h):
+            out.skipped.append({"what": LAYER_FILE.get(code, code),
+                                "why": f"{img.size[0]}x{img.size[1]} at one pixel a tile, not "
+                                       f"{w}x{h}, so its values would be for the wrong tiles"})
+            layers.append((code, col, None))
+            continue
+        layers.append((code, col, list(img.getdata())))
+    names: Dict[Tuple[str, Rgb], str] = {}
+
+    def named(code: str, rgb: Rgb) -> str:
+        k = (code, rgb)
+        if k not in names:
+            label, code_name = campmap._colour_name(cm, code, rgb, climates)
+            names[k] = code_name if code_name else (f"unknown {rgb[0]},{rgb[1]},{rgb[2]}"
+                                                    if code != "regions" else "")
+        return names[k]
+
+    only = {rf.name.lower() for rf in result.matched} if result is not None else None
+    region_of: List[str] = []
+    for colour in index.colours:
+        reg = index.by_key.get(key(colour))
+        region_of.append(reg.record.name if reg is not None and reg.record is not None else "")
+    header = list(TILE_COLUMNS) + ([f"{code}_rgb" for code, _c, _d in layers] if extended else [])
+    lines = ["\t".join(header)]
+    labels = index.labels
+    by_layer = {code: data for code, _c, data in layers}
+    regions_px = by_layer.get("regions")
+    for iy in range(h):
+        gy = cm.terrain.game_y(iy)
+        row0 = iy * w
+        for ix in range(w):
+            i = row0 + ix
+            at_sea = bool(sea[i])
+            if land_only and at_sea:
+                continue
+            region = region_of[labels[i]] if labels[i] < len(region_of) else ""
+            if only is not None and region.lower() not in only:
+                continue
+            rf = facts.by_name.get(region.lower()) if region else None
+            marker = ""
+            if regions_px is not None:
+                px = regions_px[i]
+                marker = "settlement" if px == SETTLEMENT_RGB else "port" if px == PORT_RGB else ""
+            cells = [str(ix), str(gy), str(ix), str(iy), region,
+                     rf.settlement if rf else "", rf.owner if rf else "", marker]
+            for code, _col, data in layers[1:]:
+                if data is None:
+                    cells.append("")
+                elif code == "heights":
+                    cells.append("" if at_sea else str(data[i][0]))
+                else:
+                    cells.append(named(code, data[i]))
+            cells.append("1" if at_sea else "0")
+            if extended:
+                cells += ["" if data is None else "%d,%d,%d" % data[i] for _code, _c, data in layers]
+            lines.append("\t".join(cells))
+    rows = len(lines) - 1
+    if not rows:
+        out.skipped.append({"what": "the tiles", "why": "no tile is in what was asked for"})
+        out.ms = int((time.perf_counter() - t0) * 1000)
+        return out
+    folder = export_dir(facts.mod)
+    stem = "map_tiles" + ("_query" if result is not None else "") + ("_land" if land_only else "")
+    path = folder / f"{stem}.tsv"
+    body = ("\n".join(lines) + "\n").encode("utf-8")
+    path.write_bytes(body)
+    out.folder = str(folder)
+    out.files.append({"name": path.name, "bytes": len(body), "label": "Every tile as text",
+                      "rows": rows, "columns": len(header),
+                      "too_many_for_a_sheet": rows + 1 > SHEET_ROWS,
+                      "regions": len({ln.split("\t", 5)[4] for ln in lines[1:]} - {""})})
+    out.ms = int((time.perf_counter() - t0) * 1000)
+    return out
+
+
+#: layer code -> its file, for the sentence that says which one was skipped
+LAYER_FILE = {ly["code"]: ly["file"] for ly in campmap.LAYERS}
+
+
+# ---------------------------------------------------------------------------
 # what the panel asks for once, when it opens
 
 

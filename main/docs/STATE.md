@@ -1,7 +1,23 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 69 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals); **70 is next** (T6, every tile as text). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-23 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 71 are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back); **72 is next** (D13, a horde start for a new faction). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 71 is done - D12, a campaign as a zip and any `data/` zip loaded back,
+2026-09-24, committed and uncut.** The map's Export tab downloads one
+campaign (the base map, the campaign folder, the region names) at its `data/`
+paths with a `project.json`, leaving out `map.rwm` and the side copies (22 in
+ROCSS, 84 MB of them). *My changes* loads any `data/` zip back (that one, the
+changed files, a faction's files): each file planned through Phase 62's put
+and shown as new, the same, replacing (records named) or refused; stale
+compiled maps deleted; one Undo. **72 is next.**
+
+**Phase 70 is done - T6, every tile as text, 2026-09-24, committed and
+uncut.** The map's Export tab writes a `.tsv`, a row per tile: both
+coordinates, region, settlement, owner, marker, ground, feature, climate,
+height, sea, optionally each layer's colour; land only or the query's
+provinces only. A whole map is about a second (ROCSS 260 100 rows, DaC
+248 370), and every sampled row agrees with the tile probe. **71 is next.**
+
 **Phase 69 is done - agents and generals, 2026-09-24, committed and uncut.** A
 tab edits `descr_character.txt` (each type's actions, wage and action points;
 each faction's strat models, battle model and kit), with a grid of which

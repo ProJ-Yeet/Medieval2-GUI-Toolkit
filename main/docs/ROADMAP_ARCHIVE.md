@@ -9396,3 +9396,57 @@ faction has which type.
 
 Exit: `tests/test_characters.py`, 29 checks.
 
+## Phase 70 - T6, every tile as text - DONE 2026-09-24
+
+The map exported pictures and never numbers. The Export tab now writes
+`map_tiles.tsv` into the export folder beside the TGAs: a tab-delimited row
+per tile with `x, y` (the game's, as `descr_strat.txt` writes them) and
+`image_x, image_y` (the picture's), the province, its settlement and owner
+from the fact table, the settlement or port marker, and the ground type,
+feature, climate and height there, and the sea flag. Options: land only, each
+layer's colour as `r,g,b`, and only the provinces the current query matched
+(worked out again from the rules on the server, never from a list the page
+sends).
+
+**Not the probe in a loop.** Probing all ten layers per tile would be a
+quarter of a million probes. Each layer is read once at one pixel a tile
+(the probe's own sampling), each distinct colour named once, and the region
+label per tile is the index's; a whole map takes about a second on both mods.
+Sixty rows chosen at random agree with the probe on both. A colour no table
+names is written as `unknown r,g,b` rather than left blank (ROCSS's climate
+layer has one at sea). Upstream's warning about a spreadsheet's row limit is
+kept: a map near 1 048 576 tiles is flagged; both installed ones are about a
+quarter of that.
+
+Exit: `tests/test_maptiles.py`, 18 checks.
+
+## Phase 71 - D12, a campaign as a zip, and any `data/` zip loaded back - DONE 2026-09-24
+
+Upstream's `exportProject` and `loadProject`. **Half of it was here**:
+*My changes* exports a change set and the changed files as a `data/` zip,
+and the faction screen exports a faction's files the same way. What no screen
+did was take such a zip back. So `projectzip.py` adds the two missing halves.
+
+**Out: one campaign** from the map's Export tab: `world/maps/base`, the
+campaign's own folder, and the region and settlement names, at their `data/`
+paths with a `project.json` and a note. **Measured before deciding what goes
+in**: ROCSS's campaign carries 22 files the game never reads under that name
+(84 MB: `campaign_script - Kopie.txt`, `descr_strat hmm.txt`,
+`map_regions back.tga`...) and DaC's two zips, two `.bak` files and a GIMP
+`.xcf`. A name with a space (no file the game reads has one), an archive, a
+backup copy or an image source is left out and listed, unless asked for; the
+compiled `map.rwm` always is, since a stale one hides map edits. ROCSS comes
+out at 7 MB, DaC at 50 MB (its custom tiles are real).
+
+**In: any zip laid out under `data/`**, from *My changes*. Each file goes
+through Phase 62's single-file put, so the path is held inside `data/`, an
+encoding change is named and the file's reader is asked; on top of that each
+file is new, the same, or replacing with the records that differ named by
+*My changes*' record split (`edited Haditha_Province`). A `map.rwm` in the zip
+is never written, files outside `data/` are ignored and listed, empty files
+are allowed (`descr_disasters.txt` is empty in both mods), and a compiled map
+the loaded files make stale is deleted. "Keep what is there" loads only new
+files. One backup, one Undo, which puts back the deleted `map.rwm` too.
+
+Exit: `tests/test_projectzip.py`, 18 checks.
+

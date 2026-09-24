@@ -164,6 +164,13 @@ async function cqExport(what){
     body.border_every = k.borderEvery;
   }
   if(what === 'query'){ body.rules = k.rules; body.match = k.match; }
+  if(what === 'tiles'){
+    // 70: the numbers rather than a picture. `only_query` narrows the rows to
+    // the provinces the query matched, which the server works out again from
+    // the rules, never from a list the page sends
+    body.extended = !!k.tilesExt; body.land_only = !!k.tilesLand;
+    if(k.tilesQuery && k.res && k.res.count){ body.only_query = true; body.rules = k.rules; body.match = k.match; }
+  }
   let r;
   try{ r = await api.post('/api/map/export', body); }
   catch(e){ r = {error: errText(e)}; }
@@ -172,7 +179,7 @@ async function cqExport(what){
   k.err = r.error || '';
   if(!r.error){
     k.exported = r;
-    activity('map export', `${r.count} TGA(s), ${Math.round(r.bytes / 1024)} KB`);
+    activity('map export', `${r.count} file(s), ${Math.round(r.bytes / 1024)} KB`);
     toast(`${r.count} file${r.count === 1 ? '' : 's'} written to ${r.folder}`, 7000);
   }
   cqPaint();
@@ -682,13 +689,36 @@ function cqExportHtml(){
       <button onclick="cqExport('query')"
         ${k.exporting || !(k.res && k.res.count) ? 'disabled' : ''}>The query result</button>
     </div>
+    <div class="cqhead" style="flex-wrap:wrap">
+      <button onclick="cqExport('tiles')" ${k.exporting ? 'disabled' : ''}
+        title="A tab-delimited row per tile: both coordinates, the province, its settlement and owner, and each layer's value there"
+        >Every tile as text</button>
+      <label class="count"><input type="checkbox" ${k.tilesLand ? 'checked' : ''}
+        onchange="state.cq.tilesLand = this.checked"> land only</label>
+      <label class="count"><input type="checkbox" ${k.tilesExt ? 'checked' : ''}
+        onchange="state.cq.tilesExt = this.checked"> each layer's colour too</label>
+      <label class="count"><input type="checkbox" ${k.tilesQuery ? 'checked' : ''}
+        ${k.res && k.res.count ? '' : 'disabled'} onchange="state.cq.tilesQuery = this.checked">
+        only the query's provinces</label>
+    </div>
+    <div class="cqhead" style="flex-wrap:wrap">
+      <a class="btn" href="/api/project/campaign?mod=${enc(k.mod)}${cmapCampQ()}${k.zipAll ? '&everything=1' : ''}"
+        title="The base map, this campaign's folder and the region names, at their data/ paths, to share or keep. Load one back from My changes."
+        >⤓ This campaign as a zip</a>
+      <label class="count"><input type="checkbox" ${k.zipAll ? 'checked' : ''}
+        onchange="state.cq.zipAll = this.checked; cqPaint()"> with the copies and archives beside the files</label>
+    </div>
+    <div class="count">A <code>.tsv</code> for a spreadsheet or a script: <code>x, y</code> are the game's
+      (what descr_strat.txt writes), <code>image_x, image_y</code> the picture's. A feature overrides the ground
+      where there is one. A whole map is about 250 000 rows and 20 MB; a spreadsheet stops at 1 048 576.</div>
     ${k.exporting ? `<div class="count">writing…</div>` : ''}
     ${done ? `<div class="cqres"><div class="k">${done.count} file${
       done.count === 1 ? '' : 's'} <span class="count">${
       Math.round(done.bytes / 1024).toLocaleString()} KB · ${done.ms} ms</span></div>
       <div class="count">${esc(done.folder)}</div>
       ${done.files.slice(0, 40).map(f => `<div class="count">${esc(f.name)}
-        - ${esc(f.label)}, ${f.regions} province(s)</div>`).join('')}
+        - ${esc(f.label)}, ${f.regions} province(s)${f.rows ? `, ${f.rows.toLocaleString()} rows`
+          + (f.too_many_for_a_sheet ? ' <b class="w-warn">- more than a spreadsheet holds in one sheet</b>' : '') : ''}</div>`).join('')}
       ${done.files.length > 40 ? `<div class="count">and ${
         done.files.length - 40} more</div>` : ''}
     </div>` : ''}

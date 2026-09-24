@@ -617,7 +617,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, areaeffects, heroabilities, walls, characters, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, heroabilities, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2002,6 +2002,20 @@ class Handler(BaseHTTPRequestHandler):
                 fname = re.sub(r"[^A-Za-z0-9_.\-]+", "_", sname) + ".m2changes"
                 return self._send(200, blob, "application/zip",
                                   {"Content-Disposition": f'attachment; filename="{fname}"'})
+            if u.path == "/api/project/campaign":
+                # 71, D12: one campaign's map project, at its data/ paths
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                camp = (q.get("campaign") or [""])[0]
+                try:
+                    blob, man = projectzip.export_campaign(
+                        self.registry.get(name), camp, (q.get("everything") or ["0"])[0] == "1")
+                except projectzip.ProjectError as e:
+                    return self._err(404, str(e))
+                fname = re.sub(r"[^A-Za-z0-9_.\-]+", "_", f"{name}_{man['campaign']}") + ".zip"
+                return self._send(200, blob, "application/zip",
+                                  {"Content-Disposition": f'attachment; filename="{fname}"'})
             if u.path == "/api/changes/files":
                 # the changed files themselves, at their data/ paths, for anyone
                 sname = (q.get("set") or [""])[0]
@@ -2514,6 +2528,23 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/factions/clone_plan", "/api/factions/clone_apply"):
                 return self._json(
                     self._faction_clone(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/project/load_plan", "/api/project/load_apply"):
+                # 71, D12: any zip laid out under data/, into the mod, one Undo
+                import base64
+                try:
+                    mod = self.registry.describe(body["mod"])
+                    raw = base64.b64decode(str(body.get("data") or ""), validate=True)
+                except (KeyError, ValueError) as e:
+                    return self._json({"error": str(e)})
+                plan = projectzip.plan_load(mod, raw, body.get("replace", True) is not False)
+                out = {"plan": plan.payload()}
+                if u.path.endswith("_plan") or plan.errors:
+                    if plan.errors:
+                        out["error"] = "; ".join(plan.errors)
+                    return self._json(out)
+                out.update(projectzip.apply_load(plan))
+                self.registry.invalidate(body["mod"])
+                return self._json(out)
             if u.path in ("/api/file/put_plan", "/api/file/put_apply"):
                 # 62, B3: one file into the mod, replacing or adding, one Undo
                 import base64
@@ -3815,6 +3846,11 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if what == "factions":
                 out = mapquery.export_factions(facts)
+            elif what == "tiles":
+                # 70, T6: every tile as a row, or only the query's provinces
+                out = mapquery.export_tiles(
+                    facts, mapquery.run_query(facts, rules, match) if body.get("only_query") else None,
+                    bool(body.get("extended")), bool(body.get("land_only")))
             elif what == "query":
                 out = mapquery.export_query(
                     facts, mapquery.run_query(facts, rules, match),

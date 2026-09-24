@@ -83,6 +83,7 @@ function chgPaint(){
   const s = k.sum;
   main.innerHTML = `<div class="chgwrap">
     ${chgHeadHtml(s)}
+    ${typeof pzHtml === 'function' ? pzHtml() : ''}
     ${chgVersionsHtml(s)}
     ${chgFilesHtml(s)}
     ${chgPortHtml(s)}
@@ -111,6 +112,9 @@ Unzip into a mod's folder to put them in place, or send them to somebody without
           >⤓ Export changed files</a>` : ''}
       <label class="btn" title="A change set exported somewhere else">⤒ Import
         <input type="file" accept=".m2changes,.zip" style="display:none" onchange="chgImport(this)"></label>
+      <label class="btn" title="Any zip laid out under data/ - changed files, a faction's files, a campaign.
+Each file is checked and shown before anything is written, and one Undo takes the lot back.">⤒ Load a zip of files
+        <input type="file" accept=".zip" style="display:none" onchange="pzChosen(this)"></label>
       ${s.set ? `<button onclick="chgAdopt()" title="For edits you made by hand outside the toolkit.
 Not after an update: that is what a port is for.">Take the files on disk as mine</button>
         <button class="danger" onclick="chgForget()" title="Stop recording against this original.
