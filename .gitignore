@@ -80,3 +80,6 @@ troubleshoot-output.txt
 # Editor/OS cruft
 .DS_Store
 Thumbs.db
+
+# dev/checks/run_suites.py writes its report here
+main/dev/checks/suite_report.*

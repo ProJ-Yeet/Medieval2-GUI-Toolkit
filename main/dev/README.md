@@ -55,6 +55,7 @@ reader cannot tell which they are looking at.
 | | |
 |---|---|
 | `prose_check.py` | Reads the repository's own prose, in comments, docstrings and Markdown, and reports the habits this project has decided against. |
+| `run_suites.py` / `run_suites.bat` | Runs the test suites, six at once, with no console windows and no browser tab (`UT_NO_BROWSER=1`, which `app.py` honours). The `.bat` starts it hidden and returns. `suite_report.txt` beside it says RUNNING until the pass is done, then lists each failed suite with its first failing checks; `suite_report.json` has every suite. Name suites to run only those. |
 
 ## diagnose/ - when a file will not read
 

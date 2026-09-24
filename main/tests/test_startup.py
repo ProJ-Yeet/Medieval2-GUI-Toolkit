@@ -21,6 +21,7 @@ Covers:
     python -m tests.test_startup
 """
 import json
+import os
 import shutil
 import socket
 import subprocess
@@ -264,8 +265,11 @@ lport = free_port()
 
 
 def run_launcher():
+    # The real launch, reuse path and all, but no tab in the default browser:
+    # two per run piled up in the user's browser (UT_NO_BROWSER, app.py)
     return subprocess.run([sys.executable, str(ROOT / "app.py"), "--port", str(lport)],
-                          cwd=str(ROOT), capture_output=True, text=True, timeout=300)
+                          cwd=str(ROOT), capture_output=True, text=True, timeout=300,
+                          env={**os.environ, "UT_NO_BROWSER": "1"})
 
 
 def ping(p):

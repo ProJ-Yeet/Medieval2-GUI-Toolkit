@@ -27,6 +27,7 @@ registered. The tool never picks a specific one.
 """
 from __future__ import annotations
 
+import os
 import sys
 import threading
 import time
@@ -273,7 +274,7 @@ def _run_server(log, port: int, verbose: bool, keep_console: bool,
                 return
             # Nobody was sent to the page, so "no page loaded" is the expected
             # outcome rather than the failure that check exists to shout about.
-            if not no_browser:
+            if not (no_browser or os.environ.get("UT_NO_BROWSER")):
                 _watch_for_page(log, port, stopping)
             log.info("%s - server ready on port %d.%s", startup.READY_MARKER, port,
                      "  Ctrl+C here, or Quit in the UI, to stop."
@@ -352,6 +353,11 @@ def _open_browser(log, port: int) -> None:
     by waiting for the UI's heartbeat (see ``_watch_for_page``).
     """
     url = f"http://127.0.0.1:{port}/"
+    # The test suites launch the real thing, reuse path included; this keeps
+    # them from opening a tab each time (see dev/checks/run_suites.py)
+    if os.environ.get("UT_NO_BROWSER"):
+        log.info("UT_NO_BROWSER is set: serving %s and opening no tab.", url)
+        return
     log.info("Opening %s in your default browser…", url)
     try:
         webbrowser.open(url)
