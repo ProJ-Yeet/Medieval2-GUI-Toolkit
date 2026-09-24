@@ -1662,6 +1662,15 @@
     background:var(--panel)}
   .cxtag button{font:inherit;font-size:10px;padding:0 4px;border-radius:9px;
     border:1px solid var(--edge);background:var(--panel2);color:var(--ink)}
+  /* ---- 72: the Horde start tab. Every name starts `hz`. ---- */
+  .hzmode{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 6px;
+    padding:5px 7px;border:1px solid var(--edge);border-radius:6px;cursor:pointer}
+  .hzmode.on{border-color:var(--accent)}
+  .hzmode .count{flex-basis:100%;padding-left:20px}
+  .hzhorde>summary{cursor:pointer;font-size:11px;font-weight:600}
+  .hzkeys{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:4px 8px;margin:4px 0}
+  .hzkeys input{width:100%;box-sizing:border-box}
   /* ---- 16j: the campaign's own settings ----
      Every name starts `cj`. It reuses 16h's fields and 16i's panel, rows and
      tabs wholesale; only the four shapes neither of them had are new. */
@@ -3277,6 +3286,7 @@
 <script src="js/mapfe.js"></script>
 <script src="js/stratedit.js"></script>
 <script src="js/stratchar.js"></script>
+<script src="js/hordestart.js"></script>
 <script src="js/stratcamp.js"></script>
 <script src="js/stratview.js"></script>
 <script src="js/campevents.js"></script>

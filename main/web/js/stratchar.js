@@ -77,6 +77,7 @@ function cxTab(name){
   if(!k) return;
   k.tab = name;
   cxPaint();
+  if(name === 'horde') hzOpen();              // 72: read on first open
 }
 
 /* ---------- picking somebody ---------- */
@@ -368,8 +369,12 @@ function cxHtml(){
         >Characters</button>
       <button class="${k.tab === 'family' ? 'on' : ''}" onclick="cxTab('family')"
         >Family tree</button>
+      <button class="${k.tab === 'horde' ? 'on' : ''}" onclick="cxTab('horde')"
+        title="Phase 72: fill a faction that holds nothing with a horde"
+        >Horde start</button>
     </div>
-    ${k.tab === 'people' ? cxPeopleHtml() : cxFamilyHtml()}
+    ${k.tab === 'people' ? cxPeopleHtml() : k.tab === 'family' ? cxFamilyHtml()
+      : hzHtml()}
     ${cxSkippedHtml()}
   </div>`;
 }
@@ -403,6 +408,9 @@ function cxPeopleHtml(){
       `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${esc(f.message)}</div>`).join('')}
     <div class="csbtns">
       <button onclick="cxAdd()">+ Add a character</button>
+      ${d.characters.length ? '' : `<button onclick="cxTab('horde')"
+        title="Leaders and armies on free land in one province, or an emergent_faction event"
+        >⚑ Give it a horde start</button>`}
     </div>`;
 }
 

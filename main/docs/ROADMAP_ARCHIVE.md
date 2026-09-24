@@ -9450,3 +9450,50 @@ files. One backup, one Undo, which puts back the deleted `map.rwm` too.
 
 Exit: `tests/test_projectzip.py`, 18 checks.
 
+
+## Phase 72 - D13, a horde start for a new faction - DONE 2026-09-24
+
+16j-2 makes a faction with the donor's AI, label, purse and diplomacy and
+nothing else, because two factions cannot start in the same city. That is the
+shape vanilla's Mongols and Timurids are. `hordestart.py` is the other half:
+the toolkit filling in the start, in one plan and one Undo over up to three
+files. It is the People panel's third tab, and the map's Create screen has a
+button for it.
+
+**Two ways a faction with no city enters a campaign, both read off the
+game's own files.** *On the map from turn one*: the faction's block gets a
+leader, an heir and more named characters, each leading one army on a free
+tile of a chosen province, and the `relative` line that makes the leader, a
+wife out of the pool and the heir a family. This is Demir's
+`buildStartingFactionStrat`. *Arriving later*: vanilla's Mongol block is
+`ai_label`, `dead_until_resurrected` and the purse, with nobody in it;
+ROCSS, which kept vanilla's roster, heads the faction `spawned_on_event` in
+`descr_sm_factions.txt`; and vanilla's campaign script raises it with an
+`event emergent_faction mongols` naming four provinces. The game's own
+`descr_events.txt` header documents that category, so a dated block in that
+file is the same event with no script, and 19b's refusal to write
+`campaign_script.txt` stands.
+
+**Both modes write the horde keys when the faction has none**: the seven
+keys and a `horde_unit` roster, taken from the faction itself, else the first
+complete horde in the same file (ROCSS's Mongols), else vanilla's numbers. An
+emergent faction with no roster is refused, because the engine raises it out
+of those lines and nothing else. The Factions screen's own findings judge the
+result.
+
+**It fills an empty faction and refuses anything else.** A faction holding a
+settlement is not a horde, and one with people already has a leader this
+would duplicate; the refusal names what it holds. **The tiles are D10's
+grid**: not sea, not impassable, not a settlement or port pixel, not a fort
+or watchtower, not under any character in the file, inside the province,
+nearest its settlement, two tiles apart where there is room. **The names come
+out of the faction's pool**: in a campaign with surnames the leader and heir
+share one and everybody else takes another. The four starter traits are
+written only when the trait file declares them (ROCSS all four, DaC one), and
+every character is held against `stratchar.check_character`, one finding per
+army collapsed into one line naming who it covers.
+
+Exit: `tests/test_hordestart.py`, 66 checks, on copies of ROCSS and DaC with a
+new faction declared off a donor: both modes, the tiles, the pool, the family
+line, every other faction's block byte for byte, the refusals, the routes,
+and one Undo restoring every file.

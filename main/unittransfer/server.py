@@ -407,6 +407,20 @@ Characters, armies and the family tree (16i, see :mod:`unittransfer.stratchar`)
                                     lifted into another faction (one backup +
                                     undo)
 
+A horde start for a faction that holds nothing (72, D13, see
+:mod:`unittransfer.hordestart`)
+  GET  /api/map/horde?mod=&campaign=&faction=
+                                 -> what the faction holds, its horde keys and
+                                    roster, any emergent_faction event it has,
+                                    the pickers, and a dry plan of each mode
+  POST /api/map/horde_plan|_apply
+                                 -> `mode` start (named characters with armies
+                                    on free land in one province, and the
+                                    family line) or emerge (the flag, an
+                                    emergent_faction event, spawned_on_event);
+                                    the horde keys written when missing. Up to
+                                    three files, one backup + undo
+
 Forts, watchtowers and resources (22a, 22b, see :mod:`unittransfer.stratobj`)
   GET  /api/map/objects?mod=&campaign=
                                  -> every fort, watchtower and trade resource
@@ -617,7 +631,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import ancillaries, areaeffects, heroabilities, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2694,6 +2708,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/map/character_plan", "/api/map/character_apply"):
                 return self._json(self._character(
                     u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/map/horde_plan", "/api/map/horde_apply"):
+                return self._json(self._horde(
+                    u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/map/object_plan", "/api/map/object_apply"):
                 return self._json(self._object(
                     u.path.rsplit("_", 1)[-1], body))
@@ -4011,6 +4028,33 @@ class Handler(BaseHTTPRequestHandler):
         self.registry.invalidate(name)              # the file changed on disk
         return out
 
+    # ---- a horde start for a faction that holds nothing (72, D13) ----
+    def _horde(self, action, body):
+        """Preview or write a horde start: up to three files, one Undo.
+
+        16i's handler with 72's plan in it. The fact table is the vocabulary
+        and the map the tiles are judged on; every file is read from disk
+        inside :func:`~unittransfer.hordestart.plan`.
+        """
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            facts = self.registry.map_facts(name, body.get("campaign") or "")
+            plan = hordestart.plan(mod, facts, body)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(hordestart.apply(plan))
+        except (OSError, ValueError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)              # the files changed on disk
+        return out
+
     # ---- the campaign map's forts, watchtowers and resources, written (22a, 22b) ----
     def _object(self, action, body):
         """Preview or write one fort, watchtower or resource line of
@@ -5034,6 +5078,16 @@ class Handler(BaseHTTPRequestHandler):
                 facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
                 return self._json(stratchar.faction_detail(
                     facts, (q.get("faction") or [""])[0]))
+            except (campmap.MapError, ModDataError, OSError) as exc:
+                return self._err(404, str(exc))
+
+        if path == "/api/map/horde":
+            # 72, D13. The fact table's parse, and a dry plan of each mode.
+            try:
+                facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
+                return self._json(hordestart.view(
+                    self.registry.describe(name), facts,
+                    (q.get("faction") or [""])[0]))
             except (campmap.MapError, ModDataError, OSError) as exc:
                 return self._err(404, str(exc))
 

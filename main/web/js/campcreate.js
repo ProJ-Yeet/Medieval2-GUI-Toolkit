@@ -23,6 +23,8 @@ function cmapCreatePaint(){
         ${Object.keys(CMK_CHAR).map(t => `<option value="${esc(t)}"${t === type ? ' selected' : ''}>${esc(t)}</option>`).join('')}
       </select></label>
       <button onclick="cmapCreateCharacter()" ${Object.keys(factions).length ? '' : 'disabled'}>＋ Place character / army</button>
+      <button onclick="cmapCreateHorde()" ${Object.keys(factions).length ? '' : 'disabled'}
+        title="For a faction that holds nothing: leaders and armies on free land, or an event that raises it later">⚑ Horde start…</button>
       <p>${k && k.err ? esc(k.err) : !Object.keys(factions).length ? 'Campaign factions are loading. Enable or retry Map icons if loading fails.' : 'Pick a tile, then set the name, traits and army in the character editor.'}</p>
     </section>
     <section><h3>Campaign objects</h3><div class="cmcreategrid">
@@ -93,6 +95,19 @@ function cmapCreateCharacter(){
   if(!c || !c.createFaction){ toast('Choose a faction for the new character.',4000); return; }
   cmapCreateStopPaint();
   cpinArm('the new character', 'cmapCreateCharacterAt', [c.createFaction,c.createType || 'general']);
+}
+
+//: 72, D13: the People panel's Horde start tab, for the chosen faction.
+async function cmapCreateHorde(){
+  const c = state.cmap;
+  if(!c || !c.createFaction){ toast('Choose a faction for the horde start.',4000); return; }
+  cmapCreateStopPaint();
+  await cxOpen(c.createFaction);
+  const k = state.cx;
+  if(state.cmap !== c || !k || k.faction !== c.createFaction) return;
+  k.open = true;
+  cxTab('horde');
+  cmapSub('place','chars');
 }
 
 async function cmapCreateCharacterAt(faction, type, game){
