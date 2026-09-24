@@ -43,6 +43,11 @@ The engine loads every copy onto the tile and into its province's resources,
 so a stacked resource is one the province trades, and mods stack them on
 purpose. There is nothing to report and nothing to delete.
 
+Two more are ours. ``ford_none`` clears a river crossing standing in open
+water, and ``crossing_smooth`` levels the ground around a crossing a battle
+would build a bridge in mid-air at (a modder's report: the battle map averages
+the 5x5 tiles around the fight). Smoothing is offered one crossing at a time.
+
 Vanilla is the measurement for the first one, and it is a better example than
 the one this phase was scoped with. ``map_heights.tga`` has 55 tiles painted
 pure black on land that ``map_ground_types.tga`` calls land, and
@@ -66,7 +71,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
-from PIL import Image
+from PIL import Image, ImageChops
 
 from . import campmap, campstrat, mapvocab
 from .campaint import block
@@ -649,6 +654,14 @@ def marker_faults(cm: CampaignMap, at: Sequence[int], kind: str,
             out.append({"code": "marker.ground", "fatal": True,
                         "tail": f"is standing on {g['name']}, which nothing can "
                                 f"stand on."})
+        elif kind == "settlement" and g["code"] == "forest_dense":
+            # A modder's report, and it fits the maps: not one settlement on
+            # the two installed here stands on dense forest.
+            out.append({"code": "marker.ground", "fatal": True,
+                        "tail": f"is standing on {g['name']}. A battle at "
+                                f"this settlement can crash building its "
+                                f"battle map; sparse forest or open ground "
+                                f"under the settlement is safe."})
         elif kind == "port" and g["code"] in mapvocab.SEA_GROUND:
             out.append({"code": "marker.ground", "fatal": False,
                         "tail": f"is standing on {g['name']}. A port pixel goes "
@@ -1139,6 +1152,142 @@ def _r_ford_in_sea(ck: Check) -> Iterable[Finding]:
             f"tile is a hole of land in the ocean that nothing else reports.",
             file=ck.rel("map_features.tga"), tile=(x, y), fix="ford_none",
             what=f"{x},{y}")
+
+
+#: How far, in grey levels of ``map_heights.tga``, a river crossing may sit
+#: from the average of the land around it. Measured, not given: on the two maps
+#: installed here the middle crossing is 1.5 off, 95 in 100 are under 11, and
+#: then there is a gap to the handful between 15 and 33 - the mountain passes.
+CROSSING_LIMIT = 15
+
+#: The battle map's reach around a crossing, in tiles each way: a 5x5 block.
+_CROSSING_REACH = 2
+
+
+def _land_heights(img: Image.Image) -> bytes:
+    """``map_heights.tga`` as one byte per corner: its height, 0 for sea.
+
+    The same reading as :func:`mapvocab.is_sea_height` - grey is land, and
+    anything not grey, or pure black, is water - for the whole layer at once in
+    Pillow's C, because the rule reads 121 corners around each crossing.
+    """
+    r, g, b = img.convert("RGB").split()
+    flat = ImageChops.lighter(ImageChops.difference(r, g),
+                              ImageChops.difference(g, b))
+    grey = flat.point([255 if v == 0 else 0 for v in range(256)])
+    return ImageChops.multiply(r, grey).tobytes()
+
+
+def crossing_offset(land: bytes, size: Tuple[int, int], x: int, y: int
+                    ) -> Optional[Tuple[int, float]]:
+    """``(height, average around it)`` for the crossing on tile ``x, y``.
+
+    A battle builds its ground out of the campaign heights of the 5x5 tiles
+    around it, and a crossing's bridge is placed against that ground. The
+    corners of those 25 tiles are the 11x11 pixels of ``map_heights.tga``
+    around the tile's own centre pixel; sea corners are left out, since a
+    bridge joins land. ``land`` is :func:`_land_heights`. None when the
+    crossing's own corner is sea.
+    """
+    vw, vh = size
+    h = land[(2 * y + 1) * vw + 2 * x + 1]
+    if not h:
+        return None
+    x0 = max(0, 2 * x - 2 * _CROSSING_REACH)
+    x1 = min(vw, 2 * x + 2 * _CROSSING_REACH + 3)
+    total = count = 0
+    for vy in range(max(0, 2 * y - 2 * _CROSSING_REACH),
+                    min(vh, 2 * y + 2 * _CROSSING_REACH + 3)):
+        row = land[vy * vw + x0:vy * vw + x1]
+        total += sum(row)
+        count += len(row) - row.count(0)
+    return h, total / count
+
+
+@rule("feature.crossing_uneven", "A river crossing on uneven ground", "warn",
+      "A modder's report: the battle map averages the 5x5 tiles around a "
+      "bridge, so a crossing under a mountain gets a bridge in mid-air")
+def _r_crossing_uneven(ck: Check) -> Iterable[Finding]:
+    """A crossing well below, or above, the ground a battle there is built on.
+
+    Reported by a modder who fixes these by hand: the battle map is the average
+    of the 5x5 tiles around the fight, so a bridge at height 0 beside a
+    mountain at 100 is set against ground at 50, and neither bank meets it.
+    The campaign map shows nothing wrong at all.
+    """
+    data = ck.px("features")
+    f = mapvocab.feature("river_crossing")
+    if not data or not f:
+        return
+    try:
+        img = ck.cm.layer("heights")
+    except MapError:
+        return
+    land = _land_heights(img)
+    n = 0
+    for x, y in _find(data, ck.width, f["rgb"]):
+        got = crossing_offset(land, img.size, x, y)
+        if got is None:
+            continue
+        h, mean = got
+        if abs(mean - h) <= CROSSING_LIMIT:
+            continue
+        n += 1
+        if n > ROW_MAX:
+            continue
+        side = "above" if mean > h else "below"
+        yield Finding(
+            "feature.crossing_uneven", "warn",
+            f"The river crossing at {x},{y} is at height {h}, and the land in "
+            f"the 5x5 tiles around it averages {mean:.0f}, {abs(mean - h):.0f} "
+            f"{side} it. A battle here is built on that average, so the bridge "
+            f"does not meet its banks and the battle map can be unplayable. "
+            f"Smooth levels the ground around the crossing and eases it back "
+            f"into the hills.",
+            file=ck.rel("map_heights.tga"), tile=(x, y),
+            fix="crossing_smooth", what=f"{x},{y}")
+
+
+def smooth_crossing(px, land: bytearray, size: Tuple[int, int], x: int, y: int
+                    ) -> int:
+    """Level the ground around one crossing until the rule is satisfied.
+
+    Every land corner is pulled toward the crossing's own height by how close
+    it is: fully inside a flat core of ``r`` corners, not at all from ``r + 4``
+    out, and in a straight line between. The core grows a corner at a time
+    until the 5x5 average is within half the limit, so a slight fault moves a
+    little ground and a mountain pass moves more, and the hills beyond keep
+    their shape. The crossing's height never moves - it is where the river is.
+    Sea corners are left alone, and land never goes below 1, which would read
+    as sea. ``land`` is :func:`_land_heights`, kept in step with ``px``.
+    Returns how many pixels changed.
+    """
+    vw, vh = size
+    got = crossing_offset(land, size, x, y)
+    if got is None:
+        return 0
+    h = got[0]
+    cx, cy = 2 * x + 1, 2 * y + 1
+    was: Dict[Tuple[int, int], int] = {}
+    for r in range(1, 4 * _CROSSING_REACH + 3):
+        reach = r + 4
+        for vy in range(max(0, cy - reach), min(vh, cy + reach + 1)):
+            for vx in range(max(0, cx - reach), min(vw, cx + reach + 1)):
+                old = was.get((vx, vy))
+                if old is None:
+                    old = land[vy * vw + vx]
+                    if not old:
+                        continue
+                    was[(vx, vy)] = old
+                d = max(abs(vx - cx), abs(vy - cy))
+                t = min(1.0, max(0.0, (d - r) / (reach - r)))
+                v = max(1, round(h + (old - h) * t))
+                px[vx, vy] = (v, v, v)
+                land[vy * vw + vx] = v
+        _, mean = crossing_offset(land, size, x, y)
+        if abs(mean - h) <= CROSSING_LIMIT / 2:
+            break
+    return sum(1 for (vx, vy), old in was.items() if px[vx, vy][0] != old)
 
 
 # ---------------------------------------------------------------------------
@@ -1841,6 +1990,16 @@ FIXES: Dict[str, dict] = {
                 "feature at all. The tile goes back to being the sea its "
                 "altitude already says it is; nothing else on the layer moves.",
     },
+    "crossing_smooth": {
+        "label": "Smooth the ground around uneven river crossings",
+        "button": "Smooth",
+        "rule": "feature.crossing_uneven",
+        "file": "map_heights.tga",
+        "what": "The land around the crossing is pulled toward the crossing's "
+                "own height: flat right beside it, easing back into the hills "
+                "further out, and only as far as it takes. The crossing and "
+                "the sea do not move.",
+    },
     "resource_position": {
         "label": "Delete resources that are off the map or in the sea",
         "rule": "strat.resource_position",
@@ -1925,6 +2084,8 @@ def plan_fix(mod, codes: Sequence[str], cm: Optional[CampaignMap] = None,
         _plan_heights(ck, p)
     if found.get("ford_none"):
         _plan_fords(ck, p, [f.tile for f in found["ford_none"] if f.tile])
+    if found.get("crossing_smooth"):
+        _plan_smooth(ck, p, [f.tile for f in found["crossing_smooth"] if f.tile])
     drop = sorted({f.line - 1 for f in found.get("resource_position", ())
                    if f.line > 0})
     if drop:
@@ -2009,6 +2170,29 @@ def _plan_fords(ck: Check, p: FixPlan, tiles: Sequence[Tuple[int, int]]) -> None
         return
     p.changes.append(f"map_features.tga: {moved:,} river crossing(s) standing "
                      f"in open water cleared to no feature")
+
+
+def _plan_smooth(ck: Check, p: FixPlan, tiles: Sequence[Tuple[int, int]]) -> None:
+    """Level the ground around each uneven crossing - :func:`smooth_crossing`."""
+    cm = ck.cm
+    try:
+        img = cm.layer("heights").convert("RGB")
+        info = cm.info("heights")
+    except MapError as exc:
+        p.errors.append(f"map_heights.tga could not be read: {exc}")
+        return
+    px = img.load()
+    land = bytearray(_land_heights(img))
+    moved = sum(smooth_crossing(px, land, img.size, x, y) for x, y in tiles)
+    if not moved:
+        return
+    try:
+        p.data[ck.rel("map_heights.tga")] = encode(img, info)
+    except Exception as exc:                           # noqa: BLE001
+        p.errors.append(f"map_heights.tga could not be re-encoded: {exc}")
+        return
+    p.changes.append(f"map_heights.tga: {moved:,} pixel(s) levelled around "
+                     f"{len(tiles):,} river crossing(s)")
 
 
 def _plan_strat(ck: Check, p: FixPlan, drop: Sequence[int]) -> None:

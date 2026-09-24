@@ -139,12 +139,14 @@ async function cchkBaseline(what){
    findings it would clear, and it is built by re-running the rule rather than
    from the list on the screen - so a fix cannot act on a finding that has
    stopped being true since the report was drawn. */
-async function cchkPlan(code){
+async function cchkPlan(code, key){
   const k = state.cchk;
-  const r = await cchkPost('fix_plan', {fixes: [code]});
+  const keys = key ? [key] : null;
+  const r = await cchkPost('fix_plan', keys ? {fixes: [code], keys} : {fixes: [code]});
   if(!r) return;
   k.plan = r.plan && r.plan.ok ? r.plan : null;
   k.planFor = k.plan ? code : '';
+  k.planKeys = k.plan ? keys : null;
   if(!k.plan && !k.err) k.err = (r.plan && r.plan.errors || []).join('; ')
     || 'nothing to fix';
   cchkPaint();
@@ -153,10 +155,11 @@ async function cchkPlan(code){
 async function cchkApply(){
   const k = state.cchk;
   if(!k.planFor) return;
-  const r = await cchkPost('fix_apply', {fixes: [k.planFor]});
+  const r = await cchkPost('fix_apply', k.planKeys
+    ? {fixes: [k.planFor], keys: k.planKeys} : {fixes: [k.planFor]});
   if(!r || r.error) return;
   const label = (cchkFix(k.planFor) || {}).label || k.planFor;
-  k.plan = null; k.planFor = '';
+  k.plan = null; k.planFor = ''; k.planKeys = null;
   activity('map fix', `${label} - ${r.cleared} finding(s), id ${r.id}`);
   toast(`${label}: ${r.cleared} finding(s) fixed. Undo it in the Log.`, 6000);
   // The files on disk changed, so the map the screen is drawn from is stale.
@@ -311,8 +314,15 @@ function cchkRowHtml(f){
     : f.file ? `<button class="cpshape" onclick="cchkRevealKey('${f.key}')"
         title="Open ${esc(f.file)}${f.line ? ' at line ' + f.line : ''}"
         >\u{1F4C4} ${f.line ? 'line ' + f.line : 'file'}</button>` : '';
-  const fix = f.fix ? `<button class="cpshape" onclick="cchkPlan('${f.fix}')"
-      title="${esc((cchkFix(f.fix) || {}).what || '')}">\u{1F527} Fix</button>` : '';
+  // A fix that names its own button acts on this one finding, not on every
+  // finding of its rule: smoothing a crossing is a choice made crossing by
+  // crossing.
+  const fx = f.fix ? cchkFix(f.fix) || {} : null;
+  const fix = !fx ? '' : fx.button
+    ? `<button class="cpshape" onclick="cchkPlan('${f.fix}', '${f.key}')"
+        title="${esc(fx.what || '')}">\u{1F527} ${esc(fx.button)}</button>`
+    : `<button class="cpshape" onclick="cchkPlan('${f.fix}')"
+        title="${esc(fx.what || '')}">\u{1F527} Fix</button>`;
   return `<div class="cchkrow${f.baseline ? ' was' : ''}">
     <span class="${sev}">${CCHK_DOT[f.severity] || '·'}</span>
     <div>
@@ -350,7 +360,7 @@ function cchkFixesHtml(rep){
     ${rep.fixes.filter(x => have.has(x.code)).map(x => {
       const n = rep.findings.filter(f => f.fix === x.code).length;
       return `<div class="cchkfixrow">
-        <button class="cpshape${k.planFor === x.code ? ' on' : ''}"
+        <button class="cpshape${k.planFor === x.code && !k.planKeys ? ' on' : ''}"
           onclick="cchkPlan('${x.code}')">${esc(x.label)} (${n})</button>
         <div class="count">${esc(x.what)}</div>
       </div>`;
@@ -368,7 +378,7 @@ function cchkFixesHtml(rep){
 
 function cchkCancel(){
   const k = state.cchk;
-  k.plan = null; k.planFor = '';
+  k.plan = null; k.planFor = ''; k.planKeys = null;
   cchkPaint();
 }
 

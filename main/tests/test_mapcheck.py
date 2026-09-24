@@ -397,6 +397,11 @@ broken(lambda d: repaint(d, "map_ground_types.tga",
                          if 5 <= x <= 6 and 3 <= y <= 4 else None),
        "marker.ground", "a settlement standing on impassable land")
 
+broken(lambda d: repaint(d, "map_ground_types.tga",
+                         lambda x, y, c: (0, 64, 0)
+                         if 5 <= x <= 6 and 3 <= y <= 4 else None),
+       "marker.ground", "a settlement standing on dense forest")
+
 broken(lambda d: repaint(d, "map_heights.tga",
                          lambda x, y, c: (0, 0, 0)
                          if 13 <= x <= 14 and 11 <= y <= 12 else None),
@@ -767,6 +772,57 @@ try:
           bad.get("error"))
 finally:
     httpd.shutdown()
+
+def _crossing_in_pass(d):
+    """A crossing at (3,2) at height 20, in a 5x5 of land at 150 around it.
+
+    The heights layer is 2W+1 a side, so the crossing's tile is the 3x3 block
+    of corners from (6,4) to (8,6), and the 5x5 tiles around it are the 11x11
+    from (2,0). The sea row is left alone.
+    """
+    repaint(d, "map_features.tga",
+            lambda x, y, c: (0, 255, 255) if (x, y) == (3, 2) else None)
+    repaint(d, "map_heights.tga",
+            lambda x, y, c: None if y >= SEA_PX
+            else (20, 20, 20) if 6 <= x <= 8 and 4 <= y <= 6
+            else (150, 150, 150) if 2 <= x <= 12 and y <= 10 else None)
+
+
+PASS = broken(_crossing_in_pass, "feature.crossing_uneven",
+              "a river crossing far below the ground a battle is built on",
+              others=False)   # a crossing alone is also a river with no source
+check("  the uneven crossing is the one on the pass, and it offers Smooth",
+      [(f.tile, f.fix) for f in PASS.findings
+       if f.code == "feature.crossing_uneven"] == [((3, 2), "crossing_smooth")])
+
+passroot = tmp / "mods" / "PassFix"
+shutil.copytree(clean_root, passroot)
+_crossing_in_pass(passroot / "data")
+passmod = Mod(passroot)
+pre, _ = read(passroot / "data" / campmap.BASE_REL / "map_heights.tga")
+ppx = pre.convert("RGB").load()
+pp = mapcheck.plan_fix(passmod, ["crossing_smooth"])
+check(f"smoothing plans map_heights.tga alone: {(pp.changes or pp.errors)[:1]}",
+      pp.payload()["ok"] and len(pp.data) == 1
+      and list(pp.data)[0].endswith("map_heights.tga") and not pp.text)
+mapcheck.apply_fix(pp)
+smoothed, _ = read(passroot / "data" / campmap.BASE_REL / "map_heights.tga")
+spx = smoothed.convert("RGB").load()
+check("the crossing keeps its height; the river is where it is",
+      spx[7, 5] == (20, 20, 20))
+check("the ground right beside it is level with it",
+      all(spx[x, y] == (20, 20, 20) for x in range(6, 9) for y in range(4, 7)))
+check("and the sea row is untouched",
+      all(spx[x, y] == ppx[x, y] for x in range(smoothed.width)
+          for y in range(SEA_PX + 1, smoothed.height)))
+# the pass fills the whole 5x5, so the whole 5x5 has to come down; past it
+# the ground climbs back toward what it was rather than stopping at a cliff
+check("past the 5x5 the ground eases back up toward what it was",
+      spx[2, 5][0] == 20 < spx[1, 5][0] < spx[0, 5][0] <= ppx[0, 5][0])
+check("the finding is gone on a re-run",
+      "feature.crossing_uneven" not in
+      {f.code for f in mapcheck.run(passmod, use_baseline=False).findings})
+
 
 # ---- Phase 31: the one repair of the three that has a safe answer -----------
 print("\n31) a ford standing in open water, cleared")
