@@ -144,6 +144,20 @@ check("an empty file with nothing beside it IS still returned - present and "
 check("no material at all is None, and always was",
       cas.texture_path(model, "") is None)
 
+# 2026-09-24: a stub with BOTH a <name>.tga.dds and a bare <stem>.dds beside
+# it, holding different pictures - DaC's Amroth general, drawn steel grey
+(tex / "armour.tga").write_bytes(b"")
+(tex / "armour.tga.dds").write_bytes(_dds_bytes(rgba=(20, 60, 200, 255)))
+(tex / "armour.dds").write_bytes(_dds_bytes(rgba=(128, 128, 128, 255)))
+hit = cas.texture_path(model, r"textures\armour.tga")
+check("a stub's own .tga.dds wins over a bare .dds of the same stem",
+      hit is not None and hit.name == "armour.tga.dds")
+(tex / "plain.tga").write_bytes(b"")
+(tex / "plain.dds").write_bytes(_dds_bytes())
+hit = cas.texture_path(model, r"textures\plain.tga")
+check("...and a bare .dds with no .tga.dds beside it is still found",
+      hit is not None and hit.name == "plain.dds")
+
 
 # =====================================================================
 print("\n== 1. icons: absent and unreadable stop being the same answer ==")
@@ -343,6 +357,56 @@ else:
         check(f"{root.name}: every stub that was meant to be art has art beside "
               f"it - the {len(orphan)} that do not are files the mod switched off",
               all(q.name.lower().startswith("xxxx") for q in orphan))
+
+        # a stub's .tga.dds over a bare .dds, on every model with both
+        pairs = chose = 0
+        for m in sorted(strat.rglob("*.cas")):
+            try:
+                scene = cas.read_cas(m)
+            except Exception:
+                continue
+            for mat in scene.materials:
+                if not mat.texture:
+                    continue
+                target = m.parent / mat.texture.replace("\\", "/").lstrip("/")
+                a = target.with_name(target.stem + ".dds")
+                b = target.with_name(target.name + ".dds")
+                if not (a.is_file() and b.is_file() and a.stat().st_size
+                        and b.stat().st_size and a.name.lower() != b.name.lower()):
+                    continue
+                pairs += 1
+                hit = cas.texture_path(m, mat.texture)
+                chose += bool(hit and hit.name.lower() == b.name.lower())
+        if pairs:
+            check(f"{root.name}: each of the {pairs} material(s) with both a bare "
+                  f".dds and a .tga.dds takes the .tga.dds ({chose})", chose == pairs)
+        amroth = strat / "amroth_general.cas"
+        if amroth.is_file():
+            # which picture the model was painted for: where its UVs land
+            scene = cas.read_cas(amroth)
+            mat = next(x for x in scene.materials if x.texture)
+
+            def background(path):
+                im = Image.open(io.BytesIO(icons.IconCache(sand / "fit").png_bytes(
+                    path, 512, strict=True))).convert("RGB")
+                px, (w, h) = im.load(), im.size
+                n = empty = 0
+                for o in scene.objects:
+                    for i in range(0, len(o.indices), 3):
+                        u = sum(o.uvs[2 * o.indices[i + k]] for k in range(3)) / 3 % 1
+                        v = sum(o.uvs[2 * o.indices[i + k] + 1] for k in range(3)) / 3 % 1
+                        n += 1
+                        empty += sum(px[min(w - 1, int(u * w)), min(h - 1, int(v * h))]) < 24
+                return empty / max(n, 1)
+            hit = cas.texture_path(amroth, mat.texture)
+            other = hit.with_name("amroth_general.dds")
+            if other.is_file():
+                a, b = background(hit), background(other)
+                print(f"    amroth_general.cas: {a:.1%} of its triangles on empty "
+                      f"background in {hit.name}, {b:.1%} in {other.name}")
+                check(f"{root.name}: the Amroth general is painted from the sheet "
+                      f"its own UVs were laid out on", hit.name.endswith(".tga.dds")
+                      and a < b / 4)
 
         models = sorted(strat.rglob("*.cas"))[:40]
         resolved = drawn = 0

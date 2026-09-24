@@ -820,8 +820,8 @@ def texture_path(model: Path, texture: str) -> Optional[Path]:
       would, so the lookup is case-insensitive by hand.
     * **the extension.** The game reads ``.tga`` or ``.dds`` and mods ship
       whichever; the vanilla strat folder holds both for nearly every texture.
-      A named ``.tga`` that is not there is tried as ``.dds`` and as
-      ``.tga.dds``, which is how the packer leaves them.
+      A named ``.tga`` that is not there is tried as ``.tga.dds``, which is
+      how the packer leaves them, and then as ``.dds``.
     * **nothing at all**, which is not an error: 31 objects have no material.
 
     And one thing has to be *preferred*, which is Phase 29's root. A mod's
@@ -839,13 +839,26 @@ def texture_path(model: Path, texture: str) -> Optional[Path]:
     empty file is still returned when it is the ONLY thing there, because
     "present and unreadable" is a fault the layers above now report and
     "absent" is not, and collapsing the two is the mistake this phase undid.
+
+    **``<name>.tga.dds`` comes before ``<stem>.dds``**, and it used to come
+    after. Four materials installed here have both, with different pictures
+    in them: DaC's Amroth general drew plain steel grey because a bare
+    ``amroth_general.dds`` that nothing names was taken over the
+    ``amroth_general.tga.dds`` beside the stub. The model's own UVs say which
+    one it was painted for: 16.7% of its triangles land on empty background
+    in the bare ``.dds`` and 1.0% in the ``.tga.dds``, and Umbar's captain is
+    27.3% against 1.9%. The other two (Umbar's general, ROCSS's Bulgarian
+    banner) fit both alike. That is the engine's own rule for a stubbed
+    ``.tga``, the name with ``.dds`` after it, and it is what
+    :func:`unittransfer.icons` already calls a file's partner. Every one of
+    the 7,927 materials that resolve to a file in the two mods paints.
     """
     if not texture:
         return None
     rel = texture.replace("\\", "/").lstrip("/")
     folder = model.parent
     target = folder / rel
-    wanted = [target.name, target.stem + ".dds", target.name + ".dds"]
+    wanted = [target.name, target.name + ".dds", target.stem + ".dds"]
     here = target.parent
     if not here.is_dir():
         return None
