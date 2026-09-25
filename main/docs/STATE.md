@@ -9,7 +9,13 @@ New Map Editor, split 87a-87h in `ROADMAP.md`: the world picker with a rotated
 box, reference maps and OpenHistoricalMap, water and a heights adjust, land
 use, land cover and Köppen, a new campaign from the real world, historic
 sites, the Overpass chunks shown, the bundle. Built now, ahead of 80b, because
-it was asked for directly. **87a is next.**
+it was asked for directly.
+**87a is done**: *Pick it on a world map…* on the Real world tab, the whole
+world before any box exists, a box drawn, moved, resized and turned, typed
+too, a worldwide search that fits the box round a place, and the map's shape
+kept so nothing stretches. The turn is in `osmmap.Projection`, so everything
+that uses the box sees it. `test_osmworld` (42), `test_osmmap` (66).
+**87b is next.**
 
 **Phase 80a is done - every animation a model has, in the Models viewer,
 2026-09-25, committed and uncut.** `unittransfer/animview.py`: the viewer's

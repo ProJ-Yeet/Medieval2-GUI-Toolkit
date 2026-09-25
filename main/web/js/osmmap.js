@@ -74,22 +74,77 @@ function osmMerc(lat){
   return Math.log(Math.tan(Math.PI / 4 + r / 2));
 }
 
-//: [fx, fy] in tile space, a tile's centre at its whole number
-function osmToTile(b, W, H, lat, lon){
-  const mn = osmMerc(b.north), ms = osmMerc(b.south);
-  return [(lon - b.west) / (b.east - b.west) * (W - 1),
-          (mn - osmMerc(lat)) / (mn - ms) * (H - 1)];
+/* 87a - A TURNED BOX. The rectangle is turned about its centre (the plain
+   midpoint of its edges) in degree-scaled Mercator, positive clockwise on
+   screen: osmmap.Bbox.turn, and Mylae's rotatedBbox, line for line. Turning is
+   linear in (longitude, Mercator), so the whole projection stays affine in
+   those two, which is what lets a slippy tile be drawn with one transform. */
+const OSM_ROT_EPS = 0.01;
+const osmMdeg = lat => osmMerc(lat) * 180 / Math.PI;
+const osmInvMdeg = y => (2 * Math.atan(Math.exp(y * Math.PI / 180)) - Math.PI / 2) * 180 / Math.PI;
+const osmRot = b => { const r = +(b && b.rotation) || 0; return Math.abs(r) >= OSM_ROT_EPS ? r : 0; };
+
+//: [lon, Mercator degrees] turned about the box's centre by `ang` degrees
+function osmTurnLM(b, lon, md, ang){
+  if(!ang) return [lon, md];
+  const a = ang * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  const clon = (b.east + b.west) / 2, cy = osmMdeg((b.north + b.south) / 2);
+  const dx = lon - clon, dy = md - cy;
+  return [clon + dx * c + dy * s, cy + dy * c - dx * s];
 }
 
-//: the same, for a Mercator value rather than a latitude (a slippy tile's edge)
-function osmMercRow(b, H, m){
-  const mn = osmMerc(b.north), ms = osmMerc(b.south);
-  return (mn - m) / (mn - ms) * (H - 1);
+//: [fx, fy] in tile space for a longitude and a Mercator value in radians
+function osmTileOfLonMerc(b, W, H, lon, m){
+  let md = m * 180 / Math.PI;
+  const r = osmRot(b);
+  if(r) [lon, md] = osmTurnLM(b, lon, md, -r);
+  const mn = osmMdeg(b.north), ms = osmMdeg(b.south);
+  return [(lon - b.west) / (b.east - b.west) * (W - 1), (mn - md) / (mn - ms) * (H - 1)];
 }
+
+//: [fx, fy] in tile space, a tile's centre at its whole number
+function osmToTile(b, W, H, lat, lon){
+  return osmTileOfLonMerc(b, W, H, lon, osmMerc(lat));
+}
+
+//: and back: [lat, lon] of a point in tile space
+function osmToGeo(b, W, H, fx, fy){
+  const mn = osmMdeg(b.north), ms = osmMdeg(b.south);
+  let lon = b.west + fx / (W - 1) * (b.east - b.west), md = mn - fy / (H - 1) * (mn - ms);
+  const r = osmRot(b);
+  if(r) [lon, md] = osmTurnLM(b, lon, md, r);
+  return [osmInvMdeg(md), lon];
+}
+
+//: The box's whole projection as an affine [a, b, c, d, e, f] in canvas order:
+//: fx = a*lon + c*m + e, fy = b*lon + d*m + f, with m the Mercator in radians.
+function osmGeoAffine(b, W, H){
+  const o = osmTileOfLonMerc(b, W, H, 0, 0), p = osmTileOfLonMerc(b, W, H, 1, 0),
+        q = osmTileOfLonMerc(b, W, H, 0, 1);
+  return [p[0] - o[0], p[1] - o[1], q[0] - o[0], q[1] - o[1], o[0], o[1]];
+}
+
+//: a number for a box field: rounded for the eye, trailing zeros dropped
+const osmNum = (v, dp) => typeof v === 'number' && isFinite(v) ? String(+v.toFixed(dp)) : String(v ?? '');
 
 function osmBoxOk(b){
   return b && [b.north, b.south, b.west, b.east].every(v => typeof v === 'number' && isFinite(v))
-    && b.north > b.south && b.east > b.west && b.north <= 85.05 && b.south >= -85.05;
+    && b.north > b.south && b.east > b.west && b.north <= 85.05 && b.south >= -85.05
+    && Math.abs(+b.rotation || 0) <= 180;
+}
+
+//: Degrees of longitude per degree of Mercator: osmmap.Bbox.aspect
+const osmAspect = b => (b.east - b.west) / Math.max(osmMdeg(b.north) - osmMdeg(b.south), 1e-12);
+
+//: How far a box stretches a W x H map: 0 is square tiles (osmmap.stretch)
+const osmStretch = (b, W, H) => osmAspect(b) / ((W - 1) / Math.max(H - 1, 1)) - 1;
+
+//: [km east-west, km north-south] one tile reaches (Projection.km_per_tile)
+function osmKmPerTile(b, W, H){
+  const cl = (b.north + b.south) / 2 * Math.PI / 180;
+  const m = (osmMerc(b.north) - osmMerc(b.south)) / Math.max(H - 1, 1);
+  const r = 6378.137 * Math.cos(cl);                 // osmmap.EARTH_KM, per radian there
+  return [(b.east - b.west) * Math.PI / 180 / Math.max(W - 1, 1) * r, m * r];
 }
 
 /* ---------- drawing, called by cmapPaint inside its clip ---------- */
@@ -112,7 +167,11 @@ function osmTileImg(z, x, y){
 let _osmSoon = 0;
 function osmRepaintSoon(){
   if(_osmSoon) return;
-  _osmSoon = setTimeout(() => { _osmSoon = 0; cmapPaint(); }, 60);
+  _osmSoon = setTimeout(() => {
+    _osmSoon = 0;
+    if(state.cmap) cmapPaint();
+    if(typeof owpDraw === 'function' && state.owp && state.owp.open) owpDraw();   // 87a
+  }, 60);
 }
 
 function osmDraw(x, s0, t0, s1, t1){
@@ -132,16 +191,20 @@ function osmDraw(x, s0, t0, s1, t1){
 
 function osmDrawTiles(x, b, W, H, v, s0, t0, s1, t1){
   const k = state.osm;
-  // the zoom whose tiles come out about 256 screen pixels wide
+  // the zoom whose tiles come out about 256 screen pixels wide (a turn does
+  // not change the scale)
   const span = b.east - b.west;
   let z = Math.round(Math.log2(360 * (W - 1) * v.zoom / (span * OSM_TILE_PX)));
   z = Math.max(0, Math.min(18, z));
-  // the visible part of the box, in degrees and in Mercator
-  const lon = fx => b.west + fx / (W - 1) * span;
-  const mn = osmMerc(b.north), ms = osmMerc(b.south);
-  const merc = fy => mn - fy / (H - 1) * (mn - ms);
-  const lonA = Math.max(b.west, lon(s0 - 0.5)), lonB = Math.min(b.east, lon(s1 - 0.5));
-  const mA = Math.min(mn, merc(t0 - 0.5)), mB = Math.max(ms, merc(t1 - 0.5));
+  // the visible part of the map as geography: the envelope of its four
+  // corners, which for an unturned box is the old rectangle exactly
+  const fa = Math.max(-0.5, s0 - 0.5), fb = Math.min(W - 0.5, s1 - 0.5);
+  const ga = Math.max(-0.5, t0 - 0.5), gb = Math.min(H - 0.5, t1 - 0.5);
+  if(fb <= fa || gb <= ga) return;
+  const cs = [[fa, ga], [fb, ga], [fa, gb], [fb, gb]].map(([p, q]) => osmToGeo(b, W, H, p, q));
+  const lonA = Math.max(-180, Math.min(...cs.map(g => g[1])));
+  const lonB = Math.min(180, Math.max(...cs.map(g => g[1])));
+  const mA = osmMerc(Math.max(...cs.map(g => g[0]))), mB = osmMerc(Math.min(...cs.map(g => g[0])));
   if(lonB <= lonA || mA <= mB) return;
   let xs, ys;
   for(;; z--){
@@ -158,16 +221,22 @@ function osmDrawTiles(x, b, W, H, v, s0, t0, s1, t1){
   x.clip();
   x.globalAlpha = k.alpha;
   x.imageSmoothingEnabled = true;
+  // a tile's pixel (u, v) is longitude L0 + u*dl and Mercator M0 + v*dm; the
+  // box's affine takes those to tile space, and the view to the canvas
+  const g = osmGeoAffine(b, W, H), zm = v.zoom;
+  const dl = 360 / (n * OSM_TILE_PX), dm = -2 * Math.PI / (n * OSM_TILE_PX);
   for(let ty = Math.max(0, ys[0]); ty <= Math.min(n - 1, ys[1]); ty++){
-    const top = osmMercRow(b, H, Math.PI * (1 - 2 * ty / n));
-    const bot = osmMercRow(b, H, Math.PI * (1 - 2 * (ty + 1) / n));
+    const M0 = Math.PI * (1 - 2 * ty / n);
     for(let tx = Math.max(0, xs[0]); tx <= Math.min(n - 1, xs[1]); tx++){
       const img = osmTileImg(z, tx, ty);
       if(!img) continue;
-      const left = (tx / n * 360 - 180 - b.west) / span * (W - 1);
-      const right = ((tx + 1) / n * 360 - 180 - b.west) / span * (W - 1);
-      const sx = cmapX(left + 0.5), sy = cmapY(top + 0.5);
-      x.drawImage(img, sx, sy, cmapX(right + 0.5) - sx, cmapY(bot + 0.5) - sy);
+      const L0 = tx / n * 360 - 180;
+      x.save();
+      x.transform(g[0] * dl * zm, g[1] * dl * zm, g[2] * dm * zm, g[3] * dm * zm,
+                  v.ox + (g[0] * L0 + g[2] * M0 + g[4] + 0.5) * zm,
+                  v.oy + (g[1] * L0 + g[3] * M0 + g[5] + 0.5) * zm);
+      x.drawImage(img, 0, 0, OSM_TILE_PX, OSM_TILE_PX);
+      x.restore();
     }
   }
   x.restore();
@@ -200,7 +269,7 @@ function osmBuildOver(){
 
 function osmBoxSet(field, value){
   const k = state.osm;
-  if(!k.box) k.box = {north: 0, south: 0, west: 0, east: 0};
+  if(!k.box) k.box = {north: 0, south: 0, west: 0, east: 0, rotation: 0};
   k.box[field] = parseFloat(value);
   k.coast = null; k.over = null;
   cmapPaint();                      // the backdrop follows before anything is kept
@@ -214,7 +283,7 @@ async function osmBoxPost(body){
   catch(e){ r = {error: errText(e)}; }
   if(state.osm !== k) return;
   if(r.error){ toast('✗ ' + r.error, 7000); return; }
-  k.st.box = r.box; k.st.box_from = r.box_from; k.st.file = r.file;
+  k.st.box = r.box; k.st.box_from = r.box_from; k.st.file = r.file; k.st.shape = r.shape;
   k.box = r.box ? Object.assign({}, r.box) : null;
   k.coast = null; k.over = null;
   osmPaint(); cmapPaint();
@@ -362,10 +431,21 @@ function osmHtml(){
       `To: ${esc(s.tiles[0])}, ${esc(s.overpass[0])} and ${esc(s.nominatim)}. Settings, Real-world map, lists them all and can change them.`,
       'Tiles are kept on disk for 30 days, and searches are sent at most once a second, as OpenStreetMap asks.'])}</div>
     <button onclick="openSettings()">⚙ Open Settings to turn it on</button>`;
-  const b = k.box || {north: '', south: '', west: '', east: ''};
-  const box = ['north', 'south', 'west', 'east'].map(f => `<label style="flex:1 1 90px">${f}
-      <input type="number" step="0.01" value="${esc(String(b[f] ?? ''))}"
+  const b = k.box || {north: '', south: '', west: '', east: '', rotation: ''};
+  const box = ['north', 'south', 'west', 'east', 'rotation'].map(f => `<label style="flex:1 1 90px">${f}
+      <input type="number" step="${f === 'rotation' ? 1 : 0.01}" value="${esc(osmNum(b[f] ?? (f === 'rotation' && k.box ? 0 : ''), f === 'rotation' ? 1 : 6))}"
         onchange="osmBoxSet('${f}',this.value)"></label>`).join('');
+  // 87a: how the box sits on this map - the size of a tile, and any stretch
+  const W = c.man.width, H = c.man.height;
+  let shape = '';
+  if(osmBoxOk(k.box)){
+    const [ew, ns] = osmKmPerTile(k.box, W, H), st = osmStretch(k.box, W, H);
+    const f = v => v >= 10 ? v.toFixed(0) : v.toFixed(1);
+    shape = `<div class="count">One tile: ${f(ew)} km east-west, ${f(ns)} km north-south.
+      ${Math.abs(st) < 0.005 ? '' : `<span class="w-warn">The box stretches the map
+      ${Math.abs(st * 100).toFixed(1)}% ${st > 0 ? 'wider' : 'taller'} than the real ground:
+      the world picker can give it the map’s shape.</span>`}</div>`;
+  }
   const kept = k.st.box_from === 'kept' ? 'kept for this map'
     : k.st.box_from === 'file' ? 'read from bbox_coords.txt beside the map' : 'not set yet';
   const co = k.coast;
@@ -374,7 +454,9 @@ function osmHtml(){
   return `${head}
     ${k.err ? `<div class="w-bad">${esc(k.err)}</div>` : ''}
     <div class="bsec"><h4>The box <span class="count">${esc(kept)}</span></h4>
+      <div class="cmbar2"><button class="primary" onclick="owpOpen()">🌍 Pick it on a world map…</button></div>
       <div class="brow" style="flex-wrap:wrap">${box}</div>
+      ${shape}
       <div class="cmbar2">
         <button class="primary" onclick="osmBoxPost({box: state.osm.box})"
           ${osmBoxOk(k.box) ? '' : 'disabled'}>Keep</button>
@@ -383,8 +465,9 @@ function osmHtml(){
         <button onclick="osmBoxDownload()" ${k.st.file ? '' : 'disabled'}>Export</button>
         <button onclick="osmBoxPost({clear: true})" ${k.st.box_from === 'kept' ? '' : 'disabled'}>Clear</button>
       </div>
-      <div class="count">Where the map’s edges are in the real world. Change a number and the
-        backdrop moves at once; Keep saves it in the toolkit, not in the mod.</div>
+      <div class="count">Where the map’s edges are in the real world, and how far the map is
+        turned (degrees, clockwise). Change a number and the backdrop moves at once; Keep saves
+        it in the toolkit, not in the mod.</div>
     </div>
     <div class="bsec"><h4>Backdrop</h4>
       <label class="chk"><input type="checkbox" ${k.show ? 'checked' : ''}

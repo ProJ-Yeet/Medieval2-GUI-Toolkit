@@ -10214,3 +10214,63 @@ the second action exact without overlap, halfway through the blend halfway
 between the two, the pelvis pinned) and the rider test. Checked in the running
 app on a DaC rider: the picker, an attack out of the pack, the marks, a
 three-step sequence both ways, the rider seated.
+
+## Phase 87 - the real world, whole: Mylae's New Map Editor
+
+The plan and the table of what is his, what we had and what each piece adds
+are in `ROADMAP.md` under *Phase 87*. Each piece is written up here as it lands.
+
+### 87a - the world picker, and a box that can be turned - DONE 2026-09-25
+
+`web/js/osmworld.js` (the dialog), with the geometry in `osmmap.py` and
+`osmmap.js`. *Pick it on a world map…* on the Real world tab opens the whole
+world as OpenStreetMap, before any box exists: drag to pan, wheel to zoom, and
+the box drawn by dragging (the *Draw* button or Shift), moved by its middle,
+resized by its corners and turned by the violet handle above it (Shift snaps
+to 5°). North, south, west, east and rotation are typed beside it, with the
+size of a tile in km and how far the box stretches the map. A worldwide search
+(`/api/osm/world`, Nominatim unbounded) lists places with their kind; *Go*
+flies there and *Fit the box around it* puts the box round the place's extent.
+*Use for this map* keeps it.
+
+**The shape.** Tile 0 is the west edge and tile W-1 the east, so the one box
+that does not stretch a tile is `(W-1):(H-1)` in longitude against Mercator
+degrees. *Keep this map's shape* holds the box to it while it is drawn, while
+a corner is dragged and when it is fitted round a place (grown, never shrunk,
+so the place stays inside), and Keep sends it with `fit=width` so
+`osmmap.fit` makes it exact. `osmmap.size_for` gives the other side of a map
+from one side and the box, for 87e.
+
+**The turn** is Mylae's `rotatedBbox`: the four edges are the unturned
+rectangle, turned about the plain midpoint of its edges in degree-scaled
+Mercator, positive clockwise on screen. Where his layers are made on the
+envelope and resampled on export, here the turn is in `Projection` itself, so
+the backdrop, the coastline, the search, the boundaries and the heights all
+see the turned map directly, and an unturned box is Phase 25's projection to
+the last digit. Turning is linear in longitude and Mercator, so the heights
+are still one affine transform (now with its cross terms) and a backdrop tile
+is drawn with one canvas transform. Overpass is asked for the envelope. The
+file gets `rotation=`, a line his loader passes over; his loader's refusal of
+a coordinate of exactly 0 is not copied.
+
+**A corner held still.** Dragging a corner of a turned box keeps the opposite
+corner where it stands. The box's frame is only turned, so the diagonal in it
+is the drag turned back; the pivot is the one thing that moves (the plain
+middle of the latitudes, a hair off the Mercator middle), and a short
+iteration finds it to 1e-12, where a naive re-rotation drifted 0.03°.
+
+A fix on the way: `km_per_tile` measured east-west on the equatorial radius
+and north-south on the mean one, so a square tile read 0.1% oblong; both use
+the Web Mercator sphere now.
+
+Tests: `test_osmworld` (42): the unturned projection is 25's; the turned one
+lands the map's corners on his transcribed `rotatePointMerc` and goes there
+and back; the file; fit, size and stretch; the envelope and the chunks; a
+turned box's heights sampled where the projection says (0.00 px); the world
+search sent unbounded; and under node, `osmmap.js` agreeing with Python on a
+turned box, the affine that draws a tile, a held corner, a kept shape and a
+drawn box. `test_osmmap` gains the world route, a fitted keep and a turned
+keep (66). Checked in the app on a scratch server with a fake OpenStreetMap:
+the world at zoom 4, a search, a box fitted round Sicily in ROCSS's 510x510
+shape, turned 29.7° by the handle, a corner dragged with the far corner still
+to 1e-15, kept, and the backdrop drawn turned over the map.

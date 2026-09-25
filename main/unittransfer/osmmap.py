@@ -141,19 +141,80 @@ def require_on() -> dict:
 # the box
 
 
+#: The sphere Web Mercator is drawn on, in km.
+EARTH_KM = 6378.137
+#: Below this many degrees a box is not rotated at all (Mylae's EPS).
+ROT_EPS = 0.01
+
+
 @dataclass
 class Bbox:
+    """The map's rectangle in the real world, before it is turned.
+
+    ``rotation`` is in degrees, positive clockwise on screen, and turns the
+    rectangle about its centre (the plain midpoint of the four edges) in
+    degree-scaled Mercator, where a turned rectangle stays a rectangle on the
+    slippy map. That is Mylae's ``rotatedBbox`` exactly, so a box turned in his
+    New Map Editor is the same box here.
+    """
     north: float
     south: float
     west: float
     east: float
+    rotation: float = 0.0
+
+    @property
+    def rotated(self) -> bool:
+        return abs(self.rotation) >= ROT_EPS
 
     def payload(self) -> dict:
-        return {"north": self.north, "south": self.south,
-                "west": self.west, "east": self.east}
+        out = {"north": self.north, "south": self.south,
+               "west": self.west, "east": self.east}
+        if self.rotated:
+            out["rotation"] = self.rotation
+        return out
+
+    def centre(self) -> Tuple[float, float]:
+        return (self.north + self.south) / 2, (self.east + self.west) / 2
+
+    def turn(self, lat: float, lon: float, angle: Optional[float] = None
+             ) -> Tuple[float, float]:
+        """A point turned about the centre by ``angle`` (the box's own by
+        default), in degree-scaled Mercator. Returns ``(lat, lon)``."""
+        a = math.radians(self.rotation if angle is None else angle)
+        if abs(a) < 1e-12:
+            return lat, lon
+        clat, clon = self.centre()
+        cy = merc_deg(clat)
+        dx, dy = lon - clon, merc_deg(lat) - cy
+        c, s = math.cos(a), math.sin(a)
+        return inv_merc_deg(cy + dy * c - dx * s), clon + dx * c + dy * s
+
+    def corners(self) -> List[Tuple[float, float]]:
+        """The four corners as they stand, north-west first, clockwise."""
+        return [self.turn(la, lo) for la, lo in ((self.north, self.west),
+                                                 (self.north, self.east),
+                                                 (self.south, self.east),
+                                                 (self.south, self.west))]
+
+    def envelope(self) -> "Bbox":
+        """The unturned box around the turned one: what a query has to cover."""
+        if not self.rotated:
+            return Bbox(self.north, self.south, self.west, self.east)
+        pts = self.corners()
+        lats, lons = [p[0] for p in pts], [p[1] for p in pts]
+        return Bbox(min(MAX_LAT, max(lats)), max(-MAX_LAT, min(lats)),
+                    max(-180.0, min(lons)), min(180.0, max(lons)))
+
+    def aspect(self) -> float:
+        """Degrees of longitude per degree of Mercator: Mylae's ``bboxAspect``."""
+        return (self.east - self.west) / max(merc_deg(self.north) - merc_deg(self.south),
+                                             1e-12)
 
     def problems(self) -> List[str]:
         out = []
+        if not -180 <= self.rotation <= 180:
+            out.append(f"rotation {self.rotation} is not between -180 and 180 degrees")
         for k in ("north", "south"):
             v = getattr(self, k)
             if not -MAX_LAT <= v <= MAX_LAT:
@@ -168,6 +229,12 @@ class Bbox:
         if self.east <= self.west:
             out.append("east has to be east of west (a box across the date line "
                        "is not supported)")
+        if not out and self.rotated:
+            env = self.envelope()
+            if any(abs(la) > MAX_LAT - 1e-6 for la, _ in self.corners()):
+                out.append("turned this far, a corner goes past the pole")
+            elif env.west <= -180 or env.east >= 180:
+                out.append("turned this far, a corner crosses the date line")
         return out
 
 
@@ -194,6 +261,12 @@ def parse_bbox(body) -> Bbox:
         b = Bbox(*(float(body[k]) for k in ("north", "south", "west", "east")))
     except (KeyError, TypeError, ValueError):
         raise OsmError("a box needs north, south, west and east, each a number") from None
+    try:
+        b.rotation = float(body.get("rotation") or 0.0)
+    except (TypeError, ValueError):
+        raise OsmError("the rotation has to be a number of degrees") from None
+    if not math.isfinite(b.rotation):
+        raise OsmError("the rotation has to be a number of degrees")
     bad = b.problems()
     if bad:
         raise OsmError("; ".join(bad))
@@ -201,13 +274,17 @@ def parse_bbox(body) -> Bbox:
 
 
 def bbox_text(b: Bbox, width: int, height: int) -> str:
-    """The box as a ``bbox_coords.txt``, in the shape Mylae's editor reads."""
+    """The box as a ``bbox_coords.txt``, in the shape Mylae's editor reads.
+
+    A turned box adds ``rotation=``, which his loader passes over (it reads
+    only the four edges), so the file still opens there, unturned."""
     return "\n".join([
         "# the campaign map's real-world box, written by the Medieval 2 GUI Toolkit",
         f"# {time.strftime('%Y-%m-%d %H:%M:%S')}",
         "",
         f"north={b.north:.6f}", f"south={b.south:.6f}",
         f"west={b.west:.6f}", f"east={b.east:.6f}",
+        *([f"rotation={b.rotation:.4f}"] if b.rotated else []),
         "",
         f"map_width={width}", f"map_height={height}",
         f"heightmap_width={2 * width + 1}", f"heightmap_height={2 * height + 1}",
@@ -266,13 +343,28 @@ def merc(lat: float) -> float:
     return math.log(math.tan(math.pi / 4 + math.radians(lat) / 2))
 
 
+def merc_deg(lat: float) -> float:
+    """Mercator scaled to degrees, the space a box is turned in."""
+    return math.degrees(merc(lat))
+
+
+def inv_merc_deg(y: float) -> float:
+    return math.degrees(2 * math.atan(math.exp(math.radians(y))) - math.pi / 2)
+
+
 class Projection:
+    """Tile space against the real world. A tile's centre is where the box
+    puts it before the box is turned; a turned box turns the whole map with
+    it, about the box's centre."""
+
     def __init__(self, b: Bbox, width: int, height: int):
         self.b, self.w, self.h = b, width, height
         self.mn, self.ms = merc(b.north), merc(b.south)
 
     def to_tile(self, lat: float, lon: float) -> Tuple[float, float]:
         b = self.b
+        if b.rotated:
+            lat, lon = b.turn(lat, lon, -b.rotation)
         return ((lon - b.west) / (b.east - b.west) * (self.w - 1),
                 (self.mn - merc(lat)) / (self.mn - self.ms) * (self.h - 1))
 
@@ -280,7 +372,25 @@ class Projection:
         b = self.b
         lon = b.west + fx / (self.w - 1) * (b.east - b.west)
         m = self.mn - fy / (self.h - 1) * (self.mn - self.ms)
-        return math.degrees(2 * math.atan(math.exp(m)) - math.pi / 2), lon
+        lat = math.degrees(2 * math.atan(math.exp(m)) - math.pi / 2)
+        return b.turn(lat, lon) if b.rotated else (lat, lon)
+
+    def to_lonmerc(self, fx: float, fy: float) -> Tuple[float, float]:
+        """``(longitude, Mercator in radians)`` of a tile position: both are
+        affine in ``(fx, fy)``, turned or not, which is what lets one affine
+        transform resample a slippy picture onto the map."""
+        lat, lon = self.to_geo(fx, fy)
+        return lon, merc(lat)
+
+    def km_per_tile(self) -> Tuple[float, float]:
+        """How far one tile reaches, east-west and north-south, at the box's
+        middle latitude."""
+        b = self.b
+        clat = math.radians((b.north + b.south) / 2)
+        r = EARTH_KM * math.cos(clat)                      # km per radian there
+        ew = math.radians(b.east - b.west) / max(self.w - 1, 1) * r
+        m = (self.mn - self.ms) / max(self.h - 1, 1)       # radians of Mercator
+        return ew, m * r
 
 
 # ---------------------------------------------------------------------------
@@ -373,6 +483,9 @@ def nominatim(path: str, params: dict):
 
 
 def _chunks(b: Bbox, size: float) -> List[Bbox]:
+    """The box cut into squares of ``size`` degrees for Overpass. A turned box
+    is covered by its envelope."""
+    b = b.envelope()
     out = []
     lat = b.south
     while lat < b.north - 1e-9:
@@ -576,27 +689,95 @@ def search(b: Bbox, proj: Projection, q: str) -> List[dict]:
     q = (q or "").strip()
     if not q:
         raise OsmError("search for a place by name")
+    env = b.envelope()
     got = nominatim("search", {
         "q": q, "format": "jsonv2", "limit": 12, "bounded": 1, "extratags": 1,
-        "viewbox": f"{b.west},{b.north},{b.east},{b.south}"})
+        "viewbox": f"{env.west},{env.north},{env.east},{env.south}"})
     out = []
     for r in got or []:
-        try:
-            lat, lon = float(r["lat"]), float(r["lon"])
-        except (KeyError, TypeError, ValueError):
+        p = _place(r)
+        if p is None:
             continue
-        fx, fy = proj.to_tile(lat, lon)
+        fx, fy = proj.to_tile(p["lat"], p["lon"])
         x, y = round(fx), round(fy)
-        level = (r.get("extratags") or {}).get("admin_level")
-        name = (r.get("name") or (r.get("display_name") or "").split(",")[0]).strip()
-        out.append({"name": name, "display": r.get("display_name") or name,
-                    "lat": lat, "lon": lon, "x": x, "y": y,
-                    "on_map": 0 <= x < proj.w and 0 <= y < proj.h,
-                    "osm_type": r.get("osm_type") or "", "osm_id": r.get("osm_id"),
-                    "kind": r.get("addresstype") or r.get("type") or "",
-                    "admin_level": int(level) if str(level or "").isdigit() else None,
-                    "boundary": r.get("osm_type") == "relation"})
+        p.update(x=x, y=y, on_map=0 <= x < proj.w and 0 <= y < proj.h)
+        out.append(p)
     return out
+
+
+def _place(r: dict) -> Optional[dict]:
+    """One Nominatim answer, in the shape the page lists."""
+    try:
+        lat, lon = float(r["lat"]), float(r["lon"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    level = (r.get("extratags") or {}).get("admin_level")
+    name = (r.get("name") or (r.get("display_name") or "").split(",")[0]).strip()
+    out = {"name": name, "display": r.get("display_name") or name,
+           "lat": lat, "lon": lon,
+           "osm_type": r.get("osm_type") or "", "osm_id": r.get("osm_id"),
+           "kind": r.get("addresstype") or r.get("type") or "",
+           "admin_level": int(level) if str(level or "").isdigit() else None,
+           "boundary": r.get("osm_type") == "relation"}
+    bb = r.get("boundingbox")
+    try:
+        s, n, w, e = (float(v) for v in bb)
+        out["extent"] = {"north": min(n, MAX_LAT), "south": max(s, -MAX_LAT),
+                         "west": w, "east": e}
+    except (TypeError, ValueError):
+        pass
+    return out
+
+
+def search_world(q: str) -> List[dict]:
+    """Places matching ``q`` anywhere, for the world picker: each with its
+    point and, where Nominatim gives one, the extent to fit a box around."""
+    q = (q or "").strip()
+    if not q:
+        raise OsmError("search for a place by name")
+    got = nominatim("search", {"q": q, "format": "jsonv2", "limit": 12, "extratags": 1})
+    return [p for p in (_place(r) for r in got or []) if p is not None]
+
+
+def fit(b: Bbox, width: int, height: int, keep: str = "width") -> Bbox:
+    """The box given the map's own shape, so a tile is as wide as it is tall.
+
+    Tile 0 sits on the west edge and tile ``width-1`` on the east, so the
+    shape that does not stretch is ``(width-1) : (height-1)`` in degrees of
+    longitude against degrees of Mercator. ``keep`` says which pair of edges
+    stays: ``width`` keeps west and east and moves north and south about their
+    middle (in Mercator), ``height`` the other way round. The rotation stays.
+    """
+    want = (width - 1) / max(height - 1, 1)
+    mn, ms = merc_deg(b.north), merc_deg(b.south)
+    if keep == "height":
+        half = (mn - ms) * want / 2
+        mid = (b.east + b.west) / 2
+        out = Bbox(b.north, b.south, mid - half, mid + half, b.rotation)
+    else:
+        half = (b.east - b.west) / want / 2
+        mid = (mn + ms) / 2
+        out = Bbox(inv_merc_deg(mid + half), inv_merc_deg(mid - half),
+                   b.west, b.east, b.rotation)
+    bad = out.problems()
+    if bad:
+        raise OsmError("the box cannot take this map's shape there: " + "; ".join(bad))
+    return out
+
+
+def size_for(b: Bbox, width: int = 0, height: int = 0) -> Tuple[int, int]:
+    """A map size in the box's own shape: one side given, the other from the
+    box (Mylae's ``bboxAspect``, counted between tile centres like ours)."""
+    a = b.aspect()
+    if width:
+        return int(width), max(2, 1 + round((int(width) - 1) / a))
+    return max(2, 1 + round((int(height) - 1) * a)), int(height)
+
+
+def stretch(b: Bbox, width: int, height: int) -> float:
+    """How far the box stretches a map of this size: 0 is square tiles, 0.1 is
+    a tile ten per cent wider than it is tall (or narrower, negative)."""
+    return b.aspect() / ((width - 1) / max(height - 1, 1)) - 1
 
 
 def boundary(lat: float, lon: float, osm_type: str = "", osm_id=None) -> dict:

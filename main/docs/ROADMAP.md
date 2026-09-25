@@ -431,7 +431,7 @@ It stays recorded rather than rediscovered.
 | 84 | Keep a ported mod rebuildable: loose `.cas` and `descr_skeleton.txt` for what was ported | - | M | both |
 | 85 | Pack housekeeping: duplicates, orphans, and a compacted pack | - | M | both |
 | 86 | Animations on their own: a skeleton or one animation from another mod, and an edit saved into the pack | - | M | both |
-| 87 | The real world, whole: the rest of Mylae's New Map Editor (world picker, rotation, reference maps, water, land cover, Köppen, historic sites, a new campaign from the real world, the bundle) | - | L, split 87a-87h | beta |
+| 87 | The real world, whole: the rest of Mylae's New Map Editor (world picker, rotation, reference maps, water, land cover, Köppen, historic sites, a new campaign from the real world, the bundle) | - | L, split 87a-87h | beta - **87a done 2026-09-25** |
 
 Releasing stays on request: each phase is committed to master as it lands.
 
@@ -864,6 +864,7 @@ His loader's bug (a coordinate of exactly 0 is refused) is not copied. Done
 when: a box drawn, turned and kept puts the backdrop, the coastline, a search
 result and a boundary where they were before at 0°, and where the rotated
 projection puts them otherwise, checked both ways in Python and in JS.
+**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
 
 **87b - reference maps.** The backdrop gets a choice: OpenStreetMap,
 OpenTopoMap, OSM Humanitarian, Terrarium relief (drawn grey by Python from the

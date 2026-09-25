@@ -446,6 +446,19 @@ check("POST /api/osm/coast reports without painting",
 r = get("/api/osm/search?mod=Coasty&q=Midtown")
 check("GET /api/osm/search", r.get("results", [{}])[0].get("name") == "Midtown")
 check("GET /api/osm/tile serves a tile", get("/api/osm/tile/5/16/11", raw=True) == PNG)
+# 87a: the world picker's search, and a box kept in the map's shape or turned
+r = get("/api/osm/world?q=Midtown")
+check("87a: GET /api/osm/world searches without a mod or a box",
+      r.get("results", [{}])[0].get("name") == "Midtown")
+r = post("/api/osm/box", {"mod": "Coasty", "box": b.payload(), "fit": "width"})
+check("87a: POST /api/osm/box with fit gives the box the map's shape",
+      abs(r.get("shape", {}).get("stretch", 1)) < 1e-9 and r["box"]["west"] == b.west)
+r = post("/api/osm/box", {"mod": "Coasty", "box": dict(b.payload(), rotation=12.5)})
+st = get("/api/osm?mod=Coasty")
+check("87a: a turned box is kept, and its file says rotation=",
+      st.get("box", {}).get("rotation") == 12.5 and "rotation=12.5000" in st.get("file", "")
+      and len(st.get("shape", {}).get("km", [])) == 2)
+post("/api/osm/box", {"mod": "Coasty", "box": b.payload()})
 r = post("/api/map/osm_coast", {"mod": "Coasty"})
 check("POST /api/map/osm_coast paints into the session",
       r.get("tiles") == len(c.to_sea) - 2 and "heights" in r.get("state", {}).get("dirty", []))

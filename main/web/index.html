@@ -2281,6 +2281,14 @@
   .mgnbands input{width:70px}
   /* 25: the real world behind the map (osmmap.js) */
   .osmres{border-top:1px solid var(--edge);padding:6px 0}
+  /* 87a: the world picker (osmworld.js) */
+  .modal.owp{display:flex;flex-direction:column;height:calc(90vh / var(--uiz))}
+  .owpbody{display:flex;flex:1 1 auto;min-height:0}
+  .owpstage{position:relative;flex:1 1 auto;min-width:0;background:#aac9d6}
+  .owpstage canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab}
+  .owptip{position:absolute;left:8px;bottom:8px;display:none;background:#0f172ae0;color:#e2e8f0;
+    font:11px ui-monospace,monospace;padding:3px 6px;border-radius:4px;pointer-events:none}
+  .owpside{width:330px;flex:0 0 330px;overflow:auto;padding:10px 12px;border-left:1px solid var(--edge)}
   /* 76: building lines from another mod (edbimport.js) */
   .bimlist{max-height:260px;overflow:auto;border:1px solid var(--edge);border-radius:6px;padding:4px 8px}
   .bimrow{display:flex;gap:8px;align-items:center;padding:2px 0;cursor:pointer}
@@ -3331,6 +3339,7 @@
 <script src="js/campforts.js"></script>
 <script src="js/campcreate.js"></script>
 <script src="js/osmmap.js"></script>
+<script src="js/osmworld.js"></script>
 <script src="js/mapsize.js"></script>
 <script src="js/mapgen.js"></script>
 <script src="js/climates.js"></script>

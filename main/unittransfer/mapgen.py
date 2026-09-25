@@ -258,21 +258,24 @@ def elevation(box, cols: int, rows: int) -> Image.Image:
 
     Longitude is linear across both the tiles and the map, and so is the
     Mercator of the latitude, so the whole resampling is one affine transform
-    of the stitched picture: Pillow does it, in C.
+    of the stitched picture: Pillow does it, in C. A turned box (87a) is still
+    one affine transform, since turning is linear in the same two, and only the
+    tiles under its envelope are fetched.
     """
     w, h = (cols - 1) // 2, (rows - 1) // 2
     proj = osmmap.Projection(box, w, h)
+    env = box.envelope()
     z = 12
     for zz in range(3, 13):
-        wide = _lon2x(box.east, zz) - _lon2x(box.west, zz)
-        tall = _lat2y(box.south, zz) - _lat2y(box.north, zz)
+        wide = _lon2x(env.east, zz) - _lon2x(env.west, zz)
+        tall = _lat2y(env.south, zz) - _lat2y(env.north, zz)
         if wide >= 1.5 * cols and tall >= 1.5 * rows:
             z = zz
             break
 
     def span(zz):
-        return (int(_lon2x(box.west, zz) // 256), int(_lon2x(box.east, zz) // 256),
-                int(_lat2y(box.north, zz) // 256), int(_lat2y(box.south, zz) // 256))
+        return (int(_lon2x(env.west, zz) // 256), int(_lon2x(env.east, zz) // 256),
+                int(_lat2y(env.north, zz) // 256), int(_lat2y(env.south, zz) // 256))
 
     x0, x1, y0, y1 = span(z)
     while (x1 - x0 + 1) * (y1 - y0 + 1) > ELEVATION_BUDGET and z > 3:
@@ -283,19 +286,24 @@ def elevation(box, cols: int, rows: int) -> Image.Image:
         for tx in range(x0, x1 + 1):
             big.paste(elevation_tile(z, tx % (2 ** z), ty),
                       ((tx - x0) * 256, (ty - y0) * 256))
-    # corner i -> the stitched picture's column: linear in i, and the same for
-    # rows. Pillow samples output pixel x at a * (x + .5) + c - .5, so c takes
-    # the half-pixel back.
-    lon_a, lon_b = proj.to_geo(1, 0)[1], proj.to_geo(3, 0)[1]      # corners 3 and 7
-    px_a, px_b = _lon2x(lon_a, z) - x0 * 256, _lon2x(lon_b, z) - x0 * 256
-    ax = (px_b - px_a) / 4
-    bx = px_a - 3 * ax
-    lat_a, lat_b = proj.to_geo(0, 1)[0], proj.to_geo(0, 3)[0]
-    py_a, py_b = _lat2y(lat_a, z) - y0 * 256, _lat2y(lat_b, z) - y0 * 256
-    ay = (py_b - py_a) / 4
-    by = py_a - 3 * ay
+    # corner (i, j) -> the stitched picture's pixel: affine in (i, j), so three
+    # corners fix it. Corner i stands at tile (i - 1) / 2. Pillow samples output
+    # pixel (x, y) at a * (x + .5) + b * (y + .5) + c - .5, so c and f take the
+    # half-pixel back.
+    size = 2 ** z * 256
+
+    def pix(i, j):
+        lon, m = proj.to_lonmerc((i - 1) / 2, (j - 1) / 2)
+        return ((lon + 180) / 360 * size - x0 * 256,
+                (1 - m / math.pi) / 2 * size - y0 * 256)
+
+    (p0x, p0y), (p1x, p1y), (p2x, p2y) = pix(1, 1), pix(3, 1), pix(1, 3)
+    a, b = (p1x - p0x) / 2, (p2x - p0x) / 2
+    d, e = (p1y - p0y) / 2, (p2y - p0y) / 2
+    c, f = p0x - a - b, p0y - d - e
     return big.transform((cols, rows), Image.AFFINE,
-                         (ax, 0, bx + 0.5 - 0.5 * ax, 0, ay, by + 0.5 - 0.5 * ay),
+                         (a, b, c + 0.5 - 0.5 * a - 0.5 * b,
+                          d, e, f + 0.5 - 0.5 * d - 0.5 * e),
                          Image.BILINEAR)
 
 

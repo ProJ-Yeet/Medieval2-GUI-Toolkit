@@ -193,7 +193,8 @@ on top. Ships on the dated beta pre-release; see the module table above.
   heights, climates from the ground types, and rivers, cliffs and volcanoes from
   OpenStreetMap drawn the way the game can build a river. **Real world** draws
   OpenStreetMap over the map, traces the real coastline and finds places by
-  name. The two that use the internet are off until Settings turns them on.
+  name, and its world map is where the map's box is found: drawn, moved,
+  turned, or fitted round a place, in the map's own shape. The two that use the internet are off until Settings turns them on.
 * **A refusal says what would work instead.** A culture or a resource name the
   mod does not declare is refused outright; a tile that is wrong for what you put
   on it is told where the nearest tile that would do is, and **⌖ Move it to**

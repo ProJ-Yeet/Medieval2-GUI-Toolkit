@@ -358,7 +358,9 @@ show the unsaved map rather than the one on disk.
                                     the servers it would use, and this map's box
   GET  /api/osm/tile/Z/X/Y       -> one OpenStreetMap tile, cached on disk
   GET  /api/osm/search?mod=&q=   -> places inside the box, each with its tile
-  POST /api/osm/box              -> keep, import (bbox_coords.txt) or clear the box
+  GET  /api/osm/world?q=         -> 87a. places anywhere, for the world picker
+  POST /api/osm/box              -> keep, import (bbox_coords.txt) or clear the box;
+                                    with fit=width|height, given the map's shape
   POST /api/osm/coast            -> the real coastline over the map, and what it
                                     says about the map's sea; nothing written
   POST /api/map/osm_coast|osm_boundary
@@ -2405,6 +2407,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(settlemodel.view(mod))
             if u.path == "/api/osm" or u.path == "/api/osm/search":
                 return self._json(self._osm_get(u.path, q))
+            if u.path == "/api/osm/world":
+                # 87a. The world picker's search: anywhere, no mod, no box
+                try:
+                    return self._json({"results": osmmap.search_world(
+                        (q.get("q") or [""])[0])})
+                except (OSError, ValueError) as e:
+                    return self._json({"error": str(e)})
             if u.path.startswith("/api/osm/tile/"):
                 return self._osm_tile(u.path)
             if u.path == "/api/edbimport/lines":
@@ -3893,8 +3902,16 @@ class Handler(BaseHTTPRequestHandler):
         w, h = cm.terrain.width, cm.terrain.height
         return {"mod": name, "settings": s, "width": w, "height": h,
                 "box": box.payload() if box else None, "box_from": where,
-                "key": osmmap.map_key(cm),
+                "key": osmmap.map_key(cm), "shape": self._osm_shape(box, w, h),
                 "file": osmmap.bbox_text(box, w, h) if box else ""}
+
+    @staticmethod
+    def _osm_shape(box, w, h):
+        """87a: how far the box stretches this map, and how big a tile is."""
+        if box is None:
+            return None
+        ew, ns = osmmap.Projection(box, w, h).km_per_tile()
+        return {"stretch": osmmap.stretch(box, w, h), "km": [ew, ns]}
 
     def _osm_tile(self, path):
         try:
@@ -3915,11 +3932,17 @@ class Handler(BaseHTTPRequestHandler):
                     osmmap.keep_box(cm, None)
                 else:
                     src = body.get("text") if body.get("text") else body.get("box")
-                    osmmap.keep_box(cm, osmmap.parse_bbox(src or {}))
+                    b = osmmap.parse_bbox(src or {})
+                    if body.get("fit") in ("width", "height"):
+                        # 87a: given the map's own shape, so nothing stretches
+                        b = osmmap.fit(b, cm.terrain.width, cm.terrain.height,
+                                       body["fit"])
+                    osmmap.keep_box(cm, b)
                 box, where = osmmap.box_for(cm)
+                w, h = cm.terrain.width, cm.terrain.height
                 return {"box": box.payload() if box else None, "box_from": where,
-                        "file": osmmap.bbox_text(box, cm.terrain.width,
-                                                 cm.terrain.height) if box else ""}
+                        "shape": self._osm_shape(box, w, h),
+                        "file": osmmap.bbox_text(box, w, h) if box else ""}
             box, _ = osmmap.box_for(cm)
             if box is None:
                 return {"error": "give the map its real-world box first"}
