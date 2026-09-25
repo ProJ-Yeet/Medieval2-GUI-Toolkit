@@ -536,6 +536,11 @@ sizes. It rotates at 4 MB.
 usually started but your browser did not open. Go to `http://127.0.0.1:8756/`
 manually.
 
+**If the page says "The tool did not finish loading"** and names a file, the
+server is fine but your browser never asked it for that file. An ad blocker or
+privacy extension (uBlock Origin, AdBlock, Brave Shields) is the usual cause.
+Turn it off for `127.0.0.1` and reload.
+
 ## Project layout
 
 Only the three things a person actually opens sit at the top: the two `.bat`

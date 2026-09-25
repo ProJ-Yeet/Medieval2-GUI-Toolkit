@@ -1,4 +1,4 @@
-/* banners.js - Battle banners: descr_banners_new.xml
+/* battleflags.js - Battle banners: descr_banners_new.xml
 
    Part of the Medieval 2 GUI Toolkit UI. These files are plain
    <script> tags sharing ONE global scope, loaded in the order set in
@@ -14,7 +14,11 @@
    when the banner their EDU line names has no row for it, which is the
    warning that matters here.
 
-   THE PAGE NEVER PARSES A GAME FILE: /api/banners and its plan|apply. */
+   THE PAGE NEVER PARSES A GAME FILE: /api/battleflags and its plan|apply.
+
+   The file and its routes say "battleflags", never "banners": an ad blocker's
+   list blocks any URL ending /banners.js or holding /banners/, the request never
+   leaves the browser, and the whole UI stops at "did not finish loading". */
 
 const BNX_SECTIONS = [
   {tag: 'FactionBanners', label: 'Faction banners', edu: 'banner faction'},
@@ -27,7 +31,7 @@ async function loadBanners(){
   const mod = state.src;
   main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s battle banners…</div>';
   let r;
-  try{ r = await api.get('/api/banners?mod=' + enc(mod)); }
+  try{ r = await api.get('/api/battleflags?mod=' + enc(mod)); }
   catch(e){ if(stale('banners', mod)) return;
     main.innerHTML = `<div class="empty">Couldn't read them.<br><span class="count">${esc(errText(e))}</span>
       <br><br><button class="primary" onclick="loadBanners()">Retry</button></div>`; return; }
@@ -182,7 +186,7 @@ async function bnxSave(){
   const body = Object.assign({mod: state.src, sig: c.sig || ''}, c.w);
   c.busy = true;
   let plan;
-  try{ plan = await api.post('/api/banners/plan', body); }
+  try{ plan = await api.post('/api/battleflags/plan', body); }
   catch(e){ plan = {error: errText(e)}; }
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
@@ -191,7 +195,7 @@ async function bnxSave(){
     + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')
     + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
   let res;
-  try{ res = await api.post('/api/banners/apply', body); }
+  try{ res = await api.post('/api/battleflags/apply', body); }
   catch(e){ res = {error: errText(e)}; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
   toast('Saved. 🕑 Log can undo it.');

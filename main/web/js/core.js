@@ -75,7 +75,8 @@ function uiLoadFailed(lost){
   main.innerHTML=`<div class="empty">The tool did not finish loading.<br>
     <span class="count">The server is running - it answered for the rest of this page -
     but the browser never received ${names?`<b>${esc(names)}</b>`:'part of the interface'}.
-    Reloading fetches it again.</span><br><br>
+    Reloading fetches it again. If it fails every time, an ad blocker or
+    privacy extension is the usual cause: turn it off for 127.0.0.1.</span><br><br>
     <button class="primary" onclick="location.reload()">Reload the page</button></div>`;
 }
 

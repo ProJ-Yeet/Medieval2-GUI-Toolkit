@@ -2258,7 +2258,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._err(404, "unknown mod")
                 m = heroabilities if u.path == "/api/heroabilities" else areaeffects
                 return self._json(m.overview(self.registry.get(name)))
-            if u.path == "/api/banners":
+            if u.path == "/api/battleflags":
                 # 65. descr_banners_new.xml, read whole
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
@@ -2740,7 +2740,7 @@ class Handler(BaseHTTPRequestHandler):
                 out.update(m.apply(plan))
                 self.registry.invalidate(body["mod"])
                 return self._json(out)
-            if u.path in ("/api/banners/plan", "/api/banners/apply"):
+            if u.path in ("/api/battleflags/plan", "/api/battleflags/apply"):
                 try:
                     mod = self.registry.get(body["mod"])
                 except (KeyError, OSError) as e:

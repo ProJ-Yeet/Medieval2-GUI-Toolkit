@@ -524,5 +524,19 @@ from unittransfer import mapcheck                                    # noqa: E40
 check("the Rules sub-tab's title counts the rules there really are",
       f"'The {len(mapcheck.RULES)} rules, their severity" in campmap_js)
 
+print("\n== nothing an ad blocker would drop ==")
+# A browser extension's filter list blocks a request whose URL looks like an ad
+# before it ever reaches the server. That is how banners.js stopped a user's
+# whole UI loading. Script names and /api routes stay off those words.
+BAIT = re.compile(r"(?<![a-z])(banners?|ads?|adverts?|popups?|sponsors?|tracking|analytics)(?![a-z])",
+                  re.I)
+bait_js = [p.name for p in JS.glob("*.js") if BAIT.search(p.stem)]
+check("no web/js file is named like an ad", not bait_js)
+server_py = (ROOT / "unittransfer" / "server.py").read_text(encoding="utf-8")
+bait_api = sorted({r for r in re.findall(r'"(/api/[\w/.-]+)"', server_py) if BAIT.search(r)})
+check("and no /api route is either", not bait_api)
+if bait_js or bait_api:
+    print("     ", bait_js + bait_api)
+
 print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)
