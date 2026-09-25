@@ -373,6 +373,10 @@ show the unsaved map rather than the one on disk.
   POST /api/osm/historic         -> 87f. historic sites (his 21 tags) over the map's
                                     box, each with its tile, and historic_features.txt;
                                     or, given a box and no mod, over that box alone
+  GET  /api/osm/chunks?mod=       -> 87g. every Overpass fetch kept for the map's box,
+                                    its chunks numbered, which failed and what each found
+  POST /api/osm/refetch          -> 87g. one chunk of a kept fetch asked again alone,
+                                    what it finds merged in: {kind, key, n}
   POST /api/map/osm_coast|osm_boundary|osm_water
                                  -> the water side made sea, or a place's
                                     boundary painted onto a region: one stroke
@@ -2416,7 +2420,7 @@ class Handler(BaseHTTPRequestHandler):
                 if u.path.endswith("/models"):
                     return self._json({"mod": name, "models": settlemodel.sources(mod)})
                 return self._json(settlemodel.view(mod))
-            if u.path == "/api/osm" or u.path == "/api/osm/search":
+            if u.path in ("/api/osm", "/api/osm/search", "/api/osm/chunks"):
                 return self._json(self._osm_get(u.path, q))
             if u.path == "/api/osm/world":
                 # 87a. The world picker's search: anywhere, no mod, no box
@@ -2860,6 +2864,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._osm_post(u.path.rsplit("/", 1)[-1], body))
             if u.path == "/api/osm/historic":
                 return self._json(self._osm_historic(body))
+            if u.path == "/api/osm/refetch":
+                try:
+                    return self._json(osmmap.refetch(body.get("kind"), body.get("key"),
+                                                     body.get("n")))
+                except (OSError, ValueError) as e:
+                    return self._json({"error": str(e)})
             if u.path in ("/api/edbimport/plan", "/api/edbimport/apply"):
                 return self._json(self._edbimport(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/campimport/plan", "/api/campimport/apply"):
@@ -3911,6 +3921,9 @@ class Handler(BaseHTTPRequestHandler):
                     return {"error": "give the map its real-world box first"}
                 proj = osmmap.Projection(box, cm.terrain.width, cm.terrain.height)
                 return {"results": osmmap.search(box, proj, (q.get("q") or [""])[0])}
+            if path == "/api/osm/chunks":
+                # 87g: read off disk only; nothing is sent
+                return {"fetches": osmmap.fetches_for(box) if box else []}
         except (KeyError, campmap.MapError, ModDataError, OSError, ValueError) as e:
             return {"error": str(e)}
         s = osmmap.settings()

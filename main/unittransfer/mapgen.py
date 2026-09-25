@@ -47,10 +47,7 @@ it is; *the whole map* is a choice, and the plan says what it leaves behind.
 """
 from __future__ import annotations
 
-import gzip
-import hashlib
 import io
-import json
 import math
 import time
 from dataclasses import dataclass, field
@@ -562,55 +559,43 @@ def _plan_climates(p: GenPlan, cm, body: dict) -> None:
 # rivers, cliffs and volcanoes, from OpenStreetMap
 
 
+def _ask_features(meta: dict, c) -> dict:
+    """One chunk's waterways, cliffs and volcanoes, each keyed by what it is
+    and its OSM id, so a chunk asked again (87g) merges."""
+    bb = f"({c.south},{c.west},{c.north},{c.east})"
+    q = (f"[out:json][timeout:180][maxsize:536870912];("
+         f"way[\"waterway\"~\"^({RIVER_DETAIL[meta['detail']]})$\"]{bb};"
+         f"way[\"natural\"=\"cliff\"]{bb};"
+         f"node[\"natural\"=\"volcano\"]{bb};);out geom;")
+    out = {}
+    for e in osmmap.overpass(q).get("elements", []):
+        tags = e.get("tags") or {}
+        if e.get("type") == "node" and tags.get("natural") == "volcano":
+            out[f"volcano/{e.get('id')}"] = (e["lat"], e["lon"])
+            continue
+        geo = [(round(q["lat"], 6), round(q["lon"], 6))
+               for q in (e.get("geometry") or []) if q]
+        if len(geo) < 2:
+            continue
+        bucket = "cliffs" if tags.get("natural") == "cliff" else "rivers"
+        out[f"{bucket}/{e.get('id')}"] = geo
+    return out
+
+
+osmmap.ASKERS["features"] = _ask_features
+
+
 def _osm_features(box, detail: str) -> dict:
-    """The waterways, cliffs and volcanoes in the box, kept on disk by the box."""
-    key = hashlib.sha1(json.dumps([box.payload(), detail], sort_keys=True)
-                       .encode()).hexdigest()[:16]
-    path = config.cache_dir("osm_features") / f"{key}.json.gz"
-    try:
-        if path.is_file():
-            return json.loads(gzip.decompress(path.read_bytes()).decode("utf-8"))
-    except (OSError, ValueError):
-        pass
-    osmmap.require_on()
+    """The waterways, cliffs and volcanoes in the box, kept on disk by the box
+    (87g's chunked fetch, so a chunk that failed can be asked again alone)."""
+    got = osmmap.chunked("features", box, {"detail": detail}, "rivers, cliffs and volcanoes")
     out = {"rivers": {}, "cliffs": {}, "volcanoes": []}
-
-    def one(c):
-        bb = f"({c.south},{c.west},{c.north},{c.east})"
-        q = (f"[out:json][timeout:180][maxsize:536870912];("
-             f"way[\"waterway\"~\"^({RIVER_DETAIL[detail]})$\"]{bb};"
-             f"way[\"natural\"=\"cliff\"]{bb};"
-             f"node[\"natural\"=\"volcano\"]{bb};);out geom;")
-        try:
-            data = osmmap.overpass(q)
-        except osmmap.OsmError:
-            if (c.north - c.south) / 2 < osmmap.CHUNK_MIN:
-                raise
-            mlat, mlon = (c.north + c.south) / 2, (c.east + c.west) / 2
-            for part in (osmmap.Bbox(c.north, mlat, c.west, mlon),
-                         osmmap.Bbox(c.north, mlat, mlon, c.east),
-                         osmmap.Bbox(mlat, c.south, c.west, mlon),
-                         osmmap.Bbox(mlat, c.south, mlon, c.east)):
-                one(part)
-            return
-        for e in data.get("elements", []):
-            tags = e.get("tags") or {}
-            if e.get("type") == "node" and tags.get("natural") == "volcano":
-                out["volcanoes"].append((e["lat"], e["lon"]))
-                continue
-            geo = [(round(q["lat"], 6), round(q["lon"], 6))
-                   for q in (e.get("geometry") or []) if q]
-            if len(geo) < 2:
-                continue
-            bucket = "cliffs" if tags.get("natural") == "cliff" else "rivers"
-            out[bucket][str(e["id"])] = geo
-
-    for c in osmmap._chunks(box, osmmap.CHUNK_DEG):
-        one(c)
-    try:
-        path.write_bytes(gzip.compress(json.dumps(out).encode("utf-8")))
-    except OSError:
-        pass
+    for k, v in got.items():
+        bucket, _, oid = k.partition("/")
+        if bucket == "volcano":
+            out["volcanoes"].append(tuple(v))
+        else:
+            out[bucket][oid] = v
     return out
 
 

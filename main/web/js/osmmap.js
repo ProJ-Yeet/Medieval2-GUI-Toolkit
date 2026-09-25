@@ -38,6 +38,7 @@ function osmNew(mod){
           water: null, wkinds: {sea: true, lagoon: false, lake: false}, wmin: 16,
           style: 'osm', year: 1200, picW: 2048,
           htags: null, hist: null, hq: '', hshow: true, hpick: -1,
+          chunks: null, cpick: 0, cshow: true,
           q: '', results: null, target: '', job: '', pct: 0, label: ''};
 }
 
@@ -66,6 +67,7 @@ async function osmLoad(){
     else { k.st = r; k.box = r.box ? Object.assign({}, r.box) : null; }
   }catch(e){ if(state.osm === k) k.err = errText(e); }
   finally{ if(state.osm === k){ k.busy = false; osmPaint(); cmapPaint(); } }
+  if(state.osm === k && k.st && k.box) osmChunksLoad(false);
 }
 
 const osmOn = () => !!(state.osm && state.osm.st && state.osm.st.settings.enabled);
@@ -208,6 +210,33 @@ function osmDraw(x, s0, t0, s1, t1){
     x.restore();
   }
   if(k.hshow && k.hist) osmDrawSites(x, s0, t0, s1, t1);
+  if(k.cshow && k.chunks && k.chunks[k.cpick]) osmDrawChunks(x);
+}
+
+//: 87g: the chunks of the fetch picked, each its box on the map (turned with
+//: the map), numbered at its middle; a failed one filled red
+function osmDrawChunks(x){
+  const k = state.osm, c = state.cmap, f = k.chunks[k.cpick];
+  const W = c.man.width, H = c.man.height, b = k.box;
+  x.save();
+  x.lineWidth = 1.5;
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = 'bold 13px sans-serif';
+  for(const ch of f.chunks){
+    const pts = [[ch.north, ch.west], [ch.north, ch.east], [ch.south, ch.east], [ch.south, ch.west]]
+      .map(([la, lo]) => { const [fx, fy] = osmToTile(b, W, H, la, lo); return [cmapX(fx + 0.5), cmapY(fy + 0.5)]; });
+    x.beginPath();
+    pts.forEach(([px, py], i) => i ? x.lineTo(px, py) : x.moveTo(px, py));
+    x.closePath();
+    if(!ch.ok){ x.fillStyle = 'rgba(255,40,40,0.28)'; x.fill(); }
+    x.strokeStyle = ch.ok ? 'rgba(40,120,255,0.85)' : 'rgba(255,40,40,0.95)';
+    x.stroke();
+    const mx = pts.reduce((a, p) => a + p[0], 0) / 4, my = pts.reduce((a, p) => a + p[1], 0) / 4;
+    x.lineWidth = 3; x.strokeStyle = '#000'; x.strokeText(String(ch.n), mx, my);
+    x.fillStyle = ch.ok ? '#fff' : '#ff6b6b'; x.fillText(String(ch.n), mx, my);
+    x.lineWidth = 1.5;
+  }
+  x.restore();
 }
 
 //: 87f: each historic site a square in its tag's colour on the tile it names,
@@ -388,9 +417,10 @@ async function osmBoxPost(body){
   if(r.error){ toast('✗ ' + r.error, 7000); return; }
   k.st.box = r.box; k.st.box_from = r.box_from; k.st.file = r.file; k.st.shape = r.shape;
   k.box = r.box ? Object.assign({}, r.box) : null;
-  k.coast = null; k.water = null; k.over = null;
+  k.coast = null; k.water = null; k.over = null; k.hist = null; k.chunks = null; k.cpick = 0;
   osmPaint(); cmapPaint();
   toast(r.box ? 'Box kept for this map.' : 'Box cleared.');
+  if(r.box) osmChunksLoad(false);
 }
 
 async function osmBoxFile(input){
@@ -432,6 +462,7 @@ async function osmCoast(){
   k.coast = r.coast;
   osmBuildOver();
   osmPaint(); cmapPaint();
+  osmChunksLoad(true);
 }
 
 async function osmCoastApply(){
@@ -480,6 +511,7 @@ async function osmWater(){
   k.water = r.water;
   osmBuildOver();
   osmPaint(); cmapPaint();
+  osmChunksLoad(true);
 }
 
 async function osmWaterApply(){
@@ -619,6 +651,7 @@ async function osmHist(){
   if(r.error){ k.err = r.error; osmPaint(); return; }
   k.hist = r; k.hpick = -1;
   osmPaint(); cmapPaint();
+  osmChunksLoad(true);
 }
 
 //: The sites the list shows: on the map, matching the filter, in tag order
@@ -715,6 +748,95 @@ function osmHistHtml(){
           ${act(i, s, 'fort', '▣ Fort here')}${act(i, s, 'watchtower', '△ Watchtower here')}
           ${act(i, s, 'settlement', 'New region here')}</div></div>`).join('')}
     ${rows.length > shown.length ? `<div class="count">${rows.length - shown.length} more: narrow them with the filter.</div>` : ''}`;
+}
+
+/* ---------- the Overpass chunks (87g) ---------- */
+
+//: The fetches kept for this box, off disk (nothing is sent). After a fetch,
+//: `fresh` says so when some of its chunks failed.
+async function osmChunksLoad(fresh){
+  const k = state.osm, c = state.cmap;
+  if(!k || !c) return;
+  let r;
+  try{ r = await api.get(`/api/osm/chunks?mod=${enc(c.mod)}`); }
+  catch(e){ return; }
+  if(state.osm !== k || !r || r.error) return;
+  k.chunks = r.fetches || [];
+  // the newest fetch shows; one with a failed chunk before one without
+  const bad = k.chunks.findIndex(f => f.failed);
+  k.cpick = fresh && bad >= 0 ? bad : Math.min(k.cpick, Math.max(0, k.chunks.length - 1));
+  if(fresh && k.chunks[0] && k.chunks[0].failed)
+    toast(`${k.chunks[0].failed} of ${k.chunks[0].chunks.length} chunks of the ${k.chunks[0].label} `
+          + 'fetch got no answer. They are red on the map; Overpass chunks fetches them again.', 9000);
+  osmPaint(); cmapPaint();
+}
+
+function osmChunkPickFetch(i){
+  state.osm.cpick = +i || 0;
+  osmPaint(); cmapPaint();
+}
+
+//: One chunk asked again alone, and what the panel shows fetched again off
+//: disk with it merged in
+async function osmChunkAgain(n){
+  const k = state.osm, f = k.chunks && k.chunks[k.cpick];
+  if(!f || k.busy) return;
+  k.busy = true; k.err = ''; osmPaint();
+  let r;
+  try{ r = await api.post('/api/osm/refetch', {kind: f.kind, key: f.key, n},
+                          {label: `fetching chunk ${n} again`}); }
+  catch(e){ r = {error: errText(e)}; }
+  if(state.osm !== k) return;
+  k.busy = false;
+  if(r.error){ toast('✗ ' + r.error, 8000); osmPaint(); return; }
+  const ch = r.chunks[n - 1];
+  k.chunks[k.cpick] = r;
+  osmPaint(); cmapPaint();
+  if(!ch.ok){ toast(`✗ chunk ${n} failed again: ${ch.error}`, 9000); return; }
+  toast(`Chunk ${n}: ${ch.count} found, ${r.added} new to this fetch.`, 6000);
+  if(!r.added) return;
+  if(f.kind === 'coast' && k.coast) osmCoast();
+  else if(f.kind === 'polygons' && f.label === 'water' && k.water) osmWater();
+  else if(f.kind === 'historic' && k.hist) osmHist();
+  else if(f.kind !== 'coast' && f.kind !== 'historic' && f.label !== 'water')
+    toast(`Chunk ${n}: ${r.added} new. Plan it again on Generate to use them.`, 7000);
+}
+
+//: The pin's answer: the chunk under the clicked tile, a failed one first
+function osmChunkPicked(game, tile){
+  const k = state.osm, c = state.cmap, f = k.chunks && k.chunks[k.cpick];
+  if(!f || !osmBoxOk(k.box)) return;
+  const [lat, lon] = osmToGeo(k.box, c.man.width, c.man.height, tile[0], tile[1]);
+  const inside = f.chunks.filter(ch => ch.south <= lat && lat <= ch.north && ch.west <= lon && lon <= ch.east);
+  const ch = inside.find(x => !x.ok) || inside[0];
+  if(!ch){ toast('No chunk of that fetch covers that tile.', 5000); return; }
+  osmChunkAgain(ch.n);
+}
+
+function osmChunksHtml(){
+  const k = state.osm, fs = k.chunks || [];
+  if(!fs.length) return `<div class="count">Nothing fetched from Overpass for this box yet. The coastline,
+    the water, the historic sites and the Generate tab’s land use and rivers each ask it in chunks,
+    and each chunk shows here.</div>`;
+  const f = fs[Math.min(k.cpick, fs.length - 1)];
+  const when = t => new Date(t * 1000).toLocaleString();
+  const bad = f.chunks.filter(ch => !ch.ok);
+  return `<label style="display:block">Fetch <select onchange="osmChunkPickFetch(this.value)">${fs.map((x, i) =>
+      `<option value="${i}" ${i === k.cpick ? 'selected' : ''}>${esc(x.label)} · ${x.chunks.length} chunks${x.failed
+        ? ` · ${x.failed} failed` : ''}</option>`).join('')}</select></label>
+    <div class="count">${f.chunks.length} chunks, ${f.found} things found, asked ${esc(when(f.when))}${f.failed
+      ? `. <span class="w-warn">${f.failed} got no answer, so what is inside ${f.failed === 1 ? 'it' : 'them'} is missing.</span>` : '.'}</div>
+    <label class="chk"><input type="checkbox" ${k.cshow ? 'checked' : ''}
+      onchange="state.osm.cshow=this.checked;cmapPaint()"> Show them on the map, numbered (failed ones red)</label>
+    <div class="cmbar2">${typeof cpinButton === 'function' ? cpinButton('a chunk to fetch again', 'osmChunkPicked', []) : ''}
+      <span class="count">or click a chunk on the map to fetch it again</span></div>
+    ${bad.map(ch => `<div class="osmres"><b>Chunk ${ch.n}</b> <span class="count">${ch.south.toFixed(2)} to ${ch.north.toFixed(2)} N,
+        ${ch.west.toFixed(2)} to ${ch.east.toFixed(2)} E</span>
+        <div class="w-bad">${esc(ch.error)}</div>
+        <div class="cmbar2"><button class="primary" onclick="osmChunkAgain(${ch.n})" ${k.busy ? 'disabled' : ''}>↺ Fetch it again</button></div></div>`).join('')}
+    <details><summary class="count">Every chunk</summary>${f.chunks.map(ch => `<div class="brow" style="gap:6px">
+        <span style="min-width:24px">${ch.n}</span><span class="count" style="flex:1">${ch.ok ? `${ch.count} found` : 'failed'}</span>
+        <button onclick="osmChunkAgain(${ch.n})" ${k.busy ? 'disabled' : ''}>↺</button></div>`).join('')}</details>`;
 }
 
 /* ---------- the panel ---------- */
@@ -826,6 +948,8 @@ function osmHtml(){
         the map. An inland lake is sea to the engine, as the Caspian is.</div>
     </div>
     <div class="bsec"><h4>Historic sites</h4>${osmHistHtml()}</div>
+    <div class="bsec"><h4>Overpass chunks ${(k.chunks || []).some(f => f.failed)
+      ? '<span class="w-warn">some failed</span>' : ''}</h4>${osmChunksHtml()}</div>
     <div class="bsec"><h4>Find a place</h4>
       <div class="brow"><input id="osmQ" value="${esc(k.q)}" placeholder="a town, a region, a country"
         onkeydown="if(event.key==='Enter')osmSearch()">

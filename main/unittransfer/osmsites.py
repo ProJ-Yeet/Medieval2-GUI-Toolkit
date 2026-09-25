@@ -14,14 +14,15 @@ where his comment lines have a long dash, and a comment is not read.
 
 **Where it departs from his.**
 
-* One query a chunk for every tag asked, not one a tag, and each tag kept on
-  disk by the box: ticking a twelfth tag asks only for that one.
+* One query a chunk for every tag asked, not one a tag, and each fetch kept on
+  disk by the box and its tags: ticking a twelfth tag asks only for that one.
 * ``out center`` rather than ``out geom``: a castle's point is the middle of
   its outline rather than the mean of its nodes, which is the same tile at any
   scale a campaign map has, and a city wall comes back as one point instead of
   every stone of it. An answer that does carry geometry is still read his way.
-* A chunk that fails is split in four, as the coastline's is, rather than the
-  whole fetch failing.
+* A chunk that fails is split in four, as the coastline's is, and one that
+  still fails is recorded rather than failing the whole fetch; 87g shows it
+  and asks it again alone.
 * **A site becomes a thing on the map**, not only a line in a file: each point
   carries the tile it stands on in the strat's own coordinates (``y`` counted
   from the bottom), so the page can put a fort or a watchtower there through
@@ -31,13 +32,10 @@ where his comment lines have a long dash, and a comment is not read.
 """
 from __future__ import annotations
 
-import gzip
-import hashlib
-import json
 import math
 from typing import Callable, Dict, List, Optional, Sequence
 
-from . import config, osmmap
+from . import osmmap
 from .osmmap import Bbox, OsmError, Projection
 
 #: (key, value, label, what it is, what it suggests on the map). His order.
@@ -132,79 +130,57 @@ def _centre(e: dict) -> Optional[tuple]:
     return (sum(p["lat"] for p in pts) / len(pts), sum(p["lon"] for p in pts) / len(pts))
 
 
-def _chunk(c: Bbox, tags: Sequence[str], out: Dict[str, Dict[str, dict]],
-           progress: Callable[[str], None]) -> None:
+def _ask(meta: dict, c: Bbox) -> Dict[str, dict]:
+    """One chunk, every tag of the fetch in one query: each element once, with
+    the tags it answers to."""
+    tags = meta["tags"]
     bb = f"({c.south},{c.west},{c.north},{c.east})"
     body = "".join(f'nwr["{BY_KEY[t][0]}"="{BY_KEY[t][1]}"]{bb};' for t in tags)
-    try:
-        data = osmmap.overpass(f"{HEAD}({body});out center tags;")
-    except OsmError:
-        if (c.north - c.south) / 2 < osmmap.CHUNK_MIN:
-            raise
-        progress("splitting a crowded stretch in four")
-        midlat, midlon = (c.north + c.south) / 2, (c.east + c.west) / 2
-        for part in (Bbox(c.north, midlat, c.west, midlon),
-                     Bbox(c.north, midlat, midlon, c.east),
-                     Bbox(midlat, c.south, c.west, midlon),
-                     Bbox(midlat, c.south, midlon, c.east)):
-            _chunk(part, tags, out, progress)
-        return
-    for e in data.get("elements", []):
+    out: Dict[str, dict] = {}
+    for e in osmmap.overpass(f"{HEAD}({body});out center tags;").get("elements", []):
         at = _centre(e)
         if at is None:
             continue
         et = e.get("tags") or {}
-        key = f"{e.get('type')}/{e.get('id')}"
-        for t in tags:
-            k, v = BY_KEY[t][:2]
-            if et.get(k) == v and key not in out[t]:
-                out[t][key] = {"id": key, "lat": round(at[0], 6), "lon": round(at[1], 6),
-                               "name": et.get("name") or et.get("name:en") or ""}
+        hit = [t for t in tags if et.get(BY_KEY[t][0]) == BY_KEY[t][1]]
+        if hit:
+            key = f"{e.get('type')}/{e.get('id')}"
+            out[key] = {"id": key, "lat": round(at[0], 6), "lon": round(at[1], 6),
+                        "name": et.get("name") or et.get("name:en") or "", "tags": hit}
+    return out
 
 
-def _cache_path(b: Bbox, tag: str):
-    key = hashlib.sha1(json.dumps([b.envelope().payload(), tag]).encode()).hexdigest()[:16]
-    return config.cache_dir("osm_historic") / f"{key}.json.gz"
+osmmap.ASKERS["historic"] = _ask
 
 
 def fetch(b: Bbox, tags: Sequence[str],
           progress: Optional[Callable[[int, str], None]] = None) -> Dict[str, List[dict]]:
     """Every element of each tag over the box: ``{tag: [{id, lat, lon, name}]}``.
 
-    A tag already fetched for this box is read off disk; the rest are asked in
-    one query a chunk, and each kept apart, so the next fetch with one tag
-    more sends only that tag."""
+    A tag an earlier fetch of this box asked for is read off disk with it; the
+    rest are asked together, one query a chunk (87g's chunked fetch, so a chunk
+    that failed can be asked again alone), and kept as one more fetch."""
     tags = pick_tags(tags)
-    got: Dict[str, List[dict]] = {}
-    missing = []
-    for t in tags:
-        try:
-            p = _cache_path(b, t)
-            if p.is_file():
-                got[t] = json.loads(gzip.decompress(p.read_bytes()).decode("utf-8"))
-                continue
-        except (OSError, ValueError):
-            pass
-        missing.append(t)
+    sources: List[dict] = []
+    covered = set()
+    for rec in osmmap.fetches_for(b):
+        mine = [t for t in rec.get("meta", {}).get("tags", []) if t in tags and t not in covered]
+        if rec.get("kind") == "historic" and mine:
+            sources.append(rec["meta"])
+            covered.update(mine)
+    missing = [t for t in tags if t not in covered]
     if missing:
-        osmmap.require_on()
-        parts = osmmap._chunks(b, osmmap.CHUNK_DEG)
-        found: Dict[str, Dict[str, dict]] = {t: {} for t in missing}
-        for n, c in enumerate(parts):
-            pct = int(100 * n / len(parts))
-            if progress:
-                progress(pct, f"historic sites: {n + 1} of {len(parts)} stretches, "
-                              f"{sum(len(v) for v in found.values())} found")
-            _chunk(c, missing, found,
-                   lambda msg: progress and progress(pct, f"historic sites: {msg}"))
-        for t in missing:
-            got[t] = list(found[t].values())
-            try:
-                _cache_path(b, t).write_bytes(
-                    gzip.compress(json.dumps(got[t]).encode("utf-8")))
-            except OSError:
-                pass
-    return {t: got[t] for t in tags}
+        sources.append({"tags": missing})
+    found: Dict[str, List[dict]] = {t: [] for t in tags}
+    seen: Dict[str, set] = {t: set() for t in tags}
+    for meta in sources:
+        items = osmmap.chunked("historic", b, meta, "historic sites", progress)
+        for e in items.values():
+            for t in e.get("tags", []):
+                if t in found and e["id"] not in seen[t]:
+                    seen[t].add(e["id"])
+                    found[t].append({k: e[k] for k in ("id", "lat", "lon", "name")})
+    return found
 
 
 # ---------------------------------------------------------------------------

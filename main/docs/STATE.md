@@ -39,8 +39,15 @@ box written beside the map. It passes the validator on copies of both mods.
 box in one query a chunk, each kept on disk, drawn in his colours, listed; from
 a site, *Fort here* and *Watchtower here* through 22a's form, *New region
 here*, and on the world picker *+ A city here* for 87e. `historic_features.txt`
-in his format. `test_osmsites` (33). **87g is next** (the user: "continue till
-phase g").
+in his format. `test_osmsites` (33).
+**87g is done**: every Overpass fetch (coast, water, land use, rivers, historic)
+goes through `osmmap.chunked`, which records each chunk. A chunk that fails is
+recorded rather than failing the fetch, and one can be fetched again alone, its
+finds merged. The Real world tab shows the chunks numbered on the map, failed
+ones red, fetched again from the list or by a click on the map.
+`test_osmchunks` (27). The caches moved to `osm_fetch`, so an old box is fetched
+once more. **Paused after 87g on the user's word ("continue till phase g");
+87h, the bundle, is next.**
 
 **Phase 80a is done - every animation a model has, in the Models viewer,
 2026-09-25, committed and uncut.** `unittransfer/animview.py`: the viewer's

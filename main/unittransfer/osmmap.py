@@ -713,29 +713,173 @@ def _chunks(b: Bbox, size: float) -> List[Bbox]:
     return out
 
 
-def _coast_chunk(c: Bbox, ways: Dict[int, list],
-                 progress: Callable[[str], None]) -> None:
-    q = (f"[out:json][timeout:180][maxsize:536870912];"
-         f"way[\"natural\"=\"coastline\"]({c.south},{c.west},{c.north},{c.east});"
-         f"out geom;")
+# ---------------------------------------------------------------------------
+# 87g: every Overpass fetch in chunks, and every chunk recorded
+#
+# Mylae's fetchers split a large area into tiles and let one be fetched again
+# by a click on it. Here every fetch that asks Overpass (the coastline, water
+# and land use, 27's rivers, 87f's historic sites) goes through ``chunked``:
+# the box is cut into chunks, a chunk that fails is split in four down to
+# ``CHUNK_MIN``, and one that still fails is recorded as failed rather than
+# failing the whole fetch. What each chunk found is kept on disk with the
+# record, beside it, so one chunk can be asked again alone
+# (:func:`refetch`) and what it brings merged in.
+
+FETCH_DIR = "osm_fetch"
+
+#: kind -> ask(meta, chunk) -> {key: item}. The kinds outside this module
+#: (``features``, ``historic``) register themselves when imported.
+ASKERS: Dict[str, Callable[[dict, Bbox], Dict[str, object]]] = {}
+
+
+def _askers() -> Dict[str, Callable]:
+    from . import mapgen, osmsites  # noqa: F401  (each registers its kind)
+    return ASKERS
+
+
+def fetch_key(kind: str, b: Bbox, meta: dict) -> str:
+    return hashlib.sha1(json.dumps([kind, b.envelope().payload(), meta],
+                                   sort_keys=True).encode()).hexdigest()[:16]
+
+
+def _fetch_paths(kind: str, key: str) -> Tuple[Path, Path]:
+    d = config.cache_dir(FETCH_DIR)
+    return d / f"{kind}-{key}.json.gz", d / f"{kind}-{key}.chunks.json"
+
+
+def _chunk_rec(c: Bbox, ok: bool, count: int = 0, error: str = "") -> dict:
+    return {"south": c.south, "west": c.west, "north": c.north, "east": c.east,
+            "ok": ok, "count": count, "error": error}
+
+
+def _ask_chunk(ask, meta: dict, c: Bbox, items: Dict[str, object], chunks: List[dict],
+               say: Callable[[str], None], split: bool = True) -> None:
     try:
-        data = overpass(q)
-    except OsmError:
-        if (c.north - c.south) / 2 < CHUNK_MIN:
-            raise
-        progress("splitting a dense stretch of coast")
+        got = ask(meta, c)
+    except OsmOff:
+        raise
+    except OsmError as e:
+        if not split or (c.north - c.south) / 2 < CHUNK_MIN:
+            chunks.append(_chunk_rec(c, False, error=str(e)))
+            return
+        say("splitting a crowded stretch in four")
         midlat, midlon = (c.north + c.south) / 2, (c.east + c.west) / 2
         for part in (Bbox(c.north, midlat, c.west, midlon),
                      Bbox(c.north, midlat, midlon, c.east),
                      Bbox(midlat, c.south, c.west, midlon),
                      Bbox(midlat, c.south, midlon, c.east)):
-            _coast_chunk(part, ways, progress)
+            _ask_chunk(ask, meta, part, items, chunks, say)
         return
-    for e in data.get("elements", []):
+    for k, v in got.items():
+        items.setdefault(k, v)
+    chunks.append(_chunk_rec(c, True, len(got)))
+
+
+def _read_fetch(kind: str, key: str) -> Tuple[Optional[dict], Optional[dict]]:
+    data, side = _fetch_paths(kind, key)
+    try:
+        rec = json.loads(side.read_text(encoding="utf-8"))
+        items = json.loads(gzip.decompress(data.read_bytes()).decode("utf-8"))
+        return rec, items
+    except (OSError, ValueError):
+        return None, None
+
+
+def _write_fetch(rec: dict, items: dict) -> None:
+    for n, ch in enumerate(rec["chunks"], 1):
+        ch["n"] = n
+    rec["failed"] = sum(1 for ch in rec["chunks"] if not ch["ok"])
+    rec["found"] = len(items)
+    data, side = _fetch_paths(rec["kind"], rec["key"])
+    try:
+        data.write_bytes(gzip.compress(json.dumps(items).encode("utf-8")))
+        side.write_text(json.dumps(rec), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def chunked(kind: str, b: Bbox, meta: dict, label: str,
+            progress: Optional[Callable[[int, str], None]] = None) -> Dict[str, object]:
+    """Everything one kind of Overpass question finds over the box, keyed so
+    a chunk asked again merges: ``{key: item}``.
+
+    Read off disk when this box has been asked before (failed chunks and all:
+    those are fetched again by :func:`refetch`, not by asking the whole box).
+    Refused only when no chunk answered at all, and then nothing is kept."""
+    key = fetch_key(kind, b, meta)
+    rec, items = _read_fetch(kind, key)
+    if rec is not None:
+        return items
+    require_on()
+    ask = _askers()[kind]
+    parts = _chunks(b, CHUNK_DEG)
+    items, chunks = {}, []
+    for n, c in enumerate(parts):
+        pct = int(100 * n / len(parts))
+        if progress:
+            progress(pct, f"{label}: {n + 1} of {len(parts)} stretches, {len(items)} found")
+        _ask_chunk(ask, meta, c, items, chunks,
+                   lambda msg: progress and progress(pct, f"{label}: {msg}"))
+    if chunks and not any(ch["ok"] for ch in chunks):
+        raise OsmError(chunks[-1]["error"])
+    rec = {"kind": kind, "key": key, "label": label, "meta": meta,
+           "box": b.envelope().payload(), "when": time.time(), "chunks": chunks}
+    _write_fetch(rec, items)
+    return items
+
+
+def fetches_for(b: Bbox) -> List[dict]:
+    """Every fetch kept for this box, newest first: what it asked, its chunks
+    numbered, which failed and how many things each found."""
+    env = b.envelope().payload()
+    out = []
+    for side in config.cache_dir(FETCH_DIR).glob("*.chunks.json"):
+        try:
+            rec = json.loads(side.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if rec.get("box") == env:
+            out.append(rec)
+    out.sort(key=lambda r: -float(r.get("when") or 0))
+    return out
+
+
+def refetch(kind: str, key: str, n: int) -> dict:
+    """Chunk ``n`` of one kept fetch asked again, alone, and what it finds
+    merged into what was kept. The record comes back as it now stands."""
+    rec, items = _read_fetch(str(kind), str(key))
+    if rec is None:
+        raise OsmError("that fetch is no longer kept: fetch it again from its panel")
+    try:
+        n = int(n)
+        ch = rec["chunks"][n - 1]
+        if n < 1:
+            raise IndexError
+    except (TypeError, ValueError, IndexError):
+        raise OsmError(f"there is no chunk {n} in that fetch") from None
+    require_on()
+    c = Bbox(ch["north"], ch["south"], ch["west"], ch["east"])
+    before = len(items)
+    got: List[dict] = []
+    _ask_chunk(_askers()[rec["kind"]], rec["meta"], c, items, got, lambda m: None,
+               split=False)
+    rec["chunks"][n - 1] = got[0]
+    rec["when_chunk"] = time.time()
+    _write_fetch(rec, items)
+    return dict(rec, added=len(items) - before, chunk=n)
+
+
+def _ask_coast(meta: dict, c: Bbox) -> Dict[str, list]:
+    q = (f"[out:json][timeout:180][maxsize:536870912];"
+         f"way[\"natural\"=\"coastline\"]({c.south},{c.west},{c.north},{c.east});"
+         f"out geom;")
+    out = {}
+    for e in overpass(q).get("elements", []):
         geo = e.get("geometry") or []
-        if e.get("type") == "way" and len(geo) > 1 and e.get("id") not in ways:
-            ways[e["id"]] = [(round(p["lat"], 6), round(p["lon"], 6))
-                             for p in geo if p]
+        if e.get("type") == "way" and len(geo) > 1:
+            out[str(e.get("id"))] = [(round(p["lat"], 6), round(p["lon"], 6))
+                                     for p in geo if p]
+    return out
 
 
 def coastline(b: Bbox, progress: Optional[Callable[[int, str], None]] = None
@@ -746,28 +890,7 @@ def coastline(b: Bbox, progress: Optional[Callable[[int, str], None]] = None
     the same map sends nothing. Each way keeps its own direction: that is what
     says which side is water.
     """
-    key = hashlib.sha1(json.dumps(b.payload(), sort_keys=True).encode()).hexdigest()[:16]
-    path = config.cache_dir("osm_coast") / f"{key}.json.gz"
-    try:
-        if path.is_file():
-            return json.loads(gzip.decompress(path.read_bytes()).decode("utf-8"))
-    except (OSError, ValueError):
-        pass
-    require_on()
-    parts = _chunks(b, CHUNK_DEG)
-    ways: Dict[int, list] = {}
-    for n, c in enumerate(parts):
-        if progress:
-            progress(int(100 * n / len(parts)),
-                     f"coastline: {n + 1} of {len(parts)} stretches, {len(ways)} ways")
-        _coast_chunk(c, ways, (lambda msg: progress and progress(
-            int(100 * n / len(parts)), msg)))
-    out = [w for w in ways.values()]
-    try:
-        path.write_bytes(gzip.compress(json.dumps(out).encode("utf-8")))
-    except OSError:
-        pass
-    return out
+    return list(chunked("coast", b, {}, "coastline", progress).values())
 
 
 def _collapse(proj: Projection, way) -> List[Tuple[float, float]]:
@@ -945,21 +1068,11 @@ def rings(ways: List[List[Tuple[float, float]]]) -> List[List[Tuple[float, float
     return out
 
 
-def _poly_chunk(c: Bbox, filters: List[str], out: Dict[str, dict], head: str) -> None:
+def _ask_polygons(meta: dict, c: Bbox) -> Dict[str, dict]:
     bb = f"({c.south},{c.west},{c.north},{c.east})"
-    body = "".join(f"{t}{f}{bb};" for f in filters for t in ("way", "relation"))
-    try:
-        data = overpass(f"{head}({body});out geom;")
-    except OsmError:
-        if (c.north - c.south) / 2 < CHUNK_MIN:
-            raise
-        midlat, midlon = (c.north + c.south) / 2, (c.east + c.west) / 2
-        for part in (Bbox(c.north, midlat, c.west, midlon),
-                     Bbox(c.north, midlat, midlon, c.east),
-                     Bbox(midlat, c.south, c.west, midlon),
-                     Bbox(midlat, c.south, midlon, c.east)):
-            _poly_chunk(part, filters, out, head)
-        return
+    body = "".join(f"{t}{f}{bb};" for f in meta["filters"] for t in ("way", "relation"))
+    data = overpass(f"{meta['head']}({body});out geom;")
+    out: Dict[str, dict] = {}
     for e in data.get("elements", []):
         key = f"{e.get('type')}/{e.get('id')}"
         if key in out:
@@ -981,6 +1094,7 @@ def _poly_chunk(c: Bbox, filters: List[str], out: Dict[str, dict], head: str) ->
             if not outer:            # Mylae's fallback: every member way
                 outer, inner = [pts(m.get("geometry")) for m in members], []
             out[key] = {"tags": tags, "outer": rings(outer), "inner": rings(inner)}
+    return out
 
 
 def polygons(b: Bbox, filters: List[str], what: str = "polygons",
@@ -991,28 +1105,11 @@ def polygons(b: Bbox, filters: List[str], what: str = "polygons",
     each ring ``(lat, lon)``, a relation's member ways joined into rings.
     Asked a chunk at a time, a chunk that fails split in four, and kept on
     disk by the box and the filters, so a second look sends nothing."""
-    key = hashlib.sha1(json.dumps([b.envelope().payload(), sorted(filters)])
-                       .encode()).hexdigest()[:16]
-    path = config.cache_dir("osm_polygons") / f"{key}.json.gz"
-    try:
-        if path.is_file():
-            return json.loads(gzip.decompress(path.read_bytes()).decode("utf-8"))
-    except (OSError, ValueError):
-        pass
-    require_on()
-    parts = _chunks(b, CHUNK_DEG)
-    found: Dict[str, dict] = {}
-    for n, c in enumerate(parts):
-        if progress:
-            progress(int(100 * n / len(parts)),
-                     f"{what}: {n + 1} of {len(parts)} stretches, {len(found)} found")
-        _poly_chunk(c, filters, found, head)
-    out = list(found.values())
-    try:
-        path.write_bytes(gzip.compress(json.dumps(out).encode("utf-8")))
-    except OSError:
-        pass
-    return out
+    return list(chunked("polygons", b, {"filters": sorted(filters), "head": head},
+                        what, progress).values())
+
+
+ASKERS.update(coast=_ask_coast, polygons=_ask_polygons)
 
 
 def water(b: Bbox, kinds: List[str],

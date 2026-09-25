@@ -10522,3 +10522,61 @@ box, an unknown tag, the switch off. Checked in the app on ROCSS with a sample
 result held in the page, not fetched: the section, the squares drawn in their
 tags' colours, *Fort here* opening the Forts panel with the fort planned on the
 site's tile (not saved), and a site made a city on the world picker.
+
+### 87g - the Overpass chunks shown - DONE 2026-09-25
+
+Mylae's fetchers split a large area into tiles and let one be fetched again by
+a click on it. Before this, ours split a chunk that failed in four and said
+nothing, and a chunk that still failed at the smallest size failed the whole
+fetch. Now every fetch that asks Overpass goes through one fetcher,
+`osmmap.chunked`: the coastline (25), the lakes, lagoons and seas (87c), the
+land use (87d), the rivers, cliffs and volcanoes (27) and the historic sites
+(87f).
+
+**What it does.** The box is cut into chunks as before, and a chunk that fails
+is split in four down to `CHUNK_MIN`. A chunk that still fails is **recorded as
+failed and the fetch carries on**. What the rest found is kept, so a stretch
+that never answers costs only that stretch. A fetch where nothing answered at
+all is refused as before, and nothing of it is kept. What every chunk found is
+kept on disk under a key that says what it is (`way/123`, `rivers/456`), with
+a small record beside it: the chunks numbered in the order they were asked,
+each chunk's box, whether it answered, how many things it found and, if it
+failed, why. `refetch` asks one chunk again alone (one query, that chunk's
+own box, not split) and merges what it finds, so the next look at the
+coastline or the water has it with nothing sent. A chunk that fails again
+stays failed and nothing kept is lost. Each module that asks Overpass
+registers its own question with `osmmap.ASKERS`, so the chunk it asks again
+is the same question as the first time.
+
+**The page.** An *Overpass chunks* section on the Real world tab lists every
+fetch kept for this box (read off disk, nothing sent), newest first. Its
+heading says when some failed, and a toast says so as soon as a fetch comes
+back short. The fetch picked is drawn on the map, turned with the map: every
+chunk numbered at its middle, answered chunks outlined in blue and failed ones
+filled red. A failed chunk can be fetched again from its button in the list,
+from the list of every chunk, or by clicking it on the map with 20c's pin.
+After a chunk is fetched again, the coastline, the water or the sites shown on
+the panel are worked out again from disk. A fetch made from the Generate tab
+says to plan it again there.
+
+**The caches moved.** The coastline, polygon and river caches were kept whole
+under `osm_coast`, `osm_polygons` and `osm_features`. They now live under
+`osm_fetch`, keyed by what was asked, so a box fetched before this change is
+fetched once more the first time it is looked at again. 87f's historic sites
+went onto the fetcher too: a fetch reuses any earlier fetch of the box that
+covers a tag, and asks for the rest together.
+
+Tests: `test_osmchunks` (27) against a fake Overpass that never answers for
+one stretch while switched on: the coastline kept without that stretch, one
+chunk recorded failed (the smallest one round the bad point) with its reason,
+chunks numbered, counts, a second look sending nothing, a fetch where nothing
+answered refused and not kept; **the failed chunk fetched again alone (one
+query, for its own box) and merged, the next look whole with nothing sent**; a
+chunk that fails again leaving everything as it was; bad chunk numbers and a
+fetch no longer kept refused; the same for the water, the rivers and the
+historic sites; the two routes, and nothing sent while switched off.
+`test_osmmap` (83), `test_osmsites` (33), `test_mapreal` (32), `test_mapgen`
+(39) and `test_mapnewreal` (41) pass unchanged. Checked in the app on ROCSS
+with a sample record held in the page: the section, the chunks drawn numbered
+with the failed one red, and a click on the map through the pin finding that
+chunk and asking the server for it.

@@ -431,7 +431,7 @@ It stays recorded rather than rediscovered.
 | 84 | Keep a ported mod rebuildable: loose `.cas` and `descr_skeleton.txt` for what was ported | - | M | both |
 | 85 | Pack housekeeping: duplicates, orphans, and a compacted pack | - | M | both |
 | 86 | Animations on their own: a skeleton or one animation from another mod, and an edit saved into the pack | - | M | both |
-| 87 | The real world, whole: the rest of Mylae's New Map Editor (world picker, rotation, reference maps, water, land cover, Köppen, historic sites, a new campaign from the real world, the bundle) | - | L, split 87a-87h | beta - **87a-87f done 2026-09-25** |
+| 87 | The real world, whole: the rest of Mylae's New Map Editor (world picker, rotation, reference maps, water, land cover, Köppen, historic sites, a new campaign from the real world, the bundle) | - | L, split 87a-87h | beta - **87a-87g done 2026-09-25** |
 | 88 | Every major language: the interface translated, with each language's correct technical terms (a termbase, right-to-left, CJK) | - | L, split 88a-88f | both |
 
 Releasing stays on request: each phase is committed to master as it lands.
@@ -918,6 +918,7 @@ becomes a fort on the tile it names.
 use, rivers, historic) records its chunks; the map can show them numbered,
 failed ones red, and fetch one again by a click. Done when: a chunk that failed
 on the fake server is fetched again alone and the result merges.
+**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
 
 **87h - the bundle.** *Export the map bundle*: the ten layers as TGAs,
 `bbox_coords.txt` (with the rotation), `map_regions.txt` (his columns: name,
