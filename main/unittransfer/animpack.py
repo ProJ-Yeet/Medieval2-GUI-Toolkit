@@ -558,6 +558,38 @@ def for_data(data_dir) -> Optional[Packs]:
     return packs if (packs.anims or packs.skels) else None
 
 
+class KnownSkeletons:
+    """The skeleton names a mod can play, looked up case-blind. ``source`` is
+    ``"pack"`` when they are its own ``skeletons.idx`` (the packs are the
+    truth), ``"modeldb"`` when it has no pack and they are every body and
+    weapon skeleton its modeldb already names."""
+
+    def __init__(self, names: Iterable[str], source: str):
+        self.source = source
+        self._names = {_key(n) for n in names if n}
+
+    def __contains__(self, name) -> bool:
+        return bool(name) and _key(name) in self._names
+
+    def __len__(self) -> int:
+        return len(self._names)
+
+    @property
+    def where(self) -> str:
+        return "skeleton pack" if self.source == "pack" else "modeldb"
+
+
+def known_skeletons(data_dir, modeldb=None) -> KnownSkeletons:
+    """What a transfer holds a model's skeletons against (Phase 79)."""
+    packs = for_data(data_dir)
+    if packs is not None and packs.skels is not None:
+        return KnownSkeletons((e.name for e in packs.skels.entries), "pack")
+    names: List[str] = []
+    for e in (modeldb.entries if modeldb is not None else ()):
+        names += e.skeletons() + e.weapon_skeletons()
+    return KnownSkeletons(names, "modeldb")
+
+
 # ---------------------------------------------------------------------------
 # the structural checks
 

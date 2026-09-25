@@ -28,6 +28,7 @@ from typing import Dict, List, Optional, Tuple
 from . import (config, edu as edu_mod, effects as effects_mod,
                engines as engines_mod, eop, localization,
                modeldb, mounts, projectiles as projectiles_mod, sounds)
+from . import animpack
 from . import keyblock as kb
 from .logutil import block, counted, file_op, fingerprint, log
 from .mod import Mod
@@ -345,6 +346,15 @@ class TransferPlan:
     # the soldier-line model this transfer actually copies ("" when the soldier
     # comes from the base, so no soldier skeleton can be missing).
     skeleton_models: Dict[str, List[str]] = field(default_factory=dict)
+    #: weapon skeletons (a modeldb record's primary/secondary weapon lists) the
+    #: destination has not got, and the models naming them. Reported apart: one
+    #: only matters when the mesh has vertices weighted to the weapon bones, and
+    #: most entries carry weapon skeletons they never use (Phase 79)
+    missing_weapon_skeletons: List[str] = field(default_factory=list)
+    weapon_skeleton_models: Dict[str, List[str]] = field(default_factory=dict)
+    #: what the skeletons were held against: "pack" (the destination's own
+    #: skeletons.idx) or "modeldb" (a mod with no pack of its own)
+    skeletons_from: str = "modeldb"
     soldier_model_name: str = ""
     #: copied model name (lowercased) -> the slot it fills for THIS unit, one of
     #: :data:`SLOT_ORDER`. What the fix for a missing animation is depends
@@ -407,6 +417,22 @@ class TransferPlan:
         """
         return self._missing_for("armour")
 
+    def _skel_where(self) -> str:
+        return (f"{self.dest.name}'s "
+                + ("skeleton pack" if self.skeletons_from == "pack" else "modeldb"))
+
+    def _weapon_lines(self) -> List[str]:
+        if not self.missing_weapon_skeletons:
+            return []
+        who = ", ".join(sorted({m for s in self.missing_weapon_skeletons
+                                for m in self.weapon_skeleton_models.get(s, [])}))
+        return ["  - WEAPON ANIMATION - " + ", ".join(self.missing_weapon_skeletons)
+                + f" absent from {self._skel_where()}, named as weapon skeletons by "
+                f"'{who}'. This only shows if the mesh has vertices weighted to the "
+                "weapon bones (a bowstring, a flag, a javelin); most entries carry "
+                "weapon skeletons they never use, because modeldb entries are copied "
+                "whole. Import the animation set if that weapon should move."]
+
     def _models_summary(self) -> List[str]:
         """The `models` mode's own summary body.
 
@@ -453,12 +479,13 @@ class TransferPlan:
         # build on them, not about this import.
         if self.missing_skeletons:
             L.append("  ! ANIMATION - " + ", ".join(self.missing_skeletons)
-                     + f" absent from {self.dest.name}'s modeldb, asked for by "
+                     + f" absent from {self._skel_where()}, asked for by "
                      + ", ".join(sorted({m for ms in self.skeleton_models.values()
                                          for m in ms}))
                      + ". Nothing draws these entries yet, so nothing crashes today - "
                        "but a unit pointed at one will, on load. Import the animation "
                        "set (anim pack / descr_skeleton) before you use it.")
+        L.extend(self._weapon_lines())
         if self.missing_assets:
             L.append(f"  ! {len(self.missing_assets)} referenced files not found on disk (skipped)")
         for w in self.warnings:
@@ -629,7 +656,7 @@ class TransferPlan:
         if soldier:
             L.append("  ! ANIMATION WARNING (soldier line) - "
                      + ", ".join(soldier)
-                     + f" absent from {self.dest.name}'s modeldb, asked for by the "
+                     + f" absent from {self._skel_where()}, asked for by the "
                      f"soldier model '{self.soldier_model_name}'. The game CRASHES on "
                      "load. Set Soldier to the base / replaced unit, or import the "
                      "animation set yourself first (anim pack / descr_skeleton) - only "
@@ -644,13 +671,14 @@ class TransferPlan:
                 who = ", ".join(sorted({m for s in miss
                                         for m in self.skeleton_models.get(s, [])}))
                 L.append(f"  ! ANIMATION WARNING ({label}) - " + ", ".join(miss)
-                         + f" absent from {self.dest.name}'s modeldb, asked for by "
+                         + f" absent from {self._skel_where()}, asked for by "
                          f"'{who}'. The game CRASHES on load. " + fix)
         cosmetic = self.cosmetic_skeletons_missing()
         if cosmetic:
             L.append("  - armour-upgrade models name animation(s) this mod has not got ("
                      + ", ".join(cosmetic) + "). Not a crash: the engine animates the "
                      "unit from its SOLDIER entry and an upgrade level is a visual swap.")
+        L.extend(self._weapon_lines())
         if self.missing_assets:
             L.append(f"  ! {len(self.missing_assets)} referenced files not found on disk (skipped)")
         for w in self.warnings:
@@ -849,8 +877,8 @@ def _swap_entry_animations(plan: "TransferPlan", dest: Mod, model_name: str,
     for i, (final_name, entry) in enumerate(plan.add_entries):
         if entry.name.lower() != model_name:
             continue
-        missing = [s for s in dict.fromkeys(entry.skeletons())
-                   if s and s not in dest.modeldb.all_skeletons()]
+        known = animpack.known_skeletons(dest.data, dest.modeldb)
+        missing = [s for s in dict.fromkeys(entry.skeletons()) if s and s not in known]
         if not missing:
             return "", []                # its own animations work here - keep them
         if donor is None or not donor.animations:
@@ -1905,7 +1933,10 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
             "already exist in the destination, so nothing is copied for them.")
 
     dest_models = dest.modeldb.by_name()
-    dest_skeletons = dest.modeldb.all_skeletons()
+    # the destination's own skeletons.idx when it has one: its modeldb names
+    # what it meant to have, its pack is what the game can play (Phase 79)
+    dest_skeletons = animpack.known_skeletons(dest.data, dest.modeldb)
+    plan.skeletons_from = dest_skeletons.source
     taken_names = set(dest_models.keys())
     seen_assets: set = set()
     # Content dedup is done in a CANONICAL path space: the default mod_folder /
@@ -1965,6 +1996,13 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                 if skel not in plan.missing_skeletons:
                     plan.missing_skeletons.append(skel)
                 owners = plan.skeleton_models.setdefault(skel, [])
+                if name not in owners:
+                    owners.append(name)
+        for skel in dict.fromkeys(entry.weapon_skeletons()):
+            if skel not in dest_skeletons:
+                if skel not in plan.missing_weapon_skeletons:
+                    plan.missing_weapon_skeletons.append(skel)
+                owners = plan.weapon_skeleton_models.setdefault(skel, [])
                 if name not in owners:
                     owners.append(name)
 
@@ -2617,6 +2655,9 @@ def _log_plan(plan: TransferPlan) -> None:
                                            or "?")
                            + ("  [SOLDIER line]" if s in soldier_skels else "")
                            for s in plan.missing_skeletons]),
+                         ("missing weapon skeletons",
+                          [s + "   <- " + ", ".join(plan.weapon_skeleton_models.get(s, []))
+                           for s in plan.missing_weapon_skeletons]),
                          ("missing assets", plan.missing_assets),
                          ("excluded secondaries", plan.excluded_secondaries)):
         if names:
@@ -2702,7 +2743,8 @@ def _base_record(plan: TransferPlan, applied: bool, transfer_id: str = "",
         "undone": False,
         "note": note,
         "summary": plan.summary(),
-        "warnings": list(plan.warnings) + [f"animation missing: {s}" for s in plan.missing_skeletons],
+        "warnings": list(plan.warnings) + [f"animation missing: {s}" for s in plan.missing_skeletons]
+        + [f"weapon animation missing: {s}" for s in plan.missing_weapon_skeletons],
     }
 
 

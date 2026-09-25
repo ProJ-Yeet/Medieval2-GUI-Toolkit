@@ -423,7 +423,7 @@ It stays recorded rather than rediscovered.
 | ~~27~~ | ~~Overlay and layer generators~~ | 3 | L | beta - **done 2026-09-24** |
 | ~~77~~ | ~~The packs, read: `pack.idx`/`.dat` and `skeletons.idx`/`.dat` in the engine~~ | - | M | both - **done 2026-09-25** |
 | ~~78~~ | ~~The 687 slots named, and `descr_skeleton.txt` held against the packs~~ | - | M | both - **done 2026-09-25** |
-| 79 | Transfer knows what the destination really has: skeletons from the pack, weapon skeletons counted | - | S | both |
+| ~~79~~ | ~~Transfer knows what the destination really has: skeletons from the pack, weapon skeletons counted~~ | - | S | both - **done 2026-09-25** |
 | 80 | Every animation a unit has, in the Models viewer: packed ones, named, with its weapons, shield and mount | - | L | both |
 | 81 | Append to a pack, and take it back | - | L | both |
 | 82 | In-game proof: what the engine accepts, rebuilds and prefers | - | S | both |
@@ -634,6 +634,7 @@ it only bites if the mesh has weight on the weapon bones. The same check
 becomes a Health rule: a modeldb skeleton or weapon skeleton the mod's own
 pack does not have (ROCSS's three). Done when: ROCSS reports exactly those
 three, DaC none, and every existing transfer test still passes.
+**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
 
 **80 - Every animation a unit has, in the Models viewer (L).** Asked for by
 the user on 2026-09-23 ("I also want to be able to view the different

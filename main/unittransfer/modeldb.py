@@ -41,6 +41,11 @@ class Animation:
     def skeletons(self) -> List[str]:
         return [s for s in (self.primary_skeleton, self.secondary_skeleton) if s]
 
+    def weapon_skeletons(self) -> List[str]:
+        """The weapon skeletons, primary then secondary: skeleton names too, in
+        the same pack as the body's (ROCSS 5 372 of 5 375 found there)."""
+        return [s for s in self.pri_weapons + self.sec_weapons if s]
+
 
 @dataclass
 class Texture:
@@ -67,6 +72,12 @@ class ModelEntry:
         out: List[str] = []
         for a in self.animations:
             out.extend(a.skeletons())
+        return out
+
+    def weapon_skeletons(self) -> List[str]:
+        out: List[str] = []
+        for a in self.animations:
+            out.extend(a.weapon_skeletons())
         return out
 
     def mesh_files(self) -> List[str]:

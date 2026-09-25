@@ -21,6 +21,12 @@ often out of step with them, and the game plays the packs. :func:`report`
 says how far out, for one mod: types the text has and the pack does not,
 skeletons the pack has and the text does not, and per skeleton the slots
 where the two disagree.
+
+**And the modeldb held against the pack** (Phase 79): :func:`modeldb_findings`
+lists every body or weapon skeleton a modeldb entry names that the mod's own
+``skeletons.idx`` has not got, which Health reports. A weapon skeleton is a
+warning, not a crash: it only shows when the mesh has weight on the weapon
+bones (Makanyane).
 """
 from __future__ import annotations
 
@@ -211,3 +217,75 @@ def report(data_dir, text_dir=None) -> Report:
     out.pack_only = sorted({e.name for e in skels.entries if e.name.lower() not in types},
                            key=str.lower)
     return out
+
+
+# ---------------------------------------------------------------------------
+# the modeldb held against the mod's own pack (Phase 79)
+
+MODELDB_REL = "unit_models/battle_models.modeldb"
+
+
+def modeldb_findings(mod) -> List[dict]:
+    """Every body or weapon skeleton a modeldb entry names that the mod's own
+    ``skeletons.idx`` has not got, one row per entry and skeleton. Empty for a
+    mod with no pack of its own: it plays vanilla's, and its modeldb names are
+    all there is to hold anything against. Measured 2026-09-25: ROCSS 3 (all
+    weapon skeletons), DaC none."""
+    packs = animpack.for_data(mod.data)
+    if packs is None or packs.skels is None or not mod.modeldb_path.is_file():
+        return []
+    rows: List[dict] = []
+    seen = set()
+    for e in mod.modeldb.entries:
+        for kind, names in (("body", e.skeletons()), ("weapon", e.weapon_skeletons())):
+            for s in dict.fromkeys(names):
+                if s in packs.skels or (e.name, s.lower()) in seen:
+                    continue
+                seen.add((e.name, s.lower()))
+                if kind == "body":
+                    msg = (f"'{e.name}' is animated by the skeleton '{s}', which this mod's "
+                           "skeleton pack has not got. A unit drawn with this model crashes "
+                           "the battle it loads in.")
+                else:
+                    msg = (f"'{e.name}' names '{s}' as a weapon skeleton, and this mod's "
+                           "skeleton pack has not got it. That only shows if the mesh has "
+                           "vertices weighted to the weapon bones (a bowstring, a flag, a "
+                           "javelin): the weapon stays still.")
+                rows.append({"code": f"skeleton.{kind}_not_in_pack", "name": e.name,
+                             "skeleton": s, "kind": kind, "message": msg,
+                             "severity": "fatal" if kind == "body" else "warn"})
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# families, so two hundred actions can be found (Phase 80)
+
+#: The order the viewer lists them in; the first pattern a name matches wins.
+FAMILIES = (
+    ("stand", "Standing and idle", r"^(stand|idle|ready(?!_brace)|taunt|celebrate|selected|"
+                                   r"er_stand|victory|pre_battle|general_signal)"),
+    ("move", "Walking and running", r"^(walk|run(?!_attack)|shuffle|step|advance|combat_jog|"
+                                    r"retreat|stealthy|hide|er_walk|er_run|jump)"),
+    ("charge", "Charging", r"^charge"),
+    ("attack", "Attacking", r"^(eager_attack|attack|run_attack)"),
+    ("defend", "Defending", r"^eager_defend"),
+    ("brace", "Braced formation", r"brace"),
+    ("die", "Hit, knocked down and dying", r"^(die|knockback|knockdown|kill_mount|impact)"),
+    ("crew", "Crews, carrying and siege", r"^(crew|carry|push|pull|raise_hand|siege|elephant)"),
+    ("climb", "Climbing and swimming", r"^(climb|swim)"),
+    ("agent", "Agents on the campaign map", r"^(build_settlement|ambush|no_mp|despoil|decimate|"
+                                            r"insurrect|sabotage|assassinate|capture|spying|"
+                                            r"conduct|refuse|druid)"),
+    ("other", "Everything else", r""),
+)
+_FAMILY_RES = None
+
+
+def family(name: str) -> str:
+    """The family id of an ``anim`` name (``walk_to_run`` is ``move``)."""
+    global _FAMILY_RES
+    if _FAMILY_RES is None:
+        import re
+        _FAMILY_RES = [(fid, re.compile(rx)) for fid, _label, rx in FAMILIES]
+    n = (name or "").lower()
+    return next(fid for fid, rx in _FAMILY_RES if rx.search(n))

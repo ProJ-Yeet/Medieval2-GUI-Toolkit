@@ -10100,3 +10100,48 @@ text with both kinds of spaced path; one skeleton with every kind of
 difference and a group agreeing on a shared path; a small mod written to temp
 with a type on each side only and one listed twice; the installs as measured
 above.
+
+## Phase 79 - transfer knows what the destination really has - DONE 2026-09-25
+
+**The skeletons come from the pack.** `animpack.known_skeletons(data, modeldb)`
+is what a transfer holds a model's skeletons against: the destination's own
+`skeletons.idx` when it has one, since the game plays the pack and the modeldb
+only says what the mod meant to have; every body and weapon skeleton its modeldb
+names when it ships no pack (the old check, kept for those). Names are compared
+case-blind, as the pack is looked up. Both places transfer asked
+`dest.modeldb.all_skeletons()` ask this now: the missing-skeleton check on every
+entry a transfer adds, and the mount and officer donor swap. The plan records
+which was read (`skeletons_from`), and its messages say "ROCSS's skeleton pack"
+or "ROCSS's modeldb" to match.
+
+**Weapon skeletons are counted.** `Animation.weapon_skeletons()` and
+`ModelEntry.weapon_skeletons()` read the modeldb's primary and secondary weapon
+lists as the skeleton names they are (ROCSS 5 372 of 5 375 found in its pack).
+A missing one goes to `missing_weapon_skeletons`, with the models naming it,
+apart from the body skeletons, and never triggers the donor swap. Its line
+carries Makanyane's rule: it only shows if the mesh has vertices weighted to the
+weapon bones (a bowstring, a flag, a javelin), and most entries carry weapon
+skeletons they never use because modeldb entries are copied whole. The server's
+plan JSON and the undo log's warnings carry it too.
+
+**Health**: a new source, *Battle skeletons the pack has not got*
+(`skelslots.modeldb_findings`), for a mod with a skeleton pack of its own: a
+body skeleton missing is fatal (a unit drawn with that model crashes its
+battle), a weapon skeleton a warning. Each opens its entry on the Models Editor.
+Measured 2026-09-25: **ROCSS exactly three**, all weapon skeletons
+(`mounted_luchniki` and `mounted_luchniki_ug1` name `MTW2_axe_Primary`,
+`mounted_al_mushat` names `MTW2_HR_mace_Primary`); **DaC none**.
+
+What changes for a real transfer: DaC's *Goblin Bodyguards* into ROCSS now says
+`MTW2_Goblin_Mace` is missing as before, and `MTW2_Goblin_Mace_Primary` as a
+weapon skeleton on its own line, which was silent.
+
+**Tested** by `test_transfer_skeletons` (17): the weapon lists; the pack read
+case-blind and the modeldb fallback; a DaC unit planned into a throwaway copy of
+ROCSS's four files with a small `skeletons.idx`, nothing missing with every
+ROCSS skeleton listed, its body skeleton reported missing when left out of the
+pack though the modeldb names it, a weapon skeleton reported apart, and the
+modeldb read again with the pack gone; Health on both mods. The existing
+transfer suites that can run here still pass. The full suite: 38 of 148 red,
+37 of them red on the commit before as well (mods no longer installed), and
+`test_animedit` passes alone.

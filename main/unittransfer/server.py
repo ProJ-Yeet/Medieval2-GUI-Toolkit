@@ -1660,6 +1660,10 @@ def _plan_payload(plan) -> dict:
         # which copied model asks for each missing skeleton, and the subset the
         # Soldier row owns - the composer warns beside that row, not in general
         "skeleton_models": plan.skeleton_models,
+        # 79: weapon skeletons apart, and whether the pack or the modeldb was read
+        "missing_weapon_skeletons": plan.missing_weapon_skeletons,
+        "weapon_skeleton_models": plan.weapon_skeleton_models,
+        "skeletons_from": plan.skeletons_from,
         "soldier_model_name": plan.soldier_model_name,
         "soldier_skeletons_missing": plan.soldier_skeletons_missing(),
         # graded the same way: a missing skeleton is blamed on the slot whose fix

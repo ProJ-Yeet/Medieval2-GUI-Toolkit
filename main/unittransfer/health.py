@@ -390,6 +390,18 @@ def _minor(mod, ctx) -> List[Finding]:
     return out
 
 
+@source("skeletons", "Battle skeletons the pack has not got", "bmdb",
+        "battle_models.modeldb, animations/skeletons.idx", "battle")
+def _skeletons(mod, ctx) -> List[Finding]:
+    """Phase 79: a modeldb skeleton, body or weapon, missing from the mod's own pack."""
+    from . import skelslots
+    return [Finding(source="skeletons", code=r["code"], severity=r["severity"],
+                    message=r["message"], file=skelslots.MODELDB_REL,
+                    what=f"{r['name']}|{r['skeleton']}", when="battle",
+                    open={"mode": "bmdb", "name": r["name"]})
+            for r in skelslots.modeldb_findings(mod)]
+
+
 @source("crash", "What the crash guides name", "rawtext", "five files", "play")
 def _crash(mod, ctx) -> List[Finding]:
     """Phase 54b's rules: the guides' causes that belonged to no module."""
