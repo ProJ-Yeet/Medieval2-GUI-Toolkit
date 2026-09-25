@@ -1,7 +1,15 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-24 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 76, and 25, are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton; a building tree from another mod); then 25, the OSM backdrop and coastline tracer; then 26, map resize and a new campaign on a map from scratch; then 27, the layer generators; **77 is next** (animations that travel with a unit, 77-86). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.8 and beta 2026-09-23** (2026-09-23), carrying everything through 67 and the effect-set fix. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-25 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 76, and 25, are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton; a building tree from another mod); then 25, the OSM backdrop and coastline tracer; then 26, map resize and a new campaign on a map from scratch; then 27, the layer generators; **77 is next** (animations that travel with a unit, 77-86). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.9 and beta 2026-09-25** (2026-09-25), carrying everything through 76 and 25-27. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Cut v2.3.9 and beta 2026-09-25, 2026-09-25, on the user's word ("start
+next two phases and then subrelease it").** Everything since v2.3.8: the
+unpacked-pack animations, 68, 69, 71's data-zip load, 74, 75, 76 and the strat
+texture order go on both lines; 70, 71's campaign zip, 72, 73, 25, 26, 27, the
+validator changes (ports on their dock, stacked resources, dense forest,
+uneven crossings and Smooth) and the new-campaign header fix are the beta's.
+**77 is next.**
+
 **Phase 27 is done - the layer generators, 2026-09-24, committed.** The
 Campaign Map's *Generate* tab (under Map): heights from the real world at the
 engine's own scale (land only unless asked), ground types from the heights by
@@ -1463,15 +1471,15 @@ path in this file and in the source is relative to. `main/dev/` never ships.
 ## THE TWO RELEASE LINES
 Two lines off this one `master`, chosen by whether a change touches the campaign
 map. **Not campaign-map** -> a **2.x subrelease with the map hidden**, uploaded
-`--latest` (latest **v2.3.8**, 2026-09-23). **Campaign-map** -> the **beta
-line**, uploaded as a **pre-release** (latest **beta 2026-09-23**). A
+`--latest` (latest **v2.3.9**, 2026-09-25). **Campaign-map** -> the **beta
+line**, uploaded as a **pre-release** (latest **beta 2026-09-25**). A
 **subrelease means both**: one job, both zips, same tree.
 
 The switch is **one flag**: `off:true` on the `campmap` entry in `MODES` in
 `web/js/core.js`, which `menuModes()` and `modeOffered()` are the only readers
 of. It is a **release-time edit, not a state of `master`**: set it, bump the 2.x
 number, build, upload, then put it straight back off in the next commit.
-`master` carries the map ON, and `__version__` says `beta-2026-09-23`
+`master` carries the map ON, and `__version__` says `beta-2026-09-25`
 because the beta was the last thing cut.
 
 Of the finished work, **21 and 29 belong to BOTH lines** (raw text is a menu
