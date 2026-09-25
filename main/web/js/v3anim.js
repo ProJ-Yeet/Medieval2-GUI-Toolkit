@@ -8,15 +8,13 @@
 /* =========================================================================
    PLAYING A MODEL'S ANIMATIONS - the chain, then the skin.
 
-   The chain is the server's (casanim.actions_view): a modeldb entry names its
-   skeletons, descr_skeleton.txt names each skeleton's file per action, and a
-   file plays only when the mod ships it loose. Most mods ship most of theirs
-   in animations/pack.dat, which nothing here reads, so the picker lists every
-   action and greys out the packed ones rather than pretending they are not
-   there. A mod whose pack was unpacked in place (the files nested under
-   animations/mods/<mod>/data/animations, still in the pack's own format) plays
-   too: the server finds them and reads them with the unpacked skeleton's
-   bones, which is why every request for keys carries the skeleton's name.
+   The chain is the server's (animview.entry_view, Phase 80): a modeldb entry
+   names its skeleton sets, one per mount type, and every filled slot of each
+   skeleton in the mod's skeletons.dat is an action, named by Phase 78's slot
+   table and read straight out of pack.dat with the packed skeleton's bones -
+   which is why every request for keys carries the skeleton's name. A loose
+   file at the same path is preferred; a skeleton the pack has not got falls
+   back to Phase 55's chain, descr_skeleton.txt and loose files only.
 
    The skin is done HERE, on the CPU, into the same position and normal buffers
    the static model draws from. A soldier is 30 000 vertices over two bones
@@ -166,6 +164,18 @@ function v3aTravel(anim){
   return [z[0] - a[0], z[2] - a[2]];
 }
 
+/* A rider's action: its pelvis never leaves the origin, because a rider (the
+   HR_* and CR_* folders) keeps its pelvis as the control bone and is carried
+   by its mount. Such a pose is drawn where the model sits, not lowered onto
+   the ground as a man on foot is. */
+function v3aCarried(anim){
+  const hub = anim.bones.findIndex(b => b.parent === 0);
+  if(hub < 0) return false;
+  const b = anim.bones[hub];
+  if(Math.abs(b.pivot[1]) > 0.05) return false;
+  return (b.pos || []).every(p => Math.abs(p[1]) < 0.05);
+}
+
 /* The model's bones -> the animation's tracks, by name. A bone the skeleton
    does not have (a weapon or shield bone, which soldiers carry and never
    weight a vertex to) goes with the pelvis, so anything that did hang off one
@@ -227,14 +237,85 @@ function v3aSkin(geo, pose, bind, map, outPos, outNrm, shift){
   }
 }
 
-/* --- the picker ----------------------------------------------------------- */
+/* --- a sequence (80) ------------------------------------------------------
+   Several actions of one skeleton back to back, as one timeline. With OVERLAP
+   the next starts `blend` seconds before the last ends and the two are
+   crossfaded across that window (Makanyane's "overlap": smooth playback);
+   without it each plays exactly as stored, end to end, for inspecting. Pure,
+   so tests/test_v3anim.py runs these under node. */
+
+/* Where each action starts on the shared timeline, and how long the whole is. */
+function v3aSeqPlan(anims, blend){
+  let at = 0;
+  const segs = [];
+  anims.forEach((a, i) => {
+    const t = (a && a.times) || [];
+    const len = t.length ? t[t.length-1] : 0;
+    const b = i && blend > 0 ? Math.min(blend, len / 2, segs[i-1].len / 2) : 0;
+    at -= b;
+    segs.push({start: at, len, blend: b});
+    at += len;
+  });
+  return {segs, total: Math.max(0, at)};
+}
+
+/* One action's local pose at `t`, held at its last key rather than looping. */
+function v3aSampleAt(anim, t){
+  const times = anim.times || [];
+  const end = times.length ? times[times.length-1] : 0;
+  return v3aSample(anim, Math.max(0, Math.min(t, end > 0 ? end - 1e-6 : 0)));
+}
+
+/* The sequence's local pose at `t` (looping over the whole). The pelvis is
+   pinned over the ground: each action's root motion starts from its own
+   origin, so played end to end the man would snap back at every join. */
+function v3aSeqSample(anims, t, blend){
+  const {segs, total} = v3aSeqPlan(anims, blend);
+  if(!segs.length) return [];
+  if(total > 0) t = ((t % total) + total) % total;
+  let i = segs.length - 1;
+  for(let k = 0; k < segs.length; k++) if(t < segs[k].start + segs[k].len){ i = k; break; }
+  const at = (k) => t - segs[k].start;
+  let out = v3aSampleAt(anims[i], at(i));
+  const nx = segs[i+1];
+  if(nx && nx.blend > 0 && t >= nx.start){
+    const f = Math.min(1, (t - nx.start) / nx.blend);
+    const nxt = v3aSampleAt(anims[i+1], at(i+1));
+    out = out.map((c, b) => nxt[b] ? {q: v3aSlerp(c.q, nxt[b].q, f),
+                                       p: [0,1,2].map(k => c.p[k] + (nxt[b].p[k] - c.p[k]) * f)} : c);
+  }
+  const hub = anims[i].bones.findIndex(b => b.parent === 0);
+  if(hub >= 0 && out[hub]) out[hub] = {q: out[hub].q, p: [0, out[hub].p[1], 0]};
+  return out;
+}
+
+/* World pose from a local one: v3aPose's chaining, for a pose not sampled
+   from one animation. */
+function v3aPoseOf(bones, local){
+  const out = [];
+  bones.forEach((b, i) => {
+    const m = v3aMat(local[i].q);
+    const par = b.parent >= 0 && b.parent < i ? out[b.parent] : null;
+    if(!par){ out.push({m, p: local[i].p}); return; }
+    const d = v3aApply(par.m, local[i].p);
+    out.push({m: v3aMul(par.m, m), p: [par.p[0]+d[0], par.p[1]+d[1], par.p[2]+d[2]]});
+  });
+  return out;
+}
+
+/* --- the picker ------------------------------------------------------------
+   The list is the server's (animview.entry_view): the entry's skeleton sets,
+   one per mount type, and every filled slot of each skeleton in the mod's
+   skeletons.dat, named, grouped by family and played straight out of
+   pack.dat. A mod with no pack of its own plays vanilla's, and says so. */
 
 /* Called by v3Load once a model's geometry is in: a skinned .mesh asks which
    actions its skeletons have. A .cas and a static model have none to ask for. */
 async function v3AnimInit(){
   if(!v3 || v3.cas || !v3.geo || !v3.geo.skinned) return v3AnimPanel();
-  if(!v3.anim) v3.anim = {list: null, skel: 0, action: '', data: null,
-                          playing: true, t: 0, speed: 1, err: ''};
+  if(!v3.anim) v3.anim = {list: null, set: 0, skel: '', find: '', key: '', data: null,
+                          playing: true, t: 0, speed: 1, err: '',
+                          seq: [], seqData: null, seqOn: false, overlap: true};
   if(v3.anim.list) return v3AnimPanel();
   const mine = v3;
   let list;
@@ -242,8 +323,48 @@ async function v3AnimInit(){
   catch(e){ list = {error: ''+e}; }
   if(v3 !== mine) return;
   v3.anim.list = list;
+  const set = (list.sets || [])[v3.anim.set] || (list.sets || [])[0];
+  if(set && !v3.anim.skel) v3.anim.skel = set.primary || set.secondary || '';
   v3AnimPanel();
   v3ExportPanel();
+}
+
+/* The skeleton being played, from the list. */
+function v3AnimSk(){
+  const a = v3 && v3.anim, L = a && a.list;
+  return L && L.skeletons ? L.skeletons[(a.skel || '').toLowerCase()] || null : null;
+}
+function v3AnimKey(row){ return row.slot != null ? String(row.slot) : 'a:' + row.action; }
+function v3AnimRow(key){
+  const sk = v3AnimSk();
+  return sk && (sk.actions || []).find(r => v3AnimKey(r) === key) || null;
+}
+
+function v3AnimStats(r){
+  const bits = [];
+  if(r.frames) bits.push(`${r.frames} f`);
+  if(r.duration != null) bits.push(`${(+r.duration).toFixed(2)} s`);
+  if(r.distance > 0.01) bits.push(`${(+r.distance).toFixed(2)} m`);
+  return bits.join(' · ');
+}
+
+/* The option list, by family, filtered by the find box. */
+function v3AnimListHtml(){
+  const a = v3.anim, sk = v3AnimSk(), L = a.list;
+  const q = (a.find || '').trim().toLowerCase();
+  const rows = (sk.actions || []).filter(r => !q || r.action.toLowerCase().includes(q)
+                                         || (r.file || '').toLowerCase().includes(q));
+  if(!rows.length) return `<option disabled>nothing matches “${esc(a.find)}”</option>`;
+  return (L.families || [{id: 'other', label: 'Actions'}]).map(f => {
+    const mine = rows.filter(r => (r.family || 'other') === f.id);
+    if(!mine.length) return '';
+    return `<optgroup label="${esc(f.label)} (${mine.length})">${mine.map(r => {
+      const k = v3AnimKey(r);
+      return `<option value="${esc(k)}" ${k === a.key ? 'selected' : ''} ${r.playable ? '' : 'disabled'}
+        title="${esc(r.path || r.file || '')}">${esc(r.action)}${r.playable ? '' : ' - not in the pack'}${
+        v3AnimStats(r) ? ' · ' + v3AnimStats(r) : ''}</option>`;
+    }).join('')}</optgroup>`;
+  }).join('');
 }
 
 function v3AnimPanel(){
@@ -254,98 +375,228 @@ function v3AnimPanel(){
     return;
   }
   const a = v3.anim, L = a.list;
-  if(!L){ host.innerHTML = '<div class="k">Animation <span class="count">reading descr_skeleton.txt…</span></div>'; return; }
+  if(!L){ host.innerHTML = '<div class="k">Animation <span class="count">reading the packs…</span></div>'; return; }
   if(L.error){ host.innerHTML = `<div class="k">Animation</div><div class="w-bad">${esc(L.error)}</div>`; return; }
-  const sks = L.skeletons || [];
-  if(!L.file || !sks.length){
-    host.innerHTML = `<div class="k">Animation</div><div class="count">${
-      !L.file ? 'This mod has no <code>descr_skeleton.txt</code>, so there is nothing to play.'
-              : 'This entry names no skeleton.'}</div>`;
+  const sets = L.sets || [];
+  if(!sets.length){
+    host.innerHTML = '<div class="k">Animation</div><div class="count">This entry names no skeleton.</div>';
     return;
   }
-  const sk = sks[a.skel] || sks[0];
-  const skelSel = sks.length > 1
-    ? `<label class="v3f"><span>Skeleton</span><select onchange="v3AnimSkel(this.value)">${
-        sks.map((s, n) => `<option value="${n}" ${n===a.skel?'selected':''}>${esc(s.skeleton)}${
-          s.found ? ` · ${s.loose} of ${s.actions.length} loose` : ' - not in descr_skeleton.txt'}</option>`).join('')
-      }</select></label>` : '';
+  const set = sets[a.set] || sets[0];
+  const setSel = sets.length > 1
+    ? `<label class="v3f"><span>Skeleton set</span><select onchange="v3AnimSet(this.value)">${
+        sets.map((x, n) => `<option value="${n}" ${n === a.set ? 'selected' : ''}>${esc(x.mount)} · ${
+          esc([x.primary, x.secondary].filter(Boolean).join(' / '))}</option>`).join('')}</select></label>` : '';
+  const bodies = [set.primary, set.secondary].filter(Boolean);
+  const skSel = `<label class="v3f"><span>Skeleton</span><select onchange="v3AnimSkel(this.value)">${
+    bodies.map((n, i) => {
+      const s = L.skeletons[n.toLowerCase()] || {};
+      return `<option value="${esc(n)}" ${n.toLowerCase() === (a.skel || '').toLowerCase() ? 'selected' : ''}>${
+        i ? 'secondary' : 'primary'}: ${esc(n)} · ${s.packed ? `${(s.actions || []).length} actions`
+          : s.found ? `${(s.actions || []).length} in descr_skeleton.txt` : 'not in the pack'}</option>`;
+    }).join('')}</select></label>`;
+  const sk = v3AnimSk();
   let body;
-  if(!sk.found){
-    body = `<div class="w-warn">descr_skeleton.txt has no <code>${esc(sk.skeleton)}</code>, `
-         + `so the game cannot animate this model either.</div>`;
+  if(!sk || (!sk.packed && !sk.found)){
+    body = `<div class="w-warn">Neither the skeleton pack nor descr_skeleton.txt has <code>${esc(a.skel)}</code>, `
+         + `so the game cannot animate this model with it either.</div>`;
   }else{
-    const opts = sk.actions.map(x =>
-      `<option value="${esc(x.action)}" ${x.action===a.action?'selected':''} ${x.rel?'':'disabled'}>${
-        esc(x.action)}${x.rel ? '' : ' - packed'}</option>`).join('');
-    body = `<label class="v3f"><span>Action</span><select onchange="v3AnimPick(this.value)" ${sk.loose?'':'disabled'}>
-        <option value="" ${a.action?'':'selected'}>Still - the model as modelled</option>${opts}</select></label>`
-      + (a.data ? `<div class="v3btns v3play">
-          <button onclick="v3AnimPlay()" class="${a.playing?'on':''}">${a.playing?'Pause':'Play'}</button>
-          <input type="range" id="v3atime" min="0" max="1000" value="${v3AnimFrac()}"
-            oninput="v3AnimScrub(this.value)" title="Scrub through the action">
-          <select onchange="v3AnimSpeed(this.value)" title="Playback speed">${
-            [0.25, 0.5, 1, 2].map(s => `<option value="${s}" ${s===a.speed?'selected':''}>${s}×</option>`).join('')
-          }</select></div>
-          <div class="count" id="v3aclock">${v3AnimClock()}</div>
-          ${v3AnimEditHtml()}` : '')
-      + `<div class="count">${sk.loose
-          ? `${sk.loose} of ${sk.actions.length} actions are loose files in this mod`
-            + (sk.unpacked ? ` (${sk.unpacked === sk.loose ? 'all' : sk.unpacked} of them in an unpacked copy of the pack, `
-              + `under <code>animations/mods/…</code>)` : '')
-            + (sk.loose < sk.actions.length ? `; the rest are packed in <code>animations/pack.dat</code>, `
-              + `which this viewer does not read.` : '.')
-          : `All ${sk.actions.length} of its actions are packed in <code>animations/pack.dat</code>, `
-            + `which this viewer does not read, so nothing here can play.`}</div>`;
+    body = `<label class="v3f"><span>Find</span><input type="search" value="${esc(a.find)}"
+        placeholder="walk, charge, die, a file name…" oninput="v3AnimFind(this.value)"></label>
+      <select id="v3alist" class="v3alist" size="11" onchange="v3AnimPick(this.value)">${v3AnimListHtml()}</select>
+      <div class="v3btns"><button onclick="v3AnimPick('')" ${a.key || a.seqOn ? '' : 'disabled'}>Still</button>
+        <button onclick="v3AnimSeqAdd()" ${a.key ? '' : 'disabled'} title="Add this action to the end of a sequence">+ Sequence</button></div>`
+      + v3AnimSeqHtml()
+      + (a.data ? v3AnimPlayHtml() : '')
+      + `<div class="count">${sk.packed
+          ? `${sk.actions.length} actions, every filled slot of <code>${esc(sk.skeleton)}</code> in `
+            + `${L.packs === 'vanilla' ? 'vanilla’s skeleton pack (this mod ships none, so the game plays vanilla’s)'
+                                        : 'this mod’s skeleton pack'}, played straight out of <code>pack.dat</code>.`
+          : `Not in the skeleton pack; these are <code>descr_skeleton.txt</code>’s actions, and only the ones `
+            + `shipped loose play.`}</div>`;
   }
+  const weap = [...(set.primary_weapons || []), ...(set.secondary_weapons || [])];
+  const wnote = weap.length ? `<div class="count">Weapon skeletons: ${weap.map(n => {
+      const s = L.skeletons[n.toLowerCase()] || {};
+      return `<code>${esc(n)}</code>${s.packed ? '' : ' (not in the pack)'}`;
+    }).join(', ')}.</div>` : '';
   const notes = [];
   if(a.err) notes.push(`<div class="w-bad">${esc(a.err)}</div>`);
   if(a.data && a.missing && a.missing.length)
     notes.push(`<div class="count">Not in the skeleton, so carried with the pelvis: ${
       a.missing.map(n => `<code>${esc(n)}</code>`).join(', ')}.</div>`);
-  if(a.data && a.travel && Math.hypot(a.travel[0], a.travel[1]) > 0.05)
+  if(a.data && !a.seqOn && a.travel && Math.hypot(a.travel[0], a.travel[1]) > 0.05)
     notes.push(`<div class="count">A cycle: it carries the model ${
       Math.hypot(a.travel[0], a.travel[1]).toFixed(2)} across the ground each loop, `
       + `which is taken out here so it plays in place.</div>`);
+  if(a.data && a.carried)
+    notes.push('<div class="count">A rider’s action: its pelvis rides on the mount, so it is drawn where the model sits, not stood on the ground.</div>');
   if(a.data && (a.data.notes || []).length)
     notes.push(a.data.notes.map(n => `<div class="w-warn">${esc(n)}</div>`).join(''));
-  host.innerHTML = `<div class="k">Animation</div>${skelSel}${body}${notes.join('')}`;
+  host.innerHTML = `<div class="k">Animation</div>${setSel}${skSel}${body}${wnote}${notes.join('')}`;
+}
+
+/* Play, pause, scrub and speed, the clock, what the slot says about the
+   action on a strip under the scrubber, and the editor for a loose file. */
+function v3AnimPlayHtml(){
+  const a = v3.anim;
+  return `<div class="v3btns v3play">
+      <button onclick="v3AnimPlay()" class="${a.playing?'on':''}">${a.playing?'Pause':'Play'}</button>
+      <input type="range" id="v3atime" min="0" max="1000" value="${v3AnimFrac()}"
+        oninput="v3AnimScrub(this.value)" title="Scrub through the action">
+      <select onchange="v3AnimSpeed(this.value)" title="Playback speed">${
+        [0.25, 0.5, 1, 2].map(s => `<option value="${s}" ${s===a.speed?'selected':''}>${s}×</option>`).join('')
+      }</select></div>
+    ${v3AnimMarksHtml()}
+    <div class="count" id="v3aclock">${v3AnimClock()}</div>
+    ${a.seqOn ? '' : a.rel ? v3AnimEditHtml()
+      : '<div class="count">Played from the pack. The editor works on loose files; saving an edit into the pack is not built yet.</div>'}`;
+}
+
+/* The slot's impact frame and events at their frames, and its turn limits. */
+function v3AnimMarksHtml(){
+  const a = v3.anim;
+  if(a.seqOn) return '';
+  const r = v3AnimRow(a.key);
+  if(!r || !r.frames) return '';
+  const span = Math.max(1, r.frames - 1);
+  const at = f => `${Math.max(0, Math.min(100, f / span * 100)).toFixed(2)}%`;
+  const ticks = [];
+  if(r.impact_frame > 0)
+    ticks.push(`<i class="v3aimp" style="left:${at(r.impact_frame)}" title="impact at frame ${r.impact_frame}"></i>`);
+  (r.events || []).forEach(e => ticks.push(`<i class="v3aev" style="left:${at(e.start)};width:${
+    e.end > e.start ? ((Math.min(e.end, span) - e.start) / span * 100).toFixed(2) : 0}%" title="${
+    esc(e.type)} ${esc(e.name)}, frame ${e.start}${e.end > e.start ? ' to ' + e.end : ''}"></i>`));
+  const turn = r.turn && (r.turn[0] || r.turn[1]) ? ` · turns ${r.turn[0]}° to ${r.turn[1]}°` : '';
+  const said = [r.impact_frame > 0 ? `impact at frame ${r.impact_frame}` : '',
+                (r.events || []).map(e => `${e.type} ${e.name} at ${e.start}`).join(', ')].filter(Boolean);
+  return `<div class="v3amarks">${ticks.join('')}</div>
+    ${said.length || turn ? `<div class="count">${esc(said.join('; '))}${turn}</div>` : ''}`;
+}
+
+function v3AnimSeqHtml(){
+  const a = v3.anim;
+  if(!a.seq.length) return '';
+  const chips = a.seq.map((r, i) => `<span class="v3achip">${i + 1}. ${esc(r.action)}
+    <button onclick="v3AnimSeqDrop(${i})" title="Take it out">×</button></span>`).join('');
+  return `<div class="v3aseq">${chips}</div>
+    <div class="v3btns"><button onclick="v3AnimSeqPlay()" class="${a.seqOn ? 'on' : ''}" ${a.seq.length > 1 ? '' : 'disabled'}>${
+      a.seqOn ? '■ Stop the sequence' : '▶ Play the sequence'}</button>
+      <label class="count" title="On: each action starts 0.2 s before the last ends, and the two are blended (smooth). Off: each plays exactly as stored, end to end"><input type="checkbox" ${
+        a.overlap ? 'checked' : ''} onchange="v3AnimOverlap(this.checked)"> overlap</label>
+      <button onclick="v3AnimSeqClear()">Clear</button></div>`;
+}
+
+function v3AnimFind(v){
+  if(!v3 || !v3.anim) return;
+  v3.anim.find = v;
+  const el = document.getElementById('v3alist');
+  if(el) el.innerHTML = v3AnimListHtml();
+}
+
+function v3AnimSet(v){
+  if(!v3 || !v3.anim) return;
+  const a = v3.anim, set = (a.list.sets || [])[+v];
+  a.set = +v;
+  a.skel = set ? set.primary || set.secondary || '' : '';
+  v3AnimSeqClear(true);
+  v3AnimPick('');
 }
 
 function v3AnimSkel(v){
   if(!v3 || !v3.anim) return;
-  v3.anim.skel = +v;
+  v3.anim.skel = v;
+  v3AnimSeqClear(true);
   v3AnimPick('');
 }
 
-async function v3AnimPick(action){
+/* One action's keys: the loose file when there is one, else out of pack.dat. */
+async function v3AnimFetch(row){
+  const q = row.rel ? `rel=${enc(row.rel)}` : `pack=${enc(row.path)}`;
+  try{ return await api.get(`/api/model/anim?mod=${enc(v3.mod)}&${q}&skel=${enc(v3.anim.skel)}`); }
+  catch(e){ return {error: '' + e}; }
+}
+
+async function v3AnimPick(key){
   if(!v3 || !v3.anim) return;
   const a = v3.anim;
-  a.action = action; a.err = ''; a.t = 0;
-  if(!action){
-    a.data = null;
+  a.key = key; a.err = ''; a.t = 0; a.seqOn = false;
+  const row = key ? v3AnimRow(key) : null;
+  if(!row || !row.playable){
+    a.data = null; a.rel = '';
     v3AnimRest();
     return v3AnimPanel();
   }
-  const sk = (a.list.skeletons || [])[a.skel];
-  const row = sk && sk.actions.find(x => x.action === action);
-  if(!row || !row.rel){ a.data = null; v3AnimRest(); return v3AnimPanel(); }
   const mine = v3;
-  let data;
-  try{ data = await api.get(`/api/model/anim?mod=${enc(v3.mod)}&rel=${enc(row.rel)}&skel=${enc(sk.skeleton)}`); }
-  catch(e){ data = {error: ''+e}; }
-  if(v3 !== mine || a.action !== action) return;
+  const data = await v3AnimFetch(row);
+  if(v3 !== mine || a.key !== key) return;
   if(data.error){ a.data = null; a.err = data.error; v3AnimRest(); return v3AnimPanel(); }
   a.data = data;
   a.orig = data;              // what the editor's Reset goes back to
-  a.rel = row.rel;
-  a.edit = v3AnimEditNew(data, row);
+  a.rel = row.rel || '';
+  a.edit = a.rel ? v3AnimEditNew(data, row) : null;
   a.bind = v3aBind(data);
   a.travel = v3aTravel(data);
+  a.carried = v3aCarried(data);
   a.geo = null;               // the bone map is built against the model on the next frame
   a.last = performance.now();
   a.playing = true;
   v3AnimPanel();
 }
+
+function v3AnimSeqAdd(){
+  const a = v3 && v3.anim, row = a && v3AnimRow(a.key);
+  if(!row) return;
+  a.seq.push(row);
+  a.seqData = null;
+  v3AnimPanel();
+}
+function v3AnimSeqDrop(i){
+  const a = v3.anim;
+  a.seq.splice(i, 1);
+  a.seqData = null;
+  if(a.seq.length < 2 && a.seqOn){ a.seqOn = false; return v3AnimPick(a.key); }
+  if(a.seqOn) return v3AnimSeqPlay(true);
+  v3AnimPanel();
+}
+function v3AnimSeqClear(quiet){
+  const a = v3 && v3.anim;
+  if(!a) return;
+  a.seq = []; a.seqData = null;
+  if(a.seqOn){ a.seqOn = false; if(!quiet) return v3AnimPick(a.key); }
+  if(!quiet) v3AnimPanel();
+}
+function v3AnimOverlap(on){
+  const a = v3.anim;
+  a.overlap = !!on; a.dirty = true;
+  const c = document.getElementById('v3aclock');
+  if(c) c.textContent = v3AnimClock();
+}
+
+/* Load every action of the sequence, then play them as one. */
+async function v3AnimSeqPlay(restart){
+  const a = v3.anim;
+  if(a.seqOn && !restart){ a.seqOn = false; return v3AnimPick(a.key); }
+  if(a.seq.length < 2) return;
+  const mine = v3, want = a.seq.slice();
+  const got = [];
+  for(const r of want){
+    const d = await v3AnimFetch(r);
+    if(v3 !== mine) return;
+    if(d.error){ a.err = `${r.action}: ${d.error}`; return v3AnimPanel(); }
+    got.push(d);
+  }
+  a.seqData = got;
+  a.seqOn = true;
+  a.data = got[0];
+  a.bind = v3aBind(got[0]);
+  a.travel = null;
+  a.carried = got.every(v3aCarried);
+  a.geo = null; a.t = 0; a.playing = true; a.last = performance.now();
+  v3AnimPanel();
+}
+
+const V3A_BLEND = 0.2;
 
 function v3AnimPlay(){
   if(!v3 || !v3.anim) return;
@@ -355,19 +606,29 @@ function v3AnimPlay(){
 }
 function v3AnimSpeed(v){ if(v3 && v3.anim) v3.anim.speed = +v || 1; }
 function v3AnimLength(){
-  const d = v3 && v3.anim && v3.anim.data;
+  const a = v3 && v3.anim;
+  if(a && a.seqOn && a.seqData) return v3aSeqPlan(a.seqData, a.overlap ? V3A_BLEND : 0).total;
+  const d = a && a.data;
   const t = d && d.times;
   return t && t.length ? t[t.length-1] : 0;
 }
 function v3AnimFrac(){
   const len = v3AnimLength();
-  return len > 0 ? Math.round((v3.anim.t % len) / len * 1000) : 0;
+  return len > 0 ? Math.round((((v3.anim.t % len) + len) % len) / len * 1000) : 0;
 }
 function v3AnimClock(){
   const a = v3 && v3.anim, len = v3AnimLength();
   if(!a || !a.data) return '';
-  const now = len > 0 ? (a.t % len) : 0;
-  return `${now.toFixed(2)} s of ${len.toFixed(2)} s · ${a.data.times.length} keys · `
+  const now = len > 0 ? (((a.t % len) + len) % len) : 0;
+  if(a.seqOn && a.seqData){
+    const {segs} = v3aSeqPlan(a.seqData, a.overlap ? V3A_BLEND : 0);
+    let i = segs.length - 1;
+    for(let k = 0; k < segs.length; k++) if(now < segs[k].start + segs[k].len){ i = k; break; }
+    return `${now.toFixed(2)} s of ${len.toFixed(2)} s · ${i + 1} of ${segs.length}: ${
+      a.seq[i] ? a.seq[i].action : ''} · ${a.overlap ? 'overlapped' : 'end to end'}, in place`;
+  }
+  const frame = Math.round(now * 20);
+  return `${now.toFixed(2)} s of ${len.toFixed(2)} s · frame ${frame} of ${a.data.times.length - 1} · `
        + `${a.data.bones.length - 1} bones`;
 }
 function v3AnimScrub(v){
@@ -414,11 +675,18 @@ function v3AnimStep(){
   }
   if(!a.dirty) return;
   a.dirty = false;
-  // a cycle walks in place: its travel so far this loop is taken back out
-  const len = v3AnimLength(), f = len > 0 ? ((a.t % len) + len) % len / len : 0;
-  const tr = a.travel || [0, 0];
-  v3aSkin(g, v3aPose(a.data, a.t), a.bind, a.map, a.pos, a.nrm,
-          [-tr[0] * f, g.min[1], -tr[1] * f]);
+  let pose, shift;
+  if(a.seqOn && a.seqData){
+    pose = v3aPoseOf(a.data.bones, v3aSeqSample(a.seqData, a.t, a.overlap ? V3A_BLEND : 0));
+    shift = [0, a.carried ? 0 : g.min[1], 0];
+  }else{
+    // a cycle walks in place: its travel so far this loop is taken back out
+    const len = v3AnimLength(), f = len > 0 ? ((a.t % len) + len) % len / len : 0;
+    const tr = a.travel || [0, 0];
+    pose = v3aPose(a.data, a.t);
+    shift = [-tr[0] * f, a.carried ? 0 : g.min[1], -tr[1] * f];
+  }
+  v3aSkin(g, pose, a.bind, a.map, a.pos, a.nrm, shift);
   const gl = v3.gl;
   gl.bindBuffer(gl.ARRAY_BUFFER, v3.bPos);
   gl.bufferSubData(gl.ARRAY_BUFFER, 0, a.pos);
@@ -528,7 +796,7 @@ function v3AnimEditHtml(){
     <div class="v3aedrow"><span>Save as</span><input type="text" value="${esc(e.saveAs)}" style="flex:1;min-width:0"
       onchange="v3AnimEditSet('saveAs', this.value)" spellcheck="false"></div>
     <label class="count"><input type="checkbox" ${e.assign ? 'checked' : ''} onchange="v3AnimEditSet('assign', this.checked)">
-      Make it this skeleton's <b>${esc(a.action)}</b> in descr_skeleton.txt</label>
+      Make it this skeleton's <b>${esc((v3AnimRow(a.key) || {}).action || '')}</b> in descr_skeleton.txt</label>
     <div class="v3btns"><button onclick="v3AnimEditReset()" ${n || a.data !== a.orig ? '' : 'disabled'}>Reset</button>
       <button class="primary" onclick="v3AnimEditSave()" ${e.busy ? 'disabled' : ''}>Save…</button></div>
     ${e.msg ? `<div class="${e.bad ? 'w-bad' : 'count'}">${esc(e.msg)}</div>` : ''}
@@ -583,9 +851,8 @@ async function v3AnimEditPreview(){
   const a = v3.anim, e = a.edit, mine = v3;
   e.busy = true; e.msg = ''; e.bad = false;
   let data;
-  const psk = (a.list.skeletons || [])[a.skel];
   try{ data = await api.post('/api/model/anim/preview', {mod: v3.mod, rel: a.rel, edits: v3AnimEdits(),
-                                                        skeleton: psk ? psk.skeleton : ''}); }
+                                                        skeleton: a.skel || ''}); }
   catch(err){ data = {error: '' + err}; }
   if(v3 !== mine || v3.anim !== a) return;
   e.busy = false;
@@ -609,10 +876,10 @@ function v3AnimEditReset(){
 
 async function v3AnimEditSave(){
   const a = v3.anim, e = a.edit;
-  const sk = (a.list.skeletons || [])[a.skel];
+  const act = (v3AnimRow(a.key) || {}).action || '';
   const body = {mod: v3.mod, rel: a.rel, edits: v3AnimEdits(), save_as: e.saveAs,
-                skeleton: sk ? sk.skeleton : '',
-                assign: e.assign && sk ? {skeleton: sk.skeleton, action: a.action} : null};
+                skeleton: a.skel || '',
+                assign: e.assign && a.skel && !act.includes(' / ') ? {skeleton: a.skel, action: act} : null};
   let r;
   try{ r = await api.post('/api/model/anim/save_plan', body); }
   catch(err){ r = {error: '' + err}; }
@@ -648,8 +915,8 @@ function v3ExportPanel(){
   const host = document.getElementById('v3export');
   if(!host) return;
   if(!v3 || v3.cas || !v3.geo){ host.innerHTML = ''; return; }
-  const a = v3.anim, sk = a && a.list && (a.list.skeletons || [])[a.skel];
-  const loose = sk && sk.found ? sk.loose : 0;
+  const a = v3.anim, sk = a && a.list ? v3AnimSk() : null;
+  const loose = sk ? (sk.actions || []).filter(r => r.rel).length : 0;
   const all = v3.exportAll !== false;
   host.innerHTML = `<div class="k">Export</div>
     <div class="v3btns">
@@ -671,8 +938,13 @@ function v3Export(fmt){
                                  groups: v3Visible().join(','), hd: v3HdOn() ? '1' : '0'});
   const a = v3.anim;
   if(fmt === 'glb' && a){
-    q.set('skel', a.skel || 0);
-    q.set('actions', v3.exportAll !== false ? '*' : (a.action || ''));
+    // the export's own list: the entry's body skeletons, once each, in order
+    const bodies = [];
+    ((a.list && a.list.sets) || []).forEach(x => [x.primary, x.secondary].forEach(n => {
+      if(n && !bodies.includes(n)) bodies.push(n);
+    }));
+    q.set('skel', Math.max(0, bodies.indexOf(a.skel)));
+    q.set('actions', v3.exportAll !== false ? '*' : ((v3AnimRow(a.key) || {}).action || ''));
   }
   const link = document.createElement('a');
   link.href = '/api/model/export?' + q.toString();

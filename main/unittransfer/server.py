@@ -681,7 +681,7 @@ from typing import Dict, List, Optional
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
 from . import mapgen, mapnew, mapresize
-from . import ancillaries, areaeffects, campimport, edbimport, osmmap, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, campimport, edbimport, osmmap, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animview, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -5063,6 +5063,15 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, data, "image/png",
                               {"X-Texture-Full-Size": "1" if hd else "0"})
 
+        if path == "/api/model/anim" and not (q.get("rel") or [""])[0]:
+            # 80: an action straight out of pack.dat, with its packed skeleton's
+            # bones; `pack` is the path exactly as pack.idx and the slot hold it
+            try:
+                anim = animview.read(mod.data, (q.get("skel") or [""])[0],
+                                     path=(q.get("pack") or [""])[0])
+            except casanim.AnimError as exc:
+                return self._err(400, str(exc))
+            return self._json(animedit.view(anim))
         if path == "/api/model/anim":
             # one animation's keys, Phase 55b. `rel` came out of the action list
             # below, and is resolved and held under data/ like every `rel`
@@ -5112,13 +5121,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, blob, mime,
                               {"Content-Disposition": f'attachment; filename="{fname}"'})
         if path == "/api/model/anims":
-            # the entry's skeletons and every action each one names, with the
-            # ones this mod ships loose marked playable
-            skels = []
-            for s_ in entry.skeletons():
-                if s_ and s_ not in skels:
-                    skels.append(s_)
-            return self._json(casanim.actions_view(mod.data, skels))
+            # 80: the entry's skeleton sets, and every filled slot of each
+            # skeleton in skeletons.dat, named, grouped and playable from the pack
+            return self._json(animview.entry_view(mod.data, entry))
 
         lod = int((q.get("lod") or ["0"])[0] or 0)
         rels = entry.mesh_files()

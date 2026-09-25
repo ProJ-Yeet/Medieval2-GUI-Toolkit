@@ -10145,3 +10145,72 @@ modeldb read again with the pack gone; Health on both mods. The existing
 transfer suites that can run here still pass. The full suite: 38 of 148 red,
 37 of them red on the commit before as well (mods no longer installed), and
 `test_animedit` passes alone.
+
+## Phase 80a - every animation a model has, in the Models viewer - DONE 2026-09-25
+
+The first half of Phase 80: items 1, 2, 4 and 5, and item 3's skeleton sets.
+80b (weapon skeletons moving the weapon bones, the rider on his mount, `.cas`
+models, and source and destination side by side) is still open.
+
+New: `unittransfer/animview.py`, the viewer's chain; `/api/model/anims` returns
+its view and `/api/model/anim?pack=<path>&skel=<name>` reads one action out of
+the pack. `web/js/v3anim.js`'s picker, sequence and frame step are rewritten
+around it; the editor and the export keep working on loose files.
+
+**Every animation, loose or packed.** The actions are the filled slots of each
+skeleton **in `skeletons.dat`**, not `descr_skeleton.txt`'s lines, so what is
+offered is what the game plays: DaC's `MTW2_HR_Spear` 80, vanilla's
+`MTW2_2HSwordsman` 208. Each is read straight out of `pack.dat` and given the
+packed skeleton's bones (`casanim.read_packed_bytes`, fed by 77), so no unpack
+and no unpacked skeleton is needed. A loose `.cas` at the slot's path is
+preferred; an unpacked pack entry left under a `.cas` name (DaC has 11 568) is
+told apart by its first five bytes and its size, and read from the pack, which
+is the same bytes. A mod with no pack of its own plays **vanilla's**, as the
+game does, and the panel says so. A skeleton the pack has not got falls back to
+Phase 55's chain.
+
+**Found among two hundred.** Each action is named by 78's slot table (a group
+shows as `crew_right / crew_right_to_crew_stand`), put in one of eleven
+families (standing and idle, walking and running, charging, attacking,
+defending, braced formation, hit and dying, crews and siege, climbing and
+swimming, agents, everything else; `skelslots.FAMILIES`), listed under its
+family with a find box over names and file names, and shown with its frame
+count, duration and distance, from its index record and summary floats (read
+as the entry's last 40 bytes, not the whole entry).
+
+**The unit's skeletons.** The picker offers each modeldb animation record
+(`none`, `horse`, `camel`...) as a skeleton set, its primary and secondary
+skeletons to play, and lists its weapon skeletons with whether the pack has
+them.
+
+**Playback.** Play, pause, scrub, speed and loop as before, and a
+**sequence**: actions added one by one, played as one timeline, with
+**overlap** on (each starts 0.2 s before the last ends and the two are
+blended, rotations slerped and positions lerped) or off (each exactly as
+stored, end to end). A sequence keeps the pelvis over the ground, since each
+action's root motion starts from its own origin.
+
+**What the slot says.** The impact frame and each event (sound, sound bank,
+shockwave, voice, ambient) are marked at their frames on a strip under the
+scrubber, and listed with the turn limits in degrees.
+
+**A rider, drawn where it sits.** An `HR_*` rider's pelvis is its control bone
+and never leaves the origin: it is carried by its mount. Lowered onto the
+ground like a man on foot, it sank through the floor. Such an action is now
+drawn where the model sits, and the panel says why. Putting it on its mount
+is 80b.
+
+Cold, the first view of a DaC rider takes 1.4 s (the loose-file index of DaC's
+unpacked tree); warm, 0.06 s.
+
+**Tested** by `test_animview` (24): the rider's view against its pack (one
+action per filled slot, named, in families, the stats and the slot's events);
+vanilla's packs for a mod with none, through a small built "vanilla"; a pack
+entry written out as a loose `.cas` and read back giving the same pose at three
+times on every bone; every filled slot of a soldier, a horse, a rider and a
+weapon skeleton on vanilla, ROCSS and DaC read with its skeleton's bones; and,
+under node, the page's sequence arithmetic (the three-step lengths both ways,
+the second action exact without overlap, halfway through the blend halfway
+between the two, the pelvis pinned) and the rider test. Checked in the running
+app on a DaC rider: the picker, an attack out of the pack, the marks, a
+three-step sequence both ways, the rider seated.

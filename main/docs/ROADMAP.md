@@ -424,7 +424,7 @@ It stays recorded rather than rediscovered.
 | ~~77~~ | ~~The packs, read: `pack.idx`/`.dat` and `skeletons.idx`/`.dat` in the engine~~ | - | M | both - **done 2026-09-25** |
 | ~~78~~ | ~~The 687 slots named, and `descr_skeleton.txt` held against the packs~~ | - | M | both - **done 2026-09-25** |
 | ~~79~~ | ~~Transfer knows what the destination really has: skeletons from the pack, weapon skeletons counted~~ | - | S | both - **done 2026-09-25** |
-| 80 | Every animation a unit has, in the Models viewer: packed ones, named, with its weapons, shield and mount | - | L | both |
+| 80 | Every animation a unit has, in the Models viewer: packed ones, named, with its weapons, shield and mount | - | L | both - **80a done 2026-09-25**, 80b open |
 | 81 | Append to a pack, and take it back | - | L | both |
 | 82 | In-game proof: what the engine accepts, rebuilds and prefers | - | S | both |
 | 83 | Port the animations with a unit | - | L | both |
@@ -687,6 +687,13 @@ a bowman with his weapon skeleton plays on vanilla, ROCSS and DaC; a packed
 animation that also exists loose draws identically both ways; a three-step
 sequence plays with and without overlap; the slot's events show at their
 frames.
+**80a done 2026-09-25** (items 1, 2, 4 and 5, and item 3's skeleton sets;
+write-up in `ROADMAP_ARCHIVE.md`): every filled slot of a soldier, a horse, a
+rider and a weapon skeleton reads out of the pack on all three installs (a rider played in the app), a packed
+action and the same action loose give the same pose, the sequence plays both
+ways, the events show at their frames. **80b is open**: item 3's weapon
+skeletons moving the weapon and shield bones and the rider drawn on his mount,
+item 6 (`.cas` models) and item 7 (side by side).
 
 **81 - Append to a pack, and take it back (L).** `animpack.plan_port(source,
 dest, skeletons)` returns what would happen: skeletons reused, renamed or
