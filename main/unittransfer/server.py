@@ -357,6 +357,11 @@ show the unsaved map rather than the one on disk.
   GET  /api/osm?mod=              -> 25. The real-world map: whether it is on,
                                     the servers it would use, and this map's box
   GET  /api/osm/tile/Z/X/Y       -> one OpenStreetMap tile, cached on disk
+  GET  /api/osm/tile/STYLE/Z/X/Y?year=
+                                 -> 87b. a tile of another style (topo, hot,
+                                    relief, ohm with its year)
+  GET  /api/osm/picture?mod=&style=&year=&width=&format=png|svg
+                                 -> 87b. the box as a picture in the map's frame
   GET  /api/osm/search?mod=&q=   -> places inside the box, each with its tile
   GET  /api/osm/world?q=         -> 87a. places anywhere, for the world picker
   POST /api/osm/box              -> keep, import (bbox_coords.txt) or clear the box;
@@ -668,6 +673,7 @@ Buildings mode (export_descr_buildings.txt, see :mod:`unittransfer.buildings`)
 from __future__ import annotations
 
 import base64
+import io
 import json
 import os
 import re
@@ -2415,7 +2421,9 @@ class Handler(BaseHTTPRequestHandler):
                 except (OSError, ValueError) as e:
                     return self._json({"error": str(e)})
             if u.path.startswith("/api/osm/tile/"):
-                return self._osm_tile(u.path)
+                return self._osm_tile(u.path, q)
+            if u.path == "/api/osm/picture":
+                return self._osm_picture(q)
             if u.path == "/api/edbimport/lines":
                 # 76. Two EDBs and the destination's names; nothing written
                 name = (q.get("mod") or [None])[0]
@@ -3913,15 +3921,49 @@ class Handler(BaseHTTPRequestHandler):
         ew, ns = osmmap.Projection(box, w, h).km_per_tile()
         return {"stretch": osmmap.stretch(box, w, h), "km": [ew, ns]}
 
-    def _osm_tile(self, path):
+    def _osm_tile(self, path, q=None):
+        """``/api/osm/tile/Z/X/Y`` (the standard style) or, 87b,
+        ``/api/osm/tile/STYLE/Z/X/Y`` with ``?year=`` for the historical map."""
         try:
-            z, x, y = (int(v) for v in path.rsplit("/", 3)[1:])
-            raw = osmmap.tile(z, x, y)
+            parts = path[len("/api/osm/tile/"):].strip("/").split("/")
+            style = parts.pop(0) if len(parts) == 4 else "osm"
+            z, x, y = (int(v) for v in parts)
+            year = ((q or {}).get("year") or [None])[0]
+            raw = osmmap.tile(z, x, y, style, year)
         except osmmap.OsmOff as e:
             return self._err(403, str(e))
         except (ValueError, OSError) as e:
             return self._err(404, str(e))
         return self._send(200, raw, "image/png")
+
+    def _osm_picture(self, q):
+        """87b: the box's real world as a PNG or an SVG in the map's own frame,
+        to keep beside the map. Sends tiles' worth of requests, so it is under
+        the switch like the backdrop."""
+        name = (q.get("mod") or [""])[0]
+        style = (q.get("style") or ["osm"])[0]
+        fmt = (q.get("format") or ["png"])[0]
+        try:
+            cm = self._osm_map(name)
+            box, _ = osmmap.box_for(cm)
+            if box is None:
+                return self._err(400, "give the map its real-world box first")
+            w, h = cm.terrain.width, cm.terrain.height
+            img = osmmap.picture(box, w, h, style, (q.get("year") or [None])[0],
+                                 int((q.get("width") or ["2048"])[0]))
+        except osmmap.OsmOff as e:
+            return self._err(403, str(e))
+        except (KeyError, campmap.MapError, ModDataError, OSError, ValueError) as e:
+            return self._err(400, str(e))
+        stem = f"reference_{style}_{w}x{h}"
+        if fmt == "svg":
+            body = osmmap.picture_svg(img, box, w, h, style).encode("utf-8")
+            return self._send(200, body, "image/svg+xml",
+                              {"Content-Disposition": f'attachment; filename="{stem}.svg"'})
+        buf = io.BytesIO()
+        img.save(buf, "PNG", optimize=True)
+        return self._send(200, buf.getvalue(), "image/png",
+                          {"Content-Disposition": f'attachment; filename="{stem}.png"'})
 
     def _osm_post(self, action, body):
         name = str(body.get("mod") or "")

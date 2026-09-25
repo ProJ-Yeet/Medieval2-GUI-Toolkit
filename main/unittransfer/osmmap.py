@@ -48,6 +48,7 @@ from __future__ import annotations
 
 import gzip
 import hashlib
+import io
 import json
 import math
 import threading
@@ -60,7 +61,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageChops, ImageDraw
 
 from . import __version__, config
 
@@ -75,6 +76,36 @@ DEFAULT_TILES = ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"]
 DEFAULT_OVERPASS = ["https://overpass-api.de/api/interpreter",
                     "https://overpass.kumi.systems/api/interpreter"]
 DEFAULT_NOMINATIM = "https://nominatim.openstreetmap.org"
+
+#: 87b. The backdrop's styles, Mylae's reference layers and his historical
+#: map: the settings key holding each style's servers, the servers, its name,
+#: the deepest zoom it has, and the credit a picture of it has to carry.
+#: ``relief`` has no server of its own: it is drawn here from the elevation
+#: tiles the heights generator reads (27), on one scale for every tile, where
+#: his stretched each tile to its own range and left a seam between them.
+#: ``ohm`` takes a year, into ``{date}``.
+STYLES = {
+    "osm": ("osm_tiles", DEFAULT_TILES, "OpenStreetMap", 19,
+            "© OpenStreetMap contributors"),
+    "topo": ("osm_tiles_topo", ["https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
+                                "https://b.tile.opentopomap.org/{z}/{x}/{y}.png",
+                                "https://c.tile.opentopomap.org/{z}/{x}/{y}.png"],
+             "OpenTopoMap", 17,
+             "© OpenStreetMap contributors, SRTM · style © OpenTopoMap (CC-BY-SA)"),
+    "hot": ("osm_tiles_hot", ["https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+                              "https://b.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"],
+            "OSM Humanitarian", 19,
+            "© OpenStreetMap contributors · tiles Humanitarian OSM Team, OSM France"),
+    "ohm": ("osm_tiles_ohm",
+            ["https://tile.openhistoricalmap.org/historicalmaps/{z}/{x}/{y}.png?date={date}"],
+            "OpenHistoricalMap", 19, "© OpenHistoricalMap contributors"),
+    "relief": (None, None, "Relief (from the elevation tiles)", 15,
+               "elevation: Terrarium tiles, AWS Open Data (Mapzen)"),
+}
+#: His year slider's reach, and his twelve era buttons.
+OHM_YEARS = (500, 1600)
+OHM_ERAS = (500, 700, 800, 900, 1000, 1066, 1095, 1200, 1250, 1350, 1400, 1500)
+OHM_DEFAULT = 1200
 
 USER_AGENT = f"Medieval2-GUI-Toolkit/{__version__} (local campaign map editor)"
 
@@ -123,6 +154,11 @@ def settings() -> dict:
 
     return {"enabled": bool(s.get(ENABLED_KEY, False)),
             "tiles": lst("osm_tiles", DEFAULT_TILES),
+            "styles": {k: {"name": v[2], "max_zoom": v[3], "credit": v[4],
+                           "servers": lst(v[0], v[1]) if v[0] else []}
+                       for k, v in STYLES.items()},
+            "ohm_years": list(OHM_YEARS), "ohm_eras": list(OHM_ERAS),
+            "ohm_default": OHM_DEFAULT,
             "overpass": lst("osm_overpass", DEFAULT_OVERPASS),
             "nominatim": (str(s.get("osm_nominatim") or "").strip().rstrip("/")
                           or DEFAULT_NOMINATIM),
@@ -409,17 +445,55 @@ _TILE_LOCK = threading.Lock()
 _TILE_TIMES: deque = deque()
 
 
-def tile(z: int, x: int, y: int) -> bytes:
-    """One map tile, off the disk if it was fetched in the last 30 days."""
+def _year(style: str, year) -> Optional[int]:
+    if style != "ohm":
+        return None
+    try:
+        y = int(year) if year not in (None, "") else OHM_DEFAULT
+    except (TypeError, ValueError):
+        raise OsmError("the year has to be a whole number") from None
+    if not 1 <= y <= 2100:
+        raise OsmError(f"{y} is not a year the historical map has")
+    return y
+
+
+def _tile_path(style: str, year: Optional[int], z: int, x: int, y: int) -> Path:
+    # the standard style keeps Phase 25's folder, so its cache stays good
+    base = config.cache_dir("osm_tiles" if style == "osm" else f"osm_tiles_{style}")
+    if year is not None:
+        base = base / str(year)
+    return base / str(z) / str(x) / f"{y}.png"
+
+
+def _urls(tpl: str, z: int, x: int, y: int, year: Optional[int]) -> List[str]:
+    u = (tpl.replace("{z}", str(z)).replace("{x}", str(x)).replace("{y}", str(y))
+         .replace("{date}", f"{year or OHM_DEFAULT:04d}-01-01"))
+    return [u.replace("{s}", c) for c in "abc"] if "{s}" in u else [u]
+
+
+def tile(z: int, x: int, y: int, style: str = "osm", year=None) -> bytes:
+    """One map tile of a style, off the disk if it was fetched in the last 30
+    days. The relief is drawn here from the elevation tile under it."""
+    if style not in STYLES:
+        raise OsmError(f"{style} is not a backdrop style")
     if not (0 <= z <= 19 and 0 <= x < 2 ** z and 0 <= y < 2 ** z):
         raise OsmError(f"{z}/{x}/{y} is not a map tile")
-    path = config.cache_dir("osm_tiles") / str(z) / str(x) / f"{y}.png"
+    yr = _year(style, year)
+    path = _tile_path(style, yr, z, x, y)
     try:
         if path.is_file() and time.time() - path.stat().st_mtime < TILE_DAYS * 86400:
             return path.read_bytes()
     except OSError:
         pass
     s = require_on()
+    if style == "relief":
+        raw = relief_png(z, x, y)
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(raw)
+        except OSError:
+            pass
+        return raw
     with _TILE_LOCK:
         now = time.time()
         while _TILE_TIMES and now - _TILE_TIMES[0] > 60:
@@ -429,20 +503,160 @@ def tile(z: int, x: int, y: int) -> bytes:
                            "minute - it will carry on shortly")
         _TILE_TIMES.append(now)
     last = None
-    for tpl in s["tiles"]:
-        try:
-            raw = _fetch(tpl.replace("{z}", str(z)).replace("{x}", str(x))
-                         .replace("{y}", str(y)), timeout=20)
-        except (urllib.error.URLError, OSError, ValueError) as e:
-            last = e
-            continue
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(raw)
-        except OSError:
-            pass
-        return raw
-    raise OsmError(f"no tile server answered ({last})")
+    for tpl in s["styles"][style]["servers"]:
+        for url in _urls(tpl, z, x, y, yr):
+            try:
+                raw = _fetch(url, timeout=20)
+            except (urllib.error.URLError, OSError, ValueError) as e:
+                last = e
+                continue
+            try:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(raw)
+            except OSError:
+                pass
+            return raw
+    raise OsmError(f"no {STYLES[style][2]} server answered ({last})")
+
+
+#: The relief's scale: land from 0 to this many metres runs dark to light, the
+#: sea from 0 to this depth light to dark blue. One scale for every tile.
+RELIEF_TOP = 4500.0
+RELIEF_DEEP = 5000.0
+
+
+def relief_png(z: int, x: int, y: int) -> bytes:
+    """A relief tile: the elevation under it in grey on land and blue at sea,
+    shaded from the north-west so the slopes read."""
+    from . import mapgen
+    e = mapgen.elevation_tile(z, x, y)
+    # the neighbour to the north-west of every pixel, the edge repeated
+    pad = Image.new("F", (257, 257))
+    pad.paste(e, (1, 1))
+    pad.paste(e.crop((0, 0, 256, 1)), (1, 0))
+    pad.paste(e.crop((0, 0, 1, 256)), (0, 1))
+    pad.putpixel((0, 0), e.getpixel((0, 0)))
+    nw = pad.crop((0, 0, 256, 256))
+    lat = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (y + 0.5) / 2 ** z))))
+    m_px = 2 * math.pi * EARTH_KM * 1000 * math.cos(math.radians(lat)) / (256 * 2 ** z)
+    slope = mapgen._math("(n - e) / p", n=nw, e=e,
+                         p=Image.new("F", e.size, max(m_px, 1e-6)))
+    shade = slope.point(lambda v: v * 350.0 + 205.0).convert("L")
+    grey = e.point(lambda v: v * 255.0 / RELIEF_TOP).convert("L").point(
+        [round(70 + 185 * math.sqrt(i / 255)) for i in range(256)])
+    grey = ImageChops.multiply(grey, shade)
+    deep = e.point(lambda v: -v * 255.0 / RELIEF_DEEP).convert("L")
+    blue = deep.point([round(235 - 150 * math.sqrt(i / 255)) for i in range(256)])
+    sea_rg = deep.point([round(190 - 170 * math.sqrt(i / 255)) for i in range(256)])
+    land = mapgen._math("convert((e > 0) * 255, 'L')", e=e)
+    rgb = Image.merge("RGB", (sea_rg, sea_rg, blue))
+    rgb.paste(Image.merge("RGB", (grey, grey, grey)), mask=land)
+    buf = io.BytesIO()
+    rgb.save(buf, "PNG", optimize=True)
+    return buf.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# 87b: a picture of the box, to keep beside the map
+
+
+#: The most tiles one picture may stitch.
+PICTURE_BUDGET = 400
+
+
+def picture(b: Bbox, width: int, height: int, style: str = "osm", year=None,
+            px: int = 2048) -> Image.Image:
+    """The box's real world as one picture in the map's own frame: ``px``
+    wide, as tall as the map's shape makes it, a turned box turned with it,
+    and the style's credit in the corner, as its licence asks.
+
+    The slippy tiles under the envelope are stitched at the first zoom that
+    covers the picture one and a half times over (Mylae's rule), then one
+    affine transform puts them in the map's frame, as for the heights."""
+    if style not in STYLES:
+        raise OsmError(f"{style} is not a backdrop style")
+    px = max(64, min(8192, int(px)))
+    tall = max(1, round(px * height / width))
+    proj = Projection(b, width, height)
+    env = b.envelope()
+
+    def lon2x(lon, z):
+        return (lon + 180) / 360 * 2 ** z * 256
+
+    def lat2y(lat, z):
+        return (1 - merc(lat) / math.pi) / 2 * 2 ** z * 256
+
+    zmax = STYLES[style][3]
+    z = zmax
+    for zz in range(1, zmax + 1):
+        if (lon2x(env.east, zz) - lon2x(env.west, zz) >= 1.5 * px
+                and lat2y(env.south, zz) - lat2y(env.north, zz) >= 1.5 * tall):
+            z = zz
+            break
+
+    def span(zz):
+        return (int(lon2x(env.west, zz) // 256), int(lon2x(env.east, zz) // 256),
+                int(lat2y(env.north, zz) // 256), int(lat2y(env.south, zz) // 256))
+
+    x0, x1, y0, y1 = span(z)
+    while (x1 - x0 + 1) * (y1 - y0 + 1) > PICTURE_BUDGET and z > 1:
+        z -= 1
+        x0, x1, y0, y1 = span(z)
+    n = 2 ** z
+    big = Image.new("RGB", ((x1 - x0 + 1) * 256, (y1 - y0 + 1) * 256), (170, 201, 214))
+    for ty in range(max(0, y0), min(n - 1, y1) + 1):
+        for tx in range(x0, x1 + 1):
+            raw = tile(z, tx % n, ty, style, year)
+            im = Image.open(io.BytesIO(raw)).convert("RGB")
+            if im.size != (256, 256):
+                im = im.resize((256, 256), Image.BILINEAR)
+            big.paste(im, ((tx - x0) * 256, (ty - y0) * 256))
+    size = n * 256
+
+    def at(u, v):
+        # output pixel centre (u + .5, v + .5) -> the map's tile space -> the stitch
+        fx = (u + 0.5) * width / px - 0.5
+        fy = (v + 0.5) * height / tall - 0.5
+        lon, m = proj.to_lonmerc(fx, fy)
+        return (lon + 180) / 360 * size - x0 * 256, (1 - m / math.pi) / 2 * size - y0 * 256
+
+    (p0x, p0y), (p1x, p1y), (p2x, p2y) = at(0, 0), at(1, 0), at(0, 1)
+    a, bb, d, e = p1x - p0x, p2x - p0x, p1y - p0y, p2y - p0y
+    # at(u, v) is where output pixel (u, v)'s centre lands, in the stitch's
+    # continuous coordinates (a pixel's centre at k + .5); Pillow samples the
+    # continuous point a * (u + .5) + b * (v + .5) + c
+    c = p0x - 0.5 * a - 0.5 * bb
+    f = p0y - 0.5 * d - 0.5 * e
+    out = big.transform((px, tall), Image.AFFINE, (a, bb, c, d, e, f), Image.BILINEAR)
+    out.info["zoom"] = z
+    draw = ImageDraw.Draw(out)
+    credit = STYLES[style][4] + (f" · {_year(style, year)}" if style == "ohm" else "")
+    tw = draw.textlength(credit)
+    draw.rectangle([px - tw - 10, tall - 16, px, tall], fill=(255, 255, 255))
+    draw.text((px - tw - 5, tall - 14), credit, fill=(40, 40, 40))
+    return out
+
+
+def picture_svg(img: Image.Image, b: Bbox, width: int, height: int, style: str) -> str:
+    """The picture as an SVG, Mylae's shape with one correction: his viewBox
+    is in degrees, which misplaces every latitude on a Mercator picture, so
+    this one is in the map's tiles (0 to W, 0 to H), the box and the turn
+    written beside it."""
+    import base64
+    buf = io.BytesIO()
+    img.save(buf, "PNG", optimize=True)
+    data = base64.b64encode(buf.getvalue()).decode("ascii")
+    return (f'<?xml version="1.0" encoding="UTF-8"?>\n'
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
+            f'width="{img.width}" height="{img.height}">\n'
+            f'  <title>{STYLES[style][2]}: N {b.north:.6f} S {b.south:.6f} '
+            f'W {b.west:.6f} E {b.east:.6f}'
+            f'{f" turned {b.rotation:.2f}" if b.rotated else ""}</title>\n'
+            f'  <!-- one unit is one tile of the {width}x{height} campaign map; '
+            f'{STYLES[style][4]} -->\n'
+            f'  <image x="0" y="0" width="{width}" height="{height}" '
+            f'preserveAspectRatio="none" href="data:image/png;base64,{data}"/>\n'
+            f'</svg>\n')
 
 
 def overpass(query: str) -> dict:

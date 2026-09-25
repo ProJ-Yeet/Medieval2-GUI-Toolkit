@@ -35,6 +35,7 @@ const OSM_MAX_TILES = 48;
 function osmNew(mod){
   return {mod, open: false, st: null, busy: false, err: '', box: null,
           show: true, alpha: 0.5, coast: null, showCoast: true, over: null,
+          style: 'osm', year: 1200, picW: 2048,
           q: '', results: null, target: '', job: '', pct: 0, label: ''};
 }
 
@@ -151,8 +152,25 @@ function osmKmPerTile(b, W, H){
 
 const _osmTiles = new Map();
 
+/* 87b - THE STYLE. Mylae's reference layers and his historical map, one at a
+   time, chosen on the panel and shared with the world picker. The standard
+   style keeps Phase 25's URL; the others name themselves, and the historical
+   map carries its year. */
+const osmStyle = () => (state.osm && state.osm.style) || 'osm';
+function osmStyleInfo(){
+  const st = state.osm && state.osm.st, s = st && st.settings && st.settings.styles;
+  return (s && s[osmStyle()]) || {name: 'OpenStreetMap', max_zoom: 19, credit: '© OpenStreetMap contributors'};
+}
+const osmMaxZoom = () => Math.min(18, osmStyleInfo().max_zoom || 18);
+
+function osmTileUrl(z, x, y){
+  const s = osmStyle();
+  if(s === 'osm') return `/api/osm/tile/${z}/${x}/${y}`;
+  return `/api/osm/tile/${s}/${z}/${x}/${y}` + (s === 'ohm' ? `?year=${state.osm.year}` : '');
+}
+
 function osmTileImg(z, x, y){
-  const url = `/api/osm/tile/${z}/${x}/${y}`;
+  const url = osmTileUrl(z, x, y);
   let t = _osmTiles.get(url);
   if(t) return t.ok ? t.img : null;
   const img = new Image();
@@ -195,7 +213,7 @@ function osmDrawTiles(x, b, W, H, v, s0, t0, s1, t1){
   // not change the scale)
   const span = b.east - b.west;
   let z = Math.round(Math.log2(360 * (W - 1) * v.zoom / (span * OSM_TILE_PX)));
-  z = Math.max(0, Math.min(18, z));
+  z = Math.max(0, Math.min(osmMaxZoom(), z));
   // the visible part of the map as geography: the envelope of its four
   // corners, which for an unturned box is the old rectangle exactly
   const fa = Math.max(-0.5, s0 - 0.5), fb = Math.min(W - 0.5, s1 - 0.5);
@@ -263,6 +281,65 @@ function osmBuildOver(){
   put(k.coast.line_xy || [], 0, 240, 255, 255);
   x.putImageData(im, 0, 0);
   k.over = cv;
+}
+
+/* ---------- the style, and a picture of the box (87b) ---------- */
+
+function osmSetStyle(style){
+  const k = state.osm;
+  k.style = style;
+  osmPaint(); cmapPaint();
+  if(state.owp && state.owp.open){ owpSide(); owpDraw(); }
+}
+
+function osmSetYear(y){
+  const k = state.osm, st = k.st && k.st.settings;
+  const [lo, hi] = (st && st.ohm_years) || [500, 1600];
+  y = Math.round(+y);
+  if(!isFinite(y)) return;
+  k.year = Math.max(1, Math.min(2100, y));
+  // the panel and the world picker each have a pair
+  document.querySelectorAll('.osmYearN').forEach(n => { if(document.activeElement !== n) n.value = k.year; });
+  document.querySelectorAll('.osmYearR').forEach(r => { r.value = Math.max(lo, Math.min(hi, k.year)); });
+  cmapPaint();
+  if(state.owp && state.owp.open) owpDraw();
+}
+
+//: The style picker, the year for the historical map, and its credit: the same
+//: controls on the panel and in the world picker.
+function osmStyleHtml(){
+  const k = state.osm, st = k.st.settings, styles = st.styles || {};
+  const [lo, hi] = st.ohm_years || [500, 1600];
+  return `<label style="display:block">Style <select onchange="osmSetStyle(this.value)">${Object.entries(styles).map(([id, s]) =>
+      `<option value="${id}" ${id === k.style ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></label>
+    ${k.style === 'ohm' ? `<div class="brow"><input type="range" class="osmYearR" min="${lo}" max="${hi}" step="1"
+        value="${Math.max(lo, Math.min(hi, k.year))}" oninput="osmSetYear(this.value)" style="flex:1">
+        <input type="number" class="osmYearN" min="1" max="2100" value="${k.year}" style="width:70px"
+          onchange="osmSetYear(this.value)"> AD</div>
+      <div class="cmbar2">${(st.ohm_eras || []).map(y =>
+        `<button class="${y === k.year ? 'primary' : ''}" onclick="osmSetYear(${y});osmPaint();if(state.owp&&state.owp.open)owpSide()">${y}</button>`).join('')}</div>
+      <div class="count">The historical borders as OpenHistoricalMap has them for 1 January of that
+        year: a tracing guide for the regions.</div>` : ''}
+    <div class="count">${esc(osmStyleInfo().credit)}</div>`;
+}
+
+async function osmPicture(fmt){
+  const k = state.osm, c = state.cmap;
+  if(!k || !c || k.busy) return;
+  const q = `mod=${enc(c.mod)}&style=${enc(k.style)}&year=${k.year}&width=${k.picW}&format=${fmt}`;
+  k.busy = true; osmPaint();
+  try{
+    const r = await fetch(`/api/osm/picture?${q}`);
+    if(!r.ok){ toast('✗ ' + (await r.text()).slice(0, 300), 8000); return; }
+    const name = ((r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/) || [])[1]
+      || `reference.${fmt}`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await r.blob());
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }catch(e){ toast('✗ ' + errText(e), 8000); }
+  finally{ k.busy = false; osmPaint(); }
 }
 
 /* ---------- the box ---------- */
@@ -471,9 +548,17 @@ function osmHtml(){
     </div>
     <div class="bsec"><h4>Backdrop</h4>
       <label class="chk"><input type="checkbox" ${k.show ? 'checked' : ''}
-        onchange="state.osm.show=this.checked;cmapPaint()"> Show OpenStreetMap over the map</label>
-      <label>Opacity <input type="range" min="0.1" max="1" step="0.05" value="${k.alpha}"
+        onchange="state.osm.show=this.checked;cmapPaint()"> Show the real world over the map</label>
+      <label style="display:block">Opacity <input type="range" min="0.1" max="1" step="0.05" value="${k.alpha}"
         oninput="state.osm.alpha=+this.value;cmapPaint()"></label>
+      ${osmStyleHtml()}
+      <div class="cmbar2"><label>Save a picture of the box
+          <select onchange="state.osm.picW=+this.value">${[1024, 2048, 4096].map(w =>
+            `<option value="${w}" ${w === k.picW ? 'selected' : ''}>${w} px wide</option>`).join('')}</select></label>
+        <button onclick="osmPicture('png')" ${k.busy || !osmBoxOk(k.box) ? 'disabled' : ''}>PNG</button>
+        <button onclick="osmPicture('svg')" ${k.busy || !osmBoxOk(k.box) ? 'disabled' : ''}>SVG</button></div>
+      <div class="count">The style above, cut to the box and turned with it, in the map’s own
+        frame: a reference to paint from in another program.</div>
     </div>
     <div class="bsec"><h4>Coastline</h4>
       <div class="cmbar2"><button onclick="osmCoast()" ${k.busy || !osmBoxOk(k.box) ? 'disabled' : ''}

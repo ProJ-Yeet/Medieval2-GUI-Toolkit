@@ -10274,3 +10274,46 @@ keep (66). Checked in the app on a scratch server with a fake OpenStreetMap:
 the world at zoom 4, a search, a box fitted round Sicily in ROCSS's 510x510
 shape, turned 29.7° by the handle, a corner dragged with the far corner still
 to 1e-15, kept, and the backdrop drawn turned over the map.
+
+### 87b - reference maps and the historical map - DONE 2026-09-25
+
+The backdrop, on the panel and in the world picker alike, is one of five
+styles: **OpenStreetMap**, **OpenTopoMap** and **OSM Humanitarian** (Mylae's
+reference layers), **Relief**, and **OpenHistoricalMap** with his year slider
+(500-1600, any year typed) and his twelve era buttons, the year going into the
+server's `{date}` as 1 January. Each style has its own server list in
+Settings, its own cache folder (the standard style keeps Phase 25's, so its
+cache stays good), its deepest zoom and its credit, shown under the picker.
+`{s}` in a server is tried as a, b and c. The route is
+`/api/osm/tile/STYLE/Z/X/Y?year=`; the old one is still the standard style.
+
+**The relief is drawn here**, from the elevation tiles 27 already reads:
+grey on land and blue at sea on one scale for every tile, shaded from the
+north-west by the slope in metres per pixel. His stretched each tile to its
+own minimum and maximum, so the same height was a different grey on the next
+tile and every tile edge showed.
+
+**A picture of the box.** *Save a picture of the box* (1024, 2048 or 4096
+wide, PNG or SVG) cuts the chosen style to the box in the map's own frame: the
+tiles under the envelope at the first zoom that covers the picture one and a
+half times (his rule, a budget of 400), put in place by one affine transform,
+so a turned box comes out turned with the map. The style's credit is drawn in
+the corner, as its licence asks. The SVG is his shape with one correction:
+his viewBox is in degrees, which misplaces every latitude on a Mercator
+picture, so this one is in the map's tiles, with the box and the turn written
+in its title.
+
+On the way, both resamplers (the picture's and 27's heights) were half a
+slippy pixel off: Pillow samples in continuous coordinates, where a tile
+pixel's centre is k + 0.5, and the formula treated the slippy coordinate as an
+index. It was a third of an output pixel at the zoom chosen; `test_osmworld`
+now holds the heights to the pixel centre exactly.
+
+Tests: `test_osmstyles` (27) with a fake server for every style and for the
+elevation: the five styles and their settings, off with nothing sent, a style
+from its own servers past one that fails, cached apart, the year into the
+date and each year apart, the relief's colours on one scale across tiles, and
+a picture straight and turned whose every probed pixel comes from the slippy
+tile its point stands in. `test_osmmap` (70) gains the styled tile route and
+the picture as PNG and SVG. Checked in the app on the scratch server: the
+style picker on ROCSS, OpenHistoricalMap at 1066 over the map, and the relief.

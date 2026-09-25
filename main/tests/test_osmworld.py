@@ -197,8 +197,9 @@ for z in range(3, 13):
     err = 0.0
     for i, j in probe:
         la, lo = pt.to_geo((i - 1) / 2, (j - 1) / 2)
-        err = max(err, abs(mx.getpixel((i, j)) - mapgen._lon2x(lo, z)),
-                  abs(my.getpixel((i, j)) - mapgen._lat2y(la, z)))
+        # a tile pixel k holds the value at its centre, k + .5
+        err = max(err, abs(mx.getpixel((i, j)) + 0.5 - mapgen._lon2x(lo, z)),
+                  abs(my.getpixel((i, j)) + 0.5 - mapgen._lat2y(la, z)))
     if best is None or err < best[1]:
         best = (z, err)
 check(f"every probed corner samples the tile pixel under its turned position "

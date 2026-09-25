@@ -192,7 +192,8 @@ on top. Ships on the dated beta pre-release; see the module table above.
   real ground under the map's box at the game's own scale, ground types from the
   heights, climates from the ground types, and rivers, cliffs and volcanoes from
   OpenStreetMap drawn the way the game can build a river. **Real world** draws
-  OpenStreetMap over the map, traces the real coastline and finds places by
+  the real world over the map (OpenStreetMap, OpenTopoMap, a relief, or the
+  historical borders of any year from OpenHistoricalMap), traces the real coastline and finds places by
   name, and its world map is where the map's box is found: drawn, moved,
   turned, or fitted round a place, in the map's own shape. The two that use the internet are off until Settings turns them on.
 * **A refusal says what would work instead.** A culture or a resource name the

@@ -286,10 +286,10 @@ def elevation(box, cols: int, rows: int) -> Image.Image:
         for tx in range(x0, x1 + 1):
             big.paste(elevation_tile(z, tx % (2 ** z), ty),
                       ((tx - x0) * 256, (ty - y0) * 256))
-    # corner (i, j) -> the stitched picture's pixel: affine in (i, j), so three
+    # corner (i, j) -> the stitched picture's continuous coordinates (a pixel's
+    # centre at k + .5, where its sample stands): affine in (i, j), so three
     # corners fix it. Corner i stands at tile (i - 1) / 2. Pillow samples output
-    # pixel (x, y) at a * (x + .5) + b * (y + .5) + c - .5, so c and f take the
-    # half-pixel back.
+    # pixel (x, y) at the continuous point a * (x + .5) + b * (y + .5) + c.
     size = 2 ** z * 256
 
     def pix(i, j):
@@ -302,8 +302,7 @@ def elevation(box, cols: int, rows: int) -> Image.Image:
     d, e = (p1y - p0y) / 2, (p2y - p0y) / 2
     c, f = p0x - a - b, p0y - d - e
     return big.transform((cols, rows), Image.AFFINE,
-                         (a, b, c + 0.5 - 0.5 * a - 0.5 * b,
-                          d, e, f + 0.5 - 0.5 * d - 0.5 * e),
+                         (a, b, c - 0.5 * a - 0.5 * b, d, e, f - 0.5 * d - 0.5 * e),
                          Image.BILINEAR)
 
 

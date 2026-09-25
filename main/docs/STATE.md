@@ -15,7 +15,11 @@ world before any box exists, a box drawn, moved, resized and turned, typed
 too, a worldwide search that fits the box round a place, and the map's shape
 kept so nothing stretches. The turn is in `osmmap.Projection`, so everything
 that uses the box sees it. `test_osmworld` (42), `test_osmmap` (66).
-**87b is next.**
+**87b is done**: the backdrop's styles (OpenStreetMap, OpenTopoMap, OSM
+Humanitarian, a relief drawn from the elevation tiles, OpenHistoricalMap by
+year with his era buttons), each with its servers in Settings, and the box
+saved as a picture (PNG or SVG) in the map's own frame. `test_osmstyles` (27),
+`test_osmmap` (70). **87c is next.**
 
 **Phase 80a is done - every animation a model has, in the Models viewer,
 2026-09-25, committed and uncut.** `unittransfer/animview.py`: the viewer's

@@ -242,7 +242,7 @@ function owpDraw(){
 
 function owpDrawTiles(x, cw, ch){
   const v = state.owp.view;
-  let tz = Math.max(0, Math.min(18, Math.round(v.z)));
+  let tz = Math.max(0, Math.min(osmMaxZoom(), Math.round(v.z)));
   let x0, x1, y0, y1, n, sc;
   for(;; tz--){
     n = 2 ** tz; sc = 2 ** (v.z - tz);
@@ -460,6 +460,7 @@ function owpSideHtml(){
         onchange="owpField('${k}',this.value)" ${b ? '' : 'disabled'}></label>`;
   return `
     ${o.err ? `<div class="w-bad">${esc(o.err)}</div>` : ''}
+    <div class="bsec"><h4>The world as</h4>${osmStyleHtml()}</div>
     <div class="bsec"><h4>Find a place</h4>
       <div class="brow"><input id="owpQ" value="${esc(o.q)}" placeholder="a town, a region, a country"
         onkeydown="if(event.key==='Enter')owpSearch()">

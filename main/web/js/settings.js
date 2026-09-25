@@ -139,9 +139,15 @@ async function openSettings(){
            'The servers are below, one a line, tried in order. Change them to use a mirror of your own.'])}</div>
         <label style="display:block;margin-top:6px">Map tiles <span class="count">({z}, {x} and {y} are filled in)</span>
           <textarea id="osmTiles" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_tiles||['https://tile.openstreetmap.org/{z}/{x}/{y}.png']).join('\n'))}</textarea></label>
+        <label style="display:block">OpenTopoMap <span class="count">(a backdrop style)</span>
+          <textarea id="osmTilesTopo" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_tiles_topo||['https://a.tile.opentopomap.org/{z}/{x}/{y}.png','https://b.tile.opentopomap.org/{z}/{x}/{y}.png','https://c.tile.opentopomap.org/{z}/{x}/{y}.png']).join('\n'))}</textarea></label>
+        <label style="display:block">OSM Humanitarian <span class="count">(a backdrop style)</span>
+          <textarea id="osmTilesHot" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_tiles_hot||['https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png','https://b.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png']).join('\n'))}</textarea></label>
+        <label style="display:block">OpenHistoricalMap <span class="count">(a backdrop style; {date} is the year picked, as YYYY-01-01)</span>
+          <textarea id="osmTilesOhm" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_tiles_ohm||['https://tile.openhistoricalmap.org/historicalmaps/{z}/{x}/{y}.png?date={date}']).join('\n'))}</textarea></label>
         <label style="display:block">Overpass (the coastline)
           <textarea id="osmOverpass" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_overpass||['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']).join('\n'))}</textarea></label>
-        <label style="display:block">Elevation tiles (the heights generator, Terrarium format)
+        <label style="display:block">Elevation tiles (the heights generator and the relief style, Terrarium format)
           <textarea id="osmElevation" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_elevation||['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png']).join('\n'))}</textarea></label>
         <label style="display:block">Nominatim (the place search)
           <input id="osmNominatim" style="width:100%" value="${esc(s.osm_nominatim||'https://nominatim.openstreetmap.org')}" onchange="saveOsm()"></label>
@@ -416,6 +422,8 @@ async function saveOsm(){
   const lines = id => val(id).split(/\r?\n/).map(x => x.trim()).filter(Boolean);
   const on = !!(document.getElementById('osmChk') || {}).checked;
   const body = {osm_enabled: on, osm_tiles: lines('osmTiles'),
+                osm_tiles_topo: lines('osmTilesTopo'), osm_tiles_hot: lines('osmTilesHot'),
+                osm_tiles_ohm: lines('osmTilesOhm'),
                 osm_overpass: lines('osmOverpass'), osm_elevation: lines('osmElevation'),
                 osm_nominatim: val('osmNominatim').trim()};
   state.settings = await api.post('/api/settings', body);

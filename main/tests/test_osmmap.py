@@ -440,6 +440,19 @@ check("POST /api/osm/box keeps an imported file", r.get("box", {}).get("north") 
 r = post("/api/osm/box", {"mod": "Coasty", "box": {"north": 1, "south": 2, "west": 0, "east": 1}})
 check("and refuses a bad box", "above south" in (r.get("error") or ""))
 post("/api/osm/box", {"mod": "Coasty", "box": b.payload()})
+# 87b: a tile of another style, and a picture of the box
+config.save_settings(osm_tiles_hot=[FAKE + "/tiles/{z}/{x}/{y}.png"])
+check("87b: GET /api/osm/tile/hot/Z/X/Y serves a Humanitarian tile",
+      get("/api/osm/tile/hot/5/16/11", raw=True) == PNG)
+check("87b: and a style that does not exist is a 404",
+      get("/api/osm/tile/satellite/5/16/11", raw=True) == 404)
+pic = get("/api/osm/picture?mod=Coasty&style=osm&width=300&format=png", raw=True)
+pim = Image.open(__import__("io").BytesIO(pic)) if isinstance(pic, bytes) else None
+check("87b: GET /api/osm/picture gives the box as a PNG in the map's shape",
+      pim is not None and pim.size == (300, round(300 * H / W)))
+svg = get("/api/osm/picture?mod=Coasty&width=300&format=svg", raw=True)
+check("87b: and as an SVG in the map's frame",
+      isinstance(svg, bytes) and f'viewBox="0 0 {W} {H}"'.encode() in svg)
 r = post("/api/osm/coast", {"mod": "Coasty"})
 check("POST /api/osm/coast reports without painting",
       r.get("coast", {}).get("to_sea") == len(c.to_sea) and layers() == before)
