@@ -422,7 +422,7 @@ It stays recorded rather than rediscovered.
 | ~~26~~ | ~~Map resize, and create from scratch~~ | 3 | L | beta - **done 2026-09-24** |
 | ~~27~~ | ~~Overlay and layer generators~~ | 3 | L | beta - **done 2026-09-24** |
 | ~~77~~ | ~~The packs, read: `pack.idx`/`.dat` and `skeletons.idx`/`.dat` in the engine~~ | - | M | both - **done 2026-09-25** |
-| 78 | The 687 slots named, and `descr_skeleton.txt` held against the packs | - | M | both |
+| ~~78~~ | ~~The 687 slots named, and `descr_skeleton.txt` held against the packs~~ | - | M | both - **done 2026-09-25** |
 | 79 | Transfer knows what the destination really has: skeletons from the pack, weapon skeletons counted | - | S | both |
 | 80 | Every animation a unit has, in the Models viewer: packed ones, named, with its weapons, shield and mount | - | L | both |
 | 81 | Append to a pack, and take it back | - | L | both |
@@ -623,6 +623,7 @@ pack, skeletons in the pack but not the text, slots that disagree. Measure how
 out of step DaC and ROCSS are (Wilddog's point 4, never measured here). Done
 when: every slot a vanilla skeleton fills has a name, and the per-mod report
 runs on all three.
+**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
 
 **79 - Transfer knows what the destination really has (S).** The
 missing-skeleton check reads `skeletons.idx` (the modeldb only as the fallback

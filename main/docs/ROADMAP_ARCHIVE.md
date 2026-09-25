@@ -10034,3 +10034,69 @@ temp, 80 KB where a copied pack would be 70-352 MB, with a duplicate path
 holding different bytes; the cache kept until a file changes; a vanilla walk
 drawn through `casanim` with its packed skeleton's bones, the pelvis carrying
 the root motion; and the three installs whole.
+
+## Phase 78 - the 687 slots named, and `descr_skeleton.txt` held against the packs - DONE 2026-09-25
+
+New: `unittransfer/data/skeleton_slots.json` (the table),
+`dev/reference/skeleton_slots.py` (which builds it, and `--check`s it), and
+`unittransfer/skelslots.py` (the table's lookups and the per-mod report). No
+UI; Phase 80 shows the names in the viewer.
+
+**How the slots got their names.** A packed skeleton's slot has a position
+and no name; `descr_skeleton.txt`'s `anim` lines have names and no positions.
+In a skeleton whose text names exactly as many animations as its pack fills,
+a slot's name is one of the names the text gives that slot's path. Those
+candidates are intersected over every such skeleton, and a name settled for
+one slot is struck from every other slot's candidates, until nothing more
+settles. 678 skeletons qualified: all of DaC's 410 and ROCSS's 208, and 60 of
+vanilla's (vanilla ships no loose text; the copy kept under
+`Reference/UnitEditor11/vanilla` is older than the Definitive Edition's pack,
+and 52 of its skeletons fill slots it does not name). There was **not one
+disagreement** between a settled name and any skeleton's text.
+
+- **455 of the 687 slots are named**, and that is every slot any skeleton on
+  vanilla, ROCSS or DaC fills (83 631 filled slots, none unnamed). The other
+  232 are filled nowhere here, so nothing on disk names them.
+- **21 slots are in groups** of two or three that share as many names, where
+  every skeleton measured gives each name of the group the same path and the
+  same flags: `die_to_back_right_2`/`_left_2` on 91 and 93,
+  `crew_right`/`crew_right_to_crew_stand` on 655 and 656,
+  `pre_battle_general_gesture`/`_finish` on 684 and 685, the brace
+  transitions on 608-646, and four pairs of attack fails. Nothing tells a
+  group's slots apart and nothing needs to: whichever holds which, each holds
+  that path. The table keeps the group, and the report compares a group as a
+  whole.
+- Slot 0 is `stand_a_idle`, 159 `crew_stand`, 686 `default`.
+
+**The report** (`skelslots.report(data_dir)`) holds a mod's text against its
+packs: types only in the text, skeletons only in the pack, types listed twice
+(not compared slot by slot, since which block the game keeps is not known),
+and per skeleton each slot that disagrees, as *path differs*, *pack only* or
+*text only*, plus `anim` names the table does not know. Measured 2026-09-25,
+answering Wilddog's point 4 for the two installed mods:
+
+| | compared | in step | slots out of step |
+|---|---|---|---|
+| DaC | 410 | **410** | 0 |
+| ROCSS | 208 | **203** | 44, all *path differs* |
+| vanilla (the older kept text) | 110, the halberd listed twice | 58 | 7 692 *pack only* |
+
+ROCSS's five are weapon skeletons (`MTW2_Arquebus_Primary`,
+`MTW2_Handgun_Primary`, `MTW2_Musket_Primary`, `MTW2_HR_Arquebus_Primary`,
+`MTW2_HR_Javelin_Primary`) whose text names vanilla's
+`data/animations/...` path where the pack holds ROCSS's own copy under
+`mods/rocss/data/animations/...`. The game plays the pack's.
+
+**A parser fix on the way.** `casanim.skeleton_types` split an `anim` line on
+whitespace, so a path with a space in it was cut short: vanilla's camels
+(`Camel_shuffle forwards.CAS`) and DaC's witch (`lid_84  hide to stand - strat
+map version.cas`). The path now runs to the first flag, a dash straight
+followed by a letter, so the witch's ` - ` stays in its name. That also fixes
+those actions in the Phase 55 viewer. The parser now counts a type given twice
+(`blocks`), as vanilla gives `MTW2_Halberd_primary`.
+
+**Tested** by `test_skelslots` (22): the table's shape and its groups; the
+text with both kinds of spaced path; one skeleton with every kind of
+difference and a group agreeing on a shared path; a small mod written to temp
+with a type on each side only and one listed twice; the installs as measured
+above.

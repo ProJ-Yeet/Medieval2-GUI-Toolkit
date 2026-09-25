@@ -66,6 +66,7 @@ the skeleton: node names, parents and pivots.
 from __future__ import annotations
 
 import os
+import re
 import struct
 from array import array
 from dataclasses import dataclass, field
@@ -605,9 +606,13 @@ class SkeletonType:
     scale: float = 1.0
     #: (action, path as the file writes it)
     anims: List[Tuple[str, str]] = field(default_factory=list)
+    #: ``type`` lines with this name; a second block's actions are appended to
+    #: the first's (vanilla lists ``MTW2_Halberd_primary`` twice, as its pack does)
+    blocks: int = 1
 
 
 _SKEL_CACHE: Dict[str, tuple] = {}
+_ANIM_LINE = re.compile(r"\s*anim\s+\S+\s+(.+?)(?=\s+-[a-z]|\s*$)", re.I)
 
 
 def skeleton_types(data_dir) -> Dict[str, SkeletonType]:
@@ -635,11 +640,19 @@ def skeleton_types(data_dir) -> Dict[str, SkeletonType]:
                 continue
             kw = w[0].lower()
             if kw == "type" and len(w) > 1:
-                cur = out.setdefault(w[1].lower(), SkeletonType(w[1]))
+                cur = out.get(w[1].lower())
+                if cur is None:
+                    cur = out[w[1].lower()] = SkeletonType(w[1])
+                else:
+                    cur.blocks += 1
             elif cur is None:
                 continue
             elif kw == "anim" and len(w) > 2:
-                cur.anims.append((w[1], w[2]))
+                # the path runs to the first flag (-fr, -evt:...): vanilla's
+                # camels have "camel_shuffle forwards.cas", and DaC's witch
+                # "lid_84  hide to stand - strat map version.cas"
+                m = _ANIM_LINE.match(line.split(";", 1)[0])
+                cur.anims.append((w[1], m.group(1) if m else w[2]))
             elif kw == "scale" and len(w) > 1:
                 try:
                     cur.scale = float(w[1])
