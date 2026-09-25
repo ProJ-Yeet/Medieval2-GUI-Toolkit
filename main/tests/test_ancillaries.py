@@ -26,6 +26,7 @@ sweeps every real EDA, which is the check that actually matters.
 
     python -m tests.test_ancillaries
 """
+import shutil
 import sys
 from pathlib import Path
 
@@ -35,6 +36,16 @@ sys.path.insert(0, str(ROOT))
 from tests import _tmp
 from unittransfer import ancillaries, codeview, config, keyblock, triggers
 from unittransfer.mod import Mod
+
+# Every save and undo here goes to a config of its own, never the real undo log
+# and backups: a suite run beside others would race them on transfers.json. It
+# starts from a copy of the real settings, so the game root and the M2EX marks
+# read the same, and nothing is written back to them.
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
+if config.SETTINGS_PATH.is_file():
+    shutil.copy2(config.SETTINGS_PATH, cfg / "settings.json")
+config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
+config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
 ok = []
 

@@ -22,6 +22,17 @@ sys.path.insert(0, str(ROOT))
 from tests import _tmp  # noqa: E402
 from unittransfer import settlemech as sm  # noqa: E402
 from unittransfer import transfer  # noqa: E402
+from unittransfer import config  # noqa: E402
+
+# Every save and undo here goes to a config of its own, never the real undo log
+# and backups: a suite run beside others would race them on transfers.json. It
+# starts from a copy of the real settings, so the game root and the M2EX marks
+# read the same, and nothing is written back to them.
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
+if config.SETTINGS_PATH.is_file():
+    shutil.copy2(config.SETTINGS_PATH, cfg / "settings.json")
+config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
+config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
 MODS = Path(r"C:/Users/projy/Downloads/Games/Total War MEDIEVAL II Definitive Edition/mods")
 ok = []

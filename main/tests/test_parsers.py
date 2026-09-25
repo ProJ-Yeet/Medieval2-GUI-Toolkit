@@ -17,6 +17,17 @@ from unittransfer import keyblock as kb  # noqa: E402
 NL_ = chr(13) + chr(10)
 MARK = bytes((0xEF, 0xBB, 0xBF))
 from unittransfer.mod import Mod  # noqa: E402
+from unittransfer import config  # noqa: E402
+
+# Every save and undo here goes to a config of its own, never the real undo log
+# and backups: a suite run beside others would race them on transfers.json. It
+# starts from a copy of the real settings, so the game root and the M2EX marks
+# read the same, and nothing is written back to them.
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
+if config.SETTINGS_PATH.is_file():
+    shutil.copy2(config.SETTINGS_PATH, cfg / "settings.json")
+config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
+config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
 MODS_ROOT = Path(r"C:/Users/projy/Downloads/Games/Total War MEDIEVAL II Definitive Edition/mods")
 MODS = ["Third_Age_Reforged", "Divide_and_Conquer_EUR"]
