@@ -9980,3 +9980,57 @@ climate generators plan from the mods' own maps.
 
 Not in this phase: turning the switch on against the real servers. That is
 still the user's to do; nothing here has sent a request.
+
+## Phase 77 - the packs, read - DONE 2026-09-25
+
+The first of 77-86 (animations that travel with a unit). New:
+`unittransfer/animpack.py`, the one module that reads the four pack files
+(`pack.idx`/`.dat`, `skeletons.idx`/`.dat`); from Phase 81 it is also the one
+that writes them. No UI.
+
+**Nothing is unpacked.** An entry is read out of the `.dat` at the offset its
+index record gives, so DaC's 352 MB `pack.dat` is opened and read a few
+kilobytes at a time.
+
+- `PackIndex` reads either kind of `.idx`, keeps every copy of a name listed
+  twice (`find` returns them all, `first` the first, `duplicates` the lot:
+  DaC 916 animation paths, vanilla 3 and one skeleton), looks names up
+  case-blind with either slash, and serializes back to its file. Which copy
+  the game plays is still 82's question 5.
+- `PackedAnimation` is one `pack.dat` entry as flat float arrays in the order
+  they are stored, with the counts, the moving-bone mask, the root motion and
+  the summary floats (duration, distance, speed). The size rule and the mask
+  are checked, and a wrong one is refused with the path.
+- `PackedSkeleton` parses the bones and all 687 slots (the animation path,
+  its timing, impact and turn values, and its events) and keeps everything
+  after the last slot, the speeds and the combat tables, as bytes that are
+  written back untouched. Nothing here builds a combat table, which is the
+  whole reason ports move skeletons whole. An event name can end in a `01`
+  byte as well as a `00`, and the byte is kept. A slot's path can be changed
+  and written back, which is the one rewrite Phase 81 needs.
+  `bone_table()` is the `[(name, parent, pivot)]` shape
+  `casanim.read_packed_bytes` already takes, so a packed animation plays with
+  its packed skeleton and no unpacked file anywhere.
+- `open_packs(anim_dir)` caches a folder's packs on the four files' time and
+  size; `for_data(data_dir)` finds `data/animations` whatever its case
+  (vanilla's is `Animations`) and gives None for a mod that ships neither pack.
+- `check(anim_dir)` counts every structural rule over a whole folder: each
+  `.dat` touching from byte 20 to its last byte, its header the same as its
+  index's, both indexes serializing back to their files, every animation the
+  size its counts say with the counts matching its record, every skeleton
+  parsed and serialized back, the `default` slot filled, and every slot path
+  in `pack.idx`.
+
+**Measured, 2026-09-25**, with `check`: every rule holds on vanilla DE, ROCSS
+and DaC. **All 730 skeletons (112, 208, 410) and all six indexes serialize
+back byte for byte.** 21 195 animations read; 83 631 slot paths, all in their
+own mod's `pack.idx`. The three installs check in about 2 s together, with no
+numpy.
+
+**Tested** by `test_animpack` (50): an animation and a skeleton built byte by
+byte (the `01` event ending, empty slots, a tail, a slot path rewritten); a
+small pack of six real vanilla animations and three skeletons written to
+temp, 80 KB where a copied pack would be 70-352 MB, with a duplicate path
+holding different bytes; the cache kept until a file changes; a vanilla walk
+drawn through `casanim` with its packed skeleton's bones, the pelvis carrying
+the root motion; and the three installs whole.
