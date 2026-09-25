@@ -383,6 +383,7 @@ class Province:
     rgb: Tuple[int, int, int]
     seat: Tuple[int, int]                 # image
     faction: str
+    port: Optional[Tuple[int, int]] = None   # image; 87e places one on the coast
 
 
 def _regions_text(provs: Sequence[Province], rebels: str, religions: str) -> str:
@@ -473,7 +474,9 @@ class NewMapPlan:
                 "width": self.width, "height": self.height,
                 "provinces": [{"name": p.name, "town": p.town, "shown": p.shown,
                                "faction": p.faction, "rgb": list(p.rgb),
-                               "seat": list(p.seat)} for p in self.provinces],
+                               "seat": list(p.seat),
+                               "port": list(p.port) if p.port else None}
+                              for p in self.provinces],
                 "files": sorted(set(self.data) | {r for _, r in (cp.copies if cp else [])}),
                 "changes": list(self.changes), "warnings": list(self.warnings),
                 "errors": list(self.errors),
@@ -489,7 +492,11 @@ def _int(body: dict, key: str, default: int) -> int:
 
 def plan(mod, body: dict) -> NewMapPlan:
     """``body``: ``{source, name, title, blurb, width, height, provinces,
-    land, climate, factions: [...]}``."""
+    land, climate, factions: [...]}``. With ``shape: real`` the map is the real
+    world under a box instead (87e, :mod:`unittransfer.mapnewreal`)."""
+    if str(body.get("shape") or "") == "real":
+        from . import mapnewreal
+        return mapnewreal.plan(mod, body)
     p = NewMapPlan()
     try:
         w = _int(body, "width", 160)
@@ -500,13 +507,43 @@ def plan(mod, body: dict) -> NewMapPlan:
         p.errors.append(str(exc))
         return p
     p.width, p.height = w, h
+    _check_size(mod, p, w, h)
+    if not 0.1 <= share <= 0.85:
+        p.errors.append("the land share is between 0.1 and 0.85 of the map")
+    got = _setup(mod, body, p, n)
+    if got is None:
+        return p
+    cp, picked, climate = got
+    try:
+        isl = island(w, h, n, share)
+    except NewMapError as exc:
+        p.errors.append(str(exc))
+        return p
+    leaf = campstrat.campaign_leaf(cp.name)
+    token = "".join(ch for ch in leaf if ch.isalnum() or ch == "_") or "New"
+    colours = region_colours(n)
+    keys = [(f"{token}_{i + 1}_Province", f"{token}_{i + 1}") for i in range(n)]
+    if not _names_free(mod, p, keys):
+        return p
+    for i, (name, town) in enumerate(keys):
+        p.provinces.append(Province(name, town, f"{leaf} {i + 1}", colours[i],
+                                    isl.seats[i], "slave"))
+    _hand_out(p, picked, w, h)
+    _finish(mod, p, cp, layers(isl, colours, climate["rgb"]), picked, w, h)
+    return p
+
+
+def _check_size(mod, p: NewMapPlan, w: int, h: int) -> None:
     side_max = 2048 if getattr(mod, "m2ex", False) else MAX_SIDE
     if not (MIN_SIDE <= w <= side_max and MIN_SIDE <= h <= side_max):
         p.errors.append(f"a map is {MIN_SIDE} to {side_max} tiles a side"
                         + ("" if side_max > MAX_SIDE else
                            " on the stock engine; M2EX goes further"))
-    if not 0.1 <= share <= 0.85:
-        p.errors.append("the land share is between 0.1 and 0.85 of the map")
+
+
+def _setup(mod, body: dict, p: NewMapPlan, n: int):
+    """The checks every new map shares, then the campaign copied. Returns
+    ``(campaign plan, factions picked, climate)``, or None with ``p.errors``."""
     if not 1 <= n <= 199:
         p.errors.append("a map has 1 to 199 provinces")
     slots = [s.lower() for s in factions.faction_slots(mod)]
@@ -527,49 +564,54 @@ def plan(mod, body: dict) -> NewMapPlan:
         p.errors.append("this mod declares no climates in descr_climates.txt, so "
                         "there is nothing to paint the map with")
     if p.errors:
-        return p
+        return None
 
     cp = campnew.plan(mod, {k: body.get(k) for k in ("source", "name", "title", "blurb")})
     p.cp = cp
     if cp.errors:
         p.errors += cp.errors
-        return p
+        return None
     p.warnings += [x for x in cp.warnings if "map layer" not in x]
     skip = {f.lower() for f in REWRITTEN + NOT_COPIED} | {
         f.lower() for f in campmap.ALL_FILES if f.lower() != "map_fe.tga"} | {
         Path(campmap.RWM_REL).name.lower()}
     cp.copies = [(s, r) for s, r in cp.copies if Path(r).name.lower() not in skip]
     cp.texts = {r: t for r, t in cp.texts.items() if Path(r).name.lower() not in skip}
+    return cp, picked, climate
 
-    try:
-        isl = island(w, h, n, share)
-    except NewMapError as exc:
-        p.errors.append(str(exc))
-        return p
-    leaf = campstrat.campaign_leaf(cp.name)
-    token = "".join(ch for ch in leaf if ch.isalnum() or ch == "_") or "New"
-    colours = region_colours(n)
+
+def _names_free(mod, p: NewMapPlan, keys: Sequence[Tuple[str, str]]) -> bool:
+    """Refuse a province or town key the shared names file already has."""
     have = {k.lower() for k in namekeys.loc_pairs(mod, campmap.REGION_NAMES_REL)}
-    for i in range(n):
-        name, town = f"{token}_{i + 1}_Province", f"{token}_{i + 1}"
+    for name, town in keys:
         if name.lower() in have or town.lower() in have:
             p.errors.append(f"{name} or {town} is already a name in "
                             f"{campmap.REGION_NAMES_REL}; pick another campaign "
                             f"name")
-            return p
-        p.provinces.append(Province(name, town, f"{leaf} {i + 1}", colours[i],
-                                    isl.seats[i], "slave"))
-    # the leader of each faction is its own province's; the first is nearest the
-    # middle, so the player starts where the map is
-    order = sorted(range(n), key=lambda i: (isl.seats[i][0] - w / 2) ** 2
-                   + (isl.seats[i][1] - h / 2) ** 2)
-    for j, i in enumerate(order[:len(picked)]):
-        p.provinces[i].faction = picked[j]
-    for i in order[len(picked):]:
-        p.provinces[i].faction = "slave"
+            return False
+    return True
 
+
+def _hand_out(p: NewMapPlan, picked: Sequence[str], w: int, h: int) -> None:
+    """Each faction picked that holds nothing yet takes the free province
+    nearest the middle, so the player starts where the map is; every province
+    nobody holds is the rebels'."""
+    held = {pr.faction for pr in p.provinces if pr.faction != "slave"}
+    order = sorted(range(len(p.provinces)),
+                   key=lambda i: (p.provinces[i].seat[0] - w / 2) ** 2
+                   + (p.provinces[i].seat[1] - h / 2) ** 2)
+    free = [i for i in order if p.provinces[i].faction == "slave"]
+    for f, i in zip([f for f in picked if f not in held], free):
+        p.provinces[i].faction = f
+
+
+def _finish(mod, p: NewMapPlan, cp, imgs: Dict[str, Image.Image],
+            picked: Sequence[str], w: int, h: int) -> None:
+    """Every file of the new campaign: the layers, its terrain and regions, the
+    strat with a leader each, the script, the blanks, and the names."""
+    n = len(p.provinces)
     home = cp.folder
-    for code, img in layers(isl, colours, climate["rgb"]).items():
+    for code, img in imgs.items():
         p.data[f"{home}/{campmap.LAYER_BY_CODE[code]['file']}"] = _tga(mod, code, img)
     p.data[f"{home}/descr_terrain.txt"] = _terrain(mod, w, h).encode(ENCODING)
     rebels, religions = _template_record(mod)
@@ -592,7 +634,8 @@ def plan(mod, body: dict) -> NewMapPlan:
     if src.is_file():
         src_strat = src.read_bytes().decode(ENCODING)
     p.data[f"{home}/{campstrat.STRAT_NAME}"] = _strat_text(
-        leaf, src_strat, p.provinces, leaders, h, picked).encode(ENCODING)
+        campstrat.campaign_leaf(cp.name), src_strat, p.provinces, leaders, h,
+        picked).encode(ENCODING)
     p.data[f"{home}/campaign_script.txt"] = SCRIPT.encode(ENCODING)
     for blank in ("descr_events.txt", "descr_mercenaries.txt",
                   "descr_win_conditions.txt"):
@@ -616,7 +659,6 @@ def plan(mod, body: dict) -> NewMapPlan:
         "descr_sounds_music_types.txt in world/maps/base is shared with every "
         "other campaign and names no music for these provinces; they play the "
         "default until a music type lists them")
-    return p
 
 
 # ---------------------------------------------------------------------------

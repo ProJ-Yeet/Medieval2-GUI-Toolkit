@@ -168,7 +168,10 @@ function mnwState(){
   if(!state.mnw || state.mnw.mod !== c.mod)
     state.mnw = {mod: c.mod, open: false, d: null, loading: false, err: '',
                  f: {name: '', title: '', source: '', width: 160, height: 120,
-                     provinces: 10, land: 0.55, climate: '', factions: []},
+                     provinces: 10, land: 0.55, climate: '', factions: [],
+                     // 87e: the real world under a box, cities picked on the world map
+                     shape: 'island', box: null, settlements: [], coast: true, lakes: false,
+                     rivers: 'major', climates: 'ground', min_island: 4},
                  plan: null, busy: false};
   return state.mnw;
 }
@@ -208,8 +211,33 @@ function mnwFaction(name, on){
 }
 
 function mnwBody(){
-  const k = state.mnw;
-  return Object.assign({mod: k.mod}, k.f, {name: k.f.name.trim(), title: k.f.title.trim()});
+  const k = state.mnw, f = k.f;
+  const base = {mod: k.mod, name: f.name.trim(), title: f.title.trim(), source: f.source,
+                climate: f.climate, factions: f.factions};
+  if(f.shape !== 'real')
+    return Object.assign(base, {width: f.width, height: f.height, provinces: f.provinces, land: f.land});
+  // 87e: the height follows the box's shape (osmmap.size_for), so it is not sent
+  return Object.assign(base, {shape: 'real', box: f.box, width: f.width,
+    settlements: f.settlements, provinces: f.settlements.length ? 0 : f.provinces,
+    coast: f.coast, water: f.lakes ? ['lake', 'lagoon'] : [], rivers: f.rivers,
+    climates: f.climates, min_island: f.min_island});
+}
+
+//: 87e: the height a real-world map comes out at, the box's shape (osmmap.size_for)
+function mnwRealHeight(){
+  const f = state.mnw.f;
+  if(!f.box || !osmBoxOk(f.box)) return 0;
+  return Math.max(2, 1 + Math.round((f.width - 1) / osmAspect(f.box)));
+}
+
+//: 87e: open the world picker to choose the box and the cities
+function mnwPickReal(){
+  const k = state.mnw, c = state.cmap;
+  if(!state.osm || state.osm.mod !== c.mod) state.osm = osmNew(c.mod);
+  const go = () => owpOpen('campaign');
+  if(state.osm.st) go();
+  else osmLoad().then(() => { if(state.osm.st && state.osm.st.settings.enabled) go();
+                              else toast('Turn the Real world switch on in Settings first.', 6000); });
 }
 
 async function mnwPlan(){
@@ -244,6 +272,40 @@ async function mnwApply(){
   if(typeof cmapSetCampaign === 'function') cmapSetCampaign(r.name);
 }
 
+function mnwRealHtml(){
+  const k = state.mnw, f = k.f, d = k.d, b = f.box;
+  const num = (field, label, step, min, max) => `<label class="mszbox">${label}
+      <input type="number" step="${step}" min="${min}" max="${max}" value="${f[field]}"
+        onchange="mnwSet('${field}', +this.value)"></label>`;
+  const sel = (field, pairs) => `<select onchange="mnwSet('${field}', this.value)">${pairs.map(([v, t]) =>
+    `<option value="${v}"${f[field] === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+  const hh = mnwRealHeight();
+  return `<div class="bnote">The map is the real ground under a box, and a province grows round each
+      city you pick. <button class="primary" onclick="mnwPickReal()">🌍 Pick the box and the cities…</button></div>
+    ${b ? `<div class="count">Box N ${(+b.north).toFixed(3)} S ${(+b.south).toFixed(3)} W ${(+b.west).toFixed(3)}
+      E ${(+b.east).toFixed(3)}${osmRot(b) ? `, turned ${(+b.rotation).toFixed(1)}°` : ''};
+      ${f.settlements.length ? `${f.settlements.length} cit(ies): ${esc(f.settlements.map(s => s.name).join(', '))}`
+        : 'no cities picked, so they are spread evenly'}.</div>` : '<div class="count">No box yet.</div>'}
+    <div class="mszgrid">
+      ${num('width', 'Width (tiles)', 1, d.limits.min, d.limits.max)}
+      <label class="mszbox">Height <span class="count">${hh ? hh + ' (the box’s shape)' : '-'}</span></label>
+      ${f.settlements.length ? '' : num('provinces', 'Cities to spread', 1, 1, 199)}
+    </div>
+    <div class="mszgrid">
+      <label class="mszbox">Climates ${sel('climates', [['ground', 'from the ground types'],
+        ['koppen', 'from the Köppen zones'], ['one', 'one climate, below']])}</label>
+      <label class="mszbox">Rivers ${sel('rivers', [['major', 'rivers'], ['medium', 'rivers and canals'],
+        ['all', 'rivers, canals and streams'], ['none', 'none']])}</label>
+      ${num('min_island', 'Smallest island (tiles)', 1, 0, 1000)}
+    </div>
+    <div class="brow" style="gap:12px">
+      <label class="chk"><input type="checkbox" ${f.coast ? 'checked' : ''} onchange="mnwSet('coast', this.checked)">
+        the real coastline</label>
+      <label class="chk"><input type="checkbox" ${f.lakes ? 'checked' : ''} onchange="mnwSet('lakes', this.checked)">
+        lakes and lagoons as sea</label>
+    </div>`;
+}
+
 function mnwHtml(){
   const k = mnwState();
   if(!k) return '';
@@ -266,13 +328,19 @@ function mnwHtml(){
           <input value="${esc(f.title)}" placeholder="what the new-game menu shows"
             onchange="mnwSet('title', this.value)"></label>
       </div>
-      <div class="mszgrid">
+      <div class="brow" style="gap:12px">
+        <label class="chk"><input type="radio" name="mnwShape" ${f.shape !== 'real' ? 'checked' : ''}
+          onchange="mnwSet('shape','island')"> An island from nothing</label>
+        <label class="chk"><input type="radio" name="mnwShape" ${f.shape === 'real' ? 'checked' : ''}
+          onchange="mnwSet('shape','real')"> The real world</label>
+      </div>
+      ${f.shape === 'real' ? mnwRealHtml() : `<div class="mszgrid">
         ${num('width', 'Width (tiles)', 1, d.limits.min, d.limits.max)}
         ${num('height', 'Height (tiles)', 1, d.limits.min, d.limits.max)}
         ${num('provinces', 'Provinces', 1, 1, 199)}
-      </div>
+      </div>`}
       <div class="mszgrid">
-        ${num('land', 'Land share', 0.05, 0.1, 0.85)}
+        ${f.shape === 'real' ? '' : num('land', 'Land share', 0.05, 0.1, 0.85)}
         <label class="mszbox">Climate <select onchange="mnwSet('climate', this.value)">
           ${(d.climates || []).map(c => `<option value="${esc(c.code)}"${c.code === f.climate ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}
         </select></label>

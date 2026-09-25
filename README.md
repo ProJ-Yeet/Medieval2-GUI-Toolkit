@@ -187,8 +187,9 @@ on top. Ships on the dated beta pre-release; see the module table above.
   edge, new ground the map's own sea, and moves every coordinate the strat, the
   events, the battles and the campaign scripts hold; a shrink that would leave
   anything standing nowhere is refused with the file and line of each. **New
-  map** starts a campaign on an island of provinces in its own folder, one
-  province and a leader per faction picked. **Generate** makes heights from the
+  map** starts a campaign in its own folder on an island of provinces, or on
+  the real ground under a box picked on the world map with a province round
+  each city picked there; one province and a leader per faction picked. **Generate** makes heights from the
   real ground under the map's box at the game's own scale, ground types from the
   heights, climates from the ground types, and rivers, cliffs and volcanoes from
   OpenStreetMap drawn the way the game can build a river. **Real world** draws

@@ -39,18 +39,34 @@ const OWP_MAX_TILES = 80;
 
 function owpNew(){
   return {open: false, box: null, lock: true, draw: false, view: null,
-          q: '', results: null, busy: false, err: '', drag: null, hover: ''};
+          q: '', results: null, busy: false, err: '', drag: null, hover: '',
+          mode: 'map', places: [], placing: false, nextName: ''};
 }
+
+/* 87e - THE CAMPAIGN MODE. Opened from the new-map form (mapsize.js) rather
+   than for the map on screen: the box's shape is free (the new map's height
+   follows it), and the cities of the new campaign are picked here - a search
+   result added, or a click with "place by clicking" on. They go back to the
+   form, which sends them to mapnewreal.py. */
+const owpCampaign = () => state.owp && state.owp.mode === 'campaign';
 
 /* ---------- opening and closing ---------- */
 
-function owpOpen(){
+function owpOpen(mode){
   const k = state.osm, c = state.cmap;
   if(!k || !c || !k.st) return;
   const o = state.owp = owpNew();
   o.open = true;
   o.W = c.man.width; o.H = c.man.height;
   o.box = osmBoxOk(k.box) ? Object.assign({rotation: 0}, k.box) : null;
+  if(mode === 'campaign' && state.mnw){
+    const f = state.mnw.f;
+    o.mode = 'campaign'; o.lock = false;
+    o.W = f.width;
+    if(osmBoxOk(f.box)) o.box = Object.assign({rotation: 0}, f.box);
+    o.places = f.settlements.map(s => Object.assign({}, s));
+    owpSizeFromBox();
+  }
   const m = document.getElementById('modal');
   m.className = 'modal wide owp';
   m.innerHTML = owpShell();
@@ -76,7 +92,8 @@ function owpShell(){
       <span class="count" style="margin-right:auto">Drag to pan, wheel to zoom. Drag the
         box's corners to resize it, its middle to move it, the violet handle to turn it.</span>
       <button onclick="owpClose()">Cancel</button>
-      <button class="primary" id="owpUse" onclick="owpUse()">Use for this map</button>
+      <button class="primary" id="owpUse" onclick="owpUse()">${owpCampaign()
+        ? 'Use for the new campaign' : 'Use for this map'}</button>
     </div>`;
 }
 
@@ -236,6 +253,7 @@ function owpDraw(){
   x.fillRect(0, 0, cw, ch);
   owpDrawTiles(x, cw, ch);
   if(o.results) owpDrawPlaces(x);
+  if(o.places.length) owpDrawCities(x);
   if(o.box) owpDrawBox(x);
   if(o.drag && o.drag.kind === 'draw' && o.drag.rect) owpDrawRect(x, o.drag.rect);
 }
@@ -324,6 +342,46 @@ function owpDrawPlaces(x){
   x.restore();
 }
 
+//: 87e: the new campaign's cities, as the settlement marker is drawn: black
+function owpDrawCities(x){
+  const o = state.owp;
+  x.save();
+  x.font = 'bold 11px sans-serif';
+  for(const p of o.places){
+    const [sx, sy] = owpToScreen(p.lon, osmMdeg(p.lat));
+    x.fillStyle = '#000'; x.strokeStyle = '#fff'; x.lineWidth = 2;
+    x.strokeRect(sx - 4, sy - 4, 8, 8); x.fillRect(sx - 4, sy - 4, 8, 8);
+    x.fillStyle = '#fff'; x.strokeStyle = '#000'; x.lineWidth = 3;
+    x.strokeText(p.name, sx + 7, sy + 4); x.fillText(p.name, sx + 7, sy + 4);
+  }
+  x.restore();
+}
+
+//: the height the new map comes out at, as the box's shape gives it
+function owpSizeFromBox(){
+  const o = state.owp;
+  if(o.mode === 'campaign' && o.box) o.H = Math.max(2, 1 + Math.round((o.W - 1) / osmAspect(o.box)));
+}
+
+function owpAddCity(name, lat, lon){
+  const o = state.owp;
+  name = (name || '').trim() || `Place ${o.places.length + 1}`;
+  o.places.push({name, lat, lon, faction: ''});
+  owpSide(); owpDraw();
+}
+
+function owpCityField(i, field, value){
+  const o = state.owp;
+  if(!o.places[i]) return;
+  o.places[i][field] = value;
+  owpDraw();
+}
+
+function owpCityDrop(i){
+  state.owp.places.splice(i, 1);
+  owpSide(); owpDraw();
+}
+
 /* ---------- the pointer ---------- */
 
 function owpHit(sx, sy){
@@ -380,6 +438,7 @@ function owpBind(){
       const nb = owpCornerTo(+d.kind.slice(1), p);
       if(owpSane(nb)) o.box = nb;
     }
+    owpSizeFromBox();
     owpDraw();
     if(d.kind !== 'pan') owpSide(true);
   });
@@ -388,6 +447,14 @@ function owpBind(){
     if(!o || !o.drag) return;
     const d = o.drag;
     o.drag = null;
+    // 87e: a click that did not travel, with "place by clicking" on, is a city
+    const [ux, uy] = at(e);
+    if(d.kind === 'pan' && o.placing && Math.hypot(ux - d.sx, uy - d.sy) < 4){
+      const [lon, md] = owpFromScreen(ux, uy);
+      owpAddCity(o.nextName, osmInvMdeg(md), lon);
+      o.nextName = '';
+      return;
+    }
     if(d.kind === 'draw' && d.rect && owpSane(d.rect)){
       const [ax, ay] = owpToScreen(d.rect.west, osmMdeg(d.rect.north));
       const [bx, by] = owpToScreen(d.rect.east, osmMdeg(d.rect.south));
@@ -469,7 +536,8 @@ function owpSideHtml(){
           <div><b>${esc(p.name)}</b> <span class="count">${esc(p.kind)}${p.admin_level ? ' ' + p.admin_level : ''}</span></div>
           <div class="count">${esc(p.display)}</div>
           <div class="cmbar2"><button onclick="owpGo(${i})">Go</button>
-            <button onclick="owpFitPlace(${i})" ${p.extent ? '' : 'disabled'}>Fit the box around it</button></div>
+            <button onclick="owpFitPlace(${i})" ${p.extent ? '' : 'disabled'}>Fit the box around it</button>
+            ${o.mode === 'campaign' ? `<button onclick="owpAddCity(state.owp.results[${i}].name, state.owp.results[${i}].lat, state.owp.results[${i}].lon)">+ A city here</button>` : ''}</div>
         </div>`).join('')}
       ${o.results && !res.length ? '<div class="count">Nothing found.</div>' : ''}
     </div>
@@ -483,13 +551,38 @@ function owpSideHtml(){
       <div class="count">Or hold Shift and drag anywhere on the map.</div>
       <div class="brow" id="owpNums" style="flex-wrap:wrap">${num('north', 0.01)}${num('south', 0.01)}
         ${num('west', 0.01)}${num('east', 0.01)}${num('rotation', 1)}</div>
-      <label class="chk"><input type="checkbox" ${o.lock ? 'checked' : ''}
-        onchange="owpLock(this.checked)"> Keep this map’s shape (${o.W}×${o.H})</label>
+      ${o.mode === 'campaign' ? `<label class="mszbox">The new map’s width
+          <input type="number" min="24" max="2048" value="${o.W}" onchange="state.owp.W=Math.max(24,+this.value||0);owpSizeFromBox();owpSide();owpDraw()"></label>
+        <div class="count">It comes out ${o.W}×${o.H}: the height follows the box’s shape.</div>`
+      : `<label class="chk"><input type="checkbox" ${o.lock ? 'checked' : ''}
+        onchange="owpLock(this.checked)"> Keep this map’s shape (${o.W}×${o.H})</label>`}
       ${b ? `<div class="count" id="owpRead">${owpReadout()}</div>
         <div class="cmbar2"><button onclick="owpShape()">Give it this map’s shape</button>
           <button onclick="owpField('rotation',0)" ${osmRot(b) ? '' : 'disabled'}>Straighten</button></div>`
         : '<div class="count">No box yet: draw one, import a bbox_coords.txt, or fit it around a place you found.</div>'}
-    </div>`;
+    </div>
+    ${o.mode === 'campaign' ? owpCitiesHtml() : ''}`;
+}
+
+//: 87e: the new campaign's cities, each growing a province
+function owpCitiesHtml(){
+  const o = state.owp, facs = (state.mnw && state.mnw.d && state.mnw.d.factions) || [];
+  const picked = (state.mnw && state.mnw.f.factions) || [];
+  return `<div class="bsec"><h4>The cities <span class="count">${o.places.length}</span></h4>
+    <div class="count">Each grows a province over the land round it. Add them from the search, or
+      click on the map with this on. None at all, and they are spread evenly.</div>
+    <label class="chk"><input type="checkbox" ${o.placing ? 'checked' : ''}
+      onchange="state.owp.placing=this.checked;owpDraw()"> Place a city with a click</label>
+    ${o.placing ? `<label class="mszbox">Name of the next one
+      <input value="${esc(o.nextName)}" placeholder="Place ${o.places.length + 1}"
+        oninput="state.owp.nextName=this.value"></label>` : ''}
+    ${o.places.map((p, i) => `<div class="brow" style="gap:4px;align-items:center">
+        <input style="flex:1;min-width:0" value="${esc(p.name)}" onchange="owpCityField(${i},'name',this.value)">
+        <select title="who holds it (a faction ticked on the form)" onchange="owpCityField(${i},'faction',this.value)">
+          <option value="">(given out)</option>${facs.filter(n => picked.includes(n)).map(n =>
+            `<option${n === p.faction ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>
+        <button title="leave it out" onclick="owpCityDrop(${i})">×</button></div>`).join('')}
+  </div>`;
 }
 
 function owpField(k, v){
@@ -499,6 +592,7 @@ function owpField(k, v){
   if(!isFinite(nb[k])){ owpSide(); return; }
   if(osmBoxOk(nb) && owpSane(nb)){ o.box = nb; o.err = ''; }
   else o.err = `That ${k} would put the box past the pole, across the date line, or inside out.`;
+  owpSizeFromBox();
   owpSide(); owpDraw();
 }
 
@@ -601,6 +695,15 @@ async function owpUse(){
   if(!o || !owpSane(o.box)) return;
   const b = Object.assign({}, o.box);
   if(!osmRot(b)) delete b.rotation;
+  if(o.mode === 'campaign' && state.mnw){
+    // 87e: back to the new-map form, which plans it
+    Object.assign(state.mnw.f, {shape: 'real', box: b, width: o.W,
+                                settlements: o.places.map(p => Object.assign({}, p))});
+    state.mnw.plan = null;
+    owpClose();
+    if(typeof mszPaint === 'function') mszPaint();
+    return;
+  }
   owpClose();
   // Python makes the shape exact (osmmap.fit) when the shape is being kept
   await osmBoxPost(Object.assign({box: b}, o.lock ? {fit: 'width'} : {}));

@@ -10409,3 +10409,66 @@ point, too big refused, and from a WMS; one climate everywhere; the corrected
 table; and a box turned a quarter with every probed corner on the zone under
 its turned position. Checked in the app on the scratch server: the four new
 controls on ROCSS, all 30 zones finding a ROCSS climate, and a land-use plan.
+
+### 87e - a new campaign on the real world - DONE 2026-09-25
+
+`unittransfer/mapnewreal.py`, reached from 26b's new-map form (Size tab) by
+its new *The real world* choice. Mylae's New Map Editor ends in a bundle of
+layers somebody still has to make into a campaign; this ends in a campaign
+that loads, and the validator has nothing to say about it on either installed
+mod.
+
+**The form and the picker.** *Pick the box and the cities…* opens the world
+picker in a campaign mode: the box's shape is free and the new map's height
+follows it (`osmmap.size_for`), the width typed there or on the form. The
+cities are picked there: *+ A city here* on a search result, or a click on the
+map with *Place a city with a click* on, each named and, if wanted, given to
+one of the factions ticked. None picked, and the form asks how many to spread.
+The form also takes the climates (from the ground types, the Köppen zones or
+one), the rivers' detail, the smallest island, and whether the real coastline
+and OSM's lakes and lagoons are made sea.
+
+**The map.** A tile is land when the real ground under its centre is above sea
+level (27's elevation, one affine transform, turned boxes too); the coastline's
+water side (25) and OSM's water (87c) are made sea where asked, and land in
+specks under a size too. Every province is grown from its city over the land a
+tile at a time, all at once (26b's growth), so each is the land its city can
+walk to; land no city reaches, an island with no settlement, joins the
+province nearest across the water, as islands do in the shipped maps (the
+validator has no rule against a province in pieces, rightly). A city on the
+sea moves to the nearest land with land beside it, one off the map or next to
+another is left out, and each is said. A port goes on the coastal land tile of
+each coastal city's province that has sea beside it and nobody else's land,
+nearest the city: the tile the dock rule reads.
+
+**The layers** are every generator's at this map's own scale: the heights true
+to the copied `max_land_height` with the sea floor in the blue, the land never
+under grey 1; ground types by 27's bands with shallow sea along the coast and
+deep beyond, and nothing a city or port cannot stand on under one; the
+climates as asked; rivers from OSM through 27's river rules, cut at every city
+and port (the drawing split out of 27's plan as `mapgen.draw_features` so both
+use it). `bbox_coords.txt` is written beside the new map, so the new
+campaign's Real world and Generate tabs line up with no box to type.
+
+**A real city's name is often taken** (Palermo is in ROCSS's names file): the
+names file is shared by every campaign, so a taken key takes the campaign's
+name in front (`Realdemo_Palermo_Province`), while the name the player sees
+stays the city's.
+
+26b's `mapnew.plan` was cut into its shared parts on the way (the checks and
+the copied campaign, the names, handing out factions, writing the campaign),
+so the island and the real world write a campaign the same way;
+`test_mapnew`'s 25 checks pass unchanged.
+
+Tests: `test_mapnewreal` (41) on a synthetic continent (elevation tiles and an
+OSM river replaced) laid onto a copy of each installed mod: the height from
+the box's shape; the picked cities, one moved off the sea, one off the map and
+one next to another left out; the faction given; the sea, the speck made sea,
+the island joined; every city with its own province beside it and nobody
+else's; a port on each coastal city's coast; the heights to scale; no city on
+ground nothing can stand on; a river cut at its city; a taken name prefixed;
+`bbox_coords.txt` found by the new campaign; nothing fatal from the
+validator; one Undo; cities spread when none is picked, a box over open sea
+refused. Checked in the app on the scratch server: the form's real-world
+choice, the picker in campaign mode with three cities added, and a plan on
+ROCSS (not written: the scratch server reads the installed mods).

@@ -27,7 +27,15 @@ adjusts the heights on land only. `test_osmmap` (83), `test_mapgen` (39).
 and from ESA WorldCover (a WMS), climates from the Köppen-Geiger zones (the
 published map as a file, no network; or a WMS), and one climate everywhere.
 27's climate table now names vanilla's `unused1`/`unused2` slots.
-`test_mapreal` (32). **87e is next.**
+`test_mapreal` (32).
+**87e is done**: the new-map form's *The real world* choice (`mapnewreal.py`):
+a new campaign on the ground under a box picked on the world map, a province
+grown round each city picked there, islands joined, a port on each coastal
+city's coast, heights, ground, climates and rivers from the generators, the
+box written beside the map. It passes the validator on copies of both mods.
+`mapnew.plan` was cut into shared parts (`test_mapnew` 25 unchanged).
+`test_mapnewreal` (41). **Paused after 87e on the user's word ("continue till
+87e"); 87f is next.**
 
 **Phase 80a is done - every animation a model has, in the Models viewer,
 2026-09-25, committed and uncut.** `unittransfer/animview.py`: the viewer's

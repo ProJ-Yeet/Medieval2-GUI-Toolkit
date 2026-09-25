@@ -780,6 +780,28 @@ def _plan_features(p: GenPlan, cm, body: dict) -> None:
     for t in old:
         for n in net._around(t):
             net.parent[net._find(n)] = net._find(t)
+    drawn, tiles, cliffs, volc, short = draw_features(px, got, proj, w, h, sea, blocked, net)
+    _put(p, cm, "features", out, info, rel)
+    p.changes.append(
+        f"{rel}: {drawn} river course(s), {tiles:,} tiles, one source each, from "
+        f"OSM's {RIVER_DETAIL[detail].replace('|', ', ')} ({len(got['rivers'])} "
+        f"way(s) under the box, {where}); {cliffs:,} cliff tile(s); {volc} volcano(es)")
+    p.changes.append("drawn in cardinal steps, a tributary ending where it meets "
+                     "its trunk, cut at every settlement and port, never "
+                     "closing a loop" + ("; the old rivers, cliffs and volcanoes "
+                                         "were cleared first" if replace else
+                                         "; the old rivers are kept and joined"))
+    if short:
+        p.warnings.append(f"{short} OSM course(s) were too short to draw at this "
+                          f"map's scale (under {MIN_RIVER} tiles of land)")
+
+
+def draw_features(px, got: dict, proj, w: int, h: int, sea, blocked, net) -> Tuple[int, int, int, int, int]:
+    """OSM's rivers, cliffs and volcanoes onto ``px`` (a features picture's
+    pixels) through the river network ``net``. Returns ``(courses drawn, river
+    tiles, cliff tiles, volcanoes, courses too short)``. The new campaign from
+    the real world (87e) draws its first rivers with this too."""
+    f = mapvocab.feature
     # a settlement or a port on a river's line cuts it in two: the water above
     # the city is one river, the water below it another with its own source
     courses = []
@@ -824,20 +846,7 @@ def _plan_features(p: GenPlan, cm, body: dict) -> None:
         if free(x, y):
             px[x, y] = tuple(f("volcano")["rgb"])
             volc += 1
-    _put(p, cm, "features", out, info, rel)
-    p.changes.append(
-        f"{rel}: {drawn} river course(s), {tiles:,} tiles, one source each, from "
-        f"OSM's {RIVER_DETAIL[detail].replace('|', ', ')} ({len(got['rivers'])} "
-        f"way(s) under the box, {where}); {cliffs:,} cliff tile(s); {volc} volcano(es)")
-    p.changes.append("drawn in cardinal steps, a tributary ending where it meets "
-                     "its trunk, cut at every settlement and port, never "
-                     "closing a loop" + ("; the old rivers, cliffs and volcanoes "
-                                         "were cleared first" if replace else
-                                         "; the old rivers are kept and joined"))
-    if len(courses) > drawn:
-        p.warnings.append(f"{len(courses) - drawn} OSM course(s) were too short "
-                          f"to draw at this map's scale (under {MIN_RIVER} tiles "
-                          f"of land)")
+    return drawn, tiles, cliffs, volc, len(courses) - drawn
 
 
 # ---------------------------------------------------------------------------
