@@ -432,6 +432,7 @@ It stays recorded rather than rediscovered.
 | 85 | Pack housekeeping: duplicates, orphans, and a compacted pack | - | M | both |
 | 86 | Animations on their own: a skeleton or one animation from another mod, and an edit saved into the pack | - | M | both |
 | 87 | The real world, whole: the rest of Mylae's New Map Editor (world picker, rotation, reference maps, water, land cover, Köppen, historic sites, a new campaign from the real world, the bundle) | - | L, split 87a-87h | beta - **87a-87e done 2026-09-25** |
+| 88 | Every major language: the interface translated, with each language's correct technical terms (a termbase, right-to-left, CJK) | - | L, split 88a-88f | both |
 
 Releasing stays on request: each phase is committed to master as it lands.
 
@@ -922,6 +923,155 @@ on the fake server is fetched again alone and the result merges.
 colour, city, port), `historic_features.txt` and any reference pictures, as a
 zip in his layout. Done when: the zip opens in his editor's shape (names and
 sizes) and every TGA is the file on disk byte for byte.
+
+# Phase 88 - every major language, scheduled 2026-09-25
+
+**Asked for by the user on 2026-09-25**: "add a phase to add support for all
+major languages. Make sure the words are correct technical words fitting for
+the contexts". Unrated, both lines (it is not map work, and every screen
+changes), after 87 in the table.
+
+**What is there now.** No internationalisation at all: `index.html` is
+`<html lang="en">` and every string a person reads is an English literal in
+one of the ~70 modules under `web/js/` or in a message the engine raises. A
+crude count finds at least ~380 prose literals in `web/js/` and ~350 raised
+messages in `unittransfer/` that can reach the screen; 88a measures the real
+number before anything is moved.
+
+**Two languages, never confused.** The *interface language* is the toolkit's
+own buttons, headings and messages, and it is what this phase adds. The *mod's
+language* is whatever its `data/text` files hold, and the locked decision
+*Localised names first* already shows it: `Town Hall (core_building)` stays the
+mod's own string whatever the interface language is. **Choosing an interface
+language never changes a byte written to a mod.**
+
+## The languages
+
+English stays the source locale and the fallback. The targets, by BCP 47 tag:
+
+| Group | Languages |
+|---|---|
+| Western and central European | German `de`, French `fr`, Spanish `es`, Italian `it`, Portuguese (Brazil) `pt-BR`, Polish `pl`, Czech `cs`, Hungarian `hu`, Turkish `tr` |
+| Cyrillic | Russian `ru`, Ukrainian `uk` |
+| CJK | Chinese (Simplified) `zh-Hans`, Chinese (Traditional) `zh-Hant`, Japanese `ja`, Korean `ko` |
+| Right-to-left | Arabic `ar` |
+
+Any language after these is one catalogue file and one termbase column, with
+no code change; that is the test that the plumbing is right.
+
+## The correct word, not the literal one
+
+A literal translation is the failure this phase is built against: a mod tool
+that calls a *trait* by the word for a personality quirk, or translates the
+file keyword `hidden_resource`, is worse than English. So every string is
+translated against a **termbase** (`web/i18n/termbase.json`), and each entry
+records which of four rules it falls under and where its rendering comes from:
+
+1. **Never translated.** File names, file-format keywords, script commands,
+   condition names, attributes, code names, file extensions and product
+   names (OpenStreetMap, Overpass, IWTE):
+   `descr_strat.txt`, `recruit_pool`, `hidden_resource`, `export_units.txt`,
+   `.cas`, `pack.dat`, EDU, EDB, modeldb. They are read exactly as written,
+   by the engine or by the person searching for them, so they stay as they
+   are, in the monospace style, isolated with `<bdi>` so right-to-left text cannot reorder
+   them.
+2. **The game's own term.** A concept the player sees in the game (faction,
+   settlement, province, general, trait, ancillary, agent, building, unit,
+   recruitment, mercenary, climate) takes the word the game's official release
+   in that language uses, so the toolkit and the game name one thing the same
+   way. The termbase cites the source string for each.
+3. **The modding community's term.** A concept with no in-game name (skeleton,
+   animation pack, heights map, ground types, bone weights, pivot, mesh,
+   texture, UV map, strat model, the campaign map's layers) takes the
+   established 3D and modding term in that language, which is often the
+   English one kept as a loanword; the termbase says so rather than inventing
+   a word nobody searches for.
+4. **The platform's standard term.** Generic interface words (Save, Undo,
+   Redo, Cancel, Settings, Import, Export, Browse, Preview, Apply) take the
+   standard Windows term for that language (the Microsoft terminology
+   collection), so a button reads the way it does in every other program on
+   the machine.
+
+A term with no source for its rendering is marked *unsourced* and the checker
+reports it. Each catalogue carries a review status; a language no native
+speaker who mods the game has read is shown as **draft** in the language
+picker, never presented as finished.
+
+## Rules the code keeps
+
+- **Display is localised, file values are not.** Numbers, sizes and dates on
+  screen go through `Intl.NumberFormat` and `Intl.DateTimeFormat`; a value
+  typed into a field that is written to a file is parsed and written in the
+  file's own format, ASCII digits and a `.` decimal separator, in every
+  locale. A German decimal comma or Arabic-Indic digits never reach a mod.
+- **Plurals by CLDR, not by `+ "s"`.** `Intl.PluralRules` picks the form
+  (Polish, Russian, Ukrainian and Czech have three or four; Arabic six;
+  Chinese, Japanese and Korean one), and the catalogue holds every category
+  its locale needs.
+- **Named placeholders only** (`{count} tiles in {region}`), never string
+  concatenation, because word order changes between languages.
+- **Sorting by `Intl.Collator`** in the interface language wherever a list is
+  sorted by its shown name; lists sorted by code name keep code order.
+- **The engine speaks message IDs.** A message the engine raises keeps its
+  English text for the log and the command line, and carries an ID and its
+  parameters; the interface shows the catalogue's string for that ID, or the
+  English text when there is none. Logs, `server.log` and `transfer_cli.py`
+  stay English, so a bug report is readable by whoever fixes it.
+- **Vanilla stack.** `web/js/i18n.js` and one JSON catalogue per locale under
+  `web/i18n/`, served by the Python server; no npm, no build step, no web
+  fonts.
+
+## The pieces
+
+**88a - the plumbing and the pseudo-locales.** `i18n.js` (`t(id, params)`,
+plural selection, the formatters, fallback to English per string),
+`unittransfer/i18n.py` (message IDs and parameters on the engine's errors),
+the interface language in Settings (defaulting to the first supported entry of
+`navigator.languages`, else English), and `<html lang dir>` set from it. Two
+pseudo-locales for testing: `en-XA` (accented, lengthened by about 35%,
+bracketed, so a hard-coded string and a clipped button are both visible) and
+`ar-XB` (English mirrored right-to-left). The real string count is measured and
+recorded here. Done when: Home and Settings run fully under both
+pseudo-locales, and English is unchanged.
+
+**88b - every string externalised.** Every module under `web/js/`,
+`index.html` and the engine's user-facing messages moved into `en.json` under
+stable, namespaced IDs (`map.paint.brush_size`, not the English text as the
+key). A lint suite fails on any prose literal outside the catalogue, with an
+allowlist for rule 1's code names. Done when: the lint is clean, and every
+screen in English is the same text as before, checked against a snapshot
+taken first.
+
+**88c - the termbase.** Every technical term in `en.json` extracted and
+classified under the four rules, with a rendering and its source per target
+language. The checker enforces it: an English string containing a termbase
+term must contain that term's rendering in each translation, a rule-1 term
+must appear untranslated, and placeholders and plural categories must match
+the source. Done when: every term has a rendering and a source in every
+language, and the checker passes on the pseudo-locales.
+
+**88d - the European and Cyrillic languages.** `de`, `fr`, `es`, `it`,
+`pt-BR`, `pl`, `cs`, `hu`, `tr`, `ru`, `uk`, translated against the
+termbase. German, the longest, sets the layout: panels, toolbar and tabs
+wrap or truncate with a tooltip, never clip. Done when: the checker passes
+for all eleven, and every screen is looked at in German at desktop width and
+375 px with nothing clipped or overlapping.
+
+**88e - Chinese, Japanese and Korean.** The four catalogues, a font fallback
+stack of Windows system fonts per language (Microsoft YaHei, Microsoft
+JhengHei, Yu Gothic UI, Malgun Gothic), line breaking set for CJK
+(`line-break: strict` for Japanese), and no synthetic italics or letter
+spacing on CJK text. Done when: the checker passes, and every screen renders
+with no missing-glyph boxes and no line broken inside a word.
+
+**88f - Arabic and right-to-left.** The Arabic catalogue, and the layout
+mirrored with `dir="rtl"`: `index.html` and the modules moved to CSS logical
+properties (`margin-inline-start`, `inset-inline-end`, `text-align: start`),
+panels and toolbars mirrored. What must **not** mirror stays left-to-right:
+the campaign map, the 3D viewer and every canvas, Code View's raw pane, file
+paths, coordinates and code names. Done when: every screen is walked in
+Arabic, and on the map a click, the tile pin and a drag land on the same tile
+as in English.
 
 # What each open phase is
 
