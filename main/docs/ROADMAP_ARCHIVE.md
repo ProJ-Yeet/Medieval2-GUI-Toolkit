@@ -10317,3 +10317,40 @@ a picture straight and turned whose every probed pixel comes from the slippy
 tile its point stands in. `test_osmmap` (70) gains the styled tile route and
 the picture as PNG and SVG. Checked in the app on the scratch server: the
 style picker on ROCSS, OpenHistoricalMap at 1066 over the map, and the relief.
+
+### 87c - lakes, lagoons and seas, and the heights adjusted - DONE 2026-09-25
+
+**Water.** *Lakes, lagoons and seas* on the Real world tab is Mylae's water
+step: OpenStreetMap's sea (tagged three ways), lagoon and lake outlines,
+ticked kind by kind, fetched a chunk at a time and kept on disk by the box and
+the kinds. A relation's member ways are joined end to end in either direction
+into closed rings (his `chainPolylines`, matched on the exact point), and
+where his fill drew only the outer ways, the **inner rings are kept** and cut
+back out, so an island in a lake stays dry. An outline smaller than a size in
+tiles (his default, 16) is left out and counted. The land inside is drawn in
+blue over the map, and *Make the blue tiles sea* is one stroke of the water
+brush, like the coastline: regions, heights and ground types together, in the
+map's own sea colours, settlements and ports spared, the Paint tab's Undo and
+Save. An inland lake is sea to the engine, as the Caspian is. Routes:
+`/api/osm/water` (the counts and the tiles, nothing written) and
+`/api/map/osm_water` (the stroke).
+
+**The heights adjusted** is a fifth Generate card, his `HeightmapAdjustPanel`:
+brightness, contrast and gamma (his formulas) and equalize, as one plan with a
+preview and one Undo. His works on the red and green of every pixel and keeps
+the blue, which turns a sea pixel (0, 0, 255) into (v, v, 255), land by the
+engine's rule, and a grey land pixel into one that is not grey. Here a pixel
+the engine reads as sea is never touched, a land pixel's three channels move
+together, nothing is written under grey 1 (black reads as sea), equalize
+counts the land only, a land that is all one grey is left as it is, and a
+land pixel that was not grey is said.
+
+Tests: `test_osmmap` (83) gains a lake whose outline is two member ways, one
+drawn backwards, with an island; a pond too small to keep; a bay of sea over
+the settlement; the kinds filter, the cache, the island kept dry, the stroke
+with the settlement spared and its undo, and the two routes. `test_mapgen` (39)
+gains the adjust: nothing moved refused, a gamma out of range refused,
+brightness on land with the sea untouched, and equalize over a gradient that
+spreads to 1..255 with no land corner reading as sea and the stray pixel made
+grey. Checked in the app on the scratch server: the water fetched and drawn
+(one lake, its island dry), and an adjust planned on ROCSS's real heights.

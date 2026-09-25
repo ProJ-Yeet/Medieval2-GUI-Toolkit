@@ -895,6 +895,192 @@ def analyse(ways, proj: Projection, sea: bytes) -> Coast:
 
 
 # ---------------------------------------------------------------------------
+# 87c: lakes, lagoons and seas, from OSM's water polygons
+
+#: Mylae's three kinds of water, and the Overpass filters for each. His sea is
+#: tagged three ways; a lagoon and a lake one each.
+WATER_KINDS = {
+    "sea": ['["natural"="water"]["water"="sea"]', '["place"="sea"]', '["place"="ocean"]'],
+    "lagoon": ['["water"="lagoon"]'],
+    "lake": ['["water"="lake"]'],
+}
+#: His slider's default: a ring smaller than this many tiles is left out.
+WATER_MIN_TILES = 16
+
+
+def _water_kind(tags: dict) -> str:
+    if tags.get("water") == "sea" or tags.get("place") in ("sea", "ocean"):
+        return "sea"
+    return "lagoon" if tags.get("water") == "lagoon" else "lake"
+
+
+def rings(ways: List[List[Tuple[float, float]]]) -> List[List[Tuple[float, float]]]:
+    """Ways joined end to end, in either direction, into closed rings: what a
+    multipolygon's member ways are, one boundary cut into pieces. Mylae's
+    ``chainPolylines``, matched on the exact point (OSM repeats the node), and
+    a piece that never closes is closed as it stands."""
+    todo = [list(w) for w in ways if len(w) >= 2]
+    out = []
+    while todo:
+        ring = todo.pop()
+        grown = True
+        while ring[0] != ring[-1] and grown:
+            grown = False
+            for i, w in enumerate(todo):
+                if w[0] == ring[-1]:
+                    ring += w[1:]
+                elif w[-1] == ring[-1]:
+                    ring += w[-2::-1]
+                elif w[-1] == ring[0]:
+                    ring = w[:-1] + ring
+                elif w[0] == ring[0]:
+                    ring = w[:0:-1] + ring
+                else:
+                    continue
+                todo.pop(i)
+                grown = True
+                break
+        if len(ring) >= 3:
+            out.append(ring)
+    return out
+
+
+def _water_chunk(c: Bbox, kinds: List[str], out: Dict[str, dict]) -> None:
+    bb = f"({c.south},{c.west},{c.north},{c.east})"
+    body = "".join(f"{t}{f}{bb};" for k in kinds for f in WATER_KINDS[k]
+                   for t in ("way", "relation"))
+    try:
+        data = overpass(f"[out:json][timeout:120];({body});out geom;")
+    except OsmError:
+        if (c.north - c.south) / 2 < CHUNK_MIN:
+            raise
+        midlat, midlon = (c.north + c.south) / 2, (c.east + c.west) / 2
+        for part in (Bbox(c.north, midlat, c.west, midlon),
+                     Bbox(c.north, midlat, midlon, c.east),
+                     Bbox(midlat, c.south, c.west, midlon),
+                     Bbox(midlat, c.south, midlon, c.east)):
+            _water_chunk(part, kinds, out)
+        return
+    for e in data.get("elements", []):
+        key = f"{e.get('type')}/{e.get('id')}"
+        if key in out:
+            continue
+
+        def pts(geo):
+            return [(round(q["lat"], 6), round(q["lon"], 6)) for q in (geo or []) if q]
+
+        if e.get("type") == "way":
+            geo = pts(e.get("geometry"))
+            if len(geo) >= 3:
+                out[key] = {"kind": _water_kind(e.get("tags") or {}),
+                            "outer": [geo], "inner": []}
+        elif e.get("type") == "relation":
+            members = [m for m in e.get("members") or [] if m.get("type") == "way"]
+            outer = [pts(m.get("geometry")) for m in members
+                     if m.get("role") in ("outer", "")]
+            inner = [pts(m.get("geometry")) for m in members if m.get("role") == "inner"]
+            if not outer:            # his fallback: every member way
+                outer, inner = [pts(m.get("geometry")) for m in members], []
+            out[key] = {"kind": _water_kind(e.get("tags") or {}),
+                        "outer": rings(outer), "inner": rings(inner)}
+
+
+def water(b: Bbox, kinds: List[str],
+          progress: Optional[Callable[[int, str], None]] = None) -> List[dict]:
+    """Every sea, lagoon and lake polygon of the kinds asked for over the box:
+    ``{kind, outer: [ring...], inner: [ring...]}``, each ring ``(lat, lon)``.
+    Asked a chunk at a time and kept on disk by the box and the kinds."""
+    kinds = [k for k in WATER_KINDS if k in (kinds or [])]
+    if not kinds:
+        raise OsmError("pick at least one kind of water: seas, lagoons or lakes")
+    key = hashlib.sha1(json.dumps([b.envelope().payload(), kinds]).encode()).hexdigest()[:16]
+    path = config.cache_dir("osm_water") / f"{key}.json.gz"
+    try:
+        if path.is_file():
+            return json.loads(gzip.decompress(path.read_bytes()).decode("utf-8"))
+    except (OSError, ValueError):
+        pass
+    require_on()
+    parts = _chunks(b, CHUNK_DEG)
+    found: Dict[str, dict] = {}
+    for n, c in enumerate(parts):
+        if progress:
+            progress(int(100 * n / len(parts)),
+                     f"water: {n + 1} of {len(parts)} stretches, {len(found)} found")
+        _water_chunk(c, kinds, found)
+    out = list(found.values())
+    try:
+        path.write_bytes(gzip.compress(json.dumps(out).encode("utf-8")))
+    except OSError:
+        pass
+    return out
+
+
+def _area(pts: List[Tuple[float, float]]) -> float:
+    return abs(sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1)
+                   in zip(pts, pts[1:] + pts[:1]))) / 2
+
+
+@dataclass
+class Water:
+    """The water polygons over one map, and which land tiles they cover."""
+    rings: int                       # outer rings kept
+    small: int                       # outer rings under the size, left out
+    holes: int                       # inner rings (islands) kept dry
+    by_kind: Dict[str, int]
+    to_sea: List[Tuple[int, int]]    # land now, inside the water
+    sea_already: int                 # sea now, inside the water
+
+    def payload(self) -> dict:
+        return {"rings": self.rings, "small": self.small, "holes": self.holes,
+                "by_kind": dict(self.by_kind), "to_sea": len(self.to_sea),
+                "sea_already": self.sea_already,
+                "to_sea_xy": [v for xy in self.to_sea for v in xy]}
+
+
+def water_tiles(polys: List[dict], proj: Projection, sea: bytes,
+                min_tiles: float = WATER_MIN_TILES) -> Water:
+    """The tiles inside the water, islands left dry: every outer ring of at
+    least ``min_tiles`` tiles filled, every inner ring cut back out."""
+    W, H = proj.w, proj.h
+    fill = Image.new("L", (W, H), 0)
+    holes = Image.new("L", (W, H), 0)
+    df, dh = ImageDraw.Draw(fill), ImageDraw.Draw(holes)
+    kept = small = cut = 0
+    by_kind: Dict[str, int] = {}
+    for poly in polys:
+        for ring in poly.get("outer") or []:
+            t = [proj.to_tile(la, lo) for la, lo in ring]
+            if len(t) < 3 or _area(t) < min_tiles:
+                small += 1
+                continue
+            df.polygon(t, fill=255)
+            kept += 1
+            by_kind[poly.get("kind", "lake")] = by_kind.get(poly.get("kind", "lake"), 0) + 1
+        for ring in poly.get("inner") or []:
+            t = [proj.to_tile(la, lo) for la, lo in ring]
+            if len(t) >= 3:
+                dh.polygon(t, fill=255)
+                cut += 1
+    inside = ImageChops.subtract(fill, holes).tobytes()
+    to_sea = [(i % W, i // W) for i, v in enumerate(inside) if v and not sea[i]]
+    already = sum(1 for i, v in enumerate(inside) if v and sea[i])
+    return Water(rings=kept, small=small, holes=cut, by_kind=by_kind,
+                 to_sea=to_sea, sea_already=already)
+
+
+def _water_args(body: dict) -> Tuple[List[str], float]:
+    kinds = body.get("kinds") or ["sea"]
+    if isinstance(kinds, str):
+        kinds = [k.strip() for k in kinds.split(",")]
+    try:
+        size = float(body.get("min_tiles", WATER_MIN_TILES))
+    except (TypeError, ValueError):
+        raise OsmError("the smallest water to keep is a number of tiles") from None
+    return [str(k) for k in kinds], max(0.0, size)
+
+
+# ---------------------------------------------------------------------------
 # places and their boundaries
 
 
@@ -1080,6 +1266,24 @@ def paint_coast(sess) -> dict:
     colours = campaint._resolve(cm, sess, {"tool": "water"})
     return campaint._stroke_over(sess, coast.to_sea, colours, "water", {},
                                  label="OSM coastline: the water side made sea")
+
+
+def paint_water(sess, body: dict) -> dict:
+    """Every land tile inside OSM's seas, lagoons or lakes (the kinds asked
+    for, the small ones left out, islands kept dry), made sea: the water
+    brush's stroke, as for the coastline."""
+    from . import campaint
+    cm = sess.cm
+    box, proj = _box_proj(cm)
+    kinds, size = _water_args(body)
+    got = water_tiles(water(box, kinds), proj, cm.sea, size)
+    if not got.to_sea:
+        return {"ok": True, "changed": {}, "tiles": 0,
+                "note": "every tile inside that water is sea already",
+                "state": sess.state()}
+    colours = campaint._resolve(cm, sess, {"tool": "water"})
+    return campaint._stroke_over(sess, got.to_sea, colours, "water", {},
+                                 label=f"OSM water ({', '.join(kinds)}) made sea")
 
 
 def paint_boundary(sess, body: dict) -> dict:

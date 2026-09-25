@@ -19,7 +19,11 @@ that uses the box sees it. `test_osmworld` (42), `test_osmmap` (66).
 Humanitarian, a relief drawn from the elevation tiles, OpenHistoricalMap by
 year with his era buttons), each with its servers in Settings, and the box
 saved as a picture (PNG or SVG) in the map's own frame. `test_osmstyles` (27),
-`test_osmmap` (70). **87c is next.**
+`test_osmmap` (70).
+**87c is done**: OSM's seas, lagoons and lakes made sea as one paint stroke
+(islands kept dry, the small ones left out), and a fifth Generate card that
+adjusts the heights on land only. `test_osmmap` (83), `test_mapgen` (39).
+**87d is next.**
 
 **Phase 80a is done - every animation a model has, in the Models viewer,
 2026-09-25, committed and uncut.** `unittransfer/animview.py`: the viewer's

@@ -12,7 +12,9 @@ backup set and one Undo in the Log:
               of ``map_ground_types.tga``;
 ``climates``  climates from the ground types, onto ``map_climates.tga``;
 ``features``  rivers, cliffs and volcanoes from OpenStreetMap, onto
-              ``map_features.tga``.
+              ``map_features.tga``;
+``adjust``    (87c) brightness, contrast, gamma and equalize on the land of
+              ``map_heights.tga``, Mylae's ``HeightmapAdjustPanel``.
 
 The first and the last use the network and are under Phase 25's switch: off
 until Settings turns it on, and the box is the Real world tab's. The middle two
@@ -64,7 +66,7 @@ from .campmap import RWM_REL, MapError
 from .maptga import encode
 from .mapnew import corner_view
 
-KINDS = ("heights", "ground", "climates", "features")
+KINDS = ("heights", "adjust", "ground", "climates", "features")
 
 #: Terrarium elevation tiles: ``R*256 + G + B/256 - 32768`` metres. AWS Open
 #: Data, the set Mylae's editor reads.
@@ -185,7 +187,7 @@ def plan(mod, cm, body: dict) -> GenPlan:
         p.errors.append(f"no generator called {kind!r}; there are {', '.join(KINDS)}")
         return p
     try:
-        {"heights": _plan_heights, "ground": _plan_ground,
+        {"heights": _plan_heights, "adjust": _plan_adjust, "ground": _plan_ground,
          "climates": _plan_climates, "features": _plan_features}[kind](p, cm, body)
     except (GenError, osmmap.OsmError, MapError) as exc:
         p.errors.append(str(exc))
@@ -363,6 +365,83 @@ def _plan_heights(p: GenPlan, cm, body: dict) -> None:
     _put(p, cm, "heights", out, info, rel)
     p.changes.append(f"{rel}: {'every corner' if whole else 'the land'} from the "
                      f"real ground under the box ({where}), {what}")
+
+
+# ---------------------------------------------------------------------------
+# 87c: the heights adjusted, land only
+
+
+def _num(body: dict, key: str, default: float, lo: float, hi: float) -> float:
+    try:
+        v = float(body.get(key, default))
+    except (TypeError, ValueError):
+        raise GenError(f"{key} has to be a number") from None
+    if not lo <= v <= hi:
+        raise GenError(f"{key} runs from {lo:g} to {hi:g}")
+    return v
+
+
+def adjust_lut(brightness: float = 0, contrast: float = 0, gamma: float = 1.0) -> List[int]:
+    """Mylae's three sliders as one table, grey in to grey out: contrast about
+    the middle, then brightness, then the gamma curve. Never under 1, which
+    would read as sea."""
+    b, c = brightness * 2.55, contrast * 2.55
+    factor = (259 * (c + 255)) / (255 * (259 - c))
+    out = []
+    for v in range(256):
+        r = max(0.0, min(255.0, factor * (v - 128) + 128 + b))
+        r = 255 * (r / 255) ** (1 / gamma)
+        out.append(max(1, min(255, round(r))))
+    return out
+
+
+def _plan_adjust(p: GenPlan, cm, body: dict) -> None:
+    """Mylae's heightmap adjust, on land only. His works on the red and green
+    of every pixel and keeps the blue, which turns a sea pixel (0, 0, 255) into
+    (v, v, 255), land by the engine's rule, and a land pixel into one that is
+    not grey. Here a pixel the engine reads as sea (red and green 0, blue above
+    0) is never touched, and a land pixel's three channels move together."""
+    br = _num(body, "brightness", 0, -100, 100)
+    ct = _num(body, "contrast", 0, -100, 100)
+    ga = _num(body, "gamma", 1, 0.1, 3)
+    eq = bool(body.get("equalize"))
+    if not eq and br == 0 and ct == 0 and ga == 1:
+        raise GenError("move a slider or tick equalize first: as it stands, nothing changes")
+    img, info, rel = _layer(cm, "heights")
+    r, g, bch = img.split()
+    sea = _math("convert(((r == 0) & (g == 0) & (b > 0)) * 255, 'L')", r=r, g=g, b=bch)
+    land = ImageChops.invert(sea)
+    lut = list(range(256))
+    if eq:
+        hist = r.histogram(mask=land)
+        total = sum(hist)
+        cdf, run = [], 0
+        for n in hist:
+            run += n
+            cdf.append(run)
+        low = next((v for v in cdf if v), 0)
+        # one grey all over has nothing to spread (Mylae's leaves it too); below
+        # the lowest land grey nothing is mapped, so those stay as they are
+        if total - low > 0:
+            lut = [max(1, round(1 + (cdf[i] - low) * 254 / (total - low))) if cdf[i] else i
+                   for i in range(256)]
+    tone = adjust_lut(br, ct, ga)
+    lut = [tone[v] for v in lut]
+    grey = r.point(lut)
+    out = img.copy()
+    out.paste(Image.merge("RGB", (grey, grey, grey)), mask=land)
+    moved = _count(ImageChops.difference(out.convert("L"), img.convert("L"))
+                   .point(lambda v: 255 if v else 0))
+    off_grey = _count(ImageChops.multiply(
+        _math("convert(((r != g) | (g != b)) * 255, 'L')", r=r, g=g, b=bch), land))
+    _put(p, cm, "heights", out, info, rel)
+    what = ", ".join(x for x in (
+        "equalized" if eq else "", f"brightness {br:+g}" if br else "",
+        f"contrast {ct:+g}" if ct else "", f"gamma {ga:g}" if ga != 1 else "") if x)
+    p.changes.append(f"{rel}: the land {what}; {moved:,} corner(s) change, the sea none")
+    if off_grey:
+        p.warnings.append(f"{off_grey:,} land corner(s) were not grey (red, green and blue "
+                          f"not equal); they come out grey, from their red")
 
 
 # ---------------------------------------------------------------------------

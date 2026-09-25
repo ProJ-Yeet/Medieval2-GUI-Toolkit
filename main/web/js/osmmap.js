@@ -35,6 +35,7 @@ const OSM_MAX_TILES = 48;
 function osmNew(mod){
   return {mod, open: false, st: null, busy: false, err: '', box: null,
           show: true, alpha: 0.5, coast: null, showCoast: true, over: null,
+          water: null, wkinds: {sea: true, lagoon: false, lake: false}, wmin: 16,
           style: 'osm', year: 1200, picW: 2048,
           q: '', results: null, target: '', job: '', pct: 0, label: ''};
 }
@@ -265,7 +266,7 @@ function osmDrawTiles(x, b, W, H, v, s0, t0, s1, t1){
 function osmBuildOver(){
   const k = state.osm, c = state.cmap;
   k.over = null;
-  if(!k.coast || !c) return;
+  if((!k.coast && !k.water) || !c) return;
   const W = c.man.width, H = c.man.height;
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
@@ -277,8 +278,12 @@ function osmBuildOver(){
       d[p] = r; d[p + 1] = g; d[p + 2] = bl; d[p + 3] = a;
     }
   };
-  put(k.coast.to_sea_xy || [], 255, 70, 70, 150);
-  put(k.coast.line_xy || [], 0, 240, 255, 255);
+  if(k.coast){
+    put(k.coast.to_sea_xy || [], 255, 70, 70, 150);
+    put(k.coast.line_xy || [], 0, 240, 255, 255);
+  }
+  // 87c: the land inside OSM's water, in a see-through blue
+  if(k.water) put(k.water.to_sea_xy || [], 60, 110, 255, 170);
   x.putImageData(im, 0, 0);
   k.over = cv;
 }
@@ -348,7 +353,7 @@ function osmBoxSet(field, value){
   const k = state.osm;
   if(!k.box) k.box = {north: 0, south: 0, west: 0, east: 0, rotation: 0};
   k.box[field] = parseFloat(value);
-  k.coast = null; k.over = null;
+  k.coast = null; k.water = null; k.over = null;
   cmapPaint();                      // the backdrop follows before anything is kept
 }
 
@@ -362,7 +367,7 @@ async function osmBoxPost(body){
   if(r.error){ toast('✗ ' + r.error, 7000); return; }
   k.st.box = r.box; k.st.box_from = r.box_from; k.st.file = r.file; k.st.shape = r.shape;
   k.box = r.box ? Object.assign({}, r.box) : null;
-  k.coast = null; k.over = null;
+  k.coast = null; k.water = null; k.over = null;
   osmPaint(); cmapPaint();
   toast(r.box ? 'Box kept for this map.' : 'Box cleared.');
 }
@@ -423,6 +428,59 @@ async function osmCoastApply(){
   toast(r.tiles ? `${r.tiles} tiles made sea${r.note ? ' - ' + r.note : ''}. Save it from Paint.`
                 : (r.note || 'Nothing to change.'), 7000);
   osmCoast();                       // the red goes where it became sea
+}
+
+/* ---------- lakes, lagoons and seas (87c) ---------- */
+
+function osmWaterBody(){
+  const k = state.osm;
+  return {kinds: Object.keys(k.wkinds).filter(x => k.wkinds[x]), min_tiles: k.wmin};
+}
+
+async function osmWater(){
+  const k = state.osm, c = state.cmap;
+  if(!k || k.busy) return;
+  k.busy = true; k.err = ''; k.job = 'osmw' + Date.now(); k.pct = 0; k.label = '';
+  osmPaint();
+  const poll = setInterval(async () => {
+    try{
+      const p = await api.get(`/api/progress?job=${enc(k.job)}`);
+      if(p && p.label){ k.pct = p.pct; k.label = p.label; osmPaint(); }
+    }catch(e){}
+  }, 800);
+  let r;
+  try{ r = await api.post('/api/osm/water', Object.assign({mod: c.mod, job: k.job}, osmWaterBody()),
+                          {label: 'fetching the water'}); }
+  catch(e){ r = {error: errText(e)}; }
+  finally{ clearInterval(poll); }
+  if(state.osm !== k) return;
+  k.busy = false;
+  if(r.error){ k.err = r.error; osmPaint(); return; }
+  k.water = r.water;
+  osmBuildOver();
+  osmPaint(); cmapPaint();
+}
+
+async function osmWaterApply(){
+  const k = state.osm;
+  if(!k || !k.water || !state.cpaint) return;
+  if(!confirm(`Make ${k.water.to_sea} land tiles inside OpenStreetMap’s water sea?\n\n`
+    + 'It is one stroke of the paint tool, like the coastline: regions, heights and ground types '
+    + 'together, in this map’s own sea colours, islands kept dry, settlements and ports left alone. '
+    + 'The Paint tab’s Undo takes it back, and nothing is written until you save there.')) return;
+  const r = await cpaintPost('osm_water', osmWaterBody());
+  if(!r) return;
+  if(r.error){ toast('✗ ' + r.error, 9000); return; }
+  cpaintApply(r.changed || {});
+  cpaintPaint();
+  toast(r.tiles ? `${r.tiles} tiles made sea. Save it from Paint.` : (r.note || 'Nothing to change.'), 7000);
+  osmWater();                       // the blue goes where it became sea
+}
+
+function osmWaterSet(kind, on){
+  const k = state.osm;
+  k.wkinds[kind] = on;
+  k.water = null; osmBuildOver(); osmPaint(); cmapPaint();
 }
 
 /* ---------- places ---------- */
@@ -562,7 +620,7 @@ function osmHtml(){
     </div>
     <div class="bsec"><h4>Coastline</h4>
       <div class="cmbar2"><button onclick="osmCoast()" ${k.busy || !osmBoxOk(k.box) ? 'disabled' : ''}
-        >${k.busy && k.label ? esc(k.label) : co ? '↺ Again' : 'Fetch the real coastline'}</button></div>
+        >${k.busy && k.label && !k.job.startsWith('osmw') ? esc(k.label) : co ? '↺ Again' : 'Fetch the real coastline'}</button></div>
       ${co ? `<div class="count">${co.way_count} coastline ways: ${co.line} tiles of line
           (<span style="color:#00f0ff">cyan</span>), ${co.to_sea} land tiles on the water side
           (<span style="color:#ff4646">red</span>), ${co.land_side_sea} sea tiles on the land side
@@ -575,6 +633,22 @@ function osmHtml(){
         : `<div class="cmbar2"><button class="primary" onclick="osmCoastApply()"
             ${co.to_sea ? '' : 'disabled'}>Make the red tiles sea</button>
             <span class="count">one stroke; the Paint tab undoes and saves it</span></div>`}` : ''}
+    </div>
+    <div class="bsec"><h4>Lakes, lagoons and seas</h4>
+      <div class="brow" style="flex-wrap:wrap">${[['sea', 'seas'], ['lagoon', 'lagoons'], ['lake', 'lakes']].map(([w, t]) =>
+        `<label class="chk"><input type="checkbox" ${k.wkinds[w] ? 'checked' : ''}
+          onchange="osmWaterSet('${w}',this.checked)"> ${t}</label>`).join('')}</div>
+      <label>Leave out any smaller than <input type="number" min="0" max="10000" value="${k.wmin}" style="width:70px"
+        onchange="state.osm.wmin=Math.max(0,+this.value||0);state.osm.water=null;osmBuildOver();osmPaint();cmapPaint()"> tiles</label>
+      <div class="cmbar2"><button onclick="osmWater()" ${k.busy || !osmBoxOk(k.box) || !osmWaterBody().kinds.length ? 'disabled' : ''}
+        >${k.busy && k.label && k.job.startsWith('osmw') ? esc(k.label) : k.water ? '↺ Again' : 'Fetch the water'}</button></div>
+      ${k.water ? `<div class="count">${k.water.rings} water outline(s)${Object.entries(k.water.by_kind || {}).map(([w, n]) =>
+          ` (${n} ${w})`).join('')}, ${k.water.holes} island(s) kept dry, ${k.water.small} too small and left out:
+          ${k.water.to_sea} land tiles inside (<span style="color:#3c6eff">blue</span>), ${k.water.sea_already} sea already.</div>
+        <div class="cmbar2"><button class="primary" onclick="osmWaterApply()" ${k.water.to_sea ? '' : 'disabled'}>Make the blue tiles sea</button>
+          <span class="count">one stroke; the Paint tab undoes and saves it</span></div>` : ''}
+      <div class="count">Mylae’s water step: OpenStreetMap’s sea, lagoon and lake outlines made sea on
+        the map. An inland lake is sea to the engine, as the Caspian is.</div>
     </div>
     <div class="bsec"><h4>Find a place</h4>
       <div class="brow"><input id="osmQ" value="${esc(k.q)}" placeholder="a town, a region, a country"

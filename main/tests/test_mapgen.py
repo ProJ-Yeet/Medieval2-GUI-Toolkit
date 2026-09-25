@@ -222,6 +222,52 @@ check("a band list that stops short of 255 is refused",
                       {"kind": "ground", "bands": [["hills", 100]]}).payload()["ok"])
 transfer.undo(out["id"])
 
+# ---- 2b) 87c: the heights adjusted -------------------------------------------
+print("\n2b) 87c: the heights adjusted, land only")
+hp = root / "data" / campmap.BASE_REL / "map_heights.tga"
+p = mapgen.plan(Mod(root), campmap.CampaignMap(Mod(root)), {"kind": "adjust"})
+check("with nothing moved, the plan says nothing would change",
+      not p.payload()["ok"] and "nothing changes" in p.errors[0])
+check("a gamma past 3 is refused",
+      not mapgen.plan(Mod(root), campmap.CampaignMap(Mod(root)),
+                      {"kind": "adjust", "gamma": 5}).payload()["ok"])
+p = mapgen.plan(Mod(root), campmap.CampaignMap(Mod(root)), {"kind": "adjust", "brightness": 50})
+check(f"brightness +50: {p.changes[:1]}", p.payload()["ok"] and p.payload()["preview"])
+out = mapgen.apply(p)
+ht, _ = read(hp)
+hpx = ht.convert("RGB").load()
+check("the land's grey 60 is 188 now, grey all three ways, and the sea is untouched",
+      hpx[W, H] == (188, 188, 188) and hpx[0, 0] == (0, 0, 200))
+transfer.undo(out["id"])
+# a land that runs from grey 20 in the west to grey 120 in the east, one pixel
+# off grey, to see equalize spread it and the stray come back grey
+orig = hp.read_bytes()
+ht, hinfo = read(hp)
+grad = ht.convert("RGB")
+gpx = grad.load()
+for y in range(grad.height):
+    for x in range(grad.width):
+        if gpx[x, y] != (0, 0, 200):
+            v = 20 + 100 * x // (grad.width - 1)
+            gpx[x, y] = (v, v, v)
+gpx[W, H] = (10, 20, 30)
+hp.write_bytes(encode(grad, hinfo))
+p = mapgen.plan(Mod(root), campmap.CampaignMap(Mod(root)), {"kind": "adjust", "equalize": True})
+out = mapgen.apply(p)
+eq = read(hp)[0].convert("RGB")
+land = [eq.getpixel((x, y))[0] for y in range(eq.height) for x in range(eq.width)
+        if grad.getpixel((x, y)) != (0, 0, 200)]
+check(f"equalize spreads the land's greys over the whole range ({min(land)}..{max(land)})",
+      min(land) <= 5 and max(land) == 255)
+check("no land corner reads as sea afterwards, and the sea is as it was",
+      all(v >= 1 for v in land) and all(
+          eq.getpixel((x, y)) == (0, 0, 200) for y in range(eq.height) for x in range(eq.width)
+          if grad.getpixel((x, y)) == (0, 0, 200)))
+check("the corner that was not grey is grey now, and the plan said so",
+      len(set(eq.getpixel((W, H)))) == 1 and any("not grey" in w for w in p.warnings))
+transfer.undo(out["id"])
+hp.write_bytes(orig)
+
 # ---- 3) climates ---------------------------------------------------------------
 print("\n3) climates from the ground types")
 p = mapgen.plan(Mod(root), campmap.CampaignMap(Mod(root)), {"kind": "climates",

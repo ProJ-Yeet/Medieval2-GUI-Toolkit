@@ -65,6 +65,9 @@ COAST_LAT = 44.0
 ASKED = {"tiles": 0, "overpass": 0, "search": 0, "lookup": 0}
 #: what the fake Overpass answers for a coastline query; swapped per test
 COAST = {"ways": []}
+#: 87c: the water it knows, each with the filter a query must name to get it
+WATER = []
+QUERIES = []
 PNG = b""
 
 
@@ -114,7 +117,10 @@ class Fake(BaseHTTPRequestHandler):
         body = self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode()
         ASKED["overpass"] += 1
         q = urllib.parse.unquote(body)
-        if "is_in" in q:
+        QUERIES.append(q)
+        if '"water"=' in q or '"place"=' in q:
+            self._json({"elements": [e for f, e in WATER if f in q]})
+        elif "is_in" in q:
             self._json({"elements": [
                 {"type": "area", "id": 3600000000 + 777,
                  "tags": {"boundary": "administrative", "admin_level": "8"}},
@@ -390,6 +396,76 @@ except osmmap.OsmError:
     check("a boundary with no region is refused", True)
 
 # ---------------------------------------------------------------------------
+print("\n5b) 87c: lakes, lagoons and seas")
+
+
+def closed(pts):
+    return [{"lat": a, "lon": o} for a, o in pts + pts[:1]]
+
+
+LAKE = '["water"="lake"]'
+SEA = '["water"="sea"]'
+WATER[:] = [
+    # a lake whose outline is two member ways, with an island in it
+    (LAKE, {"type": "relation", "id": 900,
+            "tags": {"type": "multipolygon", "natural": "water", "water": "lake"},
+            "members": [
+                {"type": "way", "role": "outer", "geometry": [
+                    {"lat": 48, "lon": 4}, {"lat": 48, "lon": 8}, {"lat": 46, "lon": 8}]},
+                # drawn the other way round: the join has to turn it
+                {"type": "way", "role": "outer", "geometry": [
+                    {"lat": 48, "lon": 4}, {"lat": 46, "lon": 4}, {"lat": 46, "lon": 8}]},
+                {"type": "way", "role": "inner", "geometry": closed(
+                    [(47.25, 5.4), (47.25, 6.6), (46.75, 6.6), (46.75, 5.4)])}]}),
+    # a pond too small to keep
+    (LAKE, {"type": "way", "id": 901, "tags": {"natural": "water", "water": "lake"},
+            "geometry": closed([(44.1, 10), (44.1, 10.2), (43.98, 10.2), (43.98, 10)])}),
+    # a bay of sea, over the settlement
+    (SEA, {"type": "way", "id": 902, "tags": {"natural": "water", "water": "sea"},
+           "geometry": closed([(42.8, 0.5), (42.8, 3), (41, 3), (41, 0.5)])}),
+]
+polys = osmmap.water(b, ["lake"])
+check("asked for lakes, only the lake filter is sent and only lakes come back",
+      LAKE in QUERIES[-1] and SEA not in QUERIES[-1] and len(polys) == 2
+      and {p["kind"] for p in polys} == {"lake"})
+rel = next(p for p in polys if len(p["inner"]))
+check("the relation's two outer pieces are joined into one closed ring, its island kept",
+      len(rel["outer"]) == 1 and tuple(rel["outer"][0][0]) == tuple(rel["outer"][0][-1])
+      and len(rel["outer"][0]) == 5 and len(rel["inner"]) == 1)
+n = len(QUERIES)
+osmmap.water(b, ["lake"])
+check("a second look asks Overpass nothing", len(QUERIES) == n)
+wt = osmmap.water_tiles(polys, proj, cm.sea, 16)
+lake_x, lake_y = (round(v) for v in proj.to_tile(47.8, 4.5))
+isl_x, isl_y = (round(v) for v in proj.to_tile(47, 6))
+check(f"the lake's land becomes sea ({wt.to_sea and len(wt.to_sea)} tiles), the island stays dry",
+      (lake_x, lake_y) in wt.to_sea and (isl_x, isl_y) not in wt.to_sea
+      and wt.rings == 1 and wt.holes == 1)
+check("the pond is too small, left out and counted", wt.small == 1)
+wt0 = osmmap.water_tiles(polys, proj, cm.sea, 0)
+pond = tuple(round(v) for v in proj.to_tile(44.04, 10.1))
+check("with no smallest size, the pond is kept", wt0.small == 0 and pond in wt0.to_sea)
+both = osmmap.water_tiles(osmmap.water(b, ["sea", "lake"]), proj, cm.sea, 16)
+check("seas and lakes together: the bay's land too, and the kinds counted",
+      both.by_kind == {"lake": 1, "sea": 1} and len(both.to_sea) > len(wt.to_sea)
+      and SETTLE in both.to_sea)
+before = layers()
+sess = campaint.PaintSession(mod, cm)
+out = osmmap.paint_water(sess, {"kinds": ["sea", "lake"], "min_tiles": 16})
+check(f"one stroke: {out.get('label')}, {out['tiles']} tiles, the settlement spared",
+      out["ok"] and out["tiles"] == len(both.to_sea) - 1 and out["protected"] == 1
+      and set(out["changed"]) == {"regions", "heights", "ground_types"})
+check("the island is still land and the lake is sea now",
+      not cm.sea[isl_y * W + isl_x] and cm.sea[lake_y * W + lake_x])
+campaint.undo_stroke(sess)
+check("one undo puts it back, and nothing was written", not sess.unsaved and layers() == before)
+try:
+    osmmap.water(b, [])
+    check("no kind of water is refused", False)
+except osmmap.OsmError:
+    check("no kind of water is refused", True)
+
+# ---------------------------------------------------------------------------
 print("\n6) the tile proxy")
 n = ASKED["tiles"]
 t1 = osmmap.tile(5, 16, 11)
@@ -453,6 +529,14 @@ check("87b: GET /api/osm/picture gives the box as a PNG in the map's shape",
 svg = get("/api/osm/picture?mod=Coasty&width=300&format=svg", raw=True)
 check("87b: and as an SVG in the map's frame",
       isinstance(svg, bytes) and f'viewBox="0 0 {W} {H}"'.encode() in svg)
+r = post("/api/osm/water", {"mod": "Coasty", "kinds": ["lake"], "min_tiles": 16})
+check("87c: POST /api/osm/water reports the lake without painting",
+      r.get("water", {}).get("to_sea") == len(wt.to_sea) and r["water"]["holes"] == 1
+      and len(r["water"]["to_sea_xy"]) == 2 * len(wt.to_sea))
+r = post("/api/map/osm_water", {"mod": "Coasty", "kinds": ["lake"], "min_tiles": 16})
+check("87c: POST /api/map/osm_water paints it into the session",
+      r.get("tiles") == len(wt.to_sea) and "regions" in r.get("state", {}).get("dirty", []))
+post("/api/map/paint_undo", {"mod": "Coasty"})
 r = post("/api/osm/coast", {"mod": "Coasty"})
 check("POST /api/osm/coast reports without painting",
       r.get("coast", {}).get("to_sea") == len(c.to_sea) and layers() == before)

@@ -368,7 +368,9 @@ show the unsaved map rather than the one on disk.
                                     with fit=width|height, given the map's shape
   POST /api/osm/coast            -> the real coastline over the map, and what it
                                     says about the map's sea; nothing written
-  POST /api/map/osm_coast|osm_boundary
+  POST /api/osm/water            -> 87c. OSM's seas, lagoons and lakes over the map,
+                                    and the land tiles inside them; nothing written
+  POST /api/map/osm_coast|osm_boundary|osm_water
                                  -> the water side made sea, or a place's
                                     boundary painted onto a region: one stroke
                                     of the paint tool each, undone like any other
@@ -2817,7 +2819,7 @@ class Handler(BaseHTTPRequestHandler):
                     or u.path in ("/api/map/region_start", "/api/map/region_cancel",
                                   "/api/map/region_vocab", "/api/map/recolour",
                                   "/api/map/recolour_cancel", "/api/map/osm_coast",
-                                  "/api/map/osm_boundary")):
+                                  "/api/map/osm_boundary", "/api/map/osm_water")):
                 return self._json(self._paint(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/settlement_plan", "/api/map/settlement_apply"):
                 return self._json(self._settlement(
@@ -2851,7 +2853,7 @@ class Handler(BaseHTTPRequestHandler):
                     u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/settlemodel/plan", "/api/settlemodel/apply"):
                 return self._json(self._settlemodel(u.path.rsplit("/", 1)[-1], body))
-            if u.path in ("/api/osm/box", "/api/osm/coast"):
+            if u.path in ("/api/osm/box", "/api/osm/coast", "/api/osm/water"):
                 return self._json(self._osm_post(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/edbimport/plan", "/api/edbimport/apply"):
                 return self._json(self._edbimport(u.path.rsplit("/", 1)[-1], body))
@@ -3989,11 +3991,16 @@ class Handler(BaseHTTPRequestHandler):
             if box is None:
                 return {"error": "give the map its real-world box first"}
             report = _progress_sink(str(body.get("job") or ""))
-            ways = osmmap.coastline(box, report)
             proj = osmmap.Projection(box, cm.terrain.width, cm.terrain.height)
             # the painted state: an unsaved stroke is part of the map being judged
             held = campaint.peek(name)
             sea = (held.cm if held is not None and held.cm is cm else cm).sea
+            if action == "water":
+                # 87c: OSM's seas, lagoons and lakes over the map; nothing written
+                kinds, size = osmmap._water_args(body)
+                return {"water": osmmap.water_tiles(osmmap.water(box, kinds, report),
+                                                    proj, sea, size).payload()}
+            ways = osmmap.coastline(box, report)
             return {"coast": osmmap.analyse(ways, proj, sea).payload()}
         except (KeyError, campmap.MapError, ModDataError, OSError, ValueError) as e:
             return {"error": str(e)}
@@ -4154,6 +4161,8 @@ class Handler(BaseHTTPRequestHandler):
                 out = osmmap.paint_coast(sess)
             elif action == "osm_boundary":
                 out = osmmap.paint_boundary(sess, body)
+            elif action == "osm_water":
+                out = osmmap.paint_water(sess, body)
             elif action in ("paint_plan", "paint_apply"):
                 plan = campaint.plan_paint(sess)
                 out = {"plan": plan.payload(), "state": sess.state()}

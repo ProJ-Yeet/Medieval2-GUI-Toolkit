@@ -21,6 +21,8 @@
 const MGN_TITLES = {
   heights: ['Heights from the real world',
             'The real ground under the map’s box, at the engine’s own scale.'],
+  adjust: ['Adjust the heights',
+           'Brightness, contrast, gamma and equalize, on the land only: a sea corner is never touched.'],
   ground: ['Ground types from the heights',
            'Each land corner typed by its height, in bands. The sea is left alone.'],
   climates: ['Climates from the ground types',
@@ -35,6 +37,7 @@ function mgnOpen(){
   if(!state.mgn || state.mgn.mod !== c.mod)
     state.mgn = {mod: c.mod, open: false, d: null, loading: false, err: '',
                  opt: {heights: {area: 'land', scale: 'true'},
+                       adjust: {brightness: 0, contrast: 0, gamma: 1, equalize: false},
                        ground: {bands: null}, climates: {mapping: null},
                        features: {detail: 'major', mode: 'replace'}},
                  plan: {}, busy: ''};
@@ -98,6 +101,7 @@ function mgnBody(kind){
     for(const [g, v] of Object.entries(k.opt.climates.mapping)) body.mapping[g] = v || '-';
   }
   if(kind === 'features') Object.assign(body, k.opt.features);
+  if(kind === 'adjust') Object.assign(body, k.opt.adjust);
   return body;
 }
 
@@ -176,6 +180,16 @@ function mgnHtml(){
       <label class="mszbox">Where ${sel('heights', 'area', [['land', 'the land the map has'], ['whole', 'the whole map, sea floor too']])}</label>
       <label class="mszbox">Scale ${sel('heights', 'scale', [['true', 'true, by max_land_height'], ['stretch', 'stretched to the highest peak']])}</label>
     </div>`;
+  // 87c: Mylae's three sliders and his Equalize, as one plan
+  const a = o.adjust;
+  const slider = (f, lo, hi, step) => `<label style="display:block">${f}
+      <span class="count">${f === 'gamma' ? (+a[f]).toFixed(2) : (a[f] > 0 ? '+' : '') + a[f]}</span>
+      <input type="range" min="${lo}" max="${hi}" step="${step}" value="${a[f]}" style="width:100%"
+        onchange="mgnSet('adjust','${f}',+this.value)"></label>`;
+  const adjust = `${slider('brightness', -100, 100, 1)}${slider('contrast', -100, 100, 1)}${slider('gamma', 0.1, 3, 0.05)}
+    <label class="chk"><input type="checkbox" ${a.equalize ? 'checked' : ''}
+      onchange="mgnSet('adjust','equalize',this.checked)"> Equalize first (spread the land's greys evenly)</label>
+    <div class="cmbar2"><button onclick="state.mgn.opt.adjust={brightness:0,contrast:0,gamma:1,equalize:false};delete state.mgn.plan.adjust;mgnPaint()">Reset</button></div>`;
   const grounds = d.grounds;
   const ground = `<div class="mgnbands">${o.ground.bands.map((b, i) => `<div>
       <select onchange="mgnBand(${i},'code',this.value)">${grounds.map(g =>
@@ -197,6 +211,7 @@ function mgnHtml(){
     ${k.err ? `<div class="w-bad">${esc(k.err)}</div>` : ''}
     <div class="count">The box is the Real world tab’s. Save or discard unsaved paint strokes first.</div>
     ${mgnCard('heights', heights, true)}
+    ${mgnCard('adjust', adjust, false)}
     ${mgnCard('ground', ground, false)}
     ${mgnCard('climates', climates, false)}
     ${mgnCard('features', features, true)}`;
