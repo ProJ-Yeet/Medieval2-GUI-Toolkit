@@ -10472,3 +10472,53 @@ validator; one Undo; cities spread when none is picked, a box over open sea
 refused. Checked in the app on the scratch server: the form's real-world
 choice, the picker in campaign mode with three cities added, and a plan on
 ROCSS (not written: the scratch server reads the installed mods).
+
+### 87f - historic sites - DONE 2026-09-25
+
+`unittransfer/osmsites.py`, a *Historic sites* section on the Real world tab
+and on the world picker's campaign mode. His `OsmHistoricTagFetcher`, ported
+whole: his 21 tags (eleven `historic=*`, ten `castle_type=*`) in his two
+groups, with his labels and his colours. The colour is his hash of
+`key=value` through the same HSL, and all 21 were checked against his
+`tagColor` run in JavaScript.
+
+**The fetch.** He sends one query per tag. This sends one query per chunk for
+every tag ticked, and keeps each tag on disk by the box, so ticking one more
+tag asks Overpass for that tag alone. It asks for `out center` where he asks
+for `out geom`, so a castle's point is the middle of its outline rather than
+the mean of its nodes. That is the same tile at any campaign scale, and a city
+wall comes back as one point instead of every stone. An answer that does carry
+geometry is still read his way. A chunk that fails is split in four, as the
+coastline's is. It is under 25's switch like everything else here.
+
+**On the map.** Each site is a square in its tag's colour on the tile it names,
+listed with its name (his `name`, then `name:en`), with a filter, and each list
+row has four buttons. *Go*. *Fort here* and *Watchtower here* put 22a's form on
+the site's tile, filled in and planned, and open the Forts panel, so the fort
+gets the same checks and the same Save as any other. *New region here* is 25's
+button with the site's name. Each tag suggests one of these, and that button is
+highlighted: a castle a fort, a tower a watchtower, a monastery or a mosque a
+settlement. On the world picker's campaign mode the sites under the box are
+dots, and *+ A city here* makes one a city of 87e's new campaign. There is no
+map there yet, so the route takes a box instead of a mod, and a turned box
+leaves out the sites in its envelope's corners.
+
+**`historic_features.txt`** is his format line for line
+(`Castle; x30; y12; name: "Bodiam"`, the pixel counted from the regions map's
+top-left, `"(no name)"` for an unnamed site). The one change is a hyphen where
+his comment lines have a long dash. A comment is not read, so nothing that
+reads his file is affected. Sites off a turned map are left out of the file, as
+his are, and counted on the panel.
+
+Tests: `test_osmsites` (33) against a fake Overpass: the table and its
+colours; off by default; one query per chunk for four tags, a failed chunk
+split in four; a node's point, a way's centre, a relation's mean; one castle
+under two tags; a fort on the corner of four chunks listed once; the second
+fetch asks nothing and one tag more asks only for that tag; the pixel and the
+strat tile; the file's shape; off a turned map; the world picker's form; **the
+fake answer's castle planned and saved as a fort on the tile it names, through
+22a's writer, and read back from the file**; the route with a mod and with a
+box, an unknown tag, the switch off. Checked in the app on ROCSS with a sample
+result held in the page, not fetched: the section, the squares drawn in their
+tags' colours, *Fort here* opening the Forts panel with the fort planned on the
+site's tile (not saved), and a site made a city on the world picker.

@@ -40,7 +40,8 @@ const OWP_MAX_TILES = 80;
 function owpNew(){
   return {open: false, box: null, lock: true, draw: false, view: null,
           q: '', results: null, busy: false, err: '', drag: null, hover: '',
-          mode: 'map', places: [], placing: false, nextName: ''};
+          mode: 'map', places: [], placing: false, nextName: '',
+          sites: null, sq: '', sbusy: false};
 }
 
 /* 87e - THE CAMPAIGN MODE. Opened from the new-map form (mapsize.js) rather
@@ -253,6 +254,7 @@ function owpDraw(){
   x.fillRect(0, 0, cw, ch);
   owpDrawTiles(x, cw, ch);
   if(o.results) owpDrawPlaces(x);
+  if(o.sites) owpDrawSites(x);
   if(o.places.length) owpDrawCities(x);
   if(o.box) owpDrawBox(x);
   if(o.drag && o.drag.kind === 'draw' && o.drag.rect) owpDrawRect(x, o.drag.rect);
@@ -339,6 +341,20 @@ function owpDrawPlaces(x){
       x.fillStyle = '#111'; x.fillText(p.name, sx + 8, sy + 4);
     }
   });
+  x.restore();
+}
+
+//: 87f: the historic sites under the box, each a dot in its tag's colour
+function owpDrawSites(x){
+  const o = state.owp, [cw, ch] = owpSize();
+  x.save();
+  x.strokeStyle = '#000'; x.lineWidth = 1;
+  for(const s of o.sites.sites){
+    const [sx, sy] = owpToScreen(s.lon, osmMdeg(s.lat));
+    if(sx < -5 || sy < -5 || sx > cw + 5 || sy > ch + 5) continue;
+    x.fillStyle = `rgb(${s.colour.join(',')})`;
+    x.beginPath(); x.arc(sx, sy, 3.5, 0, Math.PI * 2); x.fill(); x.stroke();
+  }
   x.restore();
 }
 
@@ -561,7 +577,70 @@ function owpSideHtml(){
           <button onclick="owpField('rotation',0)" ${osmRot(b) ? '' : 'disabled'}>Straighten</button></div>`
         : '<div class="count">No box yet: draw one, import a bbox_coords.txt, or fit it around a place you found.</div>'}
     </div>
-    ${o.mode === 'campaign' ? owpCitiesHtml() : ''}`;
+    ${o.mode === 'campaign' ? owpSitesHtml() + owpCitiesHtml() : ''}`;
+}
+
+/* ---------- 87f: historic sites, as cities of the new campaign ---------- */
+
+async function owpSites(){
+  const o = state.owp;
+  if(!o || o.sbusy || !owpSane(o.box) || !osmHistTags().length) return;
+  o.sbusy = true; o.err = ''; owpSide();
+  let r;
+  try{ r = await api.post('/api/osm/historic', {box: o.box, tags: osmHistTags()},
+                          {label: 'fetching the historic sites'}); }
+  catch(e){ r = {error: errText(e)}; }
+  if(state.owp !== o) return;
+  o.sbusy = false;
+  if(r.error){ o.err = r.error; o.sites = null; }
+  else o.sites = r;
+  owpSide(); owpDraw();
+}
+
+function owpSiteCity(i){
+  const s = state.owp.sites && state.owp.sites.sites[i];
+  if(s) owpAddCity(s.name || s.label, s.lat, s.lon);
+}
+
+function owpSiteGo(i){
+  const o = state.owp, s = o.sites && o.sites.sites[i];
+  if(!s) return;
+  const [cw, ch] = owpSize();
+  o.view.z = Math.max(o.view.z, 9);
+  const S = owpWorld(o.view.z);
+  o.view.cx = (s.lon + 180) / 360 * S; o.view.cy = (1 - osmMdeg(s.lat) / 180) / 2 * S;
+  owpDraw();
+}
+
+let _owpSq = 0;
+function owpSiteFilter(v){
+  state.owp.sq = v;
+  clearTimeout(_owpSq);
+  _owpSq = setTimeout(() => {
+    owpSide();
+    const e = document.getElementById('owpSq');
+    if(e){ e.focus(); e.setSelectionRange(e.value.length, e.value.length); }
+  }, 250);
+}
+
+function owpSitesHtml(){
+  const o = state.owp, h = o.sites, q = (o.sq || '').trim().toLowerCase();
+  const rows = h ? h.sites.map((s, i) => [s, i]).filter(([s]) => !q
+    || s.name.toLowerCase().includes(q) || s.label.toLowerCase().includes(q)) : [];
+  const shown = rows.slice(0, 100);
+  return `<div class="bsec"><h4>Historic sites <span class="count">${h ? h.sites.length : ''}</span></h4>
+    ${osmHistTagsHtml('owpSide()')}
+    <div class="cmbar2"><button onclick="owpSites()" ${o.sbusy || !owpSane(o.box) || !osmHistTags().length ? 'disabled' : ''}
+      >${o.sbusy ? 'Fetching…' : h ? '↺ Again' : 'Fetch the sites in the box'}</button></div>
+    ${h ? `<input id="owpSq" value="${esc(o.sq)}" placeholder="filter by name or kind" oninput="owpSiteFilter(this.value)">
+      ${shown.map(([s, i]) => `<div class="osmres">
+        <div><span class="osmsw" style="background:rgb(${s.colour.join(',')})"></span><b>${esc(s.name || '(no name)')}</b>
+          <span class="count">${esc(s.label)}</span></div>
+        <div class="cmbar2"><button onclick="owpSiteGo(${i})">Go</button>
+          <button class="${s.suggest === 'settlement' ? 'primary' : ''}" onclick="owpSiteCity(${i})">+ A city here</button></div></div>`).join('')}
+      ${rows.length > shown.length ? `<div class="count">${rows.length - shown.length} more: narrow them with the filter.</div>` : ''}`
+    : '<div class="count">Castles, monasteries, mosques and the rest under the box, each one a city for the new campaign at a click.</div>'}
+  </div>`;
 }
 
 //: 87e: the new campaign's cities, each growing a province

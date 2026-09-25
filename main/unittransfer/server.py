@@ -370,6 +370,9 @@ show the unsaved map rather than the one on disk.
                                     says about the map's sea; nothing written
   POST /api/osm/water            -> 87c. OSM's seas, lagoons and lakes over the map,
                                     and the land tiles inside them; nothing written
+  POST /api/osm/historic         -> 87f. historic sites (his 21 tags) over the map's
+                                    box, each with its tile, and historic_features.txt;
+                                    or, given a box and no mod, over that box alone
   POST /api/map/osm_coast|osm_boundary|osm_water
                                  -> the water side made sea, or a place's
                                     boundary painted onto a region: one stroke
@@ -691,7 +694,7 @@ from typing import Dict, List, Optional
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
 from . import mapgen, mapnew, mapresize
-from . import ancillaries, areaeffects, campimport, edbimport, osmmap, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animview, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, campimport, edbimport, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animview, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2855,6 +2858,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._settlemodel(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/osm/box", "/api/osm/coast", "/api/osm/water"):
                 return self._json(self._osm_post(u.path.rsplit("/", 1)[-1], body))
+            if u.path == "/api/osm/historic":
+                return self._json(self._osm_historic(body))
             if u.path in ("/api/edbimport/plan", "/api/edbimport/apply"):
                 return self._json(self._edbimport(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/campimport/plan", "/api/campimport/apply"):
@@ -3911,6 +3916,7 @@ class Handler(BaseHTTPRequestHandler):
         s = osmmap.settings()
         w, h = cm.terrain.width, cm.terrain.height
         return {"mod": name, "settings": s, "width": w, "height": h,
+                "historic_tags": osmsites.tags_payload(),
                 "box": box.payload() if box else None, "box_from": where,
                 "key": osmmap.map_key(cm), "shape": self._osm_shape(box, w, h),
                 "file": osmmap.bbox_text(box, w, h) if box else ""}
@@ -4002,6 +4008,19 @@ class Handler(BaseHTTPRequestHandler):
                                                     proj, sea, size).payload()}
             ways = osmmap.coastline(box, report)
             return {"coast": osmmap.analyse(ways, proj, sea).payload()}
+        except (KeyError, campmap.MapError, ModDataError, OSError, ValueError) as e:
+            return {"error": str(e)}
+
+    def _osm_historic(self, body):
+        """87f: historic sites over a map's kept box, or over a box sent with
+        no mod (the world picker, before the map exists). Nothing written."""
+        report = _progress_sink(str(body.get("job") or ""))
+        try:
+            if body.get("mod"):
+                return osmsites.for_map(self._osm_map(str(body["mod"])),
+                                        body.get("tags"), report)
+            return osmsites.for_box(osmmap.parse_bbox(body.get("box") or {}),
+                                    body.get("tags"), report)
         except (KeyError, campmap.MapError, ModDataError, OSError, ValueError) as e:
             return {"error": str(e)}
 

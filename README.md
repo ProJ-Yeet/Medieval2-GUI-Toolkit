@@ -194,8 +194,9 @@ on top. Ships on the dated beta pre-release; see the module table above.
   heights, climates from the ground types, and rivers, cliffs and volcanoes from
   OpenStreetMap drawn the way the game can build a river. **Real world** draws
   the real world over the map (OpenStreetMap, OpenTopoMap, a relief, or the
-  historical borders of any year from OpenHistoricalMap), traces the real coastline and finds places by
-  name, and its world map is where the map's box is found: drawn, moved,
+  historical borders of any year from OpenHistoricalMap), traces the real coastline, finds places by
+  name, and marks castles, forts, monasteries and other historic sites, any of
+  which can be made a fort, a watchtower or a new region. Its world map is where the map's box is found: drawn, moved,
   turned, or fitted round a place, in the map's own shape. The two that use the internet are off until Settings turns them on.
 * **A refusal says what would work instead.** A culture or a resource name the
   mod does not declare is refused outright; a tile that is wrong for what you put

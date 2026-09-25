@@ -34,8 +34,13 @@ grown round each city picked there, islands joined, a port on each coastal
 city's coast, heights, ground, climates and rivers from the generators, the
 box written beside the map. It passes the validator on copies of both mods.
 `mapnew.plan` was cut into shared parts (`test_mapnew` 25 unchanged).
-`test_mapnewreal` (41). **Paused after 87e on the user's word ("continue till
-87e"); 87f is next.**
+`test_mapnewreal` (41).
+**87f is done**: historic sites (`osmsites.py`), his 21 tags fetched for the
+box in one query a chunk, each kept on disk, drawn in his colours, listed; from
+a site, *Fort here* and *Watchtower here* through 22a's form, *New region
+here*, and on the world picker *+ A city here* for 87e. `historic_features.txt`
+in his format. `test_osmsites` (33). **87g is next** (the user: "continue till
+phase g").
 
 **Phase 80a is done - every animation a model has, in the Models viewer,
 2026-09-25, committed and uncut.** `unittransfer/animview.py`: the viewer's

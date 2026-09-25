@@ -37,6 +37,7 @@ function osmNew(mod){
           show: true, alpha: 0.5, coast: null, showCoast: true, over: null,
           water: null, wkinds: {sea: true, lagoon: false, lake: false}, wmin: 16,
           style: 'osm', year: 1200, picW: 2048,
+          htags: null, hist: null, hq: '', hshow: true, hpick: -1,
           q: '', results: null, target: '', job: '', pct: 0, label: ''};
 }
 
@@ -206,6 +207,26 @@ function osmDraw(x, s0, t0, s1, t1){
                 cmapX(s0), cmapY(t0), (s1 - s0) * v.zoom, (t1 - t0) * v.zoom);
     x.restore();
   }
+  if(k.hshow && k.hist) osmDrawSites(x, s0, t0, s1, t1);
+}
+
+//: 87f: each historic site a square in its tag's colour on the tile it names,
+//: big enough to see at any zoom, outlined so it shows on any ground
+function osmDrawSites(x, s0, t0, s1, t1){
+  const k = state.osm, v = state.cmap.view;
+  const r = Math.max(2.5, Math.min(6, v.zoom * 0.4));
+  x.save();
+  x.lineWidth = 1;
+  x.strokeStyle = '#000';
+  k.hist.sites.forEach((s, i) => {
+    if(!s.on_map || s.x < s0 - 1 || s.x > s1 || s.y < t0 - 1 || s.y > t1) return;
+    const cx = cmapX(s.x + 0.5), cy = cmapY(s.y + 0.5);
+    x.fillStyle = `rgb(${s.colour.join(',')})`;
+    const rr = i === k.hpick ? r + 3 : r;
+    x.fillRect(cx - rr, cy - rr, 2 * rr, 2 * rr);
+    x.strokeRect(cx - rr, cy - rr, 2 * rr, 2 * rr);
+  });
+  x.restore();
 }
 
 function osmDrawTiles(x, b, W, H, v, s0, t0, s1, t1){
@@ -512,7 +533,11 @@ const osmKey = s => (s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '')
   .replace(/\s+/g, '_').replace(/[^A-Za-z0-9_]/g, '') || 'Place';
 
 async function osmNewRegion(i){
-  const p = state.osm.results[i], pt = state.cpaint;
+  return osmNewRegionAt(state.osm.results[i]);
+}
+
+async function osmNewRegionAt(p){
+  const pt = state.cpaint;
   if(!p || !pt) return;
   if(p.on_map) cmapGoTile([p.x, p.y], 6);
   await cmapCreateRegion();
@@ -540,6 +565,156 @@ async function osmBoundary(i){
   cpaintApply(r.changed || {});
   cpaintPaint();
   toast(`${r.tiles} tiles of ${p.name} painted onto ${region}. Save it from Paint.`, 7000);
+}
+
+/* ---------- historic sites (87f) ---------- */
+
+//: The tags ticked: what was ticked last, else his four commonest
+function osmHistTags(){
+  const k = state.osm;
+  if(!k.htags) k.htags = ['historic=castle', 'historic=fort', 'historic=monastery', 'historic=tower'];
+  return k.htags;
+}
+
+function osmHistTick(tag, on){
+  const k = state.osm, t = osmHistTags().filter(x => x !== tag);
+  if(on) t.push(tag);
+  k.htags = t;
+}
+
+//: The 21 tags in his two groups, each with its colour; the same boxes on the
+//: panel and the world picker. `repaint` is what a tick redraws.
+function osmHistTagsHtml(repaint){
+  const k = state.osm, all = (k.st && k.st.historic_tags) || [], on = osmHistTags();
+  const groups = [...new Set(all.map(t => t.group))];
+  return groups.map(g => {
+    const tags = all.filter(t => t.group === g), n = tags.filter(t => on.includes(t.tag)).length;
+    return `<details class="osmhg"><summary>${esc(g)} <span class="count">${n} of ${tags.length} ticked</span></summary>
+      <div class="brow" style="flex-wrap:wrap;gap:2px 10px">${tags.map(t => `<label class="chk" title="${esc(t.tag)}: ${esc(t.desc)}">
+        <input type="checkbox" ${on.includes(t.tag) ? 'checked' : ''}
+          onchange="osmHistTick('${t.tag}',this.checked);${repaint}">
+        <span class="osmsw" style="background:rgb(${t.colour.join(',')})"></span>${esc(t.label)}</label>`).join('')}</div>
+    </details>`;
+  }).join('');
+}
+
+async function osmHist(){
+  const k = state.osm, c = state.cmap;
+  if(!k || k.busy || !osmHistTags().length) return;
+  k.busy = true; k.err = ''; k.job = 'osmh' + Date.now(); k.pct = 0; k.label = '';
+  osmPaint();
+  const poll = setInterval(async () => {
+    try{
+      const p = await api.get(`/api/progress?job=${enc(k.job)}`);
+      if(p && p.label){ k.pct = p.pct; k.label = p.label; osmPaint(); }
+    }catch(e){}
+  }, 800);
+  let r;
+  try{ r = await api.post('/api/osm/historic', {mod: c.mod, job: k.job, tags: osmHistTags()},
+                          {label: 'fetching the historic sites'}); }
+  catch(e){ r = {error: errText(e)}; }
+  finally{ clearInterval(poll); }
+  if(state.osm !== k) return;
+  k.busy = false;
+  if(r.error){ k.err = r.error; osmPaint(); return; }
+  k.hist = r; k.hpick = -1;
+  osmPaint(); cmapPaint();
+}
+
+//: The sites the list shows: on the map, matching the filter, in tag order
+function osmHistRows(){
+  const k = state.osm, q = (k.hq || '').trim().toLowerCase();
+  return k.hist.sites.map((s, i) => [s, i]).filter(([s]) => s.on_map
+    && (!q || s.name.toLowerCase().includes(q) || s.label.toLowerCase().includes(q)));
+}
+
+function osmSiteGo(i){
+  const k = state.osm, s = k.hist && k.hist.sites[i];
+  if(!s || !s.on_map) return;
+  k.hpick = i;
+  cmapGoTile([s.x, s.y], 8);
+  osmPaint();
+}
+
+//: A fort or a watchtower on the site's tile: 22a's form, filled in and planned,
+//: so its checks and its Save are the ones every fort goes through
+async function osmSiteObject(i, kind){
+  const k = state.osm, s = k.hist && k.hist.sites[i];
+  if(!s || !s.on_map || typeof cftPlace !== 'function') return;
+  osmSiteGo(i);
+  if(!state.cft) cftOpen();
+  const f = state.cft;
+  if(!f) return;
+  f.open = true;
+  if(!f.d) await cftLoad();
+  if(state.cft !== f) return;
+  cftPlace(kind, [s.gx, s.gy]);
+  // asked for, so shown: not 28a's once-per-map switch meant for map clicks
+  const where = typeof cmapSubOf === 'function' && cmapSubOf('cmForts');
+  if(where) cmapSub(where.tab, where.sub);
+  toast(`A ${kind} planned on ${s.gx}, ${s.gy}, where ${s.name || 'the ' + s.label.toLowerCase()} stands. `
+        + 'Check it and save it from the Forts panel.', 7000);
+}
+
+function osmSiteRegion(i){
+  const s = state.osm.hist && state.osm.hist.sites[i];
+  if(s) osmNewRegionAt({name: s.name || s.label, x: s.x, y: s.y, on_map: s.on_map});
+}
+
+function osmHistSave(){
+  const k = state.osm;
+  if(!k.hist || !k.hist.text) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([k.hist.text], {type: 'text/plain'}));
+  a.download = 'historic_features.txt';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+//: The filter box: redrawn after a pause, the caret put back where it was
+let _osmHq = 0;
+function osmHistFilter(v){
+  state.osm.hq = v;
+  clearTimeout(_osmHq);
+  _osmHq = setTimeout(() => {
+    osmPaint();
+    const e = document.getElementById('osmHq');
+    if(e){ e.focus(); e.setSelectionRange(e.value.length, e.value.length); }
+  }, 250);
+}
+
+//: The most rows the list draws; the filter narrows the rest
+const OSM_HIST_ROWS = 150;
+
+function osmHistHtml(){
+  const k = state.osm, h = k.hist;
+  const busy = k.busy && k.label && k.job.startsWith('osmh');
+  const btn = `<div class="cmbar2"><button onclick="osmHist()" ${k.busy || !osmBoxOk(k.box) || !osmHistTags().length ? 'disabled' : ''}
+      >${busy ? esc(k.label) : h ? '↺ Again' : 'Fetch the sites'}</button></div>`;
+  if(!h) return `${osmHistTagsHtml('osmPaint()')}${btn}
+    <div class="count">Mylae’s historic features: castles, forts, monasteries and eighteen more
+      OpenStreetMap tags, each a point in its own colour. A site can become a fort, a watchtower
+      or a new region.</div>`;
+  const all = k.st.historic_tags || [];
+  const lab = t => (all.find(x => x.tag === t) || {}).label || t;
+  const rows = osmHistRows(), shown = rows.slice(0, OSM_HIST_ROWS);
+  const counts = Object.entries(h.counts || {}).map(([t, n]) => `${n} ${esc(lab(t))}`).join(', ');
+  const act = (i, s, kind, txt) => `<button class="${s.suggest === kind ? 'primary' : ''}"
+      onclick="${kind === 'settlement' ? `osmSiteRegion(${i})` : `osmSiteObject(${i},'${kind}')`}">${txt}</button>`;
+  return `${osmHistTagsHtml('osmPaint()')}${btn}
+    <div class="count">${counts || 'Nothing'} on the map${h.off_map ? `; ${h.off_map} in the box’s corners, off the turned map` : ''}.</div>
+    <label class="chk"><input type="checkbox" ${k.hshow ? 'checked' : ''}
+      onchange="state.osm.hshow=this.checked;cmapPaint()"> Show them on the map</label>
+    <div class="cmbar2"><button onclick="osmHistSave()">Save historic_features.txt</button>
+      <span class="count">his format: a line a site, its pixel from the top-left</span></div>
+    <input id="osmHq" value="${esc(k.hq)}" placeholder="filter by name or kind" oninput="osmHistFilter(this.value)">
+    ${shown.map(([s, i]) => `<div class="osmres">
+        <div><span class="osmsw" style="background:rgb(${s.colour.join(',')})"></span><b>${esc(s.name || '(no name)')}</b>
+          <span class="count">${esc(s.label)} · tile ${s.gx}, ${s.gy}</span></div>
+        <div class="cmbar2"><button class="${i === k.hpick ? 'primary' : ''}" onclick="osmSiteGo(${i})">Go</button>
+          ${act(i, s, 'fort', '▣ Fort here')}${act(i, s, 'watchtower', '△ Watchtower here')}
+          ${act(i, s, 'settlement', 'New region here')}</div></div>`).join('')}
+    ${rows.length > shown.length ? `<div class="count">${rows.length - shown.length} more: narrow them with the filter.</div>` : ''}`;
 }
 
 /* ---------- the panel ---------- */
@@ -650,6 +825,7 @@ function osmHtml(){
       <div class="count">Mylae’s water step: OpenStreetMap’s sea, lagoon and lake outlines made sea on
         the map. An inland lake is sea to the engine, as the Caspian is.</div>
     </div>
+    <div class="bsec"><h4>Historic sites</h4>${osmHistHtml()}</div>
     <div class="bsec"><h4>Find a place</h4>
       <div class="brow"><input id="osmQ" value="${esc(k.q)}" placeholder="a town, a region, a country"
         onkeydown="if(event.key==='Enter')osmSearch()">
