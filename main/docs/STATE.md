@@ -23,7 +23,11 @@ saved as a picture (PNG or SVG) in the map's own frame. `test_osmstyles` (27),
 **87c is done**: OSM's seas, lagoons and lakes made sea as one paint stroke
 (islands kept dry, the small ones left out), and a fifth Generate card that
 adjusts the heights on land only. `test_osmmap` (83), `test_mapgen` (39).
-**87d is next.**
+**87d is done**: `mapreal.py`, ground types from OSM land use (his 47 tags)
+and from ESA WorldCover (a WMS), climates from the Köppen-Geiger zones (the
+published map as a file, no network; or a WMS), and one climate everywhere.
+27's climate table now names vanilla's `unused1`/`unused2` slots.
+`test_mapreal` (32). **87e is next.**
 
 **Phase 80a is done - every animation a model has, in the Models viewer,
 2026-09-25, committed and uncut.** `unittransfer/animview.py`: the viewer's

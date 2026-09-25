@@ -431,7 +431,7 @@ It stays recorded rather than rediscovered.
 | 84 | Keep a ported mod rebuildable: loose `.cas` and `descr_skeleton.txt` for what was ported | - | M | both |
 | 85 | Pack housekeeping: duplicates, orphans, and a compacted pack | - | M | both |
 | 86 | Animations on their own: a skeleton or one animation from another mod, and an edit saved into the pack | - | M | both |
-| 87 | The real world, whole: the rest of Mylae's New Map Editor (world picker, rotation, reference maps, water, land cover, Köppen, historic sites, a new campaign from the real world, the bundle) | - | L, split 87a-87h | beta - **87a-87c done 2026-09-25** |
+| 87 | The real world, whole: the rest of Mylae's New Map Editor (world picker, rotation, reference maps, water, land cover, Köppen, historic sites, a new campaign from the real world, the bundle) | - | L, split 87a-87h | beta - **87a-87d done 2026-09-25** |
 
 Releasing stays on request: each phase is committed to master as it lands.
 
@@ -892,6 +892,7 @@ ground type, changeable, painted in the order listed, land corners only);
 generator. Plans with previews, one Undo each. Done when: each writes only
 palette colours, never touches sea, and the Köppen file route runs with no
 network at all.
+**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
 
 **87e - a new campaign from the real world.** 26b's new-campaign form gains
 *from the box*: the size from the box's shape, heights at scale and the sea

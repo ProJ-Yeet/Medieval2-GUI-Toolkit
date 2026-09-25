@@ -945,12 +945,11 @@ def rings(ways: List[List[Tuple[float, float]]]) -> List[List[Tuple[float, float
     return out
 
 
-def _water_chunk(c: Bbox, kinds: List[str], out: Dict[str, dict]) -> None:
+def _poly_chunk(c: Bbox, filters: List[str], out: Dict[str, dict], head: str) -> None:
     bb = f"({c.south},{c.west},{c.north},{c.east})"
-    body = "".join(f"{t}{f}{bb};" for k in kinds for f in WATER_KINDS[k]
-                   for t in ("way", "relation"))
+    body = "".join(f"{t}{f}{bb};" for f in filters for t in ("way", "relation"))
     try:
-        data = overpass(f"[out:json][timeout:120];({body});out geom;")
+        data = overpass(f"{head}({body});out geom;")
     except OsmError:
         if (c.north - c.south) / 2 < CHUNK_MIN:
             raise
@@ -959,7 +958,7 @@ def _water_chunk(c: Bbox, kinds: List[str], out: Dict[str, dict]) -> None:
                      Bbox(c.north, midlat, midlon, c.east),
                      Bbox(midlat, c.south, c.west, midlon),
                      Bbox(midlat, c.south, midlon, c.east)):
-            _water_chunk(part, kinds, out)
+            _poly_chunk(part, filters, out, head)
         return
     for e in data.get("elements", []):
         key = f"{e.get('type')}/{e.get('id')}"
@@ -969,32 +968,32 @@ def _water_chunk(c: Bbox, kinds: List[str], out: Dict[str, dict]) -> None:
         def pts(geo):
             return [(round(q["lat"], 6), round(q["lon"], 6)) for q in (geo or []) if q]
 
+        tags = e.get("tags") or {}
         if e.get("type") == "way":
             geo = pts(e.get("geometry"))
             if len(geo) >= 3:
-                out[key] = {"kind": _water_kind(e.get("tags") or {}),
-                            "outer": [geo], "inner": []}
+                out[key] = {"tags": tags, "outer": [geo], "inner": []}
         elif e.get("type") == "relation":
             members = [m for m in e.get("members") or [] if m.get("type") == "way"]
             outer = [pts(m.get("geometry")) for m in members
                      if m.get("role") in ("outer", "")]
             inner = [pts(m.get("geometry")) for m in members if m.get("role") == "inner"]
-            if not outer:            # his fallback: every member way
+            if not outer:            # Mylae's fallback: every member way
                 outer, inner = [pts(m.get("geometry")) for m in members], []
-            out[key] = {"kind": _water_kind(e.get("tags") or {}),
-                        "outer": rings(outer), "inner": rings(inner)}
+            out[key] = {"tags": tags, "outer": rings(outer), "inner": rings(inner)}
 
 
-def water(b: Bbox, kinds: List[str],
-          progress: Optional[Callable[[int, str], None]] = None) -> List[dict]:
-    """Every sea, lagoon and lake polygon of the kinds asked for over the box:
-    ``{kind, outer: [ring...], inner: [ring...]}``, each ring ``(lat, lon)``.
-    Asked a chunk at a time and kept on disk by the box and the kinds."""
-    kinds = [k for k in WATER_KINDS if k in (kinds or [])]
-    if not kinds:
-        raise OsmError("pick at least one kind of water: seas, lagoons or lakes")
-    key = hashlib.sha1(json.dumps([b.envelope().payload(), kinds]).encode()).hexdigest()[:16]
-    path = config.cache_dir("osm_water") / f"{key}.json.gz"
+def polygons(b: Bbox, filters: List[str], what: str = "polygons",
+             progress: Optional[Callable[[int, str], None]] = None,
+             head: str = "[out:json][timeout:180][maxsize:536870912];") -> List[dict]:
+    """Every OSM way and multipolygon matching any of ``filters`` (Overpass tag
+    filters, ``["natural"="wood"]``) over the box: ``{tags, outer, inner}``,
+    each ring ``(lat, lon)``, a relation's member ways joined into rings.
+    Asked a chunk at a time, a chunk that fails split in four, and kept on
+    disk by the box and the filters, so a second look sends nothing."""
+    key = hashlib.sha1(json.dumps([b.envelope().payload(), sorted(filters)])
+                       .encode()).hexdigest()[:16]
+    path = config.cache_dir("osm_polygons") / f"{key}.json.gz"
     try:
         if path.is_file():
             return json.loads(gzip.decompress(path.read_bytes()).decode("utf-8"))
@@ -1006,14 +1005,26 @@ def water(b: Bbox, kinds: List[str],
     for n, c in enumerate(parts):
         if progress:
             progress(int(100 * n / len(parts)),
-                     f"water: {n + 1} of {len(parts)} stretches, {len(found)} found")
-        _water_chunk(c, kinds, found)
+                     f"{what}: {n + 1} of {len(parts)} stretches, {len(found)} found")
+        _poly_chunk(c, filters, found, head)
     out = list(found.values())
     try:
         path.write_bytes(gzip.compress(json.dumps(out).encode("utf-8")))
     except OSError:
         pass
     return out
+
+
+def water(b: Bbox, kinds: List[str],
+          progress: Optional[Callable[[int, str], None]] = None) -> List[dict]:
+    """Every sea, lagoon and lake polygon of the kinds asked for over the box:
+    ``{kind, outer: [ring...], inner: [ring...]}``, each ring ``(lat, lon)``."""
+    kinds = [k for k in WATER_KINDS if k in (kinds or [])]
+    if not kinds:
+        raise OsmError("pick at least one kind of water: seas, lagoons or lakes")
+    got = polygons(b, [f for k in kinds for f in WATER_KINDS[k]], "water", progress,
+                   head="[out:json][timeout:120];")
+    return [dict(p, kind=_water_kind(p.get("tags") or {})) for p in got]
 
 
 def _area(pts: List[Tuple[float, float]]) -> float:

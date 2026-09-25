@@ -66,7 +66,8 @@ from .campmap import RWM_REL, MapError
 from .maptga import encode
 from .mapnew import corner_view
 
-KINDS = ("heights", "adjust", "ground", "climates", "features")
+KINDS = ("heights", "adjust", "ground", "climates", "features",
+         "landuse", "landcover", "koppen")
 
 #: Terrarium elevation tiles: ``R*256 + G + B/256 - 32768`` metres. AWS Open
 #: Data, the set Mylae's editor reads.
@@ -83,13 +84,15 @@ GROUND_BANDS: List[Tuple[str, int]] = [
 
 #: Mylae's ground -> climate table, by the vanilla climate names. A mod that
 #: does not declare one of these climates keeps that ground type's climate as
-#: it is, and the plan says which.
+#: it is, and the plan says which. His temperate grassland and swamp are the
+#: slots vanilla calls ``unused1`` and ``unused2`` (his colours are theirs);
+#: until 87d this table named two climates no mod declares.
 CLIMATE_OF: Dict[str, str] = {
     "beach": "mediterranean", "fertility_low": "mediterranean",
-    "fertility_medium": "temperate_grassland_fertile",
+    "fertility_medium": "unused1",
     "fertility_high": "temperate_deciduous_forest", "wilderness": "steppe",
     "forest_sparse": "temperate_deciduous_forest",
-    "forest_dense": "temperate_coniferous_forest", "swamp": "swamp",
+    "forest_dense": "temperate_coniferous_forest", "swamp": "unused2",
     "hills": "highland", "mountains_low": "alpine", "mountains_high": "alpine",
     "impassable_land": "alpine"}
 
@@ -187,8 +190,12 @@ def plan(mod, cm, body: dict) -> GenPlan:
         p.errors.append(f"no generator called {kind!r}; there are {', '.join(KINDS)}")
         return p
     try:
-        {"heights": _plan_heights, "adjust": _plan_adjust, "ground": _plan_ground,
-         "climates": _plan_climates, "features": _plan_features}[kind](p, cm, body)
+        if kind in ("landuse", "landcover", "koppen"):
+            from . import mapreal          # 87d, which builds on this module
+            mapreal.plan(p, cm, body)
+        else:
+            {"heights": _plan_heights, "adjust": _plan_adjust, "ground": _plan_ground,
+             "climates": _plan_climates, "features": _plan_features}[kind](p, cm, body)
     except (GenError, osmmap.OsmError, MapError) as exc:
         p.errors.append(str(exc))
     return p
@@ -510,6 +517,16 @@ def _equal(img: Image.Image, rgb) -> Image.Image:
 
 def _plan_climates(p: GenPlan, cm, body: dict) -> None:
     have = {c["code"]: c for c in mapvocab.climates(p.mod) if c.get("rgb")}
+    fill = str(body.get("fill") or "").strip()
+    if fill:
+        # 87d: Mylae's "fill the entire map with one climate", sea and all
+        clim = have.get(fill)
+        if clim is None:
+            raise GenError(f"this mod declares no climate called {fill!r}")
+        img, info, rel = _layer(cm, "climates")
+        _put(p, cm, "climates", Image.new("RGB", img.size, tuple(clim["rgb"])), info, rel)
+        p.changes.append(f"{rel}: every corner {fill}, the sea too")
+        return
     mapping = dict(CLIMATE_OF)
     mapping.update({str(k): str(v) for k, v in (body.get("mapping") or {}).items()})
     ground = cm.layer("ground_types").convert("RGB")
@@ -890,4 +907,9 @@ def view(mod) -> dict:
             "climates": [{"code": c["code"], "name": c["name"]}
                          for c in mapvocab.climates(mod) if c.get("rgb")],
             "detail": list(RIVER_DETAIL), "network": osmmap.settings()["enabled"],
-            "elevation": elevation_servers()}
+            "elevation": elevation_servers(), "real": _real_view(mod)}
+
+
+def _real_view(mod) -> dict:
+    from . import mapreal                  # 87d
+    return mapreal.view(mod)

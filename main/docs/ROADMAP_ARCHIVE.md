@@ -10354,3 +10354,58 @@ brightness on land with the sea untouched, and equalize over a gradient that
 spreads to 1..255 with no land corner reading as sea and the stray pixel made
 grey. Checked in the app on the scratch server: the water fetched and drawn
 (one lake, its island dry), and an adjust planned on ROCSS's real heights.
+
+### 87d - ground types and climates from the real world - DONE 2026-09-25
+
+`unittransfer/mapreal.py`, three more cards on the Generate tab on 27's rails
+(`mapgen.plan` hands these kinds over), each a preview and one Undo:
+
+- **Ground types from OpenStreetMap land use**, his `OsmTagOverlayEditor`: his
+  47 tags in his five groups (water, wetland, natural, land use, leisure), each
+  ticked one given his ground type or another, fetched one tag at a time and
+  kept on disk (a shared `osmmap.polygons` that water now uses too), painted in
+  the order listed so a later tag lies over an earlier one. His overlay fills
+  every ring, holes too, and spares the sea by skipping (0, 0, 255), which on
+  a ground-type layer is never the sea, so it paints the sea; here only land
+  corners are painted and an inner ring is cut back out. A plan that would
+  change nothing is refused.
+- **Ground types from land cover**, his `LandCoverFetcher`: ESA WorldCover's
+  eleven classes, his default ground for each. His reads LERC tiles, which need
+  a decoder the release lacks; here it is a WMS that draws the classes in ESA's
+  legend colours (Terrascope's by default, the address in Settings), each pixel
+  taken to the nearest legend colour and one far from all of them to nothing.
+  His blends the four nearest ground colours, which makes colours in no
+  palette where classes meet; here each corner takes one class, the most common
+  in the block around it when the picture is finer than the map.
+- **Climates from the Köppen-Geiger zones**, his `KoppenClimateFetcher`: his
+  zone-to-climate table by the engine's names (his temperate grassland is the
+  slot vanilla calls `unused1`), each zone changeable to any climate the mod
+  declares. His map comes from a service with a private key in his source,
+  which is not ours to use. Here the zones come from **the published
+  Köppen-Geiger map as a file on disk** (Beck et al., CC BY 4.0, the 0.083° or
+  0.5° GeoTIFF from gloh2o.org/koppen), read by Pillow with no network at all:
+  a GeoTIFF's own tie point and scale are honoured, a palette picture's
+  numbers are read as numbers, and the 1 km map (933 million pixels) is
+  refused with the name of the one to use. A WMS in the standard colours can
+  be given in Settings instead; it is empty by default.
+- **One climate everywhere**, his *Fill entire map*, on the climates card.
+
+Every one works on the map's own frame, so a turned box turns them too: the
+source picture is Mercator-true over the envelope and one affine transform,
+nearest pixel, puts it on the corner grid. Settings gains the land-cover WMS,
+the Köppen WMS and the Köppen file.
+
+**A Phase 27 fix found on the way.** Its ground-to-climate table named
+`temperate_grassland_fertile` and `swamp`, which no installed mod declares, so
+those two ground types were always skipped. His colours for them are the
+slots vanilla calls `unused1` and `unused2`, and the table says so now.
+
+Tests: `test_mapreal` (32) with Overpass and the WMS replaced and the Köppen
+maps written as files: tags asked one by one and painted in order, a hole kept,
+the sea spared, a no-op refused; land cover from its metres box, a near colour
+still its class, palette colours only, a class left out; Köppen from a plain
+TIFF with the switch off, a palette PNG, a GeoTIFF of Europe placed by its tie
+point, too big refused, and from a WMS; one climate everywhere; the corrected
+table; and a box turned a quarter with every probed corner on the zone under
+its turned position. Checked in the app on the scratch server: the four new
+controls on ROCSS, all 30 zones finding a ROCSS climate, and a land-use plan.

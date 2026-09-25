@@ -149,6 +149,12 @@ async function openSettings(){
           <textarea id="osmOverpass" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_overpass||['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']).join('\n'))}</textarea></label>
         <label style="display:block">Elevation tiles (the heights generator and the relief style, Terrarium format)
           <textarea id="osmElevation" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_elevation||['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png']).join('\n'))}</textarea></label>
+        <label style="display:block">Land cover <span class="count">(ESA WorldCover as a WMS in its legend colours; {bbox} is EPSG:3857 metres, {width} and {height} pixels)</span>
+          <textarea id="osmLandcover" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_landcover_wms||['https://services.terrascope.be/wms/v2?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=WORLDCOVER_2021_MAP&STYLES=&FORMAT=image/png&TRANSPARENT=FALSE&SRS=EPSG:3857&BBOX={bbox}&WIDTH={width}&HEIGHT={height}']).join('\n'))}</textarea></label>
+        <label style="display:block">Köppen climates, a WMS <span class="count">(optional: one that draws the zones in the standard Köppen-Geiger colours, same placeholders)</span>
+          <textarea id="osmKoppenWms" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_koppen_wms||[]).join('\n'))}</textarea></label>
+        <label style="display:block">Köppen climates, a file on this computer <span class="count">(no internet needed: the Köppen-Geiger map by Beck et al., the 0.083° or 0.5° GeoTIFF from gloh2o.org/koppen)</span>
+          <input id="koppenFile" style="width:100%" placeholder="C:\\maps\\koppen_geiger_0p083.tif" value="${esc(s.koppen_file||'')}" onchange="saveOsm()"></label>
         <label style="display:block">Nominatim (the place search)
           <input id="osmNominatim" style="width:100%" value="${esc(s.osm_nominatim||'https://nominatim.openstreetmap.org')}" onchange="saveOsm()"></label>
       </fieldset>
@@ -424,9 +430,12 @@ async function saveOsm(){
   const body = {osm_enabled: on, osm_tiles: lines('osmTiles'),
                 osm_tiles_topo: lines('osmTilesTopo'), osm_tiles_hot: lines('osmTilesHot'),
                 osm_tiles_ohm: lines('osmTilesOhm'),
+                osm_landcover_wms: lines('osmLandcover'), osm_koppen_wms: lines('osmKoppenWms'),
+                koppen_file: val('koppenFile').trim(),
                 osm_overpass: lines('osmOverpass'), osm_elevation: lines('osmElevation'),
                 osm_nominatim: val('osmNominatim').trim()};
   state.settings = await api.post('/api/settings', body);
   if(state.osm){ state.osm.st = null; if(state.osm.open) osmLoad(); }
+  if(state.mgn){ state.mgn.d = null; if(state.mgn.open) mgnToggle().then(mgnToggle); }
   toast(on ? 'OpenStreetMap is on for the Real world tab.' : 'OpenStreetMap is off.');
 }
