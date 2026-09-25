@@ -38,7 +38,7 @@ function osmNew(mod){
           water: null, wkinds: {sea: true, lagoon: false, lake: false}, wmin: 16,
           style: 'osm', year: 1200, picW: 2048,
           htags: null, hist: null, hq: '', hshow: true, hpick: -1,
-          chunks: null, cpick: 0, cshow: true,
+          chunks: null, cpick: 0, cshow: true, bpic: false,
           q: '', results: null, target: '', job: '', pct: 0, label: ''};
 }
 
@@ -839,6 +839,44 @@ function osmChunksHtml(){
         <button onclick="osmChunkAgain(${ch.n})" ${k.busy ? 'disabled' : ''}>↺</button></div>`).join('')}</details>`;
 }
 
+/* ---------- the map bundle (87h) ---------- */
+
+//: The zip in Mylae's layout, made by Python from the files on disk
+async function osmBundle(){
+  const k = state.osm, c = state.cmap;
+  if(!k || !c || k.busy) return;
+  const q = `mod=${enc(c.mod)}` + (k.bpic && osmBoxOk(k.box)
+    ? `&picture=${enc(k.style)}&year=${k.year}&width=${k.picW}` : '');
+  k.busy = true; osmPaint();
+  try{
+    const r = await fetch(`/api/osm/bundle?${q}`);
+    if(!r.ok){ toast('✗ ' + (await r.text()).slice(0, 300), 8000); return; }
+    const name = ((r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/) || [])[1]
+      || 'm2tw_map_layers.zip';
+    const n = r.headers.get('X-Bundle-Files') || '?', notes = r.headers.get('X-Bundle-Notes') || '';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await r.blob());
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast(`${name}: ${n} files.${notes ? ' ' + notes + '.' : ''}`, notes ? 9000 : 5000);
+  }catch(e){ toast('✗ ' + errText(e), 8000); }
+  finally{ k.busy = false; osmPaint(); }
+}
+
+function osmBundleHtml(){
+  const k = state.osm, pt = state.cpaint;
+  const dirty = pt && pt.st && (pt.st.dirty || []).length;
+  return `${dirty ? `<div class="w-warn">The Paint tab has changes not saved yet. The bundle is the
+      files on disk, so save first if they should be in it.</div>` : ''}
+    <label class="chk"><input type="checkbox" ${k.bpic ? 'checked' : ''} ${osmBoxOk(k.box) ? '' : 'disabled'}
+      onchange="state.osm.bpic=this.checked"> With a reference picture (the backdrop style, ${k.picW} px wide)</label>
+    <div class="cmbar2"><button class="primary" onclick="osmBundle()" ${k.busy ? 'disabled' : ''}>📦 Export the map bundle</button></div>
+    <div class="count">Mylae’s layout: the map’s layers as they are on disk, bbox_coords.txt, and
+      reference/ with map_regions.txt (each province’s colour, city and port), the historic sites
+      already fetched for this box, and the picture. Only the picture uses the internet.</div>`;
+}
+
 /* ---------- the panel ---------- */
 
 function osmPaint(){
@@ -950,6 +988,7 @@ function osmHtml(){
     <div class="bsec"><h4>Historic sites</h4>${osmHistHtml()}</div>
     <div class="bsec"><h4>Overpass chunks ${(k.chunks || []).some(f => f.failed)
       ? '<span class="w-warn">some failed</span>' : ''}</h4>${osmChunksHtml()}</div>
+    <div class="bsec"><h4>The map bundle</h4>${osmBundleHtml()}</div>
     <div class="bsec"><h4>Find a place</h4>
       <div class="brow"><input id="osmQ" value="${esc(k.q)}" placeholder="a town, a region, a country"
         onkeydown="if(event.key==='Enter')osmSearch()">

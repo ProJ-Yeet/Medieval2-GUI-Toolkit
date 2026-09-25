@@ -10580,3 +10580,53 @@ historic sites; the two routes, and nothing sent while switched off.
 with a sample record held in the page: the section, the chunks drawn numbered
 with the failed one red, and a click on the map through the pin finding that
 chunk and asking the server for it.
+
+### 87h - the bundle - DONE 2026-09-25 (and with it, Phase 87)
+
+`unittransfer/mapbundle.py`, *Export the map bundle* on the Real world tab,
+`GET /api/osm/bundle`. His *Export Bundle* is `m2tw_map_layers.zip`. Each
+layer's TGA sits at the top under the game's own name, with a `reference/`
+folder beside them: `map_regions.txt`, `historic_features.txt` with one
+transparent PNG a tag (`historic_castle.png`), and the reference pictures. This
+writes the same zip, named `<mod>_map_layers.zip`, from a map on disk.
+
+**The layers are the files on disk, byte for byte.** His are re-encoded from
+the canvas and, for a turned box, resampled onto the map's rectangle at
+export. Here the turn is already in the projection (87a), so there is nothing
+to resample and every file is copied as it is. That is all ten layers the map
+has, his six and the four he does not draw (trade routes, roughness, water
+surface, front-end map). A paint stroke not yet saved is not in them, and the
+panel says so when the Paint tab has one.
+
+**`bbox_coords.txt`** goes at the top with the rotation, because his Campaign
+Map picks it out of a folder of map files by name.
+
+**`reference/map_regions.txt`** is his columns: `name  r g b  city_x city_y
+port_x port_y`, pixels from the regions map's top-left. A province with no
+port gets `0 0` (his value) and one with no city `-1 -1` (his value for a point
+he could not place). Every province the map paints and `descr_regions.txt`
+declares is listed, in the engine's order, with its city and port pixels as
+the map reader pairs them. His header has a long dash; ours has a hyphen, in a
+comment.
+
+**Nothing is sent to make it.** The historic sites are whatever 87f fetched
+for this box, read off disk (87g's records). The one thing that can use the
+network is a reference picture (87b), and only when ticked: with the switch
+off it still comes if its tiles are on disk, and is refused (403) if they
+would have to be fetched.
+
+Tests: `test_mapbundle` (22) on a 60x40 map with all ten layers: with no box,
+the layers and `map_regions.txt` and a note why; with a turned box and a
+historic fetch kept, **his six layer names at the top, every TGA the file on
+disk byte for byte and the size the grid says**, `bbox_coords.txt` reading
+back as the box, `map_regions.txt` lines for a province with and without a
+port, 87f's text and the per-tag PNG with exactly one pixel, and nothing asked
+of Overpass or the tile server; a picture when asked for; the route, with the
+switch off, and an unknown mod. On the installed mods, both bundles are
+byte-exact: ROCSS lists 449 provinces with 232 ports and DaC 201 with 79,
+every one with its city. Checked in the app on ROCSS: the section, and the
+export downloading `ROCSS_map_layers.zip` (0.7 MB, eleven files).
+
+**Phase 87 is done.** Everything on his New Map Editor is here but two things,
+each for the reason its write-up gives: the Google Drive upload (cloud
+plumbing) and the five files nothing of his imports.

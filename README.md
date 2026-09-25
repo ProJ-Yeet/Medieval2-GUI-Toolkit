@@ -198,7 +198,9 @@ on top. Ships on the dated beta pre-release; see the module table above.
   name, and marks castles, forts, monasteries and other historic sites, any of
   which can be made a fort, a watchtower or a new region. What it asks
   OpenStreetMap is shown chunk by chunk, and a chunk that got no answer can be
-  asked again. Its world map is where the map's box is found: drawn, moved,
+  asked again. *Export the map bundle* puts the map's layers, its box and a
+  list of its provinces with their cities and ports in one zip, in the shape
+  Mylae's New Map Editor uses. Its world map is where the map's box is found: drawn, moved,
   turned, or fitted round a place, in the map's own shape. The two that use the internet are off until Settings turns them on.
 * **A refusal says what would work instead.** A culture or a resource name the
   mod does not declare is refused outright; a tile that is wrong for what you put

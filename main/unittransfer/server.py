@@ -375,6 +375,10 @@ show the unsaved map rather than the one on disk.
                                     or, given a box and no mod, over that box alone
   GET  /api/osm/chunks?mod=       -> 87g. every Overpass fetch kept for the map's box,
                                     its chunks numbered, which failed and what each found
+  GET  /api/osm/bundle?mod=&picture=&year=&width=
+                                 -> 87h. the map bundle, a zip in Mylae's layout: the
+                                    layers as on disk, bbox_coords.txt, reference/
+                                    map_regions.txt and the historic sites kept
   POST /api/osm/refetch          -> 87g. one chunk of a kept fetch asked again alone,
                                     what it finds merged in: {kind, key, n}
   POST /api/map/osm_coast|osm_boundary|osm_water
@@ -698,7 +702,7 @@ from typing import Dict, List, Optional
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
 from . import mapgen, mapnew, mapresize
-from . import ancillaries, areaeffects, campimport, edbimport, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animview, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animview, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2431,6 +2435,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": str(e)})
             if u.path.startswith("/api/osm/tile/"):
                 return self._osm_tile(u.path, q)
+            if u.path == "/api/osm/bundle":
+                return self._osm_bundle(q)
             if u.path == "/api/osm/picture":
                 return self._osm_picture(q)
             if u.path == "/api/edbimport/lines":
@@ -3985,6 +3991,25 @@ class Handler(BaseHTTPRequestHandler):
         img.save(buf, "PNG", optimize=True)
         return self._send(200, buf.getvalue(), "image/png",
                           {"Content-Disposition": f'attachment; filename="{stem}.png"'})
+
+    def _osm_bundle(self, q):
+        """87h: the map bundle. Sends nothing unless a reference picture is
+        asked for, and that only under the switch."""
+        name = (q.get("mod") or [""])[0]
+        pic = (q.get("picture") or [""])[0] or None
+        try:
+            cm = self._osm_map(name)
+            got = mapbundle.build(cm, pic, (q.get("year") or [None])[0],
+                                  int((q.get("width") or ["2048"])[0]))
+        except osmmap.OsmOff as e:
+            return self._err(403, str(e))
+        except (KeyError, campmap.MapError, ModDataError, OSError, ValueError) as e:
+            return self._err(400, str(e))
+        notes = "; ".join(got["notes"]).encode("ascii", "replace").decode("ascii")
+        return self._send(200, got["data"], "application/zip",
+                          {"Content-Disposition": f'attachment; filename="{got["name"]}"',
+                           "X-Bundle-Files": str(len(got["files"])),
+                           "X-Bundle-Notes": notes})
 
     def _osm_post(self, action, body):
         name = str(body.get("mod") or "")
