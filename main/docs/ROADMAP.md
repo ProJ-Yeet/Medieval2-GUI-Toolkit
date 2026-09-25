@@ -6,7 +6,7 @@ reads 3,000 lines of finished work to find the next step. What stays here is
 what a session still has to act on: the locked decisions, the phase index, the
 map-format reference the map modules are built on, and the schedule of what is
 left. **When a phase finishes, its write-up goes to the archive and its row here
-is struck through, in the same commit** - the rule in *The four documents*
+moves up into the phase index, in the same commit** - the rule in *The four documents*
 below, restored on 2026-09-23 after this file had grown back to 5,000 lines.
 
 **Where to look**
@@ -91,8 +91,8 @@ running the test suite, and running `graphify update .`.
 Every phase in this table is finished. The write-up for each one is in
 `ROADMAP_ARCHIVE.md` under the same heading; the table is here so the numbers in
 commit messages, `docs/upstream/PORT_MANIFEST.json` and `STATE.md` still resolve.
-Phases 56 onward are in the schedule table further down, struck through as
-they finish, beside the ones still to build.
+A phase from the schedule further down moves up into this table when it
+finishes; the schedule holds only what is left.
 
 | # | Phase | Shipped in |
 |---|---|---|
@@ -131,6 +131,11 @@ they finish, beside the ones still to build.
 | 54 | Health - one door to every check (M17) | v2.3.7 |
 | 55 | A battle model that moves (M16, playback) | uncut |
 | M18 | The map in 3D | beta |
+| 56-60, 62-69, 74-76 | Several factions and the faction zip; the animation editor and converter; will this mod launch; settlement mechanics; add a religion; one file in or out; the minor files (populace and off-map models, animals, standards, advice, battle banners, hero abilities, area effects, walls, agents and generals); a settlement model imported; the `.cas` view placed by its skeleton; a building tree from another mod; and 71's `data/` zip loaded back | v2.3.9 at the latest |
+| 61, 70-73 | Delete, create and copy a settlement; every tile as text; a campaign as a zip; a horde start; a campaign from another mod | beta 2026-09-25 at the latest |
+| 25-27 | The OSM backdrop and coastline; map resize and a map from scratch; the layer generators | beta 2026-09-25 |
+| 77-79, 80a | The packs read; the 687 slots named; transfer held against the destination's pack; every packed animation in the Models viewer | uncut |
+| 87 | The real world, whole: Mylae's New Map Editor, 87a-87h | uncut, beta line |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
@@ -377,53 +382,15 @@ mask pass is measured that way, and so is 20c's label placement
 
 ---
 
-# Phases 56-76, then 25-27, then 77-86 - the rest of the roadmap, scheduled 2026-09-23
+# The schedule - what is left
 
-**Asked for by the user on 2026-09-23: "finish all phases remaining in
-roadmap".** With 55 done nothing was scheduled, so everything still open in
-this file became a phase, in the order the file already gave it: the *Future
-roadmap* list by stars, then by size within a rating (small first, as the
-three-star table says), with the two beta items where their four stars put
-them. The three numbered campaign-map phases, 25-27, keep their numbers and go
-last: they are the largest, and 25 and 27 are the only work here that touches
-the network (opt-in, off by default, under the 2026-09-03 amendment).
-
-**Two rows are not phases, and why.** *M17, the crash and validation
-dashboard*, is done: it is Phase 54's Health screen, one door to every check.
-*The `.sd` interface skins* were left unrated on the ballot because the row
-argued against itself - GUI skinning rather than mod data, with a dedicated
-editor already in the archive - and "finish the roadmap" does not rate it.
-It stays recorded rather than rediscovered.
+Set on 2026-09-23 on the user's word ("finish all phases remaining in
+roadmap"), with 87 and 88 added on 2026-09-25. A finished row moves up into
+the phase index. The schedule as it stood, with how it was ordered and the
+notes on 74-76, is in `ROADMAP_ARCHIVE.md` under *The 2026-09-23 schedule*.
 
 | # | Phase | Stars | Size | Line |
 |---|---|---|---|---|
-| ~~56~~ | ~~M12 - several factions at once, and the faction files as a zip~~ | 5 | M | both - **done 2026-09-23** |
-| ~~57~~ | ~~M16's editor half - the animation editor and asset converter~~ | 5 | L | both - **done 2026-09-23** |
-| ~~58~~ | ~~Will this mod even launch - a readiness row on Home~~ | 4 | S | both - **done 2026-09-23** |
-| ~~59~~ | ~~The rest of *Mines and hidden resources*: `descr_settlement_mechanics.xml` and its ceiling~~ | 4 | S | both - **done 2026-09-23** |
-| ~~60~~ | ~~Add a religion~~ | 4 | M | both - **done 2026-09-23** |
-| ~~61~~ | ~~B2 - delete a settlement, create one where none is, move one between mods~~ | 4 | M | beta - **done 2026-09-23** |
-| ~~62~~ | ~~B3 - insert and export one file at a time~~ | 4 | M | both - **done 2026-09-23** |
-| ~~63~~ | ~~`descr_lbc_db.txt` and `descr_offmap_models.txt`~~ | 3 | S | both - **done 2026-09-23** |
-| ~~64~~ | ~~`descr_animals.txt`, `descr_standards.txt`, `export_descr_advice.txt`~~ | 3 | S | both - **done 2026-09-23** |
-| ~~65~~ | ~~`descr_banners_new.xml`~~ | 3 | M | both - **done 2026-09-23** |
-| ~~66~~ | ~~`descr_hero_abilities.xml`~~ | 3 | M | both - **done 2026-09-23** |
-| ~~67~~ | ~~`descr_area_effects.xml`~~ | 3 | M | both - **done 2026-09-23** |
-| ~~68~~ | ~~`descr_walls.txt`~~ | 3 | M | both - **done 2026-09-24** |
-| ~~69~~ | ~~`descr_character.txt`~~ | 3 | M | both - **done 2026-09-24** |
-| ~~70~~ | ~~T6 - every tile as text~~ | 3 | M | beta - **done 2026-09-24** |
-| ~~71~~ | ~~D12 - the project as a zip, and loaded back~~ | 3 | M | both - **done 2026-09-24** |
-| ~~72~~ | ~~D13 - a horde start for a new faction~~ | 3 | M | beta - **done 2026-09-24** |
-| ~~73~~ | ~~M7 - import a campaign from another mod~~ | 3 | L | beta - **done 2026-09-24** |
-| ~~74~~ | ~~Import a settlement `.cas` from another mod or disk, and assign it to a culture's level~~ | - | M | both - **done 2026-09-24** |
-| ~~75~~ | ~~Fix the `.cas` model view: place each piece by its skeleton (the squashed unit models)~~ | - | M | both - **done 2026-09-24** |
-| ~~76~~ | ~~Import a building tree from another mod~~ | - | L | both - **done 2026-09-24** |
-| ~~25~~ | ~~OSM backdrop and coastline tracer~~ | 3 | L | beta - **done 2026-09-24** |
-| ~~26~~ | ~~Map resize, and create from scratch~~ | 3 | L | beta - **done 2026-09-24** |
-| ~~27~~ | ~~Overlay and layer generators~~ | 3 | L | beta - **done 2026-09-24** |
-| ~~77~~ | ~~The packs, read: `pack.idx`/`.dat` and `skeletons.idx`/`.dat` in the engine~~ | - | M | both - **done 2026-09-25** |
-| ~~78~~ | ~~The 687 slots named, and `descr_skeleton.txt` held against the packs~~ | - | M | both - **done 2026-09-25** |
-| ~~79~~ | ~~Transfer knows what the destination really has: skeletons from the pack, weapon skeletons counted~~ | - | S | both - **done 2026-09-25** |
 | 80 | Every animation a unit has, in the Models viewer: packed ones, named, with its weapons, shield and mount | - | L | both - **80a done 2026-09-25**, 80b open |
 | 81 | Append to a pack, and take it back | - | L | both |
 | 82 | In-game proof: what the engine accepts, rebuilds and prefers | - | S | both |
@@ -431,63 +398,9 @@ It stays recorded rather than rediscovered.
 | 84 | Keep a ported mod rebuildable: loose `.cas` and `descr_skeleton.txt` for what was ported | - | M | both |
 | 85 | Pack housekeeping: duplicates, orphans, and a compacted pack | - | M | both |
 | 86 | Animations on their own: a skeleton or one animation from another mod, and an edit saved into the pack | - | M | both |
-| ~~87~~ | ~~The real world, whole: the rest of Mylae's New Map Editor (world picker, rotation, reference maps, water, land cover, Köppen, historic sites, a new campaign from the real world, the bundle)~~ | - | L, split 87a-87h | beta - **done 2026-09-25** |
 | 88 | Every major language: the interface translated, with each language's correct technical terms (a termbase, right-to-left, CJK) | - | L, split 88a-88f | both |
 
 Releasing stays on request: each phase is committed to master as it lands.
-
-**74 to 76 were added on the user's word on 2026-09-23**, after the table
-was set, and checked against the code first so none of them repeats work
-already done. They are unrated; they go after 73 and before 25-27 until the
-user orders them otherwise.
-
-* **74 - a settlement model, imported and assigned.** What exists: the map
-  screen lists and draws every strat `.cas` (`/api/map/models`), the Cultures
-  screen edits a level's model path as text (`minorfiles.py`), and B3 puts any
-  file under `data/` (`fileswap.py`). Missing is the one step joining them:
-  pick a model in another mod (or on disk), copy it with the textures it names,
-  and write it onto a culture and level in one plan and one Undo.
-* **75 - the `.cas` model view, placed by its skeleton.** Phase 29's viewer
-  (`viewer3d.js`, `/api/map/model/geometry`, `tests/test_stratart.py`) had no
-  defect on record (the one fixed on 2026-09-12 was the zero-byte `.tga` taken
-  over its DDS), so this was scheduled as "reproduce first". **The context
-  arrived on 2026-09-23**, from the user's Discord thread with Wilddog (IWTE):
-  - **The symptom.** The user's `.mesh` units and settlement `.cas` models
-    draw correctly, but a *unit's* `.cas` model comes out squashed, its pieces
-    piled on top of each other (the screenshot's top-right view).
-  - **Wilddog's diagnosis.** "`.mesh` files are a series of submeshes already
-    pre-positioned around a skeleton/pose. `.cas` mesh files are centred
-    around 0,0,0 and moved to position by the skeleton." The squashed view
-    is "the mesh part of the cas, correct, but not moved to position as per
-    the skeleton". A unit's pieces must be parented to its skeleton to be
-    placed; **buildings have no skeleton, which is why they already work**. A
-    standard `.cas` always carries a skeleton, or at least the hierarchy, but
-    for units the actual skeleton and animation are often in **another**
-    `.cas`.
-  - **The code agrees.** `cas.py` reads every node's parent and pivot
-    (`out.pivots`, `cas.py:400`) and **nothing ever applies them to
-    geometry**: `scene_view` hands the objects over as stored. The animation
-    panel also skips a `.cas` outright (`v3anim.js:232`, `if(v3.cas ...)`), so
-    a `.cas` model is never posed by anything.
-  - **The fix.** Chain each node's pivot from the Scene Root (the bind pose
-    `v3anim.js` already builds for `.mesh` units, `mesh.py`'s "pivots chained
-    from zero") and move each object, or each skinned vertex by its bone
-    weights, by its node's position. When the model's own hierarchy has no
-    pivots worth the name, take them from the skeleton `.cas` beside it or,
-    for a battle model, from the packed skeleton (Phase 77; the format notes' bone
-    positions are parent-relative, the pelvis at 0). Settlement and resource
-    models (no skeleton) must draw exactly as they do now.
-  - **Done when:** a strat character (general, diplomat, assassin) and a
-    battle-unit `.cas` from each installed mod stand as figures, not piles;
-    every settlement `.cas` draws unchanged; checked with the pane visible (a
-    hidden tab never draws WebGL). This is also Phase 80's prerequisite for
-    animating a `.cas` model.
-* **76 - a building tree from another mod.** Missing entirely: `transfer.py`
-  moves units only and the buildings screen edits in place. The shape is
-  Unit Transfer's own at EDB scale - the building and its levels, their
-  `text/export_buildings.txt` strings, the pictures, and a report of what the
-  destination lacks (units a level recruits, resources, factions and cultures
-  it names), with one Undo.
 
 # Phases 77-86 - animations that travel with a unit, scheduled 2026-09-23
 
@@ -606,37 +519,8 @@ the main path.
 
 ## The phases
 
-**77 - The packs, read (M).** `animpack.py`: `PackIndex` for both `.idx`
-kinds, `PackedAnimation` (the arrays in the format notes), `PackedSkeleton` (bones and
-the 687 slots parsed, tail kept as bytes) with a serializer, and a per-mod
-cache keyed on the files' mtime and size (DaC's index is 15 661 records). No
-UI. Done when: the serializer round-trips all 730 skeletons on vanilla, ROCSS
-and DaC byte for byte; `verify`'s structural checks pass through the new
-module; tests build **small synthetic packs from a handful of real entries**
-rather than copying 70-352 MB packs into temp (the suites' `ut_*` temp dirs
-already leak, 37 GB by September 2026).
-**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
-
-**78 - The 687 slots named, and `descr_skeleton.txt` held against the packs
-(M).** Name each slot by aligning `descr_skeleton.txt`'s `anim` lines with a
-packed skeleton's filled slots wherever the two agree (vanilla first). Bank the table as data
-(`unittransfer/data/`). Then report per mod: types in the text but not the
-pack, skeletons in the pack but not the text, slots that disagree. Measure how
-out of step DaC and ROCSS are (Wilddog's point 4, never measured here). Done
-when: every slot a vanilla skeleton fills has a name, and the per-mod report
-runs on all three.
-**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
-
-**79 - Transfer knows what the destination really has (S).** The
-missing-skeleton check reads `skeletons.idx` (the modeldb only as the fallback
-for a mod with no pack), and counts the **weapon skeletons** too
-(`pri_weapons`/`sec_weapons`), which it ignores today. A weapon skeleton
-missing is reported apart from a body skeleton, with Makanyane's rule attached:
-it only bites if the mesh has weight on the weapon bones. The same check
-becomes a Health rule: a modeldb skeleton or weapon skeleton the mod's own
-pack does not have (ROCSS's three). Done when: ROCSS reports exactly those
-three, DaC none, and every existing transfer test still passes.
-**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
+**77 to 79 are done**; each one's scoping and write-up are in
+`ROADMAP_ARCHIVE.md`.
 
 **80 - Every animation a unit has, in the Models viewer (L).** Asked for by
 the user on 2026-09-23 ("I also want to be able to view the different
@@ -768,165 +652,6 @@ in game without any outside tool.
 user's other Discord goal; 80 builds exactly the posed, animated unit an
 exporter would need, and `modelexport.py` would carry it), and Rome/RR packs (a
 half-frame layout; nothing here is measured on it).
-
-# Phase 87 - the real world, whole: Mylae's New Map Editor, scheduled 2026-09-25
-
-**Asked for by the user on 2026-09-25**: "how do i find the coordinates without
-even having the real world view like mylaes tool does", then "port over the
-complete feature of the real world maps that is in mylaes tool, record this as
-a new phase at the end", and "mylae recently updated his tool, take that into
-consideration too". Unrated, beta line (it is map work), after 86 in the table,
-and **built now** rather than waiting its turn: the user asked for it directly.
-
-**His update, checked.** His `main` was read again on 2026-09-25 (`cbf962b`).
-Everything after the last review (`6f975d2`) is a package bump; his newest map
-work is the 2026-09-14/16 batch (3D preview, custom climates, spray brush),
-already triaged as M18-M20. None of the New Map Editor files changed since
-Phases 25 and 27 read them, so this phase is built against what is described
-below. `upstream_sync.py sync --accept` records the review.
-
-## What is his, what we have, what is missing
-
-His *New Map Editor* page (`pages/NewMapEditor.jsx`, 722 lines, and 30 files
-under `components/newmap/`) is five steps on a Leaflet world map: **Select
-Area**, **Set Resolution**, **Generate Layers**, **Preview**, **Edit & Export**.
-Five of those files are dead (`GeoImporter`, `GeoImportPanel`, `BBoxGenerator`,
-`MapEditorCanvas`, `ToolSettings`: nothing imports them) and his Google Drive
-upload is cloud plumbing; neither is ported.
-
-| His | Ours before 87 | 87 |
-|---|---|---|
-| A world map to find the area on, a box drawn by dragging, moved and resized by handles, **rotated** by a handle; N/S/W/E and rotation typed; the size of a tile in km | four number boxes, and a backdrop only once they are filled | **87a** |
-| Width and height tied to the box's shape (`bboxAspect`), or the box tied to the map | nothing: a box of the wrong shape stretches the map | **87a** |
-| Reference maps: OpenTopoMap, OSM Humanitarian, Terrarium relief; OpenHistoricalMap by year (500-1600, twelve era buttons); a reference map as SVG | one tile server | **87b** |
-| Seas, lagoons and lakes from OSM polygons as sea, smaller than N pixels left out | the coastline tracer (25) | **87c** |
-| Brightness, contrast, gamma and equalize on the heights | nothing | **87c** |
-| 47 OSM tags painted onto the ground types (farmland, wood, marsh, bare rock...), each ground type changeable | bands from the heights (27) | **87d** |
-| ESA WorldCover land cover onto the ground types | not built: LERC tiles need a decoder (27) | **87d** |
-| Köppen climates from koppen.earth | not built: his key is private (27) | **87d** |
-| One climate over the whole map | the climates generator's table | **87d** |
-| Settlements searched and placed, each with a colour and its city dot; a boundary painted in its colour or merged into the last; a port by a click; `map_regions.txt` | search inside the box, *New region here*, *Paint its boundary* (25) | **87e** |
-| A whole new map from the box | an island from nothing (26b) | **87e** |
-| Castles, forts, monasteries and 18 more `historic=`/`castle_type=` tags as points, `historic_features.txt` | nothing | **87f** |
-| Overpass split into tiles, a tile fetched again by a click | chunks split on failure, silently | **87g** |
-| The bundle: every layer as a TGA (rotated to the box at export), `map_regions.txt`, `historic_features.txt`, the reference pictures | Phase 71's changed files | **87h** |
-
-## Where it departs from his, and why
-
-- **Rotation is in the projection, not resampled at export.** His layers are
-  made on the rotated box's axis-aligned envelope and turned by nearest
-  neighbour on export, so every layer is resampled twice and a one-pixel river
-  breaks. Rotating by an angle is linear in (longitude, Mercator) space, so
-  `osmmap.Projection` takes the angle and every consumer (the backdrop, the
-  coastline, the search, the boundaries, the heights' one affine transform,
-  the rivers) gets a rotated map directly. An unrotated box is exactly
-  today's projection, so every box already kept lines up as before.
-- **Sea is the engine's sea.** His water fill writes (0,0,255) on the heights
-  only, and his heights adjust touches R and G on every pixel, which turns a
-  sea pixel `(0,0,255)` into `(v,v,255)`, land by the engine's rule. Here water
-  is the water brush's stroke (regions, heights, ground together, 25's
-  colours) and the heights adjust touches land corners only, never lifting one
-  to 0 or into the sea.
-- **Land cover gives palette colours only.** His bilinear blend of four
-  ground-type colours produces colours in no palette where classes meet.
-  Here each ground corner takes the most common class under it.
-- **Köppen without his key.** The primary source is the published
-  Köppen-Geiger map as a file on disk (Beck et al., CC BY 4.0, the 0.083° or
-  0.5° GeoTIFF, values 1-30 in the standard order, which Pillow reads), so it
-  works offline; a WMS address in Settings is the second, empty by default.
-  His zone-to-climate table is the default mapping, each zone changeable to
-  any climate the mod declares.
-- **Land cover without LERC.** A WMS that serves the WorldCover classes as a
-  PNG in ESA's own legend colours (address in Settings), so Pillow reads it.
-- **A new campaign that loads.** His regions layer is whatever was painted;
-  ours has to give every land tile a province with a city, so the provinces
-  grow from the settlements placed (26b's growth, over land only), or take a
-  settlement's administrative boundary where it has one, and 26b's campaign
-  writing does the rest. The validator runs on the result.
-- **Historic sites become things on the map**, not only a text file: a fort,
-  a watchtower (22a's writers) or a settlement for 87e, from the point.
-- **Everything network is under 25's switch**, each server listed and
-  editable in Settings; tests use local fakes, and nothing is sent to the real
-  servers by this work.
-
-## The pieces
-
-**87a - the world picker.** A *World* view on the Real world tab that works
-before any box exists: a slippy map of the whole world through
-`/api/osm/tile` (drag to pan, wheel to zoom), a box drawn by dragging, then
-moved by its centre, resized by its corners and turned by its rotation handle,
-with north, south, west, east and rotation typed beside it and the size of a
-tile in km. Search worldwide (Nominatim, unbounded), *Go* and *Fit the box
-around it*. Two ways out: **Use for this map**, the box locked to the map's
-own W:H in Mercator (so it cannot stretch), and **New campaign from this box**
-(87e), width and height tied to the box's shape. The rotation is kept with the
-box and written to `bbox_coords.txt` as `rotation=`, a line his loader ignores.
-His loader's bug (a coordinate of exactly 0 is refused) is not copied. Done
-when: a box drawn, turned and kept puts the backdrop, the coastline, a search
-result and a boundary where they were before at 0°, and where the rotated
-projection puts them otherwise, checked both ways in Python and in JS.
-**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
-
-**87b - reference maps.** The backdrop gets a choice: OpenStreetMap,
-OpenTopoMap, OSM Humanitarian, Terrarium relief (drawn grey by Python from the
-elevation tiles 27 already reads) and OpenHistoricalMap with a year slider and
-his era buttons, each server list in Settings, the same cache and budget. The
-same choice on the world picker. *Save a reference picture*: the box's map as
-a PNG, or an SVG with the picture embedded and a viewBox in degrees, his shape.
-Done when: each style draws on the fake server and the year reaches the tile
-request.
-**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
-
-**87c - water and the heights.** *Lakes, lagoons and seas*: OSM water polygons
-(his queries), rings joined by his chaining, holes kept, smaller than a size in
-tiles left out, made sea as one paint stroke like the coastline. *Adjust the
-heights*: brightness, contrast, gamma and equalize over land corners only, a
-Generate plan with a preview and one Undo. Done when: a lake with an island in
-it becomes sea around a dry island, and an adjust never changes a sea corner.
-**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
-
-**87d - ground and climate from the real world.** Three generators on the
-Generate tab: *OSM land use* (his 47 tags in his groups, each with his default
-ground type, changeable, painted in the order listed, land corners only);
-*Land cover* (WorldCover classes, his default mapping); *Köppen climates*
-(file or WMS, his table); and *one climate everywhere* on the climates
-generator. Plans with previews, one Undo each. Done when: each writes only
-palette colours, never touches sea, and the Köppen file route runs with no
-network at all.
-**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
-
-**87e - a new campaign from the real world.** 26b's new-campaign form gains
-*from the box*: the size from the box's shape, heights at scale and the sea
-from the elevation (and the coastline, when asked), ground and climates from
-87d or 27, rivers from 27, and provinces from a settlement list built on the
-world picker (search results, historic sites, clicks), each grown over the
-land from its city or filled from its boundary; land nobody reaches is joined
-to the nearest province or, under a size, made sea, and said. Ports go on the
-coast where the engine's dock rule puts them, movable. Factions are picked as
-in 26b. Done when: a campaign made from a real box passes the validator's
-fatal rules and loads its strat on both installed mods' copies.
-**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
-
-**87f - historic sites.** His 21 tags fetched for the box, drawn as points in
-his colours, listed with their names; from a point: *fort here*, *watchtower
-here*, *new region here*, or *a settlement* in 87e's list.
-`historic_features.txt` in his format. Done when: a fake answer's castle
-becomes a fort on the tile it names.
-**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
-
-**87g - the Overpass tiles shown.** Every Overpass fetch (coast, water, land
-use, rivers, historic) records its chunks; the map can show them numbered,
-failed ones red, and fetch one again by a click. Done when: a chunk that failed
-on the fake server is fetched again alone and the result merges.
-**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`.
-
-**87h - the bundle.** *Export the map bundle*: the ten layers as TGAs,
-`bbox_coords.txt` (with the rotation), `map_regions.txt` (his columns: name,
-colour, city, port), `historic_features.txt` and any reference pictures, as a
-zip in his layout. Done when: the zip opens in his editor's shape (names and
-sizes) and every TGA is the file on disk byte for byte.
-**Done 2026-09-25**; the write-up is in `ROADMAP_ARCHIVE.md`. **Phase 87 is
-done.**
 
 # Phase 88 - every major language, scheduled 2026-09-25
 
@@ -1077,26 +802,12 @@ paths, coordinates and code names. Done when: every screen is walked in
 Arabic, and on the map a click, the tile pin and a drag land on the same tile
 as in English.
 
-# What each open phase is
+# What else is open
 
-The user rated the candidates one to five stars on 2026-09-12. Every five- and
-four-star item is built (M17, M12, M16, B2, B3, *Will this mod launch*, *Add a
-religion*, *Mines and hidden resources*), and so are the finished three-star
-rows; their write-ups are in `ROADMAP_ARCHIVE.md`. What is left is the open
-three-star rows below, each a numbered phase in the schedule above, and 74-76,
-which are described under the schedule. How the ratings were reconciled with the 2026-09-05 triage board is
-archived with the rest.
-
-## Three stars
-
-Ordered small to large, because at this rating size is what decides whether one
-is worth picking up.
-
-| # | Item | Size | Note |
-|---|---|---|---|
-| ~~25~~ | ~~**Phase 25 - OSM backdrop and coastline tracer**~~ | L | **Done 2026-09-24**; write-up in `ROADMAP_ARCHIVE.md`. |
-| ~~26~~ | ~~**Phase 26 - map resize, and create from scratch**~~ | L | **Done 2026-09-24**; write-up in `ROADMAP_ARCHIVE.md`. |
-| ~~27~~ | ~~**Phase 27 - overlay and layer generators**~~ | L | **Done 2026-09-24**; write-up in `ROADMAP_ARCHIVE.md`. |
+Every rated item is built: the five- and four-star rows, and the three-star
+rows, which became Phases 56-73 and 25-27. Their write-ups are in
+`ROADMAP_ARCHIVE.md`, with how the ratings were reconciled with the 2026-09-05
+triage board.
 
 ## Unrated, and the rating is not the reason
 
@@ -1108,40 +819,7 @@ so the decision is recorded rather than rediscovered.
 
 ---
 
-# Phases 25-27, the longer write-ups
-
-Once called `V3.1`, `V3.2` and `V3.3`, rated three stars on 2026-09-12, and
-scheduled last because they are the largest. The write-ups are here because
-they are longer than a table row.
-
-## Phase 25 - OSM backdrop and coastline tracer
-
-Mylae's `OsmBackground`, `OsmRegionSearch` and `CoastlineTracer`: an
-OpenStreetMap backdrop aligned by `bbox_coords.txt`, and Overpass
-`natural=coastline` ways chained and Bresenham-projected onto the heights layer
-as editable pixels. Needs the Locked-decisions amendment above, and is the first
-thing in the toolkit that touches the network, so it is **opt-in and off by
-default** with the mirror list visible in settings.
-
-## Phase 26 - Map resize, and create from scratch
-
-Geomod's resize (audit item **G6**) - add surface area on any edge and rewrite
-every coordinate in `descr_strat.txt` - plus building a map from nothing against
-the TWCenter tutorial's recipe. Deferred because it touches every coordinate in
-the mod, and because shrinking requires the affected regions to be emptied by
-hand first, which Geomod's own manual calls unfinished. Phase 22 and Phase 24
-between them remove most of that objection, so re-read this after 3.2.0.
-**Done 2026-09-24**; the write-up is in `ROADMAP_ARCHIVE.md`.
-
-## Phase 27 - Overlay and layer generators
-
-Mylae's `OverlayMapGenerator`, `BboxLayerGenerator`, `FeaturesLayerGenerator`,
-`autoGroundTypes` and the Köppen / land-cover fetchers. Same amendment and the
-same opt-in rule as Phase 25.
-**Done 2026-09-24**; the write-up is in `ROADMAP_ARCHIVE.md`, with why the two
-fetchers were not built.
-
----
+# How this file is kept
 
 ## The audit itself
 
@@ -1170,6 +848,9 @@ Köppen / land-cover fetchers move to **Phase 27**. Re-triage them in
 `docs/upstream/PORT_MANIFEST.json` when Phase 25 starts. `LuaAiAssistant`,
 `ScriptAIAssistant` and `SymbolGenerator` are **not** reclassified - they are
 the AI/autogenerate rule and stay a permanent no.
+
+**Reclassified again.** *Animations* became Phases 77-86 (2026-09-23), and the
+*New Map Editor* became Phase 87 (2026-09-25, done).
 
 ---
 ## The four documents, and what goes where
