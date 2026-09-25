@@ -3,8 +3,8 @@
   "remote": "upstream-editor",
   "ref": "refs/upstream/editor/main",
   "clone_url": "https://github.com/Machiavello-1441/m2tw-editor.git",
-  "reviewed_sha": "6f975d268427a85f7294b87d996602f43f5d5638",
-  "reviewed_date": "2026-09-24"
+  "reviewed_sha": "cbf962bc804f2d1af3c6dab17c437e99f9303108",
+  "reviewed_date": "2026-09-25"
  },
  "dispositions": {
   "port-concept": "rebuild the idea in our stack; a change here may mean the format knowledge changed",

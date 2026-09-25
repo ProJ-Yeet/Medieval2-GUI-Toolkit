@@ -2,6 +2,15 @@
 _Updated: 2026-09-25 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, table under *Phases 56-76* in `ROADMAP.md` (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 76, and 25, are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton; a building tree from another mod); then 25, the OSM backdrop and coastline tracer; then 26, map resize and a new campaign on a map from scratch; then 27, the layer generators; then 77, the animation and skeleton packs read without unpacking (the first of 77-86, animations that travel with a unit); then 78, the 687 slots named and `descr_skeleton.txt` held against the packs; then 79, transfer holding skeletons against the destination's pack, weapon skeletons counted; then 80a, every packed animation of a model's skeletons in the Models viewer, named, grouped, played from `pack.dat`, with its slot's marks and sequences; **80b is next** (the weapon skeletons moving the weapon bones, the rider on his mount, `.cas` models, and the source and destination side by side). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.9 and beta 2026-09-25** (2026-09-25), carrying everything through 76 and 25-27. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 87 is recorded and under way - the real world, whole, 2026-09-25**, on
+the user's word ("port over the complete feature of the real world maps that
+is in mylaes tool, record this as a new phase at the end"). The rest of his
+New Map Editor, split 87a-87h in `ROADMAP.md`: the world picker with a rotated
+box, reference maps and OpenHistoricalMap, water and a heights adjust, land
+use, land cover and Köppen, a new campaign from the real world, historic
+sites, the Overpass chunks shown, the bundle. Built now, ahead of 80b, because
+it was asked for directly. **87a is next.**
+
 **Phase 80a is done - every animation a model has, in the Models viewer,
 2026-09-25, committed and uncut.** `unittransfer/animview.py`: the viewer's
 picker is every filled slot of each skeleton in the mod's `skeletons.dat` (or
@@ -1877,7 +1886,7 @@ the edits out from under it (21 did it once; see the archive).
   it". 1,171 of the 1,174 zero-byte files on the installed mods are that.
 
 ## Upstream
-Reference tool reviewed SHA **6f975d2** (2026-09-24, two `skip` files since 439aa9b; the three OSM files are ported in Phase 25). Before that, **439aa9b** (2026-09-17), accepted after the diff
+Reference tool reviewed SHA **cbf962b** (2026-09-25, a package bump since 6f975d2; his New Map Editor unchanged since 25 and 27 read it, and ported whole in Phase 87). Before that **6f975d2** (2026-09-24, two `skip` files since 439aa9b; the three OSM files are ported in Phase 25). Before that, **439aa9b** (2026-09-17), accepted after the diff
 was read: **34 commits, 49 files**, against three at the last review. The
 manifest is **342 files, none untriaged** - 30 new records were classified by
 hand in this pass, including five he pushed while it was being written.

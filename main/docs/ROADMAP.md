@@ -431,6 +431,7 @@ It stays recorded rather than rediscovered.
 | 84 | Keep a ported mod rebuildable: loose `.cas` and `descr_skeleton.txt` for what was ported | - | M | both |
 | 85 | Pack housekeeping: duplicates, orphans, and a compacted pack | - | M | both |
 | 86 | Animations on their own: a skeleton or one animation from another mod, and an edit saved into the pack | - | M | both |
+| 87 | The real world, whole: the rest of Mylae's New Map Editor (world picker, rotation, reference maps, water, land cover, Köppen, historic sites, a new campaign from the real world, the bundle) | - | L, split 87a-87h | beta |
 
 Releasing stays on request: each phase is committed to master as it lands.
 
@@ -766,6 +767,156 @@ in game without any outside tool.
 user's other Discord goal; 80 builds exactly the posed, animated unit an
 exporter would need, and `modelexport.py` would carry it), and Rome/RR packs (a
 half-frame layout; nothing here is measured on it).
+
+# Phase 87 - the real world, whole: Mylae's New Map Editor, scheduled 2026-09-25
+
+**Asked for by the user on 2026-09-25**: "how do i find the coordinates without
+even having the real world view like mylaes tool does", then "port over the
+complete feature of the real world maps that is in mylaes tool, record this as
+a new phase at the end", and "mylae recently updated his tool, take that into
+consideration too". Unrated, beta line (it is map work), after 86 in the table,
+and **built now** rather than waiting its turn: the user asked for it directly.
+
+**His update, checked.** His `main` was read again on 2026-09-25 (`cbf962b`).
+Everything after the last review (`6f975d2`) is a package bump; his newest map
+work is the 2026-09-14/16 batch (3D preview, custom climates, spray brush),
+already triaged as M18-M20. None of the New Map Editor files changed since
+Phases 25 and 27 read them, so this phase is built against what is described
+below. `upstream_sync.py sync --accept` records the review.
+
+## What is his, what we have, what is missing
+
+His *New Map Editor* page (`pages/NewMapEditor.jsx`, 722 lines, and 30 files
+under `components/newmap/`) is five steps on a Leaflet world map: **Select
+Area**, **Set Resolution**, **Generate Layers**, **Preview**, **Edit & Export**.
+Five of those files are dead (`GeoImporter`, `GeoImportPanel`, `BBoxGenerator`,
+`MapEditorCanvas`, `ToolSettings`: nothing imports them) and his Google Drive
+upload is cloud plumbing; neither is ported.
+
+| His | Ours before 87 | 87 |
+|---|---|---|
+| A world map to find the area on, a box drawn by dragging, moved and resized by handles, **rotated** by a handle; N/S/W/E and rotation typed; the size of a tile in km | four number boxes, and a backdrop only once they are filled | **87a** |
+| Width and height tied to the box's shape (`bboxAspect`), or the box tied to the map | nothing: a box of the wrong shape stretches the map | **87a** |
+| Reference maps: OpenTopoMap, OSM Humanitarian, Terrarium relief; OpenHistoricalMap by year (500-1600, twelve era buttons); a reference map as SVG | one tile server | **87b** |
+| Seas, lagoons and lakes from OSM polygons as sea, smaller than N pixels left out | the coastline tracer (25) | **87c** |
+| Brightness, contrast, gamma and equalize on the heights | nothing | **87c** |
+| 47 OSM tags painted onto the ground types (farmland, wood, marsh, bare rock...), each ground type changeable | bands from the heights (27) | **87d** |
+| ESA WorldCover land cover onto the ground types | not built: LERC tiles need a decoder (27) | **87d** |
+| Köppen climates from koppen.earth | not built: his key is private (27) | **87d** |
+| One climate over the whole map | the climates generator's table | **87d** |
+| Settlements searched and placed, each with a colour and its city dot; a boundary painted in its colour or merged into the last; a port by a click; `map_regions.txt` | search inside the box, *New region here*, *Paint its boundary* (25) | **87e** |
+| A whole new map from the box | an island from nothing (26b) | **87e** |
+| Castles, forts, monasteries and 18 more `historic=`/`castle_type=` tags as points, `historic_features.txt` | nothing | **87f** |
+| Overpass split into tiles, a tile fetched again by a click | chunks split on failure, silently | **87g** |
+| The bundle: every layer as a TGA (rotated to the box at export), `map_regions.txt`, `historic_features.txt`, the reference pictures | Phase 71's changed files | **87h** |
+
+## Where it departs from his, and why
+
+- **Rotation is in the projection, not resampled at export.** His layers are
+  made on the rotated box's axis-aligned envelope and turned by nearest
+  neighbour on export, so every layer is resampled twice and a one-pixel river
+  breaks. Rotating by an angle is linear in (longitude, Mercator) space, so
+  `osmmap.Projection` takes the angle and every consumer (the backdrop, the
+  coastline, the search, the boundaries, the heights' one affine transform,
+  the rivers) gets a rotated map directly. An unrotated box is exactly
+  today's projection, so every box already kept lines up as before.
+- **Sea is the engine's sea.** His water fill writes (0,0,255) on the heights
+  only, and his heights adjust touches R and G on every pixel, which turns a
+  sea pixel `(0,0,255)` into `(v,v,255)`, land by the engine's rule. Here water
+  is the water brush's stroke (regions, heights, ground together, 25's
+  colours) and the heights adjust touches land corners only, never lifting one
+  to 0 or into the sea.
+- **Land cover gives palette colours only.** His bilinear blend of four
+  ground-type colours produces colours in no palette where classes meet.
+  Here each ground corner takes the most common class under it.
+- **Köppen without his key.** The primary source is the published
+  Köppen-Geiger map as a file on disk (Beck et al., CC BY 4.0, the 0.083° or
+  0.5° GeoTIFF, values 1-30 in the standard order, which Pillow reads), so it
+  works offline; a WMS address in Settings is the second, empty by default.
+  His zone-to-climate table is the default mapping, each zone changeable to
+  any climate the mod declares.
+- **Land cover without LERC.** A WMS that serves the WorldCover classes as a
+  PNG in ESA's own legend colours (address in Settings), so Pillow reads it.
+- **A new campaign that loads.** His regions layer is whatever was painted;
+  ours has to give every land tile a province with a city, so the provinces
+  grow from the settlements placed (26b's growth, over land only), or take a
+  settlement's administrative boundary where it has one, and 26b's campaign
+  writing does the rest. The validator runs on the result.
+- **Historic sites become things on the map**, not only a text file: a fort,
+  a watchtower (22a's writers) or a settlement for 87e, from the point.
+- **Everything network is under 25's switch**, each server listed and
+  editable in Settings; tests use local fakes, and nothing is sent to the real
+  servers by this work.
+
+## The pieces
+
+**87a - the world picker.** A *World* view on the Real world tab that works
+before any box exists: a slippy map of the whole world through
+`/api/osm/tile` (drag to pan, wheel to zoom), a box drawn by dragging, then
+moved by its centre, resized by its corners and turned by its rotation handle,
+with north, south, west, east and rotation typed beside it and the size of a
+tile in km. Search worldwide (Nominatim, unbounded), *Go* and *Fit the box
+around it*. Two ways out: **Use for this map**, the box locked to the map's
+own W:H in Mercator (so it cannot stretch), and **New campaign from this box**
+(87e), width and height tied to the box's shape. The rotation is kept with the
+box and written to `bbox_coords.txt` as `rotation=`, a line his loader ignores.
+His loader's bug (a coordinate of exactly 0 is refused) is not copied. Done
+when: a box drawn, turned and kept puts the backdrop, the coastline, a search
+result and a boundary where they were before at 0°, and where the rotated
+projection puts them otherwise, checked both ways in Python and in JS.
+
+**87b - reference maps.** The backdrop gets a choice: OpenStreetMap,
+OpenTopoMap, OSM Humanitarian, Terrarium relief (drawn grey by Python from the
+elevation tiles 27 already reads) and OpenHistoricalMap with a year slider and
+his era buttons, each server list in Settings, the same cache and budget. The
+same choice on the world picker. *Save a reference picture*: the box's map as
+a PNG, or an SVG with the picture embedded and a viewBox in degrees, his shape.
+Done when: each style draws on the fake server and the year reaches the tile
+request.
+
+**87c - water and the heights.** *Lakes, lagoons and seas*: OSM water polygons
+(his queries), rings joined by his chaining, holes kept, smaller than a size in
+tiles left out, made sea as one paint stroke like the coastline. *Adjust the
+heights*: brightness, contrast, gamma and equalize over land corners only, a
+Generate plan with a preview and one Undo. Done when: a lake with an island in
+it becomes sea around a dry island, and an adjust never changes a sea corner.
+
+**87d - ground and climate from the real world.** Three generators on the
+Generate tab: *OSM land use* (his 47 tags in his groups, each with his default
+ground type, changeable, painted in the order listed, land corners only);
+*Land cover* (WorldCover classes, his default mapping); *Köppen climates*
+(file or WMS, his table); and *one climate everywhere* on the climates
+generator. Plans with previews, one Undo each. Done when: each writes only
+palette colours, never touches sea, and the Köppen file route runs with no
+network at all.
+
+**87e - a new campaign from the real world.** 26b's new-campaign form gains
+*from the box*: the size from the box's shape, heights at scale and the sea
+from the elevation (and the coastline, when asked), ground and climates from
+87d or 27, rivers from 27, and provinces from a settlement list built on the
+world picker (search results, historic sites, clicks), each grown over the
+land from its city or filled from its boundary; land nobody reaches is joined
+to the nearest province or, under a size, made sea, and said. Ports go on the
+coast where the engine's dock rule puts them, movable. Factions are picked as
+in 26b. Done when: a campaign made from a real box passes the validator's
+fatal rules and loads its strat on both installed mods' copies.
+
+**87f - historic sites.** His 21 tags fetched for the box, drawn as points in
+his colours, listed with their names; from a point: *fort here*, *watchtower
+here*, *new region here*, or *a settlement* in 87e's list.
+`historic_features.txt` in his format. Done when: a fake answer's castle
+becomes a fort on the tile it names.
+
+**87g - the Overpass tiles shown.** Every Overpass fetch (coast, water, land
+use, rivers, historic) records its chunks; the map can show them numbered,
+failed ones red, and fetch one again by a click. Done when: a chunk that failed
+on the fake server is fetched again alone and the result merges.
+
+**87h - the bundle.** *Export the map bundle*: the ten layers as TGAs,
+`bbox_coords.txt` (with the rotation), `map_regions.txt` (his columns: name,
+colour, city, port), `historic_features.txt` and any reference pictures, as a
+zip in his layout. Done when: the zip opens in his editor's shape (names and
+sizes) and every TGA is the file on disk byte for byte.
 
 # What each open phase is
 
