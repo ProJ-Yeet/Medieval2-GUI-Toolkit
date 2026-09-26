@@ -523,11 +523,11 @@ the main path.
 **82 - In-game proof (S, needs the user to run the game).** 81 builds the test
 kits into a copy of ROCSS; the user plays a custom battle and reports. The
 questions, each with its kit:
-1. Does the game load a pack with appended entries and the counts updated? **Yes** (2026-09-26, Reforged with DaC EUR's Hobbit Infantry appended by Phase 83: it loads and the hobbits animate).
+1. Does the game load a pack with appended entries and the counts updated? **Yes** (2026-09-26, Reforged with four DaC EUR units appended by Phase 83 - Hobbit Infantry, Suriut Chariots, Trolls, Moria Balrog - all animating in a custom battle).
 2. Does the `.dat` header's count matter, or only the `.idx`'s?
 3. Does a renamed skeleton (`<name>_<tag>`) and a namespaced animation path
    (no such file on disk) work?
-4. When does the engine regenerate the packs from `descr_skeleton.txt`
+4. *(Partly answered 2026-09-26: with `descr_skeleton.txt` untouched and older than the packs, a session of play left all four pack files exactly as written, size and time.)* When does the engine regenerate the packs from `descr_skeleton.txt`
    (packs deleted? the text file newer?), and does a regeneration drop entries
    that have no loose `.cas`? This decides whether 84 is needed by default.
 5. Which of two duplicate entries wins, the first or the last?

@@ -21,7 +21,7 @@ holds the soldier count to 100 unless the destination's own units already pass i
 and says so; every other Phase 39 ceiling (`educeil`) on the composed block is
 reported. The Balrog was undone and done again as `-082721-0e5e1e` with 100 men.
 `pack.dat` measured at 226 609 180 bytes. Reforged's packs: 10 208 animations, 374
-skeletons, every check passing. Awaiting the user's in-game word on these.
+skeletons, every check passing. **All four play in game** (the user: "it works!"), and after the session Reforged's four pack files were exactly as written (08:27:21, `pack.dat` 226 609 180 bytes): no rebuild with `descr_skeleton.txt` left alone. Still open in 82: a renamed skeleton and a `ported/<tag>/` path (none of these four needed one), when a rebuild happens, which duplicate wins, and whether a loose `.cas` overrides a packed one.
 `test_animtransfer` (29).
 
 **Phase 83 is done - Unit Transfer brings a unit's animations, 2026-09-26,
