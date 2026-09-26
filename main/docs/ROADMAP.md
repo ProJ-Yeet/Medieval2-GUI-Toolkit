@@ -134,13 +134,13 @@ finishes; the schedule holds only what is left.
 | 56-60, 62-69, 74-76 | Several factions and the faction zip; the animation editor and converter; will this mod launch; settlement mechanics; add a religion; one file in or out; the minor files (populace and off-map models, animals, standards, advice, battle banners, hero abilities, area effects, walls, agents and generals); a settlement model imported; the `.cas` view placed by its skeleton; a building tree from another mod; and 71's `data/` zip loaded back | v2.3.9 at the latest |
 | 61, 70-73 | Delete, create and copy a settlement; every tile as text; a campaign as a zip; a horde start; a campaign from another mod | beta 2026-09-25 at the latest |
 | 25-27 | The OSM backdrop and coastline; map resize and a map from scratch; the layer generators | beta 2026-09-25 |
-| 77-81 | The packs read; the 687 slots named; transfer held against the destination's pack; every packed animation in the Models viewer, with its weapons, its mount, `.cas` models and another mod's side by side; a port appended to a pack and taken back | uncut |
-| 83 | Unit Transfer brings a unit's missing animations into the destination's packs | uncut |
-| 84 | A ported unit kept rebuildable: a loose `.cas` for each animation, its cues, and a `descr_skeleton.txt` block | uncut |
-| 85 | Pack housekeeping: what a mod's packs hold that nothing plays, and a compacted pack with Undo | uncut |
+| 77-81 | The packs read; the 687 slots named; transfer held against the destination's pack; every packed animation in the Models viewer, with its weapons, its mount, `.cas` models and another mod's side by side; a port appended to a pack and taken back | v2.4.0 |
+| 83 | Unit Transfer brings a unit's missing animations into the destination's packs | v2.4.0 |
+| 84 | A ported unit kept rebuildable: a loose `.cas` for each animation, its cues, and a `descr_skeleton.txt` block | v2.4.0 |
+| 85 | Pack housekeeping: what a mod's packs hold that nothing plays, and a compacted pack with Undo | v2.4.0 |
 | 82 | In-game proof: an appended pack loads, the two counts must agree, the first duplicate plays, a loose file does not override the pack | - (answers) |
 | 86 | Animations on their own: an edit saved into the pack, another mod's animation in one slot, a skeleton ported alone | v2.4.0 |
-| 87 | The real world, whole: Mylae's New Map Editor, 87a-87h | uncut, beta line |
+| 87 | The real world, whole: Mylae's New Map Editor, 87a-87h | beta 2026-09-26 |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
