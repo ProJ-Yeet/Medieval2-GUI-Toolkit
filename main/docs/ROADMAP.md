@@ -138,6 +138,8 @@ finishes; the schedule holds only what is left.
 | 83 | Unit Transfer brings a unit's missing animations into the destination's packs | uncut |
 | 84 | A ported unit kept rebuildable: a loose `.cas` for each animation, its cues, and a `descr_skeleton.txt` block | uncut |
 | 85 | Pack housekeeping: what a mod's packs hold that nothing plays, and a compacted pack with Undo | uncut |
+| 82 | In-game proof: an appended pack loads, the two counts must agree, the first duplicate plays, a loose file does not override the pack | - (answers) |
+| 86 | Animations on their own: an edit saved into the pack, another mod's animation in one slot, a skeleton ported alone | v2.4.0 |
 | 87 | The real world, whole: Mylae's New Map Editor, 87a-87h | uncut, beta line |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
@@ -394,8 +396,6 @@ notes on 74-76, is in `ROADMAP_ARCHIVE.md` under *The 2026-09-23 schedule*.
 
 | # | Phase | Stars | Size | Line |
 |---|---|---|---|---|
-| 82 | In-game proof: what the engine accepts, rebuilds and prefers | - | S | both |
-| 86 | Animations on their own: a skeleton or one animation from another mod, and an edit saved into the pack | - | M | both |
 | 88 | Every major language: the interface translated, with each language's correct technical terms (a termbase, right-to-left, CJK) | - | L, split 88a-88f | both |
 
 Releasing stays on request: each phase is committed to master as it lands.
@@ -517,47 +517,8 @@ the main path.
 
 ## The phases
 
-**77 to 81 and 83 to 85 are done** (84's in-game check waits on a mod that can rebuild); each one's scoping and write-up are in
-`ROADMAP_ARCHIVE.md`.
-
-**82 - In-game proof (S, needs the user to run the game).** 81 builds the test
-kits into a copy of ROCSS; the user plays a custom battle and reports. The
-questions, each with its kit:
-1. Does the game load a pack with appended entries and the counts updated? **Yes** (2026-09-26, Reforged with four DaC EUR units appended by Phase 83 - Hobbit Infantry, Suriut Chariots, Trolls, Moria Balrog - all animating in a custom battle).
-2. Does the `.dat` header's count matter, or only the `.idx`'s? **It matters** (2026-09-26, `dev/checks/phase82_kit.py apply2`: both `.dat` headers set back to Reforged's pre-port counts, 9 837 and 370, the `.idx` files whole. At load the game reported "Missing skeleton for secondary weapon" for 44 of Reforged's own units, whose weapon skeletons sit early in the pack, well inside the count; picking the Balrog, whose skeleton lay past it, crashed the game. So a mismatch between a `.dat` header and its `.idx` breaks lookups across the whole pack: **each `.dat` header must equal its `.idx`'s count**, which 81's writer keeps and `animpack.check` tests.) *(Working model, from Phase 84: both, and they must agree; a pack whose two counts differ does not load, and the game falls back to vanilla's packs. The kit: one count set one off, on a copy.)*
-3. Does a renamed skeleton (`<name>_<tag>`) and a namespaced animation path
-   (no such file on disk) work? *(The path half answered 2026-09-26: **yes**. DaC's Stewards Guards plays in Reforged with 174 of its 175 slots on `ported/divi/...` paths no file on disk has, and Reforged's own `MTW2_Mace` units unchanged. A renamed skeleton cannot arise through a transfer, which only brings a name the pack lacks; it waits for Phase 86.)*
-4. *(Answered 2026-09-26. Measured: with `descr_skeleton.txt` untouched and older than the packs, a session of play left all four pack files exactly as written, size and time; and so did one with a loose `.cas` newer than the packs lying at a packed path. And from the user's friend, who has built packs this way: **the game rebuilds only when the packs are removed** from the mod's folder (or the folder above), and a rebuild needs every loose "true" `.cas` that `descr_skeleton.txt` names. So a port is never undone by the game on its own; 84's loose files matter to a modder who later deletes the packs to rebuild.)* When does the engine regenerate the packs from `descr_skeleton.txt`
-   (packs deleted? the text file newer?), and does a regeneration drop entries
-   that have no loose `.cas`? This decides whether 84 is needed by default.
-   *(Working model, from Phase 84, which is on by default: not by age. The
-   game rebuilds only when neither the mod's four pack files nor vanilla's
-   load, a skeleton pack's version carrying the `Version` line of
-   `descr_skeleton.txt`, so changing that line is what starts one; and a
-   rebuild that meets a file it cannot open fails outright rather than
-   dropping it. No installed mod can rebuild: their texts name files that are
-   not on disk. The kit for 84's done-when is a mod that can: every skeleton
-   its text names written out by 84's writer, the `Version` line changed.)*
-5. Which of two duplicate entries wins, the first or the last? **The first** (2026-09-26, `dev/checks/phase82_kit.py`: a second `pack.idx` entry for Steward's Guard's standing idle, holding `die_forward_2`, appended last; they idled normally). The user's friend, from building packs with duplicates: when his generated duplicate `.cas` overwrote the file of the same name, it caused problems, so "likely it's the first one encountered that's used" - what the kit measured. He also warns that duplicates often carry bones that do not match their skeleton, which 85's report can hold them to.
-6. Does a loose `.cas` at an entry's path override the packed one? **No** (2026-09-26, the same kit: a loose `.cas` at Steward's Guard's walk path holding `celebrate_1`; they walked normally, with Reforged's `[io] file_first = true` on and nothing about the file in the logs).
-
-The answers are written into the format notes, and into this phase's archive entry. Done when all six are answered. **All six answered by 2026-09-26**, but for question 3's renamed skeleton, which no transfer can produce and which is carried into 86. **Open: 2** (the header's count; needs a kit that sets the `.idx` and `.dat` counts apart) **and the rest of 4** (what does make the game rebuild).
-
-**What 5 and 6 change.** An entry appended under a path the pack already holds never plays, and a loose file never overrides a packed path. So 86's saved edit cannot be appended under its own path (see 86), 57's editor saving a loose file changes nothing in game for an animation the pack holds (it should say so), and 85's compaction keeps the **first** copy of each duplicate. *(Corrected by 85: a path is a duplicate only at the same scale. Reforged's 102 paths listed twice, and DaC's 808, are each at scales of their own and all played; no installed pack has a dead copy.)*
-
-**86 - Animations on their own (M).** The same engine without a unit: bring a
-named skeleton (with its animations) or one animation into a chosen slot from
-another mod; and **the animation editor saves straight into the pack**,
-replacing `animedit.REPACK_NOTE`'s "rebuild with xidx" step. A saved edit is
-appended **under a new path** and the skeleton's slot pointed there (the skeleton
-appended again under its own name would lose to the first copy too, so the
-slot is rewritten in the skeleton's entry, which is small), so no 352 MB
-rewrite. *(Changed 2026-09-26: appended under its old path it would never play,
-82's question 5: the first copy wins.)* And the port chooses each slot's entry
-by path and scale, as the game does (`animpack.resolve_slot`, Phase 85); today it
-chooses by path, which plays the same only because every installed copy at
-another scale is an exact rescale. Done when: an edit made in 57's editor plays
-in game without any outside tool.
+**77 to 86 are done**, 2026-09-26 (84's in-game check waits on a mod that can rebuild, and 86's on the user's game); each one's scoping and write-up are in
+`ROADMAP_ARCHIVE.md`, 82's six answers with them.
 
 **Not in these phases**: exporting a unit with an animation for Blender (the
 user's other Discord goal; 80 builds exactly the posed, animated unit an

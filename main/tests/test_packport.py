@@ -312,7 +312,8 @@ if DAC.is_dir() and ROCSS.is_dir():
           round(med(1) / 1e6, 1) == 3.3 and round(med(2) / 1e6, 1) == 1.6
           and round(max(r[1] for r in rows) / 1e6, 1) == 5.1)
     check(f"slot paths: {refs:,}, {reused:,} already in ROCSS byte for byte (the table: 45 784 and 9 736, "
-          "the second re-measured 11 133 two ways)", refs == 45784 and reused == 11133)
+          "the second re-measured 11 133 two ways, then 10 979 once Phase 86 took each slot's copy at "
+          "its skeleton's scale, as the game does)", refs == 45784 and reused == 10979)
     allp = animpack.plan_port(DAC / "data", ROCSS / "data", names)
     ta = allp.totals()
     check(f"all 410 in one plan: {(ta['anim bytes appended'] + ta['skeleton bytes appended']) / 1e6:.0f} MB "

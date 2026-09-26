@@ -484,7 +484,7 @@ function v3AnimPanel(){
   if(a.data && (a.data.notes || []).length)
     notes.push(a.data.notes.map(n => `<div class="w-warn">${esc(n)}</div>`).join(''));
   host.innerHTML = `<div class="k">Animation</div>${setSel}${skSel}${casNote}${body}${wnote}`
-    + `${v3AnimMountHtml(set)}${v3AnimTwinHtml()}${notes.join('')}`;
+    + `${v3AnimMountHtml(set)}${v3AnimTwinHtml()}${notes.join('')}${v3AnimPortHtml()}`;
 }
 
 /* The weapon skeletons of the body being played: a switch, and what each one
@@ -540,8 +540,8 @@ function v3AnimPlayHtml(){
       }</select></div>
     ${v3AnimMarksHtml()}
     <div class="count" id="v3aclock">${v3AnimClock()}</div>
-    ${a.seqOn ? '' : a.rel ? v3AnimEditHtml()
-      : '<div class="count">Played from the pack. The editor works on loose files; saving an edit into the pack is not built yet.</div>'}`;
+    ${a.seqOn ? '' : a.edit ? v3AnimEditHtml()
+      : '<div class="count">Played from vanilla’s pack: this mod ships none of its own to save an edit into.</div>'}`;
 }
 
 /* The slot's impact frame and events at their frames, and its turn limits. */
@@ -628,7 +628,8 @@ async function v3AnimPick(key){
   a.data = data;
   a.orig = data;              // what the editor's Reset goes back to
   a.rel = row.rel || '';
-  a.edit = a.rel ? v3AnimEditNew(data, row) : null;
+  a.slot = row.slot != null ? row.slot : null;
+  a.edit = a.rel || v3AnimPackable(row) ? v3AnimEditNew(data, row) : null;
   a.bind = v3aBind(data);
   a.travel = v3aTravel(data);
   a.carried = v3aCarried(data);
@@ -1011,7 +1012,9 @@ function v3AnimTwinHtml(){
       + (c.same_bytes ? 'the same animation, byte for byte' + (c.same_path ? '' : `, under <code>${esc(c.path)}</code>`)
          : `a different animation, <code>${esc(c.path)}</code>`)
       + (c.frames ? `, ${c.frames} f · ${(+c.duration).toFixed(2)} s` : '')
-      + (c.same_bones ? '' : '; its skeleton’s bones differ from this one’s') + '.';
+      + (c.same_bones ? '' : '; its skeleton’s bones differ from this one’s') + '.'
+      + (!c.same_bytes && c.playable && a.slot != null && v3AnimPackable(v3AnimRow(a.key))
+         ? ` <button onclick="v3AnimTwinTake()" title="Put ${esc(t.mod)}’s animation in this slot of this mod’s pack">Use it here</button>` : '');
   }
   return `<label class="v3f" title="The same skeleton and slot out of another mod, drawn to the right of this one"><span>Beside it</span>
     <select onchange="v3AnimTwinMod(this.value)">${opts}</select></label>${said ? `<div class="count">${said}</div>` : ''}`;
@@ -1108,12 +1111,23 @@ function v3AnimRest(){
    plays here is what Save writes, and there is one implementation of each edit.
    The bind stays the unedited file's: the model was built on that skeleton. */
 
+/* 86: whether an edit to this action can be saved into the mod's own pack -
+   a slot of a packed skeleton, in a mod that ships packs of its own. */
+function v3AnimPackable(row){
+  const L = v3 && v3.anim && v3.anim.list, sk = v3AnimSk();
+  return !!(row && row.slot != null && sk && sk.packed && L && L.packs && L.packs !== 'vanilla');
+}
+
 function v3AnimEditNew(data, row){
   const keys = (data.times || []).length;
   const name = (row.rel || '').replace(/\.cas$/i, '');
+  const packable = v3AnimPackable(row);
+  const base = (row.path || row.rel || 'action').replace(/^.*[\\/]/, '').replace(/\.cas$/i, '');
   return {open: false, speed: 1, trim: [0, Math.max(0, keys - 1)], in_place: false,
           scale: [1, 1, 1], offsets: {}, keys: [], bone: '', turn: [0, 0, 0],
-          saveAs: name + '_edited.cas', assign: false, busy: false, msg: '', bad: false};
+          saveAs: name + '_edited.cas', packName: base + '_edited', packable,
+          target: packable ? 'pack' : 'loose', keep: true,
+          assign: false, busy: false, msg: '', bad: false};
 }
 
 /* The edits as animedit takes them, leaving out whatever is at its default. */
@@ -1177,15 +1191,25 @@ function v3AnimEditHtml(){
     <div class="v3aedrow" title="Scrub to a key, then set this bone's rotation there outright"><span>At key ${k}</span>
       ${[0, 1, 2].map(i => `<input type="number" step="1" id="v3aek${i}" value="${(+eul[i]).toFixed(1)}" style="width:52px">`).join('')}°
       <button onclick="v3AnimEditKey()">Set</button></div>
-    <div class="v3aedrow"><span>Save as</span><input type="text" value="${esc(e.saveAs)}" style="flex:1;min-width:0"
+    ${e.packable && a.rel ? `<div class="v3aedrow"><span>Save</span><select onchange="v3AnimEditSet('target', this.value)">
+      <option value="pack" ${e.target === 'pack' ? 'selected' : ''}>into the pack</option>
+      <option value="loose" ${e.target === 'loose' ? 'selected' : ''}>as a loose file</option></select></div>` : ''}
+    ${e.target === 'pack' ? `<div class="v3aedrow"><span>Name</span><input type="text" value="${esc(e.packName)}" style="flex:1;min-width:0"
+      onchange="v3AnimEditSet('packName', this.value)" spellcheck="false"><span class="count">.cas</span></div>
+    <label class="count" title="The new animation also written loose, and descr_skeleton.txt's line pointed at it, so a rebuild of the packs keeps it">
+      <input type="checkbox" ${e.keep ? 'checked' : ''} onchange="v3AnimEditSet('keep', this.checked)"> keep the mod rebuildable</label>`
+    : `<div class="v3aedrow"><span>Save as</span><input type="text" value="${esc(e.saveAs)}" style="flex:1;min-width:0"
       onchange="v3AnimEditSet('saveAs', this.value)" spellcheck="false"></div>
     <label class="count"><input type="checkbox" ${e.assign ? 'checked' : ''} onchange="v3AnimEditSet('assign', this.checked)">
-      Make it this skeleton's <b>${esc((v3AnimRow(a.key) || {}).action || '')}</b> in descr_skeleton.txt</label>
+      Make it this skeleton's <b>${esc((v3AnimRow(a.key) || {}).action || '')}</b> in descr_skeleton.txt</label>`}
     <div class="v3btns"><button onclick="v3AnimEditReset()" ${n || a.data !== a.orig ? '' : 'disabled'}>Reset</button>
       <button class="primary" onclick="v3AnimEditSave()" ${e.busy ? 'disabled' : ''}>Save…</button></div>
     ${e.msg ? `<div class="${e.bad ? 'w-bad' : 'count'}">${esc(e.msg)}</div>` : ''}
-    <div class="count">The game plays this mod's animations from <code>animations/pack.dat</code>; a saved
-      file reaches it once the pack is rebuilt (xidx, in the TWCenter archive).</div>
+    <div class="count">${e.target === 'pack'
+      ? `Saved into <code>animations/pack.dat</code> under a new name, and <code>${esc(a.skel)}</code>’s slot pointed there, so the game plays it: every model on this skeleton.`
+      : e.packable
+      ? `The game plays this action from <code>animations/pack.dat</code>, and a loose file does not override a packed one: a loose save reaches the game only if the packs are removed and rebuilt.`
+      : `This mod plays vanilla’s packs, so a loose file reaches the game only when packs of its own are built.`}</div>
   </div>`;
 }
 
@@ -1205,7 +1229,7 @@ function v3AnimEditSet(key, value){
   else if(key.startsWith('scale')) e.scale[+key.slice(5)] = +value || 1;
   else if(key === 'speed') e.speed = Math.max(0.05, Math.min(20, +value || 1));
   else e[key] = value;
-  if(key === 'bone' || key === 'saveAs' || key === 'assign') return v3AnimPanel();
+  if(['bone', 'saveAs', 'assign', 'target', 'packName', 'keep'].includes(key)) return v3AnimPanel();
   v3AnimEditPreview();
 }
 
@@ -1235,8 +1259,13 @@ async function v3AnimEditPreview(){
   const a = v3.anim, e = a.edit, mine = v3;
   e.busy = true; e.msg = ''; e.bad = false;
   let data;
-  try{ data = await api.post('/api/model/anim/preview', {mod: v3.mod, rel: a.rel, edits: v3AnimEdits(),
-                                                        skeleton: a.skel || ''}); }
+  try{
+    data = a.rel ? await api.post('/api/model/anim/preview', {mod: v3.mod, rel: a.rel, edits: v3AnimEdits(),
+                                                              skeleton: a.skel || ''})
+      // 86: the bytes a save into the pack would write, read back
+      : await api.post('/api/model/anim/pack_preview', {mod: v3.mod, skeleton: a.skel, slot: a.slot,
+                                                        edits: v3AnimEdits(), weapons: v3AnimWeapons()});
+  }
   catch(err){ data = {error: '' + err}; }
   if(v3 !== mine || v3.anim !== a) return;
   e.busy = false;
@@ -1260,6 +1289,7 @@ function v3AnimEditReset(){
 
 async function v3AnimEditSave(){
   const a = v3.anim, e = a.edit;
+  if(e.target === 'pack') return v3AnimPackSave();
   const act = (v3AnimRow(a.key) || {}).action || '';
   const body = {mod: v3.mod, rel: a.rel, edits: v3AnimEdits(), save_as: e.saveAs,
                 skeleton: a.skel || '',
@@ -1286,6 +1316,149 @@ async function v3AnimEditSave(){
   const keep = a;
   await v3AnimInit();
   if(v3 && v3.anim === keep) v3AnimPanel();
+}
+
+
+/* --- saving into the pack (86) ----------------------------------------------
+   An edit, or another mod's take on the slot, appended to this mod's pack.dat
+   under a new name and the skeleton's slot pointed there: the game plays the
+   first of two entries with one name, so neither can go under the old one. */
+
+function v3AnimPackMsg(p){
+  return (p.reuse ? `  The pack holds these bytes already, as ${p.new_path}: the slot is pointed there.\n`
+                  : `  Appended to pack.dat as ${p.new_path} (${(p.bytes / 1024).toFixed(0)} KB, ${p.frames} frames).\n`)
+    + `  ${p.skeleton}’s ${p.action} is pointed at it, for every model on that skeleton.\n`
+    + (p.loose ? `  Kept rebuildable: ${p.loose}${p.descr_skeleton ? ', and descr_skeleton.txt’s line' : ''}.\n` : '')
+    + (p.notes || []).map(n => '  ' + n).join('\n');
+}
+
+async function v3AnimPackAfter(w, what){
+  if(typeof activity === 'function') activity(what, w.summary);
+  const a = v3.anim, key = a.key;
+  a.list = null;
+  await v3AnimInit();
+  if(v3 && v3.anim === a && key) await v3AnimPick(key);
+}
+
+async function v3AnimPackSave(){
+  const a = v3.anim, e = a.edit;
+  const body = {mod: v3.mod, skeleton: a.skel, slot: a.slot, edits: v3AnimEdits(), name: e.packName,
+                rel: a.rel || '', keep_rebuildable: e.keep};
+  let r;
+  try{ r = await api.post('/api/model/anim/pack_plan', body); }
+  catch(err){ r = {error: '' + err}; }
+  const p = r.plan;
+  if(r.error || !p || !p.ok){ e.msg = r.error || 'nothing to save'; e.bad = true; return v3AnimPanel(); }
+  if(!confirm(`Save this edit into ${v3.mod}’s pack?\n\n${v3AnimPackMsg(p)}\n\nClose the game first. 🕑 Log undoes it.`)) return;
+  e.busy = true; v3AnimPanel();
+  let w;
+  try{ w = await api.post('/api/model/anim/pack_apply', body); }
+  catch(err){ w = {error: '' + err}; }
+  e.busy = false;
+  if(w.error){ e.msg = w.error; e.bad = true; return v3AnimPanel(); }
+  await v3AnimPackAfter(w, 'saved an animation into the pack');
+  if(v3 && v3.anim && v3.anim.edit){ v3.anim.edit.msg = `Saved as ${w.new_path}. 🕑 Log can undo it.`; v3AnimPanel(); }
+}
+
+/* The other mod's take on this slot, played here from now on. */
+async function v3AnimTwinTake(){
+  const a = v3 && v3.anim, t = a && a.twin;
+  if(!t || a.slot == null) return;
+  const body = {mod: v3.mod, skeleton: a.skel, slot: a.slot, source: t.mod, source_skeleton: a.skel,
+                keep_rebuildable: true};
+  let r;
+  try{ r = await api.post('/api/model/anim/bring_plan', body); }
+  catch(err){ r = {error: '' + err}; }
+  const p = r.plan;
+  if(r.error || !p || !p.ok){ t.err = r.error || 'nothing to bring'; return v3AnimPanel(); }
+  if(!confirm(`Play ${t.mod}’s ${p.action} in ${v3.mod}?\n\n  From ${p.source}.\n${v3AnimPackMsg(p)}\n\nClose the game first. 🕑 Log undoes it.`)) return;
+  let w;
+  try{ w = await api.post('/api/model/anim/bring_apply', body); }
+  catch(err){ w = {error: '' + err}; }
+  if(w.error){ t.err = w.error; return v3AnimPanel(); }
+  await v3AnimPackAfter(w, 'brought an animation');
+}
+
+/* A skeleton from another mod's pack, with every animation it plays. */
+function v3AnimPortHtml(){
+  const a = v3.anim, L = a.list;
+  if(!L || !L.packs || L.packs === 'vanilla') return '';
+  const f = a.port;
+  if(!f) return `<div class="v3btns"><button onclick="v3AnimPortOpen()" title="A skeleton and every animation it plays, from another mod's pack into this mod's">Bring a skeleton from another mod…</button></div>`;
+  const mods = (state.mods || []).filter(x => !x.pack && x.name !== v3.mod);
+  const p = f.plan;
+  const bodies = v3.cas ? [] : [...new Set(((L.sets || []).flatMap(x => [x.primary, x.secondary])).filter(Boolean))];
+  const t = p && p.port ? p.port.totals : null;
+  return `<div class="v3aed">
+    <div class="v3aedrow"><span>From</span><select onchange="v3AnimPortSet('mod', this.value)">
+      <option value="">pick a mod</option>${mods.map(x => `<option ${x.name === f.mod ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
+    <div class="v3aedrow"><span>Skeleton</span><input type="text" list="v3aportnames" value="${esc(f.name)}" style="flex:1;min-width:0"
+      onchange="v3AnimPortSet('name', this.value)" spellcheck="false" placeholder="${f.names ? f.names.length + ' in its pack' : ''}">
+      <datalist id="v3aportnames">${(f.names || []).map(n => `<option value="${esc(n)}">`).join('')}</datalist></div>
+    ${bodies.length ? `<div class="v3aedrow"><span>Then</span><select onchange="v3AnimPortSet('point', this.value)">
+      <option value="">leave ${esc(v3.entry)} as it is</option>${bodies.map(n =>
+        `<option value="${esc(n)}" ${n === f.point ? 'selected' : ''}>point ${esc(v3.entry)}’s ${esc(n)} at it</option>`).join('')}</select></div>` : ''}
+    <div class="v3btns"><button onclick="v3.anim.port = null; v3AnimPanel()">Cancel</button>
+      <button onclick="v3AnimPortPlan()" ${f.mod && f.name && !f.busy ? '' : 'disabled'}>Check</button>
+      <button class="primary" onclick="v3AnimPortApply()" ${p && p.ok && !f.busy ? '' : 'disabled'}>Bring it</button></div>
+    ${f.msg ? `<div class="${f.bad ? 'w-bad' : 'count'}">${esc(f.msg)}</div>` : ''}
+    ${t ? `<div class="count">${esc(p.port.skeletons.map(s => `${s.name} ${s.action === 'rename' ? 'comes in as ' + s.dest_name
+        : s.action === 'add' ? 'is added' : s.action === 'reuse' ? 'is here already' : 'is here as ' + s.dest_name}`).join('; '))}: ${
+        t['animations append'] + t['animations append_renamed']} of ${t.animations} animations appended, ${
+        ((t['anim bytes appended'] + t['skeleton bytes appended']) / 1e6).toFixed(1)} MB${
+        p.loose && p.loose.files ? `; ${p.loose.files} loose file(s) kept for a rebuild` : ''}.</div>
+      ${(p.notes || []).map(n => `<div class="count">${esc(n)}</div>`).join('')}` : ''}
+  </div>`;
+}
+
+function v3AnimPortOpen(){
+  v3.anim.port = {mod: '', name: '', point: '', names: null, plan: null, msg: '', bad: false, busy: false};
+  v3AnimPanel();
+}
+
+async function v3AnimPortSet(k, v){
+  const f = v3.anim.port;
+  f[k] = v; f.plan = null; f.msg = ''; f.bad = false;
+  if(k === 'mod'){
+    f.names = null;
+    if(v){
+      try{ f.names = (await api.get(`/api/model/skeleton_names?mod=${enc(v)}`)).names || []; }
+      catch(e){ f.msg = '' + e; f.bad = true; }
+    }
+  }
+  v3AnimPanel();
+}
+
+function v3AnimPortBody(){
+  const f = v3.anim.port;
+  return {mod: v3.mod, source: f.mod, skeleton: f.name, entry: f.point ? v3.entry : '',
+          entry_skeleton: f.point, keep_rebuildable: true};
+}
+
+async function v3AnimPortPlan(){
+  const f = v3.anim.port;
+  f.busy = true; f.msg = 'reading both packs…'; f.bad = false; v3AnimPanel();
+  let r;
+  try{ r = await api.post('/api/model/skeleton/port_plan', v3AnimPortBody()); }
+  catch(e){ r = {error: '' + e}; }
+  f.busy = false; f.msg = r.error || ''; f.bad = !!r.error; f.plan = r.plan || null;
+  v3AnimPanel();
+}
+
+async function v3AnimPortApply(){
+  const f = v3.anim.port;
+  if(!confirm(`Bring ${f.name} from ${f.mod} into ${v3.mod}’s packs?\n\nClose the game first. 🕑 Log undoes it.`)) return;
+  f.busy = true; f.msg = 'writing…'; v3AnimPanel();
+  let w;
+  try{ w = await api.post('/api/model/skeleton/port_apply', v3AnimPortBody()); }
+  catch(e){ w = {error: '' + e}; }
+  f.busy = false;
+  if(w.error){ f.msg = w.error; f.bad = true; return v3AnimPanel(); }
+  if(typeof activity === 'function') activity('ported a skeleton', w.summary);
+  v3.anim.port = null;
+  v3.anim.list = null;
+  await v3AnimInit();
+  if(v3 && v3.anim){ v3.anim.err = ''; }
 }
 
 

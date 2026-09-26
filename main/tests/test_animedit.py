@@ -178,8 +178,8 @@ else:
     p = ae.plan_save(mod, rel, edits, "animations/MTW2_Mace/fast_walk",
                      {"skeleton": "mtw2_mace", "action": "walk"})
     check("a new name gets .cas, and the plan is clean", p.target.endswith("fast_walk.cas") and not p.errors)
-    check("the save says the game reads a pack, and how it is rebuilt",
-          any("pack.dat" in n and "xidx" in n for n in p.notes))
+    check("the save says the game reads a pack, that a loose file does not override it, and to save into the pack",
+          any("pack.dat" in n and "not override" in n and "into the pack" in n for n in p.notes))
     res = ae.apply_save(p)
     new = root / "data" / "animations" / "MTW2_Mace" / "fast_walk.cas"
     check("the new file is written and reads as the edit", new.is_file()

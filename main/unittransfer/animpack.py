@@ -819,7 +819,7 @@ def plan_port(source_dir, dest_dir, skeletons: Iterable[str], tag: str = "") -> 
     a_content, s_content = content_index(dst, "anims"), content_index(dst, "skels")
     taken_paths = set(dst.anims._names())
     taken_skels = set(dst.skels._names())
-    decided: Dict[str, PortAnim] = {}        # source path key -> its row
+    decided: Dict[tuple, PortAnim] = {}      # (source path key, entry offset) -> its row
     brought: Dict[str, PortAnim] = {}        # sha of appended bytes -> its row
     skel_brought: Dict[str, PortSkeleton] = {}
     seen = set()
@@ -839,12 +839,13 @@ def plan_port(source_dir, dest_dir, skeletons: Iterable[str], tag: str = "") -> 
             for _i, slot in sk.filled():
                 row.slots += 1
                 k = _key(slot.path)
-                a = decided.get(k)
+                # the copy this skeleton plays: its path at its scale (Phase 86)
+                e = resolve_slot(src.anims, slot.path, sk.scale)
+                if e is None:
+                    plan.errors.append(f"{sent.name}: pack.idx has no {slot.path!r}")
+                    continue
+                a = decided.get((k, e.offset))
                 if a is None:
-                    e = src.anims.first(slot.path)
-                    if e is None:
-                        plan.errors.append(f"{sent.name}: pack.idx has no {slot.path!r}")
-                        continue
                     data = src.anims.read_entry(e, sfid)
                     here = dst.anims.first(slot.path)
                     if here is not None and here.size == len(data) and \
@@ -865,7 +866,7 @@ def plan_port(source_dir, dest_dir, skeletons: Iterable[str], tag: str = "") -> 
                         if a.appends:
                             taken_paths.add(_key(a.dest_path))
                             brought[_sha(data)] = a
-                    decided[k] = a
+                    decided[(k, e.offset)] = a
                     plan.anims.append(a)
                 row.counts[a.action] = row.counts.get(a.action, 0) + 1
                 if a.dest_path != slot.path and _key(a.dest_path) != k:
@@ -1246,24 +1247,57 @@ def resolve_slot(idx: PackIndex, path: str, scale: float) -> Optional[PackEntry]
     return next(h for h in hits if h.scale == low)
 
 
+def replace_entry(idx: PackIndex, target: PackEntry, data: bytes) -> None:
+    """Write ``idx``'s pair again with ``target``'s bytes replaced by ``data``,
+    every other entry as it was and in the same order, the pair touching end
+    to end. For a skeleton whose slot now names another path (Phase 86): a
+    second copy appended under the same name would never be read, since the
+    game plays the first (Phase 82's question 5), so the entry itself is
+    rewritten, and ``skeletons.dat`` is small enough (Reforged's 9 MB) to
+    write whole. The caller backs the pair up first; the new files are
+    written beside the old and swapped in, the ``.dat`` first."""
+    if game_running():
+        raise PackError(f"{', '.join(game_running())} is running and holds the packs open; close the game first")
+    if not any(e is target for e in idx.entries):
+        raise PackError(f"{target.name} is not an entry of {idx.path.name}")
+    dat_new = idx.dat_path.with_name(idx.dat_path.name + ".new")
+    idx_new = idx.path.with_name(idx.path.name + ".new")
+    try:
+        _write_pack(idx, idx.entries, dat_new, idx_new, swap=(target, data))
+        back = PackIndex.read(idx_new)
+        if len(back) != len(idx) or back.first(target.name) is None:
+            raise PackError(f"{idx_new.name} does not read back as written")
+        os.replace(dat_new, idx.dat_path)
+        os.replace(idx_new, idx.path)
+    finally:
+        for p in (dat_new, idx_new):
+            try:
+                p.unlink()
+            except OSError:
+                pass
+
+
 #: Where a compaction keeps the four files it replaced, under the mod's own
 #: folder (never inside ``data/``, so the game and the toolkit never read them)
 COMPACT_DIR = ".ut_compacted"
 
 
-def _write_pack(idx: PackIndex, keep: List[PackEntry], dat_out: Path, idx_out: Path) -> None:
+def _write_pack(idx: PackIndex, keep: List[PackEntry], dat_out: Path, idx_out: Path,
+                swap: Optional[Tuple[PackEntry, bytes]] = None) -> None:
     """``keep``'s entries, in the order given, copied out of ``idx``'s .dat
-    into a new pair of files, touching end to end from byte 20."""
+    into a new pair of files, touching end to end from byte 20. ``swap`` is
+    one of them written with other bytes (Phase 86)."""
     new: List[PackEntry] = []
     at = HEADER_SIZE
     for e in keep:
-        new.append(PackEntry(e.name, at, e.size, e.scale, e.frames, e.rot_bones, e.pos_bones))
-        at += e.size
+        size = len(swap[1]) if swap is not None and e is swap[0] else e.size
+        new.append(PackEntry(e.name, at, size, e.scale, e.frames, e.rot_bones, e.pos_bones))
+        at += size
     out = PackIndex(idx.magic, new, idx.version, idx.version2, idx.filler, idx_out)
     with open(idx.dat_path, "rb") as src, open(dat_out, "wb") as dst:
         dst.write(out.header())
         for e in keep:
-            dst.write(idx.read_entry(e, src))
+            dst.write(swap[1] if swap is not None and e is swap[0] else idx.read_entry(e, src))
         dst.flush()
         os.fsync(dst.fileno())
     idx_out.write_bytes(out.to_bytes())

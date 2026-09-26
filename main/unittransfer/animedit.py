@@ -23,10 +23,14 @@ given every key first, holding the one it had, which is what the game did
 with it anyway.
 
 **What saving does, and does not, reach.** The game plays a mod's animations
-from ``data/animations/pack.dat`` (``pack.idx`` lists what is in it); DaC and
-ROCSS both ship one beside their loose files. A loose file this writes reaches
-the game once the pack is rebuilt - the TWCenter archive carries the tool,
-``xidx.exe -caf pack.idx < anim_list.txt``. Every screen that saves says so.
+from ``data/animations/pack.dat`` (``pack.idx`` lists what is in it); DaC,
+ROCSS and Reforged all ship one beside their loose files, and a loose file at
+a path the pack holds does **not** override it (Phase 82's question 6, in
+game). So in a mod with packs of its own the editor saves into the pack
+instead: :mod:`unittransfer.animslot` (Phase 86). What this module writes is a
+loose ``.cas``, for a mod that plays vanilla's packs, or for a modder who
+rebuilds the packs (the game does that only when they are removed). Every
+screen that saves says which.
 """
 from __future__ import annotations
 
@@ -43,9 +47,10 @@ from typing import Dict, List, Optional, Tuple
 from . import casanim
 
 REPACK_NOTE = (
-    "The game plays this mod's animations from animations/pack.dat. A loose "
-    "file reaches the game once that pack is rebuilt - the TWCenter archive's "
-    "xidx does it: xidx.exe -caf pack.idx < anim_list.txt, in data/animations.")
+    "The game plays animations from animations/pack.dat, and a loose file does "
+    "not override a path the pack holds: this file reaches the game only when "
+    "the packs are removed and the game rebuilds them from descr_skeleton.txt. "
+    "To change what the game plays now, save the edit into the pack.")
 
 
 class EditError(ValueError):
@@ -290,12 +295,13 @@ def plan_save(mod, rel: str, edits: Optional[Dict], save_as: str = "",
     return p
 
 
-def _assign(mod, skeleton: str, action: str, target: str):
+def _assign(mod, skeleton: str, action: str, target: str, full: str = ""):
     """``descr_skeleton.txt`` with one ``anim`` line pointed at ``target``, or a
     sentence saying why not. Only the path is replaced: the flags after it
     (``-fr``, ``-evt:``) and the file's spacing and line endings stay. The new
     path keeps whatever the old one had before ``data/`` - DaC's name another
-    mod's folder for every file, and the game resolves them all the same."""
+    mod's folder for every file, and the game resolves them all the same -
+    unless ``full`` gives it whole (Phase 86: a pack path)."""
     path = Path(mod.data) / "descr_skeleton.txt"
     if not path.is_file():
         return "this mod has no descr_skeleton.txt to point at the file"
@@ -316,7 +322,7 @@ def _assign(mod, skeleton: str, action: str, target: str):
         return f"{skeleton} has no {action} line in descr_skeleton.txt"
     old = m.group(2)
     at = old.lower().find("data/")
-    new_path = (old[:at] if at >= 0 else "") + "data/" + target
+    new_path = full or (old[:at] if at >= 0 else "") + "data/" + target
     block = block[:m.start(2)] + new_path + block[m.end(2):]
     return ("descr_skeleton.txt", text[:span[0]] + block + text[span[1]:])
 

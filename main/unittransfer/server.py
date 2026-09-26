@@ -702,7 +702,7 @@ from typing import Dict, List, Optional
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
 from . import mapgen, mapnew, mapresize
-from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2513,6 +2513,11 @@ class Handler(BaseHTTPRequestHandler):
                           "/api/model/anims", "/api/model/anim", "/api/model/export",
                           "/api/model/mounts", "/api/model/compare"):
                 return self._model_route(u.path, q)
+            if u.path == "/api/model/skeleton_names":
+                # 86: the skeletons another mod's pack holds, to port one
+                packs, whose = animpack.packs_for(self.registry.get((q.get("mod") or [""])[0]).data)
+                return self._json({"packs": whose, "names": packs.skeleton_names()
+                                   if packs is not None and packs.skels is not None else []})
             return self._err(404, "not found")
         except ModDataError as e:
             # A file this mod needs is missing or will not parse. The sentence is
@@ -2742,6 +2747,13 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/model/anim/preview", "/api/model/anim/save_plan",
                           "/api/model/anim/save_apply"):
                 return self._json(self._anim_edit(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/model/anim/pack_preview", "/api/model/anim/pack_plan",
+                          "/api/model/anim/pack_apply", "/api/model/anim/bring_plan",
+                          "/api/model/anim/bring_apply", "/api/model/skeleton/port_plan",
+                          "/api/model/skeleton/port_apply"):
+                # 86: an edit saved into the pack, another mod's animation put
+                # in a slot, and a skeleton ported on its own
+                return self._json(self._anim_pack(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/packs/compact", "/api/packs/forget"):
                 # 85: the animation packs written again holding only what is
                 # played, as a logged job; or that job's kept packs deleted
@@ -3610,6 +3622,66 @@ class Handler(BaseHTTPRequestHandler):
                 out["error"] = "; ".join(plan.errors)
             return out
         out.update(animedit.apply_save(plan))
+        self.registry.invalidate(body["mod"])
+        return out
+
+    def _anim_pack(self, action, body):
+        """Phase 86, :mod:`unittransfer.animslot`: the editor's edit saved into
+        the mod's own pack (``pack_*``), another mod's animation put in one
+        slot (``bring_*``), and a skeleton ported on its own (``port_*``).
+        Each plan writes nothing; each apply is one logged, undoable job."""
+        try:
+            mod = self.registry.get(body["mod"])
+        except (KeyError, OSError) as e:
+            return {"error": str(e)}
+        skel = str(body.get("skeleton") or "")
+        try:
+            slot = int(body.get("slot"))
+        except (TypeError, ValueError):
+            slot = -1
+        keep = bool(body.get("keep_rebuildable", True))
+        try:
+            if action == "pack_preview":
+                anim = animslot.preview_edit(
+                    mod, skel, slot, body.get("edits") if isinstance(body.get("edits"), dict) else {},
+                    rel=str(body.get("rel") or ""))
+                # the weapon skeletons hung on the hands, as the action was played
+                weapons = [w for w in (body.get("weapons") or []) if isinstance(w, str) and w]
+                added = animview.add_weapons(mod.data, anim, weapons, slot) if weapons else []
+                out = animedit.view(anim)
+                out["weapons"] = added
+                return out
+            if action in ("pack_plan", "pack_apply"):
+                plan = animslot.plan_edit(
+                    mod, skel, slot, body.get("edits") if isinstance(body.get("edits"), dict) else {},
+                    name=str(body.get("name") or ""), rel=str(body.get("rel") or ""), keep_rebuildable=keep)
+            elif action in ("bring_plan", "bring_apply"):
+                plan = animslot.plan_bring(mod, skel, slot, self.registry.get(str(body.get("source") or "")),
+                                           str(body.get("source_skeleton") or ""), keep_rebuildable=keep)
+            else:
+                source = self.registry.get(str(body.get("source") or ""))
+                sp = animslot.plan_skeleton(mod, source, skel, entry=str(body.get("entry") or ""),
+                                            entry_skeleton=str(body.get("entry_skeleton") or ""),
+                                            keep_rebuildable=keep)
+                out = {"plan": sp.payload()}
+                if sp.errors:
+                    out["error"] = "; ".join(sp.errors)
+                if action == "port_plan" or sp.errors:
+                    return out
+                out.update(animslot.apply_skeleton(sp, mod, source))
+                self.registry.invalidate(body["mod"])
+                return out
+        except (KeyError, animslot.SlotError, animpack.PackError, casanim.AnimError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if plan.errors:
+            out["error"] = "; ".join(plan.errors)
+        if action.endswith("_plan") or plan.errors:
+            return out
+        try:
+            out.update(animslot.apply(plan))
+        except (animslot.SlotError, animpack.PackError, OSError) as e:
+            return {"error": str(e), "plan": plan.payload()}
         self.registry.invalidate(body["mod"])
         return out
 
