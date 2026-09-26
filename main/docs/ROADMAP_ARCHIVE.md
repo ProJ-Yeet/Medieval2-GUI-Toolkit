@@ -10798,6 +10798,78 @@ we ported too. This is the route Wilddog described, done only for what we
 added. Done when: a ported unit survives a pack regeneration in game (82's
 question 4).
 
+## Phase 85 - pack housekeeping - DONE 2026-09-26
+
+Asked for on 2026-09-26: "continue next 2 phases" (84 and 85).
+
+**What the game plays, the rule it all rests on.** An animation is known by its
+path **and** its scale. A skeleton's slot plays the first copy of its path at
+the skeleton's own scale, and when there is none, the first copy at the
+smallest scale, rescaled as it loads (`animpack.resolve_slot`). A skeleton is
+known by its name alone, and the first of two is kept. So two entries under
+one path are duplicates only when their scales match; the rest are one
+animation at two sizes, and both are played.
+
+**Measured on the three installs, 2026-09-26: nothing to clean.** Every entry
+of every pack is played. DaC's 808 paths listed more than once (916 later
+copies) and Reforged's 102 are every one at a scale of its own, each played by
+skeletons of that scale, and every later copy is an exact rescale of the first.
+**This corrects a note written under 82 the same morning**, that the later
+copies of Reforged's 102 were dead bytes: they are not. No pack has a
+skeleton name twice. What the report does find is skeletons no battle or
+strat model names (ROCSS 63, DaC 212, Reforged 192, mostly mounts' `fs_*` and
+banner poles), which it lists and never removes, since other files and the
+game itself can ask for one by name.
+
+**The report** (`unittransfer/packhouse.py`, `report`): per mod, the entries
+in `pack.dat` that are not played, as dead copies (a path again at a scale it
+already has), copies at a scale no skeleton has, and paths no slot names; the
+skeleton names listed twice; the paths listed more than once with each copy's
+scale, state and whether its bytes match the first; the skeletons no model
+names; and slots naming a path the pack has not got. 0.6 s on ROCSS, 1.6 s on
+DaC. On the Home screen, each mod card's **Animation packs** line opens it.
+
+**The compaction** (`packhouse.compact`, `animpack.write_compacted`): the
+packs written again holding the played entries only, in their order, so every
+slot plays what it played before. Each new pair is written beside the old one
+and read back, then the old ones are moved into the mod's own
+`.ut_compacted/<id>/` folder (outside `data/`, so nothing reads them) and the
+new ones put in place; any failure puts every file back. Only a pack that
+changes is rewritten. It is refused with the game running, without the space,
+or when there is nothing to leave out. It is logged as one job ("animation
+packs compacted" in the log); **Undo** puts the old packs back, refusing when
+the packs have been written since; **Forget the old packs** in the log deletes
+the kept copy, giving its space back and the Undo up.
+
+**Found on the way, left for 86.** Phase 81's port picks a slot's source entry
+by path alone, where the game picks by path and scale. On every installed pack
+the copies at other scales are exact rescales of the first, so what the game
+shows is the same: measured on the Balrog (25 of its 27 slots take the 2.1
+copy where DaC plays the 5.25 one) and Stewards Guards (58 of 175), the
+animation on screen differs by under 0.0000002. 86, which uses the same
+engine, makes the port choose by scale.
+
+**Tested** by `test_packhouse` (19): the resolution rule; the report on all
+three installs, every entry accounted for and every slot resolved; a copy of
+ROCSS given one of each kind of waste (a dead copy, a copy at a scale nothing
+plays, an unused path, a skeleton listed twice), found by the report and
+compacted back to **ROCSS's own four files byte for byte**, every structural
+check passing and the viewer playing out of it, then undone byte for byte;
+refused with nothing to do and with the game running; an undo refused after
+the pack was written again, touching nothing; the kept packs forgotten.
+
+### Phase 85 as it was scheduled
+
+**85 - Pack housekeeping (M).** The "cleanup" asked about on Discord. A report
+first: duplicate paths (same bytes or not), entries no skeleton slot uses,
+skeletons no modeldb entry names, skeleton names listed twice. Then, as its own
+plan and Undo, a compacted pack: only what is referenced, one copy of each
+duplicate, the first (82's question 5: the engine plays the first). Compaction does rewrite the
+whole `.dat`, written beside the old one and swapped, so it needs the free
+space of the pack and is never automatic. Done when: the report runs on all
+three installs, and a compacted ROCSS plays every unit (viewer and `verify`)
+and undoes.
+
 ## Phase 87 - the real world, whole: Mylae's New Map Editor
 
 The plan, with the table of what is his, what we had and what each piece

@@ -3105,6 +3105,11 @@ def undo(transfer_id: str) -> Dict:
     if manifest.get("appended"):
         from . import animpack
         animpack.undo_appended(data, manifest["appended"])
+    # Phase 85: a compaction. The packs it replaced come back from the mod's
+    # .ut_compacted folder, refused when the packs were written since
+    if manifest.get("compacted"):
+        from . import packhouse
+        packhouse.undo(dest_root, manifest["compacted"])
 
     # restore overwritten files
     for rel in manifest.get("backed_up", []):

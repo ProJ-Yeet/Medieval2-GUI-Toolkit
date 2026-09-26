@@ -702,7 +702,7 @@ from typing import Dict, List, Optional
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
 from . import mapgen, mapnew, mapresize
-from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animview, modelexport, launchcheck, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from .logutil import log, setup as setup_logging
@@ -2365,6 +2365,13 @@ class Handler(BaseHTTPRequestHandler):
                 mod = (self.registry.get(name)
                        if name and name in self.registry.names() else None)
                 return self._json(triggers.vocab_payload(mod))
+            if u.path == "/api/packs/housekeeping":
+                # 85: what the mod's animation packs hold that nothing plays
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                return self._json(packhouse.report(mod.data, mod).payload())
             if u.path == "/api/mod_files":
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
@@ -2735,6 +2742,10 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/model/anim/preview", "/api/model/anim/save_plan",
                           "/api/model/anim/save_apply"):
                 return self._json(self._anim_edit(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/packs/compact", "/api/packs/forget"):
+                # 85: the animation packs written again holding only what is
+                # played, as a logged job; or that job's kept packs deleted
+                return self._json(self._pack_house(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/factions/repair_plan", "/api/factions/repair_apply"):
                 return self._json(
                     self._faction_repair(u.path.rsplit("/", 1)[-1], body))
@@ -3546,6 +3557,30 @@ class Handler(BaseHTTPRequestHandler):
         return out
 
     # ---- editing an animation (57a) ----
+    def _pack_house(self, action, body):
+        """85: ``compact`` a mod's animation packs as one logged, undoable job,
+        or ``forget`` a compaction's kept packs (the space back, the Undo gone)."""
+        if action == "forget":
+            rec = next((e for e in config.load_log() if e.get("id") == body.get("id")), None)
+            block = ((rec or {}).get("manifest") or {}).get("compacted")
+            if not block:
+                return {"error": "no compaction with that id"}
+            if rec.get("undone"):
+                return {"error": "that compaction is undone; there is nothing kept to forget"}
+            freed = packhouse.forget_backup(rec["dest_root"], block)
+            config.update_log(rec["id"], backup_forgotten=True,
+                              note=(rec.get("note") or "") + " (its kept packs were deleted; it cannot be undone)")
+            return {"ok": True, "freed": freed}
+        try:
+            mod = self.registry.get(body["mod"])
+        except (KeyError, OSError) as e:
+            return {"error": str(e)}
+        try:
+            rec = packhouse.compact(mod)
+        except (animpack.PackError, OSError) as e:
+            return {"error": str(e)}
+        return {"ok": True, "id": rec["id"], "summary": rec["summary"]}
+
     def _anim_edit(self, action, body):
         """Preview, plan or write an edited animation - see
         :mod:`unittransfer.animedit`. The preview is the edited keys, played by

@@ -37,8 +37,9 @@ then, in the ``.idx`` only, a record per entry::
 In the ``.dat`` the files run from byte 20 to the last byte, in index order,
 touching. A pack can list a name twice, each with its own bytes (DaC 916
 animation paths, vanilla 3 and one skeleton): :meth:`PackIndex.find` returns
-every copy, :meth:`PackIndex.first` the first. Which copy the game plays is
-Phase 82's question 5.
+every copy, :meth:`PackIndex.first` the first. An animation's copies are,
+on every installed pack, the same animation at other scales, and a slot plays
+the one at its skeleton's scale: see :func:`resolve_slot` (Phase 85).
 
 A packed animation
 ------------------
@@ -1207,3 +1208,161 @@ def port(plan: PortPlan, mod_name: str, mod_root, source_name: str = "") -> dict
     config.append_log(rec)
     log.info("PORT   %s, id=%s", summary, tid)
     return rec
+
+
+# ---------------------------------------------------------------------------
+# which entry a slot plays, and a compacted pack (Phase 85)
+
+def resolve_slot(idx: PackIndex, path: str, scale: float) -> Optional[PackEntry]:
+    """The entry a skeleton at ``scale`` plays for the slot path ``path``.
+
+    An animation is known by its path **and** its scale: DaC holds
+    ``Knife_Default.cas`` four times, at 0.89, 1.0, 1.3 and 2.1, and each is a
+    different entry to the game. A skeleton plays the first copy at exactly
+    its own scale; when there is none, the first copy at the smallest scale,
+    rescaled as it loads. So two copies of a path are duplicates only when
+    their scales are the same, and then the later one is never played (Phase
+    82's question 5: the first wins)."""
+    hits = idx.find(path)
+    if not hits:
+        return None
+    for h in hits:
+        if h.scale == scale:
+            return h
+    low = min(h.scale for h in hits)
+    return next(h for h in hits if h.scale == low)
+
+
+#: Where a compaction keeps the four files it replaced, under the mod's own
+#: folder (never inside ``data/``, so the game and the toolkit never read them)
+COMPACT_DIR = ".ut_compacted"
+
+
+def _write_pack(idx: PackIndex, keep: List[PackEntry], dat_out: Path, idx_out: Path) -> None:
+    """``keep``'s entries, in the order given, copied out of ``idx``'s .dat
+    into a new pair of files, touching end to end from byte 20."""
+    new: List[PackEntry] = []
+    at = HEADER_SIZE
+    for e in keep:
+        new.append(PackEntry(e.name, at, e.size, e.scale, e.frames, e.rot_bones, e.pos_bones))
+        at += e.size
+    out = PackIndex(idx.magic, new, idx.version, idx.version2, idx.filler, idx_out)
+    with open(idx.dat_path, "rb") as src, open(dat_out, "wb") as dst:
+        dst.write(out.header())
+        for e in keep:
+            dst.write(idx.read_entry(e, src))
+        dst.flush()
+        os.fsync(dst.fileno())
+    idx_out.write_bytes(out.to_bytes())
+    if dat_out.stat().st_size != at:
+        raise PackError(f"{dat_out.name}: written {dat_out.stat().st_size:,} bytes, "
+                        f"{at:,} expected")
+
+
+def write_compacted(anim_dir, keep: Dict[str, List[PackEntry]], kept_dir) -> List[dict]:
+    """Rewrite the packs in ``anim_dir`` holding only ``keep`` (``{"pack":
+    [...], "skeletons": [...]}``; a stem left out is not touched). Each new
+    pair is written beside the old one and read back, and only then are the
+    old files moved into ``kept_dir`` and the new ones put in their place;
+    any failure puts every file back. Returns undo's rows."""
+    anim_dir, kept_dir = Path(anim_dir), Path(kept_dir)
+    running = game_running()
+    if running:
+        raise PackError(f"{', '.join(running)} is running and holds the packs open; close the game first")
+    packs = open_packs(anim_dir)
+    jobs = []
+    for stem, entries in keep.items():
+        idx = packs.anims if stem == "pack" else packs.skels
+        if idx is None:
+            raise PackError(f"{anim_dir} has no {stem}.idx")
+        jobs.append((stem, idx, entries))
+    need = sum(HEADER_SIZE + sum(e.size for e in ents) for _s, _i, ents in jobs) + SPACE_MARGIN
+    free = shutil.disk_usage(anim_dir).free
+    if free < need:
+        raise PackError(f"a compaction needs {need / 1e6:.0f} MB free beside the packs and "
+                        f"{free / 1e6:.0f} MB is")
+    made: List[Path] = []
+    try:
+        for stem, idx, entries in jobs:
+            dat_new, idx_new = anim_dir / f"{stem}.dat.compact", anim_dir / f"{stem}.idx.compact"
+            made += [dat_new, idx_new]
+            _write_pack(idx, entries, dat_new, idx_new)
+            back = PackIndex.read(idx_new)
+            if [e.name for e in back.entries] != [e.name for e in entries]:
+                raise PackError(f"{idx_new.name} does not read back as written")
+    except BaseException:
+        for p in made:
+            try:
+                p.unlink()
+            except OSError:
+                pass
+        raise
+    kept_dir.mkdir(parents=True, exist_ok=True)
+    moved: List[Tuple[Path, Path]] = []
+    rows: List[dict] = []
+    try:
+        for stem, _idx, _entries in jobs:
+            for ext in (".idx", ".dat"):
+                live = anim_dir / f"{stem}{ext}"
+                os.replace(live, kept_dir / live.name)
+                moved.append((kept_dir / live.name, live))
+                os.replace(anim_dir / f"{stem}{ext}.compact", live)
+                moved.append((live, anim_dir / f"{stem}{ext}.compact"))
+            dat = anim_dir / f"{stem}.dat"
+            size = dat.stat().st_size
+            with open(dat, "rb") as f:
+                head = f.read(HEADER_SIZE)
+                tail = _tail_sha(f, size)
+            rows.append({"stem": stem, "idx_sha": _sha((anim_dir / f"{stem}.idx").read_bytes()),
+                         "dat_size": size, "dat_head": head.hex(), "dat_tail_sha": tail})
+    except BaseException:
+        for a, b in reversed(moved):
+            try:
+                os.replace(a, b)
+            except OSError:
+                pass
+        for p in made:
+            try:
+                p.unlink()
+            except OSError:
+                pass
+        raise
+    return rows
+
+
+def undo_compacted(anim_dir, kept_dir, rows: List[dict]) -> None:
+    """Put back the packs a compaction replaced. Every file is checked first,
+    and nothing is done when one is no longer the file the compaction wrote
+    (the game rebuilt it, or another tool or a later port wrote to it)."""
+    anim_dir, kept_dir = Path(anim_dir), Path(kept_dir)
+    if rows and game_running():
+        raise PackError(f"{', '.join(game_running())} is running and holds the packs open; "
+                        "close the game before undoing")
+    for r in rows:
+        stem = r["stem"]
+        idx, dat = anim_dir / f"{stem}.idx", anim_dir / f"{stem}.dat"
+        for p in (kept_dir / idx.name, kept_dir / dat.name):
+            if not p.is_file():
+                raise PackError(f"cannot undo: the replaced {p.name} is gone from {kept_dir}")
+        if not (idx.is_file() and dat.is_file()):
+            raise PackError(f"cannot undo: {stem}.idx or {stem}.dat is gone")
+        size = dat.stat().st_size
+        with open(dat, "rb") as f:
+            head = f.read(HEADER_SIZE)
+            same = (size == r["dat_size"] and head.hex() == r["dat_head"]
+                    and _tail_sha(f, size) == r["dat_tail_sha"]
+                    and _sha(idx.read_bytes()) == r["idx_sha"])
+        if not same:
+            raise PackError(f"cannot undo: {stem}.dat is no longer the file the compaction wrote "
+                            "(the game or another tool has written it since); undo the later "
+                            "change first")
+    for r in rows:
+        for ext in (".idx", ".dat"):
+            live = anim_dir / f"{r['stem']}{ext}"
+            live.unlink()
+            os.replace(kept_dir / live.name, live)
+    for d in (kept_dir, kept_dir.parent):
+        try:
+            d.rmdir()
+        except OSError:
+            break

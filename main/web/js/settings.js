@@ -373,6 +373,10 @@ function renderLog(){
 function logItemHtml(e){
   const id=q1(esc(e.id));
   const undoBtn=e.applied&&!e.undone?`<button class="danger" onclick="doUndo('${id}')">Undo</button>`:'';
+  // 85: a compaction keeps the packs it replaced until it is undone; this
+  // gives their space back and the Undo up
+  const forgetBtn=e.action==='pack compact'&&e.applied&&!e.undone&&!e.backup_forgotten
+    ?`<button onclick="doForgetPacks('${id}')" title="Delete the packs this compaction replaced, kept whole in the mod's .ut_compacted folder. Frees their space; this entry can no longer be undone.">Forget the old packs</button>`:'';
   const revBtn=e.applied&&!e.undone&&e.newer_count
     ?`<button onclick="doRevert('${id}')" title="Restore “${esc(e.dest)}” to its state at this point (undo everything newer)">⟲ Revert to here (${e.newer_count})</button>`
     :'';
@@ -394,17 +398,25 @@ function logItemHtml(e){
       :e.mode==='campmap'&&e.action==='fortification'?`🏰 ${esc((e.options||{}).what||'edit')} in ${esc(e.dest)}`
       // 22b: one trade resource line, the same writer
       :e.mode==='campmap'&&e.action==='resource'?`◆ ${esc((e.options||{}).what||'edit')} resource in ${esc(e.dest)}`
+      // 81 and 85: a mod's animation packs appended to, or written again
+      :e.action==='pack port'?`🎞 animations ported into ${esc(e.dest)}`
+      :e.action==='pack compact'?`🎞 animation packs compacted in ${esc(e.dest)}`
       :e.mode&&e.mode!=='transfer'?`${esc(e.mode)} edit in ${esc(e.dest)}`
       // a transfer that wrote no unit: its models only, which is what the row
       // would otherwise claim was a unit called after the source's
       :e.action==='models'?`🗄 ${esc(e.source)} → ${esc(e.dest)} · battle models only`
                      :`${esc(e.source)} → ${esc(e.dest)}`}</span></div>
       <div style="display:flex;gap:8px;align-items:center"><span class="when">${esc(e.when)}</span>
-      ${undoBtn}${revBtn}
+      ${undoBtn}${forgetBtn}${revBtn}
       ${e.undone?'<span class="pill">undone</span>':(!e.applied?'<span class="pill">not applied</span>':'')}</div></div>
     ${renderSummary(e.summary||'')}${e.summary_cut?`<div class="count">…and ${e.summary_cut}
       more characters, in the diagnostic log.</div>`:''}</div>`;
 }
+async function doForgetPacks(id){
+  if(!confirm('Delete the packs this compaction replaced? Their space comes back, and this entry can no longer be undone.'))return;
+  const r=await api.post('/api/packs/forget',{id});
+  if(r.error){toast(r.error);return;}
+  toast(`Old packs deleted, ${(r.freed/1048576).toFixed(0)} MB freed`);openLog();}
 async function doUndo(id){const r=await api.post('/api/undo',{id});if(r.error){toast('Undo error: '+r.error);return;}
   toast('Undone ✓');state.destData=null;openLog();if(state.data)loadSource();}
 async function doRevert(id){

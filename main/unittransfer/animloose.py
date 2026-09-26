@@ -470,10 +470,7 @@ class Rebuild:
 
 
 def _entry(idx: animpack.PackIndex, path: str, scale: float) -> Optional[animpack.PackEntry]:
-    """The entry a skeleton at ``scale`` plays under ``path``: the first at
-    that scale, else the first (which the engine rescales)."""
-    hits = idx.find(path)
-    return next((h for h in hits if abs(h.scale - scale) < 1e-6), hits[0] if hits else None)
+    return animpack.resolve_slot(idx, path, scale)
 
 
 def _exists(game_root: Optional[Path], data: Path, pack_path: str, rel: str) -> bool:

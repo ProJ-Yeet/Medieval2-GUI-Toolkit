@@ -137,6 +137,7 @@ finishes; the schedule holds only what is left.
 | 77-81 | The packs read; the 687 slots named; transfer held against the destination's pack; every packed animation in the Models viewer, with its weapons, its mount, `.cas` models and another mod's side by side; a port appended to a pack and taken back | uncut |
 | 83 | Unit Transfer brings a unit's missing animations into the destination's packs | uncut |
 | 84 | A ported unit kept rebuildable: a loose `.cas` for each animation, its cues, and a `descr_skeleton.txt` block | uncut |
+| 85 | Pack housekeeping: what a mod's packs hold that nothing plays, and a compacted pack with Undo | uncut |
 | 87 | The real world, whole: Mylae's New Map Editor, 87a-87h | uncut, beta line |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
@@ -394,7 +395,6 @@ notes on 74-76, is in `ROADMAP_ARCHIVE.md` under *The 2026-09-23 schedule*.
 | # | Phase | Stars | Size | Line |
 |---|---|---|---|---|
 | 82 | In-game proof: what the engine accepts, rebuilds and prefers | - | S | both |
-| 85 | Pack housekeeping: duplicates, orphans, and a compacted pack | - | M | both |
 | 86 | Animations on their own: a skeleton or one animation from another mod, and an edit saved into the pack | - | M | both |
 | 88 | Every major language: the interface translated, with each language's correct technical terms (a termbase, right-to-left, CJK) | - | L, split 88a-88f | both |
 
@@ -517,7 +517,7 @@ the main path.
 
 ## The phases
 
-**77 to 81, 83 and 84 are done** (84's in-game check waits on a mod that can rebuild); each one's scoping and write-up are in
+**77 to 81 and 83 to 85 are done** (84's in-game check waits on a mod that can rebuild); each one's scoping and write-up are in
 `ROADMAP_ARCHIVE.md`.
 
 **82 - In-game proof (S, needs the user to run the game).** 81 builds the test
@@ -543,17 +543,7 @@ questions, each with its kit:
 
 The answers are written into the format notes, and into this phase's archive entry. Done when all six are answered. **Open: 2** (the header's count; needs a kit that sets the `.idx` and `.dat` counts apart) **and the rest of 4** (what does make the game rebuild).
 
-**What 5 and 6 change.** An entry appended under a path the pack already holds never plays, and a loose file never overrides a packed path. So 86's saved edit cannot be appended under its own path (see 86), 57's editor saving a loose file changes nothing in game for an animation the pack holds (it should say so), and 85's compaction keeps the **first** copy of each duplicate: the later copies of Reforged's 102 duplicated paths are dead bytes.
-
-**85 - Pack housekeeping (M).** The "cleanup" asked about on Discord. A report
-first: duplicate paths (same bytes or not), entries no skeleton slot uses,
-skeletons no modeldb entry names, skeleton names listed twice. Then, as its own
-plan and Undo, a compacted pack: only what is referenced, one copy of each
-duplicate, the first (82's question 5: the engine plays the first). Compaction does rewrite the
-whole `.dat`, written beside the old one and swapped, so it needs the free
-space of the pack and is never automatic. Done when: the report runs on all
-three installs, and a compacted ROCSS plays every unit (viewer and `verify`)
-and undoes.
+**What 5 and 6 change.** An entry appended under a path the pack already holds never plays, and a loose file never overrides a packed path. So 86's saved edit cannot be appended under its own path (see 86), 57's editor saving a loose file changes nothing in game for an animation the pack holds (it should say so), and 85's compaction keeps the **first** copy of each duplicate. *(Corrected by 85: a path is a duplicate only at the same scale. Reforged's 102 paths listed twice, and DaC's 808, are each at scales of their own and all played; no installed pack has a dead copy.)*
 
 **86 - Animations on their own (M).** The same engine without a unit: bring a
 named skeleton (with its animations) or one animation into a chosen slot from
@@ -563,7 +553,10 @@ appended **under a new path** and the skeleton's slot pointed there (the skeleto
 appended again under its own name would lose to the first copy too, so the
 slot is rewritten in the skeleton's entry, which is small), so no 352 MB
 rewrite. *(Changed 2026-09-26: appended under its old path it would never play,
-82's question 5: the first copy wins.)* Done when: an edit made in 57's editor plays
+82's question 5: the first copy wins.)* And the port chooses each slot's entry
+by path and scale, as the game does (`animpack.resolve_slot`, Phase 85); today it
+chooses by path, which plays the same only because every installed copy at
+another scale is an exact rescale. Done when: an edit made in 57's editor plays
 in game without any outside tool.
 
 **Not in these phases**: exporting a unit with an animation for Blender (the

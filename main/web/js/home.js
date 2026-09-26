@@ -180,7 +180,7 @@ function homeCardHtml(m){
     </div>
     ${homeM2exHtml(m)}
     <div class="hcmods">${homeModulesHtml(m, r)}</div>
-    <div class="hcfiles">${homeLaunchHtml(m, r)}${homeFilesHtml(m, r)}</div>
+    <div class="hcfiles">${homeLaunchHtml(m, r)}${homePacksHtml(m)}${homeFilesHtml(m, r)}</div>
   </section>`;
 }
 // ids have to survive a mod folder called anything at all
@@ -274,6 +274,83 @@ function homeLaunchHtml(m, r){
     ${open ? `<table class="hctab">${rows}</table>${reg}` : ''}`;
 }
 function homeToggle(key){ HOME_REPORTS[key] = !HOME_REPORTS[key]; renderHome(); }
+
+/* ---- the animation packs (85) ----
+   What the mod's pack.dat and skeletons.dat hold that nothing plays: a copy of
+   a path at a scale it already has (the game plays the first), a copy at a
+   scale no skeleton has, a path no slot names, a skeleton listed twice. Read
+   only when opened; "Compact" writes the packs again holding what is played,
+   as a job of its own that Undo takes back. */
+function homePacksHtml(m){
+  const key = '_packs_' + m.name, open = !!HOME_REPORTS[key], P = HOME_REPORTS['_packsr_' + m.name];
+  let head = '';
+  if(P && !P.error){
+    const waste = P.anim_freed + P.skel_freed;
+    head = waste ? `<span class="w-warn">●</span> ${homeSize(waste)} nothing plays`
+                 : '<span class="w-good">✓</span> everything in them is played';
+  } else if(P && P.error) head = `<span class="count">${esc(P.error)}</span>`;
+  const btn = `<button class="hctoggle" onclick="homePacksToggle('${q1(esc(m.name))}')">
+      ${open ? '▾' : '▸'} Animation packs${head ? ': ' + head : ''}</button>`;
+  if(!open) return `<div>${btn}</div>`;
+  if(!P) return `<div>${btn}<div class="count">Reading the packs…</div></div>`;
+  if(P.error) return `<div>${btn}</div>`;
+  const row = (n, bytes, what) => `<tr><td class="r">${n.toLocaleString()}</td><td class="r count">${homeSize(bytes)}</td><td>${what}</td></tr>`;
+  const dupNote = P.duplicate_paths
+    ? `<div class="count">${P.duplicate_paths.toLocaleString()} path(s) are listed more than once${
+        P.duplicate_paths_same_scale ? `, ${P.duplicate_paths_same_scale} of them at one scale twice`
+          : ', every copy at its own scale: the game keeps a path per scale, and each is played'}.</div>` : '';
+  const twice = P.skel_twice.length
+    ? `<div class="w-warn">Skeletons listed twice (the first is played): ${P.skel_twice.map(esc).join(', ')}</div>` : '';
+  const unnamed = P.unnamed.length
+    ? `<details><summary class="count">${P.unnamed.length} skeleton(s) no battle or strat model names</summary>
+        <div class="count">Kept by a compaction all the same: other files and the game itself can ask for one by name.</div>
+        <div class="count">${P.unnamed.map(esc).join(', ')}</div></details>` : '';
+  const act = P.worth_compacting
+    ? `<div><button onclick="homePacksCompact('${q1(esc(m.name))}')">Compact the packs…</button>
+        <span class="count">keeps ${P.keep_anims.toLocaleString()} animation(s) and ${P.keep_skels.toLocaleString()} skeleton(s); Undo puts the old packs back</span></div>`
+    : '';
+  return `<div>${btn}<table class="hctab">
+      ${row(P.anims, P.anim_bytes, '<b>animations</b> in pack.dat')}
+      ${row(P.dead, P.dead_bytes, 'dead copies: a path again at a scale it already has, never played')}
+      ${row(P.other_scale, P.other_scale_bytes, 'copies at a scale no skeleton has')}
+      ${row(P.unused, P.unused_bytes, 'no slot of any skeleton names them')}
+      ${row(P.skeletons, P.skel_bytes, '<b>skeletons</b> in skeletons.dat')}
+    </table>${dupNote}${twice}${P.missing_slots ? `<div class="w-bad">${P.missing_slots} slot(s) name a path pack.idx has not got</div>` : ''}${unnamed}${act}</div>`;
+}
+async function homePacksToggle(name){
+  const key = '_packs_' + name;
+  HOME_REPORTS[key] = !HOME_REPORTS[key];
+  renderHome();
+  if(HOME_REPORTS[key] && !HOME_REPORTS['_packsr_' + name]){
+    let r;
+    try{ r = await api.get('/api/packs/housekeeping?mod=' + encodeURIComponent(name)); }
+    catch(e){ r = {error: '' + e}; }
+    HOME_REPORTS['_packsr_' + name] = r;
+    if(state.mode === 'home') renderHome();
+  }
+}
+async function homePacksCompact(name){
+  const P = HOME_REPORTS['_packsr_' + name];
+  if(!P) return;
+  const ok = confirm(`Compact ${name}'s animation packs?
+
+`
+    + `pack.dat is written again holding the ${P.keep_anims.toLocaleString()} animations that are played `
+    + `(${homeSize(P.anim_freed + P.skel_freed)} left out). The new files are written beside the old ones, `
+    + `which are kept whole in the mod's .ut_compacted folder until you undo this or forget them.
+
+`
+    + `Close the game first. Undo (in the log) puts the old packs back, as long as nothing has written them since.`);
+  if(!ok) return;
+  let r;
+  try{ r = await api.post('/api/packs/compact', {mod: name}); }
+  catch(e){ r = {error: '' + e}; }
+  if(r.error) return toast(r.error);
+  toast(r.summary);
+  delete HOME_REPORTS['_packsr_' + name];
+  HOME_REPORTS['_packs_' + name] = false;
+  homePacksToggle(name);                       // open again, read afresh
+}
 
 function homeFilesHtml(m, r){
   if(!r || r.error) return '';
