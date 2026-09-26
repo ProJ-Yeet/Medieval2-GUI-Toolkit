@@ -782,6 +782,139 @@ is changed:
   chosen `admin_level`), historical names, or only an easier way to rename
   many at once. Build that answer, and nothing until it is known.
 
+# Phase 90 - a layout that fits the window at every interface size, scheduled 2026-09-26
+
+**Reported by a user on 2026-09-26**, passed on by the user: "UI scaling seems
+to work but the elements are not responsive. Can you make the ui properly
+responsive". Unrated, both lines (every screen changes). The screenshot is
+Minor Files > Ancillaries on a 1600 px window: the tab strip breaks into
+two-line tabs of uneven width with the file path squeezed in after the last
+one, **+ New ancillary** and **Port from another mod** are bars the whole width
+of the page with their labels pushed to the right, and the page scrolls
+sideways.
+
+**Why the size setting and the layout disagree.** Settings' interface size
+(`core.js`, `uiScaleApply`) draws the page with CSS `zoom` on the root and
+corrects the `vh`/`vw` units by `--uiz`. The `@media (max-width: ...)`
+breakpoints in `index.html` (about a dozen, each written for one screen) are
+**not** corrected: they measure the window, not the zoomed page. At 125% on a
+1280 px window the page lays out in 1024 px of room while every breakpoint
+still sees 1280, and at 60% the reverse. So a breakpoint fires at the wrong
+size, or never, depending on the setting. This is checked first, in the
+browser, before it is treated as the cause.
+
+**90a - measured.** Every screen at the three window widths people use (1280,
+1600, 1920) times the interface sizes (60, 80, 100, 125%), plus 375 px at
+100%: horizontal page scroll, clipped or overlapping controls, and a tab strip
+or toolbar that breaks badly. A list of what fails where, recorded here.
+
+**90b - breakpoints that see the page.** The layout decides on the room the
+page actually has. Either container queries (measured in the zoomed page, so
+the interface size is taken into account by construction) or one class set on
+`<html>` from `innerWidth / zoom`, whichever fixes the most screens with the
+least change; chosen in 90a, not in advance. Done when: each existing
+breakpoint fires at the same *page* width at 60% and 125%.
+
+**90c - the shared pieces, fixed once.**
+
+- **Tab strips** (Minor Files, the editors' sub-tabs) are one row that
+  scrolls sideways inside itself, with the file path on its own line under
+  it, rather than wrapping into tabs of different heights.
+- **Action buttons** such as *+ New ...* and *Port from another mod* are the
+  size of their label, in a row, and not a full-width bar with right-aligned
+  text.
+- **List and form panes** (the list, the record, Code View beside it) go from
+  side by side to stacked at one shared width, not one per screen.
+- **No horizontal page scroll** anywhere: anything wide (a table, a path, a
+  canvas) scrolls inside its own box.
+
+Done when: 90a's list is walked again at every size and width and nothing
+is left on it, with a screenshot of Minor Files at 60% and 125% to show it.
+
+# Phase 91 - a cloned faction's missing faction button, scheduled 2026-09-26
+
+**Reported by a user on 2026-09-26** against the beta: a faction added with
+*Add a faction* (a copy of one they already had) works in the game, "it all
+works perfectly and took just 15-20 minutes", **except** that the faction
+button on the campaign map's settlement bar (circled in their screenshot, left
+of the settlement's name plate) is missing for that faction. The screen it
+opens still comes up with the hotkey **O** (`faction_button` in
+`descr_shortcuts.txt`), so the button's action is there and only its picture
+is not. Factions they added by hand never had this. They sent the tutorial
+they used by hand (Imperial forum, "Сичевые Свитки", *adding a new faction to
+M2TW from scratch*, two posts, from 2014 and 2007) and asked whether the
+toolkit does the same thing. Unrated, both lines.
+
+**The comparison with that tutorial.** Its first post lists fourteen places,
+the second walks through them with an example (Aragon):
+
+| the tutorial | what *Add a faction* does |
+|---|---|
+| `descr_sm_factions.txt`, "the main file" | copied from the donor, re-headed; every value kept, `logo_index` and `small_logo_index` included |
+| `descr_character.txt` | joins the donor's lists |
+| `export_descr_unit.txt` | joins every `ownership` line the donor is in |
+| `export_descr_buildings.txt` | joins every `requires factions { }` the donor is in |
+| `text/expanded.txt` (+ `.strings.bin`) | the name and the `EMT_*` keys copied; the `.bin` refreshed |
+| `descr_names.txt` | the donor's section copied |
+| `descr_banners_new.xml` | a row in every banner the donor has one in |
+| `descr_offmap_models.txt` | the donor's block copied |
+| `descr_lbc_db.txt` | the donor's paragraph copied |
+| `descr_model_strat.txt` | every `texture <donor>, ...` line duplicated |
+| `descr_sounds_accents.txt` (second post) | joins the donor's accent |
+| `menu/symbols` (`fe_buttons_24`, `fe_buttons_48`, `fe_symbols_80`, `fe_faction_units`) | found by the donor's name and copied under the new one, with `ui/faction_symbols`, captain cards, unit cards and banners |
+| `descr_strat.txt` | **not done, on purpose**, and the plan says so: two factions cannot start in one settlement |
+| `descr_win_conditions.txt` | **reported, not copied** (`REVIEW_FILES`) |
+| `campaign_descriptions.txt` (+ `.strings.bin`) | **not done** |
+| delete `map.rwm` | not needed by the clone itself, since it does not change `descr_strat.txt` or the map |
+
+The toolkit also does two the tutorial does not name:
+`battle_models.modeldb` (the donor's skins) and `descr_faction_standing.txt`.
+**So the method is the same one**, a copy of an existing faction under a new
+name, and the gaps are the three files the campaign needs, not the button.
+
+**Where the button's picture comes from.** The tutorial names it: `logo_index`
+is the identifier of "the strat icon, the shields", and `small_logo_index` the
+small one. The value is a sprite **name** in the interface's sprite sheets
+(`strategy.sd` for `logo_index`, `shared.sd` for the small one, under each
+culture's `ui/` folder), not a file the clone could copy. If the name is not
+in the sheet the engine is reading, the button has no picture and nothing to
+click, which is what the screenshot shows. A clone keeps the donor's value,
+which is in the donor's sheet, so a plain clone should show the donor's
+shield. Something differs for this faction, and 91a finds what.
+
+**91a - the reporter's files.** Ask for the new faction's and the donor's
+`descr_sm_factions.txt` blocks, and whether the new faction's `logo_index`,
+`small_logo_index` or `culture` was changed after the copy (the Factions
+editor offers those as free fields), and whether the mod runs M2EX or another
+engine patch. The hypotheses,
+in order: a `logo_index` value changed to a name the sheet does not have (the
+tutorial's own `FACTION_LOGO_ARAGON` is that kind of name, and the tutorial
+never says how to add it to the sheet); a culture changed so the sheet read is
+a different culture's; the faction's position in the list against a patched
+engine's limit. Done when: the cause is known and written here.
+
+**91b - the fix, and a check so it cannot happen quietly.** Whatever 91a
+finds is fixed where it lives (the clone, the Factions editor or the
+documentation). Then the check: `logo_index` and `small_logo_index` are held
+against the sprite names in the sheets the faction's culture uses, in *Is
+this faction complete* (Phase 21), in the Factions editor (a name not in the
+sheet is a finding, and the box offers only names that are), and in Health.
+Reading sprite names out of an `.sd` is new: the interface skins are the
+unrated row in *Unrated, and the rating is not the reason*, and this needs
+only the names, not an editor for them. Done when: a faction whose logo name
+is not in its sheet is reported in all three places, and the reporter's
+faction shows its button.
+
+**91c - the three campaign files the clone leaves to the modder.** With the
+tutorial side by side, the plan already names `descr_strat.txt`; it also
+names `descr_win_conditions.txt` and `campaign_descriptions.txt` as things
+still to do before the faction is playable, with a link to the editors that
+write them (the campaign descriptions editor from 18a). Whether the clone
+should copy the donor's `descr_win_conditions.txt` block and
+`campaign_descriptions` keys outright, like it copies `expanded.txt`, is
+decided here: both are per-faction blocks with no settlement in them, so the
+reason `descr_strat.txt` is not copied does not apply to them.
+
 # What else is open
 
 Every rated item is built: the five- and four-star rows, and the three-star
