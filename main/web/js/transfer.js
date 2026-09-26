@@ -22,6 +22,9 @@ function cfgFor(type){
     // "Port + base animations" for the mount / officers: bring the source's own
     // models across and take only their animations from the base's (fromBasePanel)
     import_mount_with_base:true,import_officers_with_base:true,
+    // 83: "bring its animations" - a skeleton this mod's packs lack comes out of
+    // the source's packs with its animations, appended, nothing unpacked
+    bring_animations:true,
     field_overrides:{},on_conflict:'rename',new_type:'',new_dictionary:'',
     // null, not '': conflictUI prefills it with the source's own name the first
     // time it draws, and an empty string is a name the user cleared on purpose
@@ -1179,6 +1182,7 @@ function optsPayload(type){const c=cfgFor(type);
     upgrade_from:c.upgrade_from||'source',
     import_mount_with_base:c.import_mount_with_base!==false,
     import_officers_with_base:c.import_officers_with_base!==false,
+    bring_animations:c.bring_animations!==false,
     on_conflict:c.on_conflict,new_type:c.new_type||null,new_dictionary:c.new_dictionary||null,
     // null = keep the source unit's own name, which is what a cross-mod transfer
     // of the SAME unit wants; the box only exists where a new record is written
@@ -1553,10 +1557,11 @@ function paintSoldierAnim(r){
           on load</b>.</li>
         <li>Fix: set this row to <b>Base</b> and the unit keeps ${who}’s model and
           animations.</li>
-        <li>Or import the animation set into this mod first (anim pack +
-          <code>descr_skeleton.txt</code>). Only do that if you already know how.</li>
+        <li>Or tick <b>Bring its animations</b> below, and the skeleton comes across
+          from ${esc(state.src)}’s packs with the unit.</li>
       </ul>`);
   }
+  out.push(animPortHtml(r));
   // Taking the base's soldier entry always loads, but it also swaps the animation
   // set - a pikeman animated as a swordsman fights wrong and nothing says why.
   const chg=(r&&r.soldier_anim_changed)||[];
@@ -1579,7 +1584,41 @@ function paintSoldierAnim(r){
       </ul>`);
   }
   el.innerHTML=out.join('');
-  el.hidden=!out.length;
+  el.hidden=!out.filter(Boolean).length;
+}
+
+/* 83: what "bring its animations" will do - per skeleton added, reused or
+   renamed, its slots and the megabytes appended - and the switch for it. Shown
+   whenever a copied model names a skeleton this mod's pack lacks, or once the
+   switch has been turned off, so it can be turned back on. */
+function animPortHtml(r){
+  if(!r) return '';
+  const c=cfgFor(state.editing), on=c.bring_animations!==false;
+  const p=r.anim_port, err=r.anim_port_error;
+  const missing=[...(r.missing_skeletons||[]),...(r.missing_weapon_skeletons||[])];
+  if(!p && !err && on) return '';
+  if(!on && !missing.length) return '';
+  const box=`<label class="count"><input type="checkbox" ${on?'checked':''}
+    onchange="animBringSet(this.checked)"> <b>Bring its animations</b> from ${esc(state.src)}’s packs</label>`;
+  if(!on) return `<b>Animations</b><div>${box}</div>`;
+  if(err) return `<b>⚠ Animations not brought</b><div>${box}</div><div class="count">${esc(err)}</div>`;
+  const t=p.totals, mb=((t['anim bytes appended']+t['skeleton bytes appended'])/1e6).toFixed(2);
+  const say={add:'added',rename:'added as',reuse:'already there',reuse_as:'already there as'};
+  const rows=p.skeletons.map(k=>{
+    const a=k.animations||{}, app=(a.append||0)+(a.append_renamed||0), re=(a.reuse||0)+(a.reuse_content||0);
+    return `<li><code>${esc(k.name)}</code>${k.weapon?' <span class="v3tag">weapon</span>':''}: ${say[k.action]}${
+      k.dest_name!==k.name?` <code>${esc(k.dest_name)}</code>`:''} · ${k.slots} slots, ${app} from animations appended${
+      re?`, ${re} from ones ${esc(state.dst)} already has`:''}</li>`;}).join('');
+  return `<b>Animations brought</b><div>${box}</div>
+    <ul>${rows}</ul>
+    <div class="count">${t['animations append']+t['animations append_renamed']} animation(s), ${mb} MB appended to
+      ${esc(state.dst)}’s <code>pack.dat</code> and <code>skeletons.dat</code>; nothing unpacked, and Undo
+      cuts them back. <code>descr_skeleton.txt</code> is left alone.</div>`;
+}
+function animBringSet(on){
+  const c=cfgFor(state.editing);
+  c.bring_animations=!!on;
+  renderComposer();
 }
 /* Where the unit's EDU block gets written. Shown whenever the destination has an
    M2TWEOP folder OR the source unit is an EOP unit - the second case matters even

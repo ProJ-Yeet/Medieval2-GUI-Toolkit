@@ -27,7 +27,7 @@ Split out of `ROADMAP.md` on 2026-09-05, verbatim.
 | 29, with B4 - the strat model viewer, and a stub that beat the art beside it | below |
 | 18-24 as planned, B2/B3 as reported, 28-43, 54 - the backlog of 2026-09-05 and the 2026-09-12 review, to Health | below, *Split out on 2026-09-23* |
 | 44-53, 55-64, M18, and the upstream passes of 2026-09-13, -17 and -20 | below, *Split out on 2026-09-23* |
-| 65-81, 25-27, 87, and the 2026-09-23 schedule as it stood | below, *Finished after the 2026-09-23 split* |
+| 65-81, 83, 25-27, 87, and the 2026-09-23 schedule as it stood | below, *Finished after the 2026-09-23 split* |
 
 ---
 
@@ -10635,6 +10635,78 @@ run over every DaC skeleton into ROCSS is the measurement. Done when: append
 then undo leaves both files byte-identical to before; `verify` passes on the
 result; a ported skeleton reads back identical except for its rewritten slot
 paths; the dry run's totals match the table above.
+
+## Phase 83 - port the animations with a unit - DONE 2026-09-26 (in-game check pending)
+
+Asked for on 2026-09-26: "continue but transfer a unit with a skeleton that
+doesnt exist from eur to reforged instead of rocss". Built ahead of 82, whose
+in-game questions the user is answering with this very transfer.
+
+**The fourth answer.** `TransferOptions.bring_animations`, on by default: every
+skeleton a copied model names, body and weapon, that the destination's pack
+lacks (Phase 79's check) is ported out of the source's packs with Phase 81's
+engine, and the copied modeldb entries are pointed at the names they land
+under (`modeldb.rename_skeletons`, which rewrites weapon lists too; the old
+`animation_spans` now reports their spans). What the source cannot supply
+stays missing and is warned about as before. It runs after the base-donor
+answers, so a mount or officer taken with the base's animations is not
+brought. Off, the three older answers are all there is.
+
+**One undo.** `apply_transfer` does the pack append first, before any text
+file, planned again against the packs as they are then: a refusal (the game
+running, no room, the packs changed so the names would differ) writes nothing
+at all. The appends and the two `.idx` backups go into the transfer's own
+manifest, so the transfer's single undo truncates the packs too. In a batch
+the second unit's port finds what the first brought and reuses it.
+
+**What the screen says.** The plan's summary gains `+ ANIMATIONS BROUGHT`, a
+line a skeleton (added, reused, renamed; slots filled from appended or existing
+animations) and the MB appended; the composer shows the same beside the
+Soldier row with the switch, and the Soldier row's missing-animation advice
+now points at it. `/api/transfer` plans carry `anim_port` and
+`anim_port_error`.
+
+**Not done, on purpose: `descr_skeleton.txt`.** The schedule had 83 write a
+`type` block for each added skeleton. It does not: if the engine rebuilds the
+packs from that file when it is newer than them (82's question 4), a block
+naming animations that exist only inside the pack would make the rebuild lose
+them or fail. The block goes in with 84, beside the loose `.cas` files that
+make such a rebuild safe. The plan says so in a warning.
+
+**Done for real**: DaC EUR's Hobbit Infantry (`hobbit_spearmen` on
+`EUR_Hobbit_Spear`, which Reforged lacks) into the installed
+Third_Age_Reforged, through the Unit Transfer screen: written as `Hobbit
+Infantry (copy)` (Reforged has its own), its entry renamed
+`hobbit_spearmen_divi`, 176 animations and one skeleton appended (4.18 MB to
+`pack.dat`), every structural check passing on Reforged's packs (10 013
+animations, 371 skeletons, all 43 994 slot paths indexed), all 182 slots
+playing out of Reforged's own pack in the Models viewer, and the launch check
+ready. Transfer id `20260926-080427-fac6e3`. The in-game check is with the user.
+
+**Tested** by `test_animtransfer` (20), on a throwaway copy of ROCSS's unit
+files and packs: planned (brought, nothing missing; off, the old warning),
+applied (the packs grow by what was planned, every check passes, every slot
+plays), undone byte for byte, a batch of two units on the same skeletons (the
+second reuses them, no skeleton twice), refused with the game running and
+nothing written, and the modeldb rename.
+
+### Phase 83 as it was scheduled
+
+**83 - Port the animations with a unit (L).** Unit Transfer gains a fourth
+answer beside "port as is", "port with the base's animations" and "use the
+base's": **"bring its animations"**, per model group (soldier, officer, mount,
+crew, armour upgrades), the default when the destination lacks a skeleton the
+unit needs. The plan screen shows, per skeleton: added, reused, renamed; the
+animation counts; the MB appended after dedup; weapon skeletons listed
+separately. The modeldb entry is written with any renamed skeleton or weapon
+names. A batch shares its skeletons (two units on `MTW2_2HSwordsman` move it
+once), the way `dest_by_content` already shares models. `descr_skeleton.txt`
+gains a `type` block for each added skeleton, from 78's slot names, so the
+text file stays in step for what we added. One Undo covers the transfer, the
+pack appends included. Done when: a DaC unit on a skeleton ROCSS lacks
+transfers into ROCSS, plays in the viewer, passes `verify`, and plays in game
+(82's kit, repeated through the real transfer); undo restores ROCSS byte for
+byte.
 
 ## Phase 87 - the real world, whole: Mylae's New Map Editor
 

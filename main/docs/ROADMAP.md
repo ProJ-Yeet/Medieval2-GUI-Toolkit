@@ -135,6 +135,7 @@ finishes; the schedule holds only what is left.
 | 61, 70-73 | Delete, create and copy a settlement; every tile as text; a campaign as a zip; a horde start; a campaign from another mod | beta 2026-09-25 at the latest |
 | 25-27 | The OSM backdrop and coastline; map resize and a map from scratch; the layer generators | beta 2026-09-25 |
 | 77-81 | The packs read; the 687 slots named; transfer held against the destination's pack; every packed animation in the Models viewer, with its weapons, its mount, `.cas` models and another mod's side by side; a port appended to a pack and taken back | uncut |
+| 83 | Unit Transfer brings a unit's missing animations into the destination's packs | uncut |
 | 87 | The real world, whole: Mylae's New Map Editor, 87a-87h | uncut, beta line |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
@@ -392,7 +393,6 @@ notes on 74-76, is in `ROADMAP_ARCHIVE.md` under *The 2026-09-23 schedule*.
 | # | Phase | Stars | Size | Line |
 |---|---|---|---|---|
 | 82 | In-game proof: what the engine accepts, rebuilds and prefers | - | S | both |
-| 83 | Port the animations with a unit | - | L | both |
 | 84 | Keep a ported mod rebuildable: loose `.cas` and `descr_skeleton.txt` for what was ported | - | M | both |
 | 85 | Pack housekeeping: duplicates, orphans, and a compacted pack | - | M | both |
 | 86 | Animations on their own: a skeleton or one animation from another mod, and an edit saved into the pack | - | M | both |
@@ -517,7 +517,7 @@ the main path.
 
 ## The phases
 
-**77 to 81 are done**; each one's scoping and write-up are in
+**77 to 81, and 83, are done**; each one's scoping and write-up are in
 `ROADMAP_ARCHIVE.md`.
 
 **82 - In-game proof (S, needs the user to run the game).** 81 builds the test
@@ -534,22 +534,6 @@ questions, each with its kit:
 6. Does a loose `.cas` at an entry's path override the packed one?
 
 The answers are written into the format notes, and into this phase's archive entry. Done when all six are answered.
-
-**83 - Port the animations with a unit (L).** Unit Transfer gains a fourth
-answer beside "port as is", "port with the base's animations" and "use the
-base's": **"bring its animations"**, per model group (soldier, officer, mount,
-crew, armour upgrades), the default when the destination lacks a skeleton the
-unit needs. The plan screen shows, per skeleton: added, reused, renamed; the
-animation counts; the MB appended after dedup; weapon skeletons listed
-separately. The modeldb entry is written with any renamed skeleton or weapon
-names. A batch shares its skeletons (two units on `MTW2_2HSwordsman` move it
-once), the way `dest_by_content` already shares models. `descr_skeleton.txt`
-gains a `type` block for each added skeleton, from 78's slot names, so the
-text file stays in step for what we added. One Undo covers the transfer, the
-pack appends included. Done when: a DaC unit on a skeleton ROCSS lacks
-transfers into ROCSS, plays in the viewer, passes `verify`, and plays in game
-(82's kit, repeated through the real transfer); undo restores ROCSS byte for
-byte.
 
 **84 - Keep a ported mod rebuildable (M).** If 82 shows the engine
 regenerates the packs and drops what has no loose file, or as an option

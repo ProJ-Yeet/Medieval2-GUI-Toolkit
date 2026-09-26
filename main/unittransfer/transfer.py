@@ -157,6 +157,15 @@ class TransferOptions:
     # the destination lacks the skeleton), "port with the base's animations" and
     # "use the base's officers" are three different answers.
     import_officers_with_base: bool = True
+    # Phase 83, the fourth answer: "bring its animations". Every skeleton a
+    # copied model names (body and weapon) that the destination's pack lacks is
+    # ported out of the source's packs with its animations - appended to the
+    # destination's pack.dat and skeletons.dat, nothing unpacked - and renamed
+    # in the copied entries when its name is taken there. On by default: it is
+    # the one answer that keeps both the source's models and the source's
+    # movement. Off = the three older answers only, and a missing one is left
+    # missing, as before.
+    bring_animations: bool = True
     # manual per-field EDU overrides: {field_key: full value string}
     field_overrides: Dict[str, str] = field(default_factory=dict)
     # what to do about copied mesh/texture files:
@@ -352,6 +361,13 @@ class TransferPlan:
     #: most entries carry weapon skeletons they never use (Phase 79)
     missing_weapon_skeletons: List[str] = field(default_factory=list)
     weapon_skeleton_models: Dict[str, List[str]] = field(default_factory=dict)
+    #: Phase 83: the pack port that brings the missing skeletons, when
+    #: ``bring_animations`` is on and there were any; ``anim_port_error`` says
+    #: why none could be planned (the destination plays vanilla's packs...)
+    anim_port: Optional[animpack.PortPlan] = None
+    anim_port_error: str = ""
+    #: the weapon skeletons among those brought, reported apart
+    anim_port_weapons: List[str] = field(default_factory=list)
     #: what the skeletons were held against: "pack" (the destination's own
     #: skeletons.idx) or "modeldb" (a mod with no pack of its own)
     skeletons_from: str = "modeldb"
@@ -421,6 +437,31 @@ class TransferPlan:
         return (f"{self.dest.name}'s "
                 + ("skeleton pack" if self.skeletons_from == "pack" else "modeldb"))
 
+    def _anim_port_lines(self) -> List[str]:
+        """Phase 83: what bringing the animations will do, one line a skeleton."""
+        if self.anim_port_error:
+            return [f"  ! ANIMATIONS NOT BROUGHT - {self.anim_port_error}"]
+        port = self.anim_port
+        if port is None or not port.skeletons:
+            return []
+        t = port.totals()
+        mb = (t["anim bytes appended"] + t["skeleton bytes appended"]) / 1e6
+        L = [f"  + ANIMATIONS BROUGHT from {self.source.name}'s packs: "
+             f"{len(port.skeletons)} skeleton(s), {t['animations append'] + t['animations append_renamed']} "
+             f"animation(s) appended ({mb:.2f} MB), {t['animations reuse'] + t['animations reuse_content']} "
+             f"already in {self.dest.name} byte for byte"]
+        say = {"add": "added", "rename": "added as {n}", "reuse": "already there",
+               "reuse_as": "already there as {n}"}
+        weap = {w.lower() for w in self.anim_port_weapons}
+        for sk in port.skeletons:
+            c = sk.counts
+            L.append(f"      - {sk.name}{' (weapon)' if sk.name.lower() in weap else ''}: "
+                     + say[sk.action].format(n=sk.dest_name)
+                     + f"; its {sk.slots} slots filled by {c.get('append', 0) + c.get('append_renamed', 0)} "
+                       f"appended, {c.get('reuse', 0) + c.get('reuse_content', 0)} reused, "
+                       f"{c.get('shared', 0)} shared")
+        return L
+
     def _weapon_lines(self) -> List[str]:
         if not self.missing_weapon_skeletons:
             return []
@@ -477,6 +518,7 @@ class TransferPlan:
         # the moment something DRAWS it. Nothing here draws it - no unit points at
         # these entries yet - so it is a warning about the unit you are about to
         # build on them, not about this import.
+        L.extend(self._anim_port_lines())
         if self.missing_skeletons:
             L.append("  ! ANIMATION - " + ", ".join(self.missing_skeletons)
                      + f" absent from {self._skel_where()}, asked for by "
@@ -648,6 +690,7 @@ class TransferPlan:
                 L.append(f"      - {s}")
         if self.missing_models:
             L.append("  ! model entries NOT found in source modeldb: " + ", ".join(self.missing_models))
+        L.extend(self._anim_port_lines())
         # The soldier line's missing animations get their own ONE-LINE entry, tagged
         # "(soldier line)": the composer shows that case beside the Soldier row (the
         # row that fixes it) and drops this line to avoid saying it twice. Keeping it
@@ -910,6 +953,59 @@ def _swap_entry_animations(plan: "TransferPlan", dest: Mod, model_name: str,
             f"the base's - it may move unexpectedly in battle. {undo_hint}")
         return donor.name, missing
     return "", []
+
+
+def _plan_anim_port(plan: "TransferPlan", source: Mod, dest: Mod) -> None:
+    """Phase 83: port every skeleton still missing (body and weapon) out of
+    the source's packs, and point the copied entries at the names they land
+    under. What the source cannot supply stays missing and is reported as
+    before."""
+    wanted = list(dict.fromkeys(plan.missing_skeletons + plan.missing_weapon_skeletons))
+    if not wanted:
+        return
+    src, _whose = animpack.packs_for(source.data)
+    if src is None or src.skels is None:
+        plan.anim_port_error = (f"{source.name} has no skeleton pack, and vanilla's was not "
+                                "found, so there is nothing to bring them from")
+        return
+    have = [s for s in wanted if src.skels.first(s) is not None]
+    if not have:
+        plan.anim_port_error = (f"{source.name}'s own skeleton pack has none of "
+                                f"{', '.join(wanted)} either")
+        return
+    port = animpack.plan_port(source.data, dest.data, have, tag=_tag(source))
+    if not port.ok:
+        plan.anim_port_error = "; ".join(port.errors)
+        return
+    plan.anim_port = port
+    plan.anim_port_weapons = [s for s in have if s in plan.missing_weapon_skeletons
+                              and s not in plan.missing_skeletons]
+    renames = port.renames
+    if renames:
+        for i, (final_name, entry) in enumerate(plan.add_entries):
+            raw = modeldb.rename_skeletons(entry.raw, renames, pad=entry.first_entry_pad)
+            if raw == entry.raw:
+                continue
+            plan.add_entries[i] = (final_name, modeldb.ModelEntry(
+                name=entry.name, scale=entry.scale, lods=entry.lods,
+                main_textures=entry.main_textures, attach_textures=entry.attach_textures,
+                animations=modeldb.renamed_animations(entry.animations, renames),
+                torch_index=entry.torch_index, torch=entry.torch, raw=raw,
+                first_entry_pad=entry.first_entry_pad))
+    brought = {s.lower() for s in have}
+    plan.missing_skeletons = [s for s in plan.missing_skeletons if s.lower() not in brought]
+    plan.missing_weapon_skeletons = [s for s in plan.missing_weapon_skeletons
+                                     if s.lower() not in brought]
+    for d in (plan.skeleton_models, plan.weapon_skeleton_models):
+        for k in [k for k in d if k.lower() in brought]:
+            del d[k]
+    if port.notes:
+        plan.warnings.extend(port.notes)
+    plan.warnings.append(
+        "the animations come into the packs only: descr_skeleton.txt is left as it "
+        "is, so a game that rebuilds its packs from that file would drop them "
+        "(Phase 82 is to say when it does; Phase 84 writes the loose files that "
+        "survive a rebuild)")
 
 
 def _apply_mount_anim_donor(plan: "TransferPlan", source: Mod, dest: Mod,
@@ -2036,6 +2132,10 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
     if plan.officer_from_base_import:
         _apply_officer_anim_donor(plan, source, dest, unit, off_donor)
 
+    # ---- 83: bring the animations the destination lacks ----
+    if opts.bring_animations:
+        _plan_anim_port(plan, source, dest)
+
     # ---- mount definition (descr_mount.txt) ----
     # The EDU's `mount` field names a block here, and that block's `model` field
     # names the modeldb entry (copied above). Without the block the destination
@@ -2362,6 +2462,26 @@ def apply_transfer(plan: TransferPlan) -> Dict:
     _log_plan(plan)
 
     manifest = {"backed_up": [], "created": []}
+
+    # ---- 0) Phase 83: the animations, into the packs, before anything else,
+    # so a refusal (the game running, no room, the packs changed) writes
+    # nothing at all. Planned again against the packs as they are now: a unit
+    # before this one in a batch may have brought the same skeleton, which is
+    # then reused, and the names the entries were given must still be right.
+    if plan.anim_port is not None:
+        fresh = animpack.plan_port(plan.source.data, dest.data,
+                                   [s.name for s in plan.anim_port.skeletons], tag=plan.anim_port.tag)
+        if not fresh.ok:
+            raise ValueError("cannot bring the animations: " + "; ".join(fresh.errors))
+        if fresh.renames != plan.anim_port.renames:
+            raise ValueError("the destination's skeleton pack changed since this transfer was "
+                             "planned, and the skeletons would land under other names; plan it again")
+        port_manifest = animpack.apply_port(fresh, backup_root)
+        manifest["backed_up"].extend(port_manifest["backed_up"])
+        manifest["appended"] = port_manifest["appended"]
+        for r in port_manifest["appended"]:
+            file_op("APPEND", dest.data / r["rel"], f"+{r['added']} bytes (animations brought)")
+        plan.anim_port = fresh
 
     def backup_and(rel: str) -> Path:
         """Ensure a backup of dest/data/<rel> exists (if the file exists) and return the target path."""

@@ -674,9 +674,12 @@ def rewrite_paths_indexed(raw: str, index_map: Dict[int, str],
 def animation_spans(raw: str, pad: bool = False) -> List[Dict[str, Tuple[int, int, str]]]:
     """Per animation record, the spans of its three name strings.
 
-    ``[{"mount_type": (s, e, value), "primary": …, "secondary": …}, …]`` in file
-    order. The weapon lists are deliberately not reported: they are the model's
-    own weapons, and nothing here has any business rewriting them.
+    ``[{"mount_type": (s, e, value), "primary": …, "secondary": …,
+    "weapons": [(s, e, value), …]}, …]`` in file order. ``weapons`` is the
+    primary list then the secondary one: they are the model's own weapons,
+    which :func:`rewrite_animations` never touches and only
+    :func:`rename_skeletons` (a skeleton renamed as it is ported, Phase 83)
+    rewrites.
     ``pad`` - see :func:`entry_path_spans`.
     """
     r = _SpanReader(raw)
@@ -712,13 +715,13 @@ def animation_spans(raw: str, pad: bool = False) -> List[Dict[str, Tuple[int, in
     anim_n = r.get_int()
     firstpad()
     for _ in range(anim_n):
-        out.append({"mount_type": r.get_string_span(),
-                    "primary": r.get_string_span(),
-                    "secondary": r.get_string_span()})
-        for _ in range(r.get_int()):
-            r.get_string()              # primary weapons
-        for _ in range(r.get_int()):
-            r.get_string()              # secondary weapons
+        rec = {"mount_type": r.get_string_span(),
+               "primary": r.get_string_span(),
+               "secondary": r.get_string_span()}
+        weapons = [r.get_string_span() for _ in range(r.get_int())]     # primary weapons
+        weapons += [r.get_string_span() for _ in range(r.get_int())]    # secondary weapons
+        rec["weapons"] = weapons
+        out.append(rec)
     return out
 
 
@@ -758,6 +761,35 @@ def rewrite_animations(raw: str, anims: List["Animation"],
     for start, end, text in sorted(edits, key=lambda e: e[0], reverse=True):
         out = out[:start] + text + out[end:]
     return out
+
+
+def rename_skeletons(raw: str, renames: Dict[str, str], pad: bool = False) -> str:
+    """``raw`` with every skeleton name in its animation records, body and
+    weapon alike, that ``renames`` maps (case-blind) written as the new name.
+    Everything else stays byte for byte. Phase 83: a skeleton ported into a
+    mod whose pack already has that name is added under another one, and the
+    entry has to ask for it by that name."""
+    m = {k.lower(): v for k, v in renames.items() if k and v}
+    if not m:
+        return raw
+    edits: List[Tuple[int, int, str]] = []
+    for rec in animation_spans(raw, pad=pad):
+        for start, end, old in [rec["primary"], rec["secondary"], *rec["weapons"]]:
+            new = m.get((old or "").lower())
+            if old and new and new != old:
+                edits.append((start, end, f"{len(new)} {new}"))
+    out = raw
+    for start, end, text in sorted(edits, key=lambda e: e[0], reverse=True):
+        out = out[:start] + text + out[end:]
+    return out
+
+
+def renamed_animations(anims: List["Animation"], renames: Dict[str, str]) -> List["Animation"]:
+    """The parsed counterpart of :func:`rename_skeletons`."""
+    m = {k.lower(): v for k, v in renames.items() if k and v}
+    r = lambda n: m.get((n or "").lower(), n)
+    return [Animation(a.mount_type, r(a.primary_skeleton), r(a.secondary_skeleton),
+                      [r(w) for w in a.pri_weapons], [r(w) for w in a.sec_weapons]) for a in anims]
 
 
 def merged_animations(entry_anims: List["Animation"],

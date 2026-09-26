@@ -30,6 +30,8 @@ MODS = Path(r"C:/Users/projy/Downloads/Games/Total War MEDIEVAL II Definitive Ed
 ROCSS, DAC = MODS / "ROCSS", MODS / "Divide_and_Conquer_EUR"
 REL = ("export_descr_unit.txt", "text/export_units.txt",
        "unit_models/battle_models.modeldb", "descr_mount.txt")
+# The detection is what this suite is about, so every plan here has Phase 83's
+# "bring its animations" off: on, a missing skeleton is brought, not reported
 ok = []
 
 
@@ -92,7 +94,7 @@ all_rocss = [x.name for x in animpack.for_data(rocss.data).skels.entries]
 
 UNIT = "Uruk Bodyguard"
 write_skeleton_index(anim_dir, all_rocss)
-plan = plan_transfer(dac, UNIT, Mod(dest_root), TransferOptions())
+plan = plan_transfer(dac, UNIT, Mod(dest_root), TransferOptions(bring_animations=False))
 body = sorted({s for _n, x in plan.add_entries for s in x.skeletons()})
 weapons = sorted({s for _n, x in plan.add_entries for s in x.weapon_skeletons()})
 check(f"'{UNIT}' with every ROCSS skeleton in the pack: nothing missing, read from the pack "
@@ -106,7 +108,7 @@ check(f"the destination's modeldb names '{gone_body}'",
       any(gone_body in x.skeletons() for x in dest_db.entries))
 write_skeleton_index(anim_dir, [n for n in all_rocss
                                 if n.lower() not in (gone_body.lower(), gone_weapon.lower())])
-plan = plan_transfer(dac, UNIT, Mod(dest_root), TransferOptions())
+plan = plan_transfer(dac, UNIT, Mod(dest_root), TransferOptions(bring_animations=False))
 check("left out of the pack, it is missing although the modeldb names it",
       gone_body in plan.missing_skeletons and plan.skeleton_models.get(gone_body))
 check("a weapon skeleton left out is reported apart, with the models naming it",
@@ -120,12 +122,12 @@ check("  ... the weapon line names Makanyane's rule",
       "WEAPON ANIMATION" in text and "weighted to the weapon bones" in text)
 
 shutil.rmtree(anim_dir)
-plan = plan_transfer(dac, UNIT, Mod(dest_root), TransferOptions())
+plan = plan_transfer(dac, UNIT, Mod(dest_root), TransferOptions(bring_animations=False))
 check("with no pack the modeldb is read, as before, and says so",
       plan.skeletons_from == "modeldb" and gone_body not in plan.missing_skeletons
       and "skeleton pack" not in plan.summary())
 
-plan = plan_transfer(dac, "Goblin Bodyguards", rocss, TransferOptions())
+plan = plan_transfer(dac, "Goblin Bodyguards", rocss, TransferOptions(bring_animations=False))
 check("into ROCSS itself: 'Goblin Bodyguards' needs MTW2_Goblin_Mace, and its weapon "
       "skeleton is listed apart",
       "MTW2_Goblin_Mace" in plan.missing_skeletons

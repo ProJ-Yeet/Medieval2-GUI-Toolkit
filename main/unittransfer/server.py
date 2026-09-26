@@ -1587,6 +1587,7 @@ def _options_from(d: dict) -> TransferOptions:
         upgrade_from=d.get("upgrade_from", "source"),
         import_mount_with_base=bool(d.get("import_mount_with_base", True)),
         import_officers_with_base=bool(d.get("import_officers_with_base", True)),
+        bring_animations=bool(d.get("bring_animations", True)),
         field_overrides=dict(d.get("field_overrides") or {}),
         asset_conflict=d.get("asset_conflict", "mod_folder"),
         asset_reroute_dir=d.get("asset_reroute_dir") or None,
@@ -1685,6 +1686,14 @@ def _plan_payload(plan) -> dict:
         "missing_weapon_skeletons": plan.missing_weapon_skeletons,
         "weapon_skeleton_models": plan.weapon_skeleton_models,
         "skeletons_from": plan.skeletons_from,
+        # 83: the skeletons this transfer brings into the packs, each with what
+        # happens to it, and the bytes appended; or why none could be brought
+        "anim_port": ({"skeletons": [dict(x.payload(), weapon=x.name in plan.anim_port_weapons)
+                                     for x in plan.anim_port.skeletons],
+                       "totals": plan.anim_port.totals(), "renames": plan.anim_port.renames,
+                       "source_packs": plan.anim_port.source_packs}
+                      if plan.anim_port is not None else None),
+        "anim_port_error": plan.anim_port_error,
         "soldier_model_name": plan.soldier_model_name,
         "soldier_skeletons_missing": plan.soldier_skeletons_missing(),
         # graded the same way: a missing skeleton is blamed on the slot whose fix
