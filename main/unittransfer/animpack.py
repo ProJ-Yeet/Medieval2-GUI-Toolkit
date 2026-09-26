@@ -226,8 +226,20 @@ class PackIndex:
         return list(self._names().get(_key(name), ()))
 
     def first(self, name: str) -> Optional[PackEntry]:
+        """The entry ``name`` resolves to: the first whose name matches it
+        exactly, else the first that matches it case-blind. Vanilla's
+        skeletons.idx has ``MTW2_Halberd_Primary`` (a body skeleton, 20 bones)
+        and ``MTW2_Halberd_primary`` (a weapon skeleton, 2 bones), both
+        played, so the case of a name can be all that tells two apart."""
         hits = self._names().get(_key(name))
-        return hits[0] if hits else None
+        if not hits:
+            return None
+        if len(hits) > 1:
+            want = name.replace("\\", "/")
+            for e in hits:
+                if e.name.replace("\\", "/") == want:
+                    return e
+        return hits[0]
 
     def __contains__(self, name: str) -> bool:
         return _key(name) in self._names()
@@ -570,7 +582,8 @@ def for_data(data_dir) -> Optional[Packs]:
     if d is None:
         return None
     packs = open_packs(d)
-    return packs if (packs.anims or packs.skels) else None
+    # `is not None`: an index with no entries is falsy, and still a pack
+    return packs if (packs.anims is not None or packs.skels is not None) else None
 
 
 def packs_for(data_dir) -> Tuple[Optional[Packs], str]:
@@ -813,9 +826,9 @@ def plan_port(source_dir, dest_dir, skeletons: Iterable[str], tag: str = "") -> 
     with open(src.anims.dat_path, "rb") as sfid, open(dst.anims.dat_path, "rb") as dfid, \
             open(dst.skels.dat_path, "rb") as dsfid:
         for name in skeletons:
-            if not name or _key(name) in seen:
+            if not name or name in seen:
                 continue
-            seen.add(_key(name))
+            seen.add(name)   # exact: two names can differ in case alone (MTW2_Halberd_Primary / _primary)
             row = PortSkeleton(name)
             sent = src.skels.first(name)
             if sent is None:

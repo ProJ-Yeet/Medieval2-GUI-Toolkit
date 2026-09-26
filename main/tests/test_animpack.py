@@ -243,5 +243,30 @@ if total:
     check("vanilla, ROCSS and DaC together are the 730 the roadmap counts",
           total == 730 or not all(d.is_dir() for d in INSTALLS.values()))
 
+# ---- names that differ in case alone ----------------------------------------------------
+print("\nnames that differ in case alone")
+if (GAME / "data").is_dir():
+    vp = animpack.Packs(animpack.animations_dir(GAME / "data"))
+    body, weapon = vp.skeleton("MTW2_Halberd_Primary"), vp.skeleton("MTW2_Halberd_primary")
+    check("vanilla's MTW2_Halberd_Primary is a body (20 bones), MTW2_Halberd_primary a weapon (2): "
+          "each spelling finds its own", len(body.bones) == 20 and len(weapon.bones) == 2)
+    check("a spelling matching neither exactly falls back to the first, case-blind",
+          vp.skeleton("mtw2_halberd_primary") is body
+          and len(vp.skels.find("MTW2_HALBERD_PRIMARY")) == 2)
+    dest = Path(_tmp.mkdtemp(prefix="ut_animpack_case_")) / "mods" / "D" / "data" / "animations"
+    dest.mkdir(parents=True)
+    for n in animpack.FILES:
+        (dest / n).write_bytes((vp.dir / n).read_bytes()[:animpack.HEADER_SIZE] if n.endswith(".dat")
+                               else animpack.PackIndex(
+                                   animpack.SKEL_MAGIC if n.startswith("skel") else animpack.ANIM_MAGIC,
+                                   [], 14 if n.startswith("skel") else 9,
+                                   24 if n.startswith("skel") else 0).to_bytes())
+    plan = animpack.plan_port(GAME / "data", dest.parent, ["MTW2_Halberd_Primary", "MTW2_Halberd_primary"])
+    rows = [(s.name, s.action, len(animpack.PackedSkeleton(s.data).bones)) for s in plan.skeletons]
+    # the second is renamed: a name taken but for its case counts as taken, the
+    # cautious reading, since only this one pair shows the game telling case apart
+    check("a port asked for both brings both, each its own skeleton, not the first twice",
+          plan.ok and rows == [("MTW2_Halberd_Primary", "add", 20), ("MTW2_Halberd_primary", "rename", 2)])
+
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)
