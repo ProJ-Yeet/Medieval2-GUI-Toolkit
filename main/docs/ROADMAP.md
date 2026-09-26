@@ -527,13 +527,15 @@ questions, each with its kit:
 2. Does the `.dat` header's count matter, or only the `.idx`'s?
 3. Does a renamed skeleton (`<name>_<tag>`) and a namespaced animation path
    (no such file on disk) work? *(The path half answered 2026-09-26: **yes**. DaC's Stewards Guards plays in Reforged with 174 of its 175 slots on `ported/divi/...` paths no file on disk has, and Reforged's own `MTW2_Mace` units unchanged. A renamed skeleton cannot arise through a transfer, which only brings a name the pack lacks; it waits for Phase 86.)*
-4. *(Partly answered 2026-09-26: with `descr_skeleton.txt` untouched and older than the packs, a session of play left all four pack files exactly as written, size and time.)* When does the engine regenerate the packs from `descr_skeleton.txt`
+4. *(Partly answered 2026-09-26: with `descr_skeleton.txt` untouched and older than the packs, a session of play left all four pack files exactly as written, size and time; and so did one with a loose `.cas` newer than the packs lying at a packed path.)* When does the engine regenerate the packs from `descr_skeleton.txt`
    (packs deleted? the text file newer?), and does a regeneration drop entries
    that have no loose `.cas`? This decides whether 84 is needed by default.
-5. Which of two duplicate entries wins, the first or the last?
-6. Does a loose `.cas` at an entry's path override the packed one?
+5. Which of two duplicate entries wins, the first or the last? **The first** (2026-09-26, `dev/checks/phase82_kit.py`: a second `pack.idx` entry for Steward's Guard's standing idle, holding `die_forward_2`, appended last; they idled normally).
+6. Does a loose `.cas` at an entry's path override the packed one? **No** (2026-09-26, the same kit: a loose `.cas` at Steward's Guard's walk path holding `celebrate_1`; they walked normally, with Reforged's `[io] file_first = true` on and nothing about the file in the logs).
 
-The answers are written into the format notes, and into this phase's archive entry. Done when all six are answered.
+The answers are written into the format notes, and into this phase's archive entry. Done when all six are answered. **Open: 2** (the header's count; needs a kit that sets the `.idx` and `.dat` counts apart) **and the rest of 4** (what does make the game rebuild).
+
+**What 5 and 6 change.** An entry appended under a path the pack already holds never plays, and a loose file never overrides a packed path. So 86's saved edit cannot be appended under its own path (see 86), 57's editor saving a loose file changes nothing in game for an animation the pack holds (it should say so), and 85's compaction keeps the **first** copy of each duplicate: the later copies of Reforged's 102 duplicated paths are dead bytes.
 
 **84 - Keep a ported mod rebuildable (M).** If 82 shows the engine
 regenerates the packs and drops what has no loose file, or as an option
@@ -548,7 +550,7 @@ ported unit survives a pack regeneration in game (82's question 4).
 first: duplicate paths (same bytes or not), entries no skeleton slot uses,
 skeletons no modeldb entry names, skeleton names listed twice. Then, as its own
 plan and Undo, a compacted pack: only what is referenced, one copy of each
-duplicate (the one 82 says the engine plays). Compaction does rewrite the
+duplicate, the first (82's question 5: the engine plays the first). Compaction does rewrite the
 whole `.dat`, written beside the old one and swapped, so it needs the free
 space of the pack and is never automatic. Done when: the report runs on all
 three installs, and a compacted ROCSS plays every unit (viewer and `verify`)
@@ -558,8 +560,11 @@ and undoes.
 named skeleton (with its animations) or one animation into a chosen slot from
 another mod; and **the animation editor saves straight into the pack**,
 replacing `animedit.REPACK_NOTE`'s "rebuild with xidx" step. A saved edit is
-appended under its path, which makes the old entry an orphan (85's report
-finds it), so no 352 MB rewrite. Done when: an edit made in 57's editor plays
+appended **under a new path** and the skeleton's slot pointed there (the skeleton
+appended again under its own name would lose to the first copy too, so the
+slot is rewritten in the skeleton's entry, which is small), so no 352 MB
+rewrite. *(Changed 2026-09-26: appended under its old path it would never play,
+82's question 5: the first copy wins.)* Done when: an edit made in 57's editor plays
 in game without any outside tool.
 
 **Not in these phases**: exporting a unit with an animation for Blender (the
