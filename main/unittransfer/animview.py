@@ -54,19 +54,8 @@ EVENT_TYPES = {1: "sound", 2: "sound bank", 3: "shockwave", 4: "voice", 5: "ambi
 DEFAULT_SLOT = animpack.SKELETON_SLOTS - 1
 
 
-def packs_for(data_dir) -> Tuple[Optional[animpack.Packs], str]:
-    """The packs a mod plays: its own, or vanilla's when it ships none.
-    ``("", None)`` when neither can be found."""
-    own = animpack.for_data(data_dir)
-    if own is not None and own.skels is not None:
-        return own, "mod"
-    data = Path(data_dir)
-    # <game>/mods/<mod>/data -> <game>/data
-    if data.parent.parent.name.lower() == "mods":
-        van = animpack.for_data(data.parent.parent.parent / "data")
-        if van is not None and van.skels is not None:
-            return van, "vanilla"
-    return None, ""
+#: The packs a mod plays, its own or vanilla's: :func:`animpack.packs_for`.
+packs_for = animpack.packs_for
 
 
 def _summary(packs: animpack.Packs, fid, entry: animpack.PackEntry) -> dict:

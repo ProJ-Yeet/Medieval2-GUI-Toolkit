@@ -27,7 +27,7 @@ Split out of `ROADMAP.md` on 2026-09-05, verbatim.
 | 29, with B4 - the strat model viewer, and a stub that beat the art beside it | below |
 | 18-24 as planned, B2/B3 as reported, 28-43, 54 - the backlog of 2026-09-05 and the 2026-09-12 review, to Health | below, *Split out on 2026-09-23* |
 | 44-53, 55-64, M18, and the upstream passes of 2026-09-13, -17 and -20 | below, *Split out on 2026-09-23* |
-| 65-80, 25-27, 87, and the 2026-09-23 schedule as it stood | below, *Finished after the 2026-09-23 split* |
+| 65-81, 25-27, 87, and the 2026-09-23 schedule as it stood | below, *Finished after the 2026-09-23 split* |
 
 ---
 
@@ -10552,6 +10552,89 @@ action and the same action loose give the same pose, the sequence plays both
 ways, the events show at their frames. **80b is open**: item 3's weapon
 skeletons moving the weapon and shield bones and the rider drawn on his mount,
 item 6 (`.cas` models) and item 7 (side by side).
+
+## Phase 81 - append to a pack, and take it back - DONE 2026-09-26
+
+The engine Phase 83's "bring its animations" will stand on, in
+`unittransfer/animpack.py` (the one module that reads and writes the four pack
+files). No UI yet; 83 is the screen.
+
+**`plan_port(source, dest, skeletons)`** says what bringing those skeletons,
+and every animation their slots name, would do, and writes nothing. For each
+animation, in the design's order: the same path with the same bytes is
+**reused**; the same bytes under another path are **reused by content** and
+the slot is pointed there; bytes this port already brings under another path
+are **shared**; otherwise the animation is **appended** under its own path,
+or **appended renamed** under `mods/<dest>/data/animations/ported/<tag>/...`
+when the destination has the path with other bytes. Then each skeleton, its
+slot paths rewritten: the same name with the same bytes is reused; the same
+bytes under another name are reused under that name (`reuse_as`, and the name
+goes into `renames` for the modeldb); otherwise it is added, as
+`<name>_<tag>` when the name is taken. A content lookup hashes only the
+destination entries of the same size, and only the first copy under a name
+(the copy a path resolves to), cached on the four files' stamp. The source
+plays its own packs or vanilla's (`animpack.packs_for`, moved here from
+`animview`); a destination with no packs of its own is refused, as there is
+nothing to append to.
+
+**`apply_port`** backs up the two `.idx` files, appends to each `.dat`, writes
+the new `.idx` to a temp file and swaps it in, then writes the new count into
+the `.dat` header. Killed midway, it leaves at worst bytes nothing indexes; an
+exception midway is put right on the spot (the `.dat` cut back, its header and
+`.idx` restored, the pair before it too). It refuses while the game runs
+(`tasklist`: `M2EX.exe`, `kingdoms.exe`, `medieval2.exe`), when the packs
+changed since the plan, without the space it needs plus 32 MB, and when a
+`.dat` cannot be opened for writing. **`port`** does it as one job in the
+transfer log, with a new manifest kind, `appended`: the file, its length
+before, its old and new header, and the SHA-1 of the 64 KB before the old end.
+**`undo_appended`**, run by `transfer.undo` before any backup is restored,
+checks every row first and refuses the whole undo, touching nothing, when a
+`.dat` is no longer the file the port left (the game rebuilt it, or another
+tool wrote to it); otherwise it truncates each `.dat` back and puts its header
+back, and the `.idx` files come back from their backups. The 352 MB `.dat` is
+never copied, rewritten or backed up whole.
+
+**The dry run**, every DaC skeleton into ROCSS, one plan each, 11 s (2 s as one
+plan): against the table measured on 2026-09-23, 134 of the 410 names are
+ROCSS's with other data (123 renamed; the rest match once their slots point at
+ROCSS's copies), a median 145 animations a skeleton and 219 at most, a median
+3.27 MB a skeleton, **1.60 MB after content dedup**, 5.06 MB at most, 45 784
+slot paths. One figure was wrong in the table: the slot paths already in ROCSS
+byte for byte are **11 133**, not 9 736, measured by the plan and by hashing
+every ROCSS entry independently. All 410 in one plan: 274 MB to append, 12 532
+slot paths rewritten.
+
+**A real port**, DaC's `MTW2_2HSwordsman` and its weapon skeleton into a copy
+of ROCSS: 217 animations, 168 of them reused by content, 1.60 MB appended,
+`pack.dat` grown by exactly that; every structural check passes (3 182
+animations, 209 skeletons, every slot path indexed); the renamed
+`MTW2_2HSwordsman_divideandconquer` reads back and every one of its animations
+reads out of the pack; undone, all four files byte for byte.
+
+**Tested** by `test_packport` (38): on a built pair, one case for every rule
+(reuse, reuse by content, shared, append, append renamed, a renamed skeleton,
+three slot paths rewritten), written and read back (the skeleton the source's
+but for those three paths, byte for byte with them put in; planned again,
+nothing left to bring, the skeleton `reuse_as` under its new name), undone byte
+for byte; the real port above and its undo; an undo refused after another tool
+wrote to `pack.dat`, touching nothing, and going through once put right; the
+refusals (game running, packs changed, no packs, unknown skeleton); an
+exception at the second index leaving all four files as they were; and the
+dry run's totals.
+
+**Not proven**: that the game loads a pack appended this way. That is Phase
+82, in game.
+
+### Phase 81 as it was scheduled
+
+**81 - Append to a pack, and take it back (L).** `animpack.plan_port(source,
+dest, skeletons)` returns what would happen: skeletons reused, renamed or
+added; animations reused by path, reused by content, appended, renamed; bytes
+appended; slot paths rewritten. `apply` and `undo` as in *The design*. A dry
+run over every DaC skeleton into ROCSS is the measurement. Done when: append
+then undo leaves both files byte-identical to before; `verify` passes on the
+result; a ported skeleton reads back identical except for its rewritten slot
+paths; the dry run's totals match the table above.
 
 ## Phase 87 - the real world, whole: Mylae's New Map Editor
 

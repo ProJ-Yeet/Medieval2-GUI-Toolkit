@@ -284,9 +284,12 @@ try:
     # Phase 55b: the entry's actions, and one animation. The planted mod ships
     # no descr_skeleton.txt, which is its own answer rather than an error
     acts = get(f"/api/model/anims?mod=ViewerMod&entry={enc(entry.name)}")
-    check(f"the action list answers, and says the mod has no descr_skeleton.txt "
-          f"({len(acts.get('skeletons', []))} skeletons named)",
-          acts.get("file") is False and all(not s_["found"] for s_ in acts["skeletons"]))
+    # (Phase 80: the skeletons are keyed by name, each saying whether a pack
+    # has it; a mod with neither a pack nor descr_skeleton.txt finds none)
+    sks = list((acts.get("skeletons") or {}).values())
+    check(f"the action list answers, and finds none of its {len(sks)} skeletons in a pack "
+          f"or in a descr_skeleton.txt",
+          sks and all(not s_["packed"] and not s_.get("found") for s_ in sks))
     code, why = status("/api/model/anim?mod=ViewerMod&rel=../../../../windows/win.ini")
     check(f"an animation path pointing outside the mod is a 404, never the file ({code})",
           code == 404)

@@ -2767,6 +2767,14 @@ def undo(transfer_id: str) -> Dict:
     backup_root = Path(rec.get("backup_root", ""))
     manifest = rec.get("manifest", {})
 
+    # Phase 81: a port appended to the animation packs. Each .dat is truncated
+    # back to the length it had, every one checked first; a .dat the game or
+    # another tool has rewritten since refuses the whole undo, before anything
+    # below is touched
+    if manifest.get("appended"):
+        from . import animpack
+        animpack.undo_appended(data, manifest["appended"])
+
     # restore overwritten files
     for rel in manifest.get("backed_up", []):
         bpath = backup_root / "data" / rel

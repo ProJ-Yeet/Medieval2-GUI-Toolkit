@@ -1,7 +1,23 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-26 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, the schedule in `ROADMAP.md` (the finished rows now in its phase index) (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 76, and 25, are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton; a building tree from another mod); then 25, the OSM backdrop and coastline tracer; then 26, map resize and a new campaign on a map from scratch; then 27, the layer generators; then 77, the animation and skeleton packs read without unpacking (the first of 77-86, animations that travel with a unit); then 78, the 687 slots named and `descr_skeleton.txt` held against the packs; then 79, transfer holding skeletons against the destination's pack, weapon skeletons counted; then 80a, every packed animation of a model's skeletons in the Models viewer, named, grouped, played from `pack.dat`, with its slot's marks and sequences; then 80b, the weapon skeletons moving the weapon, the rider on his mount, `.cas` models played, and another mod's action side by side; **81 is next** (append to a pack, and take it back). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.9 and beta 2026-09-25** (2026-09-25), carrying everything through 76 and 25-27. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-26 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, the schedule in `ROADMAP.md` (the finished rows now in its phase index) (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 76, and 25, are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton; a building tree from another mod); then 25, the OSM backdrop and coastline tracer; then 26, map resize and a new campaign on a map from scratch; then 27, the layer generators; then 77, the animation and skeleton packs read without unpacking (the first of 77-86, animations that travel with a unit); then 78, the 687 slots named and `descr_skeleton.txt` held against the packs; then 79, transfer holding skeletons against the destination's pack, weapon skeletons counted; then 80a, every packed animation of a model's skeletons in the Models viewer, named, grouped, played from `pack.dat`, with its slot's marks and sequences; then 80b, the weapon skeletons moving the weapon, the rider on his mount, `.cas` models played, and another mod's action side by side; then 81, a port appended to a mod's packs and taken back, nothing unpacked; **82 is next** (in-game proof, which needs the user to run the game). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.9 and beta 2026-09-25** (2026-09-25), carrying everything through 76 and 25-27. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 81 is done - append to a pack, and take it back, 2026-09-26,
+committed and uncut.** `animpack.plan_port` says what bringing skeletons and
+every animation their slots name from one mod into another would do (reused
+by path, by content, shared, appended, appended renamed under
+`ported/<tag>/`; a skeleton reused, reused under another name, added, or
+renamed `<name>_<tag>`); `apply_port` appends to the two `.dat` files and
+swaps in new `.idx` files; `port` logs it with a new manifest kind,
+`appended`, and `transfer.undo` truncates each `.dat` back, refusing when the
+game or another tool has written it since. A real DaC `MTW2_2HSwordsman`
+into a copy of ROCSS appends 1.60 MB, passes every structural check and undoes
+byte for byte. The dry run of all 410 DaC skeletons matches the 2026-09-23
+table but one figure, re-measured 11 133 (not 9 736). No UI: 83 is the
+screen. `test_packport` (38). Full suite: 36 of 159 red, the installed mods' 36 (each checked against `6a71c0b1` where it runs); `test_viewer3d_http` had gone stale with 80a's route and is updated. **82 is next, and needs the user to run the
+game**; 83 can be built without it, but whether a default port also writes
+84's loose files waits on 82's answers.
+
 **Phase 80b is done, and with it 80 - the unit as the game assembles it,
 2026-09-26, committed and uncut**, on the user's word ("start next 2 phases":
 80b and 81). The weapon skeletons now move the weapon: 1 066 of ROCSS's 1 800
@@ -14,7 +30,7 @@ each weapon skeleton's bones off the body's hand for the action's slot (or its
 carrying the rider at its `rider_offset`. A strat `.cas` plays by the skeleton
 its `descr_model_strat.txt` entry names (its skin now in the payload). *Beside
 it* draws the same slot out of another mod to the right, and says whether it is
-the same bytes. `test_animunit` (36). **81 is next.**
+the same bytes. `test_animunit` (36). 81 followed.
 
 **Phase 87 is done - the real world, whole, 2026-09-25, committed and uncut**, on
 the user's word ("port over the complete feature of the real world maps that

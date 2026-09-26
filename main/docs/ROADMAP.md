@@ -134,7 +134,7 @@ finishes; the schedule holds only what is left.
 | 56-60, 62-69, 74-76 | Several factions and the faction zip; the animation editor and converter; will this mod launch; settlement mechanics; add a religion; one file in or out; the minor files (populace and off-map models, animals, standards, advice, battle banners, hero abilities, area effects, walls, agents and generals); a settlement model imported; the `.cas` view placed by its skeleton; a building tree from another mod; and 71's `data/` zip loaded back | v2.3.9 at the latest |
 | 61, 70-73 | Delete, create and copy a settlement; every tile as text; a campaign as a zip; a horde start; a campaign from another mod | beta 2026-09-25 at the latest |
 | 25-27 | The OSM backdrop and coastline; map resize and a map from scratch; the layer generators | beta 2026-09-25 |
-| 77-80 | The packs read; the 687 slots named; transfer held against the destination's pack; every packed animation in the Models viewer, with its weapons, its mount, `.cas` models and another mod's side by side | uncut |
+| 77-81 | The packs read; the 687 slots named; transfer held against the destination's pack; every packed animation in the Models viewer, with its weapons, its mount, `.cas` models and another mod's side by side; a port appended to a pack and taken back | uncut |
 | 87 | The real world, whole: Mylae's New Map Editor, 87a-87h | uncut, beta line |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
@@ -391,7 +391,6 @@ notes on 74-76, is in `ROADMAP_ARCHIVE.md` under *The 2026-09-23 schedule*.
 
 | # | Phase | Stars | Size | Line |
 |---|---|---|---|---|
-| 81 | Append to a pack, and take it back | - | L | both |
 | 82 | In-game proof: what the engine accepts, rebuilds and prefers | - | S | both |
 | 83 | Port the animations with a unit | - | L | both |
 | 84 | Keep a ported mod rebuildable: loose `.cas` and `descr_skeleton.txt` for what was ported | - | M | both |
@@ -476,7 +475,7 @@ the main path.
 | **the modeldb weapon lists are skeleton names too** | ROCSS 5 372/5 375 found in `skeletons.idx`, DaC 3 780/3 780 | transfer's missing-skeleton check ignores them today (`ModelEntry.skeletons()` returns only primary/secondary) |
 | ROCSS modeldb weapon skeletons not in its own pack | 3 (`MTW2_axe_Primary` ×2, `MTW2_HR_mace_Primary`) | a Health finding waiting to be reported |
 | DaC and ROCSS share no animation path string | 0 of 45 784 | paths carry the mod they were built in (`mods/Third_Age_3/...`, `mods/americas/...`), so matching by path finds nothing |
-| DaC animations already in ROCSS **byte for byte** under another path | 9 736 of 45 784 slot references; 166 of the 215 of DaC's `MTW2_2HSwordsman` | content dedup halves the append |
+| DaC animations already in ROCSS **byte for byte** under another path | 9 736 of 45 784 slot references (**11 133**, re-measured two ways in Phase 81); 166 of the 215 of DaC's `MTW2_2HSwordsman` | content dedup halves the append |
 | DaC skeleton names ROCSS already has, with different data | **134 of 410** | renaming a ported skeleton is the common case, not an edge case |
 | animations per soldier skeleton | median 145, max 219 | the unit of work |
 | bytes appended per skeleton | median 3.3 MB, 1.6 MB after content dedup; max 5.1 MB | small against 70-352 MB packs |
@@ -518,17 +517,8 @@ the main path.
 
 ## The phases
 
-**77 to 80 are done**; each one's scoping and write-up are in
+**77 to 81 are done**; each one's scoping and write-up are in
 `ROADMAP_ARCHIVE.md`.
-
-**81 - Append to a pack, and take it back (L).** `animpack.plan_port(source,
-dest, skeletons)` returns what would happen: skeletons reused, renamed or
-added; animations reused by path, reused by content, appended, renamed; bytes
-appended; slot paths rewritten. `apply` and `undo` as in *The design*. A dry
-run over every DaC skeleton into ROCSS is the measurement. Done when: append
-then undo leaves both files byte-identical to before; `verify` passes on the
-result; a ported skeleton reads back identical except for its rewritten slot
-paths; the dry run's totals match the table above.
 
 **82 - In-game proof (S, needs the user to run the game).** 81 builds the test
 kits into a copy of ROCSS; the user plays a custom battle and reports. The
