@@ -14,9 +14,15 @@ Misty Mountains, Rhudaur). The Balrog's engine fires `fireball_engine_set`,
 which only DaC's effect files declare: a transfer now comments out a
 `shot_pfx_*` line naming a set the destination lacks and says so (Reforged is
 not M2EX, so effect sets are not ported). Ids `20260926-082147-ba7df6`,
-`-082149-9e34e4`, `-082151-d281b7`. Reforged's packs: 10 208 animations, 374
+`-082149-9e34e4`, and the Balrog's `-082151-d281b7`, which the game then refused:
+"Invalid number of soldiers 120". DaC's M2TWEOP lifts the M2TW guide's 100 (twenty
+DaC units have 120); ROCSS and Reforged top out at exactly 100. A transfer now
+holds the soldier count to 100 unless the destination's own units already pass it,
+and says so; every other Phase 39 ceiling (`educeil`) on the composed block is
+reported. The Balrog was undone and done again as `-082721-0e5e1e` with 100 men.
+`pack.dat` measured at 226 609 180 bytes. Reforged's packs: 10 208 animations, 374
 skeletons, every check passing. Awaiting the user's in-game word on these.
-`test_animtransfer` (26).
+`test_animtransfer` (29).
 
 **Phase 83 is done - Unit Transfer brings a unit's animations, 2026-09-26,
 committed; the in-game check is with the user.** On the user's word

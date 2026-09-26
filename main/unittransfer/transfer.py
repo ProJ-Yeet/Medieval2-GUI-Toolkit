@@ -377,6 +377,12 @@ class TransferPlan:
     #: an engine block's ``shot_pfx_*`` lines naming an effect set the
     #: destination does not declare, commented out: (engine, key, set)
     engine_effects_dropped: List[Tuple[str, str, str]] = field(default_factory=list)
+    #: the soldier count held to the engine's 100, as (was, now), when the
+    #: destination's own units never go past it. Found in game on 2026-09-26:
+    #: "Invalid number of soldiers 120" for DaC's Moria Balrog in Reforged
+    soldiers_held: Tuple[int, int] = (0, 0)
+    #: every other Phase 39 ceiling the composed block is past, reported only
+    ceilings: List[str] = field(default_factory=list)
     #: what the skeletons were held against: "pack" (the destination's own
     #: skeletons.idx) or "modeldb" (a mod with no pack of its own)
     skeletons_from: str = "modeldb"
@@ -717,6 +723,14 @@ class TransferPlan:
             L.append("  ! model entries NOT found in source modeldb: " + ", ".join(self.missing_models))
         L.extend(self._anim_port_lines())
         L.extend(self._faction_lines())
+        if self.soldiers_held[0]:
+            L.append(f"  ! SOLDIERS - {self.soldiers_held[0]} men is over the engine's "
+                     f"{self.soldiers_held[1]}, and none of {self.dest.name}'s own units goes "
+                     f"past it, so it is written as {self.soldiers_held[1]} (the game refuses "
+                     f"the whole unit file otherwise; {self.source.name} lifts the limit "
+                     "and this mod does not)")
+        for c in self.ceilings:
+            L.append(f"  ! CEILING - {c}")
         # The soldier line's missing animations get their own ONE-LINE entry, tagged
         # "(soldier line)": the composer shows that case beside the Soldier row (the
         # row that fixes it) and drops this line to avoid saying it twice. Keeping it
@@ -2503,6 +2517,9 @@ def _build_unit_block(plan: TransferPlan, unit) -> str:
     #     `era` lines, whichever of the source, the base or an override put them
     #     there. After the overrides, so a hand-typed faction is held to it too
     block = _drop_unknown_factions(plan, block)
+    # 4c) the engine's ceilings: the soldier count held to what the destination
+    #     can take, and anything else past one said
+    block = _hold_ceilings(plan, block)
     # 5) mercenary flag last, so a manual `attributes` override can't drop it
     if plan.mercenary:
         block = edu_mod.add_attribute(block, MERC_ATTR)
@@ -2511,6 +2528,42 @@ def _build_unit_block(plan: TransferPlan, unit) -> str:
 
 _FACTION_LINE = re.compile(r"^(\s*)(ownership|era\s+\d+)(\s+)([^;\r\n]*?)([ \t]*(?:;[^\r\n]*)?)(\r?\n?)$",
                            re.IGNORECASE)
+
+
+_SOLDIER_LINE = re.compile(r"^([ \t]*soldier[ \t]+[^,\r\n]+,[ \t]*)(\d+)", re.IGNORECASE | re.MULTILINE)
+
+
+def _dest_men_max(dest) -> int:
+    """The most men any of ``dest``'s own units has: proof of what its engine
+    takes. ROCSS and Reforged top out at exactly 100, the M2TW guide's limit;
+    DaC, whose M2TWEOP lifts it, has twenty units of 120."""
+    best = 0
+    for u in dest.edu.units:
+        m = _SOLDIER_LINE.search(getattr(u, "raw", "") or "")
+        if m:
+            best = max(best, int(m.group(2)))
+    return best
+
+
+def _hold_ceilings(plan: "TransferPlan", block: str) -> str:
+    """Phase 39's ceilings on the block about to be written. The soldier count
+    is held to the engine's 100 unless the destination's own units already go
+    past it; every other ceiling (attack, hit points, officers...) is said, not
+    changed, since the engine takes those and caps them itself."""
+    from . import educeil
+    plan.soldiers_held = (0, 0)
+    m = _SOLDIER_LINE.search(block)
+    if m and int(m.group(2)) > educeil.MEN_MAX:
+        try:
+            ok = _dest_men_max(plan.dest)
+        except Exception:
+            ok = 0
+        if ok <= educeil.MEN_MAX:
+            plan.soldiers_held = (int(m.group(2)), educeil.MEN_MAX)
+            block = block[:m.start(2)] + str(educeil.MEN_MAX) + block[m.end(2):]
+    plan.ceilings = [f["message"] for f in educeil.unit_findings(block)
+                     if f.get("field") != "soldier" or not plan.soldiers_held[0]]
+    return block
 
 
 def _drop_unknown_factions(plan: "TransferPlan", block: str) -> str:

@@ -21,6 +21,9 @@ On a throwaway copy of ROCSS's unit files and its four pack files:
    DaC's `united`).
 8. An engine's shot effect set the destination has not got is commented
    out (DaC's Moria Balrog fires `fireball_engine_set`, which Reforged lacks).
+9. The engine's 100 men: held there when the destination's own units never
+   pass it (Reforged refused DaC's 120-man Moria Balrog), left alone when they
+   do; other ceilings said.
 """
 import hashlib
 import shutil
@@ -268,6 +271,21 @@ if reforged.is_dir():
     check("DaC's Moria Balrog planned into Reforged: fireball_engine_set commented out, and said",
           any(k == "shot_pfx_front" and n == "fireball_engine_set" for _e, k, n in bp.engine_effects_dropped)
           and any("fireball_engine_set" in w for w in bp.warnings))
+
+# ---- 9) the soldier ceiling -----------------------------------------------------------
+print("\n9) the engine's 100 men")
+from types import SimpleNamespace as _NS  # noqa: E402
+
+blk = "type  x\nsoldier    crew, 120,1,1 ;;; a note\nstat_pri  70, 2, no, 0, 0, melee\n"
+plain = _NS(dest=_NS(edu=_NS(units=[_NS(raw="soldier a, 100, 0, 1"), _NS(raw="soldier b, 60, 0, 1")])))
+got = transfer._hold_ceilings(plain, blk)
+check("into a mod whose units stop at 100, 120 men is written as 100, the rest of the line kept",
+      "soldier    crew, 100,1,1 ;;; a note" in got and plain.soldiers_held == (120, 100))
+check("  ... and another ceiling (attack 70) is said, not changed",
+      any("attack 70" in c for c in plain.ceilings) and "stat_pri  70" in got)
+lifted = _NS(dest=_NS(edu=_NS(units=[_NS(raw="soldier a, 120, 0, 1")])))
+check("into a mod that already has 120-man units (its engine takes them), 120 stays",
+      "crew, 120,1,1" in transfer._hold_ceilings(lifted, blk) and lifted.soldiers_held == (0, 0))
 animpack.game_running = real_running
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
