@@ -19,6 +19,8 @@ On a throwaway copy of ROCSS's unit files and its four pack files:
 7. Factions the destination has not got are left out of ownership and the
    era lines (found in game on 2026-09-26: Reforged refused its whole EDU on
    DaC's `united`).
+8. An engine's shot effect set the destination has not got is commented
+   out (DaC's Moria Balrog fires `fireball_engine_set`, which Reforged lacks).
 """
 import hashlib
 import shutil
@@ -235,6 +237,37 @@ if reforged.is_dir():
     rp = transfer.plan_transfer(dac, UNIT, Mod(reforged), transfer.TransferOptions())
     check("DaC's Hobbit Infantry planned into Reforged: united left out, and the summary says so",
           rp.factions_dropped.get("ownership") == ["united"] and "FACTIONS - united" in rp.summary())
+
+# ---- 8) an engine's effect sets --------------------------------------------------------
+print("\n8) an engine's shot effects the destination has not got")
+
+
+class _FxDest:
+    effect_sets = {"cannon_shot_elephant_serpentine_set"}
+
+
+class _FxPlan:
+    def __init__(self):
+        self.engine_effects_dropped = []
+
+
+fx = _FxPlan()
+eng = ("type  x\n"
+       "shot_pfx_front\t\t\tfireball_engine_set\n"
+       "shot_pfx_back   cannon_shot_elephant_serpentine_set\n"
+       ";shot_sfx\t\t\tANIM_Serpentine_Fire\n")
+out = transfer._engine_effects(fx, _FxDest(), "x", eng)
+check("a shot_pfx set the destination lacks is commented out and noted; one it has stays; comments stay",
+      out.splitlines()[1].startswith(";shot_pfx_front\t\t\tfireball_engine_set ;")
+      and out.splitlines()[2] == "shot_pfx_back   cannon_shot_elephant_serpentine_set"
+      and out.splitlines()[3] == ";shot_sfx\t\t\tANIM_Serpentine_Fire"
+      and fx.engine_effects_dropped == [("x", "shot_pfx_front", "fireball_engine_set")])
+reforged = MODS / "Third_Age_Reforged"
+if reforged.is_dir():
+    bp = transfer.plan_transfer(dac, "Moria Balrog", Mod(reforged), transfer.TransferOptions())
+    check("DaC's Moria Balrog planned into Reforged: fireball_engine_set commented out, and said",
+          any(k == "shot_pfx_front" and n == "fireball_engine_set" for _e, k, n in bp.engine_effects_dropped)
+          and any("fireball_engine_set" in w for w in bp.warnings))
 animpack.game_running = real_running
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")

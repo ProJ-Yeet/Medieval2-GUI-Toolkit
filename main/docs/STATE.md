@@ -2,6 +2,22 @@
 _Updated: 2026-09-26 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, the schedule in `ROADMAP.md` (the finished rows now in its phase index) (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 76, and 25, are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton; a building tree from another mod); then 25, the OSM backdrop and coastline tracer; then 26, map resize and a new campaign on a map from scratch; then 27, the layer generators; then 77, the animation and skeleton packs read without unpacking (the first of 77-86, animations that travel with a unit); then 78, the 687 slots named and `descr_skeleton.txt` held against the packs; then 79, transfer holding skeletons against the destination's pack, weapon skeletons counted; then 80a, every packed animation of a model's skeletons in the Models viewer, named, grouped, played from `pack.dat`, with its slot's marks and sequences; then 80b, the weapon skeletons moving the weapon, the rider on his mount, `.cas` models played, and another mod's action side by side; then 81, a port appended to a mod's packs and taken back, nothing unpacked; then 83, Unit Transfer bringing a unit's missing animations; **82 is under way in game** (the user testing DaC EUR's Hobbit Infantry in Reforged), then 84. Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.9 and beta 2026-09-25** (2026-09-25), carrying everything through 76 and 25-27. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**82, question 1, answered in game on 2026-09-26: yes.** The user: "it works,
+hobbits animate fine". Reforged loaded a `pack.dat` and `skeletons.dat` with
+entries appended and both headers' counts updated, and played the appended
+animations. Then, on the user's word ("transfer eur chariot, eur troll and eur
+balrog"), three more into Reforged: **Suriut Chariots** (the chariot's
+`fs_chariot_eur` brought, mount block added; Rhun and Umbar), **Trolls**
+(`EUR_Troll_Slow_Mace`; Orcs of the Misty Mountains, Isengard, Rhudaur) and
+**Moria Balrog** (`balrog` brought, mount and mounted engine added; Orcs of the
+Misty Mountains, Rhudaur). The Balrog's engine fires `fireball_engine_set`,
+which only DaC's effect files declare: a transfer now comments out a
+`shot_pfx_*` line naming a set the destination lacks and says so (Reforged is
+not M2EX, so effect sets are not ported). Ids `20260926-082147-ba7df6`,
+`-082149-9e34e4`, `-082151-d281b7`. Reforged's packs: 10 208 animations, 374
+skeletons, every check passing. Awaiting the user's in-game word on these.
+`test_animtransfer` (26).
+
 **Phase 83 is done - Unit Transfer brings a unit's animations, 2026-09-26,
 committed; the in-game check is with the user.** On the user's word
 ("continue but transfer a unit with a skeleton that doesnt exist from eur to

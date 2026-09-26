@@ -523,7 +523,7 @@ the main path.
 **82 - In-game proof (S, needs the user to run the game).** 81 builds the test
 kits into a copy of ROCSS; the user plays a custom battle and reports. The
 questions, each with its kit:
-1. Does the game load a pack with appended entries and the counts updated?
+1. Does the game load a pack with appended entries and the counts updated? **Yes** (2026-09-26, Reforged with DaC EUR's Hobbit Infantry appended by Phase 83: it loads and the hobbits animate).
 2. Does the `.dat` header's count matter, or only the `.idx`'s?
 3. Does a renamed skeleton (`<name>_<tag>`) and a namespaced animation path
    (no such file on disk) work?

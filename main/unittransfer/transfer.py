@@ -374,6 +374,9 @@ class TransferPlan:
     #: (``{"ownership": ["united"]}``). The engine refuses the whole EDU on
     #: one ("Invalid ownership type 'united'"), found in game on 2026-09-26
     factions_dropped: Dict[str, List[str]] = field(default_factory=dict)
+    #: an engine block's ``shot_pfx_*`` lines naming an effect set the
+    #: destination does not declare, commented out: (engine, key, set)
+    engine_effects_dropped: List[Tuple[str, str, str]] = field(default_factory=list)
     #: what the skeletons were held against: "pack" (the destination's own
     #: skeletons.idx) or "modeldb" (a mod with no pack of its own)
     skeletons_from: str = "modeldb"
@@ -1396,6 +1399,34 @@ def _resolve_engine_skeletons(plan: "TransferPlan", source: Mod, dest: Mod,
     return renames
 
 
+_SHOT_PFX = re.compile(r"^([ \t]*)(shot_pfx_front|shot_pfx_back)([ \t]+)(\S+)([^\r\n]*)(\r?\n?)$",
+                       re.IGNORECASE)
+
+
+def _engine_effects(plan: "TransferPlan", dest: Mod, engine: str, raw: str) -> str:
+    """``raw`` with each ``shot_pfx_front`` / ``shot_pfx_back`` naming an effect
+    set the destination does not declare commented out, and noted on the plan.
+    Found on 2026-09-26: DaC's Moria Balrog fires ``fireball_engine_set``,
+    which only DaC's descr_artillery_effects.txt has. A destination whose
+    effect files cannot be read is not checked."""
+    try:
+        have = {e.lower() for e in dest.effect_sets}
+    except Exception:
+        have = set()
+    if not have:
+        return raw
+    out = []
+    for line in raw.splitlines(keepends=True):
+        m = _SHOT_PFX.match(line)
+        if m and m.group(4).lower() not in have:
+            plan.engine_effects_dropped.append((engine, m.group(2), m.group(4)))
+            out.append(f"{m.group(1)};{m.group(2)}{m.group(3)}{m.group(4)}{m.group(5)}"
+                       f" ; not in this mod's effect files (Unit Transfer){m.group(6)}")
+        else:
+            out.append(line)
+    return "".join(out)
+
+
 def _resolve_engines(plan: "TransferPlan", source: Mod, dest: Mod, unit,
                      opts: "TransferOptions", seen_assets: set) -> None:
     """Plan everything a unit's siege engine needs in the destination."""
@@ -1453,6 +1484,7 @@ def _resolve_engines(plan: "TransferPlan", source: Mod, dest: Mod, unit,
             raw = engines_mod.rewrite_engine_raw(
                 b.raw, type_new=(final_name if final_name != name else None),
                 skeleton_map=skel_map)
+            raw = _engine_effects(plan, dest, final_name, raw)
             (plan.mounted_engine_raws if mounted else plan.engine_raws).append(raw)
             for p in b.projectiles():
                 if not any(p.lower() == x.lower() for x in plan.engine_projectiles):
@@ -1488,10 +1520,18 @@ def _resolve_engines(plan: "TransferPlan", source: Mod, dest: Mod, unit,
             + (" …" if len(plan.engine_dest_overrides) > 6 else ""))
     if plan.engine_raws or plan.mounted_engine_raws:
         plan.warnings.append(
-            "ENGINE IMPORT: effect/particle/sound references in the engine block "
-            "(fire_effect, shot_pfx_*, shot_sfx, area_effect) and the crew animation "
-            "names in its `crew_animations` block are NOT ported - verify they exist "
-            "in the destination.")
+            "ENGINE IMPORT: the engine block's fire_effect, shot_sfx and area_effect "
+            "references and the crew animation names in its `crew_animations` block "
+            "are NOT ported - verify they exist in the destination. Its shot_pfx "
+            "effect sets are checked: one the destination does not declare is "
+            "commented out.")
+    for eng, key, name in plan.engine_effects_dropped:
+        plan.warnings.append(
+            f"engine '{eng}': its {key} names the effect set '{name}', which "
+            f"{dest.name} does not declare, so the line is commented out (the "
+            "shot plays with no muzzle effect; the game refuses an effect it cannot "
+            "find). Bring the set across by hand, or point the line at one of the "
+            "destination's own.")
 
     # ship / animal name entries in descr_ship.txt / descr_animals.txt, which this
     # tool does not carry across. Say so rather than silently dropping them.
