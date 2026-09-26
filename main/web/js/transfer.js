@@ -25,6 +25,9 @@ function cfgFor(type){
     // 83: "bring its animations" - a skeleton this mod's packs lack comes out of
     // the source's packs with its animations, appended, nothing unpacked
     bring_animations:true,
+    // 84: with them, the loose .cas files and descr_skeleton.txt blocks a pack
+    // rebuild reads, so the unit survives one
+    keep_rebuildable:true,
     field_overrides:{},on_conflict:'rename',new_type:'',new_dictionary:'',
     // null, not '': conflictUI prefills it with the source's own name the first
     // time it draws, and an empty string is a name the user cleared on purpose
@@ -1183,6 +1186,7 @@ function optsPayload(type){const c=cfgFor(type);
     import_mount_with_base:c.import_mount_with_base!==false,
     import_officers_with_base:c.import_officers_with_base!==false,
     bring_animations:c.bring_animations!==false,
+    keep_rebuildable:c.keep_rebuildable!==false,
     on_conflict:c.on_conflict,new_type:c.new_type||null,new_dictionary:c.new_dictionary||null,
     // null = keep the source unit's own name, which is what a cross-mod transfer
     // of the SAME unit wants; the box only exists where a new record is written
@@ -1609,11 +1613,33 @@ function animPortHtml(r){
     return `<li><code>${esc(k.name)}</code>${k.weapon?' <span class="v3tag">weapon</span>':''}: ${say[k.action]}${
       k.dest_name!==k.name?` <code>${esc(k.dest_name)}</code>`:''} · ${k.slots} slots, ${app} from animations appended${
       re?`, ${re} from ones ${esc(state.dst)} already has`:''}</li>`;}).join('');
+  const keep=c.keep_rebuildable!==false, lo=r.anim_loose;
+  const kbox=`<label class="count"><input type="checkbox" ${keep?'checked':''}
+    onchange="animKeepSet(this.checked)"> <b>Keep it rebuildable</b>: loose <code>.cas</code> files and a
+    <code>descr_skeleton.txt</code> block for each skeleton added</label>`;
+  let kept='';
+  if(keep && lo && (lo.files || lo.skeletons.length)){
+    kept=`<div class="count">${lo.cas} loose <code>.cas</code>${lo.evt?` and ${lo.evt} <code>.evt</code>`:''} file(s),
+      ${(lo.bytes/1e6).toFixed(2)} MB, and ${lo.skeletons.length} type block(s) at the end of
+      <code>descr_skeleton.txt</code>${lo.present?`; ${lo.present} file(s) already there are left alone`:''}.
+      Its <code>Version</code> line is not touched, so this never starts a rebuild; if the game ever does
+      rebuild its packs, it can build these skeletons too.</div>`
+      +(lo.notes.length?`<ul>${lo.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:'');
+  } else if(!keep){
+    kept=`<div class="count">Only the packs are written: a pack rebuild from <code>descr_skeleton.txt</code>
+      could not build these skeletons.</div>`;
+  }
   return `<b>Animations brought</b><div>${box}</div>
     <ul>${rows}</ul>
     <div class="count">${t['animations append']+t['animations append_renamed']} animation(s), ${mb} MB appended to
       ${esc(state.dst)}’s <code>pack.dat</code> and <code>skeletons.dat</code>; nothing unpacked, and Undo
-      cuts them back. <code>descr_skeleton.txt</code> is left alone.</div>`;
+      cuts them back.</div>
+    <div>${kbox}</div>${kept}`;
+}
+function animKeepSet(on){
+  const c=cfgFor(state.editing);
+  c.keep_rebuildable=!!on;
+  renderComposer();
 }
 function animBringSet(on){
   const c=cfgFor(state.editing);

@@ -10708,6 +10708,96 @@ transfers into ROCSS, plays in the viewer, passes `verify`, and plays in game
 (82's kit, repeated through the real transfer); undo restores ROCSS byte for
 byte.
 
+## Phase 84 - keep a ported mod rebuildable - DONE 2026-09-26 (in-game check pending)
+
+Asked for on 2026-09-26: "continue next 2 phases" (84 and 85; 82 waits on the
+game). Built before 82's question 4 is fully answered, as the roadmap allowed
+("or as an option otherwise"), and on by default: it costs a few MB a skeleton
+and writes nothing a game that never rebuilds will read.
+
+**The working model of a rebuild**, which 84 is built on and 82's kits are to
+confirm: the game loads a mod's four pack files when all four are there and
+each loads (the magic, the version, a skeleton pack's version carrying the
+`Version` line of `descr_skeleton.txt`, and the same entry count in the `.idx`
+and `.dat` headers); if they fail it tries vanilla's; only when those fail too
+does it read `descr_skeleton.txt` and write new packs, and a rebuild that
+meets one file it cannot open stops loading the animations altogether. The
+file's age plays no part. So a block added at the end of the text, with its
+`Version` line untouched, never starts a rebuild; and a mod whose text names
+files that are not on disk (every mod measured: DaC's loose `.cas` files are
+pack entries written out, not files the engine packs) cannot rebuild at all.
+84 makes sure a ported unit is never the reason.
+
+**`unittransfer/animloose.py`.** For each skeleton a port adds:
+- **a loose `.cas` per animation it plays**, where no file is already found
+  (`to_cas`/`cas_bytes`, written through `casanim.write_anim`): each bone's
+  rotations as packed, the moving bones' positions less their pivot over the
+  **entry's** scale, and the pelvis keyed along its root offsets; the pivots
+  are the packed skeleton's bones over the **skeleton's** scale, which is what
+  the engine builds a type's bones from when the file is the first it names.
+  The two scales differ where a pack was put together by hand: DaC's crew
+  animations are packed at 0.89 and played by skeletons at 1.0.
+- **a `type` block**, rendered from the packed skeleton (the packs are the
+  truth): every filled slot a line, `default` first, its flags written only
+  where a slot differs from the engine's default (`-evade`/`-parry`, `-prob`,
+  `-fr`, `-id`, `-if`, `-mintd`, `-maxtd`, `-ld`, `-evt`, in the order the
+  engine reads them); the combat settings (`strike_distances` and the rest,
+  `locomotion_table`, `no_deltas`...) copied from the source's own block for
+  that skeleton, in the order the engine reads them; `scale` from the pack;
+  `parent`, `remove_attack_anims` and `reference_points` left out, since every
+  slot is written in full with its impact point. No source block: a note, and
+  `no_deltas` read off the animations.
+- **an `.evt` file per distinct set of cues**, under
+  `animations/ported/<tag>/events/<skeleton>/`.
+
+**Where the files go.** A path under the destination's own folder is written
+where it says; any other (`mods/Third_Age_3/data/...`, every DaC path) under
+the destination's `data/` with the whole path kept, which is where the game
+looks first. Nothing is written outside the destination.
+
+**In Unit Transfer.** `TransferOptions.keep_rebuildable`, on by default,
+beside "bring its animations": the plan's summary gains `+ KEPT REBUILDABLE`
+(files, MB, blocks, and what was already there), the composer a second switch
+with the same numbers, `/api/transfer` plans an `anim_loose` payload. The
+files are written after the pack append, from the packs as they now are, as
+new files; `descr_skeleton.txt` is backed up whole and gains the blocks at its
+end, in its own line endings. One undo takes it all away, and now removes the
+folders a transfer's new files leave empty. A destination with no
+`descr_skeleton.txt` of its own gets nothing (a new file holding only our
+blocks would be all a rebuild read) and a warning.
+
+**Proved without the game.** `to_packed` is the engine's own reading of a
+`.cas` into a pack entry, written out in Python; every animation ROCSS holds
+(3 133) and every one of every tenth DaC skeleton (3 602), turned into a loose
+file and packed back, equals its entry to float precision, but one:
+`Knife_Default.cas`, which DaC holds at four scales and whose first copy is
+labelled 0.89 with data built at 1.3; no file packs into that. 47 of DaC's
+crew entries were made by the engine's rescale, which works out the distance
+still to travel without zeroing an offset under a millimetre; `to_packed`
+does either. Every one of ROCSS's 23 493 and DaC's 49 083 slots, written as
+flags, reads back as the slot.
+
+**Tested** by `test_animloose` (19): the round trips above, the cues, 40
+rendered blocks read back in step with ROCSS's pack through the toolkit's own
+reader, a real transfer of DaC's Hobbit Infantry into a copy of ROCSS (176
+loose files, 124 `.evt`, one block in step, each file packing back to the
+pack's entry, the rest of `descr_skeleton.txt` untouched, one undo back to byte
+for byte), switched off, and a destination with no text.
+
+**Still to show in game** (the done-when): a ported unit surviving a rebuild.
+It needs a mod that can rebuild, which none installed can; see 82's question 4.
+
+### Phase 84 as it was scheduled
+
+**84 - Keep a ported mod rebuildable (M).** If 82 shows the engine
+regenerates the packs and drops what has no loose file, or as an option
+otherwise: write each ported animation as a loose `.cas` (packed to `.cas` by
+the format notes, through `casanim.write_anim`) at its path, beside the
+`descr_skeleton.txt` block 83 already writes, so a regeneration rebuilds what
+we ported too. This is the route Wilddog described, done only for what we
+added. Done when: a ported unit survives a pack regeneration in game (82's
+question 4).
+
 ## Phase 87 - the real world, whole: Mylae's New Map Editor
 
 The plan, with the table of what is his, what we had and what each piece

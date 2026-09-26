@@ -29,7 +29,7 @@ from typing import Dict, List, Optional, Tuple
 from . import (config, edu as edu_mod, effects as effects_mod,
                engines as engines_mod, eop, localization,
                modeldb, mounts, projectiles as projectiles_mod, sounds)
-from . import animpack
+from . import animloose, animpack
 from . import keyblock as kb
 from .logutil import block, counted, file_op, fingerprint, log
 from .mod import Mod
@@ -167,6 +167,12 @@ class TransferOptions:
     # movement. Off = the three older answers only, and a missing one is left
     # missing, as before.
     bring_animations: bool = True
+    # Phase 84: with the animations brought, also write what a pack rebuild
+    # reads for them - each one as a loose .cas at its slot's path, its cues as
+    # .evt files, and a type block per skeleton added to descr_skeleton.txt - so
+    # a game that rebuilds its packs from that file keeps the unit. Its
+    # Version line is not touched, so writing it never starts a rebuild.
+    keep_rebuildable: bool = True
     # manual per-field EDU overrides: {field_key: full value string}
     field_overrides: Dict[str, str] = field(default_factory=dict)
     # what to do about copied mesh/texture files:
@@ -369,6 +375,9 @@ class TransferPlan:
     anim_port_error: str = ""
     #: the weapon skeletons among those brought, reported apart
     anim_port_weapons: List[str] = field(default_factory=list)
+    #: Phase 84: the loose files and descr_skeleton.txt blocks that keep the
+    #: brought skeletons rebuildable, when ``keep_rebuildable`` is on
+    anim_loose: Optional["animloose.Rebuild"] = None
     #: factions the unit's ``ownership`` and ``era`` lines named that the
     #: destination has not got, left out of the block, by line
     #: (``{"ownership": ["united"]}``). The engine refuses the whole EDU on
@@ -491,6 +500,14 @@ class TransferPlan:
                      + f"; its {sk.slots} slots filled by {c.get('append', 0) + c.get('append_renamed', 0)} "
                        f"appended, {c.get('reuse', 0) + c.get('reuse_content', 0)} reused, "
                        f"{c.get('shared', 0)} shared")
+        lo = self.anim_loose
+        if lo is not None and (lo.files or lo.blocks):
+            d = lo.payload()
+            L.append(f"  + KEPT REBUILDABLE: {d['cas']} loose .cas and {d['evt']} .evt file(s) "
+                     f"({d['bytes'] / 1e6:.2f} MB) and {len(lo.blocks)} type block(s) added to "
+                     f"descr_skeleton.txt, so a pack rebuild keeps them"
+                     + (f"; {lo.present} file(s) already there" if lo.present else ""))
+            L.extend(f"      - {n}" for n in lo.notes)
         return L
 
     def _weapon_lines(self) -> List[str]:
@@ -1041,11 +1058,14 @@ def _plan_anim_port(plan: "TransferPlan", source: Mod, dest: Mod) -> None:
             del d[k]
     if port.notes:
         plan.warnings.extend(port.notes)
-    plan.warnings.append(
-        "the animations come into the packs only: descr_skeleton.txt is left as it "
-        "is, so a game that rebuilds its packs from that file would drop them "
-        "(Phase 82 is to say when it does; Phase 84 writes the loose files that "
-        "survive a rebuild)")
+    if plan.options.keep_rebuildable:
+        plan.anim_loose = animloose.for_port(port, source.data)
+        plan.warnings.extend(plan.anim_loose.errors)
+    else:
+        plan.warnings.append(
+            "the animations come into the packs only: descr_skeleton.txt is left as it "
+            "is and no loose .cas is written, so if the game ever rebuilds its packs "
+            "from that file it cannot build these skeletons")
 
 
 def _apply_mount_anim_donor(plan: "TransferPlan", source: Mod, dest: Mod,
@@ -2685,6 +2705,26 @@ def apply_transfer(plan: TransferPlan) -> Dict:
             target.write_text(text, encoding=encoding)
         file_op("WRITE", target, f"{encoding}, {len(text)} chars")
 
+    # ---- 0b) Phase 84: what a pack rebuild reads for the skeletons just
+    # brought - loose .cas files, .evt files and descr_skeleton.txt blocks -
+    # built from the packs as they now are. Each file is new (a file already at
+    # a path is left alone), so Undo deletes it; the text is backed up whole.
+    if plan.anim_port is not None and plan.options.keep_rebuildable:
+        added = [(s.dest_name, s.name) for s in plan.anim_port.skeletons if s.appends]
+        if added:
+            loose = animloose.build(dest.data, added, source.data, plan.anim_port.tag)
+            for f in loose.files:
+                target = backup_and(f.rel)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(f.data)
+                file_op("WRITE", target, f"{f.size} bytes ({f.kind}, kept rebuildable)")
+            if loose.blocks:
+                old = kb.read_text(dest.data / loose.text_rel, "latin-1")
+                write_text(loose.text_rel, animloose.append_blocks(
+                    old, loose.blocks, f"brought from {source.name} by Unit Transfer ({tid})"),
+                    "latin-1", exact=True)
+            plan.anim_loose = loose
+
     conflicts = {c.rel: c for c in plan.asset_conflicts}
     # Relocating modes write into a folder of our own, so replacing anything that
     # happens to sit there is the right call.
@@ -3073,14 +3113,24 @@ def undo(transfer_id: str) -> Dict:
             target = data / rel
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(bpath, target)
-    # delete created files
+    # delete created files, and the folders that leaves empty (Phase 84 writes
+    # its loose files into folders of their own, ported/<tag>/...)
+    emptied = set()
     for rel in manifest.get("created", []):
         target = data / rel
         try:
             if target.exists():
                 target.unlink()
+                emptied.add(target.parent)
         except OSError:
             pass
+    for d in sorted(emptied, key=lambda p: len(p.parts), reverse=True):
+        while d != data and data in d.parents:
+            try:
+                d.rmdir()
+            except OSError:
+                break
+            d = d.parent
     # M2TWEOP unit files: these are absolute paths outside data/ (often outside
     # the mod), so they carry their own backup location rather than being resolved
     # against `data` like everything above.
