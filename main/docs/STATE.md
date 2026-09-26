@@ -2,6 +2,14 @@
 _Updated: 2026-09-26 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, the schedule in `ROADMAP.md` (the finished rows now in its phase index) (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 76, and 25, are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton; a building tree from another mod); then 25, the OSM backdrop and coastline tracer; then 26, map resize and a new campaign on a map from scratch; then 27, the layer generators; then 77, the animation and skeleton packs read without unpacking (the first of 77-86, animations that travel with a unit); then 78, the 687 slots named and `descr_skeleton.txt` held against the packs; then 79, transfer holding skeletons against the destination's pack, weapon skeletons counted; then 80a, every packed animation of a model's skeletons in the Models viewer, named, grouped, played from `pack.dat`, with its slot's marks and sequences; then 80b, the weapon skeletons moving the weapon, the rider on his mount, `.cas` models played, and another mod's action side by side; then 81, a port appended to a mod's packs and taken back, nothing unpacked; then 83, Unit Transfer bringing a unit's missing animations; **82 is under way in game** (the user testing DaC EUR's Hobbit Infantry in Reforged), then 84. Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.9 and beta 2026-09-25** (2026-09-25), carrying everything through 76 and 25-27. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**The 687 slots all named, 2026-09-26.** A list of the engine's slot names in order,
+shared by the user's friend (`dev/reference/m2_slot_names.json`), agrees with every
+slot measured off the packs, now 462 with Reforged installed again (455 before), so
+`skeleton_slots.json` takes the rest from it and it settles the ten groups (91 is
+`die_to_back_right_2`, 93 `die_to_back_left_2`, 655 `crew_right`...). The builder
+measures first and stops if the two ever disagree; the table records which slots
+were measured (`skelslots.measured`). `test_skelslots` (22).
+
 **82, question 1, answered in game on 2026-09-26: yes.** The user: "it works,
 hobbits animate fine". Reforged loaded a `pack.dat` and `skeletons.dat` with
 entries appended and both headers' counts updated, and played the appended
@@ -24,8 +32,8 @@ reported. The Balrog was undone and done again as `-082721-0e5e1e` with 100 men.
 skeletons, every check passing. **All four play in game** (the user: "it works!"), and after the session Reforged's four pack files were exactly as written (08:27:21, `pack.dat` 226 609 180 bytes): no rebuild with `descr_skeleton.txt` left alone. For 82's question 3, **Stewards Guards** into Reforged (`20260926-093750-178386`): its
 `MTW2_Mace_no_stun` names DaC's copies of the `MTW2_Mace` paths, which Reforged holds with
 its own bytes, so 174 of its 175 slots point at `ported/divi/...` paths no file on disk has;
-Reforged's own `MTW2_Mace` (187 paths) untouched; `pack.dat` 230 372 897 bytes; awaiting the
-user's word. (A renamed skeleton cannot arise through a transfer: only a name the pack lacks is
+Reforged's own `MTW2_Mace` (187 paths) untouched; `pack.dat` 230 372 897 bytes. **It plays** (the user:
+"Yes it works"), so a path that exists only inside the pack works. (A renamed skeleton cannot arise through a transfer: only a name the pack lacks is
 brought.) Still open in 82: when a rebuild happens, which duplicate wins, and whether a loose `.cas` overrides a packed one.
 `test_animtransfer` (29).
 

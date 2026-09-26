@@ -24,6 +24,14 @@ ships none loose, and this copy is not the one the Definitive Edition's pack
 was built from: 52 of its skeletons fill more slots than it names, so those
 are left out), then every installed mod that has both a pack and the text.
 
+**Then the list.** ``m2_slot_names.json`` beside this script is the engine's
+687 slot names in order, shared by the user's friend on 2026-09-26. Measured,
+it agrees with every one of the 455 slots the packs name (the 21 grouped ones
+included), so it names the 232 slots no installed skeleton fills and says which
+slot of a group is which. It is used only after the measurement, and the build
+stops if the two ever disagree on a measured slot. The table records which
+slots were measured.
+
 The output ``skeleton_slots.json`` ships; this script does not.
 """
 from __future__ import annotations
@@ -107,37 +115,60 @@ def solve(obs):
     return name_of, sorted(shared)
 
 
+LIST = Path(__file__).resolve().parent / "m2_slot_names.json"
+
+
+def with_list(measured):
+    """The measured slots, checked against the list, and every slot named by it.
+    Stops on the first measured slot the list does not agree with."""
+    listed = json.loads(LIST.read_text(encoding="utf-8"))["slots"]
+    if len(listed) != animpack.SKELETON_SLOTS:
+        raise SystemExit(f"{LIST.name} has {len(listed)} names, not {animpack.SKELETON_SLOTS}")
+    for i, m in enumerate(measured):
+        if m is None:
+            continue
+        ok = (listed[i].lower() == m.lower()) if isinstance(m, str) \
+            else listed[i].lower() in {x.lower() for x in m}
+        if not ok:
+            raise SystemExit(f"slot {i}: measured {m!r}, {LIST.name} says {listed[i]!r}")
+    return list(listed)
+
+
 def build():
     srcs = sources()
     obs, used = observations(srcs)
     name_of, shared = solve(obs)
-    slots = [None] * animpack.SKELETON_SLOTS
+    measured = [None] * animpack.SKELETON_SLOTS
     for i, n in name_of.items():
-        slots[i] = n
+        measured[i] = n
     for group_slots, names in shared:
         for i in group_slots:
-            slots[i] = names
+            measured[i] = names
+    slots = with_list(measured)
     filled = collections.Counter()
     for label, packs, _types in srcs:
         for _e, sk in animpack.iter_skeletons(packs):
             filled.update(i for i, _s in sk.filled())
     return {
-        "about": "The 687 slots of a packed skeleton, by position. A string is the slot's "
-                 "descr_skeleton.txt anim name; a list is a group of slots that share those "
-                 "names and, in every skeleton measured, the same path. Built by "
-                 "dev/reference/skeleton_slots.py.",
+        "about": "The 687 slots of a packed skeleton, by position, each by its "
+                 "descr_skeleton.txt anim name. `measured` are the slots the installed packs "
+                 "name (aligned with their descr_skeleton.txt); the rest, and which slot of a "
+                 "measured group is which, come from dev/reference/m2_slot_names.json, which "
+                 "agrees with every measured slot. Built by dev/reference/skeleton_slots.py.",
         "built": time.strftime("%Y-%m-%d"),
         "skeletons_used": dict(used),
         "slots": slots,
-        "unnamed_but_filled": sorted(i for i in filled if slots[i] is None),
+        "measured": sorted(i for i, m in enumerate(measured) if m is not None),
+        "groups_settled_by_list": [g for g, _n in shared],
+        "unnamed_but_filled": sorted(i for i in filled if measured[i] is None),
     }
 
 
 def main(argv):
     table = build()
     text = json.dumps(table, indent=1) + "\n"
-    named = sum(1 for s in table["slots"] if s)
-    print(f"{named} of {animpack.SKELETON_SLOTS} slots named from "
+    named = len(table["measured"])
+    print(f"{named} of {animpack.SKELETON_SLOTS} slots measured, the list agreeing on all, from "
           f"{sum(table['skeletons_used'].values())} skeletons {table['skeletons_used']}; "
           f"filled but unnamed: {table['unnamed_but_filled']}")
     if "--check" in argv:

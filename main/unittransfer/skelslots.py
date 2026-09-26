@@ -8,13 +8,15 @@ with the packs wherever the two agree: every skeleton on vanilla, ROCSS and
 DaC whose text names exactly as many animations as its pack fills
 (``dev/reference/skeleton_slots.py``, which says how).
 
-**455 slots have a name**, every slot any installed skeleton fills among them.
-The other 232 are filled by no skeleton on this machine, so nothing names
-them. **21 slots are in groups**: a few slots sharing as many names, where
-every skeleton measured gives each name the same path and the same flags
-(``die_to_back_right_2`` and ``die_to_back_left_2`` on slots 91 and 93).
-Nothing tells those apart and nothing needs to: whichever holds which, each
-holds that path. :func:`label` shows the group as ``a / b``.
+**Every one of the 687 slots has a name** since 2026-09-26. The measurement
+names 462 (455 before Reforged was installed again), every slot an installed
+skeleton fills but one; a few of them only as a group whose names always share
+a path (``die_to_back_right_2`` and ``die_to_back_left_2`` on 91 and 93). A list
+of the engine's 687 names in order, shared by the user's friend
+(``dev/reference/m2_slot_names.json``), agrees with every measured slot, so it
+names the rest and says which slot of a group is which. :func:`measured` says
+whether a slot's name was measured or taken from that list. A group still
+shows as ``a / b`` if a table without the list is ever loaded.
 
 **The packs are the truth.** Many mods appended to their packs, so the text is
 often out of step with them, and the game plays the packs. :func:`report`
@@ -40,12 +42,15 @@ from . import animpack, casanim
 _TABLE_PATH = Path(__file__).resolve().parent / "data" / "skeleton_slots.json"
 _TABLE: Optional[Tuple[Tuple[str, ...], ...]] = None
 _BY_NAME: Dict[str, Tuple[int, ...]] = {}
+_MEASURED: set = set()
 
 
 def _load():
     global _TABLE
     if _TABLE is None:
-        raw = json.loads(_TABLE_PATH.read_text(encoding="utf-8"))["slots"]
+        doc = json.loads(_TABLE_PATH.read_text(encoding="utf-8"))
+        raw = doc["slots"]
+        _MEASURED.update(doc.get("measured") or [i for i, v in enumerate(raw) if v])
         table = []
         for i, v in enumerate(raw):
             names = () if v is None else (v,) if isinstance(v, str) else tuple(v)
@@ -77,6 +82,13 @@ def slots_of(name: str) -> Tuple[int, ...]:
 
 def named() -> int:
     return sum(1 for n in _load() if n)
+
+
+def measured(slot: int) -> bool:
+    """Whether the slot's name was measured off the installed packs (True) or
+    taken from the list of the engine's names (False)."""
+    _load()
+    return slot in _MEASURED
 
 
 # ---------------------------------------------------------------------------

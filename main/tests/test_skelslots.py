@@ -57,24 +57,25 @@ def text_type(body):
 # ---- 1) the table -------------------------------------------------------------------
 print("\n1) the banked table")
 table = [skelslots.names(i) for i in range(animpack.SKELETON_SLOTS)]
-check(f"687 slots, {skelslots.named()} named", len(table) == 687 and skelslots.named() == 455)
+meas = [i for i in range(animpack.SKELETON_SLOTS) if skelslots.measured(i)]
+check(f"687 slots, every one named; {len(meas)} of them measured off the packs",
+      len(table) == 687 and skelslots.named() == 687 and len(meas) >= 455)
 check("stand_a_idle is 0, crew_stand 159, default 686",
       (table[0], table[159], table[686]) == (("stand_a_idle",), ("crew_stand",), ("default",)))
-groups = {}
-for i, n in enumerate(table):
-    if len(n) > 1:
-        groups.setdefault(n, []).append(i)
-check(f"{sum(len(v) for v in groups.values())} slots in {len(groups)} groups, "
-      "each k slots sharing k names", groups and all(len(v) == len(k) for k, v in groups.items()))
-single = [n[0] for n in table if len(n) == 1]
-check("no name on two slots outside a group", len(single) == len(set(single))
-      and not set(single) & {x for k in groups for x in k})
-check("slots_of: one slot, a group's slots, case-blind, or none",
-      (skelslots.slots_of("DEFAULT"), skelslots.slots_of("die_to_back_left_2"),
-       skelslots.slots_of("no_such_anim")) == ((686,), (91, 93), ()))
-check("labels: a name, a group, a number",
+check("one name a slot, no name on two slots",
+      all(len(n) == 1 for n in table) and len({n[0] for n in table}) == 687)
+import json as _json  # noqa: E402
+_listed = _json.loads((ROOT / "dev" / "reference" / "m2_slot_names.json").read_text(encoding="utf-8"))["slots"]
+check("the table is the friend's list, slot for slot (it agreed with every measured slot)",
+      [n[0] for n in table] == _listed)
+check("slots_of: one slot, case-blind, or none; the old groups told apart",
+      (skelslots.slots_of("DEFAULT"), skelslots.slots_of("die_to_back_right_2"),
+       skelslots.slots_of("die_to_back_left_2"), skelslots.slots_of("no_such_anim"))
+      == ((686,), (91,), (93,), ()))
+check("labels: 0, 655 (a group before the list), 1 (unmeasured, named by the list)",
       (skelslots.label(0), skelslots.label(655), skelslots.label(1))
-      == ("stand_a_idle", "crew_right / crew_right_to_crew_stand", "slot 1"))
+      == ("stand_a_idle", "crew_right", "idle_1_short")
+      and skelslots.measured(655) and not skelslots.measured(1))
 
 # ---- 2) the text --------------------------------------------------------------------
 print("\n2) descr_skeleton.txt, the paths that are not one word")

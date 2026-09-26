@@ -526,7 +526,7 @@ questions, each with its kit:
 1. Does the game load a pack with appended entries and the counts updated? **Yes** (2026-09-26, Reforged with four DaC EUR units appended by Phase 83 - Hobbit Infantry, Suriut Chariots, Trolls, Moria Balrog - all animating in a custom battle).
 2. Does the `.dat` header's count matter, or only the `.idx`'s?
 3. Does a renamed skeleton (`<name>_<tag>`) and a namespaced animation path
-   (no such file on disk) work?
+   (no such file on disk) work? *(The path half answered 2026-09-26: **yes**. DaC's Stewards Guards plays in Reforged with 174 of its 175 slots on `ported/divi/...` paths no file on disk has, and Reforged's own `MTW2_Mace` units unchanged. A renamed skeleton cannot arise through a transfer, which only brings a name the pack lacks; it waits for Phase 86.)*
 4. *(Partly answered 2026-09-26: with `descr_skeleton.txt` untouched and older than the packs, a session of play left all four pack files exactly as written, size and time.)* When does the engine regenerate the packs from `descr_skeleton.txt`
    (packs deleted? the text file newer?), and does a regeneration drop entries
    that have no loose `.cas`? This decides whether 84 is needed by default.
