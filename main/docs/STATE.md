@@ -15,10 +15,10 @@ alone until 84 (a rebuild from it could drop pack-only animations).
 installed Third_Age_Reforged as `Hobbit Infantry (copy)`, shown as
 Hobbitry-in-Arms, owned by Gondor and Cardolan there; 4.18 MB appended, every
 check on Reforged's packs passing, all 182 slots playing in the viewer.
-Transfer id `20260926-080427-fac6e3`; `pack.dat` now 222 165 745 bytes.
+First try, `20260926-080427-fac6e3`: the game refused Reforged's whole EDU on "Invalid ownership type 'united'", a DaC faction Reforged has not got, which the transfer had always copied as it was. Fixed (`_drop_unknown_factions`: a faction the destination's descr_sm_factions.txt lacks is left out of `ownership` and the `era` lines, and the plan says so), that transfer undone on Reforged itself (all four packs back byte for byte) and done again as `20260926-081249-680f4d`; `pack.dat` again 222 165 745 bytes.
 **82 is the user's**: does the game load it, do the hobbits animate, do
 Reforged's own units still animate, and is `pack.dat` still that size after
-quitting (if not, the game rebuilt the packs). `test_animtransfer` (20).
+quitting (if not, the game rebuilt the packs). `test_animtransfer` (24).
 
 **Phase 81 is done - append to a pack, and take it back, 2026-09-26,
 committed and uncut.** `animpack.plan_port` says what bringing skeletons and

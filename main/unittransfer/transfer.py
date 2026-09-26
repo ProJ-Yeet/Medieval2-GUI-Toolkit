@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import filecmp
 import logging
+import re
 import shutil
 from dataclasses import dataclass, field, asdict, replace as dc_replace
 from pathlib import Path
@@ -368,6 +369,11 @@ class TransferPlan:
     anim_port_error: str = ""
     #: the weapon skeletons among those brought, reported apart
     anim_port_weapons: List[str] = field(default_factory=list)
+    #: factions the unit's ``ownership`` and ``era`` lines named that the
+    #: destination has not got, left out of the block, by line
+    #: (``{"ownership": ["united"]}``). The engine refuses the whole EDU on
+    #: one ("Invalid ownership type 'united'"), found in game on 2026-09-26
+    factions_dropped: Dict[str, List[str]] = field(default_factory=dict)
     #: what the skeletons were held against: "pack" (the destination's own
     #: skeletons.idx) or "modeldb" (a mod with no pack of its own)
     skeletons_from: str = "modeldb"
@@ -436,6 +442,22 @@ class TransferPlan:
     def _skel_where(self) -> str:
         return (f"{self.dest.name}'s "
                 + ("skeleton pack" if self.skeletons_from == "pack" else "modeldb"))
+
+    def _faction_lines(self) -> List[str]:
+        if not self.factions_dropped:
+            return []
+        gone = sorted({f for fs in self.factions_dropped.values() for f in fs})
+        where = ", ".join(self.factions_dropped)
+        L = [f"  ! FACTIONS - {', '.join(gone)} {'is' if len(gone) == 1 else 'are'} not a faction in "
+             f"{self.dest.name}, so {'it is' if len(gone) == 1 else 'they are'} left out of the unit's "
+             f"{where} (the game refuses the whole unit file on one it does not know)"]
+        if "ownership" in self.factions_dropped and self.factions_left_only_slave:
+            L.append("  ! OWNERSHIP - no faction of the destination owns this unit now; it is "
+                     "left to the rebels (slave). Set its ownership before playing it.")
+        return L
+
+    #: set by :func:`_drop_unknown_factions` when nothing but ``slave`` is left
+    factions_left_only_slave: bool = False
 
     def _anim_port_lines(self) -> List[str]:
         """Phase 83: what bringing the animations will do, one line a skeleton."""
@@ -691,6 +713,7 @@ class TransferPlan:
         if self.missing_models:
             L.append("  ! model entries NOT found in source modeldb: " + ", ".join(self.missing_models))
         L.extend(self._anim_port_lines())
+        L.extend(self._faction_lines())
         # The soldier line's missing animations get their own ONE-LINE entry, tagged
         # "(soldier line)": the composer shows that case beside the Soldier row (the
         # row that fixes it) and drops this line to avoid saying it twice. Keeping it
@@ -2364,6 +2387,14 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                ". OVERWRITING them, which also re-skins the destination's OWN engines "
                "that share these files."))
 
+    # the block the unit will be written as, composed once now so the plan can
+    # say which factions it leaves out (the apply composes it again)
+    if not models and not plan.base_error and not plan.skipped:
+        try:
+            _build_unit_block(plan, unit)
+        except Exception as exc:          # the composer's own errors surface at apply
+            log.debug("plan: the unit block did not compose: %s", exc)
+
     return plan
 
 
@@ -2428,10 +2459,57 @@ def _build_unit_block(plan: TransferPlan, unit) -> str:
         if k in locked:
             continue
         block = edu_mod.set_field(block, k, v)
+    # 4b) the factions the destination has not got, out of `ownership` and the
+    #     `era` lines, whichever of the source, the base or an override put them
+    #     there. After the overrides, so a hand-typed faction is held to it too
+    block = _drop_unknown_factions(plan, block)
     # 5) mercenary flag last, so a manual `attributes` override can't drop it
     if plan.mercenary:
         block = edu_mod.add_attribute(block, MERC_ATTR)
     return block
+
+
+_FACTION_LINE = re.compile(r"^(\s*)(ownership|era\s+\d+)(\s+)([^;\r\n]*?)([ \t]*(?:;[^\r\n]*)?)(\r?\n?)$",
+                           re.IGNORECASE)
+
+
+def _drop_unknown_factions(plan: "TransferPlan", block: str) -> str:
+    """``block`` with every faction its ``ownership`` and ``era N`` lines name
+    that the destination's descr_sm_factions.txt has not got left out
+    (``all`` is a keyword, kept). An ``era`` line left empty goes; an empty
+    ``ownership`` becomes ``slave``, and the plan says so. What was dropped is
+    on ``plan.factions_dropped``. A destination whose factions cannot be read
+    is not checked."""
+    try:
+        valid = {f.lower() for f in plan.dest.faction_cultures}
+    except Exception:
+        valid = set()
+    plan.factions_dropped = {}
+    plan.factions_left_only_slave = False
+    if not valid:
+        return block
+    valid.add("all")
+    out = []
+    for line in block.splitlines(keepends=True):
+        m = _FACTION_LINE.match(line)
+        if not m:
+            out.append(line)
+            continue
+        key = re.sub(r"\s+", " ", m.group(2).lower())
+        vals = [v.strip() for v in m.group(4).split(",") if v.strip()]
+        gone = [v for v in vals if v.lower() not in valid]
+        if not gone:
+            out.append(line)
+            continue
+        plan.factions_dropped[key] = gone
+        keep = [v for v in vals if v.lower() in valid]
+        if not keep:
+            if key != "ownership":
+                continue                      # an era no destination faction is in
+            keep = ["slave"]
+            plan.factions_left_only_slave = True
+        out.append(f"{m.group(1)}{m.group(2)}{m.group(3)}{', '.join(keep)}{m.group(5)}{m.group(6)}")
+    return "".join(out)
 
 
 def apply_transfer(plan: TransferPlan) -> Dict:

@@ -10681,9 +10681,9 @@ Infantry (copy)` (Reforged has its own), its entry renamed
 `pack.dat`), every structural check passing on Reforged's packs (10 013
 animations, 371 skeletons, all 43 994 slot paths indexed), all 182 slots
 playing out of Reforged's own pack in the Models viewer, and the launch check
-ready. Transfer id `20260926-080427-fac6e3`. The in-game check is with the user.
+ready. The first try (`20260926-080427-fac6e3`) was refused in game: "Invalid ownership type 'united'", a DaC faction Reforged has not got. Every transfer had copied `ownership` and the `era` lines as they were; now a faction the destination lacks is left out of them (`_drop_unknown_factions`, after the base and the overrides, so a hand-typed one is held to it too), an `era` line left empty goes, an empty `ownership` becomes `slave` with a warning, and the plan says what was dropped. That transfer was undone on Reforged itself, the first real undo of a pack append (all four files back byte for byte), and done again as `20260926-081249-680f4d`. The in-game check is with the user.
 
-**Tested** by `test_animtransfer` (20), on a throwaway copy of ROCSS's unit
+**Tested** by `test_animtransfer` (24; the last four the faction filter), on a throwaway copy of ROCSS's unit
 files and packs: planned (brought, nothing missing; off, the old warning),
 applied (the packs grow by what was planned, every check passes, every slot
 plays), undone byte for byte, a batch of two units on the same skeletons (the

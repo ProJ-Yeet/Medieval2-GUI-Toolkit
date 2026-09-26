@@ -16,6 +16,9 @@ On a throwaway copy of ROCSS's unit files and its four pack files:
    second reuses what the first brought.
 5. Refused: with the game running nothing is written at all.
 6. The modeldb rename of a skeleton, weapon lists included.
+7. Factions the destination has not got are left out of ownership and the
+   era lines (found in game on 2026-09-26: Reforged refused its whole EDU on
+   DaC's `united`).
 """
 import hashlib
 import shutil
@@ -190,6 +193,48 @@ check("the parsed records say the same", [(a.primary_skeleton, a.pri_weapons) fo
                                           modeldb.renamed_animations(ent.animations, ren)]
       == [("MTW2_Fast_Javelin_dac", ["MTW2_Javelin_primary", "fs_test_shield_dac"])])
 check("an empty map changes nothing", modeldb.rename_skeletons(ent.raw, {}) == ent.raw)
+
+# ---- 7) factions the destination has not got -------------------------------------------
+print("\n7) factions the destination has not got")
+
+
+class _Dest:
+    def __init__(self, facs):
+        self.faction_cultures = {f: "c" for f in facs}
+
+
+class _Plan:
+    def __init__(self, facs):
+        self.dest = _Dest(facs)
+
+
+fp = _Plan(["sicily", "turks", "slave"])
+blk = ("type             x\n"
+       "ownership        slave, sicily, turks, united\n"
+       "era 0            turks, united ; a comment\n"
+       "era 1            united\n"
+       "era 2            all\n"
+       "recruit_priority_offset 0\n")
+got = transfer._drop_unknown_factions(fp, blk)
+check("united left out of ownership and era 0, its comment kept; era 1 (only united) goes; 'all' stays",
+      got == ("type             x\n"
+              "ownership        slave, sicily, turks\n"
+              "era 0            turks ; a comment\n"
+              "era 2            all\n"
+              "recruit_priority_offset 0\n")
+      and fp.factions_dropped == {"ownership": ["united"], "era 0": ["united"], "era 1": ["united"]})
+fp2 = _Plan(["england", "slave"])
+got2 = transfer._drop_unknown_factions(fp2, "ownership  united, turks\r\n")
+check("an ownership left empty becomes slave, its line ending kept, and the plan says so",
+      got2 == "ownership  slave\r\n" and fp2.factions_left_only_slave)
+check("a block naming only real factions is untouched",
+      transfer._drop_unknown_factions(_Plan(["turks", "slave"]), "ownership  turks, slave\n")
+      == "ownership  turks, slave\n")
+reforged = MODS / "Third_Age_Reforged"
+if reforged.is_dir():
+    rp = transfer.plan_transfer(dac, UNIT, Mod(reforged), transfer.TransferOptions())
+    check("DaC's Hobbit Infantry planned into Reforged: united left out, and the summary says so",
+          rp.factions_dropped.get("ownership") == ["united"] and "FACTIONS - united" in rp.summary())
 animpack.game_running = real_running
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
