@@ -27,7 +27,7 @@ Split out of `ROADMAP.md` on 2026-09-05, verbatim.
 | 29, with B4 - the strat model viewer, and a stub that beat the art beside it | below |
 | 18-24 as planned, B2/B3 as reported, 28-43, 54 - the backlog of 2026-09-05 and the 2026-09-12 review, to Health | below, *Split out on 2026-09-23* |
 | 44-53, 55-64, M18, and the upstream passes of 2026-09-13, -17 and -20 | below, *Split out on 2026-09-23* |
-| 65-80a, 25-27, 87, and the 2026-09-23 schedule as it stood | below, *Finished after the 2026-09-23 split* |
+| 65-80, 25-27, 87, and the 2026-09-23 schedule as it stood | below, *Finished after the 2026-09-23 split* |
 
 ---
 
@@ -10418,6 +10418,140 @@ the second action exact without overlap, halfway through the blend halfway
 between the two, the pelvis pinned) and the rider test. Checked in the running
 app on a DaC rider: the picker, an attack out of the pack, the marks, a
 three-step sequence both ways, the rider seated.
+
+## Phase 80b - the unit as the game assembles it, in the Models viewer - DONE 2026-09-26
+
+The second half of Phase 80: item 3's weapon skeletons and the rider on his
+mount, item 6 (`.cas` models) and item 7 (side by side). With 80a, Phase 80 is
+done. Its scoping, as it stood in `ROADMAP.md`, is at the end of this entry.
+
+**The weapon skeletons move the weapon.** Measured first: **1 066 of ROCSS's
+1 800 soldier meshes** weight vertices to `bone_weapon01`, a bone only the
+weapon skeleton has, so 80a carried those vertices with the pelvis and a
+javelin swung loose across the man's legs. A weapon skeleton is two or three
+bones rooted at a hand (`bone_Rhand` + `bone_weapon01`; `bone_Lhand` +
+`bone_shield`), and its root's pivot is exactly where that hand is in the
+T-pose (0.764, 0.51: the clavicle, upper arm, elbow and hand pivots summed),
+so it is built to hang off the body's hand. `animview.add_weapons` does that on
+the server: for the body's slot it takes the weapon skeleton's same slot when
+that is filled (the bow's draw, hold and release) and its `default` otherwise,
+resamples the weapon action onto the body's key times, and appends its bones
+under the body's bone of the root's name. The body's own tracks are untouched,
+and a bone the body already has is left to the body. `/api/model/anim` takes
+`weapons` and `slot`; the panel has a *weapon skeletons* switch and says, per
+weapon skeleton, which bone it added, where, and from which slot. Tested: the
+javelin stays 0.088 from the hand (its pivot) at seven times through the walk.
+Which slot the engine plays for a weapon is read off the files, not proven in
+game; it is 82's kind of question.
+
+**The rider on his mount.** `animview.mounts_for` lists the mounts a rider
+entry can sit on: first those its own units ride (EDU `soldier` this entry,
+`mount` that type, through `descr_mount.txt` to the mount's modeldb entry),
+then every other mount of the class its skeleton sets are for. Each carries
+its skeleton and its `rider_offset`, "(x, y, z) for the rider relative to horse
+or camel root node" in the file's own header. The page loads the mount as a
+second model (`viewer3d.js`'s `v3DrawExtra`, its own buffers, skin and parts),
+plays the mount's action for the rider's slot (the same slot when the mount
+fills it, else its standing idle, else `default`) on the rider's clock, and
+carries the rider's whole pose by the mount's root bone (`bone_H_Saddle`) at
+the offset (`v3aCarry`). The mount's cycle is played in place as a man's is,
+and the rider goes with it. Checked in the app on DaC's `ghash_rider_upg0` on
+the Nandor Glade Riders' `mount_nazgul_horse`: seated, spear up, through the
+walk. The scene is reframed for a horse and a man on it.
+
+**`.cas` models play.** A strat character's skinned `.cas` (Phase 75 placed it)
+now carries its skin in the payload, one bone a vertex at weight 1, laid out as
+a `.mesh` lays its bytes; a static model (every settlement) carries none and is
+served as before. `/api/map/model/anims` gives the skeleton its
+`descr_model_strat.txt` entry names (`strat_assassin`), or, for a model no
+entry draws, every `strat_` skeleton in the pack, marked a guess. The Strat
+model viewer has the Animation panel now. Checked on ROCSS's assassin: his idle
+stands, his walk walks, knife in hand. No battle-unit `.cas` with geometry is
+installed (Phase 75), so none was checked.
+
+**Side by side.** *Beside it* picks another installed mod; `animview.compare`
+says whether it has the skeleton and the slot, the path it plays there,
+whether the two animations are the same bytes and whether the skeletons' bones
+are, and the page draws this model a second time to the right, posed by that
+mod's action with that mod's bones. DaC's `MTW2_HR_Spear` walk is ROCSS's byte
+for byte under another path; ROCSS's `MTW2_Fast_Javelin` missile ready is not
+DaC's, and its bones differ. This is the preview Phase 83's port will be
+checked with. It stands down while a sequence plays or the rider is mounted.
+
+**Tested** by `test_animunit` (36): the weapon bones, their parents, their keys,
+the hand holding them, the slot each weapon skeleton plays, the errors for a
+missing or misrooted weapon skeleton; a rider's mounts, the ridden one first,
+`rider_offset` read the ways the files write it; the assassin's skeleton and
+skin, a backslashed path, a guess for a model nobody draws, a settlement left
+alone; the three comparisons; the four routes; and, under node, the carry
+arithmetic (unturned, turned) and a real DaC rider's pelvis on a real horse's
+saddle plus the offset. `test_animview`, `test_v3anim`, `test_caspose`,
+`test_cas`, `test_casanim` and `test_animedit` unchanged and green.
+
+**Not in 80b**: several riders on one elephant (the first `rider_offset`, the
+driver's, is used), a siege crew on its engine, and a mount's own weapon
+skeletons.
+
+### Phase 80 as it was scheduled
+
+**80 - Every animation a unit has, in the Models viewer (L).** Asked for by
+the user on 2026-09-23 ("I also want to be able to view the different
+animations in our model viewer"), and the user's Discord goal from June: pick
+a unit, its skeleton comes from the modeldb (or is chosen by hand), pick one
+animation or several, and watch it. **What exists (Phase 55)**: the viewer
+plays a `.mesh` unit's actions from `descr_skeleton.txt`, but **only the ones
+shipped as loose files** (`casanim.actions_view`), which for DaC is 1 753 of
+15 661 and for most mods almost none; and never a `.cas` model. What 80 adds:
+
+1. **Every animation, loose or packed.** The picker lists every filled slot
+   of the model's skeleton **from `skeletons.dat`** (Phase 77), named by 78's
+   slot table, not from `descr_skeleton.txt`, which is often out of step
+   (Wilddog). A packed animation becomes the model casanim already draws by
+   the format notes' mapping: bone-major tracks, pivots from the packed skeleton,
+   position keys as offsets from the pivot, and the control bone as the
+   pelvis track so the root motion plays. A loose file at the same path is
+   still preferred, as the game may prefer it too (82's question 6).
+   **The mapping is built** (2026-09-24, `casanim.read_packed_bytes`), for a
+   mod whose pack was unpacked in place: the entries sit under
+   `animations/mods/<mod>/data/animations` still in the pack's own format,
+   and the skeletons under `animations/skeleton/`. What 80 still adds is the
+   reading straight out of `pack.dat` (77), so no unpack is needed.
+2. **Grouped so 200 actions can be found**: by the slot families (stand,
+   walk, run, charge, attack, die, idle, formation, mounted...), with a find
+   box, and the duration, frame count, distance and speed from each
+   animation's summary floats beside its name.
+3. **The unit as the game assembles it** (Makanyane: "body, weapon, shield,
+   mount" at most). Switch between the modeldb's skeleton sets (per mount
+   type, primary and secondary weapon); the **weapon skeletons** animate the
+   weapon and shield bones, which only shows when the mesh has weight on
+   them (a bowman's string, a flag, a javelin); a rider can be shown **on his
+   mount**, both playing the matching slot, the rider's pelvis following the
+   mount (the `HR_*` rider animations store their pelvis as the control bone,
+   the format notes).
+4. **Playback**: play, pause, scrub, speed, loop, in place (Phase 55's
+   controls), and **a sequence** of several animations back to back, with
+   Makanyane's "overlap" (blend the end of one into the start of the next)
+   on for smooth playback and off for inspecting each exactly.
+5. **What the skeleton says about the animation**: the slot's impact frame,
+   turn limits and sound events (the format notes) marked on the timeline.
+6. **`.cas` models too**, once 75 places them by their skeleton: a strat
+   character's or a battle unit's `.cas`, posed and animated.
+7. **Before and after a transfer**: the same animation from the source mod
+   and from the destination side by side, which is how Phase 83's port is
+   previewed and checked.
+
+Done when: every filled slot of a soldier, a horse, a rider on his horse and
+a bowman with his weapon skeleton plays on vanilla, ROCSS and DaC; a packed
+animation that also exists loose draws identically both ways; a three-step
+sequence plays with and without overlap; the slot's events show at their
+frames.
+**80a done 2026-09-25** (items 1, 2, 4 and 5, and item 3's skeleton sets;
+write-up in `ROADMAP_ARCHIVE.md`): every filled slot of a soldier, a horse, a
+rider and a weapon skeleton reads out of the pack on all three installs (a rider played in the app), a packed
+action and the same action loose give the same pose, the sequence plays both
+ways, the events show at their frames. **80b is open**: item 3's weapon
+skeletons moving the weapon and shield bones and the rider drawn on his mount,
+item 6 (`.cas` models) and item 7 (side by side).
 
 ## Phase 87 - the real world, whole: Mylae's New Map Editor
 

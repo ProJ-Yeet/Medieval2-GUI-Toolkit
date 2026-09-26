@@ -528,7 +528,7 @@ for a soldier on screen a few hundred pixels tall.">HD textures</button>
           <button onclick="v3Frame()">Recentre</button>
         </div>
         <div id="v3uvkey"></div>
-        ${v3.cas ? '' : '<div class="v3anim" id="v3anim"></div><div class="v3anim" id="v3export"></div>'}
+        <div class="v3anim" id="v3anim"></div>${v3.cas ? '' : '<div class="v3anim" id="v3export"></div>'}
         <div class="v3parts" id="v3parts"></div>
         <div class="v3facts" id="v3facts"></div>
       </aside>
@@ -1819,6 +1819,98 @@ function v3Draw(){
       const grp = g.groups[idx];
       gl.drawElements(gl.LINES, grp.count*2, gl.UNSIGNED_SHORT, grp.start*4);
     }
+  }
+  // 80b: a second model beside the first - a rider's mount, or this model
+  // played by another mod's animation. v3anim.js keeps them and skins them.
+  if(typeof v3AnimExtras === 'function') v3AnimExtras().forEach(v3DrawExtra);
+}
+
+/* --- a second model (80b) -------------------------------------------------
+   `x` is {geo, pos, nrm, world, ...}: its own geometry with its own skin
+   (a mount, with `img`/`imgAtt` and `groups`), or `shared`, which is this
+   model's geometry posed another way and drawn with this model's UVs,
+   indices, texture and parts. Its buffers are made on the context they are
+   drawn in, and again when a repaint makes a new one. */
+function v3ExtraBuffers(x){
+  const gl = v3.gl, g = x.geo;
+  const mk = (data, target, usage) => {
+    const b = gl.createBuffer();
+    gl.bindBuffer(target, b); gl.bufferData(target, data, usage || gl.STATIC_DRAW);
+    return b;
+  };
+  x.bPos = mk(x.pos || g.positions, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW);
+  x.bNormal = mk(x.nrm || g.normals || new Float32Array(g.vertices*3).fill(0.577), gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW);
+  if(!x.shared){
+    x.bUv = mk(g.uvs || new Float32Array(g.vertices*2), gl.ARRAY_BUFFER);
+    x.bIdx = mk(g.indices, gl.ELEMENT_ARRAY_BUFFER);
+    x.texture = null;
+    if(x.img){
+      const atlas = x.imgAtt ? v3Atlas(x.img, x.imgAtt) : x.img;
+      const t = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlas);
+      const pot = n => n > 0 && (n & (n-1)) === 0;
+      const wrap = pot(atlas.width) && pot(atlas.height) ? gl.REPEAT : gl.CLAMP_TO_EDGE;
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
+      if(wrap === gl.REPEAT){
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      }else gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      x.texture = t;
+    }
+  }
+  x.gl = gl; x.texFor = x.img || null;
+}
+
+/* The posed vertices into its buffers, which are made first if need be. */
+function v3ExtraUpload(x){
+  if(!v3 || !v3.gl || !x || !x.pos) return;
+  const gl = v3.gl;
+  if(x.gl !== gl || (!x.shared && (x.img || null) !== x.texFor)) return v3ExtraBuffers(x);
+  gl.bindBuffer(gl.ARRAY_BUFFER, x.bPos);
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, x.pos);
+  if(x.nrm){
+    gl.bindBuffer(gl.ARRAY_BUFFER, x.bNormal);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, x.nrm);
+  }
+}
+
+function v3DrawExtra(x){
+  const gl = v3.gl;
+  if(!x || !x.geo || !x.pos) return;
+  if(x.gl !== gl) v3ExtraBuffers(x);
+  const g = x.geo, t = x.world || [0, 0, 0];
+  // the same left-handed flip as the model itself, then `world` in the scene's frame
+  gl.uniformMatrix4fv(v3.loc.uModel, false, [-1,0,0,0, 0,1,0,0, 0,0,1,0, t[0],t[1],t[2],1]);
+  const bind = (buf, loc, size) => {
+    if(loc < 0) return;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+  };
+  bind(x.bPos, v3.loc.aPos, 3);
+  bind(x.bNormal, v3.loc.aNormal, 3);
+  bind(x.shared ? v3.bUv : x.bUv, v3.loc.aUv, 2);
+  const tex = x.shared ? v3.texture : x.texture;
+  const textured = !!(tex && g.has_uvs);
+  if(textured){
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.uniform1i(v3.loc.uTex, 0);
+  }
+  gl.uniform1f(v3.loc.uHasTex, textured ? 1 : 0);
+  gl.uniform1f(v3.loc.uUScale, x.shared ? (v3.uScale || 0.5) : (x.uScale || 0.5));
+  gl.uniform1f(v3.loc.uPair, (x.shared ? v3.texAtt : x.imgAtt) ? 1 : 0);
+  gl.uniform1f(v3.loc.uUv, (v3.uv && g.has_uvs) ? 1 : 0);
+  gl.uniform1f(v3.loc.uCutout, v3.cas ? 0 : 1);
+  gl.uniform1f(v3.loc.uFlat, 0);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, x.shared ? v3.bIdx : x.bIdx);
+  for(const idx of (x.shared ? v3Visible() : x.groups || [])){
+    const grp = g.groups[idx];
+    if(grp) gl.drawElements(gl.TRIANGLES, grp.count, gl.UNSIGNED_SHORT, grp.start*2);
   }
 }
 

@@ -39,6 +39,15 @@
        the model's own lowest point, and the ground stays where the still model
        had its feet.
 
+   80b assembles the unit as the game does. The server hangs each WEAPON
+   skeleton's bones (bone_weapon01, bone_shield) under the body's hand for the
+   action's slot, so a mesh weighted to them - 1 066 of ROCSS's 1 800 soldier
+   meshes - moves its weapon with the arm; a rider can be drawn ON HIS MOUNT,
+   the mount playing the same slot and the rider's pose carried by its root
+   bone at descr_mount.txt's rider_offset; a strat .cas plays by the skeleton
+   its descr_model_strat.txt entry names; and the same action out of another
+   mod can stand beside it, which is how a port is checked.
+
    And one about the actions: a CYCLE travels. MTW2_Mace's walk carries the
    pelvis 1.62 forward over its 0.9 s and its charge 2.58, so looped as written
    the man strides out of the frame and snaps back. A cycle is known by its
@@ -303,6 +312,32 @@ function v3aPoseOf(bones, local){
   return out;
 }
 
+/* --- a rider on his mount (80b) -------------------------------------------
+   The mount's root bone (bone_H_Saddle on a horse) carries the rider: every
+   world bone of the rider's pose is taken into the root's frame, offset by
+   descr_mount.txt's rider_offset, "(x, y, z) for the rider relative to horse
+   or camel root node". `root` is the root's world {m, p}, `lift` what the
+   mount itself was shifted by. Pure, so tests/test_v3anim.py runs it. */
+function v3aCarry(pose, root, off, lift){
+  const o = off || [0, 0, 0], l = lift || [0, 0, 0];
+  return pose.map(b => {
+    const d = v3aApply(root.m, [b.p[0] + o[0], b.p[1] + o[1], b.p[2] + o[2]]);
+    return {m: v3aMul(root.m, b.m),
+            p: [root.p[0] + l[0] + d[0], root.p[1] + l[1] + d[1], root.p[2] + l[2] + d[2]]};
+  });
+}
+
+/* Which of the mount's actions plays under the rider's `slot`: the same slot
+   when the mount fills it, else its standing idle, else its default. Returns
+   the row and whether it is the same slot. */
+function v3aMountRow(actions, slot){
+  const rows = (actions || []).filter(r => r.playable);
+  const at = n => rows.find(r => r.slot === n);
+  const same = slot != null ? at(slot) : null;
+  if(same) return {row: same, same: true};
+  return {row: at(0) || at(686) || rows[0] || null, same: false};
+}
+
 /* --- the picker ------------------------------------------------------------
    The list is the server's (animview.entry_view): the entry's skeleton sets,
    one per mount type, and every filled slot of each skeleton in the mod's
@@ -312,17 +347,28 @@ function v3aPoseOf(bones, local){
 /* Called by v3Load once a model's geometry is in: a skinned .mesh asks which
    actions its skeletons have. A .cas and a static model have none to ask for. */
 async function v3AnimInit(){
-  if(!v3 || v3.cas || !v3.geo || !v3.geo.skinned) return v3AnimPanel();
+  if(!v3 || !v3.geo || !v3.geo.skinned) return v3AnimPanel();
   if(!v3.anim) v3.anim = {list: null, set: 0, skel: '', find: '', key: '', data: null,
                           playing: true, t: 0, speed: 1, err: '',
-                          seq: [], seqData: null, seqOn: false, overlap: true};
+                          seq: [], seqData: null, seqOn: false, overlap: true,
+                          weapons: true, mount: null, twin: null};
   if(v3.anim.list) return v3AnimPanel();
   const mine = v3;
   let list;
-  try{ list = await api.get(`/api/model/anims?mod=${enc(v3.mod)}&entry=${enc(v3.entry)}`); }
+  // a strat .cas is played by the skeleton its descr_model_strat.txt entry names
+  const url = v3.cas ? `/api/map/model/anims?mod=${enc(v3.mod)}&rel=${enc(v3.cas)}`
+                     : `/api/model/anims?mod=${enc(v3.mod)}&entry=${enc(v3.entry)}`;
+  try{ list = await api.get(url); }
   catch(e){ list = {error: ''+e}; }
   if(v3 !== mine) return;
   v3.anim.list = list;
+  // a rider's entry: the mounts its units ride, to show it on one
+  if(!v3.cas && (list.sets || []).some(x => (x.mount || 'none').toLowerCase() !== 'none')){
+    v3.anim.mount = {on: false, list: null, pick: 0, x: null, data: null, err: ''};
+    api.get(`/api/model/mounts?mod=${enc(v3.mod)}&entry=${enc(v3.entry)}`)
+      .then(r => { if(v3 === mine && v3.anim.mount){ v3.anim.mount.list = r; v3AnimPanel(); } })
+      .catch(e => { if(v3 === mine && v3.anim.mount){ v3.anim.mount.err = '' + e; v3AnimPanel(); } });
+  }
   const set = (list.sets || [])[v3.anim.set] || (list.sets || [])[0];
   if(set && !v3.anim.skel) v3.anim.skel = set.primary || set.secondary || '';
   v3AnimPanel();
@@ -370,7 +416,7 @@ function v3AnimListHtml(){
 function v3AnimPanel(){
   const host = document.getElementById('v3anim');
   if(!host) return;
-  if(!v3 || v3.cas || !v3.geo || !v3.geo.skinned || !v3.anim){
+  if(!v3 || !v3.geo || !v3.geo.skinned || !v3.anim){
     host.innerHTML = '';
     return;
   }
@@ -383,12 +429,16 @@ function v3AnimPanel(){
     return;
   }
   const set = sets[a.set] || sets[0];
-  const setSel = sets.length > 1
+  const setSel = sets.length > 1 && v3.cas
+    ? `<label class="v3f"><span>Skeleton</span><select onchange="v3AnimSet(this.value)">${
+        sets.map((x, n) => `<option value="${n}" ${n === a.set ? 'selected' : ''}>${esc(x.primary)}${
+          x.entry ? ' · ' + esc(x.entry) : ''}</option>`).join('')}</select></label>`
+    : sets.length > 1
     ? `<label class="v3f"><span>Skeleton set</span><select onchange="v3AnimSet(this.value)">${
         sets.map((x, n) => `<option value="${n}" ${n === a.set ? 'selected' : ''}>${esc(x.mount)} · ${
           esc([x.primary, x.secondary].filter(Boolean).join(' / '))}</option>`).join('')}</select></label>` : '';
   const bodies = [set.primary, set.secondary].filter(Boolean);
-  const skSel = `<label class="v3f"><span>Skeleton</span><select onchange="v3AnimSkel(this.value)">${
+  const skSel = v3.cas ? '' : `<label class="v3f"><span>Skeleton</span><select onchange="v3AnimSkel(this.value)">${
     bodies.map((n, i) => {
       const s = L.skeletons[n.toLowerCase()] || {};
       return `<option value="${esc(n)}" ${n.toLowerCase() === (a.skel || '').toLowerCase() ? 'selected' : ''}>${
@@ -415,11 +465,11 @@ function v3AnimPanel(){
           : `Not in the skeleton pack; these are <code>descr_skeleton.txt</code>’s actions, and only the ones `
             + `shipped loose play.`}</div>`;
   }
-  const weap = [...(set.primary_weapons || []), ...(set.secondary_weapons || [])];
-  const wnote = weap.length ? `<div class="count">Weapon skeletons: ${weap.map(n => {
-      const s = L.skeletons[n.toLowerCase()] || {};
-      return `<code>${esc(n)}</code>${s.packed ? '' : ' (not in the pack)'}`;
-    }).join(', ')}.</div>` : '';
+  const wnote = v3AnimWeaponsHtml(set);
+  const casNote = v3.cas ? (L.guessed
+      ? '<div class="w-warn">No entry in descr_model_strat.txt draws this model, so its skeleton is a guess: every strat skeleton in the pack is offered.</div>'
+      : `<div class="count">Played by the skeleton its descr_model_strat.txt entry names (${
+          esc(set.entry || '')}).</div>`) : '';
   const notes = [];
   if(a.err) notes.push(`<div class="w-bad">${esc(a.err)}</div>`);
   if(a.data && a.missing && a.missing.length)
@@ -433,7 +483,48 @@ function v3AnimPanel(){
     notes.push('<div class="count">A rider’s action: its pelvis rides on the mount, so it is drawn where the model sits, not stood on the ground.</div>');
   if(a.data && (a.data.notes || []).length)
     notes.push(a.data.notes.map(n => `<div class="w-warn">${esc(n)}</div>`).join(''));
-  host.innerHTML = `<div class="k">Animation</div>${setSel}${skSel}${body}${wnote}${notes.join('')}`;
+  host.innerHTML = `<div class="k">Animation</div>${setSel}${skSel}${casNote}${body}${wnote}`
+    + `${v3AnimMountHtml(set)}${v3AnimTwinHtml()}${notes.join('')}`;
+}
+
+/* The weapon skeletons of the body being played: a switch, and what each one
+   did with this action. */
+function v3AnimWeapons(){
+  const a = v3 && v3.anim, L = a && a.list;
+  if(!L || !a.weapons) return [];
+  const set = (L.sets || [])[a.set] || (L.sets || [])[0];
+  if(!set) return [];
+  const sk = (a.skel || '').toLowerCase();
+  if(sk && sk === (set.secondary || '').toLowerCase() && sk !== (set.primary || '').toLowerCase())
+    return set.secondary_weapons || [];
+  return set.primary_weapons || [];
+}
+function v3AnimWeaponsHtml(set){
+  const a = v3.anim, L = a.list;
+  const sk = (a.skel || '').toLowerCase();
+  const mine = sk && sk === (set.secondary || '').toLowerCase() && sk !== (set.primary || '').toLowerCase()
+    ? set.secondary_weapons || [] : set.primary_weapons || [];
+  if(!mine.length) return '';
+  const got = (a.data && !a.seqOn && a.data.weapons) || [];
+  const said = mine.map(n => {
+    const s = L.skeletons[n.toLowerCase()] || {};
+    const r = got.find(g => (g.skeleton || '').toLowerCase() === n.toLowerCase());
+    let what = s.packed ? '' : ' (not in the pack)';
+    if(r && r.error) what = ` - ${esc(r.error)}`;
+    else if(r) what = ` - ${r.bones.length ? r.bones.map(esc).join(', ') : 'no new bone'} on ${esc(r.hangs_off)}, `
+                    + `its ${r.slot === 686 ? 'default' : esc(r.action)}`;
+    return `<code>${esc(n)}</code>${what}`;
+  }).join('; ');
+  return `<label class="count" title="The weapon skeletons move the weapon and shield bones. A mesh weighted to them carries its weapon with the arm; without them those vertices go with the pelvis"><input type="checkbox" ${
+      a.weapons ? 'checked' : ''} onchange="v3AnimWeaponsOn(this.checked)"> weapon skeletons</label>
+    <div class="count">${said}.</div>`;
+}
+function v3AnimWeaponsOn(on){
+  const a = v3 && v3.anim;
+  if(!a) return;
+  a.weapons = !!on;
+  if(a.seqOn) return v3AnimSeqPlay(true);
+  return v3AnimPick(a.key);
 }
 
 /* Play, pause, scrub and speed, the clock, what the slot says about the
@@ -511,9 +602,11 @@ function v3AnimSkel(v){
 }
 
 /* One action's keys: the loose file when there is one, else out of pack.dat. */
-async function v3AnimFetch(row){
+async function v3AnimFetch(row, mod, skel, weapons){
   const q = row.rel ? `rel=${enc(row.rel)}` : `pack=${enc(row.path)}`;
-  try{ return await api.get(`/api/model/anim?mod=${enc(v3.mod)}&${q}&skel=${enc(v3.anim.skel)}`); }
+  const w = weapons !== undefined ? weapons : v3AnimWeapons();
+  const extra = (row.slot != null ? `&slot=${row.slot}` : '') + (w.length ? `&weapons=${enc(w.join(','))}` : '');
+  try{ return await api.get(`/api/model/anim?mod=${enc(mod || v3.mod)}&${q}&skel=${enc(skel || v3.anim.skel)}${extra}`); }
   catch(e){ return {error: '' + e}; }
 }
 
@@ -524,6 +617,7 @@ async function v3AnimPick(key){
   const row = key ? v3AnimRow(key) : null;
   if(!row || !row.playable){
     a.data = null; a.rel = '';
+    if(a.twin) a.twin.data = null;
     v3AnimRest();
     return v3AnimPanel();
   }
@@ -542,6 +636,8 @@ async function v3AnimPick(key){
   a.last = performance.now();
   a.playing = true;
   v3AnimPanel();
+  v3AnimMountAction();
+  v3AnimTwinAction();
 }
 
 function v3AnimSeqAdd(){
@@ -594,6 +690,7 @@ async function v3AnimSeqPlay(restart){
   a.carried = got.every(v3aCarried);
   a.geo = null; a.t = 0; a.playing = true; a.last = performance.now();
   v3AnimPanel();
+  v3AnimMountAction();
 }
 
 const V3A_BLEND = 0.2;
@@ -686,7 +783,14 @@ function v3AnimStep(){
     pose = v3aPose(a.data, a.t);
     shift = [-tr[0] * f, a.carried ? 0 : g.min[1], -tr[1] * f];
   }
+  // on his mount: the mount is posed and skinned first, and carries the rider
+  const root = v3AnimMountStep(g.min[1]);
+  if(root){
+    pose = v3aCarry(pose, root.at, root.off, root.lift);
+    shift = [0, 0, 0];
+  }
   v3aSkin(g, pose, a.bind, a.map, a.pos, a.nrm, shift);
+  v3AnimTwinStep(g);
   const gl = v3.gl;
   gl.bindBuffer(gl.ARRAY_BUFFER, v3.bPos);
   gl.bufferSubData(gl.ARRAY_BUFFER, 0, a.pos);
@@ -702,6 +806,286 @@ function v3AnimStep(){
     const c = document.getElementById('v3aclock');
     if(c) c.textContent = v3AnimClock();
   }
+}
+
+/* --- the mount and the twin (80b) -----------------------------------------
+   Both are drawn by viewer3d.js's v3DrawExtra; this keeps them. The mount is
+   its own model with its own skin and skeleton, playing the rider's slot. The
+   twin is this model posed by another mod's action for the same skeleton and
+   slot, standing to its right. */
+
+function v3AnimExtras(){
+  const a = v3 && v3.anim;
+  if(!a || !a.data) return [];
+  const out = [];
+  const m = a.mount;
+  if(m && m.on && m.x && m.x.pos && m.data) out.push(m.x);
+  const t = a.twin;
+  if(t && t.x && t.x.pos && t.data && !a.seqOn && !(m && m.on)) out.push(t.x);
+  return out;
+}
+
+function v3AnimMountHtml(set){
+  const a = v3.anim, m = a.mount;
+  if(!m || v3.cas) return '';
+  if(m.err) return `<div class="w-bad">The mounts: ${esc(m.err)}</div>`;
+  if(!m.list) return '<div class="count">Finding its mounts…</div>';
+  const rows = m.list.mounts || [];
+  if(!rows.length) return `<div class="count">No mount in descr_mount.txt is a ${esc((m.list.classes || []).join(' or '))} with a model in the modeldb, so it cannot be shown mounted.</div>`;
+  const opts = rows.map((r, n) => `<option value="${n}" ${n === m.pick ? 'selected' : ''}>${esc(r.type)} · ${
+    esc(r.entry)}${r.units.length ? ` · ridden by ${r.units.length} unit${r.units.length === 1 ? '' : 's'}` : ''}</option>`).join('');
+  const r = rows[m.pick] || rows[0];
+  const said = [];
+  if(m.on && m.state === 'loading') said.push('reading the mount…');
+  if(m.on && m.data && m.row) said.push(m.same ? `the mount plays its own ${esc(m.row.action)}`
+    : `the mount has no ${esc((v3AnimRow(a.key) || {}).action || 'such action')}, so it plays its ${esc(m.row.action)}`);
+  if(m.on && m.note) said.push(esc(m.note));
+  if(m.on && r && !r.offset_given) said.push('its descr_mount.txt block gives no rider_offset, so the rider sits on its root bone');
+  return `<label class="count" title="The mount plays the same slot and carries the rider on its root bone, at descr_mount.txt's rider_offset"><input type="checkbox" ${
+      m.on ? 'checked' : ''} onchange="v3AnimMountOn(this.checked)"> on his mount</label>
+    ${m.on ? `<label class="v3f"><span>Mount</span><select onchange="v3AnimMountPick(this.value)">${opts}</select></label>
+      <div class="count">rider at ${(r.offset || [0, 0, 0]).map(v => (+v).toFixed(2)).join(', ')} from its root bone${
+        said.length ? ' · ' + said.join(' · ') : ''}</div>` : ''}`;
+}
+
+function v3AnimMountOn(on){
+  const a = v3 && v3.anim, m = a && a.mount;
+  if(!m) return;
+  m.on = !!on;
+  if(m.on && !m.x) return v3AnimMountLoad();
+  a.dirty = true;
+  if(!m.on) v3AnimFrameBack();
+  v3AnimPanel();
+}
+function v3AnimMountPick(v){
+  const m = v3 && v3.anim && v3.anim.mount;
+  if(!m) return;
+  m.pick = +v || 0;
+  m.x = null; m.data = null;
+  v3AnimMountLoad();
+}
+
+/* The mount's model, first LOD on disk, first skin the mod ships, and its
+   skeleton's actions. */
+async function v3AnimMountLoad(){
+  const a = v3.anim, m = a.mount, mine = v3;
+  const r = ((m.list || {}).mounts || [])[m.pick];
+  if(!r) return;
+  m.state = 'loading'; m.note = ''; v3AnimPanel();
+  let info, geo, list;
+  try{
+    info = await api.get(`/api/model?mod=${enc(v3.mod)}&entry=${enc(r.entry)}`);
+    if(info.error) throw new Error(info.error);
+    const lod = (info.lods.find(l => l.exists) || {index: 0}).index;
+    const res = await fetch(`/api/model/geometry?mod=${enc(v3.mod)}&entry=${enc(r.entry)}&lod=${lod}`);
+    if(!res.ok){ let msg = `the server answered ${res.status}`; try{ msg = (await res.json()).error || msg; }catch(e){} throw new Error(msg); }
+    geo = v3Parse(await res.arrayBuffer());
+    list = await api.get(`/api/model/anims?mod=${enc(v3.mod)}&entry=${enc(r.entry)}`);
+  }catch(e){
+    if(v3 !== mine) return;
+    m.state = ''; m.err = `${r.entry}: ${e.message || e}`; return v3AnimPanel();
+  }
+  if(v3 !== mine || a.mount !== m) return;
+  if(!geo.skinned){ m.state = ''; m.note = `${r.entry} is not a skinned model`; return v3AnimPanel(); }
+  // one variant a part, the stances a model does not wear at once left off
+  const parts = new Map();
+  geo.groups.forEach((g, idx) => { const k = (g.name || '').toLowerCase(); if(!parts.has(k)) parts.set(k, idx); });
+  const groups = [...parts.entries()].filter(([k]) => !v3SlotHidden(k)).map(([, idx]) => idx);
+  const skin = (info.skins || []).find(s => s.exists) || null;
+  m.x = {geo, info, list, groups, entry: r.entry, uScale: skin && skin.attach ? 1.0 : 0.5,
+         pos: new Float32Array(geo.vertices * 3), nrm: geo.normals ? new Float32Array(geo.vertices * 3) : null};
+  m.skel = r.skeleton || (((list.sets || [])[0] || {}).primary || '');
+  if(skin) v3AnimExtraSkin(m.x, skin, mine);
+  m.state = '';
+  await v3AnimMountAction();
+  v3AnimFrameMounted();
+}
+
+/* A mount's sheets, glued as the model's are (v3Apply's rule for u). */
+function v3AnimExtraSkin(x, skin, mine){
+  const load = rel => new Promise(res => {
+    if(!rel) return res(null);
+    const img = new Image();
+    img.onload = () => res(v3Degenerate(img) ? null : img);
+    img.onerror = () => res(null);
+    img.src = v3TexUrl(rel);
+  });
+  const same = skin.attach && skin.rel && skin.attach.toLowerCase() === skin.rel.toLowerCase();
+  Promise.all([load(skin.rel), load(skin.attach_exists && !same ? skin.attach : '')]).then(([main, att]) => {
+    if(v3 !== mine || !main) return;
+    x.img = main; x.imgAtt = att;
+    // glued, or one sheet over the two units: halved; named and not glued: full
+    x.uScale = att ? 0.5 : (skin.attach ? 1.0 : 0.5);
+    if(v3.anim) v3.anim.dirty = true;
+  });
+}
+
+/* The mount's action for the rider's (or, in a sequence, one for each). */
+async function v3AnimMountAction(){
+  const a = v3 && v3.anim, m = a && a.mount;
+  if(!m || !m.on || !m.x || !a.data) return;
+  const mine = v3;
+  const sk = (m.x.list.skeletons || {})[(m.skel || '').toLowerCase()];
+  if(!sk || !sk.actions){ m.data = null; m.note = `${m.skel || 'its skeleton'} is not in the skeleton pack`; return v3AnimPanel(); }
+  const rows = a.seqOn ? a.seq : [v3AnimRow(a.key)];
+  const picks = rows.map(r => v3aMountRow(sk.actions, r ? r.slot : null));
+  if(picks.some(p => !p.row)){ m.data = null; m.note = 'the mount has no action to play'; return v3AnimPanel(); }
+  const got = [];
+  for(const p of picks){
+    const d = await v3AnimFetch(p.row, v3.mod, m.skel, []);
+    if(v3 !== mine) return;
+    if(d.error){ m.data = null; m.note = d.error; return v3AnimPanel(); }
+    got.push(d);
+  }
+  m.row = picks[0].row; m.same = picks.every(p => p.same);
+  m.data = got[0]; m.seqData = a.seqOn ? got : null;
+  m.bind = v3aBind(got[0]);
+  m.travel = a.seqOn ? null : v3aTravel(got[0]);
+  const bm = v3aBoneMap(m.x.geo.bones, got[0]);
+  m.map = bm.map;
+  m.hub = got[0].bones.findIndex(b => b.parent === 0);
+  a.dirty = true;
+  v3AnimPanel();
+}
+
+/* Pose and skin the mount at the rider's clock, and hand back its root bone's
+   world place for the rider to be carried by. */
+function v3AnimMountStep(ground){
+  const a = v3.anim, m = a.mount;
+  if(!m || !m.on || !m.x || !m.data || m.hub < 0) return null;
+  let pose, lift;
+  if(a.seqOn && m.seqData){
+    pose = v3aPoseOf(m.data.bones, v3aSeqSample(m.seqData, a.t, a.overlap ? V3A_BLEND : 0));
+    lift = [0, ground, 0];
+  }else{
+    const t = m.data.times || [], len = t.length ? t[t.length - 1] : 0;
+    const f = len > 0 ? ((a.t % len) + len) % len / len : 0;
+    const tr = m.travel || [0, 0];
+    pose = v3aPose(m.data, a.t);
+    lift = [-tr[0] * f, ground, -tr[1] * f];
+  }
+  v3aSkin(m.x.geo, pose, m.bind, m.map, m.x.pos, m.x.nrm, lift);
+  v3ExtraUpload(m.x);
+  const r = ((m.list || {}).mounts || [])[m.pick] || {};
+  return {at: pose[m.hub], off: r.offset || [0, 0, 0], lift};
+}
+
+/* Mounted, the scene is a horse and a man on it: frame the two. */
+function v3AnimFrameMounted(){
+  const m = v3.anim.mount;
+  if(!m || !m.x || m.framed) return;
+  const g = v3.geo, h = m.x.geo;
+  const tall = (h.max[1] - h.min[1]) + (g.max[1] - g.min[1]) * 0.6;
+  const long = h.max[2] - h.min[2];
+  v3.centre = [0, g.min[1] + tall / 2, (h.max[2] + h.min[2]) / 2];
+  v3.dist = Math.max(tall, long / 2) * 1.2;
+  m.framed = true;
+}
+function v3AnimFrameBack(){
+  const m = v3.anim.mount;
+  if(m) m.framed = false;
+  const t = v3.anim.twin;
+  if(t) t.framed = 0;
+  v3Frame();
+}
+
+/* Side by side: the mods to set against this one. */
+function v3AnimTwinHtml(){
+  const a = v3.anim;
+  const mods = (state.mods || []).filter(x => !x.pack && x.name !== v3.mod);
+  if(!mods.length) return '';
+  const t = a.twin || {};
+  const opts = `<option value="">nothing beside it</option>` + mods.map(x =>
+    `<option value="${esc(x.name)}" ${x.name === t.mod ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
+  let said = '';
+  if(t.mod){
+    const c = t.cmp;
+    if(a.mount && a.mount.on) said = 'Taken off while the rider is on his mount.';
+    else if(a.seqOn) said = 'Not shown while a sequence plays.';
+    else if(!a.key) said = 'Pick an action to see it in both.';
+    else if(t.err) said = esc(t.err);
+    else if(!c) said = 'reading…';
+    else if(!c.has_skeleton) said = `${esc(t.mod)}’s skeleton pack has no <code>${esc(c.skeleton)}</code>: a port would have to bring it.`;
+    else if(!c.has_slot) said = `${esc(t.mod)}’s <code>${esc(c.skeleton)}</code> leaves ${esc(c.action)} empty.`;
+    else said = `On the right, ${esc(t.mod)}${c.packs === 'vanilla' ? ' (vanilla’s packs)' : ''}: `
+      + (c.same_bytes ? 'the same animation, byte for byte' + (c.same_path ? '' : `, under <code>${esc(c.path)}</code>`)
+         : `a different animation, <code>${esc(c.path)}</code>`)
+      + (c.frames ? `, ${c.frames} f · ${(+c.duration).toFixed(2)} s` : '')
+      + (c.same_bones ? '' : '; its skeleton’s bones differ from this one’s') + '.';
+  }
+  return `<label class="v3f" title="The same skeleton and slot out of another mod, drawn to the right of this one"><span>Beside it</span>
+    <select onchange="v3AnimTwinMod(this.value)">${opts}</select></label>${said ? `<div class="count">${said}</div>` : ''}`;
+}
+
+function v3AnimTwinMod(mod){
+  const a = v3 && v3.anim;
+  if(!a) return;
+  a.twin = mod ? {mod, cmp: null, data: null, x: null, err: '', framed: 0} : null;
+  if(!mod){ v3AnimFrameBack(); return v3AnimPanel(); }
+  v3AnimTwinAction();
+}
+
+/* The other mod's take on the action being played. */
+async function v3AnimTwinAction(){
+  const a = v3 && v3.anim, t = a && a.twin;
+  if(!t) return;
+  t.cmp = null; t.data = null; t.err = '';
+  const row = v3AnimRow(a.key);
+  if(!row || row.slot == null || a.seqOn){ v3AnimPanel(); return; }
+  const mine = v3, key = a.key;
+  let c;
+  try{ c = await api.get(`/api/model/compare?mod=${enc(v3.mod)}&other=${enc(t.mod)}&skel=${enc(a.skel)}&slot=${row.slot}`); }
+  catch(e){ c = {error: '' + e}; }
+  if(v3 !== mine || a.twin !== t || a.key !== key) return;
+  if(c.error){ t.err = c.error; return v3AnimPanel(); }
+  t.cmp = c;
+  if(c.has_slot && c.playable){
+    const d = await v3AnimFetch({path: c.path, slot: row.slot}, t.mod, a.skel);
+    if(v3 !== mine || a.twin !== t || a.key !== key) return;
+    if(d.error) t.err = d.error;
+    else{
+      t.data = d;
+      t.bind = v3aBind(d);
+      t.travel = v3aTravel(d);
+      t.carried = v3aCarried(d);
+      t.geo = null;
+      v3AnimTwinPlace();
+    }
+  }
+  a.dirty = true;
+  v3AnimPanel();
+}
+
+/* To the right of the model, clear of its widest reach, and the camera moved
+   to look between the two. */
+function v3AnimTwinPlace(){
+  const t = v3.anim.twin, g = v3.geo;
+  const gap = Math.max(1.0, (g.max[0] - g.min[0]) + 0.3);
+  if(!t.x) t.x = {geo: g, shared: true, pos: null, nrm: null};
+  t.x.world = [gap, 0, 0];
+  if(t.framed !== gap){
+    v3.centre[0] += (gap - (t.framed || 0)) / 2;
+    v3.dist = Math.max(v3.dist, gap * 1.3);
+    t.framed = gap;
+  }
+}
+
+function v3AnimTwinStep(g){
+  const a = v3.anim, t = a.twin;
+  if(!t || !t.data || a.seqOn || (a.mount && a.mount.on)) return;
+  if(t.geo !== g){
+    t.map = v3aBoneMap(g.bones, t.data).map;
+    t.x = {geo: g, shared: true, world: t.x ? t.x.world : [0, 0, 0],
+           pos: new Float32Array(g.vertices * 3), nrm: g.normals ? new Float32Array(g.vertices * 3) : null};
+    t.geo = g;
+    v3AnimTwinPlace();
+  }
+  const d = t.data.times || [], len = d.length ? d[d.length - 1] : 0;
+  const f = len > 0 ? ((a.t % len) + len) % len / len : 0;
+  const tr = t.travel || [0, 0];
+  v3aSkin(g, v3aPose(t.data, a.t), t.bind, t.map, t.x.pos, t.x.nrm,
+          [-tr[0] * f, t.carried ? 0 : g.min[1], -tr[1] * f]);
+  v3ExtraUpload(t.x);
 }
 
 /* Back to the model as modelled: the bind pose, straight from the file. */

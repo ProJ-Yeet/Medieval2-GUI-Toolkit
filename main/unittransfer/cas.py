@@ -750,8 +750,20 @@ def as_mesh(scene: CasScene, skeleton: Optional[CasScene] = None,
         out.notes.append("its bones all sit at the origin and no skeleton was "
                          "found beside it, so it is drawn as stored, its pieces "
                          "on top of one another")
+    # 80b: a placed skinned model carries its skin, one bone a vertex at weight
+    # 1, so the viewer can play it; the four bytes a vertex are laid out as a
+    # .mesh lays them (the first weight's bone third). An object with no bones
+    # hangs off the Scene Root, which never moves. A node past 255 cannot be
+    # named in a byte, so such a model is served unskinned, as before.
+    skin = bool(world) and len(scene.nodes) <= 0xFF
+    ids = bytearray()
     base = 0
     for obj in scene.objects:
+        if skin:
+            out.weights.extend((1.0, 0.0) * obj.vertices)
+            bones = obj.bones if obj.skinned and len(obj.bones) == obj.vertices else [0] * obj.vertices
+            for b in bones:
+                ids += bytes((0, 0, b if b < len(scene.nodes) else 0, 0))
         out.positions.extend(posed_positions(obj, world) if world else obj.positions)
         out.normals.extend(obj.normals)
         if any_uvs:
@@ -767,6 +779,8 @@ def as_mesh(scene: CasScene, skeleton: Optional[CasScene] = None,
             sheets="main",
         ))
         base += obj.vertices
+    if skin:
+        out.bone_ids = bytes(ids)
     if base > 0xFFFF:
         raise CasError(f"{Path(scene.source).name}: its {len(scene.objects)} "
                        f"meshes come to {base:,} vertices, past what 16-bit "

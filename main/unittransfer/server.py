@@ -2407,7 +2407,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._err(404, "unknown mod")
                 return self._json(sprites.overview(self.registry.get(name)))
             if u.path in ("/api/map/models", "/api/map/model",
-                          "/api/map/model/geometry"):
+                          "/api/map/model/geometry", "/api/map/model/anims"):
                 # 16k, and ahead of _map_route on purpose: a strat model is a
                 # file in the mod, not a layer of a map, and a mod that ships
                 # models and no map of its own should still preview them.
@@ -2491,7 +2491,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/icon":
                 return self._icon(q)
             if u.path in ("/api/model", "/api/model/geometry", "/model_texture",
-                          "/api/model/anims", "/api/model/anim", "/api/model/export"):
+                          "/api/model/anims", "/api/model/anim", "/api/model/export",
+                          "/api/model/mounts", "/api/model/compare"):
                 return self._model_route(u.path, q)
             return self._err(404, "not found")
         except ModDataError as e:
@@ -5194,15 +5195,34 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, data, "image/png",
                               {"X-Texture-Full-Size": "1" if hd else "0"})
 
+        # 80b: the weapon skeletons to hang off the body, and the body's slot,
+        # which picks each weapon skeleton's action
+        weapons = [w for w in (q.get("weapons") or [""])[0].split(",") if w.strip()]
+        slot_q = (q.get("slot") or [""])[0]
+        slot = int(slot_q) if slot_q.lstrip("-").isdigit() else None
+
+        def anim_json(anim):
+            out = animedit.view(anim)
+            out["weapons"] = getattr(anim, "weapons", [])
+            return self._json(out)
+
+        if path == "/api/model/compare":
+            # 80b: the same skeleton's slot in another mod, for side by side
+            other = (q.get("other") or [""])[0]
+            if not other or other not in self.registry.names():
+                return self._err(404, "unknown mod to compare with")
+            return self._json(animview.compare(mod.data, self.registry.get(other).data,
+                                               (q.get("skel") or [""])[0], slot if slot is not None else 0))
         if path == "/api/model/anim" and not (q.get("rel") or [""])[0]:
             # 80: an action straight out of pack.dat, with its packed skeleton's
             # bones; `pack` is the path exactly as pack.idx and the slot hold it
             try:
                 anim = animview.read(mod.data, (q.get("skel") or [""])[0],
-                                     path=(q.get("pack") or [""])[0])
+                                     path=(q.get("pack") or [""])[0],
+                                     weapons=weapons, slot=slot)
             except casanim.AnimError as exc:
                 return self._err(400, str(exc))
-            return self._json(animedit.view(anim))
+            return anim_json(anim)
         if path == "/api/model/anim":
             # one animation's keys, Phase 55b. `rel` came out of the action list
             # below, and is resolved and held under data/ like every `rel`
@@ -5215,8 +5235,9 @@ class Handler(BaseHTTPRequestHandler):
                 anim = casanim.read_anim(src, (q.get("skel") or [""])[0], mod.data)
             except casanim.AnimError as exc:
                 return self._err(400, str(exc))
+            anim.weapons = animview.add_weapons(mod.data, anim, weapons, slot) if weapons else []
             # with each key's rotation as Euler degrees too, for the editor (57a)
-            return self._json(animedit.view(anim))
+            return anim_json(anim)
 
         entry = mod.modeldb.by_name().get((q.get("entry") or [""])[0].lower())
         if entry is None:
@@ -5255,6 +5276,9 @@ class Handler(BaseHTTPRequestHandler):
             # 80: the entry's skeleton sets, and every filled slot of each
             # skeleton in skeletons.dat, named, grouped and playable from the pack
             return self._json(animview.entry_view(mod.data, entry))
+        if path == "/api/model/mounts":
+            # 80b: the mounts a rider can be shown on, with its rider_offset
+            return self._json(animview.mounts_for(mod, entry))
 
         lod = int((q.get("lod") or ["0"])[0] or 0)
         rels = entry.mesh_files()
@@ -5299,6 +5323,9 @@ class Handler(BaseHTTPRequestHandler):
             scene = cas.read_cas(src)
         except cas.CasError as exc:
             return self._err(400, str(exc))
+        if path == "/api/map/model/anims":
+            # 80b: a strat model's skeleton, from descr_model_strat.txt, and its actions
+            return self._json(animview.cas_view(mod, rel))
         # 75: a skinned model is placed by its bones, or by a skeleton beside it
         skeleton, how = cas.pose_of(src, scene)
         if path == "/api/map/model":

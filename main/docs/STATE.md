@@ -1,7 +1,21 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-09-25 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, the schedule in `ROADMAP.md` (the finished rows now in its phase index) (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 76, and 25, are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton; a building tree from another mod); then 25, the OSM backdrop and coastline tracer; then 26, map resize and a new campaign on a map from scratch; then 27, the layer generators; then 77, the animation and skeleton packs read without unpacking (the first of 77-86, animations that travel with a unit); then 78, the 687 slots named and `descr_skeleton.txt` held against the packs; then 79, transfer holding skeletons against the destination's pack, weapon skeletons counted; then 80a, every packed animation of a model's skeletons in the Models viewer, named, grouped, played from `pack.dat`, with its slot's marks and sequences; **80b is next** (the weapon skeletons moving the weapon bones, the rider on his mount, `.cas` models, and the source and destination side by side). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.9 and beta 2026-09-25** (2026-09-25), carrying everything through 76 and 25-27. **Releasing is on-request only**: commit to master and stop_
+_Updated: 2026-09-26 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, the schedule in `ROADMAP.md` (the finished rows now in its phase index) (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 76, and 25, are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton; a building tree from another mod); then 25, the OSM backdrop and coastline tracer; then 26, map resize and a new campaign on a map from scratch; then 27, the layer generators; then 77, the animation and skeleton packs read without unpacking (the first of 77-86, animations that travel with a unit); then 78, the 687 slots named and `descr_skeleton.txt` held against the packs; then 79, transfer holding skeletons against the destination's pack, weapon skeletons counted; then 80a, every packed animation of a model's skeletons in the Models viewer, named, grouped, played from `pack.dat`, with its slot's marks and sequences; then 80b, the weapon skeletons moving the weapon, the rider on his mount, `.cas` models played, and another mod's action side by side; **81 is next** (append to a pack, and take it back). Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.9 and beta 2026-09-25** (2026-09-25), carrying everything through 76 and 25-27. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**Phase 80b is done, and with it 80 - the unit as the game assembles it,
+2026-09-26, committed and uncut**, on the user's word ("start next 2 phases":
+80b and 81). The weapon skeletons now move the weapon: 1 066 of ROCSS's 1 800
+soldier meshes weight their weapon to `bone_weapon01`, which only the weapon
+skeleton has, and 80a carried it with the pelvis. `animview.add_weapons` hangs
+each weapon skeleton's bones off the body's hand for the action's slot (or its
+`default`), with a switch in the panel. A rider can be shown **on his mount**
+(`animview.mounts_for`: the mounts his units ride first, from the EDU and
+`descr_mount.txt`), the mount a second drawn model playing the same slot and
+carrying the rider at its `rider_offset`. A strat `.cas` plays by the skeleton
+its `descr_model_strat.txt` entry names (its skin now in the payload). *Beside
+it* draws the same slot out of another mod to the right, and says whether it is
+the same bytes. `test_animunit` (36). **81 is next.**
+
 **Phase 87 is done - the real world, whole, 2026-09-25, committed and uncut**, on
 the user's word ("port over the complete feature of the real world maps that
 is in mylaes tool, record this as a new phase at the end"). The rest of his
@@ -54,7 +68,7 @@ rotation, and `reference/` with `map_regions.txt` in his columns, the historic
 sites already fetched (his text and a PNG a tag) and, if asked, a reference
 picture. Only the picture can use the network. Byte-exact on both installed
 mods (ROCSS 449 provinces, 232 ports; DaC 201). `test_mapbundle` (22).
-**80b is next** (87 was built ahead of it).
+80b followed it.
 
 **Phase 80a is done - every animation a model has, in the Models viewer,
 2026-09-25, committed and uncut.** `unittransfer/animview.py`: the viewer's
@@ -67,7 +81,7 @@ are listed; the slot's impact frame, events and turn limits are marked under
 the scrubber; several actions play as a **sequence**, overlapped (0.2 s blend)
 or end to end. A rider's action (pelvis carried by the mount) is drawn where
 the model sits instead of sunk into the ground. `test_animview` (24).
-**80b is next**: the weapon skeletons animating the weapon and shield bones,
+80b followed: the weapon skeletons animating the weapon and shield bones,
 the rider on his mount, `.cas` models, and before/after side by side.
 
 **Phase 79 is done - transfer knows what the destination really has,

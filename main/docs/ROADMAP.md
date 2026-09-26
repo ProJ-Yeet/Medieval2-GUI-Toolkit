@@ -134,7 +134,7 @@ finishes; the schedule holds only what is left.
 | 56-60, 62-69, 74-76 | Several factions and the faction zip; the animation editor and converter; will this mod launch; settlement mechanics; add a religion; one file in or out; the minor files (populace and off-map models, animals, standards, advice, battle banners, hero abilities, area effects, walls, agents and generals); a settlement model imported; the `.cas` view placed by its skeleton; a building tree from another mod; and 71's `data/` zip loaded back | v2.3.9 at the latest |
 | 61, 70-73 | Delete, create and copy a settlement; every tile as text; a campaign as a zip; a horde start; a campaign from another mod | beta 2026-09-25 at the latest |
 | 25-27 | The OSM backdrop and coastline; map resize and a map from scratch; the layer generators | beta 2026-09-25 |
-| 77-79, 80a | The packs read; the 687 slots named; transfer held against the destination's pack; every packed animation in the Models viewer | uncut |
+| 77-80 | The packs read; the 687 slots named; transfer held against the destination's pack; every packed animation in the Models viewer, with its weapons, its mount, `.cas` models and another mod's side by side | uncut |
 | 87 | The real world, whole: Mylae's New Map Editor, 87a-87h | uncut, beta line |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
@@ -391,7 +391,6 @@ notes on 74-76, is in `ROADMAP_ARCHIVE.md` under *The 2026-09-23 schedule*.
 
 | # | Phase | Stars | Size | Line |
 |---|---|---|---|---|
-| 80 | Every animation a unit has, in the Models viewer: packed ones, named, with its weapons, shield and mount | - | L | both - **80a done 2026-09-25**, 80b open |
 | 81 | Append to a pack, and take it back | - | L | both |
 | 82 | In-game proof: what the engine accepts, rebuilds and prefers | - | S | both |
 | 83 | Port the animations with a unit | - | L | both |
@@ -519,67 +518,8 @@ the main path.
 
 ## The phases
 
-**77 to 79 are done**; each one's scoping and write-up are in
+**77 to 80 are done**; each one's scoping and write-up are in
 `ROADMAP_ARCHIVE.md`.
-
-**80 - Every animation a unit has, in the Models viewer (L).** Asked for by
-the user on 2026-09-23 ("I also want to be able to view the different
-animations in our model viewer"), and the user's Discord goal from June: pick
-a unit, its skeleton comes from the modeldb (or is chosen by hand), pick one
-animation or several, and watch it. **What exists (Phase 55)**: the viewer
-plays a `.mesh` unit's actions from `descr_skeleton.txt`, but **only the ones
-shipped as loose files** (`casanim.actions_view`), which for DaC is 1 753 of
-15 661 and for most mods almost none; and never a `.cas` model. What 80 adds:
-
-1. **Every animation, loose or packed.** The picker lists every filled slot
-   of the model's skeleton **from `skeletons.dat`** (Phase 77), named by 78's
-   slot table, not from `descr_skeleton.txt`, which is often out of step
-   (Wilddog). A packed animation becomes the model casanim already draws by
-   the format notes' mapping: bone-major tracks, pivots from the packed skeleton,
-   position keys as offsets from the pivot, and the control bone as the
-   pelvis track so the root motion plays. A loose file at the same path is
-   still preferred, as the game may prefer it too (82's question 6).
-   **The mapping is built** (2026-09-24, `casanim.read_packed_bytes`), for a
-   mod whose pack was unpacked in place: the entries sit under
-   `animations/mods/<mod>/data/animations` still in the pack's own format,
-   and the skeletons under `animations/skeleton/`. What 80 still adds is the
-   reading straight out of `pack.dat` (77), so no unpack is needed.
-2. **Grouped so 200 actions can be found**: by the slot families (stand,
-   walk, run, charge, attack, die, idle, formation, mounted...), with a find
-   box, and the duration, frame count, distance and speed from each
-   animation's summary floats beside its name.
-3. **The unit as the game assembles it** (Makanyane: "body, weapon, shield,
-   mount" at most). Switch between the modeldb's skeleton sets (per mount
-   type, primary and secondary weapon); the **weapon skeletons** animate the
-   weapon and shield bones, which only shows when the mesh has weight on
-   them (a bowman's string, a flag, a javelin); a rider can be shown **on his
-   mount**, both playing the matching slot, the rider's pelvis following the
-   mount (the `HR_*` rider animations store their pelvis as the control bone,
-   the format notes).
-4. **Playback**: play, pause, scrub, speed, loop, in place (Phase 55's
-   controls), and **a sequence** of several animations back to back, with
-   Makanyane's "overlap" (blend the end of one into the start of the next)
-   on for smooth playback and off for inspecting each exactly.
-5. **What the skeleton says about the animation**: the slot's impact frame,
-   turn limits and sound events (the format notes) marked on the timeline.
-6. **`.cas` models too**, once 75 places them by their skeleton: a strat
-   character's or a battle unit's `.cas`, posed and animated.
-7. **Before and after a transfer**: the same animation from the source mod
-   and from the destination side by side, which is how Phase 83's port is
-   previewed and checked.
-
-Done when: every filled slot of a soldier, a horse, a rider on his horse and
-a bowman with his weapon skeleton plays on vanilla, ROCSS and DaC; a packed
-animation that also exists loose draws identically both ways; a three-step
-sequence plays with and without overlap; the slot's events show at their
-frames.
-**80a done 2026-09-25** (items 1, 2, 4 and 5, and item 3's skeleton sets;
-write-up in `ROADMAP_ARCHIVE.md`): every filled slot of a soldier, a horse, a
-rider and a weapon skeleton reads out of the pack on all three installs (a rider played in the app), a packed
-action and the same action loose give the same pose, the sequence plays both
-ways, the events show at their frames. **80b is open**: item 3's weapon
-skeletons moving the weapon and shield bones and the rider drawn on his mount,
-item 6 (`.cas` models) and item 7 (side by side).
 
 **81 - Append to a pack, and take it back (L).** `animpack.plan_port(source,
 dest, skeletons)` returns what would happen: skeletons reused, renamed or
