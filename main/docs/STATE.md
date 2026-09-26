@@ -19,6 +19,9 @@ entry by path alone; on screen it plays the same because of those exact
 rescales (the Balrog and Stewards Guards measured), and 86 makes it choose by
 scale. `test_packhouse` (19): a copy of ROCSS given one of each kind of waste
 compacts back to ROCSS's own four files byte for byte, and undoes.
+Full suite after both: 18 of 162 red, all in the campaign, map, effects and
+recruitment suites on the installed mods; the ones that could touch a transfer
+(effects, health, codeview, recruitment, edusort) fail the same on `3fe86b8c`.
 
 **Phase 84 is done - a ported unit kept rebuildable, 2026-09-26, committed and
 uncut; the in-game check waits.** On the user's word ("continue next 2
