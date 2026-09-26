@@ -2,6 +2,18 @@
 _Updated: 2026-09-26 - **The rest of the roadmap is scheduled and under way**, on the user's word ("finish all phases remaining"): Phases 56-73, then 74-76 (added 2026-09-23: a settlement model imported and assigned, the Strat models 3D view, a building tree from another mod), then 25-27, the schedule in `ROADMAP.md` (the finished rows now in its phase index) (finished write-ups now go to `ROADMAP_ARCHIVE.md`). **56 to 76, and 25, are done** (several factions at once and the faction zip; the animation editor and the model converter; will this mod launch; settlement mechanics; add a religion; delete, create and copy a settlement; one file in or out; populace and off-map models; animals, standards and advice; battle banners; hero abilities; area effects; walls and towers; agents and generals; every tile as text; a campaign as a zip and any data/ zip loaded back; a horde start for a new faction; a campaign imported from another mod; a settlement model imported and put on a culture's level; the `.cas` model view placed by its skeleton; a building tree from another mod); then 25, the OSM backdrop and coastline tracer; then 26, map resize and a new campaign on a map from scratch; then 27, the layer generators; then 77, the animation and skeleton packs read without unpacking (the first of 77-86, animations that travel with a unit); then 78, the 687 slots named and `descr_skeleton.txt` held against the packs; then 79, transfer holding skeletons against the destination's pack, weapon skeletons counted; then 80a, every packed animation of a model's skeletons in the Models viewer, named, grouped, played from `pack.dat`, with its slot's marks and sequences; then 80b, the weapon skeletons moving the weapon, the rider on his mount, `.cas` models played, and another mod's action side by side; then 81, a port appended to a mod's packs and taken back, nothing unpacked; then 83, Unit Transfer bringing a unit's missing animations; **82 is under way in game** (questions 2 and 4 left); then 84, a ported unit kept rebuildable (loose `.cas`, `.evt` and a `descr_skeleton.txt` block; its in-game check waits on a mod that can rebuild); then 85, pack housekeeping (all three installs measured clean); 86 and 88 are what is left. Phase 55 is done: the Models viewer plays a model's animations. Latest cut is **v2.3.9 and beta 2026-09-25** (2026-09-25), carrying everything through 76 and 25-27. **Releasing is on-request only**: commit to master and stop_
 
 ## Next up
+**82's question 2 answered in game, 2026-09-26: the `.dat` header's count
+matters.** With both `.dat` headers set back to Reforged's pre-port counts and
+the `.idx` files whole (`phase82_kit.py apply2`), the game logged "Missing
+skeleton for secondary weapon" for 44 of Reforged's own units (their weapon
+skeletons early in the pack, inside the count) and crashed when the Balrog was
+picked. Each `.dat` header must equal its `.idx`, as 81's writer keeps it. Kit
+undone, byte for byte. **82 is answered but for a renamed skeleton**, which no
+transfer produces; carried into 86. The user's friend, 2026-09-26: the game
+rebuilds only when the packs are removed; a skeleton pair can differ in case
+alone (vanilla's `MTW2_Halberd_Primary` / `_primary`), now looked up exact-case
+first (`5bd1f65f`).
+
 **Phase 85 is done - pack housekeeping, 2026-09-26, committed and uncut.**
 `unittransfer/packhouse.py`: per mod, what its packs hold that nothing plays
 (a path again at a scale it already has, a copy at a scale no skeleton has, a
