@@ -674,6 +674,114 @@ paths, coordinates and code names. Done when: every screen is walked in
 Arabic, and on the map a click, the tile pin and a drag land on the same tile
 as in English.
 
+# Phase 89 - four reports from users, scheduled 2026-09-26
+
+**Passed on by the user on 2026-09-26**, from users of the toolkit, with "add
+these into the roadmap at the end". Two suggestions, one bug report against
+beta 2026-09-25, and one report on the real-world map. Unrated. 89a and 89b
+are not map work and go on both lines; 89c and 89d are map work and go on the
+beta.
+
+## What was reported
+
+1. *A button for creating new resources*, like the one the Religions tab
+   already has.
+2. *Remove the warning in Minor Files > Resources*: with **Runs on M2EX - no
+   engine limits** ticked, a 29th resource (`citrus`) is flagged on line 149
+   as "not one of the 28 resources the engine knows - the line is read and then
+   ignored", yet in the game it shows and it trades.
+3. *A watchtower's line of sight drawn on the map* when one is placed, with a
+   switch to show or hide it. Two looks were sent: a filled, see-through disc
+   that tints the tiles it covers, and an outline circle only.
+4. *The real-world map*, from someone who built a campaign on it: renaming a
+   region takes a long time on a map with many provinces; after painting a
+   province and setting its capital they could not go back to painting it, and
+   did not find how to redraw a province at all; and they still need a way to
+   get the correct province names.
+
+## The pieces
+
+**89a - the resource list is open on M2EX (the bug, 2).** Resources are
+edit-only today on a stated decision (`minorfiles.py`, `ACTIONS` and
+`REFUSED`): "the engine's list is closed", so a 29th name is a line nothing
+reads. That was measured on mods that do not run M2EX, and the report shows it
+is not true under M2EX. Every place that holds a name against
+`KNOWN_RESOURCES` asks `modflags.is_m2ex(mod)` first, the way the faction
+limit already does (`factions.py`, `factionclone.py`):
+
+- the `unknown-resource` finding in `minorfiles.py` is not raised on an M2EX
+  mod;
+- the row's `known` flag, and the "not an engine resource" note it drives in
+  `minorfiles.js`, treat every declared name as known;
+- the map's resource name box (`stratobj.resource_names`) offers the file's
+  own names as it already does, and is checked to not fall back to the 28.
+
+What M2EX's own ceiling is, if it has one, is found out, not assumed: the
+finding becomes "resource N of M2EX's M" if there is a number, and nothing if
+there is not. On a mod without M2EX the warning stays exactly as it is, since
+there it is still true. Done when: a 29th resource on an M2EX mod shows no
+finding and no note, the same file with the flag off shows both, and the
+suite covers both.
+
+**89b - a new resource (the suggestion, 1).** Built on 89a: `add` joins
+`resources` in `ACTIONS` **only on an M2EX mod**. Without the flag the button
+is not offered and `REFUSED` says why, as today. The button is the Religions
+tab's (`+ New ...` in the list, `mfNew`), and a copy of the open resource
+through the existing clone (`mfClone`), since a resource is a model, an icon
+and a trade value that are usually taken from one that works. A new resource
+brings:
+
+- its record in `descr_sm_resources.txt` (name, trade value, model, icon, the
+  mine flag);
+- its shown name in `text/strat.txt`, with the missing-key rule the Religions
+  tab already follows;
+- its icon, copied from a picked `.tga` or from the resource it was cloned
+  from, the way a new religion's pip is.
+
+It is then placed on the map with 22b's resource tool, which must offer the
+new name. Deleting a resource stays refused on every mod, for the reason
+`REFUSED` gives (`descr_regions.txt` places resources by name). Done when: a
+resource made in the tab, placed on the map and saved loads in the game on an
+M2EX mod, and the tab offers no add on one without it.
+
+**89c - a watchtower's line of sight (the suggestion, 3).** First the number:
+how far a watchtower sees, in tiles, and whether a mod file sets it or the
+engine does. It is found in a file or measured in the game, and recorded with
+where it came from, never guessed; if it depends on something (the culture's
+tower, the owner's traits) that is recorded too. Then the drawing, on the
+markers layer 17d built: every watchtower gets its radius, shown as either
+look from the report (**filled** tints the covered tiles, **outline** draws
+only the circle), picked in the layer's options, with a switch in the layer
+list and a number key like the other layers. It is on while a watchtower is
+being placed or dragged (22a), so the spot can be chosen by what it covers,
+and it follows the drag. Done when: both looks draw at the right size against
+a tower measured in the game, the switch hides them, and the radius moves with
+a dragged tower.
+
+**89d - the real-world map report (4).** Three problems and one question, each
+reproduced on a map with as many provinces as the reporter's before anything
+is changed:
+
+- **Renaming a region is slow.** 19b's rename follows the name through
+  twenty-four files. Time it on a large real-world campaign, find where the
+  time goes (re-reading files per region, re-drawing the map, re-running the
+  checks), and fix that. Done when: a rename on that map finishes in a
+  measured, stated time, and the numbers before and after are recorded here.
+- **Painting stops after the capital is set.** Reproduce the order the report
+  gives: paint a province, set its capital, go back to the brush. Find what
+  holds the brush (a mode left on, a pin not released, a guard on a province
+  that now has a settlement) and fix it. Done when: paint, set capital, paint
+  again works in that order on a real-world map, with a test for it.
+- **How to redraw a province was not found.** Whatever the painting fix turns out to be, the way
+  to repaint a province's tiles is made visible where someone looking for it
+  would look: in the region's own panel, not only on the toolbar.
+- **The correct province names.** 87e names each province after its city
+  (`<City>_Province`, with the campaign's name in front when the key is
+  taken). Ask the reporter what "correct" means for their map: real
+  administrative regions from the same OpenStreetMap data (boundaries at a
+  chosen `admin_level`), historical names, or only an easier way to rename
+  many at once. Build that answer, and nothing until it is known.
+
 # What else is open
 
 Every rated item is built: the five- and four-star rows, and the three-star
