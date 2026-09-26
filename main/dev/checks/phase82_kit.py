@@ -3,6 +3,7 @@
     python dev/checks/phase82_kit.py apply  [mod]   # default Third_Age_Reforged
     python dev/checks/phase82_kit.py status [mod]
     python dev/checks/phase82_kit.py undo   [mod]
+    python dev/checks/phase82_kit.py apply2 [mod] [anims] [skeletons]   # question 2
 
 Both kits ride on DaC EUR's Stewards Guards as Phase 83 brought it into
 Reforged: its skeleton ``MTW2_Mace_no_stun`` plays animations stored only
@@ -16,6 +17,12 @@ there is no doubt which folder a loose file would be looked for in.
 * **6 - does a loose ``.cas`` override the pack.** The walk's path is written
   as a loose ``.cas`` holding the skeleton's ``celebrate_1``. Cheering as they
   walk: the loose file wins. Walking normally: the pack does.
+
+* **2 - does the ``.dat`` header's count matter, or only the ``.idx``'s.**
+  ``apply2`` writes smaller counts into the two ``.dat`` headers (by default
+  Reforged's before any port: 9 837 animations, 370 skeletons) and leaves the
+  ``.idx`` files whole, so every ported entry lies past what the ``.dat``
+  headers claim. Ported units still animating: only the ``.idx`` counts.
 
 Before anything is written, the four pack files are copied whole into the
 toolkit's backup folder; ``undo`` puts them back byte for byte and deletes the
@@ -114,6 +121,43 @@ def apply(mod: str) -> None:
           and c["anim .dat header = .idx header"] == 1 else c)
 
 
+def _backup(mod: str, packs) -> tuple:
+    back = Path(config.BACKUP_DIR) / f"phase82_kit_{mod}_{time.strftime('%Y%m%d-%H%M%S')}"
+    back.mkdir(parents=True)
+    files = {}
+    for n in animpack.FILES:
+        src = packs.dir / n
+        shutil.copy2(src, back / n)
+        files[n] = {"size": src.stat().st_size, "sha": sha(src)}
+    print(f"backed up the four pack files to {back}")
+    return back, files
+
+
+def apply2(mod: str, anims: int = 9837, skels: int = 370) -> None:
+    import struct
+    data = GAME / "mods" / mod / "data"
+    if animpack.game_running():
+        raise SystemExit("the game is running; close it first")
+    if manifest_path(mod).is_file():
+        raise SystemExit(f"a kit is already in {mod}; undo it first")
+    packs = animpack.for_data(data)
+    back, files = _backup(mod, packs)
+    was = {}
+    for stem, n in (("pack", anims), ("skeletons", skels)):
+        dat = packs.dir / f"{stem}.dat"
+        idx = len(animpack.PackIndex.read(packs.dir / f"{stem}.idx"))
+        with open(dat, "r+b") as f:
+            head = bytearray(f.read(animpack.HEADER_SIZE))
+            was[stem] = struct.unpack_from("<I", head, 16)[0]
+            struct.pack_into("<I", head, 16, n)
+            f.seek(0)
+            f.write(head)
+        print(f"2: {stem}.dat header says {n:,} (was {was[stem]:,}); {stem}.idx lists {idx:,}")
+    manifest_path(mod).write_text(json.dumps({
+        "mod": mod, "kit": "2", "backup": str(back), "files": files, "headers_were": was,
+        "loose": "", "when": time.strftime("%Y-%m-%d %H:%M:%S")}, indent=1), encoding="utf-8")
+
+
 def status(mod: str) -> None:
     m = manifest_path(mod)
     if not m.is_file():
@@ -124,7 +168,11 @@ def status(mod: str) -> None:
     for n, was in man["files"].items():
         now = (d / n).stat().st_size
         print(f"{n}: {now:,} bytes (before the kit {was['size']:,})")
-    print("loose file there:", Path(man["loose"]).is_file())
+    if man.get("loose"):
+        print("loose file there:", Path(man["loose"]).is_file())
+    import struct
+    for stem in ("pack", "skeletons"):
+        print(f"{stem}.dat header count:", struct.unpack_from("<I", (d / f"{stem}.dat").read_bytes()[:20], 16)[0])
 
 
 def undo(mod: str) -> None:
@@ -138,11 +186,11 @@ def undo(mod: str) -> None:
     back = Path(man["backup"])
     for n in man["files"]:
         shutil.copy2(back / n, d / n)
-    loose = Path(man["loose"])
-    if loose.is_file():
+    loose = Path(man["loose"]) if man.get("loose") else None
+    if loose is not None and loose.is_file():
         loose.unlink()
     # the empty folders the loose file needed
-    p = loose.parent
+    p = loose.parent if loose is not None else d
     while p != d and p.is_dir() and not any(p.iterdir()):
         p.rmdir()
         p = p.parent
@@ -156,4 +204,7 @@ def undo(mod: str) -> None:
 if __name__ == "__main__":
     what = sys.argv[1] if len(sys.argv) > 1 else "status"
     mod = sys.argv[2] if len(sys.argv) > 2 else "Third_Age_Reforged"
-    {"apply": apply, "status": status, "undo": undo}[what](mod)
+    if what == "apply2":
+        apply2(mod, *(int(x) for x in sys.argv[3:5]))
+    else:
+        {"apply": apply, "status": status, "undo": undo}[what](mod)
