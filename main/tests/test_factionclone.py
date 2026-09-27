@@ -83,7 +83,7 @@ for edit in plan.edits:
         print(f"  [--] {edit.rel}: not in this mod")
         continue
     check(f"{edit.rel}: cloned {edit.count} time(s), not silently zero",
-          edit.count > 0 and bool(edit.text))
+          edit.count > 0 and bool(edit.text or edit.data))
 
 
 # ---------------------------------------------------------------------------
@@ -91,6 +91,15 @@ for edit in plan.edits:
 
 for rel, edit in written.items():
     path = Path(mod.data) / rel
+    if edit.data:
+        # 91: a sprite sheet, bytes not text - every sprite where it was, and
+        # one more, the new faction's shield
+        from unittransfer import spritesheet as ss
+        was, now = ss.parse(path.read_bytes()), ss.parse(edit.data)
+        check(f"{rel}: every sprite kept its position, and one was added "
+              f"({now.names()[-1]})", now.names()[:-1] == was.names()
+              and now.names()[-1].endswith("_" + NEW.upper()))
+        continue
     before = kb.read_text(path, edit.encoding)
     after = edit.text
     if rel.endswith(".modeldb"):

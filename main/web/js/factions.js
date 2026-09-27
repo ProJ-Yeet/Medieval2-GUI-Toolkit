@@ -272,8 +272,8 @@ function facArtSection(d){
     <div class="trgrid">
       ${(v.art_keys||[]).map(k => facArt(d, k)).join('')}
       ${facBox(d, 'standard_index', tt('factions.banner_index'))}
-      ${facBox(d, 'logo_index', tt('factions.logo_index'), v.logo_indexes)}
-      ${facBox(d, 'small_logo_index', tt('factions.small_logo_index'), v.small_logo_indexes)}
+      ${facLogo(d, 'logo_index', tt('factions.logo_index'), v.logo_sprites, v.logo_indexes)}
+      ${facLogo(d, 'small_logo_index', tt('factions.small_logo_index'), v.small_logo_sprites, v.small_logo_indexes)}
       ${facBox(d, 'triumph_value', tt('factions.triumph_value'))}
     </div>
   </section>`;
@@ -302,14 +302,23 @@ function facBox(d, key, label, list){
       `<option value="${esc(x)}">`).join('')}</datalist>`:''}</div>`;
 }
 
-function facPick(d, key, label, options, optional){
+//: 91: a shield is a sprite name in ui/strategy.sd or ui/shared.sd. When the mod
+//: ships the sheet, only its names are offered and one that is not in it says
+//: so; when the sheet is packed there is nothing to hold it against.
+function facLogo(d, key, label, sprites, used){
+  return sprites && sprites.length
+    ? facPick(d, key, label, sprites, false, true)
+    : facBox(d, key, label, used);
+}
+
+function facPick(d, key, label, options, optional, sheet){
   const cur = d.w[key] || '', opts = options || [];
   return `<label class="lbl" data-label="${key}">${esc(label)}</label>
     <div><select data-label="${key}" onchange="facSet('${key}',this.value)">
       ${optional?`<option value=""${cur?'':' selected'}>${tt('common.none_2')}</option>`:''}
       ${opts.map(o => `<option value="${esc(o)}"${o===cur?' selected':''}>${esc(o)}</option>`).join('')}
       ${cur && !opts.includes(cur)
-        ? `<option value="${esc(cur)}" selected>${tt('factions.not_in_this_mod',{cur:esc(cur)})}</option>` : ''}
+        ? `<option value="${esc(cur)}" selected>${sheet ? tt('factions.not_in_the_sheet',{cur:esc(cur)}) : tt('factions.not_in_this_mod',{cur:esc(cur)})}</option>` : ''}
     </select></div>`;
 }
 

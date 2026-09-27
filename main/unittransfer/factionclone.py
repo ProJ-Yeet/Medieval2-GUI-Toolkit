@@ -127,7 +127,8 @@ def _key_tok(name: str) -> str:
     return r"(?<![A-Za-z0-9])" + re.escape(name) + r"(?![A-Za-z0-9])"
 
 
-def clone_roster(text: str, src: str, new: str) -> Tuple[str, int]:
+def clone_roster(text: str, src: str, new: str,
+                 logos: Optional[Dict[str, str]] = None) -> Tuple[str, int]:
     """``descr_sm_factions.txt``: the donor's record again, under the new head.
 
     Inserted straight after the donor so the file stays readable and a diff
@@ -143,7 +144,11 @@ def clone_roster(text: str, src: str, new: str) -> Tuple[str, int]:
     block = rf.block_text(rec)
     lines = block.split("\n")
     lines[0] = kb.sub_head(lines[0], "faction", new)
-    return rf.replace(rec.end, rec.end, "\n".join(lines)), 1
+    block = "\n".join(lines)
+    if logos:
+        # 91: the shields of its own name that :func:`own_logos` put in the sheets
+        block = fr.render_record(fac.SHAPE, block, dict(logos))
+    return rf.replace(rec.end, rec.end, block), 1
 
 
 def clone_paragraph(text: str, src: str, new: str, kw: str = "faction") -> Tuple[str, int]:
@@ -658,6 +663,8 @@ class FileEdit:
     label: str
     text: str = ""                 # the whole new file; "" means unchanged
     encoding: str = ENCODING
+    #: 91: a binary file's whole new bytes (a sprite sheet); b"" means unchanged
+    data: bytes = b""
     count: int = 0
     note: str = ""
     skipped: str = ""              # why it did nothing, when it did nothing
@@ -683,7 +690,7 @@ class ClonePlan:
     art: List[Dict] = field(default_factory=list)
 
     def written(self) -> List[FileEdit]:
-        return [e for e in self.edits if e.text]
+        return [e for e in self.edits if e.text or e.data]
 
     def touched(self) -> bool:
         return bool(self.written() or self.assets)
@@ -700,7 +707,7 @@ class ClonePlan:
         return {
             "action": self.action, "source": self.source, "new": self.new,
             "files": [{"rel": e.rel, "label": e.label, "count": e.count,
-                       "note": e.note, "skipped": e.skipped, "written": bool(e.text)}
+                       "note": e.note, "skipped": e.skipped, "written": bool(e.text or e.data)}
                       for e in self.edits],
             "assets": [{"src": a.src, "dst": a.dst, "dir": a.is_dir,
                         "files": a.files, "bytes": a.bytes} for a in self.assets],
@@ -947,10 +954,11 @@ def clone_file(data: Path, job: Job, src: str, new: str, label: str = "",
         flat = job.how != "modeldb"
         opts = dict(text_opts or {})
         art = bool(opts.pop("art", False))
+        logos = opts.pop("logos", None)
         newline = kb.newline_of(original)
         before = kb.to_newline(original, "\n") if flat else original
         if job.how == "roster":
-            after, n = clone_roster(before, src, new)
+            after, n = clone_roster(before, src, new, logos)
         elif job.how == "expanded":
             after, n = clone_expanded(before, src, new, label, **opts)
         elif job.how == "list":
@@ -983,6 +991,56 @@ def clone_file(data: Path, job: Job, src: str, new: str, label: str = "",
     return edit
 
 
+#: what the two sheet edits are called in the plan
+LOGO_LABELS: Dict[str, str] = {"logo_index": "Faction shield",
+                               "small_logo_index": "Small faction shield"}
+
+
+def own_logos(data: Path, donor: Dict[str, str], new: str,
+              overlay: Optional[Dict] = None) -> Tuple[List[FileEdit], Dict[str, str], List[str]]:
+    """Phase 91: shields of the new faction's own name, drawn as the donor's.
+
+    For each of ``logo_index`` and ``small_logo_index`` whose sheet the mod
+    ships loose, the new faction gets ``FACTION_LOGO_<NEW>`` (or
+    ``SMALL_FACTION_LOGO_<NEW>``), appended to the sheet as another name for the
+    donor's picture - the name a modder repaints and the tutorial's own
+    convention - and its roster record points at it. A name already in the
+    sheet is used as it is: somebody drew it already. A sheet that is packed,
+    or a donor whose own name is not in the sheet, leaves the donor's value
+    alone, which is what the clone always did.
+
+    Returns the sheet edits, the roster values to write, and notes. ``overlay``
+    is a batch's bytes for a sheet an earlier row already added to.
+    """
+    from . import spritesheet as ss
+    edits: List[FileEdit] = []
+    values: Dict[str, str] = {}
+    notes: List[str] = []
+    for key, rel in ss.SHEET_OF.items():
+        want = ss.PREFIX[key] + new.upper()
+        ahead = (overlay or {}).get(rel)
+        path = data / rel
+        if not isinstance(ahead, bytes) and not path.is_file():
+            continue
+        try:
+            raw = ahead if isinstance(ahead, bytes) else path.read_bytes()
+            sheet = ss.parse(raw)
+        except (OSError, ss.SheetError):
+            continue
+        if sheet.find(want) is not None:
+            values[key] = want
+            notes.append(_i18n.msg("eng.factionclone.logo_already_drawn", "{rel} already has {want}, so the new faction uses it and keeps that picture", rel=rel, want=want))
+            continue
+        like = (donor.get(key) or "").strip()
+        if not like or sheet.find(like) is None:
+            continue
+        edits.append(FileEdit(rel, LOGO_LABELS[key], data=ss.add_alias(raw, want, like),
+                              encoding="", count=1,
+                              note=f"{want}, drawn as {like} until it is painted"))
+        values[key] = want
+    return edits, values, notes
+
+
 def plan(mod, body: dict, overlay: Optional[Dict[str, str]] = None) -> ClonePlan:
     """Work out every file and every copy, without touching the disk.
 
@@ -1003,9 +1061,12 @@ def plan(mod, body: dict, overlay: Optional[Dict[str, str]] = None) -> ClonePlan
     want_art = bool(body.get("art", True))
     data = Path(mod.data)
 
+    donor = rf.get(src) or next((r for r in rf.records if fac.slot_of(r.name) == src), None)
+    logo_edits, logos, logo_notes = own_logos(
+        data, {k: donor.get(k) for k in LOGO_LABELS} if donor else {}, new, overlay)
     text_opts = {"rename": bool(body.get("rename")),
                  "titles": body.get("titles") if isinstance(body.get("titles"), dict) else None,
-                 "art": want_art}
+                 "art": want_art, "logos": logos}
     for job in JOBS:
         edit = clone_file(data, job, src, new, label, overlay, text_opts)
         p.edits.append(edit)
@@ -1017,6 +1078,10 @@ def plan(mod, body: dict, overlay: Optional[Dict[str, str]] = None) -> ClonePlan
         if edit.text:
             p.changes.append(f"{job.label} ({Path(job.rel).name}) - {edit.count} "
                              + ("entry" if edit.count == 1 else "entries"))
+    for edit in logo_edits:
+        p.edits.append(edit)
+        p.changes.append(f"{edit.label} ({edit.rel}) - {edit.note}")
+    p.notes.extend(logo_notes)
 
     if want_art:
         skips: List[Tuple[str, str]] = []
@@ -1094,6 +1159,11 @@ def apply(p: ClonePlan) -> Dict:
     written: List[str] = []
     for edit in p.written():
         target = keep(edit.rel)
+        if edit.data:
+            target.write_bytes(edit.data)
+            file_op("WRITE", target, f"{len(edit.data)} bytes")
+            written.append(edit.rel)
+            continue
         kb.write_text(target, edit.text, edit.encoding)
         file_op("WRITE", target, f"{len(edit.text)} bytes")
         written.append(edit.rel)
@@ -1159,8 +1229,9 @@ class BatchPlan:
     mod: object = None
     rows: List[ClonePlan] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
-    #: rel -> (final text, encoding, label): each file once, as the last row left it
-    final: Dict[str, Tuple[str, str, str]] = field(default_factory=dict)
+    #: rel -> (final text, encoding, label): each file once, as the last row left
+    #: it; a sprite sheet's is its bytes (91)
+    final: Dict[str, Tuple[object, str, str]] = field(default_factory=dict)
 
     def payload(self) -> Dict:
         rows = [r.payload() for r in self.rows]
@@ -1198,8 +1269,8 @@ def plan_many(mod, body: dict) -> BatchPlan:
             bp.errors.extend(f"row {i + 1} ({p.new or 'unnamed'}): {e}" for e in p.errors)
             continue
         for e in p.written():
-            overlay[e.rel] = e.text
-            bp.final[e.rel] = (e.text, e.encoding, e.label)
+            overlay[e.rel] = e.data or e.text
+            bp.final[e.rel] = (e.data or e.text, e.encoding, e.label)
     # two rows can plan the same art destination only by sharing a slot, which
     # the roster check already refused; the copies are otherwise independent
     return bp
@@ -1211,8 +1282,10 @@ def apply_many(bp: BatchPlan) -> Dict:
         raise ValueError("cannot apply: " + ("; ".join(bp.errors) or "nothing planned"))
     merged = ClonePlan(mod=bp.mod, source=",".join(sorted({r.source for r in bp.rows})),
                        new=",".join(r.new for r in bp.rows), action="clone")
-    for rel, (text, enc, label) in bp.final.items():
-        merged.edits.append(FileEdit(rel, label, text=text, encoding=enc, count=1))
+    for rel, (body, enc, label) in bp.final.items():
+        merged.edits.append(FileEdit(rel, label, encoding=enc, count=1,
+                                     **({"data": body} if isinstance(body, bytes)
+                                        else {"text": body})))
     for r in bp.rows:
         merged.assets.extend(r.assets)
         merged.changes.append(f"{r.source} -> {r.new}")

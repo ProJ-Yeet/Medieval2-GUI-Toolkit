@@ -86,6 +86,13 @@ WINS_NAME = "descr_win_conditions.txt"
 CHECKS: Tuple[Check, ...] = (
     Check("roster", "Faction roster", fac.REL, "gap", "addfaction",
           "the slot itself - every other file points at it"),
+    # 91. Every faction in both installed mods names a shield that is in its
+    # sheet, so a name that is not is a gap: the campaign map's faction button
+    # draws sprite 0 instead. The repair adds the name to the sheet, drawn as
+    # the template's shield; it is `clone` so the panel offers it like a copy.
+    Check("logos", "Faction shield", fac.REL, "gap", "clone",
+          "logo_index and small_logo_index are sprite names in ui/strategy.sd "
+          "and ui/shared.sd; a name not there leaves the faction button blank"),
     Check("text", "Shown name and event text", "text/expanded.txt", "gap", "clone",
           "without the {SLOT} key the game shows the code name; without the "
           "EMT_ keys its event messages show raw keys"),
@@ -171,6 +178,8 @@ class Census:
         # -- the roster --------------------------------------------------
         self.slots: List[str] = []
         self.cultures: Dict[str, str] = {}
+        #: slot -> {"logo_index": name, "small_logo_index": name} (91)
+        self.logos: Dict[str, Dict[str, str]] = {}
         self.roster_error = ""
         path = fac.path_for(mod)
         if path.is_file():
@@ -181,6 +190,7 @@ class Census:
                     if slot and slot not in self.cultures:
                         self.slots.append(slot)
                         self.cultures[slot] = r.get("culture").strip(",").lower()
+                        self.logos[slot] = {k: r.get(k) for k in fc.LOGO_LABELS}
             except (fr.RecordError, OSError, UnicodeError) as e:
                 self.roster_error = str(e)
         else:
@@ -188,6 +198,8 @@ class Census:
                                  f"{fac.REL} - it is inside the game's .pack "
                                  "archives until the mod is unpacked")
 
+        #: the mod's own loose sheets; a packed one is not here (no evidence)
+        self.sheets = fac.logo_sheets(mod)
         self._text(data)
         self._name_pools(data)
         self._characters(data)
@@ -414,6 +426,14 @@ class Census:
 # one faction, row by row
 
 
+def logo_gaps(c: Census, slot: str) -> Dict[str, str]:
+    """key -> value, for each of the faction's shield names its loose sheet
+    does not have (91)."""
+    names = c.logos.get(slot) or {}
+    return {k: names[k] for k, sheet in c.sheets.items()
+            if names.get(k) and sheet.find(names[k]) is None}
+
+
 def _row(chk: Check, state: str, detail: str, count: int = 0) -> Dict:
     return {"id": chk.id, "label": chk.label, "rel": chk.rel, "level": chk.level,
             "state": state, "detail": detail, "count": count, "fix": chk.fix,
@@ -450,6 +470,24 @@ def evaluate(c: Census, slot: str) -> List[Dict]:
         out.append(_row(chk, "missing",
                         f"{slot} has a campaign block and no {fac.REL} record, so "
                         "the game has no faction by that name", 0))
+
+    chk = BY_ID["logos"]
+    names = c.logos.get(slot)
+    if names is None:
+        out.append(_row(chk, "unknown", "it has no roster record to read a shield from"))
+    elif not c.sheets:
+        out.append(_row(chk, "unknown", "this mod ships neither ui/strategy.sd nor "
+                        "ui/shared.sd loose - the game reads its packed ones, so "
+                        "nothing was checked"))
+    else:
+        gone = logo_gaps(c, slot)
+        held = [names[k] for k in c.sheets if names.get(k)]
+        if gone:
+            out.append(_row(chk, "missing", "; ".join(
+                fac.logo_gap(k, v, c.sheets[k]) for k, v in gone.items()), 0))
+        else:
+            out.append(_row(chk, "ok", " and ".join(held) + " - in the sheet",
+                            len(held)))
 
     chk = BY_ID["text"]
     if c.text_keys is None:
@@ -644,6 +682,29 @@ def audit(mod, campaign: str = "") -> Dict:
 # the repair
 
 
+def _repair_logos(p: fc.ClonePlan, c: Census, data: Path, faction: str,
+                  template: str) -> None:
+    """91's repair: each shield name the faction has and its sheet does not is
+    added to the sheet, drawn as the template's shield. The roster is left as
+    it is, so the name the modder chose is the one that now resolves."""
+    from . import spritesheet as ss
+    for key, value in logo_gaps(c, faction).items():
+        rel = ss.SHEET_OF[key]
+        if value[:1].isdigit():
+            p.warnings.append(_i18n.msg("eng.factionaudit.logo_position_cannot_be_given", "{rel}: `{value}` is a position, and a position cannot be given a picture - choose a shield by name in the Factions editor", rel=rel, value=value))
+            continue
+        like = c.logos[template][key]
+        try:
+            raw = (data / rel).read_bytes()
+            body = ss.add_alias(raw, value, like)
+        except (OSError, ss.SheetError) as e:
+            p.warnings.append(f"{rel}: {e}")
+            continue
+        p.edits.append(fc.FileEdit(rel, fc.LOGO_LABELS[key], data=body, encoding="",
+                                   count=1, note=f"{value}, drawn as {like}"))
+        p.changes.append(_i18n.msg("eng.factionaudit.logo_added_to_sheet", "{label} ({rel}) - {value} added, drawn as {template_}'s {like} until it is painted", label=fc.LOGO_LABELS[key], rel=rel, value=value, template_=template, like=like))
+
+
 def repair_plan(mod, body: dict) -> fc.ClonePlan:
     """Copy the records ``faction`` is missing out of ``template``.
 
@@ -699,6 +760,9 @@ def repair_plan(mod, body: dict) -> fc.ClonePlan:
             continue
         if theirs[cid]["state"] != "ok":
             p.warnings.append(_i18n.msg("eng.factionaudit.has_none_either_so_there_is", "{label}: {template_} has none either, so there is nothing to copy", label=chk.label, template_=template))
+            continue
+        if cid == "logos":
+            _repair_logos(p, c, data, faction, template)
             continue
         job = JOB_BY_REL[chk.rel]
         # the shown name is the one value not copied: two factions both called

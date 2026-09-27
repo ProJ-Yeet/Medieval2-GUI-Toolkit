@@ -191,7 +191,9 @@ def _faction_audit(mod, ctx) -> List[Finding]:
                            when="launch", open={"mode": "factions"}))
     for fac in rep.get("factions") or []:
         for row in fac.get("rows") or []:
-            if row.get("state") != "missing":
+            # a shield not in its sheet (91) is the Factions source's finding
+            # already, with the line it is on; once is enough
+            if row.get("state") != "missing" or row.get("id") == "logos":
                 continue
             sev = "warn" if row.get("level") == "gap" else "note"
             out.append(Finding(

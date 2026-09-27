@@ -956,6 +956,36 @@ never says how to add it to the sheet); a culture changed so the sheet read is
 a different culture's; the faction's position in the list against a patched
 engine's limit. Done when: the cause is known and written here.
 
+**91a, found 2026-09-27, from the reporter's two sheets.** The user's friend
+sent the mod's `data/ui/strategy.sd` and `data/ui/shared.sd` (a Gothic mod,
+Khorinis and the clans), saying these were the files that "didn't generate
+right" because the new factions' entries were not in them. What they hold:
+
+- **Both sheets are sound.** Version 6, read to the last byte (317 sprites on
+  6 pages, 351 on 4); no name twice; all 36 shields and 42 small shields have
+  a non-empty hit mask (the button is a shaped one, clickable only where the
+  mask is set). Twelve factions were added by hand, on `stratpage_06.tga` and
+  `sharedpage_02.tga`, each as `FACTION_LOGO_<NAME>` and
+  `SMALL_FACTION_LOGO_<NAME>`.
+- **There is one sheet of each for every culture.** The sheet is
+  `data/ui/strategy.sd`; only its `.tga` pages are per culture
+  (`ui/<culture>/interface/`). So the culture hypothesis is out: a culture
+  change moves which pages are drawn from, not which names exist.
+- **The value is a name, resolved to a position when the roster loads.** A
+  name not in the sheet does not stop the game; sprite 0 is drawn in the
+  shield's place (in this sheet `BUILD_BUTTON_IMAGE`, in DaC and Reforged
+  some other button too), never the faction's shield.
+- **The clone never writes a name that is not in the sheet.** It copies the
+  donor's `logo_index` and `small_logo_index` as they are, so a plain clone
+  shows the donor's shield. Nothing in the toolkit wrote a logo name at all.
+
+**So the cause is the first hypothesis**: the new factions' records name
+shields the sheets do not have, most likely `FACTION_LOGO_<new name>` typed
+into the Factions editor's free box after the clone, as the tutorial does,
+expecting the entry to exist. The friend's own words fit it exactly. Their
+`descr_sm_factions.txt` blocks for the new factions would confirm the value;
+91b's check now names it on screen either way.
+
 **91b - the fix, and a check so it cannot happen quietly.** Whatever 91a
 finds is fixed where it lives (the clone, the Factions editor or the
 documentation). Then the check: `logo_index` and `small_logo_index` are held
@@ -967,6 +997,32 @@ unrated row in *Unrated, and the rating is not the reason*, and this needs
 only the names, not an editor for them. Done when: a faction whose logo name
 is not in its sheet is reported in all three places, and the reporter's
 faction shows its button.
+
+**91b, built 2026-09-27, uncut; the in-game check waits on the reporter.**
+`unittransfer/spritesheet.py` reads a sheet's pages and sprite names and
+writes one thing, `add_alias`: another name for a picture the sheet already
+has, appended so every sprite keeps its position (a roster using numbers keeps
+its meaning). Every sheet in both installed mods and the reporter's two read
+to their last byte.
+
+- **The check**, only where the mod ships the sheet loose (a packed one is no
+  evidence): `factions.check_file` reports `logo-not-in-sheet` with the line
+  (a name not there, a name that differs only in case, a number past the end).
+  That is the Factions editor's finding and Health's, once. The audit (Phase 21)
+  has a **Faction shield** row, a gap. Baseline: all 61 factions in DaC and
+  Reforged are clean.
+- **The editor's box** offers only the shields in the sheet when the mod ships
+  it, and a value not in it reads "(not in the sheet - no shield)".
+- **The repair**: the audit's Copy from on that row adds the faction's own
+  name to the sheet, drawn as the template's shield, and leaves the roster
+  alone. One undo takes it back. This is what fixes the reporter's factions.
+- **The clone** now gives a new faction shields of its own name,
+  `FACTION_LOGO_<NEW>` and `SMALL_FACTION_LOGO_<NEW>`, drawn as the donor's
+  until someone paints them, and points its record at them. A name already in
+  the sheet is used as it is (someone drew it); packed sheets keep the donor's
+  value, as before. A batch lands every row's names in one sheet.
+- `tests/test_spritesheet` (44). Painting a new shield into a page, and its
+  hit mask, is still the modder's job; the name is now where they expect it.
 
 **91c - the three campaign files the clone leaves to the modder.** With the
 tutorial side by side, the plan already names `descr_strat.txt`; it also

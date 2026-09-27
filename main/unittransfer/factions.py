@@ -407,6 +407,33 @@ def art_path(mod, rel: str) -> Optional[Path]:
 # what is wrong with a faction that still parses
 
 
+def logo_sheets(mod) -> Dict[str, "spritesheet.Sheet"]:
+    """``logo_index`` / ``small_logo_index`` -> the mod's own loose sheet that
+    names it. A key whose sheet is packed is left out: the game reads the one in
+    its packs, and a check with no evidence reports nothing (91)."""
+    from . import spritesheet
+    data = Path(getattr(mod, "data", "") or "")
+    out = {}
+    for key, rel in spritesheet.SHEET_OF.items():
+        sheet = spritesheet.read(data, rel)
+        if sheet is not None:
+            out[key] = sheet
+    return out
+
+
+def logo_gap(key: str, value: str, sheet) -> str:
+    """Why a shield name draws the wrong picture, for the editor, Health and
+    the audit alike."""
+    from . import spritesheet
+    rel = spritesheet.SHEET_OF[key]
+    if value[:1].isdigit():
+        return _i18n.msg("eng.factions.logo_position_past_the_end", "`{key} {value}` is a position in {rel}, which has {n} sprites - the engine draws sprite 0 in its place", key=key, value=value, rel=rel, n=len(sheet.sprites))
+    near = next((n for n in sheet.names() if n.lower() == value.lower()), "")
+    if near:
+        return _i18n.msg("eng.factions.logo_differs_in_case", "`{value}` is not in {rel}, which has `{near}` - the engine matches case, so it draws sprite 0 in its place", value=value, rel=rel, near=near)
+    return _i18n.msg("eng.factions.logo_not_in_sheet", "`{value}` is not a sprite in {rel}, so the engine draws sprite 0 in its place and the faction's shield is missing - the audit's Copy from gives it one", value=value, rel=rel)
+
+
 def check_file(rf: fr.RecordFile, mod=None) -> List[Dict]:
     """Findings for the whole roster.
 
@@ -428,6 +455,7 @@ def check_file(rf: fr.RecordFile, mod=None) -> List[Dict]:
             units = {u.type for u in mod.edu.units} or None
         except (OSError, AttributeError, ValueError):
             units = None
+    sheets = logo_sheets(mod) if mod is not None else {}
 
     slots = {slot_of(r.name) for r in rf.records}
     if len(rf.records) > FACTION_LIMIT:
@@ -457,6 +485,11 @@ def check_file(rf: fr.RecordFile, mod=None) -> List[Dict]:
             add("unknown-religion", rec.name, rec.lines["religion"],
                 f"`{religion}` is not in the `religions` list of descr_religions.txt")
 
+        for key, sheet in sheets.items():
+            value = rec.get(key)
+            if key in rec.lines and value and sheet.find(value) is None:
+                add("logo-not-in-sheet", rec.name, rec.lines[key],
+                    logo_gap(key, value, sheet))
         for key in ("primary_colour", "secondary_colour"):
             if key in rec.lines and parse_colour(rec.get(key)) is None:
                 add("bad-colour", rec.name, rec.lines[key],
@@ -590,6 +623,16 @@ def detail(mod, name: str) -> Dict:
                           "label": f"{shown} ({u.type})" if shown else u.type})
     except (OSError, AttributeError, ValueError):
         units = []
+    sheets = logo_sheets(mod)
+
+    def _logo_names(sheet) -> List[str]:
+        """The shields in a sheet, and any name the roster already uses there
+        (so a value that is in the sheet is never shown as missing)."""
+        if sheet is None:
+            return []
+        used = {r.get(k) for r in rf.records for k in ("logo_index", "small_logo_index")}
+        return sorted(n for n in sheet.names() if "LOGO" in n.upper() or n in used)
+
     return {
         "mod": getattr(mod, "name", ""), "file": REL, "name": rec.name,
         "slot": slot_of(rec.name), "modifier": modifier_of(rec.name),
@@ -623,6 +666,10 @@ def detail(mod, name: str) -> Dict:
             "small_logo_indexes": sorted({r.get("small_logo_index")
                                           for r in rf.records
                                           if r.get("small_logo_index")}),
+            # 91: when the mod ships the sheet, the box offers only the shields
+            # in it; empty means the sheet is packed and the box stays free
+            "logo_sprites": _logo_names(sheets.get("logo_index")),
+            "small_logo_sprites": _logo_names(sheets.get("small_logo_index")),
         },
     }
 
