@@ -77,6 +77,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from . import flatrecord as fr
 from . import keyblock as kb
+from . import i18n as _i18n
 
 #: these are plain 8-bit text like every other campaign file, and Latin-1 is the
 #: codec that promises the bytes come back as they went in
@@ -373,7 +374,7 @@ def parse_religions(text: str) -> ReligionFile:
         if key == "religions" and not value:
             end = _closing(lines, i)
             if end < 0:
-                rf.warnings.append(f"line {i + 1}: `religions` has no closing brace")
+                rf.warnings.append(_i18n.msg("eng.minorfiles.line_religions_has_no_closing_brace", "line {x}: `religions` has no closing brace", x=i + 1))
                 i += 1
                 continue
             rf.list_start, rf.list_end = i, end
@@ -382,7 +383,7 @@ def parse_religions(text: str) -> ReligionFile:
                 if not name or name in "{}":
                     continue
                 if name in rf.listed_lines:
-                    rf.warnings.append(f"line {j + 1}: `{name}` is listed twice")
+                    rf.warnings.append(_i18n.msg("eng.minorfiles.line_is_listed_twice", "line {x}: `{name}` is listed twice", x=j + 1, name=name))
                 rf.listed.append(name)
                 rf.listed_lines.setdefault(name, j)
             i = end + 1
@@ -392,23 +393,22 @@ def parse_religions(text: str) -> ReligionFile:
             rel = Religion(name=value, start=i,
                            end=(end + 1) if end >= 0 else i + 1)
             if not value:
-                rel.warnings.append(f"line {i + 1}: this religion has no name")
+                rel.warnings.append(_i18n.msg("eng.minorfiles.line_this_religion_has_no_name", "line {x}: this religion has no name", x=i + 1))
             if end < 0:
-                rel.warnings.append(f"line {i + 1}: `religion {value}` has no "
-                                    "closing brace")
+                rel.warnings.append(_i18n.msg("eng.minorfiles.line_religion_has_no_closing_brace", "line {x}: `religion {value}` has no closing brace", x=i + 1, value=value))
             for j in range(i + 1, rel.end):
                 body = kb.code_of(lines[j])
                 if not body or body in "{}":
                     continue
                 bkey, bvalue = _head(body)
                 if bkey not in RELIGION_KEYS:
-                    rel.warnings.append(f"line {j + 1}: `{bkey}` is not a religion line")
+                    rel.warnings.append(_i18n.msg("eng.minorfiles.line_is_not_a_religion_line", "line {x}: `{bkey}` is not a religion line", x=j + 1, bkey=bkey))
                 rel.values[bkey] = bvalue
                 rel.lines[bkey] = j
             rf.religions.append(rel)
             i = rel.end
             continue
-        rf.warnings.append(f"line {i + 1}: `{key}` is not a descr_religions line")
+        rf.warnings.append(_i18n.msg("eng.minorfiles.line_is_not_a_descr_religions", "line {x}: `{key}` is not a descr_religions line", x=i + 1, key=key))
         i += 1
 
     for rel in rf.religions:
@@ -420,11 +420,9 @@ def parse_religion_block(text: str) -> Religion:
     """Read ONE ``religion … { … }`` block, as a code view pane holds it."""
     rf = parse_religions(text if text.endswith("\n") else text + "\n")
     if not rf.religions:
-        raise MinorError("a religion starts with a `religion <name>` line followed "
-                         "by `{` - this text has none", 1)
+        raise MinorError(_i18n.msg("eng.minorfiles.a_religion_starts_with_a_religion", "a religion starts with a `religion <name>` line followed by `{` - this text has none"), 1)
     if len(rf.religions) > 1:
-        raise MinorError(f"this text holds {len(rf.religions)} religions - "
-                         "one at a time", rf.religions[1].start + 1)
+        raise MinorError(_i18n.msg("eng.minorfiles.this_text_holds_religions_one_at", "this text holds {religions_n} religions - one at a time", religions_n=len(rf.religions)), rf.religions[1].start + 1)
     return rf.religions[0]
 
 
@@ -437,15 +435,14 @@ def render_religion(base: str, edits: Optional[Dict] = None) -> str:
     if "name" in edits:
         name = str(edits["name"] or "").strip()
         if not name:
-            raise MinorError("a religion needs a name", rel.start + 1)
+            raise MinorError(_i18n.msg("eng.minorfiles.a_religion_needs_a_name", "a religion needs a name"), rel.start + 1)
         if name != rel.name:
             sp.replace(rel.start, kb.sub_value(lines[rel.start], "religion", name))
     if "pip_path" in edits:
         value = str(edits["pip_path"] or "").strip()
         line = rel.lines.get("pip_path", -1)
         if not value:
-            raise MinorError("a religion needs its `pip_path` line - the pip is what "
-                             "the campaign map draws for it",
+            raise MinorError(_i18n.msg("eng.minorfiles.a_religion_needs_its_pip_path", "a religion needs its `pip_path` line - the pip is what the campaign map draws for it"),
                              (line + 1) or (rel.start + 1))
         if line >= 0:
             if value != rel.values.get("pip_path", ""):
@@ -463,7 +460,7 @@ def new_religion(edits: Dict) -> str:
     """A whole religion block written from scratch."""
     name = str(edits.get("name") or "").strip()
     if not name:
-        raise MinorError("a new religion needs a name")
+        raise MinorError(_i18n.msg("eng.minorfiles.a_new_religion_needs_a_name", "a new religion needs a name"))
     pip = str(edits.get("pip_path") or f"ui/pips/pip_{name}.tga").strip()
     return f"religion {name}\n{{\n\tpip_path\t{pip}\n}}"
 
@@ -482,11 +479,9 @@ def edit_religions_file(text: str, add: str = "", remove: str = "",
     sp = kb.Splice(rf.lines)
     if add:
         if rf.get(add) is not None or add in rf.listed_lines:
-            raise MinorError(f"`{add}` is already a religion in this file")
+            raise MinorError(_i18n.msg("eng.minorfiles.is_already_a_religion_in_this", "`{add}` is already a religion in this file", add=add))
         if rf.list_start < 0:
-            raise MinorError("this file has no `religions { … }` list to join - the "
-                             "engine reads that list, so a religion outside it does "
-                             "not exist")
+            raise MinorError(_i18n.msg("eng.minorfiles.this_file_has_no_religions_list", "this file has no `religions { … }` list to join - the engine reads that list, so a religion outside it does not exist"))
         last = max(rf.listed_lines.values()) if rf.listed_lines else rf.list_start
         pad = (kb.indent_of(rf.lines[last]) if rf.listed_lines
                else kb.indent_of(rf.lines[rf.list_start]) + "\t")
@@ -499,7 +494,7 @@ def edit_religions_file(text: str, add: str = "", remove: str = "",
     if remove:
         rel = rf.get(remove)
         if rel is None and remove not in rf.listed_lines:
-            raise MinorError(f"`{remove}` is not a religion in this file")
+            raise MinorError(_i18n.msg("eng.minorfiles.is_not_a_religion_in_this", "`{remove}` is not a religion in this file", remove=remove))
         if remove in rf.listed_lines:
             sp.drop(rf.listed_lines[remove])
         if rel is not None:
@@ -749,7 +744,7 @@ def parse_cultures(text: str) -> CultureFile:
         if key == "culture":
             cur = Culture(name=value, start=i, end=i + 1)
             if not value:
-                cur.warnings.append(f"line {i + 1}: this culture has no name")
+                cur.warnings.append(_i18n.msg("eng.minorfiles.line_this_culture_has_no_name", "line {x}: this culture has no name", x=i + 1))
             cf.cultures.append(cur)
             i += 1
             continue
@@ -758,13 +753,13 @@ def parse_cultures(text: str) -> CultureFile:
                 cf.preamble[key] = (value, i)
             else:
                 cf.warnings.append(
-                    f"line {i + 1}: `{key}` before the first `culture` line")
+                    _i18n.msg("eng.minorfiles.line_before_the_first_culture_line", "line {x}: `{key}` before the first `culture` line", x=i + 1, key=key))
             i += 1
             continue
         if code == "{" and cur.brace_start < 0:
             end = _closing(lines, i)
             if end < 0:
-                cur.warnings.append(f"line {i + 1}: the settlement block never closes")
+                cur.warnings.append(_i18n.msg("eng.minorfiles.line_the_settlement_block_never_closes", "line {x}: the settlement block never closes", x=i + 1))
                 i += 1
                 continue
             cur.brace_start, cur.brace_end = i, end
@@ -778,16 +773,15 @@ def parse_cultures(text: str) -> CultureFile:
             tokens = code.split()[1:]
             if len(tokens) != 6:
                 cur.warnings.append(
-                    f"line {i + 1}: `{key}` has {len(tokens)} values, and every real "
-                    "agent line has 6")
+                    _i18n.msg("eng.minorfiles.line_has_values_and_every_real", "line {x}: `{key}` has {tokens_n} values, and every real agent line has 6", x=i + 1, key=key, tokens_n=len(tokens)))
             cur.agents[key] = (tokens, i)
         elif key in CULTURE_HEAD + CULTURE_TAIL:
             if key in cur.lines:
-                cur.warnings.append(f"line {i + 1}: a second `{key}` line")
+                cur.warnings.append(_i18n.msg("eng.minorfiles.line_a_second_line", "line {x}: a second `{key}` line", x=i + 1, key=key))
             cur.values[key] = value
             cur.lines[key] = i
         else:
-            cur.warnings.append(f"line {i + 1}: `{key}` is not a culture line")
+            cur.warnings.append(_i18n.msg("eng.minorfiles.line_is_not_a_culture_line", "line {x}: `{key}` is not a culture line", x=i + 1, key=key))
         cur.end = i + 1
         i += 1
 
@@ -807,12 +801,12 @@ def _parse_levels(cul: Culture, lines: List[str], start: int, end: int) -> None:
         name = code.split()[0]
         close = _closing(lines, i)
         if close < 0 or close > end:
-            cul.warnings.append(f"line {i + 1}: `{name}` has no closing brace")
+            cul.warnings.append(_i18n.msg("eng.minorfiles.line_has_no_closing_brace", "line {x}: `{name}` has no closing brace", x=i + 1, name=name))
             i += 1
             continue
         lvl = CultureLevel(name=name, start=i, end=close + 1)
         if name not in CULTURE_LEVELS:
-            cul.warnings.append(f"line {i + 1}: `{name}` is not a settlement level")
+            cul.warnings.append(_i18n.msg("eng.minorfiles.line_is_not_a_settlement_level", "line {x}: `{name}` is not a settlement level", x=i + 1, name=name))
         for j in range(i + 1, close):
             body = kb.code_of(lines[j])
             if not body or body in "{}":
@@ -820,7 +814,7 @@ def _parse_levels(cul: Culture, lines: List[str], start: int, end: int) -> None:
             bkey, bvalue = _head(body)
             if bkey not in CULTURE_LEVEL_KEYS:
                 cul.warnings.append(
-                    f"line {j + 1}: `{bkey}` is not a settlement-level line")
+                    _i18n.msg("eng.minorfiles.line_is_not_a_settlement_level_2", "line {x}: `{bkey}` is not a settlement-level line", x=j + 1, bkey=bkey))
             lvl.values[bkey] = bvalue
             lvl.lines[bkey] = j
         cul.levels.append(lvl)
@@ -831,11 +825,9 @@ def parse_culture_block(text: str) -> Culture:
     """Read ONE culture record, as a code view pane holds it."""
     cf = parse_cultures(text if text.endswith("\n") else text + "\n")
     if not cf.cultures:
-        raise MinorError("a culture starts with a `culture <name>` line - this text "
-                         "has none", 1)
+        raise MinorError(_i18n.msg("eng.minorfiles.a_culture_starts_with_a_culture", "a culture starts with a `culture <name>` line - this text has none"), 1)
     if len(cf.cultures) > 1:
-        raise MinorError(f"this text holds {len(cf.cultures)} cultures - one at a "
-                         "time", cf.cultures[1].start + 1)
+        raise MinorError(_i18n.msg("eng.minorfiles.this_text_holds_cultures_one_at", "this text holds {cultures_n} cultures - one at a time", cultures_n=len(cf.cultures)), cf.cultures[1].start + 1)
     return cf.cultures[0]
 
 
@@ -859,7 +851,7 @@ def render_culture(base: str, edits: Optional[Dict] = None) -> str:
     if "name" in edits:
         name = str(edits["name"] or "").strip()
         if not name:
-            raise MinorError("a culture needs a name", cul.start + 1)
+            raise MinorError(_i18n.msg("eng.minorfiles.a_culture_needs_a_name", "a culture needs a name"), cul.start + 1)
         if name != cul.name:
             sp.replace(cul.start, kb.sub_value(lines[cul.start], "culture", name))
 
@@ -869,18 +861,16 @@ def render_culture(base: str, edits: Optional[Dict] = None) -> str:
         value = str(edits[key] or "").strip()
         line = cul.lines.get(key, -1)
         if line < 0:
-            raise MinorError(f"this culture has no `{key}` line to edit - adding one "
-                             "means saying where it goes, which the file's own order "
-                             "decides", cul.start + 1)
+            raise MinorError(_i18n.msg("eng.minorfiles.this_culture_has_no_line_to", "this culture has no `{key}` line to edit - adding one means saying where it goes, which the file's own order decides", key=key), cul.start + 1)
         if not value:
-            raise MinorError(f"a culture needs its `{key}` line", line + 1)
+            raise MinorError(_i18n.msg("eng.minorfiles.a_culture_needs_its_line", "a culture needs its `{key}` line", key=key), line + 1)
         if value != cul.values.get(key, ""):
             sp.replace(line, kb.sub_value(lines[line], key, value))
 
     for name, want in (edits.get("levels") or {}).items():
         lvl = cul.level(name)
         if lvl is None:
-            raise MinorError(f"this culture has no `{name}` settlement level",
+            raise MinorError(_i18n.msg("eng.minorfiles.this_culture_has_no_settlement_level", "this culture has no `{name}` settlement level", name=name),
                              cul.start + 1)
         _edit_level(sp, lines, lvl, dict(want or {}))
 
@@ -889,26 +879,24 @@ def render_culture(base: str, edits: Optional[Dict] = None) -> str:
         values = [str((x.get("value") if isinstance(x, dict) else x) or "").strip()
                   for x in ports]
         if len(values) != len(cul.ports):
-            raise MinorError(f"this culture's port ladder has {len(cul.ports)} lines "
-                             f"and the edit sent {len(values)} - adding or removing a "
-                             "port level is done in the code view", cul.start + 1)
+            raise MinorError(_i18n.msg("eng.minorfiles.this_cultures_port_ladder_has_lines", "this culture's port ladder has {ports_n} lines and the edit sent {values_n} - adding or removing a port level is done in the code view", ports_n=len(cul.ports), values_n=len(values)), cul.start + 1)
         for (key, old, line), value in zip(cul.ports, values):
             if not value:
-                raise MinorError(f"a `{key}` line cannot be empty", line + 1)
+                raise MinorError(_i18n.msg("eng.minorfiles.a_line_cannot_be_empty", "a `{key}` line cannot be empty", key=key), line + 1)
             if value != old:
                 sp.replace(line, kb.sub_value(lines[line], key, value))
 
     for agent, want in (edits.get("agents") or {}).items():
         held = cul.agents.get(agent)
         if held is None:
-            raise MinorError(f"this culture has no `{agent}` line", cul.start + 1)
+            raise MinorError(_i18n.msg("eng.minorfiles.this_culture_has_no_line", "this culture has no `{agent}` line", agent=agent), cul.start + 1)
         tokens, line = held
         new = list(tokens)
         for pos, name in ((0, "card"), (1, "info_card"), (2, "pip"), (3, "cost")):
             if name in (want or {}) and pos < len(new):
                 value = str(want[name] or "").strip()
                 if not value:
-                    raise MinorError(f"an agent's `{name}` cannot be empty", line + 1)
+                    raise MinorError(_i18n.msg("eng.minorfiles.an_agents_cannot_be_empty", "an agent's `{name}` cannot be empty", name=name), line + 1)
                 new[pos] = value
         if new != tokens:
             sp.replace(line, kb.sub_tokens(lines[line], agent, new))
@@ -921,11 +909,11 @@ def _edit_level(sp: kb.Splice, lines: List[str], lvl: CultureLevel,
     if "model" in want or "plan" in want:
         line = lvl.lines.get("normal", -1)
         if line < 0:
-            raise MinorError(f"`{lvl.name}` has no `normal` line", lvl.start + 1)
+            raise MinorError(_i18n.msg("eng.minorfiles.has_no_normal_line", "`{name}` has no `normal` line", name=lvl.name), lvl.start + 1)
         model = str(want.get("model", lvl.model) or "").strip()
         plan = str(want.get("plan", lvl.plan) or "").strip()
         if not model:
-            raise MinorError(f"`{lvl.name}` needs a strat model", line + 1)
+            raise MinorError(_i18n.msg("eng.minorfiles.needs_a_strat_model", "`{name}` needs a strat model", name=lvl.name), line + 1)
         old = lvl.values.get("normal", "")
         # the gap after the comma is this file's own column, like every other gap
         rest = old.partition(",")[2]
@@ -937,9 +925,9 @@ def _edit_level(sp: kb.Splice, lines: List[str], lvl: CultureLevel,
         line = lvl.lines.get("card", -1)
         card = str(want["card"] or "").strip()
         if line < 0:
-            raise MinorError(f"`{lvl.name}` has no `card` line", lvl.start + 1)
+            raise MinorError(_i18n.msg("eng.minorfiles.has_no_card_line", "`{name}` has no `card` line", name=lvl.name), lvl.start + 1)
         if not card:
-            raise MinorError(f"`{lvl.name}` needs a settlement card", line + 1)
+            raise MinorError(_i18n.msg("eng.minorfiles.needs_a_settlement_card", "`{name}` needs a settlement card", name=lvl.name), line + 1)
         if card != lvl.values.get("card", ""):
             sp.replace(line, kb.sub_value(lines[line], "card", card))
 
@@ -1206,11 +1194,11 @@ def parse_names(text: str) -> NameFile:
             fac = NameFaction(name=code.split(":", 1)[1].strip(), start=i, end=i + 1)
             sec = None
             if not fac.name:
-                fac.warnings.append(f"line {i + 1}: this faction has no name")
+                fac.warnings.append(_i18n.msg("eng.minorfiles.line_this_faction_has_no_name", "line {x}: this faction has no name", x=i + 1))
             nf.factions.append(fac)
             continue
         if fac is None:
-            nf.warnings.append(f"line {i + 1}: `{code}` before the first faction")
+            nf.warnings.append(_i18n.msg("eng.minorfiles.line_before_the_first_faction", "line {x}: `{code}` before the first faction", x=i + 1, code=code))
             continue
         if low in NAME_SECTIONS:
             sec = NameSection(name=low, start=i, end=i + 1)
@@ -1219,8 +1207,7 @@ def parse_names(text: str) -> NameFile:
             continue
         if sec is None:
             fac.warnings.append(
-                f"line {i + 1}: `{code}` is not under a "
-                f"{kb.and_list(NAME_SECTIONS)} heading")
+                _i18n.msg("eng.minorfiles.line_is_not_under_a_heading", "line {x}: `{code}` is not under a {and_list} heading", x=i + 1, code=code, and_list=kb.and_list(NAME_SECTIONS)))
             fac.end = i + 1
             continue
         fault = name_fault(sec.name, code)
@@ -1238,10 +1225,9 @@ def parse_names_block(text: str) -> NameFaction:
     """Read ONE faction's names, as a code view pane holds it."""
     nf = parse_names(text if text.endswith("\n") else text + "\n")
     if not nf.factions:
-        raise MinorError("this text has no `faction: <name>` line", 1)
+        raise MinorError(_i18n.msg("eng.minorfiles.this_text_has_no_faction_line", "this text has no `faction: <name>` line"), 1)
     if len(nf.factions) > 1:
-        raise MinorError(f"this text holds {len(nf.factions)} factions - "
-                         "one at a time", nf.factions[1].start + 1)
+        raise MinorError(_i18n.msg("eng.minorfiles.this_text_holds_factions_one_at", "this text holds {factions_n} factions - one at a time", factions_n=len(nf.factions)), nf.factions[1].start + 1)
     return nf.factions[0]
 
 
@@ -1259,14 +1245,14 @@ def render_names(base: str, edits: Optional[Dict] = None) -> str:
     if "name" in edits:
         name = str(edits["name"] or "").strip()
         if not name:
-            raise MinorError("a faction needs a name", fac.start + 1)
+            raise MinorError(_i18n.msg("eng.minorfiles.a_faction_needs_a_name", "a faction needs a name"), fac.start + 1)
         if name != fac.name:
             sp.replace(fac.start, kb.keep_comment(
                 lines[fac.start], kb.indent_of(lines[fac.start]) + f"faction: {name}"))
     for which, wanted in (edits.get("sections") or {}).items():
         sec = fac.section(str(which).lower())
         if sec is None:
-            raise MinorError(f"this faction has no `{which}` section", fac.start + 1)
+            raise MinorError(_i18n.msg("eng.minorfiles.this_faction_has_no_section", "this faction has no `{which}` section", which=which), fac.start + 1)
         rows = [str(v).strip() for v in (wanted or [])]
         for value in rows:
             fault = name_fault(sec.name, value)
@@ -1286,7 +1272,7 @@ def _edit_entries(sp: kb.Splice, lines: List[str], sec: NameSection,
                        kb.keep_comment(lines[olds[i].line],
                                        kb.indent_of(lines[olds[i].line]) + wanted[i]))
         elif not wanted[i]:
-            raise MinorError("a name cannot be blank", olds[i].line + 1)
+            raise MinorError(_i18n.msg("eng.minorfiles.a_name_cannot_be_blank", "a name cannot be blank"), olds[i].line + 1)
     if len(wanted) > len(olds):
         pad = (kb.indent_of(lines[olds[-1].line]) if olds
                else kb.indent_of(lines[sec.start]) + "\t")
@@ -1307,7 +1293,7 @@ def new_names(edits: Dict) -> str:
     """
     name = str(edits.get("name") or "").strip()
     if not name:
-        raise MinorError("a new faction needs a name")
+        raise MinorError(_i18n.msg("eng.minorfiles.a_new_faction_needs_a_name", "a new faction needs a name"))
     out = [f"faction: {name}", ""]
     sections = dict(edits.get("sections") or {})
     for which in ("characters", "surnames", "women"):
@@ -1622,7 +1608,7 @@ def tab(tab_id: str) -> MinorKind:
     for t in TABS:
         if t.id == tab_id:
             return t
-    raise KeyError(f"no minor-files tab {tab_id!r}")
+    raise KeyError(_i18n.msg("eng.minorfiles.no_minor_files_tab", "no minor-files tab {tab_id}", tab_id=repr(tab_id)))
 
 
 def path_for(mod, tab_id: str) -> Path:
@@ -1692,7 +1678,7 @@ def shape_of(tab_id: str) -> Shape:
         return REBELS
     if tab_id == "resources":
         return RESOURCES
-    raise KeyError(f"{tab_id!r} is not a flat-record tab")
+    raise KeyError(_i18n.msg("eng.minorfiles.is_not_a_flat_record_tab", "{tab_id} is not a flat-record tab", tab_id=repr(tab_id)))
 
 
 def parse_any(tab_id: str, text: str) -> LineFile:
@@ -1705,7 +1691,7 @@ def parse_any(tab_id: str, text: str) -> LineFile:
         return parse_cultures(text)
     if tab_id == "names":
         return parse_names(text)
-    raise KeyError(f"no minor-files tab {tab_id!r}")
+    raise KeyError(_i18n.msg("eng.minorfiles.no_minor_files_tab", "no minor-files tab {tab_id}", tab_id=repr(tab_id)))
 
 
 def read_any(mod, tab_id: str) -> Tuple[LineFile, str]:
@@ -1713,7 +1699,7 @@ def read_any(mod, tab_id: str) -> Tuple[LineFile, str]:
     meta = tab(tab_id)
     path = path_for(mod, tab_id)
     if not path.is_file():
-        raise KeyError(f"{getattr(mod, 'name', '?')} has no {meta.rel}")
+        raise KeyError(_i18n.msg("eng.minorfiles.has_no", "{getattr} has no {rel}", getattr=getattr(mod, 'name', '?'), rel=meta.rel))
     text = kb.read_text(path, ENCODING)
     return parse_any(tab_id, text), text
 
@@ -1728,7 +1714,7 @@ def render_any(tab_id: str, base: str, edits: Optional[Dict] = None) -> str:
         return render_culture(base, edits or {})
     if tab_id == "names":
         return render_names(base, edits or {})
-    raise KeyError(f"no minor-files tab {tab_id!r}")
+    raise KeyError(_i18n.msg("eng.minorfiles.no_minor_files_tab", "no minor-files tab {tab_id}", tab_id=repr(tab_id)))
 
 
 def new_any(tab_id: str, edits: Dict) -> str:
@@ -1752,7 +1738,7 @@ def parse_block_any(tab_id: str, text: str):
         return parse_culture_block(text)
     if tab_id == "names":
         return parse_names_block(text)
-    raise KeyError(f"no minor-files tab {tab_id!r}")
+    raise KeyError(_i18n.msg("eng.minorfiles.no_minor_files_tab", "no minor-files tab {tab_id}", tab_id=repr(tab_id)))
 
 
 def check_any(mod, tab_id: str, parsed: LineFile) -> List[Dict]:
@@ -1923,7 +1909,7 @@ def detail(mod, tab_id: str, name: str) -> Dict:
     parsed, _ = read_any(mod, tab_id)
     rec = parsed.get(name)
     if rec is None:
-        raise KeyError(f"no {meta.noun} {name!r} in {meta.rel}")
+        raise KeyError(_i18n.msg("eng.minorfiles.no_in", "no {noun} {name} in {rel}", noun=meta.noun, name=repr(name), rel=meta.rel))
     block = parsed.block_text(rec)
     names = loc_names(mod, tab_id)
     tag = loc_tag(tab_id, rec)
@@ -2050,7 +2036,7 @@ def plan(mod, body: dict) -> MinorPlan:
         return p
     path = path_for(mod, p.tab)
     if not path.is_file():
-        p.errors.append(f"{getattr(mod, 'name', '?')} has no {meta.rel}")
+        p.errors.append(_i18n.msg("eng.minorfiles.has_no", "{getattr} has no {rel}", getattr=getattr(mod, 'name', '?'), rel=meta.rel))
         return p
     original = kb.read_text(path, ENCODING)
     try:
@@ -2083,7 +2069,7 @@ def plan(mod, body: dict) -> MinorPlan:
     p.text = "" if text == original else text
     _drop_settled(p)
     if not p.touched() and not p.errors:
-        p.warnings.append("nothing to change")
+        p.warnings.append(_i18n.msg("eng.minorfiles.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -2118,14 +2104,14 @@ def _plan_record(p: MinorPlan, text: str, body: dict) -> str:
 
     if p.action == "add":
         if not p.name:
-            raise MinorError(f"a new {noun} needs a name")
+            raise MinorError(_i18n.msg("eng.minorfiles.a_new_needs_a_name", "a new {noun} needs a name", noun=noun))
         if parsed.get(p.name) is not None:
-            p.errors.append(f"{p.name} is already a {noun} in this file")
+            p.errors.append(_i18n.msg("eng.minorfiles.is_already_a_in_this_file", "{name} is already a {noun} in this file", name=p.name, noun=noun))
             return text
         block = str(body.get("raw_block") or "").strip("\r\n") or new_any(
             p.tab, dict(body.get("edits") or {}, name=p.name))
         if parse_block_any(p.tab, block + "\n").name != p.name:
-            raise MinorError(f"this text does not define `{p.name}`")
+            raise MinorError(_i18n.msg("eng.minorfiles.this_text_does_not_define", "this text does not define `{name}`", name=p.name))
         p.changes.append(f"+ {noun} {p.name}")
         if p.tab == "religions":
             p.changes.append(f"+ `{p.name}` in the `religions` list")
@@ -2138,7 +2124,7 @@ def _plan_record(p: MinorPlan, text: str, body: dict) -> str:
 
     rec = parsed.get(p.name)
     if rec is None:
-        p.errors.append(f"{p.name} is not a {noun} in this file")
+        p.errors.append(_i18n.msg("eng.minorfiles.is_not_a_in_this_file", "{name} is not a {noun} in this file", name=p.name, noun=noun))
         return text
 
     if p.action == "delete":
@@ -2156,8 +2142,7 @@ def _plan_record(p: MinorPlan, text: str, body: dict) -> str:
         block = str(raw).strip("\r\n")
         if parse_block_any(p.tab, block + "\n").name != p.name:
             raise MinorError(
-                f"this {noun} is `{p.name}` - renaming it here would orphan every "
-                "campaign file that names it")
+                _i18n.msg("eng.minorfiles.this_is_renaming_it_here_would", "this {noun} is `{name}` - renaming it here would orphan every campaign file that names it", noun=noun, name=p.name))
     else:
         block = render_any(p.tab, base, dict(body.get("edits") or {}))
     if block == base:
@@ -2177,13 +2162,11 @@ def _plan_duplicate(p: MinorPlan, parsed: CultureFile, source: str) -> str:
     models, the cards, the agent art) is the source's until it is changed."""
     src = parsed.get(source)
     if src is None:
-        raise MinorError(f"{source or '(nothing)'} is not a culture in this file")
+        raise MinorError(_i18n.msg("eng.minorfiles.is_not_a_culture_in_this", "{x} is not a culture in this file", x=source or '(nothing)'))
     if not CULTURE_NAME.match(p.name or ""):
-        raise MinorError("a culture name is lower case letters, digits and "
-                         "underscores, starting with a letter - it becomes a text key "
-                         "and a folder name")
+        raise MinorError(_i18n.msg("eng.minorfiles.a_culture_name_is_lower_case", "a culture name is lower case letters, digits and underscores, starting with a letter - it becomes a text key and a folder name"))
     if parsed.get(p.name) is not None:
-        p.errors.append(f"{p.name} is already a culture in this file")
+        p.errors.append(_i18n.msg("eng.minorfiles.is_already_a_culture_in_this", "{name} is already a culture in this file", name=p.name))
         return parsed._rebuilt(list(parsed.lines))
     lines = list(parsed.lines)
     block = lines[src.start:src.end]
@@ -2222,8 +2205,7 @@ def _plan_culture_needs(p: MinorPlan, mod, source: str) -> None:
                                      else f" - {source} has {{{k}}} \"{loc[k]}\"")})
     if not keys:
         p.needs.append({"what": "text key",
-                        "detail": f"{{{new}}} and EMT_{new}_PRIEST in text/expanded.txt "
-                                  f"({source} has none here, so the game's own are used)"})
+                        "detail": _i18n.msg("eng.minorfiles.and_emt_priest_in_text_expanded", "{{new}} and EMT_{new2}_PRIEST in text/expanded.txt ({source} has none here, so the game's own are used)", new=new, new2=new, source=source)})
     facs = sorted(f for f, c in (getattr(mod, "faction_cultures", None) or {}).items()
                   if c == source)
     p.needs.append({"what": "factions",
@@ -2233,10 +2215,7 @@ def _plan_culture_needs(p: MinorPlan, mod, source: str) -> None:
                                if facs else f"no faction names {p.name} yet, and none "
                                f"names {source} either")})
     p.needs.append({"what": "art",
-                    "detail": f"every settlement model, card and agent picture still "
-                              f"points at {source}'s files; change the paths on the "
-                              "new culture's Settlements and Agents tabs to give it "
-                              "its own"})
+                    "detail": _i18n.msg("eng.minorfiles.every_settlement_model_card_and_agent", "every settlement model, card and agent picture still points at {source}'s files; change the paths on the new culture's Settlements and Agents tabs to give it its own", source=source)})
 
 
 def _plan_merge(p: MinorPlan, text: str, body: dict) -> str:
@@ -2249,7 +2228,7 @@ def _plan_merge(p: MinorPlan, text: str, body: dict) -> str:
     parsed = parse_names(text)
     tgt = parsed.get(p.name)
     if tgt is None:
-        p.errors.append(f"{p.name} is not a faction in this file")
+        p.errors.append(_i18n.msg("eng.minorfiles.is_not_a_faction_in_this", "{name} is not a faction in this file", name=p.name))
         return text
 
     if p.action == "dedupe":
@@ -2259,15 +2238,13 @@ def _plan_merge(p: MinorPlan, text: str, body: dict) -> str:
         sources = [str(s).strip() for s in (body.get("sources") or []) if str(s).strip()]
         dedupe, sort = bool(body.get("dedupe", True)), bool(body.get("sort"))
         if not sources:
-            p.errors.append("pick at least one faction to merge in - to clear the "
-                            "duplicates inside this one without adding anything, "
-                            "use Remove duplicates")
+            p.errors.append(_i18n.msg("eng.minorfiles.pick_at_least_one_faction_to", "pick at least one faction to merge in - to clear the duplicates inside this one without adding anything, use Remove duplicates"))
             return text
         for s in sources:
             if s == p.name:
-                p.errors.append(f"{p.name} cannot be merged into itself")
+                p.errors.append(_i18n.msg("eng.minorfiles.cannot_be_merged_into_itself", "{name} cannot be merged into itself", name=p.name))
             elif parsed.get(s) is None:
-                p.errors.append(f"{s} is not a faction in this file")
+                p.errors.append(_i18n.msg("eng.minorfiles.is_not_a_faction_in_this_2", "{s} is not a faction in this file", s=s))
         if p.errors:
             return text
 
@@ -2299,9 +2276,7 @@ def _plan_merge(p: MinorPlan, text: str, body: dict) -> str:
     if not dedupe and any(c.duplicates for c in counts.values()):
         n = sum(c.duplicates for c in counts.values())
         p.warnings.append(
-            f"{n} repeated name(s) already inside {p.name} are left as they are, "
-            "because Remove duplicates is off - and any name a source shares with "
-            "it is appended a second time")
+            _i18n.msg("eng.minorfiles.repeated_name_s_already_inside_are", "{n} repeated name(s) already inside {name} are left as they are, because Remove duplicates is off - and any name a source shares with it is appended a second time", n=n, name=p.name))
 
     if not merged:
         return text
@@ -2322,8 +2297,7 @@ def _plan_lookup(p: MinorPlan, mod) -> None:
     """
     path = Path(getattr(mod, "data", "")) / RELIGIONS_LOOKUP_REL
     if not path.is_file():
-        p.warnings.append(f"this mod has no {RELIGIONS_LOOKUP_REL}, so there was "
-                          "nothing to keep in step with it")
+        p.warnings.append(_i18n.msg("eng.minorfiles.this_mod_has_no_so_there", "this mod has no {RELIGIONS_LOOKUP_REL}, so there was nothing to keep in step with it", RELIGIONS_LOOKUP_REL=RELIGIONS_LOOKUP_REL))
         return
     before = kb.read_text(path, ENCODING)
     after = edit_lookup(before, add=p.name if p.action == "add" else "",
@@ -2444,16 +2418,15 @@ def _plan_religion_regions(p: MinorPlan, mod, seeds) -> None:
         try:
             share = int(str(row.get("share", "")).strip())
         except (TypeError, ValueError):
-            p.errors.append(f"{row.get('region')!r}: a share is a whole percent")
+            p.errors.append(_i18n.msg("eng.minorfiles.a_share_is_a_whole_percent", "{row}: a share is a whole percent", row=repr(row.get('region'))))
             continue
         if not 0 < share <= 100:
-            p.errors.append(f"{row.get('region')}: a share is 1 to 100, not {share}")
+            p.errors.append(_i18n.msg("eng.minorfiles.a_share_is_1_to_100", "{row}: a share is 1 to 100, not {share}", row=row.get('region'), share=share))
             continue
         wanted[str(row.get("region") or "").strip()] = share
     files = region_files(mod)
     if not files:
-        p.warnings.append("this mod has no descr_regions.txt, so no region was given "
-                          "the religion")
+        p.warnings.append(_i18n.msg("eng.minorfiles.this_mod_has_no_descr_regions", "this mod has no descr_regions.txt, so no region was given the religion"))
         return
     seeded = set()
     for rel in files:
@@ -2463,19 +2436,17 @@ def _plan_religion_regions(p: MinorPlan, mod, seeds) -> None:
             remove=p.name if p.action == "delete" else "", seeds=wanted)
         seeded.update(r.lower() for r in st["seeded"])
         for r in st["unseedable"]:
-            p.errors.append(f"{rel}: {r}'s religions do not add up to 100, so a share "
-                            f"cannot be taken from them - set that region right first")
+            p.errors.append(_i18n.msg("eng.minorfiles.s_religions_do_not_add_up", "{rel}: {r}'s religions do not add up to 100, so a share cannot be taken from them - set that region right first", rel=rel, r=r))
         if after != before:
             p.extra[rel] = after
             verb = "given" if p.action == "add" else "taken out of"
             p.changes.append(f"{p.name} {verb} {st['lines']} region line(s) in {rel}"
                              + (f", starting in {len(st['seeded'])}" if st["seeded"] else ""))
         if st["baseline"]:
-            p.warnings.append(f"{rel}: {st['baseline']} region line(s) did not add up to "
-                              f"100 before this and are left adding up to what they did")
+            p.warnings.append(_i18n.msg("eng.minorfiles.region_line_s_did_not_add", "{rel}: {baseline} region line(s) did not add up to 100 before this and are left adding up to what they did", rel=rel, baseline=st['baseline']))
     missing = [r for r in wanted if r.lower() not in seeded]
     if missing and p.action == "add":
-        p.errors.append(f"no region called {', '.join(missing[:5])} in {files[0]}")
+        p.errors.append(_i18n.msg("eng.minorfiles.no_region_called_in", "no region called {missing} in {files}", missing=', '.join(missing[:5]), files=files[0]))
 
 
 def _plan_pip_copy(p: MinorPlan, mod, donor: str, pip_path: str) -> None:
@@ -2488,7 +2459,7 @@ def _plan_pip_copy(p: MinorPlan, mod, donor: str, pip_path: str) -> None:
         return
     rec = rf.get(donor)
     if rec is None:
-        p.errors.append(f"there is no religion `{donor}` to copy a pip from")
+        p.errors.append(_i18n.msg("eng.minorfiles.there_is_no_religion_to_copy", "there is no religion `{donor}` to copy a pip from", donor=donor))
         return
     src = (rec.pip_path or "").replace("\\", "/").strip()
     dst = (pip_path or f"ui/pips/pip_{p.name}.tga").replace("\\", "/").strip()
@@ -2497,11 +2468,10 @@ def _plan_pip_copy(p: MinorPlan, mod, donor: str, pip_path: str) -> None:
     if dst.lower().startswith("data/"):
         dst = dst[5:]
     if not src or not (data / src).is_file():
-        p.warnings.append(f"{donor}'s pip ({src or 'none'}) is not in this mod, so there "
-                          f"is nothing to copy")
+        p.warnings.append(_i18n.msg("eng.minorfiles.s_pip_is_not_in_this", "{donor}'s pip ({x}) is not in this mod, so there is nothing to copy", donor=donor, x=src or 'none'))
         return
     if (data / dst).exists():
-        p.warnings.append(f"{dst} is already there, and is kept")
+        p.warnings.append(_i18n.msg("eng.minorfiles.is_already_there_and_is_kept", "{dst} is already there, and is kept", dst=dst))
         return
     p.copies.append((src, dst))
     p.changes.append(f"+ {dst}, copied from {donor}'s pip")
@@ -2521,14 +2491,12 @@ def _plan_loc(p: MinorPlan, mod, rec, wanted: Dict) -> None:
     p.loc_rel = rel
     if not writable:
         if wanted.get(tag):
-            p.warnings.append(f"{rel} is read by position, not by tag - change this "
-                              "name in the Strings module, which can do it safely")
+            p.warnings.append(_i18n.msg("eng.minorfiles.is_read_by_position_not_by", "{rel} is read by position, not by tag - change this name in the Strings module, which can do it safely", rel=rel))
         return
     have = loc_names(mod, p.tab)
     txt = Path(mod.data) / rel
     if not txt.exists() and not stringsbin.bin_path_for(txt).exists():
-        p.warnings.append(f"this mod has no {Path(rel).name}, so this {tab(p.tab).noun}"
-                          "'s name could not be written - it will show its tag in game")
+        p.warnings.append(_i18n.msg("eng.minorfiles.this_mod_has_no_so_this", "this mod has no {name}, so this {noun}'s name could not be written - it will show its tag in game", name=Path(rel).name, noun=tab(p.tab).noun))
         return
     want = str(wanted.get(tag, "")).strip() if wanted else ""
     if tag not in have:
@@ -2551,7 +2519,7 @@ def apply(p: MinorPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.touched():
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.minorfiles.nothing_to_change", "nothing to change"))
     mod = p.mod
     meta = tab(p.tab)
     tid = config.new_transfer_id()

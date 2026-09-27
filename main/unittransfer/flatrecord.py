@@ -33,6 +33,7 @@ from typing import Dict, List, Optional, Tuple
 
 from . import keyblock as kb
 from . import triggers
+from . import i18n as _i18n
 
 #: these are plain 8-bit text like every other campaign file, and Latin-1 is the
 #: codec that promises the bytes come back as they went in
@@ -198,7 +199,7 @@ def parse_records(shape: Shape, text: str) -> RecordFile:
         if key == shape.kw:
             cur = Record(name=value, start=i, end=i + 1)
             if not value:
-                cur.warnings.append(f"line {i + 1}: this {shape.noun} has no name")
+                cur.warnings.append(_i18n.msg("eng.flatrecord.line_this_has_no_name", "line {x}: this {noun} has no name", x=i + 1, noun=shape.noun))
             rf.records.append(cur)
             continue
         if cur is None:
@@ -206,7 +207,7 @@ def parse_records(shape: Shape, text: str) -> RecordFile:
                 rf.preamble[key] = (value, i)
             else:
                 rf.warnings.append(
-                    f"line {i + 1}: `{key}` before the first `{shape.kw}` line")
+                    _i18n.msg("eng.flatrecord.line_before_the_first_line", "line {x}: `{key}` before the first `{kw}` line", x=i + 1, key=key, kw=shape.kw))
             continue
         if shape.repeat_kw and key == shape.repeat_kw:
             # the whole rest of the line: unit types have spaces in them
@@ -214,9 +215,9 @@ def parse_records(shape: Shape, text: str) -> RecordFile:
             cur.end = i + 1
             continue
         if key not in shape.order:
-            cur.warnings.append(f"line {i + 1}: `{key}` is not a {shape.noun} line")
+            cur.warnings.append(_i18n.msg("eng.flatrecord.line_is_not_a_line", "line {x}: `{key}` is not a {noun} line", x=i + 1, key=key, noun=shape.noun))
         elif key in cur.lines:
-            cur.warnings.append(f"line {i + 1}: a second `{key}` line")
+            cur.warnings.append(_i18n.msg("eng.flatrecord.line_a_second_line", "line {x}: a second `{key}` line", x=i + 1, key=key))
         cur.values[key] = value
         cur.lines[key] = i
         cur.end = i + 1
@@ -234,11 +235,10 @@ def parse_record_block(shape: Shape, text: str) -> Record:
     """Read ONE record, as a code view pane holds it."""
     rf = parse_records(shape, text if text.endswith("\n") else text + "\n")
     if not rf.records:
-        raise RecordError(f"a {shape.noun} starts with a `{shape.kw} <name>` line - "
-                         "this text has none", 1)
+        raise RecordError(_i18n.msg("eng.flatrecord.a_starts_with_a_line_this", "a {noun} starts with a `{kw} <name>` line - this text has none", noun=shape.noun, kw=shape.kw), 1)
     if len(rf.records) > 1:
         raise RecordError(
-            f"this text holds {len(rf.records)} {shape.noun}s - one at a time",
+            _i18n.msg("eng.flatrecord.this_text_holds_s_one_at", "this text holds {records_n} {noun}s - one at a time", records_n=len(rf.records), noun=shape.noun),
             rf.records[1].start + 1)
     return rf.records[0]
 
@@ -259,7 +259,7 @@ def render_record(shape: Shape, base: str, edits: Optional[Dict] = None) -> str:
     if "name" in edits:
         name = str(edits["name"] or "").strip()
         if not name:
-            raise RecordError(f"a {shape.noun} needs a name", rec.start + 1)
+            raise RecordError(_i18n.msg("eng.flatrecord.a_needs_a_name", "a {noun} needs a name", noun=shape.noun), rec.start + 1)
         if name != rec.name:
             sp.replace(rec.start, kb.sub_value(lines[rec.start], shape.kw, name))
 
@@ -291,7 +291,7 @@ def edit_repeats(sp: kb.Splice, lines: List[str], olds: List[Repeat],
         if value == olds[i].value:
             continue
         if not value:
-            raise RecordError(f"a `{keyword}` line needs a value", olds[i].line + 1)
+            raise RecordError(_i18n.msg("eng.flatrecord.a_line_needs_a_value", "a `{keyword}` line needs a value", keyword=keyword), olds[i].line + 1)
         sp.replace(olds[i].line, kb.sub_value(lines[olds[i].line], keyword, value))
     if len(wanted) > len(olds):
         prefix = (kb.head_prefix(lines[olds[-1].line], keyword) if olds
@@ -308,7 +308,7 @@ def new_record(shape: Shape, edits: Dict) -> str:
     """A whole record written from scratch, in the order the real files write it."""
     name = str(edits.get("name") or "").strip()
     if not name:
-        raise RecordError(f"a new {shape.noun} needs a name")
+        raise RecordError(_i18n.msg("eng.flatrecord.a_new_needs_a_name", "a new {noun} needs a name", noun=shape.noun))
     out = [f"{shape.kw}\t\t\t{name}"]
     out += ["\t" + ln.strip() for ln in
             kb.new_lines(edits, shape.fields, shape.order, shape.flags,

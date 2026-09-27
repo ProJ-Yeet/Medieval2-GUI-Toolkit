@@ -11,23 +11,21 @@ function openNewUnitPicker(){
   const modal=document.getElementById('modal');
   const d=state.data||{};
   modal.className='modal';
-  modal.innerHTML=`<h2>New unit: pick the unit to build it from</h2>
+  modal.innerHTML=`<h2>${tt('settings.new_unit_pick_the_unit_to')}</h2>
     <div class="mbody">
-      <div class="count" style="margin-bottom:8px">The new unit copies the one you pick: same models, icons
-        and stats under a new <code>type</code> and <code>dictionary</code>. Nothing is duplicated on disk, and
-        you can change any field in the next step.</div>
-      <input id="nuSearch" placeholder="Filter units…" style="width:100%" oninput="renderNewUnitList()">
+      <div class="count" style="margin-bottom:8px">${tt('settings.the_new_unit_copies_the_one')}</div>
+      <input id="nuSearch" placeholder="${ttA('settings.filter_units')}" style="width:100%" oninput="renderNewUnitList()">
       <div class="barrow" style="margin-bottom:6px">
         <select id="nuFac" onchange="renderNewUnitList()">${
-          opts('All factions',(d.factions||[]),facLabel)}</select>
-        <select id="nuCat" onchange="renderNewUnitList()">${opts('All categories',d.categories||[])}</select>
-        <select id="nuClass" onchange="renderNewUnitList()">${opts('All classes',d.classes||[])}</select>
-        <label class="chk"><input type="checkbox" id="nuMerc" onchange="renderNewUnitList()"> mercs only</label>
+          opts(tt('settings.all_factions'),(d.factions||[]),facLabel)}</select>
+        <select id="nuCat" onchange="renderNewUnitList()">${opts(tt('settings.all_categories'),d.categories||[])}</select>
+        <select id="nuClass" onchange="renderNewUnitList()">${opts(tt('settings.all_classes'),d.classes||[])}</select>
+        <label class="chk"><input type="checkbox" id="nuMerc" onchange="renderNewUnitList()"> ${tt('settings.mercs_only')}</label>
         <span class="count" id="nuCount"></span>
       </div>
       <div class="baselist" id="nuList" style="max-height:420px"></div>
     </div>
-    <div class="foot"><button onclick="closeModal()">Cancel</button></div>`;
+    <div class="foot"><button onclick="closeModal()">${tt('settings.cancel')}</button></div>`;
   overlay.classList.add('open');
   renderNewUnitList();
 }
@@ -55,8 +53,8 @@ function renderNewUnitList(){
     <div class="baserow" onclick="startNewUnit('${q1(esc(u.type))}')">
       <img onerror="iconRetry(this)" src="${iconUrl(state.src,u.type)}">
       <div><div>${esc(u.name)}</div><div class="count">${esc(u.type)} · ${esc(u.kind||u.category||'?')}${
-        u.class?' / '+esc(u.class):''}${u.mercenary?' · merc':''}</div></div>
-    </div>`).join('')||'<div class="count" style="padding:8px">No units match.</div>';
+        u.class?' / '+esc(u.class):''}${u.mercenary?tt('settings.merc'):''}</div></div>
+    </div>`).join('')||`<div class="count" style="padding:8px">${tt('settings.no_units_match')}</div>`;
 }
 function startNewUnit(type){
   state.dst=state.src; state.destData=null;      // same-mod "transfer" = a new unit
@@ -81,126 +79,112 @@ async function openSettings(){
   const s=await api.get('/api/settings'); state.settings=s;
   const ign=s.unit_limit_ignored||[];
   const ignHtml=ign.length
-    ? ign.map(m=>`<div class="ovr"><span><code>${esc(m)}</code></span><button onclick="reenableLimit('${q1(esc(m))}')">Re-enable warning</button></div>`).join('')
-    : '<div class="count">None. The 500-unit-limit warning is active for every mod.</div>';
-  document.getElementById('modal').innerHTML=`<h2>Settings</h2>
+    ? ign.map(m=>`<div class="ovr"><span><code>${esc(m)}</code></span><button onclick="reenableLimit('${q1(esc(m))}')">${tt('settings.re_enable_warning')}</button></div>`).join('')
+    : `<div class="count">${tt('settings.none_the_500_unit_limit_warning')}</div>`;
+  document.getElementById('modal').innerHTML=`<h2>${tt('settings.settings')}</h2>
     <div class="mbody">
-      <fieldset><legend>Display</legend>
-        <label>Interface size
+      <fieldset><legend>${tt('settings.display')}</legend>
+        <label>${tt('settings.interface_size')}
           <select onchange="uiScaleSet(this.value)" style="margin-left:6px">${UI_SCALES.map(p=>
             `<option value="${p}" ${p===(+s.ui_scale||100)?'selected':''}>${p}%</option>`).join('')}</select></label>
-        <div class="count" style="margin-top:6px">Draws the whole tool smaller or larger. Below 100% fits the
-          building editor and its code view side by side on a 1080p screen. Remembered next time.</div>
+        <div class="count" style="margin-top:6px">${tt('settings.draws_the_whole_tool_smaller_or')}</div>
+        <label style="display:block;margin-top:10px">${tt('settings.interface_language')}
+          <select id="uiLang" onchange="i18nChoose(this.value)" style="margin-left:6px">${i18nOptionsHtml()}</select></label>
+        <div class="count" style="margin-top:6px">${tt('settings.interface_language_hint')}</div>
       </fieldset>
-      <fieldset><legend>Medieval II root folder</legend>
-        <div class="count" style="margin-bottom:8px">Point to your Medieval II install (contains <b>mods</b>) or a mods folder directly. Remembered next time.</div>
+      <fieldset><legend>${tt('settings.medieval_ii_root_folder')}</legend>
+        <div class="count" style="margin-bottom:8px">${tt('settings.point_to_your_medieval_ii_install')}</div>
         <div style="display:flex;gap:6px">
-          <input id="rootInput" style="width:100%" value="${esc(s.med2_root||'')}" placeholder="C:\\...\\Total War MEDIEVAL II Definitive Edition">
-          <button onclick="autoDetectRoot()">Auto-detect</button>
-          <button onclick="browseRoot()">Browse…</button>
+          <input id="rootInput" style="width:100%" value="${esc(s.med2_root||'')}" placeholder="${ttA('settings.c_total_war_medieval_ii_definitive')}">
+          <button onclick="autoDetectRoot()">${tt('settings.auto_detect')}</button>
+          <button onclick="browseRoot()">${tt('settings.browse')}</button>
         </div>
         <div id="rootStatus" class="count" style="margin-top:8px"></div>
       </fieldset>
-      <fieldset><legend>Launcher</legend>
+      <fieldset><legend>${tt('settings.launcher')}</legend>
         <label class="chk"><input type="checkbox" id="consoleChk" ${s.show_console?'checked':''} onchange="saveConsole()">
-          Keep the console window open <span class="count">(the tool reads this when it starts, so
-          it applies from the next launch)</span></label>
+          ${tt('settings.keep_the_console_window_open_the')}</label>
         <div class="count" style="margin-top:6px">${docPoints(
-          'The launcher always opens a console showing the startup checks and the unit-card conversions.',
-          ['Off (default): it closes once that is done.',
-           'On: it stays, showing every request.',
-           'On any failure it comes back with the reason and stays put.',
-           'Everything is logged to <code>config\\\\server.log</code> either way. Checks only: <code>py app.py --check</code>'])}</div>
-        <div style="margin-top:8px"><button onclick="restartServer()">↻ Restart now to apply it</button>
-          <span class="count">Stops the tool and starts it again on the same address, so this page comes back
-          by itself</span></div>
-        <div style="margin-top:8px"><button class="danger" onclick="quitServer()">⏻ Quit server</button>
-          <span class="count">Stops the tool (needed when running silently)</span></div>
+          tt('settings.the_launcher_always_opens_a_console'),
+          [tt('settings.off_default_it_closes_once_that'),
+           tt('settings.on_it_stays_showing_every_request'),
+           tt('settings.on_any_failure_it_comes_back'),
+           tt('settings.everything_is_logged_to_config_server')])}</div>
+        <div style="margin-top:8px"><button onclick="restartServer()">${tt('settings.restart_now_to_apply_it')}</button>
+          <span class="count">${tt('settings.stops_the_tool_and_starts_it')}</span></div>
+        <div style="margin-top:8px"><button class="danger" onclick="quitServer()">${tt('settings.quit_server')}</button>
+          <span class="count">${tt('settings.stops_the_tool_needed_when_running')}</span></div>
       </fieldset>
-      <fieldset><legend>Something went wrong?</legend>
-        <div class="count" style="margin-bottom:8px">Everything the tool does is recorded, and the log is where
-          both halves of that live: what was written (and the way back out of it), and the detailed diagnostic
-          file to send along if the tool did something you didn't expect.</div>
-        <div><button onclick="closeModal();openLog()">🕑 Open the log</button>
-          <span class="count">The diagnostic download moved in there</span></div>
+      <fieldset><legend>${tt('settings.something_went_wrong')}</legend>
+        <div class="count" style="margin-bottom:8px">${tt('settings.everything_the_tool_does_is_recorded')}</div>
+        <div><button onclick="closeModal();openLog()">${tt('settings.open_the_log')}</button>
+          <span class="count">${tt('settings.the_diagnostic_download_moved_in_there')}</span></div>
       </fieldset>
-      <fieldset><legend>Transfer defaults</legend>
+      <fieldset><legend>${tt('settings.transfer_defaults')}</legend>
         <label class="chk"><input type="checkbox" id="soldierBaseChk" ${s.soldier_from_base?'checked':''} onchange="saveSoldierBase()">
-          Use the base unit's <b>soldier</b> line by default</label>
-        <div class="count" style="margin-top:6px">Start the <b>Soldier</b> row on <b>Base</b>, so the destination unit's model and projectile are used instead of the transferred unit's. Applies to both modes that have a base unit: building a new unit on one, and replacing one (there the base <i>is</i> the unit being replaced, so its own model and animations stay). Still switchable per unit.</div>
+          ${tt('settings.use_the_base_units_soldier_line')}</label>
+        <div class="count" style="margin-top:6px">${tt('settings.start_the_soldier_row_on_base')}</div>
       </fieldset>
-      <fieldset><legend>Real-world map (OpenStreetMap)</legend>
+      <fieldset><legend>${tt('settings.real_world_map_openstreetmap')}</legend>
         <label class="chk"><input type="checkbox" id="osmChk" ${s.osm_enabled?'checked':''} onchange="saveOsm()">
-          Let the campaign map's <b>Real world</b> tab use OpenStreetMap</label>
+          ${tt('settings.let_the_campaign_maps_real_world')}</label>
         <div class="count" style="margin-top:6px">${docPoints(
-          'The one part of the toolkit that uses the internet, and it is off until this is ticked.',
-          ['Sent: the map’s real-world box, the numbers of the map and elevation tiles it draws, and the words you search for. Nothing about any mod.',
-           'Map tiles are kept on disk for 30 days, and searches go at most once a second, as the OpenStreetMap usage policies ask.',
-           'The servers are below, one a line, tried in order. Change them to use a mirror of your own.'])}</div>
-        <label style="display:block;margin-top:6px">Map tiles <span class="count">({z}, {x} and {y} are filled in)</span>
+          tt('settings.the_one_part_of_the_toolkit'),
+          [tt('settings.sent_the_maps_real_world_box'),
+           tt('settings.map_tiles_are_kept_on_disk'),
+           tt('settings.the_servers_are_below_one_a')])}</div>
+        <label style="display:block;margin-top:6px">${tt('settings.map_tiles_and_are_filled_in')}
           <textarea id="osmTiles" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_tiles||['https://tile.openstreetmap.org/{z}/{x}/{y}.png']).join('\n'))}</textarea></label>
-        <label style="display:block">OpenTopoMap <span class="count">(a backdrop style)</span>
+        <label style="display:block">${tt('settings.opentopomap_a_backdrop_style')}
           <textarea id="osmTilesTopo" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_tiles_topo||['https://a.tile.opentopomap.org/{z}/{x}/{y}.png','https://b.tile.opentopomap.org/{z}/{x}/{y}.png','https://c.tile.opentopomap.org/{z}/{x}/{y}.png']).join('\n'))}</textarea></label>
-        <label style="display:block">OSM Humanitarian <span class="count">(a backdrop style)</span>
+        <label style="display:block">${tt('settings.osm_humanitarian_a_backdrop_style')}
           <textarea id="osmTilesHot" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_tiles_hot||['https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png','https://b.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png']).join('\n'))}</textarea></label>
-        <label style="display:block">OpenHistoricalMap <span class="count">(a backdrop style; {date} is the year picked, as YYYY-01-01)</span>
+        <label style="display:block">${tt('settings.openhistoricalmap_a_backdrop_style_is_the')}
           <textarea id="osmTilesOhm" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_tiles_ohm||['https://tile.openhistoricalmap.org/historicalmaps/{z}/{x}/{y}.png?date={date}']).join('\n'))}</textarea></label>
-        <label style="display:block">Overpass (the coastline)
+        <label style="display:block">${tt('settings.overpass_the_coastline')}
           <textarea id="osmOverpass" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_overpass||['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']).join('\n'))}</textarea></label>
-        <label style="display:block">Elevation tiles (the heights generator and the relief style, Terrarium format)
+        <label style="display:block">${tt('settings.elevation_tiles_the_heights_generator_and')}
           <textarea id="osmElevation" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_elevation||['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png']).join('\n'))}</textarea></label>
-        <label style="display:block">Land cover <span class="count">(ESA WorldCover as a WMS in its legend colours; {bbox} is EPSG:3857 metres, {width} and {height} pixels)</span>
+        <label style="display:block">${tt('settings.land_cover_esa_worldcover_as_a')}
           <textarea id="osmLandcover" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_landcover_wms||['https://services.terrascope.be/wms/v2?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=WORLDCOVER_2021_MAP&STYLES=&FORMAT=image/png&TRANSPARENT=FALSE&SRS=EPSG:3857&BBOX={bbox}&WIDTH={width}&HEIGHT={height}']).join('\n'))}</textarea></label>
-        <label style="display:block">Köppen climates, a WMS <span class="count">(optional: one that draws the zones in the standard Köppen-Geiger colours, same placeholders)</span>
+        <label style="display:block">${tt('settings.k_ppen_climates_a_wms_optional')}
           <textarea id="osmKoppenWms" rows="2" style="width:100%" onchange="saveOsm()">${esc((s.osm_koppen_wms||[]).join('\n'))}</textarea></label>
-        <label style="display:block">Köppen climates, a file on this computer <span class="count">(no internet needed: the Köppen-Geiger map by Beck et al., the 0.083° or 0.5° GeoTIFF from gloh2o.org/koppen)</span>
+        <label style="display:block">${tt('settings.k_ppen_climates_a_file_on')}
           <input id="koppenFile" style="width:100%" placeholder="C:\\maps\\koppen_geiger_0p083.tif" value="${esc(s.koppen_file||'')}" onchange="saveOsm()"></label>
-        <label style="display:block">Nominatim (the place search)
+        <label style="display:block">${tt('settings.nominatim_the_place_search')}
           <input id="osmNominatim" style="width:100%" value="${esc(s.osm_nominatim||'https://nominatim.openstreetmap.org')}" onchange="saveOsm()"></label>
       </fieldset>
-      <fieldset><legend>Unit-text cache</legend>
+      <fieldset><legend>${tt('settings.unit_text_cache')}</legend>
         <label class="chk"><input type="checkbox" id="clearBinChk" ${s.clear_strings_bin===false?'':'checked'} onchange="saveClearBin()">
-          Clear <code>export_units.txt.strings.bin</code> after every transfer / edit / cleanup</label>
-        <div class="count" style="margin-top:6px">The game reads that compiled cache instead of <code>export_units.txt</code>, and only rebuilds it when it's missing, so until it is deleted a new or renamed unit keeps showing its <b>old</b> text. Deleting costs nothing: the next launch writes a fresh one.</div>
-        <div class="count" style="margin-top:6px">It is the only file this touches, and it is the same setting as the box at the bottom of every Apply dialog. (It replaced <code>Full Cleaner.bat</code>, which also deleted mod files the game never rebuilds. That script is still in the app folder if you want it.)</div>
+          ${tt('settings.clear_export_units_txt_strings_bin')}</label>
+        <div class="count" style="margin-top:6px">${tt('settings.the_game_reads_that_compiled_cache')}</div>
+        <div class="count" style="margin-top:6px">${tt('settings.it_is_the_only_file_this')}</div>
       </fieldset>
-      <fieldset><legend>M2EX mods (no engine limits)</legend>
-        <div class="count" style="margin-bottom:8px">M2EX replaces the engine's hardcoded tables, so a mod
-          that runs on it has none of the ceilings the toolkit otherwise checks against:
-          ${VANILLA_FACTION_LIMIT} factions, ${VANILLA_UNIT_LIMIT} units, 9 levels on a trait, 8 effects on an
-          ancillary, 32 recruitment slots in a building level. Ticked, those findings stop being reported for
-          that mod - <b>and nothing else changes</b>: every other check still runs.</div>
-        <div class="count" style="margin-bottom:8px">Two of the engine's ceilings are about the map rather than
-          about a record, and the tick lifts those too: <b>510 tiles a side</b> and <b>200 colours in
-          map_regions.tga</b>. A map past either one is refused on an unmarked mod - the map screen would have
-          no region table and every tile would read <i>no region</i> - and read in full on a marked one.</div>
-        <div class="count" style="margin-bottom:8px">This is <b>not</b> the M2TWEOP setting below. That one is
-          about where a mod keeps extra unit files; this one is about the engine it runs on. A mod can be both,
-          either or neither.</div>
+      <fieldset><legend>${tt('settings.m2ex_mods_no_engine_limits')}</legend>
+        <div class="count" style="margin-bottom:8px">${tt('settings.m2ex_replaces_the_engines_hardcoded_tables',{VANILLA_FACTION_LIMIT,VANILLA_UNIT_LIMIT})}</div>
+        <div class="count" style="margin-bottom:8px">${tt('settings.two_of_the_engines_ceilings_are')}</div>
+        <div class="count" style="margin-bottom:8px">${tt('settings.this_is_not_the_m2tweop_setting')}</div>
         <div class="ovrlist">${(state.mods||[]).map(m=>`<div class="ovr">
           <label class="chk"><input type="checkbox" ${m.m2ex?'checked':''}
             onchange="setM2exFromSettings('${q1(esc(m.name))}',this.checked)"> <code>${esc(m.name)}</code></label>
-        </div>`).join('')||'<div class="count">No mods found.</div>'}</div>
+        </div>`).join('')||`<div class="count">${tt('settings.no_mods_found')}</div>`}</div>
       </fieldset>
-      <fieldset><legend>Unit-limit warning (500 vanilla cap)</legend>
-        <div class="count" style="margin-bottom:8px">Mods where the ${VANILLA_UNIT_LIMIT}-unit warning is suppressed (you confirmed M2TWEOP / EOP is in use):</div>
+      <fieldset><legend>${tt('settings.unit_limit_warning_500_vanilla_cap')}</legend>
+        <div class="count" style="margin-bottom:8px">${tt('settings.mods_where_the_unit_warning_is',{VANILLA_UNIT_LIMIT})}</div>
         ${ignHtml}
       </fieldset>
-      <fieldset><legend>M2TWEOP unit folders</legend>
-        <div class="count" style="margin-bottom:8px">M2TWEOP loads extra units from its own folder. Those units are
-          badged <span class="badge eop">EOP</span> here, edited in place in their own file, and don't count against the
-          ${VANILLA_UNIT_LIMIT}-unit cap.</div>
-        <div class="count" style="margin-bottom:8px">Left blank, an <code>eopData</code> folder is auto-detected. Set it
-          if your mod keeps them elsewhere.</div>
+      <fieldset><legend>${tt('settings.m2tweop_unit_folders')}</legend>
+        <div class="count" style="margin-bottom:8px">${tt('settings.m2tweop_loads_extra_units_from_its',{VANILLA_UNIT_LIMIT})}</div>
+        <div class="count" style="margin-bottom:8px">${tt('settings.left_blank_an_eopdata_folder_is')}</div>
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
           <select id="eopModSel" onchange="loadEopDirs()" style="max-width:260px">${
             (state.mods||[]).map(m=>`<option value="${esc(m.name)}"${m.name===(state.dst||state.src)?' selected':''}>${esc(m.name)}</option>`).join('')}</select>
-          <button onclick="addEopDir()">Add folder…</button>
+          <button onclick="addEopDir()">${tt('settings.add_folder')}</button>
         </div>
-        <div id="eopDirs" class="count">Loading…</div>
+        <div id="eopDirs" class="count">${tt('settings.loading')}</div>
       </fieldset>
     </div>
-    <div class="foot"><button onclick="closeModal()">Close</button><button class="primary" onclick="saveRoot()">Save & scan</button></div>`;
+    <div class="foot"><button onclick="closeModal()">${tt('settings.close')}</button><button class="primary" onclick="saveRoot()">${tt('settings.save_scan')}</button></div>`;
   overlay.classList.add('open');
   loadEopDirs();
 }
@@ -219,7 +203,7 @@ async function setM2exFromSettings(name, on){
     state.data = state.destData = null;
     state.tr = state.an = state.fac = state.mf = state.bld = null;
   }
-  toast(on ? `${name} is marked as M2EX.` : `${name} is no longer marked as M2EX.`);
+  toast(on ? tt('settings.is_marked_as_m2ex',{name}) : tt('settings.is_no_longer_marked_as_m2ex',{name}));
 }
 
 /* ---------- M2TWEOP unit folders (per mod) ---------- */
@@ -230,26 +214,25 @@ async function eopApi(body){
 }
 async function loadEopDirs(){
   const box=document.getElementById('eopDirs'); if(!box)return;
-  box.textContent='Loading…';
+  box.textContent=tt('settings.loading');
   const r=await eopApi({});
-  if(!r||r.error){box.innerHTML=`<span class="w-bad">${esc((r&&r.error)||'could not read')}</span>`;return;}
+  if(!r||r.error){box.innerHTML=`<span class="w-bad">${esc((r&&r.error)||tt('settings.could_not_read'))}</span>`;return;}
   const explicit=r.configured.length>0;
   const rows=(explicit?r.configured:r.detected).map(d=>`<div class="ovr"><span><code>${esc(d)}</code></span>${
-    explicit?`<button onclick="removeEopDir('${q1(esc(d))}')">Remove</button>`:'<span class="count">Auto-detected</span>'}</div>`).join('');
-  box.innerHTML=(rows||'<div class="count">No EOP folder found or set, so this mod\'s units all live in export_descr_unit.txt.</div>')
+    explicit?`<button onclick="removeEopDir('${q1(esc(d))}')">${tt('settings.remove')}</button>`:`<span class="count">${tt('settings.auto_detected')}</span>`}</div>`).join('');
+  box.innerHTML=(rows||`<div class="count">${tt('settings.no_eop_folder_found_or_set')}</div>`)
     // The counts need the roster read; the folders above do not. A mod whose
     // export_descr_unit.txt is missing or broken still gets the folder list -
     // with the reason in place of the two numbers, which is the answer anyone
     // opening this panel on that mod is actually after.
     +(r.note?`<div class="count w-warn" style="margin-top:8px">${esc(r.note)}</div>`
-      :`<div class="count" style="margin-top:8px"><b>${r.eop_count}</b> M2TWEOP unit(s) in <b>${r.files.length}</b> file(s);
-      <b>${r.edu_count}</b> unit(s) in export_descr_unit.txt.</div>`)
+      :`<div class="count" style="margin-top:8px"><b>${r.eop_count}</b> ${tt('settings.m2tweop_unit_s_in_file_s',{files_n:r.files.length,edu_count:r.edu_count})}</div>`)
     +(r.files.length?`<div class="flist" style="margin-top:6px">${r.files.slice(0,40).map(f=>`<div class="frow"><span class="fp">${esc(f)}</span></div>`).join('')}${
-       r.files.length>40?`<div class="count">…and ${r.files.length-40} more</div>`:''}</div>`:'')
-    +(explicit?'<div class="count" style="margin-top:6px">Remove them all to go back to auto-detection.</div>':'');
+       r.files.length>40?`<div class="count">${tt('settings.and_more',{files:r.files.length-40})}</div>`:''}</div>`:'')
+    +(explicit?`<div class="count" style="margin-top:6px">${tt('settings.remove_them_all_to_go_back')}</div>`:'');
 }
 async function addEopDir(){
-  const r=await api.post('/api/browse_folder',{title:'Select the mod’s M2TWEOP unit folder'});
+  const r=await api.post('/api/browse_folder',{title:tt('settings.select_the_mods_m2tweop_unit_folder')});
   if(!r.path)return;
   const cur=await eopApi({});
   // an explicit list replaces detection outright, so seed it with what was
@@ -259,7 +242,7 @@ async function addEopDir(){
   await eopApi({dirs});
   await refreshMods(state.src,state.dst);
   loadEopDirs();
-  toast('EOP folder saved. The mod’s units were re-read.');
+  toast(tt('settings.eop_folder_saved_the_mods_units'));
 }
 async function removeEopDir(dir){
   const cur=await eopApi({});
@@ -268,22 +251,22 @@ async function removeEopDir(dir){
   loadEopDirs();
 }
 async function saveRoot(){const root=document.getElementById('rootInput').value.trim();
-  rootStatus.textContent='Scanning…'; await api.post('/api/settings',{med2_root:root});
+  rootStatus.textContent=tt('settings.scanning'); await api.post('/api/settings',{med2_root:root});
   const mods=await api.get('/api/mods');
-  rootStatus.innerHTML=mods.length?`Found ${mods.length}: ${mods.map(m=>esc(m.name)).join(', ')}`:'<span class="w-bad">No mods under that folder.</span>';
+  rootStatus.innerHTML=mods.length?tt('settings.found',{mods_n:mods.length,x:mods.map(m=>esc(m.name)).join(', ')}):`<span class="w-bad">${tt('settings.no_mods_under_that_folder')}</span>`;
   if(mods.length){await refreshMods(state.src,state.dst);setTimeout(closeModal,700);}
 }
 async function autoDetectRoot(){
-  rootStatus.textContent='Looking up the registry…';
+  rootStatus.textContent=tt('settings.looking_up_the_registry');
   const r=await api.get('/api/detect_med2_root');
-  if(!r.path){rootStatus.innerHTML='<span class="w-bad">Not found in the registry, so the install was not detected. Type or paste the path instead.</span>';return;}
+  if(!r.path){rootStatus.innerHTML=`<span class="w-bad">${tt('settings.not_found_in_the_registry_so')}</span>`;return;}
   document.getElementById('rootInput').value=r.path;
   await saveRoot();
 }
 async function browseRoot(){
-  rootStatus.textContent='Opening folder browser…';
-  const r=await api.post('/api/browse_folder',{title:'Select your Medieval II Total War folder'});
-  if(!r.path){rootStatus.textContent='Cancelled.';return;}
+  rootStatus.textContent=tt('settings.opening_folder_browser');
+  const r=await api.post('/api/browse_folder',{title:tt('settings.select_your_medieval_ii_total_war')});
+  if(!r.path){rootStatus.textContent=tt('settings.cancelled');return;}
   document.getElementById('rootInput').value=r.path;
   await saveRoot();
 }
@@ -296,23 +279,23 @@ async function browseRoot(){
    that shows about six of them - which is why opening it could take minutes.
    The server now answers with a page and the counts the filter needs. */
 const LOG_MODES=[
-  {id:'',           label:'Everything'},
-  {id:'transfer',   label:'⚔ Transfers'},
-  {id:'edit',       label:'✎ Unit edits'},
-  {id:'bmdb',       label:'🗄 BMDB'},
-  {id:'stratmap',   label:'🗺 Strat map'},
-  {id:'cards',      label:'🖼 Unit cards'},
-  {id:'sounds',     label:'🔊 Sounds'},
-  {id:'soundbanks', label:'🔊 Sound banks'},
-  {id:'soundscripts',label:'🔊 Sound scripts'},
-  {id:'buildings',  label:'🏰 Buildings'},
-  {id:'traits',     label:'🎖 Traits'},
-  {id:'ancillaries',label:'🏅 Ancillaries'},
-  {id:'factions',   label:'🛡 Factions'},
-  {id:'minorfiles', label:'🗺 Minor files'},
-  {id:'strings',    label:'🔤 Strings'},
-  {id:'rawtext',    label:'📝 Raw text'},
-  {id:'changeset',  label:'🔀 My changes'},
+  {id:'',           label:tt('settings.everything')},
+  {id:'transfer',   label:tt('settings.transfers')},
+  {id:'edit',       label:tt('settings.unit_edits')},
+  {id:'bmdb',       label:tt('settings.bmdb')},
+  {id:'stratmap',   label:tt('settings.strat_map')},
+  {id:'cards',      label:tt('settings.unit_cards')},
+  {id:'sounds',     label:tt('settings.sounds')},
+  {id:'soundbanks', label:tt('settings.sound_banks')},
+  {id:'soundscripts',label:tt('settings.sound_scripts')},
+  {id:'buildings',  label:tt('settings.buildings')},
+  {id:'traits',     label:tt('settings.traits')},
+  {id:'ancillaries',label:tt('settings.ancillaries')},
+  {id:'factions',   label:tt('settings.factions')},
+  {id:'minorfiles', label:tt('settings.minor_files')},
+  {id:'strings',    label:tt('settings.strings')},
+  {id:'rawtext',    label:tt('settings.raw_text')},
+  {id:'changeset',  label:tt('settings.my_changes')},
 ];
 // What the panel is showing right now: which mode, and how much of it.
 state.logView={mode:'',shown:0,entries:[],total:0,counts:{},grand:0};
@@ -326,9 +309,9 @@ async function openLog(mode){
   document.getElementById('modal').className='modal';
   overlay.classList.add('open');
   if(!v.entries.length)document.getElementById('modal').innerHTML=
-    '<h2>Log</h2><div class="mbody"><div class="count">Reading the log…</div></div>';
+    `<h2>${tt('settings.log')}</h2><div class="mbody"><div class="count">${tt('settings.reading_the_log')}</div></div>`;
   const page=await api.get(`/api/log?mode=${encodeURIComponent(v.mode)}&offset=0`+
-    `&limit=${Math.max(LOG_PAGE,v.shown||LOG_PAGE)}`,{label:'Reading the log…'});
+    `&limit=${Math.max(LOG_PAGE,v.shown||LOG_PAGE)}`,{label:tt('settings.reading_the_log')});
   v.entries=page.entries; v.total=page.total; v.counts=page.counts;
   v.grand=page.grand_total; v.shown=v.entries.length;
   renderLog();
@@ -336,7 +319,7 @@ async function openLog(mode){
 async function logMore(){
   const v=state.logView;
   const page=await api.get(`/api/log?mode=${encodeURIComponent(v.mode)}`+
-    `&offset=${v.shown}&limit=${LOG_PAGE}`,{label:'Reading more of the log…'});
+    `&offset=${v.shown}&limit=${LOG_PAGE}`,{label:tt('settings.reading_more_of_the_log')});
   v.entries=v.entries.concat(page.entries); v.shown=v.entries.length; v.total=page.total;
   renderLog();
 }
@@ -349,87 +332,86 @@ function renderLog(){
       >${esc(m.label)} <span class="count">${n}</span></button>`;
   }).join('');
   const items=v.entries.map(logItemHtml).join('')
-    ||'<div class="empty">Nothing here yet.</div>';
+    ||`<div class="empty">${tt('settings.nothing_here_yet')}</div>`;
   const left=v.total-v.shown;
-  document.getElementById('modal').innerHTML=`<h2>Log</h2>
+  document.getElementById('modal').innerHTML=`<h2>${tt('settings.log')}</h2>
     <div class="mbody">
       <div class="mftabs">${tabs}</div>
-      <div class="trnote">${docPoints('Every write is here, and every one of them can be taken back.',
-        ['<b>Undo</b> reverts just that entry.',
-         '<b>Revert to here</b> rolls that mod back to how it was at that point, undoing everything newer done to it.',
-         'Backed-up files are restored byte for byte, and files that were moved in are removed again.'])}</div>
+      <div class="trnote">${docPoints(tt('settings.every_write_is_here_and_every'),
+        [tt('settings.undo_reverts_just_that_entry'),
+         tt('settings.revert_to_here_rolls_that_mod'),
+         tt('settings.backed_up_files_are_restored_byte')])}</div>
       ${items}
       ${left>0?`<div style="text-align:center;margin:10px 0">
-        <button onclick="logMore()">Show ${Math.min(left,LOG_PAGE)} more</button>
-        <span class="count"> ${v.shown} of ${v.total} shown</span></div>`
+        <button onclick="logMore()">${tt('settings.show_more',{x:Math.min(left,LOG_PAGE)})}</button>
+        <span class="count"> ${tt('settings.of_shown',{shown:v.shown,total:v.total})}</span></div>`
        :(v.total>LOG_PAGE?`<div class="count" style="text-align:center;margin:10px 0">
-          All ${v.total} shown.</div>`:'')}
+          ${tt('settings.all_shown',{total:v.total})}</div>`:'')}
     </div>
     <div class="foot">
-      <button onclick="downloadDiag()" title="The tool's own detailed log: which files it read and parsed, what it found, every file written, backed up, copied or deleted, and what you did along the way (mode opened, mod picked, record opened, field changed). Nothing personal is in it. It holds mod names, values from your mod files, and paths inside your Medieval II folder.">💾 Save diagnostic log</button>
-      <span class="count">Send it along if the tool did something you didn't expect</span>
-      <button onclick="closeModal()">Close</button></div>`;
+      <button onclick="downloadDiag()" title="${ttA('settings.the_tools_own_detailed_log_which')}">${tt('settings.save_diagnostic_log')}</button>
+      <span class="count">${tt('settings.send_it_along_if_the_tool')}</span>
+      <button onclick="closeModal()">${tt('settings.close')}</button></div>`;
 }
 function logItemHtml(e){
   const id=q1(esc(e.id));
-  const undoBtn=e.applied&&!e.undone?`<button class="danger" onclick="doUndo('${id}')">Undo</button>`:'';
+  const undoBtn=e.applied&&!e.undone?`<button class="danger" onclick="doUndo('${id}')">${tt('settings.undo')}</button>`:'';
   // 85: a compaction keeps the packs it replaced until it is undone; this
   // gives their space back and the Undo up
   const forgetBtn=e.action==='pack compact'&&e.applied&&!e.undone&&!e.backup_forgotten
-    ?`<button onclick="doForgetPacks('${id}')" title="Delete the packs this compaction replaced, kept whole in the mod's .ut_compacted folder. Frees their space; this entry can no longer be undone.">Forget the old packs</button>`:'';
+    ?`<button onclick="doForgetPacks('${id}')" title="${ttA('settings.delete_the_packs_this_compaction_replaced')}">${tt('settings.forget_the_old_packs')}</button>`:'';
   const revBtn=e.applied&&!e.undone&&e.newer_count
-    ?`<button onclick="doRevert('${id}')" title="Restore “${esc(e.dest)}” to its state at this point (undo everything newer)">⟲ Revert to here (${e.newer_count})</button>`
+    ?`<button onclick="doRevert('${id}')" title="${ttA('settings.restore_to_its_state_at_this',{dest:esc(e.dest)})}">${tt('settings.revert_to_here',{newer_count:e.newer_count})}</button>`
     :'';
   return `<div class="log-item ${e.undone?'undone':''}">
     <div class="top"><div><b>${esc(e.resolved_type||e.unit_type||'')}</b> <span class="pill">${
-      e.mode==='sounds'?`🔊 voice edits in ${esc(e.dest)}`
-      :e.mode==='soundbanks'?`🔊 sound bank edited in ${esc(e.dest)}`
-      :e.mode==='soundscripts'?`🔊 sound script edited in ${esc(e.dest)}`
-      :e.mode==='bmdb'?`${e.action==='cleanup'?'🧹 cleaned out of':'🗄 bmdb edit in'} ${esc(e.dest)}`
-      :e.mode==='stratmap'?`🧹 strat map cleaned out of ${esc(e.dest)}`
-      :e.mode==='cards'?`${e.action==='consolidate'?'🖼 cards consolidated in':'🧹 cards cleaned out of'} ${esc(e.dest)}`
-      :e.mode==='edit'?`${e.action==='delete'?'🗑 deleted in':'✎ edited in'} ${esc(e.dest)}`
+      e.mode==='sounds'?tt('settings.voice_edits_in',{dest:esc(e.dest)})
+      :e.mode==='soundbanks'?tt('settings.sound_bank_edited_in',{dest:esc(e.dest)})
+      :e.mode==='soundscripts'?tt('settings.sound_script_edited_in',{dest:esc(e.dest)})
+      :e.mode==='bmdb'?`${e.action==='cleanup'?tt('settings.cleaned_out_of'):tt('settings.bmdb_edit_in')} ${esc(e.dest)}`
+      :e.mode==='stratmap'?tt('settings.strat_map_cleaned_out_of',{dest:esc(e.dest)})
+      :e.mode==='cards'?`${e.action==='consolidate'?tt('settings.cards_consolidated_in'):tt('settings.cards_cleaned_out_of')} ${esc(e.dest)}`
+      :e.mode==='edit'?`${e.action==='delete'?tt('settings.deleted_in'):tt('settings.edited_in')} ${esc(e.dest)}`
       // 21: a whole file saved as text, and a faction's gaps copied from another
-      :e.mode==='rawtext'?`📝 raw text saved in ${esc(e.dest)}`
+      :e.mode==='rawtext'?tt('settings.raw_text_saved_in',{dest:esc(e.dest)})
       // 52: a change set's records ported onto a version of the mod
-      :e.mode==='changeset'?`🔀 changes ported into ${esc(e.dest)}`
-      :e.mode==='factions'&&e.action==='repair'?`🛡 repaired in ${esc(e.dest)}`
+      :e.mode==='changeset'?tt('settings.changes_ported_into',{dest:esc(e.dest)})
+      :e.mode==='factions'&&e.action==='repair'?tt('settings.repaired_in',{dest:esc(e.dest)})
       // 22a: one fort or watchtower line placed, moved, changed or taken out
-      :e.mode==='campmap'&&e.action==='fortification'?`🏰 ${esc((e.options||{}).what||'edit')} in ${esc(e.dest)}`
+      :e.mode==='campmap'&&e.action==='fortification'?tt('settings.in',{x:esc((e.options||{}).what||'edit'),dest:esc(e.dest)})
       // 22b: one trade resource line, the same writer
-      :e.mode==='campmap'&&e.action==='resource'?`◆ ${esc((e.options||{}).what||'edit')} resource in ${esc(e.dest)}`
+      :e.mode==='campmap'&&e.action==='resource'?tt('settings.resource_in',{x:esc((e.options||{}).what||'edit'),dest:esc(e.dest)})
       // 81 and 85: a mod's animation packs appended to, or written again
-      :e.action==='pack port'?`🎞 animations ported into ${esc(e.dest)}`
-      :e.action==='pack compact'?`🎞 animation packs compacted in ${esc(e.dest)}`
-      :e.mode&&e.mode!=='transfer'?`${esc(e.mode)} edit in ${esc(e.dest)}`
+      :e.action==='pack port'?tt('settings.animations_ported_into',{dest:esc(e.dest)})
+      :e.action==='pack compact'?tt('settings.animation_packs_compacted_in',{dest:esc(e.dest)})
+      :e.mode&&e.mode!=='transfer'?tt('settings.edit_in',{mode:esc(e.mode),dest:esc(e.dest)})
       // a transfer that wrote no unit: its models only, which is what the row
       // would otherwise claim was a unit called after the source's
-      :e.action==='models'?`🗄 ${esc(e.source)} → ${esc(e.dest)} · battle models only`
+      :e.action==='models'?tt('settings.battle_models_only',{source:esc(e.source),dest:esc(e.dest)})
                      :`${esc(e.source)} → ${esc(e.dest)}`}</span></div>
       <div style="display:flex;gap:8px;align-items:center"><span class="when">${esc(e.when)}</span>
       ${undoBtn}${forgetBtn}${revBtn}
-      ${e.undone?'<span class="pill">undone</span>':(!e.applied?'<span class="pill">not applied</span>':'')}</div></div>
-    ${renderSummary(e.summary||'')}${e.summary_cut?`<div class="count">…and ${e.summary_cut}
-      more characters, in the diagnostic log.</div>`:''}</div>`;
+      ${e.undone?`<span class="pill">${tt('settings.undone')}</span>`:(!e.applied?`<span class="pill">${tt('settings.not_applied')}</span>`:'')}</div></div>
+    ${renderSummary(e.summary||'')}${e.summary_cut?`<div class="count">${tt('settings.and_more_characters_in_the_diagnostic',{summary_cut:e.summary_cut})}</div>`:''}</div>`;
 }
 async function doForgetPacks(id){
-  if(!confirm('Delete the packs this compaction replaced? Their space comes back, and this entry can no longer be undone.'))return;
+  if(!confirm(tt('settings.delete_the_packs_this_compaction_replaced_2')))return;
   const r=await api.post('/api/packs/forget',{id});
   if(r.error){toast(r.error);return;}
-  toast(`Old packs deleted, ${(r.freed/1048576).toFixed(0)} MB freed`);openLog();}
-async function doUndo(id){const r=await api.post('/api/undo',{id});if(r.error){toast('Undo error: '+r.error);return;}
-  toast('Undone ✓');state.destData=null;openLog();if(state.data)loadSource();}
+  toast(tt('settings.old_packs_deleted_mb_freed',{freed:(r.freed/1048576).toFixed(0)}));openLog();}
+async function doUndo(id){const r=await api.post('/api/undo',{id});if(r.error){toast(tt('settings.undo_error')+r.error);return;}
+  toast(tt('settings.undone_2'));state.destData=null;openLog();if(state.data)loadSource();}
 async function doRevert(id){
-  const e=(state.logView.entries||[]).find(x=>x.id===id); if(!e){toast('Log entry not found');return;}
+  const e=(state.logView.entries||[]).find(x=>x.id===id); if(!e){toast(tt('settings.log_entry_not_found'));return;}
   // counted by the server, which is the only place that has the whole log
   const newer=e.newer_count||0;
-  if(!newer){toast('Already at this stage. There is nothing newer to undo.');return;}
-  if(!confirm(`Revert “${e.dest}” to its state right after this transfer?\n\n`+
-      `This undoes ${newer} newer transfer(s) to “${e.dest}” (newest first). `+
-      `All backed-up files (EDU, localisation, modeldb, overwritten textures) are restored byte-exact and moved-in files are removed.`)) return;
+  if(!newer){toast(tt('settings.already_at_this_stage_there_is'));return;}
+  if(!confirm(tt('settings.revert_to_its_state_right_after',{dest:e.dest})+
+      tt('settings.this_undoes_newer_transfer_s_to',{newer,dest:e.dest})+
+      tt('settings.all_backed_up_files_edu_localisation'))) return;
   const r=await api.post('/api/revert',{id});
-  if(r.error){toast('Revert error: '+r.error);return;}
-  toast(`Reverted to this stage. ${r.count} transfer(s) undone ✓`);
+  if(r.error){toast(tt('settings.revert_error')+r.error);return;}
+  toast(tt('settings.reverted_to_this_stage_transfer_s',{count:r.count}));
   state.destData=null; openLog(); if(state.data)loadSource();}
 
 /* ---------- the real-world map (Phase 25) ----------
@@ -449,5 +431,5 @@ async function saveOsm(){
   state.settings = await api.post('/api/settings', body);
   if(state.osm){ state.osm.st = null; if(state.osm.open) osmLoad(); }
   if(state.mgn){ state.mgn.d = null; if(state.mgn.open) mgnToggle().then(mgnToggle); }
-  toast(on ? 'OpenStreetMap is on for the Real world tab.' : 'OpenStreetMap is off.');
+  toast(on ? tt('settings.openstreetmap_is_on_for_the_real') : tt('settings.openstreetmap_is_off'));
 }

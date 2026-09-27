@@ -61,6 +61,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from . import campstrat
 from .stratedit import assemble, finding, is_int, rewrite_line
+from . import i18n as _i18n
 
 ENCODING = campstrat.ENCODING
 REL_NAME = "descr_win_conditions.txt"
@@ -261,53 +262,39 @@ def check_record(voc: Vocabulary, faction: str,
     out: List[dict] = []
     if faction and voc.factions and faction.lower() not in voc.faction_lower:
         out.append(finding("win.faction", True,
-                           f"{faction} has no faction block in this campaign, "
-                           f"so nothing can win with it"))
+                           _i18n.msg("eng.winconds.has_no_faction_block_in_this", "{faction} has no faction block in this campaign, so nothing can win with it", faction=faction)))
     for slot in ("hold", "short_hold"):
         for region in values.get(slot) or []:
             if voc.regions and region.lower() not in voc.region_lower:
                 out.append(finding("win.region", True,
-                                   f"{region} is not a province this map "
-                                   f"declares, and the "
-                                   f"{'short' if slot.startswith('short') else 'long'}"
-                                   f" campaign asks for it to be held"))
+                                   _i18n.msg("eng.winconds.is_not_a_province_this_map", "{region} is not a province this map declares, and the {x} campaign asks for it to be held", region=region, x='short' if slot.startswith('short') else 'long')))
     for slot in COUNTS:
         got = values.get(slot)
         if got in (None, "", 0):
             continue
         if not is_int(got):
             out.append(finding("win.count", True,
-                               f"{KEYWORD[slot]} says {got!r}, and it is a "
-                               f"number of provinces"))
+                               _i18n.msg("eng.winconds.says_and_it_is_a_number", "{KEYWORD} says {got}, and it is a number of provinces", KEYWORD=KEYWORD[slot], got=repr(got))))
         elif voc.regions and int(got) > len(voc.regions):
             out.append(finding("win.too_many", False,
-                               f"{KEYWORD[slot]} asks for {got} provinces and "
-                               f"this map has {len(voc.regions)}, so the "
-                               f"campaign cannot be won"))
+                               _i18n.msg("eng.winconds.asks_for_provinces_and_this_map", "{KEYWORD} asks for {got} provinces and this map has {regions_n}, so the campaign cannot be won", KEYWORD=KEYWORD[slot], got=got, regions_n=len(voc.regions))))
     long_take = values.get("take") or 0
     short_take = values.get("short_take") or 0
     if is_int(long_take) and is_int(short_take) \
             and int(short_take) > int(long_take) > 0:
         out.append(finding("win.short_harder", False,
-                           f"the short campaign asks for {short_take} provinces "
-                           f"and the long one for {long_take}, so the short one "
-                           f"is the harder of the two"))
+                           _i18n.msg("eng.winconds.the_short_campaign_asks_for_provinces", "the short campaign asks for {short_take} provinces and the long one for {long_take}, so the short one is the harder of the two", short_take=short_take, long_take=long_take)))
     for slot in ("outlive", "short_outlive"):
         for who in values.get(slot) or []:
             if who.lower() == faction.lower():
                 out.append(finding("win.outlive_self", False,
-                                   f"{faction} is asked to outlive itself"))
+                                   _i18n.msg("eng.winconds.is_asked_to_outlive_itself", "{faction} is asked to outlive itself", faction=faction)))
             elif voc.factions and who.lower() not in voc.faction_lower:
                 out.append(finding("win.outlive_unknown", False,
-                                   f"{faction} is asked to outlive {who}, which "
-                                   f"has no faction block in this campaign. The "
-                                   f"engine reads the word rather than looking "
-                                   f"it up, so this is a condition that can "
-                                   f"never fail"))
+                                   _i18n.msg("eng.winconds.is_asked_to_outlive_which_has", "{faction} is asked to outlive {who}, which has no faction block in this campaign. The engine reads the word rather than looking it up, so this is a condition that can never fail", faction=faction, who=who)))
     if not (values.get("hold") or values.get("take")):
         out.append(finding("win.nothing", False,
-                           f"{faction}'s long campaign asks for no province and "
-                           f"no count, so it is won at turn one"))
+                           _i18n.msg("eng.winconds.s_long_campaign_asks_for_no", "{faction}'s long campaign asks for no province and no count, so it is won at turn one", faction=faction)))
     return out
 
 
@@ -319,8 +306,7 @@ def check_file(voc: Vocabulary, wf: WinFile) -> List[dict]:
         low = rec.faction.lower()
         if low in seen:
             out.append(finding("win.twice", False,
-                               f"{rec.faction} has a second record on line "
-                               f"{rec.start + 1}; the engine reads the first"))
+                               _i18n.msg("eng.winconds.has_a_second_record_on_line", "{faction} has a second record on line {x}; the engine reads the first", faction=rec.faction, x=rec.start + 1)))
         seen[low] = rec.start
     missing = [f for f in voc.factions if f.lower() not in seen]
     if missing:
@@ -651,13 +637,10 @@ def plan_win(mod, facts, body: dict) -> WinPlan:
 
     rec = wf.find(p.faction)
     if action != "add" and rec is None:
-        p.errors.append(f"{p.faction or '(nothing)'} has no win condition in "
-                        f"{campaign}'s {REL_NAME}. Adding one is the same panel "
-                        f"with a different button")
+        p.errors.append(_i18n.msg("eng.winconds.has_no_win_condition_in_s", "{x} has no win condition in {campaign}'s {REL_NAME}. Adding one is the same panel with a different button", x=p.faction or '(nothing)', campaign=campaign, REL_NAME=REL_NAME))
         return p
     if action == "add" and rec is not None:
-        p.errors.append(f"{p.faction} already has a win condition on line "
-                        f"{rec.start + 1}")
+        p.errors.append(_i18n.msg("eng.winconds.already_has_a_win_condition_on", "{faction} already has a win condition on line {x}", faction=p.faction, x=rec.start + 1))
         return p
 
     before = dict(rec.values) if rec is not None else {}
@@ -689,7 +672,7 @@ def plan_win(mod, facts, body: dict) -> WinPlan:
     p.spans = [(a + 1, b + 1, n) for a, b, n in p.spans]
     p.text = "" if text == wf.serialise() else text
     if not p.text and not p.errors:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.winconds.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -709,7 +692,7 @@ def apply_win(p: WinPlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.winconds.nothing_to_change", "nothing to change"))
     mod = p.mod
     rel = f"{campstrat.CAMPAIGN_DIR_REL}/{p.campaign}/{REL_NAME}"
     tid = config.new_transfer_id()
@@ -767,14 +750,12 @@ def win_detail(facts) -> dict:
 
     mod = getattr(facts, "mod", None)
     if mod is None:
-        raise MapError("no mod to read win conditions from")
+        raise MapError(_i18n.msg("eng.winconds.no_mod_to_read_win_conditions", "no mod to read win conditions from"))
     rel = f"{campstrat.CAMPAIGN_DIR_REL}/{facts.campaign}/{REL_NAME}"
     try:
         wf = read_wins(mod, facts.campaign)
     except OSError as exc:
-        raise MapError(f"{rel} could not be read ({exc}). The stock game ships "
-                       f"it on disk and so do both installed mods, so a "
-                       f"campaign without one is a campaign nobody can win")
+        raise MapError(_i18n.msg("eng.winconds.could_not_be_read_the_stock", "{rel} could not be read ({exc}). The stock game ships it on disk and so do both installed mods, so a campaign without one is a campaign nobody can win", rel=rel, exc=exc))
     voc = Vocabulary(facts)
     return {
         "campaign": facts.campaign,

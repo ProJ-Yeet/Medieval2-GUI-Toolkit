@@ -69,6 +69,7 @@ from typing import Dict, List, Optional, Tuple
 from . import (config, edbvocab, edu as edu_mod, eop, localization,
                minorfiles, modeldb as modeldb_mod, stringsbin)
 from .logutil import counted, file_op, fingerprint, log
+from . import i18n as _i18n
 
 #: EDB is plain 8-bit text, like the EDU - latin-1 round-trips every byte.
 ENCODING = "latin-1"
@@ -566,7 +567,7 @@ def _parse_building(edb: EdbFile, lines: List[str], i: int) -> Tuple[Optional[Bu
     bl = BuildingLine(name=_code(lines[i]).split(None, 1)[1].strip(), start=i)
     open_idx = _open_brace(lines, i + 1, n)
     if open_idx < 0:
-        edb.warnings.append(f"line {i + 1}: `building {bl.name}` has no opening brace")
+        edb.warnings.append(_i18n.msg("eng.buildings.line_building_has_no_opening_brace", "line {x}: `building {name}` has no opening brace", x=i + 1, name=bl.name))
         return None, i + 1
     close_idx = _matching_close(lines, open_idx, n)
     bl.end = close_idx + 1
@@ -620,7 +621,7 @@ def _parse_levels(edb: EdbFile, lines: List[str], open_idx: int, close_idx: int,
         blk = _parse_level_header(code, j)
         lv_open = _open_brace(lines, j + 1, n)
         if lv_open < 0:
-            edb.warnings.append(f"line {j + 1}: level `{blk.name}` has no opening brace")
+            edb.warnings.append(_i18n.msg("eng.buildings.line_level_has_no_opening_brace", "line {x}: level `{name}` has no opening brace", x=j + 1, name=blk.name))
             j += 1
             continue
         lv_close = _matching_close(lines, lv_open, n)
@@ -1312,7 +1313,7 @@ def plan_level_edit(edb: EdbFile, bl: BuildingLine, blk: LevelBlock,
             continue
         if not value:
             edits.append(LineEdit(idx, idx + 1, ""))
-            notes.append(f"{blk.name}: {key} removed (was {old})")
+            notes.append(_i18n.msg("eng.buildings.removed_was", "{name}: {key} removed (was {old})", name=blk.name, key=key, old=old))
             continue
         _, comment = _strip_comment(lines[idx])
         edits.append(LineEdit(idx, idx + 1,
@@ -1492,7 +1493,7 @@ def _relay_capabilities(lines: List[str], span: Tuple[int, int],
         warn.append(f"{name}: {label} line {j} was not in the edit - kept at the end")
         body += lead.get(j, []) + [lines[j]]
     body += tail
-    notes.append(f"{name}: {label} order changed")
+    notes.append(_i18n.msg("eng.buildings.order_changed", "{name}: {label} order changed", name=name, label=label))
     return [LineEdit(o + 1, c, "".join(body))]
 
 
@@ -1577,8 +1578,7 @@ def _plan_ownership(mod, plan: "BuildingPlan", checks) -> None:
     for row in report:
         if not row["known"]:
             plan.warnings.append(
-                f"{row['unit']}: named by a recruit pool but not a unit in {mod.name} "
-                f"- ownership not changed")
+                _i18n.msg("eng.buildings.named_by_a_recruit_pool_but", "{unit}: named by a recruit pool but not a unit in {name} - ownership not changed", unit=row['unit'], name=mod.name))
             continue
         unit = next(u for u in mod.edu.units if u.type.lower() == row["unit"].lower())
         if row["missing_ownership"]:
@@ -1689,7 +1689,7 @@ def plan_edit(mod, body: dict) -> BuildingPlan:
     plan = BuildingPlan(mod=mod, line=str(body.get("line") or ""))
     edb = mod.edb
     if not mod.edb_path.exists():
-        plan.errors.append(f"{mod.name} has no data/{EDB_REL}")
+        plan.errors.append(_i18n.msg("eng.buildings.has_no_data", "{name} has no data/{EDB_REL}", name=mod.name, EDB_REL=EDB_REL))
         return plan
 
     edits: List[LineEdit] = []
@@ -1698,7 +1698,7 @@ def plan_edit(mod, body: dict) -> BuildingPlan:
         name = str(part.get("line") or "")
         cur = edb.get(name)
         if cur is None:
-            plan.errors.append(f"{mod.name} has no building line named {name!r}")
+            plan.errors.append(_i18n.msg("eng.buildings.has_no_building_line_named", "{name} has no building line named {name2}", name=mod.name, name2=repr(name)))
             return plan
         if bl is None:
             bl = cur
@@ -1713,7 +1713,7 @@ def plan_edit(mod, body: dict) -> BuildingPlan:
         for lv in (part.get("levels") or []):
             blk = cur.level(str(lv.get("name") or ""))
             if blk is None:
-                plan.warnings.append(f"{name} has no level {lv.get('name')!r}")
+                plan.warnings.append(_i18n.msg("eng.buildings.has_no_level", "{name} has no level {lv}", name=name, lv=repr(lv.get('name'))))
                 continue
             e, notes, warn = plan_level_edit(edb, cur, blk, lv)
             edits += e
@@ -1736,8 +1736,7 @@ def plan_edit(mod, body: dict) -> BuildingPlan:
             reparsed = parse_text(text)
             if reparsed.warnings or not reparsed.get(plan.line):
                 plan.errors.append(
-                    "the edit would produce an EDB this tool can no longer read - "
-                    "refusing to write it")
+                    _i18n.msg("eng.buildings.the_edit_would_produce_an_edb", "the edit would produce an EDB this tool can no longer read - refusing to write it"))
                 return plan
 
     for part in _all_line_bodies(body):
@@ -1828,17 +1827,12 @@ def _check_recruit_limit(mod, bl: Optional[BuildingLine], body: dict,
             label = mod.faction_label(f) if hasattr(mod, "faction_label") else f
             if a > RECRUIT_LIMIT:
                 plan.warnings.append(
-                    f"{name}: {label} can already train {a} units here with no "
-                    f"conditions attached - over the {RECRUIT_LIMIT} the "
-                    f"recruitment panel holds")
+                    _i18n.msg("eng.buildings.can_already_train_units_here_with", "{name}: {label} can already train {a} units here with no conditions attached - over the {RECRUIT_LIMIT} the recruitment panel holds", name=name, label=label, a=a, RECRUIT_LIMIT=RECRUIT_LIMIT))
             else:
                 plan.warnings.append(
-                    f"{name}: {label} could reach {n} units here if every event, "
-                    f"resource and settlement condition lined up at once "
-                    f"(limit {RECRUIT_LIMIT}; {a} apply unconditionally)")
+                    _i18n.msg("eng.buildings.could_reach_units_here_if_every", "{name}: {label} could reach {n} units here if every event, resource and settlement condition lined up at once (limit {RECRUIT_LIMIT}; {a} apply unconditionally)", name=name, label=label, n=n, RECRUIT_LIMIT=RECRUIT_LIMIT, a=a))
         if len(over) > 6:
-            plan.warnings.append(f"{name}: …and {len(over) - 6} more faction(s) over "
-                                 f"the {RECRUIT_LIMIT}-unit limit")
+            plan.warnings.append(_i18n.msg("eng.buildings.and_more_faction_s_over_the", "{name}: …and {x} more faction(s) over the {RECRUIT_LIMIT}-unit limit", name=name, x=len(over) - 6, RECRUIT_LIMIT=RECRUIT_LIMIT))
 
 
 def _raw_line_edit(plan: BuildingPlan, bl: BuildingLine, part: dict,
@@ -1855,14 +1849,11 @@ def _raw_line_edit(plan: BuildingPlan, bl: BuildingLine, part: dict,
     try:
         doc = codeview.parse("edb", raw)
     except codeview.CodeViewError as e:
-        plan.errors.append(f"{bl.name}: the edited text isn't a valid building line: "
-                           f"{e.message}")
+        plan.errors.append(_i18n.msg("eng.buildings.the_edited_text_isnt_a_valid", "{name}: the edited text isn't a valid building line: {message}", name=bl.name, message=e.message))
         return LineEdit(bl.start, bl.start, "")
     if doc.ident != bl.name:
         plan.errors.append(
-            f"the text renames the line to '{doc.ident}' - a building line's name is "
-            f"used by its levels list and by the settlement plans, so '{bl.name}' "
-            "has to stay. Rename it everywhere by hand, or not at all.")
+            _i18n.msg("eng.buildings.the_text_renames_the_line_to", "the text renames the line to '{ident}' - a building line's name is used by its levels list and by the settlement plans, so '{name}' has to stay. Rename it everywhere by hand, or not at all.", ident=doc.ident, name=bl.name))
         return LineEdit(bl.start, bl.start, "")
     # box edits made after the text edit still land, on top of the typed text
     text = render_block(raw, part)
@@ -1941,22 +1932,15 @@ MAX_UPGRADES = 8
 #: ``docs/upstream/audit-edb.md``).
 TREE_PREFIXES: List[Dict[str, str]] = [
     {"prefix": "", "label": "(no prefix)",
-     "hint": "An ordinary settlement building - what 145 of the 277 real lines are."},
+     "hint": _i18n.msg("eng.buildings.an_ordinary_settlement_building_what_145", "An ordinary settlement building - what 145 of the 277 real lines are.")},
     {"prefix": "hinterland_", "label": "hinterland_",
-     "hint": "Vanilla's province-wide lines (roads, farms, mines, ports) carry it. "
-             "Nothing restricts it: the mods use it for 66 different things, "
-             "75 lines in all."},
+     "hint": _i18n.msg("eng.buildings.vanillas_province_wide_lines_roads_farms", "Vanilla's province-wide lines (roads, farms, mines, ports) carry it. Nothing restricts it: the mods use it for 66 different things, 75 lines in all.")},
     {"prefix": "temple_", "label": "temple_",
-     "hint": "The religious lines. All 32 real ones also carry a `religion` line, "
-             "so pick a religion below if you take this."},
+     "hint": _i18n.msg("eng.buildings.the_religious_lines_all_32_real", "The religious lines. All 32 real ones also carry a `religion` line, so pick a religion below if you take this.")},
     {"prefix": "guild_", "label": "guild_",
-     "hint": "Needs a matching entry in data/export_descr_guilds.txt. All 19 real "
-             "guild_ lines have one, and nothing else in that file does - a "
-             "guild the file does not name is never offered."},
+     "hint": _i18n.msg("eng.buildings.needs_a_matching_entry_in_data", "Needs a matching entry in data/export_descr_guilds.txt. All 19 real guild_ lines have one, and nothing else in that file does - a guild the file does not name is never offered.")},
     {"prefix": "core_", "label": "core_",
-     "hint": "The settlement's own chain. Every mod measured defines exactly two - "
-             "core_building and core_castle_building - and both already exist, so "
-             "a third is not a thing any real mod does."},
+     "hint": _i18n.msg("eng.buildings.the_settlements_own_chain_every_mod", "The settlement's own chain. Every mod measured defines exactly two - core_building and core_castle_building - and both already exist, so a third is not a thing any real mod does.")},
 ]
 
 #: What this module will and will not do to a whole tree, and why. Same
@@ -2140,49 +2124,43 @@ def plan_new_tree(mod, spec: dict) -> BuildingPlan:
     plan = BuildingPlan(mod=mod, line=spec["name"], created=True)
     edb = mod.edb
     if not mod.edb_path.exists():
-        plan.errors.append(f"{mod.name} has no data/{EDB_REL}")
+        plan.errors.append(_i18n.msg("eng.buildings.has_no_data", "{name} has no data/{EDB_REL}", name=mod.name, EDB_REL=EDB_REL))
         return plan
 
     name = spec["name"]
     levels = spec["levels"]
     if not name:
-        plan.errors.append("the new building line needs a name")
+        plan.errors.append(_i18n.msg("eng.buildings.the_new_building_line_needs_a", "the new building line needs a name"))
     elif not _NAME_OK.match(name):
-        plan.errors.append(f"{name!r} is not a name the EDB can carry - letters, "
-                           "digits and underscores only, and no spaces")
+        plan.errors.append(_i18n.msg("eng.buildings.is_not_a_name_the_edb", "{name} is not a name the EDB can carry - letters, digits and underscores only, and no spaces", name=repr(name)))
     elif edb.get(name) is not None:
-        plan.errors.append(f"{mod.name} already has a building line called {name!r}")
+        plan.errors.append(_i18n.msg("eng.buildings.already_has_a_building_line_called", "{name} already has a building line called {name2}", name=mod.name, name2=repr(name)))
     if not levels:
-        plan.errors.append("a building line needs at least one level")
+        plan.errors.append(_i18n.msg("eng.buildings.a_building_line_needs_at_least", "a building line needs at least one level"))
 
     taken = edb.by_level()
     seen: set = set()
     for lv in levels:
         lname = lv["name"]
         if not lname:
-            plan.errors.append("every level needs a name")
+            plan.errors.append(_i18n.msg("eng.buildings.every_level_needs_a_name", "every level needs a name"))
         elif not _NAME_OK.match(lname):
-            plan.errors.append(f"level {lname!r}: letters, digits and underscores only")
+            plan.errors.append(_i18n.msg("eng.buildings.level_letters_digits_and_underscores_only", "level {lname}: letters, digits and underscores only", lname=repr(lname)))
         elif lname in taken:
             owner = taken[lname][0].name
             plan.errors.append(
-                f"{mod.name} already has a level called {lname!r}, in the {owner!r} "
-                "line - a level name is the key its text, its icons and every "
-                "settlement plan use, so two of them cannot share one")
+                _i18n.msg("eng.buildings.already_has_a_level_called_in", "{name} already has a level called {lname}, in the {owner} line - a level name is the key its text, its icons and every settlement plan use, so two of them cannot share one", name=mod.name, lname=repr(lname), owner=repr(owner)))
         elif lname in seen:
-            plan.errors.append(f"level {lname!r} is in the new line twice")
+            plan.errors.append(_i18n.msg("eng.buildings.level_is_in_the_new_line", "level {lname} is in the new line twice", lname=repr(lname)))
         seen.add(lname)
     if name and name in taken:
-        plan.errors.append(f"{name!r} is already the name of a level in the "
-                           f"{taken[name][0].name!r} line")
+        plan.errors.append(_i18n.msg("eng.buildings.is_already_the_name_of_a", "{name} is already the name of a level in the {name2} line", name=repr(name), name2=repr(taken[name][0].name)))
     if plan.errors:
         return plan
 
     if len(levels) > VANILLA_MAX_LEVELS:
         plan.warnings.append(
-            f"{len(levels)} levels - vanilla stops at {VANILLA_MAX_LEVELS} per tree "
-            "and crashes past it. M2TWEOP raises the ceiling and mods use that "
-            "(Third Age 6's core_building is 51 deep), so this only works with EOP.")
+            _i18n.msg("eng.buildings.levels_vanilla_stops_at_per_tree", "{levels_n} levels - vanilla stops at {VANILLA_MAX_LEVELS} per tree and crashes past it. M2TWEOP raises the ceiling and mods use that (Third Age 6's core_building is 51 deep), so this only works with EOP.", levels_n=len(levels), VANILLA_MAX_LEVELS=VANILLA_MAX_LEVELS))
     for prefix, why in (("guild_", "needs a matching entry in "
                                    "data/export_descr_guilds.txt - all 19 real "
                                    "guild_ lines have one, and a guild that file "
@@ -2194,12 +2172,10 @@ def plan_new_tree(mod, spec: dict) -> BuildingPlan:
         if name.startswith(prefix):
             plan.warnings.append(f"a {prefix} line {why}.")
     if name.startswith("temple_") and not str(spec.get("religion") or "").strip():
-        plan.warnings.append("every one of the 32 real temple_ lines also carries a "
-                             "`religion` line; this one has none.")
+        plan.warnings.append(_i18n.msg("eng.buildings.every_one_of_the_32_real", "every one of the 32 real temple_ lines also carries a `religion` line; this one has none."))
     convert = str(spec.get("convert_to") or "").strip()
     if convert and edb.get(convert) is None:
-        plan.warnings.append(f"convert_to names {convert!r}, which this EDB has no "
-                             "building line for")
+        plan.warnings.append(_i18n.msg("eng.buildings.convert_to_names_which_this_edb", "convert_to names {convert}, which this EDB has no building line for", convert=repr(convert)))
 
     block = new_tree_text(spec, _tree_indent(edb))
     text = edb.to_text()
@@ -2209,8 +2185,7 @@ def plan_new_tree(mod, spec: dict) -> BuildingPlan:
     reparsed = parse_text(text)
     new = reparsed.get(name)
     if reparsed.warnings or new is None or len(new.blocks) != len(levels):
-        plan.errors.append("the new line would produce an EDB this tool can no "
-                           "longer read - refusing to write it")
+        plan.errors.append(_i18n.msg("eng.buildings.the_new_line_would_produce_an", "the new line would produce an EDB this tool can no longer read - refusing to write it"))
         return plan
     plan.edb_text = text
     plan.changes.append(f"{name}: new building line, {len(levels)} level"
@@ -2222,9 +2197,7 @@ def plan_new_tree(mod, spec: dict) -> BuildingPlan:
     missing = [s for s in plan.slots if not s["found"]]
     if missing:
         plan.warnings.append(
-            f"{len(missing)} of {len(plan.slots)} building cards have no picture "
-            "yet - those levels show a blank card until you draw them. The paths "
-            "are listed below; this is art, not a fault.")
+            _i18n.msg("eng.buildings.of_building_cards_have_no_picture", "{missing_n} of {slots_n} building cards have no picture yet - those levels show a blank card until you draw them. The paths are listed below; this is art, not a fault.", missing_n=len(missing), slots_n=len(plan.slots)))
     return plan
 
 
@@ -2241,8 +2214,7 @@ def _plan_new_localisation(mod, spec: dict, plan: BuildingPlan) -> str:
     path = mod.data / LOC_REL
     if not path.exists():
         plan.errors.append(
-            f"{mod.name} has no data/{LOC_REL}, so the new levels would have no "
-            "names - and a level with no text key crashes the game. Nothing written.")
+            _i18n.msg("eng.buildings.has_no_data_so_the_new", "{name} has no data/{LOC_REL}, so the new levels would have no names - and a level with no text key crashes the game. Nothing written.", name=mod.name, LOC_REL=LOC_REL))
         return ""
     text = path.read_text(encoding=localization.ENCODING)
     for lv in (spec.get("levels") or []):
@@ -2411,7 +2383,7 @@ def _plan_localisation(mod, body: dict, plan: BuildingPlan) -> str:
         return ""
     path = mod.data / LOC_REL
     if not path.exists():
-        plan.warnings.append(f"{mod.name} has no data/{LOC_REL} - names not written")
+        plan.warnings.append(_i18n.msg("eng.buildings.has_no_data_names_not_written", "{name} has no data/{LOC_REL} - names not written", name=mod.name, LOC_REL=LOC_REL))
         return ""
     text = path.read_text(encoding=localization.ENCODING)
     changed = False
@@ -2558,7 +2530,7 @@ def plan_hidden(mod, body: dict) -> BuildingPlan:
     for name in remove:
         real = lower.get(name.lower())
         if real is None:
-            plan.errors.append(f"{name} is not on the hidden_resources line")
+            plan.errors.append(_i18n.msg("eng.buildings.is_not_on_the_hidden_resources", "{name} is not on the hidden_resources line", name=name))
             continue
         hit = hidden_impact(mod, real)
         used = bool(hit["clauses"] or hit["provinces"])
@@ -2566,20 +2538,17 @@ def plan_hidden(mod, body: dict) -> BuildingPlan:
         impact.append(hit)
         if used and not hit["acknowledged"]:
             plan.errors.append(
-                f"{real} is still used: {len(hit['provinces'])} province(s) carry it "
-                f"and {len(hit['clauses'])} requires clause(s) gate on it. Removing it "
-                "makes every one of them silently unbuildable - acknowledge that first")
+                _i18n.msg("eng.buildings.is_still_used_province_s_carry", "{real} is still used: {provinces_n} province(s) carry it and {clauses_n} requires clause(s) gate on it. Removing it makes every one of them silently unbuildable - acknowledge that first", real=real, provinces_n=len(hit['provinces']), clauses_n=len(hit['clauses'])))
         want = [w for w in want if w.lower() != real.lower()]
         plan.changes.append(f"- {real}" + (f" ({len(hit['provinces'])} province(s), "
                                           f"{len(hit['clauses'])} clause(s) go dark)"
                                           if used else " (nothing uses it)"))
     for name in add:
         if not HIDDEN_NAME.match(name):
-            plan.errors.append(f"{name!r} is not a name the line can hold: one word of "
-                               "letters, digits and underscores")
+            plan.errors.append(_i18n.msg("eng.buildings.is_not_a_name_the_line", "{name} is not a name the line can hold: one word of letters, digits and underscores", name=repr(name)))
             continue
         if name.lower() in {w.lower() for w in want}:
-            plan.errors.append(f"{name} is already on the hidden_resources line")
+            plan.errors.append(_i18n.msg("eng.buildings.is_already_on_the_hidden_resources", "{name} is already on the hidden_resources line", name=name))
             continue
         want.append(name)
         plan.changes.append(f"+ {name}")
@@ -3049,9 +3018,7 @@ def _t_name_twice(tc: TreeCheck):
             continue
         yield EdbFinding(
             "tree.name_twice", "fatal",
-            f"{bl.name} is declared twice - at line {first.start + 1} and again "
-            f"here. Everything that names it reaches the first one, so this "
-            f"block's levels, costs and recruitment are unreachable.",
+            _i18n.msg("eng.buildings.is_declared_twice_at_line_and", "{name} is declared twice - at line {x} and again here. Everything that names it reaches the first one, so this block's levels, costs and recruitment are unreachable.", name=bl.name, x=first.start + 1),
             line=bl.start + 1, building=bl.name, what=bl.name)
 
 
@@ -3063,9 +3030,7 @@ def _t_no_levels(tc: TreeCheck):
             continue
         yield EdbFinding(
             "tree.no_levels", "fatal",
-            f"{bl.name} has no levels in it, so there is nothing for a "
-            f"settlement to build and nothing for anything else to upgrade "
-            f"into.",
+            _i18n.msg("eng.buildings.has_no_levels_in_it_so", "{name} has no levels in it, so there is nothing for a settlement to build and nothing for anything else to upgrade into.", name=bl.name),
             line=bl.start + 1, building=bl.name, what=bl.name)
 
 
@@ -3080,8 +3045,7 @@ def _t_upgrade_unknown(tc: TreeCheck):
                     continue
                 yield EdbFinding(
                     "tree.upgrade_unknown", "fatal",
-                    f"{bl.name}/{b.name} upgrades into {nm}, and there is no "
-                    f"level called that on this line.",
+                    _i18n.msg("eng.buildings.upgrades_into_and_there_is_no", "{name}/{name2} upgrades into {nm}, and there is no level called that on this line.", name=bl.name, name2=b.name, nm=nm),
                     line=(b.upgrades_span[0] or b.header) + 1,
                     building=bl.name, what=f"{bl.name}|{b.name}|{nm}")
 
@@ -3095,8 +3059,7 @@ def _t_convert_unknown(tc: TreeCheck):
             continue
         yield EdbFinding(
             "tree.convert_unknown", "fatal",
-            f"{bl.name} converts to {target}, and no building line is called "
-            f"that.",
+            _i18n.msg("eng.buildings.converts_to_and_no_building_line", "{name} converts to {target}, and no building line is called that.", name=bl.name, target=target),
             line=bl.start + 1, building=bl.name, what=f"{bl.name}|{target}")
 
 
@@ -3118,15 +3081,13 @@ def _t_min_level_unknown(tc: TreeCheck):
                 if chain not in tc.by_name:
                     yield EdbFinding(
                         "tree.min_level_unknown", "fatal",
-                        f"{bl.name}/{b.name} requires {chain} at {lvl}, and no "
-                        f"building line is called {chain}.",
+                        _i18n.msg("eng.buildings.requires_at_and_no_building_line", "{name}/{name2} requires {chain} at {lvl}, and no building line is called {chain2}.", name=bl.name, name2=b.name, chain=chain, lvl=lvl, chain2=chain),
                         line=b.header + 1, building=bl.name,
                         what=f"{bl.name}|{b.name}|{chain}")
                 elif lvl not in tc.levels_of.get(chain, set()):
                     yield EdbFinding(
                         "tree.min_level_unknown", "fatal",
-                        f"{bl.name}/{b.name} requires {chain} at {lvl}, and "
-                        f"{chain} has no level called {lvl}.",
+                        _i18n.msg("eng.buildings.requires_at_and_has_no_level", "{name}/{name2} requires {chain} at {lvl}, and {chain2} has no level called {lvl2}.", name=bl.name, name2=b.name, chain=chain, lvl=lvl, chain2=chain, lvl2=lvl),
                         line=b.header + 1, building=bl.name,
                         what=f"{bl.name}|{b.name}|{chain}|{lvl}")
 
@@ -3157,10 +3118,7 @@ def _t_second_entry(tc: TreeCheck):
         for b in heads[1:]:
             yield EdbFinding(
                 "tree.second_entry", "note",
-                f"{bl.name} is an upgrade chain starting at {heads[0].name}, "
-                f"and nothing upgrades into {b.name} - it is a second way into "
-                f"the same line. Deliberate on some lines; worth a look if it "
-                f"was not.",
+                _i18n.msg("eng.buildings.is_an_upgrade_chain_starting_at", "{name} is an upgrade chain starting at {name2}, and nothing upgrades into {name3} - it is a second way into the same line. Deliberate on some lines; worth a look if it was not.", name=bl.name, name2=heads[0].name, name3=b.name),
                 line=b.header + 1, building=bl.name,
                 what=f"{bl.name}|{b.name}")
 
@@ -3174,8 +3132,7 @@ def _t_free_level(tc: TreeCheck):
                 continue
             yield EdbFinding(
                 "tree.free_level", "warn",
-                f"{bl.name}/{b.name} costs 0, so any settlement that can build "
-                f"it can have it for nothing.",
+                _i18n.msg("eng.buildings.costs_0_so_any_settlement_that", "{name}/{name2} costs 0, so any settlement that can build it can have it for nothing.", name=bl.name, name2=b.name),
                 line=b.scalar_lines.get("cost", b.header) + 1,
                 building=bl.name, what=f"{bl.name}|{b.name}")
 
@@ -3189,8 +3146,7 @@ def _t_instant_level(tc: TreeCheck):
                 continue
             yield EdbFinding(
                 "tree.instant_level", "warn",
-                f"{bl.name}/{b.name} has construction 0, so it finishes the "
-                f"turn it is started.",
+                _i18n.msg("eng.buildings.has_construction_0_so_it_finishes", "{name}/{name2} has construction 0, so it finishes the turn it is started.", name=bl.name, name2=b.name),
                 line=b.scalar_lines.get("construction", b.header) + 1,
                 building=bl.name, what=f"{bl.name}|{b.name}")
 
@@ -3204,8 +3160,7 @@ def _t_no_factions(tc: TreeCheck):
                 continue
             yield EdbFinding(
                 "tree.no_factions", "warn",
-                f"{bl.name}/{b.name} has no factions clause on its requires, "
-                f"so no faction is named as able to build it.",
+                _i18n.msg("eng.buildings.has_no_factions_clause_on_its", "{name}/{name2} has no factions clause on its requires, so no faction is named as able to build it.", name=bl.name, name2=b.name),
                 line=b.header + 1, building=bl.name, what=f"{bl.name}|{b.name}")
 
 

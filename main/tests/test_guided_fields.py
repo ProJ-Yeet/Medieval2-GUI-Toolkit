@@ -26,6 +26,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tests import _webtext  # noqa: E402
 
 from tests import _tmp
 from unittransfer import edu, vocab
@@ -155,7 +156,7 @@ else:
     # <script src> tags - one global scope, so concatenating them in tag order
     # IS the page's program. (Scraping an inline <script> block, as this used to,
     # now finds the HTML comment that explains the split and reads the comment.)
-    src = WEB.read_text(encoding="utf-8")
+    src = _webtext.read(WEB)
     tags = re.findall(r'<script src="js/([A-Za-z0-9_.-]+\.js)"></script>', src)
     # boot.js is left out rather than trimmed off the end: it is the file that
     # STARTS the app (and now also retries any module the browser dropped), so
@@ -163,7 +164,7 @@ else:
     # at its last `init();`, as this used to, only worked while that call was
     # the whole file.
     tags = [t for t in tags if t != "boot.js"]
-    script = "\n".join((WEB.parent / "js" / t).read_text(encoding="utf-8") for t in tags)
+    script = "\n".join(_webtext.read((WEB.parent / "js" / t)) for t in tags)
     # the page binds its hover-card listeners at load; node has no DOM, and this
     # suite only exercises the pure split/rejoin functions
     stubs = r"""

@@ -62,6 +62,7 @@ from . import campmap, config, mapvocab, osmmap
 from .campmap import RWM_REL, MapError
 from .maptga import encode
 from .mapnew import corner_view
+from . import i18n as _i18n
 
 KINDS = ("heights", "adjust", "ground", "climates", "features",
          "landuse", "landcover", "koppen")
@@ -184,7 +185,7 @@ def plan(mod, cm, body: dict) -> GenPlan:
     kind = str(body.get("kind") or "")
     p = GenPlan(mod=mod, kind=kind)
     if kind not in KINDS:
-        p.errors.append(f"no generator called {kind!r}; there are {', '.join(KINDS)}")
+        p.errors.append(_i18n.msg("eng.mapgen.no_generator_called_there_are", "no generator called {kind}; there are {KINDS}", kind=repr(kind), KINDS=', '.join(KINDS)))
         return p
     try:
         if kind in ("landuse", "landcover", "koppen"):
@@ -232,7 +233,7 @@ def elevation_tile(z: int, x: int, y: int) -> Image.Image:
             except (OSError, ValueError) as e:            # URLError is an OSError
                 last = e
         if raw is None:
-            raise GenError(f"no elevation server answered ({last})")
+            raise GenError(_i18n.msg("eng.mapgen.no_elevation_server_answered", "no elevation server answered ({last})", last=last))
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(raw)
@@ -319,8 +320,7 @@ def _floats(img: Image.Image) -> array:
 def _plan_heights(p: GenPlan, cm, body: dict) -> None:
     box, where = osmmap.box_for(cm)
     if box is None:
-        raise GenError("the map has no real-world box yet; set one on the Real "
-                       "world tab first")
+        raise GenError(_i18n.msg("eng.mapgen.the_map_has_no_real_world", "the map has no real-world box yet; set one on the Real world tab first"))
     img, info, rel = _layer(cm, "heights")
     cols, rows = img.size
     metres = elevation(box, cols, rows)
@@ -344,9 +344,7 @@ def _plan_heights(p: GenPlan, cm, body: dict) -> None:
                 f"{top:,.0f} m)")
         if top > t.max_land_height:
             p.warnings.append(
-                f"the highest ground in the box, {top:,.0f} m, is above "
-                f"max_land_height ({t.max_land_height:,.0f} m), so it is cut off "
-                f"at white. Raise max_land_height, or stretch instead.")
+                _i18n.msg("eng.mapgen.the_highest_ground_in_the_box", "the highest ground in the box, {top:,.0f} m, is above max_land_height ({max_land_height:,.0f} m), so it is cut off at white. Raise max_land_height, or stretch instead.", top=top, max_land_height=t.max_land_height))
     # grey = metres * scale, rounded, never under 1: black reads as sea
     grey = ImageChops.lighter(metres.point(lambda v: v * scale + 0.5).convert("L"),
                               Image.new("L", img.size, 1))
@@ -362,10 +360,7 @@ def _plan_heights(p: GenPlan, cm, body: dict) -> None:
         moved = _count(ImageChops.difference(new_land, land_now).point(
             lambda v: 255 if v else 0))
         p.warnings.append(
-            f"the whole map is written, so {moved:,} corner(s) change between "
-            f"land and sea. map_regions.tga and map_ground_types.tga do not "
-            f"follow; the validator will list where they disagree, and the Real "
-            f"world tab's coastline can repaint the regions.")
+            _i18n.msg("eng.mapgen.the_whole_map_is_written_so", "the whole map is written, so {moved:,} corner(s) change between land and sea. map_regions.tga and map_ground_types.tga do not follow; the validator will list where they disagree, and the Real world tab's coastline can repaint the regions.", moved=moved))
     _put(p, cm, "heights", out, info, rel)
     p.changes.append(f"{rel}: {'every corner' if whole else 'the land'} from the "
                      f"real ground under the box ({where}), {what}")
@@ -379,9 +374,9 @@ def _num(body: dict, key: str, default: float, lo: float, hi: float) -> float:
     try:
         v = float(body.get(key, default))
     except (TypeError, ValueError):
-        raise GenError(f"{key} has to be a number") from None
+        raise GenError(_i18n.msg("eng.mapgen.has_to_be_a_number", "{key} has to be a number", key=key)) from None
     if not lo <= v <= hi:
-        raise GenError(f"{key} runs from {lo:g} to {hi:g}")
+        raise GenError(_i18n.msg("eng.mapgen.runs_from_lo_g_to_hi", "{key} runs from {lo:g} to {hi:g}", key=key, lo=lo, hi=hi))
     return v
 
 
@@ -410,7 +405,7 @@ def _plan_adjust(p: GenPlan, cm, body: dict) -> None:
     ga = _num(body, "gamma", 1, 0.1, 3)
     eq = bool(body.get("equalize"))
     if not eq and br == 0 and ct == 0 and ga == 1:
-        raise GenError("move a slider or tick equalize first: as it stands, nothing changes")
+        raise GenError(_i18n.msg("eng.mapgen.move_a_slider_or_tick_equalize", "move a slider or tick equalize first: as it stands, nothing changes"))
     img, info, rel = _layer(cm, "heights")
     r, g, bch = img.split()
     sea = _math("convert(((r == 0) & (g == 0) & (b > 0)) * 255, 'L')", r=r, g=g, b=bch)
@@ -444,8 +439,7 @@ def _plan_adjust(p: GenPlan, cm, body: dict) -> None:
         f"contrast {ct:+g}" if ct else "", f"gamma {ga:g}" if ga != 1 else "") if x)
     p.changes.append(f"{rel}: the land {what}; {moved:,} corner(s) change, the sea none")
     if off_grey:
-        p.warnings.append(f"{off_grey:,} land corner(s) were not grey (red, green and blue "
-                          f"not equal); they come out grey, from their red")
+        p.warnings.append(_i18n.msg("eng.mapgen.off_grey_land_corner_s_were", "{off_grey:,} land corner(s) were not grey (red, green and blue not equal); they come out grey, from their red", off_grey=off_grey))
 
 
 # ---------------------------------------------------------------------------
@@ -460,11 +454,11 @@ def _bands(body: dict) -> List[Tuple[str, int]]:
     for row in got:
         code, top = str(row[0]), int(row[1])
         if mapvocab.ground(code) is None:
-            raise GenError(f"{code!r} is not a ground type")
+            raise GenError(_i18n.msg("eng.mapgen.is_not_a_ground_type", "{code} is not a ground type", code=repr(code)))
         out.append((code, top))
     out.sort(key=lambda r: r[1])
     if not out or out[-1][1] < 255:
-        raise GenError("the last band has to reach 255, or some ground has no type")
+        raise GenError(_i18n.msg("eng.mapgen.the_last_band_has_to_reach", "the last band has to reach 255, or some ground has no type"))
     return out
 
 
@@ -519,7 +513,7 @@ def _plan_climates(p: GenPlan, cm, body: dict) -> None:
         # 87d: Mylae's "fill the entire map with one climate", sea and all
         clim = have.get(fill)
         if clim is None:
-            raise GenError(f"this mod declares no climate called {fill!r}")
+            raise GenError(_i18n.msg("eng.mapgen.this_mod_declares_no_climate_called", "this mod declares no climate called {fill}", fill=repr(fill)))
         img, info, rel = _layer(cm, "climates")
         _put(p, cm, "climates", Image.new("RGB", img.size, tuple(clim["rgb"])), info, rel)
         p.changes.append(f"{rel}: every corner {fill}, the sea too")
@@ -529,8 +523,7 @@ def _plan_climates(p: GenPlan, cm, body: dict) -> None:
     ground = cm.layer("ground_types").convert("RGB")
     img, info, rel = _layer(cm, "climates")
     if img.size != ground.size:
-        raise GenError("map_climates.tga and map_ground_types.tga are not the "
-                       "same size")
+        raise GenError(_i18n.msg("eng.mapgen.map_climates_tga_and_map_ground", "map_climates.tga and map_ground_types.tga are not the same size"))
     out = img.copy()
     done, missing = {}, []
     for gcode, ccode in mapping.items():
@@ -545,8 +538,7 @@ def _plan_climates(p: GenPlan, cm, body: dict) -> None:
         out.paste(tuple(clim["rgb"]), mask=mask)
         done[gcode] = _count(mask)
     if not done:
-        raise GenError("this mod declares none of the climates the table names; "
-                       "choose a climate for each ground type first")
+        raise GenError(_i18n.msg("eng.mapgen.this_mod_declares_none_of_the", "this mod declares none of the climates the table names; choose a climate for each ground type first"))
     _put(p, cm, "climates", out, info, rel)
     p.changes.append(f"{rel}: " + ", ".join(
         f"{g} {n:,} -> {mapping[g]}" for g, n in done.items() if n))
@@ -730,11 +722,10 @@ class Rivers:
 def _plan_features(p: GenPlan, cm, body: dict) -> None:
     box, where = osmmap.box_for(cm)
     if box is None:
-        raise GenError("the map has no real-world box yet; set one on the Real "
-                       "world tab first")
+        raise GenError(_i18n.msg("eng.mapgen.the_map_has_no_real_world", "the map has no real-world box yet; set one on the Real world tab first"))
     detail = str(body.get("detail") or "major")
     if detail not in RIVER_DETAIL:
-        raise GenError(f"detail is one of {', '.join(RIVER_DETAIL)}")
+        raise GenError(_i18n.msg("eng.mapgen.detail_is_one_of", "detail is one of {RIVER_DETAIL}", RIVER_DETAIL=', '.join(RIVER_DETAIL)))
     got = _osm_features(box, detail)
     w, h = cm.terrain.width, cm.terrain.height
     proj = osmmap.Projection(box, w, h)
@@ -777,8 +768,7 @@ def _plan_features(p: GenPlan, cm, body: dict) -> None:
                                          "were cleared first" if replace else
                                          "; the old rivers are kept and joined"))
     if short:
-        p.warnings.append(f"{short} OSM course(s) were too short to draw at this "
-                          f"map's scale (under {MIN_RIVER} tiles of land)")
+        p.warnings.append(_i18n.msg("eng.mapgen.osm_course_s_were_too_short", "{short} OSM course(s) were too short to draw at this map's scale (under {MIN_RIVER} tiles of land)", short=short, MIN_RIVER=MIN_RIVER))
 
 
 def draw_features(px, got: dict, proj, w: int, h: int, sea, blocked, net) -> Tuple[int, int, int, int, int]:
@@ -847,7 +837,7 @@ def apply(p: GenPlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.data:
-        raise ValueError("nothing to write")
+        raise ValueError(_i18n.msg("eng.mapgen.nothing_to_write", "nothing to write"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

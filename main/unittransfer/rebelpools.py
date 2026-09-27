@@ -76,6 +76,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from . import campmap, minorfiles
+from . import i18n as _i18n
 
 #: ``descr_rebel_factions.txt``, relative to ``data/``.
 REBELS_REL = "descr_rebel_factions.txt"
@@ -292,9 +293,9 @@ def plan(mod, cm: Optional[campmap.CampaignMap], body: dict) -> RebelPlan:
     p.rel = _rel_of(cm)
 
     if not p.rebel:
-        p.errors.append("no rebel faction named")
+        p.errors.append(_i18n.msg("eng.rebelpools.no_rebel_faction_named", "no rebel faction named"))
     if not want:
-        p.errors.append("no provinces picked")
+        p.errors.append(_i18n.msg("eng.rebelpools.no_provinces_picked", "no provinces picked"))
     if p.errors:
         return p
 
@@ -302,27 +303,17 @@ def plan(mod, cm: Optional[campmap.CampaignMap], body: dict) -> RebelPlan:
     rec = rebels.get(p.rebel)
     if rec is None:
         p.errors.append(
-            f"{p.rebel} is not a rebel faction descr_rebel_factions.txt "
-            "declares. The engine reads this value off the region record and "
-            "looks it up there by name, so a province naming a block that is "
-            "not in the file gets no rebels at all. Add it on the Minor Files "
-            "screen first")
+            _i18n.msg("eng.rebelpools.is_not_a_rebel_faction_descr", "{rebel} is not a rebel faction descr_rebel_factions.txt declares. The engine reads this value off the region record and looks it up there by name, so a province naming a block that is not in the file gets no rebels at all. Add it on the Minor Files screen first", rebel=p.rebel))
         return p
 
     # the two facts a person needs BEFORE the write, not after it. Neither one
     # refuses: both are real states in the installed mods and both are legal.
     if (rec.get("chance") or "").strip() == "0":
         p.warnings.append(
-            f"{p.rebel} has `chance 0`, so these provinces will spawn no "
-            "rebels at all. That is a real setting rather than a mistake - "
-            "Reforged sets it on all 27 of the blocks its provinces name, and "
-            "DaC uses it for No_Rebels - but it is the whole of what this edit "
-            "will do")
+            _i18n.msg("eng.rebelpools.has_chance_0_so_these_provinces", "{rebel} has `chance 0`, so these provinces will spawn no rebels at all. That is a real setting rather than a mistake - Reforged sets it on all 27 of the blocks its provinces name, and DaC uses it for No_Rebels - but it is the whole of what this edit will do", rebel=p.rebel))
     if rec.get("category") in BY_CATEGORY:
         p.warnings.append(
-            f"{p.rebel} is a `{rec.get('category')}` block, which the engine "
-            "spawns by category rather than off a region record. Naming it "
-            "here is not how it is meant to be reached")
+            _i18n.msg("eng.rebelpools.is_a_block_which_the_engine", "{rebel} is a `{rec}` block, which the engine spawns by category rather than off a region record. Naming it here is not how it is meant to be reached", rebel=p.rebel, rec=rec.get('category')))
 
     missing = [n for n in want if rf.by_name(n) is None]
     if missing:
@@ -374,7 +365,7 @@ def apply(p: RebelPlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.rebelpools.nothing_to_change", "nothing to change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

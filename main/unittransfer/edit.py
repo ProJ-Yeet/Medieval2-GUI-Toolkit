@@ -46,6 +46,7 @@ from .mod import Mod
 # where a unit falls back to when card_pic_dir / info_pic_dir isn't pinned; shared
 # with the transfer engine so both put mercenary icons in the same place
 from .transfer import MERC_CARD_DIR, MERC_INFO_DIR
+from . import i18n as _i18n
 
 # ---------------------------------------------------------------------------
 # request objects (built from the JSON body by ``from_dict``)
@@ -467,7 +468,7 @@ def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> N
         want = chosen or list(dict.fromkeys(folders + [merc_folder]))
         src = _resolve_icon_src(mod, src_str)
         if src is None:
-            plan.errors.append(f"{kind} image not found: {src_str}")
+            plan.errors.append(_i18n.msg("eng.edit.image_not_found", "{kind} image not found: {src_str}", kind=kind, src_str=src_str))
             continue
         native = src.suffix.lower() in ICON_NATIVE_EXTS
         ext = src.suffix.lower() if native else ".tga"
@@ -475,8 +476,7 @@ def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> N
         dests = [f"{base_dir}/{folder}/{fname}" for folder in dict.fromkeys(want)]
         if not dests:
             plan.warnings.append(
-                f"'{unit.type}' has no ownership, so there is no faction folder "
-                f"to put the {kind} in")
+                _i18n.msg("eng.edit.has_no_ownership_so_there_is", "'{type}' has no ownership, so there is no faction folder to put the {kind} in", type=unit.type, kind=kind))
             continue
         # A folder outside the unit's ownership is written anyway - the user
         # asked for it and a mod may well pin a card somewhere the EDU does not
@@ -517,8 +517,7 @@ def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> N
         # two files that differ only by name.
         if plan.resolved_dict != unit.dictionary:
             plan.warnings.append(
-                f"{kind} written under the new dictionary '{plan.resolved_dict}' - "
-                f"tick 'remove the old icons' to drop the '{unit.dictionary}' ones")
+                _i18n.msg("eng.edit.written_under_the_new_dictionary_tick", "{kind} written under the new dictionary '{resolved_dict}' - tick 'remove the old icons' to drop the '{dictionary}' ones", kind=kind, resolved_dict=plan.resolved_dict, dictionary=unit.dictionary))
 
 
 def _unit_icon_files(mod: Mod, dictionary: str) -> List[Tuple[Path, str, str]]:
@@ -587,13 +586,11 @@ def _raw_block(plan: "EditPlan", unit, req: EditRequest) -> str:
     try:
         doc = codeview.parse("edu", req.raw_block)
     except codeview.CodeViewError as e:
-        plan.errors.append(f"the edited text isn't a valid unit block: {e.message}")
+        plan.errors.append(_i18n.msg("eng.edit.the_edited_text_isnt_a_valid", "the edited text isn't a valid unit block: {message}", message=e.message))
         return unit.raw
     if doc.ident != unit.type and not req.new_type:
         plan.warnings.append(
-            f"the text renames `type` to '{doc.ident}' - nothing else in the mod "
-            "follows that. Use the Identity tab's rename to update the files that "
-            "recruit this unit.")
+            _i18n.msg("eng.edit.the_text_renames_type_to_nothing", "the text renames `type` to '{ident}' - nothing else in the mod follows that. Use the Identity tab's rename to update the files that recruit this unit.", ident=doc.ident))
     if req.raw_block != unit.raw:
         plan.changes.append("unit block edited as text")
     return req.raw_block
@@ -602,7 +599,7 @@ def _raw_block(plan: "EditPlan", unit, req: EditRequest) -> str:
 def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
     unit = mod.edu.by_type().get(req.unit)
     if unit is None:
-        raise KeyError(f"unit {req.unit!r} not found in {mod.name}")
+        raise KeyError(_i18n.msg("eng.edit.unit_not_found_in", "unit {unit} not found in {name}", unit=repr(req.unit), name=mod.name))
     plan = EditPlan(mod=mod, unit_type=req.unit, request=req,
                     resolved_type=req.new_type or req.unit,
                     resolved_dict=req.new_dictionary or unit.dictionary)
@@ -611,7 +608,7 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
 
     by_type = mod.edu.by_type()
     if req.new_type and req.new_type != unit.type and req.new_type in by_type:
-        plan.errors.append(f"a unit called '{req.new_type}' already exists in {mod.name}")
+        plan.errors.append(_i18n.msg("eng.edit.a_unit_called_already_exists_in", "a unit called '{new_type}' already exists in {name}", new_type=req.new_type, name=mod.name))
 
     block = _raw_block(plan, unit, req)
     db = mod.modeldb
@@ -635,10 +632,9 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
         key = edu_mod.split_label(label)[0]
         if key in PROTECTED_FIELDS:
             plan.errors.append(
-                f"'{key}' cannot be removed - a unit block is defined by it "
-                "(rename or edit it instead)")
+                _i18n.msg("eng.edit.cannot_be_removed_a_unit_block", "'{key}' cannot be removed - a unit block is defined by it (rename or edit it instead)", key=key))
         elif key in ("category", "class"):
-            plan.warnings.append(f"removing '{key}' - the game needs it on every unit")
+            plan.warnings.append(_i18n.msg("eng.edit.removing_the_game_needs_it_on", "removing '{key}' - the game needs it on every unit", key=key))
     if req.field_overrides or req.remove_fields:
         before = block
         block = edu_mod.apply_field_edits(block, req.field_overrides, req.remove_fields)
@@ -697,7 +693,7 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
     before = {f["message"] for f in educeil.unit_findings(unit.raw, unit.type)}
     for f in educeil.unit_findings(block, req.new_type or unit.type):
         if f["message"] not in before:
-            plan.warnings.append(f"engine ceiling: {f['message']} ({f['source']})")
+            plan.warnings.append(_i18n.msg("eng.edit.engine_ceiling", "engine ceiling: {message} ({source})", message=f['message'], source=f['source']))
     # A renamed entry has to be chased through the WHOLE file: any other unit
     # still naming the old entry would point at nothing once it's gone.
     if plan.entry_renames:
@@ -711,8 +707,7 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
                           if m in plan.entry_renames})
         if mounted:
             plan.warnings.append(
-                f"mount(s) {', '.join(mounted)} name the renamed entry in "
-                "descr_mount.txt - that file is not rewritten, fix it by hand.")
+                _i18n.msg("eng.edit.mount_s_name_the_renamed_entry", "mount(s) {mounted} name the renamed entry in descr_mount.txt - that file is not rewritten, fix it by hand.", mounted=', '.join(mounted)))
     if block != unit.raw or plan.entry_renames:
         _take_split(plan, _replace_block(mod, unit, block, model_map=plan.entry_renames))
 
@@ -732,8 +727,7 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
                       if u.type != unit.type and u.dictionary == unit.dictionary]
             if others:
                 plan.warnings.append(
-                    f"'{unit.dictionary}' is also used by {', '.join(others[:3])}"
-                    f"{'…' if len(others) > 3 else ''} - its old text entry is kept.")
+                    _i18n.msg("eng.edit.is_also_used_by_its_old", "'{dictionary}' is also used by {others}{x} - its old text entry is kept.", dictionary=unit.dictionary, others=', '.join(others[:3]), x='…' if len(others) > 3 else ''))
             else:
                 text = localization.remove_record(text, unit.dictionary)
                 plan.changes.append(f"text entry '{unit.dictionary}' removed")
@@ -756,8 +750,7 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
                 plan.deletes.append(rel)
         if not icons:
             plan.warnings.append(
-                f"no unit card found for '{unit.dictionary}' - the renamed unit "
-                f"will need data/ui/units/<faction>/#{plan.resolved_dict}.tga.")
+                _i18n.msg("eng.edit.no_unit_card_found_for_the", "no unit card found for '{dictionary}' - the renamed unit will need data/ui/units/<faction>/#{resolved_dict}.tga.", dictionary=unit.dictionary, resolved_dict=plan.resolved_dict))
 
     # ---- 8) an imported card / info card fans out to every owning faction ----
     _plan_icon_import(plan, mod, unit, req)
@@ -796,9 +789,7 @@ def _plan_type_refs(plan: EditPlan, mod: Mod, old: str, new: str) -> None:
         # case-blind rewrite would rename those as well.
         spots = ", ".join(r.label() for r in res.case_refs[:5])
         plan.warnings.append(
-            f"{len(res.case_refs)} place(s) spell '{old}' with different "
-            f"capitalisation and were NOT rewritten - check them by hand: {spots}"
-            f"{'…' if len(res.case_refs) > 5 else ''}")
+            _i18n.msg("eng.edit.place_s_spell_with_different_capitalisation", "{case_refs_n} place(s) spell '{old}' with different capitalisation and were NOT rewritten - check them by hand: {spots}{x}", case_refs_n=len(res.case_refs), old=old, spots=spots, x='…' if len(res.case_refs) > 5 else ''))
 
 
 def bmdb_request_from_dict(d: dict) -> EditRequest:
@@ -828,8 +819,7 @@ def plan_bmdb(mod: Mod, req: EditRequest) -> EditPlan:
         _plan_new_model(plan, mod, nm, entries, taken)
         if nm.assign_to:
             plan.warnings.append(
-                f"'{nm.name}': bmdb mode edits no unit, so nothing was pointed at "
-                f"the new entry - set '{nm.assign_to}' in the unit editor.")
+                _i18n.msg("eng.edit.bmdb_mode_edits_no_unit_so", "'{name}': bmdb mode edits no unit, so nothing was pointed at the new entry - set '{assign_to}' in the unit editor.", name=nm.name, assign_to=nm.assign_to))
     for me in req.model_edits:
         _plan_model_edit(plan, mod, me, entries, taken)
 
@@ -850,8 +840,7 @@ def plan_bmdb(mod: Mod, req: EditRequest) -> EditPlan:
                           if m in plan.entry_renames})
         if mounted:
             plan.warnings.append(
-                f"mount(s) {', '.join(mounted)} name the renamed entry in "
-                "descr_mount.txt - that file is not rewritten, fix it by hand.")
+                _i18n.msg("eng.edit.mount_s_name_the_renamed_entry", "mount(s) {mounted} name the renamed entry in descr_mount.txt - that file is not rewritten, fix it by hand.", mounted=', '.join(mounted)))
     if not (plan.edu_text or plan.modeldb_touched or plan.copies or plan.deletes):
         plan.changes.append("no changes")
     return plan
@@ -868,13 +857,13 @@ def _plan_file_copy(plan: EditPlan, mod: Mod, src: Path, dest_dir: str) -> Optio
     """Queue a copy of ``src`` into ``data/<dest_dir>/`` and return its rel path."""
     rel_dir = _rel_under_data(mod, dest_dir)
     if rel_dir is None:
-        plan.errors.append(f"destination '{dest_dir}' is outside the mod's data folder")
+        plan.errors.append(_i18n.msg("eng.edit.destination_is_outside_the_mods_data", "destination '{dest_dir}' is outside the mod's data folder", dest_dir=dest_dir))
         return None
     if not src or not str(src).strip():
-        plan.errors.append("no source file given for a copy")
+        plan.errors.append(_i18n.msg("eng.edit.no_source_file_given_for_a", "no source file given for a copy"))
         return None
     if not src.is_file():
-        plan.errors.append(f"source file not found: {src}")
+        plan.errors.append(_i18n.msg("eng.edit.source_file_not_found", "source file not found: {src}", src=src))
         return None
     rel = f"{rel_dir}/{src.name}" if rel_dir else src.name
     target = mod.data / rel
@@ -883,8 +872,7 @@ def _plan_file_copy(plan: EditPlan, mod: Mod, src: Path, dest_dir: str) -> Optio
     plan.copies.append((src, rel))
     plan.changes.append(f"copy {src.name} -> data/{rel}")
     if target.exists():
-        plan.warnings.append(f"data/{rel} already exists and will be overwritten "
-                             "(backed up first, so Undo restores it).")
+        plan.warnings.append(_i18n.msg("eng.edit.data_already_exists_and_will_be", "data/{rel} already exists and will be overwritten (backed up first, so Undo restores it).", rel=rel))
     return rel
 
 
@@ -1043,7 +1031,7 @@ def model_folder_report(mod: Mod, entry_name: str, target: str = "") -> dict:
     """
     entry = mod.modeldb.by_name().get((entry_name or "").lower())
     if entry is None:
-        return {"error": f"model entry '{entry_name}' not found in {mod.name}"}
+        return {"error": _i18n.msg("eng.edit.model_entry_not_found_in", "model entry '{entry_name}' not found in {name}", entry_name=entry_name, name=mod.name)}
     info = folder_info(entry)
     tgt = (target or "").strip() or info["suggestion"]
     rel_target = _rel_under_data(mod, tgt)
@@ -1074,7 +1062,7 @@ def _plan_folder_move(plan: EditPlan, mod: Mod, entry: "modeldb.ModelEntry",
     """
     target = _rel_under_data(mod, me.move_dir)
     if target is None:
-        plan.errors.append(f"'{me.move_dir}' is outside the mod's data folder")
+        plan.errors.append(_i18n.msg("eng.edit.is_outside_the_mods_data_folder", "'{move_dir}' is outside the mod's data folder", move_dir=me.move_dir))
         return raw
     slots = modeldb.path_slots_raw(raw, pad=entry.first_entry_pad)
     moves = folder_moves_of(folder_info_of(slots, entry.name), target)
@@ -1087,8 +1075,7 @@ def _plan_folder_move(plan: EditPlan, mod: Mod, entry: "modeldb.ModelEntry",
     for new, olds in clashes.items():
         if len(olds) > 1:
             plan.errors.append(
-                f"{entry.name}: {len(olds)} different files would both become "
-                f"data/{new} ({', '.join(sorted(olds))}) - rename one first")
+                _i18n.msg("eng.edit.different_files_would_both_become_data", "{name}: {olds_n} different files would both become data/{new} ({olds}) - rename one first", name=entry.name, olds_n=len(olds), new=new, olds=', '.join(sorted(olds))))
     if plan.errors:
         return raw
 
@@ -1096,10 +1083,7 @@ def _plan_folder_move(plan: EditPlan, mod: Mod, entry: "modeldb.ModelEntry",
     users = sorted({n for names in shared.values() for n in names})
     if users and not me.move_shared:
         plan.warnings.append(
-            f"{len(users)} other model entr{'y' if len(users) == 1 else 'ies'} "
-            f"({', '.join(users[:4])}{'…' if len(users) > 4 else ''}) also use these "
-            "files - they keep pointing at the old location, so the old files are "
-            "copied, not moved.")
+            _i18n.msg("eng.edit.other_model_entr_also_use_these", "{users_n} other model entr{x} ({users}{x2}) also use these files - they keep pointing at the old location, so the old files are copied, not moved.", users_n=len(users), x='y' if len(users) == 1 else 'ies', users=', '.join(users[:4]), x2='…' if len(users) > 4 else ''))
 
     raw = modeldb.rewrite_entry_paths(raw, moves, pad=entry.first_entry_pad)
     pending = {rel.lower() for _src, rel in plan.copies}
@@ -1109,12 +1093,10 @@ def _plan_folder_move(plan: EditPlan, mod: Mod, entry: "modeldb.ModelEntry",
             if old.lower() in pending:
                 continue                      # imported this save: _follow_imports moves it
             plan.warnings.append(
-                f"data/{old} is not on disk - '{entry.name}' now points at "
-                f"data/{new}, put the file there yourself.")
+                _i18n.msg("eng.edit.data_is_not_on_disk_now", "data/{old} is not on disk - '{name}' now points at data/{new}, put the file there yourself.", old=old, name=entry.name, new=new))
             continue
         if (mod.data / new).exists() and (mod.data / new).resolve() != src.resolve():
-            plan.warnings.append(f"data/{new} already exists and will be overwritten "
-                                 "(backed up first, so Undo restores it).")
+            plan.warnings.append(_i18n.msg("eng.edit.data_already_exists_and_will_be_2", "data/{new} already exists and will be overwritten (backed up first, so Undo restores it).", new=new))
         plan.copies.append((src, new))
         if me.move_shared or old not in shared:
             plan.deletes.append(old)          # nothing references the old path any more
@@ -1201,13 +1183,11 @@ def _raw_entry(plan: "EditPlan", entry, me: ModelEdit) -> str:
     try:
         doc = codeview.parse("bmdb", me.raw_entry, ctx)
     except codeview.CodeViewError as e:
-        plan.errors.append(f"{entry.name}: the edited text isn't a valid modeldb "
-                           f"entry: {e.message}")
+        plan.errors.append(_i18n.msg("eng.edit.the_edited_text_isnt_a_valid_2", "{name}: the edited text isn't a valid modeldb entry: {message}", name=entry.name, message=e.message))
         return entry.raw
     if doc.ident != entry.name and not me.new_name:
         plan.errors.append(
-            f"the text renames the entry to '{doc.ident}' - use the rename box so "
-            "the units pointing at it follow.")
+            _i18n.msg("eng.edit.the_text_renames_the_entry_to", "the text renames the entry to '{ident}' - use the rename box so the units pointing at it follow.", ident=doc.ident))
         return entry.raw
     if me.raw_entry != entry.raw:
         plan.changes.append(f"{entry.name}: entry edited as text")
@@ -1226,7 +1206,7 @@ def _plan_model_edit(plan: EditPlan, mod: Mod, me: ModelEdit,
     """
     entry = entries.get(me.entry)
     if entry is None:
-        plan.errors.append(f"model entry '{me.entry}' not found in this mod's modeldb")
+        plan.errors.append(_i18n.msg("eng.edit.model_entry_not_found_in_this", "model entry '{entry}' not found in this mod's modeldb", entry=me.entry))
         return
     pad = entry.first_entry_pad
     raw = _raw_entry(plan, entry, me)
@@ -1258,8 +1238,7 @@ def _plan_model_edit(plan: EditPlan, mod: Mod, me: ModelEdit,
         current = [t.faction for t in entry.main_textures]
         if not wanted:
             plan.errors.append(
-                f"{entry.name}: a battle model needs at least one faction texture "
-                "record - the game can't draw a unit with none.")
+                _i18n.msg("eng.edit.a_battle_model_needs_at_least", "{name}: a battle model needs at least one faction texture record - the game can't draw a unit with none.", name=entry.name))
         elif wanted != current:
             raw = modeldb.set_texture_factions(raw, wanted, pad=pad)
             added = [f for f in wanted if f not in current]
@@ -1276,9 +1255,7 @@ def _plan_model_edit(plan: EditPlan, mod: Mod, me: ModelEdit,
                          and set(u.ownership) & set(dropped)]
                 if using:
                     plan.warnings.append(
-                        f"{entry.name}: {', '.join(dropped[:4])} still own "
-                        f"{', '.join(using[:3])}{'…' if len(using) > 3 else ''} - those "
-                        "units lose their skin unless you change their ownership too.")
+                        _i18n.msg("eng.edit.still_own_those_units_lose_their", "{name}: {dropped} still own {using}{x} - those units lose their skin unless you change their ownership too.", name=entry.name, dropped=', '.join(dropped[:4]), using=', '.join(using[:3]), x='…' if len(using) > 3 else ''))
             if not added and not dropped:
                 plan.changes.append(f"{entry.name}: faction skins reordered")
 
@@ -1309,9 +1286,9 @@ def _plan_model_edit(plan: EditPlan, mod: Mod, me: ModelEdit,
     new_name = me.new_name.strip().lower()
     if new_name and new_name != entry.name:
         if " " in new_name:
-            plan.errors.append(f"'{new_name}': model entry names cannot contain spaces")
+            plan.errors.append(_i18n.msg("eng.edit.model_entry_names_cannot_contain_spaces_2", "'{new_name}': model entry names cannot contain spaces", new_name=new_name))
         elif new_name in entries or new_name in taken:
-            plan.errors.append(f"a model entry called '{new_name}' already exists")
+            plan.errors.append(_i18n.msg("eng.edit.a_model_entry_called_already_exists", "a model entry called '{new_name}' already exists", new_name=new_name))
         else:
             raw = modeldb.rename_entry_raw(raw, new_name)
             plan.entry_renames[entry.name] = new_name
@@ -1326,18 +1303,17 @@ def _plan_new_model(plan: EditPlan, mod: Mod, nm: NewModel,
                     entries: Dict[str, "modeldb.ModelEntry"], taken: set) -> None:
     """Clone an existing entry into a new one pointing at imported files."""
     if not nm.name:
-        plan.errors.append("the new model entry needs a name")
+        plan.errors.append(_i18n.msg("eng.edit.the_new_model_entry_needs_a", "the new model entry needs a name"))
         return
     if " " in nm.name:
-        plan.errors.append(f"'{nm.name}': model entry names cannot contain spaces")
+        plan.errors.append(_i18n.msg("eng.edit.model_entry_names_cannot_contain_spaces", "'{name}': model entry names cannot contain spaces", name=nm.name))
         return
     if nm.name in entries or nm.name in taken:
-        plan.errors.append(f"'{nm.name}': a model entry with that name already exists")
+        plan.errors.append(_i18n.msg("eng.edit.a_model_entry_with_that_name", "'{name}': a model entry with that name already exists", name=nm.name))
         return
     clone = entries.get(nm.clone_from)
     if clone is None:
-        plan.errors.append(f"'{nm.name}': entry to clone from "
-                           f"('{nm.clone_from}') not found")
+        plan.errors.append(_i18n.msg("eng.edit.entry_to_clone_from_not_found", "'{name}': entry to clone from ('{clone_from}') not found", name=nm.name, clone_from=nm.clone_from))
         return
 
     slots = modeldb.path_slots(clone)
@@ -1391,11 +1367,10 @@ def _plan_new_model(plan: EditPlan, mod: Mod, nm: NewModel,
         f"{'…' if len(facs) > 6 else ''}; sprites, ownership and animations kept)")
     if not mesh_rel and not tex_rel and not att_tex_rel:
         plan.warnings.append(
-            f"'{nm.name}' points at exactly the same files as '{clone.name}' - "
-            "give it a mesh and/or a texture to make it a different model.")
+            _i18n.msg("eng.edit.points_at_exactly_the_same_files", "'{name}' points at exactly the same files as '{name2}' - give it a mesh and/or a texture to make it a different model.", name=nm.name, name2=clone.name))
     for skel in dict.fromkeys(clone.skeletons()):
         if skel and skel not in mod.modeldb.all_skeletons():
-            plan.warnings.append(f"animation '{skel}' is not in this mod's modeldb")
+            plan.warnings.append(_i18n.msg("eng.edit.animation_is_not_in_this_mods", "animation '{skel}' is not in this mod's modeldb", skel=skel))
 
 
 def _plan_delete(plan: EditPlan, unit) -> EditPlan:
@@ -1411,8 +1386,7 @@ def _plan_delete(plan: EditPlan, unit) -> EditPlan:
     if opts.remove_loc:
         if others_same_dict:
             plan.warnings.append(
-                f"text entry '{unit.dictionary}' kept - still used by "
-                f"{', '.join(others_same_dict[:3])}")
+                _i18n.msg("eng.edit.text_entry_kept_still_used_by", "text entry '{dictionary}' kept - still used by {others_same_dict}", dictionary=unit.dictionary, others_same_dict=', '.join(others_same_dict[:3])))
         else:
             text, loc_read_as = localization.read_file(mod.export_units_path)
             plan.loc_text = localization.remove_record(text, unit.dictionary)
@@ -1441,11 +1415,10 @@ def _plan_delete(plan: EditPlan, unit) -> EditPlan:
                         plan.changes.append(f"deleted data/{rel}")
     elif orphans:
         plan.warnings.append(
-            f"{len(orphans)} model entry/entries are now unused: {', '.join(orphans[:4])}"
-            f"{'…' if len(orphans) > 4 else ''}")
+            _i18n.msg("eng.edit.model_entry_entries_are_now_unused", "{orphans_n} model entry/entries are now unused: {orphans}{x}", orphans_n=len(orphans), orphans=', '.join(orphans[:4]), x='…' if len(orphans) > 4 else ''))
     if shared:
         plan.warnings.append(
-            f"kept model(s) still used elsewhere: {', '.join(sorted(set(shared))[:4])}")
+            _i18n.msg("eng.edit.kept_model_s_still_used_elsewhere", "kept model(s) still used elsewhere: {shared}", shared=', '.join(sorted(set(shared))[:4])))
 
     if opts.remove_icons:
         for _abs, rel, _kind in _unit_icon_files(mod, unit.dictionary):
@@ -1614,7 +1587,7 @@ def apply_edit(plan: EditPlan) -> Dict:
                 manifest.setdefault("deleted", []).append(rel)
                 file_op("DELETE", target, "Undo puts it back")
             except OSError as exc:
-                plan.warnings.append(f"could not delete data/{rel}: {exc}")
+                plan.warnings.append(_i18n.msg("eng.edit.could_not_delete_data", "could not delete data/{rel}: {exc}", rel=rel, exc=exc))
                 log.warning("  could not delete %s: %s", target, exc)
 
     rec = {
@@ -1658,7 +1631,7 @@ def unit_detail(mod: Mod, unit_type: str) -> dict:
     """Everything the unit editor needs for one unit."""
     unit = mod.edu.by_type().get(unit_type)
     if unit is None:
-        raise KeyError(f"unit {unit_type!r} not found in {mod.name}")
+        raise KeyError(_i18n.msg("eng.edit.unit_not_found_in_2", "unit {unit_type} not found in {name}", unit_type=repr(unit_type), name=mod.name))
     loc = mod.loc.get(unit.dictionary)
     users = _model_users(mod, skip_unit=unit_type)
     entries = mod.modeldb.by_name()

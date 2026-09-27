@@ -49,6 +49,7 @@ from typing import Dict, Iterable, List, Optional, Tuple
 from . import config, modeldb
 from .logutil import log
 from .mod import Mod
+from . import i18n as _i18n
 
 # Where the game always writes sprites, relative to the Medieval II Total War
 # root. Not configurable - the engine hard-codes it, which is why the tutorial
@@ -100,11 +101,11 @@ def dds_to_texture(dds: bytes) -> bytes:
     bails with "could not be converted" instead of guessing.
     """
     if dds[:4] != b"DDS ":
-        raise SpriteError("not a DDS file (bad magic)")
+        raise SpriteError(_i18n.msg("eng.sprites.not_a_dds_file_bad_magic", "not a DDS file (bad magic)"))
     code = _DXT_CODE.get(bytes(dds[84:88]))
     if code is None:
         got = bytes(dds[84:88]).decode("ascii", "replace")
-        raise SpriteError(f"unsupported DDS format {got!r} - need DXT5 or DXT1")
+        raise SpriteError(_i18n.msg("eng.sprites.unsupported_dds_format_need_dxt5_or", "unsupported DDS format {got} - need DXT5 or DXT1", got=repr(got)))
     out = bytearray()
     for i in _INIT:
         out += struct.pack(">i", i)
@@ -124,7 +125,7 @@ def dds_to_texture(dds: bytes) -> bytes:
 def texture_to_dds(tex: bytes) -> bytes:
     """Unwrap a .texture back to DDS - the inverse of :func:`dds_to_texture`."""
     if len(tex) <= TEXTURE_HEADER_LEN:
-        raise SpriteError("truncated .texture file")
+        raise SpriteError(_i18n.msg("eng.sprites.truncated_texture_file", "truncated .texture file"))
     return tex[TEXTURE_HEADER_LEN:]
 
 
@@ -307,7 +308,7 @@ def _med2_root(mod: Mod) -> Path:
     root = config.get_med2_root()
     if not root:
         raise SpriteError(
-            "can't locate the Medieval II Total War root - set it in Settings")
+            _i18n.msg("eng.sprites.cant_locate_the_medieval_ii_total", "can't locate the Medieval II Total War root - set it in Settings"))
     return _strip_mods(Path(root))
 
 
@@ -387,7 +388,7 @@ def plan_prep(mod: Mod, req: PrepRequest) -> PrepPlan:
             plan.unknown.append(n)
 
     if not plan.known:
-        plan.warnings.append("no valid model names - nothing would be generated")
+        plan.warnings.append(_i18n.msg("eng.sprites.no_valid_model_names_nothing_would", "no valid model names - nothing would be generated"))
 
     plan.export_dir = root / EXPORT_REL
 
@@ -403,9 +404,9 @@ def plan_prep(mod: Mod, req: PrepRequest) -> PrepPlan:
         cfg = Path(cands[0]) if cands else None
     if cfg is None:
         plan.warnings.append(
-            "no CFG found - add 'bypass_sprite_script = 1' under [misc] by hand")
+            _i18n.msg("eng.sprites.no_cfg_found_add_bypass_sprite", "no CFG found - add 'bypass_sprite_script = 1' under [misc] by hand"))
     elif not cfg.is_file():
-        plan.warnings.append(f"{cfg} does not exist")
+        plan.warnings.append(_i18n.msg("eng.sprites.does_not_exist", "{cfg} does not exist", cfg=cfg))
     else:
         state = _cfg_state(cfg)
         plan.cfg_edit = {"path": str(cfg),
@@ -497,7 +498,7 @@ def revert_prep(cfg_path: str) -> dict:
     """
     cfg = Path(cfg_path)
     if not cfg.is_file():
-        raise SpriteError(f"{cfg} does not exist")
+        raise SpriteError(_i18n.msg("eng.sprites.does_not_exist", "{cfg} does not exist", cfg=cfg))
     changed = set_cfg_bypass(cfg, False)
     log.info("SPRITE revert cfg %s (%s)", cfg, "changed" if changed else "already off")
     return {"cfg": str(cfg), "changed": changed, "state": _cfg_state(cfg)}
@@ -597,7 +598,7 @@ class ConvertPlan:
 def plan_convert(mod: Mod, req: ConvertRequest) -> ConvertPlan:
     plan = ConvertPlan(mod=mod, request=req)
     if not NVCOMPRESS.is_file():
-        plan.warnings.append(f"nvcompress.exe missing from {NVTT_DIR}")
+        plan.warnings.append(_i18n.msg("eng.sprites.nvcompress_exe_missing_from", "nvcompress.exe missing from {NVTT_DIR}", NVTT_DIR=NVTT_DIR))
     found = scan_export(mod)
     want = {s.lower() for s in req.stems}
     for stem, s in sorted(found.items()):
@@ -612,7 +613,7 @@ def plan_convert(mod: Mod, req: ConvertRequest) -> ConvertPlan:
     if not plan.sets:
         where = " or ".join(str(d) for d in export_dirs(mod)) or "the export folder"
         plan.warnings.append(
-            f"nothing to convert in {where} - has the generator run yet?")
+            _i18n.msg("eng.sprites.nothing_to_convert_in_has_the", "nothing to convert in {where} - has the generator run yet?", where=where))
     return plan
 
 
@@ -634,8 +635,7 @@ def _run_nvcompress(tga: Path, dds: Path, mipmaps: bool) -> None:
     res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(NVTT_DIR), **kw)
     if res.returncode != 0 or not dds.is_file():
         tail = (res.stderr or res.stdout or "").strip().splitlines()
-        raise SpriteError(f"nvcompress failed on {tga.name}: "
-                          f"{tail[-1] if tail else f'exit {res.returncode}'}")
+        raise SpriteError(_i18n.msg("eng.sprites.nvcompress_failed_on", "nvcompress failed on {name}: {x}", name=tga.name, x=tail[-1] if tail else f'exit {res.returncode}'))
 
 
 def _digest(p: Path) -> str:

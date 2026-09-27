@@ -37,6 +37,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tests import _webtext  # noqa: E402
 
 from tests import _tmp
 from unittransfer import config, triggers
@@ -227,7 +228,7 @@ else:
     cases = [([["a", "b"], ["c"]], ["c"], True), ([["a", "b"], ["c"]], ["a", "b"], True),
              ([["a", "b"], ["c"]], ["a"], False), ([], [], True),
              ([["settlement"]], ["character_record"], False)]
-    src = js.read_text(encoding="utf-8")
+    src = _webtext.read(js)
     harness = src + "\nconsole.log(JSON.stringify(" + json.dumps(
         [c[:2] for c in cases]) + ".map(a=>trgSatisfied(a[0],a[1]))));"
     tmp = Path(_tmp.mkdtemp(prefix="ut-trg-")) / "h.js"

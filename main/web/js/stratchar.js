@@ -233,7 +233,7 @@ function cxHere(){
 //: the flip - so this is `cxHere` without a picked tile to need first.
 function cxPinned(game){
   const k = state.cx;
-  if(!k || !k.w){ toast('✗ the character form was closed before the tile was picked', 5000);
+  if(!k || !k.w){ toast(tt('stratchar.the_character_form_was_closed_before'), 5000);
     return; }
   k.w.x = game[0];
   k.w.y = game[1];
@@ -284,7 +284,7 @@ async function cxSave(action){
   const what = action || (k.adding ? 'add' : 'edit');
   const body = cxBody(what);
   if(what === 'move'){
-    const to = prompt(`Move ${body.character} to which faction?\n\n`
+    const to = prompt(tt('stratchar.move_to_which_faction',{character:body.character})
       + k.d.vocab.factions.join(', '), '');
     if(!to) return;
     body.owner = to.trim();
@@ -302,20 +302,20 @@ async function cxSave(action){
   const lines = (p.changes || []).slice(0, 14);
   const warn = (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x);
   const verb = {edit: 'save', add: 'add', delete: 'delete', move: 'move'}[what];
-  if(!confirm(`Write: ${verb} ${body.character || (k.w && k.w.name) || 'this character'}`
-    + ` in ${k.faction}?\n\n`
-    + (lines.join('\n') || 'no visible change')
+  if(!confirm(tt('stratchar.write',{verb,x:body.character || (k.w && k.w.name) || tt('stratchar.this_character')})
+    + tt('stratchar.in',{faction:k.faction})
+    + (lines.join('\n') || tt('common.no_visible_change'))
     + ((p.changes || []).length > 14
-       ? `\n…and ${p.changes.length - 14} more` : '')
+       ? tt('stratchar.and_more',{changes:p.changes.length - 14}) : '')
     + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + '\n\nOnly this block moves. Backed up first, and 🕑 Log can undo it.')) return;
+    + tt('stratchar.only_this_block_moves_backed_up'))) return;
   k.busy = true;
   let res;
   try{ res = await api.post('/api/map/character_apply', body); }
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   activity('character', `${k.mod} ${k.faction}: ${what} ${res.name || ''}`);
   if(state.cmap !== map || !map || map.campaign !== campaign || state.cx !== k) return;
   // Only this faction and the object overlay changed. Keep the canvas,
@@ -351,27 +351,24 @@ function cxHtml(){
   const d = k.d;
   const head = `<div class="cpbar">
     <button class="cptog${k.open ? ' on' : ''}" onclick="cxToggle()"
-      title="The characters, armies and family this faction starts the campaign with."
-      >\u{2694} People${k.open ? ' ✓' : ''}</button>
-    ${d ? `<span class="count">${esc(d.label || d.faction)} ·
-      ${d.characters.length} character${d.characters.length === 1 ? '' : 's'}${
-      d.leader ? ' · ' + esc(d.leader) : ''}</span>` : ''}
-    ${k.busy ? '<span class="count">working…</span>' : ''}
+      title="${ttA('stratchar.the_characters_armies_and_family_this')}"
+      >${tt('stratchar.people',{open:k.open ? ' ✓' : ''})}</button>
+    ${d ? `<span class="count">${tt('stratchar.character',{x:esc(d.label || d.faction),characters_n:d.characters.length,characters:d.characters.length === 1 ? '' : 's',x2:d.leader ? ' · ' + esc(d.leader) : ''})}</span>` : ''}
+    ${k.busy ? `<span class="count">${tt('common.working_2')}</span>` : ''}
   </div>`;
   if(!k.open) return head;
-  if(k.loading) return head + `<div class="cxpanel count">reading
-    ${esc(k.faction)}…</div>`;
+  if(k.loading) return head + `<div class="cxpanel count">${tt('stratchar.reading',{faction:esc(k.faction)})}</div>`;
   if(k.err) return head + `<div class="cxpanel w-warn">${esc(k.err)}</div>`;
   if(!d) return head;
   return head + `<div class="cxpanel">
     <div class="cqtabs">
       <button class="${k.tab === 'people' ? 'on' : ''}" onclick="cxTab('people')"
-        >Characters</button>
+        >${tt('common.characters')}</button>
       <button class="${k.tab === 'family' ? 'on' : ''}" onclick="cxTab('family')"
-        >Family tree</button>
+        >${tt('stratchar.family_tree')}</button>
       <button class="${k.tab === 'horde' ? 'on' : ''}" onclick="cxTab('horde')"
-        title="Phase 72: fill a faction that holds nothing with a horde"
-        >Horde start</button>
+        title="${ttA('stratchar.phase_72_fill_a_faction_that')}"
+        >${tt('stratchar.horde_start')}</button>
     </div>
     ${k.tab === 'people' ? cxPeopleHtml() : k.tab === 'family' ? cxFamilyHtml()
       : hzHtml()}
@@ -383,7 +380,7 @@ function cxSkippedHtml(){
   const s = (state.cx.d.vocab.skipped || []).filter(x =>
     /descr_names|export_descr_(unit|character_traits|ancillaries)/.test(x.what));
   if(!s.length) return '';
-  return `<div class="cqskip"><div class="k">Not read</div>
+  return `<div class="cqskip"><div class="k">${tt('stratchar.not_read')}</div>
     ${s.map(x => `<div class="count"><b>${esc(x.what)}</b> ${esc(x.why)}</div>`)
       .join('')}</div>`;
 }
@@ -395,22 +392,19 @@ function cxPeopleHtml(){
     const warn = (c.findings || []).length - bad;
     return `<div class="cxrow${i === k.pick ? ' on' : ''}" onclick="cxPick(${i})">
       <b>${esc(c.name)}</b>
-      <span class="count">${esc(c.type)}${c.rank ? ' · ' + esc(c.rank) : ''}
-        · age ${c.age} · ${c.x},${c.y}${c.army ? ' · ' + c.army + ' units' : ''}</span>
-      ${bad ? `<span class="w-bad">${bad}</span>` : ''}
-      ${warn ? `<span class="w-warn">${warn}</span>` : ''}
+      ${tt('stratchar.age',{type:esc(c.type),x:c.rank ? ' · ' + esc(c.rank) : '',age:c.age,x2:c.x,x3:c.y,x4:c.army ? ' · ' + c.army + ' units' : '',bad:bad ? `<span class="w-bad">${bad}</span>` : '',warn:warn ? `<span class="w-warn">${warn}</span>` : ''})}
     </div>`;
   }).join('');
   return `${k.w ? cxFormHtml() : ''}
-    <details class="cxcharacters"${k.w ? '' : ' open'}><summary>${k.w ? 'Switch character' : 'Characters'} · ${d.characters.length}</summary>
-    <div class="cxlist">${rows || '<div class="count">Nobody.</div>'}</div></details>
+    <details class="cxcharacters"${k.w ? '' : ' open'}><summary>${k.w ? tt('stratchar.switch_character') : tt('common.characters')} · ${d.characters.length}</summary>
+    <div class="cxlist">${rows || `<div class="count">${tt('stratchar.nobody')}</div>`}</div></details>
     ${(d.findings || []).map(f =>
       `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${esc(f.message)}</div>`).join('')}
     <div class="csbtns">
-      <button onclick="cxAdd()">+ Add a character</button>
+      <button onclick="cxAdd()">${tt('stratchar.add_a_character')}</button>
       ${d.characters.length ? '' : `<button onclick="cxTab('horde')"
-        title="Leaders and armies on free land in one province, or an emergent_faction event"
-        >⚑ Give it a horde start</button>`}
+        title="${ttA('stratchar.leaders_and_armies_on_free_land')}"
+        >${tt('stratchar.give_it_a_horde_start')}</button>`}
     </div>`;
 }
 
@@ -420,78 +414,77 @@ function cxFormHtml(){
     (values || []).map(x => `<option value="${esc(x)}">`).join('')}</datalist>`;
   return `<div class="cxform">
     <div class="csbtns cxsectionnav">
-      <button onclick="cxSection('cxCharacterFields')">Character</button>
-      <button onclick="cxSection('cxTraitsEditor')">Traits &amp; items</button>
-      <button onclick="cxSection('cxArmyEditor')">Army (${w.army.length})</button>
+      <button onclick="cxSection('cxCharacterFields')">${tt('stratchar.character_2')}</button>
+      <button onclick="cxSection('cxTraitsEditor')">${tt('stratchar.traits_items')}</button>
+      <button onclick="cxSection('cxArmyEditor')">${tt('stratchar.army',{army_n:w.army.length})}</button>
     </div>
-    <div class="cshead" id="cxCharacterFields"><b>${k.adding ? 'A new character'
+    <div class="cshead" id="cxCharacterFields"><b>${k.adding ? tt('stratchar.a_new_character')
       : esc(k.d.characters[k.pick].name)}</b>
-      ${k.adding ? '' : `<span class="count">lines
-        ${k.d.characters[k.pick].lines[0]}-${k.d.characters[k.pick].lines[1]}</span>`}
+      ${k.adding ? '' : `<span class="count">${tt('stratchar.lines',{x:k.d.characters[k.pick].lines[0],x2:k.d.characters[k.pick].lines[1]})}</span>`}
     </div>
     <div class="csrow2">
-      <div class="cmfield"><label>Name</label>
+      <div class="cmfield"><label>${tt('common.name')}</label>
         <input value="${esc(w.name)}" oninput="cxSet('name', this.value)"></div>
-      <div class="cmfield"><label>Type</label>
+      <div class="cmfield"><label>${tt('common.type')}</label>
         <select onchange="cxSet('type', this.value)">
           ${v.types.map(t => `<option value="${esc(t)}"${
             t === w.type ? ' selected' : ''}>${esc(t)}</option>`).join('')}
         </select></div>
     </div>
     <div class="csrow2">
-      <div class="cmfield"><label>Sex</label>
+      <div class="cmfield"><label>${tt('stratchar.sex')}</label>
         <select onchange="cxSet('gender', this.value)">
           ${['male', 'female'].map(g => `<option value="${g}"${
             g === w.gender ? ' selected' : ''}>${g}</option>`).join('')}
         </select></div>
-      <div class="cmfield"><label>Rank</label>
+      <div class="cmfield"><label>${tt('stratchar.rank')}</label>
         <select onchange="cxSet('rank', this.value)">
-          <option value=""${w.rank ? '' : ' selected'}>neither</option>
+          <option value=""${w.rank ? '' : ' selected'}>${tt('stratchar.neither')}</option>
           ${v.ranks.map(r => `<option value="${r}"${
             r === w.rank ? ' selected' : ''}>${r}</option>`).join('')}
         </select>
         ${k.d.leader && w.rank === 'leader' && (k.adding
           || k.d.characters[k.pick].name !== k.d.leader)
-          ? `<div class="count">${esc(k.d.leader)} is the leader today.</div>` : ''}
+          ? `<div class="count">${tt('stratchar.is_the_leader_today',{leader:esc(k.d.leader)})}</div>` : ''}
       </div>
     </div>
     <div class="csrow2">
-      <div class="cmfield"><label>Age</label>
+      <div class="cmfield"><label>${tt('stratchar.age_2')}</label>
         <input type="number" value="${esc(w.age)}" min="0"
           oninput="cxSet('age', this.value)"></div>
-      <div class="cmfield"><label>Where <span class="count">game x, y</span></label>
+      <div class="cmfield"><label>${tt('stratchar.where_game_x_y')}</label>
         <div class="cxxy">
           <input type="number" value="${esc(w.x)}" oninput="cxSet('x', this.value)">
           <input type="number" value="${esc(w.y)}" oninput="cxSet('y', this.value)">
-          <button onclick="cxHere()" title="Put them on the tile the map is looking at"
-            >Here</button>
-          ${cpinButton(`${w.name || 'the new character'}'s tile`, 'cxPinned')}
+          <button onclick="cxHere()" title="${ttA('stratchar.put_them_on_the_tile_the')}"
+            >${tt('stratchar.here')}</button>
+          ${cpinButton(tt('stratchar.s_tile',{name:w.name || tt('stratchar.the_new_character')}), 'cxPinned')}
         </div></div>
     </div>
     <div class="csrow2">
-      <div class="cmfield"><label>Portrait</label>
+      <div class="cmfield"><label>${tt('stratchar.portrait')}</label>
         <input list="cxl-portrait" value="${esc(w.tail.portrait || '')}"
           oninput="cxTail('portrait', this.value)">${list('portrait', v.portraits)}</div>
-      <div class="cmfield"><label>Hero ability</label>
+      <div class="cmfield"><label>${tt('stratchar.hero_ability')}</label>
         <input list="cxl-ability" value="${esc(w.tail.hero_ability || '')}"
           oninput="cxTail('hero_ability', this.value)">${list('ability', v.abilities)}
         <div class="count">${v.have_abilities
           ? (w.tail.hero_ability && (v.declared_abilities || []).includes(String(w.tail.hero_ability).toLowerCase())
-            ? navLinkHtml({mode: 'heroabilities', name: 'name/' + w.tail.hero_ability}, 'What it does →', 'ulink',
-                'Open it in Hero abilities (middle click: a new tab)')
-            : 'The list is what descr_hero_abilities.xml declares.')
-          : 'This mod has no descr_hero_abilities.xml; the list is what this campaign already uses.'}</div></div>
+            ? navLinkHtml({mode: 'heroabilities', name: 'name/' + w.tail.hero_ability}, tt('stratchar.what_it_does'), 'ulink',
+                tt('stratchar.open_it_in_hero_abilities_middle'))
+            : tt('stratchar.the_list_is_what_descr_hero'))
+          : tt('stratchar.this_mod_has_no_descr_hero')}</div></div>
     </div>
     ${cxTraitsHtml()}
     ${cxArmyHtml()}
     ${cxFindingsHtml()}
     <div class="csbtns">
       <button class="primary" onclick="cxSave()">${k.adding
-        ? 'Add character' : 'Save character'}</button>
-      ${k.adding ? `<button onclick="cxCancel()">Cancel</button>`
-        : `<button onclick="cxSave('move')">Move…</button>
-           <button onclick="cxSave('delete')">Delete</button>
-           <button onclick="cxPick(-1)">Close</button>`}
+        ? tt('stratchar.add_character') : tt('stratchar.save_character')}</button>
+      ${k.adding ? `<button onclick="cxCancel()">${tt('common.cancel')}</button>`
+        : `<button onclick="cxSave('move')">${tt('stratchar.move')}</button>
+           <button onclick="cxSave('delete')">${tt('common.delete')}</button>
+           <button onclick="cxPick(-1)">${tt('common.close')}</button>`}
     </div>
   </div>`;
 }
@@ -515,24 +508,24 @@ function cxTraitsHtml(){
       oninput="cxTrait(${i}, 'name', this.value)">
     <input type="number" min="1" value="${esc(t.level)}"
       oninput="cxTrait(${i}, 'level', this.value)">
-    ${known[t.name] ? `<span class="count">of ${known[t.name]}</span>` : ''}
-    <button onclick="cxTraitDrop(${i})" title="Take this trait off">✕</button>
+    ${known[t.name] ? `<span class="count">${tt('stratchar.of',{x:known[t.name]})}</span>` : ''}
+    <button onclick="cxTraitDrop(${i})" title="${ttA('stratchar.take_this_trait_off')}">✕</button>
   </div>`).join('');
   const ancs = w.ancillaries.map((a, i) => `<span class="cxtag">${esc(a)}
     <button onclick="cxAncDrop(${i})">✕</button></span>`).join('');
-  return `<div class="k" id="cxTraitsEditor">Traits <span class="count">${w.traits.length}${
-      v.have_edct ? '' : ' · no export_descr_character_traits.txt on disk'}</span></div>
-    <div class="cxbits">${rows || '<div class="count">None.</div>'}</div>
+  return `<div class="k" id="cxTraitsEditor">${tt('common.traits')} <span class="count">${w.traits.length}${
+      v.have_edct ? '' : tt('stratchar.no_export_descr_character_traits_txt')}</span></div>
+    <div class="cxbits">${rows || `<div class="count">${tt('common.none_3')}</div>`}</div>
     <datalist id="cxl-trait">${v.traits.map(t =>
-      `<option value="${esc(t.name)}">${t.levels} levels</option>`).join('')}</datalist>
+      `<option value="${esc(t.name)}">${tt('stratchar.levels',{levels:t.levels})}</option>`).join('')}</datalist>
     <div class="csadd"><select onchange="cxTraitAdd(this.value); this.value=''">
-      <option value="">add a trait…</option>
+      <option value="">${tt('stratchar.add_a_trait')}</option>
       ${v.traits.map(t => `<option value="${esc(t.name)}">${esc(t.name)}</option>`)
         .join('')}</select></div>
-    <div class="k">Ancillaries <span class="count">${w.ancillaries.length}</span></div>
-    <div class="cxtags">${ancs || '<span class="count">None.</span>'}</div>
+    <div class="k">${tt('common.ancillaries')} <span class="count">${w.ancillaries.length}</span></div>
+    <div class="cxtags">${ancs || `<span class="count">${tt('common.none_3')}</span>`}</div>
     <div class="csadd"><select onchange="cxAncAdd(this.value); this.value=''">
-      <option value="">add an ancillary…</option>
+      <option value="">${tt('stratchar.add_an_ancillary')}</option>
       ${v.ancillaries.map(a => `<option value="${esc(a)}">${esc(a)}</option>`)
         .join('')}</select></div>`;
 }
@@ -553,25 +546,24 @@ function cxArmyHtml(){
       ${v.units.some(u => u.name === a.unit) ? ''
         : `<option value="${esc(a.unit)}" selected>${esc(a.unit)}</option>`}
     </select>
-    <input type="number" min="0" max="9" value="${a.exp}" title="Experience"
+    <input type="number" min="0" max="9" value="${a.exp}" title="${ttA('common.experience')}"
       oninput="cxUnit(${i}, 'exp', this.value)">
-    <input type="number" min="0" value="${a.armour}" title="Armour upgrade"
+    <input type="number" min="0" value="${a.armour}" title="${ttA('stratchar.armour_upgrade')}"
       oninput="cxUnit(${i}, 'armour', this.value)">
-    <input type="number" min="0" value="${a.weapon_lvl}" title="Weapon upgrade"
+    <input type="number" min="0" value="${a.weapon_lvl}" title="${ttA('stratchar.weapon_upgrade')}"
       oninput="cxUnit(${i}, 'weapon_lvl', this.value)">
-    <button onclick="cxUnitMove(${i}, -1)" title="Move up">↑</button>
-    <button onclick="cxUnitMove(${i}, 1)" title="Move down">↓</button>
-    <button onclick="cxUnitDrop(${i})" title="Take this regiment out">✕</button>
+    <button onclick="cxUnitMove(${i}, -1)" title="${ttA('stratchar.move_up')}">↑</button>
+    <button onclick="cxUnitMove(${i}, 1)" title="${ttA('stratchar.move_down')}">↓</button>
+    <button onclick="cxUnitDrop(${i})" title="${ttA('stratchar.take_this_regiment_out')}">✕</button>
     ${i === 0 && guard.size ? `<span class="count csnote">${
-      guard.has(a.unit) ? 'the bodyguard, in front' : 'leads this army'}</span>` : ''}
+      guard.has(a.unit) ? tt('stratchar.the_bodyguard_in_front') : tt('stratchar.leads_this_army')}</span>` : ''}
   </div>`).join('');
-  return `<div class="k" id="cxArmyEditor">Army <span class="count">${w.army.length} regiment${
-      w.army.length === 1 ? '' : 's'}${v.have_edu ? ' · ★ is a bodyguard'
-      : ' · no export_descr_unit.txt on disk, so these are the names this'
-        + ' campaign itself writes'}</span></div>
-    <div class="cxblds">${rows || '<div class="count">No army.</div>'}</div>
+  return `<div class="k" id="cxArmyEditor">${tt('stratchar.army_regiment',{army_n:w.army.length,army:w.army.length === 1 ? '' : 's',have_edu:v.have_edu ? tt('stratchar.is_a_bodyguard')
+      : tt('stratchar.no_export_descr_unit_txt_on')
+        + tt('stratchar.campaign_itself_writes')})}</div>
+    <div class="cxblds">${rows || `<div class="count">${tt('stratchar.no_army')}</div>`}</div>
     <div class="csadd"><select onchange="cxUnitAdd(this.value); this.value=''">
-      <option value="">add a regiment…</option>
+      <option value="">${tt('stratchar.add_a_regiment')}</option>
       ${(v.units || []).map(u => `<option value="${esc(u.name)}">${esc(u.name)}${
         u.general ? ' ★' : ''}</option>`).join('')}</select></div>`;
 }
@@ -588,9 +580,8 @@ function cxFindingsHtml(){
       .map(e => `<div class="w-bad">${esc(e)}</div>`).join('')}
     ${findings.map(f => `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${
       esc(f.message)}${cxPoolFixHtml(f)}${cxNearHtml(f)}</div>`).join('')}
-    ${changes.length ? `<div class="count">Would change:
-      ${changes.map(esc).join(' · ')}</div>`
-      : p ? '<div class="count">Nothing to save yet.</div>' : ''}
+    ${changes.length ? `<div class="count">${tt('stratchar.would_change',{changes:changes.map(esc).join(' · ')})}</div>`
+      : p ? `<div class="count">${tt('stratchar.nothing_to_save_yet')}</div>` : ''}
   </div>`;
 }
 
@@ -600,7 +591,7 @@ function cxFindingsHtml(){
 function cxNearHtml(f){
   if(!f.near || !state.cx || !state.cx.w) return '';
   return ` <button class="cxfix" onclick="cxNear(${+f.near[0]}, ${+f.near[1]})"
-    title="Put the two numbers in the form and ask the plan again. Nothing is written until Save.">⌖ Move to ${+f.near[0]},${+f.near[1]}</button>`;
+    title="${ttA('stratchar.put_the_two_numbers_in_the')}">${tt('stratchar.move_to',{x:+f.near[0],x2:+f.near[1]})}</button>`;
 }
 
 function cxNear(x, y){
@@ -626,7 +617,7 @@ function cxPoolFixHtml(f){
   if(f.code !== 'char.pool' && f.code !== 'char.name_key') return '';
   if(!f.part) return '';
   return ` <button class="cxfix" onclick="cxPoolAdd('${esc(f.part)}')"
-    title="Put this name in the faction's pool and give it a key in text/names.txt. Its own save, and its own undo.">Add to pool</button>`;
+    title="${ttA('stratchar.put_this_name_in_the_factions')}">${tt('stratchar.add_to_pool')}</button>`;
 }
 
 async function cxPoolAdd(part){
@@ -634,9 +625,9 @@ async function cxPoolAdd(part){
   if(!k || !k.d || k.busy) return;
   const name = (k.w && k.w.name) || (k.pick >= 0 ? k.d.characters[k.pick].name : '');
   const gender = (k.w && k.w.gender) || 'male';
-  const shown = prompt(`What should the player read for "${part}"?\n\n`
-    + 'This is the value of its key in text/names.txt. Leave it as it is to use '
-    + 'the token with its underscores turned into spaces.',
+  const shown = prompt(tt('stratchar.what_should_the_player_read_for',{part})
+    + tt('stratchar.this_is_the_value_of_its')
+    + tt('stratchar.the_token_with_its_underscores_turned'),
     part.replace(/_/g, ' '));
   if(shown === null) return;
   const body = {mod: k.mod, what: 'name_pool', faction: k.faction,
@@ -648,18 +639,18 @@ async function cxPoolAdd(part){
   finally{ k.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(`Write: ${(p.changes || []).join('\n') || 'no visible change'}?\n\n`
+  if(!confirm(tt('stratchar.write_2',{changes:(p.changes || []).join('\n') || tt('common.no_visible_change')})
     + ((p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '')
-    + `${(p.files || []).join(', ')} only - the character block is not touched.\n\n`
-    + 'Backed up first, and 🕑 Log can undo it.')) return;
+    + tt('stratchar.only_the_character_block_is_not',{files:(p.files || []).join(', ')})
+    + tt('common.backed_up_first_and_log_can_2'))) return;
   k.busy = true;
   let res;
   try{ res = await api.post('/api/namekeys/apply', body); }
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast(`${part} is in ${k.faction}'s pool. 🕑 Log can undo it.`);
-  activity('character', `${k.mod} ${k.faction}: pool + ${part}`);
+  toast(tt('stratchar.is_in_s_pool_log_can',{part,faction:k.faction}));
+  activity('character', tt('stratchar.pool',{mod:k.mod,faction:k.faction,part}));
   // re-read the faction so the finding this button just fixed goes away, then
   // put the same person back under the cursor: a save that closed the form
   // would make fixing two names take two trips through the list
@@ -687,25 +678,15 @@ async function cxPoolAdd(part){
 function cxFamilyHtml(){
   const d = state.cx.d;
   const rel = (d.relatives || []).map(r => `<div class="cxfam">
-    <span class="count">line ${r.line}</span>
-    <b>${esc(r.names[0] || '')}</b> + ${esc(r.names[1] || '(nobody)')}
-    ${r.names.length > 2 ? '&rarr; ' + r.names.slice(2).map(esc).join(', ') : ''}
+    ${tt('stratchar.line',{line:r.line,names:esc(r.names[0] || ''),names2:esc(r.names[1] || '(nobody)'),x:r.names.length > 2 ? '&rarr; ' + r.names.slice(2).map(esc).join(', ') : ''})}
   </div>`).join('');
   const rec = (d.records || []).map(r => `<div class="cxfam">
-    <span class="count">line ${r.line}</span>
-    <b>${esc(r.name)}</b>
-    <span class="count">${esc(r.gender)} · age ${r.age} ·
-      ${r.dead === null || r.dead === undefined ? 'alive' : 'dead ' + r.dead}${
-      r.leadership ? ' · ' + esc(r.leadership) : ''}</span>
+    ${tt('stratchar.line_age',{line:r.line,name:esc(r.name),gender:esc(r.gender),age:r.age,x:r.dead === null || r.dead === undefined ? 'alive' : 'dead ' + r.dead,x2:r.leadership ? ' · ' + esc(r.leadership) : ''})}
   </div>`).join('');
-  return `<div class="k">Families <span class="count">${
-      (d.relatives || []).length} relative line${
-      (d.relatives || []).length === 1 ? '' : 's'}</span></div>
-    <div class="cxfams">${rel || '<div class="count">None.</div>'}</div>
-    <div class="k">Off the map <span class="count">${(d.records || []).length}
-      character_record${(d.records || []).length === 1 ? '' : 's'} - the dead,
-      the married-in and the never-seen the game needs to draw a family</span></div>
-    <div class="cxfams">${rec || '<div class="count">None.</div>'}</div>
+  return `<div class="k">${tt('stratchar.families_relative_line',{n:(d.relatives || []).length,relatives:(d.relatives || []).length === 1 ? '' : 's'})}</div>
+    <div class="cxfams">${rel || `<div class="count">${tt('common.none_3')}</div>`}</div>
+    <div class="k">${tt('stratchar.off_the_map_character_record_the',{n:(d.records || []).length,records:(d.records || []).length === 1 ? '' : 's'})}</div>
+    <div class="cxfams">${rec || `<div class="count">${tt('common.none_3')}</div>`}</div>
     ${(d.findings || []).map(f =>
       `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${esc(f.message)}</div>`).join('')}`;
 }

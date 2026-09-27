@@ -79,6 +79,7 @@ from .campstrat import CHARACTER_TYPES, LEADERSHIP, Node, StratFile
 from .stratedit import (assemble, comment_of, faction_of, finding, indent_of,
                         is_int, move_lines, rewrite_line, serialise,
                         split_block)
+from . import i18n as _i18n
 
 #: The two ranks a character line may carry. Neither is required and only one
 #: of each may exist in a faction.
@@ -577,8 +578,7 @@ def check_character(voc: Vocabulary, spec: Spec, cm=None) -> List[dict]:
     out: List[dict] = []
     if not spec.name:
         out.append(finding("char.name", True,
-                           "A character with no name cannot be given traits, "
-                           "put in a family or found by a script."))
+                           _i18n.msg("eng.stratchar.a_character_with_no_name_cannot", "A character with no name cannot be given traits, put in a family or found by a script.")))
     if spec.type not in CHARACTER_TYPES:
         out.append(finding(
             "char.type", True,
@@ -589,49 +589,42 @@ def check_character(voc: Vocabulary, spec: Spec, cm=None) -> List[dict]:
         if not is_int(value):
             out.append(finding(
                 f"char.{slot}", True,
-                f"{slot} is {value if value not in (None, '') else '(nothing)'}, "
-                f"which is not a whole number."))
+                _i18n.msg("eng.stratchar.is_which_is_not_a_whole", "{slot} is {x}, which is not a whole number.", slot=slot, x=value if value not in (None, '') else '(nothing)')))
     if is_int(spec.age) and int(str(spec.age)) < 0:
         out.append(finding("char.age", True,
-                           "A character cannot start at a negative age."))
+                           _i18n.msg("eng.stratchar.a_character_cannot_start_at_a", "A character cannot start at a negative age.")))
     if cm is not None and is_int(spec.x) and is_int(spec.y):
         gx, gy = int(str(spec.x)), int(str(spec.y))
         ix, iy = cm.image_xy(gx, gy)
         if not cm.terrain.in_bounds(ix, iy):
             out.append(finding(
                 "char.offmap", True,
-                f"{gx},{gy} is off the {cm.terrain.width}x"
-                f"{cm.terrain.height} tile grid, so there is nowhere on the "
-                f"map for this character to stand.", x=gx, y=gy))
+                _i18n.msg("eng.stratchar.is_off_the_x_tile_grid", "{gx},{gy} is off the {width}x{height} tile grid, so there is nowhere on the map for this character to stand.", gx=gx, gy=gy, width=cm.terrain.width, height=cm.terrain.height), x=gx, y=gy))
             _shore(cm, spec, out[-1], True)
         else:
             sea = cm.sea[iy * cm.terrain.width + ix]
             if spec.type == "admiral" and not sea:
                 out.append(finding(
                     "char.aground", False,
-                    f"An admiral stands on his ship, and {gx},{gy} is land.",
+                    _i18n.msg("eng.stratchar.an_admiral_stands_on_his_ship", "An admiral stands on his ship, and {gx},{gy} is land.", gx=gx, gy=gy),
                     x=gx, y=gy))
                 _shore(cm, spec, out[-1])
             elif spec.type and spec.type != "admiral" and sea:
                 out.append(finding(
                     "char.adrift", False,
-                    f"{gx},{gy} is sea, and only an admiral starts there.",
+                    _i18n.msg("eng.stratchar.is_sea_and_only_an_admiral", "{gx},{gy} is sea, and only an admiral starts there.", gx=gx, gy=gy),
                     x=gx, y=gy))
                 _shore(cm, spec, out[-1])
     if spec.gender not in ("male", "female"):
         out.append(finding(
             "char.gender", False,
-            "No sex on the line. Every character in all three campaigns "
-            "measured writes male or female, and it is what decides which "
-            "model is drawn."))
+            _i18n.msg("eng.stratchar.no_sex_on_the_line_every", "No sex on the line. Every character in all three campaigns measured writes male or female, and it is what decides which model is drawn.")))
     elif spec.type == "princess" and spec.gender != "female":
         out.append(finding("char.gender", False,
-                           "A princess is written female in every campaign "
-                           "measured."))
+                           _i18n.msg("eng.stratchar.a_princess_is_written_female_in", "A princess is written female in every campaign measured.")))
     if spec.rank and spec.rank not in RANKS:
         out.append(finding("char.rank", False,
-                           f"{spec.rank!r} is not a rank. A character line "
-                           f"carries leader, heir or neither."))
+                           _i18n.msg("eng.stratchar.is_not_a_rank_a_character", "{rank} is not a rank. A character line carries leader, heir or neither.", rank=repr(spec.rank))))
 
     for name, level in spec.traits:
         if not name:
@@ -639,31 +632,28 @@ def check_character(voc: Vocabulary, spec: Spec, cm=None) -> List[dict]:
         if voc.have_edct and name not in voc.traits:
             out.append(finding(
                 "char.trait_unknown", True,
-                f"{name} is not a trait export_descr_character_traits.txt "
-                f"declares.", trait=name))
+                _i18n.msg("eng.stratchar.is_not_a_trait_export_descr", "{name} is not a trait export_descr_character_traits.txt declares.", name=name), trait=name))
             continue
         if not is_int(level):
             out.append(finding("char.trait_level", True,
-                               f"{name} has no level on it.", trait=name))
+                               _i18n.msg("eng.stratchar.has_no_level_on_it", "{name} has no level on it.", name=name), trait=name))
             continue
         top = voc.traits.get(name, 0)
         if voc.have_edct and top and int(str(level)) > top:
             out.append(finding(
                 "char.trait_level", True,
-                f"{name} is given level {level} and it has {top}.", trait=name))
+                _i18n.msg("eng.stratchar.is_given_level_and_it_has", "{name} is given level {level} and it has {top}.", name=name, level=level, top=top), trait=name))
     for anc in spec.ancillaries:
         if voc.have_eda and anc not in voc.ancillaries:
             out.append(finding(
                 "char.anc_unknown", True,
-                f"{anc} is not an ancillary export_descr_ancillaries.txt "
-                f"declares.", ancillary=anc))
+                _i18n.msg("eng.stratchar.is_not_an_ancillary_export_descr", "{anc} is not an ancillary export_descr_ancillaries.txt declares.", anc=anc), ancillary=anc))
 
     ability = str(spec.tail.get("hero_ability") or "")
     if ability and getattr(voc, "declared_abilities", None)             and ability.lower() not in voc.declared_abilities:
         out.append(finding(
             "char.ability", False,
-            f"hero_ability {ability} is not an ability descr_hero_abilities.xml "
-            f"declares."))
+            _i18n.msg("eng.stratchar.hero_ability_is_not_an_ability", "hero_ability {ability} is not an ability descr_hero_abilities.xml declares.", ability=ability)))
 
     out += _check_army(voc, spec)
     out.sort(key=lambda f: not f["fatal"])
@@ -676,20 +666,18 @@ def _check_army(voc: Vocabulary, spec: Spec) -> List[dict]:
     for a in spec.army:
         if not a.unit:
             out.append(finding("army.blank", True,
-                               "A regiment with no unit name on it."))
+                               _i18n.msg("eng.stratchar.a_regiment_with_no_unit_name", "A regiment with no unit name on it.")))
             continue
         if voc.have_edu and a.unit not in voc.units:
             out.append(finding(
                 "army.unknown", True,
-                f"{a.unit} is not a unit export_descr_unit.txt declares, so "
-                f"the campaign has nothing to put in this army.", unit=a.unit))
+                _i18n.msg("eng.stratchar.is_not_a_unit_export_descr", "{unit} is not a unit export_descr_unit.txt declares, so the campaign has nothing to put in this army.", unit=a.unit), unit=a.unit))
         for slot, value in (("exp", a.exp), ("armour", a.armour),
                             ("weapon_lvl", a.weapon_lvl)):
             if not is_int(value):
                 out.append(finding(
                     "army.number", True,
-                    f"{a.unit}'s {slot} is {value!r}, which is not a whole "
-                    f"number.", unit=a.unit))
+                    _i18n.msg("eng.stratchar.s_is_which_is_not_a", "{unit}'s {slot} is {value}, which is not a whole number.", unit=a.unit, slot=slot, value=repr(value)), unit=a.unit))
     if not spec.army or not voc.have_edu:
         return out
     if spec.type not in ("named character", "general"):
@@ -728,22 +716,15 @@ def check_faction(sf: StratFile, faction: Node, voc: Vocabulary) -> List[dict]:
     if len(leaders) > 1:
         out.append(finding(
             "faction.leaders", False,
-            f"{name} has {len(leaders)} characters flagged leader "
-            f"({', '.join(leaders[:4])}). Every faction on all three campaigns "
-            f"measured has exactly one or none."))
+            _i18n.msg("eng.stratchar.has_characters_flagged_leader_every_faction", "{name} has {leaders_n} characters flagged leader ({leaders}). Every faction on all three campaigns measured has exactly one or none.", name=name, leaders_n=len(leaders), leaders=', '.join(leaders[:4]))))
     elif not leaders and named:
         out.append(finding(
             "faction.leaders", False,
-            f"{name} has {len(named)} named characters and none of them is "
-            f"the leader. The rebels are the only faction in any campaign "
-            f"measured that does this."))
+            _i18n.msg("eng.stratchar.has_named_characters_and_none_of", "{name} has {named_n} named characters and none of them is the leader. The rebels are the only faction in any campaign measured that does this.", name=name, named_n=len(named))))
     if len(heirs) > 1:
         out.append(finding(
             "faction.heirs", False,
-            f"{name} has {len(heirs)} characters flagged heir "
-            f"({', '.join(heirs[:4])}). An heir is optional, and seven of "
-            f"Third Age Reforged's factions have none, but there is only ever "
-            f"one."))
+            _i18n.msg("eng.stratchar.has_characters_flagged_heir_an_heir", "{name} has {heirs_n} characters flagged heir ({heirs}). An heir is optional, and seven of Third Age Reforged's factions have none, but there is only ever one.", name=name, heirs_n=len(heirs), heirs=', '.join(heirs[:4]))))
 
     seen: Dict[str, int] = {}
     for c in chars:
@@ -753,10 +734,7 @@ def check_faction(sf: StratFile, faction: Node, voc: Vocabulary) -> List[dict]:
     if dup:
         out.append(finding(
             "faction.duplicate", False,
-            f"{name} names two characters {', '.join(dup[:3])}. A relative "
-            f"line addresses people by name and nothing else, so a family "
-            f"holding one of these is ambiguous. Five of Third Age Reforged's "
-            f"factions do it."))
+            _i18n.msg("eng.stratchar.names_two_characters_a_relative_line", "{name} names two characters {dup}. A relative line addresses people by name and nothing else, so a family holding one of these is ambiguous. Five of Third Age Reforged's factions do it.", name=name, dup=', '.join(dup[:3]))))
     out += _check_family(sf, faction, name)
     return out
 
@@ -788,9 +766,7 @@ def _check_family(sf: StratFile, faction: Node, name: str) -> List[dict]:
         if missing:
             out.append(finding(
                 "family.unknown", False,
-                f"{name}'s family line on line {rel.start + 1} names "
-                f"{', '.join(missing[:3])}, who is not a character or a "
-                f"character_record in this faction.", line=rel.start + 1))
+                _i18n.msg("eng.stratchar.s_family_line_on_line_names", "{name}'s family line on line {x} names {missing}, who is not a character or a character_record in this faction.", name=name, x=rel.start + 1, missing=', '.join(missing[:3])), line=rel.start + 1))
         if len(names) < 3:
             continue
         father, kids = names[0], names[2:]
@@ -800,18 +776,13 @@ def _check_family(sf: StratFile, faction: Node, name: str) -> List[dict]:
             if fa is not None and ka is not None and fa - ka < PARENT_YEARS:
                 out.append(finding(
                     "family.years", False,
-                    f"{father} is {fa} and {kid} is {ka}, which is "
-                    f"{fa - ka} years. A living parent should be at least "
-                    f"{PARENT_YEARS} years older; vanilla breaks it once, on "
-                    f"Egypt's Al-Zahir.", line=rel.start + 1))
+                    _i18n.msg("eng.stratchar.is_and_is_which_is_years", "{father} is {fa} and {kid} is {ka}, which is {x} years. A living parent should be at least {PARENT_YEARS} years older; vanilla breaks it once, on Egypt's Al-Zahir.", father=father, fa=fa, kid=kid, ka=ka, x=fa - ka, PARENT_YEARS=PARENT_YEARS), line=rel.start + 1))
         ages = [living[k.strip().lower()] for k in kids
                 if k.strip().lower() in living]
         if ages and ages != sorted(ages, reverse=True):
             out.append(finding(
                 "family.order", False,
-                f"{father}'s children are listed {', '.join(str(a) for a in ages)} "
-                f"and the game reads them oldest first. Vanilla breaks this "
-                f"twice, on Philip's four and Heinrich's three.",
+                _i18n.msg("eng.stratchar.s_children_are_listed_and_the", "{father}'s children are listed {x} and the game reads them oldest first. Vanilla breaks this twice, on Philip's four and Heinrich's three.", father=father, x=', '.join(str(a) for a in ages)),
                 line=rel.start + 1))
     return out
 
@@ -855,9 +826,7 @@ def check_pool(voc: Vocabulary, faction: str, name: str) -> List[dict]:
         elif voc.have_name_keys and part not in voc.name_keys:
             out.append(finding(
                 "char.name_key", False,
-                f"{part} is in the pool but has no key in text/names.txt, so the "
-                f"player reads the token rather than a name. Every one of Divide "
-                f"and Conquer's 3,583 pool names has one.",
+                _i18n.msg("eng.stratchar.is_in_the_pool_but_has", "{part} is in the pool but has no key in text/names.txt, so the player reads the token rather than a name. Every one of Divide and Conquer's 3,583 pool names has one.", part=part),
                 name=name, part=part))
     return out
 
@@ -1334,9 +1303,7 @@ def plan_character(mod, facts, body: dict) -> CharPlan:
     faction = sf.faction(p.faction)
     if faction is None:
         p.errors.append(
-            f"{p.faction or '(nothing)'} has no faction block in {campaign}'s "
-            f"descr_strat.txt. Creating a faction is 16j; cloning one that "
-            f"already works is what the Factions screen does today")
+            _i18n.msg("eng.stratchar.has_no_faction_block_in_s", "{x} has no faction block in {campaign}'s descr_strat.txt. Creating a faction is 16j; cloning one that already works is what the Factions screen does today", x=p.faction or '(nothing)', campaign=campaign))
         return p
 
     node = None
@@ -1346,8 +1313,7 @@ def plan_character(mod, facts, body: dict) -> CharPlan:
         node = find_character(sf, p.faction, p.name,
                               int(body.get("line") or 0))
         if node is None:
-            p.errors.append(f"{p.faction} has no character called {p.name!r} "
-                            f"in {campaign}'s descr_strat.txt")
+            p.errors.append(_i18n.msg("eng.stratchar.has_no_character_called_in_s", "{faction} has no character called {name} in {campaign}'s descr_strat.txt", faction=p.faction, name=repr(p.name), campaign=campaign))
             return p
         before = read_spec(sf, node)
         p.name = node.name
@@ -1365,8 +1331,7 @@ def plan_character(mod, facts, body: dict) -> CharPlan:
     now_text = ("" if now_node is None
                 else "\n".join(done.lines[now_node.start:now_node.end + 1]))
     if action != "delete" and now_node is None:
-        p.errors.append(f"after this save nothing in {dest}'s block is called "
-                        f"{spec.name!r}")
+        p.errors.append(_i18n.msg("eng.stratchar.after_this_save_nothing_in_s", "after this save nothing in {dest}'s block is called {name}", dest=dest, name=repr(spec.name)))
         return p
     p.errors += _guard(sf, done, action, was_text, now_text)
     if p.errors:
@@ -1393,7 +1358,7 @@ def plan_character(mod, facts, body: dict) -> CharPlan:
 
     p.text = "" if text == sf.serialise() else text
     if not p.text and not p.errors:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.stratchar.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -1416,8 +1381,7 @@ def _splice(sf: StratFile, p: CharPlan, faction: Node, node: Optional[Node],
         head = _clean(block[0]) if block else ""
         if not head.lower().startswith("character"):
             p.errors.append(
-                "a character block opens with the word `character`. This one "
-                f"opens with {head!r}")
+                _i18n.msg("eng.stratchar.a_character_block_opens_with_the", "a character block opens with the word `character`. This one opens with {head}", head=repr(head)))
             return sf.lines, p.faction
     elif action == "add":
         block = new_character(sf, faction, spec)
@@ -1437,18 +1401,17 @@ def _splice(sf: StratFile, p: CharPlan, faction: Node, node: Optional[Node],
     dest = sf.faction(dest_name)
     if dest is None:
         p.errors.append(
-            f"{dest_name} has no faction block in {p.campaign}'s "
-            f"descr_strat.txt, so nobody there can be given a character")
+            _i18n.msg("eng.stratchar.has_no_faction_block_in_s_2", "{dest_name} has no faction block in {campaign}'s descr_strat.txt, so nobody there can be given a character", dest_name=dest_name, campaign=p.campaign))
         return sf.lines, p.faction
     if dest.start == faction.start:
-        p.errors.append(f"{p.name} is already in {dest_name}")
+        p.errors.append(_i18n.msg("eng.stratchar.is_already_in", "{name} is already in {dest_name}", name=p.name, dest_name=dest_name))
         return sf.lines, p.faction
     lines = sf.lines[:node.start] + block + sf.lines[node.end + 1:]
     mid = campstrat.parse_strat(serialise(sf, lines))
     moved = find_character(mid, p.faction, spec.name)
     target = mid.faction(dest_name)
     if moved is None or target is None:
-        p.errors.append("the edited block could not be found again to move it")
+        p.errors.append(_i18n.msg("eng.stratchar.the_edited_block_could_not_be", "the edited block could not be found again to move it"))
         return sf.lines, p.faction
     at = insert_at(mid, target)
     p.moved = f"{p.faction} -> {dest_name}"
@@ -1477,7 +1440,7 @@ def apply_character(p: CharPlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.stratchar.nothing_to_change", "nothing to change"))
     mod = p.mod
     rel = f"{campstrat.CAMPAIGN_DIR_REL}/{p.campaign}/{campstrat.STRAT_NAME}"
     tid = config.new_transfer_id()
@@ -1534,12 +1497,10 @@ def faction_detail(facts, faction: str) -> dict:
 
     sf = getattr(facts, "strat", None)
     if sf is None:
-        raise MapError(f"{facts.strat_rel} could not be read, so this map has "
-                       f"no campaign to edit")
+        raise MapError(_i18n.msg("eng.stratchar.could_not_be_read_so_this", "{strat_rel} could not be read, so this map has no campaign to edit", strat_rel=facts.strat_rel))
     node = sf.faction(faction)
     if node is None:
-        raise MapError(f"no faction called {faction!r} in "
-                       f"{facts.campaign}'s descr_strat.txt")
+        raise MapError(_i18n.msg("eng.stratchar.no_faction_called_in_s_descr", "no faction called {faction} in {campaign}'s descr_strat.txt", faction=repr(faction), campaign=facts.campaign))
     voc = Vocabulary(facts, sf)
     cm = campmap.map_of(facts)
     people = []

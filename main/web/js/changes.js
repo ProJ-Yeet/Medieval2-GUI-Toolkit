@@ -29,18 +29,18 @@
    ===================================================================== */
 
 const CHG_OUTCOME = {
-  clean: ['✓ applies', 'w-good', 'The new version left this as it was, so your change goes straight in.'],
-  merged: ['⇄ merged', 'w-good', 'Both sides changed this, in different lines. Your lines and theirs are both in. Compare to check.'],
-  already: ['= already there', '', 'The new version already says what your change said.'],
-  conflict: ['⚠ conflict', 'w-warn', 'Both sides changed the same lines. Tick it to keep yours over theirs; leave it to keep theirs.'],
-  gone: ['✗ gone upstream', 'w-bad', 'You changed this and the new version no longer has it. Tick it to put yours back.'],
+  clean: [tt('changes.applies'), 'w-good', tt('changes.the_new_version_left_this_as')],
+  merged: [tt('changes.merged'), 'w-good', tt('changes.both_sides_changed_this_in_different')],
+  already: [tt('changes.already_there'), '', tt('changes.the_new_version_already_says_what')],
+  conflict: [tt('changes.conflict'), 'w-warn', tt('changes.both_sides_changed_the_same_lines')],
+  gone: [tt('changes.gone_upstream'), 'w-bad', tt('changes.you_changed_this_and_the_new')],
 };
 const CHG_KIND = {added: '＋', removed: '−', edited: '✎'};
 const CHG_DISK = {
   same: '',
-  changed: 'changed on disk since your last save here',
-  original: 'back to the original on disk',
-  missing: 'missing on disk',
+  changed: tt('changes.changed_on_disk_since_your_last'),
+  original: tt('changes.back_to_the_original_on_disk'),
+  missing: tt('changes.missing_on_disk'),
 };
 
 function chgNew(mod){
@@ -53,7 +53,7 @@ async function loadChanges(){
   // which set was being looked at survives a reload of the same mod
   const view = (state.chg && state.chg.mod === mod && state.chg.view) || '';
   const k = state.chg = chgNew(mod);
-  main.innerHTML = '<div class="empty">Reading what you have changed in ' + esc(mod) + '…</div>';
+  main.innerHTML = `<div class="empty">${tt('changes.reading_what_you_have_changed_in')} ` + esc(mod) + '…</div>';
   let r;
   try{ r = await api.get('/api/changes?mod=' + enc(mod) + (view ? '&set=' + enc(view) : '')); }
   catch(e){ r = {error: errText(e)}; }
@@ -75,9 +75,9 @@ const chgPickKey = it => it.rel + '\u0000' + it.key;
 function chgPaint(){
   const k = state.chg;
   if(k.err){
-    main.innerHTML = `<div class="empty">Couldn't read the change set.<br>
+    main.innerHTML = `<div class="empty">${tt('changes.couldnt_read_the_change_set')}<br>
       <span class="count">${esc(k.err)}</span><br><br>
-      <button class="primary" onclick="loadChanges()">Retry</button></div>`;
+      <button class="primary" onclick="loadChanges()">${tt('common.retry')}</button></div>`;
     return;
   }
   const s = k.sum;
@@ -93,35 +93,19 @@ function chgPaint(){
 function chgHeadHtml(s){
   const moved = (s.files || []).filter(f => f.disk && f.disk !== 'same');
   const others = (s.sets || []).filter(x => x.name !== s.set);
-  return `<div class="bsec"><h4>Your changes to ${esc(s.mod)}
-      ${s.set ? `<span class="count">${esc(s.set)}${s.on ? ', on' : ', off'} · recorded since ${
-        esc(s.created || '')}</span>` : ''}</h4>
-    <div class="trnote">Every save this toolkit makes to a mod is recorded here as it
-      happens: the file as it was before your first change, and the file as you left it.
-      Both are kept outside the mod folder, so a mod update that overwrites the files cannot
-      touch them. When it does, port your changes back onto the new version below.</div>
-    ${moved.length ? `<div class="chgwarn">⚠ ${moved.length} file${moved.length === 1 ? '' : 's'}
-      changed under you since your last save here - most likely an update to the mod.
-      <b>Port your changes onto it</b> below to put them back, change by change.</div>` : ''}
+  return `<div class="bsec"><h4>${tt('changes.your_changes_to',{mod:esc(s.mod),x:s.set ? `<span class="count">${tt('changes.recorded_since',{set:esc(s.set),on:s.on ? tt('changes.on') : tt('changes.off'),created:esc(s.created || '')})}</span>` : ''})}</h4>
+    <div class="trnote">${tt('changes.every_save_this_toolkit_makes_to')}</div>
+    ${moved.length ? `<div class="chgwarn">${tt('changes.file_changed_under_you_since_your',{moved_n:moved.length,moved:moved.length === 1 ? '' : 's'})}</div>` : ''}
     <div class="chgacts">
-      ${s.set ? `<a class="btn" href="/api/changes/export?set=${enc(s.set)}"
-          title="The whole record as one file: take it to another machine, or keep it">⤓ Export</a>
-        <a class="btn" href="/api/changes/files?set=${enc(s.set)}"
-          title="Just the files you changed, as you last saved them, in their data/ folders.
-Unzip into a mod's folder to put them in place, or send them to somebody without this tool."
-          >⤓ Export changed files</a>` : ''}
-      <label class="btn" title="A change set exported somewhere else">⤒ Import
+      ${s.set ? tt('changes.export_export_changed_files',{x:enc(s.set),x2:enc(s.set)}) : ''}
+      <label class="btn" title="${ttA('changes.a_change_set_exported_somewhere_else')}">${tt('changes.import')}
         <input type="file" accept=".m2changes,.zip" style="display:none" onchange="chgImport(this)"></label>
-      <label class="btn" title="Any zip laid out under data/ - changed files, a faction's files, a campaign.
-Each file is checked and shown before anything is written, and one Undo takes the lot back.">⤒ Load a zip of files
+      <label class="btn" title="${ttA('changes.any_zip_laid_out_under_data')}">${tt('changes.load_a_zip_of_files')}
         <input type="file" accept=".zip" style="display:none" onchange="pzChosen(this)"></label>
-      ${s.set ? `<button onclick="chgAdopt()" title="For edits you made by hand outside the toolkit.
-Not after an update: that is what a port is for.">Take the files on disk as mine</button>
-        <button class="danger" onclick="chgForget()" title="Stop recording against this original.
-The mod is not touched.">Forget this record</button>` : ''}
+      ${s.set ? `<button onclick="chgAdopt()" title="${ttA('changes.for_edits_you_made_by_hand')}">${tt('changes.take_the_files_on_disk_as')}</button>
+        <button class="danger" onclick="chgForget()" title="${ttA('changes.stop_recording_against_this_original_the')}">${tt('changes.forget_this_record')}</button>` : ''}
     </div>
-    ${others.length ? `<div class="count" style="margin-top:6px">Other change sets:
-      ${others.map(x => esc(x.name) + (x.imported ? ' (imported)' : '')).join(', ')}</div>` : ''}
+    ${others.length ? `<div class="count" style="margin-top:6px">${tt('changes.other_change_sets',{x:others.map(x => esc(x.name) + (x.imported ? ' (imported)' : '')).join(', ')})}</div>` : ''}
   </div>`;
 }
 
@@ -133,23 +117,18 @@ The mod is not touched.">Forget this record</button>` : ''}
 function chgVersionsHtml(s){
   const vs = s.versions || [];
   if(!vs.length) return '';
-  return `<div class="bsec"><h4>Versions of this mod <span class="n">${vs.length}</span></h4>
-    <div class="trnote">One is on at a time. Switching takes that version's changes out
-      of the files and puts the other's in, as one save that 🕑 Log can undo. With every
-      version off the mod is as it shipped, and your next save starts a new one.</div>
+  return `<div class="bsec"><h4>${tt('changes.versions_of_this_mod')} <span class="n">${vs.length}</span></h4>
+    <div class="trnote">${tt('changes.one_is_on_at_a_time')}</div>
     ${vs.map(v => `<div class="chgver${v.active ? ' on' : ''}">
       <span class="chgdot">${v.active ? '●' : '○'}</span>
       <b>${esc(v.name)}</b>
-      <span class="count">${v.files} file${v.files === 1 ? '' : 's'} changed${
-        v.imported ? ' · imported' : ''} · since ${esc(v.created || '?')}</span>
-      <span class="sp"></span>
-      ${v.name !== s.set ? `<button class="x" onclick="chgView('${q1(esc(v.name))}')">View</button>` : ''}
-      <button class="x" onclick="chgRename('${q1(esc(v.name))}')">Rename</button>
+      ${tt('changes.file_changed_since',{files:v.files,files2:v.files === 1 ? '' : 's',imported:v.imported ? tt('changes.imported') : '',created:esc(v.created || '?'),x:v.name !== s.set ? `<button class="x" onclick="chgView('${q1(esc(v.name))}')">${tt('changes.view')}</button>` : ''})}
+      <button class="x" onclick="chgRename('${q1(esc(v.name))}')">${tt('changes.rename')}</button>
       ${v.active
-        ? `<button class="x" onclick="chgSwitch(null)" title="Put the original records back">Turn off</button>`
-        : `<button class="x primary" onclick="chgSwitch('${q1(esc(v.name))}')">Switch to this</button>`}
+        ? `<button class="x" onclick="chgSwitch(null)" title="${ttA('changes.put_the_original_records_back')}">${tt('changes.turn_off')}</button>`
+        : `<button class="x primary" onclick="chgSwitch('${q1(esc(v.name))}')">${tt('changes.switch_to_this')}</button>`}
     </div>`).join('')}
-    ${!vs.some(v => v.active) ? '<div class="count" style="margin-top:6px">Every version is off: the mod is as it shipped.</div>' : ''}
+    ${!vs.some(v => v.active) ? `<div class="count" style="margin-top:6px">${tt('changes.every_version_is_off_the_mod')}</div>` : ''}
   </div>`;
 }
 
@@ -157,12 +136,12 @@ function chgVersionsHtml(s){
    about them, so it asks every editor that keeps a working copy. */
 function chgUnsaved(){
   const out = [];
-  try{ if(state.bld && state.bld.work && bldDirty()) out.push('Buildings'); }catch(e){}
-  try{ if(state.ed && (edDirty() || edCmpDirty() || edRecDirty())) out.push('the unit editor'); }catch(e){}
-  try{ if(typeof cevDirty === 'function' && cevDirty()) out.push('campaign events'); }catch(e){}
+  try{ if(state.bld && state.bld.work && bldDirty()) out.push(tt('common.buildings')); }catch(e){}
+  try{ if(state.ed && (edDirty() || edCmpDirty() || edRecDirty())) out.push(tt('changes.the_unit_editor')); }catch(e){}
+  try{ if(typeof cevDirty === 'function' && cevDirty()) out.push(tt('changes.campaign_events')); }catch(e){}
   try{ if(typeof cftDirty === 'function' && cftDirty()) out.push('forts'); }catch(e){}
-  const names = {tr: 'Traits', an: 'Ancillaries', gu: 'Guilds', fac: 'Factions',
-                 mf: 'Minor files', cdb: 'Campaign constants', str: 'Strings', snd: 'Unit sounds'};
+  const names = {tr: tt('common.traits'), an: tt('common.ancillaries'), gu: tt('changes.guilds'), fac: tt('common.factions'),
+                 mf: tt('changes.minor_files'), cdb: tt('changes.campaign_constants'), str: tt('changes.strings'), snd: tt('changes.unit_sounds')};
   for(const [k, v] of Object.entries(state)){
     if(v && typeof v === 'object' && (v.dirty === true || (v.d && v.d.dirty === true)))
       out.push(names[k] || k);
@@ -174,7 +153,7 @@ async function chgSwitch(to){
   const k = state.chg;
   const busy = chgUnsaved();
   if(busy.length){
-    toast('Save or drop the unsaved edits first (' + busy.join(', ') + '): a switch rewrites the files under them.', 6000);
+    toast(tt('changes.save_or_drop_the_unsaved_edits') + busy.join(', ') + tt('changes.a_switch_rewrites_the_files_under'), 6000);
     return;
   }
   let r;
@@ -183,25 +162,25 @@ async function chgSwitch(to){
   if(r.error && !r.switch){ toast(r.error, 5000); return; }
   const sw = r.switch;
   if(sw.blocked && sw.blocked.length){
-    alert('This switch is refused: ' + sw.blocked.length + ' record(s) would conflict with the files as they are now.\n\n'
+    alert(tt('changes.this_switch_is_refused') + sw.blocked.length + tt('changes.record_s_would_conflict_with_the')
       + sw.blocked.slice(0, 12).map(b => '  ' + b.set + ': ' + b.rel + ' / ' + b.key + ' (' + b.outcome + ')').join('\n')
-      + '\n\nThe files moved under the version that is on - most likely an update. Port that version onto the mod first.');
+      + tt('changes.the_files_moved_under_the_version'));
     return;
   }
-  const what = sw.off && sw.on ? `Take "${sw.off}" out and put "${sw.on}" in?`
-    : sw.off ? `Turn "${sw.off}" off, putting the original records back?`
-    : `Turn "${sw.on}" on?`;
-  if(!confirm(what + '\n\n' + sw.files.length + ' file(s) will be rewritten. 🕑 Log can undo it.')) return;
+  const what = sw.off && sw.on ? tt('changes.take_out_and_put_in',{off:sw.off,on:sw.on})
+    : sw.off ? tt('changes.turn_off_putting_the_original_records',{off:sw.off})
+    : tt('changes.turn_on',{on:sw.on});
+  if(!confirm(what + '\n\n' + sw.files.length + tt('changes.file_s_will_be_rewritten_log'))) return;
   try{ r = await api.post('/api/changes/switch', {mod: k.mod, to}); }
   catch(e){ r = {error: errText(e)}; }
   if(r.error){ toast(r.error, 5000); return; }
-  toast(`Switched: ${(r.written || []).length} file(s) rewritten. Undo is in 🕑 Log.`, 4600);
+  toast(tt('changes.switched_file_s_rewritten_undo_is',{n:(r.written || []).length}), 4600);
   k.view = '';
   await loadChanges();
 }
 
 async function chgRename(name){
-  const nn = prompt('A name for this version of the mod:', name);
+  const nn = prompt(tt('changes.a_name_for_this_version_of'), name);
   if(!nn || nn === name) return;
   const r = await api.post('/api/changes/rename', {set: name, name: nn});
   if(r.error){ toast(r.error, 5000); return; }
@@ -216,12 +195,9 @@ async function chgView(name){
 
 function chgFilesHtml(s){
   const files = s.files || [];
-  if(!s.set) return `<div class="bsec"><div class="empty" style="padding:18px">Nothing recorded for
-    ${esc(s.mod)} yet. The first save you make to it from any screen starts the record.</div></div>`;
-  if(!files.length) return `<div class="bsec"><div class="count">The record holds no change:
-    every file it tracks is back to how it started.</div></div>`;
-  return `<div class="bsec"><h4>What you changed <span class="n">${files.length}</span>
-      <span class="count">file${files.length === 1 ? '' : 's'}</span></h4>
+  if(!s.set) return `<div class="bsec"><div class="empty" style="padding:18px">${tt('changes.nothing_recorded_for_yet_the_first',{mod:esc(s.mod)})}</div></div>`;
+  if(!files.length) return `<div class="bsec"><div class="count">${tt('changes.the_record_holds_no_change_every')}</div></div>`;
+  return `<div class="bsec"><h4>${tt('changes.what_you_changed_file',{files_n:files.length,files:files.length === 1 ? '' : 's'})}</h4>
     ${files.map(f => `<div class="chgfile">
       <div class="chgfhead"><code>${esc(f.rel)}</code>
         <span class="badge">${esc(f.state)}</span>
@@ -229,7 +205,7 @@ function chgFilesHtml(s){
         ${CHG_DISK[f.disk] ? `<span class="w-warn">· ${esc(CHG_DISK[f.disk])}</span>` : ''}</div>
       <div class="chgrecs">${f.records.map(r => `<span class="chgrec ${esc(r.kind)}"
           title="${esc(r.kind)}">${CHG_KIND[r.kind] || ''} ${esc(r.key)}</span>`).join('')}
-        ${f.more ? `<span class="count">+${f.more} more</span>` : ''}</div>
+        ${f.more ? `<span class="count">${tt('changes.more',{more:f.more})}</span>` : ''}</div>
     </div>`).join('')}
   </div>`;
 }
@@ -240,19 +216,19 @@ function chgPortHtml(s){
   if(!setOpts.length) return '';
   const mods = realMods().map(m => m.name);
   const p = k.plan;
-  return `<div class="bsec"><h4>Port changes onto a version of the mod</h4>
+  return `<div class="bsec"><h4>${tt('changes.port_changes_onto_a_version_of')}</h4>
     <div class="brow">
-      <span class="k">Changes from</span>
+      <span class="k">${tt('changes.changes_from')}</span>
       <select onchange="state.chg.from=this.value;state.chg.plan=null;chgPaint()">
         ${setOpts.map(x => `<option value="${esc(x.name)}" ${x.name === k.from ? 'selected' : ''}>${
           esc(x.name)}${x.imported ? ' (imported)' : ''}</option>`).join('')}
       </select>
-      <span class="k" style="flex:0 0 auto">onto</span>
+      <span class="k" style="flex:0 0 auto">${tt('changes.onto')}</span>
       <select onchange="state.chg.target=this.value;state.chg.plan=null;chgPaint()">
         ${mods.map(m => `<option value="${esc(m)}" ${m === k.target ? 'selected' : ''}>${esc(m)}${
-          m === s.mod ? ' (this mod, as it is on disk now)' : ''}</option>`).join('')}
+          m === s.mod ? tt('changes.this_mod_as_it_is_on') : ''}</option>`).join('')}
       </select>
-      <button class="primary" ${k.busy ? 'disabled' : ''} onclick="chgPlan()">Compare</button>
+      <button class="primary" ${k.busy ? 'disabled' : ''} onclick="chgPlan()">${tt('changes.compare')}</button>
     </div>
     ${p ? chgPlanHtml(p) : ''}
   </div>`;
@@ -260,7 +236,7 @@ function chgPortHtml(s){
 
 function chgPlanHtml(p){
   const k = state.chg;
-  if(!p.items.length) return '<div class="count">The set changes nothing that could be ported.</div>';
+  if(!p.items.length) return `<div class="count">${tt('changes.the_set_changes_nothing_that_could')}</div>`;
   const c = p.counts || {};
   const order = ['conflict', 'gone', 'merged', 'clean', 'already'];
   const tally = order.filter(o => c[o]).map(o => `${c[o]} ${CHG_OUTCOME[o][0].replace(/^\S+ /, '')}`).join(' · ');
@@ -273,8 +249,8 @@ function chgPlanHtml(p){
       ${items.map(chgItemHtml).join('')}
     </div>`).join('')}
     <div class="brow" style="margin-top:10px">
-      <button class="primary" ${n && !k.busy ? '' : 'disabled'} onclick="chgApply()">Port ${n} change${n === 1 ? '' : 's'} into ${esc(p.target)}</button>
-      <span class="count">Backed up first. 🕑 Log's Undo takes it back.</span>
+      <button class="primary" ${n && !k.busy ? '' : 'disabled'} onclick="chgApply()">${tt('changes.port_change_into',{x:n,x2:n === 1 ? '' : 's',target:esc(p.target)})}</button>
+      <span class="count">${tt('changes.backed_up_first_logs_undo_takes')}</span>
     </div>`;
 }
 
@@ -288,19 +264,19 @@ function chgItemHtml(it){
       onchange="chgTick(${it.id},this.checked)"></label>
     <span class="chgrec ${esc(it.kind)}">${CHG_KIND[it.kind] || ''} ${esc(it.key)}</span>
     <span class="${cls}" title="${esc(help)}">${esc(label)}</span>
-    ${it.dangling && it.dangling.length ? `<span class="w-bad" title="The result's export_descr_unit.txt has no unit by this name, so the pool would recruit nothing">
-      recruits ${it.dangling.map(esc).join(', ')}, not in the EDU</span>` : ''}
-    ${cmp ? `<button class="x" onclick="chgToggle(${it.id})">${open ? 'Hide' : 'Compare'}</button>` : ''}
+    ${it.dangling && it.dangling.length ? `<span class="w-bad" title="${ttA('changes.the_results_export_descr_unit_txt')}">
+      ${tt('changes.recruits_not_in_the_edu',{x:it.dangling.map(esc).join(', ')})}</span>` : ''}
+    ${cmp ? `<button class="x" onclick="chgToggle(${it.id})">${open ? tt('changes.hide') : tt('changes.compare')}</button>` : ''}
     ${open ? chgCompareHtml(it) : ''}
   </div>`;
 }
 
 function chgCompareHtml(it){
   const col = (title, text) => `<div class="chgcol"><div class="count">${esc(title)}</div>
-    <pre>${text == null ? '<span class="count">(not there)</span>' : esc(text)}</pre></div>`;
+    <pre>${text == null ? `<span class="count">${tt('changes.not_there')}</span>` : esc(text)}</pre></div>`;
   return `<div class="chgcmp">
-    ${col('Original', it.base)}${col('Yours', it.mine)}${col('New version', it.theirs)}
-    ${it.merged != null ? col('Merged: what a tick writes', it.merged) : ''}
+    ${col(tt('changes.original'), it.base)}${col(tt('changes.yours'), it.mine)}${col(tt('changes.new_version'), it.theirs)}
+    ${it.merged != null ? col(tt('changes.merged_what_a_tick_writes'), it.merged) : ''}
   </div>`;
 }
 
@@ -342,7 +318,7 @@ async function chgApply(){
   catch(e){ r = {error: errText(e)}; }
   k.busy = false;
   if(r.error){ toast(r.error, 5000); chgPaint(); return; }
-  toast(`Ported ${picks.length} change(s) into ${p.target}: ${(r.written || []).length + (r.removed || []).length} file(s) written. Undo is in 🕑 Log.`, 5200);
+  toast(tt('changes.ported_change_s_into_file_s',{picks_n:picks.length,target:p.target,n:(r.written || []).length + (r.removed || []).length}), 5200);
   await loadChanges();
 }
 
@@ -356,7 +332,7 @@ function chgImport(input){
     try{ r = await api.post('/api/changes/import', {data, name: ''}); }
     catch(e){ r = {error: errText(e)}; }
     if(r.error){ toast(r.error, 5000); return; }
-    toast(`Imported as "${r.set}". Pick it under "Changes from" to port it.`, 4800);
+    toast(tt('changes.imported_as_pick_it_under_changes',{set:r.set}), 4800);
     await loadChanges();
     state.chg.from = r.set; chgPaint();
   };
@@ -365,9 +341,9 @@ function chgImport(input){
 
 async function chgAdopt(){
   const k = state.chg;
-  if(!confirm('Record every tracked file as it is on disk now, as your version?\n\n'
-      + 'Right after hand edits made outside the toolkit. WRONG after a mod update: '
-      + 'your changes would be replaced by the update. Port instead.')) return;
+  if(!confirm(tt('changes.record_every_tracked_file_as_it')
+      + tt('changes.right_after_hand_edits_made_outside')
+      + tt('changes.your_changes_would_be_replaced_by'))) return;
   const r = await api.post('/api/changes/adopt', {set: k.sum.set, mod: k.mod});
   if(r.error){ toast(r.error, 5000); return; }
   await loadChanges();
@@ -375,9 +351,9 @@ async function chgAdopt(){
 
 async function chgForget(){
   const k = state.chg;
-  if(!confirm('Forget the record of your changes to ' + k.mod + '?\n\n'
-      + 'The mod itself is not touched, but the originals are dropped, so these '
-      + 'changes can no longer be ported onto an update. Export it first to keep a copy.')) return;
+  if(!confirm(tt('changes.forget_the_record_of_your_changes') + k.mod + '?\n\n'
+      + tt('changes.the_mod_itself_is_not_touched')
+      + tt('changes.changes_can_no_longer_be_ported'))) return;
   const r = await api.post('/api/changes/forget', {set: k.sum.set});
   if(r.error){ toast(r.error, 5000); return; }
   await loadChanges();

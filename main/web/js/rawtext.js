@@ -39,7 +39,7 @@ let rtWant = null;
 async function loadRawtext(){
   const mod = state.src;
   const k = state.rt = rtNew(mod);
-  main.innerHTML = '<div class="empty">Listing ' + esc(mod) + '’s text files…</div>';
+  main.innerHTML = `<div class="empty">${tt('rawtext.listing')} ` + esc(mod) + `${tt('rawtext.s_text_files')}</div>`;
   let r;
   try{ r = await api.get('/api/raw/files?mod=' + enc(mod)); }
   catch(e){ r = {error: errText(e)}; }
@@ -64,16 +64,15 @@ function renderRawtext(){
 function rtBuild(){
   const k = state.rt;
   if(k.err){
-    main.innerHTML = `<div class="empty">Couldn't list the files.<br>
+    main.innerHTML = `<div class="empty">${tt('rawtext.couldnt_list_the_files')}<br>
       <span class="count">${esc(k.err)}</span><br><br>
-      <button class="primary" onclick="loadRawtext()">Retry</button></div>`;
+      <button class="primary" onclick="loadRawtext()">${tt('common.retry')}</button></div>`;
     return;
   }
   main.innerHTML = `<div class="trwrap rtwrap">
     <div class="trlist">
-      <div class="trnote">Every text file the toolkit reads, as the file holds it.
-        A save is backed up and 🕑 Log undoes it, like any other.
-        <button class="rtput" onclick="rtPutAny()" title="Put any file from disk into this mod's data folder - a new one, or over one that is there">⇧ Put a file into the mod…</button>
+      <div class="trnote">${tt('rawtext.every_text_file_the_toolkit_reads')}
+        <button class="rtput" onclick="rtPutAny()" title="${ttA('rawtext.put_any_file_from_disk_into')}">${tt('rawtext.put_a_file_into_the_mod')}</button>
         <input type="file" id="rtPutFile" style="display:none" onchange="rtPutChosen(this)"></div>
       <div class="trrows" id="rtList"></div>
     </div>
@@ -99,9 +98,9 @@ function rtPaintList(){
       <span class="antxt"><span class="nm">${esc(f.name)}${
         f.rel === k.rel && k.dirty ? ' <span class="w-warn">●</span>' : ''}</span>
       <span class="sub">${rtSize(f.size)}${f.screen ? ' · ' + esc(f.screen) : ''}${
-        f.too_big ? ' · too large to open here' : ''}</span></span>
+        f.too_big ? tt('rawtext.too_large_to_open_here') : ''}</span></span>
     </button>`).join('');
-  }).join('') || '<div class="count" style="padding:8px">No file matches.</div>';
+  }).join('') || `<div class="count" style="padding:8px">${tt('rawtext.no_file_matches')}</div>`;
   count.textContent = `${shown}/${k.files.count}`;
 }
 
@@ -124,7 +123,7 @@ function rtOpen(rel, line){
   const k = state.rt;
   if(!k || !k.files){ rtWant = {rel, line}; return; }
   if(k.rel === rel && k.doc){ if(line) rtGoLine(line); return; }
-  if(k.dirty && !confirm(`Leave ${k.rel} without saving? The edits are only in this box.`))
+  if(k.dirty && !confirm(tt('rawtext.leave_without_saving_the_edits_are',{rel:k.rel})))
     return;
   rtRead(rel, line);
 }
@@ -139,7 +138,7 @@ async function rtRead(rel, line){
   if(state.rt !== k || k.rel !== rel) return;
   k.loading = false;
   k.doc = d;
-  activity('opened raw file', `${rel} in ${k.mod}`);
+  activity(tt('rawtext.opened_raw_file'), `${rel} in ${k.mod}`);
   rtPaintMain(); rtPaintList();
   if(line) rtGoLine(line);
 }
@@ -154,37 +153,31 @@ function rtPaintMain(){
 function rtMainHtml(){
   const k = state.rt;
   if(!k) return '';
-  if(!k.rel) return `<div class="empty">Pick a file on the left.<br>
-    <span class="count">The screens beside this one edit these files record by
-    record, and each of them keeps what it does not understand. This is for the
-    line none of them models.</span></div>`;
-  if(k.loading) return '<div class="empty">Reading the file…</div>';
+  if(!k.rel) return `<div class="empty">${tt('rawtext.pick_a_file_on_the_left')}</div>`;
+  if(k.loading) return `<div class="empty">${tt('rawtext.reading_the_file')}</div>`;
   const d = k.doc;
   if(!d || d.error) return `<div class="empty"><span class="w-bad">✗ ${
-    esc((d && d.error) || 'no file')}</span></div>`;
+    esc((d && d.error) || tt('rawtext.no_file'))}</span></div>`;
   const ro = !!d.readonly;
   return `<div class="trbar rtbar">
       <div><b>data/${esc(d.rel)}</b>
-        <div class="count">${esc(d.encoding || '')}${d.newline ? ' · ' + d.newline : ''}${
-          d.mixed ? ' (mixed - each untouched line keeps its own)' : ''} · ${
-          d.lines || 0} lines · ${rtSize(d.size)}</div></div>
+        <div class="count">${tt('rawtext.lines',{encoding:esc(d.encoding || ''),x:d.newline ? ' · ' + d.newline : '',mixed:d.mixed ? tt('rawtext.mixed_each_untouched_line_keeps_its') : '',lines:d.lines || 0,rtSize:rtSize(d.size)})}</div></div>
       <span class="sp"></span>
       ${d.screen && d.mode && d.mode !== 'rawtext' ? `<button
         onclick="rtGoScreen('${esc(d.mode)}')"
-        title="The screen that edits this file record by record">Open in ${
-        esc(d.screen)}</button>` : ''}
-      <label class="count rtgo">Line <input id="rtLine" type="number" min="1"
+        title="${ttA('rawtext.the_screen_that_edits_this_file')}">${tt('rawtext.open_in',{screen:esc(d.screen)})}</button>` : ''}
+      <label class="count rtgo">${tt('rawtext.line')} <input id="rtLine" type="number" min="1"
         onkeydown="if(event.key==='Enter')rtGoLine(this.value)"></label>
       <span class="count" id="rtCaret"></span>
-      <button onclick="rtReload()" title="Read the file from disk again">Reload</button>
+      <button onclick="rtReload()" title="${ttA('rawtext.read_the_file_from_disk_again')}">${tt('rawtext.reload')}</button>
       <a class="btnlike" href="/api/file?mod=${enc(state.src)}&rel=${enc(d.rel)}" download
-        title="The file exactly as it is on disk">⇩ Download</a>
+        title="${ttA('rawtext.the_file_exactly_as_it_is')}">${tt('rawtext.download')}</a>
       <button onclick="rtPutOver('${q1(esc(d.rel))}')"
-        title="Replace this file with one from disk. The old one is backed up and 🕑 Log undoes it">⇧ Replace…</button>
+        title="${ttA('rawtext.replace_this_file_with_one_from')}">${tt('rawtext.replace')}</button>
       <button class="primary" id="rtSaveBtn" onclick="rtSave()"
-        ${ro || !k.dirty || k.busy ? 'disabled' : ''}>Save…</button>
+        ${ro || !k.dirty || k.busy ? 'disabled' : ''}>${tt('rawtext.save')}</button>
     </div>
-    ${ro ? `<div class="trfind w-warn">Shown, not saved: ${esc(d.readonly)}.</div>` : ''}
+    ${ro ? `<div class="trfind w-warn">${tt('rawtext.shown_not_saved',{readonly:esc(d.readonly)})}</div>` : ''}
     <textarea id="rtBox" class="rtbox" spellcheck="false" wrap="off"
       ${ro ? 'readonly' : ''}></textarea>
     <div id="rtPlan">${rtPlanHtml()}</div>`;
@@ -247,7 +240,7 @@ function rtGoLine(n){
 
 function rtGoScreen(mode){
   const k = state.rt;
-  if(k && k.dirty && !confirm(`Leave ${k.rel} without saving? The edits are only in this box.`))
+  if(k && k.dirty && !confirm(tt('rawtext.leave_without_saving_the_edits_are',{rel:k.rel})))
     return;
   if(k) k.dirty = false;
   if(mode === 'factions' && typeof minorFactions === 'function') return minorFactions();
@@ -257,7 +250,7 @@ function rtGoScreen(mode){
 function rtReload(){
   const k = state.rt;
   if(!k || !k.rel) return;
-  if(k.dirty && !confirm('Throw away the edits in this box and read the file again?')) return;
+  if(k.dirty && !confirm(tt('rawtext.throw_away_the_edits_in_this'))) return;
   rtRead(k.rel);
 }
 
@@ -272,7 +265,7 @@ async function rtSave(){
   catch(e){ r = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(state.rt !== k) return;
-  k.plan = r.plan || {errors: [r.error || 'no plan']};
+  k.plan = r.plan || {errors: [r.error || tt('rawtext.no_plan')]};
   if(r.error && !(k.plan.errors || []).length) k.plan.errors = [r.error];
   rtPaintPlan();
   const el = document.getElementById('rtPlan');
@@ -297,34 +290,32 @@ function rtPaintPlan(){
    with their line numbers. */
 function rtPlanHtml(){
   const k = state.rt, p = k && k.plan;
-  if(k && k.busy) return '<div class="count rtplan">Working out what would change…</div>';
+  if(k && k.busy) return `<div class="count rtplan">${tt('common.working_out_what_would_change')}</div>`;
   if(!p) return '';
   const errs = p.errors || [];
   if(errs.length) return `<div class="rtplan">${errs.map(e =>
     `<div class="w-bad">✗ ${esc(e)}</div>`).join('')}
-    <div class="csbtns"><button onclick="rtPlanClose()">Keep editing</button>${
+    <div class="csbtns"><button onclick="rtPlanClose()">${tt('rawtext.keep_editing')}</button>${
       errs.some(e => /changed on disk/.test(e))
-        ? '<button onclick="rtReload()">Reload from disk</button>' : ''}</div></div>`;
+        ? `<button onclick="rtReload()">${tt('rawtext.reload_from_disk')}</button>` : ''}</div></div>`;
   const c = p.counts || {};
   const hunks = (p.hunks || []).map(h => `<div class="rthunk">
-      <div class="count">line ${h.at}</div>
+      <div class="count">${tt('rawtext.line_2',{at:h.at})}</div>
       ${(h.was || []).map(l => `<div class="rtdel">- ${esc(l) || '&nbsp;'}</div>`).join('')}
       ${(h.now || []).map(l => `<div class="rtadd">+ ${esc(l) || '&nbsp;'}</div>`).join('')}
-      ${h.more ? `<div class="count">…and ${h.more} more line(s) here</div>` : ''}
+      ${h.more ? `<div class="count">${tt('rawtext.and_more_line_s_here',{more:h.more})}</div>` : ''}
     </div>`).join('');
   const shown = (p.hunks || []).length;
   return `<div class="rtplan">
-    <div><b>Write data/${esc(p.rel)}?</b>
-      <span class="count">${c.changed || 0} changed · ${c.added || 0} added · ${
-      c.removed || 0} removed · every other line is written back byte for byte</span></div>
+    <div>${tt('rawtext.write_data_changed_added_removed_every',{rel:esc(p.rel),changed:c.changed || 0,added:c.added || 0,removed:c.removed || 0})}</div>
     ${(p.warnings || []).map(w => `<div class="w-warn">⚠ ${esc(w)}</div>`).join('')}
     <div class="rthunks">${hunks}</div>
-    ${shown >= 40 ? '<div class="count">Only the first forty changes are shown.</div>' : ''}
+    ${shown >= 40 ? `<div class="count">${tt('rawtext.only_the_first_forty_changes_are')}</div>` : ''}
     ${(p.notes || []).map(n => `<div class="count">${esc(n)}</div>`).join('')}
     <div class="csbtns">
-      <button class="primary" onclick="rtApply()">Write it</button>
-      <button onclick="rtPlanClose()">Keep editing</button>
-      <span class="count">Backed up first, and 🕑 Log can undo it.</span>
+      <button class="primary" onclick="rtApply()">${tt('rawtext.write_it')}</button>
+      <button onclick="rtPlanClose()">${tt('rawtext.keep_editing')}</button>
+      <span class="count">${tt('common.backed_up_first_and_log_can_2')}</span>
     </div>
   </div>`;
 }
@@ -350,8 +341,8 @@ async function rtApply(){
     if(!(k.plan.errors || []).length) k.plan.errors = [r.error];
     rtPaintPlan(); toast('✗ ' + r.error, 8000); return;
   }
-  toast(`Saved data/${k.rel}. 🕑 Log can undo it.`);
-  activity('raw save', `${k.rel} in ${k.mod}`);
+  toast(tt('rawtext.saved_data_log_can_undo_it',{rel:k.rel}));
+  activity(tt('rawtext.raw_save'), `${k.rel} in ${k.mod}`);
   rtForget(k.rel);
   const box = document.getElementById('rtBox');
   const top = box ? box.scrollTop : 0, at = box ? box.selectionStart : 0;
@@ -383,7 +374,7 @@ function rtForget(rel){
 let rtPutTarget = null;
 
 function rtPutAny(){
-  const rel = (prompt('Where in the mod should it go? A path under data/, e.g.\n'
+  const rel = (prompt(tt('rawtext.where_in_the_mod_should_it')
                       + 'ui/units/england/#english_archers.tga', '') || '').trim();
   if(!rel) return;
   rtPutTarget = {rel: rel.replace(/^data\//i, ''), replace: false};
@@ -408,22 +399,22 @@ async function rtPutChosen(input){
   try{ r = await api.post('/api/file/put_plan', body); }
   catch(e){ r = {error: errText(e)}; }
   if(r.error && /already in the mod/.test(r.error)){
-    if(!confirm(`data/${t.rel} is already in the mod. Replace it with ${f.name}?`)) return;
+    if(!confirm(tt('rawtext.data_is_already_in_the_mod',{rel:t.rel,name:f.name}))) return;
     body.replace = true;
     try{ r = await api.post('/api/file/put_plan', body); }
     catch(e){ r = {error: errText(e)}; }
   }
   if(r.error){ toast('✗ ' + r.error, 8000); return; }
   const p = r.plan || {};
-  if(!confirm(`Put ${f.name} at data/${p.rel}?\n\n${(p.changes || []).join('\n')}`
+  if(!confirm(tt('rawtext.put_at_data',{name:f.name,rel:p.rel,changes:(p.changes || []).join('\n')})
     + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.join('\n⚠ ') : '')
-    + '\n\nBacked up first, and 🕑 Log undoes it.')) return;
+    + tt('rawtext.backed_up_first_and_log_undoes'))) return;
   let w;
   try{ w = await api.post('/api/file/put_apply', body); }
   catch(e){ w = {error: errText(e)}; }
   if(w.error){ toast('✗ ' + w.error, 8000); return; }
-  toast(`data/${p.rel} written. 🕑 Log can undo it.`, 5000);
-  activity('put a file', `data/${p.rel} in ${state.src}`);
+  toast(tt('rawtext.data_written_log_can_undo_it',{rel:p.rel}), 5000);
+  activity(tt('rawtext.put_a_file'), tt('rawtext.data_in',{rel:p.rel,src:state.src}));
   if(state.rt && state.rt.rel === p.rel) rtReload();
   else if(state.rt) loadRawtext();
 }

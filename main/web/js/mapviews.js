@@ -48,7 +48,7 @@ const CVW_MAX = 24;
 
 //: What one is called when nobody says. Numbered rather than "Untitled",
 //: because two Untitleds is the state this exists to avoid.
-const CVW_NAME = 'View';
+const CVW_NAME = tt('mapviews.view');
 
 /* ---------- state ----------
 
@@ -71,7 +71,7 @@ function cvwToggle(){
   const k = state.cvw;
   if(!k) return;
   k.open = !k.open;
-  activity('map views', k.open ? 'opened the saved views' : 'closed the saved views');
+  activity(tt('mapviews.map_views'), k.open ? tt('mapviews.opened_the_saved_views') : tt('mapviews.closed_the_saved_views'));
   cvwPaint();
 }
 
@@ -268,9 +268,9 @@ function cvwLoad(i){
     if((q.theme || '') !== plan.theme) cqTheme(plan.theme);
     else if(q.col) cqApply(q.col.colours, q.borders && q.col.borders);
   }
-  activity('map views', `loaded the view ${v.name}`);
+  activity(tt('mapviews.map_views'), tt('mapviews.loaded_the_view',{name:v.name}));
   toast(`${v.name}${plan.dropped.length
-    ? ` · ${plan.dropped.length} layer(s) it names are not on this map` : ''}`);
+    ? tt('mapviews.layer_s_it_names_are_not',{dropped_n:plan.dropped.length}) : ''}`);
   cvwPaint();
 }
 
@@ -280,25 +280,25 @@ function cvwAdd(){
   const k = state.cvw, list = cvwList();
   if(!k) return;
   if(list.length >= CVW_MAX){
-    k.err = `${CVW_MAX} saved views is the limit. Delete one to save another.`;
+    k.err = tt('mapviews.saved_views_is_the_limit_delete',{CVW_MAX});
     return cvwPaint();
   }
-  const name = prompt('Save this view as:\n\n'
-    + 'Which layers are drawn, in what order, at what opacity, the colours '
-    + 'punched out of each, the terrain textures and their season, the rivers '
-    + 'and heights readings, the settlement '
-    + 'names, and the colouring over the top. Not the zoom or the selection - '
-    + 'those are about a place.',
+  const name = prompt(tt('mapviews.save_this_view_as')
+    + tt('mapviews.which_layers_are_drawn_in_what')
+    + tt('mapviews.punched_out_of_each_the_terrain')
+    + tt('mapviews.and_heights_readings_the_settlement')
+    + tt('mapviews.names_and_the_colouring_over_the')
+    + tt('mapviews.those_are_about_a_place'),
     `${CVW_NAME} ${list.length + 1}`);
   if(name === null) return;
   const clean = String(name).trim();
   if(!clean) return;
   const at = list.findIndex(v => v.name.toLowerCase() === clean.toLowerCase());
-  if(at >= 0 && !confirm(`Replace the saved view "${list[at].name}"?`)) return;
+  if(at >= 0 && !confirm(tt('mapviews.replace_the_saved_view',{x:list[at].name}))) return;
   const snap = cvwSnapshot(clean);
   if(at >= 0) list[at] = snap; else list.push(snap);
   k.err = '';
-  activity('map views', `saved the view ${clean}`);
+  activity(tt('mapviews.map_views'), tt('mapviews.saved_the_view',{clean}));
   cvwStore();
   cvwPaint();
 }
@@ -308,9 +308,9 @@ function cvwAdd(){
 function cvwUpdate(i){
   const list = cvwList(), v = list[i];
   if(!v) return;
-  if(!confirm(`Overwrite "${v.name}" with the view on screen now?`)) return;
+  if(!confirm(tt('mapviews.overwrite_with_the_view_on_screen',{name:v.name}))) return;
   list[i] = cvwSnapshot(v.name);
-  activity('map views', `updated the view ${v.name}`);
+  activity(tt('mapviews.map_views'), tt('mapviews.updated_the_view',{name:v.name}));
   cvwStore();
   cvwPaint();
 }
@@ -318,7 +318,7 @@ function cvwUpdate(i){
 function cvwRename(i){
   const list = cvwList(), v = list[i];
   if(!v) return;
-  const name = prompt('Call this view:', v.name);
+  const name = prompt(tt('mapviews.call_this_view'), v.name);
   if(name === null) return;
   const clean = String(name).trim();
   if(!clean || clean === v.name) return;
@@ -330,10 +330,10 @@ function cvwRename(i){
 function cvwDelete(i){
   const list = cvwList(), v = list[i];
   if(!v) return;
-  if(!confirm(`Delete the saved view "${v.name}"?\n\n`
-    + 'It is a set of switches, not a file - nothing about the mod changes.')) return;
+  if(!confirm(tt('mapviews.delete_the_saved_view',{name:v.name})
+    + tt('mapviews.it_is_a_set_of_switches'))) return;
   list.splice(i, 1);
-  activity('map views', `deleted the view ${v.name}`);
+  activity(tt('mapviews.map_views'), tt('mapviews.deleted_the_view',{name:v.name}));
   cvwStore();
   cvwPaint();
 }
@@ -351,12 +351,12 @@ function cvwPaint(){
 function cvwSummary(v){
   const on = Object.keys((v && v.on) || {}).filter(code => v.on[code]);
   const bits = [`${on.length} layer${on.length === 1 ? '' : 's'}`];
-  if(v.river && v.river.on) bits.push('rivers only');
-  if(v.height_alpha) bits.push('heights as transparency');
-  if(v.theme) bits.push(`coloured by ${v.theme.replace(/_/g, ' ')}`);
+  if(v.river && v.river.on) bits.push(tt('mapviews.rivers_only'));
+  if(v.height_alpha) bits.push(tt('mapviews.heights_as_transparency'));
+  if(v.theme) bits.push(tt('mapviews.coloured_by',{x:v.theme.replace(/_/g, ' ')}));
   const hidden = Object.values((v && v.hide) || {})
     .reduce((n, a) => n + (Array.isArray(a) ? a.length : 0), 0);
-  if(hidden) bits.push(`${hidden} colour${hidden === 1 ? '' : 's'} punched out`);
+  if(hidden) bits.push(tt('mapviews.colour_punched_out',{hidden,hidden2:hidden === 1 ? '' : 's'}));
   return bits.join(' · ');
 }
 
@@ -366,27 +366,23 @@ function cvwHtml(){
   const list = cvwList();
   const head = `<div class="cpbar">
     <button class="cptog${k.open ? ' on' : ''}" onclick="cvwToggle()"
-      title="Save what the map looks like now under a name, and come back to it.
-Which layers, in what order, at what opacity, with which colours punched out - and the colouring over the top."
-      >\u{1F4D0} Views${k.open ? ' ✓' : ''}</button>
-    ${list.length ? `<span class="count">${list.length} saved</span>` : ''}
+      title="${ttA('mapviews.save_what_the_map_looks_like')}"
+      >${tt('mapviews.views',{open:k.open ? ' ✓' : ''})}</button>
+    ${list.length ? `<span class="count">${tt('mapviews.saved',{list_n:list.length})}</span>` : ''}
   </div>`;
   if(!k.open) return head;
   return head + `<div class="cvwpanel">
     ${k.err ? `<div class="w-warn">${esc(k.err)}</div>` : ''}
     ${list.length ? list.map((v, i) => `<div class="cvwrow">
       <button class="cvwgo" onclick="cvwLoad(${i})"
-        title="Draw the map this way">${esc(v.name)}</button>
+        title="${ttA('mapviews.draw_the_map_this_way')}">${esc(v.name)}</button>
       <span class="cvwbtn">
-        <button onclick="cvwUpdate(${i})" title="Overwrite it with the view on screen now"
-          >Update</button>
-        <button onclick="cvwRename(${i})" title="Rename it">✎</button>
-        <button onclick="cvwDelete(${i})" title="Delete it">✕</button></span>
+        <button onclick="cvwUpdate(${i})" title="${ttA('mapviews.overwrite_it_with_the_view_on')}"
+          >${tt('mapviews.update')}</button>
+        <button onclick="cvwRename(${i})" title="${ttA('mapviews.rename_it')}">✎</button>
+        <button onclick="cvwDelete(${i})" title="${ttA('mapviews.delete_it')}">✕</button></span>
       <div class="count">${esc(cvwSummary(v))}</div>
-    </div>`).join('') : `<div class="count">No saved views yet. Set the layers
-      up the way you want to read this map, then save it - the same set of
-      switches comes back on any mod, because the ten layer codes are the
-      engine's own and mean the same thing in all of them.</div>`}
-    <button onclick="cvwAdd()" class="primary">Save this view…</button>
+    </div>`).join('') : `<div class="count">${tt('mapviews.no_saved_views_yet_set_the')}</div>`}
+    <button onclick="cvwAdd()" class="primary">${tt('mapviews.save_this_view')}</button>
   </div>`;
 }

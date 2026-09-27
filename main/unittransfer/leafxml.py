@@ -36,6 +36,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from . import keyblock as kb
+from . import i18n as _i18n
 
 ENCODING = "latin-1"
 
@@ -192,8 +193,7 @@ def xml_findings(doc: Doc) -> List[Dict]:
     tail = doc.trailing()
     if tail.strip():
         at = doc.text.count("\n", 0, doc.root_end)
-        out.append(finding("trailing", "warn", f"text after </{doc.root_tag}> (from line "
-                           f"{at + 1}) that the game never reads", "file", at))
+        out.append(finding("trailing", "warn", _i18n.msg("eng.leafxml.text_after_from_line_that_the", "text after </{root_tag}> (from line {x}) that the game never reads", root_tag=doc.root_tag, x=at + 1), "file", at))
     return out
 
 
@@ -295,7 +295,7 @@ class Plan:
 def read(mod, rel: str) -> str:
     path = Path(mod.data) / rel
     if not path.is_file():
-        raise LeafError(f"this mod has no {rel}")
+        raise LeafError(_i18n.msg("eng.leafxml.this_mod_has_no", "this mod has no {rel}", rel=rel))
     return kb.read_text(path, ENCODING)
 
 
@@ -331,11 +331,11 @@ def plan_edits(p: Plan, text: str, doc: Doc, body: dict, check_value: Check,
     for key, v in (body.get("values") or {}).items():
         n = node(key)
         if n is None or not doc.is_leaf(n):
-            p.errors.append(f"element {key} is not a value in the file")
+            p.errors.append(_i18n.msg("eng.leafxml.element_is_not_a_value_in", "element {key} is not a value in the file", key=key))
             continue
         v = str(v).strip()
         if re.search(r"[<>&]", v):
-            p.errors.append(f"{n.tag}: <, > and & cannot go in a value")
+            p.errors.append(_i18n.msg("eng.leafxml.and_cannot_go_in_a_value", "{tag}: <, > and & cannot go in a value", tag=n.tag))
             continue
         bad = check_value(doc, n, v)
         if bad:
@@ -349,18 +349,18 @@ def plan_edits(p: Plan, text: str, doc: Doc, body: dict, check_value: Check,
     for key, vals in (body.get("attrs") or {}).items():
         n = node(key)
         if n is None:
-            p.errors.append(f"element {key} is not in the file")
+            p.errors.append(_i18n.msg("eng.leafxml.element_is_not_in_the_file", "element {key} is not in the file", key=key))
             continue
         for a, v in (vals or {}).items():
             v = str(v).strip()
             if a not in n.attrs:
-                p.errors.append(f"<{n.tag}> on line {n.line + 1} has no {a}")
+                p.errors.append(_i18n.msg("eng.leafxml.on_line_has_no", "<{tag}> on line {x} has no {a}", tag=n.tag, x=n.line + 1, a=a))
                 continue
             if re.search(r"[\"<>&]", v):
-                p.errors.append(f"{a}: quotes, <, > and & cannot go in a value")
+                p.errors.append(_i18n.msg("eng.leafxml.quotes_and_cannot_go_in_a", "{a}: quotes, <, > and & cannot go in a value", a=a))
                 continue
             if not NUM.fullmatch(v):
-                p.errors.append(f"{n.tag} {a} is a number, not {v!r}")
+                p.errors.append(_i18n.msg("eng.leafxml.is_a_number_not", "{tag} {a} is a number, not {v}", tag=n.tag, a=a, v=repr(v)))
                 continue
             cur, span = n.attrs[a]
             if v != cur:
@@ -369,7 +369,7 @@ def plan_edits(p: Plan, text: str, doc: Doc, body: dict, check_value: Check,
     for spec in body.get("copy") or []:
         like = node(spec.get("like"))
         if like is None or like.tag not in copyable:
-            p.errors.append("only a whole record can be copied")
+            p.errors.append(_i18n.msg("eng.leafxml.only_a_whole_record_can_be", "only a whole record can be copied"))
             continue
         name = str(spec.get("name") or "").strip()
         if name:
@@ -387,13 +387,13 @@ def plan_edits(p: Plan, text: str, doc: Doc, body: dict, check_value: Check,
                 p.errors.append(bad)
                 continue
         if any(k not in like.attrs or not NUM.fullmatch(v) for k, v in cattrs.items()):
-            p.errors.append(f"<{like.tag}>'s attributes are numbers it already has")
+            p.errors.append(_i18n.msg("eng.leafxml.s_attributes_are_numbers_it_already", "<{tag}>'s attributes are numbers it already has", tag=like.tag))
             continue
         into = node(spec.get("into")) if spec.get("into") not in (None, "") else None
         if into is not None:
             kids = doc.kids(into, like.tag)
             if not kids:
-                p.errors.append(f"<{like.tag}> cannot go into <{into.tag}>")
+                p.errors.append(_i18n.msg("eng.leafxml.cannot_go_into", "<{tag}> cannot go into <{tag2}>", tag=like.tag, tag2=into.tag))
                 continue
             last = kids[-1]
             _s, at = line_span(text, last)
@@ -409,7 +409,7 @@ def plan_edits(p: Plan, text: str, doc: Doc, body: dict, check_value: Check,
     for key in body.get("remove") or []:
         n = node(key)
         if n is None or n.parent < 0:
-            p.errors.append(f"element {key} is not in the file")
+            p.errors.append(_i18n.msg("eng.leafxml.element_is_not_in_the_file", "element {key} is not in the file", key=key))
             continue
         why = removable(doc, n)
         if why:
@@ -423,16 +423,16 @@ def plan_edits(p: Plan, text: str, doc: Doc, body: dict, check_value: Check,
         tag = str(spec.get("tag") or "").strip()
         v = str(spec.get("value") or "").strip()
         if par is None or not par.children:
-            p.errors.append("a field is added to a record that has fields")
+            p.errors.append(_i18n.msg("eng.leafxml.a_field_is_added_to_a", "a field is added to a record that has fields"))
             continue
         if not _TAGNAME.fullmatch(tag) or tag not in fields_of(doc, par):
-            p.errors.append(f"<{par.tag}> takes no <{tag}> here")
+            p.errors.append(_i18n.msg("eng.leafxml.takes_no_here", "<{tag}> takes no <{tag2}> here", tag=par.tag, tag2=tag))
             continue
         if doc.child(par, tag) is not None:
-            p.errors.append(f"{_label(doc, par)} already has a <{tag}>")
+            p.errors.append(_i18n.msg("eng.leafxml.already_has_a", "{label} already has a <{tag}>", label=_label(doc, par), tag=tag))
             continue
         if re.search(r"[<>&]", v):
-            p.errors.append(f"{tag}: <, > and & cannot go in a value")
+            p.errors.append(_i18n.msg("eng.leafxml.and_cannot_go_in_a_value", "{tag}: <, > and & cannot go in a value", tag=tag))
             continue
         fake = Node(-1, tag, 0, 0, par.line, parent=par.id)
         bad = check_value(doc, fake, v)
@@ -459,13 +459,13 @@ def plan_edits(p: Plan, text: str, doc: Doc, body: dict, check_value: Check,
     spans = sorted(splices, key=lambda x: (x[0], x[1]))
     for (a0, a1, _), (b0, b1, _) in zip(spans, spans[1:]):
         if b0 < a1:
-            p.errors.append("two edits touch the same place - save one, then the other")
+            p.errors.append(_i18n.msg("eng.leafxml.two_edits_touch_the_same_place", "two edits touch the same place - save one, then the other"))
             return ""
     new = text
     for s, t, v in sorted(splices, key=lambda x: (x[0], x[1]), reverse=True):
         new = new[:s] + v + new[t:]
     if new == text:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.leafxml.nothing_to_change", "nothing to change"))
         return ""
     return new
 

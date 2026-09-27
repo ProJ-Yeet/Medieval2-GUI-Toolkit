@@ -23,6 +23,7 @@ from pathlib import Path
 
 from . import keyblock as kb
 from typing import Dict, List, Optional, Tuple
+from . import i18n as _i18n
 
 # modeldb is single-byte text (paths are ASCII). latin-1 round-trips every byte
 # 1:1, which keeps raw spans exact.
@@ -483,12 +484,9 @@ def parse_text(text: str) -> ModelDb:
         magic = r.get_string()
     except ValueError:
         raise ValueError(
-            "this does not start like a battle_models.modeldb: its first token "
-            "should be the length of 'serialization::archive', and it is "
-            f"{r.s[r.i:r.i + 24].split(chr(10))[0]!r}. A file re-saved by a text "
-            "editor in the wrong encoding usually looks like this.") from None
+            _i18n.msg("eng.modeldb.this_does_not_start_like_a", "this does not start like a battle_models.modeldb: its first token should be the length of 'serialization::archive', and it is {split}. A file re-saved by a text editor in the wrong encoding usually looks like this.", split=repr(r.s[r.i:r.i + 24].split(chr(10))[0]))) from None
     if magic != ARCHIVE_MAGIC:
-        raise ValueError(f"not a modeldb archive (magic={magic!r})")
+        raise ValueError(_i18n.msg("eng.modeldb.not_a_modeldb_archive_magic", "not a modeldb archive (magic={magic})", magic=repr(magic)))
     header_ints = [r.get_int() for _ in range(8)]
     count = header_ints[5]
 
@@ -1004,7 +1002,7 @@ def parse_entry_text(raw: str, pad: bool = False) -> ModelEntry:
     entry.first_entry_pad = pad
     r._skip_ws()
     if r.i < r.n:
-        raise ValueError(f"{r.n - r.i} characters left over after the entry")
+        raise ValueError(_i18n.msg("eng.modeldb.characters_left_over_after_the_entry", "{x} characters left over after the entry", x=r.n - r.i))
     return entry
 
 

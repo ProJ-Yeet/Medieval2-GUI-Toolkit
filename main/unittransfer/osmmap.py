@@ -64,6 +64,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 from PIL import Image, ImageChops, ImageDraw
 
 from . import __version__, config
+from . import i18n as _i18n
 
 #: The switch. Off until the user turns it on.
 ENABLED_KEY = "osm_enabled"
@@ -168,8 +169,7 @@ def settings() -> dict:
 def require_on() -> dict:
     s = settings()
     if not s["enabled"]:
-        raise OsmOff("OpenStreetMap is off. Turn it on under Settings, Real-world "
-                     "map, first. Nothing was sent.")
+        raise OsmOff(_i18n.msg("eng.osmmap.openstreetmap_is_off_turn_it_on", "OpenStreetMap is off. Turn it on under Settings, Real-world map, first. Nothing was sent."))
     return s
 
 
@@ -296,13 +296,13 @@ def parse_bbox(body) -> Bbox:
     try:
         b = Bbox(*(float(body[k]) for k in ("north", "south", "west", "east")))
     except (KeyError, TypeError, ValueError):
-        raise OsmError("a box needs north, south, west and east, each a number") from None
+        raise OsmError(_i18n.msg("eng.osmmap.a_box_needs_north_south_west", "a box needs north, south, west and east, each a number")) from None
     try:
         b.rotation = float(body.get("rotation") or 0.0)
     except (TypeError, ValueError):
-        raise OsmError("the rotation has to be a number of degrees") from None
+        raise OsmError(_i18n.msg("eng.osmmap.the_rotation_has_to_be_a", "the rotation has to be a number of degrees")) from None
     if not math.isfinite(b.rotation):
-        raise OsmError("the rotation has to be a number of degrees")
+        raise OsmError(_i18n.msg("eng.osmmap.the_rotation_has_to_be_a", "the rotation has to be a number of degrees"))
     bad = b.problems()
     if bad:
         raise OsmError("; ".join(bad))
@@ -451,9 +451,9 @@ def _year(style: str, year) -> Optional[int]:
     try:
         y = int(year) if year not in (None, "") else OHM_DEFAULT
     except (TypeError, ValueError):
-        raise OsmError("the year has to be a whole number") from None
+        raise OsmError(_i18n.msg("eng.osmmap.the_year_has_to_be_a", "the year has to be a whole number")) from None
     if not 1 <= y <= 2100:
-        raise OsmError(f"{y} is not a year the historical map has")
+        raise OsmError(_i18n.msg("eng.osmmap.is_not_a_year_the_historical", "{y} is not a year the historical map has", y=y))
     return y
 
 
@@ -475,9 +475,9 @@ def tile(z: int, x: int, y: int, style: str = "osm", year=None) -> bytes:
     """One map tile of a style, off the disk if it was fetched in the last 30
     days. The relief is drawn here from the elevation tile under it."""
     if style not in STYLES:
-        raise OsmError(f"{style} is not a backdrop style")
+        raise OsmError(_i18n.msg("eng.osmmap.is_not_a_backdrop_style", "{style} is not a backdrop style", style=style))
     if not (0 <= z <= 19 and 0 <= x < 2 ** z and 0 <= y < 2 ** z):
-        raise OsmError(f"{z}/{x}/{y} is not a map tile")
+        raise OsmError(_i18n.msg("eng.osmmap.is_not_a_map_tile", "{z}/{x}/{y} is not a map tile", z=z, x=x, y=y))
     yr = _year(style, year)
     path = _tile_path(style, yr, z, x, y)
     try:
@@ -499,8 +499,7 @@ def tile(z: int, x: int, y: int, style: str = "osm", year=None) -> bytes:
         while _TILE_TIMES and now - _TILE_TIMES[0] > 60:
             _TILE_TIMES.popleft()
         if len(_TILE_TIMES) >= TILE_BUDGET:
-            raise OsmError("the backdrop has asked for a lot of tiles in the last "
-                           "minute - it will carry on shortly")
+            raise OsmError(_i18n.msg("eng.osmmap.the_backdrop_has_asked_for_a", "the backdrop has asked for a lot of tiles in the last minute - it will carry on shortly"))
         _TILE_TIMES.append(now)
     last = None
     for tpl in s["styles"][style]["servers"]:
@@ -516,7 +515,7 @@ def tile(z: int, x: int, y: int, style: str = "osm", year=None) -> bytes:
             except OSError:
                 pass
             return raw
-    raise OsmError(f"no {STYLES[style][2]} server answered ({last})")
+    raise OsmError(_i18n.msg("eng.osmmap.no_server_answered", "no {STYLES} server answered ({last})", STYLES=STYLES[style][2], last=last))
 
 
 #: The relief's scale: land from 0 to this many metres runs dark to light, the
@@ -574,7 +573,7 @@ def picture(b: Bbox, width: int, height: int, style: str = "osm", year=None,
     covers the picture one and a half times over (Mylae's rule), then one
     affine transform puts them in the map's frame, as for the heights."""
     if style not in STYLES:
-        raise OsmError(f"{style} is not a backdrop style")
+        raise OsmError(_i18n.msg("eng.osmmap.is_not_a_backdrop_style", "{style} is not a backdrop style", style=style))
     px = max(64, min(8192, int(px)))
     tall = max(1, round(px * height / width))
     proj = Projection(b, width, height)
@@ -669,7 +668,7 @@ def overpass(query: str) -> dict:
             return json.loads(raw.decode("utf-8"))
         except (urllib.error.URLError, OSError, ValueError) as e:
             last = e
-    raise OsmError(f"no Overpass server answered ({last})")
+    raise OsmError(_i18n.msg("eng.osmmap.no_overpass_server_answered", "no Overpass server answered ({last})", last=last))
 
 
 _NOM_LOCK = threading.Lock()
@@ -686,7 +685,7 @@ def nominatim(path: str, params: dict):
         try:
             raw = _fetch(url, timeout=30)
         except (urllib.error.URLError, OSError, ValueError) as e:
-            raise OsmError(f"Nominatim did not answer ({e})") from None
+            raise OsmError(_i18n.msg("eng.osmmap.nominatim_did_not_answer", "Nominatim did not answer ({e})", e=e)) from None
         finally:
             _NOM_LAST[0] = time.time()
     return json.loads(raw.decode("utf-8"))
@@ -849,14 +848,14 @@ def refetch(kind: str, key: str, n: int) -> dict:
     merged into what was kept. The record comes back as it now stands."""
     rec, items = _read_fetch(str(kind), str(key))
     if rec is None:
-        raise OsmError("that fetch is no longer kept: fetch it again from its panel")
+        raise OsmError(_i18n.msg("eng.osmmap.that_fetch_is_no_longer_kept", "that fetch is no longer kept: fetch it again from its panel"))
     try:
         n = int(n)
         ch = rec["chunks"][n - 1]
         if n < 1:
             raise IndexError
     except (TypeError, ValueError, IndexError):
-        raise OsmError(f"there is no chunk {n} in that fetch") from None
+        raise OsmError(_i18n.msg("eng.osmmap.there_is_no_chunk_in_that", "there is no chunk {n} in that fetch", n=n)) from None
     require_on()
     c = Bbox(ch["north"], ch["south"], ch["west"], ch["east"])
     before = len(items)
@@ -1118,7 +1117,7 @@ def water(b: Bbox, kinds: List[str],
     ``{kind, outer: [ring...], inner: [ring...]}``, each ring ``(lat, lon)``."""
     kinds = [k for k in WATER_KINDS if k in (kinds or [])]
     if not kinds:
-        raise OsmError("pick at least one kind of water: seas, lagoons or lakes")
+        raise OsmError(_i18n.msg("eng.osmmap.pick_at_least_one_kind_of", "pick at least one kind of water: seas, lagoons or lakes"))
     got = polygons(b, [f for k in kinds for f in WATER_KINDS[k]], "water", progress,
                    head="[out:json][timeout:120];")
     return [dict(p, kind=_water_kind(p.get("tags") or {})) for p in got]
@@ -1184,7 +1183,7 @@ def _water_args(body: dict) -> Tuple[List[str], float]:
     try:
         size = float(body.get("min_tiles", WATER_MIN_TILES))
     except (TypeError, ValueError):
-        raise OsmError("the smallest water to keep is a number of tiles") from None
+        raise OsmError(_i18n.msg("eng.osmmap.the_smallest_water_to_keep_is", "the smallest water to keep is a number of tiles")) from None
     return [str(k) for k in kinds], max(0.0, size)
 
 
@@ -1196,7 +1195,7 @@ def search(b: Bbox, proj: Projection, q: str) -> List[dict]:
     """Places matching ``q`` inside the box, each with the tile it falls on."""
     q = (q or "").strip()
     if not q:
-        raise OsmError("search for a place by name")
+        raise OsmError(_i18n.msg("eng.osmmap.search_for_a_place_by_name", "search for a place by name"))
     env = b.envelope()
     got = nominatim("search", {
         "q": q, "format": "jsonv2", "limit": 12, "bounded": 1, "extratags": 1,
@@ -1242,7 +1241,7 @@ def search_world(q: str) -> List[dict]:
     point and, where Nominatim gives one, the extent to fit a box around."""
     q = (q or "").strip()
     if not q:
-        raise OsmError("search for a place by name")
+        raise OsmError(_i18n.msg("eng.osmmap.search_for_a_place_by_name", "search for a place by name"))
     got = nominatim("search", {"q": q, "format": "jsonv2", "limit": 12, "extratags": 1})
     return [p for p in (_place(r) for r in got or []) if p is not None]
 
@@ -1302,14 +1301,13 @@ def boundary(lat: float, lon: float, osm_type: str = "", osm_id=None) -> dict:
              and e["id"] > 3600000000),
             reverse=True)
         if not cands:
-            raise OsmError("OpenStreetMap has no administrative boundary around "
-                           "that point")
+            raise OsmError(_i18n.msg("eng.osmmap.openstreetmap_has_no_administrative_boundary_aro", "OpenStreetMap has no administrative boundary around that point"))
         rel = cands[0][1]
     got = nominatim("lookup", {"osm_ids": f"R{rel}", "format": "jsonv2",
                                "polygon_geojson": 1})
     item = got[0] if got else None
     if not item or not item.get("geojson"):
-        raise OsmError("Nominatim has no outline for that place")
+        raise OsmError(_i18n.msg("eng.osmmap.nominatim_has_no_outline_for_that", "Nominatim has no outline for that place"))
     return item["geojson"]
 
 
@@ -1320,7 +1318,7 @@ def boundary_tiles(geo: dict, proj: Projection) -> List[Tuple[int, int]]:
     elif geo.get("type") == "MultiPolygon":
         polys = geo["coordinates"]
     else:
-        raise OsmError(f"a {geo.get('type')} is not an outline")
+        raise OsmError(_i18n.msg("eng.osmmap.a_is_not_an_outline", "a {geo} is not an outline", geo=geo.get('type')))
     mask = Image.new("L", (proj.w, proj.h), 0)
     draw = ImageDraw.Draw(mask)
     for poly in polys:
@@ -1346,7 +1344,7 @@ def slippy_zoom(proj: Projection, px_per_tile: float) -> int:
 def _box_proj(cm) -> Tuple[Bbox, Projection]:
     box, _ = box_for(cm)
     if box is None:
-        raise OsmError("give the map its real-world box first")
+        raise OsmError(_i18n.msg("eng.osmmap.give_the_map_its_real_world", "give the map its real-world box first"))
     return box, Projection(box, cm.terrain.width, cm.terrain.height)
 
 
@@ -1363,13 +1361,10 @@ def paint_coast(sess) -> dict:
     coast = analyse(coastline(box), proj, cm.sea)
     if coast.leaks:
         raise OsmError(
-            f"the coastline has a gap: the water side reaches {coast.leak} of the "
-            f"{coast.seeds} tiles that are land by the coastline's own reckoning, "
-            "so filling it would put sea across land. Nothing was painted: "
-            "trace the gap by hand with the water brush, using the line as a guide")
+            _i18n.msg("eng.osmmap.the_coastline_has_a_gap_the", "the coastline has a gap: the water side reaches {leak} of the {seeds} tiles that are land by the coastline's own reckoning, so filling it would put sea across land. Nothing was painted: trace the gap by hand with the water brush, using the line as a guide", leak=coast.leak, seeds=coast.seeds))
     if not coast.to_sea:
         return {"ok": True, "changed": {}, "tiles": 0,
-                "note": "every tile on the water side of the coastline is sea already",
+                "note": _i18n.msg("eng.osmmap.every_tile_on_the_water_side", "every tile on the water side of the coastline is sea already"),
                 "state": sess.state()}
     colours = campaint._resolve(cm, sess, {"tool": "water"})
     return campaint._stroke_over(sess, coast.to_sea, colours, "water", {},
@@ -1387,7 +1382,7 @@ def paint_water(sess, body: dict) -> dict:
     got = water_tiles(water(box, kinds), proj, cm.sea, size)
     if not got.to_sea:
         return {"ok": True, "changed": {}, "tiles": 0,
-                "note": "every tile inside that water is sea already",
+                "note": _i18n.msg("eng.osmmap.every_tile_inside_that_water_is", "every tile inside that water is sea already"),
                 "state": sess.state()}
     colours = campaint._resolve(cm, sess, {"tool": "water"})
     return campaint._stroke_over(sess, got.to_sea, colours, "water", {},
@@ -1406,17 +1401,17 @@ def paint_boundary(sess, body: dict) -> dict:
     _, proj = _box_proj(cm)
     region = str(body.get("region") or "").strip()
     if not region:
-        raise OsmError("pick the region the boundary is painted onto")
+        raise OsmError(_i18n.msg("eng.osmmap.pick_the_region_the_boundary_is", "pick the region the boundary is painted onto"))
     try:
         lat, lon = float(body["lat"]), float(body["lon"])
     except (KeyError, TypeError, ValueError):
-        raise OsmError("a place needs its latitude and longitude") from None
+        raise OsmError(_i18n.msg("eng.osmmap.a_place_needs_its_latitude_and", "a place needs its latitude and longitude")) from None
     geo = boundary(lat, lon, str(body.get("osm_type") or ""), body.get("osm_id"))
     sea = cm.sea
     w = cm.terrain.width
     tiles = [(x, y) for x, y in boundary_tiles(geo, proj) if not sea[y * w + x]]
     if not tiles:
-        raise OsmError("that boundary covers no land tile of this map")
+        raise OsmError(_i18n.msg("eng.osmmap.that_boundary_covers_no_land_tile", "that boundary covers no land tile of this map"))
     colours = campaint._resolve(cm, sess, {"target": "regions", "region": region})
     name = str(body.get("name") or "the place").strip()
     return campaint._stroke_over(sess, tiles, colours, "brush", {},

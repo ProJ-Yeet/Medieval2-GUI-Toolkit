@@ -73,6 +73,7 @@ from bisect import bisect_right
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from . import i18n as _i18n
 
 #: Plain 8-bit game data, as everywhere else
 ENCODING = "latin-1"
@@ -425,7 +426,7 @@ def _line_at_depth_zero(p: _Parser, i: int, s: str, word: str) -> None:
     if word in ("farming_level", "famine_threat"):
         region = p.open_of("region")
         if region is None:
-            p.record(word, i).problems.append(f"{word} with no region above it")
+            p.record(word, i).problems.append(_i18n.msg("eng.campstrat.with_no_region_above_it", "{word} with no region above it", word=word))
             return
         value = s.split(None, 1)[1].strip() if len(s.split()) > 1 else ""
         region.fields[word] = int(value) if re.fullmatch(r"-?\d+", value) else value
@@ -507,7 +508,7 @@ def _resource(p: _Parser, i: int, s: str) -> None:
     node = p.record("resource", i)
     m = _RESOURCE.match(s)
     if not m:
-        node.problems.append(f"resource line does not read as `resource <name>, <x>, <y>`: {s!r}")
+        node.problems.append(_i18n.msg("eng.campstrat.resource_line_does_not_read_as", "resource line does not read as `resource <name>, <x>, <y>`: {s}", s=repr(s)))
         return
     node.name = m.group(1)
     node.fields.update(name=m.group(1), x=int(m.group(2)), y=int(m.group(3)))
@@ -533,7 +534,7 @@ def _faction(p: _Parser, i: int, s: str) -> None:
     node.fields["ai_words"] = tail.split()
     node.field_lines["name"] = node.field_lines["ai"] = i
     if not name.strip():
-        node.problems.append("faction line has no name")
+        node.problems.append(_i18n.msg("eng.campstrat.faction_line_has_no_name", "faction line has no name"))
 
 
 def _inside_faction(p: _Parser, i: int, s: str, word: str) -> None:
@@ -584,7 +585,7 @@ def _inside_faction(p: _Parser, i: int, s: str, word: str) -> None:
 
     node = p.top
     if node is not None:
-        node.problems.append(f"line {i + 1} not recognised inside {node.kind}: {s!r}")
+        node.problems.append(_i18n.msg("eng.campstrat.line_not_recognised_inside", "line {x} not recognised inside {kind}: {s}", x=i + 1, kind=node.kind, s=repr(s)))
 
 
 def _settlement(p: _Parser, i: int, s: str) -> None:
@@ -603,8 +604,7 @@ def _settlement(p: _Parser, i: int, s: str) -> None:
     node.field_lines["settlement_type"] = i
     if len(bits) > 2 or kind not in ("city", "castle"):
         node.problems.append(
-            f"settlement header says {kind!r}; the engine knows `settlement` and "
-            f"`settlement castle`")
+            _i18n.msg("eng.campstrat.settlement_header_says_the_engine_knows", "settlement header says {kind}; the engine knows `settlement` and `settlement castle`", kind=repr(kind)))
 
 
 _CHARACTER = re.compile(
@@ -629,7 +629,7 @@ def _character(p: _Parser, i: int, s: str) -> None:
     node = p.out.nodes[idx]
     m = _CHARACTER.match(s)
     if not m:
-        node.problems.append(f"character line has no name: {s!r}")
+        node.problems.append(_i18n.msg("eng.campstrat.character_line_has_no_name", "character line has no name: {s}", s=repr(s)))
         return
     node.name = m.group("name").strip()
     node.fields["name"] = node.name
@@ -642,9 +642,9 @@ def _character(p: _Parser, i: int, s: str) -> None:
     types = [seg for seg in segments if seg.lower() in CHARACTER_TYPES]
     node.fields["type"] = types[0] if types else ""
     if len(types) > 1:
-        node.problems.append(f"character is {' and '.join(types)}; only the first counts")
+        node.problems.append(_i18n.msg("eng.campstrat.character_is_only_the_first_counts", "character is {types}; only the first counts", types=' and '.join(types)))
     elif not types:
-        node.problems.append("character has no type (named character, general, spy, …)")
+        node.problems.append(_i18n.msg("eng.campstrat.character_has_no_type_named_character", "character has no type (named character, general, spy, …)"))
 
     for token in ("male", "female"):
         if token in (seg.lower() for seg in segments):
@@ -659,7 +659,7 @@ def _character(p: _Parser, i: int, s: str) -> None:
             node.fields[key] = int(hit.group(1))
             node.field_lines[key] = i
         else:
-            node.problems.append(f"character has no {key}")
+            node.problems.append(_i18n.msg("eng.campstrat.character_has_no", "character has no {key}", key=key))
 
     for seg in segments:
         bits = seg.split(None, 1)
@@ -667,16 +667,16 @@ def _character(p: _Parser, i: int, s: str) -> None:
             node.fields[bits[0].lower()] = bits[1].strip()
             node.field_lines[bits[0].lower()] = i
         elif len(bits) == 1 and bits[0].lower() in _TAIL_KEYS:
-            node.problems.append(f"{bits[0]} has no value")
+            node.problems.append(_i18n.msg("eng.campstrat.has_no_value", "{bits} has no value", bits=bits[0]))
     if segments and not segments[-1]:
-        node.problems.append("trailing comma leaves an empty field")
+        node.problems.append(_i18n.msg("eng.campstrat.trailing_comma_leaves_an_empty_field", "trailing comma leaves an empty field"))
 
 
 def _character_list(p: _Parser, i: int, s: str, word: str) -> None:
     """``traits Name 1, Other 2, …`` and ``ancillaries a, b, c``."""
     node = p.open_of("character")
     if node is None:
-        p.record(word, i).problems.append(f"{word} line with no character above it")
+        p.record(word, i).problems.append(_i18n.msg("eng.campstrat.line_with_no_character_above_it", "{word} line with no character above it", word=word))
         return
     body = s.split(None, 1)[1].strip() if len(s.split()) > 1 else ""
     items = [t.strip() for t in body.split(",") if t.strip()]
@@ -689,7 +689,7 @@ def _character_list(p: _Parser, i: int, s: str, word: str) -> None:
             if len(bits) == 2 and re.fullmatch(r"-?\d+", bits[1]):
                 traits[bits[0]] = int(bits[1])
             else:
-                node.problems.append(f"trait {item!r} has no level")
+                node.problems.append(_i18n.msg("eng.campstrat.trait_has_no_level", "trait {item} has no level", item=repr(item)))
         node.fields["traits"] = traits
     node.field_lines[word] = i
     node.end = i
@@ -712,8 +712,7 @@ def _unit(p: _Parser, i: int, s: str) -> None:
     node = p.record("unit", i)
     m = _UNIT.match(s)
     if not m:
-        node.problems.append(f"unit line does not read as "
-                             f"`unit <name> exp N armour N weapon_lvl N`: {s!r}")
+        node.problems.append(_i18n.msg("eng.campstrat.unit_line_does_not_read_as", "unit line does not read as `unit <name> exp N armour N weapon_lvl N`: {s}", s=repr(s)))
         node.name = s.split(None, 1)[1].strip() if len(s.split()) > 1 else ""
         node.fields["name"] = node.name
         return
@@ -721,11 +720,11 @@ def _unit(p: _Parser, i: int, s: str) -> None:
     node.fields.update(name=node.name, exp=int(m.group("exp")),
                        armour=int(m.group("armour")))
     if m.group("armour_key").lower() != "armour":
-        node.problems.append(f"{m.group('armour_key')!r} should be `armour`")
+        node.problems.append(_i18n.msg("eng.campstrat.should_be_armour", "{group} should be `armour`", group=repr(m.group('armour_key'))))
     if m.group("weapon_key").lower() != "weapon_lvl":
-        node.problems.append(f"{m.group('weapon_key')!r} should be `weapon_lvl`")
+        node.problems.append(_i18n.msg("eng.campstrat.should_be_weapon_lvl", "{group} should be `weapon_lvl`", group=repr(m.group('weapon_key'))))
     if m.group("weapon") is None:
-        node.problems.append("weapon level has no value")
+        node.problems.append(_i18n.msg("eng.campstrat.weapon_level_has_no_value", "weapon level has no value"))
     else:
         node.fields["weapon_lvl"] = int(m.group("weapon"))
     for k in node.fields:
@@ -744,7 +743,7 @@ def _character_record(p: _Parser, i: int, s: str) -> None:
     node = p.record("character_record", i)
     m = _RECORD.match(s)
     if not m:
-        node.problems.append(f"character_record has no name: {s!r}")
+        node.problems.append(_i18n.msg("eng.campstrat.character_record_has_no_name", "character_record has no name: {s}", s=repr(s)))
         return
     node.name = m.group("name").strip()
     node.fields["name"] = node.name
@@ -781,12 +780,12 @@ def _relative(p: _Parser, i: int, s: str) -> None:
     if names and names[-1].lower() == "end":
         names.pop()
     else:
-        node.problems.append("relative line does not end with `end`")
+        node.problems.append(_i18n.msg("eng.campstrat.relative_line_does_not_end_with", "relative line does not end with `end`"))
     node.fields["names"] = names
     node.field_lines["names"] = i
     node.name = names[0] if names else ""
     if len(names) < 2:
-        node.problems.append("a relative line names fewer than two people")
+        node.problems.append(_i18n.msg("eng.campstrat.a_relative_line_names_fewer_than", "a relative line names fewer than two people"))
 
 
 _STANDING = re.compile(r"^faction_standings\s+(?P<who>\w+)\s*,\s*"
@@ -821,8 +820,7 @@ def _standings(p: _Parser, i: int, s: str) -> None:
     node = p.record("faction_standings", i)
     m = _STANDING.match(s)
     if not m:
-        node.problems.append(f"faction_standings does not read as "
-                             f"`faction_standings <faction>, <value> <faction…>`: {s!r}")
+        node.problems.append(_i18n.msg("eng.campstrat.faction_standings_does_not_read_as", "faction_standings does not read as `faction_standings <faction>, <value> <faction…>`: {s}", s=repr(s)))
         return
     value = float(m.group("value"))
     pairs: List[Tuple[str, float]] = []
@@ -841,8 +839,7 @@ def _standings(p: _Parser, i: int, s: str) -> None:
     for k in ("faction", "value", "toward", "pairs"):
         node.field_lines[k] = i
     if not pairs:
-        node.problems.append("a faction_standings line names no faction to "
-                             "hold an opinion of")
+        node.problems.append(_i18n.msg("eng.campstrat.a_faction_standings_line_names_no", "a faction_standings line names no faction to hold an opinion of"))
 
 
 _RELATIONSHIP = re.compile(r"^(?:faction|action)_relationships\s+(?P<who>\w+)\s*,\s*"
@@ -853,8 +850,7 @@ def _relationships(p: _Parser, i: int, s: str) -> None:
     node = p.record("faction_relationships", i)
     m = _RELATIONSHIP.match(s)
     if not m:
-        node.problems.append(f"faction_relationships does not read as "
-                             f"`faction_relationships <faction>, <how> <faction…>`: {s!r}")
+        node.problems.append(_i18n.msg("eng.campstrat.faction_relationships_does_not_read_as", "faction_relationships does not read as `faction_relationships <faction>, <how> <faction…>`: {s}", s=repr(s)))
         return
     node.name = m.group("who")
     node.fields.update(faction=m.group("who"), relation=m.group("how").lower(),
@@ -979,8 +975,7 @@ def campaign_rel(campaign: str = DEFAULT_CAMPAIGN) -> str:
     rel = str(campaign or DEFAULT_CAMPAIGN).replace("\\", "/").strip("/")
     parts = [p for p in rel.split("/") if p]
     if not parts or ":" in rel or any(p in (".", "..") for p in parts):
-        raise ValueError(f"{campaign!r} is not a campaign inside "
-                         f"{CAMPAIGN_DIR_REL}")
+        raise ValueError(_i18n.msg("eng.campstrat.is_not_a_campaign_inside", "{campaign} is not a campaign inside {CAMPAIGN_DIR_REL}", campaign=repr(campaign), CAMPAIGN_DIR_REL=CAMPAIGN_DIR_REL))
     return "/".join(parts)
 
 

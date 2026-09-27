@@ -47,6 +47,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tests import _webtext  # noqa: E402
 
 from PIL import Image
 
@@ -287,7 +288,7 @@ finally:
 print("\n== 3. the cut-out rule belongs to the format it was measured on ==")
 print("   (read off the source - there is no GL context in this suite)")
 
-js = (ROOT / "web" / "js" / "viewer3d.js").read_text(encoding="utf-8")
+js = _webtext.read((ROOT / "web" / "js" / "viewer3d.js"))
 check("the discard is gated rather than unconditional",
       "if(uCutout > 0.5 && base.a < 0.35) discard;" in js
       and "\n  if(base.a < 0.35) discard;" not in js)

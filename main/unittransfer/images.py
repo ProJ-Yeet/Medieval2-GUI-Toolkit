@@ -45,6 +45,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from .logutil import file_op, log, stamp_written
+from . import i18n as _i18n
 
 #: What the engine reads. A picked file with one of these extensions is copied
 #: verbatim; anything else is converted (see :func:`encode`).
@@ -129,7 +130,7 @@ def parse_url(url: str) -> Dict[str, str]:
     # checked as well: these URLs are same-origin by construction, and one that
     # is not did not come from a picture this tool painted.
     if u.scheme or u.netloc or path not in ("/icon", "/building_icon"):
-        raise ValueError("that is not a picture this tool serves")
+        raise ValueError(_i18n.msg("eng.images.that_is_not_a_picture_this", "that is not a picture this tool serves"))
     q = urllib.parse.parse_qs(u.query)
     out = {k: (v[0] if v else "") for k, v in q.items()}
     out["_path"] = path
@@ -324,8 +325,7 @@ def reveal_target(mod, url: str, vanilla_root=None) -> Dict:
         return {"ok": True, "path": str(folder), "outside": False,
                 "source": "", "folder_only": True}
     return {"ok": False,
-            "error": "there is no file here yet, and no folder for one either - "
-                     "import a picture and it is created"}
+            "error": _i18n.msg("eng.images.there_is_no_file_here_yet", "there is no file here yet, and no folder for one either - import a picture and it is created")}
 
 
 # ------------------------------------------------------------- the report ----
@@ -425,7 +425,7 @@ def apply(mod, url: str, src_path: str, vanilla_root=None) -> Dict:
     if not p["ok"]:
         raise ValueError(p["error"] or "that picture cannot be replaced")
     if not src_path:
-        raise ValueError("no image was picked")
+        raise ValueError(_i18n.msg("eng.images.no_image_was_picked", "no image was picked"))
     src = Path(src_path)
     ext = Path(p["targets"][0]).suffix.lower()
     data = encode(src, ext)

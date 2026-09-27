@@ -101,12 +101,11 @@ function cmodMatch(k){
 function cmodHtml(){
   const k = state.cmod;
   if(!k) return '<div class="count">…</div>';
-  if(k.loading) return '<div class="count">finding the models…</div>';
+  if(k.loading) return `<div class="count">${tt('stratview.finding_the_models')}</div>`;
   if(k.err) return `<div class="w-warn">${esc(k.err)}</div>`;
   const models = k.models || [];
   if(!models.length)
-    return `<div class="count">this mod ships no <code>data/models_strat</code>,
-      so it uses the game's own strat models</div>`;
+    return `<div class="count">${tt('stratview.this_mod_ships_no_data_models')}</div>`;
 
   const shown = cmodMatch(k);
   const groups = new Map();
@@ -118,15 +117,14 @@ function cmodHtml(){
     <div class="k">${esc(group)} <span class="count">${list.length}</span></div>
     ${list.map(m => `<button class="cmodrow${k.chosen === m.rel ? ' on' : ''}"
         onclick="cmodShow('${q1(esc(m.rel))}')" title="${esc(m.rel)}"
-        >${esc(m.name)}<span class="count">${Math.round(m.bytes/1024)} KB</span></button>`
+        >${tt('stratview.kb',{name:esc(m.name),bytes:Math.round(m.bytes/1024)})}</button>`
       ).join('')}`).join('');
-  return `<label class="v3f"><span>Find</span>
+  return `<label class="v3f"><span>${tt('common.find')}</span>
       <input id="cmodFilter" type="text" value="${esc(k.filter)}"
-        placeholder="castle, general, symbol…"
+        placeholder="${ttA('stratview.castle_general_symbol')}"
         oninput="cmodFilter(this.value)"></label>
     <div class="count">${shown.length === models.length
-      ? `${models.length} model file${models.length === 1 ? '' : 's'} under
-         data/models_strat`
+      ? tt('stratview.model_file_under_data_models_strat',{models_n:models.length,models:models.length === 1 ? '' : 's'})
       : `${shown.length} of ${models.length}`}</div>
-    <div class="cmodlist">${rows || '<div class="count">nothing by that name</div>'}</div>`;
+    <div class="cmodlist">${rows || `<div class="count">${tt('stratview.nothing_by_that_name')}</div>`}</div>`;
 }

@@ -54,6 +54,7 @@ from typing import Dict, List, Optional, Tuple
 
 from . import campmap, campstrat, keyblock as kb, mapquery, mercpools, stringsbin
 from .triggers import split_lines
+from . import i18n as _i18n
 
 #: the campaign files are plain 8-bit text; the localisation file is UTF-16
 ENCODING = "latin-1"
@@ -417,8 +418,7 @@ def parse_movies(text: str) -> MovieFile:
         cur.end = i + 1
         m = _VALUE.match(code)
         if m is None:
-            mf.warnings.append(f"line {i + 1}: `{code[:40]}` is not a "
-                               "<slot>value</slot> line")
+            mf.warnings.append(_i18n.msg("eng.campfiles.line_is_not_a_value_line", "line {x}: `{code}` is not a <slot>value</slot> line", x=i + 1, code=code[:40]))
             continue
         tag, value = m.group(1), m.group(2).strip()
         if tag == "name":
@@ -431,16 +431,14 @@ def parse_movies(text: str) -> MovieFile:
                 + kb.and_list(list(MOVIE_SLOTS)))
             continue
         if tag in cur.lines:
-            mf.warnings.append(f"line {i + 1}: a second <{tag}> for "
-                               f"{cur.faction or '(unnamed)'}")
+            mf.warnings.append(_i18n.msg("eng.campfiles.line_a_second_for", "line {x}: a second <{tag}> for {x2}", x=i + 1, tag=tag, x2=cur.faction or '(unnamed)'))
         cur.values[tag] = value
         cur.lines[tag] = i
     for rec in mf.records:
         if not rec.faction:
-            mf.warnings.append(f"line {rec.start + 1}: this <faction> block has "
-                               "no <name>")
+            mf.warnings.append(_i18n.msg("eng.campfiles.line_this_block_has_no", "line {x}: this <faction> block has no <name>", x=rec.start + 1))
     if mf.close_line < 0:
-        mf.warnings.append("this file has no closing </faction_movies>")
+        mf.warnings.append(_i18n.msg("eng.campfiles.this_file_has_no_closing", "this file has no closing </faction_movies>"))
     return mf
 
 
@@ -451,7 +449,7 @@ def movies_path(mod, campaign: str = DEFAULT_CAMPAIGN) -> Path:
 def read_movies(mod, campaign: str = DEFAULT_CAMPAIGN) -> Tuple[MovieFile, str]:
     path = movies_path(mod, campaign)
     if not path.exists():
-        raise CampFileError(f"{campaign} has no {MOVIES_NAME}")
+        raise CampFileError(_i18n.msg("eng.campfiles.has_no", "{campaign} has no {MOVIES_NAME}", campaign=campaign, MOVIES_NAME=MOVIES_NAME))
     text = kb.read_text(path, ENCODING)
     return parse_movies(text), text
 
@@ -491,7 +489,7 @@ def render_movies(mf: MovieFile, rec: MovieRecord, edits: Dict) -> str:
     if "faction" in edits:
         name = str(edits["faction"] or "").strip()
         if not name:
-            raise CampFileError("a <faction> block needs a <name>", rec.start + 1)
+            raise CampFileError(_i18n.msg("eng.campfiles.a_block_needs_a", "a <faction> block needs a <name>"), rec.start + 1)
         if name != rec.faction and rec.name_line >= 0:
             sp.replace(rec.name_line, f"{inner}<name>{name}</name>")
     if added:
@@ -512,7 +510,7 @@ def new_movie_block(faction: str, edits: Dict, outer: str = "\t",
     """A whole ``<faction>`` block, in the order the real files write it."""
     name = str(faction or "").strip()
     if not name:
-        raise CampFileError("a new <faction> block needs a name")
+        raise CampFileError(_i18n.msg("eng.campfiles.a_new_block_needs_a_name", "a new <faction> block needs a name"))
     rows = [f"{outer}<faction>", f"{inner}<name>{name}</name>"]
     for slot in MOVIE_SLOTS:
         value = str(edits.get(slot) or "").strip()
@@ -525,8 +523,7 @@ def new_movie_block(faction: str, edits: Dict, outer: str = "\t",
 def insert_movie_block(mf: MovieFile, rows: List[str]) -> str:
     """A new block goes immediately above ``</faction_movies>``."""
     if mf.close_line < 0:
-        raise CampFileError("this file has no closing </faction_movies> to put a "
-                            "faction in front of")
+        raise CampFileError(_i18n.msg("eng.campfiles.this_file_has_no_closing_to", "this file has no closing </faction_movies> to put a faction in front of"))
     lines = list(mf.lines)
     lines[mf.close_line:mf.close_line] = rows
     out = mf.newline.join(lines)
@@ -763,8 +760,7 @@ def plan(mod, body: dict) -> CampFilePlan:
                      action=str(body.get("action") or "edit"),
                      name=str(body.get("name") or "").strip())
     if p.what not in WHAT:
-        p.errors.append(f"a save is about {kb.and_list(list(WHAT))}, not "
-                        f"{p.what!r}")
+        p.errors.append(_i18n.msg("eng.campfiles.a_save_is_about_not", "a save is about {and_list}, not {what}", and_list=kb.and_list(list(WHAT)), what=repr(p.what)))
         return p
     try:
         if p.what == "descriptions":
@@ -779,7 +775,7 @@ def plan(mod, body: dict) -> CampFilePlan:
         p.errors.append(e.message)
         return p
     if not p.text and not p.loc_writes and not p.errors:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.campfiles.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -809,11 +805,9 @@ def _plan_descriptions(p: CampFilePlan, edits: Dict) -> None:
         bin_path = stringsbin.bin_path_for(descr_path(p.mod))
         if not bin_path.exists():
             raise CampFileError(
-                f"{getattr(p.mod, 'name', '?')} has neither {DESCR_REL} nor the "
-                "compiled archive beside it, so there is nothing to write into")
+                _i18n.msg("eng.campfiles.has_neither_nor_the_compiled_archive", "{getattr} has neither {DESCR_REL} nor the compiled archive beside it, so there is nothing to write into", getattr=getattr(p.mod, 'name', '?'), DESCR_REL=DESCR_REL))
         p.warnings.append(
-            f"this mod ships only {bin_path.name}, so the keys go straight into "
-            "the compiled archive")
+            _i18n.msg("eng.campfiles.this_mod_ships_only_so_the", "this mod ships only {name}, so the keys go straight into the compiled archive", name=bin_path.name))
 
 
 def _plan_movies(p: CampFilePlan, edits: Dict) -> None:
@@ -822,10 +816,10 @@ def _plan_movies(p: CampFilePlan, edits: Dict) -> None:
     rec = mf.get(p.name)
     if p.action == "add":
         if rec is not None:
-            p.errors.append(f"{p.name} already has a <faction> block")
+            p.errors.append(_i18n.msg("eng.campfiles.already_has_a_block", "{name} already has a <faction> block", name=p.name))
             return
         if not p.name:
-            p.errors.append("a new <faction> block needs a faction")
+            p.errors.append(_i18n.msg("eng.campfiles.a_new_block_needs_a_faction", "a new <faction> block needs a faction"))
             return
         outer, inner = ("\t", "\t\t")
         if mf.records:
@@ -833,7 +827,7 @@ def _plan_movies(p: CampFilePlan, edits: Dict) -> None:
         text = insert_movie_block(mf, new_movie_block(p.name, edits, outer, inner))
         p.changes.append(f"+ <faction>{p.name}</faction>")
     elif rec is None:
-        p.errors.append(f"{p.name} has no <faction> block in {MOVIES_NAME}")
+        p.errors.append(_i18n.msg("eng.campfiles.has_no_block_in", "{name} has no <faction> block in {MOVIES_NAME}", name=p.name, MOVIES_NAME=MOVIES_NAME))
         return
     elif p.action == "delete":
         text = remove_movie_block(mf, rec)
@@ -860,7 +854,7 @@ def _plan_mercenaries(p: CampFilePlan, edits: Dict) -> None:
     """Move one province between pools. ``name`` is the region."""
     mf, original = read_mercs(p.mod, p.campaign)
     if not p.name:
-        raise CampFileError("moving a mercenary pool needs a region")
+        raise CampFileError(_i18n.msg("eng.campfiles.moving_a_mercenary_pool_needs_a", "moving a mercenary pool needs a region"))
     pool = str(edits.get("pool") or "").strip()
     before = mf.pool_of(p.name)
     if pool == before:
@@ -872,7 +866,7 @@ def _plan_mercenaries(p: CampFilePlan, edits: Dict) -> None:
                      f"{pool or '(none)'}")
     if not pool:
         p.warnings.append(
-            f"{p.name} is now in no pool, so no mercenary is recruitable there")
+            _i18n.msg("eng.campfiles.is_now_in_no_pool_so", "{name} is now in no pool, so no mercenary is recruitable there", name=p.name))
     p.findings = check_mercs(parse_mercs(text))
 
 
@@ -897,10 +891,9 @@ def _plan_music(p: CampFilePlan, edits: Dict) -> None:
     original = kb.read_text(path, ENCODING) if path.is_file() else ""
     if not original:
         raise CampFileError(
-            f"{getattr(p.mod, 'name', '?')} has no {mapquery.MUSIC_REL}, so "
-            f"there is no music type to put a province in")
+            _i18n.msg("eng.campfiles.has_no_so_there_is_no", "{getattr} has no {MUSIC_REL}, so there is no music type to put a province in", getattr=getattr(p.mod, 'name', '?'), MUSIC_REL=mapquery.MUSIC_REL))
     if not p.name:
-        raise CampFileError("moving a music type needs a region")
+        raise CampFileError(_i18n.msg("eng.campfiles.moving_a_music_type_needs_a", "moving a music type needs a region"))
     want = str(edits.get("music_type") or "").strip()
     was = mapquery.music_view(p.mod, p.name)
     if want == was["type"] and not was["also"] and not was["twice"]:
@@ -928,8 +921,7 @@ def _plan_music(p: CampFilePlan, edits: Dict) -> None:
                          f"{was['type']} and is named once now")
     if not want:
         p.warnings.append(
-            f"{p.name} now has no music type, and the engine says so out loud "
-            f"at load: \"music_type not found for regions: {p.name}\"")
+            _i18n.msg("eng.campfiles.now_has_no_music_type_and", "{name} now has no music type, and the engine says so out loud at load: \"music_type not found for regions: {name2}\"", name=p.name, name2=p.name))
 
 
 def apply(p: CampFilePlan) -> Dict:
@@ -943,7 +935,7 @@ def apply(p: CampFilePlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text and not p.loc_writes:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.campfiles.nothing_to_change", "nothing to change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

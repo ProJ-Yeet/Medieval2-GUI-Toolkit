@@ -82,7 +82,7 @@ function fauRow(slot){
 //: `· 2 gaps` for the faction picker; nothing while it is loading or clean.
 function fauBadge(slot){
   const f = fauRow(slot);
-  return f && f.gaps ? ` · ${f.gaps} gap${f.gaps === 1 ? '' : 's'}` : '';
+  return f && f.gaps ? tt('facaudit.gap',{gaps:f.gaps,x:f.gaps === 1 ? '' : 's'}) : '';
 }
 
 function fauPaint(){
@@ -116,43 +116,38 @@ const FAU_MARK = {ok: '<span class="w-good">✓</span>',
 
 function fauHtml(){
   const k = state.fau, slot = fauSlot();
-  if(!k || k.loading) return `<div class="fauhead count">Checking every file that
-    should name this faction…</div>`;
+  if(!k || k.loading) return `<div class="fauhead count">${tt('facaudit.checking_every_file_that_should_name')}</div>`;
   if(k.err) return `<div class="fauhead w-warn">${esc(k.err)}</div>`;
   if(!slot) return '';
   const f = fauRow(slot);
-  if(!f) return `<div class="fauhead count">${esc(slot)} is not in the audit - it is
-    in neither descr_sm_factions.txt nor this campaign.</div>`;
+  if(!f) return `<div class="fauhead count">${tt('facaudit.is_not_in_the_audit_it',{slot:esc(slot)})}</div>`;
   const tpl = k.tpl[slot] || f.template;
   const lack = f.rows.filter(r => r.state === 'missing');
   const copyable = lack.filter(r => r.fix === 'clone' && r.level === 'gap' && fauHas(tpl, r.id));
   const head = f.gaps
-    ? `<span class="w-bad">✗ ${f.gaps} gap${f.gaps === 1 ? '' : 's'}</span>`
-    : `<span class="w-good">✓ Complete</span>`;
-  const notes = f.notes ? ` <span class="count">· ${f.notes} note${
-    f.notes === 1 ? '' : 's'}</span>` : '';
+    ? `<span class="w-bad">${tt('facaudit.gap_2',{gaps:f.gaps,x:f.gaps === 1 ? '' : 's'})}</span>`
+    : `<span class="w-good">${tt('facaudit.complete')}</span>`;
+  const notes = f.notes ? ` <span class="count">${tt('facaudit.note',{notes:f.notes,x:f.notes === 1 ? '' : 's'})}</span>` : '';
   const names = lack.filter(r => r.level === 'gap').map(r => r.label);
   return `<div class="fauhead">
       <button class="fautog" onclick="fauToggle()"
-        title="Every file that should name this faction, and whether it does">${
-        k.open ? '▾' : '▸'} Is it complete?</button>
+        title="${ttA('facaudit.every_file_that_should_name_this')}">${tt('facaudit.is_it_complete',{open:k.open ? '▾' : '▸'})}</button>
       ${head}${notes}
       ${!k.open && names.length ? `<span class="count">${esc(names.join(', '))}</span>` : ''}
     </div>
     ${k.open ? `<table class="fautab">${f.rows.map(r => fauRowHtml(f, r, tpl)).join('')}</table>
     ${f.in_roster && lack.some(r => r.fix === 'clone') ? `<div class="faufix">
-      <label>Copy from
+      <label>${tt('facaudit.copy_from')}
         <select onchange="fauPickTemplate('${esc(slot)}', this.value)">
           ${fauTemplates(slot).map(t => `<option value="${esc(t.slot)}"${
             t.slot === tpl ? ' selected' : ''}>${esc(t.label)}${
-            t.gaps ? ` · ${t.gaps} gap${t.gaps === 1 ? '' : 's'}` : ''}</option>`).join('')}
+            t.gaps ? tt('facaudit.gap_3',{gaps:t.gaps,gaps2:t.gaps === 1 ? '' : 's'}) : ''}</option>`).join('')}
         </select></label>
       <button class="primary" ${copyable.length && !k.busy ? '' : 'disabled'}
         onclick="fauRepair('${esc(slot)}', null)"
-        title="Every gap the template can fill, in one save. A note is copied from its own row"
-        >Copy ${copyable.length} gap${copyable.length === 1 ? '' : 's'} from ${esc(tpl)}</button>
-      <span class="count">The same records ＋ Add a faction would have written,
-        copied only where this faction has none. One backup; 🕑 Log undoes it.</span>
+        title="${ttA('facaudit.every_gap_the_template_can_fill')}"
+        >${tt('facaudit.copy_gap_from',{copyable_n:copyable.length,copyable:copyable.length === 1 ? '' : 's',tpl:esc(tpl)})}</button>
+      <span class="count">${tt('facaudit.the_same_records_add_a_faction')}</span>
     </div>` : ''}` : ''}`;
 }
 
@@ -181,22 +176,22 @@ function fauRowHtml(f, r, tpl){
   if(miss && r.fix === 'clone' && f.in_roster){
     fix = fauHas(tpl, r.id)
       ? `<button onclick="fauRepair('${esc(f.slot)}', '${r.id}')"
-          ${state.fau.busy ? 'disabled' : ''}>Copy from ${esc(tpl)}</button>`
-      : `<span class="count">${esc(tpl)} has none either</span>`;
+          ${state.fau.busy ? 'disabled' : ''}>${tt('facaudit.copy_from_2',{tpl:esc(tpl)})}</button>`
+      : `<span class="count">${tt('facaudit.has_none_either',{tpl:esc(tpl)})}</span>`;
   }else if(miss && r.fix === 'strat' && state.mode === 'campmap' && state.cj && state.cj.d){
     fix = `<button onclick="fauGoCreate('${esc(f.slot)}')"
-      title="The campaign screen's New faction tab writes a descr_strat.txt entry">New faction tab</button>`;
+      title="${ttA('facaudit.the_campaign_screens_new_faction_tab')}">${tt('facaudit.new_faction_tab')}</button>`;
   }else if(miss && r.fix === 'wins' && state.mode === 'campmap' && state.cj && state.cj.d){
-    fix = `<button onclick="fauGoWins('${esc(f.slot)}')">Add a record</button>`;
+    fix = `<button onclick="fauGoWins('${esc(f.slot)}')">${tt('facaudit.add_a_record')}</button>`;
   }else if(miss && r.fix === 'addfaction' && typeof facCloneOpen === 'function'){
     fix = `<button onclick="fauGoAdd('${esc(f.slot)}')"
-      title="Writes the slot into all thirteen files at once, copied from a donor">＋ Add a faction</button>`;
+      title="${ttA('facaudit.writes_the_slot_into_all_thirteen')}">${tt('facaudit.add_a_faction')}</button>`;
   }
   return `<tr class="${miss ? (r.level === 'gap' ? 'gap' : 'note') : ''}">
     <td class="faumk">${mark}</td>
     <td><b>${esc(r.label)}</b>${r.level === 'note' ? ' <span class="count">(note)</span>' : ''}
       <div class="count">${esc(r.detail)}</div></td>
-    <td class="faurel"><a class="ulink" title="${esc(r.why)} - open the file as text"
+    <td class="faurel"><a class="ulink" title="${ttA('facaudit.open_the_file_as_text',{why:esc(r.why)})}"
       onclick="rtOpen('${q1(esc(fauRel(r)))}')">${esc(r.rel)}</a></td>
     <td class="faubtn">${fix}</td>
   </tr>`;
@@ -207,7 +202,7 @@ function fauRowHtml(f, r, tpl){
 function fauRel(r){
   if(r.id !== 'campaign' && r.id !== 'wins') return r.rel;
   const camp = (state.fau && state.fau.d && state.fau.d.campaign) || 'imperial_campaign';
-  return `world/maps/campaign/${camp}/${r.rel}`;
+  return tt('facaudit.world_maps_campaign',{camp,rel:r.rel});
 }
 
 async function fauRepair(slot, id){
@@ -225,18 +220,18 @@ async function fauRepair(slot, id){
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
   const warn = (p.warnings || []).map(x => '⚠ ' + x);
-  if(!confirm(`Copy into ${slot} from ${tpl}?\n\n`
-    + ((p.changes || []).join('\n') || 'no visible change')
+  if(!confirm(tt('facaudit.copy_into_from',{slot,tpl})
+    + ((p.changes || []).join('\n') || tt('common.no_visible_change'))
     + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   k.busy = true; fauPaint();
   let res;
   try{ res = await api.post('/api/factions/repair_apply', body); }
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); fauPaint(); return; }
-  toast(`Copied ${(res.files || []).length} file(s) from ${tpl}. 🕑 Log can undo it.`);
-  activity('faction repair', `${k.mod}: ${slot} from ${tpl}`);
+  toast(tt('facaudit.copied_file_s_from_log_can',{n:(res.files || []).length,tpl}));
+  activity(tt('facaudit.faction_repair'), tt('facaudit.from',{mod:k.mod,slot,tpl}));
   // the roster, the text keys and the counts all moved
   if(state.fac && state.fac.mod === k.mod && typeof facFetch === 'function'){
     try{ await facFetch(k.mod); }catch(e){}

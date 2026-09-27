@@ -26,9 +26,9 @@ async function mpOpen(label,part){
   const host=gfHost(); if(!host)return;
   const modal=document.getElementById('modal');
   mpBack={html:modal.innerHTML,cls:modal.className,label,part,scroll:stashPlace()};
-  modal.innerHTML=`<h2>Pick a battle-model entry</h2>
-    <div class="mbody"><div class="empty">Reading the modeldb…</div></div>
-    <div class="foot"><button onclick="mpCancel()">Cancel</button></div>`;
+  modal.innerHTML=`<h2>${tt('modelpicker.pick_a_battle_model_entry')}</h2>
+    <div class="mbody"><div class="empty">${tt('modelpicker.reading_the_modeldb')}</div></div>
+    <div class="foot"><button onclick="mpCancel()">${tt('common.cancel')}</button></div>`;
   const mod=(state.ed&&state.ed.mod)||state.src;
   if(!state.mp||state.mp.mod!==mod){
     let r;
@@ -88,36 +88,33 @@ function mpRender(){
   const s=state.mp;
   const tab=(k,t)=>`<button class="${s.tab===k?'on':''}" onclick="mpSet('tab','${k}')">${t}</button>`;
   const rows=s.tab==='unit'?[]:mpShown().slice(0,400);
-  document.getElementById('modal').innerHTML=`<h2>Pick a battle-model entry
-      ${s.cur?`<span class="pill">now: ${esc(s.cur)}</span>`:''}</h2>
+  document.getElementById('modal').innerHTML=`<h2>${tt('modelpicker.pick_a_battle_model_entry_2',{cur:s.cur?`<span class="pill">${tt('modelpicker.now',{cur:esc(s.cur)})}</span>`:''})}</h2>
     <div class="mbody">
-      <div class="mptabs">${tab('skel','By skeleton')}${tab('name','By name')}
-        ${tab('unit','From another unit')}</div>
+      <div class="mptabs">${tab('skel',tt('modelpicker.by_skeleton'))}${tab('name',tt('modelpicker.by_name'))}
+        ${tab('unit',tt('modelpicker.from_another_unit'))}</div>
       ${s.tab==='unit'?mpUnitBody():`
         <div class="basebar">
           ${s.tab==='skel'?`<select onchange="mpSet('skel',this.value)" style="max-width:280px">
-            <option value="">Every skeleton</option>
+            <option value="">${tt('modelpicker.every_skeleton')}</option>
             ${s.skeletons.map(k=>`<option value="${esc(k.name)}" ${k.name===s.skel?'selected':''}
-              >${esc(k.name)}: ${k.entries} entr${k.entries===1?'y':'ies'}</option>`).join('')}
+              >${tt('modelpicker.entr_2',{name:esc(k.name),x:k.entries,x2:k.entries===1?'y':'ies'})}</option>`).join('')}
           </select>`:''}
-          <input id="mpQ" placeholder="${s.tab==='skel'?'Narrow these…':'Search entries and skeletons…'}"
+          <input id="mpQ" placeholder="${s.tab==='skel'?tt('modelpicker.narrow_these'):tt('modelpicker.search_entries_and_skeletons')}"
             value="${esc(s.q||'')}" oninput="mpSet('q',this.value)" style="flex:1">
-          <span class="count">${mpShown().length} entr${mpShown().length===1?'y':'ies'}</span>
+          <span class="count">${tt('modelpicker.entr',{n:mpShown().length,mpShown:mpShown().length===1?'y':'ies'})}</span>
         </div>
         <div class="mplist" id="mpList">${rows.length?rows.map(e=>`
           <div class="mprow ${e.name===s.cur?'on':''}" onclick="mpPick('${q1(esc(e.name))}')">
             <span class="mn">${esc(e.name)}</span>
-            <span class="msk">${esc(e.skeletons.join(' + ')||'no skeleton')}</span>
-            <span class="count">${e.lods} LOD · ${e.skins} skin</span>
-            <span class="mu">${e.pending?'<span class="w-good">staged, saves with this unit</span>'
+            <span class="msk">${esc(e.skeletons.join(' + ')||tt('modelpicker.no_skeleton'))}</span>
+            ${tt('modelpicker.lod_skin',{lods:e.lods,skins:e.skins,x:e.pending?`<span class="w-good">${tt('modelpicker.staged_saves_with_this_unit')}</span>`
               :e.used_by?`${e.used_by} user${e.used_by===1?'':'s'}`
-              :'<span class="w-warn">unused</span>'}</span>
-          </div>`).join(''):'<div class="caprow"><span class="count">Nothing matches.</span></div>'}</div>
-        ${mpShown().length>400?`<div class="bnote">Showing the first 400. Narrow it down.</div>`:''}
-        <div class="bnote">The skeleton is what decides how the man moves. An entry with a
-          different one will animate differently even if the meshes look the same.</div>`}
+              :`<span class="w-warn">${tt('modelpicker.unused')}</span>`})}
+          </div>`).join(''):`<div class="caprow"><span class="count">${tt('common.nothing_matches')}</span></div>`}</div>
+        ${mpShown().length>400?`<div class="bnote">${tt('modelpicker.showing_the_first_400_narrow_it')}</div>`:''}
+        <div class="bnote">${tt('modelpicker.the_skeleton_is_what_decides_how')}</div>`}
     </div>
-    <div class="foot"><button onclick="mpCancel()">Cancel</button></div>`;
+    <div class="foot"><button onclick="mpCancel()">${tt('common.cancel')}</button></div>`;
 }
 function mpUnitBody(){
   const s=state.mp,q=(s.uq||'').trim().toLowerCase();
@@ -125,16 +122,15 @@ function mpUnitBody(){
     .filter(u=>u.type!==(state.ed&&state.ed.unit)
       &&(!q||u.name.toLowerCase().includes(q)||u.type.toLowerCase().includes(q)))
     .slice(0,300);
-  return `<div class="basebar"><input id="mpUQ" placeholder="Filter units…" value="${esc(s.uq||'')}"
+  return `<div class="basebar"><input id="mpUQ" placeholder="${ttA('modelpicker.filter_units')}" value="${esc(s.uq||'')}"
       oninput="mpSet('uq',this.value)" style="flex:1"></div>
     <div class="baselist" style="max-height:300px">${units.map(u=>`
       <div class="baserow" onclick="mpTakeUnit('${q1(esc(u.type))}')">
         <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.ed?state.ed.mod:state.src,u.type)}">
         <div><div class="bn">${esc(u.name)}</div>
           <div class="bs">${esc(u.type)}${u.soldier_model?` · <code>${esc(u.soldier_model)}</code>`:''}</div></div>
-      </div>`).join('')||'<div class="caprow"><span class="count">No units match.</span></div>'}</div>
-    <div class="bnote">Takes that unit's whole <code>soldier</code> line (model, men, extras and mass)
-      not just the entry name. The men count is usually what you want to check afterwards.</div>`;
+      </div>`).join('')||`<div class="caprow"><span class="count">${tt('common.no_units_match')}</span></div>`}</div>
+    <div class="bnote">${tt('modelpicker.takes_that_units_whole_soldier_line')}</div>`;
 }
 // Write one part back through the same path the boxes use, then reopen the form.
 function mpPick(name){
@@ -144,22 +140,22 @@ function mpPick(name){
   const p=gfParse(spec,host.get(b.label));
   if(p.ok){ p.parts[b.part]=name; host.set(b.label,gfBuild(spec,p.parts)); host.stale(); }
   mpCancel();
-  toast(`Model set to ${name}.`);
+  toast(tt('modelpicker.model_set_to',{name}));
 }
 async function mpTakeUnit(type){
   const b=mpBack; if(!b)return;
   const mod=(state.ed&&state.ed.mod)||state.src;
   let d;
   try{ d=await api.get(`/api/edit/unit?mod=${enc(mod)}&type=${enc(type)}`); }
-  catch(e){ return toast('Could not read '+type+': '+e); }
+  catch(e){ return toast(tt('modelpicker.could_not_read')+type+': '+e); }
   if(d.error)return toast(d.error);
   // fields come back as [label, value] pairs, in file order
   const line=(d.fields||[]).find(f=>f[0]===gfKey(b.label));
-  if(!line||!line[1])return toast(`${type} has no ${gfKey(b.label)} line.`);
+  if(!line||!line[1])return toast(tt('modelpicker.has_no_line',{type,x:gfKey(b.label)}));
   const host=gfHost(); if(!host)return mpCancel();
   host.set(b.label,line[1]); host.stale();
   mpCancel();
-  toast(`${gfKey(b.label)} line copied from ${type}: ${line[1]}`,4600);
+  toast(tt('modelpicker.line_copied_from',{x:gfKey(b.label),type,line:line[1]}),4600);
 }
 
 /* ---- the widgets a plain box cannot do ---- */
@@ -171,7 +167,7 @@ function gfWidget(host,label,spec,cur){
   if(spec.w==='ugmodels')return host.richArmour?`<div class="gfrow">${edArmourField(label,cur)}</div>`
     :gfListWidget(host,label,cur,'model');
   if(spec.w==='uglevels')return host.richArmour
-    ?`<div class="gfrow"><div class="gfpart grow"><span class="pl">smith level per tier</span>
+    ?`<div class="gfrow"><div class="gfpart grow"><span class="pl">${tt('modelpicker.smith_level_per_tier')}</span>
         <input data-gfraw="${esc(label)}" value="${esc(cur)}" spellcheck="false"></div></div>`
     :gfListWidget(host,label,cur,'');
   return '';
@@ -182,9 +178,9 @@ function gfListWidget(host,label,cur,vocabName){
   return `<div class="gfrow"><div style="flex:1;min-width:0">
     ${gfChips(host,label,items)}
     <div class="barrow">
-      <input id="${gfAddId(label)}" placeholder="add…" style="width:190px;font-size:12px;padding:3px 7px"
-        ${vocabName?`list="gfdl-${esc(vocabName)}"`:''}>
-      <button onclick="gfListAdd('${q1(esc(label))}')">Add</button>
+      <input id="${gfAddId(label)}" placeholder="${ttA('modelpicker.add')}" style="width:190px;font-size:12px;padding:3px 7px"
+        ${vocabName?tt('modelpicker.list_gfdl',{vocabName:esc(vocabName)}):''}>
+      <button onclick="gfListAdd('${q1(esc(label))}')">${tt('common.add_2')}</button>
     </div></div></div>`;
 }
 function gfListAdd(label){
@@ -210,12 +206,12 @@ function gfChips(host,label,items){
       ondragstart="gfDragStart(event,'${q1(esc(label))}',${i})"
       ondragover="gfDragOver(event,'${q1(esc(label))}')" ondragleave="edDragLeave(event)"
       ondragend="edDragEnd(event)" ondrop="gfDrop(event,'${q1(esc(label))}',${i})"
-      title="${was.has(v)?'drag to reorder':'Added by you · drag to reorder'}">
+      title="${was.has(v)?tt('modelpicker.drag_to_reorder'):tt('modelpicker.added_by_you_drag_to_reorder')}">
       <span class="g">⠿</span><span class="${i===0?'first':''}">${esc(v)}</span>
-      <button class="x" title="Remove ${esc(v)}"
+      <button class="x" title="${ttA('modelpicker.remove',{x:esc(v)})}"
         onclick="gfListRemove('${q1(esc(label))}',${i})">✕</button></span>`).join('')
-    ||'<span class="count">Empty</span>'}
-    ${gone.map(v=>`<span class="chipd gone" title="Removed by you. Click to put it back."
+    ||`<span class="count">${tt('modelpicker.empty')}</span>`}
+    ${gone.map(v=>`<span class="chipd gone" title="${ttA('modelpicker.removed_by_you_click_to_put')}"
       onclick="gfListRestore('${q1(esc(label))}','${q1(esc(v))}')">${esc(v)}</span>`).join('')}</div>`;
 }
 function gfListRestore(label,v){
@@ -260,20 +256,18 @@ function gfAttrWidget(host,label,cur){
   return `<div class="gfrow"><div style="flex:1;min-width:0">
     ${gfChips(host,label,have)}
     <div class="barrow">
-      <details class="drop"><summary>▾ Abilities: ${have.filter(a=>!isAI(a)).length} on</summary>
+      <details class="drop"><summary>${tt('modelpicker.abilities_on',{n:have.filter(a=>!isAI(a)).length})}</summary>
         <div class="dropbody"><div class="faclist" style="border:none;padding:0;max-height:none">
           ${abilities.map(box).join('')}</div></div></details>
-      <details class="drop"><summary>▾ AI hints: ${have.filter(isAI).length} on</summary>
-        <div class="dropbody"><div class="count" style="margin-bottom:6px">These change nothing about the
-          unit itself; they tell the campaign AI what kind of unit it is looking at.</div>
+      <details class="drop"><summary>${tt('modelpicker.ai_hints_on',{n:have.filter(isAI).length})}</summary>
+        <div class="dropbody"><div class="count" style="margin-bottom:6px">${tt('modelpicker.these_change_nothing_about_the_unit')}</div>
           <div class="faclist" style="border:none;padding:0;max-height:none">${hints.map(box).join('')}</div>
         </div></details>
-      <input id="${gfAddId(label)}" list="gfdl-unit_attr" placeholder="add your own…"
+      <input id="${gfAddId(label)}" list="gfdl-unit_attr" placeholder="${ttA('modelpicker.add_your_own')}"
         style="width:170px;font-size:12px;padding:3px 7px">
-      <button onclick="gfListAdd('${q1(esc(label))}')">Add</button>
+      <button onclick="gfListAdd('${q1(esc(label))}')">${tt('common.add_2')}</button>
     </div>
-    ${unknown.length?`<div class="gfnote">Not in this mod’s usual set:
-      <b>${unknown.map(esc).join(', ')}</b>, kept as typed.</div>`:''}
+    ${unknown.length?`<div class="gfnote">${tt('modelpicker.not_in_this_mods_usual_set',{unknown:unknown.map(esc).join(', ')})}</div>`:''}
   </div></div>`;
 }
 // stat_pri_attr / stat_sec_attr / stat_ter_attr: same idea, but "empty" is the
@@ -286,17 +280,17 @@ function gfWeaponAttrWidget(host,label,cur){
   return `<div class="gfrow"><div style="flex:1;min-width:0">
     ${gfChips(host,label,have.length?have:[])}
     <div class="barrow">
-      <details class="drop"><summary>▾ Choose attributes: ${have.length} on</summary>
+      <details class="drop"><summary>${tt('modelpicker.choose_attributes_on',{have_n:have.length})}</summary>
         <div class="dropbody"><div class="faclist" style="border:none;padding:0;max-height:none">
           ${all.map(a=>facCheckRow(a,'',
             `gfWAttrToggle('${q1(esc(label))}','${q1(esc(a))}',this.checked)`,
             haveSet.has(a),'',haveSet.has(a)!==wasSet.has(a))).join('')}
         </div></div></details>
-      <input id="${gfAddId(label)}" list="gfdl-weapon_attr" placeholder="add your own…"
+      <input id="${gfAddId(label)}" list="gfdl-weapon_attr" placeholder="${ttA('modelpicker.add_your_own')}"
         style="width:170px;font-size:12px;padding:3px 7px">
-      <button onclick="gfListAdd('${q1(esc(label))}')">Add</button>
+      <button onclick="gfListAdd('${q1(esc(label))}')">${tt('common.add_2')}</button>
     </div>
-    ${have.length?'':'<div class="gfnote">None, so the line is written as <code>no</code>.</div>'}
+    ${have.length?'':`<div class="gfnote">${tt('modelpicker.none_so_the_line_is_written')}</div>`}
   </div></div>`;
 }
 function gfWAttrToggle(label,attr,on){
@@ -334,16 +328,16 @@ function gfFactionWidget(host,label,cur){
   return `<div class="gfrow"><div style="flex:1;min-width:0">
     ${gfChips(host,label,list)}
     <div class="barrow">
-      <details class="drop"><summary>▾ Choose factions: ${list.length} selected</summary>
+      <details class="drop"><summary>${tt('modelpicker.choose_factions_selected',{list_n:list.length})}</summary>
         <div class="dropbody"><div class="faclist" style="border:none;padding:0;max-height:none">
           ${all.map(f=>facCheckRow(f,gfFacName(host,f),
               `gfListToggle('${q1(esc(label))}','${q1(esc(f))}',this.checked)`,
               chosen.has(f),'',chosen.has(f)!==wasSet.has(f))).join('')}
         </div></div></details>
       ${isEra&&own.length?`<button onclick="gfSetList('${q1(esc(label))}',${
-        JSON.stringify(own).replace(/"/g,'&quot;')})" title="Replace this era with the ownership line"
-        >Copy ownership (${own.length})</button>`:''}
-      <button onclick="gfSetList('${q1(esc(label))}',[])">Clear</button>
+        JSON.stringify(own).replace(/"/g,'&quot;')})" title="${ttA('modelpicker.replace_this_era_with_the_ownership')}"
+        >${tt('modelpicker.copy_ownership',{own_n:own.length})}</button>`:''}
+      <button onclick="gfSetList('${q1(esc(label))}',[])">${tt('common.clear')}</button>
     </div></div></div>`;
 }
 function gfSetList(label,items){const host=gfHost();
@@ -358,15 +352,15 @@ function gfMountEffectWidget(host,label,cur){
       <span class="idx">${i+1}</span>
       <input data-gfme="${esc(label)}" data-i="${i}" data-part="n" list="gfdl-mount_class"
         value="${esc(p.n)}" style="width:180px;font-size:12.5px;padding:4px 7px">
-      ${gfSpin(`data-gfme="${esc(label)}" data-i="${i}" data-part="v" aria-label="modifier"`,p.v)}
-      <button class="rm" title="Remove" onclick="gfMeRemove('${q1(esc(label))}',${i})"
+      ${gfSpin(tt('modelpicker.data_gfme_data_i_data_part',{label:esc(label),x:i}),p.v)}
+      <button class="rm" title="${ttA('common.remove')}" onclick="gfMeRemove('${q1(esc(label))}',${i})"
         style="background:none;border:1px solid transparent;color:var(--dim);padding:2px 6px">✕</button>
     </div>`).join('');
   return `<div class="gfgrid" style="flex-direction:column;align-items:flex-start">${rows}
     <div class="barrow">
-      <button ${pairs.length>=3?'disabled title="The engine reads at most three"':''}
-        onclick="gfMeAdd('${q1(esc(label))}')">＋ Add a mount effect</button>
-      <span class="count">${pairs.length}/3 · a class (horse, camel, elephant) or one specific mount</span>
+      <button ${pairs.length>=3?tt('modelpicker.disabled_title_the_engine_reads_at'):''}
+        onclick="gfMeAdd('${q1(esc(label))}')">${tt('modelpicker.add_a_mount_effect')}</button>
+      <span class="count">${tt('modelpicker.3_a_class_horse_camel_elephant',{pairs_n:pairs.length})}</span>
     </div></div>`;
 }
 function gfMeParts(host,label){
@@ -393,15 +387,15 @@ function gfAddHtml(host){
   const here=missing.filter(k=>sec&&sec.keys.indexOf(k)>=0);
   const list=here.length?here:missing;
   return `<div class="gfmissing">
-    <span class="count">Add a line:</span>
+    <span class="count">${tt('modelpicker.add_a_line')}</span>
     <select id="gfAddKey">${(list.length?list:missing).map(k=>{
       const sp=GF_FIELDS[k];
       return `<option value="${esc(k)}">${esc(k)}${sp?': '+esc(sp.t):''}</option>`;}).join('')
-      ||'<option value="">The unit already has every known line</option>'}</select>
-    <button onclick="gfAdd()">Add</button>
-    ${offCount<3?`<button onclick="gfAddOfficer()" title="Officers are extra men on top of the unit; up to three"
-      >＋ Officer (${offCount}/3)</button>`:''}
-    ${here.length&&here.length!==missing.length?'<span class="count">Missing from this group</span>':''}
+      ||`<option value="">${tt('modelpicker.the_unit_already_has_every_known')}</option>`}</select>
+    <button onclick="gfAdd()">${tt('common.add_2')}</button>
+    ${offCount<3?`<button onclick="gfAddOfficer()" title="${ttA('modelpicker.officers_are_extra_men_on_top')}"
+      >${tt('modelpicker.officer_3',{offCount})}</button>`:''}
+    ${here.length&&here.length!==missing.length?`<span class="count">${tt('modelpicker.missing_from_this_group')}</span>`:''}
   </div>`;
 }
 function gfAdd(){

@@ -48,6 +48,7 @@ from pathlib import Path
 
 from . import keyblock as kb
 from typing import Dict, List, Optional, Tuple
+from . import i18n as _i18n
 
 #: EDCT and EDA are plain 8-bit text; the game reads them as Latin-1
 ENCODING = "latin-1"
@@ -270,7 +271,7 @@ def parse_text(text: str) -> TriggerFile:
                 cur.end = i
             cur = Trigger(name=words[1] if len(words) > 1 else "", start=i, end=i + 1)
             if not cur.name:
-                cur.warnings.append(f"line {i + 1}: this Trigger has no name")
+                cur.warnings.append(_i18n.msg("eng.triggers.line_this_trigger_has_no_name", "line {x}: this Trigger has no name", x=i + 1))
             tf.triggers.append(cur)
             continue
         if head in BLOCK_ENDERS and len(words) == DEFINITION_WORDS:
@@ -290,12 +291,12 @@ def parse_text(text: str) -> TriggerFile:
             cur.when_to_test = words[1] if len(words) > 1 else ""
             cur.wtt_line = i
             if not cur.when_to_test:
-                cur.warnings.append(f"line {i + 1}: WhenToTest names no event")
+                cur.warnings.append(_i18n.msg("eng.triggers.line_whentotest_names_no_event", "line {x}: WhenToTest names no event", x=i + 1))
             continue
         if head == "Condition" or head in JOINERS:
             cond = _parse_clause(words, i, raw, joiner="" if head == "Condition" else head)
             if cond is None:
-                cur.warnings.append(f"line {i + 1}: {head} with nothing after it")
+                cur.warnings.append(_i18n.msg("eng.triggers.line_with_nothing_after_it", "line {x}: {head} with nothing after it", x=i + 1, head=head))
                 continue
             cur.conditions.append(cond)
             continue
@@ -336,11 +337,10 @@ def parse_block(text: str) -> Trigger:
     """
     tf = parse_text(text if text.endswith("\n") else text + "\n")
     if not tf.triggers:
-        raise TriggerError("a trigger block starts with a `Trigger <name>` line - "
-                           "this text has none", 1)
+        raise TriggerError(_i18n.msg("eng.triggers.a_trigger_block_starts_with_a", "a trigger block starts with a `Trigger <name>` line - this text has none"), 1)
     if len(tf.triggers) > 1:
         raise TriggerError(
-            f"this text holds {len(tf.triggers)} trigger blocks - one at a time",
+            _i18n.msg("eng.triggers.this_text_holds_trigger_blocks_one", "this text holds {triggers_n} trigger blocks - one at a time", triggers_n=len(tf.triggers)),
             tf.triggers[1].start + 1)
     return tf.triggers[0]
 
@@ -374,22 +374,19 @@ def check(trig: Trigger) -> List[Dict]:
     out: List[Dict] = []
     if trig.when_to_test and ev is None:
         out.append({"kind": "unknown-event", "line": trig.wtt_line + 1,
-                    "message": f"no engine event is called `{trig.when_to_test}`"})
+                    "message": _i18n.msg("eng.triggers.no_engine_event_is_called", "no engine event is called `{when_to_test}`", when_to_test=trig.when_to_test)})
         return out
     exports = set((ev or {}).get("exports", []))
     for cond in trig.conditions:
         d = term_def(cond.term)
         if d is None:
             out.append({"kind": "unknown-condition", "line": cond.line + 1,
-                        "message": f"`{cond.term}` is not a condition anything "
-                                   "documents - it may still be valid"})
+                        "message": _i18n.msg("eng.triggers.is_not_a_condition_anything_documents", "`{term}` is not a condition anything documents - it may still be valid", term=cond.term)})
             continue
         if ev is None or satisfied(d.get("requires", []), exports):
             continue
         out.append({"kind": "missing-export", "line": cond.line + 1,
-                    "message": f"`{cond.term}` needs {describe(d.get('requires', []))}, "
-                               f"which `{trig.when_to_test}` does not export - this "
-                               "condition can never be true"})
+                    "message": _i18n.msg("eng.triggers.needs_which_does_not_export_this", "`{term}` needs {describe}, which `{when_to_test}` does not export - this condition can never be true", term=cond.term, describe=describe(d.get('requires', [])), when_to_test=trig.when_to_test)})
     return out
 
 
@@ -581,7 +578,7 @@ def edit_section(text: str, req: Dict, changes: List[str], warnings: List[str],
         tf = parse_text(text)
         trig = tf.get(name)
         if trig is None:
-            warnings.append(f"no trigger called {name} - already gone?")
+            warnings.append(_i18n.msg("eng.triggers.no_trigger_called_already_gone", "no trigger called {name} - already gone?", name=name))
             continue
         text = remove_block(tf, trig)
         changes.append(f"- Trigger {name}")
@@ -590,7 +587,7 @@ def edit_section(text: str, req: Dict, changes: List[str], warnings: List[str],
         tf = parse_text(text)
         trig = tf.get(name)
         if trig is None:
-            errors.append(f"no trigger called {name}")
+            errors.append(_i18n.msg("eng.triggers.no_trigger_called", "no trigger called {name}", name=name))
             continue
         base = tf.block_text(trig)
         block = (str(e["raw_block"]).strip("\r\n") if e.get("raw_block")
@@ -604,10 +601,10 @@ def edit_section(text: str, req: Dict, changes: List[str], warnings: List[str],
         t = dict(a.get("trigger") or a)
         name = str(t.get("name") or "").strip()
         if not name:
-            errors.append("a new trigger needs a name")
+            errors.append(_i18n.msg("eng.triggers.a_new_trigger_needs_a_name", "a new trigger needs a name"))
             continue
         if tf.get(name) is not None:
-            errors.append(f"{name} is already a trigger in this file")
+            errors.append(_i18n.msg("eng.triggers.is_already_a_trigger_in_this", "{name} is already a trigger in this file", name=name))
             continue
         text = append_block(tf, new_block(t))
         changes.append(f"+ Trigger {name}")

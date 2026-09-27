@@ -42,6 +42,7 @@ from . import campmap, campstrat, mapgen, mapvocab, namekeys, osmmap
 from .mapnew import (SEA_HEIGHT, SEA_REGION, NewMapError, NewMapPlan, Province, _CARD,
                      _check_size, _finish, _grow, _hand_out, _int, _names_free, _seed_tiles,
                      _setup, _terrain, corner_view, region_colours)
+from . import i18n as _i18n
 
 #: Land in a piece smaller than this many tiles is made sea.
 MIN_ISLAND = 4
@@ -192,8 +193,7 @@ def plan(mod, body: dict) -> NewMapPlan:
     picks = [s for s in (body.get("settlements") or []) if isinstance(s, dict)]
     n = len(picks) or n_auto
     if not n:
-        p.errors.append("pick the settlements on the world map (search, a historic "
-                        "site or a click), or say how many to spread")
+        p.errors.append(_i18n.msg("eng.mapnewreal.pick_the_settlements_on_the_world", "pick the settlements on the world map (search, a historic site or a click), or say how many to spread"))
         return p
     got = _setup(mod, body, p, n)
     if got is None:
@@ -259,37 +259,34 @@ def _make(mod, p: NewMapPlan, box, proj, w: int, h: int, picks: Sequence[dict],
     metres = mapgen.elevation(box, cols, rows)
     centre = metres.transform((w, h), Image.AFFINE, (2, 0, 0.5, 0, 2, 0.5), Image.NEAREST)
     land = bytearray(1 if v > 0 else 0 for v in array_of(centre))
-    notes.append(f"land and sea from the real ground: {sum(land):,} of {w * h:,} tiles "
-                 f"above sea level")
+    notes.append(_i18n.msg("eng.mapnewreal.land_and_sea_from_the_real", "land and sea from the real ground: {sum:,} of {x:,} tiles above sea level", sum=sum(land), x=w * h))
     if body.get("coast"):
         ways = osmmap.coastline(box)
         c = osmmap.analyse(ways, proj, bytes(w * h))
         if c.leaks or not ways:
-            p.warnings.append("the real coastline has a gap over this box (or none), "
-                              "so the land is the elevation's alone")
+            p.warnings.append(_i18n.msg("eng.mapnewreal.the_real_coastline_has_a_gap", "the real coastline has a gap over this box (or none), so the land is the elevation's alone"))
         else:
             n = 0
             for i, v in enumerate(c.water):
                 if v and land[i]:
                     land[i] = 0
                     n += 1
-            notes.append(f"the real coastline's water side made sea: {n:,} tile(s)")
+            notes.append(_i18n.msg("eng.mapnewreal.the_real_coastlines_water_side_made", "the real coastline's water side made sea: {n:,} tile(s)", n=n))
     kinds = [k for k in (body.get("water") or []) if k in osmmap.WATER_KINDS]
     if kinds:
         wt = osmmap.water_tiles(osmmap.water(box, kinds), proj, bytes(w * h),
                                 float(body.get("water_min", osmmap.WATER_MIN_TILES)))
         for x, y in wt.to_sea:
             land[y * w + x] = 0
-        notes.append(f"OSM's {', '.join(kinds)} made sea: {len(wt.to_sea):,} tile(s), "
-                     f"{wt.holes} island(s) kept dry")
+        notes.append(_i18n.msg("eng.mapnewreal.osms_made_sea_to_sea_n", "OSM's {kinds} made sea: {to_sea_n:,} tile(s), {holes} island(s) kept dry", kinds=', '.join(kinds), to_sea_n=len(wt.to_sea), holes=wt.holes))
     specks = [pc for pc in _pieces(land, w, h) if len(pc) < min_island]
     for pc in specks:
         for i in pc:
             land[i] = 0
     if specks:
-        notes.append(f"{len(specks)} speck(s) of land under {min_island} tiles made sea")
+        notes.append(_i18n.msg("eng.mapnewreal.speck_s_of_land_under_tiles", "{specks_n} speck(s) of land under {min_island} tiles made sea", specks_n=len(specks), min_island=min_island))
     if sum(land) < 5:
-        raise NewMapError("there is next to no land under this box; move it over some")
+        raise NewMapError(_i18n.msg("eng.mapnewreal.there_is_next_to_no_land", "there is next to no land under this box; move it over some"))
 
     # the cities
     seats: List[dict] = []
@@ -298,43 +295,38 @@ def _make(mod, p: NewMapPlan, box, proj, w: int, h: int, picks: Sequence[dict],
         try:
             lat, lon = float(s["lat"]), float(s["lon"])
         except (KeyError, TypeError, ValueError):
-            p.warnings.append(f"{s.get('name') or 'a settlement'} has no latitude and "
-                              "longitude, and is left out")
+            p.warnings.append(_i18n.msg("eng.mapnewreal.has_no_latitude_and_longitude_and", "{x} has no latitude and longitude, and is left out", x=s.get('name') or 'a settlement'))
             continue
         fx, fy = proj.to_tile(lat, lon)
         x, y = int(round(fx)), int(round(fy))
         name = str(s.get("name") or "").strip()
         if not (0 <= x < w and 0 <= y < h):
-            p.warnings.append(f"{name or 'a settlement'} is off the map, and is left out")
+            p.warnings.append(_i18n.msg("eng.mapnewreal.is_off_the_map_and_is", "{x} is off the map, and is left out", x=name or 'a settlement'))
             continue
         at = _nearest_land(land, w, h, x, y, MOVE_REACH)
         if at is None:
-            p.warnings.append(f"{name or 'a settlement'} is at sea, with no land within "
-                              f"{MOVE_REACH} tiles, and is left out")
+            p.warnings.append(_i18n.msg("eng.mapnewreal.is_at_sea_with_no_land", "{x} is at sea, with no land within {MOVE_REACH} tiles, and is left out", x=name or 'a settlement', MOVE_REACH=MOVE_REACH))
             continue
         if at != (x, y):
-            p.warnings.append(f"{name or 'a settlement'} stood on the sea at {x},{y}; it "
-                              f"is moved to the nearest land, {at[0]},{at[1]}")
+            p.warnings.append(_i18n.msg("eng.mapnewreal.stood_on_the_sea_at_it", "{x} stood on the sea at {x2},{y}; it is moved to the nearest land, {at},{at2}", x=name or 'a settlement', x2=x, y=y, at=at[0], at2=at[1]))
         if any(abs(at[0] - a) + abs(at[1] - b) <= 1 for a, b in taken):
-            p.warnings.append(f"{name or 'a settlement'} is next to another city, and "
-                              "is left out (a city needs its own tiles round it)")
+            p.warnings.append(_i18n.msg("eng.mapnewreal.is_next_to_another_city_and", "{x} is next to another city, and is left out (a city needs its own tiles round it)", x=name or 'a settlement'))
             continue
         taken.add(at)
         seats.append({"name": name, "seat": at, "faction": s.get("faction"),
                       "want_port": s.get("port", True) is not False})
     if picks and not seats:
-        raise NewMapError("none of the settlements picked stands on this map's land")
+        raise NewMapError(_i18n.msg("eng.mapnewreal.none_of_the_settlements_picked_stands", "none of the settlements picked stands on this map's land"))
     if not picks:
         for i in _seed_tiles(land, w, h, n_auto):
             seats.append({"name": "", "seat": (i % w, i // w), "faction": None,
                           "want_port": True})
     if len(seats) > 199:
-        raise NewMapError(f"{len(seats)} settlements is more than a map can hold (199)")
+        raise NewMapError(_i18n.msg("eng.mapnewreal.settlements_is_more_than_a_map", "{seats_n} settlements is more than a map can hold (199)", seats_n=len(seats)))
     owner = _grow(land, w, h, [y * w + x for x, y in (s["seat"] for s in seats)])
     joined = _join_islands(land, owner, w, h)
     if joined:
-        notes.append(f"{joined:,} tile(s) of land no city walks to (islands) joined to "
-                     f"the province nearest across the water")
+        notes.append(_i18n.msg("eng.mapnewreal.joined_tile_s_of_land_no", "{joined:,} tile(s) of land no city walks to (islands) joined to the province nearest across the water", joined=joined))
     ports = 0
     for k, s in enumerate(seats):
         if s["want_port"]:
@@ -342,8 +334,7 @@ def _make(mod, p: NewMapPlan, box, proj, w: int, h: int, picks: Sequence[dict],
             if s["port"]:
                 taken.add(s["port"])
                 ports += 1
-    notes.append(f"{len(seats)} province(s) grown from their cities over the land, "
-                 f"{ports} with a port on the coast")
+    notes.append(_i18n.msg("eng.mapnewreal.province_s_grown_from_their_cities", "{seats_n} province(s) grown from their cities over the land, {ports} with a port on the coast", seats_n=len(seats), ports=ports))
 
     # the corners
     land_c = corner_view(Image.frombytes("L", (w, h), bytes(255 if v else 0 for v in land)))
@@ -357,8 +348,7 @@ def _make(mod, p: NewMapPlan, box, proj, w: int, h: int, picks: Sequence[dict],
     heights.paste(Image.merge("RGB", (grey, grey, grey)), mask=land_c)
     peak = max((v for v, m in zip(array_of(metres), land_c.tobytes()) if m), default=0.0)
     if peak > top:
-        p.warnings.append(f"the highest ground, {peak:,.0f} m, is above this mod's "
-                          f"max_land_height ({top:,.0f} m) and is cut off at white")
+        p.warnings.append(_i18n.msg("eng.mapnewreal.the_highest_ground_peak_0f_m", "the highest ground, {peak:,.0f} m, is above this mod's max_land_height ({top:,.0f} m) and is cut off at white", peak=peak, top=top))
     g = mapvocab.ground
     ground = Image.new("RGB", (cols, rows), g("sea_deep")["rgb"])
     ground.paste(g("sea_shallow")["rgb"], mask=land_c.filter(ImageFilter.MaxFilter(9)))
@@ -392,14 +382,13 @@ def _make(mod, p: NewMapPlan, box, proj, w: int, h: int, picks: Sequence[dict],
     detail = str(body.get("rivers") or "none")
     if detail != "none":
         if detail not in mapgen.RIVER_DETAIL:
-            raise mapgen.GenError(f"rivers is none or one of {', '.join(mapgen.RIVER_DETAIL)}")
+            raise mapgen.GenError(_i18n.msg("eng.mapnewreal.rivers_is_none_or_one_of", "rivers is none or one of {RIVER_DETAIL}", RIVER_DETAIL=', '.join(mapgen.RIVER_DETAIL)))
         blocked = {s["seat"] for s in seats} | {s["port"] for s in seats if s.get("port")}
         sea = bytes(0 if v else 1 for v in land)
         net = mapgen.Rivers(w, h, sea, blocked)
         drawn, tiles, cliffs, volc, short = mapgen.draw_features(
             features.load(), mapgen._osm_features(box, detail), proj, w, h, sea, blocked, net)
-        notes.append(f"{drawn} river(s) from OSM, {tiles:,} tiles, a source each, cut at "
-                     f"every city; {cliffs} cliff tile(s), {volc} volcano(es)")
+        notes.append(_i18n.msg("eng.mapnewreal.river_s_from_osm_tiles_tiles", "{drawn} river(s) from OSM, {tiles:,} tiles, a source each, cut at every city; {cliffs} cliff tile(s), {volc} volcano(es)", drawn=drawn, tiles=tiles, cliffs=cliffs, volc=volc))
     water = Image.new("RGB", (256, 256), (0, 0, 0))
     water.paste((40, 90, 170), mask=Image.frombytes("L", (w, h), bytes(0 if v else 255 for v in land))
                 .resize((256, 256), Image.NEAREST))
@@ -416,7 +405,7 @@ def _climates(mod, p, box, proj, w, h, ground, climate, how, notes) -> Image.Ima
     base = Image.new("RGB", (cols, rows), tuple(climate["rgb"]))
     have = {c["code"]: c for c in mapvocab.climates(mod) if c.get("rgb")}
     if how == "one":
-        notes.append(f"one climate, {climate['code']}")
+        notes.append(_i18n.msg("eng.mapnewreal.one_climate", "one climate, {code}", code=climate['code']))
         return base
     if how == "ground":
         n = 0
@@ -427,8 +416,7 @@ def _climates(mod, p, box, proj, w, h, ground, climate, how, notes) -> Image.Ima
             mask = mapgen._equal(ground, mapvocab.ground(gcode)["rgb"])
             base.paste(tuple(c["rgb"]), mask=mask)
             n += 1
-        notes.append(f"climates from the ground types ({n} of this mod's climates), "
-                     f"{climate['code']} elsewhere")
+        notes.append(_i18n.msg("eng.mapnewreal.climates_from_the_ground_types_of", "climates from the ground types ({n} of this mod's climates), {code} elsewhere", n=n, code=climate['code']))
         return base
     if how == "koppen":
         from . import mapreal
@@ -441,8 +429,7 @@ def _climates(mod, p, box, proj, w, h, ground, climate, how, notes) -> Image.Ima
             codes = mapreal.classify(mapreal.wms(st["koppen_wms"], env, sw, sh, "Köppen"),
                                      [(i + 1, rgb) for i, (_, rgb, _) in enumerate(mapreal.KOPPEN)])
         else:
-            raise mapgen.GenError("Köppen climates need the Köppen-Geiger map's file (or a "
-                                  "WMS) in Settings, Real-world map")
+            raise mapgen.GenError(_i18n.msg("eng.mapnewreal.k_ppen_climates_need_the_k", "Köppen climates need the Köppen-Geiger map's file (or a WMS) in Settings, Real-world map"))
         at = mapreal._to_corners(codes, env, proj, cols, rows)
         n = 0
         for i, (code, _, clim) in enumerate(mapreal.KOPPEN):
@@ -450,10 +437,9 @@ def _climates(mod, p, box, proj, w, h, ground, climate, how, notes) -> Image.Ima
             if c is not None:
                 base.paste(tuple(c["rgb"]), mask=at.point(lambda v, k=i + 1: 255 if v == k else 0))
                 n += 1
-        notes.append(f"climates from the Köppen-Geiger zones, {climate['code']} where "
-                     f"there is no zone or no climate for it")
+        notes.append(_i18n.msg("eng.mapnewreal.climates_from_the_k_ppen_geiger", "climates from the Köppen-Geiger zones, {code} where there is no zone or no climate for it", code=climate['code']))
         return base
-    raise mapgen.GenError("climates is one, ground or koppen")
+    raise mapgen.GenError(_i18n.msg("eng.mapnewreal.climates_is_one_ground_or_koppen", "climates is one, ground or koppen"))
 
 
 def _regions(owner: List[int], land: bytearray, w: int, h: int, colours, seats, ports) -> Image.Image:

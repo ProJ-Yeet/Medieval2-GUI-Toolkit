@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Dict
+from . import i18n as _i18n
 
 #: relative to the mod root - the only file this module ever removes
 STRINGS_BIN_REL = "data/text/export_units.txt.strings.bin"
@@ -57,7 +58,7 @@ def refresh_strings_bin(mod_root: str | Path,
     root = Path(mod_root)
     if not root.is_dir():
         return {"ran": False, "file": rel, "deleted": False, "rebuilt": False,
-                "error": f"mod folder not found: {root}"}
+                "error": _i18n.msg("eng.cleaner.mod_folder_not_found", "mod folder not found: {root}", root=root)}
     target = strings_bin_path(root, rel)
     txt = stringsbin.txt_path_for(target)
     if txt.exists():
@@ -83,7 +84,7 @@ def clear_strings_bin(mod_root: str | Path, rel: str = STRINGS_BIN_REL) -> Dict:
     result: Dict = {"ran": True, "file": rel, "deleted": False}
     root = Path(mod_root)
     if not root.is_dir():
-        return {**result, "ran": False, "error": f"mod folder not found: {root}"}
+        return {**result, "ran": False, "error": _i18n.msg("eng.cleaner.mod_folder_not_found", "mod folder not found: {root}", root=root)}
 
     target = strings_bin_path(root, rel)
     result["path"] = str(target)

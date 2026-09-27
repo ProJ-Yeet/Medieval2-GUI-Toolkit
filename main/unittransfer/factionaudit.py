@@ -63,6 +63,7 @@ from . import factionclone as fc
 from . import factions as fac
 from . import flatrecord as fr
 from . import keyblock as kb
+from . import i18n as _i18n
 
 ENCODING = fc.ENCODING
 
@@ -659,14 +660,13 @@ def repair_plan(mod, body: dict) -> fc.ClonePlan:
     p = fc.ClonePlan(mod=mod, source=template, new=faction, action="repair")
     c = Census(mod, str(body.get("campaign") or ""))
     if faction not in c.cultures:
-        p.errors.append(f"{faction or 'the faction'} is not in {fac.REL} - add it "
-                        "with ＋ Add a faction, which writes every file at once")
+        p.errors.append(_i18n.msg("eng.factionaudit.is_not_in_add_it_with", "{x} is not in {REL} - add it with ＋ Add a faction, which writes every file at once", x=faction or 'the faction', REL=fac.REL))
         return p
     if not template or template not in c.cultures:
-        p.errors.append(f"{template or 'a template'} is not a faction in this mod")
+        p.errors.append(_i18n.msg("eng.factionaudit.is_not_a_faction_in_this", "{x} is not a faction in this mod", x=template or 'a template'))
         return p
     if template == faction:
-        p.errors.append("a faction cannot be repaired from itself")
+        p.errors.append(_i18n.msg("eng.factionaudit.a_faction_cannot_be_repaired_from", "a faction cannot be repaired from itself"))
         return p
     mine = {r["id"]: r for r in evaluate(c, faction)}
     theirs = {r["id"]: r for r in evaluate(c, template)}
@@ -682,7 +682,7 @@ def repair_plan(mod, body: dict) -> fc.ClonePlan:
     for cid in want:
         chk = BY_ID.get(cid)
         if chk is None:
-            p.errors.append(f"there is no check called {cid}")
+            p.errors.append(_i18n.msg("eng.factionaudit.there_is_no_check_called", "there is no check called {cid}", cid=cid))
             continue
         if chk.fix != "clone":
             p.errors.append(f"{chk.label} is not repaired by copying - "
@@ -692,14 +692,13 @@ def repair_plan(mod, body: dict) -> fc.ClonePlan:
                                if chk.fix == "wins" else "nothing copies it"))
             continue
         if mine[cid]["state"] == "ok":
-            p.notes.append(f"{chk.label}: {faction} already has it")
+            p.notes.append(_i18n.msg("eng.factionaudit.already_has_it", "{label}: {faction} already has it", label=chk.label, faction=faction))
             continue
         if mine[cid]["state"] == "unknown":
             p.warnings.append(f"{chk.label}: {mine[cid]['detail']}")
             continue
         if theirs[cid]["state"] != "ok":
-            p.warnings.append(f"{chk.label}: {template} has none either, so there is "
-                              "nothing to copy")
+            p.warnings.append(_i18n.msg("eng.factionaudit.has_none_either_so_there_is", "{label}: {template_} has none either, so there is nothing to copy", label=chk.label, template_=template))
             continue
         job = JOB_BY_REL[chk.rel]
         # the shown name is the one value not copied: two factions both called
@@ -717,14 +716,10 @@ def repair_plan(mod, body: dict) -> fc.ClonePlan:
                          f"{template}")
         if cid == "units":
             p.warnings.append(
-                f"{faction} joins every ownership line {template} is on - "
-                f"{_plural(edit.count, 'unit')}. That is {template}'s whole "
-                "roster; the Unit Editor takes any of them back out.")
+                _i18n.msg("eng.factionaudit.joins_every_ownership_line_is_on", "{faction} joins every ownership line {template_} is on - {plural}. That is {template_2}'s whole roster; the Unit Editor takes any of them back out.", faction=faction, template_=template, plural=_plural(edit.count, 'unit'), template_2=template))
         if cid == "buildings":
             p.warnings.append(
-                f"{faction} joins {_plural(edit.count, 'requires factions clause')}"
-                f" - it builds and recruits wherever {template} does.")
+                _i18n.msg("eng.factionaudit.joins_it_builds_and_recruits_wherever", "{faction} joins {plural} - it builds and recruits wherever {template_} does.", faction=faction, plural=_plural(edit.count, 'requires factions clause'), template_=template))
     if not p.errors and not p.written():
-        p.errors.append(f"nothing to repair: {faction} is missing nothing "
-                        f"{template} can give it")
+        p.errors.append(_i18n.msg("eng.factionaudit.nothing_to_repair_is_missing_nothing", "nothing to repair: {faction} is missing nothing {template_} can give it", faction=faction, template_=template))
     return p

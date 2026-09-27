@@ -22,13 +22,13 @@ else uiRescue();
 function uiRescue(){
   const el=document.createElement('div');
   el.style.cssText='padding:2rem;font:15px/1.7 system-ui,sans-serif';
-  el.innerHTML='<h2>The tool did not finish loading.</h2>'+
-    '<p>The server is running - it answered for the rest of this page - but the '+
-    'browser never received <code>js/core.js</code>, which the rest of the '+
-    'interface is built on.</p>'+
-    '<p>Reloading fetches it again. If it keeps happening, '+
-    '<code>config\\server.log</code> is worth sending on.</p>'+
-    '<p><button>Reload the page</button></p>';
+  el.innerHTML=`<h2>${tt('boot.the_tool_did_not_finish_loading')}</h2>`+
+    `<p>${tt('boot.the_server_is_running_it_answered')} `+
+    `${tt('boot.browser_never_received_js_core_js')} `+
+    `${tt('boot.interface_is_built_on')}</p>`+
+    `<p>${tt('boot.reloading_fetches_it_again_if_it')} `+
+    `${tt('boot.config_server_log_is_worth_sending')}</p>`+
+    `<p><button>${tt('boot.reload_the_page')}</button></p>`;
   el.querySelector('button').onclick=()=>location.reload();
   document.body.replaceChildren(el);
 }

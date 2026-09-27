@@ -40,8 +40,8 @@ const PORT_NOUN = {traits:'trait', ancillaries:'ancillary'};
 function portOpen(kind){
   const others = (state.mods||[]).map(m=>m.name).filter(n=>n!==state.src);
   if(!others.length){
-    toast('There is only one mod here to read from. Point the toolkit at your '
-        + 'mods folder in ⚙ Settings if that is wrong.', 6000); return;
+    toast(tt('portui.there_is_only_one_mod_here')
+        + tt('portui.mods_folder_in_settings_if_that'), 6000); return;
   }
   portState = {kind, dest:state.src, source:others[0], ov:null, sel:new Set(),
                q:'', plan:null, busy:false, withTriggers:true, overwrite:false,
@@ -88,60 +88,53 @@ function portRender(){
   const others = (state.mods||[]).map(m=>m.name).filter(n=>n!==p.dest);
   const ov = p.ov;
   const rows = portRows();
-  const body = !ov ? `<div class="empty">Reading ${esc(p.source)}’s ${esc(noun)}s…</div>`
+  const body = !ov ? `<div class="empty">${tt('portui.reading_s_s',{source:esc(p.source),noun:esc(noun)})}</div>`
     : ov.error ? `<div class="w-bad">${esc(ov.error)}</div>`
-    : `<div class="count" style="margin:8px 0">${ov.count} ${esc(noun)}${
-        ov.count===1?'':'s'} in <b>${esc(ov.source)}</b> · ${ov.already} of them
-        already exist in <b>${esc(ov.dest)}</b>
-        ${ov.dest_error?`<br><span class="w-bad">${esc(ov.dest_error)}</span>`:''}</div>
+    : `<div class="count" style="margin:8px 0">${tt('portui.in_of_them_already_exist_in',{count:ov.count,noun:esc(noun),x:ov.count===1?'':'s',source:esc(ov.source),already:ov.already,dest:esc(ov.dest),x2:ov.dest_error?`<br><span class="w-bad">${esc(ov.dest_error)}</span>`:''})}</div>
       <div class="barrow">
-        <input placeholder="Filter…" value="${esc(p.q)}" style="flex:1"
+        <input placeholder="${ttA('portui.filter')}" value="${esc(p.q)}" style="flex:1"
           oninput="portState.q=this.value;portRowsPaint()">
         <label class="chk"><input type="checkbox" ${p.onlyNew?'checked':''}
           onchange="portState.onlyNew=this.checked;portRowsPaint()">
-          hide the ${ov.already} this mod already has</label>
+          ${tt('portui.hide_the_this_mod_already_has',{already:ov.already})}</label>
         <span class="count" id="portCount"></span>
       </div>
       <div class="portlist" id="portList">${rows.map(portRowHtml).join('')}</div>`;
   document.getElementById('modal').innerHTML = `
-    <h2>Port ${esc(noun)}s into <span class="pill">${esc(p.dest)}</span></h2>
+    <h2>${tt('portui.port_s_into',{noun:esc(noun)})} <span class="pill">${esc(p.dest)}</span></h2>
     <div class="mbody">
       <div class="count" style="margin-bottom:8px">${docPoints(
-        `Each one brings three things, because a ${esc(noun)} is three things:`,[
-        'its block, at the top of the file',
-        'every trigger in the other mod that grants it, appended to this mod’s '
-          + 'trigger section',
+        tt('portui.each_one_brings_three_things_because',{noun:esc(noun)}),[
+        tt('portui.its_block_at_the_top_of'),
+        tt('portui.every_trigger_in_the_other_mod')
+          + tt('portui.trigger_section'),
         'its text keys - without them the character screen crashes the first time '
-          + `anyone has the ${esc(noun)}`])}</div>
+          + tt('portui.anyone_has_the',{noun:esc(noun)})])}</div>
       <div class="barrow">
-        <span class="count">Read from</span>
+        <span class="count">${tt('portui.read_from')}</span>
         <select onchange="portPickSource(this.value)">${others.map(n =>
           `<option value="${esc(n)}"${n===p.source?' selected':''}>${esc(n)}</option>`).join('')}</select>
-        <span class="count">→ written into <b>${esc(p.dest)}</b></span>
+        <span class="count">${tt('portui.written_into')} <b>${esc(p.dest)}</b></span>
       </div>
       ${body}
-      <fieldset style="margin-top:10px"><legend>How</legend>
+      <fieldset style="margin-top:10px"><legend>${tt('portui.how')}</legend>
         <label class="chk"><input type="checkbox" ${p.withTriggers?'checked':''}
           onchange="portState.withTriggers=this.checked;portStale()">
-          bring the triggers that grant it</label>
-        <div class="count" style="margin:2px 0 6px">Off, the ${esc(noun)} exists in
-          this mod and nothing ever gives it - useful only when you mean to write
-          your own trigger for it.</div>
+          ${tt('portui.bring_the_triggers_that_grant_it')}</label>
+        <div class="count" style="margin:2px 0 6px">${tt('portui.off_the_exists_in_this_mod',{noun:esc(noun)})}</div>
         <label class="chk"><input type="checkbox" ${p.overwrite?'checked':''}
           onchange="portState.overwrite=this.checked;portStale()">
-          replace what is already there</label>
-        <div class="count" style="margin-top:2px">Off (the safe default), a name
-          this mod already has is skipped and said so. On, its block <b>and its
-          wording</b> are overwritten with the other mod’s.</div>
+          ${tt('portui.replace_what_is_already_there')}</label>
+        <div class="count" style="margin-top:2px">${tt('portui.off_the_safe_default_a_name')}</div>
       </fieldset>
       <div id="portPreview"></div>
     </div>
     <div class="foot">
       <span class="count" id="portSel"></span>
       ${cleanerBoxHtml()}
-      <button onclick="closeModal()">Close</button>
-      <button onclick="portPreview()">Probe</button>
-      <button class="primary" onclick="portApply()">Port them</button>
+      <button onclick="closeModal()">${tt('common.close')}</button>
+      <button onclick="portPreview()">${tt('common.probe')}</button>
+      <button class="primary" onclick="portApply()">${tt('portui.port_them')}</button>
     </div>`;
   portRowsPaint();
 }
@@ -152,10 +145,9 @@ function portRowHtml(r){
     <input type="checkbox" ${on?'checked':''}
       onchange="portTick('${q1(esc(r.name))}',this.checked)">
     <span class="pn">${esc(r.label||r.name)}</span>
-    <span class="count">${r.triggers
+    <span class="count">${tt('portui.text_key',{triggers:r.triggers
       ? `${r.triggers} trigger${r.triggers===1?'':'s'}`
-      : '<b class="w-warn">nothing grants it there</b>'} · ${r.keys} text key${
-      r.keys===1?'':'s'}${r.exists?' · <b class="w-warn">already in this mod</b>':''}</span>
+      : `<b class="w-warn">${tt('portui.nothing_grants_it_there')}</b>`,x:r.keys,x2:r.keys===1?'':'s',exists:r.exists?` ${tt('portui.already_in_this_mod')}`:''})}</span>
   </label>`;
 }
 
@@ -166,12 +158,12 @@ function portRowsPaint(){
   const rows = portRows();
   const list = document.getElementById('portList');
   if(list) list.innerHTML = rows.map(portRowHtml).join('')
-    || `<div class="count" style="padding:8px">Nothing matches.</div>`;
+    || `<div class="count" style="padding:8px">${tt('common.nothing_matches')}</div>`;
   const c = document.getElementById('portCount');
   if(c) c.textContent = `${rows.length}/${p.ov.count}`;
   const s = document.getElementById('portSel');
   if(s) s.textContent = p.sel.size
-    ? `${p.sel.size} picked` : 'nothing picked yet';
+    ? `${p.sel.size} picked` : tt('portui.nothing_picked_yet');
 }
 function portTick(name, on){
   const p = portState; if(!p) return;
@@ -194,8 +186,8 @@ const portBody = () => ({kind:portState.kind, source:portState.source,
 async function portPreview(){
   const p = portState, box = document.getElementById('portPreview');
   if(!p || !box) return null;
-  if(!p.sel.size){ toast(`Tick at least one ${PORT_NOUN[p.kind]||'record'}.`); return null; }
-  box.innerHTML = '<div class="preview">Planning…</div>';
+  if(!p.sel.size){ toast(tt('portui.tick_at_least_one',{x:PORT_NOUN[p.kind]||'record'})); return null; }
+  box.innerHTML = `<div class="preview">${tt('common.planning')}</div>`;
   let r;
   try{ r = await api.post('/api/port/plan', portBody()); }
   catch(e){ r = {error:errText(e)}; }
@@ -212,16 +204,15 @@ function portPlanHtml(pl){
       cls==='bad'?'✗':cls==='warn'?'!':'·'}</span><span class="stext">${esc(x)}</span></div>`).join('');
   const changes = (pl.changes||[]).slice(0, 20);
   return `<div class="sum" style="margin-top:10px">
-    <div class="srow shead"><span class="sicon">⇩</span><span class="stext">What this writes</span></div>
+    <div class="srow shead"><span class="sicon">⇩</span><span class="stext">${tt('common.what_this_writes')}</span></div>
     ${li('', changes)}
     ${(pl.changes||[]).length>20
       ? `<div class="srow"><span class="sicon">·</span><span class="stext">
-         <i>…and ${pl.changes.length-20} more</i></span></div>` : ''}
+         <i>${tt('portui.and_more',{x:pl.changes.length-20})}</i></span></div>` : ''}
     ${li('warn', pl.warnings)}${li('bad', pl.errors)}
     ${(pl.skipped||[]).length
       ? `<div class="srow warn"><span class="sicon">!</span><span class="stext">
-         ${pl.skipped.length} already here and left alone:
-         ${esc(pl.skipped.slice(0,8).join(', '))}${pl.skipped.length>8?'…':''}</span></div>` : ''}
+         ${tt('portui.already_here_and_left_alone',{skipped_n:pl.skipped.length,x:esc(pl.skipped.slice(0,8).join(', ')),x2:pl.skipped.length>8?'…':''})}</span></div>` : ''}
   </div>`;
 }
 
@@ -231,15 +222,15 @@ async function portApply(){
   const pl = p.plan || await portPreview();
   if(!pl) return;
   if((pl.errors||[]).length){ toast('✗ ' + pl.errors[0], 6000); return; }
-  if(!pl.ok){ toast('Nothing to write - everything picked is already here.', 5000); return; }
+  if(!pl.ok){ toast(tt('portui.nothing_to_write_everything_picked_is'), 5000); return; }
   const noun = PORT_NOUN[p.kind] || 'record';
   const lines = (pl.changes||[]).slice(0, 12);
   const warn = (pl.warnings||[]).slice(0, 5).map(w => '⚠ ' + w);
-  if(!confirm(`Port ${p.sel.size} ${noun}(s) from ${p.source} into ${p.dest}?\n\n`
-    + (lines.join('\n') || 'no visible change')
-    + ((pl.changes||[]).length > 12 ? `\n…and ${pl.changes.length-12} more` : '')
+  if(!confirm(tt('portui.port_s_from_into',{sel_n:p.sel.size,noun,source:p.source,dest:p.dest})
+    + (lines.join('\n') || tt('common.no_visible_change'))
+    + ((pl.changes||[]).length > 12 ? tt('portui.and_more_2',{x:pl.changes.length-12}) : '')
     + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + '\n\nBoth files are backed up first, and 🕑 Log → Undo puts them back.')) return;
+    + tt('portui.both_files_are_backed_up_first'))) return;
   p.busy = true;
   let res;
   try{ res = await api.post('/api/port/apply',
@@ -248,8 +239,8 @@ async function portApply(){
   finally{ if(portState === p) p.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 6000); return; }
   closeModal();
-  toast(`Ported ${(res.plan&&res.plan.rows||[]).length||p.sel.size} ${noun}(s) into `
-      + `${p.dest} ✓  (undo in 🕑 Log)`, 5200);
+  toast(tt('portui.ported_s_into',{n:(res.plan&&res.plan.rows||[]).length||p.sel.size,noun})
+      + tt('portui.undo_in_log',{dest:p.dest}), 5200);
   portState = null;
   // the destination is the mod on screen, and its file just changed under it
   if(p.kind === 'traits'){ state.tr = null; loadTraits(); }

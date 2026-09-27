@@ -16,22 +16,22 @@
    THE PAGE NEVER PARSES A GAME FILE: /api/areaeffects and its plan|apply. */
 
 const AEX_TYPES = {
-  nausea: 'sickens and frightens the units in it',
-  holy: 'lifts the morale of the units in it',
-  fire: 'burns on the ground',
-  explosion: 'throws, hurts and kills',
-  projectile: 'splits into more shots',
-  area_effect_set: 'fires other area effects, each after a delay',
+  nausea: tt('areaeffects.sickens_and_frightens_the_units_in'),
+  holy: tt('areaeffects.lifts_the_morale_of_the_units'),
+  fire: tt('areaeffects.burns_on_the_ground'),
+  explosion: tt('areaeffects.throws_hurts_and_kills'),
+  projectile: tt('areaeffects.splits_into_more_shots'),
+  area_effect_set: tt('areaeffects.fires_other_area_effects_each_after'),
 };
 
 async function loadAreaEffects(){
   const mod = state.src;
-  main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s area effects…</div>';
+  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('areaeffects.s_area_effects')}</div>`;
   let r;
   try{ r = await api.get('/api/areaeffects?mod=' + enc(mod)); }
   catch(e){ if(stale('areaeffects', mod)) return;
-    main.innerHTML = `<div class="empty">Couldn't read them.<br><span class="count">${esc(errText(e))}</span>
-      <br><br><button class="primary" onclick="loadAreaEffects()">Retry</button></div>`; return; }
+    main.innerHTML = `<div class="empty">${tt('common.couldnt_read_them')}<br><span class="count">${esc(errText(e))}</span>
+      <br><br><button class="primary" onclick="loadAreaEffects()">${tt('common.retry')}</button></div>`; return; }
   if(stale('areaeffects', mod)) return;
   const keep = state.aex && state.aex.mod === mod ? state.aex : null;
   state.aex = Object.assign({mod, sel: keep ? keep.sel : '', w: aexBlank(), busy: false}, r);
@@ -59,22 +59,22 @@ function renderAreaEffects(){
     : types.map(t => {
         const of = list.filter(e => e.type === t);
         if(!of.length) return '';
-        return `<div class="trnote"><b>${esc(t || '(no type)')}</b> <span class="count">${esc(AEX_TYPES[t] || '')}</span></div>`
+        return `<div class="trnote"><b>${esc(t || tt('areaeffects.no_type'))}</b> <span class="count">${esc(AEX_TYPES[t] || '')}</span></div>`
           + of.map(e => `<button class="trrow${c.sel === String(e.id) ? ' on' : ''}" onclick="aexPick('${e.id}')">
-            <div class="nm">${esc(e.name || '(no name)')}${c.w.remove.includes(e.id) ? ' <span class="count">removed on save</span>' : ''}</div>
-            <div class="sub">${aexUsedText(e)}${aexDirty(e) ? ' · <b>changed</b>' : ''}</div></button>`).join('');
+            <div class="nm">${esc(e.name || tt('common.no_name'))}${c.w.remove.includes(e.id) ? ` <span class="count">${tt('common.removed_on_save')}</span>` : ''}</div>
+            <div class="sub">${aexUsedText(e)}${aexDirty(e) ? ` ${tt('common.changed')}` : ''}</div></button>`).join('');
       }).join('')
-      + c.w.copy.filter(x => x.name).map(x => `<div class="trnote">+ ${esc(x.name)} <span class="count">on save</span></div>`).join('');
+      + c.w.copy.filter(x => x.name).map(x => `<div class="trnote">${tt('areaeffects.on_save',{name:esc(x.name)})}</div>`).join('');
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
       ${findingsHtml('areaeffects', find, 'aexOpen')}
       <div class="trrows">${left}</div>
     </div>
     <div class="trmain">
-      <div class="cdbhead"><div><b>descr_area_effects.xml</b> <span class="count">what a shot does where it lands</span></div>
+      <div class="cdbhead"><div>${tt('areaeffects.descr_area_effects_xml_what_a')}</div>
         <span style="flex:1"></span>
-        <button onclick="aexRevert()" ${n ? '' : 'disabled'}>Revert</button>
-        <button class="primary" onclick="aexSave()" ${n ? '' : 'disabled'}>Save ${n || ''} change${n === 1 ? '' : 's'}</button>
+        <button onclick="aexRevert()" ${n ? '' : 'disabled'}>${tt('common.revert')}</button>
+        <button class="primary" onclick="aexSave()" ${n ? '' : 'disabled'}>${tt('areaeffects.save_change',{x:n || '',x2:n === 1 ? '' : 's'})}</button>
       </div>
       ${c.error ? '' : aexEffectHtml()}
     </div>
@@ -83,9 +83,9 @@ function renderAreaEffects(){
 function aexUsedText(e){
   const bits = [];
   if(e.used.length) bits.push(`${e.used.length} ${e.used.length === 1 ? 'user' : 'users'}`);
-  if(e.in_sets.length) bits.push(`in ${e.in_sets.length} set(s)`);
+  if(e.in_sets.length) bits.push(tt('areaeffects.in_set_s',{in_sets_n:e.in_sets.length}));
   if(e.members.length) bits.push(`${e.members.length} member(s)`);
-  return bits.join(' · ') || 'named by nothing';
+  return bits.join(' · ') || tt('areaeffects.named_by_nothing');
 }
 
 function aexEffect(){ const c = state.aex; return (c.effects || []).find(e => String(e.id) === c.sel); }
@@ -102,7 +102,7 @@ function aexOpen(key){
   else if(kind === 'name' || kind === 'use'){
     const e = list.find(x => x.name.toLowerCase() === String(rest).toLowerCase());
     if(e) c.sel = String(e.id);
-    else if(kind === 'use') toast(`${rest} is named by a projectile and declared nowhere in this file. Copy an effect under that name to declare it.`, 7000);
+    else if(kind === 'use') toast(tt('areaeffects.is_named_by_a_projectile_and',{rest}), 7000);
   }
   renderAreaEffects();
 }
@@ -138,7 +138,7 @@ function aexDrop(id){
 
 function aexEffectHtml(){
   const c = state.aex, e = aexEffect();
-  if(!e) return '<div class="count" style="padding:8px">Pick an area effect.</div>';
+  if(!e) return `<div class="count" style="padding:8px">${tt('areaeffects.pick_an_area_effect')}</div>`;
   const w = c.w, gone = w.remove.includes(e.id);
   const fixed = ['name', 'type', 'red', 'green', 'blue'];
   const rows = e.fields.map(f => {
@@ -151,12 +151,12 @@ function aexEffectHtml(){
   const have = e.fields.map(f => f.tag);
   const want = known.filter(t => !have.includes(t) && !w.add_field.some(x => x.parent === e.id && x.tag === t));
   const pending = w.add_field.filter(x => x.parent === e.id).map(x =>
-    `<tr><td><code>${esc(x.tag)}</code></td><td>${esc(x.value)} <span class="count">added on save</span></td><td></td></tr>`).join('');
+    `<tr><td><code>${esc(x.tag)}</code></td><td>${tt('areaeffects.added_on_save',{value:esc(x.value)})}</td><td></td></tr>`).join('');
   const add = want.length ? `<tr><td><select id="aexAddTag">${want.map(t => `<option>${esc(t)}</option>`).join('')}</select></td>
-    <td><input id="aexAddVal" style="width:200px" placeholder="value"> <button onclick="aexAddField(${e.id})">＋ Add</button></td><td></td></tr>` : '';
+    <td><input id="aexAddVal" style="width:200px" placeholder="${ttA('common.value')}"> <button onclick="aexAddField(${e.id})">${tt('common.add')}</button></td><td></td></tr>` : '';
   const names = (c.effects || []).map(x => x.name).filter(Boolean);
-  const members = e.type === 'area_effect_set' ? `<div class="cdbsec"><h3>Members <span class="count">${e.members.length}, each fired after its delay (seconds)</span></h3>
-    <table class="smxtab"><tr><th>Area effect</th><th>Delay</th><th></th></tr>${e.members.map(m => {
+  const members = e.type === 'area_effect_set' ? `<div class="cdbsec"><h3>${tt('areaeffects.members_each_fired_after_its_delay',{members_n:e.members.length})}</h3>
+    <table class="smxtab"><tr><th>${tt('areaeffects.area_effect')}</th><th>${tt('areaeffects.delay')}</th><th></th></tr>${e.members.map(m => {
       const mg = w.remove.includes(m.id), v = aexVal(m.id, m.name);
       const d = w.attrs[m.id] ? w.attrs[m.id].delay : m.delay;
       const opts = names.includes(v) ? names : [v, ...names];
@@ -166,32 +166,32 @@ function aexEffectHtml(){
         <td><button onclick="aexDrop(${m.id})">${mg ? 'keep' : '✕'}</button></td></tr>`;
     }).join('')}
     ${w.copy.filter(x => e.members.some(m => m.id === x.like)).map(x =>
-      `<tr><td colspan="3" class="count">+ ${esc(x.value)}${x.attrs ? ` after ${esc(x.attrs.delay)}s` : ''}, on save</td></tr>`).join('')}
+      `<tr><td colspan="3" class="count">${tt('areaeffects.on_save_2',{value:esc(x.value),attrs:x.attrs ? tt('areaeffects.after_s',{delay:esc(x.attrs.delay)}) : ''})}</td></tr>`).join('')}
     </table>
-    ${e.members.length ? `<div class="trnote">Add <select id="aexMember">${names.map(o => `<option>${esc(o)}</option>`).join('')}</select>
-      after <input id="aexDelay" style="width:60px" value="${esc(e.members[e.members.length - 1].delay || '')}"> s
-      <button onclick="aexAddMember(${e.members[e.members.length - 1].id})">＋ Add</button></div>` : ''}</div>` : '';
+    ${e.members.length ? `<div class="trnote">${tt('common.add_2')} <select id="aexMember">${names.map(o => `<option>${esc(o)}</option>`).join('')}</select>
+      ${tt('areaeffects.after')} <input id="aexDelay" style="width:60px" value="${esc(e.members[e.members.length - 1].delay || '')}"> s
+      <button onclick="aexAddMember(${e.members[e.members.length - 1].id})">${tt('common.add')}</button></div>` : ''}</div>` : '';
   const used = e.used.map(u => `<div class="count"><code>${esc(u.file)}:${u.line}</code> ${esc(u.who)}</div>`).join('')
-    + e.in_sets.map(s => `<div class="count">a member of <a class="ulink" onclick="aexOpen('name/${q1(esc(s))}')">${esc(s)}</a></div>`).join('');
-  return `<div class="cdbsec"><h3>${esc(e.name)} <span class="count">${esc(e.type)} · line ${e.line}</span>
-      <button onclick="aexDrop(${e.id})">${gone ? 'Keep it' : 'Remove area effect'}</button></h3>
-    ${gone && (e.used.length || e.in_sets.length) ? `<div class="trnote">⚠ ${e.used.length + e.in_sets.length} thing(s) name it and will name nothing.</div>` : ''}
+    + e.in_sets.map(s => `<div class="count">${tt('areaeffects.a_member_of')} <a class="ulink" onclick="aexOpen('name/${q1(esc(s))}')">${esc(s)}</a></div>`).join('');
+  return `<div class="cdbsec"><h3>${tt('areaeffects.line',{name:esc(e.name),type:esc(e.type),line:e.line})}
+      <button onclick="aexDrop(${e.id})">${gone ? tt('common.keep_it') : tt('areaeffects.remove_area_effect')}</button></h3>
+    ${gone && (e.used.length || e.in_sets.length) ? `<div class="trnote">${tt('areaeffects.thing_s_name_it_and_will',{n:e.used.length + e.in_sets.length})}</div>` : ''}
     <table class="smxtab">${rows}${pending}${add}</table>
-    <div class="count">${e.type === 'area_effect_set' ? 'A set fires its members.'
-      : 'An <code>effect</code>, <code>ground_effect</code> or <code>floating_effect</code> is an <code>effect_set</code> in one of the files <code>descr_effects.txt</code> lists.'}
-      ${(c.absent_effect_files || []).length ? ` ${c.absent_effect_files.length} of those files are the base game's and packed, so their sets cannot be checked here.` : ''}</div>
-    <div class="trnote">Copy it as <input id="aexCopyName" style="width:200px" placeholder="ae_new_name">
-      <button onclick="aexCopy(${e.id})">＋ Copy</button>
-      ${w.copy.filter(x => x.like === e.id).map(x => `<span class="count">+ ${esc(x.name)} on save</span>`).join(' ')}</div>
+    <div class="count">${e.type === 'area_effect_set' ? tt('areaeffects.a_set_fires_its_members')
+      : tt('areaeffects.an_effect_ground_effect_or_floating')}
+      ${(c.absent_effect_files || []).length ? tt('areaeffects.of_those_files_are_the_base',{absent_effect_files_n:c.absent_effect_files.length}) : ''}</div>
+    <div class="trnote">${tt('areaeffects.copy_it_as')} <input id="aexCopyName" style="width:200px" placeholder="ae_new_name">
+      <button onclick="aexCopy(${e.id})">${tt('common.copy')}</button>
+      ${w.copy.filter(x => x.like === e.id).map(x => `<span class="count">${tt('areaeffects.on_save_3',{name:esc(x.name)})}</span>`).join(' ')}</div>
   </div>
   ${members}
-  <div class="cdbsec"><h3>Named by <span class="count">${e.used.length + e.in_sets.length}</span></h3>
-    ${used || '<div class="count">No projectile, engine or set in this mod names it.</div>'}</div>`;
+  <div class="cdbsec"><h3>${tt('areaeffects.named_by')} <span class="count">${e.used.length + e.in_sets.length}</span></h3>
+    ${used || `<div class="count">${tt('areaeffects.no_projectile_engine_or_set_in')}</div>`}</div>`;
 }
 function aexAddField(parent){
   const tag = document.getElementById('aexAddTag').value;
   const value = (document.getElementById('aexAddVal').value || '').trim();
-  if(!value) return toast('Give the new field a value first.');
+  if(!value) return toast(tt('areaeffects.give_the_new_field_a_value'));
   state.aex.w.add_field.push({parent, tag, value});
   renderAreaEffects();
 }
@@ -205,7 +205,7 @@ function aexAddMember(like){
 }
 function aexCopy(id){
   const name = (document.getElementById('aexCopyName').value || '').trim();
-  if(!name) return toast('Name the copy first.');
+  if(!name) return toast(tt('areaeffects.name_the_copy_first'));
   state.aex.w.copy.push({like: id, name});
   renderAreaEffects();
 }
@@ -221,13 +221,13 @@ async function aexSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(`Write ${(p.changes || []).length} change(s)?\n\n` + (p.changes || []).slice(0, 16).join('\n')
+  if(!confirm(tt('areaeffects.write_change_s',{n:(p.changes || []).length}) + (p.changes || []).slice(0, 16).join('\n')
     + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   let res;
   try{ res = await api.post('/api/areaeffects/apply', body); }
   catch(e){ res = {error: errText(e)}; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   await loadAreaEffects();
 }

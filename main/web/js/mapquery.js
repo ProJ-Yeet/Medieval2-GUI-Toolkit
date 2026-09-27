@@ -76,7 +76,7 @@ function cqToggle(){
   const k = state.cq;
   if(!k) return;
   k.open = !k.open;
-  activity('map query', k.open ? 'opened the query panel' : 'closed the query panel');
+  activity(tt('mapquery.map_query'), k.open ? tt('mapquery.opened_the_query_panel') : tt('mapquery.closed_the_query_panel'));
   if(k.open && !k.voc) cqLoadVocab();
   else cqPaint();
 }
@@ -96,7 +96,7 @@ async function cqLoadVocab(){
   cqPaint();
   try{
     k.voc = await api.get(`/api/map/query/vocab?mod=${enc(k.mod)}${cmapCampQ()}`,
-                          {label: 'reading what this map can be asked'});
+                          {label: tt('mapquery.reading_what_this_map_can_be')});
   }catch(e){ k.err = errText(e); }
   finally{ k.busy = false; }
   if(state.cq === k) cqPaint();
@@ -115,7 +115,7 @@ async function cqRun(){
   finally{ k.busy = false; }
   if(state.cq !== k) return;
   if(k.res){
-    activity('map query', `${k.rules.length} filter(s) -> ${k.res.count} province(s)`);
+    activity(tt('mapquery.map_query'), tt('mapquery.filter_s_province_s',{rules_n:k.rules.length,count:k.res.count}));
     // A query answer replaces a theme on the map: they are two different
     // colourings of one layer and showing both at once would be a picture
     // neither of them means.
@@ -138,10 +138,10 @@ async function cqTheme(code){
   try{
     k.col = await api.get(`/api/map/colouring?mod=${enc(k.mod)}&code=${enc(code)}`
                           + cmapCampQ(),
-                          {label: 'building that map'});
+                          {label: tt('mapquery.building_that_map')});
     k.theme = code;
     k.res = null;
-    activity('map query', `showed the ${k.col.label} map`);
+    activity(tt('mapquery.map_query'), tt('mapquery.showed_the_map',{label:k.col.label}));
     cqApply(k.col, k.borders);
   }catch(e){ k.err = errText(e); k.theme = ''; k.col = null; }
   finally{ k.busy = false; }
@@ -179,8 +179,8 @@ async function cqExport(what){
   k.err = r.error || '';
   if(!r.error){
     k.exported = r;
-    activity('map export', `${r.count} file(s), ${Math.round(r.bytes / 1024)} KB`);
-    toast(`${r.count} file${r.count === 1 ? '' : 's'} written to ${r.folder}`, 7000);
+    activity(tt('mapquery.map_export'), tt('mapquery.file_s_kb',{count:r.count,bytes:Math.round(r.bytes / 1024)}));
+    toast(tt('mapquery.file_written_to',{count:r.count,count2:r.count === 1 ? '' : 's',folder:r.folder}), 7000);
   }
   cqPaint();
 }
@@ -399,7 +399,7 @@ function cqDraw(field, value){
   k[field] = value;
   const c = state.cmap;
   if(field === 'fill' && c) c.overlayFill = value;
-  activity('map query', `${field} ${value}`);
+  activity(tt('mapquery.map_query'), `${field} ${value}`);
   if(k.col) cqApply(k.col, k.borders);
   else if(k.res) cqApply(k.res, k.borders);
   cqPaint();
@@ -419,7 +419,7 @@ function cqBordersToggle(on){ cqDraw('borders', on); }
 function cqGo(r){
   if(!r || !r.tile) return;
   cmapGoTile(r.tile, CQ_ZOOM, r.name);
-  activity('map query', `went to ${r.name}`);
+  activity(tt('mapquery.map_query'), tt('mapquery.went_to',{name:r.name}));
 }
 
 /* ---------- drawing ---------- */
@@ -453,24 +453,23 @@ function cqHtml(){
   if(!k) return '';
   const head = `<div class="cpbar">
     <button class="cptog${k.open ? ' on' : ''}" onclick="cqToggle()"
-      title="Ask this map which provinces are which, and colour it by what it says."
-      >\u{1F5FA} Query${k.open ? ' ✓' : ''}</button>
-    ${k.res ? `<span class="count">${k.res.count} of ${k.res.of} provinces</span>` : ''}
+      title="${ttA('mapquery.ask_this_map_which_provinces_are')}"
+      >${tt('mapquery.query',{open:k.open ? ' ✓' : ''})}</button>
+    ${k.res ? `<span class="count">${tt('mapquery.of_provinces',{count:k.res.count,of:k.res.of})}</span>` : ''}
     ${k.theme && k.col ? `<span class="count">${esc(k.col.label)}</span>` : ''}
-    ${k.busy ? `<span class="count">working…</span>` : ''}
+    ${k.busy ? `<span class="count">${tt('common.working_2')}</span>` : ''}
   </div>`;
   if(!k.open) return head;
   if(k.err && !k.voc) return head + `<div class="cqpanel w-bad">${esc(k.err)}</div>`;
-  if(!k.voc) return head + `<div class="cqpanel count">reading what this map
-    can be asked…</div>`;
+  if(!k.voc) return head + `<div class="cqpanel count">${tt('mapquery.reading_what_this_map_can_be_2')}</div>`;
   return head + `<div class="cqpanel">
     <div class="cqtabs">
       <button class="${k.tab === 'query' ? 'on' : ''}" onclick="cqTab('query')"
-        >Filters</button>
+        >${tt('mapquery.filters')}</button>
       <button class="${k.tab === 'maps' ? 'on' : ''}" onclick="cqTab('maps')"
-        >Themes and information maps</button>
+        >${tt('mapquery.themes_and_information_maps')}</button>
       <button class="${k.tab === 'export' ? 'on' : ''}" onclick="cqTab('export')"
-        >Export</button>
+        >${tt('common.export')}</button>
     </div>
     ${k.err ? `<div class="w-bad">${esc(k.err)}</div>` : ''}
     ${k.tab === 'query' ? cqFiltersHtml()
@@ -485,7 +484,7 @@ function cqSkippedHtml(){
   const k = state.cq;
   const s = (k.voc && k.voc.skipped) || [];
   if(!s.length) return '';
-  return `<div class="cqskip"><div class="k">Not read</div>
+  return `<div class="cqskip"><div class="k">${tt('mapquery.not_read')}</div>
     ${s.map(x => `<div class="count"><b>${esc(x.what)}</b> ${esc(x.why)}</div>`).join('')}
   </div>`;
 }
@@ -499,7 +498,7 @@ function cqFiltersHtml(){
     g.items.push(f);
   }
   const picker = `<select data-cqadd>
-    <option value="">Add a filter…</option>
+    <option value="">${tt('mapquery.add_a_filter')}</option>
     ${groups.map(g => `<optgroup label="${esc(g.name)}">${g.items.map(f =>
       `<option value="${esc(f.code)}" ${f.off ? 'disabled' : ''}>${esc(f.label)}${
         f.off ? ' - off' : (f.values.length ? ` (${f.values.length})` : '')
@@ -512,18 +511,16 @@ function cqFiltersHtml(){
       ${picker}
       <span class="cqmatch">
         <label class="chk"><input type="radio" name="cqmatch" ${k.match === 'all' ? 'checked' : ''}
-          onchange="cqMatch('all')"> all of them</label>
+          onchange="cqMatch('all')"> ${tt('mapquery.all_of_them')}</label>
         <label class="chk"><input type="radio" name="cqmatch" ${k.match === 'any' ? 'checked' : ''}
-          onchange="cqMatch('any')"> any of them</label>
+          onchange="cqMatch('any')"> ${tt('mapquery.any_of_them')}</label>
       </span>
       <button class="primary" onclick="cqRun()" ${k.rules.length ? '' : 'disabled'}
-        >Find provinces</button>
+        >${tt('mapquery.find_provinces')}</button>
     </div>
     ${k.rules.length ? k.rules.map(cqRuleHtml).join('')
-      : `<div class="count">No filter yet. Every one of them is a question the
-         mod's own files answer - who starts holding a province, what is buried
-         under it, which mercenaries it sells, whose win conditions name it.</div>`}
-    ${off.length ? `<div class="cqoff"><div class="k">Off on this mod</div>
+      : `<div class="count">${tt('mapquery.no_filter_yet_every_one_of')}</div>`}
+    ${off.length ? `<div class="cqoff"><div class="k">${tt('mapquery.off_on_this_mod')}</div>
       ${off.map(f => `<div class="count"><b>${esc(f.label)}</b> ${esc(f.off)}</div>`).join('')}
     </div>` : ''}
     ${cqResultHtml()}
@@ -538,26 +535,26 @@ function cqRuleHtml(r, i){
     body = `<select data-cqval="${i}">${f.values.map(v =>
       `<option value="${esc(v.value)}" ${v.value === r.value ? 'selected' : ''}
         >${esc(v.label)} · ${v.count}</option>`).join('')}</select>`;
-    if(f.kind === 'share') body += ` at least <input type="number" min="0" max="100"
+    if(f.kind === 'share') body += ` ${tt('mapquery.at_least')} <input type="number" min="0" max="100"
       value="${r.min == null ? 50 : r.min}" data-cqnum="${i}" data-slot="min"
       style="width:5em">${esc(f.unit || '')}`;
   }else if(f.kind === 'range'){
-    body = `from <input type="number" value="${r.min == null ? '' : r.min}"
-        data-cqnum="${i}" data-slot="min" style="width:6em" placeholder="any">
-      to <input type="number" value="${r.max == null ? '' : r.max}"
-        data-cqnum="${i}" data-slot="max" style="width:6em" placeholder="any">
+    body = `${tt('mapquery.from')} <input type="number" value="${r.min == null ? '' : r.min}"
+        data-cqnum="${i}" data-slot="min" style="width:6em" placeholder="${ttA('mapquery.any')}">
+      ${tt('mapquery.to')} <input type="number" value="${r.max == null ? '' : r.max}"
+        data-cqnum="${i}" data-slot="max" style="width:6em" placeholder="${ttA('mapquery.any')}">
       ${esc(f.unit || '')}`;
   }else if(f.kind === 'text'){
     body = `<input type="text" value="${esc(r.value || '')}" data-cqtext="${i}"
-      placeholder="part of a name" style="width:14em">`;
+      placeholder="${ttA('mapquery.part_of_a_name')}" style="width:14em">`;
   }else{
-    body = `<span class="count">on</span>`;
+    body = `<span class="count">${tt('mapquery.on')}</span>`;
   }
   return `<div class="cqrule">
     <b>${esc(f.label)}</b> ${body}
-    <label class="chk" title="Keep the provinces this does NOT describe">
-      <input type="checkbox" data-cqneg="${i}" ${r.negate ? 'checked' : ''}> not</label>
-    <button onclick="cqDrop(${i})" title="Remove this filter">✕</button>
+    <label class="chk" title="${ttA('mapquery.keep_the_provinces_this_does_not')}">
+      <input type="checkbox" data-cqneg="${i}" ${r.negate ? 'checked' : ''}> ${tt('common.not')}</label>
+    <button onclick="cqDrop(${i})" title="${ttA('mapquery.remove_this_filter')}">✕</button>
     ${f.note ? `<div class="count">${esc(f.note)}</div>` : ''}
     <div class="count cqsrc">${esc(f.source)}</div>
   </div>`;
@@ -568,24 +565,19 @@ function cqResultHtml(){
   if(!res) return '';
   const rows = res.regions.slice(0, CQ_ROWS);
   return `<div class="cqres">
-    <div class="k">${res.count} province${res.count === 1 ? '' : 's'}
-      <span class="count">of ${res.of} · ${res.tiles.toLocaleString()} tiles ·
-        ${res.ms} ms</span></div>
+    <div class="k">${tt('mapquery.province_of_tiles_ms',{count:res.count,x:res.count === 1 ? '' : 's',of:res.of,tiles:res.tiles.toLocaleString(),ms:res.ms})}</div>
     ${res.off.length ? res.off.map(o => `<div class="w-warn">
-      <b>${esc(o.label || o.code)}</b> was not asked: ${esc(o.why)}</div>`).join('') : ''}
+      <b>${esc(o.label || o.code)}</b> ${tt('mapquery.was_not_asked',{why:esc(o.why)})}</div>`).join('') : ''}
     ${res.count ? rows.map(r => `<div class="cqrow" onclick='cqGo(${
         JSON.stringify({name: r.name, tile: r.tile}).replace(/'/g, "&#39;")})'>
         <b>${esc(r.shown || r.name)}</b>
-        <span class="count">${esc(r.name)}${r.owner ? ' · ' + esc(r.owner) : ''}
-          · ${r.pixels.toLocaleString()} tiles</span>
+        <span class="count">${tt('mapquery.tiles',{name:esc(r.name),x:r.owner ? ' · ' + esc(r.owner) : '',pixels:r.pixels.toLocaleString()})}</span>
         <div class="count">${r.why.map(esc).join(' · ')}</div>
       </div>`).join('')
-      : `<div class="count">Nothing on this map answers all of that. The filters
-         that did run are listed above with what each one is reading.</div>`}
-    ${res.regions.length > CQ_ROWS ? `<div class="count">and ${
-      res.count - CQ_ROWS} more, all of them coloured on the map</div>` : ''}
+      : `<div class="count">${tt('mapquery.nothing_on_this_map_answers_all')}</div>`}
+    ${res.regions.length > CQ_ROWS ? `<div class="count">${tt('mapquery.and_more_all_of_them_coloured',{x:res.count - CQ_ROWS})}</div>` : ''}
     ${res.count ? `<button onclick="cqExport('query')" ${k.exporting ? 'disabled' : ''}
-      >Export this as a TGA</button>` : ''}
+      >${tt('mapquery.export_this_as_a_tga')}</button>` : ''}
   </div>`;
 }
 
@@ -601,73 +593,54 @@ function cqMapsHtml(){
   return `<div class="cqmaps">
     <div class="cqhead">
       <select data-cqtheme>
-        <option value="">No colouring - the layers as they are</option>
+        <option value="">${tt('mapquery.no_colouring_the_layers_as_they')}</option>
         ${groups.map(g => `<optgroup label="${esc(g.name)}">${g.items.map(c =>
           `<option value="${esc(c.code)}" ${c.code === k.theme ? 'selected' : ''}
             ${c.off ? 'disabled' : ''}>${esc(c.label)}${c.off ? ' - off' : ''}</option>`
           ).join('')}</optgroup>`).join('')}
       </select>
-      <span class="cmseg" title="How the colouring meets the map.
-Solid lays it over. Tint takes the colour of the theme and the light of what is already
-drawn, so 23a's terrain textures still read underneath - which is TWMapReader's HSB fill,
-and the reason it exists: a colouring that paints over a textured map hides the map."
-        >${[['solid', 'Solid'], ['tint', 'Tint']].map(([v, t]) =>
+      <span class="cmseg" title="${ttA('mapquery.how_the_colouring_meets_the_map')}"
+        >${[['solid', tt('mapquery.solid')], ['tint', tt('mapquery.tint')]].map(([v, t]) =>
           `<button class="${k.fill === v ? 'on' : ''}"
             onclick="cqDraw('fill', '${v}')">${t}</button>`).join('')}</span>
       <input type="range" min="20" max="100" value="${Math.round(k.opacity * 100)}"
-        oninput="cqOpacity(+this.value)" title="How much of the layers below shows through">
+        oninput="cqOpacity(+this.value)" title="${ttA('mapquery.how_much_of_the_layers_below')}">
       <span class="cmpct">${Math.round(k.opacity * 100)}%</span>
     </div>
     <div class="cqhead">
-      <label class="chk" title="Frontiers, on any colouring. Until 23b this tickbox
-did nothing on an information map, because each colouring carried its own yes-or-no and
-only the three themes said yes - so 'borders' on a fertility map was a control that
-appeared to be broken. It is the switch now, and it means what it says."
+      <label class="chk" title="${ttA('mapquery.frontiers_on_any_colouring_until_23b')}"
         ><input type="checkbox" ${k.borders ? 'checked' : ''}
-        onchange="cqBordersToggle(this.checked)"> borders</label>
-      <span class="cmseg" title="Where the line goes. On the edge it sits between the
-two provinces and belongs to neither. Inside draws it on both sides instead, which is what
-still reads once a hairline has disappeared into the zoom or into a texture."
-        >${[['edge', 'On the edge'], ['inside', 'Inside']].map(([v, t]) =>
+        onchange="cqBordersToggle(this.checked)"> ${tt('mapquery.borders')}</label>
+      <span class="cmseg" title="${ttA('mapquery.where_the_line_goes_on_the')}"
+        >${[['edge', tt('mapquery.on_the_edge')], ['inside', tt('mapquery.inside')]].map(([v, t]) =>
           `<button class="${k.borderPos === v ? 'on' : ''}" ${k.borders ? '' : 'disabled'}
             onclick="cqDraw('borderPos', '${v}')">${t}</button>`).join('')}</span>
-      <span class="cmseg" title="Between which. Groups draws the frontiers of the
-colouring - two provinces of one faction have no line between them. Every province draws
-every boundary, coloured or not. A coastline is never a frontier either way."
-        >${[[false, 'Groups'], [true, 'Every province']].map(([v, t]) =>
+      <span class="cmseg" title="${ttA('mapquery.between_which_groups_draws_the_frontiers')}"
+        >${[[false, tt('mapquery.groups')], [true, tt('mapquery.every_province')]].map(([v, t]) =>
           `<button class="${k.borderEvery === v ? 'on' : ''}" ${k.borders ? '' : 'disabled'}
             onclick="cqDraw('borderEvery', ${v})">${t}</button>`).join('')}</span>
     </div>
-    ${col ? cqLegendHtml(col) : `<div class="count">Pick a theme to colour every
-      province by who holds it, or an information map to colour it by what is in
-      it. Both are the region layer recoloured through a table Python builds, so
-      what is on screen and what an export writes are the same picture.</div>`}
+    ${col ? cqLegendHtml(col) : `<div class="count">${tt('mapquery.pick_a_theme_to_colour_every')}</div>`}
   </div>`;
 }
 
 function cqLegendHtml(col){
   const k = state.cq;
   return `<div class="cqleg">
-    <div class="k">${esc(col.label)}
-      <span class="count">${col.groups.length} group${col.groups.length === 1 ? '' : 's'}${
-        col.ungrouped ? ` · ${col.ungrouped} province(s) in none` : ''}</span></div>
+    <div class="k">${tt('mapquery.group',{label:esc(col.label),groups_n:col.groups.length,x:col.groups.length === 1 ? '' : 's',x2:col.ungrouped ? tt('mapquery.province_s_in_none',{ungrouped:col.ungrouped}) : ''})}</div>
     ${col.note ? `<div class="count">${esc(col.note)}</div>` : ''}
     ${(col.substituted || []).length ? `<div class="w-warn">
-      ${col.substituted.length} faction${col.substituted.length === 1 ? '' : 's'}
-      declare a colour too close to something already on the map to tell apart and
-      ${col.substituted.length === 1 ? 'is' : 'are'} drawn in the fallback palette:
-      ${col.substituted.map(s => `${esc(s.value)} (rgb(${s.declared.join(', ')}),
-        the same as ${esc(s.clash)})`).join('; ')}</div>` : ''}
+      ${tt('mapquery.faction_declare_a_colour_too_close',{substituted_n:col.substituted.length,x:col.substituted.length === 1 ? '' : 's',x2:col.substituted.length === 1 ? 'is' : 'are',x3:col.substituted.map(s => tt('mapquery.rgb_the_same_as',{value:esc(s.value),declared:s.declared.join(', '),clash:esc(s.clash)})).join('; ')})}</div>` : ''}
     <div class="cqswatches">
       ${col.groups.map(g => `<div class="cqsw" title="${esc(g.names.join(', '))}">
         <i style="background:rgb(${g.rgb.join(',')})"></i>
         <b>${esc(g.label)}</b>
-        <span class="count">${g.regions} · ${g.pixels.toLocaleString()} tiles</span>
+        <span class="count">${tt('mapquery.tiles_2',{regions:g.regions,pixels:g.pixels.toLocaleString()})}</span>
       </div>`).join('')}
     </div>
     <div class="count cqsrc">${esc(col.source)}</div>
     <button onclick="cqExport('colouring')" ${k.exporting ? 'disabled' : ''}
-      >Export this as a TGA</button>
+      >${tt('mapquery.export_this_as_a_tga')}</button>
   </div>`;
 }
 
@@ -675,52 +648,41 @@ function cqExportHtml(){
   const k = state.cq;
   const done = k.exported;
   return `<div class="cqexport">
-    <div class="count">Every export is written into the toolkit's cache and
-      never into the mod: it is a picture of somebody else's files, and a tool
-      that drops forty TGAs into <code>data/world/maps/base</code> has changed a
-      mod nobody asked it to change. Each one is written in the shape of this
-      mod's own <code>map_regions.tga</code>, so it opens in whatever made the
-      map.</div>
+    <div class="count">${tt('mapquery.every_export_is_written_into_the')}</div>
     <div class="cqhead">
       <button class="primary" onclick="cqExport('factions')"
-        ${k.exporting ? 'disabled' : ''}>Every faction, one TGA each</button>
+        ${k.exporting ? 'disabled' : ''}>${tt('mapquery.every_faction_one_tga_each')}</button>
       <button onclick="cqExport('colouring')"
-        ${k.exporting || !k.theme ? 'disabled' : ''}>The colouring on screen</button>
+        ${k.exporting || !k.theme ? 'disabled' : ''}>${tt('mapquery.the_colouring_on_screen')}</button>
       <button onclick="cqExport('query')"
-        ${k.exporting || !(k.res && k.res.count) ? 'disabled' : ''}>The query result</button>
+        ${k.exporting || !(k.res && k.res.count) ? 'disabled' : ''}>${tt('mapquery.the_query_result')}</button>
     </div>
     <div class="cqhead" style="flex-wrap:wrap">
       <button onclick="cqExport('tiles')" ${k.exporting ? 'disabled' : ''}
-        title="A tab-delimited row per tile: both coordinates, the province, its settlement and owner, and each layer's value there"
-        >Every tile as text</button>
+        title="${ttA('mapquery.a_tab_delimited_row_per_tile')}"
+        >${tt('mapquery.every_tile_as_text')}</button>
       <label class="count"><input type="checkbox" ${k.tilesLand ? 'checked' : ''}
-        onchange="state.cq.tilesLand = this.checked"> land only</label>
+        onchange="state.cq.tilesLand = this.checked"> ${tt('mapquery.land_only')}</label>
       <label class="count"><input type="checkbox" ${k.tilesExt ? 'checked' : ''}
-        onchange="state.cq.tilesExt = this.checked"> each layer's colour too</label>
+        onchange="state.cq.tilesExt = this.checked"> ${tt('mapquery.each_layers_colour_too')}</label>
       <label class="count"><input type="checkbox" ${k.tilesQuery ? 'checked' : ''}
         ${k.res && k.res.count ? '' : 'disabled'} onchange="state.cq.tilesQuery = this.checked">
-        only the query's provinces</label>
+        ${tt('mapquery.only_the_querys_provinces')}</label>
     </div>
     <div class="cqhead" style="flex-wrap:wrap">
       <a class="btn" href="/api/project/campaign?mod=${enc(k.mod)}${cmapCampQ()}${k.zipAll ? '&everything=1' : ''}"
-        title="The base map, this campaign's folder and the region names, at their data/ paths, to share or keep. Load one back from My changes."
-        >⤓ This campaign as a zip</a>
+        title="${ttA('mapquery.the_base_map_this_campaigns_folder')}"
+        >${tt('mapquery.this_campaign_as_a_zip')}</a>
       <label class="count"><input type="checkbox" ${k.zipAll ? 'checked' : ''}
-        onchange="state.cq.zipAll = this.checked; cqPaint()"> with the copies and archives beside the files</label>
+        onchange="state.cq.zipAll = this.checked; cqPaint()"> ${tt('mapquery.with_the_copies_and_archives_beside')}</label>
     </div>
-    <div class="count">A <code>.tsv</code> for a spreadsheet or a script: <code>x, y</code> are the game's
-      (what descr_strat.txt writes), <code>image_x, image_y</code> the picture's. A feature overrides the ground
-      where there is one. A whole map is about 250 000 rows and 20 MB; a spreadsheet stops at 1 048 576.</div>
-    ${k.exporting ? `<div class="count">writing…</div>` : ''}
-    ${done ? `<div class="cqres"><div class="k">${done.count} file${
-      done.count === 1 ? '' : 's'} <span class="count">${
-      Math.round(done.bytes / 1024).toLocaleString()} KB · ${done.ms} ms</span></div>
+    <div class="count">${tt('mapquery.a_tsv_for_a_spreadsheet_or')}</div>
+    ${k.exporting ? `<div class="count">${tt('common.writing')}</div>` : ''}
+    ${done ? `<div class="cqres"><div class="k">${tt('mapquery.file_kb_ms',{count:done.count,x:done.count === 1 ? '' : 's',x2:Math.round(done.bytes / 1024).toLocaleString(),ms:done.ms})}</div>
       <div class="count">${esc(done.folder)}</div>
-      ${done.files.slice(0, 40).map(f => `<div class="count">${esc(f.name)}
-        - ${esc(f.label)}, ${f.regions} province(s)${f.rows ? `, ${f.rows.toLocaleString()} rows`
-          + (f.too_many_for_a_sheet ? ' <b class="w-warn">- more than a spreadsheet holds in one sheet</b>' : '') : ''}</div>`).join('')}
-      ${done.files.length > 40 ? `<div class="count">and ${
-        done.files.length - 40} more</div>` : ''}
+      ${done.files.slice(0, 40).map(f => `<div class="count">${tt('mapquery.province_s',{name:esc(f.name),label:esc(f.label),regions:f.regions,x:f.rows ? tt('mapquery.rows',{rows:f.rows.toLocaleString()})
+          + (f.too_many_for_a_sheet ? ` <b class="w-warn">${tt('mapquery.more_than_a_spreadsheet_holds_in')}</b>` : '') : ''})}</div>`).join('')}
+      ${done.files.length > 40 ? `<div class="count">${tt('mapquery.and_more',{x:done.files.length - 40})}</div>` : ''}
     </div>` : ''}
     ${(done && done.skipped || []).map(s => `<div class="w-warn">
       <b>${esc(s.what)}</b> ${esc(s.why)}</div>`).join('')}

@@ -73,6 +73,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from PIL import Image
+from . import i18n as _i18n
 
 try:                                  # only the RLE writer's speed depends on it
     import numpy as np
@@ -182,7 +183,7 @@ def probe(path: Path) -> TgaInfo:
         with path.open("rb") as fh:
             head = fh.read(HEADER_SIZE)
             if len(head) < HEADER_SIZE:
-                raise TgaError(f"{path.name}: too short to be a TGA")
+                raise TgaError(_i18n.msg("eng.maptga.too_short_to_be_a_tga", "{name}: too short to be a TGA", name=path.name))
             (id_len, cmap_type, img_type, cmap_first, cmap_len, cmap_depth,
              x0, y0, w, h, depth, desc) = _HEADER.unpack(head)
             id_field = fh.read(id_len) if id_len else b""
@@ -203,13 +204,13 @@ def probe(path: Path) -> TgaInfo:
         raise TgaError(f"{path.name}: {exc}") from exc
 
     if img_type not in (TYPE_RAW, TYPE_RLE):
-        raise TgaError(f"{path.name}: image type {img_type} is not a true-colour TGA")
+        raise TgaError(_i18n.msg("eng.maptga.image_type_is_not_a_true", "{name}: image type {img_type} is not a true-colour TGA", name=path.name, img_type=img_type))
     if depth not in (24, 32):
-        raise TgaError(f"{path.name}: {depth}-bit is neither 24 nor 32")
+        raise TgaError(_i18n.msg("eng.maptga.bit_is_neither_24_nor_32", "{name}: {depth}-bit is neither 24 nor 32", name=path.name, depth=depth))
     if cmap_type:
-        raise TgaError(f"{path.name}: has a colour map, which no map layer does")
+        raise TgaError(_i18n.msg("eng.maptga.has_a_colour_map_which_no", "{name}: has a colour map, which no map layer does", name=path.name))
     if w <= 0 or h <= 0:
-        raise TgaError(f"{path.name}: header says {w}x{h}")
+        raise TgaError(_i18n.msg("eng.maptga.header_says_x", "{name}: header says {w}x{h}", name=path.name, w=w, h=h))
 
     return TgaInfo(image_type=img_type, width=w, height=h, depth=depth,
                    descriptor=desc, id_field=id_field, colour_map_type=cmap_type,
@@ -239,8 +240,7 @@ def read(path: Path) -> Tuple[Image.Image, TgaInfo]:
         # either this produces the layer, or it says in tiles what is missing.
         out = _decode(path, info)
     if out.size != (info.width, info.height):
-        raise TgaError(f"{path.name}: header says {info.width}x{info.height}, "
-                       f"decoded {out.size[0]}x{out.size[1]}")
+        raise TgaError(_i18n.msg("eng.maptga.header_says_x_decoded_x", "{name}: header says {width}x{height}, decoded {size}x{size2}", name=path.name, width=info.width, height=info.height, size=out.size[0], size2=out.size[1]))
     return out, info
 
 
@@ -263,9 +263,7 @@ def _decode(path: Path, info: TgaInfo) -> Image.Image:
     if info.rle:
         pixels = _decode_rle(body, count, stride, path.name)
     elif len(body) < count * stride:
-        raise TgaError(f"{path.name}: the pixel data is {len(body):,} bytes and "
-                       f"{info.width}x{info.height} at {info.depth}-bit needs "
-                       f"{count * stride:,}")
+        raise TgaError(_i18n.msg("eng.maptga.the_pixel_data_is_body_n", "{name}: the pixel data is {body_n:,} bytes and {width}x{height} at {depth}-bit needs {x:,}", name=path.name, body_n=len(body), width=info.width, height=info.height, depth=info.depth, x=count * stride))
     else:
         pixels = body[:count * stride]
 
@@ -294,8 +292,7 @@ def _decode_rle(body: bytes, count: int, stride: int, name: str) -> bytes:
     end = len(body)
     while at < count:
         if i >= end:
-            raise TgaError(f"{name}: the pixel data ends {count - at:,} pixel(s) "
-                           f"short of the {count:,} the header asks for")
+            raise TgaError(_i18n.msg("eng.maptga.the_pixel_data_ends_x_pixel", "{name}: the pixel data ends {x:,} pixel(s) short of the {count:,} the header asks for", name=name, x=count - at, count=count))
         packet = body[i]
         i += 1
         run = (packet & 0x7F) + 1
@@ -306,15 +303,13 @@ def _decode_rle(body: bytes, count: int, stride: int, name: str) -> bytes:
             px = body[i:i + stride]
             i += stride
             if len(px) < stride:
-                raise TgaError(f"{name}: a run packet is cut off {count - at:,} "
-                               f"pixel(s) from the end")
+                raise TgaError(_i18n.msg("eng.maptga.a_run_packet_is_cut_off", "{name}: a run packet is cut off {x:,} pixel(s) from the end", name=name, x=count - at))
             out[at * stride:(at + n) * stride] = px * n
         else:
             chunk = body[i:i + n * stride]
             i += run * stride
             if len(chunk) < n * stride:
-                raise TgaError(f"{name}: a literal packet is cut off "
-                               f"{count - at:,} pixel(s) from the end")
+                raise TgaError(_i18n.msg("eng.maptga.a_literal_packet_is_cut_off", "{name}: a literal packet is cut off {x:,} pixel(s) from the end", name=name, x=count - at))
             out[at * stride:(at + n) * stride] = chunk
         at += n
     return bytes(out)
@@ -327,10 +322,9 @@ def encode(image: Image.Image, info: TgaInfo) -> bytes:
     hand it to a backup before anything on disk changes.
     """
     if image.size != (info.width, info.height):
-        raise TgaError(f"image is {image.size[0]}x{image.size[1]}, "
-                       f"header says {info.width}x{info.height}")
+        raise TgaError(_i18n.msg("eng.maptga.image_is_x_header_says_x", "image is {size}x{size2}, header says {width}x{height}", size=image.size[0], size2=image.size[1], width=info.width, height=info.height))
     if info.image_type not in (TYPE_RAW, TYPE_RLE):
-        raise TgaError(f"cannot write image type {info.image_type}")
+        raise TgaError(_i18n.msg("eng.maptga.cannot_write_image_type", "cannot write image type {image_type}", image_type=info.image_type))
 
     src = image if image.mode == info.mode else image.convert(info.mode)
     raw = "BGRA" if info.depth == 32 else "BGR"

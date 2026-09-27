@@ -37,10 +37,9 @@ function gfSetMode(m){
 }
 function gfToggleHtml(){
   const g=gfMode()==='guided';
-  return `<div class="gfmode" title="Guided: every value in its own labelled box, with drop-downs and checks.
-Raw lines: one text box per EDU line, exactly as the file stores it.">
-    <button class="${g?'on':''}" onclick="gfSetMode('guided')">🧭 Guided</button>
-    <button class="${g?'':'on'}" onclick="gfSetMode('raw')">⌗ Raw lines</button></div>`;
+  return `<div class="gfmode" title="${ttA('guided.guided_every_value_in_its_own')}">
+    <button class="${g?'on':''}" onclick="gfSetMode('guided')">${tt('guided.guided')}</button>
+    <button class="${g?'':'on'}" onclick="gfSetMode('raw')">${tt('guided.raw_lines')}</button></div>`;
 }
 
 /* ---- vocabularies -------------------------------------------------------
@@ -51,7 +50,7 @@ Raw lines: one text box per EDU line, exactly as the file stores it.">
 const GF_STATIC={
   category:['infantry','cavalry','siege','ship','handler','non_combatant'],
   'class':['light','heavy','missile','spearmen','skirmish'],
-  voice_type:['Heavy','Light','General'],
+  voice_type:[tt('guided.heavy'),tt('guided.light'),tt('common.general')],
   formation_main:['square','horde'],
   formation_special:['','schiltrom','shield_wall','phalanx','testudo','wedge'],
   discipline:['low','normal','disciplined','impetuous'],
@@ -121,44 +120,44 @@ const gfT=(pl,o)=>gfP(pl,'text',o);
 // optional "effect played when the weapon fires" (musket_shot_set) is present
 // between the hit sound and the delay.
 const gfWeaponParts=()=>[
-  gfN('Attack',{min:0,max:63,
-    help:'The weapon’s attack factor: how much damage a connecting blow does. <b>The engine caps this at 63</b>. '
-      +'A higher number is stored but behaves as 63, so it is the one number here with a hard ceiling.'}),
-  gfN('Charge bonus',{min:0,max:63,
-    help:'Extra attack added while the charge is running. It decays as the charge is absorbed, so it rewards '
-      +'hitting a unit that is not braced rather than a long melee.'}),
-  gfC('Projectile','projectile',{w:3,
-    help:'The ammunition this weapon fires: an entry in <code>descr_projectile.txt</code>, which is where its '
-      +'speed, arc, damage model and impact effect live. <code>no</code> means a melee weapon.'}),
-  gfN('Range',{min:0,max:2000,
-    help:'How far the missile can be fired, in metres. 0 for a melee weapon. Vanilla bows sit near 120–180 and '
-      +'artillery near 250–450.'}),
-  gfN('Ammo',{min:0,max:999,
-    help:'Shots carried <b>per man</b>, not per unit. 0 for a melee weapon.'}),
-  gfS('Weapon type','weapon_type',{w:2,
-    help:'How the weapon is used: <code>melee</code>, <code>thrown</code>, <code>missile</code> or '
-      +'<code>siege_missile</code>. <b>A missile weapon has to be the primary one</b>: the engine will not fire a '
-      +'secondary bow. The exception is artillery, where the crew’s own weapon is primary.'}),
-  gfS('Tech type','tech_type',{w:3,
-    help:'Which weapon-upgrade line a smith improves for this unit: <code>melee_simple</code>, '
+  gfN(tt('guided.attack'),{min:0,max:63,
+    help:`${tt('guided.the_weapons_attack_factor_how_much')} `
+      +tt('guided.a_higher_number_is_stored_but')}),
+  gfN(tt('guided.charge_bonus'),{min:0,max:63,
+    help:tt('guided.extra_attack_added_while_the_charge')
+      +tt('guided.hitting_a_unit_that_is_not')}),
+  gfC(tt('guided.projectile'),'projectile',{w:3,
+    help:`${tt('guided.the_ammunition_this_weapon_fires_an')} `
+      +tt('guided.speed_arc_damage_model_and_impact')}),
+  gfN(tt('guided.range'),{min:0,max:2000,
+    help:tt('guided.how_far_the_missile_can_be')
+      +tt('guided.artillery_near_250_450')}),
+  gfN(tt('guided.ammo'),{min:0,max:999,
+    help:tt('guided.shots_carried_per_man_not_per')}),
+  gfS(tt('guided.weapon_type'),'weapon_type',{w:2,
+    help:`${tt('guided.how_the_weapon_is_used_melee')} `
+      +`${tt('guided.siege_missile_a_missile_weapon_has')} `
+      +tt('guided.secondary_bow_the_exception_is_artillery')}),
+  gfS(tt('guided.tech_type'),'tech_type',{w:3,
+    help:`${tt('guided.which_weapon_upgrade_line_a_smith')} `
       +'<code>melee_blade</code>, <code>missile_mechanical</code>, <code>missile_gunpowder</code>, '
-      +'<code>artillery_mechanical</code> or <code>artillery_gunpowder</code>.'}),
-  gfS('Damage type','damage_type',{w:2,
-    help:'<code>piercing</code>, <code>blunt</code> or <code>slashing</code>. The EDU’s own header notes this may '
-      +'no longer be read by the engine; it is still set on every unit.'}),
-  gfS('Hit sound','weapon_sound',{w:2,
-    help:'The sound played when the weapon connects: <code>none</code>, <code>knife</code>, <code>mace</code>, '
-      +'<code>axe</code>, <code>sword</code> or <code>spear</code>. Cosmetic only.'}),
-  gfC('Fire effect','fire_effect',{w:3,optional:1,
-    help:'Optional. The effect played when the weapon <i>fires</i>: <code>musket_shot_set</code> for gunpowder '
-      +'units, and essentially nothing else. Setting it is what turns this line from 11 values into 12; clearing '
-      +'it turns it back.'}),
-  gfN('Delay',{min:0,max:9999,
-    help:'Minimum delay between attacks, in tenths of a second, on top of whatever the animation takes. Lower is '
-      +'faster. 25 is the value nearly every unit in the game uses.'}),
-  gfN('Skel. factor',{min:0,max:100,step:0.1,dec:1,
-    help:'Skeleton compensation factor in melee. The EDU header says it should be 1; a few mods use it to tune '
-      +'how a mismatched animation lands.'}),
+      +tt('guided.artillery_mechanical_or_artillery_gunpowder')}),
+  gfS(tt('guided.damage_type'),'damage_type',{w:2,
+    help:`${tt('guided.piercing_blunt_or_slashing_the_edus')} `
+      +tt('guided.no_longer_be_read_by_the')}),
+  gfS(tt('guided.hit_sound'),'weapon_sound',{w:2,
+    help:`${tt('guided.the_sound_played_when_the_weapon')} `
+      +tt('guided.axe_sword_or_spear_cosmetic_only')}),
+  gfC(tt('guided.fire_effect'),'fire_effect',{w:3,optional:1,
+    help:`${tt('guided.optional_the_effect_played_when_the')} `
+      +tt('guided.units_and_essentially_nothing_else_setting')
+      +tt('guided.it_turns_it_back')}),
+  gfN(tt('guided.delay'),{min:0,max:9999,
+    help:tt('guided.minimum_delay_between_attacks_in_tenths')
+      +tt('guided.faster_25_is_the_value_nearly')}),
+  gfN(tt('guided.skel_factor'),{min:0,max:100,step:0.1,dec:1,
+    help:tt('guided.skeleton_compensation_factor_in_melee_the')
+      +tt('guided.how_a_mismatched_animation_lands')}),
 ];
 // A doc is a short lead line and then points. Prose that runs for six lines is
 // what this editor exists to replace, so it does not get to live in the help.
@@ -166,284 +165,284 @@ const gfWeaponParts=()=>[
 const gfDoc=docPoints;
 
 const gfWeaponSpec=(title,doc)=>({t:title,doc,parts:gfWeaponParts(),arity:[11,12],
-  syn:'attack, charge, projectile, range, ammo, weapon type, tech type, damage type, hit sound, [fire effect,] delay, skeleton factor',
+  syn:tt('guided.attack_charge_projectile_range_ammo_weapon'),
   // 11 values -> no fire effect: open slot 9 so every box keeps its meaning
   pad:p=>p.length>=12?p:p.slice(0,9).concat([''],p.slice(9)),
   join:p=>{const fx=(p[9]||'').trim();
     return p.slice(0,9).concat(fx?[fx]:[],p.slice(10)).map(x=>(''+(x==null?'':x)).trim()).join(', ');}});
-const gfExSpec=which=>({t:which+' weapon bonuses',opt:1,
-  syn:'attack bonus vs mounted, defence bonus vs mounted, armour penetration',
-  doc:gfDoc('Optional. Three factors that apply only against mounted enemies.',[
-    'The engine does read the line.',
-    'Most mods leave it out and use <code>mount_effect</code> plus the '
-      +'<code>spear_bonus_N</code> attributes instead.',
-    'Vanilla ships it commented out on every unit.']),
-  parts:[gfN('Attack vs mounted',{min:-100,max:100,help:'Added to the attack factor when the target is mounted.'}),
-    gfN('Defence vs mounted',{min:-100,max:100,help:'Added to defence when the attacker is mounted.'}),
-    gfN('Armour penetration',{min:-100,max:100,help:'How much of a mounted target’s armour this weapon ignores.'})]});
-const gfAttrSpec=which=>({t:which+' weapon attributes',w:'wattr',
-  doc:gfDoc('What the weapon does beyond its numbers.',[
-    '<code>ap</code>: halves the target’s armour.',
-    '<code>bp</code>: a missile passes through a man and hits the one behind.',
-    '<code>spear</code> / <code>light_spear</code>: brace against a cavalry charge '
-      +'from the front. <code>spear</code> also carries a penalty against infantry.',
-    '<code>long_pike</code>: required by phalanx units.',
-    '<code>spear_bonus_N</code>: a flat attack bonus against cavalry. Only one applies.',
-    '<code>thrown</code> / <code>launching</code> / <code>area</code>: change how the hit resolves.',
-    '<code>prec</code>: a missile unit throws one volley, then charges.',
-    'None of them is written <code>no</code>, which is how "none" is spelled here.'])});
+const gfExSpec=which=>({t:which+tt('guided.weapon_bonuses'),opt:1,
+  syn:tt('guided.attack_bonus_vs_mounted_defence_bonus'),
+  doc:gfDoc(tt('guided.optional_three_factors_that_apply_only'),[
+    tt('guided.the_engine_does_read_the_line'),
+    `${tt('guided.most_mods_leave_it_out_and')} `
+      +tt('guided.spear_bonus_n_attributes_instead'),
+    tt('guided.vanilla_ships_it_commented_out_on')]),
+  parts:[gfN(tt('guided.attack_vs_mounted'),{min:-100,max:100,help:tt('guided.added_to_the_attack_factor_when')}),
+    gfN(tt('guided.defence_vs_mounted'),{min:-100,max:100,help:tt('guided.added_to_defence_when_the_attacker')}),
+    gfN(tt('guided.armour_penetration'),{min:-100,max:100,help:tt('guided.how_much_of_a_mounted_targets')})]});
+const gfAttrSpec=which=>({t:which+tt('guided.weapon_attributes'),w:'wattr',
+  doc:gfDoc(tt('guided.what_the_weapon_does_beyond_its'),[
+    tt('guided.ap_halves_the_targets_armour'),
+    tt('guided.bp_a_missile_passes_through_a'),
+    `${tt('guided.spear_light_spear_brace_against_a')} `
+      +tt('guided.from_the_front_spear_also_carries'),
+    tt('guided.long_pike_required_by_phalanx_units'),
+    tt('guided.spear_bonus_n_a_flat_attack'),
+    tt('guided.thrown_launching_area_change_how_the'),
+    tt('guided.prec_a_missile_unit_throws_one'),
+    tt('guided.none_of_them_is_written_no')])});
 
 const GF_FIELDS={
-  'type':{t:'Internal name',syn:'<name>',
-    doc:gfDoc('The name every <b>other</b> file uses for this unit.',[
-      'Read by <code>descr_strat.txt</code>, <code>export_descr_buildings.txt</code>, '
-        +'<code>descr_mercenaries.txt</code>, <code>descr_rebel_factions.txt</code> and campaign scripts.',
-      'Spaces are allowed.',
-      'Rule of thumb: any file that names units without underscores wants this name.']),
-    parts:[gfT('type',{grow:1,help:'Renaming it here does not update the other files that recruit the unit.'})]},
-  'dictionary':{t:'Dictionary key',syn:'<key>  ; <comment>',
-    doc:gfDoc('The unit’s <i>other</i> name.',[
-      'The key its on-screen text is looked up under in <code>data/text/export_units.txt</code>.',
-      'Also the filename of its unit card and info card (<code>#&lt;key&gt;.tga</code>).',
-      'Usually the type with underscores instead of spaces.',
-      'Anything after a <code>;</code> is a comment. Vanilla uses it to spell the real name out.']),
+  'type':{t:tt('guided.internal_name'),syn:'<name>',
+    doc:gfDoc(tt('guided.the_name_every_other_file_uses'),[
+      `${tt('guided.read_by_descr_strat_txt_export')} `
+        +tt('guided.descr_mercenaries_txt_descr_rebel_factions'),
+      tt('guided.spaces_are_allowed'),
+      tt('guided.rule_of_thumb_any_file_that')]),
+    parts:[gfT('type',{grow:1,help:tt('guided.renaming_it_here_does_not_update')})]},
+  'dictionary':{t:tt('guided.dictionary_key'),syn:'<key>  ; <comment>',
+    doc:gfDoc(tt('guided.the_units_other_name'),[
+      tt('guided.the_key_its_on_screen_text'),
+      tt('guided.also_the_filename_of_its_unit'),
+      tt('guided.usually_the_type_with_underscores_instead'),
+      tt('guided.anything_after_a_is_a_comment')]),
     parts:[gfT('dictionary',{grow:1})]},
-  'category':{t:'Category',syn:'infantry | cavalry | siege | ship | handler',
-    doc:gfDoc('The broad troop type. Sets defaults and where the unit stands in an army’s formation.',[
-      'Wagons like the Great Cross count as <code>siege</code>.',
-      '<code>handler</code> is for a unit whose animals do the fighting.',
-      '<code>non_combatant</code> is in the file header but is a Rome leftover.']),
+  'category':{t:tt('common.category'),syn:tt('guided.infantry_cavalry_siege_ship_handler'),
+    doc:gfDoc(tt('guided.the_broad_troop_type_sets_defaults'),[
+      tt('guided.wagons_like_the_great_cross_count'),
+      tt('guided.handler_is_for_a_unit_whose'),
+      tt('guided.non_combatant_is_in_the_file')]),
     parts:[gfS('category','category',{w:2})]},
-  'class':{t:'Class',syn:'light | heavy | missile | spearmen',
-    doc:gfDoc('What the unit is within its category.',[
-      '<code>light</code> / <code>heavy</code>: infantry, cavalry and ships.',
-      '<code>missile</code>: infantry, cavalry and siege.',
-      '<code>spearmen</code>: infantry only.',
-      'A wagon is the odd one out: <code>siege</code> category, <code>light</code> class.']),
+  'class':{t:tt('guided.class'),syn:tt('guided.light_heavy_missile_spearmen'),
+    doc:gfDoc(tt('guided.what_the_unit_is_within_its'),[
+      tt('guided.light_heavy_infantry_cavalry_and_ships'),
+      tt('guided.missile_infantry_cavalry_and_siege'),
+      tt('guided.spearmen_infantry_only'),
+      tt('guided.a_wagon_is_the_odd_one')]),
     parts:[gfS('class','class',{w:2})]},
-  'voice_type':{t:'Voice type',syn:'Heavy | Light | General',
-    doc:gfDoc('Which set of battlefield barks the unit uses.',[
-      '<code>Light</code>: ships and weak-sounding troops.',
-      '<code>Heavy</code>: regulars.',
-      '<code>General</code>: a general’s bodyguard.',
-      'With <code>accent</code>, this is what points the game at a block in '
+  'voice_type':{t:tt('guided.voice_type'),syn:tt('guided.heavy_light_general'),
+    doc:gfDoc(tt('guided.which_set_of_battlefield_barks_the'),[
+      tt('guided.light_ships_and_weak_sounding_troops'),
+      tt('guided.heavy_regulars'),
+      tt('guided.general_a_generals_bodyguard'),
+      `${tt('guided.with_accent_this_is_what_points')} `
         +'<code>export_descr_sounds_units_voice.txt</code>.']),
     parts:[gfS('voice_type','voice_type',{w:2})]},
-  'accent':{t:'Accent',opt:1,syn:'<accent>',
-    doc:gfDoc('Optional. Forces one accent on the unit whoever owns it.',[
-      'Without the line it speaks with the owning faction’s accent, so English-owned '
-        +'Swiss Pikemen sound English.',
-      'Accents are declared in <code>descr_sounds_accents.txt</code>.',
-      'Vanilla has English, Scottish, French, German, Mediterranean, East_European, '
-        +'Arabic and Mongolian. Mods add their own.']),
+  'accent':{t:tt('guided.accent'),opt:1,syn:'<accent>',
+    doc:gfDoc(tt('guided.optional_forces_one_accent_on_the'),[
+      tt('guided.without_the_line_it_speaks_with')
+        +tt('guided.swiss_pikemen_sound_english'),
+      tt('guided.accents_are_declared_in_descr_sounds'),
+      tt('guided.vanilla_has_english_scottish_french_german')
+        +tt('guided.arabic_and_mongolian_mods_add_their')]),
     parts:[gfC('accent','accent',{w:3})]},
-  'banner faction':{t:'Faction banner',syn:'<banner>',
-    doc:gfDoc('The unit’s big battlefield banner, from <code>descr_banners_new.xml</code>.',[
-      'It also decides the mini-banners for experience and weapon/armour upgrades.',
-      'The list is the <code>&lt;FactionBanners&gt;</code> section of that file, so it is this '
-        +'mod’s own. Vanilla declares four, all named <code>main_…</code>.',
-      'Ships have no line: they never appear on the battlefield.']),
+  'banner faction':{t:tt('guided.faction_banner'),syn:'<banner>',
+    doc:gfDoc(tt('guided.the_units_big_battlefield_banner_from'),[
+      tt('guided.it_also_decides_the_mini_banners'),
+      `${tt('guided.the_list_is_the_factionbanners_section')} `
+        +tt('guided.mods_own_vanilla_declares_four_all'),
+      tt('guided.ships_have_no_line_they_never')]),
     parts:[gfC('banner','banner_faction',{w:3})]},
-  'banner holy':{t:'Holy-war banner',opt:1,syn:'<banner>',
-    doc:gfDoc('Optional. The second banner the unit carries while on a crusade.',[
-      'The list is the <code>&lt;HolyBanners&gt;</code> section of '
-        +'<code>descr_banners_new.xml</code>. Vanilla declares <code>crusade</code> and '
-        +'<code>crusade_cavalry</code>, and a mod may declare its own.',
-      'Leave the line out and the unit carries none.']),
+  'banner holy':{t:tt('guided.holy_war_banner'),opt:1,syn:'<banner>',
+    doc:gfDoc(tt('guided.optional_the_second_banner_the_unit'),[
+      `${tt('guided.the_list_is_the_holybanners_section')} `
+        +`${tt('guided.descr_banners_new_xml_vanilla_declares')} `
+        +tt('guided.crusade_cavalry_and_a_mod_may'),
+      tt('guided.leave_the_line_out_and_the')]),
     parts:[gfC('banner','banner_holy',{w:3})]},
-  'banner unit':{t:'Unit banner',opt:1,syn:'<banner>',
-    doc:gfDoc('Optional and rare. A per-unit banner override.',[
-      'The list is the <code>&lt;UnitSpecificBanners&gt;</code> section of '
-        +'<code>descr_banners_new.xml</code>. The crusading orders live here.',
-      'Leave the line out and the unit flies its faction banner.']),
+  'banner unit':{t:tt('guided.unit_banner'),opt:1,syn:'<banner>',
+    doc:gfDoc(tt('guided.optional_and_rare_a_per_unit'),[
+      `${tt('guided.the_list_is_the_unitspecificbanners_section')} `
+        +tt('guided.descr_banners_new_xml_the_crusading'),
+      tt('guided.leave_the_line_out_and_the_2')]),
     parts:[gfC('banner','banner_unit',{w:3})]},
 
-  'soldier':{t:'Soldiers',syn:'model, men, extras, mass[, radius[, height]]',
-    doc:gfDoc('Who the unit is made of.',[
-      'The model name is an entry in <code>battle_models.modeldb</code>.',
-      'That entry decides how the man looks <b>and</b> how he moves.',
-      'Swapping it swaps the animation set with it.']),
-    parts:[gfC('Model','model',{w:3,
-        help:'A <code>battle_models.modeldb</code> entry. It carries the meshes, the per-faction textures and the '
-          +'animation skeleton, so changing it changes how the man looks <i>and</i> how he fights.'}),
-      gfN('Men',{min:1,max:500,
-        help:'Men in the unit at the largest unit-size setting; the smaller settings scale down from it. The guide '
-          +'gives 4–100 as the range, though shipped mods field 2-man scout and monster units quite happily.'}),
-      gfN('Extras',{min:0,max:99,
-        help:'Attached siege engines or animals: 2 on a two-trebuchet unit, and 0 for ordinary troops. What the '
-          +'extras <i>are</i> comes from the <code>engine</code> / <code>animal</code> / <code>mounted_engine</code> line.'}),
-      gfN('Mass',{min:0,max:200,step:0.1,dec:1,
-        help:'Collision mass of one man; 1 is normal. A heavier man shoves people aside on the charge. Ignored for '
-          +'cavalry, because a mounted unit takes its mass from the mount in <code>descr_mount.txt</code>.'}),
-      gfN('Radius',{optional:1,min:0,max:10,step:0.05,dec:2,
-        help:'Optional. Collision radius of one man in metres. Leave it empty unless the mod already sets it. '
-          +'Adding it lengthens the line, and the height slot is only read when a radius is present.'}),
-      gfN('Height',{optional:1,min:0,max:10,step:0.1,dec:1,
-        help:'Optional. Collision height of one man in metres. Only read when a radius is given.'})],
+  'soldier':{t:tt('guided.soldiers'),syn:tt('guided.model_men_extras_mass_radius_height'),
+    doc:gfDoc(tt('guided.who_the_unit_is_made_of'),[
+      tt('guided.the_model_name_is_an_entry'),
+      tt('guided.that_entry_decides_how_the_man'),
+      tt('guided.swapping_it_swaps_the_animation_set')]),
+    parts:[gfC(tt('guided.model'),'model',{w:3,
+        help:`${tt('guided.a_battle_models_modeldb_entry_it')} `
+          +tt('guided.animation_skeleton_so_changing_it_changes')}),
+      gfN(tt('guided.men'),{min:1,max:500,
+        help:tt('guided.men_in_the_unit_at_the')
+          +tt('guided.gives_4_100_as_the_range')}),
+      gfN(tt('guided.extras'),{min:0,max:99,
+        help:tt('guided.attached_siege_engines_or_animals_2')
+          +tt('guided.extras_are_comes_from_the_engine')}),
+      gfN(tt('guided.mass'),{min:0,max:200,step:0.1,dec:1,
+        help:tt('guided.collision_mass_of_one_man_1')
+          +tt('guided.cavalry_because_a_mounted_unit_takes')}),
+      gfN(tt('guided.radius'),{optional:1,min:0,max:10,step:0.05,dec:2,
+        help:tt('guided.optional_collision_radius_of_one_man')
+          +tt('guided.adding_it_lengthens_the_line_and')}),
+      gfN(tt('common.height'),{optional:1,min:0,max:10,step:0.1,dec:1,
+        help:tt('guided.optional_collision_height_of_one_man')})],
     arity:[4,5,6],
     join:p=>{const q=p.map(x=>(''+(x==null?'':x)).trim());
       while(q.length>4&&!q[q.length-1])q.pop(); return q.join(', ');}},
-  'officer':{t:'Officer',opt:1,syn:'<model>',
-    doc:gfDoc('Optional. An extra man riding along with the unit.',[
-      'Taken from <code>battle_models.modeldb</code>, like the soldier model.',
-      'Decoration only: losing him costs the unit nothing.',
-      'Up to three <code>officer</code> lines, directly after <code>soldier</code>.']),
-    parts:[gfC('Model','model',{w:3})]},
-  'mount':{t:'Mount',opt:1,syn:'<mount>',
-    doc:gfDoc('What the unit rides, named in <code>descr_mount.txt</code>.',[
-      'That block holds the animal’s mass, its model and its own stats.',
-      'This line only points at it.',
-      'A ridden horse or camel has no separate hit points. An elephant does.']),
-    parts:[gfC('Mount','mount',{w:3})]},
-  'ship':{t:'Ship',opt:1,syn:'<ship type>',
-    doc:gfDoc('Ships only, from <code>descr_ship.txt</code>.',[
-      '<code>heavy warship</code> is the type that can cross deep ocean tiles.',
-      'The line goes directly after <code>soldier</code>.']),
-    parts:[gfC('Ship','ship',{w:3})]},
-  'engine':{t:'Siege engine',opt:1,syn:'<engine>',
-    doc:gfDoc('The siege engine this crew operates, from <code>descr_engines.txt</code>.',[
-      'Catapult, trebuchet, bombard, ram, ladder, siege tower and so on.',
-      'How many the unit fields comes from the <i>extras</i> slot of the '
-        +'<code>soldier</code> line.']),
-    parts:[gfC('Engine','engine',{w:3})]},
-  'mounted_engine':{t:'Mounted engine',opt:1,syn:'<engine>',
-    doc:gfDoc('A gun carried by the unit’s mount, from <code>descr_mounted_engines.txt</code>.',[
-      'Elephant serpentine, elephant rocket launcher, camel gun.',
-      'Unlike a ground engine it has no model of its own: it rides the mount’s.']),
-    parts:[gfC('Engine','mounted_engine',{w:3})]},
-  'animal':{t:'Animals',opt:1,syn:'<animal>',
-    doc:gfDoc('Non-ridden animals that fight while the men handle them, from '
+  'officer':{t:tt('guided.officer'),opt:1,syn:'<model>',
+    doc:gfDoc(tt('guided.optional_an_extra_man_riding_along'),[
+      tt('guided.taken_from_battle_models_modeldb_like'),
+      tt('guided.decoration_only_losing_him_costs_the'),
+      tt('guided.up_to_three_officer_lines_directly')]),
+    parts:[gfC(tt('guided.model'),'model',{w:3})]},
+  'mount':{t:tt('common.mount'),opt:1,syn:'<mount>',
+    doc:gfDoc(tt('guided.what_the_unit_rides_named_in'),[
+      tt('guided.that_block_holds_the_animals_mass'),
+      tt('guided.this_line_only_points_at_it'),
+      tt('guided.a_ridden_horse_or_camel_has')]),
+    parts:[gfC(tt('common.mount'),'mount',{w:3})]},
+  'ship':{t:tt('guided.ship'),opt:1,syn:'<ship type>',
+    doc:gfDoc(tt('guided.ships_only_from_descr_ship_txt'),[
+      tt('guided.heavy_warship_is_the_type_that'),
+      tt('guided.the_line_goes_directly_after_soldier')]),
+    parts:[gfC(tt('guided.ship'),'ship',{w:3})]},
+  'engine':{t:tt('guided.siege_engine'),opt:1,syn:'<engine>',
+    doc:gfDoc(tt('guided.the_siege_engine_this_crew_operates'),[
+      tt('guided.catapult_trebuchet_bombard_ram_ladder_siege'),
+      `${tt('guided.how_many_the_unit_fields_comes')} `
+        +tt('guided.soldier_line')]),
+    parts:[gfC(tt('guided.engine'),'engine',{w:3})]},
+  'mounted_engine':{t:tt('guided.mounted_engine'),opt:1,syn:'<engine>',
+    doc:gfDoc(tt('guided.a_gun_carried_by_the_units'),[
+      tt('guided.elephant_serpentine_elephant_rocket_launcher_cam'),
+      tt('guided.unlike_a_ground_engine_it_has')]),
+    parts:[gfC(tt('guided.engine'),'mounted_engine',{w:3})]},
+  'animal':{t:tt('guided.animals'),opt:1,syn:'<animal>',
+    doc:gfDoc(tt('guided.non_ridden_animals_that_fight_while')
       +'<code>descr_animals.txt</code>.',[
-      'War dogs, pigs.',
-      'Needs <code>category handler</code> or the animals never appear.',
-      'How many comes from the <i>extras</i> slot of the <code>soldier</code> line.']),
-    parts:[gfC('Animal','animal',{w:3})]},
-  'mount_effect':{t:'Bonus vs mounts',opt:1,w:'meffect',
+      tt('guided.war_dogs_pigs'),
+      tt('guided.needs_category_handler_or_the_animals'),
+      tt('guided.how_many_comes_from_the_extras')]),
+    parts:[gfC(tt('guided.animal'),'animal',{w:3})]},
+  'mount_effect':{t:tt('guided.bonus_vs_mounts'),opt:1,w:'meffect',
     syn:'<mount> ±N, <mount> ±N, <mount> ±N',
-    doc:gfDoc('Attack modifiers that apply only against enemies riding a particular mount.',[
-      'Each entry is a name and a signed number.',
-      'The name is a mount <i>class</i> (<code>horse</code>, <code>camel</code>, '
-        +'<code>elephant</code>) or one specific mount from <code>descr_mount.txt</code>.',
-      '<b>The engine reads at most three.</b>',
-      'This is where "camels frighten horses" and "everything hates elephants" live.'])},
-  'attributes':{t:'Attributes',w:'attrs',syn:'attr, attr, attr, …',
-    doc:gfDoc('Everything about the unit that is not a number. Two different kinds share the line.',[
-      '<b>Abilities</b>: where it can hide, whether it can board ships or swim, whether '
-        +'it can withdraw, its stamina, whether it is a mercenary, whether it can lay '
-        +'stakes or form a Cantabrian circle.',
-      'A unit may only carry <b>one</b> special ability.',
-      '<b>AI labels</b> (<code>pike</code>, <code>crossbow</code>, <code>artillery</code>, '
-        +'<code>gunmen</code>) change nothing about the unit.',
-      'They only tell the campaign AI what kind of unit it is looking at.'])},
-  'move_speed_mod':{t:'Movement modifier',opt:1,syn:'<multiplier>',
-    doc:gfDoc('Kingdoms only. Multiplies the speed the unit’s animation skeleton gives it.',[
-      'Above 1 is faster, below is slower.',
-      'Without the line the skeleton alone decides.']),
-    parts:[gfN('×',{min:0,max:5,step:0.01,dec:2,help:'1 leaves the skeleton’s own speed alone.'})]},
+    doc:gfDoc(tt('guided.attack_modifiers_that_apply_only_against'),[
+      tt('guided.each_entry_is_a_name_and'),
+      `${tt('guided.the_name_is_a_mount_class')} `
+        +tt('guided.elephant_or_one_specific_mount_from'),
+      `<b>${tt('guided.the_engine_reads_at_most_three')}</b>`,
+      tt('guided.this_is_where_camels_frighten_horses')])},
+  'attributes':{t:tt('guided.attributes'),w:'attrs',syn:tt('guided.attr_attr_attr'),
+    doc:gfDoc(tt('guided.everything_about_the_unit_that_is'),[
+      `${tt('guided.abilities_where_it_can_hide_whether')} `
+        +tt('guided.it_can_withdraw_its_stamina_whether')
+        +tt('guided.stakes_or_form_a_cantabrian_circle'),
+      tt('guided.a_unit_may_only_carry_one'),
+      `${tt('guided.ai_labels_pike_crossbow_artillery')} `
+        +tt('guided.gunmen_change_nothing_about_the_unit'),
+      tt('guided.they_only_tell_the_campaign_ai')])},
+  'move_speed_mod':{t:tt('guided.movement_modifier'),opt:1,syn:'<multiplier>',
+    doc:gfDoc(tt('guided.kingdoms_only_multiplies_the_speed_the'),[
+      tt('guided.above_1_is_faster_below_is'),
+      tt('guided.without_the_line_the_skeleton_alone')]),
+    parts:[gfN('×',{min:0,max:5,step:0.01,dec:2,help:tt('guided.1_leaves_the_skeletons_own_speed')})]},
 
-  'formation':{t:'Formation',syn:'close ↔, close ↕, loose ↔, loose ↕, ranks, formation[, second formation]',
-    doc:gfDoc('How tightly the men stand, and which formations the unit may adopt.',[
-      'The first four numbers are spacing in metres.',
-      'Side-to-side then front-to-back, in close order then in loose order.']),
-    parts:[gfN('Close ↔',{min:0,max:200,step:0.1,dec:1,help:'Side-to-side spacing between men in metres, close order.'}),
-      gfN('Close ↕',{min:0,max:200,step:0.1,dec:1,help:'Front-to-back spacing between ranks in metres, close order.'}),
-      gfN('Loose ↔',{min:0,max:200,step:0.1,dec:1,help:'Side-to-side spacing in loose order. It is always wider than close order.'}),
-      gfN('Loose ↕',{min:0,max:200,step:0.1,dec:1,help:'Front-to-back spacing in loose order.'}),
-      gfN('Ranks',{min:1,max:50,help:'How many ranks deep the unit forms up by default. Pikes use 8; most infantry 3–4.'}),
-      gfS('Formation','formation_main',{w:2,
-        help:'The formation the unit starts in. With a second formation set, this one <b>must</b> be '
-          +'<code>square</code> or <code>horde</code> (a circle).'}),
-      gfS('Can switch to','formation_special',{w:2,optional:1,
-        help:'Optional. The formation the unit can toggle into: <code>phalanx</code> (a spear wall, which needs '
-          +'<code>long_pike</code> on the primary weapon), <code>schiltrom</code>, <code>shield_wall</code>, '
-          +'<code>testudo</code> or <code>wedge</code>.'})],
+  'formation':{t:tt('guided.formation'),syn:tt('guided.close_close_loose_loose_ranks_formation'),
+    doc:gfDoc(tt('guided.how_tightly_the_men_stand_and'),[
+      tt('guided.the_first_four_numbers_are_spacing'),
+      tt('guided.side_to_side_then_front_to')]),
+    parts:[gfN(tt('guided.close'),{min:0,max:200,step:0.1,dec:1,help:tt('guided.side_to_side_spacing_between_men')}),
+      gfN(tt('guided.close_2'),{min:0,max:200,step:0.1,dec:1,help:tt('guided.front_to_back_spacing_between_ranks')}),
+      gfN(tt('guided.loose'),{min:0,max:200,step:0.1,dec:1,help:tt('guided.side_to_side_spacing_in_loose')}),
+      gfN(tt('guided.loose_2'),{min:0,max:200,step:0.1,dec:1,help:tt('guided.front_to_back_spacing_in_loose')}),
+      gfN(tt('guided.ranks'),{min:1,max:50,help:tt('guided.how_many_ranks_deep_the_unit')}),
+      gfS(tt('guided.formation'),'formation_main',{w:2,
+        help:`${tt('guided.the_formation_the_unit_starts_in')} `
+          +tt('guided.square_or_horde_a_circle')}),
+      gfS(tt('guided.can_switch_to'),'formation_special',{w:2,optional:1,
+        help:`${tt('guided.optional_the_formation_the_unit_can')} `
+          +`${tt('guided.long_pike_on_the_primary_weapon')} `
+          +tt('guided.testudo_or_wedge')})],
     arity:[6,7],
     join:p=>{const q=p.map(x=>(''+(x==null?'':x)).trim());
       // drop the empty 7th slot unless the file's own line carried it as a
       // trailing comma, which one real unit in Third Age Reforged does
       if(!q[6]&&p.gfSrcLen!==7)q.length=6; return q.join(', ');}},
-  'stat_health':{t:'Hit points',syn:'man, mount/animal',
-    doc:gfDoc('How many killing blows it takes to put one man down.',[
-      'Almost every unit in the game uses 1. More than that is effectively a monster.',
-      'Ridden horses and camels have <b>no</b> separate hit points.',
-      'The second box is for elephants and attached animals.']),
-    parts:[gfN('Man',{min:0,max:999,help:'Killing blows one man absorbs. 1 is normal.'}),
-      gfN('Mount / animal',{min:0,max:999,
-        help:'Hit points of the mount or attached animal, where it has its own. Horses and camels do not.'})]},
-  'stat_stl':{t:'Soldiers to stay alive',opt:1,syn:'<men>',
-    doc:gfDoc('Optional. How many men the unit must keep for the game to still count it alive.',[
+  'stat_health':{t:tt('guided.hit_points'),syn:tt('guided.man_mount_animal'),
+    doc:gfDoc(tt('guided.how_many_killing_blows_it_takes'),[
+      tt('guided.almost_every_unit_in_the_game'),
+      tt('guided.ridden_horses_and_camels_have_no'),
+      tt('guided.the_second_box_is_for_elephants')]),
+    parts:[gfN(tt('guided.man'),{min:0,max:999,help:tt('guided.killing_blows_one_man_absorbs_1')}),
+      gfN(tt('guided.mount_animal'),{min:0,max:999,
+        help:tt('guided.hit_points_of_the_mount_or')})]},
+  'stat_stl':{t:tt('guided.soldiers_to_stay_alive'),opt:1,syn:'<men>',
+    doc:gfDoc(tt('guided.optional_how_many_men_the_unit'),[
       'Only a handful of units in any mod set it.']),
-    parts:[gfN('Men',{min:0,max:999})]},
+    parts:[gfN(tt('guided.men'),{min:0,max:999})]},
 
-  'stat_pri':gfWeaponSpec('Primary weapon',
-    gfDoc('The weapon the unit leads with.',[
-      '<b>A missile weapon has to be this one.</b> The engine will not fire a secondary bow.',
-      'Artillery is the exception: the crew’s own hand weapon goes here and the engine’s '
-        +'shot is the secondary line.'])),
-  'stat_pri_ex':gfExSpec('Primary'),
-  'stat_pri_attr':gfAttrSpec('Primary'),
-  'stat_sec':gfWeaponSpec('Secondary weapon',
-    gfDoc('The sidearm.',[
-      'On a mounted, vehicle or artillery unit this is the mount’s or engine’s own attack.',
-      'A missile unit’s melee weapon belongs here.',
-      '"No sidearm" is one exact line: <code>0, 0, no, 0, 0, no, melee_simple, blunt, '
-        +'none, 25, 1</code>. The button in this card’s header writes it.'])),
-  'stat_sec_ex':gfExSpec('Secondary'),
-  'stat_sec_attr':gfAttrSpec('Secondary'),
-  'stat_ter':gfWeaponSpec('Third weapon',
-    gfDoc('Optional third weapon, read exactly like the other two.',[
-      'Vanilla uses it once: the trebuchet’s rotten cow carcass.',
-      'Either all of the ternary lines are present or none of them is.'])),
-  'stat_ter_ex':gfExSpec('Third'),
-  'stat_ter_attr':gfAttrSpec('Third'),
+  'stat_pri':gfWeaponSpec(tt('guided.primary_weapon'),
+    gfDoc(tt('guided.the_weapon_the_unit_leads_with'),[
+      tt('guided.a_missile_weapon_has_to_be'),
+      tt('guided.artillery_is_the_exception_the_crews')
+        +tt('guided.shot_is_the_secondary_line')])),
+  'stat_pri_ex':gfExSpec(tt('guided.primary')),
+  'stat_pri_attr':gfAttrSpec(tt('guided.primary')),
+  'stat_sec':gfWeaponSpec(tt('guided.secondary_weapon'),
+    gfDoc(tt('guided.the_sidearm'),[
+      tt('guided.on_a_mounted_vehicle_or_artillery'),
+      tt('guided.a_missile_units_melee_weapon_belongs'),
+      `${tt('guided.no_sidearm_is_one_exact_line')} `
+        +tt('guided.none_25_1_the_button_in')])),
+  'stat_sec_ex':gfExSpec(tt('guided.secondary')),
+  'stat_sec_attr':gfAttrSpec(tt('guided.secondary')),
+  'stat_ter':gfWeaponSpec(tt('guided.third_weapon'),
+    gfDoc(tt('guided.optional_third_weapon_read_exactly_like'),[
+      tt('guided.vanilla_uses_it_once_the_trebuchets'),
+      tt('guided.either_all_of_the_ternary_lines')])),
+  'stat_ter_ex':gfExSpec(tt('guided.third')),
+  'stat_ter_attr':gfAttrSpec(tt('guided.third')),
 
-  'stat_pri_armour':{t:'Defence',syn:'armour, defence skill, shield, hit sound',
-    doc:gfDoc('What protects the man, split three ways because they work differently.',[
-      '<b>Armour</b> counts against everything.',
-      '<b>Defence skill</b> is his parrying, and is <b>not</b> used when he is shot at.',
-      '<b>Shield</b> only counts against attacks from the front or the left.']),
-    parts:[gfN('Armour',{min:0,max:255,help:'Armour factor. Counts against every kind of attack. Halved by an <code>ap</code> weapon.'}),
-      gfN('Defence skill',{min:0,max:255,help:'Parrying skill. It is ignored when the man is shot at: armour and shield are all that protect him then.'}),
-      gfN('Shield',{min:0,max:255,help:'Shield factor. Only applies to attacks from the front or the left, which is why flanking works.'}),
-      gfS('Hit sound','armour_sound',{w:2,help:'What it sounds like when the man is hit: <code>flesh</code>, <code>leather</code> or <code>metal</code>. Cosmetic.'})]},
-  'stat_armour_ex':{t:'Defence (extended)',opt:1,
-    syn:'armour 0, armour 1, armour 2, armour 3, defence skill, shield melee, shield missile, hit sound',
-    doc:gfDoc('Optional long form of the line above.',[
-      'Gives armour its own value at the base level and at each of the three upgrade '
-        +'levels, instead of letting the engine derive them.',
-      'Splits the shield into one value against melee and another against missile fire.',
-      'Vanilla ships it commented out.']),
-    parts:[gfN('Armour 0',{min:0,max:255,help:'Armour with no smith upgrade.'}),
-      gfN('Armour 1',{min:0,max:255,help:'Armour at the first upgrade level.'}),
-      gfN('Armour 2',{min:0,max:255,help:'Armour at the second upgrade level.'}),
-      gfN('Armour 3',{min:0,max:255,help:'Armour at the third upgrade level.'}),
-      gfN('Defence skill',{min:0,max:255,help:'As in the normal line. It is not used against missiles.'}),
-      gfN('Shield melee',{min:0,max:255,help:'Shield factor against melee attacks from the front or left.'}),
-      gfN('Shield missile',{min:0,max:255,help:'Shield factor against missile fire. This is the split the longer line exists for.'}),
-      gfS('Hit sound','armour_sound',{w:2})]},
-  'stat_sec_armour':{t:'Vehicle / animal defence',syn:'armour, defence skill, hit sound',
-    doc:gfDoc('The defence of the attached artillery piece, wagon or animal.',[
-      'There is no shield slot here.',
-      'A ridden horse has no separate defence, so ordinary cavalry leaves this at '
+  'stat_pri_armour':{t:tt('guided.defence'),syn:tt('guided.armour_defence_skill_shield_hit_sound'),
+    doc:gfDoc(tt('guided.what_protects_the_man_split_three'),[
+      tt('guided.armour_counts_against_everything'),
+      tt('guided.defence_skill_is_his_parrying_and'),
+      tt('guided.shield_only_counts_against_attacks_from')]),
+    parts:[gfN(tt('guided.armour'),{min:0,max:255,help:tt('guided.armour_factor_counts_against_every_kind')}),
+      gfN(tt('guided.defence_skill'),{min:0,max:255,help:tt('guided.parrying_skill_it_is_ignored_when')}),
+      gfN(tt('guided.shield'),{min:0,max:255,help:tt('guided.shield_factor_only_applies_to_attacks')}),
+      gfS(tt('guided.hit_sound'),'armour_sound',{w:2,help:tt('guided.what_it_sounds_like_when_the')})]},
+  'stat_armour_ex':{t:tt('guided.defence_extended'),opt:1,
+    syn:tt('guided.armour_0_armour_1_armour_2'),
+    doc:gfDoc(tt('guided.optional_long_form_of_the_line'),[
+      tt('guided.gives_armour_its_own_value_at')
+        +tt('guided.levels_instead_of_letting_the_engine'),
+      tt('guided.splits_the_shield_into_one_value'),
+      tt('guided.vanilla_ships_it_commented_out')]),
+    parts:[gfN(tt('guided.armour_0'),{min:0,max:255,help:tt('guided.armour_with_no_smith_upgrade')}),
+      gfN(tt('guided.armour_1'),{min:0,max:255,help:tt('guided.armour_at_the_first_upgrade_level')}),
+      gfN(tt('guided.armour_2'),{min:0,max:255,help:tt('guided.armour_at_the_second_upgrade_level')}),
+      gfN(tt('guided.armour_3'),{min:0,max:255,help:tt('guided.armour_at_the_third_upgrade_level')}),
+      gfN(tt('guided.defence_skill'),{min:0,max:255,help:tt('guided.as_in_the_normal_line_it')}),
+      gfN(tt('guided.shield_melee'),{min:0,max:255,help:tt('guided.shield_factor_against_melee_attacks_from')}),
+      gfN(tt('guided.shield_missile'),{min:0,max:255,help:tt('guided.shield_factor_against_missile_fire_this')}),
+      gfS(tt('guided.hit_sound'),'armour_sound',{w:2})]},
+  'stat_sec_armour':{t:tt('guided.vehicle_animal_defence'),syn:tt('guided.armour_defence_skill_hit_sound'),
+    doc:gfDoc(tt('guided.the_defence_of_the_attached_artillery'),[
+      tt('guided.there_is_no_shield_slot_here'),
+      tt('guided.a_ridden_horse_has_no_separate')
         +'<code>0, 0, flesh</code>.']),
-    parts:[gfN('Armour',{min:0,max:255,help:'Armour of the vehicle or animal.'}),
-      gfN('Defence skill',{min:0,max:255,help:'Defence skill of the vehicle or animal.'}),
-      gfS('Hit sound','armour_sound',{w:2})]},
-  'stat_mental':{t:'Morale',syn:'morale, discipline, training[, lock_morale]',
-    doc:gfDoc('The unit’s state of mind.',[
-      '<b>Morale</b>: how much punishment it takes before routing.',
-      '<b>Discipline</b>: how well it answers a sudden shock, like a charge in the rear '
-        +'or the general dying.',
-      '<b>Training</b>: how tidily it holds its formation.']),
-    parts:[gfN('Morale',{min:0,max:100,help:'Base morale. Higher units stand longer before routing.'}),
-      gfS('Discipline','discipline',{w:2,
-        help:'<code>low</code>, <code>normal</code>, <code>disciplined</code> or <code>impetuous</code>. '
-          +'Impetuous units may charge without being told to.'}),
-      gfS('Training','training',{w:2,
-        help:'<code>untrained</code>, <code>trained</code> or <code>highly_trained</code>: how neatly the unit '
-          +'keeps its formation while it moves.'}),
-      gfP('Never routs','flag',{on:'lock_morale',
-        help:'Adds <code>lock_morale</code>, an optional fourth value: the unit will not rout, whatever happens to it.'})],
+    parts:[gfN(tt('guided.armour'),{min:0,max:255,help:tt('guided.armour_of_the_vehicle_or_animal')}),
+      gfN(tt('guided.defence_skill'),{min:0,max:255,help:tt('guided.defence_skill_of_the_vehicle_or')}),
+      gfS(tt('guided.hit_sound'),'armour_sound',{w:2})]},
+  'stat_mental':{t:tt('guided.morale'),syn:tt('guided.morale_discipline_training_lock_morale'),
+    doc:gfDoc(tt('guided.the_units_state_of_mind'),[
+      tt('guided.morale_how_much_punishment_it_takes'),
+      `${tt('guided.discipline_how_well_it_answers_a')} `
+        +tt('guided.or_the_general_dying'),
+      tt('guided.training_how_tidily_it_holds_its')]),
+    parts:[gfN(tt('guided.morale'),{min:0,max:100,help:tt('guided.base_morale_higher_units_stand_longer')}),
+      gfS(tt('guided.discipline'),'discipline',{w:2,
+        help:`${tt('guided.low_normal_disciplined_or_impetuous')} `
+          +tt('guided.impetuous_units_may_charge_without_being')}),
+      gfS(tt('guided.training'),'training',{w:2,
+        help:`${tt('guided.untrained_trained_or_highly_trained_how')} `
+          +tt('guided.keeps_its_formation_while_it_moves')}),
+      gfP(tt('guided.never_routs'),'flag',{on:'lock_morale',
+        help:tt('guided.adds_lock_morale_an_optional_fourth')})],
     arity:[3,4],
     join:p=>{const q=p.slice(0,3).map(x=>(''+(x==null?'':x)).trim());
       // the 4th token goes back exactly as the file wrote it: Third Age Reforged
@@ -451,102 +450,102 @@ const GF_FIELDS={
       // `lock_morale` on save would quietly make the unit unroutable
       const f=(''+(p[3]==null?'':p[3])).trim();
       if(f)q.push(f==='1'?'lock_morale':f); return q.join(', ');}},
-  'stat_heat':{t:'Heat fatigue',syn:'<extra fatigue>',
-    doc:gfDoc('Extra fatigue in hot climates, on top of the normal rate.',[
-      'Higher tires sooner in the desert.',
-      'Heavily armoured units carry the most.']),
-    parts:[gfN('Heat',{min:-100,max:100})]},
-  'stat_ground':{t:'Ground modifiers',syn:'scrub, sand, forest, snow',
-    doc:gfDoc('Combat modifiers per ground type, wherever the unit is fighting.',[
-      'Negative is a penalty.',
-      'A desert unit has a positive sand value and a negative snow one.']),
-    parts:[gfN('Scrub',{min:-100,max:100,help:'Modifier while fighting on scrub.'}),
-      gfN('Sand',{min:-100,max:100,help:'Modifier on sand. Positive for desert troops.'}),
-      gfN('Forest',{min:-100,max:100,help:'Modifier in forest. Positive for woodsmen, negative for close formations.'}),
-      gfN('Snow',{min:-100,max:100,help:'Modifier in snow. Positive for northern troops.'})]},
-  'stat_charge_dist':{t:'Charge distance',syn:'<metres>',
-    doc:gfDoc('How far out from the enemy the unit breaks into its charge.',[
-      'Bigger means it starts running sooner.',
-      'That builds more charge, but also tires it more.']),
-    parts:[gfN('Metres',{min:0,max:999})]},
-  'stat_fire_delay':{t:'Fire delay',opt:1,syn:'<delay>',
-    doc:gfDoc('Extra delay between volleys, on top of what the reload animation costs.',[
-      'Modders report it has no effect in Kingdoms.',
-      'Nearly every unit carries 0.']),
-    parts:[gfN('Delay',{min:0,max:999})]},
-  'stat_food':{t:'Food',opt:1,syn:'<a>, <b>',
-    doc:gfDoc('No longer used by the engine.',[
-      'Every unit in the game carries <code>60, 300</code> out of habit.',
-      'No reason to change it, no reason to remove it.']),
-    parts:[gfN('Value 1',{min:0,max:9999}),gfN('Value 2',{min:0,max:9999})]},
-  'stat_cost':{t:'Cost',syn:'turns, recruit, upkeep, weapon ug, armour ug, custom battle, free picks, price rise',
-    doc:gfDoc('Everything the unit costs.',[
-      'The first box is turns.',
-      'Every other box is florins.']),
-    parts:[gfN('Turns',{min:0,max:99,help:'Turns the unit takes to recruit.'}),
-      gfN('Recruit',{min:0,max:999999,help:'Florins to recruit it in the campaign. This does <i>not</i> set the price of hiring it as a mercenary.'}),
-      gfN('Upkeep',{min:0,max:999999,help:'Florins per turn to keep it in the field.'}),
-      gfN('Weapon ug.',{min:0,max:999999,help:'Florins the smith charges to upgrade its weapons.'}),
-      gfN('Armour ug.',{min:0,max:999999,help:'Florins the smith charges to upgrade its armour.'}),
-      gfN('Custom battle',{min:0,max:999999,help:'What it costs in a custom battle, independent of the campaign price.'}),
-      gfN('Free picks',{min:0,max:99,help:'How many you may buy in a custom battle before the price starts climbing.'}),
-      gfN('Price rise',{min:0,max:999999,help:'How much the custom-battle price goes up by after that.'})]},
-  'recruit_priority_offset':{t:'AI recruit priority',opt:1,syn:'<offset>',
-    doc:gfDoc('Kingdoms only. How badly the AI wants this unit.',[
-      'Higher means it recruits it more often.',
-      'Negative pushes it down the list.',
-      'It goes at the end of the unit’s block.']),
-    parts:[gfN('Offset',{min:-1000,max:1000})]},
-  'crusading_upkeep_modifier':{t:'Crusade upkeep',opt:1,syn:'<multiplier>',
-    doc:gfDoc('Multiplies the unit’s upkeep while it is on a crusade or jihad.',[
+  'stat_heat':{t:tt('guided.heat_fatigue'),syn:'<extra fatigue>',
+    doc:gfDoc(tt('guided.extra_fatigue_in_hot_climates_on'),[
+      tt('guided.higher_tires_sooner_in_the_desert'),
+      tt('guided.heavily_armoured_units_carry_the_most')]),
+    parts:[gfN(tt('guided.heat'),{min:-100,max:100})]},
+  'stat_ground':{t:tt('guided.ground_modifiers'),syn:tt('guided.scrub_sand_forest_snow'),
+    doc:gfDoc(tt('guided.combat_modifiers_per_ground_type_wherever'),[
+      tt('guided.negative_is_a_penalty'),
+      tt('guided.a_desert_unit_has_a_positive')]),
+    parts:[gfN(tt('guided.scrub'),{min:-100,max:100,help:tt('guided.modifier_while_fighting_on_scrub')}),
+      gfN(tt('guided.sand'),{min:-100,max:100,help:tt('guided.modifier_on_sand_positive_for_desert')}),
+      gfN(tt('guided.forest'),{min:-100,max:100,help:tt('guided.modifier_in_forest_positive_for_woodsmen')}),
+      gfN(tt('guided.snow'),{min:-100,max:100,help:tt('guided.modifier_in_snow_positive_for_northern')})]},
+  'stat_charge_dist':{t:tt('guided.charge_distance'),syn:'<metres>',
+    doc:gfDoc(tt('guided.how_far_out_from_the_enemy'),[
+      tt('guided.bigger_means_it_starts_running_sooner'),
+      tt('guided.that_builds_more_charge_but_also')]),
+    parts:[gfN(tt('guided.metres'),{min:0,max:999})]},
+  'stat_fire_delay':{t:tt('guided.fire_delay'),opt:1,syn:'<delay>',
+    doc:gfDoc(tt('guided.extra_delay_between_volleys_on_top'),[
+      tt('guided.modders_report_it_has_no_effect'),
+      tt('guided.nearly_every_unit_carries_0')]),
+    parts:[gfN(tt('guided.delay'),{min:0,max:999})]},
+  'stat_food':{t:tt('guided.food'),opt:1,syn:'<a>, <b>',
+    doc:gfDoc(tt('guided.no_longer_used_by_the_engine'),[
+      tt('guided.every_unit_in_the_game_carries'),
+      tt('guided.no_reason_to_change_it_no')]),
+    parts:[gfN(tt('guided.value_1'),{min:0,max:9999}),gfN(tt('guided.value_2'),{min:0,max:9999})]},
+  'stat_cost':{t:tt('common.cost'),syn:tt('guided.turns_recruit_upkeep_weapon_ug_armour'),
+    doc:gfDoc(tt('guided.everything_the_unit_costs'),[
+      tt('guided.the_first_box_is_turns'),
+      tt('guided.every_other_box_is_florins')]),
+    parts:[gfN(tt('guided.turns'),{min:0,max:99,help:tt('guided.turns_the_unit_takes_to_recruit')}),
+      gfN(tt('guided.recruit'),{min:0,max:999999,help:tt('guided.florins_to_recruit_it_in_the')}),
+      gfN(tt('guided.upkeep'),{min:0,max:999999,help:tt('guided.florins_per_turn_to_keep_it')}),
+      gfN(tt('guided.weapon_ug'),{min:0,max:999999,help:tt('guided.florins_the_smith_charges_to_upgrade')}),
+      gfN(tt('guided.armour_ug'),{min:0,max:999999,help:tt('guided.florins_the_smith_charges_to_upgrade_2')}),
+      gfN(tt('guided.custom_battle'),{min:0,max:999999,help:tt('guided.what_it_costs_in_a_custom')}),
+      gfN(tt('guided.free_picks'),{min:0,max:99,help:tt('guided.how_many_you_may_buy_in')}),
+      gfN(tt('guided.price_rise'),{min:0,max:999999,help:tt('guided.how_much_the_custom_battle_price')})]},
+  'recruit_priority_offset':{t:tt('guided.ai_recruit_priority'),opt:1,syn:'<offset>',
+    doc:gfDoc(tt('guided.kingdoms_only_how_badly_the_ai'),[
+      tt('guided.higher_means_it_recruits_it_more'),
+      tt('guided.negative_pushes_it_down_the_list'),
+      tt('guided.it_goes_at_the_end_of')]),
+    parts:[gfN(tt('guided.offset'),{min:-1000,max:1000})]},
+  'crusading_upkeep_modifier':{t:tt('guided.crusade_upkeep'),opt:1,syn:'<multiplier>',
+    doc:gfDoc(tt('guided.multiplies_the_units_upkeep_while_it'),[
       'Vanilla uses 0.5 (half price) on the units it wants you to take along.']),
     parts:[gfN('×',{min:0,max:10,step:0.1,dec:2})]},
-  'armour_ug_levels':{t:'Armour upgrade levels',w:'uglevels',syn:'level, level, level, …',
-    doc:gfDoc('The smith level each armour tier needs, read position by position against '
-      +'the models below.',[
-      'The first value is the unit’s normal level. The rest are the upgrades.',
-      'The list has to stay ascending.',
-      'More levels than models is normal: the last model carries the levels above it.'])},
-  'armour_ug_models':{t:'Armour upgrade models',w:'ugmodels',syn:'model, model, model, …',
-    doc:gfDoc('One <code>battle_models.modeldb</code> entry per armour tier.',[
-      'Position 0 is the unit’s normal look, position 1 the first upgrade, and so on.',
-      'Naming the same entry twice is a real pattern, not a mistake: it gains the '
-        +'armour upgrade in its stats without changing how it looks.',
-      'These entries do <b>not</b> decide how the unit animates. The '
-        +'<code>soldier</code> line does.'])},
-  'ownership':{t:'Ownership',w:'factions',syn:'faction, faction, culture, …',
-    doc:gfDoc('The factions and cultures allowed to have this unit.',[
-      'Not optional book-keeping: <b>a faction that can build the unit still cannot '
-        +'recruit it unless it is listed here</b>.',
-      'It also decides which faction folders the unit’s card is looked up in.'])},
-  'era 0':{t:'Custom battle: Early',w:'factions',opt:1,syn:'faction, faction, …',
-    doc:gfDoc('Optional. Which factions may pick this unit in an <b>Early</b>-era custom battle.',[
-      'Nothing to do with the campaign.',
-      'The campaign is <code>ownership</code> plus the building that recruits it.'])},
-  'era 1':{t:'Custom battle: High',w:'factions',opt:1,syn:'faction, faction, …',
-    doc:'Optional. Which factions may pick this unit in a <b>High</b>-era custom battle.'},
-  'era 2':{t:'Custom battle: Late',w:'factions',opt:1,syn:'faction, faction, …',
-    doc:'Optional. Which factions may pick this unit in a <b>Late</b>-era custom battle.'},
-  'card_pic_dir':{t:'Unit card folder',opt:1,syn:'<folder>',
-    doc:gfDoc('Optional. Pins the unit card to one folder under <code>data/ui/units/</code>.',[
-      'Without it the game looks the card up in the <i>player’s</i> faction folder.',
-      'Useful for a mercenary or a shared unit.',
-      'A trap otherwise: it overrides every per-faction card.']),
-    parts:[gfT('Folder',{grow:1,mono:1})]},
-  'info_pic_dir':{t:'Info card folder',opt:1,syn:'<folder>',
-    doc:'Optional. The same thing for the big info card, under <code>data/ui/unit_info/</code>.',
-    parts:[gfT('Folder',{grow:1,mono:1})]},
-  'unit_info':{t:'Info panel numbers',opt:1,syn:'melee attack, missile attack, defence',
-    doc:gfDoc('Optional. The three summary numbers the unit-info panel shows the player.',[
-      'Vanilla keeps this line commented out on every unit.',
-      'Left out, the engine works them out from the real stats.']),
-    parts:[gfN('Melee attack',{min:0,max:999}),gfN('Missile attack',{min:0,max:999}),gfN('Defence',{min:0,max:999})]},
+  'armour_ug_levels':{t:tt('guided.armour_upgrade_levels'),w:'uglevels',syn:tt('guided.level_level_level'),
+    doc:gfDoc(tt('guided.the_smith_level_each_armour_tier')
+      +tt('guided.the_models_below'),[
+      tt('guided.the_first_value_is_the_units'),
+      tt('guided.the_list_has_to_stay_ascending'),
+      tt('guided.more_levels_than_models_is_normal')])},
+  'armour_ug_models':{t:tt('guided.armour_upgrade_models'),w:'ugmodels',syn:tt('guided.model_model_model'),
+    doc:gfDoc(tt('guided.one_battle_models_modeldb_entry_per'),[
+      tt('guided.position_0_is_the_units_normal'),
+      tt('guided.naming_the_same_entry_twice_is')
+        +tt('guided.armour_upgrade_in_its_stats_without'),
+      `${tt('guided.these_entries_do_not_decide_how')} `
+        +tt('guided.soldier_line_does')])},
+  'ownership':{t:tt('guided.ownership'),w:'factions',syn:tt('guided.faction_faction_culture'),
+    doc:gfDoc(tt('guided.the_factions_and_cultures_allowed_to'),[
+      `${tt('guided.not_optional_book_keeping_a_faction')} `
+        +tt('guided.recruit_it_unless_it_is_listed'),
+      tt('guided.it_also_decides_which_faction_folders')])},
+  'era 0':{t:tt('guided.custom_battle_early'),w:'factions',opt:1,syn:tt('guided.faction_faction'),
+    doc:gfDoc(tt('guided.optional_which_factions_may_pick_this'),[
+      tt('guided.nothing_to_do_with_the_campaign'),
+      tt('guided.the_campaign_is_ownership_plus_the')])},
+  'era 1':{t:tt('guided.custom_battle_high'),w:'factions',opt:1,syn:tt('guided.faction_faction'),
+    doc:tt('guided.optional_which_factions_may_pick_this_2')},
+  'era 2':{t:tt('guided.custom_battle_late'),w:'factions',opt:1,syn:tt('guided.faction_faction'),
+    doc:tt('guided.optional_which_factions_may_pick_this_3')},
+  'card_pic_dir':{t:tt('guided.unit_card_folder'),opt:1,syn:'<folder>',
+    doc:gfDoc(tt('guided.optional_pins_the_unit_card_to'),[
+      tt('guided.without_it_the_game_looks_the'),
+      tt('guided.useful_for_a_mercenary_or_a'),
+      tt('guided.a_trap_otherwise_it_overrides_every')]),
+    parts:[gfT(tt('guided.folder'),{grow:1,mono:1})]},
+  'info_pic_dir':{t:tt('guided.info_card_folder'),opt:1,syn:'<folder>',
+    doc:tt('guided.optional_the_same_thing_for_the'),
+    parts:[gfT(tt('guided.folder'),{grow:1,mono:1})]},
+  'unit_info':{t:tt('guided.info_panel_numbers'),opt:1,syn:tt('guided.melee_attack_missile_attack_defence'),
+    doc:gfDoc(tt('guided.optional_the_three_summary_numbers_the'),[
+      tt('guided.vanilla_keeps_this_line_commented_out'),
+      tt('guided.left_out_the_engine_works_them')]),
+    parts:[gfN(tt('guided.melee_attack'),{min:0,max:999}),gfN(tt('guided.missile_attack'),{min:0,max:999}),gfN(tt('guided.defence'),{min:0,max:999})]},
 };
 
 const GF_SECTIONS=[
-  {id:'basics',t:'Basics',keys:['type','dictionary','category','class','voice_type','accent',
-    'banner faction','banner holy','banner unit']},
-  {id:'men',t:'Men & mounts',keys:['soldier','officer','mount','ship','engine','mounted_engine',
+  {id:'basics',t:tt('guided.basics'),keys:['type','dictionary','category','class','voice_type','accent',
+    tt('guided.banner_faction'),tt('guided.banner_holy'),tt('guided.banner_unit')]},
+  {id:'men',t:tt('guided.men_mounts'),keys:['soldier','officer','mount','ship','engine','mounted_engine',
     'animal','stat_health','stat_stl','move_speed_mod','armour_ug_levels','armour_ug_models']},
   /* Abilities used to be a group of its own, holding two lines: `attributes` and
      `mount_effect`. Two cards is not a tab - it sat there half empty while the
@@ -554,15 +553,15 @@ const GF_SECTIONS=[
      because what a unit can DO and what it does it WITH are the same question.
      They lead the group: `attributes` is the widest-reaching line on the unit
      and belongs at the top of whatever tab it is on. */
-  {id:'weapons',t:'Weapons & abilities',
+  {id:'weapons',t:tt('guided.weapons_abilities'),
    keys:['attributes','mount_effect','stat_pri','stat_pri_attr','stat_pri_ex',
     'stat_sec','stat_sec_attr','stat_sec_ex','stat_ter','stat_ter_attr','stat_ter_ex']},
-  {id:'defence',t:'Defence & morale',keys:['stat_pri_armour','stat_armour_ex','stat_sec_armour',
+  {id:'defence',t:tt('guided.defence_morale'),keys:['stat_pri_armour','stat_armour_ex','stat_sec_armour',
     'stat_mental','formation','stat_charge_dist','stat_fire_delay','stat_heat','stat_ground']},
-  {id:'cost',t:'Recruitment',keys:['stat_cost','recruit_priority_offset','crusading_upkeep_modifier',
-    'ownership','era 0','era 1','era 2']},
-  {id:'ui',t:'Cards & misc',keys:['card_pic_dir','info_pic_dir','unit_info','stat_food']},
-  {id:'other',t:'Other lines',keys:[]},
+  {id:'cost',t:tt('guided.recruitment'),keys:['stat_cost','recruit_priority_offset','crusading_upkeep_modifier',
+    'ownership',tt('guided.era_0'),tt('guided.era_1'),tt('guided.era_2')]},
+  {id:'ui',t:tt('guided.cards_misc'),keys:['card_pic_dir','info_pic_dir','unit_info','stat_food']},
+  {id:'other',t:tt('guided.other_lines'),keys:[]},
 ];
 const GF_SECTION_OF=(()=>{const m={};GF_SECTIONS.forEach(s=>s.keys.forEach(k=>m[k]=s.id));return m;})();
 const gfKey=label=>label.replace(/#\d+$/,'');
@@ -580,7 +579,7 @@ const gfKey=label=>label.replace(/#\d+$/,'');
 const GF_PAIRS=[
   ['type','dictionary'],
   ['category','class','voice_type','accent'],
-  ['banner faction','banner holy'],
+  [tt('guided.banner_faction'),tt('guided.banner_holy')],
   ['officer'],
   ['move_speed_mod','stat_health'],
   ['stat_heat','stat_ground'],
@@ -639,7 +638,7 @@ function gfBuild(spec,parts){
 function gfHostEditor(){
   const e=state.ed;
   return {
-    id:'ed', key:'ed:'+e.mod+':'+e.unit, mod:e.mod,
+    id:'ed', key:tt('guided.ed')+e.mod+':'+e.unit, mod:e.mod,
     vocab:gfVocabFor(e.mod),
     fields:()=>e.d.fields,
     known:new Set(e.d.known_fields||[]),
@@ -677,7 +676,7 @@ function gfHostComposer(){
   const inh=new Set(c.base_type?(c._inherited||[]):[]);
   const lockFor=gfComposerLock(c);
   return {
-    id:'cm', key:'cm:'+state.dst+':'+state.editing, mod:state.dst,
+    id:'cm', key:tt('guided.cm')+state.dst+':'+state.editing, mod:state.dst,
     vocab:gfVocabFor(state.dst),
     fields:()=>gfComposerFields(c),
     known:new Set(Object.keys(GF_FIELDS)),
@@ -710,11 +709,11 @@ function gfHostComposer(){
 function gfComposerLock(c){
   const snd=soundDonor(c);
   const sndLock=snd.accent?{vals:{accent:snd.accent,voice_type:snd.cls},
-    why:`Locked by the voice panel. “${snd.name}”’s sounds are copied into ${snd.accent} / ${snd.cls}, `
-       +`and these two fields are what point the game at that block. Choose “Don’t import sound” to edit them yourself.`}:null;
+    why:tt('guided.locked_by_the_voice_panel_s',{name:snd.name,accent:snd.accent,cls:snd.cls})
+       +tt('guided.and_these_two_fields_are_what')}:null;
   const rb=baseUnitOf(c);
   const idLock=(isReplace(c)&&rb)?{vals:{type:rb.type,dictionary:rb.dictionary},
-    why:`Locked. This transfer rewrites “${rb.type}” in place, so it keeps its own type and dictionary.`}:null;
+    why:tt('guided.locked_this_transfer_rewrites_in_place',{type:rb.type})}:null;
   return key=>(idLock&&(key in idLock.vals))?{val:idLock.vals[key],why:idLock.why}
              :(sndLock&&(key in sndLock.vals))?{val:sndLock.vals[key],why:sndLock.why}:null;
 }
@@ -747,7 +746,7 @@ function gfComposerCreates(){
 function gfComposerFactions(c){
   const all=Object.keys(state.factionNames||{}).slice();
   (state.destData&&state.destData.factions||[]).forEach(f=>all.push(f.name||f));
-  ['ownership','era 0','era 1','era 2'].forEach(l=>{
+  ['ownership',tt('guided.era_0'),tt('guided.era_1'),tt('guided.era_2')].forEach(l=>{
     const v=(l in c.field_overrides)?c.field_overrides[l]:c._orig[l];
     csv(v||'').forEach(f=>all.push(f));
   });
@@ -778,84 +777,84 @@ function gfWarnings(host){
   const cls=(val('class')||'').toLowerCase();
   if(has('class')&&cat==='infantry'&&cls==='spearmen'){/* fine */}
   if(has('class')&&cat!=='infantry'&&cls==='spearmen')
-    add('class','<b>spearmen</b> is an infantry class, so on a '+esc(cat)+' unit the engine falls back to a default.');
+    add('class',`${tt('guided.spearmen_is_an_infantry_class_so')} `+esc(cat)+tt('guided.unit_the_engine_falls_back_to'));
   if(has('animal')&&cat!=='handler')
-    add('animal','An <code>animal</code> line needs <code>category handler</code>, otherwise the animals never appear.');
+    add('animal',tt('guided.an_animal_line_needs_category_handler'));
   // a unit carries ONE kind of attachment; the engine reads whichever it finds
   // first and the others are dead weight
   const extras=['ship','engine','mounted_engine','animal'].filter(has);
   if(extras.length>1)extras.forEach(k=>add(k,
-    'A unit can only use one of <code>ship</code>, <code>engine</code>, <code>mounted_engine</code> and '
-    +'<code>animal</code>. This one has <b>'+extras.join('</b>, <b>')+'</b>.','bad'));
+    `${tt('guided.a_unit_can_only_use_one')} `
+    +tt('guided.animal_this_one_has')+extras.join('</b>, <b>')+'</b>.','bad'));
 
   ['stat_pri','stat_sec','stat_ter'].forEach(k=>{
     if(!has(k))return;
     const p=parts(k); if(p.length<11)return;
     const atk=num(p[0]),proj=(p[2]||'').toLowerCase(),rng=num(p[3]),ammo=num(p[4]),wt=(p[5]||'').toLowerCase();
-    if(atk!==null&&atk>63)add(k,'Attack <b>'+esc(p[0])+'</b> is above the engine’s cap of 63, so it will behave as 63.');
+    if(atk!==null&&atk>63)add(k,`${tt('guided.attack')} <b>`+esc(p[0])+`</b> ${tt('guided.is_above_the_engines_cap_of')}`);
     const missile=(wt==='missile'||wt==='thrown'||wt==='siege_missile');
-    if(missile&&proj==='no')add(k,'Weapon type is <b>'+esc(wt)+'</b> but the projectile is <code>no</code>, so it will never fire.');
-    if(!missile&&proj!=='no'&&proj)add(k,'A projectile is set but the weapon type is <b>'+esc(wt||'none')+'</b>. Only missile, thrown and siege_missile weapons fire.');
-    if(missile&&!rng)add(k,'Missile weapon with range 0, so it cannot reach anything.');
-    if(missile&&!ammo)add(k,'Missile weapon with 0 ammunition, so it fires nothing.');
+    if(missile&&proj==='no')add(k,`${tt('guided.weapon_type_is')} <b>`+esc(wt)+`</b> ${tt('guided.but_the_projectile_is_no_so')}`);
+    if(!missile&&proj!=='no'&&proj)add(k,`${tt('guided.a_projectile_is_set_but_the')} <b>`+esc(wt||'none')+`</b>${tt('guided.only_missile_thrown_and_siege_missile')}`);
+    if(missile&&!rng)add(k,tt('guided.missile_weapon_with_range_0_so'));
+    if(missile&&!ammo)add(k,tt('guided.missile_weapon_with_0_ammunition_so'));
     if(proj&&proj!=='no'&&!gfHas(gfDefined(host,'projectile'),p[2])&&gfDefined(host,'projectile').length)
-      add(k,'Projectile <code>'+esc(p[2])+'</code> is not defined in this mod’s <code>descr_projectile.txt</code>.','bad');
+      add(k,`${tt('guided.projectile')} <code>`+esc(p[2])+`</code> ${tt('guided.is_not_defined_in_this_mods')}`,'bad');
     if(p.length>=12&&(p[9]||'').trim()&&!/^[A-Za-z_][\w]*$/.test(p[9].trim()))
-      add(k,'The 12-value form puts the fire effect in slot 10, and <code>'+esc(p[9])+'</code> does not look like an effect name.');
+      add(k,`${tt('guided.the_12_value_form_puts_the')} <code>`+esc(p[9])+`</code> ${tt('guided.does_not_look_like_an_effect')}`);
   });
   if(has('stat_pri')&&has('stat_sec')){
     const w=x=>((parts(x)[5])||'').toLowerCase();
     const missileSec=['missile','thrown'].indexOf(w('stat_sec'))>=0;
     if(missileSec&&['missile','thrown','siege_missile'].indexOf(w('stat_pri'))<0)
-      add('stat_sec','A missile weapon has to be the <b>primary</b> one. The engine ignores a secondary bow.');
+      add('stat_sec',tt('guided.a_missile_weapon_has_to_be_2'));
   }
   if(has('stat_ter')!==has('stat_ter_attr'))
-    add(has('stat_ter')?'stat_ter':'stat_ter_attr','A third weapon needs <b>all</b> of stat_ter and stat_ter_attr, or the engine drops it.');
+    add(has('stat_ter')?'stat_ter':'stat_ter_attr',tt('guided.a_third_weapon_needs_all_of'));
 
   if(has('formation')){
     const p=parts('formation');
     if(p.length>=7){
       const a=(p[5]||'').toLowerCase(),b=(p[6]||'').toLowerCase();
       if(b&&['square','horde'].indexOf(a)<0)
-        add('formation','With two formations the first must be <b>square</b> or <b>horde</b>.');
+        add('formation',tt('guided.with_two_formations_the_first_must'));
       if(b&&['schiltrom','shield_wall','phalanx','testudo','wedge'].indexOf(b)<0)
-        add('formation','<b>'+esc(b)+'</b> is not one of the switchable formations (schiltrom, shield_wall, phalanx, testudo, wedge).');
+        add('formation','<b>'+esc(b)+`</b> ${tt('guided.is_not_one_of_the_switchable')}`);
       if(b==='phalanx'&&csv(val('stat_pri_attr')).indexOf('long_pike')<0)
-        add('formation','A <b>phalanx</b> unit normally needs <code>long_pike</code> in its primary weapon attributes.');
+        add('formation',tt('guided.a_phalanx_unit_normally_needs_long'));
     }
   }
   const lv=csv(val('armour_ug_levels')),md=csv(val('armour_ug_models'));
   if(has('armour_ug_models')&&lv.length&&md.length&&md.length>lv.length)
-    add('armour_ug_models',`<b>${md.length}</b> upgrade model(s) but only <b>${lv.length}</b> level(s). `
-      +'The tiers past the last level have nothing to trigger them.');
+    add('armour_ug_models',`<b>${md.length}</b> ${tt('guided.upgrade_model_s_but_only_level',{lv_n:lv.length})} `
+      +tt('guided.the_tiers_past_the_last_level'));
   else if(has('armour_ug_models')&&lv.length&&md.length&&lv.length>md.length)
-    add('armour_ug_models',`<b>${lv.length}</b> armour levels share <b>${md.length}</b> model(s), so the last `
-      +'model carries the levels above it. Common and fine; add models only if the tiers should look different.','info');
+    add('armour_ug_models',`<b>${lv.length}</b> ${tt('guided.armour_levels_share_model_s_so',{md_n:md.length})} `
+      +tt('guided.model_carries_the_levels_above_it'),'info');
   const defModels=gfDefined(host,'model');
   // plus whatever this job is about to write into the modeldb - see host.creates
   const coming=new Set((host.creates?host.creates():[]).map(x=>(''+x).trim().toLowerCase()));
   const knownModel=m=>gfHas(defModels,m)||coming.has((m||'').trim().toLowerCase());
   if(defModels.length){
-    md.forEach(m=>{if(!knownModel(m))add('armour_ug_models','<code>'+esc(m)+'</code> is not an entry in this mod’s battle_models.modeldb.','bad');});
+    md.forEach(m=>{if(!knownModel(m))add('armour_ug_models','<code>'+esc(m)+`</code> ${tt('guided.is_not_an_entry_in_this')}`,'bad');});
     const sm=(parts('soldier')[0]||'');
     if(has('soldier')&&sm&&!knownModel(sm))
-      add('soldier','<code>'+esc(sm)+'</code> is not an entry in this mod’s battle_models.modeldb.','bad');
+      add('soldier','<code>'+esc(sm)+`</code> ${tt('guided.is_not_an_entry_in_this')}`,'bad');
   }
   [['mount','mount'],['engine','engine'],['mounted_engine','mounted_engine'],
    ['ship','ship'],['animal','animal']].forEach(([k,v])=>{
     const list=gfDefined(host,v);
     if(has(k)&&list.length&&!gfHas(list,val(k))&&!coming.has((val(k)||'').trim().toLowerCase()))
-      add(k,'<code>'+esc(val(k))+'</code> is not defined in this mod’s <code>descr_'+
-        (k==='mounted_engine'?'mounted_engines':k==='engine'?'engines':k==='animal'?'animals':k)+'.txt</code>.','bad');
+      add(k,'<code>'+esc(val(k))+`</code> ${tt('guided.is_not_defined_in_this_mods_2')}`+
+        (k==='mounted_engine'?'mounted_engines':k==='engine'?'engines':k==='animal'?'animals':k)+tt('guided.txt'),'bad');
   });
   // The three banner lines name banners declared by descr_banners_new.xml, one
   // XML section per line. `defined` only carries them when the mod HAS that file.
-  [['banner faction','banner_faction','FactionBanners'],
-   ['banner holy','banner_holy','HolyBanners'],
-   ['banner unit','banner_unit','UnitSpecificBanners']].forEach(([k,v,section])=>{
+  [[tt('guided.banner_faction'),'banner_faction','FactionBanners'],
+   [tt('guided.banner_holy'),'banner_holy','HolyBanners'],
+   [tt('guided.banner_unit'),'banner_unit','UnitSpecificBanners']].forEach(([k,v,section])=>{
     const list=gfDefined(host,v);
     if(has(k)&&list.length&&!gfHas(list,val(k)))
-      add(k,'<code>'+esc(val(k))+'</code> is not declared in this mod’s '
+      add(k,'<code>'+esc(val(k))+`</code> ${tt('guided.is_not_declared_in_this_mods')} `
         +'<code>descr_banners_new.xml</code> (<code>&lt;'+section+'&gt;</code>).','bad');
   });
   if(has('soldier')){
@@ -863,19 +862,19 @@ function gfWarnings(host){
     // field 2-man scout and monster units that work perfectly well - only a unit
     // with no men at all is definitely wrong.
     const men=num(parts('soldier')[1]);
-    if(men!==null&&men<1)add('soldier','A unit with no men, so nothing will be recruited.','bad');
+    if(men!==null&&men<1)add('soldier',tt('guided.a_unit_with_no_men_so'),'bad');
   }
   if(has('ownership')&&!csv(val('ownership')).length)
-    add('ownership','No owner. No faction can recruit this unit, and its unit card has no faction folder to live in.','bad');
+    add('ownership',tt('guided.no_owner_no_faction_can_recruit'),'bad');
   const attrs=csv(val('attributes'));
   if(attrs.indexOf('mercenary_unit')>=0&&!has('card_pic_dir'))
-    add('attributes','<code>mercenary_unit</code>: the unit card is looked up under <code>ui/units/mercs/</code> unless <code>card_pic_dir</code> says otherwise.','info');
+    add('attributes',tt('guided.mercenary_unit_the_unit_card_is'),'info');
   if(attrs.indexOf('can_run_amok')>=0&&!has('mount'))
-    add('attributes','<code>can_run_amok</code> only does anything on a mounted unit.');
+    add('attributes',tt('guided.can_run_amok_only_does_anything'));
   if(has('stat_mental')){
     const p=parts('stat_mental');
     if(p.length>3&&(p[3]||'').toLowerCase()!=='lock_morale')
-      add('stat_mental','The optional fourth value can only be <code>lock_morale</code>.','bad');
+      add('stat_mental',tt('guided.the_optional_fourth_value_can_only'),'bad');
   }
   return out;
 }
@@ -898,7 +897,7 @@ function gfRender(host){
     shown=host.fields().map(([l])=>l).filter(l=>{
       const sp=GF_FIELDS[gfKey(l)]||{};
       return (l+' '+(sp.t||'')+' '+(sp.doc||'')).toLowerCase().indexOf(q)>=0;});
-    heading=`<div class="gfintro">${shown.length} field(s) matching “${esc(gf.q)}”.</div>`;
+    heading=`<div class="gfintro">${tt('guided.field_s_matching',{shown_n:shown.length,gf:esc(gf.q)})}</div>`;
   }else{
     if(!groups[gf.tab]||(!groups[gf.tab].length&&gf.tab!=='other'))
       gf.tab=(GF_SECTIONS.find(s=>groups[s.id].length)||GF_SECTIONS[0]).id;
@@ -911,7 +910,7 @@ function gfRender(host){
     const hits=groups[s.id].filter(l=>gfReal(warns[l]).length);
     // the badge names the fields, not just how many - a bare "3 things to look
     // at" makes you open all three sections to find out which
-    const why=hits.length?hits.join(', ')+'. Hover or click the section to read them.':'';
+    const why=hits.length?hits.join(', ')+tt('guided.hover_or_click_the_section_to'):'';
     return `<button class="${!q&&gf.tab===s.id?'on':''}" onclick="gfTab('${s.id}')">${esc(s.t)}
       <span class="n">${n}</span>${hits.length?`<span class="bad" title="${esc(why)}">▲ ${hits.length}</span>`:''}</button>`;
   }).join('');
@@ -921,7 +920,7 @@ function gfRender(host){
       <div class="gfsum" id="gfSum">${gfSumHtml(host,warns)}</div>
       ${heading}
       ${shown.length?gfRows(host,shown,warns)
-        :'<div class="gfempty">Nothing in this group. The unit has no such lines, so add one below.</div>'}
+        :`<div class="gfempty">${tt('guided.nothing_in_this_group_the_unit')}</div>`}
       ${gfAddHtml(host)}
     </div>
     ${gfDatalists(host)}</div>`;
@@ -943,10 +942,10 @@ const gfReal=list=>(list||[]).filter(x=>x.k!=='info');
 function gfSumHtml(host,warns){
   const n=Object.values(warns).reduce((a,b)=>a+gfReal(b).length,0);
   const bad=Object.values(warns).reduce((a,b)=>a+b.filter(x=>x.k==='bad').length,0);
-  return `<span class="count">${host.fields().length} line(s) in this unit.</span>`
-    +(n?`<span class="pill warn" onclick="gfShowWarnings()" title="Jump to the first one">
-        ${bad?'✖ '+bad+' broken':''}${bad&&n-bad?' · ':''}${n-bad?'▲ '+(n-bad)+' to check':''}</span>`
-      :`<span class="pill" style="border-color:var(--good);color:var(--good)">✓ nothing looks wrong</span>`);
+  return `<span class="count">${tt('guided.line_s_in_this_unit',{n:host.fields().length})}</span>`
+    +(n?`<span class="pill warn" onclick="gfShowWarnings()" title="${ttA('guided.jump_to_the_first_one')}">
+        ${bad?'✖ '+bad+' broken':''}${bad&&n-bad?' · ':''}${n-bad?'▲ '+(n-bad)+tt('guided.to_check'):''}</span>`
+      :`<span class="pill" style="border-color:var(--good);color:var(--good)">${tt('guided.nothing_looks_wrong')}</span>`);
 }
 function gfShowWarnings(){
   const el=document.querySelector('#gfBody .gfnote.bad,#gfBody .gfnote.warn');
@@ -990,32 +989,31 @@ function gfCard(host,label,warns){
     ${spec?qmSpec(key,null):''}
     <span class="t">${esc(title)}</span>
     <span class="k">${esc(label)}</span>
-    ${spec&&spec.opt?'<span class="count" title="The engine works without this line">Optional</span>':''}
+    ${spec&&spec.opt?`<span class="count" title="${ttA('guided.the_engine_works_without_this_line')}">${tt('guided.optional')}</span>`:''}
     ${lk?`<span class="ibadge" title="${esc(lk.why)}">🔒</span>`:host.badge(label,cur)}
     <span class="sp"></span>
     ${(!gone&&!lk&&GF_ACTIONS[key])?GF_ACTIONS[key](label,cur):''}
-    ${spec?`<button class="${gf.help.has(label)?'on':''}" title="What this line does"
+    ${spec?`<button class="${gf.help.has(label)?'on':''}" title="${ttA('guided.what_this_line_does')}"
         onclick="gfHelp('${q1(esc(label))}')">?</button>`:''}
-    ${lk?'':`<button class="${rawOpen?'on':''}" title="Show the line exactly as the file stores it"
+    ${lk?'':`<button class="${rawOpen?'on':''}" title="${ttA('guided.show_the_line_exactly_as_the')}"
         onclick="gfRaw('${q1(esc(label))}')">&lt;/&gt;</button>`}
-    ${canRm?`<button class="rm" title="${gone?'Keep this line':'Delete this line from the unit'}"
+    ${canRm?`<button class="rm" title="${gone?tt('guided.keep_this_line'):tt('guided.delete_this_line_from_the_unit')}"
         onclick="gfRemove('${q1(esc(label))}')">${gone?'↺':'✕'}</button>`:''}
   </div>`;
   let body='';
-  if(gone)body='<div class="gfnote">This line will be removed from the unit.</div>';
-  else if(lk)body=`<div class="gfrow"><div class="gfpart grow"><span class="pl">value</span>
+  if(gone)body=`<div class="gfnote">${tt('guided.this_line_will_be_removed_from')}</div>`;
+  else if(lk)body=`<div class="gfrow"><div class="gfpart grow"><span class="pl">${tt('common.value')}</span>
       <input value="${esc(lk.val)}" disabled title="${esc(lk.why)}"></div></div>
     <div class="gfnote">${esc(lk.why)}</div>`;
   else if(spec&&spec.w)body=gfWidget(host,label,spec,cur);
   else if(spec&&parsed&&parsed.ok)body=gfParts(host,label,spec,parsed);
-  else if(spec)body=`<div class="gfnote warn">This line has ${parsed.parts.length} value(s); the engine
-      reads ${(spec.arity||[spec.parts.length]).join(' or ')} here, so it is shown as raw text.</div>`;
+  else if(spec)body=`<div class="gfnote warn">${tt('guided.this_line_has_value_s_the',{parts_n:parsed.parts.length,x:(spec.arity||[spec.parts.length]).join(' or ')})}</div>`;
   const raw=(rawOpen&&!gone&&!lk)?`<div class="gfraw">
       <span class="pl">${esc(key)}</span>
       <input data-gfraw="${esc(label)}" value="${esc(cur)}" spellcheck="false"
         class="${changed?'changed':''}"></div>`:'';
   const doc=(spec&&gf.help.has(label))?`<div class="gfdoc">${spec.doc||''}</div>`:'';
-  const empty=(parsed&&parsed.empty&&!gone)?'<div class="gfnote">This line is empty. Fill it in and it gets written.</div>':'';
+  const empty=(parsed&&parsed.empty&&!gone)?`<div class="gfnote">${tt('guided.this_line_is_empty_fill_it')}</div>`:'';
   return `<div class="gfcard${changed?' changed':''}${gone?' gone':''}" data-card="${esc(label)}">
     ${head}${doc}${body}${empty}${raw}
     <div data-warn="${esc(label)}">${gfNotes(warns[label])}</div></div>`;
@@ -1024,15 +1022,14 @@ function gfCard(host,label,warns){
    shortcut: the engine recognises one exact line as "this unit has no sidearm"
    (`0, 0, no, 0, 0, no, melee_simple, blunt, none, 25, 1`), and typing eleven
    values by hand to say nothing is how the reference editor makes people do it. */
-const GF_NO_WEAPON='0, 0, no, 0, 0, no, melee_simple, blunt, none, 25, 1';
+const GF_NO_WEAPON=tt('guided.0_0_no_0_0_no');
 const gfIsNoWeapon=v=>{const p=(v||'').split(',').map(x=>x.trim());
   return p.length>=9&&p[0]==='0'&&p[2]==='no'&&(p[5]==='no'||p[5]==='');};
 const GF_ACTIONS={
-  stat_sec:(label,cur)=>gfIsNoWeapon(cur)?'':`<button title="Write the line the engine reads as
-'this unit has no sidearm', and clear its attributes"
-    onclick="gfNoWeapon('${q1(esc(label))}')">no secondary weapon</button>`,
-  stat_ter:(label,cur)=>gfIsNoWeapon(cur)?'':`<button title="Write the empty-weapon line and clear its attributes"
-    onclick="gfNoWeapon('${q1(esc(label))}')">no third weapon</button>`,
+  stat_sec:(label,cur)=>gfIsNoWeapon(cur)?'':`<button title="${ttA('guided.write_the_line_the_engine_reads')}"
+    onclick="gfNoWeapon('${q1(esc(label))}')">${tt('guided.no_secondary_weapon')}</button>`,
+  stat_ter:(label,cur)=>gfIsNoWeapon(cur)?'':`<button title="${ttA('guided.write_the_empty_weapon_line_and')}"
+    onclick="gfNoWeapon('${q1(esc(label))}')">${tt('guided.no_third_weapon')}</button>`,
 };
 function gfNoWeapon(label){
   const host=gfHost();
@@ -1062,11 +1059,11 @@ function gfParts(host,label,spec,parsed){
     const v=parsed.parts[i]==null?'':parsed.parts[i];
     const ch=partChanged(i);
     const cls='gfpart'+(p.grow?' grow':p.w===3?' w3':p.w===2?' w2':'')+(ch?' changed':'');
-    const attr=`data-gfp="${esc(label)}" data-i="${i}"`;
+    const attr=tt('guided.data_gfp_data_i',{label:esc(label),x:i});
     const chc=ch?' changed':'';                  // the amber "you changed this"
     // the explanation hangs off the ? beside the part's name; the control keeps
     // an accessible name of its own, since the label is not a <label for=…>
-    const aria=` aria-label="${esc(p.pl)}"`;
+    const aria=tt('guided.aria_label',{pl:esc(p.pl)});
     let ctl;
     if(p.type==='flag'){
       ctl=`<label class="chk" style="height:26px"><input type="checkbox" ${attr}${aria}
@@ -1075,7 +1072,7 @@ function gfParts(host,label,spec,parsed){
       const opts=gfV(host,p.v);
       const list=opts.indexOf(v)<0?[v].concat(opts):opts;
       ctl=`<select ${attr}${aria} class="${chc.trim()}">${list.map(o=>`<option value="${esc(o)}"${
-        o===v?' selected':''}>${o===''?(p.optional?'None':'(unset)'):esc(o)}</option>`).join('')}</select>`;
+        o===v?' selected':''}>${o===''?(p.optional?tt('common.none_2'):'(unset)'):esc(o)}</option>`).join('')}</select>`;
     }else if(p.type==='combo'){
       // A model name is the one combo where the datalist is not enough: it is
       // 2000-odd entries and the thing you actually know is how the man should
@@ -1083,7 +1080,7 @@ function gfParts(host,label,spec,parsed){
       const box=`<input ${attr}${aria} class="${chc.trim()}" list="gfdl-${esc(p.v)}"
         value="${esc(v)}" spellcheck="false">`;
       ctl=p.v!=='model'?box:`<span class="gfcombo">${box}<button type="button" class="gfbrowse"
-        tabindex="-1" title="Find an entry by skeleton, by name, or copy another unit's whole soldier line"
+        tabindex="-1" title="${ttA('guided.find_an_entry_by_skeleton_by')}"
         onclick="mpOpen('${q1(esc(label))}',${i})">⌕</button></span>`;
     }else if(p.type==='num'){
       ctl=gfSpin(attr+aria,v,chc);
@@ -1106,8 +1103,8 @@ function gfParts(host,label,spec,parsed){
    stepping in buttons and the ↑/↓ keys, which are the only things that clamp. */
 const gfSpin=(attr,v,cls)=>`<span class="gfspin"><input ${attr} class="gfnum${cls||''}" value="${esc(v)}"
     spellcheck="false" inputmode="decimal"><span class="gfsp">
-    <button type="button" tabindex="-1" data-spin="1" aria-label="increase">▴</button>
-    <button type="button" tabindex="-1" data-spin="-1" aria-label="decrease">▾</button>
+    <button type="button" tabindex="-1" data-spin="1" aria-label="${ttA('guided.increase')}">▴</button>
+    <button type="button" tabindex="-1" data-spin="-1" aria-label="${ttA('guided.decrease')}">▾</button>
   </span></span>`;
 
 /* ---- the ? marker -------------------------------------------------------
@@ -1125,10 +1122,10 @@ const gfSpin=(attr,v,cls)=>`<span class="gfspin"><input ${attr} class="gfnum${cl
 // they focus the field itself (see the focusin handler), and the marker keeps a
 // plain `title` so it still has an accessible name of its own.
 const qm=(text,title)=>!text?'':`<span class="qm" tabindex="-1"
-  title="${esc(text)}"${title?` data-tiptitle="${esc(title)}"`:''}
+  title="${esc(text)}"${title?tt('guided.data_tiptitle',{title:esc(title)}):''}
   data-tiptext="${esc(text)}">?</span>`;
-const qmSpec=(key,i)=>`<span class="qm" tabindex="-1" title="What is this?"
-  data-tip="${esc(key)}"${i==null?'':` data-tipi="${i}"`}>?</span>`;
+const qmSpec=(key,i)=>`<span class="qm" tabindex="-1" title="${ttA('guided.what_is_this')}"
+  data-tip="${esc(key)}"${i==null?'':tt('guided.data_tipi',{x:i})}>?</span>`;
 // A field's documentation as plain text, for the raw view - GF_FIELDS writes its
 // `doc` as HTML, and a ? marker carries text.
 function gfPlainDoc(key){
@@ -1147,21 +1144,20 @@ function gfTipHtml(key,i){
     return `<div class="tt">${esc(spec.t)}</div>
       <div class="tk">${esc(key)}${spec.syn?'  '+esc(spec.syn):''}</div>
       <div class="tb">${spec.doc||''}</div>
-      ${spec.opt?'<div class="tf">Optional. The engine works without this line.</div>':''}`;
+      ${spec.opt?`<div class="tf">${tt('guided.optional_the_engine_works_without_this')}</div>`:''}`;
   }
   const p=(spec.parts||[])[+i]; if(!p)return '';
   const range=[];
   if(p.type==='num'){
     if(p.min!=null&&p.max!=null)range.push(`${p.min} to ${p.max}`);
-    else if(p.min!=null)range.push(`${p.min} or more`);
-    else if(p.max!=null)range.push(`up to ${p.max}`);
-    if(p.step&&p.step!==1)range.push(`steps of ${p.step}`);
+    else if(p.min!=null)range.push(tt('guided.or_more',{x:p.min}));
+    else if(p.max!=null)range.push(tt('guided.up_to',{x:p.max}));
+    if(p.step&&p.step!==1)range.push(tt('guided.steps_of',{step:p.step}));
   }
-  return `<div class="tt">${esc(p.pl)}${p.optional?' <span class="topt">optional</span>':''}</div>
-    <div class="tk">${esc(key)}, value ${(+i)+1} of ${spec.parts.length}</div>
+  return `<div class="tt">${esc(p.pl)}${p.optional?` <span class="topt">${tt('common.optional')}</span>`:''}</div>
+    <div class="tk">${tt('guided.value_of',{key:esc(key),x:(+i)+1,parts_n:spec.parts.length})}</div>
     <div class="tb">${p.help||spec.doc||''}</div>
-    ${range.length?`<div class="tf">▴▾ and the ↑/↓ keys step within ${range.join(', ')}.
-      Hold Shift for ×10, or hold the button down to repeat. Typing is never clamped.</div>`:''}`;
+    ${range.length?`<div class="tf">${tt('guided.and_the_keys_step_within_hold',{range:range.join(', ')})}</div>`:''}`;
 }
 let gfTipEl=null;
 function gfTipShow(el){

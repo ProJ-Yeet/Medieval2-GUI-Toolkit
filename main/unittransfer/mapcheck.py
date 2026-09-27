@@ -79,6 +79,7 @@ from .campmap import (ENCODING, LAYER_BY_CODE, RWM_REL,
                       CampaignMap, MapError, Rgb, key)
 from .maptga import encode
 from .mapvocab import PORT_RGB, SETTLEMENT_RGB
+from . import i18n as _i18n
 
 #: How many findings one rule may list individually before the rest are folded
 #: into a single row with a count. Each listed finding carries a tile or a line,
@@ -379,9 +380,7 @@ def _r_colour_cap(ck: Check) -> Iterable[Finding]:
     if used > mapvocab.MAX_REGION_COLOURS:
         yield Finding(
             "layer.colour_cap", "fatal",
-            f"descr_regions.txt declares {used} regions and the engine's cap is "
-            f"{mapvocab.MAX_REGION_COLOURS}. Everything past the cap is a "
-            f"province the game never sees.",
+            _i18n.msg("eng.mapcheck.descr_regions_txt_declares_regions_and", "descr_regions.txt declares {used} regions and the engine's cap is {MAX_REGION_COLOURS}. Everything past the cap is a province the game never sees.", used=used, MAX_REGION_COLOURS=mapvocab.MAX_REGION_COLOURS),
             file=ck.rel("map_regions.tga"), what="cap")
 
 
@@ -406,10 +405,7 @@ def _r_duplicate_colour(ck: Check) -> Iterable[Finding]:
             continue
         yield Finding(
             "region.duplicate_colour", "fatal",
-            f"{rec.name} is declared rgb({rec.rgb[0]}, {rec.rgb[1]}, "
-            f"{rec.rgb[2]}), which {first.name} already has. The map cannot "
-            f"tell them apart, so one of the two owns every tile and the other "
-            f"owns none.",
+            _i18n.msg("eng.mapcheck.is_declared_rgb_which_already_has", "{name} is declared rgb({rgb}, {rgb2}, {rgb3}), which {name2} already has. The map cannot tell them apart, so one of the two owns every tile and the other owns none.", name=rec.name, rgb=rec.rgb[0], rgb2=rec.rgb[1], rgb3=rec.rgb[2], name2=first.name),
             file=ck.rel("descr_regions.txt"), line=rec.rgb_line + 1, what=f"{rec.name}|{first.name}")
 
 
@@ -422,9 +418,7 @@ def _r_reserved_colour(ck: Check) -> Iterable[Finding]:
             if rec.rgb == rgb:
                 yield Finding(
                     "region.reserved_colour", "fatal",
-                    f"{rec.name} claims rgb({rgb[0]}, {rgb[1]}, {rgb[2]}), "
-                    f"which is {what} rather than a province colour. The "
-                    f"region scan skips it, so the province does not exist.",
+                    _i18n.msg("eng.mapcheck.claims_rgb_which_is_rather_than", "{name} claims rgb({rgb}, {rgb2}, {rgb3}), which is {what} rather than a province colour. The region scan skips it, so the province does not exist.", name=rec.name, rgb=rgb[0], rgb2=rgb[1], rgb3=rgb[2], what=what),
                     file=ck.rel("descr_regions.txt"), line=rec.rgb_line + 1, what=rec.name)
 
 
@@ -437,10 +431,7 @@ def _r_no_pixels(ck: Check) -> Iterable[Finding]:
     for rec in idx.empty_records:
         yield Finding(
             "region.no_pixels", "fatal",
-            f"{rec.name} is declared rgb({rec.rgb[0]}, {rec.rgb[1]}, "
-            f"{rec.rgb[2]}) and not one pixel of map_regions.tga is that "
-            f"colour. A region with no tiles is legal to write and fatal to "
-            f"play.",
+            _i18n.msg("eng.mapcheck.is_declared_rgb_and_not_one", "{name} is declared rgb({rgb}, {rgb2}, {rgb3}) and not one pixel of map_regions.tga is that colour. A region with no tiles is legal to write and fatal to play.", name=rec.name, rgb=rec.rgb[0], rgb2=rec.rgb[1], rgb3=rec.rgb[2]),
             file=ck.rel("descr_regions.txt"), line=rec.rgb_line + 1, what=rec.name)
 
 
@@ -466,10 +457,7 @@ def _r_undeclared(ck: Check) -> Iterable[Finding]:
             continue
         yield Finding(
             "region.undeclared", "fatal",
-            f"{r.pixels:,} tiles are painted rgb({r.rgb[0]}, {r.rgb[1]}, "
-            f"{r.rgb[2]}) and descr_regions.txt declares no region with that "
-            f"colour. None of it is sea, so it is land the game has no "
-            f"province for.",
+            _i18n.msg("eng.mapcheck.pixels_tiles_are_painted_rgb_and", "{pixels:,} tiles are painted rgb({rgb}, {rgb2}, {rgb3}) and descr_regions.txt declares no region with that colour. None of it is sea, so it is land the game has no province for.", pixels=r.pixels, rgb=r.rgb[0], rgb2=r.rgb[1], rgb3=r.rgb[2]),
             file=ck.rel("map_regions.tga"), tile=r.anchor,
             what=f"{r.rgb[0]},{r.rgb[1]},{r.rgb[2]}")
 
@@ -500,9 +488,7 @@ def _r_wasteland_last(ck: Check) -> Iterable[Finding]:
         if rec.wasteland and i != len(recs) - 1:
             yield Finding(
                 "region.wasteland_last", "warn",
-                f"{rec.name} has no settlement line, and the arbiter says such "
-                f"a record must be the last one in the file. It is entry "
-                f"{i + 1} of {len(recs)}.",
+                _i18n.msg("eng.mapcheck.has_no_settlement_line_and_the", "{name} has no settlement line, and the arbiter says such a record must be the last one in the file. It is entry {x} of {recs_n}.", name=rec.name, x=i + 1, recs_n=len(recs)),
                 file=ck.rel("descr_regions.txt"), line=rec.span[0] + 1, what=rec.name)
 
 
@@ -521,8 +507,7 @@ def _r_no_settlement(ck: Check) -> Iterable[Finding]:
             continue
         yield Finding(
             "marker.no_settlement", "fatal",
-            f"{r.name} owns {r.pixels:,} tiles and has no settlement pixel on "
-            f"any of them. The engine has nowhere to put the city.",
+            _i18n.msg("eng.mapcheck.owns_pixels_tiles_and_has_no", "{name} owns {pixels:,} tiles and has no settlement pixel on any of them. The engine has nowhere to put the city.", name=r.name, pixels=r.pixels),
             file=ck.rel("map_regions.tga"), tile=r.anchor, what=r.name)
 
 
@@ -573,9 +558,7 @@ def _r_orphan_markers(ck: Check) -> Iterable[Finding]:
     for at in idx.orphan_settlements[:ROW_MAX]:
         yield Finding(
             "marker.orphan", "fatal",
-            f"The settlement pixel at {at[0]},{at[1]} has no region on any "
-            f"cardinal side, so no province owns it. Usually a city painted on "
-            f"the map and never written into descr_regions.txt.",
+            _i18n.msg("eng.mapcheck.the_settlement_pixel_at_has_no", "The settlement pixel at {at},{at2} has no region on any cardinal side, so no province owns it. Usually a city painted on the map and never written into descr_regions.txt.", at=at[0], at2=at[1]),
             file=ck.rel("map_regions.tga"), tile=at,
             what=f"settlement|{at[0]},{at[1]}")
     # A port with no sea at all beside it is also undecidable - the dock rule
@@ -587,9 +570,7 @@ def _r_orphan_markers(ck: Check) -> Iterable[Finding]:
             continue
         yield Finding(
             "marker.orphan", "warn",
-            f"The port pixel at {at[0]},{at[1]} touches no single region the "
-            f"cardinal rule can give it to, so which province gets the port is "
-            f"whatever the engine decides.",
+            _i18n.msg("eng.mapcheck.the_port_pixel_at_touches_no", "The port pixel at {at},{at2} touches no single region the cardinal rule can give it to, so which province gets the port is whatever the engine decides.", at=at[0], at2=at[1]),
             file=ck.rel("map_regions.tga"), tile=at,
             what=f"port|{at[0]},{at[1]}")
 
@@ -708,8 +689,7 @@ def _marker_rule(ck: Check, code: str) -> Iterable[Finding]:
                     continue
                 yield Finding(
                     code, "fatal" if f["fatal"] else "warn",
-                    f"{r.name or 'An undeclared region'}'s {kind} pixel at "
-                    f"{at[0]},{at[1]} {f['tail']}",
+                    _i18n.msg("eng.mapcheck.s_pixel_at", "{x}'s {kind} pixel at {at},{at2} {tail}", x=r.name or 'An undeclared region', kind=kind, at=at[0], at2=at[1], tail=f['tail']),
                     file=ck.rel(MARKER_LAYER[code]) if code in MARKER_LAYER
                     else "", tile=at,
                     fix="heights_black" if f.get("ambiguous") else "",
@@ -765,9 +745,7 @@ def _r_port_inland(ck: Check) -> Iterable[Finding]:
         who = owner.get((x, y)) or "an undeclared region"
         yield Finding(
             "port.inland", "fatal",
-            f"The port pixel at {x},{y} ({who}) has no sea tile on any of its "
-            f"four sides, so nothing can ever dock there and no province can be "
-            f"given the port.",
+            _i18n.msg("eng.mapcheck.the_port_pixel_at_has_no", "The port pixel at {x},{y} ({who}) has no sea tile on any of its four sides, so nothing can ever dock there and no province can be given the port.", x=x, y=y, who=who),
             file=MARKER_LAYER["port.inland"], tile=(x, y), what=f"{x},{y}")
 
 
@@ -793,11 +771,7 @@ def _unknown_colours(ck: Check, code: str, namer, label: str, rule_code: str,
         where = _find(data, ck.width, rgb, limit=1)
         yield Finding(
             rule_code, severity,
-            f"rgb({rgb[0]}, {rgb[1]}, {rgb[2]}) is on {count:,} tile"
-            f"{'' if count == 1 else 's'} of "
-            f"{LAYER_BY_CODE[code]['file']} and {label}. The engine reads it as "
-            f"whatever it happens to fall nearest to, which is not a decision "
-            f"anybody made.",
+            _i18n.msg("eng.mapcheck.rgb_is_on_count_tile_of", "rgb({rgb}, {rgb2}, {rgb3}) is on {count:,} tile{x} of {file} and {label}. The engine reads it as whatever it happens to fall nearest to, which is not a decision anybody made.", rgb=rgb[0], rgb2=rgb[1], rgb3=rgb[2], count=count, x='' if count == 1 else 's', file=LAYER_BY_CODE[code]['file'], label=label),
             file=ck.rel(LAYER_BY_CODE[code]['file']),
             tile=where[0] if where else None, count=count,
             what=f"{rgb[0]},{rgb[1]},{rgb[2]}")
@@ -904,10 +878,7 @@ def _r_terrain_textures(ck: Check) -> Iterable[Finding]:
             where = mapterrain.AERIAL_REL
         yield Finding(
             "terrain.texture", "warn",
-            f"{gap['why']} The tiles are drawn "
-            f"rgb({', '.join(str(v) for v in mapterrain.MISSING_RGB)}) on the "
-            f"terrain backdrop rather than left out, so they can be found."
-            f"{when}",
+            _i18n.msg("eng.mapcheck.the_tiles_are_drawn_rgb_on", "{why} The tiles are drawn rgb({x}) on the terrain backdrop rather than left out, so they can be found.{when}", why=gap['why'], x=', '.join(str(v) for v in mapterrain.MISSING_RGB), when=when),
             file=where, tile=tuple(gap["tile"]) if gap["tile"] else None,
             count=gap["tiles"], what=what)
 
@@ -942,9 +913,7 @@ def _r_river_diagonal(ck: Check) -> Iterable[Finding]:
             continue
         yield Finding(
             "river.diagonal", "warn",
-            f"The river tile at {x},{y} touches the rest of the river only at "
-            f"a corner. The engine steps a river north, south, east and west, "
-            f"so the water stops here and starts again on the far side.",
+            _i18n.msg("eng.mapcheck.the_river_tile_at_touches_the", "The river tile at {x},{y} touches the rest of the river only at a corner. The engine steps a river north, south, east and west, so the water stops here and starts again on the far side.", x=x, y=y),
             file=ck.rel("map_features.tga"), tile=(x, y), what=f"{x},{y}")
 
 
@@ -961,8 +930,7 @@ def _r_river_isolated(ck: Check) -> Iterable[Finding]:
             continue
         yield Finding(
             "river.isolated", "warn",
-            f"The river tile at {x},{y} touches no other river tile at all. "
-            f"One tile of water with no course through it.",
+            _i18n.msg("eng.mapcheck.the_river_tile_at_touches_no", "The river tile at {x},{y} touches no other river tile at all. One tile of water with no course through it.", x=x, y=y),
             file=ck.rel("map_features.tga"), tile=(x, y), what=f"{x},{y}")
 
 
@@ -1003,9 +971,7 @@ def _r_river_rejoin(ck: Check) -> Iterable[Finding]:
                 continue
             yield Finding(
                 "river.rejoin", "warn",
-                f"The river closes a loop at {p[0]},{p[1]}: the water leaves "
-                f"here and comes back to the same tile. A river the engine can "
-                f"build is a tree, and a loop has no mouth.",
+                _i18n.msg("eng.mapcheck.the_river_closes_a_loop_at", "The river closes a loop at {p},{p2}: the water leaves here and comes back to the same tile. A river the engine can build is a tree, and a loop has no mouth.", p=p[0], p2=p[1]),
                 file=ck.rel("map_features.tga"), tile=p,
                 what=f"{p[0]},{p[1]}|{q[0]},{q[1]}")
 
@@ -1037,9 +1003,7 @@ def _r_river_fourway(ck: Check) -> Iterable[Finding]:
             continue
         yield Finding(
             "river.fourway", "warn",
-            f"The river tile at {x},{y} has river on all four sides. The "
-            f"engine steps one course through a tile, so water arriving from "
-            f"north, south, east and west at once has no course to take.",
+            _i18n.msg("eng.mapcheck.the_river_tile_at_has_river", "The river tile at {x},{y} has river on all four sides. The engine steps one course through a tile, so water arriving from north, south, east and west at once has no course to take.", x=x, y=y),
             file=ck.rel("map_features.tga"), tile=(x, y), what=f"{x},{y}")
 
 
@@ -1088,9 +1052,7 @@ def _r_river_no_source(ck: Check) -> Iterable[Finding]:
             continue
         yield Finding(
             "river.no_source", "warn",
-            f"The river running through {start[0]},{start[1]} has no source "
-            f"pixel anywhere along its {len(comp):,} tile(s). A course the "
-            f"engine can build starts at one white tile and runs to its mouth.",
+            _i18n.msg("eng.mapcheck.the_river_running_through_has_no", "The river running through {start},{start2} has no source pixel anywhere along its {comp_n:,} tile(s). A course the engine can build starts at one white tile and runs to its mouth.", start=start[0], start2=start[1], comp_n=len(comp)),
             file=ck.rel("map_features.tga"), tile=start,
             count=len(comp), what=f"{start[0]},{start[1]}")
 
@@ -1145,11 +1107,7 @@ def _r_ford_in_sea(ck: Check) -> Iterable[Finding]:
             continue
         yield Finding(
             "feature.ford_in_sea", "warn",
-            f"The river crossing at {x},{y} has sea on all four sides and an "
-            f"altitude that reads sea itself. A ford is where a course is "
-            f"crossed on foot, so one in open water crosses nothing - and "
-            f"because a crossing is never sea whatever its height says, this "
-            f"tile is a hole of land in the ocean that nothing else reports.",
+            _i18n.msg("eng.mapcheck.the_river_crossing_at_has_sea", "The river crossing at {x},{y} has sea on all four sides and an altitude that reads sea itself. A ford is where a course is crossed on foot, so one in open water crosses nothing - and because a crossing is never sea whatever its height says, this tile is a hole of land in the ocean that nothing else reports.", x=x, y=y),
             file=ck.rel("map_features.tga"), tile=(x, y), fix="ford_none",
             what=f"{x},{y}")
 
@@ -1238,12 +1196,7 @@ def _r_crossing_uneven(ck: Check) -> Iterable[Finding]:
         side = "above" if mean > h else "below"
         yield Finding(
             "feature.crossing_uneven", "warn",
-            f"The river crossing at {x},{y} is at height {h}, and the land in "
-            f"the 5x5 tiles around it averages {mean:.0f}, {abs(mean - h):.0f} "
-            f"{side} it. A battle here is built on that average, so the bridge "
-            f"does not meet its banks and the battle map can be unplayable. "
-            f"Smooth levels the ground around the crossing and eases it back "
-            f"into the hills.",
+            _i18n.msg("eng.mapcheck.the_river_crossing_at_is_at", "The river crossing at {x},{y} is at height {h}, and the land in the 5x5 tiles around it averages {mean:.0f}, {x2:.0f} {side} it. A battle here is built on that average, so the bridge does not meet its banks and the battle map can be unplayable. Smooth levels the ground around the crossing and eases it back into the hills.", x=x, y=y, h=h, mean=mean, x2=abs(mean - h), side=side),
             file=ck.rel("map_heights.tga"), tile=(x, y),
             fix="crossing_smooth", what=f"{x},{y}")
 
@@ -1337,15 +1290,13 @@ def _r_height_black(ck: Check) -> Iterable[Finding]:
             break
         yield Finding(
             "height.ambiguous", "warn",
-            f"The tile at {at[0]},{at[1]} is land in map_ground_types.tga and "
-            f"pure black in map_heights.tga, which the engine reads as sea.",
+            _i18n.msg("eng.mapcheck.the_tile_at_is_land_in", "The tile at {at},{at2} is land in map_ground_types.tga and pure black in map_heights.tga, which the engine reads as sea.", at=at[0], at2=at[1]),
             file=ck.rel("map_heights.tga"), tile=at, fix="heights_black",
             what=f"{at[0]},{at[1]}")
     if len(tiles) > ROW_MAX:
         yield Finding(
             "height.ambiguous", "warn",
-            f"Another {len(tiles) - ROW_MAX:,} tiles carry the same pure-black "
-            f"altitude on land.",
+            _i18n.msg("eng.mapcheck.another_x_tiles_carry_the_same", "Another {x:,} tiles carry the same pure-black altitude on land.", x=len(tiles) - ROW_MAX),
             file=ck.rel("map_heights.tga"), tile=tiles[ROW_MAX],
             fix="heights_black", count=len(tiles) - ROW_MAX, what="rest")
 
@@ -1383,10 +1334,7 @@ def _r_faction_order(ck: Check) -> Iterable[Finding]:
             continue
         yield Finding(
             "strat.faction_after_diplomacy", "fatal",
-            f"The faction block for {n.name} starts on line {n.start + 1}, "
-            f"after the diplomacy section opens on line {first + 1}. The "
-            f"engine has stopped reading faction blocks by then, so this "
-            f"faction has no settlements, no characters and no army.",
+            _i18n.msg("eng.mapcheck.the_faction_block_for_starts_on", "The faction block for {name} starts on line {x}, after the diplomacy section opens on line {x2}. The engine has stopped reading faction blocks by then, so this faction has no settlements, no characters and no army.", name=n.name, x=n.start + 1, x2=first + 1),
             file=ck.strat_rel, line=n.start + 1, what=n.name)
 
 
@@ -1476,14 +1424,12 @@ def _r_settlement_region(ck: Check) -> Iterable[Finding]:
         if not reg:
             yield Finding(
                 "strat.settlement_region", "fatal",
-                f"The settlement block opening on line {n.start + 1} names no "
-                f"region at all.",
+                _i18n.msg("eng.mapcheck.the_settlement_block_opening_on_line", "The settlement block opening on line {x} names no region at all.", x=n.start + 1),
                 file=ck.strat_rel, line=n.start + 1, what=f"line|{n.start}")
         elif reg.lower() not in known:
             yield Finding(
                 "strat.settlement_region", "fatal",
-                f"a settlement is placed in `{reg}`, and descr_regions.txt "
-                f"declares no region with that name.",
+                _i18n.msg("eng.mapcheck.a_settlement_is_placed_in_and", "a settlement is placed in `{reg}`, and descr_regions.txt declares no region with that name.", reg=reg),
                 file=ck.strat_rel, line=n.field_lines.get("region", n.start) + 1,
                 what=reg)
 
@@ -1500,9 +1446,7 @@ def _r_region_unowned(ck: Check) -> Iterable[Finding]:
             continue
         yield Finding(
             "strat.region_unowned", "note",
-            f"{rec.name} is declared with a settlement ({rec.settlement}) and "
-            f"no faction's settlement block in {ck.campaign} claims it, so "
-            f"nobody starts there.",
+            _i18n.msg("eng.mapcheck.is_declared_with_a_settlement_and", "{name} is declared with a settlement ({settlement}) and no faction's settlement block in {campaign} claims it, so nobody starts there.", name=rec.name, settlement=rec.settlement, campaign=ck.campaign),
             file=ck.strat_rel, what=rec.name)
 
 
@@ -1523,9 +1467,7 @@ def _r_port_building(ck: Check) -> Iterable[Finding]:
             continue
         yield Finding(
             "strat.port_building", "fatal",
-            f"{reg} starts with a `{ports[0].name}` and map_regions.tga has no "
-            f"white port pixel anywhere in it. The building has nowhere to "
-            f"stand.",
+            _i18n.msg("eng.mapcheck.starts_with_a_and_map_regions", "{reg} starts with a `{name}` and map_regions.tga has no white port pixel anywhere in it. The building has nowhere to stand.", reg=reg, name=ports[0].name),
             file=ck.strat_rel, line=ports[0].start + 1, what=reg)
 
 
@@ -1561,9 +1503,7 @@ def _r_localisation(ck: Check) -> Iterable[Finding]:
                 continue
             yield Finding(
                 "loc.missing", "warn",
-                f"The {what} `{value}` has no line in "
-                f"{Path(campmap.REGION_NAMES_REL).name}, so the player reads "
-                f"the code name on the campaign map.",
+                _i18n.msg("eng.mapcheck.the_has_no_line_in_so", "The {what} `{value}` has no line in {name}, so the player reads the code name on the campaign map.", what=what, value=value, name=Path(campmap.REGION_NAMES_REL).name),
                 file=campmap.REGION_NAMES_REL,
                 line=(rec.name_line if what == "region"
                       else rec.settlement_line) + 1,
@@ -1678,8 +1618,7 @@ def _r_merc_unit_unknown(ck: Check) -> Iterable[Finding]:
         if u.name and u.name not in types:
             yield Finding(
                 "merc.unit_unknown", "warn",
-                f"pool `{p.name}` sells `{u.name}`, which is not a unit in this "
-                "mod's EDU, so nobody can ever hire it",
+                _i18n.msg("eng.mapcheck.pool_sells_which_is_not_a", "pool `{name}` sells `{name2}`, which is not a unit in this mod's EDU, so nobody can ever hire it", name=p.name, name2=u.name),
                 file=rel, line=u.line + 1, what=f"{p.name}|{u.name}")
 
 
@@ -1701,9 +1640,7 @@ def _r_merc_region_twice(ck: Check) -> Iterable[Finding]:
         pools = [p.name for _, p in hits]
         yield Finding(
             "merc.region_twice", "warn",
-            f"`{name}` is in {len(pools)} pools ({', '.join(pools)}). The file says a "
-            "province may be in one; the Mercenaries panel keeps it in the pool "
-            "you pick",
+            _i18n.msg("eng.mapcheck.is_in_pools_the_file_says", "`{name}` is in {pools_n} pools ({pools}). The file says a province may be in one; the Mercenaries panel keeps it in the pool you pick", name=name, pools_n=len(pools), pools=', '.join(pools)),
             file=rel, line=(hits[1][1].regions_lines[0] + 1
                             if hits[1][1].regions_lines else 0),
             what=f"{low}")
@@ -1725,8 +1662,7 @@ def _r_merc_region_unknown(ck: Check) -> Iterable[Finding]:
             if r.lower() not in known:
                 yield Finding(
                     "merc.region_unknown", "warn",
-                    f"pool `{p.name}` names `{r}`, which is not a province in "
-                    "descr_regions.txt, so nothing is sold there",
+                    _i18n.msg("eng.mapcheck.pool_names_which_is_not_a", "pool `{name}` names `{r}`, which is not a province in descr_regions.txt, so nothing is sold there", name=p.name, r=r),
                     file=rel, line=(p.regions_lines[0] + 1 if p.regions_lines else 0),
                     what=f"{p.name}|{r.lower()}")
 
@@ -1758,16 +1694,13 @@ def _r_merc_religion_unknown(ck: Check) -> Iterable[Finding]:
             if r not in religions:
                 yield Finding(
                     "merc.religion_unknown", "warn",
-                    f"`{u.name}` in pool `{p.name}` sells to the religion `{r}`, "
-                    "which descr_religions.txt does not declare, so that half of "
-                    "its list reaches nobody",
+                    _i18n.msg("eng.mapcheck.in_pool_sells_to_the_religion", "`{name}` in pool `{name2}` sells to the religion `{r}`, which descr_religions.txt does not declare, so that half of its list reaches nobody", name=u.name, name2=p.name, r=r),
                     file=rel, line=u.line + 1, what=f"{p.name}|{u.name}|religion|{r}")
         for f in (u.factions or []) if factions else []:
             if f.lower() != "all" and f.lower() not in factions:
                 yield Finding(
                     "merc.religion_unknown", "warn",
-                    f"`{u.name}` in pool `{p.name}` sells to the faction `{f}`, "
-                    "which descr_sm_factions.txt does not declare",
+                    _i18n.msg("eng.mapcheck.in_pool_sells_to_the_faction", "`{name}` in pool `{name2}` sells to the faction `{f}`, which descr_sm_factions.txt does not declare", name=u.name, name2=p.name, f=f),
                     file=rel, line=u.line + 1, what=f"{p.name}|{u.name}|faction|{f}")
 
 
@@ -1785,10 +1718,7 @@ def _r_merc_event_unknown(ck: Check) -> Iterable[Finding]:
             if ev.lower() not in sources:
                 yield Finding(
                     "merc.event_unknown", "warn",
-                    f"`{u.name}` in pool `{p.name}` waits on `{ev}`, which neither "
-                    "this campaign's descr_events.txt nor its scripts set. A script "
-                    "outside the campaign folder may; if nothing does, the unit is "
-                    "never sold",
+                    _i18n.msg("eng.mapcheck.in_pool_waits_on_which_neither", "`{name}` in pool `{name2}` waits on `{ev}`, which neither this campaign's descr_events.txt nor its scripts set. A script outside the campaign folder may; if nothing does, the unit is never sold", name=u.name, name2=p.name, ev=ev),
                     file=rel, line=u.line + 1, what=f"{p.name}|{u.name}|{ev.lower()}")
 
 
@@ -1806,14 +1736,12 @@ def _r_merc_year_outside(ck: Check) -> Iterable[Finding]:
         if u.start_year and end is not None and u.start_year > end:
             yield Finding(
                 "merc.year_outside", "warn",
-                f"`{u.name}` in pool `{p.name}` is sold from {u.start_year}, and the "
-                f"campaign ends in {end}, so it never is",
+                _i18n.msg("eng.mapcheck.in_pool_is_sold_from_and", "`{name}` in pool `{name2}` is sold from {start_year}, and the campaign ends in {end}, so it never is", name=u.name, name2=p.name, start_year=u.start_year, end=end),
                 file=rel, line=u.line + 1, what=f"{p.name}|{u.name}|start")
         if u.end_year and start is not None and u.end_year < start:
             yield Finding(
                 "merc.year_outside", "warn",
-                f"`{u.name}` in pool `{p.name}` is sold until {u.end_year}, and the "
-                f"campaign starts in {start}, so it never is",
+                _i18n.msg("eng.mapcheck.in_pool_is_sold_until_and", "`{name}` in pool `{name2}` is sold until {end_year}, and the campaign starts in {start}, so it never is", name=u.name, name2=p.name, end_year=u.end_year, start=start),
                 file=rel, line=u.line + 1, what=f"{p.name}|{u.name}|end")
 
 
@@ -2057,7 +1985,7 @@ def plan_fix(mod, codes: Sequence[str], cm: Optional[CampaignMap] = None,
                         + ". The fixes are " + ", ".join(sorted(FIXES)) + ".")
         return p
     if not p.codes:
-        p.errors.append("no fix was chosen")
+        p.errors.append(_i18n.msg("eng.mapcheck.no_fix_was_chosen", "no fix was chosen"))
         return p
     ck = Check(mod, cm, campaign)
     want = set(keys) if keys else None
@@ -2068,7 +1996,7 @@ def plan_fix(mod, codes: Sequence[str], cm: Optional[CampaignMap] = None,
         try:
             got = [f for f in (r.fn(ck) or ()) if f.fix == code]
         except Exception as exc:                       # noqa: BLE001
-            p.errors.append(f"{r.code} could not be re-checked: {exc}")
+            p.errors.append(_i18n.msg("eng.mapcheck.could_not_be_re_checked", "{code} could not be re-checked: {exc}", code=r.code, exc=exc))
             continue
         if want is not None:
             got = [f for f in got if f.key in want]
@@ -2077,7 +2005,7 @@ def plan_fix(mod, codes: Sequence[str], cm: Optional[CampaignMap] = None,
     if p.errors:
         return p
     if not p.cleared:
-        p.errors.append("nothing left to fix - the findings are already gone")
+        p.errors.append(_i18n.msg("eng.mapcheck.nothing_left_to_fix_the_findings", "nothing left to fix - the findings are already gone"))
         return p
 
     if "heights_black" in found and found["heights_black"]:
@@ -2091,7 +2019,7 @@ def plan_fix(mod, codes: Sequence[str], cm: Optional[CampaignMap] = None,
     if drop:
         _plan_strat(ck, p, drop)
     if not p.data and not p.text and not p.errors:
-        p.errors.append("nothing left to fix - the findings are already gone")
+        p.errors.append(_i18n.msg("eng.mapcheck.nothing_left_to_fix_the_findings", "nothing left to fix - the findings are already gone"))
     return p
 
 
@@ -2113,7 +2041,7 @@ def _plan_heights(ck: Check, p: FixPlan) -> None:
         img = cm.layer("heights").convert("RGB")
         info = cm.info("heights")
     except MapError as exc:
-        p.errors.append(f"map_heights.tga could not be read: {exc}")
+        p.errors.append(_i18n.msg("eng.mapcheck.map_heights_tga_could_not_be", "map_heights.tga could not be read: {exc}", exc=exc))
         return
     px = img.load()
     rule = LAYER_BY_CODE["heights"]["size"]
@@ -2130,7 +2058,7 @@ def _plan_heights(ck: Check, p: FixPlan) -> None:
     try:
         p.data[ck.rel("map_heights.tga")] = encode(img, info)
     except Exception as exc:                           # noqa: BLE001
-        p.errors.append(f"map_heights.tga could not be re-encoded: {exc}")
+        p.errors.append(_i18n.msg("eng.mapcheck.map_heights_tga_could_not_be_2", "map_heights.tga could not be re-encoded: {exc}", exc=exc))
         return
     p.changes.append(f"map_heights.tga: {moved:,} pixel(s) over {len(tiles):,} "
                      f"tile(s) from (0,0,0) to (1,1,1)")
@@ -2152,7 +2080,7 @@ def _plan_fords(ck: Check, p: FixPlan, tiles: Sequence[Tuple[int, int]]) -> None
         img = cm.layer("features").convert("RGB")
         info = cm.info("features")
     except MapError as exc:
-        p.errors.append(f"map_features.tga could not be read: {exc}")
+        p.errors.append(_i18n.msg("eng.mapcheck.map_features_tga_could_not_be", "map_features.tga could not be read: {exc}", exc=exc))
         return
     none_rgb = mapvocab.feature("none")["rgb"]
     px = img.load()
@@ -2166,7 +2094,7 @@ def _plan_fords(ck: Check, p: FixPlan, tiles: Sequence[Tuple[int, int]]) -> None
     try:
         p.data[ck.rel("map_features.tga")] = encode(img, info)
     except Exception as exc:                           # noqa: BLE001
-        p.errors.append(f"map_features.tga could not be re-encoded: {exc}")
+        p.errors.append(_i18n.msg("eng.mapcheck.map_features_tga_could_not_be_2", "map_features.tga could not be re-encoded: {exc}", exc=exc))
         return
     p.changes.append(f"map_features.tga: {moved:,} river crossing(s) standing "
                      f"in open water cleared to no feature")
@@ -2179,7 +2107,7 @@ def _plan_smooth(ck: Check, p: FixPlan, tiles: Sequence[Tuple[int, int]]) -> Non
         img = cm.layer("heights").convert("RGB")
         info = cm.info("heights")
     except MapError as exc:
-        p.errors.append(f"map_heights.tga could not be read: {exc}")
+        p.errors.append(_i18n.msg("eng.mapcheck.map_heights_tga_could_not_be", "map_heights.tga could not be read: {exc}", exc=exc))
         return
     px = img.load()
     land = bytearray(_land_heights(img))
@@ -2189,7 +2117,7 @@ def _plan_smooth(ck: Check, p: FixPlan, tiles: Sequence[Tuple[int, int]]) -> Non
     try:
         p.data[ck.rel("map_heights.tga")] = encode(img, info)
     except Exception as exc:                           # noqa: BLE001
-        p.errors.append(f"map_heights.tga could not be re-encoded: {exc}")
+        p.errors.append(_i18n.msg("eng.mapcheck.map_heights_tga_could_not_be_2", "map_heights.tga could not be re-encoded: {exc}", exc=exc))
         return
     p.changes.append(f"map_heights.tga: {moved:,} pixel(s) levelled around "
                      f"{len(tiles):,} river crossing(s)")
@@ -2204,8 +2132,7 @@ def _plan_strat(ck: Check, p: FixPlan, drop: Sequence[int]) -> None:
     a deletion is a slice rather than a re-serialisation.
     """
     if ck.strat is None:
-        p.errors.append("descr_strat.txt could not be read, so nothing in it "
-                        "can be fixed")
+        p.errors.append(_i18n.msg("eng.mapcheck.descr_strat_txt_could_not_be", "descr_strat.txt could not be read, so nothing in it can be fixed"))
         return
     lines = list(ck.strat.lines)
     gone = []
@@ -2240,7 +2167,7 @@ def apply_fix(p: FixPlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.data and not p.text:
-        raise ValueError("nothing to fix")
+        raise ValueError(_i18n.msg("eng.mapcheck.nothing_to_fix", "nothing to fix"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

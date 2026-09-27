@@ -39,6 +39,7 @@ import re
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Sequence
+from . import i18n as _i18n
 
 
 class BlockError(Exception):
@@ -388,7 +389,7 @@ def edit_keys(sp: Splice, lines: List[str], present: Dict[str, int],
                 continue
         elif not value:
             if key in required:
-                raise BlockError(f"a {noun} needs its `{key}` line", (line + 1) or 1)
+                raise BlockError(_i18n.msg("eng.keyblock.a_needs_its_line", "a {noun} needs its `{key}` line", noun=noun, key=key), (line + 1) or 1)
             if line >= 0:
                 sp.drop(line)
                 at.pop(key, None)
@@ -425,8 +426,7 @@ def edit_effects(sp: Splice, lines: List[str], effects, wanted: List[Dict],
         if (attribute, amount) == (eff.attribute, eff.amount):
             continue
         if not attribute or not amount:
-            raise BlockError("an Effect line is `Effect <attribute> <points>` - "
-                             "both are needed", eff.line + 1)
+            raise BlockError(_i18n.msg("eng.keyblock.an_effect_line_is_effect_both", "an Effect line is `Effect <attribute> <points>` - both are needed"), eff.line + 1)
         sp.replace(eff.line,
                    keep_comment(lines[eff.line],
                                 f"{indent_of(lines[eff.line])}Effect "

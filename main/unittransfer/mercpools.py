@@ -44,6 +44,7 @@ from typing import Dict, List, Optional, Tuple
 
 from . import keyblock as kb
 from .triggers import split_lines
+from . import i18n as _i18n
 
 MERCS_NAME = "descr_mercenaries.txt"
 ENCODING = "latin-1"
@@ -255,28 +256,26 @@ def parse_text(text: str) -> MercFile:
         if low == "pool":
             cur = MercPool(name=rest.strip(), line=i, end=i)
             if cur.name in mf.pool_line:
-                mf.warnings.append(f"line {i + 1}: a second pool called "
-                                   f"{cur.name}; edits go to the first")
+                mf.warnings.append(_i18n.msg("eng.mercpools.line_a_second_pool_called_edits", "line {x}: a second pool called {name}; edits go to the first", x=i + 1, name=cur.name))
             mf.pools.append(cur)
             mf.pool_line.setdefault(cur.name, i)
             mf.regions_line.setdefault(cur.name, -1)
         elif cur is None:
-            mf.warnings.append(f"line {i + 1}: `{word}` before any pool")
+            mf.warnings.append(_i18n.msg("eng.mercpools.line_before_any_pool", "line {x}: `{word}` before any pool", x=i + 1, word=word))
         elif low == "regions":
             cur.regions.extend(rest.split())
             cur.regions_lines.append(i)
             cur.end = i
             if mf.regions_line.get(cur.name, -1) >= 0:
                 if mf.pool(cur.name) is cur:
-                    mf.warnings.append(f"line {i + 1}: a second `regions` line for "
-                                       f"pool {cur.name}; the first one is edited")
+                    mf.warnings.append(_i18n.msg("eng.mercpools.line_a_second_regions_line_for", "line {x}: a second `regions` line for pool {name}; the first one is edited", x=i + 1, name=cur.name))
             elif mf.pool(cur.name) is cur:
                 mf.regions_line[cur.name] = i
         elif low == "unit":
             cur.units.append(parse_unit(raw, i))
             cur.end = i
         else:
-            mf.warnings.append(f"line {i + 1}: `{word}` is not pool, regions or unit")
+            mf.warnings.append(_i18n.msg("eng.mercpools.line_is_not_pool_regions_or", "line {x}: `{word}` is not pool, regions or unit", x=i + 1, word=word))
     return mf
 
 
@@ -289,8 +288,7 @@ def path_for(mod, campaign: str) -> Path:
 def read(mod, campaign: str) -> Tuple[MercFile, str]:
     path = path_for(mod, campaign)
     if not path.is_file():
-        raise MercError(f"{campaign} has no {MERCS_NAME}, so no province in it "
-                        "has a mercenary pool")
+        raise MercError(_i18n.msg("eng.mercpools.has_no_so_no_province_in", "{campaign} has no {MERCS_NAME}, so no province in it has a mercenary pool", campaign=campaign, MERCS_NAME=MERCS_NAME))
     text = kb.read_text(path, ENCODING)
     return parse_text(text), text
 
@@ -380,8 +378,7 @@ def set_field(raw: str, key: str, value) -> str:
         _, vs, ve = u.spans[key]
         return raw[:vs] + text + raw[ve:]
     if key in FIXED:
-        raise MercError(f"this line has no `{key}` to set, and a fixed field is "
-                        "not added out of its order")
+        raise MercError(_i18n.msg("eng.mercpools.this_line_has_no_to_set", "this line has no `{key}` to set, and a fixed field is not added out of its order", key=key))
     return _append(raw, f"{key} {text}")
 
 
@@ -419,7 +416,7 @@ def unit_line(template: Optional[str], values: Dict) -> str:
     parts = []
     for key in FIXED:
         if values.get(key) is None:
-            raise MercError(f"a new unit line needs `{key}`")
+            raise MercError(_i18n.msg("eng.mercpools.a_new_unit_line_needs", "a new unit line needs `{key}`", key=key))
         text, err = check_edit(key, values[key])
         if err:
             raise MercError(err)
@@ -442,7 +439,7 @@ def _result(mf: MercFile, sp: kb.Splice) -> str:
 def _need_pool(mf: MercFile, name: str) -> MercPool:
     p = mf.pool(name)
     if p is None:
-        raise MercError(f"there is no pool called {name!r} in {MERCS_NAME}")
+        raise MercError(_i18n.msg("eng.mercpools.there_is_no_pool_called_in", "there is no pool called {name} in {MERCS_NAME}", name=repr(name), MERCS_NAME=MERCS_NAME))
     return p
 
 
@@ -450,10 +447,9 @@ def _need_unit(p: MercPool, index) -> MercUnit:
     try:
         i = int(index)
     except (TypeError, ValueError):
-        raise MercError(f"pick a unit of pool {p.name} by its place in the pool")
+        raise MercError(_i18n.msg("eng.mercpools.pick_a_unit_of_pool_by", "pick a unit of pool {name} by its place in the pool", name=p.name))
     if not 0 <= i < len(p.units):
-        raise MercError(f"pool {p.name} has {len(p.units)} unit line(s), not a "
-                        f"number {i + 1}")
+        raise MercError(_i18n.msg("eng.mercpools.pool_has_unit_line_s_not", "pool {name} has {units_n} unit line(s), not a number {x}", name=p.name, units_n=len(p.units), x=i + 1))
     return p.units[i]
 
 
@@ -509,7 +505,7 @@ def move_region(mf: MercFile, region: str, pool: str) -> str:
     """
     low = region.lower()
     if pool and pool not in mf.regions_line:
-        raise MercError(f"there is no pool called {pool!r} in {MERCS_NAME}")
+        raise MercError(_i18n.msg("eng.mercpools.there_is_no_pool_called_in_2", "there is no pool called {pool} in {MERCS_NAME}", pool=repr(pool), MERCS_NAME=MERCS_NAME))
     sp = kb.Splice(list(mf.lines))
     touched = False
     for p in mf.pools:
@@ -545,14 +541,13 @@ def add_pool(mf: MercFile, name: str, regions: Optional[List[str]] = None) -> st
     """A new pool at the end of the file, laid out like the first pool in it."""
     name = str(name or "").strip()
     if not name or not _WORD.match(name):
-        raise MercError(f"`{name}` cannot be a pool name - one word, no braces")
+        raise MercError(_i18n.msg("eng.mercpools.cannot_be_a_pool_name_one", "`{name}` cannot be a pool name - one word, no braces", name=name))
     if mf.pool(name) is not None:
-        raise MercError(f"there is already a pool called {name}")
+        raise MercError(_i18n.msg("eng.mercpools.there_is_already_a_pool_called", "there is already a pool called {name}", name=name))
     regions = [r for r in (regions or []) if r]
     taken = [(r, mf.pool_of(r)) for r in regions if mf.pool_of(r)]
     if taken:
-        raise MercError(f"{taken[0][0]} is already in pool {taken[0][1]} - move it "
-                        "rather than put it in two")
+        raise MercError(_i18n.msg("eng.mercpools.is_already_in_pool_move_it", "{taken} is already in pool {taken2} - move it rather than put it in two", taken=taken[0][0], taken2=taken[0][1]))
     indent = "\t"
     first = next((p for p in mf.pools if p.regions_lines), None)
     if first is not None:
@@ -657,8 +652,7 @@ def plan(mod, body: dict) -> MercPlan:
     p = MercPlan(mod=mod, campaign=str(body.get("campaign") or campstrat.DEFAULT_CAMPAIGN),
                  action=str(body.get("action") or ""))
     if p.action not in ACTIONS:
-        p.errors.append(f"a mercenary save is one of {kb.and_list(list(ACTIONS))}, "
-                        f"not {p.action!r}")
+        p.errors.append(_i18n.msg("eng.mercpools.a_mercenary_save_is_one_of", "a mercenary save is one of {and_list}, not {action}", and_list=kb.and_list(list(ACTIONS)), action=repr(p.action)))
         return p
     try:
         mf, original = read(mod, p.campaign)
@@ -711,20 +705,18 @@ def plan(mod, body: dict) -> MercPlan:
             p.changes.append(f"- pool {pool}: {len(q.units)} unit line(s), "
                              f"{len(q.regions)} province(s)")
             if q.regions:
-                p.warnings.append(f"{len(q.regions)} province(s) are left in no pool, "
-                                  "so no mercenary is recruitable there")
+                p.warnings.append(_i18n.msg("eng.mercpools.province_s_are_left_in_no", "{regions_n} province(s) are left in no pool, so no mercenary is recruitable there", regions_n=len(q.regions)))
             expect = {(pool, j): None for j in range(len(q.units))}
         else:
             region = str(body.get("region") or "").strip()
             if not region:
-                raise MercError("moving a province between pools needs the province")
+                raise MercError(_i18n.msg("eng.mercpools.moving_a_province_between_pools_needs", "moving a province between pools needs the province"))
             was = mf.pool_of(region)
             text = move_region(mf, region, pool)
             p.changes.append(f"{region}: mercenary pool {was or '(none)'} -> "
                              f"{pool or '(none)'}")
             if not pool:
-                p.warnings.append(f"{region} is now in no pool, so no mercenary is "
-                                  "recruitable there")
+                p.warnings.append(_i18n.msg("eng.mercpools.is_now_in_no_pool_so", "{region} is now in no pool, so no mercenary is recruitable there", region=region))
             expect = {}
     except MercError as e:
         p.errors.append(e.message)
@@ -737,8 +729,7 @@ def plan(mod, body: dict) -> MercPlan:
     wrong = [k for k, v in expect.items() if got.get(k) != v]
     if stray or wrong:
         k = (stray or wrong)[0]
-        p.errors.append(f"refused: the save would change {k[0]} unit {k[1] + 1} "
-                        "as well as what it names")
+        p.errors.append(_i18n.msg("eng.mercpools.refused_the_save_would_change_unit", "refused: the save would change {k} unit {x} as well as what it names", k=k[0], x=k[1] + 1))
         return p
     names = [q.name for q in mf.pools]
     if p.action == "pool_add":
@@ -746,28 +737,25 @@ def plan(mod, body: dict) -> MercPlan:
     elif p.action == "pool_delete":
         names.remove(pool)
     if [q.name for q in after.pools] != names:
-        p.errors.append("refused: the save would change which pools the file has")
+        p.errors.append(_i18n.msg("eng.mercpools.refused_the_save_would_change_which", "refused: the save would change which pools the file has"))
         return p
     for (qn, i), rec in expect.items():
         if rec is None:
             continue
         if rec["fault"]:
-            p.errors.append(f"{qn}: {rec['name']} would not read back - {rec['fault']}")
+            p.errors.append(_i18n.msg("eng.mercpools.would_not_read_back", "{qn}: {name} would not read back - {fault}", qn=qn, name=rec['name'], fault=rec['fault']))
         if rec["max"] is not None and rec["initial"] is not None                 and rec["initial"] > rec["max"]:
-            p.warnings.append(f"{qn}: {rec['name']} starts with {rec['initial']} and "
-                              f"its pool holds at most {rec['max']}")
+            p.warnings.append(_i18n.msg("eng.mercpools.starts_with_and_its_pool_holds", "{qn}: {name} starts with {initial} and its pool holds at most {max}", qn=qn, name=rec['name'], initial=rec['initial'], max=rec['max']))
         rep = rec["replenish"]
         if rep and rep[0] > rep[1]:
-            p.warnings.append(f"{qn}: {rec['name']} replenishes from {rep[0]} to a "
-                              f"lower {rep[1]}")
+            p.warnings.append(_i18n.msg("eng.mercpools.replenishes_from_to_a_lower", "{qn}: {name} replenishes from {rep} to a lower {rep2}", qn=qn, name=rec['name'], rep=rep[0], rep2=rep[1]))
         if rec["crusading"] and not rec["religions"]:
-            p.warnings.append(f"{qn}: {rec['name']} is `crusading` with no religions, "
-                              "and the file's header says it needs one")
+            p.warnings.append(_i18n.msg("eng.mercpools.is_crusading_with_no_religions_and", "{qn}: {name} is `crusading` with no religions, and the file's header says it needs one", qn=qn, name=rec['name']))
     if p.errors:
         return p
     p.text = "" if text == original else text
     if not p.text:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.mercpools.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -790,7 +778,7 @@ def apply(p: MercPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.mercpools.nothing_to_change", "nothing to change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

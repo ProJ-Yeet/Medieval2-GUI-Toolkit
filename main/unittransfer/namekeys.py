@@ -65,6 +65,7 @@ from typing import Dict, List, Tuple
 
 from . import campmap, cleaner, config, keyblock as kb, minorfiles, stringsbin
 from .logutil import file_op, log
+from . import i18n as _i18n
 
 #: the campaign files are plain 8-bit text; both text files are UTF-16
 ENCODING = "latin-1"
@@ -128,14 +129,12 @@ def clean_value(value: str, what: str) -> str:
     text = str(value or "").strip()
     if not text:
         raise NameKeyError(
-            f"a {what} the player reads cannot be blank - with no line at all "
-            f"the game shows the code name, which is at least a word")
+            _i18n.msg("eng.namekeys.a_the_player_reads_cannot_be", "a {what} the player reads cannot be blank - with no line at all the game shows the code name, which is at least a word", what=what))
     if "\n" in text or "\r" in text:
-        raise NameKeyError(f"a {what} is one line; this one has a line break in it")
+        raise NameKeyError(_i18n.msg("eng.namekeys.a_is_one_line_this_one", "a {what} is one line; this one has a line break in it", what=what))
     if "{" in text or "}" in text:
         raise NameKeyError(
-            f"a {what} cannot contain {{ or }} - they are what separates a key "
-            f"from its text in this file")
+            _i18n.msg("eng.namekeys.a_cannot_contain_or_they_are", "a {what} cannot contain { or } - they are what separates a key from its text in this file", what=what))
     return text
 
 
@@ -163,9 +162,7 @@ def _write_loc(mod, rel: str, writes: Dict[str, str], keep,
         res = cleaner.refresh_strings_bin(mod.root, bin_rel(rel))
         if not res.get("rebuilt"):
             warnings.append(
-                f"{Path(rel).name}.strings.bin could not be recompiled "
-                f"({res.get('rebuild_error') or 'no reason given'}), so it was "
-                f"deleted instead and the game rebuilds it on the next launch")
+                _i18n.msg("eng.namekeys.strings_bin_could_not_be_recompiled", "{name}.strings.bin could not be recompiled ({x}), so it was deleted instead and the game rebuilds it on the next launch", name=Path(rel).name, x=res.get('rebuild_error') or 'no reason given'))
         return {"file": rel, "written": len(writes), "strings_bin": res}
     rel_bin = rel + ".strings.bin"
     target = keep(rel_bin)
@@ -213,7 +210,7 @@ def region_names(mod, region: str) -> Dict:
     rf = campmap.read_regions(mod)
     rec = rf.by_name(region)
     if rec is None:
-        raise NameKeyError(f"no region called {region!r} in descr_regions.txt")
+        raise NameKeyError(_i18n.msg("eng.namekeys.no_region_called_in_descr_regions", "no region called {region} in descr_regions.txt", region=repr(region)))
     pairs = loc_pairs(mod, REGION_NAMES_REL)
     state = loc_state(mod, REGION_NAMES_REL)
     out = {**state, "region": rec.name, "have": state["txt"] or state["bin"],
@@ -289,8 +286,7 @@ def read_pool(mod) -> Tuple[minorfiles.NameFile, str]:
     path = Path(mod.data) / POOL_REL
     if not path.is_file():
         raise NameKeyError(
-            f"{getattr(mod, 'name', '?')} has no {POOL_REL}, so there is no pool "
-            f"to add a name to. The stock game keeps it inside its packed data")
+            _i18n.msg("eng.namekeys.has_no_so_there_is_no", "{getattr} has no {POOL_REL}, so there is no pool to add a name to. The stock game keeps it inside its packed data", getattr=getattr(mod, 'name', '?'), POOL_REL=POOL_REL))
     text = kb.read_text(path, ENCODING)
     return minorfiles.parse_names(text), text
 
@@ -408,7 +404,7 @@ def plan(mod, body: dict) -> NamePlan:
     """Work out one save. ``body`` is ``{what, region|faction, name, gender, edits}``."""
     p = NamePlan(mod=mod, what=str(body.get("what") or "").strip())
     if p.what not in WHAT:
-        p.errors.append(f"a save is about {kb.and_list(list(WHAT))}, not {p.what!r}")
+        p.errors.append(_i18n.msg("eng.namekeys.a_save_is_about_not", "a save is about {and_list}, not {what}", and_list=kb.and_list(list(WHAT)), what=repr(p.what)))
         return p
     try:
         if p.what == "region_names":
@@ -419,7 +415,7 @@ def plan(mod, body: dict) -> NamePlan:
         p.errors.append(getattr(exc, "message", None) or str(exc))
         return p
     if not p.touched() and not p.errors:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.namekeys.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -433,9 +429,7 @@ def _plan_region(p: NamePlan, body: dict) -> None:
     for key, value in writes.items():
         p.changes.append(f"{'+ ' if key in new else ''}{key}: {value}")
     if not loc_state(p.mod, REGION_NAMES_REL)["txt"]:
-        p.warnings.append(f"this mod ships only {Path(REGION_NAMES_REL).name}"
-                          f".strings.bin, so the keys go straight into the "
-                          f"compiled archive")
+        p.warnings.append(_i18n.msg("eng.namekeys.this_mod_ships_only_strings_bin", "this mod ships only {name}.strings.bin, so the keys go straight into the compiled archive", name=Path(REGION_NAMES_REL).name))
 
 
 def _plan_pool(p: NamePlan, body: dict) -> None:
@@ -449,13 +443,11 @@ def _plan_pool(p: NamePlan, body: dict) -> None:
     p.name = str(body.get("name") or "").strip()
     gender = str(body.get("gender") or "male").lower()
     if not p.name:
-        raise NameKeyError("a name is needed before it can be put in a pool")
+        raise NameKeyError(_i18n.msg("eng.namekeys.a_name_is_needed_before_it", "a name is needed before it can be put in a pool"))
     nf, original = read_pool(p.mod)
     if nf.get(p.faction) is None:
         raise NameKeyError(
-            f"{POOL_REL} has no `faction: {p.faction}` block. Adding one is the "
-            f"Minor Files names tab, or the Factions screen's clone, both of "
-            f"which write a whole pool rather than one line of one")
+            _i18n.msg("eng.namekeys.has_no_faction_block_adding_one", "{POOL_REL} has no `faction: {faction}` block. Adding one is the Minor Files names tab, or the Factions screen's clone, both of which write a whole pool rather than one line of one", POOL_REL=POOL_REL, faction=p.faction))
     have = loc_pairs(p.mod, POOL_LOC_REL)
     shown = dict(body.get("edits") or {})
     text = original
@@ -476,11 +468,9 @@ def _plan_pool(p: NamePlan, body: dict) -> None:
                 p.changes.append(f"+ a `{section}` heading for {p.faction}")
             p.changes.append(f"+ {part} in {p.faction}'s `{section}` list")
         elif part in have:
-            p.warnings.append(f"{part} is already in {p.faction}'s `{section}` "
-                              f"list and already has a text key")
+            p.warnings.append(_i18n.msg("eng.namekeys.is_already_in_s_list_and", "{part} is already in {faction}'s `{section}` list and already has a text key", part=part, faction=p.faction, section=section))
         else:
-            p.warnings.append(f"{part} is already in {p.faction}'s `{section}` "
-                              f"list; what is missing is its text key")
+            p.warnings.append(_i18n.msg("eng.namekeys.is_already_in_s_list_what", "{part} is already in {faction}'s `{section}` list; what is missing is its text key", part=part, faction=p.faction, section=section))
         want = clean_value(shown.get(part) or have.get(part)
                            or part.replace("_", " "), "name")
         if part not in have:
@@ -496,14 +486,10 @@ def _plan_pool(p: NamePlan, body: dict) -> None:
     if not got["txt"] and not got["bin"]:
         if loc:
             p.warnings.append(
-                f"this mod has neither {POOL_LOC_REL} nor the archive beside it, "
-                f"so nothing here could give {p.name} a localised name - the game "
-                f"shows the token instead")
+                _i18n.msg("eng.namekeys.this_mod_has_neither_nor_the", "this mod has neither {POOL_LOC_REL} nor the archive beside it, so nothing here could give {name} a localised name - the game shows the token instead", POOL_LOC_REL=POOL_LOC_REL, name=p.name))
         loc = {}
     elif loc and not got["txt"]:
-        p.warnings.append(f"this mod ships only {Path(POOL_LOC_REL).name}"
-                          f".strings.bin, so the keys go straight into the "
-                          f"compiled archive")
+        p.warnings.append(_i18n.msg("eng.namekeys.this_mod_ships_only_strings_bin", "this mod ships only {name}.strings.bin, so the keys go straight into the compiled archive", name=Path(POOL_LOC_REL).name))
     if loc:
         p.loc_writes[POOL_LOC_REL] = loc
 
@@ -518,7 +504,7 @@ def apply(p: NamePlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.touched():
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.namekeys.nothing_to_change", "nothing to change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

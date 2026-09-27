@@ -69,6 +69,7 @@ from .campmap import (BASE_REL, ENCODING, LAYER_BY_CODE, REGIONS_REL, RWM_REL,
                       CampaignMap, MapError, Rgb, key)
 from .maptga import encode
 from .mapvocab import PORT_RGB, SETTLEMENT_RGB, unkey
+from . import i18n as _i18n
 
 #: The layers a brush may touch: the eight with a fixed relationship to the tile
 #: grid. ``water_surface`` and ``map_FE`` are pictures - they are stretched over
@@ -129,8 +130,7 @@ def block(size_rule: str, x: int, y: int) -> Tuple[int, int, int, int]:
         return (2 * x if x == 0 else 2 * x + 1,
                 2 * y if y == 0 else 2 * y + 1,
                 2 * x + 2, 2 * y + 2)
-    raise MapError(f"a {size_rule!r} layer has no relationship to the tile "
-                   f"grid, so a tile cannot be painted on it")
+    raise MapError(_i18n.msg("eng.campaint.a_layer_has_no_relationship_to", "a {size_rule} layer has no relationship to the tile grid, so a tile cannot be painted on it", size_rule=repr(size_rule)))
 
 
 # ---------------------------------------------------------------------------
@@ -364,7 +364,7 @@ def flood(cm: CampaignMap, code: str, sx: int, sy: int) -> List[Tuple[int, int]]
     """
     w, h = cm.terrain.width, cm.terrain.height
     if not (0 <= sx < w and 0 <= sy < h):
-        raise MapError(f"{sx},{sy} is off the {w}x{h} tile grid")
+        raise MapError(_i18n.msg("eng.campaint.is_off_the_x_tile_grid", "{sx},{sy} is off the {w}x{h} tile grid", sx=sx, sy=sy, w=w, h=h))
     data = cm.tiles(code).tobytes()
 
     def at(i: int) -> int:
@@ -624,19 +624,15 @@ def _own_key(cm: CampaignMap, sess: PaintSession, name: str) -> int:
     be got wrong.
     """
     if not name:
-        raise MapError("pick the region to paint first - the brush writes its "
-                       "colour out of descr_regions.txt, never one read off "
-                       "the screen")
+        raise MapError(_i18n.msg("eng.campaint.pick_the_region_to_paint_first", "pick the region to paint first - the brush writes its colour out of descr_regions.txt, never one read off the screen"))
     pending = sess.new_region
     if pending and pending["name"].lower() == name.lower():
         return key(tuple(pending["rgb"]))
     rec = cm.regions.by_name(name)
     if rec is None:
-        raise MapError(f"no region called {name!r} in descr_regions.txt")
+        raise MapError(_i18n.msg("eng.campaint.no_region_called_in_descr_regions", "no region called {name} in descr_regions.txt", name=repr(name)))
     if rec.rgb_key in PROTECTED:
-        raise MapError(f"{rec.name} is declared as "
-                       f"{rec.rgb[0]} {rec.rgb[1]} {rec.rgb[2]}, which is a "
-                       f"marker colour, not a province colour")
+        raise MapError(_i18n.msg("eng.campaint.is_declared_as_which_is_a", "{name} is declared as {rgb} {rgb2} {rgb3}, which is a marker colour, not a province colour", name=rec.name, rgb=rec.rgb[0], rgb2=rec.rgb[1], rgb3=rec.rgb[2]))
     return rec.rgb_key
 
 
@@ -662,22 +658,19 @@ def _resolve(cm: CampaignMap, sess: PaintSession, body: dict) -> Dict[str, int]:
 
     code = body.get("target") or ""
     if code not in PAINTABLE:
-        raise MapError(f"{code!r} is not a layer this tool paints - it is one "
-                       f"of {', '.join(PAINTABLE)}")
+        raise MapError(_i18n.msg("eng.campaint.is_not_a_layer_this_tool", "{code} is not a layer this tool paints - it is one of {PAINTABLE}", code=repr(code), PAINTABLE=', '.join(PAINTABLE)))
     cm.require_grid(code)
 
     if code == "regions":
         if body.get("sea"):
             w = water_palette(cm)
             if "regions" not in w["layers"]:
-                raise MapError("no tile of this map reads as sea, so there is "
-                               "no sea colour to snap to")
+                raise MapError(_i18n.msg("eng.campaint.no_tile_of_this_map_reads", "no tile of this map reads as sea, so there is no sea colour to snap to"))
             return {code: w["layers"]["regions"]["key"]}
         marker = str(body.get("marker") or "")
         if marker:
             if marker not in ("settlement", "port"):
-                raise MapError(f"{marker!r} is not a marker - map_regions.tga "
-                               f"has two, the settlement and the port")
+                raise MapError(_i18n.msg("eng.campaint.is_not_a_marker_map_regions", "{marker} is not a marker - map_regions.tga has two, the settlement and the port", marker=repr(marker)))
             return {code: key(SETTLEMENT_RGB if marker == "settlement"
                               else PORT_RGB)}
         return {code: _own_key(cm, sess, str(body.get("region") or "").strip())}
@@ -686,14 +679,11 @@ def _resolve(cm: CampaignMap, sess: PaintSession, body: dict) -> Dict[str, int]:
     try:
         k = key((int(rgb[0]), int(rgb[1]), int(rgb[2])))
     except (TypeError, ValueError, IndexError, KeyError):
-        raise MapError("a colour is three numbers 0-255") from None
+        raise MapError(_i18n.msg("eng.campaint.a_colour_is_three_numbers_0", "a colour is three numbers 0-255")) from None
     pal = palette(cm, code)
     if pal["closed"] and k not in {c["key"] for c in pal["colours"]}:
         r, g, b = unkey(k)
-        raise MapError(f"{r} {g} {b} is not a colour {pal['file']} has a "
-                       f"meaning for. Painting it would put a pixel on the map "
-                       f"that no table names - which is the fault 16f exists to "
-                       f"report, so it is refused here instead")
+        raise MapError(_i18n.msg("eng.campaint.is_not_a_colour_has_a", "{r} {g} {b} is not a colour {file} has a meaning for. Painting it would put a pixel on the map that no table names - which is the fault 16f exists to report, so it is refused here instead", r=r, g=g, b=b, file=pal['file']))
     return {code: k}
 
 
@@ -714,7 +704,7 @@ def _check_marker(cm: CampaignMap, sess: PaintSession, body: dict,
     """
     kind = str(body.get("marker"))
     if len(tiles) != 1:
-        raise MapError(f"a {kind} pixel is one tile - place it with the pencil")
+        raise MapError(_i18n.msg("eng.campaint.a_pixel_is_one_tile_place", "a {kind} pixel is one tile - place it with the pencil", kind=kind))
     home = _own_key(cm, sess, str(body.get("region") or "").strip())
     tx, ty = tiles[0]
     data = cm.tiles("regions").tobytes()
@@ -722,9 +712,7 @@ def _check_marker(cm: CampaignMap, sess: PaintSession, body: dict,
     now = (data[p] << 16) | (data[p + 1] << 8) | data[p + 2]
     if now != home:
         r, g, b = unkey(home)
-        raise MapError(f"{tx},{ty} is not painted {r} {g} {b}, so it is not "
-                       f"inside this region. A {kind} marker stands on one of "
-                       f"its own region's tiles - paint the tile first.")
+        raise MapError(_i18n.msg("eng.campaint.is_not_painted_so_it_is", "{tx},{ty} is not painted {r} {g} {b}, so it is not inside this region. A {kind} marker stands on one of its own region's tiles - paint the tile first.", tx=tx, ty=ty, r=r, g=g, b=b, kind=kind))
     for fatal, message in _marker_problems(cm, (tx, ty), kind):
         if fatal:
             raise MapError(message + _marker_near(cm, data, home, (tx, ty), kind))
@@ -780,14 +768,13 @@ def paint(sess: PaintSession, body: dict) -> dict:
     w, h = cm.terrain.width, cm.terrain.height
     tool = str(body.get("tool") or "")
     if tool not in TOOLS:
-        raise MapError(f"{tool!r} is not a tool - it is one of "
-                       f"{', '.join(TOOLS)} (the pipette reads, it never writes)")
+        raise MapError(_i18n.msg("eng.campaint.is_not_a_tool_it_is", "{tool} is not a tool - it is one of {TOOLS} (the pipette reads, it never writes)", tool=repr(tool), TOOLS=', '.join(TOOLS)))
     colours = _resolve(cm, sess, body)
 
     if tool == "bucket":
         pt = body.get("points") or []
         if not pt:
-            raise MapError("a bucket needs the tile it was clicked on")
+            raise MapError(_i18n.msg("eng.campaint.a_bucket_needs_the_tile_it", "a bucket needs the tile it was clicked on"))
         seed = (int(pt[-1][0]), int(pt[-1][1]))
         tiles = flood(cm, body.get("target") or "regions", seed[0], seed[1])
     elif tool == "pencil":
@@ -796,7 +783,7 @@ def paint(sess: PaintSession, body: dict) -> dict:
         tiles = expand(body.get("points") or [], body.get("size") or 1,
                        str(body.get("shape") or "round"), w, h)
     if not tiles:
-        raise MapError("that stroke covered no tile of the map")
+        raise MapError(_i18n.msg("eng.campaint.that_stroke_covered_no_tile_of", "that stroke covered no tile of the map"))
 
     marker = str(body.get("marker") or "")
     if marker:
@@ -878,7 +865,7 @@ def _stroke_over(sess: PaintSession, tiles, colours: Dict[str, int],
 
 def undo_stroke(sess: PaintSession) -> dict:
     if not sess.undo:
-        raise MapError("there is nothing to undo")
+        raise MapError(_i18n.msg("eng.campaint.there_is_nothing_to_undo", "there is nothing to undo"))
     s = sess.undo.pop()
     sess.apply_px(s, False)
     sess.redo.append(s)
@@ -888,7 +875,7 @@ def undo_stroke(sess: PaintSession) -> dict:
 
 def redo_stroke(sess: PaintSession) -> dict:
     if not sess.redo:
-        raise MapError("there is nothing to redo")
+        raise MapError(_i18n.msg("eng.campaint.there_is_nothing_to_redo", "there is nothing to redo"))
     s = sess.redo.pop()
     sess.apply_px(s, True)
     sess.undo.append(s)
@@ -1019,7 +1006,7 @@ def region_vocab(mod) -> dict:
         try:
             sf = campstrat.read_strat(mod, c["campaign"])
         except (OSError, ValueError) as exc:
-            problems.append(f"{c['strat']} could not be read ({exc})")
+            problems.append(_i18n.msg("eng.campaint.could_not_be_read", "{strat} could not be read ({exc})", strat=c['strat'], exc=exc))
             continue
         for n in sf.of_kind("faction"):
             owners.setdefault(str(n.get("name") or n.name), []).append(c["campaign"])
@@ -1077,34 +1064,25 @@ def start_region(sess: PaintSession, body: dict) -> dict:
     name = str(body.get("name") or "").strip()
     settlement = str(body.get("settlement") or "").strip()
     if not name or " " in name:
-        raise MapError("a region needs a name with no spaces in it - it is a "
-                       "key descr_strat.txt and the campaign script point at")
+        raise MapError(_i18n.msg("eng.campaint.a_region_needs_a_name_with", "a region needs a name with no spaces in it - it is a key descr_strat.txt and the campaign script point at"))
     if not settlement or " " in settlement:
-        raise MapError("a settlement needs a name with no spaces in it, for the "
-                       "same reason the region does")
+        raise MapError(_i18n.msg("eng.campaint.a_settlement_needs_a_name_with", "a settlement needs a name with no spaces in it, for the same reason the region does"))
     if cm.regions.by_name(name):
-        raise MapError(f"descr_regions.txt already has a region called {name}")
+        raise MapError(_i18n.msg("eng.campaint.descr_regions_txt_already_has_a", "descr_regions.txt already has a region called {name}", name=name))
     if any(r.settlement.lower() == settlement.lower() for r in cm.regions.records):
-        raise MapError(f"descr_regions.txt already has a settlement called "
-                       f"{settlement}")
+        raise MapError(_i18n.msg("eng.campaint.descr_regions_txt_already_has_a_2", "descr_regions.txt already has a settlement called {settlement}", settlement=settlement))
     try:
         rgb = (int(body["rgb"][0]), int(body["rgb"][1]), int(body["rgb"][2]))
     except (TypeError, ValueError, IndexError, KeyError):
-        raise MapError("a region colour is three numbers 0-255") from None
+        raise MapError(_i18n.msg("eng.campaint.a_region_colour_is_three_numbers", "a region colour is three numbers 0-255")) from None
     k = key(rgb)
     if k in PROTECTED:
-        raise MapError(f"{rgb[0]} {rgb[1]} {rgb[2]} is a marker colour - black "
-                       f"is where a settlement stands and white is where a port "
-                       f"does, so neither can be a province")
+        raise MapError(_i18n.msg("eng.campaint.is_a_marker_colour_black_is", "{rgb} {rgb2} {rgb3} is a marker colour - black is where a settlement stands and white is where a port does, so neither can be a province", rgb=rgb[0], rgb2=rgb[1], rgb3=rgb[2]))
     taken = cm.regions.by_rgb(rgb)
     if taken is not None:
-        raise MapError(f"{rgb[0]} {rgb[1]} {rgb[2]} is already "
-                       f"{taken.name}'s colour")
+        raise MapError(_i18n.msg("eng.campaint.is_already_s_colour", "{rgb} {rgb2} {rgb3} is already {name}'s colour", rgb=rgb[0], rgb2=rgb[1], rgb3=rgb[2], name=taken.name))
     if k in cm.index.by_key:
-        raise MapError(f"{rgb[0]} {rgb[1]} {rgb[2]} is already painted on "
-                       f"map_regions.tga, on "
-                       f"{cm.index.by_key[k].pixels} tile(s), and no record "
-                       f"declares it - fix that hole before adding to it")
+        raise MapError(_i18n.msg("eng.campaint.is_already_painted_on_map_regions", "{rgb} {rgb2} {rgb3} is already painted on map_regions.tga, on {pixels} tile(s), and no record declares it - fix that hole before adding to it", rgb=rgb[0], rgb2=rgb[1], rgb3=rgb[2], pixels=cm.index.by_key[k].pixels))
     sess.new_region = {
         "name": name, "settlement": settlement, "rgb": list(rgb), "key": k,
         # 19a, D4. The two words the player reads, decided here with everything
@@ -1137,12 +1115,10 @@ def start_region(sess: PaintSession, body: dict) -> dict:
     if not spec["owner"]:
         spec["owner"] = voc["owner_default"]
     elif owners and spec["owner"].lower() not in owners:
-        refused.append(f"{spec['owner']} has no faction block in any campaign that "
-                       f"reads this map, so it cannot start holding a province")
+        refused.append(_i18n.msg("eng.campaint.has_no_faction_block_in_any", "{owner} has no faction block in any campaign that reads this map, so it cannot start holding a province", owner=spec['owner']))
     kinds = {m["name"] for m in voc["music"]}
     if spec["music"] and voc["music_file"] and spec["music"] not in kinds:
-        refused.append(f"there is no music_type {spec['music']} in "
-                       f"{voc['music_file']}")
+        refused.append(_i18n.msg("eng.campaint.there_is_no_music_type_in", "there is no music_type {music} in {music_file}", music=spec['music'], music_file=voc['music_file']))
     if refused:
         sess.new_region = None
         raise MapError("; ".join(refused))
@@ -1258,9 +1234,9 @@ def recolour(sess: PaintSession, body: dict) -> dict:
     try:
         rgb = (int(body["rgb"][0]), int(body["rgb"][1]), int(body["rgb"][2]))
     except (TypeError, ValueError, IndexError, KeyError):
-        raise MapError("a region colour is three numbers 0-255") from None
+        raise MapError(_i18n.msg("eng.campaint.a_region_colour_is_three_numbers", "a region colour is three numbers 0-255")) from None
     if any(v < 0 or v > 255 for v in rgb):
-        raise MapError("a region colour is three numbers 0-255")
+        raise MapError(_i18n.msg("eng.campaint.a_region_colour_is_three_numbers", "a region colour is three numbers 0-255"))
     faults = recolour_faults(cm, name, rgb)
     if faults:
         raise MapError("; ".join(faults))
@@ -1269,10 +1245,7 @@ def recolour(sess: PaintSession, body: dict) -> dict:
     tiles = region_tiles(cm, rec.rgb_key)
     if not tiles:
         raise MapError(
-            f"{name} is declared {rec.rgb[0]} {rec.rgb[1]} {rec.rgb[2]} and not "
-            f"one tile of map_regions.tga carries that colour, so there is "
-            f"nothing to repaint. That is a province with no tiles and the "
-            f"Check panel already reports it")
+            _i18n.msg("eng.campaint.is_declared_and_not_one_tile", "{name} is declared {rgb} {rgb2} {rgb3} and not one tile of map_regions.tga carries that colour, so there is nothing to repaint. That is a province with no tiles and the Check panel already reports it", name=name, rgb=rec.rgb[0], rgb2=rec.rgb[1], rgb3=rec.rgb[2]))
     out = _stroke_over(
         sess, tiles, {"regions": key(rgb)}, "recolour", body,
         label=f"{name} recoloured to {rgb[0]} {rgb[1]} {rgb[2]}")
@@ -1657,7 +1630,7 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
     cm = sess.cm
     p = PaintPlan(mod=sess.mod, session=sess)
     if not sess.unsaved and not sess.new_region and not sess.recolour:
-        p.errors.append("nothing has been painted")
+        p.errors.append(_i18n.msg("eng.campaint.nothing_has_been_painted", "nothing has been painted"))
         return p
 
     for code in sess.unsaved:
@@ -1666,8 +1639,7 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
         try:
             data = encode(img, info)
         except Exception as exc:                        # noqa: BLE001
-            p.errors.append(f"{info.path.name if info.path else code} could not "
-                            f"be re-encoded: {exc}")
+            p.errors.append(_i18n.msg("eng.campaint.could_not_be_re_encoded", "{x} could not be re-encoded: {exc}", x=info.path.name if info.path else code, exc=exc))
             continue
         # A layer that has been painted and then undone back to where it started
         # is not a change, and writing it would put a file in the backup set and
@@ -1699,8 +1671,7 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
         colours = len(cm.index.by_key)
         if colours > mapvocab.MAX_REGION_COLOURS and not cm.uncapped:
             p.warnings.append(
-                f"map_regions.tga now has {colours} colours and the engine's "
-                f"cap is {mapvocab.MAX_REGION_COLOURS}, markers included")
+                _i18n.msg("eng.campaint.map_regions_tga_now_has_colours", "map_regions.tga now has {colours} colours and the engine's cap is {MAX_REGION_COLOURS}, markers included", colours=colours, MAX_REGION_COLOURS=mapvocab.MAX_REGION_COLOURS))
 
     if sess.recolour:
         _plan_recolour(p, sess)
@@ -1732,15 +1703,9 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
                         if r.region_id > (mine.region_id if mine else -1))
             if after:
                 p.warnings.append(
-                    f"{spec['name']} takes region ID "
-                    f"{mine.region_id if mine else '?'}, and the {after} "
-                    f"region(s) the engine scans after it each move up by one. "
-                    f"A region ID is the scan order of map_regions.tga rather "
-                    f"than anything written down, so no file needs editing - but "
-                    f"a script that names a region by number now names a "
-                    f"different one.")
+                    _i18n.msg("eng.campaint.takes_region_id_and_the_region", "{name} takes region ID {x}, and the {after} region(s) the engine scans after it each move up by one. A region ID is the scan order of map_regions.tga rather than anything written down, so no file needs editing - but a script that names a region by number now names a different one.", name=spec['name'], x=mine.region_id if mine else '?', after=after))
     if not p.data and not p.region_text and not p.errors:
-        p.errors.append("nothing has been painted")
+        p.errors.append(_i18n.msg("eng.campaint.nothing_has_been_painted", "nothing has been painted"))
     return p
 
 
@@ -1763,18 +1728,14 @@ def _plan_recolour(p: "PaintPlan", sess: PaintSession) -> None:
     cm = sess.cm
     rec = cm.regions.by_name(spec["name"])
     if rec is None:
-        p.errors.append(f"{spec['name']} is no longer in descr_regions.txt")
+        p.errors.append(_i18n.msg("eng.campaint.is_no_longer_in_descr_regions", "{name} is no longer in descr_regions.txt", name=spec['name']))
         return
     # the pixels have to still be down. An Undo that took the stroke back leaves
     # the record half pending over a map that no longer agrees with it.
     still = len(region_tiles(cm, spec["key"]))
     if not still:
         p.errors.append(
-            f"the repaint of {spec['name']} has been undone, so nothing on "
-            f"map_regions.tga is {spec['rgb'][0]} {spec['rgb'][1]} "
-            f"{spec['rgb'][2]} any more. Writing the record alone would leave "
-            f"the province with no tiles at all - recolour it again, or use "
-            f"Cancel to forget it")
+            _i18n.msg("eng.campaint.the_repaint_of_has_been_undone", "the repaint of {name} has been undone, so nothing on map_regions.tga is {rgb} {rgb2} {rgb3} any more. Writing the record alone would leave the province with no tiles at all - recolour it again, or use Cancel to forget it", name=spec['name'], rgb=spec['rgb'][0], rgb2=spec['rgb'][1], rgb3=spec['rgb'][2]))
         return
     base = campmap.record_text(cm.regions, rec)
     try:
@@ -1784,8 +1745,7 @@ def _plan_recolour(p: "PaintPlan", sess: PaintSession) -> None:
         return
     text = campmap.replace_record(cm.regions, rec, block)
     if text == cm.regions.serialise():
-        p.errors.append(f"{spec['name']} already reads "
-                        f"{spec['rgb'][0]} {spec['rgb'][1]} {spec['rgb'][2]}")
+        p.errors.append(_i18n.msg("eng.campaint.already_reads", "{name} already reads {rgb} {rgb2} {rgb3}", name=spec['name'], rgb=spec['rgb'][0], rgb2=spec['rgb'][1], rgb3=spec['rgb'][2]))
         return
     p.region_text = text
     p.changes.append(
@@ -1825,10 +1785,7 @@ def _plan_region_names(p: PaintPlan, spec: dict) -> None:
     state = namekeys.loc_state(p.mod, namekeys.REGION_NAMES_REL)
     if not (state["txt"] or state["bin"]):
         p.errors.append(
-            f"{getattr(p.mod, 'name', '?')} has neither "
-            f"{namekeys.REGION_NAMES_REL} nor the compiled archive beside it, so "
-            f"there is nothing to write the province's two names into - and the "
-            f"engine will not start a province that has none")
+            _i18n.msg("eng.campaint.has_neither_nor_the_compiled_archive", "{getattr} has neither {REGION_NAMES_REL} nor the compiled archive beside it, so there is nothing to write the province's two names into - and the engine will not start a province that has none", getattr=getattr(p.mod, 'name', '?'), REGION_NAMES_REL=namekeys.REGION_NAMES_REL))
         return
     have = {k.lower() for k in namekeys.loc_pairs(p.mod, namekeys.REGION_NAMES_REL)}
     writes = {}
@@ -1838,9 +1795,7 @@ def _plan_region_names(p: PaintPlan, spec: dict) -> None:
         if not str(value or "").strip():
             if key.lower() not in have:
                 p.errors.append(
-                    f"{key} has no line in {name_file}, and the engine asserts "
-                    f"on a name it cannot find rather than showing the key - "
-                    f"fill in '{box}'")
+                    _i18n.msg("eng.campaint.has_no_line_in_and_the", "{key} has no line in {name_file}, and the engine asserts on a name it cannot find rather than showing the key - fill in '{box}'", key=key, name_file=name_file, box=box))
             continue
         try:
             writes[key] = namekeys.clean_value(value, "name")
@@ -1879,15 +1834,10 @@ def _plan_region_campaigns(p: PaintPlan, spec: dict, voc: dict) -> None:
     skipped = [c["campaign"] for c in voc["campaigns"] if not c["reads_base"]]
     if skipped:
         p.warnings.append(
-            f"{', '.join(skipped)} ship{'s' if len(skipped) == 1 else ''} "
-            f"{'its' if len(skipped) == 1 else 'their'} own {REGIONS_TGA}, so "
-            f"{'it does' if len(skipped) == 1 else 'they do'} not see these "
-            f"pixels and {spec['name']} does not exist there")
+            _i18n.msg("eng.campaint.ship_own_so_not_see_these", "{skipped} ship{x} {x2} own {REGIONS_TGA}, so {x3} not see these pixels and {name} does not exist there", skipped=', '.join(skipped), x='s' if len(skipped) == 1 else '', x2='its' if len(skipped) == 1 else 'their', REGIONS_TGA=REGIONS_TGA, x3='it does' if len(skipped) == 1 else 'they do', name=spec['name']))
     if not camps:
         p.warnings.append(
-            f"no campaign in {getattr(p.mod, 'name', '?')} reads this map, so no "
-            f"faction starts in {spec['name']} yet - there is no descr_strat.txt "
-            f"to give it a settlement in")
+            _i18n.msg("eng.campaint.no_campaign_in_reads_this_map", "no campaign in {getattr} reads this map, so no faction starts in {name} yet - there is no descr_strat.txt to give it a settlement in", getattr=getattr(p.mod, 'name', '?'), name=spec['name']))
         return
 
     name, town = spec["name"], spec["settlement"]
@@ -1903,8 +1853,7 @@ def _plan_region_campaigns(p: PaintPlan, spec: dict, voc: dict) -> None:
                 if n.lower() in of:
                     music = of[n.lower()]
                     p.warnings.append(
-                        f"{name} plays {music}, the music type of {n}, which it "
-                        f"shares the longest border with")
+                        _i18n.msg("eng.campaint.plays_the_music_type_of_which", "{name} plays {music}, the music type of {n}, which it shares the longest border with", name=name, music=music, n=n))
                     break
     p.region["music_chosen"] = music
 
@@ -1916,17 +1865,14 @@ def _plan_region_campaigns(p: PaintPlan, spec: dict, voc: dict) -> None:
         try:
             sf = campstrat.parse_strat(text_of(c["strat"]))
         except (OSError, ValueError) as exc:
-            p.errors.append(f"{c['strat']} could not be read ({exc})")
+            p.errors.append(_i18n.msg("eng.campaint.could_not_be_read", "{strat} could not be read ({exc})", strat=c['strat'], exc=exc))
             continue
         owner = spec.get("owner") or OWNER_DEFAULT
         if sf.faction(owner) is None:
             if sf.faction(OWNER_DEFAULT) is None:
-                p.errors.append(f"{c['campaign']} has no {owner} block and no "
-                                f"{OWNER_DEFAULT} block either, so nobody could "
-                                f"start holding {name} in it")
+                p.errors.append(_i18n.msg("eng.campaint.has_no_block_and_no_block", "{campaign} has no {owner} block and no {OWNER_DEFAULT} block either, so nobody could start holding {name} in it", campaign=c['campaign'], owner=owner, OWNER_DEFAULT=OWNER_DEFAULT, name=name))
                 continue
-            p.warnings.append(f"{owner} is not in {c['campaign']}, so {name} "
-                              f"starts under the rebels there")
+            p.warnings.append(_i18n.msg("eng.campaint.is_not_in_so_starts_under", "{owner} is not in {campaign}, so {name} starts under the rebels there", owner=owner, campaign=c['campaign'], name=name))
             owner = OWNER_DEFAULT
         text, errs = stratedit.plan_new_settlement(sf, name, owner, spec["faction"])
         if errs:
@@ -1952,18 +1898,15 @@ def _plan_region_campaigns(p: PaintPlan, spec: dict, voc: dict) -> None:
             if any(name.lower() == r.lower() for rs in types.values() for r in rs):
                 pass
             elif not music:
-                p.errors.append(f"{name} needs a music type in {rel} - the "
-                                f"engine logs `music_type not found` for a "
-                                f"province with none. Pick one in the wizard")
+                p.errors.append(_i18n.msg("eng.campaint.needs_a_music_type_in_the", "{name} needs a music type in {rel} - the engine logs `music_type not found` for a province with none. Pick one in the wizard", name=name, rel=rel))
             elif music not in types:
-                p.errors.append(f"there is no music_type {music} in {rel}")
+                p.errors.append(_i18n.msg("eng.campaint.there_is_no_music_type_in_2", "there is no music_type {music} in {rel}", music=music, rel=rel))
             else:
                 p.texts[rel] = mapquery.add_music_region(mt, music, name)
                 p.changes.append(f"{rel}: + {name} under {music}")
         elif rel == mapquery.MUSIC_REL and not any(
                 "descr_sounds_music_types" in w for w in p.warnings):
-            p.warnings.append(f"{rel} is not on disk, so there is no music type "
-                              f"to give {name} (the stock game keeps it packed)")
+            p.warnings.append(_i18n.msg("eng.campaint.is_not_on_disk_so_there", "{rel} is not on disk, so there is no music type to give {name} (the stock game keeps it packed)", rel=rel, name=name))
 
         # -- the name lookup, when the campaign ships one
         if c["lookup"]:
@@ -2023,7 +1966,7 @@ def apply_paint(p: PaintPlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.data and not p.region_text:
-        raise ValueError("nothing has been painted")
+        raise ValueError(_i18n.msg("eng.campaint.nothing_has_been_painted", "nothing has been painted"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

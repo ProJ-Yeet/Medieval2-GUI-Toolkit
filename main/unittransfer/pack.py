@@ -40,6 +40,7 @@ from typing import Iterable, List, Optional, Sequence, Set, Tuple
 from . import bmdb, config, edu as edu_mod, localization, modeldb as modeldb_mod
 from .logutil import log
 from .mod import Mod
+from . import i18n as _i18n
 
 #: Bumped only when a pack stops being readable by the previous reader. The
 #: layout is a mod, so in practice this stays at 1.
@@ -164,7 +165,7 @@ def plan_pack(mod: Mod, unit_types: Sequence[str]) -> PackPlan:
         else:
             plan.units.append(u)
     if not plan.units:
-        plan.warnings.append("none of those units are in this mod")
+        plan.warnings.append(_i18n.msg("eng.pack.none_of_those_units_are_in", "none of those units are in this mod"))
         return plan
 
     models: List[str] = []
@@ -178,18 +179,15 @@ def plan_pack(mod: Mod, unit_types: Sequence[str]) -> PackPlan:
     for n in models:
         if n.lower() not in known:
             plan.warnings.append(
-                f"'{n}' is not an entry in this mod's battle_models.modeldb - "
-                "the pack cannot carry it")
+                _i18n.msg("eng.pack.is_not_an_entry_in_this", "'{n}' is not an entry in this mod's battle_models.modeldb - the pack cannot carry it", n=n))
 
     plan.assets = _entry_files(mod, models)
     for u in plan.units:
         plan.icons += _icon_files(mod, u)
         if not mod.find_unit_card(u):
-            plan.warnings.append(f"{u.type} has no unit card in this mod - "
-                                 "the import will have nothing to show on its row")
+            plan.warnings.append(_i18n.msg("eng.pack.has_no_unit_card_in_this", "{type} has no unit card in this mod - the import will have nothing to show on its row", type=u.type))
         if u.mount and mod.mount_def(u.mount) is None:
-            plan.warnings.append(f"{u.type} rides '{u.mount}', which this mod's "
-                                 "descr_mount.txt does not define")
+            plan.warnings.append(_i18n.msg("eng.pack.rides_which_this_mods_descr_mount", "{type} rides '{mount}', which this mod's descr_mount.txt does not define", type=u.type, mount=u.mount))
     plan.mounts = sorted({u.mount for u in plan.units if u.mount})
     plan.projectiles = sorted({p for u in plan.units for p in u.projectiles()
                                if p and p.lower() != "no"})
@@ -380,7 +378,7 @@ def read_manifest(zip_path: Path) -> dict:
     """The pack's manifest, or a reconstructed one for a zip that has none."""
     zip_path = Path(zip_path)
     if not zip_path.is_file():
-        raise PackError(f"{zip_path} does not exist")
+        raise PackError(_i18n.msg("eng.pack.does_not_exist", "{zip_path} does not exist", zip_path=zip_path))
     try:
         with zipfile.ZipFile(zip_path) as z:
             names = {i.filename.replace("\\", "/") for i in z.infolist()}
@@ -388,10 +386,9 @@ def read_manifest(zip_path: Path) -> dict:
                 return json.loads(z.read(MANIFEST_NAME).decode("utf-8"))
             if "data/export_descr_unit.txt" not in names:
                 raise PackError(
-                    "that zip is not a unit pack - it has no unitpack.json and no "
-                    "data/export_descr_unit.txt")
+                    _i18n.msg("eng.pack.that_zip_is_not_a_unit", "that zip is not a unit pack - it has no unitpack.json and no data/export_descr_unit.txt"))
     except zipfile.BadZipFile:
-        raise PackError(f"{zip_path.name} is not a readable zip file")
+        raise PackError(_i18n.msg("eng.pack.is_not_a_readable_zip_file", "{name} is not a readable zip file", name=zip_path.name))
     return {"pack_version": 0, "source_mod": "", "units": [], "created": ""}
 
 
@@ -407,15 +404,14 @@ def unpack(zip_path: Path, into: Path) -> Mod:
         with zipfile.ZipFile(zip_path) as z:
             members = _safe_members(z)
             if not members:
-                raise PackError(f"{zip_path.name} holds nothing a pack should hold")
+                raise PackError(_i18n.msg("eng.pack.holds_nothing_a_pack_should_hold", "{name} holds nothing a pack should hold", name=zip_path.name))
             z.extractall(into, members=members)
     except zipfile.BadZipFile:
-        raise PackError(f"{zip_path.name} is not a readable zip file")
+        raise PackError(_i18n.msg("eng.pack.is_not_a_readable_zip_file", "{name} is not a readable zip file", name=zip_path.name))
     if not (into / "data").is_dir():
-        raise PackError(f"{zip_path.name} has no data/ folder - it is not a unit pack")
+        raise PackError(_i18n.msg("eng.pack.has_no_data_folder_it_is", "{name} has no data/ folder - it is not a unit pack", name=zip_path.name))
     if not (into / "data" / "export_descr_unit.txt").is_file():
-        raise PackError(f"{zip_path.name} carries no export_descr_unit.txt, so it "
-                        "names no units")
+        raise PackError(_i18n.msg("eng.pack.carries_no_export_descr_unit_txt", "{name} carries no export_descr_unit.txt, so it names no units", name=zip_path.name))
     return Mod(into)
 
 

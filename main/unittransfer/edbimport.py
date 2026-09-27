@@ -56,6 +56,7 @@ from typing import Dict, List, Set, Tuple
 from . import buildings as B
 from . import config, edbvocab, localization, stringsbin
 from .logutil import counted, file_op, fingerprint, log
+from . import i18n as _i18n
 
 #: The three pictures a level has per culture, and the one a line has, under
 #: ``data/ui/<culture>/``. The game looks for exactly these names.
@@ -250,15 +251,12 @@ def _line_block(p: TreePlan, src_edb: B.EdbFile, bl: B.BuildingLine, vocab: _Voc
         if i < first_level and word == "convert_to":
             target = code.split()[1] if len(code.split()) > 1 else ""
             if target and target not in lines:
-                p.warnings.append(f"{bl.name}: converts to {target!r}, which "
-                                  f"{p.dst.name} has no line for, so that line is "
-                                  f"dropped and the building does not convert")
+                p.warnings.append(_i18n.msg("eng.edbimport.converts_to_which_has_no_line", "{name}: converts to {target}, which {name2} has no line for, so that line is dropped and the building does not convert", name=bl.name, target=repr(target), name2=p.dst.name))
                 continue
         if i < first_level and word == "religion":
             rel = code.split()[1] if len(code.split()) > 1 else ""
             if rel and rel.lower() not in vocab.rel:
-                p.errors.append(f"{bl.name} is a temple of {rel!r}, a religion "
-                                f"{p.dst.name} does not have - add the religion first")
+                p.errors.append(_i18n.msg("eng.edbimport.is_a_temple_of_a_religion", "{name} is a temple of {rel}, a religion {name2} does not have - add the religion first", name=bl.name, rel=repr(rel), name2=p.dst.name))
         blk = headers.get(i)
         if blk is not None:
             c = _rewrite_clause(blk.requires, vocab, mapping, lines)
@@ -307,12 +305,9 @@ def _line_block(p: TreePlan, src_edb: B.EdbFile, bl: B.BuildingLine, vocab: _Voc
         out.append(raw)
     if nobody and len(nobody) == len(bl.blocks):
         left = sorted(n for n, k in used.items() if k)
-        p.errors.append(f"no faction of {p.dst.name} could build any level of "
-                        f"{bl.name} - map at least one of "
-                        f"{', '.join(left) or 'its factions'} onto a faction or culture")
+        p.errors.append(_i18n.msg("eng.edbimport.no_faction_of_could_build_any", "no faction of {name} could build any level of {name2} - map at least one of {x} onto a faction or culture", name=p.dst.name, name2=bl.name, x=', '.join(left) or 'its factions'))
     elif nobody:
-        p.warnings.append(f"{bl.name}: no faction could build "
-                          f"{', '.join(nobody)} once the names are mapped")
+        p.warnings.append(_i18n.msg("eng.edbimport.no_faction_could_build_once_the", "{name}: no faction could build {nobody} once the names are mapped", name=bl.name, nobody=', '.join(nobody)))
     return out
 
 
@@ -348,9 +343,7 @@ def _text(p: TreePlan, src, spans: Dict[str, List[str]], mapping: Dict[str, str]
     """
     path = p.dst.data / B.LOC_REL
     if not path.is_file():
-        p.errors.append(f"{p.dst.name} has no data/{B.LOC_REL}, so the levels "
-                        "would have no names, and a level with no text key stops "
-                        "the game. Nothing written.")
+        p.errors.append(_i18n.msg("eng.edbimport.has_no_data_so_the_levels", "{name} has no data/{LOC_REL}, so the levels would have no names, and a level with no text key stops the game. Nothing written.", name=p.dst.name, LOC_REL=B.LOC_REL))
         return
     have = _pairs(src)
     lower = {k.lower(): k for k in have}
@@ -387,9 +380,7 @@ def _text(p: TreePlan, src, spans: Dict[str, List[str]], mapping: Dict[str, str]
                 if new not in writes or to == who:
                     writes[new] = have[key]
     if filled:
-        p.warnings.append(f"{filled} text key(s) the source does not have were "
-                          "written with the level's code name or left blank - the "
-                          "game stops on a level with a key missing")
+        p.warnings.append(_i18n.msg("eng.edbimport.text_key_s_the_source_does", "{filled} text key(s) the source does not have were written with the level's code name or left blank - the game stops on a level with a key missing", filled=filled))
     text, enc = localization.read_file(path)
     p.loc_text = stringsbin.upsert_txt(text, writes)
     p.loc_encoding = enc
@@ -492,20 +483,20 @@ def plan(dst, src, body: dict) -> TreePlan:
     want = list(dict.fromkeys(want))
     p = TreePlan(dst=dst, source=src.name, lines=want, replace=bool(body.get("replace")))
     if not want:
-        p.errors.append("pick at least one building line to bring")
+        p.errors.append(_i18n.msg("eng.edbimport.pick_at_least_one_building_line", "pick at least one building line to bring"))
         return p
     if not src.edb_path.is_file():
-        p.errors.append(f"{src.name} has no data/{B.EDB_REL}")
+        p.errors.append(_i18n.msg("eng.edbimport.has_no_data", "{name} has no data/{EDB_REL}", name=src.name, EDB_REL=B.EDB_REL))
         return p
     if not dst.edb_path.is_file():
-        p.errors.append(f"{dst.name} has no data/{B.EDB_REL}")
+        p.errors.append(_i18n.msg("eng.edbimport.has_no_data", "{name} has no data/{EDB_REL}", name=dst.name, EDB_REL=B.EDB_REL))
         return p
     src_edb, dst_edb = src.edb, dst.edb
     picked = []
     for name in want:
         bl = src_edb.get(name)
         if bl is None:
-            p.errors.append(f"{src.name} has no building line called {name!r}")
+            p.errors.append(_i18n.msg("eng.edbimport.has_no_building_line_called", "{name} has no building line called {name2}", name=src.name, name2=repr(name)))
         else:
             picked.append(bl)
     if p.errors:
@@ -515,8 +506,7 @@ def plan(dst, src, body: dict) -> TreePlan:
     replaced = {bl.name for bl in picked if dst_edb.get(bl.name) is not None}
     if replaced and not p.replace:
         for n in sorted(replaced):
-            p.errors.append(f"{dst.name} already has a line called {n!r} - tick "
-                            "Replace to swap it for this one")
+            p.errors.append(_i18n.msg("eng.edbimport.already_has_a_line_called_tick", "{name} already has a line called {n} - tick Replace to swap it for this one", name=dst.name, n=repr(n)))
         return p
     taken = {lv: owner for lv, (owner, _) in
              ((k, (v[0].name, v[1])) for k, v in dst_edb.by_level().items())
@@ -524,10 +514,7 @@ def plan(dst, src, body: dict) -> TreePlan:
     for bl in picked:
         for b in bl.blocks:
             if b.name in taken:
-                p.errors.append(f"{bl.name}/{b.name}: {dst.name} already has a level "
-                                f"called {b.name!r}, in its {taken[b.name]!r} line: a "
-                                "level name is its text key and its card, so two "
-                                "lines cannot share one")
+                p.errors.append(_i18n.msg("eng.edbimport.already_has_a_level_called_in", "{name}/{name2}: {name3} already has a level called {name4}, in its {taken} line: a level name is its text key and its card, so two lines cannot share one", name=bl.name, name2=b.name, name3=dst.name, name4=repr(b.name), taken=repr(taken[b.name])))
     if p.errors:
         return p
     lines: Dict[str, Set[str]] = {bl.name: {b.name for b in bl.blocks}
@@ -595,16 +582,14 @@ def plan(dst, src, body: dict) -> TreePlan:
     for bl in picked:
         got = after.get(bl.name)
         if got is None or len(got.blocks) != len(bl.blocks):
-            p.errors.append(f"{bl.name} would come out as an EDB this tool can no "
-                            "longer read - refusing to write it")
+            p.errors.append(_i18n.msg("eng.edbimport.would_come_out_as_an_edb", "{name} would come out as an EDB this tool can no longer read - refusing to write it", name=bl.name))
         # the whole point of the mapping, checked on what would be written
         for b in (got.blocks if got else []):
             for clause in [b.requires] + [c.requires for c in b.capabilities
                                           + b.faction_capabilities]:
                 stray = [v for v in B.clause_factions(clause) if not vocab.knows(v)]
                 if stray:
-                    p.errors.append(f"{bl.name}/{b.name} would still name "
-                                    f"{', '.join(stray)}, which {dst.name} does not have")
+                    p.errors.append(_i18n.msg("eng.edbimport.would_still_name_which_does_not", "{name}/{name2} would still name {stray}, which {name3} does not have", name=bl.name, name2=b.name, stray=', '.join(stray), name3=dst.name))
     if len(after.warnings) > len(dst_edb.warnings):
         p.errors.append("the EDB would read with new warnings: "
                         + "; ".join(after.warnings[len(dst_edb.warnings):][:3]))
@@ -621,9 +606,7 @@ def plan(dst, src, body: dict) -> TreePlan:
         return p
     for bl in picked:
         if bl.name.startswith("core_"):
-            p.warnings.append(f"{bl.name} is the settlement's own chain: its top "
-                              "level has to match each culture's largest settlement "
-                              "in descr_cultures.txt, or the game will not load")
+            p.warnings.append(_i18n.msg("eng.edbimport.is_the_settlements_own_chain_its", "{name} is the settlement's own chain: its top level has to match each culture's largest settlement in descr_cultures.txt, or the game will not load", name=bl.name))
 
     p.edb_text = text
     for bl in picked:
@@ -633,11 +616,9 @@ def plan(dst, src, body: dict) -> TreePlan:
                          f"({', '.join(b.name for b in bl.blocks)})")
     if p.units_left:
         n = sum(p.units_left.values())
-        p.warnings.append(f"{n} recruit pool(s) left out: {len(p.units_left)} unit(s) "
-                          f"{dst.name} does not have. Transfer them first and plan "
-                          "again to keep the pools.")
+        p.warnings.append(_i18n.msg("eng.edbimport.recruit_pool_s_left_out_unit", "{n} recruit pool(s) left out: {units_left_n} unit(s) {name} does not have. Transfer them first and plan again to keep the pools.", n=n, units_left_n=len(p.units_left), name=dst.name))
     for why, n in sorted(p.caps_left.items()):
-        p.warnings.append(f"{n} capability line(s) left out: {why}")
+        p.warnings.append(_i18n.msg("eng.edbimport.capability_line_s_left_out", "{n} capability line(s) left out: {why}", n=n, why=why))
     spans = {bl.name: [b.name for b in bl.blocks] for bl in picked}
     _text(p, src, spans, mapping, vocab, set(src_fac) | src_cul)
     if body.get("pictures", True) and not p.errors:
@@ -645,8 +626,7 @@ def plan(dst, src, body: dict) -> TreePlan:
         if p.pictures:
             p.changes.append(f"{len(p.pictures)} building card file(s)")
         if p.pictures_kept:
-            p.warnings.append(f"{p.pictures_kept} card(s) the destination already "
-                              "draws for a culture the source does not have were kept")
+            p.warnings.append(_i18n.msg("eng.edbimport.card_s_the_destination_already_draws", "{pictures_kept} card(s) the destination already draws for a culture the source does not have were kept", pictures_kept=p.pictures_kept))
     return p
 
 
@@ -659,7 +639,7 @@ def apply(p: TreePlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.edb_text:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.edbimport.nothing_to_change", "nothing to change"))
     mod = p.dst
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

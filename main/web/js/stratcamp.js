@@ -409,23 +409,23 @@ async function cjSave(extra){
   const runs = (p.spans || []).map(s => s[0] >= s[1] ? `line ${s[0]}`
     : `lines ${s[0]}-${s[1]}`);
   const spans = runs.slice(0, 6).join(', ')
-    + (runs.length > 6 ? ` and ${runs.length - 6} more runs` : '');
-  if(!confirm(`Write: ${body.what}`
+    + (runs.length > 6 ? tt('stratcamp.and_more_runs',{runs:runs.length - 6}) : '');
+  if(!confirm(tt('stratcamp.write',{what:body.what})
     + (body.faction ? ` for ${body.faction}` : '')
-    + ` in ${k.d.campaign}?\n\n`
-    + (lines.join('\n') || 'no visible change')
+    + tt('stratcamp.in',{campaign:k.d.campaign})
+    + (lines.join('\n') || tt('common.no_visible_change'))
     + ((p.changes || []).length > 14
-       ? `\n…and ${p.changes.length - 14} more` : '')
+       ? tt('stratcamp.and_more',{changes:p.changes.length - 14}) : '')
     + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + (spans ? `\n\nOnly ${spans} change.` : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + (spans ? tt('stratcamp.only_change',{spans}) : '')
+    + tt('common.backed_up_first_and_log_can'))) return;
   k.busy = true;
   let res;
   try{ res = await api.post('/api/map/campaign_apply', body); }
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   if(typeof fauStale === 'function') fauStale();
   activity('campaign', `${k.mod}: ${body.what}`
     + (body.faction ? ` ${body.faction}` : ''));
@@ -448,19 +448,19 @@ async function cjWinSave(extra){
   k.preview = p;
   cjPaint();
   const warn = (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x);
-  if(!confirm(`Write: ${body.action} the win conditions for ${body.faction}?`
-    + '\n\n' + ((p.changes || []).join('\n') || 'no visible change')
+  if(!confirm(tt('stratcamp.write_the_win_conditions_for',{action:body.action,faction:body.faction})
+    + '\n\n' + ((p.changes || []).join('\n') || tt('common.no_visible_change'))
     + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   k.busy = true;
   let res;
   try{ res = await api.post('/api/map/wins_apply', body); }
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   if(typeof fauStale === 'function') fauStale();
-  activity('campaign', `${k.mod}: win conditions ${body.faction}`);
+  activity('campaign', tt('stratcamp.win_conditions',{mod:k.mod,faction:body.faction}));
   k.wins = null;
   cjWinReset();
 }
@@ -500,16 +500,13 @@ function cjHtml(){
   const d = k.d;
   const head = `<div class="cpbar">
     <button class="cptog${k.open ? ' on' : ''}" onclick="cjToggle()"
-      title="The campaign's own settings: when it runs, who can play it, and who starts at war with whom."
-      >\u{1F5D3} Campaign${k.open ? ' ✓' : ''}</button>
-    ${d ? `<span class="count">${esc(d.name || d.campaign)} ·
-      ${esc(d.values.start_date || '?')} to ${esc(d.values.end_date || '?')} ·
-      ${d.factions.length} factions</span>` : ''}
-    ${k.busy ? '<span class="count">working…</span>' : ''}
+      title="${ttA('stratcamp.the_campaigns_own_settings_when_it')}"
+      >${tt('stratcamp.campaign',{open:k.open ? ' ✓' : ''})}</button>
+    ${d ? `<span class="count">${tt('stratcamp.to_factions',{x:esc(d.name || d.campaign),start_date:esc(d.values.start_date || '?'),end_date:esc(d.values.end_date || '?'),factions_n:d.factions.length})}</span>` : ''}
+    ${k.busy ? `<span class="count">${tt('common.working_2')}</span>` : ''}
   </div>`;
   if(!k.open) return head;
-  if(k.loading) return head + `<div class="cxpanel count">reading the
-    campaign…</div>`;
+  if(k.loading) return head + `<div class="cxpanel count">${tt('stratcamp.reading_the_campaign')}</div>`;
   /* 17f - the campaign half can be missing and the faction half still be
      there. A mod with no `descr_strat.txt` still has a `descr_sm_factions.txt`
      with every faction it ships in it, and the rule 16f and 16g settled applies
@@ -522,9 +519,9 @@ function cjHtml(){
         typeof fauHost === 'function' ? fauHost() : ''}${cjSmHtml()}</div>`
              : ''}</div>`;
   }
-  const tabs = [['campaign', 'When it runs'], ['rosters', 'Who plays'],
-                ['faction', 'Each faction'], ['diplomacy', 'Diplomacy'],
-                ['create', 'New faction'], ['wins', 'Winning']];
+  const tabs = [['campaign', tt('stratcamp.when_it_runs')], ['rosters', tt('stratcamp.who_plays')],
+                ['faction', tt('stratcamp.each_faction')], ['diplomacy', tt('stratcamp.diplomacy')],
+                ['create', tt('stratcamp.new_faction')], ['wins', tt('stratcamp.winning')]];
   return head + `<div class="cxpanel">
     <div class="cqtabs">
       ${tabs.map(([id, label]) => `<button class="${k.tab === id ? 'on' : ''}"
@@ -550,26 +547,26 @@ function cjGlobalsHtml(){
     ${note ? `<div class="count">${note}</div>` : ''}</div>`;
   return `<div class="cxform">
     <div class="csrow2">
-      ${box('start_date', 'Starts', 'a year and ' + v.seasons.join(' or '))}
-      ${box('end_date', 'Ends', '')}
+      ${box('start_date', tt('stratcamp.starts'), tt('stratcamp.a_year_and') + v.seasons.join(' or '))}
+      ${box('end_date', tt('stratcamp.ends'), '')}
     </div>
     <div class="csrow2">
-      ${box('timescale', 'Years per turn', 'a decimal - vanilla writes 2.00')}
-      ${box('free_upkeep_forts', 'Free upkeep in forts', 'blank means no line')}
+      ${box('timescale', tt('stratcamp.years_per_turn'), tt('stratcamp.a_decimal_vanilla_writes_2_00'))}
+      ${box('free_upkeep_forts', tt('stratcamp.free_upkeep_in_forts'), tt('stratcamp.blank_means_no_line'))}
     </div>
     <div class="csrow2">
-      ${box('brigand_spawn_value', 'Brigands', 'higher is rarer')}
-      ${box('pirate_spawn_value', 'Pirates', '')}
+      ${box('brigand_spawn_value', tt('stratcamp.brigands'), tt('stratcamp.higher_is_rarer'))}
+      ${box('pirate_spawn_value', tt('stratcamp.pirates'), '')}
     </div>
-    <div class="cmfield"><label>Flags</label>
+    <div class="cmfield"><label>${tt('stratcamp.flags')}</label>
       <div class="cjflags">${v.flags.map(f => `<label class="cjchk">
         <input type="checkbox"${w.flags.indexOf(f) >= 0 ? ' checked' : ''}
           onchange="cjFlag('${f}', this.checked)">${esc(f)}${
-          v.dead_flags.indexOf(f) >= 0 ? ' <span class="count">(does nothing)</span>'
+          v.dead_flags.indexOf(f) >= 0 ? ` <span class="count">${tt('stratcamp.does_nothing')}</span>`
           : ''}</label>`).join('')}</div>
     </div>
     <div class="csbtns">
-      <button class="primary" onclick="cjSave()">Save the campaign header</button>
+      <button class="primary" onclick="cjSave()">${tt('stratcamp.save_the_campaign_header')}</button>
     </div>
   </div>`;
 }
@@ -594,22 +591,21 @@ function cjRostersHtml(){
   </div>`).join('');
   return `<div class="cxform">
     <div class="cxlist">${rows}</div>
-    <div class="count">The engine reads the first list it meets a faction in,
-      so each one sits in exactly one.</div>
+    <div class="count">${tt('stratcamp.the_engine_reads_the_first_list')}</div>
     <div class="csbtns">
-      <button class="primary" onclick="cjSave()">Save the three lists</button>
+      <button class="primary" onclick="cjSave()">${tt('stratcamp.save_the_three_lists')}</button>
     </div>
   </div>`;
 }
 
 function cjFactionPickerHtml(){
   const k = state.cj;
-  return `<div class="cmfield"><label>Faction</label>
+  return `<div class="cmfield"><label>${tt('common.faction')}</label>
     <select onchange="cjPickFaction(this.value)">
       ${cjFactionList().map(f => `<option value="${esc(f.name)}"${
         f.name === k.faction ? ' selected' : ''}>${esc(f.label)}${
-        f.camp && f.sm ? '' : f.camp ? ' · not in descr_sm_factions.txt'
-                                     : ' · not in descr_strat.txt'}${
+        f.camp && f.sm ? '' : f.camp ? tt('stratcamp.not_in_descr_sm_factions_txt')
+                                     : tt('stratcamp.not_in_descr_strat_txt')}${
         typeof fauBadge === 'function' ? fauBadge(f.name) : ''}</option>`).join('')}
     </select></div>`;
 }
@@ -632,10 +628,8 @@ function cjFactionHtml(){
 function cjSmHtml(){
   const has = !!(state.fac && state.fac.exists);
   return `<div class="cjsm">
-    <div class="cjsmhead">The faction itself
-      <span class="count">data/descr_sm_factions.txt - its culture, religion,
-        colours, horde and art. A separate file and a separate save.</span></div>
-    ${has ? '' : `<div class="count">reading descr_sm_factions.txt…</div>`}
+    <div class="cjsmhead">${tt('stratcamp.the_faction_itself_data_descr_sm')}</div>
+    ${has ? '' : `<div class="count">${tt('stratcamp.reading_descr_sm_factions_txt')}</div>`}
     <div id="facMain">${(typeof facDetailHtml === 'function' && state.fac)
       ? facDetailHtml() : ''}</div>
   </div>`;
@@ -718,52 +712,40 @@ const cjPresDirty = keys => {
 function cjPresHtml(){
   const k = state.cj, p = k.pres;
   if(!p) return '';
-  if(p.loading) return `<div class="cjsm"><div class="cjsmhead">On the menu</div>
-    <div class="count">reading the campaign's text and movies…</div></div>`;
-  if(p.err) return `<div class="cjsm"><div class="cjsmhead">On the menu</div>
+  if(p.loading) return `<div class="cjsm"><div class="cjsmhead">${tt('common.on_the_menu')}</div>
+    <div class="count">${tt('stratcamp.reading_the_campaigns_text_and_movies')}</div></div>`;
+  if(p.err) return `<div class="cjsm"><div class="cjsmhead">${tt('common.on_the_menu')}</div>
     <div class="w-warn">${esc(p.err)}</div></div>`;
   if(!p.w) return '';
   const d = p.descr, mv = p.movies;
   const row = (d.rows || []).find(r => r.faction === k.faction) || {};
   return `<div class="cjsm">
-      <div class="cjsmhead">On the menu
-        <span class="count">data/${esc(d.file)} - the title and the blurb the
-          new-game screen shows for this faction. A separate file and a separate
-          save.</span></div>
-      ${row.title_set ? '' : `<div class="count">This campaign has never named
-        <b>${esc(k.faction)}</b>, so the menu shows its code name. Saving writes
-        <code>${esc(row.title_key || '')}</code>.</div>`}
-      <div class="cmfield"><label>Title</label>
+      <div class="cjsmhead">${tt('stratcamp.on_the_menu_data_the_title',{file:esc(d.file)})}</div>
+      ${row.title_set ? '' : `<div class="count">${tt('stratcamp.this_campaign_has_never_named_so',{faction:esc(k.faction),x:esc(row.title_key || '')})}</div>`}
+      <div class="cmfield"><label>${tt('stratcamp.title')}</label>
         <input value="${esc(p.w.title)}" placeholder="${esc(k.faction)}"
           oninput="cjPresSet('title', this.value)">
         <div class="count">${esc(row.title_key || '')}</div></div>
-      <div class="cmfield"><label>Blurb</label>
+      <div class="cmfield"><label>${tt('stratcamp.blurb')}</label>
         <textarea rows="5" oninput="cjPresSet('descr', this.value)"
           >${esc(p.w.descr)}</textarea>
-        <div class="count">${esc(row.descr_key || '')} · press Enter for a line
-          break; the file stores it as <code>\\n</code> on one line, which is
-          what the game reads</div></div>
+        <div class="count">${tt('stratcamp.press_enter_for_a_line_break',{x:esc(row.descr_key || '')})}</div></div>
       ${cjPresDirty(['title', 'descr'])
-        ? `<button class="primary" onclick="cjPresSaveText()">Save menu text</button>`
+        ? `<button class="primary" onclick="cjPresSaveText()">${tt('stratcamp.save_menu_text')}</button>`
         : ''}
     </div>
     <div class="cjsm">
-      <div class="cjsmhead">Movies
-        <span class="count">${esc(mv && mv.file || 'descr_faction_movies.xml')}${
-          mv && mv.have ? ' - paths under data/' + esc(mv.fmv) : ''}. A separate
-          file and a separate save.</span></div>
+      <div class="cjsmhead">${tt('stratcamp.movies_a_separate_file_and_a',{x:esc(mv && mv.file || 'descr_faction_movies.xml'),x2:mv && mv.have ? tt('stratcamp.paths_under_data') + esc(mv.fmv) : ''})}</div>
       ${!mv || !mv.have
         ? `<div class="count">${esc((mv && mv.problem)
-            || 'this campaign has no movie file')}</div>`
-        : `${p.hasBlock ? '' : `<div class="count">This campaign has no
-             <code>&lt;faction&gt;</code> block for <b>${esc(k.faction)}</b>, so it
-             plays no movies. Filling any box below writes one.</div>`}
+            || tt('stratcamp.this_campaign_has_no_movie_file'))}</div>`
+        : `${p.hasBlock ? '' : `<div class="count">${tt('stratcamp.this_campaign_has_no_faction_block',{faction:esc(k.faction)})}</div>`}
            ${CJ_MOVIE_SLOTS.map(s => `<div class="cmfield">
              <label>${s[0].toUpperCase() + s.slice(1)}</label>
-             <input value="${esc(p.w[s])}" placeholder="faction/${esc(s)}.bik"
+             <input value="${esc(p.w[s])}" placeholder="${ttA('stratcamp.faction_bik',{x:esc(s)})}"
                oninput="cjPresSet('${s}', this.value)"></div>`).join('')}
            ${cjPresDirty(CJ_MOVIE_SLOTS)
-             ? `<button class="primary" onclick="cjPresSaveMovies()">Save movies</button>`
+             ? `<button class="primary" onclick="cjPresSaveMovies()">${tt('stratcamp.save_movies')}</button>`
              : ''}`}
     </div>`;
 }
@@ -772,7 +754,7 @@ async function cjPresSaveText(){
   const k = state.cj, p = k.pres;
   await cjPresApply({what: 'descriptions', campaign: p.campaign, name: k.faction,
                      edits: {title: p.w.title, descr: p.w.descr}},
-                    `the menu text for ${k.faction}`);
+                    tt('stratcamp.the_menu_text_for',{faction:k.faction}));
 }
 
 async function cjPresSaveMovies(){
@@ -783,10 +765,10 @@ async function cjPresSaveMovies(){
   // - an empty <faction> block names no movie and does nothing.
   const action = p.hasBlock ? 'edit' : 'add';
   if(action === 'add' && !CJ_MOVIE_SLOTS.some(s => (p.w[s] || '').trim())){
-    toast('A new <faction> block needs at least one movie path', 4000); return;
+    toast(`${tt('stratcamp.a_new')} <faction> ${tt('stratcamp.block_needs_at_least_one_movie')}`, 4000); return;
   }
   await cjPresApply({what: 'movies', campaign: p.campaign, name: k.faction,
-                     action, edits}, `the movies for ${k.faction}`);
+                     action, edits}, tt('stratcamp.the_movies_for',{faction:k.faction}));
 }
 
 async function cjPresApply(body, what){
@@ -799,20 +781,20 @@ async function cjPresApply(body, what){
   finally{ p.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 7000); return; }
   const q = plan.plan || {};
-  if(!confirm(`Write: ${what}?\n\n`
-    + ((q.changes || []).slice(0, 10).join('\n') || 'no visible change')
+  if(!confirm(tt('stratcamp.write_2',{what})
+    + ((q.changes || []).slice(0, 10).join('\n') || tt('common.no_visible_change'))
     + ((q.warnings || []).length ? '\n\n' + (q.warnings || []).slice(0, 3)
         .map(x => '⚠ ' + x).join('\n') : '')
     + (q.loc_new && q.loc_new.length
-        ? `\n\n${q.loc_new.length} text key(s) this file has never had are created.`
+        ? tt('stratcamp.text_key_s_this_file_has',{loc_new_n:q.loc_new.length})
         : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   p.busy = true;
   let res;
   try{ res = await api.post('/api/campfiles/apply', body); }
   finally{ p.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 7000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   await cjPresOpen(true);
 }
 
@@ -820,40 +802,33 @@ async function cjPresApply(body, what){
 //: file has no block for says so rather than showing an empty form somebody
 //: could type into and save into nothing.
 function cjCampFactionHtml(f, w, v){
-  if(!f.name) return `<div class="cjsmhead">The campaign
-      <span class="count">data/${esc((state.cj.d && state.cj.d.campaign)
-        || 'world/maps/campaign')}/descr_strat.txt</span></div>
-    <div class="w-warn">This campaign has no block for
-      <b>${esc(state.cj.faction || 'this faction')}</b>, so there is nothing here
-      to edit. New faction, on the tab beside this one, writes one.</div>`;
+  if(!f.name) return `<div class="cjsmhead">${tt('stratcamp.the_campaign_data_descr_strat_txt',{x:esc((state.cj.d && state.cj.d.campaign)
+        || 'world/maps/campaign')})}</div>
+    <div class="w-warn">${tt('stratcamp.this_campaign_has_no_block_for',{x:esc(state.cj.faction || tt('stratcamp.this_faction'))})}</div>`;
   const list = `<datalist id="cjl-ai">${(v.ai || []).map(x =>
     `<option value="${esc(x)}">`).join('')}</datalist>
     <datalist id="cjl-label">${(v.ai_labels || []).map(x =>
     `<option value="${esc(x)}">`).join('')}</datalist>`;
-  return `<div class="cjsmhead">The campaign
-      <span class="count">descr_strat.txt - what it starts the campaign with</span></div>
-    <div class="count">line ${f.line} · ${f.settlements} settlement${
-      f.settlements === 1 ? '' : 's'} · ${f.characters} character${
-      f.characters === 1 ? '' : 's'}${f.roster ? ' · ' + f.roster : ''}</div>
+  return `<div class="cjsmhead">${tt('stratcamp.the_campaign_descr_strat_txt_what')}</div>
+    <div class="count">${tt('stratcamp.line_settlement_character',{line:f.line,settlements:f.settlements,x:f.settlements === 1 ? '' : 's',characters:f.characters,x2:f.characters === 1 ? '' : 's',x3:f.roster ? ' · ' + f.roster : ''})}</div>
     <div class="csrow2">
-      <div class="cmfield"><label>AI personality</label>
+      <div class="cmfield"><label>${tt('stratcamp.ai_personality')}</label>
         <input list="cjl-ai" value="${esc(w.scalars.ai)}"
           oninput="cjScalar('ai', this.value)">
-        <div class="count">two words, and no file on disk declares them - the
-          list is what this campaign already uses.</div></div>
-      <div class="cmfield"><label>AI label</label>
+        <div class="count">${tt('stratcamp.two_words_and_no_file_on')}</div></div>
+      <div class="cmfield"><label>${tt('stratcamp.ai_label')}</label>
         <input list="cjl-label" value="${esc(w.scalars.ai_label)}"
           oninput="cjScalar('ai_label', this.value)"></div>
     </div>
     <div class="csrow2">
-      <div class="cmfield"><label>Treasury</label>
+      <div class="cmfield"><label>${tt('stratcamp.treasury')}</label>
         <input type="number" value="${esc(w.scalars.denari)}"
           oninput="cjScalar('denari', this.value)"></div>
-      <div class="cmfield"><label>King's purse</label>
+      <div class="cmfield"><label>${tt('stratcamp.kings_purse')}</label>
         <input type="number" value="${esc(w.scalars.denari_kings_purse)}"
           oninput="cjScalar('denari_kings_purse', this.value)"></div>
     </div>
-    <div class="cmfield"><label>Flags</label>
+    <div class="cmfield"><label>${tt('stratcamp.flags')}</label>
       <div class="cjflags">${v.faction_flags.map(x => `<label class="cjchk">
         <input type="checkbox"${w.fflags.indexOf(x) >= 0 ? ' checked' : ''}
           onchange="cjFlag('${x}', this.checked, 'faction')">${esc(x)}</label>`)
@@ -861,8 +836,7 @@ function cjCampFactionHtml(f, w, v){
     </div>
     ${list}
     <div class="csbtns">
-      <button class="primary" onclick="cjSave()">Save ${esc(state.cj.faction)}
-        in descr_strat.txt</button>
+      <button class="primary" onclick="cjSave()">${tt('stratcamp.save_in_descr_strat_txt',{faction:esc(state.cj.faction)})}</button>
     </div>`;
 }
 
@@ -886,23 +860,20 @@ function cjDiplomacyHtml(){
         value="${mine === undefined ? '' : esc(mine)}"
         oninput="cjStanding('${esc(f.name)}', this.value)">
       <select onchange="cjRelation('${esc(f.name)}', this.value)">
-        <option value=""${w.relationships[f.name] ? '' : ' selected'}>neutral</option>
+        <option value=""${w.relationships[f.name] ? '' : ' selected'}>${tt('stratcamp.neutral')}</option>
         ${v.relations.map(r => `<option value="${r}"${
           w.relationships[f.name] === r ? ' selected' : ''}>${r}</option>`).join('')}
       </select>
-      <span class="count">their side: ${back === undefined ? '-' : esc(back)}${
-        backRel ? ' · ' + esc(backRel) : ''}</span>
+      <span class="count">${tt('stratcamp.their_side',{x:back === undefined ? '-' : esc(back),x2:backRel ? ' · ' + esc(backRel) : ''})}</span>
     </div>`;
   }).join('');
   return `<div class="cxform">
     ${cjFactionPickerHtml()}
-    <div class="cxlist">${rows || '<div class="count">Nobody else.</div>'}</div>
-    <div class="count">The two directions are two separate lines of the file
-      and nothing in the engine makes one follow from the other, so "their side"
-      is shown rather than kept in step.</div>
+    <div class="cxlist">${rows || `<div class="count">${tt('stratcamp.nobody_else')}</div>`}</div>
+    <div class="count">${tt('stratcamp.the_two_directions_are_two_separate')}</div>
     <div class="csbtns">
-      <button class="primary" onclick="cjSave()">Save the standings</button>
-      <button onclick="cjSaveRelations()">Save the relationships</button>
+      <button class="primary" onclick="cjSave()">${tt('stratcamp.save_the_standings')}</button>
+      <button onclick="cjSaveRelations()">${tt('stratcamp.save_the_relationships')}</button>
     </div>
   </div>`;
 }
@@ -916,44 +887,38 @@ function cjCreateHtml(){
   const k = state.cj, m = k.w.made, v = k.d.vocab;
   return `<div class="cxform">
     <div class="csrow2">
-      <div class="cmfield"><label>New faction's slot</label>
-        <input value="${esc(m.name)}" placeholder="burgundy"
+      <div class="cmfield"><label>${tt('stratcamp.new_factions_slot')}</label>
+        <input value="${esc(m.name)}" placeholder="${ttA('stratcamp.burgundy')}"
           oninput="cjMade('name', this.value)">
-        <div class="count">The name the rest of the mod points at, not the one
-          shown in game. Lower case, no spaces.${v.slots_known
-          ? ' descr_sm_factions.txt has to declare it first - that is the'
-            + ' Factions screen.'
-          : ''}</div></div>
-      <div class="cmfield"><label>Cloned from</label>
+        <div class="count">${tt('stratcamp.the_name_the_rest_of_the',{slots_known:v.slots_known
+          ? tt('stratcamp.descr_sm_factions_txt_has_to')
+            + tt('stratcamp.factions_screen')
+          : ''})}</div></div>
+      <div class="cmfield"><label>${tt('stratcamp.cloned_from')}</label>
         <select onchange="cjMade('donor', this.value)">
           ${k.d.factions.map(f => `<option value="${esc(f.name)}"${
             f.name === m.donor ? ' selected' : ''}>${esc(f.label || f.name)
             }</option>`).join('')}
         </select>
-        <div class="count">Its AI, its label and its purse, written in the shape
-          of its own lines.</div></div>
+        <div class="count">${tt('stratcamp.its_ai_its_label_and_its')}</div></div>
     </div>
     <div class="csrow2">
-      <div class="cmfield"><label>Goes in</label>
+      <div class="cmfield"><label>${tt('stratcamp.goes_in')}</label>
         <select onchange="cjMade('roster', this.value)">
           ${v.rosters.map(r => `<option value="${r}"${
             r === m.roster ? ' selected' : ''}>${r}</option>`).join('')}
         </select></div>
-      <div class="cmfield"><label>Treasury</label>
+      <div class="cmfield"><label>${tt('stratcamp.treasury')}</label>
         <input type="number" value="${esc(m.denari)}"
-          placeholder="the donor's"
+          placeholder="${ttA('stratcamp.the_donors')}"
           oninput="cjMade('denari', this.value)"></div>
     </div>
     <label class="cjchk"><input type="checkbox"${m.diplomacy ? ' checked' : ''}
-      onchange="cjMade('diplomacy', this.checked)">Give it the donor's diplomacy,
-      both ways</label>
-    <div class="count">No settlement and nobody: two factions cannot start in
-      the same city, so there is nothing to clone. Give it one with the
-      settlement panel and a general with the people panel, and until then it
-      is the shape vanilla's Mongols and Timurids are.</div>
+      onchange="cjMade('diplomacy', this.checked)">${tt('stratcamp.give_it_the_donors_diplomacy_both')}</label>
+    <div class="count">${tt('stratcamp.no_settlement_and_nobody_two_factions')}</div>
     <div class="csbtns">
-      <button class="primary" onclick="cjSave()">Create the faction</button>
-      <button onclick="cjDelete()">Delete ${esc(k.faction)}…</button>
+      <button class="primary" onclick="cjSave()">${tt('stratcamp.create_the_faction')}</button>
+      <button onclick="cjDelete()">${tt('stratcamp.delete',{faction:esc(k.faction)})}</button>
     </div>
   </div>`;
 }
@@ -976,7 +941,7 @@ function cjDelete(){
 function cjWinsHtml(){
   const k = state.cj;
   if(k.winErr) return `<div class="w-warn">${esc(k.winErr)}</div>`;
-  if(!k.wins) return '<div class="count">reading the win conditions…</div>';
+  if(!k.wins) return `<div class="count">${tt('stratcamp.reading_the_win_conditions')}</div>`;
   const w = k.ww;
   const rows = (k.wins.records || []).map(r => {
     const bad = (r.findings || []).filter(f => f.fatal).length;
@@ -984,10 +949,7 @@ function cjWinsHtml(){
     return `<div class="cxrow${r.faction === k.winPick ? ' on' : ''}"
       onclick="cjWinPick('${esc(r.faction)}')">
       <b>${esc(r.faction)}</b>
-      <span class="count">hold ${(r.hold || []).length} · take ${r.take || 0}${
-        r.short_take ? ' · short ' + r.short_take : ''}</span>
-      ${bad ? `<span class="w-bad">${bad}</span>` : ''}
-      ${warn ? `<span class="w-warn">${warn}</span>` : ''}
+      ${tt('stratcamp.hold_take',{n:(r.hold || []).length,take:r.take || 0,x:r.short_take ? tt('stratcamp.short') + r.short_take : '',bad:bad ? `<span class="w-bad">${bad}</span>` : '',warn:warn ? `<span class="w-warn">${warn}</span>` : ''})}
     </div>`;
   }).join('');
   const box = (slot, label, note) => `<div class="cmfield"><label>${label}</label>
@@ -998,29 +960,29 @@ function cjWinsHtml(){
            oninput="cjWinSet('${slot}', this.value)">`}
     ${note ? `<div class="count">${note}</div>` : ''}</div>`;
   return `<div class="cxform">
-    <div class="cxlist">${rows || '<div class="count">Nobody can win.</div>'}</div>
+    <div class="cxlist">${rows || `<div class="count">${tt('stratcamp.nobody_can_win')}</div>`}</div>
     ${(k.wins.findings || []).map(f =>
       `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${esc(f.message)}</div>`)
       .join('')}
     ${w ? `
     <div class="cshead"><b>${esc(w.faction)}</b>
-      <span class="count">long campaign</span></div>
-    ${box('hold', 'Provinces held', 'space-separated, as the file writes them')}
+      <span class="count">${tt('stratcamp.long_campaign')}</span></div>
+    ${box('hold', tt('stratcamp.provinces_held'), tt('stratcamp.space_separated_as_the_file_writes'))}
     <div class="csrow2">
-      ${box('take', 'Provinces taken', '')}
-      ${box('outlive', 'Outlive', 'factions, space-separated')}
+      ${box('take', tt('stratcamp.provinces_taken'), '')}
+      ${box('outlive', tt('stratcamp.outlive'), tt('stratcamp.factions_space_separated'))}
     </div>
-    <div class="cshead"><span class="count">short campaign</span></div>
-    ${box('short_hold', 'Provinces held', '')}
+    <div class="cshead"><span class="count">${tt('stratcamp.short_campaign')}</span></div>
+    ${box('short_hold', tt('stratcamp.provinces_held'), '')}
     <div class="csrow2">
-      ${box('short_take', 'Provinces taken', '')}
-      ${box('short_outlive', 'Outlive', '')}
+      ${box('short_take', tt('stratcamp.provinces_taken'), '')}
+      ${box('short_outlive', tt('stratcamp.outlive'), '')}
     </div>
     <datalist id="cjl-region">${(k.wins.vocab.regions || []).map(r =>
       `<option value="${esc(r)}">`).join('')}</datalist>
     <div class="csbtns">
-      <button class="primary" onclick="cjSave()">Save ${esc(w.faction)}</button>
-      <button onclick="cjSave({action: 'delete'})">Delete</button>
+      <button class="primary" onclick="cjSave()">${tt('stratcamp.save',{faction:esc(w.faction)})}</button>
+      <button onclick="cjSave({action: 'delete'})">${tt('common.delete')}</button>
     </div>` : ''}
     ${cjWinAddHtml()}
   </div>`;
@@ -1035,8 +997,7 @@ function cjWinAddHtml(){
   const missing = (k.d.factions || []).map(f => f.name)
     .filter(n => !have.has(n));
   if(!missing.length) return '';
-  return `<div class="cjplan"><div class="count">No win condition for
-    ${missing.map(esc).join(', ')}.</div>
+  return `<div class="cjplan"><div class="count">${tt('stratcamp.no_win_condition_for',{missing:missing.map(esc).join(', ')})}</div>
     <div class="csbtns">${missing.slice(0, 8).map(n =>
       `<button onclick="cjWinAdd('${esc(n)}')">+ ${esc(n)}</button>`).join('')}
     </div></div>`;

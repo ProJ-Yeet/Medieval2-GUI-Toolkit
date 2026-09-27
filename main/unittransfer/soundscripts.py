@@ -53,6 +53,7 @@ from typing import Dict, List, Optional
 
 from . import config, keyblock as kb, soundbanks as sb
 from .logutil import file_op, log
+from . import i18n as _i18n
 
 ENCODING = "latin-1"
 MUSIC_TYPES_REL = "world/maps/base/descr_sounds_music_types.txt"
@@ -212,7 +213,7 @@ def parse_text(rel: str, text: str) -> Script:
             if sb._is_end(low):
                 ev.end = i + 1
                 if low != "end":
-                    sc.warnings.append(f"line {i + 1}: read {s!r} as 'end'")
+                    sc.warnings.append(_i18n.msg("eng.soundscripts.line_read_as_end", "line {x}: read {s} as 'end'", x=i + 1, s=repr(s)))
                 ev = None
             else:
                 ev.body.append(i)
@@ -235,7 +236,7 @@ def parse_text(rel: str, text: str) -> Script:
                 holder().events.append(ev)
             continue
         if sb._is_end(low):
-            sc.warnings.append(f"line {i + 1}: 'end' with no open 'event'")
+            sc.warnings.append(_i18n.msg("eng.soundscripts.line_end_with_no_open_event", "line {x}: 'end' with no open 'event'", x=i + 1))
             continue
         if lk == "default:":
             # a DEFAULT: starts a new stretch of the file; it is the file's
@@ -302,14 +303,14 @@ def _file_entry(f: str, group: str) -> dict:
 
 def rel_of(f: str) -> str:
     if not re.match(r"^[a-z0-9_]+$", f or ""):
-        raise ScriptError(f"no sound script called {f!r}")
+        raise ScriptError(_i18n.msg("eng.soundscripts.no_sound_script_called", "no sound script called {f}", f=repr(f)))
     return MUSIC_TYPES_REL if f == "music_types" else f"descr_sounds_{f}.txt"
 
 
 def read(mod, f: str) -> Script:
     p = Path(mod.data) / rel_of(f)
     if not p.exists():
-        raise ScriptError(f"{getattr(mod, 'name', '?')} has no data/{rel_of(f)}")
+        raise ScriptError(_i18n.msg("eng.soundscripts.has_no_data", "{getattr} has no data/{rel_of}", getattr=getattr(mod, 'name', '?'), rel_of=rel_of(f)))
     return parse_text(rel_of(f), kb.read_text(p, ENCODING))
 
 
@@ -412,13 +413,10 @@ def _check_attrs(p: ScriptPlan, where: str, attrs: str, vocab: dict) -> None:
         p.errors.append(f"{where}: {b}")
     odd = [k for k, v in pairs if v == "?"]
     if odd:
-        p.warnings.append(f"{where}: {kb.and_list(odd)} "
-                          f"{'is' if len(odd) == 1 else 'are'} not an attribute any "
-                          f"sound script here writes")
+        p.warnings.append(_i18n.msg("eng.soundscripts.not_an_attribute_any_sound_script", "{where}: {and_list} {x} not an attribute any sound script here writes", where=where, and_list=kb.and_list(odd), x='is' if len(odd) == 1 else 'are'))
     for k, v in pairs:
         if k in WORD_KEYS and v and vocab["prefs"] and v.upper() not in vocab["prefs"]:
-            p.warnings.append(f"{where}: pref {v} is not one this mod uses "
-                              f"({kb.and_list(sorted(vocab['prefs']))})")
+            p.warnings.append(_i18n.msg("eng.soundscripts.pref_is_not_one_this_mod", "{where}: pref {v} is not one this mod uses ({and_list})", where=where, v=v, and_list=kb.and_list(sorted(vocab['prefs']))))
 
 
 def _mod_factions(mod) -> set:
@@ -438,25 +436,19 @@ def _check_selector(p: ScriptPlan, sc: Script, n: Node, value: str,
         known = _mod_factions(mod)
         odd = [v for v in vals if known and v not in known]
         if odd:
-            p.warnings.append(f"{where}: {kb.and_list(odd)} "
-                              f"{'is not a faction' if len(odd) == 1 else 'are not factions'} "
-                              f"in this mod")
+            p.warnings.append(_i18n.msg("eng.soundscripts.in_this_mod", "{where}: {and_list} {x} in this mod", where=where, and_list=kb.and_list(odd), x='is not a faction' if len(odd) == 1 else 'are not factions'))
         for other in sc.nodes:
             if other is n or other.kw.lower() != "factions":
                 continue
             twice = sorted(set(vals) & set(_values(other.value)))
             if twice:
                 acc = other.parent.label if other.parent else "another accent"
-                p.warnings.append(f"{where}: {kb.and_list(twice)} "
-                                  f"{'is' if len(twice) == 1 else 'are'} also under "
-                                  f"{acc}, and a faction speaks with one accent")
+                p.warnings.append(_i18n.msg("eng.soundscripts.also_under_and_a_faction_speaks", "{where}: {and_list} {x} also under {acc}, and a faction speaks with one accent", where=where, and_list=kb.and_list(twice), x='is' if len(twice) == 1 else 'are', acc=acc))
         return
     seen = vocab["values"].get(kw, set())
     odd = [v for v in vals if seen and v not in seen]
     if odd:
-        p.warnings.append(f"{where}: {kb.and_list(odd)} "
-                          f"{'is' if len(odd) == 1 else 'are'} not a {n.kw} "
-                          f"any sound script in this mod names")
+        p.warnings.append(_i18n.msg("eng.soundscripts.not_a_any_sound_script_in", "{where}: {and_list} {x} not a {kw} any sound script in this mod names", where=where, and_list=kb.and_list(odd), x='is' if len(odd) == 1 else 'are', kw=n.kw))
 
 
 def plan(mod, body: dict) -> ScriptPlan:
@@ -473,12 +465,11 @@ def plan(mod, body: dict) -> ScriptPlan:
         p.errors.append(str(e))
         return p
     if f == "music_types":
-        p.errors.append("descr_sounds_music_types.txt is written from the campaign "
-                        "map, a province at a time; it is shown here, not edited")
+        p.errors.append(_i18n.msg("eng.soundscripts.descr_sounds_music_types_txt_is", "descr_sounds_music_types.txt is written from the campaign map, a province at a time; it is shown here, not edited"))
         return p
     path = Path(mod.data) / rel
     if not path.exists():
-        p.errors.append(f"{getattr(mod, 'name', '?')} has no data/{rel}")
+        p.errors.append(_i18n.msg("eng.soundscripts.has_no_data_2", "{getattr} has no data/{rel}", getattr=getattr(mod, 'name', '?'), rel=rel))
         return p
     original = kb.read_text(path, ENCODING)
     text = original
@@ -491,8 +482,7 @@ def plan(mod, body: dict) -> ScriptPlan:
         want = str(o.get("head") or "").strip()
         sc = parse_text(rel, text)
         if not 0 <= at < len(sc.lines) or sc.lines[at].strip() != want:
-            p.errors.append(f"line {at + 1}: the file changed since it was read "
-                            f"(expected {want!r}); reload and try again")
+            p.errors.append(_i18n.msg("eng.soundscripts.line_the_file_changed_since_it", "line {x}: the file changed since it was read (expected {want}); reload and try again", x=at + 1, want=repr(want)))
             continue
         if vocab is None:
             vocab = vocabulary(mod)
@@ -500,7 +490,7 @@ def plan(mod, body: dict) -> ScriptPlan:
             if kind == "event":
                 e = sc.event_at(at)
                 if e is None:
-                    p.errors.append(f"line {at + 1} is not an event")
+                    p.errors.append(_i18n.msg("eng.soundscripts.line_is_not_an_event", "line {x} is not an event", x=at + 1))
                     continue
                 owner = next((n for n in sc.nodes if e in n.events), sc.root)
                 where = " / ".join(owner.path() or [f"line {at + 1}"])
@@ -528,13 +518,13 @@ def plan(mod, body: dict) -> ScriptPlan:
             if kind in ("default", "setting"):
                 it = sc.item_at(at)
                 if it is None or it.kind != kind:
-                    p.errors.append(f"line {at + 1} is not a {kind} line")
+                    p.errors.append(_i18n.msg("eng.soundscripts.line_is_not_a_line", "line {x} is not a {kind} line", x=at + 1, kind=kind))
                     continue
                 value = " ".join(str(o.get("value") or "").split())
                 where = f"{it.key} on line {at + 1}"
                 if kind == "setting":
                     if not value or not all(NUM.match(v) for v in value.split()):
-                        p.errors.append(f"{where}: a setting's value is a number")
+                        p.errors.append(_i18n.msg("eng.soundscripts.a_settings_value_is_a_number", "{where}: a setting's value is a number", where=where))
                         continue
                 else:
                     n_err = len(p.errors)
@@ -550,22 +540,20 @@ def plan(mod, body: dict) -> ScriptPlan:
                 continue
             n = sc.node_at(at)
             if n is None:
-                p.errors.append(f"line {at + 1} is not a block")
+                p.errors.append(_i18n.msg("eng.soundscripts.line_is_not_a_block", "line {x} is not a block", x=at + 1))
                 continue
             where = " / ".join(n.path())
             value = " ".join(str(o.get("value") or "").split())
             if kind == "rename":
                 if n.kind == "bank":
-                    p.errors.append(f"{where}: the engine asks for a bank by its name, "
-                                    f"so it is not renamed here")
+                    p.errors.append(_i18n.msg("eng.soundscripts.the_engine_asks_for_a_bank", "{where}: the engine asks for a bank by its name, so it is not renamed here", where=where))
                     continue
                 if n.kind == "named":
                     if not sb.NAME_RE.match(value):
-                        p.errors.append(f"{where}: an event name is letters, digits "
-                                        f"and underscores")
+                        p.errors.append(_i18n.msg("eng.soundscripts.an_event_name_is_letters_digits", "{where}: an event name is letters, digits and underscores", where=where))
                         continue
                     if value in sc.named() and value != n.value:
-                        p.errors.append(f"{where}: there is already an event {value}")
+                        p.errors.append(_i18n.msg("eng.soundscripts.there_is_already_an_event", "{where}: there is already an event {value}", where=where, value=value))
                         continue
                     e = n.events[0]
                     rest = e.attrs[len(e.name):].strip()
@@ -573,14 +561,12 @@ def plan(mod, body: dict) -> ScriptPlan:
                     lines[at] = sb._with_value(lines[at], (value + " " + rest).strip())
                     text = "".join(lines)
                     p.changes.append(f"{where}: renamed to event {value}")
-                    p.warnings.append(f"whatever played {n.value} - the engine or a "
-                                      f"script - plays nothing now")
+                    p.warnings.append(_i18n.msg("eng.soundscripts.whatever_played_the_engine_or_a", "whatever played {value} - the engine or a script - plays nothing now", value=n.value))
                     continue
                 # an accent with no factions is common (DaC has five); any
                 # other selector emptied becomes a different one
                 if not value and n.value and n.kw.lower() != "factions":
-                    p.errors.append(f"{where}: a {n.kw} with nothing after it is "
-                                    f"another selector; remove it in Raw text if meant")
+                    p.errors.append(_i18n.msg("eng.soundscripts.a_with_nothing_after_it_is", "{where}: a {kw} with nothing after it is another selector; remove it in Raw text if meant", where=where, kw=n.kw))
                     continue
                 if value == n.value:
                     continue
@@ -591,24 +577,20 @@ def plan(mod, body: dict) -> ScriptPlan:
                 p.changes.append(f"{where}: now {n.kw} {value}")
                 continue
             if n.kind != "named":
-                p.errors.append(f"{where}: only a named event can be copied or "
-                                f"removed here; a selector's extent is set by "
-                                f"indentation this file does not keep to")
+                p.errors.append(_i18n.msg("eng.soundscripts.only_a_named_event_can_be", "{where}: only a named event can be copied or removed here; a selector's extent is set by indentation this file does not keep to", where=where))
                 continue
             e = n.events[0]
             if kind == "remove":
                 text = "".join(sc.lines[:e.at] + sc.lines[e.end:])
                 p.changes.append(f"{where}: removed ({e.end - e.at} lines)")
-                p.warnings.append(f"whatever plays {n.value} - the engine or a "
-                                  f"script - plays nothing now")
+                p.warnings.append(_i18n.msg("eng.soundscripts.whatever_plays_the_engine_or_a", "whatever plays {value} - the engine or a script - plays nothing now", value=n.value))
                 continue
             if kind == "duplicate":
                 if not sb.NAME_RE.match(value):
-                    p.errors.append(f"{where}: an event name is letters, digits and "
-                                    f"underscores")
+                    p.errors.append(_i18n.msg("eng.soundscripts.an_event_name_is_letters_digits", "{where}: an event name is letters, digits and underscores", where=where))
                     continue
                 if value in sc.named():
-                    p.errors.append(f"{where}: there is already an event {value}")
+                    p.errors.append(_i18n.msg("eng.soundscripts.there_is_already_an_event", "{where}: there is already an event {value}", where=where, value=value))
                     continue
                 block = sc.lines[e.at:e.end]
                 rest = e.attrs[len(e.name):].strip()
@@ -620,16 +602,15 @@ def plan(mod, body: dict) -> ScriptPlan:
                 text = "".join(before + block + sc.lines[e.end:])
                 p.changes.append(f"event {value}: a copy of {where} "
                                  f"({e.end - e.at} lines)")
-                p.warnings.append(f"event {value} plays when something asks for it "
-                                  f"by name; nothing here does")
+                p.warnings.append(_i18n.msg("eng.soundscripts.event_plays_when_something_asks_for", "event {value} plays when something asks for it by name; nothing here does", value=value))
                 continue
-            p.errors.append(f"unknown operation {kind!r}")
+            p.errors.append(_i18n.msg("eng.soundscripts.unknown_operation", "unknown operation {kind}", kind=repr(kind)))
         except (sb.SoundBankError, ScriptError) as exc:
             p.errors.append(str(exc))
     if p.errors:
         return p
     if parse_text(rel, text).to_text() != text:
-        p.errors.append("the result does not read back the same; nothing written")
+        p.errors.append(_i18n.msg("eng.soundscripts.the_result_does_not_read_back", "the result does not read back the same; nothing written"))
         return p
     p.text = "" if text == original else text
     return p
@@ -639,7 +620,7 @@ def apply(p: ScriptPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.soundscripts.nothing_to_change", "nothing to change"))
     mod = p.mod
     rel = rel_of(p.file)
     tid = config.new_transfer_id()

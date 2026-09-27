@@ -63,12 +63,12 @@ async function mszPlan(){
   mszPaint();
   let r;
   try{ r = await api.post('/api/map/resize_plan', mszBody(),
-                          {label: 'working out the resize'}); }
+                          {label: tt('mapsize.working_out_the_resize')}); }
   catch(e){ r = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(state.msz !== k) return;
   k.plan = r.plan || null;
-  if(!k.plan) k.err = r.error || 'the plan came back empty';
+  if(!k.plan) k.err = r.error || tt('common.the_plan_came_back_empty');
   mszPaint();
 }
 
@@ -76,25 +76,25 @@ async function mszApply(){
   const k = state.msz;
   if(!k || k.busy || !k.plan || !k.plan.ok) return;
   const p = k.plan;
-  if(!confirm(`Resize the map from ${p.old.join('x')} to ${p.new.join('x')}?\n\n`
+  if(!confirm(tt('mapsize.resize_the_map_from_to',{old:p.old.join('x'),new:p.new.join('x')})
     + (p.changes || []).join('\n')
     + ((p.warnings || []).length ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')
-    + '\n\nOne backup set; 🕑 Log can undo it.')) return;
+    + tt('mapsize.one_backup_set_log_can_undo'))) return;
   k.busy = true;
   mszPaint();
   let r;
   try{ r = await api.post('/api/map/resize_apply', mszBody(),
-                          {label: 'resizing the map'}); }
+                          {label: tt('mapsize.resizing_the_map')}); }
   catch(e){ r = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(!r || r.error){
-    k.err = (r && r.error) || 'the resize failed';
+    k.err = (r && r.error) || tt('mapsize.the_resize_failed');
     mszPaint();
     return;
   }
-  toast(`The map is ${r.new.join('x')} now: ${r.files.length} file(s) written. `
-    + '🕑 Log can undo it.', 7000);
-  activity('map resize', `${k.mod}: ${r.old.join('x')} -> ${r.new.join('x')}, id ${r.id}`);
+  toast(tt('mapsize.the_map_is_now_file_s',{new:r.new.join('x'),files_n:r.files.length})
+    + tt('common.log_can_undo_it'), 7000);
+  activity(tt('mapsize.map_resize'), tt('mapsize.id',{mod:k.mod,old:r.old.join('x'),new:r.new.join('x'),id:r.id}));
   k.plan = null; k.m = {north: 0, south: 0, west: 0, east: 0};
   // every layer changed size, so the screen is a different map
   if(typeof loadCampmap === 'function') loadCampmap();
@@ -110,8 +110,7 @@ function mszHtml(){
   const k = state.msz, c = state.cmap;
   if(!k || !c || !c.man) return '';
   const head = `<div class="cmrow cmhdr" onclick="mszToggle()">
-      <b>Resize</b> <span class="count">${c.man.width}x${c.man.height} tiles</span>
-      <span class="count">${k.open ? '▾' : '▸'}</span>
+      ${tt('mapsize.resize_x_tiles',{width:c.man.width,height:c.man.height,open:k.open ? '▾' : '▸'})}
     </div>`;
   if(!k.open) return head + (typeof mnwHtml === 'function' ? mnwHtml() : '');
   const m = k.m;
@@ -128,12 +127,10 @@ function mszHtml(){
         ${box('west')}<div class="mszmid">${c.man.width}x${c.man.height}<br>→ <b>${nw}x${nh}</b></div>${box('east')}
         <div></div>${box('south')}<div></div>
       </div>
-      <div class="count">Tiles to add on each edge; a negative number takes that many away. New
-        ground is the map's own sea. The game counts from the west and south edges, so only those
-        two move the coordinates in descr_strat.txt, the scripts, the events and the battles.</div>
+      <div class="count">${tt('mapsize.tiles_to_add_on_each_edge')}</div>
       <div class="cmbar2">
-        <button onclick="mszPlan()" ${k.busy ? 'disabled' : ''}>${k.busy ? 'Working…' : 'Plan'}</button>
-        <button class="primary" onclick="mszApply()" ${p && p.ok && !k.busy ? '' : 'disabled'}>Resize</button>
+        <button onclick="mszPlan()" ${k.busy ? 'disabled' : ''}>${k.busy ? tt('common.working') : tt('mapsize.plan')}</button>
+        <button class="primary" onclick="mszApply()" ${p && p.ok && !k.busy ? '' : 'disabled'}>${tt('mapsize.resize')}</button>
       </div>
       ${k.err ? `<div class="w-bad">${esc(k.err)}</div>` : ''}
       ${p ? `<div class="mszplan">
@@ -142,9 +139,9 @@ function mszHtml(){
         ${(p.errors || []).map(x => `<div class="w-bad">${esc(x)}</div>`).join('')}
         ${off.length ? `<div class="mszoff">${off.map(([f, rows]) => `
           <div><b>${esc(f)}</b></div>
-          ${rows.map(([ln, t]) => `<div class="count">${ln ? `line ${ln}: ` : ''}${esc(t)}</div>`).join('')}`
+          ${rows.map(([ln, t]) => `<div class="count">${ln ? tt('mapsize.line',{ln}) : ''}${esc(t)}</div>`).join('')}`
           ).join('')}${p.off_total > off.reduce((a, [, r]) => a + r.length, 0)
-            ? `<div class="count">and ${p.off_total - off.reduce((a, [, r]) => a + r.length, 0)} more</div>` : ''}
+            ? `<div class="count">${tt('mapsize.and_more',{x:p.off_total - off.reduce((a, [, r]) => a + r.length, 0)})}</div>` : ''}
         </div>` : ''}
       </div>` : ''}
     </div>
@@ -183,7 +180,7 @@ async function mnwToggle(){
   if(k.open && !k.d && !k.loading){
     k.loading = true; mszPaint();
     try{
-      k.d = await api.get(`/api/mapnew?mod=${enc(k.mod)}`, {label: 'reading factions and climates'});
+      k.d = await api.get(`/api/mapnew?mod=${enc(k.mod)}`, {label: tt('mapsize.reading_factions_and_climates')});
       k.f.source = ((k.d.sources || [])[0] || {}).campaign || '';
       k.f.climate = ((k.d.climates || [])[0] || {}).code || '';
     }catch(e){ k.err = errText(e); }
@@ -237,7 +234,7 @@ function mnwPickReal(){
   const go = () => owpOpen('campaign');
   if(state.osm.st) go();
   else osmLoad().then(() => { if(state.osm.st && state.osm.st.settings.enabled) go();
-                              else toast('Turn the Real world switch on in Settings first.', 6000); });
+                              else toast(tt('mapsize.turn_the_real_world_switch_on'), 6000); });
 }
 
 async function mnwPlan(){
@@ -245,11 +242,11 @@ async function mnwPlan(){
   if(!k || k.busy) return;
   k.busy = true; k.err = ''; k.plan = null; mszPaint();
   let r;
-  try{ r = await api.post('/api/mapnew/plan', mnwBody(), {label: 'drawing the new map'}); }
+  try{ r = await api.post('/api/mapnew/plan', mnwBody(), {label: tt('mapsize.drawing_the_new_map')}); }
   catch(e){ r = {error: errText(e)}; }
   finally{ k.busy = false; }
   k.plan = r.plan || null;
-  if(!k.plan) k.err = r.error || 'the plan came back empty';
+  if(!k.plan) k.err = r.error || tt('common.the_plan_came_back_empty');
   mszPaint();
 }
 
@@ -257,16 +254,16 @@ async function mnwApply(){
   const k = state.mnw;
   if(!k || k.busy || !k.plan || !k.plan.ok) return;
   const p = k.plan;
-  if(!confirm(`Make ${p.name}, a new campaign on a ${p.width}x${p.height} map?\n\n`
-    + (p.changes || []).join('\n') + '\n\nNothing existing is written over, and 🕑 Log can undo it.')) return;
+  if(!confirm(tt('mapsize.make_a_new_campaign_on_a',{name:p.name,width:p.width,height:p.height})
+    + (p.changes || []).join('\n') + tt('mapsize.nothing_existing_is_written_over_and'))) return;
   k.busy = true; mszPaint();
   let r;
   try{ r = await api.post('/api/mapnew/apply', mnwBody(), {label: `making ${p.name}`}); }
   catch(e){ r = {error: errText(e)}; }
   finally{ k.busy = false; }
-  if(!r || r.error){ k.err = (r && r.error) || 'it could not be made'; mszPaint(); return; }
-  toast(`${r.name} made: ${r.files} file(s). Opening it. 🕑 Log can undo it.`, 7000);
-  activity('new map', `${k.mod}: ${r.name}, ${p.width}x${p.height}, id ${r.id}`);
+  if(!r || r.error){ k.err = (r && r.error) || tt('mapsize.it_could_not_be_made'); mszPaint(); return; }
+  toast(tt('mapsize.made_file_s_opening_it_log',{name:r.name,files:r.files}), 7000);
+  activity(tt('mapsize.new_map'), tt('mapsize.x_id',{mod:k.mod,name:r.name,width:p.width,height:p.height,id:r.id}));
   k.plan = null;
   if(state.cbr){ state.cbr.d = null; }
   if(typeof cmapSetCampaign === 'function') cmapSetCampaign(r.name);
@@ -280,29 +277,26 @@ function mnwRealHtml(){
   const sel = (field, pairs) => `<select onchange="mnwSet('${field}', this.value)">${pairs.map(([v, t]) =>
     `<option value="${v}"${f[field] === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
   const hh = mnwRealHeight();
-  return `<div class="bnote">The map is the real ground under a box, and a province grows round each
-      city you pick. <button class="primary" onclick="mnwPickReal()">🌍 Pick the box and the cities…</button></div>
-    ${b ? `<div class="count">Box N ${(+b.north).toFixed(3)} S ${(+b.south).toFixed(3)} W ${(+b.west).toFixed(3)}
-      E ${(+b.east).toFixed(3)}${osmRot(b) ? `, turned ${(+b.rotation).toFixed(1)}°` : ''};
-      ${f.settlements.length ? `${f.settlements.length} cit(ies): ${esc(f.settlements.map(s => s.name).join(', '))}`
-        : 'no cities picked, so they are spread evenly'}.</div>` : '<div class="count">No box yet.</div>'}
+  return `<div class="bnote">${tt('mapsize.the_map_is_the_real_ground')} <button class="primary" onclick="mnwPickReal()">${tt('mapsize.pick_the_box_and_the_cities')}</button></div>
+    ${b ? `<div class="count">${tt('mapsize.box_n_s_w_e',{north:(+b.north).toFixed(3),south:(+b.south).toFixed(3),west:(+b.west).toFixed(3),east:(+b.east).toFixed(3),osmRot:osmRot(b) ? tt('mapsize.turned',{rotation:(+b.rotation).toFixed(1)}) : '',x:f.settlements.length ? tt('mapsize.cit_ies',{settlements_n:f.settlements.length,x:esc(f.settlements.map(s => s.name).join(', '))})
+        : tt('mapsize.no_cities_picked_so_they_are')})}</div>` : `<div class="count">${tt('mapsize.no_box_yet')}</div>`}
     <div class="mszgrid">
-      ${num('width', 'Width (tiles)', 1, d.limits.min, d.limits.max)}
-      <label class="mszbox">Height <span class="count">${hh ? hh + ' (the box’s shape)' : '-'}</span></label>
-      ${f.settlements.length ? '' : num('provinces', 'Cities to spread', 1, 1, 199)}
+      ${num('width', tt('mapsize.width_tiles'), 1, d.limits.min, d.limits.max)}
+      <label class="mszbox">${tt('common.height')} <span class="count">${hh ? hh + tt('mapsize.the_boxs_shape') : '-'}</span></label>
+      ${f.settlements.length ? '' : num('provinces', tt('mapsize.cities_to_spread'), 1, 1, 199)}
     </div>
     <div class="mszgrid">
-      <label class="mszbox">Climates ${sel('climates', [['ground', 'from the ground types'],
-        ['koppen', 'from the Köppen zones'], ['one', 'one climate, below']])}</label>
-      <label class="mszbox">Rivers ${sel('rivers', [['major', 'rivers'], ['medium', 'rivers and canals'],
-        ['all', 'rivers, canals and streams'], ['none', 'none']])}</label>
-      ${num('min_island', 'Smallest island (tiles)', 1, 0, 1000)}
+      <label class="mszbox">${tt('mapsize.climates',{sel:sel('climates', [['ground', tt('mapsize.from_the_ground_types')],
+        ['koppen', tt('mapsize.from_the_k_ppen_zones')], ['one', tt('mapsize.one_climate_below')]])})}</label>
+      <label class="mszbox">${tt('mapsize.rivers',{sel:sel('rivers', [['major', 'rivers'], ['medium', tt('mapsize.rivers_and_canals')],
+        ['all', tt('mapsize.rivers_canals_and_streams')], ['none', 'none']])})}</label>
+      ${num('min_island', tt('mapsize.smallest_island_tiles'), 1, 0, 1000)}
     </div>
     <div class="brow" style="gap:12px">
       <label class="chk"><input type="checkbox" ${f.coast ? 'checked' : ''} onchange="mnwSet('coast', this.checked)">
-        the real coastline</label>
+        ${tt('mapsize.the_real_coastline')}</label>
       <label class="chk"><input type="checkbox" ${f.lakes ? 'checked' : ''} onchange="mnwSet('lakes', this.checked)">
-        lakes and lagoons as sea</label>
+        ${tt('mapsize.lakes_and_lagoons_as_sea')}</label>
     </div>`;
 }
 
@@ -310,11 +304,10 @@ function mnwHtml(){
   const k = mnwState();
   if(!k) return '';
   const head = `<div class="cmrow cmhdr" onclick="mnwToggle()">
-      <b>New map</b> <span class="count">a new campaign on a map made from nothing</span>
-      <span class="count">${k.open ? '▾' : '▸'}</span>
+      ${tt('mapsize.new_map_a_new_campaign_on',{open:k.open ? '▾' : '▸'})}
     </div>`;
   if(!k.open) return head;
-  if(!k.d) return head + `<div class="count">${k.loading ? 'Reading…' : esc(k.err)}</div>`;
+  if(!k.d) return head + `<div class="count">${k.loading ? tt('common.reading_3') : esc(k.err)}</div>`;
   const f = k.f, d = k.d, p = k.plan;
   const num = (field, label, step, min, max) => `<label class="mszbox">${label}
       <input type="number" step="${step}" min="${min}" max="${max}" value="${f[field]}"
@@ -322,38 +315,38 @@ function mnwHtml(){
   return `${head}
     <div class="bsec">
       <div class="brow" style="flex-wrap:wrap;gap:6px">
-        <label class="mszbox" style="flex:1 1 140px">Folder name
-          <input value="${esc(f.name)}" placeholder="Iceland" onchange="mnwSet('name', this.value)"></label>
-        <label class="mszbox" style="flex:1 1 140px">Menu title
-          <input value="${esc(f.title)}" placeholder="what the new-game menu shows"
+        <label class="mszbox" style="flex:1 1 140px">${tt('mapsize.folder_name')}
+          <input value="${esc(f.name)}" placeholder="${ttA('mapsize.iceland')}" onchange="mnwSet('name', this.value)"></label>
+        <label class="mszbox" style="flex:1 1 140px">${tt('mapsize.menu_title')}
+          <input value="${esc(f.title)}" placeholder="${ttA('mapsize.what_the_new_game_menu_shows')}"
             onchange="mnwSet('title', this.value)"></label>
       </div>
       <div class="brow" style="gap:12px">
         <label class="chk"><input type="radio" name="mnwShape" ${f.shape !== 'real' ? 'checked' : ''}
-          onchange="mnwSet('shape','island')"> An island from nothing</label>
+          onchange="mnwSet('shape','island')"> ${tt('mapsize.an_island_from_nothing')}</label>
         <label class="chk"><input type="radio" name="mnwShape" ${f.shape === 'real' ? 'checked' : ''}
-          onchange="mnwSet('shape','real')"> The real world</label>
+          onchange="mnwSet('shape','real')"> ${tt('mapsize.the_real_world')}</label>
       </div>
       ${f.shape === 'real' ? mnwRealHtml() : `<div class="mszgrid">
-        ${num('width', 'Width (tiles)', 1, d.limits.min, d.limits.max)}
-        ${num('height', 'Height (tiles)', 1, d.limits.min, d.limits.max)}
-        ${num('provinces', 'Provinces', 1, 1, 199)}
+        ${num('width', tt('mapsize.width_tiles'), 1, d.limits.min, d.limits.max)}
+        ${num('height', tt('mapsize.height_tiles'), 1, d.limits.min, d.limits.max)}
+        ${num('provinces', tt('mapsize.provinces'), 1, 1, 199)}
       </div>`}
       <div class="mszgrid">
-        ${f.shape === 'real' ? '' : num('land', 'Land share', 0.05, 0.1, 0.85)}
-        <label class="mszbox">Climate <select onchange="mnwSet('climate', this.value)">
+        ${f.shape === 'real' ? '' : num('land', tt('mapsize.land_share'), 0.05, 0.1, 0.85)}
+        <label class="mszbox">${tt('mapsize.climate')} <select onchange="mnwSet('climate', this.value)">
           ${(d.climates || []).map(c => `<option value="${esc(c.code)}"${c.code === f.climate ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}
         </select></label>
-        <label class="mszbox">Copy the rest from <select onchange="mnwSet('source', this.value)">
+        <label class="mszbox">${tt('mapsize.copy_the_rest_from')} <select onchange="mnwSet('source', this.value)">
           ${(d.sources || []).map(s => `<option value="${esc(s.campaign)}"${s.campaign === f.source ? ' selected' : ''}>${esc(s.campaign)}</option>`).join('')}
         </select></label>
       </div>
-      <div class="count">Factions to play, one province and a leader each; every other province is the rebels'.</div>
+      <div class="count">${tt('mapsize.factions_to_play_one_province_and')}</div>
       <div class="mnwfac">${(d.factions || []).map(n => `<label class="chk"><input type="checkbox"
           ${f.factions.includes(n) ? 'checked' : ''} onchange="mnwFaction('${esc(n)}', this.checked)"> ${esc(n)}</label>`).join('')}</div>
       <div class="cmbar2">
-        <button onclick="mnwPlan()" ${k.busy ? 'disabled' : ''}>${k.busy ? 'Working…' : 'Plan'}</button>
-        <button class="primary" onclick="mnwApply()" ${p && p.ok && !k.busy ? '' : 'disabled'}>Make it</button>
+        <button onclick="mnwPlan()" ${k.busy ? 'disabled' : ''}>${k.busy ? tt('common.working') : tt('mapsize.plan')}</button>
+        <button class="primary" onclick="mnwApply()" ${p && p.ok && !k.busy ? '' : 'disabled'}>${tt('mapsize.make_it')}</button>
       </div>
       ${k.err ? `<div class="w-bad">${esc(k.err)}</div>` : ''}
       ${p ? `<div class="mszplan">

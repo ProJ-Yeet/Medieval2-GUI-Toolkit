@@ -141,8 +141,8 @@ function cm3Toggle(want){
   const on = want === undefined ? !d.on : !!want;
   if(on === d.on) return;
   d.on = on;
-  activity('map view', on ? 'looked at the map in 3D'
-                          : 'went back to the flat map');
+  activity(tt('map3d.map_view'), on ? tt('map3d.looked_at_the_map_in_3d')
+                          : tt('map3d.went_back_to_the_flat_map'));
   cm3Show();
   if(!on){
     cm3Stop();
@@ -437,17 +437,17 @@ async function cm3Mount(){
   cm3Stop();
   const L = c.layers.heights;
   if(!L || !L.def.present)
-    return cm3Fail('This map has no map_heights.tga, so there is no shape to draw.');
-  cm3Say('Reading the heights…');
+    return cm3Fail(tt('map3d.this_map_has_no_map_heights'));
+  cm3Say(tt('map3d.reading_the_heights'));
   if(!L.raw && !L.loading) await cmapFetchLayer(c, 'heights');
   else if(L.loading) await new Promise(ok => {
     const t = setInterval(() => { if(!L.loading){ clearInterval(t); ok(); } }, 40);
   });
   if(state.cmap !== c || !cm3On()) return;
   const raw = cmapRawOf(L);
-  if(!raw) return cm3Fail(L.failed || 'The heights layer would not load.');
+  if(!raw) return cm3Fail(L.failed || tt('map3d.the_heights_layer_would_not_load'));
   cmapCompose();
-  cm3Say('Building the mesh…');
+  cm3Say(tt('map3d.building_the_mesh'));
   await cm3Yield();
   if(state.cmap !== c || !cm3On()) return;
   try{
@@ -730,26 +730,23 @@ function cm3CardHtml(){
   const d = cm3State();
   if(!d) return '';
   const thin = (cm3 && cm3.thinned)
-    ? `<p class="cm3note">This driver has no 32-bit index, so the mesh is
-       every ${cm3.thinned} tiles rather than every tile.</p>` : '';
+    ? `<p class="cm3note">${tt('map3d.this_driver_has_no_32_bit',{thinned:cm3.thinned})}</p>` : '';
   return `
     <div class="cm3row">
-      <label for="cm3H">Height</label>
+      <label for="cm3H">${tt('common.height')}</label>
       <input id="cm3H" type="range" min="${CM3_HEIGHT_MIN}" max="${CM3_HEIGHT_MAX}"
         value="${d.height}" oninput="cm3Height(this.value)"
-        title="How tall the highest land stands, in tiles. 0 is flat.">
+        title="${ttA('map3d.how_tall_the_highest_land_stands')}">
       <span class="count" id="cm3HN">${d.height}</span>
     </div>
     <div class="cm3row">
       <label><input type="checkbox" ${d.water ? 'checked' : ''}
-        onchange="cm3Water(this.checked)"> Water surface</label>
-      <button onclick="cm3Fit()" title="Frame the whole map again">&#8676; Fit</button>
+        onchange="cm3Water(this.checked)"> ${tt('map3d.water_surface')}</label>
+      <button onclick="cm3Fit()" title="${ttA('map3d.frame_the_whole_map_again')}">${tt('map3d.fit')}</button>
     </div>
     ${thin}
-    <p class="cm3note">Drag to orbit, right-drag to pan, wheel to zoom.</p>
-    <p class="cm3note">The layers, their opacities, the season and the
-      colouring are the flat map's. Change them there and they change here.
-      Markers, labels and the tooltip stay on the flat map.</p>`;
+    <p class="cm3note">${tt('map3d.drag_to_orbit_right_drag_to')}</p>
+    <p class="cm3note">${tt('map3d.the_layers_their_opacities_the_season')}</p>`;
 }
 
 //: The height scale moves every vertex, so the mesh is rebuilt. One pass over
@@ -825,7 +822,7 @@ function cm3Say(msg){
 function cm3Fail(why){
   const el = document.getElementById('cm3Msg');
   if(el){
-    el.innerHTML = `<b>The map cannot be drawn in 3D.</b><br>${esc(why)}`;
+    el.innerHTML = tt('map3d.the_map_cannot_be_drawn_in',{why:esc(why)});
     el.hidden = false;
   }
 }

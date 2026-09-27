@@ -37,6 +37,7 @@ import re
 import struct
 from pathlib import Path
 from typing import Dict, List, Optional
+from . import i18n as _i18n
 
 GAME_EXES = ("M2EX.exe", "kingdoms.exe", "medieval2.exe")
 
@@ -163,8 +164,7 @@ def check(mod) -> dict:
                               f"mods/{root.name}")
             ff = cfg.get("io", {}).get("file_first", "")
             if ff.lower() not in ("1", "true", "yes", "on"):
-                warns.append(f"{cfg_path.name} does not set [io] file_first, so the mod's "
-                             f"loose files lose to the packs")
+                warns.append(_i18n.msg("eng.launchcheck.does_not_set_io_file_first", "{name} does not set [io] file_first, so the mod's loose files lose to the packs", name=cfg_path.name))
         exe_path = None
         if r["kind"] == "bat":
             tried = [(e, _find(game, e)) for e in r["exes"]]
@@ -173,16 +173,14 @@ def check(mod) -> dict:
                 faults.append(f"it starts {' or '.join(r['exes'])}, and the game folder has "
                               f"{'neither' if len(tried) > 1 else 'no such file'}")
             elif tried[0][1] is None:
-                notes.append(f"it tries {tried[0][0]} first, which is not here, and starts "
-                             f"{exe_path.name}")
+                notes.append(_i18n.msg("eng.launchcheck.it_tries_first_which_is_not", "it tries {tried} first, which is not here, and starts {name}", tried=tried[0][0], name=exe_path.name))
         else:
             exe_path = exes.get("medieval2.exe") or exes.get("kingdoms.exe")
             if exe_path is None:
                 faults.append("neither medieval2.exe nor kingdoms.exe is in the game folder")
         laa = large_address_aware(exe_path) if exe_path else None
         if laa is False:
-            warns.append(f"{exe_path.name} is not Large Address Aware, so the game has 2 GB "
-                         f"and a big mod runs out of it")
+            warns.append(_i18n.msg("eng.launchcheck.is_not_large_address_aware_so", "{name} is not Large Address Aware, so the game has 2 GB and a big mod runs out of it", name=exe_path.name))
         rows.append({"how": r["how"], "kind": r["kind"], "cfg": r["cfg"],
                      "exe": exe_path.name if exe_path else r["exe"], "laa": laa,
                      "faults": faults, "warnings": warns, "notes": notes,

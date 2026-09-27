@@ -43,21 +43,21 @@ function pzClose(){ state.chg.pz = null; chgPaint(); }
 function pzReplace(on){ state.chg.pz.replace = on; pzPlan(); }
 
 const PZ_STATES = {
-  replaces: ['replaces', 'the mod has it, and this one is different'],
-  new: ['new', 'not in the mod yet'],
-  refused: ['refused', 'not written, and why'],
-  skipped: ['skipped', 'left as it is'],
-  same: ['the same', 'already in the mod, byte for byte'],
+  replaces: ['replaces', tt('projectzip.the_mod_has_it_and_this')],
+  new: ['new', tt('projectzip.not_in_the_mod_yet')],
+  refused: ['refused', tt('projectzip.not_written_and_why')],
+  skipped: ['skipped', tt('projectzip.left_as_it_is')],
+  same: [tt('projectzip.the_same'), tt('projectzip.already_in_the_mod_byte_for')],
 };
 
 function pzHtml(){
   const z = state.chg && state.chg.pz;
   if(!z) return '';
   const p = z.plan;
-  const head = `<h4>Load ${esc(z.name)} into ${esc(state.src)}
-    <span class="count">${p && p.manifest && p.manifest.kind ? `a ${esc(p.manifest.kind)}${p.manifest.campaign
-      ? ` (${esc(p.manifest.campaign)})` : ''} from ${esc(p.manifest.mod || '?')}, ${esc(p.manifest.made || '')}` : 'a zip of files'}</span></h4>`;
-  if(z.busy && !p) return `<div class="bsec">${head}<div class="count">Reading the zip and checking each file…</div></div>`;
+  const head = `<h4>${tt('projectzip.load_into',{name:esc(z.name),src:esc(state.src)})}
+    <span class="count">${p && p.manifest && p.manifest.kind ? tt('projectzip.a_from',{kind:esc(p.manifest.kind),x:p.manifest.campaign
+      ? ` (${esc(p.manifest.campaign)})` : '',x2:esc(p.manifest.mod || '?'),x3:esc(p.manifest.made || '')}) : tt('projectzip.a_zip_of_files')}</span></h4>`;
+  if(z.busy && !p) return `<div class="bsec">${head}<div class="count">${tt('projectzip.reading_the_zip_and_checking_each')}</div></div>`;
   const counts = (p && p.counts) || {};
   const groups = Object.keys(PZ_STATES).filter(s => counts[s]).map(s => {
     const files = p.files.filter(f => f.state === s);
@@ -65,26 +65,24 @@ function pzHtml(){
     return `<details ${open ? 'open' : ''}><summary><b>${counts[s]} ${PZ_STATES[s][0]}</b>
         <span class="count">${PZ_STATES[s][1]}</span></summary>
       ${files.slice(0, 400).map(f => `<div class="count" style="margin-left:14px"><code>data/${esc(f.rel)}</code>
-        ${f.state === 'replaces' ? ` ${f.before.toLocaleString()} -> ${f.bytes.toLocaleString()} bytes`
-          + (f.records.length ? ` · ${esc(f.records.join(', '))}${f.records_more ? ` +${f.records_more} more` : ''}` : '') : ''}
+        ${f.state === 'replaces' ? tt('projectzip.bytes',{before:f.before.toLocaleString(),bytes:f.bytes.toLocaleString()})
+          + (f.records.length ? ` · ${esc(f.records.join(', '))}${f.records_more ? tt('projectzip.more',{records_more:f.records_more}) : ''}` : '') : ''}
         ${f.why ? ` - ${esc(f.why)}` : ''}
         ${f.warnings.map(w => `<div class="w-warn">⚠ ${esc(w)}</div>`).join('')}</div>`).join('')}
-      ${files.length > 400 ? `<div class="count">…and ${files.length - 400} more</div>` : ''}</details>`;
+      ${files.length > 400 ? `<div class="count">${tt('projectzip.and_more',{files:files.length - 400})}</div>` : ''}</details>`;
   }).join('');
   const writes = (counts.new || 0) + (counts.replaces || 0);
   return `<div class="bsec">${head}
     ${z.err ? `<div class="w-warn">${esc(z.err)}</div>` : ''}
     ${groups}
-    ${p && p.stale.length ? `<div class="count">and ${p.stale.length} compiled <code>map.rwm</code> the loaded map files make stale,
-      deleted (backed up) so the game builds it again: ${p.stale.map(r => `<code>${esc(r)}</code>`).join(', ')}</div>` : ''}
-    ${p && p.ignored.length ? `<div class="count">${p.ignored.length} file(s) outside <code>data/</code> in the zip are not loaded:
-      ${esc(p.ignored.slice(0, 6).join(', '))}${p.ignored.length > 6 ? '…' : ''}</div>` : ''}
+    ${p && p.stale.length ? `<div class="count">${tt('projectzip.and_compiled_map_rwm_the_loaded',{stale_n:p.stale.length,stale:p.stale.map(r => `<code>${esc(r)}</code>`).join(', ')})}</div>` : ''}
+    ${p && p.ignored.length ? `<div class="count">${tt('projectzip.file_s_outside_data_in_the',{ignored_n:p.ignored.length,ignored:esc(p.ignored.slice(0, 6).join(', ')),ignored2:p.ignored.length > 6 ? '…' : ''})}</div>` : ''}
     <div class="chgacts">
       <label class="count"><input type="checkbox" ${z.replace ? 'checked' : ''} onchange="pzReplace(this.checked)">
-        replace the files the mod already has</label>
+        ${tt('projectzip.replace_the_files_the_mod_already')}</label>
       <span style="flex:1"></span>
-      <button onclick="pzClose()">Close</button>
-      <button class="primary" onclick="pzApply()" ${writes && !z.busy ? '' : 'disabled'}>Load ${writes} file${writes === 1 ? '' : 's'}</button>
+      <button onclick="pzClose()">${tt('common.close')}</button>
+      <button class="primary" onclick="pzApply()" ${writes && !z.busy ? '' : 'disabled'}>${tt('projectzip.load_file',{writes,writes2:writes === 1 ? '' : 's'})}</button>
     </div></div>`;
 }
 
@@ -92,8 +90,8 @@ async function pzApply(){
   const z = state.chg && state.chg.pz;
   if(!z || z.busy || !z.plan) return;
   const c = z.plan.counts || {};
-  if(!confirm(`Load ${(c.new || 0) + (c.replaces || 0)} file(s) into ${state.src}: ${c.new || 0} new, `
-    + `${c.replaces || 0} replacing the mod's own?\n\nEverything replaced is backed up first, and 🕑 Log undoes the whole load.`)) return;
+  if(!confirm(tt('projectzip.load_file_s_into_new',{x:(c.new || 0) + (c.replaces || 0),src:state.src,new:c.new || 0})
+    + tt('projectzip.replacing_the_mods_own_everything_replaced',{replaces:c.replaces || 0}))) return;
   z.busy = true;
   chgPaint();
   let r;
@@ -101,7 +99,7 @@ async function pzApply(){
   catch(e){ r = {error: errText(e)}; }
   z.busy = false;
   if(r.error){ z.err = r.error; chgPaint(); return; }
-  toast(`Loaded. ${r.record ? r.record.summary : ''}. 🕑 Log undoes it.`, 7000);
+  toast(tt('projectzip.loaded_log_undoes_it',{x:r.record ? r.record.summary : ''}), 7000);
   state.chg.pz = null;
   await loadChanges();
 }

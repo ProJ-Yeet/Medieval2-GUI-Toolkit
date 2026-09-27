@@ -96,6 +96,7 @@ from typing import Dict, List, Optional, Tuple
 from . import campmap, campstrat, mapsnap, stratedit
 from .campstrat import Node, StratFile
 from .stratedit import comment_of, finding, indent_of, is_int, serialise
+from . import i18n as _i18n
 
 #: What this module places.
 KINDS = ("fort", "watchtower", "resource")
@@ -801,17 +802,14 @@ def check_object(voc: Vocabulary, spec: Spec, sf: StratFile,
         v = getattr(spec, slot)
         if not is_int(v):
             out.append(finding(f"obj.{slot}", True,
-                               f"{slot} is {v if v not in (None, '') else '(nothing)'}"
-                               f", which is not a whole number."))
+                               _i18n.msg("eng.stratobj.is_which_is_not_a_whole", "{slot} is {x}, which is not a whole number.", slot=slot, x=v if v not in (None, '') else '(nothing)')))
     xy = spec.xy()
     if xy is not None and voc.cm is not None:
         gx, gy = xy
         if not voc.in_bounds(gx, gy):
             out.append(finding(
                 "obj.offmap", True,
-                f"{gx},{gy} is off the {voc.cm.terrain.width}x"
-                f"{voc.cm.terrain.height} tile grid, so there is nowhere for "
-                f"this {what} to stand.", x=gx, y=gy))
+                _i18n.msg("eng.stratobj.is_off_the_x_tile_grid", "{gx},{gy} is off the {width}x{height} tile grid, so there is nowhere for this {what} to stand.", gx=gx, gy=gy, width=voc.cm.terrain.width, height=voc.cm.terrain.height, what=what), x=gx, y=gy))
             _snap(voc, spec, sf, me, cen, "", out[-1])
         else:
             tile = (_resource_tile(voc, spec, sf, section, me, gx, gy, cen)
@@ -858,8 +856,7 @@ def _name_findings(voc: Vocabulary, spec: Spec) -> List[dict]:
     from .minorfiles import RESOURCES
     if not spec.name:
         return [finding("res.name", True,
-                        "A resource line names the resource first, and this "
-                        "one names nothing.")]
+                        _i18n.msg("eng.stratobj.a_resource_line_names_the_resource", "A resource line names the resource first, and this one names nothing."))]
     if voc.resources is not None and spec.name not in voc.resources:
         low = [r for r in voc.resources if r.lower() == spec.name.lower()]
         return [finding(
@@ -888,9 +885,7 @@ def _resource_tile(voc: Vocabulary, spec: Spec, sf: StratFile, heading: str,
                 cen.layout.under[me.start].lower()
         out.append(finding(
             "res.heading", False,
-            f"{gx},{gy} is in {here}, and this {name} is listed under the "
-            f"{cen.layout.prefix}{heading} heading. {good} of the {t} in this "
-            f"campaign stand in the province their heading names.",
+            _i18n.msg("eng.stratobj.is_in_and_this_is_listed", "{gx},{gy} is in {here}, and this {name} is listed under the {prefix}{heading} heading. {good} of the {t} in this campaign stand in the province their heading names.", gx=gx, gy=gy, here=here, name=name, prefix=cen.layout.prefix, heading=heading, good=good, t=t),
             x=gx, y=gy, province=here))
     for f in mapcheck.position_faults(voc.cm, gx, gy):
         if f["code"] == "sea":
@@ -927,10 +922,7 @@ def _mixed(sf: StratFile, me: Optional[Node], gx: int, gy: int, cen: Census,
         return []
     return [finding(
         "obj.mixed", False,
-        f"{gx},{gy} already has a {o.name if o.kind == 'resource' else o.kind}"
-        f" on it (line {o.start + 1}). None of the {MEASURED_RESOURCES:,} "
-        f"resources on the four campaigns measured shares a tile with a fort "
-        f"or a watchtower.", x=gx, y=gy, line=o.start + 1)]
+        _i18n.msg("eng.stratobj.already_has_a_on_it_line", "{gx},{gy} already has a {x} on it (line {x2}). None of the {MEASURED_RESOURCES:,} resources on the four campaigns measured shares a tile with a fort or a watchtower.", gx=gx, gy=gy, x=o.name if o.kind == 'resource' else o.kind, x2=o.start + 1, MEASURED_RESOURCES=MEASURED_RESOURCES), x=gx, y=gy, line=o.start + 1)]
 
 
 def _tile_findings(voc: Vocabulary, spec: Spec, sf: StratFile, section: str,
@@ -952,31 +944,27 @@ def _tile_findings(voc: Vocabulary, spec: Spec, sf: StratFile, section: str,
     if voc.sea(gx, gy) is True:
         out.append(finding(
             "obj.sea", False,
-            f"{gx},{gy} is sea. A {what} is built on land: one watchtower of "
-            f"the 800 on DaC's two campaigns is on the sea, and no fort.",
+            _i18n.msg("eng.stratobj.is_sea_a_is_built_on", "{gx},{gy} is sea. A {what} is built on land: one watchtower of the 800 on DaC's two campaigns is on the sea, and no fort.", gx=gx, gy=gy, what=what),
             x=gx, y=gy))
     else:
         g = voc.ground(gx, gy)
         if g is not None and g["code"] == "impassable_land":
             out.append(finding(
                 "obj.ground", False,
-                f"{gx},{gy} is {g['name']}, which no army can walk onto. Four "
-                f"of DaC's watchtowers stand on it and no fort does.",
+                _i18n.msg("eng.stratobj.is_which_no_army_can_walk", "{gx},{gy} is {name}, which no army can walk onto. Four of DaC's watchtowers stand on it and no fort does.", gx=gx, gy=gy, name=g['name']),
                 x=gx, y=gy))
     mark = voc.marker(gx, gy)
     if mark:
         out.append(finding(
             "obj.marker", False,
-            f"{gx},{gy} is {mark} pixel. None of the 800 forts and watchtowers "
-            f"measured stands on a settlement or a port.", x=gx, y=gy))
+            _i18n.msg("eng.stratobj.is_pixel_none_of_the_800", "{gx},{gy} is {mark} pixel. None of the 800 forts and watchtowers measured stands on a settlement or a port.", gx=gx, gy=gy, mark=mark), x=gx, y=gy))
     others = [n for n in cen.at.get((gx, gy), []) if n is not me
               and n.kind in SECTIONED]
     if others:
         o = others[0]
         out.append(finding(
             "obj.shared", False,
-            f"{gx},{gy} already has a {o.kind} on it (line {o.start + 1}). No "
-            f"two of the 800 measured share a tile.", x=gx, y=gy,
+            _i18n.msg("eng.stratobj.already_has_a_on_it_line_2", "{gx},{gy} already has a {kind} on it (line {x}). No two of the 800 measured share a tile.", gx=gx, gy=gy, kind=o.kind, x=o.start + 1), x=gx, y=gy,
             line=o.start + 1))
     out += _mixed(sf, me, gx, gy, cen, ("resource",))
     return out
@@ -1004,10 +992,7 @@ def _fort_findings(voc: Vocabulary, spec: Spec, sf: StratFile) -> List[dict]:
                     if t and t.lower() in voc.folders)
         out.append(finding(
             "fort.type", False,
-            f"There is no {spec.type} folder under any culture's "
-            f"settlements/*/{AMBIENT}, which is where the fort's battle map is "
-            f"drawn from. {found} of the {named} fort lines in this campaign "
-            f"that name a type name one of those folders."))
+            _i18n.msg("eng.stratobj.there_is_no_folder_under_any", "There is no {type} folder under any culture's settlements/*/{AMBIENT}, which is where the fort's battle map is drawn from. {found} of the {named} fort lines in this campaign that name a type name one of those folders.", type=spec.type, AMBIENT=AMBIENT, found=found, named=named)))
     return out
 
 
@@ -1209,16 +1194,14 @@ def plan(mod, facts, body: dict) -> ObjPlan:
     if action in ("add", "move"):
         if not want and sectioned:
             p.errors.append(
-                f"there is no declared province under "
-                f"{spec.x},{spec.y}, so there is no region section to file "
-                f"this {kind} under. Pick a tile inside a province")
+                _i18n.msg("eng.stratobj.there_is_no_declared_province_under", "there is no declared province under {x},{y}, so there is no region section to file this {kind} under. Pick a tile inside a province", x=spec.x, y=spec.y, kind=kind))
             return p
         if not want and action == "move":
             action = p.action = "edit"
         elif want and voc.provinces \
                 and want.lower() not in {r.lower() for r in voc.provinces} \
                 and want.lower() not in sections(sf):
-            p.errors.append(f"{want} is not a province this map declares")
+            p.errors.append(_i18n.msg("eng.stratobj.is_not_a_province_this_map", "{want} is not a province this map declares", want=want))
             return p
         if action == "move" and was and want.lower() == was.lower():
             action = p.action = "edit"
@@ -1262,8 +1245,7 @@ def plan(mod, facts, body: dict) -> ObjPlan:
                          and filed_under(done, n, lay_done).lower()
                          == p.region.lower()), None)
         if now_node is None:
-            p.errors.append(f"after this save the new line cannot be found in "
-                            f"{p.region or 'the file'}")
+            p.errors.append(_i18n.msg("eng.stratobj.after_this_save_the_new_line", "after this save the new line cannot be found in {x}", x=p.region or 'the file'))
             return p
     key = lambda f, n, ly: (n.kind, f.lines[n.start],          # noqa: E731
                             filed_under(f, n, ly).lower())
@@ -1290,7 +1272,7 @@ def plan(mod, facts, body: dict) -> ObjPlan:
 
     p.text = "" if text == sf.serialise() else text
     if not p.text and not p.errors:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.stratobj.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -1354,7 +1336,7 @@ def apply(p: ObjPlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.stratobj.nothing_to_change", "nothing to change"))
     mod = p.mod
     rel = (f"{campstrat.CAMPAIGN_DIR_REL}/{campstrat.campaign_rel(p.campaign)}/"
            f"{campstrat.STRAT_NAME}")
@@ -1414,8 +1396,7 @@ def view(facts) -> dict:
 
     sf = getattr(facts, "strat", None)
     if sf is None:
-        raise MapError(f"{facts.strat_rel} could not be read, so this campaign "
-                       f"has nothing to show")
+        raise MapError(_i18n.msg("eng.stratobj.could_not_be_read_so_this", "{strat_rel} could not be read, so this campaign has nothing to show", strat_rel=facts.strat_rel))
     voc = Vocabulary(facts.mod, sf, campmap.map_of(facts))
     cen = census(sf, voc)
     rows = []

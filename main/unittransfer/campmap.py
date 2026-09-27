@@ -80,6 +80,7 @@ from PIL import Image, ImageChops
 from . import mapvocab
 from .maptga import TgaError, TgaInfo, probe, read
 from .mapvocab import PORT_RGB, SETTLEMENT_RGB, Rgb, key
+from . import i18n as _i18n
 
 #: Plain 8-bit game data, as everywhere else
 ENCODING = "latin-1"
@@ -248,12 +249,11 @@ def read_terrain(mod) -> Terrain:
     try:
         text = path.read_text(encoding=ENCODING)
     except OSError as exc:
-        raise MapError(f"descr_terrain.txt: {exc}") from exc
+        raise MapError(_i18n.msg("eng.campmap.descr_terrain_txt", "descr_terrain.txt: {exc}", exc=exc)) from exc
     t = parse_terrain(text)
     t.path = path
     if t.width <= 0 or t.height <= 0:
-        raise MapError(f"descr_terrain.txt has no usable dimensions block "
-                       f"(read {t.width}x{t.height})")
+        raise MapError(_i18n.msg("eng.campmap.descr_terrain_txt_has_no_usable", "descr_terrain.txt has no usable dimensions block (read {width}x{height})", width=t.width, height=t.height))
     return t
 
 
@@ -544,7 +544,7 @@ def _parse_record(lines: List[str], start: int, end: int) -> RegionRecord:
 
     at_rgb = next((n for n, (_, s) in enumerate(body) if _RGB_LINE.match(s)), None)
     if at_rgb is None:
-        rec.problems.append("no R G B line")
+        rec.problems.append(_i18n.msg("eng.campmap.no_r_g_b_line", "no R G B line"))
         return rec
     line_no, s = body[at_rgb]
     m = _RGB_LINE.match(s)
@@ -576,10 +576,10 @@ def _parse_record(lines: List[str], start: int, end: int) -> RegionRecord:
                 try:
                     rec.religions[parts[i]] = int(parts[i + 1])
                 except ValueError:
-                    rec.problems.append(f"religion {parts[i]!r} has no number")
+                    rec.problems.append(_i18n.msg("eng.campmap.religion_has_no_number", "religion {parts} has no number", parts=repr(parts[i])))
         tail = tail[:rel_at]
     elif not rec.wasteland:
-        rec.problems.append("no religions line")
+        rec.problems.append(_i18n.msg("eng.campmap.no_religions_line", "no religions line"))
 
     # the last two bare numbers before the religions line are triumph then farming;
     # anything left in front of them is the resource list, blank or not
@@ -591,7 +591,7 @@ def _parse_record(lines: List[str], start: int, end: int) -> RegionRecord:
         rest = tail[:n_t]
     else:
         if not rec.wasteland:
-            rec.problems.append("triumph value and farming level not both present")
+            rec.problems.append(_i18n.msg("eng.campmap.triumph_value_and_farming_level_not", "triumph value and farming level not both present"))
         rest = tail
 
     if rest:
@@ -608,7 +608,7 @@ def _parse_record(lines: List[str], start: int, end: int) -> RegionRecord:
         # only an edit rewrites it.
         rec.resources = [] if [t.lower() for t in got] == ["none"] else got
         if len(rest) > 1:
-            rec.problems.append(f"{len(rest) - 1} unrecognised line(s) in the record")
+            rec.problems.append(_i18n.msg("eng.campmap.unrecognised_line_s_in_the_record", "{x} unrecognised line(s) in the record", x=len(rest) - 1))
     return rec
 
 
@@ -618,7 +618,7 @@ def read_regions(mod) -> RegionsFile:
     try:
         text = read_text(path, ENCODING)
     except OSError as exc:
-        raise MapError(f"descr_regions.txt: {exc}") from exc
+        raise MapError(_i18n.msg("eng.campmap.descr_regions_txt", "descr_regions.txt: {exc}", exc=exc)) from exc
     out = parse_regions(text)
     out.path = path
     return out
@@ -722,11 +722,10 @@ def _label_image(rgb: Image.Image) -> Tuple[Sequence[int], List[Rgb], List[int]]
     """
     census = rgb.getcolors(maxcolors=1 << 20)
     if census is None:                       # more than a label can index
-        raise MapError("map_regions.tga has more than a million colours")
+        raise MapError(_i18n.msg("eng.campmap.map_regions_tga_has_more_than", "map_regions.tga has more than a million colours"))
     if len(census) > MAX_LABELS:
         raise MapError(
-            f"map_regions.tga has {len(census)} distinct colours and a label is "
-            f"16 bits, so {MAX_LABELS} is the most that can be indexed")
+            _i18n.msg("eng.campmap.map_regions_tga_has_distinct_colours", "map_regions.tga has {census_n} distinct colours and a label is 16 bits, so {MAX_LABELS} is the most that can be indexed", census_n=len(census), MAX_LABELS=MAX_LABELS))
     # most-used first, so the biggest regions get the low label numbers
     census.sort(key=lambda t: -t[0])
     colours = [c for _, c in census]
@@ -1183,7 +1182,7 @@ class CampaignMap:
         """One decoded layer, in image coordinates. Raises for a missing one."""
         if code not in self._layers:
             if code not in LAYER_BY_CODE:
-                raise MapError(f"no such layer {code!r}")
+                raise MapError(_i18n.msg("eng.campmap.no_such_layer", "no such layer {code}", code=repr(code)))
             try:
                 img, info = read(self.path(code))
             except TgaError as exc:
@@ -1278,9 +1277,7 @@ class CampaignMap:
             got = self.layer(code).size
             if got != want:
                 raise MapError(
-                    f"{LAYER_BY_CODE[code]['file']} is {got[0]}x{got[1]}, and "
-                    f"descr_terrain.txt says the map is {self.terrain.width}x"
-                    f"{self.terrain.height}, so it should be {want[0]}x{want[1]}")
+                    _i18n.msg("eng.campmap.is_x_and_descr_terrain_txt", "{file} is {got}x{got2}, and descr_terrain.txt says the map is {width}x{height}, so it should be {want}x{want2}", file=LAYER_BY_CODE[code]['file'], got=got[0], got2=got[1], width=self.terrain.width, height=self.terrain.height, want=want[0], want2=want[1]))
 
     @property
     def sea(self) -> bytes:
@@ -1707,9 +1704,9 @@ def layer_png(cm: "CampaignMap", code: str, fit: str = "tile") -> bytes:
     names, with no fourth number to disagree about.
     """
     if code not in LAYER_BY_CODE:
-        raise MapError(f"no such layer {code!r}")
+        raise MapError(_i18n.msg("eng.campmap.no_such_layer", "no such layer {code}", code=repr(code)))
     if fit not in FITS:
-        raise MapError(f"no such fit {fit!r} - it is one of {', '.join(FITS)}")
+        raise MapError(_i18n.msg("eng.campmap.no_such_fit_it_is_one", "no such fit {fit} - it is one of {FITS}", fit=repr(fit), FITS=', '.join(FITS)))
     img = cm.layer(code) if fit == "native" else tile_view(cm, code)
     buf = io.BytesIO()
     img.convert("RGB").save(buf, "PNG", optimize=False)
@@ -1732,9 +1729,9 @@ def layer_rgb(cm: "CampaignMap", code: str, fit: str = "tile") -> Tuple[int, int
     writes to its canvases.
     """
     if code not in LAYER_BY_CODE:
-        raise MapError(f"no such layer {code!r}")
+        raise MapError(_i18n.msg("eng.campmap.no_such_layer", "no such layer {code}", code=repr(code)))
     if fit not in FITS:
-        raise MapError(f"no such fit {fit!r} - it is one of {', '.join(FITS)}")
+        raise MapError(_i18n.msg("eng.campmap.no_such_fit_it_is_one", "no such fit {fit} - it is one of {FITS}", fit=repr(fit), FITS=', '.join(FITS)))
     img = (cm.layer(code) if fit == "native" else tile_view(cm, code)).convert("RGB")
     return img.width, img.height, img.tobytes()
 
@@ -1824,15 +1821,13 @@ def layer_view(cm: "CampaignMap", code: str) -> dict:
 #: the picture, so the checkbox is not offered for them at all.
 BLANK: Dict[str, dict] = {
     "features": {"rgb": (0, 0, 0), "sourced": True,
-                 "why": "none - no river, ford, source, cliff, volcano or land bridge"},
+                 "why": _i18n.msg("eng.campmap.none_no_river_ford_source_cliff", "none - no river, ford, source, cliff, volcano or land bridge")},
     "trade_routes": {"rgb": (0, 0, 0), "sourced": False,
-                     "why": "no trade route: vanilla marks 995 tiles out of 54,760, "
-                            "and DaC marks none at all"},
+                     "why": _i18n.msg("eng.campmap.no_trade_route_vanilla_marks_995", "no trade route: vanilla marks 995 tiles out of 54,760, and DaC marks none at all")},
     "roughness": {"rgb": (0, 0, 0), "sourced": False,
-                  "why": "flat - the layer is a greyscale magnitude and black is its zero"},
+                  "why": _i18n.msg("eng.campmap.flat_the_layer_is_a_greyscale", "flat - the layer is a greyscale magnitude and black is its zero")},
     "fog": {"rgb": (255, 255, 255), "sourced": False,
-            "why": "the colour most of the map is (87% of vanilla, 98% of DaC); no "
-                   "reference says which way round the engine reads this layer"},
+            "why": _i18n.msg("eng.campmap.the_colour_most_of_the_map", "the colour most of the map is (87% of vanilla, 98% of DaC); no reference says which way round the engine reads this layer")},
 }
 
 #: How many colours a legend lists before it starts counting instead. Heights
@@ -1924,7 +1919,7 @@ def layer_legend(cm: "CampaignMap", code: str) -> dict:
     naming their colours; a photograph does not have a legend.
     """
     if code not in LAYER_BY_CODE:
-        raise MapError(f"no such layer {code!r}")
+        raise MapError(_i18n.msg("eng.campmap.no_such_layer", "no such layer {code}", code=repr(code)))
     ly = LAYER_BY_CODE[code]
     out: dict = {"code": code, "label": ly["label"], "file": ly["file"],
                  "colours": [], "total": 0, "listed": 0, "more": 0, "note": "",
@@ -1962,14 +1957,10 @@ def layer_legend(cm: "CampaignMap", code: str) -> dict:
     out["more"] = max(0, len(census) - cap)
     notes = []
     if out["more"]:
-        notes.append(f"{len(census)} distinct colours in {ly['file']}; the {cap} "
-                     "largest are listed. A layer carrying this many is a "
-                     "magnitude rather than a vocabulary.")
+        notes.append(_i18n.msg("eng.campmap.distinct_colours_in_the_largest_are", "{census_n} distinct colours in {file}; the {cap} largest are listed. A layer carrying this many is a magnitude rather than a vocabulary.", census_n=len(census), file=ly['file'], cap=cap))
     unknown = sum(1 for c in out["colours"] if c["code_name"] is None)
     if unknown:
-        notes.append(f"{unknown} of the colours listed "
-                     f"{'is one' if unknown == 1 else 'are ones'} no table this "
-                     "toolkit has names.")
+        notes.append(_i18n.msg("eng.campmap.of_the_colours_listed_no_table", "{unknown} of the colours listed {x} no table this toolkit has names.", unknown=unknown, x='is one' if unknown == 1 else 'are ones'))
     out["note"] = " ".join(notes)
     return out
 
@@ -2245,8 +2236,7 @@ def parse_block(text: str) -> RegionRecord:
             retry = _parse_record(lines, first, len(lines) - 1)
             if retry.name and retry.rgb_line >= 0 and not retry.wasteland:
                 return retry
-        raise MapError("this is not a region record - no unindented region name "
-                       "line to start it")
+        raise MapError(_i18n.msg("eng.campmap.this_is_not_a_region_record", "this is not a region record - no unindented region name line to start it"))
     if len(real) > 1:
         raise MapError(f"this is {len(real)} region records, not one: "
                        + ", ".join(r.name for r in real[:4]))
@@ -2292,11 +2282,9 @@ def render_block(base: str, edits: dict) -> str:
         at = getattr(rec, f"{slot}_line")
         want = str(edits[slot] or "").strip()
         if at < 0:
-            raise MapError(f"this record has no {slot} line to write to - it is "
-                           "the short wasteland form, and the arbiter says a "
-                           "wasteland has no settlement, creator or rebel type")
+            raise MapError(_i18n.msg("eng.campmap.this_record_has_no_line_to", "this record has no {slot} line to write to - it is the short wasteland form, and the arbiter says a wasteland has no settlement, creator or rebel type", slot=slot))
         if not want:
-            raise MapError(f"a region's {slot} cannot be blank")
+            raise MapError(_i18n.msg("eng.campmap.a_regions_cannot_be_blank", "a region's {slot} cannot be blank", slot=slot))
         _set_line(lines, at, want)
 
     # 36. The colour, which is the one slot that is meaningless on its own: the
@@ -2310,11 +2298,11 @@ def render_block(base: str, edits: dict) -> str:
         try:
             trio = tuple(int(v) for v in edits["rgb"])
         except (TypeError, ValueError):
-            raise MapError("a region colour is three numbers 0-255") from None
+            raise MapError(_i18n.msg("eng.campmap.a_region_colour_is_three_numbers", "a region colour is three numbers 0-255")) from None
         if len(trio) != 3 or any(v < 0 or v > 255 for v in trio):
-            raise MapError("a region colour is three numbers 0-255")
+            raise MapError(_i18n.msg("eng.campmap.a_region_colour_is_three_numbers", "a region colour is three numbers 0-255"))
         if rec.rgb_line < 0:
-            raise MapError("this record has no colour line to write to")
+            raise MapError(_i18n.msg("eng.campmap.this_record_has_no_colour_line", "this record has no colour line to write to"))
         _set_line(lines, rec.rgb_line, " ".join(str(v) for v in trio))
 
     if "resources" in edits:
@@ -2338,10 +2326,9 @@ def render_block(base: str, edits: dict) -> str:
         try:
             n = int(str(edits[slot]).strip())
         except (TypeError, ValueError):
-            raise MapError(f"{slot} must be a whole number, "
-                           f"not {edits[slot]!r}") from None
+            raise MapError(_i18n.msg("eng.campmap.must_be_a_whole_number_not", "{slot} must be a whole number, not {edits}", slot=slot, edits=repr(edits[slot]))) from None
         if at < 0:
-            raise MapError(f"this record has no {slot} line to write to")
+            raise MapError(_i18n.msg("eng.campmap.this_record_has_no_line_to_2", "this record has no {slot} line to write to", slot=slot))
         _set_line(lines, at, str(n))
 
     if "religions" in edits:
@@ -2353,10 +2340,9 @@ def render_block(base: str, edits: dict) -> str:
             try:
                 rel[name] = int(str(value).strip() or 0)
             except ValueError:
-                raise MapError(f"religion {name} must be a whole "
-                               f"percentage, not {value!r}") from None
+                raise MapError(_i18n.msg("eng.campmap.religion_must_be_a_whole_percentage", "religion {name} must be a whole percentage, not {value}", name=name, value=repr(value))) from None
         if rec.religions_line < 0:
-            raise MapError("this record has no religions line to write to")
+            raise MapError(_i18n.msg("eng.campmap.this_record_has_no_religions_line", "this record has no religions line to write to"))
         _set_line(lines, rec.religions_line, _religions_text(rel))
 
     for at, line in sorted(insert, reverse=True):
@@ -2648,7 +2634,7 @@ def region_detail(cm: "CampaignMap", name: str) -> dict:
     """
     rec = cm.regions.by_name(name)
     if rec is None:
-        raise MapError(f"no region called {name!r} in descr_regions.txt")
+        raise MapError(_i18n.msg("eng.campmap.no_region_called_in_descr_regions", "no region called {name} in descr_regions.txt", name=repr(name)))
     loc = shown_names(cm.mod)
     vocab = region_vocab(cm.mod)
     out = {
@@ -2871,7 +2857,7 @@ def plan_region(mod, body: dict, cm: Optional["CampaignMap"] = None
     p.path = rf.path
     rec = rf.by_name(p.name)
     if rec is None:
-        p.errors.append(f"no region called {p.name!r} in descr_regions.txt")
+        p.errors.append(_i18n.msg("eng.campmap.no_region_called_in_descr_regions", "no region called {name} in descr_regions.txt", name=repr(p.name)))
         return p
 
     base = record_text(rf, rec)
@@ -2884,26 +2870,15 @@ def plan_region(mod, body: dict, cm: Optional["CampaignMap"] = None
         return p
     if after.name != rec.name:
         p.errors.append(
-            f"this region is `{rec.name}` - renaming it HERE would orphan every "
-            "descr_strat.txt settlement, win condition, mercenary pool, script "
-            "line and `legion:` entry that names it. The Rename button beside "
-            "the name follows all of them at once (19b)")
+            _i18n.msg("eng.campmap.this_region_is_renaming_it_here", "this region is `{name}` - renaming it HERE would orphan every descr_strat.txt settlement, win condition, mercenary pool, script line and `legion:` entry that names it. The Rename button beside the name follows all of them at once (19b)", name=rec.name))
         return p
     if after.rgb != rec.rgb:
         p.errors.append(
-            f"this region is painted {rec.rgb[0]} {rec.rgb[1]} {rec.rgb[2]} on "
-            "map_regions.tga. Changing the number here without repainting the "
-            "pixels would leave the region with no tiles at all - arm the "
-            "brush and repaint them instead")
+            _i18n.msg("eng.campmap.this_region_is_painted_on_map", "this region is painted {rgb} {rgb2} {rgb3} on map_regions.tga. Changing the number here without repainting the pixels would leave the region with no tiles at all - arm the brush and repaint them instead", rgb=rec.rgb[0], rgb2=rec.rgb[1], rgb3=rec.rgb[2]))
         return p
     if after.settlement != rec.settlement:
         p.errors.append(
-            f"this settlement is `{rec.settlement}` - the lookup file, the "
-            "settlement name text file and the campaign script point at that "
-            "name. The Rename button beside it follows the first two and "
-            "reports the third (19b). Measured over both installed mods, "
-            "descr_strat.txt is NOT one of them: a settlement block names its "
-            "province and never itself")
+            _i18n.msg("eng.campmap.this_settlement_is_the_lookup_file", "this settlement is `{settlement}` - the lookup file, the settlement name text file and the campaign script point at that name. The Rename button beside it follows the first two and reports the third (19b). Measured over both installed mods, descr_strat.txt is NOT one of them: a settlement block names its province and never itself", settlement=rec.settlement))
         return p
 
     vocab = region_vocab(mod)
@@ -2915,7 +2890,7 @@ def plan_region(mod, body: dict, cm: Optional["CampaignMap"] = None
     text = replace_record(rf, rec, block)
     p.text = "" if text == rf.serialise() else text
     if not p.text and not p.errors:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.campmap.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -2942,7 +2917,7 @@ def apply_region(p: RegionPlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.campmap.nothing_to_change", "nothing to change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

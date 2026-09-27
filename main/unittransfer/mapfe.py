@@ -101,6 +101,7 @@ from PIL import Image
 
 from . import campmap, campstrat
 from .maptga import TYPE_RAW, TgaError, TgaInfo, encode
+from . import i18n as _i18n
 
 #: The layer this module is about. One place, so a rename is one edit.
 CODE = "fe"
@@ -172,9 +173,9 @@ def frame(grid: Tuple[int, int], picture: Tuple[int, int]) -> Frame:
     gw, gh = grid
     pw, ph = picture
     if gw <= 0 or gh <= 0:
-        raise FeError(f"the tile grid is {gw}x{gh}")
+        raise FeError(_i18n.msg("eng.mapfe.the_tile_grid_is_x", "the tile grid is {gw}x{gh}", gw=gw, gh=gh))
     if pw <= 0 or ph <= 0:
-        raise FeError(f"the picture is {pw}x{ph}")
+        raise FeError(_i18n.msg("eng.mapfe.the_picture_is_x", "the picture is {pw}x{ph}", pw=pw, ph=ph))
     want = pw / ph
     w, h = float(gw), float(gh)
     if want > w / h:
@@ -189,13 +190,11 @@ def check_frame(fr: Frame, grid: Tuple[int, int]) -> None:
     that merely leaves the grid - that is the normal case."""
     gw, gh = grid
     if not (fr.w > 0 and fr.h > 0):
-        raise FeError(f"the frame is {fr.w:g}x{fr.h:g} tiles")
+        raise FeError(_i18n.msg("eng.mapfe.the_frame_is_w_g_x", "the frame is {w:g}x{h:g} tiles", w=fr.w, h=fr.h))
     if fr.w < MIN_TILES or fr.h < MIN_TILES:
-        raise FeError(f"the frame is {fr.w:g}x{fr.h:g} tiles, and fewer than "
-                      f"{MIN_TILES} a side is not a picture of anything")
+        raise FeError(_i18n.msg("eng.mapfe.the_frame_is_w_g_x_2", "the frame is {w:g}x{h:g} tiles, and fewer than {MIN_TILES} a side is not a picture of anything", w=fr.w, h=fr.h, MIN_TILES=MIN_TILES))
     if fr.x >= gw or fr.y >= gh or fr.x + fr.w <= 0 or fr.y + fr.h <= 0:
-        raise FeError(f"the frame at ({fr.x:g},{fr.y:g}) {fr.w:g}x{fr.h:g} "
-                      f"does not touch the {gw}x{gh} grid")
+        raise FeError(_i18n.msg("eng.mapfe.the_frame_at_x_g_y", "the frame at ({x:g},{y:g}) {w:g}x{h:g} does not touch the {gw}x{gh} grid", x=fr.x, y=fr.y, w=fr.w, h=fr.h, gw=gw, gh=gh))
 
 
 # ---------------------------------------------------------------------------
@@ -276,8 +275,7 @@ def render(cm: "campmap.CampaignMap", fr: Frame, size: Tuple[int, int],
     """
     w, h = size
     if not (0 < w <= MAX_SIDE and 0 < h <= MAX_SIDE):
-        raise FeError(f"{w}x{h} is not a size this can compose - "
-                      f"it is 1 to {MAX_SIDE} a side")
+        raise FeError(_i18n.msg("eng.mapfe.x_is_not_a_size_this", "{w}x{h} is not a size this can compose - it is 1 to {MAX_SIDE} a side", w=w, h=h, MAX_SIDE=MAX_SIDE))
     check_frame(fr, (cm.terrain.width, cm.terrain.height))
 
     out = Image.new("RGB", (w, h), backdrop)
@@ -285,10 +283,9 @@ def render(cm: "campmap.CampaignMap", fr: Frame, size: Tuple[int, int],
     for spec in layers:
         code = str(spec.get("code") or "")
         if code == CODE:
-            raise FeError("the front-end picture cannot be one of the layers "
-                          "traced onto it - that is a copy of itself")
+            raise FeError(_i18n.msg("eng.mapfe.the_front_end_picture_cannot_be", "the front-end picture cannot be one of the layers traced onto it - that is a copy of itself"))
         if code not in campmap.LAYER_BY_CODE:
-            raise FeError(f"no such layer {code!r}")
+            raise FeError(_i18n.msg("eng.mapfe.no_such_layer", "no such layer {code}", code=repr(code)))
         try:
             tile = campmap.tile_view(cm, code).convert("RGB")
         except (campmap.MapError, TgaError, OSError):

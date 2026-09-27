@@ -45,6 +45,7 @@ from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
 from . import animpack, casanim, skelslots
+from . import i18n as _i18n
 
 #: An event's type, as descr_skeleton.txt's event files use them.
 EVENT_TYPES = {1: "sound", 2: "sound bank", 3: "shockwave", 4: "voice", 5: "ambient"}
@@ -167,13 +168,13 @@ def read(data_dir, skeleton: str, path: str = "", rel: str = "",
     else:
         packs, _whose = packs_for(root)
         if packs is None or packs.anims is None:
-            raise casanim.AnimError("this mod has no animation pack, and vanilla's was not found")
+            raise casanim.AnimError(_i18n.msg("eng.animview.this_mod_has_no_animation_pack", "this mod has no animation pack, and vanilla's was not found"))
         sk = packs.skeleton(skeleton)
         if sk is None:
-            raise casanim.AnimError(f"the skeleton pack has no {skeleton!r}")
+            raise casanim.AnimError(_i18n.msg("eng.animview.the_skeleton_pack_has_no", "the skeleton pack has no {skeleton}", skeleton=repr(skeleton)))
         data = packs.animation_bytes(path)
         if data is None:
-            raise casanim.AnimError(f"pack.idx has no {path!r}")
+            raise casanim.AnimError(_i18n.msg("eng.animview.pack_idx_has_no", "pack.idx has no {path}", path=repr(path)))
         anim = casanim.read_packed_bytes(data, path, sk.bone_table(), skeleton)
     anim.weapons = add_weapons(root, anim, weapons, slot) if weapons else []
     return anim
@@ -209,7 +210,7 @@ def add_weapons(data_dir, anim: casanim.Animation, weapons: Sequence[str],
     weapon skeleton naming ``bone_weapon01`` does not fight the first."""
     packs, _whose = packs_for(data_dir)
     if packs is None or packs.anims is None:
-        return [{"skeleton": w, "error": "no skeleton pack"} for w in weapons if w]
+        return [{"skeleton": w, "error": _i18n.msg("eng.animview.no_skeleton_pack", "no skeleton pack")} for w in weapons if w]
     report: List[dict] = []
     have = {t.name.lower(): i for i, t in enumerate(anim.tracks)}
     times = list(anim.key_times) or [0.0]
@@ -218,16 +219,16 @@ def add_weapons(data_dir, anim: casanim.Animation, weapons: Sequence[str],
             continue
         ws = packs.skeleton(w)
         if ws is None:
-            report.append({"skeleton": w, "error": "not in the skeleton pack"})
+            report.append({"skeleton": w, "error": _i18n.msg("eng.animview.not_in_the_skeleton_pack", "not in the skeleton pack")})
             continue
         at = weapon_slot(ws, slot)
         if at is None:
-            report.append({"skeleton": w, "error": "fills no slot"})
+            report.append({"skeleton": w, "error": _i18n.msg("eng.animview.fills_no_slot", "fills no slot")})
             continue
         path = ws.slots[at].path
         data = packs.animation_bytes(path)
         if data is None:
-            report.append({"skeleton": w, "error": f"pack.idx has no {path!r}"})
+            report.append({"skeleton": w, "error": _i18n.msg("eng.animview.pack_idx_has_no", "pack.idx has no {path}", path=repr(path))})
             continue
         try:
             wa = casanim.read_packed_bytes(data, path, ws.bone_table(), w)
@@ -236,11 +237,11 @@ def add_weapons(data_dir, anim: casanim.Animation, weapons: Sequence[str],
             continue
         # wa.tracks: 0 the Scene Root, 1 the weapon skeleton's root, then its bones
         if len(wa.tracks) < 3:
-            report.append({"skeleton": w, "error": "has no bone past its root"})
+            report.append({"skeleton": w, "error": _i18n.msg("eng.animview.has_no_bone_past_its_root", "has no bone past its root")})
             continue
         root = wa.tracks[1].name
         if root.lower() not in have:
-            report.append({"skeleton": w, "error": f"hangs off {root}, which the body has not got"})
+            report.append({"skeleton": w, "error": _i18n.msg("eng.animview.hangs_off_which_the_body_has", "hangs off {root}, which the body has not got", root=root)})
             continue
         into = {1: have[root.lower()]}
         samples = [casanim.sample(wa, t) for t in times]

@@ -41,6 +41,7 @@ import time
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional
+from . import i18n as _i18n
 
 SEVERITIES = ("fatal", "warn", "note")
 
@@ -172,7 +173,7 @@ def _map(mod, ctx) -> List[Finding]:
     for r in rep.failed:
         out.append(Finding(
             source="map", code=str(r.get("code") or "rule"), severity="warn",
-            message=f"this rule could not run: {r.get('error') or r}",
+            message=_i18n.msg("eng.health.this_rule_could_not_run", "this rule could not run: {x}", x=r.get('error') or r),
             what=f"failed|{r.get('code')}", when="campaign",
             open={"mode": "campmap"}))
     return out
@@ -420,7 +421,7 @@ def _crash(mod, ctx) -> List[Finding]:
     for x in failed:
         out.append(Finding(
             source="crash", code=x["code"], severity="warn",
-            message=f"this rule could not run: {x['error']}",
+            message=_i18n.msg("eng.health.this_rule_could_not_run_2", "this rule could not run: {error}", error=x['error']),
             what=f"failed|{x['code']}", when="play", open={"mode": "rawtext"}))
     return out
 

@@ -23,14 +23,12 @@
 
 async function loadCampDb(){
   const mod = state.src;
-  main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s campaign constants…</div>';
+  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('campdb.s_campaign_constants')}</div>`;
   let r;
   try{ r = await api.get('/api/campdb?mod=' + enc(mod)); }
   catch(e){ if(stale('campdb', mod)) return;
-    main.innerHTML = `<div class="empty">Couldn't read the campaign constants.<br>
-      <span class="count">${esc(errText(e))}</span><br>
-      <span class="count">They live in data/descr_campaign_db.xml</span><br><br>
-      <button class="primary" onclick="loadCampDb()">Retry</button></div>`; return; }
+    main.innerHTML = `<div class="empty">${tt('campdb.couldnt_read_the_campaign_constants_they',{errText:esc(errText(e))})}<br><br>
+      <button class="primary" onclick="loadCampDb()">${tt('common.retry')}</button></div>`; return; }
   if(stale('campdb', mod)) return;
   const keep = state.cdb && state.cdb.mod === mod ? state.cdb.sel : '';
   state.cdb = Object.assign({mod, sel:'', w:{}, add:[], busy:false}, r);
@@ -98,9 +96,9 @@ function renderCampDb(){
         const on = !q && c.sel === s.name;
         return `<button class="trrow${on?' on':''}" onclick="cdbSection('${q1(esc(s.name))}')">
           <div class="nm">${esc(s.name)}</div>
-          <div class="sub">${q ? `${rows.length} of ${n} match` : `${n} tag${n===1?'':'s'}`}${
-            ch ? ` · <b>${ch} changed</b>` : ''}</div></button>`;
-      }).join('') || '<div class="count" style="padding:8px">No tag matches.</div>'}</div>
+          <div class="sub">${q ? tt('campdb.of_match',{rows_n:rows.length,x:n}) : `${n} tag${n===1?'':'s'}`}${
+            ch ? ` ${tt('campdb.changed',{ch})}` : ''}</div></button>`;
+      }).join('') || `<div class="count" style="padding:8px">${tt('campdb.no_tag_matches')}</div>`}</div>
     </div>
     <div class="trmain" id="cdbMain">${cdbMainHtml(secs)}</div>
   </div>`;
@@ -111,22 +109,21 @@ function cdbMainHtml(secs){
   const shown = q ? secs : secs.filter(x => x.s.name === c.sel);
   const n = cdbChanged();
   const head = `<div class="cdbhead">
-    <div><b>descr_campaign_db.xml</b> <span class="count">read once, when a campaign starts -
-      a change reaches a NEW campaign, not a save</span></div>
+    <div>${tt('campdb.descr_campaign_db_xml_read_once')}</div>
     <span style="flex:1"></span>
-    <button onclick="cdbRevert()" id="cdbRevert" ${n?'':'disabled'}>Revert</button>
-    <button class="primary" onclick="cdbSave()" id="cdbSave" ${n?'':'disabled'}>Save ${n||''} change${n===1?'':'s'}</button>
+    <button onclick="cdbRevert()" id="cdbRevert" ${n?'':'disabled'}>${tt('common.revert')}</button>
+    <button class="primary" onclick="cdbSave()" id="cdbSave" ${n?'':'disabled'}>${tt('campdb.save_change',{x:n||'',x2:n===1?'':'s'})}</button>
   </div>`;
   return head + shown.map(({s, rows}) => {
     const missing = q ? [] : c.missing.filter(m => m.section === s.name);
     return `<div class="cdbsec">
       <h3>&lt;${esc(s.name)}&gt;</h3>
       ${missing.length ? `<div class="trnote cdbmiss">
-        <div class="count">The archive documents ${missing.length === 1 ? 'a tag' : 'tags'} this file does not write:</div>
+        <div class="count">${tt('campdb.the_archive_documents_this_file_does',{missing:missing.length === 1 ? tt('campdb.a_tag') : 'tags'})}</div>
         ${missing.map(m => {
           const on = c.add.includes(m.name);
           return `<div class="cdbadd"><button class="${on?'on':''}" onclick="cdbAdd('${q1(esc(m.name))}')"
-            >${on ? '✓ adding' : '＋ add'}</button> <code>${esc(m.name)}</code>
+            >${on ? tt('campdb.adding') : tt('campdb.add')}</button> <code>${esc(m.name)}</code>
             <span class="cdbtype">${esc(m.type)}</span> = <code>${esc(m.default)}</code>
             <div class="count">${esc(m.doc)} <i>(${esc(m.source)})</i></div></div>`;
         }).join('')}
@@ -147,9 +144,9 @@ function cdbRowHtml(it){
          oninput="cdbSet('${q1(esc(it.key))}', this.value, this)">`;
   const doc = it.vocab ? `<div class="cdbdoc">${esc(it.vocab.doc)} <i>(${esc(it.vocab.source)})</i></div>` : '';
   return `<div class="cdbrow${ch ? ' on' : ''}" id="${id}">
-    <code class="cdbname" title="line ${it.line}">${esc(it.name)}</code>
+    <code class="cdbname" title="${ttA('campdb.line',{line:it.line})}">${esc(it.name)}</code>
     <span class="cdbtype">${esc(it.type)}</span>
-    <span class="cdbbox">${box}${ch ? `<span class="count" title="the value in the file">was ${esc(it.value)}</span>` : ''}</span>
+    <span class="cdbbox">${box}${ch ? `<span class="count" title="${ttA('campdb.the_value_in_the_file')}">${tt('campdb.was',{value:esc(it.value)})}</span>` : ''}</span>
     <span class="cdbwhy">${it.note ? esc(it.note) : ''}${doc}</span>
   </div>`;
 }
@@ -169,7 +166,7 @@ function cdbSet(key, value, el){
 function cdbPaintButtons(){
   const n = cdbChanged(), s = document.getElementById('cdbSave'),
         r = document.getElementById('cdbRevert');
-  if(s){ s.disabled = !n; s.textContent = `Save ${n||''} change${n===1?'':'s'}`; }
+  if(s){ s.disabled = !n; s.textContent = tt('campdb.save_change',{x:n||'',x2:n===1?'':'s'}); }
   if(r) r.disabled = !n;
 }
 
@@ -212,18 +209,18 @@ async function cdbSave(){
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 16);
-  if(!confirm(`Write ${(p.changes||[]).length} change(s) to descr_campaign_db.xml?\n\n`
+  if(!confirm(tt('campdb.write_change_s_to_descr_campaign',{n:(p.changes||[]).length})
     + lines.join('\n')
-    + ((p.changes || []).length > 16 ? `\n…and ${p.changes.length - 16} more` : '')
+    + ((p.changes || []).length > 16 ? tt('campdb.and_more',{changes:p.changes.length - 16}) : '')
     + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 4).join('\n⚠ ') : '')
-    + `\n\nIt is read when a campaign starts, so start a new one to see it.`
-    + `\nBacked up first, and 🕑 Log can undo it.`)) return;
+    + tt('campdb.it_is_read_when_a_campaign')
+    + tt('campdb.backed_up_first_and_log_can'))) return;
   c.busy = true;
   let res;
   try{ res = await api.post('/api/campdb/apply', body); }
   catch(e){ toast('✗ ' + errText(e), 6000); return; }
   finally{ c.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   await loadCampDb();
 }

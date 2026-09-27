@@ -34,6 +34,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tests import _webtext  # noqa: E402
 
 from tests import _tmp
 from unittransfer import config, edit
@@ -126,7 +127,7 @@ else:
     drv = cfg / "drive.js"
     drv.write_text(DRIVER, encoding="utf-8")
     res = subprocess.run(
-        [node, str(drv), str(ROOT / "web/js/editor.js"),
+        [node, str(drv), str(_webtext.english_copy(ROOT / "web/js/editor.js")),
          json.dumps(STUB_ENTRY), json.dumps(CASES)],
         capture_output=True, text=True)
     if res.returncode != 0:

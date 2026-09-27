@@ -24,6 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tests import _webtext  # noqa: E402
 
 from tests import _realmod, _tmp
 from unittransfer import buildings, config, localization
@@ -844,7 +845,7 @@ else:
         t = Path(tmp)
         (t / "h.js").write_text(GATE_HARNESS, encoding="utf-8")
         (t / "job.json").write_text(json.dumps(job), encoding="utf-8")
-        r = subprocess.run([_node, str(t / "h.js"), str(ROOT / "web" / "js" / "buildings.js"),
+        r = subprocess.run([_node, str(t / "h.js"), str(_webtext.english_copy(ROOT / "web" / "js" / "buildings.js")),
                             str(t / "job.json"), str(t / "out.json")],
                            capture_output=True, text=True)
         check("the harness runs", r.returncode == 0)

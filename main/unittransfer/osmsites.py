@@ -37,6 +37,7 @@ from typing import Callable, Dict, List, Optional, Sequence
 
 from . import osmmap
 from .osmmap import Bbox, OsmError, Projection
+from . import i18n as _i18n
 
 #: (key, value, label, what it is, what it suggests on the map). His order.
 TAGS = (
@@ -104,9 +105,9 @@ def pick_tags(asked) -> List[str]:
     asked = [str(t) for t in (asked or [])]
     bad = [t for t in asked if t not in BY_KEY]
     if bad:
-        raise OsmError(f"not a historic tag this knows: {', '.join(bad)}")
+        raise OsmError(_i18n.msg("eng.osmsites.not_a_historic_tag_this_knows", "not a historic tag this knows: {bad}", bad=', '.join(bad)))
     if not asked:
-        raise OsmError("tick at least one kind of historic site")
+        raise OsmError(_i18n.msg("eng.osmsites.tick_at_least_one_kind_of", "tick at least one kind of historic site"))
     return [t for t in BY_KEY if t in asked]
 
 
@@ -230,7 +231,7 @@ def for_map(cm, tags, progress=None) -> dict:
     counts by tag, and the file."""
     box, _ = osmmap.box_for(cm)
     if box is None:
-        raise OsmError("give the map its real-world box first")
+        raise OsmError(_i18n.msg("eng.osmsites.give_the_map_its_real_world", "give the map its real-world box first"))
     proj = Projection(box, cm.terrain.width, cm.terrain.height)
     found = fetch(box, tags, progress)
     got = sites(found, proj)

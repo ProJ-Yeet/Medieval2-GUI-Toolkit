@@ -55,12 +55,12 @@ async function facFetch(mod){
 
 async function loadFactions(){
   const mod = state.src;
-  main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s factions…</div>';
+  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('factions.s_factions')}</div>`;
   try{ await facFetch(mod); }
   catch(e){ if(stale('factions', mod)) return;
-    main.innerHTML = `<div class="empty">Couldn't read the faction roster.<br>
+    main.innerHTML = `<div class="empty">${tt('factions.couldnt_read_the_faction_roster')}<br>
       <span class="count">${esc(errText(e))}</span><br><br>
-      <button class="primary" onclick="loadFactions()">Retry</button></div>`; return; }
+      <button class="primary" onclick="loadFactions()">${tt('common.retry')}</button></div>`; return; }
   if(stale('factions', mod)) return;
   state.fac.sel = '';
   undoReset();
@@ -72,8 +72,7 @@ function renderFactions(){
   if(!f){ loadFactions(); return; }
   const strip = minorTabsHtml('', 'data/descr_sm_factions.txt');
   if(f.error || !f.exists){
-    main.innerHTML = strip + `<div class="empty">${esc(f.error || 'No faction roster.')}<br>
-      <span class="count">It lives in data/descr_sm_factions.txt</span></div>`;
+    main.innerHTML = strip + `<div class="empty">${tt('factions.it_lives_in_data_descr_sm',{x:esc(f.error || tt('factions.no_faction_roster'))})}</div>`;
     return;
   }
   const rows = facRows();
@@ -81,20 +80,14 @@ function renderFactions(){
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
       ${findingsHtml('factions', f.finding_list, 'facOpen')}
-      <div class="trnote">${f.limit ? `${f.count}/${f.limit} faction slots used`
-        : `${f.count} faction slots - this mod is marked <b>M2EX</b>, so the
-           engine's ${VANILLA_FACTION_LIMIT} is not its ceiling`}
-        ${f.can_clone ? `<button class="fcadd" onclick="facCloneOpen()"
+      <div class="trnote">${tt('factions.faction_files',{x:f.limit ? tt('factions.faction_slots_used',{count:f.count,limit:f.limit})
+        : tt('factions.faction_slots_this_mod_is_marked',{count:f.count,VANILLA_FACTION_LIMIT}),x2:f.can_clone ? `<button class="fcadd" onclick="facCloneOpen()"
           ${facFull() ? 'disabled' : ''} title="${facFull()
-            ? 'Every faction slot the engine has is already used'
-            : 'Add a faction by copying one that already works, into all thirteen files that name a slot'}"
-          >＋ Add a faction</button>` : ''}
-        <a class="fcadd" href="/api/factions/export_zip?mod=${enc(state.src)}${
-          f.sel ? '&art=' + enc(fcSlotOf(f.sel)) : ''}" download
-          title="Every file a faction lives in, as one zip laid out under data/${
-            f.sel ? ', with the art of the faction you have open' : ''}">⇩ Faction files</a></div>
+            ? tt('factions.every_faction_slot_the_engine_has')
+            : tt('factions.add_a_faction_by_copying_one')}"
+          >${tt('factions.add_a_faction')}</button>` : '',x3:enc(state.src),x4:f.sel ? '&art=' + enc(fcSlotOf(f.sel)) : '',x5:f.sel ? tt('factions.with_the_art_of_the_faction') : ''})}</div>
       <div class="trrows">${rows.map(facRowHtml).join('')
-        || '<div class="count" style="padding:8px">No faction matches.</div>'}</div>
+        || `<div class="count" style="padding:8px">${tt('factions.no_faction_matches')}</div>`}</div>
     </div>
     <div class="trmain">${f.sel && typeof fauHost === 'function' ? fauHost() : ''}
       <div id="facMain">${facDetailHtml()}</div></div>
@@ -119,8 +112,8 @@ function facRowHtml(r){
       ><i style="background:${esc(r.secondary||'#333')}"></i></span>
     <span class="antxt">
       <span class="nm">${esc(r.label)}</span>
-      <span class="sub">${esc(r.culture||'no culture')} · ${esc(r.religion||'no religion')}${
-        r.horde?` · horde of ${r.horde}`:''}${
+      <span class="sub">${esc(r.culture||tt('factions.no_culture'))} · ${esc(r.religion||tt('factions.no_religion'))}${
+        r.horde?tt('factions.horde_of',{horde:r.horde}):''}${
         r.special?` · ${esc(r.special)}`:''}${
         r.modifier?` · ${esc(r.modifier)}`:''}${
         r.findings?` <span class="w-warn">· ${r.findings}⚠</span>`:''}</span>
@@ -134,7 +127,7 @@ function facRowHtml(r){
 function facHosted(){ return state.mode === 'factions' || state.mode === 'campmap'; }
 
 async function facOpen(name){
-  activity('opened faction', `${name} in ${state.src}`);
+  activity(tt('factions.opened_faction'), `${name} in ${state.src}`);
   const f = state.fac;
   if(!f) return;
   f.sel = name; f.d = null;
@@ -176,25 +169,21 @@ function facPaintForm(){
 /* ---- the detail pane ---- */
 function facDetailHtml(){
   const f = state.fac, d = f.d;
-  if(!f.sel) return `<div class="empty">Pick a faction on the left.<br>
-    <span class="count">${f.count} faction${f.count===1?'':'s'} in data/${esc(f.file)}</span>
+  if(!f.sel) return `<div class="empty">${tt('factions.pick_a_faction_on_the_left',{count:f.count,x:f.count===1?'':'s',file:esc(f.file)})}
     <div class="trnote" style="max-width:600px;margin:14px auto;text-align:left">${
       esc(f.refused)}</div></div>`;
-  if(!d) return '<div class="empty">Reading the faction…</div>';
+  if(!d) return `<div class="empty">${tt('factions.reading_the_faction')}</div>`;
   if(d.error) return `<div class="empty"><span class="w-bad">✗ ${esc(d.error)}</span></div>`;
   return `<div class="trbar">
       <div><b>${esc(d.label)}</b>
         <span class="count">${esc(d.faction.culture||'')}${
           d.modifier?' · '+esc(d.modifier):''}</span></div>
       <span class="sp"></span>
-      <button title="Rename this slot in every file that names it - about twenty
-of them, the length-prefixed texture records in battle_models.modeldb, and the art
-the engine finds from the slot itself. The campaign script is reported, not edited."
-        onclick="facRename()">Rename slot…</button>
-      <button class="${d.cv?'on':''}" title="Show this faction exactly as
-descr_sm_factions.txt stores it, beside the form."
-        onclick="facCvToggle()">&lt;/&gt; Code view</button>
-      <button class="primary" onclick="facSave()">Save</button>
+      <button title="${ttA('factions.rename_this_slot_in_every_file')}"
+        onclick="facRename()">${tt('factions.rename_slot')}</button>
+      <button class="${d.cv?'on':''}" title="${ttA('factions.show_this_faction_exactly_as_descr')}"
+        onclick="facCvToggle()">${tt('common.code_view')}</button>
+      <button class="primary" onclick="facSave()">${tt('common.save')}</button>
     </div>
     <div id="facGui">
       ${facFindingsHtml(d)}
@@ -225,11 +214,9 @@ function facRename(){
 
 function facFindingsHtml(d){
   const out = (d.findings||[]).map(f =>
-    `<div class="trfind w-warn">line ${f.line}: ${esc(f.message)}</div>`);
+    `<div class="trfind w-warn">${tt('factions.line',{line:f.line,message:esc(f.message)})}</div>`);
   if((d.missing_loc||[]).length) out.push(`<div class="trfind w-warn">
-    There is no <code>{${esc(d.loc_tag)}}</code> entry in ${esc(d.loc_file)}, so this
-    faction shows its slot name in game. Type its name beside the slot below, or
-    save and the key is created with the slot as placeholder text.</div>`);
+    ${tt('factions.there_is_no_entry_in_so',{loc_tag:esc(d.loc_tag),loc_file:esc(d.loc_file)})}</div>`);
   return out.join('');
 }
 
@@ -239,76 +226,67 @@ function facFindingsHtml(d){
    the record, the pictures, what it can do, the movies and the horde. The same
    strip as the Cultures form, no parser work: a tab is only which section is
    drawn. The chosen tab is remembered across factions. */
-const FAC_TABS = [['general','General'], ['art','Art and banners'], ['abilities','What it can do'],
-                  ['movies','Movies'], ['horde','Horde']];
+const FAC_TABS = [['general',tt('common.general')], ['art',tt('factions.art_and_banners')], ['abilities',tt('factions.what_it_can_do')],
+                  ['movies',tt('factions.movies')], ['horde',tt('factions.horde')]];
 function facTab(id){ state.facTab = id; facPaintForm(); }
 function facFormHtml(d){
   const cur = state.facTab || 'general';
   const strip = recTabsHtml(FAC_TABS, cur, 'facTab');
   const body = cur === 'art' ? facArtSection(d) : cur === 'abilities' ? facAbilitySection(d)
     : cur === 'movies' ? facMovies(d) : cur === 'horde' ? facHorde(d) : facGeneralSection(d);
-  return strip + (body || '<div class="empty" style="padding:18px">Nothing on this tab for this faction.</div>');
+  return strip + (body || `<div class="empty" style="padding:18px">${tt('factions.nothing_on_this_tab_for_this')}</div>`);
 }
 function facGeneralSection(d){
   const w = d.w, v = d.vocab || {};
   const shownName = d.locEdits[d.loc_tag] !== undefined
     ? d.locEdits[d.loc_tag] : ((d.loc||{})[d.loc_tag] || '');
   return `<section class="trsec">
-    <div class="trsechead">The faction
-      <span class="count">The line order here is what all 90 real factions
-        measured write, so an added line goes to its place in it</span></div>
+    <div class="trsechead">${tt('factions.the_faction_the_line_order_here')}</div>
     <div class="trgrid">
-      <label class="lbl" data-label="name">Slot</label>
+      <label class="lbl" data-label="name">${tt('factions.slot')}</label>
       <div class="trkey">
         <input data-label="name" value="${esc(d.slot)}" disabled
-          title="The faction slot. descr_strat, every unit's ownership line and
-every 'requires factions' clause point at it, so it is not renamed here.">
+          title="${ttA('factions.the_faction_slot_descr_strat_every')}">
         <input class="trtext" value="${esc(shownName)}"
           placeholder="${((d.loc||{})[d.loc_tag] === undefined)
-            ? 'not in ' + esc(d.loc_file) + ' yet' : 'the faction’s name in game'}"
-          title="What the player reads. Saved into data/${esc(d.loc_file)}."
+            ? tt('factions.not_in') + esc(d.loc_file) + ' yet' : tt('factions.the_factions_name_in_game')}"
+          title="${ttA('factions.what_the_player_reads_saved_into',{loc_file:esc(d.loc_file)})}"
           oninput="facSetLoc(this.value)">
       </div>
-      ${d.modifier ? `<label class="lbl">Head modifier</label>
+      ${d.modifier ? `<label class="lbl">${tt('factions.head_modifier')}</label>
         <div><input value="${esc(d.modifier)}" disabled>
-        <div class="trhint count">Carried on the <code>faction</code> line itself;
-          edited in the code view</div></div>` : ''}
-      ${facPick(d, 'culture', 'Culture', v.cultures)}
-      ${facPick(d, 'religion', 'Religion', v.religions)}
-      ${facColour(d, 'primary_colour', 'Primary colour')}
-      ${facColour(d, 'secondary_colour', 'Secondary colour')}
-      ${facPick(d, 'special_faction_type', 'Special type', v.special_types, true)}
+        <div class="trhint count">${tt('factions.carried_on_the_faction_line_itself')}</div></div>` : ''}
+      ${facPick(d, 'culture', tt('common.culture'), v.cultures)}
+      ${facPick(d, 'religion', tt('factions.religion'), v.religions)}
+      ${facColour(d, 'primary_colour', tt('factions.primary_colour'))}
+      ${facColour(d, 'secondary_colour', tt('factions.secondary_colour'))}
+      ${facPick(d, 'special_faction_type', tt('factions.special_type'), v.special_types, true)}
     </div>
   </section>`;
 }
 function facArtSection(d){
   const v = d.vocab || {};
   return `<section class="trsec">
-    <div class="trsechead">Art and banners
-      <span class="count">Symbol lines name .CAS strat MODELS, not textures. A
-        loading logo normally lives inside the game's .pack archives, so "not
-        found" here is not "missing"</span></div>
+    <div class="trsechead">${tt('factions.art_and_banners_symbol_lines_name')}</div>
     ${facPictures(d)}
     <div class="trgrid">
       ${(v.art_keys||[]).map(k => facArt(d, k)).join('')}
-      ${facBox(d, 'standard_index', 'Banner index')}
-      ${facBox(d, 'logo_index', 'Logo index', v.logo_indexes)}
-      ${facBox(d, 'small_logo_index', 'Small logo index', v.small_logo_indexes)}
-      ${facBox(d, 'triumph_value', 'Triumph value')}
+      ${facBox(d, 'standard_index', tt('factions.banner_index'))}
+      ${facBox(d, 'logo_index', tt('factions.logo_index'), v.logo_indexes)}
+      ${facBox(d, 'small_logo_index', tt('factions.small_logo_index'), v.small_logo_indexes)}
+      ${facBox(d, 'triumph_value', tt('factions.triumph_value'))}
     </div>
   </section>`;
 }
 function facAbilitySection(d){
   const v = d.vocab || {};
   return `<section class="trsec">
-    <div class="trsechead">What it can do</div>
+    <div class="trsechead">${tt('factions.what_it_can_do')}</div>
     <div class="trgrid">
       ${(v.yes_no||[]).map(k => facYesNo(d, k)).join('')}
       ${facPick(d, 'has_family_tree', 'has_family_tree', v.family_tree)}
     </div>
-    <div class="trhint count">has_family_tree is not a yes/no: 24 of the 90 real
-      factions measured say <code>teutonic</code>, and a checkbox would have
-      written <code>no</code> over every one of them.</div>
+    <div class="trhint count">${tt('factions.has_family_tree_is_not_a')}</div>
   </section>`;
 }
 
@@ -318,7 +296,7 @@ function facBox(d, key, label, list){
   const id = 'facdl-' + key;
   return `<label class="lbl" data-label="${key}">${esc(label)}</label>
     <div><input data-label="${key}" value="${esc(d.w[key]||'')}"
-      ${list&&list.length?`list="${id}"`:''}
+      ${list&&list.length?tt('factions.list',{id}):''}
       oninput="facSet('${key}',this.value.trim())">
     ${list&&list.length?`<datalist id="${id}">${list.map(x =>
       `<option value="${esc(x)}">`).join('')}</datalist>`:''}</div>`;
@@ -328,10 +306,10 @@ function facPick(d, key, label, options, optional){
   const cur = d.w[key] || '', opts = options || [];
   return `<label class="lbl" data-label="${key}">${esc(label)}</label>
     <div><select data-label="${key}" onchange="facSet('${key}',this.value)">
-      ${optional?`<option value=""${cur?'':' selected'}>None</option>`:''}
+      ${optional?`<option value=""${cur?'':' selected'}>${tt('common.none_2')}</option>`:''}
       ${opts.map(o => `<option value="${esc(o)}"${o===cur?' selected':''}>${esc(o)}</option>`).join('')}
       ${cur && !opts.includes(cur)
-        ? `<option value="${esc(cur)}" selected>${esc(cur)} (not in this mod)</option>` : ''}
+        ? `<option value="${esc(cur)}" selected>${tt('factions.not_in_this_mod',{cur:esc(cur)})}</option>` : ''}
     </select></div>`;
 }
 
@@ -342,7 +320,7 @@ function facYesNo(d, key){
     <div><select data-label="${key}" onchange="facSet('${key}',this.value)">
       ${['yes','no'].map(o => `<option value="${esc(o)}"${o===cur?' selected':''}>${esc(o)}</option>`).join('')}
       ${cur && cur!=='yes' && cur!=='no'
-        ? `<option value="${esc(cur)}" selected>${esc(cur)} (not yes or no)</option>` : ''}
+        ? `<option value="${esc(cur)}" selected>${tt('factions.not_yes_or_no',{cur:esc(cur)})}</option>` : ''}
     </select></div>`;
 }
 
@@ -366,11 +344,11 @@ function facColour(d, key, label){
     <div>
       <div class="faccol">
         <input type="color" id="fcs_${key}" value="${esc(hex)}"
-          title="Pick a colour. The box stays open until you close it."
+          title="${ttA('factions.pick_a_colour_the_box_stays')}"
           oninput="facSetColour('${key}',this.value)">
         <input class="faccolt" id="fch_${key}" value="${esc(hex)}"
           spellcheck="false" maxlength="7" placeholder="#rrggbb"
-          title="The colour as a hex code - paste one from anywhere."
+          title="${ttA('factions.the_colour_as_a_hex_code')}"
           oninput="facSetHex('${key}',this.value)">
       </div>
       <div class="trhint count" id="fcr_${key}">${esc(d.w[key]||'')}</div>
@@ -390,13 +368,12 @@ function facHexFull(text){
 function facPictures(d){
   const pics = d.pictures || [];
   if(!pics.length) return `<div class="trhint count" style="margin-bottom:8px">
-    No unpacked pictures for <code>${esc(d.slot)}</code>. Normal: most mods keep
-    faction art inside the game's <code>.pack</code> archives.</div>`;
+    ${tt('factions.no_unpacked_pictures_for_normal_most',{slot:esc(d.slot)})}</div>`;
   return `<div class="facpics">${pics.map(p => {
     const url = `/icon?mod=${enc(state.fac.mod)}&kind=faction&rel=${enc(p.rel)}${iconBust()}`;
     return `<figure>
       <div class="icowrap"><img loading="lazy" onerror="iconRetry(this)"
-        title="Replace this picture" onclick="imgPick('${q1(esc(url))}','facPaint')"
+        title="${ttA('common.replace_this_picture')}" onclick="imgPick('${q1(esc(url))}','facPaint')"
         src="${url}" alt="">${imgEditBtn(url,'facPaint')}</div>
       <figcaption>${esc(p.label)}<span class="count">${esc(p.rel)}</span>
         ${imgRow(url,'facPaint')}</figcaption>
@@ -409,8 +386,8 @@ function facArt(d, key){
     <div><input data-label="${key}" value="${esc(d.w[key]||'')}"
       oninput="facSet('${key}',this.value.trim())">
       <div class="trhint count">${found
-        ? '✓ found in this mod'
-        : 'Not unpacked here. Normally that means it is inside a .pack archive'}</div>
+        ? tt('factions.found_in_this_mod')
+        : tt('factions.not_unpacked_here_normally_that_means')}</div>
     </div>`;
 }
 
@@ -418,12 +395,11 @@ function facMovies(d){
   const keys = ['intro_movie','victory_movie','defeat_movie','death_movie'];
   const any = keys.some(k => d.had.has(k) || facHas(d, k));
   if(!any) return `<section class="trsec">
-    <div class="trsechead">Movies <span class="count">This faction has none, and
-      63% of the real factions measured do</span></div>
-    <button class="trgadd" onclick="facAddGroup('movies')">＋ Add the four movie lines</button>
+    <div class="trsechead">${tt('factions.movies_this_faction_has_none_and')}</div>
+    <button class="trgadd" onclick="facAddGroup('movies')">${tt('factions.add_the_four_movie_lines')}</button>
   </section>`;
   return `<section class="trsec">
-    <div class="trsechead">Movies <span class="count">.bik files under data/</span></div>
+    <div class="trsechead">${tt('factions.movies_bik_files_under_data')}</div>
     <div class="trgrid">${keys.map(k => facBox(d, k, k)).join('')}</div>
   </section>`;
 }
@@ -432,27 +408,24 @@ function facHorde(d){
   const v = d.vocab || {}, keys = v.horde_keys || [];
   const any = keys.some(k => d.had.has(k) || facHas(d, k));
   if(!any) return `<section class="trsec">
-    <div class="trsechead">Horde <span class="count">This faction has none</span></div>
-    <button class="trgadd" onclick="facAddGroup('horde')">＋ Make this a horde faction</button>
+    <div class="trsechead">${tt('factions.horde_this_faction_has_none')}</div>
+    <button class="trgadd" onclick="facAddGroup('horde')">${tt('factions.make_this_a_horde_faction')}</button>
   </section>`;
   const units = d.w.horde_units || [];
   return `<section class="trsec">
-    <div class="trsechead">Horde
-      <span class="count">The eight settings only mean anything together</span></div>
+    <div class="trsechead">${tt('factions.horde_the_eight_settings_only_mean')}</div>
     <div class="trgrid">${keys.map(k => facBox(d, k, k)).join('')}</div>
     <div class="treffects">
-      <div class="trsechead" style="margin:8px 0 0">Horde units
-        <span class="count">${units.length}: what it spawns when it loses its
-          last settlement</span></div>
+      <div class="trsechead" style="margin:8px 0 0">${tt('factions.horde_units_what_it_spawns_when',{units_n:units.length})}</div>
       ${units.map((u,k)=>`<div class="treff" data-label="horde_unit#${k+1}">
-        <input class="trattr" value="${esc(u)}" list="facUnits" placeholder="unit type"
+        <input class="trattr" value="${esc(u)}" list="facUnits" placeholder="${ttA('factions.unit_type')}"
           oninput="facSetUnit(${k},this.value)">
         <span class="count">${esc(facUnitLabel(d, u))}</span>
         <button class="trgdel" onclick="facDelUnit(${k})">✕</button>
       </div>`).join('')}
       <datalist id="facUnits">${(v.units||[]).map(u =>
         `<option value="${esc(u.type)}">${esc(u.label)}</option>`).join('')}</datalist>
-      <button class="trgadd" onclick="facAddUnit()">＋ Add horde unit</button>
+      <button class="trgadd" onclick="facAddUnit()">${tt('factions.add_horde_unit')}</button>
     </div>
   </section>`;
 }
@@ -460,7 +433,7 @@ function facHorde(d){
 function facUnitLabel(d, type){
   if(!type) return '';
   const hit = ((d.vocab||{}).units||[]).find(u => u.type === type);
-  return hit ? hit.label : '✗ not a unit in this mod';
+  return hit ? hit.label : tt('factions.not_a_unit_in_this_mod');
 }
 
 /* ---- edits ---- */
@@ -484,7 +457,7 @@ function facSet(key, value){
 function facWriteColour(key, hex, skip){
   const d = state.fac.d; if(!d) return;
   const n = parseInt(hex.slice(1), 16);
-  d.w[key] = `red ${(n>>16)&255}, green ${(n>>8)&255}, blue ${n&255}`;
+  d.w[key] = tt('factions.red_green_blue',{x:(n>>16)&255,x2:(n>>8)&255,x3:n&255});
   (d.colours = d.colours || {})[key] = hex;
   const sw = document.getElementById('fcs_' + key);
   const hx = document.getElementById('fch_' + key);
@@ -588,16 +561,16 @@ async function facSave(){
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 14);
   const found = (p.findings || []).map(x => '⚠ ' + x.message);
-  if(!confirm(`Write: save ${d.slot}?\n\n` + (lines.join('\n') || 'no visible change')
-    + ((p.changes || []).length > 14 ? `\n…and ${p.changes.length - 14} more` : '')
+  if(!confirm(tt('factions.write_save',{slot:d.slot}) + (lines.join('\n') || tt('common.no_visible_change'))
+    + ((p.changes || []).length > 14 ? tt('factions.and_more',{changes:p.changes.length - 14}) : '')
     + (found.length ? '\n\n' + found.slice(0, 4).join('\n') : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   f.busy = true;
   let res;
   try{ res = await api.post('/api/factions/apply', body); }
   finally{ f.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 6000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   if(typeof fauStale === 'function') fauStale();
   const keep = body.faction;
   // 17f: the roster is re-read either way, but only the mode may redraw the
@@ -650,11 +623,11 @@ function fcRowNew(){ return {name: '', label: '', titles: {}, open: false}; }
 /* The five text keys worth asking for at creation - factionclone.TITLE_KEYS.
    Blank leaves the donor's value, which is what a clone does everywhere else. */
 const FC_TITLES = [
-  ['leader', 'Leader title', 'EMT_X_FACTION_LEADER_TITLE'],
-  ['heir', 'Heir title', 'EMT_X_FACTION_HEIR_TITLE'],
-  ['former', 'Former leader title', 'EMT_X_FORMER_FACTION_LEADER_TITLE'],
-  ['strength', 'Strengths', 'X_STRENGTH'],
-  ['weakness', 'Weaknesses', 'X_WEAKNESS'],
+  ['leader', tt('factions.leader_title'), 'EMT_X_FACTION_LEADER_TITLE'],
+  ['heir', tt('factions.heir_title'), 'EMT_X_FACTION_HEIR_TITLE'],
+  ['former', tt('factions.former_leader_title'), 'EMT_X_FORMER_FACTION_LEADER_TITLE'],
+  ['strength', tt('factions.strengths'), 'X_STRENGTH'],
+  ['weakness', tt('factions.weaknesses'), 'X_WEAKNESS'],
 ];
 
 /* The head line may carry a modifier after a comma (`egypt, spawned_on_event`)
@@ -677,7 +650,7 @@ function facClonePaint(){
   const go = document.querySelector('.foot .primary');
   if(go) go.disabled = !(facCloneReady() && !c.busy);
   const note = document.getElementById('fcNote');
-  if(note) note.textContent = c.busy ? 'Working out what would change…' : '';
+  if(note) note.textContent = c.busy ? tt('common.working_out_what_would_change') : '';
 }
 
 function facCloneRender(){
@@ -691,18 +664,14 @@ function facCloneRender(){
   const p = c.plan || null;
   const full = facFull();
   document.getElementById('modal').innerHTML = `
-    <h2>Add a faction <span class="pill">${esc(f.mod || state.src)}</span></h2>
+    <h2>${tt('factions.add_a_faction_2')} <span class="pill">${esc(f.mod || state.src)}</span></h2>
     <div class="mbody" style="padding:14px 16px">
       <div class="count fcintro">
-        A faction is added by <b>copying one that already works</b> - into all
-        thirteen files that name a faction slot, plus its symbols, banners and unit
-        cards. The clone starts identical to the faction it copies; change what
-        you want afterwards in this tab and the editors beside it.
+        ${tt('factions.a_faction_is_added_by_copying')}
       </div>
-      ${full ? `<div class="w-warn fcmsg">This mod already uses all ${f.limit}
-        of the engine's faction slots, so nothing can be added until one goes.</div>` : ''}
+      ${full ? `<div class="w-warn fcmsg">${tt('factions.this_mod_already_uses_all_of',{limit:f.limit})}</div>` : ''}
       <div class="fcgrid">
-        <label class="v3f"><span>Copy from</span>
+        <label class="v3f"><span>${tt('factions.copy_from')}</span>
           <select onchange="facCloneSet('source', this.value)">
             ${rows.map(r => `<option value="${q1(esc(r.slot))}"${
               r.slot === c.source ? ' selected' : ''
@@ -711,51 +680,42 @@ function facCloneRender(){
         <span></span><span></span>
       </div>
       ${c.rows.map((r, i) => `<div class="fcgrid fcrowin">
-        <label class="v3f"><span>${c.rows.length > 1 ? `New faction ${i + 1}` : 'New faction slot'}</span>
+        <label class="v3f"><span>${c.rows.length > 1 ? tt('factions.new_faction',{x:i + 1}) : tt('factions.new_faction_slot')}</span>
           <input type="text" id="fcName${i}" value="${q1(esc(r.name))}"
-            placeholder="e.g. gondor_south" spellcheck="false"
+            placeholder="${ttA('factions.e_g_gondor_south')}" spellcheck="false"
             oninput="facCloneSet('name', this.value, ${i})"></label>
-        <label class="v3f"><span>Shown name <span class="count">(optional)</span></span>
+        <label class="v3f"><span>${tt('factions.shown_name_optional')}</span>
           <input type="text" id="fcLabel${i}" value="${q1(esc(r.label))}"
-            placeholder="what the game calls it"
+            placeholder="${ttA('factions.what_the_game_calls_it')}"
             oninput="facCloneSet('label', this.value, ${i})"></label>
         <span class="fcrowbtns">
           <button onclick="facCloneFold(${i})" class="${r.open ? 'on' : ''}"
-            title="Leader and heir titles, strengths and weaknesses">Titles${
-              Object.values(r.titles).some(v => v) ? ' ●' : ''}</button>
-          ${c.rows.length > 1 ? `<button onclick="facCloneDrop(${i})" title="Take this one out">✕</button>` : ''}
+            title="${ttA('factions.leader_and_heir_titles_strengths_and')}">${tt('factions.titles',{x:Object.values(r.titles).some(v => v) ? ' ●' : ''})}</button>
+          ${c.rows.length > 1 ? `<button onclick="facCloneDrop(${i})" title="${ttA('factions.take_this_one_out')}">✕</button>` : ''}
         </span>
         ${r.open ? `<div class="fctitles">${FC_TITLES.map(([k, lab, key]) =>
           `<label class="v3f"><span>${lab} <code>${esc(key.replace('X', (r.name || 'slot').toUpperCase()))}</code></span>
             <input type="text" id="fcT${i}_${k}" value="${q1(esc(r.titles[k] || ''))}"
-              placeholder="blank keeps the donor's" oninput="facCloneTitle(${i}, '${k}', this.value)"></label>`
+              placeholder="${ttA('factions.blank_keeps_the_donors')}" oninput="facCloneTitle(${i}, '${k}', this.value)"></label>`
         ).join('')}</div>` : ''}
       </div>`).join('')}
-      <button class="fcmore" onclick="facCloneRow()" title="Add several factions from the same donor in one go - one plan, one write, one Undo">＋ Another faction</button>
+      <button class="fcmore" onclick="facCloneRow()" title="${ttA('factions.add_several_factions_from_the_same')}">${tt('factions.another_faction')}</button>
       <div class="count fcintro">
-        The slot is what every other file points at, so it has to be one bare
-        word: lower case, digits and underscores. It cannot be renamed later
-        without orphaning every line that names it. The shown name and any
-        titles you give are filled in for you, and with the second box below
-        ticked the donor's name in its text becomes the new one; every other
-        text entry stays the donor's until you edit it.
+        ${tt('factions.the_slot_is_what_every_other')}
       </div>
       <label class="fcart"><input type="checkbox"${c.art ? ' checked' : ''}
         onchange="facCloneSet('art', this.checked)">
-        <span>Copy the art too - symbols, banners, captain cards and the unit
-        card folders, each renamed for the new slot</span></label>
+        <span>${tt('factions.copy_the_art_too_symbols_banners')}</span></label>
       <label class="fcart"><input type="checkbox"${c.rename ? ' checked' : ''}
         onchange="facCloneSet('rename', this.checked)">
-        <span>Where the donor's shown name stands in its text, put the new one -
-        "Mordor Scout" becomes "Rhûn Scout". Only with a shown name, and only the
-        whole word.</span></label>
+        <span>${tt('factions.where_the_donors_shown_name_stands')}</span></label>
       <div id="fcPlan">${facClonePlanHtml()}</div>
     </div>
     <div class="foot">
-      <span class="count" id="fcNote">${c.busy ? 'Working out what would change…' : ''}</span>
-      <button onclick="facCloneClose()">Cancel</button>
+      <span class="count" id="fcNote">${c.busy ? tt('common.working_out_what_would_change') : ''}</span>
+      <button onclick="facCloneClose()">${tt('common.cancel')}</button>
       <button class="primary"${(facCloneReady() && !c.busy) ? '' : ' disabled'}
-        onclick="facCloneApply()">${c.rows.length > 1 ? `Create ${c.rows.length} factions` : 'Create faction'}</button>
+        onclick="facCloneApply()">${c.rows.length > 1 ? tt('factions.create_factions',{rows_n:c.rows.length}) : tt('factions.create_faction')}</button>
     </div>`;
   if(keep){
     const box = document.getElementById(keep);
@@ -814,37 +774,26 @@ function facClonePlanHtml(){
 /* A batch: one line per new faction, each opening onto its own plan, and the
    files the whole job writes - each once, as the last row leaves it. */
 function facCloneBatchHtml(b){
-  if(!b) return `<div class="count fcintro">Name the new factions to see exactly
-    which files would change, and by how much.</div>`;
+  if(!b) return `<div class="count fcintro">${tt('factions.name_the_new_factions_to_see')}</div>`;
   const rows = b.rows || [];
   return `<div class="fcplan">
-    <div class="k">What would be written <span class="count">${rows.length} factions ·
-      ${(b.files || []).length} file(s)${b.asset_files ? ` · ${b.asset_files} art file(s)` : ''}
-      · one backup, one Undo</span></div>
+    <div class="k">${tt('factions.what_would_be_written_factions_file',{rows_n:rows.length,n:(b.files || []).length,asset_files:b.asset_files ? tt('factions.art_file_s',{asset_files:b.asset_files}) : ''})}</div>
     ${(b.errors || []).length ? `<div class="w-warn fcmsg">${b.errors.map(esc).join('<br>')}</div>` : ''}
     ${rows.map(r => `<details class="fcbatch"><summary>
         <span class="${r.ok ? 'ok' : 'bad'}">${r.ok ? '✓' : '✗'}</span>
-        <b>${esc(r.new || 'unnamed')}</b> <span class="count">from ${esc(r.source)} ·
-        ${(r.files || []).filter(x => x.written).length} file(s)${
-          r.asset_files ? ` · ${r.asset_files} art file(s)` : ''}${
-          (r.art_gaps || []).length ? ` · ${r.art_gaps.length} art place(s) empty` : ''}</span>
+        <b>${esc(r.new || 'unnamed')}</b> <span class="count">${tt('factions.from_file_s',{source:esc(r.source),n:(r.files || []).filter(x => x.written).length,asset_files:r.asset_files ? tt('factions.art_file_s',{asset_files:r.asset_files}) : '',art_gaps:(r.art_gaps || []).length ? tt('factions.art_place_s_empty',{art_gaps_n:r.art_gaps.length}) : ''})}</span>
       </summary>${facClonePlanBody(r)}</details>`).join('')}
   </div>`;
 }
 
 function facClonePlanBody(p){
-  if(!p) return `<div class="count fcintro">Name the new faction to see exactly
-    which files would change, and by how much.</div>`;
+  if(!p) return `<div class="count fcintro">${tt('factions.name_the_new_faction_to_see')}</div>`;
   if((p.errors || []).length)
     return `<div class="w-warn fcmsg">${p.errors.map(esc).join('<br>')}</div>`;
   const files = p.files || [];
   return `<div class="fcplan">
-    <div class="k">What would be written
-      <span class="count">${files.filter(x => x.written).length} file(s)${
-        p.asset_files ? ` · ${p.asset_files} art file(s), ${
-          (p.asset_bytes / 1048576).toFixed(1)} MB` : ''}${
-        (p.art_gaps || []).length
-          ? ` · ${p.art_gaps.length} art place(s) empty` : ''}</span></div>
+    <div class="k">${tt('factions.what_would_be_written_file_s',{n:files.filter(x => x.written).length,x:p.asset_files ? tt('factions.art_file_s_mb',{asset_files:p.asset_files,asset_bytes:(p.asset_bytes / 1048576).toFixed(1)}) : '',art_gaps:(p.art_gaps || []).length
+          ? tt('factions.art_place_s_empty',{art_gaps_n:p.art_gaps.length}) : ''})}</div>
     ${files.map(x => `<div class="fcrow${x.written ? '' : ' off'}">
       <span class="fcc">${x.written ? '+' + x.count : '-'}</span>
       <span class="fcn">${esc(x.label)}
@@ -853,11 +802,7 @@ function facClonePlanBody(p){
     </div>`).join('')}
     ${(p.review || []).length ? `<div class="fcrow fcrev">
       <span class="fcc">-</span>
-      <span class="fcn">Left for you to decide
-        <span class="fcf">${p.review.map(r => esc(r.rel) + ' (' + r.hits + ')').join(', ')}</span></span>
-      <span class="fcw count">the donor is named here in ways that are a
-        judgement, not a list - a trait named after it, an ancillary's condition,
-        a prebattle speech</span></div>` : ''}
+      ${tt('factions.left_for_you_to_decide_the',{x:p.review.map(r => esc(r.rel) + ' (' + r.hits + ')').join(', ')})}</div>` : ''}
     ${(p.art_gaps || []).map(g => `<div class="fcrow fcgap" data-why="${esc(g.reason)}">
       <span class="fcc">0</span>
       <span class="fcn">${esc(g.label)}
@@ -889,7 +834,7 @@ async function facClonePreview(){
   if(!c.rows.some(r => r.name)){ c.plan = null; c.batch = null; c.err = ''; facClonePaint(); return; }
   c.busy = true; c.err = '';
   const note = document.getElementById('fcNote');
-  if(note) note.textContent = 'Working out what would change…';
+  if(note) note.textContent = tt('common.working_out_what_would_change');
   let r;
   try{ r = await api.post('/api/factions/clone_plan', facCloneBody()); }
   catch(e){ r = {error: String((e && e.message) || e)}; }
@@ -920,34 +865,34 @@ async function facCloneApply(){
   if(c.rows.length > 1) return facCloneApplyMany();
   const p = c.plan, name = c.rows[0].name;
   const files = (p.files || []).filter(x => x.written);
-  if(!confirm(`Add faction ${name}, copied from ${c.source}?\n\n`
+  if(!confirm(tt('factions.add_faction_copied_from',{name,source:c.source})
     + files.map(x => `  ${x.rel}  +${x.count}`).join('\n')
-    + (p.asset_files ? `\n  ${p.asset_files} art file(s), copied and renamed` : '')
+    + (p.asset_files ? tt('factions.art_file_s_copied_and_renamed',{asset_files:p.asset_files}) : '')
     // the review files live in `review`, not in the note, so this dialog names
     // them itself - it has no row to draw them in the way the plan pane does
-    + ((p.review || []).length ? '\n\nLeft for you to decide:\n'
-        + p.review.map(r => `  ${r.rel}  (${r.hits} mention(s))`).join('\n') : '')
+    + ((p.review || []).length ? tt('factions.left_for_you_to_decide')
+        + p.review.map(r => tt('factions.mention_s',{rel:r.rel,hits:r.hits})).join('\n') : '')
     // 42: the art the clone will NOT get, said here rather than found in the
     // game. A donor with nothing in a folder cannot fill it, so this is the
     // last point at which picking a different donor is still a choice.
     + ((p.art_gaps || []).length
-        ? `\n\n${p.art_gaps.length} place(s) get no art:\n`
+        ? tt('factions.place_s_get_no_art',{art_gaps_n:p.art_gaps.length})
           + p.art_gaps.map(g => `  ${g.label}  (${g.rel})\n    ${g.what}`).join('\n')
         : '')
-    + '\n\nEvery file is backed up first, and 🕑 Log undoes the whole faction '
-    + 'in one go.\n\n' + (p.notes || []).join('\n\n'))) return;
+    + tt('factions.every_file_is_backed_up_first')
+    + tt('factions.in_one_go') + (p.notes || []).join('\n\n'))) return;
   c.busy = true;
   facCloneRender();
   let res;
   try{ res = await api.post('/api/factions/clone_apply', facCloneBody()); }
   finally{ c.busy = false; }
   if(res.error){ c.err = res.error; facCloneRender(); toast('✗ ' + res.error, 6000); return; }
-  activity('added faction', `${name}, cloned from ${c.source} in ${state.src}`);
+  activity(tt('factions.added_faction'), tt('factions.cloned_from_in',{name,source:c.source,src:state.src}));
   const keep = name;
   f.clone = null;
   closeModal();
-  toast(`Added ${keep} - ${res.files.length} file(s), ${res.asset_files} art file(s). `
-        + '🕑 Log can undo it.', 5000);
+  toast(tt('factions.added_file_s_art_file_s',{keep,files_n:res.files.length,asset_files:res.asset_files})
+        + tt('common.log_can_undo_it'), 5000);
   if(typeof fauStale === 'function') fauStale();
   // 21: the audit offers this dialog from the campaign map's faction screen too,
   // and there `main` is the map - only the mode may redraw the page (17f's rule)
@@ -959,21 +904,21 @@ async function facCloneApply(){
 async function facCloneApplyMany(){
   const f = state.fac, c = f.clone, b = c.batch;
   const names = c.rows.map(r => r.name);
-  if(!confirm(`Add ${names.length} factions, each copied from ${c.source}?\n\n  `
-    + names.join('\n  ') + `\n\n${(b.files || []).length} file(s) are written, each once`
-    + (b.asset_files ? `, and ${b.asset_files} art file(s) copied and renamed` : '')
-    + '.\n\nEvery file is backed up first, and 🕑 Log undoes all of them in one go.')) return;
+  if(!confirm(tt('factions.add_factions_each_copied_from',{names_n:names.length,source:c.source})
+    + names.join('\n  ') + tt('factions.file_s_are_written_each_once',{n:(b.files || []).length})
+    + (b.asset_files ? tt('factions.and_art_file_s_copied_and',{asset_files:b.asset_files}) : '')
+    + tt('factions.every_file_is_backed_up_first_2'))) return;
   c.busy = true;
   facCloneRender();
   let res;
   try{ res = await api.post('/api/factions/clone_apply', facCloneBody()); }
   finally{ c.busy = false; }
   if(res.error){ c.err = res.error; facCloneRender(); toast('✗ ' + res.error, 6000); return; }
-  activity('added factions', `${names.join(', ')}, cloned from ${c.source} in ${state.src}`);
+  activity(tt('factions.added_factions'), tt('factions.cloned_from_in_2',{names:names.join(', '),source:c.source,src:state.src}));
   f.clone = null;
   closeModal();
-  toast(`Added ${names.length} factions - ${res.files.length} file(s), ${res.asset_files} art file(s). `
-        + '🕑 Log can undo all of them.', 6000);
+  toast(tt('factions.added_factions_file_s_art_file',{names_n:names.length,files_n:res.files.length,asset_files:res.asset_files})
+        + tt('factions.log_can_undo_all_of_them'), 6000);
   if(typeof fauStale === 'function') fauStale();
   if(state.mode === 'factions'){ await loadFactions(); facOpen(names[0]); return; }
   try{ await facFetch(f.mod); }catch(e){}

@@ -34,6 +34,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tests import _webtext  # noqa: E402
 
 from unittransfer import mapvocab  # noqa: E402
 
@@ -48,12 +49,12 @@ def check(label, cond):
     print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
 
 
-src = JS.read_text(encoding="utf-8")
+src = _webtext.read(JS)
 
 # ---------------------------------------------------------------------------
 print("\n== 1) the file is loaded, and loaded after the one it borrows from ==")
 
-html = (WEB / "index.html").read_text(encoding="utf-8")
+html = _webtext.read((WEB / "index.html"))
 tags = re.findall(r'<script src="js/([^"]+)"></script>', html)
 check("index.html loads map3d.js", "map3d.js" in tags)
 check("after viewer3d.js, whose matrix helpers it calls",
@@ -68,7 +69,7 @@ check("v3Program, v3Perspective and v3LookAt are viewer3d's, not copied here",
 # ---------------------------------------------------------------------------
 print("\n== 2) the screen reaches it the way it reaches every other late file ==")
 
-cm = (ROOT / "web" / "js" / "campmap.js").read_text(encoding="utf-8")
+cm = _webtext.read((ROOT / "web" / "js" / "campmap.js"))
 check("campmap.js asks whether the mode is up through a typeof guard",
       "typeof cm3On === 'function'" in cm)
 check("and the one texture hook is in cmapPaint, the funnel, not per caller",
@@ -81,7 +82,7 @@ check("the height scale and the water ride in cmapLayerState, so a view keeps th
       re.search(r"m\.d3 = \{height: c\.d3\.height, water:", cm) is not None)
 check("but `on` does not - a saved view must not open a WebGL context",
       "m.d3 = {height" in cm and "on: c.d3.on" not in cm)
-core = (ROOT / "web" / "js" / "core.js").read_text(encoding="utf-8")
+core = _webtext.read((ROOT / "web" / "js" / "core.js"))
 check("a mode switch drops the orphaned scene, beside the model viewer's",
       "cm3DropOrphan" in core and "v3DropOrphan" in core)
 

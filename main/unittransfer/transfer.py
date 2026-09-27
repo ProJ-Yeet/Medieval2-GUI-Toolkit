@@ -33,6 +33,7 @@ from . import animloose, animpack
 from . import keyblock as kb
 from .logutil import block, counted, file_op, fingerprint, log
 from .mod import Mod
+from . import i18n as _i18n
 
 
 # Human-readable names of the EDU field groups a base / replaced unit can supply,
@@ -835,7 +836,7 @@ def unit_model_index(source: Mod, unit_type: str) -> List[Dict]:
     """
     unit = source.edu.by_type().get(unit_type)
     if unit is None:
-        raise KeyError(f"unit {unit_type!r} not found in {source.name}")
+        raise KeyError(_i18n.msg("eng.transfer.unit_not_found_in", "unit {unit_type} not found in {name}", unit_type=repr(unit_type), name=source.name))
     out: List[Dict] = []
     for name, slot in model_slots_for(source, unit).items():
         entry = source.modeldb.get(name)
@@ -983,11 +984,7 @@ def _swap_entry_animations(plan: "TransferPlan", dest: Mod, model_name: str,
             return "", []                # its own animations work here - keep them
         if donor is None or not donor.animations:
             plan.warnings.append(
-                f"{what} model '{entry.name}' needs animation(s) "
-                f"{', '.join(missing)}, which {dest.name} does not have, and the "
-                f"base unit's {what} has no readable modeldb entry to borrow an "
-                "animation set from. Copy the .cas files over by hand, or the game "
-                "will crash on load.")
+                _i18n.msg("eng.transfer.model_needs_animation_s_which_does", "{what} model '{name}' needs animation(s) {missing}, which {name2} does not have, and the base unit's {what2} has no readable modeldb entry to borrow an animation set from. Copy the .cas files over by hand, or the game will crash on load.", what=what, name=entry.name, missing=', '.join(missing), name2=dest.name, what2=what))
             return "", []
         raw = modeldb.rewrite_animations(entry.raw, donor.animations,
                                          pad=entry.first_entry_pad)
@@ -1004,10 +1001,7 @@ def _swap_entry_animations(plan: "TransferPlan", dest: Mod, model_name: str,
         plan.missing_skeletons = [s for s in plan.missing_skeletons
                                   if s not in missing or s in still_wanted]
         plan.warnings.append(
-            f"the {what}'s model '{entry.name}' uses animation(s) "
-            f"{', '.join(missing)}, which {dest.name} does not have. It was given "
-            f"'{donor.name}'s instead (the base unit's {what}), so it animates like "
-            f"the base's - it may move unexpectedly in battle. {undo_hint}")
+            _i18n.msg("eng.transfer.the_s_model_uses_animation_s", "the {what}'s model '{name}' uses animation(s) {missing}, which {name2} does not have. It was given '{name3}'s instead (the base unit's {what2}), so it animates like the base's - it may move unexpectedly in battle. {undo_hint}", what=what, name=entry.name, missing=', '.join(missing), name2=dest.name, name3=donor.name, what2=what, undo_hint=undo_hint))
         return donor.name, missing
     return "", []
 
@@ -1063,9 +1057,7 @@ def _plan_anim_port(plan: "TransferPlan", source: Mod, dest: Mod) -> None:
         plan.warnings.extend(plan.anim_loose.errors)
     else:
         plan.warnings.append(
-            "the animations come into the packs only: descr_skeleton.txt is left as it "
-            "is and no loose .cas is written, so if the game ever rebuilds its packs "
-            "from that file it cannot build these skeletons")
+            _i18n.msg("eng.transfer.the_animations_come_into_the_packs", "the animations come into the packs only: descr_skeleton.txt is left as it is and no loose .cas is written, so if the game ever rebuilds its packs from that file it cannot build these skeletons"))
 
 
 def _apply_mount_anim_donor(plan: "TransferPlan", source: Mod, dest: Mod,
@@ -1129,7 +1121,7 @@ def _resolve_projectiles(plan: "TransferPlan", source: Mod, dest: Mod,
             plan.projectile_actions.append((name, "missing",
                                             "not found in source descr_projectile.txt"))
             plan.warnings.append(
-                f"projectile '{name}' has no entry in the source descr_projectile.txt")
+                _i18n.msg("eng.transfer.projectile_has_no_entry_in_the", "projectile '{name}' has no entry in the source descr_projectile.txt", name=name))
             continue
         dp = dest_projs.get(name)
         if dp is not None and dp.content_equals(sp):
@@ -1206,20 +1198,11 @@ def _resolve_projectiles(plan: "TransferPlan", source: Mod, dest: Mod,
                             and v.lower() not in src_sets}, key=str.lower)
         if unread and unchecked:
             plan.warnings.append(
-                f"UNCHECKED EFFECTS: {len(unchecked)} effect set(s) "
-                f"({', '.join(unchecked[:4])}{', ...' if len(unchecked) > 4 else ''}) "
-                "are in neither mod's own effect files. They may be the base game's, "
-                f"in one of the {len(unread)} effect file(s) the destination leaves to it "
-                f"({', '.join(unread[:3])}{', ...' if len(unread) > 3 else ''}), which "
-                "are packed and cannot be read here, so they were blanked to be safe. "
-                "If the unit showed them in the source mod, point those lines back at "
-                "the real names by hand.")
+                _i18n.msg("eng.transfer.unchecked_effects_effect_set_s_are", "UNCHECKED EFFECTS: {unchecked_n} effect set(s) ({unchecked}{x}) are in neither mod's own effect files. They may be the base game's, in one of the {unread_n} effect file(s) the destination leaves to it ({unread}{x2}), which are packed and cannot be read here, so they were blanked to be safe. If the unit showed them in the source mod, point those lines back at the real names by hand.", unchecked_n=len(unchecked), unchecked=', '.join(unchecked[:4]), x=', ...' if len(unchecked) > 4 else '', unread_n=len(unread), unread=', '.join(unread[:3]), x2=', ...' if len(unread) > 3 else ''))
         if any(source.projectile_def(a[0]) and source.projectile_def(a[0]).models
                for a in added):
             plan.warnings.append(
-                "projectile model (.cas) files were copied, but their textures under "
-                "data/models_missile/textures/ are not chased - verify the missile model "
-                "renders and copy its texture if it's missing in the destination.")
+                _i18n.msg("eng.transfer.projectile_model_cas_files_were_copied", "projectile model (.cas) files were copied, but their textures under data/models_missile/textures/ are not chased - verify the missile model renders and copy its texture if it's missing in the destination."))
 
 
 def _plan_effects(plan: "TransferPlan", source: Mod, dest: Mod, to_emit) -> set:
@@ -1316,12 +1299,7 @@ def _plan_effects(plan: "TransferPlan", source: Mod, dest: Mod, to_emit) -> set:
 
     if imported:
         plan.warnings.append(
-            f"EFFECTS IMPORTED: {len(imported)} effect set(s) the destination did not "
-            "have were copied into its effect files, because it is marked as M2EX. "
-            "On a vanilla engine this is what the 'effects are not imported' rule "
-            "protects against: the engine's effect table has a fixed size and "
-            "silently drops whatever is past the end of it. Untick M2EX to go back "
-            "to placeholders.")
+            _i18n.msg("eng.transfer.effects_imported_effect_set_s_the", "EFFECTS IMPORTED: {imported_n} effect set(s) the destination did not have were copied into its effect files, because it is marked as M2EX. On a vanilla engine this is what the 'effects are not imported' rule protects against: the engine's effect table has a fixed size and silently drops whatever is past the end of it. Untick M2EX to go back to placeholders.", imported_n=len(imported)))
     return imported
 
 
@@ -1395,9 +1373,7 @@ def _resolve_engine_skeletons(plan: "TransferPlan", source: Mod, dest: Mod,
                  "base game)" + ("" if in_dest else " - and ABSENT from the destination's")))
             if not in_dest:
                 plan.warnings.append(
-                    f"engine skeleton '{name}' is defined in NEITHER mod's "
-                    "descr_engine_skeleton.txt - it must exist in the base game or that "
-                    "model group will have no animation. Add the entry by hand if not.")
+                    _i18n.msg("eng.transfer.engine_skeleton_is_defined_in_neither", "engine skeleton '{name}' is defined in NEITHER mod's descr_engine_skeleton.txt - it must exist in the base game or that model group will have no animation. Add the entry by hand if not.", name=name))
             continue
         dst_s = dest.engine_skeleton_def(name)
         if dst_s is not None and dst_s.content_equals(src_s):
@@ -1408,11 +1384,7 @@ def _resolve_engine_skeletons(plan: "TransferPlan", source: Mod, dest: Mod,
                 (name, "reuse", "already in the destination descr_engine_skeleton.txt "
                                 "with different animations - KEPT, not overwritten"))
             plan.warnings.append(
-                f"engine skeleton '{name}' (the mounted engine's `class`) already exists "
-                "in the destination descr_engine_skeleton.txt with different animations. "
-                "The destination's entry is kept - the mounted engine will use it, which "
-                "normally works fine. Compare the two by hand if the firing animation "
-                "looks wrong.")
+                _i18n.msg("eng.transfer.engine_skeleton_the_mounted_engines_class", "engine skeleton '{name}' (the mounted engine's `class`) already exists in the destination descr_engine_skeleton.txt with different animations. The destination's entry is kept - the mounted engine will use it, which normally works fine. Compare the two by hand if the firing animation looks wrong.", name=name))
             continue
         if dst_s is not None:
             new_name = engines_mod.unique_engine_name(name, taken, _tag(source))
@@ -1475,8 +1447,7 @@ def _resolve_engines(plan: "TransferPlan", source: Mod, dest: Mod, unit,
             plan.engine_actions.append(
                 (name, "missing", f"{filename} - no entry in the source"))
             plan.warnings.append(
-                f"siege engine '{name}' ({field_key}) has no entry in the source "
-                f"{filename} - the destination will have a dangling engine reference.")
+                _i18n.msg("eng.transfer.siege_engine_has_no_entry_in", "siege engine '{name}' ({field_key}) has no entry in the source {filename} - the destination will have a dangling engine reference.", name=name, field_key=field_key, filename=filename))
             continue
         dst_blocks = (dest.mounted_engine_defs(name) if mounted
                       else dest.engine_defs(name))
@@ -1537,9 +1508,7 @@ def _resolve_engines(plan: "TransferPlan", source: Mod, dest: Mod, unit,
                 texs = engines_mod.mesh_textures(mesh_abs)
                 if not texs:
                     plan.warnings.append(
-                        f"no texture paths could be read out of '{rel}' - check the "
-                        "engine's textures manually (convert it with IWTE / open it "
-                        "in Blender or Milkshape).")
+                        _i18n.msg("eng.transfer.no_texture_paths_could_be_read", "no texture paths could be read out of '{rel}' - check the engine's textures manually (convert it with IWTE / open it in Blender or Milkshape).", rel=rel))
                 for t in texs:
                     _engine_asset(plan, source, dest, t, seen_assets,
                                   f"texture baked into '{rel}'")
@@ -1554,18 +1523,10 @@ def _resolve_engines(plan: "TransferPlan", source: Mod, dest: Mod, unit,
             + (" …" if len(plan.engine_dest_overrides) > 6 else ""))
     if plan.engine_raws or plan.mounted_engine_raws:
         plan.warnings.append(
-            "ENGINE IMPORT: the engine block's fire_effect, shot_sfx and area_effect "
-            "references and the crew animation names in its `crew_animations` block "
-            "are NOT ported - verify they exist in the destination. Its shot_pfx "
-            "effect sets are checked: one the destination does not declare is "
-            "commented out.")
+            _i18n.msg("eng.transfer.engine_import_the_engine_blocks_fire", "ENGINE IMPORT: the engine block's fire_effect, shot_sfx and area_effect references and the crew animation names in its `crew_animations` block are NOT ported - verify they exist in the destination. Its shot_pfx effect sets are checked: one the destination does not declare is commented out."))
     for eng, key, name in plan.engine_effects_dropped:
         plan.warnings.append(
-            f"engine '{eng}': its {key} names the effect set '{name}', which "
-            f"{dest.name} does not declare, so the line is commented out (the "
-            "shot plays with no muzzle effect; the game refuses an effect it cannot "
-            "find). Bring the set across by hand, or point the line at one of the "
-            "destination's own.")
+            _i18n.msg("eng.transfer.engine_its_names_the_effect_set", "engine '{eng}': its {key} names the effect set '{name}', which {name2} does not declare, so the line is commented out (the shot plays with no muzzle effect; the game refuses an effect it cannot find). Bring the set across by hand, or point the line at one of the destination's own.", eng=eng, key=key, name=name, name2=dest.name))
 
     # ship / animal name entries in descr_ship.txt / descr_animals.txt, which this
     # tool does not carry across. Say so rather than silently dropping them.
@@ -1574,9 +1535,7 @@ def _resolve_engines(plan: "TransferPlan", source: Mod, dest: Mod, unit,
         val = getattr(unit, field_key, "")
         if val and field_key not in plan.base_field_groups:
             plan.warnings.append(
-                f"unit has `{field_key} {val}`, which names an entry in {filename} - "
-                "that file is NOT transferred; add the entry by hand if the "
-                "destination lacks it.")
+                _i18n.msg("eng.transfer.unit_has_which_names_an_entry", "unit has `{field_key} {val}`, which names an entry in {filename} - that file is NOT transferred; add the entry by hand if the destination lacks it.", field_key=field_key, val=val, filename=filename))
 
 
 def _resolve_sound(plan: "TransferPlan", dest: Mod) -> None:
@@ -1662,9 +1621,7 @@ def _resolve_sound(plan: "TransferPlan", dest: Mod) -> None:
         return
     plan.sound_action = "copy"
     plan.warnings.append(
-        f"voice: '{plan.resolved_type}' copies {donor_name}'s Unit_Select sounds and "
-        f"its EDU accent/voice_type are pinned to {donor.accent}/{donor.voice_class} "
-        "(the entry only works if both point at the same block).")
+        _i18n.msg("eng.transfer.voice_copies_s_unit_select_sounds", "voice: '{resolved_type}' copies {donor_name}'s Unit_Select sounds and its EDU accent/voice_type are pinned to {accent}/{voice_class} (the entry only works if both point at the same block).", resolved_type=plan.resolved_type, donor_name=donor_name, accent=donor.accent, voice_class=donor.voice_class))
 
 
 def _override_projectiles(opts: TransferOptions) -> List[str]:
@@ -1741,10 +1698,7 @@ def _check_base_soldier_animations(plan: "TransferPlan", source: Mod, dest: Mod,
     plan.soldier_anim_changed = (", ".join(was), ", ".join(now))
     who = plan.replace_type or plan.options.base_type
     plan.warnings.append(
-        f"the soldier line comes from '{who}', so the unit animates as "
-        f"{plan.soldier_anim_changed[1]} instead of {plan.soldier_anim_changed[0]}. "
-        "It will not crash, but it may move and fight unexpectedly in battle - a "
-        "different animation set means different attack timings and reach.")
+        _i18n.msg("eng.transfer.the_soldier_line_comes_from_so", "the soldier line comes from '{who}', so the unit animates as {soldier_anim_changed} instead of {soldier_anim_changed2}. It will not crash, but it may move and fight unexpectedly in battle - a different animation set means different attack timings and reach.", who=who, soldier_anim_changed=plan.soldier_anim_changed[1], soldier_anim_changed2=plan.soldier_anim_changed[0]))
 
 
 def base_field_groups_for(opts: TransferOptions) -> List[str]:
@@ -1919,9 +1873,7 @@ def _resolve_eop_target(plan: TransferPlan, unit) -> None:
         # Only worth saying out loud when the unit came in as an EOP unit or the
         # user asked for one - otherwise "auto" simply resolved to the EDU.
         plan.warnings.append(
-            f"'{dest.name}' has no M2TWEOP unit folder configured, so "
-            f"'{plan.resolved_type}' goes into export_descr_unit.txt instead. Set the "
-            "mod's EOP folder in Settings to keep it out of the 500-unit cap.")
+            _i18n.msg("eng.transfer.has_no_m2tweop_unit_folder_configured", "'{name}' has no M2TWEOP unit folder configured, so '{resolved_type}' goes into export_descr_unit.txt instead. Set the mod's EOP folder in Settings to keep it out of the 500-unit cap.", name=dest.name, resolved_type=plan.resolved_type))
         return
 
     # Overwriting an existing EOP unit reuses its file - a rewrite in place, so
@@ -1941,7 +1893,7 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
     opts = options or TransferOptions()
     unit = source.edu.by_type().get(unit_type)
     if unit is None:
-        raise KeyError(f"unit {unit_type!r} not found in {source.name}")
+        raise KeyError(_i18n.msg("eng.transfer.unit_not_found_in", "unit {unit_type} not found in {name}", unit_type=repr(unit_type), name=source.name))
 
     plan = TransferPlan(unit_type=unit_type, dictionary=unit.dictionary,
                         source=source, dest=dest, options=opts)
@@ -1971,17 +1923,12 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
             if replacing:
                 plan.replace_type = base_unit.type
                 plan.warnings.append(
-                    f"replacing '{base_unit.type}': its EDU block is rewritten in place, so "
-                    "no unit type and no dictionary entry are added. It keeps its name, "
-                    "description, stats, ownership and era - only the models change.")
+                    _i18n.msg("eng.transfer.replacing_its_edu_block_is_rewritten", "replacing '{type}': its EDU block is rewritten in place, so no unit type and no dictionary entry are added. It keeps its name, description, stats, ownership and era - only the models change.", type=base_unit.type))
                 plan.warnings.append(
-                    f"'{base_unit.type}'s previous battle models are left in "
-                    "battle_models.modeldb (other units may still use them). Use the BMDB "
-                    "Editor's cleanup afterwards if nothing else does.")
+                    _i18n.msg("eng.transfer.s_previous_battle_models_are_left", "'{type}'s previous battle models are left in battle_models.modeldb (other units may still use them). Use the BMDB Editor's cleanup afterwards if nothing else does.", type=base_unit.type))
             else:
                 plan.warnings.append(
-                    f"using '{donor_type}' as stat base: combat stats, attributes, cost, "
-                    "formation, ownership & era come from it; models/name/icons stay from the transferred unit.")
+                    _i18n.msg("eng.transfer.using_as_stat_base_combat_stats", "using '{donor_type}' as stat base: combat stats, attributes, cost, formation, ownership & era come from it; models/name/icons stay from the transferred unit.", donor_type=donor_type))
     elif replacing:
         plan.base_error = "no destination unit chosen to replace"
 
@@ -2114,8 +2061,7 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
     _check_base_soldier_animations(plan, source, dest, unit)
     if excluded:
         plan.warnings.append(
-            f"{len(excluded)} secondary model(s) excluded; their EDU names are kept and "
-            "must already exist in the destination.")
+            _i18n.msg("eng.transfer.secondary_model_s_excluded_their_edu", "{excluded_n} secondary model(s) excluded; their EDU names are kept and must already exist in the destination.", excluded_n=len(excluded)))
     if plan.base_field_groups:
         taken = [_MODEL_GROUP_NAMES[g] for g in plan.base_field_groups
                  if g in _MODEL_GROUP_NAMES]
@@ -2217,8 +2163,7 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                         plan.asset_files.append((sheet_abs, sheet_rel))
                     if not sheets:
                         plan.warnings.append(
-                            f"no sheet textures (<name>_000.texture) found next to "
-                            f"'{rel}' - far-away sprites may not render.")
+                            _i18n.msg("eng.transfer.no_sheet_textures_000_texture_found", "no sheet textures (<name>_000.texture) found next to '{rel}' - far-away sprites may not render.", rel=rel))
             else:
                 plan.missing_assets.append(rel)
 
@@ -2242,7 +2187,7 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
         if src_m is None:
             plan.mount_action = "missing"
             plan.warnings.append(
-                f"mount '{unit.mount}' has no entry in the source descr_mount.txt")
+                _i18n.msg("eng.transfer.mount_has_no_entry_in_the", "mount '{mount}' has no entry in the source descr_mount.txt", mount=unit.mount))
         else:
             dst_m = dest.mount_def(unit.mount)
             if dst_m is not None and dst_m.content_equals(src_m):
@@ -2263,9 +2208,7 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                     src_m.raw, model_map=plan.model_renames)
             if plan.mount_raw and not opts.include_mount:
                 plan.warnings.append(
-                    f"mount definition '{plan.mount_name}' is being added but its model "
-                    f"'{src_m.model}' was excluded - that model must already exist in "
-                    "the destination.")
+                    _i18n.msg("eng.transfer.mount_definition_is_being_added_but", "mount definition '{mount_name}' is being added but its model '{model}' was excluded - that model must already exist in the destination.", mount_name=plan.mount_name, model=src_m.model))
 
     # ---- siege engine (descr_engines.txt + descr_engine_skeleton.txt) ----
     # Resolved BEFORE projectiles so the engine's own `attack_stat` projectiles are
@@ -2319,12 +2262,10 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                     remapped.append((src_abs, rel))
             plan.asset_files = remapped
             plan.warnings.append(
-                f"assets relocated to '{target}/' ({len(plan.path_map)} file(s)); "
-                "the added battle_models.modeldb entries point at the new paths.")
+                _i18n.msg("eng.transfer.assets_relocated_to_file_s_the", "assets relocated to '{target}/' ({path_map_n} file(s)); the added battle_models.modeldb entries point at the new paths.", target=target, path_map_n=len(plan.path_map)))
             if skipped_outside:
                 plan.warnings.append(
-                    f"{skipped_outside} file(s) outside {UNIT_MODELS}/ were left "
-                    "where they are (only unit_models paths can be relocated).")
+                    _i18n.msg("eng.transfer.file_s_outside_were_left_where", "{skipped_outside} file(s) outside {UNIT_MODELS}/ were left where they are (only unit_models paths can be relocated).", skipped_outside=skipped_outside, UNIT_MODELS=UNIT_MODELS))
 
     # ---- icons ----
     # Without merc_icons, every faction the unit ends up owned by needs its OWN
@@ -2371,30 +2312,25 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
             for folder in dict.fromkeys(final_ownership + [merc_folder]):
                 plan.icon_files.append((icon, f"{base_dir}/{folder}/{fname}"))
     if card is None and want_card:
-        plan.warnings.append("no unit card icon found in source")
+        plan.warnings.append(_i18n.msg("eng.transfer.no_unit_card_icon_found_in", "no unit card icon found in source"))
     if info is None and want_info:
-        plan.warnings.append("no unit info icon found in source")
+        plan.warnings.append(_i18n.msg("eng.transfer.no_unit_info_icon_found_in", "no unit info icon found in source"))
     if plan.replace_type and not (want_card and want_info):
         kept = ("its unit card and info card" if not (want_card or want_info)
                 else "its info card" if want_card else "its unit card")
-        plan.warnings.append(f"'{plan.replace_type}' keeps {kept} - the source's "
-                             "is not copied over it.")
+        plan.warnings.append(_i18n.msg("eng.transfer.keeps_the_sources_is_not_copied", "'{replace_type}' keeps {kept} - the source's is not copied over it.", replace_type=plan.replace_type, kept=kept))
 
     # ---- mercenary ----
     if opts.make_mercenary and not models:
         plan.mercenary = True
         plan.warnings.append(
-            f"mercenary attribute: '{MERC_ATTR}' attribute added, bmdb entries "
-            f"get a '{MERC_TEX_FACTION}' skin.")
+            _i18n.msg("eng.transfer.mercenary_attribute_attribute_added_bmdb_entries", "mercenary attribute: '{MERC_ATTR}' attribute added, bmdb entries get a '{MERC_TEX_FACTION}' skin.", MERC_ATTR=MERC_ATTR, MERC_TEX_FACTION=MERC_TEX_FACTION))
         plan.warnings.append(
-            "mercenary: to actually recruit it, add a pool entry in "
-            "data/world/maps/campaign/imperial_campaign/descr_mercenaries.txt - "
-            "this tool does not write that file.")
+            _i18n.msg("eng.transfer.mercenary_to_actually_recruit_it_add", "mercenary: to actually recruit it, add a pool entry in data/world/maps/campaign/imperial_campaign/descr_mercenaries.txt - this tool does not write that file."))
     if opts.merc_icons and not models:
         plan.merc_icons = True
         plan.warnings.append(
-            f"mercenary icons: card/info card go to ui/units/{MERC_CARD_DIR}/ + "
-            f"ui/unit_info/{MERC_INFO_DIR}/ (pinned via card_pic_dir/info_pic_dir).")
+            _i18n.msg("eng.transfer.mercenary_icons_card_info_card_go", "mercenary icons: card/info card go to ui/units/{MERC_CARD_DIR}/ + ui/unit_info/{MERC_INFO_DIR}/ (pinned via card_pic_dir/info_pic_dir).", MERC_CARD_DIR=MERC_CARD_DIR, MERC_INFO_DIR=MERC_INFO_DIR))
 
     # ---- voice bank ----
     if not models:
@@ -2438,15 +2374,12 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
     if plan.replace_type and plan.icon_files and opts.icon_conflict != "overwrite":
         if any(c.kind == "icon" and not c.identical for c in plan.asset_conflicts):
             plan.warnings.append(
-                f"the imported card(s) would replace '{plan.replace_type}'s own files, but "
-                "the icon rule is set to keep the destination's - nothing would be written. "
-                "Choose 'overwrite' under Unit card / info icons.")
+                _i18n.msg("eng.transfer.the_imported_card_s_would_replace", "the imported card(s) would replace '{replace_type}'s own files, but the icon rule is set to keep the destination's - nothing would be written. Choose 'overwrite' under Unit card / info icons.", replace_type=plan.replace_type))
 
     diff_conflicts = [c for c in plan.asset_conflicts if not c.identical]
     if diff_conflicts:
         plan.warnings.append(
-            f"{len(diff_conflicts)} asset file(s) already exist in the destination with "
-            "DIFFERENT content - choose overwrite or keep-existing before applying.")
+            _i18n.msg("eng.transfer.asset_file_s_already_exist_in", "{diff_conflicts_n} asset file(s) already exist in the destination with DIFFERENT content - choose overwrite or keep-existing before applying.", diff_conflicts_n=len(diff_conflicts)))
     diff_engine = [c for c in diff_conflicts if c.kind == "engine"]
     if diff_engine:
         keeping = opts.engine_conflict != "overwrite"
@@ -2665,8 +2598,7 @@ def apply_transfer(plan: TransferPlan) -> Dict:
         if not fresh.ok:
             raise ValueError("cannot bring the animations: " + "; ".join(fresh.errors))
         if fresh.renames != plan.anim_port.renames:
-            raise ValueError("the destination's skeleton pack changed since this transfer was "
-                             "planned, and the skeletons would land under other names; plan it again")
+            raise ValueError(_i18n.msg("eng.transfer.the_destinations_skeleton_pack_changed_since", "the destination's skeleton pack changed since this transfer was planned, and the skeletons would land under other names; plan it again"))
         port_manifest = animpack.apply_port(fresh, backup_root)
         manifest["backed_up"].extend(port_manifest["backed_up"])
         manifest["appended"] = port_manifest["appended"]
@@ -2794,7 +2726,7 @@ def apply_transfer(plan: TransferPlan) -> Dict:
             plan.warnings.append(note)
         write_text("text/export_units.txt", loc_text, loc_encoding)
     elif not (plan.replace_type or plan.models_mode):
-        plan.warnings.append("source localisation missing; none written")
+        plan.warnings.append(_i18n.msg("eng.transfer.source_localisation_missing_none_written", "source localisation missing; none written"))
 
     # ---- 3) modeldb ----
     if plan.add_entries:
@@ -3090,7 +3022,7 @@ def undo(transfer_id: str) -> Dict:
     entries = config.load_log()
     rec = next((e for e in entries if e.get("id") == transfer_id), None)
     if rec is None:
-        raise KeyError(f"no transfer with id {transfer_id}")
+        raise KeyError(_i18n.msg("eng.transfer.no_transfer_with_id", "no transfer with id {transfer_id}", transfer_id=transfer_id))
     if not rec.get("applied") or rec.get("undone"):
         return rec
     dest_root = Path(rec["dest_root"])
@@ -3165,7 +3097,7 @@ def revert_to(transfer_id: str) -> Dict:
     entries = config.load_log()
     idx = next((i for i, e in enumerate(entries) if e.get("id") == transfer_id), None)
     if idx is None:
-        raise KeyError(f"no transfer with id {transfer_id}")
+        raise KeyError(_i18n.msg("eng.transfer.no_transfer_with_id", "no transfer with id {transfer_id}", transfer_id=transfer_id))
     target = entries[idx]
     dest_root = target.get("dest_root")
     dest_name = target.get("dest")

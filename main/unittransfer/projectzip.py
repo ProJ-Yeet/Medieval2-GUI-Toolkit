@@ -42,6 +42,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from . import fileswap
+from . import i18n as _i18n
 
 MANIFEST = "project.json"
 NOTE = "PROJECT.txt"
@@ -114,7 +115,7 @@ def export_campaign(mod, campaign: str = "", everything: bool = False) -> tuple:
     data = Path(mod.data)
     rels, left = campaign_files(mod, campaign, everything)
     if not rels:
-        raise ProjectError(f"{getattr(mod, 'name', 'this mod')} has no campaign map files to export")
+        raise ProjectError(_i18n.msg("eng.projectzip.has_no_campaign_map_files_to", "{getattr} has no campaign map files to export", getattr=getattr(mod, 'name', 'this mod')))
     camp = campstrat.campaign_rel(campaign)
     files = []
     buf = io.BytesIO()
@@ -210,7 +211,7 @@ def plan_load(mod, raw: bytes, replace: bool = True) -> LoadPlan:
     try:
         z = zipfile.ZipFile(io.BytesIO(raw))
     except zipfile.BadZipFile as e:
-        p.errors.append(f"not a zip ({e})")
+        p.errors.append(_i18n.msg("eng.projectzip.not_a_zip", "not a zip ({e})", e=e))
         return p
     try:
         p.manifest = json.loads(z.read(MANIFEST).decode("utf-8"))
@@ -237,7 +238,7 @@ def plan_load(mod, raw: bytes, replace: bool = True) -> LoadPlan:
             continue
         total += info.file_size
         if total > MAX_TOTAL:
-            p.errors.append(f"more than {MAX_TOTAL // 1048576} MB in one load")
+            p.errors.append(_i18n.msg("eng.projectzip.more_than_mb_in_one_load", "more than {x} MB in one load", x=MAX_TOTAL // 1048576))
             return p
         body = z.read(info)
         try:
@@ -282,9 +283,9 @@ def plan_load(mod, raw: bytes, replace: bool = True) -> LoadPlan:
             if r not in p.stale and (data / r).is_file():
                 p.stale.append(r)
     if not p.files and not p.errors:
-        p.errors.append("the zip has no files under data/")
+        p.errors.append(_i18n.msg("eng.projectzip.the_zip_has_no_files_under", "the zip has no files under data/"))
     elif not p.writes() and not p.errors:
-        p.errors.append("nothing to load: every file is refused, skipped or already the same")
+        p.errors.append(_i18n.msg("eng.projectzip.nothing_to_load_every_file_is", "nothing to load: every file is refused, skipped or already the same"))
     p.files.sort(key=lambda f: ({"replaces": 0, "new": 1, "refused": 2, "skipped": 3,
                                  "same": 4}.get(f.state, 5), f.rel.lower()))
     return p

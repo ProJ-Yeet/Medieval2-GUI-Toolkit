@@ -16,6 +16,7 @@ from . import (buildings as buildings_mod, edu, engines as engines_mod,
                eop as eop_mod, localization, luascan, modeldb, modflags,
                mounts as mounts_mod, projectiles as projectiles_mod,
                sounds as sounds_mod)
+from . import i18n as _i18n
 
 
 #: How long after a folder's recorded mtime a second change to it could still
@@ -58,7 +59,7 @@ class Mod:
         self.root = Path(root)
         self.data = self.root / "data"
         if not self.data.is_dir():
-            raise FileNotFoundError(f"no data/ folder under {self.root}")
+            raise FileNotFoundError(_i18n.msg("eng.mod.no_data_folder_under", "no data/ folder under {root}", root=self.root))
         # folder -> (its mtime when listed, {lower-case filename: path},
         # whether that mtime was too fresh to trust). See :meth:`_dir_index`.
         self._icon_dirs: Dict[Path, Tuple[int, Dict[str, Path], bool]] = {}
@@ -183,15 +184,15 @@ class Mod:
         out about the damage kept on the end of the sentence.
         """
         if not path.exists():
-            raise ModDataError(f"{self.name}: {self._rel(path)} is not there. {missing}")
+            raise ModDataError(_i18n.msg("eng.mod.is_not_there", "{name}: {rel} is not there. {missing}", name=self.name, rel=self._rel(path), missing=missing))
         try:
             return parse(path)
         except (ValueError, UnicodeError) as e:
             raise ModDataError(
-                f"{self.name}: {self._rel(path)} could not be read. {e}") from e
+                _i18n.msg("eng.mod.could_not_be_read", "{name}: {rel} could not be read. {e}", name=self.name, rel=self._rel(path), e=e)) from e
         except OSError as e:
             raise ModDataError(
-                f"{self.name}: {self._rel(path)} could not be opened - {e}") from e
+                _i18n.msg("eng.mod.could_not_be_opened", "{name}: {rel} could not be opened - {e}", name=self.name, rel=self._rel(path), e=e)) from e
 
     #: Said about every missing file that lives in a released mod's ``.pack``
     #: archives. The four Kingdoms campaign folders under a stock install are

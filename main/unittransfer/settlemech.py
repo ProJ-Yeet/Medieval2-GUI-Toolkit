@@ -39,6 +39,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import keyblock as kb
+from . import i18n as _i18n
 
 REL = "descr_settlement_mechanics.xml"
 ENCODING = "latin-1"
@@ -153,7 +154,7 @@ def path_for(mod) -> Path:
 def read(mod) -> Tuple[MechFile, str]:
     path = path_for(mod)
     if not path.is_file():
-        raise SettleError(f"this mod has no {REL} - the game uses its own, packed")
+        raise SettleError(_i18n.msg("eng.settlemech.this_mod_has_no_the_game", "this mod has no {REL} - the game uses its own, packed", REL=REL))
     text = kb.read_text(path, ENCODING)
     return parse_text(text), text
 
@@ -180,8 +181,7 @@ def check_file(mf: MechFile) -> List[Dict]:
     seen: Dict[str, int] = {}
     for f in mf.factors:
         if f.name in seen:
-            out.append(finding("duplicate", "warn", f"{f.name} is written twice (lines "
-                               f"{seen[f.name] + 1} and {f.line + 1}) - one of them is ignored",
+            out.append(finding("duplicate", "warn", _i18n.msg("eng.settlemech.is_written_twice_lines_and_one", "{name} is written twice (lines {x} and {x2}) - one of them is ignored", name=f.name, x=seen[f.name] + 1, x2=f.line + 1),
                                f"factor/{f.name}", f.line))
         seen.setdefault(f.name, f.line)
         for v in f.values.values():
@@ -191,8 +191,7 @@ def check_file(mf: MechFile) -> List[Dict]:
         lo, hi = f.values.get("pip_min"), f.values.get("pip_max")
         if lo and hi and not check_value(lo.key, lo.value) and not check_value(hi.key, hi.value) \
                 and float(lo.value) > float(hi.value):
-            out.append(finding("pip_range", "warn", f"{f.name}: pip_min {lo.value} is above "
-                               f"pip_max {hi.value}", hi.key, hi.line))
+            out.append(finding("pip_range", "warn", _i18n.msg("eng.settlemech.pip_min_is_above_pip_max", "{name}: pip_min {value} is above pip_max {value2}", name=f.name, value=lo.value, value2=hi.value), hi.key, hi.line))
     by = {lv.name: lv for lv in mf.levels}
     for ladder in (CITY, CASTLE):
         for i, name in enumerate(ladder):
@@ -205,22 +204,17 @@ def check_file(mf: MechFile) -> List[Dict]:
                 if why:
                     out.append(finding("value", "fatal", f"{v.key}: {why}", v.key, v.line))
             if "min" in nums and "max" in nums and nums["min"] > nums["max"]:
-                out.append(finding("min_max", "warn", f"{name}: min {nums['min']} is above "
-                                   f"max {nums['max']}", f"level/{name}/min", lv.line))
+                out.append(finding("min_max", "warn", _i18n.msg("eng.settlemech.min_is_above_max", "{name}: min {min} is above max {max}", name=name, min=nums['min'], max=nums['max']), f"level/{name}/min", lv.line))
             if "upgrade" in nums and "max" in nums and nums["upgrade"] > nums["max"]:
                 out.append(finding("upgrade_max", "warn",
-                                   f"{name}: upgrade {nums['upgrade']} is above max "
-                                   f"{nums['max']}, which the population never passes - a "
-                                   f"{name} never grows into the next level",
+                                   _i18n.msg("eng.settlemech.upgrade_is_above_max_which_the", "{name}: upgrade {upgrade} is above max {max}, which the population never passes - a {name2} never grows into the next level", name=name, upgrade=nums['upgrade'], max=nums['max'], name2=name),
                                    f"level/{name}/upgrade", lv.line))
             nxt = by.get(ladder[i + 1]) if i + 1 < len(ladder) else None
             if nxt and "upgrade" in nums:
                 nb = nxt.values.get("base")
                 if nb and not check_value(nb.key, nb.value) and int(nb.value) != nums["upgrade"]:
                     out.append(finding("chain", "note",
-                                       f"{name}: upgrade {nums['upgrade']} is not "
-                                       f"{nxt.name}'s base {nb.value} (both installed mods "
-                                       f"keep them equal)", f"level/{name}/upgrade", lv.line))
+                                       _i18n.msg("eng.settlemech.upgrade_is_not_s_base_both", "{name}: upgrade {upgrade} is not {name2}'s base {value} (both installed mods keep them equal)", name=name, upgrade=nums['upgrade'], name2=nxt.name, value=nb.value), f"level/{name}/upgrade", lv.line))
     return out
 
 
@@ -302,7 +296,7 @@ def plan(mod, body: dict) -> SettlePlan:
             continue
         f = mf.factor(name) if kind == "factor" else None
         if f is None or attr not in CHILDREN:
-            p.errors.append(f"{key} is not in the file, and not something this screen adds")
+            p.errors.append(_i18n.msg("eng.settlemech.is_not_in_the_file_and", "{key} is not in the file, and not something this screen adds", key=key))
             continue
         if value == "":
             continue
@@ -325,13 +319,13 @@ def plan(mod, body: dict) -> SettlePlan:
     try:
         ET.fromstring(text.encode(ENCODING))
     except ET.ParseError as e:
-        p.errors.append(f"the result would not be well-formed XML ({e})")
+        p.errors.append(_i18n.msg("eng.settlemech.the_result_would_not_be_well", "the result would not be well-formed XML ({e})", e=e))
         return p
     for f in check_file(parse_text(text)):
         if f["severity"] == "warn" and f not in check_file(mf):
             p.warnings.append(f["message"])
     if text == original:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.settlemech.nothing_to_change", "nothing to change"))
         return p
     p.text = text
     return p

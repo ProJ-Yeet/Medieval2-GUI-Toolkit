@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from . import edu as edu_mod
+from . import i18n as _i18n
 
 REL = "export_descr_unit.txt"
 ENCODING = edu_mod.ENCODING
@@ -646,7 +647,7 @@ def overview(mod) -> Dict:
     """
     path = path_for(mod)
     if not path.is_file():
-        return {"sections": [], "error": f"this mod has no {REL}"}
+        return {"sections": [], "error": _i18n.msg("eng.edusort.this_mod_has_no", "this mod has no {REL}", REL=REL)}
     text = path.read_text(encoding=ENCODING)
     f = edu_mod.parse_text(text)
     names = {k.lower(): v for k, v in (mod.faction_names or {}).items()}
@@ -715,13 +716,13 @@ def plan(mod, *, banners: bool = True, tidy: bool = True, group: bool = True,
     p = SortPlan(mod=mod)
     path = path_for(mod)
     if not path.is_file():
-        p.errors.append(f"this mod has no {REL}")
+        p.errors.append(_i18n.msg("eng.edusort.this_mod_has_no", "this mod has no {REL}", REL=REL))
         return p
 
     original = path.read_text(encoding=ENCODING)
     f = edu_mod.parse_text(original)
     if not f.main_units:
-        p.errors.append(f"no units found in {REL} - refusing to rewrite it")
+        p.errors.append(_i18n.msg("eng.edusort.no_units_found_in_refusing_to", "no units found in {REL} - refusing to rewrite it", REL=REL))
         return p
 
     # The tier a banner already states is written onto the unit's own marker
@@ -787,9 +788,7 @@ def plan(mod, *, banners: bool = True, tidy: bool = True, group: bool = True,
         p.changes.append(f"~ {len(seen)} section banner(s) written")
     if p.untiered:
         p.warnings.append(
-            f"{len(p.untiered)} unit(s) have no tier yet, so they sort after the "
-            "tiered ones in their group - read the file's own banners in to give "
-            "them one")
+            _i18n.msg("eng.edusort.unit_s_have_no_tier_yet", "{untiered_n} unit(s) have no tier yet, so they sort after the tiered ones in their group - read the file's own banners in to give them one", untiered_n=len(p.untiered)))
     _verify(p, original, text)
     return p
 
@@ -843,7 +842,7 @@ def apply(p: SortPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.touched():
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.edusort.nothing_to_change", "nothing to change"))
 
     mod = p.mod
     tid = config.new_transfer_id()

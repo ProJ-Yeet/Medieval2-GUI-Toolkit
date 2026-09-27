@@ -24,7 +24,7 @@ async function loadBmdb(){
   main.innerHTML=`<div class="empty" style="max-width:420px;margin:60px auto">
       <div class="progress-track"><div class="progress-fill" id="jobFill" style="width:0%"></div></div>
       <div class="count" style="margin-top:8px"><b id="jobPct">0%</b>
-        <span id="jobStep">reading ${esc(mod)}’s battle_models.modeldb…</span></div>
+        <span id="jobStep">${tt('bmdb.reading_s_battle_models_modeldb',{mod:esc(mod)})}</span></div>
     </div>`;
   state.bmdbJob=job;
   (async()=>{ while(state.bmdbJob===job){
@@ -36,9 +36,9 @@ async function loadBmdb(){
   }})();
   try{ state.bmdb=await api.get(`/api/bmdb/entries?mod=${enc(mod)}&job=${enc(job)}`); }
   catch(e){ state.bmdbJob=null; if(stale('bmdb',mod))return;
-    main.innerHTML=`<div class="empty">Couldn't read the modeldb.<br>
+    main.innerHTML=`<div class="empty">${tt('bmdb.couldnt_read_the_modeldb')}<br>
     <span class="count">${esc(errText(e))}</span><br><br>
-    <button class="primary" onclick="loadBmdb()">Retry</button></div>`; return; }
+    <button class="primary" onclick="loadBmdb()">${tt('common.retry')}</button></div>`; return; }
   finally{ state.bmdbJob=null; }
   if(stale('bmdb',mod))return;          // moved on while this was in flight
   renderBmdb();
@@ -64,38 +64,31 @@ function renderBmdb(){
   main.innerHTML=bmdbTabsHtml('data/unit_models/battle_models.modeldb')+`<div class="bmsplit" id="bmSplit">
     <div class="bmmain">
     <div class="dbhead">
-      <h2>${esc(state.src)} · ${state.bmdb.names} battle-model entries</h2>
-      <span class="count">${nUnused} referenced by nothing${
-        nUnused?'. <b class="w-warn">🧹 Clean up BMDB…</b> moves them out.':''}${
-        dupBlocks?` · ${dupBlocks} entry block${dupBlocks===1?'':'s'} share a name with another,
-          so the game never reads ${dupBlocks===1?'it':'them'}`:''}</span>
-      <span class="sp" style="flex:1"></span>
-      ${dupBlocks?`<button onclick="openDupes()"
-        title="M2TW reads the first entry with a name and ignores every later one. Rename the
-copies so they can be used, or remove them.">🧬 Duplicates (${dupBlocks})</button>`:''}
+      <h2>${tt('bmdb.battle_model_entries',{src:esc(state.src),names:state.bmdb.names})}</h2>
+      ${tt('bmdb.referenced_by_nothing',{nUnused,nUnused2:nUnused?tt('bmdb.clean_up_bmdb_moves_them_out'):'',x:dupBlocks?tt('bmdb.entry_block_share_a_name_with',{dupBlocks,dupBlocks2:dupBlocks===1?'':'s',dupBlocks3:dupBlocks===1?'it':'them'}):'',x2:dupBlocks?`<button onclick="openDupes()"
+        title="${ttA('bmdb.m2tw_reads_the_first_entry_with')}">${tt('bmdb.duplicates',{dupBlocks})}</button>`:''})}
       <button class="${bmPrevNode?'on':''}" onclick="bmPrevToggle()"
-        title="Draw a battle model beside the list, without leaving it. Every row
-gets its own 🧊 button once this is open.">🧊 View in 3D</button>
+        title="${ttA('bmdb.draw_a_battle_model_beside_the')}">${tt('bmdb.view_in_3d')}</button>
     </div>
     ${rows.length?`<div class="dblist">${rows.map(bmdbRow).join('')}</div>`
-                 :'<div class="empty">No entries match.</div>'}
+                 :`<div class="empty">${tt('bmdb.no_entries_match')}</div>`}
     </div>
   </div>`;
   main.querySelectorAll('.dbrow').forEach(r=>r.onclick=()=>openBmdbEntry(r.dataset.name));
   bmPrevAttach();
 }
 function bmdbRow(e){
-  const use=e.unused?'<span class="w-warn">nothing references it</span>'
-    :e.mentioned_in?`<span class="count">No unit uses it. ${e.mentioned_in_lua
-        ?'named by a <b class="w-good">Lua script</b>':'only named in'} <code>${esc(e.mentioned_in)}</code></span>`
-    :`${esc(e.used_by.slice(0,4).join(', '))}${e.use_count>4?` +${e.use_count-4} more`:''}`;
+  const use=e.unused?`<span class="w-warn">${tt('common.nothing_references_it')}</span>`
+    :e.mentioned_in?`<span class="count">${tt('bmdb.no_unit_uses_it',{mentioned_in_lua:e.mentioned_in_lua
+        ?tt('bmdb.named_by_a_lua_script'):tt('bmdb.only_named_in')})} <code>${esc(e.mentioned_in)}</code></span>`
+    :`${esc(e.used_by.slice(0,4).join(', '))}${e.use_count>4?tt('bmdb.more',{use_count:e.use_count-4}):''}`;
   return `<div class="dbrow ${e.unused?'unused':''}${
       bmPrevEntry===e.name?' showing':''}" data-name="${esc(e.name)}">
     <span class="en">${esc(e.name)}${e.copies>1?`<span class="badge w-warn" style="margin-left:5px"
-      title="The modeldb holds this name ${e.copies} times.">×${e.copies}</span>`:''}</span>
+      title="${ttA('bmdb.the_modeldb_holds_this_name_times',{copies:e.copies})}">×${e.copies}</span>`:''}</span>
     <span class="use">${use}</span>
-    <span class="nums">${e.lods} LOD${e.lods===1?'':'s'} · ${e.skins} skin${e.skins===1?'':'s'}</span>
-    <button class="db3d" title="Draw this model in the panel beside the list"
+    <span class="nums">${tt('bmdb.lod_skin',{lods:e.lods,lods2:e.lods===1?'':'s',skins:e.skins,skins2:e.skins===1?'':'s'})}</span>
+    <button class="db3d" title="${ttA('bmdb.draw_this_model_in_the_panel')}"
       onclick="event.stopPropagation();bmPrevOpen('${q1(esc(e.name))}')">🧊</button>
   </div>`;
 }
@@ -168,18 +161,18 @@ function bmPrevBar(){
   const el = document.getElementById('bmPrevBar');
   if(!el) return;
   el.innerHTML = `<b>3D</b>
-    <span class="count" title="${esc(bmPrevEntry)}">${esc(bmPrevEntry || 'pick an entry')}</span>
+    <span class="count" title="${esc(bmPrevEntry)}">${esc(bmPrevEntry || tt('bmdb.pick_an_entry'))}</span>
     <span class="sp"></span>
     ${bmPrevEntry?`<button onclick="openBmdbEntry('${q1(esc(bmPrevEntry))}')"
-      title="Open this entry's editor">✎</button>
-    <button onclick="bmPrevFull()" title="Full screen - Esc comes back">⤢</button>`:''}
-    <button onclick="bmPrevClose()" title="Close the panel">✕</button>`;
+      title="${ttA('bmdb.open_this_entrys_editor')}">✎</button>
+    <button onclick="bmPrevFull()" title="${ttA('bmdb.full_screen_esc_comes_back')}">⤢</button>`:''}
+    <button onclick="bmPrevClose()" title="${ttA('bmdb.close_the_panel')}">✕</button>`;
 }
 async function bmPrevMount(){
   const host = document.getElementById(BM_PREV_HOST);
   if(!host) return;
   if(!bmPrevEntry){
-    host.innerHTML = '<div class="empty">Press 🧊 on any row.</div>';
+    host.innerHTML = `<div class="empty">${tt('bmdb.press_on_any_row')}</div>`;
     return;
   }
   await v3Mount(BM_PREV_HOST, state.src, bmPrevEntry);
@@ -189,22 +182,22 @@ function bmPrevFull(){
   if(!el) return;
   if(document.fullscreenElement) return document.exitFullscreen();
   const go = el.requestFullscreen || el.webkitRequestFullscreen;
-  if(!go){ toast('This browser will not go full screen here.', 3000); return; }
+  if(!go){ toast(tt('common.this_browser_will_not_go_full'), 3000); return; }
   Promise.resolve(go.call(el)).catch(e =>
-    toast('Full screen was refused: ' + ((e && e.message) || e), 4000));
+    toast(tt('common.full_screen_was_refused') + ((e && e.message) || e), 4000));
 }
 // Opening an entry builds exactly the state the unit editor's model tab runs on,
 // with a one-entry `models` list and no unit - so edModels(), the faction
 // checklist, the folder box and "＋ New entry from this" all work unchanged.
 async function openBmdbEntry(name){
   const modal=document.getElementById('modal');
-  modal.className='modal wide'; modal.innerHTML='<h2>Loading entry…</h2>';
+  modal.className='modal wide'; modal.innerHTML=`<h2>${tt('bmdb.loading_entry')}</h2>`;
   overlay.classList.add('open');
   let r;
   try{ r=await api.get(`/api/bmdb/entry?mod=${enc(state.src)}&name=${enc(name)}`); }
   catch(e){ r={error:''+e}; }
-  if(r.error){ modal.innerHTML=`<h2>Battle model</h2><div class="mbody w-bad">${esc(r.error)}</div>
-    <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
+  if(r.error){ modal.innerHTML=`<h2>${tt('bmdb.battle_model')}</h2><div class="mbody w-bad">${esc(r.error)}</div>
+    <div class="foot"><button onclick="closeModal()">${tt('common.close')}</button></div>`; return; }
   state.ed={bmdb:true,mod:state.src,unit:'',tab:'models',ov:{},rm:new Set(),added:new Set(),
     loc:{},newType:'',newDict:'',mEdits:{},newModels:[],open:{[r.model.name]:true},form:null,
     facOpen:{},folder:{},
@@ -233,9 +226,8 @@ async function openBmdbEntry(name){
 const bmCvEdited=()=>{const cv=state.ed&&state.ed.cv;
   return !!(cv&&cv.kind==='bmdb'&&cv.loaded&&cv.owns);};
 function bmCvToggleHtml(){
-  return `<button class="${state.ed.cv?'on':''}" title="Show this entry exactly as
-battle_models.modeldb stores it, beside the boxes."
-    onclick="bmCvToggle()">&lt;/&gt; Code view</button>`;
+  return `<button class="${state.ed.cv?'on':''}" title="${ttA('bmdb.show_this_entry_exactly_as_battle')}"
+    onclick="bmCvToggle()">${tt('common.code_view')}</button>`;
 }
 async function bmCvToggle(){
   const e=state.ed;
@@ -289,12 +281,12 @@ function bmCvLabel(el,name){
   const idx=el.closest('[data-i]');
   if(idx&&idx.dataset.entry)return 'path#'+idx.dataset.i;
   const fac=el.closest('[data-fac]');
-  if(fac)return 'fac:'+fac.dataset.f+':'+fac.dataset.kind;
+  if(fac)return tt('bmdb.fac')+fac.dataset.f+':'+fac.dataset.kind;
   // a default box stands for that kind in EVERY faction record
   const def=el.closest('[data-def]');
   if(def){
     const m=bmModel(name),k=def.dataset.kind;
-    return (m.factions||[]).map(f=>'fac:'+f+':'+k);
+    return (m.factions||[]).map(f=>tt('bmdb.fac')+f+':'+k);
   }
   const nm=el.closest('[data-rename]');
   return nm?'name':'';
@@ -313,12 +305,10 @@ function bmCvFind(label,guiId){
 function renderBmdbEditor(){
   const e=state.ed,m=e.d.models[0];
   document.getElementById('modal').innerHTML=`
-    <h2>Battle model <span class="pill">${esc(e.mod)}</span></h2>
+    <h2>${tt('bmdb.battle_model')} <span class="pill">${esc(e.mod)}</span></h2>
     <div class="ehead">
       <div><div class="nm" style="font-family:ui-monospace,Consolas,monospace">${esc(m.name)}</div>
-        <div class="count">${m.lods.length} LOD${m.lods.length===1?'':'s'} ·
-          ${m.factions.length} faction skin${m.factions.length===1?'':'s'} ·
-          ${m.used_by.length?`used by ${m.used_by.length}`:'<span class="w-warn">referenced by nothing</span>'}</div></div>
+        <div class="count">${tt('bmdb.lod_faction_skin',{lods_n:m.lods.length,lods:m.lods.length===1?'':'s',factions_n:m.factions.length,factions:m.factions.length===1?'':'s',used_by:m.used_by.length?tt('bmdb.used_by',{used_by_n:m.used_by.length}):`<span class="w-warn">${tt('bmdb.referenced_by_nothing_2')}</span>`})}</div></div>
     </div>
     <div class="cvsplit${e.cv?'':' off'}" style="padding:0 14px">
       <div id="bmGui"><div class="mbody" id="edBody" style="padding:0"></div></div>
@@ -326,13 +316,10 @@ function renderBmdbEditor(){
     </div>
     <div class="foot">
       <span id="edDirtyNote"></span>
-      ${bmCvToggleHtml()}
-      <span class="count" title="Takes back one value at a time, without closing this dialog">
-        ⌨ Ctrl+Z undo · Ctrl+Y redo</span>
-      ${cleanerBoxHtml()}
-      <button onclick="closeModal()">Close</button>
-      <button onclick="edPreview()">Probe</button>
-      <button class="primary" onclick="edSave()">Save changes</button>
+      ${tt('bmdb.ctrl_z_undo_ctrl_y_redo',{bmCvToggleHtml:bmCvToggleHtml(),cleanerBoxHtml:cleanerBoxHtml()})}
+      <button onclick="closeModal()">${tt('common.close')}</button>
+      <button onclick="edPreview()">${tt('common.probe')}</button>
+      <button class="primary" onclick="edSave()">${tt('common.save_changes')}</button>
     </div>`;
   edRenderTab();
   if(e.cv){cvWire(e.cv); cvBindHover(e.cv,document.getElementById('bmGui'));}
@@ -354,23 +341,22 @@ function edEntryUsers(m){
   const index=Object.fromEntries(((state.data&&state.data.units)||[]).map(u=>[u.type.toLowerCase(),u]));
   const rows=all.filter(w=>!q||w.toLowerCase().includes(q));
   return `<div class="bsec edusers"><h4>
-      <button class="usertog" onclick="edToggleUsers()">${edUsersOpen()?'▾':'▸'}
-        Used by <span class="n">${all.length}</span></button>
-      ${all.length?'<span class="count">Every unit, mount and file that names this entry</span>'
-                  :'<span class="count w-warn">nothing in the mod references it</span>'}
+      <button class="usertog" onclick="edToggleUsers()">${tt('bmdb.used_by_2',{edUsersOpen:edUsersOpen()?'▾':'▸'})} <span class="n">${all.length}</span></button>
+      ${all.length?`<span class="count">${tt('bmdb.every_unit_mount_and_file_that')}</span>`
+                  :`<span class="count w-warn">${tt('bmdb.nothing_in_the_mod_references_it')}</span>`}
       ${edUsersOpen()&&all.length>8?`<input class="mini" style="margin-left:auto;max-width:200px"
-        placeholder="Filter…" value="${esc(state.ed.usersQ||'')}"
+        placeholder="${ttA('bmdb.filter')}" value="${esc(state.ed.usersQ||'')}"
         oninput="edUsersFilter(this.value)">`:''}</h4>
     ${edUsersOpen()&&all.length?`<div class="usergrid">${rows.map(w=>{
       const other=/^(mount|file):/.test(w);
       const u=index[w.toLowerCase()];
       return `<div class="ucell ${other?'plain':''}"
-        ${other?'':`onclick="openUnitTab('${q1(esc(w))}')" title="Open ${esc(w)} in a new tab"`}>
-        ${other?'<div class="ic none">none</div>'
+        ${other?'':tt('bmdb.onclick_openunittab_title_open_in_a',{x:q1(esc(w)),x2:esc(w)})}>
+        ${other?`<div class="ic none">${tt('common.none')}</div>`
                :`<img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.ed.mod,w)}" alt="">`}
         <div class="un">${esc(u?u.name:short(w))}</div>
         <div class="ut">${esc(other?w.split(':')[0]:(u?(u.kind||u.category||w):w))}</div>
-      </div>`;}).join('')||'<span class="count">Nothing matches.</span>'}</div>`:''}
+      </div>`;}).join('')||`<span class="count">${tt('common.nothing_matches')}</span>`}</div>`:''}
   </div>`;
 }
 const short=w=>w.replace(/^(mount|file):/,'');
@@ -401,10 +387,10 @@ const short=w=>w.replace(/^(mount|file):/,'');
    - so the backup, the undo record and the guards are the ones that already
    exist rather than new ones. */
 const OWN_MODES={
-  units:{icon:'🛡', title:'Fix faction ownership',
-         short:'the factions their units are owned by'},
-  all:  {icon:'🌐', title:'Give every model every faction',
-         short:'every faction in the mod'}};
+  units:{icon:'🛡', title:tt('bmdb.fix_faction_ownership'),
+         short:tt('bmdb.the_factions_their_units_are_owned')},
+  all:  {icon:'🌐', title:tt('bmdb.give_every_model_every_faction'),
+         short:tt('bmdb.every_faction_in_the_mod')}};
 
 async function openOwnership(mode){
   const modal=document.getElementById('modal');
@@ -413,13 +399,12 @@ async function openOwnership(mode){
   const job=newJob();
   let a;
   try{ a=await runJob(job,`${OWN_MODES[mode].icon} ${OWN_MODES[mode].title}`,
-        `Reading <code>battle_models.modeldb</code>, the faction roster and every unit's
-         <code>ownership</code> line…`,
+        tt('bmdb.reading_battle_models_modeldb_the_faction'),
         ()=>api.get(`/api/bmdb/ownership?mod=${enc(state.src)}&mode=${enc(mode)}&job=${enc(job)}`)); }
   catch(e){ a={error:''+e}; }
   if(a.error){ modal.innerHTML=`<h2>${esc(OWN_MODES[mode].title)}</h2>
     <div class="mbody w-bad">${esc(a.error)}</div>
-    <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
+    <div class="foot"><button onclick="closeModal()">${tt('common.close')}</button></div>`; return; }
   state.own={a,mode,
     // Ticked by default: every row is a record the entry is missing, which is a
     // fact about the file rather than a judgement - the same reason the BMDB
@@ -446,69 +431,49 @@ function renderOwnership(){
         ${Object.entries(OWN_MODES).map(([k,d])=>`<button class="${k===o.mode?'on':''}"
           onclick="ownMode('${k}')">${d.icon} ${esc(d.title)}</button>`).join('')}
       </div>
-      <div class="count" style="margin:8px 0 10px">Every entry gets a texture record for
-        <b>${esc(def.short)}</b>. A new record is a <b>clone of one the entry already has</b>,
-        so it points at the same texture until you give it its own - the entry stops having a
-        gap, and no art is invented. Records are only ever <b>added</b>: nothing here can take
-        a faction skin away.</div>
+      <div class="count" style="margin:8px 0 10px">${tt('bmdb.every_entry_gets_a_texture_record',{short:esc(def.short)})}</div>
 
-      ${!a.has_roster?`<div class="warnbox">This mod has no readable
-        <code>descr_sm_factions.txt</code>, so there is no list of faction slots to check
-        against and nothing can be added safely.</div>`:''}
+      ${!a.has_roster?`<div class="warnbox">${tt('bmdb.this_mod_has_no_readable_descr')}</div>`:''}
 
       <div class="sum">
         <div class="srow shead"><span class="sicon">${def.icon}</span><span class="stext">
-          ${a.row_count} of ${a.entry_count} entries are short of a faction record</span></div>
+          ${tt('bmdb.of_entries_are_short_of_a',{row_count:a.row_count,entry_count:a.entry_count})}</span></div>
         <div class="srow"><span class="sicon">+</span><span class="stext">
-          <b>${a.added_records}</b> record${a.added_records===1?'':'s'} to add across
-          ${a.slot_count} faction slot${a.slot_count===1?'':'s'}</span></div>
+          <b>${a.added_records}</b> ${tt('bmdb.record_to_add_across_faction_slot',{added_records:a.added_records===1?'':'s',slot_count:a.slot_count,slot_count2:a.slot_count===1?'':'s'})}</span></div>
         <div class="srow ${heavy?'warn':''}"><span class="sicon">${heavy?'!':'📦'}</span>
-          <span class="stext">battle_models.modeldb grows by about <b>${MB(a.bytes)}</b>
-          ${a.modeldb_bytes?`- from ${MB(a.modeldb_bytes)} to ${MB(a.modeldb_bytes+a.bytes)}, <b>${
-            (1+grow).toFixed(1)}×</b> its size`:''}${heavy?`. M2TW loads the whole file into
-          memory, and a mod near that ceiling is exactly what <b>🧹 Clean up BMDB</b> is for -
-          worth running first.`:'.'}</span></div>
+          <span class="stext">${tt('bmdb.battle_models_modeldb_grows_by_about',{x:MB(a.bytes),x2:a.modeldb_bytes?tt('bmdb.from_to_its_size',{x:MB(a.modeldb_bytes),x2:MB(a.modeldb_bytes+a.bytes),grow:(1+grow).toFixed(1)}):'',x3:heavy?tt('bmdb.m2tw_loads_the_whole_file_into'):'.'})}</span></div>
         ${a.covered?`<div class="srow"><span class="sicon">✓</span><span class="stext">
-          ${a.covered} entr${a.covered===1?'y':'ies'} already ha${a.covered===1?'s':'ve'} every
-          record ${o.mode==='all'?'the roster asks for':'their units need'}</span></div>`:''}
+          ${tt('bmdb.entr_already_ha_every_record',{covered:a.covered,covered2:a.covered===1?'y':'ies',covered3:a.covered===1?'s':'ve',mode:o.mode==='all'?tt('bmdb.the_roster_asks_for'):tt('bmdb.their_units_need')})}</span></div>`:''}
         ${a.no_unit?`<div class="srow"><span class="sicon">·</span><span class="stext">
-          ${a.no_unit} entr${a.no_unit===1?'y is':'ies are'} drawn for no unit at all - a mount,
-          a general, or something nothing uses${o.mode==='units'?', so this mode has nothing to say about '
-          +(a.no_unit===1?'it':'them'):''}</span></div>`:''}
+          ${tt('bmdb.entr_drawn_for_no_unit_at',{no_unit:a.no_unit,no_unit2:a.no_unit===1?tt('bmdb.y_is'):tt('bmdb.ies_are'),x:o.mode==='units'?tt('bmdb.so_this_mode_has_nothing_to')
+          +(a.no_unit===1?'it':'them'):''})}</span></div>`:''}
         ${a.no_records?`<div class="srow warn"><span class="sicon">!</span><span class="stext">
-          ${a.no_records} entr${a.no_records===1?'y has':'ies have'} no texture record at all,
-          so there is nothing to clone a new one from. Left alone.</span></div>`:''}
+          ${tt('bmdb.entr_no_texture_record_at_all',{no_records:a.no_records,no_records2:a.no_records===1?tt('bmdb.y_has'):tt('bmdb.ies_have')})}</span></div>`:''}
       </div>
 
       ${a.unknown_ownership.length?`<fieldset class="assetconf" style="margin-top:10px">
-        <legend class="w-warn">Ownership tokens that are not faction slots</legend>
-        <div class="count">These appear on a unit's <code>ownership</code> line but
-          <code>descr_sm_factions.txt</code> does not define them - a culture name, or a typo.
-          A record written for one of them is a skin no faction ever reads, so they are
-          <b>reported and not added</b>.</div>
+        <legend class="w-warn">${tt('bmdb.ownership_tokens_that_are_not_faction')}</legend>
+        <div class="count">${tt('bmdb.these_appear_on_a_units_ownership')}</div>
         <div class="flist" style="margin-top:6px">${a.unknown_ownership.map(x=>`<div class="frow">
           <span class="fp">${esc(x.faction)}</span>
-          <span class="fs">${x.count} unit${x.count===1?'':'s'}: ${esc(x.units.join(', '))}${
-            x.count>x.units.length?' …':''}</span></div>`).join('')}</div>
+          <span class="fs">${tt('bmdb.unit',{count:x.count,count2:x.count===1?'':'s',units:esc(x.units.join(', ')),x:x.count>x.units.length?' …':''})}</span></div>`).join('')}</div>
       </fieldset>`:''}
 
       ${a.row_count?`<div class="clbar" style="margin-top:12px">
-          <button onclick="ownAll(true)">Select all</button>
-          <button onclick="ownAll(false)">None</button>
+          <button onclick="ownAll(true)">${tt('common.select_all')}</button>
+          <button onclick="ownAll(false)">${tt('common.none_2')}</button>
           <span class="count" id="ownCount">${ownCountText()}</span></div>
         <div class="cllist">${a.rows.map(ownRowHtml).join('')}</div>
-        ${a.row_count>a.rows.length?`<div class="count">…and ${a.row_count-a.rows.length}
-          more, not listed. <b>Select all</b> covers them too - the list is capped for the
-          page, the write is not.</div>`:''}`
-       :'<div class="count" style="margin-top:10px">Nothing to add. Every entry already has a record for '
+        ${a.row_count>a.rows.length?`<div class="count">${tt('bmdb.and_more_not_listed_select_all',{n:a.row_count-a.rows.length})}</div>`:''}`
+       :`<div class="count" style="margin-top:10px">${tt('bmdb.nothing_to_add_every_entry_already')} `
         +esc(def.short)+'. 🎉</div>'}
       <div id="ownPreview"></div>
     </div>
     <div class="foot">
-      <button onclick="closeModal()">Close</button>
-      <button onclick="ownPreview()" ${a.row_count?'':'disabled'}>Probe</button>
+      <button onclick="closeModal()">${tt('common.close')}</button>
+      <button onclick="ownPreview()" ${a.row_count?'':'disabled'}>${tt('common.probe')}</button>
       <button class="primary" onclick="ownApply()" ${a.row_count&&a.has_roster?'':'disabled'}>
-        Add the missing records</button>
+        ${tt('bmdb.add_the_missing_records')}</button>
     </div>`;
 }
 function ownRowHtml(r){
@@ -517,18 +482,17 @@ function ownRowHtml(r){
     <input type="checkbox" ${o.picked.has(r.entry)?'checked':''}
       onchange="ownPick('${q1(esc(r.entry))}',this.checked)">
     <div class="grow"><span class="nm">${esc(r.entry)}</span>
-      <span class="badge">has ${r.have}</span>
+      <span class="badge">${tt('bmdb.has',{have:r.have})}</span>
       <div class="sub">+ ${r.missing.map(f=>`<code>${esc(f)}</code>`).join(' ')}</div>
-      ${r.used_by.length?`<div class="sub">drawn for ${esc(r.used_by.slice(0,4).join(', '))}${
-        r.used_by.length>4?` +${r.used_by.length-4} more`:''}</div>`
-       :'<div class="sub count">no unit is drawn with it</div>'}
+      ${r.used_by.length?`<div class="sub">${tt('bmdb.drawn_for',{used_by:esc(r.used_by.slice(0,4).join(', ')),used_by2:r.used_by.length>4?tt('bmdb.more_2',{used_by:r.used_by.length-4}):''})}</div>`
+       :`<div class="sub count">${tt('bmdb.no_unit_is_drawn_with_it')}</div>`}
     </div>
     <span class="count">+${MB(r.bytes)}</span></div>`;
 }
 function ownCountText(){
   const o=state.own;
   const bytes=o.a.rows.reduce((n,r)=>n+(o.picked.has(r.entry)?r.bytes:0),0);
-  return `${o.picked.size}/${o.a.row_count} ticked · about ${MB(bytes)}`;
+  return tt('bmdb.ticked_about',{picked_n:o.picked.size,row_count:o.a.row_count,x:MB(bytes)});
 }
 // Only the header count is repainted on a tick - the checkbox already shows its
 // own new state, and a mod can have 1500 rows here.
@@ -560,7 +524,7 @@ function ownPayload(){
 }
 async function ownPreview(){
   const box=document.getElementById('ownPreview'); if(!box)return null;
-  box.innerHTML='<div class="preview">Planning…</div>';
+  box.innerHTML=`<div class="preview">${tt('common.planning')}</div>`;
   const r=await api.post('/api/bmdb/ownership_plan',ownPayload());
   if(r.error){box.innerHTML=`<div class="preview w-bad">${esc(r.error)}</div>`;return null;}
   state.own.plan=r;
@@ -575,14 +539,13 @@ function ownPlanHtml(r){
   const li=(cls,items)=>(items||[]).slice(0,12).map(x=>`<div class="srow ${cls}"><span class="sicon">${
       cls==='bad'?'✗':'!'}</span><span class="stext">${esc(x)}</span></div>`).join('');
   return `<div class="sum" style="margin-top:10px">
-    <div class="srow shead"><span class="sicon">✎</span><span class="stext">What this writes</span></div>
+    <div class="srow shead"><span class="sicon">✎</span><span class="stext">${tt('common.what_this_writes')}</span></div>
     <div class="srow"><span class="sicon">·</span><span class="stext">
-      <b>${r.entries||0}</b> entr${r.entries===1?'y':'ies'} in
-      <span class="path">data/unit_models/battle_models.modeldb</span></span></div>
+      <b>${r.entries||0}</b> ${tt('bmdb.entr_in_data_unit_models_battle',{x:r.entries===1?'y':'ies'})}</span></div>
     ${ch.slice(0,8).map(x=>`<div class="srow"><span class="sicon">·</span>
       <span class="stext">${esc(x)}</span></div>`).join('')}
     ${ch.length>8?`<div class="srow"><span class="sicon">·</span><span class="stext">
-      <i>…and ${ch.length-8} more, listed in full in the 🕑 Log and in config/server.log</i>
+      <i>${tt('bmdb.and_more_listed_in_full_in',{ch:ch.length-8})}</i>
       </span></div>`:''}
     ${li('warn',p.warnings)}${li('bad',p.errors)}</div>`;
 }
@@ -592,22 +555,21 @@ async function ownApply(){
   if(!r)return;
   const p=r.plan||{};
   if((p.errors||[]).length){toast(p.errors[0]);return;}
-  if(!r.entries){toast('Nothing to add');return;}
+  if(!r.entries){toast(tt('bmdb.nothing_to_add'));return;}
   const bytes=a.rows.reduce((n,x)=>n+(o.picked.has(x.entry)?x.bytes:0),0);
-  if(!confirm(`Add the missing faction texture records to ${r.entries} `+
-      `entr${r.entries===1?'y':'ies'} of “${a.mod}”?\n\n`+
-      `Each new record is a clone of one the entry already has, so it points at the same `+
-      `texture. Nothing is removed.\n\n`+
-      `battle_models.modeldb grows by roughly ${MB(bytes)}.\n\n`+
-      `It is backed up first. 🕑 Log → Undo puts it back byte for byte.`))return;
+  if(!confirm(tt('bmdb.add_the_missing_faction_texture_records',{x:r.entries})+
+      tt('bmdb.entr_of',{x:r.entries===1?'y':'ies',mod:a.mod})+
+      tt('bmdb.each_new_record_is_a_clone')+
+      tt('bmdb.texture_nothing_is_removed')+
+      tt('bmdb.battle_models_modeldb_grows_by_roughly',{x:MB(bytes)})+
+      tt('bmdb.it_is_backed_up_first_log')))return;
   const job=newJob();
   const res=await runJob(job,`${OWN_MODES[o.mode].icon} ${esc(OWN_MODES[o.mode].title)}`,
-    `Adding the missing faction records to ${r.entries} entr${r.entries===1?'y':'ies'} and
-     rewriting ${esc(a.mod)}’s <code>battle_models.modeldb</code>. It is backed up first.`,
+    tt('bmdb.adding_the_missing_faction_records_to',{x:r.entries,x2:r.entries===1?'y':'ies',mod:esc(a.mod)}),
     ()=>api.post('/api/bmdb/ownership_apply',{...ownPayload(),job}));
-  if(res.error){toast('Could not add the records: '+res.error);renderOwnership();return;}
-  toast(`${res.entries} entr${res.entries===1?'y':'ies'} given their missing faction `+
-        `record(s) ✓  (undo in 🕑 Log)`,5200);
+  if(res.error){toast(tt('bmdb.could_not_add_the_records')+res.error);renderOwnership();return;}
+  toast(tt('bmdb.entr_given_their_missing_faction',{res:res.entries,res2:res.entries===1?'y':'ies'})+
+        tt('bmdb.record_s_undo_in_log'),5200);
   // The list was built from a scan taken BEFORE the write, so it now describes a
   // file that has changed - re-run rather than leave rows up inviting a second go.
   state.bmdb=null;

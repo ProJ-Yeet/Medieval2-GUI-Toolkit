@@ -40,6 +40,7 @@ from typing import Dict, List, Optional
 from PIL import Image
 
 from . import campmap, osmmap, osmsites
+from . import i18n as _i18n
 
 REF = "reference"
 
@@ -96,12 +97,11 @@ def build(cm, picture: Optional[str] = None, year=None, picture_px: int = 2048) 
             if path.is_file():
                 put(ly["file"], path.read_bytes())
             elif ly["required"]:
-                notes.append(f"{ly['file']} is missing from the map, so it is not in the bundle")
+                notes.append(_i18n.msg("eng.mapbundle.is_missing_from_the_map_so", "{file} is missing from the map, so it is not in the bundle", file=ly['file']))
         if box is not None:
             put(osmmap.BBOX_FILE, osmmap.bbox_text(box, w, h))
         else:
-            notes.append("the map has no real-world box, so there is no bbox_coords.txt "
-                         "and no historic sites")
+            notes.append(_i18n.msg("eng.mapbundle.the_map_has_no_real_world", "the map has no real-world box, so there is no bbox_coords.txt and no historic sites"))
         put(f"{REF}/map_regions.txt", regions_text(cm))
         if box is not None:
             proj = osmmap.Projection(box, w, h)

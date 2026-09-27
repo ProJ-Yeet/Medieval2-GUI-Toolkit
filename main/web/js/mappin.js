@@ -48,9 +48,9 @@
    screen. */
 function cpinArm(what, fn, args){
   if(!state.cmap) return;
-  state.cpin = {what: String(what || 'a tile'), fn: String(fn || ''),
+  state.cpin = {what: String(what || tt('mappin.a_tile')), fn: String(fn || ''),
                 args: Array.isArray(args) ? args.slice() : []};
-  activity('map pin', `picking ${state.cpin.what}`);
+  activity(tt('mappin.map_pin'), `picking ${state.cpin.what}`);
   cpinPaint();
   cmapPaint();
 }
@@ -81,8 +81,8 @@ function cpinTake(tile){
   if(!p || !c) return false;
   const game = cpinGame(tile, c.man.width, c.man.height);
   if(!game){
-    toast(`That is off the ${c.man.width}×${c.man.height} map - pick a tile on it, `
-      + 'or press Esc', 4000);
+    toast(tt('mappin.that_is_off_the_map_pick',{width:c.man.width,height:c.man.height})
+      + tt('mappin.or_press_esc'), 4000);
     return true;
   }
   state.cpin = null;
@@ -91,10 +91,10 @@ function cpinTake(tile){
   cmapPaint();
   const fn = typeof window !== 'undefined' ? window[p.fn] : null;
   if(typeof fn !== 'function'){
-    toast(`✗ nothing is listening for ${p.what} any more`, 5000);
+    toast(tt('mappin.nothing_is_listening_for_any_more',{what:p.what}), 5000);
     return true;
   }
-  activity('map pin', `${p.what} -> ${game[0]},${game[1]}`);
+  activity(tt('mappin.map_pin'), `${p.what} -> ${game[0]},${game[1]}`);
   fn(...p.args, game, tile.slice());
   return true;
 }
@@ -112,8 +112,7 @@ function cpinButton(what, fn, args){
   // `esc` turns `"` into `&quot;`, which the attribute gives back to the script.
   return `<button class="cpinbtn${on ? ' on' : ''}" onclick="cpinToggle(${
     esc(JSON.stringify(String(what)))}, ${esc(JSON.stringify(fn))}, ${esc(a)})"
-    title="Pick ${esc(what)} on the map: the next click writes its tile here.
-Nothing on the map is selected by it. Esc stops.">⌖</button>`;
+    title="${ttA('mappin.pick_on_the_map_the_next',{what:esc(what)})}">⌖</button>`;
 }
 
 function cpinToggle(what, fn, args){
@@ -133,8 +132,8 @@ function cpinPaint(){
   if(el){
     const p = state.cpin;
     el.hidden = !p;
-    el.innerHTML = p ? `⌖ Click the tile for <b>${esc(p.what)}</b>
-      <button onclick="cpinCancel()" title="Esc">Cancel</button>` : '';
+    el.innerHTML = p ? `${tt('mappin.click_the_tile_for')} <b>${esc(p.what)}</b>
+      <button onclick="cpinCancel()" title="${ttA('mappin.esc')}">${tt('common.cancel')}</button>` : '';
   }
   // the buttons that armed it light up, wherever they are
   if(typeof cxPaint === 'function') cxPaint();

@@ -51,6 +51,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import animedit, animloose, animpack, casanim, modeldb, skelslots
+from . import i18n as _i18n
 
 DEFAULT_SLOT = animpack.SKELETON_SLOTS - 1
 FRAME_TIME = animloose.FRAME_TIME
@@ -68,15 +69,14 @@ def _own(data_dir) -> animpack.Packs:
     """The mod's own packs, or why there are none to write to."""
     packs = animpack.for_data(data_dir)
     if packs is None or packs.anims is None or packs.skels is None:
-        raise SlotError("this mod ships no animation packs of its own (the game plays vanilla's), "
-                        "so there is no pack of its own to save into")
+        raise SlotError(_i18n.msg("eng.animslot.this_mod_ships_no_animation_packs", "this mod ships no animation packs of its own (the game plays vanilla's), so there is no pack of its own to save into"))
     return packs
 
 
 def _skeleton(packs: animpack.Packs, name: str) -> Tuple[animpack.PackEntry, animpack.PackedSkeleton]:
     e = packs.skels.first(name)
     if e is None:
-        raise SlotError(f"the skeleton pack has no {name!r}")
+        raise SlotError(_i18n.msg("eng.animslot.the_skeleton_pack_has_no", "the skeleton pack has no {name}", name=repr(name)))
     return e, animpack.PackedSkeleton(packs.skels.read_entry(e), e.name)
 
 
@@ -155,9 +155,7 @@ def onto(anim: casanim.Animation, sk: animpack.PackedSkeleton, nq: int) -> Tuple
             t.pos = array("f", src.pos)
         out.tracks.append(t)
     if len(missing) == nq:
-        raise SlotError(f"none of this skeleton's {nq} bones is in "
-                        f"{Path(anim.source).name or 'the animation'}: it was made for another kind "
-                        "of skeleton (a horse's on a camel, say), and every bone would hold still")
+        raise SlotError(_i18n.msg("eng.animslot.none_of_this_skeletons_bones_is", "none of this skeleton's {nq} bones is in {x}: it was made for another kind of skeleton (a horse's on a camel, say), and every bone would hold still", nq=nq, x=Path(anim.source).name or 'the animation'))
     return out, missing
 
 
@@ -254,11 +252,10 @@ def _finish(p: SlotPlan, packs: animpack.Packs, sk_entry: animpack.PackEntry,
     hit = animpack.content_index(packs, "anims").find(p.data)
     if hit is not None and hit.scale == p.scale:
         if p.old_path and animpack._key(hit.name) == animpack._key(p.old_path):
-            p.errors.append(f"{p.skeleton}'s {p.action} plays exactly these bytes already")
+            p.errors.append(_i18n.msg("eng.animslot.s_plays_exactly_these_bytes_already", "{skeleton}'s {action} plays exactly these bytes already", skeleton=p.skeleton, action=p.action))
             return p
         p.reuse, p.new_path = True, hit.name
-        p.notes.append(f"the pack already holds these bytes as {hit.name}; the slot is pointed there "
-                       "and nothing is appended")
+        p.notes.append(_i18n.msg("eng.animslot.the_pack_already_holds_these_bytes", "the pack already holds these bytes as {name}; the slot is pointed there and nothing is appended", name=hit.name))
     else:
         p.new_path = animpack._unique(want, set(packs.anims._names()))
     s = p.new_slot
@@ -267,12 +264,11 @@ def _finish(p: SlotPlan, packs: animpack.Packs, sk_entry: animpack.PackEntry,
     p.skeleton_bytes = sk.to_bytes()
     p.stamp = animpack._stamp(packs.dir)
     if len(packs.skels.find(sk_entry.name)) > 1:
-        p.notes.append(f"the skeleton pack lists {sk_entry.name} more than once; the first copy, "
-                       "the one the game plays, is the one changed")
+        p.notes.append(_i18n.msg("eng.animslot.the_skeleton_pack_lists_more_than", "the skeleton pack lists {name} more than once; the first copy, the one the game plays, is the one changed", name=sk_entry.name))
     if keep_rebuildable and not p.reuse:
         rel = animloose.loose_rel(mod_name, p.new_path)
         if (Path(p.mod.data) / rel).exists():
-            p.notes.append(f"{rel} is a file already; it is left alone, and a rebuild would read it")
+            p.notes.append(_i18n.msg("eng.animslot.is_a_file_already_it_is", "{rel} is a file already; it is left alone, and a rebuild would read it", rel=rel))
         elif loose_anim is not None:
             p.loose = (rel, casanim.write_anim(loose_anim))
         for name in skelslots.names(p.slot) or (p.action,):
@@ -281,8 +277,7 @@ def _finish(p: SlotPlan, packs: animpack.Packs, sk_entry: animpack.PackEntry,
                 p.text_edit = edit
                 break
         if p.text_edit is None:
-            p.notes.append(f"descr_skeleton.txt has no {p.action} line for {p.skeleton} to point at the "
-                           "new file, so a rebuild of the packs would not keep it")
+            p.notes.append(_i18n.msg("eng.animslot.descr_skeleton_txt_has_no_line", "descr_skeleton.txt has no {action} line for {skeleton} to point at the new file, so a rebuild of the packs would not keep it", action=p.action, skeleton=p.skeleton))
     return p
 
 
@@ -296,7 +291,7 @@ def plan_edit(mod, skeleton: str, slot: int, edits: Optional[Dict], name: str = 
                  action=skelslots.label(int(slot)) if 0 <= int(slot) < animpack.SKELETON_SLOTS else "")
     if not rel and not any((v not in (None, "", 1) if k == "speed" else v not in (None, "", [], {}, False))
                            for k, v in (edits or {}).items()):
-        p.errors.append("nothing is edited: the slot would play what it plays now")
+        p.errors.append(_i18n.msg("eng.animslot.nothing_is_edited_the_slot_would", "nothing is edited: the slot would play what it plays now"))
         return p
     try:
         packs = _own(mod.data)
@@ -304,27 +299,25 @@ def plan_edit(mod, skeleton: str, slot: int, edits: Optional[Dict], name: str = 
         p.skeleton = sk_entry.name
         cur = sk.slots[p.slot] if 0 <= p.slot < len(sk.slots) else None
         if cur is None:
-            raise SlotError(f"{sk_entry.name} leaves {p.action or p.slot} empty; there is no action to edit")
+            raise SlotError(_i18n.msg("eng.animslot.leaves_empty_there_is_no_action", "{name} leaves {x} empty; there is no action to edit", name=sk_entry.name, x=p.action or p.slot))
         p.old_path = cur.path
         nq = _rot_bones(packs, sk, p.slot)
         if rel:
             src = Path(mod.data) / rel
             if not src.is_file():
-                raise SlotError(f"{rel!r} is not a file in this mod")
+                raise SlotError(_i18n.msg("eng.animslot.is_not_a_file_in_this", "{rel} is not a file in this mod", rel=repr(rel)))
             loaded = casanim.read_anim(src, skeleton, mod.data)
             base, missing = onto(loaded, sk, nq)
             shift = root_shift(loaded, sk)
             if shift:
                 p.notes.append(shift)
             if missing:
-                p.notes.append(f"{len(missing)} of {sk_entry.name}'s bones are not in {Path(rel).name} "
-                               f"and hold their bind pose: {', '.join(missing[:6])}"
-                               f"{'...' if len(missing) > 6 else ''}")
+                p.notes.append(_i18n.msg("eng.animslot.of_s_bones_are_not_in", "{missing_n} of {name}'s bones are not in {name2} and hold their bind pose: {missing}{x}", missing_n=len(missing), name=sk_entry.name, name2=Path(rel).name, missing=', '.join(missing[:6]), x='...' if len(missing) > 6 else ''))
             p.source = rel
         else:
             e = animpack.resolve_slot(packs.anims, cur.path, sk.scale)
             if e is None:
-                raise SlotError(f"pack.idx has no {cur.path!r}")
+                raise SlotError(_i18n.msg("eng.animslot.pack_idx_has_no", "pack.idx has no {path}", path=repr(cur.path)))
             base = animloose.to_cas(packs.anims.read_entry(e), sk.bone_table(), e.scale, cur.path,
                                     bone_scale=sk.scale)
             p.source = cur.path
@@ -343,7 +336,7 @@ def plan_edit(mod, skeleton: str, slot: int, edits: Optional[Dict], name: str = 
     if stem.lower().endswith(".cas"):
         stem = stem[:-4]
     if not stem or not animedit._SAFE.match(stem):
-        p.errors.append(f"{stem!r}: name the file with letters, digits, _ . and -")
+        p.errors.append(_i18n.msg("eng.animslot.name_the_file_with_letters_digits", "{stem}: name the file with letters, digits, _ . and -", stem=repr(stem)))
         return p
     mod_name = Path(mod.data).parent.name
     want = f"mods/{mod_name}/data/animations/edited/{p.skeleton}/{stem}.cas"
@@ -376,14 +369,14 @@ def plan_bring(mod, skeleton: str, slot: int, source_mod, source_skeleton: str =
         p.skeleton = sk_entry.name
         src, whose = animpack.packs_for(source_mod.data)
         if src is None or src.anims is None or src.skels is None:
-            raise SlotError(f"{source_mod.name} has no animation packs, and vanilla's were not found")
+            raise SlotError(_i18n.msg("eng.animslot.has_no_animation_packs_and_vanillas", "{name} has no animation packs, and vanilla's were not found", name=source_mod.name))
         _se, ssk = _skeleton(src, source_skeleton)
         sslot = ssk.slots[p.slot] if 0 <= p.slot < len(ssk.slots) else None
         if sslot is None:
-            raise SlotError(f"{source_mod.name}'s {_se.name} leaves {p.action} empty")
+            raise SlotError(_i18n.msg("eng.animslot.s_leaves_empty", "{name}'s {name2} leaves {action} empty", name=source_mod.name, name2=_se.name, action=p.action))
         e = animpack.resolve_slot(src.anims, sslot.path, ssk.scale)
         if e is None:
-            raise SlotError(f"{source_mod.name}'s pack.idx has no {sslot.path!r}")
+            raise SlotError(_i18n.msg("eng.animslot.s_pack_idx_has_no", "{name}'s pack.idx has no {path}", name=source_mod.name, path=repr(sslot.path)))
         raw = src.anims.read_entry(e)
         cur = sk.slots[p.slot]
         p.old_path = cur.path if cur is not None else ""
@@ -415,21 +408,19 @@ def plan_bring(mod, skeleton: str, slot: int, source_mod, source_skeleton: str =
         # settings; only the impact frame is held inside the new frames
         p.new_slot = _retime(cur, 0, 1.0, nf)
         if cur.impact_frame > 0 and sslot.impact_frame > 0 and cur.impact_frame != sslot.impact_frame:
-            p.notes.append(f"the slot keeps {p.skeleton}'s impact frame, {p.new_slot.impact_frame}; "
-                           f"{source_mod.name} strikes at frame {sslot.impact_frame}")
+            p.notes.append(_i18n.msg("eng.animslot.the_slot_keeps_s_impact_frame", "the slot keeps {skeleton}'s impact frame, {impact_frame}; {name} strikes at frame {impact_frame2}", skeleton=p.skeleton, impact_frame=p.new_slot.impact_frame, name=source_mod.name, impact_frame2=sslot.impact_frame))
     else:
         import copy
         p.new_slot = copy.deepcopy(sslot)
         if p.new_slot.events:
-            p.notes.append(f"{len(p.new_slot.events)} sound or effect cue(s) of {source_mod.name}'s slot "
-                           "are left out: their names are that mod's")
+            p.notes.append(_i18n.msg("eng.animslot.sound_or_effect_cue_s_of", "{events_n} sound or effect cue(s) of {name}'s slot are left out: their names are that mod's", events_n=len(p.new_slot.events), name=source_mod.name))
             p.new_slot.events = []
     mod_name = Path(mod.data).parent.name
     want = f"mods/{mod_name}/data/animations/ported/{_tag(source_mod.name)}/{animpack._tail_of(sslot.path)}"
     if p.old_path and animpack._key(p.old_path) == animpack._key(sslot.path):
         hit = animpack.resolve_slot(packs.anims, p.old_path, sk.scale)
         if hit is not None and packs.anims.read_entry(hit) == p.data:
-            p.errors.append(f"{p.skeleton}'s {p.action} is that animation already, byte for byte")
+            p.errors.append(_i18n.msg("eng.animslot.s_is_that_animation_already_byte", "{skeleton}'s {action} is that animation already, byte for byte", skeleton=p.skeleton, action=p.action))
             return p
     return _finish(p, packs, sk_entry, sk, want, loose_anim, keep_rebuildable)
 
@@ -449,15 +440,15 @@ def apply(p: SlotPlan) -> dict:
         raise SlotError("cannot save: " + ("; ".join(p.errors) or "nothing planned"))
     running = animpack.game_running()
     if running:
-        raise SlotError(f"{', '.join(running)} is running and holds the packs open; close the game first")
+        raise SlotError(_i18n.msg("eng.animslot.is_running_and_holds_the_packs", "{running} is running and holds the packs open; close the game first", running=', '.join(running)))
     data = Path(p.mod.data)
     packs = _own(data)
     if animpack._stamp(packs.dir) != p.stamp:
-        raise SlotError("the mod's packs changed since this was planned; plan it again")
+        raise SlotError(_i18n.msg("eng.animslot.the_mods_packs_changed_since_this", "the mod's packs changed since this was planned; plan it again"))
     need = len(p.data) + 2 * (packs.skels.dat_path.stat().st_size + packs.anims.path.stat().st_size) \
         + animpack.SPACE_MARGIN
     if shutil.disk_usage(packs.dir).free < need:
-        raise SlotError(f"it needs {need / 1e6:.0f} MB free on that drive")
+        raise SlotError(_i18n.msg("eng.animslot.it_needs_x_0f_mb_free", "it needs {x:.0f} MB free on that drive", x=need / 1e6))
     rel_dir = packs.dir.relative_to(data).as_posix()
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)
@@ -568,9 +559,9 @@ def plan_skeleton(mod, source_mod, name: str, entry: str = "", entry_skeleton: s
         return out
     row = out.port.skeletons[0]
     if row.action == "reuse":
-        out.notes.append(f"{mod.name} has {row.dest_name} already, byte for byte: nothing to bring")
+        out.notes.append(_i18n.msg("eng.animslot.has_already_byte_for_byte_nothing", "{name} has {dest_name} already, byte for byte: nothing to bring", name=mod.name, dest_name=row.dest_name))
     elif row.action == "reuse_as":
-        out.notes.append(f"{mod.name} has these bytes already, as {row.dest_name}")
+        out.notes.append(_i18n.msg("eng.animslot.has_these_bytes_already_as", "{name} has these bytes already, as {dest_name}", name=mod.name, dest_name=row.dest_name))
     elif row.action == "rename":
         out.notes.append(f"{mod.name}'s pack has another skeleton called {row.name}, so this one "
                          f"comes in as {row.dest_name}"
@@ -582,15 +573,15 @@ def plan_skeleton(mod, source_mod, name: str, entry: str = "", entry_skeleton: s
     if entry:
         e = mod.modeldb.by_name().get(entry.lower())
         if e is None:
-            out.errors.append(f"no model entry {entry!r}")
+            out.errors.append(_i18n.msg("eng.animslot.no_model_entry", "no model entry {entry}", entry=repr(entry)))
             return out
         old = entry_skeleton or (e.skeletons() or [""])[0]
         if old.lower() not in {x.lower() for x in e.skeletons() + e.weapon_skeletons()}:
-            out.errors.append(f"{e.name} names no skeleton {old!r}")
+            out.errors.append(_i18n.msg("eng.animslot.names_no_skeleton", "{name} names no skeleton {old}", name=e.name, old=repr(old)))
             return out
         out.entry, out.entry_skeleton = e.name, old
         if old == row.dest_name:
-            out.notes.append(f"{e.name} asks for {old} already")
+            out.notes.append(_i18n.msg("eng.animslot.asks_for_already", "{name} asks for {old} already", name=e.name, old=old))
         else:
             # the whole file from its parse with the one entry's text changed,
             # as the model editor writes it (Phase 15)

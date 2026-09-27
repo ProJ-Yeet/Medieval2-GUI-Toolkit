@@ -32,6 +32,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tests import _webtext  # noqa: E402
 
 from PIL import Image
 
@@ -252,7 +253,7 @@ comp = campmap.LAYER_BY_CODE["fe"]
 check(f"  cmapComposite draws every layer into a {W}x{H}-TILE canvas, so the "
       f"{FE_W}x{FE_H} picture is squeezed to {W}x{H} and scaled again",
       (FE_W, FE_H) != GRID)
-js = (ROOT / "web" / "js" / "campmap.js").read_text(encoding="utf-8")
+js = _webtext.read((ROOT / "web" / "js" / "campmap.js"))
 check("  and that is the line in campmap.js, still there, still honest about it",
       "x.drawImage(L.masked || L.cv || L.img, 0, 0, m.width, m.height);" in js)
 check("  the composite now skips the picture, so nothing squeezes it",

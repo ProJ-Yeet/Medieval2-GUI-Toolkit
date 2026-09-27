@@ -36,7 +36,7 @@ async function openEduTidy(){
   eduTidy.sections=[]; eduTidy.hand={}; eduTidy.marks={}; eduTidy.q='';
   const modal=document.getElementById('modal');
   modal.className='modal wide';
-  modal.innerHTML='<h2>Clean up the unit file</h2>';
+  modal.innerHTML=`<h2>${tt('edusort.clean_up_the_unit_file')}</h2>`;
   overlay.classList.add('open');
   undoReset();
   renderEduTidy();
@@ -50,15 +50,15 @@ function renderEduTidy(){
   const tab=(k,label)=>`<button class="${t.view===k?'on':''}"
     onclick="eduTidyView('${k}')">${label}</button>`;
   document.getElementById('modal').innerHTML=`
-    <h2>Clean up the unit file <span class="pill">${esc(t.mod)}</span></h2>
-    <div class="tabs">${tab('clean','Clean up')}${tab('order','Order and tiers')}</div>
+    <h2>${tt('edusort.clean_up_the_unit_file')} <span class="pill">${esc(t.mod)}</span></h2>
+    <div class="tabs">${tab('clean',tt('common.clean_up'))}${tab('order',tt('edusort.order_and_tiers'))}</div>
     <div class="mbody" id="eduBody">${
       t.view==='clean'?eduTidyClean():eduTidyOrder()}</div>
     <div class="foot">
-      <span class="count">${eduTidyMarkCount()?`${eduTidyMarkCount()} unit(s) edited on the Order tab`:''}</span>
-      <button onclick="closeModal()">Close</button>
+      <span class="count">${eduTidyMarkCount()?tt('edusort.unit_s_edited_on_the_order',{eduTidyMarkCount:eduTidyMarkCount()}):''}</span>
+      <button onclick="closeModal()">${tt('common.close')}</button>
       <button class="primary" ${(!p||!p.touched||p.errors.length||t.busy)?'disabled':''}
-        onclick="eduTidyApply()">${t.busy?'Working…':'Apply'}</button>
+        onclick="eduTidyApply()">${t.busy?tt('common.working'):tt('common.apply')}</button>
     </div>`;
   if(t.view==='order')eduTidyWireOrder();
 }
@@ -84,24 +84,24 @@ function eduTidySet(k,v){eduTidy.opts[k]=v; eduTidyPlan();}
 function eduTidyStyleBox(){
   const s=eduTidy.style;
   const fills=['-','=','*','~','#','_','+','.'];
-  return `<fieldset><legend>Section banners</legend>
+  return `<fieldset><legend>${tt('edusort.section_banners')}</legend>
     <div class="brow eduband">
-      <label>Width<input type="number" min="20" max="200" value="${esc(s.width)}"
+      <label>${tt('edusort.width')}<input type="number" min="20" max="200" value="${esc(s.width)}"
         oninput="eduTidyStyle('width',this.value)"></label>
-      <label>Line character<select onchange="eduTidyStyle('fill',this.value)">
+      <label>${tt('edusort.line_character')}<select onchange="eduTidyStyle('fill',this.value)">
         ${fills.map(f=>`<option value="${esc(f)}"${f===s.fill?' selected':''}>${esc(f)}</option>`).join('')}
       </select></label>
-      <label>Starts with<input value="${esc(s.prefix)}" maxlength="6"
-        title="A comment in this file starts with a semicolon, so a banner has to as well."
+      <label>${tt('edusort.starts_with')}<input value="${esc(s.prefix)}" maxlength="6"
+        title="${ttA('edusort.a_comment_in_this_file_starts')}"
         oninput="eduTidyStyle('prefix',this.value)"></label>
       <label class="chk"><input type="checkbox" ${s.upper?'checked':''}
-        onchange="eduTidyStyle('upper',this.checked)"> Capitals</label>
+        onchange="eduTidyStyle('upper',this.checked)"> ${tt('edusort.capitals')}</label>
     </div>
     <div class="edusample"><code>${esc(eduTidySample())}</code></div>
-    <div class="count">${docPoints('This is the only line the cleanup writes itself.',[
-      'Everything else in the file is carried across as the bytes it already was.',
-      'The shape is fixed so the next run can read the section back out of it. '
-        +'A banner your mod wrote by hand is recognised too, and left alone.'])}</div>
+    <div class="count">${docPoints(tt('edusort.this_is_the_only_line_the'),[
+      tt('edusort.everything_else_in_the_file_is'),
+      tt('edusort.the_shape_is_fixed_so_the')
+        +tt('edusort.a_banner_your_mod_wrote_by')])}</div>
   </fieldset>`;
 }
 /* The sample, worked out in the page.
@@ -112,7 +112,7 @@ function eduTidyStyleBox(){
    characters long, prefix and the two spaces around the title included. */
 function eduTidySample(){
   const s=eduTidy.style;
-  const title=s.upper?'GONDOR TIER 2 INFANTRY':'Gondor Tier 2 Infantry';
+  const title=s.upper?tt('edusort.gondor_tier_2_infantry'):tt('edusort.gondor_tier_2_infantry_2');
   const width=Math.max(20,Math.min(200,parseInt(s.width,10)||95));
   const pad=Math.max(4,width-title.length-(s.prefix||';').length-2);
   const left=Math.floor(pad/2);
@@ -131,44 +131,43 @@ function eduTidyPlanSoon(){clearTimeout(_eduPlanT); _eduPlanT=setTimeout(eduTidy
 
 function eduTidyClean(){
   const p=eduTidy.plan;
-  const opts=`<fieldset><legend>What to do</legend>
-    ${eduOpt('group','Group the units into sections',
-             'Move each unit into its faction’s run, ordered by tier then by kind')}
-    ${eduOpt('tiers','Read tiers from the file’s own banners',
-             'A banner like ;--- GONDOR TIER 2 INFANTRY --- already says the tier')}
-    ${eduOpt('banners','Write a banner above each section',
-             'One comment line naming the section, tier and kind')}
-    ${eduOpt('tidy','Line every unit’s values up in one column',
-             'Rewrites only the gap between a keyword and its value')}
+  const opts=`<fieldset><legend>${tt('edusort.what_to_do')}</legend>
+    ${eduOpt('group',tt('edusort.group_the_units_into_sections'),
+             tt('edusort.move_each_unit_into_its_factions'))}
+    ${eduOpt('tiers',tt('edusort.read_tiers_from_the_files_own'),
+             tt('edusort.a_banner_like_gondor_tier_2'))}
+    ${eduOpt('banners',tt('edusort.write_a_banner_above_each_section'),
+             tt('edusort.one_comment_line_naming_the_section'))}
+    ${eduOpt('tidy',tt('edusort.line_every_units_values_up_in'),
+             tt('edusort.rewrites_only_the_gap_between_a'))}
     <div class="count" style="margin-top:6px">${docPoints(
-      'This rewrites the whole unit file in one go.',[
-      'It only ever <b>moves</b> a block. No unit, field or comment of yours is changed or lost, '+
-        'and the probe is refused outright if that is not true of the result.',
-      'A tier read from a banner is written onto the unit as <code>;@m2gt tier=2</code>, so the '+
-        'next run does not have to read it again.',
-      'One backup, one entry in the log, one Undo.'])}</div>
+      tt('edusort.this_rewrites_the_whole_unit_file'),[
+      `${tt('edusort.it_only_ever_moves_a_block')} `+
+        tt('edusort.and_the_probe_is_refused_outright'),
+      `${tt('edusort.a_tier_read_from_a_banner')} `+
+        tt('edusort.next_run_does_not_have_to'),
+      tt('edusort.one_backup_one_entry_in_the')])}</div>
   </fieldset>`
   +(eduTidy.opts.banners?eduTidyStyleBox():'');
-  if(!p)return opts+'<div class="empty">Working out what would change…</div>';
+  if(!p)return opts+`<div class="empty">${tt('common.working_out_what_would_change')}</div>`;
   if(p.errors.length)
     return opts+`<div class="w-bad">${p.errors.map(esc).join('<br>')}</div>`;
   if(!p.touched)
-    return opts+'<div class="empty">This file is already in shape. Nothing to change.</div>';
+    return opts+`<div class="empty">${tt('edusort.this_file_is_already_in_shape')}</div>`;
   const secs=p.sections.map(s=>`<tr><td>${esc(s.name)}</td>
     <td class="num">${s.units}</td></tr>`).join('');
   return opts+`
     <div class="cards"><ul>${p.changes.map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>
     ${p.warnings.length?`<div class="w-warn">${p.warnings.map(esc).join('<br>')}</div>`:''}
     <div class="two">
-      <div><h3>Sections (${p.sections.length})</h3>
+      <div><h3>${tt('edusort.sections',{sections_n:p.sections.length})}</h3>
         <div class="scroll" style="max-height:280px"><table class="grid">
-          <thead><tr><th>Section</th><th class="num">Units</th></tr></thead>
+          <thead><tr><th>${tt('edusort.section')}</th><th class="num">${tt('edusort.units')}</th></tr></thead>
           <tbody>${secs}</tbody></table></div></div>
-      <div><h3>Units that move (${p.moved_count})</h3>
+      <div><h3>${tt('edusort.units_that_move',{moved_count:p.moved_count})}</h3>
         <div class="scroll count" style="max-height:280px">${
-          p.moved.map(esc).join('<br>')||'None.'}${
-          p.moved_count>p.moved.length?`<br><span class="count">…and ${
-            p.moved_count-p.moved.length} more</span>`:''}</div></div>
+          p.moved.map(esc).join('<br>')||tt('common.none_3')}${
+          p.moved_count>p.moved.length?`<br><span class="count">${tt('edusort.and_more',{n:p.moved_count-p.moved.length})}</span>`:''}</div></div>
     </div>`;
 }
 
@@ -187,36 +186,32 @@ function eduTidyClean(){
    ========================================================================= */
 function eduTidyOrder(){
   const t=eduTidy;
-  if(!t.sections.length)return '<div class="empty">Reading the unit file…</div>';
+  if(!t.sections.length)return `<div class="empty">${tt('edusort.reading_the_unit_file')}</div>`;
   const q=(t.q||'').toLowerCase();
   const shown=t.sections.map(s=>({name:s.name,
       units:s.units.filter(u=>!q||u.type.toLowerCase().includes(q)
         ||(u.name||'').toLowerCase().includes(q))}))
     .filter(s=>s.units.length);
   return `<div class="count">${docPoints(
-      'Set what the sorter reads, and it sorts the way you meant.',[
-      'A unit with no <b>tier</b> sorts after every tiered unit in its group. '
-        +'Tiers read from the file’s own banners are already filled in.',
-      '<b>Classification</b> is what makes a unit lead its faction’s run. '
-        +'Generals are detected from the unit’s own <code>attributes</code>; '
-        +'a bodyguard or a hero that carries no such attribute is not, so say so here.',
-      'Drag a unit onto another to place it by hand, which leads even that.',
-      'None of it is written until <b>Apply</b>, and all of it is one Undo.'])}</div>
+      tt('edusort.set_what_the_sorter_reads_and'),[
+      `${tt('edusort.a_unit_with_no_tier_sorts')} `
+        +tt('edusort.tiers_read_from_the_files_own'),
+      `${tt('edusort.classification_is_what_makes_a_unit')} `
+        +`${tt('edusort.generals_are_detected_from_the_units')} `
+        +tt('edusort.a_bodyguard_or_a_hero_that'),
+      tt('edusort.drag_a_unit_onto_another_to'),
+      tt('edusort.none_of_it_is_written_until')])}</div>
     <div class="basebar" style="margin:8px 0">
-      <input id="eduQ" placeholder="Filter these units…" value="${esc(t.q)}"
+      <input id="eduQ" placeholder="${ttA('edusort.filter_these_units')}" value="${esc(t.q)}"
         oninput="eduTidyFind(this.value)">
-      ${eduTidyMarkCount()?`<button onclick="eduTidyClearMarks()">✕ Undo my ${
-        eduTidyMarkCount()} edit(s)</button>`:''}
-      <span class="count">${shown.reduce((n,s)=>n+s.units.length,0)} unit(s) shown</span>
+      ${tt('edusort.unit_s_shown',{x:eduTidyMarkCount()?`<button onclick="eduTidyClearMarks()">${tt('edusort.undo_my_edit_s',{eduTidyMarkCount:eduTidyMarkCount()})}</button>`:'',x2:shown.reduce((n,s)=>n+s.units.length,0)})}
     </div>
     ${shown.map(s=>`<fieldset style="margin-top:10px">
       <legend>${esc(s.name)} <span class="count">${s.units.length}</span></legend>
       <div class="edulist">
-        <div class="edurow eduhd"><span class="euu">Unit</span>
-          <span class="eun">Tier</span><span class="eun">Variant</span>
-          <span class="eun">Classification</span><span class="euk">Kind</span></div>
+        <div class="edurow eduhd">${tt('edusort.unit_tier_variant_classification_kind')}</div>
         ${s.units.map(u=>eduTidyRow(s.name,u)).join('')}
-      </div></fieldset>`).join('')||'<div class="empty">No unit matches that.</div>'}`;
+      </div></fieldset>`).join('')||`<div class="empty">${tt('edusort.no_unit_matches_that')}</div>`}`;
 }
 // What a unit shows right now: the pending edit, then the file's own marker.
 function eduTidyMark(type,key){
@@ -266,7 +261,7 @@ function eduTidySetMark(type,key,value){
 function eduTidyPaintFoot(){
   const el=document.querySelector('#modal .foot .count');
   if(el)el.textContent=eduTidyMarkCount()
-    ?`${eduTidyMarkCount()} unit(s) edited on the Order tab`:'';
+    ?tt('edusort.unit_s_edited_on_the_order',{eduTidyMarkCount:eduTidyMarkCount()}):'';
 }
 function eduTidyClearMarks(){
   eduTidy.marks={}; eduTidy.sections=[];
@@ -299,17 +294,17 @@ function eduTidyRow(section,u){
   // anyone's decision - the difference matters when you are deciding whether to
   // trust it.
   const from=(!u.special&&u.detected_special&&special===u.detected_special)
-    ? '<span class="count">Detected</span>' : '';
+    ? `<span class="count">${tt('edusort.detected')}</span>` : '';
   return `<div class="edurow${hand?' placed':''}" draggable="true"
       data-sec="${esc(section)}" data-type="${esc(u.type)}">
     <span class="euu" title="${esc(u.type)}">
-      <span class="g" title="Drag to place this unit by hand">⠿</span>
+      <span class="g" title="${ttA('edusort.drag_to_place_this_unit_by')}">⠿</span>
       <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.src,u.type)}" alt="">
       <span class="eunm"><span class="nm">${esc(u.name||u.type)}</span>
-        <span class="ty">${esc(u.type)}${hand?' · placed by hand':''}</span></span></span>
-    <span class="eun">${eduTidySel(u,'tier',v.tiers,'No tier')}</span>
-    <span class="eun">${eduTidySel(u,'variant',v.variants,'None')}</span>
-    <span class="eun">${eduTidySel(u,'special',v.specials,'Ordinary unit')}${from}</span>
+        <span class="ty">${esc(u.type)}${hand?tt('edusort.placed_by_hand'):''}</span></span></span>
+    <span class="eun">${eduTidySel(u,'tier',v.tiers,tt('edusort.no_tier'))}</span>
+    <span class="eun">${eduTidySel(u,'variant',v.variants,tt('common.none_2'))}</span>
+    <span class="eun">${eduTidySel(u,'special',v.specials,tt('edusort.ordinary_unit'))}${from}</span>
     <span class="euk count">${esc(u.category||'')}</span></div>`;
 }
 
@@ -354,7 +349,7 @@ async function eduTidyPlan(){
   try{
     const r=await api.post('/api/edu/sort/plan',
       Object.assign({mod:t.mod,hand:t.hand,marks:t.marks,style:t.style},t.opts));
-    t.plan=r.plan||{errors:[r.error||'no answer'],changes:[],warnings:[],
+    t.plan=r.plan||{errors:[r.error||tt('edusort.no_answer')],changes:[],warnings:[],
                     sections:[],moved:[],moved_count:0,touched:false};
   }catch(e){
     t.plan={errors:[''+e],changes:[],warnings:[],sections:[],moved:[],
@@ -370,9 +365,9 @@ async function eduTidyApply(){
     const r=await api.post('/api/edu/sort/apply',
       Object.assign({mod:t.mod,hand:t.hand,marks:t.marks,style:t.style},t.opts));
     if(r.error){toast(r.error,5000); return;}
-    activity('cleaned up the unit file',
-             `${r.moved} unit(s) moved in ${t.mod}`);
-    toast(`Unit file cleaned up. ${r.moved} unit(s) moved; 🕑 Log can undo it.`,5000);
+    activity(tt('edusort.cleaned_up_the_unit_file'),
+             tt('edusort.unit_s_moved_in',{moved:r.moved,mod:t.mod}));
+    toast(tt('edusort.unit_file_cleaned_up_unit_s',{moved:r.moved}),5000);
     closeModal();
     loadSource();                // the roster on screen came from the file we just rewrote
   }catch(e){ toast(''+e,5000); }

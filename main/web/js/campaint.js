@@ -93,18 +93,18 @@ function cpaintToggle(){
   // server refuses the stroke too; this says so before anybody tries one.
   const h = state.cmap && state.cmap.man && state.cmap.man.campaign_map;
   if(!p.on && h && h.paints === false){
-    p.err = `${h.campaign} reads its own map from ${h.folder}, and the brush `
-      + 'paints world/maps/base, which it does not show. '
+    p.err = tt('campaint.reads_its_own_map_from_and',{campaign:h.campaign,folder:h.folder})
+      + tt('campaint.paints_world_maps_base_which_it')
       + ((h.readers || []).length
-        ? `Open ${h.readers.join(' or ')} with 🏰 Campaign to paint.`
-        : 'No campaign in this mod reads the base map.');
+        ? tt('campaint.open_with_campaign_to_paint',{readers:h.readers.join(' or ')})
+        : tt('campaint.no_campaign_in_this_mod_reads'));
     cpaintPaint();
     return;
   }
   p.on = !p.on;
   if(p.on && state.cmap) state.cmap.selectMode = false;
   p.err = ''; p.note = '';
-  activity('map paint', p.on ? 'armed the brush' : 'put the brush down');
+  activity(tt('campaint.map_paint'), p.on ? tt('campaint.armed_the_brush') : tt('campaint.put_the_brush_down'));
   if(p.on && !p.pal) cpaintLoadPalette();
   if(p.on) cpaintSync();
   cpaintPaint();
@@ -303,16 +303,16 @@ async function cpaintPipette(tile){
   catch(e){ toast('✗ ' + errText(e), 6000); return; }
   if(state.cpaint !== p) return;
   const L = (r.layers || []).find(l => l.code === p.target);
-  if(!L || !L.rgb){ toast(`✗ ${p.target} has no value at ${tx},${ty}`, 5000); return; }
+  if(!L || !L.rgb){ toast(tt('campaint.has_no_value_at',{target:p.target,tx,ty}), 5000); return; }
   if(p.target === 'regions'){
     const reg = c.byKey.get((L.rgb[0] << 16) | (L.rgb[1] << 8) | L.rgb[2]);
     if(reg && reg.name){ p.region = reg.name; p.sea = false; }
     else if(r.sea){ p.sea = true; p.region = ''; }
-    else { toast('✗ that tile is not painted any declared region’s colour', 5000); return; }
+    else { toast(tt('campaint.that_tile_is_not_painted_any'), 5000); return; }
   }else{
     p.rgb = L.rgb.slice();
   }
-  toast(`Picked ${L.name || L.rgb.join(', ')}`);
+  toast(tt('campaint.picked',{x:L.name || L.rgb.join(', ')}));
   cpaintPaint();
 }
 
@@ -398,11 +398,11 @@ async function cpaintRedo(){
 async function cpaintDiscard(){
   const p = state.cpaint;
   if(p.busy) return;
-  if(p.st.undo && !confirm(`Throw away ${p.st.undo} unsaved stroke`
-      + `${p.st.undo === 1 ? '' : 's'}?\n\nThe layers are re-read from disk. `
-      + 'Nothing that has been saved is affected.')) return;
+  if(p.st.undo && !confirm(tt('campaint.throw_away_unsaved_stroke',{undo:p.st.undo})
+      + tt('campaint.the_layers_are_re_read_from',{x:p.st.undo === 1 ? '' : 's'})
+      + tt('campaint.nothing_that_has_been_saved_is'))) return;
   await cpaintPost('paint_discard', {});
-  toast('The map was re-read from disk.');
+  toast(tt('campaint.the_map_was_re_read_from'));
   await loadCampmap();
 }
 
@@ -414,21 +414,21 @@ async function cpaintSave(){
   if(plan.error){ toast('✗ ' + plan.error, 9000); cpaintPaint(); return; }
   const q = plan.plan || {};
   const warn = (q.warnings || []).map(w => '⚠ ' + w);
-  if(!confirm(`Write: save the painted map?\n\n`
-    + ((q.changes || []).join('\n') || 'no visible change')
+  if(!confirm(tt('campaint.write_save_the_painted_map')
+    + ((q.changes || []).join('\n') || tt('common.no_visible_change'))
     + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + '\n\nmap.rwm is deleted too, or the game loads the old compiled map and '
-    + 'shows none of this.\n\nBacked up first, and 🕑 Log can undo the whole '
-    + 'save in one go.')) return;
+    + tt('campaint.map_rwm_is_deleted_too_or')
+    + tt('campaint.shows_none_of_this_backed_up')
+    + tt('campaint.save_in_one_go'))) return;
   const res = await cpaintPost('paint_apply', {});
   if(!res) return;
   if(res.error){ toast('✗ ' + res.error, 9000); cpaintPaint(); return; }
   const camp = (q.texts || []).length;
-  toast(`Saved ${(res.layers || []).length} layer`
+  toast(tt('campaint.saved_layer',{n:(res.layers || []).length})
     + `${(res.layers || []).length === 1 ? '' : 's'}`
-    + (res.region ? ` and the record for ${res.region}` : '')
-    + (camp ? `, and ${camp} campaign file${camp === 1 ? '' : 's'}` : '')
-    + '. map.rwm deleted. 🕑 Log can undo it.', 6000);
+    + (res.region ? tt('campaint.and_the_record_for',{region:res.region}) : '')
+    + (camp ? tt('campaint.and_campaign_file',{camp,camp2:camp === 1 ? '' : 's'}) : '')
+    + tt('campaint.map_rwm_deleted_log_can_undo'), 6000);
   p.wiz = null; p.wizOpen = false; p.prog = null;
   await loadCampmap();
 }
@@ -517,15 +517,15 @@ async function cpaintWizStart(){
                          port: null, declared: false});
   p.region = spec.name; p.sea = false; p.target = 'regions'; p.tool = 'brush';
   p.on = true;
-  toast(`${spec.name} is open. Paint it, then place its settlement pixel.`, 6000);
+  toast(tt('campaint.is_open_paint_it_then_place',{name:spec.name}), 6000);
   cpaintProgress();
 }
 
 async function cpaintWizCancel(){
   const p = state.cpaint;
-  if(p.st.new_region && !confirm('Drop the new region’s record?\n\n'
-      + 'Any tiles already painted its colour stay painted. Undo those '
-      + 'separately, or they become a province nothing declares.')) return;
+  if(p.st.new_region && !confirm(tt('campaint.drop_the_new_regions_record')
+      + tt('campaint.any_tiles_already_painted_its_colour')
+      + tt('campaint.separately_or_they_become_a_province'))) return;
   await cpaintPost('region_cancel', {});
   p.wiz = null; p.wizOpen = false; p.prog = null; p.marker = '';
   cpaintPaint();
@@ -580,39 +580,33 @@ function cpaintHtml(){
   const st = p.st;
   const unsaved = st.undo || st.dirty.length || st.new_region;
   const head = `<div class="cpbar">
-    <span class="k">Paint</span>
-    ${unsaved ? `<span class="cpun" title="${esc(st.files.join(', '))}">${
-      st.undo} stroke${st.undo === 1 ? '' : 's'}${st.dirty.length
-        ? ` · ${st.dirty.length} layer${st.dirty.length === 1 ? '' : 's'}` : ''
-      } unsaved</span>` : ''}
+    ${tt('campaint.paint',{x:unsaved ? `<span class="cpun" title="${esc(st.files.join(', '))}">${tt('campaint.stroke_unsaved',{undo:st.undo,x:st.undo === 1 ? '' : 's',x2:st.dirty.length
+        ? tt('campaint.layer',{dirty_n:st.dirty.length,x:st.dirty.length === 1 ? '' : 's'}) : ''})}</span>` : ''})}
   </div>`;
   if(!p.on) return head + `<div class="cppanel">${p.err
     ? `<div class="w-warn">${esc(p.err)}</div>`
-    : `<span class="count">The brush is put down. Paint is on the toolbar over
-       the map, with the tools beside it.</span>`}</div>`;
+    : `<span class="count">${tt('campaint.the_brush_is_put_down_paint')}</span>`}</div>`;
   if(p.palErr) return head + `<div class="cppanel"><div class="w-bad">${
     esc(p.palErr)}</div></div>`;
-  if(!p.pal) return head + `<div class="cppanel"><span class="count">reading the
-    palettes…</span></div>`;
+  if(!p.pal) return head + `<div class="cppanel"><span class="count">${tt('campaint.reading_the_palettes')}</span></div>`;
   return head + `<div class="cppanel">
     ${cpaintWaterHtml()}
     ${cpaintChosenHtml()}
-    <div class="count">The layer and its colours are in the column on the left of
-      the map, beside the tiles they go on.</div>
+    <div class="count">${tt('campaint.the_layer_and_its_colours_are')}</div>
     ${cpaintWizHtml()}
     ${cpaintFootHtml()}
   </div>`;
 }
 
 const CPAINT_TOOLS = [
-  ['pencil', '✏', 'Pencil', 'One tile per click or drag'],
-  ['brush', '\u{1F58C}', 'Brush', 'A disc or square of tiles, joined along the drag'],
-  ['bucket', '\u{1FAA3}', 'Bucket', 'Flood-fill every tile of one colour joined to '
-    + 'this one, four-connected'],
-  ['pipette', '\u{1F489}', 'Pipette', 'Read the tile: on the region layer it '
-    + 'selects the region, on the others it takes the colour'],
-  ['water', '\u{1F30A}', 'Water', 'Demir’s water brush: regions, heights and '
-    + 'ground types together, in this map’s own sea colours'],
+  ['pencil', '✏', tt('campaint.pencil'), tt('campaint.one_tile_per_click_or_drag')],
+  ['brush', '\u{1F58C}', tt('campaint.brush'), tt('campaint.a_disc_or_square_of_tiles')],
+  ['bucket', '\u{1FAA3}', tt('campaint.bucket'), tt('campaint.flood_fill_every_tile_of_one')
+    + tt('campaint.this_one_four_connected')],
+  ['pipette', '\u{1F489}', tt('campaint.pipette'), tt('campaint.read_the_tile_on_the_region')
+    + tt('campaint.selects_the_region_on_the_others')],
+  ['water', '\u{1F30A}', tt('campaint.water'), tt('campaint.demirs_water_brush_regions_heights_and')
+    + tt('campaint.ground_types_together_in_this_maps')],
 ];
 
 //: 28b: the five tool buttons and nothing else - the size and the water note
@@ -634,14 +628,14 @@ function cpaintSizeHtml(){
   const p = state.cpaint;
   if(CPAINT_SIZED.indexOf(p.tool) < 0 || p.marker) return '';
   return `<span class="cpsized">
-    <label class="cpsz">Size
+    <label class="cpsz">${tt('campaint.size')}
       <input type="range" min="1" max="${p.pal.brush_max}" step="2"
         value="${p.size}" data-size></label>
-    <b class="cpszn">${p.size} across</b>
+    <b class="cpszn">${tt('campaint.across',{p_n:p.size})}</b>
     <button class="cpshape${p.shape === 'round' ? ' on' : ''}" data-shape="round"
-      title="A disc">●</button>
+      title="${ttA('campaint.a_disc')}">●</button>
     <button class="cpshape${p.shape === 'square' ? ' on' : ''}" data-shape="square"
-      title="A square">■</button></span>`;
+      title="${ttA('campaint.a_square')}">■</button></span>`;
 }
 
 //: What the water brush is about to write, in this map's own sea colours. It
@@ -651,13 +645,11 @@ function cpaintWaterHtml(){
   const p = state.cpaint;
   const w = p.pal.water || {};
   return `${p.tool === 'water' ? `<div class="cpnote">${w.ok
-      ? `Writes ${Object.keys(w.layers).length} layers at once, in the colours
-         <b>measured off this map</b>: ${Object.keys(w.layers).map(c =>
+      ? tt('campaint.writes_layers_at_once_in_the',{n:Object.keys(w.layers).length,layers:Object.keys(w.layers).map(c =>
          `<i style="background:rgb(${w.layers[c].rgb.join(',')})"></i>${esc(c)}`
-         ).join(' ')} · from ${w.sea_tiles.toLocaleString()} sea tiles.
-         Settlement and port pixels are left alone.`
+         ).join(' '),sea_tiles:w.sea_tiles.toLocaleString()})
       : `<span class="w-bad">${esc(w.problem
-         || 'no tile of this map reads as sea, so there is no sea colour to use')
+         || tt('campaint.no_tile_of_this_map_reads'))
          }</span>`}</div>` : ''}`;
 }
 
@@ -703,8 +695,8 @@ function cpaintChosenHtml(){
   const rgb = cpaintColour();
   return `<div class="cppick">
     <i style="background:${rgb ? `rgb(${rgb.join(',')})` : 'transparent'}"></i>
-    <span>${rgb ? cpaintColourName() : '<span class="w-warn">nothing picked - a '
-      + 'stroke would be refused, and say so</span>'}</span></div>`;
+    <span>${rgb ? cpaintColourName() : `<span class="w-warn">${tt('campaint.nothing_picked_a')} `
+      + `${tt('campaint.stroke_would_be_refused_and_say')}</span>`}</span></div>`;
 }
 
 /* 49: the layer being painted, as a toggle rather than a dropdown.
@@ -720,9 +712,8 @@ function cpaintChosenHtml(){
 function cpaintLayerTogHtml(){
   const p = state.cpaint;
   if(!p.pal) return '';
-  if(p.tool === 'water') return `<div class="cpnote">The water brush writes
-    regions, heights and ground types together, so it picks its own layers.</div>`;
-  return `<div class="k">Layer</div>
+  if(p.tool === 'water') return `<div class="cpnote">${tt('campaint.the_water_brush_writes_regions_heights')}</div>`;
+  return `<div class="k">${tt('campaint.layer_2')}</div>
     <div class="cmpallay">${p.pal.layers.map(L =>
       `<button class="${L.code === p.target ? 'on' : ''}" data-target-btn="${L.code}"
         ${L.problem ? 'disabled' : ''} title="${esc(L.label)}${
@@ -751,40 +742,37 @@ function cpaintPaletteHtml(){
         esc(k.name)}</button>`).join('');
     const w = p.pal.water;
     return `<div class="cprow">
-        <input class="cpsearch" placeholder="find a region…"
+        <input class="cpsearch" placeholder="${ttA('campaint.find_a_region')}"
           value="${esc(p.filter)}" data-filter>
         <button class="cprg${p.sea ? ' on' : ''}" data-sea
           title="${w && w.layers && w.layers.regions
-            ? 'The sea colour measured off this map: '
+            ? tt('campaint.the_sea_colour_measured_off_this')
               + w.layers.regions.rgb.join(', ')
-            : 'this map has no sea colour to measure'}"
-          ${w && w.layers && w.layers.regions ? '' : 'disabled'}>${
-          w && w.layers && w.layers.regions
+            : tt('campaint.this_map_has_no_sea_colour')}"
+          ${w && w.layers && w.layers.regions ? '' : 'disabled'}>${tt('campaint.sea',{x:w && w.layers && w.layers.regions
             ? `<i style="background:rgb(${w.layers.regions.rgb.join(',')})"></i>`
-            : ''}Sea</button>
+            : ''})}</button>
         ${spec ? `<button class="cprg${spec.name === p.region ? ' on' : ''}"
           data-region="${esc(spec.name)}"><i style="background:rgb(${
-          spec.rgb.join(',')})"></i>${esc(spec.name)} <span class="count">new</span
-          ></button>` : ''}
+          spec.rgb.join(',')})"></i>${tt('campaint.new',{name:esc(spec.name)})}</button>` : ''}
       </div>
-      <div class="cppal">${list || '<span class="count">no region matches</span>'}
+      <div class="cppal">${list || `<span class="count">${tt('campaint.no_region_matches')}</span>`}
       </div>
-      ${rows.length > 400 ? `<div class="count">${rows.length} match; the first
-        400 are listed. Type more of the name.</div>` : ''}
+      ${rows.length > 400 ? `<div class="count">${tt('campaint.match_the_first_400_are_listed',{rows_n:rows.length})}</div>` : ''}
       <div class="cpnote">${esc(L.note)}</div>`;
   }
 
   const list = L.colours.map(k =>
     `<button class="cpsw2${rgb && k.key === ((rgb[0] << 16) | (rgb[1] << 8) | rgb[2])
       ? ' on' : ''}" data-rgb="${k.rgb.join(',')}"
-      title="${esc(k.name || 'no table names this colour')} · ${k.rgb.join(', ')}${
+      title="${esc(k.name || tt('campaint.no_table_names_this_colour'))} · ${k.rgb.join(', ')}${
       k.count ? ' · ' + k.count.toLocaleString() + ' tiles' : ''}"
       ><i style="background:rgb(${k.rgb.join(',')})"></i><span>${
       esc(k.name || k.rgb.join(', '))}</span></button>`).join('');
   return `<div class="cppal">${list}</div>
     <div class="cpnote">${esc(L.note)}${L.closed ? ''
-      : ' A colour outside this list can still be written, because the layer has '
-      + 'no table to hold it to.'}</div>`;
+      : tt('campaint.a_colour_outside_this_list_can')
+      + tt('campaint.no_table_to_hold_it_to')}</div>`;
 }
 
 /* ---------- 49: the dock on the left of the map ----------
@@ -820,11 +808,11 @@ function cpaintDockHtml(){
 
 function cpaintColourName(){
   const p = state.cpaint;
-  if(p.marker) return `the ${p.marker} marker pixel`;
-  if(p.tool === 'water') return 'this map’s own sea, on three layers';
+  if(p.marker) return tt('campaint.the_marker_pixel',{marker:p.marker});
+  if(p.tool === 'water') return tt('campaint.this_maps_own_sea_on_three');
   if(p.target === 'regions')
-    return p.sea ? 'Sea <span class="count">declared in no record</span>'
-      : esc(p.region) + ' <span class="count">its own colour, out of '
+    return p.sea ? tt('campaint.sea_declared_in_no_record')
+      : esc(p.region) + ` <span class="count">${tt('campaint.its_own_colour_out_of')} `
         + 'descr_regions.txt</span>';
   const L = cpaintLayer();
   const rgb = p.rgb || [];
@@ -842,8 +830,8 @@ function cpaintWizHtml(){
   const spec = p.st.new_region;
   if(!spec && !p.wizOpen)
     return `<div class="cprow"><button class="cpnew" onclick="cpaintWizOpen()"
-      title="Add a province: decide its record, paint it, place its settlement, then its port or skip."
-      >＋ New region</button></div>`;
+      title="${ttA('campaint.add_a_province_decide_its_record')}"
+      >${tt('campaint.new_region')}</button></div>`;
   if(!spec){
     const w = p.wiz || {};
     const box = (slot, label, ph, hint) => `<div class="cpfield">
@@ -861,51 +849,46 @@ function cpaintWizHtml(){
     const owners = v.owners.map(o => [o.name, cpaintFac(o.name)
       + (o.name === 'slave' ? ' - the rebels' : '')]);
     const music = v.music.length
-      ? [['', 'the neighbour it shares the most border with']].concat(
-          v.music.map(m => [m.name, `${m.name} (${m.regions} regions)`]))
+      ? [['', tt('campaint.the_neighbour_it_shares_the_most')]].concat(
+          v.music.map(m => [m.name, tt('campaint.regions',{name:m.name,regions:m.regions})]))
       : [];
     const camps = p.vocCamps || [];
     const reach = camps.filter(c => c.reads_base).map(c => c.campaign);
     const miss = camps.filter(c => !c.reads_base).map(c => c.campaign);
     return `<div class="cpwiz">
-      <div class="k">A new province <span class="count">step 1 of 3: the record</span></div>
-      ${box('name', 'Region name', 'New_Province', 'no spaces - it is a key')}
-      ${box('settlement', 'Settlement name', 'Newtown', 'no spaces, same reason')}
-      ${box('shown', 'Shown on the map', 'New Province',
-        'required: the game asserts on a province it cannot name')}
-      ${box('settlement_shown', 'Settlement, shown', 'Newtown',
-        'required, for the same reason')}
-      <div class="cpfield"><label>Colour on map_regions.tga
-          <span class="count">free on this map</span></label>
+      <div class="k">${tt('campaint.a_new_province_step_1_of')}</div>
+      ${box('name', tt('campaint.region_name'), 'New_Province', 'no spaces - it is a key')}
+      ${box('settlement', tt('campaint.settlement_name'), tt('campaint.newtown'), tt('campaint.no_spaces_same_reason'))}
+      ${box('shown', tt('campaint.shown_on_the_map'), tt('campaint.new_province'),
+        tt('campaint.required_the_game_asserts_on_a'))}
+      ${box('settlement_shown', tt('campaint.settlement_shown'), tt('campaint.newtown'),
+        tt('campaint.required_for_the_same_reason'))}
+      <div class="cpfield"><label>${tt('campaint.colour_on_map_regions_tga_free')}</label>
         <div class="cprow"><i class="cpsw" style="background:rgb(${
           (w.rgb || [0, 0, 0]).join(',')})"></i>
         <input value="${(w.rgb || []).join(' ')}" data-wiz="rgb"></div></div>
       ${v.creators.length
-        ? pick('faction', 'Creator faction', creators,
-            'whose architecture it is built in')
-        : box('faction', 'Creator faction', 'england',
-            'nothing on disk lists the factions, so this is not checked')}
-      ${owners.length ? pick('owner', 'Starts held by', owners,
-        'a village, last in that faction’s block, so no capital moves') : ''}
-      ${music.length ? pick('music', 'Music type', music,
-        'the game logs a province with none') : ''}
+        ? pick('faction', tt('campaint.creator_faction'), creators,
+            tt('campaint.whose_architecture_it_is_built_in'))
+        : box('faction', tt('campaint.creator_faction'), 'england',
+            tt('campaint.nothing_on_disk_lists_the_factions'))}
+      ${owners.length ? pick('owner', tt('campaint.starts_held_by'), owners,
+        tt('campaint.a_village_last_in_that_factions')) : ''}
+      ${music.length ? pick('music', tt('campaint.music_type'), music,
+        tt('campaint.the_game_logs_a_province_with')) : ''}
       <div class="count">${reach.length
-        ? `Written into ${reach.map(esc).join(', ')}: a settlement, the music
-           type and, where it ships one, the name lookup - each campaign’s own
-           copy of each file.`
-        : 'No campaign reads this map, so there is no start position to give '
-          + 'the province a settlement in yet.'}${miss.length
-        ? ` <span class="w-warn">${miss.map(esc).join(', ')} ${
-            miss.length === 1 ? 'has' : 'have'} a map of ${
-            miss.length === 1 ? 'its' : 'their'} own and will not see it.</span>`
+        ? tt('campaint.written_into_a_settlement_the_music',{reach:reach.map(esc).join(', ')})
+        : tt('campaint.no_campaign_reads_this_map_so')
+          + tt('campaint.the_province_a_settlement_in_yet')}${miss.length
+        ? ` <span class="w-warn">${tt('campaint.a_map_of_own_and_will',{miss:miss.map(esc).join(', '),miss2:miss.length === 1 ? 'has' : 'have',miss3:miss.length === 1 ? 'its' : 'their'})}</span>`
         : ''}</div>
-      ${box('rebels', 'Rebel type', 'brigands')}
-      ${box('resources', 'Resources', 'gold, wine', 'comma separated')}
-      ${box('religions', 'Religions', 'catholic 100', 'name percent, comma '
-        + 'separated; they must total 100 or the game crashes on load')}
+      ${box('rebels', tt('campaint.rebel_type'), 'brigands')}
+      ${box('resources', tt('common.resources'), tt('campaint.gold_wine'), tt('campaint.comma_separated'))}
+      ${box('religions', tt('common.religions'), tt('campaint.catholic_100'), tt('campaint.name_percent_comma')
+        + tt('campaint.separated_they_must_total_100_or'))}
       <div class="cprow">
-        <button class="primary" onclick="cpaintWizStart()">Open it, and paint</button>
-        <button onclick="cpaintWizCancel()">Cancel</button></div>
+        <button class="primary" onclick="cpaintWizStart()">${tt('campaint.open_it_and_paint')}</button>
+        <button onclick="cpaintWizCancel()">${tt('common.cancel')}</button></div>
     </div>`;
   }
   const pr = p.prog || {tiles: 0, settlement: null, port: null};
@@ -914,32 +897,25 @@ function cpaintWizHtml(){
   const step = (n, done, label, extra) => `<div class="cpstep${done ? ' done' : ''}">
     <b>${done ? '✓' : n}</b><span>${label}</span>${extra || ''}</div>`;
   return `<div class="cpwiz">
-    <div class="k">${esc(spec.name)}
-      <span class="count">rgb(${spec.rgb.join(', ')}) · ${
-      esc(spec.settlement)}</span></div>
-    ${step(1, true, 'The record is open', spec.shown && spec.settlement_shown
-      ? `<span class="count">${esc(spec.shown)} · ${esc(spec.settlement_shown)
-          } · built by ${esc(cpaintFac(spec.faction))} · held by ${
-          esc(cpaintFac(spec.owner || 'slave'))}${p.wizMusic
-          ? ' · plays ' + esc(p.wizMusic) : ''}</span>`
-      : `<span class="w-bad" title="The game asserts on a province or a
-          settlement it cannot find a name for. Drop this region and open it
-          again with both names filled in.">a shown name is missing</span>`)}
-    ${step(2, pr.tiles > 0, `Paint the province`,
-      `<span class="count">${pr.tiles.toLocaleString()} tile${
-        pr.tiles === 1 ? '' : 's'}</span>`)}
-    ${step(3, !!pr.settlement, 'Place the settlement pixel',
+    <div class="k">${tt('campaint.rgb',{name:esc(spec.name),x:spec.rgb.join(', '),settlement:esc(spec.settlement)})}</div>
+    ${step(1, true, tt('campaint.the_record_is_open'), spec.shown && spec.settlement_shown
+      ? `<span class="count">${tt('campaint.built_by_held_by',{shown:esc(spec.shown),settlement_shown:esc(spec.settlement_shown),x:esc(cpaintFac(spec.faction)),x2:esc(cpaintFac(spec.owner || 'slave')),x3:p.wizMusic
+          ? tt('campaint.plays') + esc(p.wizMusic) : ''})}</span>`
+      : `<span class="w-bad" title="${ttA('campaint.the_game_asserts_on_a_province')}">${tt('campaint.a_shown_name_is_missing')}</span>`)}
+    ${step(2, pr.tiles > 0, tt('campaint.paint_the_province'),
+      `<span class="count">${tt('campaint.tile',{tiles:pr.tiles.toLocaleString(),x:pr.tiles === 1 ? '' : 's'})}</span>`)}
+    ${step(3, !!pr.settlement, tt('campaint.place_the_settlement_pixel'),
       `<button class="cpmk${p.marker === 'settlement' ? ' on' : ''}"
         data-marker="settlement">${pr.settlement
         ? `at ${pr.settlement.join(', ')}` : 'place'}</button>`)}
-    ${step(4, !!pr.port, 'Place the port pixel, or skip it',
+    ${step(4, !!pr.port, tt('campaint.place_the_port_pixel_or_skip'),
       `<button class="cpmk${p.marker === 'port' ? ' on' : ''}"
         data-marker="port">${pr.port ? `at ${pr.port.join(', ')}` : 'place'}</button>`)}
     ${bad.map(f => `<div class="w-bad">${esc(f.message)}</div>`).join('')}
     ${(p.wizPlanErrors || []).map(e => `<div class="w-bad">${esc(e)}</div>`).join('')}
     ${soft.map(f => `<div class="w-warn">${esc(f.message)}</div>`).join('')}
-    <div class="cprow"><button onclick="cpaintWizCancel()">Drop this region</button>
-      <button onclick="cpaintProgress()" title="Count the pixels again">Recheck</button>
+    <div class="cprow"><button onclick="cpaintWizCancel()">${tt('campaint.drop_this_region')}</button>
+      <button onclick="cpaintProgress()" title="${ttA('campaint.count_the_pixels_again')}">${tt('campaint.recheck')}</button>
     </div>
   </div>`;
 }
@@ -950,24 +926,21 @@ function cpaintFootHtml(){
     ${p.note ? `<div class="w-warn cpnote">${esc(p.note)}</div>` : ''}
     <div class="cprow cpundo">
       <button ${st.undo ? '' : 'disabled'} onclick="cpaintUndo()"
-        title="${esc(st.last || 'nothing to undo')} (Ctrl+Z)"
-        >↶ Undo${st.undo ? ` (${st.undo})` : ''}</button>
+        title="${esc(st.last || tt('campaint.nothing_to_undo'))} (Ctrl+Z)"
+        >${tt('campaint.undo',{x:st.undo ? ` (${st.undo})` : ''})}</button>
       <button ${st.redo ? '' : 'disabled'} onclick="cpaintRedo()"
-        title="${esc(st.next || 'nothing to redo')} (Ctrl+Y)"
-        >↷ Redo${st.redo ? ` (${st.redo})` : ''}</button>
-      <span class="count">${st.last ? esc(st.last) : 'no stroke yet'}</span>
+        title="${esc(st.next || tt('campaint.nothing_to_redo'))} (Ctrl+Y)"
+        >${tt('campaint.redo',{x:st.redo ? ` (${st.redo})` : ''})}</button>
+      <span class="count">${st.last ? esc(st.last) : tt('campaint.no_stroke_yet')}</span>
     </div>
-    ${st.dropped ? `<div class="count">${st.dropped} of the oldest stroke${
-      st.dropped === 1 ? ' has' : 's have'} been let go: the stack holds every
-      level there is until it is holding too many pixels to be worth it.</div>` : ''}
+    ${st.dropped ? `<div class="count">${tt('campaint.of_the_oldest_stroke_been_let',{dropped:st.dropped,x:st.dropped === 1 ? ' has' : 's have'})}</div>` : ''}
     ${(st.dirty.length || st.new_region) ? `<div class="cprow">
-      <button class="primary" onclick="cpaintSave()">Save the map</button>
+      <button class="primary" onclick="cpaintSave()">${tt('campaint.save_the_map')}</button>
       <button onclick="cpaintDiscard()"
-        title="Re-read every layer from disk and lose the unsaved strokes"
-        >Discard</button>
+        title="${ttA('campaint.re_read_every_layer_from_disk')}"
+        >${tt('campaint.discard')}</button>
       <span class="count">${esc(st.files.join(', ')) || 'descr_regions.txt'}</span>
-    </div>` : `<div class="count">Nothing is unsaved. map.rwm is deleted on
-      every save, or the game loads the old compiled map.</div>`}`;
+    </div>` : `<div class="count">${tt('campaint.nothing_is_unsaved_map_rwm_is')}</div>`}`;
 }
 
 //: 28b: wires whichever box it is handed - the panel or the toolbar row - so
@@ -1076,15 +1049,15 @@ function cpaintWorkspacePaint(){
   const locked = p.busy || p.painting;
   el.classList.toggle('is-painting', !!p.on);
   el.innerHTML = `<div class="cmworkmode"><span class="cmstatedot"></span>
-    <b class="cmselectionname">${p.on ? 'Painting' : state.cmap && state.cmap.sel
-      ? esc(state.cmap.sel.shown || state.cmap.sel.name || 'Selected region') : 'Select a region'}</b>
-    <span>${p.on ? (p.pal ? esc(cpaintToolName()) : 'Loading palette…') + ' · Right drag to pan' : 'Click a province to inspect · Drag to pan'}</span>
-    ${p.on ? '<button onclick="cpaintToggle()">Stop painting</button>' : ''}</div>
+    <b class="cmselectionname">${p.on ? tt('campaint.painting') : state.cmap && state.cmap.sel
+      ? esc(state.cmap.sel.shown || state.cmap.sel.name || tt('campaint.selected_region')) : tt('campaint.select_a_region')}</b>
+    <span>${p.on ? (p.pal ? esc(cpaintToolName()) : tt('campaint.loading_palette')) + tt('campaint.right_drag_to_pan') : tt('campaint.click_a_province_to_inspect_drag')}</span>
+    ${p.on ? `<button onclick="cpaintToggle()">${tt('campaint.stop_painting')}</button>` : ''}</div>
     <div class="cmworksave">
-      <span role="status">${p.busy ? 'Working…' : dirty ? 'Unsaved map changes' : 'Paint changes saved'}</span>
-      <button onclick="cpaintUndo()" ${locked || !st.undo ? 'disabled' : ''} title="${esc(st.last || 'Nothing to undo')}">↶ Undo</button>
-      <button onclick="cpaintRedo()" ${locked || !st.redo ? 'disabled' : ''} title="${esc(st.next || 'Nothing to redo')}">↷ Redo</button>
-      <button class="primary" onclick="cpaintSave()" ${locked || !dirty ? 'disabled' : ''}>Review &amp; save</button>
+      <span role="status">${p.busy ? tt('common.working') : dirty ? tt('campaint.unsaved_map_changes') : tt('campaint.paint_changes_saved')}</span>
+      <button onclick="cpaintUndo()" ${locked || !st.undo ? 'disabled' : ''} title="${esc(st.last || tt('campaint.nothing_to_undo_2'))}">${tt('campaint.undo_2')}</button>
+      <button onclick="cpaintRedo()" ${locked || !st.redo ? 'disabled' : ''} title="${esc(st.next || tt('campaint.nothing_to_redo_2'))}">${tt('campaint.redo_2')}</button>
+      <button class="primary" onclick="cpaintSave()" ${locked || !dirty ? 'disabled' : ''}>${tt('campaint.review_save')}</button>
     </div>`;
 }
 
@@ -1113,16 +1086,16 @@ function cpaintBarHtml(){
   if(!p) return '';
   const open = cpaintRowOpen();
   const arm = `<button class="cptog${p.on ? ' on' : ''}" onclick="cpaintToggle()"
-      title="Arm the brush. The left button paints; the right and middle still pan."
-      >\u{1F58C} Paint${p.on ? ' ✓' : ''}</button>`;
+      title="${ttA('campaint.arm_the_brush_the_left_button')}"
+      >${tt('campaint.paint_2',{on:p.on ? ' ✓' : ''})}</button>`;
   if(!p.on) return `<button class="${state.cmap && state.cmap.selectMode ? 'on' : ''}"
     aria-pressed="${!!(state.cmap && state.cmap.selectMode)}" onclick="cpaintSelectRegion()"
-    title="Select a province without moving map objects. Click to select; drag to pan.">⌖ Select region</button>` + arm;
+    title="${ttA('campaint.select_a_province_without_moving_map')}">${tt('campaint.select_region')}</button>` + arm;
   if(p.palErr) return arm + `<span class="w-bad">${esc(p.palErr)}</span>`;
-  if(!p.pal) return arm + '<span class="count">reading the palettes…</span>';
+  if(!p.pal) return arm + `<span class="count">${tt('campaint.reading_the_palettes')}</span>`;
   const fold = `<button class="cpfold" onclick="cpaintRowToggle()"
-      title="${open ? 'Fold the tools away and keep the brush armed'
-                    : 'Show the tools again'}">${open ? '▴' : '▾'}</button>`;
+      title="${open ? tt('campaint.fold_the_tools_away_and_keep')
+                    : tt('campaint.show_the_tools_again')}">${open ? '▴' : '▾'}</button>`;
   if(!open) return arm + fold + `<span class="count">${esc(cpaintToolName())}</span>`;
   // 49: the target layer left this row for the dock on the left, where the
   // colours it decides are. The folded summary below still names it.

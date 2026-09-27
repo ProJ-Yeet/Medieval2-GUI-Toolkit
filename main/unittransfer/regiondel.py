@@ -69,6 +69,7 @@ from . import keyblock as kb
 from .campmap import ENCODING, CampaignMap, MapError
 from .maptga import encode
 from .mapvocab import key
+from . import i18n as _i18n
 
 #: the one layer a delete paints
 CODE = "regions"
@@ -101,8 +102,7 @@ def record_of(cm: CampaignMap, name: str):
     """The record being deleted, or a refusal naming the file it is not in."""
     rec = cm.regions.by_name(name)
     if rec is None:
-        raise MapError(f"{campmap.rel_of(cm, REGIONS_NAME)} has no region "
-                       f"called {name}")
+        raise MapError(_i18n.msg("eng.regiondel.has_no_region_called", "{rel_of} has no region called {name}", rel_of=campmap.rel_of(cm, REGIONS_NAME), name=name))
     return rec
 
 
@@ -283,7 +283,7 @@ def plan(mod, cm: CampaignMap, campaign: str, body: dict) -> DeletePlan:
                    campaign=campaign or campstrat.DEFAULT_CAMPAIGN,
                    name=str(body.get("name") or "").strip())
     if not p.name:
-        p.errors.append("no province was named")
+        p.errors.append(_i18n.msg("eng.regiondel.no_province_was_named", "no province was named"))
         return p
     try:
         rec = record_of(cm, p.name)
@@ -293,9 +293,7 @@ def plan(mod, cm: CampaignMap, campaign: str, body: dict) -> DeletePlan:
     p.settlement = rec.settlement
     p.shown = campmap.shown_names(mod).get(p.name.lower(), "")
     if len(cm.regions.records) <= 1:
-        p.errors.append(f"{p.name} is the only region "
-                        f"{campmap.rel_of(cm, REGIONS_NAME)} declares, and a map "
-                        f"with no region at all will not load")
+        p.errors.append(_i18n.msg("eng.regiondel.is_the_only_region_declares_and", "{name} is the only region {rel_of} declares, and a map with no region at all will not load", name=p.name, rel_of=campmap.rel_of(cm, REGIONS_NAME)))
         return p
 
     reg = cm.index.by_key.get(rec.rgb_key)
@@ -310,9 +308,7 @@ def plan(mod, cm: CampaignMap, campaign: str, body: dict) -> DeletePlan:
     _plan_mentions(p)
     _plan_renumber(p, reg)
     if not p.data and not p.texts and not p.errors:
-        p.errors.append(f"nothing in {getattr(mod, 'name', '?')} would change, "
-                        f"which means {p.name} is not written down anywhere this "
-                        f"knows how to read")
+        p.errors.append(_i18n.msg("eng.regiondel.nothing_in_would_change_which_means", "nothing in {getattr} would change, which means {name} is not written down anywhere this knows how to read", getattr=getattr(mod, 'name', '?'), name=p.name))
     return p
 
 
@@ -329,15 +325,11 @@ def _plan_pixels(p: DeletePlan, rec, reg, body: dict) -> None:
     names = {h["name"].lower(): h for h in cands}
     if reg is None or not reg.pixels:
         p.warnings.append(
-            f"no tile of {campmap.rel_of(cm, REGIONS_TGA)} is painted "
-            f"{rec.rgb[0]} {rec.rgb[1]} {rec.rgb[2]}, so {p.name} is a record "
-            f"with no land and there is nothing to give away")
+            _i18n.msg("eng.regiondel.no_tile_of_is_painted_so", "no tile of {rel_of} is painted {rgb} {rgb2} {rgb3}, so {name} is a record with no land and there is nothing to give away", rel_of=campmap.rel_of(cm, REGIONS_TGA), rgb=rec.rgb[0], rgb2=rec.rgb[1], rgb3=rec.rgb[2], name=p.name))
         return
     if not cands:
         p.errors.append(
-            f"{p.name} shares an edge with no declared region, so there is "
-            f"nobody to give its {reg.pixels:,} tile(s) to. A province whose "
-            f"only neighbour is the ocean has to be painted over by hand.")
+            _i18n.msg("eng.regiondel.shares_an_edge_with_no_declared", "{name} shares an edge with no declared region, so there is nobody to give its {pixels:,} tile(s) to. A province whose only neighbour is the ocean has to be painted over by hand.", name=p.name, pixels=reg.pixels))
         return
     if not want:
         want = cands[0]["name"]
@@ -371,7 +363,7 @@ def _plan_pixels(p: DeletePlan, rec, reg, body: dict) -> None:
     try:
         raw = encode(img, info)
     except Exception as exc:                                    # noqa: BLE001
-        p.errors.append(f"{REGIONS_TGA} could not be re-encoded: {exc}")
+        p.errors.append(_i18n.msg("eng.regiondel.could_not_be_re_encoded", "{REGIONS_TGA} could not be re-encoded: {exc}", REGIONS_TGA=REGIONS_TGA, exc=exc))
         return
     rel = campmap.rel_of(cm, REGIONS_TGA)
     p.data[rel] = raw
@@ -391,9 +383,7 @@ def _plan_pixels(p: DeletePlan, rec, reg, body: dict) -> None:
                f"two is ever used"))
     if p.port == "keep" and heir["port"]:
         p.warnings.append(
-            f"{p.heir} already has a port of its own, so keeping this one "
-            f"leaves two port pixels in one province and the engine uses one "
-            f"of them. Check reports that as a second port.")
+            _i18n.msg("eng.regiondel.already_has_a_port_of_its", "{heir} already has a port of its own, so keeping this one leaves two port pixels in one province and the engine uses one of them. Check reports that as a second port.", heir=p.heir))
 
     # 16e's own contiguity rule, read the other way round. The heir's land plus
     # a piece that does not touch it is a province in two pieces, and the engine
@@ -401,10 +391,7 @@ def _plan_pixels(p: DeletePlan, rec, reg, body: dict) -> None:
     apart = _detached(cm, rec.rgb_key, hrec.rgb_key)
     if apart:
         p.warnings.append(
-            f"{apart:,} of {p.name}'s tile(s) do not touch {p.heir} at all, so "
-            f"{p.heir} would be painted in more than one piece. The engine "
-            f"treats it as one region, and an army cannot walk between the "
-            f"pieces.")
+            _i18n.msg("eng.regiondel.apart_of_s_tile_s_do", "{apart:,} of {name}'s tile(s) do not touch {heir} at all, so {heir2} would be painted in more than one piece. The engine treats it as one region, and an army cannot walk between the pieces.", apart=apart, name=p.name, heir=p.heir, heir2=p.heir))
 
 
 def _detached(cm: CampaignMap, gone: int, heir: int) -> int:
@@ -468,9 +455,7 @@ def _plan_campaigns(p: DeletePlan, camps: Sequence[dict]) -> None:
     """
     if not camps:
         p.warnings.append(
-            f"no campaign in {getattr(p.mod, 'name', '?')} reads this map, so "
-            f"there is no start position, no win condition and no music type "
-            f"naming {p.name} to follow")
+            _i18n.msg("eng.regiondel.no_campaign_in_reads_this_map", "no campaign in {getattr} reads this map, so there is no start position, no win condition and no music type naming {name} to follow", getattr=getattr(p.mod, 'name', '?'), name=p.name))
         return
     for c in camps:
         _plan_strat(p, c)
@@ -509,12 +494,12 @@ def _plan_strat(p: DeletePlan, c: dict) -> None:
     rel = c["strat"]
     path = Path(p.mod.data) / rel
     if not path.is_file():
-        p.warnings.append(f"{c['campaign']} has no {campstrat.STRAT_NAME}")
+        p.warnings.append(_i18n.msg("eng.regiondel.has_no", "{campaign} has no {STRAT_NAME}", campaign=c['campaign'], STRAT_NAME=campstrat.STRAT_NAME))
         return
     try:
         sf = campstrat.parse_strat(_text_of(p, rel))
     except (OSError, ValueError) as exc:
-        p.errors.append(f"{rel} could not be read ({exc})")
+        p.errors.append(_i18n.msg("eng.regiondel.could_not_be_read", "{rel} could not be read ({exc})", rel=rel, exc=exc))
         return
     lines = list(sf.lines)
     drop: List[Tuple[int, int]] = []
@@ -524,9 +509,7 @@ def _plan_strat(p: DeletePlan, c: dict) -> None:
     if node is not None:
         faction = stratedit.faction_of(sf, node)
         if faction is None:
-            p.errors.append(f"{rel}: {p.name}'s settlement block is not inside "
-                            f"any faction block, which is a defect to fix "
-                            f"rather than a block to delete")
+            p.errors.append(_i18n.msg("eng.regiondel.s_settlement_block_is_not_inside", "{rel}: {name}'s settlement block is not inside any faction block, which is a defect to fix rather than a block to delete", rel=rel, name=p.name))
             return
         span = stratedit.detach_span(sf, node, faction)
         drop.append(span)
@@ -535,19 +518,12 @@ def _plan_strat(p: DeletePlan, c: dict) -> None:
                          f"(lines {span[0] + 1}-{span[1] + 1}) removed")
         if len(held) == 1:
             p.warnings.append(
-                f"{p.name} is the only settlement {faction.name} holds in "
-                f"{c['campaign']}, so it starts the campaign holding nothing. "
-                f"That is legal - it is the shape a horde faction is - but it "
-                f"is very rarely what somebody meant.")
+                _i18n.msg("eng.regiondel.is_the_only_settlement_holds_in", "{name} is the only settlement {name2} holds in {campaign}, so it starts the campaign holding nothing. That is legal - it is the shape a horde faction is - but it is very rarely what somebody meant.", name=p.name, name2=faction.name, campaign=c['campaign']))
         elif held and held[0] is node:
             p.warnings.append(
-                f"{p.name} is {faction.name}'s capital in {c['campaign']} - the "
-                f"first settlement in the block - so "
-                f"{held[1].get('region') or '(the next one)'} becomes the "
-                f"capital instead.")
+                _i18n.msg("eng.regiondel.is_s_capital_in_the_first", "{name} is {name2}'s capital in {campaign} - the first settlement in the block - so {x} becomes the capital instead.", name=p.name, name2=faction.name, campaign=c['campaign'], x=held[1].get('region') or '(the next one)'))
     else:
-        p.warnings.append(f"{rel}: no faction starts holding {p.name}, so there "
-                          f"is no settlement block to remove")
+        p.warnings.append(_i18n.msg("eng.regiondel.no_faction_starts_holding_so_there", "{rel}: no faction starts holding {name}, so there is no settlement block to remove", rel=rel, name=p.name))
 
     section = next((n for n in sf.of_kind("region")
                     if str(n.get("name") or "").strip().lower()
@@ -585,9 +561,7 @@ def _plan_section(p: DeletePlan, sf, section, rel: str, lines: List[str],
         drop.append((section.start, stratobj.content_end(sf, section)))
         if kept:
             p.warnings.append(
-                f"{rel}: the `region {p.name}` section and its {len(kept)} fort "
-                f"or watchtower line(s) go with it, because there is no heir to "
-                f"move them to")
+                _i18n.msg("eng.regiondel.the_region_section_and_its_fort", "{rel}: the `region {name}` section and its {kept_n} fort or watchtower line(s) go with it, because there is no heir to move them to", rel=rel, name=p.name, kept_n=len(kept)))
         return
     into = next((n for n in sf.of_kind("region")
                  if str(n.get("name") or "").strip().lower()
@@ -621,7 +595,7 @@ def _guard_strat(p: DeletePlan, before, text: str, rel: str) -> None:
     try:
         after = campstrat.parse_strat(text)
     except (OSError, ValueError) as exc:
-        p.errors.append(f"{rel}: the edited file no longer reads ({exc})")
+        p.errors.append(_i18n.msg("eng.regiondel.the_edited_file_no_longer_reads", "{rel}: the edited file no longer reads ({exc})", rel=rel, exc=exc))
         return
     was, now = before.counts(), after.counts()
     moved = ("settlement", "building", "unit", "character", "character_record",
@@ -630,16 +604,11 @@ def _guard_strat(p: DeletePlan, before, text: str, rel: str) -> None:
         if kind in moved:
             continue
         if was.get(kind, 0) != now.get(kind, 0):
-            p.errors.append(f"{rel}: this would leave {now.get(kind, 0)} "
-                            f"{kind} record(s) where the file has "
-                            f"{was.get(kind, 0)}, and a delete removes one "
-                            f"settlement")
+            p.errors.append(_i18n.msg("eng.regiondel.this_would_leave_record_s_where", "{rel}: this would leave {now} {kind} record(s) where the file has {was}, and a delete removes one settlement", rel=rel, now=now.get(kind, 0), kind=kind, was=was.get(kind, 0)))
     if before.rosters != after.rosters:
-        p.errors.append(f"{rel}: this would change the playable, unlockable or "
-                        f"nonplayable lists, which no delete does")
+        p.errors.append(_i18n.msg("eng.regiondel.this_would_change_the_playable_unlockable", "{rel}: this would change the playable, unlockable or nonplayable lists, which no delete does", rel=rel))
     if before.globals != after.globals:
-        p.errors.append(f"{rel}: this would change the campaign's own header "
-                        f"values")
+        p.errors.append(_i18n.msg("eng.regiondel.this_would_change_the_campaigns_own", "{rel}: this would change the campaign's own header values", rel=rel))
     a, _ = stratedit.blocks_by_region(before)
     b, _ = stratedit.blocks_by_region(after)
     lost = sorted(set(a) - set(b))
@@ -650,15 +619,11 @@ def _guard_strat(p: DeletePlan, before, text: str, rel: str) -> None:
         return
     changed = [k for k in b if a.get(k) != b[k]]
     if changed:
-        p.errors.append(f"{rel}: this would rewrite {len(changed)} settlement "
-                        f"block(s) nobody asked it to, starting with "
-                        f"{changed[0]}")
+        p.errors.append(_i18n.msg("eng.regiondel.this_would_rewrite_settlement_block_s", "{rel}: this would rewrite {changed_n} settlement block(s) nobody asked it to, starting with {changed}", rel=rel, changed_n=len(changed), changed=changed[0]))
     for kind in ("fort", "watchtower"):
         if was.get(kind, 0) != now.get(kind, 0):
             p.warnings.append(
-                f"{rel}: {was.get(kind, 0) - now.get(kind, 0)} {kind}(s) go "
-                f"with the section, because there was no heir to file them "
-                f"under")
+                _i18n.msg("eng.regiondel.s_go_with_the_section_because", "{rel}: {x} {kind}(s) go with the section, because there was no heir to file them under", rel=rel, x=was.get(kind, 0) - now.get(kind, 0), kind=kind))
 
 
 def _plan_wins(p: DeletePlan, c: dict) -> None:
@@ -737,8 +702,7 @@ def _plan_mercs(p: DeletePlan, c: dict) -> None:
     after = {q.name: q.regions for q in campfiles.parse_mercs(out).pools}
     for name in mine:
         if not after.get(name):
-            p.warnings.append(f"{rel}: the pool {name} now sells in no province "
-                              f"at all, so nothing in it is ever recruitable")
+            p.warnings.append(_i18n.msg("eng.regiondel.the_pool_now_sells_in_no", "{rel}: the pool {name} now sells in no province at all, so nothing in it is ever recruitable", rel=rel, name=name))
 
 
 def _plan_music(p: DeletePlan, c: dict) -> None:
@@ -795,9 +759,7 @@ def _plan_lookup(p: DeletePlan, c: dict) -> None:
     p.texts[rel] = newline.join(out) + (newline if trailing else "")
     p.changes.append(f"{rel}: the {p.name} / {p.settlement or '?'} pair removed")
     if mate < 0:
-        p.warnings.append(f"{rel}: {p.name} was the last line in the file and "
-                          f"had no settlement under it, which is a pair the "
-                          f"engine would have read short anyway")
+        p.warnings.append(_i18n.msg("eng.regiondel.was_the_last_line_in_the", "{rel}: {name} was the last line in the file and had no settlement under it, which is a pair the engine would have read short anyway", rel=rel, name=p.name))
 
 
 def _plan_tiles_db(p: DeletePlan, c: dict) -> None:
@@ -831,9 +793,7 @@ def _plan_mentions(p: DeletePlan) -> None:
         p.mod, p.name, set(p.texts) | set(p.data))
     if p.script:
         p.warnings.append(
-            f"{len(p.script)} line(s) of the campaign script name {p.name}, and "
-            f"the script is reported and never written - it is a grammar "
-            f"nothing here parses. Each one is listed with its line number.")
+            _i18n.msg("eng.regiondel.line_s_of_the_campaign_script", "{script_n} line(s) of the campaign script name {name}, and the script is reported and never written - it is a grammar nothing here parses. Each one is listed with its line number.", script_n=len(p.script), name=p.name))
     keys = [r for r in p.review
             if r["rel"].startswith("text/") and r["rel"].endswith(".txt")]
     if keys:
@@ -852,11 +812,7 @@ def _plan_renumber(p: DeletePlan, reg) -> None:
     if not after:
         return
     p.warnings.append(
-        f"{p.name} is region ID {reg.region_id}, and the {after} region(s) the "
-        f"engine scans after it each move down by one. A region ID is the scan "
-        f"order of {REGIONS_TGA} rather than anything written down, so no file "
-        f"needs editing - but a script that names a region by number now names "
-        f"a different one.")
+        _i18n.msg("eng.regiondel.is_region_id_and_the_region", "{name} is region ID {region_id}, and the {after} region(s) the engine scans after it each move down by one. A region ID is the scan order of {REGIONS_TGA} rather than anything written down, so no file needs editing - but a script that names a region by number now names a different one.", name=p.name, region_id=reg.region_id, after=after, REGIONS_TGA=REGIONS_TGA))
 
 
 # ---------------------------------------------------------------------------
@@ -878,7 +834,7 @@ def apply(p: DeletePlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.data and not p.texts:
-        raise ValueError("nothing would change")
+        raise ValueError(_i18n.msg("eng.regiondel.nothing_would_change", "nothing would change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

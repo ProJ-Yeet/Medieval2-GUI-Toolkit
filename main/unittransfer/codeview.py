@@ -40,6 +40,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from . import edu as edu_mod
+from . import i18n as _i18n
 
 
 class CodeViewError(Exception):
@@ -157,14 +158,13 @@ def _edu_parse(text: str, ctx: dict) -> Doc:
     parsed = edu_mod.parse_text(text)
     if not parsed.units:
         raise CodeViewError(
-            "a unit block needs a `type` line - this text has none", 1)
+            _i18n.msg("eng.codeview.a_unit_block_needs_a_type", "a unit block needs a `type` line - this text has none"), 1)
     if len(parsed.units) > 1:
         # the line the second block starts on, so the editor can point at it
         first = parsed.units[0].raw.count("\n")
         pre = parsed.preamble.count("\n")
         raise CodeViewError(
-            f"this text holds {len(parsed.units)} unit blocks - a code view edits "
-            "one unit at a time, so the extra `type` line(s) must go",
+            _i18n.msg("eng.codeview.this_text_holds_unit_blocks_a", "this text holds {units_n} unit blocks - a code view edits one unit at a time, so the extra `type` line(s) must go", units_n=len(parsed.units)),
             pre + first + 1)
     unit = parsed.units[0]
     note = ""
@@ -414,15 +414,14 @@ def _edb_parse(text: str, ctx: dict) -> Doc:
     sub = bld.parse_text(text)
     if not sub.buildings:
         raise CodeViewError(
-            "a building line starts with `building <name> {` - this text has none", 1)
+            _i18n.msg("eng.codeview.a_building_line_starts_with_building", "a building line starts with `building <name> {` - this text has none"), 1)
     if len(sub.buildings) > 1:
         raise CodeViewError(
-            f"this text holds {len(sub.buildings)} building lines - a code view "
-            "edits one line at a time",
+            _i18n.msg("eng.codeview.this_text_holds_building_lines_a", "this text holds {buildings_n} building lines - a code view edits one line at a time", buildings_n=len(sub.buildings)),
             sub.buildings[1].start + 1)
     bl = sub.buildings[0]
     if bl.end < len(sub.lines) and "".join(sub.lines[bl.end:]).strip():
-        raise CodeViewError("there is text after the line's closing brace", bl.end + 1)
+        raise CodeViewError(_i18n.msg("eng.codeview.there_is_text_after_the_lines", "there is text after the line's closing brace"), bl.end + 1)
     note = "; ".join(sub.warnings) if sub.warnings else ""
     mod = ctx.get("mod")
     # The boxes are a tree, not a field list, so they are redrawn from a full
@@ -464,7 +463,7 @@ def _bmdb_parse(text: str, ctx: dict) -> Doc:
                 + (f" (and {len(bad) - 1} more like it)" if len(bad) > 1 else "")
                 + " - every modeldb string is written `<length> <text>`",
                 first["line"]) from None
-        raise CodeViewError(f"this text isn't a modeldb entry: {e}", 0) from None
+        raise CodeViewError(_i18n.msg("eng.codeview.this_text_isnt_a_modeldb_entry", "this text isn't a modeldb entry: {e}", e=e), 0) from None
     # the whole card, not a slot list: hand-edited text can add or drop a faction
     # record, and then a card patched slot-by-slot would be quietly out of step
     from .edit import model_payload
@@ -512,8 +511,7 @@ def _strings_parse(text: str, ctx: dict) -> Doc:
         # would silently orphan whatever names it. Same ruling as a building
         # line and a modeldb entry, and for the same reason.
         raise CodeViewError(
-            f"this entry's tag is `{locked}` - renaming a tag in the text pane "
-            "would orphan everything that looks the string up by it", 1)
+            _i18n.msg("eng.codeview.this_entrys_tag_is_renaming_a", "this entry's tag is `{locked}` - renaming a tag in the text pane would orphan everything that looks the string up by it", locked=locked), 1)
     return Doc(kind="strings", text=text,
                fields=[("tag", tag), ("text", value)],
                spans={"tag": [[1, 1]], "text": [[1, 1]]},
@@ -549,9 +547,7 @@ def _traits_parse(text: str, ctx: dict) -> Doc:
         # traits' `AntiTraits` lists, the EDA's conditions and descr_strat all
         # point at. Same ruling as a building line, and for the same reason.
         raise CodeViewError(
-            f"this trait is `{locked}` - renaming it in the text pane would "
-            "orphan every trigger, antitrait list and starting character that "
-            "names it", 1)
+            _i18n.msg("eng.codeview.this_trait_is_renaming_it_in", "this trait is `{locked}` - renaming it in the text pane would orphan every trigger, antitrait list and starting character that names it", locked=locked), 1)
     known = set(ctx.get("known") or ())
     findings = traits_mod.check(trait, known or None)
     return Doc(kind="traits", text=text, fields=traits_mod.block_fields(text),
@@ -586,9 +582,7 @@ def _guilds_parse(text: str, ctx: dict) -> Doc:
     locked = ctx.get("guild")
     if locked and rec.name != locked:
         raise CodeViewError(
-            f"this guild is `{locked}` - renaming it in the text pane would "
-            "orphan every trigger that awards it points and the building line "
-            "it grants", 1)
+            _i18n.msg("eng.codeview.this_guild_is_renaming_it_in", "this guild is `{locked}` - renaming it in the text pane would orphan every trigger that awards it points and the building line it grants", locked=locked), 1)
     findings = guilds_mod.check_guild(rec, ctx.get("buildings"))
     return Doc(kind="guilds", text=text, fields=guilds_mod.block_fields(text),
                spans=guilds_mod.block_spans(text), ident=rec.name,
@@ -622,9 +616,7 @@ def _anc_parse(text: str, ctx: dict) -> Doc:
         # `ExcludedAncillaries` entries, a condition operand, a descr_strat entry
         # AND its own text key. Same ruling as a trait, for four more reasons.
         raise CodeViewError(
-            f"this ancillary is `{locked}` - renaming it in the text pane would "
-            "orphan every trigger, exclusion list, starting character and text "
-            "entry that names it", 1)
+            _i18n.msg("eng.codeview.this_ancillary_is_renaming_it_in", "this ancillary is `{locked}` - renaming it in the text pane would orphan every trigger, exclusion list, starting character and text entry that names it", locked=locked), 1)
     known = set(ctx.get("known") or ())
     findings = anc_mod.check(anc, known or None)
     return Doc(kind="ancillaries", text=text, fields=anc_mod.block_fields(text),
@@ -653,8 +645,7 @@ def _anc_render(base: str, edits: dict, ctx: dict) -> str:
 def _minor_locked(kind: str, ident: str, found: str, points_at: str) -> None:
     if ident and found != ident:
         raise CodeViewError(
-            f"this {kind} is `{ident}` - renaming it in the text pane would orphan "
-            f"{points_at}", 1)
+            _i18n.msg("eng.codeview.this_is_renaming_it_in_the", "this {kind} is `{ident}` - renaming it in the text pane would orphan {points_at}", kind=kind, ident=ident, points_at=points_at), 1)
 
 
 def _record_kind(tab: str, shape_name: str, points_at: str):
@@ -767,10 +758,7 @@ def _factions_parse(text: str, ctx: dict) -> Doc:
     locked = ctx.get("faction") or ""
     if locked and fac.slot_of(rec.name) != fac.slot_of(locked):
         raise CodeViewError(
-            f"this faction is `{fac.slot_of(locked)}` - renaming a slot in the text "
-            "pane would orphan descr_strat, every unit's ownership line, every "
-            "`requires factions { … }` clause and its own text entry. The Rename "
-            "slot button above follows all of them, and moves the art (19b)", 1)
+            _i18n.msg("eng.codeview.this_faction_is_renaming_a_slot", "this faction is `{slot_of}` - renaming a slot in the text pane would orphan descr_strat, every unit's ownership line, every `requires factions { … }` clause and its own text entry. The Rename slot button above follows all of them, and moves the art (19b)", slot_of=fac.slot_of(locked)), 1)
     findings = fac.check_file(fac.parse_text(text if text.endswith("\n") else text + "\n"))
     return Doc(kind="factions", text=text, fields=fac.block_fields(text),
                spans=fac.block_spans(text), ident=rec.name,
@@ -809,10 +797,7 @@ def _regions_parse(text: str, ctx: dict) -> Doc:
     locked = ctx.get("region")
     if locked and rec.name != locked:
         raise CodeViewError(
-            f"this region is `{locked}` - renaming it in the text pane would "
-            "orphan every descr_strat.txt settlement, win condition, mercenary "
-            "pool, campaign script line and `legion:` entry that names it. The "
-            "Rename button on the region panel follows all of them (19b)", 1)
+            _i18n.msg("eng.codeview.this_region_is_renaming_it_in", "this region is `{locked}` - renaming it in the text pane would orphan every descr_strat.txt settlement, win condition, mercenary pool, campaign script line and `legion:` entry that names it. The Rename button on the region panel follows all of them (19b)", locked=locked), 1)
     findings = campmap.check_record(rec, ctx.get("vocab") or {},
                                     ctx.get("shape"))
     return Doc(kind="regions", text=text,
@@ -861,7 +846,7 @@ def _kind(kind: str) -> dict:
     try:
         return KINDS[kind]
     except KeyError:
-        raise CodeViewError(f"no code view for '{kind}'") from None
+        raise CodeViewError(_i18n.msg("eng.codeview.no_code_view_for", "no code view for '{kind}'", kind=kind)) from None
 
 
 def parse(kind: str, text: str, ctx: Optional[dict] = None) -> Doc:
@@ -895,7 +880,7 @@ def tidy(kind: str, text: str, ctx: Optional[dict] = None) -> Doc:
     ctx = ctx or {}
     fn = _kind(kind).get("tidy")
     if fn is None:
-        raise CodeViewError(f"'{kind}' has no layout to tidy")
+        raise CodeViewError(_i18n.msg("eng.codeview.has_no_layout_to_tidy", "'{kind}' has no layout to tidy", kind=kind))
     return parse(kind, fn(text, ctx), ctx)
 
 
@@ -908,7 +893,7 @@ def repair(kind: str, text: str, ctx: Optional[dict] = None) -> Doc:
     ctx = ctx or {}
     fn = _kind(kind).get("repair")
     if fn is None:
-        raise CodeViewError(f"'{kind}' has nothing to repair")
+        raise CodeViewError(_i18n.msg("eng.codeview.has_nothing_to_repair", "'{kind}' has nothing to repair", kind=kind))
     return parse(kind, fn(text, ctx), ctx)
 
 
@@ -916,7 +901,7 @@ def unit_document(mod, unit_type: str) -> Doc:
     """The code view of one unit as it currently sits in the mod's files."""
     unit = mod.edu.by_type().get(unit_type)
     if unit is None:
-        raise KeyError(f"unit {unit_type!r} not found in {mod.name}")
+        raise KeyError(_i18n.msg("eng.codeview.unit_not_found_in", "unit {unit_type} not found in {name}", unit_type=repr(unit_type), name=mod.name))
     return parse("edu", unit.raw)
 
 
@@ -925,7 +910,7 @@ def building_document(mod, name: str, culture: str = "") -> Doc:
     from . import buildings as bld
     bl = mod.edb.get(name)
     if bl is None:
-        raise KeyError(f"no building line {name!r} in {mod.name}")
+        raise KeyError(_i18n.msg("eng.codeview.no_building_line_in", "no building line {name} in {name2}", name=repr(name), name2=mod.name))
     return parse("edb", bld.block_text(mod.edb, bl),
                  {"mod": mod, "culture": culture})
 
@@ -934,7 +919,7 @@ def entry_document(mod, name: str) -> Doc:
     """The code view of one battle-model entry as it currently sits in the mod."""
     entry = mod.modeldb.by_name().get((name or "").lower())
     if entry is None:
-        raise KeyError(f"no model entry {name!r} in {mod.name}")
+        raise KeyError(_i18n.msg("eng.codeview.no_model_entry_in", "no model entry {name} in {name2}", name=repr(name), name2=mod.name))
     doc = parse("bmdb", entry.raw, {"pad": entry.first_entry_pad, "base": entry.raw})
     doc.note = ("every string here is written `<length> <text>` - edit a path and "
                 "the length beside it needs to follow, which the ⟲ button does")
@@ -959,7 +944,7 @@ def trait_document(mod, name: str) -> Doc:
     tf = traits_mod.parse_file(mod.edct_path)
     trait = tf.get(name)
     if trait is None:
-        raise KeyError(f"no trait {name!r} in {mod.name}")
+        raise KeyError(_i18n.msg("eng.codeview.no_trait_in", "no trait {name} in {name2}", name=repr(name), name2=mod.name))
     return parse("traits", tf.block_text(trait),
                  {"trait": name, "known": set(tf.by_name())})
 
@@ -970,7 +955,7 @@ def guild_document(mod, name: str) -> Doc:
     gf, _ = guilds_mod.read(mod)
     rec = gf.get(name)
     if rec is None:
-        raise KeyError(f"no guild {name!r} in {mod.name}")
+        raise KeyError(_i18n.msg("eng.codeview.no_guild_in", "no guild {name} in {name2}", name=repr(name), name2=mod.name))
     return parse("guilds", gf.block_text(rec),
                  {"guild": name, "buildings": guilds_mod.building_names(mod)})
 
@@ -981,7 +966,7 @@ def ancillary_document(mod, name: str) -> Doc:
     af = anc_mod.parse_file(mod.eda_path)
     anc = af.get(name)
     if anc is None:
-        raise KeyError(f"no ancillary {name!r} in {mod.name}")
+        raise KeyError(_i18n.msg("eng.codeview.no_ancillary_in", "no ancillary {name} in {name2}", name=repr(name), name2=mod.name))
     return parse("ancillaries", af.block_text(anc),
                  {"ancillary": name, "known": set(af.by_name())})
 
@@ -1000,11 +985,11 @@ def sounds_document(mod, unit_name: str) -> Doc:
     from . import sounds as snd
     path = Path(mod.data) / snd.EDS_REL
     if not path.is_file():
-        raise KeyError(f"{getattr(mod, 'name', '?')} has no voice bank")
+        raise KeyError(_i18n.msg("eng.codeview.has_no_voice_bank", "{getattr} has no voice bank", getattr=getattr(mod, 'name', '?')))
     bank = snd.parse_file(path)
     entry = bank.get(unit_name)
     if entry is None:
-        raise KeyError(f"no voice entry for {unit_name!r}")
+        raise KeyError(_i18n.msg("eng.codeview.no_voice_entry_for", "no voice entry for {unit_name}", unit_name=repr(unit_name)))
     lines = bank.lines[entry.start:entry.end]
     text = "".join(lines).rstrip("\r\n")
     spans: Dict[str, List[List[int]]] = {"unit": [[1, 1]]}
@@ -1040,7 +1025,7 @@ def pools_document(mod, unit: str) -> Doc:
 
     rows = b.unit_instances(mod, unit)["instances"]
     if not rows:
-        raise KeyError(f"no building trains {unit!r}")
+        raise KeyError(_i18n.msg("eng.codeview.no_building_trains", "no building trains {unit}", unit=repr(unit)))
     src = kb.read_text(Path(mod.data) / b.EDB_REL, b.ENCODING).split("\n")
 
     out: List[str] = []
@@ -1075,7 +1060,7 @@ def faction_document(mod, name: str) -> Doc:
     rec = rf.get(name) or next(
         (r for r in rf.records if fac.slot_of(r.name) == fac.slot_of(name)), None)
     if rec is None:
-        raise KeyError(f"no faction {name!r} in {fac.REL}")
+        raise KeyError(_i18n.msg("eng.codeview.no_faction_in", "no faction {name} in {REL}", name=repr(name), REL=fac.REL))
     return parse("factions", rf.block_text(rec), {"faction": rec.name})
 
 
@@ -1090,7 +1075,7 @@ def minor_document(mod, tab_id: str, name: str) -> Doc:
     meta = mf.tab(tab_id)
     path = mf.path_for(mod, tab_id)
     if not path.is_file():
-        raise KeyError(f"{getattr(mod, 'name', '?')} has no {meta.rel}")
+        raise KeyError(_i18n.msg("eng.codeview.has_no", "{getattr} has no {rel}", getattr=getattr(mod, 'name', '?'), rel=meta.rel))
     text = kb.read_text(path, mf.ENCODING)
     if tab_id in ("rebels", "resources"):
         shape = mf.REBELS if tab_id == "rebels" else mf.RESOURCES
@@ -1103,7 +1088,7 @@ def minor_document(mod, tab_id: str, name: str) -> Doc:
         parsed = mf.parse_names(text)
     rec = parsed.get(name)
     if rec is None:
-        raise KeyError(f"no {meta.noun} {name!r} in {meta.rel}")
+        raise KeyError(_i18n.msg("eng.codeview.no_in", "no {noun} {name} in {rel}", noun=meta.noun, name=repr(name), rel=meta.rel))
     return parse(meta.id, parsed.block_text(rec), {"ident": name})
 
 
@@ -1119,7 +1104,7 @@ def region_document(mod, name: str) -> Doc:
     rf = campmap.read_regions(mod)
     rec = rf.by_name(name)
     if rec is None:
-        raise KeyError(f"no region {name!r} in {campmap.REGIONS_REL}")
+        raise KeyError(_i18n.msg("eng.codeview.no_region_in", "no region {name} in {REGIONS_REL}", name=repr(name), REGIONS_REL=campmap.REGIONS_REL))
     return parse("regions", campmap.record_text(rf, rec),
                  context("regions", mod, rec.name))
 

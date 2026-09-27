@@ -63,6 +63,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple
 from . import config, edit, keyblock as kb, luascan
 from .logutil import counted, file_op, fingerprint, log
 from .mod import Mod
+from . import i18n as _i18n
 
 #: ``descr_model_strat.txt`` is latin-1 like every other game text file, and it
 #: is read and written through :mod:`unittransfer.keyblock` so a mod that mixes
@@ -743,7 +744,7 @@ def entry_detail(mod: Mod, name: str) -> dict:
     """One entry, with its block verbatim - what the read-only card shows."""
     e = strat_file(mod).by_name().get((name or "").lower())
     if e is None:
-        return {"error": f"no strat model {name!r} in {mod.name}"}
+        return {"error": _i18n.msg("eng.stratmap.no_strat_model_in", "no strat model {name} in {name2}", name=repr(name), name2=mod.name)}
     users = _describe(entry_users(mod), e.name)
     return {"mod": mod.name, "name": e.name, "line": e.line, "skeleton": e.skeleton,
             "raw": e.raw, "factions": e.factions,
@@ -838,17 +839,17 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
         key = raw.lower()
         e = entries.get(key)
         if e is None:
-            plan.warnings.append(f"{raw} is not in {REL} any more - skipped")
+            plan.warnings.append(_i18n.msg("eng.stratmap.is_not_in_any_more_skipped", "{raw} is not in {REL} any more - skipped", raw=raw, REL=REL))
             continue
         who = _describe(users, e.name)
         if who:
             plan.warnings.append(
-                f"{e.name} is used by {', '.join(who[:3])} - kept")
+                _i18n.msg("eng.stratmap.is_used_by_kept", "{name} is used by {who} - kept", name=e.name, who=', '.join(who[:3])))
             continue
         row = mentions.get(key)
         if row:
             plan.warnings.append(
-                f"{e.name} is named in {row['file']} - kept")
+                _i18n.msg("eng.stratmap.is_named_in_kept", "{name} is named in {file} - kept", name=e.name, file=row['file']))
             continue
         if key not in [w.lower() for w in wanted]:
             wanted.append(e.name)
@@ -894,11 +895,11 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
     for rel in req.orphans:
         key = norm(rel)
         if not key.startswith(MODELS_DIR + "/") or _skipped(key):
-            plan.warnings.append(f"{rel} is not a file this cleanup may touch - skipped")
+            plan.warnings.append(_i18n.msg("eng.stratmap.is_not_a_file_this_cleanup", "{rel} is not a file this cleanup may touch - skipped", rel=rel))
             continue
         src = mod.data / key
         if not src.is_file():
-            plan.warnings.append(f"{rel} is not there any more - skipped")
+            plan.warnings.append(_i18n.msg("eng.stratmap.is_not_there_any_more_skipped", "{rel} is not there any more - skipped", rel=rel))
             continue
         if key in seen_files or key in still_used or key in outside:
             plan.kept_files.append(key)
@@ -922,7 +923,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
         plan.changes.append(f"{len(plan.kept_files)} file(s) left in place - something "
                             f"that stays still names them")
     if not plan.changes and not plan.errors:
-        plan.warnings.append("nothing is ticked")
+        plan.warnings.append(_i18n.msg("eng.stratmap.nothing_is_ticked", "nothing is ticked"))
     return plan
 
 
@@ -952,7 +953,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
         raise ValueError("cannot apply: " + "; ".join(plan.errors))
     mod, target = plan.mod, plan.target
     if target is None:
-        raise ValueError("cannot apply: no export folder")
+        raise ValueError(_i18n.msg("eng.stratmap.cannot_apply_no_export_folder", "cannot apply: no export folder"))
     say = _reporter(progress)
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)
@@ -1016,7 +1017,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
                 manifest.setdefault("deleted", []).append(rel)
                 file_op("DELETE", t, "taken out of the mod (Undo puts it back)")
             except OSError as exc:
-                plan.warnings.append(f"could not remove data/{rel}: {exc}")
+                plan.warnings.append(_i18n.msg("eng.stratmap.could_not_remove_data", "could not remove data/{rel}: {exc}", rel=rel, exc=exc))
                 log.warning("  could not remove %s: %s", t, exc)
     say(99, "writing the log entry")
 

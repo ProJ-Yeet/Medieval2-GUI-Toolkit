@@ -55,6 +55,7 @@ from . import keyblock as kb
 from . import modflags
 from . import traits as traits_mod
 from . import triggers
+from . import i18n as _i18n
 
 #: EDA is plain 8-bit text, like the EDCT beside it
 ENCODING = triggers.ENCODING
@@ -201,7 +202,7 @@ def parse_text(text: str) -> AncillaryFile:
         if head == ANC_KW:
             cur = Ancillary(name=words[1] if len(words) > 1 else "", start=i, end=i + 1)
             if not cur.name:
-                cur.warnings.append(f"line {i + 1}: this Ancillary has no name")
+                cur.warnings.append(_i18n.msg("eng.ancillaries.line_this_ancillary_has_no_name", "line {x}: this Ancillary has no name", x=i + 1))
             af.ancillaries.append(cur)
             continue
         if head == triggers.TRIGGER_KW:
@@ -219,9 +220,9 @@ def parse_text(text: str) -> AncillaryFile:
             cur.end = i + 1
             continue
         if head not in BODY_ORDER:
-            cur.warnings.append(f"line {i + 1}: `{head}` is not an ancillary line")
+            cur.warnings.append(_i18n.msg("eng.ancillaries.line_is_not_an_ancillary_line", "line {x}: `{head}` is not an ancillary line", x=i + 1, head=head))
         elif head in cur.lines:
-            cur.warnings.append(f"line {i + 1}: a second `{head}` line")
+            cur.warnings.append(_i18n.msg("eng.ancillaries.line_a_second_line", "line {x}: a second `{head}` line", x=i + 1, head=head))
         cur.values[head] = value
         cur.lines[head] = i
         cur.end = i + 1
@@ -243,15 +244,13 @@ def parse_block(text: str) -> Ancillary:
     """
     af = parse_text(text if text.endswith("\n") else text + "\n")
     if not af.ancillaries:
-        raise AncillaryError("an ancillary block starts with an `Ancillary <name>` "
-                             "line - this text has none", 1)
+        raise AncillaryError(_i18n.msg("eng.ancillaries.an_ancillary_block_starts_with_an", "an ancillary block starts with an `Ancillary <name>` line - this text has none"), 1)
     if len(af.ancillaries) > 1:
         raise AncillaryError(
-            f"this text holds {len(af.ancillaries)} ancillary blocks - one at a time",
+            _i18n.msg("eng.ancillaries.this_text_holds_ancillary_blocks_one", "this text holds {ancillaries_n} ancillary blocks - one at a time", ancillaries_n=len(af.ancillaries)),
             af.ancillaries[1].start + 1)
     if af.trigger_start >= 0:
-        raise AncillaryError("there is a `Trigger` block in this text - the trigger "
-                             "section is edited on its own", af.trigger_start + 1)
+        raise AncillaryError(_i18n.msg("eng.ancillaries.there_is_a_trigger_block_in", "there is a `Trigger` block in this text - the trigger section is edited on its own"), af.trigger_start + 1)
     return af.ancillaries[0]
 
 
@@ -337,8 +336,7 @@ def check_file(af: AncillaryFile, trigger_file=None, mod=None) -> List[Dict]:
         if a.name in seen:
             out.append({"kind": "duplicate-ancillary", "ancillary": a.name,
                         "line": a.start + 1,
-                        "message": f"`{a.name}` is already defined on line "
-                                   f"{seen[a.name] + 1} - names must be unique"})
+                        "message": _i18n.msg("eng.ancillaries.is_already_defined_on_line_names", "`{name}` is already defined on line {x} - names must be unique", name=a.name, x=seen[a.name] + 1)})
         else:
             seen[a.name] = a.start
         out.extend(check(a, known))
@@ -368,9 +366,7 @@ def check_file(af: AncillaryFile, trigger_file=None, mod=None) -> List[Dict]:
             if eff.args[0] not in known:
                 out.append({"kind": "unknown-acquire", "ancillary": eff.args[0],
                             "line": eff.line + 1,
-                            "message": f"trigger `{trig.name}` grants "
-                                       f"`{eff.args[0]}`, which this file does not "
-                                       "define - an errorless crash when it fires"})
+                            "message": _i18n.msg("eng.ancillaries.trigger_grants_which_this_file_does", "trigger `{name}` grants `{args}`, which this file does not define - an errorless crash when it fires", name=trig.name, args=eff.args[0])})
     return out
 
 
@@ -531,7 +527,7 @@ def detail(mod, name: str) -> Dict:
     af = parse_file(mod.eda_path)
     anc = af.get(name)
     if anc is None:
-        raise KeyError(f"no ancillary {name!r} in {getattr(mod, 'name', '?')}")
+        raise KeyError(_i18n.msg("eng.ancillaries.no_ancillary_in", "no ancillary {name} in {getattr}", name=repr(name), getattr=getattr(mod, 'name', '?')))
     tg = triggers.parse_file(mod.eda_path)
     names = loc(mod)
     block = af.block_text(anc)
@@ -586,7 +582,7 @@ def _render_block(base: str, edits: Dict) -> str:
     if "name" in edits:
         name = str(edits["name"] or "").strip()
         if not name:
-            raise AncillaryError("an ancillary needs a name", anc.start + 1)
+            raise AncillaryError(_i18n.msg("eng.ancillaries.an_ancillary_needs_a_name", "an ancillary needs a name"), anc.start + 1)
         if name != anc.name:
             sp.replace(anc.start, kb.sub_head(lines[anc.start], ANC_KW, name))
 
@@ -605,7 +601,7 @@ def new_block(edits: Dict) -> str:
     """A whole ancillary block written from scratch, in the order the engine wants."""
     name = str(edits.get("name") or "").strip()
     if not name:
-        raise AncillaryError("a new ancillary needs a name")
+        raise AncillaryError(_i18n.msg("eng.ancillaries.a_new_ancillary_needs_a_name", "a new ancillary needs a name"))
     values = dict(edits)
     # Blank means "give it the usual value", not "leave the line out". The editor
     # posts every field, so an untouched box arrives as an EMPTY STRING rather
@@ -711,7 +707,7 @@ def plan(mod, body: dict) -> AncillaryPlan:
                       name=str(body.get("ancillary") or "").strip())
     path = Path(mod.eda_path)
     if not path.exists():
-        p.errors.append(f"{getattr(mod, 'name', '?')} has no {path.name}")
+        p.errors.append(_i18n.msg("eng.ancillaries.has_no", "{getattr} has no {name}", getattr=getattr(mod, 'name', '?'), name=path.name))
         return p
     original = kb.read_text(path, ENCODING)
     try:
@@ -732,7 +728,7 @@ def plan(mod, body: dict) -> AncillaryPlan:
             _plan_loc(p, mod, anc, dict(body.get("loc") or {}))
     p.text = "" if text == original else text
     if not p.text and not p.loc_writes and not p.errors:
-        p.warnings.append("nothing to change")
+        p.warnings.append(_i18n.msg("eng.ancillaries.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -741,9 +737,9 @@ def _plan_block(p: AncillaryPlan, text: str, body: dict) -> str:
     af = parse_text(text)
     if p.action == "add":
         if not p.name:
-            raise AncillaryError("a new ancillary needs a name")
+            raise AncillaryError(_i18n.msg("eng.ancillaries.a_new_ancillary_needs_a_name", "a new ancillary needs a name"))
         if af.get(p.name) is not None:
-            p.errors.append(f"{p.name} is already an ancillary in this file")
+            p.errors.append(_i18n.msg("eng.ancillaries.is_already_an_ancillary_in_this", "{name} is already an ancillary in this file", name=p.name))
             return text
         block = str(body.get("raw_block") or "").strip("\r\n") or new_block(
             dict(body.get("edits") or {}, name=p.name))
@@ -759,7 +755,7 @@ def _plan_block(p: AncillaryPlan, text: str, body: dict) -> str:
 
     anc = af.get(p.name)
     if anc is None:
-        p.errors.append(f"{p.name} is not an ancillary in this file")
+        p.errors.append(_i18n.msg("eng.ancillaries.is_not_an_ancillary_in_this", "{name} is not an ancillary in this file", name=p.name))
         return text
 
     if p.action == "delete":
@@ -775,9 +771,7 @@ def _plan_block(p: AncillaryPlan, text: str, body: dict) -> str:
         block = str(raw).strip("\r\n")
         if parse_block(block + "\n").name != p.name:
             raise AncillaryError(
-                f"this ancillary is `{p.name}` - renaming it here would orphan "
-                "every trigger, exclusion list, starting character and text entry "
-                "that names it")
+                _i18n.msg("eng.ancillaries.this_ancillary_is_renaming_it_here", "this ancillary is `{name}` - renaming it here would orphan every trigger, exclusion list, starting character and text entry that names it", name=p.name))
     else:
         block = render_block(base, dict(body.get("edits") or {}))
     if block == base:
@@ -816,8 +810,7 @@ def _plan_loc(p: AncillaryPlan, mod, anc: Ancillary, wanted: Dict) -> None:
     have = loc(mod)
     txt = Path(mod.data) / LOC_REL
     if not txt.exists() and not stringsbin.bin_path_for(txt).exists():
-        p.warnings.append(f"this mod has no {txt.name}, so its text key(s) could "
-                          "not be written - it will show its tags in game")
+        p.warnings.append(_i18n.msg("eng.ancillaries.this_mod_has_no_so_its", "this mod has no {name}, so its text key(s) could not be written - it will show its tags in game", name=txt.name))
         return
     for tag in text_tags(anc):
         want = str(wanted.get(tag, "")).strip() if wanted else ""
@@ -844,7 +837,7 @@ def apply(p: AncillaryPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text and not p.loc_writes:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.ancillaries.nothing_to_change", "nothing to change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

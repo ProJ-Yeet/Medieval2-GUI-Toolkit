@@ -6,33 +6,32 @@ function cmapCreatePaint(){
   const faction = c.createFaction || (c.sel && c.sel.faction) || '';
   const type = c.createType || 'general';
   el.innerHTML = `<div class="cmcreate">
-    <div class="cmcreateintro"><b>Create on the map</b>
-      <span>Choose what to add, then place it on a tile. Review its details before saving.</span></div>
-    <section><h3>Regions &amp; settlements</h3><div class="cmcreategrid">
-      <button class="primary" onclick="cmapCreateRegion()"><b>＋ New region</b><small>Name → paint → settlement → port</small></button>
-      <button onclick="cmapCreateMarker('settlement')"><b>⌂ Settlement marker</b><small>Add or move on the selected region</small></button>
-      <button onclick="cmapCreateMarker('port')"><b>⚓ Port marker</b><small>Add or move on the selected region</small></button>
-      <button onclick="cmapCreateSettlement()"><b>▣ Settlement details</b><small>Owner, buildings &amp; level</small></button>
-    </div><p>Select a region first for markers. Marker edits use Review &amp; save.</p></section>
-    <section><h3>Characters &amp; armies</h3>
-      <label>Faction<select aria-label="New character faction" onchange="state.cmap.createFaction=this.value">
-        <option value="">Choose a faction…</option>${Object.entries(factions).map(([id,f]) =>
+    <div class="cmcreateintro">${tt('campcreate.create_on_the_map_choose_what')}</div>
+    <section><h3>${tt('campcreate.regions_settlements')}</h3><div class="cmcreategrid">
+      <button class="primary" onclick="cmapCreateRegion()">${tt('campcreate.new_region_name_paint_settlement_port')}</button>
+      <button onclick="cmapCreateMarker('settlement')">${tt('campcreate.settlement_marker_add_or_move_on')}</button>
+      <button onclick="cmapCreateMarker('port')">${tt('campcreate.port_marker_add_or_move_on')}</button>
+      <button onclick="cmapCreateSettlement()">${tt('campcreate.settlement_details_owner_buildings_level')}</button>
+    </div><p>${tt('campcreate.select_a_region_first_for_markers')}</p></section>
+    <section><h3>${tt('campcreate.characters_armies')}</h3>
+      <label>${tt('common.faction')}<select aria-label="${ttA('campcreate.new_character_faction')}" onchange="state.cmap.createFaction=this.value">
+        <option value="">${tt('campcreate.choose_a_faction')}</option>${Object.entries(factions).map(([id,f]) =>
           `<option value="${esc(id)}"${id === faction ? ' selected' : ''}>${esc(f.label || id)}</option>`).join('')}
       </select></label>
-      <label>Character type<select aria-label="New character type" onchange="state.cmap.createType=this.value">
+      <label>${tt('campcreate.character_type')}<select aria-label="${ttA('campcreate.new_character_type')}" onchange="state.cmap.createType=this.value">
         ${Object.keys(CMK_CHAR).map(t => `<option value="${esc(t)}"${t === type ? ' selected' : ''}>${esc(t)}</option>`).join('')}
       </select></label>
-      <button onclick="cmapCreateCharacter()" ${Object.keys(factions).length ? '' : 'disabled'}>＋ Place character / army</button>
+      <button onclick="cmapCreateCharacter()" ${Object.keys(factions).length ? '' : 'disabled'}>${tt('campcreate.place_character_army')}</button>
       <button onclick="cmapCreateHorde()" ${Object.keys(factions).length ? '' : 'disabled'}
-        title="For a faction that holds nothing: leaders and armies on free land, or an event that raises it later">⚑ Horde start…</button>
-      <p>${k && k.err ? esc(k.err) : !Object.keys(factions).length ? 'Campaign factions are loading. Enable or retry Map icons if loading fails.' : 'Pick a tile, then set the name, traits and army in the character editor.'}</p>
+        title="${ttA('campcreate.for_a_faction_that_holds_nothing')}">${tt('campcreate.horde_start')}</button>
+      <p>${k && k.err ? esc(k.err) : !Object.keys(factions).length ? tt('campcreate.campaign_factions_are_loading_enable_or') : tt('campcreate.pick_a_tile_then_set_the')}</p>
     </section>
-    <section><h3>Campaign objects</h3><div class="cmcreategrid">
-      <button onclick="cmapCreateObject('fort')">▣ Fort</button>
-      <button onclick="cmapCreateObject('watchtower')">♜ Watchtower</button>
-      <button onclick="cmapCreateObject('resource')">◆ Resource</button>
-      <button onclick="cmapObjectMode()">⌖ Select / move objects</button>
-    </div><p>Click an icon to open its editor. Drag movable objects to preview a new position.</p></section>
+    <section><h3>${tt('campcreate.campaign_objects')}</h3><div class="cmcreategrid">
+      <button onclick="cmapCreateObject('fort')">${tt('campcreate.fort')}</button>
+      <button onclick="cmapCreateObject('watchtower')">${tt('campcreate.watchtower')}</button>
+      <button onclick="cmapCreateObject('resource')">${tt('campcreate.resource')}</button>
+      <button onclick="cmapObjectMode()">${tt('campcreate.select_move_objects')}</button>
+    </div><p>${tt('campcreate.click_an_icon_to_open_its')}</p></section>
   </div>`;
   // The displayed default must also be the value used by the placement action.
   if(faction && factions[faction]) c.createFaction = faction;
@@ -59,12 +58,12 @@ function cmapCreateMarker(kind){
   const c = state.cmap, p = state.cpaint;
   if(!c || !p || p.busy) return;
   const region = c.sel && c.sel.name ? c.sel.name : p.st.new_region && p.st.new_region.name;
-  if(!region){ toast('Select a region first, then choose its settlement or port marker.',5000); return; }
+  if(!region){ toast(tt('campcreate.select_a_region_first_then_choose'),5000); return; }
   if(c.man.campaign_map && c.man.campaign_map.paints === false){
-    toast('This campaign uses its own map. Open a campaign using the base map to edit markers.',6000); return;
+    toast(tt('campcreate.this_campaign_uses_its_own_map'),6000); return;
   }
   cmapCreateStopPaint();
-  cpinArm(`the ${kind} for ${region}`, 'cmapCreateMarkerAt', [kind, region]);
+  cpinArm(tt('campcreate.the_for',{kind,region}), 'cmapCreateMarkerAt', [kind, region]);
 }
 
 async function cmapCreateMarkerAt(kind, region, game, tile){
@@ -77,12 +76,12 @@ async function cmapCreateMarkerAt(kind, region, game, tile){
   cpaintApply(result.changed);
   if(p.st.new_region) cpaintProgress();
   cpaintPaint();
-  toast(`${kind === 'port' ? 'Port' : 'Settlement'} marker placed. Review & save to write the map.`,5000);
+  toast(tt('campcreate.marker_placed_review_save_to_write',{kind:kind === 'port' ? tt('campcreate.port') : tt('common.settlement')}),5000);
 }
 
 async function cmapCreateSettlement(){
   const c = state.cmap, r = c && c.sel;
-  if(!r || !r.name){ toast('Select a region to edit its settlement.',4000); return; }
+  if(!r || !r.name){ toast(tt('campcreate.select_a_region_to_edit_its'),4000); return; }
   cmapCreateStopPaint();
   await csOpen(r.name);
   if(state.cmap !== c) return;
@@ -92,15 +91,15 @@ async function cmapCreateSettlement(){
 
 function cmapCreateCharacter(){
   const c = state.cmap;
-  if(!c || !c.createFaction){ toast('Choose a faction for the new character.',4000); return; }
+  if(!c || !c.createFaction){ toast(tt('campcreate.choose_a_faction_for_the_new'),4000); return; }
   cmapCreateStopPaint();
-  cpinArm('the new character', 'cmapCreateCharacterAt', [c.createFaction,c.createType || 'general']);
+  cpinArm(tt('campcreate.the_new_character'), 'cmapCreateCharacterAt', [c.createFaction,c.createType || 'general']);
 }
 
 //: 72, D13: the People panel's Horde start tab, for the chosen faction.
 async function cmapCreateHorde(){
   const c = state.cmap;
-  if(!c || !c.createFaction){ toast('Choose a faction for the horde start.',4000); return; }
+  if(!c || !c.createFaction){ toast(tt('campcreate.choose_a_faction_for_the_horde'),4000); return; }
   cmapCreateStopPaint();
   await cxOpen(c.createFaction);
   const k = state.cx;
@@ -116,7 +115,7 @@ async function cmapCreateCharacterAt(faction, type, game){
   await cxOpen(faction);
   const k = state.cx;
   if(state.cmap !== c || c.campaign !== campaign || c.objectRequest !== request) return;
-  if(!k || k.faction !== faction || !k.d){ toast('Could not load that faction’s character editor.',5000); return; }
+  if(!k || k.faction !== faction || !k.d){ toast(tt('campcreate.could_not_load_that_factions_character'),5000); return; }
   cxAdd();
   k.open = true; k.tab = 'people';
   Object.assign(k.w, {x:game[0],y:game[1],type,
@@ -131,8 +130,8 @@ async function cmapCreateObject(kind){
   cmapCreateStopPaint(); cftOpen();
   if(!state.cft.d) await cftLoad();
   if(state.cmap !== c || c.campaign !== campaign) return;
-  if(!state.cft || !state.cft.d){ toast('Could not load campaign objects.',5000); return; }
-  cpinArm(`the new ${kind}`, 'cmapCreateObjectAt', [kind]);
+  if(!state.cft || !state.cft.d){ toast(tt('campcreate.could_not_load_campaign_objects'),5000); return; }
+  cpinArm(tt('campcreate.the_new',{kind}), 'cmapCreateObjectAt', [kind]);
 }
 
 function cmapCreateObjectAt(kind, game){
@@ -145,7 +144,7 @@ function cmapObjectMode(){
   state.cmap.selectMode = false;
   if(state.cmk && !state.cmk.on) cmkToggleLayer();
   cmapSub('paint','marks'); cpaintBarPaint();
-  toast('Click an object to edit it. Drag characters, forts, watchtowers or resources to move them.',5000);
+  toast(tt('campcreate.click_an_object_to_edit_it'),5000);
 }
 
 // Claim object clicks before region picking can asynchronously open its owner's

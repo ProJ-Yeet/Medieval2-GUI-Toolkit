@@ -21,20 +21,20 @@
    leaves the browser, and the whole UI stops at "did not finish loading". */
 
 const BNX_SECTIONS = [
-  {tag: 'FactionBanners', label: 'Faction banners', edu: 'banner faction'},
-  {tag: 'UnitSpecificBanners', label: 'Unit banners', edu: 'banner unit'},
-  {tag: 'HolyBanners', label: 'Holy banners', edu: 'banner holy'},
-  {tag: 'RoyalBanner', label: 'Royal banner', edu: ''},
+  {tag: 'FactionBanners', label: tt('battleflags.faction_banners'), edu: tt('battleflags.banner_faction')},
+  {tag: 'UnitSpecificBanners', label: tt('battleflags.unit_banners'), edu: tt('battleflags.banner_unit')},
+  {tag: 'HolyBanners', label: tt('battleflags.holy_banners'), edu: tt('battleflags.banner_holy')},
+  {tag: 'RoyalBanner', label: tt('battleflags.royal_banner'), edu: ''},
 ];
 
 async function loadBanners(){
   const mod = state.src;
-  main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s battle banners…</div>';
+  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('battleflags.s_battle_banners')}</div>`;
   let r;
   try{ r = await api.get('/api/battleflags?mod=' + enc(mod)); }
   catch(e){ if(stale('banners', mod)) return;
-    main.innerHTML = `<div class="empty">Couldn't read them.<br><span class="count">${esc(errText(e))}</span>
-      <br><br><button class="primary" onclick="loadBanners()">Retry</button></div>`; return; }
+    main.innerHTML = `<div class="empty">${tt('common.couldnt_read_them')}<br><span class="count">${esc(errText(e))}</span>
+      <br><br><button class="primary" onclick="loadBanners()">${tt('common.retry')}</button></div>`; return; }
   if(stale('banners', mod)) return;
   const keep = state.bnx && state.bnx.mod === mod ? state.bnx : null;
   state.bnx = Object.assign({mod, sel: keep ? keep.sel : '', w: bnxBlank(), busy: false}, r);
@@ -56,14 +56,14 @@ function renderBanners(){
   const n = bnxChanged();
   const left = c.error ? `<div class="count" style="padding:8px">${esc(c.error)}.</div>`
     : `<button class="trrow${c.sel === 'settings' ? ' on' : ''}" onclick="bnxPick('settings')">
-        <div class="nm">Settings</div><div class="sub">scale, colours and the wave, for every banner</div></button>`
+        <div class="nm">${tt('battleflags.settings')}</div><div class="sub">${tt('battleflags.scale_colours_and_the_wave_for')}</div></button>`
       + BNX_SECTIONS.map(s => {
           const list = (c.banners || []).filter(b => b.section === s.tag);
           if(!list.length) return '';
           return `<div class="trnote"><b>${s.label}</b>${s.edu ? ` <span class="count"><code>${s.edu}</code></span>` : ''}</div>`
             + list.map(b => `<button class="trrow${c.sel === String(b.id) ? ' on' : ''}" onclick="bnxPick('${b.id}')">
               <div class="nm">${esc(b.name)}</div>
-              <div class="sub">${b.rows.length} row(s)${s.edu ? ` · ${b.units} unit(s) carry it` : ''}${bnxDirty(b) ? ' · <b>changed</b>' : ''}</div></button>`).join('');
+              <div class="sub">${b.rows.length} row(s)${s.edu ? tt('battleflags.unit_s_carry_it',{units:b.units}) : ''}${bnxDirty(b) ? ` ${tt('common.changed')}` : ''}</div></button>`).join('');
         }).join('');
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
@@ -71,14 +71,13 @@ function renderBanners(){
       <div class="trrows">${left}</div>
     </div>
     <div class="trmain">
-      <div class="cdbhead"><div><b>descr_banners_new.xml</b> <span class="count">the banner each unit carries in battle, a texture per faction</span></div>
+      <div class="cdbhead"><div>${tt('battleflags.descr_banners_new_xml_the_banner')}</div>
         <span style="flex:1"></span>
-        <button onclick="bnxRevert()" ${n ? '' : 'disabled'}>Revert</button>
-        <button class="primary" onclick="bnxSave()" ${n ? '' : 'disabled'}>Save ${n || ''} change${n === 1 ? '' : 's'}</button>
+        <button onclick="bnxRevert()" ${n ? '' : 'disabled'}>${tt('common.revert')}</button>
+        <button class="primary" onclick="bnxSave()" ${n ? '' : 'disabled'}>${tt('battleflags.save_change',{x:n || '',x2:n === 1 ? '' : 's'})}</button>
       </div>
-      ${c.trailing_lines ? `<div class="trnote">⚠ ${c.trailing_lines} line(s) follow <code>&lt;/Banners&gt;</code>. The game stops reading at the root's close,
-        so they do nothing - an older copy saved over and never cut off.
-        <button onclick="bnxTrim()">${c.w.trim ? 'Keep them' : 'Cut them off on save'}</button></div>` : ''}
+      ${c.trailing_lines ? `<div class="trnote">${tt('battleflags.line_s_follow_banners_the_game',{trailing_lines:c.trailing_lines})}
+        <button onclick="bnxTrim()">${c.w.trim ? tt('battleflags.keep_them') : tt('battleflags.cut_them_off_on_save')}</button></div>` : ''}
       ${c.error ? '' : c.sel === 'settings' ? bnxSettingsHtml() : bnxBannerHtml()}
     </div>
   </div>`;
@@ -125,43 +124,41 @@ function bnxBox(id, a, v, width){
 
 function bnxSettingsHtml(){
   const c = state.bnx;
-  return `<div class="cdbsec"><h3>Settings</h3>
+  return `<div class="cdbsec"><h3>${tt('battleflags.settings')}</h3>
     <table class="smxtab">${(c.settings || []).map(s => `<tr><td><code>${esc(s.path)}</code></td><td>${
       Object.entries(s.attrs).map(([k, v]) => `<span class="count">${esc(k)}</span> ${bnxBox(s.id, k, v, 60)}`).join(' ')}</td></tr>`).join('')}
     </table>
-    <div class="count">The colours are 0 to 255. Scale is applied to every banner; past MinSizeDistance a banner keeps its screen size.</div></div>`;
+    <div class="count">${tt('battleflags.the_colours_are_0_to_255')}</div></div>`;
 }
 
 function bnxBannerHtml(){
   const c = state.bnx, b = (c.banners || []).find(x => String(x.id) === c.sel);
-  if(!b) return '<div class="count" style="padding:8px">Pick a banner.</div>';
+  if(!b) return `<div class="count" style="padding:8px">${tt('battleflags.pick_a_banner')}</div>`;
   const sec = BNX_SECTIONS.find(s => s.tag === b.section) || {};
   const paths = b.rows.length ? Object.keys(b.rows[0].attrs).filter(k => k !== 'Faction') : [];
   const have = new Set(b.rows.map(r => r.faction.toLowerCase()));
   const missing = (c.roster || []).filter(f => !have.has(f) && !c.w.add_rows.some(a => a.faction.toLowerCase() === f
     && b.rows.some(r => r.id === a.like)));
   const head = Object.entries(b.attrs).filter(([k]) => k !== 'Name');
-  return `<div class="cdbsec"><h3>${esc(b.name)} <span class="count">${sec.label || ''}${sec.edu
-      ? ` · <code>${sec.edu} ${esc(b.name)}</code> on ${b.units} unit(s)` : ''} · line ${b.line}</span></h3>
+  return `<div class="cdbsec"><h3>${tt('battleflags.line',{name:esc(b.name),x:sec.label || '',x2:sec.edu
+      ? ` ${tt('battleflags.on_unit_s',{edu:sec.edu,name:esc(b.name),units:b.units})}` : '',line:b.line})}</h3>
     ${head.length ? `<table class="smxtab">${head.map(([k, v]) => `<tr><td><code>${esc(k)}</code></td>
       <td>${bnxBox(b.id, k, v, /Mesh$/.test(k) ? 340 : 70)}</td></tr>`).join('')}</table>` : ''}
-    <h3>A row per faction <span class="count">${b.rows.length}</span></h3>
-    <table class="smxtab"><tr><th>Faction</th>${paths.map(k => `<th>${esc(k)}</th>`).join('')}<th></th></tr>
+    <h3>${tt('battleflags.a_row_per_faction')} <span class="count">${b.rows.length}</span></h3>
+    <table class="smxtab"><tr><th>${tt('common.faction')}</th>${paths.map(k => `<th>${esc(k)}</th>`).join('')}<th></th></tr>
     ${b.rows.map(r => {
       const gone = c.w.remove_rows.includes(r.id);
-      return `<tr${gone ? ' style="opacity:.45"' : ''}><td>${bnxBox(r.id, 'Faction', r.faction, 110)}</td>
+      return `<tr${gone ? ' style="opacity:.45"' : ''}><td>${bnxBox(r.id, tt('common.faction'), r.faction, 110)}</td>
         ${paths.map(k => `<td>${r.attrs[k] !== undefined ? bnxBox(r.id, k, r.attrs[k], k === 'Mesh' ? 200 : 290) : ''}</td>`).join('')}
         <td><button onclick="bnxDrop(${r.id})">${gone ? 'keep' : '✕'}</button></td></tr>`;
     }).join('')}
     ${c.w.add_rows.filter(a => b.rows.some(r => r.id === a.like)).map(a =>
-      `<tr><td colspan="${paths.length + 2}" class="count">+ ${esc(a.faction)}, copied from ${esc(b.rows.find(r => r.id === a.like).faction)}, on save</td></tr>`).join('')}
+      `<tr><td colspan="${paths.length + 2}" class="count">${tt('battleflags.copied_from_on_save',{faction:esc(a.faction),x:esc(b.rows.find(r => r.id === a.like).faction)})}</td></tr>`).join('')}
     </table>
-    ${b.rows.length ? `<div class="trnote">Add a row for
-      ${missing.length ? `<select id="bnxNewFac">${missing.map(f => `<option>${esc(f)}</option>`).join('')}</select>`
-        : '<input id="bnxNewFac" placeholder="faction" style="width:110px">'}
-      copied from <select id="bnxLike">${b.rows.map(r => `<option value="${r.id}">${esc(r.faction)}</option>`).join('')}</select>
-      <button onclick="bnxAdd()">＋ Add</button>
-      <div class="count">The copy points at the same textures as the row it came from; change the paths after, or draw the faction's own.</div></div>` : ''}
+    ${b.rows.length ? `<div class="trnote">${tt('battleflags.add_a_row_for_copied_from',{x:missing.length ? `<select id="bnxNewFac">${missing.map(f => `<option>${esc(f)}</option>`).join('')}</select>`
+        : `<input id="bnxNewFac" placeholder="${ttA('common.faction_2')}" style="width:110px">`})} <select id="bnxLike">${b.rows.map(r => `<option value="${r.id}">${esc(r.faction)}</option>`).join('')}</select>
+      <button onclick="bnxAdd()">${tt('common.add')}</button>
+      <div class="count">${tt('battleflags.the_copy_points_at_the_same')}</div></div>` : ''}
   </div>`;
 }
 function bnxDrop(id){
@@ -191,13 +188,13 @@ async function bnxSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(`Write ${(p.changes || []).length} change(s)?\n\n` + (p.changes || []).slice(0, 16).join('\n')
+  if(!confirm(tt('battleflags.write_change_s',{n:(p.changes || []).length}) + (p.changes || []).slice(0, 16).join('\n')
     + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   let res;
   try{ res = await api.post('/api/battleflags/apply', body); }
   catch(e){ res = {error: errText(e)}; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   await loadBanners();
 }

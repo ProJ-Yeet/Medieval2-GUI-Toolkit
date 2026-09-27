@@ -48,6 +48,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import keyblock as kb
+from . import i18n as _i18n
 
 LBC_REL = "descr_lbc_db.txt"
 OFFMAP_REL = "descr_offmap_models.txt"
@@ -193,7 +194,7 @@ def _roster(mod) -> List[str]:
 def _read(mod, rel: str) -> str:
     path = Path(mod.data) / rel
     if not path.is_file():
-        raise SiteError(f"this mod has no {rel}")
+        raise SiteError(_i18n.msg("eng.factionsites.this_mod_has_no", "this mod has no {rel}", rel=rel))
     return kb.read_text(path, ENCODING)
 
 
@@ -207,30 +208,25 @@ def check_lbc(pops: List[Populace], roster: List[str]) -> List[Dict]:
     seen: Dict[str, int] = {}
     for p in pops:
         if p.faction in seen:
-            out.append(finding("duplicate", "warn", f"{p.faction} has two populace blocks "
-                               f"(lines {seen[p.faction] + 1} and {p.line + 1})",
+            out.append(finding("duplicate", "warn", _i18n.msg("eng.factionsites.has_two_populace_blocks_lines_and", "{faction} has two populace blocks (lines {x} and {x2})", faction=p.faction, x=seen[p.faction] + 1, x2=p.line + 1),
                                f"lbc/{p.faction}", p.line))
         seen.setdefault(p.faction, p.line)
         bad = False
         for i, m, s in p.models:
             if not re.fullmatch(r"\d+", s):
                 bad = True
-                out.append(finding("share", "fatal", f"{p.faction}: {m}'s share {s!r} is not "
-                                   f"a whole number", f"lbc/{p.faction}", i))
+                out.append(finding("share", "fatal", _i18n.msg("eng.factionsites.s_share_is_not_a_whole", "{faction}: {m}'s share {s} is not a whole number", faction=p.faction, m=m, s=repr(s)), f"lbc/{p.faction}", i))
         total = sum(int(s) for _i, _m, s in p.models if re.fullmatch(r"\d+", s))
         if p.models and not bad and total != 100:
-            out.append(finding("sum", "warn", f"{p.faction}'s townsfolk add up to {total}, "
-                               f"not 100 (both installed mods' do, every one)",
+            out.append(finding("sum", "warn", _i18n.msg("eng.factionsites.s_townsfolk_add_up_to_not", "{faction}'s townsfolk add up to {total}, not 100 (both installed mods' do, every one)", faction=p.faction, total=total),
                                f"lbc/{p.faction}", p.line))
     if roster:
         for f in roster:
             if f not in seen:
-                out.append(finding("absent", "note", f"{f} is in the roster and has no "
-                                   f"populace block", f"lbc/{f}", 0))
+                out.append(finding("absent", "note", _i18n.msg("eng.factionsites.is_in_the_roster_and_has", "{f} is in the roster and has no populace block", f=f), f"lbc/{f}", 0))
         for f, at in seen.items():
             if f not in roster:
-                out.append(finding("stale", "note", f"{f} has a populace block and is not a "
-                                   f"faction in the roster", f"lbc/{f}", at))
+                out.append(finding("stale", "note", _i18n.msg("eng.factionsites.has_a_populace_block_and_is", "{f} has a populace block and is not a faction in the roster", f=f), f"lbc/{f}", at))
     return out
 
 
@@ -245,18 +241,15 @@ def check_offmap(nodes: List[OffNode], roster: List[str]) -> List[Dict]:
         for n in facs:
             f = n.head[1]
             if f in seen:
-                out.append(finding("duplicate", "warn", f"{name}: {f} is written twice (lines "
-                                   f"{seen[f] + 1} and {n.line + 1})", f"offmap/{name}/{f}", n.line))
+                out.append(finding("duplicate", "warn", _i18n.msg("eng.factionsites.is_written_twice_lines_and", "{name}: {f} is written twice (lines {x} and {x2})", name=name, f=f, x=seen[f] + 1, x2=n.line + 1), f"offmap/{name}/{f}", n.line))
             seen.setdefault(f, n.line)
         if facs and roster:
             for f in roster:
                 if f not in seen:
-                    out.append(finding("absent", "note", f"{name}: {f} is in the roster and has "
-                                       f"no block here", f"offmap/{name}/{f}", top.line))
+                    out.append(finding("absent", "note", _i18n.msg("eng.factionsites.is_in_the_roster_and_has_2", "{name}: {f} is in the roster and has no block here", name=name, f=f), f"offmap/{name}/{f}", top.line))
             for f, at in seen.items():
                 if f not in roster:
-                    out.append(finding("stale", "note", f"{name}: {f} has a block and is not a "
-                                       f"faction in the roster", f"offmap/{name}/{f}", at))
+                    out.append(finding("stale", "note", _i18n.msg("eng.factionsites.has_a_block_and_is_not", "{name}: {f} has a block and is not a faction in the roster", name=name, f=f), f"offmap/{name}/{f}", at))
     for n in nodes:
         for i, toks in n.rows:
             if toks[:1] == ["faction"] and len(toks) > 1:
@@ -264,14 +257,12 @@ def check_offmap(nodes: List[OffNode], roster: List[str]) -> List[Dict]:
                 # 117 opening braces to 118 closing - its `}` closes the navy
                 # section, and every faction after it is read outside the navy
                 out.append(finding("unopened", "warn",
-                                   f"line {i + 1}: faction {toks[1]} has no opening brace, so "
-                                   f"its closing one ends the enclosing block early and "
-                                   f"everything after it is read outside it",
+                                   _i18n.msg("eng.factionsites.line_faction_has_no_opening_brace", "line {x}: faction {toks} has no opening brace, so its closing one ends the enclosing block early and everything after it is read outside it", x=i + 1, toks=toks[1]),
                                    f"offmap/{offmap_path(nodes, n)}", i))
                 continue
             for v in (toks[-2:] if len(toks) >= 3 else []):
                 if not _NUM.fullmatch(v):
-                    out.append(finding("number", "fatal", f"line {i + 1}: {v!r} is not a number",
+                    out.append(finding("number", "fatal", _i18n.msg("eng.factionsites.line_is_not_a_number", "line {x}: {v} is not a number", x=i + 1, v=repr(v)),
                                        f"offmap/{offmap_path(nodes, n)}", i))
     return out
 
@@ -347,7 +338,7 @@ def _plan_lbc(p: SitePlan, mod, lbc: Dict, roster: List[str]) -> None:
         cur = by.get(fac)
         if rows is None:
             if cur is None:
-                p.errors.append(f"{fac} has no populace block to take out")
+                p.errors.append(_i18n.msg("eng.factionsites.has_no_populace_block_to_take", "{fac} has no populace block to take out", fac=fac))
                 continue
             end = cur.end + 1
             while end < len(lines) and not lines[end].strip():
@@ -359,17 +350,17 @@ def _plan_lbc(p: SitePlan, mod, lbc: Dict, roster: List[str]) -> None:
         bad = False
         for m, s in rows:
             if not m or re.search(r"\s", m):
-                p.errors.append(f"{fac}: {m!r} is not a model name")
+                p.errors.append(_i18n.msg("eng.factionsites.is_not_a_model_name", "{fac}: {m} is not a model name", fac=fac, m=repr(m)))
                 bad = True
             if not re.fullmatch(r"\d+", s):
-                p.errors.append(f"{fac}: a share is a whole number, not {s!r}")
+                p.errors.append(_i18n.msg("eng.factionsites.a_share_is_a_whole_number", "{fac}: a share is a whole number, not {s}", fac=fac, s=repr(s)))
                 bad = True
         if bad:
             continue
         made = lambda m, s, base=sample: _tok_sub(_tok_sub(base, 1, m), 2, s)
         if cur is None:
             if roster and fac not in roster:
-                p.warnings.append(f"{fac} is not a faction in the roster")
+                p.warnings.append(_i18n.msg("eng.factionsites.is_not_a_faction_in_the", "{fac} is not a faction in the roster", fac=fac))
             tail += ["", f"faction {fac}"] + [made(m, s) for m, s in rows]
             p.changes.append(f"+ {fac}'s populace ({len(rows)} model(s))")
             continue
@@ -411,7 +402,7 @@ def _plan_offmap(p: SitePlan, mod, off: Dict, sig: str, roster: List[str]) -> No
         p.errors.append(e.message)
         return
     if sig != _sig(text):
-        p.errors.append(f"{OFFMAP_REL} changed on disk after it was opened here - reload it")
+        p.errors.append(_i18n.msg("eng.factionsites.changed_on_disk_after_it_was", "{OFFMAP_REL} changed on disk after it was opened here - reload it", OFFMAP_REL=OFFMAP_REL))
         return
     nl = "\r\n" if "\r\n" in text else "\n"
     lines, nodes = parse_offmap(text.replace("\r\n", "\n"))
@@ -422,15 +413,15 @@ def _plan_offmap(p: SitePlan, mod, off: Dict, sig: str, roster: List[str]) -> No
     for key, vals in (off.get("rows") or {}).items():
         i = int(key)
         if i not in rows:
-            p.errors.append(f"line {i + 1} is not a row of {OFFMAP_REL}")
+            p.errors.append(_i18n.msg("eng.factionsites.line_is_not_a_row_of", "line {x} is not a row of {OFFMAP_REL}", x=i + 1, OFFMAP_REL=OFFMAP_REL))
             continue
         n, toks = rows[i]
         vals = [str(v).strip() for v in vals]
         if len(vals) != len(toks) or any(not v or re.search(r"\s", v) for v in vals):
-            p.errors.append(f"line {i + 1} takes {len(toks)} values, none of them blank")
+            p.errors.append(_i18n.msg("eng.factionsites.line_takes_values_none_of_them", "line {x} takes {toks_n} values, none of them blank", x=i + 1, toks_n=len(toks)))
             continue
         if len(vals) >= 3 and any(not _NUM.fullmatch(v) for v in vals[-2:]):
-            p.errors.append(f"line {i + 1}: the last two values are numbers")
+            p.errors.append(_i18n.msg("eng.factionsites.line_the_last_two_values_are", "line {x}: the last two values are numbers", x=i + 1))
             continue
         ln = lines[i]
         for k, v in enumerate(vals):
@@ -446,16 +437,16 @@ def _plan_offmap(p: SitePlan, mod, off: Dict, sig: str, roster: List[str]) -> No
         kids = _children(nodes, ti) if top is not None else []
         src = next((x for x in kids if x.head[:2] == ["faction", like]), None)
         if src is None:
-            p.errors.append(f"{sec or 'that section'} has no faction {like} to copy")
+            p.errors.append(_i18n.msg("eng.factionsites.has_no_faction_to_copy", "{x} has no faction {like} to copy", x=sec or 'that section', like=like))
             continue
         if not re.fullmatch(r"[a-z][a-z0-9_]*", fac):
-            p.errors.append(f"{fac!r} is not a faction slot")
+            p.errors.append(_i18n.msg("eng.factionsites.is_not_a_faction_slot", "{fac} is not a faction slot", fac=repr(fac)))
             continue
         if any(x.head[:2] == ["faction", fac] for x in kids):
-            p.errors.append(f"{sec} already has {fac}")
+            p.errors.append(_i18n.msg("eng.factionsites.already_has", "{sec} already has {fac}", sec=sec, fac=fac))
             continue
         if roster and fac not in roster:
-            p.warnings.append(f"{fac} is not a faction in the roster")
+            p.warnings.append(_i18n.msg("eng.factionsites.is_not_a_faction_in_the", "{fac} is not a faction in the roster", fac=fac))
         block = lines[src.line:src.close + 1]
         block[0] = _tok_sub(block[0], 1, fac)
         inserts.setdefault(top.close - 1, []).extend(block)
@@ -466,7 +457,7 @@ def _plan_offmap(p: SitePlan, mod, off: Dict, sig: str, roster: List[str]) -> No
         hit = next((x for x in (_children(nodes, ti) if top is not None else [])
                     if x.head[:2] == ["faction", fac]), None)
         if hit is None:
-            p.errors.append(f"{sec or 'that section'} has no block for {fac}")
+            p.errors.append(_i18n.msg("eng.factionsites.has_no_block_for", "{x} has no block for {fac}", x=sec or 'that section', fac=fac))
             continue
         drops |= set(range(hit.line, hit.close + 1))
         p.changes.append(f"- {sec}: {fac}")
@@ -490,7 +481,7 @@ def plan(mod, body: dict) -> SitePlan:
     if body.get("offmap") and not p.errors:
         _plan_offmap(p, mod, dict(body["offmap"]), str(body.get("offmap_sig") or ""), roster)
     if not p.texts and not p.errors:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.factionsites.nothing_to_change", "nothing to change"))
     return p
 
 

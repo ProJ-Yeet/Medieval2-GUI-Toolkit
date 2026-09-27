@@ -41,6 +41,7 @@ from typing import Dict, List, Tuple
 
 from . import cas, minorfiles
 from . import keyblock as kb
+from . import i18n as _i18n
 
 RESIDENCES = f"{cas.STRAT_MODELS}/residences"
 #: the culture lines outside the settlement ladder that name a model
@@ -62,8 +63,7 @@ def _cultures_path(mod) -> Path:
 def _read_cultures(mod):
     path = _cultures_path(mod)
     if not path.is_file():
-        raise ModelError(f"{getattr(mod, 'name', '?')} has no {minorfiles.CULTURES_REL} "
-                         f"on disk, so there is no culture to put a model on")
+        raise ModelError(_i18n.msg("eng.settlemodel.has_no_on_disk_so_there", "{getattr} has no {CULTURES_REL} on disk, so there is no culture to put a model on", getattr=getattr(mod, 'name', '?'), CULTURES_REL=minorfiles.CULTURES_REL))
     text = kb.read_text(path, minorfiles.ENCODING)
     return minorfiles.parse_cultures(text), text
 
@@ -156,7 +156,7 @@ def _from_mod(p: ModelPlan, src, rel: str) -> Tuple[bytes, Path, Dict[str, Tuple
     except fileswap.SwapError as exc:
         raise ModelError(str(exc)) from None
     if not path.is_file() or path.suffix.lower() != ".cas":
-        raise ModelError(f"{getattr(src, 'name', '?')} has no model at data/{rel}")
+        raise ModelError(_i18n.msg("eng.settlemodel.has_no_model_at_data", "{getattr} has no model at data/{rel}", getattr=getattr(src, 'name', '?'), rel=rel))
     raw = path.read_bytes()
     scene = _scene(raw, path.name)
     found: Dict[str, Tuple[bytes, str]] = {}
@@ -186,7 +186,7 @@ def _from_disk(files: List[dict]) -> Tuple[bytes, str, Dict[str, Tuple[bytes, st
         try:
             got[name] = base64.b64decode(str(f.get("data") or ""), validate=True)
         except ValueError:
-            raise ModelError(f"{name or 'a file'} did not arrive whole") from None
+            raise ModelError(_i18n.msg("eng.settlemodel.did_not_arrive_whole", "{x} did not arrive whole", x=name or 'a file')) from None
     models = [n for n in got if n.lower().endswith(".cas")]
     if len(models) != 1:
         raise ModelError("pick one .cas model, with the textures it names beside it"
@@ -210,7 +210,7 @@ def _scene(raw: bytes, name: str):
     try:
         return cas.read_cas_bytes(raw, name)
     except cas.CasError as exc:
-        raise ModelError(f"{name} does not read as a .cas model ({exc})") from None
+        raise ModelError(_i18n.msg("eng.settlemodel.does_not_read_as_a_cas", "{name} does not read as a .cas model ({exc})", name=name, exc=exc)) from None
 
 
 def _textures(scene) -> List[str]:
@@ -232,18 +232,17 @@ def plan(dst, src, body: dict) -> ModelPlan:
     try:
         cf, text = _read_cultures(dst)
         if p.target not in TARGETS:
-            raise ModelError(f"{p.target or 'nothing'} is not a line of a culture "
-                             f"that names a model")
+            raise ModelError(_i18n.msg("eng.settlemodel.is_not_a_line_of_a", "{x} is not a line of a culture that names a model", x=p.target or 'nothing'))
         cul = cf.get(p.culture)
         if cul is None:
-            raise ModelError(f"{dst.name} has no culture called {p.culture!r}")
+            raise ModelError(_i18n.msg("eng.settlemodel.has_no_culture_called", "{name} has no culture called {culture}", name=dst.name, culture=repr(p.culture)))
         if p.source == "disk":
             raw, name, found = _from_disk(body.get("files") or [])
             p.model = name
             home = RESIDENCES
         else:
             if src is None:
-                raise ModelError("pick the mod the model comes from, or a model on disk")
+                raise ModelError(_i18n.msg("eng.settlemodel.pick_the_mod_the_model_comes", "pick the mod the model comes from, or a model on disk"))
             raw, path, found = _from_mod(p, src, p.model)
             name = path.name
             home = path.parent.relative_to(Path(src.data)).as_posix()
@@ -259,12 +258,7 @@ def plan(dst, src, body: dict) -> ModelPlan:
                            "file": found[t][1] if t in found else ""})
     if missing:
         p.warnings.append(
-            f"{name} names {len(missing)} texture(s) that "
-            f"{'the files picked do' if p.source == 'disk' else p.source + ' does'} "
-            f"not have: {', '.join(missing[:6])}. The model comes without "
-            f"{'it' if len(missing) == 1 else 'them'} and draws untextured "
-            f"unless {dst.name} already has {'it' if len(missing) == 1 else 'them'} "
-            f"beside it.")
+            _i18n.msg("eng.settlemodel.names_texture_s_that_not_have", "{name} names {missing_n} texture(s) that {x} not have: {missing}. The model comes without {x2} and draws untextured unless {name2} already has {x3} beside it.", name=name, missing_n=len(missing), x='the files picked do' if p.source == 'disk' else p.source + ' does', missing=', '.join(missing[:6]), x2='it' if len(missing) == 1 else 'them', name2=dst.name, x3='it' if len(missing) == 1 else 'them'))
 
     # where it lands: its own folder, else one of its own, else refused
     folder = str(body.get("folder") or "").replace("\\", "/").strip().strip("/")
@@ -274,8 +268,7 @@ def plan(dst, src, body: dict) -> ModelPlan:
                                      f"{_SAFE.sub('_', p.source or 'imported')}"]
     total = len(raw) + sum(len(b) for b, _ in found.values())
     if total > MAX_BYTES:
-        p.errors.append(f"{total / 1048576:.0f} MB is more than the "
-                        f"{MAX_BYTES // 1048576} MB one model with its textures may be")
+        p.errors.append(_i18n.msg("eng.settlemodel.x_0f_mb_is_more_than", "{x:.0f} MB is more than the {x2} MB one model with its textures may be", x=total / 1048576, x2=MAX_BYTES // 1048576))
         return p
     for place in tries:
         files = [(raw, f"{place}/{name}")] + [(b, f"{place}/{r}") for b, r in found.values()]
@@ -284,9 +277,7 @@ def plan(dst, src, body: dict) -> ModelPlan:
         if not clash:
             break
     else:
-        p.errors.append(f"{', '.join(clash[:4])} {'is' if len(clash) == 1 else 'are'} "
-                        f"already in {dst.name} with other bytes, and a model is never "
-                        f"copied over another. Give it a folder of its own.")
+        p.errors.append(_i18n.msg("eng.settlemodel.already_in_with_other_bytes_and", "{clash} {x} already in {name} with other bytes, and a model is never copied over another. Give it a folder of its own.", clash=', '.join(clash[:4]), x='is' if len(clash) == 1 else 'are', name=dst.name))
         return p
     try:
         from . import fileswap
@@ -296,9 +287,7 @@ def plan(dst, src, body: dict) -> ModelPlan:
         p.errors.append(str(exc))
         return p
     if place != tries[0]:
-        p.warnings.append(f"{tries[0]} already holds a file of the same name with other "
-                          f"bytes (settlement models share one textures folder), so "
-                          f"this one goes into {place} with its own")
+        p.warnings.append(_i18n.msg("eng.settlemodel.already_holds_a_file_of_the", "{tries} already holds a file of the same name with other bytes (settlement models share one textures folder), so this one goes into {place} with its own", tries=tries[0], place=place))
     p.rel = f"{place}/{name}"
     for b, rel in files:
         target = Path(dst.data) / rel
@@ -314,7 +303,7 @@ def plan(dst, src, body: dict) -> ModelPlan:
         if p.target in TAIL_MODELS:
             old = cul.values.get(p.target)
             if old is None:
-                raise ModelError(f"{p.culture} has no `{p.target}` line")
+                raise ModelError(_i18n.msg("eng.settlemodel.has_no_line", "{culture} has no `{target}` line", culture=p.culture, target=p.target))
             model, plan_ = _model_of(old)
             gap = old.partition(",")[2]
             gap = gap[: len(gap) - len(gap.lstrip())] or "\t\t"
@@ -324,11 +313,11 @@ def plan(dst, src, body: dict) -> ModelPlan:
         else:
             lvl = cul.level(p.target)
             if lvl is None:
-                raise ModelError(f"{p.culture} has no `{p.target}` settlement level")
+                raise ModelError(_i18n.msg("eng.settlemodel.has_no_settlement_level", "{culture} has no `{target}` settlement level", culture=p.culture, target=p.target))
             p.was = lvl.model
             edits = {"levels": {p.target: {"model": value}}}
         if p.was.replace("\\", "/").lower() == value.lower():
-            raise ModelError(f"{p.culture}'s {p.target} already names {value}")
+            raise ModelError(_i18n.msg("eng.settlemodel.s_already_names", "{culture}'s {target} already names {value}", culture=p.culture, target=p.target, value=value))
         new_block = minorfiles.render_culture(block, edits)
     except (ModelError, minorfiles.MinorError) as exc:
         p.errors.append(getattr(exc, "message", None) or str(exc))
@@ -339,7 +328,7 @@ def plan(dst, src, body: dict) -> ModelPlan:
     now = (_model_of(got.values.get(p.target, ""))[0] if p.target in TAIL_MODELS
            else got.level(p.target).model) if got else ""
     if now != value or len(again.cultures) != len(cf.cultures):
-        p.errors.append(f"{minorfiles.CULTURES_REL} did not read back as written")
+        p.errors.append(_i18n.msg("eng.settlemodel.did_not_read_back_as_written", "{CULTURES_REL} did not read back as written", CULTURES_REL=minorfiles.CULTURES_REL))
         return p
 
     p.changes.append(f"{minorfiles.CULTURES_REL}: {p.culture} {p.target}: "
@@ -359,8 +348,7 @@ def plan(dst, src, body: dict) -> ModelPlan:
               if k in c.values and same(_model_of(c.values[k])[0])
               and not (c.name == p.culture and k == p.target)]
     if p.was and not users:
-        p.warnings.append(f"no other line names {p.was} any more; it stays on disk "
-                          f"and Undo puts it back on this line")
+        p.warnings.append(_i18n.msg("eng.settlemodel.no_other_line_names_any_more", "no other line names {was} any more; it stays on disk and Undo puts it back on this line", was=p.was))
     return p
 
 
@@ -376,7 +364,7 @@ def apply(p: ModelPlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.settlemodel.nothing_to_change", "nothing to change"))
     mod = p.dst
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

@@ -91,6 +91,7 @@ import subprocess
 from array import array
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
+from . import i18n as _i18n
 
 HEADER_SIZE = 20
 ANIM_MAGIC = b"ANIM.PACK"
@@ -168,7 +169,7 @@ class PackIndex:
         where = Path(path).name if path is not None else "index"
         magic = bytes(b[:9])
         if len(b) < HEADER_SIZE or magic not in (ANIM_MAGIC, SKEL_MAGIC):
-            raise PackError(f"{where}: not a pack index (starts {magic!r})")
+            raise PackError(_i18n.msg("eng.animpack.not_a_pack_index_starts", "{where}: not a pack index (starts {magic})", where=where, magic=repr(magic)))
         version, version2, count = struct.unpack_from("<HHI", b, 12)
         anim = magic == ANIM_MAGIC
         entries, p = [], HEADER_SIZE
@@ -186,15 +187,14 @@ class PackIndex:
                 name = b[p:end].decode("latin-1")
                 p = end + 1
                 if p - start != rsize:
-                    raise PackError(f"{where}: record {len(entries)} ({name!r}) says "
-                                    f"{rsize} bytes and is {p - start}")
+                    raise PackError(_i18n.msg("eng.animpack.record_says_bytes_and_is", "{where}: record {entries_n} ({name}) says {rsize} bytes and is {x}", where=where, entries_n=len(entries), name=repr(name), rsize=rsize, x=p - start))
                 entries.append(PackEntry(name, offset, size, scale, frames, rot, pos))
         except (struct.error, ValueError) as e:
             if isinstance(e, PackError):
                 raise
-            raise PackError(f"{where}: cut short at record {len(entries)} of {count}") from None
+            raise PackError(_i18n.msg("eng.animpack.cut_short_at_record_of", "{where}: cut short at record {entries_n} of {count}", where=where, entries_n=len(entries), count=count)) from None
         if p != len(b):
-            raise PackError(f"{where}: {len(b) - p} bytes after the last record")
+            raise PackError(_i18n.msg("eng.animpack.bytes_after_the_last_record", "{where}: {x} bytes after the last record", where=where, x=len(b) - p))
         return cls(magic, entries, version, version2, bytes(b[9:12]), path)
 
     def header(self, count: Optional[int] = None) -> bytes:
@@ -260,8 +260,7 @@ class PackIndex:
         fid.seek(entry.offset)
         data = fid.read(entry.size)
         if len(data) != entry.size:
-            raise PackError(f"{self.dat_path.name}: {entry.name} runs past the end "
-                            f"({entry.offset}+{entry.size})")
+            raise PackError(_i18n.msg("eng.animpack.runs_past_the_end", "{name}: {name2} runs past the end ({offset}+{size})", name=self.dat_path.name, name2=entry.name, offset=entry.offset, size=entry.size))
         return data
 
 
@@ -285,11 +284,10 @@ class PackedAnimation:
     def __init__(self, data: bytes, source: str = ""):
         where = source or "animation"
         if len(data) < 45:
-            raise PackError(f"{where}: {len(data)} bytes is too short for an animation")
+            raise PackError(_i18n.msg("eng.animpack.bytes_is_too_short_for_an", "{where}: {data_n} bytes is too short for an animation", where=where, data_n=len(data)))
         nf, nq, npb = struct.unpack_from("<HHB", data, 0)
         if len(data) != anim_size(nf, nq, npb):
-            raise PackError(f"{where}: {len(data)} bytes, and {nf} frames of {nq} bones "
-                            f"({npb} moving) is {anim_size(nf, nq, npb)}")
+            raise PackError(_i18n.msg("eng.animpack.bytes_and_frames_of_bones_moving", "{where}: {data_n} bytes, and {nf} frames of {nq} bones ({npb} moving) is {anim_size}", where=where, data_n=len(data), nf=nf, nq=nq, npb=npb, anim_size=anim_size(nf, nq, npb)))
         self.frames, self.rot_bones, self.pos_bones = nf, nq, npb
         o = 5
 
@@ -308,8 +306,7 @@ class PackedAnimation:
         self.summary = take(8)
         self.mask = int.from_bytes(data[o:o + 8], "little")
         if bin(self.mask).count("1") != npb:
-            raise PackError(f"{where}: {npb} moving bones and {bin(self.mask).count('1')} "
-                            "bits set in the mask")
+            raise PackError(_i18n.msg("eng.animpack.moving_bones_and_bits_set_in", "{where}: {npb} moving bones and {count} bits set in the mask", where=where, npb=npb, count=bin(self.mask).count('1')))
 
     def to_bytes(self) -> bytes:
         return (struct.pack("<HHB", self.frames, self.rot_bones, self.pos_bones)
@@ -458,10 +455,9 @@ class PackedSkeleton:
                 s.evade_parry, s.probability = r.f("ih")
                 self.slots.append(s)
         except (struct.error, IndexError):
-            raise PackError(f"{where}: cut short at byte {r.p} of {len(data)}") from None
+            raise PackError(_i18n.msg("eng.animpack.cut_short_at_byte_of", "{where}: cut short at byte {p} of {data_n}", where=where, p=r.p, data_n=len(data))) from None
         if len(data) - r.p < 12:
-            raise PackError(f"{where}: {len(data) - r.p} bytes after the slots, "
-                            "too few for the speeds")
+            raise PackError(_i18n.msg("eng.animpack.bytes_after_the_slots_too_few", "{where}: {x} bytes after the slots, too few for the speeds", where=where, x=len(data) - r.p))
         self.tail = bytes(data[r.p:])
 
     def to_bytes(self) -> bytes:
@@ -805,11 +801,10 @@ def plan_port(source_dir, dest_dir, skeletons: Iterable[str], tag: str = "") -> 
     plan.source_packs = whose
     dst = for_data(dest_dir)
     if src is None or src.anims is None or src.skels is None:
-        plan.errors.append(f"{Path(source_dir)} has no animation packs, and vanilla's were not found")
+        plan.errors.append(_i18n.msg("eng.animpack.has_no_animation_packs_and_vanillas", "{Path} has no animation packs, and vanilla's were not found", Path=Path(source_dir)))
         return plan
     if dst is None or dst.anims is None or dst.skels is None:
-        plan.errors.append(f"{Path(dest_dir)} has no animation packs of its own (it plays vanilla's); "
-                           "there is nothing to append to")
+        plan.errors.append(_i18n.msg("eng.animpack.has_no_animation_packs_of_its", "{Path} has no animation packs of its own (it plays vanilla's); there is nothing to append to", Path=Path(dest_dir)))
         return plan
     dest_mod = Path(dest_dir).parent.name
     if not tag:
@@ -832,7 +827,7 @@ def plan_port(source_dir, dest_dir, skeletons: Iterable[str], tag: str = "") -> 
             row = PortSkeleton(name)
             sent = src.skels.first(name)
             if sent is None:
-                plan.errors.append(f"the source's skeleton pack has no {name!r}")
+                plan.errors.append(_i18n.msg("eng.animpack.the_sources_skeleton_pack_has_no", "the source's skeleton pack has no {name}", name=repr(name)))
                 continue
             sk = PackedSkeleton(src.skels.read_entry(sent), sent.name)
             row.name = sent.name
@@ -842,7 +837,7 @@ def plan_port(source_dir, dest_dir, skeletons: Iterable[str], tag: str = "") -> 
                 # the copy this skeleton plays: its path at its scale (Phase 86)
                 e = resolve_slot(src.anims, slot.path, sk.scale)
                 if e is None:
-                    plan.errors.append(f"{sent.name}: pack.idx has no {slot.path!r}")
+                    plan.errors.append(_i18n.msg("eng.animpack.pack_idx_has_no", "{name}: pack.idx has no {path}", name=sent.name, path=repr(slot.path)))
                     continue
                 a = decided.get((k, e.offset))
                 if a is None:
@@ -892,7 +887,7 @@ def plan_port(source_dir, dest_dir, skeletons: Iterable[str], tag: str = "") -> 
                 skel_brought[_sha(new)] = row
             plan.skeletons.append(row)
     if whose == "vanilla":
-        plan.notes.append("the source ships no packs of its own, so it plays vanilla's and they are what is ported")
+        plan.notes.append(_i18n.msg("eng.animpack.the_source_ships_no_packs_of", "the source ships no packs of its own, so it plays vanilla's and they are what is ported"))
     return plan
 
 
@@ -924,11 +919,11 @@ def check_writable(plan: PortPlan) -> List[str]:
     why: List[str] = []
     running = game_running()
     if running:
-        why.append(f"{', '.join(running)} is running and holds the packs open; close the game first")
+        why.append(_i18n.msg("eng.animpack.is_running_and_holds_the_packs_3", "{running} is running and holds the packs open; close the game first", running=', '.join(running)))
     if plan.anim_dir is None:
         return why + ["nothing was planned"]
     if _stamp(plan.anim_dir) != plan.stamp:
-        why.append("the destination's packs changed since this port was planned; plan it again")
+        why.append(_i18n.msg("eng.animpack.the_destinations_packs_changed_since_this", "the destination's packs changed since this port was planned; plan it again"))
     a, s = plan.appended()
     idx = sum((plan.anim_dir / n).stat().st_size for n in ("pack.idx", "skeletons.idx")
               if (plan.anim_dir / n).is_file())
@@ -938,13 +933,13 @@ def check_writable(plan: PortPlan) -> List[str]:
     except OSError:
         free = None
     if free is not None and free < need:
-        why.append(f"it needs {need / 1e6:.0f} MB free on that drive and {free / 1e6:.0f} MB is")
+        why.append(_i18n.msg("eng.animpack.it_needs_x_0f_mb_free", "it needs {x:.0f} MB free on that drive and {x2:.0f} MB is", x=need / 1e6, x2=free / 1e6))
     for n in ("pack.dat", "skeletons.dat"):
         try:
             with open(plan.anim_dir / n, "r+b"):
                 pass
         except OSError as exc:
-            why.append(f"{n} cannot be opened for writing: {exc.strerror or exc}")
+            why.append(_i18n.msg("eng.animpack.cannot_be_opened_for_writing", "{n} cannot be opened for writing: {x}", n=n, x=exc.strerror or exc))
     return why
 
 
@@ -1062,21 +1057,18 @@ def undo_appended(data_dir, rows: List[dict]) -> None:
     them. The ``.idx`` files come back from their backups (``backed_up``)."""
     data = Path(data_dir)
     if rows and game_running():
-        raise PackError(f"{', '.join(game_running())} is running and holds the packs open; "
-                        "close the game before undoing")
+        raise PackError(_i18n.msg("eng.animpack.is_running_and_holds_the_packs", "{game_running} is running and holds the packs open; close the game before undoing", game_running=', '.join(game_running())))
     for r in rows:
         p = data / r["rel"]
         if not p.is_file():
-            raise PackError(f"cannot undo: {r['rel']} is gone")
+            raise PackError(_i18n.msg("eng.animpack.cannot_undo_is_gone", "cannot undo: {rel} is gone", rel=r['rel']))
         size = p.stat().st_size
         want = r["length"] + r.get("added", 0)
         with open(p, "rb") as f:
             head = f.read(HEADER_SIZE)
             ok = size >= r["length"] and _tail_sha(f, r["length"]) == r["tail_sha"]
         if not ok or head.hex() != r["head_after"] or size != want:
-            raise PackError(f"cannot undo: {r['rel']} is no longer the file this port appended to "
-                            f"({size:,} bytes, {want:,} expected); the game or another tool has "
-                            "rewritten it, so truncating it would cut away someone else's work")
+            raise PackError(_i18n.msg("eng.animpack.cannot_undo_is_no_longer_the", "cannot undo: {rel} is no longer the file this port appended to ({size:,} bytes, {want:,} expected); the game or another tool has rewritten it, so truncating it would cut away someone else's work", rel=r['rel'], size=size, want=want))
     for r in rows:
         p = data / r["rel"]
         with open(p, "r+b") as f:
@@ -1257,16 +1249,16 @@ def replace_entry(idx: PackIndex, target: PackEntry, data: bytes) -> None:
     write whole. The caller backs the pair up first; the new files are
     written beside the old and swapped in, the ``.dat`` first."""
     if game_running():
-        raise PackError(f"{', '.join(game_running())} is running and holds the packs open; close the game first")
+        raise PackError(_i18n.msg("eng.animpack.is_running_and_holds_the_packs_2", "{game_running} is running and holds the packs open; close the game first", game_running=', '.join(game_running())))
     if not any(e is target for e in idx.entries):
-        raise PackError(f"{target.name} is not an entry of {idx.path.name}")
+        raise PackError(_i18n.msg("eng.animpack.is_not_an_entry_of", "{name} is not an entry of {name2}", name=target.name, name2=idx.path.name))
     dat_new = idx.dat_path.with_name(idx.dat_path.name + ".new")
     idx_new = idx.path.with_name(idx.path.name + ".new")
     try:
         _write_pack(idx, idx.entries, dat_new, idx_new, swap=(target, data))
         back = PackIndex.read(idx_new)
         if len(back) != len(idx) or back.first(target.name) is None:
-            raise PackError(f"{idx_new.name} does not read back as written")
+            raise PackError(_i18n.msg("eng.animpack.does_not_read_back_as_written", "{name} does not read back as written", name=idx_new.name))
         os.replace(dat_new, idx.dat_path)
         os.replace(idx_new, idx.path)
     finally:
@@ -1302,8 +1294,7 @@ def _write_pack(idx: PackIndex, keep: List[PackEntry], dat_out: Path, idx_out: P
         os.fsync(dst.fileno())
     idx_out.write_bytes(out.to_bytes())
     if dat_out.stat().st_size != at:
-        raise PackError(f"{dat_out.name}: written {dat_out.stat().st_size:,} bytes, "
-                        f"{at:,} expected")
+        raise PackError(_i18n.msg("eng.animpack.written_st_size_bytes_at_expected", "{name}: written {st_size:,} bytes, {at:,} expected", name=dat_out.name, st_size=dat_out.stat().st_size, at=at))
 
 
 def write_compacted(anim_dir, keep: Dict[str, List[PackEntry]], kept_dir) -> List[dict]:
@@ -1315,19 +1306,18 @@ def write_compacted(anim_dir, keep: Dict[str, List[PackEntry]], kept_dir) -> Lis
     anim_dir, kept_dir = Path(anim_dir), Path(kept_dir)
     running = game_running()
     if running:
-        raise PackError(f"{', '.join(running)} is running and holds the packs open; close the game first")
+        raise PackError(_i18n.msg("eng.animpack.is_running_and_holds_the_packs_3", "{running} is running and holds the packs open; close the game first", running=', '.join(running)))
     packs = open_packs(anim_dir)
     jobs = []
     for stem, entries in keep.items():
         idx = packs.anims if stem == "pack" else packs.skels
         if idx is None:
-            raise PackError(f"{anim_dir} has no {stem}.idx")
+            raise PackError(_i18n.msg("eng.animpack.has_no_idx", "{anim_dir} has no {stem}.idx", anim_dir=anim_dir, stem=stem))
         jobs.append((stem, idx, entries))
     need = sum(HEADER_SIZE + sum(e.size for e in ents) for _s, _i, ents in jobs) + SPACE_MARGIN
     free = shutil.disk_usage(anim_dir).free
     if free < need:
-        raise PackError(f"a compaction needs {need / 1e6:.0f} MB free beside the packs and "
-                        f"{free / 1e6:.0f} MB is")
+        raise PackError(_i18n.msg("eng.animpack.a_compaction_needs_x_0f_mb", "a compaction needs {x:.0f} MB free beside the packs and {x2:.0f} MB is", x=need / 1e6, x2=free / 1e6))
     made: List[Path] = []
     try:
         for stem, idx, entries in jobs:
@@ -1336,7 +1326,7 @@ def write_compacted(anim_dir, keep: Dict[str, List[PackEntry]], kept_dir) -> Lis
             _write_pack(idx, entries, dat_new, idx_new)
             back = PackIndex.read(idx_new)
             if [e.name for e in back.entries] != [e.name for e in entries]:
-                raise PackError(f"{idx_new.name} does not read back as written")
+                raise PackError(_i18n.msg("eng.animpack.does_not_read_back_as_written", "{name} does not read back as written", name=idx_new.name))
     except BaseException:
         for p in made:
             try:
@@ -1383,16 +1373,15 @@ def undo_compacted(anim_dir, kept_dir, rows: List[dict]) -> None:
     (the game rebuilt it, or another tool or a later port wrote to it)."""
     anim_dir, kept_dir = Path(anim_dir), Path(kept_dir)
     if rows and game_running():
-        raise PackError(f"{', '.join(game_running())} is running and holds the packs open; "
-                        "close the game before undoing")
+        raise PackError(_i18n.msg("eng.animpack.is_running_and_holds_the_packs", "{game_running} is running and holds the packs open; close the game before undoing", game_running=', '.join(game_running())))
     for r in rows:
         stem = r["stem"]
         idx, dat = anim_dir / f"{stem}.idx", anim_dir / f"{stem}.dat"
         for p in (kept_dir / idx.name, kept_dir / dat.name):
             if not p.is_file():
-                raise PackError(f"cannot undo: the replaced {p.name} is gone from {kept_dir}")
+                raise PackError(_i18n.msg("eng.animpack.cannot_undo_the_replaced_is_gone", "cannot undo: the replaced {name} is gone from {kept_dir}", name=p.name, kept_dir=kept_dir))
         if not (idx.is_file() and dat.is_file()):
-            raise PackError(f"cannot undo: {stem}.idx or {stem}.dat is gone")
+            raise PackError(_i18n.msg("eng.animpack.cannot_undo_idx_or_dat_is", "cannot undo: {stem}.idx or {stem2}.dat is gone", stem=stem, stem2=stem))
         size = dat.stat().st_size
         with open(dat, "rb") as f:
             head = f.read(HEADER_SIZE)
@@ -1400,9 +1389,7 @@ def undo_compacted(anim_dir, kept_dir, rows: List[dict]) -> None:
                     and _tail_sha(f, size) == r["dat_tail_sha"]
                     and _sha(idx.read_bytes()) == r["idx_sha"])
         if not same:
-            raise PackError(f"cannot undo: {stem}.dat is no longer the file the compaction wrote "
-                            "(the game or another tool has written it since); undo the later "
-                            "change first")
+            raise PackError(_i18n.msg("eng.animpack.cannot_undo_dat_is_no_longer", "cannot undo: {stem}.dat is no longer the file the compaction wrote (the game or another tool has written it since); undo the later change first", stem=stem))
     for r in rows:
         for ext in (".idx", ".dat"):
             live = anim_dir / f"{r['stem']}{ext}"

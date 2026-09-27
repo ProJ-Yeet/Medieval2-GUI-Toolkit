@@ -32,13 +32,13 @@ const AN_BLANK = {name:'', type:'item', transferable:'1', image:'', unique:false
 
 async function loadAncillaries(){
   const mod = state.src;
-  main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s ancillaries…</div>';
+  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('ancillaries.s_ancillaries')}</div>`;
   let r;
   try{ r = await api.get('/api/ancillaries?mod=' + enc(mod)); }
   catch(e){ if(stale('ancillaries', mod)) return;
-    main.innerHTML = `<div class="empty">Couldn't read the ancillaries file.<br>
+    main.innerHTML = `<div class="empty">${tt('ancillaries.couldnt_read_the_ancillaries_file')}<br>
       <span class="count">${esc(errText(e))}</span><br><br>
-      <button class="primary" onclick="loadAncillaries()">Retry</button></div>`; return; }
+      <button class="primary" onclick="loadAncillaries()">${tt('common.retry')}</button></div>`; return; }
   if(stale('ancillaries', mod)) return;
   state.an = Object.assign({sel:'', d:null, busy:false, adding:false}, r);
   undoReset();
@@ -50,21 +50,18 @@ function renderAncillaries(){
   if(!a){ loadAncillaries(); return; }
   const strip = minorTabsHtml('', 'data/export_descr_ancillaries.txt');
   if(a.error || !a.exists){
-    main.innerHTML = strip + `<div class="empty">${esc(a.error || 'No ancillaries file.')}<br>
-      <span class="count">They live in data/export_descr_ancillaries.txt</span></div>`;
+    main.innerHTML = strip + `<div class="empty">${tt('ancillaries.they_live_in_data_export_descr',{error:esc(a.error || tt('ancillaries.no_ancillaries_file'))})}</div>`;
     return;
   }
   const rows = anRows();
   count.textContent = `${rows.length}/${a.count}`;
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
-      <button class="trnew" onclick="anNew()">＋ New ancillary</button>
-      <button class="trnew" onclick="portOpen('ancillaries')" title="Copy ancillaries
-out of another mod on this machine - the block, the triggers that grant it, and its
-text keys, in one backed-up job.">⇩ Port from another mod</button>
+      <button class="trnew" onclick="anNew()">${tt('ancillaries.new_ancillary')}</button>
+      <button class="trnew" onclick="portOpen('ancillaries')" title="${ttA('ancillaries.copy_ancillaries_out_of_another_mod')}">${tt('ancillaries.port_from_another_mod')}</button>
       ${findingsHtml('ancillaries', a.finding_list, 'anOpen')}
       <div class="trrows">${rows.map(anRowHtml).join('')
-        || '<div class="count" style="padding:8px">No ancillary matches.</div>'}</div>
+        || `<div class="count" style="padding:8px">${tt('ancillaries.no_ancillary_matches')}</div>`}</div>
     </div>
     <div class="trmain" id="anMain">${anDetailHtml()}</div>
   </div>`;
@@ -88,11 +85,11 @@ function anRowHtml(r){
       onerror="iconRetry(this)">
     <span class="antxt">
       <span class="nm">${esc(r.label)}</span>
-      <span class="sub">${esc(r.type||'no type')}${r.unique?' · unique':''}${
-        r.effects?` · ${r.effects} effect${r.effects===1?'':'s'}`:''}${
-        r.triggers?` · ${r.triggers} trigger${r.triggers===1?'':'s'}`
-                  :r.lua_gives?' · given by a script'
-                  :` · <b>nothing grants it</b>${r.lua_names?' (a script names it)':''}`}${
+      <span class="sub">${esc(r.type||tt('ancillaries.no_type'))}${r.unique?tt('ancillaries.unique'):''}${
+        r.effects?tt('ancillaries.effect',{effects:r.effects,effects2:r.effects===1?'':'s'}):''}${
+        r.triggers?tt('ancillaries.trigger',{triggers:r.triggers,triggers2:r.triggers===1?'':'s'})
+                  :r.lua_gives?tt('ancillaries.given_by_a_script')
+                  :` ${tt('ancillaries.nothing_grants_it',{lua_names:r.lua_names?tt('ancillaries.a_script_names_it'):''})}`}${
         r.findings?` <span class="w-warn">· ${r.findings}⚠</span>`:''}</span>
     </span>
   </button>`;
@@ -102,7 +99,7 @@ const anImgUrl = image => `/icon?mod=${enc(state.an.mod)}&kind=ancillary`
   + `&image=${enc(image||'')}` + iconBust();
 
 async function anOpen(name){
-  activity('opened ancillary', `${name} in ${state.src}`);
+  activity(tt('ancillaries.opened_ancillary'), `${name} in ${state.src}`);
   const a = state.an;
   a.sel = name; a.adding = false; a.d = null;
   renderAncillaries();
@@ -126,7 +123,7 @@ function anWorking(d){
 function anNew(){
   const a = state.an;
   a.sel = ''; a.adding = true;
-  a.d = {name:'', label:'(new ancillary)',
+  a.d = {name:'', label:tt('ancillaries.new_ancillary_2'),
     ancillary:JSON.parse(JSON.stringify(AN_BLANK)),
     w:JSON.parse(JSON.stringify(AN_BLANK)),
     trigs:[], findings:[], loc:{}, locEdits:{}, missing_loc:[], triggers:[],
@@ -154,20 +151,17 @@ function anPaintForm(){
 /* ---- the detail pane ---- */
 function anDetailHtml(){
   const a = state.an, d = a.d;
-  if(!a.sel && !a.adding) return `<div class="empty">Pick an ancillary on the left.<br>
-    <span class="count">${a.count} ancillar${a.count===1?'y':'ies'}, ${a.triggers}
-      trigger${a.triggers===1?'':'s'} in ${esc(a.file)}</span></div>`;
-  if(!d) return '<div class="empty">Reading the ancillary…</div>';
+  if(!a.sel && !a.adding) return `<div class="empty">${tt('ancillaries.pick_an_ancillary_on_the_left',{count:a.count,count2:a.count===1?'y':'ies',triggers:a.triggers,triggers2:a.triggers===1?'':'s',file:esc(a.file)})}</div>`;
+  if(!d) return `<div class="empty">${tt('ancillaries.reading_the_ancillary')}</div>`;
   if(d.error) return `<div class="empty"><span class="w-bad">✗ ${esc(d.error)}</span></div>`;
   return `<div class="trbar">
-      <div><b>${esc(a.adding ? 'New ancillary' : d.label)}</b>
-        <span class="count">${esc(d.w.type || 'no type')}</span></div>
+      <div><b>${esc(a.adding ? tt('ancillaries.new_ancillary_3') : d.label)}</b>
+        <span class="count">${esc(d.w.type || tt('ancillaries.no_type'))}</span></div>
       <span class="sp"></span>
-      ${a.adding ? '' : `<button class="${d.cv?'on':''}" title="Show this ancillary exactly
-as export_descr_ancillaries.txt stores it, beside the form."
-        onclick="anCvToggle()">&lt;/&gt; Code view</button>
-      <button class="danger" onclick="anDelete()">Delete</button>`}
-      <button class="primary" onclick="anSave()">${a.adding?'Create':'Save'}</button>
+      ${a.adding ? '' : `<button class="${d.cv?'on':''}" title="${ttA('ancillaries.show_this_ancillary_exactly_as_export')}"
+        onclick="anCvToggle()">${tt('common.code_view')}</button>
+      <button class="danger" onclick="anDelete()">${tt('common.delete')}</button>`}
+      <button class="primary" onclick="anSave()">${a.adding?tt('common.create'):tt('common.save')}</button>
     </div>
     <div id="anGui">
       ${anFindingsHtml(d)}
@@ -179,13 +173,8 @@ as export_descr_ancillaries.txt stores it, beside the form."
 
 function anFindingsHtml(d){
   const out = (d.findings||[]).map(f =>
-    `<div class="trfind w-warn">line ${f.line}: ${esc(f.message)}</div>`);
-  if((d.missing_loc||[]).length) out.push(`<div class="trfind w-warn">${
-    d.missing_loc.length} text key(s) are not in export_ancillaries.txt (${
-    d.missing_loc.map(esc).join(', ')}). Acquiring this ancillary, or opening the
-    character screen holding it, crashes the game with no error. Type the words
-    beside the key below, or save and they are created with the key as
-    placeholder text.</div>`);
+    `<div class="trfind w-warn">${tt('ancillaries.line',{line:f.line,message:esc(f.message)})}</div>`);
+  if((d.missing_loc||[]).length) out.push(`<div class="trfind w-warn">${tt('ancillaries.text_key_s_are_not_in',{missing_loc_n:d.missing_loc.length,missing_loc:d.missing_loc.map(esc).join(', ')})}</div>`);
   return out.join('');
 }
 
@@ -205,95 +194,88 @@ function anFormHtml(w, d){
         <input data-label="${k}" value="${esc(w[k]||'')}" placeholder="${esc(hint||'')}"
           oninput="anSet('${k}',this.value.trim())">
         <input class="trtext" value="${esc(anLocTextAt(d, k))}"
-          placeholder="${tag ? (anHasKey(d, tag)?'':'not in export_ancillaries.txt yet')
-                             : 'name the key on the left first'}"
-          title="What the player reads. Saved into data/text/export_ancillaries.txt."
+          placeholder="${tag ? (anHasKey(d, tag)?'':tt('ancillaries.not_in_export_ancillaries_txt_yet'))
+                             : tt('ancillaries.name_the_key_on_the_left')}"
+          title="${ttA('ancillaries.what_the_player_reads_saved_into')}"
           oninput="anSetLocAt('${k}',this.value)">
       </div>`;
   };
   return `<section class="trsec">
-    <div class="trsechead">The ancillary
-      <span class="count">The order of these lines is what every real EDA writes, and
-        this editor keeps it</span></div>
+    <div class="trsechead">${tt('ancillaries.the_ancillary_the_order_of_these')}</div>
     <div class="anhead">
       <div class="anpicbox">
         <div class="icowrap">
           <img class="anbig" src="${anImgUrl(w.image)}" alt="" onerror="iconRetry(this)"
-            title="Replace this picture"
+            title="${ttA('common.replace_this_picture')}"
             onclick="imgPick('${q1(esc(anImgUrl(w.image)))}','anPaint')">
           ${imgEditBtn(anImgUrl(w.image),'anPaint')}
         </div>
-        ${imgWhereBtn(anImgUrl(w.image),'Where is it?')}
+        ${imgWhereBtn(anImgUrl(w.image),tt('ancillaries.where_is_it'))}
       </div>
       <div class="trgrid" style="flex:1">
-        <label class="lbl" data-label="name">Name</label>
+        <label class="lbl" data-label="name">${tt('common.name')}</label>
         <div class="trkey">
           <input data-label="name" value="${esc(w.name)}"
             ${state.an.adding?'':'disabled'} placeholder="ancillary_name"
             oninput="anSet('name',this.value.trim())">
           <input class="trtext" value="${esc(anLocTextAt(d, 'name'))}"
-            placeholder="${w.name ? (anHasKey(d, w.name)?'':'the name on the character screen')
-                                  : 'name the ancillary first'}"
-            title="The ancillary's name as the player sees it."
+            placeholder="${w.name ? (anHasKey(d, w.name)?'':tt('ancillaries.the_name_on_the_character_screen'))
+                                  : tt('ancillaries.name_the_ancillary_first')}"
+            title="${ttA('ancillaries.the_ancillarys_name_as_the_player')}"
             oninput="anSetLocAt('name',this.value)">
         </div>
-        <label class="lbl" data-label="type">Type</label>
+        <label class="lbl" data-label="type">${tt('common.type')}</label>
         <div>
           <input data-label="type" value="${esc(w.type)}" list="anTypes"
-            placeholder="item" oninput="anSet('type',this.value.trim())">
+            placeholder="${ttA('ancillaries.item')}" oninput="anSet('type',this.value.trim())">
           <datalist id="anTypes">${(d.types||[]).map(t =>
             `<option value="${esc(t)}">`).join('')}</datalist>
-          <div class="trhint count">A character holds one ancillary per type, so this
-            is what a new one replaces</div>
+          <div class="trhint count">${tt('ancillaries.a_character_holds_one_ancillary_per')}</div>
         </div>
-        <label class="lbl" data-label="image">Image</label>
+        <label class="lbl" data-label="image">${tt('ancillaries.image')}</label>
         <div>
           <input data-label="image" value="${esc(w.image)}" placeholder="name.tga"
             oninput="anSet('image',this.value.trim())">
-          ${d.image_found === false ? `<div class="trhint w-warn">Not found in
-            data/ui/ancillaries or the vanilla UI</div>` : ''}
+          ${d.image_found === false ? `<div class="trhint w-warn">${tt('ancillaries.not_found_in_data_ui_ancillaries')}</div>` : ''}
         </div>
-        <label class="lbl" data-label="transferable">Transferable</label>
+        <label class="lbl" data-label="transferable">${tt('ancillaries.transferable')}</label>
         <div data-label="transferable"><label class="chk"><input type="checkbox"
           ${w.transferable !== '0' ? 'checked' : ''}
           onchange="anSet('transferable',this.checked?'1':'0')">
-          can be handed to another character</label></div>
-        <label class="lbl" data-label="unique">Unique</label>
+          ${tt('ancillaries.can_be_handed_to_another_character')}</label></div>
+        <label class="lbl" data-label="unique">${tt('ancillaries.unique_2')}</label>
         <div data-label="unique"><label class="chk"><input type="checkbox"
           ${w.unique?'checked':''} onchange="anSet('unique',this.checked)">
-          can only ever be acquired once</label></div>
+          ${tt('ancillaries.can_only_ever_be_acquired_once')}</label></div>
       </div>
     </div>
     <div class="trgrid" style="margin-top:8px">
-      <label class="lbl" data-label="excluded_ancillaries">ExcludedAncillaries</label>
+      <label class="lbl" data-label="excluded_ancillaries">${tt('ancillaries.excludedancillaries')}</label>
       <div>
         <input data-label="excluded_ancillaries"
           value="${esc((w.excluded_ancillaries||[]).join(', '))}" list="anNames"
-          placeholder="none"
+          placeholder="${ttA('common.none')}"
           oninput="anSet('excluded_ancillaries',this.value.split(',').map(s=>s.trim()).filter(Boolean))">
         <datalist id="anNames">${(d.known||[]).map(n =>
           `<option value="${esc(n)}">`).join('')}</datalist>
         ${(w.excluded_ancillaries||[]).length > 3
-          ? '<div class="trhint w-bad">More than 3 is an errorless crash.</div>'
+          ? `<div class="trhint w-bad">${tt('ancillaries.more_than_3_is_an_errorless')}</div>`
           : (w.unique && !(w.excluded_ancillaries||[]).includes(w.name)
-             ? `<div class="trhint w-warn">A Unique ancillary needs its own name here,
-                or it can still be acquired twice</div>` : '')}
+             ? `<div class="trhint w-warn">${tt('ancillaries.a_unique_ancillary_needs_its_own')}</div>` : '')}
       </div>
-      <label class="lbl" data-label="exclude_cultures">ExcludeCultures</label>
+      <label class="lbl" data-label="exclude_cultures">${tt('ancillaries.excludecultures')}</label>
       <input data-label="exclude_cultures"
-        value="${esc((w.exclude_cultures||[]).join(', '))}" placeholder="none"
+        value="${esc((w.exclude_cultures||[]).join(', '))}" placeholder="${ttA('common.none')}"
         oninput="anSet('exclude_cultures',this.value.split(',').map(s=>s.trim()).filter(Boolean))">
-      ${key('description','Description', w.name?w.name+'_desc':'')}
+      ${key('description',tt('common.description'), w.name?w.name+'_desc':'')}
       ${key('effects_description','EffectsDescription',
             w.name?w.name+'_effects_desc':'')}
     </div>
     <div class="treffects">
-      <div class="trsechead" style="margin:8px 0 0">Effects
-        <span class="count">${(w.effects||[]).length}/8. More than 8 makes this
-          ancillary impossible to gain from a trigger</span></div>
+      <div class="trsechead" style="margin:8px 0 0">${tt('ancillaries.effects_8_more_than_8_makes',{n:(w.effects||[]).length})}</div>
       ${(w.effects||[]).map((e,k)=>anEffectHtml(e,k,d)).join('')}
       ${(w.effects||[]).length < 8
-        ? '<button class="trgadd" onclick="anAddEffect()">＋ Add effect</button>' : ''}
+        ? `<button class="trgadd" onclick="anAddEffect()">${tt('ancillaries.add_effect')}</button>` : ''}
     </div>
   </section>`;
 }
@@ -304,10 +286,10 @@ function anEffectHtml(e, k, d){
     || /^Combat_V_(Faction|Religion)_./.test(e.attribute);
   return `<div class="treff" data-label="effect#${k+1}">
     <input class="trattr${known?'':' bad'}" value="${esc(e.attribute)}" list="anAttrs"
-      placeholder="attribute" oninput="anSetEffect(${k},'attribute',this.value.trim())">
+      placeholder="${ttA('ancillaries.attribute')}" oninput="anSetEffect(${k},'attribute',this.value.trim())">
     <input class="trnum" value="${esc(e.amount)}"
       oninput="anSetEffect(${k},'amount',this.value.trim())">
-    ${known?'':'<span class="count w-warn">not a character attribute</span>'}
+    ${known?'':`<span class="count w-warn">${tt('ancillaries.not_a_character_attribute')}</span>`}
     <button class="trgdel" onclick="anDelEffect(${k})">✕</button>
     <datalist id="anAttrs">${attrs.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>
   </div>`;
@@ -318,22 +300,21 @@ function anEffectHtml(e, k, d){
    traits editor hosts (web/js/triggerui.js). */
 function anTriggersHtml(d){
   if(state.an.adding) return `<section class="trsec">
-    <div class="trsechead">Triggers</div>
-    <div class="count" style="padding:6px">Create the ancillary first. A trigger
-      cannot grant one the file has not defined yet.</div></section>`;
+    <div class="trsechead">${tt('common.triggers')}</div>
+    <div class="count" style="padding:6px">${tt('ancillaries.create_the_ancillary_first_a_trigger')}</div></section>`;
   return `<section class="trsec">
-    <div class="trsechead">Triggers <span class="count">${d.trigs.length
-      ? 'what grants this ancillary'
-      : luaGives(d.lua) ? 'no trigger: a script grants it, below'
-      : 'nothing grants this ancillary'}</span></div>
+    <div class="trsechead">${tt('common.triggers')} <span class="count">${d.trigs.length
+      ? tt('ancillaries.what_grants_this_ancillary')
+      : luaGives(d.lua) ? tt('ancillaries.no_trigger_a_script_grants_it')
+      : tt('ancillaries.nothing_grants_this_ancillary')}</span></div>
     ${luaHitsHtml(d.lua, 'ancillary')}
     ${d.trigs.map((t,i)=>`<div class="trtrig">
       <div class="trtrighead"><b>${esc(t.name)}</b><span class="sp"></span>
-        <button class="trgdel" title="Remove this trigger"
+        <button class="trgdel" title="${ttA('common.remove_this_trigger')}"
           onclick="anDelTrigger(${i})">✕</button></div>
       <div id="antrg-${i}"></div>
     </div>`).join('')}
-    <button class="trgadd" onclick="anAddTrigger()">＋ Add trigger</button>
+    <button class="trgadd" onclick="anAddTrigger()">${tt('common.add_trigger')}</button>
   </section>`;
 }
 
@@ -419,8 +400,8 @@ function anAddTrigger(){
 }
 function anDelTrigger(i){
   const d = state.an.d, row = d.trigs[i];
-  if(!row.added && !confirm(`Remove trigger ${row.name}?\n\n`
-    + 'It is written out of the file when you save.')) return;
+  if(!row.added && !confirm(tt('ancillaries.remove_trigger',{name:row.name})
+    + tt('common.it_is_written_out_of_the'))) return;
   if(row.ui) trgDrop(row.ui);
   d.trigs.splice(i, 1);
   d.removed = (d.removed || []).concat(row.added ? [] : [row.name]);
@@ -479,7 +460,7 @@ function anBody(action){
 
 async function anSave(){
   const a = state.an, d = a.d;
-  if(a.adding && !d.w.name.trim()){ toast('A new ancillary needs a name', 3500); return; }
+  if(a.adding && !d.w.name.trim()){ toast(tt('ancillaries.a_new_ancillary_needs_a_name'), 3500); return; }
   await anApply(anBody(a.adding ? 'add' : 'edit'),
                 a.adding ? `create ${d.w.name}` : `save ${d.name}`);
 }
@@ -498,16 +479,16 @@ async function anApply(body, what){
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 14);
   const found = (p.findings || []).map(f => '⚠ ' + f.message);
-  if(!confirm(`Write: ${what}?\n\n` + (lines.join('\n') || 'no visible change')
-    + ((p.changes || []).length > 14 ? `\n…and ${p.changes.length - 14} more` : '')
+  if(!confirm(tt('ancillaries.write',{what}) + (lines.join('\n') || tt('common.no_visible_change'))
+    + ((p.changes || []).length > 14 ? tt('ancillaries.and_more',{changes:p.changes.length - 14}) : '')
     + (found.length ? '\n\n' + found.slice(0, 4).join('\n') : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   a.busy = true;
   let res;
   try{ res = await api.post('/api/ancillaries/apply', body); }
   finally{ a.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 6000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   const keep = body.action === 'delete' ? '' : body.ancillary;
   await loadAncillaries();
   if(keep) anOpen(keep);

@@ -29,23 +29,23 @@
    ========================================================================= */
 const UNDO_SCOPES=[
   // the building editor: one working copy of every level in the line
-  {id:()=>(modalOpen()&&state.bld&&state.bld.work)?'bld:'+state.bld.mod+':'+state.bld.line:'',
+  {id:()=>(modalOpen()&&state.bld&&state.bld.work)?tt('undo.bld')+state.bld.mod+':'+state.bld.line:'',
    get:()=>state.bld.work, set:v=>{state.bld.work=v;}, draw:()=>renderBuildingEditor()},
   // the unit editor and the bmdb editor share state.ed
   {id:()=>(modalOpen()&&state.ed)
-      ?(state.ed.bmdb?'bmdb:':'ed:')+state.ed.mod+':'+(state.ed.unit||edBmdbName()):'',
+      ?(state.ed.bmdb?tt('undo.bmdb'):tt('undo.ed'))+state.ed.mod+':'+(state.ed.unit||edBmdbName()):'',
    get:edSnap, set:edRestore,
    draw:()=>state.ed.bmdb?renderBmdbEditor():renderEditor()},
   // the transfer composer: one config per unit being sent across
   {id:()=>(modalOpen()&&!state.ed&&!(state.bld&&state.bld.work)&&state.editing&&composerList.length)
-      ?'cfg:'+state.src+'>'+state.dst:'',
+      ?tt('undo.cfg')+state.src+'>'+state.dst:'',
    get:cfgSnap, set:cfgRestore, draw:()=>renderComposer()},
   // sounds mode stages its changes on the page itself, with no dialog
-  {id:()=>(!modalOpen()&&state.mode==='sounds'&&state.snd)?'snd:'+state.src:'',
+  {id:()=>(!modalOpen()&&state.mode==='sounds'&&state.snd)?tt('undo.snd')+state.src:'',
    get:()=>state.snd.ops, set:v=>{state.snd.ops=v;}, draw:()=>renderSounds()},
   // 47a: the six sound banks stage event edits the same way, one file at a time
   {id:()=>(!modalOpen()&&(state.mode==='soundbanks'||state.mode==='soundscripts')&&state.sbk)
-      ?'sbk:'+state.mode+':'+state.src+':'+state.sbk.file:'',
+      ?tt('undo.sbk')+state.mode+':'+state.src+':'+state.sbk.file:'',
    get:()=>state.sbk.w, set:v=>{state.sbk.w=v;}, draw:()=>renderSoundBanks()},
 
   /* The editors built after this file. Every one of them was undoable in
@@ -61,16 +61,16 @@ const UNDO_SCOPES=[
      clears the stack instead of letting Ctrl+Z pour one record's values into
      another. */
   {id:()=>(!modalOpen()&&state.mode==='traits'&&state.tr&&state.tr.d&&state.tr.d.w)
-      ?'tr:'+state.src+':'+(state.tr.sel||'(new)'):'',
+      ?tt('undo.tr')+state.src+':'+(state.tr.sel||'(new)'):'',
    get:()=>state.tr.d.w, set:v=>{state.tr.d.w=v;}, draw:()=>trPaint()},
   {id:()=>(!modalOpen()&&state.mode==='ancillaries'&&state.an&&state.an.d&&state.an.d.w)
-      ?'an:'+state.src+':'+(state.an.sel||'(new)'):'',
+      ?tt('undo.an')+state.src+':'+(state.an.sel||'(new)'):'',
    get:()=>state.an.d.w, set:v=>{state.an.d.w=v;}, draw:()=>anPaint()},
   {id:()=>(!modalOpen()&&state.mode==='factions'&&state.fac&&state.fac.d&&state.fac.d.w)
-      ?'fac:'+state.src+':'+(state.fac.sel||''):'',
+      ?tt('undo.fac')+state.src+':'+(state.fac.sel||''):'',
    get:()=>state.fac.d.w, set:v=>{state.fac.d.w=v;}, draw:()=>facPaint()},
   {id:()=>(!modalOpen()&&mfMode()&&state.mf&&state.mf.d&&state.mf.d.w)
-      ?'mf:'+state.src+':'+(state.mf.tab||'')+':'+(state.mf.sel||'(new)'):'',
+      ?tt('undo.mf')+state.src+':'+(state.mf.tab||'')+':'+(state.mf.sel||'(new)'):'',
    get:()=>state.mf.d.w, set:v=>{state.mf.d.w=v;}, draw:()=>mfPaint()},
   // The campaign map's region panel (16d). It is a page editor like the four
   // above, and its working copy is `state.cmap.det.w` - the record's editable
@@ -79,13 +79,13 @@ const UNDO_SCOPES=[
   // region changes the key, which clears the stack rather than letting Ctrl+Z
   // pour one province's religions into another's.
   {id:()=>(!modalOpen()&&state.mode==='campmap'&&state.cmap&&state.cmap.det
-      &&state.cmap.det.w)?'cmap:'+state.cmap.mod+':'+state.cmap.det.name:'',
+      &&state.cmap.det.w)?tt('undo.cmap')+state.cmap.mod+':'+state.cmap.det.name:'',
    get:()=>state.cmap.det.w, set:v=>{state.cmap.det.w=v;},
    draw:()=>cmapRegionPaint()},
   // Strings is the odd one out: its working copy is the map of pending edits,
   // keyed by row id, not a cloned record.
   {id:()=>(!modalOpen()&&state.mode==='strings'&&state.str&&state.str.rows)
-      ?'str:'+state.src+':'+(state.str.file||''):'',
+      ?tt('undo.str')+state.src+':'+(state.str.file||''):'',
    // 48: new and removed rows are part of the same staging
    get:()=>({e:state.str.edits,a:state.str.adds,r:state.str.removes}),
    set:v=>{state.str.edits=v.e||{};state.str.adds=v.a||[];state.str.removes=v.r||{};},
@@ -138,7 +138,7 @@ function cfgRestore(v){ for(const t of Object.keys(v)) Object.assign(cfgFor(t),v
    dialog - not another line of grey chrome to read past. One painter for every
    editor, driven off the same interactions the undo stack watches, so it can
    never fall out of step with what is actually pending. */
-const dirtyChip=on=>on?'<span class="dirtychip">⚠ unsaved changes</span>':'';
+const dirtyChip=on=>on?`<span class="dirtychip">${tt('undo.unsaved_changes')}</span>`:'';
 function paintDirty(){
   const bld=document.getElementById('bldDirtyNote');
   if(bld)bld.innerHTML=dirtyChip(!!(state.bld&&state.bld.work&&bldDirty()));
@@ -209,7 +209,7 @@ function undoFocus(){
       .map(a=>`[${a.name}="${cssq(a.value)}"]`).join('');
     if(!own)return '';
     const row=el.closest('[data-cap]');
-    return (row?`[data-cap="${cssq(row.dataset.cap)}"] `:'')+el.tagName.toLowerCase()+own;
+    return (row?tt('undo.data_cap',{x:cssq(row.dataset.cap)}):'')+el.tagName.toLowerCase()+own;
   })();
   const path=[];
   for(let n=el;n&&n!==document.body;n=n.parentElement)
@@ -352,7 +352,7 @@ function undoStep(redo){
   const s=undoScope();
   if(!s||s.key!==undo.key)return false;
   const from=redo?undo.future:undo.past, to=redo?undo.past:undo.future;
-  if(!from.length){ toast(redo?'Nothing to redo.':'Nothing to undo.',1400); return true; }
+  if(!from.length){ toast(redo?tt('undo.nothing_to_redo'):tt('undo.nothing_to_undo'),1400); return true; }
   clearTimeout(_undoPend);                 // don't let a pending capture re-push
   const where=undoFocus(),scrolled=scrollSnapshot();
   to.push(undo.cur);
@@ -364,7 +364,7 @@ function undoStep(redo){
   paintDirty();
   // a re-draw that replaces images can settle a frame later and shift things
   requestAnimationFrame(()=>scrollRestore(scrolled));
-  toast((redo?'↷ Redone':'↶ Undone')+` · ${undo.past.length} more to undo`,1400);
+  toast((redo?tt('undo.redone'):tt('undo.undone'))+tt('undo.more_to_undo',{past_n:undo.past.length}),1400);
   return true;
 }
 document.addEventListener('input',e=>undoTick(undoKeyOf(e.target)));

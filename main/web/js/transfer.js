@@ -67,7 +67,7 @@ const modeOf=c=>c.mode||'new';
 const isReplace=c=>modeOf(c)==='replace'&&!!c.base_type;
 const isModels=c=>modeOf(c)==='models';
 // what the picked unit is called in prose, per mode
-const donorRole=c=>modeOf(c)==='replace'?'replaced unit':'base unit';
+const donorRole=c=>modeOf(c)==='replace'?tt('transfer.replaced_unit'):tt('transfer.base_unit');
 // The destination's voice bank, fetched once per destination mod. Needed to know
 // whether a base unit HAS barks to copy, and to list the units that do.
 async function ensureDestSnd(){
@@ -87,7 +87,7 @@ async function ensureDestSnd(){
    composer re-renders on every tick box. */
 const CMP_MODEL_SEP=String.fromCharCode(0);   // same pair-key as edrecruit.js
 const cmpModels={};   // mod + SEP + unit type -> [{name,slot,folders,…}]
-const MODEL_SLOT={soldier:'Soldier',mount:'Mount',officer:'Officer',armour:'Armour upgrade'};
+const MODEL_SLOT={soldier:tt('transfer.soldier'),mount:tt('common.mount'),officer:tt('transfer.officer'),armour:tt('transfer.armour_upgrade')};
 async function ensureUnitModels(type){
   const key=state.src+CMP_MODEL_SEP+type;
   if(!cmpModels[key]){
@@ -196,7 +196,7 @@ function cmpPrevEntries(){
     if(!seen[k]){ seen[k]=1; out.push({mod,entry:n,role,key:k}); }
   });
   const u=state.data&&state.data.units.find(x=>x.type===state.editing);
-  if(u)push(state.src,state.src===state.dst?'this unit':'from '+state.src,cmpPrevOwn(u));
+  if(u)push(state.src,state.src===state.dst?tt('transfer.this_unit'):'from '+state.src,cmpPrevOwn(u));
   const c=cfgFor(state.editing),b=baseUnitOf(c);
   if(b)push(state.dst,(isReplace(c)?'replacing ':'base ')+b.type,cmpPrevOwn(b));
   return out;
@@ -246,18 +246,18 @@ function cmpPrevBar(){
   list.forEach(e=>{ if(!roles.includes(e.role))roles.push(e.role); });
   el.innerHTML=`<b>3D</b>
     ${list.length>1
-      ? `<select title="Which battle-model entry to draw"
+      ? `<select title="${ttA('transfer.which_battle_model_entry_to_draw')}"
            onchange="cmpPrevPick(this.value)">${roles.map(r=>
            `<optgroup label="${esc(r)}">${list.filter(e=>e.role===r).map(e=>
              `<option value="${esc(e.key)}"${cur&&e.key===cur.key?' selected':''}>${
              esc(e.entry)}</option>`).join('')}</optgroup>`).join('')}</select>`
       : `<span class="count" title="${esc(cur?cur.entry:'')}">${
-           esc(cur?cur.entry:'no entry')}</span>`}
+           esc(cur?cur.entry:tt('transfer.no_entry'))}</span>`}
     <span class="sp"></span>
-    <button onclick="cmpPrevFull()" title="Full screen &mdash; Esc comes back">&#10530;</button>
-    <button onclick="cmpPrevFold()" title="${cmpPrevFolded?'Unfold the preview':'Fold the preview away'}"
+    <button onclick="cmpPrevFull()" title="${ttA('transfer.full_screen_esc_comes_back')}">&#10530;</button>
+    <button onclick="cmpPrevFold()" title="${cmpPrevFolded?tt('transfer.unfold_the_preview'):tt('transfer.fold_the_preview_away')}"
       >${cmpPrevFolded?'&#9656;':'&#9662;'}</button>
-    <button onclick="cmpPrevHide()" title="Hide the preview. The button at the top of the dialog brings it back, and the choice is remembered.">&#10005;</button>`;
+    <button onclick="cmpPrevHide()" title="${ttA('transfer.hide_the_preview_the_button_at')}">&#10005;</button>`;
 }
 async function cmpPrevMount(){
   const host=document.getElementById(CMP_PREV_HOST);
@@ -266,8 +266,7 @@ async function cmpPrevMount(){
   const e=cmpPrevEntry();
   if(!e){
     if(typeof v3!=='undefined'&&v3&&v3.host===CMP_PREV_HOST)v3Unmount();
-    host.innerHTML=`<div class="empty">This unit names no battle-model entry,
-      so there is nothing to draw.</div>`;
+    host.innerHTML=`<div class="empty">${tt('transfer.this_unit_names_no_battle_model')}</div>`;
     return;
   }
   v3Pause(false);
@@ -311,9 +310,9 @@ function cmpPrevFull(){
   if(document.fullscreenElement)return document.exitFullscreen();
   if(cmpPrevFolded)cmpPrevFold();          // nothing to look at folded
   const go=el.requestFullscreen||el.webkitRequestFullscreen;
-  if(!go){ toast('This browser will not go full screen here.',3000); return; }
+  if(!go){ toast(tt('common.this_browser_will_not_go_full'),3000); return; }
   Promise.resolve(go.call(el)).catch(e=>
-    toast('Full screen was refused: '+((e&&e.message)||e),4000));
+    toast(tt('common.full_screen_was_refused')+((e&&e.message)||e),4000));
 }
 
 /* ---------- composer (single or batch) ---------- */
@@ -326,7 +325,7 @@ async function openComposer(types){
   // rewritten under it, and a paused canvas with no parent is a leaked context
   cmpPrevDrop();
   m.className='modal';
-  m.innerHTML='<h2>Opening…</h2><div class="mbody"><div class="count">Reading '+
+  m.innerHTML=`<h2>${tt('transfer.opening')}</h2><div class="mbody"><div class="count">${tt('common.reading')} `+
     esc(state.dst)+'…</div></div>';
   overlay.classList.add('open');
   // The overlay goes up first, so anything that throws between here and the
@@ -337,14 +336,14 @@ async function openComposer(types){
     await ensureDestSnd();      // …and to know which destination units have barks
   }catch(e){
     if(isAborted(e)){closeModal();return;}
-    m.innerHTML=`<h2>Couldn't open the transfer</h2>
+    m.innerHTML=`<h2>${tt('transfer.couldnt_open_the_transfer')}</h2>
       <div class="mbody"><div class="trnote w-warn">${docPoints(
-        `Reading “${esc(state.dst)}” failed, so there is nothing to build the transfer against.`,
+        tt('transfer.reading_failed_so_there_is_nothing',{dst:esc(state.dst)}),
         [`<code>${esc(''+(e&&e.message||e))}</code>`,
-         'Nothing has been written yet. This is the step before any file is touched.',
-         'If the tool is no longer running, start it again and retry.'])}</div></div>
-      <div class="foot"><button onclick="closeModal()">Close</button>
-        <button class="primary" onclick="openComposer(${JSON.stringify(types)})">Retry</button></div>`;
+         tt('transfer.nothing_has_been_written_yet_this'),
+         tt('transfer.if_the_tool_is_no_longer')])}</div></div>
+      <div class="foot"><button onclick="closeModal()">${tt('common.close')}</button>
+        <button class="primary" onclick="openComposer(${JSON.stringify(types)})">${tt('common.retry')}</button></div>`;
     return;
   }
   undoReset();
@@ -360,9 +359,9 @@ async function renderComposer(){
       const bimg=cc.base_type?`<img onerror="iconRetry(this)" src="${iconUrl(state.dst,cc.base_type)}">`:'';
       return `<div class="bchip ${t===type?'sel':''}" onclick="switchUnit('${q1(esc(t))}')">
         <img onerror="iconRetry(this)" src="${iconUrl(state.src,t)}"><div class="t">${esc(t)}</div>
-        <div class="base">${isModels(cc)?'models only'
-          :!cc.base_type?'new unit'
-          :(isReplace(cc)?'replaces: ':'base: ')+esc(cc.base_type)}</div></div>`;}).join('')}</div>` : '';
+        <div class="base">${isModels(cc)?tt('transfer.models_only')
+          :!cc.base_type?tt('transfer.new_unit')
+          :(isReplace(cc)?tt('transfer.replaces'):tt('transfer.base'))+esc(cc.base_type)}</div></div>`;}).join('')}</div>` : '';
   const hasOff=u.officers.length>0, hasMount=!!u.mount, hasCrew=!!(u.crew&&u.crew.length);
   const proj=u.projectiles||[]; const hasProj=proj.length>0;
   // siege engine: descr_engines.txt entry + its skeletons/meshes/baked textures
@@ -383,8 +382,8 @@ async function renderComposer(){
   // never held up for it, and modelsFieldset says "Reading…" until then
   if(mo&&unitModels(type)===undefined) ensureUnitModels(type).then(()=>{
     if(state.editing===type&&isModels(cfgFor(type))) renderComposer();});
-  const kw=rep?'(kept)':'(from base)';           // why a group's box is greyed out
-  const insteadMsg=n=>rep?`→ keeping ${esc(n)}’s own`:`→ using ${esc(n)}’s instead`;
+  const kw=rep?'(kept)':tt('transfer.from_base');           // why a group's box is greyed out
+  const insteadMsg=n=>rep?tt('transfer.keeping_s_own',{x:esc(n)}):tt('transfer.using_s_instead',{x:esc(n)});
   const crwBase=c.crew_from==='base'&&!!c.base_type;
   /* "Port + base animations" is `<group>_from = base` plus the import flag: the
      source's own models come across (own modeldb entry, own descr_mount.txt
@@ -416,14 +415,14 @@ async function renderComposer(){
   // renderComposer runs on every tick box; rewriting the modal around it would
   // take the context with it and refetch the model each time.
   cmpPrevDetach();
-  m.innerHTML=`<h2>${batch?`Batch transfer: ${composerList.length} units`
-      :sameMod?`New unit from “${esc(u.name)}”`
-      :rep?`Replace “${esc(c.base_type)}” with “${esc(u.name)}”`
-      :mo?`Import “${esc(u.name)}”’s battle models`
-      :`Transfer “${esc(u.name)}”`} <span class="pill">${
+  m.innerHTML=`<h2>${batch?tt('transfer.batch_transfer_units',{composerList_n:composerList.length})
+      :sameMod?tt('transfer.new_unit_from',{name:esc(u.name)})
+      :rep?tt('transfer.replace_with',{base_type:esc(c.base_type),name:esc(u.name)})
+      :mo?tt('transfer.import_s_battle_models',{name:esc(u.name)})
+      :tt('transfer.transfer',{name:esc(u.name)})} <span class="pill">${
       sameMod?'in '+esc(state.src):esc(state.src)+' → '+esc(state.dst)}</span>
      ${cmpPrevOn()?'':`<button class="edprevon" onclick="cmpPrevShow()"
-       title="Draw this unit's battle model beside the options">&#129482; 3D preview</button>`}</h2>
+       title="${ttA('transfer.draw_this_units_battle_model_beside')}">${tt('transfer.3d_preview')}</button>`}</h2>
    <div class="edsplit" id="cmpSplit">
     <div class="edmain">
      <div class="mbody">
@@ -432,139 +431,114 @@ async function renderComposer(){
      <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
        <img class="baseimg" src="${iconUrl(state.src,type)}">
        <div><b>${esc(u.name)}</b><div class="count">${esc(type)} · ${esc(u.kind||u.category||'?')}/${esc(u.class||'?')}</div>
-         ${hasProj?`<div class="projline">🏹 projectile: ${proj.map(p=>`<span class="chip">${esc(p)}</span>`).join('')}</div>`:''}
-         ${hasEng?`<div class="projline">🏰 siege engine: <span class="chip">${esc(eng)}</span>${engMounted?'<span class="count"> (mounted)</span>':''}${engGroups.length?`<span class="count"> · ${engGroups.map(esc).join(' / ')}</span>`:''}${engClass?`<span class="count"> · class: ${esc(engClass)}</span>`:''}</div>`:''}</div>
+         ${hasProj?`<div class="projline">${tt('transfer.projectile',{proj:proj.map(p=>`<span class="chip">${esc(p)}</span>`).join('')})}</div>`:''}
+         ${hasEng?`<div class="projline">${tt('transfer.siege_engine',{eng:esc(eng),engMounted:engMounted?'<span class="count"> (mounted)</span>':'',engGroups:engGroups.length?`<span class="count"> · ${engGroups.map(esc).join(' / ')}</span>`:'',engClass:engClass?`<span class="count"> ${tt('transfer.class',{engClass:esc(engClass)})}</span>`:''})}</div>`:''}</div>
      </div>
-     ${sameMod?'':`${projOn&&!mo?`<div class="warnbox">⚠ <b>Projectile effects aren't imported.</b> The definition
-       (damage, velocity, angles) comes across; effect lines fall back to <code>invisible_placeholder_set</code>
-       where ${esc(state.dst)} lacks them. Re-add them in <code>descr_effect_impacts.txt</code>.</div>`:''}
-     ${mo?'':`<fieldset><legend>Include secondary models</legend>
-       <label class="chk${offOn?'':' off'}"><input type="checkbox" id="optOff" ${offOn&&c.include_officers?'checked':''} ${offOn?'':'disabled'}> Officers ${!hasOff?'(none)':offBase?kw:`(${u.officers.length})`}</label>
-       <label class="chk${mntOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optMount" ${mntOn&&c.include_mount?'checked':''} ${mntOn?'':'disabled'}> Mount${!hasMount?' (none)':mntBase?' '+kw:` (${esc(u.mount)})`}</label>
-       <label class="chk${crwOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optCrew" ${crwOn&&c.include_crew?'checked':''} ${crwOn?'':'disabled'}> Crew${!hasCrew?' (none)':crwBase?' '+kw:` (${u.crew.length})`}</label>
-       <label class="chk${projOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optProj" ${projOn&&c.include_projectile?'checked':''} ${projOn?'':'disabled'}> Projectile${!hasProj?' (none)':projBase?' '+kw:` (${proj.map(esc).join(', ')})`}</label>
-       <label class="chk${engOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optEngine" ${engOn&&c.include_engine!==false?'checked':''} ${engOn?'':'disabled'}> Siege engine${!hasEng?' (none)':engBase?' '+kw:` (${esc(eng)})`}</label>
-       ${hasOff?`<div class="optnames"><span class="k">Officers</span>${offBase?`<span class="frombase">${insteadMsg(c.base_type)}</span>`:modelChecks(u.officers,offOn,c)}${
-         offImport?`<span class="frombase">→ brought across; animated like
-           <b>${esc(bU.officers[0])}</b> where ${esc(state.dst)} lacks their animations</span>`:''}</div>`:''}
-       ${hasMount?`<div class="optnames"><span class="k">Mount</span><span class="chip">${esc(u.mount)}</span>${
-         mntBase?`<span class="frombase">${insteadMsg(c.base_type)}</span>`
-         :mntImport?`<span class="frombase">→ brought across; animated like
-           <b>${esc(bU.mount)}</b> where ${esc(state.dst)} lacks its animations</span>`:''}</div>`:''}
+     ${sameMod?'':`${projOn&&!mo?`<div class="warnbox">${tt('transfer.projectile_effects_arent_imported_the_definition',{dst:esc(state.dst)})}</div>`:''}
+     ${mo?'':`<fieldset><legend>${tt('transfer.include_secondary_models')}</legend>
+       <label class="chk${offOn?'':' off'}"><input type="checkbox" id="optOff" ${offOn&&c.include_officers?'checked':''} ${offOn?'':'disabled'}> ${tt('transfer.officers',{x:!hasOff?'(none)':offBase?kw:`(${u.officers.length})`})}</label>
+       <label class="chk${mntOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optMount" ${mntOn&&c.include_mount?'checked':''} ${mntOn?'':'disabled'}> ${tt('transfer.mount',{x:!hasMount?' (none)':mntBase?' '+kw:` (${esc(u.mount)})`})}</label>
+       <label class="chk${crwOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optCrew" ${crwOn&&c.include_crew?'checked':''} ${crwOn?'':'disabled'}> ${tt('transfer.crew',{x:!hasCrew?' (none)':crwBase?' '+kw:` (${u.crew.length})`})}</label>
+       <label class="chk${projOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optProj" ${projOn&&c.include_projectile?'checked':''} ${projOn?'':'disabled'}> ${tt('transfer.projectile_2',{x:!hasProj?' (none)':projBase?' '+kw:` (${proj.map(esc).join(', ')})`})}</label>
+       <label class="chk${engOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optEngine" ${engOn&&c.include_engine!==false?'checked':''} ${engOn?'':'disabled'}> ${tt('transfer.siege_engine_2',{x:!hasEng?' (none)':engBase?' '+kw:` (${esc(eng)})`})}</label>
+       ${hasOff?`<div class="optnames">${tt('transfer.officers_2',{x:offBase?`<span class="frombase">${insteadMsg(c.base_type)}</span>`:modelChecks(u.officers,offOn,c),x2:offImport?`<span class="frombase">${tt('transfer.brought_across_animated_like_where_lacks',{x:esc(bU.officers[0]),dst:esc(state.dst)})}</span>`:''})}</div>`:''}
+       ${hasMount?`<div class="optnames">${tt('transfer.mount_2',{mount:esc(u.mount),x:mntBase?`<span class="frombase">${insteadMsg(c.base_type)}</span>`
+         :mntImport?`<span class="frombase">${tt('transfer.brought_across_animated_like_where_lacks_2',{mount:esc(bU.mount),dst:esc(state.dst)})}</span>`:''})}</div>`:''}
        ${mntImport?`<div class="count" style="margin-left:22px">
-           <code>${esc(u.mount)}</code> is added to ${esc(state.dst)}'s descr_mount.txt with its
-           own model. Only its animation set is taken from <code>${esc(bU.mount)}</code>, and only
-           where the skeletons it asks for are missing here.</div>`:''}
-       ${hasCrew?`<div class="optnames"><span class="k">Crew</span>${crwBase?`<span class="frombase">${insteadMsg(c.base_type)}</span>`:modelChecks(u.crew,crwOn,c)}</div>`:''}
-       ${hasProj?`<div class="optnames"><span class="k">Projectile</span>${proj.map(o=>`<span class="chip">${esc(o)}</span>`).join('')}${projBase?`<span class="frombase">${insteadMsg(c.base_type)} stats (its projectile)</span>`:projEffects()}</div>`:''}
-       ${hasEng?`<div class="optnames"><span class="k">Siege engine</span><span class="chip">${esc(eng)}</span>${engBase?`<span class="frombase">${insteadMsg(c.base_type)}</span>`:engMounted?`→ added to descr_mounted_engines.txt with its reference points${engClass?`; its <code>class ${esc(engClass)}</code> descr_engine_skeleton.txt entry is added only if ${esc(state.dst)} lacks it`:''}`:`→ added to descr_engines.txt + descr_engine_skeleton.txt, with its meshes/bone maps/collision/reference points, the textures baked into those meshes, and its engine animations`}</div>`:''}
-       <div class="count" style="margin-top:5px">An unticked group keeps its source name, which must already exist in ${esc(state.dst)}. Or take it from ${rep?`“${esc(c.base_type)}”`:'the base'} above.</div>
+           <code>${esc(u.mount)}</code> ${tt('transfer.is_added_to_s_descr_mount',{dst:esc(state.dst),mount:esc(bU.mount)})}</div>`:''}
+       ${hasCrew?`<div class="optnames">${tt('transfer.crew_2',{x:crwBase?`<span class="frombase">${insteadMsg(c.base_type)}</span>`:modelChecks(u.crew,crwOn,c)})}</div>`:''}
+       ${hasProj?`<div class="optnames">${tt('transfer.projectile_3',{proj:proj.map(o=>`<span class="chip">${esc(o)}</span>`).join(''),x:projBase?`<span class="frombase">${tt('transfer.stats_its_projectile',{x:insteadMsg(c.base_type)})}</span>`:projEffects()})}</div>`:''}
+       ${hasEng?`<div class="optnames">${tt('transfer.siege_engine_3',{eng:esc(eng),x:engBase?`<span class="frombase">${insteadMsg(c.base_type)}</span>`:engMounted?tt('transfer.added_to_descr_mounted_engines_txt',{engClass:engClass?tt('transfer.its_class_descr_engine_skeleton_txt',{engClass:esc(engClass),dst:esc(state.dst)}):''}):tt('transfer.added_to_descr_engines_txt_descr')})}</div>`:''}
+       <div class="count" style="margin-top:5px">${tt('transfer.an_unticked_group_keeps_its_source',{dst:esc(state.dst),rep:rep?`“${esc(c.base_type)}”`:tt('transfer.the_base')})}</div>
      </fieldset>`}
-     ${engOn&&c.include_engine!==false&&!mo?`<fieldset><legend>Siege engine: <code>${esc(eng)}</code></legend>
-       <div class="count">Copied: the <code>${engMounted?'descr_mounted_engines.txt':'descr_engines.txt'}</code> block${engGroups.length?` (${engGroups.length} model group${engGroups.length>1?'s':''}: ${engGroups.map(esc).join(', ')})`:''}
-         ${engMounted?`and the <code>reference_points</code> file it names.`
-         :`, ${engGroups.length?`each group's animation entry, `:''}every mesh / bone map / collision /
-         reference-points file it names${engGroups.length?', and the textures baked into those meshes':''}.`}</div>
-       ${engMounted?`<div class="count" style="margin-top:5px">${docPoints('<b>Mounted engine.</b>',[
-         `The gun is part of the <b>mount's</b> model, so only the <code>reference_points</code> file
-          comes across.`,
-         engClass?`Its animation set <code>${esc(engClass)}</code> is added only if ${esc(state.dst)}
-           lacks it. An existing one is kept as-is, which normally works fine.`
-         :`It has no <code>class</code> line, so no animation entry comes with it. Check it by hand.`
+     ${engOn&&c.include_engine!==false&&!mo?`<fieldset><legend>${tt('transfer.siege_engine_4')} <code>${esc(eng)}</code></legend>
+       <div class="count">${tt('transfer.copied_the_block',{engMounted:engMounted?'descr_mounted_engines.txt':'descr_engines.txt',engGroups:engGroups.length?tt('transfer.model_group',{engGroups_n:engGroups.length,engGroups:engGroups.length>1?'s':'',engGroups2:engGroups.map(esc).join(', ')}):'',x:engMounted?tt('transfer.and_the_reference_points_file_it')
+         :tt('transfer.every_mesh_bone_map_collision_reference',{engGroups:engGroups.length?tt('transfer.each_groups_animation_entry'):'',engGroups2:engGroups.length?tt('transfer.and_the_textures_baked_into_those'):''})})}</div>
+       ${engMounted?`<div class="count" style="margin-top:5px">${docPoints(`<b>${tt('transfer.mounted_engine')}</b>`,[
+         tt('transfer.the_gun_is_part_of_the'),
+         engClass?tt('transfer.its_animation_set_is_added_only',{engClass:esc(engClass),dst:esc(state.dst)})
+         :tt('transfer.it_has_no_class_line_so')
          ])}</div>`:''}
        ${engMounted?'':`<div class="count" style="margin-top:5px">${docPoints(
-         `<b>Engine files can't be relocated</b>, because each mesh has its texture paths baked in.`,[
-         `Overwriting a shared one also re-skins ${esc(state.dst)}'s own engines.`,
-         `So the default keeps the destination's file, and the imported engine may then wear its skin.`,
-         'Probe lists them and lets you flip that.'])}</div>`}
-       <div class="count" style="margin-top:5px">Vanilla files the engine uses aren't copied. If ${esc(state.dst)} overrides
-         one, its version wins and may not match. The probe flags those.</div>
-       <div class="count" style="margin-top:5px">Not ported: effect / particle / sound references and
-         <code>crew_animations</code> names, so check those exist in ${esc(state.dst)}.</div>
+         tt('transfer.engine_files_cant_be_relocated_because'),[
+         tt('transfer.overwriting_a_shared_one_also_re',{dst:esc(state.dst)}),
+         tt('transfer.so_the_default_keeps_the_destinations'),
+         tt('transfer.probe_lists_them_and_lets_you')])}</div>`}
+       <div class="count" style="margin-top:5px">${tt('transfer.vanilla_files_the_engine_uses_arent',{dst:esc(state.dst)})}</div>
+       <div class="count" style="margin-top:5px">${tt('transfer.not_ported_effect_particle_sound_references',{dst:esc(state.dst)})}</div>
      </fieldset>`:''}
-     <fieldset><legend>What this transfer creates in ${esc(state.dst)}</legend>
+     <fieldset><legend>${tt('transfer.what_this_transfer_creates_in',{dst:esc(state.dst)})}</legend>
        <div class="radio-row">
          <label><input type="radio" name="tmode" value="new" ${modeOf(c)==='new'?'checked':''}>
-           <b>A new unit</b>: its own entry, name and icons</label>
+           ${tt('transfer.a_new_unit_its_own_entry')}</label>
          <label><input type="radio" name="tmode" value="base" ${modeOf(c)==='base'?'checked':''}>
-           <b>A new unit based on an existing one</b>: a new entry that inherits a destination
-           unit's stats, cost, ownership and era</label>
+           ${tt('transfer.a_new_unit_based_on_an')}</label>
          <label><input type="radio" name="tmode" value="replace" ${modeOf(c)==='replace'?'checked':''}>
-           <b>Replace an existing unit</b>: no new entry, so a destination unit keeps its name and
-           stats, and gets “${esc(u.name)}”’s models</label>
+           ${tt('transfer.replace_an_existing_unit_no_new',{name:esc(u.name)})}</label>
          <label><input type="radio" name="tmode" value="models" ${mo?'checked':''}>
-           <b>Battle-model entries only</b>: no unit at all - just the models “${esc(u.name)}” is
-           drawn from, and the files they name</label>
+           ${tt('transfer.battle_model_entries_only_no_unit',{name:esc(u.name)})}</label>
        </div>
        <div id="baseArea" style="margin-top:8px;${modeOf(c)==='new'||mo?'display:none':''}">
          <div class="count" style="margin-bottom:6px">${modeOf(c)==='replace'
-           ? docPoints(`Pick the <b>${esc(state.dst)}</b> unit to rewrite.`,[
-               'It keeps everything except its models.',
-               'Change what comes across with the <b>Take from</b> rows, the '
-                 +'<span class="ibadge">B</span> buttons and the card boxes below.',
-               `Only ${esc(u.kind||u.category||'')} units are listed: it has to be the same unit type.`])
-           : docPoints(`Pick the <b>${esc(state.dst)}</b> unit to inherit the numbers from.`,[
+           ? docPoints(tt('transfer.pick_the_unit_to_rewrite',{dst:esc(state.dst)}),[
+               tt('transfer.it_keeps_everything_except_its_models'),
+               `${tt('transfer.change_what_comes_across_with_the')} `
+                 +`<span class="ibadge">B</span> ${tt('transfer.buttons_and_the_card_boxes_below')}`,
+               tt('transfer.only_units_are_listed_it_has',{x:esc(u.kind||u.category||'')})])
+           : docPoints(tt('transfer.pick_the_unit_to_inherit_the',{dst:esc(state.dst)}),[
                `Only ${esc(u.kind||u.category||'')} units are listed: it has to be the same unit type.`])
          }</div>
          <div class="basepick">
            <img class="baseimg" id="baseImg" src="${c.base_type?iconUrl(state.dst,c.base_type):''}" style="${c.base_type?'':'visibility:hidden'}">
            <div style="flex:1">
              <div class="basebar">
-               <input id="baseSearch" value="${esc(c.base_q||'')}" placeholder="Filter ${esc(u.kind||u.category||'')} units in ${esc(state.dst)}…" oninput="renderBaseList()">
-               <select id="baseFac" onchange="renderBaseList()"><option value="">All factions</option></select>
+               <input id="baseSearch" value="${esc(c.base_q||'')}" placeholder="${ttA('transfer.filter_units_in',{x:esc(u.kind||u.category||''),dst:esc(state.dst)})}" oninput="renderBaseList()">
+               <select id="baseFac" onchange="renderBaseList()"><option value="">${tt('common.all_factions')}</option></select>
              </div>
              <div class="baselist" id="baseList"></div>
            </div>
          </div>
          ${modeOf(c)==='replace'&&!c.base_type?`<div class="count w-warn" style="margin-top:6px">
-           Pick a unit to replace before applying.</div>`:''}
+           ${tt('transfer.pick_a_unit_to_replace_before')}</div>`:''}
        </div>
      </fieldset>
-     ${rep?`<fieldset><legend>Import from “${esc(u.name)}”</legend>
-       <div class="count">“${esc(c.base_type)}” keeps its own cards unless you tick these. An imported
-         card replaces its file, under its own name and faction folders.</div>
+     ${rep?`<fieldset><legend>${tt('transfer.import_from',{name:esc(u.name)})}</legend>
+       <div class="count">${tt('transfer.keeps_its_own_cards_unless_you',{base_type:esc(c.base_type)})}</div>
        <label class="chk" style="margin-top:6px"><input type="checkbox" id="optImpCard" ${c.import_card?'checked':''}>
-         Unit card ${u.has_card?'':'<span class="count">(the source has none)</span>'}</label>
+         ${tt('transfer.unit_card',{has_card:u.has_card?'':`<span class="count">${tt('transfer.the_source_has_none')}</span>`})}</label>
        <label class="chk" style="margin-left:12px"><input type="checkbox" id="optImpInfo" ${c.import_info_card?'checked':''}>
-         Unit info card ${u.has_info?'':'<span class="count">(the source has none)</span>'}</label>
-       <div class="count" style="margin-top:6px">Stats are imported one at a time with the
-         <span class="ibadge">B</span> buttons in <b>Edit fields</b>.</div>
+         ${tt('transfer.unit_info_card',{has_info:u.has_info?'':`<span class="count">${tt('transfer.the_source_has_none')}</span>`})}</label>
+       <div class="count" style="margin-top:6px">${tt('transfer.stats_are_imported_one_at_a')}</div>
      </fieldset>`:''}`}
      ${mo?modelsFieldset(type):`${soundFieldset(c,u)}
-     <fieldset><legend>Mercenary attribute</legend>
-       <label class="chk"><input type="checkbox" id="optMerc" ${c.make_mercenary?'checked':''}> Make this a mercenary unit</label>
-       <div class="count" style="margin-top:5px">Adds the <code>mercenary_unit</code> attribute and a
-         <code>merc</code> texture record.
-         ${u.mercenary?'<b class="w-good">Already a mercenary in the source.</b>':''}
-         <br>To actually recruit it, add a pool entry in <code>descr_mercenaries.txt</code> yourself.</div>
+     <fieldset><legend>${tt('transfer.mercenary_attribute')}</legend>
+       <label class="chk"><input type="checkbox" id="optMerc" ${c.make_mercenary?'checked':''}> ${tt('transfer.make_this_a_mercenary_unit')}</label>
+       <div class="count" style="margin-top:5px">${tt('transfer.adds_the_mercenary_unit_attribute_and',{mercenary:u.mercenary?`<b class="w-good">${tt('transfer.already_a_mercenary_in_the_source')}</b>`:''})}</div>
      </fieldset>
-     <fieldset><legend>Mercenary icons</legend>
-       <label class="chk"><input type="checkbox" id="optMercIcons" ${c.merc_icons?'checked':''}> Put the unit card and info card in the merc folders ONLY</label>
-       <div class="count" style="margin-top:5px">${docPoints('What the tick box changes.',[
-         '<b>On:</b> cards go to the merc folders only, pinned with <code>card_pic_dir</code> / '
+     <fieldset><legend>${tt('transfer.mercenary_icons')}</legend>
+       <label class="chk"><input type="checkbox" id="optMercIcons" ${c.merc_icons?'checked':''}> ${tt('transfer.put_the_unit_card_and_info')}</label>
+       <div class="count" style="margin-top:5px">${docPoints(tt('transfer.what_the_tick_box_changes'),[
+         `${tt('transfer.on_cards_go_to_the_merc')} `
            +'<code>info_pic_dir</code>.',
-         '<b>Off (default):</b> a copy in every faction folder the unit is owned by, plus the merc '
-           +'folders as a fallback. No pinning needed.'])}</div>
+         `${tt('transfer.off_default_a_copy_in_every')} `
+           +tt('transfer.folders_as_a_fallback_no_pinning')])}</div>
      </fieldset>
-     <fieldset><legend>Edit fields: every EDU field, edited as overrides</legend>
+     <fieldset><legend>${tt('transfer.edit_fields_every_edu_field_edited')}</legend>
        ${sameMod?'':fromBasePanel(c,u)}
        <div class="fieldbar">
-         <input id="fieldFilter" placeholder="Filter fields…" oninput="filterFields()">
+         <input id="fieldFilter" placeholder="${ttA('transfer.filter_fields')}" oninput="filterFields()">
          ${gfToggleHtml()}
          <span class="count" id="fieldChanged"></span>
        </div>
-       <div class="allfields" id="allFields"><div class="count" style="padding:6px">Loading fields…</div></div>
+       <div class="allfields" id="allFields"><div class="count" style="padding:6px">${tt('transfer.loading_fields')}</div></div>
        ${sameMod?'':rep?`<div class="count" style="margin-top:6px">${docPoints(
-         `<span class="ibadge">B</span> marks a field <b>${esc(c.base_type)}</b> keeps.`,[
-         `Click one to import that field from “${esc(u.type)}”; click again to put it back.`,
-         `Greyed out <span class="ibadge off" style="background:transparent;color:var(--dim);border-color:var(--edge)">B</span> = imported.`,
-         '<code>type</code> and <code>dictionary</code> are locked: changing them would rename the '
-           +'unit instead of replacing it.'])}</div>`
+         `<span class="ibadge">B</span> ${tt('transfer.marks_a_field_keeps',{base_type:esc(c.base_type)})}`,[
+         tt('transfer.click_one_to_import_that_field',{type:esc(u.type)}),
+         tt('transfer.greyed_out_b_imported'),
+         `${tt('transfer.type_and_dictionary_are_locked_changing')} `
+           +tt('transfer.unit_instead_of_replacing_it')])}</div>`
         :`<div class="count" style="margin-top:6px"><span class="ibadge">B</span>
-         marks a field taken from the base${c.base_type?` <b>${esc(c.base_type)}</b>`:''}. Click one to keep
-         <b>${esc(u.type)}</b>'s own value instead; click again to go back. Greyed out <span class="ibadge off"
-         style="background:transparent;color:var(--dim);border-color:var(--edge)">B</span> = the source's
-         value. Fields the source unit doesn't have can't be switched.</div>`}
+         ${tt('transfer.marks_a_field_taken_from_the',{base_type:c.base_type?` <b>${esc(c.base_type)}</b>`:'',type:esc(u.type)})}</div>`}
      </fieldset>`}
      <div id="previewBox"></div>
      </div>
@@ -572,9 +546,9 @@ async function renderComposer(){
    </div>
    <div class="foot">
      ${cleanerBoxHtml()}
-     <button onclick="closeModal()">Cancel</button>
-     <button onclick="doPreview()">Probe${batch?' this unit':''}</button>
-     <button class="primary" onclick="doApply()">${batch?'Apply all':'Apply'}</button>
+     <button onclick="closeModal()">${tt('common.cancel')}</button>
+     <button onclick="doPreview()">${tt('transfer.probe',{batch:batch?tt('transfer.this_unit_2'):''})}</button>
+     <button class="primary" onclick="doApply()">${batch?tt('transfer.apply_all'):tt('common.apply')}</button>
    </div>`;
   cmpPrevAttach();                 // the live column, back where it belongs
   // wire per-unit option persistence (disabled inputs - absent models - never fire)
@@ -659,7 +633,7 @@ function baseUnitOf(c){
      portanim  = the source's entry with the base unit's animation records
                  written over its skeleton lines. Safe to load, may move oddly.
      base      = the base unit's own model. Nothing copied at all. */
-const GRP3=[['port','Port as is'],['portanim','Port + base animations'],['base','Use base’s']];
+const GRP3=[['port',tt('transfer.port_as_is')],['portanim',tt('transfer.port_base_animations')],['base',tt('transfer.use_bases')]];
 function grp3Value(c,key){
   if(c[key]!=='base')return 'port';
   return c[key==='mount_from'?'import_mount_with_base':'import_officers_with_base']===false
@@ -676,8 +650,8 @@ function fromBasePanel(c,u){
   const b=baseUnitOf(c), on=!!c.base_type, rep=isReplace(c);
   const row=(key,label,detail,tip)=>`<div class="sbrow"><span class="k">${
       tip?qm(tip,label):''}${label}</span>
-    <label><input type="radio" name="${key}" value="source" ${c[key]!=='base'?'checked':''} ${on?'':'disabled'}> Source</label>
-    <label><input type="radio" name="${key}" value="base" ${c[key]==='base'?'checked':''} ${on?'':'disabled'}> Base</label>
+    <label><input type="radio" name="${key}" value="source" ${c[key]!=='base'?'checked':''} ${on?'':'disabled'}> ${tt('transfer.source')}</label>
+    <label><input type="radio" name="${key}" value="base" ${c[key]==='base'?'checked':''} ${on?'':'disabled'}> ${tt('transfer.base_2')}</label>
     <span class="count">${detail}</span></div>`;
   const row3=(key,label,detail,tip)=>{const cur=grp3Value(c,key);
     return `<div class="sbrow"><span class="k">${tip?qm(tip,label):''}${label}</span>
@@ -685,52 +659,52 @@ function fromBasePanel(c,u){
         ${cur===v?'checked':''} ${on?'':'disabled'}
         onchange="grp3Set('${key}','${v}')"> ${t}</label>`).join('')}
       <span class="count">${detail}</span></div>`;};
-  const has=n=>rep?`${esc(c.base_type)} has ${n}`:`base has ${n}`;
+  const has=n=>rep?`${esc(c.base_type)} has ${n}`:tt('transfer.base_has',{x:n});
   // The soldier line is not just "the body model": its modeldb entry carries the
   // skeletons, so whichever unit supplies it decides how the unit animates. That
   // is the one thing about this row nobody guesses, hence the ?.
-  let rows=row('soldier_from','Animations (Soldier entry)', on?'the soldier line only':'',
-    'The soldier line names the battle model the unit fights with, and that '
-    +'modeldb entry is what carries its animations. It is the ONLY entry the '
-    +'engine animates the unit from. An armour-upgrade entry is a visual swap '
-    +'at that armour level and its own skeleton line is never played. '
-    +'Source: the source unit\'s own skeletons come across, and this mod must '
-    +'already have them or the game crashes on load. '
-    +(rep?'Base':'Base')+': the unit animates like '
-    +(rep?'the replaced unit':'the base unit')+' instead, which always loads but '
-    +'may fight unexpectedly.');
+  let rows=row('soldier_from',tt('transfer.animations_soldier_entry'), on?tt('transfer.the_soldier_line_only'):'',
+    tt('transfer.the_soldier_line_names_the_battle')
+    +tt('transfer.modeldb_entry_is_what_carries_its')
+    +tt('transfer.engine_animates_the_unit_from_an')
+    +tt('transfer.at_that_armour_level_and_its')
+    +tt('transfer.source_the_source_units_own_skeletons')
+    +tt('transfer.already_have_them_or_the_game')
+    +(rep?tt('transfer.base_2'):tt('transfer.base_2'))+tt('transfer.the_unit_animates_like')
+    +(rep?tt('transfer.the_replaced_unit'):tt('transfer.the_base_unit'))+tt('transfer.instead_which_always_loads_but')
+    +tt('transfer.may_fight_unexpectedly'));
   // Filled in by paintSoldierAnim() from the plan - a missing-animation warning
   // only belongs here when the SOLDIER model is the one asking for it, since
   // flipping this row is the fix. See TransferPlan.soldier_skeletons_missing.
   rows+=`<div class="sbanim" id="soldierAnim" hidden></div>`;
-  if(b&&b.officers.length) rows+=row3('officer_from','Officers',
+  if(b&&b.officers.length) rows+=row3('officer_from',tt('transfer.officers_3'),
     has(`${b.officers.length}: ${esc(b.officers.join(', '))}`),
-    'An officer is a modeldb entry of its own, so it carries its own animation '
-    +'set. Port as is: the source\'s officers, their own skeletons, and this mod '
-    +'must have them or the game crashes on load. Port + base animations: the '
-    +'same models with the base unit\'s officer\'s animation records written '
-    +'over their skeleton lines, so it always loads, and they may move oddly. '
-    +'Use base\'s: the '+(rep?'replaced':'base')+' unit\'s officers, nothing copied.');
-  if(b&&b.mount)           rows+=row3('mount_from','Mount',
+    tt('transfer.an_officer_is_a_modeldb_entry')
+    +tt('transfer.set_port_as_is_the_sources')
+    +tt('transfer.must_have_them_or_the_game')
+    +tt('transfer.same_models_with_the_base_units')
+    +tt('transfer.over_their_skeleton_lines_so_it')
+    +tt('transfer.use_bases_the')+(rep?'replaced':'base')+tt('transfer.units_officers_nothing_copied'));
+  if(b&&b.mount)           rows+=row3('mount_from',tt('common.mount'),
     has(esc(b.mount)),
-    'A mount is three things: the descr_mount.txt block, its battle model, and '
-    +'that model\'s animations. Port as is: the source\'s mount and its own '
-    +'skeletons, which this mod must have or the game crashes on load. Port + '
-    +'base animations: the same mount with the base mount\'s animation records, '
-    +'so it always loads and may move oddly. Use base\'s: ride the '
-    +(rep?'replaced':'base')+' unit\'s mount instead, nothing copied.');
-  if(b&&b.crew&&b.crew.length) rows+=row('crew_from','Crew',has(`${b.crew.length}: ${esc(b.crew.join(', '))}`));
+    tt('transfer.a_mount_is_three_things_the')
+    +tt('transfer.that_models_animations_port_as_is')
+    +tt('transfer.skeletons_which_this_mod_must_have')
+    +tt('transfer.base_animations_the_same_mount_with')
+    +tt('transfer.so_it_always_loads_and_may')
+    +(rep?'replaced':'base')+tt('transfer.units_mount_instead_nothing_copied'));
+  if(b&&b.crew&&b.crew.length) rows+=row('crew_from',tt('transfer.crew_3'),has(`${b.crew.length}: ${esc(b.crew.join(', '))}`));
   // The armour-upgrade models are only a choice when replacing: a base template
   // leaves them with the transferred unit, since the new unit IS that unit.
-  if(rep) rows+=row('upgrade_from','Armour upgrades',
-    `<code>armour_ug_models</code>: the models it wears once its armour is upgraded`,
-    'Independent of the Soldier row. The game renders the upgrade entry for the '
-    +'unit\'s armour level, so leaving this on Source while the soldier line comes '
-    +'from the base puts the source\'s model back on screen at that level. It does '
-    +'not change how the unit animates: only the soldier entry does that.');
+  if(rep) rows+=row('upgrade_from',tt('transfer.armour_upgrades'),
+    tt('transfer.armour_ug_models_the_models_it'),
+    tt('transfer.independent_of_the_soldier_row_the')
+    +tt('transfer.units_armour_level_so_leaving_this')
+    +tt('transfer.from_the_base_puts_the_sources')
+    +tt('transfer.not_change_how_the_unit_animates'));
   return `<div class="basefrom${on?'':' off'}">
-    <div class="bftitle">Take from ${on?`<b>${esc(c.base_type)}</b>`
-      :(rep?'the replaced unit. Pick one first.':'the base unit. Pick one first.')}</div>
+    <div class="bftitle">${tt('transfer.take_from',{x:on?`<b>${esc(c.base_type)}</b>`
+      :(rep?tt('transfer.the_replaced_unit_pick_one_first'):tt('transfer.the_base_unit_pick_one_first'))})}</div>
     ${rows}</div>`;
 }
 /* ---------- voice / sound ----------
@@ -762,70 +736,58 @@ function soundFieldset(c,u){
   const radio=(v,label,note,off)=>`<label class="chk${off?' off':''}">
     <input type="radio" name="sndmode" value="${v}" ${c.sound_mode===v?'checked':''} ${off?'disabled':''}>
     ${label}${note?` <span class="count">${note}</span>`:''}</label>`;
-  if(!ds.has_file)return `<fieldset><legend>Voice / sound</legend>
-    <div class="count">“${esc(state.dst)}” has no voice bank
-      (<code>export_descr_sounds_units_voice.txt</code>), so there is nothing to copy into.
-      The unit uses the game's own sounds.</div></fieldset>`;
+  if(!ds.has_file)return `<fieldset><legend>${tt('transfer.voice_sound')}</legend>
+    <div class="count">${tt('transfer.has_no_voice_bank_export_descr',{dst:esc(state.dst)})}</div></fieldset>`;
   // why the accent/class pair is not yours to choose while a donor is set
   const why=locked
-    ? `Locked. The copied entry goes into ${d.accent} / ${d.cls}, the block “${d.name}” sits in, and `
-      +`accent / voice_type are written to match. Point them elsewhere and the unit falls back to `
-      +`generic barks. `
-      +(c.sound_mode==='base'?`Switch to “another unit” for a different voice.`
-                             :`Clear the unit below to filter by accent and class again.`)
+    ? tt('transfer.locked_the_copied_entry_goes_into',{accent:d.accent,cls:d.cls,name:d.name})
+      +tt('transfer.accent_voice_type_are_written_to')
+      +tt('transfer.generic_barks')
+      +(c.sound_mode==='base'?tt('transfer.switch_to_another_unit_for_a')
+                             :tt('transfer.clear_the_unit_below_to_filter'))
     : '';
   const donors=(ds.donors||[]).filter(x=>(!c.snd_accent||x.accent===c.snd_accent)
                                        &&(!c.snd_class||x['class']===c.snd_class));
   const acc=locked?d.accent:c.snd_accent, cls=locked?d.cls:c.snd_class;
-  const pick=(key,cur,vals,blank)=>`<select ${locked?`disabled title="${esc(why)}"`
-      :`onchange="cmpSndPick('${key}',this.value)"`}>
+  const pick=(key,cur,vals,blank)=>`<select ${locked?tt('transfer.disabled_title',{why:esc(why)})
+      :tt('transfer.onchange_cmpsndpick_this_value',{key})}>
     <option value="">${blank}</option>
     ${vals.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}</option>`).join('')}
     ${locked&&!vals.includes(cur)?`<option value="${esc(cur)}" selected>${esc(cur)}</option>`:''}</select>`;
   let body='';
   if(d.mode==='keep')
-    body=`<div class="count" style="margin-top:6px">“${esc(d.name)}” keeps the barks it already has,
-      the voice bank isn't touched. Pick “another unit” to give it a different voice.</div>`;
+    body=`<div class="count" style="margin-top:6px">${tt('transfer.keeps_the_barks_it_already_has',{name:esc(d.name)})}</div>`;
   else if(c.sound_mode==='none')
-    body=`<div class="count" style="margin-top:6px">No entry is written and
-      <code>accent</code> / <code>voice_type</code> stay as the source unit had them. The unit still
-      speaks. It just uses its class's generic barks.</div>`;
+    body=`<div class="count" style="margin-top:6px">${tt('transfer.no_entry_is_written_and_accent')}</div>`;
   else if(d.blocked==='nobase')
-    body=`<div class="count w-warn" style="margin-top:6px">No base unit picked yet, so there is no
-      voice to copy. Pick one above, or switch to “another unit”.</div>`;
+    body=`<div class="count w-warn" style="margin-top:6px">${tt('transfer.no_base_unit_picked_yet_so')}</div>`;
   else if(d.blocked==='silent')
-    body=`<div class="count w-warn" style="margin-top:6px">“${esc(d.name)}” has no barks of its own
-      in ${esc(state.dst)}, so there is nothing to copy. Pick another unit${
-      c.sound_mode==='base'?' for the voice':''}.</div>`;
+    body=`<div class="count w-warn" style="margin-top:6px">${tt('transfer.has_no_barks_of_its_own',{name:esc(d.name),dst:esc(state.dst),sound_mode:c.sound_mode==='base'?tt('transfer.for_the_voice'):''})}</div>`;
   else body=`<div class="sndpick">
-      <span class="count">Accent</span>${pick('snd_accent',acc,ds.accents||[],'Any')}
-      <span class="count">Class</span>${pick('snd_class',cls,ds.classes||[],'Any')}
-      ${locked?`<span class="lockicon" title="${esc(why)}">🔒 locked</span>`:
-        `<span class="count">These two just filter the list below</span>`}
+      ${tt('transfer.accent_class',{x:pick('snd_accent',acc,ds.accents||[],tt('transfer.any')),x2:pick('snd_class',cls,ds.classes||[],tt('transfer.any')),locked:locked?`<span class="lockicon" title="${esc(why)}">${tt('transfer.locked')}</span>`:
+        `<span class="count">${tt('transfer.these_two_just_filter_the_list')}</span>`})}
     </div>
     ${c.sound_mode==='unit'?`<div class="sndpick">
-      <span class="count">Sound from</span>
+      <span class="count">${tt('transfer.sound_from')}</span>
       <select onchange="cmpSndPick('sound_donor',this.value)" style="flex:1;max-width:340px">
-        <option value="">Pick a unit (${donors.length} with their own barks)</option>
+        <option value="">${tt('transfer.pick_a_unit_with_their_own',{donors_n:donors.length})}</option>
         ${donors.map(x=>`<option value="${esc(x.name)}" ${x.name===c.sound_donor?'selected':''}>${esc(x.name)} (${esc(x.accent)}/${esc(x['class'])})</option>`).join('')}
       </select>
-      ${c.sound_donor?`<button onclick="cmpSndPick('sound_donor','')" title="Unlock the accent and class filters.">✕</button>`:''}
+      ${c.sound_donor?`<button onclick="cmpSndPick('sound_donor','')" title="${ttA('transfer.unlock_the_accent_and_class_filters')}">✕</button>`:''}
     </div>`:''}
-    ${locked?`<div class="sndlocked count">🔒 <b>${esc(d.name)}</b>’s sounds are copied to
-      <b>${esc(c.new_type||u.type)}</b> in <b>${esc(d.accent)} / ${esc(d.cls)}</b>, with
-      <code>accent</code> and <code>voice_type</code> set to match. ${esc(why)}</div>`:''}`;
-  return `<fieldset><legend>Voice / sound</legend>
+    ${locked?`<div class="sndlocked count">${tt('transfer.s_sounds_are_copied_to_in',{name:esc(d.name),x:esc(c.new_type||u.type),accent:esc(d.accent),cls:esc(d.cls),why:esc(why)})}</div>`:''}`;
+  return `<fieldset><legend>${tt('transfer.voice_sound')}</legend>
     <div class="sndopt">
       ${isReplace(c)
-        ? radio('base',`Keep “${esc(c.base_type)}”’s own voice`,'the voice bank isn’t touched')
-        : radio('base','Use the base unit’s sound',
-              c.base_type?`copies “${esc(c.base_type)}”’s barks`:'no base unit picked yet')}
-      ${radio('unit','Use another unit’s sound',
-              isReplace(c)?'copy another unit’s barks over it'
-                          :'take the voice from a different unit')}
-      ${radio('none','Don’t import sound',isReplace(c)
-              ?'same as keeping it'
-              :'use the class’s generic barks')}
+        ? radio('base',tt('transfer.keep_s_own_voice',{base_type:esc(c.base_type)}),tt('transfer.the_voice_bank_isnt_touched'))
+        : radio('base',tt('transfer.use_the_base_units_sound'),
+              c.base_type?tt('transfer.copies_s_barks',{base_type:esc(c.base_type)}):tt('transfer.no_base_unit_picked_yet'))}
+      ${radio('unit',tt('transfer.use_another_units_sound'),
+              isReplace(c)?tt('transfer.copy_another_units_barks_over_it')
+                          :tt('transfer.take_the_voice_from_a_different'))}
+      ${radio('none',tt('transfer.dont_import_sound'),isReplace(c)
+              ?tt('transfer.same_as_keeping_it')
+              :tt('transfer.use_the_classs_generic_barks'))}
     </div>${body}</fieldset>`;
 }
 function cmpSndPick(key,value){
@@ -845,7 +807,7 @@ function switchUnit(t){state.editing=t;renderComposer();}
 const destFacLabel=f=>facTwoNames(f,(state.destData?.faction_names||{})[f]);
 function renderBaseList(){
   const u=state.data.units.find(x=>x.type===state.editing); const c=cfgFor(state.editing);
-  const dd=state.destData; if(!dd){baseList.innerHTML='<div class="count" style="padding:8px">Loading destination…</div>';return;}
+  const dd=state.destData; if(!dd){baseList.innerHTML=`<div class="count" style="padding:8px">${tt('transfer.loading_destination')}</div>`;return;}
   const rawQ=document.getElementById('baseSearch')?.value||'';
   c.base_q=rawQ;                       // survive composer re-renders
   const qq=rawQ.toLowerCase();
@@ -856,7 +818,7 @@ function renderBaseList(){
   // populate the faction filter with the factions that actually own a candidate
   if(facSel&&facSel.options.length<=1){
     const facs=[...new Set(sameCat.flatMap(x=>x.ownership))].sort((a,b)=>destFacLabel(a).localeCompare(destFacLabel(b)));
-    facSel.innerHTML='<option value="">All factions</option>'+
+    facSel.innerHTML=`<option value="">${tt('common.all_factions')}</option>`+
       facs.map(f=>`<option value="${esc(f)}">${esc(destFacLabel(f))}</option>`).join('');
     if(c.base_fac)facSel.value=c.base_fac;
   }
@@ -865,7 +827,7 @@ function renderBaseList(){
     && (!qq||x.name.toLowerCase().includes(qq)||x.type.toLowerCase().includes(qq))).slice(0,120);
   baseList.innerHTML=cands.map(x=>`<div class="baserow ${x.type===c.base_type?'sel':''}" onclick="pickBase('${q1(esc(x.type))}')">
     <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.dst,x.type)}"><div><div class="bn">${esc(x.name)}</div><div class="bs">${esc(x.type)}</div></div></div>`).join('')
-    ||`<div class="count" style="padding:8px">No ${esc(u.kind||u.category||'')} units in destination match. The ${esc(donorRole(c))} must be the same unit type.</div>`;
+    ||`<div class="count" style="padding:8px">${tt('transfer.no_units_in_destination_match_the',{x:esc(u.kind||u.category||''),donorRole:esc(donorRole(c))})}</div>`;
 }
 function pickBase(t){const c=cfgFor(state.editing);c.base_type=t;
   // full re-render: the soldier toggle and the "using base's" hints only become
@@ -919,7 +881,7 @@ async function loadFields(type){
 // Any value changed from its original becomes a field override.
 function renderAllFields(type){
   const c=cfgFor(type); const box=document.getElementById('allFields'); if(!box)return;
-  if(!c._fields.length){box.innerHTML='<div class="count" style="padding:6px">No editable fields.</div>';updateFieldChanged();return;}
+  if(!c._fields.length){box.innerHTML=`<div class="count" style="padding:6px">${tt('transfer.no_editable_fields')}</div>`;updateFieldChanged();return;}
   if(gfMode()==='guided'){
     const host=gfHostComposer();
     box.classList.add('guided'); box.innerHTML=gfRender(host); gfWire(host);
@@ -933,9 +895,9 @@ function renderAllFields(type){
   // the donor's and locked, with the same explanation as the voice panel's 🔒.
   const snd=soundDonor(c), sndLock=snd.accent
     ? {vals:{accent:snd.accent,voice_type:snd.cls},
-       why:`Locked by the voice panel. “${snd.name}”’s sounds are copied into `
-          +`${snd.accent} / ${snd.cls}, and these two fields are what point the game at `
-          +`that block. Choose “Don’t import sound” to edit them yourself.`}
+       why:tt('transfer.locked_by_the_voice_panel_s',{name:snd.name})
+          +tt('transfer.and_these_two_fields_are_what',{accent:snd.accent,cls:snd.cls})
+          +tt('transfer.that_block_choose_dont_import_sound')}
     : null;
   // A unit that has no `accent` line at all still GETS one when a voice is copied
   // (the game can't find the block without it), so show that row rather than
@@ -948,9 +910,9 @@ function renderAllFields(type){
   const rb=baseUnitOf(c);
   const idLock=(isReplace(c)&&rb)
     ? {vals:{type:rb.type,dictionary:rb.dictionary},
-       why:`Locked. This transfer rewrites “${rb.type}” in place, so it keeps its own `
-          +`type and dictionary. Those two are what tie it to its name, description `
-          +`and icons; change them and you have renamed the unit instead of replacing it.`}
+       why:tt('transfer.locked_this_transfer_rewrites_in_place',{type:rb.type})
+          +tt('transfer.type_and_dictionary_those_two_are')
+          +tt('transfer.and_icons_change_them_and_you')}
     : null;
   // both locks in one lookup, most specific first
   const lockFor=key=>(idLock&&(key in idLock.vals))?{val:idLock.vals[key],why:idLock.why}
@@ -974,8 +936,8 @@ function renderAllFields(type){
     const changed=!lk&&(label in c.field_overrides)&&c.field_overrides[label]!==c._orig[label];
     const isInh=inh.has(key);
     const why=lk?lk.why
-      :isInh?`${isReplace(c)?'Kept from':'Inherited from the base unit'} ${c.base_type}.`
-      :dup?'This field appears more than once in the unit. Edit this one in the EDU directly.'
+      :isInh?`${isReplace(c)?tt('transfer.kept_from'):tt('transfer.inherited_from_the_base_unit')} ${c.base_type}.`
+      :dup?tt('transfer.this_field_appears_more_than_once')
       :(GF_FIELDS[key]&&GF_FIELDS[key].t?GF_FIELDS[key].t+'. '+gfPlainDoc(key):'');
     return `<div class="afrow${dup?' dup':''}" data-label="${esc(label)}">
       <label>${qm(why,label)}${esc(label)}${
@@ -1009,16 +971,15 @@ function baseBadge(c,label,cur){
     // different (hollow, dashed) and says why on the line: a B that simply does
     // nothing when clicked reads as a broken button.
     const why=src===undefined
-      ? `only ${esc(c.base_type)} has this line`
-      : `both units have the same value`;
-    return `<span class="ibadge fixed" title="${rep?'Kept from':'From'} ${esc(c.base_type)}.
-Not switchable: ${why}.">B</span><span class="bwhy">${why}</span>`;
+      ? tt('transfer.only_has_this_line',{base_type:esc(c.base_type)})
+      : tt('transfer.both_units_have_the_same_value');
+    return `<span class="ibadge fixed" title="${ttA('transfer.not_switchable',{rep:rep?tt('transfer.kept_from'):tt('common.from'),base_type:esc(c.base_type),why})}">B</span><span class="bwhy">${why}</span>`;
   }
   const on=cur===c._orig[label];
   return `<button type="button" class="ibadge${on?'':' off'}" data-b="${esc(label)}"
     onclick="toggleBaseField('${q1(esc(label))}')"
-    title="${on?`${rep?'Keeping':'Using'} ${esc(c.base_type)}'s value. Click to ${rep?'import':'keep'} ${esc(state.editing)}'s own (${esc(src)}).`
-              :`${rep?'Imported from':'Using'} ${esc(state.editing)}${rep?'':"'s own value"}. Click to go back to ${esc(c.base_type)}'s (${esc(c._orig[label])}).`}">B</button>`;
+    title="${on?tt('transfer.s_value_click_to_s_own',{rep:rep?tt('transfer.keeping'):tt('transfer.using'),base_type:esc(c.base_type),rep2:rep?'import':'keep',editing:esc(state.editing),src:esc(src)})
+              :tt('transfer.click_to_go_back_to_s',{rep:rep?tt('transfer.imported_from'):tt('transfer.using'),editing:esc(state.editing),rep2:rep?'':tt('transfer.s_own_value'),base_type:esc(c.base_type),x:esc(c._orig[label])})}">B</button>`;
 }
 function toggleBaseField(label){
   const c=cfgFor(state.editing);
@@ -1069,22 +1030,21 @@ const clearBinOn=()=>(state.settings||{}).clear_strings_bin!==false;
 // for anything unit-shaped, export_buildings.txt for a building rename.
 function cleanerBoxHtml(what){
   const kind=what||'unit';
-  return `<label class="chk cleanerbox" style="margin-right:auto" title="Deletes data/text/export_${kind}s.txt.strings.bin in the mod being written to. That is the compiled copy of export_${kind}s.txt; until it is gone the game keeps showing the OLD ${kind} text. It is rebuilt on the next launch. This is a setting, so it applies to every transfer, save, voice change and cleanup.">
+  return `<label class="chk cleanerbox" style="margin-right:auto" title="${ttA('transfer.deletes_data_text_export_s_txt',{kind,kind2:kind,kind3:kind})}">
     <input type="checkbox" ${clearBinOn()?'checked':''} onchange="setClearBin(this.checked)">
-    Clear the <b>${kind}-text cache</b> afterwards
-    <span class="count">A setting, so it applies to every job</span></label>`;
+    ${tt('transfer.clear_the_text_cache_afterwards_a',{kind})}</label>`;
 }
 async function setClearBin(on){
   state.settings=await api.post('/api/settings',{clear_strings_bin:on});
-  toast(on?'Unit-text cache will be cleared after every job.'
-          :'Unit-text cache left alone, so new unit text may not show in game.');
+  toast(on?tt('transfer.unit_text_cache_will_be_cleared')
+          :tt('transfer.unit_text_cache_left_alone_so'));
 }
 // what a job's response says about the clear, appended to its toast
 function binMsg(r){
   const b=r&&r.strings_bin; if(!b)return '';
-  if(b.deleted)return '  · unit-text cache cleared';
+  if(b.deleted)return tt('transfer.unit_text_cache_cleared');
   if(b.missing)return '';           // nothing was there, so not worth a mention
-  return `  · cache not cleared: ${b.error||'?'}`;
+  return tt('transfer.cache_not_cleared',{error:b.error||'?'});
 }
 
 // per-model checkboxes for a secondary group (officers / crew), so models can be
@@ -1101,12 +1061,11 @@ function binMsg(r){
 function modelsFieldset(type){
   const c=cfgFor(type);
   const list=unitModels(type);
-  if(list===undefined) return `<fieldset><legend>Battle-model entries</legend>
-    <div class="count">Reading “${esc(type)}”’s models…</div></fieldset>`;
+  if(list===undefined) return `<fieldset><legend>${tt('transfer.battle_model_entries')}</legend>
+    <div class="count">${tt('transfer.reading_s_models',{type:esc(type)})}</div></fieldset>`;
   if(list===null) return `<fieldset style="border-color:var(--warn)">
-    <legend class="w-warn">Battle-model entries</legend>
-    <div class="count">Couldn’t read this unit’s battle models. Close the dialog and
-      open the transfer again.</div></fieldset>`;
+    <legend class="w-warn">${tt('transfer.battle_model_entries')}</legend>
+    <div class="count">${tt('transfer.couldnt_read_this_units_battle_models')}</div></fieldset>`;
   const on=new Set(importedModels(c,list).map(s=>s.toLowerCase()));
   const usable=list.filter(m=>m.found);
   const picked=usable.filter(m=>on.has(m.name.toLowerCase())).length;
@@ -1116,29 +1075,23 @@ function modelsFieldset(type){
       <label class="chk"><input type="checkbox" ${lit?'checked':''} ${m.found?'':'disabled'}
         onchange="toggleImportModel('${q1(esc(m.name))}',this.checked)"> <b>${esc(m.name)}</b></label>
       <span class="pill">${esc(MODEL_SLOT[m.slot]||m.slot)}</span>
-      ${m.found?`<div class="count">${m.meshes} mesh${m.meshes===1?'':'es'},
-          ${m.textures} texture${m.textures===1?'':'s'}${
-          m.missing?` · <b class="w-warn">${m.missing} file(s) not on disk</b>`:''}${
-          m.skeletons.length?` · animates as ${m.skeletons.map(s=>`<code>${esc(s)}</code>`).join(', ')}`:''}</div>
+      ${m.found?`<div class="count">${tt('transfer.mesh_texture',{meshes:m.meshes,meshes2:m.meshes===1?'':'es',textures:m.textures,textures2:m.textures===1?'':'s',missing:m.missing?` ${tt('transfer.file_s_not_on_disk',{missing:m.missing})}`:'',x:m.skeletons.length?tt('transfer.animates_as',{skeletons:m.skeletons.map(s=>`<code>${esc(s)}</code>`).join(', ')}):''})}</div>
         <div class="mdlfolders">${m.folders.map(f=>`<span class="path">${esc(f)}/</span>`).join('')}</div>`
-        :`<div class="count w-warn">Named by the unit, but ${esc(state.src)}’s
-          battle_models.modeldb has no such entry - nothing to import.</div>`}
+        :`<div class="count w-warn">${tt('transfer.named_by_the_unit_but_s',{src:esc(state.src)})}</div>`}
     </div>`;}).join('');
-  return `<fieldset><legend>Battle-model entries to import</legend>
+  return `<fieldset><legend>${tt('transfer.battle_model_entries_to_import')}</legend>
     <div class="count">${docPoints(
-      `Every entry “${esc(type)}” is drawn from, and the folder each one’s files live in.`,[
-      'Each one brings its <code>battle_models.modeldb</code> record and the meshes / textures it names.',
-      `<b>No unit is created.</b> ${esc(state.dst)} gets the models and nothing else - no entry in
-       export_descr_unit.txt, no name, no cards, no stats.`,
-      'Where the files land is <b>Textures / meshes</b>, below.'])}</div>
+      tt('transfer.every_entry_is_drawn_from_and',{type:esc(type)}),[
+      tt('transfer.each_one_brings_its_battle_models'),
+      tt('transfer.no_unit_is_created_gets_the',{dst:esc(state.dst)}),
+      tt('transfer.where_the_files_land_is_textures')])}</div>
     <div class="mdlbar">
-      <button onclick="allImportModels(true)">Tick all</button>
-      <button onclick="allImportModels(false)">Untick all</button>
-      <span class="count">${picked} of ${usable.length} entr${usable.length===1?'y':'ies'}</span>
+      <button onclick="allImportModels(true)">${tt('transfer.tick_all')}</button>
+      <button onclick="allImportModels(false)">${tt('transfer.untick_all')}</button>
+      <span class="count">${tt('transfer.of_entr',{picked,usable_n:usable.length,usable:usable.length===1?'y':'ies'})}</span>
     </div>
     <div class="mdllist">${rows}</div>
-    ${picked?'':`<div class="count w-warn" style="margin-top:6px">Tick at least one entry
-      before applying.</div>`}</fieldset>`;
+    ${picked?'':`<div class="count w-warn" style="margin-top:6px">${tt('transfer.tick_at_least_one_entry_before')}</div>`}</fieldset>`;
 }
 function modelChecks(models,groupOn,c){
   const ex=new Set((c.exclude_models||[]).map(s=>s.toLowerCase()));
@@ -1262,9 +1215,8 @@ const modIsM2ex=mod=>!!((state.mods||[]).find(m=>m.name===mod)||{}).m2ex;
    normally replaced by a placeholder. An M2EX destination has no such table, so
    the ones the source actually defines are carried across instead. */
 const projEffects=()=>modIsM2ex(state.dst)
-  ? `→ added to descr_projectile.txt; its effect sets come too, where
-     ${esc(state.src)} defines them (${esc(state.dst)} is marked M2EX)`
-  : '→ added to descr_projectile.txt, effects blanked';
+  ? tt('transfer.added_to_descr_projectile_txt_its',{src:esc(state.src),dst:esc(state.dst)})
+  : tt('transfer.added_to_descr_projectile_txt_effects');
 const limitIgnored=mod=>modIsM2ex(mod)
   ||(state.settings.unit_limit_ignored||[]).includes(mod);
 function unitLimitBanner(){
@@ -1274,16 +1226,12 @@ function unitLimitBanner(){
   const dd=state.destData||{};
   const hasEop=((dd.eop_dirs||[]).length>0);
   return `<div class="limitwarn">
-    <b>⚠ Vanilla unit limit exceeded.</b>
-    “${esc(state.dst)}” ${now?`already has ${p.current}`:`will have ${p.projected}`} units in
-    export_descr_unit.txt
-    (vanilla M2TW caps at ${VANILLA_UNIT_LIMIT}${p.add?`; this transfer adds ${p.add}`:''}).
-    ${p.eop?`<div class="sub">Its ${p.eop} M2TWEOP unit${p.eop===1?'':'s'} don't count, because they load from the extender.${p.eopAdd?` This transfer adds ${p.eopAdd} more.`:''}</div>`:''}
-    <div class="sub">Past ${VANILLA_UNIT_LIMIT}, unmodified M2TW crashes. With M2TWEOP / EOP it's fine.</div>
+    ${tt('transfer.vanilla_unit_limit_exceeded_units_in',{dst:esc(state.dst),now:now?tt('transfer.already_has',{current:p.current}):tt('transfer.will_have',{projected:p.projected}),VANILLA_UNIT_LIMIT,add:p.add?tt('transfer.this_transfer_adds',{add:p.add}):'',x:p.eop?`<div class="sub">${tt('transfer.its_m2tweop_unit_dont_count_because',{eop:p.eop,eop2:p.eop===1?'':'s',eopAdd:p.eopAdd?tt('transfer.this_transfer_adds_more',{eopAdd:p.eopAdd}):''})}</div>`:''})}
+    <div class="sub">${tt('transfer.past_unmodified_m2tw_crashes_with_m2tweop',{VANILLA_UNIT_LIMIT})}</div>
     <div class="acts">
-      ${hasEop?`<button onclick="allToEop()">Write these as M2TWEOP units instead</button>`:''}
-      <button onclick="ignoreLimit()">Ignore for “${esc(state.dst)}” (using m2ex/eop)</button>
-      <span class="count">${hasEop?'':'Set the mod’s EOP folder in ⚙ Settings to use the first option. '}Re-enable in ⚙ Settings.</span>
+      ${hasEop?`<button onclick="allToEop()">${tt('transfer.write_these_as_m2tweop_units_instead')}</button>`:''}
+      <button onclick="ignoreLimit()">${tt('transfer.ignore_for_using_m2ex_eop',{dst:esc(state.dst)})}</button>
+      <span class="count">${tt('transfer.re_enable_in_settings',{hasEop:hasEop?'':tt('transfer.set_the_mods_eop_folder_in')})}</span>
     </div></div>`;
 }
 /* Flip every unit in the composer to "write as an M2TWEOP unit" - the one-click
@@ -1292,36 +1240,36 @@ function unitLimitBanner(){
 function allToEop(){
   for(const t of composerList) cfgFor(t).eop_target='eop';
   renderComposer();
-  toast(`${composerList.length} unit(s) will be written as M2TWEOP unit files.`);
+  toast(tt('transfer.unit_s_will_be_written_as',{composerList_n:composerList.length}));
 }
 async function ignoreLimit(){
   const cur=(state.settings.unit_limit_ignored||[]).slice();
   if(!cur.includes(state.dst)) cur.push(state.dst);
   state.settings=await api.post('/api/settings',{unit_limit_ignored:cur});
   renderComposer();
-  toast(`Unit-limit warning ignored for “${state.dst}”.`);
+  toast(tt('transfer.unit_limit_warning_ignored_for',{dst:state.dst}));
 }
 async function saveConsole(){
   const on=document.getElementById('consoleChk').checked;
   state.settings=await api.post('/api/settings',{show_console:on});
-  toast(on?'Console will show on the next launch.':'Console hidden from the next launch.');}
+  toast(on?tt('transfer.console_will_show_on_the_next'):tt('transfer.console_hidden_from_the_next_launch'));}
 async function quitServer(){
-  if(!confirm('Stop the Medieval 2 GUI Toolkit server?\n\nThe page will stop working until you launch it again.'))return;
+  if(!confirm(tt('transfer.stop_the_medieval_2_gui_toolkit')))return;
   try{await api.post('/api/quit',{});}catch(e){}
-  document.body.innerHTML='<div class="empty" style="padding:60px">Medieval 2 GUI Toolkit server stopped.<br>'
-    +'<span class="count">Run Launch-Medieval2-GUI-Toolkit.bat to start it again.</span></div>';}
+  document.body.innerHTML=`<div class="empty" style="padding:60px">${tt('transfer.medieval_2_gui_toolkit_server_stopped')}<br>`
+    +`<span class="count">${tt('transfer.run_launch_medieval2_gui_toolkit_bat')}</span></div>`;}
 /* Restart the tool in place, so a setting the server only reads at startup
    ("Keep the console window open") can be applied without going back to the
    launcher. The server answers, lets go of the port, starts a replacement on the
    same address and ends itself; this page waits for the new one and reloads. */
 async function restartServer(){
   const want=!!(document.getElementById('consoleChk')||{}).checked;
-  if(!confirm(`Restart the toolkit now?\n\nIt comes back on the same address, `+
-    `${want?'with':'without'} a console window. Anything you have open but unsaved is lost.`))return;
+  if(!confirm(tt('transfer.restart_the_toolkit_now_it_comes')+
+    tt('transfer.a_console_window_anything_you_have',{want:want?'with':'without'})))return;
   const m=document.getElementById('modal');
   m.className='modal';
-  m.innerHTML=`<h2>Restarting…</h2><div class="mbody"><div class="count">
-    Waiting for the toolkit to come back on this address. This page reloads by itself.</div></div>`;
+  m.innerHTML=`<h2>${tt('transfer.restarting')}</h2><div class="mbody"><div class="count">
+    ${tt('transfer.waiting_for_the_toolkit_to_come')}</div></div>`;
   overlay.classList.add('open');
   try{await api.post('/api/restart',{console:want});}catch(e){}
   // The old server stops answering the moment it hands the port over, so this
@@ -1333,12 +1281,12 @@ async function restartServer(){
       if(p.ok){location.reload();return;}
     }catch(e){}
     if(Date.now()-t0>45000){
-      m.innerHTML=`<h2>It has not come back</h2><div class="mbody"><div class="trnote w-warn">${docPoints(
-        'The replacement server has not answered in 45 seconds.',
-        ['If a console window opened, the reason will be in it.',
-         'Otherwise start the tool again with Launch-Medieval2-GUI-Toolkit.bat.',
-         'Nothing was written to your mods. A restart only touches this tool.'])}</div></div>
-        <div class="foot"><button class="primary" onclick="location.reload()">Try this page again</button></div>`;
+      m.innerHTML=`<h2>${tt('transfer.it_has_not_come_back')}</h2><div class="mbody"><div class="trnote w-warn">${docPoints(
+        tt('transfer.the_replacement_server_has_not_answered'),
+        [tt('transfer.if_a_console_window_opened_the'),
+         tt('transfer.otherwise_start_the_tool_again_with'),
+         tt('transfer.nothing_was_written_to_your_mods')])}</div></div>
+        <div class="foot"><button class="primary" onclick="location.reload()">${tt('transfer.try_this_page_again')}</button></div>`;
       return;
     }
     setTimeout(tick,700);
@@ -1352,17 +1300,17 @@ function downloadDiag(){
   const a=document.createElement('a');
   a.href='/api/diag'; a.download='';
   document.body.appendChild(a); a.click(); a.remove();
-  toast('Diagnostic log saved to your Downloads folder.');}
+  toast(tt('transfer.diagnostic_log_saved_to_your_downloads'));}
 async function saveClearBin(){
   await setClearBin(document.getElementById('clearBinChk').checked);}
 async function saveSoldierBase(){
   const on=document.getElementById('soldierBaseChk').checked;
   state.settings=await api.post('/api/settings',{soldier_from_base:on});
-  toast(on?'New base picks will default the soldier to the base.':'Soldier defaults to the source unit.');}
+  toast(on?tt('transfer.new_base_picks_will_default_the'):tt('transfer.soldier_defaults_to_the_source_unit'));}
 async function reenableLimit(mod){
   const cur=(state.settings.unit_limit_ignored||[]).filter(m=>m!==mod);
   state.settings=await api.post('/api/settings',{unit_limit_ignored:cur});
-  toast(`Unit-limit warning re-enabled for “${mod}”.`); openSettings();
+  toast(tt('transfer.unit_limit_warning_re_enabled_for',{mod})); openSettings();
 }
 
 /* ---------- asset (texture/mesh) conflict resolver ---------- */
@@ -1385,79 +1333,75 @@ function assetConflictUI(type,r){
   if(aConf.length||reloc){
     const warn=aDiff.length&&!reloc;
     html+=`<fieldset class="assetconf" ${warn?'':'style="border-color:var(--edge)"'}>
-      <legend class="${warn?'w-warn':''}">Textures / meshes</legend>
+      <legend class="${warn?'w-warn':''}">${tt('transfer.textures_meshes')}</legend>
       <div class="count">${docPoints(
-        `${aConf.length} file(s) already exist at the same path.`,[
-        `<b class="w-good">${aIdent.length}</b> identical, so they are reused.`,
-        `<b class="${aDiff.length?'w-warn':''}">${aDiff.length}</b> differ.`,
-        r.reroute_dir?`<span class="w-good">Relocating ${r.relocated_count} file(s) →
-          <code>${esc(r.reroute_dir)}/</code>, so those have no conflict.</span>`:''])}</div>
+        tt('transfer.file_s_already_exist_at_the',{aConf_n:aConf.length}),[
+        `<b class="w-good">${aIdent.length}</b> ${tt('transfer.identical_so_they_are_reused')}`,
+        `<b class="${aDiff.length?'w-warn':''}">${aDiff.length}</b> ${tt('transfer.differ')}`,
+        r.reroute_dir?`<span class="w-good">${tt('transfer.relocating_file_s_so_those_have',{relocated_count:r.relocated_count,reroute_dir:esc(r.reroute_dir)})}</span>`:''])}</div>
       <div class="radio-row" style="margin-top:6px">
-        <label><input type="radio" name="ac" value="mod_folder" ${c.asset_conflict==='mod_folder'?'checked':''}> Own folder: <code>${esc(modFolderName())}/</code> <b class="w-good">(default)</b></label>
-        <label><input type="radio" name="ac" value="reroute" ${c.asset_conflict==='reroute'?'checked':''}> Reroute: choose a folder under <code>unit_models/</code></label>
-        <label><input type="radio" name="ac" value="use_existing" ${c.asset_conflict==='use_existing'?'checked':''}> Keep the destination’s files</label>
-        <label><input type="radio" name="ac" value="overwrite" ${c.asset_conflict==='overwrite'?'checked':''}> Overwrite with the source’s (backed up, undoable)</label>
+        <label><input type="radio" name="ac" value="mod_folder" ${c.asset_conflict==='mod_folder'?'checked':''}> ${tt('transfer.own_folder_default',{modFolderName:esc(modFolderName())})}</label>
+        <label><input type="radio" name="ac" value="reroute" ${c.asset_conflict==='reroute'?'checked':''}> ${tt('transfer.reroute_choose_a_folder_under_unit')}</label>
+        <label><input type="radio" name="ac" value="use_existing" ${c.asset_conflict==='use_existing'?'checked':''}> ${tt('transfer.keep_the_destinations_files')}</label>
+        <label><input type="radio" name="ac" value="overwrite" ${c.asset_conflict==='overwrite'?'checked':''}> ${tt('transfer.overwrite_with_the_sources_backed_up')}</label>
       </div>
       <div id="rerouteBox" style="${c.asset_conflict==='reroute'?'':'display:none'};margin-top:8px">
         <div class="brbar">
           <input id="rrPath" value="${esc(c.asset_reroute_dir||'')}" placeholder="unit_models/MyFolder">
-          <button onclick="brToggle()">Browse…</button>
+          <button onclick="brToggle()">${tt('common.browse')}</button>
         </div>
         <div id="brBox" style="${state.brOpen?'':'display:none'}">
           <div class="brbar" style="margin-top:6px">
-            <button onclick="brUp()">↑ Up</button><span class="count" id="brNow"></span>
+            <button onclick="brUp()">${tt('transfer.up')}</button><span class="count" id="brNow"></span>
           </div>
           <div class="brlist" id="brList"></div>
           <div class="brbar" style="margin-top:6px">
-            <input id="brNew" placeholder="new sub-folder name">
-            <button onclick="brMakeSub()">Use new sub-folder</button>
+            <input id="brNew" placeholder="${ttA('transfer.new_sub_folder_name')}">
+            <button onclick="brMakeSub()">${tt('transfer.use_new_sub_folder')}</button>
           </div>
         </div>
       </div>
-      ${reloc?`<div class="count" style="margin-top:6px">Files keep their folder structure, and the new modeldb entries point at the new paths.</div>`:''}
-      ${aDiff.length&&!reloc?`<div class="flist">${aDiff.map(x=>`<div class="frow"><span class="fp">${esc(x.rel)}</span><span class="fs">src ${x.src_size}B vs dest ${x.dst_size}B${x.src_size===x.dst_size?' (same size, different bytes)':''}</span></div>`).join('')}</div>`:''}
+      ${reloc?`<div class="count" style="margin-top:6px">${tt('transfer.files_keep_their_folder_structure_and')}</div>`:''}
+      ${aDiff.length&&!reloc?`<div class="flist">${aDiff.map(x=>`<div class="frow"><span class="fp">${esc(x.rel)}</span><span class="fs">${tt('transfer.src_b_vs_dest_b',{src_size:x.src_size,dst_size:x.dst_size,x:x.src_size===x.dst_size?tt('transfer.same_size_different_bytes'):''})}</span></div>`).join('')}</div>`:''}
     </fieldset>`;
   }
   // --- icons: located by faction folder + dictionary, so they can't be relocated
   if(iConf.length){
     html+=`<fieldset class="assetconf" ${iDiff.length?'':'style="border-color:var(--edge)"'}>
-      <legend class="${iDiff.length?'w-warn':''}">Unit card / info icons</legend>
-      <div class="count">${docPoints(`${iConf.length} icon(s) already exist.`,[
-        `<b class="w-good">${iConf.length-iDiff.length}</b> identical,
-         <b class="${iDiff.length?'w-warn':''}">${iDiff.length}</b> differ.`,
-        `Icons are found by faction folder + name, so they can't be rerouted.`,
-        r.replace_type?`To import a card over <b>${esc(r.replace_type)}</b>'s, pick overwrite.`:''
+      <legend class="${iDiff.length?'w-warn':''}">${tt('transfer.unit_card_info_icons')}</legend>
+      <div class="count">${docPoints(tt('transfer.icon_s_already_exist',{iConf_n:iConf.length}),[
+        `<b class="w-good">${iConf.length-iDiff.length}</b> ${tt('transfer.identical_differ',{iDiff:iDiff.length?'w-warn':'',iDiff_n:iDiff.length})}`,
+        tt('transfer.icons_are_found_by_faction_folder'),
+        r.replace_type?tt('transfer.to_import_a_card_over_s',{replace_type:esc(r.replace_type)}):''
         ])}</div>
       ${iDiff.length?`<div class="radio-row" style="margin-top:6px">
-        <label><input type="radio" name="ic" value="use_existing" ${c.icon_conflict!=='overwrite'?'checked':''}> Keep the existing icon</label>
-        <label><input type="radio" name="ic" value="overwrite" ${c.icon_conflict==='overwrite'?'checked':''}> Overwrite with the source’s</label>
+        <label><input type="radio" name="ic" value="use_existing" ${c.icon_conflict!=='overwrite'?'checked':''}> ${tt('transfer.keep_the_existing_icon')}</label>
+        <label><input type="radio" name="ic" value="overwrite" ${c.icon_conflict==='overwrite'?'checked':''}> ${tt('transfer.overwrite_with_the_sources')}</label>
       </div>
-      <div class="flist">${iDiff.map(x=>`<div class="frow"><span class="fp">${esc(x.rel)}</span><span class="fs">src ${x.src_size}B vs dest ${x.dst_size}B</span></div>`).join('')}</div>`:''}
+      <div class="flist">${iDiff.map(x=>`<div class="frow"><span class="fp">${esc(x.rel)}</span><span class="fs">${tt('transfer.src_b_vs_dest_b_2',{src_size:x.src_size,dst_size:x.dst_size})}</span></div>`).join('')}</div>`:''}
     </fieldset>`;
   }
   // --- siege-engine files: texture paths are baked into each mesh, so no relocation
   if(eConf.length){
     html+=`<fieldset class="assetconf" ${eDiff.length?'':'style="border-color:var(--edge)"'}>
-      <legend class="${eDiff.length?'w-warn':''}">Siege-engine files</legend>
-      <div class="count">${docPoints(`${eConf.length} engine file(s) already exist.`,[
-        `<b class="w-good">${eConf.length-eDiff.length}</b> identical,
-         <b class="${eDiff.length?'w-warn':''}">${eDiff.length}</b> differ.`,
-        `Each mesh has its texture paths baked in, so they can't be relocated.`])}</div>
+      <legend class="${eDiff.length?'w-warn':''}">${tt('transfer.siege_engine_files')}</legend>
+      <div class="count">${docPoints(tt('transfer.engine_file_s_already_exist',{eConf_n:eConf.length}),[
+        `<b class="w-good">${eConf.length-eDiff.length}</b> ${tt('transfer.identical_differ_2',{eDiff:eDiff.length?'w-warn':'',eDiff_n:eDiff.length})}`,
+        tt('transfer.each_mesh_has_its_texture_paths')])}</div>
       ${eDiff.length?`<div class="radio-row" style="margin-top:6px">
-        <label><input type="radio" name="ec" value="use_existing" ${c.engine_conflict!=='overwrite'?'checked':''}> Keep the destination’s <b class="w-good">(default)</b>. The imported engine may wear its skin.</label>
-        <label><input type="radio" name="ec" value="overwrite" ${c.engine_conflict==='overwrite'?'checked':''}> Overwrite, which also re-skins ${esc(state.dst)}’s own engines</label>
+        <label><input type="radio" name="ec" value="use_existing" ${c.engine_conflict!=='overwrite'?'checked':''}> ${tt('transfer.keep_the_destinations_default_the_imported')}</label>
+        <label><input type="radio" name="ec" value="overwrite" ${c.engine_conflict==='overwrite'?'checked':''}> ${tt('transfer.overwrite_which_also_re_skins_s',{dst:esc(state.dst)})}</label>
       </div>
-      <div class="flist">${eDiff.map(x=>`<div class="frow"><span class="fp">${esc(x.rel)}</span><span class="fs">src ${x.src_size}B vs dest ${x.dst_size}B</span></div>`).join('')}</div>`:''}
+      <div class="flist">${eDiff.map(x=>`<div class="frow"><span class="fp">${esc(x.rel)}</span><span class="fs">${tt('transfer.src_b_vs_dest_b_2',{src_size:x.src_size,dst_size:x.dst_size})}</span></div>`).join('')}</div>`:''}
     </fieldset>`;
   }
   // --- vanilla files the engine needs that the DESTINATION overrides
   const ovr=r.engine_dest_overrides||[];
   if(ovr.length){
-    html+=`<fieldset class="assetconf"><legend class="w-warn">Engine override warning</legend>
-      <div class="count">${docPoints(`${ovr.length} vanilla file(s) the engine uses are overridden
-        by ${esc(state.dst)} but not by ${esc(state.src)}.`,[
-        `Nothing is copied: ${esc(state.dst)}’s version wins and may not match.`,
-        'Check these by hand:'])}</div>
+    html+=`<fieldset class="assetconf"><legend class="w-warn">${tt('transfer.engine_override_warning')}</legend>
+      <div class="count">${docPoints(tt('transfer.vanilla_file_s_the_engine_uses',{ovr_n:ovr.length,dst:esc(state.dst),src:esc(state.src)}),[
+        tt('transfer.nothing_is_copied_s_version_wins',{dst:esc(state.dst)}),
+        tt('transfer.check_these_by_hand')])}</div>
       <div class="flist">${ovr.map(p=>`<div class="frow"><span class="fp">${esc(p)}</span></div>`).join('')}</div>
     </fieldset>`;
   }
@@ -1466,8 +1410,8 @@ function assetConflictUI(type,r){
   if(skel.length){
     const kept=skel.filter(x=>x.action==='reuse');
     html+=`<fieldset class="assetconf" ${kept.length?'':'style="border-color:var(--edge)"'}>
-      <legend class="${skel.some(x=>x.action==='vanilla')?'w-warn':''}">Engine skeletons (<code>descr_engine_skeleton.txt</code>)</legend>
-      <div class="count">An entry ${esc(state.dst)} already has is reused as-is, never overwritten.</div>
+      <legend class="${skel.some(x=>x.action==='vanilla')?'w-warn':''}">${tt('transfer.engine_skeletons_descr_engine_skeleton_txt')}</legend>
+      <div class="count">${tt('transfer.an_entry_already_has_is_reused',{dst:esc(state.dst)})}</div>
       <div class="flist">${skel.map(x=>`<div class="frow"><span class="fp">${esc(x.name)}</span><span class="fs ${
         x.action==='vanilla'?'w-warn':x.action==='add'?'w-good':''}">${esc(x.action)}: ${esc(x.detail)}</span></div>`).join('')}</div>
     </fieldset>`;
@@ -1495,7 +1439,7 @@ async function brLoad(path){
   const now=document.getElementById('brNow'); if(now)now.textContent=r.path+'/';
   const list=document.getElementById('brList'); if(!list)return;
   list.innerHTML=(r.dirs||[]).map(d=>`<div class="brrow" onclick="brEnter('${q1(esc(d))}')">📁 ${esc(d)}</div>`).join('')
-    ||'<div class="count" style="padding:6px">(no sub-folders here)</div>';
+    ||`<div class="count" style="padding:6px">${tt('transfer.no_sub_folders_here')}</div>`;
   brSetPath(r.path);
 }
 function brSetPath(p){const rr=document.getElementById('rrPath');
@@ -1503,18 +1447,17 @@ function brSetPath(p){const rr=document.getElementById('rrPath');
 function brEnter(name){brLoad((state.brPath||'unit_models')+'/'+name);}
 function brUp(){const p=(state.brPath||'unit_models').split('/'); if(p.length>1){p.pop();brLoad(p.join('/'));}}
 function brMakeSub(){const n=(document.getElementById('brNew')?.value||'').trim();
-  if(!n){toast('Type a folder name first');return;}
+  if(!n){toast(tt('transfer.type_a_folder_name_first'));return;}
   brSetPath((state.brPath||'unit_models')+'/'+n.replace(/[\\/]+/g,'_'));
   doPreview();}
 
 async function doPreview(){
   const type=state.editing; const box=document.getElementById('previewBox'); if(!box)return null;
   if(modelsPickEmpty(type)){
-    box.innerHTML=`<div class="preview w-warn">No battle-model entries are ticked, so there is
-      nothing to import. Tick at least one above.</div>`;
+    box.innerHTML=`<div class="preview w-warn">${tt('transfer.no_battle_model_entries_are_ticked')}</div>`;
     return null;
   }
-  box.innerHTML='<div class="preview">Planning…</div>';
+  box.innerHTML=`<div class="preview">${tt('common.planning')}</div>`;
   const r=await api.post('/api/plan',{source:state.src,dest:state.dst,unit:type,options:optsPayload(type)});
   if(state.editing!==type) return r;          // user switched units mid-plan
   if(r.error){box.innerHTML=`<div class="preview w-bad">${esc(r.error)}</div>`;
@@ -1547,22 +1490,18 @@ async function doPreview(){
 function paintSoldierAnim(r){
   const el=document.getElementById('soldierAnim'); if(!el)return;
   const c=cfgFor(state.editing), rep=isReplace(c);
-  const who=rep?`“${esc(c.base_type||'the replaced unit')}”`:'the base unit';
+  const who=rep?`“${esc(c.base_type||tt('transfer.the_replaced_unit'))}”`:tt('transfer.the_base_unit');
   const list=a=>(a||[]).map(s=>`<code>${esc(s)}</code>`).join(', ');
   const out=[];
   const miss=(r&&r.soldier_skeletons_missing)||[];
   if(miss.length){
     const mdl=(r.soldier_model_name||'').trim();
-    out.push(`<b>⚠ Missing animation${miss.length===1?'':'s'}</b>
+    out.push(`<b>${tt('transfer.missing_animation',{miss:miss.length===1?'':'s'})}</b>
       <ul>
-        <li>${esc(state.dst)} has no ${list(miss)}${
-          mdl?`, which the soldier model <code>${esc(mdl)}</code> asks for`:''}.</li>
-        <li>A soldier entry whose animation set is not in the mod <b>crashes the game
-          on load</b>.</li>
-        <li>Fix: set this row to <b>Base</b> and the unit keeps ${who}’s model and
-          animations.</li>
-        <li>Or tick <b>Bring its animations</b> below, and the skeleton comes across
-          from ${esc(state.src)}’s packs with the unit.</li>
+        <li>${tt('transfer.has_no',{dst:esc(state.dst),x:list(miss),mdl:mdl?tt('transfer.which_the_soldier_model_asks_for',{mdl:esc(mdl)}):''})}</li>
+        <li>${tt('transfer.a_soldier_entry_whose_animation_set')}</li>
+        <li>${tt('transfer.fix_set_this_row_to_base',{who})}</li>
+        <li>${tt('transfer.or_tick_bring_its_animations_below',{src:esc(state.src)})}</li>
       </ul>`);
   }
   out.push(animPortHtml(r));
@@ -1570,21 +1509,20 @@ function paintSoldierAnim(r){
   // set - a pikeman animated as a swordsman fights wrong and nothing says why.
   const chg=(r&&r.soldier_anim_changed)||[];
   if(chg[0]&&chg[1]&&chg[0]!==chg[1]){
-    out.push(`<b>⚠ Different animation set</b>
+    out.push(`<b>${tt('transfer.different_animation_set')}</b>
       <ul>
-        <li>This unit was animated as ${list(chg[0].split(', '))}.</li>
-        <li>Taking the soldier line from ${who} animates it as ${list(chg[1].split(', '))}.</li>
-        <li>It will load, but attack timing and reach come from the animation, so it
-          may perform unexpectedly in battle.</li>
+        <li>${tt('transfer.this_unit_was_animated_as',{x:list(chg[0].split(', '))})}</li>
+        <li>${tt('transfer.taking_the_soldier_line_from_animates',{who,x:list(chg[1].split(', '))})}</li>
+        <li>${tt('transfer.it_will_load_but_attack_timing')}</li>
       </ul>`);
   }
   // An armour-upgrade entry is a visual swap; the engine never plays its skeleton.
   const cos=(r&&r.cosmetic_skeletons_missing)||[];
   if(cos.length){
-    out.push(`<b>Armour-upgrade animations</b>
+    out.push(`<b>${tt('transfer.armour_upgrade_animations')}</b>
       <ul>
-        <li>${esc(state.dst)} has no ${list(cos)}, named by an armour-upgrade model.</li>
-        <li>Not a crash: the engine animates the unit from its <b>soldier</b> entry.</li>
+        <li>${tt('transfer.has_no_named_by_an_armour',{dst:esc(state.dst),x:list(cos)})}</li>
+        <li>${tt('transfer.not_a_crash_the_engine_animates')}</li>
       </ul>`);
   }
   el.innerHTML=out.join('');
@@ -1603,37 +1541,27 @@ function animPortHtml(r){
   if(!p && !err && on) return '';
   if(!on && !missing.length) return '';
   const box=`<label class="count"><input type="checkbox" ${on?'checked':''}
-    onchange="animBringSet(this.checked)"> <b>Bring its animations</b> from ${esc(state.src)}’s packs</label>`;
-  if(!on) return `<b>Animations</b><div>${box}</div>`;
-  if(err) return `<b>⚠ Animations not brought</b><div>${box}</div><div class="count">${esc(err)}</div>`;
+    onchange="animBringSet(this.checked)"> ${tt('transfer.bring_its_animations_from_s_packs',{src:esc(state.src)})}</label>`;
+  if(!on) return `<b>${tt('transfer.animations')}</b><div>${box}</div>`;
+  if(err) return `<b>${tt('transfer.animations_not_brought')}</b><div>${box}</div><div class="count">${esc(err)}</div>`;
   const t=p.totals, mb=((t['anim bytes appended']+t['skeleton bytes appended'])/1e6).toFixed(2);
-  const say={add:'added',rename:'added as',reuse:'already there',reuse_as:'already there as'};
+  const say={add:'added',rename:tt('transfer.added_as'),reuse:tt('transfer.already_there'),reuse_as:tt('transfer.already_there_as')};
   const rows=p.skeletons.map(k=>{
     const a=k.animations||{}, app=(a.append||0)+(a.append_renamed||0), re=(a.reuse||0)+(a.reuse_content||0);
-    return `<li><code>${esc(k.name)}</code>${k.weapon?' <span class="v3tag">weapon</span>':''}: ${say[k.action]}${
-      k.dest_name!==k.name?` <code>${esc(k.dest_name)}</code>`:''} · ${k.slots} slots, ${app} from animations appended${
-      re?`, ${re} from ones ${esc(state.dst)} already has`:''}</li>`;}).join('');
+    return `<li><code>${esc(k.name)}</code>${tt('transfer.slots_from_animations_appended',{weapon:k.weapon?` <span class="v3tag">${tt('transfer.weapon')}</span>`:'',x:say[k.action],x2:k.dest_name!==k.name?` <code>${esc(k.dest_name)}</code>`:'',slots:k.slots,app,re:re?tt('transfer.from_ones_already_has',{re,dst:esc(state.dst)}):''})}</li>`;}).join('');
   const keep=c.keep_rebuildable!==false, lo=r.anim_loose;
   const kbox=`<label class="count"><input type="checkbox" ${keep?'checked':''}
-    onchange="animKeepSet(this.checked)"> <b>Keep it rebuildable</b>: loose <code>.cas</code> files and a
-    <code>descr_skeleton.txt</code> block for each skeleton added</label>`;
+    onchange="animKeepSet(this.checked)"> ${tt('transfer.keep_it_rebuildable_loose_cas_files')}</label>`;
   let kept='';
   if(keep && lo && (lo.files || lo.skeletons.length)){
-    kept=`<div class="count">${lo.cas} loose <code>.cas</code>${lo.evt?` and ${lo.evt} <code>.evt</code>`:''} file(s),
-      ${(lo.bytes/1e6).toFixed(2)} MB, and ${lo.skeletons.length} type block(s) at the end of
-      <code>descr_skeleton.txt</code>${lo.present?`; ${lo.present} file(s) already there are left alone`:''}.
-      Its <code>Version</code> line is not touched, so this never starts a rebuild; if the game ever does
-      rebuild its packs, it can build these skeletons too.</div>`
+    kept=`<div class="count">${tt('transfer.loose_cas_file_s_mb_and',{cas:lo.cas,x:lo.evt?` ${tt('transfer.and_evt',{evt:lo.evt})}`:'',x2:(lo.bytes/1e6).toFixed(2),skeletons_n:lo.skeletons.length,x3:lo.present?tt('transfer.file_s_already_there_are_left',{present:lo.present}):''})}</div>`
       +(lo.notes.length?`<ul>${lo.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:'');
   } else if(!keep){
-    kept=`<div class="count">Only the packs are written: a pack rebuild from <code>descr_skeleton.txt</code>
-      could not build these skeletons.</div>`;
+    kept=`<div class="count">${tt('transfer.only_the_packs_are_written_a')}</div>`;
   }
-  return `<b>Animations brought</b><div>${box}</div>
+  return `<b>${tt('transfer.animations_brought')}</b><div>${box}</div>
     <ul>${rows}</ul>
-    <div class="count">${t['animations append']+t['animations append_renamed']} animation(s), ${mb} MB appended to
-      ${esc(state.dst)}’s <code>pack.dat</code> and <code>skeletons.dat</code>; nothing unpacked, and Undo
-      cuts them back.</div>
+    <div class="count">${tt('transfer.animation_s_mb_appended_to_s',{x:t['animations append']+t['animations append_renamed'],mb,dst:esc(state.dst)})}</div>
     <div>${kbox}</div>${kept}`;
 }
 function animKeepSet(on){
@@ -1657,29 +1585,26 @@ function eopUI(type,r){
   // Replacing has nothing to choose: the rewritten block stays in whichever file
   // the replaced unit already lives in, EDU or M2TWEOP.
   if(r.replace_type) return `<fieldset class="assetconf" style="margin-top:10px;border-color:var(--edge)">
-    <legend>Which file this unit is written to</legend>
-    <div class="count">It replaces <b>${esc(r.replace_type)}</b> where it already is${
-      r.eop_file?` in <span class="path">${esc(r.eop_file)}</span>`:' in <code>export_descr_unit.txt</code>'}.
-      Nothing moves, and the ${VANILLA_UNIT_LIMIT}-unit cap is untouched.</div></fieldset>`;
+    <legend>${tt('transfer.which_file_this_unit_is_written')}</legend>
+    <div class="count">${tt('transfer.it_replaces_where_it_already_is',{replace_type:esc(r.replace_type),eop_file:r.eop_file?` ${tt('transfer.in')} <span class="path">${esc(r.eop_file)}</span>`:` ${tt('transfer.in_export_descr_unit_txt')}`,VANILLA_UNIT_LIMIT})}</div></fieldset>`;
   if(!r.dest_has_eop && !r.source_is_eop) return '';
-  const auto=r.source_is_eop?'M2TWEOP unit file (the source unit is one)':'export_descr_unit.txt';
+  const auto=r.source_is_eop?tt('transfer.m2tweop_unit_file_the_source_unit'):'export_descr_unit.txt';
   return `<fieldset class="assetconf" style="margin-top:10px${r.source_is_eop&&!r.dest_has_eop?';border-color:var(--warn)':''}">
-    <legend${r.source_is_eop?' class="w-warn"':''}>Which file this unit is written to</legend>
+    <legend${r.source_is_eop?' class="w-warn"':''}>${tt('transfer.which_file_this_unit_is_written')}</legend>
     <div class="count">${docPoints(
-      r.source_is_eop?`“${esc(type)}” is an <b>M2TWEOP unit</b> in the source mod.`
-                     :`Where this unit lands in ${esc(state.dst)}:`,[
-      r.dest_has_eop?`“${esc(state.dst)}” has an EOP folder, so it can hold M2TWEOP units.`
-                    :`“${esc(state.dst)}” has <b>no EOP folder set</b>, so this goes into
-                      export_descr_unit.txt. Set one in ⚙ Settings to keep it out.`,
-      r.dest_has_eop?`M2TWEOP units don't count against the ${VANILLA_UNIT_LIMIT}-unit cap.`
-                    :`It therefore <b>does</b> count against the ${VANILLA_UNIT_LIMIT}-unit cap.`])}
+      r.source_is_eop?tt('transfer.is_an_m2tweop_unit_in_the',{type:esc(type)})
+                     :tt('transfer.where_this_unit_lands_in',{dst:esc(state.dst)}),[
+      r.dest_has_eop?tt('transfer.has_an_eop_folder_so_it',{dst:esc(state.dst)})
+                    :tt('transfer.has_no_eop_folder_set_so',{dst:esc(state.dst)}),
+      r.dest_has_eop?tt('transfer.m2tweop_units_dont_count_against_the',{VANILLA_UNIT_LIMIT})
+                    :tt('transfer.it_therefore_does_count_against_the',{VANILLA_UNIT_LIMIT})])}
     </div>
     ${r.dest_has_eop?`<div class="radio-row" style="margin-top:6px">
-      <label><input type="radio" name="eopt" value="auto" ${(c.eop_target||'auto')==='auto'?'checked':''}> Same as the source (${esc(auto)})</label>
-      <label><input type="radio" name="eopt" value="eop" ${c.eop_target==='eop'?'checked':''}> M2TWEOP unit file</label>
+      <label><input type="radio" name="eopt" value="auto" ${(c.eop_target||'auto')==='auto'?'checked':''}> ${tt('transfer.same_as_the_source',{auto:esc(auto)})}</label>
+      <label><input type="radio" name="eopt" value="eop" ${c.eop_target==='eop'?'checked':''}> ${tt('transfer.m2tweop_unit_file')}</label>
       <label><input type="radio" name="eopt" value="edu" ${c.eop_target==='edu'?'checked':''}> export_descr_unit.txt</label>
     </div>`:''}
-    ${r.eop_file?`<div class="count" style="margin-top:6px">Will be written to <span class="path">${esc(r.eop_file)}</span>.</div>`:''}
+    ${r.eop_file?`<div class="count" style="margin-top:6px">${tt('transfer.will_be_written_to',{eop_file:esc(r.eop_file)})}</div>`:''}
   </fieldset>`;
 }
 function wireEop(type){const c=cfgFor(type);
@@ -1701,30 +1626,30 @@ function wireEop(type){const c=cfgFor(type);
 function conflictUI(type){const c=cfgFor(type);const u=state.data.units.find(x=>x.type===type);
   if(!c.new_type)c.new_type=type+' (copy)'; if(!c.new_dictionary)c.new_dictionary=u.dictionary+'_copy';
   if(c.new_name==null)c.new_name=u.name||'';
-  const nameRow=`<label>Displayed name <span class="count">what the player reads</span>
+  const nameRow=`<label>${tt('transfer.displayed_name_what_the_player_reads')}
       <input id="nn" value="${esc(c.new_name)}"></label>`;
   // Same mod = the "new unit" flow: the clash with the original is the whole point,
   // so ask for the new unit's names instead of warning about a conflict.
   const sameMod=state.src===state.dst;
-  if(sameMod) return `<fieldset style="margin-top:10px"><legend>Name for the new unit</legend>
+  if(sameMod) return `<fieldset style="margin-top:10px"><legend>${tt('transfer.name_for_the_new_unit')}</legend>
     <div class="rename-fields" id="rf" style="padding-left:0">
-      <label>New type<input id="nt" value="${esc(c.new_type)}"></label>
-      <label>New dictionary<input id="nd" value="${esc(c.new_dictionary)}"></label>
+      <label>${tt('transfer.new_type')}<input id="nt" value="${esc(c.new_type)}"></label>
+      <label>${tt('transfer.new_dictionary')}<input id="nd" value="${esc(c.new_dictionary)}"></label>
       ${nameRow}
     </div>
-    <div class="count">${docPoints(`The original “${esc(type)}” stays as it is.`,[
-      '<b>Type</b> and <b>dictionary</b> are internal keys - no one sees either in game.',
-      '<b>Displayed name</b> is the one on the recruitment panel and the unit card.',
-      'The descriptions are copied from the original; edit them in the Unit Editor.'])}</div></fieldset>`;
-  return `<fieldset style="margin-top:10px;border-color:var(--warn)"><legend class="w-warn">Unit already exists in destination</legend>
+    <div class="count">${docPoints(tt('transfer.the_original_stays_as_it_is',{type:esc(type)}),[
+      tt('transfer.type_and_dictionary_are_internal_keys'),
+      tt('transfer.displayed_name_is_the_one_on'),
+      tt('transfer.the_descriptions_are_copied_from_the')])}</div></fieldset>`;
+  return `<fieldset style="margin-top:10px;border-color:var(--warn)"><legend class="w-warn">${tt('transfer.unit_already_exists_in_destination')}</legend>
     <div class="radio-row">
-      <label><input type="radio" name="cf" value="rename" ${c.on_conflict==='rename'?'checked':''}> Rename</label>
-      <label><input type="radio" name="cf" value="overwrite" ${c.on_conflict==='overwrite'?'checked':''}> Overwrite existing</label>
-      <label><input type="radio" name="cf" value="skip" ${c.on_conflict==='skip'?'checked':''}> Skip</label>
+      <label><input type="radio" name="cf" value="rename" ${c.on_conflict==='rename'?'checked':''}> ${tt('transfer.rename')}</label>
+      <label><input type="radio" name="cf" value="overwrite" ${c.on_conflict==='overwrite'?'checked':''}> ${tt('transfer.overwrite_existing')}</label>
+      <label><input type="radio" name="cf" value="skip" ${c.on_conflict==='skip'?'checked':''}> ${tt('transfer.skip')}</label>
     </div>
     <div class="rename-fields" id="rf">
-      <label>New type<input id="nt" value="${esc(c.new_type)}"></label>
-      <label>New dictionary<input id="nd" value="${esc(c.new_dictionary)}"></label>
+      <label>${tt('transfer.new_type')}<input id="nt" value="${esc(c.new_type)}"></label>
+      <label>${tt('transfer.new_dictionary')}<input id="nd" value="${esc(c.new_dictionary)}"></label>
       ${nameRow}
     </div></fieldset>`;
 }
@@ -1748,11 +1673,10 @@ function renderProgress(types,status){
     const st=status[i];
     return `<div class="proglist-row ${PROG_CLS[st]||''}"><span class="pi">${PROG_ICON[st]}</span> ${esc(t)}</div>`;
   }).join('');
-  document.getElementById('modal').innerHTML=`<h2>Transferring…</h2>
+  document.getElementById('modal').innerHTML=`<h2>${tt('transfer.transferring')}</h2>
     <div class="mbody">
       <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div class="count" style="margin:8px 0 12px">${done} of ${types.length} done
-        ${curIdx>=0?`: <b>${esc(types[curIdx])}</b>`:''}</div>
+      <div class="count" style="margin:8px 0 12px">${tt('transfer.of_done',{done,types_n:types.length,curIdx:curIdx>=0?`: <b>${esc(types[curIdx])}</b>`:''})}</div>
       <div class="proglist">${rows}</div>
     </div>`;
 }
@@ -1767,7 +1691,7 @@ function jobBox(title,note){
     <div class="mbody">
       <div class="progress-track"><div class="progress-fill" id="jobFill" style="width:0%"></div></div>
       <div class="count" style="margin-top:8px"><b id="jobPct">0%</b>
-        <span id="jobStep">starting…</span></div>
+        <span id="jobStep">${tt('transfer.starting')}</span></div>
       <div class="count" style="margin-top:10px">${note}</div>
     </div>`;
 }
@@ -1800,14 +1724,14 @@ async function doApply(){
   for(const t of types){
     if(modelsPickEmpty(t)){
       state.editing=t; renderComposer();
-      toast(`“${t}”: tick at least one battle-model entry to import.`); return;
+      toast(tt('transfer.tick_at_least_one_battle_model',{x:t})); return;
     }
     const r=await api.post('/api/plan',{source:state.src,dest:state.dst,unit:t,options:optsPayload(t)});
     if(r.error){toast(`${t}: ${r.error}`);state.editing=t;renderComposer();await doPreview();return;}
     if(r.base_error){toast(`${t}: ${r.base_error}`);state.editing=t;renderComposer();return;}
     if(r.option_error){toast(`${t}: ${r.option_error}`);state.editing=t;renderComposer();return;}
     if(r.unit_conflict && !cfgFor(t)._resolved){ state.editing=t;renderComposer();await doPreview();
-      toast(`“${t}” already exists in the destination. Choose rename, overwrite or skip, then Apply again.`);
+      toast(tt('transfer.already_exists_in_the_destination_choose',{x:t}));
       cfgFor(t)._resolved=true; return; }
   }
   let ok=0,skip=0,last=null;
@@ -1830,10 +1754,8 @@ async function doApply(){
   const mdl=types.filter(t=>isModels(cfgFor(t))).length;
   // a models-only run wrote no unit, so counting units is the one thing not to say
   toast(mdl===ok
-    ? `Imported the battle models of ${ok} unit(s) into ${state.dst} - no unit was created ✓  (undo in 🕑 Log)`
-    : `${state.src===state.dst?'Created':repl===ok?'Replaced':'Transferred'} ${ok} unit(s)${
-      repl&&repl!==ok?` (${repl} replaced)`:''}${mdl?`, ${mdl} models-only`:''}${
-      skip?`, skipped ${skip}`:''} ✓${binMsg(last)}  (undo in 🕑 Log)`,4200);
+    ? tt('transfer.imported_the_battle_models_of_unit',{ok,dst:state.dst})
+    : tt('transfer.unit_s_undo_in_log',{x:state.src===state.dst?tt('transfer.created'):repl===ok?tt('transfer.replaced'):tt('transfer.transferred'),ok,x2:repl&&repl!==ok?tt('transfer.replaced_2',{repl}):'',mdl:mdl?tt('transfer.models_only_2',{mdl}):'',skip:skip?tt('transfer.skipped',{skip}):'',x3:binMsg(last)}),4200);
   // these ones are done - leaving them ticked invites transferring them twice
   clearSelection();
   state.cfg={};

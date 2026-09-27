@@ -19,22 +19,22 @@
    ===================================================================== */
 
 const MGN_TITLES = {
-  heights: ['Heights from the real world',
-            'The real ground under the map’s box, at the engine’s own scale.'],
-  adjust: ['Adjust the heights',
-           'Brightness, contrast, gamma and equalize, on the land only: a sea corner is never touched.'],
-  ground: ['Ground types from the heights',
-           'Each land corner typed by its height, in bands. The sea is left alone.'],
-  climates: ['Climates from the ground types',
-             'Each ground type painted the climate chosen for it.'],
-  landuse: ['Ground types from OpenStreetMap land use',
-            'Mylae’s 47 tags, each painted as the ground type you give it, in the order listed, on land only. Best on a small box: farmland over a country is a big answer.'],
-  landcover: ['Ground types from land cover',
-              'ESA WorldCover’s eleven classes under the land, each a ground type. One class a corner, never a blend.'],
-  koppen: ['Climates from the Köppen-Geiger zones',
-           'The climate zone under every corner, each zone a climate of this mod. From the published map on disk, or a WMS.'],
-  features: ['Rivers, cliffs and volcanoes from OpenStreetMap',
-             'Drawn the way the engine can build a river: cardinal steps, no loops, a source each, cut at every city.'],
+  heights: [tt('mapgen.heights_from_the_real_world'),
+            tt('mapgen.the_real_ground_under_the_maps')],
+  adjust: [tt('mapgen.adjust_the_heights'),
+           tt('mapgen.brightness_contrast_gamma_and_equalize_on')],
+  ground: [tt('mapgen.ground_types_from_the_heights'),
+           tt('mapgen.each_land_corner_typed_by_its')],
+  climates: [tt('mapgen.climates_from_the_ground_types'),
+             tt('mapgen.each_ground_type_painted_the_climate')],
+  landuse: [tt('mapgen.ground_types_from_openstreetmap_land_use'),
+            tt('mapgen.mylaes_47_tags_each_painted_as')],
+  landcover: [tt('mapgen.ground_types_from_land_cover'),
+              tt('mapgen.esa_worldcovers_eleven_classes_under_the')],
+  koppen: [tt('mapgen.climates_from_the_k_ppen_geiger'),
+           tt('mapgen.the_climate_zone_under_every_corner')],
+  features: [tt('mapgen.rivers_cliffs_and_volcanoes_from_openstreetmap'),
+             tt('mapgen.drawn_the_way_the_engine_can')],
 };
 
 function mgnOpen(){
@@ -64,7 +64,7 @@ async function mgnLoad(){
   const k = state.mgn;
   k.loading = true; mgnPaint();
   try{
-    k.d = await api.get(`/api/mapgen?mod=${enc(k.mod)}`, {label: 'reading the generators'});
+    k.d = await api.get(`/api/mapgen?mod=${enc(k.mod)}`, {label: tt('mapgen.reading_the_generators')});
     k.opt.ground.bands = k.d.bands.map(b => b.slice());
     const have = new Set(k.d.climates.map(c => c.code));
     k.opt.climates.mapping = {};
@@ -144,7 +144,7 @@ async function mgnPlan(kind){
                           {label: MGN_TITLES[kind][0].toLowerCase()}); }
   catch(e){ r = {error: errText(e)}; }
   finally{ k.busy = ''; }
-  k.plan[kind] = r.plan || {errors: [r.error || 'the plan came back empty']};
+  k.plan[kind] = r.plan || {errors: [r.error || tt('common.the_plan_came_back_empty')]};
   mgnPaint();
 }
 
@@ -154,15 +154,15 @@ async function mgnApply(kind){
   if(!p || !p.ok || k.busy) return;
   if(!confirm(`${MGN_TITLES[kind][0]}?\n\n${(p.changes || []).join('\n')}`
     + ((p.warnings || []).length ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')
-    + '\n\nOne backup; 🕑 Log can undo it.')) return;
+    + tt('mapgen.one_backup_log_can_undo_it'))) return;
   k.busy = kind; mgnPaint();
   let r;
-  try{ r = await api.post('/api/map/gen_apply', mgnBody(kind), {label: 'writing the layer'}); }
+  try{ r = await api.post('/api/map/gen_apply', mgnBody(kind), {label: tt('mapgen.writing_the_layer')}); }
   catch(e){ r = {error: errText(e)}; }
   finally{ k.busy = ''; }
-  if(!r || r.error){ k.plan[kind] = {errors: [(r && r.error) || 'it could not be written']}; mgnPaint(); return; }
-  toast(`${MGN_TITLES[kind][0]}: ${r.files.join(', ')} written. 🕑 Log can undo it.`, 7000);
-  activity('map generate', `${k.mod}: ${kind}, id ${r.id}`);
+  if(!r || r.error){ k.plan[kind] = {errors: [(r && r.error) || tt('mapgen.it_could_not_be_written')]}; mgnPaint(); return; }
+  toast(tt('mapgen.written_log_can_undo_it',{x:MGN_TITLES[kind][0],files:r.files.join(', ')}), 7000);
+  activity(tt('mapgen.map_generate'), tt('mapgen.id',{mod:k.mod,kind,id:r.id}));
   delete k.plan[kind];
   if(typeof loadCampmap === 'function') loadCampmap();
 }
@@ -195,14 +195,14 @@ function mgnCard(kind, body, network){
   return `<div class="bsec mgncard">
       <h4>${esc(MGN_TITLES[kind][0])}</h4>
       <div class="count">${esc(MGN_TITLES[kind][1])}</div>
-      ${off ? `<div class="bnote">Uses the internet, and the Real world switch is off.
-          <button onclick="openSettings()">⚙ Settings</button></div>` : body}
+      ${off ? `<div class="bnote">${tt('mapgen.uses_the_internet_and_the_real')}
+          <button onclick="openSettings()">${tt('mapgen.settings')}</button></div>` : body}
       <div class="cmbar2">
-        <button onclick="mgnPlan('${kind}')" ${k.busy || off ? 'disabled' : ''}>${k.busy === kind ? 'Working…' : 'Plan'}</button>
-        <button class="primary" onclick="mgnApply('${kind}')" ${p && p.ok && !k.busy ? '' : 'disabled'}>Write</button>
+        <button onclick="mgnPlan('${kind}')" ${k.busy || off ? 'disabled' : ''}>${k.busy === kind ? tt('common.working') : tt('mapgen.plan')}</button>
+        <button class="primary" onclick="mgnApply('${kind}')" ${p && p.ok && !k.busy ? '' : 'disabled'}>${tt('mapgen.write')}</button>
       </div>
       ${p ? `<div class="mszplan">
-        ${p.preview ? `<img class="mgnprev" src="${p.preview}" alt="the layer as it would be">` : ''}
+        ${p.preview ? `<img class="mgnprev" src="${p.preview}" alt="${ttA('mapgen.the_layer_as_it_would_be')}">` : ''}
         ${(p.changes || []).map(x => `<div class="count">${esc(x)}</div>`).join('')}
         ${(p.warnings || []).map(x => `<div class="w-warn">${esc(x)}</div>`).join('')}
         ${(p.errors || []).map(x => `<div class="w-bad">${esc(x)}</div>`).join('')}
@@ -214,17 +214,16 @@ function mgnHtml(){
   const k = state.mgn;
   if(!k) return '';
   const head = `<div class="cmrow cmhdr" onclick="mgnToggle()">
-      <b>Generate</b> <span class="count">layers from the real world, or from each other</span>
-      <span class="count">${k.open ? '▾' : '▸'}</span>
+      ${tt('mapgen.generate_layers_from_the_real_world',{open:k.open ? '▾' : '▸'})}
     </div>`;
   if(!k.open) return head;
-  if(!k.d) return head + `<div class="count">${k.loading ? 'Reading…' : esc(k.err)}</div>`;
+  if(!k.d) return head + `<div class="count">${k.loading ? tt('common.reading_3') : esc(k.err)}</div>`;
   const o = k.opt, d = k.d;
   const sel = (kind, field, pairs) => `<select onchange="mgnSet('${kind}','${field}',this.value)">${
     pairs.map(([v, t]) => `<option value="${v}"${o[kind][field] === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
   const heights = `<div class="brow" style="flex-wrap:wrap;gap:6px">
-      <label class="mszbox">Where ${sel('heights', 'area', [['land', 'the land the map has'], ['whole', 'the whole map, sea floor too']])}</label>
-      <label class="mszbox">Scale ${sel('heights', 'scale', [['true', 'true, by max_land_height'], ['stretch', 'stretched to the highest peak']])}</label>
+      <label class="mszbox">${tt('mapgen.where',{sel:sel('heights', 'area', [['land', tt('mapgen.the_land_the_map_has')], ['whole', tt('mapgen.the_whole_map_sea_floor_too')]])})}</label>
+      <label class="mszbox">${tt('mapgen.scale',{sel:sel('heights', 'scale', [['true', tt('mapgen.true_by_max_land_height')], ['stretch', tt('mapgen.stretched_to_the_highest_peak')]])})}</label>
     </div>`;
   // 87c: Mylae's three sliders and his Equalize, as one plan
   const a = o.adjust;
@@ -234,13 +233,13 @@ function mgnHtml(){
         onchange="mgnSet('adjust','${f}',+this.value)"></label>`;
   const adjust = `${slider('brightness', -100, 100, 1)}${slider('contrast', -100, 100, 1)}${slider('gamma', 0.1, 3, 0.05)}
     <label class="chk"><input type="checkbox" ${a.equalize ? 'checked' : ''}
-      onchange="mgnSet('adjust','equalize',this.checked)"> Equalize first (spread the land's greys evenly)</label>
-    <div class="cmbar2"><button onclick="state.mgn.opt.adjust={brightness:0,contrast:0,gamma:1,equalize:false};delete state.mgn.plan.adjust;mgnPaint()">Reset</button></div>`;
+      onchange="mgnSet('adjust','equalize',this.checked)"> ${tt('mapgen.equalize_first_spread_the_lands_greys')}</label>
+    <div class="cmbar2"><button onclick="state.mgn.opt.adjust={brightness:0,contrast:0,gamma:1,equalize:false};delete state.mgn.plan.adjust;mgnPaint()">${tt('mapgen.reset')}</button></div>`;
   const grounds = d.grounds;
   const ground = `<div class="mgnbands">${o.ground.bands.map((b, i) => `<div>
       <select onchange="mgnBand(${i},'code',this.value)">${grounds.map(g =>
         `<option${g === b[0] ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>
-      <span class="count">up to grey</span>
+      <span class="count">${tt('mapgen.up_to_grey')}</span>
       <input type="number" min="0" max="255" value="${b[1]}" onchange="mgnBand(${i},'max',this.value)">
     </div>`).join('')}</div>`;
   // 87d: the three from the real world
@@ -249,8 +248,7 @@ function mgnHtml(){
       ${blank ? `<option value="">${blank}</option>` : ''}${landGrounds.map(g =>
       `<option${g === val ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>`;
   const lt = o.landuse.tags, nOn = Object.keys(lt).length;
-  const landuse = `<div class="count">${nOn ? `${nOn} tag(s) ticked` : 'Tick the tags to fetch.'}
-      Each tag is its own request, kept on disk; a later tag paints over an earlier one.</div>
+  const landuse = `<div class="count">${tt('mapgen.each_tag_is_its_own_request',{nOn:nOn ? tt('mapgen.tag_s_ticked',{nOn}) : tt('mapgen.tick_the_tags_to_fetch')})}</div>
     ${r.landuse.map(g => `<details class="mgngroup"${g.tags.some(t => lt[t.key + '=' + t.value]) ? ' open' : ''}>
       <summary>${esc(g.group)} <span class="count">${g.tags.filter(t => lt[t.key + '=' + t.value]).length}/${g.tags.length}</span></summary>
       <div class="mgnbands">${g.tags.map(t => { const key = t.key + '=' + t.value, on = key in lt; return `<div>
@@ -261,44 +259,43 @@ function mgnHtml(){
   const landcover = `<div class="mgnbands">${r.worldcover.map(c => `<div>
       <span class="mgnsw" style="background:rgb(${c.rgb.join(',')})"></span>
       <span style="flex:1">${esc(c.name)}</span>
-      ${gsel('landcover', String(c.class), o.landcover.mapping[c.class], '(leave as it is)')}</div>`).join('')}</div>
-    <div class="count">From ${esc((r.landcover_wms[0] || '').replace(/\?.*/, ''))} (Settings lists it).</div>`;
+      ${gsel('landcover', String(c.class), o.landcover.mapping[c.class], tt('mapgen.leave_as_it_is'))}</div>`).join('')}</div>
+    <div class="count">${tt('mapgen.from_settings_lists_it',{landcover_wms:esc((r.landcover_wms[0] || '').replace(/\?.*/, ''))})}</div>`;
   const ks = o.koppen.source;
   const koppen = `<div class="brow" style="flex-wrap:wrap;gap:6px">
-      <label class="mszbox">From <select onchange="mgnSet('koppen','source',this.value)">
-        <option value="file"${ks === 'file' ? ' selected' : ''}>the map on disk</option>
-        <option value="wms"${ks === 'wms' ? ' selected' : ''}>a WMS</option></select></label></div>
+      <label class="mszbox">${tt('common.from')} <select onchange="mgnSet('koppen','source',this.value)">
+        <option value="file"${ks === 'file' ? ' selected' : ''}>${tt('mapgen.the_map_on_disk')}</option>
+        <option value="wms"${ks === 'wms' ? ' selected' : ''}>${tt('mapgen.a_wms')}</option></select></label></div>
     ${ks === 'file' ? (r.koppen_file_ok
-        ? `<div class="count">${esc(r.koppen_file)} - no internet needed.</div>`
-        : `<div class="bnote">No Köppen-Geiger map on disk yet. Download the 0.083° GeoTIFF (Beck et al.,
-            CC BY 4.0, gloh2o.org/koppen) and give its path in Settings, Real-world map.
-            <button onclick="openSettings()">⚙ Settings</button></div>`)
-      : (r.koppen_wms ? '<div class="count">From the WMS in Settings.</div>'
-        : `<div class="bnote">No Köppen WMS is set; Settings can take one. <button onclick="openSettings()">⚙ Settings</button></div>`)}
+        ? `<div class="count">${tt('mapgen.no_internet_needed',{koppen_file:esc(r.koppen_file)})}</div>`
+        : `<div class="bnote">${tt('mapgen.no_k_ppen_geiger_map_on')}
+            <button onclick="openSettings()">${tt('mapgen.settings')}</button></div>`)
+      : (r.koppen_wms ? `<div class="count">${tt('mapgen.from_the_wms_in_settings')}</div>`
+        : `<div class="bnote">${tt('mapgen.no_k_ppen_wms_is_set')} <button onclick="openSettings()">${tt('mapgen.settings')}</button></div>`)}
     <div class="mgnbands">${r.koppen.map(z => `<div>
       <span class="mgnsw" style="background:rgb(${z.rgb.join(',')})"></span>
       <span style="flex:1">${esc(z.code)}</span>
       <select onchange="mgnMap('koppen','${z.code}',this.value)">
-        <option value="">(leave as it is)</option>
+        <option value="">${tt('mapgen.leave_as_it_is')}</option>
         ${d.climates.map(c => `<option value="${esc(c.code)}"${o.koppen.mapping[z.code] === c.code ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}
       </select></div>`).join('')}</div>`;
-  const climates = `<label class="mszbox" style="display:block">Or one climate everywhere
-      <select onchange="mgnSet('climates','fill',this.value)"><option value="">(no: by ground type, below)</option>
+  const climates = `<label class="mszbox" style="display:block">${tt('mapgen.or_one_climate_everywhere')}
+      <select onchange="mgnSet('climates','fill',this.value)"><option value="">${tt('mapgen.no_by_ground_type_below')}</option>
       ${d.climates.map(c => `<option value="${esc(c.code)}"${o.climates.fill === c.code ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}
       </select></label>
     ${o.climates.fill ? '' : `<div class="mgnbands">${grounds.map(g => `<div>
       <span style="flex:1">${esc(g)}</span>
       <select onchange="mgnClimate('${g}',this.value)">
-        <option value="">(leave as it is)</option>
+        <option value="">${tt('mapgen.leave_as_it_is')}</option>
         ${d.climates.map(c => `<option value="${esc(c.code)}"${o.climates.mapping[g] === c.code ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}
       </select></div>`).join('')}</div>`}`;
   const features = `<div class="brow" style="flex-wrap:wrap;gap:6px">
-      <label class="mszbox">Rivers ${sel('features', 'detail', [['major', 'rivers'], ['medium', 'rivers and canals'], ['all', 'rivers, canals and streams']])}</label>
-      <label class="mszbox">The old ones ${sel('features', 'mode', [['replace', 'cleared first'], ['add', 'kept, and joined']])}</label>
+      <label class="mszbox">${tt('mapgen.rivers',{sel:sel('features', 'detail', [['major', 'rivers'], ['medium', tt('mapgen.rivers_and_canals')], ['all', tt('mapgen.rivers_canals_and_streams')]])})}</label>
+      <label class="mszbox">${tt('mapgen.the_old_ones',{sel:sel('features', 'mode', [['replace', tt('mapgen.cleared_first')], ['add', tt('mapgen.kept_and_joined')]])})}</label>
     </div>`;
   return `${head}
     ${k.err ? `<div class="w-bad">${esc(k.err)}</div>` : ''}
-    <div class="count">The box is the Real world tab’s. Save or discard unsaved paint strokes first.</div>
+    <div class="count">${tt('mapgen.the_box_is_the_real_world')}</div>
     ${mgnCard('heights', heights, true)}
     ${mgnCard('adjust', adjust, false)}
     ${mgnCard('ground', ground, false)}

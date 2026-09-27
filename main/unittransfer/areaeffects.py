@@ -56,6 +56,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 from . import leafxml as lx
+from . import i18n as _i18n
 
 REL = "descr_area_effects.xml"
 ROOT_TAG = "root"
@@ -193,7 +194,7 @@ def check(doc: lx.Doc, refs: Optional[Refs] = None) -> List[Dict]:
     out = lx.xml_findings(doc)
     items = _items(doc)
     if not items and not doc.errors:
-        out.append(finding("empty", "warn", f"no <{ITEM_TAG}> under <{LIST_TAG}>", "file", 0))
+        out.append(finding("empty", "warn", _i18n.msg("eng.areaeffects.no_under", "no <{ITEM_TAG}> under <{LIST_TAG}>", ITEM_TAG=ITEM_TAG, LIST_TAG=LIST_TAG), "file", 0))
     names: Dict[str, int] = {}
     for a in items:
         n = doc.field(a, "name")
@@ -207,77 +208,60 @@ def check(doc: lx.Doc, refs: Optional[Refs] = None) -> List[Dict]:
         owner = name or f"the area effect on line {a.line + 1}"
         typ = doc.field(a, "type")
         if not name:
-            out.append(finding("name", "fatal", f"line {a.line + 1}: an area effect with no "
-                               "<name>, so nothing can name it", key, a.line))
+            out.append(finding("name", "fatal", _i18n.msg("eng.areaeffects.line_an_area_effect_with_no", "line {x}: an area effect with no <name>, so nothing can name it", x=a.line + 1), key, a.line))
         elif name.lower() in seen:
-            out.append(finding("duplicate", "warn", f"{name} is declared twice (lines "
-                               f"{names[name.lower()]} and {a.line + 1})", key, a.line))
+            out.append(finding("duplicate", "warn", _i18n.msg("eng.areaeffects.is_declared_twice_lines_and", "{name} is declared twice (lines {names} and {x})", name=name, names=names[name.lower()], x=a.line + 1), key, a.line))
         if name:
             seen.add(name.lower())
         if not typ:
-            out.append(finding("type", "warn", f"{owner} has no <type>", key, a.line))
+            out.append(finding("type", "warn", _i18n.msg("eng.areaeffects.has_no", "{owner} has no <type>", owner=owner), key, a.line))
         elif typ not in TYPES:
-            out.append(finding("type", "warn", f"{owner}: type {typ} is not one of "
-                               f"{', '.join(TYPES)}", key, a.line))
+            out.append(finding("type", "warn", _i18n.msg("eng.areaeffects.type_is_not_one_of", "{owner}: type {typ} is not one of {TYPES}", owner=owner, typ=typ, TYPES=', '.join(TYPES)), key, a.line))
         vals: Dict[str, float] = {}
         for f in lx.leaves(doc, a):
             node = doc.nodes[f["id"]]
             v = f["value"]
             if f["tag"] in NUMBERS:
                 if not lx.NUM.fullmatch(v):
-                    out.append(finding("number", "fatal", f"{owner}: <{f['path']}> is "
-                                       f"{v or '(blank)'}, not a number", key, node.line))
+                    out.append(finding("number", "fatal", _i18n.msg("eng.areaeffects.is_not_a_number", "{owner}: <{path}> is {x}, not a number", owner=owner, path=f['path'], x=v or '(blank)'), key, node.line))
                     continue
                 vals[f["path"]] = float(v)
                 if f["tag"] in COLOURS and not 0 <= float(v) <= 255:
-                    out.append(finding("colour", "warn", f"{owner}: {f['path']} {v} is outside "
-                                       "0-255", key, node.line))
+                    out.append(finding("colour", "warn", _i18n.msg("eng.areaeffects.is_outside_0_255", "{owner}: {path} {v} is outside 0-255", owner=owner, path=f['path'], v=v), key, node.line))
             elif f["tag"] == "preserve_momentum" and v not in ("true", "false"):
-                out.append(finding("bool", "warn", f"{owner}: preserve_momentum is "
-                                   f"{v or '(blank)'}, not true or false", key, node.line))
+                out.append(finding("bool", "warn", _i18n.msg("eng.areaeffects.preserve_momentum_is_not_true_or", "{owner}: preserve_momentum is {x}, not true or false", owner=owner, x=v or '(blank)'), key, node.line))
             elif f["tag"] == "direction" and v not in DIRECTIONS:
-                out.append(finding("direction", "note", f"{owner}: direction {v or '(blank)'} "
-                                   f"is not one of {', '.join(DIRECTIONS)}", key, node.line))
+                out.append(finding("direction", "note", _i18n.msg("eng.areaeffects.direction_is_not_one_of", "{owner}: direction {x} is not one of {DIRECTIONS}", owner=owner, x=v or '(blank)', DIRECTIONS=', '.join(DIRECTIONS)), key, node.line))
             elif f["tag"] == "projectile_type" and refs.projectiles is not None \
                     and v.lower() not in refs.projectiles:
-                out.append(finding("projectile", "warn", f"{owner}: projectile_type {v} is not "
-                                   "a projectile descr_projectile.txt declares", key, node.line))
+                out.append(finding("projectile", "warn", _i18n.msg("eng.areaeffects.projectile_type_is_not_a_projectile", "{owner}: projectile_type {v} is not a projectile descr_projectile.txt declares", owner=owner, v=v), key, node.line))
             elif f["tag"] in SET_REFS and typ != SET_TYPE and v and refs.sets is not None \
                     and v.lower() not in refs.sets:
                 set_notes.setdefault(v, []).append((owner, node.line, key))
         for lo, hi in (("banner_colour_alpha_min", "banner_colour_alpha_max"),
                        ("explosion_force_min", "explosion_force_max")):
             if lo in vals and hi in vals and vals[lo] > vals[hi]:
-                out.append(finding("range", "warn", f"{owner}: {lo} {vals[lo]:g} is above "
-                                   f"{hi} {vals[hi]:g}", key, a.line))
+                out.append(finding("range", "warn", _i18n.msg("eng.areaeffects.vals_g_is_above_vals2_g", "{owner}: {lo} {vals:g} is above {hi} {vals2:g}", owner=owner, lo=lo, vals=vals[lo], hi=hi, vals2=vals[hi]), key, a.line))
         if typ == SET_TYPE:
             members = doc.kids(a, "effect")
             if not members:
-                out.append(finding("set", "warn", f"{owner} is a set with no <effect> in it, so "
-                                   "it does nothing", key, a.line))
+                out.append(finding("set", "warn", _i18n.msg("eng.areaeffects.is_a_set_with_no_in", "{owner} is a set with no <effect> in it, so it does nothing", owner=owner), key, a.line))
             for e in members:
                 m, d = doc.value(e), e.get("delay")
                 if m.lower() not in names:
-                    out.append(finding("member", "warn", f"{owner}: its member {m or '(blank)'} "
-                                       f"(line {e.line + 1}) is not an area effect in this file",
+                    out.append(finding("member", "warn", _i18n.msg("eng.areaeffects.its_member_line_is_not_an", "{owner}: its member {x} (line {x2}) is not an area effect in this file", owner=owner, x=m or '(blank)', x2=e.line + 1),
                                        key, e.line))
                 elif m.lower() == (name or "").lower():
-                    out.append(finding("member", "warn", f"{owner} lists itself (line "
-                                       f"{e.line + 1})", key, e.line))
+                    out.append(finding("member", "warn", _i18n.msg("eng.areaeffects.lists_itself_line", "{owner} lists itself (line {x})", owner=owner, x=e.line + 1), key, e.line))
                 if d and not lx.NUM.fullmatch(d):
-                    out.append(finding("number", "fatal", f"{owner}: delay {d!r} on line "
-                                       f"{e.line + 1} is not a number", key, e.line))
+                    out.append(finding("number", "fatal", _i18n.msg("eng.areaeffects.delay_on_line_is_not_a", "{owner}: delay {d} on line {x} is not a number", owner=owner, d=repr(d), x=e.line + 1), key, e.line))
     for v, where in set_notes.items():
         owner, line, key = where[0]
         who = ", ".join(sorted({w for w, _l, _k in where})[:4])
         if v.lower() in names:
-            out.append(finding("set_is_effect", "note", f"{who}: effect {v} is an area effect, "
-                               "where an effect set from the effect files goes", key, line))
+            out.append(finding("set_is_effect", "note", _i18n.msg("eng.areaeffects.effect_is_an_area_effect_where", "{who}: effect {v} is an area effect, where an effect set from the effect files goes", who=who, v=v), key, line))
         elif refs.absent:
-            out.append(finding("set_absent", "note", f"{who}: effect set {v} is in none of the "
-                               f"effect files that can be read; {len(refs.absent)} of the "
-                               "files descr_effects.txt lists are the base game's and packed, "
-                               "and one of those may have it", key, line))
+            out.append(finding("set_absent", "note", _i18n.msg("eng.areaeffects.effect_set_is_in_none_of", "{who}: effect set {v} is in none of the effect files that can be read; {absent_n} of the files descr_effects.txt lists are the base game's and packed, and one of those may have it", who=who, v=v, absent_n=len(refs.absent)), key, line))
         else:
             near = sorted(s for s in refs.sets if lx.lev(s, v.lower()) <= 2)
             out.append(finding("set_missing", "warn", f"{who}: effect set {v} is in none of the "
@@ -289,9 +273,7 @@ def check(doc: lx.Doc, refs: Optional[Refs] = None) -> List[Dict]:
             continue
         first = where[0]
         whos = ", ".join(sorted({w["who"] for w in where if w["who"]})[:4])
-        out.append(finding("undeclared", "warn", f"{first['file']}: {whos or 'line ' + str(first['line'])} "
-                           f"name{'s' if len(where) == 1 else ''} area_effect {first['name']}, and "
-                           f"{REL} declares no area effect called that", f"use/{first['name']}", 0))
+        out.append(finding("undeclared", "warn", _i18n.msg("eng.areaeffects.name_area_effect_and_declares_no", "{file}: {x} name{x2} area_effect {name}, and {REL} declares no area effect called that", file=first['file'], x=whos or 'line ' + str(first['line']), x2='s' if len(where) == 1 else '', name=first['name'], REL=REL), f"use/{first['name']}", 0))
     return out
 
 
@@ -394,12 +376,11 @@ def plan(mod, body: dict) -> lx.Plan:
         p.errors.append(e.message)
         return p
     if str(body.get("sig") or "") != lx.sig(text):
-        p.errors.append(f"{REL} changed on disk after it was opened here - reload it")
+        p.errors.append(_i18n.msg("eng.areaeffects.changed_on_disk_after_it_was", "{REL} changed on disk after it was opened here - reload it", REL=REL))
         return p
     doc = parse(text)
     if doc.root_end < 0:
-        p.errors.append(f"{REL} does not close its <{ROOT_TAG}>, so nothing here can be sure "
-                        "where an edit lands - fix it in Raw text first")
+        p.errors.append(_i18n.msg("eng.areaeffects.does_not_close_its_so_nothing", "{REL} does not close its <{ROOT_TAG}>, so nothing here can be sure where an edit lands - fix it in Raw text first", REL=REL, ROOT_TAG=ROOT_TAG))
         return p
     by = {str(n.id): n for n in doc.nodes}
     for spec in body.get("copy") or []:
@@ -407,9 +388,9 @@ def plan(mod, body: dict) -> lx.Plan:
         if like is None:
             continue
         if like.tag == ITEM_TAG and not str(spec.get("name") or "").strip():
-            p.errors.append("a copied area effect needs a name of its own")
+            p.errors.append(_i18n.msg("eng.areaeffects.a_copied_area_effect_needs_a", "a copied area effect needs a name of its own"))
         if like.tag == "effect" and _type_of(doc, like) != SET_TYPE:
-            p.errors.append("only a set's member is copied on its own")
+            p.errors.append(_i18n.msg("eng.areaeffects.only_a_sets_member_is_copied", "only a set's member is copied on its own"))
     if p.errors:
         return p
     new = lx.plan_edits(p, text, doc, body, _check_value, (ITEM_TAG, "effect"),

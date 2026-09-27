@@ -65,6 +65,7 @@ from . import flatrecord as fr
 from . import keyblock as kb
 from . import minorfiles
 from . import modflags
+from . import i18n as _i18n
 
 ENCODING = fr.ENCODING
 
@@ -183,11 +184,11 @@ def from_hex(text: str) -> str:
     """``"#374b30"`` -> ``"red 55, green 75, blue 48"``."""
     s = (text or "").lstrip("#")
     if len(s) != 6:
-        raise FactionError(f"`{text}` is not a #rrggbb colour")
+        raise FactionError(_i18n.msg("eng.factions.is_not_a_rrggbb_colour", "`{text}` is not a #rrggbb colour", text=text))
     try:
         return format_colour(tuple(int(s[i:i + 2], 16) for i in (0, 2, 4)))
     except ValueError:
-        raise FactionError(f"`{text}` is not a #rrggbb colour") from None
+        raise FactionError(_i18n.msg("eng.factions.is_not_a_rrggbb_colour", "`{text}` is not a #rrggbb colour", text=text)) from None
 
 
 # ---------------------------------------------------------------------------
@@ -575,7 +576,7 @@ def detail(mod, name: str) -> Dict:
     rec = rf.get(name) or next(
         (r for r in rf.records if slot_of(r.name) == slot_of(name)), None)
     if rec is None:
-        raise KeyError(f"no faction {name!r} in {REL}")
+        raise KeyError(_i18n.msg("eng.factions.no_faction_in", "no faction {name} in {REL}", name=repr(name), REL=REL))
     block = rf.block_text(rec)
     names = loc(mod)
     tag = loc_tag(rec.name)
@@ -675,14 +676,14 @@ def plan(mod, body: dict) -> FactionPlan:
         return p
     path = path_for(mod)
     if not path.is_file():
-        p.errors.append(f"{getattr(mod, 'name', '?')} has no {REL}")
+        p.errors.append(_i18n.msg("eng.factions.has_no", "{getattr} has no {REL}", getattr=getattr(mod, 'name', '?'), REL=REL))
         return p
     original = kb.read_text(path, ENCODING)
     rf = parse_text(original)
     rec = rf.get(p.name) or next(
         (r for r in rf.records if slot_of(r.name) == slot_of(p.name)), None)
     if rec is None:
-        p.errors.append(f"{p.name} is not a faction in this file")
+        p.errors.append(_i18n.msg("eng.factions.is_not_a_faction_in_this", "{name} is not a faction in this file", name=p.name))
         return p
     p.name = rec.name
 
@@ -693,9 +694,7 @@ def plan(mod, body: dict) -> FactionPlan:
             block = str(raw).strip("\r\n")
             if slot_of(parse_block(block + "\n").name) != slot_of(p.name):
                 raise FactionError(
-                    f"this faction is `{slot_of(p.name)}` - renaming a slot here "
-                    "would orphan descr_strat, every unit's ownership line, every "
-                    "`requires factions { … }` clause and its own text entry")
+                    _i18n.msg("eng.factions.this_faction_is_renaming_a_slot", "this faction is `{slot_of}` - renaming a slot here would orphan descr_strat, every unit's ownership line, every `requires factions { … }` clause and its own text entry", slot_of=slot_of(p.name)))
         else:
             edits = dict(body.get("edits") or {})
             edits.pop("name", None)      # the slot is not editable - see above
@@ -719,7 +718,7 @@ def plan(mod, body: dict) -> FactionPlan:
         if body.get("write_loc", True):
             _plan_loc(p, mod, now, dict(body.get("loc") or {}))
     if not p.touched() and not p.errors:
-        p.warnings.append("nothing to change")
+        p.warnings.append(_i18n.msg("eng.factions.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -730,8 +729,7 @@ def _plan_loc(p: FactionPlan, mod, rec, wanted: Dict) -> None:
     have = loc(mod)
     txt = Path(mod.data) / LOC_REL
     if not txt.exists() and not stringsbin.bin_path_for(txt).exists():
-        p.warnings.append(f"this mod has no {Path(LOC_REL).name}, so this faction's "
-                          "name could not be written - it will show its slot in game")
+        p.warnings.append(_i18n.msg("eng.factions.this_mod_has_no_so_this", "this mod has no {name}, so this faction's name could not be written - it will show its slot in game", name=Path(LOC_REL).name))
         return
     want = str(wanted.get(tag, "")).strip() if wanted else ""
     if tag not in have:
@@ -754,7 +752,7 @@ def apply(p: FactionPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.touched():
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.factions.nothing_to_change", "nothing to change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

@@ -58,9 +58,9 @@ const CFD_ZOOM = 6;
    to display. */
 const CFD_FIELDS = [
   {key: 'shown', what: 'province'},
-  {key: 'name', what: 'province code'},
+  {key: 'name', what: tt('mapfind.province_code')},
   {key: 'shown_settlement', what: 'settlement'},
-  {key: 'settlement_name', what: 'settlement code'},
+  {key: 'settlement_name', what: tt('mapfind.settlement_code')},
 ];
 
 /* ---------- state ----------
@@ -84,7 +84,7 @@ function cfdToggle(){
   const k = state.cfd;
   if(!k) return;
   k.open = !k.open;
-  activity('map find', k.open ? 'opened the find box' : 'closed the find box');
+  activity(tt('mapfind.map_find'), k.open ? tt('mapfind.opened_the_find_box') : tt('mapfind.closed_the_find_box'));
   cfdPaint();
   if(k.open) cfdFocus();
 }
@@ -114,7 +114,7 @@ function cfdSearch(text, regions){
     if(!r || (!r.name && !r.settlement_name)) continue;   // an undeclared colour
     let best = null;
     if(num !== null && r.id === num)
-      best = {tier: 0, field: -1, what: 'region ID', hit: String(r.id)};
+      best = {tier: 0, field: -1, what: tt('mapfind.region_id'), hit: String(r.id)};
     for(let i = 0; i < CFD_FIELDS.length; i++){
       const f = CFD_FIELDS[i], value = String(r[f.key] || '');
       if(!value) continue;
@@ -163,7 +163,7 @@ function cfdGo(i){
   if(!hit || !hit.tile) return;
   cpaintSelectRegion();
   cmapGoTile(hit.tile, CFD_ZOOM, hit.name);
-  activity('map find', `went to ${hit.shown || hit.name} (${k.q})`);
+  activity(tt('mapfind.map_find'), tt('mapfind.went_to',{x:hit.shown || hit.name,x2:k.q}));
 }
 
 //: Enter goes to the first hit, which is what a box with a list under it
@@ -201,21 +201,17 @@ function cfdHtml(){
   if(!k || !c) return '';
   const head = `<div class="cpbar">
     <button class="cptog${k.open ? ' on' : ''}" onclick="cfdToggle()"
-      title="Type a province, a settlement or a region ID and go to it (F).
-Answered out of the map you were already sent - nothing is fetched per keystroke."
-      >\u{1F50D} Find${k.open ? ' ✓' : ''}</button>
-    ${k.open && k.q ? `<span class="count">${k.of} match${
-      k.of === 1 ? '' : 'es'}</span>` : ''}
+      title="${ttA('mapfind.type_a_province_a_settlement_or')}"
+      >${tt('mapfind.find',{open:k.open ? ' ✓' : ''})}</button>
+    ${k.open && k.q ? `<span class="count">${tt('mapfind.match',{of:k.of,of2:k.of === 1 ? '' : 'es'})}</span>` : ''}
   </div>`;
   if(!k.open) return head;
   const n = (c.man.regions || []).filter(r => r.name).length;
   return head + `<div class="cfdpanel">
     <input type="search" id="cfdBox" value="${esc(k.q)}" autocomplete="off"
-      spellcheck="false" aria-label="Search regions and settlements" placeholder="Search regions / settlements…">
+      spellcheck="false" aria-label="${ttA('mapfind.search_regions_and_settlements')}" placeholder="${ttA('mapfind.search_regions_settlements')}">
     <div id="cfdRes">${cfdResHtml()}</div>
-    <div class="count">${n} province${n === 1 ? '' : 's'} on this map, each
-      searchable by the words the player reads and by the code name the files
-      use. Enter goes to the first one.</div>
+    <div class="count">${tt('mapfind.province_on_this_map_each_searchable',{x:n,x2:n === 1 ? '' : 's'})}</div>
   </div>`;
 }
 
@@ -224,7 +220,7 @@ function cfdBrowseHits(){
   return ((c && c.man.regions) || []).filter(r => r.name && r.anchor)
     .map(r => ({name:r.name, shown:r.shown, settlement:r.settlement_name,
       shown_settlement:r.shown_settlement, id:r.id, declared:r.declared,
-      tile:r.anchor, what:'Province'}))
+      tile:r.anchor, what:tt('common.province')}))
     .sort((a,b) => String(a.shown || a.name).localeCompare(String(b.shown || b.name)));
 }
 
@@ -232,18 +228,15 @@ function cfdResHtml(){
   const k = state.cfd;
   if(!k) return '';
   const hits = k.q.trim() ? k.hits : cfdBrowseHits();
-  if(!hits.length) return `<div class="count">Nothing on this map is called that.
-    A province the file declares and never paints has no tile to go to, so it is
-    not here - the read's own findings at the top of this panel list those.</div>`;
+  if(!hits.length) return `<div class="count">${tt('mapfind.nothing_on_this_map_is_called')}</div>`;
   return `<div class="cfdres">${hits.map((h, i) => `
-    <button class="cfdrow" onclick="cfdGo(${i})" title="Select ${esc(h.name)}"
+    <button class="cfdrow" onclick="cfdGo(${i})" title="${ttA('mapfind.select',{name:esc(h.name)})}"
       aria-pressed="${!!(state.cmap.sel && state.cmap.sel.name === h.name)}">
       <b>${esc(h.shown || h.name)}</b>
       <span class="count">${esc(h.what)}${h.id >= 0 ? ` · #${h.id}` : ''}</span>
       <div class="count">${esc(h.name)}${h.settlement
         ? ` · ${esc(h.shown_settlement || h.settlement)}` : ''}${h.declared
-        ? '' : ' · painted and declared nowhere'}</div>
+        ? '' : tt('mapfind.painted_and_declared_nowhere')}</div>
     </button>`).join('')}
-    ${k.of > k.hits.length ? `<div class="count">and ${k.of - k.hits.length}
-      more - a longer word narrows it</div>` : ''}</div>`;
+    ${k.of > k.hits.length ? `<div class="count">${tt('mapfind.and_more_a_longer_word_narrows',{n:k.of - k.hits.length})}</div>` : ''}</div>`;
 }

@@ -532,12 +532,19 @@ major languages. Make sure the words are correct technical words fitting for
 the contexts". Unrated, both lines (it is not map work, and every screen
 changes), after 87 in the table.
 
-**What is there now.** No internationalisation at all: `index.html` is
-`<html lang="en">` and every string a person reads is an English literal in
-one of the ~70 modules under `web/js/` or in a message the engine raises. A
-crude count finds at least ~380 prose literals in `web/js/` and ~350 raised
-messages in `unittransfer/` that can reach the screen; 88a measures the real
-number before anything is moved.
+**What was there.** No internationalisation at all: `index.html` was
+`<html lang="en">` and every string a person reads was an English literal in
+one of the ~80 modules under `web/js/` or in a message the engine raises. The
+crude count of ~380 and ~350 was an order of magnitude short.
+
+**Measured by 88a, 2026-09-27** (`dev/checks/i18n_scan.py`, a lexer and the
+rules for what is text): **6,927 runs of text in `web/js/` and `index.html`**
+(3,280 in markup, 516 tooltips and placeholders, 3,131 plain literals, about
+68,000 words before repeats), and **1,826 engine messages** in 94 of the 116
+modules under `unittransfer/`, plus 159 built with `+` or `%`. After repeats
+were merged the catalogue holds **8,027 strings, about 60,000 words**: 6,289
+for the interface (41,000 words; 91 shared under `common.`, 64 of
+index.html's under `app.`) and 1,738 engine messages (19,000 words).
 
 **Two languages, never confused.** The *interface language* is the toolkit's
 own buttons, headings and messages, and it is what this phase adds. The *mod's
@@ -635,6 +642,24 @@ bracketed, so a hard-coded string and a clipped button are both visible) and
 recorded here. Done when: Home and Settings run fully under both
 pseudo-locales, and English is unchanged.
 
+*Done 2026-09-27.* The names the code calls are `tt(id, params)`,
+`ttA` (inside an attribute) and `ttN(id, n, params)` (a plural): `t` is a
+local variable in 294 places across `web/js/`, and a global of that name would
+be shadowed in each. The server writes `i18n/catalogue.js` (English, the
+chosen locale's catalogue and the offered list), loaded with `i18n.js` before
+every other module, so a string is there when a module's first line asks for
+it; the interface language is `ui_lang` in Settings, else the first entry of
+`Accept-Language` with a catalogue (the server's view of
+`navigator.languages`), else English, never a pseudo-locale. Choosing one
+saves and reloads. The engine side is `unittransfer/i18n.py`: `msg(id,
+template, **params)` is a `str` holding the English, exactly as the f-string
+made it (`format(v, spec)`), and remembers its ID; `Handler._json` adds an
+`_i18n` map of `{text: [id, params]}` to a reply holding one, and
+`i18nFromServer` in `api.get` and `api.post` swaps each for the catalogue's
+string in any language but English. index.html's own text is marked
+`data-i18n` / `data-i18n-title` and so on, the English kept in the page.
+`tests/test_i18n` (34).
+
 **88b - every string externalised.** Every module under `web/js/`,
 `index.html` and the engine's user-facing messages moved into `en.json` under
 stable, namespaced IDs (`map.paint.brush_size`, not the English text as the
@@ -643,7 +668,45 @@ allowlist for rule 1's code names. Done when: the lint is clean, and every
 screen in English is the same text as before, checked against a snapshot
 taken first.
 
-**88c - the termbase.** Every technical term in `en.json` extracted and
+*Done 2026-09-27*, by two codemods rather than by hand, each proved rather
+than trusted. `dev/checks/i18n_extract.py` rewrites a module's literals: a
+run of text in markup becomes `${tt('id',{name:expr})}` (a quoted literal
+holding markup becomes a template literal to take it), a tooltip
+`${ttA('id')}`, a plain literal `tt('id')`. Every rewritten literal (5,411)
+is evaluated twice in Node, old and new, with its expressions replaced by
+markers and the real `i18n.js` loaded on the new catalogue, and must come out
+the same string; then `node --check` on every file. A line break and its
+indent inside HTML text is stored as one space (it draws as one; `<pre>`,
+`<textarea>`, `<style>` and `<script>` are left out). IDs are
+`<module>.<first words>`, `common.<words>` for a string three or more modules
+share, `app.` for index.html, `eng.<module>.` for the engine.
+`dev/checks/i18n_extract_py.py` does the engine's 1,826 messages: the first
+argument of a `raise`, the arguments of a call named like a report
+(`finding`, `Finding`, `fail`, any `...Error`), an `.append` onto a list
+named like one (`notes`, `errors`, `warnings`...), and a report key in a dict
+(`error`, `why`...), never `log.*`. The 47 literals that are code shaped like
+words (`/icon?...` addresses, `onclick` handler strings, `translate()`,
+`hsla()`, a media query) were found in the catalogue and put back as they
+were; the rule that caught them is now in the extractor. **The lint is the
+extractors' own rules**, so what one moves and the other checks cannot
+disagree: `test_i18n` runs both over the tree and finds nothing left. The
+before-and-after walk: every module's screen and the Settings dialog read
+from a worktree of `2c5d589b` and from the result, text compared line for
+line: identical but for two timings. Tests that read a module's words go
+through `tests/_webtext.py`, which puts each call's English back (94.5% of
+lines come back identical to the old source, the rest folded HTML text).
+
+**Left for 88c, before a word is translated**: 714 entries are fragments of a
+sentence the code still joins with `+` (`tt('home.reading') + path + '…'`),
+130 places make a plural with `+ 's'`, and 159 engine messages are built with
+`+` or `%` and are still English only. Each needs its sentence whole, with
+named placeholders, and its plural through `ttN`, or no translation of it can
+be right.
+
+**88c - whole sentences, then the termbase.** First what 88b left: the 714
+fragments joined into sentences with named placeholders, the 130 `+ 's'`
+plurals through `ttN` with a form per CLDR category, and the 159 engine
+messages built with `+` or `%` given IDs. Then every technical term in `en.json` extracted and
 classified under the four rules, with a rendering and its source per target
 language. The checker enforces it: an English string containing a termbase
 term must contain that term's rendering in each translation, a rule-1 term

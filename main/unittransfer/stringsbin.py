@@ -62,6 +62,7 @@ import struct
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from . import i18n as _i18n
 
 #: ``style`` word: entries are ``<tag> <value>`` pairs and can be looked up by name
 TAGGED = 2
@@ -133,7 +134,7 @@ class StringsBin:
     def set_value(self, pos: int, value: str) -> None:
         """Replace the value at ``pos`` (the only edit an untagged file allows)."""
         if not 0 <= pos < len(self.values):
-            raise StringsBinError(f"no entry at position {pos}")
+            raise StringsBinError(_i18n.msg("eng.stringsbin.no_entry_at_position", "no entry at position {pos}", pos=pos))
         self.values[pos] = value
 
     def set(self, tag: str, value: str) -> int:
@@ -144,7 +145,7 @@ class StringsBin:
         order puts it rather than on the end.
         """
         if not self.tagged:
-            raise StringsBinError("this file's entries have no tags - edit by position")
+            raise StringsBinError(_i18n.msg("eng.stringsbin.this_files_entries_have_no_tags_2", "this file's entries have no tags - edit by position"))
         i = self.index_of(tag)
         if i >= 0:
             self.values[i] = value
@@ -184,14 +185,13 @@ def _bisect(tags: List[str], tag: str) -> int:
 
 def _read_str(data: bytes, pos: int) -> Tuple[str, int]:
     if pos + 2 > len(data):
-        raise StringsBinError("file ends where a string length was expected", pos)
+        raise StringsBinError(_i18n.msg("eng.stringsbin.file_ends_where_a_string_length", "file ends where a string length was expected"), pos)
     (units,) = struct.unpack_from("<H", data, pos)
     pos += 2
     end = pos + units * 2
     if end > len(data):
         raise StringsBinError(
-            f"a string says it is {units} characters long but only "
-            f"{(len(data) - pos) // 2} are left in the file", pos - 2)
+            _i18n.msg("eng.stringsbin.a_string_says_it_is_characters", "a string says it is {units} characters long but only {x} are left in the file", units=units, x=(len(data) - pos) // 2), pos - 2)
     # surrogate pairs are legal UTF-16; none of the shipped files use one, but
     # decoding leniently is better than refusing to open a file over one byte
     return data[pos:end].decode("utf-16-le", "replace"), end
@@ -202,7 +202,7 @@ def _write_str(out: bytearray, s: str) -> None:
     units = len(raw) // 2
     if units > 0xFFFF:
         raise StringsBinError(
-            f"a single string cannot exceed 65535 characters (this one is {units})")
+            _i18n.msg("eng.stringsbin.a_single_string_cannot_exceed_65535", "a single string cannot exceed 65535 characters (this one is {units})", units=units))
     out += struct.pack("<H", units)
     out += raw
 
@@ -210,15 +210,15 @@ def _write_str(out: bytearray, s: str) -> None:
 def decode(data: bytes) -> StringsBin:
     """Decode a ``.strings.bin``. Raises :class:`StringsBinError` if it isn't one."""
     if len(data) < 8:
-        raise StringsBinError("too short to be a .strings.bin (needs an 8-byte header)", 0)
+        raise StringsBinError(_i18n.msg("eng.stringsbin.too_short_to_be_a_strings", "too short to be a .strings.bin (needs an 8-byte header)"), 0)
     style, flavour, count = struct.unpack_from("<HHI", data, 0)
     if style not in (TAGGED, UNTAGGED):
         raise StringsBinError(
-            f"unknown .strings.bin style {style} (expected 1 = untagged or 2 = tagged)", 0)
+            _i18n.msg("eng.stringsbin.unknown_strings_bin_style_expected_1", "unknown .strings.bin style {style} (expected 1 = untagged or 2 = tagged)", style=style), 0)
     per = 2 if style == TAGGED else 1
     if 8 + count * per * 2 > len(data):
         raise StringsBinError(
-            f"header claims {count} entries, which cannot fit in {len(data)} bytes", 4)
+            _i18n.msg("eng.stringsbin.header_claims_entries_which_cannot_fit", "header claims {count} entries, which cannot fit in {data_n} bytes", count=count, data_n=len(data)), 4)
     sb = StringsBin(style=style, flavour=flavour)
     pos = 8
     for _ in range(count):
@@ -234,7 +234,7 @@ def decode(data: bytes) -> StringsBin:
         pos += 2
     elif style == TAGGED:
         if pos + 4 > len(data):
-            raise StringsBinError("file ends before its tag index", pos)
+            raise StringsBinError(_i18n.msg("eng.stringsbin.file_ends_before_its_tag_index", "file ends before its tag index"), pos)
         (index_count,) = struct.unpack_from("<I", data, pos)
         pos += 4
         for _ in range(index_count):
@@ -242,7 +242,7 @@ def decode(data: bytes) -> StringsBin:
             sb.index.append(s)
     if pos != len(data):
         raise StringsBinError(
-            f"{len(data) - pos} unexplained bytes after the last string", pos)
+            _i18n.msg("eng.stringsbin.unexplained_bytes_after_the_last_string", "{x} unexplained bytes after the last string", x=len(data) - pos), pos)
     return sb
 
 
@@ -250,7 +250,7 @@ def encode(sb: StringsBin) -> bytes:
     """Re-encode an archive. ``encode(decode(b)) == b`` for every shipped file."""
     if sb.tagged and len(sb.tags) != len(sb.values):
         raise StringsBinError(
-            f"{len(sb.tags)} tags but {len(sb.values)} values - the two must match")
+            _i18n.msg("eng.stringsbin.tags_but_values_the_two_must", "{tags_n} tags but {values_n} values - the two must match", tags_n=len(sb.tags), values_n=len(sb.values)))
     out = bytearray(struct.pack("<HHI", sb.style, sb.flavour, len(sb.values)))
     for i, value in enumerate(sb.values):
         if sb.tagged:
@@ -279,11 +279,11 @@ def peek(path: str | Path) -> Dict:
     with Path(path).open("rb") as fh:
         head = fh.read(8)
     if len(head) < 8:
-        raise StringsBinError("too short to be a .strings.bin (needs an 8-byte header)", 0)
+        raise StringsBinError(_i18n.msg("eng.stringsbin.too_short_to_be_a_strings", "too short to be a .strings.bin (needs an 8-byte header)"), 0)
     style, flavour, count = struct.unpack("<HHI", head)
     if style not in (TAGGED, UNTAGGED):
         raise StringsBinError(
-            f"unknown .strings.bin style {style} (expected 1 = untagged or 2 = tagged)", 0)
+            _i18n.msg("eng.stringsbin.unknown_strings_bin_style_expected_1", "unknown .strings.bin style {style} (expected 1 = untagged or 2 = tagged)", style=style), 0)
     return {"style": style, "flavour": flavour, "count": count,
             "tagged": style == TAGGED}
 
@@ -318,16 +318,16 @@ def parse_record(text: str) -> Tuple[str, str]:
     s = text.strip("\ufeff").strip("\r\n")
     if "\n" in s:
         raise StringsBinError(
-            "an entry is one line - write a line break as \\n rather than pressing Enter")
+            _i18n.msg("eng.stringsbin.an_entry_is_one_line_write", "an entry is one line - write a line break as \\n rather than pressing Enter"))
     s = s.strip()
     if not s.startswith("{"):
-        raise StringsBinError("an entry starts with its tag in braces: {tag}text")
+        raise StringsBinError(_i18n.msg("eng.stringsbin.an_entry_starts_with_its_tag", "an entry starts with its tag in braces: {tag}text"))
     close = s.find("}")
     if close < 0:
-        raise StringsBinError("the tag's closing brace is missing")
+        raise StringsBinError(_i18n.msg("eng.stringsbin.the_tags_closing_brace_is_missing", "the tag's closing brace is missing"))
     tag = s[1:close]
     if not tag.strip():
-        raise StringsBinError("the tag is empty")
+        raise StringsBinError(_i18n.msg("eng.stringsbin.the_tag_is_empty", "the tag is empty"))
     return tag, unescape(s[close + 1:])
 
 
@@ -335,7 +335,7 @@ def to_txt(sb: StringsBin, newline: str = "\r\n") -> str:
     """The whole archive as its ``.txt`` counterpart (tagged files only)."""
     if not sb.tagged:
         raise StringsBinError(
-            "this file's entries have no tags, so there is no .txt form of it")
+            _i18n.msg("eng.stringsbin.this_files_entries_have_no_tags", "this file's entries have no tags, so there is no .txt form of it"))
     lines = [COMMENT] + [record_text(t, v) for t, v in sb.rows()]
     return newline.join(lines) + newline
 
@@ -482,11 +482,11 @@ def refresh_from_txt(txt_path: str | Path) -> Dict:
     target = bin_path_for(txt)
     out: Dict = {"file": str(target), "rebuilt": False}
     if not txt.exists():
-        return {**out, "error": f"no {txt.name} to compile from"}
+        return {**out, "error": _i18n.msg("eng.stringsbin.no_to_compile_from", "no {name} to compile from", name=txt.name)}
     try:
         text = txt.read_text(encoding=TXT_ENCODING)
     except (OSError, UnicodeError) as e:
-        return {**out, "error": f"could not read {txt.name}: {e}"}
+        return {**out, "error": _i18n.msg("eng.stringsbin.could_not_read", "could not read {name}: {e}", name=txt.name, e=e)}
     template = None
     if target.exists():
         try:
@@ -495,12 +495,12 @@ def refresh_from_txt(txt_path: str | Path) -> Dict:
             template = None          # unreadable cache: compile a fresh one over it
         else:
             if not template.tagged:
-                return {**out, "error": f"{target.name} has no tags - refusing to rebuild it"}
+                return {**out, "error": _i18n.msg("eng.stringsbin.has_no_tags_refusing_to_rebuild", "{name} has no tags - refusing to rebuild it", name=target.name)}
     try:
         sb = compile_txt(text, template)
         write(target, sb)
     except (OSError, StringsBinError) as e:
-        return {**out, "error": f"could not write {target.name}: {e}"}
+        return {**out, "error": _i18n.msg("eng.stringsbin.could_not_write", "could not write {name}: {e}", name=target.name, e=e)}
     out["rebuilt"] = True
     out["entries"] = len(sb)
     return out

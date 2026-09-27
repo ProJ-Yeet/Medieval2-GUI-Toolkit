@@ -262,9 +262,9 @@ async function v3Open(mod, entry){
   if(typeof cmpPrevDetach === 'function') cmpPrevDetach();
   v3Back = wasOpen ? {html: modal.innerHTML, cls: modal.className, scroll: stashPlace()} : {};
   modal.className = 'modal wide';
-  modal.innerHTML = `<h2>Model - ${esc(entry)}</h2>
-    <div class="mbody"><div class="empty">Reading ${esc(entry)}…</div></div>
-    <div class="foot"><button onclick="v3Close()">Close</button></div>`;
+  modal.innerHTML = `<h2>${tt('viewer3d.model',{entry:esc(entry)})}</h2>
+    <div class="mbody"><div class="empty">${tt('viewer3d.reading',{entry:esc(entry)})}</div></div>
+    <div class="foot"><button onclick="v3Close()">${tt('common.close')}</button></div>`;
   overlay.classList.add('open');
   await v3Begin(mod, entry, '');
 }
@@ -287,7 +287,7 @@ async function v3Mount(hostId, mod, entry){
   v3Back = null; v3 = null;
   const host = document.getElementById(hostId);
   if(!host) return;
-  host.innerHTML = `<div class="empty">Reading ${esc(entry)}…</div>`;
+  host.innerHTML = `<div class="empty">${tt('viewer3d.reading',{entry:esc(entry)})}</div>`;
   await v3Begin(mod, entry, hostId);
 }
 
@@ -342,9 +342,9 @@ async function v3OpenCas(mod, rel){
   v3Back = wasOpen ? {html: modal.innerHTML, cls: modal.className, scroll: stashPlace()} : {};
   const name = rel.split('/').pop();
   modal.className = 'modal wide';
-  modal.innerHTML = `<h2>Strat model - ${esc(name)}</h2>
-    <div class="mbody"><div class="empty">Reading ${esc(name)}…</div></div>
-    <div class="foot"><button onclick="v3Close()">Close</button></div>`;
+  modal.innerHTML = `<h2>${tt('viewer3d.strat_model',{name:esc(name)})}</h2>
+    <div class="mbody"><div class="empty">${tt('viewer3d.reading_2',{name:esc(name)})}</div></div>
+    <div class="foot"><button onclick="v3Close()">${tt('common.close')}</button></div>`;
   overlay.classList.add('open');
   await v3Begin(mod, name, '', rel);
 }
@@ -356,7 +356,7 @@ async function v3MountCas(hostId, mod, rel){
   v3Back = null; v3 = null;
   const host = document.getElementById(hostId);
   if(!host) return;
-  host.innerHTML = `<div class="empty">Reading ${esc(rel.split('/').pop())}…</div>`;
+  host.innerHTML = `<div class="empty">${tt('viewer3d.reading_3',{x:esc(rel.split('/').pop())})}</div>`;
   await v3Begin(mod, rel.split('/').pop(), hostId, rel);
 }
 
@@ -411,9 +411,9 @@ function v3HostEl(host){
    there is no one faction it belongs to. */
 function v3SkinLabel(s){
   const n = (s.factions||[]).length;
-  if(n === 0) return (s.rel || 'no texture').split('/').pop();
+  if(n === 0) return (s.rel || tt('viewer3d.no_texture')).split('/').pop();
   if(n === 1) return facLabel(s.factions[0]);
-  return `${facLabel(s.factions[0])} +${n-1} more`;
+  return tt('viewer3d.more',{x:facLabel(s.factions[0]),x2:n-1});
 }
 
 /* The skin the viewer is on, and its two sheets. */
@@ -466,7 +466,7 @@ function v3Render(){
   const i = v3.info;
   const lods = i.lods.map(l =>
     `<option value="${l.index}" ${l.index===v3.lod?'selected':''} ${l.exists?'':'disabled'}>
-       LOD ${l.index}${l.distance?` · from ${l.distance}m`:''}${l.exists?'':' - not in this mod'}
+       ${tt('viewer3d.lod',{index:l.index,distance:l.distance?tt('viewer3d.from_m',{distance:l.distance}):'',exists:l.exists?'':' - not in this mod'})}
      </option>`).join('');
   // one option per PAIR of files: an entry that lists 29 factions against the
   // same main and attachment textures has one skin, and saying so is more use
@@ -474,7 +474,7 @@ function v3Render(){
   const skins = i.skins.length
     ? i.skins.map((s, n) => `<option value="${n}" ${n===v3.skin?'selected':''}
         ${s.exists?'':'disabled'}>${esc(v3SkinLabel(s))}${s.exists?'':' - not in this mod'}</option>`).join('')
-    : '<option>no skins on this entry</option>';
+    : `<option>${tt('viewer3d.no_skins_on_this_entry')}</option>`;
 
   const host = v3HostEl();
   if(!host) return;
@@ -485,47 +485,44 @@ function v3Render(){
       <div class="v3stage${v3.uved ? ' uv' : ''}" id="v3stage">
         <div class="v3gl">
           <canvas id="v3canvas"></canvas>
-          <div class="v3hint">drag to turn · wheel to zoom · right-drag to pan</div>
+          <div class="v3hint">${tt('viewer3d.drag_to_turn_wheel_to_zoom')}</div>
           <div class="v3msg" id="v3msg"></div>
         </div>
         <div class="v3uvpane">
           <div class="v3uvbar">
             <label><input type="checkbox" ${v3.uvOpt.tex?'checked':''}
-              onchange="v3UvOpt('tex', this.checked)"> Sheet</label>
-            <label title="Draw only the island you picked, for a part buried under the others"><input
+              onchange="v3UvOpt('tex', this.checked)"> ${tt('viewer3d.sheet')}</label>
+            <label title="${ttA('viewer3d.draw_only_the_island_you_picked')}"><input
               type="checkbox" ${v3.uvOpt.solo?'checked':''}
-              onchange="v3UvOpt('solo', this.checked)"> Just this part</label>
-            <button onclick="v3UvFit()">Fit</button>
+              onchange="v3UvOpt('solo', this.checked)"> ${tt('viewer3d.just_this_part')}</label>
+            <button onclick="v3UvFit()">${tt('viewer3d.fit')}</button>
           </div>
           <div class="v3uvsel" id="v3uvsel"></div>
           <div class="v3uvstage">
             <canvas id="v3uvcanvas"></canvas>
-            <div class="v3hint" id="v3uvpos">drag to pan · wheel to zoom · click an island</div>
+            <div class="v3hint" id="v3uvpos">${tt('viewer3d.drag_to_pan_wheel_to_zoom')}</div>
           </div>
         </div>
       </div>
       ${v3.host ? `<div class="v3grip" onpointerdown="v3GripDown(event)"
         ondblclick="v3GripReset()"
-        title="Drag to give the model more room, or its controls more · double-click for the default"></div>` : ''}
+        title="${ttA('viewer3d.drag_to_give_the_model_more')}"></div>` : ''}
       <aside class="v3side">
-        ${v3.cas ? '' : `<button class="v3roll" onclick="v3Randomize()" title="Pick a variant for every part the way the game does, one soldier at a time">🎲 Randomize variations</button>
-        <label class="v3f"><span>Level of detail</span>
+        ${v3.cas ? '' : `<button class="v3roll" onclick="v3Randomize()" title="${ttA('viewer3d.pick_a_variant_for_every_part')}">${tt('viewer3d.randomize_variations')}</button>
+        <label class="v3f"><span>${tt('viewer3d.level_of_detail')}</span>
           <select onchange="v3SetLod(this.value)">${lods}</select></label>
-        <label class="v3f"><span>Skin</span>
+        <label class="v3f"><span>${tt('viewer3d.skin')}</span>
           <select onchange="v3SetSkin(this.value)" ${i.skins.length?'':'disabled'}>${skins}</select></label>`}
         <div class="v3btns">
-          <button id="v3spin" class="${v3.spin?'on':''}" onclick="v3Toggle('spin')">Rotate</button>
-          <button id="v3wire" class="${v3.wire?'on':''}" onclick="v3Toggle('wire')">Wireframe</button>
+          <button id="v3spin" class="${v3.spin?'on':''}" onclick="v3Toggle('spin')">${tt('viewer3d.rotate')}</button>
+          <button id="v3wire" class="${v3.wire?'on':''}" onclick="v3Toggle('wire')">${tt('viewer3d.wireframe')}</button>
           <button id="v3uv" class="${v3.uv?'on':''}" onclick="v3Toggle('uv')"
-            ${(v3.geo && !v3.geo.has_uvs) ? 'disabled title="This model carries no UV set"' : 'title="Paint the UV coordinate instead of the art: blue is the main sheet, amber the attachment sheet, and the dark tiles are the sheets repeating"'}>Show UVs</button>
+            ${(v3.geo && !v3.geo.has_uvs) ? tt('viewer3d.disabled_title_this_model_carries_no') : tt('viewer3d.title_paint_the_uv_coordinate_instead')}>${tt('viewer3d.show_uvs')}</button>
           <button id="v3uved" class="${v3.uved?'on':''}" onclick="v3Toggle('uved')"
-            ${(v3.geo && !v3.geo.has_uvs) ? 'disabled title="This model carries no UV set"' : 'title="Open the UV layout beside the model: the texture sheet with this model&#39;s islands drawn over it, the way a UV editor shows them"'}>UV layout</button>
+            ${(v3.geo && !v3.geo.has_uvs) ? tt('viewer3d.disabled_title_this_model_carries_no') : tt('viewer3d.title_open_the_uv_layout_beside')}>${tt('viewer3d.uv_layout')}</button>
           <button id="v3hd" class="${v3HdOn()?'on':''}" onclick="v3ToggleHd()"
-            title="Draw the texture at the size the mod ships it, instead of halving anything over
-1024. That is the size the game draws, so it is the one to check a skin's own detail
-against. Off by default: a 2048 sheet is four times the bytes and the video memory
-for a soldier on screen a few hundred pixels tall.">HD textures</button>
-          <button onclick="v3Frame()">Recentre</button>
+            title="${ttA('viewer3d.draw_the_texture_at_the_size')}">${tt('viewer3d.hd_textures')}</button>
+          <button onclick="v3Frame()">${tt('viewer3d.recentre')}</button>
         </div>
         <div id="v3uvkey"></div>
         <div class="v3anim" id="v3anim"></div>${v3.cas ? '' : '<div class="v3anim" id="v3export"></div>'}
@@ -648,15 +645,15 @@ function v3GripReset(){
    Spelling them out beats showing "shieldpassive0" and leaving you to work out
    which shield that is. */
 const V3_SLOTS = {
-  weapon0: 'Weapon', weapon1: 'Weapon 2',
-  primaryactive0: 'Primary weapon - drawn', primaryactive1: 'Primary weapon 2 - drawn',
-  primarypassive0: 'Primary weapon - stowed', primarypassive1: 'Primary weapon 2 - stowed',
-  secondaryactive0: 'Secondary weapon - drawn', secondaryactive1: 'Secondary weapon 2 - drawn',
-  secondarypassive0: 'Secondary weapon - stowed', secondarypassive1: 'Secondary weapon 2 - stowed',
-  shield0: 'Shield', shield1: 'Shield 2',
-  shieldactive0: 'Shield - carried', shieldactive1: 'Shield 2 - carried',
-  shieldpassive0: 'Shield - slung', shieldpassive1: 'Shield 2 - slung',
-  ramrod0: 'Ramrod', 'cannon ball0': 'Cannon ball', 'ballista arrow0': 'Ballista bolt'
+  weapon0: tt('viewer3d.weapon'), weapon1: tt('viewer3d.weapon_2'),
+  primaryactive0: tt('viewer3d.primary_weapon_drawn'), primaryactive1: tt('viewer3d.primary_weapon_2_drawn'),
+  primarypassive0: tt('viewer3d.primary_weapon_stowed'), primarypassive1: tt('viewer3d.primary_weapon_2_stowed'),
+  secondaryactive0: tt('viewer3d.secondary_weapon_drawn'), secondaryactive1: tt('viewer3d.secondary_weapon_2_drawn'),
+  secondarypassive0: tt('viewer3d.secondary_weapon_stowed'), secondarypassive1: tt('viewer3d.secondary_weapon_2_stowed'),
+  shield0: tt('viewer3d.shield'), shield1: tt('viewer3d.shield_2'),
+  shieldactive0: tt('viewer3d.shield_carried'), shieldactive1: tt('viewer3d.shield_2_carried'),
+  shieldpassive0: tt('viewer3d.shield_slung'), shieldpassive1: tt('viewer3d.shield_2_slung'),
+  ramrod0: tt('viewer3d.ramrod'), 'cannon ball0': tt('viewer3d.cannon_ball'), 'ballista arrow0': tt('viewer3d.ballista_bolt')
 };
 
 /* Which slots start hidden. A model ships both stances of the same kit - the
@@ -701,9 +698,9 @@ function v3Parts(){
   if(v3.cas) return v3CasParts(host);
   const parts = v3PartMap();
   const att = [...parts.values()].filter(p => p.list.some(v => v.g.sheets !== 'main')).length;
-  host.innerHTML = `<div class="k">Parts <span class="count">${parts.size} slots`
-    + (att ? ` · ${att} reaching the ${v3TexCase() === 'pair'
-        ? 'attachment sheet' : 'right half of the sheet'}` : '') + `</span></div>`
+  host.innerHTML = `<div class="k">${tt('viewer3d.parts_slots',{parts_n:parts.size})}`
+    + (att ? tt('viewer3d.reaching_the',{att,v3TexCase:v3TexCase() === 'pair'
+        ? tt('viewer3d.attachment_sheet') : tt('viewer3d.right_half_of_the_sheet')}) : '') + `</span></div>`
     + [...parts.values()].map((p, n) => {
     const box = `<input type="checkbox" ${v3.hidden[p.key]?'':'checked'}
         onchange="v3TogglePart('${q1(esc(p.key))}')">`;
@@ -713,7 +710,7 @@ function v3Parts(){
        inside the row's <label>, and a click on a label is a click on its
        checkbox, so without this, naming a part would also hide it. */
     const dot = v3.uved
-      ? `<i class="v3dot" title="find this part in the UV layout"
+      ? `<i class="v3dot" title="${ttA('viewer3d.find_this_part_in_the_uv')}"
            style="background:${v3UvColour(n, v3.uvSel === p.key)}"
            onclick="event.preventDefault();event.stopPropagation();v3UvSelect('${q1(esc(p.key))}')"></i>`
       : '';
@@ -724,26 +721,24 @@ function v3Parts(){
     // sheet the halves are halves of the one it has, and calling that an
     // "attach sheet" would name a texture the entry does not carry.
     const two = v3TexCase() === 'pair';
-    const far = two ? 'attach sheet' : 'right half';
-    const straddle = two ? 'both sheets' : 'both halves';
+    const far = two ? tt('viewer3d.attach_sheet') : tt('viewer3d.right_half');
+    const straddle = two ? tt('viewer3d.both_sheets') : tt('viewer3d.both_halves');
     const sheet = p.list.some(v => v.g.sheets === 'both') ? straddle
                 : p.list.every(v => v.g.sheets === 'attach') ? far
                 : p.list.some(v => v.g.sheets !== 'main') ? straddle : '';
-    const tags = (p.optional ? '<span class="v3tag">optional</span>' : '')
+    const tags = (p.optional ? `<span class="v3tag">${tt('common.optional')}</span>` : '')
                + (sheet ? `<span class="v3tag">${sheet}</span>` : '');
     if(p.list.length === 1){
       const {g} = p.list[0];
-      return `<label class="v3part${rowcls}">${box}${dot}
-        <span class="v3nm">${esc(p.label)}</span>${tags}
-        <span class="count">${esc(g.texture_group||'')} · ${g.count/3} tris</span></label>`;
+      return `<label class="v3part${rowcls}">${tt('viewer3d.tris',{box,dot,label:esc(p.label),tags,texture_group:esc(g.texture_group||''),count:g.count/3})}</label>`;
     }
     const chosen = v3Chosen(p);
     return `<div class="v3part v3var${rowcls}"><label class="v3nm">${box}${dot} ${esc(p.label)} ${tags}</label>
       <select onchange="v3SetVariant('${q1(esc(p.key))}', this.value)">
         ${p.list.map(({g, idx}) => `<option value="${idx}" ${idx===chosen?'selected':''}
-          >${esc(g.texture_group || ('variant ' + (idx+1)))} · ${g.count/3} tris</option>`).join('')}
+          >${tt('viewer3d.tris_2',{x:esc(g.texture_group || ('variant ' + (idx+1))),count:g.count/3})}</option>`).join('')}
       </select>
-      <span class="count">${p.list.length} variants - the game picks one per soldier</span></div>`;
+      <span class="count">${tt('viewer3d.variants_the_game_picks_one_per',{list_n:p.list.length})}</span></div>`;
   }).join('');
 }
 
@@ -792,40 +787,40 @@ function v3Facts(){
   const size = [0,1,2].map(k => (g.max[k]-g.min[k]).toFixed(2));
   const skin = v3Skin();
   const onAtt = g.groups.filter(x => x.sheets !== 'main').length;
-  host.innerHTML = docPoints('This model:', [
-    `<b>${g.vertices.toLocaleString()}</b> vertices, <b>${g.triangles.toLocaleString()}</b> triangles`,
-    `${g.groups.length} group${g.groups.length===1?'':'s'} over one shared vertex pool`,
-    `${size[0]} × ${size[1]} × ${size[2]} in game units`,
-    g.bones.length ? `rigged to ${g.bones.length} bones` : 'no skeleton - a static model',
-    skin && skin.rel ? `main texture <code>${esc(skin.rel)}</code>${skin.exists?'':' - <b>not in this mod</b>'}`
-                     : 'no texture listed on this entry',
+  host.innerHTML = docPoints(tt('viewer3d.this_model'), [
+    `<b>${g.vertices.toLocaleString()}</b> ${tt('viewer3d.vertices_triangles',{triangles:g.triangles.toLocaleString()})}`,
+    tt('viewer3d.group_over_one_shared_vertex_pool',{groups_n:g.groups.length,groups:g.groups.length===1?'':'s'}),
+    tt('viewer3d.in_game_units',{x:size[0],x2:size[1],x3:size[2]}),
+    g.bones.length ? tt('viewer3d.rigged_to_bones',{bones_n:g.bones.length}) : 'no skeleton - a static model',
+    skin && skin.rel ? tt('viewer3d.main_texture',{rel:esc(skin.rel),x:skin.exists?'':` ${tt('viewer3d.not_in_this_mod')}`})
+                     : tt('viewer3d.no_texture_listed_on_this_entry'),
     // What is actually on the model right now, which is not always what the
     // file holds: without HD, anything over 1024 arrived halved. Reading it off
     // the loaded image rather than the file means the line cannot claim a size
     // the viewer is not drawing.
-    v3.tex ? `drawn at <b>${v3.tex.naturalWidth} × ${v3.tex.naturalHeight}</b>`
-             + (v3HdOn() ? ' - the size the mod ships, as the game draws it'
+    v3.tex ? `${tt('viewer3d.drawn_at')} <b>${v3.tex.naturalWidth} × ${v3.tex.naturalHeight}</b>`
+             + (v3HdOn() ? tt('viewer3d.the_size_the_mod_ships_as')
                          : Math.max(v3.tex.naturalWidth, v3.tex.naturalHeight) >= 1024
-                           ? ' - halved to fit; <b>HD textures</b> shows it full size'
-                           : ' - under the 1024 cap, so this is the file&rsquo;s own size')
+                           ? ` ${tt('viewer3d.halved_to_fit_hd_textures_shows')}`
+                           : tt('viewer3d.under_the_1024_cap_so_this'))
            : '',
     v3TexCase() === 'pair'
-      ? `attachment texture <code>${esc(skin.attach)}</code>${skin.attach_exists?'':' - <b>not in this mod</b>'}`
+      ? tt('viewer3d.attachment_texture',{attach:esc(skin.attach),x:skin.attach_exists?'':` ${tt('viewer3d.not_in_this_mod')}`})
       : v3TexCase() === 'self'
-        ? `its attachment slot names <code>${esc((skin&&skin.attach)||'')}</code>`
-          + `${skin && skin.attach_exists ? ' - the main file again, so the game glues that sheet to a copy of itself and u wraps at 1'
-                                          : ' - <b>not in this mod</b>, so u wraps at 1 on the main sheet instead'}`
-        : 'no attachment texture on this entry, so this one sheet is the whole '
+        ? `${tt('viewer3d.its_attachment_slot_names')} <code>${esc((skin&&skin.attach)||'')}</code>`
+          + `${skin && skin.attach_exists ? tt('viewer3d.the_main_file_again_so_the')
+                                          : ` ${tt('viewer3d.not_in_this_mod_so_u')}`}`
+        : tt('viewer3d.no_attachment_texture_on_this_entry')
           + 'space and u wraps at 2 - every ordinary mount is built this way',
     // the honest answer to "why does this look right in the game and not here":
     // an entry can name an attachment sheet that no group's UVs ever reach
     onAtt ? `${onAtt} group${onAtt===1?'':'s'} reach past u 1 - into the `
-            + (v3TexCase() === 'pair' ? 'attachment sheet' : 'right half of that sheet')
-          : 'every group stays in the left half of the space, u 0 to 1',
+            + (v3TexCase() === 'pair' ? tt('viewer3d.attachment_sheet') : tt('viewer3d.right_half_of_that_sheet'))
+          : tt('viewer3d.every_group_stays_in_the_left'),
     v3.info.skins.length === 1 && (v3.info.skins[0].factions||[]).length > 1
-      ? `every one of its ${v3.info.skins[0].factions.length} factions uses that same skin`
-      : `${v3.info.skins.length} distinct skin${v3.info.skins.length===1?'':'s'} across its factions`,
-    g.lod_name ? `the file calls itself <code>${esc(g.lod_name)}</code>` : ''
+      ? tt('viewer3d.every_one_of_its_factions_uses',{n:v3.info.skins[0].factions.length})
+      : tt('viewer3d.distinct_skin_across_its_factions',{skins_n:v3.info.skins.length,x:v3.info.skins.length===1?'':'s'}),
+    g.lod_name ? `${tt('viewer3d.the_file_calls_itself')} <code>${esc(g.lod_name)}</code>` : ''
   ]) + v3FaultRows()
      + (g.notes||[]).map(n => `<div class="w-warn" style="margin-top:6px">${esc(n)}</div>`).join('');
 }
@@ -835,7 +830,7 @@ function v3Facts(){
 async function v3Load(){
   if(!v3) return;
   const want = ++v3Gen;
-  v3Note('Reading the model…');
+  v3Note(tt('viewer3d.reading_the_model'));
   let buf;
   try{
     const r = await fetch(v3.cas
@@ -843,7 +838,7 @@ async function v3Load(){
       : `/api/model/geometry?mod=${enc(v3.mod)}&entry=${enc(v3.entry)}&lod=${v3.lod}`);
     if(!r.ok){
       // the decoder's own sentence is the useful part, so it is shown as-is
-      let msg = `the server answered ${r.status}`;
+      let msg = tt('viewer3d.the_server_answered',{status:r.status});
       try{ msg = (await r.json()).error || msg; }catch(e){}
       throw new Error(msg);
     }
@@ -916,7 +911,7 @@ const v3TexUrl = rel =>
 function v3Degenerate(img){
   const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
   if(!w || !h) return 'empty';
-  if(w <= 1 && h <= 1) return `${w}x${h} - a placeholder, not a sheet`;
+  if(w <= 1 && h <= 1) return tt('viewer3d.x_a_placeholder_not_a_sheet',{x:w,x2:h});
   try{
     const n = 32, c = document.createElement('canvas');
     c.width = c.height = n;
@@ -959,7 +954,7 @@ function v3Fetch(rel, want, into){
   img.onload = () => {
     if(want!==v3Gen || !v3) return;
     const bad = v3Degenerate(img);
-    if(bad){ v3[into] = null; v3Apply(); v3TexFault(rel, `was served ${bad}`); return; }
+    if(bad){ v3[into] = null; v3Apply(); v3TexFault(rel, tt('viewer3d.was_served',{bad})); return; }
     v3[into] = img; v3Apply(); v3Facts();
   };
   img.onerror = () => {
@@ -1044,20 +1039,19 @@ function v3UvKey(){
   const kind = v3TexCase();
   const row = (css, text) => `<i style="background:${css}"></i><span>${text}</span>`;
   host.className = 'v3uvkey';
-  host.innerHTML = '<b>UV mode</b>'
+  host.innerHTML = `<b>${tt('viewer3d.uv_mode')}</b>`
     + (kind === 'pair'
         ? row('#4a82cc', 'the main sheet - u 0 to 1')
           + row('#e08f33', 'the attachment sheet - u 1 to 2')
         : kind === 'self'
-          ? row('#4a82cc', 'the sheet - and u 1 to 2 is that same file again, '
-                         + 'which is what this entry names in its attachment slot')
-          : row('#4a82cc', 'the sheet - it has no attachment beside it, so it '
-                         + 'spans all of u 0 to 2 on its own'))
+          ? row('#4a82cc', tt('viewer3d.the_sheet_and_u_1_to')
+                         + tt('viewer3d.which_is_what_this_entry_names'))
+          : row('#4a82cc', tt('viewer3d.the_sheet_it_has_no_attachment')
+                         + tt('viewer3d.spans_all_of_u_0_to')))
     + row('#2a3a4d', 'outside u 0 to 2 - past the space the model was unwrapped in')
     + row('#ff3d57', `where the art starts over - every ${
-        v3UvSpan() === 2 ? 'second unit' : 'unit'} of u`)
-    + `<span style="grid-column:1/-1">32 checker cells to a sheet: a stretched
-       cell is art stretched over that triangle.</span>`;
+        v3UvSpan() === 2 ? tt('viewer3d.second_unit') : 'unit'} of u`)
+    + `<span style="grid-column:1/-1">${tt('viewer3d.32_checker_cells_to_a_sheet')}</span>`;
 }
 
 /* --- the UV layout --------------------------------------------------------
@@ -1218,14 +1212,14 @@ function v3UvBar(){
   const parts = [...v3PartMap().values()];
   const n = parts.findIndex(p => p.key === v3.uvSel);
   if(n < 0){
-    el.innerHTML = '<span class="count">click an island to name the part wearing it</span>';
+    el.innerHTML = `<span class="count">${tt('viewer3d.click_an_island_to_name_the')}</span>`;
     return;
   }
   const p = parts[n], b = v3UvBounds(p);
   el.innerHTML = `<i class="v3dot" style="background:${v3UvColour(n, true)}"></i>`
     + `<b>${esc(p.label)}</b> <span class="count">u ${b.u0.toFixed(2)}–${b.u1.toFixed(2)} ·`
     + ` v ${b.v0.toFixed(2)}–${b.v1.toFixed(2)}`
-    + (b.out ? ' · runs outside the sheet it was authored in' : '') + '</span>';
+    + (b.out ? tt('viewer3d.runs_outside_the_sheet_it_was') : '') + '</span>';
 }
 
 /* --- drawing --------------------------------------------------------------- */
@@ -1246,7 +1240,7 @@ function v3UvEdDraw(){
     x.fillStyle = '#8a93a3';
     x.font = '13px system-ui, sans-serif';
     x.textAlign = 'center';
-    x.fillText('this model carries no UV set', w/2, h/2);
+    x.fillText(tt('viewer3d.this_model_carries_no_uv_set'), w/2, h/2);
     return;
   }
   if(!v3.uvv) v3UvFit(false);
@@ -1398,14 +1392,14 @@ function v3UvReadout(at){
   const kind = v3TexCase();
   // naming an "attachment sheet" on an entry that has none would be a lie, and
   // on the one that has the main file twice the honest word is "again"
-  const sheet = !home ? 'outside the space'
-              : kind === 'pair' ? (a < 0.5 ? 'main sheet' : 'attachment sheet')
-              : kind === 'self' ? (at.u < 1 ? 'the sheet' : 'the same sheet again')
-              : 'the sheet';
+  const sheet = !home ? tt('viewer3d.outside_the_space')
+              : kind === 'pair' ? (a < 0.5 ? tt('viewer3d.main_sheet') : tt('viewer3d.attachment_sheet'))
+              : kind === 'self' ? (at.u < 1 ? tt('viewer3d.the_sheet') : tt('viewer3d.the_same_sheet_again'))
+              : tt('viewer3d.the_sheet');
   const img = (kind === 'pair' && a >= 0.5) ? v3.texAtt : v3.tex;
   const across = kind === 'pair' ? (a % 0.5) * 2 : a;
   const px = (home && img)
-    ? ` · ${Math.floor(across * img.width)}, ${Math.floor(at.v * img.height)} px` : '';
+    ? tt('viewer3d.px',{x:Math.floor(across * img.width),x2:Math.floor(at.v * img.height)}) : '';
   el.textContent = `u ${at.u.toFixed(3)}  v ${at.v.toFixed(3)} · ${sheet}${px}`;
 }
 
@@ -1504,10 +1498,10 @@ function v3Visible(){
 function v3Start(canvas){
   const gl = canvas.getContext('webgl', {antialias:true, alpha:false})
           || canvas.getContext('experimental-webgl');
-  if(!gl) return v3Note('this browser has no WebGL, so the model cannot be drawn', true);
+  if(!gl) return v3Note(tt('viewer3d.this_browser_has_no_webgl_so'), true);
   v3.gl = gl;
   const prog = v3Program(gl, V3_VERT, V3_FRAG);
-  if(!prog) return v3Note('the viewer’s shaders would not compile here', true);
+  if(!prog) return v3Note(tt('viewer3d.the_viewers_shaders_would_not_compile'), true);
   v3.prog = prog;
   v3.loc = {
     aPos: gl.getAttribLocation(prog,'aPos'),
@@ -1682,8 +1676,8 @@ function v3Apply(){
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    v3Note('this skin is not a power of two, so the tiled parts of it cannot '
-         + 'repeat here', true);
+    v3Note(tt('viewer3d.this_skin_is_not_a_power')
+         + tt('viewer3d.repeat_here'), true);
   }
   v3.texture = t;
   // Which of the three shapes this entry is in is decided right here, and a
@@ -1975,7 +1969,7 @@ function v3LoadCasSkins(want){
     img.onload = () => {
       if(want!==v3Gen || !v3) return;
       const bad = v3Degenerate(img);
-      if(bad){ v3.casTex.delete(tex); v3Apply(); v3TexFault(rel, `was served ${bad}`); return; }
+      if(bad){ v3.casTex.delete(tex); v3Apply(); v3TexFault(rel, tt('viewer3d.was_served',{bad})); return; }
       v3.casTex.set(tex, img); v3Apply();
     };
     img.onerror = () => {
@@ -2021,8 +2015,8 @@ function v3CasApply(){
    is worth being able to drop to see the walls behind it. */
 function v3CasParts(host){
   const groups = v3.geo.groups;
-  host.innerHTML = `<div class="k">Meshes <span class="count">${groups.length}`
-    + ` in this scene</span></div>`
+  host.innerHTML = `<div class="k">${tt('viewer3d.meshes',{groups_n:groups.length})}`
+    + ` ${tt('viewer3d.in_this_scene')}</span></div>`
     + groups.map((grp, n) => {
     const key = 'm' + n;
     const rel = grp.texture ? (v3.casRel && v3.casRel.get(grp.texture)) : '';
@@ -2031,15 +2025,14 @@ function v3CasParts(host){
     // says so, which is the whole of Phase 29 in one label.
     const bad = rel && v3.texFault && v3.texFault.get(rel);
     const leaf = grp.texture ? esc(grp.texture.split(/[\\/]/).pop()) : '';
-    const paint = !grp.texture ? '<span class="v3tag">no material</span>'
-      : bad ? `<span class="w-bad">${leaf} will not load</span>`
+    const paint = !grp.texture ? `<span class="v3tag">${tt('viewer3d.no_material')}</span>`
+      : bad ? `<span class="w-bad">${tt('viewer3d.will_not_load',{leaf})}</span>`
       : rel ? `<span class="count">${leaf}</span>`
-            : `<span class="v3tag">${leaf} not in this mod</span>`;
+            : `<span class="v3tag">${tt('viewer3d.not_in_this_mod_2',{leaf})}</span>`;
     return `<label class="v3part">
       <input type="checkbox" ${v3.hidden[key]?'':'checked'}
         onchange="v3TogglePart('${q1(esc(key))}')">
-      <span class="v3nm">${esc(grp.name || '(unnamed)')}</span>${paint}
-      <span class="count">${grp.count/3} tris</span></label>`;
+      <span class="v3nm">${esc(grp.name || '(unnamed)')}</span>${tt('viewer3d.tris_3',{paint,x:grp.count/3})}</label>`;
   }).join('');
 }
 
@@ -2047,24 +2040,24 @@ function v3CasFacts(host, g){
   const i = v3.info;
   const size = [0,1,2].map(k => (g.max[k]-g.min[k]).toFixed(2));
   const missing = (i.materials||[]).filter(m => m.texture && !m.rel);
-  host.innerHTML = docPoints('This model:', [
-    `<b>${g.vertices.toLocaleString()}</b> vertices, <b>${g.triangles.toLocaleString()}</b> triangles`,
-    `${g.groups.length} mesh${g.groups.length===1?'':'es'}, each with its own vertices`,
-    `${size[0]} × ${size[1]} × ${size[2]} in game units`,
-    `exported by 3ds max, file version ${i.version}`,
+  host.innerHTML = docPoints(tt('viewer3d.this_model'), [
+    `<b>${g.vertices.toLocaleString()}</b> ${tt('viewer3d.vertices_triangles',{triangles:g.triangles.toLocaleString()})}`,
+    tt('viewer3d.mesh_each_with_its_own_vertices',{groups_n:g.groups.length,groups:g.groups.length===1?'':'es'}),
+    tt('viewer3d.in_game_units',{x:size[0],x2:size[1],x3:size[2]}),
+    tt('viewer3d.exported_by_3ds_max_file_version',{version:i.version}),
     i.nodes && i.nodes.length > 1
-      ? `${i.nodes.length} nodes - a skeleton, ${esc(i.nodes[1])} first`
-      : 'one node, Scene Root - a static model',
-    i.keys ? `${i.keys} animation keys over ${i.length}s, which this viewer does not play`
-           : 'no animation keys',
+      ? tt('viewer3d.nodes_a_skeleton_first',{nodes_n:i.nodes.length,nodes:esc(i.nodes[1])})
+      : tt('viewer3d.one_node_scene_root_a_static'),
+    i.keys ? tt('viewer3d.animation_keys_over_s_which_this',{x:i.keys,i_n:i.length})
+           : tt('viewer3d.no_animation_keys'),
     (i.materials||[]).length
-      ? `${i.materials.length} material${i.materials.length===1?'':'s'}: `
+      ? tt('viewer3d.material',{materials_n:i.materials.length,materials:i.materials.length===1?'':'s'})
         + (i.materials.map(m => m.texture
-            ? `<code>${esc(m.texture)}</code>` : 'one with no texture').join(', '))
-      : 'no materials',
+            ? `<code>${esc(m.texture)}</code>` : tt('viewer3d.one_with_no_texture')).join(', '))
+      : tt('viewer3d.no_materials'),
     missing.length
-      ? `<b>${missing.length}</b> of those texture${missing.length===1?' is':'s are'} `
-        + 'not in this mod, so what uses them draws bare'
+      ? `<b>${missing.length}</b> ${tt('viewer3d.of_those_texture',{missing:missing.length===1?' is':tt('common.s_are')})} `
+        + tt('viewer3d.not_in_this_mod_so_what')
       : ''
   ]) + v3FaultRows()
      + (g.notes||[]).map(n => `<div class="w-warn" style="margin-top:6px">${esc(n)}</div>`).join('');

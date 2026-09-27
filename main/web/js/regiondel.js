@@ -58,7 +58,7 @@ function rdlOpen(){
     return;
   }
   state.rdl = rdlNew(c.mod, c.campaign || '', c.det.name);
-  activity('region delete', `${c.mod}: opened the delete panel for ${c.det.name}`);
+  activity(tt('regiondel.region_delete'), tt('regiondel.opened_the_delete_panel_for',{mod:c.mod,name:c.det.name}));
   rdlPaint();
   rdlLoad();
 }
@@ -76,7 +76,7 @@ async function rdlLoad(){
     d = await api.get(`/api/map/region_delete?mod=${enc(k.mod)}`
       + `&name=${enc(k.name)}`
       + (k.campaign ? `&campaign=${enc(k.campaign)}` : ''),
-      {label: `reading what ${k.name} would take with it`});
+      {label: tt('regiondel.reading_what_would_take_with_it',{name:k.name})});
   }catch(e){ d = {ok: false, error: errText(e), heirs: [], standing: []}; }
   if(state.rdl !== k) return;
   k.loading = false;
@@ -116,11 +116,11 @@ async function rdlPlan(){
   rdlPaint();
   let res;
   try{ res = await api.post('/api/map/region_delete_plan', rdlBody(),
-                            {label: `working out what deleting ${k.name} writes`}); }
+                            {label: tt('regiondel.working_out_what_deleting_writes',{name:k.name})}); }
   catch(e){ res = {plan: {errors: [errText(e)], changes: [], warnings: []}}; }
   finally{ k.busy = false; }
   if(state.rdl !== k) return;
-  k.plan = res.plan || {errors: [res.error || 'the plan came back empty']};
+  k.plan = res.plan || {errors: [res.error || tt('common.the_plan_came_back_empty')]};
   rdlPaint();
 }
 
@@ -129,15 +129,15 @@ async function rdlApply(){
   if(!k || k.busy || !k.plan || !k.plan.ok) return;
   const p = k.plan;
   const files = (p.files || []).length + (p.deletes || []).length;
-  if(!confirm(`Delete ${k.name}, and give its ${p.tiles.toLocaleString()} tile`
-    + `${p.tiles === 1 ? '' : 's'} to ${p.heir || 'nobody'}?\n\n`
+  if(!confirm(tt('regiondel.delete_and_give_its_tile',{name:k.name,tiles:p.tiles.toLocaleString()})
+    + tt('regiondel.to',{tiles:p.tiles === 1 ? '' : 's',heir:p.heir || 'nobody'})
     + (p.changes || []).join('\n')
     + ((p.warnings || []).length
        ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')
     + ((p.script || []).length
-       ? `\n\n⚠ ${p.script.length} line(s) of the campaign script name `
-         + `${k.name} and are NOT edited.` : '')
-    + `\n\n${files} file(s). Backed up first, and 🕑 Log can undo it.`)) return;
+       ? tt('regiondel.line_s_of_the_campaign_script',{script_n:p.script.length})
+         + tt('regiondel.and_are_not_edited',{name:k.name}) : '')
+    + tt('regiondel.file_s_backed_up_first_and',{files}))) return;
   k.busy = true;
   rdlPaint();
   let res;
@@ -146,15 +146,15 @@ async function rdlApply(){
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(!res || res.error){
-    toast('✗ ' + ((res && res.error) || 'the delete failed'), 9000);
+    toast('✗ ' + ((res && res.error) || tt('regiondel.the_delete_failed')), 9000);
     rdlPaint();
     return;
   }
-  toast(`${k.name} deleted, its land is ${res.heir || 'nobody'}'s, `
-    + `${(res.files || []).length} file(s) written. map.rwm deleted. `
-    + '🕑 Log can undo it.', 7000);
-  activity('region delete',
-           `${k.mod}: deleted ${k.name}, land to ${res.heir || '(nobody)'}`);
+  toast(tt('regiondel.deleted_its_land_is_s',{name:k.name,x:res.heir || 'nobody'})
+    + tt('regiondel.file_s_written_map_rwm_deleted',{n:(res.files || []).length})
+    + tt('common.log_can_undo_it'), 7000);
+  activity(tt('regiondel.region_delete'),
+           tt('regiondel.deleted_land_to',{mod:k.mod,name:k.name,x:res.heir || '(nobody)'}));
   state.rdl = null;
   const c = state.cmap;
   if(c){ c.det = null; c.sel = null; c.pick = null; }
@@ -172,33 +172,25 @@ function rdlPaint(){
 function rdlHtml(){
   const k = state.rdl;
   if(!k || !k.open) return '';
-  if(k.loading) return `<div class="cbrpanel count">reading what
-    ${esc(k.name)} would take with it…</div>`;
+  if(k.loading) return `<div class="cbrpanel count">${tt('regiondel.reading_what_would_take_with_it_2',{name:esc(k.name)})}</div>`;
   const d = k.d || {};
   if(!d.ok) return `<div class="cbrpanel w-bad">${esc(d.error
-    || 'that province could not be read')}</div>`;
+    || tt('regiondel.that_province_could_not_be_read'))}</div>`;
   return `<div class="cbrpanel">
-    <div class="k">Delete ${esc(d.shown || k.name)}
-      <span class="count">${d.tiles.toLocaleString()} tile${
-        d.tiles === 1 ? '' : 's'}${d.settlement
-          ? ` · ${esc(d.settlement)}` : ''}${d.region_id >= 0
-          ? ` · region ID ${d.region_id}` : ''}</span></div>
+    <div class="k">${tt('regiondel.delete_tile',{x:esc(d.shown || k.name),tiles:d.tiles.toLocaleString(),tiles2:d.tiles === 1 ? '' : 's',settlement:d.settlement
+          ? ` · ${esc(d.settlement)}` : '',region_id:d.region_id >= 0
+          ? tt('regiondel.region_id',{region_id:d.region_id}) : ''})}</div>
     ${rdlHeirHtml(d)}
     ${rdlPortHtml(d)}
     ${rdlStandingHtml(d)}
-    <div class="count">It would be taken out of <code>${esc(d.file)}</code> and
-      out of every file ${d.campaigns.length === 1 ? 'the campaign' : 'the '
-        + d.campaigns.length + ' campaigns'} reading
-      <code>${esc(d.layer)}</code> name${d.campaigns.length === 1 ? 's' : ''}
-      it in: the start position, the win conditions, the mercenary pools, the
-      music types, the lookup pairs and the custom battle tiles. The campaign
-      script is listed and never written.</div>
+    <div class="count">${tt('regiondel.it_would_be_taken_out_of',{file:esc(d.file),x:d.campaigns.length === 1 ? tt('regiondel.the_campaign') : 'the '
+        + d.campaigns.length + ' campaigns',layer:esc(d.layer),campaigns:d.campaigns.length === 1 ? 's' : ''})}</div>
     <div class="cmbar2">
       <button onclick="rdlPlan()" ${k.busy ? 'disabled' : ''}
-        title="Walk the whole mod for every line that names this province. Seconds, and it writes nothing."
-        >${k.busy && !k.plan ? 'working it out…' : 'Work out the delete'}</button>
+        title="${ttA('regiondel.walk_the_whole_mod_for_every')}"
+        >${k.busy && !k.plan ? tt('common.working_it_out') : tt('regiondel.work_out_the_delete')}</button>
       <span class="sp"></span>
-      <button onclick="rdlClose()">Close</button>
+      <button onclick="rdlClose()">${tt('common.close')}</button>
     </div>
     ${rdlPlanHtml(k)}
   </div>`;
@@ -209,25 +201,15 @@ function rdlHtml(){
 //: cannot do anything about.
 function rdlHeirHtml(d){
   const k = state.rdl;
-  if(!d.tiles) return `<div class="w-warn">No tile of
-    <code>${esc(d.layer)}</code> is painted this province's colour, so there is
-    no land to give away. Deleting it removes the record and everything that
-    names it, which is the fix for a record with no tiles.</div>`;
-  if(!(d.heirs || []).length) return `<div class="w-bad">${esc(d.name)} shares
-    an edge with no declared region, so there is nobody to give its land to. A
-    province whose only neighbour is the ocean has to be painted over by
-    hand.</div>`;
+  if(!d.tiles) return `<div class="w-warn">${tt('regiondel.no_tile_of_is_painted_this',{layer:esc(d.layer)})}</div>`;
+  if(!(d.heirs || []).length) return `<div class="w-bad">${tt('regiondel.shares_an_edge_with_no_declared',{name:esc(d.name)})}</div>`;
   return `<div class="cmtrow"><span class="cmtval">
-    <span class="cmtnm">Its land goes to</span>
+    <span class="cmtnm">${tt('regiondel.its_land_goes_to')}</span>
     <select onchange="rdlSet('heir', this.value)">
       ${d.heirs.map(h => `<option value="${esc(h.name)}"${
-        h.name === k.heir ? ' selected' : ''}>${esc(h.name)} - ${h.edges}
-        shared edge${h.edges === 1 ? '' : 's'}, ${h.tiles.toLocaleString()}
-        tiles</option>`).join('')}
+        h.name === k.heir ? ' selected' : ''}>${tt('regiondel.shared_edge_tiles',{name:esc(h.name),edges:h.edges,edges2:h.edges === 1 ? '' : 's',tiles:h.tiles.toLocaleString()})}</option>`).join('')}
     </select></span></div>
-    <div class="count">Whole, to one province it touches. Sharing it out tile by
-      tile is what would leave the pieces unreachable: two areas that each join
-      up and share an edge make one that does.</div>`;
+    <div class="count">${tt('regiondel.whole_to_one_province_it_touches')}</div>`;
 }
 
 //: The port question, which only exists when this province has one. A heir with
@@ -238,19 +220,15 @@ function rdlPortHtml(d){
   if(!d.port || !d.tiles || !(d.heirs || []).length) return '';
   const h = (d.heirs || []).find(x => x.name === k.heir) || {};
   return `<div class="cmtrow"><span class="cmtval">
-    <span class="cmtnm">Its port</span>
-    <span class="cmseg">
+    ${tt('regiondel.its_port')}
       <button class="${k.port === 'keep' ? 'on' : ''}"
-        onclick="rdlSet('port', 'keep')">Keep it</button>
+        onclick="rdlSet('port', 'keep')">${tt('common.keep_it')}</button>
       <button class="${k.port === 'remove' ? 'on' : ''}"
-        onclick="rdlSet('port', 'remove')">Remove it</button>
+        onclick="rdlSet('port', 'remove')">${tt('regiondel.remove_it')}</button>
     </span></span></div>
     <div class="count">${h.port
-      ? `${esc(k.heir)} already has a port, and only one of two in a province is
-         ever used - so removing this one is the answer that leaves a map the
-         validator does not report.`
-      : `${esc(k.heir)} has no port of its own, so keeping this one gives it a
-         harbour on the coast it is about to inherit.`}</div>`;
+      ? tt('regiondel.already_has_a_port_and_only',{heir:esc(k.heir)})
+      : tt('regiondel.has_no_port_of_its_own',{heir:esc(k.heir)})}</div>`;
 }
 
 //: Geomod's own caveat, measured. None of this is orphaned - a fort at 212,88
@@ -260,13 +238,9 @@ function rdlStandingHtml(d){
   const k = state.rdl;
   const rows = d.standing || [];
   if(!rows.length) return '';
-  return rows.map(r => `<div class="count">${esc(r.campaign)} puts
-    ${Object.keys(r.counts).map(kind => `${r.counts[kind]}
-      ${RDL_STANDING[kind] || kind}${r.counts[kind] === 1 ? '' : 's'}`).join(', ')}
-    on these tiles. Each one is placed by tile rather than by province, so
-    ${r.counts.character || r.counts.resource ? 'they stay where they are and '
-      : ''}${k.heir ? esc(k.heir) : 'the heir'} is whose province they stand in
-    afterwards.</div>`).join('');
+  return rows.map(r => `<div class="count">${tt('regiondel.puts_on_these_tiles_each_one',{campaign:esc(r.campaign),x:Object.keys(r.counts).map(kind => `${r.counts[kind]}
+      ${RDL_STANDING[kind] || kind}${r.counts[kind] === 1 ? '' : 's'}`).join(', '),x2:r.counts.character || r.counts.resource ? tt('regiondel.they_stay_where_they_are_and')
+      : '',x3:k.heir ? esc(k.heir) : tt('regiondel.the_heir')})}</div>`).join('');
 }
 
 function rdlPlanHtml(k){
@@ -276,24 +250,18 @@ function rdlPlanHtml(k){
     ${p.errors.map(e => esc(e)).join('<br>')}</div>`;
   const script = p.script || [];
   return `<div class="cbrpanel">
-    <div class="k">${(p.files || []).length} file${
-      (p.files || []).length === 1 ? '' : 's'} would change
-      <span class="count">${(p.deletes || []).length} deleted</span></div>
+    <div class="k">${tt('regiondel.file_would_change_deleted',{n:(p.files || []).length,files:(p.files || []).length === 1 ? '' : 's',n2:(p.deletes || []).length})}</div>
     ${(p.changes || []).map(x => `<div class="count">${esc(x)}</div>`).join('')}
     ${(p.warnings || []).map(x => `<div class="w-warn">${esc(x)}</div>`).join('')}
-    ${script.length ? `<div class="w-warn">${script.length} line${
-      script.length === 1 ? '' : 's'} of the campaign script name
-      ${esc(k.name)}, and the script is a grammar nothing here parses - so it is
-      listed and never written:</div>
+    ${script.length ? `<div class="w-warn">${tt('regiondel.line_of_the_campaign_script_name',{script_n:script.length,script:script.length === 1 ? '' : 's',name:esc(k.name)})}</div>
       ${script.slice(0, RDL_SCRIPT_SHOWN).map(m => `<div class="count">
         <code>${esc(m.rel)}</code>:${m.line} ${esc(m.text)}</div>`).join('')}
-      ${script.length > RDL_SCRIPT_SHOWN ? `<div class="count">…and
-        ${script.length - RDL_SCRIPT_SHOWN} more.</div>` : ''}` : ''}
+      ${script.length > RDL_SCRIPT_SHOWN ? `<div class="count">${tt('regiondel.and_more',{x:script.length - RDL_SCRIPT_SHOWN})}</div>` : ''}` : ''}
     <div class="cmbar2">
       <button class="danger" onclick="rdlApply()" ${k.busy ? 'disabled' : ''}
-        >${k.busy ? 'deleting…' : `Delete ${esc(k.name)}`}</button>
+        >${k.busy ? tt('regiondel.deleting') : tt('regiondel.delete',{name:esc(k.name)})}</button>
       <span class="sp"></span>
-      <span class="count">Backed up first. 🕑 Log can undo it.</span>
+      <span class="count">${tt('regiondel.backed_up_first_log_can_undo')}</span>
     </div>
   </div>`;
 }

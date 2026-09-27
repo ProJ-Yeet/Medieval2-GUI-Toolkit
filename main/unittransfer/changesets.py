@@ -67,6 +67,7 @@ from pathlib import Path, PurePosixPath
 from typing import Dict, List, Optional, Tuple
 
 from . import config, rawtext
+from . import i18n as _i18n
 
 #: The verbs :func:`logutil.file_op` is called with once a file's new bytes are
 #: on disk. BACKUP is the one called before.
@@ -102,7 +103,7 @@ def root_dir() -> Path:
 def _safe_name(name: str) -> str:
     out = re.sub(r"[^A-Za-z0-9_.\- ()]+", "_", str(name or "")).strip(" .")
     if not out:
-        raise ChangeSetError("a change set needs a name")
+        raise ChangeSetError(_i18n.msg("eng.changesets.a_change_set_needs_a_name", "a change set needs a name"))
     return out
 
 
@@ -115,14 +116,14 @@ def _safe_rel(rel: str) -> str:
     somebody else, so its file list is not trusted to stay inside the mod."""
     p = PurePosixPath(str(rel).replace("\\", "/"))
     if not str(p) or p.is_absolute() or ".." in p.parts or ":" in str(p):
-        raise ChangeSetError(f"not a path inside data/: {rel}")
+        raise ChangeSetError(_i18n.msg("eng.changesets.not_a_path_inside_data", "not a path inside data/: {rel}", rel=rel))
     return str(p)
 
 
 def load(name: str) -> dict:
     p = set_dir(name) / "set.json"
     if not p.is_file():
-        raise ChangeSetError(f"no change set called {name}")
+        raise ChangeSetError(_i18n.msg("eng.changesets.no_change_set_called", "no change set called {name}", name=name))
     return json.loads(p.read_text(encoding="utf-8"))
 
 
@@ -754,7 +755,7 @@ def apply_port(port: Port, picks: Dict[int, str]) -> dict:
 
     picks = {int(k): v for k, v in (picks or {}).items() if v == "mine"}
     if not picks:
-        raise ChangeSetError("nothing ticked to port")
+        raise ChangeSetError(_i18n.msg("eng.changesets.nothing_ticked_to_port", "nothing ticked to port"))
     target = port.target
     data = Path(target.data)
     tid = config.new_transfer_id()
@@ -809,7 +810,7 @@ def apply_port(port: Port, picks: Dict[int, str]) -> dict:
         "dest": getattr(target, "name", ""), "dest_root": str(target.root),
         "unit_type": port.set_name, "resolved_type": port.set_name,
         "options": {"picked": len(picks)}, "applied": True, "undone": False,
-        "note": "", "summary": f"ported {len(picks)} change(s) from {port.set_name}",
+        "note": "", "summary": _i18n.msg("eng.changesets.ported_change_s_from", "ported {picks_n} change(s) from {set_name}", picks_n=len(picks), set_name=port.set_name),
         "warnings": list(port.warnings), "manifest": manifest,
         "backup_root": str(backup_root),
         "changeset_snapshot": {"name": port.set_name, "path": snapshot} if snapshot else None,
@@ -869,9 +870,9 @@ def plan_switch(mod, to: Optional[str]) -> Switch:
     if to is not None:
         meta_to = load(to)
         if str(meta_to.get("mod", "")).lower() != name.lower():
-            raise ChangeSetError(f"{to} is a set of {meta_to.get('mod')}, not of {name}")
+            raise ChangeSetError(_i18n.msg("eng.changesets.is_a_set_of_not_of", "{to} is a set of {meta_to}, not of {name}", to=to, meta_to=meta_to.get('mod'), name=name))
         if to == off:
-            raise ChangeSetError(f"{to} is already on")
+            raise ChangeSetError(_i18n.msg("eng.changesets.is_already_on", "{to} is already on", to=to))
     sw = Switch(mod, off, to)
     current: Dict[str, Optional[bytes]] = {}
 
@@ -920,7 +921,7 @@ def apply_switch(sw: Switch) -> dict:
     from .logutil import file_op, log
 
     if sw.blocked:
-        raise ChangeSetError("the switch would conflict: port instead")
+        raise ChangeSetError(_i18n.msg("eng.changesets.the_switch_would_conflict_port_instead", "the switch would conflict: port instead"))
     mod = sw.mod
     data = Path(mod.data)
     tid = config.new_transfer_id()
@@ -1009,7 +1010,7 @@ def rename(name: str, new: str) -> str:
     with _lock:
         meta = load(name)
         if set_dir(new).exists():
-            raise ChangeSetError(f"there is already a change set called {new}")
+            raise ChangeSetError(_i18n.msg("eng.changesets.there_is_already_a_change_set_2", "there is already a change set called {new}", new=new))
         set_dir(name).rename(set_dir(new))
         meta["name"] = new
         _save(meta)
@@ -1082,12 +1083,12 @@ def import_bytes(raw: bytes, name: str = "") -> str:
         z = zipfile.ZipFile(io.BytesIO(raw))
         meta = json.loads(z.read("set.json").decode("utf-8"))
     except (zipfile.BadZipFile, KeyError, ValueError) as e:
-        raise ChangeSetError(f"not a change set file ({e})")
+        raise ChangeSetError(_i18n.msg("eng.changesets.not_a_change_set_file", "not a change set file ({e})", e=e))
     want = _safe_name(name or f"{meta.get('mod') or 'mod'} (imported "
                       f"{time.strftime('%Y-%m-%d %H%M')})")
     d = set_dir(want)
     if d.exists():
-        raise ChangeSetError(f"there is already a change set called {want}")
+        raise ChangeSetError(_i18n.msg("eng.changesets.there_is_already_a_change_set", "there is already a change set called {want}", want=want))
     files = {}
     for rel, entry in (meta.get("files") or {}).items():
         files[_safe_rel(rel)] = {"base": entry.get("base", "absent"),

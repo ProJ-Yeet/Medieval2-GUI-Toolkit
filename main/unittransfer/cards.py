@@ -55,6 +55,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 from . import config, edit, luascan
 from .logutil import counted, file_op, fingerprint, log
 from .mod import Mod
+from . import i18n as _i18n
 
 #: Extensions the game reads a card from, in the order :meth:`Mod._find_icon`
 #: prefers them.
@@ -437,12 +438,11 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
         for name in req.remove.get(kind.key, []):
             copies = found.get(name)
             if not copies:
-                plan.warnings.append(f"no {kind.label} for '{name}' any more - skipped")
+                plan.warnings.append(_i18n.msg("eng.cards.no_for_any_more_skipped", "no {label} for '{name}' any more - skipped", label=kind.label, name=name))
                 continue
             if name in live:
                 plan.warnings.append(
-                    f"'{name}' is {live[name]}'s dictionary after all - its "
-                    f"{kind.label} is kept")
+                    _i18n.msg("eng.cards.is_s_dictionary_after_all_its", "'{name}' is {live}'s dictionary after all - its {label} is kept", name=name, live=live[name], label=kind.label))
                 continue
             for c in copies:
                 plan.exports.append((mod.data / c.rel, f"{UNUSED_SUBDIR}/data/{c.rel}"))
@@ -455,27 +455,26 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
         for name in wanted + [n for n in chosen if n not in wanted]:
             copies = found.get(name)
             if not copies:
-                plan.warnings.append(f"no {kind.label} for '{name}' any more - skipped")
+                plan.warnings.append(_i18n.msg("eng.cards.no_for_any_more_skipped", "no {label} for '{name}' any more - skipped", label=kind.label, name=name))
                 continue
             if name not in live:
                 plan.warnings.append(
-                    f"no unit claims '{name}' - its {kind.label} is not consolidated")
+                    _i18n.msg("eng.cards.no_unit_claims_its_is_not", "no unit claims '{name}' - its {label} is not consolidated", name=name, label=kind.label))
                 continue
             if name in pins:
                 plan.warnings.append(
-                    f"'{name}' pins its {kind.label} to '{pins[name]}' - left alone")
+                    _i18n.msg("eng.cards.pins_its_to_left_alone", "'{name}' pins its {label} to '{pins}' - left alone", name=name, label=kind.label, pins=pins[name]))
                 continue
             digests = {c.digest for c in copies}
             if len(digests) > 1 and name not in chosen:
                 plan.warnings.append(
-                    f"'{name}' has {len(digests)} different {kind.label}s and none was "
-                    f"chosen - left alone")
+                    _i18n.msg("eng.cards.has_different_s_and_none_was", "'{name}' has {digests_n} different {label}s and none was chosen - left alone", name=name, digests_n=len(digests), label=kind.label))
                 continue
             want = chosen.get(name) or next(iter(digests))
             group = [c for c in copies if c.digest == want]
             if not group:
                 plan.warnings.append(
-                    f"the {kind.label} chosen for '{name}' is not there any more - skipped")
+                    _i18n.msg("eng.cards.the_chosen_for_is_not_there", "the {label} chosen for '{name}' is not there any more - skipped", label=kind.label, name=name))
                 continue
             keeper = _preferred(group, merc)
             dest = kind.rel(kind.merc, name, Path(keeper.rel).suffix.lower())
@@ -503,7 +502,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
         plan.changes.append(f"{len(plan.deletes)} file(s) moved out, freeing "
                             f"{plan.freed / 1048576:.1f} MB")
     if not plan.changes and not plan.errors:
-        plan.warnings.append("nothing is ticked")
+        plan.warnings.append(_i18n.msg("eng.cards.nothing_is_ticked", "nothing is ticked"))
     return plan
 
 
@@ -531,7 +530,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
         raise ValueError("cannot apply: " + "; ".join(plan.errors))
     mod, target = plan.mod, plan.target
     if target is None:
-        raise ValueError("cannot apply: no export folder")
+        raise ValueError(_i18n.msg("eng.cards.cannot_apply_no_export_folder", "cannot apply: no export folder"))
     say = _reporter(progress)
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)
@@ -554,7 +553,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
         try:
             shutil.copy2(src, dest)
         except OSError as exc:
-            plan.warnings.append(f"could not copy {rel} out: {exc}")
+            plan.warnings.append(_i18n.msg("eng.cards.could_not_copy_out", "could not copy {rel} out: {exc}", rel=rel, exc=exc))
             continue
         file_op("EXPORT", dest, f"copied out of the mod from {src}")
     (target / README_NAME).write_text(
@@ -586,7 +585,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
             shutil.copy2(src, t)
             file_op("WRITE", t, f"the copy that stays, from {src}")
         except OSError as exc:
-            plan.warnings.append(f"could not write data/{rel}: {exc}")
+            plan.warnings.append(_i18n.msg("eng.cards.could_not_write_data", "could not write data/{rel}: {exc}", rel=rel, exc=exc))
             log.warning("  could not write %s: %s", t, exc)
 
     n_deletes = len(plan.deletes) or 1
@@ -601,7 +600,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
                 manifest.setdefault("deleted", []).append(rel)
                 file_op("DELETE", t, "taken out of the mod (Undo puts it back)")
             except OSError as exc:
-                plan.warnings.append(f"could not remove data/{rel}: {exc}")
+                plan.warnings.append(_i18n.msg("eng.cards.could_not_remove_data", "could not remove data/{rel}: {exc}", rel=rel, exc=exc))
                 log.warning("  could not remove %s: %s", t, exc)
     say(99, "writing the log entry")
 

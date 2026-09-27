@@ -51,6 +51,7 @@ from typing import Callable, Dict, List, Optional, Sequence
 
 from . import ancillaries, keyblock as kb, traits, triggers
 from .logutil import log
+from . import i18n as _i18n
 
 
 class PortError(ValueError):
@@ -89,7 +90,7 @@ KINDS: Dict[str, Kind] = {
 def kind(kind_id: str) -> Kind:
     k = KINDS.get(str(kind_id or "").strip())
     if k is None:
-        raise PortError(f"{kind_id!r} is not something this can port")
+        raise PortError(_i18n.msg("eng.portrecords.is_not_something_this_can_port", "{kind_id} is not something this can port", kind_id=repr(kind_id)))
     return k
 
 
@@ -111,7 +112,7 @@ def _read(mod, k: Kind):
     """
     path = _path(mod, k)
     if not path.exists():
-        raise PortError(f"{getattr(mod, 'name', '?')} has no {path.name}")
+        raise PortError(_i18n.msg("eng.portrecords.has_no", "{getattr} has no {name}", getattr=getattr(mod, 'name', '?'), name=path.name))
     text = kb.read_text(path, k.module.ENCODING)
     return text, k.module.parse_text(text), triggers.parse_text(text)
 
@@ -224,10 +225,10 @@ def plan(source, dest, kind_id: str, names: Sequence[str],
     p = PortPlan(source=source, dest=dest, kind=k, names=[str(n) for n in names],
                  with_triggers=bool(with_triggers), overwrite=bool(overwrite))
     if source is dest or getattr(source, "name", 1) == getattr(dest, "name", 2):
-        p.errors.append("the source and the destination are the same mod")
+        p.errors.append(_i18n.msg("eng.portrecords.the_source_and_the_destination_are", "the source and the destination are the same mod"))
         return p
     if not p.names:
-        p.errors.append(f"pick at least one {k.noun} to port")
+        p.errors.append(_i18n.msg("eng.portrecords.pick_at_least_one_to_port", "pick at least one {noun} to port", noun=k.noun))
         return p
     try:
         _stext, sparsed, stf = _read(source, k)
@@ -241,13 +242,13 @@ def plan(source, dest, kind_id: str, names: Sequence[str],
     for name in p.names:
         rec = sparsed.get(name)
         if rec is None:
-            p.errors.append(f"{name} is not {_a(k.noun)} in {source.name}")
+            p.errors.append(_i18n.msg("eng.portrecords.is_not_in", "{name} is not {a} in {name2}", name=name, a=_a(k.noun), name2=source.name))
             return p
         text = _port_one(p, k, text, sparsed, stf, rec, known)
     p.text = "" if text == original else text
     _plan_loc(p, k, sparsed)
     if not p.text and not p.loc_writes and not p.errors:
-        p.warnings.append("nothing to change")
+        p.warnings.append(_i18n.msg("eng.portrecords.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -265,8 +266,7 @@ def _port_one(p: PortPlan, k: Kind, text: str, sparsed, stf, rec, known) -> str:
     if here is not None and not p.overwrite:
         p.skipped.append(rec.name)
         p.warnings.append(
-            f"{p.dest.name} already has {_a(k.noun)} called `{rec.name}` - it was "
-            "left alone. Tick “replace what is already there” to overwrite it")
+            _i18n.msg("eng.portrecords.already_has_called_it_was_left", "{name} already has {a} called `{name2}` - it was left alone. Tick “replace what is already there” to overwrite it", name=p.dest.name, a=_a(k.noun), name2=rec.name))
         return text
     if here is not None:
         text = k.module.replace_block(parsed, here, block)
@@ -319,9 +319,7 @@ def _port_triggers(p: PortPlan, k: Kind, text: str, stf, name: str, row: Dict) -
         dtf = triggers.parse_text(text)
         if dtf.get(trig.name) is not None:
             p.warnings.append(
-                f"{name}: {p.dest.name} already has a trigger called "
-                f"`{trig.name}`, so it was not copied - check that the one it "
-                "has still does what this record needs")
+                _i18n.msg("eng.portrecords.already_has_a_trigger_called_so", "{name}: {name2} already has a trigger called `{name3}`, so it was not copied - check that the one it has still does what this record needs", name=name, name2=p.dest.name, name3=trig.name))
             continue
         text = triggers.append_block(dtf, stf.block_text(trig))
         row["triggers"].append(trig.name)
@@ -330,12 +328,9 @@ def _port_triggers(p: PortPlan, k: Kind, text: str, stf, name: str, row: Dict) -
                          if e.keyword == k.keyword and e.args and e.args[0] != name})
         if others:
             p.warnings.append(
-                f"{name}: trigger `{trig.name}` also gives {kb.and_list(others)} - "
-                f"port {'those' if len(others) > 1 else 'that'} too, or the "
-                "trigger names something this mod has not got")
+                _i18n.msg("eng.portrecords.trigger_also_gives_port_too_or", "{name}: trigger `{name2}` also gives {and_list} - port {x} too, or the trigger names something this mod has not got", name=name, name2=trig.name, and_list=kb.and_list(others), x='those' if len(others) > 1 else 'that'))
     if not row["triggers"] and p.with_triggers:
-        p.warnings.append(f"{name}: no trigger in {p.source.name} gives it, so "
-                          "nothing in the destination will either")
+        p.warnings.append(_i18n.msg("eng.portrecords.no_trigger_in_gives_it_so", "{name}: no trigger in {name2} gives it, so nothing in the destination will either", name=name, name2=p.source.name))
     return text
 
 
@@ -411,8 +406,7 @@ def _plan_loc(p: PortPlan, k: Kind, sparsed) -> None:
     theirs = k.module.loc(p.source)
     if not txt.exists() and not stringsbin.bin_path_for(txt).exists():
         p.warnings.append(
-            f"{p.dest.name} has no {Path(k.loc_rel).name}, so no text key could be "
-            f"written - every ported {k.noun} will show its tags in game")
+            _i18n.msg("eng.portrecords.has_no_so_no_text_key", "{name} has no {name2}, so no text key could be written - every ported {noun} will show its tags in game", name=p.dest.name, name2=Path(k.loc_rel).name, noun=k.noun))
         return
     for row in p.rows:
         for tag in row["keys"]:
@@ -422,8 +416,7 @@ def _plan_loc(p: PortPlan, k: Kind, sparsed) -> None:
                 p.loc_new.append(tag)
                 if not words:
                     p.warnings.append(
-                        f"{row['name']}: `{tag}` has no wording in {p.source.name} "
-                        "either, so it is created with the tag as placeholder text")
+                        _i18n.msg("eng.portrecords.has_no_wording_in_either_so", "{name}: `{tag}` has no wording in {name2} either, so it is created with the tag as placeholder text", name=row['name'], tag=tag, name2=p.source.name))
             elif p.overwrite and words and words != have[tag]:
                 p.loc_writes[tag] = words
     if p.loc_new:
@@ -454,7 +447,7 @@ def apply(p: PortPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text and not p.loc_writes:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.portrecords.nothing_to_change", "nothing to change"))
     k = p.kind
     dest = p.dest
     tid = config.new_transfer_id()

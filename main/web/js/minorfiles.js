@@ -52,13 +52,13 @@ async function loadMinor(){
   if(mode === 'cultures') tab = 'cultures';
   else if(tab === 'cultures') tab = 'rebels';
   minorWantTab = null;
-  main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s campaign files…</div>';
+  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('minorfiles.s_campaign_files')}</div>`;
   let r;
   try{ r = await api.get(`/api/minor?mod=${enc(mod)}&tab=${enc(tab)}`); }
   catch(e){ if(stale(mode, mod)) return;
-    main.innerHTML = `<div class="empty">Couldn't read the campaign files.<br>
+    main.innerHTML = `<div class="empty">${tt('minorfiles.couldnt_read_the_campaign_files')}<br>
       <span class="count">${esc(errText(e))}</span><br><br>
-      <button class="primary" onclick="loadMinor()">Retry</button></div>`; return; }
+      <button class="primary" onclick="loadMinor()">${tt('common.retry')}</button></div>`; return; }
   if(stale(mode, mod)) return;
   state.mf = Object.assign({tab, sel:'', d:null, busy:false, adding:false}, r);
   undoReset();
@@ -80,14 +80,13 @@ function renderMinor(){
   main.innerHTML = mfTabsHtml() + (f.exists ? `<div class="trwrap">
     <div class="trlist">
       ${f.actions.includes('add')
-        ? `<button class="trnew" onclick="mfNew()">＋ New ${esc(f.noun)}</button>` : ''}
-      ${findingsHtml('minor:'+f.tab, f.finding_list, 'mfOpen')}
+        ? `<button class="trnew" onclick="mfNew()">${tt('minorfiles.new',{noun:esc(f.noun)})}</button>` : ''}
+      ${findingsHtml(tt('minorfiles.minor')+f.tab, f.finding_list, 'mfOpen')}
       <div class="trrows">${rows.map(mfRowHtml).join('')
-        || `<div class="count" style="padding:8px">No ${esc(f.noun)} matches.</div>`}</div>
+        || `<div class="count" style="padding:8px">${tt('minorfiles.no_matches',{noun:esc(f.noun)})}</div>`}</div>
     </div>
     <div class="trmain" id="mfMain">${mfDetailHtml()}</div>
-  </div>` : `<div class="empty">${esc(f.error || 'This mod has not got that file.')}<br>
-      <span class="count">It would live in data/${esc(f.file)}</span></div>`);
+  </div>` : `<div class="empty">${tt('minorfiles.it_would_live_in_data',{x:esc(f.error || tt('minorfiles.this_mod_has_not_got_that')),file:esc(f.file)})}</div>`);
 }
 
 const mfTabsHtml = () => minorTabsHtml(state.mf.tab, 'data/' + state.mf.file);
@@ -106,16 +105,14 @@ function mfRows(){
 function mfRowHtml(r){
   const f = state.mf, on = f.sel === r.name;
   let sub = '';
-  if(f.tab === 'rebels') sub = `${esc(r.category||'no category')} · chance ${
-    esc(r.chance||'0')} · ${r.units} unit${r.units===1?'':'s'}`;
+  if(f.tab === 'rebels') sub = tt('minorfiles.chance_unit',{category:esc(r.category||tt('minorfiles.no_category')),chance:esc(r.chance||'0'),units:r.units,units2:r.units===1?'':'s'});
   else if(f.tab === 'resources') sub = `trade ${esc(r.trade_value||'0')}${
-    r.has_mine?' · has a mine':''}${r.known?'':' · <b>not an engine resource</b>'}`;
+    r.has_mine?tt('minorfiles.has_a_mine'):''}${r.known?'':` ${tt('minorfiles.not_an_engine_resource')}`}`;
   else if(f.tab === 'religions') sub = r.listed
-    ? esc(r.pip_path||'no pip') : '<b>not in the religions list</b>';
-  else if(f.tab === 'cultures') sub = `${r.levels} settlement level${
-    r.levels===1?'':'s'} · ${r.agents}/6 agents`;
+    ? esc(r.pip_path||tt('minorfiles.no_pip')) : `<b>${tt('minorfiles.not_in_the_religions_list')}</b>`;
+  else if(f.tab === 'cultures') sub = tt('minorfiles.settlement_level_6_agents',{levels:r.levels,levels2:r.levels===1?'':'s',agents:r.agents});
   else sub = Object.entries(r.sections||{}).map(([k,n]) => `${n} ${k}`).join(' · ')
-    || '<b>no names at all</b>';
+    || `<b>${tt('minorfiles.no_names_at_all')}</b>`;
   return `<button class="trrow${on?' on':''}" onclick="mfOpen('${q1(esc(r.name))}')">
     <span class="nm">${esc(r.label)}</span><br>
     <span class="sub">${sub}${r.findings?` <span class="w-warn">· ${r.findings}⚠</span>`:''}</span>
@@ -123,7 +120,7 @@ function mfRowHtml(r){
 }
 
 async function mfOpen(name){
-  activity('opened record', `${name} (${state.mf.tab}) in ${state.src}`);
+  activity(tt('minorfiles.opened_record'), tt('minorfiles.in',{name,tab:state.mf.tab,src:state.src}));
   const f = state.mf;
   f.sel = name; f.adding = false; f.d = null;
   renderMinor();
@@ -158,7 +155,7 @@ function mfNew(){
   const f = state.mf;
   f.sel = ''; f.adding = true;
   const blank = mfBlank(f.tab);
-  f.d = {name:'', label:`(new ${f.noun})`, tab:f.tab, file:f.file, noun:f.noun,
+  f.d = {name:'', label:tt('minorfiles.new_2',{noun:f.noun}), tab:f.tab, file:f.file, noun:f.noun,
     record:blank, w:JSON.parse(JSON.stringify(blank)), findings:[], loc:{},
     locEdits:{}, missing_loc:[], loc_tag:'', loc_writable:true,
     known:(f.records||[]).map(r=>r.name), actions:f.actions,
@@ -194,7 +191,7 @@ function mfClone(){
   const shown = was ? ((d.locEdits||{})['#name'] !== undefined ? d.locEdits['#name']
                        : ((d.loc||{})[was] || '')) : '';
   f.sel = ''; f.adding = true;
-  f.d = {name:'', label:`copy of ${d.label}`, tab:f.tab, file:f.file, noun:f.noun,
+  f.d = {name:'', label:tt('minorfiles.copy_of',{label:d.label}), tab:f.tab, file:f.file, noun:f.noun,
     record:JSON.parse(JSON.stringify(w)), w,
     findings:[], loc:{}, locEdits:(tag && shown) ? {'#name':shown} : {},
     missing_loc:tag ? [tag] : [], loc_tag:tag, loc_file:d.loc_file || '',
@@ -202,10 +199,10 @@ function mfClone(){
     known:[...known], actions:f.actions, vocab:d.vocab || {}};
   renderMinor();
   const carried = f.tab === 'rebels'
-    ? `${(w.units||[]).length} unit(s) and every field came with it`
-    : 'every field came with it';
-  toast(`Copied ${d.name} as “${name}” - ${carried}. `
-    + 'Nothing is written until you press Create.', 6500);
+    ? tt('minorfiles.unit_s_and_every_field_came',{n:(w.units||[]).length})
+    : tt('minorfiles.every_field_came_with_it');
+  toast(tt('minorfiles.copied_as',{name:d.name,name2:name,carried})
+    + tt('minorfiles.nothing_is_written_until_you_press'), 6500);
 }
 
 // The pickers (this mod's unit list, its settlement levels) come with a record,
@@ -242,35 +239,27 @@ function mfPaintForm(){
 /* ---- the detail pane ---- */
 function mfDetailHtml(){
   const f = state.mf, d = f.d;
-  if(!f.sel && !f.adding) return `<div class="empty">Pick a ${esc(f.noun)} on the left.<br>
-    <span class="count">${f.count} ${esc(f.noun)}${f.count===1?'':'s'} in data/${
-      esc(f.file)}</span>${f.refused ? `<div class="trnote"
+  if(!f.sel && !f.adding) return `<div class="empty">${tt('minorfiles.pick_a_on_the_left_in',{noun:esc(f.noun),count:f.count,noun2:esc(f.noun),x:f.count===1?'':'s',file:esc(f.file),x2:f.refused ? `<div class="trnote"
       style="max-width:560px;margin:14px auto;text-align:left">${esc(f.refused)}</div>`
-      : ''}</div>`;
-  if(!d) return `<div class="empty">Reading the ${esc(f.noun)}…</div>`;
+      : ''})}</div>`;
+  if(!d) return `<div class="empty">${tt('minorfiles.reading_the',{noun:esc(f.noun)})}</div>`;
   if(d.error) return `<div class="empty"><span class="w-bad">✗ ${esc(d.error)}</span></div>`;
   return `<div class="trbar">
-      <div><b>${esc(f.adding ? 'New ' + f.noun : d.label)}</b>
+      <div><b>${esc(f.adding ? tt('minorfiles.new_3') + f.noun : d.label)}</b>
         <span class="count">${esc(f.file)}</span></div>
       <span class="sp"></span>
-      ${f.adding ? '' : `<button class="${d.cv?'on':''}" title="Show this ${esc(f.noun)}
-exactly as ${esc(f.file)} stores it, beside the form."
-        onclick="mfCvToggle()">&lt;/&gt; Code view</button>
+      ${f.adding ? '' : `<button class="${d.cv?'on':''}" title="${ttA('minorfiles.show_this_exactly_as_stores_it',{noun:esc(f.noun),file:esc(f.file)})}"
+        onclick="mfCvToggle()">${tt('common.code_view')}</button>
       ${(d.actions||[]).includes('add')
-        ? `<button onclick="mfClone()" title="Start a new ${esc(f.noun)} holding
-everything this one holds, under a new name. Nothing is written until you press
-Create.">⧉ Clone</button>` : ''}
+        ? `<button onclick="mfClone()" title="${ttA('minorfiles.start_a_new_holding_everything_this',{noun:esc(f.noun)})}">${tt('minorfiles.clone')}</button>` : ''}
       ${(d.actions||[]).includes('duplicate')
-        ? `<button onclick="mfDuplicate()" title="A new culture: this one's whole record
-under a new name. The preview names the text keys, factions and art it still needs.">⧉ Duplicate…</button>` : ''}
+        ? `<button onclick="mfDuplicate()" title="${ttA('minorfiles.a_new_culture_this_ones_whole')}">${tt('minorfiles.duplicate')}</button>` : ''}
       ${(d.actions||[]).includes('merge')
-        ? `<button onclick="mfMergeOpen()" title="Add every name another faction
-keeps to this one's lists. The other faction is read, not changed.">⧉ Merge names…</button>
-      <button onclick="mfDedupe()" title="Clear the names this faction lists twice.
-Nothing is added.">Remove duplicates</button>` : ''}
+        ? `<button onclick="mfMergeOpen()" title="${ttA('minorfiles.add_every_name_another_faction_keeps')}">${tt('minorfiles.merge_names')}</button>
+      <button onclick="mfDedupe()" title="${ttA('minorfiles.clear_the_names_this_faction_lists')}">${tt('minorfiles.remove_duplicates')}</button>` : ''}
       ${(d.actions||[]).includes('delete')
-        ? '<button class="danger" onclick="mfDelete()">Delete</button>' : ''}`}
-      <button class="primary" onclick="mfSave()">${f.adding?'Create':'Save'}</button>
+        ? `<button class="danger" onclick="mfDelete()">${tt('common.delete')}</button>` : ''}`}
+      <button class="primary" onclick="mfSave()">${f.adding?tt('common.create'):tt('common.save')}</button>
     </div>
     <div id="mfGui">
       ${mfFindingsHtml(d)}
@@ -281,11 +270,9 @@ Nothing is added.">Remove duplicates</button>` : ''}
 
 function mfFindingsHtml(d){
   const out = (d.findings||[]).map(f =>
-    `<div class="trfind w-warn">line ${f.line}: ${esc(f.message)}</div>`);
+    `<div class="trfind w-warn">${tt('minorfiles.line',{line:f.line,message:esc(f.message)})}</div>`);
   if((d.missing_loc||[]).length && d.loc_writable) out.push(`<div class="trfind w-warn">
-    There is no <code>{${esc(d.loc_tag)}}</code> entry in ${esc(d.loc_file)}, so this
-    ${esc(d.noun)} shows its code name in game. Type the words beside the name below,
-    or save and the key is created with the code name as placeholder text.</div>`);
+    ${tt('minorfiles.there_is_no_entry_in_so',{loc_tag:esc(d.loc_tag),loc_file:esc(d.loc_file),noun:esc(d.noun)})}</div>`);
   return out.join('');
 }
 
@@ -321,14 +308,13 @@ function mfArt(rel){
   // so the redundant half is dropped here rather than in one of the parsers -
   // neither file is wrong about its own format.
   const r=(rel||'').trim().replace(/\\/g,'/').replace(/^data\//i,'');
-  if(!r)return '<span class="mfnoart" title="No path set">none</span>';
+  if(!r)return `<span class="mfnoart" title="${ttA('minorfiles.no_path_set')}">${tt('common.none')}</span>`;
   // These sit in dense tables with no room for a pair of buttons, so the pip
   // itself is the ✎ - a click replaces it, and a right-click gets the same menu
   // (with "Open file location" on it) that every other picture in the tool has.
   const url=`/icon?mod=${enc(state.mf.mod)}&kind=modfile&rel=${enc(r)}${iconBust()}`;
   return `<img class="mfpip act" loading="lazy" src="${url}"
-    alt="" title="${esc(r)}. Blank here means the file is not unpacked in this mod, which is normal: it may be inside a .pack archive.
-Click to replace it; right-click for its file location."
+    alt="" title="${ttA('minorfiles.blank_here_means_the_file_is',{x:esc(r)})}"
     onclick="imgPick('${q1(esc(url))}','mfPaint')"
     onerror="this.classList.add('gone')">`;
 }
@@ -336,7 +322,7 @@ function mfNameRow(d, placeholder){
   const w = d.w, tag = d.loc_tag || '';
   const shown = tag ? (d.locEdits['#name'] !== undefined ? d.locEdits['#name']
                        : ((d.loc||{})[tag] || '')) : '';
-  return `<label class="lbl" data-label="name">Name</label>
+  return `<label class="lbl" data-label="name">${tt('common.name')}</label>
     <div class="${tag?'trkey':''}">
       <input data-label="name" value="${esc(w.name)}"
         ${state.mf.adding?'':'disabled'} placeholder="${esc(placeholder||'')}"
@@ -344,10 +330,10 @@ function mfNameRow(d, placeholder){
       ${tag ? `<input class="trtext" value="${esc(shown)}"
         ${d.loc_writable?'':'disabled'}
         placeholder="${esc(d.loc_writable
-          ? (((d.loc||{})[tag] === undefined) ? 'not in ' + d.loc_file + ' yet'
-             : 'what the player reads')
-          : (shown || 'read by position, so edit it in the Strings module'))}"
-        title="${esc(d.loc_writable ? 'What the player reads. Saved into data/'
+          ? (((d.loc||{})[tag] === undefined) ? tt('minorfiles.not_in') + d.loc_file + ' yet'
+             : tt('minorfiles.what_the_player_reads'))
+          : (shown || tt('minorfiles.read_by_position_so_edit_it')))}"
+        title="${esc(d.loc_writable ? tt('minorfiles.what_the_player_reads_saved_into')
           + d.loc_file + '.' : d.loc_note || '')}"
         oninput="mfSetLocName(this.value)">` : ''}
     </div>
@@ -358,11 +344,10 @@ function mfNameRow(d, placeholder){
 function mfRebelForm(d){
   const w = d.w, v = d.vocab || {};
   return `<section class="trsec">
-    <div class="trsechead">The rebel faction
-      <span class="count">What spawns in a region whose descr_regions line names it</span></div>
+    <div class="trsechead">${tt('minorfiles.the_rebel_faction_what_spawns_in')}</div>
     <div class="trgrid">
       ${mfNameRow(d, 'Evil_Rebels')}
-      <label class="lbl" data-label="category">Category</label>
+      <label class="lbl" data-label="category">${tt('common.category')}</label>
       <div>
         <select data-label="category" onchange="mfSet('category',this.value)">
           ${(v.categories||[]).map(c =>
@@ -370,31 +355,27 @@ function mfRebelForm(d){
           ${(v.categories||[]).includes(w.category) ? ''
             : `<option value="${esc(w.category)}" selected>${esc(w.category)} (unknown)</option>`}
         </select>
-        <div class="trhint count">The four the engine knows. Anything else is
-          read and ignored</div>
+        <div class="trhint count">${tt('minorfiles.the_four_the_engine_knows_anything')}</div>
       </div>
-      <label class="lbl" data-label="chance">Chance</label>
+      <label class="lbl" data-label="chance">${tt('minorfiles.chance')}</label>
       <input data-label="chance" value="${esc(w.chance)}"
         oninput="mfSet('chance',this.value.trim())">
-      <label class="lbl" data-label="description">Description key</label>
+      <label class="lbl" data-label="description">${tt('minorfiles.description_key')}</label>
       <input data-label="description" value="${esc(w.description)}"
         placeholder="${esc(w.name||'')}"
         oninput="mfSet('description',this.value.trim())">
     </div>
     <div class="treffects">
-      <div class="trsechead" style="margin:8px 0 0">Units
-        <span class="count">${(w.units||[]).length}. A rebel faction with none
-          cannot spawn. The whole rest of the line is the unit type, spaces and
-          all.</span></div>
+      <div class="trsechead" style="margin:8px 0 0">${tt('minorfiles.units_a_rebel_faction_with_none',{n:(w.units||[]).length})}</div>
       ${(w.units||[]).map((u,k)=>`<div class="treff" data-label="unit#${k+1}">
         <input class="trattr" value="${esc(u)}" list="mfUnits"
-          placeholder="unit type" oninput="mfSetUnit(${k},this.value)">
+          placeholder="${ttA('minorfiles.unit_type')}" oninput="mfSetUnit(${k},this.value)">
         <span class="count" id="mfu${k}">${esc(mfUnitLabel(d, u))}</span>
         <button class="trgdel" onclick="mfDelUnit(${k})">✕</button>
       </div>`).join('')}
       <datalist id="mfUnits">${(v.units||[]).map(u =>
         `<option value="${esc(u.type)}">${esc(u.label)}</option>`).join('')}</datalist>
-      <button class="trgadd" onclick="mfAddUnit()">＋ Add unit</button>
+      <button class="trgadd" onclick="mfAddUnit()">${tt('minorfiles.add_unit')}</button>
     </div>
   </section>`;
 }
@@ -404,34 +385,33 @@ function mfRebelForm(d){
 function mfUnitLabel(d, type){
   if(!type) return '';
   const hit = ((d.vocab||{}).units||[]).find(u => u.type === type);
-  return hit ? hit.label : '✗ not a unit in this mod';
+  return hit ? hit.label : tt('minorfiles.not_a_unit_in_this_mod');
 }
 
 function mfResourceForm(d){
   const w = d.w;
   return `<section class="trsec">
-    <div class="trsechead">The resource
-      <span class="count">Placed on the campaign map by descr_regions.txt</span></div>
+    <div class="trsechead">${tt('minorfiles.the_resource_placed_on_the_campaign')}</div>
     <div class="trgrid">
       ${mfNameRow(d, 'timber')}
-      <label class="lbl" data-label="trade_value">Trade value</label>
+      <label class="lbl" data-label="trade_value">${tt('minorfiles.trade_value')}</label>
       <input data-label="trade_value" value="${esc(w.trade_value)}"
         oninput="mfSet('trade_value',this.value.trim())">
-      <label class="lbl" data-label="item">Model (item)</label>
+      <label class="lbl" data-label="item">${tt('minorfiles.model_item')}</label>
       <input data-label="item" value="${esc(w.item)}"
         placeholder="data/models_strat/resource_x.CAS"
         oninput="mfSet('item',this.value.trim())">
-      <label class="lbl" data-label="icon">Icon</label>
+      <label class="lbl" data-label="icon">${tt('minorfiles.icon')}</label>
       <div class="mfart">
         ${mfArt(w.icon)}
         <input data-label="icon" value="${esc(w.icon)}"
           placeholder="data/ui/resources/resource_x.tga"
           oninput="mfSet('icon',this.value.trim())">
       </div>
-      <label class="lbl" data-label="has_mine">Has a mine</label>
+      <label class="lbl" data-label="has_mine">${tt('minorfiles.has_a_mine_2')}</label>
       <div data-label="has_mine"><label class="chk"><input type="checkbox"
         ${w.has_mine?'checked':''} onchange="mfSet('has_mine',this.checked)">
-        shows the mine model named at the top of this file</label></div>
+        ${tt('minorfiles.shows_the_mine_model_named_at')}</label></div>
     </div>
   </section>`;
 }
@@ -439,13 +419,10 @@ function mfResourceForm(d){
 function mfReligionForm(d){
   const w = d.w;
   return `<section class="trsec">
-    <div class="trsechead">The religion
-      <span class="count">A religion is written down three times: this file's
-        list, this block, and descr_religions_lookup.txt. A save keeps all
-        three in step.</span></div>
+    <div class="trsechead">${tt('minorfiles.the_religion_a_religion_is_written')}</div>
     <div class="trgrid">
       ${mfNameRow(d, 'catholic')}
-      <label class="lbl" data-label="pip_path">Pip</label>
+      <label class="lbl" data-label="pip_path">${tt('minorfiles.pip')}</label>
       <div>
         <div class="mfart">
           ${mfArt(w.pip_path)}
@@ -453,13 +430,10 @@ function mfReligionForm(d){
             placeholder="ui/pips/pip_catholic.tga"
             oninput="mfSet('pip_path',this.value.trim())">
         </div>
-        <div class="trhint count">What the campaign map draws for it. The one
-          line a religion block has</div>
+        <div class="trhint count">${tt('minorfiles.what_the_campaign_map_draws_for')}</div>
       </div>
     </div>
-    ${d.listed === false ? `<div class="trfind w-bad">This religion has a block but
-      is not in the <code>religions { … }</code> list, and the engine reads the
-      list, so as far as the game is concerned it does not exist.</div>` : ''}
+    ${d.listed === false ? `<div class="trfind w-bad">${tt('minorfiles.this_religion_has_a_block_but')}</div>` : ''}
   </section>${state.mf.adding ? mfReligionStartHtml(d) : ''}`;
 }
 
@@ -477,30 +451,24 @@ function mfReligionStartHtml(d){
   const regions = v.regions || [];
   const seeds = w.seeds || (w.seeds = []);
   return `<section class="trsec">
-    <div class="trsechead">Where it starts
-      <span class="count">Every region's <code>religions { … }</code> line gets
-        <code>${esc((w.name||'').trim() || 'name')} 0</code>, in every descr_regions.txt
-        this mod ships. A share given here comes out of the region's other
-        religions in proportion, so each line still adds up to 100.</span></div>
+    <div class="trsechead">${tt('minorfiles.where_it_starts_every_regions_religions',{name:esc((w.name||'').trim() || 'name')})}</div>
     <div class="trgrid">
-      <label class="lbl mfstartlbl">Pip from</label>
+      <label class="lbl mfstartlbl">${tt('minorfiles.pip_from')}</label>
       <div><select onchange="mfSet('pip_from', this.value)">
-        <option value="">no copy - draw ui/pips/pip_${esc((w.name||'').trim() || 'name')}.tga yourself</option>
-        ${rels.map(r => `<option value="${esc(r)}" ${w.pip_from === r ? 'selected' : ''}>copy ${esc(r)}'s pip</option>`).join('')}
+        <option value="">${tt('minorfiles.no_copy_draw_ui_pips_pip',{name:esc((w.name||'').trim() || 'name')})}</option>
+        ${rels.map(r => `<option value="${esc(r)}" ${w.pip_from === r ? 'selected' : ''}>${tt('minorfiles.copy_s_pip',{x:esc(r)})}</option>`).join('')}
       </select></div>
-      <label class="lbl mfstartlbl">Starting in</label>
+      <label class="lbl mfstartlbl">${tt('minorfiles.starting_in')}</label>
       <div>
         ${seeds.map((row, i) => `<div class="mfseed">
-          <input list="mfRegions" value="${esc(row.region || '')}" placeholder="a region"
+          <input list="mfRegions" value="${esc(row.region || '')}" placeholder="${ttA('minorfiles.a_region_2')}"
             onchange="mfSeed(${i}, 'region', this.value)">
           <input type="number" min="1" max="100" value="${esc(row.share || '')}" style="width:64px"
             onchange="mfSeed(${i}, 'share', this.value)"> %
           <button onclick="mfSeed(${i}, 'drop')">✕</button></div>`).join('')}
-        <button onclick="mfSeed(-1, 'add')">＋ a region</button>
+        <button onclick="mfSeed(-1, 'add')">${tt('minorfiles.a_region')}</button>
         <datalist id="mfRegions">${regions.map(r => `<option value="${esc(r)}">`).join('')}</datalist>
-        <div class="trhint count">Left empty, it starts nowhere: 0 in every region.
-          A faction takes it on the Factions screen, and its temples are
-          buildings (geeko's steps 3 and 5).</div>
+        <div class="trhint count">${tt('minorfiles.left_empty_it_starts_nowhere_0')}</div>
       </div>
     </div>
   </section>`;
@@ -521,8 +489,8 @@ function mfSeed(i, what, value){
    into the code view because a port level is a pair of lines. The ladder's
    shape (how many levels) is still the file's; what each line points at is a
    box. The chosen tab is remembered across records. */
-const MF_CUL_TABS = [['general','General'], ['settlements','Settlements'],
-                     ['infra','Infrastructure'], ['agents','Agents']];
+const MF_CUL_TABS = [['general',tt('common.general')], ['settlements',tt('minorfiles.settlements')],
+                     ['infra',tt('minorfiles.infrastructure')], ['agents',tt('minorfiles.agents')]];
 function mfCulTab(id){ state.mfCulTab = id; mfPaintForm(); }
 function mfCultureForm(d){
   const cur = state.mfCulTab || 'general';
@@ -540,37 +508,30 @@ function mfCulBox(w, k, label){
 function mfCulGeneral(d){
   const w = d.w, v = d.vocab || {};
   return `<section class="trsec">
-    <div class="trsechead">The culture
-      <span class="count">The record does not end at its closing brace. The fort,
-        the ports, the watchtower and the six agents on the other tabs belong to it too</span></div>
+    <div class="trsechead">${tt('minorfiles.the_culture_the_record_does_not')}</div>
     <div class="trgrid">
       ${mfNameRow(d, 'southern_european')}
       ${(v.head||[]).map(k => mfCulBox(w, k)).join('')}
     </div>
   </section>`;
 }
-const MF_CUL_INFRA_LABEL = {fort:'Fort model', fort_cost:'Fort cost', fort_wall:'Fort wall',
-  fishing_village:'Fishing village', watchtower:'Watchtower model', watchtower_cost:'Watchtower cost'};
+const MF_CUL_INFRA_LABEL = {fort:tt('minorfiles.fort_model'), fort_cost:tt('minorfiles.fort_cost'), fort_wall:tt('minorfiles.fort_wall'),
+  fishing_village:tt('minorfiles.fishing_village'), watchtower:tt('minorfiles.watchtower_model'), watchtower_cost:tt('minorfiles.watchtower_cost')};
 function mfCulInfra(d){
   const w = d.w, v = d.vocab || {};
   const ports = w.ports || [];
   const nth = {};
   return `<section class="trsec">
-    <div class="trsechead">Fort, fishing village and watchtower</div>
+    <div class="trsechead">${tt('minorfiles.fort_fishing_village_and_watchtower')}</div>
     <div class="trgrid">
       ${(v.tail||[]).map(k => mfCulBox(w, k, MF_CUL_INFRA_LABEL[k])).join('')}
     </div>
-    ${typeof smiButton === 'function' ? `<div class="count">Import a model for:
-      ${['fort', 'fort_wall', 'fishing_village', 'watchtower'].filter(k => w[k])
-        .map(k => smiButton(w.name, k).replace('>Import…<', `>${esc(k)}<`)).join(' ')}</div>
+    ${typeof smiButton === 'function' ? `<div class="count">${tt('minorfiles.import_a_model_for',{x:['fort', 'fort_wall', 'fishing_village', 'watchtower'].filter(k => w[k])
+        .map(k => smiButton(w.name, k).replace('>Import…<', `>${esc(k)}<`)).join(' ')})}</div>
       ${smiHtml(w.name, true)}` : ''}
   </section>
   <section class="trsec">
-    <div class="trsechead">Port ladder
-      <span class="count">${ports.length} line(s), in the file's own order: each port
-        level is a <code>port_land</code> and a <code>port_sea</code> model. Adding or
-        removing a level is a pair of lines placed in that order, so it is done in the
-        code view; what each line points at is here.</span></div>
+    <div class="trsechead">${tt('minorfiles.port_ladder_line_s_in_the',{ports_n:ports.length})}</div>
     ${ports.length ? `<div class="trgrid">${ports.map((p, k) => {
       nth[p.key] = (nth[p.key] || 0) + 1;
       const lab = `${p.key}#${nth[p.key]}`;
@@ -578,25 +539,22 @@ function mfCulInfra(d){
         <input data-label="${esc(lab)}" value="${esc(p.value)}"
           oninput="mfSetPort(${k},this.value.trim())">`;
     }).join('')}</div>`
-      : '<div class="count">This culture has no port lines.</div>'}
+      : `<div class="count">${tt('minorfiles.this_culture_has_no_port_lines')}</div>`}
   </section>`;
 }
 function mfCulSettlements(d){
   const w = d.w, v = d.vocab || {};
   return `<section class="trsec">
-    <div class="trsechead">Settlement ladder
-      <span class="count">${(w.levels||[]).length} level(s), each one a strat
-        model, the settlement plan that goes with it, and the card</span></div>
+    <div class="trsechead">${tt('minorfiles.settlement_ladder_level_s_each_one',{n:(w.levels||[]).length})}</div>
     ${(w.levels||[]).map((l,k) => `<div class="mflvl" data-label="level.${esc(l.name)}">
       <div class="mflvlname">${esc(l.name)}</div>
       ${mfArt(l.card)}
       <div class="trgrid" style="flex:1">
-        <label class="lbl" data-label="level.${esc(l.name)}.normal">Model
-          ${typeof smiButton === 'function' ? smiButton(w.name, l.name) : ''}</label>
+        <label class="lbl" data-label="level.${esc(l.name)}.normal">${tt('minorfiles.model',{x:typeof smiButton === 'function' ? smiButton(w.name, l.name) : ''})}</label>
         <input value="${esc(l.model)}" oninput="mfSetLevel(${k},'model',this.value.trim())">
-        <label class="lbl">Settlement plan</label>
+        <label class="lbl">${tt('minorfiles.settlement_plan')}</label>
         <input value="${esc(l.plan)}" oninput="mfSetLevel(${k},'plan',this.value.trim())">
-        <label class="lbl" data-label="level.${esc(l.name)}.card">Card</label>
+        <label class="lbl" data-label="level.${esc(l.name)}.card">${tt('minorfiles.card')}</label>
         <input value="${esc(l.card)}" oninput="mfSetLevel(${k},'card',this.value.trim())">
       </div>
     </div>`).join('')}
@@ -607,10 +565,7 @@ function mfCulSettlements(d){
 function mfCulAgents(d){
   const w = d.w, v = d.vocab || {};
   return `<section class="trsec">
-    <div class="trsechead">Agents
-      <span class="count">Card, info card, pip and cost. The two numbers after
-        them are the same <code>1 1</code> in all 234 real agent lines, so they
-        are carried by position and never rewritten.</span></div>
+    <div class="trsechead">${tt('minorfiles.agents_card_info_card_pip_and')}</div>
     ${Object.entries(w.agents||{}).map(([a,g]) => `<div class="treff" data-label="agent.${esc(a)}">
       <span class="mfag">${esc(a)}</span>
       ${mfArt(g.tokens[0])}
@@ -620,10 +575,8 @@ function mfCulAgents(d){
           oninput="mfSetAgent('${q1(esc(a))}',${i},this.value.trim())">`).join('')}
     </div>`).join('')}
     ${(v.agents||[]).filter(a => !(w.agents||{})[a]).length
-      ? `<div class="trfind w-warn">No ${(v.agents||[]).filter(a =>
-          !(w.agents||{})[a]).map(esc).join(', ')} line, so this culture cannot
-          recruit one. Adding an agent line means saying where it goes, which
-          this file's own order decides, so it is written in the code view.</div>`
+      ? `<div class="trfind w-warn">${tt('minorfiles.no_line_so_this_culture_cannot',{x:(v.agents||[]).filter(a =>
+          !(w.agents||{})[a]).map(esc).join(', ')})}</div>`
       : ''}
   </section>`;
 }
@@ -632,9 +585,7 @@ function mfMissingLevels(w, v){
   const have = new Set((w.levels||[]).map(l => l.name));
   const gone = (v.levels||[]).filter(l => !have.has(l));
   if(!gone.length) return '';
-  return `<div class="trhint count" style="margin-top:8px">Not defined here:
-    ${gone.map(esc).join(', ')}. That is only a fault when the OTHER cultures in
-    this file define it. A mod that drops a level everywhere has removed it.</div>`;
+  return `<div class="trhint count" style="margin-top:8px">${tt('minorfiles.not_defined_here_that_is_only',{gone:gone.map(esc).join(', ')})}</div>`;
 }
 
 // 800 names is a textarea, not 800 boxes. One name per line, which is exactly
@@ -643,9 +594,7 @@ function mfNamesForm(d){
   const w = d.w, v = d.vocab || {};
   const has = new Set((w.sections||[]).map(s => s.name));
   return `<section class="trsec">
-    <div class="trsechead">The faction's names
-      <span class="count">One name per line, and a name is one word: the engine
-        picks from these when it generates a family</span></div>
+    <div class="trsechead">${tt('minorfiles.the_factions_names_one_name_per')}</div>
     <div class="trgrid">${mfNameRow(d, 'england')}</div>
     ${(w.sections||[]).map((s,k) => `<div style="margin-top:10px" data-label="${esc(s.name)}">
       <div class="trsechead" style="margin:0 0 4px">${esc(s.name)}
@@ -654,10 +603,7 @@ function mfNamesForm(d){
         oninput="mfSetSection(${k},this.value)">${esc(s.entries.join('\n'))}</textarea>
     </div>`).join('')}
     ${(v.sections||[]).filter(s => !has.has(s)).length
-      ? `<div class="trhint count" style="margin-top:8px">No ${
-          (v.sections||[]).filter(s => !has.has(s)).map(esc).join(', ')} section.
-          Adding one is a heading and its names together, so it is written in the
-          code view.</div>` : ''}
+      ? `<div class="trhint count" style="margin-top:8px">${tt('minorfiles.no_section_adding_one_is_a',{x:(v.sections||[]).filter(s => !has.has(s)).map(esc).join(', ')})}</div>` : ''}
   </section>`;
 }
 
@@ -768,26 +714,20 @@ function mfMergePaint(){
 function mfMergePlanHtml(){
   const m = state.mf.merge;
   if(m.err) return `<div class="w-warn fcmsg">${esc(m.err)}</div>`;
-  if(!(m.sources || []).length) return `<div class="count fcintro">Tick a faction
-    above to see exactly what each section would gain.</div>`;
-  if(!m.plan) return `<div class="count fcintro">Working out what would change…</div>`;
+  if(!(m.sources || []).length) return `<div class="count fcintro">${tt('minorfiles.tick_a_faction_above_to_see')}</div>`;
+  if(!m.plan) return `<div class="count fcintro">${tt('common.working_out_what_would_change')}</div>`;
   if((m.plan.errors || []).length)
     return `<div class="w-warn fcmsg">${m.plan.errors.map(esc).join('<br>')}</div>`;
   const rows = Object.entries(m.plan.merge || {});
-  if(!rows.length) return `<div class="count fcintro">Nothing to merge.</div>`;
+  if(!rows.length) return `<div class="count fcintro">${tt('minorfiles.nothing_to_merge')}</div>`;
   return `<div class="fcplan">
-    <div class="k">What each section would gain
+    <div class="k">${tt('minorfiles.what_each_section_would_gain')}
       <span class="count">${esc((m.plan.merge_sources || []).join(', '))}</span></div>
     ${rows.map(([sec, c]) => `<div class="fcrow${c.added || c.removed ? '' : ' off'}">
       <span class="fcc">${c.added ? '+' + c.added : '0'}</span>
-      <span class="fcn">${esc(sec)}
-        <span class="fcf">${c.before} → ${c.after} name(s)</span></span>
-      <span class="fcw count">${
-        c.added ? `${c.added} new` : 'nothing new'}${
-        c.present ? `, ${c.present} already there` : ''}${
-        c.removed ? `, ${c.removed} repeat(s) of its own removed`
-                  : (c.duplicates ? `, ${c.duplicates} repeat(s) of its own kept`
-                                  : '')}</span>
+      ${tt('minorfiles.name_s',{sec:esc(sec),before:c.before,after:c.after,added:c.added ? `${c.added} new` : tt('minorfiles.nothing_new'),present:c.present ? tt('minorfiles.already_there',{present:c.present}) : '',x:c.removed ? tt('minorfiles.repeat_s_of_its_own_removed',{removed:c.removed})
+                  : (c.duplicates ? tt('minorfiles.repeat_s_of_its_own_kept',{duplicates:c.duplicates})
+                                  : '')})}
     </div>`).join('')}
     ${(m.plan.warnings || []).map(w =>
       `<div class="w-warn fcmsg">${esc(w)}</div>`).join('')}
@@ -806,20 +746,18 @@ function mfMergeRender(){
   // puts the bare class back for whatever opens next.
   modal.className = 'modal mgwide';
   modal.innerHTML = `
-    <h2>Merge names into ${esc(d.name)} <span class="pill">${esc(f.mod || state.src)}</span></h2>
+    <h2>${tt('minorfiles.merge_names_into',{name:esc(d.name)})} <span class="pill">${esc(f.mod || state.src)}</span></h2>
     <div class="mbody" style="padding:14px 16px">
       <div class="count fcintro">
-        Every name the factions you tick keep, added to <b>${esc(d.name)}</b>'s own
-        lists. Nothing is taken from them - they are read, not changed.
+        ${tt('minorfiles.every_name_the_factions_you_tick',{name:esc(d.name)})}
       </div>
-      <div class="trsechead" style="margin-top:12px">Take names from
-        <span class="count">${m.sources.length} of ${others.length} selected</span></div>
+      <div class="trsechead" style="margin-top:12px">${tt('minorfiles.take_names_from_of_selected',{sources_n:m.sources.length,others_n:others.length})}</div>
       <div class="mgsrc">
         ${others.map(n => `<label class="fcart"><input type="checkbox"
           ${m.sources.includes(n) ? 'checked' : ''}
           onchange="mfMergeSource('${esc(n)}', this.checked)">${esc(n)}</label>`).join('')}
       </div>
-      <div class="trsechead" style="margin-top:12px">Which sections</div>
+      <div class="trsechead" style="margin-top:12px">${tt('minorfiles.which_sections')}</div>
       <div class="mgsrc">
         ${secs.map(s => `<label class="fcart"><input type="checkbox"
           ${m.sections.includes(s) ? '' : 'checked'}
@@ -828,21 +766,18 @@ function mfMergeRender(){
       <div style="margin-top:12px">
         <label class="fcart"><input type="checkbox" ${m.dedupe ? 'checked' : ''}
           onchange="mfMergeSet('dedupe', this.checked)">
-          <span><b>Remove duplicates</b> - a name ${esc(d.name)} already has is not
-          added again, and its own repeated lines are cleared out at the same time.
-          With this off every name is appended as it comes, repeats and all.</span></label>
+          <span>${tt('minorfiles.remove_duplicates_a_name_already_has',{name:esc(d.name)})}</span></label>
         <label class="fcart"><input type="checkbox" ${m.sort ? 'checked' : ''}
           onchange="mfMergeSet('sort', this.checked)">
-          <span><b>Sort alphabetically</b> - reorders the whole of each section it
-          touches, not just the names arriving.</span></label>
+          <span>${tt('minorfiles.sort_alphabetically_reorders_the_whole_of')}</span></label>
       </div>
       <div id="mgPlan">${mfMergePlanHtml()}</div>
     </div>
     <div class="foot">
-      <button onclick="mfMergeClose()">Cancel</button>
+      <button onclick="mfMergeClose()">${tt('common.cancel')}</button>
       <span class="sp"></span>
       <button class="primary" ${m.plan && m.plan.ok && !m.busy ? '' : 'disabled'}
-        onclick="mfMergeApply()">Merge</button>
+        onclick="mfMergeApply()">${tt('minorfiles.merge')}</button>
     </div>`;
 }
 
@@ -851,10 +786,10 @@ async function mfMergeApply(){
   if(!m || !m.plan || !m.plan.ok || m.busy) return;
   const rows = Object.entries(m.plan.merge || {})
     .filter(([, c]) => c.added || c.removed);
-  if(!confirm(`Merge ${(m.plan.merge_sources || []).join(', ')} into ${f.d.name}?\n\n`
+  if(!confirm(tt('minorfiles.merge_into',{x:(m.plan.merge_sources || []).join(', '),name:f.d.name})
     + (rows.map(([s, c]) => `  ${s}: ${c.before} → ${c.after}`).join('\n')
-       || 'no visible change')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+       || tt('common.no_visible_change'))
+    + tt('common.backed_up_first_and_log_can'))) return;
   m.busy = true;
   let res;
   try{ res = await api.post('/api/minor/apply', mfMergeBody('merge')); }
@@ -863,7 +798,7 @@ async function mfMergeApply(){
   const keep = f.d.name;
   f.merge = null;
   closeModal();
-  toast('Merged. 🕑 Log can undo it.');
+  toast(tt('minorfiles.merged_log_can_undo_it'));
   await loadMinor();
   mfOpen(keep);
 }
@@ -874,7 +809,7 @@ async function mfDedupe(){
   const d = state.mf && state.mf.d;
   if(!d) return;
   await mfApply({mod: state.mf.mod, tab: 'names', action: 'dedupe', name: d.name},
-                `remove ${d.name}'s repeated names`);
+                tt('minorfiles.remove_s_repeated_names',{name:d.name}));
 }
 
 
@@ -1019,7 +954,7 @@ function mfEdits(){
 async function mfDuplicate(){
   const f = state.mf, d = f.d;
   if(!d) return;
-  const name = (prompt(`A name for the copy of ${d.name} (lower case, digits, underscores):`,
+  const name = (prompt(tt('minorfiles.a_name_for_the_copy_of',{name:d.name}),
                        d.name + '_2') || '').trim();
   if(!name) return;
   const body = {mod: f.mod, tab: 'cultures', action: 'duplicate', name, source: d.name};
@@ -1029,13 +964,13 @@ async function mfDuplicate(){
   if(r.error){ toast('✗ ' + r.error, 6000); return; }
   const p = r.plan || {};
   const needs = (p.needs || []).map(n => `  • ${n.what}: ${n.detail}`).join('\n');
-  if(!confirm(`Write: ${(p.changes||[]).join('; ')}?\n\nWhat else ${name} needs, and`
-      + ` is NOT written here:\n${needs}\n\nBacked up first, and 🕑 Log can undo it.`)) return;
+  if(!confirm(tt('minorfiles.write_what_else_needs_and',{changes:(p.changes||[]).join('; '),name})
+      + tt('minorfiles.is_not_written_here_backed_up',{needs}))) return;
   let res;
   try{ res = await api.post('/api/minor/apply', body); }
   catch(e){ res = {error: errText(e)}; }
   if(res.error){ toast('✗ ' + res.error, 6000); return; }
-  toast(`${name} written. The list of what it still needs is in the preview you just read.`, 5000);
+  toast(tt('minorfiles.written_the_list_of_what_it',{name}), 5000);
   await loadMinor();
   mfOpen(name);
 }
@@ -1059,7 +994,7 @@ function mfBody(action){
 async function mfSave(){
   const f = state.mf, d = f.d;
   if(f.adding && !(d.w.name||'').trim()){
-    toast(`A new ${f.noun} needs a name`, 3500); return; }
+    toast(tt('minorfiles.a_new_needs_a_name',{noun:f.noun}), 3500); return; }
   await mfApply(mfBody(f.adding ? 'add' : 'edit'),
                 f.adding ? `create ${d.w.name}` : `save ${d.name}`);
 }
@@ -1079,18 +1014,18 @@ async function mfApply(body, what){
   const lines = (p.changes || []).slice(0, 14);
   const found = (p.findings || []).map(x => '⚠ ' + x.message);
   const also = (p.files || []).length
-    ? `\n\nAlso rewritten: ${p.files.join(', ')}` : '';
-  if(!confirm(`Write: ${what}?\n\n` + (lines.join('\n') || 'no visible change')
-    + ((p.changes || []).length > 14 ? `\n…and ${p.changes.length - 14} more` : '')
+    ? tt('minorfiles.also_rewritten',{files:p.files.join(', ')}) : '';
+  if(!confirm(tt('minorfiles.write',{what}) + (lines.join('\n') || tt('common.no_visible_change'))
+    + ((p.changes || []).length > 14 ? tt('minorfiles.and_more',{changes:p.changes.length - 14}) : '')
     + also
     + (found.length ? '\n\n' + found.slice(0, 4).join('\n') : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   f.busy = true;
   let res;
   try{ res = await api.post('/api/minor/apply', body); }
   finally{ f.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 6000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   const keep = body.action === 'delete' ? '' : body.name;
   await loadMinor();
   if(keep) mfOpen(keep);

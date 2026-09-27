@@ -37,14 +37,12 @@ const GU_BLANK = {name:'', building:'', levels:'100 250 500'};
 
 async function loadGuilds(){
   const mod = state.src;
-  main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s guilds…</div>';
+  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('guilds.s_guilds')}</div>`;
   let r;
   try{ r = await api.get('/api/guilds?mod=' + enc(mod)); }
   catch(e){ if(stale('guilds', mod)) return;
-    main.innerHTML = `<div class="empty">Couldn't read the guild file.<br>
-      <span class="count">${esc(errText(e))}</span><br>
-      <span class="count">Guilds live in data/export_descr_guilds.txt</span><br><br>
-      <button class="primary" onclick="loadGuilds()">Retry</button></div>`; return; }
+    main.innerHTML = `<div class="empty">${tt('guilds.couldnt_read_the_guild_file_guilds',{errText:esc(errText(e))})}<br><br>
+      <button class="primary" onclick="loadGuilds()">${tt('common.retry')}</button></div>`; return; }
   if(stale('guilds', mod)) return;
   state.gu = Object.assign({sel:'', d:null, busy:false, adding:false}, r);
   undoReset();
@@ -59,11 +57,11 @@ function renderGuilds(){
   count.textContent = `${rows.length}/${(g.guilds||[]).length}`;
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
-      <button class="trnew" onclick="guNew()">＋ New guild</button>
+      <button class="trnew" onclick="guNew()">${tt('guilds.new_guild')}</button>
       ${guUndeclaredHtml()}
       ${findingsHtml('guilds', guFindingList(), 'guOpen')}
       <div class="trrows">${rows.map(guRowHtml).join('')
-        || '<div class="count" style="padding:8px">No guild matches.</div>'}</div>
+        || `<div class="count" style="padding:8px">${tt('guilds.no_guild_matches')}</div>`}</div>
     </div>
     <div class="trmain" id="guMain">${guDetailHtml()}</div>
   </div>`;
@@ -84,12 +82,8 @@ function guUndeclaredHtml(){
   const list = state.gu.undeclared || [];
   if(!list.length) return '';
   return `<div class="trnote w-warn" style="margin:6px 0">
-    <b>${list.length} guild${list.length===1?'':'s'} get points and do not exist.</b>
-    Triggers in this file award guild points to ${list.map(esc).join(', ')}, and no
-    <code>Guild</code> block declares ${list.length===1?'it':'them'}, so those
-    points go nowhere.
-    ${list.map(n=>`<button class="trnew" style="margin:4px 4px 0 0"
-      onclick="guNew('${q1(esc(n))}')">＋ Declare ${esc(n)}</button>`).join('')}
+    ${tt('guilds.guild_get_points_and_do_not',{list_n:list.length,list:list.length===1?'':'s',list2:list.map(esc).join(', '),list3:list.length===1?'it':'them',x:list.map(n=>`<button class="trnew" style="margin:4px 4px 0 0"
+      onclick="guNew('${q1(esc(n))}')">${tt('guilds.declare',{x:esc(n)})}</button>`).join('')})}
   </div>`;
 }
 
@@ -106,10 +100,10 @@ function guRowHtml(r){
   const on = state.gu.sel === r.name;
   return `<button class="trrow${on?' on':''}" onclick="guOpen('${q1(esc(r.name))}')">
     <div class="nm">${esc(r.name)}</div>
-    <div class="sub">${r.building?esc(r.building):'<b>no building</b>'}${
+    <div class="sub">${r.building?esc(r.building):`<b>${tt('guilds.no_building')}</b>`}${
       r.levels && r.levels.length?` · ${r.levels.join(' / ')}`:''}${
-      r.awards?` · ${r.awards} trigger line${r.awards===1?'':'s'}`
-              :' · <b>nothing awards it points</b>'}${
+      r.awards?tt('guilds.trigger_line',{awards:r.awards,awards2:r.awards===1?'':'s'})
+              :` ${tt('guilds.nothing_awards_it_points')}`}${
       r.findings?` <span class="w-warn">· ${r.findings}⚠</span>`:''}</div>
   </button>`;
 }
@@ -117,7 +111,7 @@ function guRowHtml(r){
 async function guOpen(name){
   const g = state.gu;
   if(!(g.guilds||[]).some(r => r.name === name)) return;   // an undeclared name
-  activity('opened guild', `${name} in ${state.src}`);
+  activity(tt('guilds.opened_guild'), `${name} in ${state.src}`);
   g.sel = name; g.adding = false; g.d = null;
   renderGuilds();
   let d;
@@ -146,7 +140,7 @@ function guNew(name){
   g.sel = ''; g.adding = true;
   const w = Object.assign({}, GU_BLANK, name ? {name:name,
     building:'guild_' + name.replace(/_guild$/, '') + '_guild'} : {});
-  g.d = {name:'', label:'(new guild)', w:w, trigs:[], findings:[], awards:[],
+  g.d = {name:'', label:tt('guilds.new_guild_2'), w:w, trigs:[], findings:[], awards:[],
     triggers:[], dirty:true,
     vocab:{buildings:g.buildings || [], buildings_known:!!g.buildings_known,
            scopes:g.scopes || {}, guilds:(g.guilds||[]).map(r=>r.name)}};
@@ -172,24 +166,17 @@ function guPaintForm(){
 /* ---- the detail pane ---- */
 function guDetailHtml(){
   const g = state.gu, d = g.d;
-  if(!g.sel && !g.adding) return `<div class="empty">Pick a guild on the left.<br>
-    <span class="count">${(g.guilds||[]).length} guild${
-      (g.guilds||[]).length===1?'':'s'}, ${g.triggers} trigger${
-      g.triggers===1?'':'s'} and ${g.awards} point line${
-      g.awards===1?'':'s'} in ${esc(g.file||'')}</span></div>`;
-  if(!d) return '<div class="empty">Reading the guild…</div>';
+  if(!g.sel && !g.adding) return `<div class="empty">${tt('guilds.pick_a_guild_on_the_left',{n:(g.guilds||[]).length,guilds:(g.guilds||[]).length===1?'':'s',triggers:g.triggers,triggers2:g.triggers===1?'':'s',awards:g.awards,awards2:g.awards===1?'':'s',file:esc(g.file||'')})}</div>`;
+  if(!d) return `<div class="empty">${tt('guilds.reading_the_guild')}</div>`;
   if(d.error) return `<div class="empty"><span class="w-bad">✗ ${esc(d.error)}</span></div>`;
   return `<div class="trbar">
-      <div><b>${esc(g.adding ? 'New guild' : d.label || d.name)}</b>
-        ${d.awards?`<span class="count">${d.awards.length} point line${
-          d.awards.length===1?'':'s'}</span>`:''}</div>
+      <div><b>${esc(g.adding ? tt('guilds.new_guild_3') : d.label || d.name)}</b>
+        ${d.awards?`<span class="count">${tt('guilds.point_line',{awards_n:d.awards.length,awards:d.awards.length===1?'':'s'})}</span>`:''}</div>
       <span class="sp"></span>
-      ${g.adding ? '' : `<button class="${d.cv?'on':''}" title="Show this guild exactly as
-export_descr_guilds.txt stores it, beside the form. Hover a box to light up its
-line; edit either side and the other follows."
-        onclick="guCvToggle()">&lt;/&gt; Code view</button>
-      <button class="danger" onclick="guDelete()">Delete</button>`}
-      <button class="primary" onclick="guSave()">${g.adding?'Create guild':'Save'}</button>
+      ${g.adding ? '' : `<button class="${d.cv?'on':''}" title="${ttA('guilds.show_this_guild_exactly_as_export')}"
+        onclick="guCvToggle()">${tt('common.code_view')}</button>
+      <button class="danger" onclick="guDelete()">${tt('common.delete')}</button>`}
+      <button class="primary" onclick="guSave()">${g.adding?tt('guilds.create_guild'):tt('common.save')}</button>
     </div>
     <div id="guGui">
       ${guFindingsHtml(d)}
@@ -210,13 +197,12 @@ function guFormHtml(w, d){
   const known = voc.buildings_known !== false;
   const levels = String(w.levels || '').trim().split(/\s+/).filter(Boolean);
   return `<section class="trsec">
-    <div class="trsechead">The guild <span class="count">Two lines, and the
-      engine reads both of them</span></div>
+    <div class="trsechead">${tt('guilds.the_guild_two_lines_and_the')}</div>
     <div class="trgrid">
-      <label class="lbl" data-label="name">Name</label>
+      <label class="lbl" data-label="name">${tt('common.name')}</label>
       <input data-label="name" value="${esc(w.name)}" ${state.gu.adding?'':'disabled'}
         placeholder="masons_guild" oninput="guSet('name',this.value)">
-      <label class="lbl" data-label="building">Building tree</label>
+      <label class="lbl" data-label="building">${tt('guilds.building_tree')}</label>
       <div data-label="building">
         <input value="${esc(w.building)}" list="guBuildings"
           placeholder="guild_masons_guild"
@@ -224,20 +210,17 @@ function guFormHtml(w, d){
         <datalist id="guBuildings">${(voc.buildings||[])
           .filter(b => b.indexOf('guild_') === 0)
           .map(b=>`<option value="${esc(b)}">`).join('')}</datalist>
-        <div class="trhint">The <code>export_descr_buildings.txt</code> line this
-          guild grants. ${known ? 'Every <code>guild_</code> line in this mod is offered.'
-          : 'This mod keeps its EDB in the packed data, so there is no list to offer '
-            + 'and nothing here is checked against one.'}</div>
+        <div class="trhint">${tt('guilds.the_export_descr_buildings_txt_line',{known:known ? tt('guilds.every_guild_line_in_this_mod')
+          : tt('guilds.this_mod_keeps_its_edb_in')
+            + tt('guilds.and_nothing_here_is_checked_against')})}</div>
       </div>
-      <label class="lbl" data-label="levels">Point thresholds</label>
+      <label class="lbl" data-label="levels">${tt('guilds.point_thresholds')}</label>
       <div data-label="levels">
         <input value="${esc(w.levels)}" placeholder="100 250 500" style="width:180px"
           oninput="guSet('levels',this.value)">
         ${levels.length === 3
-          ? `<div class="trhint">Tier 1 at ${esc(levels[0])} guild points, tier 2 at
-             ${esc(levels[1])}, tier 3 at ${esc(levels[2])}.</div>`
-          : `<div class="trhint w-warn">Three numbers, counting upward - one per
-             guild tier. 20 of the 21 guilds in the installed mods write three.</div>`}
+          ? `<div class="trhint">${tt('guilds.tier_1_at_guild_points_tier',{levels:esc(levels[0]),levels2:esc(levels[1]),levels3:esc(levels[2])})}</div>`
+          : `<div class="trhint w-warn">${tt('guilds.three_numbers_counting_upward_one_per')}</div>`}
       </div>
     </div>
   </section>`;
@@ -250,40 +233,35 @@ function guAwardsHtml(d){
   const rows = d.awards || [];
   if(!rows.length) return '';
   return `<section class="trsec">
-    <div class="trsechead">Points <span class="count">what earns this guild its
-      points, and how many</span></div>
+    <div class="trsechead">${tt('guilds.points_what_earns_this_guild_its')}</div>
     <table class="gutbl"><tbody>${rows.map(a=>`<tr>
       <td>${esc(a.trigger)}</td>
       <td style="text-align:right"><b>${esc(a.points)}</b></td>
       <td>${esc(a.scope_label || a.scope)}</td>
-      <td class="count">line ${a.line}</td>
+      <td class="count">${tt('guilds.line',{line:a.line})}</td>
     </tr>`).join('')}</tbody></table>
   </section>`;
 }
 
 function guTriggersHtml(d){
   if(state.gu.adding) return `<section class="trsec">
-    <div class="trsechead">Triggers</div>
-    <div class="count" style="padding:6px">Create the guild first, then add the
-      triggers that give it points. A trigger cannot name a guild the file has
-      not declared yet.</div></section>`;
+    <div class="trsechead">${tt('common.triggers')}</div>
+    <div class="count" style="padding:6px">${tt('guilds.create_the_guild_first_then_add')}</div></section>`;
   return `<section class="trsec">
-    <div class="trsechead">Triggers <span class="count">${d.trigs.length
-      ? 'what awards this guild its points'
-      : 'nothing awards this guild any points'}</span></div>
-    ${d.trigs.length ? '' : `<div class="trfind w-warn">No trigger in this file
-      awards a guild point to <b>${esc(d.name)}</b>, so it never reaches its
-      first tier and the building it grants can never be built.</div>`}
+    <div class="trsechead">${tt('common.triggers')} <span class="count">${d.trigs.length
+      ? tt('guilds.what_awards_this_guild_its_points')
+      : tt('guilds.nothing_awards_this_guild_any_points')}</span></div>
+    ${d.trigs.length ? '' : `<div class="trfind w-warn">${tt('guilds.no_trigger_in_this_file_awards',{name:esc(d.name)})}</div>`}
     ${d.trigs.map((t,i)=>`<div class="trtrig">
       <div class="trtrighead">
         <b>${esc(t.name)}</b>
         <span class="sp"></span>
-        <button class="trgdel" title="Remove this trigger"
+        <button class="trgdel" title="${ttA('common.remove_this_trigger')}"
           onclick="guDelTrigger(${i})">✕</button>
       </div>
       <div id="gutrg-${i}"></div>
     </div>`).join('')}
-    <button class="trgadd" onclick="guAddTrigger()">＋ Add trigger</button>
+    <button class="trgadd" onclick="guAddTrigger()">${tt('common.add_trigger')}</button>
   </section>`;
 }
 
@@ -319,14 +297,14 @@ function guAddTrigger(){
   const n = (d.name || 'guild').toLowerCase() + '_' + (d.trigs.length + 1);
   d.trigs.push({name:n, ui:null, dirty:true, added:true,
     src:{name:n, when_to_test:'BuildingCompleted', conditions:[],
-         effects:[{keyword:'Guild', args:[d.name, 's', '10']}]}});
+         effects:[{keyword:tt('guilds.guild'), args:[d.name, 's', '10']}]}});
   guDirty(true);
 }
 function guDelTrigger(i){
   const d = state.gu.d;
   const row = d.trigs[i];
-  if(!row.added && !confirm(`Remove trigger ${row.name}?\n\n`
-    + `It is written out of the file when you save.`)) return;
+  if(!row.added && !confirm(tt('guilds.remove_trigger',{name:row.name})
+    + tt('common.it_is_written_out_of_the'))) return;
   if(row.ui) trgDrop(row.ui);
   d.trigs.splice(i, 1);
   d.removed = (d.removed || []).concat(row.added ? [] : [row.name]);
@@ -400,7 +378,7 @@ function guBody(action){
 
 async function guSave(){
   const g = state.gu, d = g.d;
-  if(g.adding && !d.w.name.trim()){ toast('A new guild needs a name', 3500); return; }
+  if(g.adding && !d.w.name.trim()){ toast(tt('guilds.a_new_guild_needs_a_name'), 3500); return; }
   await guApply(guBody(g.adding ? 'add' : 'edit'),
                 g.adding ? `create ${d.w.name}` : `save ${d.name}`);
 }
@@ -421,17 +399,17 @@ async function guApply(body, what){
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 14);
   const found = (p.findings || []).map(f => '⚠ ' + f.message);
-  if(!confirm(`Write: ${what}?\n\n` + (lines.join('\n') || 'no visible change')
-    + ((p.changes || []).length > 14 ? `\n…and ${p.changes.length - 14} more` : '')
+  if(!confirm(tt('guilds.write',{what}) + (lines.join('\n') || tt('common.no_visible_change'))
+    + ((p.changes || []).length > 14 ? tt('guilds.and_more',{changes:p.changes.length - 14}) : '')
     + ((p.warnings || []).length ? '\n\n' + p.warnings.slice(0, 3).join('\n') : '')
     + (found.length ? '\n\n' + found.slice(0, 4).join('\n') : '')
-    + `\n\nBacked up first, and 🕑 Log can undo it.`)) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   g.busy = true;
   let res;
   try{ res = await api.post('/api/guilds/apply', body); }
   finally{ g.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 6000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   const keep = body.action === 'delete' ? '' : body.guild;
   await loadGuilds();
   if(keep) guOpen(keep);

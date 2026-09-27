@@ -59,6 +59,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from . import animpack, casanim, skelslots
+from . import i18n as _i18n
 
 #: Seconds a packed frame lasts, and the battle AI's ticks a second: every
 #: installed entry's duration is (frames - 1) * 0.05, and its AI speed a tenth
@@ -108,8 +109,7 @@ def to_cas(data: bytes, bones: List[Tuple[str, int, tuple]], scale: float,
     a = animpack.PackedAnimation(data, source)
     nf, nq, npb = a.frames, a.rot_bones, a.pos_bones
     if len(bones) < nq:
-        raise LooseError(f"{Path(source).name or 'animation'} turns {nq} bones and its "
-                         f"skeleton has {len(bones)}")
+        raise LooseError(_i18n.msg("eng.animloose.turns_bones_and_its_skeleton_has", "{x} turns {nq} bones and its skeleton has {bones_n}", x=Path(source).name or 'animation', nq=nq, bones_n=len(bones)))
     s = scale or 1.0
     bs = (bone_scale if bone_scale is not None else scale) or 1.0
     moving = a.moving
@@ -165,7 +165,7 @@ def to_packed(anim: casanim.Animation, scale: float, generate_deltas: bool = Tru
     if not nf % 2:
         nf -= 1
     if nf < 1 or not nq:
-        raise LooseError(f"{Path(anim.source).name}: nothing to pack")
+        raise LooseError(_i18n.msg("eng.animloose.nothing_to_pack", "{name}: nothing to pack", name=Path(anim.source).name))
     root = nodes[0]
     base = root.pivot
 
@@ -384,13 +384,11 @@ def render_block(name: str, skel: animpack.PackedSkeleton, header: Optional[List
             if kw == "variant_skeleton":
                 other = line.split()[1] if len(line.split()) > 1 else ""
                 if other.lower() not in {d.lower() for d in dest_skeletons}:
-                    notes.append(f"{name}: its variant skeleton {other} is not in the destination, "
-                                 "so the line is left out")
+                    notes.append(_i18n.msg("eng.animloose.its_variant_skeleton_is_not_in", "{name}: its variant skeleton {other} is not in the destination, so the line is left out", name=name, other=other))
                     continue
             kept.setdefault(kw, []).append(line)
     if header is None:
-        notes.append(f"{name}: the source's descr_skeleton.txt has no block for it, so a rebuild "
-                     "would give it the engine's default strike distances")
+        notes.append(_i18n.msg("eng.animloose.the_sources_descr_skeleton_txt_has", "{name}: the source's descr_skeleton.txt has no block for it, so a rebuild would give it the engine's default strike distances", name=name))
     if no_deltas and "no_deltas" not in kept:
         kept["no_deltas"] = ["no_deltas"]
     out = [f"type            {name}"]
@@ -410,12 +408,12 @@ def render_block(name: str, skel: animpack.PackedSkeleton, header: Optional[List
         s = skel.slots[i]
         names = skelslots.names(i)
         if not names:
-            notes.append(f"{name}: slot {i} has no name the engine takes, so it is not written")
+            notes.append(_i18n.msg("eng.animloose.slot_has_no_name_the_engine", "{name}: slot {i} has no name the engine takes, so it is not written", name=name, i=i))
             continue
         flags = slot_flags(s, frames.get(animpack._key(s.path), 0), evts.get(i, ""))
         out.append("\t\t".join(["anim", f"{names[0]:<32}", s.path] + (["\t".join(flags)] if flags else [])))
         if s.events and i not in evts:
-            notes.append(f"{name}: {names[0]}'s cues could not be written")
+            notes.append(_i18n.msg("eng.animloose.s_cues_could_not_be_written", "{name}: {names}'s cues could not be written", name=name, names=names[0]))
     return "\n".join(out) + "\n", notes
 
 
@@ -497,13 +495,12 @@ def build(dest_data, skeletons: List[Tuple[str, str]], source_data=None, tag: st
     out = Rebuild()
     packs = packs or animpack.for_data(data)
     if packs is None or getattr(packs, "anims", None) is None or packs.skels is None:
-        out.errors.append(f"{data} has no packs of its own")
+        out.errors.append(_i18n.msg("eng.animloose.has_no_packs_of_its_own", "{data} has no packs of its own", data=data))
         return out
     text = data / out.text_rel
     types = casanim.skeleton_types(data) if text.is_file() else {}
     if not text.is_file():
-        out.errors.append("the destination has no descr_skeleton.txt of its own, so nothing is "
-                          "written for a pack rebuild (a block in a new file would be all one read)")
+        out.errors.append(_i18n.msg("eng.animloose.the_destination_has_no_descr_skeleton", "the destination has no descr_skeleton.txt of its own, so nothing is written for a pack rebuild (a block in a new file would be all one read)"))
         return out
     root = _game_root(data)
     dest_skels = [e.name for e in packs.skels.entries]
@@ -518,12 +515,11 @@ def build(dest_data, skeletons: List[Tuple[str, str]], source_data=None, tag: st
     cues: Dict[str, str] = {}              # an .evt file's text -> its path, written once
     for dest_name, source_name in skeletons:
         if dest_name.lower() in types:
-            out.notes.append(f"{dest_name}: descr_skeleton.txt already has a type of that name, "
-                             "so no second block is written")
+            out.notes.append(_i18n.msg("eng.animloose.descr_skeleton_txt_already_has_a", "{dest_name}: descr_skeleton.txt already has a type of that name, so no second block is written", dest_name=dest_name))
             continue
         skel = packs.skeleton(dest_name)
         if skel is None:
-            out.errors.append(f"the skeleton pack has no {dest_name}")
+            out.errors.append(_i18n.msg("eng.animloose.the_skeleton_pack_has_no", "the skeleton pack has no {dest_name}", dest_name=dest_name))
             continue
         bones = skel.bone_table()
         frames: Dict[str, int] = {}
@@ -533,7 +529,7 @@ def build(dest_data, skeletons: List[Tuple[str, str]], source_data=None, tag: st
             rel = loose_rel(dest_mod, s.path)
             got = entry_bytes(s.path, skel.scale)
             if got is None:
-                out.errors.append(f"{dest_name}: pack.idx has no {s.path}")
+                out.errors.append(_i18n.msg("eng.animloose.pack_idx_has_no", "{dest_name}: pack.idx has no {path}", dest_name=dest_name, path=s.path))
                 continue
             data_b, entry_scale = got
             frames[k] = struct.unpack_from("<H", data_b, 0)[0]
@@ -570,8 +566,7 @@ def build(dest_data, skeletons: List[Tuple[str, str]], source_data=None, tag: st
             continue
         first = DEFAULT_SLOT if DEFAULT_SLOT in ours else (ours[0] if ours else filled[0])
         if not ours:
-            out.notes.append(f"{dest_name}: every file it names was already there, so a rebuild "
-                             "builds its bones from one of those")
+            out.notes.append(_i18n.msg("eng.animloose.every_file_it_names_was_already", "{dest_name}: every file it names was already there, so a rebuild builds its bones from one of those", dest_name=dest_name))
         header = type_header(source_data, source_name) if source_data is not None else None
         block, notes = render_block(dest_name, skel, header, frames, evts, first,
                                     _no_deltas(packs, skel) if header is None else False,

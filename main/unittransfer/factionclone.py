@@ -82,6 +82,7 @@ from . import factions as fac
 from . import flatrecord as fr
 from . import keyblock as kb
 from . import modeldb as mdb
+from . import i18n as _i18n
 
 ENCODING = fr.ENCODING
 
@@ -138,7 +139,7 @@ def clone_roster(text: str, src: str, new: str) -> Tuple[str, int]:
     rec = rf.get(src) or next(
         (r for r in rf.records if fac.slot_of(r.name) == src), None)
     if rec is None:
-        raise CloneError(f"{src} is not a faction in descr_sm_factions.txt")
+        raise CloneError(_i18n.msg("eng.factionclone.is_not_a_faction_in_descr", "{src} is not a faction in descr_sm_factions.txt", src=src))
     block = rf.block_text(rec)
     lines = block.split("\n")
     lines[0] = kb.sub_head(lines[0], "faction", new)
@@ -721,33 +722,30 @@ def _validate(mod, src: str, new: str, p: ClonePlan,
     path = fac.path_for(mod)
     ahead = (overlay or {}).get(fac.REL)
     if ahead is None and not path.is_file():
-        p.errors.append(f"{getattr(mod, 'name', '?')} has no {fac.REL}")
+        p.errors.append(_i18n.msg("eng.factionclone.has_no", "{getattr} has no {REL}", getattr=getattr(mod, 'name', '?'), REL=fac.REL))
         return None
     rf = fac.parse_text(ahead) if ahead is not None else fac.parse_file(path)
     slots = {fac.slot_of(r.name) for r in rf.records}
     if src not in slots:
-        p.errors.append(f"{src} is not a faction in this mod")
+        p.errors.append(_i18n.msg("eng.factionclone.is_not_a_faction_in_this", "{src} is not a faction in this mod", src=src))
     if not new:
-        p.errors.append("the new faction needs a name")
+        p.errors.append(_i18n.msg("eng.factionclone.the_new_faction_needs_a_name", "the new faction needs a name"))
     elif not SLOT_RE.match(new):
         p.errors.append(
-            f"`{new}` cannot be a faction slot - it has to start with a letter and "
-            "hold only lower-case letters, digits and underscores, because every "
-            "file that names a faction reads it as one bare word")
+            _i18n.msg("eng.factionclone.cannot_be_a_faction_slot_it", "`{new}` cannot be a faction slot - it has to start with a letter and hold only lower-case letters, digits and underscores, because every file that names a faction reads it as one bare word", new=new))
     elif new in slots:
-        p.errors.append(f"{new} is already a faction in this mod")
+        p.errors.append(_i18n.msg("eng.factionclone.is_already_a_faction_in_this", "{new} is already a faction in this mod", new=new))
     elif new in RESERVED:
-        p.errors.append(f"`{new}` is reserved - the engine means something specific by it")
+        p.errors.append(_i18n.msg("eng.factionclone.is_reserved_the_engine_means_something", "`{new}` is reserved - the engine means something specific by it", new=new))
     if new and new == src:
-        p.errors.append("the clone needs a different name from the faction it copies")
+        p.errors.append(_i18n.msg("eng.factionclone.the_clone_needs_a_different_name", "the clone needs a different name from the faction it copies"))
     # the cap is the engine's, and an M2EX mod has replaced the table it came from
     limit = 0 if getattr(mod, "m2ex", False) else fac.FACTION_LIMIT
     if limit and len(rf.records) >= limit:
         p.errors.append(
-            f"this mod already has {len(rf.records)} of the engine's {limit} faction "
-            "slots - one has to go before another can be added")
+            _i18n.msg("eng.factionclone.this_mod_already_has_of_the", "this mod already has {records_n} of the engine's {limit} faction slots - one has to go before another can be added", records_n=len(rf.records), limit=limit))
     elif limit and len(rf.records) + 1 == limit:
-        p.warnings.append(f"this uses the last of the engine's {limit} faction slots")
+        p.warnings.append(_i18n.msg("eng.factionclone.this_uses_the_last_of_the", "this uses the last of the engine's {limit} faction slots", limit=limit))
     return rf
 
 
@@ -1013,7 +1011,7 @@ def plan(mod, body: dict, overlay: Optional[Dict[str, str]] = None) -> ClonePlan
         p.edits.append(edit)
         if edit.skipped and job.required and not edit.count:
             if not (data / job.rel).is_file() and job.rel not in (overlay or {}):
-                p.errors.append(f"{getattr(mod, 'name', '?')} has no {job.rel}")
+                p.errors.append(_i18n.msg("eng.factionclone.has_no_2", "{getattr} has no {rel}", getattr=getattr(mod, 'name', '?'), rel=job.rel))
             elif edit.skipped.startswith("could not be read"):
                 p.errors.append(f"{job.rel}: {edit.skipped}")
         if edit.text:
@@ -1029,9 +1027,7 @@ def plan(mod, body: dict, overlay: Optional[Dict[str, str]] = None) -> ClonePlan
                              f"from {src}'s and renamed")
         else:
             p.warnings.append(
-                f"no art was found carrying `{src}` in its name - the clone will "
-                "fall back to whatever the engine shows for a faction with no "
-                "symbol, banner or unit cards of its own")
+                _i18n.msg("eng.factionclone.no_art_was_found_carrying_in", "no art was found carrying `{src}` in its name - the clone will fall back to whatever the engine shows for a faction with no symbol, banner or unit cards of its own", src=src))
         # 42: the whole-scan warning above almost never fires, because banners
         # and unit-card folders are almost always found. This is the per-place
         # answer, and it is what a person needs before they launch the game and
@@ -1043,28 +1039,19 @@ def plan(mod, body: dict, overlay: Optional[Dict[str, str]] = None) -> ClonePlan
             # The rows carry the labels and the reasons, so this does not
             # re-list them - the same ruling the review note is written under.
             p.warnings.append(
-                f"{len(p.art)} of the {len(ART_PLACES)} places a faction's art "
-                f"lives got nothing, and `{new}` will show whatever the engine "
-                "falls back to there until you draw one. Each is named with its "
-                "reason, and none of them is something the copy could have done "
-                "differently - a clone gets what the donor has.")
+                _i18n.msg("eng.factionclone.of_the_places_a_factions_art", "{art_n} of the {ART_PLACES_n} places a faction's art lives got nothing, and `{new}` will show whatever the engine falls back to there until you draw one. Each is named with its reason, and none of them is something the copy could have done differently - a clone gets what the donor has.", art_n=len(p.art), ART_PLACES_n=len(ART_PLACES), new=new))
 
     # The files themselves are in `review`, so the note explains rather than
     # re-lists them: the dialog draws both, and saying it twice reads as noise.
     p.review = review_mentions(mod, src)
     if p.review:
         p.notes.append(
-            f"Some files name {src} in a way that is a decision rather than a "
-            "list, and those are left for you. A trait named after the faction, "
-            "an ancillary's `FactionType` condition and a prebattle speech "
-            "cannot be cloned by appending to them - the Traits and Ancillaries "
-            "editors open all three.")
+            _i18n.msg("eng.factionclone.some_files_name_in_a_way", "Some files name {src} in a way that is a decision rather than a list, and those are left for you. A trait named after the faction, an ancillary's `FactionType` condition and a prebattle speech cannot be cloned by appending to them - the Traits and Ancillaries editors open all three.", src=src))
     p.notes.append(STRAT_NOTE)
     if not (data / STRAT_REL).is_file():
-        p.notes.append("This mod has no descr_strat.txt where one is expected "
-                       f"({STRAT_REL}), so nothing here was checked against it.")
+        p.notes.append(_i18n.msg("eng.factionclone.this_mod_has_no_descr_strat", "This mod has no descr_strat.txt where one is expected ({STRAT_REL}), so nothing here was checked against it.", STRAT_REL=STRAT_REL))
     if not p.touched() and not p.errors:
-        p.errors.append(f"nothing in this mod names `{src}`, so there is nothing to clone")
+        p.errors.append(_i18n.msg("eng.factionclone.nothing_in_this_mod_names_so", "nothing in this mod names `{src}`, so there is nothing to clone", src=src))
     return p
 
 
@@ -1082,7 +1069,7 @@ def apply(p: ClonePlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.touched():
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.factionclone.nothing_to_change", "nothing to change"))
     mod = p.mod
     data = Path(mod.data)
     tid = config.new_transfer_id()
@@ -1194,11 +1181,10 @@ def plan_many(mod, body: dict) -> BatchPlan:
     bp = BatchPlan(mod=mod)
     rows = body.get("rows") if isinstance(body.get("rows"), list) else []
     if not rows:
-        bp.errors.append("name at least one new faction")
+        bp.errors.append(_i18n.msg("eng.factionclone.name_at_least_one_new_faction", "name at least one new faction"))
         return bp
     if len(rows) > BATCH_LIMIT:
-        bp.errors.append(f"{len(rows)} factions in one go is more than the "
-                         f"{BATCH_LIMIT} this will plan at once")
+        bp.errors.append(_i18n.msg("eng.factionclone.factions_in_one_go_is_more", "{rows_n} factions in one go is more than the {BATCH_LIMIT} this will plan at once", rows_n=len(rows), BATCH_LIMIT=BATCH_LIMIT))
         return bp
     overlay: Dict[str, str] = {}
     for i, row in enumerate(rows):

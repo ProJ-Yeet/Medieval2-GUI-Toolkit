@@ -72,12 +72,8 @@ async function retryDroppedUiFiles(){
 
 function uiLoadFailed(lost){
   const names=lost.map(s=>s.split('/').pop().split('#')[0]).join(', ');
-  main.innerHTML=`<div class="empty">The tool did not finish loading.<br>
-    <span class="count">The server is running - it answered for the rest of this page -
-    but the browser never received ${names?`<b>${esc(names)}</b>`:'part of the interface'}.
-    Reloading fetches it again. If it fails every time, an ad blocker or
-    privacy extension is the usual cause: turn it off for 127.0.0.1.</span><br><br>
-    <button class="primary" onclick="location.reload()">Reload the page</button></div>`;
+  main.innerHTML=`<div class="empty">${tt('core.the_tool_did_not_finish_loading',{names:names?`<b>${esc(names)}</b>`:tt('core.part_of_the_interface')})}<br><br>
+    <button class="primary" onclick="location.reload()">${tt('core.reload_the_page')}</button></div>`;
 }
 
 /* Start the app once every file it is made of is actually here.
@@ -162,7 +158,7 @@ const api={
       for(let i=0;i<tries;i++){
         try{const r=await fetch(u,{cache:'no-store',signal:o.signal});
           if(!r.ok) throw await httpAnswer(r);
-          return await r.json();}
+          return i18nFromServer(await r.json());}
         catch(e){
           if(isAborted(e)||(o.signal&&o.signal.aborted))throw ABORTED;
           err=e;
@@ -175,8 +171,8 @@ const api={
     const o=opts||{};
     loadbar.opened(u,o.label);
     try{
-      return await (await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(b||{}),signal:o.signal})).json();
+      return i18nFromServer(await (await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(b||{}),signal:o.signal})).json());
     }catch(e){ if(isAborted(e))throw ABORTED; throw apiFailed(e,u); }
     finally{loadbar.closed(u);}}};
 
@@ -201,7 +197,7 @@ const api={
    up. */
 async function httpAnswer(r){
   let said='';
-  try{ const b=await r.json(); said=(b&&b.error)||''; }catch(e){}
+  try{ const b=i18nFromServer(await r.json()); said=(b&&b.error)||''; }catch(e){}
   const err=new Error(said||('HTTP '+r.status));
   err.status=r.status;
   err.serverSaid=said;
@@ -270,7 +266,7 @@ const loadbar={
     // nothing to divide by yet -> sweep rather than sit at a made-up number
     el.classList.toggle('busy',total<2);
     if(total>=2)el.querySelector('.lbfill').style.width=Math.max(4,pct)+'%';
-    el.querySelector('.lbtext').textContent=this.label||'Loading…';
+    el.querySelector('.lbtext').textContent=this.label||tt('core.loading');
     el.querySelector('.lbnum').textContent=total>1?`${this.done}/${total}`:'';
   }};
 /* ---------- activity ----------
@@ -325,7 +321,7 @@ document.addEventListener('change',e=>{
   if(was===el.value)return;
   // No focusin means nothing typed in this box - a picker set by code, or a
   // control drawn and changed in one go. Saying so beats printing an empty "was".
-  activity('changed',was==null?`${name} -> “${(el.value||'').slice(0,120)}” (was not read)`
+  activity('changed',was==null?tt('core.was_not_read',{name,x:(el.value||'').slice(0,120)})
     :`${name}: “${was.slice(0,120)}” -> “${(el.value||'').slice(0,120)}”`);
   _actWas.set(el,el.value);
 },true);
@@ -360,7 +356,7 @@ function facCheckRow(code,name,onchange,checked,note,edited){
     <label class="chk"><input type="checkbox" ${checked?'checked':''} onchange="${onchange}">
       <span class="fn">${esc(facLead(code,name))}</span></label>
     ${behind||edited?`<span class="fc">${esc(behind)}${
-      edited?(behind?' · ':'')+(checked?'added by you':'removed by you'):''}</span>`:''}</div>`;
+      edited?(behind?' · ':'')+(checked?tt('core.added_by_you'):tt('core.removed_by_you')):''}</span>`:''}</div>`;
 }
 /* The stamp every picture URL carries once this tool has written one.
 
@@ -446,7 +442,7 @@ async function init(){
                  :qBld?{mode:'buildings',name:qBld}:{mode:state.mode});
     if(qEdit){
       if(state.data&&state.data.units.some(u=>u.type===qEdit))openEditor(qEdit);
-      else toast(`“${qEdit}” is not a unit in ${state.src}`,4000);
+      else toast(tt('core.is_not_a_unit_in',{qEdit,src:state.src}),4000);
     }
     else if(qBld){
       const lvl=parseInt(qLvl,10);
@@ -466,17 +462,14 @@ async function init(){
     const why=esc(String((e&&e.message)||e));
     main.innerHTML=
       e&&e.apiFailure&&!e.reachedServer
-      ? `<div class="empty">Couldn't reach the Medieval 2 GUI Toolkit server.<br>
-        <span class="count">Is <code>Launch-Medieval2-GUI-Toolkit.bat</code> (python app.py) still running?</span><br><br>
-        <button class="primary" onclick="init()">Retry</button></div>`
+      ? `<div class="empty">${tt('core.couldnt_reach_the_medieval_2_gui')}<br><br>
+        <button class="primary" onclick="init()">${tt('common.retry')}</button></div>`
       : e&&e.apiFailure
-      ? `<div class="empty">The server is running, but it answered with an error.<br>
-        <span class="count">${why} from <code>${esc(e.request||'')}</code> - the reason is in <code>config\\server.log</code>.</span><br><br>
-        <button class="primary" onclick="init()">Retry</button></div>`
-      : `<div class="empty">The server is fine - the page is not.<br>
-        <span class="count">${why}<br>A UI file that failed to download does exactly this, and a reload fetches it again. F12 → Console has the full trace.</span><br><br>
-        <button class="primary" onclick="location.reload()">Reload</button>
-        <button onclick="init()">Retry</button></div>`;
+      ? `<div class="empty">${tt('core.the_server_is_running_but_it',{why,request:esc(e.request||'')})}<br><br>
+        <button class="primary" onclick="init()">${tt('common.retry')}</button></div>`
+      : `<div class="empty">${tt('core.the_server_is_fine_the_page',{why})}<br><br>
+        <button class="primary" onclick="location.reload()">${tt('core.reload')}</button>
+        <button onclick="init()">${tt('common.retry')}</button></div>`;
   }
 }
 
@@ -489,7 +482,7 @@ async function refreshMods(pSrc,pDst){
   // and nothing else, and writing into it would go nowhere - it is deleted when
   // the pack is unmounted.
   dstSel.innerHTML=realMods().map(opt).join('');
-  if(!state.mods.length){main.innerHTML='<div class="empty">No mods found. Click ⚙ Settings to point at your Medieval II folder.</div>';return;}
+  if(!state.mods.length){main.innerHTML=`<div class="empty">${tt('core.no_mods_found_click_settings_to')}</div>`;return;}
   const real=realMods().length?realMods():state.mods;
   state.src=pSrc&&state.mods.some(m=>m.name===pSrc)?pSrc:real[0].name;
   state.dst=pDst&&real.some(m=>m.name===pDst)?pDst:(real[1]?.name||real[0].name);
@@ -511,9 +504,9 @@ async function refreshMods(pSrc,pDst){
    put there. That is what the person in the log was left looking at: the reason
    was drawn for a moment, then a screen that said the tool was still reading a
    mod nothing was being read for, under a header that had already given up. */
-const unitListFailedHtml=(mod,why)=>`<div class="empty">Couldn't load “${esc(mod)}”.<br>
+const unitListFailedHtml=(mod,why)=>`<div class="empty">${tt('core.couldnt_load',{mod:esc(mod)})}<br>
   <span class="count">${esc(why)}</span><br><br>
-  <button class="primary" onclick="loadSource()">Retry</button></div>`;
+  <button class="primary" onclick="loadSource()">${tt('common.retry')}</button></div>`;
 
 // The unit list is what Transfer and Edit show; the other modes have their own
 // workspace, so this must not paint over one of those just because the units
@@ -532,13 +525,13 @@ async function loadSource(){
   // was the one that finished last, its units were the ones you were left
   // looking at. Switching mods is the commonest thing anyone does here.
   const {gen,signal}=newLoad();
-  activity('reading mod',mod);
+  activity(tt('core.reading_mod'),mod);
   state.loadError=null;
-  if(unitListMode())main.innerHTML='<div class="empty">Loading '+esc(mod)+'…</div>';
+  if(unitListMode())main.innerHTML=`<div class="empty">${tt('core.loading_2')} `+esc(mod)+'…</div>';
   let r;
   try{
     r=await api.get('/api/units?mod='+encodeURIComponent(mod),
-                    {signal,label:`Reading ${mod}’s units…`});
+                    {signal,label:tt('core.reading_s_units',{mod})});
   }catch(e){
     if(isAborted(e)||loadStale(gen)||mod!==state.src)return;   // a later load owns the screen
     state.loadError={mod,why:String((e&&e.message)||e)};
@@ -663,7 +656,7 @@ function paintFilterFolds(){
     const n=filterFoldCount(body);
     const tag=h.querySelector('.fgn');
     if(tag)tag.textContent=n?String(n):'';
-    h.title=off?'Click to open this group.':'Click to fold this group shut.';
+    h.title=off?tt('core.click_to_open_this_group'):tt('core.click_to_fold_this_group_shut');
   });
 }
 function buildFilter(id,values,key,useLabel){
@@ -674,7 +667,7 @@ function buildFilter(id,values,key,useLabel){
                      :(values||[]);
   box.innerHTML=list.map(v=>`<label class="opt"><input type="checkbox" value="${esc(v)}" ${
     state.sel[key].has(v)?'checked':''}>${esc(useLabel?facLabel(v):v)}</label>`).join('')
-    ||'<span class="count">None</span>';
+    ||`<span class="count">${tt('common.none_2')}</span>`;
   box.querySelectorAll('input').forEach(cb=>cb.onchange=()=>{const s=state.sel[key];cb.checked?s.add(cb.value):s.delete(cb.value);filtersChanged();paintFilterFolds();});
   paintFilterFolds();
 }
@@ -695,37 +688,37 @@ function buildFilter(id,values,key,useLabel){
 // off in the commit after the upload. The beta line ships with it clear, like
 // master. The rest of the menu is unchanged either way.
 const MODES=[
-  {id:'home',     icon:'⌂', name:'Home',          hint:'Your mods, and what each one is ready for'},
-  {id:'edit',     icon:'✎', name:'Unit Editor',   hint:'Change, clone or delete one mod’s units'},
-  {id:'transfer', icon:'⚔', name:'Unit Transfer', hint:'Copy a unit from one mod into another'},
-  {id:'buildings',icon:'🏰', name:'Buildings',     hint:'Browse and edit export_descr_buildings'},
-  {id:'campmap',  icon:'🌍', name:'Campaign Map',  hint:'The ten map layers, the regions painted on them and what the game reads'},
-  {id:'bmdb',     icon:'🗄', name:'Models Editor',  hint:'Every model a mod ships: the battle entries, their sprites, the strat map’s, and the cards'},
-  {id:'sounds',   icon:'🔊', name:'Unit Sounds',   hint:'Pick which voice entry each unit speaks with'},
-  {id:'minor',    icon:'🗺', name:'Minor Files',   hint:'Rebels, religions, cultures, traits, factions and text'},
-  {id:'rawtext',  icon:'📝', name:'Raw text',      hint:'Any file the toolkit reads, as plain text, backed up and undoable'},
-  {id:'health',   icon:'🩺', name:'Health',        hint:'Every check the toolkit has, over one mod, in one list: what would crash it, and where to fix it'},
-  {id:'changes',  icon:'🔀', name:'My changes',    hint:'Everything you changed in a mod, recorded as you go: export it, and port it onto the mod’s next version'},
-  {id:'sprites',  icon:'🖼', name:'Sprites',       sub:true, hint:'Generate and wire the far-LOD unit sprites'},
-  {id:'stratmap', icon:'🗺', name:'Strat map models', sub:true, hint:'What descr_model_strat.txt names, what the campaign map never draws, and either of them in 3D'},
-  {id:'cards',    icon:'🖼', name:'Unit & info cards', sub:true, hint:'The two pictures per unit, deduplicated into the merc folder'},
-  {id:'traits',   icon:'🎖', name:'Traits',        sub:true, hint:'Character traits, their levels and the triggers that give them'},
-  {id:'ancillaries',icon:'🏅', name:'Ancillaries',  sub:true, hint:'The items and followers a character picks up'},
-  {id:'guilds',   icon:'⚖', name:'Guilds',       sub:true, hint:'What each guild grants, and the triggers that earn its points'},
-  {id:'campdb',   icon:'⚙', name:'Campaign constants', sub:true, hint:'descr_campaign_db.xml: the campaign-wide numbers, forts, piety and ransom'},
-  {id:'banners', icon:'🚩', name:'Battle banners', sub:true, hint:'descr_banners_new.xml: the banner each unit carries in battle, a texture per faction'},
-  {id:'walls', icon:'🧱', name:'Walls, gates and towers', sub:true, hint:'descr_walls.txt: each wall level’s wall, gateway, towers and gatehouse in a siege, and the gates they carry'},
-  {id:'characters', icon:'🧙', name:'Agents and generals', sub:true, hint:'descr_character.txt: what each agent can do and costs, and the models each faction’s stand and fight with'},
-  {id:'heroabilities', icon:'✨', name:'Hero abilities', sub:true, hint:'descr_hero_abilities.xml: a named character’s battle ability, its button and its effects on the armies'},
-  {id:'areaeffects', icon:'💥', name:'Area effects', sub:true, hint:'descr_area_effects.xml: what a shot does where it lands - sickness, fire, explosions, split shots, holy auras'},
-  {id:'sidefiles', icon:'🐕', name:'Animals, standards, advice', sub:true, hint:'descr_animals.txt, descr_standards.txt and export_descr_advice.txt: war animals, the strat-map flag and its symbol sheets, and the advisor’s threads'},
-  {id:'factionsites', icon:'⛵', name:'Populace and off-map', sub:true, hint:'descr_lbc_db.txt and descr_offmap_models.txt: who walks a faction\'s streets, and its fleets and towns off the map'},
-  {id:'settlemech', icon:'⚒', name:'Settlement mechanics', sub:true, hint:'descr_settlement_mechanics.xml: growth, public order, income and mines, and the population ladders'},
-  {id:'factions', icon:'🛡', name:'Factions',      sub:true, hint:'Each faction’s culture, religion, colours and horde'},
-  {id:'cultures', icon:'🏛', name:'Cultures',      sub:true, hint:'descr_cultures.txt: each culture’s settlements, fort, ports, watchtower and agents'},
-  {id:'strings',  icon:'🔤', name:'Strings',       sub:true, hint:'The compiled text files the game actually reads'},
-  {id:'soundbanks',icon:'🔊', name:'Sound banks',   sub:true, hint:'Soldier and strat map voices, battle events, pre-battle speech, advice and narration'},
-  {id:'soundscripts',icon:'🔊', name:'Sound scripts', sub:true, hint:'descr_sounds_*.txt: how every sound is played, when, and at what volume'},
+  {id:'home',     icon:'⌂', name:tt('core.home'),          hint:tt('core.your_mods_and_what_each_one')},
+  {id:'edit',     icon:'✎', name:tt('core.unit_editor'),   hint:tt('core.change_clone_or_delete_one_mods')},
+  {id:'transfer', icon:'⚔', name:tt('core.unit_transfer'), hint:tt('core.copy_a_unit_from_one_mod')},
+  {id:'buildings',icon:'🏰', name:tt('common.buildings'),     hint:tt('core.browse_and_edit_export_descr_buildings')},
+  {id:'campmap',  icon:'🌍', name:tt('core.campaign_map'),  hint:tt('core.the_ten_map_layers_the_regions')},
+  {id:'bmdb',     icon:'🗄', name:tt('core.models_editor'),  hint:tt('core.every_model_a_mod_ships_the')},
+  {id:'sounds',   icon:'🔊', name:tt('core.unit_sounds'),   hint:tt('core.pick_which_voice_entry_each_unit')},
+  {id:'minor',    icon:'🗺', name:tt('core.minor_files'),   hint:tt('core.rebels_religions_cultures_traits_factions_and')},
+  {id:'rawtext',  icon:'📝', name:tt('core.raw_text'),      hint:tt('core.any_file_the_toolkit_reads_as')},
+  {id:'health',   icon:'🩺', name:tt('core.health'),        hint:tt('core.every_check_the_toolkit_has_over')},
+  {id:'changes',  icon:'🔀', name:tt('core.my_changes'),    hint:tt('core.everything_you_changed_in_a_mod')},
+  {id:'sprites',  icon:'🖼', name:tt('core.sprites'),       sub:true, hint:tt('core.generate_and_wire_the_far_lod')},
+  {id:'stratmap', icon:'🗺', name:tt('core.strat_map_models'), sub:true, hint:tt('core.what_descr_model_strat_txt_names')},
+  {id:'cards',    icon:'🖼', name:tt('core.unit_info_cards'), sub:true, hint:tt('core.the_two_pictures_per_unit_deduplicated')},
+  {id:'traits',   icon:'🎖', name:tt('common.traits'),        sub:true, hint:tt('core.character_traits_their_levels_and_the')},
+  {id:'ancillaries',icon:'🏅', name:tt('common.ancillaries'),  sub:true, hint:tt('core.the_items_and_followers_a_character')},
+  {id:'guilds',   icon:'⚖', name:tt('core.guilds'),       sub:true, hint:tt('core.what_each_guild_grants_and_the')},
+  {id:'campdb',   icon:'⚙', name:tt('core.campaign_constants'), sub:true, hint:tt('core.descr_campaign_db_xml_the_campaign')},
+  {id:'banners', icon:'🚩', name:tt('core.battle_banners'), sub:true, hint:tt('core.descr_banners_new_xml_the_banner')},
+  {id:'walls', icon:'🧱', name:tt('core.walls_gates_and_towers'), sub:true, hint:tt('core.descr_walls_txt_each_wall_levels')},
+  {id:'characters', icon:'🧙', name:tt('core.agents_and_generals'), sub:true, hint:tt('core.descr_character_txt_what_each_agent')},
+  {id:'heroabilities', icon:'✨', name:tt('core.hero_abilities'), sub:true, hint:tt('core.descr_hero_abilities_xml_a_named')},
+  {id:'areaeffects', icon:'💥', name:tt('core.area_effects'), sub:true, hint:tt('core.descr_area_effects_xml_what_a')},
+  {id:'sidefiles', icon:'🐕', name:tt('core.animals_standards_advice'), sub:true, hint:tt('core.descr_animals_txt_descr_standards_txt')},
+  {id:'factionsites', icon:'⛵', name:tt('core.populace_and_off_map'), sub:true, hint:tt('core.descr_lbc_db_txt_and_descr')},
+  {id:'settlemech', icon:'⚒', name:tt('core.settlement_mechanics'), sub:true, hint:tt('core.descr_settlement_mechanics_xml_growth_public')},
+  {id:'factions', icon:'🛡', name:tt('common.factions'),      sub:true, hint:tt('core.each_factions_culture_religion_colours_and')},
+  {id:'cultures', icon:'🏛', name:tt('core.cultures'),      sub:true, hint:tt('core.descr_cultures_txt_each_cultures_settlements')},
+  {id:'strings',  icon:'🔤', name:tt('core.strings'),       sub:true, hint:tt('core.the_compiled_text_files_the_game')},
+  {id:'soundbanks',icon:'🔊', name:tt('core.sound_banks'),   sub:true, hint:tt('core.soldier_and_strat_map_voices_battle')},
+  {id:'soundscripts',icon:'🔊', name:tt('core.sound_scripts'), sub:true, hint:tt('core.descr_sounds_txt_how_every_sound')},
 ];
 const modeDef=id=>MODES.find(m=>m.id===id)||MODES[0];
 //: The modes anything OFFERS: the burger menu, the Home readiness cards and the
@@ -742,32 +735,32 @@ const modeOffered=id=>menuModes().some(m=>m.id===id);
    mode, so their tab switches mode rather than tab. Everything the strip needs
    is here because five different files draw it. */
 const MINOR_TABS=[
-  {id:'rebels',      label:'Rebel factions'},
-  {id:'religions',   label:'Religions'},
-  {id:'resources',   label:'Resources'},
-  {id:'names',       label:'Character names'},
+  {id:'rebels',      label:tt('core.rebel_factions')},
+  {id:'religions',   label:tt('common.religions')},
+  {id:'resources',   label:tt('common.resources')},
+  {id:'names',       label:tt('core.character_names')},
   // 46: a culture is four sections - its settlements, its infrastructure and its
   // agents on top of the record - so it has its own mode like the four below
-  {mode:'cultures',    label:'Cultures'},
-  {mode:'traits',      label:'Traits'},
-  {mode:'ancillaries', label:'Ancillaries'},
-  {mode:'guilds',      label:'Guilds'},
-  {mode:'campdb',      label:'Campaign constants'},
-  {mode:'settlemech',  label:'Settlement mechanics'},
-  {mode:'factionsites', label:'Populace and off-map'},
-  {mode:'sidefiles',   label:'Animals, standards, advice'},
-  {mode:'banners',     label:'Battle banners'},
-  {mode:'heroabilities', label:'Hero abilities'},
-  {mode:'walls',       label:'Walls and towers'},
-  {mode:'characters',  label:'Agents and generals'},
-  {mode:'areaeffects', label:'Area effects'},
+  {mode:'cultures',    label:tt('core.cultures')},
+  {mode:'traits',      label:tt('common.traits')},
+  {mode:'ancillaries', label:tt('common.ancillaries')},
+  {mode:'guilds',      label:tt('core.guilds')},
+  {mode:'campdb',      label:tt('core.campaign_constants')},
+  {mode:'settlemech',  label:tt('core.settlement_mechanics')},
+  {mode:'factionsites', label:tt('core.populace_and_off_map')},
+  {mode:'sidefiles',   label:tt('core.animals_standards_advice')},
+  {mode:'banners',     label:tt('core.battle_banners')},
+  {mode:'heroabilities', label:tt('core.hero_abilities')},
+  {mode:'walls',       label:tt('core.walls_and_towers')},
+  {mode:'characters',  label:tt('core.agents_and_generals')},
+  {mode:'areaeffects', label:tt('core.area_effects')},
   // A faction is two files - what it IS (descr_sm_factions.txt) and what it
   // starts the campaign WITH (descr_strat.txt). 17f put both on one screen
   // inside the Campaign Map and pointed this tab at it; that route was reverted
   // on 2026-09-12 (see `minorFactions`) and the tab goes to the factions mode,
   // so it lights up like every other tab in this strip.
-  {mode:'factions', label:'Factions', go:'minorFactions()'},
-  {mode:'strings',     label:'Strings'},
+  {mode:'factions', label:tt('common.factions'), go:'minorFactions()'},
+  {mode:'strings',     label:tt('core.strings')},
 ];
 let minorWantTab=null;
 /* A record form's own tab strip (Phase 46): the Cultures and Factions forms
@@ -828,9 +821,9 @@ function findingsHtml(key,list,onopen){
     </div>`).join('');
   return `<div class="trnote w-warn">
     <button class="findtog" onclick="findingsToggle('${q1(esc(key))}')">
-      ${open?'▾':'▸'} ${n} thing${n===1?'':'s'} to look at</button>
+      ${tt('core.thing_to_look_at',{open:open?'▾':'▸',x:n,x2:n===1?'':'s'})}</button>
     ${open?`<div class="findlist">${rows}</div>`
-          :'<div class="count">The marked rows below, or open this to read them.</div>'}
+          :`<div class="count">${tt('core.the_marked_rows_below_or_open')}</div>`}
   </div>`;
 }
 function findingsToggle(key){state.findOpen[key]=!state.findOpen[key]; render();}
@@ -877,7 +870,7 @@ function splitInstall(split, panel, key, fallback){
   if(!bar){
     bar = document.createElement('div');
     bar.className = 'splitbar';
-    bar.title = 'Drag to resize the 3D panel · double-click for the default width';
+    bar.title = tt('core.drag_to_resize_the_3d_panel');
   }
   split.insertBefore(bar, panel);
   bar.onpointerdown = ev => {
@@ -1080,7 +1073,7 @@ function rszApply(root){
 function rszModal(){
   const m=document.getElementById('modal');
   if(!m)return;
-  const key='dlg:'+(m.getAttribute('class')||'modal').trim().replace(/\s+/g,'.');
+  const key=tt('core.dlg')+(m.getAttribute('class')||'modal').trim().replace(/\s+/g,'.');
   if(m.dataset.rszKey===key)return;      // the same dialog repainting, not a new one
   m.dataset.rszKey=key;
   m.style.resize='both';
@@ -1113,7 +1106,7 @@ function rszDrawer(){
   if(d.querySelector(':scope > .drawergrip'))return;
   const bar=document.createElement('div');
   bar.className='drawergrip';
-  bar.title='Drag to resize this panel · double-click for the default width';
+  bar.title=tt('core.drag_to_resize_this_panel_double');
   // First child, not last: the bar floats beside the content rather than under
   // the end of it, and a drawer scrolled to the bottom still has one.
   d.insertBefore(bar,d.firstChild);
@@ -1236,7 +1229,7 @@ function rszInit(){
    chain of ifs at the click site, because every tab of BMDB mode that grows a
    cleaner adds a row here and nothing else. */
 const cleanupFor=mode=>({bmdb:openCleanup, stratmap:openStratCleanup}[mode]
-  || (()=>toast('Nothing to clean up on this tab.')));
+  || (()=>toast(tt('core.nothing_to_clean_up_on_this'))));
 
 /* ---------- the Models Editor's tab strip ----------
    Sprites are the far-LOD half of a modeldb entry, so they are a tab of this
@@ -1245,8 +1238,8 @@ const cleanupFor=mode=>({bmdb:openCleanup, stratmap:openStratCleanup}[mode]
    alike, rather than the modeldb and its sprites. The strat map's own 3D
    browser moved here from the campaign map screen in the same phase, because
    this is where a mod's models are looked at. */
-const BMDB_TABS=[{mode:'bmdb',label:'Model entries'},{mode:'sprites',label:'Sprites'},
-  {mode:'stratmap',label:'Strat map'},{mode:'cards',label:'Unit cards'}];
+const BMDB_TABS=[{mode:'bmdb',label:tt('core.model_entries')},{mode:'sprites',label:tt('core.sprites')},
+  {mode:'stratmap',label:tt('core.strat_map')},{mode:'cards',label:tt('core.unit_cards')}];
 const bmdbTabsHtml=note=>`<div class="mftabs">${BMDB_TABS.map(t=>
   `<button class="mftab${state.mode===t.mode?' on':''}" onclick="setAppMode('${t.mode}')"
     >${esc(t.label)}</button>`).join('')}${
@@ -1275,7 +1268,7 @@ function setAppMode(id){
   // recorded the route WITH its record ("Buildings · hinterland_castles"), and
   // this would file a thinner copy of it right behind.
   if(!navGoing)navPush({mode:id});
-  activity('opened',`${modeDef(id).name} (mod: ${state.src||'none'})`);
+  activity('opened',tt('core.mod',{x:modeDef(id).name,src:state.src||'none'}));
   state.mode=id;applyMode(true);
 }
 // keeps the header label and the menu's highlighted row honest - called from
@@ -1358,8 +1351,8 @@ function navLabel(r){
 /* One link, drawn one way. `label` is markup and is NOT escaped (a row puts an
    arrow in it); everything else here is. */
 function navLinkHtml(r, label, cls, title){
-  return `<a href="${esc(navUrl(r))}" data-nav="${esc(JSON.stringify(r))}"`
-    +`${cls?` class="${esc(cls)}"`:''}${title?` title="${esc(title)}"`:''}>${label}</a>`;
+  return tt('core.a_href_data_nav',{navUrl:esc(navUrl(r)),x:esc(JSON.stringify(r))})
+    +`${cls?tt('core.class',{cls:esc(cls)}):''}${title?tt('core.title',{title:esc(title)}):''}>${label}</a>`;
 }
 /* Wired once, delegated, so a repaint never has to re-attach anything. A plain
    left click is ours and is cancelled; every other button and every modifier is
@@ -1496,13 +1489,13 @@ function navCrumbs(){
   const t=state.trail, from=Math.max(0,t.i-NAV_CRUMBS+1);
   const arrow=(d,ch,what)=>`<button class="crbtn" data-step="${d}" ${navCan(d)?'':'disabled'}
     title="${esc(navCan(d)?what+' to '+t.list[t.i+d].label
-                 :'Nothing '+what.toLowerCase()+' of here')}">${ch}</button>`;
+                 :tt('core.nothing')+what.toLowerCase()+tt('core.of_here'))}">${ch}</button>`;
   const links=t.list.slice(from).map((e,n)=>{
     const j=from+n;
     return `<a class="crumb${j===t.i?' on':j>t.i?' ahead':''}" href="${esc(navUrl(e.route))}"
-      data-crumb="${j}" title="${esc(e.label)}${j>t.i?' (ahead of here)':''}">${esc(e.label)}</a>`;
+      data-crumb="${j}" title="${esc(e.label)}${j>t.i?tt('core.ahead_of_here'):''}">${esc(e.label)}</a>`;
   }).join('<span class="crsep">›</span>');
-  bar.innerHTML=arrow(-1,'←','Back')+arrow(1,'→','Forward')
+  bar.innerHTML=arrow(-1,'←',tt('core.back'))+arrow(1,'→',tt('core.forward'))
     +`<div class="crlist">${from?'<span class="crsep">…</span>':''}${links}</div>`;
   bar.querySelectorAll('.crbtn').forEach(b=>b.onclick=()=>navStep(+b.dataset.step));
   const l=bar.querySelector('.crlist');
@@ -1530,10 +1523,10 @@ function wire(){
     const v=e.target.value;
     // 21: the raw editor's box is the only copy of its edits - ask before the
     // pick is taken, so saying no leaves everything where it was
-    if(v!==state.src&&state.rt&&state.rt.dirty&&!confirm(`Leave ${state.rt.rel} without `
-      +'saving? The edits are only in the Raw text box.')){srcSel.value=state.src;return;}
+    if(v!==state.src&&state.rt&&state.rt.dirty&&!confirm(tt('core.leave_without',{rel:state.rt.rel})
+      +tt('core.saving_the_edits_are_only_in'))){srcSel.value=state.src;return;}
     if(v!==state.src)
-      activity('picked mod',`${state.mode==='transfer'?'source: ':''}${v} (was ${state.src})`);
+      activity(tt('core.picked_mod'),tt('core.was',{mode:state.mode==='transfer'?tt('core.source'):'',x:v,src:state.src}));
     // A ticked pile belongs to the mod it was ticked in - carrying it to another
     // mod would transfer whatever happens to share a type name over there.
     if(v!==state.src)clearSelection();
@@ -1551,7 +1544,7 @@ function wire(){
     loadSource();};
   dstSel.onchange=async e=>{
     const v=e.target.value;
-    if(v!==state.dst)activity('picked mod',`destination: ${v} (was ${state.dst})`);
+    if(v!==state.dst)activity(tt('core.picked_mod'),tt('core.destination_was',{x:v,dst:state.dst}));
     const srcChanged=(v===state.src);
     if(srcChanged){state.src=state.dst;srcSel.value=state.src;clearSelection();}
     state.dst=state.xferDst=v;dstSel.value=v;state.destData=null;state.destSnd=null;state.cfg={};
@@ -1623,7 +1616,7 @@ function applyMode(persist){
   // mod picker: every card carries its own.
   document.getElementById('srcLbl').style.display=home?'none':'';
   srcSel.style.display=home?'none':'';
-  document.getElementById('srcLbl').textContent=one?'Mod':'From';
+  document.getElementById('srcLbl').textContent=one?tt('core.mod_2'):tt('common.from');
   document.getElementById('dstWrap').style.display=(one||home)?'none':'';
   // The map has nothing to search until 16g brings the query engine, and an
   // input that does nothing is worse than no input.
@@ -1644,7 +1637,7 @@ function applyMode(persist){
   // the two faction-record fixers are about the modeldb itself, so they belong
   // to the Model entries tab and nowhere else
   ownBtn.style.display=allFacBtn.style.display=bm?'inline-block':'none';
-  if(bm||stm)cleanBtn.textContent=bm?'🧹 Clean up BMDB…':'🧹 Clean up strat map…';
+  if(bm||stm)cleanBtn.textContent=bm?tt('core.clean_up_bmdb'):tt('core.clean_up_strat_map');
   sndBtn.style.display=snd?'inline-block':'none';
   unusedWrap.style.display=(bm||stm)?'inline-flex':'none';
   mercOnly.parentElement.style.display=
@@ -1657,19 +1650,19 @@ function applyMode(persist){
   // Only offered while the unit editor is what you'd be going back FROM: in
   // buildings mode the building is already on screen.
   backBldBtn.style.display=(edit&&state.bldReturn)?'inline-block':'none';
-  if(state.bldReturn)backBldBtn.textContent=`← Back to ${state.bldReturn.label}`;
-  search.placeholder=bm?'Search entries…':stm?'Search strat models…'
-                    :crd?'Search units and cards…'
-                    :snd?'Search units…':sbk?'Search blocks and samples…':spr?'Search models…'
-                    :bld?'Search buildings…':str?'Search tags and text…'
-                    :trt?'Search traits…'
-                    :anc?'Search ancillaries and types…'
-                    :gld?'Search guilds…'
-                    :cdb?'Search tags and notes…'
-                    :mnr?'Search this file…'
-                    :fac?'Search factions…'
-                    :raw?'Search file names…':'Search…';
-  document.title=modeDef(state.mode).name+' · Medieval 2 GUI Toolkit';
+  if(state.bldReturn)backBldBtn.textContent=tt('core.back_to',{label:state.bldReturn.label});
+  search.placeholder=bm?tt('core.search_entries'):stm?tt('core.search_strat_models')
+                    :crd?tt('core.search_units_and_cards')
+                    :snd?tt('core.search_units'):sbk?tt('core.search_blocks_and_samples'):spr?tt('core.search_models')
+                    :bld?tt('core.search_buildings'):str?tt('core.search_tags_and_text')
+                    :trt?tt('core.search_traits')
+                    :anc?tt('core.search_ancillaries_and_types')
+                    :gld?tt('core.search_guilds')
+                    :cdb?tt('core.search_tags_and_notes')
+                    :mnr?tt('core.search_this_file')
+                    :fac?tt('core.search_factions')
+                    :raw?tt('core.search_file_names'):tt('core.search');
+  document.title=modeDef(state.mode).name+tt('core.medieval_2_gui_toolkit');
   if(one&&state.selMode)toggleSelMode();
   // A single-mod mode mirrors the destination onto the source, but the pick the
   // user made in Transfer is remembered rather than overwritten - both in
@@ -1715,11 +1708,11 @@ function clearSelection(){state.selected.clear();paintSelection();updateBatchBtn
 // every card of every selected unit, since one unit can render under several groups
 function paintSelection(){main.querySelectorAll('.card').forEach(c=>
   c.classList.toggle('sel',state.selMode&&state.selected.has(c.dataset.type)));}
-function updateBatchBtn(){batchBtn.textContent=`Transfer selected (${state.selected.size})`;batchBtn.disabled=state.selected.size===0;
+function updateBatchBtn(){batchBtn.textContent=tt('core.transfer_selected',{selected_n:state.selected.size});batchBtn.disabled=state.selected.size===0;
   const on=state.selMode&&state.selected.size?'inline-block':'none';
   clearSelBtn.style.display=on;
   packBtn.style.display=state.mode==='transfer'?on:'none';
-  packBtn.textContent=`📦 Export pack (${state.selected.size})`;}
+  packBtn.textContent=tt('core.export_pack',{selected_n:state.selected.size});}
 
 function unitMatches(u){
   const qq=search.value.trim().toLowerCase();
@@ -1775,12 +1768,12 @@ function render(){
   if(!state.data){
     const f=state.loadError;
     main.innerHTML=(f&&f.mod===state.src)?unitListFailedHtml(f.mod,f.why)
-      :'<div class="empty">Loading '+esc(state.src)+'…</div>';
+      :`<div class="empty">${tt('core.loading_2')} `+esc(state.src)+'…</div>';
     return;}
   const units=state.data.units.filter(unitMatches);
   count.textContent=`${units.length}/${state.data.units.length}`;
   const gb=groupBy.value;
-  if(!units.length){main.innerHTML='<div class="empty">No units match.</div>';return;}
+  if(!units.length){main.innerHTML=`<div class="empty">${tt('common.no_units_match')}</div>`;return;}
   // Ticking a filter says "this is what I'm here for", so its group leads -
   // otherwise picking one faction buries it under every OTHER faction its units
   // are also owned by (a unit renders once per faction it belongs to). Alphabetical
@@ -1788,7 +1781,7 @@ function render(){
   const picked=state.sel[{faction:'faction',kind:'category',class:'class',era:'era'}[gb]]||new Set();
   const byPicked=(ka,kb,la,lb)=>(picked.has(kb)-picked.has(ka))||la.localeCompare(lb);
   let groups;
-  if(gb==='none')groups=[['All units',units]];
+  if(gb==='none')groups=[[tt('core.all_units'),units]];
   else if(gb==='faction'){const map=new Map();for(const u of units){for(const f of (u.ownership.length?u.ownership:['(none)']))(map.get(f)||map.set(f,[]).get(f)).push(u);}
     groups=[...map.entries()].sort((a,b)=>byPicked(a[0],b[0],facLabel(a[0]),facLabel(b[0]))).map(([f,us])=>[facLabel(f),us]);}
   // An era is a list of factions per era slot, so a unit lands in every era it
@@ -1803,15 +1796,15 @@ function render(){
     const key=gb+':'+g,off=state.folded.has(key);
     return `<section class="faction-group${off?' folded':''}">
     <div class="faction-head" onclick="toggleGroup('${q1(esc(key))}')"
-      title="${off?'Show these units again':'Fold this group away'}">
+      title="${off?tt('core.show_these_units_again'):tt('core.fold_this_group_away')}">
       <span class="fold">${off?'▸':'▾'}</span>
-      <h2>${esc(g)}</h2><span class="n">${us.length} units</span></div>
+      <h2>${esc(g)}</h2><span class="n">${tt('core.units',{us_n:us.length})}</span></div>
     ${off?'':`<div class="grid">${us.map(cardHtml).join('')}</div>`}</section>`;}).join('');
   main.querySelectorAll('.card').forEach(c=>c.onclick=()=>onCard(c.dataset.type));
 }
 // Custom-battle era slots, in the order the EDU writes them.
 const ERA_KEYS=['0','1','2'];
-const ERA_LABEL={'0':'Early','1':'High','2':'Late','-':'No era (campaign only)'};
+const ERA_LABEL={'0':tt('core.early'),'1':tt('core.high'),'2':tt('core.late'),'-':tt('core.no_era_campaign_only')};
 /* Which group headings are folded shut. Keyed by group-by AND heading, so
    folding half the factions away does not also fold something in the category
    view, and remembered on the user's settings so it survives a reload the way
@@ -1828,7 +1821,7 @@ function cardHtml(u){
     <div class="tick">✓</div>
     <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.src,u.type)}" alt="">
     <div class="meta"><div class="nm">${esc(u.name)}</div><div class="sub">${esc(u.type)}</div>
-    <div>${u.eop?`<span class="badge eop" title="M2TWEOP unit, defined in ${esc(u.eop_file||'an EOP unit file')} rather than in export_descr_unit.txt">EOP</span>`:''}${u.mercenary?'<span class="badge merc">merc</span>':''}<span class="badge">${esc(u.kind||u.category||'?')}</span>${u.class?`<span class="badge cls">${esc(u.class)}</span>`:''}</div></div></div>`;
+    <div>${u.eop?`<span class="badge eop" title="${ttA('core.m2tweop_unit_defined_in_rather_than',{eop_file:esc(u.eop_file||tt('core.an_eop_unit_file'))})}">${tt('core.eop')}</span>`:''}${u.mercenary?`<span class="badge merc">${tt('core.merc')}</span>`:''}<span class="badge">${esc(u.kind||u.category||'?')}</span>${u.class?`<span class="badge cls">${esc(u.class)}</span>`:''}</div></div></div>`;
 }
 function onCard(type){
   if(state.selMode){ if(state.selected.has(type))state.selected.delete(type); else state.selected.add(type);
@@ -1847,19 +1840,19 @@ const cssq=s=>s.replace(/"/g,'\\"');
 function openDrawer(type){
   const u=state.data.units.find(x=>x.type===type); if(!u)return;
   const d=document.getElementById('drawer');
-  const eras=['0','1','2'].filter(e=>(u.eras[e]||[]).length).map(e=>({0:'Early',1:'High',2:'Late'}[e])).join(', ')||'none';
+  const eras=['0','1','2'].filter(e=>(u.eras[e]||[]).length).map(e=>({0:tt('core.early'),1:tt('core.high'),2:tt('core.late')}[e])).join(', ')||'none';
   d.innerHTML=`<button class="close" onclick="drawer.classList.remove('open')">×</button>
     <div class="dh"><img onerror="iconRetry(this)" src="${iconUrl(state.src,u.type)}"><div><h2>${esc(u.name)}</h2><div class="sub">${esc(u.type)}</div></div></div>
-    ${u.has_info?`<div class="infowrap"><div class="k">Info card</div><img onerror="this.parentElement.style.display='none'" src="${iconUrl(state.src,u.type,'info')}"></div>`:''}
+    ${u.has_info?`<div class="infowrap"><div class="k">${tt('core.info_card')}</div><img onerror="this.parentElement.style.display='none'" src="${iconUrl(state.src,u.type,'info')}"></div>`:''}
     <div class="body">
-      ${row('Dictionary',esc(u.dictionary))}
-      ${row('Ownership',u.ownership.map(f=>`<span class="chip">${esc(facLabel(f))}</span>`).join('')||'none')}
-      ${row('Category / Class',esc(u.kind||u.category||'none')+' / '+esc(u.class||'none'))}
-      ${row('Eras',eras)}
-      ${row('Battle models',u.models.map(m=>`<span class="chip">${esc(m)}</span>`).join('')||'none')}
-      ${row('Officers / Mount',(u.officers.map(o=>`<span class="chip">${esc(o)}</span>`).join('')||'none')+(u.mount?`  mount: <span class="chip">${esc(u.mount)}</span>`:''))}
-      ${(u.engine||u.mounted_engine)?row('Siege engine',`<span class="chip">${esc(u.engine||u.mounted_engine)}</span>${u.mounted_engine&&!u.engine?' <span class="count">(mounted)</span>':''}${(u.engine_groups||[]).length?`<span class="count"> · groups: ${(u.engine_groups||[]).map(esc).join(', ')}</span>`:''}`):''}
-      <button class="primary" style="width:100%;margin-top:6px" onclick="drawer.classList.remove('open');openComposer(['${q1(esc(u.type))}'])">Transfer to “${esc(state.dst)}” →</button>
+      ${row(tt('core.dictionary'),esc(u.dictionary))}
+      ${row(tt('core.ownership'),u.ownership.map(f=>`<span class="chip">${esc(facLabel(f))}</span>`).join('')||'none')}
+      ${row(tt('core.category_class'),esc(u.kind||u.category||'none')+' / '+esc(u.class||'none'))}
+      ${row(tt('core.eras'),eras)}
+      ${row(tt('core.battle_models'),u.models.map(m=>`<span class="chip">${esc(m)}</span>`).join('')||'none')}
+      ${row(tt('core.officers_mount'),(u.officers.map(o=>`<span class="chip">${esc(o)}</span>`).join('')||'none')+(u.mount?`  ${tt('core.mount')} <span class="chip">${esc(u.mount)}</span>`:''))}
+      ${(u.engine||u.mounted_engine)?row(tt('core.siege_engine'),`<span class="chip">${esc(u.engine||u.mounted_engine)}</span>${u.mounted_engine&&!u.engine?' <span class="count">(mounted)</span>':''}${(u.engine_groups||[]).length?`<span class="count"> ${tt('core.groups',{engine_groups:(u.engine_groups||[]).map(esc).join(', ')})}</span>`:''}`):''}
+      <button class="primary" style="width:100%;margin-top:6px" onclick="drawer.classList.remove('open');openComposer(['${q1(esc(u.type))}'])">${tt('core.transfer_to',{dst:esc(state.dst)})}</button>
     </div>`;
   d.classList.add('open');
 }
@@ -1883,11 +1876,11 @@ async function paintBuildTag(){
   const el=document.getElementById('buildTag');
   if(!el||!appBuild)return;
   el.textContent=verLabel(appBuild);
-  el.title=`This is the ${appBuild} build of the toolkit.`
+  el.title=tt('core.this_is_the_build_of_the',{appBuild})
     +(/^\d/.test(appBuild)
-      ? '\nThe 2.x line keeps the Campaign Map editor off the menu; the beta has it.'
-      : '\nThe beta line carries the Campaign Map editor.')
-    +'\nClick for the credits.';
+      ? tt('core.the_2_x_line_keeps_the')
+      : tt('core.the_beta_line_carries_the_campaign'))
+    +tt('core.click_for_the_credits');
   el.onclick=()=>openCredits();
   el.hidden=false;
 }
@@ -1900,59 +1893,48 @@ async function openCredits(){
   m.className='modal';
   m.innerHTML=`
     <div class="ehead"><div>
-      <div class="nm" style="font-size:17px;color:var(--accent)">Medieval 2 GUI Toolkit</div>
+      <div class="nm" style="font-size:17px;color:var(--accent)">${tt('core.medieval_2_gui_toolkit_2')}</div>
       <div class="count">${esc(ver)}</div>
     </div></div>
     <div style="padding:16px;line-height:1.7">
       <div style="margin-bottom:14px">
-        <div class="lbl" style="margin-bottom:4px">Developed by</div>
-        <b>ProJYeet</b>
+        <div class="lbl" style="margin-bottom:4px">${tt('core.developed_by')}</div>
+        <b>${tt('core.projyeet')}</b>
       </div>
       <div style="margin-bottom:14px">
-        <div class="lbl" style="margin-bottom:4px">Co-developed by</div>
-        <b>Demir</b>
+        <div class="lbl" style="margin-bottom:4px">${tt('core.co_developed_by')}</div>
+        <b>${tt('core.demir')}</b>
       </div>
       <div style="margin-bottom:14px">
-        <div class="lbl" style="margin-bottom:4px">Built on the work of, and
-          thanking them for permission to take reference from their code</div>
-        <!-- Tool by Creator, and the TOOL NAME is the link. Two of these used to
-             carry a bare URL off to the side instead, which read as a second,
-             lesser thing on the row and made the name itself dead text. The work
-             is what is being credited, so the work is what you click. -->
-        <div><a href="https://github.com/Machiavello-1441/m2tw-editor" target="_blank"
-             style="color:var(--accent2)">M2TW Editor</a> by <b>Mylae</b></div>
-        <div><a href="https://www.twcenter.net/ubs/medieval-2-total-war-modding-tool.26/"
-             target="_blank" style="color:var(--accent2)">Medieval II Total War Modding
-             Tool</a> by <b>Fynn</b></div>
-        <div><a href="https://www.moddb.com/mods/bare-geomod-and-tools" target="_blank"
-             style="color:var(--accent2)">Bare Geomod</a> by <b>Sinople</b> and
-             <b>Gigantus</b></div>
-        <div><a href="https://www.twcenter.net/threads/tw-map-reader-v2-24-1-jul-2015-update.438278/"
-             target="_blank" style="color:var(--accent2)">TWMapReader</a> by <b>Withwnar</b></div>
+        <div class="lbl" style="margin-bottom:4px">${tt('core.built_on_the_work_of_and')}</div>
+        ${tt('core.x')}
+        <div>${tt('core.m2tw_editor_by_mylae')}</div>
+        <div>${tt('core.medieval_ii_total_war_modding_tool')}</div>
+        <div>${tt('core.bare_geomod_by_sinople_and_gigantus')}</div>
+        <div>${tt('core.twmapreader_by_withwnar')}</div>
       </div>
       <div style="margin-bottom:14px">
-        <div class="lbl" style="margin-bottom:4px">Sponsored by</div>
-        <b>FeatherLeaf</b>
+        <div class="lbl" style="margin-bottom:4px">${tt('core.sponsored_by')}</div>
+        <b>${tt('core.featherleaf')}</b>
       </div>
       <div style="margin-bottom:14px">
-        <div class="lbl" style="margin-bottom:4px">Special thanks</div>
-        <b>Gigantus</b> and the <b>TWCenter</b> community, for the guides that
-        taught everyone, this tool included, how these files actually work.
+        <div class="lbl" style="margin-bottom:4px">${tt('core.special_thanks')}</div>
+        ${tt('core.gigantus_and_the_twcenter_community_for')}
       </div>
       <div>
-        <div class="lbl" style="margin-bottom:4px">Testing</div>
-        <b>Jayzinski</b>, <b>TheHolyPilgrim</b>, <b>Espartan</b>, <b>Anhlego</b>, <b>Lupinemaverick</b> and <b>empire3376</b>
+        <div class="lbl" style="margin-bottom:4px">${tt('core.testing')}</div>
+        ${tt('core.jayzinski_theholypilgrim_espartan_anhlego_lupine')}
       </div>
     </div>
     <div style="padding:0 16px 16px;text-align:right">
-      <button class="primary" onclick="closeModal()">Close</button>
+      <button class="primary" onclick="closeModal()">${tt('common.close')}</button>
     </div>`;
   overlay.classList.add('open');
 }
 function closeModal(){
   // "…and did they save it?" is half of what makes a log readable
   if(overlay.classList.contains('open')&&undo.past.length)
-    activity('closed dialog',`with ${undo.past.length} unsaved change(s)`);
+    activity(tt('core.closed_dialog'),tt('core.with_unsaved_change_s',{past_n:undo.past.length}));
   overlay.classList.remove('open');
   // Closing out of a sub-dialog abandons its stashed scroll: leaving it pending
   // would hand a dead snapshot to whatever re-draws next.

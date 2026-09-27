@@ -35,6 +35,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tests import _webtext  # noqa: E402
 
 from tests import _realmod, _tmp
 from unittransfer import campmap
@@ -71,11 +72,11 @@ for m in INSTALLED:
                  "width": man["width"], "height": man["height"]})
 
 # which fields a pin reaches, read off the panels' own source
-pinned = {f: (JS_DIR / f).read_text(encoding="utf-8").count("cpinButton(")
+pinned = {f: _webtext.read((JS_DIR / f)).count("cpinButton(")
           for f in ("stratchar.js", "campevents.js")}
 check(f"every coordinate on the map screen's panels has a pin beside it: {pinned}",
       pinned["stratchar.js"] >= 1 and pinned["campevents.js"] >= 2)
-html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+html = _webtext.read((ROOT / "web" / "index.html"))
 tags = re.findall(r'<script src="js/([A-Za-z0-9_.-]+\.js)"></script>', html)
 check("both new files load after campmap.js, whose transforms they draw with",
       "maplabels.js" in tags and "mappin.js" in tags
@@ -283,7 +284,7 @@ else:
     run = td / "harness.js"
     run.write_text(HARNESS, encoding="utf-8")
     res = td / "out.json"
-    files = ",".join(str(JS_DIR / n) for n in
+    files = ",".join(str(_webtext.english_copy(JS_DIR / n)) for n in
                      ("campmap.js", "maplabels.js", "mappin.js"))
     p = subprocess.run([node, str(run), files, str(job), str(res)],
                        capture_output=True, text=True)

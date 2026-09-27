@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import Callable, List, Tuple
 
 from . import keyblock as kb
+from . import i18n as _i18n
 
 GUIDE = "GUIDE - Crashes and how to fix them"
 WIKI = "Crash to Desktop (TWC Wiki)"
@@ -125,9 +126,7 @@ def _ai_label(mod) -> List[Finding]:
                     continue
                 out.append(Finding(
                     "ai.label_unknown", "fatal",
-                    f"{camp.name}: {faction or 'a faction'} has ai_label {label}, and "
-                    f"{AI_DB_REL} declares no <faction_ai_label name=\"{label}\">. The guide: "
-                    f"the game crashes during that faction's turn.",
+                    _i18n.msg("eng.crashrules.has_ai_label_and_declares_no", "{name}: {x} has ai_label {label}, and {AI_DB_REL} declares no <faction_ai_label name=\"{label2}\">. The guide: the game crashes during that faction's turn.", name=camp.name, x=faction or 'a faction', label=label, AI_DB_REL=AI_DB_REL, label2=label),
                     file=rel, line=i + 1, what=f"{camp.name}|{faction}|{label}",
                     when="play", name=faction))
     return out
@@ -167,10 +166,7 @@ def _event_text(mod) -> List[Finding]:
             i = text.count("\n", 0, m.start())   # only for a finding: it is O(n)
             out.append(Finding(
                 "event.no_text", "warn",
-                f"{camp.name}: the script fires historic_event {ev}, and "
-                f"text/historic_events.txt has neither {{{ev.upper()}_TITLE}} nor "
-                f"{{{ev.upper()}_BODY}}. The guide says this crashes the turn it fires on; "
-                f"some shipping mods carry one on a path that never runs.",
+                _i18n.msg("eng.crashrules.the_script_fires_historic_event_and", "{name}: the script fires historic_event {ev}, and text/historic_events.txt has neither {{ev2}_TITLE} nor {{ev3}_BODY}. The guide says this crashes the turn it fires on; some shipping mods carry one on a path that never runs.", name=camp.name, ev=ev, ev2=ev.upper(), ev3=ev.upper()),
                 file=rel, line=i + 1, what=f"{camp.name}|{ev.lower()}", when="play"))
     return out
 
@@ -199,9 +195,7 @@ def _antitrait(mod) -> List[Finding]:
             diff = sorted(mine ^ theirs)
             out.append(Finding(
                 "trait.antitrait_cultures", "fatal",
-                f"{t.name} and its antitrait {a} exclude different cultures "
-                f"({', '.join(diff)}). The guide: a general of that culture crashes the "
-                f"game when one trait replaces the other. Exclude the same cultures on both.",
+                _i18n.msg("eng.crashrules.and_its_antitrait_exclude_different_cultures", "{name} and its antitrait {a} exclude different cultures ({diff}). The guide: a general of that culture crashes the game when one trait replaces the other. Exclude the same cultures on both.", name=t.name, a=a, diff=', '.join(diff)),
                 file=path.name, line=t.start + 1, what=f"{t.name}|{a}", when="play",
                 name=t.name))
     return out
@@ -225,9 +219,7 @@ def _absolute(mod) -> List[Finding]:
             for m in _ABS.finditer(_code(line) if rel.endswith(".txt") else line):
                 out.append(Finding(
                     "path.absolute", "warn",
-                    f"{rel} names {m.group(0)}, a path on one particular disk. It works "
-                    f"until the mod folder is renamed or moved, and then the battle "
-                    f"that needs it crashes. Write it relative to data/.",
+                    _i18n.msg("eng.crashrules.names_a_path_on_one_particular", "{rel} names {group}, a path on one particular disk. It works until the mod folder is renamed or moved, and then the battle that needs it crashes. Write it relative to data/.", rel=rel, group=m.group(0)),
                     file=rel, line=i + 1, what=f"{rel}|{m.group(0).lower()}",
                     when="battle", name=rel))
     return out
@@ -249,9 +241,7 @@ def _modeldb_spaces(mod) -> List[Finding]:
             text = raw.decode("latin-1").strip()
             out.append(Finding(
                 "modeldb.spaces", "warn",
-                f"line {i + 1} has three or more spaces in a row: {text[:80]}. The guide "
-                f"says the game crashes loading a battle with that model. A path with "
-                f"spaces in it is the one legitimate case.",
+                _i18n.msg("eng.crashrules.line_has_three_or_more_spaces", "line {x} has three or more spaces in a row: {text}. The guide says the game crashes loading a battle with that model. A path with spaces in it is the one legitimate case.", x=i + 1, text=text[:80]),
                 file=MODELDB_REL, line=i + 1, what=f"{text[:120]}", when="battle"))
             if len(out) >= 50:
                 break

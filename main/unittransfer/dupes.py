@@ -50,6 +50,7 @@ from typing import Dict, List, Sequence
 from . import bmdb, config, modeldb
 from .logutil import file_op, log
 from .mod import Mod
+from . import i18n as _i18n
 
 #: Where the file sits under a mod's ``data``. Same constant the edit path uses;
 #: it is spelled out here so this module can back up and write without going
@@ -287,33 +288,31 @@ def plan(mod: Mod, req: DupeRequest) -> DupePlan:
     acts: Dict[int, DupeAction] = {}
     for a in req.actions:
         if not 0 <= a.index < len(entries):
-            p.errors.append(f"there is no entry block {a.index} in this modeldb")
+            p.errors.append(_i18n.msg("eng.dupes.there_is_no_entry_block_in", "there is no entry block {index} in this modeldb", index=a.index))
             continue
         e = entries[a.index]
         if a.index in seen:
-            p.errors.append(f"'{e.name}' block {a.index} is in the request twice")
+            p.errors.append(_i18n.msg("eng.dupes.block_is_in_the_request_twice", "'{name}' block {index} is in the request twice", name=e.name, index=a.index))
             continue
         seen.add(a.index)
         if counts[e.name] < 2:
             # the file changed under the page, or the request was hand-made
-            p.errors.append(f"'{e.name}' is only in the file once - nothing to tidy")
+            p.errors.append(_i18n.msg("eng.dupes.is_only_in_the_file_once", "'{name}' is only in the file once - nothing to tidy", name=e.name))
             continue
         if firsts[e.name] == a.index:
             p.errors.append(
-                f"'{e.name}': that is the FIRST block of the name, which is the one "
-                "the game reads and everything in the mod resolves to. Only a later "
-                "copy may be renamed or removed")
+                _i18n.msg("eng.dupes.that_is_the_first_block_of", "'{name}': that is the FIRST block of the name, which is the one the game reads and everything in the mod resolves to. Only a later copy may be renamed or removed", name=e.name))
             continue
         if a.action == "rename":
             new = a.new_name
             if not new:
-                p.errors.append(f"'{e.name}': a rename needs a new name")
+                p.errors.append(_i18n.msg("eng.dupes.a_rename_needs_a_new_name", "'{name}': a rename needs a new name", name=e.name))
                 continue
             if " " in new:
-                p.errors.append(f"'{new}': model entry names cannot contain spaces")
+                p.errors.append(_i18n.msg("eng.dupes.model_entry_names_cannot_contain_spaces", "'{new}': model entry names cannot contain spaces", new=new))
                 continue
             if new in taken:
-                p.errors.append(f"a model entry called '{new}' already exists")
+                p.errors.append(_i18n.msg("eng.dupes.a_model_entry_called_already_exists", "a model entry called '{new}' already exists", new=new))
                 continue
             taken.add(new)
         acts[a.index] = a
@@ -334,7 +333,7 @@ def plan(mod: Mod, req: DupeRequest) -> DupePlan:
             p.renames.append(row)
 
     if not p.touched():
-        p.errors.append("nothing is ticked")
+        p.errors.append(_i18n.msg("eng.dupes.nothing_is_ticked", "nothing is ticked"))
         return p
 
     if p.removes:
@@ -355,9 +354,7 @@ def plan(mod: Mod, req: DupeRequest) -> DupePlan:
             f"{len(p.renames)} duplicate block(s) renamed: "
             + ", ".join(f"{r['name']} -> {r['new_name']}" for r in p.renames[:6]))
         p.warnings.append(
-            "a renamed block is a real entry now, but nothing in the mod names it yet. "
-            "Point a unit's `soldier` line at it, or the next cleanup will offer to "
-            "remove it as unused")
+            _i18n.msg("eng.dupes.a_renamed_block_is_a_real", "a renamed block is a real entry now, but nothing in the mod names it yet. Point a unit's `soldier` line at it, or the next cleanup will offer to remove it as unused"))
         idle = [r for r in p.renames if r["identical"]]
         if idle:
             p.warnings.append(
@@ -419,7 +416,7 @@ def apply(p: DupePlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.touched():
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.dupes.nothing_to_change", "nothing to change"))
 
     mod = p.mod
     tid = config.new_transfer_id()

@@ -42,7 +42,7 @@
    ===================================================================== */
 
 //: The two tabs, and which file each one is.
-const CEV_TABS = [['events', 'Events'], ['disasters', 'Disasters']];
+const CEV_TABS = [['events', tt('common.events')], ['disasters', tt('campevents.disasters')]];
 
 /* ---------- state ----------
 
@@ -255,7 +255,7 @@ function cevPicked(){
 
 function cevPosFromPick(){
   const at = cevPicked();
-  if(!at){ toast('Click a tile on the map first', 4000); return; }
+  if(!at){ toast(tt('campevents.click_a_tile_on_the_map'), 4000); return; }
   cevListAdd('positions', at);
 }
 
@@ -263,7 +263,7 @@ function cevPosFromPick(){
 //: one added when `i` is -1. Already in the file's coordinates.
 function cevPinned(i, game){
   const k = state.cev;
-  if(!k || !k.w){ toast('✗ the block was closed before the tile was picked', 5000);
+  if(!k || !k.w){ toast(tt('campevents.the_block_was_closed_before_the'), 5000);
     return; }
   if(i < 0 || !k.w.positions[i]){ cevListAdd('positions', game); return; }
   const list = k.w.positions.map(p => p.slice());
@@ -281,7 +281,7 @@ function cevGo(i){
   const tile = [p[0], c.man.height - 1 - p[1]];
   if(!(tile[0] >= 0 && tile[1] >= 0 && tile[0] < c.man.width
        && tile[1] < c.man.height)){
-    toast(`${p[0]},${p[1]} is off a ${c.man.width}×${c.man.height} map`, 5000);
+    toast(tt('campevents.is_off_a_map',{x:p[0],x2:p[1],width:c.man.width,height:c.man.height}), 5000);
     return;
   }
   const [w, h] = cmapCanvasSize();
@@ -291,7 +291,7 @@ function cevGo(i){
   v.oy = h / 2 - (tile[1] + 0.5) * v.zoom;
   v.fitted = true;
   cmapPick(tile);
-  activity('map event', `went to ${p[0]},${p[1]}`);
+  activity(tt('campevents.map_event'), tt('campevents.went_to',{x:p[0],x2:p[1]}));
 }
 
 /* ---------- the save ---------- */
@@ -319,7 +319,7 @@ async function cevSave(action){
   if(!k || !k.w || k.busy) return;
   const body = cevBody(action);
   if(!body.name){
-    toast(k.tab === 'events' ? 'An event needs a label' : 'A disaster needs a type',
+    toast(k.tab === 'events' ? tt('campevents.an_event_needs_a_label') : tt('campevents.a_disaster_needs_a_type'),
           4000);
     return;
   }
@@ -338,24 +338,24 @@ async function cevSave(action){
   k.preview = p;
   cevPaint();
   const what = k.tab === 'events' ? 'event' : 'disaster';
-  const verb = body.action === 'add' ? 'Add' : body.action === 'delete'
-    ? 'Delete' : 'Write';
+  const verb = body.action === 'add' ? tt('common.add_2') : body.action === 'delete'
+    ? tt('common.delete') : tt('campevents.write');
   if(!confirm(`${verb} the ${what} ${body.name}`
-    + (k.tab === 'events' ? ` in ${k.campaign || 'this campaign'}` : '') + '?\n\n'
-    + ((p.changes || []).slice(0, 14).join('\n') || 'no visible change')
+    + (k.tab === 'events' ? ` in ${k.campaign || tt('campevents.this_campaign')}` : '') + '?\n\n'
+    + ((p.changes || []).slice(0, 14).join('\n') || tt('common.no_visible_change'))
     + ((p.changes || []).length > 14
-       ? `\n…and ${p.changes.length - 14} more` : '')
+       ? tt('campevents.and_more',{changes:p.changes.length - 14}) : '')
     + ((p.warnings || []).length
        ? '\n\n' + (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x).join('\n') : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   k.busy = true;
   let res;
   try{ res = await api.post('/api/campevents/apply', body); }
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast('Saved. 🕑 Log can undo it.');
-  activity('campaign events', `${k.mod}: ${body.action} ${what} ${body.name}`);
+  toast(tt('common.saved_log_can_undo_it'));
+  activity(tt('campevents.campaign_events'), `${k.mod}: ${body.action} ${what} ${body.name}`);
   k.sel = body.action === 'delete' ? '' : body.name;
   k.adding = false;
   await cevLoad();
@@ -385,13 +385,13 @@ function cevHtml(){
           + (k.dis && k.dis.rows ? k.dis.rows.length : 0);
   const head = `<div class="cpbar">
     <button class="cptog${k.open ? ' on' : ''}" onclick="cevToggle()"
-      title="descr_events.txt and descr_disasters.txt: the historical events a campaign fires, and the earthquakes, floods and plagues the map allows. Both place things by coordinate, so both are edited beside the map.">
-      ⚡ Events${k.open ? ' ✓' : ''}</button>
-    ${k.ev ? `<span class="count">${n} block${n === 1 ? '' : 's'}</span>` : ''}
-    ${k.busy ? '<span class="count">working…</span>' : ''}
+      title="${ttA('campevents.descr_events_txt_and_descr_disasters')}">
+      ${tt('campevents.events',{open:k.open ? ' ✓' : ''})}</button>
+    ${k.ev ? `<span class="count">${tt('campevents.block',{x:n,x2:n === 1 ? '' : 's'})}</span>` : ''}
+    ${k.busy ? `<span class="count">${tt('common.working_2')}</span>` : ''}
   </div>`;
   if(!k.open) return head;
-  if(k.loading) return head + '<div class="cxpanel count">reading the two files…</div>';
+  if(k.loading) return head + `<div class="cxpanel count">${tt('campevents.reading_the_two_files')}</div>`;
   if(k.err) return head + `<div class="cxpanel"><div class="w-bad">${esc(k.err)}</div></div>`;
   return head + `<div class="cxpanel">
     <div class="cqtabs">${CEV_TABS.map(([id, label]) =>
@@ -409,12 +409,11 @@ function cevHtml(){
 function cevFileHtml(){
   const k = state.cev, d = cevData();
   if(!d) return '';
-  if(!d.have) return `<div class="w-warn">${esc(d.problem || 'this file is not here')}
+  if(!d.have) return `<div class="w-warn">${esc(d.problem || tt('campevents.this_file_is_not_here'))}
     <div class="count">${esc(d.file)}</div></div>`;
   const extra = k.tab === 'events'
-    ? `labels are looked up in ${esc(d.text_file || '')} as
-       <code>{NAME_TITLE}</code> and <code>{NAME_BODY}</code>`
-    : `one set of disasters per map, whatever the campaign`;
+    ? tt('campevents.labels_are_looked_up_in_as',{text_file:esc(d.text_file || '')})
+    : tt('campevents.one_set_of_disasters_per_map');
   return `<div class="count">${esc(d.file)} · ${extra}</div>`;
 }
 
@@ -424,9 +423,7 @@ function cevWarnHtml(){
   const bad = ((d && d.findings) || []).filter(f => f.fatal).length;
   const warn = ((d && d.findings) || []).length - bad;
   return rows.map(w => `<div class="w-warn">${esc(w)}</div>`).join('')
-    + (bad || warn ? `<div class="count">${bad ? `${bad} fatal · ` : ''}${
-        warn} thing${warn === 1 ? '' : 's'} to look at, listed against the
-        block each belongs to</div>` : '');
+    + (bad || warn ? `<div class="count">${tt('campevents.thing_to_look_at_listed_against',{bad:bad ? tt('campevents.fatal',{bad}) : '',warn,warn2:warn === 1 ? '' : 's'})}</div>` : '');
 }
 
 /* One row per block, with what is wrong with it counted beside it.
@@ -444,13 +441,13 @@ function cevListHtml(){
     const mine = findings.filter(f => (f.name || '') === name);
     const bad = mine.filter(f => f.fatal).length;
     const where = k.tab === 'events'
-      ? `${esc(r.category || '?')} · ${esc((r.dates || []).join(' / ') || 'no date')}`
-      : `every ${esc(r.frequency || '?')} years`;
+      ? `${esc(r.category || '?')} · ${esc((r.dates || []).join(' / ') || tt('campevents.no_date'))}`
+      : tt('campevents.every_years',{frequency:esc(r.frequency || '?')});
     const pos = (r.positions || []).length;
     return `<div class="cxrow${k.sel === name && !k.adding ? ' on' : ''}"
       onclick="cevPick('${esc(name).replace(/'/g, "\\'")}')">
       <b>${esc(name || '(unnamed)')}</b>
-      <span class="count">${where}${pos ? ` · ${pos} position${pos === 1 ? '' : 's'}` : ''}</span>
+      <span class="count">${where}${pos ? tt('campevents.position',{pos,pos2:pos === 1 ? '' : 's'}) : ''}</span>
       ${bad ? `<span class="w-bad">${bad}</span>`
         : mine.length ? `<span class="w-warn">${mine.length}</span>` : ''}
     </div>`;
@@ -460,11 +457,11 @@ function cevListHtml(){
     : [];
   return `<div class="cxlist">${rows}
     ${undeclared.map(t => `<div class="cxrow"><b class="count">${esc(t)}</b>
-      <span class="count">not declared - never happens</span></div>`).join('')}
+      <span class="count">${tt('campevents.not_declared_never_happens')}</span></div>`).join('')}
     </div>
     <div class="csbtns">
-      <button onclick="cevAdd()">＋ ${k.tab === 'events' ? 'New event'
-        : 'Declare a disaster'}</button>
+      <button onclick="cevAdd()">＋ ${k.tab === 'events' ? tt('campevents.new_event')
+        : tt('campevents.declare_a_disaster')}</button>
     </div>`;
 }
 
@@ -481,25 +478,22 @@ function cevPositionsHtml(){
         oninput="cevPosSet(${i}, 0, this.value)">
       <input style="width:5.5em" value="${esc(String(p[1]))}"
         oninput="cevPosSet(${i}, 1, this.value)">
-      ${off ? `<span class="w-bad">off a ${size[0]}×${size[1]} map</span>`
+      ${off ? `<span class="w-bad">${tt('campevents.off_a_map',{x:size[0],x2:size[1]})}</span>`
             : '<span class="count">x, y</span>'}
-      <button onclick="cevGo(${i})" title="Put the map on this tile">◎</button>
+      <button onclick="cevGo(${i})" title="${ttA('campevents.put_the_map_on_this_tile')}">◎</button>
       ${cpinButton(`position ${i + 1}`, 'cevPinned', [i])}
-      <button onclick="cevListDrop('positions', ${i})" title="Remove">✕</button>
+      <button onclick="cevListDrop('positions', ${i})" title="${ttA('common.remove')}">✕</button>
     </div>`;
   }).join('');
   const at = cevPicked();
-  return `<div class="cmfield"><label>Positions</label>
-    <div class="cxlist">${rows || '<div class="count">none</div>'}</div>
+  return `<div class="cmfield"><label>${tt('campevents.positions')}</label>
+    <div class="cxlist">${rows || `<div class="count">${tt('common.none')}</div>`}</div>
     <div class="csbtns">
-      <button onclick="cevPosFromPick()">＋ from the picked tile${
-        at ? ` (${at[0]}, ${at[1]})` : ''}</button>
-      <button onclick="cevListAdd('positions', [0, 0])">＋ blank</button>
-      ${cpinButton('a new position', 'cevPinned', [-1])}
+      <button onclick="cevPosFromPick()">${tt('campevents.from_the_picked_tile',{at:at ? ` (${at[0]}, ${at[1]})` : ''})}</button>
+      <button onclick="cevListAdd('positions', [0, 0])">${tt('campevents.blank')}</button>
+      ${cpinButton(tt('campevents.a_new_position'), 'cevPinned', [-1])}
     </div>
-    <div class="count">The file writes y up from the bottom of the map, and so
-      does this - the number here is the one in descr_strat.txt, not the image
-      row.</div>
+    <div class="count">${tt('campevents.the_file_writes_y_up_from')}</div>
   </div>`;
 }
 
@@ -514,13 +508,13 @@ function cevWordsHtml(key, label, note, options){
           ${options.map(o => `<option${o === v ? ' selected' : ''}>${esc(o)}</option>`)
             .join('')}</select>`
       : `<input value="${esc(v)}" oninput="cevListSet('${key}', ${i}, this.value)">`}
-    <button onclick="cevListDrop('${key}', ${i})" title="Remove">✕</button>
+    <button onclick="cevListDrop('${key}', ${i})" title="${ttA('common.remove')}">✕</button>
   </div>`).join('');
   return `<div class="cmfield"><label>${esc(label)}</label>
-    <div class="cxlist">${rows || '<div class="count">none</div>'}</div>
+    <div class="cxlist">${rows || `<div class="count">${tt('common.none')}</div>`}</div>
     <div class="csbtns"><button
       onclick="cevListAdd('${key}', ${options && options.length
-        ? `'${esc(options[0])}'` : "''"})">＋ add</button></div>
+        ? `'${esc(options[0])}'` : "''"})">${tt('campevents.add')}</button></div>
     ${note ? `<div class="count">${note}</div>` : ''}
   </div>`;
 }
@@ -530,13 +524,13 @@ function cevEventFormHtml(){
   const cats = d.categories || [];
   const dates = (w.dates || []).map((v, i) => `<div class="cxrow">
     <input value="${esc(v)}" oninput="cevListSet('dates', ${i}, this.value)">
-    <span class="count">a year offset, or two for a range</span>
-    <button onclick="cevListDrop('dates', ${i})" title="Remove">✕</button>
+    <span class="count">${tt('campevents.a_year_offset_or_two_for')}</span>
+    <button onclick="cevListDrop('dates', ${i})" title="${ttA('common.remove')}">✕</button>
   </div>`).join('');
   const placed = (d.placed || []).indexOf(w.category) >= 0;
   return `<div class="cxform">
     <div class="csrow2">
-      <div class="cmfield"><label>Category</label>
+      <div class="cmfield"><label>${tt('common.category')}</label>
         <select onchange="cevSetPaint('category', this.value)">
           ${cats.indexOf(w.category) < 0 && w.category
             ? `<option selected>${esc(w.category)}</option>` : ''}
@@ -544,33 +538,31 @@ function cevEventFormHtml(){
             >${esc(c)}</option>`).join('')}
         </select>
         <div class="count">${placed
-          ? 'happens at the positions below, so it needs at least one'
+          ? tt('campevents.happens_at_the_positions_below_so')
           : w.category === 'emergent_faction'
-            ? 'the label is the faction that emerges, and it must be marked emergent in descr_strat.txt'
+            ? tt('campevents.the_label_is_the_faction_that')
             : w.category === 'counter'
-              ? 'increases a counter and shows no message'
-              : 'shows the message the label names'}</div>
+              ? tt('campevents.increases_a_counter_and_shows_no')
+              : tt('campevents.shows_the_message_the_label_names')}</div>
       </div>
-      <div class="cmfield"><label>Label</label>
+      <div class="cmfield"><label>${tt('campevents.label')}</label>
         <input value="${esc(w.name)}" oninput="cevSet('name', this.value)">
         <div class="count">${w.name
-          ? `{${esc(w.name.toUpperCase())}_TITLE} and _BODY, and
-             ${esc(w.name)}.tga in every eventspic folder`
-          : 'the key the title, the body and the picture are all found by'}</div>
+          ? tt('campevents.title_and_body_and_tga_in',{name:esc(w.name.toUpperCase()),name2:esc(w.name)})
+          : tt('campevents.the_key_the_title_the_body')}</div>
       </div>
     </div>
-    <div class="cmfield"><label>Dates</label>
-      <div class="cxlist">${dates || '<div class="count">none - it never fires</div>'}</div>
-      <div class="csbtns"><button onclick="cevListAdd('dates', '')">＋ add</button></div>
+    <div class="cmfield"><label>${tt('campevents.dates')}</label>
+      <div class="cxlist">${dates || `<div class="count">${tt('campevents.none_it_never_fires')}</div>`}</div>
+      <div class="csbtns"><button onclick="cevListAdd('dates', '')">${tt('campevents.add')}</button></div>
     </div>
     ${cevPositionsHtml()}
-    ${cevWordsHtml('regions', 'Regions', 'an alternative to positions - the '
-      + 'file header allows either', [])}
-    <div class="cmfield"><label>Movie</label>
+    ${cevWordsHtml('regions', tt('campevents.regions'), 'an alternative to positions - the '
+      + tt('campevents.file_header_allows_either'), [])}
+    <div class="cmfield"><label>${tt('campevents.movie')}</label>
       <input value="${esc(w.movie)}" placeholder="event/gunpowder_invented.bik"
         oninput="cevSet('movie', this.value)">
-      <div class="count">cleared to nothing, the line goes rather than being
-        written empty</div>
+      <div class="count">${tt('campevents.cleared_to_nothing_the_line_goes')}</div>
     </div>
     ${cevFindingsHtml()}
     ${cevButtonsHtml()}
@@ -582,48 +574,47 @@ function cevDisasterFormHtml(){
   const types = d.types || [];
   const flag = (key, label) => `<div class="cmfield"><label>${label}</label>
     <select onchange="cevSetPaint('${key}', this.value)">
-      <option value=""${w[key] === '' ? ' selected' : ''}>(no line)</option>
-      <option value="false"${w[key] === 'false' ? ' selected' : ''}>false</option>
-      <option value="true"${w[key] === 'true' ? ' selected' : ''}>true</option>
+      <option value=""${w[key] === '' ? ' selected' : ''}>${tt('campevents.no_line')}</option>
+      <option value="false"${w[key] === 'false' ? ' selected' : ''}>${tt('campevents.false')}</option>
+      <option value="true"${w[key] === 'true' ? ' selected' : ''}>${tt('campevents.true')}</option>
     </select></div>`;
   const num = (key, label, note) => `<div class="cmfield"><label>${label}</label>
     <input value="${esc(String(w[key]))}" oninput="cevSet('${key}', this.value)">
     ${note ? `<div class="count">${note}</div>` : ''}</div>`;
   return `<div class="cxform">
     <div class="csrow2">
-      <div class="cmfield"><label>Type</label>
+      <div class="cmfield"><label>${tt('common.type')}</label>
         <select onchange="cevSetPaint('type', this.value)" ${k.adding ? '' : 'disabled'}>
           ${types.indexOf(w.type) < 0 && w.type
             ? `<option selected>${esc(w.type)}</option>` : ''}
           ${types.map(t => `<option${t === w.type ? ' selected' : ''}
             >${esc(t)}</option>`).join('')}
         </select>
-        <div class="count">${k.adding ? 'the engine has one setting per disaster'
-          : 'the type names the block; delete and declare to change it'}</div>
+        <div class="count">${k.adding ? tt('campevents.the_engine_has_one_setting_per')
+          : tt('campevents.the_type_names_the_block_delete')}</div>
       </div>
-      ${num('frequency', 'Frequency', 'in years - higher is rarer')}
+      ${num('frequency', tt('campevents.frequency'), 'in years - higher is rarer')}
     </div>
-    <div class="csrow2">${flag('winter', 'Winter only')}${flag('summer', 'Summer only')}</div>
+    <div class="csrow2">${flag('winter', tt('campevents.winter_only'))}${flag('summer', tt('campevents.summer_only'))}</div>
     <div class="csrow2">
-      ${flag('warning', 'One year warning')}
-      <div class="cmfield"><label>Scale</label>
+      ${flag('warning', tt('campevents.one_year_warning'))}
+      <div class="cmfield"><label>${tt('campevents.scale')}</label>
         <div class="csrow2">
           <input value="${esc(String(w.min_scale))}"
             oninput="cevSet('min_scale', this.value)">
           <input value="${esc(String(w.max_scale))}"
             oninput="cevSet('max_scale', this.value)">
         </div>
-        <div class="count">smallest and largest it can be</div>
+        <div class="count">${tt('campevents.smallest_and_largest_it_can_be')}</div>
       </div>
     </div>
-    ${cevWordsHtml('climates', 'Climates',
+    ${cevWordsHtml('climates', tt('campevents.climates'),
       (d.climates || []).length
-        ? 'from this mod\'s own descr_climates.txt'
-        : 'descr_climates.txt is not on disk here, so nothing checks these',
+        ? tt('campevents.from_this_mods_own_descr_climates')
+        : tt('campevents.descr_climates_txt_is_not_on'),
       d.climates || [])}
-    ${cevWordsHtml('regions', 'Regions',
-      `<code>${esc(d.sea_region || 'the sea')}</code> is the one value that is
-       not a region and is still right - vanilla's storm and horde both use it`,
+    ${cevWordsHtml('regions', tt('campevents.regions'),
+      `<code>${esc(d.sea_region || tt('campevents.the_sea'))}</code> ${tt('campevents.is_the_one_value_that_is')}`,
       [])}
     ${cevPositionsHtml()}
     ${cevFindingsHtml()}
@@ -639,7 +630,7 @@ function cevFindingsHtml(){
   if(!mine.length) return '';
   return `<div class="cjplan">${mine.map(f =>
     `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${esc(f.message)}${
-      f.line ? ` <span class="count">line ${f.line}</span>` : ''}</div>`).join('')}
+      f.line ? ` <span class="count">${tt('campevents.line',{line:f.line})}</span>` : ''}</div>`).join('')}
   </div>`;
 }
 
@@ -648,9 +639,9 @@ function cevButtonsHtml(){
   const what = k.tab === 'events' ? 'event' : 'disaster';
   return `<div class="csbtns">
     ${cevDirty() ? `<button class="primary" onclick="cevSave()">${
-      k.adding ? `Add the ${what}` : `Save the ${what}`}</button>` : ''}
-    ${k.adding ? `<button onclick="cevPick('')">Cancel</button>`
-      : `<button onclick="cevDelete()">Delete</button>`}
+      k.adding ? tt('campevents.add_the',{what}) : tt('campevents.save_the',{what})}</button>` : ''}
+    ${k.adding ? `<button onclick="cevPick('')">${tt('common.cancel')}</button>`
+      : `<button onclick="cevDelete()">${tt('common.delete')}</button>`}
   </div>`;
 }
 

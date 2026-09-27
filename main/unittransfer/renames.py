@@ -73,6 +73,7 @@ from . import (campfiles, campmap, campstrat, cleaner, config, factionclone,
                factions as fac, keyblock as kb, modeldb as mdb, stringsbin,
                winconds)
 from .logutil import file_op, log
+from . import i18n as _i18n
 
 ENCODING = "latin-1"
 LOC_ENCODING = "utf-16"
@@ -882,33 +883,26 @@ def _validate(p: RenamePlan, known: Dict[str, List[str]]) -> None:
         if p.subject == "faction" and not known["faction"]:
             p.errors.append(fac.no_file_note(p.mod))
         else:
-            p.errors.append(f"there is no {kind} called {p.old!r} in "
-                            f"{getattr(p.mod, 'name', '?')}")
+            p.errors.append(_i18n.msg("eng.renames.there_is_no_called_in", "there is no {kind} called {old} in {getattr}", kind=kind, old=repr(p.old), getattr=getattr(p.mod, 'name', '?')))
         return
     if not p.new:
-        p.errors.append(f"a rename needs the new name")
+        p.errors.append(_i18n.msg("eng.renames.a_rename_needs_the_new_name", "a rename needs the new name"))
         return
     if p.new == p.old:
-        p.errors.append(f"{p.new} is the name it already has")
+        p.errors.append(_i18n.msg("eng.renames.is_the_name_it_already_has", "{new} is the name it already has", new=p.new))
         return
     if p.subject == "faction":
         if not factionclone.SLOT_RE.match(p.new):
             p.errors.append(
-                f"{p.new!r} is not a faction slot - the engine reads a slot as a "
-                f"lower-case word of letters, digits and underscores, and every "
-                f"file that names one spells it that way")
+                _i18n.msg("eng.renames.is_not_a_faction_slot_the", "{new} is not a faction slot - the engine reads a slot as a lower-case word of letters, digits and underscores, and every file that names one spells it that way", new=repr(p.new)))
             return
         if p.new in factionclone.RESERVED or p.old in factionclone.RESERVED:
             p.errors.append(
-                f"{kb.and_list(list(factionclone.RESERVED))} are reserved - the "
-                f"engine means something specific by each of them, so neither "
-                f"end of a rename may be one")
+                _i18n.msg("eng.renames.are_reserved_the_engine_means_something", "{and_list} are reserved - the engine means something specific by each of them, so neither end of a rename may be one", and_list=kb.and_list(list(factionclone.RESERVED))))
             return
     elif not NAME_RE.match(p.new):
         p.errors.append(
-            f"{p.new!r} is not a name these files can hold - a {kind} is one "
-            f"word of letters, digits, underscores and hyphens, starting with a "
-            f"letter, because that is what every file naming one writes")
+            _i18n.msg("eng.renames.is_not_a_name_these_files", "{new} is not a name these files can hold - a {kind} is one word of letters, digits, underscores and hyphens, starting with a letter, because that is what every file naming one writes", new=repr(p.new), kind=kind))
         return
     clash = ("region", "settlement") if p.subject in ("region", "settlement") \
         else ("faction",)
@@ -939,15 +933,13 @@ def _plan_sites(p: RenamePlan) -> None:
             try:
                 text = _read(path, site.encoding)
             except (OSError, UnicodeError) as exc:
-                p.warnings.append(f"{rel} could not be read ({exc}), so nothing "
-                                  f"in it was renamed")
+                p.warnings.append(_i18n.msg("eng.renames.could_not_be_read_so_nothing", "{rel} could not be read ({exc}), so nothing in it was renamed", rel=rel, exc=exc))
                 continue
             lines, newline, trailing = campmap._split_lines(text)
             try:
                 where = site.find(text, p.subject)
             except Exception as exc:                     # a file we cannot parse
-                p.warnings.append(f"{rel} did not parse ({exc}), so nothing in "
-                                  f"it was renamed - open it in Code View")
+                p.warnings.append(_i18n.msg("eng.renames.did_not_parse_so_nothing_in", "{rel} did not parse ({exc}), so nothing in it was renamed - open it in Code View", rel=rel, exc=exc))
                 continue
             out, touched = rewrite_lines(lines, where, p.old, p.new)
             if not touched:
@@ -970,9 +962,7 @@ def _plan_modeldb(p: RenamePlan) -> None:
         out, hits = rename_modeldb(text, p.old, p.new)
     except Exception as exc:
         p.warnings.append(
-            f"battle_models.modeldb did not read ({exc}), so the faction's "
-            f"texture records still name {p.old} and its units will show no skin "
-            f"for it - the BMDB screen reports the same fault in detail")
+            _i18n.msg("eng.renames.battle_models_modeldb_did_not_read", "battle_models.modeldb did not read ({exc}), so the faction's texture records still name {old} and its units will show no skin for it - the BMDB screen reports the same fault in detail", exc=exc, old=p.old))
         return
     if hits:
         p.edits.append(FileEdit(rel="unit_models/battle_models.modeldb",
@@ -1052,8 +1042,7 @@ def plan(mod, body: dict) -> RenamePlan:
                    old=str(body.get("old") or "").strip(),
                    new=str(body.get("new") or "").strip())
     if p.subject not in SUBJECTS:
-        p.errors.append(f"a rename is of {kb.and_list(list(SUBJECTS))}, "
-                        f"not {p.subject!r}")
+        p.errors.append(_i18n.msg("eng.renames.a_rename_is_of_not", "a rename is of {and_list}, not {subject}", and_list=kb.and_list(list(SUBJECTS)), subject=repr(p.subject)))
         return p
     try:
         _validate(p, _names(mod, p.subject))
@@ -1073,8 +1062,7 @@ def plan(mod, body: dict) -> RenamePlan:
     _notes(p)
     if not p.touched() and not p.errors:
         p.errors.append(
-            f"nothing in {getattr(mod, 'name', '?')} names the {NOUN[p.subject]} "
-            f"{p.old} in a place a rename knows how to follow")
+            _i18n.msg("eng.renames.nothing_in_names_the_in_a", "nothing in {getattr} names the {NOUN} {old} in a place a rename knows how to follow", getattr=getattr(mod, 'name', '?'), NOUN=NOUN[p.subject], old=p.old))
     return p
 
 
@@ -1083,32 +1071,19 @@ def _notes(p: RenamePlan) -> None:
     if p.script:
         files = sorted({m.rel for m in p.script})
         p.warnings.append(
-            f"{len(p.script)} line(s) in {kb.and_list(files)} name {p.old} and "
-            f"NONE of them is rewritten. A campaign script is a grammar nothing "
-            f"here parses, and a wrong edit to one is a campaign that fails to "
-            f"start - every line is listed above so it can be changed by hand")
+            _i18n.msg("eng.renames.line_s_in_name_and_none", "{script_n} line(s) in {and_list} name {old} and NONE of them is rewritten. A campaign script is a grammar nothing here parses, and a wrong edit to one is a campaign that fails to start - every line is listed above so it can be changed by hand", script_n=len(p.script), and_list=kb.and_list(files), old=p.old))
     if p.review:
         p.notes.append(
-            f"{sum(x['hits'] for x in p.review)} more line(s) across "
-            f"{len(p.review)} file(s) write the word {p.old} and are left alone. "
-            f"In a real mod most of those are something else with the same name - "
-            f"a unit type, a sound folder, a comment beside a numeric ID - so they "
-            f"are counted here for you to look at rather than rewritten")
+            _i18n.msg("eng.renames.more_line_s_across_file_s", "{sum} more line(s) across {review_n} file(s) write the word {old} and are left alone. In a real mod most of those are something else with the same name - a unit type, a sound folder, a comment beside a numeric ID - so they are counted here for you to look at rather than rewritten", sum=sum(x['hits'] for x in p.review), review_n=len(p.review), old=p.old))
     if p.subject == "region":
         p.notes.append(
-            "Region IDs are unchanged. They are first-appearance order in a scan "
-            "of map_regions.tga, and a rename moves no record and repaints no "
-            "pixel, so every `IsRegionOneOf` operand still means what it did")
+            _i18n.msg("eng.renames.region_ids_are_unchanged_they_are", "Region IDs are unchanged. They are first-appearance order in a scan of map_regions.tga, and a rename moves no record and repaints no pixel, so every `IsRegionOneOf` operand still means what it did"))
     if p.subject == "settlement":
         p.notes.append(
-            "descr_strat.txt is not in this list and does not need to be: a "
-            "settlement block names its province, never itself. Measured over "
-            "both installed mods")
+            _i18n.msg("eng.renames.descr_strat_txt_is_not_in", "descr_strat.txt is not in this list and does not need to be: a settlement block names its province, never itself. Measured over both installed mods"))
     if p.subject == "faction" and not p.assets:
         p.warnings.append(
-            f"no art under {kb.and_list(list(ART_ROOTS))} is named after {p.old}, "
-            f"so either this mod keeps its faction art somewhere else or the "
-            f"faction has none - check the Factions screen's pictures tab")
+            _i18n.msg("eng.renames.no_art_under_is_named_after", "no art under {and_list} is named after {old}, so either this mod keeps its faction art somewhere else or the faction has none - check the Factions screen's pictures tab", and_list=kb.and_list(list(ART_ROOTS)), old=p.old))
 
 
 # ---------------------------------------------------------------------------
@@ -1129,7 +1104,7 @@ def apply(p: RenamePlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.touched():
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.renames.nothing_to_change", "nothing to change"))
     mod = p.mod
     data = Path(mod.data)
     tid = config.new_transfer_id()
@@ -1163,9 +1138,7 @@ def apply(p: RenamePlan) -> Dict:
             res = cleaner.refresh_strings_bin(mod.root, "data/" + edit.rel + ".strings.bin")
             if not res.get("rebuilt"):
                 p.warnings.append(
-                    f"{Path(edit.rel).name}.strings.bin could not be recompiled "
-                    f"({res.get('rebuild_error') or 'no reason given'}), so it "
-                    f"was deleted instead and the game rebuilds it on launch")
+                    _i18n.msg("eng.renames.strings_bin_could_not_be_recompiled", "{name}.strings.bin could not be recompiled ({x}), so it was deleted instead and the game rebuilds it on launch", name=Path(edit.rel).name, x=res.get('rebuild_error') or 'no reason given'))
 
     moved = 0
     for a in p.assets:

@@ -27,6 +27,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tests import _webtext  # noqa: E402
 
 WEB = ROOT / "web"
 JS = WEB / "js"
@@ -59,7 +60,7 @@ def declarations(path: Path) -> list[str]:
 
 
 print("== index.html and web/js agree ==")
-html = (WEB / "index.html").read_text(encoding="utf-8")
+html = _webtext.read((WEB / "index.html"))
 tags = re.findall(r'<script src="js/([A-Za-z0-9_.-]+\.js)"></script>', html)
 on_disk = sorted(p.name for p in JS.glob("*.js"))
 
@@ -70,8 +71,12 @@ check(f"every tag exists on disk ({len(tags)} tags)",
 missing = sorted(set(on_disk) - set(tags))
 check(f"every file on disk is loaded{': ' + ', '.join(missing) if missing else ''}",
       not missing)
-check("core.js is loaded first - it declares the state everything reads",
-      tags and tags[0] == "core.js")
+check("i18n.js is loaded first (Phase 88: every module's text comes out of it), "
+      "right after the server's catalogue",
+      tags and tags[0] == "i18n.js"
+      and html.index('src="i18n/catalogue.js"') < html.index('src="js/i18n.js"'))
+check("core.js next - it declares the state everything reads",
+      len(tags) > 1 and tags[1] == "core.js")
 check("boot.js is loaded last - it calls init()", tags and tags[-1] == "boot.js")
 check("no inline <script> block is left in index.html",
       not re.search(r"<script>\s*\n", html))
@@ -103,7 +108,7 @@ else:
 
     # Loaded together they must also be one valid program - a stray brace in one
     # file can parse alone and still break the page.
-    joined = "\n".join((JS / n).read_text(encoding="utf-8") for n in tags)
+    joined = "\n".join(_webtext.read((JS / n)) for n in tags)
     # encoding= is not optional: the UI is full of emoji and the Windows default
     # for a pipe is cp1252, which cannot carry them.
     r = subprocess.run(
@@ -118,7 +123,7 @@ print("\n== every menu module is on the Home readiness matrix ==")
 # whole phase. This asserts the class of bug rather than the one instance.
 from unittransfer import campfiles, campmap, modfiles           # noqa: E402
 
-core = (JS / "core.js").read_text(encoding="utf-8")
+core = _webtext.read((JS / "core.js"))
 block = re.search(r"^const MODES=\[(.*?)^\];", core, re.S | re.M)
 check("core.js declares MODES", bool(block))
 menu = re.findall(r"\{id:'([a-z]+)',(.*?)\}", block.group(1) if block else "")
@@ -144,7 +149,7 @@ check("core.js declares menuModes() dropping both sub and off",
       "const menuModes=()=>MODES.filter(m=>!m.sub&&!m.off);" in core_js)
 check("the burger menu is built from menuModes()",
       "navModes.innerHTML=menuModes().map(" in core_js)
-home = (JS / "home.js").read_text(encoding="utf-8")
+home = _webtext.read((JS / "home.js"))
 check(f"Home's module cards drop the {len(subs)} sub modes and {len(off)} off",
       "menuModes().filter(d => d.id !== 'home')" in home)
 check("the resume button only offers a mode that is on the menu",
@@ -163,7 +168,7 @@ check("no build-dependent branch is left in the Factions tab",
       "modeOffered('campmap')" not in _mf and "setAppMode('campmap')" not in _mf)
 check("the campmap handoff flag is gone with it",
       "campmapWantFactions" not in core_js
-      and "campmapWantFactions" not in (JS / "campmap.js").read_text(encoding="utf-8"))
+      and "campmapWantFactions" not in _webtext.read((JS / "campmap.js")))
 
 # The campmap rows are spelled out in modfiles rather than imported from here,
 # so that drawing a mod card does not cost a Pillow import. This is what stops
@@ -186,7 +191,7 @@ print("\n== 28a: the campaign map's side column is a grouping table ==")
 # the DOM at all and whose module writes into nothing - silently, because
 # `getElementById` returning null is what every one of those modules already
 # guards against. These read the table the way the block above reads MODES.
-campmap_js = (JS / "campmap.js").read_text(encoding="utf-8")
+campmap_js = _webtext.read((JS / "campmap.js"))
 tabs_block = re.search(r"^const CMAP_TABS = \[(.*?)^\];", campmap_js, re.S | re.M)
 check("campmap.js declares CMAP_TABS", bool(tabs_block))
 tabs_src = tabs_block.group(1) if tabs_block else ""
@@ -230,7 +235,7 @@ check("no panel is in two tabs" + (": " + ", ".join(twice) if twice else ""),
 
 # Every id in the table has to be one a module actually writes into, or the
 # table is describing a panel that does not exist.
-js_all = "\n".join(f.read_text(encoding="utf-8") for f in sorted(JS.glob("*.js")))
+js_all = "\n".join(_webtext.read(f) for f in sorted(JS.glob("*.js")))
 orphan = [p for p in flat
           if p != "cmFindings" and f"'{p}'" not in js_all.replace(tabs_src, "")]
 check("every panel in the table is one some module writes into"
@@ -302,8 +307,8 @@ print("\n== 28b: the brush over the map, and a tooltip that holds still ==")
 # The controls that make a stroke are on `.cmbar` over the canvas; the palette,
 # the wizard and the save stay in the panel. These are the two halves stated as
 # checks, because both are the kind of thing a later edit puts back by accident.
-campaint_js = (JS / "campaint.js").read_text(encoding="utf-8")
-index_html = (WEB / "index.html").read_text(encoding="utf-8")
+campaint_js = _webtext.read((JS / "campaint.js"))
+index_html = _webtext.read((WEB / "index.html"))
 
 check("the toolbar has a row for the paint controls",
       'id="cmPaintBar"' in campmap_js and 'class="cmbarrow cmpaint"' in campmap_js)
@@ -321,7 +326,7 @@ for kept in ("cpaintWizHtml()", "cpaintFootHtml()", "cpaintChosenHtml()"):
 # belong to is a toggle above them rather than a <select> on the toolbar.
 check("the map screen has the left palette column",
       'id="cmPalCol"' in campmap_js and ".cmpalcol{" in
-      (WEB / "index.html").read_text(encoding="utf-8"))
+      _webtext.read((WEB / "index.html")))
 _dock = campaint_js.split("function cpaintDockHtml(){")[1].split("\nfunction ")[0]
 for want in ("cpaintLayerTogHtml()", "cpaintChosenHtml()", "cpaintPaletteHtml()"):
     check(f"the dock builds {want}", want in _dock)
@@ -332,8 +337,8 @@ check("and the layer toggle is buttons the same wiring reads",
 # 49: the Models Editor is what the BMDB mode is called, and the strat map tab
 # has the BMDB browser's own 3D panel - a second docked viewer, which is why the
 # orphan drop below exists at all.
-_core = (JS / "core.js").read_text(encoding="utf-8")
-_stm = (JS / "stratmap.js").read_text(encoding="utf-8")
+_core = _webtext.read((JS / "core.js"))
+_stm = _webtext.read((JS / "stratmap.js"))
 check("the bmdb mode is the Models Editor",
       "'Models Editor'" in _core and "BMDB + Sprites Editor" not in _core)
 check("the strat map tab has a 3D panel beside the list",
@@ -343,12 +348,12 @@ check("and its rows offer only meshes the mod actually ships",
       "e.meshes" in _stm
       and '"meshes"' in (ROOT / "unittransfer" / "stratmap.py").read_text(encoding="utf-8"))
 check("16k's model browser writes into the panel, not the map screen",
-      "cmodBrowse" in _stm and "cmodBrowse" in (JS / "stratview.js").read_text(encoding="utf-8")
-      and "cmModels" not in (JS / "campmap.js").read_text(encoding="utf-8"))
+      "cmodBrowse" in _stm and "cmodBrowse" in _webtext.read((JS / "stratview.js"))
+      and "cmModels" not in _webtext.read((JS / "campmap.js")))
 # Two docked viewers and one WebGL context: leaving a mode has to stop the one
 # whose host the next screen wrote over, or it goes on drawing to nothing.
 check("a mode switch drops a docked viewer whose host is gone",
-      "function v3DropOrphan(" in (JS / "viewer3d.js").read_text(encoding="utf-8")
+      "function v3DropOrphan(" in _webtext.read((JS / "viewer3d.js"))
       and "v3DropOrphan();" in _core)
 
 check("the dock is painted from the same entry point as the other two",
@@ -489,11 +494,11 @@ check("and it fetches the picture it just turned on",
 # A habit, so it rides with the season and a saved view puts it back.
 check("cmapLayerState carries terrain_gap", "m.terrain_gap" in state_fn)
 check("and a named view carries it",
-      "terrainGap" in (JS / "mapviews.js").read_text(encoding="utf-8"))
+      "terrainGap" in _webtext.read((JS / "mapviews.js")))
 
 
 print("\n== 32b: the mercenary pools, both directions ==")
-mercs_js = (JS / "mercs.js").read_text(encoding="utf-8")
+mercs_js = _webtext.read((JS / "mercs.js"))
 _place = campmap_js.split("{id: 'place'")[1].split("]}")[0]
 check("Mercenaries is a sub-tab of Province, and choosing it opens the panel",
       "{id: 'mercs', label: 'Mercenaries', panels: ['cmMercs']," in _place

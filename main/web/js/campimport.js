@@ -33,7 +33,7 @@ function cimToggle(){
   if(!state.cim || state.cim.mod !== c.mod) state.cim = cimNew(c.mod);
   const k = state.cim;
   k.open = !k.open;
-  activity('import campaign', k.open ? 'opened the import form' : 'closed it');
+  activity(tt('campimport.import_campaign'), k.open ? tt('campimport.opened_the_import_form') : tt('common.closed_it'));
   cbrPaint();
 }
 
@@ -48,7 +48,7 @@ async function cimFrom(src){
   let d;
   try{
     d = await api.get(`/api/campimport?mod=${enc(k.mod)}&from=${enc(src)}`,
-                      {label: `reading ${src}'s campaigns`});
+                      {label: tt('campimport.reading_s_campaigns',{src})});
   }catch(e){
     if(state.cim !== k) return;
     k.loading = false; k.err = errText(e); cbrPaint(); return;
@@ -106,11 +106,11 @@ async function cimPlan(){
   cbrPaint();
   let res;
   try{ res = await api.post('/api/campimport/plan', cimBody(),
-                            {label: 'working out the import'}); }
+                            {label: tt('campimport.working_out_the_import')}); }
   catch(e){ res = {plan: {errors: [errText(e)], changes: [], warnings: []}}; }
   finally{ k.busy = false; }
   if(state.cim !== k) return;
-  k.plan = res.plan || {errors: [res.error || 'the plan came back empty']};
+  k.plan = res.plan || {errors: [res.error || tt('common.the_plan_came_back_empty')]};
   k.stale = false;
   cbrPaint();
 }
@@ -119,11 +119,11 @@ async function cimApply(){
   const k = state.cim;
   if(!k || k.busy || !k.plan || !k.plan.ok || k.stale) return;
   const p = k.plan;
-  if(!confirm(`Import ${p.campaign} from ${p.source} into ${k.mod} as ${p.name}?\n\n`
+  if(!confirm(tt('campimport.import_from_into_as',{campaign:p.campaign,source:p.source,mod:k.mod,name:p.name})
     + (p.changes || []).join('\n')
     + ((p.warnings || []).length
        ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')
-    + `\n\n${p.files} file(s), ${cnwSize(p.bytes)}. 🕑 Log can undo it.`)) return;
+    + tt('campimport.file_s_log_can_undo_it',{files:p.files,x:cnwSize(p.bytes)}))) return;
   k.busy = true;
   cbrPaint();
   let res;
@@ -132,13 +132,13 @@ async function cimApply(){
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(!res || res.error){
-    toast('✗ ' + ((res && res.error) || 'the import failed'), 9000);
+    toast('✗ ' + ((res && res.error) || tt('common.the_import_failed')), 9000);
     cbrPaint();
     return;
   }
-  toast(`${res.name} imported from ${p.source}: ${res.files} file(s). `
-    + '🕑 Log can undo it.', 7000);
-  activity('import campaign', `${k.mod}: ${res.name} from ${p.source}/${p.campaign}`);
+  toast(tt('campimport.imported_from_file_s',{name:res.name,source:p.source,files:res.files})
+    + tt('common.log_can_undo_it'), 7000);
+  activity(tt('campimport.import_campaign'), tt('campimport.from',{mod:k.mod,name:res.name,source:p.source,campaign:p.campaign}));
   state.cim = cimNew(k.mod);
   if(state.cnw) state.cnw.d = null;
   if(state.cbr){ state.cbr.d = null; cbrLoad(); }
@@ -151,51 +151,46 @@ function cimHtml(){
   const k = state.cim && c && state.cim.mod === c.mod ? state.cim : null;
   const head = `<div class="cmbar2">
     <button class="${k && k.open ? 'on' : ''}" onclick="cimToggle()"
-      title="Bring a campaign out of another installed mod, with its map, as a new campaign of this one. Its factions are mapped onto this mod's, and whatever this mod lacks is substituted or left out, all named before anything is written."
-      >⇲ From another mod</button>
+      title="${ttA('campimport.bring_a_campaign_out_of_another')}"
+      >${tt('campimport.from_another_mod')}</button>
     <span class="sp"></span>
-    ${k && k.loading ? '<span class="count">reading…</span>' : ''}
+    ${k && k.loading ? `<span class="count">${tt('common.reading_2')}</span>` : ''}
   </div>`;
   if(!k || !k.open) return head;
   const others = (state.mods || []).map(m => m.name).filter(n => n !== k.mod);
   let html = head + `<div class="cmtrow"><span class="cmtval">
-      <span class="cmtnm">From</span>
+      <span class="cmtnm">${tt('common.from')}</span>
       <select onchange="cimFrom(this.value)">
-        <option value="">pick a mod…</option>
+        <option value="">${tt('campimport.pick_a_mod')}</option>
         ${others.map(n => `<option value="${esc(n)}"${n === k.from ? ' selected' : ''}
           >${esc(n)}</option>`).join('')}
       </select></span></div>`;
-  if(!others.length) return html + `<div class="count">No other mod is
-    installed to import from.</div>`;
+  if(!others.length) return html + `<div class="count">${tt('campimport.no_other_mod_is_installed_to')}</div>`;
   if(k.err) return html + `<div class="w-bad">${esc(k.err)}</div>`;
   const d = k.d;
   if(!k.from || !d) return html;
   const rows = d.campaigns || [];
-  if(!rows.length) return html + `<div class="count">${esc(k.from)} has no
-    campaign to import.</div>`;
+  if(!rows.length) return html + `<div class="count">${tt('campimport.has_no_campaign_to_import',{x:esc(k.from)})}</div>`;
   html += `<div class="cmtrow"><span class="cmtval">
-      <span class="cmtnm">Campaign</span>
+      <span class="cmtnm">${tt('campimport.campaign')}</span>
       <select onchange="cimType('campaign', this.value); cimDefaultName(); cbrPaint()">
         ${rows.map(r => `<option value="${esc(r.campaign)}"${
-          r.campaign === k.campaign ? ' selected' : ''}>${esc(r.title || r.leaf)}
-          - ${r.files} files, ${cnwSize(r.bytes)}</option>`).join('')}
+          r.campaign === k.campaign ? ' selected' : ''}>${tt('campimport.files',{x:esc(r.title || r.leaf),files:r.files,x2:cnwSize(r.bytes)})}</option>`).join('')}
       </select></span></div>
     <div class="cmtrow"><span class="cmtval">
-      <span class="cmtnm">Folder here</span>
+      <span class="cmtnm">${tt('campimport.folder_here')}</span>
       <input value="${esc(k.name)}" placeholder="Imported_Campaign"
         oninput="cimType('name', this.value); state.cim.named = true"></span></div>
     <div class="cmtrow"><span class="cmtval">
-      <span class="cmtnm">On the menu</span>
-      <input value="${esc(k.title)}" placeholder="the title it has in ${esc(k.from)}"
+      <span class="cmtnm">${tt('common.on_the_menu')}</span>
+      <input value="${esc(k.title)}" placeholder="${ttA('campimport.the_title_it_has_in',{x:esc(k.from)})}"
         oninput="cimType('title', this.value)"></span></div>
-    <div class="count">It goes under <code>${esc(d.dir)}</code> with its map, so
-      ${esc(k.mod)}'s own base map and campaigns are not touched. The factions
-      that play it are ${esc(k.mod)}'s.</div>
+    <div class="count">${tt('campimport.it_goes_under_with_its_map',{dir:esc(d.dir),mod:esc(k.mod),mod2:esc(k.mod)})}</div>
     <div class="cmbar2">
       <button onclick="cimPlan()" ${k.busy ? 'disabled' : ''}
-        >${k.busy ? 'working it out…' : (k.plan ? 'Work it out again' : 'Work out the import')}</button>
+        >${k.busy ? tt('common.working_it_out') : (k.plan ? tt('campimport.work_it_out_again') : tt('campimport.work_out_the_import'))}</button>
       <span class="sp"></span>
-      ${k.stale ? '<span class="count">changed since - work it out again</span>' : ''}
+      ${k.stale ? `<span class="count">${tt('campimport.changed_since_work_it_out_again')}</span>` : ''}
     </div>`;
   return html + cimPlanHtml(k);
 }
@@ -207,20 +202,18 @@ function cimPlanHtml(k){
     ${p.errors.map(e => esc(e)).join('<br>')}</div>` : '';
   return `<div class="cbrrow">
     ${errs}
-    ${p.ok ? `<div class="k">${p.files} file${p.files === 1 ? '' : 's'},
-      ${cnwSize(p.bytes)} <span class="count">into <code>${esc(p.folder)}</code></span></div>` : ''}
+    ${p.ok ? `<div class="k">${tt('campimport.file_into',{files:p.files,files2:p.files === 1 ? '' : 's',x:cnwSize(p.bytes),folder:esc(p.folder)})}</div>` : ''}
     ${(p.changes || []).map(x => `<div class="count">${esc(x)}</div>`).join('')}
     ${(p.warnings || []).map(x => `<div class="w-warn">${esc(x)}</div>`).join('')}
     ${cimFactionsHtml(k, p)}
     ${cimUnitsHtml(k, p)}
-    ${cimMapHtml(k, p, 'religions', 'religion', p.religion_names, 'Religions')}
-    ${cimMapHtml(k, p, 'rebels', 'rebels', p.rebel_names, 'Rebel types')}
+    ${cimMapHtml(k, p, 'religions', 'religion', p.religion_names, tt('common.religions'))}
+    ${cimMapHtml(k, p, 'rebels', 'rebels', p.rebel_names, tt('campimport.rebel_types'))}
     ${p.ok ? `<div class="cmbar2">
       <button class="primary" onclick="cimApply()" ${k.busy || k.stale ? 'disabled' : ''}
-        >${k.busy ? 'importing…' : `Import as ${esc(p.name)}`}</button>
+        >${k.busy ? tt('campimport.importing') : tt('campimport.import_as',{name:esc(p.name)})}</button>
       <span class="sp"></span>
-      <span class="count">Nothing existing is written over but the text keys it
-        adds. 🕑 Log can undo it.</span>
+      <span class="count">${tt('campimport.nothing_existing_is_written_over_but')}</span>
     </div>` : ''}
   </div>`;
 }
@@ -230,9 +223,8 @@ function cimFactionsHtml(k, p){
   if(!rows.length) return '';
   const slots = p.slots || [];
   return `<details ${rows.some(f => f.how !== 'same') ? 'open' : ''}>
-    <summary>Factions - ${rows.length}, ${rows.filter(f => f.how !== 'same').length}
-      on another slot</summary>
-    <table class="cimtab"><tr><th>${esc(p.source)}</th><th>plays as</th><th></th></tr>
+    <summary>${tt('campimport.factions_on_another_slot',{rows_n:rows.length,n:rows.filter(f => f.how !== 'same').length})}</summary>
+    <table class="cimtab"><tr><th>${esc(p.source)}</th><th>${tt('campimport.plays_as')}</th><th></th></tr>
     ${rows.map(f => {
       const want = k.factions[f.source] || f.slot;
       return `<tr><td>${esc(f.source)}</td><td><select
@@ -249,16 +241,14 @@ function cimUnitsHtml(k, p){
   const rows = p.units || [];
   if(!rows.length) return '';
   return `<details open>
-    <summary>Units ${esc(k.mod)} lacks - ${rows.length} type${rows.length === 1 ? '' : 's'},
-      ${rows.reduce((a, u) => a + u.count, 0)} regiments</summary>
-    <div class="count">Type one of ${esc(k.mod)}'s units to stand in for each, or
-      leave it blank to leave it out. Unit Transfer brings the unit itself.</div>
+    <summary>${tt('campimport.units_lacks_type_regiments',{mod:esc(k.mod),rows_n:rows.length,rows:rows.length === 1 ? '' : 's',x:rows.reduce((a, u) => a + u.count, 0)})}</summary>
+    <div class="count">${tt('campimport.type_one_of_s_units_to',{mod:esc(k.mod)})}</div>
     <datalist id="cimUnitList">${(p.unit_names || []).map(n =>
       `<option value="${esc(n)}">`).join('')}</datalist>
-    <table class="cimtab"><tr><th>unit</th><th>×</th><th>becomes</th></tr>
+    <table class="cimtab"><tr><th>${tt('campimport.unit')}</th><th>×</th><th>${tt('campimport.becomes')}</th></tr>
     ${rows.map(u => `<tr><td>${esc(u.unit)}</td><td>${u.count}</td><td><input
       list="cimUnitList" value="${esc(k.units[u.unit] !== undefined ? k.units[u.unit] : u.to)}"
-      placeholder="left out"
+      placeholder="${ttA('campimport.left_out')}"
       onchange="cimPick('units', '${esc(jsq(u.unit))}', this.value.trim())"></td></tr>`).join('')}
     </table></details>`;
 }
@@ -266,8 +256,8 @@ function cimUnitsHtml(k, p){
 function cimMapHtml(k, p, table, key, names, title){
   const rows = p[table] || [];
   if(!rows.length) return '';
-  return `<details open><summary>${title} ${esc(k.mod)} lacks - ${rows.length}</summary>
-    <table class="cimtab"><tr><th>${esc(p.source)}</th><th>provinces</th><th>becomes</th></tr>
+  return `<details open><summary>${tt('campimport.lacks',{title,mod:esc(k.mod),rows_n:rows.length})}</summary>
+    <table class="cimtab"><tr><th>${esc(p.source)}</th><th>${tt('campimport.provinces')}</th><th>${tt('campimport.becomes')}</th></tr>
     ${rows.map(r => {
       const want = k[table][r[key]] || r.to;
       return `<tr><td>${esc(r[key])}</td><td>${r.regions}</td><td><select

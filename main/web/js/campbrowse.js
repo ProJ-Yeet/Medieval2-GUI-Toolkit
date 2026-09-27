@@ -71,8 +71,8 @@ function cbrToggle(){
   const k = state.cbr;
   if(!k) return;
   k.open = !k.open;
-  activity('campaign browser',
-           k.open ? 'opened the campaign browser' : 'closed it');
+  activity(tt('campbrowse.campaign_browser'),
+           k.open ? tt('campbrowse.opened_the_campaign_browser') : tt('common.closed_it'));
   if(k.open && !k.d && !k.loading) cbrLoad();
   else cbrPaint();
 }
@@ -85,7 +85,7 @@ async function cbrLoad(){
   let d;
   try{
     d = await api.get(`/api/map/campaigns?mod=${enc(k.mod)}`,
-                      {label: 'reading this mod’s campaigns'});
+                      {label: tt('campbrowse.reading_this_mods_campaigns')});
   }catch(e){
     if(state.cbr !== k) return;
     k.loading = false; k.err = errText(e); cbrPaint(); return;
@@ -130,34 +130,25 @@ function cbrHtml(){
   const shown = rows.find(r => r.campaign === here);
   const head = `<div class="cpbar">
     <button class="cptog${k.open ? ' on' : ''}" onclick="cbrToggle()"
-      title="Every campaign this mod ships, with what is in each one, and which of them this screen is reading."
-      >\u{1F3F0} Campaign${k.open ? ' ✓' : ''}</button>
+      title="${ttA('campbrowse.every_campaign_this_mod_ships_with')}"
+      >${tt('campbrowse.campaign',{open:k.open ? ' ✓' : ''})}</button>
     <span class="count">${shown
       ? esc(shown.title || shown.leaf)
       : esc(here || 'imperial_campaign')}${rows.length > 1
-        ? ` · ${rows.length} in this mod` : ''}</span>
-    ${k.loading ? '<span class="count">reading…</span>' : ''}
+        ? tt('campbrowse.in_this_mod',{rows_n:rows.length}) : ''}</span>
+    ${k.loading ? `<span class="count">${tt('common.reading_2')}</span>` : ''}
   </div>${typeof cmapHomeNote === 'function' ? cmapHomeNote() : ''}`;
   if(!k.open) return head;
   if(k.err) return head + `<div class="cbrpanel w-bad">${esc(k.err)}</div>`;
-  if(!d) return head + `<div class="cbrpanel count">reading every
-    <code>descr_strat.txt</code> in this mod…</div>`;
+  if(!d) return head + `<div class="cbrpanel count">${tt('campbrowse.reading_every_descr_strat_txt_in')}</div>`;
   if(!rows.length) return head + `<div class="cbrpanel count">
-    ${esc(k.mod)} has no campaign at all: nothing under
-    <code>${esc(d.dir)}</code> holds a <code>descr_strat.txt</code>. The map
-    itself still reads, because the layers and the region list are in
-    <code>${esc(d.base)}</code> and belong to the map rather than to a
-    campaign.</div>`;
+    ${tt('campbrowse.has_no_campaign_at_all_nothing',{mod:esc(k.mod),dir:esc(d.dir),base:esc(d.base)})}</div>`;
   return head + `<div class="cbrpanel">
     ${cbrDescrHtml(d)}
     ${rows.map(r => cbrRowHtml(r, r.campaign === here)).join('')}
     ${typeof cnwHtml === 'function' ? cnwHtml() : ''}
     ${typeof cimHtml === 'function' ? cimHtml() : ''}
-    <div class="count">${rows.length} campaign${rows.length === 1 ? '' : 's'}
-      read in ${d.ms} ms. The ten map layers and the region list are in
-      <code>${esc(d.base)}</code> for every campaign that ships no copy of
-      its own - what changes between those is who starts where, with what, and
-      against whom.</div>
+    <div class="count">${tt('campbrowse.campaign_read_in_ms_the_ten',{rows_n:rows.length,rows:rows.length === 1 ? '' : 's',ms:d.ms,base:esc(d.base)})}</div>
   </div>`;
 }
 
@@ -167,10 +158,7 @@ function cbrHtml(){
 function cbrDescrHtml(d){
   const s = d.descriptions || {};
   if(s.have) return '';
-  return `<div class="count">Nothing in <code>${esc(s.file || '')}</code> to
-    read a menu title out of - this mod ships neither it nor the compiled
-    archive beside it - so no campaign below shows one. That is the file
-    missing, not the campaigns being unnamed.</div>`;
+  return `<div class="count">${tt('campbrowse.nothing_in_to_read_a_menu',{file:esc(s.file || '')})}</div>`;
 }
 
 function cbrRowHtml(r, open){
@@ -183,33 +171,22 @@ function cbrRowHtml(r, open){
   return `<div class="cbrrow${open ? ' on' : ''}">
     <div class="cbrnm">
       <b>${esc(r.title || r.leaf)}</b>
-      ${open ? '<span class="cpun">open</span>'
+      ${open ? `<span class="cpun">${tt('campbrowse.open')}</span>`
         : `<button onclick="cbrPick('${esc(r.campaign).replace(/'/g, "&#39;")}')"
-            title="Read this campaign instead">Open</button>`}
+            title="${ttA('campbrowse.read_this_campaign_instead')}">${tt('campbrowse.open_2')}</button>`}
     </div>
     <div class="count"><code>${esc(r.folder)}</code>${r.default
-      ? ' · the one every route falls back to' : ''}</div>
+      ? tt('campbrowse.the_one_every_route_falls_back') : ''}</div>
     ${!r.read ? `<div class="w-bad">${esc(r.problem)}</div>` : `
-      <div class="count">${esc(v.start_date || '?')} to
-        ${esc(v.end_date || '?')}${v.timescale
-          ? ` · ${esc(v.timescale)} years a turn` : ''} ·
-        ${r.lines.toLocaleString()} lines</div>
-      <div class="count">${play} playable · ${unlock} unlockable ·
-        ${non} not playable</div>
+      <div class="count">${tt('campbrowse.to_lines',{start_date:esc(v.start_date || '?'),end_date:esc(v.end_date || '?'),timescale:v.timescale
+          ? tt('campbrowse.years_a_turn',{timescale:esc(v.timescale)}) : '',lines:r.lines.toLocaleString()})}</div>
+      <div class="count">${tt('campbrowse.playable_unlockable_not_playable',{play,unlock,non})}</div>
       ${counts ? `<div class="count">${counts}</div>` : ''}
-      ${r.renamed ? `<div class="count">Its folder is
-        <b>${esc(r.leaf)}</b> and its first line says
-        <b>campaign ${esc(r.name)}</b>. Both names are real - a mod's own files
-        point at one or the other.</div>` : ''}
-      ${r.problems ? `<div class="w-warn">${r.problems} line${
-        r.problems === 1 ? '' : 's'} of it did not parse. Every one is reported
-        with its number by the validator.</div>` : ''}
+      ${r.renamed ? `<div class="count">${tt('campbrowse.its_folder_is_and_its_first',{leaf:esc(r.leaf),name:esc(r.name)})}</div>` : ''}
+      ${r.problems ? `<div class="w-warn">${tt('campbrowse.line_of_it_did_not_parse',{problems:r.problems,problems2:r.problems === 1 ? '' : 's'})}</div>` : ''}
       ${cbrFilesHtml(r)}
-      ${r.layers.length ? `<div class="count">It ships ${r.layers.length}
-        map layer${r.layers.length === 1 ? '' : 's'} of its own
-        (${esc(r.layers.slice(0, 3).join(', '))}${r.layers.length > 3
-          ? ', …' : ''}), which the engine reads instead of the base's. Open,
-        this screen draws those.</div>` : ''}`}
+      ${r.layers.length ? `<div class="count">${tt('campbrowse.it_ships_map_layer_of_its',{layers_n:r.layers.length,layers:r.layers.length === 1 ? '' : 's',layers2:esc(r.layers.slice(0, 3).join(', ')),layers3:r.layers.length > 3
+          ? ', …' : ''})}</div>` : ''}`}
   </div>`;
 }
 
@@ -219,8 +196,7 @@ function cbrRowHtml(r, open){
 function cbrFilesHtml(r){
   const missing = (r.files || []).filter(f => !f.have);
   if(!missing.length) return '';
-  return `<div class="count">No ${missing.map(f =>
-    `<code>${esc(f.file)}</code>`).join(', ')} of its own - ${
-    missing.length === 1 ? esc(missing[0].why) + ' comes from elsewhere'
-      : 'those come from elsewhere'}.</div>`;
+  return `<div class="count">${tt('campbrowse.no_of_its_own',{x:missing.map(f =>
+    `<code>${esc(f.file)}</code>`).join(', '),x2:missing.length === 1 ? esc(missing[0].why) + tt('campbrowse.comes_from_elsewhere')
+      : tt('campbrowse.those_come_from_elsewhere')})}</div>`;
 }

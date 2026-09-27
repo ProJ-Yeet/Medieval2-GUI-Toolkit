@@ -22,13 +22,13 @@
    patch CSVs, and a second .bat to fold them back in - none of that exists here.) */
 async function loadSounds(){
   const mod=state.src;
-  main.innerHTML='<div class="empty">Reading '+esc(mod)+'’s voice bank…</div>';
+  main.innerHTML=`<div class="empty">${tt('common.reading')} `+esc(mod)+`${tt('sounds.s_voice_bank')}</div>`;
   let r;
   try{ r=await api.get('/api/sounds?mod='+enc(mod)); }
   catch(e){ if(stale('sounds',mod))return;
-    main.innerHTML=`<div class="empty">Couldn't read the voice bank.<br>
+    main.innerHTML=`<div class="empty">${tt('sounds.couldnt_read_the_voice_bank')}<br>
     <span class="count">${esc(errText(e))}</span><br><br>
-    <button class="primary" onclick="loadSounds()">Retry</button></div>`; return; }
+    <button class="primary" onclick="loadSounds()">${tt('common.retry')}</button></div>`; return; }
   if(stale('sounds',mod))return;        // moved on while this was in flight
   // `ops` is the staging area: unit type -> {accent, class, donor, remove}
   state.snd=Object.assign({tab:'missing',ops:{},fAccent:'',fClass:'',onlyBad:false,
@@ -105,12 +105,12 @@ function sndToggleRemove(i,on){
 }
 function sndTab(t){state.snd.tab=t; renderSounds();}
 function sndFilter(key,v){state.snd[key]=v; renderSounds();}
-function sndReset(){state.snd.ops={}; renderSounds(); toast('Staged voice changes cleared.');}
+function sndReset(){state.snd.ops={}; renderSounds(); toast(tt('sounds.staged_voice_changes_cleared'));}
 // Give every visible row the same donor in one go - the usual job here is "these
 // forty new units should all sound like that one", and doing it row by row is the
 // step this replaces.
 function sndBulk(){
-  const name=state.snd.bulkDonor; if(!name){toast('Pick a unit to copy from first.');return;}
+  const name=state.snd.bulkDonor; if(!name){toast(tt('sounds.pick_a_unit_to_copy_from'));return;}
   const d=state.snd.donors.find(x=>x.name===name); if(!d)return;
   let n=0;
   for(const u of state.snd.view){
@@ -118,6 +118,6 @@ function sndBulk(){
     const op=sndOp(u.type); op.donor=name; op.accent=d.accent; op['class']=d['class']; n++;
   }
   renderSounds();
-  toast(`${n} row(s) set to copy “${name}” (${d.accent}/${d['class']}).`);
+  toast(tt('sounds.row_s_set_to_copy',{x:n,name,accent:d.accent,x2:d['class']}));
 }
 const SND_CAP=150;   // selects are expensive; the filters above are how you reach the rest

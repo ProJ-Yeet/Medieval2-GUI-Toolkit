@@ -83,18 +83,17 @@ function owpClose(){
 }
 
 function owpShell(){
-  return `<h2>Pick the map's box on the world <span class="count">OpenStreetMap</span></h2>
+  return `<h2>${tt('osmworld.pick_the_maps_box_on_the')}</h2>
     <div class="owpbody">
       <div class="owpstage" id="owpStage"><canvas id="owpCanvas"></canvas>
         <div class="owptip" id="owpTip"></div></div>
       <div class="owpside" id="owpSide"></div>
     </div>
     <div class="foot">
-      <span class="count" style="margin-right:auto">Drag to pan, wheel to zoom. Drag the
-        box's corners to resize it, its middle to move it, the violet handle to turn it.</span>
-      <button onclick="owpClose()">Cancel</button>
+      <span class="count" style="margin-right:auto">${tt('osmworld.drag_to_pan_wheel_to_zoom')}</span>
+      <button onclick="owpClose()">${tt('common.cancel')}</button>
       <button class="primary" id="owpUse" onclick="owpUse()">${owpCampaign()
-        ? 'Use for the new campaign' : 'Use for this map'}</button>
+        ? tt('osmworld.use_for_the_new_campaign') : tt('osmworld.use_for_this_map')}</button>
     </div>`;
 }
 
@@ -381,7 +380,7 @@ function owpSizeFromBox(){
 
 function owpAddCity(name, lat, lon){
   const o = state.owp;
-  name = (name || '').trim() || `Place ${o.places.length + 1}`;
+  name = (name || '').trim() || tt('osmworld.place',{places:o.places.length + 1});
   o.places.push({name, lat, lon, faction: ''});
   owpSide(); owpDraw();
 }
@@ -527,11 +526,8 @@ function owpReadout(){
   if(!b) return '';
   const [ew, ns] = osmKmPerTile(b, o.W, o.H), st = osmStretch(b, o.W, o.H);
   const f = v => v >= 10 ? v.toFixed(0) : v.toFixed(1);
-  return `One tile of this ${o.W}×${o.H} map: <b>${f(ew)} km</b> east-west, <b>${f(ns)} km</b>
-    north-south, at the box's middle.
-    ${Math.abs(st) < 0.005 ? '<span class="w-good">The box is this map’s shape.</span>'
-      : `<span class="w-warn">The box would stretch the map ${Math.abs(st * 100).toFixed(1)}%
-        ${st > 0 ? 'wider' : 'taller'} than the real ground.</span>`}`;
+  return tt('osmworld.one_tile_of_this_map_km',{W:o.W,H:o.H,x:f(ew),x2:f(ns),x3:Math.abs(st) < 0.005 ? `<span class="w-good">${tt('osmworld.the_box_is_this_maps_shape')}</span>`
+      : `<span class="w-warn">${tt('osmworld.the_box_would_stretch_the_map',{st:Math.abs(st * 100).toFixed(1),st2:st > 0 ? 'wider' : 'taller'})}</span>`});
 }
 
 function owpSideHtml(){
@@ -543,39 +539,39 @@ function owpSideHtml(){
         onchange="owpField('${k}',this.value)" ${b ? '' : 'disabled'}></label>`;
   return `
     ${o.err ? `<div class="w-bad">${esc(o.err)}</div>` : ''}
-    <div class="bsec"><h4>The world as</h4>${osmStyleHtml()}</div>
-    <div class="bsec"><h4>Find a place</h4>
-      <div class="brow"><input id="owpQ" value="${esc(o.q)}" placeholder="a town, a region, a country"
+    <div class="bsec"><h4>${tt('osmworld.the_world_as')}</h4>${osmStyleHtml()}</div>
+    <div class="bsec"><h4>${tt('osmworld.find_a_place')}</h4>
+      <div class="brow"><input id="owpQ" value="${esc(o.q)}" placeholder="${ttA('osmworld.a_town_a_region_a_country')}"
         onkeydown="if(event.key==='Enter')owpSearch()">
-        <button onclick="owpSearch()" ${o.busy ? 'disabled' : ''}>Search</button></div>
+        <button onclick="owpSearch()" ${o.busy ? 'disabled' : ''}>${tt('osmworld.search')}</button></div>
       ${res.map((p, i) => `<div class="osmres">
           <div><b>${esc(p.name)}</b> <span class="count">${esc(p.kind)}${p.admin_level ? ' ' + p.admin_level : ''}</span></div>
           <div class="count">${esc(p.display)}</div>
-          <div class="cmbar2"><button onclick="owpGo(${i})">Go</button>
-            <button onclick="owpFitPlace(${i})" ${p.extent ? '' : 'disabled'}>Fit the box around it</button>
-            ${o.mode === 'campaign' ? `<button onclick="owpAddCity(state.owp.results[${i}].name, state.owp.results[${i}].lat, state.owp.results[${i}].lon)">+ A city here</button>` : ''}</div>
+          <div class="cmbar2"><button onclick="owpGo(${i})">${tt('osmworld.go')}</button>
+            <button onclick="owpFitPlace(${i})" ${p.extent ? '' : 'disabled'}>${tt('osmworld.fit_the_box_around_it')}</button>
+            ${o.mode === 'campaign' ? `<button onclick="owpAddCity(state.owp.results[${i}].name, state.owp.results[${i}].lat, state.owp.results[${i}].lon)">${tt('osmworld.a_city_here')}</button>` : ''}</div>
         </div>`).join('')}
-      ${o.results && !res.length ? '<div class="count">Nothing found.</div>' : ''}
+      ${o.results && !res.length ? `<div class="count">${tt('osmworld.nothing_found')}</div>` : ''}
     </div>
-    <div class="bsec"><h4>The box</h4>
+    <div class="bsec"><h4>${tt('osmworld.the_box')}</h4>
       <div class="cmbar2">
         <button class="${o.draw ? 'primary' : ''}" onclick="owpDrawMode()">${o.draw
-          ? 'Drag on the map…' : b ? '✚ Draw it again' : '✚ Draw the box'}</button>
-        <label class="btnlike">Import bbox_coords.txt…
+          ? tt('osmworld.drag_on_the_map') : b ? tt('osmworld.draw_it_again') : tt('osmworld.draw_the_box')}</button>
+        <label class="btnlike">${tt('osmworld.import_bbox_coords_txt')}
           <input type="file" accept=".txt" style="display:none" onchange="owpFile(this)"></label>
       </div>
-      <div class="count">Or hold Shift and drag anywhere on the map.</div>
+      <div class="count">${tt('osmworld.or_hold_shift_and_drag_anywhere')}</div>
       <div class="brow" id="owpNums" style="flex-wrap:wrap">${num('north', 0.01)}${num('south', 0.01)}
         ${num('west', 0.01)}${num('east', 0.01)}${num('rotation', 1)}</div>
-      ${o.mode === 'campaign' ? `<label class="mszbox">The new map’s width
+      ${o.mode === 'campaign' ? `<label class="mszbox">${tt('osmworld.the_new_maps_width')}
           <input type="number" min="24" max="2048" value="${o.W}" onchange="state.owp.W=Math.max(24,+this.value||0);owpSizeFromBox();owpSide();owpDraw()"></label>
-        <div class="count">It comes out ${o.W}×${o.H}: the height follows the box’s shape.</div>`
+        <div class="count">${tt('osmworld.it_comes_out_the_height_follows',{W:o.W,H:o.H})}</div>`
       : `<label class="chk"><input type="checkbox" ${o.lock ? 'checked' : ''}
-        onchange="owpLock(this.checked)"> Keep this map’s shape (${o.W}×${o.H})</label>`}
+        onchange="owpLock(this.checked)"> ${tt('osmworld.keep_this_maps_shape',{W:o.W,H:o.H})}</label>`}
       ${b ? `<div class="count" id="owpRead">${owpReadout()}</div>
-        <div class="cmbar2"><button onclick="owpShape()">Give it this map’s shape</button>
-          <button onclick="owpField('rotation',0)" ${osmRot(b) ? '' : 'disabled'}>Straighten</button></div>`
-        : '<div class="count">No box yet: draw one, import a bbox_coords.txt, or fit it around a place you found.</div>'}
+        <div class="cmbar2"><button onclick="owpShape()">${tt('osmworld.give_it_this_maps_shape')}</button>
+          <button onclick="owpField('rotation',0)" ${osmRot(b) ? '' : 'disabled'}>${tt('osmworld.straighten')}</button></div>`
+        : `<div class="count">${tt('osmworld.no_box_yet_draw_one_import')}</div>`}
     </div>
     ${o.mode === 'campaign' ? owpSitesHtml() + owpCitiesHtml() : ''}`;
 }
@@ -588,7 +584,7 @@ async function owpSites(){
   o.sbusy = true; o.err = ''; owpSide();
   let r;
   try{ r = await api.post('/api/osm/historic', {box: o.box, tags: osmHistTags()},
-                          {label: 'fetching the historic sites'}); }
+                          {label: tt('osmworld.fetching_the_historic_sites')}); }
   catch(e){ r = {error: errText(e)}; }
   if(state.owp !== o) return;
   o.sbusy = false;
@@ -628,18 +624,18 @@ function owpSitesHtml(){
   const rows = h ? h.sites.map((s, i) => [s, i]).filter(([s]) => !q
     || s.name.toLowerCase().includes(q) || s.label.toLowerCase().includes(q)) : [];
   const shown = rows.slice(0, 100);
-  return `<div class="bsec"><h4>Historic sites <span class="count">${h ? h.sites.length : ''}</span></h4>
+  return `<div class="bsec"><h4>${tt('osmworld.historic_sites')} <span class="count">${h ? h.sites.length : ''}</span></h4>
     ${osmHistTagsHtml('owpSide()')}
     <div class="cmbar2"><button onclick="owpSites()" ${o.sbusy || !owpSane(o.box) || !osmHistTags().length ? 'disabled' : ''}
-      >${o.sbusy ? 'Fetching…' : h ? '↺ Again' : 'Fetch the sites in the box'}</button></div>
-    ${h ? `<input id="owpSq" value="${esc(o.sq)}" placeholder="filter by name or kind" oninput="owpSiteFilter(this.value)">
+      >${o.sbusy ? tt('osmworld.fetching') : h ? tt('osmworld.again') : tt('osmworld.fetch_the_sites_in_the_box')}</button></div>
+    ${h ? `<input id="owpSq" value="${esc(o.sq)}" placeholder="${ttA('osmworld.filter_by_name_or_kind')}" oninput="owpSiteFilter(this.value)">
       ${shown.map(([s, i]) => `<div class="osmres">
-        <div><span class="osmsw" style="background:rgb(${s.colour.join(',')})"></span><b>${esc(s.name || '(no name)')}</b>
+        <div><span class="osmsw" style="background:rgb(${s.colour.join(',')})"></span><b>${esc(s.name || tt('common.no_name'))}</b>
           <span class="count">${esc(s.label)}</span></div>
-        <div class="cmbar2"><button onclick="owpSiteGo(${i})">Go</button>
-          <button class="${s.suggest === 'settlement' ? 'primary' : ''}" onclick="owpSiteCity(${i})">+ A city here</button></div></div>`).join('')}
-      ${rows.length > shown.length ? `<div class="count">${rows.length - shown.length} more: narrow them with the filter.</div>` : ''}`
-    : '<div class="count">Castles, monasteries, mosques and the rest under the box, each one a city for the new campaign at a click.</div>'}
+        <div class="cmbar2"><button onclick="owpSiteGo(${i})">${tt('osmworld.go')}</button>
+          <button class="${s.suggest === 'settlement' ? 'primary' : ''}" onclick="owpSiteCity(${i})">${tt('osmworld.a_city_here')}</button></div></div>`).join('')}
+      ${rows.length > shown.length ? `<div class="count">${tt('osmworld.more_narrow_them_with_the_filter',{n:rows.length - shown.length})}</div>` : ''}`
+    : `<div class="count">${tt('osmworld.castles_monasteries_mosques_and_the_rest')}</div>`}
   </div>`;
 }
 
@@ -647,20 +643,19 @@ function owpSitesHtml(){
 function owpCitiesHtml(){
   const o = state.owp, facs = (state.mnw && state.mnw.d && state.mnw.d.factions) || [];
   const picked = (state.mnw && state.mnw.f.factions) || [];
-  return `<div class="bsec"><h4>The cities <span class="count">${o.places.length}</span></h4>
-    <div class="count">Each grows a province over the land round it. Add them from the search, or
-      click on the map with this on. None at all, and they are spread evenly.</div>
+  return `<div class="bsec"><h4>${tt('osmworld.the_cities')} <span class="count">${o.places.length}</span></h4>
+    <div class="count">${tt('osmworld.each_grows_a_province_over_the')}</div>
     <label class="chk"><input type="checkbox" ${o.placing ? 'checked' : ''}
-      onchange="state.owp.placing=this.checked;owpDraw()"> Place a city with a click</label>
-    ${o.placing ? `<label class="mszbox">Name of the next one
-      <input value="${esc(o.nextName)}" placeholder="Place ${o.places.length + 1}"
+      onchange="state.owp.placing=this.checked;owpDraw()"> ${tt('osmworld.place_a_city_with_a_click')}</label>
+    ${o.placing ? `<label class="mszbox">${tt('osmworld.name_of_the_next_one')}
+      <input value="${esc(o.nextName)}" placeholder="${ttA('osmworld.place',{places:o.places.length + 1})}"
         oninput="state.owp.nextName=this.value"></label>` : ''}
     ${o.places.map((p, i) => `<div class="brow" style="gap:4px;align-items:center">
         <input style="flex:1;min-width:0" value="${esc(p.name)}" onchange="owpCityField(${i},'name',this.value)">
-        <select title="who holds it (a faction ticked on the form)" onchange="owpCityField(${i},'faction',this.value)">
-          <option value="">(given out)</option>${facs.filter(n => picked.includes(n)).map(n =>
+        <select title="${ttA('osmworld.who_holds_it_a_faction_ticked')}" onchange="owpCityField(${i},'faction',this.value)">
+          <option value="">${tt('osmworld.given_out')}</option>${facs.filter(n => picked.includes(n)).map(n =>
             `<option${n === p.faction ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>
-        <button title="leave it out" onclick="owpCityDrop(${i})">×</button></div>`).join('')}
+        <button title="${ttA('osmworld.leave_it_out')}" onclick="owpCityDrop(${i})">×</button></div>`).join('')}
   </div>`;
 }
 
@@ -670,7 +665,7 @@ function owpField(k, v){
   const nb = Object.assign({}, o.box, {[k]: parseFloat(v)});
   if(!isFinite(nb[k])){ owpSide(); return; }
   if(osmBoxOk(nb) && owpSane(nb)){ o.box = nb; o.err = ''; }
-  else o.err = `That ${k} would put the box past the pole, across the date line, or inside out.`;
+  else o.err = tt('osmworld.that_would_put_the_box_past',{x:k});
   owpSizeFromBox();
   owpSide(); owpDraw();
 }
@@ -688,7 +683,7 @@ function owpShape(){
   const half = (b.east - b.west) / owpWant() / 2, mid = (osmMdeg(b.north) + osmMdeg(b.south)) / 2;
   const nb = Object.assign({}, b, {north: osmInvMdeg(mid + half), south: osmInvMdeg(mid - half)});
   if(owpSane(nb)){ o.box = nb; o.err = ''; }
-  else o.err = 'The box cannot take this map’s shape there without going past the pole.';
+  else o.err = tt('osmworld.the_box_cannot_take_this_maps');
   owpSide(); owpDraw();
 }
 
@@ -708,7 +703,7 @@ async function owpFile(input){
   });
   // a coordinate of exactly 0 is a coordinate: Mylae's loader drops it
   const nb = {north: v.north, south: v.south, west: v.west, east: v.east, rotation: v.rotation || 0};
-  if(!osmBoxOk(nb) || !owpSane(nb)){ o.err = 'That file has no usable north, south, west and east.'; owpSide(); return; }
+  if(!osmBoxOk(nb) || !owpSane(nb)){ o.err = tt('osmworld.that_file_has_no_usable_north'); owpSide(); return; }
   o.box = nb; o.err = '';
   owpHome(); owpSide(); owpDraw();
 }
@@ -721,7 +716,7 @@ async function owpSearch(){
   if(!o.q.trim() || o.busy) return;
   o.busy = true; o.err = ''; owpSide();
   let r;
-  try{ r = await api.get(`/api/osm/world?q=${enc(o.q)}`, {label: 'searching OpenStreetMap'}); }
+  try{ r = await api.get(`/api/osm/world?q=${enc(o.q)}`, {label: tt('osmworld.searching_openstreetmap')}); }
   catch(e){ r = {error: errText(e)}; }
   if(state.owp !== o) return;
   o.busy = false;
@@ -762,7 +757,7 @@ function owpFitPlace(i){
     }
   }
   const nb = {north: osmInvMdeg(n), south: osmInvMdeg(s), west: w, east: ea, rotation: 0};
-  if(!owpSane(nb)){ o.err = 'That place is too big for a box at this map’s shape.'; owpSide(); return; }
+  if(!owpSane(nb)){ o.err = tt('osmworld.that_place_is_too_big_for'); owpSide(); return; }
   o.box = nb; o.err = ''; o.pick = i;
   owpHome(); owpSide(); owpDraw();
 }

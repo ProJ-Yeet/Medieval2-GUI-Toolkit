@@ -31,6 +31,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tests import _webtext  # noqa: E402
 
 from tests import _tmp  # noqa: E402
 from unittransfer import casanim, mesh  # noqa: E402
@@ -49,11 +50,11 @@ def check(label, cond):
 
 # ---- 1) wiring -----------------------------------------------------------------
 print("\n1) the page loads it, and the viewer calls it")
-html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+html = _webtext.read((ROOT / "web" / "index.html"))
 tags = re.findall(r'<script src="js/([^"]+)"></script>', html)
 check("index.html loads v3anim.js after viewer3d.js",
       "v3anim.js" in tags and tags.index("v3anim.js") > tags.index("viewer3d.js"))
-v3src = (ROOT / "web" / "js" / "viewer3d.js").read_text(encoding="utf-8")
+v3src = _webtext.read((ROOT / "web" / "js" / "viewer3d.js"))
 check("the viewer parses the skin, steps the pose each frame and asks for the actions",
       "head.joints" in v3src and "v3AnimStep()" in v3src and "v3AnimInit()" in v3src
       and 'id="v3anim"' in v3src)

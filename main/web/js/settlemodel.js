@@ -35,7 +35,7 @@ async function smiFrom(src){
   if(!src || src === 'disk') return;
   try{
     const r = await api.get(`/api/settlemodel/models?mod=${enc(src)}`,
-                            {label: `listing ${src}'s settlement models`});
+                            {label: tt('settlemodel.listing_s_settlement_models',{src})});
     if(state.smi !== k || k.from !== src) return;
     k.models = r.models || [];
   }catch(e){
@@ -83,11 +83,11 @@ async function smiPlan(){
   k.busy = true; mfPaintForm();
   let res;
   try{ res = await api.post('/api/settlemodel/plan', smiBody(),
-                            {label: 'working out the model'}); }
+                            {label: tt('settlemodel.working_out_the_model')}); }
   catch(e){ res = {plan: {errors: [errText(e)]}}; }
   finally{ k.busy = false; }
   if(state.smi !== k) return;
-  k.plan = res.plan || {errors: [res.error || 'the plan came back empty']};
+  k.plan = res.plan || {errors: [res.error || tt('common.the_plan_came_back_empty')]};
   mfPaintForm();
 }
 
@@ -95,24 +95,24 @@ async function smiApply(){
   const k = state.smi;
   if(!k || k.busy || !k.plan || !k.plan.ok) return;
   const p = k.plan;
-  if(!confirm(`Put ${p.model} on ${k.culture} ${k.target}?\n\n`
+  if(!confirm(tt('settlemodel.put_on',{model:p.model,culture:k.culture,target:k.target})
     + (p.changes || []).join('\n')
     + ((p.warnings || []).length ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')
-    + '\n\nThe culture is read again from disk afterwards, so an edit to it that '
-    + 'is not saved yet is dropped. 🕑 Log can undo it.')) return;
+    + tt('settlemodel.the_culture_is_read_again_from')
+    + tt('settlemodel.is_not_saved_yet_is_dropped'))) return;
   k.busy = true; mfPaintForm();
   let res;
   try{ res = await api.post('/api/settlemodel/apply', smiBody(),
-                            {label: `putting ${p.model} on ${k.target}`}); }
+                            {label: tt('settlemodel.putting_on',{model:p.model,target:k.target})}); }
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(!res || res.error){
-    toast('✗ ' + ((res && res.error) || 'the import failed'), 9000);
+    toast('✗ ' + ((res && res.error) || tt('common.the_import_failed')), 9000);
     mfPaintForm();
     return;
   }
-  toast(`${k.culture} ${k.target} now draws ${res.rel}. 🕑 Log can undo it.`, 7000);
-  activity('settlement model', `${state.src}: ${k.culture} ${k.target} -> ${res.rel}`);
+  toast(tt('settlemodel.now_draws_log_can_undo_it',{culture:k.culture,target:k.target,rel:res.rel}), 7000);
+  activity(tt('settlemodel.settlement_model'), `${state.src}: ${k.culture} ${k.target} -> ${res.rel}`);
   state.smi = null;
   await mfOpen(k.culture);
 }
@@ -121,7 +121,7 @@ async function smiApply(){
 
 function smiButton(culture, target){
   return `<button class="trgadd" onclick="smiOpen('${q1(esc(culture))}','${q1(esc(target))}')"
-    title="Bring a settlement model in from another mod or from disk, with the textures it names, and put it on this line.">Import…</button>`;
+    title="${ttA('settlemodel.bring_a_settlement_model_in_from')}">${tt('settlemodel.import')}</button>`;
 }
 
 //: ``tail`` says which section asks: the ladder draws the picker for a level,
@@ -133,32 +133,30 @@ function smiHtml(culture, tail){
   const others = (state.mods || []).map(m => m.name).filter(n => n !== state.src);
   const p = k.plan;
   return `<div class="cbrrow" style="margin:8px 0">
-    <div class="k">A model for ${esc(culture)} ${esc(k.target)}
-      <span class="sp"></span><button class="trgadd" onclick="smiClose()">close</button></div>
+    <div class="k">${tt('settlemodel.a_model_for',{culture:esc(culture),target:esc(k.target)})}
+      <span class="sp"></span><button class="trgadd" onclick="smiClose()">${tt('settlemodel.close')}</button></div>
     <div class="trgrid">
-      <label class="lbl">From</label>
+      <label class="lbl">${tt('common.from')}</label>
       <select onchange="smiFrom(this.value)">
-        <option value="">pick…</option>
+        <option value="">${tt('settlemodel.pick')}</option>
         ${others.map(n => `<option value="${esc(n)}"${n === k.from ? ' selected' : ''}
           >${esc(n)}</option>`).join('')}
-        <option value="disk"${k.from === 'disk' ? ' selected' : ''}>a model on disk</option>
+        <option value="disk"${k.from === 'disk' ? ' selected' : ''}>${tt('settlemodel.a_model_on_disk')}</option>
       </select>
-      ${k.from === 'disk' ? `<label class="lbl">Files</label>
+      ${k.from === 'disk' ? `<label class="lbl">${tt('settlemodel.files')}</label>
         <input type="file" multiple accept=".cas,.tga,.dds" onchange="smiFiles(this)">`
-      : k.from ? `<label class="lbl">Model</label>
+      : k.from ? `<label class="lbl">${tt('settlemodel.model')}</label>
         <input list="smiList" value="${esc(k.model)}" placeholder="${k.models
-          ? `${k.models.length} settlement models` : 'listing…'}"
+          ? tt('settlemodel.settlement_models',{models_n:k.models.length}) : tt('settlemodel.listing')}"
           onchange="smiModel(this.value)">` : ''}
     </div>
-    ${k.from === 'disk' ? `<div class="count">Pick the .cas and the textures it
-      names together; they are matched by name.
-      ${(k.files || []).length ? `${k.files.length} file(s) read.` : ''}</div>` : ''}
+    ${k.from === 'disk' ? `<div class="count">${tt('settlemodel.pick_the_cas_and_the_textures',{files:(k.files || []).length ? tt('settlemodel.file_s_read',{files_n:k.files.length}) : ''})}</div>` : ''}
     ${k.models ? `<datalist id="smiList">${k.models.map(m =>
       `<option value="${esc(m.rel)}">`).join('')}</datalist>` : ''}
     ${k.err ? `<div class="w-bad">${esc(k.err)}</div>` : ''}
     <div class="cmbar2">
       <button onclick="smiPlan()" ${k.busy || !k.from ? 'disabled' : ''}
-        >${k.busy && !p ? 'working it out…' : 'Work it out'}</button>
+        >${k.busy && !p ? tt('common.working_it_out') : tt('settlemodel.work_it_out')}</button>
     </div>
     ${p ? smiPlanHtml(k, p) : ''}
   </div>`;
@@ -172,7 +170,7 @@ function smiPlanHtml(k, p){
     ${(p.warnings || []).map(x => `<div class="w-warn">${esc(x)}</div>`).join('')}
     <div class="cmbar2">
       <button class="primary" onclick="smiApply()" ${k.busy ? 'disabled' : ''}
-        >${k.busy ? 'writing…' : `Put it on ${esc(k.target)}`}</button>
-      <span class="sp"></span><span class="count">🕑 Log can undo it.</span>
+        >${k.busy ? tt('common.writing') : tt('settlemodel.put_it_on',{target:esc(k.target)})}</button>
+      <span class="sp"></span><span class="count">${tt('common.log_can_undo_it')}</span>
     </div>`;
 }

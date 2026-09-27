@@ -83,6 +83,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from . import campmap, campstrat, keyblock as kb, mapvocab, stringsbin
 from .triggers import split_lines
+from . import i18n as _i18n
 
 #: both files are plain 8-bit text; the localisation beside them is UTF-16
 ENCODING = "latin-1"
@@ -268,16 +269,14 @@ def _parse(text: str, what: str, keys: Sequence[str], named: bool) -> BlockFile:
                 cur.name = parts[2] if len(parts) > 2 else ""
                 if len(parts) > 3:
                     bf.warnings.append(
-                        f"line {i + 1}: `event` takes a category and a label; "
-                        f"{' '.join(parts[3:])[:30]} is a third value")
+                        _i18n.msg("eng.campevents.line_event_takes_a_category_and", "line {x}: `event` takes a category and a label; {parts} is a third value", x=i + 1, parts=' '.join(parts[3:])[:30]))
             else:
                 cur.kind = rest
             bf.blocks.append(cur)
             continue
         if cur is None:
             bf.warnings.append(
-                f"line {i + 1}: `{code[:30]}` is before the first `event` line, "
-                "so nothing reads it")
+                _i18n.msg("eng.campevents.line_is_before_the_first_event", "line {x}: `{code}` is before the first `event` line, so nothing reads it", x=i + 1, code=code[:30]))
             continue
         cur.end = i + 1
         if word not in keys:
@@ -291,7 +290,7 @@ def _parse(text: str, what: str, keys: Sequence[str], named: bool) -> BlockFile:
             xy = parse_position(rest)
             if xy is None:
                 bf.warnings.append(
-                    f"line {i + 1}: `{rest[:30]}` is not an `x, y` position")
+                    _i18n.msg("eng.campevents.line_is_not_an_x_y", "line {x}: `{rest}` is not an `x, y` position", x=i + 1, rest=rest[:30]))
             else:
                 cur.positions.append(Position(xy[0], xy[1], i))
     if cur is not None and cur.end < cur.start + 1:
@@ -325,8 +324,7 @@ def disasters_path(mod) -> Path:
 def read_events(mod, campaign: str = DEFAULT_CAMPAIGN) -> Tuple[BlockFile, str]:
     path = events_path(mod, campaign)
     if not path.exists():
-        raise CampEventError(f"{campaign} has no {EVENTS_NAME}, so it fires no "
-                             "historical events")
+        raise CampEventError(_i18n.msg("eng.campevents.has_no_so_it_fires_no", "{campaign} has no {EVENTS_NAME}, so it fires no historical events", campaign=campaign, EVENTS_NAME=EVENTS_NAME))
     text = kb.read_text(path, ENCODING)
     return parse_events(text), text
 
@@ -334,8 +332,7 @@ def read_events(mod, campaign: str = DEFAULT_CAMPAIGN) -> Tuple[BlockFile, str]:
 def read_disasters(mod) -> Tuple[BlockFile, str]:
     path = disasters_path(mod)
     if not path.exists():
-        raise CampEventError(f"this mod has no {DISASTERS_REL}, so no natural "
-                             "disaster ever happens on its map")
+        raise CampEventError(_i18n.msg("eng.campevents.this_mod_has_no_so_no", "this mod has no {DISASTERS_REL}, so no natural disaster ever happens on its map", DISASTERS_REL=DISASTERS_REL))
     text = kb.read_text(path, ENCODING)
     return parse_disasters(text), text
 
@@ -433,9 +430,9 @@ def render_event(bf: BlockFile, b: Block, edits: Dict) -> Tuple[str, List[str]]:
     kind = str(edits.get("category", b.kind) or "").strip()
     name = str(edits.get("name", b.name) or "").strip()
     if not kind:
-        raise CampEventError("an `event` line needs a category", b.head_line + 1)
+        raise CampEventError(_i18n.msg("eng.campevents.an_event_line_needs_a_category", "an `event` line needs a category"), b.head_line + 1)
     if not name:
-        raise CampEventError("an `event` line needs a label", b.head_line + 1)
+        raise CampEventError(_i18n.msg("eng.campevents.an_event_line_needs_a_label", "an `event` line needs a label"), b.head_line + 1)
     if kind != b.kind or name != b.name:
         sp.replace(b.head_line,
                    kb.sub_tokens(bf.lines[b.head_line], "event", [kind, name]))
@@ -447,8 +444,7 @@ def render_event(bf: BlockFile, b: Block, edits: Dict) -> Tuple[str, List[str]]:
         wanted = [str(d).strip() for d in edits["dates"] if str(d).strip()]
         if not wanted:
             raise CampEventError(
-                "an event with no `date` line never fires - the tutorial's own "
-                "warning, and the file agrees: every live block has one",
+                _i18n.msg("eng.campevents.an_event_with_no_date_line", "an event with no `date` line never fires - the tutorial's own warning, and the file agrees: every live block has one"),
                 b.head_line + 1)
         changes += _edit_repeated(sp, bf, b, "date", wanted, ())
     if "positions" in edits:
@@ -478,7 +474,7 @@ def render_disaster(bf: BlockFile, b: Block, edits: Dict) -> Tuple[str, List[str
     changes: List[str] = []
     kind = str(edits.get("type", b.kind) or "").strip()
     if not kind:
-        raise CampEventError("an `event` line needs a disaster type", b.head_line + 1)
+        raise CampEventError(_i18n.msg("eng.campevents.an_event_line_needs_a_disaster", "an `event` line needs a disaster type"), b.head_line + 1)
     if kind != b.kind:
         sp.replace(b.head_line,
                    kb.sub_tokens(bf.lines[b.head_line], "event", [kind]))
@@ -513,17 +509,17 @@ def _position_texts(raw) -> List[str]:
                 out.append(f"{int(item[0])}, {int(item[1])}")
             except (TypeError, ValueError):
                 raise CampEventError(
-                    f"`{item}` is not a pair of whole numbers") from None
+                    _i18n.msg("eng.campevents.is_not_a_pair_of_whole", "`{item}` is not a pair of whole numbers", item=item)) from None
             continue
         if isinstance(item, dict):
             try:
                 out.append(f"{int(item['x'])}, {int(item['y'])}")
             except (KeyError, TypeError, ValueError):
-                raise CampEventError(f"`{item}` is not an x and a y") from None
+                raise CampEventError(_i18n.msg("eng.campevents.is_not_an_x_and_a", "`{item}` is not an x and a y", item=item)) from None
             continue
         xy = parse_position(str(item))
         if xy is None:
-            raise CampEventError(f"`{item}` is not an `x, y` position")
+            raise CampEventError(_i18n.msg("eng.campevents.is_not_an_x_y_position", "`{item}` is not an `x, y` position", item=item))
         out.append(f"{xy[0]}, {xy[1]}")
     return out
 
@@ -537,13 +533,12 @@ def new_event_lines(kind: str, name: str, edits: Dict, prefix: str = "") -> List
     """A whole event block, in the order the game's own file writes it."""
     kind, name = str(kind or "").strip(), str(name or "").strip()
     if not kind:
-        raise CampEventError("a new event needs a category")
+        raise CampEventError(_i18n.msg("eng.campevents.a_new_event_needs_a_category", "a new event needs a category"))
     if not name:
-        raise CampEventError("a new event needs a label")
+        raise CampEventError(_i18n.msg("eng.campevents.a_new_event_needs_a_label", "a new event needs a label"))
     dates = [str(d).strip() for d in (edits.get("dates") or []) if str(d).strip()]
     if not dates:
-        raise CampEventError("a new event needs at least one `date` line, or it "
-                             "never fires")
+        raise CampEventError(_i18n.msg("eng.campevents.a_new_event_needs_at_least", "a new event needs at least one `date` line, or it never fires"))
     pad = prefix or "\t"
     rows = [f"event{pad}{kind}{pad}{name}"]
     rows += [f"date{pad}{d}" for d in dates]
@@ -572,7 +567,7 @@ def new_disaster_lines(kind: str, edits: Dict,
     """
     kind = str(kind or "").strip()
     if not kind:
-        raise CampEventError("a new disaster needs a type")
+        raise CampEventError(_i18n.msg("eng.campevents.a_new_disaster_needs_a_type", "a new disaster needs a type"))
     def row(key: str, value) -> str:
         return kb.pad_to_column(key, "", column) + str(value)
 
@@ -687,48 +682,39 @@ def check_events(bf: BlockFile, mod=None, campaign: str = DEFAULT_CAMPAIGN,
         where = {"name": b.name, "line": b.head_line + 1}
         if not b.name:
             _finding(out, "no_label", True,
-                     "an `event` line with no label names no event, and nothing "
-                     "in historic_events.txt can be found for it", **where)
+                     _i18n.msg("eng.campevents.an_event_line_with_no_label", "an `event` line with no label names no event, and nothing in historic_events.txt can be found for it"), **where)
         if b.kind and b.kind not in EVENT_CATEGORIES:
             _finding(out, "unknown_category", False,
-                     f"`{b.kind}` is not a category the engine documents; the "
-                     f"file's own header names {kb.and_list(list(EVENT_CATEGORIES[:5]))}",
+                     _i18n.msg("eng.campevents.is_not_a_category_the_engine", "`{kind}` is not a category the engine documents; the file's own header names {and_list}", kind=b.kind, and_list=kb.and_list(list(EVENT_CATEGORIES[:5]))),
                      **where)
         low = (b.name or "").lower()
         if low and low in seen:
             _finding(out, "duplicate", False,
-                     f"`{b.name}` has a second block; both fire, and both read "
-                     f"the same text (the first is line {seen[low] + 1})", **where)
+                     _i18n.msg("eng.campevents.has_a_second_block_both_fire", "`{name}` has a second block; both fire, and both read the same text (the first is line {x})", name=b.name, x=seen[low] + 1), **where)
         elif low:
             seen[low] = b.head_line
         if not b.has("date"):
             _finding(out, "no_date", True,
-                     f"`{b.name or b.kind}` has no `date` line, so it never "
-                     "fires", **where)
+                     _i18n.msg("eng.campevents.has_no_date_line_so_it", "`{x}` has no `date` line, so it never fires", x=b.name or b.kind), **where)
         for i, value in enumerate(b.all("date")):
             parts = value.split()
             nums = [p for p in parts if kb.is_int(p)]
             line = b.lines["date"][i] + 1
             if not nums:
                 _finding(out, "bad_date", True,
-                         f"`{b.name}`'s date is `{value}`, and a date is a year "
-                         "offset or a pair of them",
+                         _i18n.msg("eng.campevents.s_date_is_and_a_date", "`{name}`'s date is `{value}`, and a date is a year offset or a pair of them", name=b.name, value=value),
                          name=b.name, line=line)
             elif all(int(n) in (0, 1) for n in nums[:2]):
                 _finding(out, "date_zero", False,
-                         f"`{b.name}` is dated {value}; an event on turn 0 or 1 "
-                         "does not appear in a campaign, only in an "
-                         "`add_events` block in a script",
+                         _i18n.msg("eng.campevents.is_dated_an_event_on_turn", "`{name}` is dated {value}; an event on turn 0 or 1 does not appear in a campaign, only in an `add_events` block in a script", name=b.name, value=value),
                          name=b.name, line=line)
         if b.kind in EVENT_PLACED and not b.has("position") and not b.has("region"):
             _finding(out, "no_position", False,
-                     f"a `{b.kind}` event happens at a position, and `{b.name}` "
-                     "names none, so nothing happens", **where)
+                     _i18n.msg("eng.campevents.a_event_happens_at_a_position", "a `{kind}` event happens at a position, and `{name}` names none, so nothing happens", kind=b.kind, name=b.name), **where)
         if b.kind == "emergent_faction" and factions is not None and b.name:
             if b.name not in factions:
                 _finding(out, "unknown_faction", False,
-                         f"`{b.name}` has no block in {campaign}'s "
-                         "descr_strat.txt, so there is no faction to emerge",
+                         _i18n.msg("eng.campevents.has_no_block_in_s_descr", "`{name}` has no block in {campaign}'s descr_strat.txt, so there is no faction to emerge", name=b.name, campaign=campaign),
                          **where)
         out += _position_findings(b, regions, size)
     if mod is not None:
@@ -751,17 +737,14 @@ def _position_findings(b: Block, regions: Optional[List[str]],
     for p in b.positions:
         if size is not None and not (0 <= p.x < size[0] and 0 <= p.y < size[1]):
             _finding(out, "position_off", True,
-                     f"`{who}` is placed at {p.x},{p.y}, which is off a "
-                     f"{size[0]}x{size[1]} map altogether",
+                     _i18n.msg("eng.campevents.is_placed_at_which_is_off", "`{who}` is placed at {x},{y}, which is off a {size}x{size2} map altogether", who=who, x=p.x, y=p.y, size=size[0], size2=size[1]),
                      name=b.name, line=p.line + 1, position=[p.x, p.y])
     for i, value in enumerate(b.all("region")):
         if regions is None or value.lower() == SEA_REGION:
             continue
         if not any(r.lower() == value.lower() for r in regions):
             _finding(out, "unknown_region", False,
-                     f"`{who}` names region `{value}`, which is not in "
-                     f"descr_regions.txt (`{SEA_REGION}` is the one value that "
-                     "is not a region and is still valid)",
+                     _i18n.msg("eng.campevents.names_region_which_is_not_in", "`{who}` names region `{value}`, which is not in descr_regions.txt (`{SEA_REGION}` is the one value that is not a region and is still valid)", who=who, value=value, SEA_REGION=SEA_REGION),
                      name=b.name, line=b.lines["region"][i] + 1, region=value)
     return out
 
@@ -825,51 +808,41 @@ def check_disasters(bf: BlockFile, mod=None,
         where = {"name": b.kind, "line": b.head_line + 1}
         if not b.kind:
             _finding(out, "no_type", True,
-                     "an `event` line with no type is not a disaster", **where)
+                     _i18n.msg("eng.campevents.an_event_line_with_no_type", "an `event` line with no type is not a disaster"), **where)
             continue
         if b.kind not in DISASTER_TYPES:
             _finding(out, "unknown_type", False,
-                     f"`{b.kind}` is not one of the eight the engine has; the "
-                     f"file the engine ships declares "
-                     f"{kb.and_list(list(DISASTER_TYPES))}", **where)
+                     _i18n.msg("eng.campevents.is_not_one_of_the_eight", "`{kind}` is not one of the eight the engine has; the file the engine ships declares {and_list}", kind=b.kind, and_list=kb.and_list(list(DISASTER_TYPES))), **where)
         low = b.kind.lower()
         if low in seen:
             _finding(out, "duplicate", False,
-                     f"`{b.kind}` has a second block (the first is line "
-                     f"{seen[low] + 1}); the engine has one setting per "
-                     "disaster, so one of the two is never read", **where)
+                     _i18n.msg("eng.campevents.has_a_second_block_the_first", "`{kind}` has a second block (the first is line {x}); the engine has one setting per disaster, so one of the two is never read", kind=b.kind, x=seen[low] + 1), **where)
         else:
             seen[low] = b.head_line
         for key in DISASTER_NUMBERS:
             value = b.first(key)
             if b.has(key) and not kb.is_int(value):
                 _finding(out, "bad_number", True,
-                         f"`{b.kind}`'s {key} is `{value}`, and it is a whole "
-                         "number", name=b.kind, line=b.line_of(key) + 1)
+                         _i18n.msg("eng.campevents.s_is_and_it_is_a", "`{kind}`'s {key} is `{value}`, and it is a whole number", kind=b.kind, key=key, value=value), name=b.kind, line=b.line_of(key) + 1)
         for key in DISASTER_FLAGS:
             value = b.first(key).lower()
             if b.has(key) and value not in ("true", "false"):
                 _finding(out, "bad_flag", False,
-                         f"`{b.kind}`'s {key} is `{b.first(key)}`, and the "
-                         "engine reads `true` or `false`",
+                         _i18n.msg("eng.campevents.s_is_and_the_engine_reads", "`{kind}`'s {key} is `{first}`, and the engine reads `true` or `false`", kind=b.kind, key=key, first=b.first(key)),
                          name=b.kind, line=b.line_of(key) + 1)
         if not b.has("frequency"):
             _finding(out, "no_frequency", False,
-                     f"`{b.kind}` has no `frequency`, so how often it happens "
-                     "is whatever the engine defaults to", **where)
+                     _i18n.msg("eng.campevents.has_no_frequency_so_how_often", "`{kind}` has no `frequency`, so how often it happens is whatever the engine defaults to", kind=b.kind), **where)
         lo, hi = b.first("min_scale"), b.first("max_scale")
         if kb.is_int(lo) and kb.is_int(hi) and int(lo) > int(hi):
             _finding(out, "scale_order", True,
-                     f"`{b.kind}` has min_scale {lo} above max_scale {hi}, so "
-                     "there is no size it can be",
+                     _i18n.msg("eng.campevents.has_min_scale_above_max_scale", "`{kind}` has min_scale {lo} above max_scale {hi}, so there is no size it can be", kind=b.kind, lo=lo, hi=hi),
                      name=b.kind, line=b.line_of("min_scale") + 1)
         if climates is not None:
             for i, value in enumerate(b.all("climate")):
                 if not any(c.lower() == value.lower() for c in climates):
                     _finding(out, "unknown_climate", False,
-                             f"`{b.kind}` names climate `{value}`, which "
-                             "descr_climates.txt does not declare, so no tile "
-                             "ever matches it",
+                             _i18n.msg("eng.campevents.names_climate_which_descr_climates_txt", "`{kind}` names climate `{value}`, which descr_climates.txt does not declare, so no tile ever matches it", kind=b.kind, value=value),
                              name=b.kind, line=b.lines["climate"][i] + 1,
                              climate=value)
         out += _position_findings(b, regions, size)
@@ -1072,8 +1045,7 @@ def plan(mod, body: dict) -> CampEventPlan:
                       action=str(body.get("action") or "edit"),
                       name=str(body.get("name") or "").strip())
     if p.what not in WHAT:
-        p.errors.append(f"a save is about {kb.and_list(list(WHAT))}, not "
-                        f"{p.what!r}")
+        p.errors.append(_i18n.msg("eng.campevents.a_save_is_about_not", "a save is about {and_list}, not {what}", and_list=kb.and_list(list(WHAT)), what=repr(p.what)))
         return p
     try:
         if p.what == "events":
@@ -1084,7 +1056,7 @@ def plan(mod, body: dict) -> CampEventPlan:
         p.errors.append(e.message)
         return p
     if not p.text and not p.errors:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.campevents.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -1093,8 +1065,7 @@ def _plan_events(p: CampEventPlan, edits: Dict) -> None:
     b = bf.by_name(p.name)
     if p.action == "add":
         if b is not None:
-            p.errors.append(f"`{p.name}` already has a block at line "
-                            f"{b.head_line + 1}")
+            p.errors.append(_i18n.msg("eng.campevents.already_has_a_block_at_line", "`{name}` already has a block at line {x}", name=p.name, x=b.head_line + 1))
             return
         rows = new_event_lines(str(edits.get("category") or "historic"), p.name,
                                edits, _pad(bf))
@@ -1102,7 +1073,7 @@ def _plan_events(p: CampEventPlan, edits: Dict) -> None:
         p.block = bf.newline.join(rows)
         p.changes.append(f"+ event {edits.get('category') or 'historic'} {p.name}")
     elif b is None:
-        p.errors.append(f"`{p.name}` has no block in {EVENTS_NAME}")
+        p.errors.append(_i18n.msg("eng.campevents.has_no_block_in", "`{name}` has no block in {EVENTS_NAME}", name=p.name, EVENTS_NAME=EVENTS_NAME))
         return
     elif p.action == "delete":
         text = remove_block(bf, b)
@@ -1125,15 +1096,14 @@ def _plan_disasters(p: CampEventPlan, edits: Dict) -> None:
     b = bf.by_name(p.name)
     if p.action == "add":
         if b is not None:
-            p.errors.append(f"`{p.name}` already has a block at line "
-                            f"{b.head_line + 1}")
+            p.errors.append(_i18n.msg("eng.campevents.already_has_a_block_at_line", "`{name}` already has a block at line {x}", name=p.name, x=b.head_line + 1))
             return
         rows = new_disaster_lines(p.name, edits, _column(bf))
         text = insert_block(bf, rows)
         p.block = bf.newline.join(rows)
         p.changes.append(f"+ event {p.name}")
     elif b is None:
-        p.errors.append(f"`{p.name}` has no block in {DISASTERS_NAME}")
+        p.errors.append(_i18n.msg("eng.campevents.has_no_block_in_2", "`{name}` has no block in {DISASTERS_NAME}", name=p.name, DISASTERS_NAME=DISASTERS_NAME))
         return
     elif p.action == "delete":
         text = remove_block(bf, b)
@@ -1205,7 +1175,7 @@ def apply(p: CampEventPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text or p.path is None:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.campevents.nothing_to_change", "nothing to change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

@@ -48,6 +48,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tests import _webtext  # noqa: E402
 
 from tests import _realmod, _tmp
 from unittransfer import campfiles, campmap, campstrat, config, renames
@@ -443,7 +444,7 @@ else:
     run = td / "harness.js"
     run.write_text(HARNESS, encoding="utf-8")
     res = td / "out.json"
-    files = ",".join(str(JS_DIR / n) for n in
+    files = ",".join(str(_webtext.english_copy(JS_DIR / n)) for n in
                      ("campmap.js", "mapfind.js", "mapviews.js"))
     p = subprocess.run([node, str(run), files, str(job), str(res)],
                        capture_output=True, text=True)

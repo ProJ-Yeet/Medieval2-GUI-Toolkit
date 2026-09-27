@@ -45,6 +45,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 from . import config, mapvocab, osmmap
 from .mapgen import GenError, GenPlan, _count, _land_corners, _layer, _put
+from . import i18n as _i18n
 
 # ---------------------------------------------------------------------------
 # the tables, his defaults with the engine's names
@@ -175,8 +176,7 @@ def settings() -> dict:
 def _proj(cm) -> Tuple[osmmap.Bbox, osmmap.Projection]:
     box, _ = osmmap.box_for(cm)
     if box is None:
-        raise GenError("the map has no real-world box yet; set one on the Real "
-                       "world tab first")
+        raise GenError(_i18n.msg("eng.mapreal.the_map_has_no_real_world", "the map has no real-world box yet; set one on the Real world tab first"))
     return box, osmmap.Projection(box, cm.terrain.width, cm.terrain.height)
 
 
@@ -244,9 +244,9 @@ def plan(p: GenPlan, cm, body: dict) -> None:
 def _ground(code: str) -> dict:
     g = mapvocab.ground(code)
     if g is None:
-        raise GenError(f"{code!r} is not a ground type")
+        raise GenError(_i18n.msg("eng.mapreal.is_not_a_ground_type", "{code} is not a ground type", code=repr(code)))
     if code in mapvocab.SEA_GROUND:
-        raise GenError(f"{code} is a sea ground type, and these paint land")
+        raise GenError(_i18n.msg("eng.mapreal.is_a_sea_ground_type_and", "{code} is a sea ground type, and these paint land", code=code))
     return g
 
 
@@ -257,7 +257,7 @@ def _plan_landuse(p: GenPlan, cm, body: dict) -> None:
     todo = [(k, v, label, str(chosen.get(f"{k}={v}")))
             for k, v, label, _ in LANDUSE if chosen.get(f"{k}={v}") not in (None, "", "-")]
     if not todo:
-        raise GenError("tick at least one OpenStreetMap tag and give it a ground type")
+        raise GenError(_i18n.msg("eng.mapreal.tick_at_least_one_openstreetmap_tag", "tick at least one OpenStreetMap tag and give it a ground type"))
     box, proj = _proj(cm)
     img, info, rel = _layer(cm, "ground_types")
     cols, rows = img.size
@@ -325,14 +325,12 @@ def _plan_landcover(p: GenPlan, cm, body: dict) -> None:
         if hist[c]:
             done.append(f"{name} {hist[c]:,} -> {code}")
     if not done:
-        raise GenError("the land cover picture has none of the classes over this "
-                       "map's land; check the address in Settings")
+        raise GenError(_i18n.msg("eng.mapreal.the_land_cover_picture_has_none", "the land cover picture has none of the classes over this map's land; check the address in Settings"))
     _put(p, cm, "ground_types", out, info, rel)
     p.changes.append(f"{rel}: ESA WorldCover under the land - " + ", ".join(done))
     none = hist[0]
     if none:
-        p.warnings.append(f"{none:,} land corner(s) had no class in the picture "
-                          "and keep their type")
+        p.warnings.append(_i18n.msg("eng.mapreal.none_land_corner_s_had_no", "{none:,} land corner(s) had no class in the picture and keep their type", none=none))
     if left:
         p.warnings.append("left as they are, as asked: " + ", ".join(left))
 
@@ -355,9 +353,7 @@ def _plan_koppen(p: GenPlan, cm, body: dict) -> None:
         said = f"the Köppen-Geiger map in {Path(where).name}"
     else:
         if not st["koppen_wms"]:
-            raise GenError("no Köppen source: give the Köppen-Geiger map's file in "
-                           "Settings, Real-world map (no internet needed), or a WMS "
-                           "address that draws the zones in the standard colours")
+            raise GenError(_i18n.msg("eng.mapreal.no_k_ppen_source_give_the", "no Köppen source: give the Köppen-Geiger map's file in Settings, Real-world map (no internet needed), or a WMS address that draws the zones in the standard colours"))
         pic = wms(st["koppen_wms"], env, sw, sh, "Köppen")
         codes = classify(pic, [(i + 1, rgb) for i, (_, rgb, _) in enumerate(KOPPEN)])
         said = "the Köppen WMS"
@@ -380,13 +376,11 @@ def _plan_koppen(p: GenPlan, cm, body: dict) -> None:
         out.paste(tuple(c["rgb"]), mask=at.point(lambda v, k=i + 1: 255 if v == k else 0))
         done.append(f"{code} {n:,} -> {clim}")
     if not done:
-        raise GenError("no zone under this map has a climate this mod declares; "
-                       "choose a climate for each zone first")
+        raise GenError(_i18n.msg("eng.mapreal.no_zone_under_this_map_has", "no zone under this map has a climate this mod declares; choose a climate for each zone first"))
     _put(p, cm, "climates", out, info, rel)
     p.changes.append(f"{rel}: climates from {said} - " + ", ".join(done))
     if hist[0]:
-        p.warnings.append(f"{hist[0]:,} corner(s) have no zone (the sea, mostly) and "
-                          "keep their climate")
+        p.warnings.append(_i18n.msg("eng.mapreal.hist_corner_s_have_no_zone", "{hist:,} corner(s) have no zone (the sea, mostly) and keep their climate", hist=hist[0]))
     if missing:
         p.warnings.append("this mod has no climate for " + "; ".join(missing)
                           + ", so those corners keep theirs")
@@ -434,7 +428,7 @@ def wms(templates: List[str], env: osmmap.Bbox, width: int, height: int,
         except OSError:
             pass
         return pic.convert("RGB")
-    raise GenError(f"no {what} server sent a picture ({last})")
+    raise GenError(_i18n.msg("eng.mapreal.no_server_sent_a_picture", "no {what} server sent a picture ({last})", what=what, last=last))
 
 
 def _georef(img: Image.Image) -> Tuple[float, float, float, float]:
@@ -453,20 +447,19 @@ def koppen_from_file(where: str, env: osmmap.Bbox, width: int, height: int) -> I
     as a Mercator-true picture of the envelope: the file's latitude rows
     picked for each Mercator row, its longitude columns stretched."""
     if not where:
-        raise GenError("give the Köppen-Geiger map's file first (Settings, Real-world map)")
+        raise GenError(_i18n.msg("eng.mapreal.give_the_k_ppen_geiger_maps", "give the Köppen-Geiger map's file first (Settings, Real-world map)"))
     f = Path(where)
     if not f.is_file():
-        raise GenError(f"there is no file at {where}")
+        raise GenError(_i18n.msg("eng.mapreal.there_is_no_file_at", "there is no file at {where}", where=where))
     limit, Image.MAX_IMAGE_PIXELS = Image.MAX_IMAGE_PIXELS, None   # checked just below
     try:
         src = Image.open(f)
     except OSError as e:
-        raise GenError(f"{f.name} is not a picture Pillow can read ({e})") from None
+        raise GenError(_i18n.msg("eng.mapreal.is_not_a_picture_pillow_can", "{name} is not a picture Pillow can read ({e})", name=f.name, e=e)) from None
     finally:
         Image.MAX_IMAGE_PIXELS = limit
     if src.width * src.height > KOPPEN_MAX_PIXELS:
-        raise GenError(f"{f.name} is {src.width}x{src.height}, too big to read whole; "
-                       "use the 0.083° (or 0.5°) map from the same download")
+        raise GenError(_i18n.msg("eng.mapreal.is_x_too_big_to_read", "{name} is {width}x{height}, too big to read whole; use the 0.083° (or 0.5°) map from the same download", name=f.name, width=src.width, height=src.height))
     west, north, dx, dy = _georef(src)
     try:
         if src.mode == "P":
@@ -478,7 +471,7 @@ def koppen_from_file(where: str, env: osmmap.Bbox, width: int, height: int) -> I
         else:
             codes = classify(src, [(i + 1, rgb) for i, (_, rgb, _) in enumerate(KOPPEN)])
     except OSError as e:
-        raise GenError(f"{f.name} could not be decoded ({e})") from None
+        raise GenError(_i18n.msg("eng.mapreal.could_not_be_decoded", "{name} could not be decoded ({e})", name=f.name, e=e)) from None
     codes = codes.point([v if v <= len(KOPPEN) else 0 for v in range(256)])
     # the columns under the envelope, stretched to the picture's width
     c0 = (env.west - west) / dx

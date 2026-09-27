@@ -70,8 +70,8 @@ function imgMenu(x, y, url){
   const m = imgMenuEl = document.createElement('div');
   m.className = 'imgmenu';
   m.innerHTML = `
-    <button onclick="imgMenuClose();imgPick('${q1(esc(url))}')">Replace image…</button>
-    <button onclick="imgMenuClose();imgWhere('${q1(esc(url))}')">Open file location</button>`;
+    <button onclick="imgMenuClose();imgPick('${q1(esc(url))}')">${tt('images.replace_image')}</button>
+    <button onclick="imgMenuClose();imgWhere('${q1(esc(url))}')">${tt('images.open_file_location')}</button>`;
   document.body.appendChild(m);
   // keep it on screen when the click was near the right or bottom edge
   const r = m.getBoundingClientRect();
@@ -90,14 +90,14 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape') imgMenuClose(
    editor's card variants, Minor Files' pip table) is out of date the moment a
    file is created or an extension changes. */
 const imgEditBtn = (url, after) =>
-  `<button class="icoedit" title="Replace this picture"
+  `<button class="icoedit" title="${ttA('common.replace_this_picture')}"
     onclick="imgPick('${q1(esc(url))}'${after?`,'${after}'`:''})">✎</button>`;
 const imgWhereBtn = (url, label) =>
-  `<button title="Show the file this picture comes from in the file manager."
-    onclick="imgWhere('${q1(esc(url))}')">${label || 'Open file location'}</button>`;
+  `<button title="${ttA('images.show_the_file_this_picture_comes')}"
+    onclick="imgWhere('${q1(esc(url))}')">${label || tt('images.open_file_location')}</button>`;
 const imgRow = (url, after) =>
   `<div class="sprrow">${imgWhereBtn(url)}
-    <button onclick="imgPick('${q1(esc(url))}'${after?`,'${after}'`:''})">Replace image…</button>
+    <button onclick="imgPick('${q1(esc(url))}'${after?`,'${after}'`:''})">${tt('images.replace_image')}</button>
   </div>`;
 
 /* Call a re-render by name.
@@ -118,8 +118,8 @@ async function imgWhere(url){
   let r;
   try{ r = await api.post('/api/image/reveal', {mod: imgModOf(url), url}); }
   catch(e){ r = {ok:false, error:''+e}; }
-  if(!r || !r.ok) return toast((r && r.error) || 'that folder could not be opened');
-  if(r.outside) toast('that picture is the game’s own, not this mod’s');
+  if(!r || !r.ok) return toast((r && r.error) || tt('common.that_folder_could_not_be_opened'));
+  if(r.outside) toast(tt('images.that_picture_is_the_games_own'));
   else if(r.folder_only) toast('nothing there yet - opened the folder it would go in');
 }
 
@@ -130,7 +130,7 @@ async function imgPick(url, after){
   let p;
   try{ p = await api.post('/api/image/plan', {mod, url, src:''}); }
   catch(e){ return toast(''+e); }
-  if(!p.ok) return toast(p.error || 'that picture cannot be replaced');
+  if(!p.ok) return toast(p.error || tt('images.that_picture_cannot_be_replaced'));
   /* The picker is a NATIVE Windows dialog opened by the server process, and the
      request does not come back until it is answered. The tool does everything it
      can to put that window in front (see folder_dialog._Owner), but Windows has
@@ -141,16 +141,16 @@ async function imgPick(url, after){
      before the user looked away is no better than silence. */
   let waiting = true;
   const nag = () => { if(waiting) toast(
-    'A file picker is open - pick a picture there. If you cannot see it, check '
-    + 'the taskbar: Windows sometimes opens it behind this window.', 4000); };
+    tt('images.a_file_picker_is_open_pick')
+    + tt('images.the_taskbar_windows_sometimes_opens_it'), 4000); };
   nag();
   const nagger = setInterval(nag, 4000);
   let f;
   try{
     f = await api.post('/api/browse_file',
-      {title: 'Pick the picture to use for ' + p.label,
-       filter: 'Images (*.tga;*.dds;*.png;*.jpg;*.jpeg;*.bmp)|'
-             + '*.tga;*.dds;*.png;*.jpg;*.jpeg;*.bmp|All files (*.*)|*.*'});
+      {title: tt('images.pick_the_picture_to_use_for') + p.label,
+       filter: tt('images.images_tga_dds_png_jpg_jpeg')
+             + tt('images.tga_dds_png_jpg_jpeg_bmp')});
   }catch(e){ return toast(''+e); }
   finally{ waiting = false; clearInterval(nagger); }
   if(!f.path) return;
@@ -168,43 +168,38 @@ function imgDialog(url, mod, src, p, after){
                        scroll: stashPlace(), after} : {after};
   const cur = p.current || {}, inc = p.incoming || {};
   const dim = d => (d && d.ok) ? `${d.width}x${d.height}`
-                               : `<span class="w-warn">size unknown</span>`;
-  const kb = d => (d && d.bytes) ? ` · ${Math.round(d.bytes/1024)} KB` : '';
+                               : `<span class="w-warn">${tt('images.size_unknown')}</span>`;
+  const kb = d => (d && d.bytes) ? tt('images.kb',{bytes:Math.round(d.bytes/1024)}) : '';
   const ok = p.ok !== false;
-  modal.innerHTML = `<h2>Replace ${esc(p.label || 'this picture')}</h2>
+  modal.innerHTML = `<h2>${tt('images.replace',{label:esc(p.label || tt('images.this_picture'))})}</h2>
     <div class="mbody">
       ${ok ? '' : `<div class="w-bad" style="margin-bottom:10px">${esc(p.error||'')}</div>`}
       <div class="imgcmp">
         <figure>
           <img src="${esc(url)}&_ib=${Date.now()}" onerror="iconRetry(this)" alt="">
-          <figcaption><b>On disk now</b><br>${p.showing
+          <figcaption>${tt('images.on_disk_now',{showing:p.showing
             ? `${dim(cur)}${kb(cur)}<br><span class="count">${esc(p.showing)}</span>`
-            : '<span class="count">nothing here yet</span>'}</figcaption>
+            : `<span class="count">${tt('images.nothing_here_yet')}</span>`})}</figcaption>
         </figure>
         <div class="imgarrow">→</div>
         <figure>
           <img src="/preview_image?path=${encodeURIComponent(src)}" alt="">
-          <figcaption><b>The new one</b><br>${dim(inc)}${kb(inc)}<br>
-            <span class="count">${esc(src)}</span></figcaption>
+          <figcaption>${tt('images.the_new_one',{x:dim(inc),x2:kb(inc),src:esc(src)})}</figcaption>
         </figure>
       </div>
       ${p.note ? `<div class="count" style="margin-top:10px">${esc(p.note)}</div>` : ''}
       ${(p.warnings||[]).map(w =>
         `<div class="w-warn" style="margin-top:8px">⚠ ${esc(w)}</div>`).join('')}
-      ${(p.replaces||[]).length ? `<div class="count" style="margin-top:10px">${
-        docPoints(`This writes ${p.replaces.length} file${
-          p.replaces.length===1?'':'s'} under the mod's own data folder:`,
+      ${(p.replaces||[]).length ? `<div class="count" style="margin-top:10px">${tt('images.every_one_of_them_is_backed',{x:docPoints(tt('images.this_writes_file_under_the_mods',{replaces_n:p.replaces.length,replaces:p.replaces.length===1?'':'s'}),
           p.replaces.map(r => `<code>${esc(r.rel)}</code> - ${
-            r.exists ? 'overwritten' : '<b>created</b>'}${
-            r.drops.length ? `, and <code>${r.drops.map(esc).join('</code> <code>')
-              }</code> removed` : ''}`))
-        }<br>Every one of them is backed up first, so this is one Undo away.</div>` : ''}
+            r.exists ? 'overwritten' : `<b>${tt('images.created')}</b>`}${
+            r.drops.length ? tt('images.and_removed',{drops:r.drops.map(esc).join('</code> <code>')}) : ''}`))})}</div>` : ''}
     </div>
     <div class="foot">
-      <button onclick="imgCancel()">Cancel</button>
+      <button onclick="imgCancel()">${tt('common.cancel')}</button>
       <button class="primary" ${ok?'':'disabled'}
         onclick="imgApply('${q1(esc(url))}','${q1(esc(mod))}','${q1(esc(src))}')">
-        Replace</button>
+        ${tt('images.replace_2')}</button>
     </div>`;
   modal.className = 'modal';
   overlay.classList.add('open');
@@ -229,11 +224,11 @@ async function imgApply(url, mod, src){
   let r;
   try{ r = await api.post('/api/image/replace', {mod, url, src}); }
   catch(e){ return toast(''+e); }
-  if(!r || !r.ok) return toast((r && r.error) || 'the picture could not be replaced');
-  activity('replaced a picture', r.summary || url);
+  if(!r || !r.ok) return toast((r && r.error) || tt('images.the_picture_could_not_be_replaced'));
+  activity(tt('images.replaced_a_picture'), r.summary || url);
   imgCancel();                          // puts the panel underneath back
   imgBust();
-  toast(r.summary || 'picture replaced');
+  toast(r.summary || tt('images.picture_replaced'));
 }
 
 /* Every picture on the page, re-fetched - and every one built after this too.

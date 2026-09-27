@@ -46,8 +46,8 @@ function cnwToggle(){
   const k = state.cnw;
   if(!k) return;
   k.open = !k.open;
-  activity('new campaign',
-           k.open ? 'opened the new campaign form' : 'closed it');
+  activity(tt('campnew.new_campaign'),
+           k.open ? tt('campnew.opened_the_new_campaign_form') : tt('common.closed_it'));
   if(k.open && !k.d && !k.loading) cnwLoad();
   else cbrPaint();
 }
@@ -60,7 +60,7 @@ async function cnwLoad(){
   let d;
   try{
     d = await api.get(`/api/campnew?mod=${enc(k.mod)}`,
-                      {label: 'reading what could be copied'});
+                      {label: tt('campnew.reading_what_could_be_copied')});
   }catch(e){
     if(state.cnw !== k) return;
     k.loading = false; k.err = errText(e); cbrPaint(); return;
@@ -101,11 +101,11 @@ async function cnwPlan(){
   cbrPaint();
   let res;
   try{ res = await api.post('/api/campnew/plan', cnwBody(),
-                            {label: 'working out the copy'}); }
+                            {label: tt('campnew.working_out_the_copy')}); }
   catch(e){ res = {plan: {errors: [errText(e)], changes: [], warnings: []}}; }
   finally{ k.busy = false; }
   if(state.cnw !== k) return;
-  k.plan = res.plan || {errors: [res.error || 'the plan came back empty']};
+  k.plan = res.plan || {errors: [res.error || tt('common.the_plan_came_back_empty')]};
   cbrPaint();
 }
 
@@ -113,12 +113,12 @@ async function cnwApply(){
   const k = state.cnw;
   if(!k || k.busy || !k.plan || !k.plan.ok) return;
   const p = k.plan;
-  if(!confirm(`Make ${p.name} out of ${p.source}?\n\n`
+  if(!confirm(tt('campnew.make_out_of',{name:p.name,source:p.source})
     + (p.changes || []).join('\n')
     + ((p.warnings || []).length
        ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')
-    + `\n\n${p.files} file(s), ${cnwSize(p.bytes)}. Nothing existing is written `
-    + 'over, and 🕑 Log can undo it.')) return;
+    + tt('campnew.file_s_nothing_existing_is_written',{files:p.files,x:cnwSize(p.bytes)})
+    + tt('campnew.over_and_log_can_undo_it'))) return;
   k.busy = true;
   cbrPaint();
   let res;
@@ -127,13 +127,13 @@ async function cnwApply(){
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(!res || res.error){
-    toast('✗ ' + ((res && res.error) || 'the copy failed'), 9000);
+    toast('✗ ' + ((res && res.error) || tt('campnew.the_copy_failed')), 9000);
     cbrPaint();
     return;
   }
-  toast(`${res.name} made from ${p.source}: ${res.files} file(s). `
-    + '🕑 Log can undo it.', 7000);
-  activity('new campaign', `${k.mod}: ${res.name} copied from ${p.source}`);
+  toast(tt('campnew.made_from_file_s',{name:res.name,source:p.source,files:res.files})
+    + tt('common.log_can_undo_it'), 7000);
+  activity(tt('campnew.new_campaign'), tt('campnew.copied_from',{mod:k.mod,name:res.name,source:p.source}));
   k.plan = null; k.name = ''; k.title = ''; k.blurb = '';
   k.d = null;
   await cnwLoad();
@@ -144,7 +144,7 @@ async function cnwApply(){
 //: prints the count itself and two numbers for one size that do not agree is
 //: the sort of thing somebody stops trusting the whole panel over.
 function cnwSize(n){
-  if(!n) return '0 bytes';
+  if(!n) return tt('campnew.0_bytes');
   if(n < 1000) return `${n} bytes`;
   if(n < 1000000) return `${(n / 1000).toFixed(0)} KB`;
   return `${(n / 1000000).toFixed(1)} MB`;
@@ -160,59 +160,45 @@ function cnwHtml(){
   if(!k) return '';
   const head = `<div class="cmbar2">
     <button class="${k.open ? 'on' : ''}" onclick="cnwToggle()"
-      title="Copy a campaign that works into a new folder of its own, with its own name on the new-game menu."
-      >+ New campaign</button>
+      title="${ttA('campnew.copy_a_campaign_that_works_into')}"
+      >${tt('campnew.new_campaign_2')}</button>
     <span class="sp"></span>
-    ${k.loading ? '<span class="count">reading…</span>' : ''}
+    ${k.loading ? `<span class="count">${tt('common.reading_2')}</span>` : ''}
   </div>`;
   if(!k.open) return head;
   if(k.err) return head + `<div class="w-bad">${esc(k.err)}</div>`;
   const d = k.d;
-  if(!d) return head + '<div class="count">reading what could be copied…</div>';
+  if(!d) return head + `<div class="count">${tt('campnew.reading_what_could_be_copied_2')}</div>`;
   const rows = d.sources || [];
-  if(!rows.length) return head + `<div class="count">${esc(k.mod)} has no
-    campaign to copy. A new one is a copy of one that works: the engine reads
-    more than a dozen files out of that folder and a missing one is a load
-    failure with nothing on screen to explain it.</div>`;
+  if(!rows.length) return head + `<div class="count">${tt('campnew.has_no_campaign_to_copy_a',{mod:esc(k.mod)})}</div>`;
   const src = rows.find(r => r.campaign === k.source) || {};
   return head + `<div class="cmtrow"><span class="cmtval">
-      <span class="cmtnm">Copy</span>
+      <span class="cmtnm">${tt('campnew.copy')}</span>
       <select onchange="cnwSet('source', this.value)">
         ${rows.map(r => `<option value="${esc(r.campaign)}"${
-          r.campaign === k.source ? ' selected' : ''}>${esc(r.title || r.leaf)}
-          - ${r.files} files, ${cnwSize(r.bytes)}</option>`).join('')}
+          r.campaign === k.source ? ' selected' : ''}>${tt('campnew.files',{x:esc(r.title || r.leaf),files:r.files,x2:cnwSize(r.bytes)})}</option>`).join('')}
       </select></span></div>
-    ${src.layers && src.layers.length ? `<div class="count">It ships
-      ${src.layers.length} map layer${src.layers.length === 1 ? '' : 's'} of its
-      own, so the copy gets a copy of those too and the two are then two maps to
-      keep in step.</div>` : ''}
+    ${src.layers && src.layers.length ? `<div class="count">${tt('campnew.it_ships_map_layer_of_its',{layers_n:src.layers.length,x:src.layers.length === 1 ? '' : 's'})}</div>` : ''}
     <div class="cmtrow"><span class="cmtval">
-      <span class="cmtnm">Folder</span>
+      <span class="cmtnm">${tt('campnew.folder')}</span>
       <input value="${esc(k.name)}" placeholder="My_Campaign"
         oninput="cnwSet('name', this.value)"></span></div>
-    <div class="count">A bare word: a letter first, then letters, digits,
-      underscores or hyphens. It goes under <code>${esc(d.dir)}</code>, and the
-      engine's new-game menu reads the folders directly under that one -
-      ${d.menu.length} there now. A name with a slash in it nests, which this
-      screen opens and the menu does not.</div>
+    <div class="count">${tt('campnew.a_bare_word_a_letter_first',{dir:esc(d.dir),menu_n:d.menu.length})}</div>
     <div class="cmtrow"><span class="cmtval">
-      <span class="cmtnm">On the menu</span>
+      <span class="cmtnm">${tt('common.on_the_menu')}</span>
       <input value="${esc(k.title)}"
-        placeholder="${esc(src.title || 'the same as the one it is copied from')}"
+        placeholder="${esc(src.title || tt('campnew.the_same_as_the_one_it'))}"
         oninput="cnwSet('title', this.value)"></span></div>
     <div class="cmtrow"><span class="cmtval">
-      <span class="cmtnm">Its blurb</span>
-      <input value="${esc(k.blurb)}" placeholder="inherited"
+      <span class="cmtnm">${tt('campnew.its_blurb')}</span>
+      <input value="${esc(k.blurb)}" placeholder="${ttA('campnew.inherited')}"
         oninput="cnwSet('blurb', this.value)"></span></div>
     <div class="count">${d.have_descriptions
-      ? `Both go into <code>${esc(d.descriptions)}</code>, with every faction's
-         title and blurb copied across under the new campaign's own key.`
-      : `This mod ships only the compiled archive of
-         <code>${esc(d.descriptions)}</code>, which is where the keys would
-         go.`}</div>
+      ? tt('campnew.both_go_into_with_every_factions',{descriptions:esc(d.descriptions)})
+      : tt('campnew.this_mod_ships_only_the_compiled',{descriptions:esc(d.descriptions)})}</div>
     <div class="cmbar2">
       <button onclick="cnwPlan()" ${k.busy ? 'disabled' : ''}
-        >${k.busy && !k.plan ? 'working it out…' : 'Work out the copy'}</button>
+        >${k.busy && !k.plan ? tt('common.working_it_out') : tt('campnew.work_out_the_copy')}</button>
       <span class="sp"></span>
     </div>
     ${cnwPlanHtml(k)}`;
@@ -224,16 +210,14 @@ function cnwPlanHtml(k){
   if((p.errors || []).length) return `<div class="w-bad">
     ${p.errors.map(e => esc(e)).join('<br>')}</div>`;
   return `<div class="cbrrow">
-    <div class="k">${p.files} file${p.files === 1 ? '' : 's'},
-      ${cnwSize(p.bytes)} <span class="count">into
-      <code>${esc(p.folder)}</code></span></div>
+    <div class="k">${tt('campnew.file_into',{files:p.files,files2:p.files === 1 ? '' : 's',x:cnwSize(p.bytes),folder:esc(p.folder)})}</div>
     ${(p.changes || []).map(x => `<div class="count">${esc(x)}</div>`).join('')}
     ${(p.warnings || []).map(x => `<div class="w-warn">${esc(x)}</div>`).join('')}
     <div class="cmbar2">
       <button class="primary" onclick="cnwApply()" ${k.busy ? 'disabled' : ''}
-        >${k.busy ? 'copying…' : `Make ${esc(p.name)}`}</button>
+        >${k.busy ? tt('campnew.copying') : tt('campnew.make',{name:esc(p.name)})}</button>
       <span class="sp"></span>
-      <span class="count">Nothing existing is written over. 🕑 Log can undo it.</span>
+      <span class="count">${tt('campnew.nothing_existing_is_written_over_log')}</span>
     </div>
   </div>`;
 }

@@ -83,6 +83,7 @@ from . import campmap, mapvocab
 from .campmap import CampaignMap, MapError
 from .maptga import TgaError, probe, read
 from .mapvocab import Rgb
+from . import i18n as _i18n
 
 #: Plain 8-bit game data, as everywhere else
 ENCODING = "latin-1"
@@ -491,8 +492,7 @@ def plan(mod, cm: CampaignMap, campaign: str = "", season: str = "summer") -> Pl
     cache hit costs the hash and nothing else.
     """
     if season not in SEASONS:
-        raise TerrainError(f"no such season {season!r} - it is one of "
-                           f"{', '.join(SEASONS)}")
+        raise TerrainError(_i18n.msg("eng.mapterrain.no_such_season_it_is_one", "no such season {season} - it is one of {SEASONS}", season=repr(season), SEASONS=', '.join(SEASONS)))
     v = read_vocabulary(mod)
     p = Plan(width=cm.terrain.width, height=cm.terrain.height, season=season,
              vocab=v)
@@ -518,9 +518,7 @@ def plan(mod, cm: CampaignMap, campaign: str = "", season: str = "summer") -> Pl
     for img, code in ((ground, "ground_types"), (clim, "climates")):
         if img.size != want:
             raise TerrainError(
-                f"{campmap.LAYER_BY_CODE[code]['file']} comes out "
-                f"{img.width}x{img.height} per tile and descr_terrain.txt says "
-                f"the map is {want[0]}x{want[1]}")
+                _i18n.msg("eng.mapterrain.comes_out_x_per_tile_and", "{file} comes out {width}x{height} per tile and descr_terrain.txt says the map is {want}x{want2}", file=campmap.LAYER_BY_CODE[code]['file'], width=img.width, height=img.height, want=want[0], want2=want[1]))
 
     # 0 is "no climate declared this colour", which the engine draws with the
     # default block, so slot 0 IS the default climate rather than a hole
@@ -533,9 +531,7 @@ def plan(mod, cm: CampaignMap, campaign: str = "", season: str = "summer") -> Pl
     n_ground = len(mapvocab.GROUND_TYPES) + 1
     if len(names) * n_ground > 256:
         raise TerrainError(
-            f"{len(v.climates)} climates against {n_ground - 1} ground types is "
-            f"more pairs than a byte can index; the engine's own climate list "
-            f"is twelve")
+            _i18n.msg("eng.mapterrain.climates_against_ground_types_is_more", "{climates_n} climates against {x} ground types is more pairs than a byte can index; the engine's own climate list is twelve", climates_n=len(v.climates), x=n_ground - 1))
 
     # (climate, ground) -> texture slot, as a 256-entry table, so the whole
     # per-tile lookup is one Pillow point() in C rather than a quarter of a
@@ -551,7 +547,7 @@ def plan(mod, cm: CampaignMap, campaign: str = "", season: str = "summer") -> Pl
             if not name:
                 gaps.setdefault((cname, gcode),
                                 {"climate": cname, "ground": gcode, "file": "",
-                                 "why": "no entry", "tiles": 0, "tile": None,
+                                 "why": _i18n.msg("eng.mapterrain.no_entry", "no entry"), "tiles": 0, "tile": None,
                                  "combo": combo})
                 continue
             if name not in slots:
@@ -619,13 +615,7 @@ def plan(mod, cm: CampaignMap, campaign: str = "", season: str = "summer") -> Pl
         if want:
             p.gaps.append({"climate": "", "ground": "", "file": "",
                            "tiles": want, "tile": list(at) if at else None,
-                           "why": f"this mod has no {TEXTURE_DIR_REL} at all, so "
-                                  f"not one of the {p.used} textures "
-                                  f"{AERIAL_REL} names can be read and all "
-                                  f"{want:,} land tiles are drawn as a gap. A "
-                                  f"mod that keeps its aerial textures inside "
-                                  f"the packed data looks exactly like this; "
-                                  f"nothing here reads a .pack."})
+                           "why": _i18n.msg("eng.mapterrain.this_mod_has_no_at_all", "this mod has no {TEXTURE_DIR_REL} at all, so not one of the {used} textures {AERIAL_REL} names can be read and all {want:,} land tiles are drawn as a gap. A mod that keeps its aerial textures inside the packed data looks exactly like this; nothing here reads a .pack.", TEXTURE_DIR_REL=TEXTURE_DIR_REL, used=p.used, AERIAL_REL=AERIAL_REL, want=want)})
             p.gaps.sort(key=lambda g: -g["tiles"])
             _PLANS[memo] = (sig, p)
             return p
@@ -638,9 +628,7 @@ def plan(mod, cm: CampaignMap, campaign: str = "", season: str = "summer") -> Pl
         at = _first_tile(raw_slots, p.width, k)
         p.gaps.append({"climate": "", "ground": "", "file": name,
                        "tiles": p.counts[k - 1], "tile": list(at) if at else None,
-                       "why": f"{AERIAL_REL} draws {p.counts[k - 1]:,} tile"
-                              f"{'' if p.counts[k - 1] == 1 else 's'} with "
-                              f"{name}, and it is not in {TEXTURE_DIR_REL}"})
+                       "why": _i18n.msg("eng.mapterrain.draws_counts_tile_with_and_it", "{AERIAL_REL} draws {counts:,} tile{x} with {name}, and it is not in {TEXTURE_DIR_REL}", AERIAL_REL=AERIAL_REL, counts=p.counts[k - 1], x='' if p.counts[k - 1] == 1 else 's', name=name, TEXTURE_DIR_REL=TEXTURE_DIR_REL)})
     p.gaps.sort(key=lambda g: -g["tiles"])
     _PLANS[memo] = (sig, p)
     return p

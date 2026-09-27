@@ -174,6 +174,7 @@ from array import array
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
+from . import i18n as _i18n
 
 #: The signature every M2TW .mesh opens with.
 BOOST_SIGNATURE = b"serialization::archive"
@@ -347,8 +348,7 @@ class _Archive:
     def _need(self, n: int) -> None:
         if self.p + n > len(self.d):
             raise MeshError(
-                f"{Path(self.source).name} ends early: wanted {n} more bytes at "
-                f"offset {self.p} of {len(self.d)}")
+                _i18n.msg("eng.mesh.ends_early_wanted_more_bytes_at", "{name} ends early: wanted {n} more bytes at offset {p} of {d_n}", name=Path(self.source).name, n=n, p=self.p, d_n=len(self.d)))
 
     def u8(self) -> int:
         self._need(1)
@@ -382,8 +382,7 @@ class _Archive:
         n = self.u32()
         if n > MAX_COUNT:
             raise MeshError(
-                f"{Path(self.source).name} asks for {n:,} {what} at offset "
-                f"{self.p - 4} - not a model file this tool understands")
+                _i18n.msg("eng.mesh.asks_for_n_at_offset_not", "{name} asks for {n:,} {what} at offset {x} - not a model file this tool understands", name=Path(self.source).name, n=n, what=what, x=self.p - 4))
         return n
 
     def text(self) -> str:
@@ -464,8 +463,7 @@ def _read_header(a: _Archive) -> None:
     """
     sig = a.text()
     if sig.encode("latin-1") != BOOST_SIGNATURE:
-        raise MeshError(f"{Path(a.source).name} is not a .mesh "
-                        f"(expected a boost archive, found {sig[:32]!r})")
+        raise MeshError(_i18n.msg("eng.mesh.is_not_a_mesh_expected_a", "{name} is not a .mesh (expected a boost archive, found {sig})", name=Path(a.source).name, sig=repr(sig[:32])))
     a.blob(5)                  # library version + the archive's type sizes
     mark = a.p
     for words in (4, 3):
@@ -474,8 +472,7 @@ def _read_header(a: _Archive) -> None:
             a.u32()
         if _looks_like_descriptor(a):
             return
-    raise MeshError(f"{Path(a.source).name}: the archive header is not a shape "
-                    f"this tool knows ({a.d[mark:mark + 20].hex(' ')})")
+    raise MeshError(_i18n.msg("eng.mesh.the_archive_header_is_not_a", "{name}: the archive header is not a shape this tool knows ({hex})", name=Path(a.source).name, hex=a.d[mark:mark + 20].hex(' ')))
 
 
 def _read_groups(a: _Archive) -> List[MeshGroup]:
@@ -588,15 +585,13 @@ def _read_streams(a: _Archive, out: MeshFile) -> None:
         stype, start = found
         stride = _resolve_stride(a, stype, start, verts, tuple(packed) + (stype,))
         if stride is None:
-            out.notes.append(f"vertex stream type {stype} has a length this "
-                             f"tool could not settle; it was left out")
+            out.notes.append(_i18n.msg("eng.mesh.vertex_stream_type_has_a_length", "vertex stream type {stype} has a length this tool could not settle; it was left out", stype=stype))
             break
         a.p = start
         packed[stype] = a.blob(verts * stride)
 
     if POSITION_STREAM not in packed:
-        raise MeshError(f"{Path(a.source).name} has no vertex positions - "
-                        f"found streams {sorted(packed) or 'none'}")
+        raise MeshError(_i18n.msg("eng.mesh.has_no_vertex_positions_found_streams", "{name} has no vertex positions - found streams {x}", name=Path(a.source).name, x=sorted(packed) or 'none'))
     out.positions = array("f")
     out.positions.frombytes(packed[POSITION_STREAM])
     if UV_STREAM in packed:
@@ -616,7 +611,7 @@ def _read_streams(a: _Archive, out: MeshFile) -> None:
     if NORMAL_STREAM in packed:
         out.normals = _unpack_normals(packed[NORMAL_STREAM], verts)
     elif packed:
-        out.notes.append("no normal stream; the viewer will have to derive them")
+        out.notes.append(_i18n.msg("eng.mesh.no_normal_stream_the_viewer_will", "no normal stream; the viewer will have to derive them"))
 
 
 def _unpack_normals(raw: bytes, verts: int) -> array:
@@ -671,7 +666,7 @@ def read_mesh(path) -> MeshFile:
     try:
         data = path.read_bytes()
     except OSError as e:
-        raise MeshError(f"could not read {path.name}: {e}") from e
+        raise MeshError(_i18n.msg("eng.mesh.could_not_read", "could not read {name}: {e}", name=path.name, e=e)) from e
     if not data.startswith(struct.pack("<I", len(BOOST_SIGNATURE)) + BOOST_SIGNATURE):
         raise MeshError(_wrong_format(path, data, "mesh"))
 
@@ -803,20 +798,14 @@ def _finish(a: _Archive, out: MeshFile) -> None:
         # for both.
         if not out.lod_name:
             raise MeshError(
-                f"{Path(a.source).name} holds more than one model, one after "
-                f"another; this tool reads a single-model file. The first has "
-                f"{out.vertices:,} vertices and {out.triangles:,} triangles, "
-                f"and {out.trailer:,} bytes follow it")
+                _i18n.msg("eng.mesh.holds_more_than_one_model_one", "{name} holds more than one model, one after another; this tool reads a single-model file. The first has {vertices:,} vertices and {triangles:,} triangles, and {trailer:,} bytes follow it", name=Path(a.source).name, vertices=out.vertices, triangles=out.triangles, trailer=out.trailer))
         raise MeshError(
-            f"{Path(a.source).name}: {out.trailer:,} of {len(a.d):,} bytes left "
-            f"after the bone table - the layout does not match, so the geometry "
-            f"cannot be trusted")
+            _i18n.msg("eng.mesh.trailer_of_d_n_bytes_left", "{name}: {trailer:,} of {d_n:,} bytes left after the bone table - the layout does not match, so the geometry cannot be trusted", name=Path(a.source).name, trailer=out.trailer, d_n=len(a.d)))
     top = len(out.positions) // 3
     for g in out.groups:
         if g.indices and max(g.indices) >= top:
             raise MeshError(
-                f"{Path(a.source).name}: group {g.name!r}/{g.texture_group!r} "
-                f"indexes vertex {max(g.indices)} of {top}")
+                _i18n.msg("eng.mesh.group_indexes_vertex_of", "{name}: group {name2}/{texture_group} indexes vertex {max} of {top}", name=Path(a.source).name, name2=repr(g.name), texture_group=repr(g.texture_group), max=max(g.indices), top=top))
 
 
 def _wrong_format(path: Path, data: bytes, wanted: str) -> str:

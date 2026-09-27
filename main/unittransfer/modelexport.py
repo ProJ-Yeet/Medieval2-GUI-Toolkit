@@ -47,6 +47,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from . import casanim, mesh, sprites
+from . import i18n as _i18n
 
 
 class ExportError(ValueError):
@@ -62,14 +63,13 @@ def texture_to_dds(data: bytes) -> bytes:
     if data[:4] == b"DDS ":
         return data
     if data[sprites.TEXTURE_HEADER_LEN:sprites.TEXTURE_HEADER_LEN + 4] != b"DDS ":
-        raise ExportError("this is not a .texture - there is no DDS image 48 bytes in, "
-                          "where every one of the game's has it")
+        raise ExportError(_i18n.msg("eng.modelexport.this_is_not_a_texture_there", "this is not a .texture - there is no DDS image 48 bytes in, where every one of the game's has it"))
     return sprites.texture_to_dds(data)
 
 
 def dds_to_texture(data: bytes) -> bytes:
     if data[:4] != b"DDS ":
-        raise ExportError("this is not a DDS image - it does not open with 'DDS '")
+        raise ExportError(_i18n.msg("eng.modelexport.this_is_not_a_dds_image", "this is not a DDS image - it does not open with 'DDS '"))
     return sprites.dds_to_texture(data)
 
 
@@ -166,7 +166,7 @@ def export_glb(m: mesh.MeshFile, *, name: str = "model",
     animation file to hand is."""
     n = m.vertices
     if not n:
-        raise ExportError("this model has no vertices")
+        raise ExportError(_i18n.msg("eng.modelexport.this_model_has_no_vertices", "this model has no vertices"))
     b = _Bin()
     pos = array("f", m.positions)
     for i in range(0, len(pos), 3):
@@ -213,7 +213,7 @@ def export_glb(m: mesh.MeshFile, *, name: str = "model",
             joints[v * 4], joints[v * 4 + 1] = j0, j1
             weights[v * 4], weights[v * 4 + 1] = w0 / tot, w1 / tot
         if len(skeleton.tracks) > 255:
-            raise ExportError(f"{len(skeleton.tracks)} bones is more than a byte can index")
+            raise ExportError(_i18n.msg("eng.modelexport.bones_is_more_than_a_byte", "{tracks_n} bones is more than a byte can index", tracks_n=len(skeleton.tracks)))
         attrs["JOINTS_0"] = b.accessor(bytes(joints), UBYTE, n, "VEC4", ARRAY_BUFFER)
         attrs["WEIGHTS_0"] = b.accessor(weights.tobytes(), FLOAT, n, "VEC4", ARRAY_BUFFER)
         # the skeleton as nodes, parents before children as the file has them
@@ -264,7 +264,7 @@ def export_glb(m: mesh.MeshFile, *, name: str = "model",
             prim["material"] = 0
         prims.append(prim)
     if not prims:
-        raise ExportError("none of the parts asked for has a face")
+        raise ExportError(_i18n.msg("eng.modelexport.none_of_the_parts_asked_for", "none of the parts asked for has a face"))
     gltf["meshes"].append({"name": name, "primitives": prims})
     node = {"name": name, "mesh": 0}
     if skinned:
@@ -335,7 +335,7 @@ def read_glb(data: bytes) -> Tuple[dict, bytes]:
     """A ``.glb``'s JSON and binary chunk - for the tests, and for saying what
     an export holds."""
     if data[:4] != b"glTF":
-        raise ExportError("not a .glb")
+        raise ExportError(_i18n.msg("eng.modelexport.not_a_glb", "not a .glb"))
     _v, total = struct.unpack_from("<II", data, 4)
     jl, = struct.unpack_from("<I", data, 12)
     js = json.loads(data[20:20 + jl])
@@ -421,10 +421,10 @@ def entry_export(mod, entry, *, fmt: str, lod: int = 0, skin: int = 0,
     from . import factions
     rels = entry.mesh_files()
     if not 0 <= lod < len(rels):
-        raise ExportError(f"{entry.name} has no LOD {lod}")
+        raise ExportError(_i18n.msg("eng.modelexport.has_no_lod", "{name} has no LOD {lod}", name=entry.name, lod=lod))
     src = factions.picture_path(mod, rels[lod])
     if src is None or not src.is_file():
-        raise ExportError(f"{rels[lod]} is not in this mod")
+        raise ExportError(_i18n.msg("eng.modelexport.is_not_in_this_mod", "{rels} is not in this mod", rels=rels[lod]))
     m = mesh.read_mesh(src)
     view = mesh.entry_view(entry, Path(mod.data))
     skins = view.get("skins") or []
@@ -440,7 +440,7 @@ def entry_export(mod, entry, *, fmt: str, lod: int = 0, skin: int = 0,
         return (export_obj_zip(m, name=name, groups=groups, texture_png=png, uscale=uscale),
                 f"{name}_obj.zip", "application/zip")
     if fmt != "glb":
-        raise ExportError(f"no export called {fmt!r}")
+        raise ExportError(_i18n.msg("eng.modelexport.no_export_called", "no export called {fmt}", fmt=repr(fmt)))
     skeleton, anims = None, []
     skels = [x for x in dict.fromkeys(entry.skeletons()) if x]
     if skels and m.weights:

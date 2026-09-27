@@ -197,7 +197,7 @@ function edRecEditReq(kind,id){
 function edRecTabLabel(){
   const r=edRecOn();
   const n=(r&&r.r)?r.r.instances.length+r.adds.length:null;
-  return 'Recruitment'+(n===null?'':` <span class="badge">${n}</span>`);
+  return tt('edrecruit.recruitment')+(n===null?'':` <span class="badge">${n}</span>`);
 }
 function edRecTab(){
   const e=state.ed,r=e.rec;
@@ -206,8 +206,7 @@ function edRecTab(){
   if(!r){ Promise.resolve().then(()=>edRecLoad()); return edRecBusy(); }
   if(r.loading)return edRecBusy();
   if(r.error)return `<div class="frm"><div class="w-bad">${esc(r.error)}</div>
-    <div class="bnote">Recruitment is read from <code>data/export_descr_buildings.txt</code>.
-      A mod without one has nothing to show here.</div></div>`;
+    <div class="bnote">${tt('edrecruit.recruitment_is_read_from_data_export')}</div></div>`;
   const rows=edRecRows();
   //: The EDU/EDB keyword on the left, what the column is CALLED on the right -
   //: the same names every other screen in the toolkit gives these four numbers.
@@ -222,41 +221,36 @@ function edRecTab(){
   });
   return `<div class="frm">
     <div class="brow" style="align-items:center">
-      <b>${rows.length} recruit pool${rows.length===1?'':'s'}</b>${r.adds.length
-        ? ` <span class="badge good">+${r.adds.length} staged</span>`:''}
-      <span class="count">${rows.length
-        ? 'Every building line in this mod that trains this unit.'
-        : 'No building line in this mod trains this unit.'}</span>
+      ${tt('edrecruit.recruit_pool',{rows_n:rows.length,rows:rows.length===1?'':'s',adds:r.adds.length
+        ? ` <span class="badge good">${tt('edrecruit.staged',{adds_n:r.adds.length})}</span>`:'',rows2:rows.length
+        ? tt('edrecruit.every_building_line_in_this_mod')
+        : tt('edrecruit.no_building_line_in_this_mod')})}
       <button class="primary" style="margin-left:auto"
-        onclick="edRecAddOpen()">＋ Add a building…</button>
+        onclick="edRecAddOpen()">${tt('edrecruit.add_a_building')}</button>
     </div>
     ${e.newType&&e.newType!==e.d.type?`<div class="ownwarn" style="margin:10px 0 0">
-      Renaming the unit to <code>${esc(e.newType)}</code> rewrites these pools as part of the
-      <b>unit</b> save. The rows below still name <code>${esc(e.d.type)}</code>, which is what a
-      recruitment change written now would use - save the rename first if you are doing both.
+      ${tt('edrecruit.renaming_the_unit_to_rewrites_these',{newType:esc(e.newType),type:esc(e.d.type)})}
     </div>`:''}
     ${rows.length||r.adds.length?`<div class="poollist" id="edRecList" style="margin-top:10px">
-      <div class="erhd"><span class="erb">Building</span><span class="erlv">Tier</span>
-        <span class="ernums">${KEYS.map(([k,l])=>
-          `<span class="ern" title="${esc(POOL_HELP[k]||'')}">${esc(l)}</span>`).join('')}</span>
-        <span class="eract"></span></div>
+      <div class="erhd">${tt('edrecruit.building_tier',{KEYS:KEYS.map(([k,l])=>
+          `<span class="ern" title="${esc(POOL_HELP[k]||'')}">${esc(l)}</span>`).join('')})}</div>
       ${rows.map(row=>edRecRowHtml(row,KEYS,common)).join('')}
       ${r.adds.map((a,i)=>edRecAddRowHtml(a,i,KEYS)).join('')}
     </div>`:''}
     <div class="bnote" style="margin-top:8px">${docPoints(
-      'These are the same <code>recruit_pool</code> lines the Buildings module edits, written by the same save.',[
+      tt('edrecruit.these_are_the_same_recruit_pool'),[
       // the first two describe rows, so they are dropped when there are none
-      rows.length&&'A tier is shown as its position in its own line, so tier 2 of a three-level '
-        +'barracks and tier 2 of a five-level one are both “2”. The <b>odd</b> mark is a value '
-        +'that disagrees with what most of the other pools use.',
-      (rows.length||r.adds.length)&&'The building’s name opens it in a <b>new browser tab</b>, on '
-        +'that tier, with this unit’s rows flashed. That tab reads the file - changes staged here '
-        +'are not in it until you save.',
-      '<b>Save changes</b> writes these to <code>export_descr_buildings.txt</code> alongside the '
-        +'unit’s own save. One 🕑 Log entry, one undo.'])}</div>
+      rows.length&&tt('edrecruit.a_tier_is_shown_as_its')
+        +`${tt('edrecruit.barracks_and_tier_2_of_a')} `
+        +tt('edrecruit.that_disagrees_with_what_most_of'),
+      (rows.length||r.adds.length)&&`${tt('edrecruit.the_buildings_name_opens_it_in')} `
+        +tt('edrecruit.that_tier_with_this_units_rows')
+        +tt('edrecruit.are_not_in_it_until_you'),
+      `${tt('edrecruit.save_changes_writes_these_to_export')} `
+        +tt('edrecruit.units_own_save_one_log_entry')])}</div>
   </div>`;
 }
-const edRecBusy=()=>`<div class="frm"><div class="empty">Reading every building line…</div></div>`;
+const edRecBusy=()=>`<div class="frm"><div class="empty">${tt('edrecruit.reading_every_building_line')}</div></div>`;
 
 /* One pool row, in two lines, read as two halves rather than four columns.
 
@@ -281,7 +275,7 @@ function edRecPoolHtml(o){
       <span class="erb" title="${esc(o.line)}">
         <img class="erico" loading="lazy" onerror="iconRetry(this)" alt=""
           src="${bldIcon(o.level,'small',o.culture,true)}">
-        <a class="ulink" title="Open ${esc(o.lineLabel)} in a new browser tab, on this tier"
+        <a class="ulink" title="${ttA('edrecruit.open_in_a_new_browser_tab',{lineLabel:esc(o.lineLabel)})}"
           onclick="edRecOpenBuilding('${q1(esc(o.line))}',${o.levelIndex})">${esc(o.lineLabel)}</a>
         ${o.badges}</span>
       <span class="erlv count" title="${esc(o.level)}">${esc(o.levelLabel)}
@@ -289,17 +283,15 @@ function edRecPoolHtml(o){
       <span class="ernums">${o.nums}</span>
       <span class="eract">${o.act}</span>
     </div>
-    <div class="erbot"><span class="prk">Requires</span>
-      <span class="erreq ${o.reqEdited?'changed':''}" title="${esc(o.req||'no conditions')}">
-        <span>${o.req?esc(o.req)
-          :'<span class="count">Always - anyone who can build the tier</span>'}</span>
-        <button class="reqbtn" title="Edit who can recruit it from this building"
+    <div class="erbot">${tt('edrecruit.requires',{reqEdited:o.reqEdited?'changed':'',req:esc(o.req||tt('edrecruit.no_conditions')),x:o.req?esc(o.req)
+          :`<span class="count">${tt('edrecruit.always_anyone_who_can_build_the')}</span>`})}
+        <button class="reqbtn" title="${ttA('edrecruit.edit_who_can_recruit_it_from')}"
           onclick="${o.reqEdit}">✎</button></span></div></div>`;
 }
 function edRecRowHtml(row,KEYS,common){
   const gone=edRecDeleted(row), key=edRecKey(row), req=edRecReq(row);
   return edRecPoolHtml({
-    cls:gone?'gone':'', attr:`data-erline="${key}"`,
+    cls:gone?'gone':'', attr:tt('edrecruit.data_erline',{key}),
     line:row.line, lineLabel:row.line_label||row.line,
     level:row.level, levelLabel:row.level_label||row.level,
     levelIndex:row.level_index, levelCount:row.level_count,
@@ -307,17 +299,17 @@ function edRecRowHtml(row,KEYS,common){
     badges:`<span class="badge ${row.settlement==='castle'?'cls':''}">${
         esc(row.settlement||'both')}</span>`
       +(row.faction?`<span class="badge"
-        title="This pool sits in the level’s faction_capability block">faction</span>`:''),
+        title="${ttA('edrecruit.this_pool_sits_in_the_levels')}">${tt('common.faction_2')}</span>`:''),
     nums:KEYS.map(([k],j)=>{
       const v=edRecVal(row,k);
       const odd=String(v).trim()!==common[j];
       return `<span class="ern ${odd?'odd':''}" title="${odd
-        ?'differs from what most pools use ('+esc(common[j])+')':''}">${
-        numBox(`data-er="${k}" data-erline="${key}"`,v,
+        ?tt('edrecruit.differs_from_what_most_pools_use')+esc(common[j])+')':''}">${
+        numBox(tt('edrecruit.data_er_data_erline',{x:k,key}),v,
                k==='per_turn'?'turns':(k==='experience'?'1':'pool'))}</span>`;
     }).join(''),
     act:`<button class="reqbtn ${gone?'':'danger'}"
-      title="${gone?'Keep this recruit pool':'Remove this recruit pool'}"
+      title="${gone?tt('edrecruit.keep_this_recruit_pool'):tt('edrecruit.remove_this_recruit_pool')}"
       onclick="edRecToggleDel(${key})">${gone?'↺':'🗑'}</button>`,
     req, reqEdited:edRecNorm(req)!==edRecNorm(row.requires||''),
     reqEdit:`edRecEditReq('row',${key})`});
@@ -326,16 +318,16 @@ function edRecRowHtml(row,KEYS,common){
 // no value yet to disagree with anything) and a drop rather than a delete.
 function edRecAddRowHtml(a,i,KEYS){
   return edRecPoolHtml({
-    cls:'fresh', attr:`data-eradd="${i}"`,
+    cls:'fresh', attr:tt('edrecruit.data_eradd',{x:i}),
     line:a.line, lineLabel:a.line_label||a.line,
     level:a.level, levelLabel:a.level_label||a.level,
     levelIndex:a.level_index, levelCount:a.level_count,
     culture:edRecCulture(a.conds),
-    badges:'<span class="badge good">new</span>',
+    badges:`<span class="badge good">${tt('edrecruit.new')}</span>`,
     nums:KEYS.map(([k])=>`<span class="ern">${
-      numBox(`data-eradd="${k}" data-eraddi="${i}"`,a[k],
+      numBox(tt('edrecruit.data_eradd_data_eraddi',{x:k,x2:i}),a[k],
              k==='per_turn'?'turns':(k==='experience'?'1':'pool'))}</span>`).join(''),
-    act:`<button class="reqbtn danger" title="Drop this new pool"
+    act:`<button class="reqbtn danger" title="${ttA('edrecruit.drop_this_new_pool')}"
       onclick="edRecDropAdd(${i})">🗑</button>`,
     req:a.requires||'', reqEdited:!!a.condEdited,
     reqEdit:`edRecEditReq('add',${i})`});
@@ -403,12 +395,12 @@ const edRecLines=()=>((state.bld&&state.bld.ov&&state.bld.ov.lines)||[]);
 function edRecAddRender(){
   const e=state.ed,p=e.rec.pick;
   document.getElementById('modal').innerHTML=`
-    <h2>Add <span class="pill">${esc(e.loc.name||e.d.type)}</span> to a building</h2>
+    <h2>${tt('edrecruit.add_to_a_building',{x:esc(e.loc.name||e.d.type)})}</h2>
     <div class="mbody">
-      <div class="basebar"><input id="erQ" placeholder="Filter ${esc(e.mod)}’s buildings…"
+      <div class="basebar"><input id="erQ" placeholder="${ttA('edrecruit.filter_s_buildings',{mod:esc(e.mod)})}"
         value="${esc(p.q)}" oninput="edRecPickFilter(this.value)"></div>
       <div class="baselist" style="max-height:300px" id="erList"></div>
-      <div class="bsec" style="margin-top:10px"><h4>Numbers each new pool gets</h4>
+      <div class="bsec" style="margin-top:10px"><h4>${tt('edrecruit.numbers_each_new_pool_gets')}</h4>
         <div class="brow bpnums">
           <label>${qm(POOL_HELP.initial,POOL_LABEL.initial)}${POOL_LABEL.initial}${
             numBox('data-ern="initial"',p.nums.initial,'pool')}</label>
@@ -420,14 +412,12 @@ function edRecAddRender(){
           <label>${qm(POOL_HELP.experience,POOL_LABEL.experience)}${POOL_SHORT.experience}${
             numBox('data-ern="experience"',p.nums.experience,'1')}</label>
         </div>
-        <div class="bnote">Used as typed on every tier ticked. Each row can be corrected on the
-          Recruitment tab before you save, and <b>Requires</b> is set there too - a new pool starts
-          with no conditions, which means every faction that can build the tier can hire the unit.</div>
+        <div class="bnote">${tt('edrecruit.used_as_typed_on_every_tier')}</div>
       </div>
     </div>
     <div class="foot"><span class="count" id="erCount"></span>
-      <button onclick="edRecAddClose()">Cancel</button>
-      <button class="primary" id="erAdd" onclick="edRecAddApply()">Add</button></div>`;
+      <button onclick="edRecAddClose()">${tt('common.cancel')}</button>
+      <button class="primary" id="erAdd" onclick="edRecAddApply()">${tt('common.add_2')}</button></div>`;
   wireNumBoxes(document.getElementById('modal'));
   document.querySelectorAll('#modal input[data-ern]').forEach(inp=>{
     inp.addEventListener('input',()=>{e.rec.pick.nums[inp.dataset.ern]=inp.value;});
@@ -451,19 +441,19 @@ function edRecPickList(){
         <code class="count">${esc(l.name)}</code>
         <span class="badge ${l.settlement==='castle'?'cls':''}">${esc(l.settlement||'both')}</span>
         <button style="margin-left:auto" onclick="edRecPickAll('${q1(esc(l.name))}')"
-          title="Tick every tier of this line that does not already train the unit">All tiers</button></div>
+          title="${ttA('edrecruit.tick_every_tier_of_this_line')}">${tt('edrecruit.all_tiers')}</button></div>
       <div class="ertiers">${(l.levels||[]).map((lv,i)=>{
         const t=taken[edRecPair(l.name,lv)];
         const on=p.picked[edRecPair(l.name,lv)];
         return `<button class="ertier ${on?'on':''}" ${t?'disabled':''}
-          title="${t?(t===2?'Already staged on the Recruitment tab':'This tier already trains the unit')
+          title="${t?(t===2?tt('edrecruit.already_staged_on_the_recruitment_tab'):tt('edrecruit.this_tier_already_trains_the_unit'))
                    :esc(lv)}"
           onclick="edRecPickTier('${q1(esc(l.name))}','${q1(esc(lv))}')"><img class="erico"
           loading="lazy" onerror="iconRetry(this)" alt=""
           src="${bldIcon(lv,'small','',true)}">${
           i+1}. ${esc((l.level_labels||[])[i]||lv)}${t?' ✓':''}</button>`;
       }).join('')}</div></div>`).join('')
-    :`<div class="empty">No building line matches “${esc(p.q)}”.</div>`;
+    :`<div class="empty">${tt('edrecruit.no_building_line_matches',{x:esc(p.q)})}</div>`;
   edRecPickCount();
 }
 function edRecPickTier(line,level){
@@ -484,9 +474,9 @@ function edRecPickAll(line){
 function edRecPickCount(){
   const n=Object.keys(edRecOn().pick.picked).length;
   const c=document.getElementById('erCount');
-  if(c)c.textContent=n?`${n} tier(s) ticked`:'Tick the tiers this unit should be trained at.';
+  if(c)c.textContent=n?tt('edrecruit.tier_s_ticked',{x:n}):tt('edrecruit.tick_the_tiers_this_unit_should');
   const b=document.getElementById('erAdd');
-  if(b){b.disabled=!n;b.textContent=n?`Add ${n} pool(s)`:'Add';}
+  if(b){b.disabled=!n;b.textContent=n?tt('edrecruit.add_pool_s',{x:n}):tt('common.add_2');}
 }
 function edRecAddApply(){
   const r=edRecOn(),p=r.pick;
@@ -504,7 +494,7 @@ function edRecAddApply(){
   });
   r.pick=null;
   renderEditor();
-  toast(`${keys.length} recruit pool(s) staged. Save changes writes them.`,4200);
+  toast(tt('edrecruit.recruit_pool_s_staged_save_changes',{keys_n:keys.length}),4200);
 }
 
 /* ======================== saving ========================

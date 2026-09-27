@@ -64,6 +64,7 @@ from . import mapterrain, mapvocab
 from . import keyblock as kb
 from .campmap import MapError
 from .mapvocab import Rgb
+from . import i18n as _i18n
 
 #: Plain 8-bit game data, as everywhere else
 ENCODING = mapvocab.ENCODING
@@ -388,9 +389,7 @@ def write_climates(text: str, code: str, rgb: Rgb, heat: int, winter: bool,
     span = _list_span(flat)
     if span is None:
         raise ClimateError(
-            f"{CLIMATES_REL} has no opening 'climates {{ … }}' list, which is "
-            f"the order the engine indexes climates by. This file is not in a "
-            f"shape a climate can be added to safely.")
+            _i18n.msg("eng.climatenew.has_no_opening_climates_list_which", "{CLIMATES_REL} has no opening 'climates { … }' list, which is the order the engine indexes climates by. This file is not in a shape a climate can be added to safely.", CLIMATES_REL=CLIMATES_REL))
     start, end, body = span
     listed = body.rstrip("\n")
     listed = listed + ("\n" if listed else "") + f"\t{code}\n"
@@ -523,18 +522,15 @@ def _colour_of(body: dict) -> Rgb:
         raw = [p for p in re.split(r"[\s,]+", raw.strip()) if p]
     if not isinstance(raw, (list, tuple)) or len(raw) != 3:
         raise ClimateError(
-            "a climate is declared by one colour in map_climates.tga, so it "
-            "needs three numbers: red, green and blue")
+            _i18n.msg("eng.climatenew.a_climate_is_declared_by_one", "a climate is declared by one colour in map_climates.tga, so it needs three numbers: red, green and blue"))
     out: List[int] = []
     for v in raw:
         try:
             n = int(v)
         except (TypeError, ValueError):
-            raise ClimateError(f"{v!r} is not a colour channel - each of the "
-                               f"three is a whole number from 0 to 255") from None
+            raise ClimateError(_i18n.msg("eng.climatenew.is_not_a_colour_channel_each", "{v} is not a colour channel - each of the three is a whole number from 0 to 255", v=repr(v))) from None
         if not 0 <= n <= 255:
-            raise ClimateError(f"{n} is outside 0-255, which is what a TGA "
-                               f"channel holds")
+            raise ClimateError(_i18n.msg("eng.climatenew.is_outside_0_255_which_is", "{n} is outside 0-255, which is what a TGA channel holds", n=n))
         out.append(n)
     return (out[0], out[1], out[2])
 
@@ -553,13 +549,11 @@ def plan(mod, cm, body: dict) -> ClimatePlan:
     p.code = str(body.get("code") or "").strip()
     p.label = str(body.get("label") or "").strip()
     if not p.code:
-        p.errors.append("a climate needs the name the engine reads it by")
+        p.errors.append(_i18n.msg("eng.climatenew.a_climate_needs_the_name_the", "a climate needs the name the engine reads it by"))
         return p
     if not NAME_RE.match(p.code):
         p.errors.append(
-            f"{p.code!r} will not do as a climate name - it is a bare word the "
-            f"engine reads out of four files: a letter first, then letters, "
-            f"digits or underscores, and no spaces or dots")
+            _i18n.msg("eng.climatenew.will_not_do_as_a_climate", "{code} will not do as a climate name - it is a bare word the engine reads out of four files: a letter first, then letters, digits or underscores, and no spaces or dots", code=repr(p.code)))
         return p
 
     cl = mapvocab.climates(mod)
@@ -575,24 +569,18 @@ def plan(mod, cm, body: dict) -> ClimatePlan:
     try:
         p.heat = int(body.get("heat", existing["heat"] if existing else 2))
     except (TypeError, ValueError):
-        p.errors.append("heat is a whole number, the armour-fatigue effect")
+        p.errors.append(_i18n.msg("eng.climatenew.heat_is_a_whole_number_the", "heat is a whole number, the armour-fatigue effect"))
         return p
     if not HEAT_MIN <= p.heat <= HEAT_MAX:
         p.errors.append(
-            f"heat {p.heat} is outside {HEAT_MIN}-{HEAT_MAX}. The range is the "
-            f"file's own header comment: zero would mean no armour effects to "
-            f"fatigue at all.")
+            _i18n.msg("eng.climatenew.heat_is_outside_the_range_is", "heat {heat} is outside {HEAT_MIN}-{HEAT_MAX}. The range is the file's own header comment: zero would mean no armour effects to fatigue at all.", heat=p.heat, HEAT_MIN=HEAT_MIN, HEAT_MAX=HEAT_MAX))
     p.winter = bool(body.get("winter", existing["winter"] if existing else False))
 
     clash = [c for c in cl
              if c["rgb"] and tuple(c["rgb"]) == p.rgb and c["code"] != p.code]
     if clash:
         p.errors.append(
-            f"{' and '.join(c['code'] for c in clash)} already "
-            f"{'declare' if len(clash) > 1 else 'declares'} colour "
-            f"{' '.join(str(v) for v in p.rgb)}. Two climates on one colour is "
-            f"one climate: map_climates.tga has no way to tell them apart, and "
-            f"the probe would name whichever the file declares first.")
+            _i18n.msg("eng.climatenew.already_colour_two_climates_on_one", "{x} already {x2} colour {x3}. Two climates on one colour is one climate: map_climates.tga has no way to tell them apart, and the probe would name whichever the file declares first.", x=' and '.join(c['code'] for c in clash), x2='declare' if len(clash) > 1 else 'declares', x3=' '.join(str(v) for v in p.rgb)))
 
     voc = mapterrain.read_vocabulary(mod)
     p.geog = geography(mod)
@@ -622,12 +610,11 @@ def _plan_textures(p: ClimatePlan, voc: mapterrain.Vocabulary,
     if not src:
         have = ", ".join(sorted(voc.blocks)) or "none"
         p.errors.append(
-            f"{AERIAL_REL} has no block for {p.donor!r}, so there is nothing to "
-            f"copy the textures from. It has: {have}")
+            _i18n.msg("eng.climatenew.has_no_block_for_so_there", "{AERIAL_REL} has no block for {donor}, so there is nothing to copy the textures from. It has: {have}", AERIAL_REL=AERIAL_REL, donor=repr(p.donor), have=have))
         return
     p.grounds = ground_keys(voc)
     if not p.grounds:
-        p.errors.append(f"{AERIAL_REL} names no ground types at all")
+        p.errors.append(_i18n.msg("eng.climatenew.names_no_ground_types_at_all", "{AERIAL_REL} names no ground types at all", AERIAL_REL=AERIAL_REL))
         return
     p.ground_gaps = [g for g in p.grounds if g not in src]
 
@@ -642,9 +629,7 @@ def _plan_files(p: ClimatePlan, voc: mapterrain.Vocabulary,
     # 1 - descr_climates.txt
     cpath = data / CLIMATES_REL
     if not cpath.is_file():
-        p.errors.append(f"{CLIMATES_REL} is not in this mod's data folder. The "
-                        f"game keeps its own copy inside a .pack, and a climate "
-                        f"cannot be declared into a file that is not there.")
+        p.errors.append(_i18n.msg("eng.climatenew.is_not_in_this_mods_data", "{CLIMATES_REL} is not in this mod's data folder. The game keeps its own copy inside a .pack, and a climate cannot be declared into a file that is not there.", CLIMATES_REL=CLIMATES_REL))
         return
     ctext = kb.read_text(cpath, ENCODING)
     # a take-over keeps its own strategy models and vegetation; an add inherits
@@ -739,32 +724,16 @@ def _plan_warnings(p: ClimatePlan) -> None:
     if p.mode == "add":
         if p.geog["have"] and p.code not in p.geog["names"]:
             p.warnings.append(
-                f"{GEOG_REL} has a block for {len(p.geog['names'])} climate(s) "
-                f"and {p.code} is not one of them. The strat map will draw this "
-                f"climate; a battle fought in a province painted with it is the "
-                f"crash the tutorial's own thread ends on, because the engine "
-                f"reads the battle map's terrain by climate NAME. Taking over "
-                f"{' or '.join(SPARE)} instead avoids it entirely, and that is "
-                f"what every mod installed here did.")
+                _i18n.msg("eng.climatenew.has_a_block_for_climate_s", "{GEOG_REL} has a block for {names_n} climate(s) and {code} is not one of them. The strat map will draw this climate; a battle fought in a province painted with it is the crash the tutorial's own thread ends on, because the engine reads the battle map's terrain by climate NAME. Taking over {SPARE} instead avoids it entirely, and that is what every mod installed here did.", GEOG_REL=GEOG_REL, names_n=len(p.geog['names']), code=p.code, SPARE=' or '.join(SPARE)))
         elif not p.geog["have"]:
             p.warnings.append(
-                f"{p.geog['problem']} A climate name the battle map does not "
-                f"know is a crash when a battle starts in it, so a new name is "
-                f"the half of this operation that cannot be checked against "
-                f"this mod. Taking over one of the twelve the engine ships - "
-                f"{' or '.join(SPARE)} are spare by name - needs no such check.")
+                _i18n.msg("eng.climatenew.a_climate_name_the_battle_map", "{problem} A climate name the battle map does not know is a crash when a battle starts in it, so a new name is the half of this operation that cannot be checked against this mod. Taking over one of the twelve the engine ships - {SPARE} are spare by name - needs no such check.", problem=p.geog['problem'], SPARE=' or '.join(SPARE)))
         if p.code not in VANILLA_ORDER:
             p.warnings.append(
-                f"all four mods measured for this declare exactly the twelve "
-                f"climates the engine ships, in the engine's order, and not one "
-                f"added a thirteenth. Divide and Conquer has a wholly custom map "
-                f"and took over unused1 rather than adding a name.")
+                _i18n.msg("eng.climatenew.all_four_mods_measured_for_this", "all four mods measured for this declare exactly the twelve climates the engine ships, in the engine's order, and not one added a thirteenth. Divide and Conquer has a wholly custom map and took over unused1 rather than adding a name."))
     if p.ground_gaps:
         p.warnings.append(
-            f"{p.donor} names no texture for {', '.join(p.ground_gaps)}, so "
-            f"{p.code} will not either and those tiles fall through to the "
-            f"{DEFAULT_CLIMATE} block. Where that has none either they are "
-            f"drawn by nothing, which is the gap the terrain layer counts.")
+            _i18n.msg("eng.climatenew.names_no_texture_for_so_will", "{donor} names no texture for {ground_gaps}, so {code} will not either and those tiles fall through to the {DEFAULT_CLIMATE} block. Where that has none either they are drawn by nothing, which is the gap the terrain layer counts.", donor=p.donor, ground_gaps=', '.join(p.ground_gaps), code=p.code, DEFAULT_CLIMATE=DEFAULT_CLIMATE))
     if not p.trimmings:
         others = ", ".join(c for c in (p.climates_named or []) if c != p.code)
         p.warnings.append(
@@ -778,28 +747,16 @@ def _plan_warnings(p: ClimatePlan) -> None:
             + (f" - {others} each have them." if others else "."))
     if p.orphan_tiles:
         p.warnings.append(
-            f"{p.orphan_tiles:,} tile(s) are painted "
-            f"{' '.join(str(v) for v in p.orphan_rgb)}, which is {p.code}'s "
-            f"colour until this is saved and nobody's afterwards. They stay "
-            f"where they are - this writes no pixels - and are drawn with the "
-            f"{DEFAULT_CLIMATE} block until they are repainted with the brush.")
+            _i18n.msg("eng.climatenew.orphan_tiles_tile_s_are_painted", "{orphan_tiles:,} tile(s) are painted {x}, which is {code}'s colour until this is saved and nobody's afterwards. They stay where they are - this writes no pixels - and are drawn with the {DEFAULT_CLIMATE} block until they are repainted with the brush.", orphan_tiles=p.orphan_tiles, x=' '.join(str(v) for v in p.orphan_rgb), code=p.code, DEFAULT_CLIMATE=DEFAULT_CLIMATE))
     if p.claimed_tiles and p.mode == "add":
         p.warnings.append(
-            f"{p.claimed_tiles:,} tile(s) already carry "
-            f"{' '.join(str(v) for v in p.rgb)}. Declaring it does not paint "
-            f"them, it names them: they are this climate from the moment this "
-            f"is saved.")
+            _i18n.msg("eng.climatenew.claimed_tiles_tile_s_already_carry", "{claimed_tiles:,} tile(s) already carry {x}. Declaring it does not paint them, it names them: they are this climate from the moment this is saved.", claimed_tiles=p.claimed_tiles, x=' '.join(str(v) for v in p.rgb)))
     if not p.claimed_tiles and not p.orphan_tiles:
         p.warnings.append(
-            f"no tile carries {' '.join(str(v) for v in p.rgb)} yet. This "
-            f"declares the climate and the brush paints it - map_climates.tga "
-            f"is not written here.")
+            _i18n.msg("eng.climatenew.no_tile_carries_yet_this_declares", "no tile carries {x} yet. This declares the climate and the brush paints it - map_climates.tga is not written here.", x=' '.join(str(v) for v in p.rgb)))
     if not p.label:
         p.warnings.append(
-            f"no display name, so {NAMES_REL} is left alone and the climate "
-            f"shows as its code name. The tutorial's own note is that nobody is "
-            f"sure where the game uses it; Divide and Conquer fills it in "
-            f"anyway, which is why it is offered.")
+            _i18n.msg("eng.climatenew.no_display_name_so_is_left", "no display name, so {NAMES_REL} is left alone and the climate shows as its code name. The tutorial's own note is that nobody is sure where the game uses it; Divide and Conquer fills it in anyway, which is why it is offered.", NAMES_REL=NAMES_REL))
     if p.lookup["note"]:
         p.warnings.append(p.lookup["note"])
 
@@ -818,7 +775,7 @@ def apply(p: ClimatePlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.texts:
-        raise ValueError("there is nothing to write")
+        raise ValueError(_i18n.msg("eng.climatenew.there_is_nothing_to_write", "there is nothing to write"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

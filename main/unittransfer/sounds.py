@@ -53,6 +53,7 @@ from typing import Dict, List, Optional, Tuple
 
 from . import config, edu as edu_mod, eop
 from .logutil import counted, file_op, fingerprint, log
+from . import i18n as _i18n
 
 # Same reasoning as the EDU: 8-bit text, and latin-1 round-trips every byte.
 ENCODING = "latin-1"
@@ -219,7 +220,7 @@ def parse_text(text: str) -> SoundBank:
             if low == "end" or (low.startswith("end") and low.rstrip("d") == "en"):
                 inside_event = False
                 if low != "end":
-                    bank.warnings.append(f"line {i + 1}: read {s!r} as 'end'")
+                    bank.warnings.append(_i18n.msg("eng.sounds.line_read_as_end", "line {x}: read {s} as 'end'", x=i + 1, s=repr(s)))
             continue
 
         key, value = _keyword(s)
@@ -246,7 +247,7 @@ def parse_text(text: str) -> SoundBank:
         elif s.split(None, 1)[0].lower() == "event":
             inside_event = True
         elif s.lower() == "end":
-            bank.warnings.append(f"line {i + 1}: 'end' with no open 'event'")
+            bank.warnings.append(_i18n.msg("eng.sounds.line_end_with_no_open_event", "line {x}: 'end' with no open 'event'", x=i + 1))
         # anything else outside an event is unrecognised; left alone verbatim
 
     close_vocal(len(lines))
@@ -328,10 +329,10 @@ def add_unit(bank: SoundBank, unit_name: str, donor: VoiceEntry,
     """
     block = bank.unit_select(accent, voice_class)
     if block is None:
-        raise ValueError(f"no '{accent}' / '{voice_class}' Unit_Select block in the voice bank")
+        raise ValueError(_i18n.msg("eng.sounds.no_unit_select_block_in_the", "no '{accent}' / '{voice_class}' Unit_Select block in the voice bank", accent=accent, voice_class=voice_class))
     src = bank.lines[donor.start:donor.end]
     if not src:
-        raise ValueError(f"voice entry for {donor.name!r} is empty")
+        raise ValueError(_i18n.msg("eng.sounds.voice_entry_for_is_empty", "voice entry for {name} is empty", name=repr(donor.name)))
     copied = _reindent(src, _indent_of(src[0]), entry_indent(block, bank))
     copied[0] = _rename_keyword_line(copied[0], unit_name)
     at = _insert_at(block, donor)
@@ -366,7 +367,7 @@ def move_unit(bank: SoundBank, unit_name: str, accent: str, voice_class: str,
     """
     e = bank.get(unit_name)
     if e is None:
-        raise ValueError(f"{unit_name!r} has no voice entry to move")
+        raise ValueError(_i18n.msg("eng.sounds.has_no_voice_entry_to_move", "{unit_name} has no voice entry to move", unit_name=repr(unit_name)))
     source = donor if donor is not None else e
     # copy the block we are about to re-insert BEFORE removing anything
     src = bank.lines[source.start:source.end]
@@ -374,7 +375,7 @@ def move_unit(bank: SoundBank, unit_name: str, accent: str, voice_class: str,
     after = parse_text(text)
     block = after.unit_select(accent, voice_class)
     if block is None:
-        raise ValueError(f"no '{accent}' / '{voice_class}' Unit_Select block in the voice bank")
+        raise ValueError(_i18n.msg("eng.sounds.no_unit_select_block_in_the", "no '{accent}' / '{voice_class}' Unit_Select block in the voice bank", accent=accent, voice_class=voice_class))
     copied = _reindent(src, _indent_of(src[0]), entry_indent(block, after))
     copied[0] = _rename_keyword_line(copied[0], unit_name)
     # the donor's own entry may have shifted with the removal - re-find it
@@ -483,7 +484,7 @@ def plan_sounds(mod, ops: List[SoundOp]) -> SoundPlan:
     if not ops:
         return plan
     if not mod.eds_path.exists():
-        plan.errors.append(f"{mod.name} has no data/{mod.eds_path.name}")
+        plan.errors.append(_i18n.msg("eng.sounds.has_no_data", "{name} has no data/{name2}", name=mod.name, name2=mod.eds_path.name))
         return plan
 
     text = mod.sounds.to_text()
@@ -496,7 +497,7 @@ def plan_sounds(mod, ops: List[SoundOp]) -> SoundPlan:
 
         if op.remove:
             if existing is None:
-                plan.warnings.append(f"{op.unit}: no voice entry to remove")
+                plan.warnings.append(_i18n.msg("eng.sounds.no_voice_entry_to_remove", "{unit}: no voice entry to remove", unit=op.unit))
                 continue
             text = remove_unit(bank, op.unit)
             plan.changes.append(f"{op.unit}: voice entry removed "
@@ -504,22 +505,21 @@ def plan_sounds(mod, ops: List[SoundOp]) -> SoundPlan:
             continue
 
         if not op.accent or not op.voice_class:
-            plan.errors.append(f"{op.unit}: pick an accent and a class")
+            plan.errors.append(_i18n.msg("eng.sounds.pick_an_accent_and_a_class", "{unit}: pick an accent and a class", unit=op.unit))
             continue
         if bank.unit_select(op.accent, op.voice_class) is None:
-            plan.errors.append(f"{op.unit}: {mod.name}'s voice bank has no "
-                               f"{op.accent} / {op.voice_class} Unit_Select block")
+            plan.errors.append(_i18n.msg("eng.sounds.s_voice_bank_has_no_unit", "{unit}: {name}'s voice bank has no {accent} / {voice_class} Unit_Select block", unit=op.unit, name=mod.name, accent=op.accent, voice_class=op.voice_class))
             continue
 
         donor = bank.get(op.donor) if op.donor else None
         if op.donor and donor is None:
-            plan.errors.append(f"{op.unit}: no voice entry named {op.donor!r} to copy from")
+            plan.errors.append(_i18n.msg("eng.sounds.no_voice_entry_named_to_copy", "{unit}: no voice entry named {donor} to copy from", unit=op.unit, donor=repr(op.donor)))
             continue
 
         try:
             if existing is None:
                 if donor is None:
-                    plan.errors.append(f"{op.unit}: pick a unit to copy the sounds from")
+                    plan.errors.append(_i18n.msg("eng.sounds.pick_a_unit_to_copy_the", "{unit}: pick a unit to copy the sounds from", unit=op.unit))
                     continue
                 text = add_unit(bank, op.unit, donor, op.accent, op.voice_class)
                 plan.changes.append(
@@ -529,7 +529,7 @@ def plan_sounds(mod, ops: List[SoundOp]) -> SoundPlan:
                 moved = (existing.accent != op.accent
                          or existing.voice_class != op.voice_class)
                 if not moved and donor is None:
-                    plan.warnings.append(f"{op.unit}: nothing to change")
+                    plan.warnings.append(_i18n.msg("eng.sounds.nothing_to_change", "{unit}: nothing to change", unit=op.unit))
                     continue
                 text = move_unit(bank, op.unit, op.accent, op.voice_class, donor)
                 what = []
@@ -547,8 +547,7 @@ def plan_sounds(mod, ops: List[SoundOp]) -> SoundPlan:
             edu_edits[op.unit] = (op.accent, op.voice_class)
         else:
             plan.warnings.append(
-                f"{op.unit}: no such unit in {mod.name}'s EDU - the voice entry is "
-                f"written but nothing points at it")
+                _i18n.msg("eng.sounds.no_such_unit_in_s_edu", "{unit}: no such unit in {name}'s EDU - the voice entry is written but nothing points at it", unit=op.unit, name=mod.name))
 
     if plan.errors:
         return plan

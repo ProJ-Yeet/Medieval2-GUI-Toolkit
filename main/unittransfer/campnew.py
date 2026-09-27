@@ -50,6 +50,7 @@ from typing import Dict, List, Tuple
 
 from . import campfiles, campmap, campstrat
 from . import keyblock as kb
+from . import i18n as _i18n
 
 ENCODING = campstrat.ENCODING
 LOC_ENCODING = campfiles.LOC_ENCODING
@@ -113,14 +114,12 @@ def _resolve(mod, name: str) -> Tuple[str, Path]:
     """The new campaign's relative name and folder, or a refusal saying why."""
     rel = str(name or "").replace("\\", "/").strip("/")
     if not rel:
-        raise CampaignError("a new campaign needs a name")
+        raise CampaignError(_i18n.msg("eng.campnew.a_new_campaign_needs_a_name", "a new campaign needs a name"))
     parts = [p for p in rel.split("/") if p]
     for part in parts:
         if not NAME_RE.match(part):
             raise CampaignError(
-                f"{part!r} will not do as a folder name - a campaign is a bare "
-                f"word: a letter first, then letters, digits, underscores or "
-                f"hyphens, and no spaces or dots")
+                _i18n.msg("eng.campnew.will_not_do_as_a_folder", "{part} will not do as a folder name - a campaign is a bare word: a letter first, then letters, digits, underscores or hyphens, and no spaces or dots", part=repr(part)))
     try:
         rel = campstrat.campaign_rel("/".join(parts))
     except ValueError as exc:
@@ -131,8 +130,7 @@ def _resolve(mod, name: str) -> Tuple[str, Path]:
     if home.exists() and (not home.is_dir()
                           or any(f.is_file() for f in home.rglob("*"))):
         raise CampaignError(
-            f"{campstrat.CAMPAIGN_DIR_REL}/{rel} is already there, and this "
-            f"makes a campaign rather than writing over one")
+            _i18n.msg("eng.campnew.is_already_there_and_this_makes", "{CAMPAIGN_DIR_REL}/{rel} is already there, and this makes a campaign rather than writing over one", CAMPAIGN_DIR_REL=campstrat.CAMPAIGN_DIR_REL, rel=rel))
     return rel, home
 
 
@@ -202,8 +200,7 @@ def plan(mod, body: dict) -> CampaignPlan:
         return p
     p.folder = f"{campstrat.CAMPAIGN_DIR_REL}/{p.name}"
     if not p.source:
-        p.errors.append("a new campaign is copied from one that already works, "
-                        "so pick the one to copy")
+        p.errors.append(_i18n.msg("eng.campnew.a_new_campaign_is_copied_from", "a new campaign is copied from one that already works, so pick the one to copy"))
         return p
     try:
         src = campfiles.campaign_dir(mod, p.source)
@@ -211,12 +208,10 @@ def plan(mod, body: dict) -> CampaignPlan:
         p.errors.append(str(exc))
         return p
     if not (src / campstrat.STRAT_NAME).is_file():
-        p.errors.append(f"{p.source} has no {campstrat.STRAT_NAME}, so it is "
-                        f"not a campaign there is anything to copy")
+        p.errors.append(_i18n.msg("eng.campnew.has_no_so_it_is_not", "{source} has no {STRAT_NAME}, so it is not a campaign there is anything to copy", source=p.source, STRAT_NAME=campstrat.STRAT_NAME))
         return p
     if p.name.lower() == p.source.lower():
-        p.errors.append("the new campaign and the one it is copied from are the "
-                        "same folder")
+        p.errors.append(_i18n.msg("eng.campnew.the_new_campaign_and_the_one", "the new campaign and the one it is copied from are the same folder"))
         return p
 
     _plan_files(p, src)
@@ -226,10 +221,7 @@ def plan(mod, body: dict) -> CampaignPlan:
     _plan_keys(p, body)
     if "/" in p.name:
         p.warnings.append(
-            f"{p.name} is nested, and the engine's own new-game menu reads the "
-            f"folders directly under {campstrat.CAMPAIGN_DIR_REL} - so this "
-            f"campaign will open on this screen and not in the game. Both "
-            f"installed mods keep one there, which is why it is offered.")
+            _i18n.msg("eng.campnew.is_nested_and_the_engines_own", "{name} is nested, and the engine's own new-game menu reads the folders directly under {CAMPAIGN_DIR_REL} - so this campaign will open on this screen and not in the game. Both installed mods keep one there, which is why it is offered.", name=p.name, CAMPAIGN_DIR_REL=campstrat.CAMPAIGN_DIR_REL))
     return p
 
 
@@ -254,7 +246,7 @@ def _plan_files(p: CampaignPlan, src: Path) -> None:
         if path.name.lower() in layer_names:
             layers.append(path.name)
     if not p.copies:
-        p.errors.append(f"{p.source}'s folder has no files in it at all")
+        p.errors.append(_i18n.msg("eng.campnew.s_folder_has_no_files_in", "{source}'s folder has no files in it at all", source=p.source))
         return
     p.changes.append(f"{p.folder}: {len(p.copies)} file(s), "
                      f"{sum(q.stat().st_size for q, _ in p.copies):,} bytes, "
@@ -265,14 +257,10 @@ def _plan_files(p: CampaignPlan, src: Path) -> None:
                          f"the layers, and a copied one would be the old map")
     if layers:
         p.warnings.append(
-            f"{p.source} ships {len(layers)} map layer(s) of its own "
-            f"({', '.join(sorted(layers))}), so the copy gets a copy of them "
-            f"too and the two campaigns are then two maps to keep in step. The "
-            f"map screen draws whichever one the campaign you have open reads.")
+            _i18n.msg("eng.campnew.ships_map_layer_s_of_its", "{source} ships {layers_n} map layer(s) of its own ({layers}), so the copy gets a copy of them too and the two campaigns are then two maps to keep in step. The map screen draws whichever one the campaign you have open reads.", source=p.source, layers_n=len(layers), layers=', '.join(sorted(layers))))
     elif not (data / campmap.REGIONS_REL).is_file():
         p.warnings.append(
-            f"{campmap.REGIONS_REL} is not on disk and {p.source} ships no map "
-            f"of its own, so there is no region list for this campaign to read")
+            _i18n.msg("eng.campnew.is_not_on_disk_and_ships", "{REGIONS_REL} is not on disk and {source} ships no map of its own, so there is no region list for this campaign to read", REGIONS_REL=campmap.REGIONS_REL, source=p.source))
 
 
 def _plan_header(p: CampaignPlan, src: Path) -> None:
@@ -295,10 +283,7 @@ def _plan_header(p: CampaignPlan, src: Path) -> None:
         word, rest = (code.split(None, 1) + [""])[:2]
         if word.lower() != HEADER:
             p.warnings.append(
-                f"{p.source}'s {campstrat.STRAT_NAME} does not open on "
-                f"`{HEADER} <name>` but on {code.split()[0]!r}, so the copy is "
-                f"taken exactly as it is and names itself whatever the source "
-                f"did")
+                _i18n.msg("eng.campnew.s_does_not_open_on_but", "{source}'s {STRAT_NAME} does not open on `{HEADER} <name>` but on {split}, so the copy is taken exactly as it is and names itself whatever the source did", source=p.source, STRAT_NAME=campstrat.STRAT_NAME, HEADER=HEADER, split=repr(code.split()[0])))
             return
         was = rest.strip()
         if was == leaf:
@@ -309,8 +294,7 @@ def _plan_header(p: CampaignPlan, src: Path) -> None:
         p.changes.append(f"{rel}: `{HEADER} {was}` -> `{HEADER} {leaf}`, so the "
                          f"copy does not claim to be the campaign it came from")
         return
-    p.errors.append(f"{p.source}'s {campstrat.STRAT_NAME} has no code in it at "
-                    f"all")
+    p.errors.append(_i18n.msg("eng.campnew.s_has_no_code_in_it", "{source}'s {STRAT_NAME} has no code in it at all", source=p.source, STRAT_NAME=campstrat.STRAT_NAME))
 
 
 def _plan_keys(p: CampaignPlan, body: dict) -> None:
@@ -344,8 +328,7 @@ def _plan_keys(p: CampaignPlan, body: dict) -> None:
                     "where the key would go."))
     elif not str(body.get("title") or "").strip():
         p.warnings.append(
-            f"{p.name} inherits {p.source}'s title, {title!r}, so two campaigns "
-            f"read the same on the menu until one of them is renamed")
+            _i18n.msg("eng.campnew.inherits_s_title_so_two_campaigns", "{name} inherits {source}'s title, {title}, so two campaigns read the same on the menu until one of them is renamed", name=p.name, source=p.source, title=repr(title)))
     p.loc_new = [k for k in p.loc_writes if k not in have]
     if p.loc_writes:
         p.changes.append(f"{campfiles.DESCR_REL}: {len(p.loc_writes)} key(s) "
@@ -369,7 +352,7 @@ def apply(p: CampaignPlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.copies and not p.texts:
-        raise ValueError("there is nothing to copy")
+        raise ValueError(_i18n.msg("eng.campnew.there_is_nothing_to_copy", "there is nothing to copy"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

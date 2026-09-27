@@ -99,10 +99,10 @@ async function rclApply(){
   if(res.error){ k.err = res.error; rclPaint(); return; }
   k.done = {tiles: res.tiles || 0, protected: res.protected || 0};
   activity('recolour',
-    `${k.mod}: ${k.name} -> ${k.rgb.join(' ')} (${k.done.tiles} tiles)`);
-  toast(`${k.name}: ${k.done.tiles.toLocaleString()} tile`
-    + `${k.done.tiles === 1 ? '' : 's'} repainted. Not saved yet - `
-    + 'Save on the Paint panel writes the pixels and the record together.', 8000);
+    tt('recolour.tiles',{mod:k.mod,name:k.name,rgb:k.rgb.join(' '),tiles:k.done.tiles}));
+  toast(tt('recolour.tile',{name:k.name,tiles:k.done.tiles.toLocaleString()})
+    + tt('recolour.repainted_not_saved_yet',{x:k.done.tiles === 1 ? '' : 's'})
+    + tt('recolour.save_on_the_paint_panel_writes'), 8000);
   rclPaint();
   // The tiles the stroke changed, written into the browser's own copy of the
   // layer - the same road every brush stroke takes, which is why the map under
@@ -125,44 +125,31 @@ function rclHtml(){
   const same = k.rgb.join(' ') === k.was.join(' ');
   return `<div class="modal" onclick="if(event.target===this)rclClose()">
     <div class="mbox rclbox">
-      <div class="k">Change the colour of ${esc(k.name)}
-        <span class="count">map_regions.tga, and the colour line of its
-          record</span></div>
+      <div class="k">${tt('recolour.change_the_colour_of_map_regions',{name:esc(k.name)})}</div>
 
       <div class="rclrow">
         <span class="rclsw" style="background:rgb(${k.was.join(',')})"></span>
-        <span class="count">now ${k.was.join(' ')}</span>
-        <span class="rclarrow">→</span>
-        <span class="rclsw" style="background:rgb(${k.rgb.join(',')})"></span>
+        ${tt('recolour.now',{was:k.was.join(' '),rgb:k.rgb.join(',')})}
         <input type="color" value="${rclHex(k.rgb)}"
           oninput="rclFromHex(this.value)">
         ${[0, 1, 2].map(i => `<input type="number" min="0" max="255"
           value="${k.rgb[i]}" oninput="rclSet(${i}, this.value)">`).join('')}
       </div>
 
-      <div class="count rclnote">Every tile of the old colour is repainted,
-        wherever it is on the map - not just the piece under the pointer. A
-        province is not always one connected blob.</div>
+      <div class="count rclnote">${tt('recolour.every_tile_of_the_old_colour')}</div>
 
-      <div class="w-ok rclnote"><b>No region ID moves.</b> An ID is the order a
-        colour is first met scanning map_regions.tga, so it says where a
-        province's tiles are, not what colour they carry - and a recolour moves
-        no tile. A script that names a region by number still names the same
-        one. (Creating or deleting a province is the case that does renumber.)</div>
+      <div class="w-ok rclnote">${tt('recolour.no_region_id_moves_an_id')}</div>
 
       ${k.err ? `<div class="w-bad">${esc(k.err)}</div>` : ''}
-      ${k.done ? `<div class="w-ok"><b>${k.done.tiles.toLocaleString()} tile${
-        k.done.tiles === 1 ? '' : 's'} repainted.</b> Nothing is on disk yet:
-        <b>Save</b> on the Paint panel writes the pixels and the record's
-        colour line together, in one backup set.</div>` : ''}
+      ${k.done ? `<div class="w-ok">${tt('recolour.tile_repainted_nothing_is_on_disk',{tiles:k.done.tiles.toLocaleString(),x:k.done.tiles === 1 ? '' : 's'})}</div>` : ''}
 
       <div class="mrow">
         <span class="sp"></span>
         ${k.done
-          ? `<button class="primary" onclick="rclClose()">Done</button>`
-          : `<button onclick="rclClose()">Cancel</button>
+          ? `<button class="primary" onclick="rclClose()">${tt('recolour.done')}</button>`
+          : `<button onclick="rclClose()">${tt('common.cancel')}</button>
              <button class="primary" ${same || k.busy ? 'disabled' : ''}
-               onclick="rclApply()">${k.busy ? 'Repainting…' : 'Repaint'}</button>`}
+               onclick="rclApply()">${k.busy ? tt('recolour.repainting') : tt('recolour.repaint')}</button>`}
       </div>
     </div>
   </div>`;

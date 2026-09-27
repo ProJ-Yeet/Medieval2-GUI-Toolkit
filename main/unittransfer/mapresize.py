@@ -65,6 +65,7 @@ from . import campmap, campstrat
 from .campmap import (BASE_REL, LAYERS, RWM_REL, TERRAIN_REL, MapError,
                       parse_terrain)
 from .maptga import encode, read
+from . import i18n as _i18n
 
 ENCODING = campmap.ENCODING
 
@@ -191,8 +192,7 @@ def _margins(body: dict) -> Dict[str, int]:
         try:
             out[side] = int(body.get(side) or 0)
         except (TypeError, ValueError):
-            raise ResizeError(f"the {side} margin has to be a whole number of "
-                              f"tiles, not {body.get(side)!r}")
+            raise ResizeError(_i18n.msg("eng.mapresize.the_margin_has_to_be_a", "the {side} margin has to be a whole number of tiles, not {body}", side=side, body=repr(body.get(side))))
     return out
 
 
@@ -223,15 +223,14 @@ def plan(mod, body: dict) -> ResizePlan:
         p.errors.append(str(exc))
         return p
     if not any(p.margins.values()):
-        p.errors.append("every margin is 0, so there is nothing to resize")
+        p.errors.append(_i18n.msg("eng.mapresize.every_margin_is_0_so_there", "every margin is 0, so there is nothing to resize"))
         return p
     data = Path(mod.data)
     home, p.campaigns = members(mod, p.campaign)
     p.home = home.relative_to(data).as_posix()
     tpath = home / Path(TERRAIN_REL).name
     if not tpath.is_file():
-        p.errors.append(f"{p.home} has no descr_terrain.txt, so there is no map "
-                        f"size to change")
+        p.errors.append(_i18n.msg("eng.mapresize.has_no_descr_terrain_txt_so", "{home} has no descr_terrain.txt, so there is no map size to change", home=p.home))
         return p
     ttext = tpath.read_bytes().decode(ENCODING)
     try:
@@ -244,13 +243,11 @@ def plan(mod, body: dict) -> ResizePlan:
     nW, nH = W + m["west"] + m["east"], H + m["north"] + m["south"]
     p.old, p.new = (W, H), (nW, nH)
     if nW < 1 or nH < 1:
-        p.errors.append(f"those margins leave a map {nW}x{nH}, which is no map")
+        p.errors.append(_i18n.msg("eng.mapresize.those_margins_leave_a_map_x", "those margins leave a map {nW}x{nH}, which is no map", nW=nW, nH=nH))
         return p
     if max(nW, nH) > VANILLA_MAX and not getattr(mod, "m2ex", False):
         p.warnings.append(
-            f"{nW}x{nH} is over the stock engine's {VANILLA_MAX} a side. It "
-            f"loads on M2EX; mark the mod as M2EX on its Home card if it runs "
-            f"on it.")
+            _i18n.msg("eng.mapresize.x_is_over_the_stock_engines", "{nW}x{nH} is over the stock engine's {VANILLA_MAX} a side. It loads on M2EX; mark the mod as M2EX on its Home card if it runs on it.", nW=nW, nH=nH, VANILLA_MAX=VANILLA_MAX))
 
     cm = _map_for(mod, p)
     if cm is None:
@@ -268,15 +265,11 @@ def plan(mod, body: dict) -> ResizePlan:
                 p.left.append(f"{campmap.campaign_home(mod, c).relative_to(data).as_posix()}/{pic}")
     if p.left:
         p.warnings.append(
-            f"{len(p.left)} picture(s) of the map - the radar maps and the "
-            f"menu map - keep their own size and still show the old outline. "
-            f"The game loads them as they are.")
+            _i18n.msg("eng.mapresize.picture_s_of_the_map_the", "{left_n} picture(s) of the map - the radar maps and the menu map - keep their own size and still show the old outline. The game loads them as they are.", left_n=len(p.left)))
     if p.off:
         n = sum(len(v) for v in p.off.values())
         p.errors.append(
-            f"{n} thing(s) stand on the ground this would take away. Move or "
-            f"delete them first - the list names the file and line of each - "
-            f"and the resize will go through.")
+            _i18n.msg("eng.mapresize.thing_s_stand_on_the_ground", "{n} thing(s) stand on the ground this would take away. Move or delete them first - the list names the file and line of each - and the resize will go through.", n=n))
     return p
 
 
@@ -354,7 +347,7 @@ def _plan_layers(p: ResizePlan, cm, home: Path) -> None:
         try:
             img, info = read(path)
         except Exception as exc:                           # noqa: BLE001
-            p.errors.append(f"{rel} could not be read: {exc}")
+            p.errors.append(_i18n.msg("eng.mapresize.could_not_be_read", "{rel} could not be read: {exc}", rel=rel, exc=exc))
             continue
         if rule == "advisory":
             if img.size != (2 * W + 1, 2 * H + 1):
@@ -366,9 +359,7 @@ def _plan_layers(p: ResizePlan, cm, home: Path) -> None:
         want = {"tile": (W, H), "centre": (2 * W + 1, 2 * H + 1),
                 "double": (2 * W, 2 * H)}[rule]
         if img.size != want:
-            p.errors.append(f"{rel} is {img.size[0]}x{img.size[1]} and a "
-                            f"{W}x{H} map needs it {want[0]}x{want[1]}; fix "
-                            f"its size before resizing")
+            p.errors.append(_i18n.msg("eng.mapresize.is_x_and_a_x_map", "{rel} is {size}x{size2} and a {W}x{H} map needs it {want}x{want2}; fix its size before resizing", rel=rel, size=img.size[0], size2=img.size[1], W=W, H=H, want=want[0], want2=want[1]))
             continue
         img = img.convert(info.mode) if img.mode != info.mode else img
         fill = fill_colour(cm, ly["code"], img, rule)
@@ -443,7 +434,7 @@ def _plan_terrain(p: ResizePlan, tpath: Path, text: str) -> None:
         out, n = re.subn(rf"(\b{word}\s+)\d+", lambda mm, v=value: f"{mm.group(1)}{v}",
                          out, count=1)
         if not n:
-            p.errors.append(f"{tpath.name} has no {word} line to change")
+            p.errors.append(_i18n.msg("eng.mapresize.has_no_line_to_change", "{name} has no {word} line to change", name=tpath.name, word=word))
             return
     rel = tpath.relative_to(Path(p.mod.data)).as_posix()
     p.data[rel] = out.encode(ENCODING)
@@ -475,9 +466,7 @@ def _plan_numbering(p: ResizePlan, cm) -> None:
     moved = [n for n in before if before[n] != after.get(n)]
     if moved:
         p.warnings.append(
-            f"{len(moved)} region number(s) change, because the engine numbers "
-            f"regions in the order a scan from the top-left first meets them. A "
-            f"save made before the resize will not match the map.")
+            _i18n.msg("eng.mapresize.region_number_s_change_because_the", "{moved_n} region number(s) change, because the engine numbers regions in the order a scan from the top-left first meets them. A save made before the resize will not match the map.", moved_n=len(moved)))
 
 
 def _decode(buf) -> Image.Image:
@@ -639,9 +628,7 @@ def _plan_coordinates(p: ResizePlan) -> None:
         if off and shrink:
             if kind == "script":
                 p.warnings.append(
-                    f"{rel}: {len(off)} script line(s) name a tile the smaller "
-                    f"map does not have, first line {off[0][0]}: {off[0][1]!r}. "
-                    f"They are moved like every other and left for you to read.")
+                    _i18n.msg("eng.mapresize.script_line_s_name_a_tile", "{rel}: {off_n} script line(s) name a tile the smaller map does not have, first line {off}: {off2}. They are moved like every other and left for you to read.", rel=rel, off_n=len(off), off=off[0][0], off2=repr(off[0][1])))
             else:
                 p.off[rel] = off
         if not n or (dx, dy) == (0, 0):
@@ -675,7 +662,7 @@ def apply(p: ResizePlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.data:
-        raise ValueError("nothing to resize")
+        raise ValueError(_i18n.msg("eng.mapresize.nothing_to_resize", "nothing to resize"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

@@ -17,12 +17,12 @@
 
 async function loadWalls(){
   const mod = state.src;
-  main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s walls…</div>';
+  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('walls.s_walls')}</div>`;
   let r;
   try{ r = await api.get('/api/walls?mod=' + enc(mod)); }
   catch(e){ if(stale('walls', mod)) return;
-    main.innerHTML = `<div class="empty">Couldn't read them.<br><span class="count">${esc(errText(e))}</span>
-      <br><br><button class="primary" onclick="loadWalls()">Retry</button></div>`; return; }
+    main.innerHTML = `<div class="empty">${tt('common.couldnt_read_them')}<br><span class="count">${esc(errText(e))}</span>
+      <br><br><button class="primary" onclick="loadWalls()">${tt('common.retry')}</button></div>`; return; }
   if(stale('walls', mod)) return;
   const keep = state.wlx && state.wlx.mod === mod ? state.wlx : null;
   state.wlx = Object.assign({mod, sel: keep ? keep.sel : '', w: wlxBlank(), busy: false}, r);
@@ -45,20 +45,20 @@ function renderWalls(){
   const n = wlxChanged();
   const left = c.error ? `<div class="count" style="padding:8px">${esc(c.error)}.</div>`
     : `<button class="trrow${c.sel === 'gates' ? ' on' : ''}" onclick="wlxPick('gates')">
-        <div class="nm">Gates</div><div class="sub">${(c.gates || []).length} gate types</div></button>`
+        <div class="nm">${tt('walls.gates')}</div><div class="sub">${tt('walls.gate_types',{n:(c.gates || []).length})}</div></button>`
       + (c.walls || []).map(x => `<button class="trrow${c.sel === String(x.id) ? ' on' : ''}" onclick="wlxPick('${x.id}')">
-        <div class="nm">Wall level ${x.level ?? '?'}</div>
-        <div class="sub">${x.parts.map(p => p.kind).join(', ')}${x.edb.length ? ` · ${x.edb.length} building(s) give it` : ''}</div></button>`).join('');
+        <div class="nm">${tt('walls.wall_level',{level:x.level ?? '?'})}</div>
+        <div class="sub">${x.parts.map(p => p.kind).join(', ')}${x.edb.length ? tt('walls.building_s_give_it',{edb_n:x.edb.length}) : ''}</div></button>`).join('');
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
       ${findingsHtml('walls', find, 'wlxOpen')}
       <div class="trrows">${left}</div>
     </div>
     <div class="trmain">
-      <div class="cdbhead"><div><b>descr_walls.txt</b> <span class="count">walls, gates and towers in a siege, by wall level</span></div>
+      <div class="cdbhead"><div>${tt('walls.descr_walls_txt_walls_gates_and')}</div>
         <span style="flex:1"></span>
-        <button onclick="wlxRevert()" ${n ? '' : 'disabled'}>Revert</button>
-        <button class="primary" onclick="wlxSave()" ${n ? '' : 'disabled'}>Save ${n || ''} change${n === 1 ? '' : 's'}</button>
+        <button onclick="wlxRevert()" ${n ? '' : 'disabled'}>${tt('common.revert')}</button>
+        <button class="primary" onclick="wlxSave()" ${n ? '' : 'disabled'}>${tt('walls.save_change',{x:n || '',x2:n === 1 ? '' : 's'})}</button>
       </div>
       ${c.error ? '' : c.sel === 'gates' ? wlxGatesHtml() : wlxWallHtml()}
     </div>
@@ -90,9 +90,9 @@ function wlxRows(rows){
 }
 function wlxGatesHtml(){
   const c = state.wlx;
-  return (c.gates || []).map(g => `<div class="cdbsec"><h3>${esc(g.name)} <span class="count">line ${g.line}</span></h3>
+  return (c.gates || []).map(g => `<div class="cdbsec"><h3>${tt('walls.line',{name:esc(g.name),line:g.line})}</h3>
     <table class="smxtab">${wlxRows(g.rows)}</table></div>`).join('')
-    + `<div class="count">A gateway carries the gate types named inside it. The file's own comment: a short gate is wooden only, medium and huge come in wooden, reinforced and iron.</div>`;
+    + `<div class="count">${tt('walls.a_gateway_carries_the_gate_types')}</div>`;
 }
 function wlxToggle(list, v){
   const i = list.indexOf(v);
@@ -101,33 +101,27 @@ function wlxToggle(list, v){
 }
 function wlxWallHtml(){
   const c = state.wlx, x = (c.walls || []).find(w => String(w.id) === c.sel);
-  if(!x) return '<div class="count" style="padding:8px">Pick a wall level.</div>';
+  if(!x) return `<div class="count" style="padding:8px">${tt('walls.pick_a_wall_level')}</div>`;
   const w = c.w, gates = (c.gates || []).map(g => g.name);
   const parts = x.parts.map(p => {
-    const gateRow = p.kind === 'gateway' ? `<div class="trnote">Gate types:
-      ${p.gates.map(g => `<code${w.remove.includes(g.line) ? ' style="opacity:.45"' : ''}>${esc(g.gate)}</code>
-        <button onclick="wlxToggle(state.wlx.w.remove, ${g.line})">${w.remove.includes(g.line) ? 'keep' : '✕'}</button>`).join(' ')}
-      ${w.add_gate.filter(a => a.gateway === p.line).map(a => `<code>+ ${esc(a.gate)}</code>`).join(' ')}
-      ${(() => { const free = gates.filter(g => !p.gates.some(x2 => x2.gate === g) && !w.add_gate.some(a => a.gateway === p.line && a.gate === g));
+    const gateRow = p.kind === 'gateway' ? `<div class="trnote">${tt('walls.gate_types_2',{x:p.gates.map(g => `<code${w.remove.includes(g.line) ? ' style="opacity:.45"' : ''}>${esc(g.gate)}</code>
+        <button onclick="wlxToggle(state.wlx.w.remove, ${g.line})">${w.remove.includes(g.line) ? 'keep' : '✕'}</button>`).join(' '),x2:w.add_gate.filter(a => a.gateway === p.line).map(a => `<code>+ ${esc(a.gate)}</code>`).join(' '),x3:(() => { const free = gates.filter(g => !p.gates.some(x2 => x2.gate === g) && !w.add_gate.some(a => a.gateway === p.line && a.gate === g));
           return free.length ? `<select id="wlxGate${p.line}">${free.map(g => `<option>${esc(g)}</option>`).join('')}</select>
-            <button onclick="wlxAddGate(${p.line})">＋ Add</button>` : ''; })()}</div>` : '';
+            <button onclick="wlxAddGate(${p.line})">${tt('common.add')}</button>` : ''; })()})}</div>` : '';
     const firing = p.firing.map((f, k) => {
       const gone = w.remove.includes(f.line);
-      return `<div class="cdbsec"${gone ? ' style="opacity:.45"' : ''}><h3>${esc(p.kind)} · firing level ${k + 1}
-          <span class="count"><code>${esc(f.kind)}</code> · line ${f.line}</span>
-          <button onclick="wlxToggle(state.wlx.w.copy_firing, ${f.line})">${w.copy_firing.includes(f.line) ? 'no copy' : 'Copy'}</button>
-          ${p.firing.length > 1 ? `<button onclick="wlxToggle(state.wlx.w.remove, ${f.line})">${gone ? 'Keep it' : 'Remove'}</button>` : ''}</h3>
+      return `<div class="cdbsec"${gone ? ' style="opacity:.45"' : ''}><h3>${tt('walls.firing_level_line',{kind:esc(p.kind),x:k + 1,kind2:esc(f.kind),line:f.line})}
+          <button onclick="wlxToggle(state.wlx.w.copy_firing, ${f.line})">${w.copy_firing.includes(f.line) ? tt('walls.no_copy') : tt('walls.copy')}</button>
+          ${p.firing.length > 1 ? `<button onclick="wlxToggle(state.wlx.w.remove, ${f.line})">${gone ? tt('common.keep_it') : tt('common.remove')}</button>` : ''}</h3>
         <table class="smxtab">${wlxRows(f.rows)}</table></div>`;
     }).join('');
-    return `<div class="cdbsec"><h3>${esc(p.kind)} <span class="count">line ${p.line}</span></h3>
+    return `<div class="cdbsec"><h3>${tt('walls.line_2',{kind:esc(p.kind),line:p.line})}</h3>
       <table class="smxtab">${wlxRows(p.rows)}</table>${gateRow}</div>${firing}`;
   }).join('');
-  return `<div class="cdbsec"><h3>Wall level ${x.level ?? '?'} <span class="count">line ${x.line}</span></h3>
+  return `<div class="cdbsec"><h3>${tt('walls.wall_level_line',{level:x.level ?? '?',line:x.line})}</h3>
       <table class="smxtab">${wlxRows(x.rows)}</table>
-      <div class="count">${x.edb.length ? `Given by ${esc(x.edb.slice(0, 6).join(', '))}${x.edb.length > 6 ? '…' : ''} (<code>wall_level ${x.level}</code>)${
-        x.tower_levels.length ? `, with <code>tower_level ${x.tower_levels.join(', ')}</code>: its tower needs that many firing levels` : ''}.`
-        : 'No EDB building gives this wall level together with a tower level.'}
-        A <code>stat</code> line is the eleven fields of an EDU <code>stat_pri</code>: attack, charge, projectile, range, ammo, and the rest.</div></div>
+      <div class="count">${tt('walls.a_stat_line_is_the_eleven',{x:x.edb.length ? tt('walls.given_by_wall_level',{edb:esc(x.edb.slice(0, 6).join(', ')),edb2:x.edb.length > 6 ? '…' : '',level:x.level,tower_levels:x.tower_levels.length ? tt('walls.with_tower_level_its_tower_needs',{tower_levels:x.tower_levels.join(', ')}) : ''})
+        : tt('walls.no_edb_building_gives_this_wall')})}</div></div>
     ${parts}`;
 }
 function wlxAddGate(line){
@@ -147,13 +141,13 @@ async function wlxSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(`Write ${(p.changes || []).length} change(s)?\n\n` + (p.changes || []).slice(0, 16).join('\n')
+  if(!confirm(tt('walls.write_change_s',{n:(p.changes || []).length}) + (p.changes || []).slice(0, 16).join('\n')
     + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   let res;
   try{ res = await api.post('/api/walls/apply', body); }
   catch(e){ res = {error: errText(e)}; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   await loadWalls();
 }

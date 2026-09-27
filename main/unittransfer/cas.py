@@ -133,6 +133,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from unittransfer import mesh
+from . import i18n as _i18n
 
 #: Where the node count sits. Two RGB triples earlier in the header push every
 #: field after them two bytes off the 32-bit grid; see the module docstring.
@@ -293,8 +294,7 @@ class _Reader:
 
     def need(self, n: int) -> None:
         if n < 0 or self.p + n > len(self.d):
-            raise self.fail(f"ran off the end at byte {self.p:,} wanting {n:,} "
-                            f"more of {len(self.d):,}")
+            raise self.fail(_i18n.msg("eng.cas.ran_off_the_end_at_byte", "ran off the end at byte {p:,} wanting {n:,} more of {d_n:,}", p=self.p, n=n, d_n=len(self.d)))
 
     def u16(self) -> int:
         self.need(2)
@@ -323,7 +323,7 @@ class _Reader:
     def count(self, what: str) -> int:
         n = self.u32()
         if n > MAX_COUNT:
-            raise self.fail(f"{what} says {n:,}, which is not a real count")
+            raise self.fail(_i18n.msg("eng.cas.says_n_which_is_not_a", "{what} says {n:,}, which is not a real count", what=what, n=n))
         return n
 
     def floats(self, n: int) -> array:
@@ -361,7 +361,7 @@ class _Reader:
         """A bare NUL-terminated string - how a material writes its two."""
         end = self.d.find(b"\x00", self.p)
         if end < 0:
-            raise self.fail(f"a string starting at byte {self.p:,} never ends")
+            raise self.fail(_i18n.msg("eng.cas.a_string_starting_at_byte_p", "a string starting at byte {p:,} never ends", p=self.p))
         out = self.d[self.p:end].decode("latin-1")
         self.p = end + 1
         return out
@@ -381,8 +381,7 @@ def _read_header(r: _Reader, out: CasScene) -> None:
     """Version, scene length, node hierarchy and key times."""
     out.version = r.f32()
     if not MIN_VERSION <= out.version <= MAX_VERSION:
-        raise r.fail(f"opens with {out.version:g}, which is not a .cas version "
-                     f"(the installed set runs {MIN_VERSION:g} to {MAX_VERSION:g})")
+        raise r.fail(_i18n.msg("eng.cas.opens_with_version_g_which_is", "opens with {version:g}, which is not a .cas version (the installed set runs {MIN_VERSION:g} to {MAX_VERSION:g})", version=out.version, MIN_VERSION=MIN_VERSION, MAX_VERSION=MAX_VERSION))
     r.skip(8)                                   # 38 and 9, constant everywhere
     r.skip(4)                                   # 0, constant everywhere
     out.length = r.f32()
@@ -408,14 +407,11 @@ def _read_header(r: _Reader, out: CasScene) -> None:
             # Six terrain models here - two bridges, two volcanoes, a river
             # wall - are stamped 2.23 and lay their header out differently.
             # Saying so by version beats a string length in the billions.
-            raise r.fail(f"its header is version {out.version:g}, and the layout "
-                         f"this reader knows starts at 3.02 - the node names are "
-                         f"not where {out.version:g} puts them") from None
+            raise r.fail(_i18n.msg("eng.cas.its_header_is_version_version_g", "its header is version {version:g}, and the layout this reader knows starts at 3.02 - the node names are not where {version2:g} puts them", version=out.version, version2=out.version)) from None
         nrot, npos, roff, poff, zero = struct.unpack_from("<5I", r.skip(20), 0)
         r.text()                                # the bone's properties
         if nrot > len(out.key_times) or npos > len(out.key_times) or zero:
-            raise r.fail(f"node {out.nodes[-1]!r} has {nrot} rotation and {npos} "
-                         f"position keys of the file's {len(out.key_times)}")
+            raise r.fail(_i18n.msg("eng.cas.node_has_rotation_and_position_keys", "node {nodes} has {nrot} rotation and {npos} position keys of the file's {key_times_n}", nodes=repr(out.nodes[-1]), nrot=nrot, npos=npos, key_times_n=len(out.key_times)))
         block += nrot * ROT_BYTES + npos * POS_BYTES
     if block:
         r.skip(block)
@@ -424,8 +420,7 @@ def _read_header(r: _Reader, out: CasScene) -> None:
 
     bad = [p for p in out.parents[1:] if not 0 <= p < nodes]
     if bad:
-        raise r.fail(f"the parent table points at nodes {bad[:4]} of {nodes} - "
-                     f"the header is not being read where it really is")
+        raise r.fail(_i18n.msg("eng.cas.the_parent_table_points_at_nodes", "the parent table points at nodes {bad} of {nodes} - the header is not being read where it really is", bad=bad[:4], nodes=nodes))
 
 
 # ---------------------------------------------------------------------------
@@ -447,9 +442,7 @@ def _read_object(r: _Reader, kind: int, out: CasScene) -> CasObject:
     has_uvs = r.u8()
     has_colours = r.u8()
     if has_uvs > 1 or has_colours > 1:
-        raise r.fail(f"mesh {obj.name!r} says its UV flag is {has_uvs} and its "
-                     f"colour flag is {has_colours}; both are 0 or 1 in every "
-                     f"file measured, so the record is not where we think")
+        raise r.fail(_i18n.msg("eng.cas.mesh_says_its_uv_flag_is", "mesh {name} says its UV flag is {has_uvs} and its colour flag is {has_colours}; both are 0 or 1 in every file measured, so the record is not where we think", name=repr(obj.name), has_uvs=has_uvs, has_colours=has_colours))
 
     if obj.skinned:
         obj.bones = r.u32s(verts)
@@ -465,13 +458,11 @@ def _read_object(r: _Reader, kind: int, out: CasScene) -> CasObject:
     r.skip(4)                                   # 0 between one mesh and the next
 
     if verts and obj.indices and max(obj.indices) >= verts:
-        raise r.fail(f"mesh {obj.name!r} indexes vertex {max(obj.indices)} of "
-                     f"{verts}")
+        raise r.fail(_i18n.msg("eng.cas.mesh_indexes_vertex_of", "mesh {name} indexes vertex {max} of {verts}", name=repr(obj.name), max=max(obj.indices), verts=verts))
     if obj.bones:
         stray = [b for b in obj.bones if b >= len(out.nodes)]
         if stray:
-            out.notes.append(f"mesh {obj.name!r} weights vertices to node "
-                             f"{stray[0]} of {len(out.nodes)}")
+            out.notes.append(_i18n.msg("eng.cas.mesh_weights_vertices_to_node_of", "mesh {name} weights vertices to node {stray} of {nodes_n}", name=repr(obj.name), stray=stray[0], nodes_n=len(out.nodes)))
     return obj
 
 
@@ -494,16 +485,12 @@ def _read_meshes(r: _Reader, kind: int, end: int, out: CasScene) -> None:
         try:
             out.objects.append(_read_object(r, kind, out))
         except CasError as exc:
-            out.notes.append(f"{str(exc).split(': ', 1)[-1]} - mesh {i + 1} of "
-                             f"{count} in the {_kind_name(kind)} chunk and every "
-                             f"mesh after it was left out")
+            out.notes.append(_i18n.msg("eng.cas.mesh_of_in_the_chunk_and", "{split} - mesh {x} of {count} in the {kind_name} chunk and every mesh after it was left out", split=str(exc).split(': ', 1)[-1], x=i + 1, count=count, kind_name=_kind_name(kind)))
             r.p = end
             return
     want = _trailer(out.version, kind)
     if r.p + want != end:
-        out.notes.append(f"the {_kind_name(kind)} chunk ends at byte {end:,} and "
-                         f"its {count} meshes end at {r.p:,}, {end - r.p - want:+,} "
-                         f"bytes out - what was read may not be the whole of it")
+        out.notes.append(_i18n.msg("eng.cas.the_chunk_ends_at_byte_end", "the {kind_name} chunk ends at byte {end:,} and its {count} meshes end at {p:,}, {x:+,} bytes out - what was read may not be the whole of it", kind_name=_kind_name(kind), end=end, count=count, p=r.p, x=end - r.p - want))
     r.p = end
 
 
@@ -544,18 +531,14 @@ def _read_materials(r: _Reader, end: int, out: CasScene) -> None:
                 # read as a name and a path. Their geometry is fine and their
                 # texture is not a path at all, so it is dropped by name rather
                 # than handed to a renderer that would go looking for it.
-                out.notes.append(f"material {len(out.materials)} names "
-                                 f"{mat.texture[:24]!r}, which is not a texture "
-                                 f"path - this material's sheet is inside the "
-                                 f"file rather than beside it")
+                out.notes.append(_i18n.msg("eng.cas.material_names_which_is_not_a", "material {materials_n} names {texture}, which is not a texture path - this material's sheet is inside the file rather than beside it", materials_n=len(out.materials), texture=repr(mat.texture[:24])))
                 mat.texture = ""
         mat.diffuse = tuple(r.floats(4))        # type: ignore[assignment]
         mat.specular = tuple(r.floats(3))       # type: ignore[assignment]
         r.skip(MATERIAL_TAIL)
         out.materials.append(mat)
     if r.p != end:
-        out.notes.append(f"the material chunk has {end - r.p:+,} bytes after its "
-                         f"{count} materials that this reader does not read")
+        out.notes.append(_i18n.msg("eng.cas.the_material_chunk_has_x_bytes", "the material chunk has {x:+,} bytes after its {count} materials that this reader does not read", x=end - r.p, count=count))
     r.p = end
 
 
@@ -563,14 +546,12 @@ def _read_chunks(r: _Reader, out: CasScene) -> None:
     while r.p < len(r.d):
         start = r.p
         if start + 8 > len(r.d):
-            out.notes.append(f"{len(r.d) - start} bytes after the last chunk, "
-                             f"too few to be another one")
+            out.notes.append(_i18n.msg("eng.cas.bytes_after_the_last_chunk_too", "{x} bytes after the last chunk, too few to be another one", x=len(r.d) - start))
             return
         size = r.u32()
         kind = r.u32()
         if size < 8 or start + size > len(r.d):
-            raise r.fail(f"the chunk at byte {start:,} says it is {size:,} bytes "
-                         f"of the {len(r.d):,} in the file")
+            raise r.fail(_i18n.msg("eng.cas.the_chunk_at_byte_start_says", "the chunk at byte {start:,} says it is {size:,} bytes of the {d_n:,} in the file", start=start, size=size, d_n=len(r.d)))
         end = start + size
         if kind in (STATIC_MESHES, SKINNED_MESHES):
             _read_meshes(r, kind, end, out)
@@ -578,12 +559,9 @@ def _read_chunks(r: _Reader, out: CasScene) -> None:
             _read_materials(r, end, out)
         else:
             if kind not in ALWAYS_EMPTY:
-                out.notes.append(f"chunk kind {kind} at byte {start:,} is not one "
-                                 f"of the five this format writes; {size:,} bytes "
-                                 f"skipped")
+                out.notes.append(_i18n.msg("eng.cas.chunk_kind_at_byte_start_is", "chunk kind {kind} at byte {start:,} is not one of the five this format writes; {size:,} bytes skipped", kind=kind, start=start, size=size))
             elif size > 20:
-                out.notes.append(f"chunk kind {kind} is {size:,} bytes and is "
-                                 f"empty in every file measured")
+                out.notes.append(_i18n.msg("eng.cas.chunk_kind_is_size_bytes_and", "chunk kind {kind} is {size:,} bytes and is empty in every file measured", kind=kind, size=size))
             r.p = end
         r.p = end
 
@@ -598,7 +576,7 @@ def read_cas(path) -> CasScene:
     try:
         data = path.read_bytes()
     except OSError as exc:
-        raise CasError(f"{path.name} could not be read: {exc}") from exc
+        raise CasError(_i18n.msg("eng.cas.could_not_be_read", "{name} could not be read: {exc}", name=path.name, exc=exc)) from exc
     return read_cas_bytes(data, str(path))
 
 
@@ -607,18 +585,15 @@ def read_cas_bytes(data: bytes, source: str) -> CasScene:
     if mesh.probe_bytes(data) != "cas":
         found = mesh.probe_bytes(data)
         if found == "mesh":
-            raise CasError(f"{Path(source).name} is a battle .mesh, not a "
-                           f"strat-map .cas - unittransfer.mesh reads that one")
-        raise CasError(f"{Path(source).name} is not a Medieval II model file "
-                       f"(first bytes: {data[:8].hex(' ') or 'empty'})")
+            raise CasError(_i18n.msg("eng.cas.is_a_battle_mesh_not_a", "{name} is a battle .mesh, not a strat-map .cas - unittransfer.mesh reads that one", name=Path(source).name))
+        raise CasError(_i18n.msg("eng.cas.is_not_a_medieval_ii_model", "{name} is not a Medieval II model file (first bytes: {x})", name=Path(source).name, x=data[:8].hex(' ') or 'empty'))
     out = CasScene(source=source)
     r = _Reader(data, source)
     _read_header(r, out)
     _read_chunks(r, out)
     for obj in out.objects:
         if obj.material is not None and obj.material >= len(out.materials):
-            out.notes.append(f"mesh {obj.name!r} asks for material "
-                             f"{obj.material} of {len(out.materials)}")
+            out.notes.append(_i18n.msg("eng.cas.mesh_asks_for_material_of", "mesh {name} asks for material {material} of {materials_n}", name=repr(obj.name), material=obj.material, materials_n=len(out.materials)))
             obj.material = None
     return out
 
@@ -747,9 +722,7 @@ def as_mesh(scene: CasScene, skeleton: Optional[CasScene] = None,
     any_uvs = any(o.uvs for o in scene.objects)
     world = bind_world(scene, skeleton) if pose and is_skinned(scene) else []
     if world and not has_pivots(scene) and skeleton is None:
-        out.notes.append("its bones all sit at the origin and no skeleton was "
-                         "found beside it, so it is drawn as stored, its pieces "
-                         "on top of one another")
+        out.notes.append(_i18n.msg("eng.cas.its_bones_all_sit_at_the", "its bones all sit at the origin and no skeleton was found beside it, so it is drawn as stored, its pieces on top of one another"))
     # 80b: a placed skinned model carries its skin, one bone a vertex at weight
     # 1, so the viewer can play it; the four bytes a vertex are laid out as a
     # .mesh lays them (the first weight's bone third). An object with no bones
@@ -782,9 +755,7 @@ def as_mesh(scene: CasScene, skeleton: Optional[CasScene] = None,
     if skin:
         out.bone_ids = bytes(ids)
     if base > 0xFFFF:
-        raise CasError(f"{Path(scene.source).name}: its {len(scene.objects)} "
-                       f"meshes come to {base:,} vertices, past what 16-bit "
-                       f"indices can name")
+        raise CasError(_i18n.msg("eng.cas.its_meshes_come_to_base_vertices", "{name}: its {objects_n} meshes come to {base:,} vertices, past what 16-bit indices can name", name=Path(scene.source).name, objects_n=len(scene.objects), base=base))
     return out
 
 

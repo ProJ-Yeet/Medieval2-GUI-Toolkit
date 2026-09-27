@@ -60,6 +60,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import keyblock as kb
+from . import i18n as _i18n
 
 ANIMALS_REL = "descr_animals.txt"
 STANDARDS_REL = "descr_standards.txt"
@@ -158,7 +159,7 @@ def finding(code: str, severity: str, message: str, key: str, line: int) -> Dict
 def _read(mod, rel: str) -> str:
     path = Path(mod.data) / rel
     if not path.is_file():
-        raise SideError(f"this mod has no {rel}")
+        raise SideError(_i18n.msg("eng.sidefiles.this_mod_has_no", "this mod has no {rel}", rel=rel))
     return kb.read_text(path, ENCODING)
 
 
@@ -227,45 +228,37 @@ def check_animals(animals: List[Animal], models: Optional[set],
         key = f"animals/{a.name}"
         low = a.name.lower()
         if not a.name:
-            out.append(finding("name", "fatal", f"line {a.line + 1}: a `type` line with no name",
+            out.append(finding("name", "fatal", _i18n.msg("eng.sidefiles.line_a_type_line_with_no", "line {x}: a `type` line with no name", x=a.line + 1),
                                key, a.line))
         if low in seen:
-            out.append(finding("duplicate", "warn", f"{a.name} is declared twice (lines "
-                               f"{seen[low] + 1} and {a.line + 1})", key, a.line))
+            out.append(finding("duplicate", "warn", _i18n.msg("eng.sidefiles.is_declared_twice_lines_and", "{name} is declared twice (lines {x} and {x2})", name=a.name, x=seen[low] + 1, x2=a.line + 1), key, a.line))
         seen.setdefault(low, a.line)
         for k in ANIMAL_REQUIRED:
             if k not in a.fields:
-                out.append(finding("missing", "warn", f"{a.name} has no `{k}` line", key, a.line))
+                out.append(finding("missing", "warn", _i18n.msg("eng.sidefiles.has_no_line", "{name} has no `{k}` line", name=a.name, k=k), key, a.line))
         for i, k in a.other:
-            out.append(finding("key", "warn", f"line {i + 1}: {a.name} has a `{k}` line, which "
-                               f"is not one of the file's keys ({', '.join(ANIMAL_KEYS)})", key, i))
+            out.append(finding("key", "warn", _i18n.msg("eng.sidefiles.line_has_a_line_which_is", "line {x}: {name} has a `{k}` line, which is not one of the file's keys ({ANIMAL_KEYS})", x=i + 1, name=a.name, k=k, ANIMAL_KEYS=', '.join(ANIMAL_KEYS)), key, i))
         for k in ANIMAL_NUMBERS:
             if k in a.fields and not _is_num(a.fields[k][1]):
                 i, v = a.fields[k]
-                out.append(finding("number", "fatal", f"{a.name}: {k} {v!r} is not a number",
+                out.append(finding("number", "fatal", _i18n.msg("eng.sidefiles.is_not_a_number", "{name}: {k} {v} is not a number", name=a.name, k=k, v=repr(v)),
                                    key, i))
         if "class" in a.fields and a.fields["class"][1].lower() not in ANIMAL_CLASSES:
             i, v = a.fields["class"]
-            out.append(finding("class", "warn", f"{a.name}: class {v!r} is not one the file's "
-                               f"header lists ({', '.join(ANIMAL_CLASSES)})", key, i))
+            out.append(finding("class", "warn", _i18n.msg("eng.sidefiles.class_is_not_one_the_files", "{name}: class {v} is not one the file's header lists ({ANIMAL_CLASSES})", name=a.name, v=repr(v), ANIMAL_CLASSES=', '.join(ANIMAL_CLASSES)), key, i))
         if models is not None and "model" in a.fields:
             i, v = a.fields["model"]
             if v.lower() not in models:
                 users = uses.get(low, [])
                 if users:
-                    out.append(finding("model", "warn", f"{a.name}'s model {v} is not in the "
-                                       f"battle modeldb, and {len(users)} unit(s) bring this "
-                                       f"animal to battle ({', '.join(users[:3])})", key, i))
+                    out.append(finding("model", "warn", _i18n.msg("eng.sidefiles.s_model_is_not_in_the", "{name}'s model {v} is not in the battle modeldb, and {users_n} unit(s) bring this animal to battle ({users})", name=a.name, v=v, users_n=len(users), users=', '.join(users[:3])), key, i))
                 else:
-                    out.append(finding("model", "note", f"{a.name}'s model {v} is not in the "
-                                       f"battle modeldb; no unit uses this animal", key, i))
+                    out.append(finding("model", "note", _i18n.msg("eng.sidefiles.s_model_is_not_in_the_2", "{name}'s model {v} is not in the battle modeldb; no unit uses this animal", name=a.name, v=v), key, i))
     for name, units in uses.items():
         if name not in seen:
             have = ", ".join(a.name for a in animals) or "nothing"
             out.append(finding("undeclared", "warn",
-                               f"{', '.join(units[:3])}{' and more' if len(units) > 3 else ''} "
-                               f"carr{'ies' if len(units) == 1 else 'y'} `animal {name}`, and "
-                               f"this file does not declare it (it declares {have})",
+                               _i18n.msg("eng.sidefiles.carr_animal_and_this_file_does", "{units}{x} carr{x2} `animal {name}`, and this file does not declare it (it declares {have})", units=', '.join(units[:3]), x=' and more' if len(units) > 3 else '', x2='ies' if len(units) == 1 else 'y', name=name, have=have),
                                f"animals/{name}", 0))
     return out
 
@@ -318,46 +311,33 @@ def check_standards(rows: List[StdLine], data: Path) -> List[Dict]:
         if r.kind == "scale":
             v = r.values[0] if r.values else ""
             if not _is_num(v[:-1] if v.lower().endswith("f") else v):
-                out.append(finding("number", "fatal", f"line {r.line + 1}: file_scale {v!r} is "
-                                   f"not a number", key, r.line))
+                out.append(finding("number", "fatal", _i18n.msg("eng.sidefiles.line_file_scale_is_not_a", "line {x}: file_scale {v} is not a number", x=r.line + 1, v=repr(v)), key, r.line))
         elif r.kind == "file":
             if len(r.values) != 1:
-                out.append(finding("spaces", "warn", f"line {r.line + 1}: {r.key} is "
-                                   f"{' '.join(r.values) or 'empty'} - one path, and the "
-                                   f"file's own comment says it can't have spaces", key, r.line))
+                out.append(finding("spaces", "warn", _i18n.msg("eng.sidefiles.line_is_one_path_and_the", "line {x}: {key} is {x2} - one path, and the file's own comment says it can't have spaces", x=r.line + 1, key=r.key, x2=' '.join(r.values) or 'empty'), key, r.line))
             elif not _on_disk(data, r.values[0]):
-                out.append(finding("path", "note", f"line {r.line + 1}: {r.values[0]} is not "
-                                   f"in the mod; the base game's packs may hold it", key, r.line))
+                out.append(finding("path", "note", _i18n.msg("eng.sidefiles.line_is_not_in_the_mod", "line {x}: {values} is not in the mod; the base game's packs may hold it", x=r.line + 1, values=r.values[0]), key, r.line))
         elif r.kind == "rect":
             rects.add(r.key.lower())
             nums = r.values[:4]
             if len(nums) < 4 or not all(_is_num(v) for v in nums):
-                out.append(finding("rect", "fatal", f"line {r.line + 1}: {r.key} is four "
-                                   f"numbers, left, top, right, bottom - not "
-                                   f"{', '.join(r.values) or 'nothing'}", key, r.line))
+                out.append(finding("rect", "fatal", _i18n.msg("eng.sidefiles.line_is_four_numbers_left_top", "line {x}: {key} is four numbers, left, top, right, bottom - not {x2}", x=r.line + 1, key=r.key, x2=', '.join(r.values) or 'nothing'), key, r.line))
                 continue
             x0, y0, x1, y1 = (float(v) for v in nums)
             if any(v < 0 or v > 1 for v in (x0, y0, x1, y1)):
-                out.append(finding("range", "warn", f"line {r.line + 1}: {r.key} reaches "
-                                   f"outside the texture (every number is 0 to 1)", key, r.line))
+                out.append(finding("range", "warn", _i18n.msg("eng.sidefiles.line_reaches_outside_the_texture_every", "line {x}: {key} reaches outside the texture (every number is 0 to 1)", x=r.line + 1, key=r.key), key, r.line))
             if x0 >= x1 or y0 >= y1:
-                out.append(finding("empty", "warn", f"line {r.line + 1}: {r.key}'s right or "
-                                   f"bottom edge is not past its left or top, so it covers "
-                                   f"nothing", key, r.line))
+                out.append(finding("empty", "warn", _i18n.msg("eng.sidefiles.line_s_right_or_bottom_edge", "line {x}: {key}'s right or bottom edge is not past its left or top, so it covers nothing", x=r.line + 1, key=r.key), key, r.line))
         elif r.kind == "symbols":
             if not r.section:
-                out.append(finding("section", "warn", f"line {r.line + 1}: a symbol sheet before "
-                                   f"any `factions` line", key, r.line))
+                out.append(finding("section", "warn", _i18n.msg("eng.sidefiles.line_a_symbol_sheet_before_any", "line {x}: a symbol sheet before any `factions` line", x=r.line + 1), key, r.line))
             if r.values and not _on_disk(data, r.values[0]):
-                out.append(finding("path", "note", f"line {r.line + 1}: {r.values[0]} is not in "
-                                   f"the mod; the base game's packs may hold it", key, r.line))
+                out.append(finding("path", "note", _i18n.msg("eng.sidefiles.line_is_not_in_the_mod", "line {x}: {values} is not in the mod; the base game's packs may hold it", x=r.line + 1, values=r.values[0]), key, r.line))
     for k in BANNER_RECTS:
         if rows and k not in rects:
-            out.append(finding("absent", "note", f"no {k} rectangle; both installed mods "
-                               f"have all six", f"standards/{k}", 0))
+            out.append(finding("absent", "note", _i18n.msg("eng.sidefiles.no_rectangle_both_installed_mods_have", "no {k} rectangle; both installed mods have all six", k=k), f"standards/{k}", 0))
     if rows and not any(r.kind == "symbols" and r.section == "factions" for r in rows):
-        out.append(finding("sheets", "warn", "no symbol sheet under `factions`, so no faction "
-                           "has a symbol to put on its standard", "standards/factions", 0))
+        out.append(finding("sheets", "warn", _i18n.msg("eng.sidefiles.no_symbol_sheet_under_factions_so", "no symbol sheet under `factions`, so no faction has a symbol to put on its standard"), "standards/factions", 0))
     return out
 
 
@@ -434,55 +414,48 @@ def check_advice(threads: List[Thread], tf, data: Path) -> List[Dict]:
     for t in threads:
         k = f"advice/{t.name}"
         if t.name in names:
-            out.append(finding("duplicate", "warn", f"thread {t.name} is declared twice (lines "
-                               f"{names[t.name] + 1} and {t.line + 1})", k, t.line))
+            out.append(finding("duplicate", "warn", _i18n.msg("eng.sidefiles.thread_is_declared_twice_lines_and", "thread {name} is declared twice (lines {x} and {x2})", name=t.name, x=names[t.name] + 1, x2=t.line + 1), k, t.line))
         names.setdefault(t.name, t.line)
         if not t.area:
-            out.append(finding("area", "warn", f"thread {t.name} has no GameArea", k, t.line))
+            out.append(finding("area", "warn", _i18n.msg("eng.sidefiles.thread_has_no_gamearea", "thread {name} has no GameArea", name=t.name), k, t.line))
         if not t.items:
-            out.append(finding("items", "warn", f"thread {t.name} has no Item", k, t.line))
+            out.append(finding("items", "warn", _i18n.msg("eng.sidefiles.thread_has_no_item", "thread {name} has no Item", name=t.name), k, t.line))
         for it in t.items:
             for i, key, val in it.fields:
                 if key in ADVICE_INTS and not re.fullmatch(r"-?\d+", val):
-                    out.append(finding("number", "fatal", f"{it.name}: {key} {val!r} is not a "
-                                       f"whole number", k, i))
+                    out.append(finding("number", "fatal", _i18n.msg("eng.sidefiles.is_not_a_whole_number", "{name}: {key} {val} is not a whole number", name=it.name, key=key, val=repr(val)), k, i))
                 elif key in ("Title", "Text") and keys is not None and val.lower() not in keys:
-                    out.append(finding("text", "warn", f"{it.name}: {key} {val} is not a key in "
-                                       f"{ADVICE_TEXT_REL}, so the advisor shows the raw key",
+                    out.append(finding("text", "warn", _i18n.msg("eng.sidefiles.is_not_a_key_in_so", "{name}: {key} {val} is not a key in {ADVICE_TEXT_REL}, so the advisor shows the raw key", name=it.name, key=key, val=val, ADVICE_TEXT_REL=ADVICE_TEXT_REL),
                                        k, i))
                 elif key == "On_display" and val and not _on_disk(data, val):
-                    out.append(finding("script", "note", f"{it.name}: On_display {val} is not "
-                                       f"in the mod; the base game's packs may hold it", k, i))
+                    out.append(finding("script", "note", _i18n.msg("eng.sidefiles.on_display_is_not_in_the", "{name}: On_display {val} is not in the mod; the base game's packs may hold it", name=it.name, val=val), k, i))
     fired = set()
     trig_seen: Dict[str, int] = {}
     for trig in tf.triggers:
         k = f"advice/trigger/{trig.name}"
         if trig.name in trig_seen:
-            out.append(finding("duplicate", "warn", f"trigger {trig.name} is written twice "
-                               f"(lines {trig_seen[trig.name] + 1} and {trig.start + 1})",
+            out.append(finding("duplicate", "warn", _i18n.msg("eng.sidefiles.trigger_is_written_twice_lines_and", "trigger {name} is written twice (lines {x} and {x2})", name=trig.name, x=trig_seen[trig.name] + 1, x2=trig.start + 1),
                                k, trig.start))
         trig_seen.setdefault(trig.name, trig.start)
         effs = [e for e in trig.effects if e.keyword == "AdviceThread"]
         if not effs:
-            out.append(finding("effect", "note", f"trigger {trig.name} fires no AdviceThread",
+            out.append(finding("effect", "note", _i18n.msg("eng.sidefiles.trigger_fires_no_advicethread", "trigger {name} fires no AdviceThread", name=trig.name),
                                k, trig.start))
         for e in effs:
             nm = e.args[0] if e.args else ""
             fired.add(nm)
             if nm not in names:
-                out.append(finding("thread", "warn", f"trigger {trig.name} fires thread "
-                                   f"{nm or '(none)'}, which this file does not declare",
+                out.append(finding("thread", "warn", _i18n.msg("eng.sidefiles.trigger_fires_thread_which_this_file", "trigger {name} fires thread {x}, which this file does not declare", name=trig.name, x=nm or '(none)'),
                                    k, e.line))
             if len(e.args) > 1 and not re.fullmatch(r"-?\d+", e.args[1]):
-                out.append(finding("number", "fatal", f"trigger {trig.name}: the thread's "
-                                   f"score {e.args[1]!r} is not a whole number", k, e.line))
+                out.append(finding("number", "fatal", _i18n.msg("eng.sidefiles.trigger_the_threads_score_is_not", "trigger {name}: the thread's score {args} is not a whole number", name=trig.name, args=repr(e.args[1])), k, e.line))
         for c in tg.check(trig):
             sev = "note" if c["kind"] == "unknown-condition" else "warn"
             out.append(finding(c["kind"], sev, f"trigger {trig.name}: {c['message']}",
                                k, max(c["line"] - 1, 0)))
     for t in threads:
         if t.name not in fired:
-            out.append(finding("unfired", "note", f"no trigger fires thread {t.name}",
+            out.append(finding("unfired", "note", _i18n.msg("eng.sidefiles.no_trigger_fires_thread", "no trigger fires thread {name}", name=t.name),
                                f"advice/{t.name}", t.line))
     return out
 
@@ -594,7 +567,7 @@ def _open(p: SidePlan, mod, rel: str, sig: str) -> Optional[Tuple[str, str]]:
         p.errors.append(e.message)
         return None
     if sig != _sig(text):
-        p.errors.append(f"{rel} changed on disk after it was opened here - reload it")
+        p.errors.append(_i18n.msg("eng.sidefiles.changed_on_disk_after_it_was", "{rel} changed on disk after it was opened here - reload it", rel=rel))
         return None
     return text, ("\r\n" if "\r\n" in text else "\n")
 
@@ -622,25 +595,25 @@ def _plan_animals(p: SidePlan, mod, body: Dict, sig: str) -> None:
     for name, vals in (body.get("edit") or {}).items():
         a = by.get(name)
         if a is None:
-            p.errors.append(f"no animal is called {name}")
+            p.errors.append(_i18n.msg("eng.sidefiles.no_animal_is_called", "no animal is called {name}", name=name))
             continue
         for k, v in vals.items():
             v = str(v).strip()
             if k not in ANIMAL_KEYS:
-                p.errors.append(f"{k} is not one of an animal's keys")
+                p.errors.append(_i18n.msg("eng.sidefiles.is_not_one_of_an_animals", "{k} is not one of an animal's keys", k=k))
                 continue
             if not v:
                 if k in ANIMAL_REQUIRED:
-                    p.errors.append(f"{name}: {k} cannot be blank")
+                    p.errors.append(_i18n.msg("eng.sidefiles.cannot_be_blank", "{name}: {k} cannot be blank", name=name, k=k))
                 elif k in a.fields:
                     drops.add(a.fields[k][0])
                     p.changes.append(f"{name}: - {k}")
                 continue
             if re.search(r"\s", v):
-                p.errors.append(f"{name}: {k} is one word, not {v!r}")
+                p.errors.append(_i18n.msg("eng.sidefiles.is_one_word_not", "{name}: {k} is one word, not {v}", name=name, k=k, v=repr(v)))
                 continue
             if k in ANIMAL_NUMBERS and not _is_num(v):
-                p.errors.append(f"{name}: {k} is a number, not {v!r}")
+                p.errors.append(_i18n.msg("eng.sidefiles.is_a_number_not", "{name}: {k} is a number, not {v}", name=name, k=k, v=repr(v)))
                 continue
             if k in a.fields:
                 i, cur = a.fields[k]
@@ -659,13 +632,13 @@ def _plan_animals(p: SidePlan, mod, body: Dict, sig: str) -> None:
         name, like = str(spec.get("name") or "").strip(), str(spec.get("like") or "").strip()
         src = by.get(like)
         if src is None:
-            p.errors.append(f"there is no animal {like} to copy")
+            p.errors.append(_i18n.msg("eng.sidefiles.there_is_no_animal_to_copy", "there is no animal {like} to copy", like=like))
             continue
         if not re.fullmatch(r"[A-Za-z0-9_]+", name):
-            p.errors.append(f"{name!r} is not an animal name (letters, digits, underscore)")
+            p.errors.append(_i18n.msg("eng.sidefiles.is_not_an_animal_name_letters", "{name} is not an animal name (letters, digits, underscore)", name=repr(name)))
             continue
         if any(a.name.lower() == name.lower() for a in animals):
-            p.errors.append(f"{name} is already declared")
+            p.errors.append(_i18n.msg("eng.sidefiles.is_already_declared", "{name} is already declared", name=name))
             continue
         block = lines[src.line:src.end + 1]
         block[0] = _tok_sub(block[0], 1, name)
@@ -674,7 +647,7 @@ def _plan_animals(p: SidePlan, mod, body: Dict, sig: str) -> None:
     for name in body.get("remove") or []:
         a = by.get(name)
         if a is None:
-            p.errors.append(f"no animal is called {name}")
+            p.errors.append(_i18n.msg("eng.sidefiles.no_animal_is_called", "no animal is called {name}", name=name))
             continue
         end = a.end + 1
         while end < len(lines) and not lines[end].strip():
@@ -709,20 +682,20 @@ def _plan_standards(p: SidePlan, mod, body: Dict, sig: str) -> None:
     for key, vals in (body.get("lines") or {}).items():
         r = by.get(int(key))
         if r is None or r.kind in ("section", "other"):
-            p.errors.append(f"line {int(key) + 1} is not a line this screen edits")
+            p.errors.append(_i18n.msg("eng.sidefiles.line_is_not_a_line_this", "line {x} is not a line this screen edits", x=int(key) + 1))
             continue
         vals = [str(v).strip() for v in vals]
         if len(vals) != len(r.values) or any(not v for v in vals):
-            p.errors.append(f"line {r.line + 1} takes {len(r.values)} value(s), none blank")
+            p.errors.append(_i18n.msg("eng.sidefiles.line_takes_value_s_none_blank", "line {x} takes {values_n} value(s), none blank", x=r.line + 1, values_n=len(r.values)))
             continue
         if r.kind in ("file", "symbols") and re.search(r"\s", vals[0]):
-            p.errors.append(f"line {r.line + 1}: a path cannot have spaces")
+            p.errors.append(_i18n.msg("eng.sidefiles.line_a_path_cannot_have_spaces", "line {x}: a path cannot have spaces", x=r.line + 1))
             continue
         if r.kind == "scale" and not _is_num(vals[0].rstrip("fF")):
-            p.errors.append(f"line {r.line + 1}: file_scale is a number")
+            p.errors.append(_i18n.msg("eng.sidefiles.line_file_scale_is_a_number", "line {x}: file_scale is a number", x=r.line + 1))
             continue
         if r.kind == "rect" and not all(_is_num(v) for v in vals[:4]):
-            p.errors.append(f"line {r.line + 1}: the first four values are numbers")
+            p.errors.append(_i18n.msg("eng.sidefiles.line_the_first_four_values_are", "line {x}: the first four values are numbers", x=r.line + 1))
             continue
         if vals == r.values:
             continue
@@ -734,27 +707,26 @@ def _plan_standards(p: SidePlan, mod, body: Dict, sig: str) -> None:
         sheets = [r for r in rows if r.kind == "symbols" and r.section == sec]
         head = next((r for r in rows if r.kind == "section" and r.key.lower() == sec), None)
         if head is None:
-            p.errors.append(f"this file has no `{sec}` line")
+            p.errors.append(_i18n.msg("eng.sidefiles.this_file_has_no_line", "this file has no `{sec}` line", sec=sec))
             continue
         if not path or re.search(r"\s", path):
-            p.errors.append("a symbol sheet is one path with no spaces")
+            p.errors.append(_i18n.msg("eng.sidefiles.a_symbol_sheet_is_one_path", "a symbol sheet is one path with no spaces"))
             continue
         base = lines[sheets[-1].line] if sheets else "symbols\t\t\t\tx"
         inserts.setdefault(sheets[-1].line if sheets else head.line, []).append(
             _tok_sub(base, 1, path))
         p.changes.append(f"+ {sec}: {path}")
         if not _on_disk(Path(mod.data), path):
-            p.warnings.append(f"{path} is not in the mod")
+            p.warnings.append(_i18n.msg("eng.sidefiles.is_not_in_the_mod", "{path} is not in the mod", path=path))
     for key in body.get("symbols_remove") or []:
         r = by.get(int(key))
         if r is None or r.kind != "symbols":
-            p.errors.append(f"line {int(key) + 1} is not a symbol sheet")
+            p.errors.append(_i18n.msg("eng.sidefiles.line_is_not_a_symbol_sheet", "line {x} is not a symbol sheet", x=int(key) + 1))
             continue
         drops.add(r.line)
         p.changes.append(f"- {r.section}: {r.values[0] if r.values else ''}")
         if r.section == "factions":
-            p.warnings.append("taking a faction sheet out moves every sheet after it, and "
-                              "every standard_index that pointed past it")
+            p.warnings.append(_i18n.msg("eng.sidefiles.taking_a_faction_sheet_out_moves", "taking a faction sheet out moves every sheet after it, and every standard_index that pointed past it"))
     if p.errors:
         return
     data = Path(mod.data)
@@ -778,20 +750,20 @@ def _plan_advice(p: SidePlan, mod, body: Dict, sig: str) -> None:
         if i in fields:
             it, k, cur = fields[i]
             if k in ADVICE_INTS and not re.fullmatch(r"-?\d+", val):
-                p.errors.append(f"{it.name}: {k} is a whole number")
+                p.errors.append(_i18n.msg("eng.sidefiles.is_a_whole_number", "{name}: {k} is a whole number", name=it.name, k=k))
                 continue
             if k in ("Title", "Text", "On_display") and (not val or re.search(r"\s", val)):
-                p.errors.append(f"{it.name}: {k} is one word")
+                p.errors.append(_i18n.msg("eng.sidefiles.is_one_word", "{name}: {k} is one word", name=it.name, k=k))
                 continue
             if not cur:
-                p.errors.append(f"{it.name}: {k} takes no value")
+                p.errors.append(_i18n.msg("eng.sidefiles.takes_no_value", "{name}: {k} takes no value", name=it.name, k=k))
                 continue
             if val != cur:
                 rewrites[i] = _rest_sub(lines[i], val)
                 p.changes.append(f"{it.name}: {k} {cur} -> {val}")
         elif i in areas:
             if not val or re.search(r"\s", val):
-                p.errors.append("GameArea is one word")
+                p.errors.append(_i18n.msg("eng.sidefiles.gamearea_is_one_word", "GameArea is one word"))
                 continue
             if val != areas[i].area:
                 rewrites[i] = _rest_sub(lines[i], val)
@@ -799,17 +771,17 @@ def _plan_advice(p: SidePlan, mod, body: Dict, sig: str) -> None:
         elif i in fires:
             g, e = fires[i]
             if not re.fullmatch(r"-?\d+", val) or len(e.args) < 2:
-                p.errors.append(f"trigger {g.name}: the score is a whole number")
+                p.errors.append(_i18n.msg("eng.sidefiles.trigger_the_score_is_a_whole", "trigger {name}: the score is a whole number", name=g.name))
                 continue
             if val != e.args[1]:
                 rewrites[i] = _tok_sub(lines[i], 2, val)
                 p.changes.append(f"trigger {g.name}: {e.args[0]} scores {val}")
         else:
-            p.errors.append(f"line {i + 1} is not a value this screen edits")
+            p.errors.append(_i18n.msg("eng.sidefiles.line_is_not_a_value_this", "line {x} is not a value this screen edits", x=i + 1))
     for name in body.get("remove") or []:
         t = next((x for x in threads if x.name == name), None)
         if t is None:
-            p.errors.append(f"no thread is called {name}")
+            p.errors.append(_i18n.msg("eng.sidefiles.no_thread_is_called", "no thread is called {name}", name=name))
             continue
         last = t.line
         for i in range(t.line, t.end + 1):
@@ -855,7 +827,7 @@ def plan(mod, body: dict) -> SidePlan:
     if body.get("advice") and not p.errors:
         _plan_advice(p, mod, dict(body["advice"]), str(sigs.get(ADVICE_REL) or ""))
     if not p.texts and not p.errors:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.sidefiles.nothing_to_change", "nothing to change"))
     return p
 
 

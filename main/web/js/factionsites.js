@@ -19,12 +19,12 @@
 
 async function loadFactionSites(){
   const mod = state.src;
-  main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s populace and off-map models…</div>';
+  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('factionsites.s_populace_and_off_map_models')}</div>`;
   let r;
   try{ r = await api.get('/api/factionsites?mod=' + enc(mod)); }
   catch(e){ if(stale('factionsites', mod)) return;
-    main.innerHTML = `<div class="empty">Couldn't read them.<br><span class="count">${esc(errText(e))}</span>
-      <br><br><button class="primary" onclick="loadFactionSites()">Retry</button></div>`; return; }
+    main.innerHTML = `<div class="empty">${tt('common.couldnt_read_them')}<br><span class="count">${esc(errText(e))}</span>
+      <br><br><button class="primary" onclick="loadFactionSites()">${tt('common.retry')}</button></div>`; return; }
   if(stale('factionsites', mod)) return;
   const keep = state.fsx && state.fsx.mod === mod ? state.fsx : null;
   state.fsx = Object.assign({mod, tab: keep ? keep.tab : 'lbc', sel: keep ? keep.sel : '',
@@ -51,9 +51,8 @@ function renderFactionSites(){
         const rows = fsxRows(p.faction);
         const tot = rows.reduce((s, r) => s + (+r[1] || 0), 0);
         return `<button class="trrow${c.sel === p.faction ? ' on' : ''}" onclick="fsxPick('${q1(esc(p.faction))}')">
-          <div class="nm">${esc(p.faction)}${(c.roster || []).includes(p.faction) ? '' : ' <span class="count">not in the roster</span>'}</div>
-          <div class="sub">${rows.length} model(s) · <span class="${tot === 100 ? '' : 'w-warn'}">${tot}%</span>${
-            c.w.lbc[p.faction] !== undefined ? ' · <b>changed</b>' : ''}</div></button>`;
+          <div class="nm">${esc(p.faction)}${(c.roster || []).includes(p.faction) ? '' : ` <span class="count">${tt('factionsites.not_in_the_roster')}</span>`}</div>
+          <div class="sub">${tt('factionsites.model_s',{rows_n:rows.length,tot:tot === 100 ? '' : 'w-warn',tot2:tot,x:c.w.lbc[p.faction] !== undefined ? ` ${tt('common.changed')}` : ''})}</div></button>`;
       }).join('') + fsxAddLbcHtml()
     : off.filter(b => b.depth === 0).map(b => `<button class="trrow${c.sel === b.path ? ' on' : ''}"
           onclick="fsxPick('${q1(esc(b.path))}')"><div class="nm">${esc(b.path)}</div>
@@ -61,21 +60,21 @@ function renderFactionSites(){
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
       <div class="fsxtabs">
-        <button class="${c.tab === 'lbc' ? 'on' : ''}" onclick="fsxTab('lbc')">Populace</button>
-        <button class="${c.tab === 'offmap' ? 'on' : ''}" onclick="fsxTab('offmap')">Off-map models</button>
+        <button class="${c.tab === 'lbc' ? 'on' : ''}" onclick="fsxTab('lbc')">${tt('factionsites.populace')}</button>
+        <button class="${c.tab === 'offmap' ? 'on' : ''}" onclick="fsxTab('offmap')">${tt('factionsites.off_map_models')}</button>
       </div>
       ${findingsHtml('factionsites', find, 'fsxOpen')}
       <div class="trrows">${left || `<div class="count" style="padding:8px">${esc(c.tab === 'lbc'
-        ? (c.lbc_error || 'No populace blocks.') : (c.offmap_error || 'No sections.'))}</div>`}</div>
+        ? (c.lbc_error || tt('factionsites.no_populace_blocks')) : (c.offmap_error || tt('factionsites.no_sections')))}</div>`}</div>
     </div>
     <div class="trmain">
       <div class="cdbhead"><div><b>${c.tab === 'lbc' ? 'descr_lbc_db.txt' : 'descr_offmap_models.txt'}</b>
         <span class="count">${c.tab === 'lbc'
-          ? 'the townsfolk a faction\'s settlements are drawn with, and how many of each'
-          : 'a faction\'s fleets, and a culture\'s settlements and ports, off the map'}</span></div>
+          ? tt('factionsites.the_townsfolk_a_factions_settlements_are')
+          : tt('factionsites.a_factions_fleets_and_a_cultures')}</span></div>
         <span style="flex:1"></span>
-        <button onclick="fsxRevert()" ${n ? '' : 'disabled'}>Revert</button>
-        <button class="primary" onclick="fsxSave()" ${n ? '' : 'disabled'}>Save ${n || ''} change${n === 1 ? '' : 's'}</button>
+        <button onclick="fsxRevert()" ${n ? '' : 'disabled'}>${tt('common.revert')}</button>
+        <button class="primary" onclick="fsxSave()" ${n ? '' : 'disabled'}>${tt('factionsites.save_change',{x:n || '',x2:n === 1 ? '' : 's'})}</button>
       </div>
       ${c.tab === 'lbc' ? fsxLbcHtml() : fsxOffHtml()}
     </div>
@@ -101,20 +100,19 @@ function fsxRows(fac){
 }
 function fsxLbcHtml(){
   const c = state.fsx, fac = c.sel;
-  if(!fac) return '<div class="count" style="padding:8px">Pick a faction.</div>';
-  if(c.w.lbc[fac] === null) return `<div class="count" style="padding:8px">${esc(fac)}'s populace is taken out on save.
-    <button onclick="fsxUndrop('${q1(esc(fac))}')">Keep it</button></div>`;
+  if(!fac) return `<div class="count" style="padding:8px">${tt('factionsites.pick_a_faction')}</div>`;
+  if(c.w.lbc[fac] === null) return `<div class="count" style="padding:8px">${tt('factionsites.s_populace_is_taken_out_on',{fac:esc(fac)})}
+    <button onclick="fsxUndrop('${q1(esc(fac))}')">${tt('common.keep_it')}</button></div>`;
   const rows = fsxRows(fac), tot = rows.reduce((s, r) => s + (+r[1] || 0), 0);
-  return `<div class="cdbsec"><h3>${esc(fac)} <span class="${tot === 100 ? 'count' : 'w-warn'}">${tot}% of 100</span></h3>
-    <table class="smxtab"><tr><th>model</th><th>share</th><th></th></tr>
+  return `<div class="cdbsec"><h3>${tt('factionsites.of_100',{fac:esc(fac),tot:tot === 100 ? 'count' : 'w-warn',tot2:tot})}</h3>
+    <table class="smxtab"><tr><th>${tt('factionsites.model')}</th><th>${tt('factionsites.share')}</th><th></th></tr>
     ${rows.map((r, i) => `<tr><td><input style="width:220px" value="${esc(r[0])}" onchange="fsxLbcSet(${i}, 0, this.value)"></td>
       <td><input value="${esc(r[1])}" onchange="fsxLbcSet(${i}, 1, this.value)"></td>
       <td><button onclick="fsxLbcDrop(${i})">✕</button></td></tr>`).join('')}
     </table>
-    <button onclick="fsxLbcAdd()">＋ a model</button>
-    <button onclick="fsxLbcRemove()" title="Take this faction's populace block out">Remove ${esc(fac)}'s populace</button>
-    <div class="count">Both installed mods give every faction shares that add up to exactly 100.
-      The model names are peasants from the base game's own packed models, so they are not checked here.</div></div>`;
+    <button onclick="fsxLbcAdd()">${tt('factionsites.a_model')}</button>
+    <button onclick="fsxLbcRemove()" title="${ttA('factionsites.take_this_factions_populace_block_out')}">${tt('factionsites.remove_s_populace',{fac:esc(fac)})}</button>
+    <div class="count">${tt('factionsites.both_installed_mods_give_every_faction')}</div></div>`;
 }
 function fsxLbcEdit(fn){
   const c = state.fsx, fac = c.sel;
@@ -132,10 +130,10 @@ function fsxAddLbcHtml(){
   const c = state.fsx, have = new Set((c.lbc || []).map(p => p.faction).concat(Object.keys(c.w.lbc)));
   const missing = (c.roster || []).filter(f => !have.has(f));
   if(!missing.length || !(c.lbc || []).length) return '';
-  return `<div class="trnote">In the roster with no populace block:
+  return `<div class="trnote">${tt('factionsites.in_the_roster_with_no_populace')}
     <select id="fsxNewFac">${missing.map(f => `<option>${esc(f)}</option>`).join('')}</select>
-    copied from <select id="fsxLike">${(c.lbc || []).map(p => `<option>${esc(p.faction)}</option>`).join('')}</select>
-    <button onclick="fsxLbcNew()">＋ Add</button></div>`;
+    ${tt('factionsites.copied_from')} <select id="fsxLike">${(c.lbc || []).map(p => `<option>${esc(p.faction)}</option>`).join('')}</select>
+    <button onclick="fsxLbcNew()">${tt('common.add')}</button></div>`;
 }
 function fsxLbcNew(){
   const fac = document.getElementById('fsxNewFac').value, like = document.getElementById('fsxLike').value;
@@ -148,25 +146,24 @@ function fsxLbcNew(){
 /* ---- off-map ---- */
 function fsxOffHtml(){
   const c = state.fsx, sec = c.sel, off = c.offmap || [];
-  if(!sec) return '<div class="count" style="padding:8px">Pick a section.</div>';
+  if(!sec) return `<div class="count" style="padding:8px">${tt('factionsites.pick_a_section')}</div>`;
   const blocks = off.filter(b => b.path.startsWith(sec + '/'));
   const facs = blocks.filter(b => b.depth === 1 && b.kind === 'faction').map(b => b.head[1]);
   const gone = new Set(c.w.remove.filter(r => r.section === sec).map(r => r.faction));
   const body = blocks.map(b => {
     const drop = b.depth === 1 && b.kind === 'faction' && gone.has(b.head[1]);
     return `<div class="fsxblk" style="margin-left:${(b.depth - 1) * 16}px">
-      <div class="nm"><code>${esc(b.head.join(' '))}</code> <span class="count">line ${b.line}</span>
-        ${b.depth === 1 && b.kind === 'faction' ? `<button onclick="fsxOffRemove('${q1(esc(sec))}','${q1(esc(b.head[1]))}')">${drop ? 'keep' : '✕'}</button>` : ''}</div>
-      ${drop ? '<div class="count">taken out on save</div>' : b.rows.map(r => `<div class="fsxrow">${
+      <div class="nm"><code>${esc(b.head.join(' '))}</code> ${tt('factionsites.line',{line:b.line,x:b.depth === 1 && b.kind === 'faction' ? `<button onclick="fsxOffRemove('${q1(esc(sec))}','${q1(esc(b.head[1]))}')">${drop ? 'keep' : '✕'}</button>` : ''})}</div>
+      ${drop ? `<div class="count">${tt('factionsites.taken_out_on_save')}</div>` : b.rows.map(r => `<div class="fsxrow">${
         (c.w.rows[r.line] || r.tokens).map((t, k) => `<input value="${esc(t)}" style="width:${k === (r.tokens.length > 3 ? 1 : 0) ? 330 : 70}px"
           onchange="fsxRowSet(${r.line}, ${k}, this.value)">`).join('')}</div>`).join('')}
     </div>`;
   }).join('');
-  const add = facs.length ? `<div class="trnote">Add a faction to ${esc(sec)}:
-    <input id="fsxOffFac" placeholder="slot" style="width:120px"> copied from
+  const add = facs.length ? `<div class="trnote">${tt('factionsites.add_a_faction_to',{sec:esc(sec)})}
+    <input id="fsxOffFac" placeholder="${ttA('factionsites.slot')}" style="width:120px"> ${tt('factionsites.copied_from')}
     <select id="fsxOffLike">${facs.map(f => `<option>${esc(f)}</option>`).join('')}</select>
-    <button onclick="fsxOffAdd('${q1(esc(sec))}')">＋ Add</button>
-    ${c.w.add.filter(a => a.section === sec).map(a => `<div class="count">+ ${esc(a.faction)} (from ${esc(a.like)}) on save</div>`).join('')}</div>` : '';
+    <button onclick="fsxOffAdd('${q1(esc(sec))}')">${tt('common.add')}</button>
+    ${c.w.add.filter(a => a.section === sec).map(a => `<div class="count">${tt('factionsites.from_on_save',{faction:esc(a.faction),like:esc(a.like)})}</div>`).join('')}</div>` : '';
   return `<div class="cdbsec">${add}${body}</div>`;
 }
 function fsxRowSet(line, k, v){
@@ -204,13 +201,13 @@ async function fsxSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(`Write ${(p.changes || []).length} change(s)?\n\n` + (p.changes || []).slice(0, 16).join('\n')
+  if(!confirm(tt('factionsites.write_change_s',{n:(p.changes || []).length}) + (p.changes || []).slice(0, 16).join('\n')
     + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   let res;
   try{ res = await api.post('/api/factionsites/apply', body); }
   catch(e){ res = {error: errText(e)}; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   await loadFactionSites();
 }

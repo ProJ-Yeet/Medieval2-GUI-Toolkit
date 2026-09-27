@@ -68,6 +68,7 @@ from . import keyblock as kb
 from .stratcamp import last_content
 from .stratchar import Army, Spec
 from .stratedit import is_int, serialise
+from . import i18n as _i18n
 
 #: The two shapes a horde start takes - see the module docstring.
 MODES = ("start", "emerge")
@@ -458,8 +459,7 @@ def plan(mod, facts, body: dict) -> HordePlan:
                   faction=str(body.get("faction") or "").strip(),
                   mode=str(body.get("mode") or "start").strip().lower())
     if p.mode not in MODES:
-        p.errors.append(f"a horde start is {kb.and_list(list(MODES))}, not "
-                        f"{p.mode!r}")
+        p.errors.append(_i18n.msg("eng.hordestart.a_horde_start_is_not", "a horde start is {and_list}, not {mode}", and_list=kb.and_list(list(MODES)), mode=repr(p.mode)))
         return p
     try:
         sf = campstrat.read_strat(mod, campaign)
@@ -468,9 +468,7 @@ def plan(mod, facts, body: dict) -> HordePlan:
         return p
     node = sf.faction(p.faction)
     if node is None:
-        p.errors.append(f"{p.faction or '(nothing)'} has no faction block in "
-                        f"{campaign}'s descr_strat.txt. New faction, in the "
-                        f"Campaign panel, makes one")
+        p.errors.append(_i18n.msg("eng.hordestart.has_no_faction_block_in_s", "{x} has no faction block in {campaign}'s descr_strat.txt. New faction, in the Campaign panel, makes one", x=p.faction or '(nothing)', campaign=campaign))
         return p
     p.faction = node.name
     places = sf.children_of(node, "settlement")
@@ -482,9 +480,7 @@ def plan(mod, facts, body: dict) -> HordePlan:
         if people:
             held.append(f"{len(people)} character{'' if len(people) == 1 else 's'}")
         p.errors.append(
-            f"{p.faction} already holds {' and '.join(held)}. A horde start "
-            f"fills a faction that holds nothing - the Settlement and People "
-            f"panels move what it has")
+            _i18n.msg("eng.hordestart.already_holds_a_horde_start_fills", "{faction} already holds {held}. A horde start fills a faction that holds nothing - the Settlement and People panels move what it has", faction=p.faction, held=' and '.join(held)))
         return p
 
     rf, sm_text = _sm(mod)
@@ -504,9 +500,7 @@ def plan(mod, facts, body: dict) -> HordePlan:
     if p.mode == "emerge" and not roster:
         # the engine raises an emergent faction out of its horde_unit lines and
         # nothing else, so an empty roster is an event that raises nobody
-        p.errors.append(f"{p.faction} has no horde_unit roster and owns no unit "
-                        f"the EDU names, so its event would raise an empty "
-                        f"horde - name the units it arrives with")
+        p.errors.append(_i18n.msg("eng.hordestart.has_no_horde_unit_roster_and", "{faction} has no horde_unit roster and owns no unit the EDU names, so its event would raise an empty horde - name the units it arrives with", faction=p.faction))
         return p
 
     voc = stratchar.Vocabulary(facts, sf) if p.mode == "start" else None
@@ -552,7 +546,7 @@ def plan(mod, facts, body: dict) -> HordePlan:
         if f["message"] not in into:
             into.append(f["message"])
     if not p.texts and not p.errors:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.hordestart.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -563,13 +557,11 @@ def _plan_start(p: HordePlan, sf, node, facts, body, keys, roster,
     minimum = _int(keys.get("horde_min_named_characters"), 0)
     count = _int(body.get("count"), max(3, minimum))
     if not 1 <= count <= MAX_PEOPLE:
-        p.errors.append(f"a horde start writes 1 to {MAX_PEOPLE} people, "
-                        f"not {body.get('count')}")
+        p.errors.append(_i18n.msg("eng.hordestart.a_horde_start_writes_1_to", "a horde start writes 1 to {MAX_PEOPLE} people, not {body}", MAX_PEOPLE=MAX_PEOPLE, body=body.get('count')))
         return sf.lines
     if minimum and count < minimum:
         p.warnings.append(
-            f"horde_min_named_characters is {minimum} and this start writes "
-            f"{count}; the engine tops a horde up to its minimum from the pool")
+            _i18n.msg("eng.hordestart.horde_min_named_characters_is_and", "horde_min_named_characters is {minimum} and this start writes {count}; the engine tops a horde up to its minimum from the pool", minimum=minimum, count=count))
     province = str(body.get("province") or "").strip()
     cm = campmap.map_of(facts, p.campaign)
     given = body.get("positions")
@@ -577,12 +569,12 @@ def _plan_start(p: HordePlan, sf, node, facts, body, keys, roster,
         try:
             tiles = [(int(a), int(b)) for a, b in given][:count]
         except (TypeError, ValueError):
-            p.errors.append("positions are pairs of whole numbers")
+            p.errors.append(_i18n.msg("eng.hordestart.positions_are_pairs_of_whole_numbers", "positions are pairs of whole numbers"))
             return sf.lines
         note = ""
     else:
         if not province:
-            p.errors.append("choose the province the horde starts in")
+            p.errors.append(_i18n.msg("eng.hordestart.choose_the_province_the_horde_starts", "choose the province the horde starts in"))
             return sf.lines
         tiles, note = free_tiles(cm, sf, province, count)
     if len(tiles) < count:
@@ -595,9 +587,7 @@ def _plan_start(p: HordePlan, sf, node, facts, body, keys, roster,
     names = pick_names(pool, taken, count, body.get("names") or ())
     if len(names) < count:
         p.errors.append(
-            f"{p.faction}'s pool in descr_names.txt gives {len(names)} unused "
-            f"name{'' if len(names) == 1 else 's'} for {count} people - add "
-            f"names to the pool, or type them in")
+            _i18n.msg("eng.hordestart.s_pool_in_descr_names_txt", "{faction}'s pool in descr_names.txt gives {names_n} unused name{x} for {count} people - add names to the pool, or type them in", faction=p.faction, names_n=len(names), x='' if len(names) == 1 else 's', count=count))
         return sf.lines
     family = count >= 2 and body.get("family", True) is not False
     wife = str(body.get("wife") or "").strip()
@@ -607,9 +597,7 @@ def _plan_start(p: HordePlan, sf, node, facts, body, keys, roster,
                      if w.lower() not in used), "")
     if family and not wife:
         family = False
-        p.warnings.append(f"{p.faction}'s pool has no unused woman's name, so "
-                          f"the leader and the heir are written with no family "
-                          f"line")
+        p.warnings.append(_i18n.msg("eng.hordestart.s_pool_has_no_unused_womans", "{faction}'s pool has no unused woman's name, so the leader and the heir are written with no family line", faction=p.faction))
 
     army_sent = body.get("army")
     if army_sent:
@@ -619,12 +607,10 @@ def _plan_start(p: HordePlan, sf, node, facts, body, keys, roster,
     else:
         units = default_army(owned, roster)
     if not units:
-        p.errors.append("an army needs at least one regiment, and this faction "
-                        "owns no unit the EDU names and has no horde roster")
+        p.errors.append(_i18n.msg("eng.hordestart.an_army_needs_at_least_one", "an army needs at least one regiment, and this faction owns no unit the EDU names and has no horde roster"))
         return sf.lines
     if len(units) > STACK:
-        p.errors.append(f"an army holds {STACK} regiments and this one lists "
-                        f"{len(units)}")
+        p.errors.append(_i18n.msg("eng.hordestart.an_army_holds_regiments_and_this", "an army holds {STACK} regiments and this one lists {units_n}", STACK=STACK, units_n=len(units)))
         return sf.lines
     exp = _int(body.get("exp"), 0)
     p.used.update(count=count, province=province, names=list(names),
@@ -685,8 +671,7 @@ def _plan_emerge(p: HordePlan, sf, node, body) -> List[str]:
     if not regions and province:
         regions = [province]
     if not regions:
-        p.errors.append("choose at least one province for the horde to appear "
-                        "in - vanilla's Mongols name four")
+        p.errors.append(_i18n.msg("eng.hordestart.choose_at_least_one_province_for", "choose at least one province for the horde to appear in - vanilla's Mongols name four"))
         return sf.lines
     movie = str(body.get("movie") or "").strip()
     p.used.update(date=date, regions=list(regions), movie=movie)
@@ -726,13 +711,10 @@ def _plan_emerge(p: HordePlan, sf, node, body) -> List[str]:
 def _plan_sm(p: HordePlan, rf, rec, original: str, keys, roster) -> None:
     """The horde keys and roster, and the emerge mode's head modifier."""
     if rf is None:
-        p.warnings.append(f"{factions.REL} is not on disk, so the horde keys "
-                          f"cannot be written - the engine has no horde to "
-                          f"raise for {p.faction}")
+        p.warnings.append(_i18n.msg("eng.hordestart.is_not_on_disk_so_the", "{REL} is not on disk, so the horde keys cannot be written - the engine has no horde to raise for {faction}", REL=factions.REL, faction=p.faction))
         return
     if rec is None:
-        p.errors.append(f"{p.faction} has no record in {factions.REL}. The "
-                        f"Factions screen's clone makes one")
+        p.errors.append(_i18n.msg("eng.hordestart.has_no_record_in_the_factions", "{faction} has no record in {REL}. The Factions screen's clone makes one", faction=p.faction, REL=factions.REL))
         return
     base = rf.block_text(rec)
     have, units = _horde(rec)
@@ -750,9 +732,7 @@ def _plan_sm(p: HordePlan, rf, rec, original: str, keys, roster) -> None:
     if p.mode == "emerge" and factions.modifier_of(rec.name) != MODIFIER:
         if factions.modifier_of(rec.name):
             p.warnings.append(
-                f"{p.faction}'s head line already carries "
-                f"`{factions.modifier_of(rec.name)}`, so `{MODIFIER}` is not "
-                f"added beside it")
+                _i18n.msg("eng.hordestart.s_head_line_already_carries_so", "{faction}'s head line already carries `{modifier_of}`, so `{MODIFIER}` is not added beside it", faction=p.faction, modifier_of=factions.modifier_of(rec.name), MODIFIER=MODIFIER))
         else:
             head, nl, rest = block.partition("\n")
             block = _head_with_modifier(head, factions.slot_of(rec.name)) + nl + rest
@@ -767,7 +747,7 @@ def _plan_sm(p: HordePlan, rf, rec, original: str, keys, roster) -> None:
     after = factions.parse_text(text)
     now = _record(after, p.faction)
     if now is None:
-        p.errors.append(f"after this save {factions.REL} has no {p.faction}")
+        p.errors.append(_i18n.msg("eng.hordestart.after_this_save_has_no", "after this save {REL} has no {faction}", REL=factions.REL, faction=p.faction))
         return
     # the Factions screen's own findings, which that screen shows as warnings:
     # a horde missing a key loads, and fights with the engine's defaults
@@ -823,7 +803,7 @@ def apply(p: HordePlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.texts:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.hordestart.nothing_to_change", "nothing to change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)
@@ -876,11 +856,10 @@ def view(mod, facts, faction: str) -> dict:
     """
     sf = getattr(facts, "strat", None)
     if sf is None:
-        raise campmap.MapError(f"{facts.strat_rel} could not be read")
+        raise campmap.MapError(_i18n.msg("eng.hordestart.could_not_be_read", "{strat_rel} could not be read", strat_rel=facts.strat_rel))
     node = sf.faction(faction)
     if node is None:
-        raise campmap.MapError(f"no faction called {faction!r} in "
-                               f"{facts.campaign}'s descr_strat.txt")
+        raise campmap.MapError(_i18n.msg("eng.hordestart.no_faction_called_in_s_descr", "no faction called {faction} in {campaign}'s descr_strat.txt", faction=repr(faction), campaign=facts.campaign))
     rf, _ = _sm(mod)
     rec = _record(rf, faction)
     keys, roster = _horde(rec)

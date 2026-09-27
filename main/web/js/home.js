@@ -28,19 +28,18 @@ const HOME_REPORTS = {};
 
 function renderHome(){
   const mods = state.mods || [];
-  count.textContent = mods.length ? `${mods.length} mod${mods.length===1?'':'s'}` : '';
+  count.textContent = mods.length ? ttN('home.mods_count', mods.length) : '';
   if(!mods.length){
-    main.innerHTML = `<div class="empty">No mods found.<br>
-      <span class="count">Click ⚙ Settings and point the toolkit at your Medieval II folder.</span>
-      <br><br><button class="primary" onclick="openSettings()">⚙ Settings</button></div>`;
+    main.innerHTML = `<div class="empty">${tt('home.no_mods_found_click_settings_and')}
+      <br><br><button class="primary" onclick="openSettings()">${tt('home.settings')}</button></div>`;
     return;
   }
   main.innerHTML = `<div class="homewrap">
     ${homeRootHtml()}
     <div class="homestep">
       <span class="n">2</span>
-      <span class="t"><b>Pick a mod, then a module.</b>
-        <div class="p">Every write is backed up. 🕑 Log undoes any of them.</div></span>
+      <span class="t"><b>${tt('home.pick_a_mod_then_a_module')}</b>
+        <div class="p">${tt('home.every_write_is_backed_up_log')}</div></span>
     </div>
     ${homeResumeHtml()}
     <div class="homegrid">${mods.map(homeCardHtml).join('')}</div>
@@ -61,12 +60,12 @@ function homeRootHtml(){
   return `<div class="homestep">
     <span class="n">1</span>
     <span class="t">
-      <b>Root mod folder.</b> The Medieval II folder your mods sit under.
-      <div class="p">${root ? esc(root) : 'not set yet'}</div>
+      ${tt('home.root_mod_folder_the_medieval_ii')}
+      <div class="p">${root ? esc(root) : tt('home.not_set_yet')}</div>
       <div class="count" id="homeRootStatus"></div>
     </span>
-    <button onclick="homeAutoDetect()" title="Look the install path up from the registry">Auto-detect</button>
-    <button class="${root ? '' : 'primary'}" onclick="homeBrowseRoot()">Browse…</button>
+    <button onclick="homeAutoDetect()" title="${ttA('home.look_the_install_path_up_from')}">${tt('home.auto_detect')}</button>
+    <button class="${root ? '' : 'primary'}" onclick="homeBrowseRoot()">${tt('home.browse')}</button>
   </div>`;
 }
 // Both reuse the settings dialog's own actions, then re-read the mods and repaint
@@ -74,7 +73,7 @@ function homeRootHtml(){
 // away whether the folder was the right one.
 async function homeSetRoot(path){
   const st = document.getElementById('homeRootStatus');
-  if(st) st.textContent = 'Reading ' + path + '…';
+  if(st) st.textContent = tt('home.reading') + path + '…';
   const r = await api.post('/api/settings', {med2_root: path});
   state.settings = r;
   await refreshMods(state.src, state.dst);
@@ -83,16 +82,16 @@ async function homeSetRoot(path){
   render();
 }
 async function homeBrowseRoot(){
-  const r = await api.post('/api/browse_folder', {title:'Pick your Medieval II folder (it contains "mods")'});
+  const r = await api.post('/api/browse_folder', {title:tt('home.pick_your_medieval_ii_folder_it')});
   if(!r.path) return;
   await homeSetRoot(r.path);
 }
 async function homeAutoDetect(){
   const st = document.getElementById('homeRootStatus');
-  if(st) st.textContent = 'Looking for a Medieval II install…';
+  if(st) st.textContent = tt('home.looking_for_a_medieval_ii_install');
   const r = await api.get('/api/detect_med2_root');
   if(!r.path){
-    if(st) st.innerHTML = '<span class="w-warn">No install found in the registry. Use Browse instead.</span>';
+    if(st) st.innerHTML = `<span class="w-warn">${tt('home.no_install_found_in_the_registry')}</span>`;
     return;
   }
   await homeSetRoot(r.path);
@@ -112,27 +111,27 @@ function homePrefsHtml(){
   return `<div class="homestep">
     <span class="n">3</span>
     <span class="t">
-      <b>Preferences.</b>
+      <b>${tt('home.preferences')}</b>
       <div class="homeprefs">
-        ${chk('prefConsole', s.show_console, 'Keep the console window open',
-              'from the next launch')}
-        ${chk('prefSoldierBase', s.soldier_from_base, 'Start the Soldier row on <b>Base</b>',
-              'in a transfer')}
-        ${chk('prefClearBin', s.clear_strings_bin, 'Recompile <code>.strings.bin</code> after a text write',
-              'the game reads the compiled copy')}
-        ${chk('prefCodeView', s.code_view, 'Show Code View beside the guided editors',
-              'the raw lines, live')}
+        ${chk('prefConsole', s.show_console, tt('home.keep_the_console_window_open'),
+              tt('home.from_the_next_launch'))}
+        ${chk('prefSoldierBase', s.soldier_from_base, tt('home.start_the_soldier_row_on_base'),
+              tt('home.in_a_transfer'))}
+        ${chk('prefClearBin', s.clear_strings_bin, tt('home.recompile_strings_bin_after_a_text'),
+              tt('home.the_game_reads_the_compiled_copy'))}
+        ${chk('prefCodeView', s.code_view, tt('home.show_code_view_beside_the_guided'),
+              tt('home.the_raw_lines_live'))}
         <div>
-          <label class="chk" style="gap:6px">Faction names lead with
+          <label class="chk" style="gap:6px">${tt('home.faction_names_lead_with')}
             <select id="prefFacSort" onchange="homePref(this)">
-              <option value="name" ${s.faction_sort!=='code'?'selected':''}>The in-game name</option>
-              <option value="code" ${s.faction_sort==='code'?'selected':''}>The EDU code</option>
+              <option value="name" ${s.faction_sort!=='code'?'selected':''}>${tt('home.the_in_game_name')}</option>
+              <option value="code" ${s.faction_sort==='code'?'selected':''}>${tt('home.the_edu_code')}</option>
             </select></label>
-          <span class="count">The other one follows in brackets</span>
+          <span class="count">${tt('home.the_other_one_follows_in_brackets')}</span>
         </div>
       </div>
     </span>
-    <button onclick="openSettings()" title="M2TWEOP folders, the 500-unit-limit overrides, the cache and Quit">⚙ All settings</button>
+    <button onclick="openSettings()" title="${ttA('home.m2tweop_folders_the_500_unit_limit')}">${tt('home.all_settings')}</button>
   </div>`;
 }
 // One handler for the lot: the id says which setting, so adding a row above needs
@@ -148,7 +147,7 @@ async function homePref(el){
     facSort.value = facBy();
     if(state.data) buildFilter('factionFilter', state.data.factions, 'faction', true);
   }
-  toast('Saved.');
+  toast(tt('home.saved'));
 }
 
 // The module you were last in, offered rather than jumped into: landing
@@ -159,7 +158,7 @@ function homeResumeHtml(){
   const d = modeDef(last);
   const mod = state.src || '';
   return `<div class="homeresume">
-    <span class="count">Last time you were in</span>
+    <span class="count">${tt('home.last_time_you_were_in')}</span>
     <button class="primary" onclick="homeGo('${q1(esc(mod))}','${esc(d.id)}')">
       ${d.icon} ${esc(d.name)}${mod?`: ${esc(mod)}`:''} →</button>
   </div>`;
@@ -176,7 +175,7 @@ function homeCardHtml(m){
         <div class="nm">${esc(m.name)}</div>
         <div class="sub" title="${esc(m.root)}">${esc(m.root)}</div>
       </div>
-      ${m.pack?'<span class="badge">📦 mounted pack</span>':''}
+      ${m.pack?`<span class="badge">${tt('home.mounted_pack')}</span>`:''}
     </div>
     ${homeM2exHtml(m)}
     <div class="hcmods">${homeModulesHtml(m, r)}</div>
@@ -199,17 +198,10 @@ const homeKey = name => (''+name).replace(/[^A-Za-z0-9_-]/g,'_');
    ancillary's 8 effects, a building's 32 recruitment slots - are not this mod's
    ceilings and reporting them is noise. Every other check still runs. */
 function homeM2exHtml(m){
-  return `<label class="chk hcm2ex" title="Tick this only for a mod that runs on M2EX.
-It stops the toolkit reporting the engine's hardcoded ceilings for this mod -
-31 factions, ${VANILLA_UNIT_LIMIT} units, 9 trait levels, 8 ancillary effects,
-32 recruitment slots - because M2EX replaces the tables those numbers come from.
-It is also what lets the map screen READ a map past the engine's own two map
-ceilings: 510 tiles a side, and 200 colours in map_regions.tga. An unmarked mod
-over either of those is refused rather than half-read.
-Every other check is unaffected. This is NOT the M2TWEOP unit-folder setting.">
+  return `<label class="chk hcm2ex" title="${ttA('home.tick_this_only_for_a_mod',{VANILLA_UNIT_LIMIT})}">
     <input type="checkbox" ${m.m2ex?'checked':''}
       onchange="homeSetM2ex('${q1(esc(m.name))}',this.checked)">
-    Runs on <b>M2EX</b> <span class="count">no engine limits</span></label>`;
+    ${tt('home.runs_on_m2ex_no_engine_limits')}</label>`;
 }
 async function homeSetM2ex(name, on){
   const r = await api.post('/api/m2ex', {mod:name, on:!!on});
@@ -222,20 +214,20 @@ async function homeSetM2ex(name, on){
     state.data = state.destData = null;
     state.tr = state.an = state.fac = state.mf = state.bld = null;
   }
-  toast(on ? `${name} is marked as M2EX - its engine-limit findings are off.`
-           : `${name} is no longer marked as M2EX.`, 4500);
+  toast(on ? tt('home.is_marked_as_m2ex_its_engine',{name})
+           : tt('home.is_no_longer_marked_as_m2ex',{name}), 4500);
   renderHome();
 }
 
 function homeModulesHtml(m, r){
-  if(!r) return '<span class="count">Reading the mod’s files…</span>';
+  if(!r) return `<span class="count">${tt('home.reading_the_mods_files')}</span>`;
   if(r.error) return `<span class="w-bad">✗ ${esc(r.error)}</span>`;
   return menuModes().filter(d => d.id !== 'home').map(d => {
     const s = r.modules[d.id];
     if(!s) return '';
     const why = s.ready
-      ? (s.partial.length ? `works, but this mod has no ${s.partial.join(', ')}` : d.hint)
-      : `needs ${s.missing.join(', ')}, and this mod has none`;
+      ? (s.partial.length ? tt('home.works_but_this_mod_has_no',{partial:s.partial.join(', ')}) : d.hint)
+      : tt('home.needs_and_this_mod_has_none',{missing:s.missing.join(', ')});
     return `<button class="hcmod${s.ready?'':' off'}" title="${esc(why)}"
       onclick="homeGo('${q1(esc(m.name))}','${esc(d.id)}')">
       <span class="ic">${d.icon}</span><span class="nm">${esc(d.name)}</span>
@@ -252,25 +244,25 @@ function homeLaunchHtml(m, r){
   const L = r && r.launch;
   if(!L) return '';
   const key = '_launch_' + m.name, open = !!HOME_REPORTS[key];
-  const head = {ready: '<span class="w-good">✓</span> will start',
-                warn: '<span class="w-warn">●</span> will start, with warnings',
-                broken: '<span class="w-bad">✗</span> no way to start it works',
-                none: '<span class="w-warn">●</span> no .bat, launcher or .cfg to start it with',
-                unknown: '<span class="count">?</span> could not be read'}[L.verdict] || '';
+  const head = {ready: `<span class="w-good">✓</span> ${tt('home.will_start')}`,
+                warn: `<span class="w-warn">●</span> ${tt('home.will_start_with_warnings')}`,
+                broken: `<span class="w-bad">✗</span> ${tt('home.no_way_to_start_it_works')}`,
+                none: `<span class="w-warn">●</span> ${tt('home.no_bat_launcher_or_cfg_to')}`,
+                unknown: `<span class="count">?</span> ${tt('home.could_not_be_read')}`}[L.verdict] || '';
   const rows = (L.routes || []).map(x => `<tr>
       <td class="s">${x.ok ? (x.warnings.length ? '<span class="w-warn">●</span>' : '<span class="w-good">✓</span>')
                            : '<span class="w-bad">✗</span>'}</td>
-      <td>${esc(x.how)}<div class="count">${esc(x.cfg || 'no .cfg')} · ${esc(x.exe || '?')}${
-        x.laa === true ? ' · Large Address Aware' : x.laa === false ? ' · <b>not</b> Large Address Aware' : ''}</div>
+      <td>${esc(x.how)}<div class="count">${esc(x.cfg || tt('home.no_cfg'))} · ${esc(x.exe || '?')}${
+        x.laa === true ? tt('home.large_address_aware') : x.laa === false ? ` ${tt('home.not_large_address_aware')}` : ''}</div>
         ${[...x.faults.map(t => `<div class="w-bad">${esc(t)}</div>`),
            ...x.warnings.map(t => `<div class="w-warn">${esc(t)}</div>`),
            ...x.notes.map(t => `<div class="count">${esc(t)}</div>`)].join('')}</td></tr>`).join('');
   const reg = L.registry && L.registry.read
     ? `<div class="count">${L.registry.entry
-        ? `The disk launcher knows it (registry entry <code>${esc(L.registry.entry)}</code>).`
-        : "No launcher registry entry - only the disk version's launcher reads one, and Steam does not use it."}</div>` : '';
+        ? tt('home.the_disk_launcher_knows_it_registry',{entry:esc(L.registry.entry)})
+        : tt('home.no_launcher_registry_entry_only_the')}</div>` : '';
   return `<button class="hctoggle" onclick="homeToggle('${q1(esc(key))}')">
-      ${open ? '▾' : '▸'} Launch: ${head}</button>
+      ${tt('home.launch',{open:open ? '▾' : '▸',head})}</button>
     ${open ? `<table class="hctab">${rows}</table>${reg}` : ''}`;
 }
 function homeToggle(key){ HOME_REPORTS[key] = !HOME_REPORTS[key]; renderHome(); }
@@ -286,36 +278,35 @@ function homePacksHtml(m){
   let head = '';
   if(P && !P.error){
     const waste = P.anim_freed + P.skel_freed;
-    head = waste ? `<span class="w-warn">●</span> ${homeSize(waste)} nothing plays`
-                 : '<span class="w-good">✓</span> everything in them is played';
+    head = waste ? `<span class="w-warn">●</span> ${tt('home.nothing_plays',{x:homeSize(waste)})}`
+                 : `<span class="w-good">✓</span> ${tt('home.everything_in_them_is_played')}`;
   } else if(P && P.error) head = `<span class="count">${esc(P.error)}</span>`;
   const btn = `<button class="hctoggle" onclick="homePacksToggle('${q1(esc(m.name))}')">
-      ${open ? '▾' : '▸'} Animation packs${head ? ': ' + head : ''}</button>`;
+      ${tt('home.animation_packs',{open:open ? '▾' : '▸',x:head ? ': ' + head : ''})}</button>`;
   if(!open) return `<div>${btn}</div>`;
-  if(!P) return `<div>${btn}<div class="count">Reading the packs…</div></div>`;
+  if(!P) return `<div>${btn}<div class="count">${tt('home.reading_the_packs')}</div></div>`;
   if(P.error) return `<div>${btn}</div>`;
   const row = (n, bytes, what) => `<tr><td class="r">${n.toLocaleString()}</td><td class="r count">${homeSize(bytes)}</td><td>${what}</td></tr>`;
   const dupNote = P.duplicate_paths
-    ? `<div class="count">${P.duplicate_paths.toLocaleString()} path(s) are listed more than once${
-        P.duplicate_paths_same_scale ? `, ${P.duplicate_paths_same_scale} of them at one scale twice`
-          : ', every copy at its own scale: the game keeps a path per scale, and each is played'}.</div>` : '';
+    ? `<div class="count">${tt('home.path_s_are_listed_more_than',{duplicate_paths:P.duplicate_paths.toLocaleString(),x:P.duplicate_paths_same_scale ? tt('home.of_them_at_one_scale_twice',{duplicate_paths_same_scale:P.duplicate_paths_same_scale})
+          : tt('home.every_copy_at_its_own_scale')})}</div>` : '';
   const twice = P.skel_twice.length
-    ? `<div class="w-warn">Skeletons listed twice (the first is played): ${P.skel_twice.map(esc).join(', ')}</div>` : '';
+    ? `<div class="w-warn">${tt('home.skeletons_listed_twice_the_first_is',{x:P.skel_twice.map(esc).join(', ')})}</div>` : '';
   const unnamed = P.unnamed.length
-    ? `<details><summary class="count">${P.unnamed.length} skeleton(s) no battle or strat model names</summary>
-        <div class="count">Kept by a compaction all the same: other files and the game itself can ask for one by name.</div>
+    ? `<details><summary class="count">${tt('home.skeleton_s_no_battle_or_strat',{unnamed_n:P.unnamed.length})}</summary>
+        <div class="count">${tt('home.kept_by_a_compaction_all_the')}</div>
         <div class="count">${P.unnamed.map(esc).join(', ')}</div></details>` : '';
   const act = P.worth_compacting
-    ? `<div><button onclick="homePacksCompact('${q1(esc(m.name))}')">Compact the packs…</button>
-        <span class="count">keeps ${P.keep_anims.toLocaleString()} animation(s) and ${P.keep_skels.toLocaleString()} skeleton(s); Undo puts the old packs back</span></div>`
+    ? `<div><button onclick="homePacksCompact('${q1(esc(m.name))}')">${tt('home.compact_the_packs')}</button>
+        <span class="count">${tt('home.keeps_animation_s_and_skeleton_s',{keep_anims:P.keep_anims.toLocaleString(),keep_skels:P.keep_skels.toLocaleString()})}</span></div>`
     : '';
   return `<div>${btn}<table class="hctab">
-      ${row(P.anims, P.anim_bytes, '<b>animations</b> in pack.dat')}
-      ${row(P.dead, P.dead_bytes, 'dead copies: a path again at a scale it already has, never played')}
-      ${row(P.other_scale, P.other_scale_bytes, 'copies at a scale no skeleton has')}
-      ${row(P.unused, P.unused_bytes, 'no slot of any skeleton names them')}
-      ${row(P.skeletons, P.skel_bytes, '<b>skeletons</b> in skeletons.dat')}
-    </table>${dupNote}${twice}${P.missing_slots ? `<div class="w-bad">${P.missing_slots} slot(s) name a path pack.idx has not got</div>` : ''}${unnamed}${act}</div>`;
+      ${row(P.anims, P.anim_bytes, tt('home.animations_in_pack_dat'))}
+      ${row(P.dead, P.dead_bytes, tt('home.dead_copies_a_path_again_at'))}
+      ${row(P.other_scale, P.other_scale_bytes, tt('home.copies_at_a_scale_no_skeleton'))}
+      ${row(P.unused, P.unused_bytes, tt('home.no_slot_of_any_skeleton_names'))}
+      ${row(P.skeletons, P.skel_bytes, tt('home.skeletons_in_skeletons_dat'))}
+    </table>${dupNote}${twice}${P.missing_slots ? `<div class="w-bad">${tt('home.slot_s_name_a_path_pack',{missing_slots:P.missing_slots})}</div>` : ''}${unnamed}${act}</div>`;
 }
 async function homePacksToggle(name){
   const key = '_packs_' + name;
@@ -332,15 +323,11 @@ async function homePacksToggle(name){
 async function homePacksCompact(name){
   const P = HOME_REPORTS['_packsr_' + name];
   if(!P) return;
-  const ok = confirm(`Compact ${name}'s animation packs?
-
-`
-    + `pack.dat is written again holding the ${P.keep_anims.toLocaleString()} animations that are played `
-    + `(${homeSize(P.anim_freed + P.skel_freed)} left out). The new files are written beside the old ones, `
-    + `which are kept whole in the mod's .ut_compacted folder until you undo this or forget them.
-
-`
-    + `Close the game first. Undo (in the log) puts the old packs back, as long as nothing has written them since.`);
+  const ok = confirm(tt('home.compact_s_animation_packs',{name})
+    + tt('home.pack_dat_is_written_again_holding',{keep_anims:P.keep_anims.toLocaleString()})
+    + tt('home.left_out_the_new_files_are',{x:homeSize(P.anim_freed + P.skel_freed)})
+    + tt('home.which_are_kept_whole_in_the')
+    + tt('home.close_the_game_first_undo_in'));
   if(!ok) return;
   let r;
   try{ r = await api.post('/api/packs/compact', {mod: name}); }
@@ -358,7 +345,7 @@ function homeFilesHtml(m, r){
   const bad = r.files.filter(f => f.state === 'missing' || f.state === 'unreadable');
   const open = !!HOME_REPORTS['_open_' + m.name];
   return `<button class="hctoggle" onclick="homeToggleFiles('${q1(esc(m.name))}')">
-      ${open?'▾':'▸'} ${r.files.length} known files${bad.length?` · ${bad.length} missing`:' · all present'}
+      ${tt('home.known_files',{open:open?'▾':'▸',files_n:r.files.length,bad:bad.length?tt('home.missing',{bad_n:bad.length}):tt('home.all_present')})}
     </button>
     ${open?`<table class="hctab">${r.files.map(homeFileRow).join('')}</table>`:''}`;
 }

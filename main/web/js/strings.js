@@ -37,13 +37,13 @@ const STR_PAGE = 400;
 
 async function loadStrings(){
   const mod = state.src;
-  main.innerHTML = '<div class="empty">Looking for ' + esc(mod) + '’s text files…</div>';
+  main.innerHTML = `<div class="empty">${tt('strings.looking_for')} ` + esc(mod) + `${tt('strings.s_text_files')}</div>`;
   let r;
   try{ r = await api.get('/api/strings?mod=' + enc(mod)); }
   catch(e){ if(stale('strings', mod)) return;
-    main.innerHTML = `<div class="empty">Couldn't read the text folder.<br>
+    main.innerHTML = `<div class="empty">${tt('strings.couldnt_read_the_text_folder')}<br>
       <span class="count">${esc(errText(e))}</span><br><br>
-      <button class="primary" onclick="loadStrings()">Retry</button></div>`; return; }
+      <button class="primary" onclick="loadStrings()">${tt('common.retry')}</button></div>`; return; }
   if(stale('strings', mod)) return;
   const keep = state.str && state.str.mod === mod ? state.str.reopen : '';
   state.str = Object.assign({file:'', rows:null, edits:{}, adds:[], removes:{}, busy:false}, r);
@@ -57,8 +57,7 @@ function renderStrings(){
   if(!s){ loadStrings(); return; }
   const strip = minorTabsHtml('', s.dir || 'data/text');
   if(!s.files.length){
-    main.innerHTML = strip + `<div class="empty">${esc(s.mod)} has no .strings.bin files.<br>
-      <span class="count">Looked in ${esc(s.dir)}</span></div>`;
+    main.innerHTML = strip + `<div class="empty">${tt('strings.has_no_strings_bin_files_looked',{mod:esc(s.mod),dir:esc(s.dir)})}</div>`;
     return;
   }
   count.textContent = `${s.files.length} file${s.files.length===1?'':'s'}`;
@@ -81,31 +80,29 @@ function renderStrings(){
    quiet warning colour and the whole explanation hangs off a ? rather than
    crowding a list of forty files. */
 const STR_STALE_HELP =
-  'The game does not read the .txt. It reads the compiled .strings.bin beside '
-  + 'it, and this mod saved the .txt more recently than the .bin was built. So '
-  + 'whatever the .txt has been made to say since then is not on screen in the '
-  + 'game yet. That is usually just how the mod was written, not a fault. The '
-  + 'rows here are the .bin’s real contents: edit them and the game says '
-  + 'the new thing on the next launch, with nothing to rebuild. Use '
-  + '⟳ Rebuild from .txt only when the .txt is the version you want to '
-  + 'keep, because it compiles the whole text file over this archive.';
+  tt('strings.the_game_does_not_read_the')
+  + tt('strings.it_and_this_mod_saved_the')
+  + tt('strings.whatever_the_txt_has_been_made')
+  + tt('strings.game_yet_that_is_usually_just')
+  + tt('strings.rows_here_are_the_bins_real')
+  + tt('strings.the_new_thing_on_the_next')
+  + tt('strings.rebuild_from_txt_only_when_the')
+  + tt('strings.keep_because_it_compiles_the_whole');
 
 function strFileRow(f){
   const on = state.str.file === f.rel;
-  const state_ = f.error ? `<span class="w-bad">unreadable</span>`
-    : f.stale ? `<span class="w-warn"
-        title="${esc(f.txt)} was saved after this .strings.bin was built, and the game reads the .bin.">${
-        esc(f.txt)} is newer than this .bin</span>${qm(STR_STALE_HELP, 'What “is newer” means')}`
+  const state_ = f.error ? `<span class="w-bad">${tt('strings.unreadable')}</span>`
+    : f.stale ? tt('strings.is_newer_than_this_bin',{txt:esc(f.txt),txt2:esc(f.txt),x:qm(STR_STALE_HELP, tt('strings.what_is_newer_means'))})
     : f.txt ? `<span class="count">${esc(f.txt)}</span>`
-    : `<span class="count">No .txt beside it</span>`;
+    : `<span class="count">${tt('strings.no_txt_beside_it')}</span>`;
   return `<button class="strfile${on?' on':''}" onclick="strOpen('${q1(esc(f.rel))}')">
-    <div class="nm">${esc(f.label)}${f.tagged?'':' <span class="badge">by position</span>'}</div>
-    <div class="sub">${f.error?'':`${f.entries} entries · `}${state_}</div>
+    <div class="nm">${esc(f.label)}${f.tagged?'':` <span class="badge">${tt('strings.by_position')}</span>`}</div>
+    <div class="sub">${f.error?'':tt('strings.entries',{f:f.entries})}${state_}</div>
   </button>`;
 }
 
 async function strOpen(rel){
-  activity('opened strings file', `${rel} in ${state.src}`);
+  activity(tt('strings.opened_strings_file'), `${rel} in ${state.src}`);
   const s = state.str;
   s.file = rel; s.rows = null; s.edits = {}; s.adds = []; s.removes = {}; s.offset = 0;
   renderStrings();
@@ -133,9 +130,9 @@ async function strFetchRows(){
 
 function strRowsHtml(){
   const s = state.str;
-  if(!s.file) return '<div class="empty">Pick a file on the left.</div>';
+  if(!s.file) return `<div class="empty">${tt('strings.pick_a_file_on_the_left')}</div>`;
   const r = s.rows;
-  if(!r) return '<div class="empty">Reading the entries…</div>';
+  if(!r) return `<div class="empty">${tt('strings.reading_the_entries')}</div>`;
   if(r.error) return `<div class="empty"><span class="w-bad">✗ ${esc(r.error)}</span></div>`;
   const f = s.files.find(x => x.rel === s.file) || {};
   const pending = strPending();
@@ -146,34 +143,26 @@ function strRowsHtml(){
       <div>
         <b>${esc(r.name)}</b>
         <span class="count">${r.matched === r.count ? `${r.count} entries`
-          : `${r.matched} of ${r.count} entries match`}${
-          r.tagged ? '' : ' · addressed by position'}</span>
+          : tt('strings.of_entries_match',{matched:r.matched,count:r.count})}${
+          r.tagged ? '' : tt('strings.addressed_by_position')}</span>
       </div>
       <span class="sp"></span>
-      ${r.tagged ? `<button onclick="strAddRow()" title="A new entry in this archive: a tag and its text">＋ New entry</button>` : ''}
-      ${f.txt && r.tagged ? `<button title="Compile ${esc(f.txt)} over this archive, so the game
-reads what the text file says. Backed up first, and undoable from 🕑 Log."
-        onclick="strRebuild()">⟳ Rebuild from ${esc(f.txt)}</button>` : ''}
+      ${r.tagged ? `<button onclick="strAddRow()" title="${ttA('strings.a_new_entry_in_this_archive')}">${tt('strings.new_entry')}</button>` : ''}
+      ${f.txt && r.tagged ? `<button title="${ttA('strings.compile_over_this_archive_so_the',{txt:esc(f.txt)})}"
+        onclick="strRebuild()">${tt('strings.rebuild_from',{txt:esc(f.txt)})}</button>` : ''}
       <button class="primary" ${pending?'':'disabled'} onclick="strSave()">
-        Save ${pending} change${pending===1?'':'s'}</button>
+        ${tt('strings.save_change',{pending,pending2:pending===1?'':'s'})}</button>
     </div>
-    ${nAdd || nRm ? `<div class="strnote">${r.count} entries now, ${r.count + nAdd - nRm} after
-      saving (${nAdd ? `${nAdd} new` : ''}${nAdd && nRm ? ', ' : ''}${nRm ? `${nRm} removed` : ''}).${
-      r.index && nAdd !== nRm ? ` The archive's trailing tag index (${r.index} names) is carried through
-      unchanged; the game rebuilds it when it next compiles the .txt.` : ''}</div>` : ''}
-    ${refused.add ? `<div class="strnote count">No new entries or removals here: ${esc(refused.add)};
-      and ${esc(refused.remove)}.</div>` : ''}
-    ${f.stale && r.tagged ? `<div class="strnote w-warn">${esc(f.txt)} was edited after this
-      archive was built, so the game is showing older text than the .txt says.
-      ⟳ Rebuild puts that right.</div>` : ''}
+    ${nAdd || nRm ? `<div class="strnote">${tt('strings.entries_now_after_saving',{count:r.count,x:r.count + nAdd - nRm,nAdd:nAdd ? `${nAdd} new` : '',x2:nAdd && nRm ? ', ' : '',nRm:nRm ? `${nRm} removed` : '',x3:r.index && nAdd !== nRm ? tt('strings.the_archives_trailing_tag_index_names',{index:r.index}) : ''})}</div>` : ''}
+    ${refused.add ? `<div class="strnote count">${tt('strings.no_new_entries_or_removals_here',{add:esc(refused.add),remove:esc(refused.remove)})}</div>` : ''}
+    ${f.stale && r.tagged ? `<div class="strnote w-warn">${tt('strings.was_edited_after_this_archive_was',{txt:esc(f.txt)})}</div>` : ''}
     <table class="strtab">
-      <tr><th>${r.tagged ? 'Tag' : 'Row'}</th><th>Text</th><th></th></tr>
+      <tr><th>${r.tagged ? tt('strings.tag') : tt('strings.row')}</th><th>${tt('strings.text')}</th><th></th></tr>
       ${s.adds.map(strAddHtml).join('')}
-      ${r.rows.map(strRowHtml).join('') || '<tr><td colspan="3" class="count">No entry matches.</td></tr>'}
+      ${r.rows.map(strRowHtml).join('') || `<tr><td colspan="3" class="count">${tt('strings.no_entry_matches')}</td></tr>`}
     </table>
-    ${more > 0 ? `<div class="strmore"><button onclick="strMore()">Show ${
-      Math.min(more, STR_PAGE)} more</button>
-      <span class="count">${more} not shown. Narrow the search above.</span></div>` : ''}`;
+    ${more > 0 ? `<div class="strmore"><button onclick="strMore()">${tt('strings.show_more',{x:Math.min(more, STR_PAGE)})}</button>
+      <span class="count">${tt('strings.not_shown_narrow_the_search_above',{more})}</span></div>` : ''}`;
 }
 
 function strRowHtml(row){
@@ -186,13 +175,13 @@ function strRowHtml(row){
       data-row="${esc(row.id)}" ${gone ? 'disabled' : ''}
       oninput="strEdit('${q1(esc(row.id))}',this.value)">${esc(value)}</textarea></td>
     <td class="s">${s.rows.tagged
-      ? `<button title="${gone ? 'Keep this entry' : 'Remove this entry from the archive when you save'}"
+      ? `<button title="${gone ? tt('strings.keep_this_entry') : tt('strings.remove_this_entry_from_the_archive')}"
            onclick="strToggleRemove('${q1(esc(row.id))}')">${gone ? '↺' : '✕'}</button>` : ''}
       ${edited && !gone
-      ? `<button title="Put this entry back to what the archive says"
+      ? `<button title="${ttA('strings.put_this_entry_back_to_what')}"
            onclick="strRevert('${q1(esc(row.id))}')">↺</button>` : ''}
       ${s.rows.tagged
-      ? `<button title="Show this entry as the .txt writes it"
+      ? `<button title="${ttA('strings.show_this_entry_as_the_txt')}"
            onclick="strCode('${q1(esc(row.id))}')">&lt;/&gt;</button>` : ''}</td>
   </tr>`;
 }
@@ -207,21 +196,21 @@ function strAddHtml(a, i){
   const bad = strTagProblem(a.tag, i);
   return `<tr class="edited added">
     <td class="k"><input type="text" spellcheck="false" placeholder="NEW_TAG" value="${esc(a.tag)}"
-      class="${bad ? 'bad' : ''}" title="${esc(bad || 'The tag the game asks for this text by')}"
+      class="${bad ? 'bad' : ''}" title="${esc(bad || tt('strings.the_tag_the_game_asks_for'))}"
       oninput="strAddSet(${i},'tag',this.value,this)"></td>
     <td><textarea rows="2" placeholder="The text" oninput="strAddSet(${i},'value',this.value,this)">${esc(a.value)}</textarea></td>
-    <td class="s"><button title="Drop this new entry" onclick="strAddDrop(${i})">✕</button></td>
+    <td class="s"><button title="${ttA('strings.drop_this_new_entry')}" onclick="strAddDrop(${i})">✕</button></td>
   </tr>`;
 }
 /* the page only paints a box red early; the plan is what refuses */
 function strTagProblem(tag, i){
   const t = (tag || '').trim();
-  if(!t) return 'a new entry needs a tag';
-  if(/[\s{}]/.test(t)) return 'a tag has no spaces or braces in it';
+  if(!t) return tt('strings.a_new_entry_needs_a_tag');
+  if(/[\s{}]/.test(t)) return tt('strings.a_tag_has_no_spaces_or');
   const s = state.str;
-  if(s.adds.some((a, j) => j !== i && a.tag.trim() === t)) return 'this tag is new twice';
+  if(s.adds.some((a, j) => j !== i && a.tag.trim() === t)) return tt('strings.this_tag_is_new_twice');
   if((s.rows.rows || []).some(r => r.tag === t && !s.removes[r.id]))
-    return 'this archive already has an entry tagged ' + t;
+    return tt('strings.this_archive_already_has_an_entry') + t;
   return '';
 }
 function strAddRow(){
@@ -233,7 +222,7 @@ function strAddSet(i, key, value, el){
   const a = state.str.adds[i]; if(!a) return;
   a[key] = value;
   if(key === 'tag'){ const bad = strTagProblem(value, i);
-    el.classList.toggle('bad', !!bad); el.title = bad || 'The tag the game asks for this text by'; }
+    el.classList.toggle('bad', !!bad); el.title = bad || tt('strings.the_tag_the_game_asks_for'); }
   strPaintBar();
 }
 function strAddDrop(i){
@@ -264,7 +253,7 @@ function strRevert(id){
 function strPaintBar(){
   const n = strPending();
   const b = document.querySelector('.strbar button.primary');
-  if(b){ b.disabled = !n; b.textContent = `Save ${n} change${n===1?'':'s'}`; }
+  if(b){ b.disabled = !n; b.textContent = tt('strings.save_change_2',{x:n,x2:n===1?'':'s'}); }
 }
 // One debounce for the header search, since every keystroke is a round trip
 let strSearchT = null;
@@ -312,13 +301,13 @@ async function strCodeModal(cv, row){
       <div class="nm">${esc(row.tag)}</div>
       <div class="count">${esc(state.str.rows.name)}</div></div></div>
     <div style="padding:12px">
-      <div class="lbl">Text</div>
+      <div class="lbl">${tt('strings.text')}</div>
       <textarea id="strCvBox" rows="5" style="width:100%"
         oninput="strCvType(cvOf('${cv.uid}'),this.value)">${esc(cv._value)}</textarea>
       <div id="strCvPane" style="margin-top:10px"></div>
     </div>
     <div style="padding:0 12px 12px;text-align:right">
-      <button onclick="strCloseCode(cvOf('${cv.uid}'))">Close</button></div>`;
+      <button onclick="strCloseCode(cvOf('${cv.uid}'))">${tt('common.close')}</button></div>`;
   overlay.classList.add('open');
   await cvLoad(cv);
   const pane = document.getElementById('strCvPane');
@@ -354,13 +343,13 @@ async function strSave(){
   const n = edits.length + adds.length + removes.length;
   if(!n) return;
   await strApply({mod:s.mod, file:s.file, edits, adds, removes},
-                 `${n} change(s) to ${s.file.split('/').pop()}`);
+                 tt('strings.change_s_to',{x:n,x2:s.file.split('/').pop()}));
 }
 async function strRebuild(){
   const s = state.str;
   const f = s.files.find(x => x.rel === s.file) || {};
-  if(!confirm(`Compile ${f.txt} over ${f.name}?\n\nThe archive is backed up first `
-    + `and 🕑 Log can undo it.`)) return;
+  if(!confirm(tt('strings.compile_over_the_archive_is_backed',{txt:f.txt,name:f.name})
+    + tt('strings.and_log_can_undo_it'))) return;
   await strApply({mod:s.mod, file:s.file, action:'rebuild'}, `${f.name} from ${f.txt}`);
 }
 
@@ -371,16 +360,16 @@ async function strApply(body, what){
   if(plan.error){ toast('✗ ' + plan.error, 5000); s.busy = false; return; }
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 12);
-  if(!confirm(`Write ${what}?\n\n` + (lines.join('\n') || 'no visible change')
-    + ((p.changes || []).length > 12 ? `\n…and ${p.changes.length - 12} more` : '')
-    + `\n\n${p.before} entries -> ${p.after}`
+  if(!confirm(tt('strings.write',{what}) + (lines.join('\n') || tt('common.no_visible_change'))
+    + ((p.changes || []).length > 12 ? tt('strings.and_more',{changes:p.changes.length - 12}) : '')
+    + tt('strings.entries_2',{before:p.before,after:p.after})
     + ((p.warnings || []).filter(w => w !== 'nothing to change').length
        ? '\n⚠ ' + p.warnings.filter(w => w !== 'nothing to change').join('\n⚠ ') : '')
-    + `\n\nBacked up first, and 🕑 Log can undo it.`)) { s.busy = false; return; }
+    + tt('common.backed_up_first_and_log_can'))) { s.busy = false; return; }
   const res = await api.post('/api/strings/apply', body);
   s.busy = false;
   if(res.error){ toast('✗ ' + res.error, 5000); return; }
-  toast(`Saved. 🕑 Log can undo it.`);
+  toast(tt('common.saved_log_can_undo_it'));
   s.reopen = s.file;             // back to the archive that was saved, not the list
   await loadStrings();
 }

@@ -74,6 +74,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import cas
+from . import i18n as _i18n
 
 ROT_BYTES = 16
 POS_BYTES = 12
@@ -174,14 +175,11 @@ def read_anim(path, skeleton: str = "", data_dir=None) -> Animation:
         raise AnimError(f"{p.name}: {e}") from None
     if packed_counts(data) is not None:
         if not skeleton:
-            raise AnimError(f"{p.name} is an animation from the pack, not a loose .cas, "
-                            "and reading one needs to know its skeleton")
+            raise AnimError(_i18n.msg("eng.casanim.is_an_animation_from_the_pack", "{name} is an animation from the pack, not a loose .cas, and reading one needs to know its skeleton", name=p.name))
         root = Path(data_dir) if data_dir is not None else _data_of(p)
         bones = skeleton_bones(root, skeleton) if root is not None else None
         if bones is None:
-            raise AnimError(f"{p.name} is an animation from the pack, and this mod has no "
-                            f"unpacked skeleton {skeleton!r} (animations/skeleton/"
-                            f"{skeleton}) to give it its bones")
+            raise AnimError(_i18n.msg("eng.casanim.is_an_animation_from_the_pack_2", "{name} is an animation from the pack, and this mod has no unpacked skeleton {skeleton} (animations/skeleton/{skeleton2}) to give it its bones", name=p.name, skeleton=repr(skeleton), skeleton2=skeleton))
         return read_packed_bytes(data, str(p), bones, skeleton)
     return read_anim_bytes(data, str(p))
 
@@ -252,9 +250,9 @@ def packed_skeleton_bones(data: bytes, source: str = "") -> List[Tuple[str, int,
             out.append((data[o + 76:end].decode("latin-1"), parent, (x, y, z)))
             o = end + 1
     except (struct.error, ValueError):
-        raise AnimError(f"{Path(source).name or 'skeleton'}: not a skeleton from the pack") from None
+        raise AnimError(_i18n.msg("eng.casanim.not_a_skeleton_from_the_pack", "{x}: not a skeleton from the pack", x=Path(source).name or 'skeleton')) from None
     if not out or any(not name for name, _p, _v in out):
-        raise AnimError(f"{Path(source).name or 'skeleton'}: not a skeleton from the pack")
+        raise AnimError(_i18n.msg("eng.casanim.not_a_skeleton_from_the_pack", "{x}: not a skeleton from the pack", x=Path(source).name or 'skeleton'))
     return out
 
 
@@ -299,11 +297,10 @@ def read_packed_bytes(data: bytes, source: str, bones: List[Tuple[str, int, tupl
     counts = packed_counts(data)
     name = Path(source).name
     if counts is None:
-        raise AnimError(f"{name}: not an animation from the pack")
+        raise AnimError(_i18n.msg("eng.casanim.not_an_animation_from_the_pack", "{name}: not an animation from the pack", name=name))
     nf, nq, npb = counts
     if len(bones) < nq:
-        raise AnimError(f"{name} turns {nq} bones and the skeleton {skeleton or ''} has "
-                        f"{len(bones)}: it is another skeleton's animation")
+        raise AnimError(_i18n.msg("eng.casanim.turns_bones_and_the_skeleton_has", "{name} turns {nq} bones and the skeleton {x} has {bones_n}: it is another skeleton's animation", name=name, nq=nq, x=skeleton or '', bones_n=len(bones)))
     o = 5
     rot = array("f", data[o:o + nf * nq * 16]); o += nf * nq * 16
     pos = array("f", data[o:o + nf * npb * 12]); o += nf * npb * 12
@@ -329,7 +326,7 @@ def read_packed_bytes(data: bytes, source: str, bones: List[Tuple[str, int, tupl
                 x, y, z = src[f * stride + at:f * stride + at + 3]
                 t.pos.extend((x - px, y - py, z - pz))
         out.tracks.append(t)
-    out.notes.append(f"from the pack's own format, with {skeleton or 'its skeleton'}'s bones")
+    out.notes.append(_i18n.msg("eng.casanim.from_the_packs_own_format_with", "from the pack's own format, with {x}'s bones", x=skeleton or 'its skeleton'))
     return out
 
 
@@ -354,22 +351,22 @@ def _header(data: bytes, source: str, pad: int, props: bool):
     s = cas.CasScene(source)
     s.version = r.f32()
     if not cas.MIN_VERSION <= s.version <= cas.MAX_VERSION:
-        raise r.fail(f"opens with {s.version:g}, which is not a .cas version")
+        raise r.fail(_i18n.msg("eng.casanim.opens_with_version_g_which_is", "opens with {version:g}, which is not a .cas version", version=s.version))
     r.skip(12)
     s.length = r.f32()
     r.p = cas.NODE_COUNT_AT
     n = r.count("the node count")
     if not 1 <= n <= 1024:
-        raise r.fail(f"says it has {n:,} nodes")
+        raise r.fail(_i18n.msg("eng.casanim.says_it_has_n_nodes", "says it has {n:,} nodes", n=n))
     r.skip(pad)
     s.parents = [-1] + [r.u32() for _ in range(n - 1)]
     bad = [x for x in s.parents[1:] if not 0 <= x < n]
     if bad:
-        raise r.fail(f"the parent table points at nodes {bad[:3]} of {n}")
+        raise r.fail(_i18n.msg("eng.casanim.the_parent_table_points_at_nodes", "the parent table points at nodes {bad} of {n}", bad=bad[:3], n=n))
     s.key_times = r.floats(r.count("the key count"))
     kt = list(s.key_times)
     if kt and (abs(kt[0]) > 1e-6 or any(y < x for x, y in zip(kt, kt[1:]))):
-        raise r.fail("its key times do not start at 0 and rise")
+        raise r.fail(_i18n.msg("eng.casanim.its_key_times_do_not_start", "its key times do not start at 0 and rise"))
     recs = []
     for _ in range(n):
         at = r.p
@@ -407,18 +404,15 @@ def _decode(data: bytes, source: str, pad: int, props: bool) -> Animation:
     rot_run = 0
     for i, (name, (nrot, npos, roff, poff, pr)) in enumerate(zip(scene.nodes, counts)):
         if nrot > keys or npos > keys:
-            raise r.fail(f"node {name!r} has {nrot} rotation and {npos} position keys, "
-                         f"and the file has {keys}")
+            raise r.fail(_i18n.msg("eng.casanim.node_has_rotation_and_position_keys", "node {name} has {nrot} rotation and {npos} position keys, and the file has {keys}", name=repr(name), nrot=nrot, npos=npos, keys=keys))
         # Every soldier's track has 0, 1 or all of the keys. DaC's bomb_dead.cas,
         # which descr_engine_skeleton.txt plays, has 99 of its 101: those are
         # the first 99 times, and the last pose holds.
         short = [c for c in (nrot, npos) if c not in (0, 1, keys)]
         if short:
-            out.notes.append(f"node {name!r} has {max(short)} keys of the file's "
-                             f"{keys}; the last one holds")
+            out.notes.append(_i18n.msg("eng.casanim.node_has_keys_of_the_files", "node {name} has {max} keys of the file's {keys}; the last one holds", name=repr(name), max=max(short), keys=keys))
         if roff != rot_run:
-            raise r.fail(f"node {name!r}'s rotations start at {roff:,}, and the "
-                         f"nodes before it end at {rot_run:,}")
+            raise r.fail(_i18n.msg("eng.casanim.node_s_rotations_start_at_roff", "node {name}'s rotations start at {roff:,}, and the nodes before it end at {rot_run:,}", name=repr(name), roff=roff, rot_run=rot_run))
         rot_run += nrot * ROT_BYTES
         out.tracks.append(Track(name=name, parent=scene.parents[i], pivot=(),
                                 properties=pr, name_raw=recs[i][2],
@@ -427,8 +421,7 @@ def _decode(data: bytes, source: str, pad: int, props: bool) -> Animation:
     pos_run = rot_run
     for t, (nrot, npos, roff, poff, _) in zip(out.tracks, counts):
         if poff != pos_run:
-            raise r.fail(f"node {t.name!r}'s positions start at {poff:,}, and the "
-                         f"block before them ends at {pos_run:,}")
+            raise r.fail(_i18n.msg("eng.casanim.node_s_positions_start_at_poff", "node {name}'s positions start at {poff:,}, and the block before them ends at {pos_run:,}", name=repr(t.name), poff=poff, pos_run=pos_run))
         pos_run += npos * POS_BYTES
         t.rot = _floats(r, base + roff, nrot * 4)
         t.pos = _floats(r, base + poff, npos * 3)
@@ -471,7 +464,7 @@ def write_anim(a: Animation) -> bytes:
     roffs, run = [], 0
     for t in a.tracks:
         if t.rot_keys > keys or t.pos_keys > keys:
-            raise AnimError(f"{t.name!r} has more keys than the file's {keys}")
+            raise AnimError(_i18n.msg("eng.casanim.has_more_keys_than_the_files", "{name} has more keys than the file's {keys}", name=repr(t.name), keys=keys))
         roffs.append(run)
         run += t.rot_keys * ROT_BYTES
     poffs = []
@@ -507,16 +500,14 @@ def _check_chunks(r: "cas._Reader", out: Animation) -> None:
     while r.p < len(r.d):
         start = r.p
         if start + 8 > len(r.d):
-            raise r.fail(f"{len(r.d) - start} bytes after the key data are not a chunk")
+            raise r.fail(_i18n.msg("eng.casanim.bytes_after_the_key_data_are", "{x} bytes after the key data are not a chunk", x=len(r.d) - start))
         size, kind = r.u32(), r.u32()
         if size < 8 or start + size > len(r.d):
-            raise r.fail(f"after the key data, the chunk at byte {start:,} says it is "
-                         f"{size:,} bytes of the {len(r.d):,} in the file")
+            raise r.fail(_i18n.msg("eng.casanim.after_the_key_data_the_chunk", "after the key data, the chunk at byte {start:,} says it is {size:,} bytes of the {d_n:,} in the file", start=start, size=size, d_n=len(r.d)))
         if size > 24:
             # nine of DaC's siege engines carry their mesh inside the animation
             what = {1: "a static mesh", 2: "a skinned mesh", 5: "materials"}.get(kind, f"chunk kind {kind}")
-            out.notes.append(f"also carries {what} ({size:,} bytes), as some siege "
-                             f"engine animations do; only the keys are read here")
+            out.notes.append(_i18n.msg("eng.casanim.also_carries_size_bytes_as_some", "also carries {what} ({size:,} bytes), as some siege engine animations do; only the keys are read here", what=what, size=size))
         r.p = start + size
 
 

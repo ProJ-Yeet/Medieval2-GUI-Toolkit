@@ -60,20 +60,20 @@ const CMK_ICON_MIN = 14, CMK_ICON_MAX = 24;
 //: are on, because the largest set of them anywhere is the game's own 106 and
 //: because a coordinate being edited on the panel below has to be visible.
 const CMK_CATS = [
-  {id: 'settlement', label: 'Settlements', on: true},
-  {id: 'port', label: 'Ports', on: true},
-  {id: 'character', label: 'Characters', on: true},
-  {id: 'fort', label: 'Forts', on: true},
-  {id: 'watchtower', label: 'Watchtowers', on: true},
-  {id: 'resource', label: 'Trade resources', on: false},
-  {id: 'event', label: 'Event positions', on: true},
-  {id: 'disaster', label: 'Disaster positions', on: true},
+  {id: 'settlement', label: tt('campmark.settlements'), on: true},
+  {id: 'port', label: tt('campmark.ports'), on: true},
+  {id: 'character', label: tt('common.characters'), on: true},
+  {id: 'fort', label: tt('campmark.forts'), on: true},
+  {id: 'watchtower', label: tt('campmark.watchtowers'), on: true},
+  {id: 'resource', label: tt('campmark.trade_resources'), on: false},
+  {id: 'event', label: tt('campmark.event_positions'), on: true},
+  {id: 'disaster', label: tt('campmark.disaster_positions'), on: true},
   // 37a. The campaign script's spawns, and OFF by default - the only category
   // here that is. On DaC's imperial campaign there are 1,324 of them against
   // 305 characters, so switching them on quadruples what is drawn, and a layer
   // that opens unreadable is one nobody opens twice. It is the biggest thing on
   // this screen, which is exactly why it is a tick rather than a default.
-  {id: 'spawn', label: 'Script spawns', on: false},
+  {id: 'spawn', label: tt('campmark.script_spawns'), on: false},
 ];
 
 /* One letter per character type, because eleven kinds of person will not fit
@@ -461,16 +461,16 @@ function cmkHoverHtml(tx,ty){
   const rows = [...groups.values()];
   return `<div class="cmcharhover">
     <b>${esc(it.name)}</b>
-    <div class="count">${esc(it.type || 'Character')} · ${esc(faction ? faction.label : it.faction || 'No faction')}${it.age != null ? ` · age ${esc(it.age)}` : ''}</div>
-    <div class="count">${it.x}, ${it.y} game${it.rank ? ` · ${esc(it.rank)}` : ''}</div>
-    <div class="cmrosterhead">${it.army || 0} army units</div>
+    <div class="count">${esc(it.type || tt('campmark.character'))} · ${esc(faction ? faction.label : it.faction || tt('campmark.no_faction'))}${it.age != null ? tt('campmark.age',{age:esc(it.age)}) : ''}</div>
+    <div class="count">${tt('campmark.game',{it:it.x,it2:it.y,x:it.rank ? ` · ${esc(it.rank)}` : ''})}</div>
+    <div class="cmrosterhead">${tt('campmark.army_units',{x:it.army || 0})}</div>
     ${rows.length ? rows.slice(0,6).map(u=>`<div class="cmhoverunit">
       <span>${u.count > 1 ? `${u.count} × ` : ''}${esc(u.unit)}</span>
-      <small>Exp ${esc(u.exp)} · Armour ${esc(u.armour)} · Weapon ${esc(u.weapon_lvl)}</small>
-    </div>`).join('') : `<div class="count">${it.army ? 'Open the editor to view the roster.' : 'No army attached.'}</div>`}
-    ${rows.length > 6 ? `<div class="count">+ ${rows.length-6} more unit types in the editor</div>` : ''}
-    ${chars.length > 1 ? `<div class="count cmhovermore">Also here: ${chars.filter(ch=>ch!==it).slice(0,2).map(ch=>esc(ch.name)).join(', ')}${chars.length>3?'…':''}</div>` : ''}
-    <div class="cmhoverhint">${state.cmap.selectMode ? 'Use Select / move objects to edit.' : chars.length > 1 ? 'Click to choose a character and edit.' : 'Click to edit character, traits and army.'}</div>
+      <small>${tt('campmark.exp_armour_weapon',{exp:esc(u.exp),armour:esc(u.armour),weapon_lvl:esc(u.weapon_lvl)})}</small>
+    </div>`).join('') : `<div class="count">${it.army ? tt('campmark.open_the_editor_to_view_the') : tt('campmark.no_army_attached')}</div>`}
+    ${rows.length > 6 ? `<div class="count">${tt('campmark.more_unit_types_in_the_editor',{rows:rows.length-6})}</div>` : ''}
+    ${chars.length > 1 ? `<div class="count cmhovermore">${tt('campmark.also_here',{x:chars.filter(ch=>ch!==it).slice(0,2).map(ch=>esc(ch.name)).join(', '),chars:chars.length>3?'…':''})}</div>` : ''}
+    <div class="cmhoverhint">${state.cmap.selectMode ? tt('campmark.use_select_move_objects_to_edit') : chars.length > 1 ? tt('campmark.click_to_choose_a_character_and') : tt('campmark.click_to_edit_character_traits_and')}</div>
   </div>`;
 }
 
@@ -479,8 +479,8 @@ function cmkObjectRows(){
   if(!c || !c.pick) return '';
   const items = cmkAt(...c.pick).filter(it => ['character','fort','watchtower','resource'].includes(it.kind));
   if(!items.length) return '';
-  return `<div class="cmobjectlist"><b>Objects on this tile</b>${items.map((it,i)=>
-    `<button onclick="cmapObjectChoose(${i})"><b>${esc(it.name || it.kind)}</b><small>${esc(cmkLabel(it))}</small></button>`).join('')}</div>`;
+  return `<div class="cmobjectlist">${tt('campmark.objects_on_this_tile',{x:items.map((it,i)=>
+    `<button onclick="cmapObjectChoose(${i})"><b>${esc(it.name || it.kind)}</b><small>${esc(cmkLabel(it))}</small></button>`).join('')})}</div>`;
 }
 
 //: One marker said in a line, for 17e's tooltip.
@@ -488,27 +488,27 @@ function cmkLabel(it){
   const k = state.cmk;
   const f = it.faction && k.d && k.d.factions[it.faction];
   const who = f ? f.label : it.faction;
-  if(it.kind === 'port') return `Port · ${it.name || it.region}`;
+  if(it.kind === 'port') return tt('campmark.port',{x:it.name || it.region});
   if(it.kind === 'settlement'){
     // the two ladders are one ladder - a castle's `level` is written with the
     // same six city words - so the kind is said and the level is qualified,
     // rather than reading "huge city city"
     const lv = (it.level || '').replace(/_/g, ' ');
-    return ((it.settlement_type === 'castle') ? `castle, ${lv} level` : lv)
+    return ((it.settlement_type === 'castle') ? tt('campmark.castle_level',{lv}) : lv)
       + (who ? ` · ${who}` : '');
   }
   if(it.kind === 'character')
     return `${it.name}${it.type ? ` · ${it.type}` : ''}`
-      + (it.army ? ` · ${it.army} unit${it.army === 1 ? '' : 's'}` : '')
+      + (it.army ? tt('campmark.unit',{army:it.army,x:it.army === 1 ? '' : 's'}) : '')
       + (who ? ` · ${who}` : '');
   if(it.kind === 'resource') return it.name;
   // 18b. A date and a frequency are the whole reason one of these is here, so
   // each says its own: an event happens once, a disaster happens again.
   if(it.kind === 'event')
     return `${it.name}${it.type ? ` · ${it.type}` : ''}`
-      + (it.date ? ` · turn ${it.date}` : '');
+      + (it.date ? tt('campmark.turn',{date:it.date}) : '');
   if(it.kind === 'disaster')
-    return `${it.name}${it.frequency ? ` · every ${it.frequency} years` : ''}`;
+    return `${it.name}${it.frequency ? tt('campmark.every_years',{frequency:it.frequency}) : ''}`;
   /* 37a. A spawn says its faction, what it brings and the line it is written
      on, because the line is the only way to act on it: the script is read here
      and never written, so the answer to "this one is wrong" is the file and an
@@ -518,10 +518,10 @@ function cmkLabel(it){
   if(it.kind === 'spawn'){
     const afloat = (it.type || '').toLowerCase() === 'admiral';
     return `${it.name || '(unnamed)'}${it.type ? ` · ${it.type}` : ''}`
-      + (it.units ? ` · ${it.units} unit${it.units === 1 ? '' : 's'}` : '')
+      + (it.units ? tt('campmark.unit_2',{units:it.units,x:it.units === 1 ? '' : 's'}) : '')
       + (who ? ` · ${who}` : '')
-      + (it.at_sea ? (afloat ? ' · at sea (a fleet)' : ' · AT SEA') : '')
-      + ` · line ${it.line}`;
+      + (it.at_sea ? (afloat ? tt('campmark.at_sea_a_fleet') : tt('campmark.at_sea')) : '')
+      + tt('campmark.line',{line:it.line});
   }
   // A fort and a watchtower name a province rather than an owner: DaC writes
   // all 105 and all 295 of them inside the `region` blocks at the end of the
@@ -589,7 +589,7 @@ function cmkDragCheck(){
   const [tx, ty] = k.drag.tile;
   k.drag.fault = '';
   if(!(tx >= 0 && ty >= 0 && tx < c.man.width && ty < c.man.height)){
-    k.drag.fault = 'off the tile grid';
+    k.drag.fault = tt('campmark.off_the_tile_grid');
     return;
   }
   // 22a: a fort on the sea is a warning the plan gives, not a refusal - one of
@@ -599,8 +599,8 @@ function cmkDragCheck(){
   const sea = cmkSeaAt(tx, ty);
   if(sea === null) return;                       // the layers are not here to say
   const admiral = k.drag.item.type === 'admiral';
-  if(admiral && !sea) k.drag.fault = 'an admiral stands on his ship, and this is land';
-  if(!admiral && sea) k.drag.fault = 'this tile is sea';
+  if(admiral && !sea) k.drag.fault = tt('campmark.an_admiral_stands_on_his_ship');
+  if(!admiral && sea) k.drag.fault = tt('campmark.this_tile_is_sea');
 }
 
 //: The sea test, in the browser, off the same two layers the tooltip names.
@@ -632,28 +632,28 @@ async function cmkDrop(){
   cmapPaint();
   if(!d.tile || (d.tile[0] === d.from[0] && d.tile[1] === d.from[1])) return;
   if(d.fault){
-    toast(`✗ ${d.item.name} cannot stand there: ${d.fault}.`, 6000);
+    toast(tt('campmark.cannot_stand_there',{name:d.item.name,fault:d.fault}), 6000);
     return;
   }
   const gy = c.man.height - 1 - d.tile[1];
   if(d.item.kind === 'fort' || d.item.kind === 'watchtower' || d.item.kind === 'resource'){
-    activity('map marker', `${k.mod} drag ${d.item.kind} -> ${d.tile[0]},${gy}`);
+    activity(tt('campmark.map_marker'), tt('campmark.drag',{mod:k.mod,kind:d.item.kind,tile:d.tile[0],gy}));
     await cftDrop(d.item, [d.tile[0], gy]);
     return;
   }
   await cxOpen(d.item.faction);
   const kx = state.cx;
-  if(!kx || !kx.d){ toast('✗ that faction’s people could not be read', 6000); return; }
+  if(!kx || !kx.d){ toast(tt('campmark.that_factions_people_could_not_be'), 6000); return; }
   const i = kx.d.characters.findIndex(ch => ch.line === d.item.line
     || (ch.name && ch.name === d.item.name));
-  if(i < 0){ toast(`✗ ${d.item.name} is not in ${d.item.faction}'s list any more`, 6000);
+  if(i < 0){ toast(tt('campmark.is_not_in_s_list_any',{name:d.item.name,faction:d.item.faction}), 6000);
     return; }
   cxPick(i);
   if(!state.cx.w) return;
   state.cx.w.x = d.tile[0];
   state.cx.w.y = gy;
   cxPaint();
-  activity('map marker', `${k.mod} drag ${d.item.name} -> ${d.tile[0]},${gy}`);
+  activity(tt('campmark.map_marker'), tt('campmark.drag_2',{mod:k.mod,name:d.item.name,tile:d.tile[0],gy}));
   cxSave('edit');
 }
 
@@ -706,11 +706,11 @@ function cmkHtml(){
   if(!k) return '';
   const counts = (k.d && k.d.counts) || {};
   const head = `<div class="cmkhead">
-    <label class="chk" title="Show settlements, ports and campaign objects. Choose which categories appear below.">
+    <label class="chk" title="${ttA('campmark.show_settlements_ports_and_campaign_objects')}">
       <input type="checkbox" ${k.on ? 'checked' : ''} onchange="cmkToggleLayer()">
-      <b>Markers</b></label>
+      <b>${tt('campmark.markers')}</b></label>
     <span class="sp"></span>
-    ${k.loading ? '<span class="count">reading descr_strat.txt…</span>'
+    ${k.loading ? `<span class="count">${tt('campmark.reading_descr_strat_txt')}</span>`
       : k.d ? `<button class="cmkfold" onclick="cmkFold()">${k.open ? '▾' : '▸'}</button>`
             : ''}</div>`;
   if(k.err) return `<div class="cmmark">${head}<div class="w-bad">${esc(k.err)}</div></div>`;
@@ -727,14 +727,8 @@ function cmkHtml(){
   return `<div class="cmmark">${head}
     ${cmkObjectRows()}
     <div class="cmkcats">${rows}</div>
-    <div class="cmiconkey">♚ Named character · ⚔ General · ⚓ Admiral / port<br>
-      ◈ Spy · ¤ Merchant · ⚑ Diplomat · ✝ Priest · † Assassin</div>
-    <div class="count">Drag a character, a fort, a watchtower or a resource to move it: the
-      drop plans the same save its panel does, with the same confirmation and the
-      same undo.
-      ${res ? `This mod ships its own picture for ${art} of the
-        ${new Set((k.d.items || []).filter(i => i.kind === 'resource')
-          .map(i => i.name)).size} trade resources here; the rest draw a glyph,
-        because the stock art is inside a .pack archive.` : ''}</div>
+    <div class="cmiconkey">${tt('campmark.named_character_general_admiral_port_spy')}</div>
+    <div class="count">${tt('campmark.drag_a_character_a_fort_a',{x:res ? tt('campmark.this_mod_ships_its_own_picture',{art,n:new Set((k.d.items || []).filter(i => i.kind === 'resource')
+          .map(i => i.name)).size}) : ''})}</div>
   </div>`;
 }

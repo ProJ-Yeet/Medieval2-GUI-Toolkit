@@ -33,12 +33,12 @@
 
 //: The filters across the top of the list, and what each keeps.
 const CCHK_VIEWS = [
-  ['blocking', 'Blocking', f => f.severity === 'fatal' && !f.baseline],
-  ['fatal', 'Fatal', f => f.severity === 'fatal'],
-  ['warn', 'Warnings', f => f.severity === 'warn'],
-  ['note', 'Notes', f => f.severity === 'note'],
-  ['fixable', 'Fixable', f => !!f.fix],
-  ['all', 'Everything', () => true],
+  ['blocking', tt('mapcheck.blocking'), f => f.severity === 'fatal' && !f.baseline],
+  ['fatal', tt('mapcheck.fatal'), f => f.severity === 'fatal'],
+  ['warn', tt('mapcheck.warnings'), f => f.severity === 'warn'],
+  ['note', tt('mapcheck.notes'), f => f.severity === 'note'],
+  ['fixable', tt('mapcheck.fixable'), f => !!f.fix],
+  ['all', tt('mapcheck.everything'), () => true],
 ];
 
 //: How many rows are drawn before the list stops and says how many are left.
@@ -76,7 +76,7 @@ function cchkToggle(){
   const k = state.cchk;
   if(!k) return;
   k.open = !k.open;
-  activity('map check', k.open ? 'opened the validator' : 'closed the validator');
+  activity(tt('mapcheck.map_check'), k.open ? tt('mapcheck.opened_the_validator') : tt('mapcheck.closed_the_validator'));
   if(k.open && !k.rep) cchkRun();
   else cchkPaint();
 }
@@ -97,7 +97,7 @@ async function cchkRun(){
   cchkPaint();
   try{
     k.rep = await api.get(`/api/map/check?mod=${enc(k.mod)}${cmapCampQ()}`,
-                          {label: 'checking the map'});
+                          {label: tt('mapcheck.checking_the_map')});
     k.ran = Date.now();
   }catch(e){ k.err = errText(e); }
   finally{ k.busy = false; }
@@ -122,14 +122,14 @@ async function cchkPost(path, body){
 async function cchkBaseline(what){
   const k = state.cchk;
   if(what === 'clear'
-     && !confirm('Clear the baseline?\n\nEvery finding already in this mod goes '
-                 + 'back to being one the toolkit will block a save on.')) return;
+     && !confirm(tt('mapcheck.clear_the_baseline_every_finding_already')
+                 + tt('mapcheck.back_to_being_one_the_toolkit'))) return;
   const r = await cchkPost('baseline', {action: what});
   if(r && !r.error){
-    activity('map check', what === 'clear' ? 'cleared the baseline'
-             : `stamped ${r.baseline.keys} finding(s) as already in the mod`);
-    toast(what === 'clear' ? 'Baseline cleared'
-          : `${r.baseline.keys} finding(s) stamped as already in ${k.mod}`);
+    activity(tt('mapcheck.map_check'), what === 'clear' ? tt('mapcheck.cleared_the_baseline')
+             : tt('mapcheck.stamped_finding_s_as_already_in',{baseline:r.baseline.keys}));
+    toast(what === 'clear' ? tt('mapcheck.baseline_cleared')
+          : tt('mapcheck.finding_s_stamped_as_already_in',{baseline:r.baseline.keys,mod:k.mod}));
   }
 }
 
@@ -148,7 +148,7 @@ async function cchkPlan(code, key){
   k.planFor = k.plan ? code : '';
   k.planKeys = k.plan ? keys : null;
   if(!k.plan && !k.err) k.err = (r.plan && r.plan.errors || []).join('; ')
-    || 'nothing to fix';
+    || tt('mapcheck.nothing_to_fix');
   cchkPaint();
 }
 
@@ -160,8 +160,8 @@ async function cchkApply(){
   if(!r || r.error) return;
   const label = (cchkFix(k.planFor) || {}).label || k.planFor;
   k.plan = null; k.planFor = ''; k.planKeys = null;
-  activity('map fix', `${label} - ${r.cleared} finding(s), id ${r.id}`);
-  toast(`${label}: ${r.cleared} finding(s) fixed. Undo it in the Log.`, 6000);
+  activity(tt('mapcheck.map_fix'), tt('mapcheck.finding_s_id',{label,cleared:r.cleared,id:r.id}));
+  toast(tt('mapcheck.finding_s_fixed_undo_it_in',{label,cleared:r.cleared}), 6000);
   // The files on disk changed, so the map the screen is drawn from is stale.
   // Reloading is the whole screen, deliberately: a fixed layer is a different
   // picture, and half a screen showing the old one is worse than a blink.
@@ -188,7 +188,7 @@ function cchkFix(code){
 function cchkGo(f){
   if(!f || !f.tile) return;
   cmapGoTile(f.tile, CCHK_ZOOM);
-  activity('map check', `went to ${f.code} at ${f.tile.join(',')}`);
+  activity(tt('mapcheck.map_check'), tt('mapcheck.went_to_at',{code:f.code,x:f.tile.join(',')}));
 }
 
 /* A finding in a file rather than on the map.
@@ -199,11 +199,11 @@ function cchkGo(f){
    editor to it, and saying the number is better than pretending to. */
 async function cchkReveal(f){
   if(!f.file) return;
-  activity('map check', `revealed ${f.file}${f.line ? ':' + f.line : ''}`);
+  activity(tt('mapcheck.map_check'), `revealed ${f.file}${f.line ? ':' + f.line : ''}`);
   const r = await api.post('/api/reveal', {mod: state.cchk.mod, rel: f.file});
   toast((r && r.ok)
     ? `${f.file}${f.line ? ' - line ' + f.line : ''}`
-    : ((r && r.error) || 'that folder could not be opened'), 6000);
+    : ((r && r.error) || tt('common.that_folder_could_not_be_opened')), 6000);
 }
 
 /* ---------- drawing ---------- */
@@ -222,17 +222,17 @@ function cchkHtml(){
   const blocking = rep ? rep.blocking : 0;
   const head = `<div class="cpbar">
     <button class="cptog${k.open ? ' on' : ''}" onclick="cchkToggle()"
-      title="Run every rule over the map as it is now, unsaved strokes included."
-      >\u{1F50E} Check${k.open ? ' ✓' : ''}</button>
+      title="${ttA('mapcheck.run_every_rule_over_the_map')}"
+      >${tt('mapcheck.check',{open:k.open ? ' ✓' : ''})}</button>
     ${rep ? `<span class="cchksum">${cchkPill('fatal', counts.fatal || 0)}
       ${cchkPill('warn', counts.warn || 0)}${cchkPill('note', counts.note || 0)}
-      ${blocking ? `<b class="w-bad">${blocking} blocking</b>`
-                 : `<b class="w-good">nothing blocking</b>`}</span>` : ''}
-    ${k.busy ? `<span class="count">checking…</span>` : ''}
+      ${blocking ? `<b class="w-bad">${tt('mapcheck.blocking_2',{blocking})}</b>`
+                 : `<b class="w-good">${tt('mapcheck.nothing_blocking')}</b>`}</span>` : ''}
+    ${k.busy ? `<span class="count">${tt('mapcheck.checking')}</span>` : ''}
   </div>`;
   if(!k.open) return head;
   if(k.err) return head + `<div class="cchkpanel w-bad">${esc(k.err)}</div>`;
-  if(!rep) return head + `<div class="cchkpanel count">running the rules…</div>`;
+  if(!rep) return head + `<div class="cchkpanel count">${tt('mapcheck.running_the_rules')}</div>`;
 
   const rows = rep.findings.filter(cchkFilter());
   const listed = rows.slice(0, CCHK_ROWS);
@@ -240,17 +240,13 @@ function cchkHtml(){
     ${cchkViewsHtml(rep)}
     ${cchkBaseHtml(rep)}
     ${listed.length ? listed.map(cchkRowHtml).join('')
-      : `<div class="count">Nothing under this filter.
-         ${rep.findings.length ? `${rep.findings.length} finding(s) under the others.`
-           : `Every rule ran and every one of them passed.`}</div>`}
+      : `<div class="count">${tt('mapcheck.nothing_under_this_filter',{x:rep.findings.length ? tt('mapcheck.finding_s_under_the_others',{findings_n:rep.findings.length})
+           : tt('mapcheck.every_rule_ran_and_every_one')})}</div>`}
     ${rows.length > listed.length
-      ? `<div class="count">…and ${rows.length - listed.length} more.</div>` : ''}
+      ? `<div class="count">${tt('mapcheck.and_more',{n:rows.length - listed.length})}</div>` : ''}
     ${cchkFixesHtml(rep)}
     ${cchkSkipHtml(rep)}
-    <div class="count">${rep.rules.length} rules · ${rep.ms} ms${
-      rep.failed.length ? ` · <b class="w-bad">${rep.failed.length} rule(s) could
-        not run: ${esc(rep.failed.map(f => f.code + ' (' + f.error + ')').join('; '))}
-      </b>` : ''}</div>
+    <div class="count">${tt('mapcheck.rules_ms',{rules_n:rep.rules.length,ms:rep.ms,x:rep.failed.length ? ` ${tt('mapcheck.rule_s_could_not_run',{failed_n:rep.failed.length,x:esc(rep.failed.map(f => f.code + ' (' + f.error + ')').join('; '))})}` : ''})}</div>
   </div>`;
 }
 
@@ -290,17 +286,14 @@ function cchkBaseHtml(rep){
   const inherited = rep.findings.filter(f => f.baseline).length;
   return `<div class="cchkbase">
     <div>${stamped
-      ? `<b>${inherited}</b> of these were already in ${esc(rep.mod)} when the
-         baseline was stamped on ${esc(rep.baseline_at)}. They are shown, and
-         they do not block a save.`
-      : `No baseline. Every fatal finding here blocks a save, including the ones
-         that came with the mod.`}</div>
+      ? `<b>${inherited}</b> ${tt('mapcheck.of_these_were_already_in_when',{mod:esc(rep.mod),baseline_at:esc(rep.baseline_at)})}`
+      : tt('mapcheck.no_baseline_every_fatal_finding_here')}</div>
     <div class="cprow">
       <button class="cpshape" onclick="cchkBaseline('take')"
-        title="Records what is wrong NOW as inherited. It changes nothing in the mod."
-        >Stamp what is already wrong</button>
+        title="${ttA('mapcheck.records_what_is_wrong_now_as')}"
+        >${tt('mapcheck.stamp_what_is_already_wrong')}</button>
       ${stamped ? `<button class="cpshape" onclick="cchkBaseline('clear')"
-        >Clear</button>` : ''}
+        >${tt('common.clear')}</button>` : ''}
     </div>
   </div>`;
 }
@@ -309,10 +302,10 @@ function cchkRowHtml(f){
   const sev = {fatal: 'w-bad', warn: 'w-warn', note: 'count'}[f.severity] || 'count';
   const where = f.tile
     ? `<button class="cpshape" onclick="cchkGoKey('${f.key}')"
-        title="Centre the map on ${f.tile.join(',')} and pick it"
+        title="${ttA('mapcheck.centre_the_map_on_and_pick',{x:f.tile.join(',')})}"
         >\u{1F50D} ${f.tile[0]},${f.tile[1]}</button>`
     : f.file ? `<button class="cpshape" onclick="cchkRevealKey('${f.key}')"
-        title="Open ${esc(f.file)}${f.line ? ' at line ' + f.line : ''}"
+        title="${ttA('mapcheck.open',{file:esc(f.file),x:f.line ? tt('mapcheck.at_line') + f.line : ''})}"
         >\u{1F4C4} ${f.line ? 'line ' + f.line : 'file'}</button>` : '';
   // A fix that names its own button acts on this one finding, not on every
   // finding of its rule: smoothing a crossing is a choice made crossing by
@@ -322,13 +315,13 @@ function cchkRowHtml(f){
     ? `<button class="cpshape" onclick="cchkPlan('${f.fix}', '${f.key}')"
         title="${esc(fx.what || '')}">\u{1F527} ${esc(fx.button)}</button>`
     : `<button class="cpshape" onclick="cchkPlan('${f.fix}')"
-        title="${esc(fx.what || '')}">\u{1F527} Fix</button>`;
+        title="${esc(fx.what || '')}">${tt('mapcheck.fix')}</button>`;
   return `<div class="cchkrow${f.baseline ? ' was' : ''}">
     <span class="${sev}">${CCHK_DOT[f.severity] || '·'}</span>
     <div>
       <div class="cchkmsg">${esc(f.message)}</div>
-      <div class="count">${esc(f.code)}${f.count > 1 ? ` · ${f.count} tiles` : ''}${
-        f.baseline ? ' · already in the mod' : ''}</div>
+      <div class="count">${esc(f.code)}${f.count > 1 ? tt('mapcheck.tiles',{count:f.count}) : ''}${
+        f.baseline ? tt('mapcheck.already_in_the_mod') : ''}</div>
     </div>
     <div class="cchkbtn">${where}${fix}</div>
   </div>`;
@@ -355,8 +348,7 @@ function cchkFixesHtml(rep){
   if(!have.size) return '';
   const plan = k.plan;
   return `<div class="cchkfix">
-    <div class="k">Auto-fixes <span class="count">Geomod's debugger actions, with
-      one backup set and one Undo in the Log</span></div>
+    <div class="k">${tt('mapcheck.auto_fixes_geomods_debugger_actions_with')}</div>
     ${rep.fixes.filter(x => have.has(x.code)).map(x => {
       const n = rep.findings.filter(f => f.fix === x.code).length;
       return `<div class="cchkfixrow">
@@ -366,11 +358,11 @@ function cchkFixesHtml(rep){
       </div>`;
     }).join('')}
     ${plan ? `<div class="cchkplan">
-      <div><b>${plan.cleared}</b> finding(s) would go. Files written:</div>
+      <div><b>${plan.cleared}</b> ${tt('mapcheck.finding_s_would_go_files_written')}</div>
       ${plan.changes.map(c => `<div class="count">${esc(c)}</div>`).join('')}
       <div class="cprow">
-        <button class="cptog on" onclick="cchkApply()">Write it</button>
-        <button class="cpshape" onclick="cchkCancel()">Cancel</button>
+        <button class="cptog on" onclick="cchkApply()">${tt('mapcheck.write_it')}</button>
+        <button class="cpshape" onclick="cchkCancel()">${tt('common.cancel')}</button>
       </div>
     </div>` : ''}
   </div>`;
@@ -391,8 +383,7 @@ function cchkCancel(){
 function cchkSkipHtml(rep){
   if(!rep.skipped.length) return '';
   return `<div class="cchkskip">
-    <div class="k">Not checked <span class="count">a rule with nothing to check
-      against reports nothing, never everything</span></div>
+    <div class="k">${tt('mapcheck.not_checked_a_rule_with_nothing')}</div>
     ${rep.skipped.map(s => `<div class="count"><b>${esc(s.what)}</b>: ${esc(s.why)}</div>`)
       .join('')}
   </div>`;

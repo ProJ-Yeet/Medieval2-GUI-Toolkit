@@ -52,6 +52,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
+from . import i18n as _i18n
 
 #: What a file must end in to be offered. `.modeldb` is deliberately not here:
 #: its strings are length-prefixed and counted, so a hand edit that changes a
@@ -383,10 +384,10 @@ def _reader_notes(rel: str, before: str, after: str) -> List[str]:
 def _path(mod, rel: str) -> Path:
     rel = str(rel or "").replace("\\", "/").strip()
     if not _allowed(rel):
-        raise RawError(f"{rel or 'that'} is not a text file this editor opens")
+        raise RawError(_i18n.msg("eng.rawtext.is_not_a_text_file_this", "{x} is not a text file this editor opens", x=rel or 'that'))
     path = Path(mod.data) / rel
     if not path.is_file():
-        raise RawError(f"{getattr(mod, 'name', '?')} has no data/{rel}")
+        raise RawError(_i18n.msg("eng.rawtext.has_no_data", "{getattr} has no data/{rel}", getattr=getattr(mod, 'name', '?'), rel=rel))
     return path
 
 
@@ -463,21 +464,19 @@ def plan(mod, body: dict) -> RawPlan:
     raw = p.path.read_bytes()
     p.before = len(raw)
     if str(body.get("sig") or "") != signature(raw):
-        p.errors.append(f"data/{rel} changed on disk after it was opened here - "
-                        "reload it first, or this save would undo that change")
+        p.errors.append(_i18n.msg("eng.rawtext.data_changed_on_disk_after_it", "data/{rel} changed on disk after it was opened here - reload it first, or this save would undo that change", rel=rel))
         return p
     if len(raw) > MAX_BYTES:
-        p.errors.append(f"data/{rel} is too large to edit here")
+        p.errors.append(_i18n.msg("eng.rawtext.data_is_too_large_to_edit", "data/{rel} is too large to edit here", rel=rel))
         return p
     codec = sniff(raw)
     try:
         original = decode(raw, codec)
     except UnicodeDecodeError as e:
-        p.errors.append(f"data/{rel} is not valid {codec.label}: {e}")
+        p.errors.append(_i18n.msg("eng.rawtext.data_is_not_valid", "data/{rel} is not valid {label}: {e}", rel=rel, label=codec.label, e=e))
         return p
     if encode(original, codec) != raw:
-        p.errors.append(f"data/{rel} does not survive a read and a write unchanged, "
-                        "so this editor will not save it")
+        p.errors.append(_i18n.msg("eng.rawtext.data_does_not_survive_a_read", "data/{rel} does not survive a read and a write unchanged, so this editor will not save it", rel=rel))
         return p
     edited = str(body.get("text") if body.get("text") is not None else "")
     edited = edited.replace("\r\n", "\n").replace("\r", "\n")
@@ -486,11 +485,10 @@ def plan(mod, body: dict) -> RawPlan:
         data = encode(text, codec)
     except UnicodeEncodeError as e:
         line = text.count("\n", 0, e.start) + 1
-        p.errors.append(f"line {line}: {text[e.start:e.end]!r} cannot be written as "
-                        f"{codec.label}, the encoding this file is in")
+        p.errors.append(_i18n.msg("eng.rawtext.line_cannot_be_written_as_the", "line {line}: {text} cannot be written as {label}, the encoding this file is in", line=line, text=repr(text[e.start:e.end]), label=codec.label))
         return p
     if data == raw:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.rawtext.nothing_to_change", "nothing to change"))
         return p
     p.data = data
     p.hunks, p.counts = hunks(original, edited, ops)
@@ -499,12 +497,10 @@ def plan(mod, body: dict) -> RawPlan:
                      f"{c['added']} added, {c['removed']} removed")
     p.warnings.extend(_reader_notes(rel, original, text))
     if rel.lower().startswith("text/") and rel.lower().endswith(".txt"):
-        p.notes.append("The .strings.bin beside it is recompiled from the new text, "
-                       "because that is the file the game reads.")
+        p.notes.append(_i18n.msg("eng.rawtext.the_strings_bin_beside_it_is", "The .strings.bin beside it is recompiled from the new text, because that is the file the game reads."))
     mode, screen = _screen_for(rel)
     if screen:
-        p.notes.append(f"{screen} edits this file record by record, and will show "
-                       "the change the next time it is opened.")
+        p.notes.append(_i18n.msg("eng.rawtext.edits_this_file_record_by_record", "{screen} edits this file record by record, and will show the change the next time it is opened.", screen=screen))
     return p
 
 
@@ -516,7 +512,7 @@ def apply(p: RawPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.data or p.path is None:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.rawtext.nothing_to_change", "nothing to change"))
     mod = p.mod
     data = Path(mod.data)
     tid = config.new_transfer_id()

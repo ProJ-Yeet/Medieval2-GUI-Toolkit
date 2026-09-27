@@ -154,11 +154,11 @@ function clnObjectItems(){
   if(!k || !k.on || !c) return [];
   const out = [];
   for(const g of k.groups) for(const it of cmkShown(g)){
-    if(it.kind === 'character') out.push({key:`character:${it.line}`,tx:g.tx,ty:g.ty,
-      text:it.name + (it.army ? ` · ${it.army} units` : ''),
+    if(it.kind === 'character') out.push({key:tt('maplabels.character',{line:it.line}),tx:g.tx,ty:g.ty,
+      text:it.name + (it.army ? tt('maplabels.units',{army:it.army}) : ''),
       prio:c.objectSel && c.objectSel.line === it.line ? 1e9 : 100 + (it.army || 0)});
-    else if(it.kind === 'port') out.push({key:`port:${it.region}`,tx:g.tx,ty:g.ty,
-      text:`Port · ${it.name || it.region}`,prio:10});
+    else if(it.kind === 'port') out.push({key:tt('maplabels.port',{region:it.region}),tx:g.tx,ty:g.ty,
+      text:tt('maplabels.port_2',{x:it.name || it.region}),prio:10});
   }
   return out;
 }
@@ -248,7 +248,7 @@ function clnDraw(x, s0, t0, s1, t1){
   x.lineWidth = 3;
   x.strokeStyle = 'rgba(8,10,14,.88)';
   const sel = c.objectSel && c.objectSel.kind === 'character'
-    ? `character:${c.objectSel.line}` : c.sel && c.sel.name;
+    ? tt('maplabels.character',{line:c.objectSel.line}) : c.sel && c.sel.name;
   for(const b of lay.boxes){
     const sx = v.ox + b.x, sy = v.oy + b.y;
     if(sx > R[2] || sy > R[3] || sx + b.w < R[0] || sy + b.h < R[1]) continue;
@@ -268,7 +268,7 @@ function clnToggle(){
   c.lab = null;
   const b = document.getElementById('cmLabBtn');
   if(b) b.classList.toggle('on', !!c.labels);
-  activity('map labels', c.labels ? 'showed map names' : 'hid map names');
+  activity(tt('maplabels.map_labels'), c.labels ? tt('maplabels.showed_map_names') : tt('maplabels.hid_map_names'));
   c.saidZoom = null;
   cmapPaint();
   cmapSaveLayers();
@@ -279,5 +279,5 @@ function clnCount(){
   const c = state.cmap;
   if(!c || !c.labels || !c.lab) return '';
   const n = c.lab.boxes.length, t = c.lab.total;
-  return n === t ? `${t} named` : `${n} of ${t} named`;
+  return n === t ? `${t} named` : tt('maplabels.of_named',{x:n,x2:t});
 }

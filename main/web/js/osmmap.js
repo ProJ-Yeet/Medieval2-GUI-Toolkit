@@ -163,7 +163,7 @@ const _osmTiles = new Map();
 const osmStyle = () => (state.osm && state.osm.style) || 'osm';
 function osmStyleInfo(){
   const st = state.osm && state.osm.st, s = st && st.settings && st.settings.styles;
-  return (s && s[osmStyle()]) || {name: 'OpenStreetMap', max_zoom: 19, credit: '© OpenStreetMap contributors'};
+  return (s && s[osmStyle()]) || {name: 'OpenStreetMap', max_zoom: 19, credit: tt('osmmap.openstreetmap_contributors')};
 }
 const osmMaxZoom = () => Math.min(18, osmStyleInfo().max_zoom || 18);
 
@@ -365,16 +365,15 @@ function osmSetYear(y){
 function osmStyleHtml(){
   const k = state.osm, st = k.st.settings, styles = st.styles || {};
   const [lo, hi] = st.ohm_years || [500, 1600];
-  return `<label style="display:block">Style <select onchange="osmSetStyle(this.value)">${Object.entries(styles).map(([id, s]) =>
+  return `<label style="display:block">${tt('osmmap.style')} <select onchange="osmSetStyle(this.value)">${Object.entries(styles).map(([id, s]) =>
       `<option value="${id}" ${id === k.style ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></label>
     ${k.style === 'ohm' ? `<div class="brow"><input type="range" class="osmYearR" min="${lo}" max="${hi}" step="1"
         value="${Math.max(lo, Math.min(hi, k.year))}" oninput="osmSetYear(this.value)" style="flex:1">
         <input type="number" class="osmYearN" min="1" max="2100" value="${k.year}" style="width:70px"
-          onchange="osmSetYear(this.value)"> AD</div>
+          onchange="osmSetYear(this.value)"> ${tt('osmmap.ad')}</div>
       <div class="cmbar2">${(st.ohm_eras || []).map(y =>
         `<button class="${y === k.year ? 'primary' : ''}" onclick="osmSetYear(${y});osmPaint();if(state.owp&&state.owp.open)owpSide()">${y}</button>`).join('')}</div>
-      <div class="count">The historical borders as OpenHistoricalMap has them for 1 January of that
-        year: a tracing guide for the regions.</div>` : ''}
+      <div class="count">${tt('osmmap.the_historical_borders_as_openhistoricalmap_has')}</div>` : ''}
     <div class="count">${esc(osmStyleInfo().credit)}</div>`;
 }
 
@@ -387,7 +386,7 @@ async function osmPicture(fmt){
     const r = await fetch(`/api/osm/picture?${q}`);
     if(!r.ok){ toast('✗ ' + (await r.text()).slice(0, 300), 8000); return; }
     const name = ((r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/) || [])[1]
-      || `reference.${fmt}`;
+      || tt('osmmap.reference',{x:fmt});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(await r.blob());
     a.download = name;
@@ -419,7 +418,7 @@ async function osmBoxPost(body){
   k.box = r.box ? Object.assign({}, r.box) : null;
   k.coast = null; k.water = null; k.over = null; k.hist = null; k.chunks = null; k.cpick = 0;
   osmPaint(); cmapPaint();
-  toast(r.box ? 'Box kept for this map.' : 'Box cleared.');
+  toast(r.box ? tt('osmmap.box_kept_for_this_map') : tt('osmmap.box_cleared'));
   if(r.box) osmChunksLoad(false);
 }
 
@@ -453,7 +452,7 @@ async function osmCoast(){
   }, 800);
   let r;
   try{ r = await api.post('/api/osm/coast', {mod: c.mod, job: k.job},
-                          {label: 'fetching the coastline'}); }
+                          {label: tt('osmmap.fetching_the_coastline')}); }
   catch(e){ r = {error: errText(e)}; }
   finally{ clearInterval(poll); }
   if(state.osm !== k) return;
@@ -468,17 +467,17 @@ async function osmCoast(){
 async function osmCoastApply(){
   const k = state.osm;
   if(!k || !k.coast || !state.cpaint) return;
-  if(!confirm(`Make ${k.coast.to_sea} land tiles on the water side of the coastline sea?\n\n`
-    + 'It is one stroke of the paint tool: regions, heights and ground types together, '
-    + 'in this map’s own sea colours, settlements and ports left alone. The Paint '
-    + 'tab’s Undo takes it back, and nothing is written until you save there.')) return;
+  if(!confirm(tt('osmmap.make_land_tiles_on_the_water',{to_sea:k.coast.to_sea})
+    + tt('osmmap.it_is_one_stroke_of_the')
+    + tt('osmmap.in_this_maps_own_sea_colours')
+    + tt('osmmap.tabs_undo_takes_it_back_and'))) return;
   const r = await cpaintPost('osm_coast', {});
   if(!r) return;
   if(r.error){ toast('✗ ' + r.error, 9000); return; }
   cpaintApply(r.changed || {});
   cpaintPaint();
-  toast(r.tiles ? `${r.tiles} tiles made sea${r.note ? ' - ' + r.note : ''}. Save it from Paint.`
-                : (r.note || 'Nothing to change.'), 7000);
+  toast(r.tiles ? tt('osmmap.tiles_made_sea_save_it_from',{tiles:r.tiles,x:r.note ? ' - ' + r.note : ''})
+                : (r.note || tt('osmmap.nothing_to_change')), 7000);
   osmCoast();                       // the red goes where it became sea
 }
 
@@ -502,7 +501,7 @@ async function osmWater(){
   }, 800);
   let r;
   try{ r = await api.post('/api/osm/water', Object.assign({mod: c.mod, job: k.job}, osmWaterBody()),
-                          {label: 'fetching the water'}); }
+                          {label: tt('osmmap.fetching_the_water')}); }
   catch(e){ r = {error: errText(e)}; }
   finally{ clearInterval(poll); }
   if(state.osm !== k) return;
@@ -517,16 +516,16 @@ async function osmWater(){
 async function osmWaterApply(){
   const k = state.osm;
   if(!k || !k.water || !state.cpaint) return;
-  if(!confirm(`Make ${k.water.to_sea} land tiles inside OpenStreetMap’s water sea?\n\n`
-    + 'It is one stroke of the paint tool, like the coastline: regions, heights and ground types '
-    + 'together, in this map’s own sea colours, islands kept dry, settlements and ports left alone. '
-    + 'The Paint tab’s Undo takes it back, and nothing is written until you save there.')) return;
+  if(!confirm(tt('osmmap.make_land_tiles_inside_openstreetmaps_water',{to_sea:k.water.to_sea})
+    + tt('osmmap.it_is_one_stroke_of_the_2')
+    + tt('osmmap.together_in_this_maps_own_sea')
+    + tt('osmmap.the_paint_tabs_undo_takes_it'))) return;
   const r = await cpaintPost('osm_water', osmWaterBody());
   if(!r) return;
   if(r.error){ toast('✗ ' + r.error, 9000); return; }
   cpaintApply(r.changed || {});
   cpaintPaint();
-  toast(r.tiles ? `${r.tiles} tiles made sea. Save it from Paint.` : (r.note || 'Nothing to change.'), 7000);
+  toast(r.tiles ? tt('osmmap.tiles_made_sea_save_it_from_2',{tiles:r.tiles}) : (r.note || tt('osmmap.nothing_to_change')), 7000);
   osmWater();                       // the blue goes where it became sea
 }
 
@@ -546,7 +545,7 @@ async function osmSearch(){
   k.busy = true; k.err = ''; osmPaint();
   let r;
   try{ r = await api.get(`/api/osm/search?mod=${enc(c.mod)}&q=${enc(k.q)}`,
-                         {label: 'searching OpenStreetMap'}); }
+                         {label: tt('osmmap.searching_openstreetmap')}); }
   catch(e){ r = {error: errText(e)}; }
   if(state.osm !== k) return;
   k.busy = false;
@@ -562,7 +561,7 @@ function osmGo(i){
 
 //: A name the engine can carry: letters, digits and underscores
 const osmKey = s => (s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '')
-  .replace(/\s+/g, '_').replace(/[^A-Za-z0-9_]/g, '') || 'Place';
+  .replace(/\s+/g, '_').replace(/[^A-Za-z0-9_]/g, '') || tt('osmmap.place');
 
 async function osmNewRegion(i){
   return osmNewRegionAt(state.osm.results[i]);
@@ -578,8 +577,8 @@ async function osmNewRegionAt(p){
   Object.assign(pt.wiz, {name: key + '_Province', settlement: key,
                          shown: p.name, settlement_shown: p.name});
   cpaintPaint();
-  toast(`The new region is filled in from ${p.name}. Check it, open it, then paint `
-        + 'its boundary from Real world or by hand.', 7000);
+  toast(tt('osmmap.the_new_region_is_filled_in',{name:p.name})
+        + tt('osmmap.its_boundary_from_real_world_or'), 7000);
 }
 
 async function osmBoundary(i){
@@ -588,7 +587,7 @@ async function osmBoundary(i){
   if(el) k.target = el.value.trim();
   const region = k.target || (state.cpaint && state.cpaint.st.new_region
                               && state.cpaint.st.new_region.name) || '';
-  if(!region){ toast('Name the region the boundary is painted onto.', 5000); return; }
+  if(!region){ toast(tt('osmmap.name_the_region_the_boundary_is'), 5000); return; }
   const r = await cpaintPost('osm_boundary', {region, name: p.name, lat: p.lat,
                                               lon: p.lon, osm_type: p.osm_type,
                                               osm_id: p.osm_id});
@@ -596,7 +595,7 @@ async function osmBoundary(i){
   if(r.error){ toast('✗ ' + r.error, 9000); return; }
   cpaintApply(r.changed || {});
   cpaintPaint();
-  toast(`${r.tiles} tiles of ${p.name} painted onto ${region}. Save it from Paint.`, 7000);
+  toast(tt('osmmap.tiles_of_painted_onto_save_it',{tiles:r.tiles,name:p.name,region}), 7000);
 }
 
 /* ---------- historic sites (87f) ---------- */
@@ -621,7 +620,7 @@ function osmHistTagsHtml(repaint){
   const groups = [...new Set(all.map(t => t.group))];
   return groups.map(g => {
     const tags = all.filter(t => t.group === g), n = tags.filter(t => on.includes(t.tag)).length;
-    return `<details class="osmhg"><summary>${esc(g)} <span class="count">${n} of ${tags.length} ticked</span></summary>
+    return `<details class="osmhg"><summary>${tt('osmmap.of_ticked',{x:esc(g),x2:n,tags_n:tags.length})}</summary>
       <div class="brow" style="flex-wrap:wrap;gap:2px 10px">${tags.map(t => `<label class="chk" title="${esc(t.tag)}: ${esc(t.desc)}">
         <input type="checkbox" ${on.includes(t.tag) ? 'checked' : ''}
           onchange="osmHistTick('${t.tag}',this.checked);${repaint}">
@@ -643,7 +642,7 @@ async function osmHist(){
   }, 800);
   let r;
   try{ r = await api.post('/api/osm/historic', {mod: c.mod, job: k.job, tags: osmHistTags()},
-                          {label: 'fetching the historic sites'}); }
+                          {label: tt('osmmap.fetching_the_historic_sites')}); }
   catch(e){ r = {error: errText(e)}; }
   finally{ clearInterval(poll); }
   if(state.osm !== k) return;
@@ -685,8 +684,8 @@ async function osmSiteObject(i, kind){
   // asked for, so shown: not 28a's once-per-map switch meant for map clicks
   const where = typeof cmapSubOf === 'function' && cmapSubOf('cmForts');
   if(where) cmapSub(where.tab, where.sub);
-  toast(`A ${kind} planned on ${s.gx}, ${s.gy}, where ${s.name || 'the ' + s.label.toLowerCase()} stands. `
-        + 'Check it and save it from the Forts panel.', 7000);
+  toast(tt('osmmap.a_planned_on_where_stands',{kind,gx:s.gx,gy:s.gy,x:s.name || 'the ' + s.label.toLowerCase()})
+        + tt('osmmap.check_it_and_save_it_from'), 7000);
 }
 
 function osmSiteRegion(i){
@@ -723,11 +722,9 @@ function osmHistHtml(){
   const k = state.osm, h = k.hist;
   const busy = k.busy && k.label && k.job.startsWith('osmh');
   const btn = `<div class="cmbar2"><button onclick="osmHist()" ${k.busy || !osmBoxOk(k.box) || !osmHistTags().length ? 'disabled' : ''}
-      >${busy ? esc(k.label) : h ? '↺ Again' : 'Fetch the sites'}</button></div>`;
+      >${busy ? esc(k.label) : h ? tt('osmmap.again') : tt('osmmap.fetch_the_sites')}</button></div>`;
   if(!h) return `${osmHistTagsHtml('osmPaint()')}${btn}
-    <div class="count">Mylae’s historic features: castles, forts, monasteries and eighteen more
-      OpenStreetMap tags, each a point in its own colour. A site can become a fort, a watchtower
-      or a new region.</div>`;
+    <div class="count">${tt('osmmap.mylaes_historic_features_castles_forts_monasteri')}</div>`;
   const all = k.st.historic_tags || [];
   const lab = t => (all.find(x => x.tag === t) || {}).label || t;
   const rows = osmHistRows(), shown = rows.slice(0, OSM_HIST_ROWS);
@@ -735,19 +732,19 @@ function osmHistHtml(){
   const act = (i, s, kind, txt) => `<button class="${s.suggest === kind ? 'primary' : ''}"
       onclick="${kind === 'settlement' ? `osmSiteRegion(${i})` : `osmSiteObject(${i},'${kind}')`}">${txt}</button>`;
   return `${osmHistTagsHtml('osmPaint()')}${btn}
-    <div class="count">${counts || 'Nothing'} on the map${h.off_map ? `; ${h.off_map} in the box’s corners, off the turned map` : ''}.</div>
+    <div class="count">${tt('osmmap.on_the_map',{counts:counts || tt('osmmap.nothing'),off_map:h.off_map ? tt('osmmap.in_the_boxs_corners_off_the',{off_map:h.off_map}) : ''})}</div>
     <label class="chk"><input type="checkbox" ${k.hshow ? 'checked' : ''}
-      onchange="state.osm.hshow=this.checked;cmapPaint()"> Show them on the map</label>
-    <div class="cmbar2"><button onclick="osmHistSave()">Save historic_features.txt</button>
-      <span class="count">his format: a line a site, its pixel from the top-left</span></div>
-    <input id="osmHq" value="${esc(k.hq)}" placeholder="filter by name or kind" oninput="osmHistFilter(this.value)">
+      onchange="state.osm.hshow=this.checked;cmapPaint()"> ${tt('osmmap.show_them_on_the_map')}</label>
+    <div class="cmbar2"><button onclick="osmHistSave()">${tt('osmmap.save_historic_features_txt')}</button>
+      <span class="count">${tt('osmmap.his_format_a_line_a_site')}</span></div>
+    <input id="osmHq" value="${esc(k.hq)}" placeholder="${ttA('osmmap.filter_by_name_or_kind')}" oninput="osmHistFilter(this.value)">
     ${shown.map(([s, i]) => `<div class="osmres">
-        <div><span class="osmsw" style="background:rgb(${s.colour.join(',')})"></span><b>${esc(s.name || '(no name)')}</b>
-          <span class="count">${esc(s.label)} · tile ${s.gx}, ${s.gy}</span></div>
-        <div class="cmbar2"><button class="${i === k.hpick ? 'primary' : ''}" onclick="osmSiteGo(${i})">Go</button>
-          ${act(i, s, 'fort', '▣ Fort here')}${act(i, s, 'watchtower', '△ Watchtower here')}
-          ${act(i, s, 'settlement', 'New region here')}</div></div>`).join('')}
-    ${rows.length > shown.length ? `<div class="count">${rows.length - shown.length} more: narrow them with the filter.</div>` : ''}`;
+        <div><span class="osmsw" style="background:rgb(${s.colour.join(',')})"></span><b>${esc(s.name || tt('common.no_name'))}</b>
+          <span class="count">${tt('osmmap.tile',{label:esc(s.label),gx:s.gx,gy:s.gy})}</span></div>
+        <div class="cmbar2"><button class="${i === k.hpick ? 'primary' : ''}" onclick="osmSiteGo(${i})">${tt('osmmap.go')}</button>
+          ${act(i, s, 'fort', tt('osmmap.fort_here'))}${act(i, s, 'watchtower', tt('osmmap.watchtower_here'))}
+          ${act(i, s, 'settlement', tt('osmmap.new_region_here'))}</div></div>`).join('')}
+    ${rows.length > shown.length ? `<div class="count">${tt('osmmap.more_narrow_them_with_the_filter',{n:rows.length - shown.length})}</div>` : ''}`;
 }
 
 /* ---------- the Overpass chunks (87g) ---------- */
@@ -766,8 +763,8 @@ async function osmChunksLoad(fresh){
   const bad = k.chunks.findIndex(f => f.failed);
   k.cpick = fresh && bad >= 0 ? bad : Math.min(k.cpick, Math.max(0, k.chunks.length - 1));
   if(fresh && k.chunks[0] && k.chunks[0].failed)
-    toast(`${k.chunks[0].failed} of ${k.chunks[0].chunks.length} chunks of the ${k.chunks[0].label} `
-          + 'fetch got no answer. They are red on the map; Overpass chunks fetches them again.', 9000);
+    toast(tt('osmmap.of_chunks_of_the',{x:k.chunks[0].failed,n:k.chunks[0].chunks.length,x2:k.chunks[0].label})
+          + tt('osmmap.fetch_got_no_answer_they_are'), 9000);
   osmPaint(); cmapPaint();
 }
 
@@ -784,7 +781,7 @@ async function osmChunkAgain(n){
   k.busy = true; k.err = ''; osmPaint();
   let r;
   try{ r = await api.post('/api/osm/refetch', {kind: f.kind, key: f.key, n},
-                          {label: `fetching chunk ${n} again`}); }
+                          {label: tt('osmmap.fetching_chunk_again',{x:n})}); }
   catch(e){ r = {error: errText(e)}; }
   if(state.osm !== k) return;
   k.busy = false;
@@ -792,14 +789,14 @@ async function osmChunkAgain(n){
   const ch = r.chunks[n - 1];
   k.chunks[k.cpick] = r;
   osmPaint(); cmapPaint();
-  if(!ch.ok){ toast(`✗ chunk ${n} failed again: ${ch.error}`, 9000); return; }
-  toast(`Chunk ${n}: ${ch.count} found, ${r.added} new to this fetch.`, 6000);
+  if(!ch.ok){ toast(tt('osmmap.chunk_failed_again',{x:n,error:ch.error}), 9000); return; }
+  toast(tt('osmmap.chunk_found_new_to_this_fetch',{x:n,count:ch.count,added:r.added}), 6000);
   if(!r.added) return;
   if(f.kind === 'coast' && k.coast) osmCoast();
   else if(f.kind === 'polygons' && f.label === 'water' && k.water) osmWater();
   else if(f.kind === 'historic' && k.hist) osmHist();
   else if(f.kind !== 'coast' && f.kind !== 'historic' && f.label !== 'water')
-    toast(`Chunk ${n}: ${r.added} new. Plan it again on Generate to use them.`, 7000);
+    toast(tt('osmmap.chunk_new_plan_it_again_on',{x:n,added:r.added}), 7000);
 }
 
 //: The pin's answer: the chunk under the clicked tile, a failed one first
@@ -809,32 +806,28 @@ function osmChunkPicked(game, tile){
   const [lat, lon] = osmToGeo(k.box, c.man.width, c.man.height, tile[0], tile[1]);
   const inside = f.chunks.filter(ch => ch.south <= lat && lat <= ch.north && ch.west <= lon && lon <= ch.east);
   const ch = inside.find(x => !x.ok) || inside[0];
-  if(!ch){ toast('No chunk of that fetch covers that tile.', 5000); return; }
+  if(!ch){ toast(tt('osmmap.no_chunk_of_that_fetch_covers'), 5000); return; }
   osmChunkAgain(ch.n);
 }
 
 function osmChunksHtml(){
   const k = state.osm, fs = k.chunks || [];
-  if(!fs.length) return `<div class="count">Nothing fetched from Overpass for this box yet. The coastline,
-    the water, the historic sites and the Generate tab’s land use and rivers each ask it in chunks,
-    and each chunk shows here.</div>`;
+  if(!fs.length) return `<div class="count">${tt('osmmap.nothing_fetched_from_overpass_for_this')}</div>`;
   const f = fs[Math.min(k.cpick, fs.length - 1)];
   const when = t => new Date(t * 1000).toLocaleString();
   const bad = f.chunks.filter(ch => !ch.ok);
-  return `<label style="display:block">Fetch <select onchange="osmChunkPickFetch(this.value)">${fs.map((x, i) =>
-      `<option value="${i}" ${i === k.cpick ? 'selected' : ''}>${esc(x.label)} · ${x.chunks.length} chunks${x.failed
-        ? ` · ${x.failed} failed` : ''}</option>`).join('')}</select></label>
-    <div class="count">${f.chunks.length} chunks, ${f.found} things found, asked ${esc(when(f.when))}${f.failed
-      ? `. <span class="w-warn">${f.failed} got no answer, so what is inside ${f.failed === 1 ? 'it' : 'them'} is missing.</span>` : '.'}</div>
+  return `<label style="display:block">${tt('osmmap.fetch')} <select onchange="osmChunkPickFetch(this.value)">${fs.map((x, i) =>
+      `<option value="${i}" ${i === k.cpick ? 'selected' : ''}>${tt('osmmap.chunks',{label:esc(x.label),chunks_n:x.chunks.length,failed:x.failed
+        ? tt('osmmap.failed',{failed:x.failed}) : ''})}</option>`).join('')}</select></label>
+    <div class="count">${tt('osmmap.chunks_things_found_asked',{chunks_n:f.chunks.length,found:f.found,x:esc(when(f.when)),x2:f.failed
+      ? tt('osmmap.got_no_answer_so_what_is',{failed:f.failed,x:f.failed === 1 ? 'it' : 'them'}) : '.'})}</div>
     <label class="chk"><input type="checkbox" ${k.cshow ? 'checked' : ''}
-      onchange="state.osm.cshow=this.checked;cmapPaint()"> Show them on the map, numbered (failed ones red)</label>
-    <div class="cmbar2">${typeof cpinButton === 'function' ? cpinButton('a chunk to fetch again', 'osmChunkPicked', []) : ''}
-      <span class="count">or click a chunk on the map to fetch it again</span></div>
-    ${bad.map(ch => `<div class="osmres"><b>Chunk ${ch.n}</b> <span class="count">${ch.south.toFixed(2)} to ${ch.north.toFixed(2)} N,
-        ${ch.west.toFixed(2)} to ${ch.east.toFixed(2)} E</span>
+      onchange="state.osm.cshow=this.checked;cmapPaint()"> ${tt('osmmap.show_them_on_the_map_numbered')}</label>
+    <div class="cmbar2">${tt('osmmap.or_click_a_chunk_on_the',{x:typeof cpinButton === 'function' ? cpinButton(tt('osmmap.a_chunk_to_fetch_again'), 'osmChunkPicked', []) : ''})}</div>
+    ${bad.map(ch => `<div class="osmres">${tt('osmmap.chunk_to_n_to_e',{ch:ch.n,x:ch.south.toFixed(2),x2:ch.north.toFixed(2),x3:ch.west.toFixed(2),x4:ch.east.toFixed(2)})}
         <div class="w-bad">${esc(ch.error)}</div>
-        <div class="cmbar2"><button class="primary" onclick="osmChunkAgain(${ch.n})" ${k.busy ? 'disabled' : ''}>↺ Fetch it again</button></div></div>`).join('')}
-    <details><summary class="count">Every chunk</summary>${f.chunks.map(ch => `<div class="brow" style="gap:6px">
+        <div class="cmbar2"><button class="primary" onclick="osmChunkAgain(${ch.n})" ${k.busy ? 'disabled' : ''}>${tt('osmmap.fetch_it_again')}</button></div></div>`).join('')}
+    <details><summary class="count">${tt('osmmap.every_chunk')}</summary>${f.chunks.map(ch => `<div class="brow" style="gap:6px">
         <span style="min-width:24px">${ch.n}</span><span class="count" style="flex:1">${ch.ok ? `${ch.count} found` : 'failed'}</span>
         <button onclick="osmChunkAgain(${ch.n})" ${k.busy ? 'disabled' : ''}>↺</button></div>`).join('')}</details>`;
 }
@@ -859,7 +852,7 @@ async function osmBundle(){
     a.download = name;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    toast(`${name}: ${n} files.${notes ? ' ' + notes + '.' : ''}`, notes ? 9000 : 5000);
+    toast(tt('osmmap.files',{name,x:n,x2:notes ? ' ' + notes + '.' : ''}), notes ? 9000 : 5000);
   }catch(e){ toast('✗ ' + errText(e), 8000); }
   finally{ k.busy = false; osmPaint(); }
 }
@@ -867,14 +860,11 @@ async function osmBundle(){
 function osmBundleHtml(){
   const k = state.osm, pt = state.cpaint;
   const dirty = pt && pt.st && (pt.st.dirty || []).length;
-  return `${dirty ? `<div class="w-warn">The Paint tab has changes not saved yet. The bundle is the
-      files on disk, so save first if they should be in it.</div>` : ''}
+  return `${dirty ? `<div class="w-warn">${tt('osmmap.the_paint_tab_has_changes_not')}</div>` : ''}
     <label class="chk"><input type="checkbox" ${k.bpic ? 'checked' : ''} ${osmBoxOk(k.box) ? '' : 'disabled'}
-      onchange="state.osm.bpic=this.checked"> With a reference picture (the backdrop style, ${k.picW} px wide)</label>
-    <div class="cmbar2"><button class="primary" onclick="osmBundle()" ${k.busy ? 'disabled' : ''}>📦 Export the map bundle</button></div>
-    <div class="count">Mylae’s layout: the map’s layers as they are on disk, bbox_coords.txt, and
-      reference/ with map_regions.txt (each province’s colour, city and port), the historic sites
-      already fetched for this box, and the picture. Only the picture uses the internet.</div>`;
+      onchange="state.osm.bpic=this.checked"> ${tt('osmmap.with_a_reference_picture_the_backdrop',{picW:k.picW})}</label>
+    <div class="cmbar2"><button class="primary" onclick="osmBundle()" ${k.busy ? 'disabled' : ''}>${tt('osmmap.export_the_map_bundle')}</button></div>
+    <div class="count">${tt('osmmap.mylaes_layout_the_maps_layers_as')}</div>`;
 }
 
 /* ---------- the panel ---------- */
@@ -889,18 +879,17 @@ function osmHtml(){
   const k = state.osm, c = state.cmap;
   if(!k || !c) return '';
   const head = `<div class="cmrow cmhdr" onclick="osmToggle()">
-      <b>Real world</b> <span class="count">OpenStreetMap behind the map</span>
-      <span class="count">${k.open ? '▾' : '▸'}</span>
+      ${tt('osmmap.real_world_openstreetmap_behind_the_map',{open:k.open ? '▾' : '▸'})}
     </div>`;
   if(!k.open) return head;
-  if(!k.st) return head + `<div class="count">${k.busy ? 'Reading…' : esc(k.err || '')}</div>`;
+  if(!k.st) return head + `<div class="count">${k.busy ? tt('common.reading_3') : esc(k.err || '')}</div>`;
   const s = k.st.settings;
   if(!s.enabled) return head + `<div class="bnote">${docPoints(
-      'Off. This is the one part of the toolkit that uses the internet, so it waits to be turned on.', [
-      'It sends the map’s real-world box, the numbers of the map tiles it draws, and the words you search for. Nothing about the mod.',
-      `To: ${esc(s.tiles[0])}, ${esc(s.overpass[0])} and ${esc(s.nominatim)}. Settings, Real-world map, lists them all and can change them.`,
-      'Tiles are kept on disk for 30 days, and searches are sent at most once a second, as OpenStreetMap asks.'])}</div>
-    <button onclick="openSettings()">⚙ Open Settings to turn it on</button>`;
+      tt('osmmap.off_this_is_the_one_part'), [
+      tt('osmmap.it_sends_the_maps_real_world'),
+      tt('osmmap.to_and_settings_real_world_map',{tiles:esc(s.tiles[0]),overpass:esc(s.overpass[0]),nominatim:esc(s.nominatim)}),
+      tt('osmmap.tiles_are_kept_on_disk_for')])}</div>
+    <button onclick="openSettings()">${tt('osmmap.open_settings_to_turn_it_on')}</button>`;
   const b = k.box || {north: '', south: '', west: '', east: '', rotation: ''};
   const box = ['north', 'south', 'west', 'east', 'rotation'].map(f => `<label style="flex:1 1 90px">${f}
       <input type="number" step="${f === 'rotation' ? 1 : 0.01}" value="${esc(osmNum(b[f] ?? (f === 'rotation' && k.box ? 0 : ''), f === 'rotation' ? 1 : 6))}"
@@ -911,101 +900,88 @@ function osmHtml(){
   if(osmBoxOk(k.box)){
     const [ew, ns] = osmKmPerTile(k.box, W, H), st = osmStretch(k.box, W, H);
     const f = v => v >= 10 ? v.toFixed(0) : v.toFixed(1);
-    shape = `<div class="count">One tile: ${f(ew)} km east-west, ${f(ns)} km north-south.
-      ${Math.abs(st) < 0.005 ? '' : `<span class="w-warn">The box stretches the map
-      ${Math.abs(st * 100).toFixed(1)}% ${st > 0 ? 'wider' : 'taller'} than the real ground:
-      the world picker can give it the map’s shape.</span>`}</div>`;
+    shape = `<div class="count">${tt('osmmap.one_tile_km_east_west_km',{x:f(ew),x2:f(ns),x3:Math.abs(st) < 0.005 ? '' : `<span class="w-warn">${tt('osmmap.the_box_stretches_the_map_than',{st:Math.abs(st * 100).toFixed(1),st2:st > 0 ? 'wider' : 'taller'})}</span>`})}</div>`;
   }
-  const kept = k.st.box_from === 'kept' ? 'kept for this map'
-    : k.st.box_from === 'file' ? 'read from bbox_coords.txt beside the map' : 'not set yet';
+  const kept = k.st.box_from === 'kept' ? tt('osmmap.kept_for_this_map')
+    : k.st.box_from === 'file' ? tt('osmmap.read_from_bbox_coords_txt_beside') : tt('osmmap.not_set_yet');
   const co = k.coast;
   const res = k.results || [];
   const regions = (c.man.regions || []).filter(r => r.name).map(r => r.name).sort();
   return `${head}
     ${k.err ? `<div class="w-bad">${esc(k.err)}</div>` : ''}
-    <div class="bsec"><h4>The box <span class="count">${esc(kept)}</span></h4>
-      <div class="cmbar2"><button class="primary" onclick="owpOpen()">🌍 Pick it on a world map…</button></div>
+    <div class="bsec"><h4>${tt('osmmap.the_box')} <span class="count">${esc(kept)}</span></h4>
+      <div class="cmbar2"><button class="primary" onclick="owpOpen()">${tt('osmmap.pick_it_on_a_world_map')}</button></div>
       <div class="brow" style="flex-wrap:wrap">${box}</div>
       ${shape}
       <div class="cmbar2">
         <button class="primary" onclick="osmBoxPost({box: state.osm.box})"
-          ${osmBoxOk(k.box) ? '' : 'disabled'}>Keep</button>
-        <label class="btnlike">Import bbox_coords.txt…
+          ${osmBoxOk(k.box) ? '' : 'disabled'}>${tt('osmmap.keep')}</button>
+        <label class="btnlike">${tt('osmmap.import_bbox_coords_txt')}
           <input type="file" accept=".txt" style="display:none" onchange="osmBoxFile(this)"></label>
-        <button onclick="osmBoxDownload()" ${k.st.file ? '' : 'disabled'}>Export</button>
-        <button onclick="osmBoxPost({clear: true})" ${k.st.box_from === 'kept' ? '' : 'disabled'}>Clear</button>
+        <button onclick="osmBoxDownload()" ${k.st.file ? '' : 'disabled'}>${tt('common.export')}</button>
+        <button onclick="osmBoxPost({clear: true})" ${k.st.box_from === 'kept' ? '' : 'disabled'}>${tt('common.clear')}</button>
       </div>
-      <div class="count">Where the map’s edges are in the real world, and how far the map is
-        turned (degrees, clockwise). Change a number and the backdrop moves at once; Keep saves
-        it in the toolkit, not in the mod.</div>
+      <div class="count">${tt('osmmap.where_the_maps_edges_are_in')}</div>
     </div>
-    <div class="bsec"><h4>Backdrop</h4>
+    <div class="bsec"><h4>${tt('osmmap.backdrop')}</h4>
       <label class="chk"><input type="checkbox" ${k.show ? 'checked' : ''}
-        onchange="state.osm.show=this.checked;cmapPaint()"> Show the real world over the map</label>
-      <label style="display:block">Opacity <input type="range" min="0.1" max="1" step="0.05" value="${k.alpha}"
+        onchange="state.osm.show=this.checked;cmapPaint()"> ${tt('osmmap.show_the_real_world_over_the')}</label>
+      <label style="display:block">${tt('osmmap.opacity')} <input type="range" min="0.1" max="1" step="0.05" value="${k.alpha}"
         oninput="state.osm.alpha=+this.value;cmapPaint()"></label>
       ${osmStyleHtml()}
-      <div class="cmbar2"><label>Save a picture of the box
+      <div class="cmbar2"><label>${tt('osmmap.save_a_picture_of_the_box')}
           <select onchange="state.osm.picW=+this.value">${[1024, 2048, 4096].map(w =>
-            `<option value="${w}" ${w === k.picW ? 'selected' : ''}>${w} px wide</option>`).join('')}</select></label>
-        <button onclick="osmPicture('png')" ${k.busy || !osmBoxOk(k.box) ? 'disabled' : ''}>PNG</button>
-        <button onclick="osmPicture('svg')" ${k.busy || !osmBoxOk(k.box) ? 'disabled' : ''}>SVG</button></div>
-      <div class="count">The style above, cut to the box and turned with it, in the map’s own
-        frame: a reference to paint from in another program.</div>
+            `<option value="${w}" ${w === k.picW ? 'selected' : ''}>${tt('osmmap.px_wide',{x:w})}</option>`).join('')}</select></label>
+        <button onclick="osmPicture('png')" ${k.busy || !osmBoxOk(k.box) ? 'disabled' : ''}>${tt('osmmap.png')}</button>
+        <button onclick="osmPicture('svg')" ${k.busy || !osmBoxOk(k.box) ? 'disabled' : ''}>${tt('osmmap.svg')}</button></div>
+      <div class="count">${tt('osmmap.the_style_above_cut_to_the')}</div>
     </div>
-    <div class="bsec"><h4>Coastline</h4>
+    <div class="bsec"><h4>${tt('osmmap.coastline')}</h4>
       <div class="cmbar2"><button onclick="osmCoast()" ${k.busy || !osmBoxOk(k.box) ? 'disabled' : ''}
-        >${k.busy && k.label && !k.job.startsWith('osmw') ? esc(k.label) : co ? '↺ Again' : 'Fetch the real coastline'}</button></div>
-      ${co ? `<div class="count">${co.way_count} coastline ways: ${co.line} tiles of line
-          (<span style="color:#00f0ff">cyan</span>), ${co.to_sea} land tiles on the water side
-          (<span style="color:#ff4646">red</span>), ${co.land_side_sea} sea tiles on the land side
-          (lakes among them; left as they are).</div>
+        >${k.busy && k.label && !k.job.startsWith('osmw') ? esc(k.label) : co ? tt('osmmap.again') : tt('osmmap.fetch_the_real_coastline')}</button></div>
+      ${co ? `<div class="count">${tt('osmmap.coastline_ways_tiles_of_line_cyan',{way_count:co.way_count,line:co.line,to_sea:co.to_sea,land_side_sea:co.land_side_sea})}</div>
         <label class="chk"><input type="checkbox" ${k.showCoast ? 'checked' : ''}
-          onchange="state.osm.showCoast=this.checked;cmapPaint()"> Show it on the map</label>
-        ${co.leaks ? `<div class="w-warn">The coastline has a gap: the water side reaches ${co.leak}
-          tiles that are land by its own reckoning, so it cannot be filled. Use the line as a guide
-          for the water brush.</div>`
+          onchange="state.osm.showCoast=this.checked;cmapPaint()"> ${tt('osmmap.show_it_on_the_map')}</label>
+        ${co.leaks ? `<div class="w-warn">${tt('osmmap.the_coastline_has_a_gap_the',{leak:co.leak})}</div>`
         : `<div class="cmbar2"><button class="primary" onclick="osmCoastApply()"
-            ${co.to_sea ? '' : 'disabled'}>Make the red tiles sea</button>
-            <span class="count">one stroke; the Paint tab undoes and saves it</span></div>`}` : ''}
+            ${co.to_sea ? '' : 'disabled'}>${tt('osmmap.make_the_red_tiles_sea')}</button>
+            <span class="count">${tt('osmmap.one_stroke_the_paint_tab_undoes')}</span></div>`}` : ''}
     </div>
-    <div class="bsec"><h4>Lakes, lagoons and seas</h4>
+    <div class="bsec"><h4>${tt('osmmap.lakes_lagoons_and_seas')}</h4>
       <div class="brow" style="flex-wrap:wrap">${[['sea', 'seas'], ['lagoon', 'lagoons'], ['lake', 'lakes']].map(([w, t]) =>
         `<label class="chk"><input type="checkbox" ${k.wkinds[w] ? 'checked' : ''}
           onchange="osmWaterSet('${w}',this.checked)"> ${t}</label>`).join('')}</div>
-      <label>Leave out any smaller than <input type="number" min="0" max="10000" value="${k.wmin}" style="width:70px"
-        onchange="state.osm.wmin=Math.max(0,+this.value||0);state.osm.water=null;osmBuildOver();osmPaint();cmapPaint()"> tiles</label>
+      <label>${tt('osmmap.leave_out_any_smaller_than')} <input type="number" min="0" max="10000" value="${k.wmin}" style="width:70px"
+        onchange="state.osm.wmin=Math.max(0,+this.value||0);state.osm.water=null;osmBuildOver();osmPaint();cmapPaint()"> ${tt('osmmap.tiles')}</label>
       <div class="cmbar2"><button onclick="osmWater()" ${k.busy || !osmBoxOk(k.box) || !osmWaterBody().kinds.length ? 'disabled' : ''}
-        >${k.busy && k.label && k.job.startsWith('osmw') ? esc(k.label) : k.water ? '↺ Again' : 'Fetch the water'}</button></div>
-      ${k.water ? `<div class="count">${k.water.rings} water outline(s)${Object.entries(k.water.by_kind || {}).map(([w, n]) =>
-          ` (${n} ${w})`).join('')}, ${k.water.holes} island(s) kept dry, ${k.water.small} too small and left out:
-          ${k.water.to_sea} land tiles inside (<span style="color:#3c6eff">blue</span>), ${k.water.sea_already} sea already.</div>
-        <div class="cmbar2"><button class="primary" onclick="osmWaterApply()" ${k.water.to_sea ? '' : 'disabled'}>Make the blue tiles sea</button>
-          <span class="count">one stroke; the Paint tab undoes and saves it</span></div>` : ''}
-      <div class="count">Mylae’s water step: OpenStreetMap’s sea, lagoon and lake outlines made sea on
-        the map. An inland lake is sea to the engine, as the Caspian is.</div>
+        >${k.busy && k.label && k.job.startsWith('osmw') ? esc(k.label) : k.water ? tt('osmmap.again') : tt('osmmap.fetch_the_water')}</button></div>
+      ${k.water ? `<div class="count">${tt('osmmap.water_outline_s_island_s_kept',{rings:k.water.rings,x:Object.entries(k.water.by_kind || {}).map(([w, n]) =>
+          ` (${n} ${w})`).join(''),holes:k.water.holes,small:k.water.small,to_sea:k.water.to_sea,sea_already:k.water.sea_already})}</div>
+        <div class="cmbar2"><button class="primary" onclick="osmWaterApply()" ${k.water.to_sea ? '' : 'disabled'}>${tt('osmmap.make_the_blue_tiles_sea')}</button>
+          <span class="count">${tt('osmmap.one_stroke_the_paint_tab_undoes')}</span></div>` : ''}
+      <div class="count">${tt('osmmap.mylaes_water_step_openstreetmaps_sea_lagoon')}</div>
     </div>
-    <div class="bsec"><h4>Historic sites</h4>${osmHistHtml()}</div>
-    <div class="bsec"><h4>Overpass chunks ${(k.chunks || []).some(f => f.failed)
-      ? '<span class="w-warn">some failed</span>' : ''}</h4>${osmChunksHtml()}</div>
-    <div class="bsec"><h4>The map bundle</h4>${osmBundleHtml()}</div>
-    <div class="bsec"><h4>Find a place</h4>
-      <div class="brow"><input id="osmQ" value="${esc(k.q)}" placeholder="a town, a region, a country"
+    <div class="bsec"><h4>${tt('osmmap.historic_sites')}</h4>${osmHistHtml()}</div>
+    <div class="bsec"><h4>${tt('osmmap.overpass_chunks',{x:(k.chunks || []).some(f => f.failed)
+      ? `<span class="w-warn">${tt('osmmap.some_failed')}</span>` : ''})}</h4>${osmChunksHtml()}</div>
+    <div class="bsec"><h4>${tt('osmmap.the_map_bundle')}</h4>${osmBundleHtml()}</div>
+    <div class="bsec"><h4>${tt('osmmap.find_a_place')}</h4>
+      <div class="brow"><input id="osmQ" value="${esc(k.q)}" placeholder="${ttA('osmmap.a_town_a_region_a_country')}"
         onkeydown="if(event.key==='Enter')osmSearch()">
-        <button onclick="osmSearch()" ${k.busy ? 'disabled' : ''}>Search</button></div>
-      ${res.length ? `<label>Paint boundaries onto
-          <input id="osmTarget" list="osmRegions" value="${esc(k.target)}" placeholder="a region"
+        <button onclick="osmSearch()" ${k.busy ? 'disabled' : ''}>${tt('osmmap.search')}</button></div>
+      ${res.length ? `<label>${tt('osmmap.paint_boundaries_onto')}
+          <input id="osmTarget" list="osmRegions" value="${esc(k.target)}" placeholder="${ttA('osmmap.a_region')}"
             onchange="state.osm.target=this.value.trim()"></label>
         <datalist id="osmRegions">${regions.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
         ${res.map((p, i) => `<div class="osmres">
           <div><b>${esc(p.name)}</b> <span class="count">${esc(p.kind)}${p.admin_level
-            ? ' ' + p.admin_level : ''}${p.on_map ? ` · tile ${p.x}, ${p.y}` : ' · off the map'}</span></div>
+            ? ' ' + p.admin_level : ''}${p.on_map ? tt('osmmap.tile_2',{x:p.x,x2:p.y}) : tt('osmmap.off_the_map')}</span></div>
           <div class="count">${esc(p.display)}</div>
           <div class="cmbar2">
-            <button onclick="osmGo(${i})" ${p.on_map ? '' : 'disabled'}>Go</button>
-            <button onclick="osmNewRegion(${i})" ${p.on_map ? '' : 'disabled'}>New region here</button>
-            <button onclick="osmBoundary(${i})">Paint its boundary</button>
+            <button onclick="osmGo(${i})" ${p.on_map ? '' : 'disabled'}>${tt('osmmap.go')}</button>
+            <button onclick="osmNewRegion(${i})" ${p.on_map ? '' : 'disabled'}>${tt('osmmap.new_region_here')}</button>
+            <button onclick="osmBoundary(${i})">${tt('osmmap.paint_its_boundary')}</button>
           </div></div>`).join('')}`
-      : k.results ? '<div class="count">Nothing found inside the box.</div>' : ''}
+      : k.results ? `<div class="count">${tt('osmmap.nothing_found_inside_the_box')}</div>` : ''}
     </div>`;
 }

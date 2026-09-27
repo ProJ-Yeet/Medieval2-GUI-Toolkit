@@ -65,6 +65,7 @@ from typing import Dict, List, Optional, Tuple
 from . import keyblock as kb
 from . import modflags
 from . import triggers
+from . import i18n as _i18n
 
 #: EDCT is plain 8-bit text; the game reads it as Latin-1 (same as the triggers)
 ENCODING = triggers.ENCODING
@@ -252,7 +253,7 @@ def parse_text(text: str) -> TraitFile:
             cur = Trait(name=words[1] if len(words) > 1 else "", start=i, end=i + 1)
             lvl = None
             if not cur.name:
-                cur.warnings.append(f"line {i + 1}: this Trait has no name")
+                cur.warnings.append(_i18n.msg("eng.traits.line_this_trait_has_no_name", "line {x}: this Trait has no name", x=i + 1))
             tf.traits.append(cur)
             continue
         if head == triggers.TRIGGER_KW:
@@ -267,15 +268,14 @@ def parse_text(text: str) -> TraitFile:
         if head == LEVEL_KW:
             if len(cur.levels) >= MAX_LEVELS:
                 cur.warnings.append(
-                    f"line {i + 1}: level {len(cur.levels) + 1} - a trait can have "
-                    f"at most {MAX_LEVELS}")
+                    _i18n.msg("eng.traits.line_level_a_trait_can_have", "line {x}: level {x2} - a trait can have at most {MAX_LEVELS}", x=i + 1, x2=len(cur.levels) + 1, MAX_LEVELS=MAX_LEVELS))
             lvl = Level(name=words[1] if len(words) > 1 else "", start=i, end=i + 1)
             cur.levels.append(lvl)
             cur.end = i + 1
             continue
         if head == "Effect":
             if lvl is None:
-                cur.warnings.append(f"line {i + 1}: an Effect outside any Level")
+                cur.warnings.append(_i18n.msg("eng.traits.line_an_effect_outside_any_level", "line {x}: an Effect outside any Level", x=i + 1))
                 continue
             lvl.effects.append(Effect(attribute=words[1] if len(words) > 1 else "",
                                       amount=words[2] if len(words) > 2 else "",
@@ -287,10 +287,9 @@ def parse_text(text: str) -> TraitFile:
         known = LEVEL_ORDER if lvl is not None else ("Characters",) + HEADER_ORDER
         if head not in known:
             cur.warnings.append(
-                f"line {i + 1}: `{head}` is not a "
-                f"{'level' if lvl is not None else 'trait header'} line")
+                _i18n.msg("eng.traits.line_is_not_a_line", "line {x}: `{head}` is not a {x2} line", x=i + 1, head=head, x2='level' if lvl is not None else 'trait header'))
         if head in target.lines:
-            cur.warnings.append(f"line {i + 1}: a second `{head}` line")
+            cur.warnings.append(_i18n.msg("eng.traits.line_a_second_line", "line {x}: a second `{head}` line", x=i + 1, head=head))
         target.values[head] = value
         target.lines[head] = i
         if lvl is not None:
@@ -314,15 +313,13 @@ def parse_block(text: str) -> Trait:
     """
     tf = parse_text(text if text.endswith("\n") else text + "\n")
     if not tf.traits:
-        raise TraitError("a trait block starts with a `Trait <name>` line - "
-                         "this text has none", 1)
+        raise TraitError(_i18n.msg("eng.traits.a_trait_block_starts_with_a", "a trait block starts with a `Trait <name>` line - this text has none"), 1)
     if len(tf.traits) > 1:
         raise TraitError(
-            f"this text holds {len(tf.traits)} trait blocks - one at a time",
+            _i18n.msg("eng.traits.this_text_holds_trait_blocks_one", "this text holds {traits_n} trait blocks - one at a time", traits_n=len(tf.traits)),
             tf.traits[1].start + 1)
     if tf.trigger_start >= 0:
-        raise TraitError("there is a `Trigger` block in this text - the trigger "
-                         "section is edited on its own", tf.trigger_start + 1)
+        raise TraitError(_i18n.msg("eng.traits.there_is_a_trigger_block_in", "there is a `Trigger` block in this text - the trigger section is edited on its own"), tf.trigger_start + 1)
     return tf.traits[0]
 
 
@@ -449,8 +446,7 @@ def check_file(tf: TraitFile, trigger_file=None) -> List[Dict]:
         if t.name in seen:
             out.append({"kind": "duplicate-trait", "trait": t.name,
                         "line": t.start + 1,
-                        "message": f"`{t.name}` is already defined on line "
-                                   f"{seen[t.name] + 1} - trait names must be unique"})
+                        "message": _i18n.msg("eng.traits.is_already_defined_on_line_trait", "`{name}` is already defined on line {x} - trait names must be unique", name=t.name, x=seen[t.name] + 1)})
         else:
             seen[t.name] = t.start
         out.extend(check(t, known))
@@ -464,10 +460,7 @@ def check_file(tf: TraitFile, trigger_file=None) -> List[Dict]:
             if eff.args[0] not in known:
                 out.append({"kind": "unknown-affects", "trait": eff.args[0],
                             "line": eff.line + 1,
-                            "message": f"trigger `{trig.name}` affects `{eff.args[0]}`, "
-                                       "which this file does not define - the points "
-                                       "go nowhere, and the game reports \"Trait not "
-                                       "recognized\""})
+                            "message": _i18n.msg("eng.traits.trigger_affects_which_this_file_does", "trigger `{name}` affects `{args}`, which this file does not define - the points go nowhere, and the game reports \"Trait not recognized\"", name=trig.name, args=eff.args[0])})
     return out
 
 
@@ -616,7 +609,7 @@ def detail(mod, name: str) -> Dict:
     tf = parse_file(mod.edct_path)
     trait = tf.get(name)
     if trait is None:
-        raise KeyError(f"no trait {name!r} in {getattr(mod, 'name', '?')}")
+        raise KeyError(_i18n.msg("eng.traits.no_trait_in", "no trait {name} in {getattr}", name=repr(name), getattr=getattr(mod, 'name', '?')))
     tg = triggers.parse_file(mod.edct_path)
     names = loc(mod)
     block = tf.block_text(trait)
@@ -675,7 +668,7 @@ def _render_block(base: str, edits: Dict) -> str:
     if "name" in edits:
         name = str(edits["name"] or "").strip()
         if not name:
-            raise TraitError("a trait needs a name", trait.start + 1)
+            raise TraitError(_i18n.msg("eng.traits.a_trait_needs_a_name", "a trait needs a name"), trait.start + 1)
         if name != trait.name:
             sp.replace(trait.start, kb.sub_head(lines[trait.start], TRAIT_KW, name))
 
@@ -717,7 +710,7 @@ def _edit_level(sp: kb.Splice, lines: List[str], lv: Level, w: Dict) -> None:
     if "name" in w:
         name = str(w["name"] or "").strip()
         if not name:
-            raise TraitError("a level needs a name", lv.start + 1)
+            raise TraitError(_i18n.msg("eng.traits.a_level_needs_a_name", "a level needs a name"), lv.start + 1)
         if name != lv.name:
             sp.replace(lv.start, kb.sub_head(lines[lv.start], LEVEL_KW, name))
     indent = kb.body_indent(lines, lv.lines, lv.start)
@@ -734,7 +727,7 @@ def _new_level(w: Dict, lvl_indent: str, body_indent: str) -> List[str]:
     """A whole new ``Level`` block, written in the order the engine wants."""
     name = str(w.get("name") or "").strip()
     if not name:
-        raise TraitError("a new level needs a name")
+        raise TraitError(_i18n.msg("eng.traits.a_new_level_needs_a_name", "a new level needs a name"))
     out = [f"{lvl_indent}{LEVEL_KW} {name}"]
     values = dict(w)
     # `setdefault` was not enough: the editor sends every level field, so the
@@ -870,7 +863,7 @@ def plan(mod, body: dict) -> TraitPlan:
                   name=str(body.get("trait") or "").strip())
     path = Path(mod.edct_path)
     if not path.exists():
-        p.errors.append(f"{getattr(mod, 'name', '?')} has no {path.name}")
+        p.errors.append(_i18n.msg("eng.traits.has_no", "{getattr} has no {name}", getattr=getattr(mod, 'name', '?'), name=path.name))
         return p
     original = kb.read_text(path, ENCODING)
     try:
@@ -891,7 +884,7 @@ def plan(mod, body: dict) -> TraitPlan:
             _plan_loc(p, mod, trait, dict(body.get("loc") or {}))
     p.text = "" if text == original else text
     if not p.text and not p.loc_writes and not p.errors:
-        p.warnings.append("nothing to change")
+        p.warnings.append(_i18n.msg("eng.traits.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -900,9 +893,9 @@ def _plan_trait(p: TraitPlan, text: str, body: dict) -> str:
     tf = parse_text(text)
     if p.action == "add":
         if not p.name:
-            raise TraitError("a new trait needs a name")
+            raise TraitError(_i18n.msg("eng.traits.a_new_trait_needs_a_name", "a new trait needs a name"))
         if tf.get(p.name) is not None:
-            p.errors.append(f"{p.name} is already a trait in this file")
+            p.errors.append(_i18n.msg("eng.traits.is_already_a_trait_in_this", "{name} is already a trait in this file", name=p.name))
             return text
         block = str(body.get("raw_block") or "").strip("\r\n") or new_block(
             dict(body.get("edits") or {}, name=p.name))
@@ -912,7 +905,7 @@ def _plan_trait(p: TraitPlan, text: str, body: dict) -> str:
 
     trait = tf.get(p.name)
     if trait is None:
-        p.errors.append(f"{p.name} is not a trait in this file")
+        p.errors.append(_i18n.msg("eng.traits.is_not_a_trait_in_this", "{name} is not a trait in this file", name=p.name))
         return text
 
     if p.action == "delete":
@@ -930,8 +923,7 @@ def _plan_trait(p: TraitPlan, text: str, body: dict) -> str:
         block = str(raw).strip("\r\n")
         if parse_block(block + "\n").name != p.name:
             raise TraitError(
-                f"this trait is `{p.name}` - renaming it here would orphan every "
-                "trigger, antitrait list and starting character that names it")
+                _i18n.msg("eng.traits.this_trait_is_renaming_it_here", "this trait is `{name}` - renaming it here would orphan every trigger, antitrait list and starting character that names it", name=p.name))
     else:
         block = render_block(base, dict(body.get("edits") or {}))
     if block == base:
@@ -960,7 +952,7 @@ def new_block(edits: Dict) -> str:
     """A whole trait block written from scratch, in the order the engine wants."""
     name = str(edits.get("name") or "").strip()
     if not name:
-        raise TraitError("a new trait needs a name")
+        raise TraitError(_i18n.msg("eng.traits.a_new_trait_needs_a_name", "a new trait needs a name"))
     chars = kb.value_text(edits.get("characters"), True) or "family"
     out = [f"{TRAIT_KW} {name}", f"    Characters {chars}"]
     for key in HEADER_ORDER:
@@ -1013,8 +1005,7 @@ def _plan_loc(p: TraitPlan, mod, trait: Trait, wanted: Dict) -> None:
     txt = Path(mod.data) / VNV_REL
     from . import stringsbin
     if not txt.exists() and not stringsbin.bin_path_for(txt).exists():
-        p.warnings.append(f"this mod has no {txt.name}, so its text key(s) could "
-                          "not be written - the trait will show its tags in game")
+        p.warnings.append(_i18n.msg("eng.traits.this_mod_has_no_so_its", "this mod has no {name}, so its text key(s) could not be written - the trait will show its tags in game", name=txt.name))
         return
     for tag in text_tags(trait):
         want = str(wanted.get(tag, "")).strip() if wanted else ""
@@ -1046,7 +1037,7 @@ def apply(p: TraitPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text and not p.loc_writes:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.traits.nothing_to_change", "nothing to change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

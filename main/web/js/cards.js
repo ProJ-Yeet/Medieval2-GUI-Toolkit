@@ -35,13 +35,12 @@ const CARD_KIND_ICON={card:'🃏',info:'🖼'};
 async function loadCards(){
   const mod=state.src;
   const job=newJob();
-  main.innerHTML=bmdbTabsHtml('data/ui/units · data/ui/unit_info')+
+  main.innerHTML=bmdbTabsHtml(tt('cards.data_ui_units_data_ui_unit'))+
     `<div class="empty" style="max-width:460px;margin:60px auto">
       <div class="progress-track"><div class="progress-fill" id="jobFill" style="width:0%"></div></div>
       <div class="count" style="margin-top:8px"><b id="jobPct">0%</b>
-        <span id="jobStep">reading ${esc(mod)}’s cards…</span></div>
-      <div class="count" style="margin-top:10px">Every card is hashed, so “the same picture”
-        is a fact rather than a guess. A mod with four thousand info cards takes a moment.</div>
+        <span id="jobStep">${tt('cards.reading_s_cards',{mod:esc(mod)})}</span></div>
+      <div class="count" style="margin-top:10px">${tt('cards.every_card_is_hashed_so_the')}</div>
     </div>`;
   state.cardsJob=job;
   (async()=>{ while(state.cardsJob===job){
@@ -53,9 +52,9 @@ async function loadCards(){
   let a;
   try{ a=await api.get(`/api/cards/audit?mod=${enc(mod)}&job=${enc(job)}`); }
   catch(e){ state.cardsJob=null; if(stale('cards',mod))return;
-    main.innerHTML=bmdbTabsHtml('')+`<div class="empty">Couldn't read the cards.<br>
+    main.innerHTML=bmdbTabsHtml('')+`<div class="empty">${tt('cards.couldnt_read_the_cards')}<br>
     <span class="count">${esc(errText(e))}</span><br><br>
-    <button class="primary" onclick="loadCards()">Retry</button></div>`; return; }
+    <button class="primary" onclick="loadCards()">${tt('common.retry')}</button></div>`; return; }
   finally{ state.cardsJob=null; }
   if(stale('cards',mod))return;
   // What was typed into the folder box and which sections were unfolded survive
@@ -91,38 +90,34 @@ const cdMatch=(row,q)=>!q||row.name.toLowerCase().includes(q)
   ||(row.folders||[]).some(f=>f.toLowerCase().includes(q));
 const cdRows=(list)=>{const q=cdQuery(); return list.filter(r=>cdMatch(r,q));};
 const cdShownNote=(shown,all)=>shown.length===all.length?''
-  :`<div class="count" style="margin-top:6px">${shown.length} of ${all.length} shown -
-     the rest are filtered out by the search box, and stay as they are.</div>`;
+  :`<div class="count" style="margin-top:6px">${tt('cards.of_shown_the_rest_are_filtered',{shown_n:shown.length,all_n:all.length})}</div>`;
 
 function renderCards(){
   if(!state.cards||state.cards.a.mod!==state.src)return loadCards();
   const c=state.cards,a=c.a;
   count.textContent=`${a.kinds.reduce((n,k)=>n+k.file_count,0)} files`;
-  main.innerHTML=bmdbTabsHtml('data/ui/units · data/ui/unit_info')+`
+  main.innerHTML=bmdbTabsHtml(tt('cards.data_ui_units_data_ui_unit'))+`
     <div class="dbhead">
-      <h2>${esc(a.mod)} · unit and info cards</h2>
-      <span class="count">${a.units} unit${a.units===1?'':'s'} in the mod ·
-        ${a.kinds.map(k=>`${k.file_count} ${esc(k.label)}${k.file_count===1?'':'s'}`).join(' · ')} ·
-        <b>${MB(cdFreeable())}</b> could stop shipping</span>
+      <h2>${tt('cards.unit_and_info_cards',{mod:esc(a.mod)})}</h2>
+      <span class="count">${tt('cards.unit_in_the_mod_could_stop',{units:a.units,units2:a.units===1?'':'s',kinds:a.kinds.map(k=>`${k.file_count} ${esc(k.label)}${k.file_count===1?'':'s'}`).join(' · '),x:MB(cdFreeable())})}</span>
     </div>
     <div class="cardsbody">
-      <fieldset><legend>Where the removed cards go</legend>
+      <fieldset><legend>${tt('cards.where_the_removed_cards_go')}</legend>
         <div class="cltarget">
           <input id="cdTarget" value="${esc(c.target)}"
-            placeholder="e.g. D:\\M2TW backups\\${esc(a.mod)}_cards"
+            placeholder="${ttA('cards.e_g_d_m2tw_backups_cards',{mod:esc(a.mod)})}"
             oninput="state.cards.target=this.value;cdStale()">
-          <button onclick="cdPickTarget()">Browse…</button>
+          <button onclick="cdPickTarget()">${tt('common.browse')}</button>
         </div>
-        <div class="count" style="margin-top:6px">Must be outside the mod. Nothing is deleted:
-          every file moves there in the mod's own layout, and 🕑 Log → Undo puts it all back.</div>
+        <div class="count" style="margin-top:6px">${tt('cards.must_be_outside_the_mod_nothing')}</div>
       </fieldset>
       ${a.kinds.map(cdKindHtml).join('')}
       <div id="cdPreview"></div>
       <div class="cardsfoot">
         <span class="count" id="cdTally">${cdTally()}</span>
         <span style="flex:1"></span>
-        <button onclick="cdPreview()">Probe</button>
-        <button class="primary" onclick="cdApply()">Move them out</button>
+        <button onclick="cdPreview()">${tt('common.probe')}</button>
+        <button class="primary" onclick="cdApply()">${tt('common.move_them_out')}</button>
       </div>
     </div>`;
 }
@@ -144,7 +139,7 @@ function cdTally(){
     const n=p.remove.size+p.cons.size+Object.keys(p.choose).length;
     return `${n} ${esc(k.label)}${n===1?'':'s'}`;
   });
-  return `${parts.join(' · ')} · frees ${MB(cdFreeable())}`;
+  return tt('cards.frees',{parts:parts.join(' · '),x:MB(cdFreeable())});
 }
 function cdRefreshTally(){
   const el=document.getElementById('cdTally'); if(el)el.textContent=cdTally();
@@ -163,14 +158,10 @@ function cdKindHtml(k){
       ${open?`<div class="b">${body()}</div>`:''}</div>`;
   };
   return `<section class="cardkind">
-    <h3>${CARD_KIND_ICON[k.kind]||'🖼'} ${esc(k.label)}s <span class="count">
-      <code>data/${esc(k.base)}/&lt;faction&gt;/</code> · falls back to
-      <code>${esc(k.merc)}</code> · ${k.dictionaries} unit${k.dictionaries===1?'':'s'} have one,
-      in ${k.file_count} file${k.file_count===1?'':'s'} (${MB(k.bytes)})${
-      k.already?` · ${k.already} already live only in <code>${esc(k.merc)}</code>`:''}</span></h3>
-    ${sec('unused','For units that are gone',()=>cdUnusedBody(k))}
-    ${sec('dups','The same picture in several folders',()=>cdDupBody(k))}
-    ${sec('vars','Different pictures per faction - your call',()=>cdVarBody(k))}
+    <h3>${tt('cards.s_data_faction_falls_back_to',{x:CARD_KIND_ICON[k.kind]||'🖼',label:esc(k.label),base:esc(k.base),merc:esc(k.merc),dictionaries:k.dictionaries,dictionaries2:k.dictionaries===1?'':'s',file_count:k.file_count,file_count2:k.file_count===1?'':'s',x2:MB(k.bytes),already:k.already?` ${tt('cards.already_live_only_in',{already:k.already})} <code>${esc(k.merc)}</code>`:''})}</h3>
+    ${sec('unused',tt('cards.for_units_that_are_gone'),()=>cdUnusedBody(k))}
+    ${sec('dups',tt('cards.the_same_picture_in_several_folders'),()=>cdDupBody(k))}
+    ${sec('vars',tt('cards.different_pictures_per_faction_your_call'),()=>cdVarBody(k))}
     ${cdNotesHtml(k)}
   </section>`;
 }
@@ -178,50 +169,45 @@ function cdSectionCount(k,g){
   const p=cdPick(k.kind);
   if(g==='unused'){
     const b=k.unused.reduce((n,u)=>n+(p.remove.has(u.name)?u.bytes:0),0);
-    return `${p.remove.size}/${k.unused.length} ticked · ${MB(b)}`;
+    return tt('cards.ticked',{remove_n:p.remove.size,unused_n:k.unused.length,MB:MB(b)});
   }
   if(g==='dups'){
     const b=k.duplicates.reduce((n,d)=>n+(p.cons.has(d.name)?d.bytes_saved:0),0);
-    return `${p.cons.size}/${k.duplicates.length} ticked · ${MB(b)}`;
+    return tt('cards.ticked_2',{cons_n:p.cons.size,duplicates_n:k.duplicates.length,MB:MB(b)});
   }
   const n=Object.keys(p.choose).length;
   const b=k.variants.reduce((m,v)=>m+(p.choose[v.name]?v.bytes_saved:0),0);
-  return `${n}/${k.variants.length} chosen · ${MB(b)} · needs your eye`;
+  return tt('cards.chosen_needs_your_eye',{x:n,variants_n:k.variants.length,MB:MB(b)});
 }
 
 function cdUnusedBody(k){
   const p=cdPick(k.kind);
-  if(!k.unused.length)return '<div class="count" style="margin-top:8px">None. Every card belongs to a unit that still exists. 🎉</div>';
+  if(!k.unused.length)return `<div class="count" style="margin-top:8px">${tt('cards.none_every_card_belongs_to_a')}</div>`;
   const rows=cdRows(k.unused);
-  return `<div class="count" style="margin-top:7px">No unit in
-      <code>export_descr_unit.txt</code> (or in an M2TWEOP unit file) has these as its
-      <code>dictionary</code>, so nothing in the game can ever reach the art.</div>
+  return `<div class="count" style="margin-top:7px">${tt('cards.no_unit_in_export_descr_unit')}</div>
     ${cdShownNote(rows,k.unused)}
     <div class="clbar">
-      <button onclick="cdAll('${k.kind}','remove',true)">Select all</button>
-      <button onclick="cdAll('${k.kind}','remove',false)">None</button></div>
+      <button onclick="cdAll('${k.kind}','remove',true)">${tt('common.select_all')}</button>
+      <button onclick="cdAll('${k.kind}','remove',false)">${tt('common.none_2')}</button></div>
     <div class="cllist">${rows.map(u=>`<div class="clrow">
       <input type="checkbox" ${p.remove.has(u.name)?'checked':''}
         onchange="cdPickOne('${k.kind}','remove','${q1(esc(u.name))}',this.checked)">
       <img class="cdthumb" loading="lazy" onerror="this.style.visibility='hidden'"
         src="/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(u.showing)}${iconBust()}" alt="">
       <div class="grow"><span class="nm">${esc(u.name)}</span>
-        <div class="sub">${u.folders.length} folder${u.folders.length===1?'':'s'}:
-          ${esc(u.folders.slice(0,8).join(', '))}${u.folders.length>8?` +${u.folders.length-8}`:''}</div></div>
+        <div class="sub">${tt('cards.folder',{folders_n:u.folders.length,folders:u.folders.length===1?'':'s',folders2:esc(u.folders.slice(0,8).join(', ')),folders3:u.folders.length>8?` +${u.folders.length-8}`:''})}</div></div>
       <span class="count">${MB(u.bytes)}</span></div>`).join('')}</div>`;
 }
 
 function cdDupBody(k){
   const p=cdPick(k.kind);
-  if(!k.duplicates.length)return '<div class="count" style="margin-top:8px">None - no card is copied into more than one folder.</div>';
+  if(!k.duplicates.length)return `<div class="count" style="margin-top:8px">${tt('cards.none_no_card_is_copied_into')}</div>`;
   const rows=cdRows(k.duplicates);
-  return `<div class="count" style="margin-top:7px">Every copy of these is byte for byte the
-      same file. One goes to <code>data/${esc(k.base)}/${esc(k.merc)}/</code>, which is where the
-      game looks when a faction's own folder has nothing, and the rest move out.</div>
+  return `<div class="count" style="margin-top:7px">${tt('cards.every_copy_of_these_is_byte',{base:esc(k.base),merc:esc(k.merc)})}</div>
     ${cdShownNote(rows,k.duplicates)}
     <div class="clbar">
-      <button onclick="cdAll('${k.kind}','cons',true)">Select all</button>
-      <button onclick="cdAll('${k.kind}','cons',false)">None</button></div>
+      <button onclick="cdAll('${k.kind}','cons',true)">${tt('common.select_all')}</button>
+      <button onclick="cdAll('${k.kind}','cons',false)">${tt('common.none_2')}</button></div>
     <div class="cllist">${rows.map(d=>`<div class="clrow">
       <input type="checkbox" ${p.cons.has(d.name)?'checked':''}
         onchange="cdPickOne('${k.kind}','cons','${q1(esc(d.name))}',this.checked)">
@@ -229,9 +215,7 @@ function cdDupBody(k){
         src="/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(d.options[0].rel)}${iconBust()}" alt="">
       <div class="grow"><span class="nm">${esc(d.name)}</span>
         <span class="badge">${esc(d.unit)}</span>
-        <div class="sub">${d.folders.length} identical cop${d.folders.length===1?'y':'ies'}:
-          ${esc(d.folders.slice(0,8).join(', '))}${d.folders.length>8?` +${d.folders.length-8}`:''}${
-          d.options[0].in_merc?' - one of them is already the merc copy':''}</div></div>
+        <div class="sub">${tt('cards.identical_cop',{folders_n:d.folders.length,folders:d.folders.length===1?'y':'ies',folders2:esc(d.folders.slice(0,8).join(', ')),folders3:d.folders.length>8?` +${d.folders.length-8}`:'',x:d.options[0].in_merc?' - one of them is already the merc copy':''})}</div></div>
       <span class="count">−${MB(d.bytes_saved)}</span></div>`).join('')}</div>`;
 }
 
@@ -242,27 +226,23 @@ function cdDupBody(k){
    picture is exactly the thing this must not do on its own. */
 function cdVarBody(k){
   const p=cdPick(k.kind);
-  if(!k.variants.length)return '<div class="count" style="margin-top:8px">None - where a card is in several folders, every copy is the same picture.</div>';
+  if(!k.variants.length)return `<div class="count" style="margin-top:8px">${tt('cards.none_where_a_card_is_in')}</div>`;
   const rows=cdRows(k.variants);
-  return `<div class="count" style="margin-top:7px">These units have <b>different</b> cards in
-      different faction folders. Pick the one that should become the single copy in
-      <code>${esc(k.merc)}</code> - the others move out - or leave the set as it is.
-      Nothing here is ticked for you.</div>
+  return `<div class="count" style="margin-top:7px">${tt('cards.these_units_have_different_cards_in',{merc:esc(k.merc)})}</div>
     ${cdShownNote(rows,k.variants)}
     <div class="clbar">
-      <button onclick="cdVarAll('${k.kind}',false)">Keep all as they are</button>
-      <button onclick="cdVarAll('${k.kind}',true)" title="Choose the picture the most folders
-already share, for every row at once. Read them first.">Take the commonest, everywhere</button></div>
+      <button onclick="cdVarAll('${k.kind}',false)">${tt('cards.keep_all_as_they_are')}</button>
+      <button onclick="cdVarAll('${k.kind}',true)" title="${ttA('cards.choose_the_picture_the_most_folders')}">${tt('cards.take_the_commonest_everywhere')}</button></div>
     <div class="cllist vars">${rows.map(v=>`<div class="clrow varrow">
       <div class="grow"><span class="nm">${esc(v.name)}</span>
         <span class="badge">${esc(v.unit)}</span>
-        <span class="count">${v.options.length} different pictures across ${v.folders.length} folders</span>
+        <span class="count">${tt('cards.different_pictures_across_folders',{options_n:v.options.length,folders_n:v.folders.length})}</span>
         <div class="varopts">
           <label class="varopt${p.choose[v.name]?'':' on'}">
             <input type="radio" name="cdv_${esc(k.kind)}_${esc(v.name)}"
               ${p.choose[v.name]?'':'checked'}
               onchange="cdChoose('${k.kind}','${q1(esc(v.name))}','')">
-            <span class="varkeep">keep<br>all ${v.options.length}</span></label>
+            <span class="varkeep">${tt('cards.keep_all',{options_n:v.options.length})}</span></label>
           ${v.options.map(o=>`<label class="varopt${p.choose[v.name]===o.digest?' on':''}">
             <input type="radio" name="cdv_${esc(k.kind)}_${esc(v.name)}"
               ${p.choose[v.name]===o.digest?'checked':''}
@@ -271,7 +251,7 @@ already share, for every row at once. Read them first.">Take the commonest, ever
               src="/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(o.rel)}${iconBust()}" alt="">
             <span class="count">${esc(o.folders.slice(0,3).join(', '))}${
               o.folders.length>3?` +${o.folders.length-3}`:''}${
-              o.in_merc?' ·&nbsp;merc':''}</span></label>`).join('')}
+              o.in_merc?tt('cards.merc'):''}</span></label>`).join('')}
         </div></div>
       <span class="count">−${MB(v.bytes_saved)}</span></div>`).join('')}</div>`;
 }
@@ -281,18 +261,9 @@ already share, for every row at once. Read them first.">Take the commonest, ever
    page is that it never guesses about art it is about to delete. */
 function cdNotesHtml(k){
   const bits=[];
-  if(k.stray_count)bits.push(`${k.stray_count} file${k.stray_count===1?'':'s'} in these folders
-    ${k.stray_count===1?'is':'are'} not shaped like a ${esc(k.label)} (the agent pictures -
-    <code>spy.tga</code>, <code>diplomat.tga</code> - and whatever else has been dropped in there,
-    ${MB(k.stray_bytes)}). Their names say nothing about which unit they belong to, so they are
-    counted and left alone.`);
-  if(k.pinned.length)bits.push(`${k.pinned.length} unit${k.pinned.length===1?'':'s'} pin their
-    ${esc(k.label)} to a folder with <code>${k.kind==='card'?'card_pic_dir':'info_pic_dir'}</code>.
-    A pin is the mod saying “look here”, so those are left out of the consolidation.`);
-  if(k.lua_kept.length)bits.push(`${k.lua_kept.length} ${esc(k.label)}${
-    k.lua_kept.length===1?'':'s'} belong to a dictionary no unit claims, but which one of the mod's
-    <code>.lua</code> scripts names - M2TWEOP can build a unit at runtime, so
-    ${k.lua_kept.length===1?'it is':'they are'} not offered for removal.`);
+  if(k.stray_count)bits.push(tt('cards.file_in_these_folders_not_shaped',{stray_count:k.stray_count,stray_count2:k.stray_count===1?'':'s',stray_count3:k.stray_count===1?'is':'are',label:esc(k.label),x:MB(k.stray_bytes)}));
+  if(k.pinned.length)bits.push(tt('cards.unit_pin_their_to_a_folder',{pinned_n:k.pinned.length,pinned:k.pinned.length===1?'':'s',label:esc(k.label),kind:k.kind==='card'?'card_pic_dir':'info_pic_dir'}));
+  if(k.lua_kept.length)bits.push(tt('cards.belong_to_a_dictionary_no_unit',{lua_kept_n:k.lua_kept.length,label:esc(k.label),lua_kept:k.lua_kept.length===1?'':'s',lua_kept2:k.lua_kept.length===1?tt('common.it_is'):tt('common.they_are')}));
   return bits.length?`<div class="count cardnotes">${bits.map(b=>`<div>· ${b}</div>`).join('')}</div>`:'';
 }
 
@@ -336,7 +307,7 @@ function cdToggle(key){state.cards.open[key]=!state.cards.open[key];renderCards(
 function cdStale(){const b=document.getElementById('cdPreview');
   if(b&&state.cards.plan){state.cards.plan=null;b.innerHTML='';}}
 async function cdPickTarget(){
-  const r=await api.post('/api/browse_folder',{title:'Folder to move the removed cards into'});
+  const r=await api.post('/api/browse_folder',{title:tt('cards.folder_to_move_the_removed_cards')});
   if(!r.path)return;
   state.cards.target=r.path; cdStale(); renderCards();
   state.settings.last_cards_target=r.path;
@@ -353,7 +324,7 @@ function cdPayload(){
 }
 async function cdPreview(){
   const box=document.getElementById('cdPreview'); if(!box)return null;
-  box.innerHTML='<div class="preview">Planning…</div>';
+  box.innerHTML=`<div class="preview">${tt('common.planning')}</div>`;
   const r=await api.post('/api/cards/plan',cdPayload());
   if(r.error){box.innerHTML=`<div class="preview w-bad">${esc(r.error)}</div>`;return null;}
   state.cards.plan=r;
@@ -363,39 +334,38 @@ function cdPlanHtml(r){
   const li=(cls,items)=>items.map(x=>`<div class="srow ${cls}"><span class="sicon">${
       cls==='bad'?'✗':cls==='warn'?'!':'·'}</span><span class="stext">${esc(x)}</span></div>`).join('');
   return `<div class="sum" style="margin-top:10px">
-    <div class="srow shead"><span class="sicon">🧹</span><span class="stext">What this does</span></div>
+    <div class="srow shead"><span class="sicon">🧹</span><span class="stext">${tt('cards.what_this_does')}</span></div>
     ${li('',r.changes)}
-    ${r.target?`<div class="srow"><span class="sicon">📁</span><span class="stext">into
+    ${r.target?`<div class="srow"><span class="sicon">📁</span><span class="stext">${tt('cards.into')}
       <span class="path">${esc(r.target)}</span></span></div>`:''}
     ${r.copies.length?`<div class="srow"><span class="sicon">+</span><span class="stext">
       ${r.copies.slice(0,8).map(x=>`<span class="path">${esc(x)}</span>`).join('<br>')}
-      ${r.copy_count>8?`<br><i>…and ${r.copy_count-8} more written into the merc folder</i>`:''}</span></div>`:''}
+      ${r.copy_count>8?`<br><i>${tt('cards.and_more_written_into_the_merc',{copy_count:r.copy_count-8})}</i>`:''}</span></div>`:''}
     ${r.exports.length?`<div class="srow"><span class="sicon">→</span><span class="stext">
       ${r.exports.slice(0,8).map(x=>`<span class="path">${esc(x)}</span>`).join('<br>')}
-      ${r.export_count>8?`<br><i>…and ${r.export_count-8} more moved out</i>`:''}</span></div>`:''}
+      ${r.export_count>8?`<br><i>${tt('cards.and_more_moved_out',{export_count:r.export_count-8})}</i>`:''}</span></div>`:''}
     ${li('warn',r.warnings)}${li('bad',r.errors)}</div>`;
 }
 async function cdApply(){
   const c=state.cards;
-  if(!c.target){toast('Choose where the removed cards should go first');return;}
+  if(!c.target){toast(tt('cards.choose_where_the_removed_cards_should'));return;}
   const r=state.cards.plan||await cdPreview();
   if(!r)return;
   if(r.errors&&r.errors.length){toast(r.errors[0]);return;}
-  if(!r.delete_count&&!r.copy_count){toast('Nothing is ticked');return;}
-  if(!confirm(`Move ${r.delete_count} card file(s) out of “${c.a.mod}”, freeing `+
-      `${(r.freed/1048576).toFixed(1)} MB?\n\nThey are copied to:\n${r.target}\n\n`+
-      `${r.consolidated?`${r.consolidated} card(s) are folded into the merc folder, which is `+
-        `where the game looks when a faction's own folder has nothing.\n\n`:''}`+
-      `Everything touched is backed up first. 🕑 Log → Undo puts it all back.`))return;
+  if(!r.delete_count&&!r.copy_count){toast(tt('common.nothing_is_ticked'));return;}
+  if(!confirm(tt('cards.move_card_file_s_out_of',{delete_count:r.delete_count,mod:c.a.mod})+
+      tt('cards.mb_they_are_copied_to',{freed:(r.freed/1048576).toFixed(1),target:r.target})+
+      `${r.consolidated?tt('cards.card_s_are_folded_into_the',{consolidated:r.consolidated})+
+        tt('cards.where_the_game_looks_when_a'):''}`+
+      tt('cards.everything_touched_is_backed_up_first')))return;
   const job=newJob();
-  const res=await runJob(job,'Tidying the cards…',
-    `Copying ${r.export_count} file(s) out, writing ${r.copy_count} into the merc folder,
-     then taking ${r.delete_count} out of ${esc(c.a.mod)}. Everything is backed up as it goes.`,
+  const res=await runJob(job,tt('cards.tidying_the_cards'),
+    tt('cards.copying_file_s_out_writing_into',{export_count:r.export_count,copy_count:r.copy_count,delete_count:r.delete_count,mod:esc(c.a.mod)}),
     ()=>api.post('/api/cards/apply',{...cdPayload(),job}));
-  if(res.error){toast('Card cleanup failed: '+res.error);renderCards();return;}
+  if(res.error){toast(tt('cards.card_cleanup_failed')+res.error);renderCards();return;}
   closeModal();
-  toast(`${res.plan.delete_count} card file(s) moved out, ${(res.plan.freed/1048576).toFixed(1)}`
-       +` MB freed ✓  (undo in 🕑 Log)`,5200);
+  toast(tt('cards.card_file_s_moved_out',{delete_count:res.plan.delete_count,x:(res.plan.freed/1048576).toFixed(1)})
+       +tt('cards.mb_freed_undo_in_log'),5200);
   // The lists were built from an audit taken BEFORE this ran, so the mod on disk
   // has changed and the page has to change with it.
   state.cards=null; state.destData=null;

@@ -19,13 +19,13 @@
    ========================================================================= */
 const MBs=n=>(n/1048576).toFixed(1)+' MB';
 async function packExport(types){
-  if(!types.length)return toast('Tick some units first.');
+  if(!types.length)return toast(tt('packs.tick_some_units_first'));
   const modal=document.getElementById('modal');
   modal.className='modal';
   overlay.classList.add('open');
-  modal.innerHTML=`<h2>Export ${types.length} unit${types.length===1?'':'s'} as a pack</h2>
-    <div class="mbody"><div class="empty">Working out what has to travel…</div></div>
-    <div class="foot"><button onclick="closeModal()">Cancel</button></div>`;
+  modal.innerHTML=`<h2>${tt('packs.export_unit_as_a_pack',{types_n:types.length,types:types.length===1?'':'s'})}</h2>
+    <div class="mbody"><div class="empty">${tt('packs.working_out_what_has_to_travel')}</div></div>
+    <div class="foot"><button onclick="closeModal()">${tt('common.cancel')}</button></div>`;
   let r;
   try{ r=await api.post('/api/pack/plan',{mod:state.src,units:types}); }
   catch(e){ r={error:''+e}; }
@@ -35,50 +35,44 @@ async function packExport(types){
 }
 function packExportRender(){
   const p=state.pack.plan;
-  document.getElementById('modal').innerHTML=`<h2>Export ${p.units.length} unit${
-      p.units.length===1?'':'s'} as a pack <span class="pill">${esc(state.pack.mod)}</span></h2>
+  document.getElementById('modal').innerHTML=`<h2>${tt('packs.export_unit_as_a_pack_2',{units_n:p.units.length,units:p.units.length===1?'':'s'})} <span class="pill">${esc(state.pack.mod)}</span></h2>
     <div class="mbody">
       <div class="sum">
         <div class="srow"><span class="sicon">•</span><span class="stext">
           ${p.units.map(t=>`<code>${esc(t)}</code>`).join(', ')}</span></div>
         <div class="srow"><span class="sicon">•</span><span class="stext">
-          ${p.models.length} battle-model entr${p.models.length===1?'y':'ies'},
-          ${p.assets} mesh/texture file${p.assets===1?'':'s'}, ${p.icons} icon${p.icons===1?'':'s'}</span></div>
+          ${tt('packs.battle_model_entr_mesh_texture_file',{models_n:p.models.length,models:p.models.length===1?'y':'ies',assets:p.assets,assets2:p.assets===1?'':'s',icons:p.icons,icons2:p.icons===1?'':'s'})}</span></div>
         ${p.mounts.length?`<div class="srow"><span class="sicon">•</span><span class="stext">
-          mount${p.mounts.length===1?'':'s'}: ${p.mounts.map(m=>`<code>${esc(m)}</code>`).join(', ')}</span></div>`:''}
+          ${tt('packs.mount',{mounts:p.mounts.length===1?'':'s',mounts2:p.mounts.map(m=>`<code>${esc(m)}</code>`).join(', ')})}</span></div>`:''}
         ${p.projectiles.length?`<div class="srow"><span class="sicon">•</span><span class="stext">
-          projectile${p.projectiles.length===1?'':'s'}: ${p.projectiles.map(m=>`<code>${esc(m)}</code>`).join(', ')}</span></div>`:''}
+          ${tt('packs.projectile',{projectiles:p.projectiles.length===1?'':'s',projectiles2:p.projectiles.map(m=>`<code>${esc(m)}</code>`).join(', ')})}</span></div>`:''}
         ${p.engines.length?`<div class="srow"><span class="sicon">•</span><span class="stext">
-          engine${p.engines.length===1?'':'s'}: ${p.engines.map(m=>`<code>${esc(m)}</code>`).join(', ')}</span></div>`:''}
+          ${tt('packs.engine',{engines:p.engines.length===1?'':'s',engines2:p.engines.map(m=>`<code>${esc(m)}</code>`).join(', ')})}</span></div>`:''}
         <div class="srow"><span class="sicon">→</span><span class="stext">
-          about ${MBs(p.bytes)} of art before compression</span></div>
+          ${tt('packs.about_of_art_before_compression',{x:MBs(p.bytes)})}</span></div>
         ${(p.missing||[]).map(t=>`<div class="srow bad"><span class="sicon">✕</span>
-          <span class="stext">${esc(t)} is not in this mod</span></div>`).join('')}
+          <span class="stext">${tt('packs.is_not_in_this_mod',{x:esc(t)})}</span></div>`).join('')}
         ${(p.warnings||[]).map(w=>`<div class="srow warn"><span class="sicon">!</span>
           <span class="stext">${esc(w)}</span></div>`).join('')}
       </div>
-      <div class="bnote">The zip is a miniature mod. Whoever you send it to opens the toolkit,
-        picks the mod they want the units in and hits <b>📦 Import pack…</b>. The import runs the
-        same checks, renames and options a normal transfer does. Voices are not carried: an
-        imported unit is given a voice from the receiving mod, which is the only kind that will
-        actually play there.</div>
+      <div class="bnote">${tt('packs.the_zip_is_a_miniature_mod')}</div>
       <div id="packResult"></div>
     </div>
     <div class="foot">
-      <button onclick="closeModal()">Cancel</button>
+      <button onclick="closeModal()">${tt('common.cancel')}</button>
       <button class="primary" ${p.units.length?'':'disabled'} onclick="packWrite()">
-        Choose where to save…</button></div>`;
+        ${tt('packs.choose_where_to_save')}</button></div>`;
 }
 async function packWrite(){
   const p=state.pack;
   const name=(p.plan.units.length===1?p.plan.units[0]:`${p.mod}-${p.plan.units.length}-units`)
     .replace(/[^A-Za-z0-9_.-]+/g,'_')+'.zip';
   const pick=await api.post('/api/browse_save',
-    {title:'Save the unit pack',filter:'Unit pack (*.zip)|*.zip|All files (*.*)|*.*',
+    {title:tt('packs.save_the_unit_pack'),filter:tt('packs.unit_pack_zip_zip_all_files'),
      name,ext:'zip'});
   if(!pick.path)return;                       // cancelled
   const box=document.getElementById('packResult');
-  box.innerHTML='<div class="count" style="padding:8px">Writing the pack…</div>';
+  box.innerHTML=`<div class="count" style="padding:8px">${tt('packs.writing_the_pack')}</div>`;
   let r;
   try{ r=await api.post('/api/pack/write',{mod:p.mod,units:p.types,path:pick.path}); }
   catch(e){ r={error:''+e}; }
@@ -86,20 +80,20 @@ async function packWrite(){
   const rec=r.record;
   box.innerHTML=`<div class="sum" style="margin-top:10px">
     <div class="srow good"><span class="sicon">✓</span><span class="stext">
-      Wrote <code>${esc(rec.path)}</code>: ${rec.files} file(s), ${MBs(rec.bytes)}</span></div></div>`;
-  toast(`Pack written: ${rec.path}`,5000);
+      ${tt('packs.wrote_file_s',{path:esc(rec.path),files:rec.files,x:MBs(rec.bytes)})}</span></div></div>`;
+  toast(tt('packs.pack_written',{path:rec.path}),5000);
 }
 
 async function packImport(){
   const pick=await api.post('/api/browse_file',
-    {title:'Open a unit pack',filter:'Unit pack (*.zip)|*.zip|All files (*.*)|*.*'});
+    {title:tt('packs.open_a_unit_pack'),filter:tt('packs.unit_pack_zip_zip_all_files')});
   if(!pick.path)return;
   const modal=document.getElementById('modal');
   modal.className='modal';
   overlay.classList.add('open');
-  modal.innerHTML=`<h2>Import a unit pack</h2>
-    <div class="mbody"><div class="empty">Opening the pack…</div></div>
-    <div class="foot"><button onclick="closeModal()">Cancel</button></div>`;
+  modal.innerHTML=`<h2>${tt('packs.import_a_unit_pack')}</h2>
+    <div class="mbody"><div class="empty">${tt('packs.opening_the_pack')}</div></div>
+    <div class="foot"><button onclick="closeModal()">${tt('common.cancel')}</button></div>`;
   let r;
   try{ r=await api.post('/api/pack/open',{path:pick.path}); }
   catch(e){ r={error:''+e}; }
@@ -109,30 +103,25 @@ async function packImport(){
 }
 function packImportRender(){
   const r=state.packIn,m=r.manifest||{};
-  document.getElementById('modal').innerHTML=`<h2>Import a unit pack</h2>
+  document.getElementById('modal').innerHTML=`<h2>${tt('packs.import_a_unit_pack')}</h2>
     <div class="mbody">
       <div class="count" style="margin-bottom:8px">
         <code>${esc(r.path)}</code> · ${MBs(r.bytes)}${
-        m.source_mod?` · made from <b>${esc(m.source_mod)}</b>`:''}${
+        m.source_mod?` ${tt('packs.made_from')} <b>${esc(m.source_mod)}</b>`:''}${
         m.created?` on ${esc(m.created)}`:''}</div>
-      ${r.has_manifest?'':`<div class="warnbox">This zip carries no <code>unitpack.json</code>.
-        It still looks like a mod, so it can still be imported. Just be sure you know where
-        it came from.</div>`}
+      ${r.has_manifest?'':`<div class="warnbox">${tt('packs.this_zip_carries_no_unitpack_json')}</div>`}
       <div class="baselist" style="max-height:280px">${r.units.map(u=>`
         <div class="baserow">
-          <div><div class="bn">${esc(u.name)}${u.has_card?'':' <span class="badge">no card</span>'}</div>
+          <div><div class="bn">${esc(u.name)}${u.has_card?'':` <span class="badge">${tt('packs.no_card')}</span>`}</div>
             <div class="bs">${esc(u.type)} · ${esc([u.kind,u.class].filter(Boolean).join(' · '))}${
-              u.mount?` · rides <code>${esc(u.mount)}</code>`:''}</div></div>
-        </div>`).join('')||'<div class="caprow"><span class="count">This pack names no units.</span></div>'}</div>
-      <div class="bnote">${r.entries.length} battle-model entr${r.entries.length===1?'y':'ies'} travel with them.
-        Importing mounts the pack as a source mod and drops you in the normal transfer screen, so
-        name clashes, the base unit, ownership and every other option are asked there. Nothing is
-        written until you press Transfer.</div>
+              u.mount?` ${tt('packs.rides')} <code>${esc(u.mount)}</code>`:''}</div></div>
+        </div>`).join('')||`<div class="caprow"><span class="count">${tt('packs.this_pack_names_no_units')}</span></div>`}</div>
+      <div class="bnote">${tt('packs.battle_model_entr_travel_with_them',{entries_n:r.entries.length,x:r.entries.length===1?'y':'ies'})}</div>
     </div>
     <div class="foot">
-      <button onclick="closeModal()">Cancel</button>
+      <button onclick="closeModal()">${tt('common.cancel')}</button>
       <button class="primary" ${r.units.length?'':'disabled'} onclick="packMount()">
-        Open ${r.units.length} unit${r.units.length===1?'':'s'} for transfer</button></div>`;
+        ${tt('packs.open_unit_for_transfer',{units_n:r.units.length,units:r.units.length===1?'':'s'})}</button></div>`;
 }
 async function packMount(){
   const r=state.packIn;
@@ -147,8 +136,8 @@ async function packMount(){
   state.src=info.name; srcSel.value=info.name;
   applyMode(true);
   await loadSource();
-  toast(`Pack opened as “${info.name}”. Pick the units and transfer them into ${state.dst} `
-       +'exactly as you would from any other mod.',6000);
+  toast(tt('packs.pack_opened_as_pick_the_units',{name:info.name,dst:state.dst})
+       +tt('packs.exactly_as_you_would_from_any'),6000);
 }
 
 /* ---- clean-up: what nothing uses, and where to put it ---- */
@@ -158,13 +147,12 @@ async function openCleanup(){
   overlay.classList.add('open');
   const job=newJob();
   let a;
-  try{ a=await runJob(job,`Clean up ${esc(state.src)}’s BMDB`,
-        `Scanning every entry, every unit that names one, and every file under
-         <code>data/unit_models</code>… (a big mod takes a few seconds)`,
+  try{ a=await runJob(job,tt('packs.clean_up_s_bmdb',{src:esc(state.src)}),
+        tt('packs.scanning_every_entry_every_unit_that'),
         ()=>api.get(`/api/bmdb/audit?mod=${enc(state.src)}&job=${enc(job)}`)); }
   catch(e){ a={error:''+e}; }
-  if(a.error){ modal.innerHTML=`<h2>Clean up</h2><div class="mbody w-bad">${esc(a.error)}</div>
-    <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
+  if(a.error){ modal.innerHTML=`<h2>${tt('common.clean_up')}</h2><div class="mbody w-bad">${esc(a.error)}</div>
+    <div class="foot"><button onclick="closeModal()">${tt('common.close')}</button></div>`; return; }
   // Re-opened straight after a cleanup (see clApply), the folder that was typed
   // in and the sections that were unfolded are still the ones being worked in -
   // only the LISTS are out of date, and it is those the fresh audit replaces.
@@ -190,58 +178,44 @@ function renderCleanup(){
         <b>${title}</b><span class="count" id="clc_${k}">${clCountText(k)}</span></div>
       ${c.open[k]?`<div class="b">${body()}</div>`:''}</div>`;
   document.getElementById('modal').innerHTML=`
-    <h2>Clean up ${esc(a.mod)}’s battle_models.modeldb</h2>
+    <h2>${tt('packs.clean_up_s_battle_models_modeldb',{mod:esc(a.mod)})}</h2>
     <div class="mbody">
-      <div class="count" style="margin-bottom:10px">${a.entry_count} entries scanned. Nothing is deleted:
-        everything ticked is <b>moved</b> into the folder below, in the mod's own layout, so it can be
-        pasted straight back. Undoable from 🕑 Log.</div>
+      <div class="count" style="margin-bottom:10px">${tt('packs.entries_scanned_nothing_is_deleted_everything',{entry_count:a.entry_count})}</div>
 
-      <fieldset><legend>Where the removed assets go</legend>
+      <fieldset><legend>${tt('packs.where_the_removed_assets_go')}</legend>
         <div class="cltarget">
-          <input id="clTarget" value="${esc(c.target)}" placeholder="e.g. D:\\M2TW backups\\${esc(a.mod)}_unused"
+          <input id="clTarget" value="${esc(c.target)}" placeholder="${ttA('packs.e_g_d_m2tw_backups_unused',{mod:esc(a.mod)})}"
             oninput="state.clean.target=this.value;clStale()">
-          <button onclick="clPickTarget()">Browse…</button>
+          <button onclick="clPickTarget()">${tt('common.browse')}</button>
         </div>
-        <div class="treebox">${esc(a.mod)}_unused\\
-  removed_battle_models.modeldb   <span style="color:var(--dim)">only the entries that were removed</span>
-  removed_mounts.txt              <span style="color:var(--dim)">the descr_mount.txt blocks that were removed</span>
-  data\\unit_models\\…              <span style="color:var(--dim)">their meshes and textures, same paths as in the mod</span>
-  unused_files\\data\\unit_models\\… <span style="color:var(--dim)">files no entry mentions at all</span></div>
-        <div class="count" style="margin-top:6px">Must be outside the mod, or the files never really leave it.</div>
+        <div class="treebox">${tt('packs.unused_removed_battle_models_modeldb_only',{mod:esc(a.mod)})}</div>
+        <div class="count" style="margin-top:6px">${tt('packs.must_be_outside_the_mod_or')}</div>
       </fieldset>
 
-      ${sec('unused','Entries nothing references',()=>clUnusedBody())}
-      ${sec('merges','Soldier-only entries with an identical twin',()=>clMergeBody())}
-      ${sec('mounts','Mounts no unit rides',()=>clMountBody())}
-      ${sec('orphans','Files under unit_models no entry mentions',()=>clOrphanBody())}
+      ${sec('unused',tt('packs.entries_nothing_references'),()=>clUnusedBody())}
+      ${sec('merges',tt('packs.soldier_only_entries_with_an_identical'),()=>clMergeBody())}
+      ${sec('mounts',tt('packs.mounts_no_unit_rides'),()=>clMountBody())}
+      ${sec('orphans',tt('packs.files_under_unit_models_no_entry'),()=>clOrphanBody())}
 
       ${clLuaBox(a)}
-      ${a.mentioned.length?`<div class="count">${a.mentioned.length} more entr${
-        a.mentioned.length===1?'y is':'ies are'} used by no unit but named in another file
-        (<code>${[...new Set(a.mentioned.map(m=>m.file))].slice(0,4).map(esc).join('</code>, <code>')}</code>)
-        They are left alone.</div>`:''}
-      ${a.mentioned_mounts.length?`<div class="count">${a.mentioned_mounts.length} mount${
-        a.mentioned_mounts.length===1?' is':'s are'} ridden by no unit but still named in a
-        <code>descr_*.txt</code>, so they are not offered above.</div>`:''}
-      ${a.campaign_files.length?`<div class="count">Campaign and battle scripts also read for
-        <code>battle_model</code> references (${a.campaign_files.length}):
-        <code>${a.campaign_files.slice(0,8).map(esc).join('</code>, <code>')}</code>${
-          a.campaign_files.length>8?`, and ${a.campaign_files.length-8} more`:''}.</div>`:''}
+      ${a.mentioned.length?`<div class="count">${tt('packs.more_entr_used_by_no_unit',{mentioned_n:a.mentioned.length,mentioned:a.mentioned.length===1?tt('packs.y_is'):tt('packs.ies_are'),x:[...new Set(a.mentioned.map(m=>m.file))].slice(0,4).map(esc).join('</code>, <code>')})}</div>`:''}
+      ${a.mentioned_mounts.length?`<div class="count">${tt('packs.mount_ridden_by_no_unit_but',{mentioned_mounts_n:a.mentioned_mounts.length,mentioned_mounts:a.mentioned_mounts.length===1?' is':tt('common.s_are')})}</div>`:''}
+      ${a.campaign_files.length?`<div class="count">${tt('packs.campaign_and_battle_scripts_also_read',{campaign_files_n:a.campaign_files.length,campaign_files:a.campaign_files.slice(0,8).map(esc).join('</code>, <code>'),campaign_files2:a.campaign_files.length>8?tt('packs.and_more',{campaign_files:a.campaign_files.length-8}):''})}</div>`:''}
       <div id="clPreview"></div>
     </div>
     <div class="foot">
       ${cleanerBoxHtml()}
-      <button onclick="closeModal()">Close</button>
-      <button onclick="openRecheck()" title="Re-test what earlier cleanups removed against this build's wider safety nets">Recheck past cleanups</button>
-      <button onclick="clPreview()">Probe</button>
-      <button class="primary" onclick="clApply()">Move them out</button>
+      <button onclick="closeModal()">${tt('common.close')}</button>
+      <button onclick="openRecheck()" title="${ttA('packs.re_test_what_earlier_cleanups_removed')}">${tt('packs.recheck_past_cleanups')}</button>
+      <button onclick="clPreview()">${tt('common.probe')}</button>
+      <button class="primary" onclick="clApply()">${tt('common.move_them_out')}</button>
     </div>`;
 }
 function clToggle(k){state.clean.open[k]=!state.clean.open[k];renderCleanup();}
 function clStale(){const b=document.getElementById('clPreview');
   if(b&&state.clean.plan){state.clean.plan=null;b.innerHTML='';}}
 async function clPickTarget(){
-  const r=await api.post('/api/browse_folder',{title:'Folder to move the unused assets into'});
+  const r=await api.post('/api/browse_folder',{title:tt('packs.folder_to_move_the_unused_assets')});
   if(!r.path)return;
   state.clean.target=r.path; clStale(); renderCleanup();
   state.settings.last_cleanup_target=r.path;      // so reopening the dialog offers it again
@@ -256,35 +230,29 @@ function clLuaBox(a){
   const kept=a.lua_kept||[];
   const scanned=a.lua_files||0;
   if(!scanned) return '';
-  if(!kept.length) return `<div class="count">Read <b>${scanned}</b> <code>.lua</code> script${
-    scanned===1?'':'s'} in the mod. None of them names a battle-model entry, so nothing was held back for that.</div>`;
+  if(!kept.length) return `<div class="count">${tt('packs.read_lua_script_in_the_mod',{scanned,scanned2:scanned===1?'':'s'})}</div>`;
   const rows=kept.slice(0,60).map(m=>`<div class="frow"><span class="fp">${esc(m.entry)}</span><span class="fs">${
-    esc(m.file)}${m.in_comment?' (in a comment, and still protected)':''}</span></div>`).join('');
+    esc(m.file)}${m.in_comment?tt('packs.in_a_comment_and_still_protected'):''}</span></div>`).join('');
   return `<fieldset class="assetconf" style="margin-top:10px;border-color:var(--good)">
-    <legend class="w-good">Protected by the mod's Lua scripts</legend>
-    <div class="count"><b>${kept.length}</b> entr${kept.length===1?'y is':'ies are'} named by one of this mod's
-      <b>${scanned}</b> <code>.lua</code> script${scanned===1?'':'s'} and nothing else. Deleting
-      ${kept.length===1?'it':'them'} would break that script, so ${kept.length===1?'it is':'they are'} not
-      offered for removal.</div>
+    <legend class="w-good">${tt('packs.protected_by_the_mods_lua_scripts')}</legend>
+    <div class="count"><b>${kept.length}</b> ${tt('packs.entr_named_by_one_of_this',{kept:kept.length===1?tt('packs.y_is'):tt('packs.ies_are'),scanned,scanned2:scanned===1?'':'s',kept2:kept.length===1?'it':'them',kept3:kept.length===1?tt('common.it_is'):tt('common.they_are')})}</div>
     <div class="flist" style="margin-top:6px">${rows}${
-      kept.length>60?`<div class="count">…and ${kept.length-60} more</div>`:''}</div>
+      kept.length>60?`<div class="count">${tt('packs.and_more_2',{kept:kept.length-60})}</div>`:''}</div>
   </fieldset>`;
 }
 function clUnusedBody(){
   const c=state.clean,rows=c.a.unused;
-  if(!rows.length)return '<div class="count" style="margin-top:8px">Nothing. Every entry is referenced. 🎉</div>';
-  return `<div class="count" style="margin-top:7px">No unit, mount or character in this mod names these.
-      Their files move out too, unless an entry that stays also uses them.</div>
+  if(!rows.length)return `<div class="count" style="margin-top:8px">${tt('packs.nothing_every_entry_is_referenced')}</div>`;
+  return `<div class="count" style="margin-top:7px">${tt('packs.no_unit_mount_or_character_in')}</div>
     <div class="clbar">
-      <button onclick="clAll('entries',true)">Select all</button>
-      <button onclick="clAll('entries',false)">None</button></div>
+      <button onclick="clAll('entries',true)">${tt('common.select_all')}</button>
+      <button onclick="clAll('entries',false)">${tt('common.none_2')}</button></div>
     <div class="cllist">${rows.map(u=>`<div class="clrow">
       <input type="checkbox" ${c.entries.has(u.entry)?'checked':''}
         onchange="clPick('entries','${q1(esc(u.entry))}',this.checked)">
       <div class="grow"><span class="nm">${esc(u.entry)}</span>${u.copies>1?`
-        <span class="badge w-warn">×${u.copies} copies of this name, and all of them go</span>`:''}
-        <div class="sub">${u.lods} LOD${u.lods===1?'':'s'} · ${u.skins} skin${u.skins===1?'':'s'} ·
-          ${u.files.length} file${u.files.length===1?'':'s'} named, ${u.on_disk} on disk</div></div>
+        <span class="badge w-warn">${tt('packs.copies_of_this_name_and_all',{copies:u.copies})}</span>`:''}
+        <div class="sub">${tt('packs.lod_skin_file_named_on_disk',{lods:u.lods,lods2:u.lods===1?'':'s',skins:u.skins,skins2:u.skins===1?'':'s',files_n:u.files.length,files:u.files.length===1?'':'s',on_disk:u.on_disk})}</div></div>
     </div>`).join('')}</div>`;
 }
 /* Suggestions, never decisions: the twin has the same animations, skeletons and
@@ -292,14 +260,12 @@ function clUnusedBody(){
    by hand (or with "Agree to all" once you have read them). */
 function clMergeBody(){
   const c=state.clean,rows=c.a.merges;
-  if(!rows.length)return '<div class="count" style="margin-top:8px">None found.</div>';
+  if(!rows.length)return `<div class="count" style="margin-top:8px">${tt('packs.none_found')}</div>`;
   return `<div class="count" style="margin-top:7px">
-      Each of these is used only by a unit's <code>soldier</code> line and has a twin with the same
-      footer (animations, skeletons, torch), so the line can point at the twin instead.
-      <b>Check each pair first.</b> The twin's meshes and textures are its own.</div>
+      ${tt('packs.each_of_these_is_used_only')}</div>
     <div class="clbar">
-      <button onclick="clAll('merges',true)">Agree to all</button>
-      <button onclick="clAll('merges',false)">None</button></div>
+      <button onclick="clAll('merges',true)">${tt('packs.agree_to_all')}</button>
+      <button onclick="clAll('merges',false)">${tt('common.none_2')}</button></div>
     <div class="cllist">${rows.map(m=>{
       const risky=m.units_without_upgrades.length;
       return `<div class="clrow ${risky?'risky':''}">
@@ -311,12 +277,9 @@ function clMergeBody(){
           ${m.options.map(o=>`<option value="${esc(o)}" ${c.into[m.entry]===o?'selected':''}>${esc(o)}</option>`).join('')}
         </select>
         <span class="badge" id="clOwn_${esc(m.entry)}" style="color:var(--good);border-color:var(--good)${
-          clIsOwn(m,c.into[m.entry])?'':';display:none'}">already an armour tier of the same unit</span>
-        <div class="sub">soldier of ${m.units.map(u=>userLink(u)).join(', ')}
-          · ${m.lods} LOD${m.lods===1?'':'s'}, ${m.files.length} file${m.files.length===1?'':'s'}</div>
-        ${risky?`<div class="sub w-warn">⚠ ${esc(m.units_without_upgrades.join(', '))}
-          list no armour_ug_models, so this entry IS what you see on the field. Swapping it
-          changes how the unit looks.</div>`:''}
+          clIsOwn(m,c.into[m.entry])?'':';display:none'}">${tt('packs.already_an_armour_tier_of_the')}</span>
+        <div class="sub">${tt('packs.soldier_of_lod_file',{x:m.units.map(u=>userLink(u)).join(', '),lods:m.lods,lods2:m.lods===1?'':'s',files_n:m.files.length,files:m.files.length===1?'':'s'})}</div>
+        ${risky?`<div class="sub w-warn">${tt('packs.list_no_armour_ug_models_so',{units_without_upgrades:esc(m.units_without_upgrades.join(', '))})}</div>`:''}
       </div></div>`;}).join('')}</div>`;
 }
 /* "already an armour tier of the same unit" is a fact about the PICKED twin, not
@@ -337,37 +300,29 @@ function clInto(entry,into){
    one part of the cleanup that rewrites descr_mount.txt. */
 function clMountBody(){
   const c=state.clean,rows=c.a.unused_mounts;
-  if(!rows.length)return '<div class="count" style="margin-top:8px">None. Every mount is ridden by a unit.</div>';
-  return `<div class="count" style="margin-top:7px">No unit rides these, so their
-      <code>descr_mount.txt</code> blocks do nothing. Ticking one removes the block and frees its
-      modeldb entry if nothing else uses the model. Removed blocks are saved to
-      <code>removed_mounts.txt</code>.</div>
+  if(!rows.length)return `<div class="count" style="margin-top:8px">${tt('packs.none_every_mount_is_ridden_by')}</div>`;
+  return `<div class="count" style="margin-top:7px">${tt('packs.no_unit_rides_these_so_their')}</div>
     <div class="clbar">
-      <button onclick="clAll('mounts',true)">Select all</button>
-      <button onclick="clAll('mounts',false)">None</button></div>
+      <button onclick="clAll('mounts',true)">${tt('common.select_all')}</button>
+      <button onclick="clAll('mounts',false)">${tt('common.none_2')}</button></div>
     <div class="cllist">${rows.map(m=>`<div class="clrow">
       <input type="checkbox" ${c.mounts.has(m.mount)?'checked':''}
         onchange="clPick('mounts','${q1(esc(m.mount))}',this.checked)">
       <div class="grow"><span class="nm">${esc(m.mount)}</span>
         ${m.class?`<span class="badge">${esc(m.class)}</span>`:''}
-        ${m.frees_model?`<span class="badge" style="color:var(--good);border-color:var(--good)">frees ${esc(m.model)}</span>`:''}
-        <div class="sub">model <code>${esc(m.model||'(none)')}</code>${
-          m.in_db?'':' <span class="w-warn">(not in the modeldb)</span>'}</div>
-        ${!m.frees_model&&m.kept_by.length?`<div class="sub">its model stays: still used by
-          ${esc(m.kept_by.join(', '))}</div>`:''}
-        ${!m.frees_model&&!m.kept_by.length&&m.mentioned_in?`<div class="sub">its model stays:
-          named in <code>${esc(m.mentioned_in)}</code></div>`:''}
+        ${m.frees_model?`<span class="badge" style="color:var(--good);border-color:var(--good)">${tt('packs.frees',{model:esc(m.model)})}</span>`:''}
+        <div class="sub">${tt('packs.model',{model:esc(m.model||'(none)'),in_db:m.in_db?'':` <span class="w-warn">${tt('packs.not_in_the_modeldb')}</span>`})}</div>
+        ${!m.frees_model&&m.kept_by.length?`<div class="sub">${tt('packs.its_model_stays_still_used_by',{kept_by:esc(m.kept_by.join(', '))})}</div>`:''}
+        ${!m.frees_model&&!m.kept_by.length&&m.mentioned_in?`<div class="sub">${tt('packs.its_model_stays_named_in')} <code>${esc(m.mentioned_in)}</code></div>`:''}
       </div></div>`).join('')}</div>`;
 }
 function clOrphanBody(){
   const c=state.clean,rows=c.a.orphans;
-  if(!rows.length)return '<div class="count" style="margin-top:8px">None. Every file under unit_models is named by an entry.</div>';
-  return `<div class="count" style="margin-top:7px">Files sitting in <code>data/unit_models</code> that
-      <b>no</b> modeldb entry names, removed or otherwise. They go to
-      <code>unused_files\\</code> in the destination, paths mirrored.</div>
+  if(!rows.length)return `<div class="count" style="margin-top:8px">${tt('packs.none_every_file_under_unit_models')}</div>`;
+  return `<div class="count" style="margin-top:7px">${tt('packs.files_sitting_in_data_unit_models')}</div>
     <div class="clbar">
-      <button onclick="clAll('orphans',true)">Select all</button>
-      <button onclick="clAll('orphans',false)">None</button></div>
+      <button onclick="clAll('orphans',true)">${tt('common.select_all')}</button>
+      <button onclick="clAll('orphans',false)">${tt('common.none_2')}</button></div>
     <div class="cllist">${rows.map(o=>`<div class="clrow">
       <input type="checkbox" ${c.orphans.has(o.rel)?'checked':''}
         onchange="clPick('orphans','${q1(esc(o.rel))}',this.checked)">
@@ -376,14 +331,14 @@ function clOrphanBody(){
 }
 function clCountText(k){
   const c=state.clean,a=c.a;
-  if(k==='unused')return `${c.entries.size}/${a.unused.length} ticked`;
-  if(k==='merges')return `${c.merges.size}/${a.merges.length} ticked · needs your eye`;
+  if(k==='unused')return tt('packs.ticked',{entries_n:c.entries.size,unused_n:a.unused.length});
+  if(k==='merges')return tt('packs.ticked_needs_your_eye',{merges_n:c.merges.size,merges_n2:a.merges.length});
   if(k==='mounts'){
     const frees=a.unused_mounts.filter(m=>c.mounts.has(m.mount)&&m.frees_model).length;
-    return `${c.mounts.size}/${a.unused_mounts.length} ticked${frees?` · frees ${frees} entr${frees===1?'y':'ies'}`:''}`;
+    return tt('packs.ticked_2',{mounts_n:c.mounts.size,unused_mounts_n:a.unused_mounts.length,frees:frees?tt('packs.frees_entr',{frees,frees2:frees===1?'y':'ies'}):''});
   }
   const bytes=a.orphans.reduce((n,o)=>n+(c.orphans.has(o.rel)?o.size:0),0);
-  return `${c.orphans.size}/${a.orphans.length} ticked · ${MB(bytes)}`;
+  return tt('packs.ticked_3',{orphans_n:c.orphans.size,orphans_n2:a.orphans.length,x:MB(bytes)});
 }
 function clCounts(){['unused','merges','mounts','orphans'].forEach(k=>{
   const el=document.getElementById('clc_'+k); if(el)el.textContent=clCountText(k);});}
@@ -416,7 +371,7 @@ function clPayload(){
 }
 async function clPreview(){
   const box=document.getElementById('clPreview'); if(!box)return null;
-  box.innerHTML='<div class="preview">Planning…</div>';
+  box.innerHTML=`<div class="preview">${tt('common.planning')}</div>`;
   const r=await api.post('/api/bmdb/cleanup_plan',clPayload());
   if(r.error){box.innerHTML=`<div class="preview w-bad">${esc(r.error)}</div>`;return null;}
   state.clean.plan=r;
@@ -427,34 +382,33 @@ function clPlanHtml(r){
       cls==='bad'?'✗':cls==='warn'?'!':'·'}</span><span class="stext">${esc(x)}</span></div>`).join('');
   const sample=r.exports.slice(0,12);
   return `<div class="sum" style="margin-top:10px">
-    <div class="srow shead"><span class="sicon">🧹</span><span class="stext">What this moves</span></div>
+    <div class="srow shead"><span class="sicon">🧹</span><span class="stext">${tt('packs.what_this_moves')}</span></div>
     ${li('',r.changes)}
-    ${r.target?`<div class="srow"><span class="sicon">📁</span><span class="stext">into <span class="path">${esc(r.target)}</span></span></div>`:''}
+    ${r.target?`<div class="srow"><span class="sicon">📁</span><span class="stext">${tt('packs.into')} <span class="path">${esc(r.target)}</span></span></div>`:''}
     ${sample.length?`<div class="srow"><span class="sicon">·</span><span class="stext">
       ${sample.map(x=>`<span class="path">${esc(x)}</span>`).join('<br>')}
-      ${r.export_count>sample.length?`<br><i>…and ${r.export_count-sample.length} more</i>`:''}</span></div>`:''}
+      ${r.export_count>sample.length?`<br><i>${tt('packs.and_more_3',{n:r.export_count-sample.length})}</i>`:''}</span></div>`:''}
     ${li('warn',r.warnings)}${li('bad',r.errors)}</div>`;
 }
 async function clApply(){
   const c=state.clean;
-  if(!c.target){toast('Choose where the removed assets should go first');return;}
+  if(!c.target){toast(tt('packs.choose_where_the_removed_assets_should'));return;}
   const r=state.clean.plan||await clPreview();
   if(!r)return;
   if(r.errors&&r.errors.length){toast(r.errors[0]);return;}
-  if(!r.entry_deletes.length&&!r.export_count&&!r.mount_deletes.length){toast('Nothing is ticked');return;}
-  if(!confirm(`Move ${r.entry_deletes.length} modeldb entr${r.entry_deletes.length===1?'y':'ies'} `+
-      `and ${r.export_count} file(s) out of “${c.a.mod}”?\n\nThey are copied to:\n${r.target}\n\n`+
-      `${r.merges.length?`${r.merges.length} unit soldier line(s) are repointed at their twin.\n\n`:''}`+
-      `${r.mount_deletes.length?`${r.mount_deletes.length} mount(s) are removed from descr_mount.txt.\n\n`:''}`+
-      `Everything touched is backed up first. 🕑 Log → Undo puts it all back.`))return;
+  if(!r.entry_deletes.length&&!r.export_count&&!r.mount_deletes.length){toast(tt('common.nothing_is_ticked'));return;}
+  if(!confirm(tt('packs.move_modeldb_entr',{entry_deletes_n:r.entry_deletes.length,entry_deletes:r.entry_deletes.length===1?'y':'ies'})+
+      tt('packs.and_file_s_out_of_they',{export_count:r.export_count,mod:c.a.mod,target:r.target})+
+      `${r.merges.length?tt('packs.unit_soldier_line_s_are_repointed',{merges_n:r.merges.length}):''}`+
+      `${r.mount_deletes.length?tt('packs.mount_s_are_removed_from_descr',{mount_deletes_n:r.mount_deletes.length}):''}`+
+      tt('packs.everything_touched_is_backed_up_first')))return;
   const job=newJob();
-  const res=await runJob(job,'Cleaning up…',
-    `Copying ${r.export_count} file(s) out, then rewriting ${esc(c.a.mod)}’s modeldb.
-     Everything is backed up as it goes. 🕑 Log → Undo puts it all back.`,
+  const res=await runJob(job,tt('packs.cleaning_up'),
+    tt('packs.copying_file_s_out_then_rewriting',{export_count:r.export_count,mod:esc(c.a.mod)}),
     ()=>api.post('/api/bmdb/cleanup_apply',{...clPayload(),job,clear_strings_bin:clearBinOn()}));
-  if(res.error){toast('Cleanup failed: '+res.error);renderCleanup();return;}
-  toast(`Removed ${res.plan.entry_deletes.length} entr${res.plan.entry_deletes.length===1?'y':'ies'} `+
-        `and ${res.plan.export_count} file(s) ✓${binMsg(res)}  (undo in 🕑 Log)`,5200);
+  if(res.error){toast(tt('packs.cleanup_failed')+res.error);renderCleanup();return;}
+  toast(tt('packs.removed_entr',{entry_deletes_n:res.plan.entry_deletes.length,x:res.plan.entry_deletes.length===1?'y':'ies'})+
+        tt('packs.and_file_s_undo_in_log',{export_count:res.plan.export_count,x:binMsg(res)}),5200);
   state.bmdb=null; state.destData=null;
   // The lists in this dialog were built from an audit taken BEFORE the cleanup,
   // so leaving them up shows entries that are no longer in the mod and invites
@@ -485,15 +439,12 @@ async function openRecheck(){
   overlay.classList.add('open');
   const job=newJob();
   let r;
-  try{ r=await runJob(job,`Recheck ${esc(state.src)}’s past cleanups`,
-        `Re-reading every campaign and battle script, every other
-         <code>battle_models.modeldb</code> in the mod, and every text file that could
-         name a file under <code>data/unit_models</code> - then testing what past
-         cleanups removed against all of it.`,
+  try{ r=await runJob(job,tt('packs.recheck_s_past_cleanups',{src:esc(state.src)}),
+        tt('packs.re_reading_every_campaign_and_battle'),
         ()=>api.get(`/api/bmdb/recheck?mod=${enc(state.src)}&job=${enc(job)}`)); }
   catch(e){ r={error:''+e}; }
-  if(r.error){ modal.innerHTML=`<h2>Recheck</h2><div class="mbody w-bad">${esc(r.error)}</div>
-    <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
+  if(r.error){ modal.innerHTML=`<h2>${tt('packs.recheck')}</h2><div class="mbody w-bad">${esc(r.error)}</div>
+    <div class="foot"><button onclick="closeModal()">${tt('common.close')}</button></div>`; return; }
   state.recheck={r,picks:new Set(r.rows.filter(x=>x.revertable).map(rcKey))};
   renderRecheck();
 }
@@ -502,35 +453,28 @@ function renderRecheck(){
   const s=state.recheck,r=s.r;
   const n=r.rows.length,ok=r.revertable,lost=n-ok;
   document.getElementById('modal').innerHTML=`
-    <h2>Recheck ${esc(r.mod)}’s past cleanups</h2>
+    <h2>${tt('packs.recheck_s_past_cleanups_2',{mod:esc(r.mod)})}</h2>
     <div class="mbody">
       ${rcNetsHtml(r)}
       ${rcRunsHtml(r)}
       ${n?`<fieldset class="assetconf" style="margin-top:10px;border-color:var(--bad)">
-        <legend class="w-bad">Removed, but needed</legend>
-        <div class="count"><b>${n}</b> thing${n===1?'':'s'} a past cleanup took out
-          ${n===1?'is':'are'} named by something this build now reads and the older one did not.
-          ${ok?`<b>${ok}</b> can be put back from a backup or the export folder.`:''}
-          ${lost?`<span class="w-bad">${ok?`The other <b>${lost}</b> cannot`
-            :`None of them can be put back from here`} - the backup and the export folder
-            are both gone, so ${lost===1?'that file has':'they have'} to come from a fresh
-            copy of the mod.</span>`:''}</div>
+        <legend class="w-bad">${tt('packs.removed_but_needed')}</legend>
+        <div class="count"><b>${n}</b> ${tt('packs.thing_a_past_cleanup_took_out',{x:n===1?'':'s',x2:n===1?'is':'are',ok:ok?`<b>${ok}</b> ${tt('packs.can_be_put_back_from_a')}`:'',x3:lost?`<span class="w-bad">${tt('packs.the_backup_and_the_export_folder',{ok:ok?tt('packs.the_other_cannot',{lost})
+            :tt('packs.none_of_them_can_be_put'),lost:lost===1?tt('packs.that_file_has'):tt('packs.they_have')})}</span>`:''})}</div>
         <div class="clbar">
-          <button onclick="rcAll(true)">Select all that can go back</button>
-          <button onclick="rcAll(false)">None</button></div>
+          <button onclick="rcAll(true)">${tt('packs.select_all_that_can_go_back')}</button>
+          <button onclick="rcAll(false)">${tt('common.none_2')}</button></div>
         <div class="cllist">${r.rows.map(rcRowHtml).join('')}</div>
       </fieldset>`
       :`<div class="sum" style="margin-top:10px"><div class="srow">
-          <span class="sicon">✓</span><span class="stext">Nothing a past cleanup removed is named
-          by anything this build reads. ${r.checked_files+r.checked_entries
-            ?`All ${r.checked_files} file(s) and ${r.checked_entries} entr${
-              r.checked_entries===1?'y':'ies'} removed so far re-check clean.`
-            :'No cleanup of this mod has been applied.'}</span></div></div>`}
+          <span class="sicon">✓</span><span class="stext">${tt('packs.nothing_a_past_cleanup_removed_is',{x:r.checked_files+r.checked_entries
+            ?tt('packs.all_file_s_and_entr_removed',{checked_files:r.checked_files,checked_entries:r.checked_entries,checked_entries2:r.checked_entries===1?'y':'ies'})
+            :tt('packs.no_cleanup_of_this_mod_has')})}</span></div></div>`}
     </div>
     <div class="foot">
-      <button onclick="closeModal()">Close</button>
-      <button onclick="openCleanup()">Back to clean-up</button>
-      ${ok?`<button class="primary" onclick="rcApply()">Put the ticked ones back</button>`:''}
+      <button onclick="closeModal()">${tt('common.close')}</button>
+      <button onclick="openCleanup()">${tt('packs.back_to_clean_up')}</button>
+      ${ok?`<button class="primary" onclick="rcApply()">${tt('packs.put_the_ticked_ones_back')}</button>`:''}
     </div>`;
 }
 /* Said up front, not buried at the bottom: a clean result is only worth as much
@@ -539,16 +483,8 @@ function renderRecheck(){
 function rcNetsHtml(r){
   const n=r.nets||{};
   const cf=n.campaign_files||[];
-  return `<div class="count" style="margin-bottom:10px">Read for this check:
-    <b>${cf.length}</b> campaign / battle script${cf.length===1?'':'s'}
-    ${cf.length?`(<code>${cf.slice(0,6).map(esc).join('</code>, <code>')}</code>${
-      cf.length>6?`, and ${cf.length-6} more`:''})`:''} ·
-    <b>${n.lua_files||0}</b> <code>.lua</code> script${(n.lua_files||0)===1?'':'s'} ·
-    every text file in the mod, for a <code>unit_models</code> filename
-    (<b>${n.text_refs||0}</b> found). The mod's other
-    <code>battle_models.modeldb</code> files are <b>not</b> read: they are backups of
-    older states of the live one, so believing them would hold alive every file the
-    mod has ever used.</div>`;
+  return `<div class="count" style="margin-bottom:10px">${tt('packs.read_for_this_check_campaign_battle',{cf_n:cf.length,cf:cf.length===1?'':'s',x:cf.length?`(<code>${cf.slice(0,6).map(esc).join('</code>, <code>')}</code>${
+      cf.length>6?tt('packs.and_more_4',{cf:cf.length-6}):''})`:'',lua_files:n.lua_files||0,lua_files2:(n.lua_files||0)===1?'':'s',text_refs:n.text_refs||0})}</div>`;
 }
 /* The runs themselves, because "can this be undone at all" is decided here and
    not in the row list: a run whose backup AND export folder are both gone can
@@ -557,18 +493,16 @@ function rcNetsHtml(r){
    list of things to tick. */
 function rcRunsHtml(r){
   if(!r.runs.length)return '';
-  return `<fieldset><legend>Cleanups of this mod that are still applied</legend>
+  return `<fieldset><legend>${tt('packs.cleanups_of_this_mod_that_are')}</legend>
     <div class="cllist">${r.runs.map(x=>`<div class="clrow ${
       x.hits&&!x.backup_here&&!x.export_here?'risky':''}">
       <div class="grow"><span class="nm">${esc(x.when)}</span>
-        ${x.hits?`<span class="badge w-bad" style="border-color:var(--bad)">${x.hits} flagged</span>`
-          :'<span class="badge" style="color:var(--good);border-color:var(--good)">nothing flagged</span>'}
-        <div class="sub">${x.files} file(s) and ${x.entries} entr${x.entries===1?'y':'ies'}
-          removed · ${x.missing} still missing from the mod</div>
-        <div class="sub">backup ${x.backup_here?'<b class="w-good">present</b>'
-          :`<b class="w-bad">gone</b> (${esc(x.backup||'not recorded')})`} ·
-          export folder ${x.export_here?'<b class="w-good">present</b>'
-          :`<b class="w-bad">gone</b> (${esc(x.export||'not recorded')})`}</div>
+        ${x.hits?`<span class="badge w-bad" style="border-color:var(--bad)">${tt('packs.flagged',{hits:x.hits})}</span>`
+          :`<span class="badge" style="color:var(--good);border-color:var(--good)">${tt('packs.nothing_flagged')}</span>`}
+        <div class="sub">${tt('packs.file_s_and_entr_removed_still',{files:x.files,x:x.entries,x2:x.entries===1?'y':'ies',missing:x.missing})}</div>
+        <div class="sub">${tt('packs.backup_export_folder',{backup_here:x.backup_here?`<b class="w-good">${tt('packs.present')}</b>`
+          :tt('packs.gone',{backup:esc(x.backup||tt('packs.not_recorded'))}),export_here:x.export_here?`<b class="w-good">${tt('packs.present')}</b>`
+          :tt('packs.gone_2',{export:esc(x.export||tt('packs.not_recorded'))})})}</div>
       </div></div>`).join('')}</div></fieldset>`;
 }
 function rcRowHtml(x){
@@ -578,13 +512,12 @@ function rcRowHtml(x){
       onchange="rcPick('${q1(esc(k))}',this.checked)">
     <div class="grow">
       <span class="nm">${esc(x.name)}</span>
-      <span class="badge">${x.kind==='entry'?'modeldb entry':'file'}</span>
+      <span class="badge">${x.kind==='entry'?tt('packs.modeldb_entry'):'file'}</span>
       ${x.revertable?`<span class="badge" style="color:var(--good);border-color:var(--good)">
-        from the ${esc(x.source)}</span>`
-        :`<span class="badge w-bad" style="border-color:var(--bad)">no copy left</span>`}
+        ${tt('packs.from_the',{source:esc(x.source)})}</span>`
+        :`<span class="badge w-bad" style="border-color:var(--bad)">${tt('packs.no_copy_left')}</span>`}
       <div class="sub">${x.why.map(esc).join(' · ')}</div>
-      <div class="sub" style="color:var(--dim)">removed ${esc(x.when)}${
-        x.from?` · ${esc(x.from)}`:''}</div>
+      <div class="sub" style="color:var(--dim)">${tt('packs.removed',{when:esc(x.when),x:x.from?` · ${esc(x.from)}`:''})}</div>
     </div></div>`;
 }
 function rcPick(k,on){const p=state.recheck.picks; on?p.add(k):p.delete(k);}
@@ -596,22 +529,19 @@ function rcAll(on){
 async function rcApply(){
   const s=state.recheck;
   const picks=s.r.rows.filter(x=>s.picks.has(rcKey(x)));
-  if(!picks.length){toast('Nothing is ticked');return;}
+  if(!picks.length){toast(tt('common.nothing_is_ticked'));return;}
   const files=picks.filter(x=>x.kind==='file').length;
   const entries=picks.length-files;
-  if(!confirm(`Put ${files} file(s)${entries?` and ${entries} modeldb entr${
-      entries===1?'y':'ies'}`:''} back into “${s.r.mod}”?\n\n`+
-      `They are copied from the backups and export folders the cleanups wrote.\n`+
-      `This is itself backed up - 🕑 Log → Undo takes it away again.`))return;
+  if(!confirm(tt('packs.put_file_s_back_into',{files,x:entries?tt('packs.and_modeldb_entr',{x:entries,x2:entries===1?'y':'ies'}):'',mod:s.r.mod})+
+      tt('packs.they_are_copied_from_the_backups')+
+      tt('packs.this_is_itself_backed_up_log')))return;
   const job=newJob();
-  const res=await runJob(job,'Putting them back…',
-    `Copying ${files} file(s) back into ${esc(s.r.mod)}${
-      entries?` and appending ${entries} entr${entries===1?'y':'ies'} to its modeldb`:''}.`,
+  const res=await runJob(job,tt('packs.putting_them_back'),
+    tt('packs.copying_file_s_back_into',{files,mod:esc(s.r.mod),x:entries?tt('packs.and_appending_entr_to_its_modeldb',{x:entries,x2:entries===1?'y':'ies'}):''}),
     ()=>api.post('/api/bmdb/recheck_revert',
       {mod:s.r.mod,job,picks:picks.map(x=>({kind:x.kind,run:x.run,name:x.name}))}));
-  if(res.error){toast('Revert failed: '+res.error);return;}
-  toast(`Put ${res.restored.length} thing(s) back ✓${
-    res.failed.length?`  (${res.failed.length} could not be)`:''}  (undo in 🕑 Log)`,5200);
+  if(res.error){toast(tt('packs.revert_failed')+res.error);return;}
+  toast(tt('packs.put_thing_s_back_undo_in',{restored_n:res.restored.length,x:res.failed.length?tt('packs.could_not_be',{failed_n:res.failed.length}):''}),5200);
   state.bmdb=null; state.destData=null;
   loadSource();
   // Re-run rather than leaving the list up: the rows that just went back are no
@@ -621,26 +551,21 @@ async function rcApply(){
 
 function edDeleteDialog(){
   const e=state.ed;
-  document.getElementById('modal').innerHTML=`<h2 class="w-bad">Delete “${esc(e.d.type)}”</h2>
+  document.getElementById('modal').innerHTML=`<h2 class="w-bad">${tt('packs.delete',{type:esc(e.d.type)})}</h2>
     <div class="mbody">
-      <div class="warnbox">This removes the unit's block from <code>export_descr_unit.txt</code>.
-        Anything that still recruits it (<code>export_descr_buildings.txt</code>,
-        <code>descr_strat.txt</code>, scripts) must be cleaned up by hand or the game will error.</div>
-      <fieldset><legend>Also remove</legend>
-        <label class="chk"><input type="checkbox" id="dOptLoc" checked> its text entry
-          (<code>${esc(e.d.dictionary)}</code>) from export_units.txt</label><br>
-        <label class="chk"><input type="checkbox" id="dOptModels"> its battle-model entries:
-          only ones no other unit or mount uses</label><br>
-        <label class="chk"><input type="checkbox" id="dOptAssets"> the mesh/texture files of those
-          entries (only if nothing else references them)</label><br>
-        <label class="chk"><input type="checkbox" id="dOptIcons"> its unit card and info card</label>
+      <div class="warnbox">${tt('packs.this_removes_the_units_block_from')}</div>
+      <fieldset><legend>${tt('packs.also_remove')}</legend>
+        <label class="chk"><input type="checkbox" id="dOptLoc" checked> ${tt('packs.its_text_entry_from_export_units',{dictionary:esc(e.d.dictionary)})}</label><br>
+        <label class="chk"><input type="checkbox" id="dOptModels"> ${tt('packs.its_battle_model_entries_only_ones')}</label><br>
+        <label class="chk"><input type="checkbox" id="dOptAssets"> ${tt('packs.the_mesh_texture_files_of_those')}</label><br>
+        <label class="chk"><input type="checkbox" id="dOptIcons"> ${tt('packs.its_unit_card_and_info_card')}</label>
       </fieldset>
-      <div class="count">Everything removed is backed up first. 🕑 Log → Undo restores it byte for byte.</div>
+      <div class="count">${tt('packs.everything_removed_is_backed_up_first')}</div>
       <div id="edPreview"></div>
     </div>
-    <div class="foot"><button onclick="renderEditor()">Cancel</button>
-      <button onclick="edDeletePreview()">Probe</button>
-      <button class="danger" onclick="edDoDelete()">Delete unit</button></div>`;
+    <div class="foot"><button onclick="renderEditor()">${tt('common.cancel')}</button>
+      <button onclick="edDeletePreview()">${tt('common.probe')}</button>
+      <button class="danger" onclick="edDoDelete()">${tt('packs.delete_unit')}</button></div>`;
   edDeletePreview();
 }
 function edDeleteOpts(){
@@ -650,15 +575,15 @@ function edDeleteOpts(){
 }
 async function edDeletePreview(){
   const box=document.getElementById('edPreview'); if(!box)return;
-  box.innerHTML='<div class="preview">Planning…</div>';
+  box.innerHTML=`<div class="preview">${tt('common.planning')}</div>`;
   const r=await api.post('/api/edit/plan',edPayload(edDeleteOpts()));
   box.innerHTML=r.error?`<div class="preview w-bad">${esc(r.error)}</div>`:edPlanHtml(r);
 }
 async function edDoDelete(){
   const e=state.ed;
-  if(!confirm(`Delete “${e.d.type}” from ${e.mod}?\n\nIt is backed up first, so you can undo it from the 🕑 Log.`))return;
+  if(!confirm(tt('packs.delete_from_it_is_backed_up',{type:e.d.type,mod:e.mod})))return;
   const res=await api.post('/api/edit/apply',edPayload(edDeleteOpts()));
-  if(res.error){toast('Delete failed: '+res.error);return;}
-  closeModal(); toast(`Deleted “${e.d.type}” ✓  (undo in 🕑 Log)`,4200);
+  if(res.error){toast(tt('packs.delete_failed')+res.error);return;}
+  closeModal(); toast(tt('packs.deleted_undo_in_log',{type:e.d.type}),4200);
   state.destData=null; loadSource();
 }

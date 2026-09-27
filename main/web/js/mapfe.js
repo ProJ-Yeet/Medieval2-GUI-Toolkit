@@ -123,7 +123,7 @@ function cfeZoom(){
   v.oy = h / 2 - (f.y + f.h / 2) * v.zoom;
   v.fitted = false;
   activity('front-end map',
-    `FE zoom: ${k.view.native ? k.view.native.join('×') : 'the frame'} at 1:1`);
+    tt('mapfe.fe_zoom_at_1_1',{x:k.view.native ? k.view.native.join('×') : tt('mapfe.the_frame')}));
   cmapPaint();
 }
 
@@ -268,7 +268,7 @@ function cfeReset(){
   const k = state.cfe;
   if(!k || !k.view) return;
   k.frame = Object.assign({}, k.view.frame);
-  activity('front-end map', 'put the frame back to the proposed one');
+  activity('front-end map', tt('mapfe.put_the_frame_back_to_the'));
   cfePaint(); cmapPaint();
 }
 
@@ -292,7 +292,7 @@ async function cfeExport(){
     else {
       k.wrote = r;
       activity('front-end map',
-        `wrote ${(r.files[0] || {}).name} (${(r.files[0] || {}).width}×${(r.files[0] || {}).height})`);
+        tt('mapfe.wrote',{x:(r.files[0] || {}).name,x2:(r.files[0] || {}).width,x3:(r.files[0] || {}).height}));
     }
   }catch(e){
     if(e === ABORTED) return;
@@ -328,8 +328,8 @@ function cfeFigureText(){
   if(!k || !k.frame || !k.view) return '';
   const f = k.frame, size = k.view.size || [0, 0];
   const per = f.w ? size[0] / f.w : 0;
-  return `${f.w.toFixed(1)}×${f.h.toFixed(1)} tiles at `
-       + `${f.x.toFixed(1)},${f.y.toFixed(1)} · ${per.toFixed(3)} px per tile`;
+  return tt('mapfe.tiles_at',{f:f.w.toFixed(1),f2:f.h.toFixed(1)})
+       + tt('mapfe.px_per_tile',{f:f.x.toFixed(1),f2:f.y.toFixed(1),per:per.toFixed(3)});
 }
 
 
@@ -337,56 +337,41 @@ function cfeHtml(){
   const k = state.cfe, c = state.cmap;
   if(!k) return '';
   const head = `<div class="cmrow cmhdr" onclick="cfeToggle()">
-      <b>Front-end map</b>
-      <span class="count">${k.open ? '▾' : '▸'}</span>
+      ${tt('mapfe.front_end_map',{open:k.open ? '▾' : '▸'})}
     </div>`;
   if(!k.open) return head;
-  if(k.busy && !k.view) return head + `<div class="cmnote">reading…</div>`;
+  if(k.busy && !k.view) return head + `<div class="cmnote">${tt('common.reading_2')}</div>`;
   const v = k.view;
-  if(!v) return head + `<div class="cmnote w-warn">${esc(k.msg || 'nothing read')}</div>`;
+  if(!v) return head + `<div class="cmnote w-warn">${esc(k.msg || tt('mapfe.nothing_read'))}</div>`;
 
   const rows = [];
   if(v.present){
-    rows.push(`<div class="cmrow"><span>The file</span>
-      <span class="count">${v.native[0]}×${v.native[1]}, ${v.depth}-bit</span></div>`);
+    rows.push(`<div class="cmrow">${tt('mapfe.the_file_bit',{native:v.native[0],native2:v.native[1],depth:v.depth})}</div>`);
     rows.push(`<div class="cmnote"><code>${esc(v.rel)}</code></div>`);
   }else{
     rows.push(`<div class="cmnote w-warn">${esc(v.problem)}</div>`);
   }
   if(v.was){
-    rows.push(`<div class="cmnote">Before this panel the picture was
-      ${esc(v.was)} to get onto the canvas. It is now drawn at its own size on
-      the frame below, so nothing resamples it.</div>`);
+    rows.push(`<div class="cmnote">${tt('mapfe.before_this_panel_the_picture_was',{was:esc(v.was)})}</div>`);
   }
-  rows.push(`<div class="cmrow"><span>The frame</span>
-    <span class="count" id="cfeFigs">${esc(cfeFigureText())}</span></div>`);
-  rows.push(`<div class="cmnote">The frame is which rectangle of the map the
-    picture is a picture of. It starts as the smallest one the picture's shape
-    can be and still hold the whole map; drag it or its corners to move it, and
-    the shape is held because that is what lets one zoom draw the picture 1:1.
-    Nothing can work it out from the picture - one installed mod's has a
-    painted border round the map and two are not maps at all.</div>`);
+  rows.push(`<div class="cmrow">${tt('mapfe.the_frame_2',{cfeFigureText:esc(cfeFigureText())})}</div>`);
+  rows.push(`<div class="cmnote">${tt('mapfe.the_frame_is_which_rectangle_of')}</div>`);
   rows.push(`<div class="cmbarrow">
     <button onclick="cfeZoom()" class="${cfeAtZoom() ? 'on' : ''}"
-      title="Put the view where one screen pixel is one pixel of map_FE.tga.
-No resampling in either direction - that is the whole point of the mode.">
-      ⊹ FE zoom</button>
-    <button onclick="cfeReset()">↺ Proposed frame</button>
+      title="${ttA('mapfe.put_the_view_where_one_screen')}">
+      ${tt('mapfe.fe_zoom')}</button>
+    <button onclick="cfeReset()">${tt('mapfe.proposed_frame')}</button>
     <button onclick="cfeExport()" ${k.busy ? 'disabled' : ''}
-      title="Compose the ticked layers at the picture's own size and write a TGA
-into the cache, through this mod's own map_FE.tga header.">
-      ⭳ Export at ${v.size[0]}×${v.size[1]}</button>
+      title="${ttA('mapfe.compose_the_ticked_layers_at_the')}">
+      ${tt('mapfe.export_at',{x:v.size[0],x2:v.size[1]})}</button>
   </div>`);
   if(k.msg) rows.push(`<div class="cmnote w-warn">${esc(k.msg)}</div>`);
   if(k.wrote && k.wrote.files && k.wrote.files[0]){
     const f = k.wrote.files[0];
-    rows.push(`<div class="cmnote">Wrote <b>${esc(f.name)}</b> -
-      ${f.width}×${f.height}, ${f.depth}-bit, ${(f.bytes).toLocaleString()} bytes,
-      header ${esc(f.header)}. It is in the export cache, not in the mod.</div>`);
+    rows.push(`<div class="cmnote">${tt('mapfe.wrote_bit_bytes_header_it_is',{name:esc(f.name),width:f.width,height:f.height,depth:f.depth,x:(f.bytes).toLocaleString(),header:esc(f.header)})}</div>`);
   }
   if(!(c && c.layers && c.layers.fe && c.layers.fe.on)){
-    rows.push(`<div class="cmnote">The front-end layer is not ticked, so the
-      picture is not on the canvas - the frame is. Key <b>1</b> ticks it.</div>`);
+    rows.push(`<div class="cmnote">${tt('mapfe.the_front_end_layer_is_not')}</div>`);
   }
   return head + rows.join('');
 }

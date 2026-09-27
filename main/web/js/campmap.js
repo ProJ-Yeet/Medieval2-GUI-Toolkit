@@ -98,7 +98,7 @@ const CMAP_RIVER_RGB = [86, 180, 255];
    build that answers an older shape; `mapterrain.GAP_FILLS` is the authority
    on what the drawing will take. */
 const CMAP_GAPS = ['magenta', 'neutral', 'sea'];
-const CMAP_GAP_LABELS = {magenta: 'Pink', neutral: 'Neutral', sea: 'Sea'};
+const CMAP_GAP_LABELS = {magenta: tt('campmap.pink'), neutral: tt('campmap.neutral'), sea: tt('campmap.sea')};
 /* Which one a map with no habit saved opens on.
 
    Pink is the loudest on purpose and that is what a gap wants while the terrain
@@ -162,98 +162,98 @@ const cmap3d = () => typeof cm3On === 'function' && cm3On();
    stays in the DOM and keeps its own state. Strat models is not in the list any
    more - 49 moved it to the Models Editor, where a mod's models are. */
 const CMAP_TABS = [
-  {id: 'map', label: 'Map', icon: '\u{1F5FA}',
-   title: 'Which campaign is being read, finding a province by name, saved views '
+  {id: 'map', label: tt('campmap.map'), icon: '\u{1F5FA}',
+   title: tt('campmap.which_campaign_is_being_read_finding')
         + 'and the front-end picture',
    subs: [
-     {id: 'camps', label: 'Campaigns', panels: ['cmCamps'],
+     {id: 'camps', label: tt('campmap.campaigns'), panels: ['cmCamps'],
       open: {fn: 'cbrToggle', at: 'cbr'},
-      title: 'Which campaign of this mod the screen is reading'},
-     {id: 'find', label: 'Find', panels: ['cmFind'],
+      title: tt('campmap.which_campaign_of_this_mod_the')},
+     {id: 'find', label: tt('common.find'), panels: ['cmFind'],
       open: {fn: 'cfdToggle', at: 'cfd'},
-      title: 'Go to a province by name'},
-     {id: 'views', label: 'Views', panels: ['cmViews'],
+      title: tt('campmap.go_to_a_province_by_name')},
+     {id: 'views', label: tt('campmap.views'), panels: ['cmViews'],
       open: {fn: 'cvwToggle', at: 'cvw'},
-      title: 'Saved ways of reading this map'},
-     {id: 'fe', label: 'Front end', panels: ['cmFE'],
+      title: tt('campmap.saved_ways_of_reading_this_map')},
+     {id: 'fe', label: tt('campmap.front_end'), panels: ['cmFE'],
       open: {fn: 'cfeToggle', at: 'cfe'},
-      title: 'The picture the campaign-selection screen draws'},
-     {id: 'size', label: 'Size', panels: ['cmSize'],
+      title: tt('campmap.the_picture_the_campaign_selection_screen')},
+     {id: 'size', label: tt('campmap.size'), panels: ['cmSize'],
       open: {fn: 'mszToggle', at: 'msz'},
-      title: 'Grow or shrink the map, with every coordinate in the mod moved to '
-           + 'match, or start a new campaign on a blank map'},
-     {id: 'gen', label: 'Generate', panels: ['cmGen'],
+      title: tt('campmap.grow_or_shrink_the_map_with')
+           + tt('campmap.match_or_start_a_new_campaign')},
+     {id: 'gen', label: tt('campmap.generate'), panels: ['cmGen'],
       open: {fn: 'mgnToggle', at: 'mgn'},
-      title: 'Heights and rivers from the real world, ground types from the '
-           + 'heights, climates from the ground types'},
-     {id: 'osm', label: 'Real world', panels: ['cmOsm'],
+      title: tt('campmap.heights_and_rivers_from_the_real')
+           + tt('campmap.heights_climates_from_the_ground_types')},
+     {id: 'osm', label: tt('campmap.real_world'), panels: ['cmOsm'],
       open: {fn: 'osmToggle', at: 'osm'},
-      title: 'OpenStreetMap behind the map: the backdrop, the real coastline and '
-           + 'places by name. Off until it is turned on in Settings'},
+      title: tt('campmap.openstreetmap_behind_the_map_the_backdrop')
+           + tt('campmap.places_by_name_off_until_it')},
    ]},
-  {id: 'check', label: 'Validate', icon: '\u2713',
-   title: 'Everything wrong with this map: what the read itself found, then the '
-        + 'rules, the baseline and the filters',
+  {id: 'check', label: tt('campmap.validate'), icon: '\u2713',
+   title: tt('campmap.everything_wrong_with_this_map_what')
+        + tt('campmap.rules_the_baseline_and_the_filters'),
    subs: [
-     {id: 'findings', label: 'Findings', panels: ['cmFindings'],
-      title: 'What reading the map already found wrong with it'},
-     {id: 'rules', label: 'Rules', panels: ['cmCheck'],
+     {id: 'findings', label: tt('campmap.findings'), panels: ['cmFindings'],
+      title: tt('campmap.what_reading_the_map_already_found')},
+     {id: 'rules', label: tt('campmap.rules'), panels: ['cmCheck'],
       open: {fn: 'cchkToggle', at: 'cchk'},
-      title: 'The 41 rules, their severity, the baseline and the auto-fixes'},
+      title: tt('campmap.the_41_rules_their_severity_the')},
    ]},
-  {id: 'query', label: 'Query', icon: '\u2315',
-   title: 'Ask the map a question and colour the provinces by the answer',
+  {id: 'query', label: tt('campmap.query'), icon: '\u2315',
+   title: tt('campmap.ask_the_map_a_question_and'),
    subs: [
-     {id: 'query', label: 'Query', panels: ['cmQuery'],
+     {id: 'query', label: tt('campmap.query'), panels: ['cmQuery'],
       open: {fn: 'cqToggle', at: 'cq'},
-      title: 'Ask the map a question and colour the provinces by the answer'},
+      title: tt('campmap.ask_the_map_a_question_and')},
    ]},
-  {id: 'paint', label: 'Paint', icon: '\u270E',
-   title: 'The brush and its palette, the climates it paints with, the markers '
-        + 'layer, and the campaign events',
+  {id: 'paint', label: tt('campmap.paint'), icon: '\u270E',
+   title: tt('campmap.the_brush_and_its_palette_the')
+        + tt('campmap.layer_and_the_campaign_events'),
    subs: [
-     {id: 'create', label: 'Create', panels: ['cmCreate'],
-      title: 'Add regions, settlements, ports, characters and campaign objects'},
-     {id: 'brush', label: 'Brush', panels: ['cmPaint'],
-      title: 'The stroke, the wizard, undo and the save. The colours are in the '
-           + 'column on the left.'},
-     {id: 'clim', label: 'Climates', panels: ['cmClim'],
-      title: 'The climates this mod declares, and the colour each one is painted in'},
-     {id: 'marks', label: 'Markers', panels: ['cmMarks'],
-      title: 'Settlements, characters, forts, watchtowers, resources and spawns'},
-     {id: 'events', label: 'Events', panels: ['cmEvents'],
+     {id: 'create', label: tt('common.create'), panels: ['cmCreate'],
+      title: tt('campmap.add_regions_settlements_ports_characters_and')},
+     {id: 'brush', label: tt('campmap.brush'), panels: ['cmPaint'],
+      title: tt('campmap.the_stroke_the_wizard_undo_and')
+           + tt('campmap.column_on_the_left')},
+     {id: 'clim', label: tt('campmap.climates'), panels: ['cmClim'],
+      title: tt('campmap.the_climates_this_mod_declares_and')},
+     {id: 'marks', label: tt('campmap.markers'), panels: ['cmMarks'],
+      title: tt('campmap.settlements_characters_forts_watchtowers_resourc')},
+     {id: 'events', label: tt('common.events'), panels: ['cmEvents'],
       open: {fn: 'cevToggle', at: 'cev'},
-      title: 'The campaign\u2019s scripted events and its win conditions'},
+      title: tt('campmap.the_campaigns_scripted_events_and_its')},
    ]},
-  {id: 'place', label: 'Province', icon: '\u25C9',
-   title: 'What is on the tile you clicked: its record, its rebels, its '
-        + 'settlement, its people and its forts',
+  {id: 'place', label: tt('common.province'), icon: '\u25C9',
+   title: tt('campmap.what_is_on_the_tile_you')
+        + tt('campmap.settlement_its_people_and_its_forts'),
    subs: [
      // `cmDel` and `cmRecolour` are not sub-tabs of their own: neither is ever
      // open except on a click of its own button on the record, so they sit in
      // the DOM beside the record that opens them.
-     {id: 'record', label: 'Region', panels: ['cmPick', 'cmDel', 'cmRecolour'],
-      title: 'The record of the province under the tile you clicked'},
-     {id: 'rebels', label: 'Rebels', panels: ['cmRebels'],
-      title: 'Which rebel pool this province spawns from'},
-     {id: 'mercs', label: 'Mercenaries', panels: ['cmMercs'],
+     {id: 'record', label: tt('campmap.region'), panels: ['cmPick', 'cmDel', 'cmRecolour'],
+      title: tt('campmap.the_record_of_the_province_under')},
+     {id: 'rebels', label: tt('campmap.rebels'), panels: ['cmRebels'],
+      title: tt('campmap.which_rebel_pool_this_province_spawns')},
+     {id: 'mercs', label: tt('campmap.mercenaries'), panels: ['cmMercs'],
       open: {fn: 'mcpToggle', at: 'mcp'},
-      title: 'What this province sells, who may hire it and why not, and where a '
-           + 'mercenary is sold'},
-     {id: 'settle', label: 'Settlement', panels: ['cmSettle'],
-      title: 'The settlement standing on this province, and what it is made of'},
-     {id: 'chars', label: 'Characters', panels: ['cmChars'],
-      title: 'The people this campaign starts on this province'},
-     {id: 'forts', label: 'Forts', panels: ['cmForts'],
+      title: tt('campmap.what_this_province_sells_who_may')
+           + tt('campmap.mercenary_is_sold')},
+     {id: 'settle', label: tt('common.settlement'), panels: ['cmSettle'],
+      title: tt('campmap.the_settlement_standing_on_this_province')},
+     {id: 'chars', label: tt('common.characters'), panels: ['cmChars'],
+      title: tt('campmap.the_people_this_campaign_starts_on')},
+     {id: 'forts', label: tt('campmap.forts'), panels: ['cmForts'],
       open: {fn: 'cftToggle', at: 'cft'},
-      title: 'The forts and watchtowers this campaign starts with'},
+      title: tt('campmap.the_forts_and_watchtowers_this_campaign')},
    ]},
-  {id: 'camp', label: 'Campaign', icon: '\u2691',
-   title: 'The campaign\u2019s own settings',
+  {id: 'camp', label: tt('campmap.campaign'), icon: '\u2691',
+   title: tt('campmap.the_campaigns_own_settings'),
    subs: [
-     {id: 'settings', label: 'Settings', panels: ['cmCamp'],
+     {id: 'settings', label: tt('campmap.settings'), panels: ['cmCamp'],
       open: {fn: 'cjToggle', at: 'cj'},
-      title: 'What descr_strat.txt says about the campaign as a whole'},
+      title: tt('campmap.what_descr_strat_txt_says_about')},
    ]},
 ];
 
@@ -397,7 +397,7 @@ function cmapRailHtml(){
   if(!c) return '';
   return `<div class="cmrail" id="cmRail">
     <button class="cmtabx" onclick="cmapSideCollapse()"
-      title="Open the column again">‹</button>
+      title="${ttA('campmap.open_the_column_again')}">‹</button>
     ${CMAP_TABS.map(t => `<button class="cmrailb${c.tab === t.id ? ' on' : ''}${
       c.fresh[t.id] ? ' fresh' : ''}" title="${esc(t.label)}"
       onclick="cmapTab('${t.id}')">${t.icon}</button>`).join('')}
@@ -506,14 +506,10 @@ async function loadCampmap(){
   // core.js). Asking for the map of no mod answers "unknown mod", which is true
   // of the request and useless about the situation.
   if(!mod){
-    main.innerHTML = `<div class="empty">No mod is picked yet.<br>
-      <span class="count">The campaign map is read out of one mod's
-      <code>data/world/maps/base</code>, so there is nothing to draw until the mod
-      list arrives. If it does not, reloading the page fetches it again.</span></div>`;
+    main.innerHTML = `<div class="empty">${tt('campmap.no_mod_is_picked_yet_the')}</div>`;
     return;
   }
-  main.innerHTML = `<div class="empty">Reading ${esc(mod)}’s campaign map…<br>
-    <span class="count">ten layers, the region index and descr_regions.txt</span></div>`;
+  main.innerHTML = `<div class="empty">${tt('campmap.reading_s_campaign_map_ten_layers',{mod:esc(mod)})}</div>`;
   let man;
   try{ man = await api.get(`/api/map?mod=${enc(mod)}`
     + (campaign ? `&campaign=${enc(campaign)}` : '')); }
@@ -526,13 +522,8 @@ async function loadCampmap(){
     // server said rather than by the status.
     const why = errText(e);
     main.innerHTML = `<div class="empty" style="max-width:520px;margin:60px auto">
-      <b>${esc(mod)}</b> has no campaign map this tool can read.<br>
-      <span class="count">${esc(why)}</span><br><br>
-      <span class="count">A mod only has one if it ships
-      <code>data/world/maps/base</code> - the terrain header, the region list and
-      the ten TGA layers. Without them the game uses its own map, and there is
-      nothing here to draw.</span><br><br>
-      <button class="primary" onclick="loadCampmap()">Try again</button></div>`;
+      <b>${esc(mod)}</b> ${tt('campmap.has_no_campaign_map_this_tool',{why:esc(why)})}<br><br>
+      <button class="primary" onclick="loadCampmap()">${tt('campmap.try_again')}</button></div>`;
     return;
   }
   if(stale('campmap', mod)) return;
@@ -679,13 +670,13 @@ function cmapSaveLayers(){
 function cmapResetView(){
   const c = state.cmap;
   if(!c) return;
-  if(!confirm('Put the campaign map back to how it first opens?\n\n'
+  if(!confirm(tt('campmap.put_the_campaign_map_back_to')
     + 'Every layer, its opacity, its order and the colours punched out of it; '
-    + 'the terrain textures, and the rivers and heights readings; settlement '
-    + 'names and the tooltip; the markers; the query panel\'s colouring and '
+    + tt('campmap.the_terrain_textures_and_the_rivers')
+    + tt('campmap.names_and_the_tooltip_the_markers')
     + 'filters; the tab strip, the layer stack and the width of this column; '
-    + 'the 3D view, its height scale and its water; and the zoom.\n\n'
-    + 'Saved views, the campaign you are reading and any unsaved painting are kept.'))
+    + tt('campmap.the_3d_view_its_height_scale')
+    + tt('campmap.saved_views_the_campaign_you_are')))
     return;
   for(const l of c.man.layers){
     const L = c.layers[l.code];
@@ -723,7 +714,7 @@ function cmapResetView(){
   // the query panel and the marker layer are panels of their own; nulling them
   // is how cmapSetCampaign resets them too, and each rebuilds closed and empty
   state.cq = null; state.cmk = null;
-  activity('map layer', 'reset the map to its defaults');
+  activity(tt('campmap.map_layer'), tt('campmap.reset_the_map_to_its_defaults'));
   cmapSaveLayers();
   renderCampmap();
   for(const code of c.order) if(c.layers[code].img) cmapMask(c, code);
@@ -732,7 +723,7 @@ function cmapResetView(){
   // one of the defaults now, so the reset fetches it the way opening does
   if(c.terrain.on) cmapTerrainLoad();
   cmapFit();
-  toast('The map is back to its defaults. Saved views are kept.');
+  toast(tt('campmap.the_map_is_back_to_its'));
 }
 
 /* The saved draw order, reconciled with the layers this manifest actually has.
@@ -921,14 +912,14 @@ function cmapSetCampaign(rel){
   // worth warning about; the events panel builds a whole block before it writes
   // anything, and that is the one somebody can lose.
   if(typeof cevDirty === 'function' && cevDirty()
-     && !confirm('Read a different campaign?\n\n'
-        + 'The events panel has an unsaved block in it, and it is a block in '
-        + 'the campaign you are leaving.')) return;
+     && !confirm(tt('campmap.read_a_different_campaign')
+        + tt('campmap.the_events_panel_has_an_unsaved')
+        + tt('campmap.the_campaign_you_are_leaving'))) return;
   // 22a: and the forts panel, whose form is a line nobody has saved yet
   if(typeof cftDirty === 'function' && cftDirty()
-     && !confirm('Read a different campaign?\n\n'
-        + 'The forts panel has an unsaved fort or watchtower in it, in the '
-        + 'campaign you are leaving.')) return;
+     && !confirm(tt('campmap.read_a_different_campaign')
+        + tt('campmap.the_forts_panel_has_an_unsaved')
+        + tt('campmap.campaign_you_are_leaving'))) return;
   c.campaign = want;
   // 20c: every field a pin can write into is one of the panels reset below
   state.cpin = null;
@@ -950,7 +941,7 @@ function cmapSetCampaign(rel){
   state.cft = null;
   c.det = null; c.cv = null; c.overlay = null; c.overlayEdge = null;
   c.overlayKey = '';
-  activity('campaign browser', `read ${want || 'the default campaign'}`);
+  activity(tt('campmap.campaign_browser'), `read ${want || tt('campmap.the_default_campaign')}`);
   renderCampmap();
   if(was.cj) cjToggle();
   if(was.cev) cevToggle();
@@ -1039,15 +1030,9 @@ function cmapHomeNote(){
   if(!h || !(h.own || []).length) return '';
   const own = h.own.map(f => `<code>${esc(f)}</code>`).join(', ');
   if(!h.judged)
-    return `<div class="count">${esc(h.campaign)} ships its own ${own}, so that
-      layer is drawn from <code>${esc(h.folder)}</code>. Everything else is
-      <code>world/maps/base</code>, which is what the brush paints.</div>`;
+    return `<div class="count">${tt('campmap.ships_its_own_so_that_layer',{campaign:esc(h.campaign),own,folder:esc(h.folder)})}</div>`;
   const readers = (h.readers || []).map(esc).join(', ');
-  return `<div class="w-warn">${esc(h.campaign)} reads its own map: ${own}, from
-    <code>${esc(h.folder)}</code>. The layers, the names under the pointer and
-    ✓ Check are that map. The brush is off here, because it paints
-    <code>world/maps/base</code>${readers ? `, which ${readers} read${
-      h.readers.length === 1 ? 's' : ''}` : ''}.</div>`;
+  return `<div class="w-warn">${tt('campmap.reads_its_own_map_from_the',{campaign:esc(h.campaign),own,folder:esc(h.folder),x:readers ? tt('campmap.which_read',{readers,readers2:h.readers.length === 1 ? 's' : ''}) : ''})}</div>`;
 }
 
 /* Centre the map on a tile and pick it.
@@ -1155,71 +1140,50 @@ function renderCampmap(){
   main.innerHTML = `
     <div class="cmworkspace">
     <div class="cmwrap">
-      <!-- 49: the colours, on the left, where the user asked for them. Empty
-           and hidden until the brush is armed - see cpaintDockPaint. -->
+      ${tt('campmap.x')}
       <aside class="cmpalcol" id="cmPalCol" hidden></aside>
       <div class="cmstage" id="cmStage">
-        <canvas id="cmCanvas" aria-label="Campaign map. Drag to pan, scroll to zoom, click a province to inspect."${
+        <canvas id="cmCanvas" aria-label="${ttA('campmap.campaign_map_drag_to_pan_scroll')}"${
           cmap3d() ? ' hidden' : ''}></canvas>
-        <!-- M18: the mesh, over the same stage and under the same bar. Hidden
-             until the mode is on; the flat canvas keeps its pixels while it is,
-             so coming back is a repaint and not a reload. -->
-        <canvas id="cm3Canvas" aria-label="The campaign map as a surface. Drag to turn, right-drag to pan, scroll to zoom."${
+        ${tt('campmap.x_2')}
+        <canvas id="cm3Canvas" aria-label="${ttA('campmap.the_campaign_map_as_a_surface')}"${
           cmap3d() ? '' : ' hidden'}></canvas>
         <div class="cm3msg" id="cm3Msg" hidden></div>
         <div class="cm3card" id="cm3Card"${cmap3d() ? '' : ' hidden'}></div>
         <div class="cmbar" id="cmBar">
           <div class="cmbarrow">
-          <button onclick="cmapFit()" title="Fit the whole map (Shift+0).
-The bare number keys tick a layer - 1 to 0, one for each of the ten.">⤢ Fit</button>
+          <button onclick="cmapFit()" title="${ttA('campmap.fit_the_whole_map_shift_0')}">${tt('campmap.fit')}</button>
           <button onclick="cmapZoomTo(1)"
-            title="One screen pixel per tile (Shift+1)">1:1</button>
-          <button onclick="cmapZoomBy(1/1.4)" title="Zoom out (−)">−</button>
-          <button onclick="cmapZoomBy(1.4)" title="Zoom in (+)">+</button>
+            title="${ttA('campmap.one_screen_pixel_per_tile_shift')}">1:1</button>
+          <button onclick="cmapZoomBy(1/1.4)" title="${ttA('campmap.zoom_out')}">−</button>
+          <button onclick="cmapZoomBy(1.4)" title="${ttA('campmap.zoom_in')}">+</button>
           <button id="cmTipBtn" class="${c.tip === false ? '' : 'on'}"
             onclick="cmapTipToggle()"
-            title="Show region names and coordinates under the pointer (T).
-Answered here, out of the map you were already sent - no request per pixel.">ⓘ Names</button>
+            title="${ttA('campmap.show_region_names_and_coordinates_under')}">${tt('campmap.names')}</button>
           <button id="cmLabBtn" class="${c.labels ? 'on' : ''}" onclick="clnToggle()"
-            title="Settlement, character and port names beside their markers (L), placed so that none covers another.
-A name with no room at this zoom is left off and counted; zoom in for it.">Aa Labels</button>
-          <!-- M18: the same map, as a mesh. A MODE and not a screen - the
-               layers, the opacities, the season and the colouring are the ones
-               already set here. See map3d.js. -->
+            title="${ttA('campmap.settlement_character_and_port_names_beside')}">${tt('campmap.aa_labels')}</button>
+          ${tt('campmap.x_3')}
           <button id="cm3Btn" class="${cmap3d() ? 'on' : ''}" aria-pressed="${cmap3d()}"
             onclick="cm3Toggle()"
-            title="The heights as a surface, with this map's own ground on it, orbited (D).
-Drag to turn, right-drag to pan, wheel to zoom.
-Markers, labels and the tooltip stay on the flat map.">⛰ 3D</button>
+            title="${ttA('campmap.the_heights_as_a_surface_with')}">⛰ 3D</button>
           <button onclick="cmapResetView()"
-            title="Put the map back to how it first opens: every layer, opacity, order and
-punched colour, the terrain textures, the rivers and heights readings, names, the
-tooltip, the markers, the query panel's colouring and filters, the tab strip and
-this column's width, and the zoom.
-Saved views are kept.">↺ Reset</button>
+            title="${ttA('campmap.put_the_map_back_to_how')}">${tt('campmap.reset')}</button>
             <span class="count" id="cmZoom"></span>
           </div>
-          <!-- 28b: the brush, over the map it paints. A stroke is made
-               with the eyes on the map, so the controls that make one are
-               here rather than in a panel beside it. -->
+          ${tt('campmap.x_4')}
           <div class="cmbarrow cmpaint" id="cmPaintBar"></div>
         </div>
         <div class="cmpin" id="cmPin" hidden></div>
-        <!-- 50: the layer stack, over the map instead of under the column.
-             Hidden until the foot's button opens it, and the same markup under
-             the same id, so cmapRepanel and cmapWireLayers did not move with
-             it. (No backticks in here: this is inside a template literal.) -->
+        ${tt('campmap.x_5')}
         <div class="cmlaypop" id="cmLayPop"${c.layPop ? '' : ' hidden'}>
           <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
         </div>
         <div class="cmfoot">
           <button id="cmLayBtn" class="cmlaybtn${c.layPop ? ' on' : ''}"
             onclick="cmapLayPop()"
-            title="The ten map layers: what is drawn, in what order, at what opacity,
-and what each colour on one means (S).
-The bare number keys 1 to 0 tick a layer whether this is open or not.">▤ Layers
+            title="${ttA('campmap.the_ten_map_layers_what_is')}">${tt('campmap.layers')}
             <span class="count" id="cmLayN">${cmapLayerCount()}</span></button>
-          <div class="cmread" id="cmRead">move the pointer over the map</div>
+          <div class="cmread" id="cmRead">${tt('campmap.move_the_pointer_over_the_map')}</div>
         </div>
         <div class="cmtip" id="cmTip" hidden></div>
         <div class="cmperf" id="cmPerf"></div>
@@ -1229,14 +1193,10 @@ The bare number keys 1 to 0 tick a layer whether this is open or not.">▤ Layer
         <div class="cmhead">
           <div>
             <b>${esc(c.mod)}</b>
-            <span class="count">${m.width}×${m.height} tiles ·
-              ${m.regions.filter(r => r.id >= 0).length} regions ·
-              ${m.regions.filter(r => r.settlement).length} settlements ·
-              ${m.regions.filter(r => r.port).length} ports</span>
+            <span class="count">${tt('campmap.tiles_regions_settlements_ports',{width:m.width,height:m.height,n:m.regions.filter(r => r.id >= 0).length,n2:m.regions.filter(r => r.settlement).length,n3:m.regions.filter(r => r.port).length})}</span>
           </div>
           <button class="cmtabx" onclick="cmapSideCollapse()"
-            title="Collapse the column. The tabs stay on the rail, so it comes
-back from the collapsed state.">›</button>
+            title="${ttA('campmap.collapse_the_column_the_tabs_stay')}">›</button>
         </div>
         ${cmapTabsHtml()}
         ${cmapSubsHtml()}
@@ -1253,18 +1213,18 @@ back from the collapsed state.">›</button>
       </div>
     </div>
       <footer class="cmworkspacehead">
-        <div><span class="cmeyebrow">CAMPAIGN MAP</span><strong>${esc(c.mod)}</strong></div>
-        <nav class="cmquick" aria-label="Campaign map actions">
-          <button onclick="cmapSub('map','find');cfdFocus()" title="Find a province or settlement (F)">⌕ Regions <kbd>F</kbd></button>
-          <button onclick="cmapSub('paint','brush')">Paint &amp; terrain</button>
-          <button class="primary" onclick="cmapSub('paint','create')">＋ Create</button>
-          <button onclick="cmapSub('paint','marks')">Map icons</button>
-          <button onclick="cmapSub('check','rules')">✓ Validate map</button>
-          <details class="cmhelp"><summary>Help</summary><div>
-            <b>Move around</b><p>Drag to pan. Scroll to zoom. Use Fit to see the whole map.</p>
-            <b>Edit the map</b><p>Click a province to inspect it. Turn on Paint to edit tiles; right or middle drag still pans. Choose a layer and colour on the left.</p>
-            <b>Keyboard shortcuts</b><p>F · Find a place<br>L · Settlement labels<br>S · Layers<br>T · Tile information<br>Shift + 0 · Fit map<br>Ctrl + Z / Y · Undo / redo while painting</p>
-            <b>Save your work</b><p>Paint changes stay pending until you save. Review &amp; save shows the changes before writing them.</p>
+        <div>${tt('campmap.campaign_map',{mod:esc(c.mod)})}</div>
+        <nav class="cmquick" aria-label="${ttA('campmap.campaign_map_actions')}">
+          <button onclick="cmapSub('map','find');cfdFocus()" title="${ttA('campmap.find_a_province_or_settlement_f')}">${tt('campmap.regions')} <kbd>F</kbd></button>
+          <button onclick="cmapSub('paint','brush')">${tt('campmap.paint_terrain')}</button>
+          <button class="primary" onclick="cmapSub('paint','create')">${tt('campmap.create')}</button>
+          <button onclick="cmapSub('paint','marks')">${tt('campmap.map_icons')}</button>
+          <button onclick="cmapSub('check','rules')">${tt('campmap.validate_map')}</button>
+          <details class="cmhelp"><summary>${tt('campmap.help')}</summary><div>
+            <b>${tt('campmap.move_around')}</b><p>${tt('campmap.drag_to_pan_scroll_to_zoom')}</p>
+            <b>${tt('campmap.edit_the_map')}</b><p>${tt('campmap.click_a_province_to_inspect_it')}</p>
+            <b>${tt('campmap.keyboard_shortcuts')}</b><p>${tt('campmap.f_find_a_place_l_settlement')}</p>
+            <b>${tt('campmap.save_your_work')}</b><p>${tt('campmap.paint_changes_stay_pending_until_you')}</p>
           </div></details>
         </nav>
         <div class="cmworkstate" id="cmWorkState"></div>
@@ -1318,23 +1278,15 @@ function cmapFindingsHtml(f){
   const rows = [];
   for(const line of f.layers) rows.push(['bad', line]);
   for(const u of f.undeclared_land) rows.push(['warn',
-    `A ${u.pixels}-tile province at ${u.bbox[0]},${u.bbox[1]} to ${u.bbox[2]},${u.bbox[3]} is
-     painted <b style="color:rgb(${u.rgb.join(',')})">rgb(${u.rgb.join(', ')})</b> and declared
-     nowhere in descr_regions.txt. Not one tile of it is sea, so it is land the game has no
-     region for.`]);
+    tt('campmap.a_tile_province_at_to_is',{pixels:u.pixels,bbox:u.bbox[0],bbox2:u.bbox[1],bbox3:u.bbox[2],bbox4:u.bbox[3],rgb:u.rgb.join(','),rgb2:u.rgb.join(', ')})]);
   if(f.sea_colours) rows.push(['note',
-    `${f.sea_colours} colour${f.sea_colours === 1 ? '' : 's'} on the map
-     ${f.sea_colours === 1 ? 'is' : 'are'} sea and declared nowhere, which is normal -
-     the ocean has no region record.`]);
+    tt('campmap.colour_on_the_map_sea_and',{sea_colours:f.sea_colours,x:f.sea_colours === 1 ? '' : 's',x2:f.sea_colours === 1 ? 'is' : 'are'})]);
   if(f.empty_records.length) rows.push(['warn',
-    `${f.empty_records.length} declared region${f.empty_records.length === 1 ? '' : 's'} with
-     no pixels at all: ${esc(f.empty_records.slice(0, 4).join(', '))}`]);
+    tt('campmap.declared_region_with_no_pixels_at',{empty_records_n:f.empty_records.length,x:f.empty_records.length === 1 ? '' : 's',x2:esc(f.empty_records.slice(0, 4).join(', '))})]);
   if(f.orphan_settlements.length) rows.push(['warn',
-    `${f.orphan_settlements.length} settlement pixel${f.orphan_settlements.length === 1 ? '' : 's'}
-     standing in no region: ${f.orphan_settlements.map(p => p.join(',')).join(' · ')}`]);
+    tt('campmap.settlement_pixel_standing_in_no_region',{orphan_settlements_n:f.orphan_settlements.length,x:f.orphan_settlements.length === 1 ? '' : 's',x2:f.orphan_settlements.map(p => p.join(',')).join(' · ')})]);
   if(f.undecided_ports.length) rows.push(['warn',
-    `${f.undecided_ports.length} port pixel${f.undecided_ports.length === 1 ? '' : 's'}
-     whose owning region cannot be decided`]);
+    tt('campmap.port_pixel_whose_owning_region_cannot',{undecided_ports_n:f.undecided_ports.length,x:f.undecided_ports.length === 1 ? '' : 's'})]);
   for(const p of f.record_problems.slice(0, 5))
     rows.push(['warn', `${esc(p.name)}: ${esc(p.problems.join('; '))}`]);
   if(!rows.length) return '';
@@ -1378,9 +1330,8 @@ function cmapLayerCount(){
 
 function cmapLayersHtml(){
   const c = state.cmap;
-  return `<div class="cmlayerhead"><div><b>Map layers</b>
-    <span>Top layers appear above those below.</span></div>
-    <button onclick="cmapLayPop(false)" aria-label="Close layers" title="Close layers (S)">×</button></div>`
+  return `<div class="cmlayerhead"><div>${tt('campmap.map_layers_top_layers_appear_above')}</div>
+    <button onclick="cmapLayPop(false)" aria-label="${ttA('campmap.close_layers')}" title="${ttA('campmap.close_layers_s')}">×</button></div>`
     + c.order.map((code, i) => {
     const L = c.layers[code], d = L.def;
     // the panel reads top-down as "what you see first", so it is the draw order
@@ -1388,33 +1339,31 @@ function cmapLayersHtml(){
     const note = !d.present ? `<span class="${d.required ? 'w-bad' : 'count'}">${esc(d.problem)}</span>`
       : L.failed ? `<span class="w-bad">${esc(L.failed)}</span>`
       : d.problem ? `<span class="w-bad">${esc(d.problem)}</span>`
-      : !d.aligned ? `<span class="w-warn">${d.native[0]}×${d.native[1]}, not on the tile
-          grid - stretched to fit</span>`
+      : !d.aligned ? `<span class="w-warn">${tt('campmap.not_on_the_tile_grid_stretched',{native:d.native[0],native2:d.native[1]})}</span>`
       : `<span class="count">${d.file}${d.native[0] !== d.width
-          ? ` · ${d.native[0]}×${d.native[1]}, sampled per tile` : ''}</span>`;
+          ? tt('campmap.sampled_per_tile',{native:d.native[0],native2:d.native[1]}) : ''}</span>`;
     // how much of this layer is not being drawn, so a layer that is on and
     // invisible is never a mystery
     const hid = L.hide.size && !(code === 'features' && c.rivers)
-      ? ` <span class="cmhid" title="colours punched through">
-      ${L.hide.size} hidden</span>` : '';
+      ? ` <span class="cmhid" title="${ttA('campmap.colours_punched_through')}">
+      ${tt('campmap.hidden',{hide_n:L.hide.size})}</span>` : '';
     // 20a, T11: the key that ticks this layer, printed on the row it ticks. The
     // digit is the server's - campmap.HOTKEYS - so the panel cannot promise a
     // key the handler does not answer to.
-    const key = d.hotkey ? `<b class="cmkey" title="Press ${d.hotkey} to show or hide
-      this layer">${esc(d.hotkey)}</b>` : '';
+    const key = d.hotkey ? `<b class="cmkey" title="${ttA('campmap.press_to_show_or_hide_this',{hotkey:d.hotkey})}">${esc(d.hotkey)}</b>` : '';
     return `<div class="cmlayer${L.on ? ' on' : ''}${d.present ? '' : ' off'}" data-code="${code}">
       <label class="chk"><input type="checkbox" ${L.on ? 'checked' : ''}
         ${d.present ? '' : 'disabled'} data-lcheck="${code}">
         ${key}<span class="cmnm">${esc(d.label)}</span></label>
       <span class="cmmove">
         <button data-lleg="${code}" ${d.present ? '' : 'disabled'} class="${L.open ? 'on' : ''}"
-          aria-expanded="${!!L.open}" title="Layer options and colour legend"
-          >Options ${L.open ? '▴' : '▾'}</button>
-        <button data-lup="${code}" ${i === c.order.length - 1 ? 'disabled' : ''} aria-label="Move ${esc(d.label)} up" title="Draw later (up)">↑</button>
-        <button data-ldn="${code}" ${i === 0 ? 'disabled' : ''} aria-label="Move ${esc(d.label)} down"
-          title="Draw earlier (down)">↓</button></span>
-      <div class="cmlayeropacity"><span>Opacity</span>
-      <input type="range" min="0" max="100" value="${Math.round(L.opacity * 100)}" aria-label="${esc(d.label)} opacity"
+          aria-expanded="${!!L.open}" title="${ttA('campmap.layer_options_and_colour_legend')}"
+          >${tt('campmap.options',{x:L.open ? '▴' : '▾'})}</button>
+        <button data-lup="${code}" ${i === c.order.length - 1 ? 'disabled' : ''} aria-label="${ttA('campmap.move_up',{label:esc(d.label)})}" title="${ttA('campmap.draw_later_up')}">↑</button>
+        <button data-ldn="${code}" ${i === 0 ? 'disabled' : ''} aria-label="${ttA('campmap.move_down',{label:esc(d.label)})}"
+          title="${ttA('campmap.draw_earlier_down')}">↓</button></span>
+      <div class="cmlayeropacity"><span>${tt('campmap.opacity_2')}</span>
+      <input type="range" min="0" max="100" value="${Math.round(L.opacity * 100)}" aria-label="${ttA('campmap.opacity',{label:esc(d.label)})}"
         data-lop="${code}" ${d.present && L.on ? '' : 'disabled'}>
       <span class="cmpct">${Math.round(L.opacity * 100)}%</span></div>
       ${L.open || !d.present || L.failed || d.problem || !d.aligned || hid ? `<div class="cmnote">${note}${hid}</div>` : ''}
@@ -1439,16 +1388,13 @@ function cmapModeHtml(code){
   if(code === 'features'){
     const n = c.layers.features.rivertiles;
     return `<div class="cmmode">
-      <label class="chk" title="Draw only the river network - river, crossing and source -
-in one colour of your own, instead of three colours inside a layer that is almost
-all 'nothing here'. Open the legend for this map's own figure.">
+      <label class="chk" title="${ttA('campmap.draw_only_the_river_network_river')}">
         <input type="checkbox" data-lriver ${c.rivers ? 'checked' : ''}>
-        <span>Rivers only</span></label>
+        <span>${tt('campmap.rivers_only')}</span></label>
       <input type="color" data-lrivercol value="${cmapHex(c.riverRgb)}"
-        title="What the river network is drawn in" ${c.rivers ? '' : 'disabled'}>
-      ${c.rivers ? `<span class="count">${n.toLocaleString()} river
-        tile${n === 1 ? '' : 's'}${c.layers.features.hide.size
-          ? ' · the hidden colours do not apply while this is on' : ''}</span>` : ''}
+        title="${ttA('campmap.what_the_river_network_is_drawn')}" ${c.rivers ? '' : 'disabled'}>
+      ${c.rivers ? `<span class="count">${tt('campmap.river_tile',{x:n.toLocaleString(),x2:n === 1 ? '' : 's',x3:c.layers.features.hide.size
+          ? tt('campmap.the_hidden_colours_do_not_apply') : ''})}</span>` : ''}
     </div>`;
   }
   if(code === 'heights'){
@@ -1465,18 +1411,13 @@ all 'nothing here'. Open the legend for this map's own figure.">
     // ramp. Zero until that pass has run, and then the sentence appears.
     const med = (c.layers.heights.ramp || {}).median || 0;
     return `<div class="cmmode">
-      <label class="chk" title="Darker is more transparent, so what is under the heights
-shows through the low ground">
+      <label class="chk" title="${ttA('campmap.darker_is_more_transparent_so_what')}">
         <input type="checkbox" data-lalpha ${c.heightAlpha ? 'checked' : ''}>
-        <span>Height as transparency</span></label>
-      ${c.heightAlpha ? `<span class="count">the sea is not drawn, and the ramp is spread
-        over the heights THIS map has${med
-          ? ` - half its land is no higher than ${med} of 255` : ''}</span>` : ''}
-      ${over.length ? `<span class="w-warn">${esc(c.layers[over[over.length - 1]].def.label)}${
-        over.length > 1 ? ` and ${over.length - 1} more` : ''} still draw${
-        over.length > 1 ? '' : 's'} over it.</span>
-        <button data-ltop="heights" title="Put the heights at the top of the stack, so what
-is under them shows through">Put it on top</button>` : ''}
+        <span>${tt('campmap.height_as_transparency')}</span></label>
+      ${c.heightAlpha ? `<span class="count">${tt('campmap.the_sea_is_not_drawn_and',{med:med
+          ? ` - half its land is no higher than ${med} of 255` : ''})}</span>` : ''}
+      ${over.length ? `<span class="w-warn">${tt('campmap.still_draw_over_it',{x:esc(c.layers[over[over.length - 1]].def.label),over:over.length > 1 ? tt('campmap.and_more',{over:over.length - 1}) : '',over2:over.length > 1 ? '' : 's'})}</span>
+        <button data-ltop="heights" title="${ttA('campmap.put_the_heights_at_the_top')}">${tt('campmap.put_it_on_top')}</button>` : ''}
     </div>`;
   }
   return '';
@@ -1501,42 +1442,26 @@ function cmapTerrainHtml(){
   // pixels that have moved. Said and offered, never done: the composite is a
   // second of work and a brush that rebuilt it per stroke would be the lag 16c
   // was written to avoid.
-  const old = (t.on && t.stale) ? `<span class="w-warn">the ground types or the
-      climates have been painted since this was drawn</span>
-      <button data-lterraindraw title="Build the composite again from the map as it is
-now, unsaved strokes included">↻ Redraw</button>` : '';
-  const note = t.loading ? `<span class="count">building the composite…</span>`
+  const old = (t.on && t.stale) ? `<span class="w-warn">${tt('campmap.the_ground_types_or_the_climates')}</span>
+      <button data-lterraindraw title="${ttA('campmap.build_the_composite_again_from_the')}">${tt('campmap.redraw')}</button>` : '';
+  const note = t.loading ? `<span class="count">${tt('campmap.building_the_composite')}</span>`
     : old ? old
     : t.failed ? `<span class="w-bad">${esc(t.failed)}</span>`
     : (f && !f.have) ? `<span class="w-warn">${esc(f.problem)}</span>`
-    : (f && t.on) ? `<span class="count">${f.textures} texture${f.textures === 1 ? '' : 's'}
-        out of ${esc(f.vocabulary.folder)}, ${f.scale} pixels a tile${f.pink_tiles
-          ? '' : ' · every land tile drawn'}</span>${f.pink_tiles
+    : (f && t.on) ? tt('campmap.texture_out_of_pixels_a_tile',{textures:f.textures,x:f.textures === 1 ? '' : 's',folder:esc(f.vocabulary.folder),scale:f.scale,x2:f.pink_tiles
+          ? '' : tt('campmap.every_land_tile_drawn'),x3:f.pink_tiles
         ? ` <span class="w-warn" title="${esc(f.gaps.map(g => g.why).join('\n\n'))}">
-            ${f.pink_tiles.toLocaleString()} tile${f.pink_tiles === 1 ? '' : 's'}
-            have no texture and are drawn ${esc((CMAP_GAP_LABELS[t.gap]
-              || 'pink').toLowerCase())}</span>` : ''}`
+            ${tt('campmap.tile_have_no_texture_and_are',{pink_tiles:f.pink_tiles.toLocaleString(),x:f.pink_tiles === 1 ? '' : 's',x2:esc((CMAP_GAP_LABELS[t.gap]
+              || 'pink').toLowerCase())})}</span>` : ''})
     : '';
   return `<div class="cmmode">
-    <label class="chk" title="Draw the ground the way the game does: this mod's own
-aerial-map textures, one per climate and ground type, out of
-data/terrain/aerial_map/ground_types. It is map_ground_types.tga and
-map_climates.tga read together rather than an eleventh layer, so it goes on this row -
-and it is drawn under the whole stack, because it is the ground.
-A tile whose texture cannot be found is counted and drawn in the colour picked
-beside this, never skipped.">
+    <label class="chk" title="${ttA('campmap.draw_the_ground_the_way_the')}">
       <input type="checkbox" data-lterrain ${t.on ? 'checked' : ''}>
-      <span>Terrain textures</span></label>
-    <span class="cmseg">${[['summer', 'Summer'], ['winter', 'Winter']].map(([sn, lab]) =>
+      <span>${tt('campmap.terrain_textures')}</span></label>
+    <span class="cmseg">${[['summer', tt('campmap.summer')], ['winter', tt('campmap.winter')]].map(([sn, lab]) =>
       `<button data-lseason="${sn}" class="${t.season === sn ? 'on' : ''}"
-        ${t.on ? '' : 'disabled'} title="Draw the ${sn} texture of every climate that
-has one. A climate with no winter in descr_climates.txt is drawn in its summer
-textures all year, which is the engine's own rule.">${lab}</button>`).join('')}</span>
-    <span class="cmseg" title="What goes under a tile the terrain could not draw.
-Pink is TWMapReader's and is the loudest; Neutral reads as nothing-here; Sea is the
-honest answer for the usual gap, a tile the ground types call sea and the heights
-call land. The count beside this and the Check panel's rule do not move whichever
-is picked - this chooses how a gap is DRAWN, never whether it shows."
+        ${t.on ? '' : 'disabled'} title="${ttA('campmap.draw_the_texture_of_every_climate',{sn})}">${lab}</button>`).join('')}</span>
+    <span class="cmseg" title="${ttA('campmap.what_goes_under_a_tile_the')}"
       >${((f && f.gap_fills) || CMAP_GAPS).map(g =>
       `<button data-lgap="${g}" class="${(t.gap || CMAP_GAPS[0]) === g ? 'on' : ''}"
         ${t.on ? '' : 'disabled'}>${esc(CMAP_GAP_LABELS[g] || g)}</button>`).join('')}</span>
@@ -1550,7 +1475,7 @@ is picked - this chooses how a gap is DRAWN, never whether it shows."
 function cmapTerrain(on){
   const c = state.cmap, L = c.layers.ground_types;
   c.terrain.on = !!on;
-  activity('map layer', `${on ? 'drew' : 'stopped drawing'} the ground with the game's textures`);
+  activity(tt('campmap.map_layer'), tt('campmap.the_ground_with_the_games_textures',{on:on ? 'drew' : tt('campmap.stopped_drawing')}));
   if(on && L.def.present && !L.on) L.on = true;
   L.maskKey = '';
   if(L.img) cmapMask(c, 'ground_types');
@@ -1578,7 +1503,7 @@ function cmapTerrainGap(gap){
   const want = CMAP_GAPS.indexOf(gap) >= 0 ? gap : CMAP_GAPS[0];
   if((t.gap || CMAP_GAPS[0]) === want) return;
   t.gap = want;
-  activity('map layer', `drew a tile with no texture as ${want}`);
+  activity(tt('campmap.map_layer'), tt('campmap.drew_a_tile_with_no_texture',{want}));
   cmapSaveLayers();
   if(!t.on) return cmapRepanel();
   cmapTerrainLoad().then(() => {
@@ -1594,7 +1519,7 @@ function cmapTerrainSeason(season){
   const want = season === 'winter' ? 'winter' : 'summer';
   if(t.season === want) return;
   t.season = want;
-  activity('map layer', `drew the terrain in ${want}`);
+  activity(tt('campmap.map_layer'), tt('campmap.drew_the_terrain_in',{want}));
   cmapSaveLayers();
   if(!t.on) return cmapRepanel();
   cmapTerrainLoad().then(() => {
@@ -1731,7 +1656,7 @@ function cmapToggleLayer(code, want){
   // same nothing rather than turning on a layer there is no picture for
   if(!L || !L.def.present) return;
   L.on = want === undefined ? !L.on : !!want;
-  activity('map layer', `${L.on ? 'showed' : 'hid'} ${code}`);
+  activity(tt('campmap.map_layer'), `${L.on ? 'showed' : 'hid'} ${code}`);
   cmapLoadLayers();
   cmapSaveLayers();
   cmapRepanel();
@@ -1749,7 +1674,7 @@ function cmapMode(code, field, on){
   c[field] = on;
   if(on && L.def.present && !L.on){
     L.on = true;
-    activity('map layer', `showed ${code}`);
+    activity(tt('campmap.map_layer'), `showed ${code}`);
   }
   L.maskKey = '';
   if(L.img) cmapMask(c, code);
@@ -1843,7 +1768,7 @@ function cmapWireLayers(){
     cmapHideColour(cb.dataset.lhide, +cb.dataset.key, cb.checked));
   // 20a's two readings
   box.querySelectorAll('[data-lriver]').forEach(cb => cb.onchange = () => {
-    activity('map layer', `${cb.checked ? 'lifted the rivers out of' : 'put the rivers back into'} map_features.tga`);
+    activity(tt('campmap.map_layer'), `${cb.checked ? tt('campmap.lifted_the_rivers_out_of') : tt('campmap.put_the_rivers_back_into')} map_features.tga`);
     cmapMode('features', 'rivers', cb.checked);
   });
   // `input` rather than `change`, same as the opacity slider: a colour you can
@@ -1858,7 +1783,7 @@ function cmapWireLayers(){
   });
   box.querySelectorAll('[data-ltop]').forEach(b => b.onclick = () => cmapMoveTop(b.dataset.ltop));
   box.querySelectorAll('[data-lalpha]').forEach(cb => cb.onchange = () => {
-    activity('map layer', `drew the heights as ${cb.checked ? 'transparency' : 'grey'}`);
+    activity(tt('campmap.map_layer'), tt('campmap.drew_the_heights_as',{x:cb.checked ? 'transparency' : 'grey'}));
     cmapMode('heights', 'heightAlpha', cb.checked);
   });
   // 23a's third reading. Its own toggler rather than `cmapMode`: the picture is
@@ -1870,7 +1795,7 @@ function cmapWireLayers(){
   box.querySelectorAll('[data-lgap]').forEach(b => b.onclick = () =>
     cmapTerrainGap(b.dataset.lgap));
   box.querySelectorAll('[data-lterraindraw]').forEach(b => b.onclick = () => {
-    activity('map layer', 'redrew the terrain composite');
+    activity(tt('campmap.map_layer'), tt('campmap.redrew_the_terrain_composite'));
     cmapTerrainLoad(true);
     cmapRepanel();
   });
@@ -1902,7 +1827,7 @@ function cmapMoveTop(code){
   const o = state.cmap.order, i = o.indexOf(code);
   if(i < 0 || i === o.length - 1) return;
   o.splice(i, 1); o.push(code);
-  activity('map layer', `drew ${code} last`);
+  activity(tt('campmap.map_layer'), tt('campmap.drew_last',{code}));
   cmapCompose(); cmapPaint(); cmapSaveLayers(); cmapRepanel();
 }
 
@@ -1974,7 +1899,7 @@ function cmapFetchLayer(c, code){
       return finish(errText(e));
     }
     if(!r.ok){
-      let why = `the server answered ${r.status}`;
+      let why = tt('campmap.the_server_answered',{status:r.status});
       try{ const j = await r.json(); if(j && j.error) why = j.error; }catch(e){}
       return finish(why);
     }
@@ -1982,7 +1907,7 @@ function cmapFetchLayer(c, code){
     const h = parseInt(r.headers.get('X-Map-Height'), 10);
     const rgb = new Uint8Array(await r.arrayBuffer());
     if(!(w > 0 && h > 0) || rgb.length !== w * h * 3)
-      return finish(`the layer arrived the wrong size (${rgb.length} bytes for ${w}x${h})`);
+      return finish(tt('campmap.the_layer_arrived_the_wrong_size',{rgb_n:rgb.length,x:w,x2:h}));
     if(state.cmap !== c) return finish('');
     L.raw = cmapRawFromRgb(rgb, w, h);
     L.img = cmapCanvasFrom(L.raw);
@@ -2067,8 +1992,8 @@ function cmapCompose(){
   // picture, and a composite that did not notice would show the old one
   const key = shown.map(code => `${code}:${c.layers[code].opacity}`
     + `:${cmapModeKey(c, code)}`).join('|')
-    + `|terrain:${cmapTerrainOn(c) ? 1 : 0}`
-    + `|fe:${c.layers.fe && c.layers.fe.on ? 1 : 0}`;
+    + tt('campmap.terrain',{cmapTerrainOn:cmapTerrainOn(c) ? 1 : 0})
+    + tt('campmap.fe',{x:c.layers.fe && c.layers.fe.on ? 1 : 0});
   if(key === c.compKey && c.comp) return;
   if(!c.comp){
     c.comp = document.createElement('canvas');
@@ -2607,17 +2532,17 @@ function cmapReadout(){
   // 17e: with the pointer on the map the tooltip beside it says all of this and
   // nine layers more, so the corner line would be the same tile twice, two
   // centimetres apart. It goes back to being the affordance it started as.
-  let html = 'move the pointer over the map';
+  let html = tt('campmap.move_the_pointer_over_the_map');
   if(c.hover){
     const [tx, ty] = c.hover;
     const r = cmapRegionAt(tx, ty);
     // game y, the transform descr_strat.txt is written in
     const gy = c.man.height - 1 - ty;
-    html = `<b>${tx}, ${ty}</b> image · <b>${tx}, ${gy}</b> game · `
-      + (r === 'settlement' ? '<span class="w-good">settlement pixel</span>'
-       : r === 'port' ? '<span class="w-good">port pixel</span>'
+    html = `<b>${tx}, ${ty}</b> ${tt('campmap.image_game',{tx,gy})} `
+      + (r === 'settlement' ? `<span class="w-good">${tt('campmap.settlement_pixel')}</span>`
+       : r === 'port' ? `<span class="w-good">${tt('campmap.port_pixel')}</span>`
        : r ? `${cmapRegionName(r)}${r.id >= 0 ? ` <span class="count">#${r.id}</span>` : ''}`
-       : '<span class="count">no region</span>');
+       : `<span class="count">${tt('campmap.no_region')}</span>`);
   }
   // 17d: a drag holds the tooltip down, so this is the only line on screen
   // while one is in progress - and where it would land, and why it may not, is
@@ -2625,9 +2550,9 @@ function cmapReadout(){
   const drag = state.cmk && state.cmk.drag;
   if(drag && drag.tile){
     html = `<b>${esc(drag.item.name || drag.item.kind)}</b> → `
-      + `<b>${drag.tile[0]}, ${c.man.height - 1 - drag.tile[1]}</b> game`
+      + `<b>${drag.tile[0]}, ${c.man.height - 1 - drag.tile[1]}</b> ${tt('campmap.game')}`
       + (drag.fault ? ` · <span class="w-bad">${esc(drag.fault)}</span>`
-                    : ' · <span class="w-good">drop to plan the move</span>');
+                    : ` ${tt('campmap.drop_to_plan_the_move')}`);
   }
   // 20c: while a pin waits, the line says what it would write, in the numbers
   // the field will get - which is the only coordinate somebody picking wants
@@ -2636,8 +2561,8 @@ function cmapReadout(){
     const g = c.hover && typeof cpinGame === 'function'
       ? cpinGame(c.hover, c.man.width, c.man.height) : null;
     html = `⌖ ${esc(pin.what)} ← `
-      + (g ? `<b>${g[0]}, ${g[1]}</b> game · click to take it`
-           : '<span class="count">move onto the map</span>');
+      + (g ? `<b>${g[0]}, ${g[1]}</b> ${tt('campmap.game_click_to_take_it')}`
+           : `<span class="count">${tt('campmap.move_onto_the_map')}</span>`);
   }
   const hide = !drag && !pin && !!(c.hover && c.tip !== false);
   if(el.hidden !== hide) el.hidden = hide;
@@ -2695,18 +2620,18 @@ function cmapNameColour(code, rgb){
   if(code === 'regions'){
     const mk = c.man.markers;
     if(k === ((mk.settlement[0] << 16) | (mk.settlement[1] << 8) | mk.settlement[2]))
-      return {name: 'Settlement marker', code: 'settlement'};
+      return {name: tt('campmap.settlement_marker'), code: 'settlement'};
     if(k === ((mk.port[0] << 16) | (mk.port[1] << 8) | mk.port[2]))
-      return {name: 'Port marker', code: 'port'};
+      return {name: tt('campmap.port_marker'), code: 'port'};
     const reg = c.byKey.get(k);
     if(reg && reg.name) return {name: reg.name, code: reg.name, region: reg};
     return {name: '', code: null, region: reg || null};
   }
   if(code === 'heights'){
     // the measured rule, not the ground types: sea iff not greyscale, or black
-    if(r === 0 && g === 0 && b === 0) return {name: 'Sea (pure black)', code: 'sea'};
-    if(!(r === g && g === b)) return {name: 'Sea (not greyscale)', code: 'sea'};
-    return {name: `Land, height ${r} of 255`, code: 'land'};
+    if(r === 0 && g === 0 && b === 0) return {name: tt('campmap.sea_pure_black'), code: 'sea'};
+    if(!(r === g && g === b)) return {name: tt('campmap.sea_not_greyscale'), code: 'sea'};
+    return {name: tt('campmap.land_height_of_255',{x:r}), code: 'land'};
   }
   if(code === 'ground_types'){
     const e = hit(v.ground_types);
@@ -2715,23 +2640,23 @@ function cmapNameColour(code, rgb){
   if(code === 'features'){
     const e = hit(v.features);
     if(!e) return {name: '', code: null};
-    return {name: e.code === 'none' ? 'Nothing here' : e.name, code: e.code};
+    return {name: e.code === 'none' ? tt('campmap.nothing_here') : e.name, code: e.code};
   }
   if(code === 'climates'){
     const e = hit(v.climates);
     return e ? {name: e.name, code: e.code} : {name: '', code: null};
   }
   if(code === 'trade_routes')
-    return k === 0 ? {name: 'No trade route', code: 'none'}
-                   : {name: 'Trade route', code: 'route'};
+    return k === 0 ? {name: tt('campmap.no_trade_route'), code: 'none'}
+                   : {name: tt('campmap.trade_route'), code: 'route'};
   if(code === 'roughness'){
     if(!(r === g && g === b)) return {name: '', code: null};
-    return r === 0 ? {name: 'Flat', code: 'flat'}
-                   : {name: `Roughness ${r} of 255`, code: 'rough'};
+    return r === 0 ? {name: tt('campmap.flat'), code: 'flat'}
+                   : {name: tt('campmap.roughness_of_255',{x:r}), code: 'rough'};
   }
   if(code === 'fog'){
-    if(r === 255 && g === 255 && b === 255) return {name: 'Unmarked', code: 'unmarked'};
-    if(r === 0 && g === 0 && b === 0) return {name: 'Marked', code: 'marked'};
+    if(r === 255 && g === 255 && b === 255) return {name: tt('campmap.unmarked'), code: 'unmarked'};
+    if(r === 0 && g === 0 && b === 0) return {name: tt('campmap.marked'), code: 'marked'};
     return {name: '', code: null};
   }
   return {name: '', code: null};
@@ -2765,20 +2690,19 @@ function cmapTipRow(ly, tx, ty){
   const none = why => `<div class="cmtiprow"><i class="none"></i>
     <span class="cmtipk">${esc(ly.label)}</span>
     <span class="cmtipv count">${why}</span></div>`;
-  if(!ly.present) return none('not in this map');
+  if(!ly.present) return none(tt('campmap.not_in_this_map'));
   if(!ly.aligned) return `<div class="cmtiprow"><i class="none"></i>
     <span class="cmtipk">${esc(ly.label)}</span>
-    <span class="cmtipv w-bad">${esc(ly.problem || 'the wrong size for this map')
+    <span class="cmtipv w-bad">${esc(ly.problem || tt('campmap.the_wrong_size_for_this_map'))
       }</span></div>`;
   const L = state.cmap.layers[ly.code];
-  if(L && !L.img) return none(L.failed ? 'could not be read' : 'still reading…');
+  if(L && !L.img) return none(L.failed ? tt('campmap.could_not_be_read') : tt('campmap.still_reading'));
   const rgb = cmapLayerRgb(ly.code, tx, ty);
-  if(!rgb) return none('no value here');
+  if(!rgb) return none(tt('campmap.no_value_here'));
   const n = cmapNameColour(ly.code, rgb);
   const val = n.code
     ? `${esc(n.name)}${n.code !== n.name ? ` <span class="count">(${esc(n.code)})</span>` : ''}`
-    : `<span class="w-warn">no table names this colour</span>
-       <span class="count">rgb(${rgb.join(', ')})</span>`;
+    : tt('campmap.no_table_names_this_colour_rgb',{rgb:rgb.join(', ')});
   return `<div class="cmtiprow"><i style="background:rgb(${rgb.join(',')})"></i>
     <span class="cmtipk">${esc(ly.label)}</span>
     <span class="cmtipv">${val}</span></div>`;
@@ -2792,7 +2716,7 @@ function cmapTipHtml(tx, ty){
   const gy = m.height - 1 - ty;
   const rgb = cmapLayerRgb('regions', tx, ty);
   const n = rgb ? cmapNameColour('regions', rgb) : null;
-  let name = '<span class="count">reading the region layer…</span>', sub = '';
+  let name = `<span class="count">${tt('campmap.reading_the_region_layer')}</span>`, sub = '';
   if(n && (n.code === 'settlement' || n.code === 'port')){
     // 17c again: the marker belongs to the region around it, and saying which
     // is the whole difference between a readout and an answer
@@ -2800,7 +2724,7 @@ function cmapTipHtml(tx, ty){
     name = `<span class="w-good">${esc(n.name)}</span>`;
     sub = own
       ? `${esc(own.region.settlement_name || own.region.name)} · ${esc(own.region.name)}`
-      : '<span class="w-warn">no region claims this marker</span>';
+      : `<span class="w-warn">${tt('campmap.no_region_claims_this_marker')}</span>`;
   }else if(n && n.region && n.region.name){
     const r = n.region;
     name = `${esc(r.name)}${r.id >= 0 ? ` <span class="count">#${r.id}</span>` : ''}`;
@@ -2810,13 +2734,13 @@ function cmapTipHtml(tx, ty){
     // the sea, or a colour descr_regions.txt never declares - which is a real
     // state both real maps are in, and the sentence cmapRegionName already owns
     name = `<span class="count">${n.region ? esc(cmapRegionName(n.region))
-                                           : 'no region'}</span>`;
+                                           : tt('campmap.no_region')}</span>`;
   }
   return `<div class="cmtiphead">
       <div class="cmtipn">${name}</div>
       <div class="cmtipsub count">${sub || '&nbsp;'}</div>
     </div>
-    <div class="cmtipxy"><b>${tx}, ${ty}</b> image · <b>${tx}, ${gy}</b> game</div>`;
+    <div class="cmtipxy"><b>${tx}, ${ty}</b> ${tt('campmap.image_game_2',{tx,gy})}</div>`;
 }
 
 // Hover only needs region identity, not the ten terrain layers.
@@ -2893,7 +2817,7 @@ function cmapTipPaint(){
 function cmapRegionName(r){
   if(r.name) return esc(r.name);
   if(r.pixels && r.sea * 2 >= r.pixels) return 'sea';
-  return 'a region <code>descr_regions.txt</code> never declares';
+  return tt('campmap.a_region_descr_regions_txt_never');
 }
 
 /* One layer's pixels as a canvas the browser can read AND write.
@@ -3026,7 +2950,7 @@ async function cmapLegend(code){
 
 function cmapLegendHtml(code){
   const L = state.cmap.layers[code];
-  if(L.legendBusy) return `<div class="cmleg"><span class="count">reading the layer…</span></div>`;
+  if(L.legendBusy) return `<div class="cmleg"><span class="count">${tt('campmap.reading_the_layer')}</span></div>`;
   if(L.legendErr) return `<div class="cmleg"><span class="w-bad">${esc(L.legendErr)}</span></div>`;
   const g = L.legend;
   if(!g) return '';
@@ -3040,11 +2964,11 @@ function cmapLegendHtml(code){
     // is a colour no table knows, said as that rather than rounded to a guess
     const nm = k.code_name
       ? `${esc(k.name)} <span class="count">(${esc(k.code_name)})</span>`
-      : `<span class="w-warn">no table names this colour</span>`;
+      : `<span class="w-warn">${tt('campmap.no_table_names_this_colour')}</span>`;
     return `<div class="cmlegrow${L.hide.has(k.key) ? ' hid' : ''}">
       <label class="chk" title="${whitelisted
-        ? 'Rivers only is on, and it draws the three river colours and nothing else'
-        : 'Stop drawing this colour, so what is under it shows through'}">
+        ? tt('campmap.rivers_only_is_on_and_it')
+        : tt('campmap.stop_drawing_this_colour_so_what')}">
         <input type="checkbox" data-lhide="${code}" data-key="${k.key}"
           ${whitelisted ? 'disabled' : ''}
           ${L.hide.has(k.key) ? 'checked' : ''}></label>
@@ -3056,15 +2980,10 @@ function cmapLegendHtml(code){
   }).join('');
   const b = g.blank;
   return `<div class="cmleg">
-    ${whitelisted ? `<div class="count"><b>Rivers only</b> is on: the three river
-      colours are drawn in one colour of yours and every other colour on this
-      layer is punched through, so these tickboxes decide nothing until it is
-      off.</div>` : ''}
-    ${b ? `<div class="count">Hiding <b style="color:rgb(${b.rgb.join(',')})">
-      rgb(${b.rgb.join(', ')})</b> makes this an overlay: it means ${esc(b.why)}.
-      ${b.sourced ? '' : 'Measured on both real maps rather than stated by any reference.'}
+    ${whitelisted ? `<div class="count">${tt('campmap.rivers_only_is_on_the_three')}</div>` : ''}
+    ${b ? `<div class="count">${tt('campmap.hiding_rgb_makes_this_an_overlay',{rgb:b.rgb.join(','),rgb2:b.rgb.join(', '),why:esc(b.why),sourced:b.sourced ? '' : tt('campmap.measured_on_both_real_maps_rather')})}
       </div>` : ''}
-    ${rows || '<span class="count">nothing to list</span>'}
+    ${rows || `<span class="count">${tt('campmap.nothing_to_list')}</span>`}
     ${g.note ? `<div class="count">${esc(g.note)}</div>` : ''}
   </div>`;
 }
@@ -3143,7 +3062,7 @@ function cmapHeightRamp(src){
 function cmapModeKey(c, code){
   const L = c.layers[code];
   const bits = [...L.hide].sort().join('.');
-  const riv = (code === 'features' && c.rivers) ? `riv:${c.riverRgb.join(',')}` : '';
+  const riv = (code === 'features' && c.rivers) ? tt('campmap.riv',{riverRgb:c.riverRgb.join(',')}) : '';
   const alp = (code === 'heights' && c.heightAlpha) ? 'alpha' : '';
   // 23a: with the terrain on, the ground types layer draws nothing INTO the
   // composite - the composite would be one flat colour a tile over a picture
@@ -3320,8 +3239,8 @@ async function cmapPick(tile){
   c.pick = (tx >= 0 && ty >= 0 && tx < c.man.width && ty < c.man.height) ? [tx, ty] : null;
   cpaintWorkspacePaint();
   c.probe = null; c.probeErr = '';
-  activity('map pick', `${c.mod} ${tx},${ty} -> ${r ? r.name || 'undeclared' : hit || 'nothing'}`
-    + (c.marker ? ` (on the ${c.marker} marker)` : ''));
+  activity(tt('campmap.map_pick'), `${c.mod} ${tx},${ty} -> ${r ? r.name || 'undeclared' : hit || 'nothing'}`
+    + (c.marker ? tt('campmap.on_the_marker',{marker:c.marker}) : ''));
   cmapOutline(r);
   cmapPaint();
   cmapPickPaint();
@@ -3435,25 +3354,21 @@ function cmapRegionPaint(){
 
 function cmapProbeHtml(){
   const c = state.cmap;
-  if(!c.pick) return `<div class="k">This tile</div>
-    <div class="count">Click the map to name a tile on every layer at once.</div>`;
+  if(!c.pick) return `<div class="k">${tt('campmap.this_tile')}</div>
+    <div class="count">${tt('campmap.click_the_map_to_name_a')}</div>`;
   const [tx, ty] = c.pick;
-  const head = `<div class="k">This tile
-    <span class="count">${tx}, ${ty} image · ${tx}, ${c.man.height - 1 - ty} game</span>
+  const head = `<div class="k">${tt('campmap.this_tile_image_game',{tx,ty,tx2:tx,x:c.man.height - 1 - ty})}
     <button class="cmcopy" onclick="cmapCopyTile()"
-      title="Copy this tile as &quot;x ${tx}, y ${c.man.height - 1 - ty}&quot; - the
-form descr_strat.txt writes a position in. The c key copies whatever is under
-the pointer instead, or the middle of the view when the pointer is off the
-map.">⧉</button></div>`;
+      title="${ttA('campmap.copy_this_tile_as_x_y',{tx,x:c.man.height - 1 - ty})}">⧉</button></div>`;
   if(c.probeErr) return head + `<div class="w-bad">${esc(c.probeErr)}</div>`;
-  if(!c.probe) return head + `<div class="count">reading the ten layers…</div>`;
+  if(!c.probe) return head + `<div class="count">${tt('campmap.reading_the_ten_layers')}</div>`;
   const p = c.probe;
   const rows = p.layers.map(L => {
     const val = L.problem
       ? `<span class="count">${esc(L.problem)}</span>`
       : L.code_name
         ? `${esc(L.name)} <span class="count">(${esc(L.code_name)})</span>`
-        : `<span class="w-warn">${esc(L.name) || 'no table names this colour'}</span>`;
+        : `<span class="w-warn">${esc(L.name) || tt('campmap.no_table_names_this_colour')}</span>`;
     // one line per layer, and it has to READ as one line at 336px: the label,
     // the value and the raw triple in that order, wrapping rather than each
     // fighting the others for a column of its own
@@ -3464,13 +3379,9 @@ map.">⧉</button></div>`;
     </div>`;
   }).join('');
   const marker = p.marker
-    ? `<div class="w-good">This is the ${esc(p.marker)} marker pixel. It belongs to
-       whichever region surrounds it, and it is skipped when the engine numbers
-       regions.</div>` : '';
+    ? `<div class="w-good">${tt('campmap.this_is_the_marker_pixel_it',{marker:esc(p.marker)})}</div>` : '';
   return head + marker + `<div class="cmprobe">${rows}</div>
-    <div class="count">The engine treats this tile as
-    <b>${p.sea === null ? 'unknown' : p.sea ? 'sea' : 'land'}</b> - from map_heights, not
-    from the ground type, with river crossings excluded.</div>`;
+    <div class="count">${tt('campmap.the_engine_treats_this_tile_as',{x:p.sea === null ? 'unknown' : p.sea ? 'sea' : 'land'})}</div>`;
 }
 
 /* ---------- the region, editable ---------- */
@@ -3483,31 +3394,28 @@ function cmapRegionHtml(){
     // rather than the one sentence that used to cover all of them.
     if(c.marker && c.marker.endsWith('-orphan')){
       const kind = c.marker.split('-')[0];
-      return `<div class="k">This region</div>
-        <div class="w-warn">This is a ${esc(kind)} marker pixel and no region in
-        <code>descr_regions.txt</code> claims it. The read calls that an orphan
-        ${esc(kind)}; Check lists them.</div>`;
+      return `<div class="k">${tt('campmap.this_region')}</div>
+        <div class="w-warn">${tt('campmap.this_is_a_marker_pixel_and',{kind:esc(kind),kind2:esc(kind)})}</div>`;
     }
-    return `<div class="k">This region</div>
-      <div class="count">${c.sel ? esc(cmapRegionName(c.sel)).replace(/<[^>]+>/g, '')
-        : 'No region record on this tile'} - nothing in
-      <code>descr_regions.txt</code> to edit.</div>`;
+    return `<div class="k">${tt('campmap.this_region')}</div>
+      <div class="count">${tt('campmap.nothing_in_descr_regions_txt_to',{x:c.sel ? esc(cmapRegionName(c.sel)).replace(/<[^>]+>/g, '')
+        : tt('campmap.no_region_record_on_this_tile')})}</div>`;
   }
-  if(d.loading) return `<div class="k">This region</div>
-    <div class="count">reading ${esc(d.name)}…</div>`;
-  if(d.error) return `<div class="k">This region</div>
+  if(d.loading) return `<div class="k">${tt('campmap.this_region')}</div>
+    <div class="count">${tt('campmap.reading',{name:esc(d.name)})}</div>`;
+  if(d.error) return `<div class="k">${tt('campmap.this_region')}</div>
     <div class="w-bad">${esc(d.error)}</div>`;
   return `<div class="cmbar2">
       <div><b>${esc(d.shown || d.name)}</b>
-        <span class="count">${esc(d.file)}, lines ${d.lines[0]}-${d.lines[1]}</span></div>
+        <span class="count">${tt('campmap.lines',{file:esc(d.file),lines:d.lines[0],lines2:d.lines[1]})}</span></div>
       <span class="sp"></span>
       <button class="${d.cv ? 'on' : ''}" onclick="cmapCvToggle()"
-        title="Show this region exactly as descr_regions.txt stores it, beside the form."
-        >&lt;/&gt; Code view</button>
+        title="${ttA('campmap.show_this_region_exactly_as_descr')}"
+        >${tt('common.code_view')}</button>
       <button class="danger" onclick="rdlOpen()"
-        title="Delete this province and give its land to a neighbour. Nothing is written until the whole list of files is in front of you."
-        >Delete</button>
-      <button class="primary" onclick="cmapSave()">Save</button>
+        title="${ttA('campmap.delete_this_province_and_give_its')}"
+        >${tt('common.delete')}</button>
+      <button class="primary" onclick="cmapSave()">${tt('common.save')}</button>
     </div>
     <div id="cmGui">${cmapFormHtml()}</div>
     ${d.cv ? `<div id="cmCodeCol" style="padding-top:12px">${cvHtml(d.cv)}</div>` : ''}`;
@@ -3522,16 +3430,16 @@ function cmapRegionHtml(){
    whole-word hit in either mod's descr_strat.txt is a unit type, a portrait or
    a comment. */
 const CMAP_LOCKED = {
-  name: 'Descr_strat.txt, the win conditions, the mercenary pools, the campaign '
-      + 'script and every legion: line point at this name. Rename follows all of '
-      + 'them and reports the script',
-  settlement: 'Its province’s record, the lookup file and the settlement name '
-      + 'text file point at this name, and so does the campaign script. Rename '
-      + 'follows the three files and reports the script',
-  rgb: 'This is the colour the region is painted on map_regions.tga. Changing '
-     + 'the number without repainting the pixels would leave the region with no '
-     + 'tiles at all, so the box is read-only and Change colour… does both at '
-     + 'once (36). It does not renumber anything.',
+  name: tt('campmap.descr_strat_txt_the_win_conditions')
+      + tt('campmap.script_and_every_legion_line_point')
+      + tt('campmap.them_and_reports_the_script'),
+  settlement: tt('campmap.its_provinces_record_the_lookup_file')
+      + tt('campmap.text_file_point_at_this_name')
+      + tt('campmap.follows_the_three_files_and_reports'),
+  rgb: tt('campmap.this_is_the_colour_the_region')
+     + tt('campmap.the_number_without_repainting_the_pixels')
+     + tt('campmap.tiles_at_all_so_the_box')
+     + tt('campmap.once_36_it_does_not_renumber'),
 };
 
 /* ---- renaming the province or its settlement (19b, D2) ----
@@ -3557,9 +3465,8 @@ function cmapFormHtml(){
   //: `rename` is the subject the rename dialog opens on, for the two fields a
   //: rename can follow. The colour is not one of them: it is pixels, not a name.
   const lock = (label, value, why, extra, rename) => `<div class="cmfield">
-    <label>${esc(label)} <span class="cmlock" title="${esc(why)}">locked</span>
-      ${rename ? `<button class="cmrename" title="${esc(why)}"
-        onclick="cmapRename('${esc(rename)}')">Rename…</button>` : ''}</label>
+    <label>${tt('campmap.locked',{label:esc(label),why:esc(why),x:rename ? `<button class="cmrename" title="${esc(why)}"
+        onclick="cmapRename('${esc(rename)}')">${tt('campmap.rename')}</button>` : ''})}</label>
     <input value="${esc(value)}" readonly>
     ${extra ? `<div class="count">${extra}</div>` : ''}</div>`;
   const pick = (label, slot, list, labels) => `<div class="cmfield">
@@ -3573,44 +3480,36 @@ function cmapFormHtml(){
   const px = d.pixels;
   return cmapFindingsHtml2() + `
     <div class="cmform">
-      ${lock('Region name', d.name, CMAP_LOCKED.name,
-             d.shown ? `shown in game as <b>${esc(d.shown)}</b>`
-                     : '<span class="w-warn">no line in the names file - the '
-                       + 'player reads this key</span>', 'region')}
-      ${d.has.settlement ? lock('Settlement', d.settlement, CMAP_LOCKED.settlement,
-             d.settlement_shown ? `shown in game as <b>${esc(d.settlement_shown)}</b>`
-                                : '<span class="w-warn">no line in the names file'
+      ${lock(tt('campmap.region_name'), d.name, CMAP_LOCKED.name,
+             d.shown ? `${tt('campmap.shown_in_game_as')} <b>${esc(d.shown)}</b>`
+                     : `<span class="w-warn">${tt('campmap.no_line_in_the_names_file')} `
+                       + `${tt('campmap.player_reads_this_key')}</span>`, 'region')}
+      ${d.has.settlement ? lock(tt('common.settlement'), d.settlement, CMAP_LOCKED.settlement,
+             d.settlement_shown ? `${tt('campmap.shown_in_game_as')} <b>${esc(d.settlement_shown)}</b>`
+                                : `<span class="w-warn">${tt('campmap.no_line_in_the_names_file_2')}`
                                   + '</span>', 'settlement')
-        : `<div class="count">This is the short wasteland form: no settlement, no
-           creator and no rebel type. The arbiter says such a province must be the
-           last entry in the file.</div>`}
-      ${lock('Colour', d.rgb.join(' '), CMAP_LOCKED.rgb,
+        : `<div class="count">${tt('campmap.this_is_the_short_wasteland_form')}</div>`}
+      ${lock(tt('campmap.colour'), d.rgb.join(' '), CMAP_LOCKED.rgb,
              `<i class="cmsw" style="background:rgb(${d.rgb.join(',')})"></i>
-              region ID ${px && px.region_id >= 0 ? px.region_id : '-'}
-              <button class="cmrename" title="Repaint every tile of this province
-in a new colour, and write the record's colour line in the same save. No region
-ID moves." onclick="rclOpen('${esc(d.name)}')">Change colour…</button>`)}
-      ${pick('Legion', 'legion', [d.name])}
-      ${d.has.faction ? pick('Creator faction', 'faction', v.factions, v.faction_labels) : ''}
-      ${d.has.rebels ? pick('Rebel type', 'rebels', v.rebels) : ''}
+              ${tt('campmap.region_id',{x:px && px.region_id >= 0 ? px.region_id : '-'})}
+              <button class="cmrename" title="${ttA('campmap.repaint_every_tile_of_this_province')}" onclick="rclOpen('${esc(d.name)}')">${tt('campmap.change_colour')}</button>`)}
+      ${pick(tt('campmap.legion'), 'legion', [d.name])}
+      ${d.has.faction ? pick(tt('campmap.creator_faction'), 'faction', v.factions, v.faction_labels) : ''}
+      ${d.has.rebels ? pick(tt('campmap.rebel_type'), 'rebels', v.rebels) : ''}
       ${d.has.resources || !d.wasteland ? cmapResourceHtml() : ''}
-      ${d.has.triumph ? `<div class="cmfield"><label>Triumph value</label>
+      ${d.has.triumph ? `<div class="cmfield"><label>${tt('campmap.triumph_value')}</label>
         <input type="number" value="${w.triumph}" min="0" max="20"
           oninput="cmapSet('triumph', this.value)">
-        <div class="count">Geomod's manual: leave it at 5, other numbers may cause
-        a crash.</div></div>` : ''}
-      ${d.has.farming ? `<div class="cmfield"><label>Base farming level</label>
+        <div class="count">${tt('campmap.geomods_manual_leave_it_at_5')}</div></div>` : ''}
+      ${d.has.farming ? `<div class="cmfield"><label>${tt('campmap.base_farming_level')}</label>
         <input type="number" value="${w.farming}" min="0" max="7"
           oninput="cmapSet('farming', this.value)">
-        <div class="count">4 is about average, 6-7 highly fertile.</div></div>` : ''}
+        <div class="count">${tt('campmap.4_is_about_average_6_7')}</div></div>` : ''}
     </div>
     ${cmapNamesHtml()}
     ${cmapMercHtml()}
     ${cmapMusicHtml()}
-    ${d.has.religions ? `<div class="k">Religions
-      <span class="${total === 100 ? 'count' : 'w-bad'}">total ${total}${
-        total === 100 ? '' : ` - the game crashes on load unless this is 100 (${
-        total > 100 ? '+' : ''}${total - 100})`}</span></div>
+    ${d.has.religions ? `<div class="k">${tt('campmap.religions_total',{total:total === 100 ? 'count' : 'w-bad',total2:total,x:total === 100 ? '' : tt('campmap.the_game_crashes_on_load_unless',{total:total > 100 ? '+' : '',total2:total - 100})})}</div>
       <div class="cmrels">${cmapReligionRows()}</div>` : ''}
     ${cmapPixelHtml()}`;
 }
@@ -3627,14 +3526,14 @@ ID moves." onclick="rclOpen('${esc(d.name)}')">Change colour…</button>`)}
    touched by this button and this button does not touch the region record. */
 //: What each row of the names panel is called. 33 made it three; the slots
 //: are `namekeys.ROW_WHAT`'s and the two tables are meant to stay in step.
-const CMAP_NAME_ROWS = {region: 'Province', settlement: 'Settlement',
-                        legion: 'Legion'};
+const CMAP_NAME_ROWS = {region: tt('common.province'), settlement: tt('common.settlement'),
+                        legion: tt('campmap.legion')};
 
 function cmapNamesHtml(){
   const d = state.cmap.det, n = d.names;
   if(!n) return '';
-  if(!n.have) return `<div class="k">Names the player reads
-    <span class="count">${esc(n.problem || 'no names file')}</span></div>`;
+  if(!n.have) return `<div class="k">${tt('campmap.names_the_player_reads')}
+    <span class="count">${esc(n.problem || tt('campmap.no_names_file'))}</span></div>`;
   const pick = d.namePick || {};
   const rows = (n.rows || []).map(r => {
     const now = pick[r.slot] === undefined ? r.value : pick[r.slot];
@@ -3647,24 +3546,22 @@ function cmapNamesHtml(){
     return `<div class="cmfield">
       <label>${CMAP_NAME_ROWS[r.slot] || r.slot}
         <span class="count">{${esc(r.key)}}${
-          r.slot === 'legion' && !mine ? ' - another record’s key' : ''}</span></label>
+          r.slot === 'legion' && !mine ? tt('campmap.another_records_key') : ''}</span></label>
       <input value="${esc(now)}" placeholder="${esc(r.key)}"
         oninput="cmapNameSet('${esc(r.slot)}', this.value)">
-      ${r.set ? '' : '<div class="w-warn">no line in this file yet</div>'}</div>`;
+      ${r.set ? '' : `<div class="w-warn">${tt('campmap.no_line_in_this_file_yet')}</div>`}</div>`;
   }).join('');
   const dirty = (n.rows || []).some(r =>
     pick[r.slot] !== undefined && pick[r.slot] !== r.value);
-  return `<div class="k">Names the player reads
-      <span class="count">${esc(n.file)}, ${n.keys} key${
-        n.keys === 1 ? '' : 's'}</span></div>
+  return `<div class="k">${tt('campmap.names_the_player_reads_key',{file:esc(n.file),x:n.keys,x2:n.keys === 1 ? '' : 's'})}</div>
     <div class="cmform">${rows}
       <div class="count">${dirty
-        ? 'Not saved yet - ' + esc(n.file) + ' is a third file, so it is a third '
-          + 'save and a third undo. The compiled .strings.bin beside it is '
-          + 'rebuilt, because that is the one the game reads.'
-        : 'Blank here and the campaign map shows the code name instead.'}</div>
+        ? tt('campmap.not_saved_yet') + esc(n.file) + tt('campmap.is_a_third_file_so_it')
+          + tt('campmap.save_and_a_third_undo_the')
+          + tt('campmap.rebuilt_because_that_is_the_one')
+        : tt('campmap.blank_here_and_the_campaign_map')}</div>
       ${dirty ? `<button class="primary" style="margin-top:6px"
-        onclick="cmapNamesSave()">Save names</button>` : ''}
+        onclick="cmapNamesSave()">${tt('campmap.save_names')}</button>` : ''}
     </div>`;
 }
 
@@ -3690,16 +3587,16 @@ async function cmapNamesSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(`Write: ${(p.changes || []).join('\n') || 'no visible change'}?\n\n`
+  if(!confirm(tt('campmap.write',{changes:(p.changes || []).join('\n') || tt('common.no_visible_change')})
     + ((p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '')
-    + `${(p.files || []).join(', ')} only - the region record is not touched.\n\n`
-    + 'Backed up first, and 🕑 Log can undo it.')) return;
+    + tt('campmap.only_the_region_record_is_not',{files:(p.files || []).join(', ')})
+    + tt('common.backed_up_first_and_log_can_2'))) return;
   c.busy = true;
   let res;
   try{ res = await api.post('/api/namekeys/apply', body); }
   finally{ c.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast('Names saved, and the compiled archive rebuilt. 🕑 Log can undo it.');
+  toast(tt('campmap.names_saved_and_the_compiled_archive'));
   const name = d.name;
   c.det = null;
   await cmapOpenRegion(name);
@@ -3722,29 +3619,26 @@ async function cmapNamesSave(){
 function cmapMercHtml(){
   const d = state.cmap.det, m = d.mercenaries;
   if(!m) return '';
-  if(!m.have) return `<div class="k">Mercenaries
-    <span class="count">${esc(m.problem || 'no pool file')}</span></div>`;
+  if(!m.have) return `<div class="k">${tt('campmap.mercenaries')}
+    <span class="count">${esc(m.problem || tt('campmap.no_pool_file'))}</span></div>`;
   const now = d.mercPick === undefined ? m.pool : d.mercPick;
   const dirty = now !== m.pool;
-  return `<div class="k">Mercenaries
-      <span class="count">which pool this province hires from</span></div>
+  return `<div class="k">${tt('campmap.mercenaries_which_pool_this_province_hires')}</div>
     <div class="cmform">
       <div class="cmfield">
-        <label>Pool</label>
+        <label>${tt('campmap.pool')}</label>
         <select onchange="cmapMercSet(this.value)">
-          <option value="" ${now ? '' : 'selected'}>(none - nothing is hired here)</option>
+          <option value="" ${now ? '' : 'selected'}>${tt('campmap.none_nothing_is_hired_here')}</option>
           ${(m.pools || []).map(p => `<option value="${esc(p.name)}"
-            ${p.name === now ? 'selected' : ''}>${esc(p.name)} · ${p.regions} province${
-              p.regions === 1 ? '' : 's'}, ${p.units} unit${
-              p.units === 1 ? '' : 's'}</option>`).join('')}
+            ${p.name === now ? 'selected' : ''}>${tt('campmap.province_unit',{name:esc(p.name),regions:p.regions,regions2:p.regions === 1 ? '' : 's',units:p.units,units2:p.units === 1 ? '' : 's'})}</option>`).join('')}
         </select>
         <div class="count">${m.units && m.units.length && !dirty
-          ? 'Sells ' + m.units.map(esc).join(', ')
-          : dirty ? 'Not saved yet - ' + esc(m.file) + ' is a second file, so it is '
-                    + 'a second save and a second undo'
-          : 'This province is in no pool, so no mercenary is ever recruitable here'}</div>
+          ? tt('campmap.sells') + m.units.map(esc).join(', ')
+          : dirty ? tt('campmap.not_saved_yet') + esc(m.file) + tt('campmap.is_a_second_file_so_it')
+                    + tt('campmap.a_second_save_and_a_second')
+          : tt('campmap.this_province_is_in_no_pool')}</div>
         ${dirty ? `<button class="primary" style="margin-top:6px"
-          onclick="cmapMercSave()">Save mercenary pool</button>` : ''}
+          onclick="cmapMercSave()">${tt('campmap.save_mercenary_pool')}</button>` : ''}
       </div>
     </div>`;
 }
@@ -3767,16 +3661,16 @@ async function cmapMercSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 7000); return; }
   const p = plan.plan || {};
-  if(!confirm(`Write: ${(p.changes || []).join('\n') || 'no visible change'}?\n\n`
+  if(!confirm(tt('campmap.write',{changes:(p.changes || []).join('\n') || tt('common.no_visible_change')})
     + ((p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '')
-    + `${d.mercenaries.file} only - the region record is not touched.\n\n`
-    + 'Backed up first, and 🕑 Log can undo it.')) return;
+    + tt('campmap.only_the_region_record_is_not_2',{file:d.mercenaries.file})
+    + tt('common.backed_up_first_and_log_can_2'))) return;
   c.busy = true;
   let res;
   try{ res = await api.post('/api/campfiles/apply', body); }
   finally{ c.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 7000); return; }
-  toast('Mercenary pool saved. 🕑 Log can undo it.');
+  toast(tt('campmap.mercenary_pool_saved_log_can_undo'));
   const name = d.name;
   c.det = null;
   await cmapOpenRegion(name);
@@ -3803,37 +3697,32 @@ async function cmapMercSave(){
 function cmapMusicHtml(){
   const d = state.cmap.det, mu = d.music;
   if(!mu) return '';
-  if(!mu.have) return `<div class="k">Music
-    <span class="count">${esc(mu.problem || 'no music file')}</span></div>`;
+  if(!mu.have) return `<div class="k">${tt('campmap.music')}
+    <span class="count">${esc(mu.problem || tt('campmap.no_music_file'))}</span></div>`;
   const now = d.musicPick === undefined ? mu.type : d.musicPick;
   const dirty = now !== mu.type;
   const odd = (mu.also || []).length
-    ? `<span class="w-warn">also under ${(mu.also || []).map(esc).join(', ')} -
-       the engine plays the first it meets, and saving takes it out of the
-       others</span>`
+    ? `<span class="w-warn">${tt('campmap.also_under_the_engine_plays_the',{x:(mu.also || []).map(esc).join(', ')})}</span>`
     : mu.twice
-      ? `<span class="w-warn">named ${mu.twice + 1} times inside ${esc(mu.type)};
-         saving leaves it named once</span>`
+      ? `<span class="w-warn">${tt('campmap.named_times_inside_saving_leaves_it',{x:mu.twice + 1,type:esc(mu.type)})}</span>`
       : '';
-  return `<div class="k">Music
-      <span class="count">which music type this province plays</span></div>
+  return `<div class="k">${tt('campmap.music_which_music_type_this_province')}</div>
     <div class="cmform">
       <div class="cmfield">
-        <label>Music type</label>
+        <label>${tt('campmap.music_type')}</label>
         <select onchange="cmapMusicSet(this.value)">
-          <option value="" ${now ? '' : 'selected'}>(none - the engine says so at load)</option>
+          <option value="" ${now ? '' : 'selected'}>${tt('campmap.none_the_engine_says_so_at')}</option>
           ${(mu.types || []).map(t => `<option value="${esc(t.name)}"
-            ${t.name === now ? 'selected' : ''}>${esc(t.name)} · ${t.regions} province${
-              t.regions === 1 ? '' : 's'}</option>`).join('')}
+            ${t.name === now ? 'selected' : ''}>${tt('campmap.province',{name:esc(t.name),regions:t.regions,regions2:t.regions === 1 ? '' : 's'})}</option>`).join('')}
         </select>
         <div class="count">${dirty
-          ? 'Not saved yet - ' + esc(mu.file) + ' is another file, so it is '
-            + 'another save and another undo'
-          : odd || 'Beside the map layers, not in the campaign folder: every '
-            + 'campaign on this map hears the same thing.'}</div>
+          ? tt('campmap.not_saved_yet') + esc(mu.file) + tt('campmap.is_another_file_so_it_is')
+            + tt('campmap.another_save_and_another_undo')
+          : odd || tt('campmap.beside_the_map_layers_not_in')
+            + tt('campmap.campaign_on_this_map_hears_the')}</div>
         ${dirty && odd ? `<div class="count">${odd}</div>` : ''}
         ${dirty ? `<button class="primary" style="margin-top:6px"
-          onclick="cmapMusicSave()">Save music type</button>` : ''}
+          onclick="cmapMusicSave()">${tt('campmap.save_music_type')}</button>` : ''}
       </div>
     </div>`;
 }
@@ -3856,17 +3745,17 @@ async function cmapMusicSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 7000); return; }
   const p = plan.plan || {};
-  if(!confirm(`Write: ${(p.changes || []).join('\n') || 'no visible change'}?\n\n`
+  if(!confirm(tt('campmap.write',{changes:(p.changes || []).join('\n') || tt('common.no_visible_change')})
     + ((p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '')
-    + `${d.music.file} only - the region record is not touched, and map.rwm is `
-    + `not deleted: this file is read at load rather than compiled into the map.\n\n`
-    + 'Backed up first, and 🕑 Log can undo it.')) return;
+    + tt('campmap.only_the_region_record_is_not_3',{file:d.music.file})
+    + tt('campmap.not_deleted_this_file_is_read')
+    + tt('common.backed_up_first_and_log_can_2'))) return;
   c.busy = true;
   let res;
   try{ res = await api.post('/api/campfiles/apply', body); }
   finally{ c.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 7000); return; }
-  toast('Music type saved. 🕑 Log can undo it.');
+  toast(tt('campmap.music_type_saved_log_can_undo'));
   const name = d.name;
   c.det = null;
   await cmapOpenRegion(name);
@@ -3875,8 +3764,7 @@ async function cmapMusicSave(){
 function cmapFindingsHtml2(){
   const d = state.cmap.det;
   return (d.findings || []).map(f =>
-    `<div class="cmfind2 ${f.fatal ? 'w-bad' : 'w-warn'}">line ${f.line}:
-      ${esc(f.message)}</div>`).join('');
+    `<div class="cmfind2 ${f.fatal ? 'w-bad' : 'w-warn'}">${tt('campmap.line',{line:f.line,message:esc(f.message)})}</div>`).join('');
 }
 
 /* The resource line, and what the tool makes of it.
@@ -3892,22 +3780,20 @@ function cmapResourceHtml(){
   const chip = (r) => {
     const k = r.toLowerCase();
     const cls = hidden.has(k) ? 'h' : trade.has(k) ? 't' : 'u';
-    const why = cls === 'h' ? 'hidden resource (the EDB declares it)'
-      : cls === 't' ? 'trade resource (descr_sm_resources.txt names it)'
-      : 'neither a hidden resource nor a trade resource this mod has';
+    const why = cls === 'h' ? tt('campmap.hidden_resource_the_edb_declares_it')
+      : cls === 't' ? tt('campmap.trade_resource_descr_sm_resources_txt')
+      : tt('campmap.neither_a_hidden_resource_nor_a');
     return `<span class="cmchip ${cls}" title="${esc(why)}">${esc(r)}</span>`;
   };
   const all = v.hidden_resources.concat(v.trade_resources);
-  return `<div class="cmfield"><label>Resources</label>
+  return `<div class="cmfield"><label>${tt('common.resources')}</label>
     <input list="cml-res" value="${esc(w.resources.join(', '))}"
       oninput="cmapSetResources(this.value)">
     <datalist id="cml-res">${all.map(x =>
       `<option value="${esc(x)}">`).join('')}</datalist>
     <div class="cmchips">${w.resources.map(chip).join('') ||
-      '<span class="count">none</span>'}</div>
-    <div class="count">${v.hidden_resources.length} hidden resources on the EDB's
-      own line, ${v.trade_resources.length} trade resources in
-      descr_sm_resources.txt.</div></div>`;
+      `<span class="count">${tt('common.none')}</span>`}</div>
+    <div class="count">${tt('campmap.hidden_resources_on_the_edbs_own',{hidden_resources_n:v.hidden_resources.length,trade_resources_n:v.trade_resources.length})}</div></div>`;
 }
 
 //: Every religion the mod declares, plus any this region names that it does
@@ -3931,8 +3817,8 @@ function cmapReligionRows(){
     const has = n in d.w.religions;
     return `<div class="cmrel${known.has(n.toLowerCase()) ? '' : ' odd'}">
       <span>${esc(n)}${known.has(n.toLowerCase()) ? ''
-        : ' <span class="w-warn" title="descr_religions.txt does not declare this'
-        + ' one, so the engine reads the number and ignores it">?</span>'}</span>
+        : tt('campmap.span_class_w_warn_title_descr')
+        + ` ${tt('campmap.one_so_the_engine_reads_the')}</span>`}</span>
       <input type="number" min="0" max="100" value="${has ? d.w.religions[n] : ''}"
         placeholder="${has ? '' : '-'}"
         oninput="cmapSetReligion('${esc(n)}', this.value)"></div>`;
@@ -3944,41 +3830,24 @@ function cmapReligionRows(){
 //: is for - a number typed into a box here could not move a pixel.
 function cmapPixelHtml(){
   const d = state.cmap.det, px = d.pixels;
-  if(d.pixels_problem) return `<div class="k">On the map</div>
+  if(d.pixels_problem) return `<div class="k">${tt('campmap.on_the_map')}</div>
     <div class="w-bad">${esc(d.pixels_problem)}</div>`;
   if(!px) return '';
-  if(!px.count) return `<div class="k">On the map</div>
-    <div class="w-bad">This region is declared in descr_regions.txt and not one
-    pixel of map_regions.tga is painted its colour. That is legal to write and
-    fatal to play.</div>`;
+  if(!px.count) return `<div class="k">${tt('campmap.on_the_map')}</div>
+    <div class="w-bad">${tt('campmap.this_region_is_declared_in_descr')}</div>`;
   const g = p => p ? `${p[0]}, ${p[1]}` : '-';
-  return `<div class="k">On the map <span class="count">counted off the
-      pixels - arm the brush to change them</span></div>
+  return `<div class="k">${tt('campmap.on_the_map_counted_off_the')}</div>
     <div class="cmkv">
-      <span>Region ID</span><b>${px.region_id >= 0 ? px.region_id : '-'}</b>
-      <span>Tiles</span><b>${px.count.toLocaleString()}${px.sea
-        ? ` <span class="count">${px.sea.toLocaleString()} of them sea</span>` : ''}</b>
-      <span>Settlement at</span><b>${g(px.settlement_game)}
-        <span class="count">game</span> · ${g(px.settlement)}
-        <span class="count">image</span></b>
-      <span>Port at</span><b>${px.port_game ? `${g(px.port_game)}
-        <span class="count">game</span> · ${g(px.port)}
-        <span class="count">image</span>` : 'none'}</b>
-      ${px.dock_game ? `<span title="The sea tile beside the port pixel where the game puts the dock and the port's model">Dock at</span><b>${g(px.dock_game)}
-        <span class="count">game</span> · ${g(px.dock)}
-        <span class="count">image</span></b>` : ''}
-      <span>Bounding box</span><b>${px.bbox.join(', ')}</b>
+      ${tt('campmap.region_id_tiles_settlement_at_game',{x:px.region_id >= 0 ? px.region_id : '-',count:px.count.toLocaleString(),x2:px.sea
+        ? ` <span class="count">${tt('campmap.of_them_sea',{sea:px.sea.toLocaleString()})}</span>` : '',x3:g(px.settlement_game),x4:g(px.settlement),x5:px.port_game ? tt('campmap.game_image',{x:g(px.port_game),x2:g(px.port)}) : 'none',x6:px.dock_game ? tt('campmap.dock_at_game_image',{x:g(px.dock_game),x2:g(px.dock)}) : '',x7:px.bbox.join(', ')})}
     </div>
-    <div class="k">Neighbours <span class="count">${px.neighbours.length} sharing an
-      edge on map_regions.tga</span></div>
+    <div class="k">${tt('campmap.neighbours_sharing_an_edge_on_map',{neighbours_n:px.neighbours.length})}</div>
     <div class="cmnb">${px.neighbours.map(n => `<button class="cmchip n"
       onclick="cmapGoRegion(${n.key})"
-      title="${esc(n.declared ? 'region ' + n.region_id : 'declared nowhere in descr_regions.txt')}"
+      title="${esc(n.declared ? 'region ' + n.region_id : tt('campmap.declared_nowhere_in_descr_regions_txt'))}"
       ><i style="background:rgb(${n.rgb.join(',')})"></i>${
       esc(n.name || 'undeclared')}</button>`).join('')}</div>
-    <div class="count">Adjacency on the region layer alone. Land bridges and
-      river crossings connect provinces these pixels do not, and that rule is
-      16f's.</div>`;
+    <div class="count">${tt('campmap.adjacency_on_the_region_layer_alone')}</div>`;
 }
 
 //: Click a neighbour: select it on the canvas exactly as a click on its own
@@ -4022,7 +3891,7 @@ function cmapTouched(repaint){
       const t = cmapReligionTotal();
       k.className = t === 100 ? 'count' : 'w-bad';
       k.textContent = `total ${t}` + (t === 100 ? ''
-        : ` - the game crashes on load unless this is 100 (${t > 100 ? '+' : ''}${t - 100})`);
+        : tt('campmap.the_game_crashes_on_load_unless_2',{x:t > 100 ? '+' : '',x2:t - 100}));
     }
   }
   if(d && d.cv) cvFromGui(d.cv);
@@ -4070,9 +3939,9 @@ async function cmapSave(){
   if(!d || !d.w || c.busy) return;
   const total = cmapReligionTotal();
   if(total !== 100 && d.has.religions){
-    toast(`✗ The religion percentages total ${total}. The game crashes on load `
+    toast(tt('campmap.the_religion_percentages_total_the_game',{total})
       + `unless they total 100 - ${total > 100 ? 'take' : 'add'} `
-      + `${Math.abs(total - 100)} ${total > 100 ? 'off' : 'on'} before saving.`, 7000);
+      + tt('campmap.before_saving',{total:Math.abs(total - 100),total2:total > 100 ? 'off' : 'on'}), 7000);
     return;
   }
   /* The campaign decides WHICH `descr_regions.txt` this edits. A campaign that
@@ -4090,18 +3959,18 @@ async function cmapSave(){
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 14);
   const warn = (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x);
-  if(!confirm(`Write: save ${d.name}?\n\n`
-    + (lines.join('\n') || 'no visible change')
-    + ((p.changes || []).length > 14 ? `\n…and ${p.changes.length - 14} more` : '')
+  if(!confirm(tt('campmap.write_save',{name:d.name})
+    + (lines.join('\n') || tt('common.no_visible_change'))
+    + ((p.changes || []).length > 14 ? tt('campmap.and_more_2',{changes:p.changes.length - 14}) : '')
     + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + '\n\nmap.rwm is deleted too, or the game loads the old compiled map and '
-    + 'shows none of this.\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + tt('campmap.map_rwm_is_deleted_too_or')
+    + tt('campmap.shows_none_of_this_backed_up'))) return;
   c.busy = true;
   let res;
   try{ res = await api.post('/api/map/apply', body); }
   finally{ c.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 7000); return; }
-  toast('Saved. map.rwm deleted. 🕑 Log can undo it.');
+  toast(tt('campmap.saved_map_rwm_deleted_log_can'));
   const at = c.pick;
   await loadCampmap();
   if(at && state.cmap) cmapPick(at);
@@ -4191,15 +4060,15 @@ function cmapCopyText(){
 
 async function cmapCopyTile(){
   const text = cmapCopyText();
-  if(!text){ toast('Nothing to copy - that is off the map.'); return; }
+  if(!text){ toast(tt('campmap.nothing_to_copy_that_is_off')); return; }
   try{
     await navigator.clipboard.writeText(text);
-    toast(`Copied ${text}`);
-    activity('map copy', text);
+    toast(tt('campmap.copied',{text}));
+    activity(tt('campmap.map_copy'), text);
   }catch(e){
     // the same fallback sprites.js takes, and the same reason: a browser that
     // refuses the clipboard is not a browser that has to lose the answer
-    toast(`Could not reach the clipboard. The tile is ${text}`, 7000);
+    toast(tt('campmap.could_not_reach_the_clipboard_the',{text}), 7000);
   }
 }
 

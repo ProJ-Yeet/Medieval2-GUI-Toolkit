@@ -88,38 +88,36 @@ function trgSatisfied(requires, exports){
 }
 function trgCondWarn(tr, cond){
   const d = tr.byTerm[cond.term];
-  if(!d) return cond.term ? `“${cond.term}” isn’t a condition anything documents, though it may still be valid` : '';
+  if(!d) return cond.term ? tt('triggerui.isnt_a_condition_anything_documents_though',{term:cond.term}) : '';
   const ev = tr.byEvent[tr.when];
   if(!tr.when || !ev) return '';
   if(trgSatisfied(d.requires, ev.exports)) return '';
   const need = (d.requires||[]).map(g=>g.join(' and ')).join(', or ');
-  return `needs ${need}, which ${tr.when} does not export, so this can never be true`;
+  return tt('triggerui.needs_which_does_not_export_so',{need,when:tr.when});
 }
 
 /* ---- markup ---- */
 function trgHtml(tr){
-  if(!tr.vocab) return '<div class="count">Loading the trigger vocabulary…</div>';
+  if(!tr.vocab) return `<div class="count">${tt('triggerui.loading_the_trigger_vocabulary')}</div>`;
   if(tr.vocab.error) return `<div class="w-bad">✗ ${esc(tr.vocab.error)}</div>`;
   const ev = tr.byEvent[tr.when];
   return `<div class="trg" id="trg-${tr.uid}">
     <div class="trgrow">
-      <span class="lbl">Trigger</span>
-      <input id="trgname-${tr.uid}" value="${esc(tr.name)}" placeholder="name"
+      <span class="lbl">${tt('triggerui.trigger')}</span>
+      <input id="trgname-${tr.uid}" value="${esc(tr.name)}" placeholder="${ttA('triggerui.name')}"
         oninput="trgSet(trgOf('${tr.uid}'),'name',this.value)" ${tr.readOnly?'disabled':''}>
-      <span class="lbl">WhenToTest</span>
-      ${trgEventSelect(tr)}
+      ${tt('triggerui.whentotest',{x:trgEventSelect(tr)})}
     </div>
     <div class="trghint">${ev
-      ? `${esc(ev.hint||'')} <span class="count">· exports ${
-          (ev.exports||[]).map(esc).join(', ')||'nothing'}</span>`
-      : (tr.when?`<span class="w-bad">no engine event is called “${esc(tr.when)}”</span>`
-               :'<span class="count">Pick the moment this trigger is tested</span>')}</div>
+      ? tt('triggerui.exports',{x:esc(ev.hint||''),x2:(ev.exports||[]).map(esc).join(', ')||'nothing'})
+      : (tr.when?`<span class="w-bad">${tt('triggerui.no_engine_event_is_called',{when:esc(tr.when)})}</span>`
+               :`<span class="count">${tt('triggerui.pick_the_moment_this_trigger_is')}</span>`)}</div>
     <div class="trgconds" id="trgc-${tr.uid}">
       ${tr.conds.map((c,i)=>trgCondHtml(tr,c,i)).join('')
-        || '<div class="count">No conditions, so this fires every time the event happens.</div>'}
+        || `<div class="count">${tt('triggerui.no_conditions_so_this_fires_every')}</div>`}
     </div>
     ${tr.readOnly?'':`<button class="trgadd" onclick="trgAddCond(trgOf('${tr.uid}'))">
-      ＋ Add condition</button>`}
+      ${tt('triggerui.add_condition')}</button>`}
     ${tr.effects.length?`<div class="trgeffects">${
       tr.effects.map((e,i)=>trgEffectHtml(tr,e,i)).join('')}</div>`:''}
   </div>`;
@@ -149,17 +147,17 @@ function trgCondHtml(tr, cond, i){
   const warn = trgCondWarn(tr, cond);
   const shape = (d && d.shapes && d.shapes[0]) || '';
   return `<div class="trgcond${warn?' bad':''}" data-i="${i}">
-    ${i===0?'<span class="jn">Condition</span>'
+    ${i===0?`<span class="jn">${tt('triggerui.condition')}</span>`
       :`<select class="jn" ${tr.readOnly?'disabled':''}
           onchange="trgSet(trgOf('${tr.uid}'),'joiner',this.value,${i})">
-        <option ${cond.joiner!=='or'?'selected':''}>and</option>
-        <option ${cond.joiner==='or'?'selected':''}>or</option></select>`}
-    <label class="chk" title="Invert this clause"><input type="checkbox"
+        <option ${cond.joiner!=='or'?'selected':''}>${tt('triggerui.and')}</option>
+        <option ${cond.joiner==='or'?'selected':''}>${tt('triggerui.or')}</option></select>`}
+    <label class="chk" title="${ttA('triggerui.invert_this_clause')}"><input type="checkbox"
       ${cond.negated?'checked':''} ${tr.readOnly?'disabled':''}
-      onchange="trgSet(trgOf('${tr.uid}'),'negated',this.checked,${i})">not</label>
+      onchange="trgSet(trgOf('${tr.uid}'),'negated',this.checked,${i})">${tt('common.not')}</label>
     ${trgTermSelect(tr, cond, i)}
     <span class="trgargs">${trgArgsHtml(tr, cond, i, shape)}</span>
-    ${tr.readOnly?'':`<button class="trgdel" title="Remove this clause"
+    ${tr.readOnly?'':`<button class="trgdel" title="${ttA('triggerui.remove_this_clause')}"
       onclick="trgDelCond(trgOf('${tr.uid}'),${i})">✕</button>`}
     ${warn?`<div class="trgwarn w-bad">${esc(warn)}</div>`
       :(d&&d.hint?`<div class="trgwarn count">${esc(d.hint)}</div>`:'')}
@@ -177,7 +175,7 @@ function trgTermSelect(tr, cond, i){
     ? `<option value="${esc(cond.term)}" selected>${esc(cond.term)} (unknown)</option>` : '';
   return `<select class="trgterm" ${tr.readOnly?'disabled':''}
       onchange="trgSet(trgOf('${tr.uid}'),'term',this.value,${i})">
-    ${unknown}${cond.term?'':'<option value="" selected>Pick a condition</option>'}
+    ${unknown}${cond.term?'':`<option value="" selected>${tt('triggerui.pick_a_condition')}</option>`}
     <optgroup label="used in this mod">${used.map(opt).join('')}</optgroup>
     <optgroup label="every other engine condition">${rest.map(opt).join('')}</optgroup>
   </select>`;
@@ -207,13 +205,13 @@ function trgArgsHtml(tr, cond, i, shape){
         ${tr.readOnly?'disabled':''} oninput="${set}">`;
     }else{
       const dl = list.length?`trgdl-${tr.uid}-${src}`:'';
-      html += `<input class="trgname" value="${esc(v)}" ${dl?`list="${dl}"`:''}
+      html += `<input class="trgname" value="${esc(v)}" ${dl?tt('triggerui.list',{dl}):''}
         placeholder="${esc(src||'value')}" ${tr.readOnly?'disabled':''} oninput="${set}">`;
       if(dl && html.indexOf('<datalist id="'+dl)<0)
         html += `<datalist id="${dl}">${list.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>`;
     }
   }
-  return html || '<span class="count">No argument</span>';
+  return html || `<span class="count">${tt('triggerui.no_argument')}</span>`;
 }
 
 function trgEffectHtml(tr, eff, i){
@@ -292,14 +290,13 @@ function trgPaintWarnings(tr){
    reads the scripts (luascan.record_mentions); this lists what it found, beside
    the triggers, so "nothing gives it" is only said when nothing does. Shared by
    the traits and ancillaries screens, which is why it lives with the builder. */
-const LUA_HOW = {gives: 'gives it', reads: 'checks or removes it', names: 'names it'};
+const LUA_HOW = {gives: tt('triggerui.gives_it'), reads: tt('triggerui.checks_or_removes_it'), names: tt('triggerui.names_it')};
 const luaGives = hits => (hits || []).some(h => h.how === 'gives');
 function luaHitsHtml(hits, noun){
   if(!(hits || []).length) return '';
   const order = {gives: 0, reads: 1, names: 2};
   const rows = hits.slice().sort((a, b) => order[a.how] - order[b.how]);
-  return `<div class="trlua"><div class="count">From the mod's Lua scripts: what they do with this
-      ${esc(noun)}. Not edited here: open the file to change it.</div>
+  return `<div class="trlua"><div class="count">${tt('triggerui.from_the_mods_lua_scripts_what',{noun:esc(noun)})}</div>
     ${rows.map(h => `<div class="trluarow"><span class="${h.how === 'gives' ? 'w-good' : 'count'}">${
       esc(LUA_HOW[h.how] || h.how)}</span>
       <code>${esc(h.file)}:${h.line}</code>${h.call ? ` <span class="count">${esc(h.call)}()</span>` : ''}</div>`

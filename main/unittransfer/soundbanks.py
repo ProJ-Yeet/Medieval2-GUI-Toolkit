@@ -48,6 +48,7 @@ from typing import Dict, List, Optional
 
 from . import config, keyblock as kb
 from .logutil import file_op, log
+from . import i18n as _i18n
 
 ENCODING = "latin-1"
 
@@ -220,7 +221,7 @@ def parse_text(file: str, text: str) -> Bank:
             if _is_end(low):
                 ev.end = i + 1
                 if low != "end":
-                    b.warnings.append(f"line {i + 1}: read {s!r} as 'end'")
+                    b.warnings.append(_i18n.msg("eng.soundbanks.line_read_as_end", "line {x}: read {s} as 'end'", x=i + 1, s=repr(s)))
                 ev = None
             else:
                 ev.body.append(i)
@@ -235,8 +236,7 @@ def parse_text(file: str, text: str) -> Bank:
             ev = Event(at=i, end=len(lines), attrs=rest)
             b.events.append(ev)
             if pending is not None:
-                b.warnings.append(f"line {pending + 1}: a VnV line with no "
-                                  f"header under it")
+                b.warnings.append(_i18n.msg("eng.soundbanks.line_a_vnv_line_with_no", "line {x}: a VnV line with no header under it", x=pending + 1))
                 pending = None
             if named and not stack:
                 n = Node(kw=word[0], value=rest, depth=0, head=i, start=i,
@@ -247,18 +247,17 @@ def parse_text(file: str, text: str) -> Bank:
             elif stack:
                 stack[-1].events.append(ev)
             else:
-                b.warnings.append(f"line {i + 1}: an event with no header above it")
+                b.warnings.append(_i18n.msg("eng.soundbanks.line_an_event_with_no_header", "line {x}: an event with no header above it", x=i + 1))
             continue
         if _is_end(low):
-            b.warnings.append(f"line {i + 1}: 'end' with no open 'event'")
+            b.warnings.append(_i18n.msg("eng.soundbanks.line_end_with_no_open_event", "line {x}: 'end' with no open 'event'", x=i + 1))
             continue
         if key in prefix:
             pending = i
             continue
         depth = levels.get(key)
         if depth is None:
-            b.warnings.append(f"line {i + 1}: {word[0]!r} is not a header this "
-                              f"file uses; kept as it is")
+            b.warnings.append(_i18n.msg("eng.soundbanks.line_is_not_a_header_this", "line {x}: {word} is not a header this file uses; kept as it is", x=i + 1, word=repr(word[0])))
             continue
         # a VnV line waiting above this header is this block's, not the tail
         # of the one before it
@@ -284,7 +283,7 @@ def parse_text(file: str, text: str) -> Bank:
 
 def rel_of(file: str) -> str:
     if file not in FILES:
-        raise SoundBankError(f"no sound bank called {file!r}")
+        raise SoundBankError(_i18n.msg("eng.soundbanks.no_sound_bank_called", "no sound bank called {file}", file=repr(file)))
     return FILES[file]["rel"]
 
 
@@ -337,7 +336,7 @@ def edit_event(b: Bank, at: int, attrs: str, body: List[str]) -> str:
     """
     e = b.event_at(at)
     if e is None:
-        raise SoundBankError(f"line {at + 1} is not an event")
+        raise SoundBankError(_i18n.msg("eng.soundbanks.line_is_not_an_event", "line {x} is not an event", x=at + 1))
     src = b.lines
     old_head = src[at]
     if attrs.strip() != e.attrs:
@@ -382,7 +381,7 @@ def duplicate(b: Bank, head: int, value: str) -> str:
     """A copy of one block, straight after it, under a new value."""
     n = b.node_at(head)
     if n is None:
-        raise SoundBankError(f"line {head + 1} is not a header")
+        raise SoundBankError(_i18n.msg("eng.soundbanks.line_is_not_a_header", "line {x} is not a header", x=head + 1))
     block = b.lines[n.start:n.end]
     k = n.head - n.start
     block[k] = _with_value(block[k], value)
@@ -397,7 +396,7 @@ def duplicate(b: Bank, head: int, value: str) -> str:
 def rename(b: Bank, head: int, value: str) -> str:
     n = b.node_at(head)
     if n is None:
-        raise SoundBankError(f"line {head + 1} is not a header")
+        raise SoundBankError(_i18n.msg("eng.soundbanks.line_is_not_a_header", "line {x} is not a header", x=head + 1))
     lines = list(b.lines)
     lines[head] = _with_value(lines[head], value)
     return "".join(lines)
@@ -406,7 +405,7 @@ def rename(b: Bank, head: int, value: str) -> str:
 def remove(b: Bank, head: int) -> str:
     n = b.node_at(head)
     if n is None:
-        raise SoundBankError(f"line {head + 1} is not a header")
+        raise SoundBankError(_i18n.msg("eng.soundbanks.line_is_not_a_header", "line {x} is not a header", x=head + 1))
     return "".join(b.lines[:n.start] + b.lines[n.end:])
 
 
@@ -451,32 +450,26 @@ def _check_event(p: SoundBankPlan, where: str, attrs: str, body: List[str],
                  named: bool, known: set) -> None:
     lines = [x.strip() for x in body if x.strip()]
     if any(x.lower() == "end" or x.lower().startswith("event") for x in lines):
-        p.errors.append(f"{where}: a line of 'end' or 'event' inside an event "
-                        f"would close it early")
+        p.errors.append(_i18n.msg("eng.soundbanks.a_line_of_end_or_event", "{where}: a line of 'end' or 'event' inside an event would close it early", where=where))
         return
     if not lines:
-        p.errors.append(f"{where}: an event needs at least a folder and one sample")
+        p.errors.append(_i18n.msg("eng.soundbanks.an_event_needs_at_least_a", "{where}: an event needs at least a folder and one sample", where=where))
         return
     if not lines[0].lower().startswith("folder "):
-        p.errors.append(f"{where}: the first line has to be a folder, or the "
-                        f"engine does not know where the first sample is")
+        p.errors.append(_i18n.msg("eng.soundbanks.the_first_line_has_to_be", "{where}: the first line has to be a folder, or the engine does not know where the first sample is", where=where))
     if all(x.lower().startswith("folder ") for x in lines):
-        p.warnings.append(f"{where}: no samples, so the event plays nothing")
+        p.warnings.append(_i18n.msg("eng.soundbanks.no_samples_so_the_event_plays", "{where}: no samples, so the event plays nothing", where=where))
     if named:
         if not NAME_RE.match(attrs.strip()):
-            p.errors.append(f"{where}: an event name is letters, digits and "
-                            f"underscores")
+            p.errors.append(_i18n.msg("eng.soundbanks.an_event_name_is_letters_digits", "{where}: an event name is letters, digits and underscores", where=where))
         return
     toks = attrs.split()
     keys = toks[0::2]
     if len(toks) % 2:
-        p.warnings.append(f"{where}: event attributes come in pairs "
-                          f"(priority 120 volume -10); {attrs!r} has an odd one")
+        p.warnings.append(_i18n.msg("eng.soundbanks.event_attributes_come_in_pairs_priority", "{where}: event attributes come in pairs (priority 120 volume -10); {attrs} has an odd one", where=where, attrs=repr(attrs)))
     odd = [k for k in keys if k.lower() not in known]
     if odd:
-        p.warnings.append(f"{where}: {kb.and_list(odd)} "
-                          f"{'is' if len(odd) == 1 else 'are'} not used by any "
-                          f"event in this mod's sound banks")
+        p.warnings.append(_i18n.msg("eng.soundbanks.not_used_by_any_event_in", "{where}: {and_list} {x} not used by any event in this mod's sound banks", where=where, and_list=kb.and_list(odd), x='is' if len(odd) == 1 else 'are'))
 
 
 def _known_attrs(mod) -> set:
@@ -502,12 +495,12 @@ def plan(mod, body: dict) -> SoundBankPlan:
     file = str(body.get("file") or "")
     if file not in FILES:
         p = SoundBankPlan(mod=mod, file=next(iter(FILES)))
-        p.errors.append(f"no sound bank called {file!r}")
+        p.errors.append(_i18n.msg("eng.soundbanks.no_sound_bank_called", "no sound bank called {file}", file=repr(file)))
         return p
     p = SoundBankPlan(mod=mod, file=file)
     path = path_of(mod, file)
     if not path.exists():
-        p.errors.append(f"{getattr(mod, 'name', '?')} has no data/{rel_of(file)}")
+        p.errors.append(_i18n.msg("eng.soundbanks.has_no_data", "{getattr} has no data/{rel_of}", getattr=getattr(mod, 'name', '?'), rel_of=rel_of(file)))
         return p
     original = kb.read_text(path, ENCODING)
     text = original
@@ -521,8 +514,7 @@ def plan(mod, body: dict) -> SoundBankPlan:
         want = str(o.get("head") or "").strip()
         b = parse_text(file, text)
         if not 0 <= at < len(b.lines) or b.lines[at].strip() != want:
-            p.errors.append(f"line {at + 1}: the file changed since it was read "
-                            f"(expected {want!r}); reload and try again")
+            p.errors.append(_i18n.msg("eng.soundbanks.line_the_file_changed_since_it", "line {x}: the file changed since it was read (expected {want}); reload and try again", x=at + 1, want=repr(want)))
             continue
         try:
             if kind == "event":
@@ -551,7 +543,7 @@ def plan(mod, body: dict) -> SoundBankPlan:
                 continue
             n = b.node_at(at)
             if n is None:
-                p.errors.append(f"line {at + 1} is not a header")
+                p.errors.append(_i18n.msg("eng.soundbanks.line_is_not_a_header", "line {x} is not a header", x=at + 1))
                 continue
             where = " / ".join(n.path())
             if kind == "remove":
@@ -560,9 +552,7 @@ def plan(mod, body: dict) -> SoundBankPlan:
                                  f"({n.end - n.start} lines)")
                 if n.depth == 0 and file != "narration":
                     p.warnings.append(
-                        f"{where}: every unit or character with this "
-                        f"{n.kw} loses these sounds, and the game does not "
-                        f"say so")
+                        _i18n.msg("eng.soundbanks.every_unit_or_character_with_this", "{where}: every unit or character with this {kw} loses these sounds, and the game does not say so", where=where, kw=n.kw))
                 continue
             value = " ".join(str(o.get("value") or "").split())
             bad = _value_problem(file, n, value)
@@ -570,13 +560,12 @@ def plan(mod, body: dict) -> SoundBankPlan:
                 p.errors.append(f"{where}: {bad}")
                 continue
             if kind == "duplicate" and value == n.value:
-                p.errors.append(f"{where}: a copy needs a name of its own")
+                p.errors.append(_i18n.msg("eng.soundbanks.a_copy_needs_a_name_of", "{where}: a copy needs a name of its own", where=where))
                 continue
             if any(s is not n and s.kw.lower() == n.kw.lower() and s.value == value
                    and (s.start == s.head) == (n.start == n.head)
                    for s in _siblings(b, n)):
-                p.errors.append(f"{where}: there is already a {n.kw} {value} "
-                                f"beside it, and the game reads the first one")
+                p.errors.append(_i18n.msg("eng.soundbanks.there_is_already_a_beside_it", "{where}: there is already a {kw} {value} beside it, and the game reads the first one", where=where, kw=n.kw, value=value))
                 continue
             if kind == "duplicate":
                 text = duplicate(b, at, value)
@@ -584,9 +573,7 @@ def plan(mod, body: dict) -> SoundBankPlan:
                                  f"({n.end - n.start} lines)")
                 if n.kw.lower() == "accent":
                     p.warnings.append(
-                        f"nothing speaks with accent {value} until something "
-                        f"names it (a unit's EDU accent, for one); this save "
-                        f"does not point anything at it")
+                        _i18n.msg("eng.soundbanks.nothing_speaks_with_accent_until_something", "nothing speaks with accent {value} until something names it (a unit's EDU accent, for one); this save does not point anything at it", value=value))
             elif kind == "rename":
                 if value == n.value:
                     continue
@@ -594,16 +581,15 @@ def plan(mod, body: dict) -> SoundBankPlan:
                 p.changes.append(f"{where}: renamed to {n.kw} {value}")
                 if n.depth == 0 or named:
                     p.warnings.append(
-                        f"whatever named {n.kw} {n.value} still does, and "
-                        f"finds nothing now")
+                        _i18n.msg("eng.soundbanks.whatever_named_still_does_and_finds", "whatever named {kw} {value} still does, and finds nothing now", kw=n.kw, value=n.value))
             else:
-                p.errors.append(f"unknown operation {kind!r}")
+                p.errors.append(_i18n.msg("eng.soundbanks.unknown_operation", "unknown operation {kind}", kind=repr(kind)))
         except SoundBankError as exc:
             p.errors.append(str(exc))
     if p.errors:
         return p
     if parse_text(file, text).to_text() != text:
-        p.errors.append("the result does not read back the same; nothing written")
+        p.errors.append(_i18n.msg("eng.soundbanks.the_result_does_not_read_back", "the result does not read back the same; nothing written"))
         return p
     p.text = "" if text == original else text
     return p
@@ -613,7 +599,7 @@ def apply(p: SoundBankPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.soundbanks.nothing_to_change", "nothing to change"))
     mod = p.mod
     rel = rel_of(p.file)
     tid = config.new_transfer_id()
@@ -663,7 +649,7 @@ def files(mod) -> List[dict]:
 def overview(mod, file: str) -> dict:
     """One bank for the screen: its blocks in file order, events inline."""
     if file not in FILES:
-        raise SoundBankError(f"no sound bank called {file!r}")
+        raise SoundBankError(_i18n.msg("eng.soundbanks.no_sound_bank_called", "no sound bank called {file}", file=repr(file)))
     spec = FILES[file]
     b = read(mod, file)
     index = {id(n): k for k, n in enumerate(b.nodes)}

@@ -26,14 +26,13 @@ async function openDupes(){
   const modal=document.getElementById('modal');
   modal.className='modal wide';
   overlay.classList.add('open');
-  modal.innerHTML=`<h2>Duplicate entries</h2><div class="mbody">Reading
-    <code>battle_models.modeldb</code>…</div>`;
+  modal.innerHTML=`<h2>${tt('dupes.duplicate_entries')}</h2><div class="mbody">${tt('dupes.reading_battle_models_modeldb')}</div>`;
   let a;
   try{ a=await api.get(`/api/bmdb/dupes?mod=${enc(state.src)}`); }
   catch(e){ a={error:''+e}; }
-  if(a.error){ modal.innerHTML=`<h2>Duplicate entries</h2>
+  if(a.error){ modal.innerHTML=`<h2>${tt('dupes.duplicate_entries')}</h2>
     <div class="mbody w-bad">${esc(a.error)}</div>
-    <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
+    <div class="foot"><button onclick="closeModal()">${tt('common.close')}</button></div>`; return; }
   // `picks` is keyed by the block's index in the file, which is the only thing
   // that tells two blocks of the same name apart. Nothing is pre-ticked: one
   // choice removes a model and the other invents a name, and neither is a
@@ -49,35 +48,27 @@ function renderDupes(){
   const s=state.dup,a=s.a;
   const n=a.duplicated,x=a.extra_blocks;
   document.getElementById('modal').innerHTML=`
-    <h2>Duplicate entries in ${esc(a.mod)}’s battle_models.modeldb</h2>
+    <h2>${tt('dupes.duplicate_entries_in_s_battle_models',{mod:esc(a.mod)})}</h2>
     <div class="mbody">
       ${n?`<div class="count" style="margin-bottom:10px">
-        <b>${n}</b> name${n===1?'':'s'} appear${n===1?'s':''} more than once, which is
-        <b>${x}</b> entry block${x===1?'':'s'} (${dupBytes(a.extra_bytes)}) the game never reads.
-        M2TW takes the <b>first</b> block with a name and ignores the rest, so every unit
-        that names one of these gets the first block's meshes, skins and animations.
-        A later block is a model the mod is carrying and cannot reach.</div>
+        <b>${n}</b> ${tt('dupes.name_appear_more_than_once_which',{x:n===1?'':'s',x2:n===1?'s':'',x3:x,x4:x===1?'':'s',x5:dupBytes(a.extra_bytes)})}</div>
 
-      <div class="count" style="margin-bottom:10px">Two ways out, per block:
-        <b>Rename</b> gives it a name of its own so a unit can be pointed at it, and
-        <b>Remove</b> drops it. Only the modeldb is written, it is backed up first,
-        and 🕑 Log → Undo puts it back.</div>
+      <div class="count" style="margin-bottom:10px">${tt('dupes.two_ways_out_per_block_rename')}</div>
 
       <div class="clbar">
-        <button onclick="dupAll('remove',true)">Remove every exact copy</button>
-        <button onclick="dupAll('rename',false)">Rename every different one</button>
-        <button onclick="dupAll('',null)">Clear</button></div>
+        <button onclick="dupAll('remove',true)">${tt('dupes.remove_every_exact_copy')}</button>
+        <button onclick="dupAll('rename',false)">${tt('dupes.rename_every_different_one')}</button>
+        <button onclick="dupAll('',null)">${tt('common.clear')}</button></div>
 
       ${a.rows.map(dupRowHtml).join('')}
       <div id="dupPreview"></div>`
       :`<div class="sum" style="margin-top:10px"><div class="srow">
-          <span class="sicon">✓</span><span class="stext">No name appears twice. All
-          <b>${a.entry_count}</b> entry blocks in the file are reachable.</span></div></div>`}
+          <span class="sicon">✓</span><span class="stext">${tt('dupes.no_name_appears_twice_all_entry',{entry_count:a.entry_count})}</span></div></div>`}
     </div>
     <div class="foot">
-      <button onclick="closeModal()">Close</button>
-      ${n?`<button onclick="dupPreview()">Probe</button>
-      <button class="primary" onclick="dupApply()">Apply</button>`:''}
+      <button onclick="closeModal()">${tt('common.close')}</button>
+      ${n?`<button onclick="dupPreview()">${tt('common.probe')}</button>
+      <button class="primary" onclick="dupApply()">${tt('common.apply')}</button>`:''}
     </div>`;
 }
 const dupBytes=n=>n<1024?`${n} bytes`:n<1048576?`${(n/1024).toFixed(1)} KB`:`${(n/1048576).toFixed(1)} MB`;
@@ -88,11 +79,10 @@ const dupBytes=n=>n<1024?`${n} bytes`:n<1048576?`${(n/1024).toFixed(1)} KB`:`${(
    things in the file. */
 function dupRowHtml(r){
   return `<fieldset style="margin-top:10px">
-    <legend><code>${esc(r.name)}</code> · ${r.copies} blocks${
-      r.identical?' · identical':''}</legend>
+    <legend><code>${esc(r.name)}</code> ${tt('dupes.blocks',{copies:r.copies,identical:r.identical?tt('dupes.identical'):''})}</legend>
     <div class="count">${r.used_by
-      ? `Used as ${esc(r.used_by)} - all of which resolve to the first block below.`
-      : 'No unit, mount or character names this entry, so the game reads none of these blocks today.'}</div>
+      ? tt('dupes.used_as_all_of_which_resolve',{used_by:esc(r.used_by)})
+      : tt('dupes.no_unit_mount_or_character_names')}</div>
     ${r.blocks.map(b=>dupBlockHtml(r,b)).join('')}
   </fieldset>`;
 }
@@ -101,27 +91,25 @@ function dupBlockHtml(r,b){
   const s=state.dup;
   const pick=s.picks[b.index]||'';
   const what=b.first
-    ? '<b class="w-good">the block the game reads</b>'
+    ? `<b class="w-good">${tt('dupes.the_block_the_game_reads')}</b>`
     : b.identical
-      ? '<b>an exact copy of it</b> - removing this loses nothing'
-      : `<b class="w-warn">a different model</b>: ${esc(b.differs.join('; '))}`;
-  const facts=`line ${b.line} · ${b.lods} LOD${b.lods===1?'':'s'} · ${b.skins} skin${
-    b.skins===1?'':'s'} · ${b.files.length} file${b.files.length===1?'':'s'}, ${
-    b.on_disk} of them in the mod`;
+      ? tt('dupes.an_exact_copy_of_it_removing')
+      : tt('dupes.a_different_model',{differs:esc(b.differs.join('; '))});
+  const facts=tt('dupes.line_lod_skin_file_of_them',{line:b.line,lods:b.lods,lods2:b.lods===1?'':'s',skins:b.skins,skins2:b.skins===1?'':'s',files_n:b.files.length,files:b.files.length===1?'':'s',on_disk:b.on_disk});
   if(b.first) return `<div class="clrow"><span class="stext">
       <b>#${b.ordinal}</b> ${what}<br><span class="count">${facts}</span></span></div>`;
   return `<div class="clrow"><span class="stext">
       <b>#${b.ordinal}</b> ${what}<br><span class="count">${facts}</span>
       <div class="clbar" style="margin-top:6px">
         <label><input type="radio" name="dup${b.index}" ${pick?'':'checked'}
-          onchange="dupPick(${b.index},'')"> Leave it</label>
+          onchange="dupPick(${b.index},'')"> ${tt('dupes.leave_it')}</label>
         <label><input type="radio" name="dup${b.index}" ${pick==='rename'?'checked':''}
-          onchange="dupPick(${b.index},'rename')"> Rename to</label>
+          onchange="dupPick(${b.index},'rename')"> ${tt('dupes.rename_to')}</label>
         <input style="width:220px" value="${esc(s.names[b.index]||'')}"
           oninput="dupName(${b.index},this.value)"
           onfocus="dupPick(${b.index},'rename')">
         <label><input type="radio" name="dup${b.index}" ${pick==='remove'?'checked':''}
-          onchange="dupPick(${b.index},'remove')"> Remove it</label>
+          onchange="dupPick(${b.index},'remove')"> ${tt('dupes.remove_it')}</label>
       </div></span></div>`;
 }
 
@@ -155,8 +143,8 @@ function dupPayload(){
 
 async function dupPreview(){
   const box=document.getElementById('dupPreview'); if(!box)return null;
-  if(!dupCount()){box.innerHTML='<div class="preview">Nothing is ticked.</div>';return null;}
-  box.innerHTML='<div class="preview">Planning…</div>';
+  if(!dupCount()){box.innerHTML=`<div class="preview">${tt('dupes.nothing_is_ticked')}</div>`;return null;}
+  box.innerHTML=`<div class="preview">${tt('common.planning')}</div>`;
   const r=await api.post('/api/bmdb/dupes_plan',dupPayload());
   if(r.error){box.innerHTML=`<div class="preview w-bad">${esc(r.error)}</div>`;return null;}
   box.innerHTML=dupPlanHtml(r.plan); return r;
@@ -165,7 +153,7 @@ function dupPlanHtml(p){
   const li=(cls,items)=>items.map(x=>`<div class="srow ${cls}"><span class="sicon">${
       cls==='bad'?'✗':cls==='warn'?'!':'·'}</span><span class="stext">${esc(x)}</span></div>`).join('');
   return `<div class="sum" style="margin-top:10px">
-    <div class="srow shead"><span class="sicon">🧬</span><span class="stext">What this writes</span></div>
+    <div class="srow shead"><span class="sicon">🧬</span><span class="stext">${tt('common.what_this_writes')}</span></div>
     ${li('',p.changes)}${li('warn',p.warnings)}${li('bad',p.errors)}</div>`;
 }
 
@@ -175,15 +163,15 @@ async function dupApply(){
   if(r.plan.errors&&r.plan.errors.length){toast(r.plan.errors[0]);return;}
   const rm=r.removes.length,rn=r.renames.length;
   const lost=r.removes.filter(x=>!x.identical).length;
-  if(!confirm(`Rewrite “${state.dup.a.mod}”’s battle_models.modeldb?\n\n`+
-      `${rn?`${rn} block(s) renamed - each becomes a real entry that nothing names yet.\n`:''}`+
-      `${rm?`${rm} block(s) removed.\n`:''}`+
-      `${lost?`\n${lost} of the removed block(s) is NOT a copy of the entry the game reads, so a model goes with it.\n`:''}`+
-      `\nThe file is backed up first. 🕑 Log → Undo puts it back.`))return;
+  if(!confirm(tt('dupes.rewrite_s_battle_models_modeldb',{mod:state.dup.a.mod})+
+      `${rn?tt('dupes.block_s_renamed_each_becomes_a',{rn}):''}`+
+      `${rm?tt('dupes.block_s_removed',{rm}):''}`+
+      `${lost?tt('dupes.of_the_removed_block_s_is',{lost}):''}`+
+      tt('dupes.the_file_is_backed_up_first')))return;
   const res=await api.post('/api/bmdb/dupes_apply',dupPayload());
-  if(res.error){toast('Failed: '+res.error);return;}
+  if(res.error){toast(tt('dupes.failed')+res.error);return;}
   if(res.plan&&res.plan.errors&&res.plan.errors.length){toast(res.plan.errors[0]);return;}
-  toast(`${res.renamed} renamed, ${res.removed} removed ✓  (undo in 🕑 Log)`,5200);
+  toast(tt('dupes.renamed_removed_undo_in_log',{renamed:res.renamed,removed:res.removed}),5200);
   state.bmdb=null; state.destData=null;
   // The rows on screen were read BEFORE the write, and their block indices are
   // exactly what a rewrite of the file invalidates. So the scan is re-run here

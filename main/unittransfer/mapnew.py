@@ -48,6 +48,7 @@ from . import campfiles, campmap, campnew, campstrat, factions, hordestart, mapv
 from . import namekeys
 from .campmap import BASE_REL
 from .maptga import TgaInfo, encode, read
+from . import i18n as _i18n
 
 ENCODING = campstrat.ENCODING
 
@@ -222,9 +223,7 @@ def island(w: int, h: int, provinces: int, share: float) -> Island:
     total = sum(land)
     if total < provinces * MIN_TILES:
         raise NewMapError(
-            f"{total} tiles of land is not room for {provinces} province(s) "
-            f"of {MIN_TILES} tiles each - make the map or the land share bigger, "
-            f"or ask for fewer provinces")
+            _i18n.msg("eng.mapnew.tiles_of_land_is_not_room", "{total} tiles of land is not room for {provinces} province(s) of {MIN_TILES} tiles each - make the map or the land share bigger, or ask for fewer provinces", total=total, provinces=provinces, MIN_TILES=MIN_TILES))
     owner = _grow(land, w, h, _seed_tiles(land, w, h, provinces))
     cells: Dict[int, List[int]] = {}
     for j, o in enumerate(owner):
@@ -234,8 +233,7 @@ def island(w: int, h: int, provinces: int, share: float) -> Island:
     for i in range(provinces):
         mine = cells.get(i)
         if not mine or len(mine) < 5:
-            raise NewMapError("a province came out too small for a city; ask "
-                              "for fewer provinces or more land")
+            raise NewMapError(_i18n.msg("eng.mapnew.a_province_came_out_too_small", "a province came out too small for a city; ask for fewer provinces or more land"))
         cx = sum(j % w for j in mine) / len(mine)
         cy = sum(j // w for j in mine) / len(mine)
         best = None
@@ -246,8 +244,7 @@ def island(w: int, h: int, provinces: int, share: float) -> Island:
                 best = (x, y)
                 break
         if best is None:
-            raise NewMapError("a province is too thin for a city to stand in; "
-                              "ask for fewer provinces")
+            raise NewMapError(_i18n.msg("eng.mapnew.a_province_is_too_thin_for", "a province is too thin for a city to stand in; ask for fewer provinces"))
         seats.append(best)
     steps = _steps(land, w, h)
     top = max(steps) or 1
@@ -487,7 +484,7 @@ def _int(body: dict, key: str, default: int) -> int:
     try:
         return int(body.get(key) if body.get(key) not in (None, "") else default)
     except (TypeError, ValueError):
-        raise NewMapError(f"{key} has to be a whole number, not {body.get(key)!r}")
+        raise NewMapError(_i18n.msg("eng.mapnew.has_to_be_a_whole_number", "{key} has to be a whole number, not {body}", key=key, body=repr(body.get(key))))
 
 
 def plan(mod, body: dict) -> NewMapPlan:
@@ -509,7 +506,7 @@ def plan(mod, body: dict) -> NewMapPlan:
     p.width, p.height = w, h
     _check_size(mod, p, w, h)
     if not 0.1 <= share <= 0.85:
-        p.errors.append("the land share is between 0.1 and 0.85 of the map")
+        p.errors.append(_i18n.msg("eng.mapnew.the_land_share_is_between_0", "the land share is between 0.1 and 0.85 of the map"))
     got = _setup(mod, body, p, n)
     if got is None:
         return p
@@ -545,24 +542,22 @@ def _setup(mod, body: dict, p: NewMapPlan, n: int):
     """The checks every new map shares, then the campaign copied. Returns
     ``(campaign plan, factions picked, climate)``, or None with ``p.errors``."""
     if not 1 <= n <= 199:
-        p.errors.append("a map has 1 to 199 provinces")
+        p.errors.append(_i18n.msg("eng.mapnew.a_map_has_1_to_199", "a map has 1 to 199 provinces"))
     slots = [s.lower() for s in factions.faction_slots(mod)]
     picked = [str(f).strip() for f in (body.get("factions") or []) if str(f).strip()]
     bad = [f for f in picked if f.lower() not in slots or f.lower() == "slave"]
     if bad:
         p.errors.append("not a faction of this mod: " + ", ".join(bad))
     if not picked:
-        p.errors.append("pick at least one faction to play")
+        p.errors.append(_i18n.msg("eng.mapnew.pick_at_least_one_faction_to", "pick at least one faction to play"))
     if len(picked) > n:
-        p.errors.append(f"{len(picked)} factions need {len(picked)} provinces at "
-                        f"least, one each")
+        p.errors.append(_i18n.msg("eng.mapnew.factions_need_provinces_at_least_one", "{picked_n} factions need {picked_n2} provinces at least, one each", picked_n=len(picked), picked_n2=len(picked)))
     clim = [c for c in mapvocab.climates(mod) if c.get("rgb")]
     want = str(body.get("climate") or "").strip()
     climate = next((c for c in clim if c["code"] == want), None) or (
         clim[0] if clim else None)
     if climate is None:
-        p.errors.append("this mod declares no climates in descr_climates.txt, so "
-                        "there is nothing to paint the map with")
+        p.errors.append(_i18n.msg("eng.mapnew.this_mod_declares_no_climates_in", "this mod declares no climates in descr_climates.txt, so there is nothing to paint the map with"))
     if p.errors:
         return None
 
@@ -585,9 +580,7 @@ def _names_free(mod, p: NewMapPlan, keys: Sequence[Tuple[str, str]]) -> bool:
     have = {k.lower() for k in namekeys.loc_pairs(mod, campmap.REGION_NAMES_REL)}
     for name, town in keys:
         if name.lower() in have or town.lower() in have:
-            p.errors.append(f"{name} or {town} is already a name in "
-                            f"{campmap.REGION_NAMES_REL}; pick another campaign "
-                            f"name")
+            p.errors.append(_i18n.msg("eng.mapnew.or_is_already_a_name_in", "{name} or {town} is already a name in {REGION_NAMES_REL}; pick another campaign name", name=name, town=town, REGION_NAMES_REL=campmap.REGION_NAMES_REL))
             return False
     return True
 
@@ -626,8 +619,7 @@ def _finish(mod, p: NewMapPlan, cp, imgs: Dict[str, Image.Image],
         taken.add(name)
         army = hordestart.default_army(hordestart.owned_units(mod, f), [])
         if not army:
-            p.warnings.append(f"the EDU gives {f} no bodyguard unit, so its "
-                              f"leader starts with no army")
+            p.warnings.append(_i18n.msg("eng.mapnew.the_edu_gives_no_bodyguard_unit", "the EDU gives {f} no bodyguard unit, so its leader starts with no army", f=f))
         leaders[f] = (name, army[:1])
     src_strat = ""
     src = campmap.campaign_home(mod, cp.source) / campstrat.STRAT_NAME
@@ -656,9 +648,7 @@ def _finish(mod, p: NewMapPlan, cp, imgs: Dict[str, Image.Image],
     p.changes.append(f"copied from {cp.source}: {len(cp.copies)} file(s) that name "
                      f"no province (pictures, movies)")
     p.warnings.append(
-        "descr_sounds_music_types.txt in world/maps/base is shared with every "
-        "other campaign and names no music for these provinces; they play the "
-        "default until a music type lists them")
+        _i18n.msg("eng.mapnew.descr_sounds_music_types_txt_in", "descr_sounds_music_types.txt in world/maps/base is shared with every other campaign and names no music for these provinces; they play the default until a music type lists them"))
 
 
 # ---------------------------------------------------------------------------

@@ -69,6 +69,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from . import flatrecord as fr
 from . import keyblock as kb
 from . import triggers
+from . import i18n as _i18n
 
 #: plain 8-bit text like every other campaign file
 ENCODING = triggers.ENCODING
@@ -213,9 +214,9 @@ def parse_text(text: str) -> GuildFile:
         if key not in ORDER:
             # an effect line loose above the trigger section, or a key nobody
             # has written down. Reported, never dropped.
-            cur.warnings.append(f"line {i + 1}: `{key}` is not a guild line")
+            cur.warnings.append(_i18n.msg("eng.guilds.line_is_not_a_guild_line", "line {x}: `{key}` is not a guild line", x=i + 1, key=key))
         elif key in cur.lines:
-            cur.warnings.append(f"line {i + 1}: a second `{key}` line")
+            cur.warnings.append(_i18n.msg("eng.guilds.line_a_second_line", "line {x}: a second `{key}` line", x=i + 1, key=key))
         cur.values[key] = code[len(key):].strip()
         cur.lines[key] = i
         cur.end = i + 1
@@ -237,7 +238,7 @@ def read(mod) -> Tuple[GuildFile, str]:
     """``(parsed, original text)``. Raises :class:`GuildError` when there is none."""
     path = path_for(mod)
     if not path.exists():
-        raise GuildError(f"{getattr(mod, 'name', '?')} has no {GUILDS_REL}")
+        raise GuildError(_i18n.msg("eng.guilds.has_no", "{getattr} has no {GUILDS_REL}", getattr=getattr(mod, 'name', '?'), GUILDS_REL=GUILDS_REL))
     text = kb.read_text(path, ENCODING)
     return parse_text(text), text
 
@@ -251,10 +252,9 @@ def parse_block(text: str) -> Guild:
     """One definition block, as a Code View pane holds it."""
     gf = parse_text(text if text.endswith("\n") else text + "\n")
     if not gf.guilds:
-        raise GuildError("a guild starts with a `Guild <name>` line - this text "
-                         "has none", 1)
+        raise GuildError(_i18n.msg("eng.guilds.a_guild_starts_with_a_guild", "a guild starts with a `Guild <name>` line - this text has none"), 1)
     if len(gf.guilds) > 1:
-        raise GuildError(f"this text holds {len(gf.guilds)} guilds - one at a time",
+        raise GuildError(_i18n.msg("eng.guilds.this_text_holds_guilds_one_at", "this text holds {guilds_n} guilds - one at a time", guilds_n=len(gf.guilds)),
                          gf.guilds[1].start + 1)
     return gf.guilds[0]
 
@@ -317,31 +317,27 @@ def check_guild(g: Guild, buildings: Optional[set] = None) -> List[Dict]:
     """
     out: List[Dict] = []
     if not g.name:
-        out.append(finding("no_name", True, "this guild has no name"))
+        out.append(finding("no_name", True, _i18n.msg("eng.guilds.this_guild_has_no_name", "this guild has no name")))
     if not g.building:
         out.append(finding(
             "no_building", True,
-            f"{g.name or 'this guild'} names no `building` line, so nothing in "
-            f"{GUILDS_REL} says which building tree it grants"))
+            _i18n.msg("eng.guilds.names_no_building_line_so_nothing", "{x} names no `building` line, so nothing in {GUILDS_REL} says which building tree it grants", x=g.name or 'this guild', GUILDS_REL=GUILDS_REL)))
     elif buildings is not None and g.building not in buildings:
         out.append(finding(
             "unknown_building", False,
-            f"`building {g.building}` is not a building line in "
-            f"export_descr_buildings.txt - the guild has nothing to build",
+            _i18n.msg("eng.guilds.building_is_not_a_building_line", "`building {building}` is not a building line in export_descr_buildings.txt - the guild has nothing to build", building=g.building),
             value=g.building))
     elif g.building and not g.building.startswith(BUILDING_PREFIX):
         out.append(finding(
             "building_prefix", False,
-            f"`building {g.building}` does not start with `{BUILDING_PREFIX}` - "
-            "every guild building line in both installed mods does",
+            _i18n.msg("eng.guilds.building_does_not_start_with_every", "`building {building}` does not start with `{BUILDING_PREFIX}` - every guild building line in both installed mods does", building=g.building, BUILDING_PREFIX=BUILDING_PREFIX),
             value=g.building))
 
     levels = g.levels
     if not levels:
         out.append(finding(
             "no_levels", True,
-            f"{g.name or 'this guild'} has no `levels` line, so no number of "
-            "guild points ever completes it"))
+            _i18n.msg("eng.guilds.has_no_levels_line_so_no", "{x} has no `levels` line, so no number of guild points ever completes it", x=g.name or 'this guild')))
         return out
     bad = [v for v in levels if not kb.is_int(v)]
     if bad:
@@ -353,8 +349,7 @@ def check_guild(g: Guild, buildings: Optional[set] = None) -> List[Dict]:
     if len(nums) != LEVEL_COUNT:
         out.append(finding(
             "levels_count", False,
-            f"`levels` has {len(nums)} threshold(s); 20 of the 21 guilds in the "
-            f"installed mods write {LEVEL_COUNT}, one per guild tier",
+            _i18n.msg("eng.guilds.levels_has_threshold_s_20_of", "`levels` has {nums_n} threshold(s); 20 of the 21 guilds in the installed mods write {LEVEL_COUNT}, one per guild tier", nums_n=len(nums), LEVEL_COUNT=LEVEL_COUNT),
             value=" ".join(levels)))
     if any(b <= a for a, b in zip(nums, nums[1:])):
         out.append(finding(
@@ -364,7 +359,7 @@ def check_guild(g: Guild, buildings: Optional[set] = None) -> List[Dict]:
             value=" ".join(levels)))
     if any(n < 0 for n in nums):
         out.append(finding("levels_negative", False,
-                           "a guild point threshold below zero is reached at once",
+                           _i18n.msg("eng.guilds.a_guild_point_threshold_below_zero", "a guild point threshold below zero is reached at once"),
                            value=" ".join(levels)))
     return out
 
@@ -385,8 +380,7 @@ def check_file(gf: GuildFile, tf: Optional[triggers.TriggerFile] = None,
         if g.name in seen:
             out.append(finding(
                 "duplicate", False,
-                f"`Guild {g.name}` is declared twice - the engine reads the "
-                f"first block and ignores this one (line {seen[g.name] + 1})",
+                _i18n.msg("eng.guilds.guild_is_declared_twice_the_engine", "`Guild {name}` is declared twice - the engine reads the first block and ignores this one (line {x})", name=g.name, x=seen[g.name] + 1),
                 guild=g.name, line=g.start + 1))
         else:
             seen[g.name] = g.start
@@ -401,9 +395,7 @@ def check_file(gf: GuildFile, tf: Optional[triggers.TriggerFile] = None,
         rows = by_guild[name]
         out.append(finding(
             "undeclared", False,
-            f"{len(rows)} trigger line(s) award guild points to `{name}`, which "
-            f"no `Guild {name}` block in this file declares - those points go "
-            "nowhere",
+            _i18n.msg("eng.guilds.trigger_line_s_award_guild_points", "{rows_n} trigger line(s) award guild points to `{name}`, which no `Guild {name2}` block in this file declares - those points go nowhere", rows_n=len(rows), name=name, name2=name),
             guild=name, line=rows[0].line + 1,
             triggers=sorted({r.trigger for r in rows})))
     for name in sorted(declared):
@@ -412,8 +404,7 @@ def check_file(gf: GuildFile, tf: Optional[triggers.TriggerFile] = None,
         g = gf.get(name)
         out.append(finding(
             "never_awarded", False,
-            f"no trigger in this file awards a guild point to `{name}`, so it "
-            "can never reach its first tier",
+            _i18n.msg("eng.guilds.no_trigger_in_this_file_awards", "no trigger in this file awards a guild point to `{name}`, so it can never reach its first tier", name=name),
             guild=name, line=(g.start + 1) if g else 0))
     for a in awards(tf):
         if a.scope and a.scope not in SCOPES:
@@ -425,8 +416,7 @@ def check_file(gf: GuildFile, tf: Optional[triggers.TriggerFile] = None,
         elif a.points and not kb.is_int(a.points):
             out.append(finding(
                 "points_not_number", False,
-                f"`Guild {a.guild} {a.scope} {a.points}` - guild points are a "
-                "whole number", guild=a.guild, line=a.line + 1))
+                _i18n.msg("eng.guilds.guild_guild_points_are_a_whole", "`Guild {guild} {scope} {points}` - guild points are a whole number", guild=a.guild, scope=a.scope, points=a.points), guild=a.guild, line=a.line + 1))
     return out
 
 
@@ -469,7 +459,7 @@ def new_block(edits: Dict) -> str:
     """A whole guild written from scratch, in the shape the real files write."""
     name = str(edits.get("name") or "").strip()
     if not name:
-        raise GuildError("a new guild needs a name")
+        raise GuildError(_i18n.msg("eng.guilds.a_new_guild_needs_a_name", "a new guild needs a name"))
     building = str(edits.get("building") or "").strip() or (BUILDING_PREFIX + name)
     levels = kb.value_text(edits.get("levels")) or "100 250 500"
     return "\n".join([f"{GUILD_KW} {name}",
@@ -598,7 +588,7 @@ def detail(mod, name: str) -> Dict:
     gf, text = read(mod)
     g = gf.get(name)
     if g is None:
-        raise GuildError(f"{name!r} is not a guild in {GUILDS_REL}")
+        raise GuildError(_i18n.msg("eng.guilds.is_not_a_guild_in", "{name} is not a guild in {GUILDS_REL}", name=repr(name), GUILDS_REL=GUILDS_REL))
     tf = trigger_file(text)
     known = building_names(mod)
     rows = awards_by_guild(tf).get(name, [])
@@ -688,7 +678,7 @@ def plan(mod, body: dict) -> GuildPlan:
         p.warnings += [f["message"] for f in p.findings if not f["fatal"]]
     p.text = "" if text == original else text
     if not p.text and not p.errors:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.guilds.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -696,9 +686,9 @@ def _plan_guild(p: GuildPlan, gf: GuildFile, text: str, body: dict) -> str:
     """The file with this one guild added, edited or removed."""
     if p.action == "add":
         if not p.name:
-            raise GuildError("a new guild needs a name")
+            raise GuildError(_i18n.msg("eng.guilds.a_new_guild_needs_a_name", "a new guild needs a name"))
         if gf.get(p.name) is not None:
-            p.errors.append(f"{p.name} is already a guild in this file")
+            p.errors.append(_i18n.msg("eng.guilds.is_already_a_guild_in_this", "{name} is already a guild in this file", name=p.name))
             return text
         block = str(body.get("raw_block") or "").strip("\r\n") or new_block(
             dict(body.get("edits") or {}, name=p.name))
@@ -708,15 +698,14 @@ def _plan_guild(p: GuildPlan, gf: GuildFile, text: str, body: dict) -> str:
 
     g = gf.get(p.name)
     if g is None:
-        p.errors.append(f"{p.name} is not a guild in {GUILDS_REL}")
+        p.errors.append(_i18n.msg("eng.guilds.is_not_a_guild_in", "{name} is not a guild in {GUILDS_REL}", name=p.name, GUILDS_REL=GUILDS_REL))
         return text
 
     if p.action == "delete":
         rows = awards_by_guild(trigger_file(text)).get(p.name, [])
         if rows:
             p.warnings.append(
-                f"{len(rows)} trigger line(s) still award points to {p.name} - "
-                "they will award them to a guild nothing declares")
+                _i18n.msg("eng.guilds.trigger_line_s_still_award_points", "{rows_n} trigger line(s) still award points to {name} - they will award them to a guild nothing declares", rows_n=len(rows), name=p.name))
         p.changes.append(f"- Guild {p.name}")
         lines = list(gf.lines)
         start, end = _banner_span(gf, g)
@@ -730,8 +719,7 @@ def _plan_guild(p: GuildPlan, gf: GuildFile, text: str, body: dict) -> str:
         block = str(raw).strip("\r\n")
         if parse_block(block + "\n").name != p.name:
             raise GuildError(
-                f"this guild is `{p.name}` - renaming it here would orphan every "
-                "trigger that awards it points and the building line it grants")
+                _i18n.msg("eng.guilds.this_guild_is_renaming_it_here", "this guild is `{name}` - renaming it here would orphan every trigger that awards it points and the building line it grants", name=p.name))
     else:
         block = render_block(base, dict(body.get("edits") or {}))
     if block == base:
@@ -755,7 +743,7 @@ def apply(p: GuildPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.guilds.nothing_to_change", "nothing to change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

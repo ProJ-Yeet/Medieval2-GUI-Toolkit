@@ -29,6 +29,7 @@ from typing import Dict, List, Optional, Tuple
 
 from . import config, stringsbin
 from .logutil import file_op, log
+from . import i18n as _i18n
 
 #: where a mod keeps its localisation, relative to ``data/``
 TEXT_REL = "text"
@@ -71,10 +72,10 @@ def resolve(mod, rel: str) -> Path:
     name = (rel or "").replace("\\", "/").strip("/")
     name = name[len(TEXT_REL) + 1:] if name.startswith(TEXT_REL + "/") else name
     if not name or "/" in name or not name.endswith(".strings.bin"):
-        raise StringsError(f"{rel!r} is not a .strings.bin in data/text")
+        raise StringsError(_i18n.msg("eng.strings.is_not_a_strings_bin_in", "{rel} is not a .strings.bin in data/text", rel=repr(rel)))
     path = text_dir(mod) / name
     if not path.exists():
-        raise StringsError(f"{mod.name} has no data/{TEXT_REL}/{name}")
+        raise StringsError(_i18n.msg("eng.strings.has_no_data", "{name} has no data/{TEXT_REL}/{name2}", name=mod.name, TEXT_REL=TEXT_REL, name2=name))
     return path
 
 
@@ -169,7 +170,7 @@ def _split_ident(ident: str) -> Tuple[str, str]:
     rel, sep, row = (ident or "").partition("|")
     if not sep:
         raise StringsError(
-            f"{ident!r} does not name a row - expected <file>|<tag>")
+            _i18n.msg("eng.strings.does_not_name_a_row_expected", "{ident} does not name a row - expected <file>|<tag>", ident=repr(ident)))
     return rel, row
 
 
@@ -182,13 +183,13 @@ def locate(mod, ident: str) -> Tuple[str, str, int, str]:
         try:
             pos = int(row[1:])
         except ValueError:
-            raise StringsError(f"{row!r} is not a row position") from None
+            raise StringsError(_i18n.msg("eng.strings.is_not_a_row_position", "{row} is not a row position", row=repr(row))) from None
     else:
         pos = sb.index_of(row)
         if pos < 0:
-            raise StringsError(f"{path.name} has no entry tagged {row!r}")
+            raise StringsError(_i18n.msg("eng.strings.has_no_entry_tagged", "{name} has no entry tagged {row}", name=path.name, row=repr(row)))
     if not 0 <= pos < len(sb):
-        raise StringsError(f"{path.name} has no entry at position {pos}")
+        raise StringsError(_i18n.msg("eng.strings.has_no_entry_at_position", "{name} has no entry at position {pos}", name=path.name, pos=pos))
     tag = sb.tags[pos] if sb.tagged else ""
     return rel_of(mod, path), tag, pos, sb.values[pos]
 
@@ -201,8 +202,7 @@ def record_line(tag: str, value: str, pos: int = -1) -> str:
     """
     if not tag:
         raise StringsError(
-            "this archive's entries have no tags, so there is no {tag}text form "
-            "of them - edit the value in the box instead")
+            _i18n.msg("eng.strings.this_archives_entries_have_no_tags", "this archive's entries have no tags, so there is no {tag}text form of them - edit the value in the box instead"))
     return stringsbin.record_text(tag, value)
 
 
@@ -255,7 +255,7 @@ def plan(mod, body: dict) -> StringsPlan:
     try:
         sb = stringsbin.read(path)
     except (OSError, stringsbin.StringsBinError) as e:
-        p.errors.append(f"could not read {path.name}: {e}")
+        p.errors.append(_i18n.msg("eng.strings.could_not_read", "could not read {name}: {e}", name=path.name, e=e))
         return p
     p.before = len(sb)
     original = stringsbin.encode(sb)
@@ -275,7 +275,7 @@ def plan(mod, body: dict) -> StringsPlan:
         ident = e.get("id", e.get("pos"))
         pos = row_pos(ident)
         if pos < 0 or pos >= len(sb):
-            p.errors.append(f"{path.name} has no entry {ident!r}")
+            p.errors.append(_i18n.msg("eng.strings.has_no_entry", "{name} has no entry {ident}", name=path.name, ident=repr(ident)))
             continue
         value = str(e.get("value") or "")
         if value == sb.values[pos]:
@@ -289,14 +289,13 @@ def plan(mod, body: dict) -> StringsPlan:
             p.errors.append(NO_ADD)
             break
         if not tag:
-            p.errors.append("a new entry needs a tag")
+            p.errors.append(_i18n.msg("eng.strings.a_new_entry_needs_a_tag", "a new entry needs a tag"))
             continue
         if BAD_TAG.search(tag):
-            p.errors.append(f"{tag!r}: a tag has no spaces or braces in it, "
-                            f"because the .txt writes it as {{tag}}text")
+            p.errors.append(_i18n.msg("eng.strings.a_tag_has_no_spaces_or", "{tag2}: a tag has no spaces or braces in it, because the .txt writes it as {tag}text", tag2=repr(tag)))
             continue
         if sb.index_of(tag) >= 0:
-            p.errors.append(f"{path.name} already has an entry tagged {tag!r}")
+            p.errors.append(_i18n.msg("eng.strings.already_has_an_entry_tagged", "{name} already has an entry tagged {tag}", name=path.name, tag=repr(tag)))
             continue
         sb.set(tag, str(a.get("value") or ""))
         p.changes.append(f"+ {tag}: {_clip(str(a.get('value') or ''))}")
@@ -307,7 +306,7 @@ def plan(mod, body: dict) -> StringsPlan:
             break
         pos = row_pos(ident)
         if pos < 0 or pos >= len(sb):
-            p.errors.append(f"{path.name} has no entry {ident!r}")
+            p.errors.append(_i18n.msg("eng.strings.has_no_entry", "{name} has no entry {ident}", name=path.name, ident=repr(ident)))
             continue
         tag = sb.tags[pos]
         sb.remove(tag)
@@ -317,27 +316,26 @@ def plan(mod, body: dict) -> StringsPlan:
     p.after = len(sb)
     if sb.index and (p.after != p.before):
         p.warnings.append(
-            f"the trailing tag index ({len(sb.index)} names) is carried through "
-            "unchanged - the game rebuilds it when it recompiles the .txt")
+            _i18n.msg("eng.strings.the_trailing_tag_index_names_is", "the trailing tag index ({index_n} names) is carried through unchanged - the game rebuilds it when it recompiles the .txt", index_n=len(sb.index)))
     new = stringsbin.encode(sb)
     p.data = b"" if new == original else new
     if not p.data and not p.errors:
-        p.warnings.append("nothing to change")
+        p.warnings.append(_i18n.msg("eng.strings.nothing_to_change", "nothing to change"))
     return p
 
 
 def _plan_rebuild(p: StringsPlan, sb, original: bytes) -> StringsPlan:
     txt = stringsbin.txt_path_for(p.path)
     if not sb.tagged:
-        p.errors.append(f"{p.path.name} has no tags, so it cannot be built from a .txt")
+        p.errors.append(_i18n.msg("eng.strings.has_no_tags_so_it_cannot", "{name} has no tags, so it cannot be built from a .txt", name=p.path.name))
         return p
     if not txt.exists():
-        p.errors.append(f"there is no {txt.name} beside it to build from")
+        p.errors.append(_i18n.msg("eng.strings.there_is_no_beside_it_to", "there is no {name} beside it to build from", name=txt.name))
         return p
     try:
         made = stringsbin.compile_txt(txt.read_text(encoding=stringsbin.TXT_ENCODING), sb)
     except (OSError, UnicodeError, stringsbin.StringsBinError) as e:
-        p.errors.append(f"could not read {txt.name}: {e}")
+        p.errors.append(_i18n.msg("eng.strings.could_not_read", "could not read {name}: {e}", name=txt.name, e=e))
         return p
     p.after = len(made)
     was, now = sb.pairs(), made.pairs()
@@ -355,7 +353,7 @@ def _plan_rebuild(p: StringsPlan, sb, original: bytes) -> StringsPlan:
     new = stringsbin.encode(made)
     p.data = b"" if new == original else new
     if not p.data:
-        p.warnings.append(f"{p.path.name} already matches {txt.name}")
+        p.warnings.append(_i18n.msg("eng.strings.already_matches", "{name} already matches {name2}", name=p.path.name, name2=txt.name))
     return p
 
 
@@ -373,7 +371,7 @@ def apply(p: StringsPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.data:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.strings.nothing_to_change", "nothing to change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

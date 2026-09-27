@@ -69,6 +69,7 @@ from . import edu as edu_mod
 from . import mounts as mounts_mod
 from .logutil import block, counted, file_op, fingerprint, log
 from .mod import Mod
+from . import i18n as _i18n
 
 # Slot kinds an entry can be referenced from. "soldier" is called out separately
 # because it is the one the merge suggestions are about; OTHER_KINDS is "doing a
@@ -978,7 +979,7 @@ def entry_detail(mod: Mod, name: str) -> dict:
     """One entry in the shape the editor's model card renders."""
     entry = mod.modeldb.by_name().get((name or "").lower())
     if entry is None:
-        raise KeyError(f"model entry {name!r} not found in {mod.name}")
+        raise KeyError(_i18n.msg("eng.bmdb.model_entry_not_found_in", "model entry {name} not found in {name2}", name=repr(name), name2=mod.name))
     slots = entry_users(mod).get(entry.name) or {k: [] for k in SLOT_KINDS}
     refs = [w for k in SLOT_KINDS for w in slots[k]]
     labels = [f"{k}: {', '.join(short_referrer(w) for w in slots[k][:3])}"
@@ -1302,7 +1303,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
     for name in dict.fromkeys(req.entries):
         e = entries.get(name)
         if e is None:
-            plan.warnings.append(f"'{name}' is not in this mod's modeldb - skipped")
+            plan.warnings.append(_i18n.msg("eng.bmdb.is_not_in_this_mods_modeldb", "'{name}' is not in this mod's modeldb - skipped", name=name))
             continue
         if e.first_entry_pad:
             plan.warnings.append(edit.PAD_ENTRY_KEPT.format(name=name))
@@ -1332,7 +1333,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
     for m in req.merges:
         name, into = m["entry"], m["into"]
         if name not in entries:
-            plan.warnings.append(f"'{name}' is not in this mod's modeldb - merge skipped")
+            plan.warnings.append(_i18n.msg("eng.bmdb.is_not_in_this_mods_modeldb_2", "'{name}' is not in this mod's modeldb - merge skipped", name=name))
             continue
         if name in mentions:
             # A merge deletes `name`. Repointing the EDU does not help a script
@@ -1340,7 +1341,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
             plan.warnings.append(_kept_by_mention(name, mentions[name], merge=True))
             continue
         if into not in entries:
-            plan.errors.append(f"'{into}' is not in this mod's modeldb")
+            plan.errors.append(_i18n.msg("eng.bmdb.is_not_in_this_mods_modeldb_3", "'{into}' is not in this mod's modeldb", into=into))
             continue
         if entries[name].first_entry_pad:
             plan.warnings.append(edit.PAD_ENTRY_KEPT.format(name=name))
@@ -1351,13 +1352,11 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
             # error the game refuses to start on. Footer twins suggest each
             # other, so a mutual pair is the way this happens.
             plan.errors.append(
-                f"'{name}' would be pointed at '{into}', which this cleanup also "
-                "removes - untick one of the two, they are twins of each other")
+                _i18n.msg("eng.bmdb.would_be_pointed_at_which_this", "'{name}' would be pointed at '{into}', which this cleanup also removes - untick one of the two, they are twins of each other", name=name, into=into))
             continue
         if footer_key(entries[name]) != footer_key(entries[into]):
             plan.errors.append(
-                f"'{name}' and '{into}' no longer have the same animations/torch "
-                "footer - re-run the scan")
+                _i18n.msg("eng.bmdb.and_no_longer_have_the_same", "'{name}' and '{into}' no longer have the same animations/torch footer - re-run the scan", name=name, into=into))
             continue
         model_map[name] = into
         plan.merges.append((name, into))
@@ -1378,8 +1377,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
                          if m in model_map and m != (u.soldier_model or "").lower()]
             if leftovers:
                 plan.errors.append(
-                    f"'{u.type}' still names {', '.join(sorted(set(leftovers)))} outside "
-                    "its soldier line - that entry cannot be merged away")
+                    _i18n.msg("eng.bmdb.still_names_outside_its_soldier_line", "'{type}' still names {leftovers} outside its soldier line - that entry cannot be merged away", type=u.type, leftovers=', '.join(sorted(set(leftovers)))))
         if touched:
             # An M2TWEOP unit's soldier line is in that unit's own file, so the
             # repoint is split across the EDU and whichever EOP files are involved.
@@ -1439,15 +1437,13 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
                             "entries that stay still use them")
     if any(f.lower().endswith(".spr") for _s, f in plan.exports):
         plan.warnings.append(
-            "sprite (.spr) files were exported - their companion sprite sheet is "
-            "not named in the modeldb, so check data/unit_sprites before deleting "
-            "anything from the export folder by hand.")
+            _i18n.msg("eng.bmdb.sprite_spr_files_were_exported_their", "sprite (.spr) files were exported - their companion sprite sheet is not named in the modeldb, so check data/unit_sprites before deleting anything from the export folder by hand."))
 
     # ---- files nothing in the modeldb mentions
     for rel in dict.fromkeys(req.orphans):
         src = mod.data / rel
         if not src.is_file():
-            plan.warnings.append(f"data/{rel} is not on disk - skipped")
+            plan.warnings.append(_i18n.msg("eng.bmdb.data_is_not_on_disk_skipped", "data/{rel} is not on disk - skipped", rel=rel))
             continue
         try:
             plan.orphan_bytes += src.stat().st_size
@@ -1489,20 +1485,16 @@ def _plan_mounts(plan: CleanupPlan, users: Dict[str, Dict[str, List[str]]]) -> N
     for want in dict.fromkeys(m.strip().lower() for m in req.mounts):
         mount = by_type.get(want)
         if mount is None:
-            plan.warnings.append(f"mount '{want}' is not in this mod's descr_mount.txt - skipped")
+            plan.warnings.append(_i18n.msg("eng.bmdb.mount_is_not_in_this_mods", "mount '{want}' is not in this mod's descr_mount.txt - skipped", want=want))
             continue
         if want in mentions:
             plan.warnings.append(
-                f"mount '{mount.type}' is named in {mentions[want]} - kept. Nothing in "
-                "the EDU rides it, but that file does, so removing the block would "
-                "break whatever reads it.")
+                _i18n.msg("eng.bmdb.mount_is_named_in_kept_nothing", "mount '{type}' is named in {mentions} - kept. Nothing in the EDU rides it, but that file does, so removing the block would break whatever reads it.", type=mount.type, mentions=mentions[want]))
             continue
         if want in ridden:
             riders = [u.type for u in mod.edu.units if u.mount.lower() == want]
             plan.warnings.append(
-                f"mount '{mount.type}' is ridden by {', '.join(riders[:3])}"
-                f"{'…' if len(riders) > 3 else ''} - kept, removing it would leave those "
-                "units with a mount that does not exist")
+                _i18n.msg("eng.bmdb.mount_is_ridden_by_kept_removing", "mount '{type}' is ridden by {riders}{x} - kept, removing it would leave those units with a mount that does not exist", type=mount.type, riders=', '.join(riders[:3]), x='…' if len(riders) > 3 else ''))
             continue
         keep.append(mount.type)
     if not keep:
@@ -1598,7 +1590,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
         raise ValueError("cannot apply: " + "; ".join(plan.errors))
     mod, target = plan.mod, plan.target
     if target is None:
-        raise ValueError("cannot apply: no export folder")
+        raise ValueError(_i18n.msg("eng.bmdb.cannot_apply_no_export_folder", "cannot apply: no export folder"))
     say = _reporter(progress)
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)
@@ -1681,7 +1673,7 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
                 manifest.setdefault("deleted", []).append(rel)
                 file_op("DELETE", t, "taken out of the mod (Undo puts it back)")
             except OSError as exc:
-                plan.warnings.append(f"could not remove data/{rel}: {exc}")
+                plan.warnings.append(_i18n.msg("eng.bmdb.could_not_remove_data", "could not remove data/{rel}: {exc}", rel=rel, exc=exc))
                 log.warning("  could not remove %s: %s", t, exc)
     say(99, "writing the log entry")
 
@@ -2017,9 +2009,9 @@ def recheck(mod: Mod, progress: Progress = None) -> dict:
             key = _norm(rel)
             why = []
             if key in live_files:
-                why.append("named by an entry still in the live modeldb")
+                why.append(_i18n.msg("eng.bmdb.named_by_an_entry_still_in", "named by an entry still in the live modeldb"))
             if key in text_refs:
-                why.append(f"named by {text_refs[key]}")
+                why.append(_i18n.msg("eng.bmdb.named_by", "named by {text_refs}", text_refs=text_refs[key]))
             if not why:
                 continue
             source, path = _revert_source(rec, rel)
@@ -2037,7 +2029,7 @@ def recheck(mod: Mod, progress: Progress = None) -> dict:
                 why.append("still referenced as " + described)
             row = mentions.get(name)
             if row:
-                why.append(f"named by {row['file']}")
+                why.append(_i18n.msg("eng.bmdb.named_by_2", "named by {file}", file=row['file']))
             if not why:
                 continue
             source, path = _revert_source_entry(rec)

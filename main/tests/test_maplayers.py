@@ -46,6 +46,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tests import _webtext  # noqa: E402
 
 from tests import _realmod
 from unittransfer import campmap, mapcheck, mapvocab
@@ -346,7 +347,7 @@ else:
         run = tmp / "harness.js"
         run.write_text(HARNESS, encoding="utf-8")
         res = tmp / "out.json"
-        p = subprocess.run([node, str(run), str(JS), str(job), str(res)],
+        p = subprocess.run([node, str(run), str(_webtext.english_copy(JS)), str(job), str(res)],
                            capture_output=True, text=True)
         if p.returncode != 0:
             check("the harness runs", False)

@@ -72,7 +72,7 @@ function cvCreate(o){
     // now, which during typing is ahead of the last successful parse.
     // what the file is called, for the status line - the host knows (an EOP
     // unit's block is not in export_descr_unit.txt at all)
-    where:o.where||'the file',
+    where:o.where||tt('codeview.the_file'),
     // Some records are not editable AS TEXT - a voice entry only means anything
     // under the accent/class headers above it, which the block does not contain.
     // The pane still earns its place: it says what the file actually holds.
@@ -170,32 +170,21 @@ function cvDrop(cv){ if(cv)delete CV_LIVE[cv.uid]; }
 
 /* ---- markup ---- */
 function cvHtml(cv){
-  if(!cv.loaded)return `<div class="cvpane"><div class="cvbar"><span class="count">Loading the text…</span></div></div>`;
+  if(!cv.loaded)return `<div class="cvpane"><div class="cvbar"><span class="count">${tt('codeview.loading_the_text')}</span></div></div>`;
   const n=cvLines(cv.text).length;
   return `<div class="cvpane" id="cvp-${cv.uid}">
     <div class="cvbar">
       <span class="count" id="cvst-${cv.uid}">${cvStatus(cv)}</span>
       <span class="sp"></span>
-      ${cv.canRepair?`<button title="Every string here is stored as its own length
-followed by that many characters. Change a path and the number beside it has to
-change too. This does that, and you can see it happen."
-        onclick="cvRepair(cvOf('${cv.uid}'))">⟲ Fix lengths</button>`:''}
-      ${cv.canTidy?`<button class="${cvTidyOn()?'on':''}" title="Line every value up in
-one column, which is how this record now opens. Only the gap between a keyword
-and its value changes: nothing is reordered, nothing is dropped, and comments
-stay where they are. Turning it off reads the record back with the layout the
-file itself has."
-        onclick="cvTidyToggle(cvOf('${cv.uid}'))">⇥ Tidy layout</button>`:''}
-      ${(cv.canHide&&cv.comments)?`<button class="${cvHideOn()?'on':''}" title="Leave the
-lines that are nothing but a comment out of the box. Display only: every one of
-them is still written back, byte for byte, where it sat."
-        onclick="cvCommentsToggle(cvOf('${cv.uid}'))">; ${cv.comments} comment line${
-          cv.comments===1?'':'s'}</button>`:''}
-      <button class="${cvFollowOn()?'on':''}" data-cvfollow title="Scroll the text to a box's line
-as soon as the pointer is over it. Off, a hover only lights the line and the
-text stays where you left it until you click a box."
-        onclick="cvFollowToggle()">⇕ Follow hover</button>
-      <span class="count">${n} line${n===1?'':'s'}</span>
+      ${cv.canRepair?`<button title="${ttA('codeview.every_string_here_is_stored_as')}"
+        onclick="cvRepair(cvOf('${cv.uid}'))">${tt('codeview.fix_lengths')}</button>`:''}
+      ${cv.canTidy?`<button class="${cvTidyOn()?'on':''}" title="${ttA('codeview.line_every_value_up_in_one')}"
+        onclick="cvTidyToggle(cvOf('${cv.uid}'))">${tt('codeview.tidy_layout')}</button>`:''}
+      ${(cv.canHide&&cv.comments)?`<button class="${cvHideOn()?'on':''}" title="${ttA('codeview.leave_the_lines_that_are_nothing')}"
+        onclick="cvCommentsToggle(cvOf('${cv.uid}'))">${tt('codeview.comment_line',{comments:cv.comments,x:cv.comments===1?'':'s'})}</button>`:''}
+      <button class="${cvFollowOn()?'on':''}" data-cvfollow title="${ttA('codeview.scroll_the_text_to_a_boxs')}"
+        onclick="cvFollowToggle()">${tt('codeview.follow_hover')}</button>
+      <span class="count">${tt('codeview.line',{x:n,x2:n===1?'':'s'})}</span>
     </div>
     <div class="cvwrap">
       <div class="cvgutter"><div class="cvshift" id="cvgut-${cv.uid}">${cvGutter(cv)}</div></div>
@@ -220,21 +209,20 @@ function cvOverlay(cv){
   return cvLines(cv.text).map((_,i)=>`<div class="cvl" data-l="${i+1}"></div>`).join('');
 }
 function cvStatus(cv){
-  if(cv.err)return '<span class="w-bad">✗ this text can’t be read</span>';
-  if(cv.readonly)return `what <code>${esc(cv.where)}</code> holds · read-only`;
-  if(cv.busy)return 'checking…';
-  if(cv.edited)return '<span class="w-good">✓ Reads back, and is saved exactly as typed.</span>';
+  if(cv.err)return `<span class="w-bad">${tt('codeview.this_text_cant_be_read')}</span>`;
+  if(cv.readonly)return tt('codeview.what_holds_read_only',{where:esc(cv.where)});
+  if(cv.busy)return tt('codeview.checking');
+  if(cv.edited)return `<span class="w-good">${tt('codeview.reads_back_and_is_saved_exactly')}</span>`;
   // the pane is a promise about the bytes a save writes, so it owns up to the
   // one thing it changed on its own
   if(cv.auto&&cv.auto!==cv.pristine)
-    return 'lined up on opening · saved this way with your next change';
-  return `the record as <code>${esc(cv.where)}</code> stores it`;
+    return tt('codeview.lined_up_on_opening_saved_this');
+  return tt('codeview.the_record_as_stores_it',{where:esc(cv.where)});
 }
 function cvErrHtml(cv){
   if(!cv.err)return cv.note?`<div class="count">${esc(cv.note)}</div>`:'';
-  return `<div class="w-bad">✗ ${esc(cv.err)}${cv.errLine?` (line ${cv.errLine})`:''}
-    <div class="count">Nothing is lost: fix the line, or undo your typing, and the
-      boxes come straight back.</div></div>`;
+  return `<div class="w-bad">✗ ${esc(cv.err)}${cv.errLine?tt('codeview.line_2',{errLine:cv.errLine}):''}
+    <div class="count">${tt('codeview.nothing_is_lost_fix_the_line')}</div></div>`;
 }
 
 /* ---- wiring ---- */
@@ -345,7 +333,7 @@ async function cvParse(cv){
 // both make it the new base and let the boxes follow.
 function cvTook(cv,r,text){
   cv.busy=false;
-  if(!r.ok){cv.err=r.error||'this text can’t be read'; cv.errLine=r.line||0;
+  if(!r.ok){cv.err=r.error||tt('codeview.this_text_cant_be_read_2'); cv.errLine=r.line||0;
     cvPaintStatus(cv); cvPaintErrLine(cv); return false;}
   cv.err=null; cv.errLine=0; cv.note=r.note||'';
   cvTakeView(cv,r);
@@ -373,14 +361,14 @@ function cvTook(cv,r,text){
 async function cvRepair(cv){
   const text=cv.text,before=cv.text;
   const r=await api.post('/api/codeview/repair',Object.assign(cvWho(cv),{text}));
-  if(!r.ok){cv.err=r.error||'that could not be put right'; cv.errLine=r.line||0;
+  if(!r.ok){cv.err=r.error||tt('codeview.that_could_not_be_put_right'); cv.errLine=r.line||0;
     cvPaintStatus(cv); cvPaintErrLine(cv); return;}
   cvTook(cv,r,r.text);
   const ta=document.getElementById('cvta-'+cv.uid);
   if(ta)ta.value=r.text;
   cvUndoNote(cv,before);
   cvRedrawLines(cv);
-  toast('Lengths put right.');
+  toast(tt('codeview.lengths_put_right'));
 }
 /* Re-column the record so its values line up. Pressed by hand this is an edit
    like any other: it goes through cvTook, so the boxes are re-read from it and
@@ -390,14 +378,14 @@ async function cvRepair(cv){
 async function cvTidy(cv){
   const before=cv.text;
   const r=await api.post('/api/codeview/tidy',Object.assign(cvWho(cv),{text:cv.text}));
-  if(!r.ok){cv.err=r.error||'that could not be tidied'; cv.errLine=r.line||0;
+  if(!r.ok){cv.err=r.error||tt('codeview.that_could_not_be_tidied'); cv.errLine=r.line||0;
     cvPaintStatus(cv); cvPaintErrLine(cv); return;}
   cvTook(cv,r,r.text);
   const ta=document.getElementById('cvta-'+cv.uid);
   if(ta)ta.value=r.text;
   cvUndoNote(cv,before);
   cvRedrawLines(cv);
-  toast('Lined up. Save to keep it.');
+  toast(tt('codeview.lined_up_save_to_keep_it'));
 }
 /* ---- the two view settings, from the bar ----
    Turning tidying OFF cannot un-tidy text that has since been typed, so it does
@@ -406,8 +394,8 @@ async function cvTidy(cv){
 async function cvTidyToggle(cv){
   const on=cvTidyOn();
   if(on&&cv.base!==cv.pristine&&cv.base!==cv.auto
-     &&!confirm('Reading the record back from the file drops what you typed in this pane. '
-       +'The boxes keep their own changes. Go on?'))return;
+     &&!confirm(tt('codeview.reading_the_record_back_from_the')
+       +tt('codeview.the_boxes_keep_their_own_changes')))return;
   cvSetSetting('code_view_tidy',!on);
   if(!on)return cvTidy(cv);            // turning it on: line up what is here now
   await cvReload(cv);
@@ -516,8 +504,8 @@ async function cvUndoStep(cv,redo){
   cv.busy=true; cv.err=null;
   cvRedrawLines(cv); cvPaintStatus(cv);
   await cvParse(cv);                          // the boxes follow the text, as ever
-  toast((redo?'↷ Redone':'↶ Undone')
-    +` in the text · ${cv.uPast.length} more to undo`,1400);
+  toast((redo?tt('codeview.redone'):tt('codeview.undone'))
+    +tt('codeview.in_the_text_more_to_undo',{uPast_n:cv.uPast.length}),1400);
   return true;
 }
 // The pane the caret is in, if it is in one that can be typed into.

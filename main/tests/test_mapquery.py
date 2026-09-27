@@ -39,6 +39,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from tests import _webtext  # noqa: E402
 
 from PIL import Image
 
@@ -638,8 +639,8 @@ else:
         }), encoding="utf-8")
         res = td / "out.json"
         pr = subprocess.run(
-            [node, str(run), str(ROOT / "web/js/campmap.js"),
-             str(ROOT / "web/js/mapquery.js"), str(job), str(res)],
+            [node, str(run), str(_webtext.english_copy(ROOT / "web/js/campmap.js")),
+             str(_webtext.english_copy(ROOT / "web/js/mapquery.js")), str(job), str(res)],
             capture_output=True, text=True)
         if pr.returncode != 0:
             check("the browser's border pass runs", False)

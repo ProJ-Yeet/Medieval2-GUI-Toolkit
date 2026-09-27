@@ -41,6 +41,7 @@ import re
 from typing import Dict, List, Optional
 
 from . import edu as edu_mod
+from . import i18n as _i18n
 
 GUIDE = "A Beginner's Guide to the Export_Descr_Unit (M2TW)"
 DOCUDEMONS = "M2TW Ultimate Docudemons 5.3, Character Attributes"
@@ -144,7 +145,7 @@ def mod_findings(units) -> List[Dict]:
     if len(main) <= MAX_UNITS:
         return []
     return [finding("too-many-units", "export_descr_unit.txt",
-                    f"{len(main)} units in the file, over the engine's {MAX_UNITS}",
+                    _i18n.msg("eng.educeil.units_in_the_file_over_the", "{main_n} units in the file, over the engine's {MAX_UNITS}", main_n=len(main), MAX_UNITS=MAX_UNITS),
                     GUIDE, value=len(main), limit=MAX_UNITS)]
 
 

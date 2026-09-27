@@ -47,6 +47,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 from . import leafxml as lx
+from . import i18n as _i18n
 
 REL = "descr_hero_abilities.xml"
 ROOT_TAG = "root"
@@ -211,8 +212,7 @@ class Refs:
 def _num(doc: lx.Doc, n: lx.Node, key: str, owner: str, out: List[Dict]) -> Optional[float]:
     v = doc.value(n)
     if not lx.NUM.fullmatch(v):
-        out.append(finding("number", "fatal", f"{owner}: <{n.tag}> is {v or '(blank)'}, "
-                           "not a number", key, n.line))
+        out.append(finding("number", "fatal", _i18n.msg("eng.heroabilities.is_not_a_number", "{owner}: <{tag}> is {x}, not a number", owner=owner, tag=n.tag, x=v or '(blank)'), key, n.line))
         return None
     return float(v)
 
@@ -222,7 +222,7 @@ def check(doc: lx.Doc, refs: Optional[Refs] = None) -> List[Dict]:
     out = lx.xml_findings(doc)
     items = _items(doc)
     if not items and not doc.errors:
-        out.append(finding("empty", "warn", f"no <{ITEM_TAG}> under <{LIST_TAG}>", "file", 0))
+        out.append(finding("empty", "warn", _i18n.msg("eng.heroabilities.no_under", "no <{ITEM_TAG}> under <{LIST_TAG}>", ITEM_TAG=ITEM_TAG, LIST_TAG=LIST_TAG), "file", 0))
     seen: Dict[str, int] = {}
     for a in items:
         key = f"ability/{a.id}"
@@ -230,14 +230,11 @@ def check(doc: lx.Doc, refs: Optional[Refs] = None) -> List[Dict]:
         used = bool(name) and name.lower() in refs.uses
         owner = name or f"the ability on line {a.line + 1}"
         if not name:
-            out.append(finding("name", "fatal", f"line {a.line + 1}: an ability with no <name>, "
-                               "so no character can be given it", key, a.line))
+            out.append(finding("name", "fatal", _i18n.msg("eng.heroabilities.line_an_ability_with_no_so", "line {x}: an ability with no <name>, so no character can be given it", x=a.line + 1), key, a.line))
         elif name.lower() in seen:
-            out.append(finding("duplicate", "warn", f"{name} is declared twice (lines "
-                               f"{seen[name.lower()]} and {a.line + 1})", key, a.line))
+            out.append(finding("duplicate", "warn", _i18n.msg("eng.heroabilities.is_declared_twice_lines_and", "{name} is declared twice (lines {seen} and {x})", name=name, seen=seen[name.lower()], x=a.line + 1), key, a.line))
         elif not NAME.fullmatch(name):
-            out.append(finding("name", "warn", f"{name!r} has a space or a comma in it, and a "
-                               "descr_strat.txt line cannot name it", key, a.line))
+            out.append(finding("name", "warn", _i18n.msg("eng.heroabilities.has_a_space_or_a_comma", "{name} has a space or a comma in it, and a descr_strat.txt line cannot name it", name=repr(name)), key, a.line))
         if name:
             seen.setdefault(name.lower(), a.line + 1)
         tags: Dict[str, List[int]] = {}
@@ -245,12 +242,9 @@ def check(doc: lx.Doc, refs: Optional[Refs] = None) -> List[Dict]:
             tags.setdefault(c.tag, []).append(c.line + 1)
         for tag, lines in tags.items():
             if len(lines) > 1 and tag != EFFECTS_TAG:
-                out.append(finding("twice", "warn", f"{owner} has <{tag}> {len(lines)} times "
-                                   f"(lines {', '.join(map(str, lines))}); the game uses one "
-                                   "of them", key, a.line))
+                out.append(finding("twice", "warn", _i18n.msg("eng.heroabilities.has_times_lines_the_game_uses", "{owner} has <{tag}> {lines_n} times (lines {map}); the game uses one of them", owner=owner, tag=tag, lines_n=len(lines), map=', '.join(map(str, lines))), key, a.line))
             if tag not in ABILITY_FIELDS and tag != EFFECTS_TAG:
-                out.append(finding("field", "note", f"{owner}: <{tag}> is not a field the "
-                                   "file's own sample documents", key, lines[0] - 1))
+                out.append(finding("field", "note", _i18n.msg("eng.heroabilities.is_not_a_field_the_files", "{owner}: <{tag}> is not a field the file's own sample documents", owner=owner, tag=tag), key, lines[0] - 1))
         vals: Dict[str, float] = {}
         for c in doc.kids(a):
             if c.tag in NUMBERS and doc.is_leaf(c):
@@ -259,36 +253,29 @@ def check(doc: lx.Doc, refs: Optional[Refs] = None) -> List[Dict]:
                     vals[c.tag] = v
         if "activations" in vals and (vals["activations"] < 1
                                       or not lx.INT.fullmatch(doc.field(a, "activations"))):
-            out.append(finding("activations", "warn", f"{owner}: activations is "
-                               f"{doc.field(a, 'activations')}, and it is a count of one or "
-                               "more", key, a.line))
+            out.append(finding("activations", "warn", _i18n.msg("eng.heroabilities.activations_is_and_it_is_a", "{owner}: activations is {field}, and it is a count of one or more", owner=owner, field=doc.field(a, 'activations')), key, a.line))
         for t in ("duration", "cooldown"):
             if vals.get(t, 0) < 0:
-                out.append(finding("negative", "warn", f"{owner}: {t} is below zero", key, a.line))
+                out.append(finding("negative", "warn", _i18n.msg("eng.heroabilities.is_below_zero", "{owner}: {t} is below zero", owner=owner, t=t), key, a.line))
         sev = "warn" if used else "note"
         why = "" if used else "; no character is given it"
         if refs.text_keys is not None:
             gone = [doc.field(a, t) for t in LABELS
                     if doc.field(a, t) and doc.field(a, t).upper() not in refs.text_keys]
             if gone:
-                out.append(finding("label", sev, f"{owner}: {len(gone)} tooltip label(s) not in "
-                                   f"text/expanded.txt ({', '.join(gone)}), so the button's "
-                                   f"tooltip has no text{why}", key, a.line))
+                out.append(finding("label", sev, _i18n.msg("eng.heroabilities.tooltip_label_s_not_in_text", "{owner}: {gone_n} tooltip label(s) not in text/expanded.txt ({gone}), so the button's tooltip has no text{why}", owner=owner, gone_n=len(gone), gone=', '.join(gone), why=why), key, a.line))
         if refs.sprites is not None:
             gone = [doc.field(a, t) for t in SPRITES
                     if doc.field(a, t) and doc.field(a, t).lower().encode("latin-1") not in refs.sprites]
             if gone:
-                out.append(finding("sprite", sev, f"{owner}: {', '.join(gone)} not in "
-                                   f"ui/battle.sd, so the button has no picture{why}", key, a.line))
+                out.append(finding("sprite", sev, _i18n.msg("eng.heroabilities.not_in_ui_battle_sd_so", "{owner}: {gone} not in ui/battle.sd, so the button has no picture{why}", owner=owner, gone=', '.join(gone), why=why), key, a.line))
         snd = doc.field(a, "sound_effect")
         if refs.sounds is not None and snd and snd.lower() not in refs.sounds:
-            out.append(finding("sound", sev, f"{owner}: sound_effect {snd} is not an event in "
-                               f"descr_sounds_generic.txt{why}", key, a.line))
+            out.append(finding("sound", sev, _i18n.msg("eng.heroabilities.sound_effect_is_not_an_event", "{owner}: sound_effect {snd} is not an event in descr_sounds_generic.txt{why}", owner=owner, snd=snd, why=why), key, a.line))
         box = doc.child(a, EFFECTS_TAG)
         effects = doc.kids(box, EFFECT_TAG) if box is not None else []
         if not effects:
-            out.append(finding("no_effects", "warn", f"{owner} has no effects, so using it "
-                               "does nothing", key, a.line))
+            out.append(finding("no_effects", "warn", _i18n.msg("eng.heroabilities.has_no_effects_so_using_it", "{owner} has no effects, so using it does nothing", owner=owner), key, a.line))
         for e in effects:
             _check_effect(doc, e, owner, key, refs, out)
     for low, where in refs.uses.items():
@@ -296,10 +283,7 @@ def check(doc: lx.Doc, refs: Optional[Refs] = None) -> List[Dict]:
             continue
         first = where[0]
         places = ", ".join(sorted({w["file"].rsplit("/", 2)[-2] for w in where})[:3])
-        out.append(finding("undeclared", "warn", f"{len(where)} character line(s) name "
-                           f"hero_ability {first['name']} ({first['who'] or 'line ' + str(first['line'])}"
-                           f" in {first['file']}{'...' if len(where) > 1 else ''}; {places}), and "
-                           f"{REL} declares no ability called that", f"use/{first['name']}", 0))
+        out.append(finding("undeclared", "warn", _i18n.msg("eng.heroabilities.character_line_s_name_hero_ability", "{where_n} character line(s) name hero_ability {name} ({x} in {file}{x2}; {places}), and {REL} declares no ability called that", where_n=len(where), name=first['name'], x=first['who'] or 'line ' + str(first['line']), file=first['file'], x2='...' if len(where) > 1 else '', places=places, REL=REL), f"use/{first['name']}", 0))
     return out
 
 
@@ -308,51 +292,41 @@ def _check_effect(doc: lx.Doc, e: lx.Node, owner: str, key: str, refs: Refs,
     ename = doc.field(e, "name")
     where = f"{owner}, {ename or 'an effect'} (line {e.line + 1})"
     if not ename:
-        out.append(finding("effect", "fatal", f"{where}: an effect with no <name>", key, e.line))
+        out.append(finding("effect", "fatal", _i18n.msg("eng.heroabilities.an_effect_with_no", "{where}: an effect with no <name>", where=where), key, e.line))
         return
     if ename not in EFFECTS:
-        out.append(finding("effect", "warn", f"{where}: {ename} is not one of the "
-                           f"{len(EFFECTS)} effects ({', '.join(EFFECTS)})", key, e.line))
+        out.append(finding("effect", "warn", _i18n.msg("eng.heroabilities.is_not_one_of_the_effects", "{where}: {ename} is not one of the {EFFECTS_n} effects ({EFFECTS})", where=where, ename=ename, EFFECTS_n=len(EFFECTS), EFFECTS=', '.join(EFFECTS)), key, e.line))
         return
     known = EFFECTS[ename]
     for c in doc.kids(e):
         if c.tag == "name":
             continue
         if c.tag not in known:
-            out.append(finding("effect_field", "note", f"{where}: <{c.tag}> is not one of "
-                               f"{ename}'s fields ({', '.join(known)})", key, c.line))
+            out.append(finding("effect_field", "note", _i18n.msg("eng.heroabilities.is_not_one_of_s_fields", "{where}: <{tag}> is not one of {ename}'s fields ({known})", where=where, tag=c.tag, ename=ename, known=', '.join(known)), key, c.line))
             continue
         v = doc.value(c)
         if c.tag in NUMBERS:
             _num(doc, c, key, where, out)
         elif c.tag == "target" and v not in TARGETS:
-            out.append(finding("target", "warn", f"{where}: target {v or '(blank)'} is not "
-                               f"{', '.join(TARGETS)}", key, c.line))
+            out.append(finding("target", "warn", _i18n.msg("eng.heroabilities.target_is_not", "{where}: target {x} is not {TARGETS}", where=where, x=v or '(blank)', TARGETS=', '.join(TARGETS)), key, c.line))
         elif c.tag == "morale_level" and v not in MORALE_LEVELS:
-            out.append(finding("morale", "warn", f"{where}: morale_level {v or '(blank)'} is "
-                               f"not {', '.join(MORALE_LEVELS)}", key, c.line))
+            out.append(finding("morale", "warn", _i18n.msg("eng.heroabilities.morale_level_is_not", "{where}: morale_level {x} is not {MORALE_LEVELS}", where=where, x=v or '(blank)', MORALE_LEVELS=', '.join(MORALE_LEVELS)), key, c.line))
         elif c.tag == "permanent" and v not in ("true", "false"):
-            out.append(finding("bool", "warn", f"{where}: permanent is {v or '(blank)'}, not "
-                               "true or false", key, c.line))
+            out.append(finding("bool", "warn", _i18n.msg("eng.heroabilities.permanent_is_not_true_or_false", "{where}: permanent is {x}, not true or false", where=where, x=v or '(blank)'), key, c.line))
         elif c.tag == "projectile_name" and refs.projectiles is not None \
                 and v.lower() not in refs.projectiles:
-            out.append(finding("projectile", "warn", f"{where}: {v} is not a projectile "
-                               "descr_projectile.txt declares", key, c.line))
+            out.append(finding("projectile", "warn", _i18n.msg("eng.heroabilities.is_not_a_projectile_descr_projectile", "{where}: {v} is not a projectile descr_projectile.txt declares", where=where, v=v), key, c.line))
     if "target" in known and doc.child(e, "target") is None:
-        out.append(finding("target", "warn", f"{where}: no <target>, so it is not said which "
-                           "army it works on", key, e.line))
+        out.append(finding("target", "warn", _i18n.msg("eng.heroabilities.no_so_it_is_not_said", "{where}: no <target>, so it is not said which army it works on", where=where), key, e.line))
     kc = doc.field(e, "kill_chance_modifier")
     if lx.NUM.fullmatch(kc) and float(kc) < 0:
-        out.append(finding("kill_chance", "note", f"{where}: kill_chance_modifier {kc} is "
-                           "below 0, which the sample already calls no chance to kill", key, e.line))
+        out.append(finding("kill_chance", "note", _i18n.msg("eng.heroabilities.kill_chance_modifier_is_below_0", "{where}: kill_chance_modifier {kc} is below 0, which the sample already calls no chance to kill", where=where, kc=kc), key, e.line))
     pc = doc.field(e, "percentage_chance")
     if lx.NUM.fullmatch(pc) and not 0 <= float(pc) <= 100:
-        out.append(finding("percent", "warn", f"{where}: percentage_chance {pc} is outside "
-                           "0-100", key, e.line))
+        out.append(finding("percent", "warn", _i18n.msg("eng.heroabilities.percentage_chance_is_outside_0_100", "{where}: percentage_chance {pc} is outside 0-100", where=where, pc=pc), key, e.line))
     lo, hi = doc.field(e, "min_effect_time"), doc.field(e, "max_effect_time")
     if lx.NUM.fullmatch(lo) and lx.NUM.fullmatch(hi) and float(lo) > float(hi):
-        out.append(finding("range", "warn", f"{where}: min_effect_time {lo} is above "
-                           f"max_effect_time {hi}", key, e.line))
+        out.append(finding("range", "warn", _i18n.msg("eng.heroabilities.min_effect_time_is_above_max", "{where}: min_effect_time {lo} is above max_effect_time {hi}", where=where, lo=lo, hi=hi), key, e.line))
 
 
 # ---------------------------------------------------------------------------
@@ -464,17 +438,16 @@ def plan(mod, body: dict) -> lx.Plan:
         p.errors.append(e.message)
         return p
     if str(body.get("sig") or "") != lx.sig(text):
-        p.errors.append(f"{REL} changed on disk after it was opened here - reload it")
+        p.errors.append(_i18n.msg("eng.heroabilities.changed_on_disk_after_it_was", "{REL} changed on disk after it was opened here - reload it", REL=REL))
         return p
     doc = parse(text)
     if doc.root_end < 0:
-        p.errors.append(f"{REL} does not close its <{ROOT_TAG}>, so nothing here can be sure "
-                        "where an edit lands - fix it in Raw text first")
+        p.errors.append(_i18n.msg("eng.heroabilities.does_not_close_its_so_nothing", "{REL} does not close its <{ROOT_TAG}>, so nothing here can be sure where an edit lands - fix it in Raw text first", REL=REL, ROOT_TAG=ROOT_TAG))
         return p
     for spec in body.get("copy") or []:
         like = next((n for n in doc.nodes if str(n.id) == str(spec.get("like"))), None)
         if like is not None and like.tag == ITEM_TAG and not str(spec.get("name") or "").strip():
-            p.errors.append("a copied ability needs a name of its own")
+            p.errors.append(_i18n.msg("eng.heroabilities.a_copied_ability_needs_a_name", "a copied ability needs a name of its own"))
     if p.errors:
         return p
     new = lx.plan_edits(p, text, doc, body, _check_value, (ITEM_TAG, EFFECT_TAG),

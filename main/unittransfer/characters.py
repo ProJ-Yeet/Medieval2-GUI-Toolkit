@@ -52,6 +52,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 from . import keyblock as kb
+from . import i18n as _i18n
 
 REL = "descr_character.txt"
 ENCODING = "latin-1"
@@ -242,71 +243,56 @@ def check(doc: Doc, refs: Optional[Refs] = None) -> List[Dict]:
     refs = refs or Refs()
     out: List[Dict] = []
     if not doc.sections:
-        out.append(finding("empty", "fatal", f"{REL} has no type section", "file", 0))
+        out.append(finding("empty", "fatal", _i18n.msg("eng.characters.has_no_type_section", "{REL} has no type section", REL=REL), "file", 0))
     seen_types: Dict[str, int] = {}
     for s in doc.sections:
         low = s.name.lower()
         if low in seen_types:
-            out.append(finding("type", "warn", f"type {s.name} is written twice (lines "
-                               f"{seen_types[low]} and {s.line + 1})", f"type/{s.name}", s.line))
+            out.append(finding("type", "warn", _i18n.msg("eng.characters.type_is_written_twice_lines_and", "type {name} is written twice (lines {seen_types} and {x})", name=s.name, seen_types=seen_types[low], x=s.line + 1), f"type/{s.name}", s.line))
         seen_types.setdefault(low, s.line + 1)
         if low not in TYPES:
-            out.append(finding("type", "note", f"type {s.name} is not one of the "
-                               f"{len(TYPES)} character types", f"type/{s.name}", s.line))
+            out.append(finding("type", "note", _i18n.msg("eng.characters.type_is_not_one_of_the", "type {name} is not one of the {TYPES_n} character types", name=s.name, TYPES_n=len(TYPES)), f"type/{s.name}", s.line))
         for r in s.head:
             if r.key in NUMBERS and not kb.is_int(r.value):
-                out.append(finding("number", "fatal", f"{s.name}: {r.key} {r.value!r} is not a "
-                                   "whole number", f"type/{s.name}", r.line))
+                out.append(finding("number", "fatal", _i18n.msg("eng.characters.is_not_a_whole_number", "{name}: {key} {value} is not a whole number", name=s.name, key=r.key, value=repr(r.value)), f"type/{s.name}", r.line))
         if not any(r.key == "actions" for r in s.head):
-            out.append(finding("actions", "warn", f"{s.name} has no actions line, so it can do "
-                               "nothing", f"type/{s.name}", s.line))
+            out.append(finding("actions", "warn", _i18n.msg("eng.characters.has_no_actions_line_so_it", "{name} has no actions line, so it can do nothing", name=s.name), f"type/{s.name}", s.line))
         seen: Dict[str, int] = {}
         for b in s.blocks:
             key = _key(s, b)
             who = f"{s.name}, {', '.join(b.factions) or 'a block with no faction'}"
             if not b.factions:
-                out.append(finding("faction", "fatal", f"{s.name}: line {b.line + 1} is a faction "
-                                   "line with no faction", key, b.line))
+                out.append(finding("faction", "fatal", _i18n.msg("eng.characters.line_is_a_faction_line_with", "{name}: line {x} is a faction line with no faction", name=s.name, x=b.line + 1), key, b.line))
             for f in b.factions:
                 fl = f.lower()
                 if fl in seen:
-                    out.append(finding("duplicate", "warn", f"{s.name}: {f} has two blocks (lines "
-                                       f"{seen[fl]} and {b.line + 1}); only one of them is read",
+                    out.append(finding("duplicate", "warn", _i18n.msg("eng.characters.has_two_blocks_lines_and_only", "{name}: {f} has two blocks (lines {seen} and {x}); only one of them is read", name=s.name, f=f, seen=seen[fl], x=b.line + 1),
                                        key, b.line))
                 seen.setdefault(fl, b.line + 1)
                 if refs.roster is not None and fl not in refs.roster:
-                    out.append(finding("roster", "warn", f"{who}: {f} is not a faction in "
-                                       "descr_sm_factions.txt", key, b.line))
+                    out.append(finding("roster", "warn", _i18n.msg("eng.characters.is_not_a_faction_in_descr_2", "{who}: {f} is not a faction in descr_sm_factions.txt", who=who, f=f), key, b.line))
             for r in b.rows:
                 if r.key in NUMBERS and not kb.is_int(r.value):
-                    out.append(finding("number", "fatal", f"{who}: {r.key} {r.value!r} is not a "
-                                       "whole number", key, r.line))
+                    out.append(finding("number", "fatal", _i18n.msg("eng.characters.is_not_a_whole_number_2", "{who}: {key} {value} is not a whole number", who=who, key=r.key, value=repr(r.value)), key, r.line))
                 elif r.key == "strat_model":
                     name = r.value.split()[0] if r.value else ""
                     if not name:
-                        out.append(finding("strat", "fatal", f"{who}: a strat_model with no "
-                                           "model", key, r.line))
+                        out.append(finding("strat", "fatal", _i18n.msg("eng.characters.a_strat_model_with_no_model", "{who}: a strat_model with no model", who=who), key, r.line))
                     elif refs.strat is not None and name.lower() not in refs.strat:
-                        out.append(finding("strat", "warn", f"{who}: strat_model {name} is not "
-                                           "an entry of descr_model_strat.txt", key, r.line))
+                        out.append(finding("strat", "warn", _i18n.msg("eng.characters.strat_model_is_not_an_entry", "{who}: strat_model {name} is not an entry of descr_model_strat.txt", who=who, name=name), key, r.line))
                 elif r.key == "battle_model":
                     if refs.battle is not None and r.value.lower() not in refs.battle:
-                        out.append(finding("battle", "warn", f"{who}: battle_model {r.value} is "
-                                           "not an entry of the modeldb", key, r.line))
+                        out.append(finding("battle", "warn", _i18n.msg("eng.characters.battle_model_is_not_an_entry", "{who}: battle_model {value} is not an entry of the modeldb", who=who, value=r.value), key, r.line))
                 elif r.key not in BLOCK_KEYS:
-                    out.append(finding("key", "note", f"{who}: {r.key} is not a line a block "
-                                       "carries in either installed mod", key, r.line))
+                    out.append(finding("key", "note", _i18n.msg("eng.characters.is_not_a_line_a_block", "{who}: {key} is not a line a block carries in either installed mod", who=who, key=r.key), key, r.line))
             models = b.values("strat_model")
             if not models:
-                out.append(finding("strat", "warn", f"{who} has no strat_model, so it has nothing "
-                                   "to stand on the map with", key, b.line))
+                out.append(finding("strat", "warn", _i18n.msg("eng.characters.has_no_strat_model_so_it", "{who} has no strat_model, so it has nothing to stand on the map with", who=who), key, b.line))
             elif low == "named character" and len(models) < 3:
-                out.append(finding("strat", "warn", f"{who} has {len(models)} strat model(s); a "
-                                   "named character has one each for default, heir and leader",
+                out.append(finding("strat", "warn", _i18n.msg("eng.characters.has_strat_model_s_a_named", "{who} has {models_n} strat model(s); a named character has one each for default, heir and leader", who=who, models_n=len(models)),
                                    key, b.line))
             if low in FIGHTERS and not b.values("battle_model"):
-                out.append(finding("battle", "warn", f"{who} has no battle_model, so it has no "
-                                   "model to fight with", key, b.line))
+                out.append(finding("battle", "warn", _i18n.msg("eng.characters.has_no_battle_model_so_it", "{who} has no battle_model, so it has no model to fight with", who=who), key, b.line))
     return out
 
 
@@ -317,7 +303,7 @@ def check(doc: Doc, refs: Optional[Refs] = None) -> List[Dict]:
 def _read(mod) -> str:
     path = Path(mod.data) / REL
     if not path.is_file():
-        raise CharError(f"this mod has no {REL}")
+        raise CharError(_i18n.msg("eng.characters.this_mod_has_no", "this mod has no {REL}", REL=REL))
     return kb.read_text(path, ENCODING)
 
 
@@ -406,7 +392,7 @@ def plan(mod, body: dict) -> CharPlan:
         p.errors.append(e.message)
         return p
     if str(body.get("sig") or "") != _sig(text):
-        p.errors.append(f"{REL} changed on disk after it was opened here - reload it")
+        p.errors.append(_i18n.msg("eng.characters.changed_on_disk_after_it_was", "{REL} changed on disk after it was opened here - reload it", REL=REL))
         return p
     doc = parse(text)
     refs = Refs.of(mod)
@@ -431,7 +417,7 @@ def plan(mod, body: dict) -> CharPlan:
         i = int(key) - 1
         hit = rows.get(i)
         if hit is None:
-            p.errors.append(f"line {key} is not a keyword and its value")
+            p.errors.append(_i18n.msg("eng.characters.line_is_not_a_keyword_and", "line {key} is not a keyword and its value", key=key))
             continue
         s, b, r = hit
         v = " ".join(str(v).split())
@@ -453,7 +439,7 @@ def plan(mod, body: dict) -> CharPlan:
         model = str(spec.get("model") or "").strip()
         hit = blocks.get(at)
         if hit is None:
-            p.errors.append("a strat model is added to a faction's block")
+            p.errors.append(_i18n.msg("eng.characters.a_strat_model_is_added_to", "a strat model is added to a faction's block"))
             continue
         s, b = hit
         err, warn = _valid("strat_model", model, refs)
@@ -474,7 +460,7 @@ def plan(mod, body: dict) -> CharPlan:
         if i in blocks:
             s, b = blocks[i]
             if len(s.blocks) < 2:
-                p.errors.append(f"{s.name} keeps at least one block")
+                p.errors.append(_i18n.msg("eng.characters.keeps_at_least_one_block", "{name} keeps at least one block", name=s.name))
                 continue
             end = b.end
             # the blank lines after a block go with it, up to the next one
@@ -486,11 +472,11 @@ def plan(mod, body: dict) -> CharPlan:
             continue
         hit = rows.get(i)
         if hit is None or hit[2].key != "strat_model" or hit[1] is None:
-            p.errors.append(f"line {key} is not a strat_model or a faction's block")
+            p.errors.append(_i18n.msg("eng.characters.line_is_not_a_strat_model", "line {key} is not a strat_model or a faction's block", key=key))
             continue
         s, b, r = hit
         if len(b.values("strat_model")) < 2:
-            p.errors.append(f"{where(s, b)} keeps at least one strat model")
+            p.errors.append(_i18n.msg("eng.characters.keeps_at_least_one_strat_model", "{where} keeps at least one strat model", where=where(s, b)))
             continue
         drops.add(i)
         p.changes.append(f"- {where(s, b)}: strat_model {r.value}")
@@ -499,17 +485,17 @@ def plan(mod, body: dict) -> CharPlan:
         fac = str(spec.get("faction") or "").strip()
         hit = blocks.get(at)
         if hit is None:
-            p.errors.append("a block is copied from a faction's block")
+            p.errors.append(_i18n.msg("eng.characters.a_block_is_copied_from_a", "a block is copied from a faction's block"))
             continue
         s, b = hit
         if not _SLOT.fullmatch(fac):
-            p.errors.append(f"{fac!r} is not a faction slot")
+            p.errors.append(_i18n.msg("eng.characters.is_not_a_faction_slot", "{fac} is not a faction slot", fac=repr(fac)))
             continue
         if any(fac.lower() == f.lower() for x in s.blocks for f in x.factions):
-            p.errors.append(f"{s.name} already has a block for {fac}")
+            p.errors.append(_i18n.msg("eng.characters.already_has_a_block_for", "{name} already has a block for {fac}", name=s.name, fac=fac))
             continue
         if refs.roster is not None and fac.lower() not in refs.roster:
-            p.warnings.append(f"{fac} is not a faction in descr_sm_factions.txt")
+            p.warnings.append(_i18n.msg("eng.characters.is_not_a_faction_in_descr", "{fac} is not a faction in descr_sm_factions.txt", fac=fac))
         chunk = lines[b.line:b.end + 1]
         chunk[0] = kb.sub_value(chunk[0].rstrip("\r"), chunk[0].split()[0], fac) + _eol(chunk[0])
         last = s.blocks[-1].end
@@ -525,7 +511,7 @@ def plan(mod, body: dict) -> CharPlan:
         out += inserts.get(i, [])
     new = "\n".join(out)
     if new == text:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.characters.nothing_to_change", "nothing to change"))
         return p
     p.text = new
     was = {f["message"] for f in check(doc, refs)}

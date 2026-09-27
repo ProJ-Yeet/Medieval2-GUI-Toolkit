@@ -705,6 +705,7 @@ from . import mapgen, mapnew, mapresize
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
+from . import i18n
 from .logutil import log, setup as setup_logging
 from . import icons
 from .icons import IconCache
@@ -712,6 +713,7 @@ from .mod import Mod, ModDataError
 from .transfer import (TransferOptions, plan_transfer, apply_transfer, undo, revert_to,
                        base_field_groups_for, compose_with_base, mount_base_import,
                        officer_base_import, unit_model_index)
+from . import i18n as _i18n
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
@@ -1749,6 +1751,12 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
 
     def _json(self, obj, code=200):
+        # Phase 88: which strings are engine messages with a catalogue ID, so
+        # the page can show them in the interface language (i18n.annotate)
+        if isinstance(obj, dict) and "_i18n" not in obj:
+            marks = i18n.annotate(obj)
+            if marks:
+                obj = dict(obj, _i18n=marks)
         self._send(code, json.dumps(obj).encode("utf-8"), "application/json")
 
     def _err(self, code, msg):
@@ -1844,6 +1852,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self._file(WEB_DIR / "index.html", "text/html; charset=utf-8")
             if u.path.startswith("/js/"):
                 return self._web_asset(u.path)
+            if u.path.startswith("/i18n/") and u.path.endswith(".json"):
+                return self._web_asset(u.path)
+            if u.path == "/i18n/catalogue.js":
+                # Phase 88: English and the interface language's catalogue,
+                # loaded before any module so every string is there at once
+                lang = i18n.pick(str(config.load_settings().get("ui_lang") or ""),
+                                 self.headers.get("Accept-Language", ""))
+                return self._send(200, i18n.catalogue_js(lang).encode("utf-8"),
+                                  "application/javascript; charset=utf-8",
+                                  {"Cache-Control": "no-store"})
             if u.path == "/api/ping":
                 # Identifies an already-running instance to a second launch -
                 # and identifies WHICH build it is. "A toolkit is answering on
@@ -2581,10 +2599,10 @@ class Handler(BaseHTTPRequestHandler):
                     target.relative_to(root)
                 except (ValueError, OSError):
                     return self._json({"ok": False,
-                                       "error": "that path is not inside the mod"})
+                                       "error": _i18n.msg("eng.server.that_path_is_not_inside_the", "that path is not inside the mod")})
                 if not target.exists():
                     return self._json({"ok": False,
-                                       "error": "that file is not there any more"})
+                                       "error": _i18n.msg("eng.server.that_file_is_not_there_any", "that file is not there any more")})
                 from .folder_dialog import reveal
                 return self._json({"ok": reveal(str(target)),
                                    "path": str(target)})
@@ -2989,7 +3007,7 @@ class Handler(BaseHTTPRequestHandler):
                 # shutdown() blocks until serve_forever returns, so it must not
                 # run on this handler's thread.
                 threading.Thread(target=self.server.shutdown, daemon=True).start()
-                return self._json({"ok": True, "message": "server stopping"})
+                return self._json({"ok": True, "message": _i18n.msg("eng.server.server_stopping", "server stopping")})
             if u.path == "/api/revert":
                 log.info("REVERT to id=%s", body.get("id"))
                 res = revert_to(body["id"])
@@ -3139,7 +3157,7 @@ class Handler(BaseHTTPRequestHandler):
             return {"error": "; ".join(plan.errors), "plan": _building_payload(plan)}
         if not (plan.edb_text or plan.loc_text or plan.edu_text or plan.eop_texts
                 or plan.modeldb_text):
-            return {"error": "nothing to change", "plan": _building_payload(plan)}
+            return {"error": _i18n.msg("eng.server.nothing_to_change", "nothing to change"), "plan": _building_payload(plan)}
         log.info("BUILD  %r in %s (%d change(s))", plan.line, mod.name, len(plan.changes))
         rec = buildings.apply_edit(plan)
         self.registry.invalidate(body["mod"])       # files changed on disk
@@ -3461,7 +3479,7 @@ class Handler(BaseHTTPRequestHandler):
         src = (q.get("source") or [""])[0]
         dst = (q.get("dest") or [""])[0]
         if src not in names or dst not in names:
-            return {"error": "pick two mods this toolkit can see"}
+            return {"error": _i18n.msg("eng.server.pick_two_mods_this_toolkit_can", "pick two mods this toolkit can see")}
         try:
             return portrecords.overview(self.registry.get(src),
                                         self.registry.get(dst),
@@ -3479,7 +3497,7 @@ class Handler(BaseHTTPRequestHandler):
         names = self.registry.names()
         src, dst = body.get("source") or "", body.get("dest") or ""
         if src not in names or dst not in names:
-            return {"error": "pick two mods this toolkit can see"}
+            return {"error": _i18n.msg("eng.server.pick_two_mods_this_toolkit_can", "pick two mods this toolkit can see")}
         try:
             plan = portrecords.plan(
                 self.registry.get(src), self.registry.get(dst),
@@ -3576,9 +3594,9 @@ class Handler(BaseHTTPRequestHandler):
             rec = next((e for e in config.load_log() if e.get("id") == body.get("id")), None)
             block = ((rec or {}).get("manifest") or {}).get("compacted")
             if not block:
-                return {"error": "no compaction with that id"}
+                return {"error": _i18n.msg("eng.server.no_compaction_with_that_id", "no compaction with that id")}
             if rec.get("undone"):
-                return {"error": "that compaction is undone; there is nothing kept to forget"}
+                return {"error": _i18n.msg("eng.server.that_compaction_is_undone_there_is", "that compaction is undone; there is nothing kept to forget")}
             freed = packhouse.forget_backup(rec["dest_root"], block)
             config.update_log(rec["id"], backup_forgotten=True,
                               note=(rec.get("note") or "") + " (its kept packs were deleted; it cannot be undone)")
@@ -3607,7 +3625,7 @@ class Handler(BaseHTTPRequestHandler):
         if action == "preview":
             src = factions.picture_path(mod, rel)
             if src is None or not src.is_file():
-                return {"error": f"{rel!r} is not a file in {mod.name}"}
+                return {"error": _i18n.msg("eng.server.is_not_a_file_in", "{rel} is not a file in {name}", rel=repr(rel), name=mod.name)}
             try:
                 return animedit.view(animedit.apply_edits(
                     casanim.read_anim(src, str(body.get("skeleton") or ""), mod.data), edits))
@@ -3742,7 +3760,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.registry.invalidate(body["mod"])
                 return out
             if action not in ("plan", "apply"):
-                return {"error": f"unknown action {action}"}
+                return {"error": _i18n.msg("eng.server.unknown_action", "unknown action {action}", action=action)}
             target = self.registry.describe(body["target"])
             port = changesets.plan_port(str(body.get("set") or ""), target)
             if action == "plan":
@@ -4009,9 +4027,9 @@ class Handler(BaseHTTPRequestHandler):
             names = self.registry.names()
             name, src = str(body.get("mod") or ""), str(body.get("from") or "")
             if name not in names:
-                return {"error": "unknown mod"}
+                return {"error": _i18n.msg("eng.server.unknown_mod", "unknown mod")}
             if src != "disk" and (src not in names or src == name):
-                return {"error": "pick another installed mod, or a model on disk"}
+                return {"error": _i18n.msg("eng.server.pick_another_installed_mod_or_a", "pick another installed mod, or a model on disk")}
             plan = settlemodel.plan(self.registry.describe(name),
                                     None if src == "disk" else self.registry.describe(src),
                                     body)
@@ -4032,7 +4050,7 @@ class Handler(BaseHTTPRequestHandler):
     # ---- the real world behind the map (25) ----
     def _osm_map(self, name):
         if name not in self.registry.names():
-            raise KeyError("unknown mod")
+            raise KeyError(_i18n.msg("eng.server.unknown_mod", "unknown mod"))
         return self.registry.campaign_map(name)
 
     def _osm_get(self, path, q):
@@ -4044,7 +4062,7 @@ class Handler(BaseHTTPRequestHandler):
             box, where = osmmap.box_for(cm)
             if path == "/api/osm/search":
                 if box is None:
-                    return {"error": "give the map its real-world box first"}
+                    return {"error": _i18n.msg("eng.server.give_the_map_its_real_world", "give the map its real-world box first")}
                 proj = osmmap.Projection(box, cm.terrain.width, cm.terrain.height)
                 return {"results": osmmap.search(box, proj, (q.get("q") or [""])[0])}
             if path == "/api/osm/chunks":
@@ -4153,7 +4171,7 @@ class Handler(BaseHTTPRequestHandler):
                         "file": osmmap.bbox_text(box, w, h) if box else ""}
             box, _ = osmmap.box_for(cm)
             if box is None:
-                return {"error": "give the map its real-world box first"}
+                return {"error": _i18n.msg("eng.server.give_the_map_its_real_world", "give the map its real-world box first")}
             report = _progress_sink(str(body.get("job") or ""))
             proj = osmmap.Projection(box, cm.terrain.width, cm.terrain.height)
             # the painted state: an unsaved stroke is part of the map being judged
@@ -4190,7 +4208,7 @@ class Handler(BaseHTTPRequestHandler):
             names = self.registry.names()
             name, src = str(body.get("mod") or ""), str(body.get("from") or "")
             if name not in names or src not in names or src == name:
-                return {"error": "pick another installed mod to bring the lines from"}
+                return {"error": _i18n.msg("eng.server.pick_another_installed_mod_to_bring", "pick another installed mod to bring the lines from")}
             plan = edbimport.plan(self.registry.describe(name),
                                   self.registry.describe(src), body)
         except (KeyError, ModDataError, OSError) as e:
@@ -4220,7 +4238,7 @@ class Handler(BaseHTTPRequestHandler):
             names = self.registry.names()
             name, src = str(body.get("mod") or ""), str(body.get("from") or "")
             if name not in names or src not in names:
-                return {"error": "pick two installed mods"}
+                return {"error": _i18n.msg("eng.server.pick_two_installed_mods", "pick two installed mods")}
             plan = campimport.plan(self.registry.describe(src),
                                    self.registry.describe(name), body)
         except (KeyError, ModDataError, OSError, campmap.MapError) as e:
@@ -4356,7 +4374,7 @@ class Handler(BaseHTTPRequestHandler):
                     # save, so it has to be the state after
                     out["state"] = campaint.PaintSession(mod, cm).state()
             else:
-                return {"error": f"no such paint action {action!r}"}
+                return {"error": _i18n.msg("eng.server.no_such_paint_action", "no such paint action {action}", action=repr(action))}
             # Marker icons must follow pending pixels as well as saved files.
             # Reuse the map's index, including its port/dock ownership rules.
             changed_layers = set(out.get("changed", {})) | set(out.get("restored", {}))
@@ -4470,12 +4488,12 @@ class Handler(BaseHTTPRequestHandler):
             fr = mapfe.Frame(x=float(f.get("x", 0)), y=float(f.get("y", 0)),
                              w=float(f.get("w", 0)), h=float(f.get("h", 0)))
         except (TypeError, ValueError):
-            return {"error": "the frame is not four numbers"}
+            return {"error": _i18n.msg("eng.server.the_frame_is_not_four_numbers", "the frame is not four numbers")}
         size = body.get("size")
         try:
             wanted = (int(size[0]), int(size[1])) if size else None
         except (TypeError, ValueError, IndexError):
-            return {"error": "the size is not two numbers"}
+            return {"error": _i18n.msg("eng.server.the_size_is_not_two_numbers", "the size is not two numbers")}
         try:
             out = mapfe.export(mod, campaign, cm, fr,
                                body.get("layers") or [], wanted,
@@ -4519,7 +4537,7 @@ class Handler(BaseHTTPRequestHandler):
                 # from this mod's campaign into another mod's: the write is there
                 dest = str(body.get("to_mod") or "")
                 if dest not in self.registry.names() or dest == name:
-                    return {"error": f"{dest or 'no mod'} is not another installed mod"}
+                    return {"error": _i18n.msg("eng.server.is_not_another_installed_mod", "{x} is not another installed mod", x=dest or 'no mod')}
                 dmod = self.registry.describe(dest)
                 dfacts = self.registry.map_facts(dest, body.get("to_campaign") or "")
                 plan = stratedit.plan_copy_settlement(mod, facts, dmod, dfacts, body)
@@ -4819,7 +4837,7 @@ class Handler(BaseHTTPRequestHandler):
                     return out
                 dest = (body.get("path") or "").strip()
                 if not dest:
-                    return {"error": "no destination file chosen"}
+                    return {"error": _i18n.msg("eng.server.no_destination_file_chosen", "no destination file chosen")}
                 out["record"] = pack_mod.write_pack(plan, Path(dest))
                 return out
             if action == "open":                 # what the import dialog previews
@@ -4832,7 +4850,7 @@ class Handler(BaseHTTPRequestHandler):
             return {"error": str(e)}
         except (OSError, ValueError) as e:
             return {"error": f"{type(e).__name__}: {e}"}
-        return {"error": f"unknown pack action {action!r}"}
+        return {"error": _i18n.msg("eng.server.unknown_pack_action", "unknown pack action {action}", action=repr(action))}
 
     # ---- sprites mode ----
     def _sprites(self, action, body):
@@ -4889,11 +4907,11 @@ class Handler(BaseHTTPRequestHandler):
                           for k, v in (body.get("models") or {}).items()},
                     body.get("duplicates") or {})
                 if not edits:
-                    return {"error": "nothing to wire up"}
+                    return {"error": _i18n.msg("eng.server.nothing_to_wire_up", "nothing to wire up")}
                 return self._bmdb_apply({"mod": body["mod"], "model_edits": edits})
         except sprites.SpriteError as e:
             return {"error": str(e)}
-        return {"error": f"unknown sprite action {action!r}"}
+        return {"error": _i18n.msg("eng.server.unknown_sprite_action", "unknown sprite action {action}", action=repr(action))}
 
     # ---- bmdb mode ----
     def _bmdb_apply(self, body):
@@ -4925,7 +4943,7 @@ class Handler(BaseHTTPRequestHandler):
             mod, mode, only if isinstance(only, list) else None)
         if not edits:
             return {"plan": {"changes": ["no changes"], "warnings": [], "errors": [],
-                             "summary": "nothing to add"}, "empty": True}
+                             "summary": _i18n.msg("eng.server.nothing_to_add", "nothing to add")}, "empty": True}
         if sink:
             sink(20, f"planning {len(edits)} entr"
                      f"{'y' if len(edits) == 1 else 'ies'}")
@@ -4998,7 +5016,7 @@ class Handler(BaseHTTPRequestHandler):
         picks = [p for p in (body.get("picks") or [])
                  if p.get("kind") in ("file", "entry") and p.get("name")]
         if not picks:
-            return {"error": "nothing was ticked"}
+            return {"error": _i18n.msg("eng.server.nothing_was_ticked", "nothing was ticked")}
         out = bmdb.revert_recheck(mod, picks, progress=sink)
         self.registry.invalidate(body["mod"])
         return out
@@ -5053,13 +5071,13 @@ class Handler(BaseHTTPRequestHandler):
         what = "unit to replace" if replacing else "base"
         names = self.registry.names()
         if not (sname in names and dname in names and utype and btype):
-            return {"error": "bad params"}
+            return {"error": _i18n.msg("eng.server.bad_params", "bad params")}
         unit = self.registry.get(sname).edu.by_type().get(utype)
         base = self.registry.get(dname).edu.by_type().get(btype)
         if unit is None or base is None:
-            return {"error": f"unit or {what} not found"}
+            return {"error": _i18n.msg("eng.server.unit_or_not_found", "unit or {what} not found", what=what)}
         if base.kind() != unit.kind():
-            return {"error": f"{what} is {base.kind() or '?'}, unit is {unit.kind() or '?'}"}
+            return {"error": _i18n.msg("eng.server.is_unit_is", "{what} is {x}, unit is {x2}", what=what, x=base.kind() or '?', x2=unit.kind() or '?')}
         # mirror the real transfer exactly, including whole groups taken from the base
         body = {k: (q.get(k) or ["source"])[0]
                 for k in ("soldier_from", "officer_from", "mount_from",
@@ -5091,7 +5109,7 @@ class Handler(BaseHTTPRequestHandler):
         """
         name = body.get("mod") or ""
         if name not in self.registry.names():
-            return {"error": f"unknown mod {name!r}"}
+            return {"error": _i18n.msg("eng.server.unknown_mod_2", "unknown mod {name}", name=repr(name))}
         mod = self.registry.describe(name)
         if "on" in body:
             modflags.set_m2ex(mod, bool(body.get("on")))
@@ -5110,7 +5128,7 @@ class Handler(BaseHTTPRequestHandler):
         """
         name = body.get("mod") or ""
         if name not in self.registry.names():
-            return {"error": f"unknown mod {name!r}"}
+            return {"error": _i18n.msg("eng.server.unknown_mod_2", "unknown mod {name}", name=repr(name))}
         # Folders on disk, so nothing has to be parsed to answer - which matters
         # for the one mod this panel is most likely to be opened on: the one
         # whose roster the toolkit just refused to read.
@@ -5143,7 +5161,7 @@ class Handler(BaseHTTPRequestHandler):
         name = (q.get("mod") or [None])[0]
         rel = (q.get("path") or ["unit_models"])[0] or "unit_models"
         if not name or name not in self.registry.names():
-            return {"error": "unknown mod"}
+            return {"error": _i18n.msg("eng.server.unknown_mod", "unknown mod")}
         data = self.registry.get(name).data.resolve()
         rel = rel.replace("\\", "/").strip("/")
         target = (data / rel).resolve()
@@ -5168,7 +5186,8 @@ class Handler(BaseHTTPRequestHandler):
     #: served from disk, so this stays deliberately short.
     WEB_TYPES = {".js": "application/javascript; charset=utf-8",
                  ".css": "text/css; charset=utf-8",
-                 ".svg": "image/svg+xml", ".png": "image/png"}
+                 ".svg": "image/svg+xml", ".png": "image/png",
+                 ".json": "application/json; charset=utf-8"}
 
     def _web_asset(self, url_path: str):
         """Serve a file from web/ - the UI's own scripts, nothing else.

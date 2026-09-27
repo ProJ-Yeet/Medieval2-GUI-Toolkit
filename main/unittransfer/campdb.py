@@ -44,6 +44,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import keyblock as kb
+from . import i18n as _i18n
 
 REL = "descr_campaign_db.xml"
 #: plain 8-bit text; both real copies are ASCII
@@ -263,7 +264,7 @@ def path_for(mod) -> Path:
 def read(mod) -> Tuple[DbFile, str]:
     p = path_for(mod)
     if not p.is_file():
-        raise CampDbError(f"{mod.name} has no data/{REL}")
+        raise CampDbError(_i18n.msg("eng.campdb.has_no_data", "{name} has no data/{REL}", name=mod.name, REL=REL))
     text = kb.read_text(p, ENCODING)
     return parse_text(text), text
 
@@ -338,22 +339,19 @@ def finding(code: str, fatal: bool, message: str, **extra) -> Dict:
 def check_file(db: DbFile) -> List[Dict]:
     out: List[Dict] = []
     if db.root != "root":
-        out.append(finding("root", True, f"the document element is `<{db.root}>`, "
-                           "and the engine reads `<root>`"))
+        out.append(finding("root", True, _i18n.msg("eng.campdb.the_document_element_is_and_the", "the document element is `<{root}>`, and the engine reads `<root>`", root=db.root)))
     for i, raw in db.unread:
-        out.append(finding("unread", False, f"line {i + 1} is not a tag this screen "
-                           f"can edit and is kept as it is: {raw.strip()[:80]}",
+        out.append(finding("unread", False, _i18n.msg("eng.campdb.line_is_not_a_tag_this", "line {x} is not a tag this screen can edit and is kept as it is: {raw}", x=i + 1, raw=raw.strip()[:80]),
                            line=i + 1))
     for s in db.sections:
         if s.close_line < 0:
-            out.append(finding("unclosed", True, f"<{s.name}> is never closed",
+            out.append(finding("unclosed", True, _i18n.msg("eng.campdb.is_never_closed", "<{name}> is never closed", name=s.name),
                                section=s.name))
         seen: Dict[str, int] = {}
         for t in s.tags:
             if t.name in seen:
                 out.append(finding("duplicate", False,
-                                   f"{t.key} is written twice (lines {seen[t.name] + 1} "
-                                   f"and {t.line + 1}) - one of them is ignored",
+                                   _i18n.msg("eng.campdb.is_written_twice_lines_and_one", "{key} is written twice (lines {x} and {x2}) - one of them is ignored", key=t.key, x=seen[t.name] + 1, x2=t.line + 1),
                                    key=t.key))
             seen.setdefault(t.name, t.line)
             err, warn, note = check_value(t.type, t.value, t.name)
@@ -368,10 +366,7 @@ def check_file(db: DbFile) -> List[Dict]:
     tuned = [t.name for t in db.tags() if t.name.startswith("alt_rel_")]
     if tuned and (alt is None or alt.value != "true"):
         out.append(finding("alt_piety", False,
-                           f"{len(tuned)} alt_rel_ value(s) are set and "
-                           "alternative_religious_unrest is "
-                           f"{'missing' if alt is None else 'off'}, so none of them "
-                           "is read", key="settlement/alternative_religious_unrest"))
+                           _i18n.msg("eng.campdb.alt_rel_value_s_are_set", "{tuned_n} alt_rel_ value(s) are set and alternative_religious_unrest is {x}, so none of them is read", tuned_n=len(tuned), x='missing' if alt is None else 'off'), key="settlement/alternative_religious_unrest"))
     return out
 
 
@@ -415,7 +410,7 @@ def set_value(db: DbFile, tag: Tag, value: str) -> None:
 def add_tag(db: DbFile, section: str, name: str, type_: str, value: str) -> None:
     s = db.section(section)
     if s is None or s.close_line < 0:
-        raise CampDbError(f"there is no <{section}> section to add {name} to")
+        raise CampDbError(_i18n.msg("eng.campdb.there_is_no_section_to_add", "there is no <{section}> section to add {name} to", section=section, name=name))
     last = s.tags[-1] if s.tags else None
     indent = re.match(r"\s*", db.lines[last.line]).group(0) if last else (
         re.match(r"\s*", db.lines[s.open_line]).group(0) + "   ")
@@ -476,11 +471,11 @@ def plan(mod, body: dict) -> CampDbPlan:
     for name in [str(n) for n in (body.get("add") or [])]:
         v = VOCAB.get(name)
         if v is None or "default" not in v:
-            p.errors.append(f"{name} is not a tag this screen knows how to add")
+            p.errors.append(_i18n.msg("eng.campdb.is_not_a_tag_this_screen", "{name} is not a tag this screen knows how to add", name=name))
             continue
         key = f"{v['section']}/{name}"
         if db.get(key) is not None:
-            p.errors.append(f"{key} is already in the file")
+            p.errors.append(_i18n.msg("eng.campdb.is_already_in_the_file", "{key} is already in the file", key=key))
             continue
         value = values.get(key, v["default"])
         err, warn, note = check_value(v["type"], value, name)
@@ -500,7 +495,7 @@ def plan(mod, body: dict) -> CampDbPlan:
 
     unknown = [k for k in values if db.get(k) is None]
     if unknown:
-        p.errors.append(f"not in the file: {', '.join(unknown[:5])}")
+        p.errors.append(_i18n.msg("eng.campdb.not_in_the_file", "not in the file: {unknown}", unknown=', '.join(unknown[:5])))
     if p.errors:
         return p
 
@@ -508,11 +503,11 @@ def plan(mod, body: dict) -> CampDbPlan:
     try:
         ET.fromstring(text.encode(ENCODING))
     except ET.ParseError as e:
-        p.errors.append(f"the result would not be well-formed XML ({e})")
+        p.errors.append(_i18n.msg("eng.campdb.the_result_would_not_be_well", "the result would not be well-formed XML ({e})", e=e))
         return p
     p.text = "" if text == original else text
     if not p.text:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.campdb.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -527,7 +522,7 @@ def apply(p: CampDbPlan) -> Dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.campdb.nothing_to_change", "nothing to change"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

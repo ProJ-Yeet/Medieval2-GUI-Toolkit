@@ -23,16 +23,16 @@ function relInMod(p){
 }
 
 async function openEditor(type){
-  activity('opened unit',`${type} in ${state.src}`);
+  activity(tt('editor.opened_unit'),`${type} in ${state.src}`);
   const modal=document.getElementById('modal');
-  modal.className='modal wide'; modal.innerHTML='<h2>Loading unit…</h2>';
+  modal.className='modal wide'; modal.innerHTML=`<h2>${tt('editor.loading_unit')}</h2>`;
   overlay.classList.add('open');
   let d;
   try{ d=await api.get(`/api/edit/unit?mod=${enc(state.src)}&type=${enc(type)}`); }
-  catch(e){ modal.innerHTML=`<h2>Unit editor</h2><div class="mbody w-bad">${esc(errText(e))}</div>
-    <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
-  if(d.error){ modal.innerHTML=`<h2>Unit editor</h2><div class="mbody w-bad">${esc(d.error)}</div>
-    <div class="foot"><button onclick="closeModal()">Close</button></div>`; return; }
+  catch(e){ modal.innerHTML=`<h2>${tt('editor.unit_editor')}</h2><div class="mbody w-bad">${esc(errText(e))}</div>
+    <div class="foot"><button onclick="closeModal()">${tt('common.close')}</button></div>`; return; }
+  if(d.error){ modal.innerHTML=`<h2>${tt('editor.unit_editor')}</h2><div class="mbody w-bad">${esc(d.error)}</div>
+    <div class="foot"><button onclick="closeModal()">${tt('common.close')}</button></div>`; return; }
   state.ed={mod:state.src,unit:type,d,tab:'identity',ov:{},rm:new Set(),
             loc:Object.assign({},d.loc),newType:'',newDict:'',
             mEdits:{},newModels:[],open:{},form:null,removeOldIcons:false,added:new Set(),
@@ -115,8 +115,8 @@ function edCvUserEdited(){
 function edCvBlocked(){
   const cv=state.ed&&state.ed.cv;
   if(!cv||!cv.err)return '';
-  return 'The code view can’t be read: '+cv.err+
-    ' Fix the line, or undo your typing, before saving.';
+  return tt('editor.the_code_view_cant_be_read')+cv.err+
+    tt('editor.fix_the_line_or_undo_your');
 }
 /* ---- what each touched bmdb entry sends ----
    Texture paths go by faction + kind, never by span index: ticking a faction on
@@ -202,38 +202,33 @@ function renderEditor(){
   // context with it and reload the model on every tab switch.
   edPrevDetach();
   document.getElementById('modal').innerHTML=`
-    <h2>Edit unit <span class="pill">${esc(e.mod)}</span>
-      ${edPrevOn()?'':`<button class="edprevon" onclick="edPrevShow()"
-        title="Draw this unit's battle model beside the fields">&#129482; 3D preview</button>`}</h2>
+    <h2>${tt('editor.edit_unit',{mod:esc(e.mod),x:edPrevOn()?'':`<button class="edprevon" onclick="edPrevShow()"
+        title="${ttA('editor.draw_this_units_battle_model_beside')}">${tt('editor.3d_preview')}</button>`})}</h2>
     <div class="edsplit" id="edSplit">
      <div class="edmain">
       <div class="ehead">
         <img onerror="iconRetry(this)" src="${iconUrl(e.mod,e.unit)}">
         <div><div class="nm">${esc(e.loc.name||d.type)}${
-          d.eop?'<span class="badge eop" style="margin-left:6px;vertical-align:middle">EOP</span>':''}</div>
-          <div class="count">${esc(d.type)} · dictionary <code>${esc(d.dictionary)}</code>
-            · ${d.models.length} model entr${d.models.length===1?'y':'ies'}</div>
+          d.eop?`<span class="badge eop" style="margin-left:6px;vertical-align:middle">${tt('editor.eop')}</span>`:''}</div>
+          <div class="count">${tt('editor.dictionary_model_entr',{type:esc(d.type),dictionary:esc(d.dictionary),models_n:d.models.length,models:d.models.length===1?'y':'ies'})}</div>
           <div class="count">${d.eop
-            ? `M2TWEOP unit. Saves are written to <code>${esc(d.eop_file)}</code>, not to export_descr_unit.txt.`
-            : 'Defined in <code>data/export_descr_unit.txt</code>.'}</div></div>
+            ? tt('editor.m2tweop_unit_saves_are_written_to',{eop_file:esc(d.eop_file)})
+            : tt('editor.defined_in_data_export_descr_unit')}</div></div>
       </div>
-      <div class="tabs">${tab('identity','Identity & text')}${tab('fields','EDU fields')}
-        ${tab('models','Battle models (bmdb)')}${tab('recruit',edRecTabLabel())}${
-        tab('compare','⇄ Compare')}</div>
+      <div class="tabs">${tab('identity',tt('editor.identity_text'))}${tab('fields',tt('editor.edu_fields'))}
+        ${tab('models',tt('editor.battle_models_bmdb'))}${tab('recruit',edRecTabLabel())}${
+        tab('compare',tt('editor.compare'))}</div>
       <div class="mbody" id="edBody"></div>
      </div>
     </div>
     <div class="foot">
-      <button class="danger" onclick="edDeleteDialog()">🗑 Delete unit…</button>
+      <button class="danger" onclick="edDeleteDialog()">${tt('editor.delete_unit')}</button>
       <span id="edDirtyNote"></span>
-      <span class="count" title="Takes back one value at a time, without closing this dialog">
-        ⌨ Ctrl+Z undo · Ctrl+Y redo</span>
-      ${state.bldReturn?`<button onclick="backToBuilding()"
-        title="Return to the building editor exactly as you left it">← ${esc(state.bldReturn.label)}</button>`:''}
-      ${cleanerBoxHtml()}
-      <button onclick="closeModal()">Close</button>
-      <button onclick="edPreview()">Probe</button>
-      <button class="primary" onclick="edSave()">Save changes</button>
+      ${tt('editor.ctrl_z_undo_ctrl_y_redo',{x:state.bldReturn?`<button onclick="backToBuilding()"
+        title="${ttA('editor.return_to_the_building_editor_exactly')}">← ${esc(state.bldReturn.label)}</button>`:'',cleanerBoxHtml:cleanerBoxHtml()})}
+      <button onclick="closeModal()">${tt('common.close')}</button>
+      <button onclick="edPreview()">${tt('common.probe')}</button>
+      <button class="primary" onclick="edSave()">${tt('common.save_changes')}</button>
     </div>`;
   edRenderTab();
   edPrevAttach();
@@ -329,15 +324,15 @@ function edPrevBar(){
   const list = edPrevEntries(), cur = edPrevEntry(), min = !!(state.ed && state.ed.prevMin);
   el.innerHTML = `<b>3D</b>
     ${list.length > 1
-      ? `<select title="Which of this unit's battle-model entries to draw"
+      ? `<select title="${ttA('editor.which_of_this_units_battle_model')}"
            onchange="edPrevPick(this.value)">${list.map(n =>
            `<option value="${esc(n)}"${n===cur?' selected':''}>${esc(n)}</option>`).join('')}</select>`
-      : `<span class="count" title="${esc(cur)}">${esc(cur || 'no entry')}</span>`}
+      : `<span class="count" title="${esc(cur)}">${esc(cur || tt('editor.no_entry'))}</span>`}
     <span class="sp"></span>
-    <button onclick="edPrevFull()" title="Full screen &mdash; Esc comes back">&#10530;</button>
-    <button onclick="edPrevMin()" title="${min?'Unfold the preview':'Fold the preview away'}"
+    <button onclick="edPrevFull()" title="${ttA('editor.full_screen_esc_comes_back')}">&#10530;</button>
+    <button onclick="edPrevMin()" title="${min?tt('editor.unfold_the_preview'):tt('editor.fold_the_preview_away')}"
       >${min?'&#9656;':'&#9662;'}</button>
-    <button onclick="edPrevHide()" title="Hide the preview. The button at the top of the dialog brings it back, and the choice is remembered.">&#10005;</button>`;
+    <button onclick="edPrevHide()" title="${ttA('editor.hide_the_preview_the_button_at')}">&#10005;</button>`;
 }
 
 async function edPrevMount(){
@@ -347,8 +342,7 @@ async function edPrevMount(){
   const entry = edPrevEntry();
   if(!entry){
     if(v3 && v3.host === ED_PREV_HOST) v3Unmount();
-    host.innerHTML = `<div class="empty">This unit names no battle-model entry,
-      so there is nothing to draw.</div>`;
+    host.innerHTML = `<div class="empty">${tt('editor.this_unit_names_no_battle_model')}</div>`;
     return;
   }
   v3Pause(false);
@@ -399,9 +393,9 @@ function edPrevFull(){
   if(document.fullscreenElement){ document.exitFullscreen(); return; }
   if(state.ed && state.ed.prevMin) edPrevMin();          // nothing to look at folded
   const go = el.requestFullscreen || el.webkitRequestFullscreen;
-  if(!go){ toast('This browser will not go full screen here.', 3000); return; }
+  if(!go){ toast(tt('common.this_browser_will_not_go_full'), 3000); return; }
   Promise.resolve(go.call(el)).catch(e =>
-    toast('Full screen was refused: ' + ((e && e.message) || e), 4000));
+    toast(tt('common.full_screen_was_refused') + ((e && e.message) || e), 4000));
 }
 function edRenderTab(){
   const e=state.ed,b=document.getElementById('edBody');
@@ -469,7 +463,7 @@ function edWireModels(){
   }
   // any box on this tab moves the pane's text with it
   document.querySelectorAll('#edBody input[data-entry],#edBody input[data-def],'
-    +'#edBody input[data-fac]').forEach(inp=>{
+    +tt('editor.edbody_input_data_fac')).forEach(inp=>{
       const prev=inp.oninput;
       inp.oninput=ev=>{if(prev)prev.call(inp,ev); cvFromGui(state.ed.mcv);};
     });
@@ -483,12 +477,12 @@ function edImportDir(m,kind){
   const base=me.move_dir||m.folder.base||m.folder.suggestion;
   return kind==='sprite'?'unit_sprites':base+'/textures';
 }
-const TEX_FILTER='Textures (*.texture)|*.texture|All files (*.*)|*.*';
-const SPR_FILTER='Sprites (*.spr)|*.spr|All files (*.*)|*.*';
+const TEX_FILTER=tt('editor.textures_texture_texture_all_files');
+const SPR_FILTER=tt('editor.sprites_spr_spr_all_files');
 async function edImportInto(name,kind,set){
   const m=state.ed.d.models.find(x=>x.name===name);
   const r=await api.post('/api/browse_file',
-    {title:'Select a file to import',filter:kind==='sprite'?SPR_FILTER:TEX_FILTER});
+    {title:tt('editor.select_a_file_to_import'),filter:kind==='sprite'?SPR_FILTER:TEX_FILTER});
   if(!r.path)return;
   const dir=edImportDir(m,kind),rel=dir+'/'+r.path.split(/[\\\/]/).pop();
   const me=edTouch(name);
@@ -534,55 +528,47 @@ function edIdentity(){
   const e=state.ed,d=e.d,merc=edIsMerc();
   return `<div class="frm">
     <div class="two">
-      <div><label>Unit type (EDU <code>type</code>, the internal name)
+      <div><label>${tt('editor.unit_type_edu_type_the_internal')}
         <input id="edType" value="${esc(e.newType||d.type)}"></label>
         <div class="count" style="margin-top:4px">${docPoints(
-          'Renaming it follows the unit through the whole mod.',[
-          "Rewritten: <code>export_descr_buildings.txt</code>, every campaign's "
-            +'<code>descr_strat.txt</code> and <code>campaign_script.txt</code>, the voice bank, '
-            +"<code>descr_mercenaries.txt</code> and the mod's <code>.lua</code> scripts.",
-          'Probe lists every file and how many lines in each. Undo puts them all back.',
-          'Spellings that differ only in capitalisation are reported, not rewritten. Other '
-            +'things share these files.'])}</div></div>
-      <div><label>Dictionary (localisation + unit-card key)
+          tt('editor.renaming_it_follows_the_unit_through'),[
+          `${tt('editor.rewritten_export_descr_buildings_txt_every')} `
+            +`${tt('editor.descr_strat_txt_and_campaign_script')} `
+            +tt('editor.descr_mercenaries_txt_and_the_mods'),
+          tt('editor.probe_lists_every_file_and_how'),
+          tt('editor.spellings_that_differ_only_in_capitalisation')
+            +tt('editor.things_share_these_files')])}</div></div>
+      <div><label>${tt('editor.dictionary_localisation_unit_card_key')}
         <input id="edDict" value="${esc(e.newDict||d.dictionary)}"></label>
-        <div class="count" style="margin-top:4px">Renaming it moves the text entry and copies the
-          unit cards to the new name (${d.icons.length} icon file${d.icons.length===1?'':'s'} found).
+        <div class="count" style="margin-top:4px">${tt('editor.renaming_it_moves_the_text_entry',{icons_n:d.icons.length,icons:d.icons.length===1?'':'s'})}
           <label class="chk" style="margin-top:4px"><input type="checkbox" id="edRmIcons"
-            ${e.removeOldIcons?'checked':''}> delete the old icon files</label></div></div>
+            ${e.removeOldIcons?'checked':''}> ${tt('editor.delete_the_old_icon_files')}</label></div></div>
     </div>
-    <label>Displayed name<input id="edName" value="${esc(e.loc.name)}"></label>
-    <label>Short description (unit card tooltip)<textarea id="edShort">${esc(e.loc.descr_short)}</textarea></label>
-    <label>Description (info card)<textarea id="edDescr" style="min-height:150px">${esc(e.loc.descr)}</textarea></label>
-    <div class="count" style="margin-top:4px">The description is stored on a single line, so any
-      new line or tab you type becomes <code>\\n</code> / <code>\\t</code> when you click away.</div>
+    <label>${tt('editor.displayed_name')}<input id="edName" value="${esc(e.loc.name)}"></label>
+    <label>${tt('editor.short_description_unit_card_tooltip')}<textarea id="edShort">${esc(e.loc.descr_short)}</textarea></label>
+    <label>${tt('editor.description_info_card')}<textarea id="edDescr" style="min-height:150px">${esc(e.loc.descr)}</textarea></label>
+    <div class="count" style="margin-top:4px">${tt('editor.the_description_is_stored_on_a')}</div>
     ${edTierBox()}
-    <fieldset style="margin-top:12px"><legend>Mercenary</legend>
+    <fieldset style="margin-top:12px"><legend>${tt('editor.mercenary')}</legend>
       <button class="${merc?'on':''}" onclick="edToggleMerc(${merc?'false':'true'})">${
-        merc?'✓ Mercenary unit':'Make this a mercenary unit'}</button>
-      <div class="count" style="margin-top:6px">${merc
-        ?'This unit has the <code>mercenary_unit</code> attribute; the button removes it.'
-        :'Adds the <code>mercenary_unit</code> attribute.'}
-        To recruit it, add a pool entry in <code>descr_mercenaries.txt</code> yourself. A merc's card is
-        looked up under <code>ui/units/mercs/</code> unless <code>card_pic_dir</code> says otherwise.</div>
+        merc?tt('editor.mercenary_unit'):tt('editor.make_this_a_mercenary_unit')}</button>
+      <div class="count" style="margin-top:6px">${tt('editor.to_recruit_it_add_a_pool',{merc:merc
+        ?tt('editor.this_unit_has_the_mercenary_unit')
+        :tt('editor.adds_the_mercenary_unit_attribute')})}</div>
     </fieldset>
-    <fieldset style="margin-top:12px"><legend>Unit card / info card</legend>
-      <div class="count">${docPoints('Import a replacement from anywhere on disk.',[
-        `On save it takes the unit's dictionary name and is copied into <b>every faction that owns
-         the unit</b> (plus the <code>mercs</code>/<code>merc</code> fallback), because the game
-         looks it up under the <i>player's</i> faction folder.`,
+    <fieldset style="margin-top:12px"><legend>${tt('editor.unit_card_info_card')}</legend>
+      <div class="count">${docPoints(tt('editor.import_a_replacement_from_anywhere_on'),[
+        tt('editor.on_save_it_takes_the_units'),
         edOwnFolders().length
-          ?`Right now that is <b>${edOwnFolders().length}</b> folder(s):
-             <code>${edOwnFolders().map(esc).join('</code> <code>')}</code>.`
-          :`<b class="w-warn">This unit has no ownership</b>, so there is no faction folder to
-             copy into. Set <code>ownership</code> first.`,
-        'A <code>.png</code>/<code>.jpg</code> is converted to <code>.tga</code>; the engine reads '
-          +'nothing else.'])}</div>
+          ?tt('editor.right_now_that_is_folder_s',{n:edOwnFolders().length,edOwnFolders:edOwnFolders().map(esc).join('</code> <code>')})
+          :tt('editor.this_unit_has_no_ownership_so'),
+        `${tt('editor.a_png_jpg_is_converted_to')} `
+          +tt('editor.nothing_else')])}</div>
       <div class="icoprev">${edIconSlot('card')}${edIconSlot('info')}</div>
-      ${edCardVariants('card','Unit cards on disk')}
-      ${edCardVariants('info','Info cards on disk')}
+      ${edCardVariants('card',tt('editor.unit_cards_on_disk'))}
+      ${edCardVariants('info',tt('editor.info_cards_on_disk'))}
       ${(e.cardSrc||e.infoSrc)?`<div class="count w-good" style="margin-top:8px">
-        Staged. Nothing is written until you hit Save.</div>`:''}
+        ${tt('editor.staged_nothing_is_written_until_you')}</div>`:''}
     </fieldset>
   </div>`;
 }
@@ -608,24 +594,23 @@ const edSrcUrl=s=>edSrcAbs(s)?'/preview_image?path='+enc(s)
 function edIconSlot(kind){
   const e=state.ed, card=kind==='card';
   const key=card?'cardSrc':'infoSrc', src=e[key]||'';
-  const what=card?'unit card':'info card';
+  const what=card?tt('editor.unit_card'):'info card';
   const many=((e.d.icon_variants||{})[kind]||[]).length;
   const pic=!!src||many<2;
   return `<div class="icoslot">
     ${pic?`<div class="icowrap">
       <img class="${card?'card':'info'}" onerror="this.style.display='none'"
-        title="Replace the ${what}" onclick="edPickIcon('${key}')"
+        title="${ttA('editor.replace_the',{what})}" onclick="edPickIcon('${key}')"
         src="${src?edSrcUrl(src):iconUrl(e.mod,e.unit,card?'':'info')}">
-      <button class="icoedit" title="Replace the ${what}"
+      <button class="icoedit" title="${ttA('editor.replace_the',{what})}"
         onclick="edPickIcon('${key}')">✎</button>
     </div>`:''}
-    <div class="k">${card?'Unit card':'Info card'}</div>
+    <div class="k">${card?tt('editor.unit_card_2'):tt('editor.info_card')}</div>
     <div class="fn">${src?esc(src.split(/[\\/]/).pop())
       :(pic?'current':`${many} different pictures - below`)}</div>
     <div class="sprrow">
       ${pic?'':`<button onclick="edPickIcon('${key}')"
-        title="Import one picture and copy it into every faction folder that owns this unit.
-Replacing a single file where it lies is what the list below does.">✎ Replace for every faction…</button>`}
+        title="${ttA('editor.import_one_picture_and_copy_it')}">${tt('editor.replace_for_every_faction')}</button>`}
       ${edRevealBtn(kind)}
       ${src?`<button class="danger" onclick="edClearIcon('${key}')">✕</button>`:''}
     </div>
@@ -646,9 +631,7 @@ function edCardVariants(kind,title){
   const rows=((e.d.icon_variants||{})[kind])||[];
   if(rows.length<2)return '';           // one picture for everyone: nothing to say
   return `<div class="cardvars" data-kind="${kind}">
-    <div class="k">${esc(title)} <span class="count">${rows.length} different
-      picture${rows.length===1?'':'s'} across ${rows.reduce((n,r)=>n+r.factions.length,0)}
-      faction folder${rows.reduce((n,r)=>n+r.factions.length,0)===1?'':'s'}</span></div>
+    <div class="k">${tt('editor.different_picture_across_faction_folder',{title:esc(title),rows_n:rows.length,rows:rows.length===1?'':'s',x:rows.reduce((n,r)=>n+r.factions.length,0),x2:rows.reduce((n,r)=>n+r.factions.length,0)===1?'':'s'})}</div>
     <div class="cardvarlist">${rows.map(r=>{
       // one variant is ONE file, so it can be swapped on its own - which is the
       // point of the list: the whole reason it exists is that these differ.
@@ -662,7 +645,7 @@ function edCardVariants(kind,title){
       const url=`/icon?mod=${enc(e.mod)}&kind=modfile&rel=${enc(r.rel)}`;
       return `<figure>
       <div class="icowrap"><img onerror="iconRetry(this)"
-        title="Replace this picture" onclick="imgPick('${q1(esc(url))}','edRenderTab')"
+        title="${ttA('common.replace_this_picture')}" onclick="imgPick('${q1(esc(url))}','edRenderTab')"
         src="${url}${iconBust()}" alt="">${imgEditBtn(url,'edRenderTab')}</div>
       <figcaption>
         <span class="count">${esc(r.rel)}</span>
@@ -691,17 +674,15 @@ const edIconRel=kind=>{
 };
 function edRevealBtn(kind){
   const rel=edIconRel(kind),what=kind==='card'?'unit':'info';
-  if(!rel)return `<button disabled title="This unit has no ${what} card on disk yet.
-Import one and save, and this opens the folder it lands in.">Open file location</button>`;
+  if(!rel)return `<button disabled title="${ttA('editor.this_unit_has_no_card_on',{what})}">${tt('editor.open_file_location')}</button>`;
   const many=((state.ed.d.icon_variants||{})[kind]||[]).length>1;
-  return `<button title="Show ${esc(rel)} in the file manager.
-${many?'This unit has more than one distinct picture. The list below has the rest.'
-      :'Every faction folder that has one shares this picture.'}"
-    onclick="edReveal('${q1(esc(rel))}')">Open file location</button>`;
+  return `<button title="${ttA('editor.show_in_the_file_manager',{rel:esc(rel),many:many?tt('editor.this_unit_has_more_than_one')
+      :tt('editor.every_faction_folder_that_has_one')})}"
+    onclick="edReveal('${q1(esc(rel))}')">${tt('editor.open_file_location')}</button>`;
 }
 async function edReveal(rel){
   const r=await api.post('/api/reveal',{mod:state.ed.mod,rel});
-  if(!r||!r.ok)toast((r&&r.error)||'that folder could not be opened');
+  if(!r||!r.ok)toast((r&&r.error)||tt('common.that_folder_could_not_be_opened'));
 }
 /* ---- Replacing a card: which folders, and which picture ------------------
    The game looks a card up under the PLAYER's faction folder, so one unit's
@@ -757,30 +738,29 @@ function edPickIcon(key){
 function edIcoRender(key){
   const e=state.ed,kind=edIcoKind(key);
   const rows=((e.d.icon_variants||{})[kind])||[];
-  const what=kind==='card'?'unit card':'info card';
-  const fname=kind==='card'?`#${e.d.dictionary}.tga`:`${e.d.dictionary}_info.tga`;
+  const what=kind==='card'?tt('editor.unit_card'):'info card';
+  const fname=kind==='card'?tt('editor.tga',{dictionary:e.d.dictionary}):`${e.d.dictionary}_info.tga`;
   const folders=edIcoFolders(kind),merc=edIcoMerc(kind),sel=edIcoSel(key),has=edIcoHas(kind);
   const n=folders.filter(f=>sel.has(f)).length;
   const thumb=i=>rows[i]
     ? `<img class="edicothumb" onerror="iconRetry(this)" alt=""
         src="/icon?mod=${enc(e.mod)}&kind=modfile&rel=${enc(rows[i].rel)}${iconBust()}">`
-    : `<span class="edicothumb none">none</span>`;
-  document.getElementById('modal').innerHTML=`<h2>Replace the ${what}
+    : `<span class="edicothumb none">${tt('common.none')}</span>`;
+  document.getElementById('modal').innerHTML=`<h2>${tt('editor.replace_the',{what})}
       <span class="pill">${esc(e.d.dictionary)}</span></h2>
     <div class="mbody">
       <div class="count">${docPoints(
-        `The game looks a ${what} up under the <i>player's</i> faction folder, so this writes one
-         copy per folder, named <code>${esc(fname)}</code>.`,[
-        'Untick a folder to leave the picture it already has alone.',
-        'Nothing is written until you press Save, and every file it touches is backed up first.'])}
+        tt('editor.the_game_looks_a_up_under',{what,fname:esc(fname)}),[
+        tt('editor.untick_a_folder_to_leave_the'),
+        tt('editor.nothing_is_written_until_you_press')])}
       </div>
 
-      <fieldset style="margin-top:12px"><legend>Where it goes</legend>
+      <fieldset style="margin-top:12px"><legend>${tt('editor.where_it_goes')}</legend>
         ${folders.length?`
         <div class="barrow">
-          <button onclick="edIcoAll('${key}',true)">Replace for all</button>
-          <button onclick="edIcoAll('${key}',false)">None</button>
-          <span class="count">${n} of ${folders.length} folder${folders.length===1?'':'s'} ticked</span>
+          <button onclick="edIcoAll('${key}',true)">${tt('editor.replace_for_all')}</button>
+          <button onclick="edIcoAll('${key}',false)">${tt('common.none_2')}</button>
+          <span class="count">${tt('editor.of_folder_ticked',{x:n,folders_n:folders.length,folders:folders.length===1?'':'s'})}</span>
         </div>
         <div class="edicofolders">${folders.map(f=>`
           <label class="edicofold${sel.has(f)?' on':''}">
@@ -788,35 +768,33 @@ function edIcoRender(key){
               onchange="edIcoToggle('${key}','${q1(esc(f))}',this.checked)">
             ${thumb(has[f])}
             <span class="grow">
-              <span class="nm">${esc(f===merc?'Mercenary fallback':edFacLabel(f))}</span>
+              <span class="nm">${esc(f===merc?tt('editor.mercenary_fallback'):edFacLabel(f))}</span>
               <span class="count">${esc(f)}${f===merc
-                ? ' · what the game reads when a faction folder has nothing':''}</span></span>
+                ? tt('editor.what_the_game_reads_when_a'):''}</span></span>
           </label>`).join('')}</div>`
-        :`<div class="count w-warn">This unit has no ownership, so there is no faction folder to
-           copy into. Set <code>ownership</code> on the EDU fields tab first.</div>`}
+        :`<div class="count w-warn">${tt('editor.this_unit_has_no_ownership_so_2')}</div>`}
       </fieldset>
 
       ${rows.length>1?`<fieldset style="margin-top:12px">
-        <legend>Use one of the pictures this unit already has</legend>
-        <div class="count">Its folders hold <b>${rows.length}</b> different ${esc(what)}s.
-          Pick one and every ticked folder gets that picture.</div>
+        <legend>${tt('editor.use_one_of_the_pictures_this')}</legend>
+        <div class="count">${tt('editor.its_folders_hold_different_s_pick',{rows_n:rows.length,what:esc(what)})}</div>
         <div class="cardvars" data-kind="${kind}"><div class="cardvarlist">${rows.map((r,i)=>`
           <figure class="edicopick" onclick="edTakeIcon('${key}',${i})"
-              title="Give every ticked folder this picture">
+              title="${ttA('editor.give_every_ticked_folder_this_picture')}">
             <div class="icowrap"><img onerror="iconRetry(this)" alt=""
               src="/icon?mod=${enc(e.mod)}&kind=modfile&rel=${enc(r.rel)}${iconBust()}"></div>
             <figcaption>
               <span class="count">${esc(r.rel)}</span>
               <span class="tags">${r.factions.map(f=>
                 `<span class="badge">${esc(f)}</span>`).join('')}</span>
-              <button onclick="event.stopPropagation();edTakeIcon('${key}',${i})">Use this one</button>
+              <button onclick="event.stopPropagation();edTakeIcon('${key}',${i})">${tt('editor.use_this_one')}</button>
             </figcaption></figure>`).join('')}</div></div>
       </fieldset>`:''}
     </div>
     <div class="foot">
-      <button onclick="edIconCancel()">Cancel</button>
+      <button onclick="edIconCancel()">${tt('common.cancel')}</button>
       <button class="primary" ${n?'':'disabled'}
-        onclick="edBrowseIcon('${key}')">Choose a file from disk…</button>
+        onclick="edBrowseIcon('${key}')">${tt('editor.choose_a_file_from_disk')}</button>
     </div>`;
 }
 function edIcoToggle(key,folder,on){
@@ -850,21 +828,21 @@ function edIcoPayloadFolders(key){
 function edIcoStaged(key,label){
   const folders=edIcoPayloadFolders(key);
   edStale(); edIconCancel();
-  toast(`Staged ${label} for ${folders.length?folders.join(', ')
-        :'every folder this unit is looked up under'}. Save to write it.`,4600);
+  toast(tt('editor.staged_for_save_to_write_it',{label,x:folders.length?folders.join(', ')
+        :tt('editor.every_folder_this_unit_is_looked')}),4600);
 }
 function edTakeIcon(key,i){
   const e=state.ed,row=(((e.d.icon_variants||{})[edIcoKind(key)])||[])[i];
   if(!row)return;
-  if(!edIcoSel(key).size)return toast('Tick at least one folder to replace');
+  if(!edIcoSel(key).size)return toast(tt('editor.tick_at_least_one_folder_to'));
   e[key]=row.rel;                       // mod-relative; the server resolves both
   edIcoStaged(key,row.rel.split('/').pop());
 }
 async function edBrowseIcon(key){
-  const what=edIcoKind(key)==='card'?'unit card':'info card';
+  const what=edIcoKind(key)==='card'?tt('editor.unit_card'):'info card';
   const r=await api.post('/api/browse_file',
-    {title:`Select the image to use as the ${what}`,
-     filter:'Images (*.tga;*.dds;*.png;*.jpg;*.jpeg;*.bmp)|*.tga;*.dds;*.png;*.jpg;*.jpeg;*.bmp|All files (*.*)|*.*'});
+    {title:tt('editor.select_the_image_to_use_as',{what}),
+     filter:tt('editor.images_tga_dds_png_jpg_jpeg')});
   if(!r.path)return edIconBack?edIconCancel():undefined;
   state.ed[key]=r.path;
   if(edIconBack)edIcoStaged(key,r.path.split(/[\\/]/).pop());
@@ -906,25 +884,24 @@ function edTierBox(){
      to replace. ＋ is that first value, typed here: it goes onto this unit, and
      from the next read of the mod it is in the list for every other one. */
   const adding=!!e.tierNewVar;
-  return `<fieldset style="margin-top:12px"><legend>Tier <span class="pill">toolkit only</span></legend>
+  return `<fieldset style="margin-top:12px"><legend>${tt('editor.tier_toolkit_only')}</legend>
     <div class="two">
-      <div><label>Tier<select id="edTier">${opts(v.tier,tier)}</select></label></div>
-      <div><label>Variant<span class="tiervar">${adding
-        ? `<input id="edTierVarNew" placeholder="A name for the new variant"
+      <div><label>${tt('editor.tier')}<select id="edTier">${opts(v.tier,tier)}</select></label></div>
+      <div><label>${tt('editor.variant')}<span class="tiervar">${adding
+        ? `<input id="edTierVarNew" placeholder="${ttA('editor.a_name_for_the_new_variant')}"
              value="${esc(variant)}" autofocus>
-           <button title="Keep this variant" onclick="edTierVarAdd(false)">✓</button>`
+           <button title="${ttA('editor.keep_this_variant')}" onclick="edTierVarAdd(false)">✓</button>`
         : `<select id="edTierVar">${opts(v.tier_variant,variant)}</select>
-           <button title="Add a variant this mod has never used before.
-It goes onto this unit, and joins the list for every other one."
+           <button title="${ttA('editor.add_a_variant_this_mod_has')}"
              onclick="edTierVarAdd(true)">＋</button>`}</span></label></div>
     </div>
     <div class="count" style="margin-top:6px">${docPoints(
-      'The game never reads this. It is the toolkit’s own note about the unit.',[
-      'It is stored as a comment above the unit’s <code>type</code> line '+
-        '(<code>;@m2gt tier=3 variant=aor</code>), so the engine skips it and no mod file changes shape.',
-      'It exists so <b>Clean up the unit file</b> can group the roster by tier the way a '+
-        'hand-organised <code>export_descr_unit.txt</code> is.',
-      'The list holds every variant this mod already uses. <b>＋</b> adds one it does not.'])}</div>
+      tt('editor.the_game_never_reads_this_it'),[
+      `${tt('editor.it_is_stored_as_a_comment')} `+
+        tt('editor.m2gt_tier_3_variant_aor_so'),
+      `${tt('editor.it_exists_so_clean_up_the')} `+
+        tt('editor.hand_organised_export_descr_unit_txt'),
+      tt('editor.the_list_holds_every_variant_this')])}</div>
   </fieldset>`;
 }
 // ＋ opens the box; ✓ closes it again. The value is written on every keystroke,
@@ -977,13 +954,13 @@ function edWireIdentity(){
    drag-to-reorder chips instead of a text box: `ownership` / `era 0..2` (the
    factions that may field the unit) and `armour_ug_models` (position N = armour
    upgrade level N). */
-const LIST_FIELDS=new Set(['ownership','era 0','era 1','era 2']);
+const LIST_FIELDS=new Set(['ownership',tt('editor.era_0'),tt('editor.era_1'),tt('editor.era_2')]);
 function edFields(){
   const cv=state.ed.cv;
-  return `<fieldset><legend>EDU fields, edited in place</legend>
+  return `<fieldset><legend>${tt('editor.edu_fields_edited_in_place')}</legend>
     ${edCeilHtml()}
     <div class="fieldbar">
-      <input id="fieldFilter" placeholder="Filter fields…" oninput="filterFields()">
+      <input id="fieldFilter" placeholder="${ttA('editor.filter_fields')}" oninput="filterFields()">
       ${gfToggleHtml()}${edCvToggleHtml()}
       <span class="count" id="fieldChanged"></span>
     </div>
@@ -1000,8 +977,7 @@ function edFields(){
 function edCeilHtml(){
   const d=state.ed.d||{}, rows=(d.ceilings||[]).concat(d.roster_ceilings||[]);
   if(!rows.length)return '';
-  return `<div class="trnote w-warn edceil"><b>Past the engine's ceiling</b>
-    ${rows.map(f=>`<div>${esc(f.message)} <span class="count">(${esc(f.source)})</span></div>`).join('')}
+  return `<div class="trnote w-warn edceil">${tt('editor.past_the_engines_ceiling',{x:rows.map(f=>`<div>${esc(f.message)} <span class="count">(${esc(f.source)})</span></div>`).join('')})}
   </div>`;
 }
 // Just the boxes - redrawn on its own when the text pane re-reads the block,
@@ -1027,10 +1003,8 @@ function edFieldsRefresh(){
    the pane costs half the dialog's width. */
 function edCvToggleHtml(){
   const on=!!state.ed.cv;
-  return `<button class="${on?'on':''}" title="Show this unit's block exactly as
-export_descr_unit.txt stores it, beside the boxes. Hover a box to light up its
-line; edit either side and the other follows."
-    onclick="edCvToggle()">&lt;/&gt; Code view</button>`;
+  return `<button class="${on?'on':''}" title="${ttA('editor.show_this_units_block_exactly_as')}"
+    onclick="edCvToggle()">${tt('common.code_view')}</button>`;
 }
 async function edCvToggle(){
   const e=state.ed;
@@ -1063,9 +1037,9 @@ function edRawFields(){
   // type/dictionary/soldier define the block - the engine refuses to drop them
   const PROTECTED=new Set(['type','dictionary','soldier']);
   const rmBtn=(label,gone)=>PROTECTED.has(label.replace(/#\d+$/,''))
-    ? '<span class="rm" title="This field defines the unit and can\'t be removed"> </span>'
+    ? `<span class="rm" title="${ttA('editor.this_field_defines_the_unit_and')}"> </span>`
     : `<button class="rm" data-rm="${esc(label)}" title="${
-        gone?'Keep this field':'Remove this line from the unit'}">${gone?'↺':'✕'}</button>`;
+        gone?tt('editor.keep_this_field'):tt('editor.remove_this_line_from_the_unit')}">${gone?'↺':'✕'}</button>`;
   const rows=d.fields.map(([label,val])=>{
     const cur=(label in e.ov)?e.ov[label]:val;
     const gone=e.rm.has(label);
@@ -1086,12 +1060,11 @@ function edRawFields(){
       ${rmBtn(label,gone)}</div>`;
   }).join('');
   return `<div class="allfields" id="allFields">${rows}</div>
-    <div class="count" style="margin-top:6px">✕ removes the whole line. Clearing a value
-      leaves an empty field, which the game still reads.</div>
+    <div class="count" style="margin-top:6px">${tt('editor.removes_the_whole_line_clearing_a')}</div>
     <div class="prow" style="margin-top:8px;grid-template-columns:var(--plw) 1fr auto">
-      <span class="pl">${qm('Fields the EDU understands that this unit has no line for. Adding one writes a fresh line with an empty value.','Add a missing field')}Add a missing field</span>
-      <select id="edAddKey">${missing.map(k=>`<option>${esc(k)}</option>`).join('')||'<option value="">Nothing missing</option>'}</select>
-      <button onclick="edAddField()">Add</button>
+      <span class="pl">${tt('editor.add_a_missing_field',{qm:qm(tt('editor.fields_the_edu_understands_that_this'),tt('editor.add_a_missing_field_2'))})}</span>
+      <select id="edAddKey">${missing.map(k=>`<option>${esc(k)}</option>`).join('')||`<option value="">${tt('editor.nothing_missing')}</option>`}</select>
+      <button onclick="edAddField()">${tt('common.add_2')}</button>
     </div>`;
 }
 function edWireFields(){
@@ -1188,11 +1161,9 @@ function edAddField(){
 function edCompare(){
   const e=state.ed;
   if(!e.cmp)return edCmpPicker();
-  if(e.cmp.loading)return `<div class="frm"><div class="count">Loading
-    ${esc(e.cmp.unit)}…</div></div>`;
-  if(e.cmp.error)return `<div class="frm"><div class="w-bad">Couldn’t open
-    ${esc(e.cmp.unit)}: ${esc(e.cmp.error)}</div>
-    <button style="margin-top:8px" onclick="state.ed.cmp=null;edRenderTab()">Pick another unit</button></div>`;
+  if(e.cmp.loading)return `<div class="frm"><div class="count">${tt('editor.loading',{unit:esc(e.cmp.unit)})}</div></div>`;
+  if(e.cmp.error)return `<div class="frm"><div class="w-bad">${tt('editor.couldnt_open',{unit:esc(e.cmp.unit),error:esc(e.cmp.error)})}</div>
+    <button style="margin-top:8px" onclick="state.ed.cmp=null;edRenderTab()">${tt('editor.pick_another_unit')}</button></div>`;
   const m=edCmpModel();
   const q=(e.cmpQ||'').trim().toLowerCase();
   const fields=[];
@@ -1209,15 +1180,15 @@ function edCompare(){
   return `<div class="frm">
     ${edCmpHead(m)}
     <div class="cmpbar">
-      <input class="q" id="cmpQ" placeholder="Filter by stat: attack, morale, cost…"
+      <input class="q" id="cmpQ" placeholder="${ttA('editor.filter_by_stat_attack_morale_cost')}"
         value="${esc(e.cmpQ||'')}">
       <label class="chk"><input type="checkbox" id="cmpSame" ${e.cmpSame?'checked':''}>
-        show the stats they share</label>
-      <span class="count">Both columns are editable. <b>Save changes</b> writes both units.</span>
+        ${tt('editor.show_the_stats_they_share')}</label>
+      <span class="count">${tt('editor.both_columns_are_editable_save_changes')}</span>
     </div>
     ${fields.length?fields.map(edCmpSection).join('')
-      :`<div class="count">${q?'Nothing matches that filter.'
-        :'These two units are identical on every line. Tick “show the stats they share” to see them.'}</div>`}
+      :`<div class="count">${q?tt('editor.nothing_matches_that_filter')
+        :tt('editor.these_two_units_are_identical_on')}</div>`}
     ${cmpDatalists()}</div>`;
 }
 /* Which vocabularies the table needs a datalist for, emitted once at the bottom
@@ -1284,13 +1255,13 @@ function edChips(label,items,extra,opt){
       ondragstart="edDragStart(event,'${q1(esc(label))}',${i})"
       ondragover="edDragOver(event,'${q1(esc(label))}')" ondragleave="edDragLeave(event)"
       ondragend="edDragEnd(event)" ondrop="edDrop(event,'${q1(esc(label))}',${i})"
-      title="${was.has(v)?'drag to reorder':'Added by you · drag to reorder'}">
+      title="${was.has(v)?tt('editor.drag_to_reorder'):tt('editor.added_by_you_drag_to_reorder')}">
       <span class="g">⠿</span><span class="${i===0?'first':''}">${esc(v)}</span>
       ${(extra||(()=>''))(v,i)}
-      <button class="${o.cls==='ug'?'xup':'x'}" title="Remove ${esc(v)}"
+      <button class="${o.cls==='ug'?'xup':'x'}" title="${ttA('editor.remove',{x:esc(v)})}"
         onclick="${o.rm?o.rm(i,v):`edListRemove('${q1(esc(label))}',${i})`}">✕</button>
-    </span>`).join('')||'<span class="count">Empty</span>'}
-    ${gone.map(v=>`<span class="chipd gone" title="Removed by you. Click to put it back."
+    </span>`).join('')||`<span class="count">${tt('editor.empty')}</span>`}
+    ${gone.map(v=>`<span class="chipd gone" title="${ttA('editor.removed_by_you_click_to_put')}"
       onclick="edListRestore('${q1(esc(label))}','${q1(esc(v))}')">${esc(v)}</span>`).join('')}</div>`;
 }
 function edListRestore(label,v){
@@ -1313,7 +1284,7 @@ function edListToggle(label,fac,on){
 function edFactionList(){
   const d=state.ed.d,seen=new Set();
   const all=(d.all_factions||[]).slice();
-  ['ownership','era 0','era 1','era 2'].forEach(l=>csv(edFieldVal(l)).forEach(f=>all.push(f)));
+  ['ownership',tt('editor.era_0'),tt('editor.era_1'),tt('editor.era_2')].forEach(l=>csv(edFieldVal(l)).forEach(f=>all.push(f)));
   return all.filter(f=>!seen.has(f)&&seen.add(f))
             .sort((a,b)=>edFacLabel(a).localeCompare(edFacLabel(b)));
 }
@@ -1332,19 +1303,18 @@ function edFactionField(label,cur){
   return `<div style="flex:1;min-width:0">
     ${edChips(label,list)}
     <div class="barrow">
-      <details class="drop"><summary>▾ Choose factions: ${list.length} selected</summary>
+      <details class="drop"><summary>${tt('editor.choose_factions_selected',{list_n:list.length})}</summary>
         <div class="dropbody"><div class="barrow" style="margin:0 0 6px">
-          <button onclick="edListSet('${q1(esc(label))}',${JSON.stringify(edFactionList()).replace(/"/g,'&quot;')})">All</button>
-          <button onclick="edListSet('${q1(esc(label))}',[])">None</button>
+          <button onclick="edListSet('${q1(esc(label))}',${JSON.stringify(edFactionList()).replace(/"/g,'&quot;')})">${tt('editor.all')}</button>
+          <button onclick="edListSet('${q1(esc(label))}',[])">${tt('common.none_2')}</button>
         </div><div class="faclist" style="border:none;padding:0;max-height:none">${boxes}</div></div>
       </details>
       ${isEra?`<button ${own.length?'':'disabled'}
           onclick="edListSet('${q1(esc(label))}',${JSON.stringify(own).replace(/"/g,'&quot;')})"
-          title="Replace this era with the ownership line">Copy ownership (${own.length})</button>
+          title="${ttA('editor.replace_this_era_with_the_ownership')}">${tt('editor.copy_ownership',{own_n:own.length})}</button>
         <button ${own.length?'':'disabled'}
           onclick="edListSet('${q1(esc(label))}',['${q1(esc(own[0]||''))}'])"
-          title="Replace this era with just the first faction of ownership">Copy 1st ownership${
-            own.length?` (${esc(own[0])})`:''}</button>`:''}
+          title="${ttA('editor.replace_this_era_with_just_the')}">${tt('editor.copy_1st_ownership',{own:own.length?` (${esc(own[0])})`:''})}</button>`:''}
     </div></div>`;
 }
 
@@ -1354,17 +1324,16 @@ function edFactionField(label,cur){
    The ＋ opens a four-mode panel - see edUgPanel. */
 function edArmourField(label,cur){
   const models=csv(cur),levels=csv(edFieldVal('armour_ug_levels'));
-  const jump=(v)=>`<button title="Edit ${esc(v)} in the Battle models tab"
+  const jump=(v)=>`<button title="${ttA('editor.edit_in_the_battle_models_tab',{x:esc(v)})}"
       onclick="edJumpModel('${q1(esc(v))}')">✎</button>`;
   const open=!!state.ed.ug;
   return `<div style="flex:1;min-width:0">
     ${edChips(label,models,jump,{cls:'ug',rm:i=>`edUgRemove(${i})`})}
     <div class="barrow">
       <button class="ugadd${open?' on':''}" onclick="edUgOpen()"
-        title="Add an armour upgrade tier">${open?'−':'＋'}</button>
-      <span class="count">Position = upgrade level${levels.length?` · armour_ug_levels: ${esc(levels.join(', '))}`:''}${
-        levels.length&&levels.length!==models.length
-          ? ` <span class="w-warn">${levels.length} level(s) for ${models.length} model(s)</span>`:''}</span>
+        title="${ttA('editor.add_an_armour_upgrade_tier')}">${open?'−':'＋'}</button>
+      <span class="count">${tt('editor.position_upgrade_level',{levels:levels.length?tt('editor.armour_ug_levels',{levels:esc(levels.join(', '))}):'',x:levels.length&&levels.length!==models.length
+          ? ` <span class="w-warn">${tt('editor.level_s_for_model_s',{levels_n:levels.length,models_n:models.length})}</span>`:''})}</span>
     </div>
     ${edUgPanel()}</div>`;
 }
@@ -1397,18 +1366,18 @@ function edUgPanel(){
     onclick="edUgMode('${k}')">${label}</button>`;
   return `<div class="ugpanel">
     <div class="ugmodes">
-      ${btn('clone','1 · Repeat the last tier',
-        'Name the last entry again as the next tier. The unit gains the armour upgrade in its stats while its model stays exactly as it was. No new modeldb entry is made.')}
-      ${btn('unit','2 · Take a unit’s upgrades',
-        'Read another unit’s armour_ug_models and import the tiers you tick.')}
-      ${btn('browse','3 · Pick an existing entry',
-        'Search every entry in this mod’s battle_models.modeldb and add one as a tier.')}
-      ${btn('new','4 · New entry from a tier',
-        'Create a new modeldb entry based on one this unit already uses, with its own mesh and texture.')}
+      ${btn('clone',tt('editor.1_repeat_the_last_tier'),
+        tt('editor.name_the_last_entry_again_as'))}
+      ${btn('unit',tt('editor.2_take_a_units_upgrades'),
+        tt('editor.read_another_units_armour_ug_models'))}
+      ${btn('browse',tt('editor.3_pick_an_existing_entry'),
+        tt('editor.search_every_entry_in_this_mods'))}
+      ${btn('new',tt('editor.4_new_entry_from_a_tier'),
+        tt('editor.create_a_new_modeldb_entry_based'))}
     </div>
     ${u.mode?`<div class="ugbody">${u.mode==='unit'?edUgUnitBody()
         :u.mode==='browse'?edUgBrowseBody():edUgNewBody()}</div>`
-      :'<div class="count" style="margin-top:9px">Choose how the new tier should be made.</div>'}
+      :`<div class="count" style="margin-top:9px">${tt('editor.choose_how_the_new_tier_should')}</div>`}
   </div>`;
 }
 
@@ -1468,12 +1437,12 @@ function edUgCloneLast(){
   const e=state.ed,models=csv(edFieldVal('armour_ug_models'));
   // with no tiers yet, the first one repeats the body model
   const last=(models[models.length-1]||edFieldVal('soldier').split(',')[0]||'').trim().toLowerCase();
-  if(!last){toast('This unit has no model entry to repeat');return;}
+  if(!last){toast(tt('editor.this_unit_has_no_model_entry'));return;}
   if(!edUgAppend([last],null,{repeat:true}).length)return;
   e.ug=null; edRenderTab(); edPreview();
   const lv=csv(edFieldVal('armour_ug_levels')).slice(-1)[0];
-  toast(`“${last}” repeated as the next tier${lv?` (armour level ${lv})`:''} `
-       +`It upgrades the stats and keeps the same model.`,4200);
+  toast(tt('editor.repeated_as_the_next_tier',{last,lv:lv?tt('editor.armour_level',{lv}):''})
+       +tt('editor.it_upgrades_the_stats_and_keeps'),4200);
 }
 // Where a cloned tier comes from and what it gets called: `<stem>_ug<n>`, with n
 // walked up until nothing in the mod (or pending) has that name.
@@ -1482,7 +1451,7 @@ function edUgNewSpec(srcName){
   const src=(srcName||models[models.length-1]||edFieldVal('soldier').split(',')[0]||'')
             .trim().toLowerCase();
   if(!src||!d.models.some(m=>m.name===src)){
-    toast('No existing model entry to clone this tier from'); return null;}
+    toast(tt('editor.no_existing_model_entry_to_clone')); return null;}
   // strip an existing tier suffix so tiers stay <stem>_ug1.._ugN rather than
   // growing one per clone - mods write both `_ug3` and `_upg3`
   const stem=src.replace(/_u(p)?g\d+$/i,'');
@@ -1504,14 +1473,12 @@ function edUgUnitBody(){
   const e=state.ed,u=e.ug,d=e.d,dd=state.data||{};
   const f=u.f||(u.f={q:'',fac:'',cat:'',cls:'',merc:false});
   const have=new Set(csv(edFieldVal('armour_ug_models')));
-  const donor=u.loading?'<div class="count" style="margin-top:9px">Reading the unit…</div>'
+  const donor=u.loading?`<div class="count" style="margin-top:9px">${tt('editor.reading_the_unit')}</div>`
     :u.error?`<div class="count w-bad" style="margin-top:9px">${esc(u.error)}</div>`
     :!u.donor?''
     :!u.donor.models.length
-      ?`<div class="count w-warn" style="margin-top:9px"><b>${esc(u.unit)}</b> has no
-        <code>armour_ug_models</code>${u.donor.soldier?`. Its body model is
-        <code>${esc(u.donor.soldier)}</code>, which mode 3 can add`:''}.</div>`
-    :`<div class="count" style="margin-top:9px">Tiers of <b>${esc(u.unit)}</b> to import:</div>
+      ?`<div class="count w-warn" style="margin-top:9px"><b>${esc(u.unit)}</b> ${tt('editor.has_no_armour_ug_models',{x:u.donor.soldier?tt('editor.its_body_model_is_which_mode',{soldier:esc(u.donor.soldier)}):''})}</div>`
+    :`<div class="count" style="margin-top:9px">${tt('editor.tiers_of_to_import',{unit:esc(u.unit)})}</div>
       <div class="uglist">${u.donor.models.map((m,i)=>{
         // an entry staged on the Battle models tab counts as known: it is not in
         // the modeldb yet, but the save that imports this tier writes it too
@@ -1521,26 +1488,25 @@ function edUgUnitBody(){
           <input type="checkbox" ${u.pick[i]?'checked':''}
             onchange="state.ed.ug.pick[${i}]=this.checked">
           <span class="nm">${esc(m)}</span>
-          <span class="count">level ${esc(u.donor.levels[i]||'none')}${
-            dup?' · already a tier, so it imports as a repeat'
-              :known?'':' · <span class="w-warn">not in this mod’s modeldb</span>'}</span>
+          <span class="count">${tt('editor.level',{x:esc(u.donor.levels[i]||'none'),x2:dup?tt('editor.already_a_tier_so_it_imports')
+              :known?'':` ${tt('editor.not_in_this_mods_modeldb')}`})}</span>
         </label>`;}).join('')}</div>
       <div class="barrow">
-        <button class="primary" onclick="edUgTakeUnit()">Add ticked tier(s)</button>
-        <span class="count">Appended after the tiers this unit already has</span>
+        <button class="primary" onclick="edUgTakeUnit()">${tt('editor.add_ticked_tier_s')}</button>
+        <span class="count">${tt('editor.appended_after_the_tiers_this_unit')}</span>
       </div>`;
   const rows=edUgUnitRows();          // sets u._n, so the count renders first time
-  return `<input id="ugSearch" style="width:100%" placeholder="Filter units…"
+  return `<input id="ugSearch" style="width:100%" placeholder="${ttA('editor.filter_units')}"
       value="${esc(f.q)}" oninput="edUgFilterUnits('q',this.value)">
     <div class="barrow" style="margin:6px 0 0">
       <select onchange="edUgFilterUnits('fac',this.value)">${
-        opts('All factions',dd.factions||[],facLabel,f.fac)}</select>
+        opts(tt('common.all_factions'),dd.factions||[],facLabel,f.fac)}</select>
       <select onchange="edUgFilterUnits('cat',this.value)">${
-        opts('All categories',dd.categories||[],null,f.cat)}</select>
+        opts(tt('editor.all_categories'),dd.categories||[],null,f.cat)}</select>
       <select onchange="edUgFilterUnits('cls',this.value)">${
-        opts('All classes',dd.classes||[],null,f.cls)}</select>
+        opts(tt('editor.all_classes'),dd.classes||[],null,f.cls)}</select>
       <label class="chk"><input type="checkbox" ${f.merc?'checked':''}
-        onchange="edUgFilterUnits('merc',this.checked)"> mercs only</label>
+        onchange="edUgFilterUnits('merc',this.checked)"> ${tt('editor.mercs_only')}</label>
       <span class="count" id="ugCount">${u._n?`${u._n[0]}/${u._n[1]}`:''}</span>
     </div>
     <div class="baselist" id="ugUnitList">${rows}</div>
@@ -1562,8 +1528,8 @@ function edUgUnitRows(){
       <img onerror="iconRetry(this)" src="${iconUrl(e.mod,x.type)}">
       <div><div class="bn">${esc(x.name||x.type)}</div>
         <div class="bs">${esc(x.type)} · ${esc(x.kind||'?')}${x.class?' / '+esc(x.class):''}${
-          x.mercenary?' · merc':''}</div></div>
-    </div>`).join('')||'<div class="count" style="padding:8px">No units match.</div>';
+          x.mercenary?tt('editor.merc'):''}</div></div>
+    </div>`).join('')||`<div class="count" style="padding:8px">${tt('common.no_units_match')}</div>`;
 }
 function edUgFilterUnits(k,v){
   const u=state.ed.ug; if(!u||!u.f)return;
@@ -1599,18 +1565,18 @@ function edUgTakeUnit(){
   const names=[],levels=[];
   u.donor.models.forEach((m,i)=>{
     if(u.pick[i]){names.push(m); levels.push(u.donor.levels[i]||'');}});
-  if(!names.length){toast('Nothing ticked to import');return;}
+  if(!names.length){toast(tt('editor.nothing_ticked_to_import'));return;}
   const added=edUgAppend(names,levels,{repeat:true}),from=u.unit;
   e.ug=null; edRenderTab(); edPreview();
-  toast(`${added.length} tier${added.length===1?'':'s'} taken from ${from} ✓`);
+  toast(tt('editor.tier_taken_from',{added_n:added.length,added:added.length===1?'':'s',x:from}));
 }
 
 /* -- mode 3: search the whole modeldb -- */
 function edUgBrowseBody(){
   const u=state.ed.ug;
   return `<div class="prow" style="grid-template-columns:var(--plw) 1fr">
-      <span class="pl">Find an entry</span>
-      <input id="ugFind" value="${esc(u.filter||'')}" placeholder="type part of an entry name…"
+      <span class="pl">${tt('editor.find_an_entry')}</span>
+      <input id="ugFind" value="${esc(u.filter||'')}" placeholder="${ttA('editor.type_part_of_an_entry_name')}"
         oninput="edUgFilter(this.value)"></div>
     <div id="ugHits">${edUgBrowseHits()}</div>`;
 }
@@ -1626,13 +1592,12 @@ function edUgBrowseHits(){
       const dup=have.has(n);
       return `<div class="ugrow" onclick="edUgAddOne('${q1(esc(n))}')">
         <span class="nm">${esc(n)}</span>
-        <span class="count">${dup?'Already a tier. Click to repeat it.'
-                                 :'click to add as the next tier'}</span>
+        <span class="count">${dup?tt('editor.already_a_tier_click_to_repeat')
+                                 :tt('editor.click_to_add_as_the_next')}</span>
       </div>`;}).join('')
-      ||'<div class="ugrow have"><span class="count">No entry matches</span></div>'}</div>
-    <div class="count" style="margin-top:6px">${hits.length} of ${all.length} entr${
-      all.length===1?'y':'ies'}${hits.length>shown.length
-        ? ` · showing the first ${shown.length}, keep typing`:''}</div>`;
+      ||`<div class="ugrow have"><span class="count">${tt('editor.no_entry_matches')}</span></div>`}</div>
+    <div class="count" style="margin-top:6px">${tt('editor.of_entr',{hits_n:hits.length,all_n:all.length,all:all.length===1?'y':'ies',x:hits.length>shown.length
+        ? tt('editor.showing_the_first_keep_typing',{shown_n:shown.length}):''})}</div>`;
 }
 // Only the results are redrawn - re-rendering the tab would take the focus out
 // of the box on every keystroke.
@@ -1646,23 +1611,20 @@ function edUgAddOne(name){
   const e=state.ed,again=csv(edFieldVal('armour_ug_models')).includes(name);
   if(!edUgAppend([name],null,{repeat:true}).length)return;
   e.ug=null; edRenderTab(); edPreview();
-  toast(`“${name}” added as ${again?'a repeated':'an'} armour tier ✓`);
+  toast(tt('editor.added_as_armour_tier',{name,again:again?tt('editor.a_repeated'):'an'}));
 }
 
 /* -- mode 4: a new entry based on one of this unit's -- */
 function edUgNewBody(){
   const e=state.ed,u=e.ug;
   const own=(e.d.models||[]).filter(m=>!m.missing).map(m=>m.name);
-  if(!own.length)return `<div class="count w-warn">This unit has no readable modeldb entry
-    to base a new one on.</div>`;
+  if(!own.length)return `<div class="count w-warn">${tt('editor.this_unit_has_no_readable_modeldb')}</div>`;
   return `<div class="prow" style="grid-template-columns:var(--plw) 1fr auto">
-      <span class="pl">Base it on</span>
+      <span class="pl">${tt('editor.base_it_on')}</span>
       <select onchange="state.ed.ug.from=this.value">${own.map(n=>
         `<option value="${esc(n)}" ${u.from===n?'selected':''}>${esc(n)}</option>`).join('')}</select>
-      <button class="primary" onclick="edUgNewFromTier()">Set it up…</button></div>
-    <div class="count" style="margin-top:7px">Adds the tier and opens the new-entry form on the
-      <b>Battle models</b> tab: name it, pick its folder, and point it at its own mesh and texture.
-      Everything else is copied from the entry you based it on.</div>`;
+      <button class="primary" onclick="edUgNewFromTier()">${tt('editor.set_it_up')}</button></div>
+    <div class="count" style="margin-top:7px">${tt('editor.adds_the_tier_and_opens_the')}</div>`;
 }
 function edUgNewFromTier(){const u=state.ed.ug; edAddArmourTier(u&&u.from);}
 // Jump straight to a model's entry in the bmdb tab (the ✎ beside an armour tier
@@ -1671,7 +1633,7 @@ function edJumpModel(name){
   const e=state.ed,key=(name||'').toLowerCase();
   if(!e.d.models.some(m=>m.name===key)){
     if(e.newModels.some(n=>n.name===key)){e.tab='models'; renderEditor(); return;}
-    toast(`“${name}” is not one of this unit's model entries`); return;
+    toast(tt('editor.is_not_one_of_this_units',{name})); return;
   }
   e.tab='models'; e.open[key]=true; renderEditor();
   const el=document.querySelector(`#edBody .mentry[data-entry="${cssq(key)}"]`);
@@ -1708,8 +1670,8 @@ const TEX_KINDS=['texture','normal','sprite','attach_texture','attach_normal'];
 // the sub-folder the standard layout keeps a model's textures in - mirrors
 // edit.TEXTURE_SUBDIR, and the two have to agree or the preview lies
 const TEX_SUBDIR='textures';
-const KIND_LABEL={texture:'Texture',normal:'Normal map',sprite:'Sprite (.spr)',
-  attach_texture:'Attachment texture',attach_normal:'Attachment normal map'};
+const KIND_LABEL={texture:tt('editor.texture'),normal:tt('editor.normal_map'),sprite:tt('editor.sprite_spr'),
+  attach_texture:tt('editor.attachment_texture'),attach_normal:tt('editor.attachment_normal_map')};
 // An attachment has no sprite - the format stores an empty string there - so
 // that slot is never offered.
 const edKinds=m=>['texture','normal','sprite'].concat(
@@ -1742,27 +1704,23 @@ function edTexView(m){
 function edModels(){
   const e=state.ed,d=e.d;
   const pending=e.newModels.map((n,i)=>`<div class="pending">
-      <button class="x" onclick="edDropNew(${i})" title="Discard">✕</button>
-      <b>${esc(n.name)}</b>: new entry cloned from
-      <a class="ulink" onclick="edJumpModel('${q1(esc(n.clone_from))}')">${esc(n.clone_from)}</a>
-      ${n.assign_to?` → <code>${esc(n.assign_to)}</code>`:''}
-      ${n._tier?' <span class="count">· next armour tier</span>':''}
-      <div class="count">${esc(n.dest_dir||'(no folder)')} · ${n.mesh_src?esc(n.mesh_src.split(/[\\\/]/).pop()):'(clone mesh)'}
-        · ${n.texture_src?esc(n.texture_src.split(/[\\\/]/).pop()):'(clone texture)'}${
-        n.attach_texture_src?' · attach '+esc(n.attach_texture_src.split(/[\\\/]/).pop())
-          :n.apply_to_attach?' · attachments follow the main texture':''}
-        <button style="padding:1px 7px;font-size:11px;margin-left:6px" onclick="edEditNew(${i})">Edit…</button></div></div>`).join('');
+      <button class="x" onclick="edDropNew(${i})" title="${ttA('editor.discard')}">✕</button>
+      <b>${esc(n.name)}</b>${tt('editor.new_entry_cloned_from',{clone_from:q1(esc(n.clone_from)),clone_from2:esc(n.clone_from),assign_to:n.assign_to?` → <code>${esc(n.assign_to)}</code>`:'',_tier:n._tier?` <span class="count">${tt('editor.next_armour_tier')}</span>`:''})}
+      <div class="count">${esc(n.dest_dir||tt('editor.no_folder'))} · ${n.mesh_src?esc(n.mesh_src.split(/[\\\/]/).pop()):tt('editor.clone_mesh')}
+        · ${n.texture_src?esc(n.texture_src.split(/[\\\/]/).pop()):tt('editor.clone_texture')}${
+        n.attach_texture_src?tt('editor.attach')+esc(n.attach_texture_src.split(/[\\\/]/).pop())
+          :n.apply_to_attach?tt('editor.attachments_follow_the_main_texture'):''}
+        <button style="padding:1px 7px;font-size:11px;margin-left:6px" onclick="edEditNew(${i})">${tt('editor.edit')}</button></div></div>`).join('');
   const entries=d.models.map((m,i)=>edModelCard(m,i)).join('');
   return `${pending}${e.form?edNewModelForm():''}
-    <div class="count" style="margin-bottom:8px">Paths are relative to the mod's <code>data/</code> folder.
-      “Import…” copies a file from anywhere on disk into the mod and points the slot at it.</div>
+    <div class="count" style="margin-bottom:8px">${tt('editor.paths_are_relative_to_the_mods')}</div>
     ${entries}`;
 }
 function edModelCard(m,idx){
   const e=state.ed;
   if(m.missing) return `<div class="mentry"><div class="mhead">
       <span class="mn w-bad">${esc(m.name)}</span>
-      <span class="count">Missing from this mod's modeldb${m.slots.length?` · ${m.slots.map(esc).join(', ')}`:''}</span>
+      <span class="count">${tt('editor.missing_from_this_mods_modeldb',{slots:m.slots.length?` · ${m.slots.map(esc).join(', ')}`:''})}</span>
     </div></div>`;
   const open=!!e.open[m.name];
   const me=e.mEdits[m.name]||{};
@@ -1773,39 +1731,36 @@ function edModelCard(m,idx){
       <span class="pl" title="${esc(p.label)}">${esc(p.label)}</span>
       <input data-entry="${esc(m.name)}" data-i="${p.i}" value="${esc(cur)}"
         title="${esc(cur)}" class="${cur!==p.value?'changed':''}">
-      <button onclick="edImportPath('${q1(esc(m.name))}',${p.i},'mesh')">Import…</button>
-      <button onclick="edResetPath('${q1(esc(m.name))}',${p.i})" title="Undo this change">↺</button></div>`;
+      <button onclick="edImportPath('${q1(esc(m.name))}',${p.i},'mesh')">${tt('editor.import')}</button>
+      <button onclick="edResetPath('${q1(esc(m.name))}',${p.i})" title="${ttA('editor.undo_this_change')}">↺</button></div>`;
   }).join('');
   const cvOn=!!(e.mcv&&e.mcvName===m.name);
   return `<div class="mentry" data-entry="${esc(m.name)}">
     <div class="mhead" onclick="edToggle('${q1(esc(m.name))}')">
       <span>${open?'▾':'▸'}</span><span class="mn">${esc(m.name)}</span>
-      <span class="grow count">${m.slots.map(esc).join(', ')
-        ||(e.bmdb?'<span class="w-warn">nothing references it</span>':'referenced by this unit')}
-        · ${m.lods.length} LOD${m.lods.length===1?'':'s'} · ${facs.length} skin${facs.length===1?'':'s'}</span>
-      <button title="Draw this model - its parts, its variants and the skin each
-faction gets. Reads the .mesh the entry names."
+      <span class="grow count">${tt('editor.lod_skin',{x:m.slots.map(esc).join(', ')
+        ||(e.bmdb?`<span class="w-warn">${tt('common.nothing_references_it')}</span>`:tt('editor.referenced_by_this_unit')),lods_n:m.lods.length,lods:m.lods.length===1?'':'s',facs_n:facs.length,facs:facs.length===1?'':'s'})}</span>
+      <button title="${ttA('editor.draw_this_model_its_parts_its')}"
         onclick="event.stopPropagation();v3Open('${q1(esc(e.mod||state.src))}','${q1(esc(m.name))}')"
-        >View model</button>
-      ${open&&!e.bmdb?`<button class="${cvOn?'on':''}" title="Show this entry exactly as
-battle_models.modeldb stores it, beside the boxes."
+        >${tt('editor.view_model')}</button>
+      ${open&&!e.bmdb?`<button class="${cvOn?'on':''}" title="${ttA('editor.show_this_entry_exactly_as_battle')}"
         onclick="event.stopPropagation();edModelCv('${q1(esc(m.name))}')">&lt;/&gt;</button>`:''}
       ${edSharedDrop(m)}
     </div>
     ${open?`<div class="cvsplit${cvOn?'':' off'}">
       <div class="mbody2" id="edmGui${idx}">
       <div class="prow" style="grid-template-columns:var(--plw) 1fr auto">
-        <span class="pl">Entry name</span>
+        <span class="pl">${tt('editor.entry_name')}</span>
         <input id="edmn${idx}" value="${esc(me.new_name||m.name)}"
           oninput="edRename('${q1(esc(m.name))}',${idx},this.value)"
           class="${me.new_name?'changed':''}">
-        <button onclick="edNewFrom('${q1(esc(m.name))}')">＋ New entry from this</button>
+        <button onclick="edNewFrom('${q1(esc(m.name))}')">${tt('editor.new_entry_from_this')}</button>
       </div>
       <div class="prow" style="grid-template-columns:var(--plw) 1fr"><span class="pl"></span>
         <span id="edmns${idx}" class="count">${edNameHint(m,me.new_name||m.name)}</span></div>
-      <div class="count" style="margin-top:5px">Skeletons: ${m.skeletons.map(esc).join(', ')||'none'}</div>
+      <div class="count" style="margin-top:5px">${tt('editor.skeletons',{skeletons:m.skeletons.map(esc).join(', ')||'none'})}</div>
       ${edFolderBox(m)}
-      <div class="psec">Meshes (LODs)</div>${meshes||'<div class="count">none</div>'}
+      <div class="psec">${tt('editor.meshes_lods')}</div>${meshes||`<div class="count">${tt('common.none')}</div>`}
       ${edDefaultTextures(m)}
       ${edFactionSkins(m)}
       </div>
@@ -1831,26 +1786,25 @@ async function edModelCv(name){
    that unit in its own tab. */
 function edSharedDrop(m){
   const users=m.used_by||[],bm=!!state.ed.bmdb;
-  if(!users.length)return `<span class="count">${bm?'used by nothing':'only this unit'}</span>`;
+  if(!users.length)return `<span class="count">${bm?tt('editor.used_by_nothing'):tt('editor.only_this_unit')}</span>`;
   return `<details class="drop" onclick="event.stopPropagation()">
-    <summary class="${bm?'':'w-warn'}">${bm?`used by ${users.length}`
-      :`⚠ shared with ${users.length} other${users.length===1?'':'s'}`} ▾</summary>
+    <summary class="${bm?'':'w-warn'}">${bm?tt('editor.used_by',{users_n:users.length})
+      :tt('editor.shared_with_other',{users_n:users.length,users:users.length===1?'':'s'})} ▾</summary>
     <div class="dropbody" style="position:absolute;z-index:5;min-width:230px">
-      <div class="count" style="margin-bottom:5px">Editing this entry changes ${bm?'every one of them'
-        :'them too. Use “＋ New entry from this” to affect only this unit'}.</div>
+      <div class="count" style="margin-bottom:5px">${tt('editor.editing_this_entry_changes',{bm:bm?tt('editor.every_one_of_them')
+        :tt('editor.them_too_use_new_entry_from')})}</div>
       ${users.map(u=>`<div class="urow">${userLink(u)}</div>`).join('')}
     </div></details>`;
 }
 function edNameHint(m,val){
   const e=state.ed,v=(val||'').trim().toLowerCase();
-  if(!v)return '<span class="w-bad">the entry needs a name</span>';
+  if(!v)return `<span class="w-bad">${tt('editor.the_entry_needs_a_name')}</span>`;
   if(v===m.name)return 'unchanged';
-  if(/\s/.test(v))return '<span class="w-bad">✗ entry names cannot contain spaces</span>';
+  if(/\s/.test(v))return `<span class="w-bad">${tt('editor.entry_names_cannot_contain_spaces')}</span>`;
   if(e.d.model_names.includes(v)||e.newModels.some(n=>n.name===v))
-    return '<span class="w-bad">✗ Taken. Another entry in this mod already has that name.</span>';
+    return `<span class="w-bad">${tt('editor.taken_another_entry_in_this_mod')}</span>`;
   const n=(m.used_by||[]).length+1;
-  return `<span class="w-good">✓ Available.</span> ${n} unit reference${n===1?'':'s'} will be
-    rewritten to match across the whole EDU`;
+  return tt('editor.available_unit_reference_will_be_rewritten',{x:n,x2:n===1?'':'s'});
 }
 
 /* ---- the default texture set every faction inherits ---- */
@@ -1861,9 +1815,9 @@ function edDefaultTextures(m){
       <input data-def="${esc(m.name)}" data-kind="${k}" value="${esc(v.defs[k]||'')}"
         title="${esc(v.defs[k]||'')}"
         class="${(state.ed.mEdits[m.name]||{}).defaults&&k in state.ed.mEdits[m.name].defaults?'changed':''}">
-      <button onclick="edImportDefault('${q1(esc(m.name))}','${k}')">Import…</button></div>`).join('');
-  return `<div class="psec">Default textures and sprites</div>
-    <div class="count">Used by every faction below unless that faction is given its own.</div>
+      <button onclick="edImportDefault('${q1(esc(m.name))}','${k}')">${tt('editor.import')}</button></div>`).join('');
+  return `<div class="psec">${tt('editor.default_textures_and_sprites')}</div>
+    <div class="count">${tt('editor.used_by_every_faction_below_unless')}</div>
     ${rows}`;
 }
 /* ---- the faction checklist, with a per-faction override panel ---- */
@@ -1886,33 +1840,30 @@ function edFactionSkins(m){
         <label class="chk"><input type="checkbox" ${on?'checked':''}
           onchange="edFacToggle('${q1(esc(m.name))}','${q1(esc(f))}',this.checked)">
           ${esc(edFacLabel(f))}</label>
-        ${bad?`<span class="fc w-warn" title="No faction with this name in this mod’s
-descr_sm_factions.txt. The modeldb still names it, so the record is kept.">not a faction here</span>`:''}
-        ${on?`<button class="uq ${uniq||open?'on':''}" title="Give ${esc(f)} its own textures"
-          onclick="edFacUnique('${q1(esc(m.name))}','${q1(esc(f))}')">${uniq?'✎ unique':'✎'}</button>`:''}
+        ${bad?`<span class="fc w-warn" title="${ttA('editor.no_faction_with_this_name_in')}">${tt('editor.not_a_faction_here')}</span>`:''}
+        ${on?`<button class="uq ${uniq||open?'on':''}" title="${ttA('editor.give_its_own_textures',{f:esc(f)})}"
+          onclick="edFacUnique('${q1(esc(m.name))}','${q1(esc(f))}')">${uniq?tt('editor.unique'):'✎'}</button>`:''}
       </div>${on&&open?edFacUniquePanel(m,f,v,kinds):''}`;
   }).join('');
-  return `<div class="psec">Factions (which factions this model has a skin for)</div>
+  return `<div class="psec">${tt('editor.factions_which_factions_this_model_has')}</div>
     <div class="barrow" style="margin-top:4px">
-      <button onclick="edFacAll('${q1(esc(m.name))}',true)">All</button>
-      <button onclick="edFacAll('${q1(esc(m.name))}',false)">None</button>
-      <span class="count">${chosen.length} selected${
-        chosen.length?` · first = <b>${esc(chosen[0])}</b> (the record new skins are cloned from)`:''}</span>
+      <button onclick="edFacAll('${q1(esc(m.name))}',true)">${tt('editor.all')}</button>
+      <button onclick="edFacAll('${q1(esc(m.name))}',false)">${tt('common.none_2')}</button>
+      <span class="count">${tt('editor.selected',{chosen_n:chosen.length,chosen:chosen.length?` ${tt('editor.first_the_record_new_skins_are',{chosen:esc(chosen[0])})}`:''})}</span>
     </div>
     <div class="faclist">${rows}</div>`;
 }
 function edFacUniquePanel(m,f,v,kinds){
   const cur=v.facs[f]||{};
   return `<div class="facuniq">
-    <div class="count" style="margin-bottom:4px"><b>${esc(edFacLabel(f))}</b>. Leave a box empty
-      to fall back to the default above.</div>
+    <div class="count" style="margin-bottom:4px"><b>${esc(edFacLabel(f))}</b>${tt('editor.leave_a_box_empty_to_fall')}</div>
     ${kinds.map(k=>{const own=cur[k]&&cur[k]!==v.defs[k];
       return `<div class="prow" style="grid-template-columns:calc(var(--plw) - 10px) 1fr auto">
         <span class="pl">${KIND_LABEL[k]}</span>
         <input data-fac="${esc(m.name)}" data-f="${esc(f)}" data-kind="${k}"
           value="${esc(own?cur[k]:'')}" placeholder="${esc(v.defs[k]||'(default)')}"
           title="${esc(own?cur[k]:v.defs[k]||'')}" class="${own?'changed':''}">
-        <button onclick="edImportFac('${q1(esc(m.name))}','${q1(esc(f))}','${k}')">Import…</button>
+        <button onclick="edImportFac('${q1(esc(m.name))}','${q1(esc(f))}','${k}')">${tt('editor.import')}</button>
       </div>`;}).join('')}</div>`;
 }
 function edFacToggle(name,fac,on){
@@ -1926,7 +1877,7 @@ function edFacAll(name,on){
   if(!on&&m.factions.length){
     // one record has to survive: an entry with no faction skin can't be drawn
     me.factions=[ (me.factions||m.factions)[0] ];
-    toast('Kept one faction. A battle model needs at least one skin.');
+    toast(tt('editor.kept_one_faction_a_battle_model'));
   } else if(on){
     const all=(e.d.all_factions||[]).slice();
     (me.factions||m.factions).forEach(f=>{if(!all.includes(f))all.push(f);});
@@ -1943,12 +1894,10 @@ function edFolderBox(m){
   const e=state.ed,me=e.mEdits[m.name]||{},f=m.folder,chk=e.folder[m.name];
   const target=me.move_dir||(chk&&chk.target)||f.base||f.suggestion;
   if(me.move_dir) return `<div class="folderbox">
-    <b class="w-good">✓ Files will move into <span class="fpath">data/${esc(me.move_dir)}</span></b>
-    <div class="count" style="margin-top:4px">Meshes there, textures in <code>textures/</code>, sprites
-      left alone.
-      ${me.move_shared?'<b class="w-warn">Other entries using these files are repointed too.</b>'
-                      :'Other entries keep their paths.'}</div>
-    <div class="barrow"><button onclick="edFolderCancel('${q1(esc(m.name))}')">Undo this move</button></div>
+    <b class="w-good">${tt('editor.files_will_move_into_data',{move_dir:esc(me.move_dir)})}</b>
+    <div class="count" style="margin-top:4px">${tt('editor.meshes_there_textures_in_textures_sprites',{x:me.move_shared?`<b class="w-warn">${tt('editor.other_entries_using_these_files_are')}</b>`
+                      :tt('editor.other_entries_keep_their_paths')})}</div>
+    <div class="barrow"><button onclick="edFolderCancel('${q1(esc(m.name))}')">${tt('editor.undo_this_move')}</button></div>
   </div>`;
   // `folders` is already collapsed server-side: a model folder and its
   // textures/ sub-folder are ONE folder (that is the layout), and two spellings
@@ -1956,49 +1905,38 @@ function edFolderBox(m){
   // and are never counted - they are shared packs, like sprites.
   const folders=f.folders||[...new Set((f.mesh_dirs||[]).concat(f.texture_dirs||[]))];
   const ext=f.external_dirs||[];
-  const extNote=ext.length?`<div class="count" style="margin-top:4px">Attachment textures live
-    in ${ext.map(d=>`<span class="fpath">data/${esc(d)}</span>`).join(', ')}: a shared set,
-    so it is left where it is.</div>`:'';
+  const extNote=ext.length?`<div class="count" style="margin-top:4px">${tt('editor.attachment_textures_live_in_a_shared',{ext:ext.map(d=>`<span class="fpath">data/${esc(d)}</span>`).join(', ')})}</div>`:'';
   const head=f.standardized
-    ? `<b>Model folder</b> <span class="fpath">data/${esc(f.base)}</span>
-       <div class="count" style="margin-top:3px">Meshes here, textures in its
-         <code>${TEX_SUBDIR}/</code>, one folder.</div>${extNote}`
-    : `<b class="w-warn">⚠ No single model folder</b>
-       <div class="count" style="margin-top:3px">This entry's files are spread across
-         ${folders.length} folder(s):
-         ${folders.map(d=>`<div class="fpath">data/${esc(d||'(data root)')}</div>`).join('')}
-         Standardise them into one folder?</div>${extNote}`;
+    ? `${tt('editor.model_folder_data',{base:esc(f.base)})}
+       <div class="count" style="margin-top:3px">${tt('editor.meshes_here_textures_in_its_one',{TEX_SUBDIR})}</div>${extNote}`
+    : `<b class="w-warn">${tt('editor.no_single_model_folder')}</b>
+       <div class="count" style="margin-top:3px">${tt('editor.this_entrys_files_are_spread_across',{folders_n:folders.length,folders:folders.map(d=>`<div class="fpath">data/${esc(d||tt('editor.data_root'))}</div>`).join('')})}</div>${extNote}`;
   return `<div class="folderbox${f.standardized?'':' bad'}">
     ${head}
     <div class="frow2">
       <input id="edfd_${esc(m.name)}" value="${esc(target)}" placeholder="unit_models/_Units/my_model">
-      <button onclick="edFolderPick('${q1(esc(m.name))}')">Browse…</button>
+      <button onclick="edFolderPick('${q1(esc(m.name))}')">${tt('common.browse')}</button>
       <button class="${f.standardized?'':'primary'}" onclick="edFolderCheck('${q1(esc(m.name))}')">${
-        f.standardized?'Change folder…':'Standardise…'}</button>
+        f.standardized?tt('editor.change_folder'):tt('editor.standardise')}</button>
     </div>
     ${chk?edFolderCheckHtml(m,chk):''}</div>`;
 }
 function edFolderCheckHtml(m,chk){
   if(chk.error)return `<div class="count w-bad" style="margin-top:6px">${esc(chk.error)}</div>`;
-  if(!chk.moves.length)return `<div class="count w-good" style="margin-top:6px">Nothing to move.
-    every file is already where <span class="fpath">data/${esc(chk.target_rel)}</span> wants it.</div>`;
+  if(!chk.moves.length)return `<div class="count w-good" style="margin-top:6px">${tt('editor.nothing_to_move_every_file_is',{target_rel:esc(chk.target_rel)})}</div>`;
   const missing=chk.moves.filter(x=>x.missing);
   const shared=chk.shared_entries||[];
   return `<div style="margin-top:8px;border-top:1px solid var(--edge);padding-top:7px">
-    <div class="count">${chk.moves.length} file(s) would move:</div>
+    <div class="count">${tt('editor.file_s_would_move',{moves_n:chk.moves.length})}</div>
     <div class="movelist">${chk.moves.map(x=>`<div>${esc(x.old)} → <b>${esc(x.new)}</b>${
-      x.missing?' <span class="w-warn">(not on disk)</span>':''}</div>`).join('')}</div>
-    ${missing.length?`<div class="count w-warn" style="margin-top:5px">${missing.length} of them
-      aren't on disk. Those entries are repointed anyway; put the files there yourself.</div>`:''}
-    ${shared.length?`<div class="count w-warn" style="margin-top:6px">⚠ <b>${shared.length} other
-      model entr${shared.length===1?'y also uses':'ies also use'} these files:</b>
-      ${shared.map(n=>`<code>${esc(n)}</code>`).join(', ')}.<br>
-      Moving without updating them leaves those entries pointing at the old files.</div>
+      x.missing?` <span class="w-warn">${tt('editor.not_on_disk')}</span>`:''}</div>`).join('')}</div>
+    ${missing.length?`<div class="count w-warn" style="margin-top:5px">${tt('editor.of_them_arent_on_disk_those',{missing_n:missing.length})}</div>`:''}
+    ${shared.length?`<div class="count w-warn" style="margin-top:6px">${tt('editor.other_model_entr_these_files_moving',{shared_n:shared.length,shared:shared.length===1?tt('editor.y_also_uses'):tt('editor.ies_also_use'),shared2:shared.map(n=>`<code>${esc(n)}</code>`).join(', ')})}</div>
       <div class="barrow">
-        <button class="primary" onclick="edFolderApply('${q1(esc(m.name))}',true)">Edit and move anyway, updating all ${shared.length}</button>
-        <button onclick="edFolderApply('${q1(esc(m.name))}',false)">Move only this entry</button>
+        <button class="primary" onclick="edFolderApply('${q1(esc(m.name))}',true)">${tt('editor.edit_and_move_anyway_updating_all',{shared_n:shared.length})}</button>
+        <button onclick="edFolderApply('${q1(esc(m.name))}',false)">${tt('editor.move_only_this_entry')}</button>
       </div>`
-    :`<div class="barrow"><button class="primary" onclick="edFolderApply('${q1(esc(m.name))}',false)">Move the files</button></div>`}
+    :`<div class="barrow"><button class="primary" onclick="edFolderApply('${q1(esc(m.name))}',false)">${tt('editor.move_the_files')}</button></div>`}
   </div>`;
 }
 function edFolderTarget(name){
@@ -2006,12 +1944,12 @@ function edFolderTarget(name){
 }
 async function edFolderCheck(name){
   const e=state.ed,target=edFolderTarget(name);
-  if(!target){toast('Give the folder a path first');return;}
+  if(!target){toast(tt('editor.give_the_folder_a_path_first'));return;}
   const r=await api.post('/api/edit/model_folder',{mod:e.mod,entry:name,target});
   e.folder[name]=r; edRenderTab();
 }
 async function edFolderPick(name){
-  const r=await api.post('/api/browse_folder',{title:'Folder inside the mod’s data\\ for this model'});
+  const r=await api.post('/api/browse_folder',{title:tt('editor.folder_inside_the_mods_data_for')});
   if(!r.path)return;
   const el=document.getElementById('edfd_'+name); if(el)el.value=relInMod(r.path);
   edFolderCheck(name);
@@ -2045,10 +1983,10 @@ function edSetPath(name,i,v){const me=edTouch(name);me.paths[i]=v;}
 function edResetPath(name,i){const me=edTouch(name);delete me.paths[i];
   me.copies=(me.copies||[]).filter(c=>c.i!==i); edRenderTab();}
 async function edImportPath(name,i,kind){
-  const filt=kind==='mesh'?'Meshes (*.mesh)|*.mesh|All files (*.*)|*.*'
-            :kind==='sprite'?'Sprites (*.spr)|*.spr|All files (*.*)|*.*'
-            :'Textures (*.texture)|*.texture|All files (*.*)|*.*';
-  const r=await api.post('/api/browse_file',{title:'Select a file to import',filter:filt});
+  const filt=kind==='mesh'?tt('editor.meshes_mesh_mesh_all_files')
+            :kind==='sprite'?tt('editor.sprites_spr_spr_all_files')
+            :tt('editor.textures_texture_texture_all_files');
+  const r=await api.post('/api/browse_file',{title:tt('editor.select_a_file_to_import'),filter:filt});
   if(!r.path)return;
   const m=state.ed.d.models.find(x=>x.name===name);
   const slot=m.paths.find(p=>p.i===i);
@@ -2104,7 +2042,7 @@ function edEditNew(i){
    added earlier in this same session counts. */
 function edAssignSlots(){
   const e=state.ed;
-  const out=[{v:'',t:'Don’t change the unit'},{v:'soldier',t:'soldier (replace)'}];
+  const out=[{v:'',t:tt('editor.dont_change_the_unit')},{v:'soldier',t:tt('editor.soldier_replace')}];
   e.d.fields.forEach(([l])=>{
     if(l.replace(/#\d+$/,'')!=='officer')return;
     const lb=(l==='officer')?'officer#1':l;
@@ -2112,9 +2050,9 @@ function edAssignSlots(){
   });
   const tiers=csv(edFieldVal('armour_ug_models'));
   tiers.forEach((n,i)=>out.push({v:`armour_ug_models#${i+1}`,
-    t:`armour_ug_models#${i+1} (replace ${n})`}));
+    t:tt('editor.armour_ug_models_replace',{x:i+1,x2:n})}));
   out.push({v:`armour_ug_models#${tiers.length+1}`,
-    t:`armour_ug_models#${tiers.length+1} (add as a new tier)`});
+    t:tt('editor.armour_ug_models_add_as_a',{tiers:tiers.length+1})});
   return out;
 }
 // The slot a new entry points at unless you say otherwise: the tier after the
@@ -2127,71 +2065,65 @@ function edNewModelForm(){
   const e=state.ed,f=e.form;
   const from=(e.d.models||[]).find(m=>m.name===f.clone_from)||{};
   const slots=edAssignSlots();
-  const file=(v)=>v?esc(v):'<span class="count">Not set, so the clone’s file is kept.</span>';
+  const file=(v)=>v?esc(v):`<span class="count">${tt('editor.not_set_so_the_clones_file')}</span>`;
   const pick=(key,label,filter)=>`<div class="fbrow"><span class="k">${label}</span>
     <div>${file(f[key])}</div>
-    <span class="fbtn"><button onclick="edPickFile('${key}','${filter}')">Choose…</button>${
-      f[key]?`<button class="danger" title="Leave this slot on the clone's file"
+    <span class="fbtn"><button onclick="edPickFile('${key}','${filter}')">${tt('editor.choose')}</button>${
+      f[key]?`<button class="danger" title="${ttA('editor.leave_this_slot_on_the_clones')}"
         onclick="edClearFormFile('${key}')">✕</button>`:''}</span></div>`;
-  const TEX='Textures (*.texture)|*.texture|All files (*.*)|*.*';
+  const TEX=tt('editor.textures_texture_texture_all_files');
   return `<div class="newmodel">
-    <b>New model entry cloned from <code>${esc(f.clone_from)}</code></b>
-    <div class="count" style="margin-top:3px">Sprites, the faction (ownership) texture records and the
-      footer (animations, skeletons and torch) are copied from that entry, so the new model stays valid.</div>
-    <div class="fbrow"><span class="k">Entry name</span>
+    <b>${tt('editor.new_model_entry_cloned_from')} <code>${esc(f.clone_from)}</code></b>
+    <div class="count" style="margin-top:3px">${tt('editor.sprites_the_faction_ownership_texture_records')}</div>
+    <div class="fbrow"><span class="k">${tt('editor.entry_name')}</span>
       <input value="${esc(f.name)}" oninput="edForm('name',this.value)">
       <span></span></div>
     ${(()=>{const refs=edPendingRefs(f._named||'');
       return refs.length?`<div class="fbrow"><span class="k"></span>
-        <div class="count">Renaming it here rewrites
-          <code>${refs.map(esc).join('</code> <code>')}</code> to match.</div>
+        <div class="count">${tt('editor.renaming_it_here_rewrites_to_match',{refs:refs.map(esc).join('</code> <code>')})}</div>
         <span></span></div>`:'';})()}
-    <div class="fbrow"><span class="k">Copy files into</span>
+    <div class="fbrow"><span class="k">${tt('editor.copy_files_into')}</span>
       <input value="${esc(f.dest_dir)}" oninput="edForm('dest_dir',this.value)"
         placeholder="unit_models/my_folder">
-      <button onclick="edPickDir()">Browse…</button></div>
-    ${pick('mesh_src','Mesh (.mesh)','Meshes (*.mesh)|*.mesh|All files (*.*)|*.*')}
-    ${pick('texture_src','Texture',TEX)}
-    ${pick('normal_src','Normal map',TEX)}
-    ${pick('sprite_src','Sprite (.spr)','Sprites (*.spr)|*.spr|All files (*.*)|*.*')}
+      <button onclick="edPickDir()">${tt('common.browse')}</button></div>
+    ${pick('mesh_src',tt('editor.mesh_mesh'),tt('editor.meshes_mesh_mesh_all_files'))}
+    ${pick('texture_src',tt('editor.texture'),TEX)}
+    ${pick('normal_src',tt('editor.normal_map'),TEX)}
+    ${pick('sprite_src',tt('editor.sprite_spr'),tt('editor.sprites_spr_spr_all_files'))}
     ${from.has_attach?`
-      <div class="psec">Attachment textures</div>
-      <div class="count" style="margin-bottom:6px">${esc(f.clone_from)} has a second texture group -
-        the horse under a rider, a shield sheet - with its own files per faction. Give it its own
-        skin here, or tick the box below to hand it the main texture.</div>
-      ${pick('attach_texture_src','Attachment texture',TEX)}
-      ${pick('attach_normal_src','Attachment normal map',TEX)}`
-      :`<div class="count" style="margin-top:8px">${esc(f.clone_from)} has no attachment texture
-        group, so there is nothing to give one.</div>`}
+      <div class="psec">${tt('editor.attachment_textures')}</div>
+      <div class="count" style="margin-bottom:6px">${tt('editor.has_a_second_texture_group_the',{clone_from:esc(f.clone_from)})}</div>
+      ${pick('attach_texture_src',tt('editor.attachment_texture'),TEX)}
+      ${pick('attach_normal_src',tt('editor.attachment_normal_map'),TEX)}`
+      :`<div class="count" style="margin-top:8px">${tt('editor.has_no_attachment_texture_group_so',{clone_from:esc(f.clone_from)})}</div>`}
     <div style="margin-top:8px">
       <label class="chk"><input type="checkbox" ${f.mesh_all_lods?'checked':''}
-        onchange="edForm('mesh_all_lods',this.checked)"> use the mesh for every LOD</label>
+        onchange="edForm('mesh_all_lods',this.checked)"> ${tt('editor.use_the_mesh_for_every_lod')}</label>
       ${from.has_attach?`<label class="chk" style="margin-left:14px"
-        title="Point any attachment slot you did not give a file of its own at the main texture."
+        title="${ttA('editor.point_any_attachment_slot_you_did')}"
         ><input type="checkbox" ${f.apply_to_attach?'checked':''}
-        onchange="edForm('apply_to_attach',this.checked)"> attachments fall back to the main texture</label>`:''}
+        onchange="edForm('apply_to_attach',this.checked)"> ${tt('editor.attachments_fall_back_to_the_main')}</label>`:''}
     </div>
     ${e.bmdb?`<div class="fbrow"><span class="k"></span>
-      <div class="count">No unit is open, so nothing is repointed at it. Use the entry from a unit's
-        Battle models tab afterwards.</div>
+      <div class="count">${tt('editor.no_unit_is_open_so_nothing')}</div>
       <button class="primary" onclick="edAddNewModel()">${
-        f._editing===undefined?'Add entry':'Save entry'}</button></div>`
-    :`<div class="fbrow"><span class="k">Point EDU slot at it</span>
+        f._editing===undefined?tt('editor.add_entry'):tt('editor.save_entry')}</button></div>`
+    :`<div class="fbrow"><span class="k">${tt('editor.point_edu_slot_at_it')}</span>
       <select onchange="edForm('assign_to',this.value)">
         ${slots.map(s=>`<option value="${esc(s.v)}" ${f.assign_to===s.v?'selected':''}>${
           esc(s.t)}</option>`).join('')}
       </select><button class="primary" onclick="edAddNewModel()">${
-        f._editing===undefined?'Add entry':'Save entry'}</button></div>`}
+        f._editing===undefined?tt('editor.add_entry'):tt('editor.save_entry')}</button></div>`}
   </div>`;
 }
 function edClearFormFile(key){state.ed.form[key]=''; edRenderTab();}
 function edForm(k,v){state.ed.form[k]=v; if(k==='mesh_all_lods'||k==='apply_to_attach')return; }
 async function edPickFile(key,filter){
-  const r=await api.post('/api/browse_file',{title:'Select a file to import',filter});
+  const r=await api.post('/api/browse_file',{title:tt('editor.select_a_file_to_import'),filter});
   if(r.path){state.ed.form[key]=r.path; edRenderTab();}
 }
 async function edPickDir(){
-  const r=await api.post('/api/browse_folder',{title:'Folder inside the mod’s data\\ to copy the files into'});
+  const r=await api.post('/api/browse_folder',{title:tt('editor.folder_inside_the_mods_data_to')});
   if(r.path){state.ed.form.dest_dir=relInMod(r.path); edRenderTab();}
 }
 /* ---- a pending entry that an EDU line already names -----------------------
@@ -2232,7 +2164,7 @@ function edRenamePending(from,to){
 }
 function edAddNewModel(){
   const e=state.ed,f=e.form;
-  if(!f.name.trim()){toast('The new entry needs a name');return;}
+  if(!f.name.trim()){toast(tt('editor.the_new_entry_needs_a_name'));return;}
   const entry=Object.assign({},f,{name:f.name.trim().toLowerCase()});
   const at=entry._editing; delete entry._editing;
   // what the unit's own lines call it at this moment: the name this form opened
@@ -2243,8 +2175,7 @@ function edAddNewModel(){
   entry._named=moved.length?entry.name:(prev?prev:entry._named||'');
   e.form=null; edRenderTab(); edPreview();
   if(moved.length)
-    toast(`Renamed to \u201c${entry.name}\u201d, and ${moved.join(' and ')} follow${
-      moved.length===1?'s':''} it \u2713`,4200);
+    toast(tt('editor.renamed_to_and_follow_it',{name:entry.name,moved:moved.join(' and '),moved2:moved.length===1?'s':''}),4200);
 }
 // Discarding a pending entry has to undo what adding it changed - an armour tier
 // also wrote armour_ug_models / armour_ug_levels.
@@ -2266,7 +2197,7 @@ async function edPreview(){
   await cvSettle(state.ed.cv);          // read the last keystroke before planning
   const blocked=edCvBlocked();
   if(blocked){box.innerHTML=`<div class="preview w-bad">${esc(blocked)}</div>`; return null;}
-  box.innerHTML='<div class="preview">Planning…</div>';
+  box.innerHTML=`<div class="preview">${tt('common.planning')}</div>`;
   const r=await api.post(edApi('plan'),edPayload());
   if(r.error){box.innerHTML=`<div class="preview w-bad">${esc(r.error)}</div>`;return null;}
   state.ed.plan=r; state.ed.planStale=false;
@@ -2277,16 +2208,14 @@ async function edPreview(){
     const cr=await api.post('/api/edit/plan',edCmpPayload());
     box.insertAdjacentHTML('beforeend',cr.error
       ? `<div class="preview w-bad">${esc(state.ed.cmp.unit)}: ${esc(cr.error)}</div>`
-      : `<div class="count" style="margin-top:8px">…and for
-          <b>${esc(state.ed.cmp.unit)}</b>:</div>`+edPlanHtml(cr));
+      : `<div class="count" style="margin-top:8px">${tt('editor.and_for',{unit:esc(state.ed.cmp.unit)})}</div>`+edPlanHtml(cr));
   }
   // …and so is the Recruitment tab: a different file, planned by the buildings
   // planner, so it gets its own block rather than being folded into the unit's
   if(edRecDirty()){
     const rr=await api.post('/api/buildings/plan',edRecPayload());
     box.insertAdjacentHTML('beforeend',
-      `<div class="count" style="margin-top:8px">…and for
-        <b>recruitment</b> (<code>export_descr_buildings.txt</code>):</div>`
+      `<div class="count" style="margin-top:8px">${tt('editor.and_for_recruitment_export_descr_buildings')}</div>`
       +bldPlanHtml(rr,false));
   }
   return r;
@@ -2301,15 +2230,10 @@ function edPlanHtml(r,stale){
   const li=(cls,items)=>items.map(x=>`<div class="srow ${cls}"><span class="sicon">${
       cls==='bad'?'✗':cls==='warn'?'!':'·'}</span><span class="stext">${esc(x)}</span></div>`).join('');
   return `<div class="sum" style="margin-top:10px">
-    <div class="srow shead"><span class="sicon">✎</span><span class="stext">Pending changes${
-      stale?' <span class="w-warn">Edited since this probe. Press Probe again.</span>':''}</span></div>
+    <div class="srow shead"><span class="sicon">✎</span><span class="stext">${tt('editor.pending_changes',{stale:stale?` <span class="w-warn">${tt('editor.edited_since_this_probe_press_probe')}</span>`:''})}</span></div>
     ${li('',r.changes.length?r.changes:['no changes'])}
-    ${r.files_written.length?`<div class="srow"><span class="sicon">💾</span><span class="stext">writes ${
-      r.files_written.map(f=>`<span class="path">${esc(f)}</span>`).join(', ')}</span></div>`:''}
-    ${(r.ref_counts||[]).length?`<div class="srow"><span class="sicon">🔗</span><span class="stext">the
-      renamed unit is followed into ${r.ref_counts.length} more file(s): ${
-      r.ref_counts.map(x=>`<span class="path">${esc(x.file)}</span> <b>×${x.hits}</b>`).join(', ')
-      }</span></div>`:''}
+    ${r.files_written.length?`<div class="srow"><span class="sicon">💾</span><span class="stext">${tt('editor.writes',{x:r.files_written.map(f=>`<span class="path">${esc(f)}</span>`).join(', ')})}</span></div>`:''}
+    ${(r.ref_counts||[]).length?`<div class="srow"><span class="sicon">🔗</span><span class="stext">${tt('editor.the_renamed_unit_is_followed_into',{ref_counts_n:r.ref_counts.length,ref_counts:r.ref_counts.map(x=>`<span class="path">${esc(x.file)}</span> <b>×${x.hits}</b>`).join(', ')})}</span></div>`:''}
     ${li('warn',r.warnings)}${li('bad',r.errors)}</div>`;
 }
 /* Everything this page remembers about a mod's battle_models.modeldb, dropped.
@@ -2330,21 +2254,21 @@ async function edSave(){
   const blocked=edCvBlocked();
   if(blocked){toast(blocked); return;}
   const one=edDirty(),two=edCmpDirty(),rec=edRecDirty();
-  if(!one&&!two&&!rec){toast('Nothing to save');return;}
+  if(!one&&!two&&!rec){toast(tt('editor.nothing_to_save'));return;}
   // Both units are planned BEFORE either is written, so a problem with the
   // second one is found while nothing has been touched - half a save is worse
   // than none when the two were being balanced against each other.
   let r=null,cr=null;
   if(one){
     r=await api.post(edApi('plan'),edPayload());
-    if(r.error){toast('Error: '+r.error);return;}
+    if(r.error){toast(tt('editor.error')+r.error);return;}
     if(r.errors&&r.errors.length){
       document.getElementById('edPreview').innerHTML=edPlanHtml(r);
       toast(r.errors[0]);return;}
   }
   if(two){
     cr=await api.post('/api/edit/plan',edCmpPayload());
-    if(cr.error){toast(`Error in ${e.cmp.unit}: ${cr.error}`);return;}
+    if(cr.error){toast(tt('editor.error_in',{unit:e.cmp.unit,error:cr.error}));return;}
     if(cr.errors&&cr.errors.length){toast(`${e.cmp.unit}: ${cr.errors[0]}`);return;}
   }
   // The recruit pools are a third, independent write - a different file, planned
@@ -2352,25 +2276,25 @@ async function edSave(){
   // problem in it is found while nothing has been touched.
   if(rec){
     const rp=await api.post('/api/buildings/plan',edRecPayload());
-    if(rp.error){toast('Recruitment: '+rp.error,5000);return;}
-    if(rp.errors&&rp.errors.length){toast('Recruitment: '+rp.errors[0],5000);return;}
+    if(rp.error){toast(tt('editor.recruitment')+rp.error,5000);return;}
+    if(rp.errors&&rp.errors.length){toast(tt('editor.recruitment')+rp.errors[0],5000);return;}
   }
   const what=bm?e.d.models[0].name:e.unit;
   const writing=[one?what:null,two?e.cmp.unit:null,
-                 rec?`${edRecChangeCount()} recruit pool(s)`:null]
+                 rec?tt('editor.recruit_pool_s',{edRecChangeCount:edRecChangeCount()}):null]
     .filter(Boolean).join(' and ');
-  document.getElementById('modal').innerHTML=`<h2>Saving…</h2>
+  document.getElementById('modal').innerHTML=`<h2>${tt('editor.saving')}</h2>
     <div class="mbody"><div class="progress-track"><div class="progress-fill" style="width:60%"></div></div>
-    <div class="count" style="margin-top:8px">Writing ${esc(writing)} into ${esc(e.mod)}…</div></div>`;
+    <div class="count" style="margin-top:8px">${tt('editor.writing_into',{writing:esc(writing),mod:esc(e.mod)})}</div></div>`;
   let res=null;
   if(one){
     res=await api.post(edApi('apply'),edPayload({clear_strings_bin:clearBinOn()}));
-    if(res.error){toast('Save failed: '+res.error);bm?renderBmdbEditor():renderEditor();return;}
+    if(res.error){toast(tt('editor.save_failed')+res.error);bm?renderBmdbEditor():renderEditor();return;}
   }
   if(two){
     const res2=await api.post('/api/edit/apply',edCmpPayload({clear_strings_bin:clearBinOn()}));
     if(res2.error){
-      toast(`${one?'Saved '+what+', but ':''}saving ${e.cmp.unit} failed: ${res2.error}`,5000);
+      toast(tt('editor.saving_failed',{x:one?tt('editor.saved')+what+tt('editor.but'):'',unit:e.cmp.unit,error:res2.error}),5000);
       renderEditor(); return;}
     if(!res)res=res2;
     e.cmp.ov={}; e.cmp.rm=new Set(); e.cmp.added=new Set();
@@ -2380,8 +2304,7 @@ async function edSave(){
     pools=edRecChangeCount();
     const res3=await api.post('/api/buildings/apply',edRecPayload());
     if(res3.error){
-      toast(`${(one||two)?'The unit was saved, but the ':'The '}recruit pools failed: ${
-        res3.error}`,6000);
+      toast(tt('editor.recruit_pools_failed',{x:(one||two)?tt('editor.the_unit_was_saved_but_the'):tt('editor.the'),error:res3.error}),6000);
       // the unit's own save landed; the tab has to stop showing what did not
       await edRecReload();
       renderEditor(); return;
@@ -2400,9 +2323,9 @@ async function edSave(){
   closeModal();
   const saved=[one?(bm?what:res.plan.resolved_type):null,two?e.cmp.unit:null].filter(Boolean);
   const note=saved.length
-    ? `Saved ${saved.map(s=>'“'+s+'”').join(' and ')}${pools?` and ${pools} recruit pool(s)`:''} ✓`
-    : `Saved ${pools} recruit pool(s) ✓`;
-  toast(`${note}${binMsg(res)}  (undo in 🕑 Log)`,4200);
+    ? tt('editor.saved_2',{saved:saved.map(s=>'“'+s+'”').join(' and '),pools:pools?tt('editor.and_recruit_pool_s',{pools}):''})
+    : tt('editor.saved_recruit_pool_s',{pools});
+  toast(tt('editor.undo_in_log',{note,x:binMsg(res)}),4200);
   state.destData=null; state.bmdb=null;
   edDropModCaches(e.mod);
   // a replaced card keeps its URL, so every <img> on the page has to be asked

@@ -56,6 +56,7 @@ from . import campmap, campstrat, factions as factionfile, minorfiles
 from .campmap import BASE_REL, ENCODING, CampaignMap, MapError, Rgb, key
 from .maptga import encode
 from .mapvocab import PORT_RGB, SETTLEMENT_RGB
+from . import i18n as _i18n
 
 #: Music types live beside the layers rather than beside the campaign, because
 #: which music a province plays is a fact about the map and not about one
@@ -151,8 +152,7 @@ def add_music_region(text: str, music_type: str, region: str) -> str:
         elif low == "regions" and head >= 0:
             last = i
     if head < 0:
-        raise MapError(f"there is no music_type {music_type} in "
-                       f"descr_sounds_music_types.txt")
+        raise MapError(_i18n.msg("eng.mapquery.there_is_no_music_type_in", "there is no music_type {music_type} in descr_sounds_music_types.txt", music_type=music_type))
     if last >= 0:
         raw = lines[last]
         cr = "\r" if raw.endswith("\r") else ""
@@ -231,8 +231,7 @@ def set_music_region(text: str, region: str, music_type: str) -> str:
     """
     want = music_type.strip()
     if want and want not in parse_music_types(text):
-        raise MapError(f"there is no music_type {want} in "
-                       f"descr_sounds_music_types.txt")
+        raise MapError(_i18n.msg("eng.mapquery.there_is_no_music_type_in_2", "there is no music_type {want} in descr_sounds_music_types.txt", want=want))
     out = drop_music_region(text, region)
     return add_music_region(out, want, region) if want else out
 
@@ -1269,7 +1268,7 @@ def run_query(facts: "Facts", rules: Sequence[dict], match: str = "all"
         code = str(raw.get("code") or "")
         f = FILTER_BY_CODE.get(code)
         if f is None:
-            out.off.append({"code": code, "why": f"no filter called {code!r}"})
+            out.off.append({"code": code, "why": _i18n.msg("eng.mapquery.no_filter_called", "no filter called {code}", code=repr(code))})
             continue
         why = f.off(facts, f.options(facts))
         if why:
@@ -1277,11 +1276,11 @@ def run_query(facts: "Facts", rules: Sequence[dict], match: str = "all"
             continue
         if f.kind == "choice" and not _value(raw):
             out.off.append({"code": code, "label": f.label,
-                            "why": "nothing is picked in it yet"})
+                            "why": _i18n.msg("eng.mapquery.nothing_is_picked_in_it_yet", "nothing is picked in it yet")})
             continue
         if f.kind == "text" and not str(raw.get("value") or "").strip():
             out.off.append({"code": code, "label": f.label,
-                            "why": "nothing is typed in it yet"})
+                            "why": _i18n.msg("eng.mapquery.nothing_is_typed_in_it_yet", "nothing is typed in it yet")})
             continue
         live.append((f, dict(raw)))
 
@@ -1847,7 +1846,7 @@ def colouring(facts: "Facts", code: str) -> Colouring:
                 "32b; the provinces whose pool sells this unit line, whoever "
                 "may hire it",
                 lambda r: merc_units(facts, r))
-    raise MapError(f"no theme or information map called {code!r}")
+    raise MapError(_i18n.msg("eng.mapquery.no_theme_or_information_map_called", "no theme or information map called {code}", code=repr(code)))
 
 
 def catalogue(facts: "Facts") -> List[dict]:
@@ -2039,8 +2038,7 @@ def _draw_borders(img: Image.Image, index, groups: List[int],
     says nothing about, and a coastline is not a frontier at all.
     """
     if position not in BORDER_POSITIONS:
-        raise MapError(f"no such border position {position!r} - it is one of "
-                       f"{', '.join(BORDER_POSITIONS)}")
+        raise MapError(_i18n.msg("eng.mapquery.no_such_border_position_it_is", "no such border position {position} - it is one of {BORDER_POSITIONS}", position=repr(position), BORDER_POSITIONS=', '.join(BORDER_POSITIONS)))
     w, h, labels = index.width, index.height, index.labels
     px = img.load()
     edge: List[Tuple[int, int]] = []
@@ -2176,7 +2174,7 @@ def export_query(facts: "Facts", result: QueryResult, borders: bool = False,
     out = Export()
     if not result.matched:
         out.skipped.append({"what": "the query",
-                            "why": "nothing matched, so there is nothing to draw"})
+                            "why": _i18n.msg("eng.mapquery.nothing_matched_so_there_is_nothing", "nothing matched, so there is nothing to draw")})
         return out
     folder = export_dir(facts.mod)
     path = folder / "map_query.tga"
@@ -2278,8 +2276,7 @@ def export_tiles(facts: "Facts", result: Optional[QueryResult] = None,
             continue
         if img.size != (w, h):
             out.skipped.append({"what": LAYER_FILE.get(code, code),
-                                "why": f"{img.size[0]}x{img.size[1]} at one pixel a tile, not "
-                                       f"{w}x{h}, so its values would be for the wrong tiles"})
+                                "why": _i18n.msg("eng.mapquery.x_at_one_pixel_a_tile", "{size}x{size2} at one pixel a tile, not {w}x{h}, so its values would be for the wrong tiles", size=img.size[0], size2=img.size[1], w=w, h=h)})
             layers.append((code, col, None))
             continue
         layers.append((code, col, list(img.getdata())))
@@ -2334,7 +2331,7 @@ def export_tiles(facts: "Facts", result: Optional[QueryResult] = None,
             lines.append("\t".join(cells))
     rows = len(lines) - 1
     if not rows:
-        out.skipped.append({"what": "the tiles", "why": "no tile is in what was asked for"})
+        out.skipped.append({"what": "the tiles", "why": _i18n.msg("eng.mapquery.no_tile_is_in_what_was", "no tile is in what was asked for")})
         out.ms = int((time.perf_counter() - t0) * 1000)
         return out
     folder = export_dir(facts.mod)

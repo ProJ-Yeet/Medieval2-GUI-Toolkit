@@ -23,9 +23,9 @@
    ===================================================================== */
 
 const HL_SEV = {
-  fatal: ['✕', 'w-bad', 'Fatal: the game crashes or refuses the file'],
-  warn: ['!', 'w-warn', 'Warning: it loads, but something will not work as meant'],
-  note: ['·', '', 'Note: worth a look, not a fault'],
+  fatal: ['✕', 'w-bad', tt('health.fatal_the_game_crashes_or_refuses')],
+  warn: ['!', 'w-warn', tt('health.warning_it_loads_but_something_will')],
+  note: ['·', '', tt('health.note_worth_a_look_not_a')],
 };
 const HL_PAGE = 150;
 
@@ -34,8 +34,7 @@ function hlNew(mod){
           src: '', shown: {}};
 }
 
-const hlBusyHtml = mod => `<div class="empty">Running every check over ${esc(mod)}…<br>
-  <span class="count">A few seconds: the map rules are the slow part.</span></div>`;
+const hlBusyHtml = mod => `<div class="empty">${tt('health.running_every_check_over_a_few',{mod:esc(mod)})}</div>`;
 
 function renderHealth(){
   const h = state.hl;
@@ -79,9 +78,9 @@ function hlPaint(){
      before it had one. */
   if(!h.rep && !h.err){ main.innerHTML = hlBusyHtml(h.mod); return; }
   if(h.err){
-    main.innerHTML = `<div class="empty">Couldn't run the checks.<br>
+    main.innerHTML = `<div class="empty">${tt('health.couldnt_run_the_checks')}<br>
       <span class="count">${esc(h.err)}</span><br><br>
-      <button class="primary" onclick="loadHealth()">Retry</button></div>`;
+      <button class="primary" onclick="loadHealth()">${tt('common.retry')}</button></div>`;
     return;
   }
   const r = h.rep, rows = r.findings.filter(hlVisible);
@@ -91,8 +90,8 @@ function hlPaint(){
     ${hlSourcesHtml(r)}
     ${r.when.map(w => hlGroupHtml(w, rows.filter(f => f.when === w.id), labelOf)).join('')}
     ${rows.length ? '' : `<div class="bsec"><div class="trnote">${r.findings.length
-      ? 'Nothing matches what is shown. Tick <b>Notes</b> or clear the source above to see the rest.'
-      : 'Every check came back clean.'}</div></div>`}
+      ? tt('health.nothing_matches_what_is_shown_tick')
+      : tt('health.every_check_came_back_clean')}</div></div>`}
     ${hlSlowHtml(r)}
     ${hlRefusedHtml(r)}
   </div>`;
@@ -101,22 +100,16 @@ function hlPaint(){
 function hlHeadHtml(r){
   const h = state.hl, c = r.counts;
   const base = r.findings.filter(f => f.baseline).length;
-  return `<div class="bsec"><h4>Health of ${esc(r.mod)}
-      <span class="count">${r.sources.filter(s => s.state === 'ok').length} checks ran in
-        ${(r.ms / 1000).toFixed(1)}s</span>
-      <button style="margin-left:auto" onclick="loadHealth()">↻ Run again</button></h4>
-    <div class="trnote">Every check the toolkit has, over this mod, in one list. Each row opens the
-      screen that owns it, which is where it is fixed. Grouped by when it bites, the way the two
-      crash guides in the archive put it.</div>
+  return `<div class="bsec"><h4>${tt('health.health_of_checks_ran_in_s',{mod:esc(r.mod),n:r.sources.filter(s => s.state === 'ok').length,ms:(r.ms / 1000).toFixed(1)})}
+      <button style="margin-left:auto" onclick="loadHealth()">${tt('health.run_again')}</button></h4>
+    <div class="trnote">${tt('health.every_check_the_toolkit_has_over')}</div>
     <div class="hlcounts">
-      <span class="hlc w-bad">✕ ${c.fatal} fatal</span>
-      <span class="hlc w-warn">! ${c.warn} warning${c.warn === 1 ? '' : 's'}</span>
+      ${tt('health.fatal_warning',{fatal:c.fatal,warn:c.warn,warn2:c.warn === 1 ? '' : 's'})}
       <label class="chk"><input type="checkbox" ${h.notes ? 'checked' : ''}
-        onchange="state.hl.notes=this.checked;hlPaint()"> ${c.note} note${c.note === 1 ? '' : 's'}</label>
-      ${base ? `<label class="chk" title="The campaign map screen can stamp what a mod already had, so
-only what you add afterwards counts. These ${base} were there when it was stamped."><input type="checkbox"
+        onchange="state.hl.notes=this.checked;hlPaint()"> ${tt('health.note',{note:c.note,note2:c.note === 1 ? '' : 's'})}</label>
+      ${base ? `<label class="chk" title="${ttA('health.the_campaign_map_screen_can_stamp',{base})}"><input type="checkbox"
         ${h.base ? 'checked' : ''} onchange="state.hl.base=this.checked;hlPaint()">
-        Hide ${base} that were already there</label>` : ''}
+        ${tt('health.hide_that_were_already_there',{base})}</label>` : ''}
     </div></div>`;
 }
 
@@ -125,17 +118,17 @@ function hlSourcesHtml(r){
   return `<div class="hlsrcs">${r.sources.map(s => {
     const n = s.counts.fatal + s.counts.warn + (h.notes ? s.counts.note : 0);
     const cls = s.state === 'failed' ? ' failed' : s.state === 'off' ? ' off' : '';
-    const tip = s.state === 'failed' ? `This check could not run: ${s.error}`
-      : s.state === 'off' ? 'The campaign map screen is off in this build, so its rules are not run.'
-      : `${s.file} · ${s.ms} ms`;
+    const tip = s.state === 'failed' ? tt('health.this_check_could_not_run',{error:s.error})
+      : s.state === 'off' ? tt('health.the_campaign_map_screen_is_off')
+      : tt('health.ms',{file:s.file,ms:s.ms});
     return `<button class="hlsrc${cls}${h.src === s.id ? ' on' : ''}" title="${esc(tip)}"
-      ${s.state === 'ok' ? `onclick="hlSource('${s.id}')"` : 'disabled'}>
+      ${s.state === 'ok' ? tt('health.onclick_hlsource',{id:s.id}) : 'disabled'}>
       ${esc(s.label)}
       <span class="n">${s.state === 'failed' ? 'failed' : s.state === 'off' ? 'off'
         : s.counts.fatal ? `<b class="w-bad">${s.counts.fatal}</b>${n > s.counts.fatal ? ' +' + (n - s.counts.fatal) : ''}`
         : n}</span></button>`;
   }).join('')}${r.sources.filter(s => s.state === 'failed').map(s =>
-    `<div class="hlfail w-bad">✕ ${esc(s.label)} could not run: ${esc(s.error)}</div>`).join('')}</div>`;
+    `<div class="hlfail w-bad">${tt('health.could_not_run',{label:esc(s.label),error:esc(s.error)})}</div>`).join('')}</div>`;
 }
 
 function hlSource(id){
@@ -149,12 +142,11 @@ function hlGroupHtml(w, rows, labelOf){
   const h = state.hl, lim = h.shown[w.id] || HL_PAGE;
   const fatal = rows.filter(f => f.severity === 'fatal').length;
   return `<div class="bsec hlgroup"><h4>${esc(w.label)} <span class="n">${rows.length}</span>
-      ${fatal ? `<span class="w-bad">${fatal} fatal</span>` : ''}
+      ${fatal ? `<span class="w-bad">${tt('health.fatal',{fatal})}</span>` : ''}
       <span class="count">${esc(w.help)}</span></h4>
     <div class="hllist">${rows.slice(0, lim).map(f => hlRowHtml(f, labelOf)).join('')}</div>
     ${rows.length > lim ? `<button class="mini" style="margin-top:6px"
-      onclick="state.hl.shown['${w.id}']=${lim + HL_PAGE};hlPaint()">Show ${Math.min(HL_PAGE, rows.length - lim)}
-      more of ${rows.length - lim}</button>` : ''}</div>`;
+      onclick="state.hl.shown['${w.id}']=${lim + HL_PAGE};hlPaint()">${tt('health.show_more_of',{x:Math.min(HL_PAGE, rows.length - lim),x2:rows.length - lim})}</button>` : ''}</div>`;
 }
 
 function hlRowHtml(f, labelOf){
@@ -165,35 +157,31 @@ function hlRowHtml(f, labelOf){
     <span class="hlsev ${cls}" title="${esc(tip)}">${icon}</span>
     <div class="hlmsg">${esc(f.message)}${f.count > 1 ? ` <span class="count">(×${f.count})</span>` : ''}
       <div class="count">${esc(labelOf[f.source] || f.source)}${at ? ` · <code>${esc(at)}</code>` : ''}${
-        f.baseline ? ' · already there when the map was stamped' : ''}</div></div>
+        f.baseline ? tt('health.already_there_when_the_map_was') : ''}</div></div>
     <a class="mini" href="${esc(navUrl(f.open || {}))}" onclick="return hlOpen(${i}, event)"
-      title="Open this where it is fixed. Middle-click to open it in a new tab and keep this list."
-      >Open →</a>
+      title="${ttA('health.open_this_where_it_is_fixed')}"
+      >${tt('health.open')}</a>
   </div>`;
 }
 
 function hlSlowHtml(r){
-  return `<div class="bsec"><h4>Cleanup audits <span class="count">not run here</span></h4>
-    <div class="trnote">These look for what a mod carries and never uses: unused models, orphan
-      files, duplicate cards. None of it stops a mod starting, and each takes from seconds to over a
-      minute on a big mod, so each runs on its own screen when you ask.</div>
+  return `<div class="bsec"><h4>${tt('health.cleanup_audits_not_run_here')}</h4>
+    <div class="trnote">${tt('health.these_look_for_what_a_mod')}</div>
     <div class="hlslow">${r.slow.map(s => `<div class="hlslowrow">
       <div>${esc(s.label)} <span class="count">${esc(s.cost)}</span></div>
-      ${navLinkHtml({mode: s.mode}, 'Open →', 'mini',
-        'Open this audit. Middle-click to open it in a new tab.')}</div>`).join('')}</div></div>`;
+      ${navLinkHtml({mode: s.mode}, tt('health.open'), 'mini',
+        tt('health.open_this_audit_middle_click_to'))}</div>`).join('')}</div></div>`;
 }
 
 // What the crash guides claim that measuring the installed mods refused. Folded,
 // because it is an answer to look up rather than something to act on.
 function hlRefusedHtml(r){
   if(!(r.refused || []).length) return '';
-  return `<div class="bsec ${foldCls('hl.refused')}" data-fold="hl.refused"><h4>What the guides say
-      that is not checked <span class="n">${r.refused.length}</span></h4>
-    <div class="trnote">Claims from the two crash guides that the mods themselves disprove. Each is
-      measured, and kept here so it is not rediscovered.</div>
+  return `<div class="bsec ${foldCls('hl.refused')}" data-fold="hl.refused"><h4>${tt('health.what_the_guides_say_that_is')} <span class="n">${r.refused.length}</span></h4>
+    <div class="trnote">${tt('health.claims_from_the_two_crash_guides')}</div>
     <div class="hlslow">${r.refused.map(x => `<div class="hlslowrow" style="display:block">
       <div>${esc(x.claim)}</div>
-      <div class="count">${esc(x.source)} · measured: ${esc(x.measured)}</div></div>`).join('')}</div></div>`;
+      <div class="count">${tt('health.measured',{source:esc(x.source),measured:esc(x.measured)})}</div></div>`).join('')}</div></div>`;
 }
 
 /* ---- going to the screen that owns a finding ----

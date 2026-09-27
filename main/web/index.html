@@ -3168,30 +3168,30 @@
 </head>
 <body>
 <header>
-  <button id="navBtn" class="navbtn" title="Menu: switch module">
-    <span class="burger">☰</span><span id="navCur">Unit Transfer</span>
+  <button data-i18n-title="app.menu_switch_module" id="navBtn" class="navbtn" title="Menu: switch module">
+    <span class="burger">☰</span><span data-i18n="app.unit_transfer" id="navCur">Unit Transfer</span>
   </button>
-  <button id="backBldBtn" style="display:none" title="Go back to the building you came from">← Back to building</button>
+  <button data-i18n="app.back_to_building" data-i18n-title="app.go_back_to_the_building_you" id="backBldBtn" style="display:none" title="Go back to the building you came from">← Back to building</button>
   <div class="sep"></div>
-  <span class="lbl" id="srcLbl">From</span><select id="srcSel"></select>
-  <span id="dstWrap"><span class="lbl">→ To</span><select id="dstSel"></select></span>
+  <span data-i18n="app.from" class="lbl" id="srcLbl">From</span><select id="srcSel"></select>
+  <span id="dstWrap"><span data-i18n="app.to" class="lbl">→ To</span><select id="dstSel"></select></span>
   <div class="sep"></div>
-  <input type="search" id="search" placeholder="Search…">
-  <label class="chk"><input type="checkbox" id="mercOnly"> mercs</label>
-  <button id="selBtn" title="Select multiple units">☑ Select</button>
-  <button id="batchBtn" class="primary" style="display:none">Transfer selected (0)</button>
-  <button id="clearSelBtn" style="display:none" title="Untick every selected unit">✕ Clear</button>
-  <button id="packBtn" style="display:none" title="Put the ticked units in a zip someone else can import into their mod">📦 Export pack</button>
-  <button id="importPackBtn" style="display:none" title="Import a unit pack somebody sent you">📦 Import pack…</button>
-  <button id="newUnitBtn" class="primary" style="display:none" title="Create a new unit using an existing one as the base">＋ New unit</button>
-  <button id="cleanBtn" style="display:none" title="Find entries and files nothing uses and move them out of the mod">🧹 Clean up BMDB…</button>
-  <button id="ownBtn" style="display:none" title="Give every model entry a texture record for each faction that fields a unit drawn with it">🛡 Fix ownership…</button>
-  <button id="allFacBtn" style="display:none" title="Give every model entry a texture record for every faction in the mod">🌐 All factions…</button>
-  <button id="tidyEduBtn" style="display:none" title="Group the whole unit file into sections and line its values up">🧹 Clean up unit file…</button>
-  <button id="sndBtn" class="primary" style="display:none" title="Write the staged voice changes into this mod">Apply voice edits (0)</button>
-  <label class="chk" id="unusedWrap" style="display:none"><input type="checkbox" id="unusedOnly"> unused only</label>
-  <button id="settingsBtn" title="Settings: Medieval II root folder, launcher, defaults">⚙ Settings</button>
-  <button id="logBtn" title="Log + undo">🕑 Log</button>
+  <input data-i18n-placeholder="app.search" type="search" id="search" placeholder="Search…">
+  <label class="chk"><input type="checkbox" id="mercOnly"> <span data-i18n="app.mercs">mercs</span></label>
+  <button data-i18n="app.select" data-i18n-title="app.select_multiple_units" id="selBtn" title="Select multiple units">☑ Select</button>
+  <button data-i18n="app.transfer_selected_0" id="batchBtn" class="primary" style="display:none">Transfer selected (0)</button>
+  <button data-i18n="app.clear" data-i18n-title="app.untick_every_selected_unit" id="clearSelBtn" style="display:none" title="Untick every selected unit">✕ Clear</button>
+  <button data-i18n="app.export_pack" data-i18n-title="app.put_the_ticked_units_in_a" id="packBtn" style="display:none" title="Put the ticked units in a zip someone else can import into their mod">📦 Export pack</button>
+  <button data-i18n="app.import_pack" data-i18n-title="app.import_a_unit_pack_somebody_sent" id="importPackBtn" style="display:none" title="Import a unit pack somebody sent you">📦 Import pack…</button>
+  <button data-i18n="app.new_unit" data-i18n-title="app.create_a_new_unit_using_an" id="newUnitBtn" class="primary" style="display:none" title="Create a new unit using an existing one as the base">＋ New unit</button>
+  <button data-i18n="app.clean_up_bmdb" data-i18n-title="app.find_entries_and_files_nothing_uses" id="cleanBtn" style="display:none" title="Find entries and files nothing uses and move them out of the mod">🧹 Clean up BMDB…</button>
+  <button data-i18n="app.fix_ownership" data-i18n-title="app.give_every_model_entry_a_texture" id="ownBtn" style="display:none" title="Give every model entry a texture record for each faction that fields a unit drawn with it">🛡 Fix ownership…</button>
+  <button data-i18n="app.all_factions" data-i18n-title="app.give_every_model_entry_a_texture_2" id="allFacBtn" style="display:none" title="Give every model entry a texture record for every faction in the mod">🌐 All factions…</button>
+  <button data-i18n="app.clean_up_unit_file" data-i18n-title="app.group_the_whole_unit_file_into" id="tidyEduBtn" style="display:none" title="Group the whole unit file into sections and line its values up">🧹 Clean up unit file…</button>
+  <button data-i18n="app.apply_voice_edits_0" data-i18n-title="app.write_the_staged_voice_changes_into" id="sndBtn" class="primary" style="display:none" title="Write the staged voice changes into this mod">Apply voice edits (0)</button>
+  <label class="chk" id="unusedWrap" style="display:none"><input type="checkbox" id="unusedOnly"> <span data-i18n="app.unused_only">unused only</span></label>
+  <button data-i18n="app.settings" data-i18n-title="app.settings_medieval_ii_root_folder_launcher" id="settingsBtn" title="Settings: Medieval II root folder, launcher, defaults">⚙ Settings</button>
+  <button data-i18n="app.log" data-i18n-title="app.log_undo" id="logBtn" title="Log + undo">🕑 Log</button>
   <button class="buildtag" id="buildTag" hidden></button>
   <span class="count" id="count"></span>
 </header>
@@ -3199,13 +3199,13 @@
 <div class="navback" id="navBack"></div>
 <nav class="navmenu" id="navMenu" aria-hidden="true">
   <div class="navbrand">
-    <div class="t">Medieval 2 GUI Toolkit</div>
-    <div class="s">Edit a mod without hand-editing its files</div>
+    <div data-i18n="app.title" class="t">Medieval 2 GUI Toolkit</div>
+    <div data-i18n="app.edit_a_mod_without_hand_editing" class="s">Edit a mod without hand-editing its files</div>
   </div>
   <div class="navmodes" id="navModes"></div>
   <div class="navfoot">
     <button class="navitem" id="creditsBtn"><span class="ic">♦</span>
-      <span><span class="nm">Credits</span><span class="hint">Who made this possible</span></span></button>
+      <span data-i18n="app.credits_who_made_this_possible"><span class="nm">Credits</span><span class="hint">Who made this possible</span></span></button>
   </div>
 </nav>
 
@@ -3216,56 +3216,56 @@
 
 <div class="layout">
   <aside class="filters" id="unitFilters">
-    <h3>Group by</h3>
+    <h3 data-i18n="app.group_by">Group by</h3>
     <select id="groupBy" style="width:100%">
-      <option value="faction">Faction (ownership)</option>
-      <option value="kind">Category</option>
-      <option value="class">Class</option>
-      <option value="era">Era (custom battle)</option>
-      <option value="none">Nothing (flat)</option>
+      <option data-i18n="app.faction_ownership" value="faction">Faction (ownership)</option>
+      <option data-i18n="app.category" value="kind">Category</option>
+      <option data-i18n="app.class" value="class">Class</option>
+      <option data-i18n="app.era_custom_battle" value="era">Era (custom battle)</option>
+      <option data-i18n="app.nothing_flat" value="none">Nothing (flat)</option>
     </select>
-    <h3>Faction</h3>
-    <select id="facSort" style="width:100%;margin-bottom:6px"
+    <h3 data-i18n="app.faction">Faction</h3>
+    <select data-i18n-title="app.which_of_the_two_names_factions" id="facSort" style="width:100%;margin-bottom:6px"
       title="Which of the two names factions are listed and sorted by. The other one goes in brackets.">
-      <option value="name">A→Z by in-game name</option>
-      <option value="code">A→Z by code name</option>
+      <option data-i18n="app.a_z_by_in_game_name" value="name">A→Z by in-game name</option>
+      <option data-i18n="app.a_z_by_code_name" value="code">A→Z by code name</option>
     </select>
     <div id="factionFilter"></div>
-    <h3>Category</h3><div id="categoryFilter"></div>
-    <h3>Class</h3><div id="classFilter"></div>
-    <h3>Era</h3>
+    <h3 data-i18n="app.category">Category</h3><div id="categoryFilter"></div>
+    <h3 data-i18n="app.class">Class</h3><div id="classFilter"></div>
+    <h3 data-i18n="app.era">Era</h3>
     <div id="eraFilter">
-      <label class="opt"><input type="checkbox" value="0" class="era"> Early</label>
-      <label class="opt"><input type="checkbox" value="1" class="era"> High</label>
-      <label class="opt"><input type="checkbox" value="2" class="era"> Late</label>
+      <label class="opt"><input type="checkbox" value="0" class="era"> <span data-i18n="app.early">Early</span></label>
+      <label class="opt"><input type="checkbox" value="1" class="era"> <span data-i18n="app.high">High</span></label>
+      <label class="opt"><input type="checkbox" value="2" class="era"> <span data-i18n="app.late">Late</span></label>
     </div>
   </aside>
   <!-- Buildings mode brings its own filters: the unit sidebar's category/class/era
        say nothing about a settlement building, and which CULTURE's art to show has
        no equivalent on the unit side at all. -->
   <aside class="filters" id="bldFilters" style="display:none">
-    <h3>Culture (art)</h3>
-    <select id="bldCulture" style="width:100%"
+    <h3 data-i18n="app.culture_art">Culture (art)</h3>
+    <select data-i18n-title="app.building_icons_are_per_culture_and" id="bldCulture" style="width:100%"
       title="Building icons are per culture, and this picks whose art the grid shows"></select>
-    <h3>Settlement</h3>
+    <h3 data-i18n="app.settlement">Settlement</h3>
     <div id="bldSettleFilter">
-      <label class="opt"><input type="checkbox" value="city" class="bldset"> City</label>
-      <label class="opt"><input type="checkbox" value="castle" class="bldset"> Castle</label>
-      <label class="opt"><input type="checkbox" value="both" class="bldset"> Both</label>
+      <label class="opt"><input type="checkbox" value="city" class="bldset"> <span data-i18n="app.city">City</span></label>
+      <label class="opt"><input type="checkbox" value="castle" class="bldset"> <span data-i18n="app.castle">Castle</span></label>
+      <label class="opt"><input type="checkbox" value="both" class="bldset"> <span data-i18n="app.both">Both</span></label>
     </div>
-    <h3>Shows</h3>
-    <label class="opt"><input type="checkbox" id="bldRecruitOnly"> Recruits units only</label>
-    <label class="opt"><input type="checkbox" id="bldMissingArt"> Missing its own art</label>
-    <h3>Religion</h3><div id="bldReligionFilter"></div>
-    <h3>Faction</h3>
-    <select id="bldFacNames" style="width:100%;margin-bottom:6px"
+    <h3 data-i18n="app.shows">Shows</h3>
+    <label class="opt"><input type="checkbox" id="bldRecruitOnly"> <span data-i18n="app.recruits_units_only">Recruits units only</span></label>
+    <label class="opt"><input type="checkbox" id="bldMissingArt"> <span data-i18n="app.missing_its_own_art">Missing its own art</span></label>
+    <h3 data-i18n="app.religion">Religion</h3><div id="bldReligionFilter"></div>
+    <h3 data-i18n="app.faction">Faction</h3>
+    <select data-i18n-title="app.which_of_the_two_names_factions_2" id="bldFacNames" style="width:100%;margin-bottom:6px"
       title="Which of the two names factions are listed and sorted by. The other one goes in brackets. The same setting as the Unit Editor's.">
-      <option value="name">A→Z by in-game name</option>
-      <option value="code">A→Z by code name</option>
+      <option data-i18n="app.a_z_by_in_game_name" value="name">A→Z by in-game name</option>
+      <option data-i18n="app.a_z_by_code_name" value="code">A→Z by code name</option>
     </select>
     <div id="bldFactionFilter"></div>
   </aside>
-  <main id="main"><div class="empty">Loading…</div></main>
+  <main id="main"><div data-i18n="app.loading" class="empty">Loading…</div></main>
 </div>
 
 <div class="drawer" id="drawer"></div>
@@ -3278,12 +3278,14 @@
   <div class="lbrow"><span class="lbtext"></span><span class="lbnum"></span></div>
 </div>
 
-<!-- The UI's code, split by module. Plain <script> tags sharing ONE global
+<span data-i18n="app.the_uis_code_split_by_module"><!-- The UI's code, split by module. Plain</span> <script> tags sharing ONE global
      scope: no build step, no module system, nothing to install. The ORDER
      matters - core declares the state every other file reads, and boot calls
      init() once the rest exists. A new module goes in next to its peers and
      gets an entry in core.js's MODES array; a top-level name must be unique
      across all of them (a duplicate silently wins by hoisting). -->
+<script src="i18n/catalogue.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/core.js"></script>
 <script src="js/codeview.js"></script>
 <script src="js/triggerui.js"></script>

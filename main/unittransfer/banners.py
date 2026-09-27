@@ -59,6 +59,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import keyblock as kb
+from . import i18n as _i18n
 
 REL = "descr_banners_new.xml"
 ENCODING = "latin-1"
@@ -303,8 +304,7 @@ def _path_findings(doc: Doc, data: Optional[Path]) -> List[Dict]:
             name = v.replace("\\", "/").rsplit("/", 1)[-1]
             ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
             if ext and name.lower().endswith(f".{ext}.{ext}"):
-                out.append(finding("extension", "warn", f"{v} has its extension twice, so "
-                                   f"the game looks for a file nobody made", f"path/{v}", e.line))
+                out.append(finding("extension", "warn", _i18n.msg("eng.banners.has_its_extension_twice_so_the", "{v} has its extension twice, so the game looks for a file nobody made", v=v), f"path/{v}", e.line))
                 continue
             if data is None:
                 continue
@@ -315,9 +315,7 @@ def _path_findings(doc: Doc, data: Optional[Path]) -> List[Dict]:
                 listing[p.parent] = [f.name for f in p.parent.iterdir() if f.is_file()]
             near = [n for n in listing[p.parent] if _lev(n.lower(), name.lower()) <= 2]
             if near:
-                out.append(finding("typo", "warn", f"{v} is not in the mod, and "
-                                   f"{near[0]} is, in the same folder - probably what was "
-                                   f"meant", f"path/{v}", e.line))
+                out.append(finding("typo", "warn", _i18n.msg("eng.banners.is_not_in_the_mod_and", "{v} is not in the mod, and {near} is, in the same folder - probably what was meant", v=v, near=near[0]), f"path/{v}", e.line))
     return out
 
 
@@ -330,9 +328,7 @@ def check(doc: Doc, roster: List[str], edu: List[Tuple[str, str, str, List[str]]
     if tail.strip():
         at = doc.line_of(doc.root_end)
         n = tail.strip("\r\n").count("\n") + 1
-        out.append(finding("trailing", "warn", f"{n} line(s) after </{ROOT_TAG}> (from line "
-                           f"{at + 1}) that the game never reads - a copy saved over a longer "
-                           f"one; an edit there changes nothing", "file", at))
+        out.append(finding("trailing", "warn", _i18n.msg("eng.banners.line_s_after_from_line_that", "{n} line(s) after </{ROOT_TAG}> (from line {x}) that the game never reads - a copy saved over a longer one; an edit there changes nothing", n=n, ROOT_TAG=ROOT_TAG, x=at + 1), "file", at))
     bans = banners(doc)
     by_kind: Dict[Tuple[str, str], Dict] = {}
     #: rows for a name that is no faction, gathered so it is one note a name
@@ -343,12 +339,10 @@ def check(doc: Doc, roster: List[str], edu: List[Tuple[str, str, str, List[str]]
         for r in b["rows"]:
             f = r["faction"].lower()
             if not f:
-                out.append(finding("faction", "fatal", f"line {r['line']}: a <{r['tag']}> with "
-                                   f"no Faction", key, r["line"] - 1))
+                out.append(finding("faction", "fatal", _i18n.msg("eng.banners.line_a_with_no_faction", "line {line}: a <{tag}> with no Faction", line=r['line'], tag=r['tag']), key, r["line"] - 1))
                 continue
             if f in seen:
-                out.append(finding("duplicate", "warn", f"{b['name']}: {r['faction']} has two "
-                                   f"rows (lines {seen[f]} and {r['line']})", key, r["line"] - 1))
+                out.append(finding("duplicate", "warn", _i18n.msg("eng.banners.has_two_rows_lines_and", "{name}: {faction} has two rows (lines {seen} and {line})", name=b['name'], faction=r['faction'], seen=seen[f], line=r['line']), key, r["line"] - 1))
             seen.setdefault(f, r["line"])
             if roster and f not in roster and not MULTIPLAYER.fullmatch(f):
                 stale.setdefault(r["faction"], []).append((b["name"], r["line"] - 1))
@@ -358,11 +352,9 @@ def check(doc: Doc, roster: List[str], edu: List[Tuple[str, str, str, List[str]]
         elif roster:
             gone = [f for f in roster if f not in seen]
             if gone:
-                out.append(finding("royal", "note", f"the royal banner has no row for "
-                                   f"{', '.join(gone)}", key, b["line"] - 1))
+                out.append(finding("royal", "note", _i18n.msg("eng.banners.the_royal_banner_has_no_row", "the royal banner has no row for {gone}", gone=', '.join(gone)), key, b["line"] - 1))
     for name, where in stale.items():
-        out.append(finding("stale", "note", f"{name} has {len(where)} row(s) ({', '.join(sorted({w for w, _l in where})[:4])}"
-                           f"{'...' if len({w for w, _l in where}) > 4 else ''}) and is not a faction in the roster",
+        out.append(finding("stale", "note", _i18n.msg("eng.banners.has_row_s_and_is_not", "{name} has {where_n} row(s) ({x}{x2}) and is not a faction in the roster", name=name, where_n=len(where), x=', '.join(sorted({w for w, _l in where})[:4]), x2='...' if len({w for w, _l in where}) > 4 else ''),
                            f"faction/{name}", where[0][1]))
     holes: Dict[Tuple[str, str], Dict[str, List[str]]] = {}
     for unit, kind, name, owners in edu:
@@ -377,35 +369,28 @@ def check(doc: Doc, roster: List[str], edu: List[Tuple[str, str, str, List[str]]
     for key, facs in holes.items():
         if key[0] == "undeclared":
             units = facs[""]
-            out.append(finding("undeclared", "warn", f"{len(units)} unit(s) carry `banner {key[1]} "
-                               f"{key[2]}` ({', '.join(units[:3])}), and no <{_section_of(key[1])}> "
-                               f"banner is called that", f"edu/{key[2]}", 0))
+            out.append(finding("undeclared", "warn", _i18n.msg("eng.banners.unit_s_carry_banner_and_no", "{units_n} unit(s) carry `banner {key} {key2}` ({units}), and no <{section_of}> banner is called that", units_n=len(units), key=key[1], key2=key[2], units=', '.join(units[:3]), section_of=_section_of(key[1])), f"edu/{key[2]}", 0))
             continue
         kind, name, bid = key
         line = doc.elems[bid].line
         if kind == "holy":
-            out.append(finding("holy", "note", f"{name}: {len(facs)} faction(s) own units carrying "
-                               f"it and have no row ({', '.join(sorted(facs)[:6])}"
-                               f"{'...' if len(facs) > 6 else ''}) - it shows only on a crusade or "
-                               f"jihad, which some factions never join", f"banner/{bid}", line))
+            out.append(finding("holy", "note", _i18n.msg("eng.banners.faction_s_own_units_carrying_it", "{name}: {facs_n} faction(s) own units carrying it and have no row ({facs}{x}) - it shows only on a crusade or jihad, which some factions never join", name=name, facs_n=len(facs), facs=', '.join(sorted(facs)[:6]), x='...' if len(facs) > 6 else ''), f"banner/{bid}", line))
             continue
         for f, units in sorted(facs.items()):
-            out.append(finding("coverage", "warn", f"{name}: {f} owns {len(units)} unit(s) "
-                               f"carrying it ({', '.join(units[:3])}) and has no row here, so "
-                               f"they have no banner of theirs", f"banner/{bid}", line))
+            out.append(finding("coverage", "warn", _i18n.msg("eng.banners.owns_unit_s_carrying_it_and", "{name}: {f} owns {units_n} unit(s) carrying it ({units}) and has no row here, so they have no banner of theirs", name=name, f=f, units_n=len(units), units=', '.join(units[:3])), f"banner/{bid}", line))
     for s in settings(doc):
         for k, v in s["attrs"].items():
             if not _NUM.fullmatch(v.strip()):
-                out.append(finding("number", "fatal", f"{s['path']}: {k}={v!r} is not a number",
+                out.append(finding("number", "fatal", _i18n.msg("eng.banners.is_not_a_number", "{path}: {k}={v} is not a number", path=s['path'], k=k, v=repr(v)),
                                    f"setting/{s['id']}", s["line"] - 1))
             elif s["tag"] in COLOUR_TAGS and not 0 <= float(v) <= 255:
-                out.append(finding("colour", "warn", f"{s['path']}: {k}={v} is outside 0-255",
+                out.append(finding("colour", "warn", _i18n.msg("eng.banners.is_outside_0_255", "{path}: {k}={v} is outside 0-255", path=s['path'], k=k, v=v),
                                    f"setting/{s['id']}", s["line"] - 1))
     for b in bans:
         for k in ("EffectOffsetX", "EffectOffsetY", "EffectOffsetZ"):
             v = b["attrs"].get(k)
             if v is not None and not _NUM.fullmatch(v.strip()):
-                out.append(finding("number", "fatal", f"{b['name']}: {k}={v!r} is not a number",
+                out.append(finding("number", "fatal", _i18n.msg("eng.banners.is_not_a_number_2", "{name}: {k}={v} is not a number", name=b['name'], k=k, v=repr(v)),
                                    f"banner/{b['id']}", b["line"] - 1))
         b.pop("_have", None)
     out += _path_findings(doc, data)
@@ -423,7 +408,7 @@ def _section_of(kind: str) -> str:
 def _read(mod) -> str:
     path = Path(mod.data) / REL
     if not path.is_file():
-        raise BannerError(f"this mod has no {REL}")
+        raise BannerError(_i18n.msg("eng.banners.this_mod_has_no", "this mod has no {REL}", REL=REL))
     return kb.read_text(path, ENCODING)
 
 
@@ -566,12 +551,11 @@ def plan(mod, body: dict) -> BannerPlan:
         p.errors.append(e.message)
         return p
     if str(body.get("sig") or "") != _sig(text):
-        p.errors.append(f"{REL} changed on disk after it was opened here - reload it")
+        p.errors.append(_i18n.msg("eng.banners.changed_on_disk_after_it_was", "{REL} changed on disk after it was opened here - reload it", REL=REL))
         return p
     doc = parse(text)
     if doc.root_end < 0:
-        p.errors.append(f"{REL} does not close its <{ROOT_TAG}>, so nothing here can be sure "
-                        "where an edit lands - fix it in Raw text first")
+        p.errors.append(_i18n.msg("eng.banners.does_not_close_its_so_nothing", "{REL} does not close its <{ROOT_TAG}>, so nothing here can be sure where an edit lands - fix it in Raw text first", REL=REL, ROOT_TAG=ROOT_TAG))
         return p
     roster = _roster(mod)
     by = {e.id: e for e in doc.elems}
@@ -579,21 +563,21 @@ def plan(mod, body: dict) -> BannerPlan:
     for key, vals in (body.get("attrs") or {}).items():
         e = by.get(int(key))
         if e is None:
-            p.errors.append(f"element {key} is not in the file")
+            p.errors.append(_i18n.msg("eng.banners.element_is_not_in_the_file", "element {key} is not in the file", key=key))
             continue
         for a, v in vals.items():
             v = str(v).strip()
             if a not in e.attrs:
-                p.errors.append(f"<{e.tag}> on line {e.line + 1} has no {a}")
+                p.errors.append(_i18n.msg("eng.banners.on_line_has_no", "<{tag}> on line {x} has no {a}", tag=e.tag, x=e.line + 1, a=a))
                 continue
             if re.search(r"[\"<>&]", v):
-                p.errors.append(f"{a}: quotes, <, > and & cannot go in a value")
+                p.errors.append(_i18n.msg("eng.banners.quotes_and_cannot_go_in_a", "{a}: quotes, <, > and & cannot go in a value", a=a))
                 continue
             if a in NUMERIC_ATTRS and not _NUM.fullmatch(v):
-                p.errors.append(f"{e.tag} {a} is a number, not {v!r}")
+                p.errors.append(_i18n.msg("eng.banners.is_a_number_not", "{tag} {a} is a number, not {v}", tag=e.tag, a=a, v=repr(v)))
                 continue
             if a == "Faction" and not v:
-                p.errors.append("a row's Faction cannot be blank")
+                p.errors.append(_i18n.msg("eng.banners.a_rows_faction_cannot_be_blank", "a row's Faction cannot be blank"))
                 continue
             cur, span = e.attrs[a]
             if v != cur:
@@ -604,24 +588,24 @@ def plan(mod, body: dict) -> BannerPlan:
         r = by.get(int(spec.get("like", -1)))
         fac = str(spec.get("faction") or "").strip()
         if r is None or r.tag not in ROW_TAGS:
-            p.errors.append("a new row is copied from a row of the same banner")
+            p.errors.append(_i18n.msg("eng.banners.a_new_row_is_copied_from", "a new row is copied from a row of the same banner"))
             continue
         if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", fac):
-            p.errors.append(f"{fac!r} is not a faction slot")
+            p.errors.append(_i18n.msg("eng.banners.is_not_a_faction_slot", "{fac} is not a faction slot", fac=repr(fac)))
             continue
         sibs = [x for x in doc.elems if x.parent == r.parent and x.tag in ROW_TAGS]
         if any(x.get("Faction").lower() == fac.lower() for x in sibs):
-            p.errors.append(f"that banner already has a row for {fac}")
+            p.errors.append(_i18n.msg("eng.banners.that_banner_already_has_a_row", "that banner already has a row for {fac}", fac=fac))
             continue
         if roster and fac.lower() not in roster and not MULTIPLAYER.fullmatch(fac):
-            p.warnings.append(f"{fac} is not a faction in the roster")
+            p.warnings.append(_i18n.msg("eng.banners.is_not_a_faction_in_the", "{fac} is not a faction in the roster", fac=fac))
         _s, t = _line_span(text, r)
         splices.append((t, t, row_copy(doc, r, fac)))
         p.changes.append(f"+ {fac}, a row copied from {r.get('Faction')} (line {r.line + 1})")
     for key in body.get("remove_rows") or []:
         r = by.get(int(key))
         if r is None or r.tag not in ROW_TAGS:
-            p.errors.append(f"element {key} is not a texture row")
+            p.errors.append(_i18n.msg("eng.banners.element_is_not_a_texture_row", "element {key} is not a texture row", key=key))
             continue
         s, t = _line_span(text, r)
         splices.append((s, t, ""))
@@ -638,13 +622,13 @@ def plan(mod, body: dict) -> BannerPlan:
     spans = sorted(splices, key=lambda x: (x[0], x[1]))
     for (a0, a1, _), (b0, b1, _) in zip(spans, spans[1:]):
         if b0 < a1:
-            p.errors.append("two edits touch the same place - save one, then the other")
+            p.errors.append(_i18n.msg("eng.banners.two_edits_touch_the_same_place", "two edits touch the same place - save one, then the other"))
             return p
     new = text
     for s, t, v in sorted(splices, key=lambda x: (x[0], x[1]), reverse=True):
         new = new[:s] + v + new[t:]
     if new == text:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.banners.nothing_to_change", "nothing to change"))
         return p
     p.text = new
     edu, data = _edu_banners(mod), Path(mod.data)

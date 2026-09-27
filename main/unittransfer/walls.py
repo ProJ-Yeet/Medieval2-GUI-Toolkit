@@ -43,6 +43,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 from . import keyblock as kb
+from . import i18n as _i18n
 
 REL = "descr_walls.txt"
 ENCODING = "latin-1"
@@ -284,20 +285,16 @@ def _check_stat(value: str, owner: str, key: str, line: int, refs: Refs,
                 out: List[Dict]) -> None:
     f = [x.strip() for x in value.split(",")]
     if len(f) != STAT_FIELDS:
-        out.append(finding("stat", "fatal", f"{owner}: its stat line has {len(f)} fields, not "
-                           f"the {STAT_FIELDS} descr_unit.txt writes", key, line))
+        out.append(finding("stat", "fatal", _i18n.msg("eng.walls.its_stat_line_has_fields_not", "{owner}: its stat line has {f_n} fields, not the {STAT_FIELDS} descr_unit.txt writes", owner=owner, f_n=len(f), STAT_FIELDS=STAT_FIELDS), key, line))
         return
     for k in STAT_NUMBERS:
         if not _NUM.fullmatch(f[k]):
-            out.append(finding("stat", "fatal", f"{owner}: stat field {k + 1} is {f[k]!r}, not a "
-                               "number", key, line))
+            out.append(finding("stat", "fatal", _i18n.msg("eng.walls.stat_field_is_not_a_number", "{owner}: stat field {x} is {f}, not a number", owner=owner, x=k + 1, f=repr(f[k])), key, line))
             return
     if refs.projectiles is not None and f[2].lower() not in refs.projectiles:
-        out.append(finding("projectile", "warn", f"{owner}: fires {f[2]}, which descr_projectile.txt "
-                           "does not declare", key, line))
+        out.append(finding("projectile", "warn", _i18n.msg("eng.walls.fires_which_descr_projectile_txt_does", "{owner}: fires {f}, which descr_projectile.txt does not declare", owner=owner, f=f[2]), key, line))
     if f[8].lower() not in SOUNDS:
-        out.append(finding("sound", "note", f"{owner}: sound type {f[8]} is not one of "
-                           f"{', '.join(SOUNDS)}", key, line))
+        out.append(finding("sound", "note", _i18n.msg("eng.walls.sound_type_is_not_one_of", "{owner}: sound type {f} is not one of {SOUNDS}", owner=owner, f=f[8], SOUNDS=', '.join(SOUNDS)), key, line))
 
 
 def _check_firing(doc: Doc, f: Node, owner: str, key: str, refs: Refs, out: List[Dict]) -> None:
@@ -309,17 +306,15 @@ def _check_firing(doc: Doc, f: Node, owner: str, key: str, refs: Refs, out: List
             _check_stat(v, owner, key, i, refs, out)
         elif k == "fire_rate":
             if len(t) != 4 or not all(_NUM.fullmatch(x) for x in t[2:]):
-                out.append(finding("fire_rate", "fatal", f"{owner}: fire_rate {v} is a unit size "
-                                   "and two numbers", key, i))
+                out.append(finding("fire_rate", "fatal", _i18n.msg("eng.walls.fire_rate_is_a_unit_size", "{owner}: fire_rate {v} is a unit size and two numbers", owner=owner, v=v), key, i))
             else:
                 sizes.append(t[1].lower())
         elif k == "shot_sfx":
             if v and refs.events is not None and v.lower() not in refs.events:
-                out.append(finding("sfx", "warn", f"{owner}: shot_sfx {v} is not an event in "
-                                   "descr_sounds_generic.txt", key, i))
+                out.append(finding("sfx", "warn", _i18n.msg("eng.walls.shot_sfx_is_not_an_event", "{owner}: shot_sfx {v} is not an event in descr_sounds_generic.txt", owner=owner, v=v), key, i))
         elif k == "shot_gfx":
             if not v:
-                out.append(finding("gfx", "note", f"{owner}: shot_gfx has no value", key, i))
+                out.append(finding("gfx", "note", _i18n.msg("eng.walls.shot_gfx_has_no_value", "{owner}: shot_gfx has no value", owner=owner), key, i))
             elif refs.sets is not None and v.lower() not in refs.sets:
                 sev = "note" if refs.sets_unread else "warn"
                 out.append(finding("gfx", sev, f"{owner}: shot_gfx {v} is in none of the effect "
@@ -327,11 +322,10 @@ def _check_firing(doc: Doc, f: Node, owner: str, key: str, refs: Refs, out: List
                                    + (" (the base game's packed ones may have it)" if refs.sets_unread else ""),
                                    key, i))
         elif k in ("fire_angle",) and not (len(t) == 2 and _NUM.fullmatch(t[1])):
-            out.append(finding("number", "fatal", f"{owner}: {k} {v!r} is not a number", key, i))
+            out.append(finding("number", "fatal", _i18n.msg("eng.walls.is_not_a_number_2", "{owner}: {k} {v} is not a number", owner=owner, k=k, v=repr(v)), key, i))
     gone = [s for s in SIZES if s not in sizes]
     if gone:
-        out.append(finding("fire_rate", "warn", f"{owner}: no fire_rate for {', '.join(gone)} "
-                           "units", key, f.line))
+        out.append(finding("fire_rate", "warn", _i18n.msg("eng.walls.no_fire_rate_for_units", "{owner}: no fire_rate for {gone} units", owner=owner, gone=', '.join(gone)), key, f.line))
 
 
 def check(doc: Doc, refs: Optional[Refs] = None) -> List[Dict]:
@@ -342,10 +336,9 @@ def check(doc: Doc, refs: Optional[Refs] = None) -> List[Dict]:
         for r in g["rows"]:
             k = r["key"].lower()
             if k in ONE_NUMBER and not _NUM.fullmatch(r["value"]):
-                out.append(finding("number", "fatal", f"gate {g['name']}: {k} {r['value']!r} is not "
-                                   "a number", "gates", r["line"] - 1))
+                out.append(finding("number", "fatal", _i18n.msg("eng.walls.gate_is_not_a_number", "gate {name}: {k} {value} is not a number", name=g['name'], k=k, value=repr(r['value'])), "gates", r["line"] - 1))
     if not declared and not doc.errors:
-        out.append(finding("gates", "warn", "no gates block, so no gateway has a gate", "file", 0))
+        out.append(finding("gates", "warn", _i18n.msg("eng.walls.no_gates_block_so_no_gateway", "no gates block, so no gateway has a gate"), "file", 0))
     levels: Dict[int, int] = {}
     towers: Dict[int, int] = {}
     for w in walls(doc):
@@ -354,52 +347,46 @@ def check(doc: Doc, refs: Optional[Refs] = None) -> List[Dict]:
         lv = w["level"]
         owner = f"wall level {lv}" if lv is not None else f"the wall on line {w['line']}"
         if lv is None:
-            out.append(finding("level", "fatal", f"line {w['line']}: a wall with no level", key,
+            out.append(finding("level", "fatal", _i18n.msg("eng.walls.line_a_wall_with_no_level", "line {line}: a wall with no level", line=w['line']), key,
                                node.line))
         elif lv in levels:
-            out.append(finding("level", "warn", f"wall level {lv} is written twice (lines "
-                               f"{levels[lv]} and {w['line']}); the game uses one of them",
+            out.append(finding("level", "warn", _i18n.msg("eng.walls.wall_level_is_written_twice_lines", "wall level {lv} is written twice (lines {levels} and {line}); the game uses one of them", lv=lv, levels=levels[lv], line=w['line']),
                                key, node.line))
         else:
             levels[lv] = w["line"]
         have = {p["kind"] for p in w["parts"]}
         for need in ("wall", "gateway", "tower"):
             if need not in have:
-                out.append(finding("part", "warn", f"{owner} has no {need}", key, node.line))
+                out.append(finding("part", "warn", _i18n.msg("eng.walls.has_no", "{owner} has no {need}", owner=owner, need=need), key, node.line))
         for p in w["parts"]:
             pn = doc.nodes[p["id"]]
             where = f"{owner}, {p['kind']}"
             for i, t in pn.rows:
                 k = t[0].lower()
                 if k in ONE_NUMBER and not (len(t) == 2 and _NUM.fullmatch(t[1])):
-                    out.append(finding("number", "fatal", f"{where}: {k} {' '.join(t[1:])!r} is "
-                                       "not a number", key, i))
+                    out.append(finding("number", "fatal", _i18n.msg("eng.walls.is_not_a_number", "{where}: {k} {t} is not a number", where=where, k=k, t=repr(' '.join(t[1:]))), key, i))
             for g in p["gates"]:
                 if g["gate"].lower() not in declared:
-                    out.append(finding("gate", "warn", f"{where}: gate type {g['gate']} is not "
-                                       "declared in the gates block", key, g["line"] - 1))
+                    out.append(finding("gate", "warn", _i18n.msg("eng.walls.gate_type_is_not_declared_in", "{where}: gate type {gate} is not declared in the gates block", where=where, gate=g['gate']), key, g["line"] - 1))
             if p["kind"] == "gateway" and not p["gates"] and declared:
-                out.append(finding("gate", "warn", f"{where}: names no gate type", key, pn.line))
+                out.append(finding("gate", "warn", _i18n.msg("eng.walls.names_no_gate_type", "{where}: names no gate type", where=where), key, pn.line))
             for n, f in enumerate(p["firing"], 1):
                 _check_firing(doc, doc.nodes[f["id"]], f"{where}, firing level {n}", key, refs, out)
             if p["kind"] == "tower" and lv is not None:
                 towers[lv] = len(p["firing"])
     if levels and sorted(levels) != list(range(len(levels))):
-        out.append(finding("levels", "warn", f"the wall levels are {sorted(levels)}, not 0 to "
-                           f"{len(levels) - 1} in a run", "file", 0))
+        out.append(finding("levels", "warn", _i18n.msg("eng.walls.the_wall_levels_are_not_0", "the wall levels are {levels}, not 0 to {x} in a run", levels=sorted(levels), x=len(levels) - 1), "file", 0))
     for (wl, tl), who in sorted((refs.edb_pairs or {}).items(), key=lambda kv: str(kv[0])):
         names = ", ".join(who[:3]) + ("..." if len(who) > 3 else "")
         if wl is not None and wl not in levels:
-            out.append(finding("edb_wall", "warn", f"the EDB gives wall_level {wl} ({names}), and "
-                               "no wall block has that level", "file", 0))
+            out.append(finding("edb_wall", "warn", _i18n.msg("eng.walls.the_edb_gives_wall_level_and", "the EDB gives wall_level {wl} ({names}), and no wall block has that level", wl=wl, names=names), "file", 0))
             continue
         if tl:
             have = towers.get(wl) if wl is not None else max(towers.values(), default=0)
             if have is not None and have < tl:
                 at = f"wall {wl}'s tower has {have}" if wl is not None else \
                     f"no tower has more than {have}"
-                out.append(finding("edb_tower", "warn", f"the EDB gives tower_level {tl} ({names}), "
-                                   f"and {at} firing level(s)",
+                out.append(finding("edb_tower", "warn", _i18n.msg("eng.walls.the_edb_gives_tower_level_and", "the EDB gives tower_level {tl} ({names}), and {at} firing level(s)", tl=tl, names=names, at=at),
                                    f"wall/{next((w['id'] for w in walls(doc) if w['level'] == wl), '')}"
                                    if wl is not None else "file", 0))
     return out
@@ -412,7 +399,7 @@ def check(doc: Doc, refs: Optional[Refs] = None) -> List[Dict]:
 def _read(mod) -> str:
     path = Path(mod.data) / REL
     if not path.is_file():
-        raise WallError(f"this mod has no {REL}")
+        raise WallError(_i18n.msg("eng.walls.this_mod_has_no", "this mod has no {REL}", REL=REL))
     return kb.read_text(path, ENCODING)
 
 
@@ -506,12 +493,11 @@ def plan(mod, body: dict) -> WallPlan:
         p.errors.append(e.message)
         return p
     if str(body.get("sig") or "") != _sig(text):
-        p.errors.append(f"{REL} changed on disk after it was opened here - reload it")
+        p.errors.append(_i18n.msg("eng.walls.changed_on_disk_after_it_was", "{REL} changed on disk after it was opened here - reload it", REL=REL))
         return p
     doc = parse(text)
     if doc.errors:
-        p.errors.append(f"{REL} has a brace out of place ({doc.errors[0][1]}), so nothing here "
-                        "can be sure where an edit lands - fix it in Raw text first")
+        p.errors.append(_i18n.msg("eng.walls.has_a_brace_out_of_place", "{REL} has a brace out of place ({errors}), so nothing here can be sure where an edit lands - fix it in Raw text first", REL=REL, errors=doc.errors[0][1]))
         return p
     refs = Refs.of(mod)
     lines = doc.lines
@@ -528,7 +514,7 @@ def plan(mod, body: dict) -> WallPlan:
             i = -1
         t = rows.get(i)
         if not t or len(t) < 2 and t[0].lower() not in ("shot_gfx",):
-            p.errors.append(f"line {key} is not a keyword and its value")
+            p.errors.append(_i18n.msg("eng.walls.line_is_not_a_keyword_and", "line {key} is not a keyword and its value", key=key))
             continue
         v = " ".join(str(v).split())
         bad = _valid(t[0], v, refs)
@@ -544,21 +530,21 @@ def plan(mod, body: dict) -> WallPlan:
         if t[0].lower() == "stat" and refs.projectiles is not None:
             proj = v.split(",")[2].strip()
             if proj.lower() not in refs.projectiles:
-                p.warnings.append(f"{proj} is not a projectile descr_projectile.txt declares")
+                p.warnings.append(_i18n.msg("eng.walls.is_not_a_projectile_descr_projectile", "{proj} is not a projectile descr_projectile.txt declares", proj=proj))
     for spec in body.get("add_gate") or []:
         at = int(spec.get("gateway") or 0) - 1
         gate = str(spec.get("gate") or "").strip()
         hit = heads.get(at)
         if hit is None or hit[1].kind != "gateway":
-            p.errors.append("a gate type is added to a gateway")
+            p.errors.append(_i18n.msg("eng.walls.a_gate_type_is_added_to", "a gate type is added to a gateway"))
             continue
         n = hit[1]
         if gate.lower() not in declared:
-            p.errors.append(f"{gate!r} is not a gate the gates block declares")
+            p.errors.append(_i18n.msg("eng.walls.is_not_a_gate_the_gates", "{gate} is not a gate the gates block declares", gate=repr(gate)))
             continue
         have = [(i, t) for i, t in n.rows if len(t) == 1 and t[0].lower() in declared]
         if any(t[0].lower() == gate.lower() for _i, t in have):
-            p.errors.append(f"that gateway already carries {gate}")
+            p.errors.append(_i18n.msg("eng.walls.that_gateway_already_carries", "that gateway already carries {gate}", gate=gate))
             continue
         after = have[-1][0] if have else (n.rows[-1][0] if n.rows else n.line + 1)
         like = lines[after]
@@ -570,7 +556,7 @@ def plan(mod, body: dict) -> WallPlan:
             n = heads[i][1]
             sibs = [x for x in doc.nodes if x.parent == n.parent and x.kind in FIRING]
             if len(sibs) < 2:
-                p.errors.append("a tower keeps at least one firing level")
+                p.errors.append(_i18n.msg("eng.walls.a_tower_keeps_at_least_one", "a tower keeps at least one firing level"))
                 continue
             drops |= set(range(n.line, n.close + 1))
             p.changes.append(f"- {_where(doc, n.line)}")
@@ -582,11 +568,11 @@ def plan(mod, body: dict) -> WallPlan:
             drops.add(i)
             p.changes.append(f"- {_where(doc, i)}: gate type {t[0]}")
             continue
-        p.errors.append(f"line {key} is not a gate type or a firing level")
+        p.errors.append(_i18n.msg("eng.walls.line_is_not_a_gate_type", "line {key} is not a gate type or a firing level", key=key))
     for key in body.get("copy_firing") or []:
         i = int(key) - 1
         if i not in heads or heads[i][1].kind not in FIRING:
-            p.errors.append(f"line {key} is not a firing level")
+            p.errors.append(_i18n.msg("eng.walls.line_is_not_a_firing_level", "line {key} is not a firing level", key=key))
             continue
         n = heads[i][1]
         inserts.setdefault(n.close, []).extend(lines[n.line:n.close + 1])
@@ -600,7 +586,7 @@ def plan(mod, body: dict) -> WallPlan:
         out += inserts.get(i, [])
     new = "\n".join(out)
     if new == text:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.walls.nothing_to_change", "nothing to change"))
         return p
     p.text = new
     was = {f["message"] for f in check(doc, refs)}

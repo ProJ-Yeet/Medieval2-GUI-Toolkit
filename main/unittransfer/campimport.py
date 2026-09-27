@@ -73,6 +73,7 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 from . import campfiles, campmap, campnew, campstrat
 from . import keyblock as kb
+from . import i18n as _i18n
 
 #: every 8-bit file here is read and written byte for byte: only ASCII tokens
 #: are ever replaced, so latin-1 round-trips a UTF-8 XML file untouched too
@@ -313,11 +314,10 @@ def plan(src, dst, body: dict) -> ImportPlan:
     p = ImportPlan(src=src, dst=dst, campaign=str(body.get("campaign") or "").strip()
                    or campstrat.DEFAULT_CAMPAIGN)
     if src is None or dst is None:
-        p.errors.append("an import needs a mod to take the campaign from and one to put it in")
+        p.errors.append(_i18n.msg("eng.campimport.an_import_needs_a_mod_to", "an import needs a mod to take the campaign from and one to put it in"))
         return p
     if Path(src.data).resolve() == Path(dst.data).resolve():
-        p.errors.append("that is the same mod - New campaign copies a campaign "
-                        "within one mod")
+        p.errors.append(_i18n.msg("eng.campimport.that_is_the_same_mod_new", "that is the same mod - New campaign copies a campaign within one mod"))
         return p
     try:
         p.name, _home = campnew._resolve(dst, body.get("name") or campstrat.campaign_leaf(p.campaign))
@@ -331,8 +331,7 @@ def plan(src, dst, body: dict) -> ImportPlan:
         p.errors.append(str(exc))
         return p
     if not (home / campstrat.STRAT_NAME).is_file():
-        p.errors.append(f"{src.name} has no campaign {p.campaign} with a "
-                        f"{campstrat.STRAT_NAME} in it")
+        p.errors.append(_i18n.msg("eng.campimport.has_no_campaign_with_a_in", "{name} has no campaign {campaign} with a {STRAT_NAME} in it", name=src.name, campaign=p.campaign, STRAT_NAME=campstrat.STRAT_NAME))
         return p
     sf = campstrat.parse_strat(kb.read_text(home / campstrat.STRAT_NAME, ENCODING))
     d = Destination(dst, sf)
@@ -345,8 +344,7 @@ def plan(src, dst, body: dict) -> ImportPlan:
     regions_src = home / REGIONS_NAME if (home / REGIONS_NAME).is_file() \
         else Path(src.data) / campmap.REGIONS_REL
     if not regions_src.is_file():
-        p.errors.append(f"{src.name} has no {REGIONS_NAME} for this campaign, so "
-                        f"there is no map to bring")
+        p.errors.append(_i18n.msg("eng.campimport.has_no_for_this_campaign_so", "{name} has no {REGIONS_NAME} for this campaign, so there is no map to bring", name=src.name, REGIONS_NAME=REGIONS_NAME))
         return p
     rf = campmap.parse_regions(kb.read_text(regions_src, ENCODING))
     _plan_cap(p, rf)
@@ -371,9 +369,7 @@ def plan(src, dst, body: dict) -> ImportPlan:
     _plan_text(p, home, fmap, body)
     _plan_climates(p, home)
     p.warnings.append(
-        f"{p.name} is played by {dst.name}'s factions: each slot's own name, "
-        f"colours, units and buildings, whatever the campaign called it in "
-        f"{src.name}. Health checks the result once it is written.")
+        _i18n.msg("eng.campimport.is_played_by_s_factions_each", "{name} is played by {name2}'s factions: each slot's own name, colours, units and buildings, whatever the campaign called it in {name3}. Health checks the result once it is written.", name=p.name, name2=dst.name, name3=src.name))
     return p
 
 
@@ -413,8 +409,7 @@ def _plan_factions(p: ImportPlan, sf, rf, d: Destination, asked: dict) -> Dict[s
     fmap: Dict[str, str] = {}
     how: Dict[str, str] = {}
     if not slots:
-        p.warnings.append(f"{p.dst.name} has no descr_sm_factions.txt on disk, so "
-                          f"no faction can be checked and each keeps its slot")
+        p.warnings.append(_i18n.msg("eng.campimport.has_no_descr_sm_factions_txt", "{name} has no descr_sm_factions.txt on disk, so no faction can be checked and each keeps its slot", name=p.dst.name))
         for s in held + only:
             fmap[s] = s
             how[s] = "unchecked"
@@ -425,7 +420,7 @@ def _plan_factions(p: ImportPlan, sf, rf, d: Destination, asked: dict) -> Dict[s
             want = asked.get(s.lower())
             if want:
                 if want.lower() not in slots:
-                    p.errors.append(f"{want} is not a faction {p.dst.name} declares")
+                    p.errors.append(_i18n.msg("eng.campimport.is_not_a_faction_declares", "{want} is not a faction {name} declares", want=want, name=p.dst.name))
                     continue
                 fmap[s], how[s] = slots[want.lower()], "chosen"
         for s in held:
@@ -444,16 +439,13 @@ def _plan_factions(p: ImportPlan, sf, rf, d: Destination, asked: dict) -> Dict[s
                          and d.slot_culture.get(x, "") == culture), "") \
                 or (free[0] if free else "")
             if not pick:
-                p.errors.append(f"{s} has no slot to go to: every faction "
-                                f"{p.dst.name} declares is already taken by this "
-                                f"campaign. Add one on the Factions screen first.")
+                p.errors.append(_i18n.msg("eng.campimport.has_no_slot_to_go_to", "{s} has no slot to go to: every faction {name} declares is already taken by this campaign. Add one on the Factions screen first.", s=s, name=p.dst.name))
                 continue
             fmap[s], how[s] = pick, "free"
         for s, t in fmap.items():
             other = taken.get(t.lower())
             if other:
-                p.errors.append(f"{other} and {s} are both mapped onto {t}, and "
-                                f"two factions of one campaign cannot share a slot")
+                p.errors.append(_i18n.msg("eng.campimport.and_are_both_mapped_onto_and", "{other} and {s} are both mapped onto {t}, and two factions of one campaign cannot share a slot", other=other, s=s, t=t))
             taken[t.lower()] = s
         for s in only:
             want = asked.get(s.lower())
@@ -479,13 +471,9 @@ def _plan_factions(p: ImportPlan, sf, rf, d: Destination, asked: dict) -> Dict[s
         if row["source_culture"] and row["culture"] and row["source_culture"] != row["culture"]:
             recultured.append(f"{s} {row['source_culture']} -> {row['culture']}")
     if freed:
-        p.warnings.append(f"{len(freed)} faction(s) {p.dst.name} has no slot of that "
-                          f"name for play on a free one: {_shown(freed, 12)}. Pick "
-                          f"another slot for any of them below.")
+        p.warnings.append(_i18n.msg("eng.campimport.faction_s_has_no_slot_of", "{freed_n} faction(s) {name} has no slot of that name for play on a free one: {shown}. Pick another slot for any of them below.", freed_n=len(freed), name=p.dst.name, shown=_shown(freed, 12)))
     if recultured:
-        p.warnings.append(f"{len(recultured)} faction(s) change culture with their "
-                          f"slot, so their settlements are built in the new "
-                          f"culture's art: {_shown(recultured, 12)}")
+        p.warnings.append(_i18n.msg("eng.campimport.faction_s_change_culture_with_their", "{recultured_n} faction(s) change culture with their slot, so their settlements are built in the new culture's art: {shown}", recultured_n=len(recultured), shown=_shown(recultured, 12)))
     moved = [f"{s} -> {t}" for s, t in fmap.items() if s.lower() != t.lower()]
     if moved:
         p.changes.append(f"factions: {_shown(moved, 12)}")
@@ -590,8 +578,7 @@ def _plan_strat(p: ImportPlan, sf, d: Destination, fmap: Dict[str, str],
                 unit_to[name] = ""
                 how = "left out"
                 if want:
-                    p.warnings.append(f"{want} is not a unit {p.dst.name} has, so "
-                                      f"{name} is left out")
+                    p.warnings.append(_i18n.msg("eng.campimport.is_not_a_unit_has_so", "{want} is not a unit {name} has, so {name2} is left out", want=want, name=p.dst.name, name2=name))
             p.units.append({"unit": name, "count": count, "to": unit_to[name], "how": how})
     for u in sf.of_kind("unit"):
         to = unit_to.get(u.name, u.name)
@@ -697,41 +684,30 @@ def _plan_strat(p: ImportPlan, sf, d: Destination, fmap: Dict[str, str],
                          f"whose regiments were all left out given a bodyguard "
                          f"their new faction owns: {_counted(guards)}")
     if empty_armies:
-        p.warnings.append(f"{len(empty_armies)} character(s) lead an army with no "
-                          f"regiment left in it and no bodyguard their slot owns "
-                          f"could be found: {_shown(empty_armies)}. Substitute a "
-                          f"unit for theirs.")
+        p.warnings.append(_i18n.msg("eng.campimport.character_s_lead_an_army_with", "{empty_armies_n} character(s) lead an army with no regiment left in it and no bodyguard their slot owns could be found: {shown}. Substitute a unit for theirs.", empty_armies_n=len(empty_armies), shown=_shown(empty_armies)))
     if labels:
         p.changes.append(f"{campstrat.STRAT_NAME}: ai_label the AI file lacks: "
                          f"{_shown(labels)}")
     missing = [u for u in p.units if u["how"] == "left out"]
     if missing:
         p.warnings.append(
-            f"{len(missing)} unit type(s) {p.dst.name} lacks are left out of the "
-            f"armies: {_shown([u['unit'] for u in missing])}. Substitute one of "
-            f"{p.dst.name}'s units for each below, or bring them first with Unit "
-            f"Transfer and work the import out again.")
+            _i18n.msg("eng.campimport.unit_type_s_lacks_are_left", "{missing_n} unit type(s) {name} lacks are left out of the armies: {shown}. Substitute one of {name2}'s units for each below, or bring them first with Unit Transfer and work the import out again.", missing_n=len(missing), name=p.dst.name, shown=_shown([u['unit'] for u in missing]), name2=p.dst.name))
     if not d.units:
-        p.warnings.append(f"{p.dst.name} has no export_descr_unit.txt on disk, so "
-                          f"no regiment could be checked")
+        p.warnings.append(_i18n.msg("eng.campimport.has_no_export_descr_unit_txt", "{name} has no export_descr_unit.txt on disk, so no regiment could be checked", name=p.dst.name))
     if not d.levels:
-        p.warnings.append(f"{p.dst.name} has no export_descr_buildings.txt on "
-                          f"disk, so no building could be checked")
+        p.warnings.append(_i18n.msg("eng.campimport.has_no_export_descr_buildings_txt", "{name} has no export_descr_buildings.txt on disk, so no building could be checked", name=p.dst.name))
 
     # read back: the result has to parse no worse than the source did
     done = campstrat.parse_strat(text)
     if len(done.problems) > len(sf.problems):
-        p.errors.append(f"the rewritten {campstrat.STRAT_NAME} reads with "
-                        f"{len(done.problems)} faulty line(s) where the source had "
-                        f"{len(sf.problems)}; nothing was written")
+        p.errors.append(_i18n.msg("eng.campimport.the_rewritten_reads_with_faulty_line", "the rewritten {STRAT_NAME} reads with {problems_n} faulty line(s) where the source had {problems_n2}; nothing was written", STRAT_NAME=campstrat.STRAT_NAME, problems_n=len(done.problems), problems_n2=len(sf.problems)))
     if len(done.of_kind("faction")) != len(sf.of_kind("faction")) \
             or len(done.of_kind("settlement")) != len(sf.of_kind("settlement")) \
             or len(done.of_kind("character")) != len(sf.of_kind("character")):
-        p.errors.append(f"the rewritten {campstrat.STRAT_NAME} does not hold the "
-                        f"same factions, settlements and characters as the source")
+        p.errors.append(_i18n.msg("eng.campimport.the_rewritten_does_not_hold_the", "the rewritten {STRAT_NAME} does not hold the same factions, settlements and characters as the source", STRAT_NAME=campstrat.STRAT_NAME))
     names = [n.name.lower() for n in done.of_kind("faction")]
     if len(set(names)) != len(names):
-        p.errors.append("two faction blocks would name the same slot")
+        p.errors.append(_i18n.msg("eng.campimport.two_faction_blocks_would_name_the", "two faction blocks would name the same slot"))
     rel = f"{p.folder}/{campstrat.STRAT_NAME}"
     p.texts[rel] = text
     return text
@@ -870,10 +846,9 @@ def _plan_regions(p: ImportPlan, rf, d: Destination, fmap: Dict[str, str],
     was = {r.name for r in rf.records if r.religions_line >= 0 and r.religions
            and r.religion_total != 100}
     if [b for b in bad if b not in was]:
-        p.errors.append(f"the mapped religions would not total 100 in "
-                        f"{_shown([b for b in bad if b not in was])}")
+        p.errors.append(_i18n.msg("eng.campimport.the_mapped_religions_would_not_total", "the mapped religions would not total 100 in {shown}", shown=_shown([b for b in bad if b not in was])))
     if len(done.records) != len(rf.records):
-        p.errors.append(f"the rewritten {REGIONS_NAME} does not hold the same provinces")
+        p.errors.append(_i18n.msg("eng.campimport.the_rewritten_does_not_hold_the_2", "the rewritten {REGIONS_NAME} does not hold the same provinces", REGIONS_NAME=REGIONS_NAME))
     return text
 
 
@@ -890,9 +865,7 @@ def _plan_folder(p: ImportPlan, home: Path, d: Destination, renames: Dict[str, s
     held = sorted(s for s in renames if s.lower() in guard)
     if held:
         p.warnings.append(
-            f"{_shown(held)} {'is' if len(held) == 1 else 'are'} also a province, a "
-            f"settlement or a character in this campaign, so the word is left as "
-            f"it is in {SCRIPT_NAME} and descr_events.txt rather than guessed at")
+            _i18n.msg("eng.campimport.also_a_province_a_settlement_or", "{shown} {x} also a province, a settlement or a character in this campaign, so the word is left as it is in {SCRIPT_NAME} and descr_events.txt rather than guessed at", shown=_shown(held), x='is' if len(held) == 1 else 'are', SCRIPT_NAME=SCRIPT_NAME))
     script_hits = 0
     for path in sorted(home.rglob("*")):
         if not path.is_file():
@@ -1018,10 +991,7 @@ def _plan_map(p: ImportPlan, home: Path) -> None:
     missing = [n for n in MAP_FILES if n != REGIONS_NAME and not (home / n).is_file()
                and not (base / n).is_file()]
     if missing:
-        p.warnings.append(f"{p.src.name} has no {_shown(missing)}, so the new campaign "
-                          f"reads {p.dst.name}'s base copy of "
-                          f"{'it' if len(missing) == 1 else 'them'}, which belongs "
-                          f"to a different map")
+        p.warnings.append(_i18n.msg("eng.campimport.has_no_so_the_new_campaign", "{name} has no {shown}, so the new campaign reads {name2}'s base copy of {x}, which belongs to a different map", name=p.src.name, shown=_shown(missing), name2=p.dst.name, x='it' if len(missing) == 1 else 'them'))
 
 
 def _plan_cap(p: ImportPlan, rf) -> None:
@@ -1032,11 +1002,7 @@ def _plan_cap(p: ImportPlan, rf) -> None:
     if count <= mapvocab.MAX_REGION_COLOURS or modflags.is_m2ex(p.dst):
         return
     p.warnings.append(
-        f"this map has {count} provinces and the unmodified engine stops at "
-        f"{mapvocab.MAX_REGION_COLOURS}. {p.src.name}"
-        f"{' is marked as running on M2EX' if modflags.is_m2ex(p.src) else ''}; "
-        f"{p.dst.name} is not, so the campaign will not load unless it runs on "
-        f"M2EX too (the flag is on its Home card)")
+        _i18n.msg("eng.campimport.this_map_has_provinces_and_the", "this map has {count} provinces and the unmodified engine stops at {MAX_REGION_COLOURS}. {name}{x}; {name2} is not, so the campaign will not load unless it runs on M2EX too (the flag is on its Home card)", count=count, MAX_REGION_COLOURS=mapvocab.MAX_REGION_COLOURS, name=p.src.name, x=' is marked as running on M2EX' if modflags.is_m2ex(p.src) else '', name2=p.dst.name))
 
 
 def _plan_climates(p: ImportPlan, home: Path) -> None:
@@ -1062,9 +1028,7 @@ def _plan_climates(p: ImportPlan, home: Path) -> None:
     odd = [c for _, c in colours if mapvocab.key(c) not in declared]
     if odd:
         p.warnings.append(
-            f"map_climates.tga paints {len(odd)} colour(s) {p.dst.name}'s "
-            f"descr_climates.txt does not declare ({_shown([str(c) for c in odd], 4)}), "
-            f"and the map checker calls that fatal. The Climates screen adds a climate.")
+            _i18n.msg("eng.campimport.map_climates_tga_paints_colour_s", "map_climates.tga paints {odd_n} colour(s) {name}'s descr_climates.txt does not declare ({shown}), and the map checker calls that fatal. The Climates screen adds a climate.", odd_n=len(odd), name=p.dst.name, shown=_shown([str(c) for c in odd], 4)))
 
 
 # ---------------------------------------------------------------------------
@@ -1103,9 +1067,7 @@ def _plan_names(p: ImportPlan, sf, d: Destination, fmap: Dict[str, str]) -> None
         nf = minorfiles.parse_names(text)
         fac = nf.get(slot)
         if fac is None:
-            p.warnings.append(f"{namekeys.POOL_REL} has no `faction: {slot}` block, "
-                              f"so {sum(len(v) for v in sections.values())} name(s) "
-                              f"of its characters have no pool to go in")
+            p.warnings.append(_i18n.msg("eng.campimport.has_no_faction_block_so_name", "{POOL_REL} has no `faction: {slot}` block, so {sum} name(s) of its characters have no pool to go in", POOL_REL=namekeys.POOL_REL, slot=slot, sum=sum(len(v) for v in sections.values())))
             continue
         text = _add_names(nf, fac, sections)
         total += sum(len(v) for v in sections.values())
@@ -1182,8 +1144,7 @@ def _plan_portraits(p: ImportPlan, sf, d: Destination) -> None:
         p.changes.append(f"{PORTRAITS_REL}: {len(copied)} portrait folder(s) from "
                          f"{p.src.name}: {_shown(copied)}")
     if lacking:
-        p.warnings.append(f"{len(lacking)} portrait(s) neither mod has a folder for: "
-                          f"{_shown(lacking)}")
+        p.warnings.append(_i18n.msg("eng.campimport.portrait_s_neither_mod_has_a", "{lacking_n} portrait(s) neither mod has a folder for: {shown}", lacking_n=len(lacking), shown=_shown(lacking)))
 
 
 def _plan_text(p: ImportPlan, home: Path, fmap: Dict[str, str], body: dict) -> None:
@@ -1237,8 +1198,7 @@ def _plan_text(p: ImportPlan, home: Path, fmap: Dict[str, str], body: dict) -> N
         p.changes.append(f"{campfiles.DESCR_REL}: {len(p.descr)} key(s) under "
                          f"{new_head}, {len(p.descr_new)} of them new")
     if not p.descr.get(new_head + "TITLE"):
-        p.warnings.append(f"nothing names {p.name} on the new-game menu, so the "
-                          f"engine shows the key {new_head}TITLE")
+        p.warnings.append(_i18n.msg("eng.campimport.nothing_names_on_the_new_game", "nothing names {name} on the new-game menu, so the engine shows the key {new_head}TITLE", name=p.name, new_head=new_head))
 
 
 def _copy_keys(p: ImportPlan, rel: str, wanted, what: str, blind: bool = False) -> None:
@@ -1265,9 +1225,7 @@ def _copy_keys(p: ImportPlan, rel: str, wanted, what: str, blind: bool = False) 
         p.loc.setdefault(rel, {}).update(writes)
         p.changes.append(f"{rel}: {len(writes)} {what} from {p.src.name}")
     if differ:
-        p.warnings.append(f"{rel}: {differ} key(s) {p.dst.name} already has with "
-                          f"other words keep {p.dst.name}'s, and every campaign of "
-                          f"it reads them")
+        p.warnings.append(_i18n.msg("eng.campimport.key_s_already_has_with_other", "{rel}: {differ} key(s) {name} already has with other words keep {name2}'s, and every campaign of it reads them", rel=rel, differ=differ, name=p.dst.name, name2=p.dst.name))
 
 
 # ---------------------------------------------------------------------------
@@ -1282,10 +1240,10 @@ def apply(p: ImportPlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.copies and not p.texts:
-        raise ValueError("there is nothing to import")
+        raise ValueError(_i18n.msg("eng.campimport.there_is_nothing_to_import", "there is nothing to import"))
     there = Path(p.dst.data) / p.folder
     if there.exists() and any(f.is_file() for f in there.rglob("*")):
-        raise ValueError(f"{p.folder} appeared since the plan was made")
+        raise ValueError(_i18n.msg("eng.campimport.appeared_since_the_plan_was_made", "{folder} appeared since the plan was made", folder=p.folder))
     mod = p.dst
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

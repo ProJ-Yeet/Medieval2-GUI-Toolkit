@@ -16,20 +16,18 @@
    THE PAGE NEVER PARSES A GAME FILE. Everything here is /api/settlemech and
    /api/settlemech/plan|apply - campdb.js's shape. */
 
-const SMX_KIDS = [['pip_modifier', 'pip'], ['city_modifier', 'city ×'], ['castle_modifier', 'castle ×'],
+const SMX_KIDS = [['pip_modifier', 'pip'], ['city_modifier', tt('settlemech.city')], ['castle_modifier', tt('settlemech.castle')],
                   ['pip_min', 'min'], ['pip_max', 'max']];
 const SMX_LEVEL = ['base', 'upgrade', 'min', 'max'];
 
 async function loadSettleMech(){
   const mod = state.src;
-  main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s settlement mechanics…</div>';
+  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('settlemech.s_settlement_mechanics')}</div>`;
   let r;
   try{ r = await api.get('/api/settlemech?mod=' + enc(mod)); }
   catch(e){ if(stale('settlemech', mod)) return;
-    main.innerHTML = `<div class="empty">Couldn't read the settlement mechanics.<br>
-      <span class="count">${esc(errText(e))}</span><br>
-      <span class="count">They live in data/descr_settlement_mechanics.xml</span><br><br>
-      <button class="primary" onclick="loadSettleMech()">Retry</button></div>`; return; }
+    main.innerHTML = `<div class="empty">${tt('settlemech.couldnt_read_the_settlement_mechanics_they',{errText:esc(errText(e))})}<br><br>
+      <button class="primary" onclick="loadSettleMech()">${tt('common.retry')}</button></div>`; return; }
   if(stale('settlemech', mod)) return;
   const keep = state.smx && state.smx.mod === mod ? state.smx.sel : '';
   state.smx = Object.assign({mod, sel: keep || 'SPF', w: {}, busy: false}, r);
@@ -64,7 +62,7 @@ function renderSettleMech(){
   const find = (c.findings || []).map(f => Object.assign({}, f, {name: f.key || ''}));
   const tabs = c.families.map(f => ({id: f.id, label: f.label, n: f.factors.length,
       hit: q ? f.factors.filter(x => x.name.toLowerCase().includes(q)).length : 0}))
-    .concat([{id: 'levels', label: 'Population levels',
+    .concat([{id: 'levels', label: tt('settlemech.population_levels'),
               n: c.levels.reduce((n, l) => n + l.levels.length, 0), hit: 0}]);
   const total = c.families.reduce((n, f) => n + f.factors.length, 0);
   count.textContent = `${total}`;
@@ -77,7 +75,7 @@ function renderSettleMech(){
           onclick="smxSection('${q1(esc(t.id))}')">
         <div class="nm">${esc(t.label)}</div>
         <div class="sub">${q ? `${t.hit} match` : `${t.n} ${t.id === 'levels' ? 'levels' : 'factors'}`}${
-          edits(t.id) ? ` · <b>${edits(t.id)} changed</b>` : ''}</div></button>`).join('')}</div>
+          edits(t.id) ? ` ${tt('settlemech.changed',{x:edits(t.id)})}` : ''}</div></button>`).join('')}</div>
     </div>
     <div class="trmain" id="smxMain">${smxMainHtml(q)}</div>
   </div>`;
@@ -86,11 +84,10 @@ function renderSettleMech(){
 function smxMainHtml(q){
   const c = state.smx, n = smxChanged();
   const head = `<div class="cdbhead">
-    <div><b>descr_settlement_mechanics.xml</b> <span class="count">growth, public order, income and
-      mines for every settlement, and how many people each level holds</span></div>
+    <div>${tt('settlemech.descr_settlement_mechanics_xml_growth_public')}</div>
     <span style="flex:1"></span>
-    <button onclick="smxRevert()" id="smxRevert" ${n ? '' : 'disabled'}>Revert</button>
-    <button class="primary" onclick="smxSave()" id="smxSave" ${n ? '' : 'disabled'}>Save ${n || ''} change${n === 1 ? '' : 's'}</button>
+    <button onclick="smxRevert()" id="smxRevert" ${n ? '' : 'disabled'}>${tt('common.revert')}</button>
+    <button class="primary" onclick="smxSave()" id="smxSave" ${n ? '' : 'disabled'}>${tt('settlemech.save_change',{x:n || '',x2:n === 1 ? '' : 's'})}</button>
   </div>`;
   const fams = q ? c.families : c.families.filter(f => f.id === c.sel);
   let body = fams.map(f => {
@@ -98,22 +95,20 @@ function smxMainHtml(q){
     if(!rows.length) return '';
     return `<div class="cdbsec"><h3>${esc(f.label)} <span class="count">${esc(f.id)}_</span></h3>
       <table class="smxtab"><tr><th></th>${SMX_KIDS.map(([, l]) => `<th>${esc(l)}</th>`).join('')}</tr>
-      ${rows.map(x => `<tr id="smx_${esc(x.name)}"><td><code title="line ${x.line}">${esc(x.name)}</code></td>${
-        SMX_KIDS.map(([k]) => smxBox(`factor/${x.name}/${k}`, x.values[k])).join('')}</tr>`).join('')}
+      ${rows.map(x => `<tr id="smx_${esc(x.name)}"><td><code title="${ttA('settlemech.line',{line:x.line})}">${esc(x.name)}</code></td>${
+        SMX_KIDS.map(([k]) => smxBox(tt('settlemech.factor',{name:x.name,x:k}), x.values[k])).join('')}</tr>`).join('')}
       </table></div>`;
   }).join('');
   if(!q && c.sel === 'levels'){
-    body = c.levels.map(l => `<div class="cdbsec"><h3>${l.ladder === 'city' ? 'Cities' : 'Castles'}</h3>
+    body = c.levels.map(l => `<div class="cdbsec"><h3>${l.ladder === 'city' ? tt('settlemech.cities') : tt('settlemech.castles')}</h3>
       <table class="smxtab"><tr><th></th>${SMX_LEVEL.map(k => `<th>${k}</th>`).join('')}</tr>
-      ${l.levels.map(x => `<tr id="smx_${esc(x.name)}"><td><code title="line ${x.line}">${esc(x.name)}</code></td>${
+      ${l.levels.map(x => `<tr id="smx_${esc(x.name)}"><td><code title="${ttA('settlemech.line',{line:x.line})}">${esc(x.name)}</code></td>${
         SMX_LEVEL.map(k => x.values[k] === undefined ? '<td class="count">-</td>'
-          : smxBox(`level/${x.name}/${k}`, x.values[k])).join('')}</tr>`).join('')}
+          : smxBox(tt('settlemech.level',{name:x.name,x:k}), x.values[k])).join('')}</tr>`).join('')}
       </table>
-      <div class="count">A level's <b>upgrade</b> is the population it grows into the next level at;
-        above its <b>max</b> it is never reached. Both installed mods set each upgrade to the next
-        level's base.</div></div>`).join('');
+      <div class="count">${tt('settlemech.a_levels_upgrade_is_the_population')}</div></div>`).join('');
   }
-  return head + (body || '<div class="count" style="padding:8px">No factor matches.</div>');
+  return head + (body || `<div class="count" style="padding:8px">${tt('settlemech.no_factor_matches')}</div>`);
 }
 
 function smxBox(key, fileVal){
@@ -121,7 +116,7 @@ function smxBox(key, fileVal){
   const pip = key.endsWith('/pip_modifier');
   return `<td class="${ch ? 'on' : ''}"><input type="text" value="${esc(v)}" spellcheck="false"
       class="${smxBad(key, v) ? 'bad' : ''}" placeholder="${had ? '' : '·'}"
-      title="${had ? (pip ? 'the factor\'s own weight' : 'clear it to take the line out') : 'type a value to add this line'}"
+      title="${had ? (pip ? tt('settlemech.the_factors_own_weight') : tt('settlemech.clear_it_to_take_the_line')) : tt('settlemech.type_a_value_to_add_this')}"
       oninput="smxSet('${q1(esc(key))}', this.value, this, ${had ? 1 : 0}, '${q1(esc(fileVal || ''))}')"></td>`;
 }
 
@@ -134,7 +129,7 @@ function smxSet(key, value, el, had, fileVal){
   if(td) td.classList.toggle('on', !same);
   el.classList.toggle('bad', smxBad(key, value) || (key.endsWith('/pip_modifier') && had && !value.trim()));
   const n = smxChanged(), s = document.getElementById('smxSave'), r = document.getElementById('smxRevert');
-  if(s){ s.disabled = !n; s.textContent = `Save ${n || ''} change${n === 1 ? '' : 's'}`; }
+  if(s){ s.disabled = !n; s.textContent = tt('settlemech.save_change',{x:n || '',x2:n === 1 ? '' : 's'}); }
   if(r) r.disabled = !n;
 }
 
@@ -167,17 +162,17 @@ async function smxSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(`Write ${(p.changes || []).length} change(s) to descr_settlement_mechanics.xml?\n\n`
+  if(!confirm(tt('settlemech.write_change_s_to_descr_settlement',{n:(p.changes || []).length})
     + (p.changes || []).slice(0, 16).join('\n')
-    + ((p.changes || []).length > 16 ? `\n…and ${p.changes.length - 16} more` : '')
+    + ((p.changes || []).length > 16 ? tt('settlemech.and_more',{changes:p.changes.length - 16}) : '')
     + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 4).join('\n⚠ ') : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   c.busy = true;
   let res;
   try{ res = await api.post('/api/settlemech/apply', body); }
   catch(e){ toast('✗ ' + errText(e), 6000); return; }
   finally{ c.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   await loadSettleMech();
 }

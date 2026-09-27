@@ -35,13 +35,13 @@ const TR_BLANK = {name:'', characters:['family'], hidden:false, exclude_cultures
 
 async function loadTraits(){
   const mod = state.src;
-  main.innerHTML = '<div class="empty">Reading ' + esc(mod) + '’s traits…</div>';
+  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('traits.s_traits')}</div>`;
   let r;
   try{ r = await api.get('/api/traits?mod=' + enc(mod)); }
   catch(e){ if(stale('traits', mod)) return;
-    main.innerHTML = `<div class="empty">Couldn't read the traits file.<br>
+    main.innerHTML = `<div class="empty">${tt('traits.couldnt_read_the_traits_file')}<br>
       <span class="count">${esc(errText(e))}</span><br><br>
-      <button class="primary" onclick="loadTraits()">Retry</button></div>`; return; }
+      <button class="primary" onclick="loadTraits()">${tt('common.retry')}</button></div>`; return; }
   if(stale('traits', mod)) return;
   state.tr = Object.assign({sel:'', d:null, busy:false, adding:false}, r);
   undoReset();
@@ -53,21 +53,18 @@ function renderTraits(){
   if(!t){ loadTraits(); return; }
   const strip = minorTabsHtml('', 'data/export_descr_character_traits.txt');
   if(t.error || !t.exists){
-    main.innerHTML = strip + `<div class="empty">${esc(t.error || 'No traits file.')}<br>
-      <span class="count">Traits live in data/export_descr_character_traits.txt</span></div>`;
+    main.innerHTML = strip + `<div class="empty">${tt('traits.traits_live_in_data_export_descr',{error:esc(t.error || tt('traits.no_traits_file'))})}</div>`;
     return;
   }
   const rows = trRows();
   count.textContent = `${rows.length}/${t.count}`;
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
-      <button class="trnew" onclick="trNew()">＋ New trait</button>
-      <button class="trnew" onclick="portOpen('traits')" title="Copy traits out of
-another mod on this machine - the block, the triggers that give it, and its text
-keys, in one backed-up job.">⇩ Port from another mod</button>
+      <button class="trnew" onclick="trNew()">${tt('traits.new_trait')}</button>
+      <button class="trnew" onclick="portOpen('traits')" title="${ttA('traits.copy_traits_out_of_another_mod')}">${tt('traits.port_from_another_mod')}</button>
       ${findingsHtml('traits', t.finding_list, 'trOpen')}
       <div class="trrows">${rows.map(trRowHtml).join('')
-        || '<div class="count" style="padding:8px">No trait matches.</div>'}</div>
+        || `<div class="count" style="padding:8px">${tt('traits.no_trait_matches')}</div>`}</div>
     </div>
     <div class="trmain" id="trMain">${trDetailHtml()}</div>
   </div>`;
@@ -88,17 +85,13 @@ function trRowHtml(r){
   const on = state.tr.sel === r.name;
   return `<button class="trrow${on?' on':''}" onclick="trOpen('${q1(esc(r.name))}')">
     <div class="nm">${esc(r.label)}</div>
-    <div class="sub">${r.levels} level${r.levels===1?'':'s'}${
-      r.hidden?' · hidden':''}${
-      r.triggers?` · ${r.triggers} trigger${r.triggers===1?'':'s'}`
-        :r.lua_gives?' · given by a script':` · <b>no trigger gives it</b>${
-          r.lua_names?' (a script names it)':''}`}${
-      r.findings?` <span class="w-warn">· ${r.findings}⚠</span>`:''}</div>
+    <div class="sub">${tt('traits.level',{levels:r.levels,levels2:r.levels===1?'':'s',hidden:r.hidden?tt('traits.hidden'):'',x:r.triggers?tt('traits.trigger',{triggers:r.triggers,triggers2:r.triggers===1?'':'s'})
+        :r.lua_gives?tt('traits.given_by_a_script'):` ${tt('traits.no_trigger_gives_it',{lua_names:r.lua_names?tt('traits.a_script_names_it'):''})}`,findings:r.findings?` <span class="w-warn">· ${r.findings}⚠</span>`:''})}</div>
   </button>`;
 }
 
 async function trOpen(name){
-  activity('opened trait', `${name} in ${state.src}`);
+  activity(tt('traits.opened_trait'), `${name} in ${state.src}`);
   const t = state.tr;
   t.sel = name; t.adding = false; t.d = null;
   renderTraits();
@@ -128,7 +121,7 @@ function trWorking(d){
 function trNew(){
   const t = state.tr;
   t.sel = ''; t.adding = true;
-  t.d = {name:'', label:'(new trait)', trait:JSON.parse(JSON.stringify(TR_BLANK)),
+  t.d = {name:'', label:tt('traits.new_trait_2'), trait:JSON.parse(JSON.stringify(TR_BLANK)),
     w:Object.assign(JSON.parse(JSON.stringify(TR_BLANK)),
       {levels:[trBlankLevel('')]}),
     trigs:[], findings:[], loc:{}, missing_loc:[], triggers:[], dirty:true,
@@ -159,22 +152,18 @@ function trPaintForm(){
 /* ---- the detail pane ---- */
 function trDetailHtml(){
   const t = state.tr, d = t.d;
-  if(!t.sel && !t.adding) return `<div class="empty">Pick a trait on the left.<br>
-    <span class="count">${t.count} trait${t.count===1?'':'s'}, ${t.triggers} trigger${
-      t.triggers===1?'':'s'} in ${esc(t.file)}</span></div>`;
-  if(!d) return '<div class="empty">Reading the trait…</div>';
+  if(!t.sel && !t.adding) return `<div class="empty">${tt('traits.pick_a_trait_on_the_left',{count:t.count,count2:t.count===1?'':'s',triggers:t.triggers,triggers2:t.triggers===1?'':'s',file:esc(t.file)})}</div>`;
+  if(!d) return `<div class="empty">${tt('traits.reading_the_trait')}</div>`;
   if(d.error) return `<div class="empty"><span class="w-bad">✗ ${esc(d.error)}</span></div>`;
   const w = d.w;
   return `<div class="trbar">
-      <div><b>${esc(t.adding ? 'New trait' : d.label)}</b>
-        <span class="count">${w.levels.length} level${w.levels.length===1?'':'s'}</span></div>
+      <div><b>${esc(t.adding ? tt('traits.new_trait_3') : d.label)}</b>
+        <span class="count">${tt('traits.level_2',{levels_n:w.levels.length,levels:w.levels.length===1?'':'s'})}</span></div>
       <span class="sp"></span>
-      ${t.adding ? '' : `<button class="${d.cv?'on':''}" title="Show this trait exactly as
-export_descr_character_traits.txt stores it, beside the form. Hover a box to light
-up its line; edit either side and the other follows."
-        onclick="trCvToggle()">&lt;/&gt; Code view</button>
-      <button class="danger" onclick="trDelete()">Delete</button>`}
-      <button class="primary" onclick="trSave()">${t.adding?'Create trait':'Save'}</button>
+      ${t.adding ? '' : `<button class="${d.cv?'on':''}" title="${ttA('traits.show_this_trait_exactly_as_export')}"
+        onclick="trCvToggle()">${tt('common.code_view')}</button>
+      <button class="danger" onclick="trDelete()">${tt('common.delete')}</button>`}
+      <button class="primary" onclick="trSave()">${t.adding?tt('traits.create_trait'):tt('common.save')}</button>
     </div>
     <div id="trGui">
       ${trFindingsHtml(d)}
@@ -188,48 +177,40 @@ up its line; edit either side and the other follows."
 function trFindingsHtml(d){
   const out = [];
   if((d.findings||[]).length) out.push(...d.findings.map(f =>
-    `<div class="trfind w-warn">line ${f.line}: ${esc(f.message)}</div>`));
-  if((d.missing_loc||[]).length) out.push(`<div class="trfind w-warn">${
-    d.missing_loc.length} text key(s) are not in export_VnVs.txt (${
-    d.missing_loc.slice(0,4).map(esc).join(', ')}${d.missing_loc.length>4?'…':''}).
-    a character who reaches that level crashes the character screen. Type the words
-    beside the key below, or save and they are created with the key as
-    placeholder text.</div>`);
+    `<div class="trfind w-warn">${tt('traits.line',{line:f.line,message:esc(f.message)})}</div>`));
+  if((d.missing_loc||[]).length) out.push(`<div class="trfind w-warn">${tt('traits.text_key_s_are_not_in',{missing_loc_n:d.missing_loc.length,missing_loc:d.missing_loc.slice(0,4).map(esc).join(', '),missing_loc2:d.missing_loc.length>4?'…':''})}</div>`);
   return out.join('');
 }
 
 function trHeaderHtml(w, d){
   const types = d.character_types || ['family'];
   return `<section class="trsec">
-    <div class="trsechead">Header <span class="count">The order of these lines is
-      what the engine reads, and this editor keeps it</span></div>
+    <div class="trsechead">${tt('traits.header_the_order_of_these_lines')}</div>
     <div class="trgrid">
-      <label class="lbl" data-label="name">Name</label>
+      <label class="lbl" data-label="name">${tt('common.name')}</label>
       <input data-label="name" value="${esc(w.name)}" ${state.tr.adding?'':'disabled'}
-        placeholder="TraitName" oninput="trSet('name',this.value)">
-      <label class="lbl" data-label="characters">Characters</label>
+        placeholder="${ttA('traits.traitname')}" oninput="trSet('name',this.value)">
+      <label class="lbl" data-label="characters">${tt('common.characters')}</label>
       <div data-label="characters">
         <select onchange="trSet('characters',[this.value])">${
           types.map(c=>`<option ${c===(w.characters[0]||'family')?'selected':''}>${
             esc(c)}</option>`).join('')}</select>
-        ${w.characters.length>1?`<div class="trhint w-warn">This trait lists ${
-          esc(w.characters.join(', '))}, and the engine reads only the first. Use
-          <code>all</code> with a condition in the trigger instead</div>`:''}
+        ${w.characters.length>1?`<div class="trhint w-warn">${tt('traits.this_trait_lists_and_the_engine',{characters:esc(w.characters.join(', '))})}</div>`:''}
       </div>
-      <label class="lbl" data-label="hidden">Hidden</label>
+      <label class="lbl" data-label="hidden">${tt('traits.hidden_2')}</label>
       <div data-label="hidden"><label class="chk"><input type="checkbox" ${w.hidden?'checked':''}
-        onchange="trSet('hidden',this.checked)"> not shown on the character screen</label></div>
-      <label class="lbl" data-label="exclude_cultures">ExcludeCultures</label>
+        onchange="trSet('hidden',this.checked)"> ${tt('traits.not_shown_on_the_character_screen')}</label></div>
+      <label class="lbl" data-label="exclude_cultures">${tt('traits.excludecultures')}</label>
       <input data-label="exclude_cultures" value="${esc(w.exclude_cultures.join(', '))}"
-        placeholder="none"
+        placeholder="${ttA('common.none')}"
         oninput="trSet('exclude_cultures',this.value.split(',').map(s=>s.trim()).filter(Boolean))">
-      <label class="lbl" data-label="no_going_back_level">NoGoingBackLevel</label>
+      <label class="lbl" data-label="no_going_back_level">${tt('traits.nogoingbacklevel')}</label>
       <input data-label="no_going_back_level" value="${esc(w.no_going_back_level)}"
-        placeholder="none" style="width:90px"
+        placeholder="${ttA('common.none')}" style="width:90px"
         oninput="trSet('no_going_back_level',this.value.trim())">
-      <label class="lbl" data-label="anti_traits">AntiTraits</label>
+      <label class="lbl" data-label="anti_traits">${tt('traits.antitraits')}</label>
       <div data-label="anti_traits">
-        <input value="${esc(w.anti_traits.join(', '))}" placeholder="none" list="trAnti"
+        <input value="${esc(w.anti_traits.join(', '))}" placeholder="${ttA('common.none')}" list="trAnti"
           oninput="trSet('anti_traits',this.value.split(',').map(s=>s.trim()).filter(Boolean))">
         <datalist id="trAnti">${(d.known||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
       </div>
@@ -239,12 +220,10 @@ function trHeaderHtml(w, d){
 
 function trLevelsHtml(w, d){
   return `<section class="trsec">
-    <div class="trsechead">Levels
-      <span class="count">A character climbs these as points accumulate. The game
-        shows the highest one whose threshold is met (9 is the engine's limit)</span></div>
+    <div class="trsechead">${tt('traits.levels_a_character_climbs_these_as')}</div>
     ${w.levels.map((lv,i)=>trLevelHtml(lv,i,d)).join('')
-      || '<div class="count" style="padding:6px">No levels, so this trait can never be seen.</div>'}
-    ${w.levels.length<9?`<button class="trgadd" onclick="trAddLevel()">＋ Add level</button>`:''}
+      || `<div class="count" style="padding:6px">${tt('traits.no_levels_so_this_trait_can')}</div>`}
+    ${w.levels.length<9?`<button class="trgadd" onclick="trAddLevel()">${tt('traits.add_level')}</button>`:''}
   </section>`;
 }
 
@@ -270,9 +249,9 @@ function trLevelHtml(lv, i, d){
         placeholder="${esc(hint||'none')}"
         oninput="trSetLevel(${i},'${k}',this.value.trim())">
       <input class="trtext" value="${esc(trLocTextAt(d, i, k))}"
-        placeholder="${tag ? (trHasKey(d, tag)?'':'Not in export_VnVs.txt yet. Type the words.')
-                           : 'name the key on the left first'}"
-        title="What the player reads. Saved into data/text/export_VnVs.txt."
+        placeholder="${tag ? (trHasKey(d, tag)?'':tt('traits.not_in_export_vnvs_txt_yet'))
+                           : tt('traits.name_the_key_on_the_left')}"
+        title="${ttA('traits.what_the_player_reads_saved_into')}"
         oninput="trSetLocAt(${i},'${k}',this.value)">
     </div>`;
   };
@@ -280,28 +259,28 @@ function trLevelHtml(lv, i, d){
     <div class="trlevhead">
       <span class="n">${i+1}</span>
       <input class="trlevname" data-label="${key}.name" value="${esc(lv.name)}"
-        placeholder="LevelName" oninput="trSetLevel(${i},'name',this.value.trim())">
+        placeholder="${ttA('traits.levelname')}" oninput="trSetLevel(${i},'name',this.value.trim())">
       <input class="trtext" value="${esc(trLocTextAt(d, i, 'name'))}"
-        placeholder="${lv.name ? (trHasKey(d, lv.name)?'':'the name on the character screen')
-                               : 'name the level first'}"
-        title="The level's name as the player sees it."
+        placeholder="${lv.name ? (trHasKey(d, lv.name)?'':tt('traits.the_name_on_the_character_screen'))
+                               : tt('traits.name_the_level_first')}"
+        title="${ttA('traits.the_levels_name_as_the_player')}"
         oninput="trSetLocAt(${i},'name',this.value)">
-      <span class="lbl" data-label="${key}.threshold">Threshold</span>
+      <span class="lbl" data-label="${key}.threshold">${tt('traits.threshold')}</span>
       <input class="trnum" data-label="${key}.threshold" value="${esc(lv.threshold)}"
         oninput="trSetLevel(${i},'threshold',this.value.trim())">
-      <button class="trgdel" title="Remove this level"
+      <button class="trgdel" title="${ttA('traits.remove_this_level')}"
         onclick="trDelLevel(${i})">✕</button>
     </div>
     <div class="trgrid">
-      ${txt('description','Description', lv.name?lv.name+'_desc':'')}
+      ${txt('description',tt('common.description'), lv.name?lv.name+'_desc':'')}
       ${txt('effects_description','EffectsDescription', lv.name?lv.name+'_effects_desc':'')}
       ${txt('gain_message','GainMessage')}
       ${txt('lose_message','LoseMessage')}
-      ${txt('epithet','Epithet')}
+      ${txt('epithet',tt('traits.epithet'))}
     </div>
     <div class="treffects">
       ${(lv.effects||[]).map((e,k)=>trEffectHtml(e,i,k,d)).join('')}
-      <button class="trgadd" onclick="trAddEffect(${i})">＋ Add effect</button>
+      <button class="trgadd" onclick="trAddEffect(${i})">${tt('traits.add_effect')}</button>
     </div>
   </div>`;
 }
@@ -315,11 +294,11 @@ function trEffectHtml(e, i, k, d){
     || /^Combat_V_(Faction|Religion)_./.test(e.attribute);
   return `<div class="treff" data-label="level#${i+1}.effect#${k+1}">
     <input class="trattr${known?'':' bad'}" value="${esc(e.attribute)}" list="trAttrs"
-      placeholder="attribute"
+      placeholder="${ttA('traits.attribute')}"
       oninput="trSetEffect(${i},${k},'attribute',this.value.trim())">
     <input class="trnum" value="${esc(e.amount)}"
       oninput="trSetEffect(${i},${k},'amount',this.value.trim())">
-    ${known?'':'<span class="count w-warn">not a character attribute</span>'}
+    ${known?'':`<span class="count w-warn">${tt('traits.not_a_character_attribute')}</span>`}
     <button class="trgdel" onclick="trDelEffect(${i},${k})">✕</button>
     <datalist id="trAttrs">${attrs.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>
   </div>`;
@@ -330,26 +309,24 @@ function trEffectHtml(e, i, k, d){
    (web/js/triggerui.js), which is why that file has waited for this screen. */
 function trTriggersHtml(d){
   if(state.tr.adding) return `<section class="trsec">
-    <div class="trsechead">Triggers</div>
-    <div class="count" style="padding:6px">Create the trait first, then add the
-      triggers that give it. A trigger cannot name a trait the file has not
-      defined yet.</div></section>`;
+    <div class="trsechead">${tt('common.triggers')}</div>
+    <div class="count" style="padding:6px">${tt('traits.create_the_trait_first_then_add')}</div></section>`;
   return `<section class="trsec">
-    <div class="trsechead">Triggers <span class="count">${d.trigs.length
-      ? 'what gives this trait its points'
-      : luaGives(d.lua) ? 'no trigger: a script gives it, below'
-      : 'nothing gives this trait any points'}</span></div>
+    <div class="trsechead">${tt('common.triggers')} <span class="count">${d.trigs.length
+      ? tt('traits.what_gives_this_trait_its_points')
+      : luaGives(d.lua) ? tt('traits.no_trigger_a_script_gives_it')
+      : tt('traits.nothing_gives_this_trait_any_points')}</span></div>
     ${luaHitsHtml(d.lua, 'trait')}
     ${d.trigs.map((t,i)=>`<div class="trtrig">
       <div class="trtrighead">
         <b>${esc(t.name)}</b>
         <span class="sp"></span>
-        <button class="trgdel" title="Remove this trigger"
+        <button class="trgdel" title="${ttA('common.remove_this_trigger')}"
           onclick="trDelTrigger(${i})">✕</button>
       </div>
       <div id="trtrg-${i}"></div>
     </div>`).join('')}
-    <button class="trgadd" onclick="trAddTrigger()">＋ Add trigger</button>
+    <button class="trgadd" onclick="trAddTrigger()">${tt('common.add_trigger')}</button>
   </section>`;
 }
 
@@ -433,7 +410,7 @@ function trAddLevel(){
   const d = state.tr.d; if(!d) return;
   const n = d.w.levels.length;
   const last = d.w.levels[n-1];
-  const name = (d.w.name || 'Level') + (n + 1);
+  const name = (d.w.name || tt('traits.level_3')) + (n + 1);
   d.w.levels.push(Object.assign(trBlankLevel(name),
     {threshold:String((+(last && last.threshold) || 0) + 1)}));
   trDirty(true);
@@ -467,14 +444,14 @@ function trAddTrigger(){
   const n = (d.name || 'trait').toLowerCase() + '_' + (d.trigs.length + 1);
   d.trigs.push({name:n, ui:null, dirty:true, added:true,
     src:{name:n, when_to_test:'CharacterTurnEnd', conditions:[],
-         effects:[{keyword:'Affects', args:[d.name, '1', 'Chance', '100']}]}});
+         effects:[{keyword:tt('traits.affects'), args:[d.name, '1', tt('traits.chance'), '100']}]}});
   trDirty(true);
 }
 function trDelTrigger(i){
   const d = state.tr.d;
   const row = d.trigs[i];
-  if(!row.added && !confirm(`Remove trigger ${row.name}?\n\n`
-    + `It is written out of the file when you save.`)) return;
+  if(!row.added && !confirm(tt('traits.remove_trigger',{name:row.name})
+    + tt('common.it_is_written_out_of_the'))) return;
   if(row.ui) trgDrop(row.ui);
   d.trigs.splice(i, 1);
   d.removed = (d.removed || []).concat(row.added ? [] : [row.name]);
@@ -559,7 +536,7 @@ function trBody(action){
 
 async function trSave(){
   const t = state.tr, d = t.d;
-  if(t.adding && !d.w.name.trim()){ toast('A new trait needs a name', 3500); return; }
+  if(t.adding && !d.w.name.trim()){ toast(tt('traits.a_new_trait_needs_a_name'), 3500); return; }
   await trApply(trBody(t.adding ? 'add' : 'edit'),
                 t.adding ? `create ${d.w.name}` : `save ${d.name}`);
 }
@@ -580,16 +557,16 @@ async function trApply(body, what){
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 14);
   const found = (p.findings || []).map(f => '⚠ ' + f.message);
-  if(!confirm(`Write: ${what}?\n\n` + (lines.join('\n') || 'no visible change')
-    + ((p.changes || []).length > 14 ? `\n…and ${p.changes.length - 14} more` : '')
+  if(!confirm(tt('traits.write',{what}) + (lines.join('\n') || tt('common.no_visible_change'))
+    + ((p.changes || []).length > 14 ? tt('traits.and_more',{changes:p.changes.length - 14}) : '')
     + (found.length ? '\n\n' + found.slice(0, 4).join('\n') : '')
-    + `\n\nBacked up first, and 🕑 Log can undo it.`)) return;
+    + tt('common.backed_up_first_and_log_can'))) return;
   t.busy = true;
   let res;
   try{ res = await api.post('/api/traits/apply', body); }
   finally{ t.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 6000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   const keep = body.action === 'delete' ? '' : body.trait;
   await loadTraits();
   if(keep) trOpen(keep);

@@ -225,19 +225,19 @@ async function csSave(){
   const lines = (p.changes || []).slice(0, 14);
   const notes = (p.capitals || []).concat((p.warnings || []).slice(0, 4))
     .map(x => '⚠ ' + x);
-  if(!confirm(`Write: save the settlement in ${k.region}?\n\n`
-    + (lines.join('\n') || 'no visible change')
+  if(!confirm(tt('stratedit.write_save_the_settlement_in',{region:k.region})
+    + (lines.join('\n') || tt('common.no_visible_change'))
     + ((p.changes || []).length > 14
-       ? `\n…and ${p.changes.length - 14} more` : '')
+       ? tt('stratedit.and_more',{changes:p.changes.length - 14}) : '')
     + (notes.length ? '\n\n' + notes.join('\n') : '')
-    + '\n\nOnly this block moves. Backed up first, and 🕑 Log can undo it.')) return;
+    + tt('stratedit.only_this_block_moves_backed_up'))) return;
   k.busy = true;
   let res;
   try{ res = await api.post('/api/map/settlement_apply', csBody()); }
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast('Saved. 🕑 Log can undo it.');
+  toast(tt('common.saved_log_can_undo_it'));
   activity('settlement', `${k.mod} ${k.region} saved`);
   const at = state.cmap && state.cmap.pick;
   await loadCampmap();
@@ -265,37 +265,35 @@ function csHtml(){
   const d = k.d;
   const head = `<div class="cpbar">
     <button class="cptog${k.open ? ' on' : ''}" onclick="csToggle()"
-      title="The settlement this province starts with: its level, its buildings and who holds it."
-      >\u{1F3DB} Settlement${k.open ? ' ✓' : ''}</button>
+      title="${ttA('stratedit.the_settlement_this_province_starts_with')}"
+      >${tt('stratedit.settlement',{open:k.open ? ' ✓' : ''})}</button>
     ${d ? `<span class="count">${esc(d.owner_label || d.owner || 'nobody')}${
-      d.is_capital ? ' · capital' : ''}</span>` : ''}
-    ${k.busy ? '<span class="count">working…</span>' : ''}
+      d.is_capital ? tt('stratedit.capital') : ''}</span>` : ''}
+    ${k.busy ? `<span class="count">${tt('common.working_2')}</span>` : ''}
   </div>`;
   if(!k.open) return head;
-  if(k.loading) return head + `<div class="cspanel count">reading
-    ${esc(k.region)}…</div>`;
+  if(k.loading) return head + `<div class="cspanel count">${tt('stratedit.reading',{region:esc(k.region)})}</div>`;
   if(k.err) return head + `<div class="cspanel w-warn">${esc(k.err)}</div>`;
   if(!d) return head;
   if(d.missing) return head + `<div class="cspanel">
     <div class="count">${esc(d.message)}</div>
     <div class="csown">
-      <select id="csNewOwner">${(d.factions || []).map(f => `<option value="${esc(f.name)}">${
-        esc(f.label || f.name)} · ${f.settlements} held</option>`).join('')}</select>
-      <button class="primary" onclick="csCreate()">Create a village here</button>
+      <select id="csNewOwner">${(d.factions || []).map(f => `<option value="${esc(f.name)}">${tt('stratedit.held',{x:esc(f.label || f.name),settlements:f.settlements})}</option>`).join('')}</select>
+      <button class="primary" onclick="csCreate()">${tt('stratedit.create_a_village_here')}</button>
     </div></div>`;
   return head + `<div class="cspanel">
     <div class="cshead">
       <b>${esc(d.shown_settlement || d.settlement || d.region)}</b>
-      <span class="count">${esc(d.file)}, lines ${d.lines[0]}-${d.lines[1]}</span>
+      <span class="count">${tt('stratedit.lines',{file:esc(d.file),lines:d.lines[0],lines2:d.lines[1]})}</span>
     </div>
     ${csFormHtml()}
     ${csBuildingsHtml()}
     ${csOwnerHtml()}
     ${csFindingsHtml()}
     <div class="csbtns">
-      <button class="primary" onclick="csSave()">Save settlement</button>
-      <button onclick="csRevert()">Revert</button>
-      <button onclick="csDelete()" title="Take this settlement out of descr_strat.txt; the province stays on the map, held by nobody">Delete…</button>
+      <button class="primary" onclick="csSave()">${tt('stratedit.save_settlement')}</button>
+      <button onclick="csRevert()">${tt('common.revert')}</button>
+      <button onclick="csDelete()" title="${ttA('stratedit.take_this_settlement_out_of_descr')}">${tt('stratedit.delete')}</button>
     </div>
     ${csCopyHtml()}
   </div>`;
@@ -318,14 +316,14 @@ async function csAction(body, verb, what){
   const notes = (p.capitals || []).concat(p.warnings || []).map(x => '⚠ ' + x);
   if(!confirm(`${verb}?\n\n${(p.changes || []).join('\n')}`
     + (notes.length ? '\n\n' + notes.join('\n') : '')
-    + '\n\nBacked up first, and 🕑 Log can undo it.')){ csPaint(); return false; }
+    + tt('common.backed_up_first_and_log_can'))){ csPaint(); return false; }
   k.busy = true; csPaint();
   let res;
   try{ res = await api.post('/api/map/settlement_apply', body); }
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 9000); csPaint(); return false; }
-  toast(`${what}. 🕑 Log can undo it.`, 5000);
+  toast(tt('stratedit.log_can_undo_it',{what}), 5000);
   activity('settlement', `${body.to_mod || k.mod} ${k.region}: ${what}`);
   return true;
 }
@@ -341,7 +339,7 @@ async function csDelete(){
   const k = state.cset;
   if(!k || !k.d || k.busy) return;
   if(await csAction({mod: k.mod, region: k.region, campaign: k.d.campaign, action: 'delete'},
-                    `Delete the settlement in ${k.region}`, `${k.region}'s settlement deleted`))
+                    tt('stratedit.delete_the_settlement_in',{region:k.region}), tt('stratedit.s_settlement_deleted',{region:k.region})))
     await csReload();
 }
 
@@ -350,7 +348,7 @@ async function csCreate(){
   if(!k || !k.d || k.busy) return;
   const owner = (document.getElementById('csNewOwner') || {}).value || '';
   if(await csAction({mod: k.mod, region: k.region, campaign: k.d.campaign, action: 'create', owner},
-                    `Give ${k.region} a village held by ${owner}`, `a village in ${k.region}`))
+                    tt('stratedit.give_a_village_held_by',{region:k.region,owner}), tt('stratedit.a_village_in',{region:k.region})))
     await csReload();
 }
 
@@ -361,13 +359,11 @@ function csCopyHtml(){
   const k = state.cset;
   const others = (state.mods || []).map(m => m.name).filter(n => n !== k.mod);
   if(!others.length) return '';
-  return `<details class="cscopy"><summary class="count">Copy to another mod…</summary>
+  return `<details class="cscopy"><summary class="count">${tt('stratedit.copy_to_another_mod')}</summary>
     <div class="csown">
       <select id="csCopyTo">${others.map(n => `<option>${esc(n)}</option>`).join('')}</select>
-      <button onclick="csCopy()">Copy ${esc(k.region)} there</button>
-      <div class="count">The same province in that mod's own campaign gets this
-        settlement's level, population, founding year and buildings, keeping its
-        own owner. A building that mod does not declare is left out and named.</div>
+      <button onclick="csCopy()">${tt('stratedit.copy_there',{region:esc(k.region)})}</button>
+      <div class="count">${tt('stratedit.the_same_province_in_that_mods')}</div>
     </div></details>`;
 }
 
@@ -380,11 +376,11 @@ async function csCopy(){
   try{ probe = await api.post('/api/map/settlement_plan', body); }
   catch(e){ probe = {error: errText(e)}; }
   if(probe.error && /name the faction/.test(probe.error)){
-    const owner = (prompt(`${to} holds nothing in ${k.region}. Which of its factions should?`) || '').trim();
+    const owner = (prompt(tt('stratedit.holds_nothing_in_which_of_its',{to,region:k.region})) || '').trim();
     if(!owner) return;
     body.owner = owner;
   }
-  await csAction(body, `Copy ${k.region} into ${to}`, `${k.region} copied into ${to}`);
+  await csAction(body, tt('stratedit.copy_into',{region:k.region,to}), tt('stratedit.copied_into',{region:k.region,to}));
 }
 
 function csFormHtml(){
@@ -395,44 +391,42 @@ function csFormHtml(){
     (values || []).map(x => `<option value="${esc(x)}">`).join('')}</datalist>`;
   return `<div class="cmform">
     <div class="csrow2">
-      <div class="cmfield"><label>Kind</label>
+      <div class="cmfield"><label>${tt('stratedit.kind')}</label>
         <select onchange="csSet('settlement_type', this.value)">
           ${(v.types || []).map(t => `<option value="${esc(t)}"${
             t === w.settlement_type ? ' selected' : ''}>${esc(t)}</option>`).join('')}
         </select></div>
-      <div class="cmfield"><label>Level</label>
+      <div class="cmfield"><label>${tt('stratedit.level')}</label>
         <select onchange="csSet('level', this.value)">
           ${(v.ladder || []).map(l => `<option value="${esc(l)}"${
             l === w.level ? ' selected' : ''}>${esc(l)}</option>`).join('')}
           ${(v.ladder || []).includes(w.level) ? ''
             : `<option value="${esc(w.level)}" selected>${esc(w.level)}</option>`}
         </select>
-        ${tier ? `<div class="count">a castle at this level is a
+        ${tier ? `<div class="count">${tt('stratedit.a_castle_at_this_level_is')}
           <b>${esc(tier)}</b></div>` : ''}</div>
     </div>
     <div class="csrow2">
-      <div class="cmfield"><label>Population</label>
+      <div class="cmfield"><label>${tt('stratedit.population')}</label>
         <input type="number" value="${esc(w.population)}" min="0"
           oninput="csSet('population', this.value)"></div>
-      <div class="cmfield"><label>Year founded</label>
+      <div class="cmfield"><label>${tt('stratedit.year_founded')}</label>
         <input type="number" value="${esc(w.year_founded)}"
           oninput="csSet('year_founded', this.value)"></div>
     </div>
     <div class="csrow2">
-      <div class="cmfield"><label>Plan set</label>
+      <div class="cmfield"><label>${tt('stratedit.plan_set')}</label>
         <input list="csl-plan" value="${esc(w.plan_set)}"
           oninput="csSet('plan_set', this.value)">
         ${list('plan', v.plan_sets)}
-        <div class="count">The street plan the battle map is drawn from.
-        ${(v.plan_sets || []).length > 1
-          ? `This campaign uses ${(v.plan_sets || []).length}.`
-          : 'This campaign uses one.'}</div></div>
-      <div class="cmfield"><label>Faction creator</label>
+        <div class="count">${tt('stratedit.the_street_plan_the_battle_map',{plan_sets:(v.plan_sets || []).length > 1
+          ? tt('stratedit.this_campaign_uses',{n:(v.plan_sets || []).length})
+          : tt('stratedit.this_campaign_uses_one')})}</div></div>
+      <div class="cmfield"><label>${tt('stratedit.faction_creator')}</label>
         <input list="csl-creator" value="${esc(w.faction_creator)}"
           oninput="csSet('faction_creator', this.value)">
         ${list('creator', v.factions)}
-        <div class="count">Whose architecture it is built in, which is not the
-        same as who holds it.</div></div>
+        <div class="count">${tt('stratedit.whose_architecture_it_is_built_in')}</div></div>
     </div>
   </div>`;
 }
@@ -452,7 +446,7 @@ function csBuildingsHtml(){
     const levels = (L && L.levels) || [{level: b.level, declared: false}];
     const info = levels.find(x => x.level === b.level);
     const note = !info ? ''
-      : !info.declared ? 'not in an EDB on disk'
+      : !info.declared ? tt('stratedit.not_in_an_edb_on_disk')
       : [info.pin ? info.pin + ' only' : '',
          info.min ? 'from ' + info.min : '',
          info.max ? 'to ' + info.max : ''].filter(Boolean).join(' · ');
@@ -467,20 +461,20 @@ function csBuildingsHtml(){
           x.level === b.level ? ' selected' : ''}>${esc(x.level)}</option>`).join('')}
         ${info ? '' : `<option value="${esc(b.level)}" selected>${esc(b.level)}</option>`}
       </select>
-      <button onclick="csBldMove(${i}, -1)" title="Move up">↑</button>
-      <button onclick="csBldMove(${i}, 1)" title="Move down">↓</button>
-      <button onclick="csBldDrop(${i})" title="Take this building out">✕</button>
+      <button onclick="csBldMove(${i}, -1)" title="${ttA('stratedit.move_up')}">↑</button>
+      <button onclick="csBldMove(${i}, 1)" title="${ttA('stratedit.move_down')}">↓</button>
+      <button onclick="csBldDrop(${i})" title="${ttA('stratedit.take_this_building_out')}">✕</button>
       ${note ? `<span class="count csnote">${esc(note)}</span>` : ''}
     </div>`;
   }).join('');
-  return `<div class="k">Buildings
+  return `<div class="k">${tt('common.buildings')}
       <span class="count">${k.blds.length}${v.have_edb ? ''
-        : ' · no export_descr_buildings.txt on disk, so these are the lines this'
-          + ' campaign itself names'}</span></div>
-    <div class="csblds">${rows || '<div class="count">None.</div>'}</div>
+        : tt('stratedit.no_export_descr_buildings_txt_on')
+          + tt('stratedit.campaign_itself_names')}</span></div>
+    <div class="csblds">${rows || `<div class="count">${tt('common.none_3')}</div>`}</div>
     <div class="csadd">
       <select onchange="csBldAdd(this.value); this.value=''">
-        <option value="">add a building…</option>
+        <option value="">${tt('stratedit.add_a_building')}</option>
         ${lines.map(x => `<option value="${esc(x.name)}">${esc(x.name)}</option>`)
           .join('')}
       </select>
@@ -497,27 +491,22 @@ function csOwnerHtml(){
   const rows = d.factions || [];
   const dest = rows.find(f => f.name === k.owner);
   const moving = k.owner !== d.owner;
-  return `<div class="k">Owner
-      <span class="count">the block's place in the file</span></div>
+  return `<div class="k">${tt('stratedit.owner_the_blocks_place_in_the')}</div>
     <div class="csown">
       <select onchange="csOwner(this.value)">
         ${rows.map(f => `<option value="${esc(f.name)}"${
-          f.name === k.owner ? ' selected' : ''}>${esc(f.label || f.name)}${
-          f.roster ? ' · ' + esc(f.roster) : ' · in no roster'} · ${
-          f.settlements} held</option>`).join('')}
+          f.name === k.owner ? ' selected' : ''}>${tt('stratedit.held_2',{x:esc(f.label || f.name),x2:f.roster ? ' · ' + esc(f.roster) : tt('stratedit.in_no_roster'),settlements:f.settlements})}</option>`).join('')}
       </select>
       <select onchange="csPlace(this.value)">
-        <option value=""${k.place ? '' : ' selected'}>leave it where it is</option>
+        <option value=""${k.place ? '' : ' selected'}>${tt('stratedit.leave_it_where_it_is')}</option>
         <option value="first"${k.place === 'first' ? ' selected' : ''}
-          >first in the block - the capital</option>
+          >${tt('stratedit.first_in_the_block_the_capital')}</option>
         <option value="last"${k.place === 'last' ? ' selected' : ''}
-          >last in the block</option>
+          >${tt('stratedit.last_in_the_block')}</option>
       </select>
-      ${dest && dest.capital ? `<div class="count">${esc(dest.name)}'s capital is
-        ${esc(dest.capital)}${moving && k.place === 'first'
-          ? ', and this would take its place' : ''}.</div>` : ''}
-      ${moving && !k.place ? `<div class="count">A province cannot change hands
-        without moving: pick where in ${esc(k.owner)}'s block it lands.</div>` : ''}
+      ${dest && dest.capital ? `<div class="count">${tt('stratedit.s_capital_is',{name:esc(dest.name),capital:esc(dest.capital),x:moving && k.place === 'first'
+          ? tt('stratedit.and_this_would_take_its_place') : ''})}</div>` : ''}
+      ${moving && !k.place ? `<div class="count">${tt('stratedit.a_province_cannot_change_hands_without',{owner:esc(k.owner)})}</div>` : ''}
     </div>`;
 }
 
@@ -550,8 +539,7 @@ function csFindingsHtml(){
     ${rows}
     ${extra.map(w => `<div class="w-warn">${esc(w)}</div>`).join('')}
     ${problems}
-    ${changes.length ? `<div class="count">Would change:
-      ${changes.map(esc).join(' · ')}</div>`
-      : p ? '<div class="count">Nothing to save yet.</div>' : ''}
+    ${changes.length ? `<div class="count">${tt('stratedit.would_change',{changes:changes.map(esc).join(' · ')})}</div>`
+      : p ? `<div class="count">${tt('stratedit.nothing_to_save_yet')}</div>` : ''}
   </div>`;
 }

@@ -100,7 +100,7 @@ function hzListAdd(slot, value){
   const z = state.cx && state.cx.hz;
   if(!z || !z.w || !value) return;
   const cap = slot === 'army' ? z.v.limits.stack : 99;
-  if(z.w[slot].length >= cap){ toast(`A stack holds ${cap} regiments.`, 4000); return; }
+  if(z.w[slot].length >= cap){ toast(tt('hordestart.a_stack_holds_regiments',{cap}), 4000); return; }
   if(slot !== 'army' && z.w[slot].includes(value)) return;
   z.w[slot].push(value);
   hzPlanSoon();
@@ -177,20 +177,20 @@ async function hzSave(){
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 16);
   const warn = (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x);
-  if(!confirm(`Write a horde start for ${k.faction}?\n\n`
-    + (lines.join('\n') || 'no visible change')
-    + ((p.changes || []).length > 16 ? `\n…and ${p.changes.length - 16} more` : '')
+  if(!confirm(tt('hordestart.write_a_horde_start_for',{faction:k.faction})
+    + (lines.join('\n') || tt('common.no_visible_change'))
+    + ((p.changes || []).length > 16 ? tt('hordestart.and_more',{changes:p.changes.length - 16}) : '')
     + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + `\n\nFiles: ${(p.files || []).join(', ')}. Backed up first, and 🕑 Log`
-    + ' undoes all of them at once.')) return;
+    + tt('hordestart.files_backed_up_first_and_log',{files:(p.files || []).join(', ')})
+    + tt('hordestart.undoes_all_of_them_at_once'))) return;
   z.busy = true;
   let res;
   try{ res = await api.post('/api/map/horde_apply', body); }
   catch(e){ res = {error: errText(e)}; }
   finally{ z.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
-  toast('Horde start written. 🕑 Log can undo it.');
-  activity('horde', `${k.mod} ${k.faction}: ${body.mode} (${(res.files || []).length} files)`);
+  toast(tt('hordestart.horde_start_written_log_can_undo'));
+  activity('horde', tt('hordestart.files',{mod:k.mod,faction:k.faction,mode:body.mode,n:(res.files || []).length}));
   if(state.cmap !== map || !map || map.campaign !== campaign || state.cx !== k) return;
   const open = k.open;
   k.d = null;
@@ -216,17 +216,14 @@ function hzGo(x, y){
 
 function hzHtml(){
   const k = state.cx, z = k.hz;
-  if(!z || z.loading) return '<div class="count">reading the faction…</div>';
+  if(!z || z.loading) return `<div class="count">${tt('hordestart.reading_the_faction')}</div>`;
   if(z.err) return `<div class="w-warn">${esc(z.err)}</div>`;
   const v = z.v, w = z.w;
   if(!v.empty){
     const held = [];
     if(v.holds.settlements) held.push(`${v.holds.settlements} settlement${v.holds.settlements === 1 ? '' : 's'}`);
     if(v.holds.characters) held.push(`${v.holds.characters} character${v.holds.characters === 1 ? '' : 's'}`);
-    return `<div class="count">${esc(v.label || v.faction)} holds ${held.join(' and ')}.
-      A horde start fills a faction that holds nothing - the shape a new faction
-      has after <b>New faction</b> in the Campaign panel, and vanilla's Mongols
-      before they arrive.</div>
+    return `<div class="count">${tt('hordestart.holds_a_horde_start_fills_a',{x:esc(v.label || v.faction),held:held.join(' and ')})}</div>
       ${v.events.length ? hzEventsHtml(v) : ''}`;
   }
   const mode = (id, label, note) => `<label class="hzmode${w.mode === id ? ' on' : ''}">
@@ -234,18 +231,17 @@ function hzHtml(){
       onchange="hzMode('${id}')"> <b>${label}</b>
     <span class="count">${note}</span></label>`;
   return `<div class="cxform">
-    <div class="count">${esc(v.label || v.faction)} holds nothing yet. Give it a
-      start as a horde: no city, only armies.</div>
-    ${mode('start', 'On the map from turn one',
-      'named characters leading armies on free land in one province, and a family line')}
-    ${mode('emerge', 'Arrives later, as vanilla’s Mongols do',
-      'dead until an <code>emergent_faction</code> event raises its horde')}
+    <div class="count">${tt('hordestart.holds_nothing_yet_give_it_a',{x:esc(v.label || v.faction)})}</div>
+    ${mode('start', tt('hordestart.on_the_map_from_turn_one'),
+      tt('hordestart.named_characters_leading_armies_on_free'))}
+    ${mode('emerge', tt('hordestart.arrives_later_as_vanillas_mongols_do'),
+      tt('hordestart.dead_until_an_emergent_faction_event'))}
     ${w.mode === 'start' ? hzStartHtml() : hzEmergeHtml()}
     ${hzHordeHtml()}
     ${hzPreviewHtml()}
     <div class="csbtns">
       <button class="primary" onclick="hzSave()" ${z.busy ? 'disabled' : ''}
-        >Write horde start</button>
+        >${tt('hordestart.write_horde_start')}</button>
     </div>
     ${v.events.length ? hzEventsHtml(v) : ''}
   </div>`;
@@ -265,39 +261,36 @@ function hzStartHtml(){
   const units = v.units || [];
   const army = w.army.map((u, i) => `<span class="cxtag">${esc(u)}${
     units.some(x => x.name === u && x.general) ? ' ★' : ''}
-    <button onclick="hzListDrop('army', ${i})" title="Take this regiment out">✕</button></span>`).join('');
+    <button onclick="hzListDrop('army', ${i})" title="${ttA('hordestart.take_this_regiment_out')}">✕</button></span>`).join('');
   return `<div class="csrow2">
-      <div class="cmfield"><label>Province</label>
+      <div class="cmfield"><label>${tt('common.province')}</label>
         <select onchange="hzSet('province', this.value)">${hzProvinceOptions(w.province)}</select>
-        <div class="count">the armies stand on free land in it, nearest its settlement</div></div>
-      <div class="cmfield"><label>People</label>
+        <div class="count">${tt('hordestart.the_armies_stand_on_free_land')}</div></div>
+      <div class="cmfield"><label>${tt('hordestart.people')}</label>
         <input type="number" min="1" max="${v.limits.people}" value="${esc(w.count)}"
           oninput="hzSet('count', this.value, true)">
-        <div class="count">1 to ${v.limits.people}: a leader, an heir, then named characters</div></div>
+        <div class="count">${tt('hordestart.1_to_a_leader_an_heir',{people:v.limits.people})}</div></div>
     </div>
     <div class="csrow2">
-      <div class="cmfield"><label>Experience</label>
+      <div class="cmfield"><label>${tt('common.experience')}</label>
         <input type="number" min="0" max="9" value="${esc(w.exp)}"
           oninput="hzSet('exp', this.value, true)">
-        <div class="count">for every regiment</div></div>
+        <div class="count">${tt('hordestart.for_every_regiment')}</div></div>
       <div class="cmfield"><label><input type="checkbox" ${w.family ? 'checked' : ''}
-          onchange="hzSet('family', this.checked)"> A family line</label>
-        <div class="count">the leader, a wife out of the pool, and the heir as their son</div></div>
+          onchange="hzSet('family', this.checked)"> ${tt('hordestart.a_family_line')}</label>
+        <div class="count">${tt('hordestart.the_leader_a_wife_out_of')}</div></div>
     </div>
-    <div class="cmfield"><label>Names</label>
+    <div class="cmfield"><label>${tt('hordestart.names')}</label>
       <input value="${esc(w.names)}" oninput="hzSet('names', this.value, true)"
-        placeholder="from descr_names.txt">
-      <div class="count">optional, comma separated, leader first; the rest come out
-        of the faction's pool (${v.pool.characters || 0} first names)</div></div>
-    <div class="k">Each army <span class="count">${w.army.length} of ${v.limits.stack} regiments ·
-      ★ is a bodyguard</span></div>
-    <div class="cxtags">${army || '<span class="count">No regiment.</span>'}</div>
+        placeholder="${ttA('hordestart.from_descr_names_txt')}">
+      <div class="count">${tt('hordestart.optional_comma_separated_leader_first_the',{x:v.pool.characters || 0})}</div></div>
+    <div class="k">${tt('hordestart.each_army_of_regiments_is_a',{army_n:w.army.length,stack:v.limits.stack})}</div>
+    <div class="cxtags">${army || `<span class="count">${tt('hordestart.no_regiment')}</span>`}</div>
     <div class="csadd"><select onchange="hzListAdd('army', this.value); this.value=''">
-      <option value="">add a regiment…</option>
+      <option value="">${tt('hordestart.add_a_regiment')}</option>
       ${units.filter(u => u.category !== 'ship').map(u => `<option value="${esc(u.name)}">${
         esc(u.name)}${u.general ? ' ★' : ''}</option>`).join('')}</select>
-      ${units.length ? '' : `<div class="count">${esc(v.faction)} owns no unit in
-        export_descr_unit.txt yet; the Factions screen's clone gives it the donor's.</div>`}</div>`;
+      ${units.length ? '' : `<div class="count">${tt('hordestart.owns_no_unit_in_export_descr',{faction:esc(v.faction)})}</div>`}</div>`;
 }
 
 function hzEmergeHtml(){
@@ -305,18 +298,18 @@ function hzEmergeHtml(){
   const regions = w.regions.map((r, i) => `<span class="cxtag">${esc(r)}
     <button onclick="hzListDrop('regions', ${i})">✕</button></span>`).join('');
   return `<div class="csrow2">
-      <div class="cmfield"><label>When</label>
+      <div class="cmfield"><label>${tt('hordestart.when')}</label>
         <input value="${esc(w.date)}" oninput="hzSet('date', this.value, true)">
-        <div class="count">years after the start, or a pair to pick between</div></div>
-      <div class="cmfield"><label>Movie</label>
+        <div class="count">${tt('hordestart.years_after_the_start_or_a')}</div></div>
+      <div class="cmfield"><label>${tt('hordestart.movie')}</label>
         <input value="${esc(w.movie)}" placeholder="event/mongols_invade.bik"
           oninput="hzSet('movie', this.value, true)">
-        <div class="count">optional</div></div>
+        <div class="count">${tt('common.optional')}</div></div>
     </div>
-    <div class="k">Where it may appear <span class="count">vanilla's Mongols name four provinces</span></div>
-    <div class="cxtags">${regions || '<span class="count">None.</span>'}</div>
+    <div class="k">${tt('hordestart.where_it_may_appear_vanillas_mongols')}</div>
+    <div class="cxtags">${regions || `<span class="count">${tt('common.none_3')}</span>`}</div>
     <div class="csadd"><select onchange="hzListAdd('regions', this.value); this.value=''">
-      <option value="">add a province…</option>${hzProvinceOptions('')}</select></div>`;
+      <option value="">${tt('hordestart.add_a_province')}</option>${hzProvinceOptions('')}</select></div>`;
 }
 
 //: The horde keys and the roster. Shown in both modes because both write them
@@ -327,18 +320,18 @@ function hzHordeHtml(){
   const roster = w.horde_units.map((u, i) => `<span class="cxtag">${esc(u)}
     <button onclick="hzListDrop('horde_units', ${i})">✕</button></span>`).join('');
   return `<details class="hzhorde"${v.complete_horde ? '' : ' open'}>
-    <summary>Horde settings <span class="count">${v.complete_horde
-      ? 'descr_sm_factions.txt already has them'
-      : 'descr_sm_factions.txt has none - these are ' + (used === 'vanilla'
+    <summary>${tt('hordestart.horde_settings')} <span class="count">${v.complete_horde
+      ? tt('hordestart.descr_sm_factions_txt_already_has')
+      : tt('hordestart.descr_sm_factions_txt_has_none') + (used === 'vanilla'
         ? 'vanilla’s' : esc(used) + '’s')}</span></summary>
     <div class="hzkeys">${v.horde_keys.map(key => `<div class="cmfield">
       <label>${esc(key.replace(/^horde_/, '').replace(/_/g, ' '))}</label>
       <input type="number" value="${esc(w.horde[key] || '')}"
         oninput="hzKey('${key}', this.value)"></div>`).join('')}</div>
-    <div class="k">Horde units <span class="count">what the engine raises it from</span></div>
-    <div class="cxtags">${roster || '<span class="count">None.</span>'}</div>
+    <div class="k">${tt('hordestart.horde_units_what_the_engine_raises')}</div>
+    <div class="cxtags">${roster || `<span class="count">${tt('common.none_3')}</span>`}</div>
     <div class="csadd"><select onchange="hzListAdd('horde_units', this.value); this.value=''">
-      <option value="">add a horde unit…</option>
+      <option value="">${tt('hordestart.add_a_horde_unit')}</option>
       ${(v.units || []).filter(u => !u.general && u.category !== 'ship').map(u =>
         `<option value="${esc(u.name)}">${esc(u.name)}</option>`).join('')}</select></div>
   </details>`;
@@ -350,21 +343,20 @@ function hzPreviewHtml(){
   const said = (p.findings || []).map(f => f.message);
   const errors = (p.errors || []).filter(e => e !== 'nothing to change' && !said.includes(e));
   const people = (p.people || []).map(q => `<div class="cxrow" onclick="hzGo(${+q.x}, ${+q.y})"
-    title="Show this tile on the map"><b>${esc(q.name)}</b>
-    <span class="count">${q.rank ? esc(q.rank) + ' · ' : ''}age ${q.age} · ${q.x},${q.y}</span></div>`).join('');
+    title="${ttA('hordestart.show_this_tile_on_the_map')}"><b>${esc(q.name)}</b>
+    <span class="count">${tt('hordestart.age',{x:q.rank ? esc(q.rank) + ' · ' : '',age:q.age,x2:q.x,x3:q.y})}</span></div>`).join('');
   return `<div class="csfind">
     ${errors.map(e => `<div class="w-bad">${esc(e)}</div>`).join('')}
     ${(p.findings || []).map(f => `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${
       f.who ? `<b>${esc(f.who)}</b>: ` : ''}${esc(f.message)}</div>`).join('')}
     ${(p.warnings || []).filter(x => !said.includes(x)).map(x =>
       `<div class="w-warn">${esc(x)}</div>`).join('')}
-    ${people ? `<div class="k">Who it writes</div><div class="cxlist">${people}</div>` : ''}
-    ${(p.files || []).length ? `<div class="count">Writes ${(p.files || []).map(esc).join(', ')}</div>` : ''}
+    ${people ? `<div class="k">${tt('hordestart.who_it_writes')}</div><div class="cxlist">${people}</div>` : ''}
+    ${(p.files || []).length ? `<div class="count">${tt('hordestart.writes',{files:(p.files || []).map(esc).join(', ')})}</div>` : ''}
   </div>`;
 }
 
 function hzEventsHtml(v){
-  return `<div class="k">Its emergent_faction events</div>
-    ${v.events.map(e => `<div class="count">line ${e.line}: date ${esc(e.dates.join(' / '))}${
-      e.regions.length ? ' · ' + e.regions.map(esc).join(', ') : ''}</div>`).join('')}`;
+  return `<div class="k">${tt('hordestart.its_emergent_faction_events')}</div>
+    ${v.events.map(e => `<div class="count">${tt('hordestart.line_date',{line:e.line,dates:esc(e.dates.join(' / ')),x:e.regions.length ? ' · ' + e.regions.map(esc).join(', ') : ''})}</div>`).join('')}`;
 }

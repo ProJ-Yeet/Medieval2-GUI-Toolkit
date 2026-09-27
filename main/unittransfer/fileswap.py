@@ -31,6 +31,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
+from . import i18n as _i18n
 
 #: 64 MB is more than any single mod file measured (DaC's pack.dat aside, which
 #: is not a file anyone swaps by hand), and it keeps a mistaken upload from
@@ -51,18 +52,18 @@ def resolve(mod, rel: str) -> Path:
         rel = rel[5:]
     parts = [x for x in rel.split("/") if x]
     if not parts or any(x in (".", "..") or ":" in x or not _SAFE.match(x) for x in parts):
-        raise SwapError(f"{rel or 'that'} is not a path inside the mod's data folder")
+        raise SwapError(_i18n.msg("eng.fileswap.is_not_a_path_inside_the", "{x} is not a path inside the mod's data folder", x=rel or 'that'))
     data = Path(mod.data).resolve()
     path = (data / "/".join(parts)).resolve()
     if data not in path.parents:
-        raise SwapError(f"{rel} is not inside the mod's data folder")
+        raise SwapError(_i18n.msg("eng.fileswap.is_not_inside_the_mods_data", "{rel} is not inside the mod's data folder", rel=rel))
     return path
 
 
 def export(mod, rel: str) -> bytes:
     path = resolve(mod, rel)
     if not path.is_file():
-        raise SwapError(f"{getattr(mod, 'name', '?')} has no data/{rel}")
+        raise SwapError(_i18n.msg("eng.fileswap.has_no_data", "{getattr} has no data/{rel}", getattr=getattr(mod, 'name', '?'), rel=rel))
     return path.read_bytes()
 
 
@@ -98,21 +99,20 @@ def plan_put(mod, rel: str, data: bytes, replace: bool = False) -> PutPlan:
         p.errors.append(str(e))
         return p
     if not data:
-        p.errors.append("the file is empty")
+        p.errors.append(_i18n.msg("eng.fileswap.the_file_is_empty", "the file is empty"))
         return p
     if len(data) > MAX_BYTES:
-        p.errors.append(f"{len(data) / 1048576:.0f} MB is more than the {MAX_BYTES // 1048576} MB "
-                        f"a single put takes")
+        p.errors.append(_i18n.msg("eng.fileswap.x_0f_mb_is_more_than", "{x:.0f} MB is more than the {x2} MB a single put takes", x=len(data) / 1048576, x2=MAX_BYTES // 1048576))
         return p
     if path.is_dir():
-        p.errors.append(f"data/{p.rel} is a folder")
+        p.errors.append(_i18n.msg("eng.fileswap.data_is_a_folder", "data/{rel} is a folder", rel=p.rel))
         return p
     if p.rel.lower().endswith(".texture") and data[:4] == b"DDS ":
         from . import sprites
         try:
             data = modelexport.dds_to_texture(data)
         except sprites.SpriteError as e:
-            p.errors.append(f"this DDS cannot go into a .texture: {e}")
+            p.errors.append(_i18n.msg("eng.fileswap.this_dds_cannot_go_into_a", "this DDS cannot go into a .texture: {e}", e=e))
             return p
         p.changes.append("a DDS image, wrapped in the game's 48-byte .texture header")
     p.data = data
@@ -121,30 +121,27 @@ def plan_put(mod, rel: str, data: bytes, replace: bool = False) -> PutPlan:
         old = path.read_bytes()
         p.before = len(old)
         if not replace:
-            p.errors.append(f"data/{p.rel} is already in the mod; say to replace it")
+            p.errors.append(_i18n.msg("eng.fileswap.data_is_already_in_the_mod", "data/{rel} is already in the mod; say to replace it", rel=p.rel))
             return p
         if old == data:
-            p.errors.append("it is the same file, byte for byte")
+            p.errors.append(_i18n.msg("eng.fileswap.it_is_the_same_file_byte", "it is the same file, byte for byte"))
             return p
         p.changes.append(f"data/{p.rel} replaced ({len(old):,} -> {len(data):,} bytes), "
                          f"the old one backed up")
         if p.rel.lower().endswith(rawtext.TEXT_SUFFIXES):
             was, now = rawtext.sniff(old), rawtext.sniff(data)
             if was.name != now.name or was.bom != now.bom:
-                p.warnings.append(f"the file was {was.label} and this one is {now.label} - "
-                                  f"the game reads the file as it finds it, so a text file "
-                                  f"that changes encoding is read as noise")
+                p.warnings.append(_i18n.msg("eng.fileswap.the_file_was_and_this_one", "the file was {label} and this one is {label2} - the game reads the file as it finds it, so a text file that changes encoding is read as noise", label=was.label, label2=now.label))
             try:
                 p.warnings += rawtext._reader_notes(p.rel, rawtext.decode(old, was),
                                                     rawtext.decode(data, now))
             except (UnicodeDecodeError, LookupError):
-                p.warnings.append(f"this file does not decode as {now.label}")
+                p.warnings.append(_i18n.msg("eng.fileswap.this_file_does_not_decode_as", "this file does not decode as {label}", label=now.label))
     else:
         p.changes.append(f"+ data/{p.rel} ({len(data):,} bytes), a new file")
         if p.rel.lower().endswith(rawtext.TEXT_SUFFIXES) and p.rel.lower().startswith("text/") \
                 and not rawtext.sniff(data).name.startswith("utf-16"):
-            p.warnings.append("the game's text/ files are UTF-16 with a byte-order mark, "
-                              "and this one is not")
+            p.warnings.append(_i18n.msg("eng.fileswap.the_games_text_files_are_utf", "the game's text/ files are UTF-16 with a byte-order mark, and this one is not"))
     if p.rel.lower().startswith("text/") and p.rel.lower().endswith(".txt"):
         p.changes.append(f"data/{p.rel}.strings.bin recompiled, which is the copy the game reads")
     return p
@@ -189,7 +186,7 @@ def apply_put(p: PutPlan) -> Dict:
         "dest": mod.name, "dest_root": str(mod.root),
         "unit_type": p.rel, "resolved_type": p.rel,
         "options": {"replaces": p.replaces}, "applied": True, "undone": False, "note": "",
-        "summary": f"put data/{p.rel} in {mod.name}", "warnings": list(p.warnings),
+        "summary": _i18n.msg("eng.fileswap.put_data_in", "put data/{rel} in {name}", rel=p.rel, name=mod.name), "warnings": list(p.warnings),
         "manifest": manifest, "backup_root": str(backup_root),
     }
     config.append_log(rec)

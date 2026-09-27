@@ -74,6 +74,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from . import campstrat
 from .campstrat import Node, StratFile
+from . import i18n as _i18n
 
 #: The settlement ladder, smallest first. One ladder, both kinds - see the
 #: module docstring. The same six words as
@@ -353,8 +354,7 @@ def check_settlement(voc: Vocabulary, kind: str, level: str, population,
     if kind not in SETTLEMENT_TYPES:
         out.append(finding(
             "settlement.type", True,
-            f"The header says {kind!r}. The engine reads `settlement` and "
-            f"`settlement castle` and nothing else."))
+            _i18n.msg("eng.stratedit.the_header_says_the_engine_reads", "The header says {kind}. The engine reads `settlement` and `settlement castle` and nothing else.", kind=repr(kind))))
     if level not in LADDER:
         out.append(finding(
             "settlement.level", True,
@@ -366,12 +366,11 @@ def check_settlement(voc: Vocabulary, kind: str, level: str, population,
         if not is_int(text):
             out.append(finding(
                 f"settlement.{slot}", True,
-                f"{slot.replace('_', ' ')} is {text or '(nothing)'}, which is "
-                f"not a whole number."))
+                _i18n.msg("eng.stratedit.is_which_is_not_a_whole", "{replace} is {x}, which is not a whole number.", replace=slot.replace('_', ' '), x=text or '(nothing)')))
         elif slot == "population" and int(text) < 0:
             out.append(finding(
                 "settlement.population", True,
-                "A settlement cannot start with a negative population."))
+                _i18n.msg("eng.stratedit.a_settlement_cannot_start_with_a", "A settlement cannot start with a negative population.")))
 
     seen: Dict[str, int] = {}
     at = LADDER.index(level) if level in LADDER else -1
@@ -380,50 +379,40 @@ def check_settlement(voc: Vocabulary, kind: str, level: str, population,
         if voc.have_edb and (info is None or not info.declared):
             out.append(finding(
                 "building.unknown", True,
-                f"{lvl or '(nothing)'} is not a building level "
-                f"export_descr_buildings.txt declares, so the campaign has "
-                f"nothing to put there.", level=lvl, line=line))
+                _i18n.msg("eng.stratedit.is_not_a_building_level_export", "{x} is not a building level export_descr_buildings.txt declares, so the campaign has nothing to put there.", x=lvl or '(nothing)'), level=lvl, line=line))
             continue
         if info is None:
             continue
         if info.declared and line and info.line and line != info.line:
             out.append(finding(
                 "building.line", False,
-                f"{lvl} is a level of {info.line} and this line says {line}. "
-                f"The engine goes by the level; the line name beside it is "
-                f"only read as far as finding the building.",
+                _i18n.msg("eng.stratedit.is_a_level_of_and_this", "{lvl} is a level of {line} and this line says {line2}. The engine goes by the level; the line name beside it is only read as far as finding the building.", lvl=lvl, line=info.line, line2=line),
                 level=lvl, line=line))
         key = (info.line or line).lower()
         seen[key] = seen.get(key, 0) + 1
         if seen[key] == 2:
             out.append(finding(
                 "building.repeat", False,
-                f"Two levels of {info.line or line} stand in this settlement at "
-                f"once. Third Age Reforged ships four settlements like it, so "
-                f"it is not fatal, but only one of them is the building.",
+                _i18n.msg("eng.stratedit.two_levels_of_stand_in_this", "Two levels of {x} stand in this settlement at once. Third Age Reforged ships four settlements like it, so it is not fatal, but only one of them is the building.", x=info.line or line),
                 level=lvl, line=info.line or line))
         if not info.declared:
             continue
         if info.pin and kind and info.pin != kind:
             out.append(finding(
                 "building.pin", False,
-                f"{lvl} is declared for a {info.pin} and this is a {kind}. It "
-                f"stands and works; nobody can build it back if it falls.",
+                _i18n.msg("eng.stratedit.is_declared_for_a_and_this", "{lvl} is declared for a {pin} and this is a {kind}. It stands and works; nobody can build it back if it falls.", lvl=lvl, pin=info.pin, kind=kind),
                 level=lvl, line=info.line))
         lo = info.settlement_min
         if lo in LADDER and at >= 0 and at < LADDER.index(lo):
             out.append(finding(
                 "building.min", False,
-                f"{lvl} wants a {lo.replace('_', ' ')} and this is a "
-                f"{level.replace('_', ' ')}. The campaign may start with it "
-                f"anyway; nobody can build it back.",
+                _i18n.msg("eng.stratedit.wants_a_and_this_is_a", "{lvl} wants a {replace} and this is a {replace2}. The campaign may start with it anyway; nobody can build it back.", lvl=lvl, replace=lo.replace('_', ' '), replace2=level.replace('_', ' ')),
                 level=lvl, line=info.line))
         hi = info.settlement_max
         if hi in LADDER and at >= 0 and at > LADDER.index(hi):
             out.append(finding(
                 "building.max", False,
-                f"{lvl} is declared up to a {hi.replace('_', ' ')} and this is "
-                f"a {level.replace('_', ' ')}.",
+                _i18n.msg("eng.stratedit.is_declared_up_to_a_and", "{lvl} is declared up to a {replace} and this is a {replace2}.", lvl=lvl, replace=hi.replace('_', ' '), replace2=level.replace('_', ' ')),
                 level=lvl, line=info.line))
     out.sort(key=lambda f: not f["fatal"])
     return out
@@ -445,8 +434,7 @@ def settlement_detail(facts, region: str) -> dict:
 
     sf = getattr(facts, "strat", None)
     if sf is None:
-        raise MapError(f"{facts.strat_rel} could not be read, so this map has "
-                       f"no campaign to edit")
+        raise MapError(_i18n.msg("eng.stratedit.could_not_be_read_so_this", "{strat_rel} could not be read, so this map has no campaign to edit", strat_rel=facts.strat_rel))
     node = find_settlement(sf, region)
     rf = facts.by_name.get(region.strip().lower())
     if node is None and rf is not None:
@@ -454,8 +442,7 @@ def settlement_detail(facts, region: str) -> dict:
         # give it a settlement - so it gets what that form needs, not an error
         return {"missing": True, "region": region, "campaign": facts.campaign,
                 "file": facts.strat_rel, "shown": rf.shown,
-                "message": (f"Nobody starts holding {region}: it opens as unclaimed "
-                            f"wilderness, which is legal. Give it a settlement:"),
+                "message": (_i18n.msg("eng.stratedit.nobody_starts_holding_it_opens_as", "Nobody starts holding {region}: it opens as unclaimed wilderness, which is legal. Give it a settlement:", region=region)),
                 "factions": _faction_rows(sf, facts)}
     if node is None:
         raise MapError(
@@ -819,24 +806,19 @@ def plan_new_settlement(sf: StratFile, region: str, owner: str,
     for kind_ in sorted(set(was) | set(now)):
         want = was.get(kind_, 0) + (1 if kind_ == "settlement" else 0)
         if now.get(kind_, 0) != want:
-            errors.append(f"adding one settlement would leave {now.get(kind_, 0)} "
-                          f"{kind_} record(s) where there should be {want}")
+            errors.append(_i18n.msg("eng.stratedit.adding_one_settlement_would_leave_record", "adding one settlement would leave {now} {kind_} record(s) where there should be {want}", now=now.get(kind_, 0), kind_=kind_, want=want))
     if sf.rosters != done.rosters or sf.globals != done.globals:
-        errors.append("adding a settlement would change the campaign's header, "
-                      "which it has no business touching")
+        errors.append(_i18n.msg("eng.stratedit.adding_a_settlement_would_change_the", "adding a settlement would change the campaign's header, which it has no business touching"))
     (a, a_odd), (b, b_odd) = blocks_by_region(sf), blocks_by_region(done)
     low = region.strip().lower()
     if set(b) != set(a) | {low} or a_odd != b_odd:
-        errors.append("adding a settlement would change which provinces the "
-                      "campaign holds beyond the one being added")
+        errors.append(_i18n.msg("eng.stratedit.adding_a_settlement_would_change_which", "adding a settlement would change which provinces the campaign holds beyond the one being added"))
     elif any(a[k] != b[k] for k in a):
-        errors.append("adding a settlement would rewrite a block it was not "
-                      "adding")
+        errors.append(_i18n.msg("eng.stratedit.adding_a_settlement_would_rewrite_a", "adding a settlement would rewrite a block it was not adding"))
     node = find_settlement(done, region)
     home = faction_of(done, node) if node is not None else None
     if home is None or str(home.get("name") or home.name).lower() != owner.lower():
-        errors.append(f"the new block would not land inside {owner}'s faction "
-                      f"block")
+        errors.append(_i18n.msg("eng.stratedit.the_new_block_would_not_land", "the new block would not land inside {owner}'s faction block", owner=owner))
     return ("" if errors else text), errors
 
 
@@ -1044,13 +1026,11 @@ def plan_settlement(mod, facts, body: dict) -> StratPlan:
 
     node = find_settlement(sf, p.region)
     if node is None:
-        p.errors.append(f"no settlement in {campaign}'s descr_strat.txt stands "
-                        f"in {p.region!r}")
+        p.errors.append(_i18n.msg("eng.stratedit.no_settlement_in_s_descr_strat", "no settlement in {campaign}'s descr_strat.txt stands in {region}", campaign=campaign, region=repr(p.region)))
         return p
     faction = faction_of(sf, node)
     if faction is None:
-        p.errors.append(f"the settlement in {p.region} is not inside any "
-                        f"faction block, so there is nobody to save it for")
+        p.errors.append(_i18n.msg("eng.stratedit.the_settlement_in_is_not_inside", "the settlement in {region} is not inside any faction block, so there is nobody to save it for", region=p.region))
         return p
     source = str(faction.get("name") or faction.name)
     before = _snapshot(sf, node)
@@ -1062,14 +1042,12 @@ def plan_settlement(mod, facts, body: dict) -> StratPlan:
         head = _clean(block[0]) if block else ""
         if not head.lower().startswith("settlement"):
             p.errors.append(
-                "a settlement block opens with the word `settlement`, on its "
-                f"own or followed by `castle`. This one opens with {head!r}")
+                _i18n.msg("eng.stratedit.a_settlement_block_opens_with_the", "a settlement block opens with the word `settlement`, on its own or followed by `castle`. This one opens with {head}", head=repr(head)))
             return p
         depth = sum(_clean(ln).count("{") - _clean(ln).count("}") for ln in block)
         if depth:
             p.errors.append(
-                f"the braces in this block do not balance ({depth:+d}), so "
-                f"everything below it would be read as part of it")
+                _i18n.msg("eng.stratedit.the_braces_in_this_block_do", "the braces in this block do not balance ({depth:+d}), so everything below it would be read as part of it", depth=depth))
             return p
     else:
         want = body.get("buildings")
@@ -1100,10 +1078,7 @@ def plan_settlement(mod, facts, body: dict) -> StratPlan:
         dest = mid.faction(dest_name)
         if dest is None:
             p.errors.append(
-                f"{dest_name} has no faction block in {campaign}'s "
-                f"descr_strat.txt, so it cannot be given a province. Creating "
-                f"a faction is 16j; cloning one that already works is what the "
-                f"Factions screen does today")
+                _i18n.msg("eng.stratedit.has_no_faction_block_in_s", "{dest_name} has no faction block in {campaign}'s descr_strat.txt, so it cannot be given a province. Creating a faction is 16j; cloning one that already works is what the Factions screen does today", dest_name=dest_name, campaign=campaign))
             return p
         src2 = faction_of(mid, node2)
         same = src2 is not None and dest.start == src2.start
@@ -1152,7 +1127,7 @@ def plan_settlement(mod, facts, body: dict) -> StratPlan:
 
     p.text = "" if text == sf.serialise() else text
     if not p.text and not p.errors:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.stratedit.nothing_to_change", "nothing to change"))
     return p
 
 
@@ -1239,7 +1214,7 @@ def apply_settlement(p: StratPlan) -> dict:
     if p.errors:
         raise ValueError("cannot apply: " + "; ".join(p.errors))
     if not p.text:
-        raise ValueError("nothing to change")
+        raise ValueError(_i18n.msg("eng.stratedit.nothing_to_change", "nothing to change"))
     mod = p.mod
     rel = f"{campstrat.CAMPAIGN_DIR_REL}/{p.campaign}/{campstrat.STRAT_NAME}"
     tid = config.new_transfer_id()
@@ -1298,19 +1273,16 @@ def _read_back(before: StratFile, text: str, gone: str = "", added: str = "") ->
             continue                    # a settlement's buildings come and go with it
         want = was.get(kind_, 0) + (delta if kind_ == "settlement" else 0)
         if now.get(kind_, 0) != want:
-            errors.append(f"this would leave {now.get(kind_, 0)} {kind_} record(s) "
-                          f"where there should be {want}")
+            errors.append(_i18n.msg("eng.stratedit.this_would_leave_record_s_where", "this would leave {now} {kind_} record(s) where there should be {want}", now=now.get(kind_, 0), kind_=kind_, want=want))
     if before.rosters != done.rosters or before.globals != done.globals:
-        errors.append("this would change the campaign's header, which it has no "
-                      "business touching")
+        errors.append(_i18n.msg("eng.stratedit.this_would_change_the_campaigns_header", "this would change the campaign's header, which it has no business touching"))
     (a, a_odd), (b, b_odd) = blocks_by_region(before), blocks_by_region(done)
     keep = set(a) - ({gone.lower()} if gone else set())
     want_keys = keep | ({added.lower()} if added else set())
     if set(b) != want_keys or a_odd != b_odd:
-        errors.append("this would change which provinces the campaign holds beyond "
-                      "the one asked about")
+        errors.append(_i18n.msg("eng.stratedit.this_would_change_which_provinces_the", "this would change which provinces the campaign holds beyond the one asked about"))
     elif any(a[k] != b[k] for k in keep):
-        errors.append("this would rewrite a settlement block it was not asked to")
+        errors.append(_i18n.msg("eng.stratedit.this_would_rewrite_a_settlement_block", "this would rewrite a settlement block it was not asked to"))
     return errors
 
 
@@ -1335,7 +1307,7 @@ def plan_delete_settlement(mod, facts, body: dict) -> StratPlan:
     p.path = sf.path
     node = find_settlement(sf, p.region)
     if node is None:
-        p.errors.append(f"no settlement in {campaign}'s descr_strat.txt stands in {p.region!r}")
+        p.errors.append(_i18n.msg("eng.stratedit.no_settlement_in_s_descr_strat", "no settlement in {campaign}'s descr_strat.txt stands in {region}", campaign=campaign, region=repr(p.region)))
         return p
     faction = faction_of(sf, node)
     owner = str(faction.get("name") or faction.name) if faction is not None else ""
@@ -1354,13 +1326,9 @@ def plan_delete_settlement(mod, facts, body: dict) -> StratPlan:
     if owner:
         new = done.faction(owner)
         if new is not None and not settlements_of(done, new):
-            p.warnings.append(f"{owner} is left holding no settlement at all, so the "
-                              f"campaign opens with it already destroyed unless a "
-                              f"script gives it one.")
+            p.warnings.append(_i18n.msg("eng.stratedit.is_left_holding_no_settlement_at", "{owner} is left holding no settlement at all, so the campaign opens with it already destroyed unless a script gives it one.", owner=owner))
         p.capitals = _capital_notes(sf, done, p, owner)
-    p.warnings.append(f"{p.region} stays on the map with no settlement in it. Vanilla "
-                      f"ships one like that (Durazzo); Health lists such a province "
-                      f"as a note.")
+    p.warnings.append(_i18n.msg("eng.stratedit.stays_on_the_map_with_no", "{region} stays on the map with no settlement in it. Vanilla ships one like that (Durazzo); Health lists such a province as a note.", region=p.region))
     p.text = text
     return p
 
@@ -1388,11 +1356,11 @@ def plan_create_settlement(mod, facts, body: dict) -> StratPlan:
         return p
     p.path = sf.path
     if not owner:
-        p.errors.append("a new settlement needs a faction to hold it")
+        p.errors.append(_i18n.msg("eng.stratedit.a_new_settlement_needs_a_faction", "a new settlement needs a faction to hold it"))
         return p
     declared = _declared(facts)
     if declared and p.region.lower() not in declared:
-        p.errors.append(f"{p.region} is not a province in this map's descr_regions.txt")
+        p.errors.append(_i18n.msg("eng.stratedit.is_not_a_province_in_this", "{region} is not a province in this map's descr_regions.txt", region=p.region))
         return p
     text, errs = plan_new_settlement(sf, p.region, owner,
                                      str(body.get("creator") or owner).strip())
@@ -1435,12 +1403,11 @@ def plan_copy_settlement(src_mod, src_facts, dst_mod, dst_facts, body: dict) -> 
     p.path = sf.path
     src_node = find_settlement(src_sf, p.region)
     if src_node is None:
-        p.errors.append(f"{getattr(src_mod, 'name', '?')} has no settlement in {p.region}")
+        p.errors.append(_i18n.msg("eng.stratedit.has_no_settlement_in", "{getattr} has no settlement in {region}", getattr=getattr(src_mod, 'name', '?'), region=p.region))
         return p
     declared = _declared(dst_facts)
     if declared and p.region.lower() not in declared:
-        p.errors.append(f"{getattr(dst_mod, 'name', '?')}'s map has no province called "
-                        f"{p.region}, so there is nowhere for it to go")
+        p.errors.append(_i18n.msg("eng.stratedit.s_map_has_no_province_called", "{getattr}'s map has no province called {region}, so there is nowhere for it to go", getattr=getattr(dst_mod, 'name', '?'), region=p.region))
         return p
     snap = _snapshot(src_sf, src_node)
     voc = Vocabulary(dst_facts, sf)
@@ -1454,8 +1421,7 @@ def plan_copy_settlement(src_mod, src_facts, dst_mod, dst_facts, body: dict) -> 
     if node is None:
         owner = str(body.get("owner") or "").strip()
         if not owner:
-            p.errors.append(f"{getattr(dst_mod, 'name', '?')} holds nothing in {p.region}; "
-                            f"name the faction that should")
+            p.errors.append(_i18n.msg("eng.stratedit.holds_nothing_in_name_the_faction", "{getattr} holds nothing in {region}; name the faction that should", getattr=getattr(dst_mod, 'name', '?'), region=p.region))
             return p
         creator = snap["faction_creator"] if snap["faction_creator"] in voc.factions else owner
         text, errs = plan_new_settlement(sf, p.region, owner, creator)
@@ -1492,5 +1458,5 @@ def plan_copy_settlement(src_mod, src_facts, dst_mod, dst_facts, body: dict) -> 
                           + ", ".join(f"{a} {b}" for a, b in dropped[:8]))
     p.text = "" if text == sf.serialise() else text
     if not p.text and not p.errors:
-        p.errors.append("nothing to change")
+        p.errors.append(_i18n.msg("eng.stratedit.nothing_to_change", "nothing to change"))
     return p

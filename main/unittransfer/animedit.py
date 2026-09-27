@@ -45,6 +45,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import casanim
+from . import i18n as _i18n
 
 REPACK_NOTE = (
     "The game plays animations from animations/pack.dat, and a loose file does "
@@ -106,7 +107,7 @@ def _track(anim: casanim.Animation, name: str) -> casanim.Track:
     for t in anim.tracks:
         if t.name.lower() == low:
             return t
-    raise EditError(f"this animation has no bone called {name!r}")
+    raise EditError(_i18n.msg("eng.animedit.this_animation_has_no_bone_called", "this animation has no bone called {name}", name=repr(name)))
 
 
 def _hub(anim: casanim.Animation) -> Optional[casanim.Track]:
@@ -140,7 +141,7 @@ def apply_edits(anim: casanim.Animation, edits: Optional[Dict]) -> casanim.Anima
         t = _track(a, kv.get("bone"))
         k = int(kv.get("key", 0))
         if not 0 <= k < keys:
-            raise EditError(f"key {k} is not one of this animation's 0 to {keys - 1}")
+            raise EditError(_i18n.msg("eng.animedit.key_is_not_one_of_this", "key {k} is not one of this animation's 0 to {x}", k=k, x=keys - 1))
         if t.rot_keys <= k or (t.rot_keys == 1 and keys > 1):
             _full(t, keys, "rot")
         t.rot[k * 4:k * 4 + 4] = array("f", quat_from_euler(kv.get("euler") or (0, 0, 0)))
@@ -149,7 +150,7 @@ def apply_edits(anim: casanim.Animation, edits: Optional[Dict]) -> casanim.Anima
     if trim:
         lo, hi = int(trim[0]), int(trim[1])
         if not 0 <= lo < hi < keys:
-            raise EditError(f"keep keys {lo} to {hi}: this animation has keys 0 to {keys - 1}")
+            raise EditError(_i18n.msg("eng.animedit.keep_keys_to_this_animation_has", "keep keys {lo} to {hi}: this animation has keys 0 to {x}", lo=lo, hi=hi, x=keys - 1))
         t0 = a.key_times[lo]
         a.key_times = array("f", [t - t0 for t in a.key_times[lo:hi + 1]])
         for t in a.tracks:
@@ -168,7 +169,7 @@ def apply_edits(anim: casanim.Animation, edits: Optional[Dict]) -> casanim.Anima
     if speed not in (None, "", 1, 1.0):
         sp = float(speed)
         if not 0.05 <= sp <= 20:
-            raise EditError(f"a speed of {sp:g} is outside 0.05 to 20")
+            raise EditError(_i18n.msg("eng.animedit.a_speed_of_sp_g_is", "a speed of {sp:g} is outside 0.05 to 20", sp=sp))
         a.key_times = array("f", [t / sp for t in a.key_times])
         a.length = a.length / sp
 
@@ -258,7 +259,7 @@ def plan_save(mod, rel: str, edits: Optional[Dict], save_as: str = "",
     p = SavePlan(mod=mod, rel=rel)
     src = factions.picture_path(mod, rel)
     if src is None or not src.is_file():
-        p.errors.append(f"{rel!r} is not a file in this mod")
+        p.errors.append(_i18n.msg("eng.animedit.is_not_a_file_in_this", "{rel} is not a file in this mod", rel=repr(rel)))
         return p
     try:
         anim = casanim.read_anim(src, skeleton, mod.data)
@@ -271,26 +272,22 @@ def plan_save(mod, rel: str, edits: Optional[Dict], save_as: str = "",
         target += ".cas"
     if casanim.packed_counts(src.read_bytes()) is not None \
             and target.lower() == rel.strip().replace("\\", "/").lstrip("/").lower():
-        p.errors.append(f"{src.name} is an animation from the pack: the save is a loose .cas, "
-                        "so it goes beside it under a name of its own, not over it")
+        p.errors.append(_i18n.msg("eng.animedit.is_an_animation_from_the_pack", "{name} is an animation from the pack: the save is a loose .cas, so it goes beside it under a name of its own, not over it", name=src.name))
         return p
     if (not target.lower().startswith("animations/") or ".." in target
             or not _SAFE.match(target)):
-        p.errors.append(f"{target!r}: an animation is saved under animations/, "
-                        f"named with letters, digits, _ . - and /")
+        p.errors.append(_i18n.msg("eng.animedit.an_animation_is_saved_under_animations", "{target}: an animation is saved under animations/, named with letters, digits, _ . - and /", target=repr(target)))
         return p
     p.target = target
     if p.overwrites and target.lower() != rel.lower():
-        p.errors.append(f"{target} is already a file in this mod; pick another name "
-                        f"or save over the one you opened")
+        p.errors.append(_i18n.msg("eng.animedit.is_already_a_file_in_this", "{target} is already a file in this mod; pick another name or save over the one you opened", target=target))
     if assign and assign.get("skeleton") and assign.get("action"):
         edit = _assign(mod, str(assign["skeleton"]), str(assign["action"]), target)
         if isinstance(edit, str):
             p.errors.append(edit)
         else:
             p.skeleton_edit = edit
-            p.notes.append(f"descr_skeleton.txt: {assign['skeleton']}'s "
-                           f"{assign['action']} is pointed at {target}")
+            p.notes.append(_i18n.msg("eng.animedit.descr_skeleton_txt_s_is_pointed", "descr_skeleton.txt: {skeleton}'s {action} is pointed at {target}", skeleton=assign['skeleton'], action=assign['action'], target=target))
     p.notes.append(REPACK_NOTE)
     return p
 
@@ -371,7 +368,7 @@ def apply_save(p: SavePlan) -> Dict:
         "unit_type": p.target, "resolved_type": p.target,
         "options": {"from": p.rel},
         "applied": True, "undone": False, "note": "",
-        "summary": f"animation {p.rel} -> {p.target} in {mod.name}",
+        "summary": _i18n.msg("eng.animedit.animation_in", "animation {rel} -> {target} in {name}", rel=p.rel, target=p.target, name=mod.name),
         "warnings": [], "manifest": manifest, "backup_root": str(backup_root),
     }
     config.append_log(rec)

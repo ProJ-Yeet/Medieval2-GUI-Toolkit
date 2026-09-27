@@ -42,6 +42,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from . import animpack
+from . import i18n as _i18n
 
 
 @dataclass
@@ -205,7 +206,7 @@ def compact(mod, reason: str = "") -> dict:
     if rep.error:
         raise animpack.PackError(rep.error)
     if not rep.worth_compacting:
-        raise animpack.PackError("The packs hold nothing that is not played; there is nothing to compact")
+        raise animpack.PackError(_i18n.msg("eng.packhouse.the_packs_hold_nothing_that_is", "The packs hold nothing that is not played; there is nothing to compact"))
     keep: Dict[str, List[animpack.PackEntry]] = {}
     if rep.anim_freed:
         keep["pack"] = rep.keep_anims

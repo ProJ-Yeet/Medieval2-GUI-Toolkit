@@ -90,7 +90,7 @@ function cmpBuild(A,B,labels){
     rows.forEach(r=>{ if(r.v.same)tally.same++; else if(r.v.win)tally[r.v.win]++; else tally.neu++; });
     const sid=GF_SECTION_OF[key]||'other';
     const sec=secs[sid]||(secs[sid]={id:sid,
-      t:(GF_SECTIONS.find(s=>s.id===sid)||{}).t||'Other lines',fields:[]});
+      t:(GF_SECTIONS.find(s=>s.id===sid)||{}).t||tt('compare.other_lines'),fields:[]});
     sec.fields.push({label,key,title:(spec&&spec.t)||label,rows,absent});
   });
   return {sections:GF_SECTIONS.map(s=>secs[s.id]).filter(Boolean),tally};
@@ -173,7 +173,7 @@ async function edCmpPick(type){
 }
 function edCmpClear(){
   const e=state.ed;
-  if(edCmpDirty()&&!confirm(`Discard the unsaved changes to ${e.cmp.unit}?`))return;
+  if(edCmpDirty()&&!confirm(tt('compare.discard_the_unsaved_changes_to',{unit:e.cmp.unit})))return;
   e.cmp=null; edRenderTab();
 }
 function edCmpSetQ(v){ state.ed.cmpQ=v; }
@@ -191,16 +191,16 @@ function edCmpHead(m){
         <div class="ty">${esc(type)}</div>${extra||''}</div></div>`;
   return `<div class="cmphead">
     ${side('a',e.unit,e.loc.name||e.d.type,
-      `<div class="ty"><b class="w">${t.a}</b> better here</div>`)}
+      `<div class="ty"><b class="w">${t.a}</b> ${tt('compare.better_here')}</div>`)}
     <div class="tally">
-      <div><b>${t.a+t.b+t.neu}</b> differ${t.neu?` · ${t.neu} no better side`:''}</div>
-      <div class="count">${t.same} identical</div>
-      <div style="margin-top:4px"><button onclick="edCmpClear()">⇄ Change</button>
+      <div><b>${t.a+t.b+t.neu}</b> ${tt('compare.differ',{neu:t.neu?tt('compare.no_better_side',{neu:t.neu}):''})}</div>
+      <div class="count">${tt('compare.identical',{same:t.same})}</div>
+      <div style="margin-top:4px"><button onclick="edCmpClear()">${tt('compare.change')}</button>
         <button onclick="openUnitTab('${q1(esc(e.cmp.unit))}')"
-          title="Open the compared unit in its own editor tab">↗ Open</button></div>
+          title="${ttA('compare.open_the_compared_unit_in_its')}">${tt('compare.open')}</button></div>
     </div>
     ${side('b',e.cmp.unit,nameOf(e.mod,e.cmp.unit,e.cmp.d.type),
-      `<div class="ty"><b class="w">${t.b}</b> better here</div>`)}
+      `<div class="ty"><b class="w">${t.b}</b> ${tt('compare.better_here')}</div>`)}
   </div>`;
 }
 function edCmpSection(sec){
@@ -209,8 +209,8 @@ function edCmpSection(sec){
 }
 function edCmpField(f){
   const e=state.ed;
-  const missing=f.absent==='a'?`<span class="w-warn"> ${esc(e.unit)} has no such line.</span>`
-    :f.absent==='b'?`<span class="w-warn"> ${esc(e.cmp.unit)} has no such line.</span>`:'';
+  const missing=f.absent==='a'?`<span class="w-warn"> ${tt('compare.has_no_such_line',{unit:esc(e.unit)})}</span>`
+    :f.absent==='b'?`<span class="w-warn"> ${tt('compare.has_no_such_line',{unit:esc(e.cmp.unit)})}</span>`:'';
   return `<div class="cmpfield">${esc(f.title)}
       <span class="count">${esc(f.label)}</span>${missing}</div>
     ${f.rows.map(edCmpRow).join('')}`;
@@ -246,7 +246,7 @@ function cmpDatalists(){
 }
 function cmpWidget(w,r){
   const val=cmpPart(w,r.label,r.pi);
-  const p=r.part,at=`data-cmp="${w}" data-cl="${esc(r.label)}" data-ci="${r.pi}"`;
+  const p=r.part,at=tt('compare.data_cmp_data_cl_data_ci',{x:w,label:esc(r.label),pi:r.pi});
   if(p&&p.type==='sel'){
     const list=cmpVocabList(p.v);
     if(list.length)return `<select ${at}>${p.optional?'<option value=""></option>':''}${
@@ -266,20 +266,17 @@ function edCmpPicker(){
   const units=edCmpUnits().filter(u=>u.type!==e.unit
     &&(!q||u.name.toLowerCase().includes(q)||u.type.toLowerCase().includes(q))).slice(0,300);
   return `<div class="frm">
-    <fieldset><legend>Compare with another unit</legend>
-      <div class="count">Pick a unit from <b>${esc(e.mod)}</b>. Its stats are shown beside
-        ${esc(e.loc.name||e.d.type)}’s, slot by slot, with the better side in green and the
-        worse in red. Both columns stay editable, so a gap can be closed from either
-        end. <b>Save changes</b> then writes both units.</div>
+    <fieldset><legend>${tt('compare.compare_with_another_unit')}</legend>
+      <div class="count">${tt('compare.pick_a_unit_from_its_stats',{mod:esc(e.mod),x:esc(e.loc.name||e.d.type)})}</div>
       <input class="q" id="cmpQ" style="margin-top:8px;width:100%"
-        placeholder="Filter ${esc(e.mod)}’s units…" value="${esc(e.cmpQ||'')}">
+        placeholder="${ttA('compare.filter_s_units',{mod:esc(e.mod)})}" value="${esc(e.cmpQ||'')}">
       <div class="baselist" style="max-height:340px;margin-top:6px">${units.map(u=>`
         <div class="baserow" onclick="edCmpPick('${q1(esc(u.type))}')">
           <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(e.mod,u.type)}">
           <div><div class="bn">${esc(u.name)}</div>
             <div class="bs">${esc(u.type)} · ${esc(u.kind||u.category||'')}</div></div>
         </div>`).join('')||`<div class="caprow"><span class="count">${
-          edCmpUnits().length?'No units match.':'Loading this mod’s units…'}</span></div>`}</div>
+          edCmpUnits().length?tt('common.no_units_match'):tt('compare.loading_this_mods_units')}</span></div>`}</div>
     </fieldset></div>`;
 }
 function cmpRepaint(el){
