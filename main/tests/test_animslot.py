@@ -267,6 +267,30 @@ check("a name with a folder climb in it", any("name the file" in x for x in
 check("a skeleton the pack has not got", any("no 'nope'" in x for x in
                                              animslot.plan_edit(mod, "nope", WALK, {"speed": 2}).errors))
 
+# ---- 5b) mounts posed differently --------------------------------------------------------
+print("\n5b) a horse's animation is not carried onto a camel")
+if DAC.is_dir():
+    dm = Mod(DAC)
+    dp = animpack.open_packs(animpack.animations_dir(dm.data))
+    csk = dp.skeleton("fs_camel")
+    hsk = dp.skeleton("fs_horse")
+    check("a horse rests on its saddle at 0,0,0 with the hooves below, a camel on its feet",
+          hsk.bones[0].pos == (0.0, 0.0, 0.0) and csk.bones[0].pos[1] > 1.0)
+    b = animslot.plan_bring(dm, "fs_camel", csk.filled()[0][0], dm, source_skeleton="fs_horse")
+    check("fs_horse onto fs_camel: no bone in common, refused rather than a still camel",
+          b.errors and "another kind of skeleton" in b.errors[0])
+    fake = casanim.Animation(source="x.cas", version=3.2, length=0.0, key_times=array("f", [0.0]),
+                             layout=(2, True), head=b"", tail=None)
+    fake.tracks.append(casanim.Track("Scene Root", -1, (0.0, 0.0, 0.0)))
+    fake.tracks.append(casanim.Track(csk.bones[0].name, 0, (0.0, 0.0, 0.0)))
+    note = animslot.root_shift(fake, csk)
+    check("a root of the same name resting at another height is said, in which direction",
+          "higher" in note and "above the ground" in note)
+    fake.tracks[1] = casanim.Track(csk.bones[0].name, 0, tuple(v / (csk.scale or 1.0) for v in csk.bones[0].pos))
+    check("and nothing is said when it rests where this one does", animslot.root_shift(fake, csk) == "")
+else:
+    print("  (DaC not installed: skipped)")
+
 # ---- 6) over HTTP ---------------------------------------------------------------------
 print("\n6) the page's calls")
 import json  # noqa: E402

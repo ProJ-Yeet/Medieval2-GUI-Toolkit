@@ -11,6 +11,22 @@ Phase 87a-87h. Notes: `docs/releases/RELEASE_2_4_0.md` and
 `RELEASE_BETA_2026_09_26.md`. **What is left: Phase 88** (every major
 language), and the in-game checks of 84 and 86.
 
+**The user's friend on mounts, 2026-09-27, confirmed in the packs**: a horse
+and a camel are posed about different origins. Every horse skeleton in
+vanilla, DaC and Reforged (`fs_horse`, `fs_fast_horse`, `fs_heavy_horse`, the
+`_marka` ones) has its root, `bone_H_Saddle`, at 0,0,0 with the hooves 1.66
+below; `fs_camel` (and `fs_camel_warg`) has `bone_camel_root` 1.515 up with
+its feet at 0.1. The meshes agree (Reforged's `armor_camel` y 0 to 2.30, DaC's
+`mount_barded_horse` -1.89 to 0.74). In play both stand on the ground, because
+a horse's animations lift its root by about 1.6 (`fs_horse_stand_a_idle`,
+root at y 1.595 on frame 0). The two share no bone name, so 86's carry by bone
+name moved nothing and would have written a camel that stands still: it is
+now refused (`animslot.onto`), and a carry whose root does share a name but
+rests at another height says how far the unit will stand above or below the
+ground (`animslot.root_shift`). `test_animslot` 5b (4). **ROCSS is no longer
+installed** (only DaC and Reforged), so `test_animslot` and the other ROCSS
+suites skip; 5b was run on its own.
+
 **Phase 86 is done - animations on their own, 2026-09-26, and with it all the
 animation work (77-86).** On the user's word ("finish up all animation work
 and then release it this time to 2.4"). `unittransfer/animslot.py`: the

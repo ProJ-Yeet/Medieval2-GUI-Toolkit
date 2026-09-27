@@ -154,7 +154,30 @@ def onto(anim: casanim.Animation, sk: animpack.PackedSkeleton, nq: int) -> Tuple
             t.rot = array("f", src.rot)
             t.pos = array("f", src.pos)
         out.tracks.append(t)
+    if len(missing) == nq:
+        raise SlotError(f"none of this skeleton's {nq} bones is in "
+                        f"{Path(anim.source).name or 'the animation'}: it was made for another kind "
+                        "of skeleton (a horse's on a camel, say), and every bone would hold still")
     return out, missing
+
+
+def root_shift(anim: casanim.Animation, sk: animpack.PackedSkeleton) -> str:
+    """A note when ``anim``'s root and ``sk``'s share a name but not a rest
+    height: a root's keys are offsets from its own pivot, so the unit would
+    stand that much higher or lower. Mounts differ this way (a horse's root is
+    its saddle at 0,0,0 with the hooves below, a camel's is 1.5 up with its
+    feet at 0), and a custom skeleton can too."""
+    if len(anim.tracks) < 2 or not sk.bones:
+        return ""
+    src, dst = anim.tracks[1], sk.bones[0]
+    if src.name.lower() != dst.name.lower():
+        return ""
+    dy = dst.pos[1] / (sk.scale or 1.0) - src.pivot[1]
+    if abs(dy) < 0.25:
+        return ""
+    return (f"the root bone {dst.name} rests {abs(dy):.2f} {'higher' if dy > 0 else 'lower'} here than in the "
+            f"animation's own skeleton, so the unit will stand about that much "
+            f"{'above' if dy > 0 else 'below'} the ground")
 
 
 def pack_for(packs: animpack.Packs, sk: animpack.PackedSkeleton, slot: int,
@@ -288,7 +311,11 @@ def plan_edit(mod, skeleton: str, slot: int, edits: Optional[Dict], name: str = 
             src = Path(mod.data) / rel
             if not src.is_file():
                 raise SlotError(f"{rel!r} is not a file in this mod")
-            base, missing = onto(casanim.read_anim(src, skeleton, mod.data), sk, nq)
+            loaded = casanim.read_anim(src, skeleton, mod.data)
+            base, missing = onto(loaded, sk, nq)
+            shift = root_shift(loaded, sk)
+            if shift:
+                p.notes.append(shift)
             if missing:
                 p.notes.append(f"{len(missing)} of {sk_entry.name}'s bones are not in {Path(rel).name} "
                                f"and hold their bind pose: {', '.join(missing[:6])}"
@@ -369,6 +396,9 @@ def plan_bring(mod, skeleton: str, slot: int, source_mod, source_skeleton: str =
         else:
             dnq = _rot_bones(packs, sk, p.slot)
             moved, missing = onto(loose_anim, sk, dnq)
+            shift = root_shift(loose_anim, sk)
+            if shift:
+                p.notes.append(shift)
             p.data, p.scale = pack_for(packs, sk, p.slot, moved), sk.scale or 1.0
             loose_anim = on_frames(moved)
             p.notes.append(f"{_se.name} in {source_mod.name} has other bones than {p.skeleton} here, "
