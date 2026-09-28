@@ -1034,6 +1034,102 @@ should copy the donor's `descr_win_conditions.txt` block and
 decided here: both are per-faction blocks with no settlement in them, so the
 reason `descr_strat.txt` is not copied does not apply to them.
 
+# Phase 92 - four things another import tool does that Unit Transfer does not, scheduled 2026-09-28
+
+**Passed on by the user on 2026-09-28**: a friend wrote an import tool of
+their own (about 1,500 lines of Python, one window: pick a game, a mod and
+the units, Check, Import, Undo) and the user asked what in it is worth having
+here. Everything it does, Unit Transfer already does or does better (the dry
+run and undo, renames on a clash, relocated assets, sprite sheets, mounts,
+projectiles, cards, `strings.bin`, packs read directly, the missing
+animations ported by 83), except the four below. Reported on 2026-09-28,
+"sounds good" to adding them. Unrated, not map work, both lines. Their code
+is not copied: the ideas are.
+
+**92a - an M2EX mod that reads its battle models as text.** The friend's
+tool is written for M2EX games that read their battle models from
+`data/descr_model_battle.txt` instead of `unit_models/battle_models.modeldb`,
+switched on by `model_battle_source text` in `data/descr_caps_ex.txt`. Unit
+Transfer only ever writes the `.modeldb`, and the M2EX flag
+(`modflags.is_m2ex`) only lifts ceilings and lets effects travel. On such a
+mod a transfer writes models the game never reads. Neither installed mod runs
+this way, so **measured before a line is written**: a real
+`descr_caps_ex.txt` and `descr_model_battle.txt` are asked for (the friend
+has them), and what the file holds is recorded here: the keys (`type`,
+`scale`, `skeleton`, `skeleton_<mount>`, `skeleton_attachment_primary` and
+`_secondary`, `mesh <path>, <distance>`, `texture`, `texture_attachments`,
+`torch`), whether a mesh distance is the square root of the `.modeldb`'s
+figure, whether the first entry is special, comments and encoding. Then:
+
+- a mod is known to read text models from its `descr_caps_ex.txt`, not from
+  the M2EX tick alone, and says so on its Home card;
+- a reader and writer for the text file beside `modeldb.py`, answering the
+  same questions a `ModelEntry` does (names, skeletons, files, texture
+  records), so transfer, the 79 skeleton check and the Models viewer read
+  either;
+- transfer, as source or destination, reads and writes whichever file the mod
+  reads, and a transfer between one of each converts the entry;
+- Health warns when a mod reads text models and has a `.modeldb` that has
+  moved on since (or the other way round), since one of the two is dead.
+
+Done when: a unit transferred into a text-model M2EX mod loads in the game
+with its own model, one taken out of such a mod lands in a `.modeldb` mod,
+and the suite covers both directions against the sample files.
+
+**92b - recruitment set up by the transfer.** Today a transferred unit is
+recruitable nowhere until someone adds it in the Recruitment tab. The
+friend's tool does it in the same step, behind a tick (*Let the faction
+recruit them*), and so should this, through the Recruitment tab's own writer
+(`buildings.py`, the plan and apply road), never a second one:
+
+- **a renamed copy of a unit the destination already has** (the collision
+  rename) gets a copy of every `recruit_pool` line the original has there
+  that the destination faction can use, its `factions { }` narrowed to the
+  destination faction;
+- **a new unit** goes into the building and level that recruited it in the
+  source mod, for the source faction, when the destination has a building
+  and level of that name; the plan lists each one;
+- anything left over is "not recruitable" in the report, with a link to the
+  unit's Recruitment tab, as today.
+
+Done when: the plan shows every pool it will add, the unit trains there in
+the game, one Undo takes the pools back with the transfer, and the suite
+covers both kinds and the leftover.
+
+**92c - one faction's look only.** Transfer copies every texture the model
+names, so a DaC unit with a dozen faction skins brings a dozen sets of
+`.texture` files for a faction that wears one. The friend's tool copies only
+the source faction's and writes it as the destination faction's and as
+`default`. Here it is an option on the transfer (*Copy only the skins the
+new owners wear*), off by default: the copied entry keeps the texture
+records for the factions in its final ownership and `default` (and `slave`
+where the unit is a rebel or mercenary), the rest are dropped from the entry
+and their files are not copied. That needs a writer that removes a texture
+record and lowers the group's count, the opposite of
+`modeldb.add_texture_factions`. The plan states the saving in files and MB.
+Done when: a DaC unit taken with the option on shows the right skin in the
+game for its owner, the copy is measurably smaller, and the entry's counts
+agree with its records (the suite reads the result back).
+
+**92d - a banner the destination does not have.** A unit whose `banner
+faction` names a banner missing from the destination's
+`descr_banners_new.xml` (a Hospitaller or Templar banner, say) is copied as
+it is today, and Health finds it afterwards. The transfer does it first:
+the plan names the banner and offers to port it with 65's banner writer
+(`banners.py`) or to swap it for `main_cavalry` or `main_infantry` by the
+unit's category, which is what the friend's tool always does. `banner holy`
+and `banner unit` get the same treatment. Done when: neither choice leaves a
+Health finding on the destination, and the suite covers both.
+
+**Left out, and why.** Two smaller things in the friend's tool are recorded
+so they are not rediscovered: when a skeleton cannot be ported and there is
+no base unit to borrow from, it guesses one by trimming words off the name
+(`MTW2_Spear_new` to `MTW2_Spear`), and it swaps a missing effect for a close
+one (`bolt_impact_ground_set` to `arrow_impact_ground_set`) where this tool
+uses the invisible placeholder. Either can be a last fallback here later.
+Writing into the base game's own `data` folder, which it also does, is not
+taken: the mods folder is there so that is never needed.
+
 # What else is open
 
 Every rated item is built: the five- and four-star rows, and the three-star
