@@ -1130,6 +1130,48 @@ uses the invisible placeholder. Either can be a last fallback here later.
 Writing into the base game's own `data` folder, which it also does, is not
 taken: the mods folder is there so that is never needed.
 
+# Phase 93 - two reports on getting around, scheduled 2026-09-29
+
+**Reported by the user on 2026-09-29**, with a screenshot of each. Unrated, not
+map work, both lines.
+
+**93a - Restart now to apply it comes back without its console.** Settings →
+Launcher, *Keep the console window open* ticked, *Restart now to apply it*:
+the tool comes back on the same address, but no console window stays open. The
+restart road is `restartServer()` (`web/js/transfer.js`) posting
+`/api/restart` with `console: true`, `_restart_into` (`unittransfer/server.py`)
+and `startup.spawn_server(..., console=True)`. The likely cause, to be
+confirmed before it is fixed: a server started by the normal launch is the
+detached child, and that child runs on `pythonw.exe` (`startup._pythonw`). So
+in the server doing the restart `sys.executable` is already `pythonw.exe`, and
+`spawn_server`'s `exe = sys.executable` for the console case hands a new
+console to the windowless interpreter, which never shows one or writes
+nothing to it. The fix picks the console interpreter (`python.exe` beside
+`pythonw.exe`) explicitly, and falls back to the setting being applied at the
+next launch, said so in the modal, when there is none. Worth checking on the
+way: the replacement's log still reaches the new console (`logutil`'s
+`StreamHandler` is bound to `sys.stdout` at setup), and unticking the box and
+restarting closes it again. Done when: from a normal launch with the box
+ticked, a restart leaves a console showing every request, one without the box
+leaves none, and the suite covers the interpreter choice for both starting
+points (`python.exe` and `pythonw.exe`).
+
+**93b - a middle click opens the screen in a new tab.** The Home card's
+buttons (Unit Editor, Unit Transfer, Buildings, Campaign Map, Models Editor,
+Unit Sounds, Minor Files, Raw text, Health, My changes) are `<button
+onclick="homeGo(...)">`, so a middle click does nothing and a right click has
+no *Open in new tab*. The route already exists: `navUrl(r, mod)` in
+`web/js/core.js` builds `/?mod=&go=<mode>`, and the startup code reads it back
+for that tab only, without changing the remembered mod. So each of those
+buttons becomes a real link to its `navUrl`, looking exactly as it does now,
+whose plain left click still runs `homeGo` in place (default prevented) and
+whose middle click, Ctrl+click and context menu are the browser's own. The
+same treatment for the other places that switch screen by name where it is
+cheap: the mode bar at the top and the trail's crumbs. Done when: a middle
+click on each Home button opens that screen for that mod in a new tab, the
+first tab stays where it was, a left click behaves as before, and a
+keyboard user reaches and presses each one as before.
+
 # What else is open
 
 Every rated item is built: the five- and four-star rows, and the three-star
