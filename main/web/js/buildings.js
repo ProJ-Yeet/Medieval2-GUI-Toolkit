@@ -1403,8 +1403,9 @@ function bldBulkClause(){
             conds:seed,was:JSON.parse(JSON.stringify(seed)),
             units:hosts.map(h=>h.pool&&h.pool.unit).filter(Boolean),
             unit:'',mode:same?'replace':'add',same,pick:null};
-  b.stashScroll=stashPlace();   // come back to the row you opened, not the top
-  b.stash=document.getElementById('modal').innerHTML;
+  // The clause dialog's own slot: Cancel and Use read `cstash`, so parking the
+  // screen in `stash` left them nothing to put back but "undefined".
+  bldClauseStash();
   renderClauseDialog();
   bldClauseOwnership();
 }
