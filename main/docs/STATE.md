@@ -51,6 +51,20 @@ Phase 87a-87h. Notes: `docs/releases/RELEASE_2_4_0.md` and
 `RELEASE_BETA_2026_09_26.md`. **What is left: Phase 88** (every major
 language), and the in-game checks of 84 and 86.
 
+**Sprites at the far LOD, 2026-09-28, fixed and committed, uncut**: a user
+reported an imported Uruk-hai Crossbow drawn with the destination's old sprite
+at its base armour level, the upgrades right. A sprite is named after its
+model (`<faction>_<model>_sprite.spr`), so a model whose name the destination
+uses brings a sprite path the destination uses too, and the relocating modes
+only moved `unit_models/`: the default mode overwrote the destination's own
+sprite, "keep" left the new unit wearing it. Now a differing sprite at that
+path takes the source's tag (`france_Uruk_Crossbow_thir_sprite.spr`), its
+sheets with it, unless the mode is "overwrite"
+(`transfer._rename_colliding_sprites`; the dedup reads the rename back).
+`tests/test_transfer_sprites` (14). The reporter's own mods are not installed
+here, so the fix is proved on Reforged into a DaC copy with a planted sprite;
+waiting on the reporter to confirm in game.
+
 **The user's friend on mounts, 2026-09-27, confirmed in the packs**: a horse
 and a camel are posed about different origins. Every horse skeleton in
 vanilla, DaC and Reforged (`fs_horse`, `fs_fast_horse`, `fs_heavy_horse`, the

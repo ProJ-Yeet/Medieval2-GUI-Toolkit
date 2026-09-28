@@ -328,6 +328,10 @@ class TransferPlan:
     # Applied to the copied files AND to the added bmdb entries' path strings.
     path_map: Dict[str, str] = field(default_factory=dict)
     reroute_dir: str = ""            # data-relative folder the assets were moved to
+    # a sprite whose path the destination already uses for a different sprite:
+    # old .spr path -> its new name (see `_rename_colliding_sprites`). Applied to
+    # the added bmdb entries with path_map; the sheets are moved in asset_files.
+    sprite_renames: Dict[str, str] = field(default_factory=dict)
     # factions the copied bmdb entries must carry a texture for (set when a base
     # unit or an override changes ownership); empty means "leave textures alone"
     texture_factions: List[str] = field(default_factory=list)
@@ -550,6 +554,8 @@ class TransferPlan:
         if self.reroute_dir:
             L.append(f"  RELOCATED assets -> {self.reroute_dir}/  "
                      f"({len(self.path_map)} file(s), bmdb paths rewritten)")
+        for old, new in self.sprite_renames.items():
+            L.append(f"  SPRITE RENAMED {old} -> {new} (the destination has another there)")
         if self.asset_conflicts:
             ident = [c for c in self.asset_conflicts if c.identical]
             diff = [c for c in self.asset_conflicts if not c.identical]
@@ -720,6 +726,8 @@ class TransferPlan:
         if self.reroute_dir:
             L.append(f"  RELOCATED assets -> {self.reroute_dir}/  "
                      f"({len(self.path_map)} file(s), bmdb paths rewritten)")
+        for old, new in self.sprite_renames.items():
+            L.append(f"  SPRITE RENAMED {old} -> {new} (the destination has another there)")
         if self.asset_conflicts:
             ident = [c for c in self.asset_conflicts if c.identical]
             diff = [c for c in self.asset_conflicts if not c.identical]
@@ -1774,6 +1782,20 @@ def _canon_rel(rel: str, target: str) -> str:
     return rel
 
 
+def _canon_sprite(rel: str, tag: str) -> str:
+    """Undo `_rename_colliding_sprites` on one path, for comparing entries:
+    ``unit_sprites/france_X_<tag>_2_sprite.spr`` reads as
+    ``unit_sprites/france_X_sprite.spr``. Anything else is returned unchanged."""
+    if not tag or not rel.lower().endswith(".spr"):
+        return rel
+    import re
+    head, _, name = rel.rpartition("/")
+    m = re.match(rf"^(.*)_{re.escape(tag)}(?:_\d+)?(_sprite)?\.spr$", name, re.IGNORECASE)
+    if not m:
+        return rel
+    return (head + "/" if head else "") + m.group(1) + (m.group(2) or "") + name[-4:]
+
+
 def _normalize_reroute_dir(raw: Optional[str]) -> str:
     """Normalise a user-supplied reroute folder to a clean data-relative path.
 
@@ -1818,6 +1840,82 @@ def _sprite_sheets(source: Mod, rel: str) -> List[Tuple[Path, str]]:
             continue
         out.append((f, (p.parent / f.name).as_posix()))
     return out
+
+
+def _sprite_set_matches(source: Mod, rel: str, dest: Mod, dest_rel: str) -> bool:
+    """Is ``dest_rel`` in the destination the same sprite as ``rel`` in the source?
+
+    The same means the ``.spr`` and every sheet it has, byte for byte, under the
+    destination's name. Extra sheets the destination has do not count: the
+    ``.spr`` header carries the sheet count, so two identical ``.spr`` files read
+    the same number of sheets.
+    """
+    src_spr, dst_spr = source.data / rel, dest.data / dest_rel
+    if not (src_spr.is_file() and dst_spr.is_file()):
+        return False
+    if (src_spr.stat().st_size != dst_spr.stat().st_size
+            or not filecmp.cmp(src_spr, dst_spr, shallow=False)):
+        return False
+    old_stem, new_stem = Path(rel).stem, Path(dest_rel).stem
+    for sheet_abs, _sheet_rel in _sprite_sheets(source, rel):
+        other = dst_spr.parent / (new_stem + sheet_abs.name[len(old_stem):])
+        if not (other.is_file() and filecmp.cmp(sheet_abs, other, shallow=False)):
+            return False
+    return True
+
+
+def _rename_colliding_sprites(plan: "TransferPlan", source: Mod, dest: Mod) -> None:
+    """Give a copied sprite a name of its own where the destination has another there.
+
+    A sprite is named after the model it pictures (``<faction>_<model>_sprite``),
+    so a model whose name the destination already uses nearly always brings a
+    sprite whose path the destination already uses too - for its OWN unit. The
+    relocating modes only move files under ``unit_models/``, so the sprite used
+    to land on that path: overwriting it re-drew the destination's unit as the
+    imported one, and keeping it drew the imported unit as the destination's at
+    the far LOD (reported 2026-09-28: an Uruk-hai Crossbow's base armour level
+    showed the old unit's sprite while its upgrades, whose names were new,
+    looked right).
+
+    The sprite keeps its folder and takes the source's tag, the way a renamed
+    model does: ``france_Uruk_Crossbow_sprite`` becomes
+    ``france_Uruk_Crossbow_<tag>_sprite``. Its sheets follow, since the game
+    finds them by the ``.spr``'s own name and the ``.spr`` holds no names. A name
+    that is already the same sprite is reused. Only "overwrite" skips this.
+    """
+    tag = _tag(source)
+    renames: Dict[str, str] = {}
+    for _src_abs, rel in plan.asset_files:
+        if not rel.lower().endswith(".spr") or rel in renames:
+            continue
+        if not (dest.data / rel).exists() or _sprite_set_matches(source, rel, dest, rel):
+            continue
+        p = Path(rel.replace("\\", "/"))
+        stem = p.stem
+        core, tail = ((stem[:-len("_sprite")], stem[-len("_sprite"):])
+                      if stem.lower().endswith("_sprite") else (stem, ""))
+        n = 1
+        while True:
+            new_rel = (p.parent / f"{core}_{tag}{'' if n == 1 else f'_{n}'}{tail}{p.suffix}").as_posix()
+            if new_rel.lower() not in {v.lower() for v in renames.values()} and (
+                    not (dest.data / new_rel).exists()
+                    or _sprite_set_matches(source, rel, dest, new_rel)):
+                break
+            n += 1
+        renames[rel] = new_rel
+    if not renames:
+        return
+    moved: Dict[str, str] = {}
+    for rel, new_rel in renames.items():
+        moved[rel] = new_rel
+        old_stem, new_stem = Path(rel).stem, Path(new_rel).stem
+        for sheet_abs, sheet_rel in _sprite_sheets(source, rel):
+            moved[sheet_rel] = (Path(new_rel).parent
+                                / (new_stem + sheet_abs.name[len(old_stem):])).as_posix()
+    plan.asset_files = [(a, moved.get(r, r)) for a, r in plan.asset_files]
+    plan.sprite_renames.update(renames)
+    plan.warnings.append(
+        _i18n.msg("eng.transfer.sprite_s_renamed_the_destination_has", "{n} sprite(s) renamed: the destination already has a different sprite at that path, which belongs to its own unit ({first}{more}). The added battle_models.modeldb entries point at the new names.", n=len(renames), first=f"{next(iter(renames))} -> {next(iter(renames.values()))}", more=", ..." if len(renames) > 1 else ""))
 
 
 def _unique_name(base: str, taken: set) -> str:
@@ -2083,8 +2181,11 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
     # rewritten paths and would otherwise never compare equal to the source (or to
     # the same model brought in by another unit in a batch). Canonicalising strips
     # our relocation prefix so identical models match regardless of where they landed.
+    # A sprite an earlier transfer renamed (`_rename_colliding_sprites`) is read
+    # back under the name it came with, for the same reason.
     reloc_target = _reloc_target(opts, source)
-    canon = lambda p: _canon_rel(p, reloc_target)
+    sprite_tag = _tag(source) if opts.asset_conflict != "overwrite" else ""
+    canon = lambda p: _canon_sprite(_canon_rel(p, reloc_target), sprite_tag)
 
     def ckey(entry):
         return entry.content_key_mapped(canon)
@@ -2266,6 +2367,10 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
             if skipped_outside:
                 plan.warnings.append(
                     _i18n.msg("eng.transfer.file_s_outside_were_left_where", "{skipped_outside} file(s) outside {UNIT_MODELS}/ were left where they are (only unit_models paths can be relocated).", skipped_outside=skipped_outside, UNIT_MODELS=UNIT_MODELS))
+
+    # ---- sprites: a different one already at the same path gets a name of its own ----
+    if opts.asset_conflict != "overwrite":
+        _rename_colliding_sprites(plan, source, dest)
 
     # ---- icons ----
     # Without merc_icons, every faction the unit ends up owned by needs its OWN
@@ -2738,7 +2843,8 @@ def apply_transfer(plan: TransferPlan) -> Dict:
                    if final_name != entry.name else entry.raw)
             # point the entry at the relocated files (re-emits correct length
             # prefixes); a no-op when nothing was rerouted
-            raw = modeldb.rewrite_entry_paths(raw, plan.path_map, pad=entry.first_entry_pad)
+            raw = modeldb.rewrite_entry_paths(raw, {**plan.path_map, **plan.sprite_renames},
+                                              pad=entry.first_entry_pad)
             # give every faction the unit now belongs to a texture record
             if plan.texture_factions:
                 raw = modeldb.add_texture_factions(
@@ -2895,9 +3001,10 @@ def _log_plan(plan: TransferPlan) -> None:
           [f"{a.source_name} -> {a.final_name}  [{a.action}]"
            + (f"  - {a.reason}" if a.reason else "")
            for a in plan.model_actions] or ["(none)"], level=logging.DEBUG)
-    if plan.path_map:
+    if plan.path_map or plan.sprite_renames:
         block("  asset paths rewritten in the copied bmdb entries:",
-              [f"{old} -> {new}" for old, new in sorted(plan.path_map.items())],
+              [f"{old} -> {new}" for old, new in
+               sorted({**plan.path_map, **plan.sprite_renames}.items())],
               level=logging.DEBUG)
     block(f"  asset files to copy ({len(plan.asset_files)}):",
           [rel for _src, rel in plan.asset_files] or ["(none)"], level=logging.DEBUG)

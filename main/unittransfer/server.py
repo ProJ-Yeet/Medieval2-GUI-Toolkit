@@ -1668,6 +1668,7 @@ def _plan_payload(plan) -> dict:
         "engine_dest_overrides": plan.engine_dest_overrides,
         "reroute_dir": plan.reroute_dir,
         "relocated_count": len(plan.path_map),
+        "sprite_renames": plan.sprite_renames,
         # Only EDU units count against the vanilla 500 cap - M2TWEOP units are
         # loaded from the extender's own files, which is the point of them.
         "dest_unit_count": len(plan.dest.edu.main_units),

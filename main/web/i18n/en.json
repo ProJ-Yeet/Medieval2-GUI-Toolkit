@@ -4333,6 +4333,7 @@
 "eng.transfer.secondary_model_s_excluded_their_edu": "{excluded_n} secondary model(s) excluded; their EDU names are kept and must already exist in the destination.",
 "eng.transfer.siege_engine_has_no_entry_in": "siege engine '{name}' ({field_key}) has no entry in the source {filename} - the destination will have a dangling engine reference.",
 "eng.transfer.source_localisation_missing_none_written": "source localisation missing; none written",
+"eng.transfer.sprite_s_renamed_the_destination_has": "{n} sprite(s) renamed: the destination already has a different sprite at that path, which belongs to its own unit ({first}{more}). The added battle_models.modeldb entries point at the new names.",
 "eng.transfer.the_animations_come_into_the_packs": "the animations come into the packs only: descr_skeleton.txt is left as it is and no loose .cas is written, so if the game ever rebuilds its packs from that file it cannot build these skeletons",
 "eng.transfer.the_destinations_skeleton_pack_changed_since": "the destination's skeleton pack changed since this transfer was planned, and the skeletons would land under other names; plan it again",
 "eng.transfer.the_imported_card_s_would_replace": "the imported card(s) would replace '{replace_type}'s own files, but the icon rule is set to keep the destination's - nothing would be written. Choose 'overwrite' under Unit card / info icons.",
