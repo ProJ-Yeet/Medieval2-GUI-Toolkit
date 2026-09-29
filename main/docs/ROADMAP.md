@@ -1231,6 +1231,69 @@ click on each Home button opens that screen for that mod in a new tab, the
 first tab stays where it was, a left click behaves as before, and a
 keyboard user reaches and presses each one as before.
 
+# Phase 94 - a recruitment screen that lags, and its turns, scheduled 2026-09-29
+
+**Passed on by the user on 2026-09-29**, from a user on Tsardoms 3.0, with three
+screenshots. One performance report and one suggestion. Unrated, not map work,
+both lines.
+
+## What was reported
+
+1. *The Buildings editor is laggy on a level's recruit pools.* A ▲▼ on a pool's
+   numbers "takes a while to register" and the next click cannot follow
+   straight away; Chrome then shows *These pages aren't responding* for the
+   Buildings tab and two Unit Editor tabs, and they have to press **Wait**. The
+   level in the screenshots is Tsardoms' Barracks, where the recruitment-limit
+   banner counts 40 to 50 pools per faction for 19 to 24 factions. A build
+   from the week before is just as slow, and clearing the cache did not help.
+2. *The turns beside a replenish rate on the Unit Editor's Recruitment tab.*
+   The Buildings editor already prints "= 8.9 turns" beside the rate, but the
+   Unit Editor's table of every pool the unit has (Kruje Castle, Barracks 4/5,
+   Armoury 5/5...) shows only 0.112, 0.084, 0.125. "I have difficulties
+   remembering how many turns 0.084 for example is."
+
+## The pieces
+
+**94a - measure the lag, then remove it.** Not reproduced yet: Tsardoms is
+not installed here, so the first step is either the user's mod or the
+largest EDB on this machine with a level padded to Tsardoms' size, and a
+profile of one ▲ click. The hang takes the Unit Editor tabs down with it
+because Chrome runs same-origin tabs in one renderer, so every open tab of the
+toolkit freezes while one is busy; that is a symptom, not a second bug. The
+suspects, read from the code but not timed, all run on every click and all
+cost the size of the whole building, not of the one box:
+
+- `undoTick` (`web/js/undo.js`) fires twice per ▲, once on the button's click
+  and once on the `input` it dispatches, and each `undoCapture` does a
+  `JSON.stringify` of the whole scope.
+- `paintDirty` runs from both `undoTick` and `bldDirtyNote`, and its
+  `bldDirty()` (`web/js/buildings.js`) stringifies all of `b.work` to compare
+  it with `b.orig`.
+- `bldDirtyNote` also calls `bldLevelDirty`, which does `JSON.parse(b.orig)`
+  of the whole building and two more stringifies, for one level's chip.
+- `bldCvFollow` hands the change to `cvFromGui`, which is debounced but then
+  reserializes the whole `building ... { ... }` block into the text pane.
+
+The fix follows the profile, not this list: likely a cached parse of
+`b.orig`, one dirty check per event instead of three, and the undo snapshot
+and the text pane pushed off the click's own frame. The recruitment-limit
+banner (`bldRecruitPressure`) is worth timing too, if anything redraws it.
+Done when: on a level of Tsardoms' size a ▲ updates its box and the "= N turns"
+beside it within a frame, ten fast clicks land as ten steps, no tab reports
+not responding, and undo still steps back one click at a time.
+
+**94b - the turns in the Unit Editor's pool table.** `edRecRowHtml` and
+`edRecAddRowHtml` (`web/js/edrecruit.js`) pass the `per_turn` box to `numBox`
+with no readout, while the Buildings editor and the tab's own "numbers each
+new pool gets" block pass `<span class="turns">= ...</span>`. Pass the same
+readout on both row kinds; `wireNumBoxes` already keeps any `.turns` beside a
+box in step with what is typed. It has to fit the row without pushing the
+delete button off at the narrow widths Phase 90 set. On the way: `poolTurns`
+(`web/js/buildings.js`) still builds "N turns" and "never" in English, which
+Phase 88c's plurals by count should cover. Done when: every pool row on the
+Recruitment tab, existing and new, shows "= N turns" beside its rate, it
+follows ▲▼ and typing, and it reads correctly in every shipped language.
+
 # What else is open
 
 Every rated item is built: the five- and four-star rows, and the three-star
